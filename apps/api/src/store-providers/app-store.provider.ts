@@ -225,6 +225,7 @@ export class AppStoreProvider implements StoreProvider {
           ...deadline,
           ...(localization ? { language: pageLanguage(localization) } : {}),
         });
+        deadline.signal?.throwIfAborted();
         html = fetched;
         return listingSubtitle(fetched);
       });

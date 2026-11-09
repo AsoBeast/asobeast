@@ -941,6 +941,28 @@ describe('AppStoreProvider on demand deadline', () => {
     expect(page).not.toHaveBeenCalled();
   });
 
+  it('never extracts a page body that arrived after the deadline', async () => {
+    const app = jest
+      .fn()
+      .mockResolvedValue({ id: 1, title: 'App', description: 'desc' });
+    const page = jest.fn(
+      () =>
+        new Promise<string>((resolve) =>
+          setTimeout(() => resolve(SERVER_DATA_PAGE), DEADLINE_MS + 30),
+        ),
+    );
+    const provider = new AppStoreProvider(makeLib({ app, page }));
+
+    const result = await withinStoreDeadline(
+      () => provider.getApp('1', 'us'),
+      DEADLINE_MS,
+    );
+
+    expect(result.subtitleUnavailable).toBe(true);
+    expect(result.pageExtract).toBeUndefined();
+    expect(result.pageExtractUnavailable).toBe(true);
+  });
+
   it('starts no store call once the deadline has passed', async () => {
     const search = jest.fn().mockResolvedValue([]);
     const provider = new AppStoreProvider(makeLib({ search }));

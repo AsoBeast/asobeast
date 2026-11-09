@@ -85,7 +85,7 @@ function previewVideoUrls(shelves: Record<string, unknown>): string[] {
       }
     }
   }
-  return urls;
+  return [...new Set(urls)];
 }
 
 function appEvents(shelves: Record<string, unknown>): PageAppEvent[] {

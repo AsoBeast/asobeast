@@ -220,6 +220,21 @@ describe('parseAppStorePage', () => {
     ]);
   });
 
+  it('stores a trailer url repeated across shelves once', () => {
+    const extract = parseAppStorePage(
+      pageOf({
+        product_media_phone_: shelfOf([
+          { $kind: 'ProductMediaItem', video: { videoUrl: TRAILER_URL } },
+        ]),
+        product_media_pad_: shelfOf([
+          { $kind: 'ProductMediaItem', video: { videoUrl: TRAILER_URL } },
+        ]),
+      }),
+    );
+
+    expect(extract.previewVideoUrls).toEqual([TRAILER_URL]);
+  });
+
   it('answers an all empty extract for an empty shelf mapping', () => {
     expect(parseAppStorePage(pageOf({}))).toEqual({
       previewVideoUrls: [],
@@ -258,6 +273,27 @@ describe('parseAppStorePage', () => {
     expect(() =>
       parseAppStorePage(
         '<script type="application/json" id="serialized-server-data">{"data":[{"data":{"title":"Pokémon GO"}}]}</script>',
+      ),
+    ).toThrow('serialized server data carries no shelf mapping');
+  });
+
+  it('reads the shelf mapping from a later data entry', () => {
+    const html = `<script type="application/json" id="serialized-server-data">${JSON.stringify(
+      {
+        data: [
+          { data: { title: 'Pokémon GO' } },
+          { data: { shelfMapping: { appEvents: shelfOf([POGO_EVENT]) } } },
+        ],
+      },
+    )}</script>`;
+
+    expect(parseAppStorePage(html).appEvents).toHaveLength(1);
+  });
+
+  it('throws when the embedded data is not an object', () => {
+    expect(() =>
+      parseAppStorePage(
+        '<script type="application/json" id="serialized-server-data">[1,2]</script>',
       ),
     ).toThrow('serialized server data carries no shelf mapping');
   });
