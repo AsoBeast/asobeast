@@ -223,15 +223,16 @@ describe('createOpenAiClient', () => {
     expect(sdkOptions().timeout).toBeLessThan(120_000);
   });
 
-  it('gives a queued call long enough to spend its whole output ceiling', async () => {
+  it('gives a queued call one long attempt and leaves retries to its job', async () => {
     mockCreate.mockResolvedValue(stop('{"ok":true}'));
 
     await build().structured({ ...request, background: true });
 
     const [[, options]] = mockCreate.mock.calls as Array<
-      [unknown, { timeout?: number }]
+      [unknown, { timeout?: number; maxRetries?: number }]
     >;
     expect(options.timeout).toBeGreaterThan(sdkOptions().timeout ?? 0);
+    expect(options.maxRetries).toBe(0);
   });
 
   it('rejects a refusal', async () => {

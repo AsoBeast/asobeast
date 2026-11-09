@@ -211,8 +211,12 @@ const withoutSecret = (
 };
 
 const REQUEST_TIMEOUT_MS = 60_000;
-const BACKGROUND_REQUEST_TIMEOUT_MS = 180_000;
+export const BACKGROUND_REQUEST_TIMEOUT_MS = 180_000;
 const MAX_RETRIES = 2;
+const BACKGROUND_REQUEST = {
+  timeout: BACKGROUND_REQUEST_TIMEOUT_MS,
+  maxRetries: 0,
+} as const;
 const WITHOUT_OPENAI_ACCOUNT = { organization: null, project: null } as const;
 
 const toContentPart = (
@@ -276,7 +280,7 @@ class OpenAiClient implements AiClient {
             },
           },
         },
-        request.background ? { timeout: BACKGROUND_REQUEST_TIMEOUT_MS } : {},
+        request.background ? BACKGROUND_REQUEST : {},
       );
     } catch (error) {
       throw withoutSecret(
