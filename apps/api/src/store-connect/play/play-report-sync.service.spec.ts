@@ -20,6 +20,7 @@ import {
   PLAY_PARTIAL_SYNC,
   PlayReportSync,
 } from './play-report-sync.service';
+import { PLAY_REPORT_PARSER_VERSION } from './play-store-performance';
 
 const PACKAGE = 'com.example.habits';
 const NOW = new Date('2026-10-05T03:00:00.000Z');
@@ -139,7 +140,7 @@ function harness(objects: GcsObject[]) {
     workspace as unknown as WorkspaceContext,
     connections as unknown as StoreConnectionService,
   );
-  return { service, prisma, tx, api, connections };
+  return { service, prisma, tx, api, connections, instances };
 }
 
 const twoMonths = [
@@ -160,6 +161,21 @@ describe('importedMonths', () => {
 });
 
 describe('PlayReportSync', () => {
+  it('keys an applied file by its name, generation and the parser version', async () => {
+    const { service, instances } = harness(twoMonths);
+
+    await service.run(NOW);
+
+    expect([...instances.keys()]).toEqual(
+      twoMonths
+        .slice(0, 4)
+        .map(
+          (each) =>
+            `${each.name}#${each.generation}#parser-${PLAY_REPORT_PARSER_VERSION}`,
+        ),
+    );
+  });
+
   it('imports the two months of files', async () => {
     const { service, api } = harness(twoMonths);
 

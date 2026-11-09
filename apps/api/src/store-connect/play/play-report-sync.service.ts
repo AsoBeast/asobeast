@@ -29,6 +29,7 @@ import {
   pivotCountryFile,
   pivotTrafficFile,
   PlayHeaderError,
+  PLAY_REPORT_PARSER_VERSION,
   searchTermsOf,
   type SearchTermRow,
 } from './play-store-performance';
@@ -158,7 +159,7 @@ function monthRange(month: string): { gte: Date; lt: Date } {
 }
 
 const remoteIdOf = (object: GcsObject): string =>
-  `${object.name}#${object.generation}`;
+  `${object.name}#${object.generation}#parser-${PLAY_REPORT_PARSER_VERSION}`;
 
 const processedOn = (object: GcsObject): string => {
   const updated = new Date(object.updated);

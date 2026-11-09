@@ -22,6 +22,8 @@ const TRAFFIC_COLUMNS = [
 const SEARCH_TERM_COLUMN = 'Search term';
 export const MAX_TERM_CHARS = 200;
 
+export const PLAY_REPORT_PARSER_VERSION = 2;
+
 const storableTerm = (raw: string): string =>
   [
     ...raw
