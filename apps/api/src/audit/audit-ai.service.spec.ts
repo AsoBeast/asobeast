@@ -82,6 +82,7 @@ describe('AuditAiService', () => {
           system: string;
           schema: { name: string; schema: unknown };
           content: unknown[];
+          background?: boolean;
         },
       ]
     >;
@@ -91,6 +92,7 @@ describe('AuditAiService', () => {
       schema: CREATIVE_OBSERVATIONS_JSON_SCHEMA,
     });
     expect(request.content.length).toBeGreaterThan(0);
+    expect(request.background).toBe(true);
     expect(observations.screenshots).toHaveLength(1);
     expect(observations.icon?.similarCompetitorPosition).toBe(1);
   });

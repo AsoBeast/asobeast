@@ -1,9 +1,11 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { buildAi } from '../ai/ai-gateway.fixture';
 import { AiGateway } from '../ai/ai-gateway.service';
+import { AiStructuredRequest } from '../ai/openai.client';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MetadataAssistantService } from './metadata-assistant.service';
+import { SYSTEM_PROMPT } from './metadata-drafts';
 import { MetadataService } from './metadata.service';
 
 const gateway = (ai: ReturnType<typeof buildAi>) => ai as unknown as AiGateway;
@@ -109,10 +111,18 @@ describe('MetadataAssistantService', () => {
       appStoreService(spend).generate('app-1', {}, 'usr_1'),
     ).rejects.toThrow('stop');
     expect(spend).toHaveBeenCalledTimes(1);
-    expect(spend).toHaveBeenCalledWith(
-      { feature: 'metadataDrafts', appId: 'app-1', userId: 'usr_1' },
-      expect.anything(),
-    );
+    const [[call, request]] = spend.mock.calls as Array<
+      [unknown, AiStructuredRequest]
+    >;
+    expect(call).toEqual({
+      feature: 'metadataDrafts',
+      appId: 'app-1',
+      userId: 'usr_1',
+    });
+    expect(request.system).toBe(SYSTEM_PROMPT);
+    expect(request.content.map((part) => part.type)).toEqual(['text']);
+    expect(request.schema.name).toEqual(expect.any(String));
+    expect(request.background).toBeUndefined();
   });
 
   it('drafts from the coverage of the home listing only', async () => {

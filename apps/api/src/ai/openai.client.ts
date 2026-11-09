@@ -40,6 +40,7 @@ export interface AiStructuredRequest {
   system: string;
   content: AiContentPart[];
   schema: AiSchema;
+  background?: boolean;
 }
 
 export interface AiTokenUsage {
@@ -209,7 +210,8 @@ const withoutSecret = (
     : new AiRequestError(message, failure.retryable);
 };
 
-const REQUEST_TIMEOUT_MS = 180_000;
+const REQUEST_TIMEOUT_MS = 60_000;
+const BACKGROUND_REQUEST_TIMEOUT_MS = 180_000;
 const MAX_RETRIES = 2;
 const WITHOUT_OPENAI_ACCOUNT = { organization: null, project: null } as const;
 
@@ -260,19 +262,22 @@ class OpenAiClient implements AiClient {
       { role: 'user', content: request.content.map(toContentPart) },
     ];
     try {
-      return await this.openai.chat.completions.create({
-        model: this.model,
-        messages,
-        max_completion_tokens: this.settings.maxOutputTokens,
-        response_format: {
-          type: 'json_schema',
-          json_schema: {
-            name: request.schema.name,
-            schema: request.schema.schema,
-            strict: true,
+      return await this.openai.chat.completions.create(
+        {
+          model: this.model,
+          messages,
+          max_completion_tokens: this.settings.maxOutputTokens,
+          response_format: {
+            type: 'json_schema',
+            json_schema: {
+              name: request.schema.name,
+              schema: request.schema.schema,
+              strict: true,
+            },
           },
         },
-      });
+        request.background ? { timeout: BACKGROUND_REQUEST_TIMEOUT_MS } : {},
+      );
     } catch (error) {
       throw withoutSecret(
         error instanceof SyntaxError

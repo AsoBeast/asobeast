@@ -77,6 +77,7 @@ export class AuditAiService {
         name: 'creative_observations',
         schema: CREATIVE_OBSERVATIONS_JSON_SCHEMA,
       },
+      background: true,
     });
     return parseObservations(output, {
       icon: inputs.iconUrl !== null,

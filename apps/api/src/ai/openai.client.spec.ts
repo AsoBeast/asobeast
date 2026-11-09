@@ -211,6 +211,29 @@ describe('createOpenAiClient', () => {
     expect(payload.max_completion_tokens).toBe(8192);
   });
 
+  it('waits the client timeout for a call someone is waiting on', async () => {
+    mockCreate.mockResolvedValue(stop('{"ok":true}'));
+
+    await build().structured(request);
+
+    const [[, options]] = mockCreate.mock.calls as Array<
+      [unknown, { timeout?: number }]
+    >;
+    expect(options.timeout).toBeUndefined();
+    expect(sdkOptions().timeout).toBeLessThan(120_000);
+  });
+
+  it('gives a queued call long enough to spend its whole output ceiling', async () => {
+    mockCreate.mockResolvedValue(stop('{"ok":true}'));
+
+    await build().structured({ ...request, background: true });
+
+    const [[, options]] = mockCreate.mock.calls as Array<
+      [unknown, { timeout?: number }]
+    >;
+    expect(options.timeout).toBeGreaterThan(sdkOptions().timeout ?? 0);
+  });
+
   it('rejects a refusal', async () => {
     mockCreate.mockResolvedValue(stop(null, 'not allowed'));
     await expect(build().structured(request)).rejects.toBeInstanceOf(
