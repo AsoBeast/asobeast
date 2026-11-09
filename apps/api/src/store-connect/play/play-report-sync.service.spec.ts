@@ -306,6 +306,12 @@ describe('PlayReportSync', () => {
           visitors: 10,
           acquisitions: 1,
         }),
+        expect.objectContaining({
+          term: 'daily habit app',
+          normalized: 'daily habit app',
+          visitors: 25,
+          acquisitions: 4,
+        }),
       ],
     });
   });

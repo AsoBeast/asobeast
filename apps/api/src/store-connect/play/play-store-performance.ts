@@ -35,8 +35,10 @@ const storableTerm = (raw: string): string =>
 export const PLAY_TRAFFIC_SOURCES: Record<string, StoreFunnelSource> = {
   'google play search': 'search',
   'google play explore': 'browse',
+  'ads and referrals': 'referrer',
   'third-party referrers': 'referrer',
   'third party referrers': 'referrer',
+  'third-party referrals': 'referrer',
 };
 
 export interface SearchTermRow {
@@ -256,13 +258,17 @@ export function pivotTrafficFile(
   );
 }
 
+const TERM_SOURCES: readonly StoreFunnelSource[] = ['search', 'browse'];
+
 export function searchTermsOf(rows: string[][]): SearchTermRow[] {
   const [header, ...lines] = rows;
   if (!header) return [];
   const cell = reader(header, TRAFFIC_COLUMNS);
   const byTerm = new Map<string, SearchTermRow>();
   for (const cells of lines) {
-    if (playSourceOf(cell(cells, 'Traffic source')) !== 'search') continue;
+    if (!TERM_SOURCES.includes(playSourceOf(cell(cells, 'Traffic source')))) {
+      continue;
+    }
     const term = storableTerm(cell(cells, SEARCH_TERM_COLUMN));
     const counts = countsOf(cells, cell);
     if (!counts || !term || UNNAMED_TERMS.has(normalizeText(term))) continue;
