@@ -86,6 +86,7 @@ export interface StoreFunnelReport {
   points: StoreFunnelPoint[];
   windows: StoreFunnelWindow[];
   pages?: StoreFunnelPage[];
+  noSearchTermsMonth?: string;
 }
 
 const round = (value: number, places: number): number => {

@@ -43,11 +43,18 @@ function build(overrides: Partial<Setup> = {}) {
           },
         },
       ]),
-      aggregate: jest.fn().mockResolvedValue({
-        _min: { date: new Date('2026-08-01T00:00:00.000Z') },
-        _max: { date: new Date('2026-10-15T00:00:00.000Z') },
-      }),
+      aggregate: jest.fn((args: { where?: { territory?: string } }) =>
+        Promise.resolve(
+          args.where?.territory === 'all'
+            ? { _max: { date: new Date('2026-09-15T00:00:00.000Z') } }
+            : {
+                _min: { date: new Date('2026-08-01T00:00:00.000Z') },
+                _max: { date: new Date('2026-10-15T00:00:00.000Z') },
+              },
+        ),
+      ),
     },
+    storeFunnelSearchTerm: { count: jest.fn().mockResolvedValue(0) },
   };
   const service = new StoreFunnelService(
     prisma as unknown as PrismaService,
@@ -141,6 +148,49 @@ describe('StoreFunnelService', () => {
       'measured',
       'measured',
     ]);
+  });
+
+  it('names the newest imported month when its play report named no search terms', async () => {
+    const { service, prisma } = build({
+      app: { id: 'app_1', store: 'GOOGLE_PLAY', isCompetitor: false },
+    });
+
+    const report = await service.report('app_1', { days: 90 }, NOW);
+
+    expect(prisma.storeFunnelDay.aggregate).toHaveBeenCalledWith({
+      where: { appId: 'app_1', territory: 'all' },
+      _max: { date: true },
+    });
+    expect(prisma.storeFunnelSearchTerm.count).toHaveBeenCalledWith({
+      where: { appId: 'app_1', month: new Date('2026-09-01T00:00:00.000Z') },
+    });
+    expect(report.noSearchTermsMonth).toBe('2026-09-01');
+  });
+
+  it('leaves the month out when the newest imported month named a term', async () => {
+    const { service, prisma } = build({
+      app: { id: 'app_1', store: 'GOOGLE_PLAY', isCompetitor: false },
+    });
+    prisma.storeFunnelSearchTerm.count.mockResolvedValue(3);
+
+    const report = await service.report('app_1', { days: 90 }, NOW);
+
+    expect(report.noSearchTermsMonth).toBeUndefined();
+  });
+
+  it('leaves the month out when no traffic file was imported at all', async () => {
+    const { service, prisma } = build({
+      app: { id: 'app_1', store: 'GOOGLE_PLAY', isCompetitor: false },
+    });
+    prisma.storeFunnelDay.aggregate.mockResolvedValue({
+      _min: { date: null },
+      _max: { date: null },
+    });
+
+    const report = await service.report('app_1', { days: 90 }, NOW);
+
+    expect(report.noSearchTermsMonth).toBeUndefined();
+    expect(prisma.storeFunnelSearchTerm.count).not.toHaveBeenCalled();
   });
 
   it('throws 404 for an unknown app', async () => {

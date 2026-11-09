@@ -16,6 +16,7 @@ import {
   funnelPages,
   funnelScope,
   measureStoreFunnel,
+  PLAY_ALL_MARKETS,
   type FunnelScope,
   shiftDate,
   type FunnelDayRow,
@@ -23,6 +24,8 @@ import {
 } from './store-funnel';
 
 const dateOf = (key: string): Date => new Date(`${key}T00:00:00.000Z`);
+
+const monthKeyOf = (date: Date): string => `${toDateKey(date).slice(0, 7)}-01`;
 
 export interface StoreFunnelQuery {
   country?: string;
@@ -83,10 +86,11 @@ export class StoreFunnelService {
     }
     const today = startOfUtcDay(now);
     const from = addDays(today, 1 - Math.max(days, FUNNEL_LOOKBACK_DAYS));
-    const [rows, range, pageRows] = await Promise.all([
+    const [rows, range, pageRows, termsMonth] = await Promise.all([
       this.rows(app.id, from, funnelScope(app.store, country)),
       this.range(appId),
       this.pageRows(appId, today, country),
+      this.noSearchTermsMonth(app),
     ]);
     return {
       ...empty,
@@ -100,7 +104,25 @@ export class StoreFunnelService {
         ...range,
       }),
       ...(pageRows.length > 0 ? { pages: funnelPages(pageRows) } : {}),
+      ...(termsMonth ? { noSearchTermsMonth: termsMonth } : {}),
     };
+  }
+
+  private async noSearchTermsMonth(app: {
+    id: string;
+    store: Store;
+  }): Promise<string | null> {
+    if (app.store !== 'GOOGLE_PLAY') return null;
+    const latest = await this.prisma.storeFunnelDay.aggregate({
+      where: { appId: app.id, territory: PLAY_ALL_MARKETS },
+      _max: { date: true },
+    });
+    if (!latest._max.date) return null;
+    const month = monthKeyOf(latest._max.date);
+    const named = await this.prisma.storeFunnelSearchTerm.count({
+      where: { appId: app.id, month: dateOf(month) },
+    });
+    return named === 0 ? month : null;
   }
 
   async rows(
