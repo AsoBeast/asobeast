@@ -145,3 +145,51 @@ export function difficultySignalLines(signals: ScoreSignals | null): string[] {
     ...lowerConfidenceLines("difficulty", signals),
   ];
 }
+
+export const REVEAL_WORDS = {
+  suggested: "Suggested",
+  full: "Full phrase",
+  absent: "Not suggested",
+  dash: "A dash",
+} as const;
+
+export function revealLabel(signals: ScoreSignals | null): string | null {
+  switch (signals?.suggestReach) {
+    case "hit": {
+      const typed = signals.suggestPrefixLength;
+      const position = signals.suggestPosition;
+      if (typed === null || position === null) {
+        return REVEAL_WORDS.suggested;
+      }
+      const unit = typed === 1 ? "letter" : "letters";
+      return `${typed} ${unit} · #${position}`;
+    }
+    case "listed":
+      return REVEAL_WORDS.full;
+    case "absent":
+      return REVEAL_WORDS.absent;
+    default:
+      return null;
+  }
+}
+
+const REVEAL_LISTED_RANK = 1_000_000_000;
+const REVEAL_ABSENT_RANK = 2_000_000_000;
+const REVEAL_UNKNOWN_PART = 1_000;
+
+export function revealRank(signals: ScoreSignals | null): number | null {
+  switch (signals?.suggestReach) {
+    case "hit":
+      return (
+        (signals.suggestPrefixLength ?? REVEAL_UNKNOWN_PART) *
+          REVEAL_UNKNOWN_PART +
+        (signals.suggestPosition ?? REVEAL_UNKNOWN_PART)
+      );
+    case "listed":
+      return REVEAL_LISTED_RANK;
+    case "absent":
+      return REVEAL_ABSENT_RANK;
+    default:
+      return null;
+  }
+}

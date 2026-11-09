@@ -39,6 +39,7 @@ import {
 import {
   addedColumn,
   competitorsColumn,
+  revealColumn,
   insightsColumn,
 } from "./keyword-fact-columns";
 import {
@@ -121,6 +122,7 @@ export function keywordColumns({
     deltaColumn(),
     volatilityColumn(),
     competitorsColumn(),
+    revealColumn(),
     actionsColumn({ appId, onOpenSerp }),
     ...filterColumns(),
   ]);

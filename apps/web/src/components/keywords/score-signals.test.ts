@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { ScoreSignals } from "@asobeast/shared";
+import { revealColumn } from "./keyword-fact-columns";
 import {
   difficultySignalLines,
   lowerConfidenceLines,
   popularitySignalLines,
+  revealLabel,
+  revealRank,
 } from "./score-signals";
 
 function signals(overrides: Partial<ScoreSignals> = {}): ScoreSignals {
@@ -318,5 +321,78 @@ describe("lower confidence on a floor answer", () => {
       ),
     ).toEqual([]);
     expect(lowerConfidenceLines("opportunity", null)).toEqual([]);
+  });
+});
+
+describe("revealLabel", () => {
+  it.each([
+    [signals({ suggestPrefixLength: 3, suggestPosition: 2 }), "3 letters · #2"],
+    [signals({ suggestPrefixLength: 1, suggestPosition: 1 }), "1 letter · #1"],
+    [signals({ suggestPrefixLength: null, suggestPosition: 2 }), "Suggested"],
+    [signals({ suggestPrefixLength: 2, suggestPosition: null }), "Suggested"],
+    [signals({ suggestReach: "listed" }), "Full phrase"],
+    [signals({ suggestReach: "absent" }), "Not suggested"],
+    [signals({ suggestReach: "unavailable" }), null],
+    [null, null],
+  ])("labels %# as %s", (value, expected) => {
+    expect(revealLabel(value)).toBe(expected);
+  });
+});
+
+describe("revealRank", () => {
+  it("is null for a dash and orders the reveal values from the earliest to the latest", () => {
+    const ordered = [
+      signals({ suggestPrefixLength: 1, suggestPosition: 5 }),
+      signals({ suggestPrefixLength: 2, suggestPosition: 1 }),
+      signals({ suggestPrefixLength: 2, suggestPosition: 4 }),
+      signals({ suggestPrefixLength: null, suggestPosition: null }),
+      signals({ suggestReach: "listed" }),
+      signals({ suggestReach: "absent" }),
+    ];
+    const ranks = ordered.map((value) => revealRank(value));
+    expect(ranks.every((rank) => rank !== null)).toBe(true);
+    expect(ranks).toEqual([...ranks].sort((a, b) => (a ?? 0) - (b ?? 0)));
+    expect(revealRank(signals({ suggestReach: "unavailable" }))).toBeNull();
+    expect(revealRank(null)).toBeNull();
+  });
+});
+
+describe("reveal column", () => {
+  it("is registered hidden by default and reads the reveal rank of a row", () => {
+    const column = revealColumn();
+    expect(column.id).toBe("reveal");
+    expect(column.meta).toMatchObject({ hiddenByDefault: true });
+    const accessor = (
+      column as {
+        accessorFn: (row: {
+          scoreSignals: ScoreSignals | null;
+        }) => number | undefined;
+      }
+    ).accessorFn;
+    expect(
+      accessor({ scoreSignals: signals({ suggestReach: "listed" }) }),
+    ).toBe(revealRank(signals({ suggestReach: "listed" })) ?? undefined);
+    expect(accessor({ scoreSignals: null })).toBeUndefined();
+  });
+
+  it("sorts dashes last through the table's undefined handling, as every sortable keyword column does", () => {
+    const column = revealColumn() as {
+      sortFn?: unknown;
+      sortUndefined?: unknown;
+    };
+    expect(column.sortFn).toBe("basic");
+    expect(column.sortUndefined).toBe("last");
+    const accessor = (
+      column as {
+        accessorFn: (row: {
+          scoreSignals: ScoreSignals | null;
+        }) => number | undefined;
+      }
+    ).accessorFn;
+    const dashes = [
+      accessor({ scoreSignals: signals({ suggestReach: "unavailable" }) }),
+      accessor({ scoreSignals: null }),
+    ];
+    expect(dashes).toEqual([undefined, undefined]);
   });
 });

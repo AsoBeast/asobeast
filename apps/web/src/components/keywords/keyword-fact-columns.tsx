@@ -6,7 +6,8 @@ import { nullsLast } from "@/lib/table/sorting";
 import { insightsOf } from "@/lib/keyword-insights";
 import { InsightsCell } from "./InsightsCell";
 import { InsightsTip } from "./InsightsTip";
-import { AddedCell, CompetitorsInTop10Cell } from "./keyword-cells";
+import { AddedCell, CompetitorsInTop10Cell, RevealCell } from "./keyword-cells";
+import { REVEAL_WORDS, revealLabel, revealRank } from "./score-signals";
 import {
   keywordColumnHelper as columnHelper,
   SORTABLE,
@@ -21,6 +22,30 @@ export function addedColumn() {
     header: ({ column }) => <SortableHeader column={column} label="Added" />,
     cell: ({ row }) => <AddedCell trackedAt={row.original.trackedAt ?? null} />,
   });
+}
+
+export function revealColumn() {
+  return columnHelper.accessor(
+    (row) => nullsLast(revealRank(row.scoreSignals ?? null)),
+    {
+      id: "reveal",
+      meta: { label: "Reveal", hiddenByDefault: true },
+      ...SORTABLE,
+      header: ({ column }) => (
+        <span className="inline-flex items-center gap-1">
+          <SortableHeader column={column} label="Reveal" />
+          <InfoTip
+            label="About the reveal"
+            title="When the store suggests the keyword"
+            summary={`How many letters a shopper types before the store suggests this keyword, and at which position of the suggestions. ${REVEAL_WORDS.full} means the store only suggests it once the whole phrase is typed, and ${REVEAL_WORDS.absent} means it never does. ${REVEAL_WORDS.dash} means the store could not answer.`}
+          />
+        </span>
+      ),
+      cell: ({ row }) => (
+        <RevealCell label={revealLabel(row.original.scoreSignals ?? null)} />
+      ),
+    },
+  );
 }
 
 export function competitorsColumn() {
