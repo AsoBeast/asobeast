@@ -37,7 +37,7 @@ Closes #
 - [ ] A `fix` has a regression test that failed before the fix
 - [ ] Nothing on the HTTP contract, `@asobeast/shared` contract types or MCP tools is removed, renamed or narrowed
 - [ ] A visible `feat` has its What's New line
-- [ ] `/docs`, `README.md` and `AGENTS.md` updated where behaviour, configuration or the API changed
+- [ ] `/docs`, `README.md` and the `AGENTS.md` of each touched area updated where behaviour, configuration or the API changed
 - [ ] No comments in changed code, no `any` outside the provider boundary
 
 </details>

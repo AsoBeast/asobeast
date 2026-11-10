@@ -1,0 +1,5 @@
+# Workspace checklist rules
+
+### Domain rule 27: The workspace checklist is derived on read; the workspace stores a goal and a dismissal
+
+`GET /workspace/checklist` (`apps/api/src/checklist/`) answers the items of `buildChecklist` in `@asobeast/shared` from one workspace scoped transaction of indexed reads (an app, the markets of an app's active keywords, a competitor, a saved keyword field, a deliverable email alert or an active webhook, a used API token, an active console connection, a marked reply), never from a stored done flag, and omits an item that cannot be done (the keyword field without an App Store app, the console without `STORE_CONNECT_ENCRYPTION_KEY`, a reply before a review is stored) instead of locking it. `Workspace.checklistGoal` (text validated in code against `WORKSPACE_GOALS`, an unknown stored value reads as no goal) and `Workspace.checklistDismissedAt` are the only stored state and are written by `PATCH /workspace/checklist`, a plain write: 402 without a plan, 403 for a read token, not `@SessionOnly()`, not an MCP write tool. Whether the pill is collapsed is per viewer and lives in the browser (frontend rule 3).
