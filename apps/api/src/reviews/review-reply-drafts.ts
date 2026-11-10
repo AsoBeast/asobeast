@@ -7,8 +7,6 @@ import {
 } from '@asobeast/shared';
 import { storeName } from '../alerts/report/storefront';
 
-export const DRAFT_MAX_OUTPUT_TOKENS = 2048;
-
 const RELEASE_NOTES_MAX = 1000;
 
 const SENTENCE_ENDS = new Set(['.', '!', '?']);

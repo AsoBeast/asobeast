@@ -5,12 +5,14 @@ import { AnalyticsModule } from '../analytics/analytics.module';
 import { KeywordsModule } from '../keywords/keywords.module';
 import { QUEUES } from '../jobs/jobs.types';
 import { ScreenshotsModule } from '../screenshots/screenshots.module';
+import { StoreProvidersModule } from '../store-providers/store-providers.module';
 import { AuditAiRunsService } from './audit-ai-runs.service';
 import { AuditAiService } from './audit-ai.service';
 import { AuditContextLoader } from './audit-context.loader';
 import { AuditCreativeWorker } from './audit-creative.worker';
 import { AuditController } from './audit.controller';
 import { AuditService } from './audit.service';
+import { CreativeImages } from './creative/creative-images';
 
 @Module({
   imports: [
@@ -18,6 +20,7 @@ import { AuditService } from './audit.service';
     AnalyticsModule,
     KeywordsModule,
     ScreenshotsModule,
+    StoreProvidersModule,
     BullModule.registerQueue({ name: QUEUES.AI }),
   ],
   controllers: [AuditController],
@@ -27,6 +30,7 @@ import { AuditService } from './audit.service';
     AuditAiService,
     AuditAiRunsService,
     AuditCreativeWorker,
+    CreativeImages,
   ],
   exports: [AuditService],
 })
