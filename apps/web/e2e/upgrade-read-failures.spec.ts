@@ -107,6 +107,28 @@ test.describe("the billing wall when a read is lost", () => {
     expect(reads()).toBe(2);
   });
 
+  test("names the lost plan while the prices are still loading", async ({
+    page,
+  }) => {
+    await openWall(page);
+    await page.route("**/api/backend/auth/plan", (route) =>
+      route.abort("failed"),
+    );
+    const catalog = await holdRequest(
+      page,
+      /\/api\/backend\/billing\/catalog$/,
+      "GET",
+      (route) => route.fulfill(fulfillJson(200, CATALOG)),
+    );
+
+    await page.goto("/upgrade");
+
+    await expect(
+      page.getByRole("alert").filter({ hasText: PLAN_UNREACHABLE }),
+    ).toBeVisible();
+    catalog.release();
+  });
+
   test("names the lost prices instead of an unconfigured checkout", async ({
     page,
   }) => {

@@ -18,6 +18,14 @@ function firstLoad(read: RetryableRead & { isPending: boolean }): boolean {
   return read.isPending && !failedRead(read);
 }
 
+function CheckingSession() {
+  return (
+    <div className="flex justify-center py-12">
+      <SessionCheck />
+    </div>
+  );
+}
+
 export function UpgradeContent() {
   const { user, status, isLoading, isMember, authenticated } = useAuth();
   const signedOut = useSignedOutRedirect(true);
@@ -31,23 +39,16 @@ export function UpgradeContent() {
   });
 
   if (isMember) return <MemberBilling plan={planRead.data} />;
-  if (
-    isLoading ||
-    signedOut ||
-    (authenticated && (firstLoad(planRead) || firstLoad(catalogRead)))
-  ) {
-    return (
-      <div className="flex justify-center py-12">
-        <SessionCheck />
-      </div>
-    );
-  }
+  if (isLoading || signedOut) return <CheckingSession />;
   if (failedRead(planRead)) {
     return (
       <div className="flex justify-center py-12">
         <InlineQueryError message={PLAN_UNREACHABLE} read={planRead} />
       </div>
     );
+  }
+  if (authenticated && (firstLoad(planRead) || firstLoad(catalogRead))) {
+    return <CheckingSession />;
   }
 
   return (
