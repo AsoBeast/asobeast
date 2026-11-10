@@ -175,15 +175,20 @@ export function revealLabel(signals: ScoreSignals | null): string | null {
 
 const REVEAL_LISTED_RANK = 1_000_000_000;
 const REVEAL_ABSENT_RANK = 2_000_000_000;
-const REVEAL_UNKNOWN_PART = 1_000;
+// A position is always below this span, so a shorter prefix sorts first
+// whatever its position. An unknown prefix sorts after every real prefix
+// length, and an unknown position after every known position.
+const REVEAL_POSITION_SPAN = 1_000_000;
+const REVEAL_UNKNOWN_PREFIX = 100;
+const REVEAL_UNKNOWN_POSITION = REVEAL_POSITION_SPAN - 1;
 
 export function revealRank(signals: ScoreSignals | null): number | null {
   switch (signals?.suggestReach) {
     case "hit":
       return (
-        (signals.suggestPrefixLength ?? REVEAL_UNKNOWN_PART) *
-          REVEAL_UNKNOWN_PART +
-        (signals.suggestPosition ?? REVEAL_UNKNOWN_PART)
+        (signals.suggestPrefixLength ?? REVEAL_UNKNOWN_PREFIX) *
+          REVEAL_POSITION_SPAN +
+        (signals.suggestPosition ?? REVEAL_UNKNOWN_POSITION)
       );
     case "listed":
       return REVEAL_LISTED_RANK;

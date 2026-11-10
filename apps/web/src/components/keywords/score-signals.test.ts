@@ -355,6 +355,18 @@ describe("revealRank", () => {
     expect(revealRank(signals({ suggestReach: "unavailable" }))).toBeNull();
     expect(revealRank(null)).toBeNull();
   });
+
+  it("orders a shorter prefix first even when its position is much later", () => {
+    const oneLetterLatePosition = revealRank(
+      signals({ suggestPrefixLength: 1, suggestPosition: 1002 }),
+    );
+    const twoLettersFirstPosition = revealRank(
+      signals({ suggestPrefixLength: 2, suggestPosition: 1 }),
+    );
+    expect(oneLetterLatePosition).not.toBeNull();
+    expect(twoLettersFirstPosition).not.toBeNull();
+    expect(oneLetterLatePosition!).toBeLessThan(twoLettersFirstPosition!);
+  });
 });
 
 describe("reveal column", () => {
@@ -363,7 +375,7 @@ describe("reveal column", () => {
     expect(column.id).toBe("reveal");
     expect(column.meta).toMatchObject({ hiddenByDefault: true });
     const accessor = (
-      column as {
+      column as unknown as {
         accessorFn: (row: {
           scoreSignals: ScoreSignals | null;
         }) => number | undefined;

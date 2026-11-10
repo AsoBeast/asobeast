@@ -37,7 +37,7 @@ export function revealColumn() {
           <InfoTip
             label="About the reveal"
             title="When the store suggests the keyword"
-            summary={`How many letters a shopper types before the store suggests this keyword, and at which position of the suggestions. ${REVEAL_WORDS.full} means the store only suggests it once the whole phrase is typed, and ${REVEAL_WORDS.absent} means it never does. ${REVEAL_WORDS.dash} means the store could not answer.`}
+            summary={`How many letters a shopper types before the store suggests this keyword, and at which position of the suggestions. ${REVEAL_WORDS.full} means the store only suggests it once the whole phrase is typed, and ${REVEAL_WORDS.absent} means it never does. ${REVEAL_WORDS.dash} means the store could not answer, or the keyword has no stored score yet.`}
           />
         </span>
       ),
