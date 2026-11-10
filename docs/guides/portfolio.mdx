@@ -15,42 +15,55 @@ The dashboard is the first page after you sign in. It leads with what needs you 
 
 Under the title, one line counts your apps, tracked keywords and competitors. A second line says when your portfolio was last collected, and whether the daily run is in progress, complete or delayed. For the [platform operator](/security/admin-surfaces#views-only-the-operator-sees) it also shows what share of the daily request budget the tracking uses, linked to settings. What spends that budget is explained in [Track keywords](/guides/track-keywords).
 
-### The four tiles
+### The range and the four tiles
 
-| Tile | What it measures |
-| --- | --- |
-| Keywords in top 10 | Tracked keywords ranking in the top 10 across every app, with the change against seven days earlier and the number tracked |
-| Keyword movement | Keywords that climbed and fell over the last seven days, and how many entered the results or dropped out of them |
-| Open actions | Open Action Center items, with the critical and high counts |
-| Changes this week | Listing changes over the last seven days, split into your apps and your competitors. Edits found on one UTC day count as one change per app, the same unit as the changes page |
+The range beside **Import app** sets how far back the dashboard looks: 7, 30 or 90 days. The sentence under the title, the changes on the tiles, the charts and the keyword movers all follow it.
 
-The tiles add counts across apps and never average visibility, ratings or audit scores, because scores from different stores are not comparable.
+| Tile | What it measures | Its chart |
+| --- | --- | --- |
+| Visibility | Every tracked keyword of every app as one figure, weighted the way an app's own visibility is, with the change over the range | The figure for each day against the same days of the period before |
+| Keywords in top 10 | Tracked keywords ranking in the top 10 across every app, with the change over the range and the number tracked | The count for each day against the period before |
+| Moved in the range | Keywords that climbed and fell between the day the range began and the latest check, and how many started ranking or dropped out of the results | How many keywords climbed and fell on each day, against each app's previous checked day |
+| Open actions | Open Action Center items, with the critical count and the split by priority | Actions opened and closed on each day |
 
-### Top actions and keyword movers
+Select a tile to draw its chart under the strip. Until the daily run has finished the newest day of a line is a dashed segment, because its checks are not all in yet, and a day without a check is a gap. A change reads as missing until an app was checked on the day the range began.
 
-Top actions lists the highest impact open actions with the app each one belongs to, and each row opens that action in the Action Center. See [Work the Action Center](/guides/action-center).
+Visibility takes each app at its own latest checked day, so a store that was checked later does not pull the figure down. Popularity is scored per store, so read the figure as the trend of your own portfolio, not as a number to compare with another workspace. The other tiles add counts and never average ratings or audit scores.
 
-Keyword movers lists the largest position changes of the week across every app. Each row names its app and storefront and opens that keyword on the app's rankings. See [Read rankings](/guides/read-rankings).
+### Keyword movers and do next
+
+Keyword movers lists the largest position changes of the range across every app, with keywords that started ranking or dropped out first. Each row names its storefront and opens that keyword on the app's rankings. See [Read rankings](/guides/read-rankings).
+
+Do next lists the highest impact open actions with the app each one belongs to, and each row opens that action in the Action Center. See [Work the Action Center](/guides/action-center).
 
 ### The app list
 
-Each card shows visibility with its seven day change, a visibility sparkline, a bar of rank bands with the number of keywords in the top 10, the rating and the audit score with a grade word, open actions and new low ratings, the negative reviews written in the last seven days. How they are counted is explained in [Sync reviews and mine keyword ideas](/guides/reviews). A value the app does not have yet is left out rather than shown as zero, and an app whose first positions are still being collected shows only that. What unranked means is explained in [Positions](/concepts/positions), and audit scores in [Run an ASO audit](/guides/aso-audit).
+The list opens as a table with one row per app: a trend line of its visibility over the last 30 days, visibility with its seven day change, the keywords in the top 10, how many keywords climbed and fell, the rating and the open actions with the critical count. Audit score, listing changes and the last collection day are under **Columns**. A value the app does not have yet is a dash, never a zero, and an app whose first positions are still being collected shows dashes throughout. What unranked means is explained in [Positions](/concepts/positions), and audit scores in [Run an ASO audit](/guides/aso-audit).
 
-A card also names the keyword discoveries of the app, such as **153 keyword discoveries, 28 where you already rank**, as a link to its Discovered tab. See [Discover keywords your app already ranks for](/guides/keyword-discovery).
+The cards view shows the same apps as cards, with a bar of rank bands, the audit score and new low ratings, the negative reviews written in the last seven days. How they are counted is explained in [Sync reviews and mine keyword ideas](/guides/reviews). A card also names the keyword discoveries of the app, such as **153 keyword discoveries, 28 where you already rank**, as a link to its Discovered tab. See [Discover keywords your app already ranks for](/guides/keyword-discovery).
 
 An app whose guided setup is in progress carries a chip such as **Setup 1 of 3** that opens its setup page, and a banner above the dashboard names the app you touched last with its next step, how many other apps are still in setup, and buttons to resume or dismiss. See [Complete the guided setup](/quickstart#complete-the-guided-setup).
 
-Sort the list by visibility, seven day change, keywords in the top 10, rating, open actions, name or last collected. With more than six apps a search box filters by name, store, country or group. The table view shows the same apps as rows with one column per value, and its column headers sort the same way.
+Sort the table by its column headers, or the cards by visibility, seven day change, keywords in the top 10, rating, open actions, name or last collected. With more than six apps a search box filters by name, store, country or group.
 
-The sort, the search, the view and the changes filter are kept in the page address, so a bookmark or a shared link opens the dashboard exactly as you left it.
+The chart, its range, the sort, the search, the view, the movers filter and the changes filter are kept in the page address, so a bookmark or a shared link opens the dashboard exactly as you left it.
 
 | Parameter | Values |
 | --- | --- |
+| `metric` | `visibility`, `top10`, `moved` or `actions`; absent means visibility |
+| `range` | `7`, `30` or `90`; absent means 30 |
 | `sort` | `visibility`, `change`, `top10`, `rating`, `actions`, `name`, `updated` |
 | `dir` | `asc` or `desc`; absent means the natural direction of the sort |
 | `q` | the search text |
-| `view` | `cards` or `table` |
+| `view` | `table` or `cards`; absent means the table |
+| `movers` | `all`, `up` or `down` |
 | `changes` | `all`, `yours` or `competitors` |
+
+### Listing changes and alerts
+
+Listing changes lists the newest edits to your listings and your competitors' listings, one line each, and folds a run of version updates of one app into a single line. Each row opens the app's changes page. See [Watch listing changes](/guides/listing-changes).
+
+Alerts lists the five newest events of the last seven days from the alert feed, and each row opens what it is about. See [Send alerts](/guides/alerts).
 
 ## Group linked listings
 
