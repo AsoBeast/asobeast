@@ -5,6 +5,22 @@ import type { PrismaService } from '../prisma/prisma.service';
 import { StoreFunnelService } from './store-funnel.service';
 
 const NOW = new Date('2026-10-16T12:00:00.000Z');
+const NOVEMBER_NOW = new Date('2026-11-10T12:00:00.000Z');
+
+type AggregateArgs = {
+  where?: { territory?: string; date?: { lt?: Date } };
+};
+
+const aggregateFor = (latest: Date, earlier: Date | null) =>
+  jest.fn((args: AggregateArgs) =>
+    Promise.resolve(
+      args.where?.territory === 'all' && args.where.date?.lt
+        ? { _max: { date: earlier } }
+        : args.where?.territory === 'all'
+          ? { _max: { date: latest } }
+          : { _min: { date: null }, _max: { date: null } },
+    ),
+  );
 
 interface Setup {
   app: { id: string; store: string; isCompetitor: boolean } | null;
@@ -191,6 +207,70 @@ describe('StoreFunnelService', () => {
 
     expect(report.noSearchTermsMonth).toBeUndefined();
     expect(prisma.storeFunnelSearchTerm.count).not.toHaveBeenCalled();
+  });
+
+  it('skips the month in progress when the newest complete month named a term', async () => {
+    const { service, prisma } = build({
+      app: { id: 'app_1', store: 'GOOGLE_PLAY', isCompetitor: false },
+    });
+    prisma.storeFunnelDay.aggregate = aggregateFor(
+      new Date('2026-11-09T00:00:00.000Z'),
+      new Date('2026-10-31T00:00:00.000Z'),
+    );
+    prisma.storeFunnelSearchTerm.count.mockImplementation(
+      ({ where: { month } }: { where: { month: Date } }) =>
+        Promise.resolve(
+          month.getTime() === new Date('2026-10-01T00:00:00.000Z').getTime()
+            ? 1
+            : 0,
+        ),
+    );
+
+    const report = await service.report('app_1', { days: 90 }, NOVEMBER_NOW);
+
+    expect(report.noSearchTermsMonth).toBeUndefined();
+    expect(prisma.storeFunnelSearchTerm.count).toHaveBeenCalledWith({
+      where: { appId: 'app_1', month: new Date('2026-10-01T00:00:00.000Z') },
+    });
+  });
+
+  it('names the month in progress when it is the only month imported', async () => {
+    const { service, prisma } = build({
+      app: { id: 'app_1', store: 'GOOGLE_PLAY', isCompetitor: false },
+    });
+    prisma.storeFunnelDay.aggregate = aggregateFor(
+      new Date('2026-11-05T00:00:00.000Z'),
+      null,
+    );
+
+    const report = await service.report('app_1', { days: 90 }, NOVEMBER_NOW);
+
+    expect(report.noSearchTermsMonth).toBe('2026-11-01');
+    expect(prisma.storeFunnelSearchTerm.count).toHaveBeenCalledWith({
+      where: { appId: 'app_1', month: new Date('2026-11-01T00:00:00.000Z') },
+    });
+  });
+
+  it('names the newest complete month when the month in progress has traffic rows', async () => {
+    const { service, prisma } = build({
+      app: { id: 'app_1', store: 'GOOGLE_PLAY', isCompetitor: false },
+    });
+    prisma.storeFunnelDay.aggregate = aggregateFor(
+      new Date('2026-11-09T00:00:00.000Z'),
+      new Date('2026-10-20T00:00:00.000Z'),
+    );
+
+    const report = await service.report('app_1', { days: 90 }, NOVEMBER_NOW);
+
+    expect(prisma.storeFunnelDay.aggregate).toHaveBeenCalledWith({
+      where: {
+        appId: 'app_1',
+        territory: 'all',
+        date: { lt: new Date('2026-11-01T00:00:00.000Z') },
+      },
+      _max: { date: true },
+    });
+    expect(report.noSearchTermsMonth).toBe('2026-10-01');
   });
 
   it('throws 404 for an unknown app', async () => {
