@@ -1005,6 +1005,7 @@ describe('Store report sync (e2e)', () => {
     });
     expect(terms.map((term) => [term.term, term.normalized])).toEqual([
       ['Habit  Tracker', 'habit tracker'],
+      ['daily habit app', 'daily habit app'],
       ['habit tracker', 'habit tracker'],
     ]);
     const instance = await harness.prisma.storeReportInstance.findFirstOrThrow({

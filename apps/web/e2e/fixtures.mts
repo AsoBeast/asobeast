@@ -3930,6 +3930,13 @@ DATASETS[APP_GP_POSTING_ID] = {
   detail: { ...APP_GP_DETAIL, id: APP_GP_POSTING_ID, name: "Posting Lab" },
 };
 
+export const APP_GP_NO_TERMS_ID = "app-gp-no-terms";
+
+DATASETS[APP_GP_NO_TERMS_ID] = {
+  ...DATASETS["app-gp"],
+  detail: { ...APP_GP_DETAIL, id: APP_GP_NO_TERMS_ID, name: "No Terms Lab" },
+};
+
 export const APP_IMPORT_ID = "app-import";
 
 DATASETS[APP_IMPORT_ID] = {

@@ -394,4 +394,70 @@ describe('Store funnel (e2e)', () => {
       gets: 10,
     });
   });
+
+  it('answers the month whose play report named no search terms and leaves it out once terms are named', async () => {
+    const play = await harness.prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.GOOGLE_PLAY,
+        storeAppId: 'com.example.notes',
+        country: 'us',
+        name: 'Notes',
+      },
+    });
+    const connection = await harness.prisma.storeConnection.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.GOOGLE_PLAY,
+        issuerId: 'reports@focus-123.iam.gserviceaccount.com',
+        keyId: 'a1b2c3d4e5f6',
+        keyFingerprint: '0123456789abcdef',
+        credentialCiphertext: 'v1.sealed',
+        reportAccess: 'admin',
+        bucket: 'pubsite_prod_rev_1',
+      },
+    });
+    await reportOn(connection.id, play.id);
+    const day = utcDay(10);
+    const month = `${dateKey(day).slice(0, 7)}-01`;
+    await harness.prisma.storeFunnelDay.createMany({
+      data: [
+        {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          appId: play.id,
+          date: day,
+          territory: 'all',
+          country: null,
+          sourceType: 'all',
+          pageType: 'productPage',
+          impressions: 0,
+          uniqueImpressions: 0,
+          pageViews: 500,
+          uniquePageViews: 500,
+          gets: 25,
+          uniqueGets: 25,
+          processingDate: day,
+        },
+      ],
+    });
+
+    const report = await funnel(`/apps/${play.id}/funnel?days=30`);
+    expect(report.noSearchTermsMonth).toBe(month);
+
+    await harness.prisma.storeFunnelSearchTerm.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        appId: play.id,
+        month: new Date(`${month}T00:00:00.000Z`),
+        term: 'habit tracker',
+        normalized: 'habit tracker',
+        visitors: 300,
+        acquisitions: 15,
+        generation: '1',
+      },
+    });
+
+    const named = await funnel(`/apps/${play.id}/funnel?days=30`);
+    expect(named).not.toHaveProperty('noSearchTermsMonth');
+  });
 });

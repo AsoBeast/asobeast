@@ -5,7 +5,11 @@ import { expect, test } from "./session.mts";
 import { hoverForTooltip } from "./hover.mts";
 import { hydrated } from "./hydrated.mts";
 import { seedCookies } from "./routes.mts";
-import { PL_HISTORY_COOKIE, utcDaysAgo } from "./fixtures.mts";
+import {
+  APP_GP_NO_TERMS_ID,
+  PL_HISTORY_COOKIE,
+  utcDaysAgo,
+} from "./fixtures.mts";
 import { formatDayMonth } from "../src/lib/format";
 
 test("table renders fixture keywords and distinguishes a paused row", async ({
@@ -286,6 +290,30 @@ test("a play app shows play installs per search term and sorts by them", async (
   await expect(rows.nth(1)).toContainText("lernphasen timer");
   await expect(rows.nth(2)).toContainText("pomodoro timer");
   await expect(rows.nth(-2)).toContainText("fokus app");
+});
+
+test("a dash explains the month whose play report named no search terms", async ({
+  page,
+}) => {
+  await page.goto(`/apps/${APP_GP_NO_TERMS_ID}/keywords`);
+  const table = page.getByRole("table", {
+    name: /Play installs per search term/,
+  });
+  const rows = table.getByRole("row");
+
+  await (
+    await hydrated(table.getByRole("button", { name: "About Play installs" }))
+  ).click();
+  await expect(
+    page.getByRole("dialog", { name: "Play installs" }),
+  ).toContainText("October 2026 report named no search terms");
+  await expect(
+    rows
+      .filter({ hasText: "fokus app" })
+      .getByLabel(
+        "Google Play Console's October 2026 report named no search terms for this app.",
+      ),
+  ).toBeVisible();
 });
 
 test("an app store app has no play installs column, even from a play sort link", async ({
