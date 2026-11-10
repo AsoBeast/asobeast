@@ -1,6 +1,8 @@
 ---
 paths:
   - "apps/api/src/admin-surfaces.ts"
+  - "apps/api/src/main.ts"
+  - "apps/api/src/auth/platform-operator.ts"
   - "apps/api/src/support/**"
   - "apps/api/src/metrics/**"
   - "apps/web/src/app/**/admin/**"

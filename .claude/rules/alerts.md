@@ -1,6 +1,8 @@
 ---
 paths:
   - "apps/api/src/alerts/**"
+  - "apps/api/src/apps/listing-alerts.service.ts"
+  - "apps/api/src/reviews/review-spike*.ts"
   - "apps/web/src/app/**/{alerts,confirm-alert,unsubscribe}/**"
   - "apps/web/src/components/alerts/**"
   - "apps/web/src/lib/alerts-seen.ts"

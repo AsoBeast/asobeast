@@ -1,6 +1,7 @@
 ---
 paths:
   - "apps/api/src/screenshots/**"
+  - "apps/api/src/apps/listing-capture.service.ts"
   - "apps/web/src/components/screenshots/**"
   - "apps/web/src/lib/screenshot-captions.ts"
 ---

@@ -1,6 +1,7 @@
 ---
 paths:
   - "apps/api/src/checklist/**"
+  - "packages/shared/src/contracts/workspace-checklist.ts"
   - "apps/web/src/components/checklist/**"
 ---
 
