@@ -273,7 +273,9 @@ test("showing more listing changes hands focus to the first revealed row", async
   const card = changesCard(page);
   const rows = card.getByRole("link", { name: /Focus Timer|Rival Focus/ });
   await expect(rows).toHaveCount(VISIBLE_CHANGES);
-  const more = card.getByRole("button", { name: /^Show \d+ more$/ });
+  const more = await hydrated(
+    card.getByRole("button", { name: /^Show \d+ more$/ }),
+  );
   await more.focus();
   await page.keyboard.press("Enter");
 

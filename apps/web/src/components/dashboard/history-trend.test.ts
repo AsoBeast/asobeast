@@ -234,6 +234,18 @@ describe("divergingTrend", () => {
   it("answers no rows before anything was recorded", () => {
     expect(divergingTrend([], 30).rows).toEqual([]);
   });
+
+  it("counts only the days the caller calls active", () => {
+    const quiet = [
+      { date: day(1), up: 0, down: 0 },
+      { date: day(0), up: 2, down: 0 },
+    ];
+
+    const trend = divergingTrend(quiet, 7, 1);
+
+    expect(trend.checked).toBe(1);
+    expect(trend.rows.slice(-2).every((row) => row.checked)).toBe(true);
+  });
 });
 
 describe("unfinishedSince", () => {

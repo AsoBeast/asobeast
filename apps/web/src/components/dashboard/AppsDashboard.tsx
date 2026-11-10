@@ -2,6 +2,7 @@
 
 import { useDeferredValue } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import type { PortfolioAppInsight, PortfolioGroup } from "@asobeast/shared";
 import { useQueryStates } from "nuqs";
 import { ColumnMenu } from "@/components/data-table/ColumnMenu";
 import { FilteredEmpty } from "@/components/data-table/FilteredEmpty";
@@ -10,13 +11,41 @@ import { appListParsers } from "@/lib/search-params";
 import { AppsToolbar } from "./AppsToolbar";
 import { PortfolioGrid } from "./PortfolioGrid";
 import { PortfolioTable, usePortfolioTable } from "./PortfolioTable";
-import { filterRows, matchesQuery, sortRows, toRows } from "./portfolio-rows";
+import {
+  filterRows,
+  matchesQuery,
+  sortRows,
+  toRows,
+  type PortfolioRow,
+} from "./portfolio-rows";
 import {
   APPS_HEADING_ID,
   APPS_PANEL,
   APPS_SECTION,
   PANEL_FOOTER,
 } from "./layout-classes";
+
+function AppsBody({
+  table,
+  rows,
+  groups,
+  insights,
+}: {
+  table: ReturnType<typeof usePortfolioTable> | null;
+  rows: PortfolioRow[];
+  groups: PortfolioGroup[];
+  insights: ReadonlyMap<string, PortfolioAppInsight>;
+}) {
+  if (table === null) {
+    return <PortfolioGrid rows={rows} groups={groups} insights={insights} />;
+  }
+  return (
+    <>
+      <PortfolioTable table={table} />
+      <p className={PANEL_FOOTER}>Trend is visibility over the last 30 days</p>
+    </>
+  );
+}
 
 export function AppsDashboard() {
   const { data } = useSuspenseQuery(portfolioOptions);
@@ -62,15 +91,9 @@ export function AppsDashboard() {
           title={`No apps match "${q}"`}
           onClear={() => void setList({ q: null })}
         />
-      ) : tabular ? (
-        <>
-          <PortfolioTable table={table} />
-          <p className={PANEL_FOOTER}>
-            Trend is visibility over the last 30 days
-          </p>
-        </>
       ) : (
-        <PortfolioGrid
+        <AppsBody
+          table={tabular ? table : null}
           rows={cardRows}
           groups={data.groups}
           insights={insightById}

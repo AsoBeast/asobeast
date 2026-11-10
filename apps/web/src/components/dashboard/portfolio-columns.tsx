@@ -87,7 +87,7 @@ export const portfolioColumns = columnHelper.columns([
   }),
   columnHelper.display({
     id: "trend",
-    meta: { label: "Trend" },
+    meta: { label: "Trend", wideOnly: true },
     header: () => "Trend",
     cell: ({ row }) =>
       row.original.app.lastCapturedAt === null ? (
@@ -152,7 +152,7 @@ export const portfolioColumns = columnHelper.columns([
   ),
   columnHelper.display({
     id: "movement",
-    meta: { label: "Moved", numeric: true },
+    meta: { label: "Moved", numeric: true, wideOnly: true },
     header: () => "Moved",
     cell: ({ row }) => {
       const insight = captured(row.original);
@@ -170,7 +170,7 @@ export const portfolioColumns = columnHelper.columns([
     {
       id: "rating",
       ...NUMBER_SORT,
-      meta: { label: "Rating", numeric: true },
+      meta: { label: "Rating", numeric: true, wideOnly: true },
       header: ({ column }) => <SortableHeader column={column} label="Rating" />,
       cell: ({ row }) => {
         const average = captured(row.original)?.rating.average ?? null;

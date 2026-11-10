@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { invalidatePortfolio, runStatusOptions } from "@/lib/queries";
+import { invalidateDailyRunResults, runStatusOptions } from "@/lib/queries";
 import { unfinishedSince } from "./history-trend";
 
 export function useRefreshAfterRun(): void {
@@ -12,7 +12,8 @@ export function useRefreshAfterRun(): void {
   const wasUnfinished = useRef(unfinished);
 
   useEffect(() => {
-    if (wasUnfinished.current && !unfinished) invalidatePortfolio(queryClient);
+    if (wasUnfinished.current && !unfinished)
+      invalidateDailyRunResults(queryClient);
     wasUnfinished.current = unfinished;
   }, [unfinished, queryClient]);
 }

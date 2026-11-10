@@ -152,6 +152,7 @@ export interface DailyPair {
 export function divergingTrend(
   pairs: DailyPair[],
   days: number,
+  active = pairs.length,
 ): DivergingTrend {
   const newest = pairs.at(-1);
   if (newest === undefined) {
@@ -181,7 +182,7 @@ export function divergingTrend(
   return {
     rows,
     days,
-    checked: pairs.length,
+    checked: active,
     domain: [-top, top],
     valueTicks: [
       ...valueTicks

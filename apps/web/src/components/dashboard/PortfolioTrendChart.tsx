@@ -46,6 +46,11 @@ export interface TrendSubject {
 
 const figure = (value: number): string => formatNumber(Math.round(value));
 
+function trendNote(unfinished: boolean, unchecked: boolean): string | null {
+  if (unfinished) return "Today's checks are still running";
+  return unchecked ? "Not checked" : null;
+}
+
 function TrendTooltip({
   active,
   label,
@@ -63,6 +68,7 @@ function TrendTooltip({
   if (!row) return null;
   const unfinished = day === trend.pendingDay;
   const value = unfinished ? row.pending : row.value;
+  const note = trendNote(unfinished, value === null && row.previous === null);
   return (
     <SeriesTooltip
       title={formatDayMonth(day)}
@@ -93,13 +99,9 @@ function TrendTooltip({
             ]),
       ]}
       footer={
-        unfinished ? (
-          <span className="text-muted-foreground">
-            Today&apos;s checks are still running
-          </span>
-        ) : value === null && row.previous === null ? (
-          <span className="text-muted-foreground">Not checked</span>
-        ) : null
+        note === null ? null : (
+          <span className="text-muted-foreground">{note}</span>
+        )
       }
     />
   );
@@ -193,7 +195,7 @@ export function PortfolioTrendChart({
           stroke={SERIES}
           fill={`url(#${fadeId})`}
         />
-        {pendingRow?.pending == null ? null : (
+        {pendingRow === undefined || pendingRow.pending === null ? null : (
           <>
             <Line
               {...PENDING_LINE_PROPS}

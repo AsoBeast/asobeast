@@ -72,7 +72,7 @@ export function DeleteAppMenu({ id, name }: { id: string; name: string }) {
             ref={trigger}
             variant="ghost"
             size="icon-sm"
-            aria-label="App actions"
+            aria-label={`App actions, ${name}`}
           >
             <MoreVertical />
           </Button>

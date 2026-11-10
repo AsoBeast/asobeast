@@ -3,7 +3,7 @@
 import { Suspense, useDeferredValue, type ReactNode } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import type { ActionActivity, PortfolioHistoryDays } from "@asobeast/shared";
-import { activityRows } from "@/components/actions/activity-chart";
+import { activeDays, activityRows } from "@/components/actions/activity-chart";
 import { ACTION_COLORS, MOVEMENT_COLORS } from "@/components/charts/theme";
 import {
   actionActivityOptions,
@@ -82,13 +82,11 @@ const ACTIONS: DivergingSubject = {
 };
 
 const actionPairs = (activity: ActionActivity): DailyPair[] =>
-  activityRows(activity)
-    .filter((row) => row.opened + row.closedByYou + row.resolved > 0)
-    .map((row) => ({
-      date: row.date,
-      up: row.opened,
-      down: row.closedByYou + row.resolved,
-    }));
+  activityRows(activity).map((row) => ({
+    date: row.date,
+    up: row.opened,
+    down: row.closedByYou + row.resolved,
+  }));
 
 function DivergingPanel({
   trend,
@@ -139,7 +137,7 @@ function ActionsPanel({ days }: { days: PortfolioHistoryDays }) {
   const { data: activity } = useSuspenseQuery(actionActivityOptions({ days }));
   return (
     <DivergingPanel
-      trend={divergingTrend(actionPairs(activity), days)}
+      trend={divergingTrend(actionPairs(activity), days, activeDays(activity))}
       subject={ACTIONS}
     />
   );

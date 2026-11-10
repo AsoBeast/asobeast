@@ -6,6 +6,10 @@ import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { moverChange, type MoverChange } from "./mover-change";
 
+const MOVER_COLUMNS = "grid grid-cols-[minmax(0,1fr)_auto_4.5rem] gap-3 px-2";
+
+const BAR_REACH_PERCENT = 60;
+
 const CHANGE_TONE: Record<MoverChange["kind"], string> = {
   up: "text-signal-up",
   new: "text-signal-up",
@@ -41,13 +45,16 @@ function MoverLine({
   return (
     <Link
       href={rankingsHref(mover)}
-      className="group/mover relative grid h-10 grid-cols-[minmax(0,1fr)_auto_4.5rem] items-center gap-3 rounded-md px-2 text-dense outline-none sm:h-9 transition-colors duration-150 ease-out hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+      className={cn(
+        MOVER_COLUMNS,
+        "group/mover relative h-10 items-center rounded-md text-dense outline-none sm:h-9 transition-colors duration-150 ease-out hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring",
+      )}
     >
       <span
         aria-hidden
         data-slot="mover-bar"
         className="absolute inset-y-1 left-0 rounded-md bg-chart-tint"
-        style={{ width: `${Math.round(change.share * 60)}%` }}
+        style={{ width: `${Math.round(change.share * BAR_REACH_PERCENT)}%` }}
       />
       <span className="relative flex min-w-0 items-center gap-2">
         <AppIcon src={app?.iconUrl ?? null} size={16} />
@@ -96,7 +103,7 @@ export function MoverBreakdown({
     <div className="flex flex-col gap-1">
       <div
         aria-hidden
-        className="grid grid-cols-[minmax(0,1fr)_auto_4.5rem] gap-3 px-2 text-label text-faint-foreground"
+        className={cn(MOVER_COLUMNS, "text-label text-faint-foreground")}
       >
         <span>Keyword</span>
         <span className="text-right">Position</span>

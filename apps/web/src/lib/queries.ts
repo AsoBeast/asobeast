@@ -519,8 +519,11 @@ export const portfolioInsightsOptions = queryOptions({
   staleTime: 60_000,
 });
 
-export function invalidatePortfolio(client: QueryClient): void {
+export function invalidateDailyRunResults(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: portfolioKey });
+  void client.invalidateQueries({ queryKey: actionKeys.all });
+  void client.invalidateQueries({ queryKey: alertEventKeys.all });
+  void client.invalidateQueries({ queryKey: recentChangesRoot });
 }
 
 export const portfolioHistoryOptions = (days: PortfolioHistoryDays) =>

@@ -15,14 +15,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { appListParsers, appSortParser } from "@/lib/search-params";
-import { isNumericColumn } from "@/lib/table/column-visibility";
+import {
+  isNumericColumn,
+  isWideOnlyColumn,
+} from "@/lib/table/column-visibility";
 import { ariaSort } from "@/lib/table/sorting";
 import { portfolioColumns, type PortfolioTableRow } from "./portfolio-columns";
 
-const WIDE_ONLY = new Set(["trend", "movement", "rating"]);
-
-const widthClass = (columnId: string): string | undefined =>
-  WIDE_ONLY.has(columnId) ? "md:@max-4xl/dashboard:hidden" : undefined;
+const widthClass = (meta: unknown): string | undefined =>
+  isWideOnlyColumn(meta) ? "md:@max-4xl/dashboard:hidden" : undefined;
 
 export function usePortfolioTable(rows: PortfolioTableRow[]) {
   const [{ sort, dir }, setList] = useQueryStates(appListParsers);
@@ -67,7 +68,7 @@ export function PortfolioTable({
             {headerGroup.headers.map((header) => (
               <TableHead
                 key={header.id}
-                className={widthClass(header.column.id)}
+                className={widthClass(header.column.columnDef.meta)}
                 numeric={isNumericColumn(header.column.columnDef.meta)}
                 aria-sort={ariaSort(header.column.getIsSorted())}
               >
@@ -86,7 +87,7 @@ export function PortfolioTable({
             {row.getVisibleCells().map((cell) => (
               <TableCell
                 key={cell.id}
-                className={widthClass(cell.column.id)}
+                className={widthClass(cell.column.columnDef.meta)}
                 numeric={isNumericColumn(cell.column.columnDef.meta)}
               >
                 {flexRender(cell.column.columnDef.cell, cell.getContext())}

@@ -102,7 +102,8 @@ export function PortfolioPulse() {
   const { visibilityDelta, top10Delta } = history.change;
   const unit = rangeUnit(days);
   const { visibility } = portfolio;
-  const shown = visibility || metric !== "visibility" ? metric : "top10";
+  const shown: DashboardMetric =
+    metric === "visibility" && !visibility ? "top10" : metric;
   const tab = (value: DashboardMetric) => ({
     selected: shown === value,
     onSelect: () => void setMetric(value),
