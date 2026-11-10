@@ -18,7 +18,10 @@ import {
   isMissingApp,
 } from './app-store.lib';
 import { lookupLanguage, pageLanguage } from './app-store-languages';
-import { AppStorePageExtract, parseAppStorePage } from './app-store-page';
+import {
+  AppStorePageExtract,
+  parseAppStorePageDocument,
+} from './app-store-page';
 import { StoreAppNotFoundError, StoreRequestError } from './errors';
 import { listedInIphoneSearch } from './iphone-search';
 import { ownSubtitle } from './own-subtitle';
@@ -43,7 +46,8 @@ const COLLECTION_CONSTANTS: Record<CategoryCollection, string> = {
 
 interface PageRead {
   subtitle?: string;
-  unavailable: boolean;
+  subtitleUnavailable: boolean;
+  pageUnavailable: boolean;
   extract?: AppStorePageExtract;
   extractUnavailable: boolean;
 }
@@ -77,7 +81,8 @@ export class AppStoreProvider implements StoreProvider {
         ? await this.readPage(storeAppId, country, localization)
         : {
             subtitle: raw.subtitle,
-            unavailable: false,
+            subtitleUnavailable: false,
+            pageUnavailable: false,
             extractUnavailable: false,
           };
     return this.toNormalizedApp(raw, read);
@@ -214,11 +219,8 @@ export class AppStoreProvider implements StoreProvider {
     country: string,
     localization?: AppStoreLocalization,
   ): Promise<PageRead> {
-    let html: string | null = null;
-    let subtitle: string | undefined;
-    let listingFailed = false;
     try {
-      subtitle = await this.withRetry('page', async (deadline) => {
+      const listing = await this.withRetry('page', async (deadline) => {
         const fetched = await this.lib.page({
           id: Number(storeAppId),
           country,
@@ -226,31 +228,36 @@ export class AppStoreProvider implements StoreProvider {
           ...(localization ? { language: pageLanguage(localization) } : {}),
         });
         deadline.signal?.throwIfAborted();
-        html = fetched;
-        return listingSubtitle(fetched);
+        return listingOf(fetched);
       });
+      const extract = this.pageExtractOf(storeAppId, listing.document);
+      return {
+        ...(listing.subtitle !== undefined
+          ? { subtitle: listing.subtitle }
+          : {}),
+        subtitleUnavailable: listing.listingUnavailable,
+        pageUnavailable: false,
+        ...(extract !== undefined ? { extract } : {}),
+        extractUnavailable: extract === undefined,
+      };
     } catch (error) {
-      listingFailed = true;
       this.logger.warn(
         `subtitle scrape failed for ${storeAppId}: ${messageOf(error)}`,
       );
+      return {
+        subtitleUnavailable: true,
+        pageUnavailable: true,
+        extractUnavailable: true,
+      };
     }
-    const extract =
-      html === null ? undefined : this.pageExtractOf(storeAppId, html);
-    return {
-      ...(subtitle !== undefined ? { subtitle } : {}),
-      unavailable: listingFailed,
-      ...(extract !== undefined ? { extract } : {}),
-      extractUnavailable: extract === undefined,
-    };
   }
 
   private pageExtractOf(
     storeAppId: string,
-    html: string,
+    document: cheerio.CheerioAPI,
   ): AppStorePageExtract | undefined {
     try {
-      return parseAppStorePage(html);
+      return parseAppStorePageDocument(document);
     } catch (error) {
       this.logger.warn(
         `page extract unavailable for ${storeAppId}: ${messageOf(error)}`,
@@ -269,7 +276,8 @@ export class AppStoreProvider implements StoreProvider {
       title: raw.title,
       subtitle:
         ownSubtitle(this.store, { subtitle: read.subtitle, raw }) ?? undefined,
-      subtitleUnavailable: read.unavailable,
+      subtitleUnavailable: read.subtitleUnavailable,
+      pageUnavailable: read.pageUnavailable,
       ...(read.extract !== undefined ? { pageExtract: read.extract } : {}),
       pageExtractUnavailable: read.extractUnavailable,
       description: raw.description,
@@ -329,13 +337,23 @@ export class AppStoreProvider implements StoreProvider {
   }
 }
 
-function listingSubtitle(html: string): string | undefined {
-  const $ = cheerio.load(html);
-  if ($('h1').length === 0) {
-    throw new Error('product page rendered no listing');
+interface PageListing {
+  document: cheerio.CheerioAPI;
+  subtitle?: string;
+  listingUnavailable: boolean;
+}
+
+function listingOf(html: string): PageListing {
+  const document = cheerio.load(html);
+  if (document('h1').length === 0) {
+    return { document, listingUnavailable: true };
   }
-  const text = $('p.subtitle').first().text().trim();
-  return text.length > 0 ? text : undefined;
+  const text = document('p.subtitle').first().text().trim();
+  return {
+    document,
+    ...(text.length > 0 ? { subtitle: text } : {}),
+    listingUnavailable: false,
+  };
 }
 
 function toDate(value?: string): Date | undefined {

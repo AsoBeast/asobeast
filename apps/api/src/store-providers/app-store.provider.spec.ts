@@ -237,6 +237,7 @@ describe('AppStoreProvider', () => {
     const result = await promise;
 
     expect(result.subtitleUnavailable).toBe(true);
+    expect(result.pageUnavailable).toBe(false);
     expect(result.pageExtract).toEqual({
       previewVideoUrls: [],
       appEvents: [],
@@ -245,7 +246,7 @@ describe('AppStoreProvider', () => {
       accessibilityStatement: null,
     });
     expect(result.pageExtractUnavailable).toBe(false);
-    expect(page).toHaveBeenCalledTimes(3);
+    expect(page).toHaveBeenCalledTimes(1);
     jest.useRealTimers();
   });
 
@@ -340,6 +341,7 @@ describe('AppStoreProvider', () => {
 
     expect(result.subtitle).toBeUndefined();
     expect(result.subtitleUnavailable).toBe(true);
+    expect(result.pageUnavailable).toBe(true);
     expect(result.pageExtract).toBeUndefined();
     expect(result.pageExtractUnavailable).toBe(true);
     expect(page).toHaveBeenCalledTimes(3);
@@ -363,9 +365,10 @@ describe('AppStoreProvider', () => {
     const result = await promise;
 
     expect(result.subtitleUnavailable).toBe(true);
+    expect(result.pageUnavailable).toBe(false);
     expect(result.pageExtract).toBeUndefined();
     expect(result.pageExtractUnavailable).toBe(true);
-    expect(page).toHaveBeenCalledTimes(3);
+    expect(page).toHaveBeenCalledTimes(1);
     jest.useRealTimers();
   });
 
@@ -959,6 +962,7 @@ describe('AppStoreProvider on demand deadline', () => {
     );
 
     expect(result.subtitleUnavailable).toBe(true);
+    expect(result.pageUnavailable).toBe(true);
     expect(result.pageExtract).toBeUndefined();
     expect(result.pageExtractUnavailable).toBe(true);
   });

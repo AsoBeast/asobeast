@@ -35,11 +35,17 @@ const PRODUCT_MEDIA_KEY = /^product_media_/;
 const STORY_ID = /\/story\/id(\d+)/;
 
 export function parseAppStorePage(html: string): AppStorePageExtract {
-  return readShelves(shelfMappingOf(html));
+  return parseAppStorePageDocument(cheerio.load(html));
 }
 
-function shelfMappingOf(html: string): Record<string, unknown> {
-  const embedded = cheerio.load(html)(SERVER_DATA_SELECTOR).first().html();
+export function parseAppStorePageDocument(
+  document: cheerio.CheerioAPI,
+): AppStorePageExtract {
+  return readShelves(shelfMappingOf(document));
+}
+
+function shelfMappingOf(document: cheerio.CheerioAPI): Record<string, unknown> {
+  const embedded = document(SERVER_DATA_SELECTOR).first().html();
   if (embedded === null || embedded.trim().length === 0) {
     throw new Error('product page embeds no serialized server data');
   }

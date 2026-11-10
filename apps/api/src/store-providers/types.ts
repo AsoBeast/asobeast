@@ -12,6 +12,7 @@ export interface NormalizedApp {
   title: string;
   subtitle?: string;
   subtitleUnavailable?: boolean;
+  pageUnavailable?: boolean;
   pageExtract?: AppStorePageExtract;
   pageExtractUnavailable?: boolean;
   summary?: string;
