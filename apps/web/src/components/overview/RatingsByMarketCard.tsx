@@ -138,7 +138,6 @@ export function RatingsByMarketCard({
     <CollapsedSectionsProvider initial={collapsed} known={KNOWN_SECTIONS}>
       <CollapsibleCard
         section={OVERVIEW_SECTION.ratingsByMarket}
-        eyebrow="Store ratings"
         title="Ratings by market"
         actions={<RatingsByMarketHelp />}
       >

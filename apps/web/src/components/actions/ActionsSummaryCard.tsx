@@ -1,68 +1,72 @@
 "use client";
 
-import type { ReactNode } from "react";
 import Link from "next/link";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { ACTION_PRIORITIES } from "@asobeast/shared";
-import type { ActionItem, ActionSummary } from "@asobeast/shared";
-import { Badge } from "@/components/ui/badge";
+import type { ActionItem } from "@asobeast/shared";
+import {
+  PANEL_ACTION,
+  PANEL_HEADER,
+} from "@/components/dashboard/layout-classes";
 import {
   Card,
+  CardAction,
   CardContent,
-  CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { TOP_ACTION_LIMIT } from "@/lib/action-filters";
+import { formatNumber } from "@/lib/format";
 import { actionsOptions, actionSummaryFor } from "@/lib/queries";
-import { ACTION_PRIORITY_LABEL } from "./action-copy";
+import { cn } from "@/lib/utils";
+import { ACTION_PRIORITY_LABEL, ACTION_PRIORITY_TONE } from "./action-copy";
 import { actionHeadline } from "./action-headline";
-import { ActionPriorityBadge } from "./ActionPriorityBadge";
 
-const openActions = (limit: number) => ({
-  status: ["OPEN" as const],
-  limit,
-});
-
-function EmptyActions({ summary }: { summary: ActionSummary }) {
+function ActionLine({ item, href }: { item: ActionItem; href: string }) {
   return (
-    <p className="text-sm text-muted-foreground">
-      {summary.generatedAt === null
-        ? "No actions generated yet."
-        : "Nothing to do right now."}
-    </p>
+    <Link
+      href={href}
+      className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-x-3 gap-y-1 rounded-md px-2 py-2 outline-none transition-colors duration-150 ease-out hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <span
+        className={cn(
+          "pt-0.5 text-tick font-semibold tracking-wide uppercase",
+          ACTION_PRIORITY_TONE[item.priority],
+        )}
+      >
+        {ACTION_PRIORITY_LABEL[item.priority]}
+      </span>
+      <span className="text-body">{actionHeadline(item)}</span>
+      {item.reopenCount > 0 ? (
+        <span className="col-start-2 text-caption text-muted-foreground">
+          {`Reopened ${item.reopenCount}×`}
+        </span>
+      ) : null}
+    </Link>
   );
 }
 
-function PriorityCounts({ summary }: { summary: ActionSummary }) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {ACTION_PRIORITIES.map((priority) => (
-        <Badge key={priority} variant="outline">
-          {`${summary.openByPriority[priority]} ${ACTION_PRIORITY_LABEL[priority]}`}
-        </Badge>
-      ))}
-    </div>
-  );
-}
-
-function AppActionList({
-  appId,
-  summary,
-}: {
-  appId: string;
-  summary: ActionSummary;
-}) {
+function ActionList({ appId }: { appId: string }) {
+  const { data: summary } = useSuspenseQuery(actionSummaryFor(appId));
   const { data: list } = useSuspenseQuery(
-    actionsOptions(openActions(TOP_ACTION_LIMIT), appId),
+    actionsOptions({ status: ["OPEN"], limit: TOP_ACTION_LIMIT }, appId),
   );
-  if (list.items.length === 0) return <EmptyActions summary={summary} />;
+
+  if (list.items.length === 0) {
+    return (
+      <p className="px-2 text-body text-muted-foreground">
+        {summary.generatedAt === null
+          ? "No actions generated yet."
+          : "Nothing needs you right now."}
+      </p>
+    );
+  }
 
   return (
-    <ul className="flex list-none flex-col gap-1 p-0">
+    <ul className="flex flex-col">
       {list.items.slice(0, TOP_ACTION_LIMIT).map((item) => (
         <li key={item.id}>
-          <TopActionLink
+          <ActionLine
             item={item}
             href={`/apps/${appId}/actions?action=${item.id}`}
           />
@@ -72,66 +76,41 @@ function AppActionList({
   );
 }
 
-function TopActionLink({
-  item,
-  href,
-  children,
-}: {
-  item: ActionItem;
-  href: string;
-  children?: ReactNode;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex min-h-10 flex-col gap-1 rounded-md px-2 py-2 text-sm outline-none transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <span className="flex items-start gap-2">
-        <ActionPriorityBadge priority={item.priority} />
-        <span>{actionHeadline(item)}</span>
-        {item.reopenCount > 0 ? (
-          <Badge variant="outline">Reopened {item.reopenCount}×</Badge>
-        ) : null}
-      </span>
-      {children}
-    </Link>
-  );
-}
-
-function AppActions({ appId }: { appId: string }) {
-  const { data: summary } = useSuspenseQuery(actionSummaryFor(appId));
-
-  return (
-    <>
-      <PriorityCounts summary={summary} />
-      <AppActionList appId={appId} summary={summary} />
-    </>
-  );
-}
-
 export function ActionsSummaryCard({ appId }: { appId: string }) {
-  const href = `/apps/${appId}/actions`;
+  const { data: summary } = useSuspenseQuery(actionSummaryFor(appId));
+  const { critical, high } = summary.openByPriority;
+  const counts = [
+    `${formatNumber(summary.open)} open`,
+    critical > 0 ? `${formatNumber(critical)} critical` : null,
+    high > 0 ? `${formatNumber(high)} high` : null,
+  ].filter((part) => part !== null);
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className={PANEL_HEADER}>
         <CardTitle asChild>
-          <div>Top actions</div>
+          <h2>Do next</h2>
         </CardTitle>
-        <CardDescription>
-          The highest-impact open work, computed from your stored data.
-        </CardDescription>
+        {summary.generatedAt === null ? null : (
+          <CardAction
+            className={cn(PANEL_ACTION, "text-label text-faint-foreground")}
+          >
+            {counts.join(" · ")}
+          </CardAction>
+        )}
       </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <AppActions appId={appId} />
-
+      <CardContent className="px-2">
+        <ActionList appId={appId} />
+      </CardContent>
+      <CardFooter className="justify-between">
+        <span>Rules over your stored history</span>
         <Link
-          href={href}
-          className="inline-flex min-h-6 items-center self-start text-sm font-medium underline-offset-4 hover:underline print:hidden"
+          href={`/apps/${appId}/actions`}
+          className="inline-flex min-h-6 items-center text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-foreground print:hidden"
         >
           Open the Action Center
         </Link>
-      </CardContent>
+      </CardFooter>
     </Card>
   );
 }

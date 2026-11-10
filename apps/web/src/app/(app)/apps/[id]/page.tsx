@@ -6,30 +6,32 @@ import { MarketSwitcher } from "@/components/app-detail/MarketSwitcher";
 import { PrintReportButton } from "@/components/app-detail/PrintReportButton";
 import { MarketSwitcherSkeleton } from "@/components/app-detail/skeletons";
 import { TOP_ACTION_LIMIT } from "@/lib/action-filters";
-import { ActionsSummaryCardSkeleton } from "@/components/actions/skeletons";
 import { AlertsNudge } from "@/components/onboarding/AlertsNudge";
 import { FirstRunTimeline } from "@/components/onboarding/FirstRunTimeline";
 import { CategoryRankCard } from "@/components/overview/CategoryRankCard";
 import { CoverageCard } from "@/components/overview/CoverageCard";
 import { FunnelCard } from "@/components/overview/FunnelCard";
-import { GapHeadlineCard } from "@/components/overview/GapHeadlineCard";
 import { MoversCard } from "@/components/overview/MoversCard";
 import { RatingsByMarketCard } from "@/components/overview/RatingsByMarketCard";
 import { KNOWN_SECTIONS } from "@/components/layout/known-sections";
 import { OverviewReportHeader } from "@/components/overview/OverviewReportHeader";
-import { RankDistributionChart } from "@/components/overview/RankDistributionChart";
-import { RankDistributionHistoryChart } from "@/components/overview/RankDistributionHistoryChart";
+import { OverviewPulse } from "@/components/overview/OverviewPulse";
 import {
-  ChartCardSkeleton,
+  CoverageCardSkeleton,
   FunnelCardSkeleton,
-  GapHeadlineCardSkeleton,
-  PanelCardSkeleton,
-  StatCardsSkeleton,
+  OverviewPulseSkeleton,
+  SnapshotFactsSkeleton,
 } from "@/components/overview/skeletons";
+import {
+  SPLIT_NARROW,
+  SPLIT_ROW,
+  SPLIT_WIDE,
+} from "@/components/overview/layout-classes";
+import {
+  DoNextCardSkeleton,
+  PortfolioMoversCardSkeleton,
+} from "@/components/dashboard/skeletons";
 import { SnapshotFacts } from "@/components/overview/SnapshotFacts";
-import { StatCards } from "@/components/overview/StatCards";
-import { VisibilityChart } from "@/components/overview/VisibilityChart";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   COLLAPSED_COOKIE_NAME,
   parseCollapsed,
@@ -53,7 +55,12 @@ import { FUNNEL_SERIES_DAYS } from "@/lib/funnel";
 import { keywordScope, queryMarket, resolveMarket } from "@/lib/market";
 import { presetToRange } from "@/lib/ranges";
 import { ratesByMarket } from "@/lib/ratings-by-market";
-import { marketParser, rangeParser } from "@/lib/search-params";
+import {
+  marketParser,
+  rangeParser,
+  visibilityRangeParser,
+  visibilityViewParser,
+} from "@/lib/search-params";
 
 export default async function AppOverviewPage({
   params,
@@ -63,11 +70,17 @@ export default async function AppOverviewPage({
   searchParams: Promise<{
     categoryRange?: string | string[];
     market?: string | string[];
+    range?: string | string[];
+    visView?: string | string[];
   }>;
 }) {
   const { id } = await params;
   const sp = await searchParams;
   const categoryRange = rangeParser.parseServerSide(sp.categoryRange);
+  const chartRange = presetToRange(
+    visibilityRangeParser.parseServerSide(sp.range),
+  );
+  const view = visibilityViewParser.parseServerSide(sp.visView);
   const collapsed = parseCollapsed(
     (await cookies()).get(COLLAPSED_COOKIE_NAME)?.value,
     KNOWN_SECTIONS,
@@ -91,11 +104,19 @@ export default async function AppOverviewPage({
     : Promise.resolve(undefined);
   void scope.then((country) => {
     void queryClient.prefetchQuery(appSummaryOptions(id, country));
+    if (view === "top10") {
+      void queryClient.prefetchQuery(
+        rankDistributionHistoryOptions(id, chartRange, country),
+      );
+      return;
+    }
     void queryClient.prefetchQuery(
-      visibilityOptions(id, presetToRange("30d"), country),
-    );
-    void queryClient.prefetchQuery(
-      rankDistributionHistoryOptions(id, presetToRange("30d"), country),
+      visibilityOptions(
+        id,
+        chartRange,
+        country,
+        view === "share" ? "competitors" : undefined,
+      ),
     );
   });
   const [app, markets] = await Promise.all([
@@ -114,10 +135,11 @@ export default async function AppOverviewPage({
     appListingOptions(id, queryMarket(market, app.country)),
   );
   await firstRun;
+  const byMarket = ratesByMarket(app.store);
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <div className="page-wide flex flex-col gap-6">
+      <div className="page-wide @container/overview flex flex-col gap-6">
         <Suspense fallback={null}>
           <OverviewReportHeader id={id} />
         </Suspense>
@@ -127,7 +149,7 @@ export default async function AppOverviewPage({
         <AlertsNudge id={id} />
 
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <Suspense fallback={<Skeleton className="h-12 w-full max-w-md" />}>
+          <Suspense fallback={<SnapshotFactsSkeleton />}>
             <SnapshotFacts id={id} />
           </Suspense>
           <div className="flex flex-wrap items-center gap-3">
@@ -138,51 +160,46 @@ export default async function AppOverviewPage({
           </div>
         </div>
 
-        <Suspense fallback={<StatCardsSkeleton />}>
-          <StatCards id={id} />
+        <Suspense fallback={<OverviewPulseSkeleton />}>
+          <OverviewPulse id={id} />
         </Suspense>
+
+        <div className={SPLIT_ROW}>
+          <div className={SPLIT_WIDE}>
+            <Suspense fallback={<PortfolioMoversCardSkeleton />}>
+              <MoversCard id={id} />
+            </Suspense>
+          </div>
+          <div className={SPLIT_NARROW}>
+            <Suspense fallback={<DoNextCardSkeleton />}>
+              <ActionsSummaryCard appId={id} />
+            </Suspense>
+            <Suspense fallback={<CoverageCardSkeleton />}>
+              <CoverageCard id={id} />
+            </Suspense>
+          </div>
+        </div>
 
         <Suspense fallback={<FunnelCardSkeleton />}>
           <FunnelCard id={id} store={app.store} />
         </Suspense>
 
-        <Suspense fallback={<ActionsSummaryCardSkeleton />}>
-          <ActionsSummaryCard appId={id} />
-        </Suspense>
-
-        <div className="grid gap-6 lg:grid-cols-3 print:grid-cols-1 [&>*]:min-w-0">
-          <div className="lg:col-span-2 print:col-span-1">
-            <VisibilityChart id={id} />
+        {byMarket ? (
+          <div className={SPLIT_ROW}>
+            <div className={SPLIT_WIDE}>
+              <CategoryRankCard id={id} />
+            </div>
+            <div className={SPLIT_NARROW}>
+              <RatingsByMarketCard
+                id={id}
+                canTrack={!app.isCompetitor}
+                collapsed={[...collapsed]}
+              />
+            </div>
           </div>
-          <Suspense fallback={<ChartCardSkeleton />}>
-            <RankDistributionChart id={id} />
-          </Suspense>
-        </div>
-
-        <Suspense fallback={<GapHeadlineCardSkeleton />}>
-          <GapHeadlineCard id={id} />
-        </Suspense>
-
-        <RankDistributionHistoryChart id={id} />
-
-        <CategoryRankCard id={id} />
-
-        {ratesByMarket(app.store) ? (
-          <RatingsByMarketCard
-            id={id}
-            canTrack={!app.isCompetitor}
-            collapsed={[...collapsed]}
-          />
-        ) : null}
-
-        <div className="grid gap-6 lg:grid-cols-2 print:grid-cols-1">
-          <Suspense fallback={<PanelCardSkeleton />}>
-            <MoversCard id={id} />
-          </Suspense>
-          <Suspense fallback={<PanelCardSkeleton />}>
-            <CoverageCard id={id} />
-          </Suspense>
-        </div>
+        ) : (
+          <CategoryRankCard id={id} />
+        )}
       </div>
     </HydrationBoundary>
   );

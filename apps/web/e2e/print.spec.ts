@@ -184,8 +184,7 @@ test("prints an overview report header with the ranges shown", async ({
   await expect(page.getByText("Overview report")).toBeVisible();
   for (const fact of [
     "Home storefront: United States",
-    "Visibility: Last 90 days",
-    "Rank bands: Last 30 days",
+    "Search visibility: Last 90 days",
     "Category ranks: Last 7 days",
   ]) {
     await expect(page.getByText(fact, { exact: true })).toBeVisible();
@@ -217,7 +216,7 @@ test("prints the overview ranges as words and leaves its links out", async ({
   page,
 }) => {
   await open(page, OVERVIEW_WITH_RANGES);
-  await expect(page.getByRole("tablist")).toHaveCount(4);
+  await expect(page.getByRole("tablist")).toHaveCount(3);
 
   await printed(page);
 
@@ -230,9 +229,9 @@ test("prints the overview ranges as words and leaves its links out", async ({
     .getByRole("region", { name: "Category chart position over time" })
     .locator("xpath=ancestor::*[@data-slot='card'][1]");
   await expect(category.getByText("Last 7 days")).toBeVisible();
-  await expect(page.getByRole("link", { name: "View comparison" })).toHaveCount(
-    0,
-  );
+  await expect(
+    page.getByRole("link", { name: "See the winnable gaps" }),
+  ).toHaveCount(0);
   await expect(
     page.getByRole("link", { name: "Open the Action Center" }),
   ).toHaveCount(0);
@@ -253,14 +252,13 @@ test("prints the overview in one column with every chart inside its card", async
     .evaluate((node) => Math.round(node.getBoundingClientRect().width));
   for (const region of [
     "Search visibility over time",
-    "Keyword rank distribution",
     "Category chart position over time",
   ]) {
     expect(await cardWidth(page, region)).toBe(main);
   }
 
   const charts = await fitsInCards(page);
-  expect(charts.length).toBeGreaterThanOrEqual(3);
+  expect(charts.length).toBeGreaterThanOrEqual(2);
   expect(charts.filter((chart) => !chart.fits)).toEqual([]);
   expect(charts.filter((chart) => chart.grew)).toEqual([]);
   expect(
@@ -285,7 +283,7 @@ test("leaves the first run timeline out of the printout", async ({ page }) => {
   await expect(timeline).toBeHidden();
 });
 
-test("prints grades, badges and legends in colour with the grade word", async ({
+test("prints grades, change pills and charts in colour with the grade word", async ({
   page,
 }) => {
   await open(page, OVERVIEW);
@@ -299,7 +297,7 @@ test("prints grades, badges and legends in colour with the grade word", async ({
   expect(await after()).not.toBe("none");
   for (const selector of [
     "[data-grade='strong']",
-    "[data-slot='badge']",
+    "[data-slot='delta-pill']",
     "[data-slot='chart']",
   ]) {
     expect(

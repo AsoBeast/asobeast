@@ -96,7 +96,3 @@ export function ActionCenterSkeleton() {
     </div>
   );
 }
-
-export function ActionsSummaryCardSkeleton() {
-  return <Skeleton className="h-[196px] w-full rounded-xl" />;
-}

@@ -10,7 +10,7 @@ import {
   Card,
   CardAction,
   CardContent,
-  CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -35,7 +35,13 @@ import {
   appStateLabel,
   STORE_CONNECTIONS_PATH,
 } from "@/lib/store-connection-copy";
+import {
+  PANEL_ACTION,
+  PANEL_HEADER,
+} from "@/components/dashboard/layout-classes";
+import { cn } from "@/lib/utils";
 import { FunnelHelp } from "./FunnelHelp";
+import { PULSE_COLUMNS, PULSE_STRIP } from "./layout-classes";
 import { FunnelTilesSkeleton } from "./skeletons";
 
 const CONNECT_LINK =
@@ -109,43 +115,48 @@ function FunnelTiles({ report }: { report: StoreFunnelReport }) {
   const settled = headline?.status === "measured";
   const copy = FUNNEL_COPY[report.store];
 
+  const tiles = funnelTiles(report);
+
   return (
-    <div className="flex flex-col gap-3">
-      <StatTileGroup>
-        {funnelTiles(report).map((tile) => (
+    <>
+      <StatTileGroup className={cn(PULSE_STRIP, PULSE_COLUMNS[tiles.length])}>
+        {tiles.map((tile) => (
           <StatTile
             key={tile.label}
             label={tile.label}
             value={
-              tile.metric === "conversion"
-                ? formatConversion(headline?.current?.conversion ?? null)
-                : formatCount(headline?.current?.[tile.metric] ?? null)
-            }
-            note={
-              <span className="flex flex-wrap gap-3">
-                <TrendChip
-                  label="7d"
-                  unit="%"
-                  value={trendValue(week, tile.metric)}
-                />
+              <span className="flex flex-wrap items-center gap-2">
+                <span>
+                  {tile.metric === "conversion"
+                    ? formatConversion(headline?.current?.conversion ?? null)
+                    : formatCount(headline?.current?.[tile.metric] ?? null)}
+                </span>
                 <TrendChip
                   label="28d"
                   unit="%"
                   value={trendValue(headline, tile.metric)}
+                  form="pill"
                 />
               </span>
+            }
+            note={
+              <TrendChip
+                label="7d"
+                unit="%"
+                value={trendValue(week, tile.metric)}
+              />
             }
           />
         ))}
       </StatTileGroup>
-      <p className="text-caption text-muted-foreground">
-        {`${share === null ? "" : `Search: ${share}% of ${copy.base}. `}${
+      <CardFooter>
+        {`${copy.console}. ${share === null ? "" : `Search: ${share}% of ${copy.base}. `}${
           headline && settled
             ? `Last 28 complete days through ${formatDate(headline.to)}, against the 28 before.`
             : copy.freshness
         }`}
-      </p>
-    </div>
+      </CardFooter>
+    </>
   );
 }
 
@@ -155,7 +166,9 @@ function FunnelBody({ id }: { id: string }) {
     funnelOptions(id, FUNNEL_SERIES_DAYS, country),
   );
   return funnelState(report) === "off" ? (
-    <NotConnected id={id} store={report.store} />
+    <CardContent>
+      <NotConnected id={id} store={report.store} />
+    </CardContent>
   ) : (
     <FunnelTiles report={report} />
   );
@@ -170,19 +183,18 @@ export function FunnelCard({ id, store }: { id: string; store: Store }) {
     : "";
 
   return (
-    <Card>
-      <CardHeader>
-        <CardDescription>{FUNNEL_COPY[store].console}</CardDescription>
-        <CardTitle>{`Store funnel${market}`}</CardTitle>
-        <CardAction>
+    <Card className="gap-0 pb-0">
+      <CardHeader className={cn(PANEL_HEADER, "border-b border-border")}>
+        <CardTitle asChild>
+          <h2>{`Store funnel${market}`}</h2>
+        </CardTitle>
+        <CardAction className={PANEL_ACTION}>
           <FunnelHelp store={store} />
         </CardAction>
       </CardHeader>
-      <CardContent>
-        <Suspense fallback={<FunnelTilesSkeleton />}>
-          <FunnelBody id={id} />
-        </Suspense>
-      </CardContent>
+      <Suspense fallback={<FunnelTilesSkeleton />}>
+        <FunnelBody id={id} />
+      </Suspense>
     </Card>
   );
 }

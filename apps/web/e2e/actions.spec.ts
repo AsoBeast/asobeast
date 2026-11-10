@@ -355,10 +355,10 @@ test("undoing done brings the action back without a reopen badge", async ({
 test("the app overview counts only that app's actions", async ({ page }) => {
   await page.goto("/apps/app-1");
   const card = page
-    .getByText("Top actions", { exact: true })
+    .getByRole("heading", { name: "Do next", level: 2 })
     .locator("xpath=ancestor::*[@data-slot='card'][1]");
-  await expect(card.getByText("4 High", { exact: true })).toBeVisible();
-  await expect(card.getByText("5 High", { exact: true })).toHaveCount(0);
+  await expect(card.getByText(/· 4 high$/)).toBeVisible();
+  await expect(card.getByText(/· 5 high$/)).toHaveCount(0);
 });
 
 test("the app overview leaves snoozed actions out of its open counts", async ({
@@ -366,10 +366,10 @@ test("the app overview leaves snoozed actions out of its open counts", async ({
 }) => {
   await page.goto("/apps/app-1");
   const card = page
-    .getByText("Top actions", { exact: true })
+    .getByRole("heading", { name: "Do next", level: 2 })
     .locator("xpath=ancestor::*[@data-slot='card'][1]");
-  await expect(card.getByText("4 High", { exact: true })).toBeVisible();
-  await expect(card.getByText("5 High", { exact: true })).toHaveCount(0);
+  await expect(card.getByText(/· 4 high$/)).toBeVisible();
+  await expect(card.getByText(/· 5 high$/)).toHaveCount(0);
 });
 
 test("a failing update rolls the optimistic change back", async ({ page }) => {
@@ -479,7 +479,7 @@ test("the command palette reaches the action center", async ({ page }) => {
 test("the app overview opens a top action in its sheet", async ({ page }) => {
   await page.goto("/apps/app-1");
   const card = page
-    .getByText("Top actions", { exact: true })
+    .getByRole("heading", { name: "Do next", level: 2 })
     .locator("xpath=ancestor::*[@data-slot='card'][1]");
   const first = card.getByRole("link").first();
 
@@ -496,7 +496,9 @@ test("the app overview opens a top action in its sheet", async ({ page }) => {
 test("the app detail nav exposes an actions section", async ({ page }) => {
   await page.goto("/apps/app-1");
 
-  await expect(page.getByText("Top actions")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Do next", level: 2 }),
+  ).toBeVisible();
   await page.getByRole("link", { name: "Actions", exact: true }).click();
 
   await expect(page).toHaveURL(/\/apps\/app-1\/actions/);

@@ -628,7 +628,7 @@ test("a translated overview names the market it switched to", async ({
   const card = page
     .locator('[data-slot="card"]')
     .filter({ hasText: /in top 10/i });
-  await expect(card).toContainText("Tracked keywords · All markets");
+  await expect(card).toContainText("Search visibility · All markets");
   const switcher = await hydrated(
     page.getByRole("combobox", { name: "Market" }),
   );
@@ -638,7 +638,7 @@ test("a translated overview names the market it switched to", async ({
   await page.getByRole("option", { name: /PL · Poland/i }).click();
 
   await expect(page).toHaveURL(/market=pl/);
-  await expect(card).toContainText(/tracked keywords · pl/i);
+  await expect(card).toContainText(/search visibility · pl/i);
   expect(errors).toEqual([]);
 });
 
@@ -649,7 +649,7 @@ test("a translated overview keeps working when a trend gets its data", async ({
   await page.goto("/apps/app-1?market=pl");
   const visibility = page
     .locator('[data-slot="card"]')
-    .filter({ has: page.getByText(/^visibility · (pl|us)$/i) });
+    .filter({ has: page.getByText(/^search visibility · (pl|us)$/i) });
   await expect(visibility).toContainText("no 30d data");
   const switcher = await hydrated(
     page.getByRole("combobox", { name: "Market" }),
@@ -660,7 +660,7 @@ test("a translated overview keeps working when a trend gets its data", async ({
   await page.getByRole("option", { name: /US · United States/i }).click();
 
   await expect(page).toHaveURL(/market=us/);
-  await expect(visibility).toContainText(/visibility · us/i);
+  await expect(visibility).toContainText(/search visibility · us/i);
   await expect(visibility).toContainText("-1 30d");
   await expect(visibility).not.toContainText(/no 30d data/i);
   expect(errors).toEqual([]);

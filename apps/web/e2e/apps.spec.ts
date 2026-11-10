@@ -871,22 +871,19 @@ test("app overview renders summary numbers and a utc refresh date", async ({
   await expect(page.getByText("-3 30d").locator("..")).toHaveClass(
     /text-signal-down/,
   );
-  await expect(page.getByText("3 in top 10")).toBeVisible();
-
-  await expect(page.getByText("Where your keywords rank")).toBeVisible();
-
-  await expect(page.getByText("Keyword movers")).toBeVisible();
-  await expect(page.getByRole("link", { name: /focus timer/ })).toBeVisible();
   await expect(
-    page
-      .getByRole("link", { name: /focus timer/ })
-      .locator("[data-grade]", { hasText: "Position 3, strong" }),
-  ).toHaveAttribute("data-grade", "strong");
+    page.getByRole("button", { name: /^Keywords in top 10 3 of 5 tracked/ }),
+  ).toBeVisible();
+
   await expect(
-    page
-      .getByRole("link", { name: /pomodoro/ })
-      .locator("[data-grade]", { hasText: "Position 12, weak" }),
-  ).toHaveAttribute("data-grade", "weak");
+    page.getByRole("heading", { name: "Keyword movers", level: 2 }),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: /focus timer/ })).toHaveText(
+    "focus timer10 → 3▲ 7up 7 in 7 days",
+  );
+  await expect(page.getByRole("link", { name: /pomodoro/ })).toHaveText(
+    "pomodoro6 → 12▼ 6down 6 in 7 days",
+  );
 
   const coverage = card(page, "Metadata coverage");
   await expect(
@@ -897,11 +894,8 @@ test("app overview renders summary numbers and a utc refresh date", async ({
   const refreshDate = utcDateFormatter.format(
     new Date(APP_1_SUMMARY.lastRefreshAt ?? ""),
   );
-  const lastRefresh = card(page, "Last refresh");
-  await expect(lastRefresh).toBeVisible();
-  await expect(
-    lastRefresh.getByText(refreshDate, { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText(`Snapshot ${refreshDate}`)).toHaveCount(1);
+  await expect(page.getByText("Last refresh")).toHaveCount(0);
 });
 
 test("an app that iPhone search never lists carries a notice on every page", async ({

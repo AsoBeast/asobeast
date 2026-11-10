@@ -170,7 +170,9 @@ test("shows no store funnel while store connections are off", async ({
   ]);
   await page.goto("/apps/app-1");
 
-  await expect(card(page, "Visibility · All markets")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Search visibility · All markets" }),
+  ).toBeVisible();
   await expect(page.getByText(/^Store funnel/)).toHaveCount(0);
 });
 

@@ -121,7 +121,7 @@ function NoShare({ id, country }: { id: string; country?: string }) {
   if (reason === "noCompetitors") {
     return (
       <ChartNotice
-        height={CHART_HEIGHT.compact}
+        height={CHART_HEIGHT.tall}
         title="Add a competitor to chart share of voice"
         body="Track one on the competitors page and its share is charted from its first daily check."
       />
@@ -129,7 +129,7 @@ function NoShare({ id, country }: { id: string; country?: string }) {
   }
   return (
     <ChartNotice
-      height={CHART_HEIGHT.compact}
+      height={CHART_HEIGHT.tall}
       title="No share of voice recorded yet"
       body={`${shareReason(reason)}.`}
     />
@@ -163,7 +163,7 @@ export function ShareOfVoiceChart({
     const latest = rows[rows.length - 1];
     return (
       <ChartStat
-        height={CHART_HEIGHT.compact}
+        height={CHART_HEIGHT.tall}
         label="Latest share of voice"
         value={latest.share === undefined ? "—" : formatShare(latest.share)}
         note="A trend line needs a few more daily checks."
@@ -174,7 +174,7 @@ export function ShareOfVoiceChart({
   return (
     <ChartContainer
       config={shareConfig}
-      className={`${CHART_HEIGHT.compact} w-full`}
+      className={`${CHART_HEIGHT.tall} w-full`}
       role="region"
       aria-label="Share of voice over time"
     >

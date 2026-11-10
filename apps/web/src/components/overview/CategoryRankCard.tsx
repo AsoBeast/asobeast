@@ -18,10 +18,13 @@ import {
   Card,
   CardAction,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  PANEL_ACTION,
+  PANEL_HEADER,
+} from "@/components/dashboard/layout-classes";
 import { RangePicker } from "@/components/rankings/RangePicker";
 import { formatCategoryPosition, formatDayMonth } from "@/lib/format";
 import { appDetailOptions, categoryRanksOptions } from "@/lib/queries";
@@ -42,8 +45,8 @@ import {
   LINE_PROPS,
   seriesColor,
   seriesDash,
+  RANK_AXIS_PROPS,
   TIME_AXIS_PROPS,
-  VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
 
 const Y_TICKS = [1, 25, 50, 100, 150, 200];
@@ -139,7 +142,7 @@ function HeaderStat({
   const href = headlineChartHref(headline, detail);
 
   return (
-    <p className="text-sm">
+    <p className="text-body">
       <Link
         href={href}
         className="underline decoration-faint-foreground underline-offset-4 hover:decoration-2"
@@ -150,7 +153,7 @@ function HeaderStat({
           </span>
         ) : (
           <>
-            <span className="text-lg font-semibold numeric">
+            <span className="numeric text-heading font-semibold">
               {`#${headline.current}`}
             </span>{" "}
             <span className="text-muted-foreground">
@@ -197,12 +200,9 @@ function CategoryRankBody({ id, range }: { id: string; range: RangePreset }) {
           <CartesianGrid {...GRID_PROPS} />
           <XAxis {...TIME_AXIS_PROPS} />
           <YAxis
-            {...VALUE_AXIS_PROPS}
-            reversed
+            {...RANK_AXIS_PROPS}
             domain={[1, chart.depth]}
             ticks={ticksTo(chart.depth)}
-            width={40}
-            allowDataOverflow
           />
           <ChartTooltip content={<CategoryTooltip data={chart} />} />
           <ChartLegend
@@ -231,11 +231,12 @@ export function CategoryRankCard({ id }: { id: string }) {
   const shownRange = useDeferredValue(range);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardDescription>Category ranks · Home market</CardDescription>
-        <CardTitle>Top charts position</CardTitle>
-        <CardAction>
+    <Card className="h-full">
+      <CardHeader className={PANEL_HEADER}>
+        <CardTitle asChild>
+          <h2>Category ranks · Home market</h2>
+        </CardTitle>
+        <CardAction className={PANEL_ACTION}>
           <RangePicker
             presets={RANGE_PRESETS}
             value={range}

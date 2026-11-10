@@ -1,32 +1,31 @@
 import type { Page, Request } from "@playwright/test";
 import { expect, test } from "./session.mts";
 
-const visibilityCard = (page: Page) =>
-  page
-    .locator('[data-slot="card"]')
-    .filter({ hasText: /^Visibility/ })
-    .first();
+const shareTile = (page: Page) =>
+  page.getByRole("button", { name: /^Share of voice/ });
+
+const visibilityTile = (page: Page) =>
+  page.getByRole("button", { name: /^Visibility/ });
 
 const chartCard = (page: Page) =>
-  page
-    .locator('[data-slot="card"]')
-    .filter({ has: page.getByRole("tablist", { name: "Chart view" }) });
+  page.locator('[data-slot="card"]').filter({ has: shareTile(page) });
 
 const comparedHistory = (request: Request) =>
   /\/visibility-history\?/.test(request.url()) &&
   new URL(request.url()).searchParams.get("compare") === "competitors";
 
-test("states the share of voice on the visibility card", async ({ page }) => {
+test("states the share of voice on its tile", async ({ page }) => {
   await page.goto("/apps/app-1");
-  const card = visibilityCard(page);
+  const tile = shareTile(page);
 
-  await expect(card).toContainText("Share of voice42.0%");
-  await expect(card).toContainText("+3.5 7d");
-  await expect(card).toContainText("vs 1 competitor");
-  await expect(card).toContainText("Non branded51.3%");
-  await expect(card).toContainText("-1.2 7d");
+  await expect(tile).toContainText("Share of voice42.0%");
+  await expect(tile).toContainText("+3.5 7d");
+  await expect(tile).toContainText("vs 1 competitor · 51.3% non branded");
 
-  await card.getByRole("button", { name: "About share of voice" }).click();
+  await tile.click();
+  await chartCard(page)
+    .getByRole("button", { name: "About share of voice" })
+    .click();
   const popover = page.getByRole("dialog", {
     name: "How share of voice is calculated",
   });
@@ -43,16 +42,16 @@ test("states the share of voice on the visibility card", async ({ page }) => {
 test("says why a market has no share of voice", async ({ page }) => {
   await page.goto("/apps/app-1?market=pl");
 
-  await expect(visibilityCard(page)).toContainText(
+  await expect(shareTile(page)).toContainText(
     "Your competitors have not been checked yet",
   );
-  await expect(visibilityCard(page)).not.toContainText("Non branded");
+  await expect(shareTile(page)).not.toContainText("non branded");
 });
 
 test("asks for a competitor when the app has none", async ({ page }) => {
   await page.goto("/apps/app-2");
 
-  await expect(visibilityCard(page)).toContainText(
+  await expect(shareTile(page)).toContainText(
     "Add a competitor to see your share of voice",
   );
 });
@@ -69,7 +68,7 @@ test("switches the chart to share of voice and keeps it in the url", async ({
   expect(asked.some((url) => url.includes("compare="))).toBe(false);
 
   const compared = page.waitForRequest(comparedHistory);
-  await chartCard(page).getByRole("tab", { name: "Share of voice" }).click();
+  await shareTile(page).click();
   await compared;
 
   await expect(page).toHaveURL(/[?&]visView=share/);
@@ -91,7 +90,7 @@ test("switches the chart to share of voice and keeps it in the url", async ({
     page.getByRole("region", { name: "Share of voice over time" }),
   ).toBeVisible();
 
-  await chartCard(page).getByRole("tab", { name: "Visibility" }).click();
+  await visibilityTile(page).click();
   await expect(page).not.toHaveURL(/visView=/);
   await expect(
     page.getByRole("region", { name: "Search visibility over time" }),
@@ -120,7 +119,7 @@ test("keeps the previous chart on screen while the next view loads", async ({
   });
   await expect(visibility).toBeVisible();
 
-  await chartCard(page).getByRole("tab", { name: "Share of voice" }).click();
+  await shareTile(page).click();
   await expect(visibility).toBeVisible();
   await expect(
     page.getByRole("region", { name: "Share of voice over time" }),
@@ -155,12 +154,10 @@ test("names the share of each line in the tooltip", async ({ page }) => {
 });
 
 for (const width of [320, 375]) {
-  test(`fits the chart toggle on a ${width} px screen`, async ({ page }) => {
+  test(`fits the metric tiles on a ${width} px screen`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });
     await page.goto("/apps/app-1?visView=share");
-    await expect(
-      chartCard(page).getByRole("tablist", { name: "Chart view" }),
-    ).toBeVisible();
+    await expect(shareTile(page)).toHaveAttribute("aria-pressed", "true");
 
     expect(
       await page.evaluate(

@@ -30,6 +30,9 @@ const PILL_SHAPE = "h-[22px] rounded-md px-[7px] text-label";
 const formOf = (way: Direction, form: DeltaForm) =>
   form === "pill" ? cn(PILL_SHAPE, PILL[way]) : undefined;
 
+const slotOf = (form: DeltaForm) =>
+  form === "pill" ? "delta-pill" : undefined;
+
 function direction(value: number, polarity: DeltaPolarity): Direction {
   if (value === 0) return "flat";
   const improved = polarity === "lower-is-better" ? value < 0 : value > 0;
@@ -57,6 +60,7 @@ export function DeltaChip({
   if (value === 0) {
     return (
       <span
+        data-slot={slotOf(form)}
         className={cn(
           "numeric text-muted-foreground",
           formOf("flat", form),
@@ -74,6 +78,7 @@ export function DeltaChip({
 
   return (
     <span
+      data-slot={slotOf(form)}
       aria-label={`${way} ${magnitude} ${period}`}
       className={cn(
         "numeric inline-flex items-center gap-0.5 font-medium",
@@ -150,6 +155,7 @@ export function TrendChip({
 
   return (
     <span
+      data-slot={slotOf(form)}
       className={cn(
         "numeric inline-flex items-center gap-0.5 text-label font-medium",
         TONE[way],

@@ -19,6 +19,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "The dashboard now opens with one sentence about the keywords that climbed and fell this week, then your visibility across every app as one figure. Pick the last 7, 30 or 90 days beside Import app and the whole page follows: the sentence, the changes on the four figures, the keyword movers and the chart, which each figure draws for itself when you select it. Your keyword movers sit beside the next things to do, your apps are a table with a trend line each (the cards are one click away), and your latest alerts sit beside listing changes, where a run of version updates is folded into one line.",
       },
       {
+        kind: "improved",
+        title: "An app overview that leads with what matters",
+        text: "The overview of an app now opens with four figures: visibility, share of voice, keywords in the top 10 and the store rating. Select a figure to draw its chart. Keyword movers sit right under it beside the next things to do, with the biggest competitor gap at their foot and the keywords missing from your metadata next to them. The store funnel, category ranks and ratings by market follow as reference, and the app's own icon now sits beside its name on every page.",
+      },
+      {
         kind: "new",
         title: "What's New",
         text: "A What's New item at the bottom of the sidebar opens this page, and a red dot on its icon tells you when there is an update you have not read yet.",
