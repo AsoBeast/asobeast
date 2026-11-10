@@ -174,7 +174,7 @@ Decompose by responsibility, not by syntactic kind: the target is fewer concepts
 
 ## Environment variables
 
-- `apps/api/.env.example`, `apps/web/.env.example` and the root `.env.example` (Compose only) are the authoritative lists. `docs/configuration/reference.mdx` documents the API and Compose variables and `docs/configuration/web.mdx` the web ones; change the page in the same commit. `pnpm check:env-documented` fails CI when an API variable is missing from the reference or the reference names one no example declares.
+- `apps/api/.env.example`, `apps/web/.env.example` and the root `.env.example` (Compose only) are the authoritative lists. `docs/configuration/reference.mdx` documents the API and Compose variables and `docs/configuration/web.mdx` the web ones; change the page in the same commit. `pnpm check:env-documented` fails CI when an API variable is missing from the reference or the reference names one its example does not declare (the root `.env.example` for the Compose only section).
 - In an example file, a variable whose default is empty carries its comment on the line above it, never after it, because Compose reads `KEY=   # note` as the value `# note`; `pnpm check:compose-env` enforces it.
 - Read a variable's comment in its `.env.example` before relying on its default: many refuse to boot or warn in production.
 
