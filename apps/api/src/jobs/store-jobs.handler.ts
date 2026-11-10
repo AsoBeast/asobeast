@@ -29,6 +29,7 @@ import {
 } from './jobs.types';
 import { requireJobScope } from './job-workspace';
 import { isFinalAttempt } from './final-attempt';
+import { busyPoolRetryAt } from './busy-pool';
 
 const ELIGIBILITY_GATED_JOBS: ReadonlySet<string> = new Set([
   JOBS.SPIDER_PROBE,
@@ -58,12 +59,41 @@ export class StoreJobsHandler {
 
   async handle(job: Job): Promise<void> {
     await this.workspace.runScope(requireJobScope(job), async () => {
-      if (!(await this.mayCollect(job))) return;
-      const country = await this.targetCountry.of(job);
-      await this.egress.through(jobStore(job), country, () =>
-        this.dispatch(job),
-      );
+      if (!(await this.mayCollect(job))) {
+        await this.skipped(job);
+        return;
+      }
+      try {
+        const country = await this.targetCountry.of(job);
+        await this.egress.through(jobStore(job), country, () =>
+          this.dispatch(job),
+        );
+      } catch (error) {
+        await this.abandoned(job, error);
+        throw error;
+      }
     });
+  }
+
+  private async skipped(job: Job): Promise<void> {
+    if (job.name === JOBS.INSPECT_KEYWORD) {
+      await this.inspections.refuse(
+        (job.data as InspectKeywordPayload).inspectionId,
+      );
+    }
+  }
+
+  private async abandoned(job: Job, error: unknown): Promise<void> {
+    if (
+      job.name === JOBS.INSPECT_KEYWORD &&
+      isFinalAttempt(job) &&
+      busyPoolRetryAt(job, error) === null
+    ) {
+      await this.inspections.fail(
+        (job.data as InspectKeywordPayload).inspectionId,
+        error,
+      );
+    }
   }
 
   private mayCollect(job: Job): Promise<boolean> {
@@ -108,7 +138,6 @@ export class StoreJobsHandler {
       case JOBS.INSPECT_KEYWORD:
         await this.inspections.run(
           (job.data as InspectKeywordPayload).inspectionId,
-          isFinalAttempt(job),
         );
         return;
       case JOBS.SYNC_REVIEWS:

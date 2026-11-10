@@ -3,6 +3,7 @@ import {
   isScoringSource,
   KEYWORD_INSPECTION_STATUSES,
   KeywordInspection,
+  KeywordInspectionApp,
   KeywordInspectionDelta,
   KeywordInspectionProvenance,
   KeywordInspectionResult,
@@ -15,6 +16,10 @@ import {
 import { Prisma } from '@prisma/client';
 import { computeOpportunity } from '../scoring/opportunity';
 import { readScoreSignals } from '../scoring/score-signals';
+import {
+  INSPECTION_PENDING_TTL_MS,
+  INSPECTION_TIMED_OUT,
+} from './inspection-failures';
 import { COMPETITION_DEPTH, summarizeCompetition } from './inspection-results';
 
 export const INSPECTION_SUMMARY_SELECT = {
@@ -59,6 +64,10 @@ const scaled = (
   scale: (raw: number) => number,
 ): number | null => (value === null ? null : scale(value));
 
+const timedOut = (row: InspectionSummaryRow): boolean =>
+  row.status === 'PENDING' &&
+  row.requestedAt.getTime() < Date.now() - INSPECTION_PENDING_TTL_MS;
+
 export function toInspectionSummary(
   row: InspectionSummaryRow,
 ): KeywordInspectionSummary {
@@ -70,7 +79,7 @@ export function toInspectionSummary(
     keyword: row.keyword.text,
     store: row.keyword.store,
     country: row.keyword.country,
-    status: statusOf(row.status),
+    status: timedOut(row) ? 'FAILED' : statusOf(row.status),
     requestedAt: row.requestedAt.toISOString(),
     completedAt: row.completedAt?.toISOString() ?? null,
     volume,
@@ -100,19 +109,19 @@ function provenanceOf(
   };
 }
 
-const topTitles = (results: readonly KeywordInspectionResult[]): Set<string> =>
+const topIds = (results: readonly KeywordInspectionResult[]): Set<string> =>
   new Set(
     results.slice(0, COMPETITION_DEPTH).map((result) => result.storeAppId),
   );
 
-function titlesOf(
+function appsOf(
   results: readonly KeywordInspectionResult[],
   ids: ReadonlySet<string>,
-): string[] {
+): KeywordInspectionApp[] {
   return results
     .slice(0, COMPETITION_DEPTH)
     .filter((result) => ids.has(result.storeAppId))
-    .map((result) => result.title);
+    .map(({ storeAppId, title }) => ({ storeAppId, title }));
 }
 
 const minus = (left: Set<string>, right: Set<string>): Set<string> =>
@@ -124,8 +133,8 @@ export function inspectionDelta(
 ): KeywordInspectionDelta | null {
   if (previous.completedAt === null) return null;
   const earlier = arrayOf<KeywordInspectionResult>(previous.results);
-  const now = topTitles(current);
-  const then = topTitles(earlier);
+  const now = topIds(current);
+  const then = topIds(earlier);
   const summary = toInspectionSummary(previous);
   return {
     inspectionId: previous.id,
@@ -133,8 +142,8 @@ export function inspectionDelta(
     volume: summary.volume,
     difficulty100: summary.difficulty100,
     resultCount: summary.resultCount,
-    entered: titlesOf(current, minus(now, then)),
-    left: titlesOf(earlier, minus(then, now)),
+    entered: appsOf(current, minus(now, then)),
+    left: appsOf(earlier, minus(then, now)),
   };
 }
 
@@ -154,6 +163,6 @@ export function toInspection(
     results,
     suggestions: arrayOf<KeywordInspectionSuggestion>(row.suggestions),
     previous: previous === null ? null : inspectionDelta(results, previous),
-    failure: row.failure,
+    failure: timedOut(row) ? INSPECTION_TIMED_OUT : row.failure,
   };
 }

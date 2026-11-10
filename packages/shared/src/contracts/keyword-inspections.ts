@@ -84,14 +84,19 @@ export interface KeywordInspectionSummary {
   resultCount: number | null;
 }
 
+export interface KeywordInspectionApp {
+  storeAppId: string;
+  title: string;
+}
+
 export interface KeywordInspectionDelta {
   inspectionId: string;
   completedAt: string;
   volume: number | null;
   difficulty100: number | null;
   resultCount: number | null;
-  entered: string[];
-  left: string[];
+  entered: KeywordInspectionApp[];
+  left: KeywordInspectionApp[];
 }
 
 export interface KeywordInspection extends KeywordInspectionSummary {

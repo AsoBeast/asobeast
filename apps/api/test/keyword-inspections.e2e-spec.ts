@@ -20,6 +20,10 @@ import {
   QUEUES,
 } from '../src/jobs/jobs.types';
 import { StoreJobsHandler } from '../src/jobs/store-jobs.handler';
+import {
+  INSPECTION_NOT_QUEUED,
+  INSPECTION_TIMED_OUT,
+} from '../src/keyword-inspections/inspection-failures';
 import { StoreRequestError } from '../src/store-providers/errors';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import {
@@ -213,6 +217,88 @@ describe('KeywordInspectionsController (e2e)', () => {
     expect(await prisma.keywordInspection.count()).toBe(1);
   });
 
+  it('queues one inspection when the same keyword is requested at once', async () => {
+    const body = {
+      keyword: 'habit tracker',
+      store: 'APP_STORE',
+      country: 'us',
+    };
+    const [first, second] = await Promise.all([inspect(body), inspect(body)]);
+
+    expect(second.id).toBe(first.id);
+    expect(await prisma.keywordInspection.count()).toBe(1);
+  });
+
+  it('fails a pending inspection that never finished and queues a new one', async () => {
+    const body = {
+      keyword: 'habit tracker',
+      store: 'APP_STORE',
+      country: 'us',
+    };
+    const stale = await inspect(body);
+    await prisma.keywordInspection.update({
+      where: { id: stale.id },
+      data: { requestedAt: new Date(Date.now() - 11 * 60 * 1000) },
+    });
+
+    expect(
+      (await api.get(`/keyword-inspections/${stale.id}`).expect(200)).body,
+    ).toMatchObject({ status: 'FAILED', failure: INSPECTION_TIMED_OUT });
+
+    const fresh = await inspect(body);
+    await runJob(stale.id);
+
+    expect(registry.searches).toBe(0);
+    expect(fresh.id).not.toBe(stale.id);
+    expect(fresh.status).toBe('PENDING');
+    expect(
+      (await api.get(`/keyword-inspections/${stale.id}`).expect(200)).body,
+    ).toMatchObject({ status: 'FAILED', failure: INSPECTION_TIMED_OUT });
+  });
+
+  it('closes a run whose job arrives after it timed out without reading the store', async () => {
+    const late = await inspect({
+      keyword: 'habit tracker',
+      store: 'APP_STORE',
+      country: 'us',
+    });
+    await prisma.keywordInspection.update({
+      where: { id: late.id },
+      data: { requestedAt: new Date(Date.now() - 11 * 60 * 1000) },
+    });
+
+    await runJob(late.id);
+
+    expect(registry.searches).toBe(0);
+    expect(
+      await prisma.keywordInspection.findUniqueOrThrow({
+        where: { id: late.id },
+        select: { status: true, failure: true },
+      }),
+    ).toEqual({ status: 'FAILED', failure: INSPECTION_TIMED_OUT });
+  });
+
+  it('fails an inspection the queue would not take', async () => {
+    const add = jest
+      .spyOn(Queue.prototype, 'add')
+      .mockRejectedValueOnce(new Error('queue down'));
+
+    try {
+      await api
+        .post('/keyword-inspections')
+        .send({ keyword: 'habit tracker', store: 'APP_STORE', country: 'us' })
+        .expect(500);
+    } finally {
+      add.mockRestore();
+    }
+
+    const [row] = await prisma.keywordInspection.findMany();
+    expect(row).toMatchObject({
+      status: 'FAILED',
+      failure: INSPECTION_NOT_QUEUED,
+    });
+  });
+
   it('completes an inspection with results, suggestions and scores', async () => {
     const pending = await inspect({
       keyword: 'habit tracker',
@@ -271,6 +357,7 @@ describe('KeywordInspectionsController (e2e)', () => {
       store: 'APP_STORE',
       country: 'us',
     });
+    expect(second.previous).toBeNull();
     await runJob(second.id);
 
     const read = (
@@ -278,8 +365,8 @@ describe('KeywordInspectionsController (e2e)', () => {
     ).body as KeywordInspection;
     expect(read.previous).toMatchObject({
       inspectionId: first.id,
-      entered: ['Streak Builder'],
-      left: ['Daily Planner'],
+      entered: [{ storeAppId: '300', title: 'Streak Builder' }],
+      left: [{ storeAppId: '200', title: 'Daily Planner' }],
     });
   });
 
@@ -301,7 +388,9 @@ describe('KeywordInspectionsController (e2e)', () => {
       await api.get(`/keyword-inspections/${pending.id}`).expect(200)
     ).body as KeywordInspection;
     expect(failed.status).toBe('FAILED');
-    expect(failed.failure).toEqual(expect.any(String));
+    expect(failed.failure).toBe(
+      new StoreRequestError(Store.APP_STORE, 'search', 'timeout').userMessage,
+    );
   });
 
   it('lists inspections newest first and filters by keyword and store', async () => {

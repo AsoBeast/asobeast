@@ -32,7 +32,7 @@ export class KeywordInspectionsController {
   @ApiOperation({
     summary: 'Inspect any keyword in one storefront',
     description:
-      'Queues a live inspection of a keyword the workspace does not need to track: the top 50 search results, the store autocomplete, popularity, difficulty and opportunity with their source and confidence, and a competition summary of the top 10. Answers at once with the pending inspection; poll GET /keyword-inspections/{id} until status is DONE or FAILED. An inspection of the same keyword and storefront that is still pending is answered instead of queuing another. A queued inspection spends one on demand score of the hourly allowance; a request the validation refuses spends nothing.',
+      'Queues a live inspection of a keyword the workspace does not need to track: the top 50 search results, the store autocomplete, popularity, difficulty and opportunity with their source and confidence, and a competition summary of the top 10. Answers at once with the pending inspection; poll GET /keyword-inspections/{id} until status is DONE or FAILED. An inspection of the same keyword and storefront that is still pending is answered instead of queuing another. A queued inspection spends one on demand score of the daily allowance; a request the validation refuses spends nothing.',
   })
   request(
     @Body() dto: RequestKeywordInspectionDto,

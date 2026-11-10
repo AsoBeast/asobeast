@@ -7,16 +7,18 @@ import {
   toInspectionResults,
   toInspectionSuggestions,
 } from './inspection-results';
-
-export const INSPECTION_FAILURE_MAX_LENGTH = 500;
+import {
+  INSPECTION_NOT_COLLECTING,
+  INSPECTION_PENDING_TTL_MS,
+  INSPECTION_TIMED_OUT,
+  inspectionFailureOf,
+} from './inspection-failures';
 
 const asJson = (value: unknown): Prisma.InputJsonValue =>
   value as Prisma.InputJsonValue;
 
-function failureOf(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
-  return message.slice(0, INSPECTION_FAILURE_MAX_LENGTH);
-}
+const messageOf = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
 
 @Injectable()
 export class KeywordInspectionRunner {
@@ -27,25 +29,26 @@ export class KeywordInspectionRunner {
     private readonly collector: StatsCollectorService,
   ) {}
 
-  async run(inspectionId: string, finalAttempt: boolean): Promise<void> {
+  async run(inspectionId: string): Promise<void> {
     const inspection = await this.prisma.keywordInspection.findFirst({
       where: { id: inspectionId, status: 'PENDING' },
       select: {
         id: true,
+        requestedAt: true,
         keyword: { select: { text: true, store: true, country: true } },
       },
     });
     if (!inspection) {
       return;
     }
-    try {
-      await this.complete(inspection.id, inspection.keyword);
-    } catch (error) {
-      if (finalAttempt) {
-        await this.fail(inspection.id, error);
-      }
-      throw error;
+    if (
+      inspection.requestedAt.getTime() <
+      Date.now() - INSPECTION_PENDING_TTL_MS
+    ) {
+      await this.close(inspection.id, INSPECTION_TIMED_OUT);
+      return;
     }
+    await this.complete(inspection.id, inspection.keyword);
   }
 
   private async complete(
@@ -68,9 +71,16 @@ export class KeywordInspectionRunner {
     });
   }
 
-  private async fail(id: string, error: unknown): Promise<void> {
-    const failure = failureOf(error);
-    this.logger.warn(`keyword inspection ${id} failed: ${failure}`);
+  async fail(id: string, error: unknown): Promise<void> {
+    this.logger.warn(`keyword inspection ${id} failed: ${messageOf(error)}`);
+    await this.close(id, inspectionFailureOf(error));
+  }
+
+  async refuse(id: string): Promise<void> {
+    await this.close(id, INSPECTION_NOT_COLLECTING);
+  }
+
+  private async close(id: string, failure: string): Promise<void> {
     await this.prisma.keywordInspection.updateMany({
       where: { id, status: 'PENDING' },
       data: { status: 'FAILED', failure, completedAt: new Date() },

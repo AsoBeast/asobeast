@@ -15,12 +15,19 @@ import { inspectKeywordJobId, JOBS, QUEUES } from '../jobs/jobs.types';
 import { normalizeKeyword } from '../keywords/keywords.support';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  INSPECTION_NOT_QUEUED,
+  INSPECTION_PENDING_TTL_MS,
+  INSPECTION_TIMED_OUT,
+} from './inspection-failures';
+import {
   INSPECTION_DETAIL_SELECT,
   INSPECTION_SUMMARY_SELECT,
   InspectionDetailRow,
   toInspection,
   toInspectionSummary,
 } from './inspection-view';
+
+const INSPECTION_LOCK = 6_431_907;
 
 export interface KeywordInspectionFilter {
   keyword?: string;
@@ -50,27 +57,28 @@ export class KeywordInspectionsService {
       request.store,
       request.country,
     );
-    const pending = await this.prisma.keywordInspection.findFirst({
-      where: { workspaceId, keywordId, status: 'PENDING' },
-      select: { id: true },
-    });
-    if (pending) {
-      return this.get(pending.id);
+    await this.expireStale(workspaceId, keywordId);
+    const waiting = await this.pendingOf(this.prisma, workspaceId, keywordId);
+    if (waiting) {
+      return this.get(waiting);
     }
     await spend();
-    const created = await this.prisma.keywordInspection.create({
-      data: { workspaceId, keywordId },
-      select: { id: true },
+    const claim = await this.prisma.withTransaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${INSPECTION_LOCK}::int, hashtext(${`${workspaceId}~${keywordId}`}))`;
+      const pending = await this.pendingOf(tx, workspaceId, keywordId);
+      if (pending) {
+        return { id: pending, queued: false };
+      }
+      const created = await tx.keywordInspection.create({
+        data: { workspaceId, keywordId },
+        select: { id: true },
+      });
+      return { id: created.id, queued: true };
     });
-    await this.queueFor(request.store).add(
-      JOBS.INSPECT_KEYWORD,
-      {
-        inspectionId: created.id,
-        ...this.workspace.scopeFor('a keyword inspection'),
-      },
-      { jobId: inspectKeywordJobId(created.id) },
-    );
-    return this.get(created.id);
+    if (claim.queued) {
+      await this.enqueue(claim.id, request.store);
+    }
+    return this.get(claim.id);
   }
 
   async list(filter: KeywordInspectionFilter): Promise<KeywordInspectionList> {
@@ -91,7 +99,10 @@ export class KeywordInspectionsService {
     if (!row) {
       throw new NotFoundException(`Keyword inspection ${id} not found`);
     }
-    return toInspection(row, await this.previousOf(row));
+    return toInspection(
+      row,
+      row.status === 'DONE' ? await this.previousOf(row) : null,
+    );
   }
 
   async remove(id: string): Promise<void> {
@@ -145,6 +156,60 @@ export class KeywordInspectionsService {
       select: { id: true },
     });
     return keyword.id;
+  }
+
+  private async expireStale(
+    workspaceId: string,
+    keywordId: string,
+  ): Promise<void> {
+    await this.prisma.keywordInspection.updateMany({
+      where: {
+        workspaceId,
+        keywordId,
+        status: 'PENDING',
+        requestedAt: { lt: new Date(Date.now() - INSPECTION_PENDING_TTL_MS) },
+      },
+      data: {
+        status: 'FAILED',
+        failure: INSPECTION_TIMED_OUT,
+        completedAt: new Date(),
+      },
+    });
+  }
+
+  private async pendingOf(
+    client: Prisma.TransactionClient | PrismaService,
+    workspaceId: string,
+    keywordId: string,
+  ): Promise<string | null> {
+    const pending = await client.keywordInspection.findFirst({
+      where: { workspaceId, keywordId, status: 'PENDING' },
+      select: { id: true },
+    });
+    return pending?.id ?? null;
+  }
+
+  private async enqueue(id: string, store: Store): Promise<void> {
+    try {
+      await this.queueFor(store).add(
+        JOBS.INSPECT_KEYWORD,
+        {
+          inspectionId: id,
+          ...this.workspace.scopeFor('a keyword inspection'),
+        },
+        { jobId: inspectKeywordJobId(id) },
+      );
+    } catch (error) {
+      await this.prisma.keywordInspection.updateMany({
+        where: { id, status: 'PENDING' },
+        data: {
+          status: 'FAILED',
+          failure: INSPECTION_NOT_QUEUED,
+          completedAt: new Date(),
+        },
+      });
+      throw error;
+    }
   }
 
   private queueFor(store: Store): Queue {
