@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import { AppStoreAppResult, AppStoreLib } from './app-store.lib';
 import { AppStoreProvider } from './app-store.provider';
@@ -15,6 +16,57 @@ const makeLib = (overrides: Partial<AppStoreLib> = {}): AppStoreLib => ({
   developer: jest.fn(),
   ...overrides,
 });
+
+const TRAILER_URL =
+  'https://apptrailers.itunes.apple.com/itunes-assets/PurpleVideo211/v4/P1497996222_default.m3u8';
+
+const SERVER_DATA_PAGE = `<h1>Pokémon GO</h1><p class="subtitle svelte-abc123">Discover Pokémon Worldwide</p><script type="application/json" id="serialized-server-data">${JSON.stringify(
+  {
+    data: [
+      {
+        data: {
+          shelfMapping: {
+            product_media_phone_: {
+              items: [
+                { video: { videoUrl: TRAILER_URL } },
+                { screenshot: { template: 'https://shot/{w}x{h}' } },
+              ],
+            },
+            appEvents: {
+              items: [
+                {
+                  appEventId: '6822418007',
+                  title: 'Pokémon GO Wild Area: Global',
+                  kind: 'SPECIAL EVENT',
+                  appEventBadgeKind: 'happening',
+                  startDate: '2026-11-14T15:00:00.000Z',
+                  endDate: '2026-11-16T04:00:00.000Z',
+                },
+              ],
+            },
+          },
+        },
+      },
+    ],
+  },
+)}</script>`;
+
+const SERVER_DATA_EXTRACT = {
+  previewVideoUrls: [TRAILER_URL],
+  appEvents: [
+    {
+      appEventId: '6822418007',
+      title: 'Pokémon GO Wild Area: Global',
+      kind: 'SPECIAL EVENT',
+      badge: 'happening',
+      startsAt: '2026-11-14T15:00:00.000Z',
+      endsAt: '2026-11-16T04:00:00.000Z',
+    },
+  ],
+  featuredStories: [],
+  editorsChoice: null,
+  accessibilityStatement: null,
+};
 
 describe('AppStoreProvider', () => {
   it('maps app fields and stringifies numeric ids', async () => {
@@ -106,6 +158,8 @@ describe('AppStoreProvider', () => {
 
     expect(result.subtitle).toBe('The best app');
     expect(page).not.toHaveBeenCalled();
+    expect(result.raw).not.toHaveProperty('pageExtract');
+    expect(result.pageExtractUnavailable).toBe(false);
   });
 
   it('scrapes subtitle from the product page when the lookup omits it', async () => {
@@ -125,6 +179,81 @@ describe('AppStoreProvider', () => {
 
     expect(result.subtitle).toBe('Crossword Puzzles Brain Games');
     expect(page).toHaveBeenCalledWith({ id: 1, country: 'us' });
+  });
+
+  it('attaches the page extract from the same page read as the subtitle', async () => {
+    const app = jest.fn().mockResolvedValue({
+      id: 1094591345,
+      title: 'Pokémon GO',
+      description: 'desc',
+    });
+    const page = jest.fn().mockResolvedValue(SERVER_DATA_PAGE);
+    const provider = new AppStoreProvider(makeLib({ app, page }));
+
+    const result = await provider.getApp('1094591345', 'us');
+
+    expect(result.subtitle).toBe('Discover Pokémon Worldwide');
+    expect(result.raw).toEqual({
+      id: 1094591345,
+      title: 'Pokémon GO',
+      description: 'desc',
+      pageExtract: SERVER_DATA_EXTRACT,
+    });
+    expect(result.pageExtractUnavailable).toBe(false);
+    expect(page).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks the extract unavailable when the page embeds no server data', async () => {
+    const app = jest.fn().mockResolvedValue({
+      id: 1,
+      title: 'App',
+      description: 'desc',
+    });
+    const page = jest
+      .fn()
+      .mockResolvedValue(
+        '<h1>App</h1><p class="subtitle svelte-abc123">Real words</p>',
+      );
+    const provider = new AppStoreProvider(makeLib({ app, page }));
+
+    const result = await provider.getApp('1', 'us');
+
+    expect(result.subtitle).toBe('Real words');
+    expect(result.subtitleUnavailable).toBe(false);
+    expect(result.raw).not.toHaveProperty('pageExtract');
+    expect(result.pageExtractUnavailable).toBe(true);
+  });
+
+  it('extracts the server data of a page that renders no listing', async () => {
+    jest.useFakeTimers();
+    const app = jest
+      .fn()
+      .mockResolvedValue({ id: 1, title: 'App', description: 'desc' });
+    const page = jest
+      .fn()
+      .mockResolvedValue(
+        `<div class="body-container"></div><script type="application/json" id="serialized-server-data">${JSON.stringify(
+          { data: [{ data: { shelfMapping: {} } }] },
+        )}</script>`,
+      );
+    const provider = new AppStoreProvider(makeLib({ app, page }));
+
+    const promise = provider.getApp('1', 'us');
+    await jest.runAllTimersAsync();
+    const result = await promise;
+
+    expect(result.subtitleUnavailable).toBe(true);
+    expect(result.pageUnavailable).toBe(false);
+    expect(result.raw).toHaveProperty('pageExtract', {
+      previewVideoUrls: [],
+      appEvents: [],
+      featuredStories: [],
+      editorsChoice: null,
+      accessibilityStatement: null,
+    });
+    expect(result.pageExtractUnavailable).toBe(false);
+    expect(page).toHaveBeenCalledTimes(3);
+    jest.useRealTimers();
   });
 
   it('reads no subtitle when the product page renders the primary category in its place', async () => {
@@ -218,12 +347,18 @@ describe('AppStoreProvider', () => {
 
     expect(result.subtitle).toBeUndefined();
     expect(result.subtitleUnavailable).toBe(true);
+    expect(result.pageUnavailable).toBe(true);
+    expect(result.raw).not.toHaveProperty('pageExtract');
+    expect(result.pageExtractUnavailable).toBe(true);
     expect(page).toHaveBeenCalledTimes(3);
     jest.useRealTimers();
   });
 
-  it('marks the subtitle unavailable when the product page renders no listing', async () => {
+  it('marks the subtitle unavailable when the product page keeps rendering no listing', async () => {
     jest.useFakeTimers();
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => {});
     const app = jest
       .fn()
       .mockResolvedValue({ id: 1, title: 'App', description: 'desc' });
@@ -239,8 +374,48 @@ describe('AppStoreProvider', () => {
     const result = await promise;
 
     expect(result.subtitleUnavailable).toBe(true);
+    expect(result.pageUnavailable).toBe(false);
+    expect(result.raw).not.toHaveProperty('pageExtract');
+    expect(result.pageExtractUnavailable).toBe(true);
     expect(page).toHaveBeenCalledTimes(3);
+    expect(warn).toHaveBeenCalledWith(
+      'subtitle scrape failed for 1: product page rendered no listing',
+    );
     jest.useRealTimers();
+    warn.mockRestore();
+  });
+
+  it('reads the subtitle once a shell product page answers', async () => {
+    jest.useFakeTimers();
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => {});
+    const app = jest
+      .fn()
+      .mockResolvedValue({ id: 1, title: 'App', description: 'desc' });
+    const page = jest
+      .fn()
+      .mockResolvedValueOnce(
+        '<!DOCTYPE html><html><body><div class="body-container"></div></body></html>',
+      )
+      .mockResolvedValue(
+        '<h1>App</h1><p class="subtitle svelte-kps97o">AI assistant for life and work</p>',
+      );
+    const provider = new AppStoreProvider(makeLib({ app, page }));
+
+    const promise = provider.getApp('1', 'pl');
+    await jest.runAllTimersAsync();
+    const result = await promise;
+
+    expect(result.subtitle).toBe('AI assistant for life and work');
+    expect(result.subtitleUnavailable).toBe(false);
+    expect(result.pageUnavailable).toBe(false);
+    expect(page).toHaveBeenCalledTimes(2);
+    expect(warn).not.toHaveBeenCalledWith(
+      'subtitle scrape failed for 1: product page rendered no listing',
+    );
+    jest.useRealTimers();
+    warn.mockRestore();
   });
 
   it('reads the subtitle once a throttled product page answers', async () => {
@@ -704,6 +879,21 @@ describe('AppStoreProvider localized listings', () => {
     ]);
     expect(page.mock.calls[0]).toStrictEqual([{ id: 1, country: 'pl' }]);
   });
+
+  it('carries the page extract of a localized page read', async () => {
+    const app = jest.fn().mockResolvedValue(listing);
+    const page = jest.fn().mockResolvedValue(SERVER_DATA_PAGE);
+    const provider = new AppStoreProvider(makeLib({ app, page }));
+
+    const result = await provider.getApp('1', 'pl', 'pl');
+
+    expect(page).toHaveBeenCalledWith({ id: 1, country: 'pl', language: 'pl' });
+    expect(result.raw).toEqual({
+      ...listing,
+      pageExtract: SERVER_DATA_EXTRACT,
+    });
+    expect(result.pageExtractUnavailable).toBe(false);
+  });
 });
 
 describe('AppStoreProvider on demand deadline', () => {
@@ -801,6 +991,29 @@ describe('AppStoreProvider on demand deadline', () => {
 
     expect(failure).toBeInstanceOf(StoreRequestError);
     expect(page).not.toHaveBeenCalled();
+  });
+
+  it('never extracts a page body that arrived after the deadline', async () => {
+    const app = jest
+      .fn()
+      .mockResolvedValue({ id: 1, title: 'App', description: 'desc' });
+    const page = jest.fn(
+      () =>
+        new Promise<string>((resolve) =>
+          setTimeout(() => resolve(SERVER_DATA_PAGE), DEADLINE_MS + 30),
+        ),
+    );
+    const provider = new AppStoreProvider(makeLib({ app, page }));
+
+    const result = await withinStoreDeadline(
+      () => provider.getApp('1', 'us'),
+      DEADLINE_MS,
+    );
+
+    expect(result.subtitleUnavailable).toBe(true);
+    expect(result.pageUnavailable).toBe(true);
+    expect(result.raw).not.toHaveProperty('pageExtract');
+    expect(result.pageExtractUnavailable).toBe(true);
   });
 
   it('starts no store call once the deadline has passed', async () => {

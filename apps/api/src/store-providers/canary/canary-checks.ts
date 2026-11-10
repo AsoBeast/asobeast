@@ -15,6 +15,13 @@ export function assertParsedApp(app: NormalizedApp): void {
   assertStringFields('parsed app', REQUIRED_APP_FIELDS, app);
 }
 
+export function assertPageExtract(app: NormalizedApp): void {
+  if (app.pageExtractUnavailable !== true || app.pageUnavailable === true) {
+    return;
+  }
+  throw new CanaryShapeError('product page extract is unavailable');
+}
+
 export function assertSearchResults(results: SearchItem[]): void {
   if (results.length === 0) {
     throw new CanaryShapeError('search returned no results');
