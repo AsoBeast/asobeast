@@ -45,7 +45,8 @@ const cardOf = (page: Page, heading: string) =>
     .locator("xpath=ancestor::*[@data-slot='card'][1]");
 
 const boxOf = async (locator: Locator) => {
-  const box = (await locator.boundingBox())!;
+  const box = await locator.boundingBox();
+  if (box === null) throw new Error("The element has no layout box");
   return {
     left: Math.round(box.x),
     right: Math.round(box.x + box.width),
@@ -367,11 +368,11 @@ for (const { width, collapse, rows } of [
 
     await expect
       .poll(async () => {
-        const movers = (await cardOf(page, "Keyword movers").boundingBox())!;
-        const actions = (await cardOf(page, "Do next").boundingBox())!;
+        const movers = await boxOf(cardOf(page, "Keyword movers"));
+        const actions = await boxOf(cardOf(page, "Do next"));
         return {
-          stacked: actions.y >= movers.y + movers.height,
-          aligned: Math.round(actions.x) === Math.round(movers.x),
+          stacked: actions.top >= movers.bottom,
+          aligned: actions.left === movers.left,
         };
       })
       .toEqual({ stacked: true, aligned: true });

@@ -432,10 +432,8 @@ export const moverDaysParser = createParser({
 
 export const dashboardRangeParser = createParser({
   parse(value) {
-    const days = Number(value);
-    return (PORTFOLIO_HISTORY_DAYS as readonly number[]).includes(days)
-      ? (days as PortfolioHistoryDays)
-      : null;
+    const requested = Number(value);
+    return PORTFOLIO_HISTORY_DAYS.find((days) => days === requested) ?? null;
   },
   serialize(value: PortfolioHistoryDays) {
     return String(value);

@@ -374,16 +374,18 @@ test("the open actions tile says so when no action set has been generated", asyn
   await expect(actions).toContainText("Not generated yet");
 });
 
-const trendOffset = (value: Locator) =>
-  value.evaluate((node) => {
-    const figure = node.querySelector(":scope > span > span:first-child")!;
-    const chip = node.querySelector(":scope > span > span:last-child")!;
-    const middle = (box: DOMRect) => box.top + box.height / 2;
-    return Math.abs(
-      middle(figure.getBoundingClientRect()) -
-        middle(chip.getBoundingClientRect()),
-    );
-  });
+const middleOf = async (target: Locator): Promise<number> => {
+  const box = await target.boundingBox();
+  if (box === null) throw new Error("The element has no layout box");
+  return box.y + box.height / 2;
+};
+
+const trendOffset = async (value: Locator): Promise<number> => {
+  const parts = value.locator(":scope > span > span");
+  return Math.abs(
+    (await middleOf(parts.first())) - (await middleOf(parts.last())),
+  );
+};
 
 test("the top 10 trend sits level with its figure", async ({ page }) => {
   await page.goto("/");
