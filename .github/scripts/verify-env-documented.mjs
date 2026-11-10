@@ -4,54 +4,50 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const EXAMPLE = "apps/api/.env.example";
-const INSTRUCTIONS = "AGENTS.md";
-const HEADING = "`apps/api/.env`:";
+const API_EXAMPLE = "apps/api/.env.example";
+const EXAMPLES = [API_EXAMPLE, "apps/web/.env.example", ".env.example"];
+const REFERENCE = "docs/configuration/reference.mdx";
 
 function read(path) {
   return readFileSync(resolve(root, path), "utf8");
 }
 
-function names(text) {
-  return [...text.matchAll(/^([A-Z][A-Z0-9_]*)=/gm)].map((match) => match[1]);
+function declaredIn(path) {
+  return [...read(path).matchAll(/^([A-Z][A-Z0-9_]*)=/gm)].map(
+    (match) => match[1],
+  );
 }
 
-function documentedBlock(text) {
-  const after = text.split(HEADING)[1];
-  if (after === undefined) {
-    throw new Error(`${INSTRUCTIONS} no longer contains the ${HEADING} block.`);
-  }
-  const fenced = after.split("```")[1];
-  if (fenced === undefined) {
-    throw new Error(`The ${HEADING} block in ${INSTRUCTIONS} is not fenced.`);
-  }
-  return fenced;
+function documentedIn(path) {
+  return [...read(path).matchAll(/^\| `([A-Z][A-Z0-9_]*)`/gm)].map(
+    (match) => match[1],
+  );
 }
 
-const declared = names(read(EXAMPLE));
-const documented = names(documentedBlock(read(INSTRUCTIONS)));
-
-const missing = declared.filter((name) => !documented.includes(name));
+const documented = documentedIn(REFERENCE);
+const apiDeclared = declaredIn(API_EXAMPLE);
+const declared = EXAMPLES.flatMap(declaredIn);
+const missing = apiDeclared.filter((name) => !documented.includes(name));
 const stale = documented.filter((name) => !declared.includes(name));
 
 if (missing.length > 0 || stale.length > 0) {
   console.error(
-    `${INSTRUCTIONS} must list exactly the variables ${EXAMPLE} declares.`,
+    `${REFERENCE} must document every variable ${API_EXAMPLE} declares, and nothing no example declares.`,
   );
-  console.error("It is the file every contributor and agent reads first, so a");
+  console.error("It is the one list operators and agents configure from, so a");
   console.error("variable missing from it is a variable nobody configures.");
   console.error("");
   if (missing.length > 0) {
-    console.error(`Missing from ${INSTRUCTIONS}:`);
+    console.error(`Missing from ${REFERENCE}:`);
     for (const name of missing) console.error(`  ${name}`);
   }
   if (stale.length > 0) {
-    console.error(`Documented but no longer in ${EXAMPLE}:`);
+    console.error("Documented but declared by no example:");
     for (const name of stale) console.error(`  ${name}`);
   }
   process.exit(1);
 }
 
 console.log(
-  `${INSTRUCTIONS} documents all ${declared.length} variables ${EXAMPLE} declares.`,
+  `${REFERENCE} documents all ${apiDeclared.length} variables ${API_EXAMPLE} declares.`,
 );
