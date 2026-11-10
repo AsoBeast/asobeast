@@ -32,7 +32,7 @@ const INSPECTION_LOCK = 6_431_907;
 
 export interface InspectionAllowance {
   spend: () => Promise<void>;
-  refund: () => Promise<void>;
+  refund: () => Promise<unknown>;
 }
 
 export interface KeywordInspectionFilter {
@@ -90,7 +90,7 @@ export class KeywordInspectionsService {
       return await this.get(claim.id);
     } catch (error) {
       if (spent) {
-        await allowance.refund();
+        await allowance.refund().catch(() => undefined);
       }
       throw error;
     }

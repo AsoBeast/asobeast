@@ -1,4 +1,4 @@
-import type { Redis } from 'ioredis';
+import { ReplyError, type Redis } from 'ioredis';
 import {
   ON_DEMAND_ACTIONS,
   PLAN_LIMITS,
@@ -13,6 +13,8 @@ import { RedisUnavailableError } from '../redis/redis.errors';
 import { FailFastRedis } from '../redis/fail-fast-redis';
 import { secondsUntilReset, windowKey } from './rate-limit/window';
 import { QuotaService } from './quota.service';
+
+const AnsweredError = ReplyError as unknown as new (message: string) => Error;
 
 const INDIE_RUN_DAILY = PLAN_LIMITS.indie.onDemand?.runDaily.limit ?? 0;
 
@@ -50,7 +52,10 @@ describe('OnDemandLimiter', () => {
   });
 
   it('gives one request back to the window it was spent in', async () => {
-    await scoped(() => limiterWith(true).refund('score', NOW));
+    const limiter = limiterWith(true);
+    const charge = await scoped(() => limiter.charge('score', NOW));
+
+    await expect(limiter.refund(charge)).resolves.toBe(true);
 
     expect(evaluate).toHaveBeenCalledTimes(1);
     expect(evaluate.mock.calls[0].slice(1)).toEqual([
@@ -59,18 +64,43 @@ describe('OnDemandLimiter', () => {
     ]);
   });
 
-  it('gives nothing back on a self hosted instance', async () => {
-    await scoped(() => limiterWith(false).refund('score', NOW));
+  it('charges and gives back nothing on a self hosted instance', async () => {
+    const limiter = limiterWith(false);
+    const charge = await scoped(() => limiter.charge('score', NOW));
 
+    expect(charge).toBeNull();
+    await limiter.spend(charge);
+    await expect(limiter.refund(charge)).resolves.toBe(true);
+    expect(incr).not.toHaveBeenCalled();
     expect(evaluate).not.toHaveBeenCalled();
   });
 
-  it('swallows a refund redis cannot take', async () => {
-    evaluate.mockRejectedValue(new Error('Command timed out'));
+  it('spends a resolved charge without reading the plan again', async () => {
+    const planScope = jest.fn(() =>
+      Promise.resolve({ plan: 'indie', limits: PLAN_LIMITS.indie }),
+    );
+    const limiter = new OnDemandLimiter(redis, workspace, {
+      planScope,
+    } as unknown as QuotaService);
+    const charge = await scoped(() => limiter.charge('score', NOW));
 
-    await expect(
-      scoped(() => limiterWith(true).refund('score', NOW)),
-    ).resolves.toBeUndefined();
+    await limiter.spend(charge);
+
+    expect(planScope).toHaveBeenCalledTimes(1);
+    expect(incr).toHaveBeenCalledWith(
+      windowKey('on-demand', WORKSPACE, 'score', 86_400, NOW),
+    );
+  });
+
+  it.each([
+    ['a reply error', new AnsweredError('NOSCRIPT')],
+    ['an outage', new Error('Command timed out')],
+  ])('answers false instead of throwing on %s', async (_, error) => {
+    const limiter = limiterWith(true);
+    const charge = await scoped(() => limiter.charge('score', NOW));
+    evaluate.mockRejectedValue(error);
+
+    await expect(limiter.refund(charge)).resolves.toBe(false);
   });
 
   it('never limits a self hosted instance', async () => {
