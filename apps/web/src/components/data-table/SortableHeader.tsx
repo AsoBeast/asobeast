@@ -28,7 +28,7 @@ export function SortableHeader({
       type="button"
       onClick={column.getToggleSortingHandler()}
       className={cn(
-        "inline-flex items-center gap-1 transition-colors",
+        "inline-flex min-h-6 items-center gap-1 transition-colors",
         sorted ? "text-foreground" : "hover:text-foreground",
         className,
       )}

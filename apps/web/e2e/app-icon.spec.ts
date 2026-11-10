@@ -11,7 +11,7 @@ test("a portfolio icon that fails before hydration falls back to the placeholder
 }) => {
   await page.route(optimizedIcon(APP_2_ICON_URL), (route) => route.abort());
 
-  await page.goto("/");
+  await page.goto("/?view=cards");
 
   const card = page
     .locator("[data-slot=card]")

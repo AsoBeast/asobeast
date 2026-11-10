@@ -132,7 +132,11 @@ import {
   FIRST_RUN_UNSCHEDULED,
   HEALTH,
   RUN_STATUS,
+  EMPTY_PORTFOLIO_VISIBILITY,
+  portfolioHistoryOf,
+  PORTFOLIO_VISIBILITY,
   RUN_STATUS_DELAYED,
+  RUN_STATUS_RUNNING,
   STORE_HEALTH_BROKEN,
   STORE_HEALTH_OK,
   IMPORTED_APP,
@@ -204,6 +208,7 @@ import {
 } from "./fixtures.mts";
 import {
   EMPTY_PORTFOLIO_INSIGHTS,
+  rangeChangeOf,
   FRESH_PORTFOLIO_INSIGHTS,
   MANY_PORTFOLIO_INSIGHTS,
   PORTFOLIO_INSIGHTS,
@@ -272,6 +277,8 @@ import type {
   ParsedStoreUrl,
   StoreHealthReport,
   WorkspaceRunStatus,
+  PortfolioHistory,
+  PortfolioInsights,
   PortfolioSummary,
   RankingSeries,
   KeywordBulkRequest,
@@ -312,6 +319,8 @@ import {
   type AppStoreLocalization,
   isAppStoreLocalization,
   SESSION_COOKIE,
+  DEFAULT_PORTFOLIO_HISTORY_DAYS,
+  PORTFOLIO_HISTORY_DAYS,
   SELF_HOSTED_LIMITS,
   UPGRADE_PATH,
   parseStoreUrl,
@@ -2192,7 +2201,22 @@ function deletionStatusFor(req: IncomingMessage): WorkspaceDeletionStatus {
   return requestedAt ? scheduledDeletion(requestedAt) : UNSCHEDULED_DELETION;
 }
 
+function insightsFor(req: IncomingMessage): PortfolioInsights {
+  if (hasCookie(req, "portfolio_empty", "1")) return EMPTY_PORTFOLIO_INSIGHTS;
+  if (hasCookie(req, "portfolio_many", "1")) return MANY_PORTFOLIO_INSIGHTS;
+  if (hasCookie(req, "portfolio_insights_quiet", "1")) {
+    return QUIET_PORTFOLIO_INSIGHTS;
+  }
+  if (hasCookie(req, "portfolio_insights_unranked", "1")) {
+    return UNRANKED_PORTFOLIO_INSIGHTS;
+  }
+  return hasCookie(req, "portfolio_insights_fresh", "1")
+    ? FRESH_PORTFOLIO_INSIGHTS
+    : PORTFOLIO_INSIGHTS;
+}
+
 function runStatusFor(req: IncomingMessage): WorkspaceRunStatus {
+  if (hasCookie(req, "e2e_run_running", "1")) return RUN_STATUS_RUNNING;
   return hasCookie(req, "e2e_run_delayed", "1")
     ? RUN_STATUS_DELAYED
     : RUN_STATUS;
@@ -3217,6 +3241,7 @@ const routes: Route[] = [
           ? []
           : listed.map((app) => withDelisted(req, withSetup(req, app))),
         groups: empty ? [] : PORTFOLIO.groups,
+        visibility: empty ? EMPTY_PORTFOLIO_VISIBILITY : PORTFOLIO.visibility,
         totals: {
           ...PORTFOLIO.totals,
           apps: empty ? 0 : listed.length,
@@ -3226,21 +3251,34 @@ const routes: Route[] = [
   },
   {
     method: "GET",
+    pattern: /^\/portfolio\/history$/,
+    handler: (_p, req, res) => {
+      const path = req.url ?? "/portfolio/history";
+      const requested = Number(
+        new URL(path, "http://localhost").searchParams.get("days") ??
+          DEFAULT_PORTFOLIO_HISTORY_DAYS,
+      );
+      const days = PORTFOLIO_HISTORY_DAYS.find((each) => each === requested);
+      if (days === undefined) {
+        return json(res, 400, errorEnvelope(400, path));
+      }
+      const change = rangeChangeOf(
+        insightsFor(req),
+        PORTFOLIO_VISIBILITY.delta7d,
+      );
+      const history: PortfolioHistory = hasCookie(req, "portfolio_empty", "1")
+        ? { days, points: [], previous: [], change }
+        : { ...portfolioHistoryOf(days), change };
+      const token = cookieValue(req, INSIGHTS_HOLD_COOKIE);
+      if (!token) return json(res, 200, history);
+      void insightsHold(token).promise.then(() => json(res, 200, history));
+    },
+  },
+  {
+    method: "GET",
     pattern: /^\/portfolio\/insights$/,
     handler: (_p, req, res) => {
-      if (hasCookie(req, "portfolio_empty", "1")) {
-        return json(res, 200, EMPTY_PORTFOLIO_INSIGHTS);
-      }
-      if (hasCookie(req, "portfolio_many", "1")) {
-        return json(res, 200, MANY_PORTFOLIO_INSIGHTS);
-      }
-      const insights = hasCookie(req, "portfolio_insights_quiet", "1")
-        ? QUIET_PORTFOLIO_INSIGHTS
-        : hasCookie(req, "portfolio_insights_unranked", "1")
-          ? UNRANKED_PORTFOLIO_INSIGHTS
-          : hasCookie(req, "portfolio_insights_fresh", "1")
-            ? FRESH_PORTFOLIO_INSIGHTS
-            : PORTFOLIO_INSIGHTS;
+      const insights = insightsFor(req);
       const token = cookieValue(req, INSIGHTS_HOLD_COOKIE);
       if (!token) return json(res, 200, insights);
       void insightsHold(token).promise.then(() => json(res, 200, insights));

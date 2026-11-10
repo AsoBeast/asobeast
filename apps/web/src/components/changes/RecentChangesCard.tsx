@@ -9,17 +9,34 @@ import type { ChangeEventItem } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  FEED_LINK,
+  FEED_ROW,
+  FEED_TEXT,
+  FeedDay,
+  feedDayLabel,
+} from "@/components/dashboard/feed-row";
+import { FeedCardSkeleton } from "@/components/dashboard/skeletons";
+import {
+  PANEL_ACTION,
+  PANEL_HEADER,
+} from "@/components/dashboard/layout-classes";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { focusIsLost } from "@/lib/focus-handoff";
 import { formatDayMonth } from "@/lib/format";
 import { localizedLabel } from "@/lib/localizations";
 import { portfolioOptions, recentChangesOptions } from "@/lib/queries";
 import { changeOwnerParser, type ChangeOwner } from "@/lib/search-params";
-import { groupChangesByDay } from "./change-days";
+import { cn } from "@/lib/utils";
 import { collapseVersions, entryEvent, type ChangeEntry } from "./change-runs";
 import { ChangeValue } from "./ChangeTimeline";
-import { ChangeTimelineSkeleton } from "./skeletons";
 
 const VISIBLE_CHANGES = 8;
 
@@ -40,68 +57,88 @@ const ownedBy =
   (event: ChangeEventItem): boolean =>
     owner === "all" || event.isCompetitor === (owner === "competitors");
 
+const dayOf = (event: ChangeEventItem): string => event.capturedAt.slice(0, 10);
+
+function entryDay(entry: ChangeEntry, today: string): string {
+  if (entry.kind === "event") return feedDayLabel(dayOf(entry.event), today);
+  const first = formatDayMonth(dayOf(entry.events[entry.events.length - 1]));
+  const last = formatDayMonth(dayOf(entry.events[0]));
+  return first === last ? last : `${first} to ${last}`;
+}
+
 function VersionRun({ events }: { events: ChangeEventItem[] }) {
   const newest = events[0];
-  const first = formatDayMonth(
-    events[events.length - 1].capturedAt.slice(0, 10),
-  );
-  const last = formatDayMonth(newest.capturedAt.slice(0, 10));
-  const span = first === last ? first : `${first} to ${last}`;
   return (
-    <span className="text-muted-foreground">
-      <span>{`${events.length} version updates, ${span} · latest `}</span>
-      <span className="font-medium text-foreground">{newest.after ?? "—"}</span>
-    </span>
+    <>
+      <bdi>{newest.appName ?? "Unknown app"}</bdi>
+      <span className="text-muted-foreground">{" shipped "}</span>
+      <span className="font-medium">{`${events.length} versions`}</span>
+      <span className="text-muted-foreground">{" · latest "}</span>
+      <span className="font-medium">{newest.after ?? "—"}</span>
+    </>
+  );
+}
+
+function EventLine({ event }: { event: ChangeEventItem }) {
+  const label = localizedLabel(
+    CHANGE_FIELD_LABELS[event.field],
+    event.localization,
+  );
+  const field = event.country
+    ? `${label} · ${event.country.toUpperCase()}`
+    : label;
+  const name = event.appName ?? "Unknown app";
+  return (
+    <>
+      <span className="text-muted-foreground">{`${field} · `}</span>
+      {event.isCompetitor ? (
+        <>
+          <bdi className="text-muted-foreground">{name}</bdi>
+          <span className="text-muted-foreground">{" · "}</span>
+        </>
+      ) : (
+        <span className="sr-only">{`${name}: `}</span>
+      )}
+      <ChangeValue event={event} dense />
+    </>
   );
 }
 
 function EntryRow({
   entry,
   iconUrl,
+  today,
 }: {
   entry: ChangeEntry;
   iconUrl: string | null;
+  today: string;
 }) {
   const event = entryEvent(entry);
-  const label =
-    entry.kind === "versions"
-      ? "Versions"
-      : localizedLabel(CHANGE_FIELD_LABELS[event.field], event.localization);
-  const field = event.country
-    ? `${label} · ${event.country.toUpperCase()}`
-    : label;
   return (
     <Link
       href={`/apps/${event.appId}/changes`}
       data-change-field={event.field}
-      className="flex min-h-10 items-start gap-3 rounded-md px-2 py-2 outline-none transition-colors duration-150 ease-out hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+      className={cn(FEED_ROW, FEED_LINK)}
     >
-      <span className="pt-0.5">
+      <FeedDay>{entryDay(entry, today)}</FeedDay>
+      <span className="flex min-w-0 items-center gap-2">
         <AppIcon src={iconUrl} size={16} />
-      </span>
-      <span className="flex min-w-0 flex-1 flex-col gap-0.5 text-dense">
-        <span className="flex min-w-0 flex-wrap items-baseline gap-x-2">
-          <bdi className="font-medium wrap-anywhere">
-            {event.appName ?? "Unknown app"}
-          </bdi>
-          <span className="text-label text-faint-foreground">{field}</span>
-        </span>
-        <span className="wrap-anywhere">
+        <span className={cn(FEED_TEXT, "wrap-anywhere")}>
           {entry.kind === "versions" ? (
             <VersionRun events={entry.events} />
           ) : (
-            <ChangeValue event={event} dense />
+            <EventLine event={event} />
           )}
         </span>
       </span>
-      <Badge variant="flat" className="mt-0.5">
+      <Badge variant="flat">
         {event.isCompetitor ? "competitor" : "yours"}
       </Badge>
     </Link>
   );
 }
 
-function RecentChangesList({ today }: { today: string }) {
+function RecentChanges({ today }: { today: string }) {
   const { data } = useSuspenseQuery(recentChangesOptions());
   const { data: portfolio } = useSuspenseQuery(portfolioOptions);
   const [owner, setOwner] = useQueryState("changes", changeOwnerParser);
@@ -119,14 +156,6 @@ function RecentChangesList({ today }: { today: string }) {
       ?.focus();
   }, [expanded]);
 
-  if (data.events.length === 0) {
-    return (
-      <p className="px-2 text-body text-muted-foreground">
-        Listing changes appear here after the daily refreshes.
-      </p>
-    );
-  }
-
   const mixed =
     data.events.some((event) => event.isCompetitor) &&
     data.events.some((event) => !event.isCompetitor);
@@ -135,89 +164,79 @@ function RecentChangesList({ today }: { today: string }) {
   const shown = expanded ? entries : entries.slice(0, VISIBLE_CHANGES);
   const hidden = entries.length - shown.length;
   const icons = new Map(portfolio.apps.map((app) => [app.id, app.iconUrl]));
-  const byEvent = new Map(shown.map((entry) => [entryEvent(entry).id, entry]));
 
   return (
-    <div ref={list} className="flex flex-col gap-3">
-      {mixed ? (
-        <Tabs
-          value={owner}
-          onValueChange={(value) =>
-            void setOwner(changeOwnerParser.parse(value))
-          }
-          className="px-2"
-        >
-          <TabsList aria-label="Changes shown">
-            {OWNER_TABS.map((tab) => (
-              <TabsOption key={tab.value} value={tab.value}>
-                {tab.label}
-              </TabsOption>
-            ))}
-          </TabsList>
-        </Tabs>
-      ) : null}
-
-      {entries.length === 0 ? (
-        <p className="px-2 text-body text-muted-foreground">
-          {EMPTY_FILTER[active]}
-        </p>
-      ) : (
-        groupChangesByDay(shown.map(entryEvent), today).map((group) => (
-          <section key={group.day} className="flex flex-col">
-            <h3 className="px-2 pb-1 text-label text-faint-foreground">
-              {group.label}
-            </h3>
+    <Card className="h-full">
+      <CardHeader className={PANEL_HEADER}>
+        <CardTitle asChild>
+          <h2>Listing changes</h2>
+        </CardTitle>
+        {mixed ? (
+          <CardAction className={PANEL_ACTION}>
+            <Tabs
+              value={owner}
+              onValueChange={(value) =>
+                void setOwner(changeOwnerParser.parse(value))
+              }
+            >
+              <TabsList aria-label="Changes shown">
+                {OWNER_TABS.map((tab) => (
+                  <TabsOption key={tab.value} value={tab.value}>
+                    {tab.label}
+                  </TabsOption>
+                ))}
+              </TabsList>
+            </Tabs>
+          </CardAction>
+        ) : null}
+      </CardHeader>
+      <CardContent className="px-2">
+        <div ref={list} className="flex flex-col gap-2">
+          {entries.length === 0 ? (
+            <p className="px-2 text-body text-muted-foreground">
+              {data.events.length === 0
+                ? "Listing changes appear here after the daily refreshes."
+                : EMPTY_FILTER[active]}
+            </p>
+          ) : (
             <ul className="flex flex-col">
-              {group.events.map((event) => {
-                const entry = byEvent.get(event.id);
-                return entry ? (
+              {shown.map((entry) => {
+                const event = entryEvent(entry);
+                return (
                   <li key={event.id}>
                     <EntryRow
                       entry={entry}
-                      iconUrl={
-                        event.isCompetitor
-                          ? null
-                          : (icons.get(event.appId) ?? null)
-                      }
+                      today={today}
+                      iconUrl={event.iconUrl ?? icons.get(event.appId) ?? null}
                     />
                   </li>
-                ) : null;
+                );
               })}
             </ul>
-          </section>
-        ))
-      )}
-
-      {hidden > 0 ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="self-start"
-          onClick={() => {
-            revealing.current = true;
-            setExpanded(true);
-          }}
-        >
-          {`Show ${hidden} more`}
-        </Button>
-      ) : null}
-    </div>
+          )}
+          {hidden > 0 ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="self-start"
+              onClick={() => {
+                revealing.current = true;
+                setExpanded(true);
+              }}
+            >
+              {`Show ${hidden} more`}
+            </Button>
+          ) : null}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
 export function RecentChangesCard({ today }: { today: string }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle asChild>
-          <h2>Listing changes</h2>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="px-2">
-        <Suspense fallback={<ChangeTimelineSkeleton />}>
-          <RecentChangesList today={today} />
-        </Suspense>
-      </CardContent>
-    </Card>
+    <Suspense fallback={<FeedCardSkeleton />}>
+      <RecentChanges today={today} />
+    </Suspense>
   );
 }

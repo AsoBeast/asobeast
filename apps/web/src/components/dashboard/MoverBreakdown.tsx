@@ -19,10 +19,10 @@ function changeText(change: MoverChange): string {
   return `${change.kind === "up" ? "▲" : "▼"} ${formatNumber(change.size)}`;
 }
 
-function changeLabel(change: MoverChange): string {
+function changeLabel(change: MoverChange, days: number): string {
   if (change.kind === "new") return "started ranking";
   if (change.kind === "lost") return "dropped out of the results";
-  return `${change.kind === "up" ? "up" : "down"} ${formatNumber(change.size)} in 7 days`;
+  return `${change.kind === "up" ? "up" : "down"} ${formatNumber(change.size)} in ${days} days`;
 }
 
 const rankingsHref = (mover: PortfolioKeywordMover) =>
@@ -31,9 +31,11 @@ const rankingsHref = (mover: PortfolioKeywordMover) =>
 function MoverLine({
   mover,
   app,
+  days,
 }: {
   mover: PortfolioKeywordMover;
   app: PortfolioApp | undefined;
+  days: number;
 }) {
   const change = moverChange(mover);
   return (
@@ -70,7 +72,7 @@ function MoverLine({
         )}
       >
         <span aria-hidden>{changeText(change)}</span>
-        <span className="sr-only">{changeLabel(change)}</span>
+        <span className="sr-only">{changeLabel(change, days)}</span>
       </span>
     </Link>
   );
@@ -79,10 +81,12 @@ function MoverLine({
 export function MoverBreakdown({
   movers,
   apps,
+  days,
   empty,
 }: {
   movers: PortfolioKeywordMover[];
   apps: ReadonlyMap<string, PortfolioApp>;
+  days: number;
   empty: string;
 }) {
   if (movers.length === 0) {
@@ -101,7 +105,7 @@ export function MoverBreakdown({
       <ul className="flex flex-col">
         {movers.map((mover) => (
           <li key={rankingsHref(mover)}>
-            <MoverLine mover={mover} app={apps.get(mover.appId)} />
+            <MoverLine mover={mover} app={apps.get(mover.appId)} days={days} />
           </li>
         ))}
       </ul>

@@ -115,7 +115,7 @@ for (const view of ["cards", "table"]) {
     page,
   }) => {
     await page.goto(`/?view=${view}`);
-    const apps = page.getByRole("region", { name: "Apps" });
+    const apps = page.getByRole("region", { name: "Apps", exact: true });
 
     await openHelp(page, apps);
 

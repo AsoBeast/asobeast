@@ -22,6 +22,7 @@ import {
   portfolioOptions,
 } from "@/lib/queries";
 import { cn } from "@/lib/utils";
+import { PANEL_ACTION, PANEL_HEADER } from "./layout-classes";
 
 const PRIORITY_TONE: Record<ActionPriority, string> = {
   critical: "text-priority-critical",
@@ -105,12 +106,14 @@ export function DoNextCard() {
   const { data: summary } = useSuspenseQuery(actionSummaryOptions);
   return (
     <Card className="h-full">
-      <CardHeader>
+      <CardHeader className={PANEL_HEADER}>
         <CardTitle asChild>
           <h2>Do next</h2>
         </CardTitle>
         {summary.generatedAt === null ? null : (
-          <CardAction className="text-label text-faint-foreground">
+          <CardAction
+            className={cn(PANEL_ACTION, "text-label text-faint-foreground")}
+          >
             {`${formatNumber(summary.open)} open`}
           </CardAction>
         )}

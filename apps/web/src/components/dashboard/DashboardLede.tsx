@@ -1,21 +1,17 @@
 "use client";
 
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { portfolioInsightsOptions } from "@/lib/queries";
-import {
-  appsThatMoved,
-  hasWeekOfHistory,
-  movementSentence,
-} from "./movement-sentence";
-
-import { LEDE } from "./skeletons";
+import { LEDE } from "./layout-classes";
+import { movementLede } from "./movement-sentence";
+import { useRangeHistory } from "./use-range-history";
 
 export function DashboardLede() {
-  const { data: insights } = useSuspenseQuery(portfolioInsightsOptions);
-  const sentence = movementSentence(
-    insights.totals.movement,
-    appsThatMoved(insights),
-    hasWeekOfHistory(insights),
+  const { days, history } = useRangeHistory();
+  const { lead, fact, tail } = movementLede(history.change, days);
+  return (
+    <p className={LEDE}>
+      <span>{lead}</span>
+      <span className="font-medium text-foreground">{fact}</span>
+      <span>{tail}</span>
+    </p>
   );
-  return <p className={LEDE}>{sentence}</p>;
 }

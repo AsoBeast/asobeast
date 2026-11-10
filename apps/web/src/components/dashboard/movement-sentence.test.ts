@@ -1,55 +1,64 @@
 import { describe, expect, it } from "vitest";
-import type { PortfolioInsights } from "@asobeast/shared";
-import { appsThatMoved, movementSentence } from "./movement-sentence";
+import type { PortfolioRangeChange } from "@asobeast/shared";
+import { movementLede, quietSentence } from "./movement-sentence";
 
-const movement = (up: number, down: number, entered = 0, lost = 0) => ({
-  up,
-  down,
-  entered,
-  lost,
+const change = (
+  up: number,
+  down: number,
+  rest: Partial<PortfolioRangeChange> = {},
+): PortfolioRangeChange => ({
+  compared: true,
+  visibilityDelta: 1,
+  top10Delta: 0,
+  movement: { up, down, entered: 0, lost: 0 },
+  appsMoved: 1,
+  movers: { up: [], down: [] },
+  ...rest,
 });
 
-describe("movementSentence", () => {
-  it("says no keyword moved once a week of history exists", () => {
-    expect(movementSentence(movement(0, 0), 3, true)).toBe(
+const sentence = (...parts: Parameters<typeof movementLede>): string => {
+  const { lead, fact, tail } = movementLede(...parts);
+  return `${lead}${fact}${tail}`;
+};
+
+describe("movementLede", () => {
+  it("separates the fact from the words around it", () => {
+    expect(movementLede(change(4, 3, { appsMoved: 5 }), 30)).toEqual({
+      lead: "In the last 30 days ",
+      fact: "4 keywords climbed and 3 fell",
+      tail: " across 5 apps.",
+    });
+  });
+
+  it("says no keyword moved once the range has a day to compare with", () => {
+    expect(sentence(change(0, 0), 7)).toBe(
       "No keyword moved in the last 7 days.",
     );
   });
 
-  it("says when movement will appear before a week of history", () => {
-    expect(movementSentence(movement(0, 0), 3, false)).toBe(
-      "Movement appears after a week of daily runs.",
-    );
-  });
-
-  it("names climbers, fallers and the apps they span", () => {
-    expect(movementSentence(movement(4, 3, 1, 1), 5, true)).toBe(
-      "In the last 7 days 4 keywords climbed and 3 fell across 5 apps.",
+  it("says when movement will appear before the range has history", () => {
+    expect(sentence(change(0, 0, { compared: false }), 90)).toBe(
+      "Movement appears after 90 days of daily runs.",
     );
   });
 
   it("leaves the app count out for a single app", () => {
-    expect(movementSentence(movement(1, 0), 1, true)).toBe(
+    expect(sentence(change(1, 0), 7)).toBe(
       "In the last 7 days 1 keyword climbed.",
     );
   });
 
   it("counts a fall alone with its noun", () => {
-    expect(movementSentence(movement(0, 2), 2, true)).toBe(
+    expect(sentence(change(0, 2, { appsMoved: 2 }), 7)).toBe(
       "In the last 7 days 2 keywords fell across 2 apps.",
     );
   });
 });
 
-describe("appsThatMoved", () => {
-  it("counts only the apps with a keyword that climbed or fell", () => {
-    const insight = (appId: string, up: number, down: number) => ({
-      appId,
-      movement: movement(up, down),
-    });
-    const insights = {
-      apps: [insight("a", 4, 0), insight("b", 0, 0), insight("c", 0, 1)],
-    } as unknown as PortfolioInsights;
-    expect(appsThatMoved(insights)).toBe(2);
+describe("quietSentence", () => {
+  it("names the range it speaks for", () => {
+    expect(quietSentence(true, 30)).toBe(
+      "No keyword moved in the last 30 days.",
+    );
   });
 });

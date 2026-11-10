@@ -1,8 +1,14 @@
 import { expect, test } from "./session.mts";
 import type { Page } from "@playwright/test";
+import {
+  ALERT_EVENT_ITEMS,
+  ALERT_EVENTS_COOKIE,
+} from "./alert-feed-fixtures.mts";
 import { ACTIONS, PORTFOLIO, RECENT_CHANGES } from "./fixtures.mts";
 import { hoverForTooltip } from "./hover.mts";
+import { hydrated } from "./hydrated.mts";
 import { PORTFOLIO_INSIGHTS } from "./portfolio-insights.mts";
+import { seedCookies } from "./routes.mts";
 
 const DASHBOARD_ACTION_LIMIT = 5;
 
@@ -17,6 +23,28 @@ const changesCard = (page: Page) =>
   page
     .getByRole("heading", { name: "Listing changes", level: 2 })
     .locator("xpath=ancestor::*[@data-slot='card'][1]");
+
+const changeRows = (page: Page) =>
+  changesCard(page).getByRole("listitem").getByRole("link");
+
+const dayMonth = new Intl.DateTimeFormat("en-US", {
+  timeZone: "UTC",
+  month: "short",
+  day: "numeric",
+});
+
+const dayLabel = (timestamp: string) => dayMonth.format(new Date(timestamp));
+
+const RECENT_ALERTS = 5;
+const ALERT_WINDOW_DAYS = 7;
+const ALERT_FEED_PATH = "/api/backend/alerts/events";
+
+const alertsCard = (page: Page) =>
+  page
+    .getByRole("heading", { name: "Alerts", level: 2 })
+    .locator("xpath=ancestor::*[@data-slot='card'][1]");
+
+const alertRows = (page: Page) => alertsCard(page).getByRole("listitem");
 
 const appName = (appId: string) =>
   PORTFOLIO.apps.find((app) => app.id === appId)?.name ?? "";
@@ -154,18 +182,18 @@ test("keyword movers say so in a quiet week", async ({ page }) => {
   await page.goto("/");
 
   const card = moversCard(page);
-  await expect(card).toContainText("No keyword moved in the last 7 days.");
+  await expect(card).toContainText("No keyword moved in the last 30 days.");
   await expect(card.getByRole("list")).toHaveCount(0);
 });
 
 for (const { cookie, sentence } of [
   {
     cookie: "portfolio_insights_unranked",
-    sentence: "No keyword moved in the last 7 days.",
+    sentence: "No keyword moved in the last 30 days.",
   },
   {
     cookie: "portfolio_insights_fresh",
-    sentence: "Movement appears after a week of daily runs.",
+    sentence: "Movement appears after 30 days of daily runs.",
   },
 ]) {
   test(`keyword movers explain an empty week for ${cookie}`, async ({
@@ -264,10 +292,13 @@ test("listing changes fold one app's version updates into one row", async ({
   );
   const run = card
     .getByRole("link")
-    .filter({ hasText: "Focus Timer" })
-    .filter({ hasText: `${versions.length} version updates` });
+    .filter({ hasText: `Focus Timer shipped ${versions.length} versions` });
   await expect(run).toHaveCount(1);
   await expect(run).toContainText(`latest ${versions[0].after}`);
+  await expect(run).toContainText(
+    `${dayLabel(versions[versions.length - 1].capturedAt)} to ${dayLabel(versions[0].capturedAt)}`,
+  );
+  await expect(run).toHaveAttribute("href", "/apps/app-1/changes");
   await expect(
     card.getByRole("button", { name: /^Show \d+ more$/ }),
   ).toHaveCount(0);
@@ -293,12 +324,141 @@ test("listing changes read what's new notes as one line, exactly as stored", asy
   );
 });
 
-test("listing changes group today's events under a day heading", async ({
+test("listing changes label each row with its day instead of grouping by day", async ({
   page,
 }) => {
   await page.goto("/");
 
+  const card = changesCard(page);
+  const [today, earlier] = RECENT_CHANGES.events;
+  const days = changeRows(page).locator(":scope > span:first-child");
+  await expect(days.first()).toHaveText("Today");
+  await expect(days.nth(1)).toHaveText(dayLabel(earlier.capturedAt));
+  await expect(changeRows(page).first()).toHaveAttribute(
+    "href",
+    `/apps/${today.appId}/changes`,
+  );
+  await expect(card.getByRole("heading", { level: 3 })).toHaveCount(0);
+  await expect(card.getByRole("list")).toHaveCount(1);
+});
+
+test("a listing change names a competitor in the row and marks whose it is", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  const [own, rival] = RECENT_CHANGES.events;
+  const ownRow = changeRows(page).first();
+  await expect(ownRow).toContainText("Title · ");
+  await expect(ownRow.locator(".sr-only")).toHaveText(`${own.appName}: `);
+  await expect(ownRow.locator("bdi")).toHaveCount(0);
+  await expect(ownRow.locator('[data-slot="badge"]')).toHaveText("yours");
+
+  const rivalRow = changeRows(page).nth(1);
+  await expect(rivalRow).toContainText("Subtitle · ");
+  await expect(rivalRow.locator("bdi")).toHaveText(rival.appName ?? "");
+  await expect(rivalRow.locator("bdi")).toBeVisible();
+  await expect(rivalRow.locator(".sr-only")).toHaveCount(0);
+  await expect(rivalRow.locator('[data-slot="badge"]')).toHaveText(
+    "competitor",
+  );
+});
+
+test("the alerts panel lists the newest events of the last 7 days", async ({
+  page,
+}) => {
+  const reads: URL[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname === ALERT_FEED_PATH && url.searchParams.has("since")) {
+      reads.push(url);
+    }
+  });
+  await page.goto("/");
+
+  const card = alertsCard(page);
+  await expect(card.getByText("Last 7 days", { exact: true })).toBeVisible();
+  const rows = alertRows(page);
+  await expect(rows).toHaveCount(RECENT_ALERTS);
+  const newest = ALERT_EVENT_ITEMS.slice(0, RECENT_ALERTS);
+  for (const [index, event] of newest.entries()) {
+    await expect(rows.nth(index)).toContainText(event.sentence);
+  }
   await expect(
-    changesCard(page).getByRole("heading", { name: "Today", level: 3 }),
+    rows.first().locator(":scope > * > span:first-child"),
+  ).toHaveText("Today");
+  await expect(rows.locator('[data-slot="badge"]')).toHaveText([
+    "listing",
+    "fell",
+    "climbed",
+    "climbed",
+    "milestone",
+  ]);
+  await expect(rows.first().locator(".sr-only")).toHaveText(
+    "Metadata changed: ",
+  );
+
+  const since = new Date();
+  since.setUTCDate(since.getUTCDate() - (ALERT_WINDOW_DAYS - 1));
+  expect(reads).toHaveLength(1);
+  expect(reads[0].searchParams.get("since")).toBe(
+    since.toISOString().slice(0, 10),
+  );
+  expect(reads[0].searchParams.get("limit")).toBe(String(RECENT_ALERTS));
+});
+
+test("an alert opens the place it happened", async ({ page }) => {
+  await page.goto("/");
+
+  const alert = alertsCard(page).getByRole("link", {
+    name: /climbed from #20 to #7/,
+  });
+  await expect(alert).toHaveAttribute(
+    "href",
+    "/apps/app-1/keywords?country=de&q=%22pomodoro%22",
+  );
+
+  await (await hydrated(alert)).click();
+
+  await expect(page).toHaveURL(
+    /\/apps\/app-1\/keywords\?country=de&q=%22pomodoro%22$/,
+  );
+});
+
+test("the alerts panel says so when the week was quiet", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { [ALERT_EVENTS_COOKIE]: "empty" });
+  await page.goto("/");
+
+  const card = alertsCard(page);
+  await expect(card.getByText("No alerts in the last 7 days.")).toBeVisible();
+  await expect(card.getByRole("list")).toHaveCount(0);
+  await expect(card.getByRole("alert")).toHaveCount(0);
+});
+
+test("the alerts panel shows a failed read in place and recovers on retry", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { [ALERT_EVENTS_COOKIE]: "error" });
+  await page.goto("/");
+
+  const card = alertsCard(page);
+  await expect(card.getByRole("alert")).toHaveText(
+    "Alerts could not be loaded.",
+  );
+  await expect(
+    page.getByRole("heading", { name: "Listing changes", level: 2 }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Dashboard", level: 1 }),
+  ).toBeVisible();
+
+  await context.clearCookies({ name: ALERT_EVENTS_COOKIE });
+  await (await hydrated(card.getByRole("button", { name: "Retry" }))).click();
+
+  await expect(alertRows(page)).toHaveCount(RECENT_ALERTS);
+  await expect(card.getByRole("alert")).toHaveCount(0);
 });

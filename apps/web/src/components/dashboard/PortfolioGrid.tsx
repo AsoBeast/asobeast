@@ -2,7 +2,7 @@ import type { PortfolioAppInsight, PortfolioGroup } from "@asobeast/shared";
 import { PortfolioAppCard } from "./PortfolioAppCard";
 import { PortfolioGroupCard } from "./PortfolioGroupCard";
 import type { PortfolioRow } from "./portfolio-rows";
-import { APP_GRID } from "./skeletons";
+import { APP_GRID } from "./layout-classes";
 
 export function PortfolioGrid({
   rows,

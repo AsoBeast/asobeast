@@ -18,7 +18,7 @@ test("web liveness is independent from the api", async ({ request }) => {
   });
 });
 
-test("home renders the portfolio grid with totals and per-app cards", async ({
+test("home renders the portfolio table with totals and per-app rows", async ({
   page,
 }) => {
   await page.goto("/");
@@ -46,7 +46,12 @@ test("home renders the portfolio grid with totals and per-app cards", async ({
     page.getByText(first.country.toUpperCase(), { exact: true }).first(),
   ).toBeVisible();
 
-  await expect(page.getByText("Listing changes in 7 days")).toBeVisible();
+  await expect(
+    page.locator('[data-slot="stat-tile"]').filter({ hasText: "Visibility" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("table", { name: "Apps in this workspace" }),
+  ).toBeVisible();
   await expect(
     page.getByRole("img", { name: "visibility, last 30 days" }).first(),
   ).toBeVisible();

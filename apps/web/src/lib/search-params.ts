@@ -15,14 +15,17 @@ import {
   CHART_COMPARE_WINDOWS,
   CHART_DEVICES,
   COUNTRY_PATTERN,
+  DEFAULT_PORTFOLIO_HISTORY_DAYS,
   DISCOVERY_STATES,
   OVERALL_GENRE,
   PAID_PLAN_NAMES,
+  PORTFOLIO_HISTORY_DAYS,
   REVIEW_REPLY_STATES,
   REVIEW_SORTS,
   STORES,
   isUtcCalendarDate,
   type ActionStatus,
+  type PortfolioHistoryDays,
 } from "@asobeast/shared";
 import {
   createLoader,
@@ -214,12 +217,12 @@ export type KeywordView = (typeof KEYWORD_VIEWS)[number];
 export const keywordViewParser =
   parseAsStringLiteral(KEYWORD_VIEWS).withDefault("table");
 
-export const APP_VIEWS = ["cards", "table"] as const;
+export const APP_VIEWS = ["table", "cards"] as const;
 
 export type AppView = (typeof APP_VIEWS)[number];
 
 export const appViewParser =
-  parseAsStringLiteral(APP_VIEWS).withDefault("cards");
+  parseAsStringLiteral(APP_VIEWS).withDefault("table");
 
 export const appListParsers = {
   q: searchParser,
@@ -426,6 +429,30 @@ export const moverDaysParser = createParser({
     return String(value);
   },
 }).withDefault(7);
+
+export const dashboardRangeParser = createParser({
+  parse(value) {
+    const days = Number(value);
+    return (PORTFOLIO_HISTORY_DAYS as readonly number[]).includes(days)
+      ? (days as PortfolioHistoryDays)
+      : null;
+  },
+  serialize(value: PortfolioHistoryDays) {
+    return String(value);
+  },
+}).withDefault(DEFAULT_PORTFOLIO_HISTORY_DAYS);
+
+export const DASHBOARD_METRICS = [
+  "visibility",
+  "top10",
+  "moved",
+  "actions",
+] as const;
+
+export type DashboardMetric = (typeof DASHBOARD_METRICS)[number];
+
+export const dashboardMetricParser =
+  parseAsStringLiteral(DASHBOARD_METRICS).withDefault("visibility");
 
 export const rankingsRangeParsers = {
   range: rangeParser,

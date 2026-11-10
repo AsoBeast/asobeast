@@ -4,9 +4,11 @@ import Link from "next/link";
 import { createColumnHelper } from "@tanstack/react-table";
 import type { PortfolioApp, PortfolioAppInsight } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
+import { DeleteAppMenu } from "@/components/apps/DeleteAppMenu";
 import { DelistedBadge } from "@/components/apps/DelistedBadge";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import type { DataTableFeatures } from "@/components/data-table/table-features";
+import { Badge } from "@/components/ui/badge";
 import { TrendChip } from "@/components/ui/delta-chip";
 import { GradedNumber } from "@/components/ui/graded";
 import { Separated } from "@/components/ui/separated";
@@ -20,6 +22,7 @@ import {
 import { grade } from "@/lib/grade";
 import { nullsLast } from "@/lib/table/sorting";
 import { MovementValue } from "./MovementValue";
+import { setupChipText } from "./setup-chip";
 import { TrendLine } from "./Sparkline";
 
 export interface PortfolioTableRow {
@@ -42,6 +45,7 @@ const captured = (row: PortfolioTableRow): PortfolioAppInsight | undefined =>
 
 function AppCell({ app }: { app: PortfolioApp }) {
   const name = app.name ?? "Untitled app";
+  const setup = setupChipText(app.setup);
   const meta = [
     storeLabel(app.store),
     app.country.toUpperCase(),
@@ -54,14 +58,19 @@ function AppCell({ app }: { app: PortfolioApp }) {
       <div className="flex min-w-0 flex-col">
         <Link
           href={`/apps/${app.id}`}
-          className="truncate font-medium underline-offset-4 hover:underline"
+          className="-my-[3px] flex min-h-6 min-w-0 items-center font-medium underline-offset-4 hover:underline"
         >
-          {name}
+          <span className="truncate">{name}</span>
         </Link>
         <span className="truncate text-label text-muted-foreground">
           <Separated parts={meta} />
         </span>
         {app.delistedAt ? <DelistedBadge since={app.delistedAt} /> : null}
+        {setup ? (
+          <Badge variant="info" asChild className="mt-0.5 min-h-6">
+            <Link href={`/apps/${app.id}/setup`}>{setup}</Link>
+          </Badge>
+        ) : null}
       </div>
     </div>
   );
@@ -98,7 +107,7 @@ export const portfolioColumns = columnHelper.columns([
       row.original.app.lastCapturedAt === null ? (
         EMPTY
       ) : (
-        <span className="numeric">
+        <span className="numeric font-medium">
           {Math.round(row.original.app.visibility.current)}
         </span>
       ),
@@ -116,6 +125,7 @@ export const portfolioColumns = columnHelper.columns([
           label="7d"
           value={row.original.app.visibility.delta7d}
           form="pill"
+          labelled={false}
         />
       ),
   }),
@@ -242,6 +252,17 @@ export const portfolioColumns = columnHelper.columns([
       <span className="whitespace-nowrap">
         {formatDate(row.original.app.lastCapturedAt)}
       </span>
+    ),
+  }),
+  columnHelper.display({
+    id: "menu",
+    enableHiding: false,
+    header: () => <span className="sr-only">More</span>,
+    cell: ({ row }) => (
+      <DeleteAppMenu
+        id={row.original.app.id}
+        name={row.original.app.name ?? "Untitled app"}
+      />
     ),
   }),
 ]);
