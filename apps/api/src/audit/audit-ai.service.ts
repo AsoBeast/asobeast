@@ -3,7 +3,6 @@ import { Injectable } from '@nestjs/common';
 import { AiCallRequest, AiGateway } from '../ai/ai-gateway.service';
 import { AiCompletion, AiStructuredRequest } from '../ai/openai.client';
 import {
-  CREATIVE_MAX_OUTPUT_TOKENS,
   CREATIVE_OBSERVATIONS_JSON_SCHEMA,
   CreativeInputs,
   CreativeObservations,
@@ -11,6 +10,7 @@ import {
   parseObservations,
   sentCompetitorIcons,
 } from './creative/creative-observations';
+import { CreativeImages } from './creative/creative-images';
 import {
   buildCreativeContent,
   CREATIVE_SYSTEM_PROMPT,
@@ -24,7 +24,10 @@ const creativeCall = (appId: string, userId: string | null): AiCallRequest => ({
 
 @Injectable()
 export class AuditAiService {
-  constructor(private readonly ai: AiGateway) {}
+  constructor(
+    private readonly ai: AiGateway,
+    private readonly images: CreativeImages,
+  ) {}
 
   get configured(): boolean {
     return this.ai.configured;
@@ -69,12 +72,12 @@ export class AuditAiService {
   ): Promise<CreativeObservations> {
     const { output } = await call({
       system: CREATIVE_SYSTEM_PROMPT,
-      content: buildCreativeContent(inputs),
+      content: await this.images.inline(buildCreativeContent(inputs)),
       schema: {
         name: 'creative_observations',
         schema: CREATIVE_OBSERVATIONS_JSON_SCHEMA,
       },
-      maxOutputTokens: CREATIVE_MAX_OUTPUT_TOKENS,
+      background: true,
     });
     return parseObservations(output, {
       icon: inputs.iconUrl !== null,

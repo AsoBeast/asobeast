@@ -14,7 +14,6 @@ import {
   languageName,
   parseTranslationOutput,
   toReviewTranslation,
-  TRANSLATION_MAX_OUTPUT_TOKENS,
   TRANSLATION_SCHEMA,
   TRANSLATION_SYSTEM_PROMPT,
 } from './review-translation';
@@ -60,7 +59,6 @@ export class ReviewTranslator {
           { type: 'text', text: buildTranslationContext(review, language) },
         ],
         schema: TRANSLATION_SCHEMA,
-        maxOutputTokens: TRANSLATION_MAX_OUTPUT_TOKENS,
       },
     );
     const translated = parseTranslationOutput(output);

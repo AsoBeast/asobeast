@@ -180,6 +180,10 @@ export const EnvSchema = z.object({
     blankAsUndefined,
     z.string().min(1).default('gpt-5.6-luna'),
   ),
+  AI_MAX_OUTPUT_TOKENS: z.preprocess(
+    blankAsUndefined,
+    z.coerce.number().int().min(1024).default(16_384),
+  ),
   AI_CALLS_PER_MONTH: z.preprocess(
     (value) =>
       typeof value === 'number' ||

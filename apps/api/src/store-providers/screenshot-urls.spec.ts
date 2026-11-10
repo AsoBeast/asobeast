@@ -1,6 +1,7 @@
 import { Store } from '@prisma/client';
 import {
   appleRenditionUrl,
+  isStoreImageUrl,
   OCR_RENDITION_WIDTH,
   screenshotAssetKey,
 } from './screenshot-urls';
@@ -111,5 +112,25 @@ describe('appleRenditionUrl', () => {
     ['text that is not an address', 'not a url'],
   ])('refuses %s', (_label, url) => {
     expect(appleRenditionUrl(url)).toBeNull();
+  });
+});
+
+describe('isStoreImageUrl', () => {
+  it.each([
+    `${ASSET}/392x696bb.jpg`,
+    'https://play-lh.googleusercontent.com/AbC=w526-h296-rw',
+    'https://play-lh.googleusercontent.com/AbC',
+  ])('accepts %s', (url) => {
+    expect(isStoreImageUrl(url)).toBe(true);
+  });
+
+  it.each([
+    'http://play-lh.googleusercontent.com/AbC',
+    'https://lh3.googleusercontent.com/AbC',
+    'https://play-lh.googleusercontent.com.evil.example/AbC',
+    'https://images.example.com/a.jpg',
+    'not a url',
+  ])('refuses %s', (url) => {
+    expect(isStoreImageUrl(url)).toBe(false);
   });
 });

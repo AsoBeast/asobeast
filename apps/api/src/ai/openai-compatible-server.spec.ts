@@ -114,11 +114,14 @@ const startProvider = async (): Promise<FakeProvider> => {
   });
 };
 
+const MAX_OUTPUT_TOKENS = 16_384;
+
 const clientAt = (baseUrl: string): AiClient => {
   const values: Partial<Record<keyof Env, unknown>> = {
     OPENAI_API_KEY: KEY,
     AI_MODEL: MODEL,
     OPENAI_BASE_URL: baseUrl,
+    AI_MAX_OUTPUT_TOKENS: MAX_OUTPUT_TOKENS,
   };
   const client = createOpenAiClient({
     get: (name: keyof Env) => values[name],
@@ -173,7 +176,7 @@ describe('an OpenAI compatible provider over http', () => {
     expect(sent.headers.authorization).toBe(`Bearer ${KEY}`);
     expect(sent.body).toMatchObject({
       model: MODEL,
-      max_completion_tokens: 2048,
+      max_completion_tokens: MAX_OUTPUT_TOKENS,
       response_format: {
         type: 'json_schema',
         json_schema: { name: 'action_explanation', strict: true },

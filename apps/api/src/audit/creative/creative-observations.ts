@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { AiRequestError } from '../../ai/openai.client';
 
 export const CREATIVE_PROMPT_VERSION = 'creative-v1';
-export const CREATIVE_MAX_OUTPUT_TOKENS = 4096;
 export const MAX_ANALYZED_SCREENSHOTS = 6;
 export const MAX_COMPETITOR_ICONS = 5;
 export const MAX_CAPTION_CHARS = 140;

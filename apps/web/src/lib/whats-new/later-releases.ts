@@ -33,6 +33,11 @@ export const LATER_RELEASES: readonly Release[] = [
         title: "Deleting a workspace stops the next charge",
         text: "Asking to delete a workspace now stops any further charge on a paid plan as well as on a trial, and cancelling the deletion starts the renewal again.",
       },
+      {
+        kind: "fixed",
+        title: "AI analysis of your icon and screenshots",
+        text: "The AI analysis no longer fails now and then because the images could not be loaded, and every AI feature has more room to think before it answers.",
+      },
     ],
   },
   {

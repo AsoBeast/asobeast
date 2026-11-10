@@ -21,7 +21,6 @@ import {
 } from '@asobeast/shared';
 
 const MAX_KEYWORDS = 25;
-export const DRAFT_MAX_OUTPUT_TOKENS = 4096;
 
 const STORE_RULES: Record<Store, string[]> = {
   APP_STORE: [

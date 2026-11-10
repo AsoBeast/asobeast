@@ -8,8 +8,6 @@ import {
   untrustedReference,
 } from './review-reply-drafts';
 
-export const TRANSLATION_MAX_OUTPUT_TOKENS = 4096;
-
 export const TRANSLATION_SYSTEM_PROMPT = [
   'You translate one app store review for the app owner, who does not read the language it is written in.',
   'Translate the title and the text faithfully into the target language: keep the meaning, the tone, emoji, numbers and product or feature names, and add, drop or soften nothing.',
