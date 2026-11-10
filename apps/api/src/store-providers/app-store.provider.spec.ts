@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import { AppStoreAppResult, AppStoreLib } from './app-store.lib';
 import { AppStoreProvider } from './app-store.provider';
@@ -251,7 +252,7 @@ describe('AppStoreProvider', () => {
       accessibilityStatement: null,
     });
     expect(result.pageExtractUnavailable).toBe(false);
-    expect(page).toHaveBeenCalledTimes(1);
+    expect(page).toHaveBeenCalledTimes(3);
     jest.useRealTimers();
   });
 
@@ -353,8 +354,11 @@ describe('AppStoreProvider', () => {
     jest.useRealTimers();
   });
 
-  it('marks the subtitle unavailable when the product page renders no listing', async () => {
+  it('marks the subtitle unavailable when the product page keeps rendering no listing', async () => {
     jest.useFakeTimers();
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => {});
     const app = jest
       .fn()
       .mockResolvedValue({ id: 1, title: 'App', description: 'desc' });
@@ -373,8 +377,45 @@ describe('AppStoreProvider', () => {
     expect(result.pageUnavailable).toBe(false);
     expect(result.raw).not.toHaveProperty('pageExtract');
     expect(result.pageExtractUnavailable).toBe(true);
-    expect(page).toHaveBeenCalledTimes(1);
+    expect(page).toHaveBeenCalledTimes(3);
+    expect(warn).toHaveBeenCalledWith(
+      'subtitle scrape failed for 1: product page rendered no listing',
+    );
     jest.useRealTimers();
+    warn.mockRestore();
+  });
+
+  it('reads the subtitle once a shell product page answers', async () => {
+    jest.useFakeTimers();
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => {});
+    const app = jest
+      .fn()
+      .mockResolvedValue({ id: 1, title: 'App', description: 'desc' });
+    const page = jest
+      .fn()
+      .mockResolvedValueOnce(
+        '<!DOCTYPE html><html><body><div class="body-container"></div></body></html>',
+      )
+      .mockResolvedValue(
+        '<h1>App</h1><p class="subtitle svelte-kps97o">AI assistant for life and work</p>',
+      );
+    const provider = new AppStoreProvider(makeLib({ app, page }));
+
+    const promise = provider.getApp('1', 'pl');
+    await jest.runAllTimersAsync();
+    const result = await promise;
+
+    expect(result.subtitle).toBe('AI assistant for life and work');
+    expect(result.subtitleUnavailable).toBe(false);
+    expect(result.pageUnavailable).toBe(false);
+    expect(page).toHaveBeenCalledTimes(2);
+    expect(warn).not.toHaveBeenCalledWith(
+      'subtitle scrape failed for 1: product page rendered no listing',
+    );
+    jest.useRealTimers();
+    warn.mockRestore();
   });
 
   it('reads the subtitle once a throttled product page answers', async () => {

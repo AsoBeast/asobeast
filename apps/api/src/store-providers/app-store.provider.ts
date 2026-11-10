@@ -230,26 +230,31 @@ export class AppStoreProvider implements StoreProvider {
         deadline.signal?.throwIfAborted();
         return listingOf(fetched);
       });
-      const extract = this.pageExtractOf(storeAppId, listing.document);
-      return {
-        ...(listing.subtitle !== undefined
-          ? { subtitle: listing.subtitle }
-          : {}),
-        subtitleUnavailable: listing.listingUnavailable,
-        pageUnavailable: false,
-        ...(extract !== undefined ? { extract } : {}),
-        extractUnavailable: extract === undefined,
-      };
+      return this.pageReadOf(storeAppId, listing);
     } catch (error) {
       this.logger.warn(
         `subtitle scrape failed for ${storeAppId}: ${messageOf(error)}`,
       );
+      if (error instanceof ShellListingError) {
+        return this.pageReadOf(storeAppId, error.listing);
+      }
       return {
         subtitleUnavailable: true,
         pageUnavailable: true,
         extractUnavailable: true,
       };
     }
+  }
+
+  private pageReadOf(storeAppId: string, listing: PageListing): PageRead {
+    const extract = this.pageExtractOf(storeAppId, listing.document);
+    return {
+      ...(listing.subtitle !== undefined ? { subtitle: listing.subtitle } : {}),
+      subtitleUnavailable: listing.listingUnavailable,
+      pageUnavailable: false,
+      ...(extract !== undefined ? { extract } : {}),
+      extractUnavailable: extract === undefined,
+    };
   }
 
   private pageExtractOf(
@@ -332,6 +337,9 @@ export class AppStoreProvider implements StoreProvider {
     if (missingAppId !== undefined && isMissingApp(lastError)) {
       throw new StoreAppNotFoundError(this.store, missingAppId);
     }
+    if (lastError instanceof ShellListingError) {
+      throw lastError;
+    }
     throw new StoreRequestError(this.store, method, messageOf(lastError));
   }
 }
@@ -340,6 +348,13 @@ interface PageListing {
   document: cheerio.CheerioAPI;
   subtitle?: string;
   listingUnavailable: boolean;
+}
+
+class ShellListingError extends Error {
+  constructor(readonly listing: PageListing) {
+    super('product page rendered no listing');
+    this.name = 'ShellListingError';
+  }
 }
 
 function snapshotRawOf(
@@ -355,7 +370,7 @@ function snapshotRawOf(
 function listingOf(html: string): PageListing {
   const document = cheerio.load(html);
   if (document('h1').length === 0) {
-    return { document, listingUnavailable: true };
+    throw new ShellListingError({ document, listingUnavailable: true });
   }
   const text = document('p.subtitle').first().text().trim();
   return {
