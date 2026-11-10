@@ -16,7 +16,7 @@ const TOP10_WINDOW_DAYS = 7;
 
 export interface RankInsight {
   rankDistribution: RankDistribution;
-  top10Delta7d: number | null;
+  top10Delta: number | null;
   movement: PortfolioMovement;
   movers: RankedMovers;
 }
@@ -32,12 +32,13 @@ type TaggedMover = RankedMover & { appId: string };
 export function rankInsight(
   rows: TrackedRow[],
   reference: Date | null,
+  days = TOP10_WINDOW_DAYS,
 ): RankInsight {
   const rankDistribution = rankDistributionAt(rows, reference);
-  const movers = rankedMovers(rows, reference);
+  const movers = rankedMovers(rows, reference, days);
   return {
     rankDistribution,
-    top10Delta7d: top10Delta(rows, reference, rankDistribution.top10),
+    top10Delta: top10Delta(rows, reference, rankDistribution.top10, days),
     movement: {
       up: movers.up.length,
       down: movers.down.length,
@@ -52,15 +53,17 @@ function top10Delta(
   rows: TrackedRow[],
   reference: Date | null,
   current: number,
+  days: number,
 ): number | null {
   if (!reference) return null;
-  const past = addDays(reference, -TOP10_WINDOW_DAYS);
+  const past = addDays(reference, -days);
   if (!capturedOn(rows, past)) return null;
   return current - rankDistributionAt(rows, past).top10;
 }
 
 export function mergePortfolioMovers(
   perApp: Array<{ appId: string; movers: RankedMovers }>,
+  limit = PORTFOLIO_MOVER_LIMIT,
 ): PortfolioInsights['movers'] {
   const tagged = (pick: (movers: RankedMovers) => RankedMover[]) =>
     perApp.flatMap(({ appId, movers }) =>
@@ -70,10 +73,12 @@ export function mergePortfolioMovers(
     up: topMovers(
       tagged((movers) => movers.up),
       (a, b) => b.change - a.change,
+      limit,
     ),
     down: topMovers(
       tagged((movers) => movers.down),
       (a, b) => a.change - b.change,
+      limit,
     ),
   };
 }
@@ -81,10 +86,11 @@ export function mergePortfolioMovers(
 const topMovers = (
   movers: TaggedMover[],
   byChange: (a: TaggedMover, b: TaggedMover) => number,
+  limit: number,
 ): PortfolioKeywordMover[] =>
   movers
     .sort((a, b) => byChange(a, b) || a.text.localeCompare(b.text))
-    .slice(0, PORTFOLIO_MOVER_LIMIT)
+    .slice(0, limit)
     .map(toPortfolioMover);
 
 const toPortfolioMover = (mover: TaggedMover): PortfolioKeywordMover => ({

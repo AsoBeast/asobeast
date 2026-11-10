@@ -9,6 +9,7 @@ import {
   AppSummary,
   CURRENT_FORMULA_VERSIONS,
   PortfolioInsights,
+  PortfolioHistory,
   PortfolioSummary,
   RankDistributionHistory,
   RatingsHistory,
@@ -861,6 +862,46 @@ describe('AnalyticsController (e2e)', () => {
       trackedKeywords: summary.trackedKeywords,
       changes7d: 0,
     });
+    expect(portfolio.visibility).toEqual({
+      current: entry.visibility.current,
+      delta7d: entry.visibility.delta7d,
+    });
+  });
+
+  it('answers the workspace history for the dashboard range', async () => {
+    await seed();
+
+    const portfolio = (await api.get('/portfolio').expect(200))
+      .body as PortfolioSummary;
+    const history = (await api.get('/portfolio/history?days=30').expect(200))
+      .body as PortfolioHistory;
+
+    expect(history.days).toBe(30);
+    expect(history.points.map((point) => point.date)).toEqual([
+      '2026-06-23',
+      '2026-06-30',
+    ]);
+    expect(history.points.at(-1)?.visibility).toBeCloseTo(
+      portfolio.visibility?.current ?? Number.NaN,
+      5,
+    );
+    expect(history.previous).toEqual([]);
+    expect(
+      (
+        (await api.get('/portfolio/history').expect(200))
+          .body as PortfolioHistory
+      ).days,
+    ).toBe(30);
+    await api.get('/portfolio/history?days=14').expect(400);
+
+    const week = (await api.get('/portfolio/history?days=7').expect(200))
+      .body as PortfolioHistory;
+    expect(week.change.visibilityDelta).toBeCloseTo(
+      portfolio.visibility?.delta7d ?? Number.NaN,
+      5,
+    );
+    expect(history.change.visibilityDelta).toBeNull();
+    expect(history.change.movers).toEqual({ up: [], down: [] });
   });
 
   describe('keyword discoveries', () => {

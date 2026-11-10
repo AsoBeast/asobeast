@@ -19,11 +19,12 @@ export interface RankedMovers {
 export function rankedMovers(
   rows: TrackedRow[],
   referenceDate: Date | null,
+  days = MOVER_WINDOW_DAYS,
 ): RankedMovers {
   if (!referenceDate) {
     return { up: [], down: [] };
   }
-  const target = addDays(referenceDate, -MOVER_WINDOW_DAYS);
+  const target = addDays(referenceDate, -days);
   const up: RankedMover[] = [];
   const down: RankedMover[] = [];
 

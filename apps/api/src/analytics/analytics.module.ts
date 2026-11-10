@@ -5,6 +5,7 @@ import { AnalyticsService } from './analytics.service';
 import { BrandKeywords } from './brand-keywords';
 import { DigestService } from './digest.service';
 import { PortfolioController } from './portfolio.controller';
+import { PortfolioHistoryService } from './portfolio-history.service';
 import { PortfolioInsightsService } from './portfolio-insights.service';
 import { PortfolioSignals } from './portfolio-signals.service';
 import { PortfolioService } from './portfolio.service';
@@ -19,6 +20,7 @@ import { ShareOfVoiceService } from './share-of-voice.service';
     PortfolioService,
     PortfolioSignals,
     PortfolioInsightsService,
+    PortfolioHistoryService,
     ShareOfVoiceService,
     BrandKeywords,
   ],

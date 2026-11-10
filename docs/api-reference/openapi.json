@@ -4938,7 +4938,7 @@
     },
     "/portfolio": {
       "get": {
-        "description": "Every primary app of the workspace with its visibility, sparkline and counts, the groups and the totals. discoveries counts the keywords each app could rank for that it does not track, and how many of them it already ranks for; see keyword discovery.",
+        "description": "Every primary app of the workspace with its visibility, sparkline and counts, the groups and the totals. visibility is the workspace as one figure over every tracked keyword, with its change against seven days earlier. discoveries counts the keywords each app could rank for that it does not track, and how many of them it already ranks for; see keyword discovery.",
         "operationId": "PortfolioController_getPortfolio",
         "parameters": [],
         "responses": {
@@ -4976,6 +4976,44 @@
           }
         },
         "summary": "Per app signals and cross-app movers for the portfolio dashboard",
+        "tags": [
+          "analytics"
+        ]
+      }
+    },
+    "/portfolio/history": {
+      "get": {
+        "description": "One point per checked day for the last days days and, as previous, for the same number of days before them: the visibility of every tracked keyword of every primary app as one figure, how many of them rank in the top 10, and how many climbed or fell against the app's previous checked day. change compares each app's latest checked day with the day days before it: the change in visibility and in the top 10 count (null when no app was checked that day), how many keywords climbed, fell, started ranking or dropped out, how many apps moved and the largest movers. Each app is read at its own latest checked day. days is 7, 30 or 90.",
+        "operationId": "PortfolioController_getHistory",
+        "parameters": [
+          {
+            "name": "days",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 30,
+              "type": "number",
+              "enum": [
+                7,
+                30,
+                90
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Daily workspace figures for the dashboard charts",
         "tags": [
           "analytics"
         ]

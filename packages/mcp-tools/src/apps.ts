@@ -77,7 +77,7 @@ export const APP_TOOLS: ReadTool[] = [
     name: "portfolio",
     title: "Portfolio summary",
     description:
-      "Cross-app portfolio roll-up: totals and per-app visibility, keyword and movement figures across every tracked app.",
+      "Cross-app portfolio roll-up: totals, the workspace's combined visibility with its seven day change, and per-app visibility, keyword and movement figures across every tracked app.",
     inputSchema: z.object({}),
     request: () => ({ path: "/portfolio" }),
   }),
