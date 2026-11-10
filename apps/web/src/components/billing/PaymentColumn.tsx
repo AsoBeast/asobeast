@@ -7,30 +7,29 @@ import {
   type BillingInterval,
   type BillingPrice,
   type PaidPlanName,
-  SUPPORT_EMAIL,
 } from "@asobeast/shared";
 import { Lock } from "lucide-react";
+import type { RetryableRead } from "@/components/layout/InlineQueryError";
 import { LegalLinks } from "@/components/layout/LegalLinks";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sessionKeyOf } from "@/lib/embedded-checkout";
 import { INTERVAL_LABEL, summaryFromCatalog } from "@/lib/order-summary";
 import {
   PAYMENT_TITLE,
-  CONTACT_SUPPORT,
-  NEED_HELP,
   SECURE_BY_STRIPE,
   buysPlan,
-  trialPaymentNote,
   type PlanAction,
   type ViewerClock,
 } from "@/lib/plan-choice";
 import { EmbeddedCheckout } from "./EmbeddedCheckout";
 import { OrderSummary } from "./OrderSummary";
+import { PaymentNote } from "./PaymentNote";
 import { useCheckoutTheme } from "./use-checkout-theme";
 
 export function PaymentColumn({
   plan,
   catalog,
+  catalogRead,
   name,
   interval,
   action,
@@ -41,6 +40,7 @@ export function PaymentColumn({
 }: {
   plan: AccountPlan | undefined;
   catalog: BillingCatalog | undefined;
+  catalogRead: RetryableRead | null;
   name: PaidPlanName;
   interval: BillingInterval;
   action: PlanAction;
@@ -83,14 +83,12 @@ export function PaymentColumn({
           <span>{SECURE_BY_STRIPE}</span>
         </p>
       ) : null}
-      <p className="text-caption text-muted-foreground">
-        <span>{trialPaymentNote(catalog, offer, clock)}</span>{" "}
-        <span>{NEED_HELP}</span>{" "}
-        <a href={`mailto:${SUPPORT_EMAIL}`} className="font-medium underline">
-          {CONTACT_SUPPORT}
-        </a>
-        .
-      </p>
+      <PaymentNote
+        catalog={catalog}
+        catalogRead={catalogRead}
+        offer={offer}
+        clock={clock}
+      />
       {billing ? <LegalLinks /> : null}
     </section>
   );

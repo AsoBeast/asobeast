@@ -38,6 +38,11 @@ export const LATER_RELEASES: readonly Release[] = [
         title: "AI analysis of your icon and screenshots",
         text: "The AI analysis no longer fails now and then because the images could not be loaded, and every AI feature has more room to think before it answers.",
       },
+      {
+        kind: "fixed",
+        title: "The plan page on a weak connection",
+        text: "When the plan page cannot load your plan or the prices, it now says so and lets you try again, instead of showing an offer or a checkout that may not apply to you.",
+      },
     ],
   },
   {
