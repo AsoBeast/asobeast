@@ -27,6 +27,20 @@ const GENERIC: Recovery = {
   expected: false,
 };
 
+const LOST_REQUEST: Recovery = {
+  title: "AsoBeast could not be reached",
+  body: "The connection dropped before the request finished. Check your connection, then try again.",
+  action: { kind: "retry" },
+  expected: true,
+};
+
+const LOST_REQUEST_MESSAGE =
+  /^(Failed to fetch|Load failed|NetworkError when attempting to fetch resource\.)( \(.+\))?$/;
+
+export function isLostRequest(error: unknown): boolean {
+  return error instanceof TypeError && LOST_REQUEST_MESSAGE.test(error.message);
+}
+
 const BY_STATUS: Record<number, Explanation> = {
   401: {
     title: "Your session expired",
@@ -133,6 +147,8 @@ export function recoveryFor(error: unknown, scope?: RecoveryScope): Recovery {
     }
     return { ...GENERIC, body: message, expected: true };
   }
+
+  if (isLostRequest(error)) return LOST_REQUEST;
 
   const digest = readApiErrorDigest(digestOf(error));
   return (digest && byStatus(digest, scope)) ?? GENERIC;
