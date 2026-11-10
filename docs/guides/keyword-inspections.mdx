@@ -19,7 +19,7 @@ The inspection runs as a store job, so the request answers at once with a pendin
 
 ### What it costs
 
-Each queued inspection spends one on demand score, the same allowance as scoring a tracked keyword, so on a metered instance it counts against the hourly allowance of your plan. A request the validation refuses and a repeat of a pending inspection spend nothing. See [A spent on demand allowance names its action](/api-reference/rate-limits#a-spent-on-demand-allowance-names-its-action).
+Each queued inspection spends one on demand score, the same allowance as scoring a tracked keyword, so on a metered instance it counts against the daily allowance of your plan. A request the validation refuses and a repeat of a pending inspection spend nothing. See [A spent on demand allowance names its action](/api-reference/rate-limits#a-spent-on-demand-allowance-names-its-action).
 
 Every inspection is one search plus a few autocomplete lookups, the same evidence the scoring job reads for a tracked keyword. Google Play adds a detail lookup for each of the top 10 results, which is where its ratings and update dates come from. The requests go through the same store rate limits as the daily run. See [The daily pipeline and rate limits](/concepts/pipeline).
 
