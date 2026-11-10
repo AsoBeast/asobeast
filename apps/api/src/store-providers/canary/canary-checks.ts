@@ -16,7 +16,7 @@ export function assertParsedApp(app: NormalizedApp): void {
 }
 
 export function assertPageExtract(app: NormalizedApp): void {
-  if (app.pageExtractUnavailable !== true || app.subtitleUnavailable === true) {
+  if (app.pageExtractUnavailable !== true || app.pageUnavailable === true) {
     return;
   }
   throw new CanaryShapeError('product page extract is unavailable');
