@@ -140,7 +140,6 @@ export function InspectView() {
           </p>
         </header>
         <InspectForm
-          key={`${search.keyword}|${search.store}|${country}`}
           className="xl:w-[46rem] xl:flex-nowrap"
           initial={{ keyword: search.keyword, store: search.store, country }}
           onInspected={show}

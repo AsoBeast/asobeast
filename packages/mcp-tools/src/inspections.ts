@@ -64,7 +64,7 @@ function inspectionOutcome(body: unknown) {
     return body;
   }
   return {
-    queued: status === "PENDING",
+    pending: status === "PENDING",
     id,
     keyword,
     store,

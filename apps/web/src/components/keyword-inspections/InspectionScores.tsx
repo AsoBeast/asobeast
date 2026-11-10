@@ -92,7 +92,7 @@ export function InspectionCompetition({
       className="flex flex-col gap-2"
     >
       <h3 id="inspection-competition" className="text-sm font-medium">
-        Competition in the top {inspection.competition.topCount}
+        {`Competition in the top ${inspection.competition.topCount}`}
       </h3>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
         {competitionFacts(inspection.competition).map((fact) => (

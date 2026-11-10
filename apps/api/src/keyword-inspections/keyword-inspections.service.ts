@@ -57,15 +57,15 @@ export class KeywordInspectionsService {
       request.store,
       request.country,
     );
-    await this.expireStale(workspaceId, keywordId);
-    const waiting = await this.pendingOf(this.prisma, workspaceId, keywordId);
+    await this.expireStale(keywordId);
+    const waiting = await this.pendingOf(this.prisma, keywordId);
     if (waiting) {
       return this.get(waiting);
     }
     await spend();
     const claim = await this.prisma.withTransaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${INSPECTION_LOCK}::int, hashtext(${`${workspaceId}~${keywordId}`}))`;
-      const pending = await this.pendingOf(tx, workspaceId, keywordId);
+      const pending = await this.pendingOf(tx, keywordId);
       if (pending) {
         return { id: pending, queued: false };
       }
@@ -158,13 +158,9 @@ export class KeywordInspectionsService {
     return keyword.id;
   }
 
-  private async expireStale(
-    workspaceId: string,
-    keywordId: string,
-  ): Promise<void> {
+  private async expireStale(keywordId: string): Promise<void> {
     await this.prisma.keywordInspection.updateMany({
       where: {
-        workspaceId,
         keywordId,
         status: 'PENDING',
         requestedAt: { lt: new Date(Date.now() - INSPECTION_PENDING_TTL_MS) },
@@ -179,11 +175,10 @@ export class KeywordInspectionsService {
 
   private async pendingOf(
     client: Prisma.TransactionClient | PrismaService,
-    workspaceId: string,
     keywordId: string,
   ): Promise<string | null> {
     const pending = await client.keywordInspection.findFirst({
-      where: { workspaceId, keywordId, status: 'PENDING' },
+      where: { keywordId, status: 'PENDING' },
       select: { id: true },
     });
     return pending?.id ?? null;

@@ -46,7 +46,7 @@ export function InspectionResultsTable({
     <div className="flex flex-col gap-2">
       <Table scrollLabel="Search results" scrollFocus="overflow">
         <TableCaption className="sr-only">
-          The top {shown.length} results for “{keyword}”, in store order
+          {`The top ${shown.length} results for “${keyword}”, in store order`}
         </TableCaption>
         <TableHeader>
           <TableRow>

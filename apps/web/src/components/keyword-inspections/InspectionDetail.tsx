@@ -23,10 +23,9 @@ function InspectionHeading({ inspection }: { inspection: KeywordInspection }) {
   const when = inspection.completedAt ?? inspection.requestedAt;
   return (
     <header className="flex flex-col gap-0.5">
-      <h2 className="text-title text-balance">“{inspection.keyword}”</h2>
+      <h2 className="text-title text-balance">{`“${inspection.keyword}”`}</h2>
       <p className="text-sm text-muted-foreground">
-        {storeLabel(inspection.store)} · {formatCountry(inspection.country)} ·{" "}
-        {formatDateTime(when)}
+        {`${storeLabel(inspection.store)} · ${formatCountry(inspection.country)} · ${formatDateTime(when)}`}
       </p>
     </header>
   );
@@ -65,7 +64,7 @@ function FailedInspection({
       ) : null}
       <Button
         variant="outline"
-        disabled={retry.isPending}
+        aria-disabled={retry.isPending || undefined}
         onClick={() => retryOnce(undefined)}
       >
         {retry.isPending ? "Starting…" : "Try again"}

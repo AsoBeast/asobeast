@@ -177,9 +177,7 @@ export function InspectionMap({
             Keyword map
           </h2>
           <p className="text-sm text-muted-foreground">
-            {storeLabel(storefront.store)} · {formatCountry(storefront.country)}{" "}
-            · {formatNumber(points.length)}{" "}
-            {points.length === 1 ? "keyword" : "keywords"} inspected
+            {`${storeLabel(storefront.store)} · ${formatCountry(storefront.country)} · ${formatNumber(points.length)} ${points.length === 1 ? "keyword" : "keywords"} inspected`}
           </p>
         </div>
         <ThresholdsPopover />

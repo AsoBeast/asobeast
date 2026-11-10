@@ -51,6 +51,14 @@ export function InspectForm({
   const [keyword, setKeyword] = useState(initial.keyword);
   const [store, setStore] = useState<Store>(initial.store);
   const [country, setCountry] = useState(initial.country);
+  const incoming = `${initial.keyword}|${initial.store}|${initial.country}`;
+  const [seen, setSeen] = useState(incoming);
+  if (seen !== incoming) {
+    setSeen(incoming);
+    setKeyword(initial.keyword);
+    setStore(initial.store);
+    setCountry(initial.country);
+  }
 
   const inspect = useMutation({
     mutationFn: requestKeywordInspection,
@@ -88,7 +96,12 @@ export function InspectForm({
         <Label htmlFor="inspect-store" className="xl:sr-only">
           Store
         </Label>
-        <Select value={store} onValueChange={(next) => setStore(next as Store)}>
+        <Select
+          value={store}
+          onValueChange={(next) =>
+            setStore(STORES.find((option) => option === next) ?? store)
+          }
+        >
           <SelectTrigger id="inspect-store" className="w-[180px]">
             <SelectValue>{storeLabel(store)}</SelectValue>
           </SelectTrigger>
@@ -113,7 +126,11 @@ export function InspectForm({
           onChange={setCountry}
         />
       </div>
-      <Button type="submit" disabled={!ready || inspect.isPending}>
+      <Button
+        type="submit"
+        disabled={!ready}
+        aria-disabled={inspect.isPending || undefined}
+      >
         {inspect.isPending ? "Starting…" : "Inspect"}
       </Button>
     </form>

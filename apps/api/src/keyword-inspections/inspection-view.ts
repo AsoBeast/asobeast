@@ -2,6 +2,7 @@ import {
   isScoringConfidence,
   isScoringSource,
   KEYWORD_INSPECTION_STATUSES,
+  KEYWORD_INSPECTION_TITLE_MATCHES,
   KeywordInspection,
   KeywordInspectionApp,
   KeywordInspectionDelta,
@@ -53,10 +54,10 @@ export type InspectionDetailRow = Prisma.KeywordInspectionGetPayload<{
   select: typeof INSPECTION_DETAIL_SELECT;
 }>;
 
-const STATUSES: ReadonlySet<string> = new Set(KEYWORD_INSPECTION_STATUSES);
-
 function statusOf(value: string): KeywordInspectionStatus {
-  return STATUSES.has(value) ? (value as KeywordInspectionStatus) : 'FAILED';
+  return (
+    KEYWORD_INSPECTION_STATUSES.find((status) => status === value) ?? 'FAILED'
+  );
 }
 
 const scaled = (
@@ -89,8 +90,43 @@ export function toInspectionSummary(
   };
 }
 
-const arrayOf = <T>(value: Prisma.JsonValue | null): T[] =>
-  Array.isArray(value) ? (value as unknown as T[]) : [];
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const isNumber = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value);
+
+const isText = (value: unknown): value is string => typeof value === 'string';
+
+const isNumberOrNull = (value: unknown): value is number | null =>
+  value === null || isNumber(value);
+
+const isTextOrNull = (value: unknown): value is string | null =>
+  value === null || isText(value);
+
+const isResult = (value: unknown): value is KeywordInspectionResult =>
+  isRecord(value) &&
+  isNumber(value.position) &&
+  isText(value.storeAppId) &&
+  isText(value.title) &&
+  isTextOrNull(value.developer) &&
+  isTextOrNull(value.iconUrl) &&
+  isNumberOrNull(value.ratingAvg) &&
+  isNumberOrNull(value.ratingCount) &&
+  isTextOrNull(value.releasedAt) &&
+  isTextOrNull(value.updatedAt) &&
+  KEYWORD_INSPECTION_TITLE_MATCHES.some((match) => match === value.titleMatch);
+
+const isSuggestion = (value: unknown): value is KeywordInspectionSuggestion =>
+  isRecord(value) && isNumber(value.position) && isText(value.term);
+
+const arrayOf = <T>(
+  value: Prisma.JsonValue | null,
+  isItem: (item: unknown) => item is T,
+): T[] =>
+  Array.isArray(value)
+    ? value.flatMap((item) => (isItem(item) ? [item] : []))
+    : [];
 
 function provenanceOf(
   row: InspectionDetailRow,
@@ -132,7 +168,7 @@ export function inspectionDelta(
   previous: InspectionDetailRow,
 ): KeywordInspectionDelta | null {
   if (previous.completedAt === null) return null;
-  const earlier = arrayOf<KeywordInspectionResult>(previous.results);
+  const earlier = arrayOf(previous.results, isResult);
   const now = topIds(current);
   const then = topIds(earlier);
   const summary = toInspectionSummary(previous);
@@ -151,7 +187,7 @@ export function toInspection(
   row: InspectionDetailRow,
   previous: InspectionDetailRow | null,
 ): KeywordInspection {
-  const results = arrayOf<KeywordInspectionResult>(row.results);
+  const results = arrayOf(row.results, isResult);
   const signals = readScoreSignals(row.stats);
   const reference = row.completedAt ?? row.requestedAt;
   return {
@@ -161,7 +197,7 @@ export function toInspection(
     signals,
     competition: summarizeCompetition(results, reference),
     results,
-    suggestions: arrayOf<KeywordInspectionSuggestion>(row.suggestions),
+    suggestions: arrayOf(row.suggestions, isSuggestion),
     previous: previous === null ? null : inspectionDelta(results, previous),
     failure: timedOut(row) ? INSPECTION_TIMED_OUT : row.failure,
   };

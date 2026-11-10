@@ -60,14 +60,15 @@ function HopChip({
   }
   if (state.kind === "running" || starting) {
     return (
-      <span
-        role="status"
+      <button
+        type="button"
+        aria-disabled
         aria-label={`Inspecting ${term}`}
         className={cn(CHIP, "border-info/40 bg-info/10 text-foreground")}
       >
         <Loader2 aria-hidden className="size-3.5 animate-spin text-info" />
-        {term}
-      </span>
+        <span>{term}</span>
+      </button>
     );
   }
   return (
@@ -81,7 +82,7 @@ function HopChip({
       )}
     >
       <Plus aria-hidden className="size-3.5 text-muted-foreground" />
-      {term}
+      <span>{term}</span>
     </button>
   );
 }
@@ -129,7 +130,7 @@ export function NextHops({
       className="flex flex-col gap-2 border-t pt-3"
     >
       <h3 id="inspection-next" className="text-sm font-medium">
-        Next from “{inspection.keyword}”
+        {`Next from “${inspection.keyword}”`}
         <span className="ml-2 font-normal text-muted-foreground">
           store autocomplete, one click to inspect
         </span>

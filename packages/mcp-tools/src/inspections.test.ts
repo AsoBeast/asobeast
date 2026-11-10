@@ -110,7 +110,7 @@ describe("the keyword inspection tools", () => {
         country: "us",
       }),
     ).toEqual({
-      queued: true,
+      pending: true,
       id: "insp_1",
       keyword: "habit tracker",
       store: "APP_STORE",
