@@ -5,6 +5,8 @@ paths:
   - "apps/web/src/components/integrations/**"
   - "apps/web/src/lib/funnel.ts"
   - "apps/web/src/lib/store-connection-copy.ts"
+  - "apps/api/src/changes/change-impact*.ts"
+  - "apps/api/src/actions/rules/{conversion-investigate-drop,listing-cpp-underperforms}.ts"
 ---
 
 # Store console rules
@@ -32,7 +34,7 @@ The funnel:
 - `GET /apps/{id}/funnel` answers `connected: false` with empty series for a competitor, an app without an ongoing `requested` request of an active connection, or with the feature off, even when rows survive a disconnect. Otherwise a zero filled daily series and the 7, 14 and 28 day windows of complete days against the period before, plus optional `pages` (28 complete days, default page first).
 - A day is complete once three days old and no later than the app's newest stored day (`reportedThrough`), derived at read time, so a lagging sync never turns missing days into zeros. App Store conversion is Get taps over unique impressions as Apple reports them; a dimension a store does not report is `null`, never estimated.
 - `GET /apps/{id}/changes/impact` adds an optional `funnel` block per window only while the connection reports the app (`measureChangeFunnel`): the same number of complete days before and from the change, `measured` when every day after is final, `pending` while Apple finishes them, `unmeasured` when nothing was reported before. Without a connection the field is absent.
-- The conversion rules read 21 or 14 home market days ending at `completeThrough` and hold an action `withheld` while the console stops reporting (`ActionFunnel.reporting`), a day is missing, page views move past `CONVERSION_PAGE_VIEW_TOLERANCE`, or a page has under `CPP_MIN_UNIQUE_IMPRESSIONS`.
+- The conversion rules read 21 or 14 home market days ending at `completeThrough` and hold an action `withheld` while the console stops reporting (`ActionFunnel.reporting`), a day is missing, page views move past `CONVERSION_PAGE_VIEW_TOLERANCE`, or a page or the default page has under `CPP_MIN_PAGE_VIEWS` (100) page views.
 
 Google Play with a service account:
 

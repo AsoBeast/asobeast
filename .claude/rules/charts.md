@@ -20,7 +20,7 @@ Capturing:
   - otherwise a queued job stores the empty capture only on its last attempt (`isFinalAttempt`, passed from `StoreJobsHandler` through `checkCategory` as `CaptureOptions.finalAttempt`) and throws before, so a soft block is retried; `POST /charts/capture` stores nothing and answers 200 with `answeredNoApps: true` (`ChartListsNoAppsError`).
 - A chart empty by nature (the Play paid Shopping chart) succeeds, is asked once a day after its first day, and gives `checkCategory` `null` positions.
 - Searches and review feeds follow the same plausibility rule without the entry threshold. An App Store answer still empty on its job's last attempt settles through `settleOnLastAttempt` (`store-providers/result-plausibility.ts`): a warning, nothing written, a completed job. An empty Play answer is a soft block and fails at once.
-- `captureToday` is single flight per process, keyed by chart key and UTC date, so two first captures reach the store and spend once; a caller that joined a flight whose leader was refused before the store captures on its own allowance, while a store failure is shared. Across processes only the unique index keeps one capture.
+- `captureToday` is single flight per process, keyed by chart key and UTC date, so two first captures in one process reach the store once and spend once; a caller that joined a flight whose leader was refused before the store captures on its own allowance, while a store failure is shared. Across processes only the unique index keeps one capture.
 - `POST /charts/capture` runs under the store deadline and spends `chartCapture` only when a store request happens.
 
 Ranks and follows:

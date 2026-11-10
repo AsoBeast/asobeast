@@ -8,7 +8,7 @@ paths:
 ## Conventions
 
 - Every controller input is a `class-validator` DTO; the global `ValidationPipe` runs with `whitelist: true`.
-- An error envelope's `path` is the request path without its query (`pathWithoutQuery`, `common/request-path.ts`; Nest's unknown route message is cut the same way by `withoutQueryEcho`), so a credential put in a URL never comes back in a body. Anything that builds an `ApiErrorEnvelope` for a request calls `pathWithoutQuery`; the web proxy's own envelope uses `nextUrl.pathname`.
+- An error envelope's `path` is the request path without its query (`pathWithoutQuery`, `common/request-path.ts`; Nest's unknown route message is cut the same way by `withoutQueryEcho`), so a credential put in a query string never comes back in a body (the path itself is kept, so a credential never belongs in a path). Anything that builds an `ApiErrorEnvelope` for a request calls `pathWithoutQuery`; the web proxy's own envelope uses `nextUrl.pathname`.
 - Text reaches a service only through `@Param`, `@Query` or `@Body`. The global `StorableTextPipe` runs before `ValidationPipe` and refuses a NUL (`404` in a path id, `400` elsewhere; PostgreSQL cannot store it), an unpaired surrogate (`400`; the Prisma protocol cannot carry it) and nesting deeper than `MAX_NESTING_DEPTH` (64, `400`, or `ValidationPipe` throws a `RangeError` as a `500`).
 - A field that is only hashed (a password, a one time token) carries `@HashedOnly()`, which `@IsPassword()` applies. The mark survives `extends` but not `PartialType`, `PickType` or `OmitType`, which must apply it again.
 - A controller never reads `req.params`, `req.query` or `req.body`; `McpController` is the one exception, because its tool arguments dispatch in process to `GET` routes behind the same pipe. Never map the database error in `AllExceptionsFilter`: server sourced text stays a visible `500`.
@@ -25,7 +25,7 @@ paths:
 
 ## Domain rule 3: Rate limits
 
-- The `appstore` worker runs at concurrency 1 behind `SCRAPE_ITUNES_RPM` (default 15; iTunes tolerates about 20 a minute per IP). The `gplay` worker runs at concurrency 1 behind `SCRAPE_GPLAY_RPM` (default 10), which spaces job starts, because Play is stricter.
+- Without a proxy pool, the `appstore` worker runs at concurrency 1 behind `SCRAPE_ITUNES_RPM` (default 15; iTunes tolerates about 20 a minute per IP) and the `gplay` worker at concurrency 1 behind `SCRAPE_GPLAY_RPM` (default 10), which spaces job starts, because Play is stricter. With `PROXY_PROVIDER` set, `storeWorkerOptions` drops that limiter and runs up to `PROXY_WORKER_MAX_CONCURRENCY`, tracking the healthy endpoint count, each endpoint limited by `PROXY_ENDPOINT_RPM`; never assume store jobs run one at a time.
 - Request fan-out: a Play score job makes 12 to 20 requests (a search, 1 to 9 suggest probes, 10 `getApp` enrichments), an App Store score job 3 to 11 (a search, 1 to 9 probes, a continuation lookup); a depth 200 Play rank job makes about eight, an Apple one makes one.
 - Never call a store in bulk outside the queue. The only exceptions are small user initiated lookups (keyword suggestions, a name search, similar apps), each behind an hourly allowance.
 
@@ -43,7 +43,7 @@ Markets:
 
 - A market is suggested, never guessed. `GET /apps/{id}/market-suggestions` (`MarketSuggestionsService`) joins the languages the newest home snapshot declares (`extractRawFacts(...).languages`, normalized by `declaredLanguage`) with `storefrontsForLanguages`, which answers the first localization in a storefront's read order whose language is declared, with its role. Never English, never the home market, and an empty list for Google Play or a competitor.
 - `POST /apps/{id}/market-seed` (`MarketSeedService`) captures the market listing with `refreshListing`, extracts `seedCandidates` (`keywords/listing-seed.ts`: the sources and `MARKET_SEED_LIMIT` of the home import's `syncFromSnapshot`, shipped localizations included), leaves phrases the app already tracks there (active or paused) as they are, plans the rest with `planSeed` inside `admitKeywordMarkets`, reports what does not fit as `skipped` (never 403), then calls `FirstPositionChecks.schedule`, `enqueueFirstScores` and `MarketListingRequests.request`. A storefront without the app answers `unavailable` and writes nothing.
-- Every path that starts tracking (a manual add, an import, a seed, `KeywordFieldWriter.announce`) queues the first position check before the first score, because the store queues are FIFO at concurrency 1 and a score costs 3 to 11 requests to a check's one. The writer checks only the keywords its save activated.
+- Every path that starts tracking (a manual add, an import, a seed, `KeywordFieldWriter.announce`) queues the first position check before the first score, because the store queues are FIFO and a score costs 3 to 11 requests to a check's one. The writer checks only the keywords its save activated.
 - Category ranks, reviews, the ratings history and auto-tracked keywords stay on the home market. Top charts read any storefront through `GET /charts`, and `checkCategory` records from the same `ChartCapture`.
 
 Listings and localizations:

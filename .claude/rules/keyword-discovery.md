@@ -32,6 +32,6 @@ Tracking:
 
 Reporting:
 
-- Opportunity comes from a stored `KeywordMetric` (or Apple's listed popularity for an unscored App Store term), so Opportunities lists scored keywords only.
+- Traffic comes from a stored `KeywordMetric`, or Apple's listed popularity for an unscored App Store term; opportunity also needs a stored difficulty, so Opportunities lists scored keywords only.
 - `GET /jobs/budget` reports weekly checks in an optional `discovery` block per store and in total, never in `total` or `utilization`; the weekly job is not part of `AppRunStatusService`, the capacity report or the operator metrics.
 - The MCP read tool `keyword_discoveries` wraps the list; no MCP write tool tracks a discovery.

@@ -42,7 +42,7 @@ This file holds what applies everywhere. The detailed rules live in `.claude/rul
 
 1. Both stores are live; Google Play has no subtitle and no keyword field, and its short description is the equivalent surface.
 2. The iOS keyword field exists once per localization, is counted with `countChars`, stored only in `KeywordField`, written only by `KeywordFieldWriter` and edited only on the metadata page.
-3. Store workers run at concurrency 1 behind `SCRAPE_ITUNES_RPM` and `SCRAPE_GPLAY_RPM`; never call a store in bulk outside the queue.
+3. Without a proxy pool, store workers run at concurrency 1 behind `SCRAPE_ITUNES_RPM` and `SCRAPE_GPLAY_RPM`; with one, concurrency rises to `PROXY_WORKER_MAX_CONCURRENCY`; never call a store in bulk outside the queue.
 4. `Keyword`, `KeywordMetric` and `SerpEntry` are global, so one search serves every tenant; the tracking relation is tenant owned; every listing read is scoped through `apps/api/src/apps/listing.ts`.
 5. Opportunity is derived in the read layer, never stored.
 6. A position is 1 based; `null` means checked and not found, and the row is stored anyway.
