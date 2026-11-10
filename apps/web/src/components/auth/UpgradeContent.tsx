@@ -5,6 +5,7 @@ import { BillingWall } from "@/components/billing/BillingWall";
 import {
   InlineQueryError,
   failedRead,
+  type RetryableRead,
 } from "@/components/layout/InlineQueryError";
 import { PLAN_UNREACHABLE } from "@/lib/plan-choice";
 import { accountPlanOptions, billingCatalogOptions } from "@/lib/queries";
@@ -12,6 +13,10 @@ import { MemberBilling } from "./MemberBilling";
 import { SessionCheck } from "./SessionCheck";
 import { useAuth } from "./use-auth";
 import { useSignedOutRedirect } from "./use-signed-out-redirect";
+
+function firstLoad(read: RetryableRead & { isPending: boolean }): boolean {
+  return read.isPending && !failedRead(read);
+}
 
 export function UpgradeContent() {
   const { user, status, isLoading, isMember, authenticated } = useAuth();
@@ -29,7 +34,7 @@ export function UpgradeContent() {
   if (
     isLoading ||
     signedOut ||
-    (authenticated && (planRead.isPending || catalogRead.isPending))
+    (authenticated && (firstLoad(planRead) || firstLoad(catalogRead)))
   ) {
     return (
       <div className="flex justify-center py-12">

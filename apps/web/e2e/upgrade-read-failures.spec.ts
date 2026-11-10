@@ -1,6 +1,6 @@
 import { type Page, type Route } from "@playwright/test";
 import { type AccountPlan } from "@asobeast/shared";
-import { holdRequest } from "./held-request.mts";
+import { holdRequest, pressFromKeyboard } from "./held-request.mts";
 import { fulfillJson, seedSession } from "./plan-helpers.mts";
 import { expect, test } from "./reporting.mts";
 import {
@@ -39,7 +39,42 @@ function loseFirst(
     .then(() => () => reads);
 }
 
+async function loseAgainWhileHeld(page: Page, path: string) {
+  const { promise, resolve } = Promise.withResolvers<void>();
+  let reads = 0;
+  await page.route(`**/api/backend${path}`, async (route) => {
+    reads += 1;
+    if (reads > 1) await promise;
+    return route.abort("failed");
+  });
+  return resolve;
+}
+
 test.describe("the billing wall when a read is lost", () => {
+  for (const [path, message] of [
+    ["/auth/plan", PLAN_UNREACHABLE],
+    ["/billing/catalog", PRICES_UNREACHABLE],
+  ] as const) {
+    test(`keeps focus on Retry while the ${path} read is lost again`, async ({
+      page,
+    }) => {
+      await openWall(page);
+      const release = await loseAgainWhileHeld(page, path);
+      await page.goto("/upgrade");
+      const retry = page.getByRole("button", { name: "Retry" });
+
+      await pressFromKeyboard(retry);
+
+      await expect(retry).toHaveAttribute("aria-disabled", "true");
+      await expect(retry).not.toHaveAttribute("disabled");
+      await expect(retry).toBeFocused();
+      release();
+      await expect(retry).not.toHaveAttribute("aria-disabled", "true");
+      await expect(retry).toBeFocused();
+      await expect(page.getByText(message)).toBeVisible();
+    });
+  }
+
   test("offers a retry rather than a checkout when the plan read is lost", async ({
     page,
   }) => {
