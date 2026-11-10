@@ -157,7 +157,7 @@ describe('AppStoreProvider', () => {
 
     expect(result.subtitle).toBe('The best app');
     expect(page).not.toHaveBeenCalled();
-    expect(result.pageExtract).toBeUndefined();
+    expect(result.raw).not.toHaveProperty('pageExtract');
     expect(result.pageExtractUnavailable).toBe(false);
   });
 
@@ -192,7 +192,12 @@ describe('AppStoreProvider', () => {
     const result = await provider.getApp('1094591345', 'us');
 
     expect(result.subtitle).toBe('Discover Pokémon Worldwide');
-    expect(result.pageExtract).toEqual(SERVER_DATA_EXTRACT);
+    expect(result.raw).toEqual({
+      id: 1094591345,
+      title: 'Pokémon GO',
+      description: 'desc',
+      pageExtract: SERVER_DATA_EXTRACT,
+    });
     expect(result.pageExtractUnavailable).toBe(false);
     expect(page).toHaveBeenCalledTimes(1);
   });
@@ -214,7 +219,7 @@ describe('AppStoreProvider', () => {
 
     expect(result.subtitle).toBe('Real words');
     expect(result.subtitleUnavailable).toBe(false);
-    expect(result.pageExtract).toBeUndefined();
+    expect(result.raw).not.toHaveProperty('pageExtract');
     expect(result.pageExtractUnavailable).toBe(true);
   });
 
@@ -238,7 +243,7 @@ describe('AppStoreProvider', () => {
 
     expect(result.subtitleUnavailable).toBe(true);
     expect(result.pageUnavailable).toBe(false);
-    expect(result.pageExtract).toEqual({
+    expect(result.raw).toHaveProperty('pageExtract', {
       previewVideoUrls: [],
       appEvents: [],
       featuredStories: [],
@@ -342,7 +347,7 @@ describe('AppStoreProvider', () => {
     expect(result.subtitle).toBeUndefined();
     expect(result.subtitleUnavailable).toBe(true);
     expect(result.pageUnavailable).toBe(true);
-    expect(result.pageExtract).toBeUndefined();
+    expect(result.raw).not.toHaveProperty('pageExtract');
     expect(result.pageExtractUnavailable).toBe(true);
     expect(page).toHaveBeenCalledTimes(3);
     jest.useRealTimers();
@@ -366,7 +371,7 @@ describe('AppStoreProvider', () => {
 
     expect(result.subtitleUnavailable).toBe(true);
     expect(result.pageUnavailable).toBe(false);
-    expect(result.pageExtract).toBeUndefined();
+    expect(result.raw).not.toHaveProperty('pageExtract');
     expect(result.pageExtractUnavailable).toBe(true);
     expect(page).toHaveBeenCalledTimes(1);
     jest.useRealTimers();
@@ -842,7 +847,10 @@ describe('AppStoreProvider localized listings', () => {
     const result = await provider.getApp('1', 'pl', 'pl');
 
     expect(page).toHaveBeenCalledWith({ id: 1, country: 'pl', language: 'pl' });
-    expect(result.pageExtract).toEqual(SERVER_DATA_EXTRACT);
+    expect(result.raw).toEqual({
+      ...listing,
+      pageExtract: SERVER_DATA_EXTRACT,
+    });
     expect(result.pageExtractUnavailable).toBe(false);
   });
 });
@@ -963,7 +971,7 @@ describe('AppStoreProvider on demand deadline', () => {
 
     expect(result.subtitleUnavailable).toBe(true);
     expect(result.pageUnavailable).toBe(true);
-    expect(result.pageExtract).toBeUndefined();
+    expect(result.raw).not.toHaveProperty('pageExtract');
     expect(result.pageExtractUnavailable).toBe(true);
   });
 

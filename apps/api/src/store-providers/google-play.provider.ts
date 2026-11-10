@@ -7,7 +7,7 @@ import {
   OVERALL_GENRE,
   storefrontLanguage,
 } from '@asobeast/shared';
-import { Store } from '@prisma/client';
+import { Prisma, Store } from '@prisma/client';
 import { StoreAppNotFoundError, StoreRequestError } from './errors';
 import { Abortable, storeDeadline } from './store-deadline';
 import {
@@ -91,7 +91,7 @@ export class GooglePlayProvider implements StoreProvider {
         raw.version === VERSION_VARIES_WITH_DEVICE ? undefined : raw.version,
       releasedAt: parseDate(raw.released),
       storeUpdatedAt: new Date(raw.updated),
-      raw,
+      raw: raw as unknown as Prisma.InputJsonValue,
       searchable: true,
     };
   }

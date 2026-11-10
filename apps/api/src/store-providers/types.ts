@@ -3,8 +3,7 @@ import {
   CategoryCollection,
   MarketAvailabilityResult,
 } from '@asobeast/shared';
-import { Store } from '@prisma/client';
-import { AppStorePageExtract } from './app-store-page';
+import { Prisma, Store } from '@prisma/client';
 
 export interface NormalizedApp {
   store: Store;
@@ -13,7 +12,6 @@ export interface NormalizedApp {
   subtitle?: string;
   subtitleUnavailable?: boolean;
   pageUnavailable?: boolean;
-  pageExtract?: AppStorePageExtract;
   pageExtractUnavailable?: boolean;
   summary?: string;
   description: string;
@@ -25,7 +23,7 @@ export interface NormalizedApp {
   version?: string;
   releasedAt?: Date;
   storeUpdatedAt?: Date;
-  raw: unknown;
+  raw: Prisma.InputJsonValue;
   searchable: boolean;
 }
 

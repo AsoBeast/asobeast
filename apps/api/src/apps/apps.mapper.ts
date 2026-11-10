@@ -222,19 +222,8 @@ export function toSnapshotData(
     version: normalized.version,
     releasedAt: normalized.releasedAt,
     storeUpdatedAt: normalized.storeUpdatedAt,
-    raw: snapshotRaw(normalized),
+    raw: normalized.raw,
   };
-}
-
-function snapshotRaw(normalized: NormalizedApp): Prisma.InputJsonValue {
-  if (normalized.pageExtract === undefined) {
-    return normalized.raw as Prisma.InputJsonValue;
-  }
-  const withExtract: unknown = {
-    ...(normalized.raw as object),
-    pageExtract: normalized.pageExtract,
-  };
-  return withExtract as Prisma.InputJsonValue;
 }
 
 export function snapshotIcon(

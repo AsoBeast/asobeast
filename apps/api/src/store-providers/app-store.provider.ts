@@ -7,7 +7,7 @@ import {
   MarketAvailabilityResult,
   OVERALL_GENRE,
 } from '@asobeast/shared';
-import { Store } from '@prisma/client';
+import { Prisma, Store } from '@prisma/client';
 import * as cheerio from 'cheerio';
 import {
   APP_STORE_LIB,
@@ -278,7 +278,6 @@ export class AppStoreProvider implements StoreProvider {
         ownSubtitle(this.store, { subtitle: read.subtitle, raw }) ?? undefined,
       subtitleUnavailable: read.subtitleUnavailable,
       pageUnavailable: read.pageUnavailable,
-      ...(read.extract !== undefined ? { pageExtract: read.extract } : {}),
       pageExtractUnavailable: read.extractUnavailable,
       description: raw.description,
       iconUrl: raw.icon,
@@ -288,7 +287,7 @@ export class AppStoreProvider implements StoreProvider {
       version: raw.version,
       releasedAt: toDate(raw.released),
       storeUpdatedAt: toDate(raw.updated),
-      raw,
+      raw: snapshotRawOf(raw, read.extract),
       searchable: listedInIphoneSearch(raw.supportedDevices),
     };
   }
@@ -341,6 +340,16 @@ interface PageListing {
   document: cheerio.CheerioAPI;
   subtitle?: string;
   listingUnavailable: boolean;
+}
+
+function snapshotRawOf(
+  raw: AppStoreAppResult,
+  extract?: AppStorePageExtract,
+): Prisma.InputJsonValue {
+  return {
+    ...raw,
+    ...(extract !== undefined ? { pageExtract: extract } : {}),
+  } as unknown as Prisma.InputJsonValue;
 }
 
 function listingOf(html: string): PageListing {
