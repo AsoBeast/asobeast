@@ -13,6 +13,8 @@ const COLUMNS = "grid grid-cols-[minmax(0,1fr)_auto_4.5rem] gap-3 px-2";
 
 const BAR_REACH_PERCENT = 60;
 
+export const MOVER_DAYS = 7;
+
 const CHANGE_TONE: Record<MoverChange["kind"], string> = {
   up: "text-signal-up",
   new: "text-signal-up",
@@ -29,7 +31,7 @@ function changeText(change: MoverChange): string {
 function changeLabel(change: MoverChange): string {
   if (change.kind === "new") return "started ranking";
   if (change.kind === "lost") return "dropped out of the results";
-  return `${change.kind === "up" ? "up" : "down"} ${formatNumber(change.size)} in 7 days`;
+  return `${change.kind === "up" ? "up" : "down"} ${formatNumber(change.size)} in ${MOVER_DAYS} days`;
 }
 
 function MoverLine({ href, mover }: { href: string; mover: KeywordMover }) {
@@ -83,7 +85,7 @@ export function MoverRows({
       <div aria-hidden className={cn(COLUMNS, LIST_HEAD)}>
         <span>Keyword</span>
         <span className="text-right">Position</span>
-        <span className="text-right">7d change</span>
+        <span className="text-right">{`${MOVER_DAYS}d change`}</span>
       </div>
       <ul className="flex flex-col">
         {movers.map((mover) => (

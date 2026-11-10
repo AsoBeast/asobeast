@@ -3,8 +3,7 @@
 import { useQueryStates } from "nuqs";
 import { ReportHeader } from "@/components/app-detail/ReportHeader";
 import { overviewRangeParsers } from "@/lib/search-params";
-import { OVERVIEW_CHARTS } from "./OverviewChart";
-import { useOverviewView } from "./use-overview-view";
+import { OVERVIEW_VIEW_TITLES, useOverviewView } from "./use-overview-view";
 
 export function OverviewReportHeader({ id }: { id: string }) {
   const [ranges] = useQueryStates(overviewRangeParsers);
@@ -15,7 +14,7 @@ export function OverviewReportHeader({ id }: { id: string }) {
       id={id}
       page="Overview"
       ranges={[
-        { label: OVERVIEW_CHARTS[view].title, preset: ranges.range },
+        { label: OVERVIEW_VIEW_TITLES[view], preset: ranges.range },
         { label: "Category ranks", preset: ranges.categoryRange },
       ]}
     />

@@ -15,28 +15,25 @@ import {
   type VisibilityView,
 } from "@/lib/search-params";
 import { RankBandsChart } from "./RankBandsChart";
+import { OVERVIEW_VIEW_TITLES } from "./use-overview-view";
 import { ShareOfVoiceChart } from "./ShareOfVoiceChart";
 import { VisibilityAreaChart } from "./VisibilityAreaChart";
 
 interface ChartView {
-  title: string;
   help?: ReactNode;
   Chart: (props: { id: string; range: VisibilityRange }) => ReactNode;
 }
 
-export const OVERVIEW_CHARTS: Record<VisibilityView, ChartView> = {
+const OVERVIEW_CHARTS: Record<VisibilityView, ChartView> = {
   visibility: {
-    title: "Search visibility",
     help: <VisibilityHelp />,
     Chart: VisibilityAreaChart,
   },
   share: {
-    title: "Share of voice",
     help: <ShareOfVoiceHelp />,
     Chart: ShareOfVoiceChart,
   },
   top10: {
-    title: "Tracked keywords by rank band",
     Chart: RankBandsChart,
   },
 };
@@ -52,7 +49,8 @@ export function OverviewChart({
   const [range, setRange] = useQueryState("range", visibilityRangeParser);
   const shownRange = useDeferredValue(range);
   const shownView = useDeferredValue(view);
-  const { title, help, Chart } = OVERVIEW_CHARTS[shownView];
+  const { help, Chart } = OVERVIEW_CHARTS[shownView];
+  const title = OVERVIEW_VIEW_TITLES[shownView];
   const scope = switchable
     ? ` · ${country?.toUpperCase() ?? "All markets"}`
     : "";

@@ -52,13 +52,14 @@ function RatingTile({ id }: { id: string }) {
     <StatTile
       label="Rating"
       value={average === null ? "—" : formatRating(average)}
-      note={
-        snapshot?.ratingCount != null
-          ? pluralize(snapshot.ratingCount, "rating")
-          : "No rating captured yet"
-      }
+      note={ratingNote(average, snapshot?.ratingCount ?? null)}
     />
   );
+}
+
+function ratingNote(average: number | null, count: number | null): string {
+  if (count !== null) return pluralize(count, "rating");
+  return average === null ? "No rating captured yet" : "";
 }
 
 const top10Note = (summary: AppSummary): string =>

@@ -24,7 +24,7 @@ import {
   type MoverView,
 } from "@/lib/search-params";
 import { GapHeadline } from "./GapHeadline";
-import { MoverRows } from "./MoverRows";
+import { MOVER_DAYS, MoverRows } from "./MoverRows";
 
 const ALL_MOVERS = 8;
 
@@ -35,9 +35,9 @@ const MOVER_LABELS: Record<MoverView, string> = {
 };
 
 const EMPTY: Record<MoverView, string> = {
-  all: "No keyword moved in the last 7 days.",
-  up: "No keyword climbed in the last 7 days.",
-  down: "No keyword fell in the last 7 days.",
+  all: `No keyword moved in the last ${MOVER_DAYS} days.`,
+  up: `No keyword climbed in the last ${MOVER_DAYS} days.`,
+  down: `No keyword fell in the last ${MOVER_DAYS} days.`,
 };
 
 export function MoversCard({ id }: { id: string }) {

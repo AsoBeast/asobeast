@@ -7,6 +7,12 @@ import { useKeywordScope } from "@/components/app-detail/use-market";
 import { appSummaryOptions } from "@/lib/queries";
 import { visibilityViewParser, type VisibilityView } from "@/lib/search-params";
 
+export const OVERVIEW_VIEW_TITLES: Record<VisibilityView, string> = {
+  visibility: "Search visibility",
+  share: "Share of voice",
+  top10: "Tracked keywords by rank band",
+};
+
 export function useOverviewView(id: string): {
   summary: AppSummary;
   view: VisibilityView;
