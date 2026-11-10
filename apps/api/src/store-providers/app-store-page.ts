@@ -116,11 +116,18 @@ function appEvents(shelves: Record<string, unknown>): PageAppEvent[] {
 function featuredStories(
   shelves: Record<string, unknown>,
 ): PageFeaturedStory[] {
-  return itemsOf(shelves.featuredIn).map((item) => ({
-    storyId: storyIdOf(item.clickAction),
-    heading: nonEmptyString(item.heading),
-    title: nonEmptyString(item.title),
-  }));
+  return itemsOf(shelves.featuredIn).flatMap((item) => {
+    const story = {
+      storyId: storyIdOf(item.clickAction),
+      heading: nonEmptyString(item.heading),
+      title: nonEmptyString(item.title),
+    };
+    return story.storyId === null &&
+      story.heading === null &&
+      story.title === null
+      ? []
+      : [story];
+  });
 }
 
 function storyIdOf(clickAction: unknown): string | null {

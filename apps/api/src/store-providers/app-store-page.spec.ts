@@ -354,6 +354,14 @@ describe('parseAppStorePage', () => {
     ]);
   });
 
+  it('drops a featured story item that carries nothing readable', () => {
+    const extract = parseAppStorePage(
+      pageOf({ featuredIn: shelfOf([{ $kind: 'TodayCard' }]) }),
+    );
+
+    expect(extract.featuredStories).toEqual([]);
+  });
+
   it('answers no editors choice when the shelf carries no review', () => {
     const extract = parseAppStorePage(
       pageOf({
