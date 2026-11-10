@@ -93,6 +93,7 @@ knowledge_base:
     enabled: true
     filePatterns:
       - "AGENTS.md"
+      - ".claude/rules/*.md"
       - "CONTRIBUTING.md"
   learnings:
     scope: local
