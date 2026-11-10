@@ -351,7 +351,9 @@ describe("revealRank", () => {
     ];
     const ranks = ordered.map((value) => revealRank(value));
     expect(ranks.every((rank) => rank !== null)).toBe(true);
-    expect(ranks).toEqual([...ranks].sort((a, b) => (a ?? 0) - (b ?? 0)));
+    ranks.slice(1).forEach((rank, index) => {
+      expect(ranks[index] ?? 0).toBeLessThan(rank ?? 0);
+    });
     expect(revealRank(signals({ suggestReach: "unavailable" }))).toBeNull();
     expect(revealRank(null)).toBeNull();
   });
@@ -363,9 +365,9 @@ describe("revealRank", () => {
     const twoLettersFirstPosition = revealRank(
       signals({ suggestPrefixLength: 2, suggestPosition: 1 }),
     );
-    expect(oneLetterLatePosition).not.toBeNull();
-    expect(twoLettersFirstPosition).not.toBeNull();
-    expect(oneLetterLatePosition!).toBeLessThan(twoLettersFirstPosition!);
+    expect(oneLetterLatePosition ?? Infinity).toBeLessThan(
+      twoLettersFirstPosition ?? -Infinity,
+    );
   });
 });
 
