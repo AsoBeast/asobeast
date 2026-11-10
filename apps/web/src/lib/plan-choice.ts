@@ -228,6 +228,12 @@ export const CONTACT_SUPPORT = "Contact support";
 
 export const CHECKOUT_UNREACHABLE = "Checkout could not be opened. Try again.";
 
+export const PLAN_UNREACHABLE =
+  "Your plan could not be loaded. Check your connection, then try again.";
+
+export const PRICES_UNREACHABLE =
+  "The prices could not be loaded. Check your connection, then try again.";
+
 export const CHECKOUT_REOPENING = "Opening checkout…";
 
 export const CHECKOUT_PRICE_MISSING = "Checkout is not configured yet";

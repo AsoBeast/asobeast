@@ -21,10 +21,7 @@ import { expect, test } from "./session.mts";
 import { collectDomErrors, translateText } from "./translate.mts";
 import { openBilling } from "./trial-plans.mts";
 import { typeInto } from "./type.mts";
-import {
-  CHECKOUT_UNCONFIGURED,
-  HANDLED_BY_STRIPE,
-} from "../src/lib/plan-choice";
+import { HANDLED_BY_STRIPE, PRICES_UNREACHABLE } from "../src/lib/plan-choice";
 import { openSettledDialog } from "./dialog.mts";
 import { GOOGLE_SIGN_IN_COOKIE } from "./store-connections.mts";
 import { seedViewer } from "./viewer.mts";
@@ -82,37 +79,25 @@ async function openUpgrade(page: Page): Promise<void> {
   await page.goto("/upgrade");
 }
 
-test("a translated upgrade page shows the payment note the catalog brings", async ({
+test("a translated upgrade page shows the payment note a retried catalog brings", async ({
   page,
 }) => {
   const errors = collectDomErrors(page);
   await routeUpgrade(page);
-  const catalog = await holdRequest(
-    page,
-    /\/api\/backend\/billing\/catalog$/,
-    "GET",
-    (route) =>
-      route.fulfill(
-        fulfillJson(200, {
-          enabled: true,
-          prices: [
-            {
-              plan: "indie",
-              interval: "month",
-              priceId: "price_indie_month",
-              amountUsd: 10,
-            },
-          ],
-        }),
-      ),
-  );
+  let catalogReads = 0;
+  await page.route("**/api/backend/billing/catalog", (route) => {
+    catalogReads += 1;
+    return catalogReads === 1 ? route.abort("failed") : route.fallback();
+  });
   await page.goto("/upgrade");
-  await hydrated(page.getByText(CHECKOUT_UNCONFIGURED));
+  const retry = await hydrated(page.getByRole("button", { name: "Retry" }));
+  await expect(page.getByText(PRICES_UNREACHABLE)).toBeVisible();
 
   await translateText(page);
-  catalog.release();
+  await retry.click();
 
   await expect(page.getByText(HANDLED_BY_STRIPE)).toBeVisible();
+  await expect(page.getByText(PRICES_UNREACHABLE)).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 

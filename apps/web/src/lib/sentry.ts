@@ -1,5 +1,5 @@
 import type { Contexts, ErrorEvent, EventHint, init } from "@sentry/nextjs";
-import { isExplainedRefusal } from "@/lib/error-recovery";
+import { isExplainedRefusal, isLostRequest } from "@/lib/error-recovery";
 
 type SentryOptions = Parameters<typeof init>[0];
 
@@ -63,6 +63,7 @@ export function scrubEvent(event: ErrorEvent): ErrorEvent {
 function unactionable(error: unknown): boolean {
   return (
     isExplainedRefusal(error) ||
+    isLostRequest(error) ||
     (error instanceof Error && error.message === CLIENT_DISCONNECT)
   );
 }
