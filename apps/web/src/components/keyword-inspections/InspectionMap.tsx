@@ -1,26 +1,19 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useState,
-  type KeyboardEvent,
-  type ReactNode,
-} from "react";
-import {
-  CartesianGrid,
-  Scatter,
-  ScatterChart,
-  XAxis,
-  YAxis,
-  type ScatterShapeProps,
-} from "recharts";
+import { useId, useRef, useState, type ReactNode, type RefObject } from "react";
+import { normalizeText } from "@asobeast/shared";
+import { CartesianGrid, Scatter, ScatterChart, XAxis, YAxis } from "recharts";
 import {
   CHART_MARGIN,
   GRID_PROPS,
   SCORE_AXIS_PROPS,
-  seriesColor,
 } from "@/components/charts/theme";
+import {
+  directionOfKey,
+  edgeDot,
+  entryDot,
+  neighbour,
+} from "@/components/keywords/map/dot-navigation";
 import {
   thresholdLines,
   zoneAreas,
@@ -31,187 +24,39 @@ import { ChartContainer } from "@/components/ui/chart";
 import { formatCountry, formatNumber, storeLabel } from "@/lib/format";
 import { useIsMobile } from "@/lib/use-is-mobile";
 import {
-  END_ANCHORED_FROM,
+  DotContext,
+  InspectionDot,
+  SelectedMark,
+  type DotState,
+} from "./InspectionDots";
+import {
+  drawOrder,
   labelledKeywords,
   NARROW_LABEL_SCALE,
+  navDots,
   WIDE_LABEL_SCALE,
-  pointName,
   type InspectionPoint,
   type Storefront,
 } from "./inspection-map";
 
-const DOT_RADIUS = 5;
-const SELECTED_RADIUS = 6;
-const SELECTED_RING = 11;
-const PREVIEW_RING = 9;
-const TAG_CHAR_WIDTH = 7;
-const TAG_PADDING = 6;
-const TAG_HEIGHT = 20;
-const HIT_RADIUS = 14;
-const FOCUS_RADIUS = 10;
-const LABEL_OFFSET = 11;
-const LABEL_BASELINE = 4;
+const SELECT_KEYS = new Set(["Enter", " "]);
+const EDGE_KEYS: Readonly<Record<string, "first" | "last">> = {
+  Home: "first",
+  End: "last",
+};
 
-interface DotState {
-  selectedKeywordId: string | null;
-  previewKeyword: string | null;
-  labelled: ReadonlySet<string>;
-  freshSince: number;
-  onSelect: (point: InspectionPoint) => void;
-}
+const KEYBOARD_HELP =
+  "Arrow keys move to the nearest keyword, Home and End jump to the highest and lowest opportunity, Enter shows its inspection.";
 
-const DotContext = createContext<DotState | null>(null);
+const dotIn = (surface: HTMLElement | null, keywordId: string) =>
+  surface?.querySelector<SVGGElement>(
+    `[data-inspection-id="${CSS.escape(keywordId)}"]`,
+  ) ?? null;
 
-function isPoint(value: unknown): value is InspectionPoint {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    typeof Reflect.get(value, "keywordId") === "string" &&
-    typeof Reflect.get(value, "keyword") === "string"
-  );
-}
-
-const isFresh = (point: InspectionPoint, since: number): boolean =>
-  point.completedAt !== null && Date.parse(point.completedAt) > since;
-
-function SelectedTag({ point }: { point: InspectionPoint }) {
-  const endAnchored = point.difficulty >= END_ANCHORED_FROM;
-  const width = point.keyword.length * TAG_CHAR_WIDTH + TAG_PADDING * 2;
-  const offset = SELECTED_RING + 6;
-  const x = endAnchored ? -offset - width : offset;
-  return (
-    <g aria-hidden>
-      <rect
-        x={x}
-        y={-TAG_HEIGHT / 2}
-        width={width}
-        height={TAG_HEIGHT}
-        rx={4}
-        fill="var(--foreground)"
-      />
-      <text
-        x={x + TAG_PADDING}
-        y={LABEL_BASELINE}
-        fontSize={12}
-        fontWeight={600}
-        fill="var(--background)"
-      >
-        {point.keyword}
-      </text>
-    </g>
-  );
-}
-
-function DotLabel({
-  point,
-  strong,
-}: {
-  point: InspectionPoint;
-  strong: boolean;
-}) {
-  const endAnchored = point.difficulty >= END_ANCHORED_FROM;
-  const placement = {
-    x: endAnchored ? -LABEL_OFFSET : LABEL_OFFSET,
-    y: LABEL_BASELINE,
-    textAnchor: endAnchored ? "end" : "start",
-    fontSize: 11,
-    fontWeight: strong ? 600 : 400,
-  } as const;
-  return (
-    <g aria-hidden>
-      <text
-        {...placement}
-        fill="var(--card)"
-        stroke="var(--card)"
-        strokeWidth={4}
-        strokeLinejoin="round"
-      >
-        {point.keyword}
-      </text>
-      <text {...placement} fill="var(--foreground)">
-        {point.keyword}
-      </text>
-    </g>
-  );
-}
-
-function InspectionDot({ cx, cy, payload }: ScatterShapeProps) {
-  const state = useContext(DotContext);
-  if (cx === undefined || cy === undefined || !isPoint(payload) || !state) {
-    return null;
-  }
-  const selected = payload.keywordId === state.selectedKeywordId;
-  const previewed = !selected && payload.keyword === state.previewKeyword;
-  const choose = () => state.onSelect(payload);
-  const onKeyDown = (event: KeyboardEvent<SVGGElement>) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      choose();
-    }
-  };
-  return (
-    <g
-      transform={`translate(${cx} ${cy})`}
-      role="button"
-      tabIndex={0}
-      aria-label={pointName(payload)}
-      aria-pressed={selected}
-      data-inspection-keyword={payload.keyword}
-      className="group cursor-pointer outline-none"
-      onClick={choose}
-      onKeyDown={onKeyDown}
-    >
-      <circle r={HIT_RADIUS} fill="transparent" />
-      <g
-        className={
-          isFresh(payload, state.freshSince)
-            ? "origin-center [transform-box:fill-box] motion-safe:animate-in motion-safe:zoom-in-0 motion-safe:fade-in motion-safe:duration-300 motion-safe:ease-out"
-            : undefined
-        }
-      >
-        {selected ? (
-          <>
-            <circle r={SELECTED_RING} fill="var(--card)" />
-            <circle
-              r={SELECTED_RING}
-              fill="none"
-              stroke="var(--primary)"
-              strokeWidth={2.5}
-            />
-            <circle r={SELECTED_RADIUS} fill="var(--primary)" />
-          </>
-        ) : (
-          <circle
-            r={DOT_RADIUS}
-            fill={seriesColor(0)}
-            stroke="var(--card)"
-            strokeWidth={1.5}
-            className="transition-[r] duration-150 group-hover:[r:7px]"
-          />
-        )}
-        {previewed ? (
-          <circle
-            r={PREVIEW_RING}
-            fill="none"
-            stroke="var(--foreground)"
-            strokeWidth={2}
-          />
-        ) : null}
-      </g>
-      <circle
-        r={FOCUS_RADIUS + (selected ? 6 : 0)}
-        fill="none"
-        stroke="var(--ring)"
-        strokeWidth={2}
-        className="opacity-0 group-focus-visible:opacity-100"
-      />
-      {selected ? <SelectedTag point={payload} /> : null}
-      {!selected && (previewed || state.labelled.has(payload.keywordId)) ? (
-        <DotLabel point={payload} strong={previewed} />
-      ) : null}
-    </g>
-  );
-}
+const keepUnless =
+  (keywordId: string) =>
+  (current: string | null): string | null =>
+    current === keywordId ? null : current;
 
 function EmptyMap({ storefront }: { storefront: Storefront }) {
   return (
@@ -224,6 +69,62 @@ function EmptyMap({ storefront }: { storefront: Storefront }) {
       </p>
     </div>
   );
+}
+
+const isNavigationKey = (key: string): boolean =>
+  directionOfKey(key) !== null || Object.hasOwn(EDGE_KEYS, key);
+
+function nextDotId(
+  points: readonly InspectionPoint[],
+  from: string,
+  key: string,
+): string | null {
+  const dots = navDots(points);
+  const direction = directionOfKey(key);
+  if (direction !== null) return neighbour(dots, from, direction);
+  return Object.hasOwn(EDGE_KEYS, key) ? edgeDot(dots, EDGE_KEYS[key]) : null;
+}
+
+type RovingDot = Pick<
+  DotState,
+  "rovingId" | "focusedId" | "onFocus" | "onBlur" | "onKey"
+>;
+
+function useRovingDot(
+  points: readonly InspectionPoint[],
+  selectedKeywordId: string | null,
+  onSelect: (point: InspectionPoint) => void,
+  surfaceRef: RefObject<HTMLDivElement | null>,
+): RovingDot {
+  const [rovingId, setRovingId] = useState<string | null>(null);
+  const [focusedId, setFocusedId] = useState<string | null>(null);
+  const has = (id: string | null): id is string =>
+    id !== null && points.some((point) => point.keywordId === id);
+  const fallback = has(selectedKeywordId)
+    ? selectedKeywordId
+    : entryDot(navDots(points));
+  return {
+    rovingId: has(rovingId) ? rovingId : fallback,
+    focusedId,
+    onFocus(point) {
+      setRovingId(point.keywordId);
+      setFocusedId(point.keywordId);
+    },
+    onBlur(point, element) {
+      if (element.isConnected) setFocusedId(keepUnless(point.keywordId));
+    },
+    onKey(point, event) {
+      if (SELECT_KEYS.has(event.key)) {
+        event.preventDefault();
+        onSelect(point);
+        return;
+      }
+      if (!isNavigationKey(event.key)) return;
+      event.preventDefault();
+      const next = nextDotId(points, point.keywordId, event.key);
+      if (next !== null) dotIn(surfaceRef.current, next)?.focus();
+    },
+  };
 }
 
 export function InspectionMap({
@@ -243,16 +144,19 @@ export function InspectionMap({
 }) {
   const { thresholds } = useZoneThresholds();
   const [freshSince] = useState(() => Date.now());
+  const surfaceRef = useRef<HTMLDivElement>(null);
+  const helpId = useId();
   const narrow = useIsMobile();
-  const others = points.filter(
-    (point) => point.keywordId !== selectedKeywordId,
-  );
+  const roving = useRovingDot(points, selectedKeywordId, onSelect, surfaceRef);
+  const ordered = drawOrder(points);
   const chosen = points.filter(
     (point) => point.keywordId === selectedKeywordId,
   );
   const state: DotState = {
+    ...roving,
     selectedKeywordId,
-    previewKeyword,
+    previewKeyword:
+      previewKeyword === null ? null : normalizeText(previewKeyword),
     labelled: labelledKeywords(
       points,
       selectedKeywordId,
@@ -284,13 +188,24 @@ export function InspectionMap({
         <EmptyMap storefront={storefront} />
       ) : (
         <DotContext.Provider value={state}>
+          <p id={helpId} className="sr-only">
+            {KEYBOARD_HELP}
+          </p>
           <ChartContainer
+            ref={surfaceRef}
             config={{}}
             role="region"
             aria-label="Inspected keywords by difficulty and popularity"
             className="aspect-auto h-[300px] w-full sm:h-[420px]"
           >
-            <ScatterChart margin={{ ...CHART_MARGIN, right: 16, top: 12 }}>
+            <ScatterChart
+              accessibilityLayer
+              role="group"
+              tabIndex={-1}
+              aria-label="Inspected keywords"
+              aria-describedby={helpId}
+              margin={{ ...CHART_MARGIN, right: 16, top: 12 }}
+            >
               {zoneAreas({ thresholds, selected: null })}
               <CartesianGrid {...GRID_PROPS} />
               <XAxis
@@ -320,13 +235,13 @@ export function InspectionMap({
               />
               {thresholdLines(thresholds)}
               <Scatter
-                data={others}
+                data={ordered}
                 shape={InspectionDot}
                 isAnimationActive={false}
               />
               <Scatter
                 data={chosen}
-                shape={InspectionDot}
+                shape={SelectedMark}
                 isAnimationActive={false}
               />
             </ScatterChart>

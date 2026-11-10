@@ -1,4 +1,9 @@
-import type { KeywordInspectionSummary, Store } from "@asobeast/shared";
+import {
+  normalizeText,
+  type KeywordInspectionSummary,
+  type Store,
+} from "@asobeast/shared";
+import type { NavDot } from "@/components/keywords/map/dot-navigation";
 import {
   ZONE_LABELS,
   zoneOf,
@@ -92,6 +97,33 @@ export function inspectionPoints(
   return points;
 }
 
+function compareStrings(left: string, right: string): number {
+  if (left === right) return 0;
+  return left < right ? -1 : 1;
+}
+
+const completedTime = (point: InspectionPoint): number =>
+  point.completedAt === null ? 0 : Date.parse(point.completedAt);
+
+export function drawOrder(
+  points: readonly InspectionPoint[],
+): InspectionPoint[] {
+  return [...points].sort(
+    (a, b) =>
+      completedTime(a) - completedTime(b) ||
+      compareStrings(a.keywordId, b.keywordId),
+  );
+}
+
+export const navDots = (points: readonly InspectionPoint[]): NavDot[] =>
+  points.map((point) => ({
+    keywordId: point.keywordId,
+    text: point.keyword,
+    difficulty: point.difficulty,
+    popularity: point.popularity,
+    opportunity: point.opportunity,
+  }));
+
 interface Box {
   left: number;
   right: number;
@@ -141,7 +173,7 @@ export function labelledKeywords(
       Number(b.keywordId === selectedKeywordId) -
         Number(a.keywordId === selectedKeywordId) ||
       (b.opportunity ?? -1) - (a.opportunity ?? -1) ||
-      a.keyword.localeCompare(b.keyword),
+      compareStrings(a.keyword, b.keyword),
   );
   const placed: Box[] = [];
   const labelled = new Set<string>();
@@ -172,8 +204,6 @@ export function pointName(point: InspectionPoint): string {
     .join(", ");
 }
 
-const normalized = (term: string): string => term.trim().toLowerCase();
-
 export function suggestionState(
   term: string,
   items: readonly KeywordInspectionSummary[],
@@ -181,7 +211,7 @@ export function suggestionState(
 ): SuggestionState {
   const matches = items.filter(
     (item) =>
-      inStorefront(item, storefront) && item.keyword === normalized(term),
+      inStorefront(item, storefront) && item.keyword === normalizeText(term),
   );
   const running = matches.find((item) => item.status === "PENDING");
   if (running) return { kind: "running", id: running.id };
@@ -203,6 +233,12 @@ export function suggestionState(
 }
 
 export function nextHops(keyword: string, terms: readonly string[]): string[] {
-  const own = normalized(keyword);
-  return terms.filter((term) => normalized(term) !== own);
+  const own = normalizeText(keyword);
+  const seen = new Set<string>([own]);
+  return terms.filter((term) => {
+    const text = normalizeText(term);
+    if (text.length === 0 || seen.has(text)) return false;
+    seen.add(text);
+    return true;
+  });
 }

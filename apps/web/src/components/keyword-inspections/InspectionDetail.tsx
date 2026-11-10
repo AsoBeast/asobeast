@@ -59,9 +59,7 @@ function FailedInspection({
       role="alert"
       className="flex flex-col items-start gap-3 rounded-xl border border-destructive/40 p-4"
     >
-      <p className="font-medium">
-        The store could not be read for this inspection.
-      </p>
+      <p className="font-medium">This inspection did not finish.</p>
       {inspection.failure ? (
         <p className="text-sm text-muted-foreground">{inspection.failure}</p>
       ) : null}

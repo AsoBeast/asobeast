@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  changeTone,
   competitionFacts,
   inspectionCountry,
   scoreChange,
   shownScore,
   signedChange,
+  updatedAgo,
 } from "./inspection-format";
 
 describe("shownScore", () => {
@@ -30,6 +32,28 @@ describe("signedChange", () => {
     expect(signedChange(-2)).toBe("−2");
     expect(signedChange(0)).toBe("no change");
     expect(signedChange(null)).toBe("—");
+  });
+});
+
+describe("changeTone", () => {
+  it("reads a rise as better only for a score where higher is better", () => {
+    expect(changeTone(5, true)).toBe("better");
+    expect(changeTone(-5, true)).toBe("worse");
+    expect(changeTone(14, false)).toBe("worse");
+    expect(changeTone(-3, false)).toBe("better");
+  });
+
+  it("treats a flat or missing change as the same", () => {
+    expect(changeTone(0, true)).toBe("same");
+    expect(changeTone(null, false)).toBe("same");
+  });
+});
+
+describe("updatedAgo", () => {
+  it("words today, one day and several days", () => {
+    expect(updatedAgo(0)).toBe("Typically updated today");
+    expect(updatedAgo(1)).toBe("Typical update 1 day ago");
+    expect(updatedAgo(18)).toBe("Typical update 18 days ago");
   });
 });
 

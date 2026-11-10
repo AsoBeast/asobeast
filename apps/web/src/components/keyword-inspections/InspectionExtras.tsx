@@ -4,7 +4,7 @@ import type {
 } from "@asobeast/shared";
 import { formatDateTime, formatList } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { scoreChange, signedChange } from "./inspection-format";
+import { changeTone, scoreChange, signedChange } from "./inspection-format";
 
 function ScoreChange({
   label,
@@ -15,24 +15,21 @@ function ScoreChange({
   change: number | null;
   higherIsBetter: boolean;
 }) {
-  const better =
-    change === null || change === 0 ? null : change > 0 === higherIsBetter;
+  const tone = changeTone(change, higherIsBetter);
   return (
     <span className="inline-flex items-baseline gap-1">
       {label}
       <span
         className={cn(
           "numeric font-mono font-medium",
-          better === null && "text-muted-foreground",
-          better === true && "text-signal-up",
-          better === false && "text-signal-down",
+          tone === "same" && "text-muted-foreground",
+          tone === "better" && "text-signal-up",
+          tone === "worse" && "text-signal-down",
         )}
       >
         {signedChange(change)}
       </span>
-      {better === null ? null : (
-        <span className="sr-only">{better ? "(better)" : "(worse)"}</span>
-      )}
+      {tone === "same" ? null : <span className="sr-only">({tone})</span>}
     </span>
   );
 }
@@ -69,7 +66,7 @@ export function InspectionDelta({
       </p>
       {previous.left.length > 0 ? (
         <p className="text-muted-foreground">
-          Left the top 10: {formatList(previous.left)}
+          Left the top 10: {formatList(previous.left.map((app) => app.title))}
         </p>
       ) : null}
     </section>

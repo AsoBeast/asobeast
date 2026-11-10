@@ -1,5 +1,9 @@
 import { expect, test } from "./session.mts";
-import { INSPECTED_APPS } from "./keyword-inspections-mock.mts";
+import {
+  FAILING_KEYWORD,
+  INSPECTED_APPS,
+  INSPECTION_FAILURE,
+} from "./keyword-inspections-mock.mts";
 
 test.describe.configure({ mode: "serial" });
 
@@ -32,6 +36,43 @@ test("inspects a keyword and shows its scores and results", async ({
   await expect(page.getByText("High confidence")).toBeVisible();
   await expect(
     page.getByRole("button", { name: /habit tracker/ }).first(),
+  ).toBeVisible();
+});
+
+test("compares a second inspection of a keyword with the first", async ({
+  page,
+}) => {
+  await page.goto("/inspect");
+  await page.getByLabel("Keyword", { exact: true }).fill("habit tracker");
+  await page.getByRole("button", { name: "Inspect", exact: true }).click();
+  await expect(
+    page.getByRole("table").getByText(INSPECTED_APPS[0]),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Inspect", exact: true }).click();
+
+  await expect(page).toHaveURL(/[?&]id=inspection-2/);
+  const change = page.getByRole("region", {
+    name: "Since the previous inspection",
+  });
+  await expect(change).toContainText("+4");
+  await expect(change).toContainText("−6");
+  await expect(change).toContainText("(better)");
+});
+
+test("shows why an inspection did not finish and offers another try", async ({
+  page,
+}) => {
+  await page.goto("/inspect");
+  await page.getByLabel("Keyword", { exact: true }).fill(FAILING_KEYWORD);
+  await page.getByRole("button", { name: "Inspect", exact: true }).click();
+
+  const failure = page.getByRole("alert").filter({
+    hasText: "This inspection did not finish.",
+  });
+  await expect(failure).toContainText(INSPECTION_FAILURE);
+  await expect(
+    failure.getByRole("button", { name: "Try again" }),
   ).toBeVisible();
 });
 

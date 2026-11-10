@@ -125,6 +125,10 @@ import {
 import { withReviewReply, withReviewRow } from "./review-reply-cache";
 import { runProgressInterval } from "./run-progress";
 import { keywordsPollInterval } from "./keyword-checks";
+import {
+  inspectionListPollInterval,
+  inspectionPollInterval,
+} from "./keyword-inspection-polling";
 import { keywordDiscoveriesPollInterval } from "./keyword-discoveries";
 import { firstImportPollInterval } from "./app-localizations";
 import {
@@ -566,8 +570,6 @@ export function seedChartCapture(client: QueryClient, page: ChartPage): void {
   });
 }
 
-export const KEYWORD_INSPECTION_POLL_MS = 2000;
-
 export const keywordInspectionKeys = {
   all: ["keyword-inspections"] as const,
   list: ["keyword-inspections", "list"] as const,
@@ -577,20 +579,14 @@ export const keywordInspectionKeys = {
 export const keywordInspectionsOptions = queryOptions({
   queryKey: keywordInspectionKeys.list,
   queryFn: () => listKeywordInspections(),
-  refetchInterval: (query) =>
-    query.state.data?.items.some((item) => item.status === "PENDING")
-      ? KEYWORD_INSPECTION_POLL_MS
-      : false,
+  refetchInterval: (query) => inspectionListPollInterval(query.state),
 });
 
 export const keywordInspectionOptions = (id: string) =>
   queryOptions({
     queryKey: keywordInspectionKeys.detail(id),
     queryFn: () => getKeywordInspection(id),
-    refetchInterval: (query) =>
-      query.state.data?.status === "PENDING"
-        ? KEYWORD_INSPECTION_POLL_MS
-        : false,
+    refetchInterval: (query) => inspectionPollInterval(query.state),
   });
 
 export function seedKeywordInspection(
@@ -598,8 +594,11 @@ export function seedKeywordInspection(
   inspection: KeywordInspection,
 ): void {
   client.setQueryData(keywordInspectionKeys.detail(inspection.id), inspection);
-  void client.invalidateQueries({ queryKey: keywordInspectionKeys.list });
+  void refreshKeywordInspections(client);
 }
+
+export const refreshKeywordInspections = (client: QueryClient): Promise<void> =>
+  client.invalidateQueries({ queryKey: keywordInspectionKeys.list });
 
 export function forgetKeywordInspection(client: QueryClient, id: string): void {
   client.setQueryData<KeywordInspectionList>(

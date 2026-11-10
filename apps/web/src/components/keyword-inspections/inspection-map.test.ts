@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { KeywordInspectionSummary } from "@asobeast/shared";
 import {
+  drawOrder,
   inspectionPoints,
   labelledKeywords,
   nextHops,
@@ -99,6 +100,46 @@ describe("labelledKeywords", () => {
     ]);
   });
 
+  it("skips a label that would cover another dot", () => {
+    const points = inspectionPoints(
+      [point("alpha label", 10, 50, 90), point("b", 20, 50, 10)],
+      US,
+      THRESHOLDS,
+    );
+    expect([...labelledKeywords(points, null)]).toEqual(["b"]);
+  });
+
+  it("anchors a label at the right edge to the left of its dot", () => {
+    const blocked = inspectionPoints(
+      [point("end label", 90, 50, 90), point("b", 80, 50, 10)],
+      US,
+      THRESHOLDS,
+    );
+    const clear = inspectionPoints(
+      [point("end label", 90, 50, 90), point("b", 95, 50, 10)],
+      US,
+      THRESHOLDS,
+    );
+    expect(labelledKeywords(blocked, null).has("end label")).toBe(false);
+    expect([...labelledKeywords(clear, null)].sort()).toEqual([
+      "b",
+      "end label",
+    ]);
+  });
+
+  it("labels only the better of two points at the same spot", () => {
+    const points = inspectionPoints(
+      [point("better", 50, 50, 80), point("worse", 50, 50, 20)],
+      US,
+      THRESHOLDS,
+    );
+    expect([...labelledKeywords(points, null)]).toEqual(["better"]);
+  });
+
+  it("labels nothing on an empty map", () => {
+    expect(labelledKeywords([], null).size).toBe(0);
+  });
+
   it("always labels the selected keyword", () => {
     const points = inspectionPoints(
       [point("clash low", 50, 50, 30), point("clash high", 52, 50, 60)],
@@ -106,6 +147,42 @@ describe("labelledKeywords", () => {
       THRESHOLDS,
     );
     expect(labelledKeywords(points, "clash low").has("clash low")).toBe(true);
+  });
+});
+
+describe("drawOrder", () => {
+  it("draws earlier runs first so a new run lands on top without moving the rest", () => {
+    const points = inspectionPoints(
+      [
+        summary({
+          id: "c",
+          keywordId: "c",
+          completedAt: "2026-11-05T12:00:00.000Z",
+        }),
+        summary({
+          id: "b",
+          keywordId: "b",
+          completedAt: "2026-11-05T10:00:00.000Z",
+        }),
+        summary({
+          id: "a",
+          keywordId: "a",
+          completedAt: "2026-11-05T10:00:00.000Z",
+        }),
+      ],
+      US,
+      THRESHOLDS,
+    );
+    expect(drawOrder(points).map((point) => point.keywordId)).toEqual([
+      "a",
+      "b",
+      "c",
+    ]);
+  });
+
+  it("keeps an empty map empty", () => {
+    expect(drawOrder([])).toEqual([]);
+    expect(inspectionPoints([], US, THRESHOLDS)).toEqual([]);
   });
 });
 
@@ -141,6 +218,14 @@ describe("suggestionState", () => {
       kind: "new",
     });
   });
+
+  it("matches a suggestion the way the store keyword was saved", () => {
+    const items = [summary({ id: "todo", keyword: "to do list" })];
+    expect(suggestionState("To-Do List", items, US)).toMatchObject({
+      kind: "done",
+      id: "todo",
+    });
+  });
 });
 
 describe("nextHops", () => {
@@ -148,5 +233,16 @@ describe("nextHops", () => {
     expect(
       nextHops("habit tracker", ["Habit Tracker", "habit tracker app"]),
     ).toEqual(["habit tracker app"]);
+  });
+
+  it("drops punctuation variants of the keyword and of each other", () => {
+    expect(
+      nextHops("to do list", [
+        "To-Do List",
+        "to do list app",
+        "to-do list app",
+        "  ",
+      ]),
+    ).toEqual(["to do list app"]);
   });
 });

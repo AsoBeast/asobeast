@@ -1,6 +1,9 @@
 "use client";
 
-import type { KeywordInspectionSummary } from "@asobeast/shared";
+import {
+  KEYWORD_INSPECTION_LIST_LIMIT,
+  type KeywordInspectionSummary,
+} from "@asobeast/shared";
 import { Loader2 } from "lucide-react";
 import { ZONE_FILLS } from "@/components/keywords/map/zone-layers";
 import { useZoneThresholds } from "@/components/keywords/use-zone-thresholds";
@@ -44,7 +47,7 @@ function ZoneMark({
   );
 }
 
-function StatusOrScores({ item }: { item: KeywordInspectionSummary }) {
+function RunStatus({ item }: { item: KeywordInspectionSummary }) {
   if (item.status === "PENDING") {
     return (
       <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -98,7 +101,7 @@ function LogRow({
               {item.keyword}
             </span>
             <span className="md:hidden">
-              <StatusOrScores item={item} />
+              <RunStatus item={item} />
             </span>
           </span>
           <span className="truncate text-xs text-muted-foreground">
@@ -127,7 +130,7 @@ function LogRow({
           </>
         ) : (
           <span className="hidden md:col-span-4 md:block">
-            <StatusOrScores item={item} />
+            <RunStatus item={item} />
           </span>
         )}
         <span className="hidden text-sm text-muted-foreground md:block">
@@ -162,7 +165,9 @@ export function InspectionLog({
           All inspections
         </h2>
         <span className="text-sm text-muted-foreground">
-          {formatNumber(items.length)} across every storefront
+          {items.length >= KEYWORD_INSPECTION_LIST_LIMIT
+            ? `Latest ${formatNumber(items.length)} across every storefront`
+            : `${formatNumber(items.length)} across every storefront`}
         </span>
       </div>
       {items.length === 0 ? (

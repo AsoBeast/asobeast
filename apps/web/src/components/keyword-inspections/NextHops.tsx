@@ -1,14 +1,17 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type {
-  KeywordInspection,
-  KeywordInspectionSummary,
+import {
+  normalizeText,
+  type KeywordInspection,
+  type KeywordInspectionRequest,
+  type KeywordInspectionSummary,
 } from "@asobeast/shared";
 import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { ApiError, requestKeywordInspection } from "@/lib/api";
-import { seedKeywordInspection } from "@/lib/queries";
+import { refreshKeywordInspections } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import {
   nextHops,
@@ -18,6 +21,9 @@ import {
 
 const CHIP =
   "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm outline-none transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50";
+
+const startKey = ({ keyword, store, country }: KeywordInspectionRequest) =>
+  `${store}|${country}|${normalizeText(keyword)}`;
 
 const failureMessage = (error: unknown): string =>
   error instanceof ApiError
@@ -93,13 +99,25 @@ export function NextHops({
 }) {
   const queryClient = useQueryClient();
   const storefront = { store: inspection.store, country: inspection.country };
+  const [starting, setStarting] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const settle = (request: KeywordInspectionRequest) =>
+    setStarting((current) => {
+      const next = new Set(current);
+      next.delete(startKey(request));
+      return next;
+    });
   const inspect = useMutation({
-    mutationFn: (keyword: string) =>
-      requestKeywordInspection({ keyword, ...storefront }),
-    onSuccess: (next: KeywordInspection) =>
-      seedKeywordInspection(queryClient, next),
+    mutationFn: (request: KeywordInspectionRequest) =>
+      requestKeywordInspection(request),
+    onMutate: (request) =>
+      setStarting((current) => new Set(current).add(startKey(request))),
+    onSuccess: () => refreshKeywordInspections(queryClient),
     onError: (error) => toast.error(failureMessage(error)),
+    onSettled: (_data, _error, request) => settle(request),
   });
+  useEffect(() => () => onPreview(null), [onPreview]);
   const terms = nextHops(
     inspection.keyword,
     inspection.suggestions.map((suggestion) => suggestion.term),
@@ -133,8 +151,12 @@ export function NextHops({
               <HopChip
                 term={term}
                 state={suggestionState(term, items, storefront)}
-                starting={inspect.isPending && inspect.variables === term}
-                onInspect={(keyword) => inspect.mutate(keyword)}
+                starting={starting.has(
+                  startKey({ keyword: term, ...storefront }),
+                )}
+                onInspect={(keyword) =>
+                  inspect.mutate({ keyword, ...storefront })
+                }
                 onSelect={onSelect}
               />
             </li>

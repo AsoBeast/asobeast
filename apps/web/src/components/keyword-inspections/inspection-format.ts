@@ -1,11 +1,15 @@
 import type {
   KeywordInspectionCompetition,
-  KeywordInspectionStatus,
   KeywordInspectionTitleMatch,
 } from "@asobeast/shared";
-import { formatCompact, formatNumber, formatRating } from "@/lib/format";
+import {
+  formatCompact,
+  formatNumber,
+  formatRating,
+  pluralize,
+} from "@/lib/format";
 
-export const DEFAULT_INSPECTION_COUNTRY = "us";
+const DEFAULT_INSPECTION_COUNTRY = "us";
 
 export const TITLE_MATCH_LABELS: Record<KeywordInspectionTitleMatch, string> = {
   exact: "Exact phrase",
@@ -13,13 +17,6 @@ export const TITLE_MATCH_LABELS: Record<KeywordInspectionTitleMatch, string> = {
   someWords: "Some words",
   none: "No match",
 };
-
-export const INSPECTION_STATUS_LABELS: Record<KeywordInspectionStatus, string> =
-  {
-    PENDING: "Running",
-    DONE: "Done",
-    FAILED: "Failed",
-  };
 
 export const inspectionCountry = (country: string): string =>
   country === "" ? DEFAULT_INSPECTION_COUNTRY : country;
@@ -34,6 +31,22 @@ export function scoreChange(
 ): number | null {
   if (current === null || previous === null) return null;
   return Math.round(current) - Math.round(previous);
+}
+
+export type ChangeTone = "better" | "worse" | "same";
+
+export function changeTone(
+  change: number | null,
+  higherIsBetter: boolean,
+): ChangeTone {
+  if (change === null || change === 0) return "same";
+  return change > 0 === higherIsBetter ? "better" : "worse";
+}
+
+export function updatedAgo(days: number): string {
+  return days === 0
+    ? "Typically updated today"
+    : `Typical update ${pluralize(days, "day")} ago`;
 }
 
 export function signedChange(change: number | null): string {
@@ -90,7 +103,7 @@ export function competitionFacts(
       note:
         competition.medianDaysSinceUpdate === null
           ? "Update dates unavailable"
-          : `Typical update ${formatNumber(competition.medianDaysSinceUpdate)} days ago`,
+          : updatedAgo(competition.medianDaysSinceUpdate),
     },
   ];
 }

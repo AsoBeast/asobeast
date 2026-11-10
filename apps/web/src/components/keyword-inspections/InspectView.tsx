@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import type { KeywordInspectionSummary } from "@asobeast/shared";
 import { MousePointerClick } from "lucide-react";
@@ -43,7 +43,15 @@ function InspectWorkspace({
     enabled: selected !== null,
   });
   const { thresholds } = useZoneThresholds();
-  const [preview, setPreview] = useState<string | null>(null);
+  const [previewed, setPreviewed] = useState<{
+    selected: string | null;
+    term: string | null;
+  }>({ selected, term: null });
+  const preview = previewed.selected === selected ? previewed.term : null;
+  const setPreview = useCallback(
+    (term: string | null) => setPreviewed({ selected, term }),
+    [selected],
+  );
   const summary = data.items.find((item) => item.id === selected);
   const current = summary ?? (selected === null ? undefined : detail.data);
   const storefront: Storefront = current

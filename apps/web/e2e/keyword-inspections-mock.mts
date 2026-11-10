@@ -1,8 +1,14 @@
-import type {
-  KeywordInspection,
-  KeywordInspectionRequest,
-  KeywordInspectionSummary,
+import {
+  normalizeText,
+  type KeywordInspection,
+  type KeywordInspectionRequest,
+  type KeywordInspectionSummary,
 } from "@asobeast/shared";
+
+export const FAILING_KEYWORD = "store timeout";
+
+export const INSPECTION_FAILURE =
+  "The App Store did not answer. Try again in a few minutes.";
 
 export const INSPECTED_APPS = [
   "Habit Tracker: Daily Goals",
@@ -50,7 +56,7 @@ function completed(pending: KeywordInspection): KeywordInspection {
       developer: `Developer ${index + 1}`,
       iconUrl: null,
       ratingAvg: 4.5,
-      ratingCount: 250_000 / (index + 1),
+      ratingCount: Math.round(250_000 / (index + 1)),
       releasedAt: null,
       updatedAt: pending.requestedAt,
       titleMatch: index === 0 ? "exact" : "someWords",
@@ -62,8 +68,43 @@ function completed(pending: KeywordInspection): KeywordInspection {
   };
 }
 
+function failed(pending: KeywordInspection): KeywordInspection {
+  return {
+    ...pending,
+    status: "FAILED",
+    completedAt: pending.requestedAt,
+    failure: INSPECTION_FAILURE,
+  };
+}
+
+function settled(stored: StoredInspection): KeywordInspection {
+  if (stored.pending.keyword === FAILING_KEYWORD) return failed(stored.pending);
+  const done = completed(stored.pending);
+  const earlier = inspections
+    .slice(inspections.indexOf(stored) + 1)
+    .find(
+      (entry) =>
+        entry.pending.keywordId === stored.pending.keywordId &&
+        current(entry).status === "DONE",
+    );
+  if (!earlier) return done;
+  const before = completed(earlier.pending);
+  return {
+    ...done,
+    previous: {
+      inspectionId: before.id,
+      completedAt: before.requestedAt,
+      volume: (before.volume ?? 0) - 4,
+      difficulty100: (before.difficulty100 ?? 0) + 6,
+      resultCount: before.resultCount,
+      entered: [],
+      left: [],
+    },
+  };
+}
+
 function current(stored: StoredInspection): KeywordInspection {
-  return stored.reads > 0 ? completed(stored.pending) : stored.pending;
+  return stored.reads > 0 ? settled(stored) : stored.pending;
 }
 
 function summaryOf(inspection: KeywordInspection): KeywordInspectionSummary {
@@ -86,11 +127,19 @@ function summaryOf(inspection: KeywordInspection): KeywordInspectionSummary {
 export function requestInspection(
   request: KeywordInspectionRequest,
 ): KeywordInspection {
+  const keyword = normalizeText(request.keyword);
+  const keywordId = `inspected-keyword-${request.store}-${request.country}-${keyword}`;
+  const running = inspections.find(
+    (entry) =>
+      entry.pending.keywordId === keywordId &&
+      current(entry).status === "PENDING",
+  );
+  if (running) return running.pending;
   inspectionIds += 1;
   const pending: KeywordInspection = {
     id: `inspection-${inspectionIds}`,
-    keywordId: `inspected-keyword-${request.store}-${request.country}-${request.keyword.trim().toLowerCase()}`,
-    keyword: request.keyword.trim().toLowerCase(),
+    keywordId,
+    keyword,
     store: request.store,
     country: request.country,
     status: "PENDING",

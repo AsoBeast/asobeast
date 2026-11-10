@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import type { KeywordInspectionResult } from "@asobeast/shared";
+import type {
+  KeywordInspectionApp,
+  KeywordInspectionResult,
+} from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,11 +37,11 @@ export function InspectionResultsTable({
 }: {
   keyword: string;
   results: KeywordInspectionResult[];
-  entered: readonly string[];
+  entered: readonly KeywordInspectionApp[];
 }) {
   const [expanded, setExpanded] = useState(false);
   const shown = expanded ? results : results.slice(0, COLLAPSED_COUNT);
-  const newcomers = new Set(entered);
+  const newcomers = new Set(entered.map((app) => app.storeAppId));
   return (
     <div className="flex flex-col gap-2">
       <Table scrollLabel="Search results" scrollFocus="overflow">
@@ -55,7 +58,7 @@ export function InspectionResultsTable({
         </TableHeader>
         <TableBody>
           {shown.map((result) => {
-            const isNew = result.position <= 10 && newcomers.has(result.title);
+            const isNew = newcomers.has(result.storeAppId);
             return (
               <TableRow
                 key={`${result.position}-${result.storeAppId}`}
