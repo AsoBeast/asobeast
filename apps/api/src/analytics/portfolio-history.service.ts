@@ -13,14 +13,16 @@ export class PortfolioHistoryService {
       where: { isCompetitor: false },
       select: { id: true },
     });
+    const windowDays = 2 * days;
+    const metricRows = windowDays + 1;
     const windows = await Promise.all(
       apps.map(async ({ id }) => ({
         appId: id,
         ...(await keywordWindow(
           this.prisma,
           { appId: id },
-          2 * days,
-          2 * days + 1,
+          windowDays,
+          metricRows,
         )),
       })),
     );
