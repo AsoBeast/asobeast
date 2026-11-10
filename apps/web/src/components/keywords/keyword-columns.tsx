@@ -340,7 +340,7 @@ function acquisitionsColumn({
 }: {
   noSearchTermsMonth: string | null;
 }) {
-  const fact = noSearchTermsFact(noSearchTermsMonth);
+  const noSearchTermsStatement = noSearchTermsFact(noSearchTermsMonth);
   return columnHelper.accessor(
     (row) => nullsLast(row.playAcquisitions?.acquisitions ?? null),
     {
@@ -356,14 +356,16 @@ function acquisitionsColumn({
             title="Play installs"
             summary={PLAY_INSTALLS_SUMMARY}
           >
-            {fact ? <p className="text-muted-foreground">{fact}</p> : null}
+            {noSearchTermsStatement ? (
+              <p className="text-muted-foreground">{noSearchTermsStatement}</p>
+            ) : null}
           </InfoTip>
         </span>
       ),
       cell: ({ row }) => (
         <PlayAcquisitionsCell
           value={row.original.playAcquisitions ?? null}
-          fact={fact}
+          noSearchTermsStatement={noSearchTermsStatement}
         />
       ),
     },

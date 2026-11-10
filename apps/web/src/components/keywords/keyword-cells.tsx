@@ -150,13 +150,13 @@ export function VolatilityCell({ value }: { value: number | null }) {
 
 export function PlayAcquisitionsCell({
   value,
-  fact,
+  noSearchTermsStatement,
 }: {
   value: PlayAcquisitions | null;
-  fact?: string | null;
+  noSearchTermsStatement?: string | null;
 }) {
   if (!value) {
-    const message = fact ?? "No Play Console data";
+    const message = noSearchTermsStatement ?? "No Play Console data";
     return (
       <Tooltip>
         <TooltipTrigger asChild>
