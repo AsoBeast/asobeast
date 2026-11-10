@@ -2,6 +2,20 @@ import type { Release } from "./release-notes";
 
 export const LATER_RELEASES: readonly Release[] = [
   {
+    version: "1.17.0",
+    date: "2026-11-10",
+    title: "Keyword inspector",
+    summary:
+      "Look up any keyword in any country without tracking it, and see it beside every keyword you looked up before.",
+    changes: [
+      {
+        kind: "new",
+        title: "Inspect any keyword",
+        text: "Keyword inspector in the sidebar reads any keyword in any country straight from the store, without tracking it: the top 50 apps, the autocomplete, popularity, difficulty and opportunity, and how strong the top ten are. Each keyword you inspect lands on a map beside the others, its store suggestions inspect in one click, and the next inspection of the same keyword shows what changed since.",
+      },
+    ],
+  },
+  {
     version: "1.16.1",
     date: "2026-11-08",
     title: "Clearer sign up and billing",
@@ -76,11 +90,6 @@ export const LATER_RELEASES: readonly Release[] = [
         kind: "new",
         title: "Chart the keywords you pick",
         text: "Tick keywords on the keywords table and press Show dynamics to see their positions as one chart above the list. The charted rows are highlighted, the chart follows the market you switch to, and a link with an open chart reopens it for whoever you send it to.",
-      },
-      {
-        kind: "new",
-        title: "Inspect any keyword",
-        text: "Keyword inspector in the sidebar reads any keyword in any country straight from the store, without tracking it: the top 50 apps, the autocomplete, popularity, difficulty and opportunity, and how strong the top ten are. Every inspection is kept, so the next one of the same keyword shows what changed since.",
       },
       {
         kind: "improved",
