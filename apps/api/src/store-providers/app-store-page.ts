@@ -55,9 +55,17 @@ function shelfMappingOf(document: cheerio.CheerioAPI): Record<string, unknown> {
   } catch {
     throw new Error('serialized server data is not valid JSON');
   }
+  const mapping = shelfMappingIn(parsed);
+  if (mapping === null) {
+    throw new Error('serialized server data carries no shelf mapping');
+  }
+  return mapping;
+}
+
+function shelfMappingIn(parsed: unknown): Record<string, unknown> | null {
   const entries = asRecord(parsed)?.data;
   if (!Array.isArray(entries)) {
-    throw new Error('serialized server data carries no shelf mapping');
+    return null;
   }
   for (const entry of entries) {
     const mapping = asRecord(asRecord(asRecord(entry)?.data)?.shelfMapping);
@@ -65,7 +73,7 @@ function shelfMappingOf(document: cheerio.CheerioAPI): Record<string, unknown> {
       return mapping;
     }
   }
-  throw new Error('serialized server data carries no shelf mapping');
+  return null;
 }
 
 function readShelves(shelves: Record<string, unknown>): AppStorePageExtract {
