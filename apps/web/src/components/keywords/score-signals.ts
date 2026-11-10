@@ -175,9 +175,6 @@ export function revealLabel(signals: ScoreSignals | null): string | null {
 
 const REVEAL_LISTED_RANK = 1_000_000_000;
 const REVEAL_ABSENT_RANK = 2_000_000_000;
-// A position is always below this span, so a shorter prefix sorts first
-// whatever its position. An unknown prefix sorts after every real prefix
-// length, and an unknown position after every known position.
 const REVEAL_POSITION_SPAN = 1_000_000;
 const REVEAL_UNKNOWN_PREFIX = 100;
 const REVEAL_UNKNOWN_POSITION = REVEAL_POSITION_SPAN - 1;
