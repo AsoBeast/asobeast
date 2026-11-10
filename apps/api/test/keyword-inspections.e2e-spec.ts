@@ -21,7 +21,8 @@ import {
 } from '../src/jobs/jobs.types';
 import { StoreJobsHandler } from '../src/jobs/store-jobs.handler';
 import {
-  INSPECTION_DROPPED,
+  INSPECTION_NEVER_STARTED,
+  INSPECTION_QUEUE_LIMIT_MS,
   INSPECTION_NOT_QUEUED,
   INSPECTION_TIMED_OUT,
 } from '../src/keyword-inspections/inspection-failures';
@@ -286,7 +287,7 @@ describe('KeywordInspectionsController (e2e)', () => {
     expect(done.startedAt).not.toBeNull();
   });
 
-  it('fails a queued inspection whose job left the queue and queues a new one', async () => {
+  it('fails an inspection that never started within the queue limit and queues a new one', async () => {
     const body = {
       keyword: 'habit tracker',
       store: 'APP_STORE',
@@ -295,21 +296,54 @@ describe('KeywordInspectionsController (e2e)', () => {
     const lost = await inspect(body);
     await prisma.keywordInspection.update({
       where: { id: lost.id },
-      data: { requestedAt: new Date(Date.now() - 11 * 60 * 1000) },
+      data: {
+        requestedAt: new Date(Date.now() - INSPECTION_QUEUE_LIMIT_MS - 60_000),
+      },
     });
-    await (
-      await queue(Store.APP_STORE).getJob(inspectKeywordJobId(lost.id))
-    )?.remove();
+
+    expect(
+      (await api.get(`/keyword-inspections/${lost.id}`).expect(200)).body,
+    ).toMatchObject({ status: 'FAILED', failure: INSPECTION_NEVER_STARTED });
 
     const fresh = await inspect(body);
+    await runJob(lost.id);
 
+    expect(registry.searches).toBe(0);
     expect(fresh.id).not.toBe(lost.id);
     expect(
       await prisma.keywordInspection.findUniqueOrThrow({
         where: { id: lost.id },
+        select: { status: true, failure: true, startedAt: true },
+      }),
+    ).toEqual({
+      status: 'FAILED',
+      failure: INSPECTION_NEVER_STARTED,
+      startedAt: null,
+    });
+  });
+
+  it('closes an inspection whose job reaches the store after the queue limit', async () => {
+    const late = await inspect({
+      keyword: 'habit tracker',
+      store: 'APP_STORE',
+      country: 'us',
+    });
+    await prisma.keywordInspection.update({
+      where: { id: late.id },
+      data: {
+        requestedAt: new Date(Date.now() - INSPECTION_QUEUE_LIMIT_MS - 60_000),
+      },
+    });
+
+    await runJob(late.id);
+
+    expect(registry.searches).toBe(0);
+    expect(
+      await prisma.keywordInspection.findUniqueOrThrow({
+        where: { id: late.id },
         select: { status: true, failure: true },
       }),
-    ).toEqual({ status: 'FAILED', failure: INSPECTION_DROPPED });
+    ).toEqual({ status: 'FAILED', failure: INSPECTION_NEVER_STARTED });
   });
 
   it('fails an inspection the queue would not take', async () => {

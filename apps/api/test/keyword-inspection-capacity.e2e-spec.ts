@@ -1,6 +1,7 @@
 import './helpers/enable-billing';
 import { ApiErrorEnvelope, PLAN_LIMITS } from '@asobeast/shared';
 import { Queue } from 'bullmq';
+import { KeywordInspectionsService } from '../src/keyword-inspections/keyword-inspections.service';
 import { onDemandSpent, spendOnDemandAllowance } from './obliterate-queues';
 import {
   allowanceSpendsDuring,
@@ -107,5 +108,24 @@ describe('Keyword inspection capacity (e2e)', () => {
     }
 
     expect(await onDemandSpent(harness.app)).toBe(1);
+  });
+
+  it('keeps the allowance spent when the inspection was queued but could not be read back', async () => {
+    await inspect('first phrase').expect(202);
+    const get = jest
+      .spyOn(KeywordInspectionsService.prototype, 'get')
+      .mockRejectedValueOnce(new Error('read failed'));
+    try {
+      await inspect('queued anyway').expect(500);
+    } finally {
+      get.mockRestore();
+    }
+
+    expect(await onDemandSpent(harness.app)).toBe(2);
+    expect(
+      await harness.prisma.keywordInspection.count({
+        where: { status: 'PENDING', keyword: { text: 'queued anyway' } },
+      }),
+    ).toBe(1);
   });
 });

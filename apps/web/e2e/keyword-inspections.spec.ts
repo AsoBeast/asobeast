@@ -1,10 +1,14 @@
 import type { Page } from "@playwright/test";
-import { FIRST_CHECK_POLL_MS } from "../src/lib/keyword-checks";
+import {
+  FIRST_CHECK_POLL_LIMIT,
+  FIRST_CHECK_POLL_MS,
+} from "../src/lib/keyword-checks";
 import { expect, test } from "./session.mts";
 import {
   FAILING_KEYWORD,
   INSPECTED_APPS,
   INSPECTION_FAILURE,
+  QUEUED_KEYWORD,
 } from "./keyword-inspections-mock.mts";
 
 test.describe.configure({ mode: "serial" });
@@ -85,6 +89,43 @@ test("shows why an inspection did not finish and offers another try", async ({
   await expect(
     failure.getByRole("button", { name: "Try again" }),
   ).toBeVisible();
+});
+
+test("offers a manual check once a queued inspection stops polling", async ({
+  page,
+  request,
+}) => {
+  await page.goto("/inspect");
+  await page.getByLabel("Keyword", { exact: true }).fill(QUEUED_KEYWORD);
+  await page.getByRole("button", { name: "Inspect", exact: true }).click();
+  await expect(page).toHaveURL(/[?&]id=inspection-1/);
+
+  const checkAgain = page.getByRole("button", { name: "Check again" });
+  for (let poll = 0; poll < FIRST_CHECK_POLL_LIMIT; poll += 1) {
+    if (await checkAgain.isVisible()) break;
+    const read = page
+      .waitForResponse(
+        (response) =>
+          response.url().includes("/keyword-inspections/inspection-1"),
+        { timeout: 5_000 },
+      )
+      .catch(() => null);
+    await nextPoll(page);
+    await read;
+  }
+  await expect(page.getByText(/Waiting for the store queue/)).toBeVisible();
+  await expect(checkAgain).toBeVisible();
+  await request.get(`${MOCK_API}/__release-keyword-inspections`);
+
+  await checkAgain.click();
+
+  await expect(
+    page.getByRole("table").getByText(INSPECTED_APPS[0]),
+  ).toBeVisible();
+  await expect(checkAgain).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: `“${QUEUED_KEYWORD}”`, level: 2 }),
+  ).toBeFocused();
 });
 
 test("deletes an inspection and returns focus to the keyword box", async ({

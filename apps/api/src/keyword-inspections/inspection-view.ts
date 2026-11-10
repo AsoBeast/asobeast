@@ -18,7 +18,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { computeOpportunity } from '../scoring/opportunity';
 import { readScoreSignals } from '../scoring/score-signals';
-import { INSPECTION_TIMED_OUT, runningTooLong } from './inspection-failures';
+import { staleFailureOf } from './inspection-failures';
 import { COMPETITION_DEPTH, summarizeCompetition } from './inspection-results';
 
 export const INSPECTION_SUMMARY_SELECT = {
@@ -64,9 +64,6 @@ const scaled = (
   scale: (raw: number) => number,
 ): number | null => (value === null ? null : scale(value));
 
-const timedOut = (row: InspectionSummaryRow): boolean =>
-  row.status === 'PENDING' && runningTooLong(row.startedAt);
-
 export function toInspectionSummary(
   row: InspectionSummaryRow,
 ): KeywordInspectionSummary {
@@ -78,7 +75,7 @@ export function toInspectionSummary(
     keyword: row.keyword.text,
     store: row.keyword.store,
     country: row.keyword.country,
-    status: timedOut(row) ? 'FAILED' : statusOf(row.status),
+    status: staleFailureOf(row) === null ? statusOf(row.status) : 'FAILED',
     requestedAt: row.requestedAt.toISOString(),
     startedAt: row.startedAt?.toISOString() ?? null,
     completedAt: row.completedAt?.toISOString() ?? null,
@@ -205,6 +202,6 @@ export function toInspection(
     results,
     suggestions: arrayOf(row.suggestions, isSuggestion),
     previous: previous === null ? null : inspectionDelta(results, previous),
-    failure: timedOut(row) ? INSPECTION_TIMED_OUT : row.failure,
+    failure: staleFailureOf(row) ?? row.failure,
   };
 }

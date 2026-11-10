@@ -15,9 +15,10 @@ import { inspectKeywordJobId, JOBS, QUEUES } from '../jobs/jobs.types';
 import { normalizeKeyword } from '../keywords/keywords.support';
 import { PrismaService } from '../prisma/prisma.service';
 import {
-  INSPECTION_DROPPED,
+  INSPECTION_NEVER_STARTED,
   INSPECTION_NOT_QUEUED,
   INSPECTION_PENDING_TTL_MS,
+  INSPECTION_QUEUE_LIMIT_MS,
   INSPECTION_TIMED_OUT,
 } from './inspection-failures';
 import {
@@ -63,12 +64,13 @@ export class KeywordInspectionsService {
       request.store,
       request.country,
     );
-    await this.expireStale(keywordId, request.store);
+    await this.expireStale(keywordId);
     const waiting = await this.pendingOf(this.prisma, keywordId);
     if (waiting) {
       return this.get(waiting);
     }
     let spent = false;
+    let claimed: string;
     try {
       const claim = await this.prisma.withTransaction(async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(${INSPECTION_LOCK}::int, hashtext(${`${workspaceId}~${keywordId}`}))`;
@@ -87,13 +89,15 @@ export class KeywordInspectionsService {
       if (claim.queued) {
         await this.enqueue(claim.id, request.store);
       }
-      return await this.get(claim.id);
+      spent = false;
+      claimed = claim.id;
     } catch (error) {
       if (spent) {
         await allowance.refund().catch(() => undefined);
       }
       throw error;
     }
+    return this.get(claimed);
   }
 
   async list(filter: KeywordInspectionFilter): Promise<KeywordInspectionList> {
@@ -173,47 +177,33 @@ export class KeywordInspectionsService {
     return keyword.id;
   }
 
-  private async expireStale(keywordId: string, store: Store): Promise<void> {
-    const cutoff = new Date(Date.now() - INSPECTION_PENDING_TTL_MS);
-    await this.prisma.keywordInspection.updateMany({
-      where: { keywordId, status: 'PENDING', startedAt: { lt: cutoff } },
-      data: {
-        status: 'FAILED',
-        failure: INSPECTION_TIMED_OUT,
-        completedAt: new Date(),
-      },
-    });
-    const waiting = await this.prisma.keywordInspection.findMany({
-      where: {
+  private async expireStale(keywordId: string): Promise<void> {
+    const now = Date.now();
+    await this.failPending(
+      {
         keywordId,
-        status: 'PENDING',
-        startedAt: null,
-        requestedAt: { lt: cutoff },
+        startedAt: { lt: new Date(now - INSPECTION_PENDING_TTL_MS) },
       },
-      select: { id: true },
-    });
-    for (const { id } of waiting) {
-      if (await this.stillQueued(id, store)) continue;
-      await this.prisma.keywordInspection.updateMany({
-        where: { id, status: 'PENDING', startedAt: null },
-        data: {
-          status: 'FAILED',
-          failure: INSPECTION_DROPPED,
-          completedAt: new Date(),
-        },
-      });
-    }
+      INSPECTION_TIMED_OUT,
+    );
+    await this.failPending(
+      {
+        keywordId,
+        startedAt: null,
+        requestedAt: { lt: new Date(now - INSPECTION_QUEUE_LIMIT_MS) },
+      },
+      INSPECTION_NEVER_STARTED,
+    );
   }
 
-  private async stillQueued(id: string, store: Store): Promise<boolean> {
-    try {
-      const job = await this.queueFor(store).getJob(inspectKeywordJobId(id));
-      if (!job) return false;
-      const state = await job.getState();
-      return state !== 'completed' && state !== 'failed' && state !== 'unknown';
-    } catch {
-      return true;
-    }
+  private async failPending(
+    where: Prisma.KeywordInspectionWhereInput,
+    failure: string,
+  ): Promise<void> {
+    await this.prisma.keywordInspection.updateMany({
+      where: { ...where, status: 'PENDING' },
+      data: { status: 'FAILED', failure, completedAt: new Date() },
+    });
   }
 
   private async pendingOf(
@@ -238,14 +228,7 @@ export class KeywordInspectionsService {
         { jobId: inspectKeywordJobId(id) },
       );
     } catch (error) {
-      await this.prisma.keywordInspection.updateMany({
-        where: { id, status: 'PENDING' },
-        data: {
-          status: 'FAILED',
-          failure: INSPECTION_NOT_QUEUED,
-          completedAt: new Date(),
-        },
-      });
+      await this.failPending({ id }, INSPECTION_NOT_QUEUED);
       throw error;
     }
   }

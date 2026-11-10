@@ -8,8 +8,10 @@ import {
   toInspectionSuggestions,
 } from './inspection-results';
 import {
+  INSPECTION_NEVER_STARTED,
   INSPECTION_NOT_COLLECTING,
   inspectionFailureOf,
+  neverStarted,
 } from './inspection-failures';
 
 const asJson = (value: unknown): Prisma.InputJsonValue =>
@@ -32,10 +34,15 @@ export class KeywordInspectionRunner {
       where: { id: inspectionId, status: 'PENDING' },
       select: {
         id: true,
+        requestedAt: true,
         keyword: { select: { text: true, store: true, country: true } },
       },
     });
     if (!inspection) {
+      return;
+    }
+    if (neverStarted(inspection.requestedAt, null)) {
+      await this.close(inspection.id, INSPECTION_NEVER_STARTED);
       return;
     }
     const { count } = await this.prisma.keywordInspection.updateMany({

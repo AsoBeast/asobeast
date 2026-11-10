@@ -11,7 +11,13 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { isNotFound, requestKeywordInspection } from "@/lib/api";
 import { useFocusAfterCommit } from "@/lib/focus-handoff";
 import { formatCountry, formatDateTime, storeLabel } from "@/lib/format";
-import { keywordInspectionOptions, seedKeywordInspection } from "@/lib/queries";
+import { inspectionPollInterval } from "@/lib/keyword-inspection-polling";
+import {
+  keywordInspectionKeys,
+  keywordInspectionOptions,
+  refreshKeywordInspections,
+  seedKeywordInspection,
+} from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 import { InspectionDelta } from "./InspectionExtras";
 import { InspectionResultsTable } from "./InspectionResultsTable";
@@ -38,6 +44,51 @@ function InspectionHeading({
         {`${storeLabel(inspection.store)} · ${formatCountry(inspection.country)} · ${formatDateTime(when)}`}
       </p>
     </header>
+  );
+}
+
+function PendingInspection({
+  inspection,
+  polling,
+  checking,
+  onCheck,
+}: {
+  inspection: KeywordInspection;
+  polling: boolean;
+  checking: boolean;
+  onCheck: (leaving: HTMLButtonElement | null) => void;
+}) {
+  const button = useRef<HTMLButtonElement>(null);
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-3">
+        <p
+          role="status"
+          className="flex items-center gap-2 text-sm text-muted-foreground"
+        >
+          <Loader2 aria-hidden className="size-4 animate-spin" />
+          <span>
+            {inspection.startedAt === null
+              ? "Waiting for the store queue. Scheduled store work runs first, so this can take a few minutes."
+              : "Reading the store. This usually takes under a minute."}
+          </span>
+        </p>
+        {polling ? null : (
+          <Button
+            ref={button}
+            variant="outline"
+            size="sm"
+            aria-disabled={checking || undefined}
+            onClick={() => {
+              if (!checking) onCheck(button.current);
+            }}
+          >
+            {checking ? "Checking…" : "Check again"}
+          </Button>
+        )}
+      </div>
+      <InspectionScoresSkeleton />
+    </>
   );
 }
 
@@ -133,6 +184,7 @@ export function InspectionDetail({
   id: string;
   onInspected: (inspection: KeywordInspection) => void;
 }) {
+  const queryClient = useQueryClient();
   const read = useQuery(keywordInspectionOptions(id));
   const heading = useRef<HTMLHeadingElement>(null);
   const handOffFocus = useFocusAfterCommit();
@@ -162,20 +214,24 @@ export function InspectionDetail({
     >
       <InspectionHeading inspection={inspection} ref={heading} />
       {inspection.status === "PENDING" ? (
-        <>
-          <p
-            role="status"
-            className="flex items-center gap-2 text-sm text-muted-foreground"
-          >
-            <Loader2 aria-hidden className="size-4 animate-spin" />
-            <span>
-              {inspection.startedAt === null
-                ? "Waiting for the store queue. Scheduled store work runs first, so this can take a few minutes."
-                : "Reading the store. This usually takes under a minute."}
-            </span>
-          </p>
-          <InspectionScoresSkeleton />
-        </>
+        <PendingInspection
+          inspection={inspection}
+          polling={
+            inspectionPollInterval({
+              data: inspection,
+              error: read.error,
+              dataUpdateCount:
+                queryClient.getQueryState(keywordInspectionKeys.detail(id))
+                  ?.dataUpdateCount ?? 0,
+            }) !== false
+          }
+          checking={read.isFetching}
+          onCheck={(leaving) => {
+            handOffFocus(heading.current, leaving);
+            void read.refetch();
+            void refreshKeywordInspections(queryClient);
+          }}
+        />
       ) : null}
       {inspection.status === "FAILED" ? (
         <FailedInspection

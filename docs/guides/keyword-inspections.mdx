@@ -2,18 +2,7 @@
 title: Inspect any keyword
 description: "Research one phrase in one storefront before any app tracks it: the top 50 search results, the store autocomplete, popularity, difficulty and opportunity with their source, a summary of the top 10 and the change since the last run."
 icon: text-search
-keywords:
-  [
-    "keyword inspection",
-    "keyword research",
-    "inspect keyword",
-    "search results",
-    "autocomplete",
-    "popularity",
-    "difficulty",
-    "opportunity",
-    "compare runs",
-  ]
+keywords: ["keyword inspection","keyword research","inspect keyword","search results","autocomplete","popularity","difficulty","opportunity","compare runs"]
 ---
 
 A keyword inspection answers one question before you commit to a keyword: is this phrase worth tracking in this storefront? It reads the live store for any phrase, whether or not one of your apps tracks it, and keeps the answer in your workspace so you can come back to it and compare it with a later run.
@@ -26,7 +15,7 @@ Open **Keyword inspector** in the sidebar, type the phrase as a user would type 
 
 The phrase is normalized the way a tracked keyword is: lower case, at most 80 characters and five words. A storefront is a lowercase two letter code the store serves, and the same phrase in two storefronts is two inspections. See [Countries and markets](/concepts/countries).
 
-The inspection runs as a store job, so the request answers at once with a pending inspection and the page fills in when the job finishes. That is usually within a minute, and longer when the store queue is busy with the daily run or the weekly scoring, because an inspection waits in the queue behind that work before it reads the store. An agent reads the result with `get_keyword_inspection`, and the API with `GET /keyword-inspections/{id}`. A phrase and storefront whose inspection is still pending answers that inspection instead of queuing a second one.
+The inspection runs as a store job, so the request answers at once with a pending inspection and the page fills in when the job finishes. The page checks every 15 seconds for ten minutes, and after that a **Check again** button reads the inspection on demand. That is usually within a minute, and longer when the store queue is busy with the daily run or the weekly scoring, because an inspection waits in the queue behind that work before it reads the store. An agent reads the result with `get_keyword_inspection`, and the API with `GET /keyword-inspections/{id}`. A phrase and storefront whose inspection is still pending answers that inspection instead of queuing a second one.
 
 ### What it costs
 
@@ -38,7 +27,7 @@ Every inspection is one search plus a few autocomplete lookups, the same evidenc
 
 A store that times out or blocks the request is retried like any other store job. When the last attempt fails, the inspection is marked failed with the reason the store gave, and you can start a new one.
 
-The time an inspection waits in the queue never counts against it. Once its job starts reading the store, it has ten minutes to finish before it is marked failed. An inspection whose job left the queue without running is marked failed when you next request the same phrase and storefront, and that request queues a fresh one.
+The time an inspection waits in the queue never counts against it. Once its job starts reading the store, it has ten minutes to finish before it is marked failed. An inspection that has still not started a day after you requested it never reached the store, and it is marked failed so you can start a new one.
 
 ## Read the scores
 
@@ -58,12 +47,12 @@ The suggestions are what the store autocomplete offers for the phrase, up to ten
 
 The summary reads the top 10 results, the first screen of answers a searcher sees:
 
-| Figure                                                        | What it tells you                                   |
-| ------------------------------------------------------------- | --------------------------------------------------- |
-| Median and strongest rating count                             | How established the apps you would have to pass are |
-| Apps over 100,000 ratings                                     | How many heavyweights hold the first page           |
-| Exact and full title matches                                  | How many results target the phrase in their title   |
-| Median days since update and apps updated in the last 30 days | How actively the leaders are maintained             |
+| Figure | What it tells you |
+| --- | --- |
+| Median and strongest rating count | How established the apps you would have to pass are |
+| Apps over 100,000 ratings | How many heavyweights hold the first page |
+| Exact and full title matches | How many results target the phrase in their title |
+| Median days since update and apps updated in the last 30 days | How actively the leaders are maintained |
 
 A first page held by a few heavyweights with the phrase in their titles is hard to break into, however popular the phrase is. A page of results that only mention part of the phrase, or that have not been updated in months, is the opening the opportunity score looks for.
 
@@ -71,7 +60,7 @@ A first page held by a few heavyweights with the phrase in their titles is hard 
 
 Every inspection of a phrase and storefront is kept for `RETENTION_KEYWORD_INSPECTIONS_DAYS`, 180 days by default, so running it again later shows how the search moved. The newest inspection compares itself with the last completed one of the same phrase and storefront: its popularity, difficulty and result count, and the apps that entered or left the top 10 in between. See the [configuration reference](/configuration/reference).
 
-The history lives on the keyword inspection page, which lists every run of the workspace with the newest first. `GET /keyword-inspections` lists the same runs and filters them to one phrase, store or storefront, and an agent lists them with `list_keyword_inspections` and the same filters.
+The history lives on the keyword inspection page, which lists the newest 50 runs of the workspace. `GET /keyword-inspections` lists the same runs and filters them to one phrase, store or storefront, and an agent lists them with `list_keyword_inspections` and the same filters.
 
 Inspections belong to your workspace. Another workspace on the same instance never sees them, even for the same phrase, and they are part of the workspace export and are erased with the workspace. Deleting an inspection removes that run only. See [Data model](/concepts/data-model).
 
@@ -82,13 +71,13 @@ Inspections belong to your workspace. Another workspace on the same instance nev
     Collect positions every day for the phrases worth keeping.
   </Card>
 
-<Card title="Keyword scoring" icon="calculator" href="/concepts/scoring">
-  How popularity, difficulty and opportunity are calculated.
-</Card>
+  <Card title="Keyword scoring" icon="calculator" href="/concepts/scoring">
+    How popularity, difficulty and opportunity are calculated.
+  </Card>
 
-<Card title="MCP tool reference" icon="wrench" href="/mcp/tools">
-  The inspection tools an agent can call.
-</Card>
+  <Card title="MCP tool reference" icon="wrench" href="/mcp/tools">
+    The inspection tools an agent can call.
+  </Card>
 
   <Card title="Rate limits" icon="gauge" href="/api-reference/rate-limits">
     The on demand allowance an inspection spends.

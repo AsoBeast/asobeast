@@ -38,6 +38,7 @@ import {
   deleteInspection,
   listInspections,
   readInspection,
+  releaseQueuedInspections,
   requestInspection,
   resetInspections,
 } from "./keyword-inspections-mock.mts";
@@ -2508,6 +2509,14 @@ const routes: Route[] = [
     pattern: /^\/__reset-keyword-inspections$/,
     handler: (_p, _req, res) => {
       resetInspections();
+      json(res, 200, { ok: true });
+    },
+  },
+  {
+    method: "GET",
+    pattern: /^\/__release-keyword-inspections$/,
+    handler: (_p, _req, res) => {
+      releaseQueuedInspections();
       json(res, 200, { ok: true });
     },
   },

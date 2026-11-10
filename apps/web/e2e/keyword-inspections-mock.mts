@@ -7,6 +7,8 @@ import {
 
 export const FAILING_KEYWORD = "store timeout";
 
+export const QUEUED_KEYWORD = "sleep sounds";
+
 export const INSPECTION_FAILURE =
   "The App Store did not answer. Try again in a few minutes.";
 
@@ -23,6 +25,7 @@ interface StoredInspection {
 
 const inspections: StoredInspection[] = [];
 let inspectionIds = 0;
+let queueReleased = false;
 
 function completed(pending: KeywordInspection): KeywordInspection {
   return {
@@ -112,7 +115,8 @@ function settled(stored: StoredInspection): KeywordInspection {
 }
 
 function current(stored: StoredInspection): KeywordInspection {
-  return stored.reads > 0 ? settled(stored) : stored.pending;
+  const waiting = stored.pending.keyword === QUEUED_KEYWORD && !queueReleased;
+  return stored.reads > 0 && !waiting ? settled(stored) : stored.pending;
 }
 
 function summaryOf(inspection: KeywordInspection): KeywordInspectionSummary {
@@ -190,7 +194,12 @@ export function deleteInspection(id: string): boolean {
   return true;
 }
 
+export function releaseQueuedInspections(): void {
+  queueReleased = true;
+}
+
 export function resetInspections(): void {
   inspections.splice(0, inspections.length);
   inspectionIds = 0;
+  queueReleased = false;
 }

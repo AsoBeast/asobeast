@@ -37,6 +37,7 @@ apps/
       apps/               import, snapshots, market listings and their native localizations, localization detection (candidates, probe), refresh, linked app groups, guided setup (`AppSetup`, read and patched per app, started by the import), store search by name, the market default localization a capture proves (`MarketLocalizationRecorder`)
       competitors/        competitor apps, comparison, gaps, competitor suggestions (keyword result apps plus similar apps)
       keywords/           extraction, tracked keywords, first position checks (`FirstPositionChecks`, the rank checks a seed, an import, a manual add and a keyword field save queue, ahead of the first scores), keyword fields per localization (one transactional writer, the localizations an app ships, what a market reads, wasted words), suggestions (local strategies in `KeywordSuggestionService`, store strategies in `StoreSuggestions`, competitor searches in `CompetitorSearchPlanner`), csv import (classify, plan, preview, commit), the keyword breakdown (`KeywordBreakdownService`, the field judgement and the competitor notes, read only)
+      keyword-inspections/ on demand keyword inspector: the claim and its score allowance, the inspect job runner, the stored view, the timeout and never started rules
       keyword-discovery/  keyword discovery: the candidate pool, fresh capture reads, the weekly planner, the check job, the tracker, the list and its actions
       rankings/           rank capture + history, serp snapshots, volatility, movers, `SerpCapture` (the search and capture a keyword check and a discovery check share)
       category-ranks/     daily free/paid/grossing chart positions of tracked apps, read from the shared chart capture, the charts an app is ranked in (`ranked-charts.ts`), the chart alerts an owned app raises when it enters, leaves or crosses a tier of a chart (`ChartAlertsService`, `chart-moves.ts`)
@@ -60,7 +61,7 @@ apps/
   web/                    Next.js frontend
     src/
       app/                App Router: page/layout/loading/error/not-found per segment
-                          (/, /actions, /alerts, /charts, /integrations + google-play, /settings, /whats-new, /login, /register, /upgrade, /confirm-email,
+                          (/, /actions, /alerts, /charts, /inspect, /integrations + google-play, /settings, /whats-new, /login, /register, /upgrade, /confirm-email,
                            /verify, /forgot-password, /reset-password, /invite,
                            /admin + capacity, workspaces, users, apps,
                            /apps/[id] + keywords, rankings, competitors, audit, metadata,
@@ -71,7 +72,7 @@ apps/
         ui/               shadcn generated primitives (owned, editable)
         data-table/       table kit: sortable header, search, facet, chips, column menu, filtered empty state
         layout/           SiteHeader, ThemeToggle, HealthBadge, ErrorState, command palette, CollapsibleCard (with its cookie backed provider)
-        actions/ admin/ alerts/ apps/ app-detail/ dashboard/ overview/ keywords/ rankings/ competitors/ audit/
+        actions/ admin/ alerts/ apps/ app-detail/ dashboard/ overview/ keywords/ keyword-inspections/ rankings/ competitors/ audit/
         metadata/ localizations/ changes/ reviews/ screenshots/ visibility/ settings/ integrations/ onboarding/ auth/ billing/ top-charts/ whats-new/   feature + skeleton components (onboarding/: setup steps, first run timeline and first positions)
       lib/                api/ (typed transport: client.ts + one module per domain behind a barrel),
                           queries.ts (query keys + options + invalidation),
