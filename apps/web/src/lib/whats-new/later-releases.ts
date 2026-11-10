@@ -16,7 +16,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "improved",
         title: "A dashboard that starts with what moved",
-        text: "The dashboard now opens with one sentence about the keywords that climbed and fell this week, then your visibility across every app as one figure. Pick the last 7, 30 or 90 days beside Import app and the whole page follows: the sentence, the changes on the four figures, the keyword movers and the chart, which each figure draws for itself when you select it. Your keyword movers sit beside the next things to do, your apps are a table with a trend line each (the cards are one click away), and your latest alerts sit beside listing changes, where a run of version updates is folded into one line.",
+        text: "The dashboard now opens with one sentence about the keywords that climbed and fell over the days you choose, then your visibility across every app as one figure. Pick the last 7, 30 or 90 days beside Import app and the sentence, the changes on the four figures, the keyword movers and the chart follow it, and each figure draws its own chart when you select it. Your keyword movers sit beside the next things to do, your apps are a table with a trend line each (the cards are one click away), and your latest alerts sit beside listing changes, where a run of version updates is folded into one line.",
       },
       {
         kind: "new",
