@@ -31,10 +31,12 @@ const deleteSuccessor = (trigger: HTMLElement | null): HTMLElement | null =>
 export function DeleteInspectionButton({
   id,
   keyword,
+  subject,
   onDeleted,
 }: {
   id: string;
   keyword: string;
+  subject: string;
   onDeleted: (id: string) => void;
 }) {
   const queryClient = useQueryClient();
@@ -64,7 +66,7 @@ export function DeleteInspectionButton({
           ref={trigger}
           variant="ghost"
           size="icon-sm"
-          aria-label={`Delete the inspection of ${keyword}`}
+          aria-label={`Delete the inspection of ${subject}`}
         >
           <Trash2 />
         </Button>
@@ -73,8 +75,7 @@ export function DeleteInspectionButton({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete this inspection?</AlertDialogTitle>
           <AlertDialogDescription>
-            The saved results for “{keyword}” are removed, and later inspections
-            of the keyword compare with the run before this one.
+            {`The saved results for “${keyword}” are removed, and later inspections of the keyword compare with the run before this one.`}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <ConfirmActionFooter

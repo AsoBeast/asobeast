@@ -1,3 +1,4 @@
+import { CHART_HEIGHT } from "@/components/charts/theme";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function InspectionScoresSkeleton() {
@@ -34,7 +35,7 @@ export function InspectionMapSkeleton() {
       aria-hidden
     >
       <Skeleton className="h-6 w-40" />
-      <Skeleton className="h-[300px] rounded-md sm:h-[420px]" />
+      <Skeleton className={`${CHART_HEIGHT.hero} rounded-md`} />
       <Skeleton className="h-8 w-3/4 rounded-full" />
     </div>
   );

@@ -1,3 +1,5 @@
+import type { Page } from "@playwright/test";
+import { FIRST_CHECK_POLL_MS } from "../src/lib/keyword-checks";
 import { expect, test } from "./session.mts";
 import {
   FAILING_KEYWORD,
@@ -9,9 +11,12 @@ test.describe.configure({ mode: "serial" });
 
 const MOCK_API = "http://localhost:4100";
 
-test.beforeEach(async ({ request }) => {
+test.beforeEach(async ({ page, request }) => {
   await request.get(`${MOCK_API}/__reset-keyword-inspections`);
+  await page.clock.install();
 });
+
+const nextPoll = (page: Page) => page.clock.runFor(FIRST_CHECK_POLL_MS);
 
 test("inspects a keyword and shows its scores and results", async ({
   page,
@@ -25,6 +30,7 @@ test("inspects a keyword and shows its scores and results", async ({
   await page.getByRole("button", { name: "Inspect", exact: true }).click();
 
   await expect(page).toHaveURL(/[?&]id=inspection-1/);
+  await nextPoll(page);
   const results = page.getByRole("table");
   await expect(results.getByText(INSPECTED_APPS[0])).toBeVisible();
   await expect(
@@ -45,6 +51,8 @@ test("compares a second inspection of a keyword with the first", async ({
   await page.goto("/inspect");
   await page.getByLabel("Keyword", { exact: true }).fill("habit tracker");
   await page.getByRole("button", { name: "Inspect", exact: true }).click();
+  await expect(page).toHaveURL(/[?&]id=inspection-1/);
+  await nextPoll(page);
   await expect(
     page.getByRole("table").getByText(INSPECTED_APPS[0]),
   ).toBeVisible();
@@ -52,6 +60,7 @@ test("compares a second inspection of a keyword with the first", async ({
   await page.getByRole("button", { name: "Inspect", exact: true }).click();
 
   await expect(page).toHaveURL(/[?&]id=inspection-2/);
+  await nextPoll(page);
   const change = page.getByRole("region", {
     name: "Since the previous inspection",
   });
@@ -66,6 +75,8 @@ test("shows why an inspection did not finish and offers another try", async ({
   await page.goto("/inspect");
   await page.getByLabel("Keyword", { exact: true }).fill(FAILING_KEYWORD);
   await page.getByRole("button", { name: "Inspect", exact: true }).click();
+  await expect(page).toHaveURL(/[?&]id=inspection-1/);
+  await nextPoll(page);
 
   const failure = page.getByRole("alert").filter({
     hasText: "This inspection did not finish.",
@@ -85,7 +96,9 @@ test("deletes an inspection and returns focus to the keyword box", async ({
   await expect(page).toHaveURL(/[?&]id=inspection-1/);
 
   await page
-    .getByRole("button", { name: "Delete the inspection of water reminder" })
+    .getByRole("button", {
+      name: /^Delete the inspection of water reminder in App Store /,
+    })
     .click();
   await page
     .getByRole("alertdialog")
@@ -94,7 +107,7 @@ test("deletes an inspection and returns focus to the keyword box", async ({
 
   await expect(
     page.getByRole("button", {
-      name: "Delete the inspection of water reminder",
+      name: /^Delete the inspection of water reminder in /,
     }),
   ).toHaveCount(0);
   await expect(page.getByText("No inspection selected")).toBeVisible();

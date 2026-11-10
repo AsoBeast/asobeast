@@ -1,6 +1,6 @@
 import type {
   KeywordInspectionCompetition,
-  KeywordInspectionTitleMatch,
+  SerpTitleMatch,
 } from "@asobeast/shared";
 import {
   formatCompact,
@@ -11,10 +11,10 @@ import {
 
 const DEFAULT_INSPECTION_COUNTRY = "us";
 
-export const TITLE_MATCH_LABELS: Record<KeywordInspectionTitleMatch, string> = {
-  exact: "Exact phrase",
-  allWords: "All words",
-  someWords: "Some words",
+export const TITLE_MATCH_LABELS: Record<SerpTitleMatch, string> = {
+  phrase: "Exact phrase",
+  words: "All words",
+  partial: "Some words",
   none: "No match",
 };
 

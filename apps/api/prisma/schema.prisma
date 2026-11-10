@@ -359,6 +359,7 @@ model KeywordInspection {
   suggestions    Json?
   failure        String?
   requestedAt    DateTime  @default(now())
+  startedAt      DateTime?
   completedAt    DateTime?
 
   @@index([workspaceId, requestedAt])

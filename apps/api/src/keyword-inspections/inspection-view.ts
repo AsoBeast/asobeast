@@ -2,7 +2,7 @@ import {
   isScoringConfidence,
   isScoringSource,
   KEYWORD_INSPECTION_STATUSES,
-  KEYWORD_INSPECTION_TITLE_MATCHES,
+  KEYWORD_WORD_MATCHES,
   KeywordInspection,
   KeywordInspectionApp,
   KeywordInspectionDelta,
@@ -11,16 +11,14 @@ import {
   KeywordInspectionStatus,
   KeywordInspectionSuggestion,
   KeywordInspectionSummary,
+  SERP_TITLE_MATCHES,
   toDifficulty100,
   toVolume,
 } from '@asobeast/shared';
 import { Prisma } from '@prisma/client';
 import { computeOpportunity } from '../scoring/opportunity';
 import { readScoreSignals } from '../scoring/score-signals';
-import {
-  INSPECTION_PENDING_TTL_MS,
-  INSPECTION_TIMED_OUT,
-} from './inspection-failures';
+import { INSPECTION_TIMED_OUT, runningTooLong } from './inspection-failures';
 import { COMPETITION_DEPTH, summarizeCompetition } from './inspection-results';
 
 export const INSPECTION_SUMMARY_SELECT = {
@@ -28,6 +26,7 @@ export const INSPECTION_SUMMARY_SELECT = {
   keywordId: true,
   status: true,
   requestedAt: true,
+  startedAt: true,
   completedAt: true,
   traffic: true,
   difficulty: true,
@@ -66,8 +65,7 @@ const scaled = (
 ): number | null => (value === null ? null : scale(value));
 
 const timedOut = (row: InspectionSummaryRow): boolean =>
-  row.status === 'PENDING' &&
-  row.requestedAt.getTime() < Date.now() - INSPECTION_PENDING_TTL_MS;
+  row.status === 'PENDING' && runningTooLong(row.startedAt);
 
 export function toInspectionSummary(
   row: InspectionSummaryRow,
@@ -82,6 +80,7 @@ export function toInspectionSummary(
     country: row.keyword.country,
     status: timedOut(row) ? 'FAILED' : statusOf(row.status),
     requestedAt: row.requestedAt.toISOString(),
+    startedAt: row.startedAt?.toISOString() ?? null,
     completedAt: row.completedAt?.toISOString() ?? null,
     volume,
     difficulty100,
@@ -104,6 +103,11 @@ const isNumberOrNull = (value: unknown): value is number | null =>
 const isTextOrNull = (value: unknown): value is string | null =>
   value === null || isText(value);
 
+const isSegment = (value: unknown): boolean =>
+  isRecord(value) &&
+  isText(value.text) &&
+  KEYWORD_WORD_MATCHES.some((match) => match === value.match);
+
 const isResult = (value: unknown): value is KeywordInspectionResult =>
   isRecord(value) &&
   isNumber(value.position) &&
@@ -115,7 +119,9 @@ const isResult = (value: unknown): value is KeywordInspectionResult =>
   isNumberOrNull(value.ratingCount) &&
   isTextOrNull(value.releasedAt) &&
   isTextOrNull(value.updatedAt) &&
-  KEYWORD_INSPECTION_TITLE_MATCHES.some((match) => match === value.titleMatch);
+  SERP_TITLE_MATCHES.some((match) => match === value.titleMatch) &&
+  Array.isArray(value.titleSegments) &&
+  value.titleSegments.every(isSegment);
 
 const isSuggestion = (value: unknown): value is KeywordInspectionSuggestion =>
   isRecord(value) && isNumber(value.position) && isText(value.term);

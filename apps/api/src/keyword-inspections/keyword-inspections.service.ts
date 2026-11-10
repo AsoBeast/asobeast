@@ -15,6 +15,7 @@ import { inspectKeywordJobId, JOBS, QUEUES } from '../jobs/jobs.types';
 import { normalizeKeyword } from '../keywords/keywords.support';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  INSPECTION_DROPPED,
   INSPECTION_NOT_QUEUED,
   INSPECTION_PENDING_TTL_MS,
   INSPECTION_TIMED_OUT,
@@ -28,6 +29,11 @@ import {
 } from './inspection-view';
 
 const INSPECTION_LOCK = 6_431_907;
+
+export interface InspectionAllowance {
+  spend: () => Promise<void>;
+  refund: () => Promise<void>;
+}
 
 export interface KeywordInspectionFilter {
   keyword?: string;
@@ -47,7 +53,7 @@ export class KeywordInspectionsService {
 
   async request(
     request: KeywordInspectionRequest,
-    spend: () => Promise<void>,
+    allowance: InspectionAllowance,
   ): Promise<KeywordInspection> {
     assertStorefront(request.store, request.country);
     const text = normalizeKeyword(request.keyword);
@@ -57,28 +63,37 @@ export class KeywordInspectionsService {
       request.store,
       request.country,
     );
-    await this.expireStale(keywordId);
+    await this.expireStale(keywordId, request.store);
     const waiting = await this.pendingOf(this.prisma, keywordId);
     if (waiting) {
       return this.get(waiting);
     }
-    await spend();
-    const claim = await this.prisma.withTransaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${INSPECTION_LOCK}::int, hashtext(${`${workspaceId}~${keywordId}`}))`;
-      const pending = await this.pendingOf(tx, keywordId);
-      if (pending) {
-        return { id: pending, queued: false };
-      }
-      const created = await tx.keywordInspection.create({
-        data: { workspaceId, keywordId },
-        select: { id: true },
+    let spent = false;
+    try {
+      const claim = await this.prisma.withTransaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(${INSPECTION_LOCK}::int, hashtext(${`${workspaceId}~${keywordId}`}))`;
+        const pending = await this.pendingOf(tx, keywordId);
+        if (pending) {
+          return { id: pending, queued: false };
+        }
+        await allowance.spend();
+        spent = true;
+        const created = await tx.keywordInspection.create({
+          data: { workspaceId, keywordId },
+          select: { id: true },
+        });
+        return { id: created.id, queued: true };
       });
-      return { id: created.id, queued: true };
-    });
-    if (claim.queued) {
-      await this.enqueue(claim.id, request.store);
+      if (claim.queued) {
+        await this.enqueue(claim.id, request.store);
+      }
+      return await this.get(claim.id);
+    } catch (error) {
+      if (spent) {
+        await allowance.refund();
+      }
+      throw error;
     }
-    return this.get(claim.id);
   }
 
   async list(filter: KeywordInspectionFilter): Promise<KeywordInspectionList> {
@@ -158,19 +173,47 @@ export class KeywordInspectionsService {
     return keyword.id;
   }
 
-  private async expireStale(keywordId: string): Promise<void> {
+  private async expireStale(keywordId: string, store: Store): Promise<void> {
+    const cutoff = new Date(Date.now() - INSPECTION_PENDING_TTL_MS);
     await this.prisma.keywordInspection.updateMany({
-      where: {
-        keywordId,
-        status: 'PENDING',
-        requestedAt: { lt: new Date(Date.now() - INSPECTION_PENDING_TTL_MS) },
-      },
+      where: { keywordId, status: 'PENDING', startedAt: { lt: cutoff } },
       data: {
         status: 'FAILED',
         failure: INSPECTION_TIMED_OUT,
         completedAt: new Date(),
       },
     });
+    const waiting = await this.prisma.keywordInspection.findMany({
+      where: {
+        keywordId,
+        status: 'PENDING',
+        startedAt: null,
+        requestedAt: { lt: cutoff },
+      },
+      select: { id: true },
+    });
+    for (const { id } of waiting) {
+      if (await this.stillQueued(id, store)) continue;
+      await this.prisma.keywordInspection.updateMany({
+        where: { id, status: 'PENDING', startedAt: null },
+        data: {
+          status: 'FAILED',
+          failure: INSPECTION_DROPPED,
+          completedAt: new Date(),
+        },
+      });
+    }
+  }
+
+  private async stillQueued(id: string, store: Store): Promise<boolean> {
+    try {
+      const job = await this.queueFor(store).getJob(inspectKeywordJobId(id));
+      if (!job) return false;
+      const state = await job.getState();
+      return state !== 'completed' && state !== 'failed' && state !== 'unknown';
+    } catch {
+      return true;
+    }
   }
 
   private async pendingOf(

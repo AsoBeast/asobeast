@@ -29,7 +29,7 @@ function ScoreChange({
       >
         {signedChange(change)}
       </span>
-      {tone === "same" ? null : <span className="sr-only">({tone})</span>}
+      {tone === "same" ? null : <span className="sr-only">{`(${tone})`}</span>}
     </span>
   );
 }
@@ -51,7 +51,7 @@ export function InspectionDelta({
       </h3>
       <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className="text-muted-foreground">
-          Since {formatDateTime(previous.completedAt)}
+          {`Since ${formatDateTime(previous.completedAt)}`}
         </span>
         <ScoreChange
           label="Popularity"
@@ -66,7 +66,7 @@ export function InspectionDelta({
       </p>
       {previous.left.length > 0 ? (
         <p className="text-muted-foreground">
-          Left the top 10: {formatList(previous.left.map((app) => app.title))}
+          {`Left the top 10: ${formatList(previous.left.map((app) => app.title))}`}
         </p>
       ) : null}
     </section>

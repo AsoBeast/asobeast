@@ -1,7 +1,6 @@
 import { KeywordInspectionResult } from '@asobeast/shared';
 import {
   summarizeCompetition,
-  titleMatchOf,
   toInspectionResults,
   toInspectionSuggestions,
 } from './inspection-results';
@@ -22,22 +21,10 @@ function result(
     releasedAt: null,
     updatedAt: null,
     titleMatch: 'none',
+    titleSegments: [],
     ...overrides,
   };
 }
-
-describe('titleMatchOf', () => {
-  it('grades the exact phrase, every word, some words and none', () => {
-    expect(titleMatchOf('Habit Tracker: Daily Goals', 'habit tracker')).toBe(
-      'exact',
-    );
-    expect(titleMatchOf('Tracker for every habit', 'habit tracker')).toBe(
-      'allWords',
-    );
-    expect(titleMatchOf('Daily habit', 'habit tracker')).toBe('someWords');
-    expect(titleMatchOf('Calendar', 'habit tracker')).toBe('none');
-  });
-});
 
 describe('toInspectionResults', () => {
   it('numbers the results from 1, keeps the top 50 and maps missing fields to null', () => {
@@ -67,10 +54,36 @@ describe('toInspectionResults', () => {
       ratingCount: 1200,
       releasedAt: null,
       updatedAt: '2026-10-01T00:00:00.000Z',
-      titleMatch: 'exact',
+      titleMatch: 'phrase',
+      titleSegments: [
+        { text: 'Habit', match: 'exact' },
+        { text: ' ', match: 'none' },
+        { text: 'Tracker', match: 'exact' },
+      ],
     });
     expect(results[49].position).toBe(50);
     expect(results[1].developer).toBeNull();
+  });
+
+  it('grades each title with the rankings title judge', () => {
+    const titles = [
+      'Habit Tracker: Daily Goals',
+      'Tracker for every habit',
+      'Daily habit',
+      'Calendar',
+    ];
+
+    const results = toInspectionResults(
+      titles.map((title, index) => ({ storeAppId: `id${index}`, title })),
+      'habit tracker',
+    );
+
+    expect(results.map((result) => result.titleMatch)).toEqual([
+      'phrase',
+      'words',
+      'partial',
+      'none',
+    ]);
   });
 });
 
@@ -102,19 +115,19 @@ describe('summarizeCompetition', () => {
       result({
         ratingCount: 250_000,
         ratingAvg: 4.8,
-        titleMatch: 'exact',
+        titleMatch: 'phrase',
         updatedAt: '2026-11-01T00:00:00.000Z',
       }),
       result({
         ratingCount: 1_000,
         ratingAvg: 4.0,
-        titleMatch: 'allWords',
+        titleMatch: 'words',
         updatedAt: '2026-06-01T00:00:00.000Z',
       }),
-      result({ ratingCount: 50, titleMatch: 'someWords' }),
+      result({ ratingCount: 50, titleMatch: 'partial' }),
     ];
     const below = Array.from({ length: 10 }, () =>
-      result({ ratingCount: 9_000_000, titleMatch: 'exact' }),
+      result({ ratingCount: 9_000_000, titleMatch: 'phrase' }),
     );
 
     expect(summarizeCompetition([...top, ...below], NOW)).toEqual({

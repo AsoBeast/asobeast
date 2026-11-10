@@ -4,7 +4,9 @@ import type {
   Store,
   SuggestReachStatus,
 } from '../index';
+import type { KeywordBreakdownSegment } from './keyword-breakdown';
 import type { ScoreSignals } from './keywords';
+import type { SerpTitleMatch } from './serp';
 
 export const KEYWORD_INSPECTION_STATUSES = [
   'PENDING',
@@ -17,15 +19,6 @@ export type KeywordInspectionStatus =
 export const KEYWORD_INSPECTION_RESULT_DEPTH = 50;
 export const KEYWORD_INSPECTION_SUGGESTION_LIMIT = 10;
 export const KEYWORD_INSPECTION_LIST_LIMIT = 50;
-
-export const KEYWORD_INSPECTION_TITLE_MATCHES = [
-  'exact',
-  'allWords',
-  'someWords',
-  'none',
-] as const;
-export type KeywordInspectionTitleMatch =
-  (typeof KEYWORD_INSPECTION_TITLE_MATCHES)[number];
 
 export interface KeywordInspectionRequest {
   keyword: string;
@@ -43,7 +36,8 @@ export interface KeywordInspectionResult {
   ratingCount: number | null;
   releasedAt: string | null;
   updatedAt: string | null;
-  titleMatch: KeywordInspectionTitleMatch;
+  titleMatch: SerpTitleMatch;
+  titleSegments: KeywordBreakdownSegment[];
 }
 
 export interface KeywordInspectionSuggestion {
@@ -77,6 +71,7 @@ export interface KeywordInspectionSummary {
   country: string;
   status: KeywordInspectionStatus;
   requestedAt: string;
+  startedAt: string | null;
   completedAt: string | null;
   volume: number | null;
   difficulty100: number | null;

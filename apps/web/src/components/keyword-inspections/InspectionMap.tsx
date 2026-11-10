@@ -4,6 +4,7 @@ import { useId, useRef, useState, type ReactNode, type RefObject } from "react";
 import { normalizeText } from "@asobeast/shared";
 import { CartesianGrid, Scatter, ScatterChart, XAxis, YAxis } from "recharts";
 import {
+  CHART_HEIGHT,
   CHART_MARGIN,
   GRID_PROPS,
   SCORE_AXIS_PROPS,
@@ -60,12 +61,12 @@ const keepUnless =
 
 function EmptyMap({ storefront }: { storefront: Storefront }) {
   return (
-    <div className="flex h-[280px] flex-col items-center justify-center gap-1 rounded-md border border-dashed px-6 text-center sm:h-[400px]">
+    <div
+      className={`${CHART_HEIGHT.hero} flex flex-col items-center justify-center gap-1 rounded-md border border-dashed px-6 text-center`}
+    >
       <p className="font-medium">Nothing on the map yet</p>
       <p className="max-w-sm text-sm text-muted-foreground">
-        Inspect a keyword in {storeLabel(storefront.store)}{" "}
-        {formatCountry(storefront.country)} and it lands here, placed by its
-        popularity and difficulty.
+        {`Inspect a keyword in ${storeLabel(storefront.store)} ${formatCountry(storefront.country)} and it lands here, placed by its popularity and difficulty.`}
       </p>
     </div>
   );
@@ -194,7 +195,7 @@ export function InspectionMap({
             config={{}}
             role="region"
             aria-label="Inspected keywords by difficulty and popularity"
-            className="aspect-auto h-[300px] w-full sm:h-[420px]"
+            className={`aspect-auto ${CHART_HEIGHT.hero} w-full`}
           >
             <ScatterChart
               accessibilityLayer

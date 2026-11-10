@@ -22,9 +22,14 @@ const NOW = new Date('2026-08-08T10:30:00Z');
 describe('OnDemandLimiter', () => {
   const incr = jest.fn<Promise<number>, [string]>();
   const expire = jest.fn<Promise<number>, [string, number]>();
+  const evaluate = jest.fn<Promise<number>, [string, number, string]>();
   const workspace = new WorkspaceContext();
 
-  const redis = new FailFastRedis({ incr, expire } as unknown as Redis);
+  const redis = new FailFastRedis({
+    incr,
+    expire,
+    eval: evaluate,
+  } as unknown as Redis);
 
   const limiterWith = (metered: boolean, plan: PlanName = 'indie') =>
     new OnDemandLimiter(redis, workspace, {
@@ -41,6 +46,31 @@ describe('OnDemandLimiter', () => {
   beforeEach(() => {
     incr.mockReset().mockResolvedValue(1);
     expire.mockReset().mockResolvedValue(1);
+    evaluate.mockReset().mockResolvedValue(0);
+  });
+
+  it('gives one request back to the window it was spent in', async () => {
+    await scoped(() => limiterWith(true).refund('score', NOW));
+
+    expect(evaluate).toHaveBeenCalledTimes(1);
+    expect(evaluate.mock.calls[0].slice(1)).toEqual([
+      1,
+      windowKey('on-demand', WORKSPACE, 'score', 86_400, NOW),
+    ]);
+  });
+
+  it('gives nothing back on a self hosted instance', async () => {
+    await scoped(() => limiterWith(false).refund('score', NOW));
+
+    expect(evaluate).not.toHaveBeenCalled();
+  });
+
+  it('swallows a refund redis cannot take', async () => {
+    evaluate.mockRejectedValue(new Error('Command timed out'));
+
+    await expect(
+      scoped(() => limiterWith(true).refund('score', NOW)),
+    ).resolves.toBeUndefined();
   });
 
   it('never limits a self hosted instance', async () => {

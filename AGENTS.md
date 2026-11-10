@@ -376,6 +376,7 @@ RETENTION_CHANGE_EVENTS_DAYS=0      # change events; 0 keeps forever
 RETENTION_DELIVERIES_DAYS=30        # alert delivery log rows; 0 keeps forever
 RETENTION_AUDIT_SCORES_DAYS=0       # audit score rows; 0 keeps forever
 RETENTION_BILLING_EVENTS_DAYS=90    # stored stripe webhook payloads; they carry customer billing details. 0 keeps forever
+RETENTION_KEYWORD_INSPECTIONS_DAYS=180 # keyword inspections, each holding its search results and suggestions; 0 keeps forever
 RETENTION_ACTIONS_DAYS=180          # closed action items (done/dismissed/resolved); open and snoozed are never pruned by age; 0 keeps forever
 RETENTION_AI_CALLS_DAYS=400         # ai call ledger rows; never prunes the current month, which the monthly allowance still counts; 0 keeps forever
 RETENTION_STORE_REPORTS_DAYS=35      # downloaded app store connect report files kept for reprocessing; the funnel rows built from them are never pruned by age; 0 keeps forever

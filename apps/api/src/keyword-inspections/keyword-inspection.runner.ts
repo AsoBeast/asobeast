@@ -9,8 +9,6 @@ import {
 } from './inspection-results';
 import {
   INSPECTION_NOT_COLLECTING,
-  INSPECTION_PENDING_TTL_MS,
-  INSPECTION_TIMED_OUT,
   inspectionFailureOf,
 } from './inspection-failures';
 
@@ -34,18 +32,17 @@ export class KeywordInspectionRunner {
       where: { id: inspectionId, status: 'PENDING' },
       select: {
         id: true,
-        requestedAt: true,
         keyword: { select: { text: true, store: true, country: true } },
       },
     });
     if (!inspection) {
       return;
     }
-    if (
-      inspection.requestedAt.getTime() <
-      Date.now() - INSPECTION_PENDING_TTL_MS
-    ) {
-      await this.close(inspection.id, INSPECTION_TIMED_OUT);
+    const { count } = await this.prisma.keywordInspection.updateMany({
+      where: { id: inspection.id, status: 'PENDING' },
+      data: { startedAt: new Date() },
+    });
+    if (count === 0) {
       return;
     }
     await this.complete(inspection.id, inspection.keyword);

@@ -17,6 +17,13 @@ const ON_DEMAND_WINDOWS = new Map<number, RateWindow>([
   [DAY_SECONDS, 'day'],
 ]);
 
+const REFUND_ONE = `
+if redis.call('EXISTS', KEYS[1]) == 1 then
+  redis.call('DECR', KEYS[1])
+end
+return 0
+`;
+
 function windowOf(windowSeconds: number): RateWindow {
   const window = ON_DEMAND_WINDOWS.get(windowSeconds);
   if (!window) {
@@ -66,5 +73,21 @@ export class OnDemandLimiter {
       upgradeTo: nextPlan(plan),
       action,
     });
+  }
+
+  async refund(action: OnDemandAction, now = new Date()): Promise<void> {
+    const { limits } = await this.quota.planScope();
+    const rule = limits.onDemand?.[action];
+    if (!rule) return;
+    const key = windowKey(
+      'on-demand',
+      this.workspace.require(`an on-demand ${action}`),
+      action,
+      rule.windowSeconds,
+      now,
+    );
+    await this.redis.runOpen(async (client) => {
+      await client.eval(REFUND_ONE, 1, key);
+    }, undefined);
   }
 }

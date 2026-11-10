@@ -6,6 +6,7 @@ import type {
   KeywordInspectionResult,
 } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
+import { MatchedText } from "@/components/keyword-match/MatchedText";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,9 +25,9 @@ import { TITLE_MATCH_LABELS } from "./inspection-format";
 const COLLAPSED_COUNT = 10;
 
 const MATCH_VARIANTS = {
-  exact: "info",
-  allWords: "secondary",
-  someWords: "outline",
+  phrase: "info",
+  words: "secondary",
+  partial: "outline",
   none: "ghost",
 } as const;
 
@@ -75,8 +76,15 @@ export function InspectionResultsTable({
                       size={28}
                     />
                     <div className="flex min-w-0 flex-col">
-                      <span className="truncate font-medium">
-                        {result.title}
+                      <span
+                        translate="no"
+                        dir="auto"
+                        className="truncate font-medium"
+                      >
+                        <MatchedText
+                          segments={result.titleSegments}
+                          fallback={result.title}
+                        />
                       </span>
                       <Badge
                         variant={MATCH_VARIANTS[result.titleMatch]}

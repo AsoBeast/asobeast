@@ -8,7 +8,12 @@ import { Loader2 } from "lucide-react";
 import { ZONE_FILLS } from "@/components/keywords/map/zone-layers";
 import { useZoneThresholds } from "@/components/keywords/use-zone-thresholds";
 import { Badge } from "@/components/ui/badge";
-import { formatDateTime, formatNumber, storeLabel } from "@/lib/format";
+import {
+  formatCountry,
+  formatDateTime,
+  formatNumber,
+  storeLabel,
+} from "@/lib/format";
 import { ZONE_LABELS, zoneOf, type ZoneThresholds } from "@/lib/keyword-zones";
 import { cn } from "@/lib/utils";
 import { DeleteInspectionButton } from "./DeleteInspectionButton";
@@ -52,7 +57,7 @@ function RunStatus({ item }: { item: KeywordInspectionSummary }) {
     return (
       <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
         <Loader2 aria-hidden className="size-3.5 animate-spin" />
-        Running
+        <span>Running</span>
       </span>
     );
   }
@@ -140,6 +145,7 @@ function LogRow({
       <DeleteInspectionButton
         id={item.id}
         keyword={item.keyword}
+        subject={`${item.keyword} in ${storeLabel(item.store)} ${formatCountry(item.country)} from ${formatDateTime(item.requestedAt)}`}
         onDeleted={onDeleted}
       />
     </li>

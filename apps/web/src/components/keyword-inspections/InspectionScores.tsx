@@ -65,9 +65,9 @@ export function InspectionScores({
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
           <span>{SCORING_SOURCE_LABELS[provenance.source]}</span>
           <span aria-hidden>·</span>
-          <span>Formula {provenance.formulaVersion}</span>
+          <span>{`Formula ${provenance.formulaVersion}`}</span>
           <Badge variant="secondary">
-            {SCORING_CONFIDENCE_LABELS[provenance.confidence]} confidence
+            {`${SCORING_CONFIDENCE_LABELS[provenance.confidence]} confidence`}
           </Badge>
           <InfoTip
             label="How these scores are estimated"

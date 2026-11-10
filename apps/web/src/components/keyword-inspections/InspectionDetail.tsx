@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, type Ref } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { KeywordInspection } from "@asobeast/shared";
 import { Loader2, SearchX } from "lucide-react";
@@ -8,6 +9,7 @@ import { InlineQueryError } from "@/components/layout/InlineQueryError";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { isNotFound, requestKeywordInspection } from "@/lib/api";
+import { useFocusAfterCommit } from "@/lib/focus-handoff";
 import { formatCountry, formatDateTime, storeLabel } from "@/lib/format";
 import { keywordInspectionOptions, seedKeywordInspection } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
@@ -19,11 +21,19 @@ import {
   InspectionScoresSkeleton,
 } from "./skeletons";
 
-function InspectionHeading({ inspection }: { inspection: KeywordInspection }) {
+function InspectionHeading({
+  inspection,
+  ref,
+}: {
+  inspection: KeywordInspection;
+  ref: Ref<HTMLHeadingElement>;
+}) {
   const when = inspection.completedAt ?? inspection.requestedAt;
   return (
     <header className="flex flex-col gap-0.5">
-      <h2 className="text-title text-balance">{`“${inspection.keyword}”`}</h2>
+      <h2 ref={ref} tabIndex={-1} className="text-title text-balance">
+        {`“${inspection.keyword}”`}
+      </h2>
       <p className="text-sm text-muted-foreground">
         {`${storeLabel(inspection.store)} · ${formatCountry(inspection.country)} · ${formatDateTime(when)}`}
       </p>
@@ -33,12 +43,16 @@ function InspectionHeading({ inspection }: { inspection: KeywordInspection }) {
 
 function FailedInspection({
   inspection,
-  onInspected,
+  onRetried,
 }: {
   inspection: KeywordInspection;
-  onInspected: (inspection: KeywordInspection) => void;
+  onRetried: (
+    inspection: KeywordInspection,
+    leaving: HTMLButtonElement | null,
+  ) => void;
 }) {
   const queryClient = useQueryClient();
+  const button = useRef<HTMLButtonElement>(null);
   const retry = useMutation({
     mutationFn: () =>
       requestKeywordInspection({
@@ -48,7 +62,7 @@ function FailedInspection({
       }),
     onSuccess: (next) => {
       seedKeywordInspection(queryClient, next);
-      onInspected(next);
+      onRetried(next, button.current);
     },
     onError: () => toast.error("Could not start the inspection again"),
   });
@@ -63,6 +77,7 @@ function FailedInspection({
         <p className="text-sm text-muted-foreground">{inspection.failure}</p>
       ) : null}
       <Button
+        ref={button}
         variant="outline"
         aria-disabled={retry.isPending || undefined}
         onClick={() => retryOnce(undefined)}
@@ -119,6 +134,8 @@ export function InspectionDetail({
   onInspected: (inspection: KeywordInspection) => void;
 }) {
   const read = useQuery(keywordInspectionOptions(id));
+  const heading = useRef<HTMLHeadingElement>(null);
+  const handOffFocus = useFocusAfterCommit();
   if (read.isPending) return <InspectionDetailSkeleton />;
   if (read.isError && isNotFound(read.error)) {
     return (
@@ -143,7 +160,7 @@ export function InspectionDetail({
       aria-busy={inspection.status === "PENDING"}
       className="flex flex-col gap-6"
     >
-      <InspectionHeading inspection={inspection} />
+      <InspectionHeading inspection={inspection} ref={heading} />
       {inspection.status === "PENDING" ? (
         <>
           <p
@@ -151,13 +168,23 @@ export function InspectionDetail({
             className="flex items-center gap-2 text-sm text-muted-foreground"
           >
             <Loader2 aria-hidden className="size-4 animate-spin" />
-            Reading the store. This usually takes a few seconds.
+            <span>
+              {inspection.startedAt === null
+                ? "Waiting for the store queue. Scheduled store work runs first, so this can take a few minutes."
+                : "Reading the store. This usually takes under a minute."}
+            </span>
           </p>
           <InspectionScoresSkeleton />
         </>
       ) : null}
       {inspection.status === "FAILED" ? (
-        <FailedInspection inspection={inspection} onInspected={onInspected} />
+        <FailedInspection
+          inspection={inspection}
+          onRetried={(next, leaving) => {
+            handOffFocus(heading.current, leaving);
+            onInspected(next);
+          }}
+        />
       ) : null}
       {inspection.status === "DONE" ? (
         <CompletedInspection inspection={inspection} />

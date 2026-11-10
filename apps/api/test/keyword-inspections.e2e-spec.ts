@@ -21,6 +21,7 @@ import {
 } from '../src/jobs/jobs.types';
 import { StoreJobsHandler } from '../src/jobs/store-jobs.handler';
 import {
+  INSPECTION_DROPPED,
   INSPECTION_NOT_QUEUED,
   INSPECTION_TIMED_OUT,
 } from '../src/keyword-inspections/inspection-failures';
@@ -229,16 +230,17 @@ describe('KeywordInspectionsController (e2e)', () => {
     expect(await prisma.keywordInspection.count()).toBe(1);
   });
 
-  it('fails a pending inspection that never finished and queues a new one', async () => {
+  it('fails a started inspection that never finished and queues a new one', async () => {
     const body = {
       keyword: 'habit tracker',
       store: 'APP_STORE',
       country: 'us',
     };
     const stale = await inspect(body);
+    const elevenMinutesAgo = new Date(Date.now() - 11 * 60 * 1000);
     await prisma.keywordInspection.update({
       where: { id: stale.id },
-      data: { requestedAt: new Date(Date.now() - 11 * 60 * 1000) },
+      data: { requestedAt: elevenMinutesAgo, startedAt: elevenMinutesAgo },
     });
 
     expect(
@@ -256,26 +258,58 @@ describe('KeywordInspectionsController (e2e)', () => {
     ).toMatchObject({ status: 'FAILED', failure: INSPECTION_TIMED_OUT });
   });
 
-  it('closes a run whose job arrives after it timed out without reading the store', async () => {
-    const late = await inspect({
+  it('keeps an inspection that waits in the queue past the timeout and runs it', async () => {
+    const body = {
       keyword: 'habit tracker',
       store: 'APP_STORE',
       country: 'us',
-    });
+    };
+    const late = await inspect(body);
     await prisma.keywordInspection.update({
       where: { id: late.id },
       data: { requestedAt: new Date(Date.now() - 11 * 60 * 1000) },
     });
 
+    expect(
+      (await api.get(`/keyword-inspections/${late.id}`).expect(200)).body,
+    ).toMatchObject({ status: 'PENDING', startedAt: null, failure: null });
+    expect((await inspect(body)).id).toBe(late.id);
+
     await runJob(late.id);
 
-    expect(registry.searches).toBe(0);
+    expect(registry.searches).toBe(1);
+    const done = await prisma.keywordInspection.findUniqueOrThrow({
+      where: { id: late.id },
+      select: { status: true, startedAt: true },
+    });
+    expect(done.status).toBe('DONE');
+    expect(done.startedAt).not.toBeNull();
+  });
+
+  it('fails a queued inspection whose job left the queue and queues a new one', async () => {
+    const body = {
+      keyword: 'habit tracker',
+      store: 'APP_STORE',
+      country: 'us',
+    };
+    const lost = await inspect(body);
+    await prisma.keywordInspection.update({
+      where: { id: lost.id },
+      data: { requestedAt: new Date(Date.now() - 11 * 60 * 1000) },
+    });
+    await (
+      await queue(Store.APP_STORE).getJob(inspectKeywordJobId(lost.id))
+    )?.remove();
+
+    const fresh = await inspect(body);
+
+    expect(fresh.id).not.toBe(lost.id);
     expect(
       await prisma.keywordInspection.findUniqueOrThrow({
-        where: { id: late.id },
+        where: { id: lost.id },
         select: { status: true, failure: true },
       }),
-    ).toEqual({ status: 'FAILED', failure: INSPECTION_TIMED_OUT });
+    ).toEqual({ status: 'FAILED', failure: INSPECTION_DROPPED });
   });
 
   it('fails an inspection the queue would not take', async () => {
@@ -320,7 +354,7 @@ describe('KeywordInspectionsController (e2e)', () => {
     ]);
     expect(done.results[0]).toMatchObject({
       position: 1,
-      titleMatch: 'exact',
+      titleMatch: 'phrase',
       ratingCount: 250_000,
     });
     expect(done.suggestions.map((item) => item.term)).toEqual([

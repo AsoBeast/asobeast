@@ -23,6 +23,7 @@ function summary(
     country: "us",
     status: "DONE",
     requestedAt: "2026-11-05T10:00:00.000Z",
+    startedAt: "2026-11-05T10:00:00.000Z",
     completedAt: "2026-11-05T10:00:05.000Z",
     volume: 64.6,
     difficulty100: 18.2,

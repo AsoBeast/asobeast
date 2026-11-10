@@ -15,6 +15,7 @@ CREATE TABLE "KeywordInspection" (
     "suggestions" JSONB,
     "failure" TEXT,
     "requestedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "startedAt" TIMESTAMP(3),
     "completedAt" TIMESTAMP(3),
 
     CONSTRAINT "KeywordInspection_pkey" PRIMARY KEY ("id")

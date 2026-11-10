@@ -4,14 +4,9 @@ import {
   KeywordInspectionCompetition,
   KeywordInspectionResult,
   KeywordInspectionSuggestion,
-  KeywordInspectionTitleMatch,
   searchKey,
 } from '@asobeast/shared';
-import {
-  EVIDENCE_ALL_WORDS,
-  EVIDENCE_EXACT,
-  titleEvidence,
-} from '../scoring/serp-signals';
+import { titleJudge } from '../rankings/serp-title-match';
 import { SearchItem, SuggestItem } from '../store-providers/types';
 
 export const COMPETITION_DEPTH = 10;
@@ -19,20 +14,11 @@ export const HEAVYWEIGHT_RATINGS = 100_000;
 export const FRESH_UPDATE_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export function titleMatchOf(
-  title: string,
-  keyword: string,
-): KeywordInspectionTitleMatch {
-  const evidence = titleEvidence(title, keyword);
-  if (evidence >= EVIDENCE_EXACT) return 'exact';
-  if (evidence >= EVIDENCE_ALL_WORDS) return 'allWords';
-  return evidence > 0 ? 'someWords' : 'none';
-}
-
 export function toInspectionResults(
   items: readonly SearchItem[],
   keyword: string,
 ): KeywordInspectionResult[] {
+  const judgeTitle = titleJudge(keyword);
   return items.slice(0, KEYWORD_INSPECTION_RESULT_DEPTH).map((item, index) => ({
     position: index + 1,
     storeAppId: item.storeAppId,
@@ -43,7 +29,7 @@ export function toInspectionResults(
     ratingCount: item.ratingCount ?? null,
     releasedAt: item.releasedAt?.toISOString() ?? null,
     updatedAt: item.updatedAt?.toISOString() ?? null,
-    titleMatch: titleMatchOf(item.title, keyword),
+    ...judgeTitle(item.title),
   }));
 }
 
@@ -105,11 +91,11 @@ export function summarizeCompetition(
     medianRatingCount: rounded(median(ratings), 0),
     strongestRatingCount: ratings.length === 0 ? null : Math.max(...ratings),
     averageRating: rounded(mean(averages), 2),
-    exactTitleMatches: top.filter((result) => result.titleMatch === 'exact')
+    exactTitleMatches: top.filter((result) => result.titleMatch === 'phrase')
       .length,
     titleMatches: top.filter(
       (result) =>
-        result.titleMatch === 'exact' || result.titleMatch === 'allWords',
+        result.titleMatch === 'phrase' || result.titleMatch === 'words',
     ).length,
     appsOverHundredThousandRatings: ratings.filter(
       (count) => count >= HEAVYWEIGHT_RATINGS,

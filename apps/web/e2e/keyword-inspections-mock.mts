@@ -28,6 +28,7 @@ function completed(pending: KeywordInspection): KeywordInspection {
   return {
     ...pending,
     status: "DONE",
+    startedAt: pending.requestedAt,
     completedAt: pending.requestedAt,
     volume: 46.4,
     difficulty100: 38.2,
@@ -59,7 +60,14 @@ function completed(pending: KeywordInspection): KeywordInspection {
       ratingCount: Math.round(250_000 / (index + 1)),
       releasedAt: null,
       updatedAt: pending.requestedAt,
-      titleMatch: index === 0 ? "exact" : "someWords",
+      titleMatch: index === 0 ? "phrase" : "none",
+      titleSegments:
+        index === 0
+          ? [
+              { text: "Habit Tracker", match: "exact" },
+              { text: ": Daily Goals", match: "none" },
+            ]
+          : [{ text: title, match: "none" }],
     })),
     suggestions: [
       { position: 1, term: pending.keyword },
@@ -116,6 +124,7 @@ function summaryOf(inspection: KeywordInspection): KeywordInspectionSummary {
     country: inspection.country,
     status: inspection.status,
     requestedAt: inspection.requestedAt,
+    startedAt: inspection.startedAt,
     completedAt: inspection.completedAt,
     volume: inspection.volume,
     difficulty100: inspection.difficulty100,
@@ -144,6 +153,7 @@ export function requestInspection(
     country: request.country,
     status: "PENDING",
     requestedAt: new Date().toISOString(),
+    startedAt: null,
     completedAt: null,
     volume: null,
     difficulty100: null,
@@ -165,9 +175,8 @@ export function requestInspection(
 export function readInspection(id: string): KeywordInspection | null {
   const stored = inspections.find((entry) => entry.pending.id === id);
   if (!stored) return null;
-  const answer = current(stored);
   stored.reads += 1;
-  return answer;
+  return current(stored);
 }
 
 export function listInspections(): { items: KeywordInspectionSummary[] } {
