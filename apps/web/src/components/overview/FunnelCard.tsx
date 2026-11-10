@@ -192,7 +192,7 @@ export function FunnelCard({ id, store }: { id: string; store: Store }) {
           <FunnelHelp store={store} />
         </CardAction>
       </CardHeader>
-      <Suspense fallback={<FunnelTilesSkeleton />}>
+      <Suspense fallback={<FunnelTilesSkeleton store={store} />}>
         <FunnelBody id={id} />
       </Suspense>
     </Card>

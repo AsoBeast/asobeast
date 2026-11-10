@@ -1,3 +1,4 @@
+import type { Store } from "@asobeast/shared";
 import { ChartSkeleton } from "@/components/charts/ChartStates";
 import { CHART_HEIGHT } from "@/components/charts/theme";
 import { PANEL_HEADER } from "@/components/dashboard/layout-classes";
@@ -9,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatTileGroup, StatTileSkeleton } from "@/components/ui/stat-tile";
+import { funnelTiles } from "@/lib/funnel";
 import { cn } from "@/lib/utils";
 import { PULSE_COLUMNS, PULSE_STRIP } from "./layout-classes";
 
@@ -52,12 +54,13 @@ export function CoverageCardSkeleton() {
   );
 }
 
-export function FunnelTilesSkeleton() {
+export function FunnelTilesSkeleton({ store }: { store: Store }) {
+  const tiles = funnelTiles({ store });
   return (
     <>
-      <StatTileGroup className={cn(PULSE_STRIP, PULSE_COLUMNS[4])}>
-        {Array.from({ length: 4 }).map((_, index) => (
-          <StatTileSkeleton key={index} />
+      <StatTileGroup className={cn(PULSE_STRIP, PULSE_COLUMNS[tiles.length])}>
+        {tiles.map((tile) => (
+          <StatTileSkeleton key={tile.label} />
         ))}
       </StatTileGroup>
       <CardFooter>
@@ -67,13 +70,13 @@ export function FunnelTilesSkeleton() {
   );
 }
 
-export function FunnelCardSkeleton() {
+export function FunnelCardSkeleton({ store }: { store: Store }) {
   return (
     <Card className="gap-0 pb-0">
       <CardHeader className={cn(PANEL_HEADER, "border-b border-border")}>
         <Skeleton className="h-5 w-48" />
       </CardHeader>
-      <FunnelTilesSkeleton />
+      <FunnelTilesSkeleton store={store} />
     </Card>
   );
 }

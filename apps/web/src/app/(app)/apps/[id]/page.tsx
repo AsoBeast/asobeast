@@ -180,7 +180,7 @@ export default async function AppOverviewPage({
           </div>
         </div>
 
-        <Suspense fallback={<FunnelCardSkeleton />}>
+        <Suspense fallback={<FunnelCardSkeleton store={app.store} />}>
           <FunnelCard id={id} store={app.store} />
         </Suspense>
 
