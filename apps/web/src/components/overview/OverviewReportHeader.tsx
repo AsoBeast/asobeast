@@ -1,16 +1,14 @@
 "use client";
 
-import { useQueryState, useQueryStates } from "nuqs";
+import { useQueryStates } from "nuqs";
 import { ReportHeader } from "@/components/app-detail/ReportHeader";
-import {
-  overviewRangeParsers,
-  visibilityViewParser,
-} from "@/lib/search-params";
+import { overviewRangeParsers } from "@/lib/search-params";
 import { OVERVIEW_CHARTS } from "./OverviewChart";
+import { useOverviewView } from "./use-overview-view";
 
 export function OverviewReportHeader({ id }: { id: string }) {
   const [ranges] = useQueryStates(overviewRangeParsers);
-  const [view] = useQueryState("visView", visibilityViewParser);
+  const { view } = useOverviewView(id);
 
   return (
     <ReportHeader

@@ -2,9 +2,8 @@
 
 import { Suspense, useDeferredValue, type ReactNode } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { useQueryState } from "nuqs";
 import type { AppSummary, ShareOfVoice } from "@asobeast/shared";
-import { useKeywordScope, useMarket } from "@/components/app-detail/use-market";
+import { useMarket } from "@/components/app-detail/use-market";
 import { Card } from "@/components/ui/card";
 import { TrendChip } from "@/components/ui/delta-chip";
 import {
@@ -14,11 +13,12 @@ import {
 } from "@/components/ui/stat-tile";
 import { formatNumber, formatRating, pluralize } from "@/lib/format";
 import { queryMarket } from "@/lib/market";
-import { appListingOptions, appSummaryOptions } from "@/lib/queries";
-import { visibilityViewParser, type VisibilityView } from "@/lib/search-params";
+import { appListingOptions } from "@/lib/queries";
+import type { VisibilityView } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
 import { PULSE_COLUMNS, PULSE_STRIP } from "./layout-classes";
 import { OverviewChart } from "./OverviewChart";
+import { useOverviewView } from "./use-overview-view";
 import {
   competitorsCaption,
   formatShare,
@@ -47,11 +47,11 @@ function RatingTile({ id }: { id: string }) {
   const country = useDeferredValue(queryMarket(market, home));
   const { data: listing } = useSuspenseQuery(appListingOptions(id, country));
   const snapshot = listing.latestSnapshot;
-  const rated = snapshot?.ratingAvg != null;
+  const average = snapshot?.ratingAvg ?? null;
   return (
     <StatTile
       label="Rating"
-      value={rated ? formatRating(snapshot.ratingAvg ?? 0) : "—"}
+      value={average === null ? "—" : formatRating(average)}
       note={
         snapshot?.ratingCount != null
           ? pluralize(snapshot.ratingCount, "rating")
@@ -65,15 +65,11 @@ const top10Note = (summary: AppSummary): string =>
   `of ${formatNumber(summary.trackedKeywords)} tracked`;
 
 export function OverviewPulse({ id }: { id: string }) {
-  const { country } = useKeywordScope(id);
-  const { data: summary } = useSuspenseQuery(appSummaryOptions(id, country));
-  const [view, setView] = useQueryState("visView", visibilityViewParser);
+  const { summary, view: shown, select } = useOverviewView(id);
   const { visibility, shareOfVoice: share } = summary;
-  const shown: VisibilityView =
-    view === "share" && !share ? "visibility" : view;
   const tab = (value: VisibilityView) => ({
     selected: shown === value,
-    onSelect: () => void setView(value),
+    onSelect: () => select(value),
   });
 
   return (
