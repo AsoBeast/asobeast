@@ -8,21 +8,22 @@
 
 ## Where the rules live
 
-This file holds what applies everywhere. Each area keeps its detailed rules in an `AGENTS.md` beside its code, loaded when you work there. Before changing behaviour an index line below names, read the file it points to, even when you start elsewhere.
+This file holds what applies everywhere. The detailed rules live in `.claude/rules/`, one file per area, each with a `paths:` list of the API and web files it governs. Claude Code loads a rule file when it reads or edits one of those files; any other agent reads the file named below before it changes that area. The indexes after the list state each rule in one line.
 
-- `apps/web/AGENTS.md`: Frontend rules 1 to 10
-- `apps/api/AGENTS.md`: API conventions; domain rules 1, 3 to 8, 11, 13, 14, 18
-- `apps/api/src/auth/AGENTS.md`: Domain rule 9 (also loaded from `billing/`)
-- `apps/api/src/keywords/AGENTS.md`: Domain rules 2, 15, 22, 25 (also loaded from `competitors/`)
-- `apps/api/src/actions/AGENTS.md`: Domain rule 12
-- `apps/api/src/screenshots/AGENTS.md`: Domain rule 16
-- `apps/api/src/alerts/AGENTS.md`: Domain rules 17, 19, 24
-- `apps/api/src/charts/AGENTS.md`: Domain rule 20 (also loaded from `category-ranks/`)
-- `apps/api/src/reviews/AGENTS.md`: Domain rule 21
-- `apps/api/src/store-connect/AGENTS.md`: Domain rule 23
-- `apps/api/src/keyword-discovery/AGENTS.md`: Domain rule 26
-- `apps/api/src/checklist/AGENTS.md`: Domain rule 27
-- `packages/mcp-tools/AGENTS.md`: Shared code rule 7, domain rule 10 (also loaded from `apps/mcp/` and `apps/api/src/mcp/`)
+- `.claude/rules/web.md`: frontend rules 1 to 10. Read for any change under `apps/web`.
+- `.claude/rules/api.md`: the API conventions and domain rules 1, 3 to 8, 13, 14 and 18. Read for any change under `apps/api`.
+- `.claude/rules/admin-surfaces.md`: domain rule 11. Read when you touch the admin area, the docs, metrics or support surfaces, or the web proxy.
+- `.claude/rules/auth-billing.md`: domain rule 9. Read when you touch sign in, registration, sessions, tokens, the team, billing or the trial.
+- `.claude/rules/keywords.md`: domain rules 2, 15, 22 and 25. Read when you touch keywords, keyword fields, keyword imports, competitors or the metadata page.
+- `.claude/rules/keyword-discovery.md`: domain rule 26. Read when you touch discovered keywords.
+- `.claude/rules/actions.md`: domain rule 12. Read when you touch the Action Center.
+- `.claude/rules/screenshots.md`: domain rule 16. Read when you touch screenshots or their captions.
+- `.claude/rules/alerts.md`: domain rules 17, 19 and 24. Read when you touch alerts, alert emails or the alert feed.
+- `.claude/rules/charts.md`: domain rule 20. Read when you touch top charts or category ranks.
+- `.claude/rules/reviews.md`: domain rule 21. Read when you touch reviews, replies or translations.
+- `.claude/rules/store-connect.md`: domain rule 23. Read when you touch store console connections or the funnel.
+- `.claude/rules/checklist.md`: domain rule 27. Read when you touch the workspace checklist.
+- `.claude/rules/mcp.md`: shared code rule 7 and domain rule 10. Read when you touch either MCP transport or the tool catalog.
 
 ### Frontend rules index
 
@@ -164,7 +165,7 @@ Decompose by responsibility, not by syntactic kind: the target is fewer concepts
 
 - `/docs` is the Mintlify site, not a workspace; the Mintlify CLI runs only through `pnpm dlx` (via `scripts/mint.sh`). Preview with `pnpm docs:dev`, check with `pnpm docs:check`, lint prose with `pnpm docs:prose` and format with `pnpm docs:format` (Prettier skips `docs/**/*.mdx`).
 - Every page has a `title` and a `description`; headings are sentence case. Docs and `README.md` use no dash punctuation (no em dash, en dash or spaced hyphen standing in for a comma or colon; hyphenated compounds stay), enforced by `Dashes.yml` and `pnpm check:readme-prose`.
-- A fact lives on exactly one page. `docs/concepts/` owns the domain rules, `docs/integrations/` the console connections, `docs/guides/screenshot-captions.mdx` and `docs/concepts/stores.mdx` the caption rules, the Store funnel guide what the funnel numbers mean. `README.md` stays short and links to the docs instead of repeating them. Commit the site with the `docs` scope and `README.md`, `CONTRIBUTING.md` and the `AGENTS.md` files with `repo`.
+- A fact lives on exactly one page. `docs/concepts/` owns the domain rules, `docs/integrations/` the console connections, `docs/guides/screenshot-captions.mdx` and `docs/concepts/stores.mdx` the caption rules, the Store funnel guide what the funnel numbers mean. `README.md` stays short and links to the docs instead of repeating them. Commit the site with the `docs` scope and `README.md`, `CONTRIBUTING.md`, `AGENTS.md` and `.claude/rules/` with `repo`.
 - A change to a controller, a DTO or a response shape re-runs `pnpm docs:openapi`; Release Please bumps its `info.version`, so a release needs no recapture. `pnpm check:release-versions` keeps every versioned file on the release version.
 - Every `https://docs.asobeast.com` link in `apps/web/src` is one literal URL, checked by `apps/web/src/lib/docs-links.test.ts`; renaming a heading updates its links in the same commit.
 - Pins Dependabot cannot see are bumped by hand: `MINT_VERSION` in `scripts/mint.sh`, `VALE_VERSION`, `MCP_PUBLISHER_VERSION`, `RCLONE_VERSION` and `AGE_VERSION` in the workflows (each with its checksum), `cloudflared` in `docker-compose.tunnel.yml`, the `ASOBEAST_IMAGE_TAG` default in `docker-compose.pull.yml` (the current release) and the `mcr.microsoft.com/playwright` tag in `ci.yml`, which `pnpm check:playwright-image` holds to `@playwright/test`. CI fails any Compose image on `latest`.

@@ -92,7 +92,8 @@ knowledge_base:
   code_guidelines:
     enabled: true
     filePatterns:
-      - "**/AGENTS.md"
+      - "AGENTS.md"
+      - ".claude/rules/*.md"
       - "CONTRIBUTING.md"
   learnings:
     scope: local
