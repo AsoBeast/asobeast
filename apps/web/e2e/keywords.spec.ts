@@ -883,7 +883,7 @@ test("the columns menu hides a column and remembers it", async ({ page }) => {
   ).toHaveCount(0);
   await expect(
     menu.getByRole("menuitemcheckbox").filter({ hasNotText: "Listing marks" }),
-  ).toHaveCount(11);
+  ).toHaveCount(12);
   await menu.getByRole("menuitemcheckbox", { name: "Source" }).click();
   await page.keyboard.press("Escape");
 
