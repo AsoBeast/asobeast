@@ -595,3 +595,15 @@ export type VisibilityView = (typeof VISIBILITY_VIEWS)[number];
 
 export const visibilityViewParser =
   parseAsStringLiteral(VISIBILITY_VIEWS).withDefault("visibility");
+
+const inspectionIdParser = createParser({
+  parse: (value) => (value.trim().length > 0 ? value : null),
+  serialize: (value: string) => value,
+});
+
+export const inspectParsers = {
+  id: inspectionIdParser,
+  keyword: parseAsString.withDefault(""),
+  store: parseAsStringLiteral(STORES).withDefault("APP_STORE"),
+  country: countryParser,
+};

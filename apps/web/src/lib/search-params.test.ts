@@ -67,6 +67,7 @@ import {
   changeDaysParser,
   changeOwnerParser,
   countryParser,
+  inspectParsers,
   matrixFilterParsers,
   discoveryDaysParser,
   discoveryStateParser,
@@ -762,5 +763,15 @@ describe("the gap analysis url state", () => {
     expect(
       serialize({ sort: "popularity", dir: "asc", q: "focus", country: "de" }),
     ).toBe("?gapSort=popularity&gapDir=asc&gapQ=focus&gapCountry=de");
+  });
+});
+
+describe("inspection id parser", () => {
+  it("reads an inspection id", () => {
+    expect(inspectParsers.id.parseServerSide("insp_1")).toBe("insp_1");
+  });
+
+  it.each(["", "  "])("treats %j as no selection", (value) => {
+    expect(inspectParsers.id.parseServerSide(value)).toBeNull();
   });
 });
