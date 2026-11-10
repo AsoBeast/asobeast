@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { STORE_SEARCH_QUERY_MAX_LENGTH } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
-import { APP_1_SUMMARY, IMPORTED_APP, STORE_SEARCH } from "./fixtures.mts";
+import { APP_1_DETAIL, IMPORTED_APP, STORE_SEARCH } from "./fixtures.mts";
 import { startedSetup, storedSetup } from "./setup-session.mts";
 
 const utcDateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -860,7 +860,7 @@ test("an existing portfolio is not enrolled without an import", async ({
   await expect(page.getByRole("link", { name: "Resume setup" })).toHaveCount(0);
 });
 
-test("app overview renders summary numbers and a utc refresh date", async ({
+test("app overview renders summary numbers and a utc snapshot date", async ({
   page,
 }) => {
   await page.goto("/apps/app-1");
@@ -891,11 +891,10 @@ test("app overview renders summary numbers and a utc refresh date", async ({
   ).toBeVisible();
   await expect(coverage.getByText("productivity app")).toBeVisible();
 
-  const refreshDate = utcDateFormatter.format(
-    new Date(APP_1_SUMMARY.lastRefreshAt ?? ""),
+  const snapshotDate = utcDateFormatter.format(
+    new Date(APP_1_DETAIL.latestSnapshot?.capturedAt ?? ""),
   );
-  await expect(page.getByText(`Snapshot ${refreshDate}`)).toHaveCount(1);
-  await expect(page.getByText("Last refresh")).toHaveCount(0);
+  await expect(page.getByText(`Snapshot ${snapshotDate}`)).toHaveCount(1);
 });
 
 test("an app that iPhone search never lists carries a notice on every page", async ({

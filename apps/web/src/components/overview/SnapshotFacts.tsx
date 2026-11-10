@@ -11,6 +11,7 @@ import {
 } from "@/lib/format";
 import { queryMarket } from "@/lib/market";
 import { appListingOptions } from "@/lib/queries";
+import { cn } from "@/lib/utils";
 
 export function SnapshotFacts({ id }: { id: string }) {
   const { market, home } = useMarket(id);
@@ -30,11 +31,20 @@ export function SnapshotFacts({ id }: { id: string }) {
     snapshot ? `Snapshot ${formatDate(snapshot.capturedAt)}${where}` : null,
   ].filter((fact) => fact !== null);
 
+  if (facts.length === 0) {
+    return (
+      <p className={LEDE}>No store snapshot yet. Refresh to capture one.</p>
+    );
+  }
+
   return (
-    <p className={LEDE}>
-      {facts.length > 0
-        ? facts.join(" · ")
-        : "No store snapshot yet. Refresh to capture one."}
-    </p>
+    <ul className={cn(LEDE, "flex flex-wrap items-center gap-x-2")}>
+      {facts.map((fact, index) => (
+        <li key={fact} className="flex items-center gap-x-2">
+          {index > 0 ? <span aria-hidden>·</span> : null}
+          <span>{fact}</span>
+        </li>
+      ))}
+    </ul>
   );
 }

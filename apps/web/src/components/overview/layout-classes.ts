@@ -1,7 +1,6 @@
 export const PULSE_STRIP = "rounded-none border-0";
 
 export const PULSE_COLUMNS: Record<number, string> = {
-  2: "grid-cols-2",
   3: "grid-cols-1 @lg/overview:grid-cols-3",
   4: "grid-cols-2 @3xl/overview:grid-cols-4",
 };

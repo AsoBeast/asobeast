@@ -18,8 +18,6 @@ import { RankBandsChart } from "./RankBandsChart";
 import { ShareOfVoiceChart } from "./ShareOfVoiceChart";
 import { VisibilityAreaChart } from "./VisibilityAreaChart";
 
-export const OVERVIEW_CHART_HEIGHT = CHART_HEIGHT.tall;
-
 interface ChartView {
   title: string;
   help?: ReactNode;
@@ -75,7 +73,7 @@ export function OverviewChart({
           onChange={setRange}
         />
       </div>
-      <Suspense fallback={<ChartSkeleton height={OVERVIEW_CHART_HEIGHT} />}>
+      <Suspense fallback={<ChartSkeleton height={CHART_HEIGHT.tall} />}>
         <Chart id={id} range={shownRange} />
       </Suspense>
     </CardContent>

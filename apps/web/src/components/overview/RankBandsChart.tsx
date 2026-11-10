@@ -97,7 +97,7 @@ export function RankBandsChart({
       <ChartStat
         height={HEIGHT}
         label="Keywords in the top 10"
-        value={String(latest.rank1 + latest.rank2to3 + latest.rank4to10)}
+        value={formatNumber(latest.rank1 + latest.rank2to3 + latest.rank4to10)}
         note="A trend needs a few more daily checks."
       />
     );
