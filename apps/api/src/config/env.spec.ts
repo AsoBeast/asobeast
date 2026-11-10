@@ -89,6 +89,31 @@ describe('AI_CALLS_PER_MONTH', () => {
   });
 });
 
+describe('AI_MAX_OUTPUT_TOKENS', () => {
+  const withCeiling = (value: string) =>
+    validateEnv({ AUTH_SECRET: 'a'.repeat(32), AI_MAX_OUTPUT_TOKENS: value });
+
+  it.each([undefined, '', '  '])(
+    'gives a reasoning model 16384 output tokens when unset (%p)',
+    (value) => {
+      expect(
+        validateEnv({
+          AUTH_SECRET: 'a'.repeat(32),
+          AI_MAX_OUTPUT_TOKENS: value,
+        }).AI_MAX_OUTPUT_TOKENS,
+      ).toBe(16_384);
+    },
+  );
+
+  it('reads a lower ceiling for a provider with a smaller output limit', () => {
+    expect(withCeiling('4096').AI_MAX_OUTPUT_TOKENS).toBe(4096);
+  });
+
+  it.each(['512', '0', 'abc', '2048.5'])('refuses a ceiling of %s', (value) => {
+    expect(() => withCeiling(value)).toThrow();
+  });
+});
+
 describe('OPENAI_BASE_URL', () => {
   const withAddress = (value: string) =>
     validateEnv({ AUTH_SECRET: 'a'.repeat(32), OPENAI_BASE_URL: value });

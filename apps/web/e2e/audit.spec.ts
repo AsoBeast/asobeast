@@ -190,14 +190,16 @@ test("explains how to enable the analysis when no key is configured", async ({
   await expect(panel.getByRole("button")).toHaveCount(0);
 });
 
-test("says the image links go to OpenAI before an analysis", async ({
+test("says the icon and screenshots go to OpenAI before an analysis", async ({
   page,
 }) => {
   await page.goto("/apps/app-gp/audit");
   const panel = page.getByRole("region", { name: "AI creative analysis" });
 
   await expect(
-    panel.getByText("Sends image links to OpenAI with gpt-5.6-luna."),
+    panel.getByText(
+      "Sends the icon and screenshots to OpenAI with gpt-5.6-luna.",
+    ),
   ).toBeVisible();
 });
 
@@ -211,7 +213,7 @@ test("never names OpenAI when another provider is configured", async ({
 
   await expect(
     panel.getByText(
-      "Sends image links to gpt-5.6-luna on the AI provider this instance is configured with.",
+      "Sends the icon and screenshots to gpt-5.6-luna on the AI provider this instance is configured with.",
     ),
   ).toBeVisible();
   await expect(panel.getByText(/OpenAI/)).toHaveCount(0);
@@ -323,7 +325,7 @@ test("offers to analyze again when the creative changed", async ({
   ).toBeEnabled();
 });
 
-test("says where the image links go before analyzing again", async ({
+test("says where the icon and screenshots go before analyzing again", async ({
   page,
   context,
 }) => {
@@ -336,13 +338,13 @@ test("says where the image links go before analyzing again", async ({
 
   await expect(
     panel.getByText(
-      "Sends image links to the AI provider this instance is configured with.",
+      "Sends the icon and screenshots to the AI provider this instance is configured with.",
     ),
   ).toBeVisible();
   await expect(panel.getByText(/OpenAI/)).toHaveCount(0);
 });
 
-test("says where the image links go before trying again", async ({
+test("says where the icon and screenshots go before trying again", async ({
   page,
   context,
 }) => {
@@ -351,7 +353,9 @@ test("says where the image links go before trying again", async ({
   const panel = page.getByRole("region", { name: "AI creative analysis" });
 
   await expect(panel.getByRole("button", { name: "Try again" })).toBeVisible();
-  await expect(panel.getByText("Sends image links to OpenAI.")).toBeVisible();
+  await expect(
+    panel.getByText("Sends the icon and screenshots to OpenAI."),
+  ).toBeVisible();
 });
 
 test("says an unchanged listing is already analyzed", async ({

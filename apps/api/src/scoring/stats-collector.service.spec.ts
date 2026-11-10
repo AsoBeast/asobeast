@@ -1,5 +1,6 @@
 import { Store } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { StoreRequestError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem, SuggestItem } from '../store-providers/types';
 import { OfficialPopularityLookup } from './official-popularity';
@@ -63,9 +64,13 @@ function buildApp(overrides: Record<string, unknown> = {}) {
 }
 
 function buildGplayProvider(
-  overrides: { getApp?: jest.Mock; suggest?: jest.Mock } = {},
+  overrides: {
+    getApp?: jest.Mock;
+    suggest?: jest.Mock;
+    search?: jest.Mock;
+  } = {},
 ) {
-  const search = jest.fn().mockResolvedValue(buildSearch());
+  const search = overrides.search ?? jest.fn().mockResolvedValue(buildSearch());
   const getApp = overrides.getApp ?? jest.fn().mockResolvedValue(buildApp());
   const suggest = overrides.suggest ?? jest.fn().mockResolvedValue([]);
   const registry = {
@@ -268,6 +273,101 @@ describe('StatsCollectorService', () => {
 
     await expect(service.collect('kw1')).rejects.toThrow(
       'only 0 of 10 detail lookups succeeded',
+    );
+  });
+
+  it('scores a one result search whose only detail lookup fails on its search entry', async () => {
+    const getApp = jest.fn().mockRejectedValue(new Error('parse failure'));
+    const search = jest.fn().mockResolvedValue(buildSearch().slice(0, 1));
+    const { registry } = buildGplayProvider({ getApp, search });
+    const service = new StatsCollectorService(
+      buildGplayPrisma(),
+      registry,
+      noOfficial,
+    );
+
+    const collected = await service.collect('kw1');
+
+    expect(collected?.stats.top10).toHaveLength(1);
+    expect(collected?.evidence.detailTargetCount).toBe(1);
+    expect(collected?.evidence.detailSuccessCount).toBe(0);
+  });
+
+  it('retries a one result search when the store refused its detail lookup', async () => {
+    const getApp = jest
+      .fn()
+      .mockRejectedValue(
+        new StoreRequestError(Store.GOOGLE_PLAY, 'getApp', 'HTTP 429'),
+      );
+    const search = jest.fn().mockResolvedValue(buildSearch().slice(0, 1));
+    const { registry } = buildGplayProvider({ getApp, search });
+    const service = new StatsCollectorService(
+      buildGplayPrisma(),
+      registry,
+      noOfficial,
+    );
+
+    await expect(service.collect('kw1')).rejects.toThrow(
+      'only 0 of 1 detail lookups succeeded',
+    );
+  });
+
+  const collectTwoResults = (getApp: jest.Mock) => {
+    const search = jest.fn().mockResolvedValue(buildSearch().slice(0, 2));
+    const { registry } = buildGplayProvider({ getApp, search });
+    return new StatsCollectorService(
+      buildGplayPrisma(),
+      registry,
+      noOfficial,
+    ).collect('kw1');
+  };
+
+  it('retries a small page when the store answered its detail lookups with a server error', async () => {
+    const unavailable = new StoreRequestError(
+      Store.GOOGLE_PLAY,
+      'getApp',
+      'HttpError: Request to https://play.google.com/store/apps/details?id=app0 failed with status 503',
+    );
+
+    await expect(
+      collectTwoResults(jest.fn().mockRejectedValue(unavailable)),
+    ).rejects.toThrow('only 0 of 2 detail lookups succeeded');
+  });
+
+  it('keeps both search entries of a two result page whose details cannot be read', async () => {
+    const collected = await collectTwoResults(
+      jest.fn().mockRejectedValue(new Error('unexpected page shape')),
+    );
+
+    expect(collected?.stats.top10).toHaveLength(2);
+    expect(collected?.evidence.detailSuccessCount).toBe(0);
+  });
+
+  it('accepts a two result page with one refused and one read detail', async () => {
+    const getApp = jest
+      .fn()
+      .mockRejectedValueOnce(
+        new StoreRequestError(Store.GOOGLE_PLAY, 'getApp', 'HTTP 429'),
+      )
+      .mockResolvedValue(buildApp());
+
+    const collected = await collectTwoResults(getApp);
+
+    expect(collected?.evidence.detailSuccessCount).toBe(1);
+  });
+
+  it('still refuses a small page once three lookups fail', async () => {
+    const getApp = jest.fn().mockRejectedValue(new Error('rate limited'));
+    const search = jest.fn().mockResolvedValue(buildSearch().slice(0, 3));
+    const { registry } = buildGplayProvider({ getApp, search });
+    const service = new StatsCollectorService(
+      buildGplayPrisma(),
+      registry,
+      noOfficial,
+    );
+
+    await expect(service.collect('kw1')).rejects.toThrow(
+      'only 0 of 3 detail lookups succeeded',
     );
   });
 

@@ -89,8 +89,8 @@ The same variable reaches OpenAI's own regional hosts. `https://eu.api.openai.co
 | --- | --- | --- |
 | `POST /chat/completions` with a `system` and a `user` message and a bearer key | every feature | the call fails with the provider's own error |
 | `response_format` of type `json_schema` with `strict: true`, answered as JSON that matches the schema | every feature | an answer that does not match is reported as unusable and still counts as one call, as it does on OpenAI |
-| `image_url` parts with a public `https` address, which the provider downloads itself | the creative analysis only | the creative analysis fails. Drafts, explanations, replies and translations still work |
-| `max_completion_tokens` | every feature | a provider that ignores it uses its own output limit, and a cut answer reads "The model ran out of output tokens." |
+| `image_url` parts that embed the image as a base64 data URL | the creative analysis only | the creative analysis fails. Drafts, explanations, replies and translations still work |
+| `max_completion_tokens`, 16,384 unless `AI_MAX_OUTPUT_TOKENS` says otherwise, which counts reasoning tokens as well as the answer | every feature | a provider that ignores it uses its own output limit, and a cut answer reads "The model ran out of output tokens." A model or server whose limit is lower refuses every request until `AI_MAX_OUTPUT_TOKENS` is lowered to fit it |
 
 ### How common providers fit
 
@@ -98,10 +98,10 @@ These notes follow each provider's own documentation. Check it for the model you
 
 | Provider | `OPENAI_BASE_URL` | Notes |
 | --- | --- | --- |
-| OpenRouter | `https://openrouter.ai/api/v1` | Models are named `vendor/model`. Pick a model that lists structured outputs and image input. Some free endpoints take images only as embedded data and answer that no endpoint supports image URLs, which fails the creative analysis |
-| Ollama | `http://host.docker.internal:11434/v1` from the Compose stacks, `http://localhost:11434/v1` from `pnpm dev` | Any non empty `OPENAI_API_KEY`, such as `ollama`. Ollama accepts images only as embedded data, so the creative analysis does not run. Small models often fail the schema |
+| OpenRouter | `https://openrouter.ai/api/v1` | Models are named `vendor/model`. Pick a model that lists structured outputs and image input |
+| Ollama | `http://host.docker.internal:11434/v1` from the Compose stacks, `http://localhost:11434/v1` from `pnpm dev` | Any non empty `OPENAI_API_KEY`, such as `ollama`. The creative analysis needs a model with image input. Small models often fail the schema |
 | LM Studio | `http://host.docker.internal:1234/v1` from the Compose stacks | Any non empty `OPENAI_API_KEY`. Structured outputs are enforced by its grammar |
-| vLLM | `http://your-host:8000/v1` | The server downloads images itself. If it runs with `--allowed-media-domains`, allow the store image hosts |
+| vLLM | `http://your-host:8000/v1` | `--max-model-len` must hold the prompt plus `AI_MAX_OUTPUT_TOKENS`, or lower `AI_MAX_OUTPUT_TOKENS`. The creative analysis needs a model with image input |
 | LiteLLM proxy | `http://your-host:4000` | Set `drop_params: true` if a backend refuses a parameter LiteLLM forwards |
 | Groq | `https://api.groq.com/openai/v1` | Strict structured outputs are enforced on a few models only |
 | Azure OpenAI | `https://your-resource.openai.azure.com/openai/v1/` | `AI_MODEL` is the deployment name |
@@ -123,7 +123,7 @@ Make the model server listen on an address the container can reach. For Ollama t
 
 ### What the interface says
 
-The audit's note beside **Analyze creative**, **Analyze again** and **Try again** says the image links go to OpenAI when the address is OpenAI's, and to "the AI provider this instance is configured with" otherwise, so nobody reading it learns your provider's address. Error messages follow the same rule.
+The audit's note beside **Analyze creative**, **Analyze again** and **Try again** says the icon and screenshots go to OpenAI when the address is OpenAI's, and to "the AI provider this instance is configured with" otherwise, so nobody reading it learns your provider's address. Error messages follow the same rule.
 
 ## What is AI never allowed to do?
 
@@ -146,11 +146,11 @@ The creative analysis sends the least data that answers its checks.
 | Sent | Not sent |
 | --- | --- |
 | Store name, market code and title | Description, subtitle, short description and release notes |
-| URLs of the app icon and up to six screenshots | Ratings, reviews, keywords and rankings |
-| URLs of up to five competitor icons | Anything about other workspaces |
+| The app icon and up to six screenshots | Ratings, reviews, keywords and rankings |
+| Up to five competitor icons | Anything about other workspaces |
 |  | The provider key, in any message or log |
 
-The provider downloads the images from the store CDNs itself; asobeast never proxies image bytes. Competitor icon URLs are public store assets.
+asobeast downloads each image from the App Store or Google Play image host as the listing shows it, up to 3 MB each, and embeds it in the request, so the provider never has to reach a store CDN. An image on any other host is sent by its address and the provider downloads it. Every image is a public store asset.
 
 The action explanation prompt receives the app's store, country and title, the rule, the priority, the impact and the evidence object, and nothing else.
 
@@ -167,7 +167,7 @@ The review reply prompt receives the store, the app name, the one review being a
 - **The model rejects the request.** `AI_MODEL` must accept images and structured outputs. A text only model fails the creative analysis while drafts still work.
 - **The API refuses to start and names OPENAI_BASE_URL.** The address is not an http or https URL, or it contains a user name, a password or a `#` fragment. Put the key in `OPENAI_API_KEY` instead.
 - **Every call reports that the provider does not offer the model.** `AI_MODEL` still holds an OpenAI model name, or `OPENAI_BASE_URL` is missing the API path, such as the `/v1` at its end. Set the model to the name your provider uses and the address to the one its documentation gives.
-- **A call reports that the provider does not offer the model for this request.** The provider's own reason is in the parentheses. "No endpoints found that support image URLs" comes from the creative analysis, the one feature that sends images, and means the model takes images only as embedded data; pick one that downloads image links.
+- **A call reports that the provider does not offer the model for this request.** The provider's own reason is in the parentheses.
 - **Could not reach the AI provider.** The API container cannot open the address. From the Compose stacks, `localhost` is the container; see [Reaching a model on the Docker host](#reaching-a-model-on-the-docker-host).
 
 A failed creative analysis shows one of these messages. With `OPENAI_BASE_URL` naming a provider other than OpenAI, each message says "the AI provider" where it says "OpenAI" here, and "The OpenAI key" reads "The API key". When such a provider does not offer the model, the message asks to check both `AI_MODEL` and `OPENAI_BASE_URL`, and carries the provider's reason in parentheses when it gives one. Only transient failures are retried, once.
@@ -187,11 +187,12 @@ A failed creative analysis shows one of these messages. With `OPENAI_BASE_URL` n
 | OpenAI answered with an error, followed by the reason it gave | The provider or a gateway in front of it answered an error where a completion belongs. Retried automatically; the reason says what failed |
 | OpenAI answered with something other than a chat completion. Check OPENAI_BASE_URL. | Retried automatically. Usually a gateway page or an address that names another service, so check `OPENAI_BASE_URL` |
 | OpenAI refused to analyze this listing. | The model declined the images; try again or another model |
-| The model ran out of output tokens. | Try again; a model with a larger output limit avoids it |
+| The model ran out of output tokens. | Raise `AI_MAX_OUTPUT_TOKENS` if the model allows more, or try again |
 | OpenAI filtered the response. | The images tripped OpenAI's content filter |
 | OpenAI returned no choices. | Retried automatically; try again |
 | OpenAI returned an unreadable response. | Retried automatically; try again |
 | The model returned observations that do not match the schema. | Retried automatically; a model with structured outputs avoids it |
+| A listing image could not be downloaded from the store. Refresh the app, then try again. | The store no longer serves an image the stored listing names, or its image host did not answer on either attempt. Refresh the app, then analyze again |
 | The analysis did not finish. Try again. | The run took more than 10 minutes, usually because the API restarted; start it again |
 | The analysis could not be queued. Try again. | Redis did not accept the job; check the Redis container, then start it again |
 | This listing has no icon or screenshots to analyze yet. Refresh the app, then try again. | Wait for the daily pipeline or refresh the app |
