@@ -32,7 +32,7 @@ const stale = documented.filter((name) => !declared.includes(name));
 
 if (missing.length > 0 || stale.length > 0) {
   console.error(
-    `${REFERENCE} must document every variable ${API_EXAMPLE} declares, and nothing no example declares.`,
+    `${REFERENCE} must document every variable ${API_EXAMPLE} declares and only variables an example declares.`,
   );
   console.error("It is the one list operators and agents configure from, so a");
   console.error("variable missing from it is a variable nobody configures.");
