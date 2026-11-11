@@ -24,6 +24,7 @@ const WORKSPACE_LABELS: Record<string, string> = {
   "/actions": "Action Center",
   "/alerts": "Alerts",
   "/charts": "Top charts",
+  "/inspect": "Keyword inspector",
   [INTEGRATIONS_PATH]: "Integrations",
   [PLAY_SIGN_IN_PATH]: "Integrations",
   "/settings": "Settings",

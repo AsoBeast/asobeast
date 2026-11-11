@@ -12,7 +12,8 @@ import {
   type PaidPlanName,
 } from "@asobeast/shared";
 import { SignUpSteps } from "@/components/auth/SignUpSteps";
-import { checkoutUiFor } from "@/lib/embedded-checkout";
+import type { RetryableRead } from "@/components/layout/InlineQueryError";
+import { embeddedKeyFor } from "@/lib/embedded-checkout";
 import { paywallFaq } from "@/lib/paywall-faq";
 import {
   buysPlan,
@@ -40,11 +41,13 @@ export function BillingWall({
   user,
   plan: accountPlan,
   catalog,
+  catalogRead,
   billing,
 }: {
   user: AuthUser | undefined;
   plan: AccountPlan | undefined;
   catalog: BillingCatalog | undefined;
+  catalogRead: RetryableRead | null;
   billing: boolean;
 }) {
   const [selected, setSelected] = useQueryState(
@@ -60,10 +63,9 @@ export function BillingWall({
     (candidate) =>
       candidate.plan === selected && candidate.interval === interval,
   );
-  const publishableKey =
-    checkoutUiFor(catalog) === "embedded" && buysPlan(action) && price
-      ? (catalog?.publishableKey ?? null)
-      : null;
+  const buys = buysPlan(action);
+  const publishableKey = embeddedKeyFor(catalog, buys, price);
+  const hostedAction = !publishableKey && !(catalogRead && buys);
   const trialParts =
     action === "trial" && offer ? trialBarParts(offer, clock) : null;
 
@@ -90,6 +92,7 @@ export function BillingWall({
         <PaymentColumn
           plan={plan}
           catalog={catalog}
+          catalogRead={catalogRead}
           name={selected}
           interval={interval}
           action={action}
@@ -106,13 +109,13 @@ export function BillingWall({
         parts={trialParts}
         label={trialParts ? "Your trial" : "Checkout"}
       >
-        {publishableKey ? null : (
+        {hostedAction ? (
           <HostedAction
             action={action}
             label={planActionLabel(action, PLANS[selected].displayName)}
             price={price}
           />
-        )}
+        ) : null}
       </TrialBar>
     </div>
   );

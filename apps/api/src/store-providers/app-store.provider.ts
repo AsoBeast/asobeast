@@ -7,7 +7,7 @@ import {
   MarketAvailabilityResult,
   OVERALL_GENRE,
 } from '@asobeast/shared';
-import { Store } from '@prisma/client';
+import { Prisma, Store } from '@prisma/client';
 import * as cheerio from 'cheerio';
 import {
   APP_STORE_LIB,
@@ -18,6 +18,10 @@ import {
   isMissingApp,
 } from './app-store.lib';
 import { lookupLanguage, pageLanguage } from './app-store-languages';
+import {
+  AppStorePageExtract,
+  parseAppStorePageDocument,
+} from './app-store-page';
 import { StoreAppNotFoundError, StoreRequestError } from './errors';
 import { listedInIphoneSearch } from './iphone-search';
 import { ownSubtitle } from './own-subtitle';
@@ -40,9 +44,12 @@ const COLLECTION_CONSTANTS: Record<CategoryCollection, string> = {
   grossing: 'topgrossingapplications',
 };
 
-interface SubtitleRead {
+interface PageRead {
   subtitle?: string;
-  unavailable: boolean;
+  subtitleUnavailable: boolean;
+  pageUnavailable: boolean;
+  extract?: AppStorePageExtract;
+  extractUnavailable: boolean;
 }
 
 @Injectable()
@@ -69,10 +76,15 @@ export class AppStoreProvider implements StoreProvider {
         }),
       storeAppId,
     );
-    const read: SubtitleRead =
+    const read: PageRead =
       raw.subtitle === undefined
-        ? await this.readSubtitle(storeAppId, country, localization)
-        : { subtitle: raw.subtitle, unavailable: false };
+        ? await this.readPage(storeAppId, country, localization)
+        : {
+            subtitle: raw.subtitle,
+            subtitleUnavailable: false,
+            pageUnavailable: false,
+            extractUnavailable: false,
+          };
     return this.toNormalizedApp(raw, read);
   }
 
@@ -202,34 +214,66 @@ export class AppStoreProvider implements StoreProvider {
     };
   }
 
-  private async readSubtitle(
+  private async readPage(
     storeAppId: string,
     country: string,
     localization?: AppStoreLocalization,
-  ): Promise<SubtitleRead> {
+  ): Promise<PageRead> {
     try {
-      const subtitle = await this.withRetry('page', async (deadline) =>
-        listingSubtitle(
-          await this.lib.page({
-            id: Number(storeAppId),
-            country,
-            ...deadline,
-            ...(localization ? { language: pageLanguage(localization) } : {}),
-          }),
-        ),
-      );
-      return { subtitle, unavailable: false };
+      const listing = await this.withRetry('page', async (deadline) => {
+        const fetched = await this.lib.page({
+          id: Number(storeAppId),
+          country,
+          ...deadline,
+          ...(localization ? { language: pageLanguage(localization) } : {}),
+        });
+        deadline.signal?.throwIfAborted();
+        return listingOf(fetched);
+      });
+      return this.pageReadOf(storeAppId, listing);
     } catch (error) {
       this.logger.warn(
         `subtitle scrape failed for ${storeAppId}: ${messageOf(error)}`,
       );
-      return { unavailable: true };
+      if (error instanceof ShellListingError) {
+        return this.pageReadOf(storeAppId, error.listing);
+      }
+      return {
+        subtitleUnavailable: true,
+        pageUnavailable: true,
+        extractUnavailable: true,
+      };
+    }
+  }
+
+  private pageReadOf(storeAppId: string, listing: PageListing): PageRead {
+    const extract = this.pageExtractOf(storeAppId, listing.document);
+    return {
+      ...(listing.subtitle !== undefined ? { subtitle: listing.subtitle } : {}),
+      subtitleUnavailable: listing.listingUnavailable,
+      pageUnavailable: false,
+      ...(extract !== undefined ? { extract } : {}),
+      extractUnavailable: extract === undefined,
+    };
+  }
+
+  private pageExtractOf(
+    storeAppId: string,
+    document: cheerio.CheerioAPI,
+  ): AppStorePageExtract | undefined {
+    try {
+      return parseAppStorePageDocument(document);
+    } catch (error) {
+      this.logger.warn(
+        `page extract unavailable for ${storeAppId}: ${messageOf(error)}`,
+      );
+      return undefined;
     }
   }
 
   private toNormalizedApp(
     raw: AppStoreAppResult,
-    read: SubtitleRead,
+    read: PageRead,
   ): NormalizedApp {
     return {
       store: this.store,
@@ -237,7 +281,9 @@ export class AppStoreProvider implements StoreProvider {
       title: raw.title,
       subtitle:
         ownSubtitle(this.store, { subtitle: read.subtitle, raw }) ?? undefined,
-      subtitleUnavailable: read.unavailable,
+      subtitleUnavailable: read.subtitleUnavailable,
+      pageUnavailable: read.pageUnavailable,
+      pageExtractUnavailable: read.extractUnavailable,
       description: raw.description,
       iconUrl: raw.icon,
       ratingAvg: raw.score,
@@ -246,7 +292,7 @@ export class AppStoreProvider implements StoreProvider {
       version: raw.version,
       releasedAt: toDate(raw.released),
       storeUpdatedAt: toDate(raw.updated),
-      raw,
+      raw: snapshotRawOf(raw, read.extract),
       searchable: listedInIphoneSearch(raw.supportedDevices),
     };
   }
@@ -291,17 +337,47 @@ export class AppStoreProvider implements StoreProvider {
     if (missingAppId !== undefined && isMissingApp(lastError)) {
       throw new StoreAppNotFoundError(this.store, missingAppId);
     }
+    if (lastError instanceof ShellListingError) {
+      throw lastError;
+    }
     throw new StoreRequestError(this.store, method, messageOf(lastError));
   }
 }
 
-function listingSubtitle(html: string): string | undefined {
-  const $ = cheerio.load(html);
-  if ($('h1').length === 0) {
-    throw new Error('product page rendered no listing');
+interface PageListing {
+  document: cheerio.CheerioAPI;
+  subtitle?: string;
+  listingUnavailable: boolean;
+}
+
+class ShellListingError extends Error {
+  constructor(readonly listing: PageListing) {
+    super('product page rendered no listing');
+    this.name = 'ShellListingError';
   }
-  const text = $('p.subtitle').first().text().trim();
-  return text.length > 0 ? text : undefined;
+}
+
+function snapshotRawOf(
+  raw: AppStoreAppResult,
+  extract?: AppStorePageExtract,
+): Prisma.InputJsonValue {
+  return {
+    ...raw,
+    ...(extract !== undefined ? { pageExtract: extract } : {}),
+  } as unknown as Prisma.InputJsonValue;
+}
+
+function listingOf(html: string): PageListing {
+  const document = cheerio.load(html);
+  if (document('h1').length === 0) {
+    throw new ShellListingError({ document, listingUnavailable: true });
+  }
+  const text = document('p.subtitle').first().text().trim();
+  return {
+    document,
+    ...(text.length > 0 ? { subtitle: text } : {}),
+    listingUnavailable: false,
+  };
 }
 
 function toDate(value?: string): Date | undefined {

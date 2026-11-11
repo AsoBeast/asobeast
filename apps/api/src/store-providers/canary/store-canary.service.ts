@@ -5,7 +5,11 @@ import { storeCanaryKey } from '../../jobs/jobs.types';
 import { FailFastRedis } from '../../redis/fail-fast-redis';
 import { ProxyEgress } from '../egress/proxy-egress.service';
 import { StoreProviderRegistry } from '../store-provider.registry';
-import { assertParsedApp, assertSearchResults } from './canary-checks';
+import {
+  assertPageExtract,
+  assertParsedApp,
+  assertSearchResults,
+} from './canary-checks';
 import {
   CANARY_OUTCOMES,
   CanaryOutcome,
@@ -86,11 +90,11 @@ export class StoreCanaryService {
     const target = CANARY_TARGETS[store];
     const provider = this.registry.get(store);
     try {
-      assertParsedApp(
-        await this.egress.through(store, target.country, () =>
-          provider.getApp(target.storeAppId, target.country),
-        ),
+      const app = await this.egress.through(store, target.country, () =>
+        provider.getApp(target.storeAppId, target.country),
       );
+      assertParsedApp(app);
+      assertPageExtract(app);
       assertSearchResults(
         await this.egress.through(store, target.country, () =>
           provider.search(target.term, target.country, CANARY_SEARCH_RESULTS),

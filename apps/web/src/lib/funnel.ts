@@ -6,7 +6,7 @@ import type {
   StoreFunnelWindow,
   StoreFunnelWindowDays,
 } from "@asobeast/shared";
-import { formatNumber } from "./format";
+import { formatMonth, formatNumber } from "./format";
 
 export const FUNNEL_SERIES_DAYS = 90;
 export const FUNNEL_HEADLINE_DAYS: StoreFunnelWindowDays = 28;
@@ -141,4 +141,11 @@ export function funnelState(report: StoreFunnelReport): FunnelState {
   return report.windows.some((window) => window.current !== null)
     ? "ready"
     : "waiting";
+}
+
+export function noSearchTermsFact(
+  month: string | null | undefined,
+): string | null {
+  if (!month) return null;
+  return `${FUNNEL_COPY.GOOGLE_PLAY.console}'s ${formatMonth(month)} report named no search terms for this app.`;
 }

@@ -10,6 +10,7 @@ import {
   FUNNEL_COPY,
   funnelState,
   funnelTiles,
+  noSearchTermsFact,
   searchShare,
   trendValue,
   windowOf,
@@ -112,6 +113,20 @@ describe("funnel helpers", () => {
       }),
     ).toBe("waiting");
     expect(funnelState(REPORT)).toBe("ready");
+  });
+});
+
+describe("noSearchTermsFact", () => {
+  it("states the report fact with the console and the month it names", () => {
+    expect(noSearchTermsFact("2026-09-01")).toBe(
+      "Google Play Console's September 2026 report named no search terms for this app.",
+    );
+  });
+
+  it("stays silent without a month, as when nothing was imported", () => {
+    expect(noSearchTermsFact(null)).toBeNull();
+    expect(noSearchTermsFact(undefined)).toBeNull();
+    expect(noSearchTermsFact("")).toBeNull();
   });
 });
 

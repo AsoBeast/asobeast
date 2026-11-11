@@ -81,7 +81,7 @@ export function zoneAreas({
 }: {
   thresholds: ZoneThresholds;
   selected: KeywordZone | null;
-  onZone: (zone: KeywordZone) => void;
+  onZone?: (zone: KeywordZone) => void;
 }) {
   return KEYWORD_ZONES.map((zone) => (
     <ReferenceArea
@@ -93,8 +93,8 @@ export function zoneAreas({
       }
       ifOverflow="hidden"
       label={{ value: zone, content: ZoneLabel }}
-      className={`zone-${zone} cursor-pointer`}
-      onClick={() => onZone(zone)}
+      className={onZone ? `zone-${zone} cursor-pointer` : `zone-${zone}`}
+      onClick={onZone ? () => onZone(zone) : undefined}
     />
   ));
 }

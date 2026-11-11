@@ -21,6 +21,7 @@ const buildConfig = (days: Days): ConfigService<Env, true> => {
     RETENTION_ALERT_EVENTS_DAYS: 30,
     RETENTION_ACTIONS_DAYS: 180,
     RETENTION_BILLING_EVENTS_DAYS: 90,
+    RETENTION_KEYWORD_INSPECTIONS_DAYS: 180,
     RETENTION_AI_CALLS_DAYS: 400,
     RETENTION_STORE_REPORTS_DAYS: 35,
     ...days,
@@ -38,6 +39,9 @@ const buildPrisma = () => ({
   alertDelivery: { deleteMany: jest.fn().mockResolvedValue({ count: 6 }) },
   alertEvent: { deleteMany: jest.fn().mockResolvedValue({ count: 9 }) },
   billingEvent: { deleteMany: jest.fn().mockResolvedValue({ count: 11 }) },
+  keywordInspection: {
+    deleteMany: jest.fn().mockResolvedValue({ count: 18 }),
+  },
   suggestProbe: { deleteMany: jest.fn().mockResolvedValue({ count: 7 }) },
   keywordDiscovery: {
     deleteMany: jest.fn().mockResolvedValue({ count: 17 }),
@@ -267,6 +271,39 @@ describe('RetentionService', () => {
     expect(deleted.billingEvent).toBe(0);
   });
 
+  it('prunes keyword inspections by their own knob', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-07-13T09:30:00.000Z'));
+    const prisma = buildPrisma();
+    const service = new RetentionService(
+      buildConfig({ RETENTION_KEYWORD_INSPECTIONS_DAYS: 180 }),
+      prisma as unknown as PrismaService,
+      crossTenant,
+    );
+
+    const deleted = await service.prune();
+
+    expect(deleted.keywordInspection).toBe(18);
+    const [{ where }] = prisma.keywordInspection.deleteMany.mock.calls[0] as [
+      { where: { requestedAt: { lt: Date } } },
+    ];
+    expect(where.requestedAt.lt).toEqual(new Date('2026-01-14T00:00:00.000Z'));
+    jest.useRealTimers();
+  });
+
+  it('keeps keyword inspections forever when the knob is zero', async () => {
+    const prisma = buildPrisma();
+    const service = new RetentionService(
+      buildConfig({ RETENTION_KEYWORD_INSPECTIONS_DAYS: 0 }),
+      prisma as unknown as PrismaService,
+      crossTenant,
+    );
+
+    const deleted = await service.prune();
+
+    expect(prisma.keywordInspection.deleteMany).not.toHaveBeenCalled();
+    expect(deleted.keywordInspection).toBe(0);
+  });
+
   it('runs remaining pruners when one fails', async () => {
     const prisma = buildPrisma();
     prisma.keywordRanking.deleteMany.mockRejectedValue(new Error('boom'));
@@ -383,6 +420,7 @@ describe('RetentionService', () => {
     prisma.auditScore.deleteMany.mockImplementation(boom);
     prisma.actionItem.deleteMany.mockImplementation(boom);
     prisma.billingEvent.deleteMany.mockImplementation(boom);
+    prisma.keywordInspection.deleteMany.mockImplementation(boom);
     prisma.aiCall.deleteMany.mockImplementation(boom);
     prisma.aiCall.updateMany.mockImplementation(boom);
     prisma.screenshotText.deleteMany.mockImplementation(boom);
@@ -481,6 +519,7 @@ describe('RetentionService action pruning', () => {
         RETENTION_ALERT_EVENTS_DAYS: 0,
         RETENTION_ACTIONS_DAYS: 0,
         RETENTION_BILLING_EVENTS_DAYS: 0,
+        RETENTION_KEYWORD_INSPECTIONS_DAYS: 0,
         RETENTION_AI_CALLS_DAYS: 0,
         RETENTION_STORE_REPORTS_DAYS: 0,
       }),
@@ -517,6 +556,7 @@ describe('RetentionService action pruning', () => {
       prisma.auditScore,
       prisma.actionItem,
       prisma.billingEvent,
+      prisma.keywordInspection,
       prisma.chartCapture,
     ]) {
       expect(table.deleteMany).not.toHaveBeenCalled();

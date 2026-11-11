@@ -469,4 +469,43 @@ describe('Write isolation', () => {
       fixture.db.appAnnotation.count({ where: { id: annotationId } }),
     ).resolves.toBe(1);
   });
+
+  it('keeps a keyword inspection out of another workspace', async () => {
+    const created = await fixture.a.agent
+      .post('/keyword-inspections')
+      .send({ keyword: 'isolation probe', store: 'APP_STORE', country: 'us' })
+      .expect(202);
+    const inspectionId = (created.body as { id: string }).id;
+
+    try {
+      await fixture.b.agent
+        .get(`/keyword-inspections/${inspectionId}`)
+        .expect(404);
+      await fixture.b.agent
+        .delete(`/keyword-inspections/${inspectionId}`)
+        .expect(404);
+      const listed = await fixture.b.agent
+        .get('/keyword-inspections')
+        .expect(200);
+      expect(
+        (listed.body as { items: Array<{ id: string }> }).items.map(
+          (item) => item.id,
+        ),
+      ).not.toContain(inspectionId);
+      const repeated = await fixture.b.agent
+        .post('/keyword-inspections')
+        .send({ keyword: 'isolation probe', store: 'APP_STORE', country: 'us' })
+        .expect(202);
+      expect((repeated.body as { id: string }).id).not.toBe(inspectionId);
+
+      await expect(
+        fixture.db.keywordInspection.count({ where: { id: inspectionId } }),
+      ).resolves.toBe(1);
+    } finally {
+      await fixture.db.keywordInspection.deleteMany({
+        where: { keyword: { text: 'isolation probe' } },
+      });
+      await clearRateLimitCounters(fixture.app);
+    }
+  });
 });

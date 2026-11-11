@@ -162,7 +162,25 @@ describe('pivotTrafficFile', () => {
       '2026-09-01 browse',
       '2026-09-01 referrer',
       '2026-09-01 search',
+      '2026-09-02 browse',
       '2026-09-02 search',
+    ]);
+  });
+
+  it('lands the ad and third-party referral rows of a real file under referrer', () => {
+    const csv = [
+      'Date,Traffic source,Store listing acquisitions,Store listing visitors',
+      '2026-09-01,Ads and referrals,6,60',
+      '2026-09-01,Third-party referrals,2,20',
+      '2026-09-01,Third-party referrers,1,10',
+    ].join('\n');
+
+    expect(pivotTrafficFile(parseCsv(csv), '2026-10-23')).toEqual([
+      expect.objectContaining({
+        sourceType: 'referrer',
+        pageViews: 90,
+        gets: 9,
+      }),
     ]);
   });
 
@@ -185,6 +203,8 @@ describe('pivotTrafficFile', () => {
     ['Google Play search', 'search'],
     ['Google Play explore', 'browse'],
     ['Third-party referrers', 'referrer'],
+    ['Third-party referrals', 'referrer'],
+    ['Ads and referrals', 'referrer'],
     ['Google Ads', 'other'],
   ])('maps the traffic source %s', (raw, mapped) => {
     expect(playSourceOf(raw)).toBe(mapped);
@@ -208,7 +228,7 @@ describe('searchTermsOf', () => {
     ]);
   });
 
-  it('keeps only terms of Google Play search, never the placeholder Google writes on other sources', () => {
+  it('reads terms of Google Play search and explore alike, dropping the placeholders Google writes on both', () => {
     const real = Buffer.from(
       [
         '\ufeffDate,Package name,Traffic source,Search term,UTM source,UTM campaign,Store listing acquisitions,Store listing visitors,Store listing conversion rate',
@@ -225,6 +245,13 @@ describe('searchTermsOf', () => {
     expect(searchTermsOf(parseCsv(decodeCsv(real)))).toEqual([
       {
         month: '2026-09-01',
+        term: 'map quiz',
+        normalized: 'map quiz',
+        visitors: 9,
+        acquisitions: 1,
+      },
+      {
+        month: '2026-09-01',
         term: 'geoguess',
         normalized: 'geoguess',
         visitors: 25,
@@ -233,7 +260,26 @@ describe('searchTermsOf', () => {
     ]);
   });
 
-  it('sums each search term across the month and skips Other', () => {
+  it('keeps terms off referrer rows so the column stays organic', () => {
+    const csv = [
+      'Date,Traffic source,Search term,Store listing acquisitions,Store listing visitors',
+      '2026-09-01,Ads and referrals,map quiz,1,9',
+      '2026-09-01,Third-party referrals,geoguess,2,20',
+      '2026-09-01,Google Play search,map quiz,3,25',
+    ].join('\n');
+
+    expect(searchTermsOf(parseCsv(csv))).toEqual([
+      {
+        month: '2026-09-01',
+        term: 'map quiz',
+        normalized: 'map quiz',
+        visitors: 25,
+        acquisitions: 3,
+      },
+    ]);
+  });
+
+  it('sums each search term across the month from search and explore rows, and skips Other', () => {
     const terms = searchTermsOf(parseCsv(decodeCsv(TRAFFIC)));
 
     expect(terms).toEqual([
@@ -250,6 +296,13 @@ describe('searchTermsOf', () => {
         normalized: 'habit tracker',
         visitors: 10,
         acquisitions: 1,
+      },
+      {
+        month: '2026-09-01',
+        term: 'daily habit app',
+        normalized: 'daily habit app',
+        visitors: 25,
+        acquisitions: 4,
       },
     ]);
   });

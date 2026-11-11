@@ -3,11 +3,26 @@ import type { Release } from "./release-notes";
 export const LATER_RELEASES: readonly Release[] = [
   {
     version: "1.17.0",
-    date: "2026-11-08",
-    title: "A calmer, sharper look",
+    date: "2026-11-10",
+    title: "Keyword inspector",
     summary:
-      "Every page in AsoBeast has a new typeface, warmer colours and quieter panels.",
+      "Look up any keyword in any country without tracking it, and see it beside every keyword you looked up before.",
     changes: [
+      {
+        kind: "new",
+        title: "Inspect any keyword",
+        text: "Keyword inspector in the sidebar reads any keyword in any country straight from the store, without tracking it: the top 50 apps, the autocomplete, popularity, difficulty and opportunity, and how strong the top ten are. Each keyword you inspect lands on a map beside the others, its store suggestions inspect in one click, and the next inspection of the same keyword shows what changed since.",
+      },
+      {
+        kind: "fixed",
+        title: "Play installs finds more search terms",
+        text: "Google writes most search terms under explore traffic rather than search, and the column used to read only search, so months could look empty that never were. It now reads both, while the placeholders Google writes when it names no term stay out of the column.",
+      },
+      {
+        kind: "improved",
+        title: "An empty month says so",
+        text: "When the newest monthly report names no search term on any source, the column now states that fact with the month, instead of leaving a row of unexplained dashes.",
+      },
       {
         kind: "improved",
         title: "A calmer, sharper look",
@@ -51,6 +66,11 @@ export const LATER_RELEASES: readonly Release[] = [
         kind: "fixed",
         title: "AI analysis of your icon and screenshots",
         text: "The AI analysis no longer fails now and then because the images could not be loaded, and every AI feature has more room to think before it answers.",
+      },
+      {
+        kind: "fixed",
+        title: "The plan page on a weak connection",
+        text: "When the plan page cannot load your plan or the prices, it now says so and lets you try again, instead of showing an offer or a checkout that may not apply to you.",
       },
     ],
   },

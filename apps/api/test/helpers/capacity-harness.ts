@@ -97,11 +97,11 @@ export async function allowanceSpendsDuring<T>(
   { app }: CapacityHarness,
   act: () => PromiseLike<T>,
 ): Promise<[T, number]> {
-  const consume = jest.spyOn(app.get(OnDemandLimiter), 'consume');
+  const spend = jest.spyOn(app.get(OnDemandLimiter), 'spend');
   try {
     const result = await act();
-    return [result, consume.mock.calls.length];
+    return [result, spend.mock.calls.length];
   } finally {
-    consume.mockRestore();
+    spend.mockRestore();
   }
 }

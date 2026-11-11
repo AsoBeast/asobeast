@@ -17,7 +17,8 @@ export type KeywordPlacement = (typeof KEYWORD_PLACEMENTS)[number];
 export const isKeywordPlacement = (value: string): value is KeywordPlacement =>
   KEYWORD_PLACEMENTS.some((placement) => placement === value);
 
-export type KeywordWordMatch = 'exact' | 'folded' | 'none';
+export const KEYWORD_WORD_MATCHES = ['exact', 'folded', 'none'] as const;
+export type KeywordWordMatch = (typeof KEYWORD_WORD_MATCHES)[number];
 
 export interface KeywordBreakdownWord {
   word: string;

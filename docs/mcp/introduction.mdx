@@ -7,7 +7,7 @@ keywords: ["MCP","Model Context Protocol","Claude Code","Claude Desktop","read o
 boost: 2
 ---
 
-asobeast ships a Model Context Protocol surface. It authenticates with a personal API token and it reads by default: its read tools cover apps, keywords, competitors, positions, top charts, annotations, SERPs, audits, reviews, analytics and the Action Center queue. A few more tools change keywords, competitors, actions and annotations, and a connection sees them only when its token has the write scope. The [tool reference](/mcp/tools) lists every tool and counts them from the catalog the server serves.
+asobeast ships a Model Context Protocol surface. It authenticates with a personal API token and it reads by default: its read tools cover apps, keywords, keyword inspections, competitors, positions, top charts, annotations, SERPs, audits, reviews, analytics and the Action Center queue. A few more tools change keywords, competitors, actions and annotations or queue a keyword inspection, and a connection sees them only when its token has the write scope. The [tool reference](/mcp/tools) lists every tool and counts them from the catalog the server serves.
 
 That means you can point any MCP client, such as Claude Code, Claude Desktop, Codex, Cursor, VS Code, Gemini CLI or Windsurf, at your asobeast and ask it questions in plain language instead of clicking through the dashboard.
 
@@ -49,7 +49,7 @@ Track the three best uncovered keywords from the competitors strategy in the Ger
 
 A token with the default `read` scope lists the read tools, each a `GET` annotated `readOnlyHint: true`. Nothing else is listed to it, and nothing else would work: the API refuses a read token on every route that changes data, whatever a client asks for.
 
-A token with the `write` scope also lists seven tools that change things: `track_keywords`, `untrack_keyword`, `add_competitor`, `remove_competitor`, `set_action_status`, `add_annotation` and `delete_annotation`. You choose that when you connect an agent, with the Allow this agent to make changes option on the MCP server card in Integrations. Nothing turns it on for you, and there is no instance setting that does.
+A token with the `write` scope also lists eight tools that change things: `track_keywords`, `untrack_keyword`, `add_competitor`, `remove_competitor`, `set_action_status`, `add_annotation`, `delete_annotation` and `inspect_keyword`. You choose that when you connect an agent, with the Allow this agent to make changes option on the MCP server card in Integrations. Nothing turns it on for you, and there is no instance setting that does.
 
 Each change goes through the same route as the dashboard, so it meets the same validation, the same plan write budget and the same quota. Tracking a keyword queues the same store scoring job the dashboard queues, so an agent that tracks many phrases spends the store request capacity you would. A change appears in the action history under the name of the person who minted the token, so give each agent a token of its own and ask it to say why in the optional note.
 

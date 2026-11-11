@@ -137,6 +137,12 @@ export const NOT_CONNECTED_FUNNEL = (appId: string): StoreFunnelReport =>
     windows: [],
   });
 
+export const APP_GP_NO_TERMS_FUNNEL: StoreFunnelReport = {
+  ...APP_GP_FUNNEL,
+  appId: "app-gp-no-terms",
+  noSearchTermsMonth: "2026-10-01",
+};
+
 export function funnelFor(
   appId: string,
   country: string | null,
@@ -146,5 +152,6 @@ export function funnelFor(
   }
   if (appId === "app-long") return APP_LONG_FUNNEL;
   if (appId === "app-gp") return APP_GP_FUNNEL;
+  if (appId === "app-gp-no-terms") return APP_GP_NO_TERMS_FUNNEL;
   return NOT_CONNECTED_FUNNEL(appId);
 }

@@ -53,6 +53,7 @@ describe("worthReporting", () => {
     ["a missing record", () => apiError(404)],
     ["a failure the api reported itself", () => apiError(500)],
     ["a refusal the api explained", () => apiError(409)],
+    ["a request the connection lost", () => new TypeError("Failed to fetch")],
   ])("stays silent for %s", (_case, build) => {
     expect(worthReporting(build())).toBe(false);
   });
