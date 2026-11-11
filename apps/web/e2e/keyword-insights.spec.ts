@@ -5,6 +5,8 @@ import { APP_INSIGHTS_ID, INSIGHT_MATRIX } from "./keyword-insights.mts";
 import { openKeywordFilters } from "./keyword-controls.mts";
 
 const KEYWORDS = "/apps/app-1/keywords";
+
+test.use({ viewport: { width: 1440, height: 900 } });
 const BADGES = ["Dropping", "Page 1 close", "Beatable", "Not in listing"];
 
 const keywordRow = (page: Page, text: string) =>

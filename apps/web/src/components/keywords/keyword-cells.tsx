@@ -219,7 +219,7 @@ export function KeywordCell({ keyword }: { keyword: TrackedKeywordItem }) {
   const marks = useContext(ListingMarksContext);
   const onChart = useContext(ChartedKeywordsContext).has(keyword.keywordId);
   return (
-    <span className="flex max-w-40 items-center gap-2 font-medium md:max-w-72">
+    <span className="flex max-w-40 items-center gap-2 font-medium md:max-w-72 md:keywords-snug:max-w-52 md:keywords-cramped:max-w-44">
       <span title={keyword.text} className="truncate">
         <MatchedText
           segments={marks ? keyword.matchedIn : null}

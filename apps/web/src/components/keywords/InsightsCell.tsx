@@ -57,15 +57,22 @@ export function InsightsCell({
             aria-label={`${labels.join(", ")}: reasons for ${subject}`}
             className="-my-1 inline-flex items-center gap-1 rounded-md py-1 outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            {insights.map((insight) => (
+            {insights.map((insight, index) => (
               <Badge
                 key={insight}
                 variant={INSIGHT_VARIANTS[insight]}
                 aria-hidden
+                className={index > 0 ? "keywords-tight:hidden" : undefined}
               >
                 {INSIGHT_LABELS[insight]}
               </Badge>
             ))}
+            {insights.length > 1 ? (
+              <span
+                aria-hidden
+                className="hidden text-caption text-muted-foreground keywords-tight:inline"
+              >{`+${insights.length - 1}`}</span>
+            ) : null}
           </button>
         </PopoverTrigger>
         <PopoverContent

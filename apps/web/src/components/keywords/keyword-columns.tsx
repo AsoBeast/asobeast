@@ -1,7 +1,6 @@
 "use client";
 
 import type { FilterFn } from "@tanstack/react-table";
-import { ListOrdered } from "lucide-react";
 import type {
   KeywordBucket,
   KeywordClass,
@@ -9,7 +8,6 @@ import type {
   TrackedKeywordItem,
 } from "@asobeast/shared";
 import type { KeywordTableFeatures } from "./keyword-table-features";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { InfoTip } from "@/components/ui/info-tip";
 import { DeltaChip } from "@/components/ui/delta-chip";
@@ -111,7 +109,7 @@ export function keywordColumns({
     ...scoreColumns(),
     insightsColumn(today, multiMarket),
     ...(store === "GOOGLE_PLAY" ? [acquisitionsColumn()] : []),
-    topAppsColumn(),
+    topAppsColumn(onOpenSerp),
     ...attributeColumns(),
     volatilityColumn(),
     addedColumn(),
@@ -354,25 +352,14 @@ function actionsColumn({
     enableHiding: false,
     header: () => <span className="sr-only">Actions</span>,
     cell: ({ row, table }) => (
-      <div className="flex items-center justify-end gap-1 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100 has-data-[state=open]:opacity-100 pointer-fine:opacity-0">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="pointer-coarse:size-11"
-          aria-label={`View search results for ${row.original.text}`}
-          data-serp-keyword={row.original.keywordId}
-          onClick={() => onOpenSerp(row.original.keywordId)}
-        >
-          <ListOrdered />
-        </Button>
-        <KeywordRowActions
-          appId={appId}
-          keyword={row.original}
-          marketTags={() =>
-            tagsIn(table.getCoreRowModel().rows.map((entry) => entry.original))
-          }
-        />
-      </div>
+      <KeywordRowActions
+        appId={appId}
+        keyword={row.original}
+        marketTags={() =>
+          tagsIn(table.getCoreRowModel().rows.map((entry) => entry.original))
+        }
+        onOpenSerp={() => onOpenSerp(row.original.keywordId)}
+      />
     ),
   });
 }

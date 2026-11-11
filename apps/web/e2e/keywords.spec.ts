@@ -445,6 +445,7 @@ test("volatility column labels low, high and unavailable rows", async ({
 test("a row draws its last 7 days and names the top apps of its results", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/apps/app-1/keywords");
   const row = page.getByRole("row", { name: /focus timer/ });
 
@@ -454,10 +455,13 @@ test("a row draws its last 7 days and names the top apps of its results", async 
     }),
   ).toBeVisible();
   await expect(
-    row.getByRole("group", {
-      name: "Top apps: #1 Tomato Clock (competitor), #2 Rival Focus (competitor), #3 Focus Timer (your app)",
+    row.getByRole("button", {
+      name: "View search results for focus timer",
+      exact: true,
     }),
-  ).toBeVisible();
+  ).toHaveAccessibleDescription(
+    "Top apps: #1 Tomato Clock (competitor), #2 Rival Focus (competitor), #3 Focus Timer (your app)",
+  );
   await expect(row.locator('[data-role="own"]')).toHaveCount(1);
 
   const unranked = page.getByRole("row", { name: /productivity app/ });
@@ -1116,23 +1120,113 @@ test("a queued job says queued, not done", async ({ page }) => {
   await expect(page.getByText(/^Queued · scoring$/)).toBeVisible();
 });
 
-test("row actions reveal on keyboard focus, not only on hover", async ({
+test("the top apps of a row open its search results and take focus back", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/keywords");
+  const row = page.getByRole("row", { name: /focus timer/ });
+  const apps = await hydrated(
+    row.getByRole("button", {
+      name: "View search results for focus timer",
+      exact: true,
+    }),
+  );
 
-  const action = page
-    .getByRole("button", { name: /^View search results for/ })
-    .first();
-  const opacity = () =>
-    action.evaluate((node) => getComputedStyle(node.parentElement!).opacity);
+  await apps.click();
+  const sheet = page.getByRole("dialog", { name: "Search results" });
+  await expect(sheet).toBeVisible();
+  await expect(page).toHaveURL(/serp=kw-1/);
+  await page.keyboard.press("Escape");
 
-  expect(Number(await opacity())).toBeLessThan(0.1);
-  await action.focus();
-  await expect.poll(async () => Number(await opacity())).toBe(1);
+  await expect(sheet).toBeHidden();
+  await expect(apps).toBeFocused();
 });
 
-test("the pinned columns leave the source column visible and share the row tint", async ({
+test("the row menu opens the search results and focus returns to the row", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+  const row = page.getByRole("row", { name: /time blocking/ });
+  const menu = await hydrated(
+    row.getByRole("button", { name: "Keyword actions for time blocking" }),
+  );
+
+  await expect(menu).toBeVisible();
+  await menu.click();
+  await page.getByRole("menuitem", { name: "View search results" }).click();
+  const sheet = page.getByRole("dialog", { name: "Search results" });
+  await expect(sheet).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await expect(sheet).toBeHidden();
+  await expect(
+    row.getByRole("button", {
+      name: "View search results for time blocking",
+      exact: true,
+    }),
+  ).toBeFocused();
+});
+
+test("with the top apps hidden the search results give focus back to the row menu", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.goto("/apps/app-1/keywords");
+  const row = page.getByRole("row", { name: /focus timer/ });
+  const menu = await hydrated(
+    row.getByRole("button", { name: "Keyword actions for focus timer" }),
+  );
+  await expect(
+    row.getByRole("button", { name: /^View search results/ }),
+  ).toHaveCount(0);
+
+  await menu.click();
+  await page.getByRole("menuitem", { name: "View search results" }).click();
+  const sheet = page.getByRole("dialog", { name: "Search results" });
+  await expect(sheet).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await expect(sheet).toBeHidden();
+  await expect(menu).toBeFocused();
+});
+
+test("a narrow table folds the second insight and drops the 7 day line", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1366, height: 800 });
+  await page.goto("/apps/app-1/keywords");
+  const row = page.getByRole("row", { name: /pomodoro/ });
+
+  await expect(row.locator('[data-slot="position-trend"]')).toBeHidden();
+  await expect(row.getByText("+1", { exact: true })).toBeVisible();
+  await expect(row.getByText("Page 1 close")).toBeHidden();
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  await expect(row.locator('[data-slot="position-trend"]')).toBeVisible();
+  await expect(row.getByText("Page 1 close")).toBeVisible();
+  await expect(row.getByText("+1", { exact: true })).toBeHidden();
+});
+
+for (const width of [1280, 1366, 1440]) {
+  test(`the default columns fit the table frame at ${width} px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto("/apps/app-1/keywords");
+    const frame = page
+      .getByRole("table", { name: /Tracked keywords/ })
+      .locator("xpath=..");
+    await expect(frame).toBeVisible();
+
+    const overflow = await frame.evaluate(
+      (node) => node.scrollWidth - node.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
+}
+
+test("the pinned columns leave the source column visible, keep the row menu in reach and share the row tint", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1000, height: 800 });
@@ -1142,13 +1236,29 @@ test("the pinned columns leave the source column visible and share the row tint"
   await expect(header).toBeVisible();
 
   const gaps = await header.evaluate((row) => {
-    const cells = [...row.children].map((cell) => cell.getBoundingClientRect());
+    const cells = [...row.children]
+      .slice(0, -1)
+      .map((cell) => cell.getBoundingClientRect());
     return cells
       .slice(0, -1)
       .map((cell, index) => Math.round(cells[index + 1].left - cell.right));
   });
 
   expect(Math.min(...gaps)).toBeGreaterThanOrEqual(0);
+
+  const frame = page
+    .getByRole("table", { name: /Tracked keywords/ })
+    .locator("xpath=..");
+  const reach = await page
+    .getByRole("button", { name: "Keyword actions for focus timer" })
+    .evaluate(
+      (menu, box) => {
+        const edge = (box as Element).getBoundingClientRect().right;
+        return edge - menu.getBoundingClientRect().right;
+      },
+      await frame.elementHandle(),
+    );
+  expect(reach).toBeGreaterThanOrEqual(0);
 
   await page.getByRole("checkbox", { name: "Select focus timer" }).click();
 

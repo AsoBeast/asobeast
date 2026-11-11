@@ -6,7 +6,16 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { MoreHorizontal, Shapes, Sparkles, Tag, Trash2 } from "lucide-react";
+import {
+  ListOrdered,
+  MoreHorizontal,
+  Pause,
+  Play,
+  Shapes,
+  Sparkles,
+  Tag,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { isKeywordClass, type TrackedKeywordItem } from "@asobeast/shared";
 import {
@@ -32,7 +41,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Switch } from "@/components/ui/switch";
 import { removeKeyword, scoreKeyword } from "@/lib/api";
 import { queuedToast } from "@/lib/queued-toast";
 import { invalidateKeywordMutation, invalidateKeywords } from "@/lib/queries";
@@ -49,10 +57,12 @@ export function KeywordRowActions({
   appId,
   keyword,
   marketTags,
+  onOpenSerp,
 }: {
   appId: string;
   keyword: TrackedKeywordItem;
   marketTags: () => string[];
+  onOpenSerp: () => void;
 }) {
   const queryClient = useQueryClient();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -89,26 +99,24 @@ export function KeywordRowActions({
   const removeOnce = useSingleFlight(remove);
 
   return (
-    <div className="flex items-center justify-end gap-2">
-      <Switch
-        checked={keyword.active}
-        disabled={update.isPending}
-        onCheckedChange={(next) => update.mutate({ active: next })}
-        aria-label="Track keyword"
-      />
-
+    <div className="flex items-center justify-end">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
             size="icon-sm"
-            className="pointer-coarse:size-11"
-            aria-label="Keyword actions"
+            className="text-muted-foreground hover:text-foreground data-[state=open]:text-foreground pointer-coarse:size-11"
+            aria-label={`Keyword actions for ${keyword.text}`}
+            data-serp-keyword={keyword.keywordId}
           >
             <MoreHorizontal />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <DropdownMenuItem onSelect={onOpenSerp}>
+            <ListOrdered />
+            View search results
+          </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => setEditOpen(true)}>
             <Tag />
             Edit tags and note
@@ -145,6 +153,13 @@ export function KeywordRowActions({
           <DropdownMenuItem disabled={scoring} onSelect={() => scoreOnce()}>
             <Sparkles />
             Score now
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            disabled={update.isPending}
+            onSelect={() => update.mutate({ active: !keyword.active })}
+          >
+            {keyword.active ? <Pause /> : <Play />}
+            <span>{keyword.active ? "Pause tracking" : "Resume tracking"}</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem

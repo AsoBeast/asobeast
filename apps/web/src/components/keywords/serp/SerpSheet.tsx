@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import {
   keepPreviousData,
   useQuery,
@@ -216,6 +216,18 @@ function SerpContent({
   );
 }
 
+function serpOpener(
+  keywordId: string,
+  pressed: Element | null,
+): HTMLElement | null {
+  const selector = `[data-serp-keyword="${CSS.escape(keywordId)}"]`;
+  return pressed instanceof HTMLElement &&
+    pressed.isConnected &&
+    pressed.matches(selector)
+    ? pressed
+    : document.querySelector<HTMLElement>(selector);
+}
+
 export function SerpSheet({
   appId,
   store,
@@ -229,6 +241,7 @@ export function SerpSheet({
   const [shownId, setShownId] = useState(keywordId);
   if (keywordId !== "" && keywordId !== shownId) setShownId(keywordId);
   const open = keywordId.length > 0;
+  const pressed = useRef<Element | null>(null);
 
   return (
     <Sheet
@@ -240,10 +253,11 @@ export function SerpSheet({
       <SheetContent
         side="right"
         className="w-full gap-0 p-0 sm:max-w-xl"
+        onOpenAutoFocus={() => {
+          pressed.current = document.activeElement;
+        }}
         onCloseAutoFocus={(event) => {
-          const opener = document.querySelector<HTMLButtonElement>(
-            `[data-serp-keyword="${CSS.escape(shownId)}"]`,
-          );
+          const opener = serpOpener(shownId, pressed.current);
           if (!opener) return;
           event.preventDefault();
           opener.focus();

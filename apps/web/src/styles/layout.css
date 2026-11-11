@@ -24,3 +24,7 @@
   max-width: 45rem;
   margin-inline: auto;
 }
+
+@custom-variant keywords-snug (@container keywords (width < 76.5rem));
+@custom-variant keywords-tight (@container keywords (width < 71.25rem));
+@custom-variant keywords-cramped (@container keywords (width < 65rem));
