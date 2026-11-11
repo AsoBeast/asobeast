@@ -26,12 +26,14 @@ export function DiscoveredTable({
   rowSelection,
   onRowSelectionChange,
   footer,
+  onClearSearch,
 }: {
   rows: KeywordDiscoveryItem[];
   store: Store;
   rowSelection: RowSelectionState;
   onRowSelectionChange: OnChangeFn<RowSelectionState>;
   footer: ReactNode;
+  onClearSearch: () => void;
 }) {
   const columns = useMemo(() => discoveryColumns(store), [store]);
   const [{ sort, dir, q }, setParams] = useDiscoveryTableParams();
@@ -62,7 +64,7 @@ export function DiscoveredTable({
     <DiscoveryRows
       table={table}
       footer={footer}
-      onClearSearch={() => void setParams({ q: null })}
+      onClearSearch={onClearSearch}
     />
   );
 }

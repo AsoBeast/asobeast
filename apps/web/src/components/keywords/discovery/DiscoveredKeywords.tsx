@@ -46,6 +46,9 @@ export function DiscoveredKeywords(props: DiscoveredProps) {
 
 const NO_SELECTION: RowSelectionState = {};
 
+const activeControl = (): HTMLElement | null =>
+  document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
 function useStateSelection(state: DiscoveryState) {
   const [selection, setSelection] = useState({
     state,
@@ -137,6 +140,10 @@ function DiscoveredList({
             rowSelection={selection.rows}
             onRowSelectionChange={selection.onChange}
             footer={footer}
+            onClearSearch={() => {
+              handOffFocus(heading.current, activeControl());
+              void setTableParams({ q: null });
+            }}
           />
         ) : (
           footer

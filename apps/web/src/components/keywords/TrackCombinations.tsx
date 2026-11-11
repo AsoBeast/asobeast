@@ -35,8 +35,12 @@ export function TrackCombinations({
 }) {
   const queryClient = useQueryClient();
   const [pending, setPending] = useState<string[] | null>(null);
-  const trackSelected = useRef<HTMLButtonElement>(null);
+  const opener = useRef<HTMLButtonElement | null>(null);
   const trackShown = useRef<HTMLButtonElement>(null);
+  const confirm = (phrases: string[], button: HTMLButtonElement) => {
+    opener.current = button;
+    setPending(phrases);
+  };
   const selected = phrasesToTrack(
     table.getFilteredSelectedRowModel().rows.map((row) => row.original),
   );
@@ -71,12 +75,11 @@ export function TrackCombinations({
     <>
       {selected.length > 0 ? (
         <Button
-          ref={trackSelected}
           size="sm"
           variant="outline"
           aria-disabled={busy || undefined}
-          onClick={() => {
-            if (!busy) setPending(selected);
+          onClick={(event) => {
+            if (!busy) confirm(selected, event.currentTarget);
           }}
         >
           {`Track selected (${selected.length})`}
@@ -87,8 +90,8 @@ export function TrackCombinations({
         size="sm"
         variant="outline"
         aria-disabled={shown.length === 0 || busy || undefined}
-        onClick={() => {
-          if (shown.length > 0 && !busy) setPending(shown);
+        onClick={(event) => {
+          if (shown.length > 0 && !busy) confirm(shown, event.currentTarget);
         }}
       >
         {`Track all shown (${shown.length})`}
@@ -103,9 +106,11 @@ export function TrackCombinations({
         }}
         onConfirm={() => pending && trackOnce(pending)}
         onCloseAutoFocus={(event) => {
-          if (trackSelected.current !== null) return;
           event.preventDefault();
-          trackShown.current?.focus();
+          const survivor = opener.current?.isConnected
+            ? opener.current
+            : trackShown.current;
+          survivor?.focus();
         }}
       />
     </>

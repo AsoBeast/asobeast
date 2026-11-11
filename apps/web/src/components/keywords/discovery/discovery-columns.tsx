@@ -145,7 +145,7 @@ const keywordColumn = columnHelper.accessor("text", {
   sortDescFirst: false,
   header: ({ column }) => <SortableHeader column={column} label="Keyword" />,
   cell: ({ row }) => (
-    <span className="flex flex-wrap items-center gap-x-2">
+    <span className="flex min-w-28 flex-wrap items-center gap-x-2 leading-tight">
       <span className="font-medium wrap-anywhere">{row.original.text}</span>
       {row.original.recommended ? (
         <span className="text-label text-muted-foreground max-sm:hidden">
@@ -201,7 +201,7 @@ const scoreColumn = ({
 }) =>
   columnHelper.accessor((row) => nullsLast(value(row)), {
     id,
-    meta: { numeric: true },
+    meta: { numeric: true, wideOnly: true },
     ...SORTABLE,
     sortDescFirst: true,
     header: ({ column }) => (

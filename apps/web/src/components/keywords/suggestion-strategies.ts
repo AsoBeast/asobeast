@@ -13,7 +13,7 @@ export const STRATEGIES: {
   {
     value: "search",
     label: "Search",
-    description: "App Store autocomplete terms",
+    description: "Autocomplete terms from the store search",
   },
   {
     value: "similar",

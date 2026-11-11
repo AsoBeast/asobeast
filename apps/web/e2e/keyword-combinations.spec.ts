@@ -247,6 +247,9 @@ test("selected combinations are tracked after one confirmation", async ({
   });
   await dialog.getByRole("button", { name: "Cancel" }).click();
   expect(sent).toBe(0);
+  await expect(
+    card.getByRole("button", { name: "Track selected (3)" }),
+  ).toBeFocused();
 
   await card.getByRole("button", { name: "Track selected (3)" }).click();
   const request = trackRequest(page);
