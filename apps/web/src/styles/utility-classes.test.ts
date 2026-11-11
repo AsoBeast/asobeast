@@ -20,6 +20,13 @@ const TRANSLUCENT_TEXT = new RegExp(
   "g",
 );
 
+const RETIRED_TYPE_STEP = /\btext-(?:display|subtitle|numeric)\b/g;
+
+const TRANSLUCENT_RING = /\bring-ring\/\d+/g;
+
+const MONOSPACE_NUMBER =
+  /["'`][^"'`\n]*\b(?:numeric\b[^"'`\n]*\bfont-mono|font-mono\b[^"'`\n]*\bnumeric)\b[^"'`\n]*["'`]/g;
+
 function sources(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
@@ -46,5 +53,17 @@ describe("utility classes", () => {
 
   it("leaves no opacity modifier detached from its utility", () => {
     expect(offenders(DANGLING_MODIFIER)).toEqual([]);
+  });
+
+  it("sizes text with a step the type scale still declares", () => {
+    expect(offenders(RETIRED_TYPE_STEP)).toEqual([]);
+  });
+
+  it("draws every focus ring solid", () => {
+    expect(offenders(TRANSLUCENT_RING)).toEqual([]);
+  });
+
+  it("sets a number in tabular figures rather than monospace", () => {
+    expect(offenders(MONOSPACE_NUMBER)).toEqual([]);
   });
 });
