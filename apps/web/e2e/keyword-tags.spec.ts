@@ -386,10 +386,9 @@ test.describe("bulk tagging", () => {
       .getByRole("button", { name: "Stop tracking" })
       .click();
 
-    const emptyState = page.locator('[data-slot="empty-state"]');
-    await expect(emptyState).toBeVisible();
+    await expect(page.locator('[data-slot="empty-state"]')).toBeVisible();
     await expect(
-      emptyState.getByRole("button", { name: "Add keywords" }),
+      page.getByRole("button", { name: "Add keywords" }),
     ).toBeFocused();
   });
 

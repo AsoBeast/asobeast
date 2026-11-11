@@ -2,7 +2,6 @@
 
 import { useId } from "react";
 import { keywordLabel, type TrackedKeywordItem } from "@asobeast/shared";
-import { Badge } from "@/components/ui/badge";
 import {
   Popover,
   PopoverContent,
@@ -19,14 +18,8 @@ import {
   type KeywordInsight,
 } from "@/lib/keyword-insights";
 
-const INSIGHT_VARIANTS: Record<
-  KeywordInsight,
-  "destructive" | "info" | "success" | "warning"
-> = {
-  dropping: "destructive",
-  pageOneClose: "info",
-  beatable: "success",
-  notInListing: "warning",
+const INSIGHT_TONE: Partial<Record<KeywordInsight, string>> = {
+  dropping: "text-signal-down",
 };
 
 export function InsightsCell({
@@ -55,16 +48,15 @@ export function InsightsCell({
           <button
             type="button"
             aria-label={`${labels.join(", ")}: reasons for ${subject}`}
-            className="-my-1 inline-flex items-center gap-1 rounded-md py-1 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="-my-1 inline-flex items-center gap-1.5 rounded-md py-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
           >
-            {insights.map((insight) => (
-              <Badge
-                key={insight}
-                variant={INSIGHT_VARIANTS[insight]}
-                aria-hidden
-              >
-                {INSIGHT_LABELS[insight]}
-              </Badge>
+            {insights.map((insight, index) => (
+              <span key={insight} aria-hidden className="contents">
+                {index > 0 ? <span>·</span> : null}
+                <span data-insight={insight} className={INSIGHT_TONE[insight]}>
+                  {INSIGHT_LABELS[insight]}
+                </span>
+              </span>
             ))}
           </button>
         </PopoverTrigger>

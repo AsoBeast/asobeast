@@ -1,13 +1,8 @@
 import type { KeywordClass, KeywordClassSource } from "@asobeast/shared";
-import { Badge } from "@/components/ui/badge";
 
-const BADGES = {
-  ownBrand: { letter: "B", words: "Brand keyword", variant: "info" },
-  competitorBrand: {
-    letter: "CB",
-    words: "Competitor brand keyword",
-    variant: "outline",
-  },
+const MARKS = {
+  ownBrand: { letter: "B", words: "Brand keyword" },
+  competitorBrand: { letter: "CB", words: "Competitor brand keyword" },
 } as const;
 
 export function KeywordClassBadge({
@@ -18,12 +13,17 @@ export function KeywordClassBadge({
   source: KeywordClassSource | undefined;
 }) {
   if (keywordClass === undefined || keywordClass === "generic") return null;
-  const { letter, words, variant } = BADGES[keywordClass];
+  const { letter, words } = MARKS[keywordClass];
   const label = source === "owner" ? `${words}, set by you` : words;
   return (
-    <Badge variant={variant} title={label} className="relative shrink-0">
+    <span
+      data-slot="keyword-class"
+      data-class={keywordClass}
+      title={label}
+      className="relative inline-flex h-[18px] shrink-0 items-center rounded-sm border border-border px-1 text-tick font-medium text-muted-foreground"
+    >
       <span aria-hidden>{letter}</span>
       <span className="sr-only">{label}</span>
-    </Badge>
+    </span>
   );
 }

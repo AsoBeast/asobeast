@@ -166,11 +166,8 @@ test.describe("tracking a competitor search twice", () => {
     await (await hydrated(trackButton(page, "focus timer for adhd"))).click();
     await expect.poll(() => held.posts.length).toBe(1);
 
-    await page
-      .getByRole("group", { name: "Keyword markets" })
-      .getByRole("button", { pressed: false })
-      .first()
-      .click();
+    await page.getByRole("combobox", { name: "Keyword markets" }).click();
+    await page.getByRole("option", { selected: false }).first().click();
     await expect(page).toHaveURL(/country=/);
     await (await hydrated(trackButton(page, "focus timer for adhd"))).click();
 

@@ -28,10 +28,7 @@ import { KeywordsDataTable } from "./KeywordsDataTable";
 import { KeywordsFilterBar } from "./KeywordsFilterBar";
 import { ChartedKeywordsContext, ListingMarksContext } from "./keyword-cells";
 import { SerpSheet } from "./serp/SerpSheet";
-import {
-  useClearedSelectionFocus,
-  useEmptiedListFocus,
-} from "./use-keywords-table-focus";
+import { useClearedSelectionFocus } from "./use-keywords-table-focus";
 import { useSerpParams } from "./serp/use-serp-params";
 import { useKeywordColumnFilters } from "./use-zone-thresholds";
 import { useKeywordsTableControls } from "./use-keywords-table-controls";
@@ -140,17 +137,9 @@ export function KeywordsTable({
   );
   const mapKeywords = useKeywordsAcrossZones(table, view === "map");
   const isEmpty = keywords.length === 0;
-  const addKeywords = useEmptiedListFocus(isEmpty);
 
   if (isEmpty) {
-    return (
-      <KeywordsEmptyState
-        appId={id}
-        store={store}
-        country={country}
-        addRef={addKeywords}
-      />
-    );
+    return <KeywordsEmptyState country={country} />;
   }
 
   return (

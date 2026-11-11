@@ -4,6 +4,11 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { hoverForTooltip } from "./hover.mts";
 import { hydrated } from "./hydrated.mts";
+import {
+  chooseKeywordMarket,
+  openKeywordFilters,
+  showKeywordColumns,
+} from "./keyword-controls.mts";
 import { seedCookies } from "./routes.mts";
 import {
   APP_GP_NO_TERMS_ID,
@@ -70,10 +75,11 @@ test("market filter switches to an empty market with an add prompt", async ({
 }) => {
   await page.goto("/apps/app-1/keywords");
 
-  const usTab = page.getByRole("button", { name: /^US/ });
-  await expect(usTab).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    page.getByRole("combobox", { name: "Keyword markets" }),
+  ).toHaveText(/^United States/);
 
-  await page.getByRole("button", { name: /^PL/ }).click();
+  await chooseKeywordMarket(page, /^Poland/);
   await expect(page).toHaveURL(/country=pl/);
 
   await expect(
@@ -100,10 +106,9 @@ test("falls back to the default market for a country that is no storefront code"
 }) => {
   await page.goto("/apps/app-1/keywords?country=ZZZ");
 
-  await expect(page.getByRole("button", { name: /^US/ })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  await expect(
+    page.getByRole("combobox", { name: "Keyword markets" }),
+  ).toHaveText(/^United States/);
   await expect(page.getByText(/could not be loaded/)).toHaveCount(0);
 });
 
@@ -257,6 +262,7 @@ test("a direction without a sort names the default sort, not the remembered one"
 test("the keyword, source and weekly change headers sort too", async ({
   page,
 }) => {
+  await showKeywordColumns(page, ["source"]);
   await page.goto("/apps/app-1/keywords");
   const rows = page
     .getByRole("table", { name: /Tracked keywords/ })
@@ -273,7 +279,7 @@ test("the keyword, source and weekly change headers sort too", async ({
   await expect(rows.nth(1)).toContainText("time blocking");
   await expect(rows.nth(-2)).toContainText("focus timer");
 
-  await page.getByRole("button", { name: "Δ7d", exact: true }).click();
+  await page.getByRole("button", { name: "7d", exact: true }).click();
   await expect(page).toHaveURL(/sort=delta7d/);
   await expect(rows.nth(1)).toContainText("focus timer");
   await expect(rows.nth(2)).toContainText("study timer");
@@ -421,6 +427,7 @@ test("the seven day delta announces its direction, not only its colour", async (
 test("volatility column labels low, high and unavailable rows", async ({
   page,
 }) => {
+  await showKeywordColumns(page, ["volatility"]);
   await page.goto("/apps/app-1/keywords");
 
   const lowRow = page.getByRole("row", { name: /focus timer/ });
@@ -438,6 +445,7 @@ test("volatility column labels low, high and unavailable rows", async ({
 test("the volatility header sorts and still opens its tooltip", async ({
   page,
 }) => {
+  await showKeywordColumns(page, ["volatility"]);
   await page.goto("/apps/app-1/keywords");
 
   const header = page.getByRole("button", { name: "Volatility" });
@@ -500,9 +508,11 @@ test("score details are persistent, keyboard accessible and store specific", asy
 }) => {
   await page.goto("/apps/app-1/keywords");
 
-  await expect(
-    page.getByRole("note").filter({ hasText: "not directly comparable" }),
-  ).toBeVisible();
+  await page.getByRole("button", { name: "About popularity" }).click();
+  await expect(page.getByRole("dialog", { name: "Popularity" })).toContainText(
+    "not directly comparable",
+  );
+  await page.keyboard.press("Escape");
 
   const appleScore = page
     .getByRole("row", { name: /focus timer/ })
@@ -693,6 +703,8 @@ test("a source facet narrows the rows and shows a removable chip", async ({
     .getByRole("table", { name: /Tracked keywords/ })
     .getByRole("row");
 
+  await openKeywordFilters(page);
+
   await page.getByRole("button", { name: "Filter by source" }).click();
   await page.getByRole("option", { name: /Manual/ }).click();
   await page.keyboard.press("Escape");
@@ -701,6 +713,7 @@ test("a source facet narrows the rows and shows a removable chip", async ({
   await expect(
     page.getByRole("button", { name: "Filter by source, 1 selected" }),
   ).toBeVisible();
+  await page.keyboard.press("Escape");
   await expect(rows).toHaveCount(3);
   await expect(rows.nth(1)).toContainText("productivity app");
   await expect(page.getByText("Source: Manual")).toBeVisible();
@@ -721,6 +734,8 @@ test.describe("the type facet", () => {
     await page.goto("/apps/app-1/keywords");
     const rows = rowsOf(page);
 
+    await openKeywordFilters(page);
+
     await page.getByRole("button", { name: "Filter by type" }).click();
     await expect(page.getByRole("option")).toHaveText([
       /Own brand\s*1/,
@@ -735,6 +750,7 @@ test.describe("the type facet", () => {
     await expect(page.getByText("1 of 5 keywords")).toBeVisible();
 
     await page.getByRole("option", { name: /Competitor brand/ }).click();
+    await page.keyboard.press("Escape");
     await page.keyboard.press("Escape");
 
     await expect(page).toHaveURL(/type=ownBrand,competitorBrand/);
@@ -758,6 +774,7 @@ test.describe("the type facet", () => {
 
     await expect(rowsOf(page)).toHaveCount(5);
     await expect(page.getByText("Type: Generic")).toBeVisible();
+    await openKeywordFilters(page);
     await expect(
       page.getByRole("button", { name: "Filter by type, 1 selected" }),
     ).toBeVisible();
@@ -786,6 +803,7 @@ test.describe("the type facet", () => {
 
     await page.goto("/apps/app-1/keywords?country=pl&type=generic");
     await expect(page.getByText("Type: Generic")).toBeVisible();
+    await openKeywordFilters(page);
     await expect(table).not.toContainText("minutnik skupienia");
   });
 });
@@ -799,8 +817,12 @@ test("the status filter keeps paused rows and clear all empties the url", async 
     .getByRole("row");
 
   const status = page.getByRole("combobox", { name: "Filter by status" });
-  await (await hydrated(status)).click();
+  await (
+    await hydrated(page.getByRole("button", { name: /^Filters/ }))
+  ).click();
+  await status.click();
   await page.getByRole("option", { name: "Paused" }).click();
+  await page.keyboard.press("Escape");
 
   await expect(page).toHaveURL(/status=paused/);
   await expect(rows).toHaveCount(3);
@@ -813,34 +835,33 @@ test("the status filter keeps paused rows and clear all empties the url", async 
   await expect(rows).toHaveCount(7);
 });
 
-test("the status filter names its value before the page hydrates", async ({
+test("the market menu names its value before the page hydrates", async ({
   page,
 }) => {
   await page.route("**/_next/static/chunks/**", (route) => route.abort());
   await page.goto("/apps/app-1/keywords");
 
   await expect(
-    page.getByRole("combobox", { name: "Filter by status" }),
-  ).toHaveText("All statuses");
+    page.getByRole("combobox", { name: "Keyword markets" }),
+  ).toHaveText(/United States\s*5/);
 });
 
-test("each width offers one way to filter, and widening closes the phone filters onto a facet", async ({
+test("each width offers one filters button, and widening closes the phone filters onto it", async ({
   page,
 }) => {
   const filters = page.getByRole("button", { name: /^Filters/ });
-  const sourceFacet = page.getByRole("button", { name: "Filter by source" });
   const sheet = page.getByRole("dialog", { name: "Filters" });
   await page.setViewportSize({ width: 375, height: 800 });
   await page.goto("/apps/app-1/keywords");
-  await expect(sourceFacet).toHaveCount(0);
+  await expect(filters).toHaveCount(1);
   await (await hydrated(filters)).click();
   await expect(sheet).toBeVisible();
 
   await page.setViewportSize({ width: 1280, height: 800 });
 
   await expect(sheet).toHaveCount(0);
-  await expect(filters).toHaveCount(0);
-  await expect(sourceFacet).toBeFocused();
+  await expect(filters).toHaveCount(1);
+  await expect(filters).toBeFocused();
 });
 
 test("the phone filters open at a width the larger default font keeps narrow", async ({
@@ -864,8 +885,11 @@ test("a grade facet keeps only rows of that grade", async ({ page }) => {
   await page.goto("/apps/app-1/keywords");
   const table = page.getByRole("table", { name: /Tracked keywords/ });
 
+  await openKeywordFilters(page);
+
   await page.getByRole("button", { name: "Filter by popularity" }).click();
   await page.getByRole("option", { name: /strong/ }).click();
+  await page.keyboard.press("Escape");
   await page.keyboard.press("Escape");
 
   await expect(page).toHaveURL(/pop=strong/);
@@ -885,8 +909,11 @@ test("the position facet finds keywords that do not rank", async ({ page }) => {
     .getByRole("table", { name: /Tracked keywords/ })
     .getByRole("row");
 
+  await openKeywordFilters(page);
+
   await page.getByRole("button", { name: "Filter by position" }).click();
   await page.getByRole("option", { name: /Not ranking/ }).click();
+  await page.keyboard.press("Escape");
   await page.keyboard.press("Escape");
 
   await expect(page).toHaveURL(/pos=unranked/);
@@ -897,8 +924,10 @@ test("the position facet finds keywords that do not rank", async ({ page }) => {
 
 test("the columns menu hides a column and remembers it", async ({ page }) => {
   await page.goto("/apps/app-1/keywords");
-  const sourceHeader = page.getByRole("columnheader", { name: "Source" });
-  await expect(sourceHeader).toBeVisible();
+  const difficultyHeader = page.getByRole("columnheader", {
+    name: "Difficulty",
+  });
+  await expect(difficultyHeader).toBeVisible();
 
   await page.getByRole("button", { name: "Columns" }).click();
   const menu = page.getByRole("menu");
@@ -908,15 +937,15 @@ test("the columns menu hides a column and remembers it", async ({ page }) => {
   await expect(
     menu.getByRole("menuitemcheckbox").filter({ hasNotText: "Listing marks" }),
   ).toHaveCount(12);
-  await menu.getByRole("menuitemcheckbox", { name: "Source" }).click();
+  await menu.getByRole("menuitemcheckbox", { name: "Difficulty" }).click();
   await page.keyboard.press("Escape");
 
-  await expect(sourceHeader).toHaveCount(0);
+  await expect(difficultyHeader).toHaveCount(0);
   await page.reload();
   await expect(
     page.getByRole("columnheader", { name: "Popularity" }),
   ).toBeVisible();
-  await expect(sourceHeader).toHaveCount(0);
+  await expect(difficultyHeader).toHaveCount(0);
 });
 
 test("a phone starts with the columns that fit and offers the rest", async ({
@@ -935,12 +964,10 @@ test("a phone starts with the columns that fit and offers the rest", async ({
     "Source",
     "Popularity",
     "Difficulty",
-    "Δ7d",
+    "7d",
     "Volatility",
   ]) {
-    await expect(
-      page.getByRole("columnheader", { name, exact: true }),
-    ).toHaveCount(0);
+    await expect(page.getByRole("columnheader", { name })).toHaveCount(0);
   }
 
   await page.getByRole("button", { name: "Columns" }).click();
@@ -1017,10 +1044,8 @@ test("a column shown on a phone does not hide the rest on a wider screen", async
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.reload();
 
-  for (const name of ["Source", "Popularity", "Difficulty", "Volatility"]) {
-    await expect(
-      page.getByRole("columnheader", { name, exact: true }),
-    ).toBeVisible();
+  for (const name of ["Source", "Popularity", "Difficulty", "7d"]) {
+    await expect(page.getByRole("columnheader", { name })).toBeVisible();
   }
 });
 
@@ -1033,10 +1058,7 @@ test("a column hidden on a wide screen stays hidden after a phone change", async
   await page.getByRole("button", { name: "Columns" }).click();
   await page.getByRole("menuitemcheckbox", { name: "Popularity" }).click();
   await page.keyboard.press("Escape");
-  const popularity = page.getByRole("columnheader", {
-    name: "Popularity",
-    exact: true,
-  });
+  const popularity = page.getByRole("columnheader", { name: "Popularity" });
   await expect(popularity).toHaveCount(0);
 
   await page.setViewportSize({ width: 375, height: 800 });
@@ -1183,7 +1205,7 @@ test("a row shows three of its tags and names them all", async ({ page }) => {
       name: "Tags: core, testing, students, exam season, brand",
     });
   await expect(tags).toBeVisible();
-  await expect(tags).toHaveText("coretestingstudents+2");
+  await expect(tags).toHaveText("core, testing, students+2");
 });
 
 const NOTE_NAME = "Note: Seasonal <push> in May Keep for exam season";
@@ -1257,8 +1279,11 @@ test.describe("the tags facet", () => {
   }) => {
     await page.goto("/apps/app-1/keywords");
 
+    await openKeywordFilters(page);
+
     await page.getByRole("button", { name: "Filter by tags" }).click();
     await page.getByRole("option", { name: /^core/ }).click();
+    await page.keyboard.press("Escape");
     await page.keyboard.press("Escape");
 
     await expect(page).toHaveURL(/tag=core/);
@@ -1278,6 +1303,8 @@ test.describe("the tags facet", () => {
 
   test("counts tags within the other filters", async ({ page }) => {
     await page.goto("/apps/app-1/keywords?status=paused");
+
+    await openKeywordFilters(page);
 
     await page.getByRole("button", { name: "Filter by tags" }).click();
     const options = page.getByRole("option");

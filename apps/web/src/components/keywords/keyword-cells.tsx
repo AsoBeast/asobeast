@@ -24,33 +24,12 @@ import {
   PositionHistoryPopover,
   type PositionHistoryContext,
 } from "./PositionHistoryPopover";
-import { cn } from "@/lib/utils";
 import { KeywordClassBadge } from "./KeywordClassBadge";
 
-function volatilityBand(value: number): {
-  label: string;
-  text: string;
-  dot: string;
-} {
-  if (value < 20) {
-    return {
-      label: "Low",
-      text: "text-muted-foreground",
-      dot: "bg-muted-foreground/60",
-    };
-  }
-  if (value <= 50) {
-    return {
-      label: "Medium",
-      text: "text-warning",
-      dot: "bg-warning",
-    };
-  }
-  return {
-    label: "High",
-    text: "text-signal-down",
-    dot: "bg-signal-down",
-  };
+function volatilityBand(value: number): { label: string; text: string } {
+  if (value < 20) return { label: "Low", text: "text-muted-foreground" };
+  if (value <= 50) return { label: "Medium", text: "text-foreground" };
+  return { label: "High", text: "text-warning" };
 }
 
 export function PositionCell({
@@ -102,12 +81,13 @@ export function PositionCell({
   }
   const staleOn = staleCheckDay(keyword, today);
   return (
-    <span className="inline-flex items-center gap-1">
+    <span className="inline-flex items-center justify-end gap-1">
       <PositionReadout
         keyword={keyword}
         label={label}
         staleOn={staleOn}
         lost={lostPosition(keyword)}
+        aligned
       />
       <PositionHistoryPopover
         keyword={keyword}
@@ -133,15 +113,13 @@ export function VolatilityCell({ value }: { value: number | null }) {
   const band = volatilityBand(value);
   return (
     <span
-      className={cn(
-        "inline-flex items-center gap-1.5 text-sm font-medium",
-        band.text,
-      )}
+      className="inline-flex items-center justify-end gap-1.5"
       aria-label={`${band.label} volatility, ${value} out of 100`}
     >
-      <span className={cn("size-2 rounded-full", band.dot)} aria-hidden />
-      {band.label}
-      <span className="numeric text-xs text-muted-foreground">{value}</span>
+      <span className={band.text}>{band.label}</span>
+      <span className="numeric w-6 text-right text-muted-foreground">
+        {value}
+      </span>
     </span>
   );
 }
@@ -173,7 +151,7 @@ export function PlayAcquisitionsCell({
     <Tooltip>
       <TooltipTrigger asChild>
         <span
-          className="numeric text-sm whitespace-nowrap"
+          className="numeric whitespace-nowrap"
           aria-label={`${acquisitions} acquisitions from ${visitors} store listing visitors in ${month}`}
         >
           <span>{acquisitions}</span>
@@ -187,7 +165,7 @@ export function PlayAcquisitionsCell({
   );
 }
 
-export function TagBadges({ tags }: { tags: readonly string[] }) {
+export function TagList({ tags }: { tags: readonly string[] }) {
   if (tags.length === 0) return null;
   const { shown, hidden } = visibleTags(tags);
   const label = tagsLabel(tags);
@@ -196,15 +174,11 @@ export function TagBadges({ tags }: { tags: readonly string[] }) {
       role="group"
       aria-label={label}
       title={label}
-      className="flex items-center gap-1 whitespace-nowrap"
+      className="flex items-center gap-1 whitespace-nowrap text-muted-foreground"
     >
-      {shown.map((tag) => (
-        <Badge key={tag} variant="outline" aria-hidden>
-          {tag}
-        </Badge>
-      ))}
+      <span aria-hidden>{shown.join(", ")}</span>
       {hidden > 0 ? (
-        <span aria-hidden className="text-caption text-muted-foreground">
+        <span aria-hidden className="text-caption text-faint-foreground">
           {`+${hidden}`}
         </span>
       ) : null}
@@ -245,7 +219,7 @@ export function KeywordCell({ keyword }: { keyword: TrackedKeywordItem }) {
   const marks = useContext(ListingMarksContext);
   const onChart = useContext(ChartedKeywordsContext).has(keyword.keywordId);
   return (
-    <span className="flex max-w-40 items-center gap-2 font-medium md:max-w-64">
+    <span className="flex max-w-40 items-center gap-2 font-medium md:max-w-72">
       <span title={keyword.text} className="truncate">
         <MatchedText
           segments={marks ? keyword.matchedIn : null}
@@ -282,7 +256,7 @@ export function AddedCell({ trackedAt }: { trackedAt: string | null }) {
     );
   }
   return (
-    <time dateTime={trackedAt} className="numeric text-sm whitespace-nowrap">
+    <time dateTime={trackedAt} className="numeric whitespace-nowrap">
       {formatDate(trackedAt)}
     </time>
   );
@@ -308,7 +282,7 @@ export function CompetitorsInTop10Cell({ value }: { value: number | null }) {
   }
   return (
     <span
-      className="numeric text-sm"
+      className="numeric"
       aria-label={`${pluralize(value, "competitor")} in the top 10`}
     >
       {value}
@@ -325,5 +299,5 @@ export function RevealCell({ label }: { label: string | null }) {
       </span>
     );
   }
-  return <span className="font-mono text-sm">{label}</span>;
+  return <span className="numeric">{label}</span>;
 }

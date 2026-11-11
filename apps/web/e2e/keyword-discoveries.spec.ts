@@ -14,6 +14,7 @@ import {
   DISCOVERY_SPENT_COOKIE,
   DISCOVERY_UNFIT_COOKIE,
 } from "./keyword-discoveries.mts";
+import { chooseKeywordMarket } from "./keyword-controls.mts";
 
 const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
 const KEYWORDS = "/apps/app-1/keywords";
@@ -199,10 +200,7 @@ test("each row names its source, rank and scores", async ({ page }) => {
 test("the market pills scope the list and its counts", async ({ page }) => {
   await page.goto(DISCOVERED);
 
-  await page
-    .getByRole("group", { name: "Keyword markets" })
-    .getByRole("button", { name: /^PL/ })
-    .click();
+  await chooseKeywordMarket(page, /^Poland/);
 
   await expect(page).toHaveURL(/country=pl/);
   await expect(page).toHaveURL(/tab=discovered/);

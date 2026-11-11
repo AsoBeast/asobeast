@@ -1,12 +1,22 @@
 "use client";
 
 import { InfoTip } from "@/components/ui/info-tip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import { nullsLast } from "@/lib/table/sorting";
 import { insightsOf } from "@/lib/keyword-insights";
 import { InsightsCell } from "./InsightsCell";
 import { InsightsTip } from "./InsightsTip";
-import { AddedCell, CompetitorsInTop10Cell, RevealCell } from "./keyword-cells";
+import {
+  AddedCell,
+  CompetitorsInTop10Cell,
+  RevealCell,
+  VolatilityCell,
+} from "./keyword-cells";
 import { REVEAL_WORDS, revealLabel, revealRank } from "./score-signals";
 import {
   keywordColumnHelper as columnHelper,
@@ -54,7 +64,11 @@ export function competitorsColumn() {
     (row) => nullsLast(row.competitorsInTop10 ?? null),
     {
       id: "competitors",
-      meta: { label: "Competitors in top 10", hiddenByDefault: true },
+      meta: {
+        label: "Competitors in top 10",
+        hiddenByDefault: true,
+        numeric: true,
+      },
       ...SORTABLE,
       sortDescFirst: true,
       header: ({ column }) => (
@@ -94,5 +108,26 @@ export function insightsColumn(today: string, multiMarket: boolean) {
         multiMarket={multiMarket}
       />
     ),
+  });
+}
+
+export function volatilityColumn() {
+  return columnHelper.accessor((row) => nullsLast(row.serpVolatility7d), {
+    id: "volatility",
+    meta: { label: "Volatility", numeric: true, hiddenByDefault: true },
+    ...SORTABLE,
+    sortDescFirst: true,
+    header: ({ column }) => (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <SortableHeader column={column} label="Volatility" />
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs">
+          How much the top 10 changed day to day over the last week. High churn
+          means rankings here are unstable.
+        </TooltipContent>
+      </Tooltip>
+    ),
+    cell: ({ row }) => <VolatilityCell value={row.original.serpVolatility7d} />,
   });
 }

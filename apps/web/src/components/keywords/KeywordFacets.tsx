@@ -31,7 +31,7 @@ import {
   type KeywordFilters,
 } from "./keyword-filters";
 import { shownScore } from "@/lib/keyword-scores";
-import { SOURCE_LABELS } from "./SourceBadge";
+import { SOURCE_LABELS } from "./SourceLabel";
 
 type KeywordTable = Table<KeywordTableFeatures, TrackedKeywordItem>;
 type KeywordRow = Row<KeywordTableFeatures, TrackedKeywordItem>;

@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { isNumericColumn } from "@/lib/table/column-visibility";
 import { ariaSort } from "@/lib/table/sorting";
 import { cn } from "@/lib/utils";
 
@@ -25,7 +26,7 @@ const STICKY_COLUMNS: Record<string, string | undefined> = {
   keyword: "sticky left-10 z-10 bg-inherit",
 };
 
-const ROW_HEIGHT = 45;
+const ROW_HEIGHT = 37;
 const OVERSCAN = 12;
 const VIRTUALIZE_ABOVE = 50;
 
@@ -70,7 +71,8 @@ export function KeywordsDataTable({
   return (
     <Table
       containerRef={scrollRef}
-      containerClassName="max-h-[70svh] overflow-y-auto overscroll-contain rounded-xl border bg-card"
+      density="compact"
+      containerClassName="max-h-[70svh] overflow-y-auto rounded-lg border bg-card"
       aria-rowcount={rows.length + (rows.length > 0 ? 2 : 1)}
     >
       <TableCaption className="sr-only">
@@ -89,6 +91,7 @@ export function KeywordsDataTable({
               <TableHead
                 key={header.id}
                 aria-sort={ariaSort(header.column.getIsSorted())}
+                numeric={isNumericColumn(header.column.columnDef.meta)}
                 className={cn(
                   "max-md:whitespace-normal",
                   header.column.id === "actions" && "w-0",
@@ -140,6 +143,7 @@ export function KeywordsDataTable({
             {row.getVisibleCells().map((cell) => (
               <TableCell
                 key={cell.id}
+                numeric={isNumericColumn(cell.column.columnDef.meta)}
                 className={cn(STICKY_COLUMNS[cell.column.id])}
               >
                 {flexRender(cell.column.columnDef.cell, cell.getContext())}

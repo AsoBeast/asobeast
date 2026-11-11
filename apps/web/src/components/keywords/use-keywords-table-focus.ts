@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { SELECT_ALL_KEYWORDS } from "./keyword-columns";
 
 export function useClearedSelectionFocus(
@@ -25,15 +25,16 @@ export function useClearedSelectionFocus(
   return { tableArea, clearSelection };
 }
 
-export function useEmptiedListFocus(isEmpty: boolean) {
+export function useEmptiedListFocus(
+  isEmpty: boolean,
+  addKeywords: RefObject<HTMLElement | null>,
+) {
   const showedTable = useRef(!isEmpty);
-  const addKeywords = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const emptied = isEmpty && showedTable.current;
     showedTable.current = !isEmpty;
     if (emptied && document.activeElement === document.body) {
       addKeywords.current?.focus();
     }
-  }, [isEmpty]);
-  return addKeywords;
+  }, [isEmpty, addKeywords]);
 }

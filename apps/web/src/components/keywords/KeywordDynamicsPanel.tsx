@@ -70,20 +70,17 @@ export function KeywordDynamicsPanel({
   return (
     <section
       aria-labelledby={headingId}
-      className="flex flex-col gap-3 rounded-xl border bg-card p-4"
+      className="flex flex-col gap-3 rounded-lg border bg-card p-4"
     >
       <div className="flex flex-wrap items-center gap-2">
         <h3
           ref={headingRef}
           id={headingId}
           tabIndex={-1}
-          className="text-body font-medium outline-none"
+          className="text-heading outline-none"
         >
           Keyword dynamics
         </h3>
-        <p className="text-caption text-muted-foreground">
-          Charted rows are highlighted in the table.
-        </p>
         <RangePicker
           presets={RANGE_PRESETS}
           value={range}

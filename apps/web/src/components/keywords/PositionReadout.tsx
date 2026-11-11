@@ -14,12 +14,14 @@ export function PositionReadout({
   label,
   staleOn,
   lost = null,
+  aligned = false,
   className,
 }: {
   keyword: TrackedKeywordItem;
   label: string;
   staleOn: string | null;
   lost?: LostPosition | null;
+  aligned?: boolean;
   className?: string;
 }) {
   return (
@@ -36,12 +38,15 @@ export function PositionReadout({
           value={label}
           grade={grade("position", keyword.latestPosition)}
           label="Position"
+          aligned={aligned}
           className={className}
         />
       )}
-      <PositionDeltaChip
-        value={staleOn === null ? keyword.positionDelta1d : null}
-      />
+      <span className={aligned ? "inline-flex w-8 justify-start" : "contents"}>
+        <PositionDeltaChip
+          value={staleOn === null ? keyword.positionDelta1d : null}
+        />
+      </span>
     </span>
   );
 }

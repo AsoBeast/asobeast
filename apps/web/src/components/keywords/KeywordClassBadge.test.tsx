@@ -27,8 +27,10 @@ describe("KeywordClassBadge", () => {
   );
 
   it("tells the two brands apart by more than colour", () => {
-    expect(render("ownBrand")).toContain('data-variant="info"');
-    expect(render("competitorBrand")).toContain('data-variant="outline"');
+    expect(render("ownBrand")).toContain('<span aria-hidden="true">B</span>');
+    expect(render("competitorBrand")).toContain(
+      '<span aria-hidden="true">CB</span>',
+    );
   });
 
   it("says the owner set the type", () => {

@@ -6,6 +6,7 @@ import type { KeywordTableFeatures } from "./keyword-table-features";
 import {
   difficultyFooter,
   keywordCountFooter,
+  movedFooter,
   popularityFooter,
   positionFooter,
 } from "./KeywordTotalsFooters";
@@ -99,6 +100,20 @@ describe("the keyword totals footers", () => {
     ]);
   });
 
+  it("counts the keywords that moved up and down over 7 days", () => {
+    const moved = tableOf([
+      keyword({ positionDelta7d: -7 }),
+      keyword({ positionDelta7d: 6 }),
+      keyword({ positionDelta7d: 5 }),
+      keyword({ positionDelta7d: null }),
+    ]);
+
+    expect(textsOf(renderToStaticMarkup(movedFooter(moved)))).toEqual([
+      "1 up",
+      "2 down",
+    ]);
+  });
+
   it("names the dash of a table without scored keywords", () => {
     const unscored = tableOf([keyword({})]);
 
@@ -115,6 +130,7 @@ describe("the keyword totals footers", () => {
   it("writes each figure as one string in its own element", () => {
     for (const footer of [
       keywordCountFooter,
+      movedFooter,
       positionFooter,
       popularityFooter,
       difficultyFooter,

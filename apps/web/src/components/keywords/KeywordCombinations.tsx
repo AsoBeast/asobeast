@@ -5,13 +5,12 @@ import { ChevronDown } from "lucide-react";
 import { useQueryState, useQueryStates } from "nuqs";
 import type { Store } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  LEDE,
+  SECTION_CHEVRON,
+  SECTION_TOGGLE,
+} from "@/components/layout/panel-classes";
 import { formatCountry } from "@/lib/format";
 import {
   COMBINATION_URL_KEYS,
@@ -55,29 +54,30 @@ export function KeywordCombinations({
               type="button"
               aria-expanded={params.open}
               onClick={() => void setParams({ open: !params.open })}
-              className="flex w-full items-center justify-between gap-4 text-left"
+              className={SECTION_TOGGLE}
             >
               Keyword combinations
               <ChevronDown
                 aria-hidden
-                className={cn(
-                  "size-4 shrink-0 text-muted-foreground transition-transform",
-                  params.open && "rotate-180",
-                )}
+                className={cn(SECTION_CHEVRON, params.open && "rotate-180")}
               />
             </button>
           </h3>
         </CardTitle>
-        <CardDescription>
-          Every phrase of one to three words that the words in your{" "}
-          {LISTING_FIELDS[store]} can form, in any order, and whether you track
-          it in your home market. Coverage on the metadata page checks the
-          reverse: whether each tracked keyword appears word for word in one
-          field.
-        </CardDescription>
       </CardHeader>
       {params.open ? (
-        <CardContent role="region" aria-labelledby={TITLE_ID}>
+        <CardContent
+          role="region"
+          aria-labelledby={TITLE_ID}
+          className="flex flex-col gap-4"
+        >
+          <p className={LEDE}>
+            Every phrase of one to three words that the words in your{" "}
+            {LISTING_FIELDS[store]} can form, in any order, and whether you
+            track it in your home market. Coverage on the metadata page checks
+            the reverse: whether each tracked keyword appears word for word in
+            one field.
+          </p>
           {market === homeCountry ? (
             <Suspense fallback={<KeywordCombinationsSkeleton />}>
               <CombinationsTable
@@ -90,7 +90,7 @@ export function KeywordCombinations({
             </Suspense>
           ) : (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed p-4">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-body text-muted-foreground">
                 Combinations come from the listing in your home market, {home}.
               </p>
               <Button

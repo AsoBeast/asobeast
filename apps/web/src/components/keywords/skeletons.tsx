@@ -18,7 +18,7 @@ export function KeywordDynamicsSkeleton() {
 export function KeywordsTableSkeleton() {
   return (
     <div className="flex flex-col gap-3">
-      <div className="overflow-hidden rounded-xl border">
+      <div className="overflow-hidden rounded-lg border">
         <div className="flex items-center gap-4 border-b px-4 py-3">
           {Array.from({ length: 7 }).map((_, index) => (
             <Skeleton key={index} className="h-4 w-16" />
@@ -38,7 +38,7 @@ export function KeywordsTableSkeleton() {
 
 export function MarketSearchReadsSkeleton() {
   return (
-    <div className="flex flex-col gap-4 rounded-xl border p-4">
+    <div className="flex flex-col gap-4 rounded-lg border p-4">
       <div className="flex items-center justify-between gap-4">
         <Skeleton className="h-5 w-48" />
         <Skeleton className="h-4 w-44" />
@@ -62,7 +62,7 @@ export function KeywordCombinationsSkeleton() {
         <Skeleton className="h-8 w-24" />
         <Skeleton className="h-8 w-24" />
       </div>
-      <div className="overflow-hidden rounded-xl border">
+      <div className="overflow-hidden rounded-lg border">
         {Array.from({ length: 6 }).map((_, index) => (
           <div
             key={index}
@@ -82,7 +82,7 @@ export function KeywordMapSkeleton() {
   return (
     <div
       data-slot="keyword-map-skeleton"
-      className="flex flex-col gap-4 rounded-xl border p-4"
+      className="flex flex-col gap-4 rounded-lg border p-4"
     >
       <div className="flex items-center justify-between gap-4">
         <Skeleton className="h-5 w-48" />

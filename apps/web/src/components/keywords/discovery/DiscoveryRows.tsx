@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { focusIsLost } from "@/lib/focus-handoff";
 import { formatNumber } from "@/lib/format";
+import { isNumericColumn } from "@/lib/table/column-visibility";
 import type { KeywordTableFeatures } from "../keyword-table-features";
 import { DISCOVERY_PAGE_SIZE } from "./discovery-rows";
 
@@ -44,7 +45,8 @@ export function DiscoveryRows({ table }: { table: DiscoveryTable }) {
   return (
     <div className="flex flex-col gap-3">
       <Table
-        containerClassName="rounded-xl border bg-card"
+        density="compact"
+        containerClassName="rounded-lg border bg-card"
         scrollLabel="Keyword discoveries"
         scrollFocus="overflow"
       >
@@ -56,7 +58,10 @@ export function DiscoveryRows({ table }: { table: DiscoveryTable }) {
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
-                <TableHead key={header.id}>
+                <TableHead
+                  key={header.id}
+                  numeric={isNumericColumn(header.column.columnDef.meta)}
+                >
                   {flexRender(
                     header.column.columnDef.header,
                     header.getContext(),
@@ -77,12 +82,15 @@ export function DiscoveryRows({ table }: { table: DiscoveryTable }) {
                   <th
                     key={cell.id}
                     scope="row"
-                    className="px-2 py-1.5 text-left font-normal"
+                    className="px-2 py-1 text-left font-normal md:px-3"
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </th>
                 ) : (
-                  <TableCell key={cell.id}>
+                  <TableCell
+                    key={cell.id}
+                    numeric={isNumericColumn(cell.column.columnDef.meta)}
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ),

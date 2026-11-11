@@ -9,7 +9,6 @@ import {
 } from "@asobeast/shared";
 import { ReadRoleBadge } from "@/components/localizations/ReadRoleBadge";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardAction,
@@ -29,6 +28,8 @@ import {
 import { formatNumber, pluralize } from "@/lib/format";
 import { localizationName } from "@/lib/localizations";
 import { marketKeywordFieldsOptions } from "@/lib/queries";
+import { FOOTER_LINK } from "@/components/layout/panel-classes";
+import { cn } from "@/lib/utils";
 import { MarketWastedWords } from "./MarketWastedWords";
 import { MarketSearchReadsSkeleton } from "./skeletons";
 
@@ -45,8 +46,8 @@ function ReadsCard({
   return (
     <Card role="region" aria-labelledby={titleId} className="min-w-0">
       <CardHeader>
-        <CardTitle id={titleId}>
-          {`What ${market.toUpperCase()} search reads`}
+        <CardTitle asChild>
+          <h3 id={titleId}>{`What ${market.toUpperCase()} search reads`}</h3>
         </CardTitle>
         {aside ? <CardAction>{aside}</CardAction> : null}
       </CardHeader>
@@ -67,7 +68,7 @@ function ReadRow({ id, read }: { id: string; read: MarketLocalizationRead }) {
         <Meter
           value={Math.min(read.charactersUsed, read.charactersLimit)}
           max={read.charactersLimit}
-          tone="health"
+          tone="neutral"
         />
         <span className="numeric shrink-0 text-caption text-muted-foreground">
           {read.phrases.length === 0
@@ -75,14 +76,13 @@ function ReadRow({ id, read }: { id: string; read: MarketLocalizationRead }) {
             : `${read.charactersUsed}/${read.charactersLimit}`}
         </span>
       </span>
-      <Button asChild variant="link" size="sm" className="h-auto p-0">
-        <Link
-          href={editLocalizationHref(id, read.localization)}
-          aria-label={`Edit the ${name} keyword field`}
-        >
-          Edit
-        </Link>
-      </Button>
+      <Link
+        href={editLocalizationHref(id, read.localization)}
+        aria-label={`Edit the ${name} keyword field`}
+        className={FOOTER_LINK}
+      >
+        Edit
+      </Link>
     </li>
   );
 }
@@ -100,7 +100,7 @@ function UnshippedReads({
 }) {
   if (reads.length === 0) return null;
   return (
-    <details open={open} className="rounded-lg border border-border px-3 py-2">
+    <details open={open} className="border-t border-border-subtle pt-3">
       <summary className="cursor-pointer text-body">
         {`${market.toUpperCase()} also reads ${pluralize(reads.length, "localization")} you don't ship · up to ${formatNumber(reads.length * KEYWORD_FIELD_CHAR_LIMIT)} more characters`}
       </summary>
@@ -113,11 +113,12 @@ function UnshippedReads({
           </li>
         ))}
       </ul>
-      <Button asChild variant="link" size="sm" className="mt-2 h-auto p-0">
-        <Link href={localizationsSectionHref(id)}>
-          Add one on the metadata page
-        </Link>
-      </Button>
+      <Link
+        href={localizationsSectionHref(id)}
+        className={cn(FOOTER_LINK, "mt-2")}
+      >
+        Add one on the metadata page
+      </Link>
     </details>
   );
 }

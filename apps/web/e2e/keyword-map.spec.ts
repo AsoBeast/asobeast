@@ -10,6 +10,7 @@ import {
   MAP_LABELLED,
 } from "./keyword-map.mts";
 import { expect, test } from "./session.mts";
+import { chooseKeywordMarket } from "./keyword-controls.mts";
 
 const KEYWORDS = `/apps/${APP_MAP_ID}/keywords`;
 const TOTAL = 25;
@@ -363,10 +364,7 @@ test.describe("the opportunity map", () => {
       /\/api\/backend\/apps\/app-1\/keywords\?country=us/,
       "GET",
     );
-    await page
-      .getByRole("group", { name: "Keyword markets" })
-      .getByRole("button", { name: /^US/ })
-      .click();
+    await chooseKeywordMarket(page, /^United States/);
 
     const skeleton = page.locator('[data-slot="keyword-map-skeleton"]');
     await expect(skeleton).toBeVisible();
@@ -699,6 +697,7 @@ test.describe("zones and thresholds", () => {
     page,
   }) => {
     await storeThresholds(page, '{"popularity":30,"difficulty":25}');
+    await page.setViewportSize({ width: 1280, height: 480 });
     await page.goto(MAP_URL);
     const trigger = page.getByRole("button", { name: "Thresholds" });
     await trigger.evaluate((node) => node.scrollIntoView({ block: "end" }));
@@ -1069,7 +1068,10 @@ test.describe("dots", () => {
 
     await page.keyboard.press("Space");
     await expect(history).toBeVisible();
-    await page.getByText("Popularity by difficulty").click();
+    await page
+      .getByRole("heading", { name: "Opportunity map" })
+      .first()
+      .click();
     await expect(history).toHaveCount(0);
     await expect(dot(page, "kw-map-1")).toBeFocused();
 

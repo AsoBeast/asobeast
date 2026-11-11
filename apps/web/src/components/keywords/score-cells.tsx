@@ -8,8 +8,7 @@ import type {
   ScoringSource,
 } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
-import { Meter } from "@/components/ui/meter";
-import { gradeFill } from "@/components/ui/graded";
+import { GradeMarker } from "@/components/ui/graded";
 import {
   Tooltip,
   TooltipContent,
@@ -73,22 +72,18 @@ function ScoreButton({
           data-grade={graded ?? undefined}
           aria-label={`${label} ${valueLabel}${gradeWords}. ${summary}. Show scoring details`}
           className={cn(
-            "flex w-14 flex-col items-end gap-1 rounded-sm numeric outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-            emphasize
-              ? "font-semibold text-foreground"
-              : "text-muted-foreground",
+            "inline-flex items-center justify-end gap-1.5 rounded-sm numeric text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            emphasize && "font-medium",
           )}
         >
-          <span className="inline-flex items-center gap-1">
-            {floorAnswer ? (
-              <ArrowDownToLine
-                aria-hidden="true"
-                className="size-3 text-muted-foreground"
-              />
-            ) : null}
-            <span>{valueLabel}</span>
-          </span>
-          {graded ? <Meter value={value} fill={gradeFill(graded)} /> : null}
+          {floorAnswer ? (
+            <ArrowDownToLine
+              aria-hidden="true"
+              className="size-3 text-muted-foreground"
+            />
+          ) : null}
+          <span>{valueLabel}</span>
+          <GradeMarker grade={graded} reserve />
         </button>
       </TooltipTrigger>
       <TooltipContent className="max-w-sm flex-col items-start gap-1.5">

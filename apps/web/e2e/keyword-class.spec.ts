@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { holdRequest } from "./held-request.mts";
 import { expect, test } from "./session.mts";
+import { openKeywordFilters } from "./keyword-controls.mts";
 
 const PAGE = "/apps/app-1/keywords";
 
@@ -273,6 +274,7 @@ test.describe("the keyword type menu", () => {
       rowOf(page, "study timer").getByTitle("Brand keyword, set by you"),
     ).toBeVisible();
 
+    await openKeywordFilters(page);
     await page.getByRole("button", { name: "Filter by type" }).click();
     await expect(page.getByRole("option", { name: /Own brand/ })).toHaveText(
       /Own brand\s*2/,

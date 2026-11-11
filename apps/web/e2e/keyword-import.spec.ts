@@ -59,7 +59,7 @@ const importRequests = (page: Page) => {
   return seen;
 };
 
-test("P-WEB-01 offers the import beside Add keywords and in the empty state", async ({
+test("P-WEB-01 offers the import beside Add keywords, above an empty list too", async ({
   page,
 }) => {
   await page.goto(KEYWORDS);

@@ -1,12 +1,7 @@
 "use client";
 
 import { createColumnHelper } from "@tanstack/react-table";
-import type {
-  DiscoverySource,
-  KeywordDiscoveryItem,
-  Store,
-} from "@asobeast/shared";
-import { Badge } from "@/components/ui/badge";
+import type { KeywordDiscoveryItem, Store } from "@asobeast/shared";
 import { Checkbox } from "@/components/ui/checkbox";
 import { GradedNumber } from "@/components/ui/graded";
 import { InfoTip } from "@/components/ui/info-tip";
@@ -26,19 +21,6 @@ import {
 
 const DISCOVERY_GUIDE =
   "https://docs.asobeast.com/guides/keyword-discovery#how-the-rank-is-found";
-
-const SOURCE_VARIANT: Record<
-  DiscoverySource,
-  "success" | "secondary" | "info" | "outline"
-> = {
-  title: "success",
-  subtitle: "success",
-  description: "success",
-  competitors: "secondary",
-  reviews: "secondary",
-  popularity: "info",
-  portfolio: "outline",
-};
 
 const columnHelper = createColumnHelper<
   KeywordTableFeatures,
@@ -64,7 +46,12 @@ function ScoreValue({
   return score.value === null ? (
     <Missing label={`No ${label.toLowerCase()} score`} />
   ) : (
-    <GradedNumber value={`${score.value}`} grade={score.grade} label={label} />
+    <GradedNumber
+      value={`${score.value}`}
+      grade={score.grade}
+      label={label}
+      aligned
+    />
   );
 }
 
@@ -90,6 +77,7 @@ function RankCell({ item }: { item: KeywordDiscoveryItem }) {
       value={text}
       grade={grade("position", item.position)}
       label="Rank"
+      aligned
     />
   );
 }
@@ -145,7 +133,7 @@ const keywordColumn = columnHelper.accessor("text", {
     <span className="flex flex-wrap items-center gap-2">
       <span className="font-medium wrap-anywhere">{row.original.text}</span>
       {row.original.recommended ? (
-        <Badge variant="info">Recommended</Badge>
+        <span className="text-label text-muted-foreground">Recommended</span>
       ) : null}
     </span>
   ),
@@ -156,14 +144,15 @@ const sourceColumn = (store: Store) =>
     id: "source",
     header: "Source",
     cell: ({ row }) => (
-      <Badge variant={SOURCE_VARIANT[row.original.source]}>
+      <span className="text-muted-foreground">
         {discoverySourceLabel(row.original.source, store)}
-      </Badge>
+      </span>
     ),
   });
 
 const rankColumn = columnHelper.accessor("position", {
   id: "rank",
+  meta: { numeric: true },
   header: () => (
     <MetricHeader
       label="Rank"
@@ -177,6 +166,7 @@ const rankColumn = columnHelper.accessor("position", {
 const scoreColumns = [
   columnHelper.accessor("volume", {
     id: "popularity",
+    meta: { numeric: true },
     header: "Popularity",
     cell: ({ row }) => (
       <ScoreValue score={popularityScore(row.original)} label="Popularity" />
@@ -184,6 +174,7 @@ const scoreColumns = [
   }),
   columnHelper.accessor("difficulty", {
     id: "difficulty",
+    meta: { numeric: true },
     header: "Difficulty",
     cell: ({ row }) => (
       <ScoreValue score={difficultyScore(row.original)} label="Difficulty" />
@@ -191,6 +182,7 @@ const scoreColumns = [
   }),
   columnHelper.accessor("relevance", {
     id: "relevance",
+    meta: { numeric: true },
     header: () => (
       <MetricHeader
         label="Relevance"
@@ -204,6 +196,7 @@ const scoreColumns = [
   }),
   columnHelper.accessor("opportunity", {
     id: "opportunity",
+    meta: { numeric: true },
     header: () => (
       <MetricHeader
         label="Opportunity"

@@ -5,7 +5,6 @@ import { ListOrdered } from "lucide-react";
 import type {
   KeywordBucket,
   KeywordClass,
-  KeywordSource,
   Store,
   TrackedKeywordItem,
 } from "@asobeast/shared";
@@ -13,14 +12,10 @@ import type { KeywordTableFeatures } from "./keyword-table-features";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { InfoTip } from "@/components/ui/info-tip";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { DeltaChip } from "@/components/ui/delta-chip";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import { tagsIn } from "@/lib/keyword-tags";
+import { attributeColumns } from "./keyword-attribute-columns";
 import { noSearchTermsFact } from "@/lib/funnel";
 import { keywordZoneFilter } from "./keyword-filters";
 import { KeywordRowActions } from "./KeywordRowActions";
@@ -29,8 +24,6 @@ import {
   KeywordCell,
   PlayAcquisitionsCell,
   PositionCell,
-  TagBadges,
-  VolatilityCell,
 } from "./keyword-cells";
 import {
   keywordColumnHelper as columnHelper,
@@ -41,10 +34,12 @@ import {
   competitorsColumn,
   revealColumn,
   insightsColumn,
+  volatilityColumn,
 } from "./keyword-fact-columns";
 import {
   difficultyFooter,
   keywordCountFooter,
+  movedFooter,
   popularityFooter,
   positionFooter,
 } from "./KeywordTotalsFooters";
@@ -60,12 +55,10 @@ import {
   lowerConfidenceLines,
   popularitySignalLines,
 } from "./score-signals";
-import { SOURCE_LABELS, SourceBadge } from "./SourceBadge";
 import type { Grade, GradeMetric } from "@/lib/grade";
 import {
   gradeIn,
   oneOf,
-  someOf,
   positionBandIn,
   statusFilter,
   type ActivityStatus,
@@ -112,15 +105,16 @@ export function keywordColumns({
 }) {
   return columnHelper.columns([
     ...identityColumns(),
-    addedColumn(),
     positionColumn(today, { appId, store, homeCountry, multiMarket }),
+    deltaColumn(),
     ...scoreColumns(),
     insightsColumn(today, multiMarket),
     ...(store === "GOOGLE_PLAY"
       ? [acquisitionsColumn({ noSearchTermsMonth })]
       : []),
-    deltaColumn(),
+    ...attributeColumns(),
     volatilityColumn(),
+    addedColumn(),
     competitorsColumn(),
     revealColumn(),
     actionsColumn({ appId, onOpenSerp }),
@@ -165,29 +159,6 @@ function identityColumns() {
       footer: keywordCountFooter,
       cell: ({ row }) => <KeywordCell keyword={row.original} />,
     }),
-    columnHelper.accessor((row) => row.tags ?? [], {
-      id: "tags",
-      header: "Tags",
-      enableSorting: false,
-      getUniqueValues: (row) => row.tags ?? [],
-      filterFn: (row, _id, selected: readonly string[]) =>
-        someOf(row.original.tags, selected),
-      meta: { label: "Tags" },
-      cell: ({ row }) => <TagBadges tags={row.original.tags ?? []} />,
-    }),
-    columnHelper.accessor("source", {
-      id: "source",
-      meta: { label: "Source" },
-      sortFn: (a, b, id) =>
-        SOURCE_LABELS[a.getValue<KeywordSource>(id)].localeCompare(
-          SOURCE_LABELS[b.getValue<KeywordSource>(id)],
-        ),
-      sortDescFirst: false,
-      filterFn: (row, id, selected: KeywordSource[]) =>
-        oneOf(row.getValue<KeywordSource>(id), selected),
-      header: ({ column }) => <SortableHeader column={column} label="Source" />,
-      cell: ({ row }) => <SourceBadge source={row.original.source} />,
-    }),
   ];
 }
 
@@ -226,7 +197,7 @@ function filterColumns() {
 function positionColumn(today: string, history: PositionHistoryContext) {
   return columnHelper.accessor((row) => nullsLast(row.latestPosition), {
     id: "position",
-    meta: { label: "Position", phone: true },
+    meta: { label: "Position", phone: true, numeric: true },
     ...SORTABLE,
     sortDescFirst: false,
     filterFn: (row, _id, selected: PositionBand[]) =>
@@ -248,10 +219,11 @@ function deltaColumn() {
     (row) => (row.positionDelta7d === null ? undefined : -row.positionDelta7d),
     {
       id: "delta7d",
-      meta: { label: "Δ7d" },
+      meta: { label: "7d", numeric: true },
       ...SORTABLE,
       sortDescFirst: true,
-      header: ({ column }) => <SortableHeader column={column} label="Δ7d" />,
+      header: ({ column }) => <SortableHeader column={column} label="7d" />,
+      footer: movedFooter,
       cell: ({ row }) => (
         <DeltaChip value={row.original.positionDelta7d} period="over 7 days" />
       ),
@@ -261,56 +233,9 @@ function deltaColumn() {
 
 function scoreColumns() {
   return [
-    columnHelper.accessor((row) => nullsLast(scoreValue(row, "traffic")), {
-      id: "traffic",
-      meta: { label: "Popularity" },
-      ...SORTABLE,
-      sortDescFirst: true,
-      filterFn: gradeFilter("popularity"),
-      header: ({ column }) => (
-        <SortableHeader column={column} label="Popularity" />
-      ),
-      footer: popularityFooter,
-      cell: ({ row }) => (
-        <ScoreCell
-          value={scoreValue(row.original, "traffic")}
-          label="Popularity"
-          metric="popularity"
-          provenance={row.original.scoreProvenance}
-          details={popularitySignalLines(
-            row.original.scoreSignals ?? null,
-            row.original.scoreProvenance?.source,
-            scoreValue(row.original, "traffic"),
-          )}
-          outdated={isScoreOutdated(row.original)}
-          floorAnswer={hasFloorAnswer(row.original)}
-        />
-      ),
-    }),
-    columnHelper.accessor((row) => nullsLast(scoreValue(row, "difficulty")), {
-      id: "difficulty",
-      meta: { label: "Difficulty" },
-      ...SORTABLE,
-      sortDescFirst: true,
-      filterFn: gradeFilter("difficulty"),
-      header: ({ column }) => (
-        <SortableHeader column={column} label="Difficulty" />
-      ),
-      footer: difficultyFooter,
-      cell: ({ row }) => (
-        <ScoreCell
-          value={scoreValue(row.original, "difficulty")}
-          label="Difficulty"
-          metric="difficulty"
-          provenance={row.original.scoreProvenance}
-          details={difficultySignalLines(row.original.scoreSignals ?? null)}
-          outdated={isScoreOutdated(row.original)}
-        />
-      ),
-    }),
     columnHelper.accessor((row) => nullsLast(row.opportunity), {
       id: "opportunity",
-      meta: { label: "Opportunity", phone: true },
+      meta: { label: "Opportunity", phone: true, numeric: true },
       ...SORTABLE,
       sortDescFirst: true,
       filterFn: gradeFilter("opportunity"),
@@ -331,8 +256,65 @@ function scoreColumns() {
         />
       ),
     }),
+    columnHelper.accessor((row) => nullsLast(scoreValue(row, "traffic")), {
+      id: "traffic",
+      meta: { label: "Popularity", numeric: true },
+      ...SORTABLE,
+      sortDescFirst: true,
+      filterFn: gradeFilter("popularity"),
+      header: ({ column }) => (
+        <span className="inline-flex items-center gap-1">
+          <SortableHeader column={column} label="Popularity" />
+          <InfoTip
+            label="About popularity"
+            title="Popularity"
+            summary={CROSS_STORE_NOTE}
+          />
+        </span>
+      ),
+      footer: popularityFooter,
+      cell: ({ row }) => (
+        <ScoreCell
+          value={scoreValue(row.original, "traffic")}
+          label="Popularity"
+          metric="popularity"
+          provenance={row.original.scoreProvenance}
+          details={popularitySignalLines(
+            row.original.scoreSignals ?? null,
+            row.original.scoreProvenance?.source,
+            scoreValue(row.original, "traffic"),
+          )}
+          outdated={isScoreOutdated(row.original)}
+          floorAnswer={hasFloorAnswer(row.original)}
+        />
+      ),
+    }),
+    columnHelper.accessor((row) => nullsLast(scoreValue(row, "difficulty")), {
+      id: "difficulty",
+      meta: { label: "Difficulty", numeric: true },
+      ...SORTABLE,
+      sortDescFirst: true,
+      filterFn: gradeFilter("difficulty"),
+      header: ({ column }) => (
+        <SortableHeader column={column} label="Difficulty" />
+      ),
+      footer: difficultyFooter,
+      cell: ({ row }) => (
+        <ScoreCell
+          value={scoreValue(row.original, "difficulty")}
+          label="Difficulty"
+          metric="difficulty"
+          provenance={row.original.scoreProvenance}
+          details={difficultySignalLines(row.original.scoreSignals ?? null)}
+          outdated={isScoreOutdated(row.original)}
+        />
+      ),
+    }),
   ];
 }
+
+const CROSS_STORE_NOTE =
+  "Apple App Store and Google Play popularity and volume scores use different public signals and are not directly comparable.";
 
 const PLAY_INSTALLS_SUMMARY =
   "The acquisitions and store listing visitors this keyword brought through Google Play search and explore, from the newest complete month Play Console reported. A dash means Google reported no visitors for it.";
@@ -347,7 +329,7 @@ function acquisitionsColumn({
     (row) => nullsLast(row.playAcquisitions?.acquisitions ?? null),
     {
       id: "acquisitions",
-      meta: { label: "Play installs" },
+      meta: { label: "Play installs", numeric: true },
       ...SORTABLE,
       sortDescFirst: true,
       header: ({ column }) => (
@@ -372,27 +354,6 @@ function acquisitionsColumn({
       ),
     },
   );
-}
-
-function volatilityColumn() {
-  return columnHelper.accessor((row) => nullsLast(row.serpVolatility7d), {
-    id: "volatility",
-    meta: { label: "Volatility" },
-    ...SORTABLE,
-    sortDescFirst: true,
-    header: ({ column }) => (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <SortableHeader column={column} label="Volatility" />
-        </TooltipTrigger>
-        <TooltipContent className="max-w-xs">
-          How much the top 10 changed day to day over the last week. High churn
-          means rankings here are unstable.
-        </TooltipContent>
-      </Tooltip>
-    ),
-    cell: ({ row }) => <VolatilityCell value={row.original.serpVolatility7d} />,
-  });
 }
 
 function actionsColumn({
