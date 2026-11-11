@@ -74,7 +74,7 @@ export const AUDIT_WEIGHTS = {
   },
 } as const;
 
-export const AUDIT_RUBRIC_VERSION = 'v2';
+export const AUDIT_RUBRIC_VERSION = 'v3';
 
 export const AUDIT_GROUP_LABELS: Readonly<Record<AuditGroupId, string>> =
   Object.freeze({

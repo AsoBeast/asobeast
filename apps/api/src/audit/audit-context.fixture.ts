@@ -27,6 +27,7 @@ export const emptyFacts: RawAppFacts = {
   genreName: null,
   videoUrl: null,
   featureGraphicUrl: null,
+  previewVideoCount: null,
   supportsIpad: false,
   developerName: null,
   currentVersionScore: null,

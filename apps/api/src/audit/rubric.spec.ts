@@ -86,6 +86,7 @@ const perfectContext = (): AuditContext =>
       releaseNotes:
         'Adds streak reminders, home screen widgets and a weekly recap.',
       languages: ['EN', 'PL', 'DE', 'FR', 'ES', 'IT', 'PT', 'JA', 'KO', 'ZH'],
+      previewVideoCount: 2,
     },
     keywords: perfectKeywords,
     visibility: { latest: 60, latestDate: '2026-07-09', weekAgo: 55 },
@@ -183,6 +184,7 @@ const completeContext = (store: Store): AuditContext => {
       supportsIpad: store === Store.APP_STORE,
       languages: store === Store.APP_STORE ? ['EN', 'PL'] : [],
       releaseNotes: 'Adds streak reminders and widgets for every routine.',
+      previewVideoCount: 1,
       featureGraphicUrl: 'https://play/header',
       videoUrl: 'https://play/video',
       privacyPolicyUrl: 'https://example.com/privacy',
@@ -247,7 +249,7 @@ describe('computeAudit', () => {
       (factor) => factor.availability !== 'not-measurable',
     );
     expect(result.overall).toBe(100);
-    expect(result.coveredWeight).toBe(105);
+    expect(result.coveredWeight).toBe(110);
     expect(result.totalWeight).toBe(110);
     expect(measurable.every((factor) => factor.score === 10)).toBe(true);
     expect(measurable.some((factor) => factor.needsInput)).toBe(false);
@@ -305,9 +307,7 @@ describe('computeAudit', () => {
       true,
     );
     expect(
-      result.factors
-        .filter((factor) => factor.id !== 'previewVideo')
-        .every((factor) => factor.availability === 'measured'),
+      result.factors.every((factor) => factor.availability === 'measured'),
     ).toBe(true);
   });
 
@@ -353,8 +353,29 @@ describe('computeAudit', () => {
     expect(stuck.map((item) => item.id)).toEqual([]);
   });
 
-  it('lists no preview video check on the App Store and says so in the limitations', () => {
+  it('scores the App Store preview video when the page extract is present', () => {
     const result = computeAudit(perfectContext());
+    const video = result.factors.find((factor) => factor.id === 'previewVideo');
+
+    expect(video).toMatchObject({
+      availability: 'measured',
+      confidence: 1,
+      score: 10,
+      needsInput: false,
+    });
+    expect(video?.checks.map((item) => item.id)).toEqual([
+      'preview-video-present',
+    ]);
+    expect(result.limitations?.map((item) => item.id)).not.toContain(
+      'preview-video',
+    );
+  });
+
+  it('leaves the App Store preview video not measurable without a page extract', () => {
+    const result = computeAudit({
+      ...perfectContext(),
+      rawFacts: { ...perfectContext().rawFacts, previewVideoCount: null },
+    });
     const video = result.factors.find((factor) => factor.id === 'previewVideo');
 
     expect(video).toMatchObject({
@@ -363,9 +384,6 @@ describe('computeAudit', () => {
       score: null,
       needsInput: true,
     });
-    expect(result.limitations?.map((item) => item.id)).toContain(
-      'preview-video',
-    );
   });
 
   it('waits for the keyword field instead of scoring without it', () => {
@@ -463,6 +481,7 @@ const APP_STORE_CHECK_IDS = [
   'icon-simplicity',
   'keyword-field-hygiene',
   'keyword-field-length',
+  'preview-video-present',
   'rankings-competitor-gap',
   'rankings-top10',
   'rankings-trend',

@@ -228,7 +228,7 @@ describe('Audit creative runs (e2e)', () => {
     expect(audit.creative?.screenshots.length).toBeGreaterThan(0);
     expect(
       await prisma.auditScore.findFirst({ where: { appId: id } }),
-    ).toMatchObject({ rubricVersion: 'v2' });
+    ).toMatchObject({ rubricVersion: 'v3' });
   });
 
   it('marks the analysis stale when the screenshots change, and queues again', async () => {

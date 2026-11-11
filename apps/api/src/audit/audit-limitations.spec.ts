@@ -3,7 +3,6 @@ import { limitationsFor } from './audit-limitations';
 describe('limitationsFor', () => {
   it('lists what the App Store audit cannot see, in order', () => {
     expect(limitationsFor('APP_STORE').map((item) => item.id)).toEqual([
-      'preview-video',
       'promotional-text',
       'in-app-events',
       'custom-product-pages',

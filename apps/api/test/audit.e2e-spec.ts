@@ -121,6 +121,12 @@ describe('AuditController (e2e)', () => {
           icon: 'https://cdn.example.com/icon.png',
           screenshots: Array.from({ length: 8 }, (_, i) => `s${i}.png`),
           releaseNotes: 'Bug fixes and improvements.',
+          pageExtract: {
+            previewVideoUrls: [
+              'https://video.example.com/preview-1.mp4',
+              'https://video.example.com/preview-2.mp4',
+            ],
+          },
         },
         capturedAt: D0,
       },
@@ -300,7 +306,7 @@ describe('AuditController (e2e)', () => {
     const response = await api.get(`/apps/${id}/audit`).expect(200);
     const result = response.body as AppAuditResult;
 
-    expect(result.rubricVersion).toBe('v2');
+    expect(result.rubricVersion).toBe('v3');
     expect(result.grade).not.toBeNull();
     expect(result.confidence).toBeGreaterThan(0);
     expect(result.confidence).toBeLessThanOrEqual(1);
@@ -315,7 +321,7 @@ describe('AuditController (e2e)', () => {
           item.availability !== undefined,
       ),
     ).toBe(true);
-    expect(result.limitations?.map((item) => item.id)).toContain(
+    expect(result.limitations?.map((item) => item.id)).not.toContain(
       'preview-video',
     );
     expect(result.unlocks?.map((item) => item.kind)).toContain('ai-analysis');
@@ -338,6 +344,102 @@ describe('AuditController (e2e)', () => {
     ).toBe(true);
   });
 
+  it('scores the App Store preview video from the page extract', async () => {
+    const id = await seed();
+
+    const result = (await api.get(`/apps/${id}/audit`).expect(200))
+      .body as AppAuditResult;
+
+    expect(
+      result.factors.find((item) => item.id === 'previewVideo'),
+    ).toMatchObject({
+      availability: 'measured',
+      score: 10,
+      checks: [
+        expect.objectContaining({
+          id: 'preview-video-present',
+          label: 'Preview video present',
+          status: 'pass',
+          detail: 'The store page shows 2 preview videos.',
+        }),
+      ],
+    });
+  });
+
+  it('fails the App Store preview video when the extract holds none', async () => {
+    const app = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '2234567890',
+        country: 'us',
+        name: 'No Preview',
+      },
+    });
+    await prisma.appSnapshot.create({
+      data: {
+        appId: app.id,
+        title: 'No Preview',
+        description: 'Build better habits every single day.',
+        raw: {
+          screenshots: Array.from({ length: 8 }, (_, i) => `s${i}.png`),
+          pageExtract: { previewVideoUrls: [] },
+        },
+        capturedAt: D0,
+      },
+    });
+
+    const result = (await api.get(`/apps/${app.id}/audit`).expect(200))
+      .body as AppAuditResult;
+
+    expect(
+      result.factors.find((item) => item.id === 'previewVideo'),
+    ).toMatchObject({
+      availability: 'measured',
+      score: 0,
+      checks: [
+        expect.objectContaining({
+          id: 'preview-video-present',
+          status: 'fail',
+        }),
+      ],
+    });
+  });
+
+  it('leaves the App Store preview video not measurable without a page extract', async () => {
+    const app = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '3234567890',
+        country: 'us',
+        name: 'Legacy Snapshot',
+      },
+    });
+    await prisma.appSnapshot.create({
+      data: {
+        appId: app.id,
+        title: 'Legacy Snapshot',
+        description: 'Build better habits every single day.',
+        raw: {
+          screenshots: Array.from({ length: 8 }, (_, i) => `s${i}.png`),
+        },
+        capturedAt: D0,
+      },
+    });
+
+    const result = (await api.get(`/apps/${app.id}/audit`).expect(200))
+      .body as AppAuditResult;
+
+    expect(
+      result.factors.find((item) => item.id === 'previewVideo'),
+    ).toMatchObject({
+      checks: [],
+      availability: 'not-measurable',
+      score: null,
+    });
+  });
+
   it('runs the AI audit, caches it, and raises the overall', async () => {
     const id = await seed();
 
@@ -348,7 +450,7 @@ describe('AuditController (e2e)', () => {
     const after = (await api.post(`/apps/${id}/audit/ai`).expect(201))
       .body as AppAuditResult;
 
-    expect(factor(after, 'previewVideo')?.availability).toBe('not-measurable');
+    expect(factor(after, 'previewVideo')?.availability).toBe('measured');
     expect(factor(after, 'icon')?.score).toBe(10);
     expect((after.overall as number) > (before.overall as number)).toBe(true);
     expect(after.ai.model).toBe('gpt-4o');
@@ -379,7 +481,7 @@ describe('AuditController (e2e)', () => {
 
     const rows = await prisma.auditScore.findMany({ where: { appId: id } });
     expect(rows).toHaveLength(1);
-    expect(rows[0].rubricVersion).toBe('v2');
+    expect(rows[0].rubricVersion).toBe('v3');
   });
 
   it('returns 404 when running the AI audit for an unknown app', async () => {
@@ -470,7 +572,7 @@ describe('AuditController (e2e)', () => {
     expect(rows[0].coveredWeight).toBeGreaterThan(0);
     expect(rows[0].totalWeight).toBe(110);
     expect(Array.isArray(rows[0].factors)).toBe(true);
-    expect(rows[0].rubricVersion).toBe('v2');
+    expect(rows[0].rubricVersion).toBe('v3');
     expect(rows[0].confidence).toBeGreaterThan(0);
   });
 

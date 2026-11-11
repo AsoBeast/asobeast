@@ -800,7 +800,7 @@ describe('ActionsController (e2e)', () => {
         overall: 52,
         coveredWeight: 90,
         totalWeight: 110,
-        rubricVersion: 'v2',
+        rubricVersion: 'v3',
         confidence: 0.82,
         factors: [
           {
