@@ -36,7 +36,7 @@ export function PositionReadout({
     <span
       className={cn(
         "numeric inline-flex shrink-0 items-center gap-1.5",
-        chip && "min-w-19",
+        chip && "min-w-12",
       )}
     >
       {keyword.latestPosition === null ? (
@@ -65,17 +65,11 @@ export function PositionReadout({
           )}
         />
       )}
-      <span
-        className={
-          chip && keyword.latestPosition !== null
-            ? "inline-flex w-8 justify-start"
-            : "contents"
-        }
-      >
+      {chip ? null : (
         <PositionDeltaChip
           value={staleOn === null ? keyword.positionDelta1d : null}
         />
-      </span>
+      )}
     </span>
   );
 }

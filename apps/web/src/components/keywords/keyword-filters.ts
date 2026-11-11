@@ -3,6 +3,7 @@ import type { inferParserType } from "nuqs";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import { BUCKET_LABELS } from "@/components/BucketBadge";
 import { gradeLabel } from "@/lib/grade";
+import { MOVE_FILTER_LABELS } from "@/lib/keyword-day-change";
 import {
   ZONE_LABELS,
   zoneOf,
@@ -47,9 +48,15 @@ export function keywordColumnFilters(
     { id: "position", value: filters.pos },
     { id: "tags", value: filters.tag },
   ].filter((filter) => filter.value.length > 0 && filter.value !== "all");
-  return filters.zone === null
-    ? listed
-    : [...listed, { id: "zone", value: { zone: filters.zone, thresholds } }];
+  return [
+    ...listed,
+    ...(filters.zone === null
+      ? []
+      : [{ id: "zone", value: { zone: filters.zone, thresholds } }]),
+    ...(filters.change === null
+      ? []
+      : [{ id: "change", value: filters.change }]),
+  ];
 }
 
 function listChip<T>(
@@ -105,6 +112,12 @@ export function keywordFilterChips(
     filters.zone === null
       ? null
       : { key: "zone" as const, label: `Zone: ${ZONE_LABELS[filters.zone]}` },
+    filters.change === null
+      ? null
+      : {
+          key: "change" as const,
+          label: `Since yesterday: ${MOVE_FILTER_LABELS[filters.change]}`,
+        },
   ];
   return chips.filter((chip) => chip !== null);
 }

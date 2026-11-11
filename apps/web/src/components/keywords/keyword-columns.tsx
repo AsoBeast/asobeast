@@ -12,7 +12,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { InfoTip } from "@/components/ui/info-tip";
 import { DeltaChip } from "@/components/ui/delta-chip";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
+import {
+  dayChange,
+  dayChangeRank,
+  matchesMoveFilter,
+  type KeywordMoveFilter,
+} from "@/lib/keyword-day-change";
 import { tagsIn } from "@/lib/keyword-tags";
+import { DayChangeCell } from "./DayChangeCell";
 import { attributeColumns } from "./keyword-attribute-columns";
 import { SCORE_COMPARABILITY } from "./keyword-csv";
 import { keywordZoneFilter } from "./keyword-filters";
@@ -38,9 +45,11 @@ import {
   volatilityColumn,
 } from "./keyword-fact-columns";
 import {
+  dayChangeFooter,
   difficultyFooter,
   keywordCountFooter,
   movedFooter,
+  opportunityFooter,
   popularityFooter,
   positionFooter,
 } from "./KeywordTotalsFooters";
@@ -105,6 +114,7 @@ export function keywordColumns({
   return columnHelper.columns([
     ...identityColumns(),
     positionColumn(today, { appId, store, homeCountry, multiMarket }),
+    changeColumn(today),
     deltaColumn(),
     ...scoreColumns(),
     insightsColumn(today, multiMarket),
@@ -212,6 +222,28 @@ function positionColumn(today: string, history: PositionHistoryContext) {
   });
 }
 
+function changeColumn(today: string) {
+  return columnHelper.accessor(
+    (row) => nullsLast(dayChangeRank(dayChange(row, today))),
+    {
+      id: "change",
+      meta: { label: "Change", phone: true },
+      ...SORTABLE,
+      sortDescFirst: true,
+      filterFn: (row, _id, filter: KeywordMoveFilter) =>
+        matchesMoveFilter(row.original, today, filter),
+      header: ({ column }) => <SortableHeader column={column} label="Change" />,
+      footer: ({ table }) => dayChangeFooter({ table }, today),
+      cell: ({ row }) => (
+        <DayChangeCell
+          change={dayChange(row.original, today)}
+          muted={!row.original.active}
+        />
+      ),
+    },
+  );
+}
+
 function deltaColumn() {
   return columnHelper.accessor(
     (row) => (row.positionDelta7d === null ? undefined : -row.positionDelta7d),
@@ -230,6 +262,9 @@ function deltaColumn() {
           <DeltaChip
             value={row.original.positionDelta7d}
             period="over 7 days"
+            className={
+              row.original.active ? undefined : "text-muted-foreground"
+            }
           />
         </span>
       ),
@@ -248,6 +283,7 @@ function scoreColumns() {
       header: ({ column }) => (
         <SortableHeader column={column} label="Opportunity" />
       ),
+      footer: opportunityFooter,
       cell: ({ row }) => (
         <DerivedScoreCell
           value={scoreValue(row.original, "opportunity")}

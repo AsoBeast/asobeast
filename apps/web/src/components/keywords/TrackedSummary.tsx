@@ -3,8 +3,8 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { utcDayOf } from "@asobeast/shared";
 import { LEDE } from "@/components/layout/panel-classes";
+import { keywordMoves, movesSentence } from "@/lib/keyword-day-change";
 import { keywordCountriesOptions, keywordsOptions } from "@/lib/queries";
-import { keywordMoves, movesSentence } from "./keyword-moves";
 
 const FIGURE = "numeric font-medium text-foreground";
 

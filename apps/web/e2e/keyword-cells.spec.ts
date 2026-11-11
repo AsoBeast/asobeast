@@ -270,7 +270,10 @@ test.describe("the last position of a keyword that lost its rank", () => {
       lastRankedTitle("lost yesterday"),
     );
     await expect(
-      rowOf(page, "lost yesterday").getByText(/since yesterday/),
+      rowOf(page, "lost yesterday").getByText("Lost", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      rowOf(page, "lost for days").getByText("Lost", { exact: true }),
     ).toHaveCount(0);
   });
 
@@ -374,4 +377,97 @@ test.describe("the last position of a keyword that lost its rank", () => {
       expect(overflow).toBeLessThanOrEqual(0);
     });
   }
+});
+
+test.describe("the change since the check before", () => {
+  const moveOption = (page: Page, name: RegExp) =>
+    page
+      .getByRole("tablist", { name: "Change since yesterday" })
+      .getByRole("tab", { name });
+  const bodyRows = (page: Page) =>
+    page
+      .getByRole("row")
+      .filter({ has: page.getByRole("checkbox") })
+      .filter({
+        hasNot: page.getByRole("checkbox", { name: "Select all keywords" }),
+      });
+
+  test("a lost keyword is counted in the sentence and the totals", async ({
+    page,
+  }) => {
+    await openMarks(page);
+
+    await expect(
+      page.getByText(/2 dropped out since yesterday\./),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("table", { name: /Tracked keywords/ }).locator("tfoot"),
+    ).toContainText("2 lost");
+  });
+
+  test("the switch keeps only what was lost, in the address too", async ({
+    page,
+  }) => {
+    await openMarks(page);
+    const lost = await hydrated(moveOption(page, /^Lost/));
+
+    await expect(lost).toHaveAccessibleName("Lost 2");
+    await lost.click();
+
+    await expect(page).toHaveURL(/change=lost/);
+    await expect(lost).toHaveAttribute("aria-selected", "true");
+    await expect(lost).toBeFocused();
+    await expect(bodyRows(page)).toHaveCount(2);
+    await expect(rowOf(page, "lost yesterday")).toBeVisible();
+    await expect(rowOf(page, "lost for days")).toHaveCount(0);
+
+    await page.getByRole("button", { name: /Since yesterday: Lost/ }).click();
+
+    await expect(page).not.toHaveURL(/change=/);
+    await expect(moveOption(page, /^All/)).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(bodyRows(page)).toHaveCount(10);
+  });
+
+  test("a link with the choice opens filtered", async ({ page }) => {
+    await page.goto(`${PAGE}?change=lost`);
+
+    await expect(moveOption(page, /^Lost/)).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(bodyRows(page)).toHaveCount(2);
+  });
+
+  test("sorting by change puts the lost keywords first", async ({ page }) => {
+    await openMarks(page);
+
+    await page.getByRole("button", { name: "Change", exact: true }).click();
+
+    await expect(page).toHaveURL(/sort=change/);
+    await expect(bodyRows(page).nth(0)).toContainText("Lost");
+    await expect(bodyRows(page).nth(1)).toContainText("Lost");
+    await expect(bodyRows(page).nth(2)).not.toContainText("Lost");
+  });
+
+  test("a paused keyword keeps its change without the colour of a move", async ({
+    page,
+  }) => {
+    await page.goto("/apps/app-1/keywords");
+    const paused = rowOf(page, "time blocking").getByLabel(
+      "down 1 since yesterday",
+    );
+    const active = rowOf(page, "pomodoro").getByLabel("down 3 since yesterday");
+
+    await expect(paused).toBeVisible();
+    const colours = await Promise.all(
+      [paused, active].map((chip) =>
+        chip.evaluate((node) => getComputedStyle(node).color),
+      ),
+    );
+    expect(colours[0]).not.toBe(colours[1]);
+    await expect(page.getByText(/1 moved up and 1 moved down/)).toBeVisible();
+  });
 });

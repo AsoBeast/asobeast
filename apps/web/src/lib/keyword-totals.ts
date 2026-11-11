@@ -8,6 +8,7 @@ export interface KeywordTotals {
   unchecked: number;
   averagePosition: number | null;
   topTen: number;
+  averageOpportunity: number | null;
   averagePopularity: number | null;
   averageDifficulty: number | null;
   movedUp7d: number;
@@ -44,6 +45,10 @@ export function keywordTotals(
     averagePosition: roundTo(mean(positions), 1),
     topTen: positions.filter((position) => position <= TOP_TEN_MAX_POSITION)
       .length,
+    averageOpportunity: roundTo(
+      mean(scored(rows.map((row) => scoreValue(row, "opportunity")))),
+      0,
+    ),
     averagePopularity: roundTo(
       mean(scored(rows.map((row) => scoreValue(row, "traffic")))),
       0,

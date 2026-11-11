@@ -1,6 +1,7 @@
 import type { Table } from "@tanstack/react-table";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import { formatNumber, pluralize } from "@/lib/format";
+import { keywordMoves } from "@/lib/keyword-day-change";
 import { keywordTotals, type KeywordTotals } from "@/lib/keyword-totals";
 import type { KeywordTableFeatures } from "./keyword-table-features";
 
@@ -72,6 +73,19 @@ export function positionFooter({ table }: FooterContext) {
   );
 }
 
+export function dayChangeFooter({ table }: FooterContext, today: string) {
+  const { up, down, lost } = keywordMoves(
+    table.getRowModel().rows.map((row) => row.original),
+    today,
+  );
+  return (
+    <Figures
+      lead={`${formatNumber(up)} up, ${formatNumber(down)} down`}
+      detail={`${formatNumber(lost)} lost`}
+    />
+  );
+}
+
 export function movedFooter({ table }: FooterContext) {
   const { movedUp7d, movedDown7d } = totalsOf(table);
   return (
@@ -80,6 +94,10 @@ export function movedFooter({ table }: FooterContext) {
       detail={`${formatNumber(movedDown7d)} down`}
     />
   );
+}
+
+export function opportunityFooter({ table }: FooterContext) {
+  return <Average value={totalsOf(table).averageOpportunity} />;
 }
 
 function Average({ value }: { value: number | null }) {

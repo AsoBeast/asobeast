@@ -41,6 +41,7 @@ describe("keywordTotals", () => {
       unchecked: 0,
       averagePosition: null,
       topTen: 0,
+      averageOpportunity: null,
       averagePopularity: null,
       averageDifficulty: null,
       movedUp7d: 0,

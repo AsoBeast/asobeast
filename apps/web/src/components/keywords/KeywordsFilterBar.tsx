@@ -17,8 +17,13 @@ import type { KeywordTableFeatures } from "./keyword-table-features";
 import { exportKeywords } from "./keyword-csv";
 import { keywordFilterChips, type KeywordFilters } from "./keyword-filters";
 import { KeywordFiltersPopover, KeywordFiltersSheet } from "./KeywordFilters";
+import { KeywordMoveSwitch } from "./KeywordMoveSwitch";
 
-const CHIPS_OUTSIDE_THE_PANEL: ReadonlySet<string> = new Set(["q", "zone"]);
+const CHIPS_OUTSIDE_THE_PANEL: ReadonlySet<string> = new Set([
+  "q",
+  "zone",
+  "change",
+]);
 
 export function KeywordsFilterBar({
   appId,
@@ -36,6 +41,9 @@ export function KeywordsFilterBar({
   viewOptions: readonly ViewOption[];
 }) {
   const shown = table.getRowModel().rows;
+  const everyKeyword = table
+    .getPreFilteredRowModel()
+    .rows.map((row) => row.original);
   const chips = keywordFilterChips(filters);
   const active = chips.filter(
     (chip) => !CHIPS_OUTSIDE_THE_PANEL.has(chip.key),
@@ -69,9 +77,15 @@ export function KeywordsFilterBar({
             otherWidth={narrowerFilters}
           />
         </div>
+        <KeywordMoveSwitch
+          keywords={everyKeyword}
+          today={today}
+          value={filters.change}
+          onChange={(change) => void setFilters({ change })}
+        />
         <RowCount
           shown={shown.length}
-          total={table.getPreFilteredRowModel().rows.length}
+          total={everyKeyword.length}
           noun="keyword"
         />
         <div className="ml-auto flex items-center gap-2">

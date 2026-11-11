@@ -68,10 +68,10 @@ describe("PositionCell", () => {
     expect(markup).not.toContain("since yesterday");
   });
 
-  it("W-POS-02 a fresh check keeps the daily change and a history button", () => {
+  it("W-POS-02 a fresh check keeps a history button and leaves the change to its column", () => {
     const markup = render(keyword({ latestCheckedOn: "2026-10-21" }));
 
-    expect(markup).toContain("since yesterday");
+    expect(markup).not.toContain("since yesterday");
     expect(markup).toContain('aria-label="Position history: focus timer"');
     expect(markup).toContain(CHART);
     expect(markup).not.toContain(CLOCK);
@@ -89,7 +89,6 @@ describe("PositionCell", () => {
 
     expect(latestCheckedOn).toBe(TODAY);
     expect(markup).not.toContain(CLOCK);
-    expect(markup).toContain("since yesterday");
   });
 
   it("W-POS-05 a stale check that did not find the app keeps its bound", () => {
@@ -190,7 +189,7 @@ describe("PositionCell", () => {
     );
 
     expect(markup).not.toContain(">was #");
-    expect(markup).toContain("since yesterday");
+    expect(markup).toContain('aria-label="Position');
   });
 
   it("W-POS-14 a stale lost keyword keeps the hint and the clock", () => {
