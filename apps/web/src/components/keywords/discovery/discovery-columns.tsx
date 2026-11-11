@@ -71,6 +71,15 @@ function ScoreValue({
   );
 }
 
+function NarrowOpportunity({ value }: { value: number | null }) {
+  if (value === null) return null;
+  return (
+    <span className="numeric basis-full text-caption text-muted-foreground sm:hidden">
+      {`Opportunity ${value}`}
+    </span>
+  );
+}
+
 function PositionValue({ item }: { item: KeywordDiscoveryItem }) {
   const text = rankText(item);
   if (text === null) {
@@ -152,6 +161,7 @@ const keywordColumn = columnHelper.accessor("text", {
           Recommended
         </span>
       ) : null}
+      <NarrowOpportunity value={shownScore(row.original.opportunity)} />
     </span>
   ),
 });

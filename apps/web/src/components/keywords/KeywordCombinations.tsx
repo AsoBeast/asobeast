@@ -58,7 +58,7 @@ function UntrackedCount({
   });
   const untracked = useMemo(() => {
     if (!app || !tracked || (store === "APP_STORE" && !field)) return null;
-    return buildCombinations({
+    const { combinations, truncated } = buildCombinations({
       listing: {
         store,
         snapshot: app.latestSnapshot,
@@ -66,11 +66,18 @@ function UntrackedCount({
       },
       tracked,
       market: homeCountry,
-    }).combinations.filter(({ status }) => status === "untracked").length;
+    });
+    const count = combinations.filter(
+      ({ status }) => status === "untracked",
+    ).length;
+    return { count, truncated };
   }, [app, tracked, field, store, homeCountry]);
   if (untracked === null) return null;
+  const phrases = pluralize(untracked.count, "untracked phrase");
   return (
-    <span className="numeric">{`${pluralize(untracked, "untracked phrase")}. `}</span>
+    <span className="numeric">
+      {untracked.truncated ? `At least ${phrases}. ` : `${phrases}. `}
+    </span>
   );
 }
 
