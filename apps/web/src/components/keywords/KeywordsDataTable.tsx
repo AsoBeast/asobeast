@@ -24,6 +24,8 @@ import { cn } from "@/lib/utils";
 const STICKY_COLUMNS: Record<string, string | undefined> = {
   select: "sticky left-0 z-10 w-10 min-w-10 bg-inherit",
   keyword: "sticky left-10 z-10 bg-inherit",
+  actions:
+    "min-[1400px]:sticky min-[1400px]:right-0 min-[1400px]:z-10 min-[1400px]:group-focus-within/row:bg-inherit min-[1400px]:group-hover/row:bg-inherit min-[1400px]:has-data-[state=open]:bg-inherit",
 };
 
 const ROW_HEIGHT = 45;
@@ -72,6 +74,7 @@ export function KeywordsDataTable({
     <Table
       containerRef={scrollRef}
       containerClassName="max-h-[70svh] overflow-y-auto rounded-lg border bg-card"
+      className="[&_td]:md:px-3 [&_th]:md:px-3"
       aria-rowcount={rows.length + (rows.length > 0 ? 2 : 1)}
     >
       <TableCaption className="sr-only">

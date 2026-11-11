@@ -138,16 +138,7 @@ export function topAppsColumn() {
     id: "topApps",
     meta: { label: "Top apps" },
     enableSorting: false,
-    header: () => (
-      <span className="inline-flex items-center gap-1">
-        <span>Top apps</span>
-        <InfoTip
-          label="About top apps"
-          title="Top apps"
-          summary="The first three apps in the newest stored search results of the keyword. Your own app is ringed. A dash means no results were stored today or yesterday."
-        />
-      </span>
-    ),
+    header: "Top apps",
     cell: ({ row }) => <TopAppsCell apps={row.original.topApps} />,
   });
 }
