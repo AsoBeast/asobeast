@@ -66,16 +66,23 @@ function computeDelta(points: AuditScorePoint[]): number | null {
   return (current.overall as number) - (baseline.overall as number);
 }
 
-const RUBRIC_V2 = "v2";
+interface RubricChange {
+  date: string;
+  version: string;
+}
 
-function rubricChangeDate(points: AuditScorePoint[]): string | null {
-  const versions = new Set(
-    points.map((point) => point.rubricVersion).filter(Boolean),
-  );
-  if (versions.size < 2) return null;
-  return (
-    points.find((point) => point.rubricVersion === RUBRIC_V2)?.date ?? null
-  );
+function rubricChanges(points: AuditScorePoint[]): RubricChange[] {
+  const changes: RubricChange[] = [];
+  let previous: string | null = null;
+  for (const point of points) {
+    const version = point.rubricVersion;
+    if (version === undefined) continue;
+    if (previous !== null && version !== previous) {
+      changes.push({ date: point.date, version });
+    }
+    previous = version;
+  }
+  return changes;
 }
 
 function DeltaChip({ delta }: { delta: number | null }) {
@@ -96,7 +103,7 @@ export function AuditHealthChart({ id }: { id: string }) {
   const { data } = useSuspenseQuery(auditHistoryOptions(id));
   const points = scored(data.points);
   const state = trendState(points.length);
-  const rubricChange = rubricChangeDate(data.points);
+  const rubricChange = rubricChanges(data.points);
   const lastPoint = points[points.length - 1];
 
   return (
@@ -129,13 +136,14 @@ export function AuditHealthChart({ id }: { id: string }) {
               <ChartTooltip
                 content={<ChartTooltipContent {...TIME_TOOLTIP_PROPS} />}
               />
-              {rubricChange ? (
+              {rubricChange.map((change) => (
                 <ReferenceLine
-                  x={rubricChange}
+                  key={`${change.date}-${change.version}`}
+                  x={change.date}
                   stroke="var(--border)"
-                  label="Rubric v2"
+                  label={`Rubric ${change.version}`}
                 />
-              ) : null}
+              ))}
               <Line
                 {...LINE_PROPS}
                 dataKey="overall"

@@ -159,7 +159,7 @@ test("says what the audit cannot see", async ({ page }) => {
   await page.goto("/apps/app-1/audit");
 
   await page.getByText("What this audit cannot see").click();
-  await expect(page.getByText("App previews")).toBeVisible();
+  await expect(page.getByText("Promotional text")).toBeVisible();
 });
 
 test("reports an audit that failed to load instead of hiding it", async ({
