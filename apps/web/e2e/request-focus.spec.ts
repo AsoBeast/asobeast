@@ -129,8 +129,10 @@ test("stopping a keyword keeps focus on the confirmation, then on a row that sta
   page,
 }) => {
   let stopped = false;
+  const refetch = Promise.withResolvers<void>();
   await page.route("**/api/backend/apps/app-1/keywords?*", async (route) => {
     if (!stopped || route.request().method() !== "GET") return route.fallback();
+    await refetch.promise;
     const rows: { text: string }[] = await (await route.fetch()).json();
     return route.fulfill({
       json: rows.filter((row) => row.text !== "pomodoro"),
@@ -164,13 +166,18 @@ test("stopping a keyword keeps focus on the confirmation, then on a row that sta
   await expect(confirm).toBeFocused();
   held.release();
 
+  const focusedMenu = page
+    .getByRole("button", { name: /^Keyword actions for / })
+    .and(page.locator(":focus"));
+
   await expect(dialog).toBeHidden();
+  await expect(actions).toBeVisible();
+  await expect(focusedMenu).toHaveCount(1);
+  await expect(actions).not.toBeFocused();
+  refetch.resolve();
+
   await expect(actions).toHaveCount(0);
-  await expect(
-    page
-      .getByRole("button", { name: /^Keyword actions for / })
-      .and(page.locator(":focus")),
-  ).toHaveCount(1);
+  await expect(focusedMenu).toHaveCount(1);
   expect(
     await page.evaluate(() => document.activeElement === document.body),
   ).toBe(false);
