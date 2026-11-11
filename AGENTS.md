@@ -11,6 +11,7 @@
 This file holds what applies everywhere. The detailed rules live in `.claude/rules/`, one file per area, each with a `paths:` list of the API and web files it governs. Claude Code loads a rule file when it reads or edits one of those files; any other agent reads the file named below before it changes that area. The indexes after the list state each rule in one line.
 
 - `.claude/rules/web.md`: frontend rules 1 to 10. Read for any change under `apps/web`.
+- `apps/web/PRODUCT.md` and `apps/web/DESIGN.md`: who the signed in app is for and the design system the frontend rules implement (colours, type scale, components, per screen intent). Read both before a change to how the app looks.
 - `.claude/rules/api.md`: the API conventions and domain rules 1, 3 to 8, 13, 14 and 18. Read for any change under `apps/api`.
 - `.claude/rules/admin-surfaces.md`: domain rule 11. Read when you touch the admin area, the docs, metrics or support surfaces, or the web proxy.
 - `.claude/rules/auth-billing.md`: domain rule 9. Read when you touch sign in, registration, sessions, tokens, the team, billing or the trial.
