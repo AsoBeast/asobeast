@@ -486,6 +486,28 @@ test("the table drops its widest columns on a tablet instead of scrolling", asyn
   ).toBeVisible();
 });
 
+test("the columns menu leaves out the columns a tablet cannot show", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1024, height: 900 });
+  await page.goto("/");
+
+  const columns = appsRegion(page).getByRole("button", { name: "Columns" });
+  await (await hydrated(columns)).click();
+  const choices = page.getByRole("menuitemcheckbox");
+  await expect(choices.filter({ hasText: "Audit" })).toBeVisible();
+  for (const name of ["Trend", "Moved", "Rating"]) {
+    await expect(choices.filter({ hasText: name })).toHaveCount(0);
+  }
+  await page.keyboard.press("Escape");
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await columns.click();
+  for (const name of ["Trend", "Moved", "Rating"]) {
+    await expect(choices.filter({ hasText: name })).toBeVisible();
+  }
+});
+
 test("the table keeps phone columns and reveals more on request", async ({
   page,
 }) => {

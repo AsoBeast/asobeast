@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import type { ActionItem, ActionPriority } from "@asobeast/shared";
+import type { ActionItem } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
-import { ACTION_PRIORITY_LABEL } from "@/components/actions/action-copy";
-import { actionHeadline } from "@/components/actions/action-headline";
+import { ActionLine } from "@/components/actions/ActionLine";
 import {
   Card,
   CardAction,
@@ -24,14 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 import { PANEL_ACTION, PANEL_HEADER } from "./layout-classes";
 
-const PRIORITY_TONE: Record<ActionPriority, string> = {
-  critical: "text-priority-critical",
-  high: "text-priority-high",
-  medium: "text-priority-medium",
-  low: "text-priority-low",
-};
-
-function ActionLine({
+function ActionScope({
   item,
   iconUrl,
 }: {
@@ -40,33 +32,19 @@ function ActionLine({
 }) {
   const { appName, store, country } = item.scope;
   return (
-    <Link
-      href={`/actions?action=${item.id}`}
-      className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-x-3 gap-y-1 rounded-md px-2 py-2 outline-none transition-colors duration-150 ease-out hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <span
-        className={cn(
-          "pt-0.5 text-tick font-semibold tracking-wide uppercase",
-          PRIORITY_TONE[item.priority],
-        )}
-      >
-        {ACTION_PRIORITY_LABEL[item.priority]}
+    <>
+      <AppIcon src={iconUrl} size={16} />
+      <span className="truncate">
+        {[
+          appName ?? "Unknown app",
+          storeLabel(store),
+          country.toUpperCase(),
+          item.reopenCount > 0 ? `Reopened ${item.reopenCount}×` : null,
+        ]
+          .filter((part) => part !== null)
+          .join(" · ")}
       </span>
-      <span className="text-body">{actionHeadline(item)}</span>
-      <span className="col-start-2 flex min-w-0 items-center gap-2 text-caption text-muted-foreground">
-        <AppIcon src={iconUrl} size={16} />
-        <span className="truncate">
-          {[
-            appName ?? "Unknown app",
-            storeLabel(store),
-            country.toUpperCase(),
-            item.reopenCount > 0 ? `Reopened ${item.reopenCount}×` : null,
-          ]
-            .filter((part) => part !== null)
-            .join(" · ")}
-        </span>
-      </span>
-    </Link>
+    </>
   );
 }
 
@@ -92,10 +70,12 @@ function ActionList() {
     <ul className="flex flex-col">
       {list.items.slice(0, DASHBOARD_ACTION_LIMIT).map((item) => (
         <li key={item.id}>
-          <ActionLine
-            item={item}
-            iconUrl={icons.get(item.scope.appId) ?? null}
-          />
+          <ActionLine item={item} href={`/actions?action=${item.id}`}>
+            <ActionScope
+              item={item}
+              iconUrl={icons.get(item.scope.appId) ?? null}
+            />
+          </ActionLine>
         </li>
       ))}
     </ul>

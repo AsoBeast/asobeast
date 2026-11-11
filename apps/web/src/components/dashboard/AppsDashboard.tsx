@@ -8,9 +8,16 @@ import { ColumnMenu } from "@/components/data-table/ColumnMenu";
 import { FilteredEmpty } from "@/components/data-table/FilteredEmpty";
 import { portfolioInsightsOptions, portfolioOptions } from "@/lib/queries";
 import { appListParsers } from "@/lib/search-params";
+import { isWideOnlyColumn } from "@/lib/table/column-visibility";
+import { useIsMobile } from "@/lib/use-is-mobile";
+import { useNarrowerThan } from "@/lib/use-narrower-than";
 import { AppsToolbar } from "./AppsToolbar";
 import { PortfolioGrid } from "./PortfolioGrid";
-import { PortfolioTable, usePortfolioTable } from "./PortfolioTable";
+import {
+  PortfolioTable,
+  usePortfolioTable,
+  WIDE_COLUMNS_FROM_REM,
+} from "./PortfolioTable";
 import {
   filterRows,
   matchesQuery,
@@ -60,6 +67,15 @@ export function AppsDashboard() {
     .filter((app) => matchesQuery(app, query))
     .map((app) => ({ app, insight: insightById.get(app.id) }));
   const table = usePortfolioTable(tableRows);
+  const [section, narrow] = useNarrowerThan(WIDE_COLUMNS_FROM_REM);
+  const phone = useIsMobile();
+  const dropsWideColumns = narrow && !phone;
+  const menuColumns = table
+    .getAllLeafColumns()
+    .filter(
+      (column) =>
+        !(dropsWideColumns && isWideOnlyColumn(column.columnDef.meta)),
+    );
   const cardRows = sortRows(
     filterRows(toRows(data.apps), query),
     { sort, dir },
@@ -71,18 +87,18 @@ export function AppsDashboard() {
   const empty = cardRows.length === 0;
 
   return (
-    <section aria-labelledby={APPS_HEADING_ID} className={frame.section}>
+    <section
+      ref={section}
+      aria-labelledby={APPS_HEADING_ID}
+      className={frame.section}
+    >
       <div className={frame.header}>
         <h2 id={APPS_HEADING_ID} className="text-heading">
           Apps
         </h2>
         <div className="flex flex-wrap items-center gap-2">
           <AppsToolbar
-            columns={
-              tabular ? (
-                <ColumnMenu columns={table.getAllLeafColumns()} />
-              ) : null
-            }
+            columns={tabular ? <ColumnMenu columns={menuColumns} /> : null}
           />
         </div>
       </div>

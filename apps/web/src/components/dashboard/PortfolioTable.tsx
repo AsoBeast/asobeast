@@ -22,6 +22,8 @@ import {
 import { ariaSort } from "@/lib/table/sorting";
 import { portfolioColumns, type PortfolioTableRow } from "./portfolio-columns";
 
+export const WIDE_COLUMNS_FROM_REM = 56;
+
 const widthClass = (meta: unknown): string | undefined =>
   isWideOnlyColumn(meta) ? "md:@max-4xl/dashboard:hidden" : undefined;
 

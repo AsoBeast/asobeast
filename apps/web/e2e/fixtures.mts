@@ -1935,12 +1935,16 @@ export const APP_1_PL_CHANGES: ChangeTimeline = {
   ],
 };
 
+export const APP_1_CHANGE_ICON_URL =
+  "https://is1-ssl.mzstatic.com/image/thumb/e2e-focus-timer-change/512x512bb.png";
+
 const APP_1_CHANGES: ChangeTimeline = {
   events: [
     {
       id: "app-chg-1",
       appId: "app-1",
       appName: "Focus Timer",
+      iconUrl: APP_1_CHANGE_ICON_URL,
       isCompetitor: false,
       field: "title",
       before: "Focus Timer",
@@ -4044,6 +4048,19 @@ export function portfolioHistoryOf(
       top10: Math.max(1, points[0].top10 - 1),
       daysAgo: days,
     }),
+  };
+}
+
+export function portfolioRangeDeltasOf(days: PortfolioHistoryDays): {
+  visibility: number;
+  top10: number;
+} {
+  const { points } = portfolioHistoryOf(days);
+  const first = points[0];
+  const last = points[points.length - 1];
+  return {
+    visibility: Math.round((last.visibility - first.visibility) * 10) / 10,
+    top10: last.top10 - first.top10,
   };
 }
 
