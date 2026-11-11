@@ -62,7 +62,7 @@ export function InsightsCell({
                 key={insight}
                 variant={INSIGHT_VARIANTS[insight]}
                 aria-hidden
-                className={index > 0 ? "keywords-tight:hidden" : undefined}
+                className={index > 0 ? "keywords-snug:hidden" : undefined}
               >
                 {INSIGHT_LABELS[insight]}
               </Badge>
@@ -70,7 +70,7 @@ export function InsightsCell({
             {insights.length > 1 ? (
               <span
                 aria-hidden
-                className="hidden text-caption text-muted-foreground keywords-tight:inline"
+                className="hidden text-caption text-muted-foreground keywords-snug:inline"
               >{`+${insights.length - 1}`}</span>
             ) : null}
           </button>

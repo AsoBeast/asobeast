@@ -94,7 +94,7 @@ export function KeywordRowActions({
             <MoreHorizontal />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="min-w-52">
           <DropdownMenuItem onSelect={onOpenSerp}>
             <ListOrdered />
             View search results

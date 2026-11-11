@@ -52,8 +52,8 @@ describe("InsightsCell", () => {
       <InsightsCell keyword={POMODORO} today={TODAY} multiMarket={false} />,
     );
 
-    expect(markup.match(/keywords-tight:hidden/g)).toHaveLength(1);
-    expect(markup).toMatch(/keywords-tight:inline[^>]*>\+1</);
+    expect(markup.match(/keywords-snug:hidden/g)).toHaveLength(1);
+    expect(markup).toMatch(/keywords-snug:inline[^>]*>\+1</);
   });
 
   it("renders nothing for a keyword without an insight", () => {

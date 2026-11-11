@@ -442,6 +442,9 @@ test("volatility column labels low, high and unavailable rows", async ({
   await expect(nullRow.getByLabel(/volatility, \d+ out of 100/)).toHaveCount(0);
 });
 
+const scoreDetails = (page: Page) =>
+  page.getByRole("dialog", { name: /scoring details$/ });
+
 test("a row draws its last 7 days and names the top apps of its results", async ({
   page,
 }) => {
@@ -534,7 +537,7 @@ test("exporting keywords downloads a bom-prefixed csv", async ({ page }) => {
   ).toContain(',testing,"Seasonal <push> in May\nKeep for exam season"');
 });
 
-test("score details are persistent, keyboard accessible and store specific", async ({
+test("score details open from the keyboard, stay open and are store specific", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/keywords");
@@ -549,38 +552,35 @@ test("score details are persistent, keyboard accessible and store specific", asy
     .getByRole("row", { name: /focus timer/ })
     .getByRole("button", { name: /Popularity 5000.*High confidence/ });
   await appleScore.focus();
-  await expect(page.getByRole("tooltip")).toContainText(
-    "App Store search signals",
-  );
-  await expect(page.getByRole("tooltip")).toContainText("Formula app-store-v2");
-  await expect(page.getByRole("tooltip")).toContainText("High confidence");
-  await expect(page.getByRole("tooltip")).toContainText(
+  await page.keyboard.press("Enter");
+  await expect(scoreDetails(page)).toContainText("App Store search signals");
+  await expect(scoreDetails(page)).toContainText("Formula app-store-v2");
+  await expect(scoreDetails(page)).toContainText("High confidence");
+  await expect(scoreDetails(page)).toContainText(
     "input completeness, not ranking accuracy",
   );
-  await expect(page.getByRole("tooltip")).toContainText(
+  await expect(scoreDetails(page)).toContainText(
     "Estimated from the first 25 App Store results and search suggestions",
   );
-  await expect(page.getByRole("tooltip")).not.toContainText(
-    "The store suggests",
-  );
+  await expect(scoreDetails(page)).not.toContainText("The store suggests");
   await appleScore.press("Escape");
-  await expect(page.getByRole("tooltip")).toHaveCount(0);
+  await expect(scoreDetails(page)).toHaveCount(0);
 
   const playScore = page
     .getByRole("row", { name: /pomodoro/ })
     .getByRole("button", { name: /Popularity 9000.*Medium confidence/ });
   await playScore.focus();
-  await expect(page.getByRole("tooltip")).toContainText(
-    "Google Play suggest reach",
-  );
+  await page.keyboard.press("Enter");
+  await expect(scoreDetails(page)).toContainText("Google Play suggest reach");
   await playScore.press("Escape");
 
   const brandDifficulty = page
     .getByRole("row", { name: /pomodoro/ })
     .getByRole("button", { name: /Difficulty 70.*Medium confidence/ });
   await brandDifficulty.focus();
+  await page.keyboard.press("Enter");
   await expect(
-    page.getByRole("tooltip").filter({
+    scoreDetails(page).filter({
       hasText: "A brand search: one app dominates this page.",
     }),
   ).toBeVisible();
@@ -590,12 +590,13 @@ test("score details are persistent, keyboard accessible and store specific", asy
     .getByRole("row", { name: /study timer/ })
     .getByRole("button", { name: /Popularity 3000.*Older formula/ });
   await invalidTimeScore.focus();
-  const invalidTimeTooltip = page
-    .getByRole("tooltip")
-    .filter({ hasText: "Capture time unavailable" });
-  await expect(invalidTimeTooltip).toBeVisible();
-  await expect(invalidTimeTooltip).not.toContainText("The store suggests");
-  await expect(invalidTimeTooltip).toContainText(
+  await page.keyboard.press("Enter");
+  const invalidTimeDetails = scoreDetails(page).filter({
+    hasText: "Capture time unavailable",
+  });
+  await expect(invalidTimeDetails).toBeVisible();
+  await expect(invalidTimeDetails).not.toContainText("The store suggests");
+  await expect(invalidTimeDetails).toContainText(
     "Scored by an older formula. It is rescored automatically; the new number replaces this one within a day.",
   );
   await invalidTimeScore.press("Escape");
@@ -604,22 +605,24 @@ test("score details are persistent, keyboard accessible and store specific", asy
     .getByRole("row", { name: /focus timer/ })
     .getByRole("button", { name: /Opportunity \d+, strong\. Derived score/ });
   await opportunityScore.focus();
-  const opportunityTooltip = page
-    .getByRole("tooltip")
-    .filter({ hasText: "Calculated from popularity" });
-  await expect(opportunityTooltip).toBeVisible();
-  await expect(opportunityTooltip).not.toContainText("Formula app-store-v2");
-  await expect(opportunityTooltip).not.toContainText("confidence");
+  await page.keyboard.press("Enter");
+  const opportunityDetails = scoreDetails(page).filter({
+    hasText: "Calculated from popularity",
+  });
+  await expect(opportunityDetails).toBeVisible();
+  await expect(opportunityDetails).not.toContainText("Formula app-store-v2");
+  await expect(opportunityDetails).not.toContainText("confidence");
   await opportunityScore.press("Escape");
 
   const legacyScore = page
     .getByRole("row", { name: /productivity app/ })
     .getByRole("button", { name: /Popularity 8000.*Older formula/ });
   await legacyScore.focus();
+  await page.keyboard.press("Enter");
   await expect(
-    page
-      .getByRole("tooltip")
-      .filter({ hasText: "Legacy score — provenance unavailable" }),
+    scoreDetails(page).filter({
+      hasText: "Legacy score — provenance unavailable",
+    }),
   ).toBeVisible();
 
   const unscoredRow = page.getByRole("row", { name: /time blocking/ });
@@ -967,7 +970,7 @@ test("the columns menu hides a column and remembers it", async ({ page }) => {
   ).toHaveCount(0);
   await expect(
     menu.getByRole("menuitemcheckbox").filter({ hasNotText: "Listing marks" }),
-  ).toHaveCount(13);
+  ).toHaveCount(14);
   await menu.getByRole("menuitemcheckbox", { name: "Difficulty" }).click();
   await page.keyboard.press("Escape");
 
@@ -1142,7 +1145,7 @@ test("the top apps of a row open its search results and take focus back", async 
   await expect(apps).toBeFocused();
 });
 
-test("the row menu opens the search results and focus returns to the row", async ({
+test("a row without fresh results opens them from its menu and takes focus back", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/keywords");
@@ -1159,12 +1162,7 @@ test("the row menu opens the search results and focus returns to the row", async
   await page.keyboard.press("Escape");
 
   await expect(sheet).toBeHidden();
-  await expect(
-    row.getByRole("button", {
-      name: "View search results for time blocking",
-      exact: true,
-    }),
-  ).toBeFocused();
+  await expect(menu).toBeFocused();
 });
 
 test("with the top apps hidden the search results give focus back to the row menu", async ({
@@ -1190,22 +1188,53 @@ test("with the top apps hidden the search results give focus back to the row men
   await expect(menu).toBeFocused();
 });
 
-test("a narrow table folds the second insight and drops the 7 day line", async ({
+test("a narrower table gives up the second insight, then the 7 day line", async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 1366, height: 800 });
+  await page.setViewportSize({ width: 1700, height: 900 });
   await page.goto("/apps/app-1/keywords");
   const row = page.getByRole("row", { name: /pomodoro/ });
+  const trend = row.locator('[data-slot="position-trend"]');
+  const second = row.getByText("Page 1 close");
+  const folded = row.getByText("+1", { exact: true });
+  const ownRank = page
+    .getByRole("row", { name: /focus timer/ })
+    .getByText("you #3", { exact: true });
 
-  await expect(row.locator('[data-slot="position-trend"]')).toBeHidden();
-  await expect(row.getByText("+1", { exact: true })).toBeVisible();
-  await expect(row.getByText("Page 1 close")).toBeHidden();
+  await expect(second).toBeVisible();
+  await expect(folded).toBeHidden();
+  await expect(trend).toBeVisible();
+  await expect(ownRank).toBeVisible();
 
   await page.setViewportSize({ width: 1440, height: 900 });
 
-  await expect(row.locator('[data-slot="position-trend"]')).toBeVisible();
-  await expect(row.getByText("Page 1 close")).toBeVisible();
-  await expect(row.getByText("+1", { exact: true })).toBeHidden();
+  await expect(second).toBeHidden();
+  await expect(folded).toBeVisible();
+  await expect(trend).toBeVisible();
+  await expect(ownRank).toBeHidden();
+
+  await page.setViewportSize({ width: 1366, height: 800 });
+
+  await expect(folded).toBeVisible();
+  await expect(trend).toBeHidden();
+  await expect(row.getByLabel("down 6 over 7 days")).toBeVisible();
+});
+
+test("the narrowest table shows a sort arrow only on the sorted column", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/apps/app-1/keywords");
+  const header = (name: string) =>
+    page.getByRole("columnheader", { name }).locator("svg").first();
+
+  await expect(header("Opportunity")).toBeVisible();
+  await expect(header("Position")).toBeHidden();
+
+  await page.getByRole("button", { name: "Position", exact: true }).click();
+
+  await expect(header("Position")).toBeVisible();
+  await expect(header("Opportunity")).toBeHidden();
 });
 
 for (const width of [1280, 1366, 1440]) {

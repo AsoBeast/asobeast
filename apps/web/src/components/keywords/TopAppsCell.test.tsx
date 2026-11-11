@@ -42,17 +42,27 @@ describe("TopAppsCell", () => {
     expect(markup.match(/data-role="own"/g)).toHaveLength(1);
   });
 
+  it("says where your app stands instead of ringing its icon", () => {
+    const markup = render([
+      app(1, "Tomato Clock", "competitor"),
+      app(2, "Focus Timer", "own"),
+    ]);
+
+    expect(markup).toContain(">you #2<");
+    expect(markup).not.toContain("ring-foreground");
+    expect(markup.match(/after:bg-foreground/g)).toHaveLength(1);
+    expect(render([app(1, "Tomato Clock", "competitor")])).not.toContain(
+      "you #",
+    );
+  });
+
   it.each([[null], [undefined], [[]]])(
-    "still opens the stored results without fresh ones (%j)",
+    "shows a dash and no button without fresh results (%j)",
     (topApps) => {
       const markup = render(topApps);
 
-      expect(markup.match(/<button/g)).toHaveLength(1);
-      expect(markup).toContain(
-        'aria-label="View search results for focus timer"',
-      );
+      expect(markup).not.toContain("<button");
       expect(markup).toContain("No search results from today or yesterday");
-      expect(markup).not.toContain("data-role");
     },
   );
 });

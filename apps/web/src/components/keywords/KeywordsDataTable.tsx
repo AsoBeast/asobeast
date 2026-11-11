@@ -73,7 +73,7 @@ export function KeywordsDataTable({
     <Table
       containerRef={scrollRef}
       containerClassName="@container/keywords max-h-[70svh] overflow-y-auto rounded-lg border bg-card"
-      className="[&_td]:md:px-3 [&_td]:md:keywords-cramped:px-2 [&_th]:md:px-3 [&_th]:md:keywords-cramped:px-2"
+      className="[&_td]:md:px-3 [&_td]:md:keywords-tight:px-2 [&_th]:md:px-3 [&_th]:md:keywords-tight:px-2 keywords-cramped:[&_[data-sort-idle]]:hidden"
       aria-rowcount={rows.length + (rows.length > 0 ? 2 : 1)}
     >
       <TableCaption className="sr-only">

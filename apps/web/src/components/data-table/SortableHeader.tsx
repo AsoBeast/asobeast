@@ -34,7 +34,11 @@ export function SortableHeader({
       )}
     >
       {label}
-      <Icon className={cn("size-3.5", !sorted && "opacity-40")} aria-hidden />
+      <Icon
+        className={cn("size-3.5", !sorted && "opacity-40")}
+        data-sort-idle={sorted ? undefined : ""}
+        aria-hidden
+      />
     </button>
   );
 }
