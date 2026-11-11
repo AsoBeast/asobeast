@@ -55,7 +55,7 @@ test("the switch keeps one name whether the keyword is tracked or paused", async
   });
 
   await expect(toggle).toBeChecked();
-  await toggle.click();
+  await (await hydrated(toggle)).click();
 
   await expect(toggle).not.toBeChecked();
   await expect(
