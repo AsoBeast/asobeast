@@ -125,6 +125,43 @@ for (const [item, dialog, role] of [
   }
 }
 
+test("stopping a keyword keeps focus on the confirmation, then on the next row", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+  const actions = page.getByRole("button", {
+    name: "Keyword actions for pomodoro",
+  });
+  const held = await holdRequest(
+    page,
+    /\/api\/backend\/apps\/app-1\/keywords\/[^/?]+$/,
+    "DELETE",
+    (route) => route.fulfill({ status: 204 }),
+  );
+
+  await pressFromKeyboard(actions);
+  await page.getByRole("menuitem", { name: "Stop tracking" }).click();
+  const dialog = page.getByRole("alertdialog", {
+    name: "Stop tracking pomodoro?",
+  });
+  const confirm = dialog.getByRole("button", {
+    name: /Stop tracking|Removing/,
+  });
+  await confirm.press("Enter");
+
+  await expect(confirm).toHaveAttribute("aria-disabled", "true");
+  await expect(confirm).toBeFocused();
+  held.release();
+
+  await expect(dialog).toBeHidden();
+  await expect(
+    page
+      .getByRole("button", { name: /^Keyword actions for / })
+      .and(page.locator(":focus")),
+  ).toHaveCount(1);
+  await expect(actions).not.toBeFocused();
+});
+
 test.describe("store connection controls keep focus", () => {
   test.beforeEach(({ context }) =>
     seedCookie(context, STORE_CONNECTION_COOKIE, "active"),

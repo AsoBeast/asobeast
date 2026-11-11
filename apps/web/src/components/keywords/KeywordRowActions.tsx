@@ -41,6 +41,7 @@ import {
   KEYWORD_CLASS_OPTIONS,
 } from "./keyword-class";
 import { KeywordAnnotationsDialog } from "./KeywordAnnotationsDialog";
+import { rememberSerpOpener } from "./serp/serp-opener";
 import { StopTrackingDialog } from "./StopTrackingDialog";
 import { useKeywordUpdate } from "./useKeywordUpdate";
 
@@ -95,7 +96,12 @@ export function KeywordRowActions({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-52">
-          <DropdownMenuItem onSelect={onOpenSerp}>
+          <DropdownMenuItem
+            onSelect={() => {
+              rememberSerpOpener(menu.current);
+              onOpenSerp();
+            }}
+          >
             <ListOrdered />
             View search results
           </DropdownMenuItem>

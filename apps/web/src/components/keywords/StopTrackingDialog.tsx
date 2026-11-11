@@ -5,19 +5,28 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import {
+  closeUnlessPending,
+  ConfirmActionFooter,
+} from "@/components/ConfirmActionFooter";
+import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { removeKeyword } from "@/lib/api";
-import { returnFocusTo } from "@/lib/focus-handoff";
+import {
+  returnFocusTo,
+  siblingControl,
+  useCloseFocusHandoff,
+} from "@/lib/focus-handoff";
 import { invalidateKeywordMutation } from "@/lib/queries";
-import { useSingleFlight } from "@/lib/single-flight";
+
+const ROW_MENU = 'button[aria-label^="Keyword actions for "]';
+
+const neighbouringMenu = (menu: HTMLElement | null): HTMLElement | null =>
+  siblingControl(menu?.closest("tr") ?? null, ROW_MENU);
 
 export function StopTrackingDialog({
   open,
@@ -33,20 +42,27 @@ export function StopTrackingDialog({
   returnFocus: RefObject<HTMLElement | null>;
 }) {
   const queryClient = useQueryClient();
+  const { handOff, onCloseAutoFocus } = useCloseFocusHandoff();
   const remove = useMutation({
     mutationFn: () => removeKeyword(appId, keyword.keywordId),
     onSuccess: () => {
       invalidateKeywordMutation(queryClient, appId);
-      onOpenChange(false);
       toast.success(`Stopped tracking ${keyword.text}`);
     },
     onError: () => toast.error(`Could not stop tracking ${keyword.text}`),
   });
-  const removeOnce = useSingleFlight(remove);
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent onCloseAutoFocus={returnFocusTo(returnFocus)}>
+    <AlertDialog
+      open={open}
+      onOpenChange={closeUnlessPending(remove.isPending, onOpenChange)}
+    >
+      <AlertDialogContent
+        onCloseAutoFocus={(event) => {
+          onCloseAutoFocus(event);
+          if (!event.defaultPrevented) returnFocusTo(returnFocus)(event);
+        }}
+      >
         <AlertDialogHeader>
           <AlertDialogTitle>Stop tracking {keyword.text}?</AlertDialogTitle>
           <AlertDialogDescription>
@@ -54,21 +70,21 @@ export function StopTrackingDialog({
             again later, but the gap in history will remain.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={remove.isPending}>
-            Cancel
-          </AlertDialogCancel>
-          <AlertDialogAction
-            variant="destructive"
-            disabled={remove.isPending}
-            onClick={(event) => {
-              event.preventDefault();
-              removeOnce();
-            }}
-          >
-            {remove.isPending ? "Removing…" : "Stop tracking"}
-          </AlertDialogAction>
-        </AlertDialogFooter>
+        <ConfirmActionFooter
+          pending={remove.isPending}
+          label="Stop tracking"
+          pendingLabel="Removing…"
+          onConfirm={() => {
+            const successor = neighbouringMenu(returnFocus.current);
+            void remove.mutateAsync().then(
+              () => {
+                handOff(successor);
+                onOpenChange(false);
+              },
+              () => undefined,
+            );
+          }}
+        />
       </AlertDialogContent>
     </AlertDialog>
   );

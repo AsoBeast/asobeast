@@ -1145,6 +1145,28 @@ test("the top apps of a row open its search results and take focus back", async 
   await expect(apps).toBeFocused();
 });
 
+test("search results opened from the row menu give focus back to the menu", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+  const row = page.getByRole("row", { name: /focus timer/ });
+  const menu = await hydrated(
+    row.getByRole("button", { name: "Keyword actions for focus timer" }),
+  );
+  await expect(
+    row.getByRole("button", { name: "View search results for focus timer" }),
+  ).toBeVisible();
+
+  await menu.click();
+  await page.getByRole("menuitem", { name: "View search results" }).click();
+  const sheet = page.getByRole("dialog", { name: "Search results" });
+  await expect(sheet).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await expect(sheet).toBeHidden();
+  await expect(menu).toBeFocused();
+});
+
 test("a row without fresh results opens them from its menu and takes focus back", async ({
   page,
 }) => {
