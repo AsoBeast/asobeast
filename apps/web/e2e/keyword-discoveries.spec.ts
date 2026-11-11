@@ -197,7 +197,7 @@ test("each row names its source, rank and scores", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("the market pills scope the list and its counts", async ({ page }) => {
+test("the market menu scopes the list and its counts", async ({ page }) => {
   await page.goto(DISCOVERED);
 
   await chooseKeywordMarket(page, /^Poland/);

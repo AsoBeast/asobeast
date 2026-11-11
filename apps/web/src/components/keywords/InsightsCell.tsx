@@ -18,10 +18,6 @@ import {
   type KeywordInsight,
 } from "@/lib/keyword-insights";
 
-const INSIGHT_TONE: Partial<Record<KeywordInsight, string>> = {
-  dropping: "text-signal-down",
-};
-
 export function InsightsCell({
   keyword,
   today,
@@ -53,7 +49,12 @@ export function InsightsCell({
             {insights.map((insight, index) => (
               <span key={insight} aria-hidden className="contents">
                 {index > 0 ? <span>·</span> : null}
-                <span data-insight={insight} className={INSIGHT_TONE[insight]}>
+                <span
+                  data-insight={insight}
+                  className={
+                    insight === "dropping" ? "text-signal-down" : undefined
+                  }
+                >
                   {INSIGHT_LABELS[insight]}
                 </span>
               </span>

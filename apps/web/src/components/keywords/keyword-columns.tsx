@@ -16,6 +16,7 @@ import { DeltaChip } from "@/components/ui/delta-chip";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import { tagsIn } from "@/lib/keyword-tags";
 import { attributeColumns } from "./keyword-attribute-columns";
+import { SCORE_COMPARABILITY } from "./keyword-csv";
 import { noSearchTermsFact } from "@/lib/funnel";
 import { keywordZoneFilter } from "./keyword-filters";
 import { KeywordRowActions } from "./KeywordRowActions";
@@ -268,7 +269,7 @@ function scoreColumns() {
           <InfoTip
             label="About popularity"
             title="Popularity"
-            summary={CROSS_STORE_NOTE}
+            summary={`${SCORE_COMPARABILITY}.`}
           />
         </span>
       ),
@@ -312,9 +313,6 @@ function scoreColumns() {
     }),
   ];
 }
-
-const CROSS_STORE_NOTE =
-  "Apple App Store and Google Play popularity and volume scores use different public signals and are not directly comparable.";
 
 const PLAY_INSTALLS_SUMMARY =
   "The acquisitions and store listing visitors this keyword brought through Google Play search and explore, from the newest complete month Play Console reported. A dash means Google reported no visitors for it.";

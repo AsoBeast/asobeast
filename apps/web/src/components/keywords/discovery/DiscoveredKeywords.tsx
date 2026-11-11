@@ -29,7 +29,11 @@ export function DiscoveredKeywords(props: DiscoveredProps) {
   const heading = useRef<HTMLHeadingElement>(null);
   return (
     <div className="flex flex-col gap-4">
-      <h2 ref={heading} tabIndex={-1} className="sr-only">
+      <h2
+        ref={heading}
+        tabIndex={-1}
+        className="sr-only rounded-sm text-heading outline-none focus:not-sr-only focus:ring-2 focus:ring-ring"
+      >
         Discovered keywords
       </h2>
       <Suspense fallback={<DiscoveredSkeleton />}>

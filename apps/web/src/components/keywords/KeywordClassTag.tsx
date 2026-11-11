@@ -5,7 +5,7 @@ const MARKS = {
   competitorBrand: { letter: "CB", words: "Competitor brand keyword" },
 } as const;
 
-export function KeywordClassBadge({
+export function KeywordClassTag({
   keywordClass,
   source,
 }: {

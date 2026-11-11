@@ -166,14 +166,14 @@ test("the bulk bar opens the dynamics panel between the toolbar and the table", 
   const tableBox = await page
     .getByRole("table", { name: /Tracked keywords/ })
     .boundingBox();
-  const pillsBox = await page
+  const marketBox = await page
     .getByRole("combobox", { name: "Keyword markets" })
     .boundingBox();
   expect(panelBox).not.toBeNull();
   expect(tableBox).not.toBeNull();
-  expect(pillsBox).not.toBeNull();
-  if (!panelBox || !tableBox || !pillsBox) throw new Error("missing layout");
-  expect(panelBox.y).toBeGreaterThan(pillsBox.y);
+  expect(marketBox).not.toBeNull();
+  if (!panelBox || !tableBox || !marketBox) throw new Error("missing layout");
+  expect(panelBox.y).toBeGreaterThan(marketBox.y);
   expect(panelBox.y).toBeLessThan(tableBox.y);
 });
 
@@ -373,7 +373,7 @@ test("table sorting, filtering and bulk actions leave an open chart alone", asyn
   ]);
 });
 
-test("the market pills scope the chart and its change markers", async ({
+test("the market menu scopes the chart and its change markers", async ({
   page,
   context,
 }) => {

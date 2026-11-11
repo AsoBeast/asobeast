@@ -18,6 +18,8 @@ import { exportKeywords } from "./keyword-csv";
 import { keywordFilterChips, type KeywordFilters } from "./keyword-filters";
 import { KeywordFiltersPopover, KeywordFiltersSheet } from "./KeywordFilters";
 
+const CHIPS_OUTSIDE_THE_PANEL: ReadonlySet<string> = new Set(["q", "zone"]);
+
 export function KeywordsFilterBar({
   appId,
   table,
@@ -35,8 +37,11 @@ export function KeywordsFilterBar({
 }) {
   const shown = table.getRowModel().rows;
   const chips = keywordFilterChips(filters);
-  const active = chips.filter((chip) => chip.key !== "q").length;
+  const active = chips.filter(
+    (chip) => !CHIPS_OUTSIDE_THE_PANEL.has(chip.key),
+  ).length;
   const widerFilters = useRef<HTMLDivElement>(null);
+  const narrowerFilters = useRef<HTMLDivElement>(null);
 
   return (
     <div className="flex flex-col gap-2">
@@ -46,13 +51,13 @@ export function KeywordsFilterBar({
           value={filters.q}
           onSearch={(q, options) => void setFilters({ q }, options)}
         />
-        <div className="contents md:hidden">
+        <div ref={narrowerFilters} className="contents md:hidden">
           <KeywordFiltersSheet
             table={table}
             filters={filters}
             setFilters={setFilters}
             active={active}
-            widerFilters={widerFilters}
+            otherWidth={widerFilters}
           />
         </div>
         <div ref={widerFilters} className="hidden md:contents">
@@ -61,6 +66,7 @@ export function KeywordsFilterBar({
             filters={filters}
             setFilters={setFilters}
             active={active}
+            otherWidth={narrowerFilters}
           />
         </div>
         <RowCount

@@ -43,16 +43,49 @@ function FiltersButton({
   );
 }
 
+interface WidthBoundFilters extends Facets {
+  active: number;
+  otherWidth: RefObject<HTMLElement | null>;
+}
+
+function useWidthBoundOpen(
+  fits: boolean,
+  otherWidth: RefObject<HTMLElement | null>,
+) {
+  const [open, setOpen] = useState(false);
+  if (open && !fits) setOpen(false);
+
+  const onCloseAutoFocus = (event: Event) => {
+    const filters = firstFocusable(otherWidth.current);
+    if (!filters?.getClientRects().length) return;
+    event.preventDefault();
+    filters.focus();
+  };
+
+  return { open, setOpen, onCloseAutoFocus };
+}
+
 export function KeywordFiltersPopover({
   active,
+  otherWidth,
   ...facets
-}: Facets & { active: number }) {
+}: WidthBoundFilters) {
+  const { open, setOpen, onCloseAutoFocus } = useWidthBoundOpen(
+    !useIsMobile(),
+    otherWidth,
+  );
+
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <FiltersButton active={active} />
       </PopoverTrigger>
-      <PopoverContent align="start" aria-label="Filters" className="w-60">
+      <PopoverContent
+        align="start"
+        aria-label="Filters"
+        className="w-60"
+        onCloseAutoFocus={onCloseAutoFocus}
+      >
         <div className={FACET_ROWS}>
           <KeywordFacets {...facets} />
         </div>
@@ -63,22 +96,13 @@ export function KeywordFiltersPopover({
 
 export function KeywordFiltersSheet({
   active,
-  widerFilters,
+  otherWidth,
   ...facets
-}: Facets & {
-  active: number;
-  widerFilters: RefObject<HTMLElement | null>;
-}) {
-  const [open, setOpen] = useState(false);
-  const isMobile = useIsMobile();
-  if (open && !isMobile) setOpen(false);
-
-  const onCloseAutoFocus = (event: Event) => {
-    const filters = firstFocusable(widerFilters.current);
-    if (!filters?.getClientRects().length) return;
-    event.preventDefault();
-    filters.focus();
-  };
+}: WidthBoundFilters) {
+  const { open, setOpen, onCloseAutoFocus } = useWidthBoundOpen(
+    useIsMobile(),
+    otherWidth,
+  );
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>

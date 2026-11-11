@@ -1,17 +1,17 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { KeywordClass, KeywordClassSource } from "@asobeast/shared";
-import { KeywordClassBadge } from "./KeywordClassBadge";
+import { KeywordClassTag } from "./KeywordClassTag";
 
 const render = (
   keywordClass: KeywordClass | undefined,
   source: KeywordClassSource | undefined = "detected",
 ) =>
   renderToStaticMarkup(
-    <KeywordClassBadge keywordClass={keywordClass} source={source} />,
+    <KeywordClassTag keywordClass={keywordClass} source={source} />,
   );
 
-describe("KeywordClassBadge", () => {
+describe("KeywordClassTag", () => {
   it.each([
     ["ownBrand", "B", "Brand keyword"],
     ["competitorBrand", "CB", "Competitor brand keyword"],

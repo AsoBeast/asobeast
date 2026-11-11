@@ -3,11 +3,11 @@ import { keywordMoves, movesSentence } from "./keyword-moves";
 
 const TODAY = "2026-11-11";
 
-const row = (positionDelta1d: number | null, latestCheckedOn = TODAY) => ({
-  active: true,
-  latestCheckedOn,
-  positionDelta1d,
-});
+const row = (
+  positionDelta1d: number | null,
+  latestCheckedOn: string | null = TODAY,
+  active = true,
+) => ({ active, latestCheckedOn, positionDelta1d });
 
 describe("keywordMoves", () => {
   it("counts a lower position as a move up", () => {
@@ -22,11 +22,17 @@ describe("keywordMoves", () => {
       down: 0,
     });
   });
+
+  it("leaves out a paused keyword and one never checked", () => {
+    expect(
+      keywordMoves([row(-2, TODAY, false), row(3, null), row(1)], TODAY),
+    ).toEqual({ up: 0, down: 1 });
+  });
 });
 
 describe("movesSentence", () => {
   it.each([
-    [{ up: 0, down: 0 }, "No position moved since yesterday."],
+    [{ up: 0, down: 0 }, "No ranked keyword moved since yesterday."],
     [{ up: 2, down: 0 }, "2 moved up since yesterday."],
     [{ up: 0, down: 1 }, "1 moved down since yesterday."],
     [{ up: 2, down: 1 }, "2 moved up and 1 moved down since yesterday."],

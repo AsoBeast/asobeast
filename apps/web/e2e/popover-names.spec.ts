@@ -94,6 +94,11 @@ const POPOVERS: NamedPopover[] = [
     },
   },
   {
+    name: "Filters",
+    path: "/apps/app-1/keywords",
+    open: openKeywordFilters,
+  },
+  {
     name: "Filter by source",
     path: "/apps/app-1/keywords",
     open: async (page) => {
