@@ -142,7 +142,7 @@ import {
   RUN_STATUS,
   EMPTY_PORTFOLIO_VISIBILITY,
   portfolioHistoryOf,
-  PORTFOLIO_VISIBILITY,
+  portfolioRangeDeltasOf,
   RUN_STATUS_DELAYED,
   RUN_STATUS_RUNNING,
   STORE_HEALTH_BROKEN,
@@ -3321,7 +3321,7 @@ const routes: Route[] = [
       }
       const change = rangeChangeOf(
         insightsFor(req),
-        PORTFOLIO_VISIBILITY.delta7d,
+        portfolioRangeDeltasOf(days),
       );
       const history: PortfolioHistory = hasCookie(req, "portfolio_empty", "1")
         ? { days, points: [], previous: [], change }

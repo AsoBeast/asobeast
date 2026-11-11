@@ -4051,6 +4051,19 @@ export function portfolioHistoryOf(
   };
 }
 
+export function portfolioRangeDeltasOf(days: PortfolioHistoryDays): {
+  visibility: number;
+  top10: number;
+} {
+  const { points } = portfolioHistoryOf(days);
+  const first = points[0];
+  const last = points[points.length - 1];
+  return {
+    visibility: Math.round((last.visibility - first.visibility) * 10) / 10,
+    top10: last.top10 - first.top10,
+  };
+}
+
 export const EMPTY_PORTFOLIO_VISIBILITY: PortfolioVisibility = {
   current: 0,
   delta7d: null,

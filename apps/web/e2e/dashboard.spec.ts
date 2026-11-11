@@ -1,6 +1,10 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
-import { PORTFOLIO, PORTFOLIO_VISIBILITY } from "./fixtures.mts";
+import {
+  PORTFOLIO,
+  PORTFOLIO_VISIBILITY,
+  portfolioRangeDeltasOf,
+} from "./fixtures.mts";
 import { hydrated } from "./hydrated.mts";
 import { startedSetup } from "./setup-session.mts";
 
@@ -194,20 +198,20 @@ test("the summary tiles state the window they measure", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("the visibility tile reads the portfolio figure and its week", async ({
+test("the visibility tile reads the portfolio figure and its change over the range", async ({
   page,
 }) => {
   await page.goto("/");
 
-  const { current, delta7d } = PORTFOLIO_VISIBILITY;
-  const week = delta7d ?? 0;
+  const { current } = PORTFOLIO_VISIBILITY;
+  const month = portfolioRangeDeltasOf(30).visibility;
   const visibility = tile(page, "Visibility");
   await expect(visibility).toHaveCount(1);
   await expect(
     visibility.getByText(String(Math.round(current)), { exact: true }),
   ).toBeVisible();
   await expect(
-    visibility.getByText(`+${Math.round(week)} 30d`, { exact: true }),
+    visibility.getByText(`+${Math.round(month)} 30d`, { exact: true }),
   ).toBeVisible();
   await expect(
     visibility.getByText(`across ${CHECKED_APPS} apps`, { exact: true }),
@@ -311,7 +315,12 @@ test("the range beside import app redraws the chart for the chosen days", async 
   ).toBeFocused();
   expect(asked).toContain("90");
   await expect(tile(page, "Moved in 90 days")).toBeVisible();
-  await expect(tile(page, "Visibility")).toContainText("90d");
+  await expect(tile(page, "Visibility")).toContainText(
+    `+${Math.round(portfolioRangeDeltasOf(90).visibility)} 90d`,
+  );
+  expect(portfolioRangeDeltasOf(90).visibility).not.toBe(
+    portfolioRangeDeltasOf(30).visibility,
+  );
   await expect(page.getByRole("main")).toContainText("In the last 90 days");
   await expect(page.getByRole("main")).toContainText(
     "Largest position changes in the last 90 days",
