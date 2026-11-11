@@ -1,6 +1,10 @@
 import { Suspense } from "react";
 import { cookies } from "next/headers";
-import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
+import {
+  dehydrate,
+  HydrationBoundary,
+  type QueryClient,
+} from "@tanstack/react-query";
 import { ActionsSummaryCard } from "@/components/actions/ActionsSummaryCard";
 import { MarketSwitcher } from "@/components/app-detail/MarketSwitcher";
 import { PrintReportButton } from "@/components/app-detail/PrintReportButton";
@@ -16,6 +20,7 @@ import { RatingsByMarketCard } from "@/components/overview/RatingsByMarketCard";
 import { KNOWN_SECTIONS } from "@/components/layout/known-sections";
 import { OverviewReportHeader } from "@/components/overview/OverviewReportHeader";
 import { OverviewPulse } from "@/components/overview/OverviewPulse";
+import { RATING_CHANGE_RANGE } from "@/components/overview/rating-trend";
 import {
   CoverageCardSkeleton,
   FunnelCardSkeleton,
@@ -48,6 +53,7 @@ import {
   funnelOptions,
   listingMarketsOptions,
   rankDistributionHistoryOptions,
+  ratingsHistoryOptions,
   storeConnectionsOptions,
   visibilityOptions,
 } from "@/lib/queries";
@@ -60,7 +66,28 @@ import {
   rangeParser,
   visibilityRangeParser,
   visibilityViewParser,
+  type VisibilityView,
 } from "@/lib/search-params";
+
+interface ChartScope {
+  id: string;
+  range: ReturnType<typeof presetToRange>;
+  country: string | undefined;
+}
+
+const CHART_PREFETCH: Record<
+  VisibilityView,
+  (client: QueryClient, scope: ChartScope) => Promise<void>
+> = {
+  visibility: (client, { id, range, country }) =>
+    client.prefetchQuery(visibilityOptions(id, range, country)),
+  share: (client, { id, range, country }) =>
+    client.prefetchQuery(visibilityOptions(id, range, country, "competitors")),
+  top10: (client, { id, range, country }) =>
+    client.prefetchQuery(rankDistributionHistoryOptions(id, range, country)),
+  rating: (client, { id, range }) =>
+    client.prefetchQuery(ratingsHistoryOptions(id, range)),
+};
 
 export default async function AppOverviewPage({
   params,
@@ -94,6 +121,9 @@ export default async function AppOverviewPage({
   void queryClient.prefetchQuery(
     actionsOptions({ status: ["OPEN"], limit: TOP_ACTION_LIMIT }, id),
   );
+  void queryClient.prefetchQuery(
+    ratingsHistoryOptions(id, presetToRange(RATING_CHANGE_RANGE)),
+  );
   const firstRun = queryClient.prefetchQuery(firstRunOptions(id));
   const requested = marketParser.parseServerSide(sp.market);
   const listingMarkets = queryClient
@@ -104,20 +134,7 @@ export default async function AppOverviewPage({
     : Promise.resolve(undefined);
   void scope.then((country) => {
     void queryClient.prefetchQuery(appSummaryOptions(id, country));
-    if (view === "top10") {
-      void queryClient.prefetchQuery(
-        rankDistributionHistoryOptions(id, chartRange, country),
-      );
-      return;
-    }
-    void queryClient.prefetchQuery(
-      visibilityOptions(
-        id,
-        chartRange,
-        country,
-        view === "share" ? "competitors" : undefined,
-      ),
-    );
+    void CHART_PREFETCH[view](queryClient, { id, range: chartRange, country });
   });
   const [app, markets] = await Promise.all([
     queryClient.fetchQuery(appDetailOptions(id)),

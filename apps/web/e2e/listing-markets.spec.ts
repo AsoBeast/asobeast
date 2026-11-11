@@ -85,7 +85,8 @@ test("the overview facts follow the market", async ({ page }) => {
   const rating = page
     .locator('[data-slot="stat-tile"]')
     .filter({ hasText: "Rating" });
-  await expect(rating).toContainText("4.824,000 ratings");
+  await expect(rating).toContainText("4.8");
+  await expect(rating).toContainText("24,000 ratings");
 
   await page.goto("/apps/app-1?market=pl");
   await expect(rating).toContainText("4.63,100 ratings");

@@ -43,6 +43,7 @@ export function MoversPanel<Mover extends KeywordMover>({
   hrefOf,
   lead,
   footer,
+  children,
 }: {
   movers: { up: Mover[]; down: Mover[] };
   days: number;
@@ -51,6 +52,7 @@ export function MoversPanel<Mover extends KeywordMover>({
   hrefOf: (mover: Mover) => string;
   lead: (mover: Mover) => ReactNode;
   footer?: ReactNode;
+  children?: ReactNode;
 }) {
   const [view, setView] = useQueryState("movers", moverViewParser);
   const shown = {
@@ -84,7 +86,7 @@ export function MoversPanel<Mover extends KeywordMover>({
           </CardAction>
         )}
       </CardHeader>
-      <CardContent className="flex-1 px-2">
+      <CardContent className="flex flex-1 flex-col gap-4 px-2">
         {quiet ? (
           <p className="px-2 text-body text-muted-foreground">{quiet}</p>
         ) : (
@@ -97,6 +99,7 @@ export function MoversPanel<Mover extends KeywordMover>({
             lead={lead}
           />
         )}
+        {children}
       </CardContent>
       {footer ? <CardFooter>{footer}</CardFooter> : null}
     </Card>

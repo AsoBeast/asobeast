@@ -4,10 +4,19 @@ import { expect, test } from "./session.mts";
 
 const tile = (page: Page, name: RegExp) => page.getByRole("button", { name });
 
+const figures = (page: Page) =>
+  page
+    .locator('[data-slot="stat-tile-group"]')
+    .first()
+    .locator('[data-slot="stat-tile"]');
+
 const movers = (page: Page) =>
   page
     .locator('[data-slot="card"]')
     .filter({ has: page.getByRole("heading", { name: "Keyword movers" }) });
+
+const moverRows = (page: Page) =>
+  movers(page).getByRole("list").first().getByRole("listitem");
 
 test("each figure draws its own chart and keeps it in the url", async ({
   page,
@@ -33,22 +42,99 @@ test("each figure draws its own chart and keeps it in the url", async ({
   );
 });
 
-test("a share of voice link on an app without one falls back to visibility", async ({
+test("a share of voice link on an app without a measured share keeps the figure and says why", async ({
   page,
 }) => {
   await page.goto("/apps/app-gp?visView=share");
 
-  await expect(tile(page, /^Share of voice/)).toHaveCount(0);
-  await expect(tile(page, /^Visibility/)).toHaveAttribute(
+  await expect(figures(page)).toHaveCount(4);
+  await expect(tile(page, /^Share of voice/)).toHaveAttribute(
     "aria-pressed",
     "true",
   );
+  await expect(tile(page, /^Share of voice/)).toContainText(
+    "Your competitors have not been checked yet",
+  );
+  await expect(page.getByText("No share of voice recorded yet")).toBeVisible();
+});
+
+test("the rating figure draws the rating of the home listing", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1");
+  const rating = figures(page).filter({ hasText: /^Rating/ });
+  await expect(rating.locator('[data-slot="delta-pill"]')).toContainText("7d");
+
+  await (await hydrated(rating)).click();
+
+  await expect(page).toHaveURL(/visView=rating/);
   await expect(
-    page.getByRole("region", { name: "Search visibility over time" }),
+    page.getByRole("heading", { name: "Rating on the home listing" }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Average rating over time" }),
+  ).toBeVisible();
+});
+
+test("the rating figure of another market carries no change of the home listing", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1?market=pl");
+  const rating = figures(page).filter({ hasText: /^Rating/ });
+
+  await expect(rating).toContainText("ratings");
+  await expect(rating.locator('[data-slot="delta-pill"]')).toHaveCount(0);
+});
+
+test("the visibility chart compares with the range before and marks listing changes", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1");
+  const key = page.getByRole("list", { name: "Chart lines" });
+
+  await expect(key.getByRole("listitem")).toHaveText([
+    "Last 30 days",
+    "Previous 30 days",
+    "Listing change",
+  ]);
+  await expect(
+    page.getByRole("link", { name: "See what each change did" }),
+  ).toHaveAttribute("href", "/apps/app-1/changes");
   await expect(
     page.getByRole("heading", { name: "Search visibility", exact: true }),
   ).toBeVisible();
+});
+
+test("the keywords closest to the top 10 follow the movers", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1");
+  const near = page.getByRole("list", { name: "Closest to the top 10" });
+
+  await expect(near.getByRole("listitem")).toHaveText(["pomodoroUS122 places"]);
+  await expect(near.getByRole("link")).toHaveAttribute(
+    "href",
+    "/apps/app-1/rankings?keywords=kw-2",
+  );
+});
+
+test("each mover row draws its last 30 days of positions", async ({ page }) => {
+  await page.goto("/apps/app-1");
+
+  await expect(
+    moverRows(page).getByRole("img", { name: /^position, last 30 days/ }),
+  ).toHaveCount(2);
+});
+
+test("metadata coverage counts each field against the tracked keywords", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1");
+  const coverage = page.getByLabel("Tracked keywords found in each field");
+
+  await expect(coverage).toContainText("Title2 of 5");
+  await expect(coverage).toContainText("Subtitle1 of 5");
+  await expect(coverage).toContainText("Description3 of 5");
 });
 
 test("the movers narrow to climbers or fallers and keep the choice in the url", async ({
@@ -56,19 +142,19 @@ test("the movers narrow to climbers or fallers and keep the choice in the url", 
 }) => {
   await page.goto("/apps/app-1");
   const card = movers(page);
-  await expect(card.getByRole("listitem")).toHaveCount(2);
+  await expect(moverRows(page)).toHaveCount(2);
 
   await (await hydrated(card.getByRole("tab", { name: "Fallers" }))).click();
 
   await expect(page).toHaveURL(/movers=down/);
-  await expect(card.getByRole("listitem")).toHaveText([
+  await expect(moverRows(page)).toHaveText([
     "pomodoro6 → 12▼ 6down 6 in 7 days",
   ]);
 
   await card.getByRole("tab", { name: "Climbers" }).click();
 
   await expect(page).toHaveURL(/movers=up/);
-  await expect(card.getByRole("listitem")).toHaveText([
+  await expect(moverRows(page)).toHaveText([
     "focus timer10 → 3▲ 7up 7 in 7 days",
   ]);
 });

@@ -224,7 +224,7 @@ test("prints the overview ranges as words and leaves its links out", async ({
   const visibility = page
     .getByRole("region", { name: "Search visibility over time" })
     .locator("xpath=ancestor::*[@data-slot='card'][1]");
-  await expect(visibility.getByText("Last 90 days")).toBeVisible();
+  await expect(visibility.getByText("Last 90 days").first()).toBeVisible();
   const category = page
     .getByRole("region", { name: "Category chart position over time" })
     .locator("xpath=ancestor::*[@data-slot='card'][1]");

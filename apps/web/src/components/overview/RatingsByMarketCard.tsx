@@ -53,7 +53,7 @@ function RatingsTable({
           <TableHead scope="col" className="text-right">
             Ratings
           </TableHead>
-          <TableHead scope="col" className="text-right">
+          <TableHead scope="col" className="text-right max-sm:hidden">
             Captured
           </TableHead>
         </TableRow>
@@ -81,7 +81,7 @@ function RatingsTable({
             <TableCell className="numeric text-right">
               {formatNumber(total.count)}
             </TableCell>
-            <TableCell className="text-right text-muted-foreground">
+            <TableCell className="text-right text-muted-foreground max-sm:hidden">
               {pluralize(total.markets, "market")}
             </TableCell>
           </TableRow>

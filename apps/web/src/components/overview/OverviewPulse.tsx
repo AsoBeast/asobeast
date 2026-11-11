@@ -13,11 +13,17 @@ import {
 } from "@/components/ui/stat-tile";
 import { formatNumber, formatRating, pluralize } from "@/lib/format";
 import { queryMarket } from "@/lib/market";
-import { appListingOptions } from "@/lib/queries";
+import { appListingOptions, ratingsHistoryOptions } from "@/lib/queries";
+import { presetToRange } from "@/lib/ranges";
 import type { VisibilityView } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
 import { PULSE_COLUMNS, PULSE_STRIP } from "./layout-classes";
 import { OverviewChart } from "./OverviewChart";
+import {
+  RATING_CHANGE_DAYS,
+  RATING_CHANGE_RANGE,
+  ratingChange,
+} from "./rating-trend";
 import { useOverviewView } from "./use-overview-view";
 import {
   competitorsCaption,
@@ -42,7 +48,35 @@ function shareNote(share: ShareOfVoice, nonBranded?: ShareOfVoice): string {
     : `${versus} · ${formatShare(nonBranded.current)} non branded`;
 }
 
-function RatingTile({ id }: { id: string }) {
+const RATING_CHANGE_DIGITS = 2;
+
+interface TileSelection {
+  selected: boolean;
+  onSelect: () => void;
+}
+
+function RatingChange({ id }: { id: string }) {
+  const { data } = useSuspenseQuery(
+    ratingsHistoryOptions(id, presetToRange(RATING_CHANGE_RANGE)),
+  );
+  const change = ratingChange(data.points, RATING_CHANGE_DAYS);
+  return change === null ? null : (
+    <TrendChip
+      label={`${RATING_CHANGE_DAYS}d`}
+      value={change}
+      digits={RATING_CHANGE_DIGITS}
+      form="pill"
+    />
+  );
+}
+
+function RatingTile({
+  id,
+  selection,
+}: {
+  id: string;
+  selection: TileSelection;
+}) {
   const { market, home } = useMarket(id);
   const country = useDeferredValue(queryMarket(market, home));
   const { data: listing } = useSuspenseQuery(appListingOptions(id, country));
@@ -50,8 +84,17 @@ function RatingTile({ id }: { id: string }) {
   const average = snapshot?.ratingAvg ?? null;
   return (
     <StatTile
+      {...selection}
       label="Rating"
-      value={average === null ? "—" : formatRating(average)}
+      value={
+        <Figure value={average === null ? "—" : formatRating(average)}>
+          {country === undefined ? (
+            <Suspense fallback={null}>
+              <RatingChange id={id} />
+            </Suspense>
+          ) : null}
+        </Figure>
+      }
       note={ratingNote(average, snapshot?.ratingCount ?? null)}
     />
   );
@@ -66,16 +109,16 @@ const top10Note = (summary: AppSummary): string =>
   `of ${formatNumber(summary.trackedKeywords)} tracked`;
 
 export function OverviewPulse({ id }: { id: string }) {
-  const { summary, view: shown, select } = useOverviewView(id);
-  const { visibility, shareOfVoice: share } = summary;
-  const tab = (value: VisibilityView) => ({
+  const { summary, share, view: shown, select } = useOverviewView(id);
+  const { visibility } = summary;
+  const tab = (value: VisibilityView): TileSelection => ({
     selected: shown === value,
     onSelect: () => select(value),
   });
 
   return (
     <Card className="gap-0 py-0">
-      <StatTileGroup className={cn(PULSE_STRIP, PULSE_COLUMNS[share ? 4 : 3])}>
+      <StatTileGroup className={cn(PULSE_STRIP, PULSE_COLUMNS[4])}>
         <StatTile
           {...tab("visibility")}
           label="Visibility"
@@ -86,27 +129,25 @@ export function OverviewPulse({ id }: { id: string }) {
           }
           note={<TrendChip label="30d" value={visibility.delta30d} />}
         />
-        {share ? (
-          <StatTile
-            {...tab("share")}
-            label="Share of voice"
-            value={
-              share.current === null ? (
-                <Figure value="—" />
-              ) : (
-                <Figure value={formatShare(share.current)}>
-                  <TrendChip
-                    label="7d"
-                    value={share.delta7d}
-                    digits={1}
-                    form="pill"
-                  />
-                </Figure>
-              )
-            }
-            note={shareNote(share, summary.nonBrandedShareOfVoice)}
-          />
-        ) : null}
+        <StatTile
+          {...tab("share")}
+          label="Share of voice"
+          value={
+            share.current === null ? (
+              <Figure value="—" />
+            ) : (
+              <Figure value={formatShare(share.current)}>
+                <TrendChip
+                  label="7d"
+                  value={share.delta7d}
+                  digits={1}
+                  form="pill"
+                />
+              </Figure>
+            )
+          }
+          note={shareNote(share, summary.nonBrandedShareOfVoice)}
+        />
         <StatTile
           {...tab("top10")}
           label="Keywords in top 10"
@@ -116,7 +157,7 @@ export function OverviewPulse({ id }: { id: string }) {
           note={top10Note(summary)}
         />
         <Suspense fallback={<StatTileSkeleton />}>
-          <RatingTile id={id} />
+          <RatingTile id={id} selection={tab("rating")} />
         </Suspense>
       </StatTileGroup>
       <OverviewChart id={id} view={shown} />

@@ -4,29 +4,56 @@ import Link from "next/link";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useKeywordScope } from "@/components/app-detail/use-market";
 import {
+  FOOTER_LINK,
+  LIST_HEAD,
+  LIST_ROW,
+  PANEL_HEADER,
+} from "@/components/layout/panel-classes";
+import {
   Card,
   CardContent,
   CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { formatNumber } from "@/lib/format";
 import { discoveriesHref, discoveriesLine } from "@/lib/keyword-discoveries";
 import { appDetailOptions, appSummaryOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
-import {
-  FOOTER_LINK,
-  LIST_HEAD,
-  LIST_ROW,
-  PANEL_HEADER,
-} from "@/components/layout/panel-classes";
 
 const COLUMNS = "grid grid-cols-[minmax(0,1fr)_auto] gap-3 px-2";
 
-function CoverageStat({ label, value }: { label: string; value: number }) {
+const PERCENT = 100;
+
+function CoverageField({
+  label,
+  found,
+  tracked,
+}: {
+  label: string;
+  found: number;
+  tracked: number;
+}) {
+  const share = tracked === 0 ? 0 : Math.min(found / tracked, 1);
   return (
-    <div className="flex items-baseline gap-2">
+    <div className="grid grid-cols-[5.5rem_minmax(0,1fr)_auto] items-center gap-3">
       <dt className="text-label text-muted-foreground">{label}</dt>
-      <dd className="numeric text-body font-semibold">{value}</dd>
+      <dd className="contents">
+        <span
+          aria-hidden
+          className="h-2 overflow-hidden rounded-full border border-border print:hidden"
+        >
+          <span
+            data-slot="coverage-bar"
+            className="block h-full bg-chart-tint"
+            style={{ width: `${Math.round(share * PERCENT)}%` }}
+          />
+        </span>
+        <span className="numeric text-right text-dense">
+          <span className="font-semibold">{formatNumber(found)}</span>
+          <span className="text-muted-foreground">{` of ${formatNumber(tracked)}`}</span>
+        </span>
+      </dd>
     </div>
   );
 }
@@ -38,12 +65,12 @@ export function CoverageCard({ id }: { id: string }) {
   const coverage = summary.coverage;
   const discoveries = discoveriesLine(summary.discoveries);
 
-  const stats = [
-    { label: "Title", value: coverage.inTitle },
+  const fields = [
+    { label: "Title", found: coverage.inTitle },
     ...(detail.store === "APP_STORE"
-      ? [{ label: "Subtitle", value: coverage.inSubtitle }]
+      ? [{ label: "Subtitle", found: coverage.inSubtitle }]
       : []),
-    { label: "Description", value: coverage.inDescription },
+    { label: "Description", found: coverage.inDescription },
   ];
 
   return (
@@ -56,10 +83,14 @@ export function CoverageCard({ id }: { id: string }) {
       <CardContent className="flex flex-col gap-3 px-2">
         <dl
           aria-label="Tracked keywords found in each field"
-          className="flex flex-wrap gap-x-6 gap-y-1 px-2"
+          className="flex flex-col gap-2 px-2"
         >
-          {stats.map((stat) => (
-            <CoverageStat key={stat.label} {...stat} />
+          {fields.map((field) => (
+            <CoverageField
+              key={field.label}
+              {...field}
+              tracked={summary.trackedKeywords}
+            />
           ))}
         </dl>
         {coverage.uncoveredHighOpportunity.length === 0 ? (

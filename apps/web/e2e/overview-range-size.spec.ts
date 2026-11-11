@@ -11,14 +11,14 @@ const CHART_SIZE_WARNING = /width\(0\) and height\(0\) of chart/;
 const RANGE_CARDS = [
   {
     path: OVERVIEW,
-    label: "Search visibility · All markets",
+    label: "Search visibility",
     chart: "Search visibility over time",
     param: "range",
     endpoint: /\/apps\/app-1\/visibility-history\?/,
   },
   {
     path: `${OVERVIEW}?visView=top10`,
-    label: "Tracked keywords by rank band · All markets",
+    label: "Tracked keywords by rank band",
     chart: "Tracked keywords by rank band",
     param: "range",
     endpoint: /\/apps\/app-1\/rank-distribution-history\?/,

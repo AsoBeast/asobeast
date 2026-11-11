@@ -7,7 +7,8 @@ import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { moverChange, type MoverChange } from "./mover-change";
 
-const MOVER_COLUMNS = "grid grid-cols-[minmax(0,1fr)_auto_4.5rem] gap-3 px-2";
+export const MOVER_COLUMNS =
+  "grid grid-cols-[minmax(0,1fr)_auto_4.5rem] gap-3 px-2";
 
 const BAR_REACH_PERCENT = 60;
 

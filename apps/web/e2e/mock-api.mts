@@ -295,6 +295,7 @@ import type {
   KeywordClass,
   KeywordUpdateRequest,
   TrackedKeywordItem,
+  VisibilityHistory,
   WebhookCreateRequest,
   WebhookItem,
   WebhookUpdateRequest,
@@ -2278,6 +2279,24 @@ const BUDGET_HOLD_COOKIE = "e2e_budget_hold";
 const BUDGET_QUOTA_COOKIE = "e2e_budget_quota";
 const STALE_MARKET_COOKIE = "e2e_stale_market";
 const RATINGS_MARKETS_COOKIE = "e2e_ratings_markets";
+
+const DAY_MS = 86_400_000;
+const EARLIER_RANGE_DROP = 8;
+
+function visibilityThrough(
+  history: VisibilityHistory,
+  to: string | null,
+): VisibilityHistory {
+  const newest = history.points.at(-1)?.date;
+  if (!to || !newest || to >= newest) return history;
+  const shift = Date.parse(newest) - Date.parse(to);
+  return {
+    points: history.points.map((point) => ({
+      date: new Date(Date.parse(point.date) - shift).toISOString().slice(0, 10),
+      visibility: Math.max(0, point.visibility - EARLIER_RANGE_DROP),
+    })),
+  };
+}
 
 function listingMarketsOf(req: IncomingMessage): ListingMarket[] {
   if (hasCookie(req, RATINGS_MARKETS_COOKIE, "wide")) {
@@ -4518,7 +4537,7 @@ const routes: Route[] = [
   appRoute(/^\/apps\/([^/]+)\/visibility-history$/, (dataset, query) =>
     query.get("compare") === "competitors"
       ? visibilityComparedFor(dataset, query)
-      : dataset.visibility,
+      : visibilityThrough(dataset.visibility, query.get("to")),
   ),
   appRoute(
     /^\/apps\/([^/]+)\/competitors\/analysis$/,

@@ -118,13 +118,6 @@ const SCROLLING_TABLES: Array<{
     table: "Which of your markets read each localization",
     region: "Localization matrix",
   },
-  {
-    path: "/apps/app-1",
-    table:
-      "Rating and number of ratings on the newest listing captured in each market",
-    region: "Market ratings table",
-    cookies: { e2e_ratings_markets: "wide" },
-  },
 ];
 
 const containerOf = (page: Page, table: string) =>
@@ -174,6 +167,30 @@ for (const { path, table, region, cookies } of SCROLLING_TABLES) {
     expect(await scrollViolations(page)).toEqual([]);
   });
 }
+
+test("the ratings by market table fits a phone without scrolling", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { e2e_ratings_markets: "wide" });
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.goto("/apps/app-1");
+  const container = containerOf(
+    page,
+    "Rating and number of ratings on the newest listing captured in each market",
+  );
+  await expect(container).toBeVisible();
+
+  expect(
+    await container.evaluate((node) => node.scrollWidth <= node.clientWidth),
+  ).toBe(true);
+  await expect(
+    container.getByRole("columnheader", { name: "Captured" }),
+  ).toBeHidden();
+  await expect(
+    page.getByRole("region", { name: "Market ratings table" }),
+  ).toHaveCount(0);
+});
 
 for (const width of [320, 375, 1440]) {
   test(`the map names every control and adds no scroll region at ${width} px`, async ({

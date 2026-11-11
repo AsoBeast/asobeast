@@ -100,6 +100,17 @@ export function windowOf(
   return report.windows.find((window) => window.days === days) ?? null;
 }
 
+export function funnelTrend(
+  report: StoreFunnelReport,
+  metric: keyof StoreFunnelChange,
+  days: number,
+): number[] {
+  return report.points
+    .filter((point) => point.complete)
+    .slice(-days)
+    .flatMap((point) => point.total[metric] ?? []);
+}
+
 export function formatCount(value: number | null): string {
   return value === null ? "—" : formatNumber(value);
 }

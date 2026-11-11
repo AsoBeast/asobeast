@@ -756,7 +756,12 @@ describe("the gap analysis url state", () => {
     const serialize = createSerializer({ visView: visibilityViewParser });
 
     expect(visibilityViewParser.defaultValue).toBe("visibility");
-    expect(VISIBILITY_VIEWS).toEqual(["visibility", "share", "top10"]);
+    expect(VISIBILITY_VIEWS).toEqual([
+      "visibility",
+      "share",
+      "top10",
+      "rating",
+    ]);
     expect(serialize({ visView: "share" })).toBe("?visView=share");
     expect(serialize({ visView: "visibility" })).toBe("");
   });
