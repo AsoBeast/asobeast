@@ -176,6 +176,9 @@ function period(
 }
 
 function baselineOf(member: CheckedMember, days: number): number | null {
+  if (member.lag <= -days) {
+    return null;
+  }
   return (
     BASELINE_SHIFTS.map((shift) => member.lag + shift - days).find((day) =>
       member.days.includes(day),

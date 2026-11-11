@@ -237,6 +237,46 @@ describe('portfolioHistory', () => {
     ]);
   });
 
+  it('leaves an app out of the change when its latest check is before the range', () => {
+    const earlier = daysAgo(7);
+    const history = portfolioHistory(
+      [
+        app(
+          [
+            row(
+              'stale',
+              10,
+              [
+                [0, 4],
+                [7, 9],
+              ],
+              earlier,
+            ),
+          ],
+          earlier,
+        ),
+        app([
+          row('fresh', 10, [
+            [0, 2],
+            [7, 2],
+          ]),
+        ]),
+      ],
+      7,
+    );
+
+    expect(history.change.compared).toBe(true);
+    expect(history.change.movement).toEqual({
+      up: 0,
+      down: 0,
+      entered: 0,
+      lost: 0,
+    });
+    expect(history.change.appsMoved).toBe(0);
+    expect(history.change.movers).toEqual({ up: [], down: [] });
+    expect(history.change.visibilityDelta).toBe(0);
+  });
+
   it('blends the apps checked on a day by the popularity of their keywords', () => {
     const history = portfolioHistory(
       [app([row('a', 10, [[0, 1]])]), app([row('b', 5, [[0, 3]])])],
