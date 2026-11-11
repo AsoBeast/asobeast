@@ -36,7 +36,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "improved",
         title: "A keywords page that gets to the numbers",
-        text: "The keywords page now fits its controls on one row: the tracked and discovered lists, a market menu with the keyword count of each market, the table or map switch and Add keywords. One sentence under it says how many keywords moved up and down since yesterday. Every filter sits behind one Filters button, and the table is denser, with figures lined up on the right, the change over 7 days beside the position and a footer that counts how many keywords moved. Tags are plain text, Source and Volatility are hidden until you turn them on under Columns, and the note about comparing the two stores moved to the info button beside Popularity. Suggestions and Keyword combinations take one line until you open them.",
+        text: "The keywords page now fits its controls on one row: the tracked and discovered lists, a market menu with the keyword count of each market, the table or map switch and Add keywords. One sentence under it says how many keywords moved up and down since yesterday. Every filter sits behind one Filters button, and the table shows more at a glance: the position is a chip that turns green in the top 3, a line draws the last 7 days beside the weekly change, the icons of the three apps that rank highest sit in their own column, and a footer counts how many keywords moved. Tags, Source and Volatility are hidden until you turn them on under Columns, and the note about comparing the two stores moved to the info button beside Popularity. Suggestions and Keyword combinations take one line until you open them.",
       },
       {
         kind: "improved",

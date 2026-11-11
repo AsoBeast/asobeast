@@ -1,10 +1,16 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
+import { hydrated } from "./hydrated.mts";
+import { showKeywordColumns } from "./keyword-controls.mts";
 
 test.describe.configure({ mode: "serial" });
 
 const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
 const KEYWORDS = "/apps/app-tags/keywords";
+
+test.beforeEach(async ({ page }) => {
+  await showKeywordColumns(page, ["tags"]);
+});
 
 test.beforeEach(async ({ request }) => {
   await request.post(`${MOCK_API_URL}/__reset/keyword-annotations/app-tags`, {
@@ -31,9 +37,11 @@ test("the switch still pauses a keyword through the shared update", async ({
   await page.goto(KEYWORDS);
 
   const patch = page.waitForRequest((request) => request.method() === "PATCH");
-  await row(page, "focus timer")
-    .getByRole("switch", { name: "Track keyword" })
-    .click();
+  await (
+    await hydrated(
+      row(page, "focus timer").getByRole("switch", { name: "Track keyword" }),
+    )
+  ).click();
 
   expect((await patch).postDataJSON()).toEqual({ active: false });
 });

@@ -71,6 +71,8 @@ import type {
   TrackedKeywordItem,
   VisibilityHistory,
   WebhookItem,
+  KeywordRecentPosition,
+  KeywordTopApp,
 } from "@asobeast/shared";
 import { summarizeActions } from "./actions-summary.mts";
 import {
@@ -96,6 +98,43 @@ export function utcTimestampDaysAgo(days: number): string {
   date.setUTCDate(date.getUTCDate() - days);
   return date.toISOString();
 }
+
+export const TOP_APP_ICON_URLS = {
+  focus: "https://is1-ssl.mzstatic.com/image/thumb/e2e-top-focus/512x512bb.png",
+  tomato:
+    "https://is1-ssl.mzstatic.com/image/thumb/e2e-top-tomato/512x512bb.png",
+  rival: "https://is1-ssl.mzstatic.com/image/thumb/e2e-top-rival/512x512bb.png",
+  sand: "https://is1-ssl.mzstatic.com/image/thumb/e2e-top-sand/512x512bb.png",
+  grid: "https://is1-ssl.mzstatic.com/image/thumb/e2e-top-grid/512x512bb.png",
+} as const;
+
+type TopAppKey = keyof typeof TOP_APP_ICON_URLS;
+
+const TOP_APP_FACTS: Record<
+  TopAppKey,
+  Pick<KeywordTopApp, "storeAppId" | "title" | "role">
+> = {
+  focus: { storeAppId: "111", title: "Focus Timer", role: "own" },
+  tomato: { storeAppId: "222", title: "Tomato Clock", role: "competitor" },
+  rival: { storeAppId: "333", title: "Rival Focus", role: "competitor" },
+  sand: { storeAppId: "444", title: "Sandglass", role: "other" },
+  grid: { storeAppId: "555", title: "Blocks Planner", role: "other" },
+};
+
+const topApps = (...keys: TopAppKey[]): KeywordTopApp[] =>
+  keys.map((key, index) => ({
+    ...TOP_APP_FACTS[key],
+    iconUrl: TOP_APP_ICON_URLS[key],
+    position: index + 1,
+  }));
+
+const recentPositions = (
+  oldestFirst: readonly (number | null)[],
+): KeywordRecentPosition[] =>
+  oldestFirst.map((position, index) => ({
+    date: utcDaysAgo(oldestFirst.length - 1 - index),
+    position,
+  }));
 
 function pointsFrom(
   positions: Array<number | null>,
@@ -398,6 +437,8 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
     previousPosition: 5,
     positionDelta1d: -2,
     positionDelta7d: -7,
+    recentPositions: recentPositions([10, 9, 9, 7, 5, 5, 3]),
+    topApps: topApps("tomato", "rival", "focus"),
     dropStreak: 0,
     traffic: 55,
     difficulty: 4,
@@ -443,6 +484,8 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
     previousPosition: 9,
     positionDelta1d: 3,
     positionDelta7d: 6,
+    recentPositions: recentPositions([6, 6, 7, 8, 9, 9, 12]),
+    topApps: topApps("tomato", "sand", "rival"),
     dropStreak: 3,
     traffic: 70,
     difficulty: 7,
@@ -487,6 +530,8 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
     previousPosition: 7,
     positionDelta1d: 0,
     positionDelta7d: 0,
+    recentPositions: recentPositions([7, 8, 7, 7, 7, 7, 7]),
+    topApps: topApps("sand", "grid", "tomato"),
     dropStreak: null,
     traffic: 40,
     difficulty: 5,
@@ -522,6 +567,8 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
     previousPosition: null,
     positionDelta1d: null,
     positionDelta7d: null,
+    recentPositions: recentPositions([null, null, null]),
+    topApps: topApps("grid", "rival", "sand"),
     dropStreak: 0,
     traffic: 65,
     difficulty: 6,
@@ -553,6 +600,8 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
     previousPosition: 44,
     positionDelta1d: 1,
     positionDelta7d: 5,
+    recentPositions: recentPositions([40, 41, 41, 43, 44, 44, 45]),
+    topApps: null,
     traffic: null,
     difficulty: null,
     volume: null,

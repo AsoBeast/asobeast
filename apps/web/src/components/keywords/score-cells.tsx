@@ -73,10 +73,8 @@ function ScoreButton({
           data-grade={graded ?? undefined}
           aria-label={`${label} ${valueLabel}${gradeWords}. ${summary}. Show scoring details`}
           className={cn(
-            "flex w-14 flex-col items-end gap-1 rounded-sm numeric outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-            emphasize
-              ? "font-semibold text-foreground"
-              : "text-muted-foreground",
+            "ml-auto flex w-14 flex-col items-end gap-1 rounded-sm numeric text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            emphasize ? "font-semibold" : "font-medium",
           )}
         >
           <span className="inline-flex items-center gap-1">

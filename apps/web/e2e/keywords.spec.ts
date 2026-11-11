@@ -279,7 +279,7 @@ test("the keyword, source and weekly change headers sort too", async ({
   await expect(rows.nth(1)).toContainText("time blocking");
   await expect(rows.nth(-2)).toContainText("focus timer");
 
-  await page.getByRole("button", { name: "7d", exact: true }).click();
+  await page.getByRole("button", { name: "Last 7 days", exact: true }).click();
   await expect(page).toHaveURL(/sort=delta7d/);
   await expect(rows.nth(1)).toContainText("focus timer");
   await expect(rows.nth(2)).toContainText("study timer");
@@ -440,6 +440,33 @@ test("volatility column labels low, high and unavailable rows", async ({
 
   const nullRow = page.getByRole("row", { name: /productivity app/ });
   await expect(nullRow.getByLabel(/volatility, \d+ out of 100/)).toHaveCount(0);
+});
+
+test("a row draws its last 7 days and names the top apps of its results", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+  const row = page.getByRole("row", { name: /focus timer/ });
+
+  await expect(
+    row.getByRole("img", {
+      name: "Position over the last 7 days, from 10 to 3",
+    }),
+  ).toBeVisible();
+  await expect(
+    row.getByRole("group", {
+      name: "Top apps: #1 Tomato Clock (competitor), #2 Rival Focus (competitor), #3 Focus Timer (your app)",
+    }),
+  ).toBeVisible();
+  await expect(row.locator('[data-role="own"]')).toHaveCount(1);
+
+  const unranked = page.getByRole("row", { name: /productivity app/ });
+  await expect(unranked.locator('[data-slot="position-trend"]')).toHaveCount(0);
+  await expect(
+    page
+      .getByRole("row", { name: /time blocking/ })
+      .getByText("No search results from today or yesterday"),
+  ).toBeAttached();
 });
 
 test("the volatility header sorts and still opens its tooltip", async ({
@@ -936,7 +963,7 @@ test("the columns menu hides a column and remembers it", async ({ page }) => {
   ).toHaveCount(0);
   await expect(
     menu.getByRole("menuitemcheckbox").filter({ hasNotText: "Listing marks" }),
-  ).toHaveCount(12);
+  ).toHaveCount(13);
   await menu.getByRole("menuitemcheckbox", { name: "Difficulty" }).click();
   await page.keyboard.press("Escape");
 
@@ -964,7 +991,7 @@ test("a phone starts with the columns that fit and offers the rest", async ({
     "Source",
     "Popularity",
     "Difficulty",
-    "7d",
+    "Last 7 days",
     "Volatility",
   ]) {
     await expect(page.getByRole("columnheader", { name })).toHaveCount(0);
@@ -1044,7 +1071,7 @@ test("a column shown on a phone does not hide the rest on a wider screen", async
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.reload();
 
-  for (const name of ["Source", "Popularity", "Difficulty", "7d"]) {
+  for (const name of ["Source", "Popularity", "Difficulty", "Last 7 days"]) {
     await expect(page.getByRole("columnheader", { name })).toBeVisible();
   }
 });
@@ -1197,6 +1224,7 @@ test.describe("a market typed into the add keywords dialog", () => {
 });
 
 test("a row shows three of its tags and names them all", async ({ page }) => {
+  await showKeywordColumns(page, ["tags"]);
   await page.goto("/apps/app-1/keywords");
 
   const tags = page

@@ -34,12 +34,14 @@ export function GradedNumber({
   grade,
   label,
   aligned = false,
+  marker = true,
   className,
 }: {
   value: string;
   grade: Grade | null;
   label: string;
   aligned?: boolean;
+  marker?: boolean;
   className?: string;
 }) {
   const spoken = grade
@@ -52,7 +54,7 @@ export function GradedNumber({
       className={cn("numeric inline-flex items-center gap-1.5", className)}
     >
       <span aria-hidden>{value}</span>
-      <GradeMarker grade={grade} reserve={aligned} />
+      {marker ? <GradeMarker grade={grade} reserve={aligned} /> : null}
       <span className="sr-only">{spoken}</span>
     </span>
   );

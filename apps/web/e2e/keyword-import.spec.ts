@@ -10,6 +10,7 @@ import {
   resetImportKeywords,
 } from "./keyword-import-dialog.mts";
 import { seedViewer } from "./viewer.mts";
+import { showKeywordColumns } from "./keyword-controls.mts";
 
 test.describe.configure({ mode: "serial" });
 
@@ -120,6 +121,7 @@ test("P-WEB-02 downloads a template the import reads back", async ({
 test("P-WEB-03 reviews every row, then imports the new and paused ones with their tags", async ({
   page,
 }) => {
+  await showKeywordColumns(page, ["tags"]);
   const sent = importRequests(page);
   const dialog = await openDialog(page);
 

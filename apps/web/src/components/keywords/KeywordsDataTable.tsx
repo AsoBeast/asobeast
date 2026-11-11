@@ -26,7 +26,7 @@ const STICKY_COLUMNS: Record<string, string | undefined> = {
   keyword: "sticky left-10 z-10 bg-inherit",
 };
 
-const ROW_HEIGHT = 37;
+const ROW_HEIGHT = 45;
 const OVERSCAN = 12;
 const VIRTUALIZE_ABOVE = 50;
 
@@ -71,7 +71,6 @@ export function KeywordsDataTable({
   return (
     <Table
       containerRef={scrollRef}
-      density="compact"
       containerClassName="max-h-[70svh] overflow-y-auto rounded-lg border bg-card"
       aria-rowcount={rows.length + (rows.length > 0 ? 2 : 1)}
     >

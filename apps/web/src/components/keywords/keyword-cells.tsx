@@ -81,13 +81,13 @@ export function PositionCell({
   }
   const staleOn = staleCheckDay(keyword, today);
   return (
-    <span className="inline-flex items-center justify-end gap-1">
+    <span className="inline-flex items-center gap-1">
       <PositionReadout
         keyword={keyword}
         label={label}
         staleOn={staleOn}
         lost={lostPosition(keyword)}
-        aligned
+        chip
       />
       <PositionHistoryPopover
         keyword={keyword}

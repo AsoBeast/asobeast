@@ -20,6 +20,7 @@ import { SCORE_COMPARABILITY } from "./keyword-csv";
 import { noSearchTermsFact } from "@/lib/funnel";
 import { keywordZoneFilter } from "./keyword-filters";
 import { KeywordRowActions } from "./KeywordRowActions";
+import { PositionTrend } from "./PositionTrend";
 import type { PositionHistoryContext } from "./PositionHistoryPopover";
 import {
   KeywordCell,
@@ -34,6 +35,7 @@ import {
   addedColumn,
   competitorsColumn,
   revealColumn,
+  topAppsColumn,
   insightsColumn,
   volatilityColumn,
 } from "./keyword-fact-columns";
@@ -113,6 +115,7 @@ export function keywordColumns({
     ...(store === "GOOGLE_PLAY"
       ? [acquisitionsColumn({ noSearchTermsMonth })]
       : []),
+    topAppsColumn(),
     ...attributeColumns(),
     volatilityColumn(),
     addedColumn(),
@@ -198,7 +201,7 @@ function filterColumns() {
 function positionColumn(today: string, history: PositionHistoryContext) {
   return columnHelper.accessor((row) => nullsLast(row.latestPosition), {
     id: "position",
-    meta: { label: "Position", phone: true, numeric: true },
+    meta: { label: "Position", phone: true },
     ...SORTABLE,
     sortDescFirst: false,
     filterFn: (row, _id, selected: PositionBand[]) =>
@@ -220,13 +223,21 @@ function deltaColumn() {
     (row) => (row.positionDelta7d === null ? undefined : -row.positionDelta7d),
     {
       id: "delta7d",
-      meta: { label: "7d", numeric: true },
+      meta: { label: "Last 7 days" },
       ...SORTABLE,
       sortDescFirst: true,
-      header: ({ column }) => <SortableHeader column={column} label="7d" />,
+      header: ({ column }) => (
+        <SortableHeader column={column} label="Last 7 days" />
+      ),
       footer: movedFooter,
       cell: ({ row }) => (
-        <DeltaChip value={row.original.positionDelta7d} period="over 7 days" />
+        <span className="inline-flex items-center gap-2">
+          <PositionTrend checks={row.original.recentPositions} />
+          <DeltaChip
+            value={row.original.positionDelta7d}
+            period="over 7 days"
+          />
+        </span>
       ),
     },
   );

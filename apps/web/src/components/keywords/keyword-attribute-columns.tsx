@@ -16,7 +16,7 @@ export function attributeColumns() {
       getUniqueValues: (row) => row.tags ?? [],
       filterFn: (row, _id, selected: readonly string[]) =>
         someOf(row.original.tags, selected),
-      meta: { label: "Tags" },
+      meta: { label: "Tags", hiddenByDefault: true },
       cell: ({ row }) => <TagList tags={row.original.tags ?? []} />,
     }),
     columnHelper.accessor("source", {

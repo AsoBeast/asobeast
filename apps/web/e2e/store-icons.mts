@@ -5,6 +5,7 @@ import {
   APP_LONG_ICON_URL,
   SIMILAR_ICON_URL,
   STORE_SEARCH_ICON_URL,
+  TOP_APP_ICON_URLS,
 } from "./fixtures.mts";
 import { SERP_ICON_URLS, SERP_PLAY_ICON_URL } from "./serp-history.mts";
 import { ALERT_FEED_ICON_URL } from "./alert-feed-fixtures.mts";
@@ -37,6 +38,7 @@ export const test = base.extend<{ storeIcons: void }>({
         APP_LONG_ICON_URL,
         STORE_SEARCH_ICON_URL,
         SIMILAR_ICON_URL,
+        ...Object.values(TOP_APP_ICON_URLS),
         ...SERP_ICON_URLS,
         SERP_PLAY_ICON_URL,
         ALERT_FEED_ICON_URL,
