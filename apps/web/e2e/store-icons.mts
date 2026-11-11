@@ -1,5 +1,6 @@
 import { test as base } from "@playwright/test";
 import {
+  APP_1_CHANGE_ICON_URL,
   APP_2_ICON_URL,
   APP_LONG_ICON_URL,
   SIMILAR_ICON_URL,
@@ -31,6 +32,7 @@ export const test = base.extend<{ storeIcons: void }>({
   storeIcons: [
     async ({ context }, use) => {
       for (const iconUrl of [
+        APP_1_CHANGE_ICON_URL,
         APP_2_ICON_URL,
         APP_LONG_ICON_URL,
         STORE_SEARCH_ICON_URL,

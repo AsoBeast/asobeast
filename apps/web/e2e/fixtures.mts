@@ -1935,12 +1935,16 @@ export const APP_1_PL_CHANGES: ChangeTimeline = {
   ],
 };
 
+export const APP_1_CHANGE_ICON_URL =
+  "https://is1-ssl.mzstatic.com/image/thumb/e2e-focus-timer-change/512x512bb.png";
+
 const APP_1_CHANGES: ChangeTimeline = {
   events: [
     {
       id: "app-chg-1",
       appId: "app-1",
       appName: "Focus Timer",
+      iconUrl: APP_1_CHANGE_ICON_URL,
       isCompetitor: false,
       field: "title",
       before: "Focus Timer",
