@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { STORE_SEARCH_QUERY_MAX_LENGTH } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
-import { APP_1_SUMMARY, IMPORTED_APP, STORE_SEARCH } from "./fixtures.mts";
+import { APP_1_DETAIL, IMPORTED_APP, STORE_SEARCH } from "./fixtures.mts";
 import { startedSetup, storedSetup } from "./setup-session.mts";
 
 const utcDateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -860,7 +860,7 @@ test("an existing portfolio is not enrolled without an import", async ({
   await expect(page.getByRole("link", { name: "Resume setup" })).toHaveCount(0);
 });
 
-test("app overview renders summary numbers and a utc refresh date", async ({
+test("app overview renders summary numbers and a utc snapshot date", async ({
   page,
 }) => {
   await page.goto("/apps/app-1");
@@ -871,22 +871,19 @@ test("app overview renders summary numbers and a utc refresh date", async ({
   await expect(page.getByText("-3 30d").locator("..")).toHaveClass(
     /text-signal-down/,
   );
-  await expect(page.getByText("3 in top 10")).toBeVisible();
-
-  await expect(page.getByText("Where your keywords rank")).toBeVisible();
-
-  await expect(page.getByText("Keyword movers")).toBeVisible();
-  await expect(page.getByRole("link", { name: /focus timer/ })).toBeVisible();
   await expect(
-    page
-      .getByRole("link", { name: /focus timer/ })
-      .locator("[data-grade]", { hasText: "Position 3, strong" }),
-  ).toHaveAttribute("data-grade", "strong");
+    page.getByRole("button", { name: /^Keywords in top 10 3 of 5 tracked/ }),
+  ).toBeVisible();
+
   await expect(
-    page
-      .getByRole("link", { name: /pomodoro/ })
-      .locator("[data-grade]", { hasText: "Position 12, weak" }),
-  ).toHaveAttribute("data-grade", "weak");
+    page.getByRole("heading", { name: "Keyword movers", level: 2 }),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: /focus timer/ })).toHaveText(
+    "focus timer10 → 3▲ 7up 7 in 7 days",
+  );
+  await expect(page.getByRole("link", { name: /pomodoro/ })).toHaveText(
+    "pomodoro6 → 12▼ 6down 6 in 7 days",
+  );
 
   const coverage = card(page, "Metadata coverage");
   await expect(
@@ -894,14 +891,10 @@ test("app overview renders summary numbers and a utc refresh date", async ({
   ).toBeVisible();
   await expect(coverage.getByText("productivity app")).toBeVisible();
 
-  const refreshDate = utcDateFormatter.format(
-    new Date(APP_1_SUMMARY.lastRefreshAt ?? ""),
+  const snapshotDate = utcDateFormatter.format(
+    new Date(APP_1_DETAIL.latestSnapshot?.capturedAt ?? ""),
   );
-  const lastRefresh = card(page, "Last refresh");
-  await expect(lastRefresh).toBeVisible();
-  await expect(
-    lastRefresh.getByText(refreshDate, { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText(`Snapshot ${snapshotDate}`)).toHaveCount(1);
 });
 
 test("an app that iPhone search never lists carries a notice on every page", async ({

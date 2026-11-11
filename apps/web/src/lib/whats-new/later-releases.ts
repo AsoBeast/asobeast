@@ -30,6 +30,11 @@ export const LATER_RELEASES: readonly Release[] = [
       },
       {
         kind: "improved",
+        title: "An app overview that leads with what matters",
+        text: "The overview of an app now opens with its key figures: visibility, share of voice once you track a competitor, keywords in the top 10 and the store rating. Select visibility, share of voice or the top 10 to draw its chart. Keyword movers sit right under it beside the next things to do, with the biggest competitor gap at their foot and the keywords missing from your metadata next to them. The store funnel, category ranks and ratings by market follow as reference, and the app's own icon now sits beside its name on every page.",
+      },
+      {
+        kind: "improved",
         title: "A calmer, sharper look",
         text: "AsoBeast has a new typeface, warmer neutral colours and flatter panels with fine borders. Numbers line up in columns, labels are easier to read, and the brand orange is kept for the main action on each page.",
       },

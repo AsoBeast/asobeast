@@ -12,6 +12,12 @@ const card = (page: Page, label: string) =>
     .locator('[data-slot="card"]')
     .filter({ has: page.getByText(label, { exact: true }) });
 
+const tile = (page: Page, label: string) =>
+  page.locator('[data-slot="stat-tile"]').filter({ hasText: label });
+
+const chartOf = (page: Page, scope: string) =>
+  page.getByRole("heading", { name: `Search visibility · ${scope}` });
+
 const pickMarket = async (page: Page, name: string) => {
   await page.getByRole("combobox", { name: SWITCHER }).click();
   await page.getByRole("option", { name }).click();
@@ -22,8 +28,9 @@ test("counts every market until a market is chosen", async ({ page }) => {
 
   const switcher = page.getByRole("combobox", { name: SWITCHER });
   await expect(switcher).toHaveText(ALL);
-  await expect(card(page, "Visibility · All markets")).toContainText("62");
-  await expect(card(page, "Tracked keywords · All markets")).toContainText("5");
+  await expect(chartOf(page, "All markets")).toBeVisible();
+  await expect(tile(page, "Visibility")).toContainText("62");
+  await expect(tile(page, "Keywords in top 10")).toContainText("of 5 tracked");
   await switcher.click();
   await expect(page.getByRole("option")).toHaveText([ALL, HOME, POLAND]);
 });
@@ -33,17 +40,21 @@ test("narrows the numbers to the selected market", async ({ page }) => {
   const history = page.waitForRequest(
     /\/apps\/app-1\/visibility-history\?.*country=pl/,
   );
-  const distribution = page.waitForRequest(
-    /\/apps\/app-1\/rank-distribution-history\?.*country=pl/,
-  );
 
   await pickMarket(page, POLAND);
 
   await expect(page).toHaveURL(/market=pl/);
-  await expect(card(page, "Visibility · PL")).toContainText("19");
-  await expect(card(page, "Tracked keywords · PL")).toContainText("2");
+  await expect(chartOf(page, "PL")).toBeVisible();
+  await expect(tile(page, "Visibility")).toContainText("19");
+  await expect(tile(page, "Keywords in top 10")).toContainText("of 2 tracked");
   await history;
+
+  const distribution = page.waitForRequest(
+    /\/apps\/app-1\/rank-distribution-history\?.*country=pl/,
+  );
+  await tile(page, "Keywords in top 10").click();
   await distribution;
+  await expect(page).toHaveURL(/visView=top10/);
 });
 
 test("offers the home market as a choice of its own", async ({ page }) => {
@@ -52,8 +63,9 @@ test("offers the home market as a choice of its own", async ({ page }) => {
   await pickMarket(page, HOME);
 
   await expect(page).toHaveURL(/market=us/);
-  await expect(card(page, "Visibility · US")).toContainText("71");
-  await expect(card(page, "Tracked keywords · US")).toContainText("3");
+  await expect(chartOf(page, "US")).toBeVisible();
+  await expect(tile(page, "Visibility")).toContainText("71");
+  await expect(tile(page, "Keywords in top 10")).toContainText("of 3 tracked");
 });
 
 test("returns to every market", async ({ page }) => {
@@ -62,7 +74,8 @@ test("returns to every market", async ({ page }) => {
   await pickMarket(page, ALL);
 
   await expect(page).not.toHaveURL(/market=/);
-  await expect(card(page, "Visibility · All markets")).toContainText("62");
+  await expect(chartOf(page, "All markets")).toBeVisible();
+  await expect(tile(page, "Visibility")).toContainText("62");
 });
 
 for (const [market, label, scope, visibility] of [
@@ -84,7 +97,8 @@ for (const [market, label, scope, visibility] of [
     await expect(page.getByRole("combobox", { name: SWITCHER })).toHaveText(
       label,
     );
-    await expect(card(page, `Visibility · ${scope}`)).toContainText(visibility);
+    await expect(chartOf(page, scope)).toBeVisible();
+    await expect(tile(page, "Visibility")).toContainText(visibility);
     expect(refetched).toEqual([]);
     expect(errors).toEqual([]);
   });
@@ -108,11 +122,10 @@ test("keeps the numbers on screen while the next market loads", async ({
   await expect(page.getByRole("combobox", { name: SWITCHER })).toHaveText(
     POLAND,
   );
-  const previous = card(page, "Visibility · All markets");
-  await expect(previous).toBeVisible();
-  await expect(previous).toContainText("62");
+  await expect(chartOf(page, "All markets")).toBeVisible();
+  await expect(tile(page, "Visibility")).toContainText("62");
   release();
-  await expect(card(page, "Visibility · PL")).toBeVisible();
+  await expect(chartOf(page, "PL")).toBeVisible();
 });
 
 test("names no market on the cards of an app with one listing", async ({
@@ -120,7 +133,9 @@ test("names no market on the cards of an app with one listing", async ({
 }) => {
   await page.goto("/apps/app-2");
 
-  await expect(card(page, "Visibility").first()).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Search visibility", exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("combobox", { name: SWITCHER })).toHaveCount(0);
 });
 
@@ -140,9 +155,9 @@ test("says which scope the cards that ignore the switcher count", async ({
 test("links the keyword discoveries of the scoped market", async ({ page }) => {
   await page.goto("/apps/app-1");
 
-  const tracked = card(page, "Tracked keywords · All markets");
+  const coverage = card(page, "Metadata coverage");
   await expect(
-    tracked.getByRole("link", {
+    coverage.getByRole("link", {
       name: "11 keyword discoveries, 4 where you already rank",
     }),
   ).toHaveAttribute("href", "/apps/app-1/keywords?tab=discovered");
@@ -150,7 +165,7 @@ test("links the keyword discoveries of the scoped market", async ({ page }) => {
   await pickMarket(page, POLAND);
 
   await expect(
-    card(page, "Tracked keywords · PL").getByRole("link", {
+    coverage.getByRole("link", {
       name: "2 keyword discoveries, 1 where you already rank",
     }),
   ).toHaveAttribute("href", "/apps/app-1/keywords?tab=discovered&country=pl");

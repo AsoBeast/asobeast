@@ -1,35 +1,41 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
-import type { KeywordMover } from "@asobeast/shared";
-import { MoverList } from "@/components/rankings/MoverRow";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useKeywordScope } from "@/components/app-detail/use-market";
-import { appSummaryOptions } from "@/lib/queries";
+import { MoversPanel } from "@/components/rankings/MoversPanel";
+import { appDetailOptions, appSummaryOptions } from "@/lib/queries";
+import { GapHeadline } from "./GapHeadline";
+
+const MOVER_DAYS = 7;
 
 export function MoversCard({ id }: { id: string }) {
   const { country } = useKeywordScope(id);
   const { data: summary } = useSuspenseQuery(appSummaryOptions(id, country));
-  const rankingsHref = (mover: KeywordMover) =>
-    `/apps/${id}/rankings?keywords=${mover.keywordId}`;
+  const { data: app } = useSuspenseQuery(appDetailOptions(id));
+  const { up, down } = summary.movers;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Keyword movers</CardTitle>
-      </CardHeader>
-      <CardContent className="grid gap-6 sm:grid-cols-2">
-        <MoverList
-          title="Climbers"
-          movers={summary.movers.up}
-          renderHref={rankingsHref}
-        />
-        <MoverList
-          title="Fallers"
-          movers={summary.movers.down}
-          renderHref={rankingsHref}
-        />
-      </CardContent>
-    </Card>
+    <MoversPanel
+      movers={summary.movers}
+      days={MOVER_DAYS}
+      quiet={
+        up.length + down.length > 0
+          ? null
+          : `No keyword moved in the last ${MOVER_DAYS} days.`
+      }
+      changeHeading={`${MOVER_DAYS}d change`}
+      hrefOf={(mover) => `/apps/${id}/rankings?keywords=${mover.keywordId}`}
+      lead={(mover) => (
+        <span
+          translate="no"
+          className="truncate font-medium print:whitespace-normal"
+        >
+          {mover.text}
+        </span>
+      )}
+      footer={
+        app.isCompetitor ? null : <GapHeadline id={id} home={app.country} />
+      }
+    />
   );
 }

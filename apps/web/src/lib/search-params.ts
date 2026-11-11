@@ -329,7 +329,6 @@ export const visibilityRangeParser =
 
 export const overviewRangeParsers = {
   range: visibilityRangeParser,
-  distRange: visibilityRangeParser,
   categoryRange: rangeParser,
 };
 
@@ -622,7 +621,7 @@ export const GAP_URL_KEYS = {
   country: "gapCountry",
 } as const satisfies Record<keyof typeof gapTableParsers, string>;
 
-export const VISIBILITY_VIEWS = ["visibility", "share"] as const;
+export const VISIBILITY_VIEWS = ["visibility", "share", "top10"] as const;
 
 export type VisibilityView = (typeof VISIBILITY_VIEWS)[number];
 

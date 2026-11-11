@@ -18,7 +18,7 @@ const headline = async (page: Page, id: string) => {
   await expect(
     card.getByRole("region", { name: "Category chart position over time" }),
   ).toBeVisible();
-  return card.locator("p.text-sm").first();
+  return card.locator("p.text-body").first();
 };
 
 test("a paid app at the top of the paid chart reads its paid position", async ({

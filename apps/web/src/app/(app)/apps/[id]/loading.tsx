@@ -1,5 +1,8 @@
 import { AppHeaderSkeleton } from "@/components/app-detail/skeletons";
-import { StatCardsSkeleton } from "@/components/overview/skeletons";
+import {
+  OverviewPulseSkeleton,
+  SnapshotFactsSkeleton,
+} from "@/components/overview/skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Loading() {
@@ -7,15 +10,12 @@ export default function Loading() {
     <div className="flex flex-col gap-6">
       <AppHeaderSkeleton />
 
-      <div className="page-wide flex flex-col gap-6">
+      <div className="page-wide @container/overview flex flex-col gap-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Skeleton className="size-12 rounded-xl" />
-            <Skeleton className="h-4 w-64" />
-          </div>
-          <Skeleton className="h-7 w-28" />
+          <SnapshotFactsSkeleton />
+          <Skeleton className="h-8 w-28" />
         </div>
-        <StatCardsSkeleton />
+        <OverviewPulseSkeleton />
       </div>
     </div>
   );

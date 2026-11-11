@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { formatRankPosition } from "@asobeast/shared";
 import type { KeywordMover } from "@asobeast/shared";
+import { LIST_HEAD, LIST_ROW } from "@/components/layout/panel-classes";
 import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { moverChange, type MoverChange } from "./mover-change";
@@ -42,13 +43,7 @@ function MoverLine({
 }) {
   const change = moverChange(mover);
   return (
-    <Link
-      href={href}
-      className={cn(
-        MOVER_COLUMNS,
-        "relative h-10 items-center rounded-md text-dense outline-none sm:h-9 transition-colors duration-150 ease-out hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring",
-      )}
-    >
+    <Link href={href} className={cn(MOVER_COLUMNS, LIST_ROW)}>
       <span
         aria-hidden
         data-slot="mover-bar"
@@ -97,10 +92,7 @@ export function MoverList<Mover extends KeywordMover>({
   }
   return (
     <div className="flex flex-col gap-1">
-      <div
-        aria-hidden
-        className={cn(MOVER_COLUMNS, "text-label text-faint-foreground")}
-      >
+      <div aria-hidden className={cn(MOVER_COLUMNS, LIST_HEAD)}>
         <span>Keyword</span>
         <span className="text-right">Position</span>
         <span className="text-right">{changeHeading}</span>

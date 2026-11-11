@@ -3,7 +3,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { ExternalLink } from "lucide-react";
 import type { AppDetail } from "@asobeast/shared";
-import { Badge } from "@/components/ui/badge";
+import { AppIcon } from "@/components/AppIcon";
 import { appDetailOptions } from "@/lib/queries";
 import { formatCountry, storeLabel } from "@/lib/format";
 import { AppLink } from "./AppLink";
@@ -24,30 +24,32 @@ export function AppHeader({ id }: { id: string }) {
   return (
     <>
       <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-1.5">
-          <h1
-            title={name}
-            className="line-clamp-2 text-title tracking-tight text-balance print:line-clamp-none"
-          >
-            {name}
-          </h1>
-          <div className="flex flex-wrap items-center gap-2 text-body text-muted-foreground">
-            <Badge variant="secondary">{storeLabel(detail.store)}</Badge>
-            <Badge
-              variant="outline"
-              title={`Home storefront · ${formatCountry(detail.country)}`}
+        <div className="flex min-w-0 items-start gap-3">
+          <AppIcon src={detail.iconUrl} size={32} />
+          <div className="flex min-w-0 flex-col gap-1">
+            <h1
+              title={name}
+              className="line-clamp-2 text-title text-balance print:line-clamp-none"
             >
-              {detail.country.toUpperCase()}
-            </Badge>
-            <a
-              href={storeUrl(detail)}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex min-h-6 items-center gap-1 rounded-sm hover:text-foreground print:hidden"
-            >
-              Store page
-              <ExternalLink className="size-3.5" />
-            </a>
+              {name}
+            </h1>
+            <p className="flex flex-wrap items-center gap-x-2 text-label text-muted-foreground">
+              <span>{storeLabel(detail.store)}</span>
+              <span aria-hidden>·</span>
+              <span>{`Home storefront ${formatCountry(detail.country)}`}</span>
+              <span aria-hidden className="print:hidden">
+                ·
+              </span>
+              <a
+                href={storeUrl(detail)}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex min-h-6 items-center gap-1 rounded-sm hover:text-foreground print:hidden"
+              >
+                <span>Store page</span>
+                <ExternalLink aria-hidden className="size-3.5" />
+              </a>
+            </p>
           </div>
         </div>
 

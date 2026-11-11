@@ -1,18 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import type { ActionItem } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { ActionLine } from "@/components/actions/ActionLine";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { DoNextPanel, NoOpenActions } from "@/components/actions/DoNextPanel";
 import { DASHBOARD_ACTION_LIMIT } from "@/lib/action-filters";
 import { formatNumber, storeLabel } from "@/lib/format";
 import {
@@ -20,8 +12,6 @@ import {
   actionSummaryOptions,
   portfolioOptions,
 } from "@/lib/queries";
-import { cn } from "@/lib/utils";
-import { PANEL_ACTION, PANEL_HEADER } from "./layout-classes";
 
 function ActionScope({
   item,
@@ -56,13 +46,7 @@ function ActionList() {
   const { data: portfolio } = useSuspenseQuery(portfolioOptions);
 
   if (list.items.length === 0) {
-    return (
-      <p className="px-2 text-body text-muted-foreground">
-        {summary.generatedAt === null
-          ? "No actions generated yet."
-          : "Nothing needs you right now."}
-      </p>
-    );
+    return <NoOpenActions generated={summary.generatedAt !== null} />;
   }
 
   const icons = new Map(portfolio.apps.map((app) => [app.id, app.iconUrl]));
@@ -85,31 +69,16 @@ function ActionList() {
 export function DoNextCard() {
   const { data: summary } = useSuspenseQuery(actionSummaryOptions);
   return (
-    <Card className="h-full">
-      <CardHeader className={PANEL_HEADER}>
-        <CardTitle asChild>
-          <h2>Do next</h2>
-        </CardTitle>
-        {summary.generatedAt === null ? null : (
-          <CardAction
-            className={cn(PANEL_ACTION, "text-label text-faint-foreground")}
-          >
-            {`${formatNumber(summary.open)} open`}
-          </CardAction>
-        )}
-      </CardHeader>
-      <CardContent className="flex-1 px-2">
-        <ActionList />
-      </CardContent>
-      <CardFooter className="justify-between">
-        <span>Rules over your stored history</span>
-        <Link
-          href="/actions"
-          className="inline-flex min-h-6 items-center text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-foreground print:hidden"
-        >
-          Open the Action Center
-        </Link>
-      </CardFooter>
-    </Card>
+    <DoNextPanel
+      counts={
+        summary.generatedAt === null
+          ? null
+          : `${formatNumber(summary.open)} open`
+      }
+      href="/actions"
+      className="h-full"
+    >
+      <ActionList />
+    </DoNextPanel>
   );
 }

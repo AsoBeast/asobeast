@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 import { ALERT_KINDS } from "./alert-kind";
 import { FEED_LINK, FEED_ROW, FeedDay, feedDayLabel } from "./feed-row";
 import { FeedRowsSkeleton } from "./skeletons";
-import { PANEL_ACTION, PANEL_HEADER } from "./layout-classes";
+import { PANEL_COUNT, PANEL_HEADER } from "@/components/layout/panel-classes";
 import { dayBefore } from "@/lib/utc-day";
 
 const WINDOW_DAYS = 7;
@@ -101,11 +101,7 @@ export function AlertsCard({ today }: { today: string }) {
         <CardTitle asChild>
           <h2>Alerts</h2>
         </CardTitle>
-        <CardAction
-          className={cn(PANEL_ACTION, "text-label text-faint-foreground")}
-        >
-          Last 7 days
-        </CardAction>
+        <CardAction className={PANEL_COUNT}>Last 7 days</CardAction>
       </CardHeader>
       <CardContent className="px-2">
         <AlertList today={today} />

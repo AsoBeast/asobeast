@@ -27,7 +27,7 @@ export function CollapsibleCard({
 }: {
   section: string;
   title: string;
-  eyebrow: string;
+  eyebrow?: string;
   actions?: ReactNode;
   children: ReactNode;
 }) {
@@ -45,7 +45,7 @@ export function CollapsibleCard({
       <Card data-slot="card" role="region" aria-labelledby={titleId}>
         <CardHeader className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
           <div className="flex min-w-0 flex-col gap-1">
-            <CardDescription>{eyebrow}</CardDescription>
+            {eyebrow ? <CardDescription>{eyebrow}</CardDescription> : null}
             <CardTitle asChild>
               <h2 id={titleId}>
                 <CollapsibleTrigger asChild>

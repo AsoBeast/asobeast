@@ -15,6 +15,7 @@ import {
   ChartContainer,
   ChartTooltip,
 } from "@/components/ui/chart";
+import { SeriesFade, useFadeId } from "@/components/charts/SeriesFade";
 import { SeriesTooltip } from "@/components/charts/SeriesTooltip";
 import { AnnotationTooltipNotes } from "@/components/annotations/AnnotationTooltipNotes";
 import {
@@ -32,6 +33,7 @@ import {
   CHART_HEIGHT,
   CHART_MARGIN,
   GRID_PROPS,
+  LINE_PROPS,
   seriesColor,
   TIME_AXIS_PROPS,
   VALUE_AXIS_PROPS,
@@ -89,6 +91,7 @@ export function VisibilityAreaChart({
   id: string;
   range: VisibilityRange;
 }) {
+  const fadeId = useFadeId();
   const { country } = useKeywordScope(id);
   const { data } = useSuspenseQuery(
     visibilityOptions(id, presetToRange(range), country),
@@ -105,7 +108,7 @@ export function VisibilityAreaChart({
   if (state === "empty") {
     return (
       <ChartNotice
-        height={CHART_HEIGHT.compact}
+        height={CHART_HEIGHT.tall}
         title="No visibility recorded yet"
         body="The daily pipeline captures your first point within 24 hours."
       />
@@ -115,7 +118,7 @@ export function VisibilityAreaChart({
     const latest = data.points[data.points.length - 1];
     return (
       <ChartStat
-        height={CHART_HEIGHT.compact}
+        height={CHART_HEIGHT.tall}
         label="Latest visibility"
         value={String(latest.visibility)}
         note="A trend line needs a few more daily checks."
@@ -126,11 +129,12 @@ export function VisibilityAreaChart({
   return (
     <ChartContainer
       config={chartConfig}
-      className={`${CHART_HEIGHT.compact} w-full`}
+      className={`${CHART_HEIGHT.tall} w-full`}
       role="region"
       aria-label="Search visibility over time"
     >
       <AreaChart accessibilityLayer data={data.points} margin={CHART_MARGIN}>
+        <SeriesFade id={fadeId} color="var(--color-visibility)" />
         <CartesianGrid {...GRID_PROPS} />
         <XAxis {...TIME_AXIS_PROPS} />
         <YAxis {...VALUE_AXIS_PROPS} />
@@ -148,11 +152,10 @@ export function VisibilityAreaChart({
           }
         />
         <Area
+          {...LINE_PROPS}
           dataKey="visibility"
-          type="monotone"
           stroke="var(--color-visibility)"
-          fill="var(--color-visibility)"
-          fillOpacity={0.2}
+          fill={`url(#${fadeId})`}
         />
       </AreaChart>
     </ChartContainer>

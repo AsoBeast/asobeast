@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import { GradedNumber } from "@/components/ui/graded";
 import { TableCell, TableRow } from "@/components/ui/table";
 import {
@@ -54,11 +53,17 @@ export function MarketRatingRow({
       aria-current={selected ? "true" : undefined}
     >
       <TableCell>
-        <span className="flex flex-wrap items-center gap-2">
-          <span className="numeric">{row.country.toUpperCase()}</span>
-          <span>{name}</span>
-          {row.home ? <Badge variant="secondary">Home</Badge> : null}
-          {selected ? <Badge variant="info">Selected</Badge> : null}
+        <span className="flex flex-wrap items-center gap-x-2">
+          <span className="numeric text-muted-foreground">
+            {row.country.toUpperCase()}
+          </span>
+          <span className="font-medium">{name}</span>
+          {row.home ? (
+            <span className="text-label text-muted-foreground">Home</span>
+          ) : null}
+          {selected ? (
+            <span className="text-label text-muted-foreground">Selected</span>
+          ) : null}
         </span>
       </TableCell>
       <TableCell className="text-right">

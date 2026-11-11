@@ -82,10 +82,13 @@ test("falls back to the home listing for a market without one", async ({
 
 test("the overview facts follow the market", async ({ page }) => {
   await page.goto("/apps/app-1");
-  await expect(page.getByText("★ 4.8 (24,000)")).toBeVisible();
+  const rating = page
+    .locator('[data-slot="stat-tile"]')
+    .filter({ hasText: "Rating" });
+  await expect(rating).toContainText("4.824,000 ratings");
 
   await page.goto("/apps/app-1?market=pl");
-  await expect(page.getByText("★ 4.6 (3,100)")).toBeVisible();
+  await expect(rating).toContainText("4.63,100 ratings");
 });
 
 test("the change timeline follows the market", async ({ page }) => {

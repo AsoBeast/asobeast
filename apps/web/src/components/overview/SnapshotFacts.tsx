@@ -1,18 +1,17 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { AppIcon } from "@/components/AppIcon";
+import { LEDE } from "@/components/layout/panel-classes";
 import { useMarket } from "@/components/app-detail/use-market";
 import {
   formatCompact,
   formatCountry,
   formatDate,
-  formatNumber,
   formatPrice,
-  formatRating,
 } from "@/lib/format";
 import { queryMarket } from "@/lib/market";
 import { appListingOptions } from "@/lib/queries";
+import { cn } from "@/lib/utils";
 
 export function SnapshotFacts({ id }: { id: string }) {
   const { market, home } = useMarket(id);
@@ -22,13 +21,6 @@ export function SnapshotFacts({ id }: { id: string }) {
   const where = country === undefined ? "" : ` · ${formatCountry(country)}`;
 
   const facts = [
-    snapshot?.ratingAvg != null
-      ? `★ ${formatRating(snapshot.ratingAvg)}${
-          snapshot.ratingCount != null
-            ? ` (${formatNumber(snapshot.ratingCount)})`
-            : ""
-        }`
-      : null,
     snapshot?.installs != null
       ? `${formatCompact(snapshot.installs)} installs`
       : null,
@@ -37,22 +29,22 @@ export function SnapshotFacts({ id }: { id: string }) {
       ? formatPrice(snapshot.price, snapshot.currency)
       : null,
     snapshot ? `Snapshot ${formatDate(snapshot.capturedAt)}${where}` : null,
-  ].filter((fact): fact is string => fact !== null);
+  ].filter((fact) => fact !== null);
+
+  if (facts.length === 0) {
+    return (
+      <p className={LEDE}>No store snapshot yet. Refresh to capture one.</p>
+    );
+  }
 
   return (
-    <div className="flex items-center gap-3">
-      <AppIcon src={detail.iconUrl} size={48} />
-      {facts.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-body text-muted-foreground">
-          {facts.map((fact) => (
-            <span key={fact}>{fact}</span>
-          ))}
-        </div>
-      ) : (
-        <p className="text-body text-muted-foreground">
-          No store snapshot yet. Refresh to capture one.
-        </p>
-      )}
-    </div>
+    <ul className={cn(LEDE, "flex flex-wrap items-center gap-x-2")}>
+      {facts.map((fact, index) => (
+        <li key={fact} className="flex items-center gap-x-2">
+          {index > 0 ? <span aria-hidden>·</span> : null}
+          <span>{fact}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
