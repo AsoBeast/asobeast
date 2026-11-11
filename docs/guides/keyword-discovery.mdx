@@ -74,22 +74,24 @@ The keywords page has two tabs, **Tracked** and **Discovered**, each with its co
 | --- | --- |
 | Keyword | The phrase, with the word **Recommended** on the first 50 of the list |
 | Source | Your title, Your subtitle, Your description (Your short description on Google Play), Competitors, Reviews, Apple popularity or Your other apps |
-| Rank | The position, `>50` or `>200` when checked and not found within that depth, a dash when not checked yet |
+| Position | The position as on the tracked table, `>50` or `>200` when checked and not found within that depth, a dash when not checked yet |
+| Opportunity | Popularity weighed against difficulty, a dash until both exist |
 | Popularity, Difficulty | The scores some tracker already produced, a dash when there is none |
 | Relevance | How close the phrase is to your listing |
-| Opportunity | Popularity weighed against difficulty, a dash until both exist |
 
-The list keeps the order the API answers, relevance first and then popularity, and shows 50 rows at a time with **Show 50 more** below. The line under the table says when the list was last checked, how many searches the week allows and how many were used, and the day of the next weekly run. While searches are still queued it counts them and the list updates by itself. When auto track is on and some ranked discoveries did not fit the plan, it says how many.
+Positions and scores look the way they do on the tracked table: a position in the top 10 sits in a chip and each score has a meter under its number. The list opens in the order the API answers, relevance first and then popularity. Press a column header to sort by it, and use the search beside the sub tabs to narrow the list by phrase; the address keeps both (`foundSort`, `foundDir` and `foundQ`). The list shows 50 rows at a time with **Show 50 more** below. The line at the foot of the table says when the list was last checked, how many searches the week allows and how many were used, and the day of the next weekly run. While searches are still queued it counts them and the list updates by itself. When auto track is on and some ranked discoveries did not fit the plan, it says how many.
+
+Under the list sit **Suggestions** and **Keyword combinations**, the two other places to find phrases you do not track yet. [Track keywords](/guides/track-keywords#get-keyword-suggestions) describes both.
 
 ## Track, dismiss and refresh
 
-Each row has **Track** and **Dismiss**. Tick rows to use **Track selected**, or use **Track recommended** for the rows marked **Recommended** and **Track all ranked** for every ranked discovery of the market; each button names how many it tracks. Nothing asks for confirmation, because a tracked keyword returns to the list when you stop tracking it. A message says how many keywords are now tracked and how many did not fit your plan.
+Each row has **Track** and a cross that dismisses it. Tick rows, or the box in the header for all of them, and **Track selected** appears; or use **Track recommended** for the rows marked **Recommended** and **Track all ranked** for every ranked discovery of the market; each button names how many it tracks. Nothing asks for confirmation, because a tracked keyword returns to the list when you stop tracking it. A message says how many keywords are now tracked and how many did not fit your plan.
 
-The **Auto-track ranked** switch is the setting [Track, dismiss and auto track](#track-dismiss-and-auto-track) describes. **Refresh** rebuilds the list and queues the searches left this week. It spends one deep search of the on demand allowance only when it queues at least one search, and a refresh that finds nothing left to search says so and spends nothing.
+The **Auto-track ranked** switch is the setting [Track, dismiss and auto track](#track-dismiss-and-auto-track) describes. **Refresh discoveries** rebuilds the list and queues the searches left this week. It spends one deep search of the on demand allowance only when it queues at least one search, and a refresh that finds nothing left to search says so and spends nothing.
 
 ## First results after an import
 
-An import builds the first list from the listing it just captured and queues its searches right away, without spending an on demand allowance. The keywords step of the guided setup then shows **Your first results are ready** with the five best discoveries and their rank, and a link to the Discovered tab, or says the first results are still being collected. When the import found nothing to search, the step shows nothing, and the Discovered tab says when the next weekly run looks, or that weekly runs are off, with **Refresh** to look now. The portfolio card of the app and the metadata coverage panel of its overview name how many discoveries the app has and how many it already ranks for, for the market the overview shows.
+An import builds the first list from the listing it just captured and queues its searches right away, without spending an on demand allowance. The keywords step of the guided setup then shows **Your first results are ready** with the five best discoveries and their rank, and a link to the Discovered tab, or says the first results are still being collected. When the import found nothing to search, the step shows nothing, and the Discovered tab says when the next weekly run looks, or that weekly runs are off, with **Refresh discoveries** to look now. The portfolio card of the app and the metadata coverage panel of its overview name how many discoveries the app has and how many it already ranks for, for the market the overview shows.
 
 ## Through the API and MCP
 
