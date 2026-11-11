@@ -31,6 +31,7 @@ export function revealColumn() {
       id: "reveal",
       meta: { label: "Reveal", hiddenByDefault: true },
       ...SORTABLE,
+      sortDescFirst: false,
       header: ({ column }) => (
         <span className="inline-flex items-center gap-1">
           <SortableHeader column={column} label="Reveal" />

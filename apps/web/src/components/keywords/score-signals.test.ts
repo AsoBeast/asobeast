@@ -396,6 +396,7 @@ describe("reveal column", () => {
     };
     expect(column.sortFn).toBe("basic");
     expect(column.sortUndefined).toBe("last");
+    expect(column.sortDescFirst).toBe(false);
     const accessor = (
       column as {
         accessorFn: (row: {
