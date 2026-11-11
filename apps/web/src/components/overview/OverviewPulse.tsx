@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useDeferredValue, type ReactNode } from "react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import type { AppSummary, ShareOfVoice } from "@asobeast/shared";
 import { useMarket } from "@/components/app-detail/use-market";
 import { Card } from "@/components/ui/card";
@@ -56,10 +56,10 @@ interface TileSelection {
 }
 
 function RatingChange({ id }: { id: string }) {
-  const { data } = useSuspenseQuery(
+  const { data } = useQuery(
     ratingsHistoryOptions(id, presetToRange(RATING_CHANGE_RANGE)),
   );
-  const change = ratingChange(data.points, RATING_CHANGE_DAYS);
+  const change = data ? ratingChange(data.points, RATING_CHANGE_DAYS) : null;
   return change === null ? null : (
     <TrendChip
       label={`${RATING_CHANGE_DAYS}d`}
@@ -88,10 +88,8 @@ function RatingTile({
       label="Rating"
       value={
         <Figure value={average === null ? "—" : formatRating(average)}>
-          {country === undefined ? (
-            <Suspense fallback={null}>
-              <RatingChange id={id} />
-            </Suspense>
+          {country === undefined && average !== null ? (
+            <RatingChange id={id} />
           ) : null}
         </Figure>
       }

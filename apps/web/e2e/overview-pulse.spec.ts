@@ -105,6 +105,26 @@ test("the visibility chart compares with the range before and marks listing chan
   ).toBeVisible();
 });
 
+test("a failed listing changes read leaves the chart up and offers a retry", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await page.route("**/api/backend/apps/app-1/changes?*", (route) =>
+    route.fulfill({ status: 500, json: { message: "down" } }),
+  );
+  await page.goto("/apps/app-1");
+
+  await expect(
+    page.getByRole("region", { name: "Search visibility over time" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("The listing changes could not be loaded."),
+  ).toBeVisible({ timeout: 30_000 });
+  await expect(
+    page.getByRole("link", { name: "See what each change did" }),
+  ).toHaveCount(0);
+});
+
 test("the keywords closest to the top 10 follow the movers", async ({
   page,
 }) => {
@@ -135,6 +155,18 @@ test("metadata coverage counts each field against the tracked keywords", async (
   await expect(coverage).toContainText("Title2 of 5");
   await expect(coverage).toContainText("Subtitle1 of 5");
   await expect(coverage).toContainText("Description3 of 5");
+});
+
+test("metadata coverage keeps counting every market while one is chosen", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1?market=pl");
+  const coverage = page.getByLabel("Tracked keywords found in each field");
+
+  await expect(coverage).toContainText("Title2 of 5");
+  await expect(
+    page.locator('[data-slot="stat-tile"]').filter({ hasText: "in top 10" }),
+  ).toContainText("of 2 tracked");
 });
 
 test("the movers narrow to climbers or fallers and keep the choice in the url", async ({

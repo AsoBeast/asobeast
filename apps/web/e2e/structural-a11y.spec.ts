@@ -106,7 +106,6 @@ const SCROLLING_TABLES: Array<{
   path: string;
   table: string;
   region: string;
-  cookies?: Record<string, string>;
 }> = [
   {
     path: "/apps/app-1/audit",
@@ -125,12 +124,10 @@ const containerOf = (page: Page, table: string) =>
     .locator('[data-slot="table-container"]')
     .filter({ has: page.getByRole("table", { name: table }) });
 
-for (const { path, table, region, cookies } of SCROLLING_TABLES) {
+for (const { path, table, region } of SCROLLING_TABLES) {
   test(`${path} lets a keyboard scroll its table at 375px`, async ({
     page,
-    context,
   }) => {
-    if (cookies) await seedCookies(context, cookies);
     await page.setViewportSize({ width: 375, height: 800 });
     await page.goto(path);
     const container = containerOf(page, table);
@@ -152,9 +149,7 @@ for (const { path, table, region, cookies } of SCROLLING_TABLES) {
 
   test(`${path} adds no tab stop while its table fits at 1440px`, async ({
     page,
-    context,
   }) => {
-    if (cookies) await seedCookies(context, cookies);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(path);
     const container = containerOf(page, table);
@@ -168,29 +163,37 @@ for (const { path, table, region, cookies } of SCROLLING_TABLES) {
   });
 }
 
-test("the ratings by market table fits a phone without scrolling", async ({
-  page,
-  context,
-}) => {
-  await seedCookies(context, { e2e_ratings_markets: "wide" });
-  await page.setViewportSize({ width: 375, height: 800 });
-  await page.goto("/apps/app-1");
-  const container = containerOf(
-    page,
-    "Rating and number of ratings on the newest listing captured in each market",
-  );
-  await expect(container).toBeVisible();
+const RATINGS_TABLE_WIDTHS = [
+  { width: 375, captured: false },
+  { width: 1440, captured: true },
+];
 
-  expect(
-    await container.evaluate((node) => node.scrollWidth <= node.clientWidth),
-  ).toBe(true);
-  await expect(
-    container.getByRole("columnheader", { name: "Captured" }),
-  ).toBeHidden();
-  await expect(
-    page.getByRole("region", { name: "Market ratings table" }),
-  ).toHaveCount(0);
-});
+for (const { width, captured } of RATINGS_TABLE_WIDTHS) {
+  test(`the ratings by market table fits ${width}px without a scroll region`, async ({
+    page,
+    context,
+  }) => {
+    await seedCookies(context, { e2e_ratings_markets: "wide" });
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/apps/app-1");
+    const container = containerOf(
+      page,
+      "Rating and number of ratings on the newest listing captured in each market",
+    );
+    await expect(container).toBeVisible();
+
+    expect(
+      await container.evaluate((node) => node.scrollWidth <= node.clientWidth),
+    ).toBe(true);
+    await expect(
+      container.getByRole("columnheader", { name: "Captured" }),
+    ).toBeVisible({ visible: captured });
+    await expect(
+      page.getByRole("region", { name: "Market ratings table" }),
+    ).toHaveCount(0);
+    expect(await scrollViolations(page)).toEqual([]);
+  });
+}
 
 for (const width of [320, 375, 1440]) {
   test(`the map names every control and adds no scroll region at ${width} px`, async ({

@@ -18,14 +18,24 @@ describe("ratingChange", () => {
     expect(ratingChange(points, 7)).toBeCloseTo(0.2);
   });
 
-  it("uses the last rating captured before the week began", () => {
+  it("uses the last rating captured just before the week began", () => {
+    const points = [
+      point("2026-11-02", 4.1),
+      point("2026-11-08", 4.3),
+      point("2026-11-11", 4.4),
+    ];
+
+    expect(ratingChange(points, 7)).toBeCloseTo(0.3);
+  });
+
+  it("answers nothing when the only earlier rating is much older than a week", () => {
     const points = [
       point("2026-10-20", 4.1),
       point("2026-11-08", 4.3),
       point("2026-11-11", 4.4),
     ];
 
-    expect(ratingChange(points, 7)).toBeCloseTo(0.3);
+    expect(ratingChange(points, 7)).toBeNull();
   });
 
   it("skips days without a rating", () => {

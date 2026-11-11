@@ -105,10 +105,11 @@ export function funnelTrend(
   metric: keyof StoreFunnelChange,
   days: number,
 ): number[] {
-  return report.points
+  const values = report.points
     .filter((point) => point.complete)
     .slice(-days)
-    .flatMap((point) => point.total[metric] ?? []);
+    .map((point) => point.total[metric]);
+  return values.every((value) => value !== null) ? values : [];
 }
 
 export function formatCount(value: number | null): string {

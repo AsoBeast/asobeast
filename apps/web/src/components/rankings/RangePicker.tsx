@@ -5,7 +5,10 @@ import { rangeLabel, type DayPreset } from "@/lib/ranges";
 
 export function PrintRangeLabel({ preset }: { preset: DayPreset }) {
   return (
-    <span className="hidden text-body text-muted-foreground print:inline">
+    <span
+      data-slot="print-range"
+      className="hidden text-body text-muted-foreground print:inline"
+    >
       {rangeLabel(preset)}
     </span>
   );

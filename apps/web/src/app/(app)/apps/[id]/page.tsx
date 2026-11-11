@@ -121,7 +121,7 @@ export default async function AppOverviewPage({
   void queryClient.prefetchQuery(
     actionsOptions({ status: ["OPEN"], limit: TOP_ACTION_LIMIT }, id),
   );
-  void queryClient.prefetchQuery(
+  const ratingChange = queryClient.prefetchQuery(
     ratingsHistoryOptions(id, presetToRange(RATING_CHANGE_RANGE)),
   );
   const firstRun = queryClient.prefetchQuery(firstRunOptions(id));
@@ -134,6 +134,7 @@ export default async function AppOverviewPage({
     : Promise.resolve(undefined);
   void scope.then((country) => {
     void queryClient.prefetchQuery(appSummaryOptions(id, country));
+    if (country) void queryClient.prefetchQuery(appSummaryOptions(id));
     void CHART_PREFETCH[view](queryClient, { id, range: chartRange, country });
   });
   const [app, markets] = await Promise.all([
@@ -151,7 +152,7 @@ export default async function AppOverviewPage({
   await queryClient.prefetchQuery(
     appListingOptions(id, queryMarket(market, app.country)),
   );
-  await firstRun;
+  await Promise.all([firstRun, ratingChange]);
   const byMarket = ratesByMarket(app.store);
 
   return (

@@ -5,6 +5,8 @@ export const RATING_CHANGE_DAYS = 7;
 
 export const RATING_CHANGE_RANGE = "30d";
 
+const BASELINE_SLACK_DAYS = 3;
+
 const AXIS_STEP = 0.1;
 const MAX_RATING = 5;
 
@@ -28,7 +30,10 @@ export function ratingChange(
   const latest = rated.at(-1);
   if (!latest) return null;
   const since = dayBefore(latest.date, days);
-  const before = rated.findLast((point) => point.date <= since);
+  const oldest = dayBefore(since, BASELINE_SLACK_DAYS);
+  const before = rated.findLast(
+    (point) => point.date <= since && point.date >= oldest,
+  );
   return before ? latest.ratingAvg - before.ratingAvg : null;
 }
 

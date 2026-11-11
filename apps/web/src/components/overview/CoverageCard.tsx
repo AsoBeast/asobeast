@@ -60,10 +60,11 @@ function CoverageField({
 
 export function CoverageCard({ id }: { id: string }) {
   const { country, switchable } = useKeywordScope(id);
-  const { data: summary } = useSuspenseQuery(appSummaryOptions(id, country));
+  const { data: market } = useSuspenseQuery(appSummaryOptions(id, country));
+  const { data: everyMarket } = useSuspenseQuery(appSummaryOptions(id));
   const { data: detail } = useSuspenseQuery(appDetailOptions(id));
-  const coverage = summary.coverage;
-  const discoveries = discoveriesLine(summary.discoveries);
+  const coverage = everyMarket.coverage;
+  const discoveries = discoveriesLine(market.discoveries);
 
   const fields = [
     { label: "Title", found: coverage.inTitle },
@@ -89,7 +90,7 @@ export function CoverageCard({ id }: { id: string }) {
             <CoverageField
               key={field.label}
               {...field}
-              tracked={summary.trackedKeywords}
+              tracked={everyMarket.trackedKeywords}
             />
           ))}
         </dl>

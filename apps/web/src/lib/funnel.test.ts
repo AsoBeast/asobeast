@@ -123,7 +123,7 @@ describe("funnelTrend", () => {
     expect(funnelTrend(REPORT, "gets", 28)).toEqual([1, 1, 1, 1]);
   });
 
-  it("leaves out a day still filling in and a day without the metric", () => {
+  it("leaves out a day still filling in and draws nothing over a missing day", () => {
     const report = {
       ...REPORT,
       points: [
@@ -134,7 +134,8 @@ describe("funnelTrend", () => {
     };
 
     expect(funnelTrend(report, "impressions", 28)).toEqual([0, 200]);
-    expect(funnelTrend(report, "conversion", 28)).toEqual([1 / 200]);
+    expect(funnelTrend(report, "conversion", 28)).toEqual([]);
+    expect(funnelTrend(report, "conversion", 1)).toEqual([1 / 200]);
   });
 });
 

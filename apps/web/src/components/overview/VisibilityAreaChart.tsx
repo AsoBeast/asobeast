@@ -47,6 +47,10 @@ import {
   changedFieldsLabel,
   listingChangeDays,
 } from "@/components/keywords/position-history";
+import {
+  failedRead,
+  InlineQueryError,
+} from "@/components/layout/InlineQueryError";
 import { FOOTER_LINK } from "@/components/layout/panel-classes";
 import { formatDayMonth, formatNumber } from "@/lib/format";
 import {
@@ -180,17 +184,17 @@ export function VisibilityAreaChart({
   const bounds = presetToRange(range);
   const days = presetDays(range);
   const { data } = useSuspenseQuery(visibilityOptions(id, bounds, country));
-  const { data: earlier } = useQuery(
+  const earlierRead = useQuery(
     visibilityOptions(id, previousRange(bounds, days), country),
   );
-  const { data: timeline } = useQuery(changesOptions(id, days, country));
+  const changesRead = useQuery(changesOptions(id, days, country));
   const { data: annotations } = useQuery(annotationsOptions(id));
 
-  const rows = withPrevious(data.points, earlier?.points ?? [], days);
+  const rows = withPrevious(data.points, earlierRead.data?.points ?? [], days);
   const plotted = new Set(rows.map((row) => row.date));
   const inScope = annotationsInScope(annotations?.annotations ?? [], country);
   const marked = annotationLines(inScope, [...plotted], todayUtc());
-  const changes = listingChangeDays(timeline?.events ?? [], {
+  const changes = listingChangeDays(changesRead.data?.events ?? [], {
     country: country ?? app.country,
     homeCountry: app.country,
   });
@@ -275,6 +279,18 @@ export function VisibilityAreaChart({
           </Link>
         ) : null}
       </div>
+      {failedRead(earlierRead) ? (
+        <InlineQueryError
+          message="The range before could not be loaded."
+          read={earlierRead}
+        />
+      ) : null}
+      {failedRead(changesRead) ? (
+        <InlineQueryError
+          message="The listing changes could not be loaded."
+          read={changesRead}
+        />
+      ) : null}
     </div>
   );
 }
