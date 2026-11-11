@@ -24,10 +24,7 @@ import {
   feedDayLabel,
 } from "@/components/dashboard/feed-row";
 import { FeedCardSkeleton } from "@/components/dashboard/skeletons";
-import {
-  PANEL_ACTION,
-  PANEL_HEADER,
-} from "@/components/dashboard/layout-classes";
+import { PANEL_ACTION, PANEL_HEADER } from "@/components/layout/panel-classes";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { focusIsLost } from "@/lib/focus-handoff";
 import { formatDayMonth } from "@/lib/format";

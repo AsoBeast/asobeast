@@ -1,6 +1,6 @@
 "use client";
 
-import { LEDE } from "./layout-classes";
+import { LEDE } from "@/components/layout/panel-classes";
 import { movementLede } from "./movement-sentence";
 import { useRangeHistory } from "./use-range-history";
 

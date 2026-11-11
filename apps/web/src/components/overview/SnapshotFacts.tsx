@@ -1,7 +1,7 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { LEDE } from "@/components/dashboard/layout-classes";
+import { LEDE } from "@/components/layout/panel-classes";
 import { useMarket } from "@/components/app-detail/use-market";
 import {
   formatCompact,

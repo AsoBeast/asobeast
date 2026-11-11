@@ -14,11 +14,10 @@ import {
   APPS_PANEL,
   APPS_SECTION,
   APP_GRID,
-  LEDE,
-  PANEL_HEADER,
   PULSE_STRIP,
   PANEL_FOOTER,
 } from "./layout-classes";
+import { LEDE, PANEL_HEADER } from "@/components/layout/panel-classes";
 
 export function MetricPanelSkeleton() {
   return (

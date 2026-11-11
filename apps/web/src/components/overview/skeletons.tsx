@@ -1,7 +1,7 @@
 import type { Store } from "@asobeast/shared";
 import { ChartSkeleton } from "@/components/charts/ChartStates";
 import { CHART_HEIGHT } from "@/components/charts/theme";
-import { PANEL_HEADER } from "@/components/dashboard/layout-classes";
+import { PANEL_HEADER } from "@/components/layout/panel-classes";
 import {
   Card,
   CardContent,

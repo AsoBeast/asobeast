@@ -35,10 +35,7 @@ import {
   appStateLabel,
   STORE_CONNECTIONS_PATH,
 } from "@/lib/store-connection-copy";
-import {
-  PANEL_ACTION,
-  PANEL_HEADER,
-} from "@/components/dashboard/layout-classes";
+import { PANEL_ACTION, PANEL_HEADER } from "@/components/layout/panel-classes";
 import { cn } from "@/lib/utils";
 import { FunnelHelp } from "./FunnelHelp";
 import { PULSE_COLUMNS, PULSE_STRIP } from "./layout-classes";

@@ -10,7 +10,7 @@ import {
 import { InfoTip } from "@/components/ui/info-tip";
 import { gapHeadline, headlineLink, headlineText } from "@/lib/gap-headline";
 import { competitorAnalysisOptions, competitorsOptions } from "@/lib/queries";
-import { FOOTER_LINK } from "./layout-classes";
+import { FOOTER_LINK } from "@/components/layout/panel-classes";
 import { GapHeadlineSkeleton } from "./skeletons";
 
 function GapHeadlineBody({ id, home }: { id: string; home: string }) {

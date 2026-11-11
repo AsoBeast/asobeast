@@ -21,10 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  PANEL_ACTION,
-  PANEL_HEADER,
-} from "@/components/dashboard/layout-classes";
+import { PANEL_ACTION, PANEL_HEADER } from "@/components/layout/panel-classes";
 import { RangePicker } from "@/components/rankings/RangePicker";
 import { formatCategoryPosition, formatDayMonth } from "@/lib/format";
 import { appDetailOptions, categoryRanksOptions } from "@/lib/queries";

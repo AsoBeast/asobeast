@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useKeywordScope } from "@/components/app-detail/use-market";
-import { PANEL_HEADER } from "@/components/dashboard/layout-classes";
 import {
   Card,
   CardContent,
@@ -14,7 +13,12 @@ import {
 import { discoveriesHref, discoveriesLine } from "@/lib/keyword-discoveries";
 import { appDetailOptions, appSummaryOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
-import { FOOTER_LINK, LIST_HEAD, LIST_ROW } from "./layout-classes";
+import {
+  FOOTER_LINK,
+  LIST_HEAD,
+  LIST_ROW,
+  PANEL_HEADER,
+} from "@/components/layout/panel-classes";
 
 const COLUMNS = "grid grid-cols-[minmax(0,1fr)_auto] gap-3 px-2";
 
