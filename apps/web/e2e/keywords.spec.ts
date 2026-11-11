@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
-import { hoverForTooltip } from "./hover.mts";
 import { hydrated } from "./hydrated.mts";
 import {
   chooseKeywordMarket,
@@ -469,21 +468,21 @@ test("a row draws its last 7 days and names the top apps of its results", async 
   ).toBeAttached();
 });
 
-test("the volatility header sorts and still opens its tooltip", async ({
+test("the volatility header sorts and explains itself on a click", async ({
   page,
 }) => {
   await showKeywordColumns(page, ["volatility"]);
   await page.goto("/apps/app-1/keywords");
 
-  const header = page.getByRole("button", { name: "Volatility" });
-
-  await hoverForTooltip(
-    page,
-    header,
-    page.getByText(/How much the top 10 changed day to day/),
+  await (
+    await hydrated(page.getByRole("button", { name: "About volatility" }))
+  ).click();
+  await expect(page.getByRole("dialog", { name: "Volatility" })).toContainText(
+    "How much the top 10 changed day to day",
   );
+  await page.keyboard.press("Escape");
 
-  await header.click();
+  await page.getByRole("button", { name: "Volatility", exact: true }).click();
   await expect(page).toHaveURL(/sort=volatility/);
 });
 

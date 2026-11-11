@@ -1,11 +1,6 @@
 "use client";
 
 import { InfoTip } from "@/components/ui/info-tip";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import { nullsLast } from "@/lib/table/sorting";
 import { insightsOf } from "@/lib/keyword-insights";
@@ -119,15 +114,14 @@ export function volatilityColumn() {
     ...SORTABLE,
     sortDescFirst: true,
     header: ({ column }) => (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <SortableHeader column={column} label="Volatility" />
-        </TooltipTrigger>
-        <TooltipContent className="max-w-xs">
-          How much the top 10 changed day to day over the last week. High churn
-          means rankings here are unstable.
-        </TooltipContent>
-      </Tooltip>
+      <span className="inline-flex items-center gap-1">
+        <SortableHeader column={column} label="Volatility" />
+        <InfoTip
+          label="About volatility"
+          title="Volatility"
+          summary="How much the top 10 changed day to day over the last week. High churn means rankings here are unstable."
+        />
+      </span>
     ),
     cell: ({ row }) => <VolatilityCell value={row.original.serpVolatility7d} />,
   });
