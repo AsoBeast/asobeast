@@ -269,6 +269,7 @@ The search box and the **Filters** button above the table narrow the rows withou
 | Position | Top 3, 4 to 10, 11 to 30, beyond 30, or not ranking | `pos` |
 | Tags | Keywords carrying any of the chosen tags | `tag` |
 | Zone | Keywords in one opportunity map zone, chosen on the map | `zone` |
+| All, Moved, Fell, Lost | Keywords whose position changed since the day before: every move, only the falls, or only the keywords that dropped out of the results. Each choice shows how many keywords it holds | `change` |
 
 Every active filter shows as a chip under the controls. Remove one chip to drop that filter, or use **Clear all**. The count next to the controls reads how many keywords are shown out of how many are tracked in the market, and **Export CSV** exports exactly the rows shown, in the order shown. The grade words are defined in [How are scores graded?](/concepts/scoring#how-are-scores-graded). The **Zone** filter is set by pressing a zone on the [opportunity map](#read-the-opportunity-map) and shows as a chip like the others.
 
@@ -304,13 +305,15 @@ The **Listing marks** choice in the **Columns** menu hides the marks. It is reme
 
 ### Position, trend and top apps
 
-The **Position** column shows the latest position as a chip: green for the top 3, outlined for positions 4 to 10 and plain below that, with the change since the day before beside it. **Last 7 days** draws the positions of the seven days that end at the latest check as a line, a better position higher, with the change over those days beside it. A day the app was not found breaks the line, and a keyword with fewer than two ranked checks in those days shows only the change.
+The **Position** column shows the latest position as a chip: green for the top 3, outlined for positions 4 to 10 and plain below that. **Change** shows the move since the check before: places up in green, places down in red, **Lost** when the keyword ranked on the check before and was not found on the latest one, and **New** when it was not found before and ranks now. Sort by it to see the lost keywords and the biggest falls first. A paused keyword shows its last change without colour, and a keyword whose latest check is older than yesterday shows a dash. The sentence above the table and the totals row count the same moves. **Last 7 days** draws the positions of the seven days that end at the latest check as a line, a better position higher, with the change over those days beside it. A day the app was not found breaks the line, and a keyword with fewer than two ranked checks in those days shows only the change.
 
-**Top apps** shows the icons of the first three apps in the newest stored search results of the keyword. Your own app is ringed, and pointing at an icon names the app, its position and whether it is one of your competitors. Press the icons to open the [search results](/guides/read-rankings#search-results) of the keyword. A list icon in their place means no results were stored today or yesterday, and pressing it opens the newest stored day.
+**Top apps** shows the icons of the first three apps in the newest stored search results of the keyword. Your own app has a line under its icon and, on a wide table, its position beside the icons, for example `you #3`. Pointing at an icon names the app, its position and whether it is one of your competitors. Press the icons to open the [search results](/guides/read-rankings#search-results) of the keyword. A dash means no results were stored today or yesterday; **View search results** in the row menu still opens the newest stored day.
 
 The row menu at the right edge of the table stays in view while the table scrolls sideways. It holds **View search results**, **Edit tags and note**, **Keyword type**, **Score now**, **Pause tracking** or **Resume tracking**, and **Stop tracking**.
 
-The table adapts to the room it has. When the table is narrower than about 1,140 px, the **Insights** column keeps its first badge and counts the rest, for example `+1`, and **Last 7 days** keeps the change and drops the line. Both come back on a wider window or with the sidebar collapsed, and a long keyword is cut with its full text on hover.
+The table adapts to the room it has. Below about 1,320 px of table width the **Insights** column keeps its first badge and counts the rest, for example `+1`. Below about 1,140 px **Last 7 days** keeps the change and drops the line, and below about 1,040 px a header shows its sort arrow only while the table is sorted by it. Everything comes back on a wider window or with the sidebar collapsed, and a long keyword is cut with its full text on hover.
+
+Press a score to read where it comes from: its source, formula version, capture time and confidence. A score still on an older formula is grey with a small clock until it is rescored.
 
 ### Insights and totals
 
