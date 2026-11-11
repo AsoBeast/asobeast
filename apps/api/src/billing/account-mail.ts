@@ -18,7 +18,15 @@ const CHOOSE_A_PLAN: AccountMailAction = {
   path: UPGRADE_PATH,
 };
 
-function legacyTrialNotice(day: TrialNoticeDay, endsOn: string): AccountMail {
+function timeLeftHeading(timeLeft: string): string {
+  return `${timeLeft.charAt(0).toUpperCase()}${timeLeft.slice(1)} left`;
+}
+
+function legacyTrialNotice(
+  day: TrialNoticeDay,
+  endsOn: string,
+  timeLeft: string,
+): AccountMail {
   const notices: Record<TrialNoticeDay, AccountMail> = {
     0: {
       subject: 'Your asobeast trial has started',
@@ -41,21 +49,12 @@ function legacyTrialNotice(day: TrialNoticeDay, endsOn: string): AccountMail {
       action: { label: 'Open the Action Center', path: '/actions' },
     },
     5: {
-      subject: 'Two days left on your asobeast trial',
-      heading: 'Two days left on your trial',
+      subject: `${timeLeftHeading(timeLeft)} on your asobeast trial`,
+      heading: `${timeLeftHeading(timeLeft)} on your trial`,
       body: [
         `Your trial ends on ${endsOn}.`,
         'Everything collected so far stays yours, whether or not you subscribe.',
         'Choose a plan to keep the daily collection running.',
-      ],
-      action: CHOOSE_A_PLAN,
-    },
-    7: {
-      subject: 'Your asobeast trial ends today',
-      heading: 'Your trial ends today',
-      body: [
-        'Daily rank checks stop after today unless you choose a plan.',
-        'Your apps, keywords, rankings and audits remain readable and exportable either way.',
       ],
       action: CHOOSE_A_PLAN,
     },
@@ -79,6 +78,7 @@ export interface TrialNoticeContext {
   plan: string;
   price: string | null;
   endsOn: string;
+  timeLeft: string;
   cancelling: boolean;
   chargeFailed: boolean;
 }
@@ -92,9 +92,13 @@ export function trialNotice(
   day: TrialNoticeDay,
   context: TrialNoticeContext,
 ): AccountMail {
-  if (!context.card) return legacyTrialNotice(day, context.endsOn);
+  if (!context.card) {
+    return legacyTrialNotice(day, context.endsOn, context.timeLeft);
+  }
   if (day === 8) return cardTrialEnded(context.chargeFailed);
-  if (context.price === null) return legacyTrialNotice(day, context.endsOn);
+  if (context.price === null) {
+    return legacyTrialNotice(day, context.endsOn, context.timeLeft);
+  }
   return cardTrialNotice(day, { ...context, price: context.price });
 }
 
@@ -107,6 +111,7 @@ function cardTrialNotice(
     plan,
     price,
     endsOn,
+    timeLeft,
     cancelling,
   }: TrialNoticeContext & {
     price: string;
@@ -118,39 +123,26 @@ function cardTrialNotice(
       heading: 'Your trial has started',
       body: [
         `Your ${days} day trial of ${plan} runs until ${endsOn}.`,
-        `Nothing is charged until then; on ${endsOn} your card is charged ${price} unless you cancel from Settings, Billing.`,
+        `Nothing is charged until then. On ${endsOn} your card is charged ${price}. Cancel from Settings, Billing before then and nothing is charged.`,
         'The metadata audit, keyword extraction, competitor discovery and the gap finder work from the first import, so start there.',
         'Rank tracking is daily, so the first positions land tomorrow and trends become readable from day three.',
       ],
       action: { label: 'Import your first app', path: '/' },
     }),
-    3: () => legacyTrialNotice(3, endsOn),
+    3: () => legacyTrialNotice(3, endsOn, timeLeft),
     5: () => ({
-      subject: 'Two days left on your asobeast trial',
-      heading: 'Two days left on your trial',
+      subject: `${timeLeftHeading(timeLeft)} on your asobeast trial`,
+      heading: `${timeLeftHeading(timeLeft)} on your trial`,
       body: cancelling
         ? [
             `Your trial ends on ${endsOn}. It is cancelled, so nothing is charged.`,
             'Everything collected so far stays yours. Resume the plan from Settings, Billing to keep the daily collection running.',
           ]
         : [
-            `On ${endsOn} your card is charged ${price} for ${plan}.`,
+            `Your ${plan} trial ends on ${endsOn}. Your card is then charged ${price}.`,
             'To stop that, cancel from Settings, Billing before then; everything collected stays yours either way.',
           ],
       action: BILLING_SETTINGS,
-    }),
-    7: () => ({
-      subject: 'Your asobeast trial ends today',
-      heading: 'Your trial ends today',
-      body: cancelling
-        ? [
-            'Your trial ends today and nothing is charged.',
-            'Daily rank checks stop after today; your apps, keywords, rankings and audits remain readable and exportable.',
-          ]
-        : [
-            `Your trial ends today; your card is charged ${price} at the end of it and the daily collection continues.`,
-          ],
-      action: cancelling ? CHOOSE_A_PLAN : BILLING_SETTINGS,
     }),
   };
   return notices[day]();
@@ -170,6 +162,18 @@ function cardTrialEnded(chargeFailed: boolean): AccountMail {
     action: chargeFailed
       ? { label: 'Update your card', path: SETTINGS_PATH }
       : CHOOSE_A_PLAN,
+  };
+}
+
+export function trialRefused(): AccountMail {
+  return {
+    subject: 'Your asobeast free trial could not start',
+    heading: 'Your free trial could not start',
+    body: [
+      'This card or email has already had a free trial, so this one did not start and nothing was charged.',
+      'Choose a plan to start today.',
+    ],
+    action: CHOOSE_A_PLAN,
   };
 }
 

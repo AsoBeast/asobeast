@@ -77,6 +77,7 @@ interface RedisKeyspace {
   keys(pattern: string): Promise<string[]>;
   del(...keys: string[]): Promise<number>;
   set(key: string, value: string, mode: 'KEEPTTL'): Promise<unknown>;
+  get(key: string): Promise<string | null>;
 }
 
 async function keyspace(app: INestApplication): Promise<RedisKeyspace> {
@@ -103,6 +104,24 @@ async function clearKeys(
   const client = await keyspace(app);
   const keys = await client.keys(pattern);
   if (keys.length > 0) await client.del(...keys);
+}
+
+export async function spendOnDemandAllowance(
+  app: INestApplication,
+  used: number,
+): Promise<number> {
+  const client = await keyspace(app);
+  const keys = await client.keys('asobeast:on-demand:*');
+  for (const key of keys) await client.set(key, String(used), 'KEEPTTL');
+  return keys.length;
+}
+
+export async function onDemandSpent(app: INestApplication): Promise<number> {
+  const client = await keyspace(app);
+  const keys = await client.keys('asobeast:on-demand:*');
+  let spent = 0;
+  for (const key of keys) spent += Number((await client.get(key)) ?? 0);
+  return spent;
 }
 
 export function clearOnDemandCounters(app: INestApplication): Promise<void> {

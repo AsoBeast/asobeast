@@ -1,6 +1,7 @@
 import { Store } from '@prisma/client';
 import { NormalizedApp, SearchItem } from '../types';
 import {
+  assertPageExtract,
   assertParsedApp,
   assertSearchResults,
   CanaryShapeError,
@@ -68,6 +69,56 @@ describe('assertParsedApp', () => {
     expect(() => assertParsedApp(appOf({ title: '' }))).toThrow(
       CanaryShapeError,
     );
+  });
+});
+
+describe('assertPageExtract', () => {
+  it('accepts an app that carries a page extract', () => {
+    expect(() =>
+      assertPageExtract(
+        appOf({
+          raw: {
+            pageExtract: {
+              previewVideoUrls: [],
+              appEvents: [],
+              featuredStories: [],
+              editorsChoice: null,
+              accessibilityStatement: null,
+            },
+          },
+        }),
+      ),
+    ).not.toThrow();
+  });
+
+  it('accepts an app that never read a product page', () => {
+    expect(() => assertPageExtract(appOf())).not.toThrow();
+  });
+
+  it('accepts an unavailable extract when the page never answered', () => {
+    expect(() =>
+      assertPageExtract(
+        appOf({
+          pageUnavailable: true,
+          subtitleUnavailable: true,
+          pageExtractUnavailable: true,
+        }),
+      ),
+    ).not.toThrow();
+  });
+
+  it('rejects an unavailable extract when the page answered without a listing', () => {
+    expect(() =>
+      assertPageExtract(
+        appOf({ subtitleUnavailable: true, pageExtractUnavailable: true }),
+      ),
+    ).toThrow(new CanaryShapeError('product page extract is unavailable'));
+  });
+
+  it('rejects an unavailable extract from a page that rendered', () => {
+    expect(() =>
+      assertPageExtract(appOf({ pageExtractUnavailable: true })),
+    ).toThrow(new CanaryShapeError('product page extract is unavailable'));
   });
 });
 

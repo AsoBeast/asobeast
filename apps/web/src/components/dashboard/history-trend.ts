@@ -8,7 +8,8 @@ import { dayBefore } from "@/lib/utc-day";
 const WEEK_DAYS = 7;
 const MAX_DAY_TICKS = 6;
 const MAX_VALUE_TICKS = 5;
-const STEPS = [1, 2, 5, 10, 20, 25, 50, 100];
+const STEPS = [1, 2, 5, 10, 20, 25, 50];
+const STEP_SCALE = 100;
 
 export type TrendMetric = "visibility" | "top10";
 
@@ -35,17 +36,24 @@ export const unfinishedSince = (run: WorkspaceRunStatus): string | null =>
     ? run.startedAt.slice(0, 10)
     : null;
 
-export function valueAxis(
-  values: number[],
-): Pick<HistoryTrend, "domain" | "valueTicks"> {
-  const least = values.length === 0 ? 0 : Math.min(...values);
-  const most = values.length === 0 ? 0 : Math.max(...values);
-  const step =
-    STEPS.find((candidate) => {
+function stepFor(least: number, most: number): number {
+  for (let scale = 1; ; scale *= STEP_SCALE) {
+    const step = STEPS.map((base) => base * scale).find((candidate) => {
       const low = Math.floor(least / candidate) * candidate;
       const high = Math.max(Math.ceil(most / candidate) * candidate, low + 1);
       return (high - low) / candidate <= MAX_VALUE_TICKS - 1;
-    }) ?? STEPS[STEPS.length - 1];
+    });
+    if (step !== undefined) return step;
+  }
+}
+
+export function valueAxis(
+  values: number[],
+): Pick<HistoryTrend, "domain" | "valueTicks"> {
+  const finite = values.filter(Number.isFinite);
+  const least = finite.length === 0 ? 0 : Math.min(...finite);
+  const most = finite.length === 0 ? 0 : Math.max(...finite);
+  const step = stepFor(least, most);
   const low = Math.max(0, Math.floor(least / step) * step);
   const ceiling = Math.ceil(most / step) * step;
   const high = ceiling > low ? ceiling : low + step;

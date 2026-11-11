@@ -60,6 +60,7 @@ export const JOBS = {
   CHECK_KEYWORD: 'check-keyword',
   CHECK_CATEGORY: 'check-category',
   SCORE_KEYWORD: 'score-keyword',
+  INSPECT_KEYWORD: 'inspect-keyword',
   SPIDER_PROBE: 'spider-probe',
   DISCOVER_KEYWORD: 'discover-keyword',
   KEYWORD_DISCOVERY: 'keyword-discovery',
@@ -134,6 +135,14 @@ export interface DeliverEmailPayload extends WorkspaceJobPayload {
 
 export interface CheckKeywordPayload extends WorkspaceJobPayload {
   keywordId: string;
+}
+
+export interface InspectKeywordPayload extends WorkspaceJobPayload {
+  inspectionId: string;
+}
+
+export function inspectKeywordJobId(inspectionId: string): string {
+  return `inspect~${inspectionId}`;
 }
 
 export interface CheckCategoryPayload extends WorkspaceJobPayload {

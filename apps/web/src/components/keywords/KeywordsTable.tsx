@@ -9,8 +9,13 @@ import {
 } from "@asobeast/shared";
 import { useTable, type RowSelectionState } from "@tanstack/react-table";
 import { useQueryState, useQueryStates } from "nuqs";
-import { keywordCountriesOptions, keywordsOptions } from "@/lib/queries";
+import {
+  funnelOptions,
+  keywordCountriesOptions,
+  keywordsOptions,
+} from "@/lib/queries";
 import { keywordFilterParsers, keywordViewParser } from "@/lib/search-params";
+import { FUNNEL_SERIES_DAYS } from "@/lib/funnel";
 import { HIDDEN_KEYWORD_COLUMNS, keywordColumns } from "./keyword-columns";
 import { exactSearchEmptyBody, keywordSearchFilter } from "./keyword-filters";
 import { keywordTableFeatures } from "./keyword-table-features";
@@ -31,6 +36,7 @@ import { useSerpParams } from "./serp/use-serp-params";
 import { useKeywordColumnFilters } from "./use-zone-thresholds";
 import { useKeywordsTableControls } from "./use-keywords-table-controls";
 import { KeywordMap } from "./map/KeywordMap";
+import { filtersNarrowMap } from "./map/map-points";
 import { useKeywordsAcrossZones } from "./map/use-map-keywords";
 
 export function KeywordsTable({
@@ -58,6 +64,11 @@ export function KeywordsTable({
   const { data: markets } = useQuery(keywordCountriesOptions(id));
   const multiMarket = (markets?.length ?? 0) > 1;
   const [selection, setSelection] = useState<RowSelectionState>({});
+  const { data: funnel } = useQuery({
+    ...funnelOptions(id, FUNNEL_SERIES_DAYS, undefined),
+    enabled: store === "GOOGLE_PLAY",
+  });
+  const noSearchTermsMonth = funnel?.noSearchTermsMonth ?? null;
 
   const rowSelection = useMemo(
     () => selectedKeywordsStillOnScreen(selection, keywords),
@@ -72,10 +83,19 @@ export function KeywordsTable({
         homeCountry,
         multiMarket,
         today,
+        noSearchTermsMonth,
         onOpenSerp: (keywordId) =>
           void setSerpState({ serp: keywordId, serpDate: null }),
       }),
-    [id, store, homeCountry, multiMarket, setSerpState, today],
+    [
+      id,
+      store,
+      homeCountry,
+      multiMarket,
+      setSerpState,
+      today,
+      noSearchTermsMonth,
+    ],
   );
 
   const { sorting, onSortingChange, visibility, setVisibility, marks } =
@@ -147,6 +167,7 @@ export function KeywordsTable({
         {view === "map" ? (
           <KeywordMap
             keywords={mapKeywords}
+            narrowed={filtersNarrowMap(mapKeywords, keywords)}
             history={{ appId: id, store, homeCountry, multiMarket }}
             market={country}
             today={today}

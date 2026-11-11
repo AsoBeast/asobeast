@@ -5,6 +5,7 @@ export * from './jobs';
 export * from './keywords';
 export * from './keyword-discoveries';
 export * from './keyword-breakdown';
+export * from './keyword-inspections';
 export * from './localizations';
 export * from './markets';
 export * from './setup';

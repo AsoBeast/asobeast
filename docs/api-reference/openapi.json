@@ -1505,6 +1505,9 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "The workspace has no billing account Stripe knows yet"
           }
         },
         "summary": "Open the Stripe customer portal for this workspace",
@@ -3772,7 +3775,7 @@
     },
     "/apps/{id}/keyword-discoveries": {
       "get": {
-        "description": "Reads stored rows only and reaches no store. A weekly job and a manual refresh build the list from the listing of each market, the home titles and subtitles of competitors, review phrases, Apple popularity weeks for the genre of the app and the phrases the workspace tracks for other apps, leaving out what the app tracks, active or paused, and what was dismissed. position is 1 based; null with a depth means checked and not found within that depth, and a null depth means never checked. depth 50 comes from another search of the phrase today or yesterday, 200 from the search of the app itself. state is ranked when the app has a position, opportunity when it has none, relevance is at least 60 and opportunity at least 35, and open otherwise. traffic and difficulty come from a score some tracker already produced, or, for an unscored App Store term, from the popularity Apple lists; a discovery is never scored, so opportunity is null until the keyword has a score. recommended marks the first 50 rows in list order and counts cover every open row of the requested market, whatever the state filter and the limit. unfit is the number of ranked rows that did not fit the plan while auto track is on. checks reports the weekly cap of searches, how many were queued this ISO week, how many are still waiting, the day of the newest check and the next weekly run, null when the schedule is off.",
+        "description": "Reads stored rows only and reaches no store. A weekly job and a manual refresh build the list from the listing of each market, the home titles and subtitles of competitors, review phrases, Apple popularity weeks for the genre of the app and the phrases the workspace tracks for other apps, leaving out what the app tracks, active or paused, and what was dismissed. position is 1 based; null with a depth means checked and not found within that depth, and a null depth means never checked. depth 50 comes from another search of the phrase today or yesterday, 200 from the search of the app itself. state is ranked when the app has a position, opportunity when it has none, relevance is at least 60 and opportunity at least 35, and open otherwise. traffic and difficulty come from a score some tracker already produced, or, for an unscored App Store term, from the popularity Apple lists; a discovery is never scored, so opportunity is null until the keyword has a score. recommended marks the first 50 rows in list order and counts cover every open row of the requested market, whatever the state filter and the limit. unfit is the number of ranked rows that did not fit the plan while auto track is on. checks reports the weekly cap of searches, how many were queued this ISO week, how many are still waiting, the day of the newest check and the next run of the discovery schedule, whatever its cadence, null when the schedule is off.",
         "operationId": "KeywordDiscoveryController_list",
         "parameters": [
           {
@@ -4714,6 +4717,158 @@
         "summary": "Stop following a top chart",
         "tags": [
           "charts"
+        ]
+      }
+    },
+    "/keyword-inspections": {
+      "post": {
+        "description": "Queues a live inspection of a keyword the workspace does not need to track: the top 50 search results, the store autocomplete, popularity, difficulty and opportunity with their source and confidence, and a competition summary of the top 10. Answers at once with the pending inspection; poll GET /keyword-inspections/{id} until status is DONE or FAILED. An inspection of the same keyword and storefront that is still pending is answered instead of queuing another. A queued inspection spends one on demand score of the daily allowance; a request the validation refuses, a repeat of a pending inspection and an inspection that could not be queued spend nothing.",
+        "operationId": "KeywordInspectionsController_request",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestKeywordInspectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Inspect any keyword in one storefront",
+        "tags": [
+          "keyword-inspections"
+        ]
+      },
+      "get": {
+        "description": "Lists the inspections of the workspace, newest first, optionally filtered to one keyword, store or storefront. Reads stored rows only.",
+        "operationId": "KeywordInspectionsController_list",
+        "parameters": [
+          {
+            "name": "keyword",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 80,
+              "example": "habit tracker",
+              "type": "string"
+            }
+          },
+          {
+            "name": "store",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "APP_STORE",
+                "GOOGLE_PLAY"
+              ]
+            }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "us",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 50,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List keyword inspections",
+        "tags": [
+          "keyword-inspections"
+        ]
+      }
+    },
+    "/keyword-inspections/{inspectionId}": {
+      "get": {
+        "description": "Answers the inspection with its search results, suggestions, scores and competition summary, and the change since the previous completed inspection of the same keyword and storefront. Reads stored rows only.",
+        "operationId": "KeywordInspectionsController_get",
+        "parameters": [
+          {
+            "name": "inspectionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Read one keyword inspection",
+        "tags": [
+          "keyword-inspections"
+        ]
+      },
+      "delete": {
+        "operationId": "KeywordInspectionsController_remove",
+        "parameters": [
+          {
+            "name": "inspectionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Delete a keyword inspection",
+        "tags": [
+          "keyword-inspections"
         ]
       }
     },
@@ -7189,7 +7344,7 @@
   "info": {
     "title": "asobeast API",
     "description": "Self hosted ASO toolkit API.\n\nA metered instance carries RateLimit-Limit, RateLimit-Remaining and RateLimit-Reset on every response, for the tightest limit the request touched. A self hosted instance has no request rate limits and sends no such header. Limits are per workspace, so minting more tokens does not buy more capacity, and they are sized per plan across three classes: read for stored data, write for configuration changes and store for the endpoints that reach the App Store or Google Play.\n\nA 429 carries Retry-After and a rateLimit object naming the window that closed, or an aiAllowance object when the workspace has spent the AI calls its plan includes this month. A 403 with a quota object means a plan capacity limit such as apps or tracked keyword markets, which is a different problem from a rate limit. A 402 with an entitlement object means the workspace needs a plan.\n\nPositions are 1-based and null means checked but not found within the captured depth, never zero. Daily granularity uses UTC dates.",
-    "version": "1.15.0",
+    "version": "1.16.0",
     "contact": {}
   },
   "tags": [],
@@ -8347,6 +8502,33 @@
           "collection",
           "genre",
           "device"
+        ]
+      },
+      "RequestKeywordInspectionDto": {
+        "type": "object",
+        "properties": {
+          "keyword": {
+            "type": "string",
+            "maxLength": 80,
+            "example": "habit tracker"
+          },
+          "store": {
+            "enum": [
+              "APP_STORE",
+              "GOOGLE_PLAY"
+            ],
+            "type": "string"
+          },
+          "country": {
+            "type": "string",
+            "example": "us",
+            "pattern": "^[a-z]{2}$"
+          }
+        },
+        "required": [
+          "keyword",
+          "store",
+          "country"
         ]
       },
       "ReviewReplyPatchDto": {

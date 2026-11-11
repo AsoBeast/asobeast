@@ -93,7 +93,7 @@ describe('BillingWebhookService', () => {
     const constructEvent = jest.fn().mockReturnValue(eventOf());
     const notify = jest.fn().mockResolvedValue('delivered');
     const enqueue = jest.fn().mockResolvedValue(undefined);
-    const settle = jest.fn().mockResolvedValue('skipped');
+    const settle = jest.fn().mockResolvedValue({ outcome: 'skipped' });
     const record = jest
       .fn()
       .mockResolvedValue(over.neverPaid ? null : new Date('2026-09-01'));
@@ -319,6 +319,49 @@ describe('BillingWebhookService', () => {
     await service.process('evt_1');
 
     expect(settle).not.toHaveBeenCalled();
+  });
+
+  it('ignores every later event of a trial the workspace was refused', async () => {
+    const { service, settle, workspaceUpdate, update, record } = build({
+      stored: { id: 'evt_1', processedAt: null, payload: eventOf() },
+      workspace: {
+        id: WORKSPACE,
+        billingCustomerId: 'cus_1',
+        trialRefusedSubscriptionId: 'sub_1',
+      },
+      subscription: subscriptionOf({ status: 'canceled' }),
+    });
+
+    await service.process('evt_1');
+
+    expect(workspaceUpdate).not.toHaveBeenCalled();
+    expect(settle).not.toHaveBeenCalled();
+    expect(record).not.toHaveBeenCalled();
+    expect(lastOutcome(update)).toBe('ignored');
+  });
+
+  it('projects a later subscription of a workspace that was refused a trial', async () => {
+    const { service, workspaceUpdate } = build({
+      stored: { id: 'evt_1', processedAt: null, payload: eventOf() },
+      workspace: {
+        id: WORKSPACE,
+        billingCustomerId: 'cus_1',
+        trialRefusedSubscriptionId: 'sub_refused',
+      },
+    });
+
+    await service.process('evt_1');
+
+    expect(workspaceUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          OR: [
+            { trialRefusedSubscriptionId: null },
+            { trialRefusedSubscriptionId: { not: 'sub_1' } },
+          ],
+        }) as Record<string, unknown>,
+      }),
+    );
   });
 
   it('records the first payment before the ordering guard', async () => {

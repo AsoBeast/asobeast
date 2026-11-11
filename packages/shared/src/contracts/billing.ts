@@ -25,6 +25,18 @@ export function planPriceLabel(
   return `$${(interval === 'month' ? monthlyUsd : annualUsd) ?? 0} per ${interval}`;
 }
 
+const RENEWAL_CADENCE: Record<BillingInterval, string> = {
+  month: 'monthly',
+  year: 'yearly',
+};
+
+export function planRenewalTerms(
+  plan: PaidPlanName,
+  interval: BillingInterval,
+): string {
+  return `${planPriceLabel(plan, interval)} plus any VAT or sales tax, renewing ${RENEWAL_CADENCE[interval]} until you cancel`;
+}
+
 export interface BillingPrice {
   plan: PaidPlanName;
   interval: BillingInterval;

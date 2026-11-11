@@ -34,6 +34,17 @@ const workspaceOf = (over: Partial<Workspace> = {}): Workspace =>
     ...over,
   }) as Workspace;
 
+type RefusalBranch = {
+  trialRefusedSubscriptionId: string | null | { not: string };
+};
+
+const refusalMatches = (workspace: Workspace, branch: RefusalBranch) => {
+  const expected = branch.trialRefusedSubscriptionId;
+  return expected === null || typeof expected === 'string'
+    ? workspace.trialRefusedSubscriptionId === expected
+    : workspace.trialRefusedSubscriptionId !== expected.not;
+};
+
 const stripeErrorOf = (over: {
   type?: string;
   code?: string;
@@ -70,10 +81,17 @@ describe('BillingReconciler', () => {
   }) => {
     const rows = over.workspaces ?? [];
     const update = jest.fn(
-      (args: { where: Partial<Workspace>; data: Partial<Workspace> }) => {
+      (args: {
+        where: Partial<Workspace> & { OR?: RefusalBranch[] };
+        data: Partial<Workspace>;
+      }) => {
         const row = rows.find((workspace) =>
-          Object.entries(args.where).every(
-            ([key, value]) => workspace[key as keyof Workspace] === value,
+          Object.entries(args.where).every(([key, value]) =>
+            key === 'OR'
+              ? (value as RefusalBranch[]).some((branch) =>
+                  refusalMatches(workspace, branch),
+                )
+              : workspace[key as keyof Workspace] === value,
           ),
         );
         if (row) Object.assign(row, args.data);
@@ -89,7 +107,7 @@ describe('BillingReconciler', () => {
       Promise.resolve(rows.map((row) => ({ ...row }))),
     );
     const redisSet = jest.fn(() => Promise.resolve('OK'));
-    const settle = jest.fn().mockResolvedValue('skipped');
+    const settle = jest.fn().mockResolvedValue({ outcome: 'skipped' });
     const record = jest
       .fn()
       .mockResolvedValue(over.neverPaid ? null : new Date('2026-09-01'));
@@ -103,12 +121,13 @@ describe('BillingReconciler', () => {
         ? Promise.reject(over.session)
         : Promise.resolve(over.session),
     );
+    const findUnique = jest.fn(() =>
+      Promise.resolve(rows[0] ? { ...rows[0] } : null),
+    );
     const prisma = {
       workspace: {
         findMany,
-        findUnique: jest.fn(() =>
-          Promise.resolve(rows[0] ? { ...rows[0] } : null),
-        ),
+        findUnique,
         update,
         updateMany: update,
       },
@@ -147,6 +166,7 @@ describe('BillingReconciler', () => {
       listCustomerSubscriptions,
       retrieveSubscription,
       findMany,
+      findUnique,
       rows,
     };
   };
@@ -161,6 +181,50 @@ describe('BillingReconciler', () => {
       unreconciled: [],
     });
     expect(update).not.toHaveBeenCalled();
+  });
+
+  describe('a reconcile on demand while Stripe is not configured', () => {
+    const claimed = () =>
+      workspaceOf({
+        plan: 'indie',
+        subscriptionId: null,
+        subscriptionStatus: null,
+        billingCustomerId: null,
+      });
+
+    it('keeps a plan it cannot check against Stripe', async () => {
+      const { reconciler, update, rows } = build({
+        enabled: false,
+        workspaces: [claimed()],
+      });
+
+      await expect(reconciler.reconcileOne('ws_1')).resolves.toEqual({
+        checked: 1,
+        corrected: 0,
+        orphanSubscriptions: [],
+        unreconciled: [],
+      });
+      expect(update).not.toHaveBeenCalled();
+      expect(rows[0]?.plan).toBe('indie');
+    });
+
+    it('answers the same for a checkout return instead of blaming Stripe', async () => {
+      const { reconciler, update } = build({
+        enabled: false,
+        workspaces: [claimed()],
+        session: new ServiceUnavailableException('Billing is not configured'),
+      });
+
+      await expect(
+        reconciler.reconcileOne('ws_1', 'cs_test_returned'),
+      ).resolves.toEqual({
+        checked: 1,
+        corrected: 0,
+        orphanSubscriptions: [],
+        unreconciled: [],
+      });
+      expect(update).not.toHaveBeenCalled();
+    });
   });
 
   it('leaves a workspace that already agrees with Stripe alone', async () => {
@@ -197,6 +261,84 @@ describe('BillingReconciler', () => {
     expect(update.mock.invocationCallOrder[0]).toBeLessThan(
       settle.mock.invocationCallOrder[0],
     );
+  });
+
+  describe('a trial a lost claim refused', () => {
+    it('counts as a correction and is not projected again', async () => {
+      const { reconciler, settle, update } = build({
+        workspaces: [workspaceOf()],
+      });
+      settle.mockResolvedValue({ outcome: 'refused' });
+
+      await expect(reconciler.reconcile()).resolves.toMatchObject({
+        corrected: 1,
+      });
+      expect(update).not.toHaveBeenCalled();
+    });
+
+    it('is never brought back once it was refused', async () => {
+      const { reconciler, settle, update, record, retrieveSubscription } =
+        build({
+          workspaces: [
+            workspaceOf({
+              plan: 'free',
+              subscriptionId: null,
+              subscriptionStatus: null,
+              trialRefusedSubscriptionId: 'sub_1',
+            }),
+          ],
+          subscription: subscriptionOf({ status: 'canceled' }),
+          session: { client_reference_id: 'ws_1', subscription: 'sub_1' },
+        });
+
+      await expect(
+        reconciler.reconcileOne('ws_1', 'cs_1'),
+      ).resolves.toMatchObject({ corrected: 0 });
+      expect(retrieveSubscription).toHaveBeenCalledWith('sub_1');
+      expect(update).not.toHaveBeenCalled();
+      expect(settle).not.toHaveBeenCalled();
+      expect(record).not.toHaveBeenCalled();
+    });
+
+    it('writes no projection over a refusal that landed meanwhile', async () => {
+      const { reconciler, record, rows } = build({
+        workspaces: [workspaceOf()],
+        subscription: subscriptionOf({ status: 'trialing' }),
+      });
+      record.mockImplementation(() => {
+        Object.assign(rows[0], {
+          plan: 'free',
+          subscriptionId: null,
+          subscriptionStatus: null,
+          trialRefusedSubscriptionId: 'sub_1',
+        });
+        return Promise.resolve(null);
+      });
+
+      await reconciler.reconcile();
+
+      expect(rows[0]).toMatchObject({
+        plan: 'free',
+        subscriptionId: null,
+        trialRefusedSubscriptionId: 'sub_1',
+      });
+    });
+
+    it('still projects another subscription of a refused workspace', async () => {
+      const { reconciler, rows } = build({
+        workspaces: [
+          workspaceOf({
+            plan: 'free',
+            subscriptionStatus: 'canceled',
+            trialRefusedSubscriptionId: 'sub_refused',
+          }),
+        ],
+      });
+
+      await reconciler.reconcile();
+
+      expect(rows[0]).toMatchObject({ plan: 'indie' });
+    });
   });
 
   it('records the first payment before it corrects the plan', async () => {

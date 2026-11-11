@@ -10,7 +10,7 @@ import {
   type PlanLimits,
   type TrialOffer,
 } from "@asobeast/shared";
-import { formatDate, pluralize } from "@/lib/format";
+import { formatDate, formatDateIn, pluralize } from "@/lib/format";
 
 export type PlanAction =
   "current" | "checkout" | "trial" | "change" | "resume" | "pending";
@@ -18,14 +18,17 @@ export type PlanAction =
 export const PAYMENT_CONFIRMING =
   "Your payment is being confirmed. This usually takes a minute; if it has not completed within a day the attempt expires and you can choose a plan again.";
 
-export const SOLD_THROUGH_LINK =
-  "Sold through Link, our reseller. Prices are in US dollars; checkout adds sales tax or VAT where it applies and can charge in your local currency. Cancel any time from settings.";
+export const HANDLED_BY_LINK =
+  "Payments are handled by Link, a Stripe affiliate and the merchant of record. Prices are in US dollars; checkout adds sales tax or VAT where it applies and can charge in your local currency. Cancel any time from settings.";
 
 export const HANDLED_BY_STRIPE =
   "Payments are handled by Stripe. Cancel any time from settings.";
 
 export const CHECKOUT_UNCONFIGURED =
   "Checkout is not configured on this instance.";
+
+export const TRIAL_REFUSED =
+  "This card or email has already had a free trial. Choose a plan to start today.";
 
 export const COLLECTION_PAUSED =
   "Collection is paused. Everything AsoBeast has already gathered stays readable and exportable.";
@@ -116,6 +119,18 @@ export function trialBannerLine(
     : `${remaining}.`;
 }
 
+export function sellingTrial(catalog: BillingCatalog | undefined): boolean {
+  return catalog?.enabled !== false;
+}
+
+export function planOnSale(
+  plan: AccountPlan | undefined,
+  catalog: BillingCatalog | undefined,
+): AccountPlan | undefined {
+  if (!plan?.trialOffer || sellingTrial(catalog)) return plan;
+  return { ...plan, trialOffer: null };
+}
+
 export function planAction(
   plan: AccountPlan | undefined,
   name: PaidPlanName,
@@ -132,16 +147,24 @@ export function paywallHeading(plan: AccountPlan | undefined): string {
     : "Keep optimizing without limits";
 }
 
+export interface ViewerClock {
+  now: Date;
+  timeZone: string;
+}
+
 export function trialEndsOn(offer: TrialOffer, now: Date): Date {
   return new Date(now.getTime() + offer.days * DAY_MS);
 }
 
-export function trialEndLabel(offer: TrialOffer, now: Date): string {
-  return formatDate(trialEndsOn(offer, now).toISOString());
+export function trialEndLabel(
+  offer: TrialOffer,
+  { now, timeZone }: ViewerClock,
+): string {
+  return formatDateIn(trialEndsOn(offer, now), timeZone);
 }
 
-function trialLine(offer: TrialOffer, now: Date): string {
-  return `Pay $0 today. Your trial ends on ${trialEndLabel(offer, now)}, then the plan you choose is charged. Cancel any time from settings.`;
+function trialLine(offer: TrialOffer, clock: ViewerClock): string {
+  return `Pay $0 today. Your trial ends on ${trialEndLabel(offer, clock)}, then the plan you choose is charged, plus any VAT or sales tax, and renews until you cancel. Cancel any time from settings.`;
 }
 
 export const CONFIRM_EMAIL_TITLE = "Confirm your email";
@@ -205,6 +228,12 @@ export const CONTACT_SUPPORT = "Contact support";
 
 export const CHECKOUT_UNREACHABLE = "Checkout could not be opened. Try again.";
 
+export const PLAN_UNREACHABLE =
+  "Your plan could not be loaded. Check your connection, then try again.";
+
+export const PRICES_UNREACHABLE =
+  "The prices could not be loaded. Check your connection, then try again.";
+
 export const CHECKOUT_REOPENING = "Opening checkout…";
 
 export const CHECKOUT_PRICE_MISSING = "Checkout is not configured yet";
@@ -244,8 +273,11 @@ export function savingPercent(name: PaidPlanName): number {
   return Math.round(((12 * monthlyUsd - annualUsd) / (12 * monthlyUsd)) * 100);
 }
 
-export function trustLines(offer: TrialOffer, now: Date): readonly string[] {
-  const endsOn = trialEndLabel(offer, now);
+export function trustLines(
+  offer: TrialOffer,
+  clock: ViewerClock,
+): readonly string[] {
+  const endsOn = trialEndLabel(offer, clock);
   return [
     `No risk: cancel before ${endsOn} and nothing is charged`,
     `Pay nothing for the first ${offer.days} days`,
@@ -261,12 +293,15 @@ export interface TrialBarParts {
   after: string;
 }
 
-export function trialBarParts(offer: TrialOffer, now: Date): TrialBarParts {
+export function trialBarParts(
+  offer: TrialOffer,
+  clock: ViewerClock,
+): TrialBarParts {
   return {
     before: `Your ${offer.days} day trial is `,
     free: "100% free",
     middle: ", ending ",
-    endsOn: trialEndLabel(offer, now),
+    endsOn: trialEndLabel(offer, clock),
     after: ". Cancel any time from settings.",
   };
 }
@@ -305,12 +340,13 @@ function settingsTrialLine(plan: AccountPlan): string | null {
 
 export function paywallStatusLine(
   plan: AccountPlan | undefined,
-  now = new Date(),
+  clock: ViewerClock,
 ): string {
   if (!plan) return CHOOSE_A_PLAN;
   if (pending(plan)) return PAYMENT_CONFIRMING;
+  if (plan.trialRefused) return TRIAL_REFUSED;
   if (plan.trialOffer && !plan.subscribed) {
-    return trialLine(plan.trialOffer, now);
+    return trialLine(plan.trialOffer, clock);
   }
   const trial = paywallTrialLine(plan);
   if (trial) return trial;
@@ -348,17 +384,17 @@ export function planCallToAction(plan: AccountPlan): string {
 
 export function paymentNote(catalog: BillingCatalog | undefined): string {
   if (!catalog?.enabled) return CHECKOUT_UNCONFIGURED;
-  return catalog.managedPayments ? SOLD_THROUGH_LINK : HANDLED_BY_STRIPE;
+  return catalog.managedPayments ? HANDLED_BY_LINK : HANDLED_BY_STRIPE;
 }
 
 export function trialPaymentNote(
   catalog: BillingCatalog | undefined,
   offer: TrialOffer | null | undefined,
-  now: Date,
+  clock: ViewerClock,
 ): string {
   const note = paymentNote(catalog);
   if (!offer || !catalog?.enabled) return note;
-  return `${note} Your card is verified now and charged on ${trialEndLabel(offer, now)}.`;
+  return `${note} Your card is verified now and charged on ${trialEndLabel(offer, clock)}.`;
 }
 
 export function memberPlanLine(plan: AccountPlan | undefined): string {

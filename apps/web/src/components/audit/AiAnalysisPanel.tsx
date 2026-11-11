@@ -24,9 +24,9 @@ import {
   ANALYSIS_COPY,
   analysisState,
   type AnalysisState,
-  imageLinksLine,
+  creativeSentLine,
   progressLine,
-  sendsImageLinks,
+  sendsCreative,
 } from "./analysis-state";
 
 const ELAPSED_TICK_MS = 1_000;
@@ -183,9 +183,9 @@ function AnalysisIntro({
           Read the AI features guide
         </a>
       ) : null}
-      {sendsImageLinks(state) ? (
+      {sendsCreative(state) ? (
         <p className="text-caption text-muted-foreground">
-          {imageLinksLine(
+          {creativeSentLine(
             audit.ai.provider,
             state === "never" ? audit.ai.model : null,
           )}

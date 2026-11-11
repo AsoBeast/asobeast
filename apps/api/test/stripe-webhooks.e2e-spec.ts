@@ -40,6 +40,7 @@ import { obliterateQueues, pauseQueues } from './obliterate-queues';
 const WORKSPACE = 'ws_stripe_fixture';
 const CUSTOMER = 'cus_TestWorkspace1';
 const SUBSCRIPTION = 'sub_TestIndieMonthly';
+const SUBSCRIPTION_BOUGHT = 'sub_TestBoughtAfterRefusal';
 const PERIOD_END = new Date(1_802_678_400 * 1000);
 const BEFORE_PERIOD_END = new Date(PERIOD_END.getTime() - 60_000);
 
@@ -476,6 +477,24 @@ describe('Stripe webhooks', () => {
     const OWNER_MAILBOX = trialClaimKey('trial-owner@example.com');
     const CARD = cardClaimKey('fp_TestCard');
 
+    const expectRefused = async () => {
+      await expect(workspaceRow()).resolves.toMatchObject({
+        plan: 'free',
+        subscriptionId: null,
+        subscriptionStatus: null,
+        planExpiresAt: null,
+        trialStartedAt: null,
+        trialEndsAt: null,
+        trialRefusedSubscriptionId: SUBSCRIPTION,
+        trialClaimedAt: expect.any(Date) as Date,
+      });
+      await expect(me()).resolves.toMatchObject({
+        entitled: false,
+        trialing: false,
+        trialAwaitsCheckout: false,
+      });
+    };
+
     const claimKeys = async () =>
       (await prisma.trialClaim.findMany({ select: { key: true } }))
         .map(({ key }) => key)
@@ -546,19 +565,64 @@ describe('Stripe webhooks', () => {
     it.each([
       ['mailbox', OWNER_MAILBOX],
       ['card', CARD],
-    ])('ends a second trial of the same %s at stripe', async (_claim, key) => {
-      await prisma.trialClaim.create({ data: { key } });
+    ])(
+      'refuses a second trial of the same %s without charging',
+      async (_claim, key) => {
+        await prisma.trialClaim.create({ data: { key } });
 
+        await project('customer.subscription.trialing');
+
+        expect(fake.subscriptionCancels).toEqual([
+          {
+            params: { id: SUBSCRIPTION, invoice_now: false, prorate: false },
+            idempotencyKey: `trial-refused:${SUBSCRIPTION}`,
+          },
+        ]);
+        expect(fake.subscriptionUpdates).toEqual([]);
+        expect(subscriptions.get(SUBSCRIPTION)?.status).toBe('canceled');
+        await expectRefused();
+      },
+    );
+
+    it('ignores every later event of a refused trial', async () => {
+      await prisma.trialClaim.create({ data: { key: CARD } });
       await project('customer.subscription.trialing');
 
-      expect(fake.subscriptionUpdates).toEqual([
-        {
-          params: { id: SUBSCRIPTION, trial_end: 'now' },
-          idempotencyKey: `trial-end:${SUBSCRIPTION}`,
-        },
-      ]);
-      expect((await workspaceRow()).trialClaimedAt).not.toBeNull();
-      expect(subscriptions.get(SUBSCRIPTION)?.status).toBe('active');
+      const later = {
+        ...fixture('customer.subscription.trialing'),
+        id: 'evt_TestAfterRefusal',
+        created: Math.floor(Date.now() / 1000),
+      };
+      await send(later).expect(200);
+      await webhook.process(later.id);
+
+      await expect(
+        prisma.billingEvent.findUniqueOrThrow({ where: { id: later.id } }),
+      ).resolves.toMatchObject({ outcome: 'ignored' });
+      expect(fake.subscriptionCancels).toHaveLength(1);
+      await expectRefused();
+    });
+
+    it('sells the plan from day one after a refusal', async () => {
+      await prisma.trialClaim.create({ data: { key: CARD } });
+      await project('customer.subscription.trialing');
+      await prisma.workspace.update({
+        where: { id: WORKSPACE },
+        data: { subscriptionEventAt: null },
+      });
+
+      subscriptions.set(SUBSCRIPTION_BOUGHT, {
+        ...subscriptionOf('customer.subscription.created'),
+        id: SUBSCRIPTION_BOUGHT,
+      });
+      await app.get(BillingReconciler).reconcileOne(WORKSPACE);
+
+      await expect(workspaceRow()).resolves.toMatchObject({
+        plan: 'indie',
+        subscriptionId: SUBSCRIPTION_BOUGHT,
+        subscriptionStatus: 'active',
+      });
+      expect(fake.subscriptionCancels).toHaveLength(1);
     });
 
     it('settles the claims once when the reconcile lands before the webhook', async () => {
@@ -575,6 +639,25 @@ describe('Stripe webhooks', () => {
       expect((await workspaceRow()).trialClaimedAt).toEqual(settledAt);
       await expect(claimKeys()).resolves.toEqual([OWNER_MAILBOX, CARD].sort());
       expect(fake.subscriptionUpdates).toEqual([]);
+    });
+
+    it('refuses a lost trial when the reconcile lands first and the webhook stays quiet', async () => {
+      await prisma.trialClaim.create({ data: { key: CARD } });
+      subscriptions.set(
+        SUBSCRIPTION,
+        subscriptionOf('customer.subscription.trialing'),
+      );
+
+      await app.get(BillingReconciler).reconcileOne(WORKSPACE);
+      await app.get(BillingReconciler).reconcileOne(WORKSPACE);
+
+      await expectRefused();
+      expect(fake.subscriptionCancels).toEqual([
+        {
+          params: { id: SUBSCRIPTION, invoice_now: false, prorate: false },
+          idempotencyKey: `trial-refused:${SUBSCRIPTION}`,
+        },
+      ]);
     });
 
     it('settles the claims once when the reconcile and the webhook race', async () => {
@@ -595,7 +678,7 @@ describe('Stripe webhooks', () => {
       expect(fake.subscriptionUpdates).toEqual([]);
     });
 
-    it('ends a lost trial once when the reconcile and the webhook race', async () => {
+    it('refuses a lost trial once when the reconcile and the webhook race', async () => {
       await prisma.trialClaim.create({ data: { key: CARD } });
       const event = fixture('customer.subscription.trialing');
       subscriptions.set(
@@ -603,12 +686,12 @@ describe('Stripe webhooks', () => {
         subscriptionOf('customer.subscription.trialing'),
       );
       await send(event).expect(200);
-      const update = fake.subscriptions.update.bind(fake.subscriptions);
-      const slowUpdate = jest
-        .spyOn(fake.subscriptions, 'update')
+      const cancel = fake.subscriptions.cancel.bind(fake.subscriptions);
+      const slowCancel = jest
+        .spyOn(fake.subscriptions, 'cancel')
         .mockImplementation(async (...args) => {
           await new Promise((resolve) => setTimeout(resolve, 300));
-          return update(...args);
+          return cancel(...args);
         });
 
       try {
@@ -617,27 +700,27 @@ describe('Stripe webhooks', () => {
           webhook.process(event.id),
         ]);
       } finally {
-        slowUpdate.mockRestore();
+        slowCancel.mockRestore();
       }
 
-      expect(fake.subscriptionUpdates).toEqual([
+      expect(fake.subscriptionCancels).toEqual([
         {
-          params: { id: SUBSCRIPTION, trial_end: 'now' },
-          idempotencyKey: `trial-end:${SUBSCRIPTION}`,
+          params: { id: SUBSCRIPTION, invoice_now: false, prorate: false },
+          idempotencyKey: `trial-refused:${SUBSCRIPTION}`,
         },
       ]);
       await expect(claimKeys()).resolves.toEqual([OWNER_MAILBOX, CARD].sort());
-      expect((await workspaceRow()).trialClaimedAt).not.toBeNull();
+      await expectRefused();
     });
 
-    it('rolls the claims back with the marker when stripe cannot end a lost trial', async () => {
+    it('rolls the claims back with the marker when stripe cannot cancel a lost trial', async () => {
       await prisma.trialClaim.create({ data: { key: CARD } });
       subscriptions.set(
         SUBSCRIPTION,
         subscriptionOf('customer.subscription.trialing'),
       );
       const refused = jest
-        .spyOn(fake.subscriptions, 'update')
+        .spyOn(fake.subscriptions, 'cancel')
         .mockRejectedValue(new Error('stripe is down'));
 
       try {

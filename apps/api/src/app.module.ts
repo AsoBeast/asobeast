@@ -22,6 +22,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { ActionsModule } from './actions/actions.module';
 import { AnnotationsModule } from './annotations/annotations.module';
 import { ChecklistModule } from './checklist/checklist.module';
+import { KeywordInspectionsModule } from './keyword-inspections/keyword-inspections.module';
 import { AppsModule } from './apps/apps.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
@@ -62,6 +63,7 @@ import { envConfigModule } from './config/env-config.module';
     AnalyticsModule,
     AnnotationsModule,
     ChecklistModule,
+    KeywordInspectionsModule,
     StoreConnectModule,
     AuditModule,
     ActionsModule,

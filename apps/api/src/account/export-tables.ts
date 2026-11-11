@@ -98,6 +98,11 @@ export const EXPORT_TABLE_KEYS: readonly ExportTableKey[] = [
     key: ['appId', 'keywordId'],
     include: { keyword: true },
   },
+  {
+    name: 'keywordInspection',
+    key: ID,
+    include: { keyword: true },
+  },
   { name: 'webhook', key: ID },
   { name: 'emailAlert', key: ID },
   { name: 'alertDelivery', key: ID },

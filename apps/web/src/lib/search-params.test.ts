@@ -71,6 +71,7 @@ import {
   changeDaysParser,
   changeOwnerParser,
   countryParser,
+  inspectParsers,
   matrixFilterParsers,
   discoveryDaysParser,
   discoveryStateParser,
@@ -236,6 +237,12 @@ describe.each(LIST_PARSERS)(
       expect(parser.parseServerSide(members.join(","))).toEqual([...members]);
     });
 
+    it("reads a repeated member once", () => {
+      expect(
+        parser.parseServerSide(`${members[0]},${members[0]},${members[0]}`),
+      ).toEqual([members[0]]);
+    });
+
     it("drops an unknown member rather than the whole selection", () => {
       expect(parser.parseServerSide(`${members[0]},not-a-member`)).toEqual([
         members[0],
@@ -295,6 +302,13 @@ describe("matrix filter parsers", () => {
 describe("keywordIds parser", () => {
   it("defaults to an empty list", () => {
     expect(keywordIdsParser.defaultValue).toEqual([]);
+  });
+
+  it("reads a repeated id once", () => {
+    expect(keywordIdsParser.parseServerSide("kw-2,kw-1,kw-2")).toEqual([
+      "kw-2",
+      "kw-1",
+    ]);
   });
 
   it("keeps the order of the selected ids", () => {
@@ -382,6 +396,19 @@ describe("action queue parsers", () => {
       "de",
     ]);
     expect(actionQueueParsers.app.parseServerSide("app-1")).toEqual(["app-1"]);
+  });
+
+  it("reads a repeated market, app or category once", () => {
+    expect(actionQueueParsers.market.parseServerSide("us,de,us")).toEqual([
+      "us",
+      "de",
+    ]);
+    expect(actionQueueParsers.app.parseServerSide("app-1,app-1")).toEqual([
+      "app-1",
+    ]);
+    expect(
+      actionQueueParsers.category.parseServerSide("metadata,metadata"),
+    ).toEqual(["metadata"]);
   });
 });
 
@@ -513,6 +540,13 @@ describe("keyword tags parser", () => {
     ]);
     expect(keywordTagsParser.parseServerSide(undefined)).toEqual([]);
   });
+
+  it("reads a repeated tag once", () => {
+    expect(keywordTagsParser.parseServerSide("core,brand,core")).toEqual([
+      "core",
+      "brand",
+    ]);
+  });
 });
 
 describe("draftLocale parser", () => {
@@ -592,6 +626,12 @@ describe("keyword type parser", () => {
     expect(serialize({ type: [] })).toBe("");
   });
 
+  it("reads a repeated class once", () => {
+    expect(
+      keywordFilterParsers.type.parseServerSide("generic,ownBrand,generic"),
+    ).toEqual(["generic", "ownBrand"]);
+  });
+
   it("drops a class it does not know", () => {
     expect(keywordFilterParsers.type.parseServerSide("brand,generic")).toEqual([
       "generic",
@@ -603,6 +643,12 @@ describe("alert feed parsers", () => {
   it("keeps only the feed events of a type list", () => {
     expect(
       alertFeedParsers.type.parse("rank.dropped,nope,chart.entered"),
+    ).toEqual(["rank.dropped", "chart.entered"]);
+  });
+
+  it("reads a repeated type once", () => {
+    expect(
+      alertFeedParsers.type.parse("rank.dropped,chart.entered,rank.dropped"),
     ).toEqual(["rank.dropped", "chart.entered"]);
   });
 
@@ -723,5 +769,15 @@ describe("the gap analysis url state", () => {
     expect(
       serialize({ sort: "popularity", dir: "asc", q: "focus", country: "de" }),
     ).toBe("?gapSort=popularity&gapDir=asc&gapQ=focus&gapCountry=de");
+  });
+});
+
+describe("inspection id parser", () => {
+  it("reads an inspection id", () => {
+    expect(inspectParsers.id.parseServerSide("insp_1")).toBe("insp_1");
+  });
+
+  it.each(["", "  "])("treats %j as no selection", (value) => {
+    expect(inspectParsers.id.parseServerSide(value)).toBeNull();
   });
 });

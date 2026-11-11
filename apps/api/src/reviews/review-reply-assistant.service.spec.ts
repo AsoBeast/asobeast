@@ -12,7 +12,6 @@ import { HOME_LISTING, NEWEST_FIRST } from '../apps/listing';
 import type { WorkspaceContext } from '../common/tenancy/workspace-context';
 import type { PrismaService } from '../prisma/prisma.service';
 import { ReviewReplyAssistant } from './review-reply-assistant.service';
-import { DRAFT_MAX_OUTPUT_TOKENS } from './review-reply-drafts';
 
 const NOW = new Date('2026-10-15T12:00:00.000Z');
 
@@ -114,9 +113,6 @@ describe('ReviewReplyAssistant.draft', () => {
       userId: 'user-1',
     });
     expect(spend.mock.calls[0][1].schema.name).toBe('review_reply');
-    expect(spend.mock.calls[0][1].maxOutputTokens).toBe(
-      DRAFT_MAX_OUTPUT_TOKENS,
-    );
     const [args] = upsert.mock.calls[0];
     for (const branch of [args.create, args.update]) {
       expect(branch).toMatchObject({

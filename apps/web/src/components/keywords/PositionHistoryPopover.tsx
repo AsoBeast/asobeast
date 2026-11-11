@@ -17,10 +17,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { formatCountry, storeLabel } from "@/lib/format";
+import { lostPosition } from "@/lib/keyword-checks";
 import type { RangePreset } from "@/lib/ranges";
 import { positionHoldFacts } from "./position-hold";
 import { PositionHistoryPanel } from "./PositionHistoryPanel";
-import { PositionReadout } from "./PositionReadout";
+import { lastRankedLine, PositionReadout } from "./PositionReadout";
 import { staleCheckLabel, staleCheckLine } from "./stale-check";
 
 export interface PositionHistoryContext {
@@ -34,6 +35,16 @@ export interface PositionHistoryProps extends PositionHistoryContext {
   keyword: TrackedKeywordItem;
   label: string;
   staleOn: string | null;
+}
+
+function LostDay({ keyword }: { keyword: TrackedKeywordItem }) {
+  const lost = lostPosition(keyword);
+  if (!lost?.on) return null;
+  return (
+    <p className="text-caption text-muted-foreground">
+      {lastRankedLine(lost.position, lost.on)}
+    </p>
+  );
 }
 
 function HoldFacts({ keyword }: { keyword: TrackedKeywordItem }) {
@@ -90,6 +101,7 @@ function PositionHistoryContent({
           {staleCheckLine(staleOn)}
         </p>
       )}
+      <LostDay keyword={keyword} />
       <HoldFacts keyword={keyword} />
       <PositionHistoryPanel
         appId={appId}

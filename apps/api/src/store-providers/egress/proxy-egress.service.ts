@@ -70,19 +70,36 @@ export class ProxyEgress implements OnModuleInit {
   }
 
   private async settle(
-    { endpointId, leasedAt }: ProxyLease,
+    lease: ProxyLease,
     store: Store,
     meter: EgressMeter,
     thrown: unknown,
   ): Promise<ProxyOutcome | null> {
     const observation = observe(meter, thrown);
+    const unjudged =
+      thrown !== null &&
+      (observation.outcome === null || storeDeadlinePassed());
+    try {
+      await this.record(lease, store, meter, observation, unjudged);
+    } catch (error) {
+      this.logger.warn(
+        `could not record the outcome of endpoint ${lease.endpointId}: ${String(error)}`,
+      );
+    }
+    return unjudged ? null : observation.outcome;
+  }
+
+  private async record(
+    { endpointId, leasedAt }: ProxyLease,
+    store: Store,
+    meter: EgressMeter,
+    observation: EgressObservation,
+    unjudged: boolean,
+  ): Promise<void> {
     const pacing = {
       leasedAt,
       until: this.pacedUntil(leasedAt, meter, observation),
     };
-    const unjudged =
-      thrown !== null &&
-      (observation.outcome === null || storeDeadlinePassed());
     if (unjudged) {
       await this.pool.release(endpointId, store, pacing);
     } else {
@@ -94,7 +111,6 @@ export class ProxyEgress implements OnModuleInit {
       });
     }
     await this.ledger.record(ProxyTier.DATACENTER, observation.requests);
-    return unjudged ? null : observation.outcome;
   }
 
   private pacedUntil(

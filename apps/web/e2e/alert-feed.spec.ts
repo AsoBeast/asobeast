@@ -6,6 +6,8 @@ import {
   LONG_ALERT_KEYWORD,
 } from "./alert-feed-fixtures.mts";
 import { hydrated } from "./hydrated.mts";
+import { revealAfterLoad } from "./late-reveal.mts";
+import { collectPageErrors } from "./page-errors.mts";
 import { ALERTS_SEEN_COOKIE_NAME } from "../src/lib/alerts-seen";
 import { SIDEBAR_COOKIE_NAME } from "../src/lib/sidebar-cookie";
 import { expect, test } from "./session.mts";
@@ -372,6 +374,27 @@ test.describe("alerts page", () => {
 
       await expect(page).not.toHaveURL(/[?&](app|type|q)=/);
       await expect(search).toBeFocused();
+    });
+
+    test("keeps a search typed into a feed that streams in after the apps loaded", async ({
+      page,
+    }) => {
+      const errors = collectPageErrors(page);
+      const heldReveals = await revealAfterLoad(page);
+      await page.goto("/alerts?app=app-1&type=rank.dropped,rank.improved");
+      const search = await hydrated(
+        page.getByRole("textbox", { name: "Search alerts" }),
+      );
+      await search.fill("pomodoro");
+
+      await expect(page).toHaveURL(/q=pomodoro/);
+      await expect(
+        page
+          .getByRole("list", { name: "Active filters" })
+          .getByText("App: Focus Timer · App Store · US"),
+      ).toBeVisible();
+      expect(await heldReveals()).toBeGreaterThan(0);
+      expect(errors).toEqual([]);
     });
   });
 

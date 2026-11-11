@@ -29,13 +29,20 @@ import {
 import { StripeService } from './stripe.service';
 import { effectOf } from './subscription-status';
 import { FirstPayment } from './first-payment';
-import { TrialStarts } from './trial-starts';
+import { TrialStarts, isRefusedTrial, notRefusedTrial } from './trial-starts';
 import { belongsToWorkspace } from './workspace-link';
 
 const RECONCILE_JUSTIFICATION =
   'reconciliation compares every workspace against the billing provider';
 
 type Outcome = 'corrected' | 'agreed' | 'unreachable';
+
+const nothingReconciled = (): BillingReconcileReport => ({
+  checked: 0,
+  corrected: 0,
+  orphanSubscriptions: [],
+  unreconciled: [],
+});
 
 @Injectable()
 export class BillingReconciler {
@@ -71,7 +78,9 @@ export class BillingReconciler {
         if (!workspace) throw new NotFoundException('Workspace not found');
         await this.prices.refreshIfStale();
 
-        const outcome = await this.attempt(workspace, sessionId);
+        const outcome = this.stripe.enabled
+          ? await this.attempt(workspace, sessionId)
+          : 'agreed';
         if (outcome === 'unreachable') {
           throw new ServiceUnavailableException(
             'Stripe could not be reached, so this workspace keeps the plan it already has. Try again shortly.',
@@ -88,14 +97,7 @@ export class BillingReconciler {
   }
 
   private async sweep(): Promise<BillingReconcileReport> {
-    if (!this.stripe.enabled) {
-      return {
-        checked: 0,
-        corrected: 0,
-        orphanSubscriptions: [],
-        unreconciled: [],
-      };
-    }
+    if (!this.stripe.enabled) return nothingReconciled();
 
     const known = await this.prisma.workspace.findMany({
       where: {
@@ -165,25 +167,42 @@ export class BillingReconciler {
     workspace: Workspace,
     subscription: Stripe.Subscription,
   ): Promise<boolean> {
+    if (isRefusedTrial(workspace, subscription)) return false;
+    const drifted = await this.align(workspace, subscription, (desired) =>
+      this.logger.error(
+        `workspace ${workspace.id} drifted from Stripe: local ${workspace.plan}/${workspace.subscriptionStatus ?? 'none'}, Stripe ${desired.plan}/${desired.status}`,
+      ),
+    );
+    const settlement = await this.trialStarts.settle(workspace, subscription);
+    return drifted || settlement.outcome === 'refused';
+  }
+
+  private async align(
+    workspace: Workspace,
+    subscription: Stripe.Subscription,
+    announce: (desired: SubscriptionState) => void,
+  ): Promise<boolean> {
     const firstPaidAt = await this.firstPayment.record(workspace, subscription);
     const desired = stateFrom(subscription, this.prices, firstPaidAt !== null);
-    const drifted = !matches(workspace, desired);
-    if (drifted) await this.project(workspace, desired);
-    await this.trialStarts.settle(workspace, subscription);
-    return drifted;
+    if (matches(workspace, desired)) return false;
+    announce(desired);
+    await this.project(workspace, desired);
+    return true;
   }
 
   private async project(
     workspace: Workspace,
     desired: SubscriptionState,
   ): Promise<void> {
-    this.logger.error(
-      `workspace ${workspace.id} drifted from Stripe: local ${workspace.plan}/${workspace.subscriptionStatus ?? 'none'}, Stripe ${desired.plan}/${desired.status}`,
-    );
-    await this.prisma.workspace.update({
-      where: { id: workspace.id },
+    const { count } = await this.prisma.workspace.updateMany({
+      where: { id: workspace.id, ...notRefusedTrial(desired.subscriptionId) },
       data: projectionOf(desired, workspace, new Date()),
     });
+    if (count === 0) {
+      this.logger.warn(
+        `workspace ${workspace.id} was not projected onto subscription ${desired.subscriptionId}, because its trial was refused or the row is gone`,
+      );
+    }
   }
 
   private async desiredSubscription(

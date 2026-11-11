@@ -147,9 +147,10 @@ describe('KeywordsService.syncFromSnapshot', () => {
         'preguntados',
         'juegos',
         'trivia',
-        'juegos trivia',
+        'preguntas gratis',
       ]),
     );
+    expect(texts).not.toContain('juegos trivia');
     expect(texts.filter((text) => /(^| )(de|para|tu)( |$)/.test(text))).toEqual(
       [],
     );
@@ -236,7 +237,10 @@ describe('KeywordsService.syncFromSnapshot', () => {
 
     const [{ data }] = prisma.keyword.createMany.mock.calls[0];
     const texts = data.map((row) => row.text);
-    expect(texts).toEqual(expect.arrayContaining(['la fitness', 'gym cours']));
+    expect(texts).toEqual(
+      expect.arrayContaining(['la fitness', 'gym', 'cours']),
+    );
+    expect(texts).not.toContain('gym cours');
     expect(texts.filter((text) => /(^| )et( |$)/.test(text))).toEqual([]);
   });
 
@@ -266,7 +270,8 @@ describe('KeywordsService.syncFromSnapshot', () => {
 
     const [{ data }] = prisma.keyword.createMany.mock.calls[0];
     const texts = data.map((row) => row.text);
-    expect(texts).toContain('programmer kanaler');
+    expect(texts).toEqual(expect.arrayContaining(['programmer', 'kanaler']));
+    expect(texts).not.toContain('programmer kanaler');
     expect(texts.filter((text) => /(^| )og( |$)/.test(text))).toEqual([]);
   });
 
@@ -1137,7 +1142,11 @@ describe('KeywordsService keyword class', () => {
           Promise.resolve(select.name ? brandRow : homeApp),
         ),
       },
-      appSnapshot: { findFirst: jest.fn().mockResolvedValue(null) },
+      appSnapshot: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      appLocalization: { findMany: jest.fn().mockResolvedValue([]) },
       trackedKeyword: {
         findMany: jest
           .fn()

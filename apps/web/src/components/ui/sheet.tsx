@@ -70,7 +70,7 @@ function SheetContent({
       <SheetPrimitive.Content
         data-slot="sheet-content"
         className={cn(
-          "fixed z-50 flex flex-col gap-4 overflow-y-auto overscroll-contain border-border bg-popover p-4 text-body text-popover-foreground shadow-overlay duration-200 outline-none data-open:animate-in data-closed:animate-out",
+          "fixed z-50 flex flex-col gap-4 overflow-y-auto overscroll-contain border-border bg-popover p-4 text-body text-popover-foreground shadow-overlay duration-200 outline-hidden data-open:animate-in data-closed:animate-out",
           SHEET_SIDES[side],
           className,
         )}

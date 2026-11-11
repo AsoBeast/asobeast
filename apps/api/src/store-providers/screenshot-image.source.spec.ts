@@ -1,5 +1,6 @@
 import { ScreenshotFetchError } from './errors';
 import {
+  MAX_LISTED_IMAGE_BYTES,
   MAX_SCREENSHOT_BYTES,
   ScreenshotImageSource,
 } from './screenshot-image.source';
@@ -243,5 +244,44 @@ describe('ScreenshotImageSource', () => {
         ),
       20,
     );
+  });
+  describe('readListed', () => {
+    const PLAY = 'https://play-lh.googleusercontent.com/AbC=w526-h296-rw';
+
+    it.each([URL_IN, PLAY])(
+      'downloads %s as listed with its media type',
+      async (url) => {
+        fetchMock.mockResolvedValue(
+          image(new Uint8Array([7, 8]), {
+            'content-type': 'image/webp; charset=binary',
+          }),
+        );
+
+        await expect(source.readListed(url)).resolves.toEqual({
+          bytes: Buffer.from([7, 8]),
+          mediaType: 'image/webp',
+        });
+        expect(fetchMock.mock.calls[0][0]).toBe(url);
+      },
+    );
+
+    it('refuses an address outside the store image hosts without a request', async () => {
+      await expect(
+        source.readListed('https://images.example.com/a.jpg'),
+      ).rejects.toMatchObject({ retryable: false });
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('gives up for good when the listed image is over the cap', async () => {
+      fetchMock.mockResolvedValue(
+        image(new Uint8Array([1]), {
+          'content-length': String(MAX_LISTED_IMAGE_BYTES + 1),
+        }),
+      );
+
+      await expect(source.readListed(PLAY)).rejects.toMatchObject({
+        retryable: false,
+      });
+    });
   });
 });

@@ -314,6 +314,53 @@ test.describe("the last position of a keyword that lost its rank", () => {
     await expect(history).not.toContainText("(was");
   });
 
+  test("the position history popover names the day of the lost position", async ({
+    page,
+  }) => {
+    await openMarks(page);
+    await rowOf(page, "lost yesterday")
+      .getByRole("button", { name: "Position history: lost yesterday" })
+      .press("Enter");
+    const history = page.getByRole("dialog", {
+      name: "Position history lost yesterday",
+    });
+
+    await expect(
+      history.getByText(lastRankedTitle("lost yesterday"), { exact: true }),
+    ).toBeVisible();
+  });
+
+  test("the position history popover names the day after several unranked checks", async ({
+    page,
+  }) => {
+    await openMarks(page);
+    await rowOf(page, "lost for days")
+      .getByRole("button", { name: "Position history: lost for days" })
+      .press("Enter");
+    const history = page.getByRole("dialog", {
+      name: "Position history lost for days",
+    });
+
+    await expect(
+      history.getByText(lastRankedTitle("lost for days"), { exact: true }),
+    ).toBeVisible();
+  });
+
+  test("the position history popover of an older api names no day", async ({
+    page,
+  }) => {
+    await openMarks(page);
+    await rowOf(page, "lost on an older api")
+      .getByRole("button", { name: "Position history: lost on an older api" })
+      .click();
+    const history = page.getByRole("dialog", {
+      name: "Position history lost on an older api",
+    });
+
+    await expect(history).toBeVisible();
+    await expect(history).not.toContainText("Last ranked");
+  });
+
   for (const width of [320, 375]) {
     test(`the hint never widens the page at ${width} px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });

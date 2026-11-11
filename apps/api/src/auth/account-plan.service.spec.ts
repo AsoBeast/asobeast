@@ -45,6 +45,8 @@ describe('AccountPlanService', () => {
       cancelAtPeriodEnd?: boolean;
       billingInterval?: string | null;
       firstPaidAt?: Date | null;
+      trialStartedAt?: Date | null;
+      trialRefusedSubscriptionId?: string | null;
     } = {},
   ) => ({
     plan: 'free',
@@ -56,7 +58,28 @@ describe('AccountPlanService', () => {
     cancelAtPeriodEnd: false,
     billingInterval: null,
     firstPaidAt: new Date('2026-08-01T00:00:00.000Z'),
+    trialStartedAt: null,
+    trialRefusedSubscriptionId: null,
     ...over,
+  });
+
+  it('reports a refused trial until the workspace holds a plan', async () => {
+    const service = build(true, { plan: 'free' });
+    const refused = { trialRefusedSubscriptionId: 'sub_refused' };
+
+    await expect(
+      service.describe(workspace(refused), NOW, null),
+    ).resolves.toMatchObject({ trialRefused: true });
+    await expect(
+      service.describe(
+        workspace({ ...refused, planExpiresAt: new Date('2026-12-01') }),
+        NOW,
+        null,
+      ),
+    ).resolves.not.toHaveProperty('trialRefused');
+    await expect(
+      service.describe(workspace(), NOW, null),
+    ).resolves.not.toHaveProperty('trialRefused');
   });
 
   it('reports usage against the limits of the plan in force', async () => {

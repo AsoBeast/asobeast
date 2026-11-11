@@ -1,0 +1,162 @@
+---
+paths:
+  - "apps/web/**"
+---
+
+# Frontend rules
+
+## Frontend rule 1: One transport, typed by shared
+
+- Only `src/lib/api/` talks to the API: a barrel over one file per domain, `client.ts` owning `apiFetch`, `ApiError` and `withQuery`, one function per endpoint typed by an `@asobeast/shared` contract. Never redefine a response shape or import Prisma types.
+- Only the proxy (`src/lib/api/proxy.ts`) reads a request body, through `readBoundedBody` (`src/lib/api/request-body.ts`): a body over `REQUEST_BODY_LIMIT_BYTES` (the API's 100 KB, from `@asobeast/shared`), counted as received before any `Content-Encoding` is decoded, by its `Content-Length` or as soon as a chunked stream passes it, gets a 413 envelope with `Connection: close` and the rest of the stream is cancelled. `FORWARDED_HEADERS` carries `content-encoding` and the proxy never decodes; the API decodes gzip, deflate and br itself, limits the decoded size and answers 415 for anything else. A handler never calls `request.text()`, `request.json()` or `request.arrayBuffer()` on an unbounded body.
+- `src/proxy.ts` does not match `/api`, `/docs`, `/metrics` or `/admin/queues`, so Next's `proxyClientMaxBodySize`, which truncates instead of refusing, never applies to them, with two narrow exceptions:
+  - paths under `/api/backend`, `/docs`, `/admin/queues` and `/.well-known` that carry an escape that can fail to decode (a `%` not followed by two hex digits, or the escape of a byte above `%7F`), because Next answers a bare 500 when it cannot decode a dynamic segment. `lib/api/malformed-path.ts` refuses an undecodable path (the 400 envelope under `/api/backend`, the hidden 404 for the other three, a rewrite to not found for an app page, before the sign in redirect) and passes a decodable one through, so an ordinary `%20` never runs the proxy;
+  - any request carrying `Next-Action`, answered with the 404 Next gives an unknown action, because the app defines no server actions.
+- `next.config.ts` caps `experimental.proxyClientMaxBodySize` at `REQUEST_BODY_LIMIT_BYTES`, so those paths buffer no more than the API would read.
+
+## Frontend rule 2: The query cache owns freshness
+
+- `src/lib/queries.ts` holds the `appKeys` hierarchy, the `queryOptions` factories and every mutation invalidation helper (`invalidateKeywordMutation`, `invalidateCompetitorMutation`, …; `invalidateStoreConnectionMutation` refreshes the connections and every funnel). `router.refresh()` is banned: after a mutation, invalidate or seed the cache.
+- Pages prefetch into `getQueryClient()` and render a `HydrationBoundary`; client components use `useSuspenseQuery` and `useMutation`. A query a page starts with `void prefetchQuery` streams pending, so inside that boundary it is read only with `useSuspenseQuery` under a local `Suspense`. A query whose value decides whether an element exists, or whose `dataUpdatedAt` a relative time renders against, is awaited, so the server render and hydration read the same entry.
+- A query that spends a store allowance (the search, similar and developer suggestions, the competitor suggestions) is keyed outside `appKeys.detail(id)`, which competitor changes, listing refreshes and every run stage invalidate whole; it is stale for a day and never retried. Local suggestion sources share `appKeys.suggestionsRoot(id)` and are invalidated with the app by `invalidateLocalSuggestions`.
+
+## Frontend rule 3: URL is the state
+
+View state (sorts, date presets, selected keyword ids, filters) lives in `searchParams` through `nuqs` parsers in `src/lib/search-params.ts`, built from shared unions; never a duplicate `useState`. Everything else lives in exactly one of these places:
+
+- **Component state** for transient input to one request, or a toggle that discards nothing: the Action Center bulk selection; the keyword import dialog's status filter and current part; the metadata save dialog's market checkboxes; the setup step's market ticks, seed choices, keyword picker tab and ticks, competitor ticks and the import dialog's text, store and storefront; the Google Play connect dialog's method; the billing wall's interval and open FAQ question; the top charts trending tabs; the reviews composer's text, tone, instruction line, raised **Show all** limit and per card translation toggle; the position history popover's range tabs; the discovered table's selection (per sub tab, cleared by a successful track and with the market); the opportunity map's roving focus dot, active dot and open history dot.
+- **Local storage** for per viewer preferences the server render never needs: the remembered keywords sort, the zone thresholds, column visibility, the What's New seen release, the checklist pill's collapse.
+- **A cookie** for per viewer preferences the server render reads: collapsed sections and the alerts seen time.
+- **The server** for the setup's selected countries and skipped steps (`GET` and `PATCH /apps/{id}/setup`, read through `setupOptions`, written with an optimistic patch).
+
+Keywords page:
+
+- `useUrlSorting`'s `remember` keeps the viewer's last sort under `asobeast.sort.keywords` (helpers in `lib/table/sorting.ts`, validated against the columns) and applies it only when the URL names neither `sort` nor `dir` (a bare `dir` is the default sort's direction). The default `KEYWORD_DEFAULT_SORT` (`opportunity`) never enters the URL, which is why `keywordSortParser` is nullable.
+- `?zone=` (`keywordZoneParser`: `quickWins`, `worthFighting`, `easyPickings`, `lowPriority`; absent is none) is a key of `keywordFilterParsers` and a hidden column filter, so the table, count, chips, **Clear all** and CSV read it. Its filter value carries both thresholds (`ZoneFilterValue`), because a `filterFn` cannot read a preference. The thresholds (default popularity 20, difficulty 25, `lib/keyword-zones.ts`) live under `asobeast.map.thresholds` through `useStoredPreference`, never in the URL, because a link must not change the recipient's thresholds: the same `?zone=` link classifies rows with each recipient's own thresholds.
+- `?type=` (any of `KEYWORD_CLASSES`) filters a hidden `type` column with `oneOf`; a keyword without a class matches no type; chip and facet labels come from `KEYWORD_CLASS_LABELS` (`components/keywords/keyword-class.ts`).
+- `?view=map` (`keywordViewParser`, default `table` omitted) is not a key of `keywordFilterParsers`, so **Clear all** keeps the view.
+- `?tab=` (`keywordsTabParser`, `tracked` omitted) switches tracked and discovered; `?state=` (`discoveryStateParser`, `all` omitted) is the discovered sub tab, filtered in the browser over one fetch per market. A discovery mutation seeds the list with `withoutDiscoveries` and invalidates `appKeys.keywordDiscoveriesRoot` (under `appKeys.detail(id)`, stored rows only); the list polls every 15 s, at most 40 times, while `checks.pending` is positive (`keywordDiscoveriesPollInterval`).
+- `?serp=` and `?serpDate=` (absent for the newest captured day) hold the search results sheet.
+
+Other pages:
+
+- Action Center: filters, groups and search run in the browser over the status scoped list; `?action=` is the open action.
+- Metadata: `?fieldLocale=` is the open localization. Billing wall: `?plan=` is the selected plan.
+- Reviews: `score`, `version`, `since`, `replyState`, `sort`, `q` and the open composer `reply` are in the URL; the **Needs reply** tile also sets `sort=lowest`. A translation is seeded into every cached list (`seedReviewTranslation`). A reply save updates the badge and moves the counts in the cached lists (`withReviewReply`, `lib/review-reply-cache.ts`) and marks them stale without refetching, so the open composer stays under a filter it no longer matches.
+- Overview: `?market=` also scopes keyword numbers; `keywordScope` (`lib/market.ts`) turns it into the optional `country` of the summary and both histories (no market, a market without a listing, or a single listing app counts every market), and cards read it through `useKeywordScope`, deferred with `useDeferredValue`. `?visView=` holds the selected figure (`visibility`, `share` or `top10`), each drawing its own chart over the one `?range=`.
+- Competitors: the matrix's keyword breakdown is `?keyword=`. Gap analysis keeps its tab in `?gaps=` (`gaps`, `winnable`, `threats`, `lead`) and its own `gapSort`, `gapDir`, `gapQ` and `gapCountry` (`GAP_URL_KEYS`), because the matrix owns `sort`, `dir`, `q` and `country`; market, search and sort run in the browser over one analysis answer, read with `useQuery` and no server prefetch.
+- Alerts: `app`, `type` and `q` through `alertFeedParsers`; `app` and `type` go to `GET /alerts/events` so every page is full, `q` filters the loaded events in the browser (`searchEvents`), because sentences are computed and the feed is paged.
+
+Per viewer preferences:
+
+- Collapsed sections: the `asobeast_collapsed` cookie (`lib/collapsed-sections.ts`; page scoped ids such as `competitors.discovery`, declared beside the page's components and parsed against that list) is read with `cookies()` and passed to `CollapsedSectionsProvider`. A section is a `CollapsibleCard` (`components/layout/CollapsibleCard.tsx`): its title is the trigger inside an `h2`, its header controls stay visible, collapsed content is not mounted (so it starts no request), and it animates open only after the viewer toggles it, so a streamed section never shifts the page. A second page adopting the cookie passes the union of every page's ids as `known`, or a write drops the other page's.
+- Alerts seen: the `asobeast_alerts_seen` cookie (`lib/alerts-seen.ts`, an ISO instant) is read by the layout into `AlertsSeenProvider`, so the **New** marks are server rendered. The sidebar dot is `newest > seen`, `newest` from `GET /alerts/events?limit=1` with `useQuery` (no data, no dot); visiting `/alerts` writes the newest event's time and the page keeps the value it found on mount.
+- What's New: `asobeast.whatsNew.seen` (`lib/whats-new/seen-release.ts`) has the server snapshot `undefined`, so `WhatsNewMenuItem`'s dot appears only after hydration; `null` reads unread, a value newer than the newest shown release reads seen, a write storage refuses is kept in memory. The page marks the newest shown release seen on mount, and the `storage` event clears other tabs.
+- Checklist pill: `asobeast.checklist.collapsed` through `useStoredPreference` (in memory fallback). `components/checklist/ChecklistPill.tsx` renders only after `useAuth` hydrated and for an entitled viewer, fixed at `z-10` below the sticky bulk bars and every dialog with a spacer in the page, and hides while its read fails, loads, is dismissed or complete. The `(app)` layout awaits `workspaceChecklistOptions` for a signed in viewer and hydrates it around the whole shell, because a page boundary that dehydrated it after the pill started fetching would hydrate empty and fail with React #418.
+
+## Frontend rule 4: Boundaries per section
+
+- Every route segment has a geometry matched `loading.tsx` skeleton and an `error.tsx` that renders the shared `ErrorState` and nothing else. **Try again** resets the failed queries (`useQueryErrorResetBoundary`), refetches every query still in error, mounted or not (`refetchFailedQueries`, `lib/queries.ts`), then calls the boundary's `retry` prop: a failed `useSuspenseQuery` throws again without fetching until reset, the layout never remounts, and the reset reaches only reads that mount before the flag clears.
+- Every `useSuspenseQuery` sits under a local `Suspense`, not the whole page. A section the page can do without (the review themes strip) reads with `useQuery` and shows `InlineQueryError` (`components/layout`) when it has no data and the request failed.
+- Content of an on demand dialog, sheet or popover (the search results sheet, the keyword breakdown sheet, the position history popover) always reads with `useQuery` and `InlineQueryError`: Radix mounts portal content a render after the segment's retry, so a `useSuspenseQuery` there would never refetch.
+
+## Frontend rule 5: Domain rendering
+
+Positions and ranking charts:
+
+- Positions are 1 based; `null` is checked and not found: render `>100` or `>200` from the row's depth, never `0`. A lost ranking reads `>200 (was #14)` as one string in the position cell (`lostPosition`, from `lastRankedPosition` and `lastRankedOn`, else `previousPosition`), with the day in its title; every other readout keeps the bare bound.
+- A comparison row lists apps without a check in `unchecked` (absent: all checked); the matrix draws each as a dash named **Not checked yet** and exports an empty cell, never `>200`.
+- Ranking charts use a reversed Y axis on a square root scale (`RANK_AXIS_PROPS`, `components/charts/theme.ts`); a band label (`RankBandLabel`) is drawn only when its band is at least 14 px tall. `buildRankingChart(series, through)` puts every UTC day from the first check to `through` minus `CHECK_FRESH_DAYS` (or the last check, when later) on the axis: a day without a check is a gap, a ranked day between gaps is a dot (`loneKey`), the tooltip takes `filterNull={false}` and reads **Not checked**, and the empty and insufficient states, **Export CSV** and its rows count checked days only (`checkedDays`, `hasCheck`).
+
+Dates, storefronts and prices:
+
+- Dates are UTC `date` strings formatted with `Intl.DateTimeFormat` pinned to UTC. Never let the engine word a date joined with a time or a storefront name (`Intl.DisplayNames`): WebKit, Chromium and Node differ and React rejects the mismatch (#418). `formatDateTime` writes the clock itself; `formatCountry` reads `COUNTRY_NAMES` (kept in step by `country-names.test.ts`); `e2e/engine-hydration.spec.ts` sweeps the routes in WebKit.
+- A store price goes through `formatPrice(value, currency)` in the storefront's currency, pinned to `en-US` and the fraction digits `format.ts` names per currency, because WebKit's currency data differs (HUF, IDR, COP, PKR and others). The API reads `currency` from the raw payload (`currencyOf`, on the snapshot summary, the refresh answer and every `price` change); a missing one prints the bare number, never `$`. `formatUsd` is only for amounts asobeast itself reports in dollars.
+
+Scores, checks and runs:
+
+- Traffic, difficulty and opportunity are 0 to 100 scores. `refresh` returns a snapshot diff to show; `run-daily` and `score` return 202: toast "queued" and let the cache refetch.
+- An active, never checked keyword (`latestDepth === null`) renders **Checking…** and the list polls every 15 s, at most 40 times, while one exists (`lib/keyword-checks.ts`); a never checked paused row keeps the dash.
+- An active keyword whose `latestCheckedOn` is older than yesterday UTC (`isCheckFresh`, `CHECK_FRESH_DAYS`) keeps its number, hides the daily delta chip, and its **Position history** button (`PositionHistoryPopover`) shows a clock (`staleCheckDay`, wording in `components/keywords/stale-check.ts`) whose name ends with the last check's day. "Today" is the UTC day of the keywords query's `dataUpdatedAt`, never the browser clock; a paused row or one without the field shows no day.
+- Every checked keyword has that button. Its popover reads one keyword's `GET /apps/{id}/rankings` and its market's listing changes only while open, draws without markers, shows `InlineQueryError` under the chart when only the changes fail, keeps the previous range with `keepPreviousData`, and caps its height at the space Radix measured, scrolling inside.
+- `PageActions` renders **Refresh**, **Run daily** and `RunProgress` only once the app's detail is cached (`useCachedQueryData`), so an unknown app offers no action and sends no run status request. `RunProgress` polls `GET /apps/{id}/run-status` every 10 s while `state` is `running` and the run is not paused (`paused` with any state but `complete` hides the pill and stops polling; `lib/run-progress.ts`) and invalidates the app's queries when a stage advances.
+- The top charts view defers its request with `useDeferredValue` and, while the shown chart is not the requested one, keeps it under `ChartPending`, a status pill fixed at the viewport bottom naming the requested store and country.
+
+## Frontend rule 6: Theming & a11y
+
+Basics:
+
+- shadcn primitives live in `components/ui` (owned, editable); dark mode uses the `next-themes` class strategy.
+- Icon-only buttons carry `aria-label`, dialogs a description, and every popover an accessible name (`aria-label` or `aria-labelledby` on `PopoverContent`; `e2e/popover-names.spec.ts`). Tables carry a caption; a table with no link or button that scrolls sideways is a named focusable region while it overflows (`scrollLabel` with `scrollFocus="overflow"` on `Table`, `lib/scroll-overflow.ts`; `e2e/structural-a11y.spec.ts` at 375 px). Charts keep `accessibilityLayer`. Colour is never the only signal.
+- A tab strip that switches a source without rendering a `TabsContent` uses `TabsOption`, never `TabsTrigger`, so no `aria-controls` names a missing id.
+
+Focus:
+
+- Focus never falls to `body`: a control that changes the URL stays mounted with no remounting `key`, a dialog opened from a button is driven by a trigger so Radix restores focus, and an opener replaced by another control hands focus to it.
+- A control that starts a request stays focusable while it runs: `aria-disabled` with a guard in `onClick` or `useSingleFlight`, dimmed by the base `Button`, never `disabled`. `e2e/request-focus.spec.ts` holds each such control's answer (`holdRequest`, `e2e/held-request.mts`), presses it from the keyboard and checks focus during and after, and closes each confirmation with Escape and Cancel; a new control or dialog of that kind adds its row there.
+- When a request removes or replaces the focused control, `lib/focus-handoff.ts` moves focus to a survivor only if the user has not moved it:
+  - `useFocusAfterCommit` focuses a target chosen before the removing commit (the Action Center bulk bar, the followed charts list); a caller naming the leaving control waits while focus stays on it;
+  - `useCloseFocusHandoff` gives a confirmation's `onCloseAutoFocus` the survivor a removal chose, usually `siblingControl` of the removed row, else `cardAction` (alert rows, competitor cards, API tokens);
+  - `returnFocusTo` returns focus to an opener that is not the trigger (the snapshot diff after Refresh, the switcher's Import app); `survivingNeighbour` picks the survivor;
+  - `armFocusHandoff` with `useFocusClaim` lets a replacement that mounts later take focus (the follow button, a chart row's competitor badge);
+  - `useFocusGroupClaim` hands focus to the first link or enabled button left in a group (a chart column's **Capture today** hands to **Open table**, the table actions' to the follow button; the activation arms `captureFocusKey`).
+- A confirmation that leaves its trigger disabled or replaced picks the target in `onCloseAutoFocus` (`FollowChartButton`, the reply composer).
+
+Accessible names:
+
+- A button a list repeats per row (a review card's **Reply**, **Translate**, **Show more**) has an `aria-label` that starts with its visible text and names its row (`reviewActionLabel`, `components/reviews/review-subject.ts`), and the repeated container is named too; rows whose names would collide add their position, `(2 of 3)`, from `reviewTwins`, and only those rows.
+- A button whose visible text several views share (**Export CSV**) is an `ExportCsvButton` (`components/ExportCsvButton.tsx`): the visible words start its name and the subject follows as visually hidden text, never an `aria-label` that rewords it (WCAG 2.5.3; `e2e/export-csv-names.spec.ts`).
+- A metric explanation is an `InfoTip` (`components/ui/info-tip.tsx`), an icon button opening a named and described popover on click, tap or keyboard, never a hover `Tooltip`, because it links the documentation and must work on touch. One per metric beside its label, or once in the header of a section whose cards repeat the metric. A popover holding data (the position history) is its own component on the `Popover` primitives.
+
+Translator safety (a browser translator replaces the page's text nodes; React then throws `NotFoundError`, which shows `error.tsx`, or silently keeps stale words):
+
+- Never put a bare text node beside an icon or spinner a render inserts or swaps. The base `Button` wraps each run of text children in one `<span>` holding one string, the `asChild` child included; a native control wraps its label itself; `SelectItem` and `SelectValue` do the same (`textInSpans`, `components/ui/text-spans.tsx`), because Radix portals the chosen text into the trigger; a table cell renders an element, not a bare string, because cells remount when columns rebuild.
+- Text that changes while its element stays mounted is one string per element (``{`${count} selected`}``, not `{count} selected`), a label beside a swapped icon included; `Separated` and `MatchedText` follow it. A list whose rows can show a different item next render keys rows by item (`serpRowKeys`).
+- `KeywordCell` draws `matchedIn` through `MatchedText`: each mark carries a hidden label naming its surface and a tint per surface (title green, subtitle and short description blue, keyword field amber), and toggling marks writes elements, never a bare text node. `e2e/translated-page.spec.ts` translates the page and presses each such control.
+
+Specific components:
+
+- `ScreenshotThumb` is drawn at a fixed height with `width: auto` and `object-contain`, never cropped, because the caption is at the top.
+- The header's action group is fixed width: below `sm` the health badge shows only its mark (words `sr-only sm:not-sr-only`), with a distinct mark per state (a dot while healthy or checking, a triangle degraded, a crossed circle unreachable). Degraded ("API up · database unavailable") is only the API's own 503 on `/health` (`answeredDatabaseDown`, `components/layout/health-answer.ts`); every other failed poll, the proxy's 502 and 504 included, reads unreachable. The poll never retries (`retry: false` on `healthOptions`). Pinned by `e2e/operator-status.spec.ts` and `e2e/header-narrow.spec.ts` (`scrollWidth <= innerWidth` at 320 and 375 px).
+- Text a store user wrote (a review's title, text and developer reply, the owner's reply field) carries `dir="auto"`, its author sits in a `<bdi>`, the text block fills its row so `text-align: start` works, and the card chrome stays left to right (`e2e/review-direction.spec.ts`).
+- `AlertRules` is one component for the add email alert, add webhook and edit dialogs; its switches and save buttons stay focusable during requests.
+
+## Frontend rule 7: The shell is a sidebar, and page width is a per-page decision
+
+- `(app)` routes render inside `SidebarProvider` and `SidebarInset`; `(auth)` routes (`/login`, `/register`, the link landings) a centered card without sidebar; `(wall)` routes (`/upgrade`, `/confirm-email`) full width under a header with the theme toggle and sign out, need a session, and are where an account owing a step is sent. Route groups keep every URL unchanged.
+- Only `/login` and `/register` are public (`PUBLIC_ROUTES`); `/upgrade` needs a session. Without a session cookie `src/proxy.ts` redirects to `/login?next=%2Fupgrade`. A stale cookie is redirected by the server render (`src/proxy.ts` forwards the path in `x-asobeast-requested-path` and `apiFetch` redirects to `signInTarget(...)` on a 401, `lib/api/server-session.ts`; `e2e/stale-session.spec.ts` sweeps every signed in route) and by `useSignedOutRedirect` once `/auth/status` answers on an open page. Sign in returns to `/upgrade` (`signedInDestination`); a 402 on `/upgrade` never redirects to itself; its queries wait for `useAuth().authenticated`.
+- Each page picks one width utility from `src/styles/layout.css`: `page-full` for tables and charts (keywords, rankings, competitors, top charts), `page-wide` at 1600 px for dashboards and grids (portfolio, overview, actions, alerts, changes, reviews, metadata, all of `/admin`), `page-checkout` at 1216 px for the billing wall, `page-reading` at 720 px for prose and forms (settings, integrations, audit, setup). Gutters come from `page-gutter`, which folds `env(safe-area-inset-*)` into the density scale; never per page padding.
+- A grid whose columns depend on the content box beside the collapsible sidebar uses a container query (`@container/dashboard`, `@container/metadata`), and its cards carry `min-w-0`. User supplied text in a flex item or shrink to fit column takes `wrap-anywhere`, because `break-words` keeps the box as wide as its longest word.
+
+## Frontend rule 8: Charts go through the chart system
+
+- `src/components/charts/theme.ts` owns axes, grid, margins, heights, the series palette and the stroke pattern order; no chart sets those inline or references `--chart-N`. The fill under a line is `SeriesFade` with `FADE_STOPS`; rank tiers, ticks and marker dots come from `charts/rank-layers.tsx`. Multi-series charts differ by stroke pattern as well as colour, and every chart has loading, empty and insufficient (fewer than four points) states at its real height.
+- A control that changes the query key of a mounted chart defers it with `useDeferredValue` (the overview cards' and ratings history's range tabs); otherwise `Suspense` hides the chart with `display: none` and Recharts measures 0 by 0 and warns on every render.
+- A chart leaves the app as a picture only through `lib/chart-image/` and `useChartImage` (`components/charts/use-chart-image.ts`, behind `ChartImageButtons` and the position history icon). `renderChartPng` clones the Recharts surface, resolves every `var()` and copies each element's computed paint (an `img` sees no stylesheet or web font), waits for the chart to rest with timers, never `requestAnimationFrame`, and draws caption and legend with the canvas text API in the viewer's theme colours. Copy hands the clipboard the PNG promise synchronously from the click and falls back to a download; the buttons exist only while the chart draws a line.
+- The keywords opportunity map (`components/keywords/map/`) is a Recharts `ScatterChart` through the system: `SCORE_AXIS_PROPS`, `THRESHOLD_LINE_PROPS`, `CHART_HEIGHT.hero`, four `ReferenceArea`s from `zone-layers.tsx`, one `Scatter` with `isAnimationActive={false}`; x is difficulty and y popularity, in the whole numbers the table shows.
+  - Fill is rank state (filled ranking, ring not) and shape is popularity certainty (circle measured, diamond an Apple floor answer), never colour alone; at most five dots are labelled (`labelledIds`).
+  - A dot is one module level `shape` function that reads its state from context (one created in the component remounts every dot and drops focus to `body`), with a transparent 24 px target.
+  - The `svg` is `role="group"` with `tabIndex={-1}`, `accessibilityLayer` on, and draws loading, empty, insufficient (`trendState`) and filtered out states at `CHART_HEIGHT.hero`.
+  - Its rows are the zone column's faceted rows (`useKeywordsAcrossZones`, memoized on the faceted row model so selection or sorting does not redraw), every filter but the zone, so a chosen zone dims dots instead of removing them.
+
+## Frontend rule 9: Tables go through the table kit, and judged numbers go through the grade scale
+
+- A data table is a `@tanstack/react-table` v9 instance built from `components/data-table/` (sortable header, search, facet, chips, column menu, filtered empty state), with pure logic in `lib/table/`; sorting and filtering run in the browser and live in the URL (rule 3). Column visibility is a local storage preference.
+- The keywords table's Columns menu also holds the `listingMarks` choice (default on, `listingMarksOption` in `components/keywords/listing-marks-option.tsx`, an `options` entry of `ColumnMenu`), read by the keyword cell through `ListingMarksContext` so the columns are not rebuilt.
+- A score, position, rating or coverage share is graded by `lib/grade.ts` (strong, fair, weak, poor) and rendered by `components/ui/graded.tsx`: the figure stays in ink, the grade word is in its accessible name and title, and every grade but fair carries a quiet marker, a filled dot for strong, a half filled one for weak and a ring for poor, so shape tells them apart, not colour. `--rank-band-*` and `--score-*` are only for charts showing a distribution.
+- A numeric column sets `numeric: true` in its column `meta`; a renderer that reads it passes it to `TableHead` and `TableCell`, which right align the header and the figures in tabular numerals. Rows are 44 px, or 36 px under `density="compact"` on `Table`.
+- A footer is a column definition's `footer`, rendered by `components/data-table/DataTableFooter.tsx` from `table.getFooterGroups()`, sticky and opaque, over `table.getRowModel().rows`, so it follows every filter. The keywords totals row (`lib/keyword-totals.ts`) puts the counts in the keyword cell, the average position and top 10 count in the position cell and the two score means under their columns, one string per element, counted in `aria-rowcount` and `aria-rowindex`.
+- The Insights column (`lib/keyword-insights.ts`) shows the first two applicable of dropping, page 1 close, beatable and not in listing, hidden below `md` by default.
+
+## Frontend rule 10: Orange is action, blue is information, status keeps its own hues
+
+- `--primary` is the brand orange (`--brand-500`) in both themes with dark ink text (`--primary-foreground`, 8.24:1), darkening to `--primary-hover`. It fills controls and is never text on a surface: it is 2.1:1 on the light background and reads as `--warning`.
+- A link is the text colour with a `decoration-faint-foreground` underline that darkens to the foreground on hover, never orange; an informational badge uses `--info` (blue); a meter reporting a level uses the status tokens, never `primary`.
+- One `default` button per independent task: a trigger opening a dialog is `outline`, the dialog's submit is `default`, a per row action is `secondary` or `outline`. Every focus ring is a solid 2 px ring in `--ring`, the ink colour, and the filled button's is offset from its fill.
+- Nothing else is orange: checkboxes and switches fill with the foreground when on, the active sidebar item is the `--sidebar-accent` surface in ink, and charts draw in the deeper `--brand-series` shade of the same hue (`--chart-1`), with the comparison period in `--chart-previous` and the inline bar tint in `--chart-tint`.
+- Panels are flat: `--elevation-raised` is none, a card is a surface with a hairline `--border`, only overlays carry `--elevation-overlay`, and the segmented control's raised option is the one `--elevation-segment`.
+- `TEXT_PAIRS` (`components/tokens/token-groups.ts`) lists every promised pair, status text on `--muted` and on its own tint included, and `tokens.test.ts` measures them in whole sRGB bytes. A `-subtle` tint is opaque, mixed with `--card`, so it never paints twice. `--primary-subtle` is the one orange tint (the selected plan card under its `--primary` ring) and carries foreground and muted text, never orange text.
+- The face is Geist (`@fontsource-variable/geist`, self hosted); identifiers use the system monospace stack, and a number is never monospace: it takes the `numeric` utility (tabular lining figures).
+- The scale in `styles/typography.css`: `hero` (2.25 rem, only the wall's heading and plan prices from `sm`), `metric` (1.75 rem, a metric tile's value), `title` (1.375 rem, the page title), `heading` (0.875 rem at 600, every section and card heading), `body` (0.875 rem), `dense` (0.8125 rem, table cells, list rows, controls), `label` (0.75 rem at 500, sentence case, no tracking), `caption` (0.75 rem) and `tick` (0.6875 rem, chart axes and sidebar group labels). `cn` (`lib/utils.ts`) knows every step through `TYPE_STEPS` (held to the scale by `typography.test.ts`), so a `text-title` on a primitive replaces its size instead of being merged away.
+- Text takes a token colour, never an opacity modifier (`styles/utility-classes.test.ts`); a paused or secondary row mutes with `--muted-foreground`. `e2e/contrast.spec.ts` runs axe `color-contrast` on every route in both themes with no exclusion.
+- Interface text writes the product as `AsoBeast` (`PRODUCT_NAME`, `lib/brand.ts`); technical identifiers stay lowercase (`lib/brand.test.ts`).

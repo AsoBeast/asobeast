@@ -1,4 +1,6 @@
 import type {
+  KeywordInspection,
+  KeywordInspectionList,
   AlertChannel,
   AlertFeedEvent,
   ChartFollowItem,
@@ -34,6 +36,8 @@ import {
   getStoreConnections,
   getChart,
   listChartFollows,
+  getKeywordInspection,
+  listKeywordInspections,
   getAction,
   getActionActivity,
   getAdminApps,
@@ -123,6 +127,10 @@ import {
 import { withReviewReply, withReviewRow } from "./review-reply-cache";
 import { runProgressInterval } from "./run-progress";
 import { keywordsPollInterval } from "./keyword-checks";
+import {
+  inspectionListPollInterval,
+  inspectionPollInterval,
+} from "./keyword-inspection-polling";
 import { keywordDiscoveriesPollInterval } from "./keyword-discoveries";
 import { firstImportPollInterval } from "./app-localizations";
 import {
@@ -582,6 +590,45 @@ export function seedChartCapture(client: QueryClient, page: ChartPage): void {
     queryKey: chartKeys.all,
     predicate: (query) => query.queryHash !== hashKey(seeded),
   });
+}
+
+export const keywordInspectionKeys = {
+  all: ["keyword-inspections"] as const,
+  list: ["keyword-inspections", "list"] as const,
+  detail: (id: string) => ["keyword-inspections", "detail", id] as const,
+};
+
+export const keywordInspectionsOptions = queryOptions({
+  queryKey: keywordInspectionKeys.list,
+  queryFn: () => listKeywordInspections(),
+  refetchInterval: (query) => inspectionListPollInterval(query.state),
+});
+
+export const keywordInspectionOptions = (id: string) =>
+  queryOptions({
+    queryKey: keywordInspectionKeys.detail(id),
+    queryFn: () => getKeywordInspection(id),
+    refetchInterval: (query) => inspectionPollInterval(query.state),
+  });
+
+export function seedKeywordInspection(
+  client: QueryClient,
+  inspection: KeywordInspection,
+): void {
+  client.setQueryData(keywordInspectionKeys.detail(inspection.id), inspection);
+  void refreshKeywordInspections(client);
+}
+
+export const refreshKeywordInspections = (client: QueryClient): Promise<void> =>
+  client.invalidateQueries({ queryKey: keywordInspectionKeys.list });
+
+export function forgetKeywordInspection(client: QueryClient, id: string): void {
+  client.setQueryData<KeywordInspectionList>(
+    keywordInspectionKeys.list,
+    (list) => list && { items: list.items.filter((item) => item.id !== id) },
+  );
+  client.removeQueries({ queryKey: keywordInspectionKeys.detail(id) });
+  void client.invalidateQueries({ queryKey: keywordInspectionKeys.list });
 }
 
 export const actionKeys = {

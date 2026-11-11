@@ -28,9 +28,7 @@ export function OrderSummary({ summary }: { summary: OrderSummaryModel }) {
           <dd className="text-title tabular-nums">{summary.dueToday}</dd>
         </div>
       </dl>
-      {summary.thenLine ? (
-        <p className="text-heading font-normal">{summary.thenLine}</p>
-      ) : null}
+      <p className="text-body">{summary.thenLine}</p>
       <p className="text-body text-muted-foreground">{summary.cancelLine}</p>
     </section>
   );

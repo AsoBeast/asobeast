@@ -4,10 +4,26 @@ services:
   postgres:
     image: postgres:18-alpine
     restart: unless-stopped
+    command:
+      [
+        "postgres",
+        "-c",
+        "shared_buffers=96MB",
+        "-c",
+        "hash_mem_multiplier=1",
+        "-c",
+        "maintenance_work_mem=32MB",
+        "-c",
+        "autovacuum_max_workers=2",
+        "-c",
+        "max_parallel_workers_per_gather=0",
+        "-c",
+        "max_parallel_maintenance_workers=0",
+      ]
     deploy:
       resources:
         limits:
-          memory: 384M
+          memory: 512M
     logging:
       driver: json-file
       options:
@@ -58,7 +74,7 @@ services:
     networks:
       - backend
   api:
-    image: ghcr.io/${ASOBEAST_IMAGE_OWNER:-asobeast}/asobeast-api:${ASOBEAST_IMAGE_TAG:-1.15.0} # x-release-please-version
+    image: ghcr.io/${ASOBEAST_IMAGE_OWNER:-asobeast}/asobeast-api:${ASOBEAST_IMAGE_TAG:-1.16.0} # x-release-please-version
     restart: unless-stopped
     stop_grace_period: 90s
     deploy:
@@ -108,7 +124,7 @@ services:
       - frontend
       - backend
   web:
-    image: ghcr.io/${ASOBEAST_IMAGE_OWNER:-asobeast}/asobeast-web:${ASOBEAST_IMAGE_TAG:-1.15.0} # x-release-please-version
+    image: ghcr.io/${ASOBEAST_IMAGE_OWNER:-asobeast}/asobeast-web:${ASOBEAST_IMAGE_TAG:-1.16.0} # x-release-please-version
     restart: unless-stopped
     deploy:
       resources:

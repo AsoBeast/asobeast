@@ -39,6 +39,25 @@ function planRefusal(retryAfterSeconds?: number): ApiError {
   });
 }
 
+describe("recoveryFor a lost request", () => {
+  it.each([
+    ["Chromium", "Failed to fetch"],
+    ["WebKit", "Load failed"],
+    ["Firefox", "NetworkError when attempting to fetch resource."],
+    ["the reporter", "Failed to fetch (app.example.com)"],
+  ])(
+    "explains a request %s lost on the way and offers a retry",
+    (_engine, message) => {
+      expect(recoveryFor(new TypeError(message))).toEqual({
+        title: "AsoBeast could not be reached",
+        body: "The connection dropped before the request finished. Check your connection, then try again.",
+        action: { kind: "retry" },
+        expected: true,
+      });
+    },
+  );
+});
+
 describe("recoveryFor", () => {
   it("offers a retry for an unknown error", () => {
     expect(recoveryFor(new Error("nope")).action).toEqual({ kind: "retry" });

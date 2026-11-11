@@ -125,7 +125,7 @@ describe('a trial checkout', () => {
 
   it('names the days in the submit message', () => {
     expect(trialSubmitMessage(7)).toBe(
-      '$0 today. Your 7 day trial ends on the date shown above, then the plan price is charged. Cancel any time from Settings, Billing.',
+      '$0 today. Your 7 day trial ends on the date shown above, then the plan price plus any VAT or sales tax is charged and renews until you cancel. Cancel any time from Settings, Billing.',
     );
   });
 });

@@ -2,6 +2,7 @@ import request from 'supertest';
 import type {
   AppSummary,
   CompetitorAnalysis,
+  PortfolioHistory,
   PortfolioSummary,
   TrackedKeywordItem,
 } from '@asobeast/shared';
@@ -498,6 +499,26 @@ describe('Read isolation', () => {
     expect(await fixture.db.app.count({ where: { isCompetitor: false } })).toBe(
       owned * 2,
     );
+  });
+
+  it('charts only the rankings of the workspace that asks for its history', async () => {
+    const historyOf = async (workspace: IsolationWorkspace) =>
+      (await workspace.agent.get('/portfolio/history').expect(200))
+        .body as PortfolioHistory;
+    const top10 = (history: PortfolioHistory) =>
+      history.points.map((point) => point.top10);
+
+    const forA = await historyOf(fixture.a);
+    const forB = await historyOf(fixture.b);
+
+    expect(top10(forA)).toEqual([1, 1, 1]);
+    expect(top10(forB)).toEqual([0, 0, 0]);
+    for (const [answer, other] of [
+      [forA, fixture.b],
+      [forB, fixture.a],
+    ] as const) {
+      expect(JSON.stringify(answer)).not.toContain(other.appleAppId);
+    }
   });
 
   it('counts nothing for another workspace app id in the action summary', async () => {

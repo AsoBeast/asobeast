@@ -157,6 +157,16 @@ describe("filterEvent", () => {
       "a render the visitor left",
       new Error("The destination stream closed early."),
     ],
+    ["a request Chromium lost", new TypeError("Failed to fetch")],
+    ["a request WebKit lost", new TypeError("Load failed")],
+    [
+      "a request Firefox lost",
+      new TypeError("NetworkError when attempting to fetch resource."),
+    ],
+    [
+      "a lost request whose host the reporter appended",
+      new TypeError("Failed to fetch (api.stripe.com)"),
+    ],
   ])("drops %s", (_reason, error) => {
     expect(filterEvent(event, { originalException: error })).toBeNull();
   });
@@ -167,6 +177,12 @@ describe("filterEvent", () => {
     ["a gateway that gave up on the api", apiError(504)],
     ["a refusal no page explains", apiError(400)],
     ["no exception at all", undefined],
+    ["a type error in the code", new TypeError("x is not a function")],
+    ["a plain error that reads like a lost request", new Error("Load failed")],
+    [
+      "a type error that only starts like a lost request",
+      new TypeError("Failed to fetch the plan"),
+    ],
   ])("keeps %s and scrubs it", (_reason, error) => {
     expect(filterEvent(event, { originalException: error })).toEqual(
       scrubEvent(event),

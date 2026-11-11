@@ -176,6 +176,20 @@ describe("valueAxis", () => {
     expect(valueAxis([50, 50]).domain).toEqual([50, 51]);
   });
 
+  it("keeps to five ticks for counts in the thousands", () => {
+    expect(valueAxis([300, 800])).toEqual({
+      domain: [200, 800],
+      valueTicks: [200, 400, 600, 800],
+    });
+    expect(valueAxis([0, 3200])).toEqual({
+      domain: [0, 4000],
+      valueTicks: [0, 1000, 2000, 3000, 4000],
+    });
+    expect(valueAxis([0, 61_000]).valueTicks).toEqual([
+      0, 20_000, 40_000, 60_000, 80_000,
+    ]);
+  });
+
   it("spans the whole scale for figures far apart", () => {
     expect(valueAxis([4, 96])).toEqual({
       domain: [0, 100],
@@ -229,6 +243,15 @@ describe("divergingTrend", () => {
     expect(trend.domain).toEqual([-4, 4]);
     expect(trend.valueTicks).toEqual([-4, -3, -2, -1, 0, 1, 2, 3, 4]);
     expect(trend.checked).toBe(2);
+  });
+
+  it("mirrors a busy day on nine ticks at most", () => {
+    const trend = divergingTrend([{ date: day(0), up: 640, down: 2900 }], 7);
+
+    expect(trend.domain).toEqual([-3000, 3000]);
+    expect(trend.valueTicks).toEqual([
+      -3000, -2000, -1000, 0, 1000, 2000, 3000,
+    ]);
   });
 
   it("answers no rows before anything was recorded", () => {

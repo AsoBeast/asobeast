@@ -1,4 +1,9 @@
-import { completionHours, nextDailyRun, nextWeeklyRun } from './daily-schedule';
+import {
+  completionHours,
+  nextDailyRun,
+  nextRun,
+  nextWeeklyRun,
+} from './daily-schedule';
 
 describe('nextDailyRun', () => {
   it('reads the next run from a daily cron', () => {
@@ -103,5 +108,50 @@ describe('completionHours', () => {
 
   it('completes instantly when a store has neither work nor capacity', () => {
     expect(completionHours(0, 0)).toBe(0);
+  });
+});
+
+describe('nextRun', () => {
+  const now = new Date('2026-11-11T12:00:00Z');
+
+  it('reads a weekday name exactly as its number', () => {
+    expect(nextRun('30 7 * * MON', now)).toEqual(
+      new Date('2026-11-16T07:30:00Z'),
+    );
+    expect(nextRun('30 7 * * mon', now)).toEqual(nextRun('30 7 * * 1', now));
+  });
+
+  it('answers the nearest of several days', () => {
+    expect(nextRun('30 7 * * MON,THU', now)).toEqual(
+      new Date('2026-11-12T07:30:00Z'),
+    );
+    expect(nextRun('0 4 * * 1-5', now)).toEqual(
+      new Date('2026-11-12T04:00:00Z'),
+    );
+  });
+
+  it('answers later today while the time is still ahead', () => {
+    expect(nextRun('0 18 * * *', now)).toEqual(
+      new Date('2026-11-11T18:00:00Z'),
+    );
+  });
+
+  it('rolls forward on the exact minute rather than reporting the past', () => {
+    expect(nextRun('0 12 * * WED', now)).toEqual(
+      new Date('2026-11-18T12:00:00Z'),
+    );
+  });
+
+  it('stays in utc across a month boundary', () => {
+    expect(nextRun('30 23 * * SUN', new Date('2026-08-30T23:45:00Z'))).toEqual(
+      new Date('2026-09-06T23:30:00Z'),
+    );
+  });
+
+  it('reports nothing for a pattern that is not cron', () => {
+    expect(nextRun('', now)).toBeNull();
+    expect(nextRun('  ', now)).toBeNull();
+    expect(nextRun('not a cron', now)).toBeNull();
+    expect(nextRun('60 4 * * 0', now)).toBeNull();
   });
 });

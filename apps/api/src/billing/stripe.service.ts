@@ -19,10 +19,12 @@ export class StripeService {
     return this.client !== null;
   }
 
+  requireConfigured(): void {
+    if (!this.client) throw notConfigured();
+  }
+
   private get stripe(): StripeApi {
-    if (!this.client) {
-      throw new ServiceUnavailableException('Billing is not configured');
-    }
+    if (!this.client) throw notConfigured();
     return this.client;
   }
 
@@ -93,11 +95,11 @@ export class StripeService {
     return this.stripe.subscriptions.retrieve(id);
   }
 
-  endTrialNow(id: string): Promise<Stripe.Subscription> {
-    return this.stripe.subscriptions.update(
+  cancelRefusedTrial(id: string): Promise<Stripe.Subscription> {
+    return this.stripe.subscriptions.cancel(
       id,
-      { trial_end: 'now' },
-      { idempotencyKey: `trial-end:${id}` },
+      { invoice_now: false, prorate: false },
+      { idempotencyKey: `trial-refused:${id}` },
     );
   }
 
@@ -116,6 +118,18 @@ export class StripeService {
     );
   }
 
+  keepRenewing(id: string, requestedAt: Date): Promise<Stripe.Subscription> {
+    return this.stripe.subscriptions.update(
+      id,
+      { cancel_at_period_end: false },
+      { idempotencyKey: `keep-renewing:${id}:${requestedAt.getTime()}` },
+    );
+  }
+
+  releaseSchedule(id: string): Promise<Stripe.SubscriptionSchedule> {
+    return this.stripe.subscriptionSchedules.release(id);
+  }
+
   retrieveInvoice(id: string): Promise<Stripe.Invoice> {
     return this.stripe.invoices.retrieve(id);
   }
@@ -131,4 +145,8 @@ export class StripeService {
   ): Stripe.Event {
     return this.stripe.webhooks.constructEvent(payload, signature, secret);
   }
+}
+
+function notConfigured(): ServiceUnavailableException {
+  return new ServiceUnavailableException('Billing is not configured');
 }

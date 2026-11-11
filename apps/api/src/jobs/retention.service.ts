@@ -45,6 +45,7 @@ export class RetentionService {
       ['auditScore', () => this.pruneAuditScores(now)],
       ['actionItem', () => this.pruneActions(now)],
       ['billingEvent', () => this.pruneBillingEvents(now)],
+      ['keywordInspection', () => this.pruneKeywordInspections(now)],
       ['aiCall', () => this.pruneAiCalls(now)],
       ['aiCallReservation', () => this.releaseAbandonedAiCalls(now)],
       ['storeReportInstance', () => this.pruneStoreReportInstances(now)],
@@ -171,6 +172,19 @@ export class RetentionService {
     }
     const { count } = await this.prisma.billingEvent.deleteMany({
       where: { receivedAt: { lt: this.cutoff(days, now) } },
+    });
+    return count;
+  }
+
+  private async pruneKeywordInspections(now: Date): Promise<number> {
+    const days = this.config.get('RETENTION_KEYWORD_INSPECTIONS_DAYS', {
+      infer: true,
+    });
+    if (days === 0) {
+      return 0;
+    }
+    const { count } = await this.prisma.keywordInspection.deleteMany({
+      where: { requestedAt: { lt: this.cutoff(days, now) } },
     });
     return count;
   }

@@ -15,6 +15,7 @@ import {
 } from "@asobeast/shared";
 import { actionIdFrom } from "./actions";
 import { ANNOTATION_WRITE_TOOLS } from "./annotations";
+import { INSPECTION_WRITE_TOOLS } from "./inspections";
 import { utcDate } from "./calendar-date";
 import { defineWriteTool, seg, type WriteTool } from "./define";
 
@@ -243,4 +244,5 @@ const CORE_WRITE_TOOLS: WriteTool[] = [
 export const MCP_WRITE_TOOLS: WriteTool[] = [
   ...CORE_WRITE_TOOLS,
   ...ANNOTATION_WRITE_TOOLS,
+  ...INSPECTION_WRITE_TOOLS,
 ];

@@ -50,29 +50,29 @@ export const progressLine = (screenshots: number | null): string =>
     ? "Analyzing your icon and screenshots"
     : `Analyzing your icon and ${screenshots} screenshot${screenshots === 1 ? "" : "s"}`;
 
-const SENDS_IMAGE_LINKS: ReadonlySet<AnalysisState> = new Set([
+const SENDS_CREATIVE: ReadonlySet<AnalysisState> = new Set([
   "never",
   "stale",
   "failed",
 ]);
 
-export const sendsImageLinks = (state: AnalysisState): boolean =>
-  SENDS_IMAGE_LINKS.has(state);
+export const sendsCreative = (state: AnalysisState): boolean =>
+  SENDS_CREATIVE.has(state);
 
 const CONFIGURED_PROVIDER = "the AI provider this instance is configured with";
 
-export const imageLinksLine = (
+export const creativeSentLine = (
   provider: AiProvider | null | undefined,
   model: string | null,
 ): string => {
   if (provider === "compatible") {
     return model === null
-      ? `Sends image links to ${CONFIGURED_PROVIDER}.`
-      : `Sends image links to ${model} on ${CONFIGURED_PROVIDER}.`;
+      ? `Sends the icon and screenshots to ${CONFIGURED_PROVIDER}.`
+      : `Sends the icon and screenshots to ${model} on ${CONFIGURED_PROVIDER}.`;
   }
   return model === null
-    ? "Sends image links to OpenAI."
-    : `Sends image links to OpenAI with ${model}.`;
+    ? "Sends the icon and screenshots to OpenAI."
+    : `Sends the icon and screenshots to OpenAI with ${model}.`;
 };
 
 export const AI_FEATURES_GUIDE = "https://docs.asobeast.com/guides/ai-features";

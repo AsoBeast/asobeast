@@ -3,7 +3,9 @@ import { Logger, OnModuleInit } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import { DelayedError, Job } from 'bullmq';
 import { ErrorTracking } from '../observability/error-tracking.service';
+import { isDatabaseUnavailable } from '../prisma/database-fault';
 import { PoolCapacity } from '../store-providers/egress/pool-capacity.service';
+import { pause } from '../store-providers/store-deadline';
 import { busyPoolRetryAt } from './busy-pool';
 import { reportJobFailure } from './job-failure';
 import { StoreJobsHandler } from './store-jobs.handler';
@@ -30,8 +32,8 @@ export abstract class StoreQueueWorker
   async process(job: Job, token?: string): Promise<void> {
     const startedAt = Date.now();
     this.logger.debug(`start ${job.name} #${job.id}`);
-    await this.matchPoolCapacity();
     try {
+      await this.matchPoolCapacity();
       await this.handler.handle(job);
       this.logger.debug(
         `done ${job.name} #${job.id} in ${Date.now() - startedAt}ms`,
@@ -42,6 +44,7 @@ export abstract class StoreQueueWorker
         this.logger.warn(
           `delayed ${job.name} #${job.id}: ${(error as Error).message}`,
         );
+        if (isDatabaseUnavailable(error)) await pause(retryAt - Date.now());
         await job.moveToDelayed(retryAt, token);
         throw new DelayedError();
       }
