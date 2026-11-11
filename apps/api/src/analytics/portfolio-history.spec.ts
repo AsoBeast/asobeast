@@ -153,18 +153,87 @@ describe('portfolioHistory', () => {
     expect(history.previous[0].climbed).toBe(0);
   });
 
-  it('reads each app at its own latest checked day', () => {
+  it('dates every check by its calendar day and carries the last figures of an app forward', () => {
     const earlier = daysAgo(3);
     const history = portfolioHistory(
       [
         app([row('fresh', 10, [[0, 1]])]),
-        app([row('stale', 10, [[0, 1]], earlier)], earlier),
+        app([row('stale', 10, [[0, null]], earlier)], earlier),
       ],
       7,
     );
 
     expect(history.points).toEqual([
-      { date: '2026-07-13', visibility: 100, top10: 2, climbed: 0, fell: 0 },
+      { date: '2026-07-10', visibility: 0, top10: 0, climbed: 0, fell: 0 },
+      { date: '2026-07-13', visibility: 50, top10: 1, climbed: 0, fell: 0 },
+    ]);
+  });
+
+  it('counts a move only on the day the app was checked', () => {
+    const earlier = daysAgo(2);
+    const history = portfolioHistory(
+      [
+        app([
+          row('fresh', 10, [
+            [0, 1],
+            [1, 1],
+            [2, 1],
+          ]),
+        ]),
+        app(
+          [
+            row(
+              'stale',
+              10,
+              [
+                [0, 4],
+                [1, 9],
+              ],
+              earlier,
+            ),
+          ],
+          earlier,
+        ),
+      ],
+      7,
+    );
+
+    expect(history.points.map(({ date, climbed }) => [date, climbed])).toEqual([
+      ['2026-07-10', 0],
+      ['2026-07-11', 1],
+      ['2026-07-12', 0],
+      ['2026-07-13', 0],
+    ]);
+    expect(history.points.at(-1)?.top10).toBe(2);
+  });
+
+  it('compares a stale app across its own range', () => {
+    const earlier = daysAgo(3);
+    const history = portfolioHistory(
+      [
+        app(
+          [
+            row(
+              'stale',
+              10,
+              [
+                [0, 4],
+                [7, 9],
+              ],
+              earlier,
+            ),
+          ],
+          earlier,
+        ),
+        app([row('fresh', 10, [[0, 1]])]),
+      ],
+      7,
+    );
+
+    expect(history.change.compared).toBe(true);
+    expect(history.change.movement.up).toBe(1);
+    expect(history.change.movers.up.map((mover) => mover.text)).toEqual([
+      'stale',
     ]);
   });
 

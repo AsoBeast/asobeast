@@ -5138,7 +5138,7 @@
     },
     "/portfolio/history": {
       "get": {
-        "description": "One point per checked day for the last days days and, as previous, for the same number of days before them: the visibility of every tracked keyword of every primary app as one figure, how many of them rank in the top 10, and how many climbed or fell against the app's previous checked day. change compares each app's latest checked day with the day days before it: the change in visibility and in the top 10 count (null when no app was checked that day), how many keywords climbed, fell, started ranking or dropped out, how many apps moved and the largest movers. Each app is read at its own latest checked day. days is 7, 30 or 90.",
+        "description": "One point per checked day for the last days days and, as previous, for the same number of days before them: the visibility of every tracked keyword of every primary app as one figure, how many of them rank in the top 10, and how many climbed or fell against the app's previous checked day. change compares each app's latest checked day with the day days before it: the change in visibility and in the top 10 count (null when no app was checked that day), how many keywords climbed, fell, started ranking or dropped out, how many apps moved and the largest movers. A point counts every app: one that was not checked that day keeps the figures of its latest earlier check, and its moves count only on the days it was checked. days is 7, 30 or 90.",
         "operationId": "PortfolioController_getHistory",
         "parameters": [
           {

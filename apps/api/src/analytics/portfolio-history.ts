@@ -34,6 +34,7 @@ interface CheckedMember {
   appId: string;
   rows: TrackedRow[];
   reference: Date;
+  lag: number;
   checks: CheckedRow[];
   days: number[];
   before: Map<number, number>;
@@ -49,14 +50,14 @@ const rankOf = (position: number | null): number =>
 
 function trafficByDay(
   row: TrackedRow,
-  reference: Date,
+  newest: Date,
   days: number[],
 ): Map<number, number | null> {
   const { metrics } = row.keyword;
   const traffic = new Map<number, number | null>();
   let index = 0;
   for (const day of [...days].reverse()) {
-    const date = addDays(reference, day).getTime();
+    const date = addDays(newest, day).getTime();
     while (index < metrics.length && metrics[index].date.getTime() > date) {
       index += 1;
     }
@@ -65,16 +66,16 @@ function trafficByDay(
   return traffic;
 }
 
-function checked(member: HistoryMember): CheckedMember | null {
-  const reference = member.referenceDate;
-  if (!reference) {
-    return null;
-  }
+function checked(
+  member: HistoryMember,
+  reference: Date,
+  newest: Date,
+): CheckedMember {
   const positions = member.rows.map(
     (row) =>
       new Map(
         row.keyword.rankings.map((ranking) => [
-          offsetOf(ranking.date, reference),
+          offsetOf(ranking.date, newest),
           ranking.position,
         ]),
       ),
@@ -86,11 +87,12 @@ function checked(member: HistoryMember): CheckedMember | null {
     appId: member.appId,
     rows: member.rows,
     reference,
+    lag: offsetOf(reference, newest),
     days,
     before: new Map(days.slice(1).map((day, index) => [day, days[index]])),
     checks: member.rows.map((row, index) => ({
       positions: positions[index],
-      traffic: trafficByDay(row, reference, days),
+      traffic: trafficByDay(row, newest, days),
     })),
   };
 }
@@ -111,23 +113,35 @@ function movedSince(
   return rankOf(now) < rankOf(then) ? 'climbed' : 'fell';
 }
 
+function latestCheck(days: number[], day: number): number | undefined {
+  for (let index = days.length - 1; index >= 0; index -= 1) {
+    if (days[index] <= day) {
+      return days[index];
+    }
+  }
+  return undefined;
+}
+
 function dayPoint(
   members: CheckedMember[],
   day: number,
   newest: Date,
 ): PortfolioHistoryPoint | null {
-  const captured = members.filter((member) => member.days.includes(day));
-  if (captured.length === 0) {
+  if (!members.some((member) => member.days.includes(day))) {
     return null;
   }
   const totals = { top10: 0, climbed: 0, fell: 0 };
   const keywords: VisibilityKeyword[] = [];
 
-  for (const member of captured) {
-    const before = member.before.get(day);
+  for (const member of members) {
+    const latest = latestCheck(member.days, day);
+    if (latest === undefined) {
+      continue;
+    }
+    const before = latest === day ? member.before.get(day) : undefined;
     for (const check of member.checks) {
-      const position = check.positions.get(day) ?? null;
-      keywords.push({ traffic: check.traffic.get(day) ?? null, position });
+      const position = check.positions.get(latest) ?? null;
+      keywords.push({ traffic: check.traffic.get(latest) ?? null, position });
       if (position !== null && position <= TOP_TEN) {
         totals.top10 += 1;
       }
@@ -163,7 +177,7 @@ function period(
 
 function baselineOf(member: CheckedMember, days: number): number | null {
   return (
-    BASELINE_SHIFTS.map((shift) => shift - days).find((day) =>
+    BASELINE_SHIFTS.map((shift) => member.lag + shift - days).find((day) =>
       member.days.includes(day),
     ) ?? null
   );
@@ -190,14 +204,14 @@ function rangeChange(
 
   const ranked = compared.map(({ member, baseline }) => ({
     appId: member.appId,
-    ...rankInsight(member.rows, member.reference, -baseline),
+    ...rankInsight(member.rows, member.reference, member.lag - baseline),
   }));
   const now = visibility(
     compared.flatMap(({ member }) => keywordsAt(member.rows, member.reference)),
   );
   const then = visibility(
     compared.flatMap(({ member, baseline }) =>
-      keywordsAt(member.rows, addDays(member.reference, baseline)),
+      keywordsAt(member.rows, addDays(member.reference, baseline - member.lag)),
     ),
   );
 
@@ -224,14 +238,17 @@ export function portfolioHistory(
   windows: HistoryMember[],
   days: PortfolioHistoryDays,
 ): PortfolioHistory {
-  const members = windows.flatMap((window) => checked(window) ?? []);
+  const references = windows.flatMap(({ referenceDate }) =>
+    referenceDate ? [referenceDate.getTime()] : [],
+  );
+  const newest = new Date(Math.max(0, ...references));
+  const members = windows.flatMap((window) =>
+    window.referenceDate ? [checked(window, window.referenceDate, newest)] : [],
+  );
   const change = rangeChange(members, days);
   if (members.length === 0) {
     return { days, points: [], previous: [], change };
   }
-  const newest = new Date(
-    Math.max(...members.map((member) => member.reference.getTime())),
-  );
   return {
     days,
     points: period(members, newest, 1 - days, 0),
