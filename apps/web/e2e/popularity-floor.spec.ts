@@ -15,7 +15,8 @@ const scoreButton = (page: Page, keyword: string, name: RegExp) =>
 const floorPopularity = (page: Page) =>
   scoreButton(page, "world flags", /Popularity 41.*Floor answer, Medium/);
 
-const tooltip = (page: Page) => page.getByRole("tooltip");
+const details = (page: Page) =>
+  page.getByRole("dialog", { name: /scoring details$/i });
 
 test("a floor answer names itself in the popularity button", async ({
   page,
@@ -29,37 +30,37 @@ test("a floor answer names itself in the popularity button", async ({
   await expect(button.locator('svg[aria-hidden="true"]')).toHaveCount(1);
 });
 
-test("the floor tooltip says what Apple answered", async ({ page }) => {
+test("the floor details say what Apple answered", async ({ page }) => {
   await page.goto(PAGE);
 
-  await (await hydrated(floorPopularity(page))).focus();
+  await (await hydrated(floorPopularity(page))).click();
 
-  await expect(tooltip(page)).toContainText(
+  await expect(details(page)).toContainText(
     "Apple answered its floor value (41) for the week of 18 Oct 2026.",
   );
-  await expect(tooltip(page)).toContainText(
+  await expect(details(page)).toContainText(
     "The last value above the floor was 63 in the week of 6 Sep 2026.",
   );
   await page.keyboard.press("Escape");
-  await expect(tooltip(page)).toHaveCount(0);
+  await expect(details(page)).toHaveCount(0);
 });
 
-test("the left out tooltip keeps the estimate line", async ({ page }) => {
+test("the left out details keep the estimate line", async ({ page }) => {
   await page.goto(PAGE);
 
   await (
     await hydrated(
       scoreButton(page, "capital cities quiz", /Popularity 38.*Floor answer/),
     )
-  ).focus();
+  ).click();
 
-  await expect(tooltip(page)).toContainText(
+  await expect(details(page)).toContainText(
     "Estimated from the first 25 App Store results",
   );
-  await expect(tooltip(page)).toContainText(
+  await expect(details(page)).toContainText(
     "Apple left this term out of its list for the week of 18 Oct 2026, so its popularity is below the floor of 41",
   );
-  await expect(tooltip(page)).toContainText(
+  await expect(details(page)).toContainText(
     "The last value above the floor was 58 in the week of 27 Sep 2026.",
   );
 });
@@ -73,10 +74,10 @@ test("a left out term never listed in the kept weeks names no last value", async
     await hydrated(
       scoreButton(page, "flag trivia", /Popularity 30.*Floor answer/),
     )
-  ).focus();
+  ).click();
 
-  await expect(tooltip(page)).toContainText("below the floor of 41");
-  await expect(tooltip(page)).not.toContainText(
+  await expect(details(page)).toContainText("below the floor of 41");
+  await expect(details(page)).not.toContainText(
     "The last value above the floor",
   );
 });
@@ -91,8 +92,8 @@ test("a listed term reads as before", async ({ page }) => {
   );
   await expect(button).not.toHaveAccessibleName(/Floor answer/);
   await expect(button.locator("svg")).toHaveCount(0);
-  await (await hydrated(button)).focus();
-  await expect(tooltip(page)).toContainText(
+  await (await hydrated(button)).click();
+  await expect(details(page)).toContainText(
     "Apple reports a search popularity of 71 for this term.",
   );
 });
@@ -104,9 +105,9 @@ test("difficulty says it carries lower confidence", async ({ page }) => {
     await hydrated(
       scoreButton(page, "world flags", /Difficulty \d+.*Medium confidence/),
     )
-  ).focus();
+  ).click();
 
-  await expect(tooltip(page)).toContainText("capped at Medium");
+  await expect(details(page)).toContainText("capped at Medium");
 });
 
 test("opportunity says it carries lower confidence", async ({ page }) => {
@@ -120,9 +121,9 @@ test("opportunity says it carries lower confidence", async ({ page }) => {
         /Opportunity \d+.*Derived score, lower confidence/,
       ),
     )
-  ).focus();
+  ).click();
 
-  await expect(tooltip(page)).toContainText("read it with lower confidence");
+  await expect(details(page)).toContainText("read it with lower confidence");
   await expect(
     scoreButton(page, "geo quiz", /Opportunity \d+.*Derived score/),
   ).not.toHaveAccessibleName(/lower confidence/);
@@ -132,7 +133,7 @@ test("the marker does not break keyboard use", async ({ page }) => {
   await page.goto(PAGE);
 
   const button = await hydrated(floorPopularity(page));
-  await button.focus();
+  await button.click();
   await page.keyboard.press("Escape");
 
   await expect(button).toBeFocused();
@@ -166,15 +167,15 @@ for (const theme of THEMES) {
   });
 }
 
-test("a translated page keeps the floor tooltip working", async ({ page }) => {
+test("a translated page keeps the floor details working", async ({ page }) => {
   const errors = collectDomErrors(page);
   await page.goto(PAGE);
   const button = await hydrated(floorPopularity(page));
 
   await translateText(page);
-  await button.focus();
+  await button.click();
 
-  await expect(tooltip(page)).toContainText(/Apple answered its floor value/i);
+  await expect(details(page)).toContainText(/Apple answered its floor value/i);
   await expect(button).toContainText("41");
   expect(errors).toEqual([]);
 });
