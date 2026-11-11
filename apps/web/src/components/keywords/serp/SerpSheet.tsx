@@ -39,6 +39,7 @@ import {
   SerpSkeleton,
 } from "./SerpStates";
 import { SerpSummary } from "./SerpSummary";
+import { serpOpenerFor } from "./serp-opener";
 import { useSerpParams } from "./use-serp-params";
 
 type ActionsFor = (entry: SerpEntryItem, role: SerpRole) => ReactNode;
@@ -241,9 +242,7 @@ export function SerpSheet({
         side="right"
         className="w-full gap-0 p-0 sm:max-w-xl"
         onCloseAutoFocus={(event) => {
-          const opener = document.querySelector<HTMLButtonElement>(
-            `[data-serp-keyword="${CSS.escape(shownId)}"]`,
-          );
+          const opener = serpOpenerFor(shownId);
           if (!opener) return;
           event.preventDefault();
           opener.focus();

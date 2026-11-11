@@ -23,6 +23,7 @@ const NONE: KeywordFilters = {
   pos: [],
   tag: [],
   zone: null,
+  change: null,
 };
 
 describe("keywordColumnFilters", () => {
@@ -76,6 +77,7 @@ describe("keywordFilterChips", () => {
         pos: ["top3", "unranked"],
         tag: [],
         zone: null,
+        change: null,
       }),
     ).toEqual([
       { key: "q", label: "Search: pomo" },
@@ -169,6 +171,29 @@ describe("the quoted search", () => {
 
     expect(filter("focus timer", '"focus timer"')).toBe(true);
     expect(filter("focus timer app", '"focus timer"')).toBe(false);
+  });
+});
+
+describe("the change since yesterday filter", () => {
+  it("filters the change column after the zone", () => {
+    expect(
+      keywordColumnFilters(
+        { ...NONE, zone: "quickWins", change: "fell" },
+        DEFAULT_ZONE_THRESHOLDS,
+      ).map((filter) => filter.id),
+    ).toEqual(["zone", "change"]);
+    expect(
+      keywordColumnFilters(
+        { ...NONE, change: "lost" },
+        DEFAULT_ZONE_THRESHOLDS,
+      ),
+    ).toEqual([{ id: "change", value: "lost" }]);
+  });
+
+  it("names the choice in a chip", () => {
+    expect(keywordFilterChips({ ...NONE, change: "moved" })).toEqual([
+      { key: "change", label: "Since yesterday: Moved" },
+    ]);
   });
 });
 

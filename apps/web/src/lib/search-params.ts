@@ -54,6 +54,7 @@ import {
 import { DEFAULT_MCP_CLIENT, MCP_CLIENTS } from "./mcp-snippets";
 import { GAP_TABS } from "./gap-lists";
 import { GRADES } from "./grade";
+import { KEYWORD_MOVE_FILTERS } from "./keyword-day-change";
 import { KEYWORD_ZONES } from "./keyword-zones";
 import { POSITION_BANDS, VERSUS, type ActivityStatus } from "./table/facets";
 
@@ -63,6 +64,7 @@ export const KEYWORD_TABLE_SORTS = [
   ...KEYWORD_SORTS,
   "keyword",
   "source",
+  "change",
   "delta7d",
   "acquisitions",
   "reveal",
@@ -117,6 +119,8 @@ export const keywordTagsParser = parseAsDistinctArrayOf(
 
 export const keywordZoneParser = parseAsStringLiteral(KEYWORD_ZONES);
 
+export const keywordMoveParser = parseAsStringLiteral(KEYWORD_MOVE_FILTERS);
+
 export const keywordClassParser = parseAsDistinctArrayOf(
   parseAsStringLiteral(KEYWORD_CLASSES),
 ).withDefault([]);
@@ -133,6 +137,7 @@ export const keywordFilterParsers = {
   pos: positionBandParser,
   tag: keywordTagsParser,
   zone: keywordZoneParser,
+  change: keywordMoveParser,
 };
 
 export const COMBINATION_WORD_FILTERS = [

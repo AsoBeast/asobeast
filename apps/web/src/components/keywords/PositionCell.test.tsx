@@ -68,10 +68,10 @@ describe("PositionCell", () => {
     expect(markup).not.toContain("since yesterday");
   });
 
-  it("W-POS-02 a fresh check keeps the daily change and a history button", () => {
+  it("W-POS-02 a fresh check keeps a history button and leaves the change to its column", () => {
     const markup = render(keyword({ latestCheckedOn: "2026-10-21" }));
 
-    expect(markup).toContain("since yesterday");
+    expect(markup).not.toContain("since yesterday");
     expect(markup).toContain('aria-label="Position history: focus timer"');
     expect(markup).toContain(CHART);
     expect(markup).not.toContain(CLOCK);
@@ -89,7 +89,6 @@ describe("PositionCell", () => {
 
     expect(latestCheckedOn).toBe(TODAY);
     expect(markup).not.toContain(CLOCK);
-    expect(markup).toContain("since yesterday");
   });
 
   it("W-POS-05 a stale check that did not find the app keeps its bound", () => {
@@ -152,7 +151,7 @@ describe("PositionCell", () => {
     expect(markup).toContain('aria-label="Position history: focus timer"');
   });
 
-  it("W-POS-11 a keyword that lost its rank says where it was in one string", () => {
+  it("W-POS-11 a keyword that lost its rank says where it was under the bound", () => {
     const markup = render(
       keyword({
         latestPosition: null,
@@ -163,7 +162,8 @@ describe("PositionCell", () => {
       }),
     );
 
-    expect(markup).toContain(">&gt;200 (was #14)<");
+    expect(markup).toContain("<span>&gt;200</span>");
+    expect(markup).toContain(">was #14<");
     expect(markup).toContain(
       `title="Last ranked #14 on ${formatDate("2026-10-21")}"`,
     );
@@ -179,7 +179,7 @@ describe("PositionCell", () => {
       }),
     );
 
-    expect(markup).toContain(">&gt;200 (was #6)<");
+    expect(markup).toContain(">was #6<");
     expect(markup).not.toContain("Last ranked");
   });
 
@@ -188,8 +188,8 @@ describe("PositionCell", () => {
       keyword({ lastRankedPosition: null, lastRankedOn: null }),
     );
 
-    expect(markup).not.toContain("(was");
-    expect(markup).toContain("since yesterday");
+    expect(markup).not.toContain(">was #");
+    expect(markup).toMatch(/title="Position \d+[^"]*"[^>]*min-w-9/);
   });
 
   it("W-POS-14 a stale lost keyword keeps the hint and the clock", () => {
@@ -202,7 +202,7 @@ describe("PositionCell", () => {
       }),
     );
 
-    expect(markup).toContain("(was #14)");
+    expect(markup).toContain(">was #14<");
     expect(markup).toContain(CLOCK);
   });
 

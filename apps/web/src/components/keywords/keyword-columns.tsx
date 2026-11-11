@@ -1,7 +1,6 @@
 "use client";
 
 import type { FilterFn } from "@tanstack/react-table";
-import { ListOrdered } from "lucide-react";
 import type {
   KeywordBucket,
   KeywordClass,
@@ -9,12 +8,18 @@ import type {
   TrackedKeywordItem,
 } from "@asobeast/shared";
 import type { KeywordTableFeatures } from "./keyword-table-features";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { InfoTip } from "@/components/ui/info-tip";
 import { DeltaChip } from "@/components/ui/delta-chip";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
+import {
+  dayChange,
+  dayChangeRank,
+  matchesMoveFilter,
+  type KeywordMoveFilter,
+} from "@/lib/keyword-day-change";
 import { tagsIn } from "@/lib/keyword-tags";
+import { DayChangeCell } from "./DayChangeCell";
 import { attributeColumns } from "./keyword-attribute-columns";
 import { SCORE_COMPARABILITY } from "./keyword-csv";
 import { keywordZoneFilter } from "./keyword-filters";
@@ -40,9 +45,11 @@ import {
   volatilityColumn,
 } from "./keyword-fact-columns";
 import {
+  dayChangeFooter,
   difficultyFooter,
   keywordCountFooter,
   movedFooter,
+  opportunityFooter,
   popularityFooter,
   positionFooter,
 } from "./KeywordTotalsFooters";
@@ -107,11 +114,12 @@ export function keywordColumns({
   return columnHelper.columns([
     ...identityColumns(),
     positionColumn(today, { appId, store, homeCountry, multiMarket }),
+    changeColumn(today),
     deltaColumn(),
     ...scoreColumns(),
     insightsColumn(today, multiMarket),
     ...(store === "GOOGLE_PLAY" ? [acquisitionsColumn()] : []),
-    topAppsColumn(),
+    topAppsColumn(onOpenSerp),
     ...attributeColumns(),
     volatilityColumn(),
     addedColumn(),
@@ -214,6 +222,28 @@ function positionColumn(today: string, history: PositionHistoryContext) {
   });
 }
 
+function changeColumn(today: string) {
+  return columnHelper.accessor(
+    (row) => nullsLast(dayChangeRank(dayChange(row, today))),
+    {
+      id: "change",
+      meta: { label: "Change", phone: true },
+      ...SORTABLE,
+      sortDescFirst: true,
+      filterFn: (row, _id, filter: KeywordMoveFilter) =>
+        matchesMoveFilter(row.original, today, filter),
+      header: ({ column }) => <SortableHeader column={column} label="Change" />,
+      footer: ({ table }) => dayChangeFooter({ table }, today),
+      cell: ({ row }) => (
+        <DayChangeCell
+          change={dayChange(row.original, today)}
+          muted={!row.original.active}
+        />
+      ),
+    },
+  );
+}
+
 function deltaColumn() {
   return columnHelper.accessor(
     (row) => (row.positionDelta7d === null ? undefined : -row.positionDelta7d),
@@ -232,6 +262,9 @@ function deltaColumn() {
           <DeltaChip
             value={row.original.positionDelta7d}
             period="over 7 days"
+            className={
+              row.original.active ? undefined : "text-muted-foreground"
+            }
           />
         </span>
       ),
@@ -250,6 +283,7 @@ function scoreColumns() {
       header: ({ column }) => (
         <SortableHeader column={column} label="Opportunity" />
       ),
+      footer: opportunityFooter,
       cell: ({ row }) => (
         <DerivedScoreCell
           value={scoreValue(row.original, "opportunity")}
@@ -354,25 +388,14 @@ function actionsColumn({
     enableHiding: false,
     header: () => <span className="sr-only">Actions</span>,
     cell: ({ row, table }) => (
-      <div className="flex items-center justify-end gap-1 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100 has-data-[state=open]:opacity-100 pointer-fine:opacity-0">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="pointer-coarse:size-11"
-          aria-label={`View search results for ${row.original.text}`}
-          data-serp-keyword={row.original.keywordId}
-          onClick={() => onOpenSerp(row.original.keywordId)}
-        >
-          <ListOrdered />
-        </Button>
-        <KeywordRowActions
-          appId={appId}
-          keyword={row.original}
-          marketTags={() =>
-            tagsIn(table.getCoreRowModel().rows.map((entry) => entry.original))
-          }
-        />
-      </div>
+      <KeywordRowActions
+        appId={appId}
+        keyword={row.original}
+        marketTags={() =>
+          tagsIn(table.getCoreRowModel().rows.map((entry) => entry.original))
+        }
+        onOpenSerp={() => onOpenSerp(row.original.keywordId)}
+      />
     ),
   });
 }

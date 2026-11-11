@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { ArrowDownToLine } from "lucide-react";
+import { ArrowDownToLine, History } from "lucide-react";
 import type {
   ScoreProvenance,
   ScoringConfidence,
@@ -10,6 +10,11 @@ import type {
 import { Badge } from "@/components/ui/badge";
 import { Meter } from "@/components/ui/meter";
 import { gradeFill } from "@/components/ui/graded";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Tooltip,
   TooltipContent,
@@ -37,6 +42,7 @@ function ScoreButton({
   summary,
   emphasize,
   floorAnswer,
+  outdated,
   children,
 }: {
   value: number | null;
@@ -45,6 +51,7 @@ function ScoreButton({
   summary: string;
   emphasize?: boolean;
   floorAnswer?: boolean;
+  outdated?: boolean;
   children: ReactNode;
 }) {
   if (value === null) {
@@ -66,18 +73,26 @@ function ScoreButton({
   const graded = grade(metric, valueLabel);
   const gradeWords = graded ? `, ${gradeLabel(graded)}` : "";
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
+    <Popover>
+      <PopoverTrigger asChild>
         <button
           type="button"
           data-grade={graded ?? undefined}
+          data-outdated={outdated || undefined}
           aria-label={`${label} ${valueLabel}${gradeWords}. ${summary}. Show scoring details`}
           className={cn(
-            "ml-auto flex w-14 flex-col items-end gap-1 rounded-sm numeric text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            "ml-auto flex w-14 cursor-pointer flex-col items-end gap-1 rounded-sm numeric outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            outdated ? "text-muted-foreground" : "text-foreground",
             emphasize ? "font-semibold" : "font-medium",
           )}
         >
           <span className="inline-flex items-center gap-1">
+            {outdated ? (
+              <History
+                aria-hidden="true"
+                className="size-3 text-muted-foreground"
+              />
+            ) : null}
             {floorAnswer ? (
               <ArrowDownToLine
                 aria-hidden="true"
@@ -88,11 +103,17 @@ function ScoreButton({
           </span>
           {graded ? <Meter value={value} fill={gradeFill(graded)} /> : null}
         </button>
-      </TooltipTrigger>
-      <TooltipContent className="max-w-sm flex-col items-start gap-1.5">
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        collisionPadding={16}
+        aria-label={`${label} scoring details`}
+        className="w-80 max-w-(--radix-popover-content-available-width) items-start gap-1.5 p-3 text-left text-body font-normal whitespace-normal text-muted-foreground"
+      >
+        <p className="text-heading text-foreground">{`${label} ${valueLabel}${gradeWords}`}</p>
         {children}
-      </TooltipContent>
-    </Tooltip>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -146,6 +167,7 @@ export function ScoreCell({
       metric={metric}
       emphasize={emphasize}
       floorAnswer={floorAnswer}
+      outdated={outdated}
       summary={scoreSummary(provenance, outdated, floorAnswer)}
     >
       {outdated ? <span>{OUTDATED_SCORE_DETAIL}</span> : null}
@@ -222,7 +244,7 @@ function ScoreProvenanceDetails({
       <span>Formula {provenance.formulaVersion}</span>
       <span>{capturedAtLabel(provenance.capturedAt)}</span>
       <Badge variant="secondary">{confidence} confidence</Badge>
-      <span className="max-w-xs text-background">
+      <span className="text-caption">
         Confidence measures input completeness, not ranking accuracy.
       </span>
     </>

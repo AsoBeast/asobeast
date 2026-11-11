@@ -1,6 +1,8 @@
-import type { KeywordTopApp } from "@asobeast/shared";
+import { useId } from "react";
+import type { KeywordTopApp, TrackedKeywordItem } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { cn } from "@/lib/utils";
+import { rememberSerpOpener } from "./serp/serp-opener";
 
 const ICON_SIZE = 24;
 
@@ -14,10 +16,14 @@ const appLine = (app: KeywordTopApp): string =>
   `#${app.position} ${app.title}${ROLE_WORDS[app.role]}`;
 
 export function TopAppsCell({
-  apps,
+  keyword,
+  onOpen,
 }: {
-  apps: readonly KeywordTopApp[] | null | undefined;
+  keyword: Pick<TrackedKeywordItem, "keywordId" | "text" | "topApps">;
+  onOpen: () => void;
 }) {
+  const appsId = useId();
+  const apps = keyword.topApps;
   if (!apps || apps.length === 0) {
     return (
       <span className="text-muted-foreground">
@@ -28,26 +34,43 @@ export function TopAppsCell({
       </span>
     );
   }
+  const own = apps.find((app) => app.role === "own");
   return (
-    <span
-      role="group"
-      aria-label={`Top apps: ${apps.map(appLine).join(", ")}`}
-      className="flex items-center"
+    <button
+      type="button"
+      aria-label={`View search results for ${keyword.text}`}
+      aria-describedby={appsId}
+      data-serp-keyword={keyword.keywordId}
+      onClick={(event) => {
+        rememberSerpOpener(event.currentTarget);
+        onOpen();
+      }}
+      className="group/apps -m-1 flex cursor-pointer items-center rounded-md p-1 outline-none transition-colors duration-150 ease-out hover:bg-card hover:shadow-[inset_0_0_0_1px_var(--border)] focus-visible:ring-2 focus-visible:ring-ring"
     >
+      <span id={appsId} className="sr-only">
+        {`Top apps: ${apps.map(appLine).join(", ")}`}
+      </span>
       {apps.map((app) => (
         <span
           key={app.position}
           title={appLine(app)}
           data-role={app.role}
           className={cn(
-            "-ml-1.5 flex rounded-md ring-2 ring-card first:ml-0 group-hover/row:ring-muted group-data-[state=selected]/row:ring-accent",
+            "relative -ml-1.5 flex rounded-md ring-2 ring-card first:ml-0 group-hover/row:ring-muted group-hover/apps:ring-card group-data-[state=selected]/row:ring-accent",
             app.role === "own" &&
-              "z-10 ring-foreground group-hover/row:ring-foreground group-data-[state=selected]/row:ring-foreground",
+              "z-10 after:absolute after:inset-x-0.5 after:-bottom-1.5 after:h-0.5 after:rounded-full after:bg-foreground",
           )}
         >
           <AppIcon src={app.iconUrl} size={ICON_SIZE} />
         </span>
       ))}
-    </span>
+      {own ? (
+        <span
+          aria-hidden
+          data-slot="own-rank"
+          className="numeric ml-1.5 text-tick font-medium text-foreground keywords-snug:hidden"
+        >{`you #${own.position}`}</span>
+      ) : null}
+    </button>
   );
 }

@@ -3,8 +3,8 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { utcDayOf } from "@asobeast/shared";
 import { LEDE } from "@/components/layout/panel-classes";
+import { keywordMoves, movesSentence } from "@/lib/keyword-day-change";
 import { keywordCountriesOptions, keywordsOptions } from "@/lib/queries";
-import { keywordMoves, movesSentence } from "./keyword-moves";
 
 const FIGURE = "numeric font-medium text-foreground";
 
@@ -15,7 +15,7 @@ export function TrackedSummary({ id, market }: { id: string; market: string }) {
   );
   const total = markets.reduce((sum, entry) => sum + entry.keywordCount, 0);
   const active = keywords.filter((keyword) => keyword.active).length;
-  const moves = keywordMoves(keywords, utcDayOf(dataUpdatedAt));
+  const moved = movesSentence(keywordMoves(keywords, utcDayOf(dataUpdatedAt)));
 
   return (
     <p className={LEDE} aria-live="polite">
@@ -30,7 +30,7 @@ export function TrackedSummary({ id, market }: { id: string; market: string }) {
         <span>{` keyword${keywords.length === 1 ? "" : "s"} · `}</span>
         <span className={FIGURE}>{active}</span> active
       </span>
-      {keywords.length > 0 ? <span>{`. ${movesSentence(moves)}`}</span> : null}
+      {moved === null ? null : <span>{`. ${moved}`}</span>}
     </p>
   );
 }

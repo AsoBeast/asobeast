@@ -4,9 +4,11 @@ import type { TrackedKeywordItem } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
 import type { KeywordTableFeatures } from "./keyword-table-features";
 import {
+  dayChangeFooter,
   difficultyFooter,
   keywordCountFooter,
   movedFooter,
+  opportunityFooter,
   popularityFooter,
   positionFooter,
 } from "./KeywordTotalsFooters";
@@ -111,6 +113,39 @@ describe("the keyword totals footers", () => {
     expect(textsOf(renderToStaticMarkup(movedFooter(moved)))).toEqual([
       "1 up",
       "2 down",
+    ]);
+  });
+
+  it("counts yesterday's moves and the keywords that dropped out", () => {
+    const today = "2026-11-11";
+    const checked = { latestCheckedOn: today };
+    const moved = tableOf([
+      keyword({ ...checked, latestPosition: 3, previousPosition: 5 }),
+      keyword({ ...checked, latestPosition: 9, previousPosition: 4 }),
+      keyword({ ...checked, latestPosition: null, previousPosition: 14 }),
+      keyword({ ...checked, latestPosition: 7, previousPosition: 7 }),
+      keyword({
+        ...checked,
+        active: false,
+        latestPosition: 30,
+        previousPosition: 20,
+      }),
+    ]);
+
+    expect(
+      textsOf(renderToStaticMarkup(dayChangeFooter(moved, today))),
+    ).toEqual(["1 up, 1 down", "1 lost"]);
+  });
+
+  it("averages opportunity over the scored rows", () => {
+    const scored = tableOf([
+      keyword({ opportunity: 80 }),
+      keyword({ opportunity: 41 }),
+      keyword({}),
+    ]);
+
+    expect(textsOf(renderToStaticMarkup(opportunityFooter(scored)))).toEqual([
+      "avg 61",
     ]);
   });
 

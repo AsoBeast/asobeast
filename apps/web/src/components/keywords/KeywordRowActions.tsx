@@ -1,24 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   useIsMutating,
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { MoreHorizontal, Shapes, Sparkles, Tag, Trash2 } from "lucide-react";
+import {
+  ListOrdered,
+  MoreHorizontal,
+  Pause,
+  Play,
+  Shapes,
+  Sparkles,
+  Tag,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { isKeywordClass, type TrackedKeywordItem } from "@asobeast/shared";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -32,10 +31,9 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Switch } from "@/components/ui/switch";
-import { removeKeyword, scoreKeyword } from "@/lib/api";
+import { scoreKeyword } from "@/lib/api";
 import { queuedToast } from "@/lib/queued-toast";
-import { invalidateKeywordMutation, invalidateKeywords } from "@/lib/queries";
+import { invalidateKeywords } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 import {
   classChoice,
@@ -43,20 +41,25 @@ import {
   KEYWORD_CLASS_OPTIONS,
 } from "./keyword-class";
 import { KeywordAnnotationsDialog } from "./KeywordAnnotationsDialog";
+import { rememberSerpOpener } from "./serp/serp-opener";
+import { StopTrackingDialog } from "./StopTrackingDialog";
 import { useKeywordUpdate } from "./useKeywordUpdate";
 
 export function KeywordRowActions({
   appId,
   keyword,
   marketTags,
+  onOpenSerp,
 }: {
   appId: string;
   keyword: TrackedKeywordItem;
   marketTags: () => string[];
+  onOpenSerp: () => void;
 }) {
   const queryClient = useQueryClient();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const menu = useRef<HTMLButtonElement>(null);
 
   const update = useKeywordUpdate(appId, keyword);
   const checkedClass = classChoice(keyword);
@@ -77,38 +80,31 @@ export function KeywordRowActions({
   });
   const scoreOnce = useSingleFlight(score);
 
-  const remove = useMutation({
-    mutationFn: () => removeKeyword(appId, keyword.keywordId),
-    onSuccess: () => {
-      invalidateKeywordMutation(queryClient, appId);
-      setConfirmOpen(false);
-      toast.success(`Stopped tracking ${keyword.text}`);
-    },
-    onError: () => toast.error(`Could not stop tracking ${keyword.text}`),
-  });
-  const removeOnce = useSingleFlight(remove);
-
   return (
-    <div className="flex items-center justify-end gap-2">
-      <Switch
-        checked={keyword.active}
-        disabled={update.isPending}
-        onCheckedChange={(next) => update.mutate({ active: next })}
-        aria-label="Track keyword"
-      />
-
+    <div className="flex items-center justify-end">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
+            ref={menu}
             variant="ghost"
             size="icon-sm"
-            className="pointer-coarse:size-11"
-            aria-label="Keyword actions"
+            className="text-muted-foreground hover:text-foreground data-[state=open]:text-foreground pointer-coarse:size-11"
+            aria-label={`Keyword actions for ${keyword.text}`}
+            data-serp-keyword={keyword.keywordId}
           >
             <MoreHorizontal />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="min-w-52">
+          <DropdownMenuItem
+            onSelect={() => {
+              rememberSerpOpener(menu.current);
+              onOpenSerp();
+            }}
+          >
+            <ListOrdered />
+            View search results
+          </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => setEditOpen(true)}>
             <Tag />
             Edit tags and note
@@ -146,6 +142,17 @@ export function KeywordRowActions({
             <Sparkles />
             Score now
           </DropdownMenuItem>
+          <DropdownMenuItem
+            aria-disabled={update.isPending || undefined}
+            className="aria-disabled:opacity-60"
+            onSelect={(event) => {
+              if (update.isPending) event.preventDefault();
+              else update.mutate({ active: !keyword.active });
+            }}
+          >
+            {keyword.active ? <Pause /> : <Play />}
+            <span>{keyword.active ? "Pause tracking" : "Resume tracking"}</span>
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"
@@ -163,34 +170,16 @@ export function KeywordRowActions({
         appId={appId}
         keyword={keyword}
         marketTags={marketTags}
+        returnFocus={menu}
       />
 
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Stop tracking {keyword.text}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Ranking history for this keyword stops accruing. You can add it
-              again later, but the gap in history will remain.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={remove.isPending}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={remove.isPending}
-              onClick={(event) => {
-                event.preventDefault();
-                removeOnce();
-              }}
-            >
-              {remove.isPending ? "Removing…" : "Stop tracking"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <StopTrackingDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        appId={appId}
+        keyword={keyword}
+        returnFocus={menu}
+      />
     </div>
   );
 }

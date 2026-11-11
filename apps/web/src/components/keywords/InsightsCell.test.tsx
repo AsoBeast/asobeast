@@ -47,6 +47,15 @@ describe("InsightsCell", () => {
     expect(labels.join(" ")).not.toContain("Fell on 3 checks in a row");
   });
 
+  it("keeps the first badge and counts the rest when the table is narrow", () => {
+    const markup = renderToStaticMarkup(
+      <InsightsCell keyword={POMODORO} today={TODAY} multiMarket={false} />,
+    );
+
+    expect(markup.match(/keywords-snug:hidden/g)).toHaveLength(1);
+    expect(markup).toMatch(/keywords-snug:inline[^>]*>\+1</);
+  });
+
   it("renders nothing for a keyword without an insight", () => {
     expect(
       renderToStaticMarkup(

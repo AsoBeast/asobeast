@@ -12,7 +12,13 @@ export function PositionTrend({
 }) {
   const shape = positionTrendShape(checks);
   if (!shape) {
-    return <span aria-hidden style={{ width: TREND_WIDTH }} />;
+    return (
+      <span
+        aria-hidden
+        style={{ width: TREND_WIDTH }}
+        className="keywords-tight:hidden"
+      />
+    );
   }
   return (
     <svg
@@ -22,7 +28,7 @@ export function PositionTrend({
       width={TREND_WIDTH}
       height={TREND_HEIGHT}
       viewBox={`0 0 ${TREND_WIDTH} ${TREND_HEIGHT}`}
-      className="shrink-0 text-muted-foreground"
+      className="shrink-0 text-muted-foreground keywords-tight:hidden"
     >
       <path
         d={shape.path}

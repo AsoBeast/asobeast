@@ -38,7 +38,7 @@ async function openEditor(page: Page, text: string) {
   return dialog;
 }
 
-test("the switch still pauses a keyword through the shared update", async ({
+test("the row menu pauses a keyword through the shared update", async ({
   page,
 }) => {
   await openKeywords(page);
@@ -46,28 +46,29 @@ test("the switch still pauses a keyword through the shared update", async ({
   const patch = page.waitForRequest((request) => request.method() === "PATCH");
   await (
     await hydrated(
-      row(page, "focus timer").getByRole("switch", { name: "Track keyword" }),
+      row(page, "focus timer").getByRole("button", { name: "Keyword actions" }),
     )
   ).click();
+  await page.getByRole("menuitem", { name: "Pause tracking" }).click();
 
   expect((await patch).postDataJSON()).toEqual({ active: false });
 });
 
-test("the switch keeps one name whether the keyword is tracked or paused", async ({
-  page,
-}) => {
-  await openKeywords(page);
-  const toggle = row(page, "focus timer").getByRole("switch", {
-    name: "Track keyword",
-  });
+test("the row menu offers to resume a paused keyword", async ({ page }) => {
+  await page.goto("/apps/app-1/keywords");
+  const paused = row(page, "time blocking");
+  await expect(paused.getByText("Paused")).toBeVisible();
 
-  await expect(toggle).toBeChecked();
-  await (await hydrated(toggle)).click();
-
-  await expect(toggle).not.toBeChecked();
+  const patch = page.waitForRequest((request) => request.method() === "PATCH");
+  await (
+    await hydrated(paused.getByRole("button", { name: "Keyword actions" }))
+  ).click();
   await expect(
-    row(page, "focus timer").getByRole("switch", { name: "Track keyword" }),
-  ).toHaveCount(1);
+    page.getByRole("menuitem", { name: "Pause tracking" }),
+  ).toHaveCount(0);
+  await page.getByRole("menuitem", { name: "Resume tracking" }).click();
+
+  expect((await patch).postDataJSON()).toEqual({ active: true });
 });
 
 test("tags are added with enter, a comma and a suggestion, and saved", async ({

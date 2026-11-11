@@ -27,6 +27,7 @@ import {
 } from "./ranges";
 import { DEFAULT_MCP_CLIENT, MCP_CLIENTS } from "./mcp-snippets";
 import { GRADES } from "./grade";
+import { KEYWORD_MOVE_FILTERS } from "./keyword-day-change";
 import { KEYWORD_ZONES } from "./keyword-zones";
 import { POSITION_BANDS } from "./table/facets";
 import { GAP_TABS } from "./gap-lists";
@@ -48,6 +49,7 @@ import {
   combinationStatusParser,
   combinationWordsParser,
   keywordFilterParsers,
+  keywordMoveParser,
   keywordZoneParser,
   keywordViewParser,
   KEYWORD_VIEWS,
@@ -593,6 +595,18 @@ describe("serpDate parser", () => {
 
   it.each(["2026-02-30", "yesterday"])("refuses %s", (value) => {
     expect(serpDateParser.parse(value)).toBeNull();
+  });
+});
+
+describe("keywordMoveParser", () => {
+  it.each(KEYWORD_MOVE_FILTERS)("round trips %s", (filter) => {
+    expect(keywordMoveParser.parse(keywordMoveParser.serialize(filter))).toBe(
+      filter,
+    );
+  });
+
+  it("reads an unknown choice as every keyword", () => {
+    expect(keywordMoveParser.parse("rose")).toBeNull();
   });
 });
 

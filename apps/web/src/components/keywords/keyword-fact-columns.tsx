@@ -127,12 +127,17 @@ export function volatilityColumn() {
   });
 }
 
-export function topAppsColumn() {
+export function topAppsColumn(onOpenSerp: (keywordId: string) => void) {
   return columnHelper.accessor((row) => row.topApps ?? null, {
     id: "topApps",
     meta: { label: "Top apps" },
     enableSorting: false,
     header: "Top apps",
-    cell: ({ row }) => <TopAppsCell apps={row.original.topApps} />,
+    cell: ({ row }) => (
+      <TopAppsCell
+        keyword={row.original}
+        onOpen={() => onOpenSerp(row.original.keywordId)}
+      />
+    ),
   });
 }
