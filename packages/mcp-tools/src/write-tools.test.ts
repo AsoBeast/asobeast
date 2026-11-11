@@ -18,7 +18,7 @@ const ITEM = {
 };
 
 describe("the write tools", () => {
-  it("are exactly the seven the catalog promises, in order", () => {
+  it("are exactly the eight the catalog promises, in order", () => {
     expect(MCP_WRITE_TOOLS.map((tool) => tool.name)).toEqual([
       "track_keywords",
       "untrack_keyword",
@@ -27,6 +27,7 @@ describe("the write tools", () => {
       "set_action_status",
       "add_annotation",
       "delete_annotation",
+      "inspect_keyword",
     ]);
   });
 

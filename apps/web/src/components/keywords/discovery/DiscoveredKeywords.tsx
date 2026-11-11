@@ -111,10 +111,7 @@ function DiscoveredList({
           actions={actions}
         />
         {empty.kind === "never_run" ? (
-          <EmptyState
-            title="No discoveries yet"
-            body="AsoBeast looks for keywords near your listing once a week and right after you import an app. The first results appear within minutes of an import."
-          />
+          <EmptyState title="No discoveries yet" body={empty.body} />
         ) : null}
         {empty.kind === "nothing_here" ? (
           <EmptyState

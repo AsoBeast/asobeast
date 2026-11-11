@@ -222,7 +222,7 @@ export function toSnapshotData(
     version: normalized.version,
     releasedAt: normalized.releasedAt,
     storeUpdatedAt: normalized.storeUpdatedAt,
-    raw: normalized.raw as Prisma.InputJsonValue,
+    raw: normalized.raw,
   };
 }
 

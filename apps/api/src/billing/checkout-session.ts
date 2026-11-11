@@ -50,7 +50,7 @@ function uiParams(
 }
 
 export function trialSubmitMessage(days: number): string {
-  return `$0 today. Your ${days} day trial ends on the date shown above, then the plan price is charged. Cancel any time from Settings, Billing.`;
+  return `$0 today. Your ${days} day trial ends on the date shown above, then the plan price plus any VAT or sales tax is charged and renews until you cancel. Cancel any time from Settings, Billing.`;
 }
 
 function trialParams(

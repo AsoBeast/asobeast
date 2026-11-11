@@ -126,7 +126,7 @@ Both answers carry the same fields. `summary` and `results` describe the plan, r
 
 ## See Play installs per search term
 
-The keywords page of a Google Play app shows a **Play installs** column: the acquisitions and the store listing visitors that the keyword brought as a Google Play search term, from the newest complete month Google reported it, or the month in progress when it is the only one. The tooltip names the month. A dash means Google reported no visitors for that term, or that the workspace has not connected the Google Play Console. The column sorts like the others, hides on a phone and can be hidden from the **Columns** menu. See [Installs per search term](/guides/store-funnel#installs-per-search-term).
+The keywords page of a Google Play app shows a **Play installs** column: the acquisitions and the store listing visitors that the keyword brought as a Google Play search or explore term, from the newest complete month Google reported it, or the month in progress when it is the only one. The tooltip names the month. A dash means Google reported no visitors for that term, or that the workspace has not connected the Google Play Console. When the newest month Google has delivered names no search term on any source, the dash explains that fact and names the month instead. The column sorts like the others, hides on a phone and can be hidden from the **Columns** menu. See [Installs per search term](/guides/store-funnel#installs-per-search-term).
 
 ## See what each market reads
 
@@ -296,7 +296,7 @@ Each keyword in the table marks the words that the listing of the keyword's own 
 | Blue | the subtitle on the App Store, the short description on Google Play |
 | Amber | the keyword field you saved, App Store only |
 
-A word found in more than one place takes the first of those, in that order. Every mark also has a hidden label such as "in title" for screen readers, so colour is never the only signal, and the **Columns** menu shows the colours next to the **Listing marks** choice. A dotted mark is a word that matches only when accents are ignored, the same dotted mark as in the [keyword breakdown](/guides/competitors#why-does-a-competitor-rank-above-you).
+A word found in more than one place takes the first of those, in that order, except that an exact match always beats a match that ignores accents: with `cafe` saved in the keyword field and `Café` in the subtitle, the word `cafe` takes the solid amber mark of the keyword field, not a dotted blue one. Every mark also has a hidden label such as "in title" for screen readers, so colour is never the only signal, and the **Columns** menu shows the colours next to the **Listing marks** choice. A dotted mark is a word that matches only when accents are ignored, the same dotted mark as in the [keyword breakdown](/guides/competitors#why-does-a-competitor-rank-above-you).
 
 The marks use the word rules of the [coverage table](/guides/metadata-workbench#check-keyword-coverage): a keyword that the coverage table calls covered has every word marked. They also show what coverage cannot, because words found in different places are marked even when no single field holds the whole phrase. The description is never marked, and a market where you saved no keyword field that it reads shows no amber marks. Markets are judged on their own listing, or on your home listing when the market has none captured.
 
@@ -304,7 +304,7 @@ The **Listing marks** choice in the **Columns** menu hides the marks. It is reme
 
 ### Insights and totals
 
-The **Insights** column gives each keyword up to two verdicts worked out from the numbers on its row. Each badge is a word, never only a colour, and pointing at one shows the reason behind it.
+The **Insights** column gives each keyword up to two verdicts worked out from the numbers on its row. Each badge is a word, never only a colour. Press the badges of a row, with a click, a tap or the keyboard, to read the reason behind each one.
 
 | Badge | When it shows |
 | --- | --- |
@@ -323,7 +323,7 @@ The last row of the table totals the keywords it shows: how many there are, how 
 
 **Table** and **Map** above the keywords switch the page between the table alone and the map above the table. The address carries `view=map`, so a copied link opens the map. Everything above the table, the market, the search and every filter, narrows the map and the table the same way, and the table keeps its count and its **Export CSV** for the rows it shows.
 
-The map draws one dot for every keyword of the selected market that has both a popularity and a difficulty. Difficulty runs along the bottom from 0 to 100 and popularity up the side from 0 to 100, both as the whole numbers the table shows. A keyword with only one of the two scores is not on the map, and a line under the chart says how many. With fewer than four plotted keywords the map says it needs more, and with none it says there is nothing to map yet.
+The map draws one dot for every keyword of the selected market that has both a popularity and a difficulty. Difficulty runs along the bottom from 0 to 100 and popularity up the side from 0 to 100, both as the whole numbers the table shows. A keyword with only one of the two scores is not on the map, and a line under the chart says how many. With fewer than four plotted keywords the map says it needs more, and with none it says there is nothing to map yet. When a search or a filter of the table is what leaves too few scored keywords, the map says so instead and offers **Clear filters**.
 
 ### What a dot says
 
@@ -335,7 +335,7 @@ The map draws one dot for every keyword of the selected market that has both a p
 
 Dots have one size, so the map is not a bubble chart. A dot sits at the popularity the table shows, so a floor answer is drawn at the floor value Apple answered, or at the number held under it for a term Apple left out of its list. Google Play keywords use asobeast's own popularity on the same axes and never show a diamond. Dots in the same place overlap, and the table lists every keyword.
 
-Point at a dot or focus it to read the keyword, its position, popularity, difficulty and opportunity. Click or tap it, or press Enter or Space on it, to open the position history of that keyword. A keyword that has not been checked yet has no history to open. The five keywords with the highest opportunity carry a label, and no more than five ever do.
+Point at a dot or focus it to read the keyword, its position, popularity, difficulty and opportunity. Click or tap it, or press Enter or Space on it, to open the position history of that keyword. A keyword that has not been checked yet has no history to open. The five keywords with the highest opportunity carry a label, and no more than five ever do. Keywords that share the same spot share one label, so the next keyword by opportunity takes the freed one.
 
 ### The four zones
 

@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 
 const GRADE_MARKER: Partial<Record<Grade, string>> = {
   strong: "bg-grade-strong",
+  weak: "border-[1.5px] border-grade-weak bg-linear-to-r from-grade-weak from-50% to-transparent to-50%",
   poor: "border-[1.5px] border-grade-poor",
 };
 

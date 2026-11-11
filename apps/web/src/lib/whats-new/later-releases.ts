@@ -2,17 +2,85 @@ import type { Release } from "./release-notes";
 
 export const LATER_RELEASES: readonly Release[] = [
   {
-    version: "1.16.0",
-    date: "2026-11-03",
-    title: "Know what changed and connect your stores faster",
+    version: "1.17.0",
+    date: "2026-11-10",
+    title: "Keyword inspector",
     summary:
-      "AsoBeast now tells you when something new arrives and explains each update in plain words. Connecting App Store Connect or Google Play comes with a guide for every step.",
+      "Look up any keyword in any country without tracking it, and see it beside every keyword you looked up before.",
     changes: [
+      {
+        kind: "new",
+        title: "Inspect any keyword",
+        text: "Keyword inspector in the sidebar reads any keyword in any country straight from the store, without tracking it: the top 50 apps, the autocomplete, popularity, difficulty and opportunity, and how strong the top ten are. Each keyword you inspect lands on a map beside the others, its store suggestions inspect in one click, and the next inspection of the same keyword shows what changed since.",
+      },
+      {
+        kind: "fixed",
+        title: "Play installs finds more search terms",
+        text: "Google writes most search terms under explore traffic rather than search, and the column used to read only search, so months could look empty that never were. It now reads both, while the placeholders Google writes when it names no term stay out of the column.",
+      },
+      {
+        kind: "improved",
+        title: "An empty month says so",
+        text: "When the newest monthly report names no search term on any source, the column now states that fact with the month, instead of leaving a row of unexplained dashes.",
+      },
       {
         kind: "improved",
         title: "A calmer, sharper look",
         text: "AsoBeast has a new typeface, warmer neutral colours and flatter panels with fine borders. Numbers line up in columns, labels are easier to read, and the brand orange is kept for the main action on each page.",
       },
+    ],
+  },
+  {
+    version: "1.16.1",
+    date: "2026-11-08",
+    title: "Clearer sign up and billing",
+    summary:
+      "Signing up and paying now say exactly what you agree to and what you will be charged, and a trial that cannot run never costs you anything.",
+    changes: [
+      {
+        kind: "improved",
+        title: "Terms at sign up",
+        text: "Creating an account now names the Terms of Service and the Privacy Policy, and both are linked from the sidebar and the plan page.",
+      },
+      {
+        kind: "improved",
+        title: "What you pay, stated in full",
+        text: "The plan page and the trial emails now state the price, the billing period, that tax is added and that the plan renews until you cancel.",
+      },
+      {
+        kind: "fixed",
+        title: "No charge when a trial cannot start",
+        text: "A card or email that already had a free trial is no longer charged by surprise. The trial is cancelled, nothing is charged, and you are told why and offered a plan.",
+      },
+      {
+        kind: "fixed",
+        title: "A reminder three days before the first charge",
+        text: "The reminder before your first charge now arrives at least three days ahead, and its subject says how long is left.",
+      },
+      {
+        kind: "fixed",
+        title: "Deleting a workspace stops the next charge",
+        text: "Asking to delete a workspace now stops any further charge on a paid plan as well as on a trial, and cancelling the deletion starts the renewal again.",
+      },
+      {
+        kind: "fixed",
+        title: "AI analysis of your icon and screenshots",
+        text: "The AI analysis no longer fails now and then because the images could not be loaded, and every AI feature has more room to think before it answers.",
+      },
+      {
+        kind: "fixed",
+        title: "The plan page on a weak connection",
+        text: "When the plan page cannot load your plan or the prices, it now says so and lets you try again, instead of showing an offer or a checkout that may not apply to you.",
+      },
+    ],
+  },
+  {
+    version: "1.16.0",
+    date: "2026-11-03",
+    title: "Find new keywords and know what changed",
+    summary:
+      "AsoBeast now finds the keywords your app already ranks for, shows where competitors beat you and lists what the daily run noticed on one page. Each update is explained in plain words, and connecting App Store Connect or Google Play comes with a guide for every step.",
+    changes: [
       {
         kind: "improved",
         title: "A dashboard that starts with what moved",
@@ -67,6 +135,46 @@ export const LATER_RELEASES: readonly Release[] = [
         kind: "new",
         title: "Brand and generic keywords",
         text: "Each keyword is marked as your own brand, a competitor's brand or a generic search. A B or CB badge sits after the keyword, a Type filter keeps one kind, the export carries the type, and the menu of a keyword lets you set it yourself when it reads wrong.",
+      },
+      {
+        kind: "new",
+        title: "Discovered keywords",
+        text: "A Discovered tab beside your tracked keywords lists the searches your app already ranks for, or could rank for, that you do not track yet, with their popularity, difficulty and opportunity. Track one, the ones you tick or every ranked one at once, dismiss the ones you do not want, or switch on Auto-track ranked. The list is checked again every week.",
+      },
+      {
+        kind: "improved",
+        title: "Search keywords with or without accents",
+        text: "The search box of the keywords table ignores accents, so cafe finds café and uber finds über.",
+      },
+      {
+        kind: "new",
+        title: "Keyword gaps, threats and where you lead",
+        text: "A Gap analysis section on the competitors page lists the keywords a competitor ranks for and you do not, the gaps you can win now, the competitors closing in on you and the keywords where you lead. The overview sums them up in one line under the visibility chart.",
+      },
+      {
+        kind: "new",
+        title: "Share of voice",
+        text: "The visibility card shows what part of the visibility you and your tracked competitors hold together is yours, with and without brand keywords, and the visibility chart switches between visibility and share of voice.",
+      },
+      {
+        kind: "new",
+        title: "Alerts page",
+        text: "An Alerts item in the sidebar lists what the daily run noticed in the last 30 days, such as rank moves, rating drops and listing changes, even if you never set up an alert. Filter it by app or by kind, search it, and a dot on the sidebar item tells you something arrived since your last visit.",
+      },
+      {
+        kind: "new",
+        title: "Essential alerts from the first day",
+        text: "When your AsoBeast can send email, the owner of a new workspace gets an email alert for the changes that matter most once its first app is checked. Every email alert and webhook lists its rules with a switch for each and can set its own rank drop threshold, and the daily report starts with the biggest moves.",
+      },
+      {
+        kind: "new",
+        title: "Rating drop and review spike alerts",
+        text: "Get told when the rating of your app falls by as much as you choose, and when far more reviews than usual arrive on one day.",
+      },
+      {
+        kind: "new",
+        title: "Alerts when an app leaves the store",
+        text: "Get told when the store stops listing your app or a competitor in its home country or in one of the other countries you track.",
       },
       {
         kind: "improved",

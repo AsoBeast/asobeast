@@ -1,4 +1,4 @@
-import { Store } from '@prisma/client';
+import { Prisma, Store } from '@prisma/client';
 import { Job, Queue, Worker } from 'bullmq';
 import { BUSY_POOL_LIMIT_MS } from '../src/jobs/busy-pool';
 import { GplayWorker } from '../src/jobs/gplay.worker';
@@ -18,12 +18,23 @@ const connection = {
 const busyPool = () =>
   new ProxyPoolUnavailableError(Store.GOOGLE_PLAY, 120_000, 50);
 
+const databaseRecovering = () =>
+  new Prisma.PrismaClientKnownRequestError(
+    'Database error. Code: `57P03`. Message: `the database system is in recovery mode`',
+    {
+      code: 'P2039',
+      clientVersion: '7.10.1',
+      meta: { driverAdapterError: { cause: { originalCode: '57P03' } } },
+    },
+  );
+
 describe('A store job the proxy pool is too busy to serve (e2e)', () => {
   const handle = jest.fn<Promise<void>, [Job]>();
   const capture = jest.fn();
+  const concurrencyFor = jest.fn<Promise<number | null>, []>();
   const storeWorker = new GplayWorker(
     { handle } as unknown as StoreJobsHandler,
-    { concurrencyFor: () => Promise.resolve(null) } as unknown as PoolCapacity,
+    { concurrencyFor } as unknown as PoolCapacity,
     { capture } as unknown as ErrorTracking,
   );
   let queue: Queue;
@@ -53,6 +64,7 @@ describe('A store job the proxy pool is too busy to serve (e2e)', () => {
   beforeEach(() => {
     handle.mockReset();
     capture.mockReset();
+    concurrencyFor.mockReset().mockResolvedValue(null);
   });
 
   afterAll(async () => {
@@ -70,6 +82,29 @@ describe('A store job the proxy pool is too busy to serve (e2e)', () => {
     expect(handle).toHaveBeenCalledTimes(2);
     expect(capture).not.toHaveBeenCalled();
   });
+
+  it('spends no attempt on a database that is restarting', async () => {
+    handle
+      .mockRejectedValueOnce(databaseRecovering())
+      .mockResolvedValue(undefined);
+
+    const job = await queue.add('score-keyword', {}, { attempts: 1 });
+
+    await expect(settled(job)).resolves.toBe('completed');
+    expect(handle).toHaveBeenCalledTimes(2);
+    expect(capture).not.toHaveBeenCalled();
+  }, 15_000);
+
+  it('spends no attempt when the pool capacity read meets a restarting database', async () => {
+    concurrencyFor.mockRejectedValueOnce(databaseRecovering());
+    handle.mockResolvedValue(undefined);
+
+    const job = await queue.add('score-keyword', {}, { attempts: 1 });
+
+    await expect(settled(job)).resolves.toBe('completed');
+    expect(handle).toHaveBeenCalledTimes(1);
+    expect(capture).not.toHaveBeenCalled();
+  }, 15_000);
 
   it('fails as before once the job has waited longer than the limit', async () => {
     handle.mockRejectedValue(busyPool());

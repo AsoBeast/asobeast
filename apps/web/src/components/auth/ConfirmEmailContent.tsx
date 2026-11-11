@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import type { AuthUser } from "@asobeast/shared";
 import {
   Card,
@@ -16,8 +17,12 @@ import {
   REGISTER_AGAIN,
   WRONG_ADDRESS,
   confirmEmailParts,
+  sellingTrial,
 } from "@/lib/plan-choice";
-import { confirmEmailViewerOptions } from "@/lib/queries";
+import {
+  billingCatalogOptions,
+  confirmEmailViewerOptions,
+} from "@/lib/queries";
 import { signUpSteps } from "@/lib/sign-up-steps";
 import { ResendConfirmationButton } from "./ResendConfirmationButton";
 import { SessionCheck } from "./SessionCheck";
@@ -31,9 +36,10 @@ export function ConfirmEmailContent({ user }: { user: AuthUser }) {
       user.entryStep === "confirm-email" ? null : entryDestination(user, null),
     confirmEmailViewerOptions,
   );
+  const { data: catalog } = useQuery(billingCatalogOptions);
   const { before, address, after } = confirmEmailParts(
     user.email,
-    user.trialAwaitsCheckout === true,
+    user.trialAwaitsCheckout === true && sellingTrial(catalog),
   );
 
   if (leaving) {

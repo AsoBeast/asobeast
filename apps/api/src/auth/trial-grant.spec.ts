@@ -30,10 +30,12 @@ describe('alreadyTrialed', () => {
 describe('trialAwaitsConfirmation', () => {
   const account = (
     over: {
+      role?: string;
       emailVerifiedAt?: Date | null;
       workspace?: Partial<TrialWorkspace>;
     } = {},
   ) => ({
+    role: over.role ?? 'owner',
     emailVerifiedAt: over.emailVerifiedAt ?? null,
     workspace: {
       plan: 'free',
@@ -48,6 +50,12 @@ describe('trialAwaitsConfirmation', () => {
 
   it('waits on an unconfirmed account whose workspace has had no trial', () => {
     expect(trialAwaitsConfirmation(account(), NOW)).toBe(true);
+  });
+
+  it('never asks a member to wait, because the trial belongs to the owner', () => {
+    expect(trialAwaitsConfirmation(account({ role: 'member' }), NOW)).toBe(
+      false,
+    );
   });
 
   it('stops waiting once the address is confirmed', () => {

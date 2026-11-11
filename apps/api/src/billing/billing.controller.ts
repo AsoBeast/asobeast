@@ -6,7 +6,12 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiConflictResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import type {
   BillingCatalog,
@@ -58,6 +63,9 @@ export class BillingController {
   @HttpCode(200)
   @ApiOperation({
     summary: 'Open the Stripe customer portal for this workspace',
+  })
+  @ApiConflictResponse({
+    description: 'The workspace has no billing account Stripe knows yet',
   })
   async portal(@CurrentUser() user: AccountUser): Promise<BillingSession> {
     return { url: await this.billing.portal(user) };

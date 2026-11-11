@@ -4,6 +4,7 @@ import {
   paymentFailed,
   trialChargeFailed,
   trialNotice,
+  trialRefused,
   type AccountMail,
   type TrialNoticeContext,
 } from './account-mail';
@@ -11,12 +12,16 @@ import { TRIAL_NOTICE_DAYS } from './trial-notices';
 
 const OVER = [{ resource: 'keywords', used: 40, limit: 20 }];
 
+const TERMS =
+  '$10 per month plus any VAT or sales tax, renewing monthly until you cancel';
+
 const CONTEXT: TrialNoticeContext = {
   card: true,
   days: 7,
   plan: 'Indie',
-  price: '$10 per month',
+  price: TERMS,
   endsOn: '2026-10-28',
+  timeLeft: '3 days',
   cancelling: false,
   chargeFailed: false,
 };
@@ -36,10 +41,11 @@ const card = (
 const everyNotice = (): AccountMail[] => [
   ...TRIAL_NOTICE_DAYS.map((day) => trialNotice(day, LEGACY)),
   ...TRIAL_NOTICE_DAYS.map((day) => card(day)),
-  card(7, { cancelling: true }),
+  card(5, { cancelling: true }),
   card(8, { chargeFailed: true }),
   paymentFailed(),
   trialChargeFailed(),
+  trialRefused(),
   downgradeWarning('Indie', '2026-11-01', OVER),
 ];
 
@@ -80,6 +86,16 @@ describe('account mail', () => {
     });
   });
 
+  it('tells the owner a refused trial charged nothing and offers the plans', () => {
+    const mail = trialRefused();
+
+    expect(mail.subject).toBe('Your asobeast free trial could not start');
+    expect(mail.body[0]).toBe(
+      'This card or email has already had a free trial, so this one did not start and nothing was charged.',
+    );
+    expect(mail.action).toEqual({ label: 'Choose a plan', path: UPGRADE_PATH });
+  });
+
   describe('a card trial', () => {
     it('states the plan, the amount, the date and how to cancel on day 0', () => {
       const mail = card(0);
@@ -88,7 +104,7 @@ describe('account mail', () => {
         'Your 7 day trial of Indie runs until 2026-10-28.',
       );
       expect(mail.body.join(' ')).toContain(
-        'on 2026-10-28 your card is charged $10 per month unless you cancel from Settings, Billing',
+        `On 2026-10-28 your card is charged ${TERMS}. Cancel from Settings, Billing before then and nothing is charged.`,
       );
       expect(mail.action?.label).toBe('Import your first app');
     });
@@ -97,26 +113,25 @@ describe('account mail', () => {
       expect(card(3).body.at(-1)).toBe('Your trial runs until 2026-10-28.');
     });
 
-    it('names the charge and the way out on day 5', () => {
+    it('states the real time left in the reminder subject', () => {
+      expect(card(5).subject).toBe('3 days left on your asobeast trial');
+      expect(card(5).heading).toBe('3 days left on your trial');
+      expect(card(5, { timeLeft: 'less than an hour' }).subject).toBe(
+        'Less than an hour left on your asobeast trial',
+      );
+    });
+
+    it('names the charge and the way out in the reminder', () => {
       const body = card(5).body.join(' ');
 
       expect(body).toContain(
-        'On 2026-10-28 your card is charged $10 per month for Indie.',
+        `Your Indie trial ends on 2026-10-28. Your card is then charged ${TERMS}.`,
       );
       expect(body).toContain('cancel from Settings, Billing before then');
       expect(card(5).action).toEqual({
         label: 'Open billing settings',
         path: SETTINGS_PATH,
       });
-    });
-
-    it('names the charge on day 7, or that nothing is charged once cancelled', () => {
-      expect(card(7).body.join(' ')).toContain(
-        'charged $10 per month at the end of it',
-      );
-      const cancelled = card(7, { cancelling: true }).body.join(' ');
-      expect(cancelled).toContain('nothing is charged');
-      expect(cancelled.match(/charge/g)).toHaveLength(1);
     });
 
     it('says nothing is charged on day 5 once cancelled', () => {
@@ -154,10 +169,6 @@ describe('account mail', () => {
         'Your trial ends on 2026-10-17.',
         'Everything collected so far stays yours, whether or not you subscribe.',
         'Choose a plan to keep the daily collection running.',
-      ]);
-      expect(trialNotice(7, LEGACY).body).toEqual([
-        'Daily rank checks stop after today unless you choose a plan.',
-        'Your apps, keywords, rankings and audits remain readable and exportable either way.',
       ]);
       expect(trialNotice(8, LEGACY).body).toEqual([
         'Daily collection has stopped, and nothing has been deleted.',

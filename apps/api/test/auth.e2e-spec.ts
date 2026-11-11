@@ -228,6 +228,14 @@ describe('Auth (enabled, self-hosted)', () => {
     await expect(prisma.user.count()).resolves.toBe(1);
   });
 
+  it('records no terms acceptance on an instance without billing', async () => {
+    await registerOwner();
+
+    await expect(
+      prisma.user.findUniqueOrThrow({ where: { email: 'owner@example.com' } }),
+    ).resolves.toMatchObject({ termsAcceptedAt: null, termsVersion: null });
+  });
+
   it('refuses to remove the owner and revokes a pending invitation', async () => {
     const cookie = await registerOwner();
     const owner = await prisma.user.findUniqueOrThrow({

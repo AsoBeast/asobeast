@@ -34,6 +34,7 @@ import {
   parseAsBoolean,
   parseAsString,
   parseAsStringLiteral,
+  type SingleParser,
 } from "nuqs/server";
 import {
   CHANGE_WINDOWS,
@@ -70,13 +71,25 @@ export const KEYWORD_DEFAULT_SORT = "opportunity";
 
 export const keywordSortParser = parseAsStringLiteral(KEYWORD_TABLE_SORTS);
 
+const parseAsDistinctArrayOf = <Item>(itemParser: SingleParser<Item>) => {
+  const list = parseAsArrayOf(itemParser);
+  return createParser({
+    parse: (value) => {
+      const items = list.parse(value);
+      return items === null ? null : [...new Set(items)];
+    },
+    serialize: list.serialize,
+    eq: list.eq,
+  });
+};
+
 export const searchParser = parseAsString.withDefault("");
 
-export const keywordSourceParser = parseAsArrayOf(
+export const keywordSourceParser = parseAsDistinctArrayOf(
   parseAsStringLiteral(KEYWORD_SOURCES),
 ).withDefault([]);
 
-export const keywordBucketParser = parseAsArrayOf(
+export const keywordBucketParser = parseAsDistinctArrayOf(
   parseAsStringLiteral(KEYWORD_BUCKETS),
 ).withDefault([]);
 
@@ -89,19 +102,21 @@ export const KEYWORD_STATUSES = [
 export const keywordStatusParser =
   parseAsStringLiteral(KEYWORD_STATUSES).withDefault("all");
 
-export const gradeFacetParser = parseAsArrayOf(
+export const gradeFacetParser = parseAsDistinctArrayOf(
   parseAsStringLiteral(GRADES),
 ).withDefault([]);
 
-export const positionBandParser = parseAsArrayOf(
+export const positionBandParser = parseAsDistinctArrayOf(
   parseAsStringLiteral(POSITION_BANDS),
 ).withDefault([]);
 
-export const keywordTagsParser = parseAsArrayOf(parseAsString).withDefault([]);
+export const keywordTagsParser = parseAsDistinctArrayOf(
+  parseAsString,
+).withDefault([]);
 
 export const keywordZoneParser = parseAsStringLiteral(KEYWORD_ZONES);
 
-export const keywordClassParser = parseAsArrayOf(
+export const keywordClassParser = parseAsDistinctArrayOf(
   parseAsStringLiteral(KEYWORD_CLASSES),
 ).withDefault([]);
 
@@ -125,11 +140,11 @@ export const COMBINATION_WORD_FILTERS = [
   "3",
 ] as const satisfies readonly `${CombinationWordCount}`[];
 
-export const combinationWordsParser = parseAsArrayOf(
+export const combinationWordsParser = parseAsDistinctArrayOf(
   parseAsStringLiteral(COMBINATION_WORD_FILTERS),
 ).withDefault([]);
 
-export const combinationStatusParser = parseAsArrayOf(
+export const combinationStatusParser = parseAsDistinctArrayOf(
   parseAsStringLiteral(COMBINATION_STATUSES),
 ).withDefault([]);
 
@@ -293,7 +308,7 @@ export const ADMIN_APP_SORTS = [
 export const adminAppSortParser =
   parseAsStringLiteral(ADMIN_APP_SORTS).withDefault("added");
 
-export const adminStoreParser = parseAsArrayOf(
+export const adminStoreParser = parseAsDistinctArrayOf(
   parseAsStringLiteral(STORES),
 ).withDefault([]);
 
@@ -317,7 +332,9 @@ export const overviewRangeParsers = {
   categoryRange: rangeParser,
 };
 
-export const keywordIdsParser = parseAsArrayOf(parseAsString).withDefault([]);
+export const keywordIdsParser = parseAsDistinctArrayOf(
+  parseAsString,
+).withDefault([]);
 
 export type KeywordChartSelection =
   { mode: "chart"; ids: string[] } | { mode: "hidden" };
@@ -462,15 +479,15 @@ export const ACTION_DEFAULT_STATUSES = [
   "SNOOZED",
 ] as const satisfies readonly ActionStatus[];
 
-export const actionStatusParser = parseAsArrayOf(
+export const actionStatusParser = parseAsDistinctArrayOf(
   parseAsStringLiteral(ACTION_STATUSES),
 ).withDefault([...ACTION_DEFAULT_STATUSES]);
 
-export const actionPriorityParser = parseAsArrayOf(
+export const actionPriorityParser = parseAsDistinctArrayOf(
   parseAsStringLiteral(ACTION_PRIORITIES),
 ).withDefault([]);
 
-export const actionRuleParser = parseAsArrayOf(
+export const actionRuleParser = parseAsDistinctArrayOf(
   parseAsStringLiteral(ACTION_RULES),
 ).withDefault([]);
 
@@ -484,11 +501,11 @@ export const actionQueueParsers = {
   status: actionStatusParser,
   priority: actionPriorityParser,
   rule: actionRuleParser,
-  category: parseAsArrayOf(parseAsStringLiteral(ACTION_CATEGORIES)).withDefault(
-    [],
-  ),
-  app: parseAsArrayOf(parseAsString).withDefault([]),
-  market: parseAsArrayOf(parseAsString).withDefault([]),
+  category: parseAsDistinctArrayOf(
+    parseAsStringLiteral(ACTION_CATEGORIES),
+  ).withDefault([]),
+  app: parseAsDistinctArrayOf(parseAsString).withDefault([]),
+  market: parseAsDistinctArrayOf(parseAsString).withDefault([]),
   store: parseAsStringLiteral(STORES),
   q: parseAsString.withDefault(""),
   group: parseAsStringLiteral(ACTION_GROUPS).withDefault("priority"),
@@ -563,7 +580,9 @@ export const chartTableParsers = {
 
 export const alertFeedParsers = {
   app: parseAsString,
-  type: parseAsArrayOf(parseAsStringLiteral(ALERT_FEED_EVENTS)).withDefault([]),
+  type: parseAsDistinctArrayOf(
+    parseAsStringLiteral(ALERT_FEED_EVENTS),
+  ).withDefault([]),
   q: searchParser,
 };
 
@@ -608,3 +627,15 @@ export type VisibilityView = (typeof VISIBILITY_VIEWS)[number];
 
 export const visibilityViewParser =
   parseAsStringLiteral(VISIBILITY_VIEWS).withDefault("visibility");
+
+const inspectionIdParser = createParser({
+  parse: (value) => (value.trim().length > 0 ? value : null),
+  serialize: (value: string) => value,
+});
+
+export const inspectParsers = {
+  id: inspectionIdParser,
+  keyword: parseAsString.withDefault(""),
+  store: parseAsStringLiteral(STORES).withDefault("APP_STORE"),
+  country: countryParser,
+};

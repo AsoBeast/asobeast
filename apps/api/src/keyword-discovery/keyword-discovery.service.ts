@@ -11,7 +11,7 @@ import {
   utcDayOf,
 } from '@asobeast/shared';
 import { Env } from '../config/env';
-import { nextWeeklyRun } from '../jobs/daily-schedule';
+import { nextRun } from '../jobs/daily-schedule';
 import { ensurePrimaryApp, KeywordApp } from '../keywords/keywords.support';
 import { PrismaService } from '../prisma/prisma.service';
 import { appOpportunity } from '../scoring/keyword-opportunity';
@@ -24,8 +24,8 @@ import {
   isPending,
   pendingWindowStart,
   rankDiscoveries,
-  unfitCount,
 } from './discovery-state';
+import { DiscoveryTracker } from './discovery-tracker.service';
 
 export interface DiscoveryListQuery {
   country?: string;
@@ -49,6 +49,7 @@ export class KeywordDiscoveryService {
     private readonly prisma: PrismaService,
     private readonly popularity: DiscoveryPopularity,
     private readonly config: ConfigService<Env, true>,
+    private readonly tracker: DiscoveryTracker,
   ) {}
 
   async list(
@@ -71,7 +72,12 @@ export class KeywordDiscoveryService {
       items: items.filter(inState(query.state)).slice(0, query.limit),
       counts,
       autoTrackRanked,
-      unfit: unfitCount(counts, autoTrackRanked),
+      unfit: autoTrackRanked
+        ? await this.tracker.unfit(
+            app,
+            items.filter(({ state }) => state === 'ranked'),
+          )
+        : 0,
       checks,
     };
   }
@@ -212,9 +218,7 @@ export class KeywordDiscoveryService {
         ),
       ).length,
       checkedAt: dayOf(newest._max.checkedOn),
-      nextRunAt: cron
-        ? (nextWeeklyRun(cron, now)?.toISOString() ?? null)
-        : null,
+      nextRunAt: nextRun(cron, now)?.toISOString() ?? null,
     };
   }
 }

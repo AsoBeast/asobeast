@@ -17,7 +17,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { releaseNotesFor } from '../store-providers/raw-facts';
 import {
   buildReplyContext,
-  DRAFT_MAX_OUTPUT_TOKENS,
   fitReply,
   foreignContacts,
   parseReplyOutput,
@@ -58,7 +57,6 @@ export class ReviewReplyAssistant {
         system: SYSTEM_PROMPT,
         content: [{ type: 'text', text: buildReplyContext(context) }],
         schema: REPLY_SCHEMA,
-        maxOutputTokens: DRAFT_MAX_OUTPUT_TOKENS,
       },
     );
 

@@ -16,6 +16,7 @@ import { DatabaseUnavailableError } from './health.errors';
 
 const STALE_MS = 26 * 60 * 60 * 1000;
 const REDIS_TIMEOUT_MS = 1000;
+const DATABASE_TIMEOUT_MS = 2000;
 
 interface PipelineSignals {
   redis: 'up' | 'down';
@@ -78,7 +79,11 @@ export class HealthController {
 
   private async pingDb(): Promise<'up' | 'down'> {
     try {
-      await this.prisma.$queryRaw`SELECT 1`;
+      await withTimeout(
+        this.prisma.$queryRaw`SELECT 1`,
+        DATABASE_TIMEOUT_MS,
+        'database timeout',
+      );
       return 'up';
     } catch {
       return 'down';

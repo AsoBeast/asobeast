@@ -8,6 +8,9 @@ describe('StripeService', () => {
     const service = new StripeService(createStripeClient(undefined));
 
     expect(service.enabled).toBe(false);
+    expect(() => service.requireConfigured()).toThrow(
+      ServiceUnavailableException,
+    );
     expect(() =>
       service.createCustomer({ email: 'owner@example.com' }, 'key'),
     ).toThrow(ServiceUnavailableException);
@@ -17,6 +20,7 @@ describe('StripeService', () => {
     const service = new StripeService(createStripeClient('sk_test_key'));
 
     expect(service.enabled).toBe(true);
+    expect(() => service.requireConfigured()).not.toThrow();
   });
 
   it('carries an idempotency key on every mutation it makes', async () => {
@@ -123,18 +127,18 @@ describe('StripeService', () => {
   });
 
   describe('trial calls', () => {
-    it('ends a trial now under an idempotency key named after the subscription', async () => {
-      const update = jest.fn().mockResolvedValue({ id: 'sub_1' });
+    it('cancels a refused trial with no invoice under an idempotency key named after the subscription', async () => {
+      const cancel = jest.fn().mockResolvedValue({ id: 'sub_1' });
       const service = new StripeService({
-        subscriptions: { update },
+        subscriptions: { cancel },
       } as unknown as Stripe);
 
-      await service.endTrialNow('sub_1');
+      await service.cancelRefusedTrial('sub_1');
 
-      expect(update).toHaveBeenCalledWith(
+      expect(cancel).toHaveBeenCalledWith(
         'sub_1',
-        { trial_end: 'now' },
-        { idempotencyKey: 'trial-end:sub_1' },
+        { invoice_now: false, prorate: false },
+        { idempotencyKey: 'trial-refused:sub_1' },
       );
     });
 
@@ -180,7 +184,7 @@ describe('StripeService', () => {
     it('refuses both while billing is not configured', () => {
       const service = new StripeService(createStripeClient(undefined));
 
-      expect(() => service.endTrialNow('sub_1')).toThrow(
+      expect(() => service.cancelRefusedTrial('sub_1')).toThrow(
         ServiceUnavailableException,
       );
       expect(() => service.retrievePaymentMethod('pm_1')).toThrow(

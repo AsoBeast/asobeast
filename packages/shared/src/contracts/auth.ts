@@ -101,6 +101,7 @@ export interface AccountPlan {
   subscriptionPending?: boolean;
   trialing?: boolean;
   trialOffer?: TrialOffer | null;
+  trialRefused?: boolean;
   billingInterval?: BillingInterval | null;
   trialChargeFailed?: boolean;
   cancelAtPeriodEnd: boolean;

@@ -298,7 +298,7 @@ test.describe("the opportunity map", () => {
     await expect(dots(page)).toHaveCount(7);
     await page.goto(`${MAP_URL}&status=paused`);
     await expect(mapCard(page)).toContainText("Too few scored keywords");
-    await expect(mapCard(page)).toContainText("1 of 4 so far");
+    await expect(mapCard(page)).toContainText("These filters leave 1.");
   });
 
   test("a zone dims, it does not remove", async ({ page }) => {

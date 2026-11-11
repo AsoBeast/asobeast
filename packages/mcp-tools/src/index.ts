@@ -5,6 +5,7 @@ import { APP_TOOLS } from "./apps";
 import { CHART_TOOLS } from "./charts";
 import { COMPETITOR_TOOLS } from "./competitors";
 import { INSIGHT_TOOLS } from "./insights";
+import { INSPECTION_TOOLS } from "./inspections";
 import { KEYWORD_TOOLS } from "./keywords";
 import { MCP_WRITE_TOOLS } from "./write-tools";
 import type { McpTool, ReadTool } from "./define";
@@ -26,12 +27,14 @@ export { APP_TOOLS } from "./apps";
 export { CHART_TOOLS } from "./charts";
 export { COMPETITOR_TOOLS } from "./competitors";
 export { INSIGHT_TOOLS } from "./insights";
+export { INSPECTION_TOOLS, INSPECTION_WRITE_TOOLS } from "./inspections";
 export { KEYWORD_TOOLS } from "./keywords";
 export { MCP_WRITE_TOOLS, TRACK_KEYWORDS_LIMIT } from "./write-tools";
 
 export const MCP_TOOLS: ReadTool[] = [
   ...APP_TOOLS,
   ...KEYWORD_TOOLS,
+  ...INSPECTION_TOOLS,
   ...COMPETITOR_TOOLS,
   ...CHART_TOOLS,
   ...ANNOTATION_TOOLS,

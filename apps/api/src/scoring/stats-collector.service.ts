@@ -1,8 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { outcomeOf } from '../store-providers/egress/proxy-health.service';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
-import { SearchItem, StoreProvider } from '../store-providers/types';
+import {
+  SearchItem,
+  StoreProvider,
+  SuggestItem,
+} from '../store-providers/types';
 import { inferPopularityGenre } from './apple-genres';
 import { KeywordStats } from './formulas';
 import { OfficialPopularityLookup } from './official-popularity';
@@ -22,6 +27,8 @@ const TOP_STRENGTH = 10;
 const COMPETITOR_DEPTH = 25;
 const TITLE_MATCH_DEPTH = 30;
 export const MIN_DETAIL_SUCCESS_SHARE = 0.5;
+const MIN_JUDGED_DETAILS = 3;
+const STORE_SERVER_ERROR = /failed with status 5\d\d/;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface CollectedKeywordStats {
@@ -29,10 +36,22 @@ export interface CollectedKeywordStats {
   evidence: ScoringEvidence;
 }
 
+export interface KeywordTarget {
+  text: string;
+  store: Store;
+  country: string;
+}
+
+export interface InspectedKeywordStats extends CollectedKeywordStats {
+  results: SearchItem[];
+  suggestions: SuggestItem[];
+}
+
 interface SuggestSignals {
   reach: SuggestReach;
   continuations: number | null;
   requests: number;
+  suggestions: SuggestItem[];
 }
 
 interface DetailCollection {
@@ -59,7 +78,11 @@ export class StatsCollectorService {
     if (!keyword) {
       return null;
     }
+    const { stats, evidence } = await this.collectFor(keyword);
+    return { stats, evidence };
+  }
 
+  async collectFor(keyword: KeywordTarget): Promise<InspectedKeywordStats> {
     const provider = this.registry.get(keyword.store);
     const results = await provider.search(
       keyword.text,
@@ -70,10 +93,8 @@ export class StatsCollectorService {
       keyword.store === Store.GOOGLE_PLAY
         ? await this.enrichTop10(provider, results, keyword.country)
         : this.searchTopTen(results);
-    const { reach, continuations, requests } = await this.suggestSignals(
-      provider,
-      keyword,
-    );
+    const { reach, continuations, requests, suggestions } =
+      await this.suggestSignals(provider, keyword);
     const suggestCompleted = reach.status !== 'unavailable';
     const official = await this.officialPopularity.for(
       keyword,
@@ -81,6 +102,8 @@ export class StatsCollectorService {
     );
 
     return {
+      results,
+      suggestions,
       stats: {
         store: keyword.store,
         keywordText: keyword.text,
@@ -112,7 +135,7 @@ export class StatsCollectorService {
 
   private async suggestSignals(
     provider: StoreProvider,
-    { text, store, country }: { text: string; store: Store; country: string },
+    { text, store, country }: KeywordTarget,
   ): Promise<SuggestSignals> {
     const lookup = countingLookup((term) => provider.suggest(term, country));
     const { reach } = await probeSuggestReach(
@@ -129,7 +152,9 @@ export class StatsCollectorService {
       store === Store.APP_STORE
         ? await countContinuations(text, lookup.ask)
         : null;
-    return { reach, continuations, requests: lookup.requests() };
+    const suggestions =
+      reach.status === 'unavailable' ? [] : await offered(lookup.ask, text);
+    return { reach, continuations, requests: lookup.requests(), suggestions };
   }
 
   private searchTopTen(results: SearchItem[]): DetailCollection {
@@ -151,6 +176,7 @@ export class StatsCollectorService {
     const targets = results.slice(0, TOP_STRENGTH);
     const enriched: KeywordStats['top10'] = [];
     let failed = 0;
+    let unanswered = 0;
     for (const item of targets) {
       try {
         const app = await provider.getApp(item.storeAppId, country);
@@ -176,11 +202,15 @@ export class StatsCollectorService {
           `detail lookup failed for "${item.storeAppId}", keeping its search entry: ${messageOf(error)}`,
         );
         failed += 1;
+        if (storeDidNotAnswer(error)) unanswered += 1;
         enriched.push(this.toStrength(item));
       }
     }
     const successCount = targets.length - failed;
-    if (successCount < targets.length * MIN_DETAIL_SUCCESS_SHARE) {
+    if (
+      (targets.length >= MIN_JUDGED_DETAILS || unanswered > 0) &&
+      successCount < targets.length * MIN_DETAIL_SUCCESS_SHARE
+    ) {
       throw new Error(
         `only ${successCount} of ${targets.length} detail lookups succeeded`,
       );
@@ -220,6 +250,21 @@ function identityOf(
     storeAppId: item.storeAppId,
     ...(item.developer === undefined ? {} : { developer: item.developer }),
   };
+}
+
+function storeDidNotAnswer(error: unknown): boolean {
+  return outcomeOf(error) !== null || STORE_SERVER_ERROR.test(messageOf(error));
+}
+
+async function offered(
+  ask: (term: string) => Promise<SuggestItem[]>,
+  text: string,
+): Promise<SuggestItem[]> {
+  try {
+    return await ask(text);
+  } catch {
+    return [];
+  }
 }
 
 function daysSince(date: Date): number {

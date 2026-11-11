@@ -4,7 +4,7 @@ import {
   CHECKOUT_UNCONFIGURED,
   HANDLED_BY_STRIPE,
   PAYMENT_CONFIRMING,
-  SOLD_THROUGH_LINK,
+  HANDLED_BY_LINK,
   confirmEmailParts,
   featuresTitle,
   memberPlanLine,
@@ -14,14 +14,17 @@ import {
   planCallToAction,
   planCardLabel,
   planHighlights,
+  planOnSale,
   limitHighlights,
   planStatusLine,
   savingPercent,
+  sellingTrial,
   trialBarParts,
   trialEndLabel,
   trustLines,
   paywallHeading,
   paywallStatusLine,
+  TRIAL_REFUSED,
   suspensionNotice,
   trialBannerLine,
   trialEndsOn,
@@ -29,6 +32,9 @@ import {
   trialPriceLabel,
 } from "./plan-choice";
 import { formatDate } from "./format";
+
+const NOW = new Date("2026-10-22T12:00:00.000Z");
+const CLOCK = { now: NOW, timeZone: "UTC" };
 
 const planOf = (over: Partial<AccountPlan> = {}): AccountPlan =>
   ({
@@ -122,36 +128,46 @@ describe("planActionLabel", () => {
 });
 
 describe("paywallStatusLine", () => {
+  it("tells a refused trial why it did not start, ahead of everything else", () => {
+    const refused = planOf({ trialOffer: null, trialRefused: true });
+
+    expect(paywallStatusLine(refused, CLOCK)).toBe(TRIAL_REFUSED);
+  });
+
   it("asks a fresh workspace to choose", () => {
-    expect(paywallStatusLine(undefined)).toContain("Choose a plan");
+    expect(paywallStatusLine(undefined, CLOCK)).toContain("Choose a plan");
   });
 
   it("counts down an active trial", () => {
     const line = paywallStatusLine(
       planOf({ plan: "trial", trialEndsAt: "2026-09-30T00:00:00.000Z" }),
+      CLOCK,
     );
 
     expect(line).toContain("trial is active");
   });
 
   it("blames the payment method rather than the trial when a subscription stalled", () => {
-    const line = paywallStatusLine(stalled);
+    const line = paywallStatusLine(stalled, CLOCK);
 
     expect(line).toContain("stopped collecting");
     expect(line).not.toContain("trial ended");
   });
 
   it("still explains a trial that simply ran out", () => {
-    expect(paywallStatusLine(lapsedTrial)).toContain("trial ended");
+    expect(paywallStatusLine(lapsedTrial, CLOCK)).toContain("trial ended");
   });
 
   it("does not blame the payment method of a subscription that is collecting", () => {
-    expect(paywallStatusLine(drifted)).not.toContain("stopped collecting");
+    expect(paywallStatusLine(drifted, CLOCK)).not.toContain(
+      "stopped collecting",
+    );
   });
 
   it("names the renewal date of a paid plan", () => {
     const line = paywallStatusLine(
       planOf({ renewsAt: "2026-10-01T00:00:00.000Z" }),
+      CLOCK,
     );
 
     expect(line).toContain("Indie");
@@ -203,14 +219,14 @@ describe("a first payment still being confirmed", () => {
   });
 
   it("says the payment is confirming on the paywall and in settings", () => {
-    expect(paywallStatusLine(pending)).toBe(PAYMENT_CONFIRMING);
+    expect(paywallStatusLine(pending, CLOCK)).toBe(PAYMENT_CONFIRMING);
     expect(planStatusLine(pending)).toBe(PAYMENT_CONFIRMING);
   });
 
   it("says the payment is confirming ahead of a trial that is still running", () => {
     const trialing = { ...pending, plan: "trial" as const };
 
-    expect(paywallStatusLine(trialing)).toBe(PAYMENT_CONFIRMING);
+    expect(paywallStatusLine(trialing, CLOCK)).toBe(PAYMENT_CONFIRMING);
     expect(planAction(trialing, "indie")).toBe("pending");
   });
 
@@ -220,7 +236,6 @@ describe("a first payment still being confirmed", () => {
 });
 
 describe("a trial offered on the wall", () => {
-  const NOW = new Date("2026-10-22T12:00:00.000Z");
   const offered = planOf({
     plan: "free",
     entitled: false,
@@ -266,18 +281,18 @@ describe("a trial offered on the wall", () => {
   });
 
   it("names the zero charge, the end date and how to cancel", () => {
-    const line = `Pay $0 today. Your trial ends on ${ENDS_ON}, then the plan you choose is charged. Cancel any time from settings.`;
+    const line = `Pay $0 today. Your trial ends on ${ENDS_ON}, then the plan you choose is charged, plus any VAT or sales tax, and renews until you cancel. Cancel any time from settings.`;
 
-    expect(paywallStatusLine(offered, NOW)).toBe(line);
+    expect(paywallStatusLine(offered, CLOCK)).toBe(line);
   });
 
   it("says when the verified card is charged", () => {
     const catalog: BillingCatalog = { enabled: true, prices: [] };
 
-    expect(trialPaymentNote(catalog, { days: 7 }, NOW)).toBe(
+    expect(trialPaymentNote(catalog, { days: 7 }, CLOCK)).toBe(
       `${HANDLED_BY_STRIPE} Your card is verified now and charged on ${ENDS_ON}.`,
     );
-    expect(trialPaymentNote(catalog, null, NOW)).toBe(HANDLED_BY_STRIPE);
+    expect(trialPaymentNote(catalog, null, CLOCK)).toBe(HANDLED_BY_STRIPE);
   });
 
   it("points settings at the wall", () => {
@@ -314,7 +329,7 @@ describe("a card backed trial", () => {
     expect(planStatusLine(TRIALING)).toBe(
       `Trial until ${formatDate(ENDS)}, then $10 per month.`,
     );
-    expect(paywallStatusLine(TRIALING)).toBe(
+    expect(paywallStatusLine(TRIALING, CLOCK)).toBe(
       `Your trial runs until ${formatDate(ENDS)}, then $10 per month. Change or cancel it in the billing portal.`,
     );
     expect(planAction(TRIALING, "ultimate")).toBe("change");
@@ -331,7 +346,7 @@ describe("a card backed trial", () => {
     const line = `Cancelled. Your trial ends on ${formatDate(ENDS)} and nothing is charged.`;
 
     expect(planStatusLine(cancelled)).toBe(line);
-    expect(paywallStatusLine(cancelled)).toBe(line);
+    expect(paywallStatusLine(cancelled, CLOCK)).toBe(line);
   });
 
   it("sends a declined first charge to the portal for a new card", () => {
@@ -345,12 +360,12 @@ describe("a card backed trial", () => {
     });
 
     expect(planStatusLine(declined)).toBe(DECLINED);
-    expect(paywallStatusLine(declined)).toBe(DECLINED);
+    expect(paywallStatusLine(declined, CLOCK)).toBe(DECLINED);
   });
 
   it("keeps the stalled sentence for a paying customer that once trialed", () => {
     expect(planStatusLine(stalled)).not.toBe(DECLINED);
-    expect(paywallStatusLine(stalled)).not.toBe(DECLINED);
+    expect(paywallStatusLine(stalled, CLOCK)).not.toBe(DECLINED);
   });
 
   it("counts down the banner and names the plan and its price", () => {
@@ -374,13 +389,16 @@ describe("paymentNote", () => {
     ...over,
   });
 
-  it("names link as the reseller and the tax line under managed payments", () => {
+  it("names link as the merchant of record, never a seller, and the tax line under managed payments", () => {
     expect(paymentNote(catalogOf({ managedPayments: true }))).toBe(
-      SOLD_THROUGH_LINK,
+      HANDLED_BY_LINK,
     );
-    expect(SOLD_THROUGH_LINK).toContain("Link");
-    expect(SOLD_THROUGH_LINK).toContain("VAT");
-    expect(SOLD_THROUGH_LINK).toContain("local currency");
+    expect(HANDLED_BY_LINK).toContain(
+      "Link, a Stripe affiliate and the merchant of record",
+    );
+    expect(HANDLED_BY_LINK).not.toMatch(/reseller|seller of record/);
+    expect(HANDLED_BY_LINK).toContain("VAT");
+    expect(HANDLED_BY_LINK).toContain("local currency");
   });
 
   it("keeps today's sentence when this business sells", () => {
@@ -470,11 +488,10 @@ describe("confirmEmailParts", () => {
 });
 
 describe("the wall around the checkout", () => {
-  const NOW = new Date("2026-10-22T12:00:00.000Z");
   const ENDS_ON = formatDate("2026-10-29T12:00:00.000Z");
 
   it("names the trial end, the free days and how to cancel", () => {
-    expect(trustLines({ days: 7 }, NOW)).toEqual([
+    expect(trustLines({ days: 7 }, CLOCK)).toEqual([
       `No risk: cancel before ${ENDS_ON} and nothing is charged`,
       "Pay nothing for the first 7 days",
       "Cancel any time from settings",
@@ -482,23 +499,43 @@ describe("the wall around the checkout", () => {
   });
 
   it("names the trial end on the bar", () => {
-    expect(Object.values(trialBarParts({ days: 7 }, NOW)).join("")).toBe(
+    expect(Object.values(trialBarParts({ days: 7 }, CLOCK)).join("")).toBe(
       `Your 7 day trial is 100% free, ending ${ENDS_ON}. Cancel any time from settings.`,
     );
   });
 
   it("splits the bar sentence so the promise and the date stand alone", () => {
-    expect(trialBarParts({ days: 7 }, NOW)).toEqual({
+    expect(trialBarParts({ days: 7 }, CLOCK)).toEqual({
       before: "Your 7 day trial is ",
       free: "100% free",
       middle: ", ending ",
-      endsOn: trialEndLabel({ days: 7 }, NOW),
+      endsOn: trialEndLabel({ days: 7 }, CLOCK),
       after: ". Cancel any time from settings.",
     });
   });
 
+  it("names the day the viewer's time zone shows, as checkout does", () => {
+    const lateInTheUtcDay = new Date("2026-11-06T23:12:00.000Z");
+
+    expect(
+      trialEndLabel(
+        { days: 7 },
+        { now: lateInTheUtcDay, timeZone: "Europe/Warsaw" },
+      ),
+    ).toBe("Nov 14, 2026");
+    expect(
+      trialEndLabel({ days: 7 }, { now: lateInTheUtcDay, timeZone: "UTC" }),
+    ).toBe("Nov 13, 2026");
+    expect(
+      trialEndLabel(
+        { days: 7 },
+        { now: lateInTheUtcDay, timeZone: "America/Los_Angeles" },
+      ),
+    ).toBe("Nov 13, 2026");
+  });
+
   it("keeps the emphasised parts free of edge spaces", () => {
-    const { free, endsOn } = trialBarParts({ days: 7 }, NOW);
+    const { free, endsOn } = trialBarParts({ days: 7 }, CLOCK);
     expect(free).toBe(free.trim());
     expect(endsOn).toBe(endsOn.trim());
   });
@@ -540,5 +577,38 @@ describe("the plan cards", () => {
   it("titles the features after the selected plan", () => {
     expect(featuresTitle("indie")).toBe("What Indie includes");
     expect(featuresTitle("ultimate")).toBe("What Ultimate includes");
+  });
+});
+
+describe("planOnSale", () => {
+  const offered = planOf({
+    plan: "free",
+    entitled: false,
+    subscribed: false,
+    trialOffer: { days: 7 },
+  });
+  const selling: BillingCatalog = { enabled: true, prices: [] };
+  const unconfigured: BillingCatalog = { enabled: false, prices: [] };
+
+  it("keeps the trial offer while checkout can start it", () => {
+    expect(planOnSale(offered, selling)).toBe(offered);
+    expect(sellingTrial(selling)).toBe(true);
+  });
+
+  it("drops the trial offer where checkout is not configured", () => {
+    const shown = planOnSale(offered, unconfigured);
+
+    expect(shown?.trialOffer).toBeNull();
+    expect(paywallHeading(shown)).toBe("Keep optimizing without limits");
+    expect(paywallStatusLine(shown, CLOCK)).not.toContain("$0");
+    expect(sellingTrial(unconfigured)).toBe(false);
+  });
+
+  it("keeps the trial offer while the catalog is loading or has failed", () => {
+    expect(planOnSale(offered, undefined)).toBe(offered);
+    expect(paywallHeading(planOnSale(offered, undefined))).toBe(
+      "Start your 7 day free trial",
+    );
+    expect(sellingTrial(undefined)).toBe(true);
   });
 });

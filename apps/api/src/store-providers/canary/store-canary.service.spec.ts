@@ -141,6 +141,41 @@ describe('StoreCanaryService', () => {
     expect(written(redis, Store.APP_STORE).consecutiveFailures).toBe(1);
   });
 
+  it('records an unavailable page extract as a broken run', async () => {
+    const { service, providers } = build();
+    providers.APP_STORE.getApp = jest.fn(() =>
+      Promise.resolve(appOf(Store.APP_STORE, { pageExtractUnavailable: true })),
+    );
+
+    const records = await service.run();
+
+    expect(records.APP_STORE).toMatchObject({
+      outcome: 'broken',
+      detail: 'product page extract is unavailable',
+      consecutiveFailures: 1,
+    });
+  });
+
+  it('records an answered page without a listing extract as a broken run', async () => {
+    const { service, providers } = build();
+    providers.APP_STORE.getApp = jest.fn(() =>
+      Promise.resolve(
+        appOf(Store.APP_STORE, {
+          subtitleUnavailable: true,
+          pageExtractUnavailable: true,
+        }),
+      ),
+    );
+
+    const records = await service.run();
+
+    expect(records.APP_STORE).toMatchObject({
+      outcome: 'broken',
+      detail: 'product page extract is unavailable',
+      consecutiveFailures: 1,
+    });
+  });
+
   it('counts a second consecutive break without moving failingSince', async () => {
     const { service, providers } = build({
       [storeCanaryKey(Store.APP_STORE)]: recordOf(),

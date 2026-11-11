@@ -7,6 +7,8 @@ import { CollectionEligibility } from '../auth/collection-eligibility.service';
 import { CategoryRanksService } from '../category-ranks/category-ranks.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { DiscoveryCheck } from '../keyword-discovery/discovery-check.service';
+import { KeywordInspectionRunner } from '../keyword-inspections/keyword-inspection.runner';
+import { ProxyPoolUnavailableError } from '../store-providers/egress/proxy-pool.service';
 import { SpiderService } from '../keywords/spider.service';
 import { RankingsService } from '../rankings/rankings.service';
 import { ReviewsService } from '../reviews/reviews.service';
@@ -23,6 +25,9 @@ describe('StoreJobsHandler', () => {
   const runSpiderProbe = jest.fn();
   const probeLocalization = jest.fn();
   const runDiscoveryCheck = jest.fn<Promise<void>, [unknown, boolean]>();
+  const runInspection = jest.fn<Promise<void>, [string]>();
+  const failInspection = jest.fn<Promise<void>, [string, unknown]>();
+  const refuseInspection = jest.fn<Promise<void>, [string]>();
   const checkCategory = jest.fn().mockResolvedValue(undefined);
   const syncReviews = jest.fn().mockResolvedValue([]);
   const checkKeyword = jest.fn().mockResolvedValue(undefined);
@@ -45,6 +50,9 @@ describe('StoreJobsHandler', () => {
     runSpiderProbe.mockReset().mockResolvedValue(undefined);
     probeLocalization.mockReset().mockResolvedValue(undefined);
     runDiscoveryCheck.mockReset().mockResolvedValue(undefined);
+    runInspection.mockReset().mockResolvedValue(undefined);
+    failInspection.mockReset().mockResolvedValue(undefined);
+    refuseInspection.mockReset().mockResolvedValue(undefined);
     forWorkspace.mockReset().mockResolvedValue(true);
     scoresKeyword.mockReset().mockResolvedValue(true);
     scoreKeyword.mockReset().mockResolvedValue(undefined);
@@ -66,6 +74,11 @@ describe('StoreJobsHandler', () => {
       { forWorkspace, scoresKeyword } as unknown as CollectionEligibility,
       { probe: probeLocalization } as unknown as LocalizationDetection,
       { run: runDiscoveryCheck } as unknown as DiscoveryCheck,
+      {
+        run: runInspection,
+        fail: failInspection,
+        refuse: refuseInspection,
+      } as unknown as KeywordInspectionRunner,
     );
   });
 
@@ -274,6 +287,55 @@ describe('StoreJobsHandler', () => {
 
       expect(through).not.toHaveBeenCalled();
       expect(runDiscoveryCheck).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('a keyword inspection', () => {
+    const inspection = (attemptsMade = 0) =>
+      ({
+        name: JOBS.INSPECT_KEYWORD,
+        id: '7',
+        data: { inspectionId: 'i1', workspaceId: 'ws_a' },
+        queueName: QUEUES.APP_STORE,
+        attemptsMade,
+        opts: { attempts: 3 },
+        timestamp: Date.now(),
+      }) as Job;
+
+    it('runs the inspection through one egress endpoint', async () => {
+      await handler.handle(inspection());
+
+      expect(through).toHaveBeenCalledTimes(1);
+      expect(runInspection).toHaveBeenCalledWith('i1');
+    });
+
+    it('closes the inspection once its workspace may no longer collect', async () => {
+      forWorkspace.mockResolvedValue(false);
+
+      await handler.handle(inspection());
+
+      expect(through).not.toHaveBeenCalled();
+      expect(runInspection).not.toHaveBeenCalled();
+      expect(refuseInspection).toHaveBeenCalledWith('i1');
+    });
+
+    it('fails the inspection only when the final attempt throws', async () => {
+      const failure = new Error('no egress endpoint');
+      countryOf.mockRejectedValue(failure);
+
+      await expect(handler.handle(inspection(0))).rejects.toThrow(failure);
+      expect(failInspection).not.toHaveBeenCalled();
+
+      await expect(handler.handle(inspection(2))).rejects.toThrow(failure);
+      expect(failInspection).toHaveBeenCalledWith('i1', failure);
+    });
+
+    it('leaves the inspection pending while the job waits for a busy pool', async () => {
+      const busy = new ProxyPoolUnavailableError(Store.APP_STORE, 1_000, 5_000);
+      countryOf.mockRejectedValue(busy);
+
+      await expect(handler.handle(inspection(2))).rejects.toThrow(busy);
+      expect(failInspection).not.toHaveBeenCalled();
     });
   });
 

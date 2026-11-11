@@ -5,22 +5,29 @@ import {
   billingIntervalOf,
   effectivePlan,
   paidPlanOf,
-  planPriceLabel,
+  planRenewalTerms,
 } from '@asobeast/shared';
 import { isEntitled } from '../auth/entitlement';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { AccountNotifier, noticeSettled } from './account-notifier.service';
-import { trialNotice, type TrialNoticeContext } from './account-mail';
-import { dueTrialNotice, type TrialNoticeDay } from './trial-notices';
+import {
+  trialNotice,
+  trialRefused,
+  type TrialNoticeContext,
+} from './account-mail';
+import {
+  TRIAL_ENDED_NOTICE,
+  dueTrialNotice,
+  timeLeftLabel,
+  type TrialNoticeDay,
+} from './trial-notices';
 
 const SWEEP_JUSTIFICATION =
   'trial milestones are counted across every workspace before notifying each';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-
-const LAST_NOTICE = 8;
 
 const TRIAL_SELECT = {
   id: true,
@@ -77,7 +84,10 @@ export class TrialNotifier {
     const trials: TrialRow[] = await this.prisma.workspace.findMany({
       where: {
         trialStartedAt: { not: null },
-        OR: [{ trialNoticeDay: null }, { trialNoticeDay: { lt: LAST_NOTICE } }],
+        OR: [
+          { trialNoticeDay: null },
+          { trialNoticeDay: { lt: TRIAL_ENDED_NOTICE } },
+        ],
         AND: [
           { OR: [{ subscriptionId: null }, { trialClaimedAt: { not: null } }] },
         ],
@@ -90,10 +100,10 @@ export class TrialNotifier {
       const day = noticeDayOf(workspace, now);
       if (day === null) continue;
       if (
-        day === LAST_NOTICE &&
+        day === TRIAL_ENDED_NOTICE &&
         (isEntitled(workspace, now) || declineAlreadyMailed(workspace))
       ) {
-        await this.record(workspace.id, LAST_NOTICE);
+        await this.record(workspace.id, TRIAL_ENDED_NOTICE);
         continue;
       }
 
@@ -108,7 +118,32 @@ export class TrialNotifier {
       if (outcome === 'delivered') sent += 1;
     }
 
+    sent += await this.notifyRefused();
     if (sent > 0) this.logger.log(`sent ${sent} trial notices`);
+    return sent;
+  }
+
+  private async notifyRefused(): Promise<number> {
+    const refused = await this.prisma.workspace.findMany({
+      where: {
+        trialRefusedSubscriptionId: { not: null },
+        trialNoticeDay: null,
+        subscriptionId: null,
+      },
+      select: { id: true },
+    });
+
+    let sent = 0;
+    for (const { id } of refused) {
+      const outcome = await this.notifier.notify(
+        id,
+        'trial.refused',
+        trialRefused(),
+      );
+      if (!noticeSettled(outcome)) continue;
+      await this.record(id, TRIAL_ENDED_NOTICE);
+      if (outcome === 'delivered') sent += 1;
+    }
     return sent;
   }
 
@@ -127,6 +162,7 @@ export class TrialNotifier {
       plan: PLANS[paid ?? effectivePlan(workspace, now)].displayName,
       price: priceOf(workspace),
       endsOn: formatDay(workspace.trialEndsAt),
+      timeLeft: timeLeftLabel(workspace.trialEndsAt ?? now, now),
       cancelling: workspace.cancelAtPeriodEnd,
       chargeFailed: firstChargeFailed(workspace),
     };
@@ -156,17 +192,17 @@ function declineAlreadyMailed(workspace: TrialRow): boolean {
 function noticeDayOf(workspace: TrialRow, now: Date): TrialNoticeDay | null {
   const due = dueTrialNotice(workspace, now);
   if (due === null) return null;
-  const cardTrialEnded =
-    workspace.subscriptionId !== null &&
-    workspace.subscriptionStatus !== 'trialing';
-  return cardTrialEnded ? LAST_NOTICE : due;
+  const stillTrialing = workspace.subscriptionStatus === 'trialing';
+  if (due === TRIAL_ENDED_NOTICE && stillTrialing) return null;
+  const cardTrialEnded = workspace.subscriptionId !== null && !stillTrialing;
+  return cardTrialEnded ? TRIAL_ENDED_NOTICE : due;
 }
 
 function priceOf(workspace: TrialRow): string | null {
   if (workspace.subscriptionId === null) return null;
   const plan = paidPlanOf(workspace.plan);
   const interval = billingIntervalOf(workspace.billingInterval);
-  return plan && interval ? planPriceLabel(plan, interval) : null;
+  return plan && interval ? planRenewalTerms(plan, interval) : null;
 }
 
 function formatDay(endsAt: Date | null): string {

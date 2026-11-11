@@ -1,5 +1,6 @@
 import type {
   BillingCatalog,
+  BillingPrice,
   CheckoutTheme,
   CheckoutUi,
 } from "@asobeast/shared";
@@ -30,4 +31,13 @@ export function checkoutThemeOf(
 
 export function checkoutUiFor(catalog: BillingCatalog | undefined): CheckoutUi {
   return catalog?.enabled && catalog.publishableKey ? "embedded" : "hosted";
+}
+
+export function embeddedKeyFor(
+  catalog: BillingCatalog | undefined,
+  buys: boolean,
+  price: BillingPrice | undefined,
+): string | null {
+  if (!buys || !price || checkoutUiFor(catalog) !== "embedded") return null;
+  return catalog?.publishableKey ?? null;
 }

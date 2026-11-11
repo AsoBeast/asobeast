@@ -1,6 +1,7 @@
 import { version } from "../package.json";
 import { contrastRatio } from "../src/lib/contrast";
 import { hydrated } from "./hydrated.mts";
+import { revealAfterLoad } from "./late-reveal.mts";
 import { expect, test } from "./session.mts";
 import type { BrowserContext, Page } from "@playwright/test";
 
@@ -97,6 +98,7 @@ test.describe("the what's new page", () => {
 
   test("groups the changes under words", async ({ page }) => {
     await page.goto("/whats-new");
+    await expect(releases(page).first()).toBeVisible();
 
     const groups = await releases(page)
       .getByRole("heading", { level: 3 })
@@ -205,6 +207,16 @@ test.describe("the what's new page", () => {
     await page.goto("/whats-new#release-1-0-0");
 
     await expect(page.locator("#release-1-0-0")).toBeInViewport();
+  });
+
+  test("deep links a release that streams in after the page loaded", async ({
+    page,
+  }) => {
+    const heldReveals = await revealAfterLoad(page);
+    await page.goto("/whats-new#release-1-0-0");
+
+    await expect(page.locator("#release-1-0-0")).toBeInViewport();
+    expect(await heldReveals()).toBeGreaterThan(0);
   });
 });
 
@@ -326,6 +338,7 @@ test.describe("the what's new sidebar item", () => {
   }) => {
     await page.setViewportSize({ width: 1512, height: 982 });
     await page.goto("/whats-new");
+    await expect(releases(page).first()).toBeVisible();
     await page.mouse.wheel(0, 500);
     await expect
       .poll(() => page.evaluate(() => window.scrollY))

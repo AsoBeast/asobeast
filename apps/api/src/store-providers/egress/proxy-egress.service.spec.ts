@@ -1,4 +1,4 @@
-import { ProxyOutcome, ProxyTier, Store } from '@prisma/client';
+import { Prisma, ProxyOutcome, ProxyTier, Store } from '@prisma/client';
 import { Dispatcher } from 'undici';
 import { ImplausibleResultError, StoreRequestError } from '../errors';
 import { storeDeadline, withinStoreDeadline } from '../store-deadline';
@@ -106,13 +106,12 @@ describe('ProxyEgress', () => {
     ]);
   });
 
-  it('hands the endpoint back once when the ledger fails after the work succeeded', async () => {
-    const ledgerDown = new Error('ledger unavailable');
-    charge.mockRejectedValue(ledgerDown);
+  it('keeps the result of a job whose ledger write failed afterwards', async () => {
+    charge.mockRejectedValue(new Error('ledger unavailable'));
     const work = jest.fn(okSubrequests(3));
 
-    await expect(egress.through(Store.GOOGLE_PLAY, 'us', work)).rejects.toBe(
-      ledgerDown,
+    await expect(egress.through(Store.GOOGLE_PLAY, 'us', work)).resolves.toBe(
+      'ok',
     );
 
     expect(work).toHaveBeenCalledTimes(1);
@@ -332,6 +331,48 @@ describe('ProxyEgress', () => {
     ).rejects.toBe(transport);
 
     expect(claim).not.toHaveBeenCalled();
+  });
+
+  it('rethrows the failure of the job when its outcome cannot be recorded', async () => {
+    const parse = new Error('app not found');
+    release.mockRejectedValue(new Error('database restarting'));
+
+    await expect(
+      egress.through(Store.APP_STORE, 'us', () => Promise.reject(parse)),
+    ).rejects.toBe(parse);
+  });
+
+  it('still retries a blocked job on residential egress when its outcome cannot be recorded', async () => {
+    const blocked = new StoreRequestError(
+      Store.APP_STORE,
+      'search',
+      'HTTP 403 forbidden',
+    );
+    record.mockRejectedValue(new Error('database restarting'));
+    claim.mockResolvedValue({} as Dispatcher);
+    const work = jest
+      .fn<Promise<string>, []>()
+      .mockRejectedValueOnce(blocked)
+      .mockResolvedValue('via residential');
+
+    await expect(egress.through(Store.APP_STORE, 'us', work)).resolves.toBe(
+      'via residential',
+    );
+    expect(claim).toHaveBeenCalledTimes(1);
+  });
+
+  it('never cools an endpoint down for a database timeout inside the job', async () => {
+    const expired = new Prisma.PrismaClientKnownRequestError(
+      'Transaction API error: A query cannot be executed on an expired transaction. The timeout for this transaction was 20000 ms',
+      { code: 'P2028', clientVersion: '7.10.1' },
+    );
+
+    await expect(
+      egress.through(Store.GOOGLE_PLAY, 'us', () => Promise.reject(expired)),
+    ).rejects.toBe(expired);
+
+    expect(record).not.toHaveBeenCalled();
+    expect(release).toHaveBeenCalledTimes(1);
   });
 
   it('leaves health alone when the failure was not about the network', async () => {

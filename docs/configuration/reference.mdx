@@ -167,6 +167,7 @@ See [Read screenshot captions](/guides/screenshot-captions).
 | `RETENTION_AI_CALLS_DAYS` | `400` | No | Days the AI call ledger is kept. Never prunes the current month, which the monthly AI allowance still counts. `0` keeps forever |
 | `RETENTION_STORE_REPORTS_DAYS` | `35` | No | Days a downloaded store console report file is kept so it can be read again after a parser change. The funnel rows built from it are never pruned by age. `0` keeps forever, which is not recommended because the files grow with every app and day |
 | `RETENTION_BILLING_EVENTS_DAYS` | `90` | No | Days to keep stored Stripe webhook payloads, which carry customer billing details. `0` keeps them forever |
+| `RETENTION_KEYWORD_INSPECTIONS_DAYS` | `180` | No | Prunes keyword inspections requested more than N days ago. Each holds its search results and suggestions. `0` keeps them forever |
 
 ## Runtime
 
@@ -196,7 +197,7 @@ See [Authentication and accounts](/security/authentication).
 | `STRIPE_PRICE_ULTIMATE_MONTHLY` | empty | No | Price id for Ultimate monthly. Empty resolves it from `asobeast_ultimate_month` |
 | `STRIPE_PRICE_ULTIMATE_YEARLY` | empty | No | Price id for Ultimate annual. Empty resolves it from `asobeast_ultimate_year` |
 | `CRON_BILLING_RECONCILE` | `0 7 * * *` | No | Daily reconciliation of local subscription state against Stripe, UTC |
-| `CRON_TRIAL_NOTICES` | `0 9 * * *` | No | Daily sweep that sends the trial milestone emails, which name the plan, the first charge and how to cancel, UTC |
+| `CRON_TRIAL_NOTICES` | `0 * * * *` | No | Hourly sweep that sends the trial emails, which name the plan, the first charge and how to cancel, so the reminder lands at least 72 hours before the charge. A daily value makes it late, UTC |
 | `AUTH_COOKIE_SECURE` | `false` | No | Marks the session cookie `Secure`. **Refuses to boot** when `false` and `NODE_ENV` is `production`. The Docker image sets `NODE_ENV=production`, so the Compose stack defaults this to `true` |
 | `TRUST_PROXY` | `0`, and `1` pinned in the Compose stack | No | How many proxies you control sit between the internet and the API, counting the web app as one. Compose pins it to `1` because the web app is always exactly one hop in front of the API there. `true` means 1 and `false` means 0. The API reads that many entries back from the right of `X-Forwarded-For`, so auth throttling keys on the real client address. Both apps warn at startup in production when `0`. See [Hosting](/security/hosting) |
 
@@ -227,6 +228,7 @@ See [Enable the optional AI features](/guides/ai-features).
 | `OPENAI_API_KEY` | Empty | No | Empty disables every AI feature. With `OPENAI_BASE_URL` set, the key of that provider; any non empty value for a local server that checks none |
 | `OPENAI_BASE_URL` | Empty | No | Address of an OpenAI compatible API the AI features call instead of OpenAI, for example `https://openrouter.ai/api/v1`. Empty uses `https://api.openai.com/v1`. Refuses to boot when it is not an http or https URL, carries a user name or password, or holds a `#` fragment. See [Use an OpenAI compatible provider](/guides/ai-features#use-an-openai-compatible-provider) |
 | `AI_MODEL` | `gpt-5.6-luna` | No | The model name as the provider spells it. Must support vision and structured outputs, because the audit reads screenshots |
+| `AI_MAX_OUTPUT_TOKENS` | `16384` | No | The most tokens one AI answer may use, reasoning included, sent as `max_completion_tokens`. Lower it for a model or server whose limit is smaller, such as a vLLM `--max-model-len`. Refuses to boot below 1024 |
 | `AI_CALLS_PER_MONTH` | Empty | No | AI calls each workspace may make per calendar month (UTC) on a self hosted instance. Empty means unlimited and `0` turns AI calls off. Ignored when `BILLING_ENABLED` is true, where each plan sets its own allowance. Warns in production when empty while `OPENAI_API_KEY` is set and registration is open |
 
 ## Apple search popularity
@@ -274,7 +276,7 @@ These live in the root `.env` and are read by Compose, not by the API directly.
 | --- | --- | --- | --- |
 | `POSTGRES_PASSWORD` | None | Yes | Sets the PostgreSQL role password and is interpolated into `DATABASE_URL` |
 | `AUTH_SECRET` | None | Yes | Passed through to the API container |
-| `ASOBEAST_PORT` | `3001` | No | Host port the web container's port 3000 is published on. Change it when another service already uses 3001. The default `WEB_PUBLIC_URL` follows it. The tunnel overlay publishes no port, so it has no effect there |
+| `ASOBEAST_PORT` | `3001` | No | Host port number the web container's port 3000 is published on, such as `3002`. Change it when another service already uses 3001. It takes a port number only: an address such as `127.0.0.1:3002` makes the default `WEB_PUBLIC_URL` unreadable, and the API refuses to boot with a message that names `ASOBEAST_PORT`. The default `WEB_PUBLIC_URL` follows it. The tunnel overlay publishes no port, so it has no effect there |
 | `WEB_PUBLIC_URL` | `http://localhost:` and `ASOBEAST_PORT` | No | Passed to the API container in place of any value in `apps/api/.env`, which `pnpm dev` reads on port 3000. Unset, it follows `ASOBEAST_PORT`. Set it to the origin a person would type when a proxy or another host serves the stack. The tunnel overlay replaces it with `https://` and `ASOBEAST_DOMAIN` |
 | `TRUST_PROXY` | `0` | No | Hops you control in front of the web app. The tunnel overlay pins `1` for the web app whatever this file says, because the tunnel is always exactly one hop. Set it yourself when you run `cloudflared` on the host or bring your own proxy |
 | `TUNNEL_TOKEN` | None | With the tunnel overlay | Token of the Cloudflare Tunnel you created in the dashboard. Read only by `docker-compose.tunnel.yml` |

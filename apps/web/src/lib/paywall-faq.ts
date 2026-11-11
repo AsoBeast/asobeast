@@ -1,5 +1,5 @@
 import type { TrialOffer } from "@asobeast/shared";
-import { trialEndLabel } from "@/lib/plan-choice";
+import { trialEndLabel, type ViewerClock } from "@/lib/plan-choice";
 
 export interface FaqItem {
   question: string;
@@ -59,26 +59,26 @@ const STANDING_ITEMS: readonly FaqItem[] = [
 
 function chargeItem(
   offer: TrialOffer | null | undefined,
-  priceLabel: string,
-  now: Date,
+  renewalTerms: string,
+  clock: ViewerClock,
 ): FaqItem {
   if (!offer) {
     return {
       question: "When am I charged?",
-      answer: "Today, for the first period. The plan renews until you cancel.",
+      answer: `Today, for the first period. Then ${renewalTerms}.`,
     };
   }
-  const endsOn = trialEndLabel(offer, now);
+  const endsOn = trialEndLabel(offer, clock);
   return {
     question: "Will I be charged today?",
-    answer: `No. Your card is verified today and nothing is charged. ${priceLabel} is charged on ${endsOn} unless you cancel from settings before then.`,
+    answer: `No. Your card is verified today and nothing is charged. From ${endsOn}: ${renewalTerms}. Cancel from settings before then and nothing is charged.`,
   };
 }
 
 export function paywallFaq(
   offer: TrialOffer | null | undefined,
-  priceLabel: string,
-  now: Date,
+  renewalTerms: string,
+  clock: ViewerClock,
 ): readonly FaqItem[] {
-  return [chargeItem(offer, priceLabel, now), ...STANDING_ITEMS];
+  return [chargeItem(offer, renewalTerms, clock), ...STANDING_ITEMS];
 }

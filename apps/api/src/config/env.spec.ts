@@ -89,6 +89,31 @@ describe('AI_CALLS_PER_MONTH', () => {
   });
 });
 
+describe('AI_MAX_OUTPUT_TOKENS', () => {
+  const withCeiling = (value: string) =>
+    validateEnv({ AUTH_SECRET: 'a'.repeat(32), AI_MAX_OUTPUT_TOKENS: value });
+
+  it.each([undefined, '', '  '])(
+    'gives a reasoning model 16384 output tokens when unset (%p)',
+    (value) => {
+      expect(
+        validateEnv({
+          AUTH_SECRET: 'a'.repeat(32),
+          AI_MAX_OUTPUT_TOKENS: value,
+        }).AI_MAX_OUTPUT_TOKENS,
+      ).toBe(16_384);
+    },
+  );
+
+  it('reads a lower ceiling for a provider with a smaller output limit', () => {
+    expect(withCeiling('4096').AI_MAX_OUTPUT_TOKENS).toBe(4096);
+  });
+
+  it.each(['512', '0', 'abc', '2048.5'])('refuses a ceiling of %s', (value) => {
+    expect(() => withCeiling(value)).toThrow();
+  });
+});
+
 describe('OPENAI_BASE_URL', () => {
   const withAddress = (value: string) =>
     validateEnv({ AUTH_SECRET: 'a'.repeat(32), OPENAI_BASE_URL: value });
@@ -310,5 +335,31 @@ describe('RETENTION_STORE_REPORTS_DAYS', () => {
     expect(() =>
       validateEnv({ ...base, RETENTION_STORE_REPORTS_DAYS: '-1' }),
     ).toThrow();
+  });
+});
+
+describe('WEB_PUBLIC_URL built from ASOBEAST_PORT', () => {
+  const withOrigin = (origin: string) =>
+    validateEnv({ AUTH_SECRET: 'a'.repeat(32), WEB_PUBLIC_URL: origin });
+
+  it.each(['http://localhost:127.0.0.1:3999', 'http://localhost:0.0.0.0:3001'])(
+    'names the unparsable origin before the ASOBEAST_PORT it may come from %s',
+    (origin) => {
+      expect(() => withOrigin(origin)).toThrow(
+        'WEB_PUBLIC_URL is not an origin that parses. When WEB_PUBLIC_URL is not set, the Compose stacks build it from ASOBEAST_PORT',
+      );
+    },
+  );
+
+  it('keeps the default origin a port number builds', () => {
+    expect(withOrigin('http://localhost:3999').WEB_PUBLIC_URL).toBe(
+      'http://localhost:3999',
+    );
+  });
+
+  it('keeps naming WEB_PUBLIC_URL for any other malformed origin', () => {
+    expect(() => withOrigin('ftp://aso.example.com')).toThrow(
+      'WEB_PUBLIC_URL must be the http or https origin',
+    );
   });
 });

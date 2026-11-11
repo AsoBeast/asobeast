@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   checkoutThemeOf,
   checkoutUiFor,
+  embeddedKeyFor,
   OPEN_TURN_MS,
   openAfterPrevious,
   sessionKeyOf,
@@ -40,6 +41,24 @@ describe("embedded checkout", () => {
       }),
     ).toBe("hosted");
     expect(checkoutUiFor(undefined)).toBe("hosted");
+  });
+
+  it("hands the publishable key only to a purchase with a price to embed", () => {
+    const catalog = { enabled: true, prices: [], publishableKey: "pk_test_1" };
+    const price = {
+      plan: "indie" as const,
+      interval: "month" as const,
+      priceId: "price_indie_month",
+      amountUsd: 10,
+    };
+
+    expect(embeddedKeyFor(catalog, true, price)).toBe("pk_test_1");
+    expect(embeddedKeyFor(catalog, false, price)).toBeNull();
+    expect(embeddedKeyFor(catalog, true, undefined)).toBeNull();
+    expect(
+      embeddedKeyFor({ enabled: true, prices: [] }, true, price),
+    ).toBeNull();
+    expect(embeddedKeyFor(undefined, true, price)).toBeNull();
   });
 
   it("opens each checkout only after the one before it settled, failed or not", async () => {

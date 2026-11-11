@@ -8,6 +8,7 @@ import {
   CHECKOUT_UIS,
   billingIntervalOf,
   planPriceLabel,
+  planRenewalTerms,
   type BillingCatalog,
   type BillingInterval,
   type BillingSession,
@@ -385,6 +386,15 @@ describe('trialingLimits', () => {
     expect(planPriceLabel('indie', 'month')).toBe('$10 per month');
     expect(planPriceLabel('indie', 'year')).toBe('$100 per year');
     expect(planPriceLabel('ultimate', 'month')).toBe('$99 per month');
+  });
+
+  it('states the renewal terms of a plan per interval', () => {
+    expect(planRenewalTerms('indie', 'month')).toBe(
+      '$10 per month plus any VAT or sales tax, renewing monthly until you cancel',
+    );
+    expect(planRenewalTerms('ultimate', 'year')).toBe(
+      '$990 per year plus any VAT or sales tax, renewing yearly until you cancel',
+    );
   });
 
   it('names the two checkout uis', () => {

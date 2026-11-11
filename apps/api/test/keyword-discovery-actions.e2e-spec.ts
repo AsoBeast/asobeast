@@ -237,6 +237,22 @@ describe('keyword discovery actions (e2e)', () => {
     expect((await listed()).unfit).toBe(0);
   });
 
+  it('reports no unfit row for a ranked discovery untracked while the plan has room', async () => {
+    await owner
+      .patch(route('settings'))
+      .send({ autoTrackRanked: true })
+      .expect(200);
+    expect(await trackedOf(ids['time blocking'])).not.toBeNull();
+
+    await owner
+      .delete(`/apps/${appId}/keywords/${ids['time blocking']}`)
+      .expect(204);
+
+    const after = await listed();
+    expect(after.counts.ranked).toBe(1);
+    expect(after).toMatchObject({ autoTrackRanked: true, unfit: 0 });
+  });
+
   it('opens no keyword market for a phrase another app already tracks', async () => {
     const filler = await fillRoom(0);
     await harness.prisma.trackedKeyword.create({

@@ -1,4 +1,9 @@
+import { BACKGROUND_REQUEST_TIMEOUT_MS } from '../ai/openai.client';
+import { SCREENSHOT_FETCH_TIMEOUT_MS } from '../store-providers/screenshot-image.source';
 import {
+  CREATIVE_RUN_ATTEMPTS,
+  CREATIVE_RUN_BACKOFF_MS,
+  CREATIVE_RUN_TIMEOUT_MS,
   effectiveRun,
   RUN_UNFINISHED_MESSAGE,
   StoredRun,
@@ -54,5 +59,17 @@ describe('effectiveRun', () => {
       finishedAt: EARLIER.toISOString(),
       error: null,
     });
+  });
+});
+
+describe('creative run window', () => {
+  it('outlasts every attempt of a job whose downloads and model call all time out', () => {
+    const attempt = SCREENSHOT_FETCH_TIMEOUT_MS + BACKGROUND_REQUEST_TIMEOUT_MS;
+    const backoff =
+      CREATIVE_RUN_BACKOFF_MS * (2 ** (CREATIVE_RUN_ATTEMPTS - 1) - 1);
+
+    expect(CREATIVE_RUN_ATTEMPTS * attempt + backoff).toBeLessThan(
+      CREATIVE_RUN_TIMEOUT_MS,
+    );
   });
 });

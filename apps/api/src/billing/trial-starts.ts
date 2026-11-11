@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type Stripe from 'stripe';
+import { FREE_PLAN } from '@asobeast/shared';
 import { TrialClaims } from '../auth/trial-claims';
 import { workspaceOwnerEmail } from '../auth/workspace-owner';
 import { PrismaService } from '../prisma/prisma.service';
@@ -13,7 +14,9 @@ const SETTLE_LOCK = 2_847_513;
 const SETTLE_TIMEOUT_MS =
   STRIPE_TIMEOUT_MS * (STRIPE_MAX_NETWORK_RETRIES + 1) + 5_000;
 
-export type TrialSettlement = 'skipped' | 'settled' | 'ended';
+export type TrialSettlement = { outcome: 'skipped' | 'settled' | 'refused' };
+
+const SKIPPED: TrialSettlement = { outcome: 'skipped' };
 
 export interface TrialSettlementSubject {
   id: string;
@@ -21,6 +24,22 @@ export interface TrialSettlementSubject {
 }
 
 type ClaimName = 'mailbox' | 'card';
+
+export function isRefusedTrial(
+  workspace: { trialRefusedSubscriptionId: string | null },
+  subscription: { id: string },
+): boolean {
+  return workspace.trialRefusedSubscriptionId === subscription.id;
+}
+
+export function notRefusedTrial(subscriptionId: string) {
+  return {
+    OR: [
+      { trialRefusedSubscriptionId: null },
+      { trialRefusedSubscriptionId: { not: subscriptionId } },
+    ],
+  };
+}
 
 @Injectable()
 export class TrialStarts {
@@ -37,7 +56,7 @@ export class TrialStarts {
     subscription: Stripe.Subscription,
   ): Promise<TrialSettlement> {
     if (!subscription.trial_start || workspace.trialClaimedAt !== null) {
-      return 'skipped';
+      return SKIPPED;
     }
     const fingerprint = await this.cardFingerprintOf(subscription);
     const owner = await workspaceOwnerEmail(this.prisma, workspace.id);
@@ -49,13 +68,14 @@ export class TrialStarts {
           where: { id: workspace.id },
           select: { trialClaimedAt: true },
         });
-        if (current?.trialClaimedAt) return 'skipped';
+        if (current?.trialClaimedAt) return SKIPPED;
         const lost = await this.claim(tx, workspace.id, owner, fingerprint);
-        if (lost.length > 0) {
-          await this.endTrial(workspace.id, subscription, lost);
+        if (await this.refuse(workspace.id, subscription, lost)) {
+          await markRefused(tx, workspace.id, subscription.id);
+          return { outcome: 'refused' };
         }
         await markSettled(tx, workspace.id);
-        return lost.length === 0 ? 'settled' : 'ended';
+        return { outcome: 'settled' };
       },
       { timeout: SETTLE_TIMEOUT_MS },
     );
@@ -81,22 +101,26 @@ export class TrialStarts {
     return lost;
   }
 
-  private async endTrial(
+  private async refuse(
     workspaceId: string,
     subscription: Stripe.Subscription,
     lost: ClaimName[],
-  ): Promise<void> {
+  ): Promise<boolean> {
+    if (lost.length === 0) return false;
     const which = lost.join(' and ');
-    if (subscription.status !== 'trialing') {
+    if (subscription.status !== 'trialing' && !endedInTrial(subscription)) {
       this.logger.warn(
         `workspace ${workspaceId} lost the ${which} claim of subscription ${subscription.id}, whose trial already ended`,
       );
-      return;
+      return false;
     }
-    await this.stripe.endTrialNow(subscription.id);
+    if (subscription.status === 'trialing') {
+      await this.stripe.cancelRefusedTrial(subscription.id);
+    }
     this.logger.warn(
-      `workspace ${workspaceId} lost the ${which} claim, so the trial of subscription ${subscription.id} was ended at stripe and the plan is charged now`,
+      `workspace ${workspaceId} lost the ${which} claim, so the trial of subscription ${subscription.id} was cancelled at stripe and nothing is charged`,
     );
+    return true;
   }
 
   private async cardFingerprintOf(
@@ -126,9 +150,47 @@ export class TrialStarts {
   }
 }
 
+function endedInTrial({
+  status,
+  ended_at,
+  trial_end,
+}: Stripe.Subscription): boolean {
+  return (
+    status === 'canceled' &&
+    ended_at !== null &&
+    trial_end !== null &&
+    ended_at < trial_end
+  );
+}
+
 function markSettled(tx: Prisma.TransactionClient, workspaceId: string) {
   return tx.workspace.updateMany({
     where: { id: workspaceId, trialClaimedAt: null },
     data: { trialClaimedAt: new Date() },
+  });
+}
+
+function markRefused(
+  tx: Prisma.TransactionClient,
+  workspaceId: string,
+  subscriptionId: string,
+) {
+  const now = new Date();
+  return tx.workspace.updateMany({
+    where: { id: workspaceId, trialClaimedAt: null },
+    data: {
+      plan: FREE_PLAN,
+      planExpiresAt: null,
+      subscriptionId: null,
+      subscriptionStatus: null,
+      cancelAtPeriodEnd: false,
+      billingInterval: null,
+      trialStartedAt: null,
+      trialEndsAt: null,
+      trialNoticeDay: null,
+      trialClaimedAt: now,
+      trialDeclinedAt: now,
+      trialRefusedSubscriptionId: subscriptionId,
+    },
   });
 }

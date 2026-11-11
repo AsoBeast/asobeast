@@ -97,8 +97,33 @@ describe("emptyStateOf", () => {
   });
 
   it("says discovery never ran without rows or a check", () => {
-    expect(emptyStateOf(list([], null), 0, "all")).toEqual({
+    expect(emptyStateOf(list([], null), 0, "all")).toMatchObject({
       kind: "never_run",
+    });
+  });
+
+  it("promises no result and no time while a check is queued", () => {
+    const queued = list([], null);
+    queued.checks.pending = 2;
+    queued.checks.nextRunAt = "2026-11-09T07:30:00.000Z";
+    expect(emptyStateOf(queued, 0, "all")).toEqual({
+      kind: "never_run",
+      body: "AsoBeast has queued checks of the keywords near your listing. Any it finds in this market appear here.",
+    });
+    const weekly = list([], null);
+    weekly.checks.nextRunAt = "2026-11-09T07:30:00.000Z";
+    expect(emptyStateOf(weekly, 0, "all")).toEqual({
+      kind: "never_run",
+      body: "AsoBeast looks for keywords near your listing once a week. Press Refresh to look now.",
+    });
+  });
+
+  it("claims no schedule it cannot read", () => {
+    const off = list([], null);
+    off.checks.nextRunAt = null;
+    expect(emptyStateOf(off, 0, "all")).toEqual({
+      kind: "never_run",
+      body: "AsoBeast has not looked for keywords near your listing yet. Press Refresh to look now.",
     });
   });
 

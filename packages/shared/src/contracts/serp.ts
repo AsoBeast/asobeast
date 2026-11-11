@@ -2,7 +2,13 @@ import type { ChartMovement } from './charts';
 import type { KeywordBreakdownSegment } from './keyword-breakdown';
 import type { KeywordScope } from './keywords';
 
-export type SerpTitleMatch = 'phrase' | 'words' | 'partial' | 'none';
+export const SERP_TITLE_MATCHES = [
+  'phrase',
+  'words',
+  'partial',
+  'none',
+] as const;
+export type SerpTitleMatch = (typeof SERP_TITLE_MATCHES)[number];
 
 export interface SerpEntryItem {
   position: number;

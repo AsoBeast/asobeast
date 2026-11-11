@@ -3873,6 +3873,19 @@ DATASETS[APP_TAGS_ID] = {
   })),
 };
 
+export const APP_TRANSLATED_DISCOVERY_STATES_ID = "app-translated-states";
+export const APP_TRANSLATED_DISCOVERY_TRACK_ID = "app-translated-track";
+
+for (const [id, name] of [
+  [APP_TRANSLATED_DISCOVERY_STATES_ID, "Discovery States Lab"],
+  [APP_TRANSLATED_DISCOVERY_TRACK_ID, "Discovery Track Lab"],
+] as const) {
+  DATASETS[id] = {
+    ...DATASETS["app-1"],
+    detail: { ...APP_1_DETAIL, id, name },
+  };
+}
+
 export const APP_CLASS_ID = "app-class";
 
 DATASETS[APP_CLASS_ID] = {
@@ -3931,6 +3944,13 @@ export const APP_GP_POSTING_ID = "app-gp-posting";
 DATASETS[APP_GP_POSTING_ID] = {
   ...DATASETS["app-gp"],
   detail: { ...APP_GP_DETAIL, id: APP_GP_POSTING_ID, name: "Posting Lab" },
+};
+
+export const APP_GP_NO_TERMS_ID = "app-gp-no-terms";
+
+DATASETS[APP_GP_NO_TERMS_ID] = {
+  ...DATASETS["app-gp"],
+  detail: { ...APP_GP_DETAIL, id: APP_GP_NO_TERMS_ID, name: "No Terms Lab" },
 };
 
 export const APP_IMPORT_ID = "app-import";

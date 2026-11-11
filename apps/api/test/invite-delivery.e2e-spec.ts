@@ -11,6 +11,7 @@ import { App } from 'supertest/types';
 import { MailerService } from '../src/alerts/mailer.service';
 import { AppModule } from '../src/app.module';
 import { AuthService } from '../src/auth/auth.service';
+import { TERMS_VERSION } from '../src/auth/terms-acceptance';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { restoreAuthEnv } from './helpers/auth-env';
 import { testDb } from './helpers/test-db';
@@ -164,6 +165,20 @@ describe('Who receives an invitation link', () => {
     await app.close();
     restoreAuthEnv();
     await prisma.$disconnect();
+  });
+
+  it('records the terms a billing instance registers and invites under', async () => {
+    await invite(VICTIM).expect(201);
+    await accept(tokenFrom(sent[0])).expect(201);
+
+    for (const email of [OWNER, VICTIM]) {
+      await expect(
+        prisma.user.findUniqueOrThrow({ where: { email } }),
+      ).resolves.toMatchObject({
+        termsAcceptedAt: expect.any(Date) as Date,
+        termsVersion: TERMS_VERSION,
+      });
+    }
   });
 
   it('leaves the invited address free for its real owner when the mail went out', async () => {

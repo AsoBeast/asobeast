@@ -23,6 +23,11 @@ import {
   pressFromKeyboard,
 } from "./held-request.mts";
 import { DISCOVERY_FOCUS_APP } from "./keyword-discoveries.mts";
+import {
+  FAILING_KEYWORD,
+  readInspection,
+  requestInspection,
+} from "./keyword-inspections-mock.mts";
 import { MOCK_API_URL, seedLocalizations } from "./localizations.mts";
 import { fulfillJson } from "./plan-helpers.mts";
 import { activateTwiceInOneTask, hydrated } from "./hydrated.mts";
@@ -1536,6 +1541,8 @@ test("a goal keeps focus while its save runs", async ({ page, context }) => {
 });
 
 test.describe("keyword discovery controls keep focus", () => {
+  test.describe.configure({ mode: "serial" });
+
   const discovered = (state = "") =>
     `/apps/${DISCOVERY_FOCUS_APP}/keywords?tab=discovered${state}`;
   const write = (action: string) =>
@@ -1626,5 +1633,124 @@ test.describe("keyword discovery controls keep focus", () => {
     await expect(
       page.getByRole("heading", { name: "Discovered keywords" }),
     ).toBeFocused();
+  });
+});
+
+test.describe("the keyword inspector keeps focus", () => {
+  type Inspection = ReturnType<typeof requestInspection>;
+
+  const INSPECTIONS = "**/api/backend/keyword-inspections";
+  const ONE_INSPECTION = /\/api\/backend\/keyword-inspections\/[^/?]+$/;
+  const STARTED = /\/api\/backend\/keyword-inspections$/;
+
+  const pendingOf = (keyword: string, id: string): Inspection => ({
+    ...requestInspection({ keyword, store: "APP_STORE", country: "us" }),
+    id,
+  });
+
+  const settledOf = (keyword: string, id: string): Inspection => {
+    const pending = requestInspection({
+      keyword,
+      store: "APP_STORE",
+      country: "us",
+    });
+    readInspection(pending.id);
+    const settled = readInspection(pending.id);
+    if (!settled) throw new Error(`No inspection of ${keyword}`);
+    return { ...settled, id };
+  };
+
+  const serve = async (page: Page, list: () => readonly Inspection[]) => {
+    await page.route(INSPECTIONS, (route) =>
+      route.request().method() === "GET"
+        ? route.fulfill(fulfillJson(200, { items: list() }))
+        : route.fallback(),
+    );
+    await page.route(ONE_INSPECTION, (route) => {
+      if (route.request().method() !== "GET") return route.fallback();
+      const id = new URL(route.request().url()).pathname.split("/").pop();
+      const found = list().find((inspection) => inspection.id === id);
+      return route.fulfill(
+        found ? fulfillJson(200, found) : fulfillJson(404, {}),
+      );
+    });
+  };
+
+  const inspectUrl = (inspection: Inspection) =>
+    `/inspect?id=${inspection.id}&keyword=${encodeURIComponent(inspection.keyword)}&store=${inspection.store}&country=${inspection.country}`;
+
+  test("Inspect keeps focus while the inspection starts and after the URL changes", async ({
+    page,
+  }) => {
+    const started = pendingOf("focus inspect", "focus-inspect-1");
+    const known: Inspection[] = [];
+    await serve(page, () => known);
+    const held = await holdRequest(page, STARTED, "POST", (route) => {
+      known.push(started);
+      return route.fulfill(fulfillJson(202, started));
+    });
+
+    await page.goto("/inspect");
+    await page.getByLabel("Keyword", { exact: true }).fill("Focus Inspect");
+    const submit = page
+      .getByRole("form", { name: "Inspect a keyword" })
+      .getByRole("button", { name: /^(Inspect|Starting…)$/ });
+    await pressFromKeyboard(submit);
+
+    await expectFocusKeptWhileHeld(submit, held);
+    await expect(page).toHaveURL(/[?&]id=focus-inspect-1/);
+    await expect(submit).toBeFocused();
+  });
+
+  test("Try again on a failed inspection keeps focus while the retry starts", async ({
+    page,
+  }) => {
+    const failed = settledOf(FAILING_KEYWORD, "focus-failed-1");
+    const again = { ...failed, id: "focus-failed-2" };
+    const known: Inspection[] = [failed];
+    await serve(page, () => known);
+    const held = await holdRequest(page, STARTED, "POST", (route) => {
+      known.push(again);
+      return route.fulfill(fulfillJson(202, again));
+    });
+
+    await page.goto(inspectUrl(failed));
+    const retry = page
+      .getByRole("alert")
+      .filter({ hasText: "This inspection did not finish." })
+      .getByRole("button");
+    await pressFromKeyboard(retry);
+
+    await expectFocusKeptWhileHeld(retry, held);
+    await expect(page).toHaveURL(/[?&]id=focus-failed-2/);
+    await expect(retry).toBeFocused();
+  });
+
+  test("a suggestion chip keeps focus while its inspection starts and runs", async ({
+    page,
+  }) => {
+    const inspected = settledOf("focus hop", "focus-hop-1");
+    const hop = pendingOf("focus hop app", "focus-hop-2");
+    const known: Inspection[] = [inspected];
+    await serve(page, () => known);
+    const held = await holdRequest(page, STARTED, "POST", (route) => {
+      known.push(hop);
+      return route.fulfill(fulfillJson(202, hop));
+    });
+
+    await page.goto(inspectUrl(inspected));
+    const chip = page
+      .getByRole("region", { name: /^Next from/ })
+      .getByRole("listitem")
+      .filter({ hasText: "focus hop app" })
+      .getByRole("button");
+    await expect(chip).toHaveAccessibleName("Inspect focus hop app");
+    await pressFromKeyboard(chip);
+
+    await expect(chip).toHaveAttribute("aria-disabled", "true");
+    await expect(chip).toBeFocused();
+    held.release();
+    await expect(chip).toHaveAccessibleName("Inspecting focus hop app");
+    await expect(chip).toBeFocused();
   });
 });
