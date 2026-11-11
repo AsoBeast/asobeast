@@ -65,6 +65,7 @@ export const KEYWORD_TABLE_SORTS = [
   "source",
   "delta7d",
   "acquisitions",
+  "reveal",
 ] as const;
 
 export const KEYWORD_DEFAULT_SORT = "opportunity";

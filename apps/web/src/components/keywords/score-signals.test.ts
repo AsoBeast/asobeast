@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { ScoreSignals } from "@asobeast/shared";
+
 import {
   difficultySignalLines,
   lowerConfidenceLines,
   popularitySignalLines,
+  revealLabel,
+  revealRank,
 } from "./score-signals";
 
 function signals(overrides: Partial<ScoreSignals> = {}): ScoreSignals {
@@ -318,5 +321,52 @@ describe("lower confidence on a floor answer", () => {
       ),
     ).toEqual([]);
     expect(lowerConfidenceLines("opportunity", null)).toEqual([]);
+  });
+});
+
+describe("revealLabel", () => {
+  it.each([
+    [signals({ suggestPrefixLength: 3, suggestPosition: 2 }), "3 letters · #2"],
+    [signals({ suggestPrefixLength: 1, suggestPosition: 1 }), "1 letter · #1"],
+    [signals({ suggestPrefixLength: null, suggestPosition: 2 }), "Suggested"],
+    [signals({ suggestPrefixLength: 2, suggestPosition: null }), "Suggested"],
+    [signals({ suggestReach: "listed" }), "Full phrase"],
+    [signals({ suggestReach: "absent" }), "Not suggested"],
+    [signals({ suggestReach: "unavailable" }), null],
+    [null, null],
+  ])("labels %# as %s", (value, expected) => {
+    expect(revealLabel(value)).toBe(expected);
+  });
+});
+
+describe("revealRank", () => {
+  it("is null for a dash and orders the reveal values from the earliest to the latest", () => {
+    const ordered = [
+      signals({ suggestPrefixLength: 1, suggestPosition: 5 }),
+      signals({ suggestPrefixLength: 2, suggestPosition: 1 }),
+      signals({ suggestPrefixLength: 2, suggestPosition: 4 }),
+      signals({ suggestPrefixLength: null, suggestPosition: null }),
+      signals({ suggestReach: "listed" }),
+      signals({ suggestReach: "absent" }),
+    ];
+    const ranks = ordered.map((value) => revealRank(value));
+    expect(ranks.every((rank) => rank !== null)).toBe(true);
+    ranks.slice(1).forEach((rank, index) => {
+      expect(ranks[index] ?? 0).toBeLessThan(rank ?? 0);
+    });
+    expect(revealRank(signals({ suggestReach: "unavailable" }))).toBeNull();
+    expect(revealRank(null)).toBeNull();
+  });
+
+  it("orders a shorter prefix first even when its position is much later", () => {
+    const oneLetterLatePosition = revealRank(
+      signals({ suggestPrefixLength: 1, suggestPosition: 1002 }),
+    );
+    const twoLettersFirstPosition = revealRank(
+      signals({ suggestPrefixLength: 2, suggestPosition: 1 }),
+    );
+    expect(oneLetterLatePosition ?? Infinity).toBeLessThan(
+      twoLettersFirstPosition ?? -Infinity,
+    );
   });
 });
