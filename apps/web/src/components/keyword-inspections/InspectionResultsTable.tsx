@@ -65,16 +65,12 @@ export function InspectionResultsTable({
                 key={`${result.position}-${result.storeAppId}`}
                 className={cn(isNew && "bg-success-subtle/60")}
               >
-                <TableCell className="numeric pr-0 text-right font-mono text-muted-foreground">
+                <TableCell className="numeric pr-0 text-right text-muted-foreground">
                   {result.position}
                 </TableCell>
                 <TableCell className="max-w-0 w-full">
                   <div className="flex min-w-0 items-center gap-2.5">
-                    <AppIcon
-                      src={result.iconUrl}
-                      name={result.title}
-                      size={28}
-                    />
+                    <AppIcon src={result.iconUrl} size={28} />
                     <div className="flex min-w-0 flex-col">
                       <span
                         translate="no"
@@ -112,7 +108,7 @@ export function InspectionResultsTable({
                     </div>
                   </div>
                 </TableCell>
-                <TableCell className="numeric text-right font-mono">
+                <TableCell className="numeric text-right">
                   {result.ratingCount === null
                     ? "—"
                     : formatCompact(result.ratingCount)}

@@ -25,7 +25,7 @@ export function ActionImpactMeter({
       >
         <Meter value={impact} tone="opportunity" />
       </div>
-      <span className="numeric font-mono text-caption text-muted-foreground">
+      <span className="numeric text-caption text-muted-foreground">
         {impact}
         <span className="sr-only"> of 100</span>
         <span className={cn(compact && "sr-only")}> estimated impact</span>

@@ -30,7 +30,7 @@ export function ReportHeader({
 
   return (
     <div className="hidden flex-col gap-1 print:flex">
-      <p className="text-title">{page} report</p>
+      <p className="text-heading">{page} report</p>
       <ul className="flex flex-wrap gap-x-4 gap-y-1 text-body text-muted-foreground">
         {facts.map((fact) => (
           <li key={fact}>{fact}</li>

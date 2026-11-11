@@ -25,7 +25,7 @@ function SerpToolbar({
   const dates = snapshot?.dates ?? [];
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-      {loading ? <Skeleton aria-hidden className="h-8 w-60 md:h-9" /> : null}
+      {loading ? <Skeleton aria-hidden className="h-[34px] w-60" /> : null}
       {snapshot?.date && dates.length > 0 ? (
         <>
           <CapturedDayPicker
@@ -78,7 +78,7 @@ export function SerpHeader({
     <div className="flex flex-col gap-3 px-4 pt-4">
       <div className="flex min-w-0 flex-col gap-0.5">
         {text ? (
-          <p translate="no" dir="auto" className="text-title wrap-anywhere">
+          <p translate="no" dir="auto" className="text-heading wrap-anywhere">
             {text}
           </p>
         ) : null}

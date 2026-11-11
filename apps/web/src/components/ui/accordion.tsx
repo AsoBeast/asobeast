@@ -42,7 +42,7 @@ function AccordionTrigger({
       <AccordionPrimitive.Trigger
         data-slot="accordion-trigger"
         className={cn(
-          "group/accordion-trigger relative flex flex-1 items-start justify-between gap-3 rounded-lg border border-transparent py-2.5 text-left text-sm font-medium transition-[color,background-color,border-color,box-shadow] outline-none hover:underline focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+          "group/accordion-trigger relative flex flex-1 items-start justify-between gap-3 rounded-lg border border-transparent py-2.5 text-left text-dense font-medium transition-[color,background-color,border-color,box-shadow] outline-hidden hover:underline focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring",
           className,
         )}
         {...props}
@@ -72,7 +72,7 @@ function AccordionContent({
       data-slot="accordion-content"
       forceMount={forceMount}
       className={cn(
-        "overflow-hidden text-sm data-open:animate-accordion-down data-closed:animate-accordion-up",
+        "overflow-hidden text-dense data-open:animate-accordion-down data-closed:animate-accordion-up",
         forceMount && "data-[state=closed]:hidden",
       )}
       {...props}

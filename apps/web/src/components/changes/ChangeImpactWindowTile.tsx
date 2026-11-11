@@ -18,7 +18,7 @@ import {
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <dt className="text-label text-muted-foreground uppercase">{label}</dt>
+      <dt className="text-label text-muted-foreground">{label}</dt>
       {children}
     </div>
   );
@@ -33,7 +33,7 @@ function MeasuredFacts({ impact }: { impact: ChangeImpactWindow }) {
     <dl className="flex flex-col gap-2 text-body">
       <Fact label="Visibility">
         <dd className="flex items-center gap-2">
-          <span className="numeric font-mono">{range}</span>
+          <span className="numeric">{range}</span>
           <DeltaChip
             value={impact.visibilityChange}
             polarity="higher-is-better"
@@ -82,7 +82,7 @@ export function FunnelFacts({ impact, store }: WindowProps) {
           <>
             <dd className="flex flex-wrap items-center gap-2">
               <span>{getsLabel}</span>
-              <span className="numeric font-mono">{ranges.gets}</span>
+              <span className="numeric">{ranges.gets}</span>
               <DeltaChip
                 value={gets === null ? null : Math.round(gets * 100)}
                 polarity="higher-is-better"
@@ -92,7 +92,7 @@ export function FunnelFacts({ impact, store }: WindowProps) {
             </dd>
             <dd className="flex flex-wrap items-center gap-2">
               <span>Conversion</span>
-              <span className="numeric font-mono">{ranges.conversion}</span>
+              <span className="numeric">{ranges.conversion}</span>
             </dd>
           </>
         ) : (

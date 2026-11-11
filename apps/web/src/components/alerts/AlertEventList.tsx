@@ -24,10 +24,7 @@ export function AlertEventList({
             aria-labelledby={headingId}
             className="flex flex-col gap-2"
           >
-            <h2
-              id={headingId}
-              className="text-label text-muted-foreground uppercase"
-            >
+            <h2 id={headingId} className="text-label text-muted-foreground">
               {`${group.label} · ${group.events.length}`}
             </h2>
             <ul className="flex list-none flex-col gap-2 p-0">

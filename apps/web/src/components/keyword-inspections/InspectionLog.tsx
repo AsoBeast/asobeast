@@ -93,7 +93,7 @@ function LogRow({
         type="button"
         aria-current={selected || undefined}
         onClick={() => onSelect(item.id)}
-        className="col-span-1 grid min-w-0 items-center gap-x-4 rounded-sm py-1 text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 md:col-span-6 md:grid-cols-subgrid"
+        className="col-span-1 grid min-w-0 items-center gap-x-4 rounded-sm py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring md:col-span-6 md:grid-cols-subgrid"
       >
         <span className="flex min-w-0 flex-col">
           <span className="flex items-center gap-2">
@@ -120,13 +120,13 @@ function LogRow({
         </span>
         {done ? (
           <>
-            <span className="numeric hidden text-right font-mono md:block">
+            <span className="numeric hidden text-right md:block">
               {shownScore(item.volume)}
             </span>
-            <span className="numeric hidden text-right font-mono md:block">
+            <span className="numeric hidden text-right md:block">
               {shownScore(item.difficulty100)}
             </span>
-            <span className="numeric hidden text-right font-mono md:block">
+            <span className="numeric hidden text-right md:block">
               {shownScore(item.opportunity)}
             </span>
             <span className="hidden md:block">

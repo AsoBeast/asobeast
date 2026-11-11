@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import Image from "next/image";
+import { iconRadius } from "./app-icon-radius";
 
 export function AppIconImage({
   src,
@@ -22,8 +23,8 @@ export function AppIconImage({
       alt=""
       width={size}
       height={size}
-      style={{ width: size, height: size }}
-      className="shrink-0 rounded-xl object-cover"
+      style={{ width: size, height: size, borderRadius: iconRadius(size) }}
+      className="shrink-0 object-cover"
       onError={() => setFailed(true)}
     />
   );

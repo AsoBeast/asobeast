@@ -27,7 +27,7 @@ function ScoreTile({
   return (
     <div className="flex flex-col gap-2 px-4 first:pl-0 last:pr-0">
       <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="numeric font-mono text-2xl leading-none font-medium">
+      <dd className="numeric text-2xl leading-none font-medium">
         {shownScore(value)}
       </dd>
       <Meter value={value ?? 0} tone={tone} />
@@ -98,9 +98,7 @@ export function InspectionCompetition({
         {competitionFacts(inspection.competition).map((fact) => (
           <div key={fact.label} className="flex min-w-0 flex-col">
             <dt className="text-xs text-muted-foreground">{fact.label}</dt>
-            <dd className="numeric font-mono text-base font-medium">
-              {fact.value}
-            </dd>
+            <dd className="numeric text-base font-medium">{fact.value}</dd>
             <dd className="text-xs text-muted-foreground">{fact.note}</dd>
           </div>
         ))}

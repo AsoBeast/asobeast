@@ -40,7 +40,7 @@ test("the active section carries aria-current in the sidebar", async ({
   await expect(sections.locator('[aria-current="page"]')).toHaveCount(1);
 });
 
-test("the active section icon takes the brand colour", async ({ page }) => {
+test("the active section icon takes the ink colour", async ({ page }) => {
   await page.goto("/apps/app-1/keywords");
 
   const sections = page.getByRole("navigation", { name: "App sections" });
@@ -50,12 +50,10 @@ test("the active section icon takes the brand colour", async ({ page }) => {
     exact: true,
   });
   await expect(active).toHaveAttribute("aria-current", "page");
-  const brand = await renderedTokenRgb(page, "--sidebar-primary");
+  const ink = await renderedTokenRgb(page, "--sidebar-primary");
 
-  expect(await renderedRgb(active.locator("svg"), "color")).toEqual(brand);
-  expect(await renderedRgb(inactive.locator("svg"), "color")).not.toEqual(
-    brand,
-  );
+  expect(await renderedRgb(active.locator("svg"), "color")).toEqual(ink);
+  expect(await renderedRgb(inactive.locator("svg"), "color")).not.toEqual(ink);
 });
 
 for (const width of DESKTOP_WIDTHS) {
@@ -216,4 +214,23 @@ test("the shell declares its colour scheme and safe-area gutters", async ({
     .getByRole("main")
     .evaluate((node) => getComputedStyle(node).paddingLeft);
   expect(Number.parseFloat(gutter)).toBeGreaterThanOrEqual(16);
+});
+
+test("the header separator sits centred beside the breadcrumb", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+
+  const header = page.getByRole("banner");
+  const separator = header.locator('[data-slot="separator"]').first();
+  const [bar, line] = await Promise.all([
+    header.boundingBox(),
+    separator.boundingBox(),
+  ]);
+  const barMiddle = bar!.y + bar!.height / 2;
+  const lineMiddle = line!.y + line!.height / 2;
+
+  expect(line!.height).toBeGreaterThan(0);
+  expect(Math.abs(lineMiddle - barMiddle)).toBeLessThanOrEqual(1);
 });

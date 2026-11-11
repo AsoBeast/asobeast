@@ -54,7 +54,7 @@ export function chartColumns(
       meta: { phone: true },
       header: ({ column }) => <SortableHeader column={column} label="#" />,
       cell: ({ row }) => (
-        <span className="numeric font-mono">{row.original.position}</span>
+        <span className="numeric">{row.original.position}</span>
       ),
     }),
     columnHelper.accessor(movementSortValue, {
@@ -75,11 +75,7 @@ export function chartColumns(
       header: ({ column }) => <SortableHeader column={column} label="App" />,
       cell: ({ row }) => (
         <div className="flex min-w-0 items-center gap-3">
-          <AppIcon
-            src={row.original.iconUrl}
-            name={row.original.title}
-            size={32}
-          />
+          <AppIcon src={row.original.iconUrl} size={32} />
           <div className="flex min-w-0 flex-col">
             <span className="font-medium" translate="no">
               {row.original.title}

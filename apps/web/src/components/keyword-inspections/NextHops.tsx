@@ -20,7 +20,7 @@ import {
 } from "./inspection-map";
 
 const CHIP =
-  "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm outline-none transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50";
+  "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring";
 
 const startKey = ({ keyword, store, country }: KeywordInspectionRequest) =>
   `${store}|${country}|${normalizeText(keyword)}`;
@@ -52,7 +52,7 @@ function HopChip({
         className={cn(CHIP, "bg-muted/60 hover:bg-muted")}
       >
         <span>{term}</span>
-        <span className="numeric font-mono text-xs text-muted-foreground">
+        <span className="numeric text-xs text-muted-foreground">
           {state.popularity}·{state.difficulty}
         </span>
       </button>

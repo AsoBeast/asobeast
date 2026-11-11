@@ -2,6 +2,7 @@ import { CHART_HEIGHT } from "@/components/charts/theme";
 import { ChartSkeleton } from "@/components/charts/ChartStates";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StatTileGroup, StatTileSkeleton } from "@/components/ui/stat-tile";
 
 const TILE_COUNT = 7;
 
@@ -17,18 +18,11 @@ function CardHeaderSkeleton() {
 export function AdminOverviewSkeleton() {
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,12rem),1fr))] gap-3">
+      <StatTileGroup>
         {Array.from({ length: TILE_COUNT }).map((_, index) => (
-          <div
-            key={index}
-            className="flex flex-col gap-2 rounded-xl border bg-card px-4 py-3"
-          >
-            <Skeleton className="h-3 w-24" />
-            <Skeleton className="h-8 w-16" />
-            <Skeleton className="h-3 w-32" />
-          </div>
+          <StatTileSkeleton key={index} />
         ))}
-      </div>
+      </StatTileGroup>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)]">
         <Card>
           <CardHeaderSkeleton />

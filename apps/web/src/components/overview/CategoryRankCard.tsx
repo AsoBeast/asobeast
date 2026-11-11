@@ -142,7 +142,7 @@ function HeaderStat({
     <p className="text-sm">
       <Link
         href={href}
-        className="underline decoration-primary underline-offset-4 hover:decoration-2"
+        className="underline decoration-faint-foreground underline-offset-4 hover:decoration-2"
       >
         {headline.current === null ? (
           <span className="text-muted-foreground">
@@ -150,7 +150,7 @@ function HeaderStat({
           </span>
         ) : (
           <>
-            <span className="font-mono text-lg font-semibold numeric font-mono">
+            <span className="text-lg font-semibold numeric">
               {`#${headline.current}`}
             </span>{" "}
             <span className="text-muted-foreground">

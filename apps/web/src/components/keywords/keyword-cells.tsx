@@ -141,9 +141,7 @@ export function VolatilityCell({ value }: { value: number | null }) {
     >
       <span className={cn("size-2 rounded-full", band.dot)} aria-hidden />
       {band.label}
-      <span className="numeric font-mono text-xs text-muted-foreground">
-        {value}
-      </span>
+      <span className="numeric text-xs text-muted-foreground">{value}</span>
     </span>
   );
 }
@@ -175,7 +173,7 @@ export function PlayAcquisitionsCell({
     <Tooltip>
       <TooltipTrigger asChild>
         <span
-          className="numeric font-mono text-sm whitespace-nowrap"
+          className="numeric text-sm whitespace-nowrap"
           aria-label={`${acquisitions} acquisitions from ${visitors} store listing visitors in ${month}`}
         >
           <span>{acquisitions}</span>
@@ -310,7 +308,7 @@ export function CompetitorsInTop10Cell({ value }: { value: number | null }) {
   }
   return (
     <span
-      className="numeric font-mono text-sm"
+      className="numeric text-sm"
       aria-label={`${pluralize(value, "competitor")} in the top 10`}
     >
       {value}

@@ -20,7 +20,7 @@ export function TrialBar({
     >
       <div className="page-checkout flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-end sm:gap-8 sm:py-4">
         {parts ? (
-          <p className="text-subtitle font-normal text-muted-foreground sm:mr-auto">
+          <p className="text-heading font-normal text-muted-foreground sm:mr-auto">
             <span>{parts.before}</span>
             <span className="font-medium text-foreground">{parts.free}</span>
             <span>{parts.middle}</span>

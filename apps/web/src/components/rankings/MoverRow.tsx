@@ -19,7 +19,7 @@ export function MoverRow({
   className?: string;
 }) {
   const positions = (
-    <span className="flex shrink-0 items-center gap-1 numeric font-mono text-muted-foreground">
+    <span className="flex shrink-0 items-center gap-1 numeric text-muted-foreground">
       <span>{formatRankPosition(mover.from, mover.fromDepth)}</span>
       <ArrowRight className="size-3" />
       {mover.to === null ? (

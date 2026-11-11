@@ -55,7 +55,7 @@ export function ConfirmEmailContent({ user }: { user: AuthUser }) {
       <SignUpSteps steps={signUpSteps(user)} />
       <Card>
         <CardHeader>
-          <CardTitle asChild className="text-display">
+          <CardTitle asChild className="text-title">
             <h1>{CONFIRM_EMAIL_TITLE}</h1>
           </CardTitle>
           <CardDescription>

@@ -7,7 +7,7 @@ import { grade } from "@/lib/grade";
 import { discoveriesHref, discoveriesLine } from "@/lib/keyword-discoveries";
 
 const FACT_LINK =
-  "relative z-20 inline-flex min-h-6 items-center underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none";
+  "relative z-20 inline-flex min-h-6 items-center underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none";
 
 function RatingFact({ rating }: { rating: PortfolioAppInsight["rating"] }) {
   if (rating.average === null) return null;

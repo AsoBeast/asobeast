@@ -23,6 +23,11 @@ export const LATER_RELEASES: readonly Release[] = [
         title: "An empty month says so",
         text: "When the newest monthly report names no search term on any source, the column now states that fact with the month, instead of leaving a row of unexplained dashes.",
       },
+      {
+        kind: "improved",
+        title: "A calmer, sharper look",
+        text: "AsoBeast has a new typeface, warmer neutral colours and flatter panels with fine borders. Numbers line up in columns, labels are easier to read, and the brand orange is kept for the main action on each page.",
+      },
     ],
   },
   {

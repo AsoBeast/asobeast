@@ -44,11 +44,11 @@ export function ErrorState({
   return (
     <div
       role="alert"
-      className="flex flex-col items-center gap-4 rounded-xl border border-dashed py-16 text-center"
+      className="flex flex-col items-start gap-4 rounded-lg border border-border bg-card p-6 text-left"
     >
       <div className="flex flex-col gap-1">
         <p className="font-medium">{title ?? recovery.title}</p>
-        <p className="max-w-md text-body text-muted-foreground">
+        <p className="max-w-prose text-body text-muted-foreground">
           {recovery.body}
         </p>
       </div>

@@ -40,7 +40,7 @@ function SetupBanner({ app, more }: { app: AppInSetup; more: number }) {
               {" · "}
               <Link
                 href="/?view=cards"
-                className="underline decoration-primary underline-offset-4"
+                className="underline decoration-faint-foreground underline-offset-4"
               >
                 and {pluralize(more, "more app", "more apps")}
               </Link>

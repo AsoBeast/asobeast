@@ -85,11 +85,7 @@ function LinkedControl({
     <div className="flex items-center gap-1">
       <Button variant="outline" asChild>
         <Link href={`/apps/${counterpart.id}`}>
-          <AppIcon
-            src={counterpart.iconUrl}
-            name={counterpart.name}
-            size={20}
-          />
+          <AppIcon src={counterpart.iconUrl} size={20} />
           {storeLabel(counterpart.store)}
         </Link>
       </Button>
@@ -216,7 +212,7 @@ function LinkCandidates({
             onClick={() => linkOnce(candidate.id)}
             className="flex w-full items-center gap-3 rounded-lg border p-2 text-left transition-colors hover:bg-accent disabled:opacity-50"
           >
-            <AppIcon src={candidate.iconUrl} name={candidate.name} size={36} />
+            <AppIcon src={candidate.iconUrl} size={36} />
             <span className="flex flex-col">
               <span className="text-sm font-medium">
                 {candidate.name ?? "Untitled app"}

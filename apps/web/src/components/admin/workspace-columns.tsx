@@ -87,13 +87,13 @@ export const workspaceColumns = columnHelper.columns([
   columnHelper.accessor("members", {
     id: "members",
     ...NUMBER_SORT,
-    meta: { label: "Members" },
+    meta: { label: "Members", numeric: true },
     header: ({ column }) => <SortableHeader column={column} label="Members" />,
     cell: ({ row }) => (
       <Link
         href={workspaceListHref("users", row.original.workspaceId)}
         aria-label={`${pluralize(row.original.members, "member")} in ${row.original.name}`}
-        className="numeric font-mono underline-offset-4 hover:underline"
+        className="numeric underline-offset-4 hover:underline"
       >
         {formatNumber(row.original.members)}
       </Link>
@@ -102,14 +102,14 @@ export const workspaceColumns = columnHelper.columns([
   columnHelper.accessor("apps", {
     id: "apps",
     ...NUMBER_SORT,
-    meta: { label: "Apps" },
+    meta: { label: "Apps", numeric: true },
     header: ({ column }) => <SortableHeader column={column} label="Apps" />,
     cell: ({ row }) => (
       <div className="flex flex-col">
         <Link
           href={workspaceListHref("apps", row.original.workspaceId)}
           aria-label={`${pluralize(row.original.apps, "app")} in ${row.original.name}`}
-          className="numeric font-mono underline-offset-4 hover:underline"
+          className="numeric underline-offset-4 hover:underline"
         >
           {formatNumber(row.original.apps)}
         </Link>
@@ -122,12 +122,12 @@ export const workspaceColumns = columnHelper.columns([
   columnHelper.accessor("keywordMarkets", {
     id: "keywordMarkets",
     ...NUMBER_SORT,
-    meta: { label: "Keyword markets" },
+    meta: { label: "Keyword markets", numeric: true },
     header: ({ column }) => (
       <SortableHeader column={column} label="Keyword markets" />
     ),
     cell: ({ row }) => (
-      <span className="numeric font-mono">
+      <span className="numeric">
         {formatNumber(row.original.keywordMarkets)}
       </span>
     ),

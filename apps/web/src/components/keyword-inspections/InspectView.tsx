@@ -3,7 +3,6 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import type { KeywordInspectionSummary } from "@asobeast/shared";
-import { MousePointerClick } from "lucide-react";
 import { useQueryStates } from "nuqs";
 import { useZoneThresholds } from "@/components/keywords/use-zone-thresholds";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -93,7 +92,6 @@ function InspectWorkspace({
             <InspectionDetail id={selected} onInspected={onSelect} />
           ) : (
             <EmptyState
-              icon={MousePointerClick}
               title="No inspection selected"
               body="Inspect a keyword above, or pick a point on the map."
             />
@@ -131,7 +129,7 @@ export function InspectView() {
     <>
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between xl:gap-8">
         <header className="flex flex-col gap-1">
-          <h1 className="text-display tracking-tight text-balance">
+          <h1 className="text-title tracking-tight text-balance">
             Keyword inspector
           </h1>
           <p className="max-w-[60ch] text-body text-muted-foreground">

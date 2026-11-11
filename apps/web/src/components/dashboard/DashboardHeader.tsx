@@ -6,7 +6,7 @@ export function DashboardHeader({ children }: { children?: ReactNode }) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-display tracking-tight text-balance">Dashboard</h1>
+        <h1 className="text-title tracking-tight text-balance">Dashboard</h1>
         <ImportAppDialog>
           <Button>Import app</Button>
         </ImportAppDialog>

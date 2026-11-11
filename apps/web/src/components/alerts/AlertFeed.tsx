@@ -29,7 +29,7 @@ const WHAT_THE_PAGE_LISTS =
 function AlertFeedHeader() {
   return (
     <header className="flex items-center gap-2">
-      <h1 className="text-display tracking-tight text-balance">Alerts</h1>
+      <h1 className="text-title tracking-tight text-balance">Alerts</h1>
       <InfoTip
         label="About the alerts page"
         title="What the alerts page lists"
@@ -39,7 +39,7 @@ function AlertFeedHeader() {
           href={ALERTS_GUIDE}
           target="_blank"
           rel="noreferrer"
-          className="font-medium text-foreground underline decoration-primary underline-offset-4 hover:decoration-2"
+          className="font-medium text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-2"
         >
           Read how alerts work
         </a>

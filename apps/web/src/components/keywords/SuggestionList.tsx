@@ -22,13 +22,13 @@ function SuggestionMeta({ suggestion }: { suggestion: KeywordSuggestion }) {
         <span className="wrap-anywhere">from “{suggestion.seed}”</span>
       ) : null}
       {suggestion.usedByCount !== undefined ? (
-        <span className="numeric font-mono">
+        <span className="numeric">
           {suggestion.usedByCount} {noun}
           {suggestion.usedByCount === 1 ? "" : "s"}
         </span>
       ) : null}
       {suggestion.priority !== undefined ? (
-        <span className="numeric font-mono">
+        <span className="numeric">
           priority {Math.round(suggestion.priority)}
         </span>
       ) : null}

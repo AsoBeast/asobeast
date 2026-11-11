@@ -58,7 +58,7 @@ export function KeywordFieldSuggestionCard({
             </button>
             <Link
               href={editHref}
-              className="mt-2 text-sm text-foreground underline decoration-primary underline-offset-4"
+              className="mt-2 text-sm text-foreground underline decoration-faint-foreground underline-offset-4"
             >
               Edit this keyword field
             </Link>

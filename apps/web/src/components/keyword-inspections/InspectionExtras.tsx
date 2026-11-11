@@ -21,7 +21,7 @@ function ScoreChange({
       {label}
       <span
         className={cn(
-          "numeric font-mono font-medium",
+          "numeric font-medium",
           tone === "same" && "text-muted-foreground",
           tone === "better" && "text-signal-up",
           tone === "worse" && "text-signal-down",

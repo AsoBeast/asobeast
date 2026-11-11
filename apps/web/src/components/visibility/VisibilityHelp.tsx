@@ -40,10 +40,8 @@ export function VisibilityHelp({ note }: { note?: string }) {
         <TableBody>
           {POSITION_SHARES.map(({ position, share }) => (
             <TableRow key={position}>
-              <TableCell className="numeric font-mono">{position}</TableCell>
-              <TableCell className="text-right numeric font-mono">
-                {share}
-              </TableCell>
+              <TableCell className="numeric">{position}</TableCell>
+              <TableCell className="text-right numeric">{share}</TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -58,7 +56,7 @@ export function VisibilityHelp({ note }: { note?: string }) {
         href={VISIBILITY_GUIDE}
         target="_blank"
         rel="noreferrer"
-        className="font-medium text-foreground underline decoration-primary underline-offset-4 hover:decoration-2"
+        className="font-medium text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-2"
       >
         Read the full calculation
       </a>

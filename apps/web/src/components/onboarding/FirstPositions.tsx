@@ -46,7 +46,7 @@ function FirstPositionsBody({
             {summary.rows.map((row) => (
               <li
                 key={row.keywordId}
-                className="numeric font-mono text-sm text-muted-foreground"
+                className="numeric text-sm text-muted-foreground"
               >
                 {`“${row.text}” · ${positionLabel(row)}`}
               </li>

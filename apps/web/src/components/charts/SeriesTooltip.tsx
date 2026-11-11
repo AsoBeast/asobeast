@@ -47,7 +47,7 @@ export function SeriesTooltip({
               </svg>
               {item.label}
             </span>
-            <span className="numeric font-mono font-medium text-foreground">
+            <span className="numeric font-medium text-foreground">
               {item.value}
             </span>
           </div>

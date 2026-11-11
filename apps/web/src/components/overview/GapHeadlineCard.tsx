@@ -45,7 +45,7 @@ function GapHeadlineBody({ id, home }: { id: string; home: string }) {
       {link ? (
         <Link
           href={link.href}
-          className="text-body font-medium underline decoration-primary underline-offset-4 hover:decoration-2 print:hidden"
+          className="text-body font-medium underline decoration-faint-foreground underline-offset-4 hover:decoration-2 print:hidden"
         >
           {link.label}
         </Link>
@@ -73,7 +73,7 @@ export function GapHeadlineCard({ id }: { id: string }) {
               href="https://docs.asobeast.com/guides/competitors#gap-analysis"
               target="_blank"
               rel="noreferrer"
-              className="font-medium text-foreground underline decoration-primary underline-offset-4 hover:decoration-2"
+              className="font-medium text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-2"
             >
               Read how the lists are chosen
             </a>

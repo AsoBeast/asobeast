@@ -82,7 +82,7 @@ export function PortfolioAppCard({
       <AppCardLink
         id={app.id}
         name={name}
-        className="absolute inset-0 z-10 rounded-xl focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+        className="absolute inset-0 z-10 rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       />
 
       <div className="absolute top-2 right-2 z-20">
@@ -91,7 +91,7 @@ export function PortfolioAppCard({
 
       <div className="flex flex-1 flex-col gap-3">
         <div className="flex items-start gap-4">
-          <AppIcon src={app.iconUrl} name={app.name} />
+          <AppIcon src={app.iconUrl} />
           <div className="flex min-w-0 flex-1 flex-col gap-1 pr-6">
             <span title={name} className="truncate font-medium">
               {name}
@@ -108,7 +108,7 @@ export function PortfolioAppCard({
           <>
             <div className="flex flex-col gap-1">
               <div className="flex items-baseline gap-2">
-                <span className="numeric font-mono text-3xl font-semibold">
+                <span className="numeric text-3xl font-semibold">
                   {Math.round(app.visibility.current)}
                 </span>
                 <TrendChip label="7d" value={app.visibility.delta7d} />
@@ -149,7 +149,7 @@ export function PortfolioGroupMember({
       <AppCardLink
         id={app.id}
         name={name}
-        className="absolute inset-0 z-10 rounded-lg focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+        className="absolute inset-0 z-10 rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       />
 
       <div className="absolute top-2 right-0 z-20">
@@ -157,7 +157,7 @@ export function PortfolioGroupMember({
       </div>
 
       <div className="flex items-center gap-3 pr-6">
-        <AppIcon src={app.iconUrl} name={app.name} size={36} />
+        <AppIcon src={app.iconUrl} size={36} />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <span title={name} className="truncate text-body font-medium">
             {name}
@@ -166,7 +166,7 @@ export function PortfolioGroupMember({
         </div>
         {app.lastCapturedAt === null ? null : (
           <div className="flex flex-col items-end gap-1">
-            <span className="numeric font-mono text-2xl font-semibold">
+            <span className="numeric text-2xl font-semibold">
               {Math.round(app.visibility.current)}
             </span>
             <TrendChip label="7d" value={app.visibility.delta7d} />

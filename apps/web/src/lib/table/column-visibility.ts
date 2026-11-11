@@ -6,6 +6,16 @@ export interface TableColumnMeta {
   label?: string;
   phone?: boolean;
   hiddenByDefault?: boolean;
+  numeric?: boolean;
+}
+
+export function isNumericColumn(meta: unknown): boolean {
+  return (
+    typeof meta === "object" &&
+    meta !== null &&
+    "numeric" in meta &&
+    meta.numeric === true
+  );
 }
 
 function isVisibilityState(value: unknown): value is ColumnVisibilityState {

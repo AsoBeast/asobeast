@@ -3,11 +3,10 @@ import { ICON_PIXEL, optimizedIcon } from "./store-icons.mts";
 import { APP_2_ICON_URL } from "./fixtures.mts";
 
 const NAME = "Habit Tracker";
-const INITIAL = "H";
 const SWITCHER = /^Switch app, currently /;
 const PLACEHOLDER = "[data-slot=app-icon-placeholder]";
 
-test("a portfolio icon that fails before hydration falls back to the letter tile", async ({
+test("a portfolio icon that fails before hydration falls back to the placeholder silhouette", async ({
   page,
 }) => {
   await page.route(optimizedIcon(APP_2_ICON_URL), (route) => route.abort());
@@ -19,7 +18,7 @@ test("a portfolio icon that fails before hydration falls back to the letter tile
     .filter({ hasText: new RegExp(NAME) });
   const placeholder = card.locator(PLACEHOLDER);
 
-  await expect(placeholder).toHaveText(INITIAL);
+  await expect(placeholder).toHaveText("");
   await expect(card.locator("img")).toHaveCount(0);
   expect(await placeholder.boundingBox()).toMatchObject({
     width: 48,
@@ -27,7 +26,7 @@ test("a portfolio icon that fails before hydration falls back to the letter tile
   });
 });
 
-test("a switcher icon that fails after hydration falls back to the letter tile", async ({
+test("a switcher icon that fails after hydration falls back to the placeholder silhouette", async ({
   page,
 }) => {
   await page.route(optimizedIcon(APP_2_ICON_URL), (route) => route.abort());
@@ -37,7 +36,7 @@ test("a switcher icon that fails after hydration falls back to the letter tile",
   const trigger = page.getByRole("button", { name: SWITCHER });
   const placeholder = trigger.locator(PLACEHOLDER);
 
-  await expect(placeholder).toHaveText(INITIAL);
+  await expect(placeholder).toHaveText("");
   await expect(trigger.locator("img")).toHaveCount(0);
   expect(await placeholder.boundingBox()).toMatchObject({
     width: 24,
@@ -81,7 +80,7 @@ test("a failed icon does not stick to the app or to its own url", async ({
   await page.goto("/apps/app-2");
 
   const trigger = page.getByRole("button", { name: SWITCHER });
-  await expect(trigger.locator(PLACEHOLDER)).toHaveText(INITIAL);
+  await expect(trigger.locator(PLACEHOLDER)).toBeVisible();
 
   await trigger.click();
   await page.getByRole("option", { name: /Deep Focus Pomodoro/ }).click();

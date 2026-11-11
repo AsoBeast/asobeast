@@ -27,7 +27,7 @@ export function AppHeader({ id }: { id: string }) {
         <div className="flex min-w-0 flex-col gap-1.5">
           <h1
             title={name}
-            className="line-clamp-2 text-display tracking-tight text-balance print:line-clamp-none"
+            className="line-clamp-2 text-title tracking-tight text-balance print:line-clamp-none"
           >
             {name}
           </h1>

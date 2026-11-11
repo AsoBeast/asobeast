@@ -78,7 +78,7 @@ function RatingsTable({
                 label="Rating across the listed markets"
               />
             </TableCell>
-            <TableCell className="numeric text-right font-mono">
+            <TableCell className="numeric text-right">
               {formatNumber(total.count)}
             </TableCell>
             <TableCell className="text-right text-muted-foreground">

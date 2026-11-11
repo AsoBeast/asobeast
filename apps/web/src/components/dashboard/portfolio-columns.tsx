@@ -41,7 +41,7 @@ function AppCell({ app }: { app: PortfolioApp }) {
   const name = app.name ?? "Untitled app";
   return (
     <div className="flex max-w-44 min-w-0 items-center gap-3 @xl/dashboard:max-w-72">
-      <AppIcon src={app.iconUrl} name={app.name} size={32} />
+      <AppIcon src={app.iconUrl} size={32} />
       <div className="flex min-w-0 flex-col">
         <Link
           href={`/apps/${app.id}`}
@@ -79,7 +79,7 @@ export const portfolioColumns = columnHelper.columns([
       row.original.app.lastCapturedAt === null ? (
         EMPTY
       ) : (
-        <span className="numeric font-mono">
+        <span className="numeric">
           {Math.round(row.original.app.visibility.current)}
         </span>
       ),
@@ -108,7 +108,7 @@ export const portfolioColumns = columnHelper.columns([
       cell: ({ row }) => {
         const insight = captured(row.original);
         return insight ? (
-          <span className="numeric font-mono">
+          <span className="numeric">
             {formatNumber(insight.rankDistribution.top10)}
           </span>
         ) : (
@@ -124,7 +124,7 @@ export const portfolioColumns = columnHelper.columns([
     cell: ({ row }) => {
       const insight = captured(row.original);
       return insight ? (
-        <span className="numeric font-mono whitespace-nowrap">
+        <span className="numeric whitespace-nowrap">
           <MovementValue movement={insight.movement} />
         </span>
       ) : (
@@ -184,9 +184,7 @@ export const portfolioColumns = columnHelper.columns([
         return actions === null ? (
           EMPTY
         ) : (
-          <span className="numeric font-mono">
-            {formatNumber(actions.open)}
-          </span>
+          <span className="numeric">{formatNumber(actions.open)}</span>
         );
       },
     },
@@ -198,7 +196,7 @@ export const portfolioColumns = columnHelper.columns([
     cell: ({ row }) => {
       const changes = captured(row.original)?.changes7d;
       return changes ? (
-        <span className="numeric font-mono">
+        <span className="numeric">
           {formatNumber(changes.own + changes.competitors)}
         </span>
       ) : (

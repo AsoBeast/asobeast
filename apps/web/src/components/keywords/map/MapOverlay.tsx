@@ -18,7 +18,7 @@ function OverlayRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-4">
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className="numeric font-mono font-medium text-foreground">{value}</dd>
+      <dd className="numeric font-medium text-foreground">{value}</dd>
     </div>
   );
 }

@@ -43,7 +43,7 @@ export function FactorCard({
         <CardContent className="flex flex-col gap-2">
           <div className="flex items-start justify-between gap-3">
             <h3 className="text-body font-medium">{factor.label}</h3>
-            <span className="numeric font-mono text-body font-semibold">
+            <span className="numeric text-body font-semibold">
               {factor.score === null ? "—" : factor.score}
             </span>
           </div>

@@ -3,7 +3,7 @@
 import { useRef, type Ref } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { KeywordInspection } from "@asobeast/shared";
-import { Loader2, SearchX } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { InlineQueryError } from "@/components/layout/InlineQueryError";
 import { Button } from "@/components/ui/button";
@@ -192,7 +192,6 @@ export function InspectionDetail({
   if (read.isError && isNotFound(read.error)) {
     return (
       <EmptyState
-        icon={SearchX}
         title="This inspection no longer exists"
         body="It may have been deleted. Run a new one above."
       />

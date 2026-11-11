@@ -14,7 +14,7 @@ import { Sparkline } from "./Sparkline";
 function GroupVisibility({ group }: { group: PortfolioGroup | undefined }) {
   if (!group) {
     return (
-      <span className="numeric font-mono text-3xl font-semibold text-muted-foreground">
+      <span className="numeric text-3xl font-semibold text-muted-foreground">
         —
       </span>
     );
@@ -23,7 +23,7 @@ function GroupVisibility({ group }: { group: PortfolioGroup | undefined }) {
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-baseline gap-2">
-        <span className="numeric font-mono text-3xl font-semibold">
+        <span className="numeric text-3xl font-semibold">
           {Math.round(group.visibility.current)}
         </span>
         <span className="text-caption text-muted-foreground">

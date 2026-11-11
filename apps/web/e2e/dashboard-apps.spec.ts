@@ -142,11 +142,15 @@ test("app card footers line up along a grid row", async ({ page }) => {
       return { top: card.top, bottom: node.getBoundingClientRect().bottom };
     }),
   );
-  const firstRow = boxes.filter((box) => Math.abs(box.top - boxes[0].top) <= 1);
+  const rows = boxes
+    .map((anchor) => boxes.filter((box) => Math.abs(box.top - anchor.top) <= 1))
+    .filter((row) => row.length > 1);
 
-  expect(firstRow.length).toBeGreaterThan(1);
-  for (const box of firstRow) {
-    expect(Math.abs(box.bottom - firstRow[0].bottom)).toBeLessThanOrEqual(1);
+  expect(rows.length).toBeGreaterThan(0);
+  for (const row of rows) {
+    for (const box of row) {
+      expect(Math.abs(box.bottom - row[0]!.bottom)).toBeLessThanOrEqual(1);
+    }
   }
 });
 

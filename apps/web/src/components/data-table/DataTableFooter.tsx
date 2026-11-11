@@ -5,6 +5,7 @@ import {
   type TableFeatures,
 } from "@tanstack/react-table";
 import { TableCell, TableFooter, TableRow } from "@/components/ui/table";
+import { isNumericColumn } from "@/lib/table/column-visibility";
 import { cn } from "@/lib/utils";
 
 export function DataTableFooter<
@@ -24,11 +25,15 @@ export function DataTableFooter<
     return null;
   }
   return (
-    <TableFooter className="sticky bottom-0 z-20 bg-muted">
-      <TableRow aria-rowindex={rowIndex} className="bg-muted hover:bg-muted">
+    <TableFooter className="sticky bottom-0 z-20 bg-card">
+      <TableRow
+        aria-rowindex={rowIndex}
+        className="border-b-0 bg-card text-label text-muted-foreground hover:bg-card"
+      >
         {group.headers.map((header) => (
           <TableCell
             key={header.id}
+            numeric={isNumericColumn(header.column.columnDef.meta)}
             className={cn("align-top", cellClassName?.(header.column.id))}
           >
             {header.isPlaceholder

@@ -3,13 +3,14 @@ import { extendTailwindMerge } from "tailwind-merge";
 
 export const TYPE_STEPS = [
   "hero",
-  "display",
+  "metric",
   "title",
-  "subtitle",
+  "heading",
   "body",
+  "dense",
   "label",
   "caption",
-  "numeric",
+  "tick",
 ] as const;
 
 const twMerge = extendTailwindMerge({

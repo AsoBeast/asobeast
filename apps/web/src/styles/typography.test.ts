@@ -11,11 +11,12 @@ const scale = declarations(
 
 const STEPS = [
   "hero",
-  "display",
+  "metric",
   "title",
-  "subtitle",
   "body",
-  "caption",
+  "dense",
+  "label",
+  "tick",
 ] as const;
 
 function rem(step: (typeof STEPS)[number]): number {
@@ -23,14 +24,22 @@ function rem(step: (typeof STEPS)[number]): number {
 }
 
 describe("the type scale", () => {
-  it("declares the hero step above the display step", () => {
+  it("sets a heading at body size and a label at caption size, told apart by weight", () => {
+    expect(scale["--text-heading"]).toBe(scale["--text-body"]);
+    expect(scale["--text-heading--font-weight"]).toBe("600");
+    expect(scale["--text-caption"]).toBe(scale["--text-label"]);
+    expect(scale["--text-label--font-weight"]).toBe("500");
+    expect(scale["--text-label--letter-spacing"]).toBeUndefined();
+  });
+
+  it("declares the hero step above the metric step", () => {
     expect(scale["--text-hero"]).toBe("2.25rem");
     expect(scale["--text-hero--line-height"]).toBe("1.1");
     expect(scale["--text-hero--letter-spacing"]).toBe("-0.024em");
     expect(scale["--text-hero--font-weight"]).toBe("600");
   });
 
-  it("runs from hero down to caption without a step out of order", () => {
+  it("runs from hero down to tick without a step out of order", () => {
     const sizes = STEPS.map(rem);
     expect(sizes).toEqual([...sizes].sort((a, b) => b - a));
     expect(new Set(sizes).size).toBe(STEPS.length);
