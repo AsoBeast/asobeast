@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   useIsMutating,
   useMutation,
@@ -18,16 +18,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { isKeywordClass, type TrackedKeywordItem } from "@asobeast/shared";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -41,9 +31,9 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { removeKeyword, scoreKeyword } from "@/lib/api";
+import { scoreKeyword } from "@/lib/api";
 import { queuedToast } from "@/lib/queued-toast";
-import { invalidateKeywordMutation, invalidateKeywords } from "@/lib/queries";
+import { invalidateKeywords } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 import {
   classChoice,
@@ -51,6 +41,7 @@ import {
   KEYWORD_CLASS_OPTIONS,
 } from "./keyword-class";
 import { KeywordAnnotationsDialog } from "./KeywordAnnotationsDialog";
+import { StopTrackingDialog } from "./StopTrackingDialog";
 import { useKeywordUpdate } from "./useKeywordUpdate";
 
 export function KeywordRowActions({
@@ -67,6 +58,7 @@ export function KeywordRowActions({
   const queryClient = useQueryClient();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const menu = useRef<HTMLButtonElement>(null);
 
   const update = useKeywordUpdate(appId, keyword);
   const checkedClass = classChoice(keyword);
@@ -87,22 +79,12 @@ export function KeywordRowActions({
   });
   const scoreOnce = useSingleFlight(score);
 
-  const remove = useMutation({
-    mutationFn: () => removeKeyword(appId, keyword.keywordId),
-    onSuccess: () => {
-      invalidateKeywordMutation(queryClient, appId);
-      setConfirmOpen(false);
-      toast.success(`Stopped tracking ${keyword.text}`);
-    },
-    onError: () => toast.error(`Could not stop tracking ${keyword.text}`),
-  });
-  const removeOnce = useSingleFlight(remove);
-
   return (
     <div className="flex items-center justify-end">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
+            ref={menu}
             variant="ghost"
             size="icon-sm"
             className="text-muted-foreground hover:text-foreground data-[state=open]:text-foreground pointer-coarse:size-11"
@@ -178,34 +160,16 @@ export function KeywordRowActions({
         appId={appId}
         keyword={keyword}
         marketTags={marketTags}
+        returnFocus={menu}
       />
 
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Stop tracking {keyword.text}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Ranking history for this keyword stops accruing. You can add it
-              again later, but the gap in history will remain.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={remove.isPending}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={remove.isPending}
-              onClick={(event) => {
-                event.preventDefault();
-                removeOnce();
-              }}
-            >
-              {remove.isPending ? "Removing…" : "Stop tracking"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <StopTrackingDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        appId={appId}
+        keyword={keyword}
+        returnFocus={menu}
+      />
     </div>
   );
 }

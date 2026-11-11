@@ -1,8 +1,9 @@
 "use client";
 
 import { useId, useState } from "react";
-import type { FormEvent, KeyboardEvent } from "react";
+import type { FormEvent, KeyboardEvent, RefObject } from "react";
 import { X } from "lucide-react";
+import { returnFocusTo } from "@/lib/focus-handoff";
 import {
   KEYWORD_NOTE_MAX_LENGTH,
   KEYWORD_TAG_MAX_LENGTH,
@@ -206,14 +207,16 @@ function AnnotationsForm({
 export function KeywordAnnotationsDialog({
   open,
   onOpenChange,
+  returnFocus,
   ...props
 }: AnnotationsProps & {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  returnFocus?: RefObject<HTMLElement | null>;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent onCloseAutoFocus={returnFocusTo(returnFocus)}>
         <DialogHeader>
           <DialogTitle>Edit tags and note</DialogTitle>
           <DialogDescription>

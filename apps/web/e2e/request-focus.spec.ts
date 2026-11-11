@@ -99,6 +99,32 @@ test("choosing a keyword type from the keyboard returns focus to the row menu", 
   ).toBe(false);
 });
 
+for (const [item, dialog, role] of [
+  ["Edit tags and note", "Edit tags and note", "dialog"],
+  ["Stop tracking", "Stop tracking pomodoro?", "alertdialog"],
+] as const) {
+  for (const close of ["Escape", "Cancel"] as const) {
+    test(`closing ${item} with ${close} returns focus to the row menu`, async ({
+      page,
+    }) => {
+      await page.goto("/apps/app-1/keywords");
+      const actions = page.getByRole("button", {
+        name: "Keyword actions for pomodoro",
+      });
+
+      await pressFromKeyboard(actions);
+      await page.getByRole("menuitem", { name: item }).click();
+      const opened = page.getByRole(role, { name: dialog });
+      await expect(opened).toBeVisible();
+      if (close === "Escape") await page.keyboard.press("Escape");
+      else await opened.getByRole("button", { name: "Cancel" }).click();
+
+      await expect(opened).toBeHidden();
+      await expect(actions).toBeFocused();
+    });
+  }
+}
+
 test.describe("store connection controls keep focus", () => {
   test.beforeEach(({ context }) =>
     seedCookie(context, STORE_CONNECTION_COOKIE, "active"),
