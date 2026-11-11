@@ -31,6 +31,14 @@ const columnHelper = createColumnHelper<
   KeywordDiscoveryItem
 >();
 
+function selectAllState(table: {
+  getIsAllRowsSelected: () => boolean;
+  getIsSomeRowsSelected: () => boolean;
+}): boolean | "indeterminate" {
+  if (table.getIsAllRowsSelected()) return true;
+  return table.getIsSomeRowsSelected() ? "indeterminate" : false;
+}
+
 function Missing({ label }: { label: string }) {
   return (
     <span className="text-muted-foreground">
@@ -116,13 +124,7 @@ const selectColumn = columnHelper.display({
   enableHiding: false,
   header: ({ table }) => (
     <Checkbox
-      checked={
-        table.getIsAllRowsSelected()
-          ? true
-          : table.getIsSomeRowsSelected()
-            ? "indeterminate"
-            : false
-      }
+      checked={selectAllState(table)}
       onCheckedChange={(value) => table.toggleAllRowsSelected(!!value)}
       aria-label={SELECT_ALL_DISCOVERIES}
     />
