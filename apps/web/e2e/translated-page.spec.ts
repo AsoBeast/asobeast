@@ -589,7 +589,9 @@ test("a translated overview names the market it switched to", async ({
   const card = page
     .locator('[data-slot="card"]')
     .filter({ hasText: /in top 10/i });
-  await expect(card).toContainText("Search visibility · All markets");
+  await expect(
+    card.getByRole("heading", { name: "Search visibility", exact: true }),
+  ).toBeVisible();
   const switcher = await hydrated(
     page.getByRole("combobox", { name: "Market" }),
   );

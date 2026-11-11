@@ -72,7 +72,7 @@ export function MarketRatingRow({
       <TableCell className="text-right">
         <RatingCount row={row} />
       </TableCell>
-      <TableCell className="text-right">
+      <TableCell className="text-right max-sm:hidden">
         {row.capturedAt === null ? (
           <span className="text-muted-foreground">{NOT_CAPTURED}</span>
         ) : (

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { createColumnHelper } from "@tanstack/react-table";
 import type { PortfolioApp, PortfolioAppInsight } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
+import { TrendLine } from "@/components/charts/Sparkline";
 import { DeleteAppMenu } from "@/components/apps/DeleteAppMenu";
 import { DelistedBadge } from "@/components/apps/DelistedBadge";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
@@ -23,11 +24,21 @@ import { grade } from "@/lib/grade";
 import { nullsLast } from "@/lib/table/sorting";
 import { MovementValue } from "./MovementValue";
 import { setupChipText } from "./setup-chip";
-import { TrendLine } from "./Sparkline";
 
 export interface PortfolioTableRow {
   app: PortfolioApp;
   insight: PortfolioAppInsight | undefined;
+}
+
+function VisibilityTrend({ points }: { points: PortfolioApp["sparkline"] }) {
+  const values = points.map((point) => point.visibility);
+  return (
+    <TrendLine
+      values={values}
+      label="visibility, last 30 days"
+      now={String(Math.round(values.at(-1) ?? 0))}
+    />
+  );
 }
 
 const columnHelper = createColumnHelper<DataTableFeatures, PortfolioTableRow>();
@@ -93,7 +104,7 @@ export const portfolioColumns = columnHelper.columns([
       row.original.app.lastCapturedAt === null ? (
         EMPTY
       ) : (
-        <TrendLine points={row.original.app.sparkline} />
+        <VisibilityTrend points={row.original.app.sparkline} />
       ),
   }),
   columnHelper.accessor((row) => row.app.visibility.current, {

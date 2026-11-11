@@ -1,6 +1,6 @@
 import type { VisibilityPoint } from "@asobeast/shared";
 import { cn } from "@/lib/utils";
-import { seriesColor } from "@/components/charts/theme";
+import { seriesColor } from "./theme";
 import { areaPath, monotonePath, sparklinePoints } from "./sparkline-path";
 
 const BOX = { width: 120, height: 48, padding: 3 };
@@ -15,26 +15,38 @@ function trendDirection(first: number, last: number): Direction {
   return "flat";
 }
 
-export function TrendLine({ points }: { points: VisibilityPoint[] }) {
-  if (points.length < 2) {
+export function TrendLine({
+  values,
+  label,
+  now,
+  className,
+}: {
+  values: number[];
+  label: string;
+  now: string;
+  className?: string;
+}) {
+  if (values.length < 2) {
     return (
-      <span className="text-caption whitespace-nowrap text-faint-foreground">
+      <span
+        className={cn(
+          "text-caption whitespace-nowrap text-faint-foreground",
+          className,
+        )}
+      >
         Not enough history
       </span>
     );
   }
-  const values = points.map((point) => point.visibility);
-  const first = values[0];
-  const last = values[values.length - 1];
-  const direction = trendDirection(first, last);
+  const direction = trendDirection(values[0], values[values.length - 1]);
   return (
     <svg
       role="img"
-      aria-label={`visibility, last 30 days: ${direction}, now ${Math.round(last)}`}
+      aria-label={`${label}: ${direction}, now ${now}`}
       width={TREND_BOX.width}
       height={TREND_BOX.height}
       viewBox={`0 0 ${TREND_BOX.width} ${TREND_BOX.height}`}
-      className="block shrink-0"
+      className={cn("block shrink-0", className)}
     >
       <path
         d={monotonePath(sparklinePoints(values, TREND_BOX))}

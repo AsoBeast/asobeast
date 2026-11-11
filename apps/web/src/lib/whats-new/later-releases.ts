@@ -31,7 +31,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "improved",
         title: "An app overview that leads with what matters",
-        text: "The overview of an app now opens with its key figures: visibility, share of voice once you track a competitor, keywords in the top 10 and the store rating. Select visibility, share of voice or the top 10 to draw its chart. Keyword movers sit right under it beside the next things to do, with the biggest competitor gap at their foot and the keywords missing from your metadata next to them. The store funnel, category ranks and ratings by market follow as reference, and the app's own icon now sits beside its name on every page.",
+        text: "The overview of an app now opens with four figures: visibility, share of voice, keywords in the top 10 and the store rating. Select any of them to draw its chart. The visibility chart shows the range before as a second line and marks the days your listing changed, with a link to what each change did. Keyword movers sit right under it with a small line of each keyword's last 30 days, followed by the keywords closest to the top 10, the next things to do and how many tracked keywords each part of your listing covers. The store funnel shows a trend line under each number, category ranks and ratings by market follow as reference, and the app's own icon now sits beside its name on every page.",
       },
       {
         kind: "improved",
