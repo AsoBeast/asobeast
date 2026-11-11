@@ -56,6 +56,25 @@ export interface KeywordMarkSegment {
   match?: Exclude<KeywordWordMatch, 'none'>;
 }
 
+export interface KeywordRecentPosition {
+  date: string;
+  position: number | null;
+}
+
+export const KEYWORD_TOP_APP_ROLES = ['own', 'competitor', 'other'] as const;
+export type KeywordTopAppRole = (typeof KEYWORD_TOP_APP_ROLES)[number];
+
+export interface KeywordTopApp {
+  storeAppId: string;
+  title: string;
+  iconUrl: string | null;
+  position: number;
+  role: KeywordTopAppRole;
+}
+
+export const KEYWORD_RECENT_POSITION_DAYS = 7;
+export const KEYWORD_TOP_APPS = 3;
+
 export interface TrackedKeywordItem {
   keywordId: string;
   text: string;
@@ -95,6 +114,8 @@ export interface TrackedKeywordItem {
   keywordClassSource?: KeywordClassSource;
   lastRankedPosition?: number | null;
   lastRankedOn?: string | null;
+  recentPositions?: KeywordRecentPosition[];
+  topApps?: KeywordTopApp[] | null;
 }
 
 export interface PlayAcquisitions {

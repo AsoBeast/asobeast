@@ -339,6 +339,49 @@ describe('KeywordsController table facts (e2e)', () => {
       expect(byText.get('unchecked')?.competitorsInTop10).toBeNull();
     });
 
+    it('lists the first three apps of the newest results with their roles', async () => {
+      const primary = await seedApp();
+      await seedCompetitor(primary.id, '222');
+      const keywordId = await track(primary.id, 'pomodoro');
+      const stale = await track(primary.id, 'stale');
+      await snapshot(keywordId, daysAgo(1), ['111', '999', '222']);
+      await snapshot(keywordId, utcToday(), ['999', '222', '111', '555']);
+      await snapshot(stale, daysAgo(2), ['222']);
+
+      const byText = new Map(
+        (await list(primary.id)).map((item) => [item.text, item]),
+      );
+
+      expect(
+        byText
+          .get('pomodoro')
+          ?.topApps?.map((app) => [app.position, app.storeAppId, app.role]),
+      ).toEqual([
+        [1, '999', 'other'],
+        [2, '222', 'competitor'],
+        [3, '111', 'own'],
+      ]);
+      expect(byText.get('stale')?.topApps).toBeNull();
+    });
+
+    it('lists the positions of the last seven days, oldest first', async () => {
+      const primary = await seedApp();
+      const keywordId = await track(primary.id, 'pomodoro');
+      await rank(primary.id, keywordId, [20, 18, 15, 12, 12, 9, null, 7, 5]);
+
+      const [item] = await list(primary.id);
+
+      expect(item.recentPositions?.map((check) => check.position)).toEqual([
+        15,
+        12,
+        12,
+        9,
+        null,
+        7,
+        5,
+      ]);
+    });
+
     it('counts a snapshot from yesterday and not one from two days ago', async () => {
       const primary = await seedApp();
       await seedCompetitor(primary.id, '222');

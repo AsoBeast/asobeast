@@ -27,6 +27,7 @@ import {
 import { sortTracked } from './keyword-sort';
 import { loadSerpDays } from './keyword-serp-days';
 import { competitorsInTop10 } from './keyword-rivals';
+import { loadTopAppRows, topAppsByKeyword } from './keyword-top-apps';
 import { volatilities } from './keyword-volatility';
 import { retainedPositionFacts } from './keyword-position-facts';
 import { toTrackedKeywordItem } from './keywords.mapper';
@@ -65,6 +66,7 @@ export class KeywordsService {
       coverageFacts?: boolean;
       listingMarks?: boolean;
       brandFacts?: boolean;
+      topApps?: boolean;
     } = {},
   ): Promise<TrackedKeywordItem[]> {
     const app = await ensureApp(this.prisma, appId);
@@ -73,7 +75,8 @@ export class KeywordsService {
       ...trackedArgs(appId),
     });
     const keywordIds = rows.map((row) => row.keywordId);
-    const [facts, serpDays, hold, acquisitions, competitors] =
+    const today = utcDayOf(new Date());
+    const [facts, serpDays, hold, acquisitions, competitors, topAppRows] =
       await Promise.all([
         listingFacts(
           this.prisma,
@@ -96,11 +99,21 @@ export class KeywordsService {
               rows.map((row) => row.keyword.text),
             )
           : null,
-        options.competitorFacts ? this.competitorStoreAppIds(appId) : null,
+        options.competitorFacts || options.topApps
+          ? this.competitorStoreAppIds(appId)
+          : null,
+        options.topApps ? loadTopAppRows(this.prisma, keywordIds, today) : null,
       ]);
     const volatility = volatilities(serpDays);
-    const rivals = competitors
-      ? competitorsInTop10(serpDays, competitors, utcDayOf(new Date()))
+    const rivals =
+      options.competitorFacts && competitors
+        ? competitorsInTop10(serpDays, competitors, today)
+        : null;
+    const topApps = topAppRows
+      ? topAppsByKeyword(topAppRows, {
+          own: app.storeAppId,
+          competitors: competitors ?? new Set(),
+        })
       : null;
     return sortTracked(
       classifyBuckets(
@@ -120,6 +133,7 @@ export class KeywordsService {
           ...(rivals
             ? { competitorsInTop10: rivals.get(row.keywordId) ?? null }
             : {}),
+          ...(topApps ? { topApps: topApps.get(row.keywordId) ?? null } : {}),
         })),
       ),
       sort,
