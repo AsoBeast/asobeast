@@ -33,13 +33,24 @@ export function PositionReadout({
 }) {
   const tier = grade("position", keyword.latestPosition);
   return (
-    <span className="numeric inline-flex shrink-0 items-center gap-1.5">
+    <span
+      className={cn(
+        "numeric inline-flex shrink-0 items-center gap-1.5",
+        chip && "min-w-19",
+      )}
+    >
       {keyword.latestPosition === null ? (
         <span
           title={lost?.on ? lastRankedLine(lost.position, lost.on) : undefined}
-          className={cn("text-muted-foreground", className)}
+          className={cn(
+            "flex flex-col leading-tight text-muted-foreground",
+            className,
+          )}
         >
-          {lost ? `${label} (was #${lost.position})` : label}
+          <span>{label}</span>
+          {lost ? (
+            <span className="text-tick text-faint-foreground">{`was #${lost.position}`}</span>
+          ) : null}
         </span>
       ) : (
         <GradedNumber
@@ -54,7 +65,13 @@ export function PositionReadout({
           )}
         />
       )}
-      <span className={chip ? "inline-flex w-8 justify-start" : "contents"}>
+      <span
+        className={
+          chip && keyword.latestPosition !== null
+            ? "inline-flex w-8 justify-start"
+            : "contents"
+        }
+      >
         <PositionDeltaChip
           value={staleOn === null ? keyword.positionDelta1d : null}
         />

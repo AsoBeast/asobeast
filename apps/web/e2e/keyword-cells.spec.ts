@@ -18,6 +18,11 @@ const lastRankedTitle = (text: string) => {
   return `Last ranked #${keyword.lastRankedPosition} on ${formatDate(keyword.lastRankedOn)}`;
 };
 
+const lostReadout = (page: Page, text: string, position: number) =>
+  rowOf(page, text)
+    .getByText(`was #${position}`, { exact: true })
+    .locator("xpath=..");
+
 const keywordCell = (page: Page, text: string) =>
   rowOf(page, text).getByRole("cell").nth(1);
 
@@ -257,9 +262,7 @@ test.describe("the listing marks choice", () => {
 test.describe("the last position of a keyword that lost its rank", () => {
   test("a keyword that lost its rank says where it was", async ({ page }) => {
     await openMarks(page);
-    const position = rowOf(page, "lost yesterday").getByText(">200 (was #14)", {
-      exact: true,
-    });
+    const position = lostReadout(page, "lost yesterday", 14);
 
     await expect(position).toBeVisible();
     await expect(position).toHaveAttribute(
@@ -274,17 +277,15 @@ test.describe("the last position of a keyword that lost its rank", () => {
   test("the hint outlives the first day", async ({ page }) => {
     await openMarks(page);
 
-    await expect(
-      rowOf(page, "lost for days").getByText(">200 (was #9)", { exact: true }),
-    ).toHaveAttribute("title", lastRankedTitle("lost for days"));
+    await expect(lostReadout(page, "lost for days", 9)).toHaveAttribute(
+      "title",
+      lastRankedTitle("lost for days"),
+    );
   });
 
   test("an older api still shows the day before", async ({ page }) => {
     await openMarks(page);
-    const position = rowOf(page, "lost on an older api").getByText(
-      ">200 (was #6)",
-      { exact: true },
-    );
+    const position = lostReadout(page, "lost on an older api", 6);
 
     await expect(position).toBeVisible();
     await expect(position).not.toHaveAttribute("title");
@@ -295,7 +296,7 @@ test.describe("the last position of a keyword that lost its rank", () => {
     const row = rowOf(page, "never ranked");
 
     await expect(row.getByText(">200", { exact: true })).toBeVisible();
-    await expect(row).not.toContainText("(was");
+    await expect(row).not.toContainText("was #");
   });
 
   test("the position history popover keeps its own readout", async ({
@@ -365,9 +366,7 @@ test.describe("the last position of a keyword that lost its rank", () => {
     test(`the hint never widens the page at ${width} px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
       await openMarks(page);
-      await expect(
-        rowOf(page, "lost on an older api").getByText(">200 (was #6)"),
-      ).toBeVisible();
+      await expect(lostReadout(page, "lost on an older api", 6)).toBeVisible();
 
       const overflow = await page.evaluate(
         () => document.documentElement.scrollWidth - window.innerWidth,

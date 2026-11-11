@@ -152,7 +152,7 @@ describe("PositionCell", () => {
     expect(markup).toContain('aria-label="Position history: focus timer"');
   });
 
-  it("W-POS-11 a keyword that lost its rank says where it was in one string", () => {
+  it("W-POS-11 a keyword that lost its rank says where it was under the bound", () => {
     const markup = render(
       keyword({
         latestPosition: null,
@@ -163,7 +163,8 @@ describe("PositionCell", () => {
       }),
     );
 
-    expect(markup).toContain(">&gt;200 (was #14)<");
+    expect(markup).toContain("<span>&gt;200</span>");
+    expect(markup).toContain(">was #14<");
     expect(markup).toContain(
       `title="Last ranked #14 on ${formatDate("2026-10-21")}"`,
     );
@@ -179,7 +180,7 @@ describe("PositionCell", () => {
       }),
     );
 
-    expect(markup).toContain(">&gt;200 (was #6)<");
+    expect(markup).toContain(">was #6<");
     expect(markup).not.toContain("Last ranked");
   });
 
@@ -188,7 +189,7 @@ describe("PositionCell", () => {
       keyword({ lastRankedPosition: null, lastRankedOn: null }),
     );
 
-    expect(markup).not.toContain("(was");
+    expect(markup).not.toContain(">was #");
     expect(markup).toContain("since yesterday");
   });
 
@@ -202,7 +203,7 @@ describe("PositionCell", () => {
       }),
     );
 
-    expect(markup).toContain("(was #14)");
+    expect(markup).toContain(">was #14<");
     expect(markup).toContain(CLOCK);
   });
 

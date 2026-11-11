@@ -550,14 +550,14 @@ test("a translated keywords table keeps the last position of a lost keyword", as
   const sort = await hydrated(
     table.getByRole("button", { name: /^position$/i }),
   );
-  await expect(table.getByText(">200 (was #14)")).toBeVisible();
+  await expect(table.getByText("was #14", { exact: true })).toBeVisible();
 
   await translateText(page);
   await sort.click();
   await sort.click();
 
-  await expect(table.getByText(/>200 \(was #14\)/i)).toBeVisible();
-  await expect(table.getByText(/>200 \(was #9\)/i)).toBeVisible();
+  await expect(table.getByText(/^was #14$/i)).toBeVisible();
+  await expect(table.getByText(/^was #9$/i)).toBeVisible();
   expect(errors).toEqual([]);
 });
 
