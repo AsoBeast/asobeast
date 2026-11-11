@@ -274,7 +274,10 @@ export function VisibilityAreaChart({
           items={chartKey(days, compared, changeDays.length > 0)}
         />
         {changeDays.length > 0 ? (
-          <Link href={`/apps/${id}/changes`} className={FOOTER_LINK}>
+          <Link
+            href={`/apps/${id}/changes${country ? `?market=${country}` : ""}`}
+            className={FOOTER_LINK}
+          >
             See what each change did
           </Link>
         ) : null}

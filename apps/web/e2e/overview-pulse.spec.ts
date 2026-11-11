@@ -105,6 +105,14 @@ test("the visibility chart compares with the range before and marks listing chan
   ).toBeVisible();
 });
 
+test("the link under the chart keeps the chosen market", async ({ page }) => {
+  await page.goto("/apps/app-1?market=pl");
+
+  await expect(
+    page.getByRole("link", { name: "See what each change did" }),
+  ).toHaveAttribute("href", "/apps/app-1/changes?market=pl");
+});
+
 test("a failed listing changes read leaves the chart up and offers a retry", async ({
   page,
 }) => {
