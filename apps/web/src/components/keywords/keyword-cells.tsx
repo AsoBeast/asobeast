@@ -19,6 +19,7 @@ import {
 import { formatDate, formatMonth, formatNumber, pluralize } from "@/lib/format";
 import { isChecking, lostPosition, staleCheckDay } from "@/lib/keyword-checks";
 import { tagsLabel, visibleTags } from "@/lib/keyword-tags";
+import { NoSearchTermsContext } from "./PlayInstallsTip";
 import { PositionReadout } from "./PositionReadout";
 import {
   PositionHistoryPopover,
@@ -126,11 +127,10 @@ export function VolatilityCell({ value }: { value: number | null }) {
 
 export function PlayAcquisitionsCell({
   value,
-  noSearchTermsStatement,
 }: {
   value: PlayAcquisitions | null;
-  noSearchTermsStatement?: string | null;
 }) {
+  const noSearchTermsStatement = useContext(NoSearchTermsContext);
   if (!value) {
     const message = noSearchTermsStatement ?? "No Play Console data";
     return (

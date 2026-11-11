@@ -17,9 +17,9 @@ import { SortableHeader } from "@/components/data-table/SortableHeader";
 import { tagsIn } from "@/lib/keyword-tags";
 import { attributeColumns } from "./keyword-attribute-columns";
 import { SCORE_COMPARABILITY } from "./keyword-csv";
-import { noSearchTermsFact } from "@/lib/funnel";
 import { keywordZoneFilter } from "./keyword-filters";
 import { KeywordRowActions } from "./KeywordRowActions";
+import { PlayInstallsTip } from "./PlayInstallsTip";
 import { PositionTrend } from "./PositionTrend";
 import type { PositionHistoryContext } from "./PositionHistoryPopover";
 import {
@@ -95,7 +95,6 @@ export function keywordColumns({
   homeCountry,
   multiMarket,
   today,
-  noSearchTermsMonth,
   onOpenSerp,
 }: {
   appId: string;
@@ -103,7 +102,6 @@ export function keywordColumns({
   homeCountry: string;
   multiMarket: boolean;
   today: string;
-  noSearchTermsMonth: string | null;
   onOpenSerp: (keywordId: string) => void;
 }) {
   return columnHelper.columns([
@@ -112,9 +110,7 @@ export function keywordColumns({
     deltaColumn(),
     ...scoreColumns(),
     insightsColumn(today, multiMarket),
-    ...(store === "GOOGLE_PLAY"
-      ? [acquisitionsColumn({ noSearchTermsMonth })]
-      : []),
+    ...(store === "GOOGLE_PLAY" ? [acquisitionsColumn()] : []),
     topAppsColumn(),
     ...attributeColumns(),
     volatilityColumn(),
@@ -325,15 +321,7 @@ function scoreColumns() {
   ];
 }
 
-const PLAY_INSTALLS_SUMMARY =
-  "The acquisitions and store listing visitors this keyword brought through Google Play search and explore, from the newest complete month Play Console reported. A dash means Google reported no visitors for it.";
-
-function acquisitionsColumn({
-  noSearchTermsMonth,
-}: {
-  noSearchTermsMonth: string | null;
-}) {
-  const noSearchTermsStatement = noSearchTermsFact(noSearchTermsMonth);
+function acquisitionsColumn() {
   return columnHelper.accessor(
     (row) => nullsLast(row.playAcquisitions?.acquisitions ?? null),
     {
@@ -344,22 +332,11 @@ function acquisitionsColumn({
       header: ({ column }) => (
         <span className="inline-flex items-center gap-1">
           <SortableHeader column={column} label="Play installs" />
-          <InfoTip
-            label="About Play installs"
-            title="Play installs"
-            summary={PLAY_INSTALLS_SUMMARY}
-          >
-            {noSearchTermsStatement ? (
-              <p className="text-muted-foreground">{noSearchTermsStatement}</p>
-            ) : null}
-          </InfoTip>
+          <PlayInstallsTip />
         </span>
       ),
       cell: ({ row }) => (
-        <PlayAcquisitionsCell
-          value={row.original.playAcquisitions ?? null}
-          noSearchTermsStatement={noSearchTermsStatement}
-        />
+        <PlayAcquisitionsCell value={row.original.playAcquisitions ?? null} />
       ),
     },
   );
