@@ -125,9 +125,17 @@ for (const [item, dialog, role] of [
   }
 }
 
-test("stopping a keyword keeps focus on the confirmation, then on the next row", async ({
+test("stopping a keyword keeps focus on the confirmation, then on a row that stays", async ({
   page,
 }) => {
+  let stopped = false;
+  await page.route("**/api/backend/apps/app-1/keywords?*", async (route) => {
+    if (!stopped || route.request().method() !== "GET") return route.fallback();
+    const rows: { text: string }[] = await (await route.fetch()).json();
+    return route.fulfill({
+      json: rows.filter((row) => row.text !== "pomodoro"),
+    });
+  });
   await page.goto("/apps/app-1/keywords");
   const actions = page.getByRole("button", {
     name: "Keyword actions for pomodoro",
@@ -136,7 +144,10 @@ test("stopping a keyword keeps focus on the confirmation, then on the next row",
     page,
     /\/api\/backend\/apps\/app-1\/keywords\/[^/?]+$/,
     "DELETE",
-    (route) => route.fulfill({ status: 204 }),
+    (route) => {
+      stopped = true;
+      return route.fulfill({ status: 204 });
+    },
   );
 
   await pressFromKeyboard(actions);
@@ -154,12 +165,15 @@ test("stopping a keyword keeps focus on the confirmation, then on the next row",
   held.release();
 
   await expect(dialog).toBeHidden();
+  await expect(actions).toHaveCount(0);
   await expect(
     page
       .getByRole("button", { name: /^Keyword actions for / })
       .and(page.locator(":focus")),
   ).toHaveCount(1);
-  await expect(actions).not.toBeFocused();
+  expect(
+    await page.evaluate(() => document.activeElement === document.body),
+  ).toBe(false);
 });
 
 test.describe("store connection controls keep focus", () => {
