@@ -6,6 +6,7 @@ import {
   utcDaysAgo,
 } from "./fixtures.mts";
 import { seedCookies } from "./routes.mts";
+import { chooseKeywordMarket } from "./keyword-controls.mts";
 
 test.describe.configure({ mode: "serial" });
 
@@ -165,14 +166,14 @@ test("the bulk bar opens the dynamics panel between the toolbar and the table", 
   const tableBox = await page
     .getByRole("table", { name: /Tracked keywords/ })
     .boundingBox();
-  const pillsBox = await page
-    .getByRole("group", { name: "Keyword markets" })
+  const marketBox = await page
+    .getByRole("combobox", { name: "Keyword markets" })
     .boundingBox();
   expect(panelBox).not.toBeNull();
   expect(tableBox).not.toBeNull();
-  expect(pillsBox).not.toBeNull();
-  if (!panelBox || !tableBox || !pillsBox) throw new Error("missing layout");
-  expect(panelBox.y).toBeGreaterThan(pillsBox.y);
+  expect(marketBox).not.toBeNull();
+  if (!panelBox || !tableBox || !marketBox) throw new Error("missing layout");
+  expect(panelBox.y).toBeGreaterThan(marketBox.y);
   expect(panelBox.y).toBeLessThan(tableBox.y);
 });
 
@@ -372,7 +373,7 @@ test("table sorting, filtering and bulk actions leave an open chart alone", asyn
   ]);
 });
 
-test("the market pills scope the chart and its change markers", async ({
+test("the market menu scopes the chart and its change markers", async ({
   page,
   context,
 }) => {
@@ -388,10 +389,7 @@ test("the market pills scope the chart and its change markers", async ({
   const chart = page.getByRole("region", { name: CHART });
   await expect(chart.locator(".metadata-change-marker")).toHaveCount(3);
 
-  await page
-    .getByRole("group", { name: "Keyword markets" })
-    .getByRole("button", { name: /^PL/ })
-    .click();
+  await chooseKeywordMarket(page, /^Poland/);
   await expect(page).toHaveURL(/country=pl/);
   await expect(chartSeries(page)).toHaveText(["minutnik skupienia (PL)"]);
   await expect(

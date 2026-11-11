@@ -6,7 +6,9 @@ import {
   isRanked,
   isScoringConfidence,
   isScoringSource,
+  KEYWORD_RECENT_POSITION_DAYS,
   KeywordClass,
+  KeywordRecentPosition,
   RankMilestoneTier,
   ScoreProvenance,
   ScoreSignals,
@@ -206,6 +208,7 @@ type PositionFacts = Pick<
       | 'daysInTier'
       | 'heldTier'
       | 'dropStreak'
+      | 'recentPositions'
     >
   >;
 
@@ -223,6 +226,22 @@ function dropStreakFact(
     return null;
   }
   return dropStreakOf(rankings);
+}
+
+export function recentPositions(
+  rankings: Pick<KeywordRanking, 'position' | 'date'>[],
+): KeywordRecentPosition[] {
+  const latest = rankings[0];
+  if (!latest) return [];
+  const from = new Date(latest.date);
+  from.setUTCDate(from.getUTCDate() - (KEYWORD_RECENT_POSITION_DAYS - 1));
+  return rankings
+    .filter((ranking) => ranking.date >= from)
+    .map((ranking) => ({
+      date: utcDayOf(ranking.date),
+      position: ranking.position,
+    }))
+    .reverse();
 }
 
 function positionFacts(
@@ -250,6 +269,7 @@ function positionFacts(
       : {
           ...heldFacts(hold, latestPosition, active, today),
           dropStreak: dropStreakFact(rankings, active, today),
+          recentPositions: recentPositions(rankings),
         }),
   };
 }

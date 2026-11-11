@@ -6,8 +6,14 @@ import { nullsLast } from "@/lib/table/sorting";
 import { insightsOf } from "@/lib/keyword-insights";
 import { InsightsCell } from "./InsightsCell";
 import { InsightsTip } from "./InsightsTip";
-import { AddedCell, CompetitorsInTop10Cell, RevealCell } from "./keyword-cells";
+import {
+  AddedCell,
+  CompetitorsInTop10Cell,
+  RevealCell,
+  VolatilityCell,
+} from "./keyword-cells";
 import { REVEAL_WORDS, revealLabel, revealRank } from "./score-signals";
+import { TopAppsCell } from "./TopAppsCell";
 import {
   keywordColumnHelper as columnHelper,
   SORTABLE,
@@ -54,7 +60,11 @@ export function competitorsColumn() {
     (row) => nullsLast(row.competitorsInTop10 ?? null),
     {
       id: "competitors",
-      meta: { label: "Competitors in top 10", hiddenByDefault: true },
+      meta: {
+        label: "Competitors in top 10",
+        hiddenByDefault: true,
+        numeric: true,
+      },
       ...SORTABLE,
       sortDescFirst: true,
       header: ({ column }) => (
@@ -94,5 +104,35 @@ export function insightsColumn(today: string, multiMarket: boolean) {
         multiMarket={multiMarket}
       />
     ),
+  });
+}
+
+export function volatilityColumn() {
+  return columnHelper.accessor((row) => nullsLast(row.serpVolatility7d), {
+    id: "volatility",
+    meta: { label: "Volatility", numeric: true, hiddenByDefault: true },
+    ...SORTABLE,
+    sortDescFirst: true,
+    header: ({ column }) => (
+      <span className="inline-flex items-center gap-1">
+        <SortableHeader column={column} label="Volatility" />
+        <InfoTip
+          label="About volatility"
+          title="Volatility"
+          summary="How much the top 10 changed day to day over the last week. High churn means rankings here are unstable."
+        />
+      </span>
+    ),
+    cell: ({ row }) => <VolatilityCell value={row.original.serpVolatility7d} />,
+  });
+}
+
+export function topAppsColumn() {
+  return columnHelper.accessor((row) => row.topApps ?? null, {
+    id: "topApps",
+    meta: { label: "Top apps" },
+    enableSorting: false,
+    header: "Top apps",
+    cell: ({ row }) => <TopAppsCell apps={row.original.topApps} />,
   });
 }

@@ -10,6 +10,8 @@ export interface KeywordTotals {
   topTen: number;
   averagePopularity: number | null;
   averageDifficulty: number | null;
+  movedUp7d: number;
+  movedDown7d: number;
 }
 
 export const TOP_TEN_MAX_POSITION = 10;
@@ -33,6 +35,7 @@ export function keywordTotals(
 ): KeywordTotals {
   const positions = scored(rows.map((row) => row.latestPosition));
   const unchecked = rows.filter((row) => row.latestDepth === null).length;
+  const changes = scored(rows.map((row) => row.positionDelta7d));
   return {
     count: rows.length,
     ranked: positions.length,
@@ -49,5 +52,7 @@ export function keywordTotals(
       mean(scored(rows.map((row) => scoreValue(row, "difficulty")))),
       0,
     ),
+    movedUp7d: changes.filter((change) => change < 0).length,
+    movedDown7d: changes.filter((change) => change > 0).length,
   };
 }

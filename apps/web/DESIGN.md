@@ -333,7 +333,7 @@ A restrained radius scale by role: 4 px on tags and checkboxes, 6 px on buttons,
 
 ### Tables
 
-- The table kit, 44 px rows with 16 px cell padding, 12 px sentence case headers in ink 3 over a hairline, 13 px cells, no zebra, a lighter line between rows, hover to surface 2. Numeric columns and their headers are right aligned and tabular; a name cell holds a 24 px app icon, the name at 500 and a 12 px ink 3 line under it. The keyword table defaults to about 36 px rows, right aligns its position and score columns, shows change beside position, fits its default columns inside 1440 px and has no meter under a score. A totals footer repeats the header style and counts: keywords, ranked, not ranking, in the top 10, moved up, moved down.
+- The table kit, 44 px rows with 16 px cell padding, 12 px sentence case headers in ink 3 over a hairline, 13 px cells, no zebra, a lighter line between rows, hover to surface 2. Numeric columns and their headers are right aligned and tabular; a name cell holds a 24 px app icon, the name at 500 and a 12 px ink 3 line under it. The keyword table keeps 44 px rows, right aligns its score columns, shows change beside position, fits its default columns inside 1440 px and keeps a slim meter under each score. A totals footer repeats the header style and counts: keywords, ranked, not ranking, in the top 10, moved up, moved down.
 
 ### Navigation
 
@@ -377,7 +377,7 @@ A restrained radius scale by role: 4 px on tags and checkboxes, 6 px on buttons,
 - **Don't** use a pill for a source, a store, a market, a tag or a category, or on every row of a list.
 - **Don't** use orange for a warning, a data bar on another page, a link underline or an active navigation item.
 - **Don't** colour a position or a score by grade; show the grade word with a quiet marker: a filled dot for strong, a half filled one for weak, a ring for poor, none for fair.
-- **Don't** draw a meter under a number in a table, a sparkline fill, or a shadow below an overlay.
+- **Don't** draw a sparkline fill or a shadow below an overlay. A meter under a number belongs to the keywords table only, where the owner asked for it.
 - **Don't** use uppercase tracked labels, a second typeface, or a monospace face for numbers.
 - **Don't** render a letter tile where an app icon belongs.
 
@@ -395,7 +395,7 @@ A header band on the page: the app icon at 32 px, the name as the title, store a
 
 ### Keywords
 
-One heading row: the Tracked and Discovered segmented control, a market select with counts, search, one Filters control with its active chips, Columns, Export and the primary "Add keywords"; Import CSV is in the Add menu. Under it one sentence of movement for the market. The table at about 36 px rows with Keyword (listing marks as quiet underlines, the class as a 4 px tag only when the owner set it), Position with its 1 day change beside it, 7d, Opportunity, Popularity, Difficulty, one Insight word, then Source, Tags, Volatility and Added hidden by default; the row actions appear at the right on hover and focus, and the table fits 1440 px without an inner scroller. The totals footer counts. Suggestions and Keyword combinations are one line each when collapsed; the keyword field diagnostic moves to the metadata page and leaves a one line link. The cross store note lives in the Popularity header's info popover.
+One heading row: the Tracked and Discovered segmented control, a market select with the keyword count of each market, then the Table and Map switch, Import CSV as an outline button and the primary "Add keywords". Under it one sentence: how many keywords are tracked and active, and how many moved up and down since yesterday. Then the table's own row: search, one Filters control (a popover from `md`, a bottom sheet below it) with its active chips under it, the shown count, Columns and Export. The table keeps 44 px rows with Keyword (listing marks as tinted underlines, the class as a 4 px tag, Paused as a flat pill), Position as a chip (tinted for the top 3, outlined for the top 10) with its 1 day change beside it, Last 7 days as a position line with the 7 day change, then Opportunity, Popularity and Difficulty each as a number over a slim meter in the grade colour, up to two coloured Insight badges and the Top apps column of three overlapping store icons with the own app ringed; Tags, Source, Volatility, Added, Competitors in top 10 and Reveal are hidden by default, the row actions appear at the right on hover and focus, and the default columns fit 1440 px. The totals footer counts keywords, ranked and not found, the top 10, and how many moved up and down over 7 days, beside the three averages. Suggestions and Keyword combinations are one line each when collapsed; the keyword field read of the market stays as a flat panel of rows and notes. The cross store note lives in the Popularity header's info popover.
 
 ## Migration map
 

@@ -16,8 +16,9 @@ import type { keywordFilterParsers } from "@/lib/search-params";
 import type { KeywordTableFeatures } from "./keyword-table-features";
 import { exportKeywords } from "./keyword-csv";
 import { keywordFilterChips, type KeywordFilters } from "./keyword-filters";
-import { KeywordFacets } from "./KeywordFacets";
-import { KeywordFiltersSheet } from "./KeywordFiltersSheet";
+import { KeywordFiltersPopover, KeywordFiltersSheet } from "./KeywordFilters";
+
+const CHIPS_OUTSIDE_THE_PANEL: ReadonlySet<string> = new Set(["q", "zone"]);
 
 export function KeywordsFilterBar({
   appId,
@@ -36,7 +37,11 @@ export function KeywordsFilterBar({
 }) {
   const shown = table.getRowModel().rows;
   const chips = keywordFilterChips(filters);
-  const inlineFacets = useRef<HTMLDivElement>(null);
+  const active = chips.filter(
+    (chip) => !CHIPS_OUTSIDE_THE_PANEL.has(chip.key),
+  ).length;
+  const widerFilters = useRef<HTMLDivElement>(null);
+  const narrowerFilters = useRef<HTMLDivElement>(null);
 
   return (
     <div className="flex flex-col gap-2">
@@ -46,20 +51,22 @@ export function KeywordsFilterBar({
           value={filters.q}
           onSearch={(q, options) => void setFilters({ q }, options)}
         />
-        <div className="contents md:hidden">
+        <div ref={narrowerFilters} className="contents md:hidden">
           <KeywordFiltersSheet
             table={table}
             filters={filters}
             setFilters={setFilters}
-            active={chips.filter((chip) => chip.key !== "q").length}
-            inlineFacets={inlineFacets}
+            active={active}
+            otherWidth={widerFilters}
           />
         </div>
-        <div ref={inlineFacets} className="hidden md:contents">
-          <KeywordFacets
+        <div ref={widerFilters} className="hidden md:contents">
+          <KeywordFiltersPopover
             table={table}
             filters={filters}
             setFilters={setFilters}
+            active={active}
+            otherWidth={narrowerFilters}
           />
         </div>
         <RowCount

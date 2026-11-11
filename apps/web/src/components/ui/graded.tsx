@@ -33,11 +33,15 @@ export function GradedNumber({
   value,
   grade,
   label,
+  aligned = false,
+  marker = true,
   className,
 }: {
   value: string;
   grade: Grade | null;
   label: string;
+  aligned?: boolean;
+  marker?: boolean;
   className?: string;
 }) {
   const spoken = grade
@@ -50,19 +54,25 @@ export function GradedNumber({
       className={cn("numeric inline-flex items-center gap-1.5", className)}
     >
       <span aria-hidden>{value}</span>
-      <GradeMarker grade={grade} />
+      {marker ? <GradeMarker grade={grade} reserve={aligned} /> : null}
       <span className="sr-only">{spoken}</span>
     </span>
   );
 }
 
-function GradeMarker({ grade }: { grade: Grade | null }) {
+export function GradeMarker({
+  grade,
+  reserve = false,
+}: {
+  grade: Grade | null;
+  reserve?: boolean;
+}) {
   const marker = grade ? GRADE_MARKER[grade] : undefined;
-  if (!marker) return null;
+  if (!marker && !reserve) return null;
   return (
     <span
       aria-hidden
-      data-slot="grade-marker"
+      data-slot={marker ? "grade-marker" : undefined}
       className={cn("size-1.5 shrink-0 rounded-full", marker)}
     />
   );

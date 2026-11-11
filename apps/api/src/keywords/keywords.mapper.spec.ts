@@ -1,5 +1,6 @@
 import {
   heldFacts,
+  recentPositions,
   toTrackedKeywordItem,
   TrackedKeywordRow,
 } from './keywords.mapper';
@@ -678,6 +679,32 @@ describe('uncovered', () => {
     const item = toTrackedKeywordItem(row(), facts(''));
 
     expect(item).not.toHaveProperty('uncovered');
+  });
+});
+
+describe('recentPositions', () => {
+  const on = (day: string, position: number | null) => ({
+    date: new Date(`${day}T00:00:00.000Z`),
+    position,
+  });
+
+  it('lists the checks of the 7 days ending at the latest check, oldest first', () => {
+    expect(
+      recentPositions([
+        on('2026-10-28', 3),
+        on('2026-10-27', null),
+        on('2026-10-22', 9),
+        on('2026-10-21', 12),
+      ]),
+    ).toEqual([
+      { date: '2026-10-22', position: 9 },
+      { date: '2026-10-27', position: null },
+      { date: '2026-10-28', position: 3 },
+    ]);
+  });
+
+  it('answers nothing for a keyword never checked', () => {
+    expect(recentPositions([])).toEqual([]);
   });
 });
 

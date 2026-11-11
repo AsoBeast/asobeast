@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
 import { APP_INSIGHTS_ID, INSIGHT_MATRIX } from "./keyword-insights.mts";
+import { openKeywordFilters } from "./keyword-controls.mts";
 
 const KEYWORDS = "/apps/app-1/keywords";
 const BADGES = ["Dropping", "Page 1 close", "Beatable", "Not in listing"];
@@ -166,15 +167,19 @@ test.describe("the totals row", () => {
     await search.fill("");
     await expect(keywordTotal(page)).toHaveText("5 keywords");
 
+    await openKeywordFilters(page);
     await page.getByRole("button", { name: "Filter by position" }).click();
     await page.getByRole("option", { name: /^Top 3/ }).click();
+    await page.keyboard.press("Escape");
     await page.keyboard.press("Escape");
     await expect(keywordTotal(page)).toHaveText("1 keyword");
     await page.getByRole("button", { name: /^Remove Position/ }).click();
     await expect(keywordTotal(page)).toHaveText("5 keywords");
 
+    await openKeywordFilters(page);
     await page.getByRole("combobox", { name: "Filter by status" }).click();
     await page.getByRole("option", { name: "Paused" }).click();
+    await page.keyboard.press("Escape");
     await expect(keywordTotal(page)).toHaveText("1 keyword");
     await expect(footer(page)).toContainText("avg 45");
     await search.fill("time");

@@ -4,7 +4,7 @@ import { csvFilename, downloadCsv, toCsv } from "@/lib/csv";
 import { insightsCsv } from "@/lib/keyword-insights";
 import { scoreValue } from "@/lib/keyword-scores";
 
-const SCORE_COMPARABILITY =
+export const SCORE_COMPARABILITY =
   "Apple App Store and Google Play popularity and volume scores use different public signals and are not directly comparable";
 
 const KEYWORD_CSV_HEADERS = [

@@ -15,7 +15,7 @@ import {
   keywordsOptions,
 } from "@/lib/queries";
 import { keywordFilterParsers, keywordViewParser } from "@/lib/search-params";
-import { FUNNEL_SERIES_DAYS } from "@/lib/funnel";
+import { FUNNEL_SERIES_DAYS, noSearchTermsFact } from "@/lib/funnel";
 import { HIDDEN_KEYWORD_COLUMNS, keywordColumns } from "./keyword-columns";
 import { exactSearchEmptyBody, keywordSearchFilter } from "./keyword-filters";
 import { keywordTableFeatures } from "./keyword-table-features";
@@ -27,11 +27,9 @@ import { KeywordsEmptyState } from "./KeywordsEmptyState";
 import { KeywordsDataTable } from "./KeywordsDataTable";
 import { KeywordsFilterBar } from "./KeywordsFilterBar";
 import { ChartedKeywordsContext, ListingMarksContext } from "./keyword-cells";
+import { NoSearchTermsContext } from "./PlayInstallsTip";
 import { SerpSheet } from "./serp/SerpSheet";
-import {
-  useClearedSelectionFocus,
-  useEmptiedListFocus,
-} from "./use-keywords-table-focus";
+import { useClearedSelectionFocus } from "./use-keywords-table-focus";
 import { useSerpParams } from "./serp/use-serp-params";
 import { useKeywordColumnFilters } from "./use-zone-thresholds";
 import { useKeywordsTableControls } from "./use-keywords-table-controls";
@@ -68,7 +66,7 @@ export function KeywordsTable({
     ...funnelOptions(id, FUNNEL_SERIES_DAYS, undefined),
     enabled: store === "GOOGLE_PLAY",
   });
-  const noSearchTermsMonth = funnel?.noSearchTermsMonth ?? null;
+  const noSearchTerms = noSearchTermsFact(funnel?.noSearchTermsMonth);
 
   const rowSelection = useMemo(
     () => selectedKeywordsStillOnScreen(selection, keywords),
@@ -83,19 +81,10 @@ export function KeywordsTable({
         homeCountry,
         multiMarket,
         today,
-        noSearchTermsMonth,
         onOpenSerp: (keywordId) =>
           void setSerpState({ serp: keywordId, serpDate: null }),
       }),
-    [
-      id,
-      store,
-      homeCountry,
-      multiMarket,
-      setSerpState,
-      today,
-      noSearchTermsMonth,
-    ],
+    [id, store, homeCountry, multiMarket, setSerpState, today],
   );
 
   const { sorting, onSortingChange, visibility, setVisibility, marks } =
@@ -140,17 +129,9 @@ export function KeywordsTable({
   );
   const mapKeywords = useKeywordsAcrossZones(table, view === "map");
   const isEmpty = keywords.length === 0;
-  const addKeywords = useEmptiedListFocus(isEmpty);
 
   if (isEmpty) {
-    return (
-      <KeywordsEmptyState
-        appId={id}
-        store={store}
-        country={country}
-        addRef={addKeywords}
-      />
-    );
+    return <KeywordsEmptyState country={country} />;
   }
 
   return (
@@ -174,16 +155,18 @@ export function KeywordsTable({
             onClearFilters={() => void setFilters(null)}
           />
         ) : null}
-        <ListingMarksContext value={marks.checked}>
-          <ChartedKeywordsContext value={chartedSet}>
-            <KeywordsDataTable
-              table={table}
-              chartedSet={chartedSet}
-              emptyBody={exactSearchEmptyBody(filters.q)}
-              onClearFilters={() => void setFilters(null)}
-            />
-          </ChartedKeywordsContext>
-        </ListingMarksContext>
+        <NoSearchTermsContext value={noSearchTerms}>
+          <ListingMarksContext value={marks.checked}>
+            <ChartedKeywordsContext value={chartedSet}>
+              <KeywordsDataTable
+                table={table}
+                chartedSet={chartedSet}
+                emptyBody={exactSearchEmptyBody(filters.q)}
+                onClearFilters={() => void setFilters(null)}
+              />
+            </ChartedKeywordsContext>
+          </ListingMarksContext>
+        </NoSearchTermsContext>
 
         {selectedIds.length > 0 ? (
           <div className="sticky bottom-4 z-30 flex justify-center">

@@ -3,6 +3,7 @@ import type { Page } from "@playwright/test";
 import { hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
 import { seedChecklist } from "./workspace-checklist.mts";
+import { openKeywordFilters } from "./keyword-controls.mts";
 
 interface NamedPopover {
   name: string;
@@ -93,10 +94,17 @@ const POPOVERS: NamedPopover[] = [
     },
   },
   {
+    name: "Filters",
+    path: "/apps/app-1/keywords",
+    open: openKeywordFilters,
+  },
+  {
     name: "Filter by source",
     path: "/apps/app-1/keywords",
-    open: (page) =>
-      page.getByRole("button", { name: /^Filter by source/ }).click(),
+    open: async (page) => {
+      await openKeywordFilters(page);
+      await page.getByRole("button", { name: /^Filter by source/ }).click();
+    },
   },
   {
     name: "Filter by app",
@@ -113,8 +121,10 @@ const POPOVERS: NamedPopover[] = [
   {
     name: "Keyword types",
     path: "/apps/app-1/keywords",
-    open: (page) =>
-      page.getByRole("button", { name: "About keyword types" }).click(),
+    open: async (page) => {
+      await openKeywordFilters(page);
+      await page.getByRole("button", { name: "About keyword types" }).click();
+    },
   },
   {
     name: "How actions are generated",
@@ -228,6 +238,7 @@ test("About insights links the insights guide", async ({ page }) => {
 
 test("About keyword types links the keyword types page", async ({ page }) => {
   await page.goto("/apps/app-1/keywords");
+  await openKeywordFilters(page);
   await page.getByRole("button", { name: "About keyword types" }).click();
 
   const dialog = page.getByRole("dialog", {

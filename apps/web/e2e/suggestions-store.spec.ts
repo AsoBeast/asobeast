@@ -10,6 +10,7 @@ test("a google play keywords page names google play in the suggestions hint", as
   page,
 }) => {
   await page.goto(`/apps/${APP_GP_DETAIL.id}/keywords`);
+  await page.getByRole("button", { name: /^Suggestions/ }).click();
 
   await expect(page.getByText(suggestionsHint("Google Play"))).toBeVisible();
   await expect(page.getByText(suggestionsHint("App Store"))).toHaveCount(0);
@@ -19,6 +20,7 @@ test("an app store keywords page names the app store in the suggestions hint", a
   page,
 }) => {
   await page.goto(`/apps/${APP_1_DETAIL.id}/keywords`);
+  await page.getByRole("button", { name: /^Suggestions/ }).click();
 
   await expect(page.getByText(suggestionsHint("App Store"))).toBeVisible();
 });

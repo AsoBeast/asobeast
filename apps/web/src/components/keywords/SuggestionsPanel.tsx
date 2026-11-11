@@ -12,13 +12,12 @@ import { useQueryState } from "nuqs";
 import { toast } from "sonner";
 import type { KeywordSuggestionStrategy, Store } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  LEDE,
+  SECTION_CHEVRON,
+  SECTION_TOGGLE,
+} from "@/components/layout/panel-classes";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { addKeywords, ApiError } from "@/lib/api";
 import { formatList, storeLabel } from "@/lib/format";
@@ -88,30 +87,30 @@ export function SuggestionsPanel({
   return (
     <Card>
       <CardHeader>
-        <button
-          type="button"
-          onClick={() => setOpen((value) => !value)}
-          aria-expanded={open}
-          className="flex w-full items-start justify-between gap-4 text-left"
-        >
-          <div className="flex flex-col gap-1">
-            <CardTitle>Suggestions</CardTitle>
-            <CardDescription>
-              {formatList(storeLookupLabels())} run a live {storeLabel(store)}{" "}
-              lookup, so results can take a few seconds.
-            </CardDescription>
-          </div>
-          <ChevronDown
-            className={cn(
-              "mt-1 size-4 shrink-0 text-muted-foreground transition-transform",
-              open && "rotate-180",
-            )}
-          />
-        </button>
+        <CardTitle asChild>
+          <h3>
+            <button
+              type="button"
+              onClick={() => setOpen((value) => !value)}
+              aria-expanded={open}
+              className={SECTION_TOGGLE}
+            >
+              Suggestions
+              <ChevronDown
+                aria-hidden
+                className={cn(SECTION_CHEVRON, open && "rotate-180")}
+              />
+            </button>
+          </h3>
+        </CardTitle>
       </CardHeader>
 
       {open ? (
         <CardContent className="flex flex-col gap-4">
+          <p className={LEDE}>
+            {formatList(storeLookupLabels())} run a live {storeLabel(store)}{" "}
+            lookup, so results can take a few seconds.
+          </p>
           <Tabs
             value={strategy}
             onValueChange={(value) =>

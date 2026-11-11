@@ -34,7 +34,7 @@ export function DynamicsChips({
           id={dynamicsChipId(keywordId)}
           aria-label={`Remove ${labels.get(keywordId) ?? keywordId} from the chart`}
           onClick={(event) => onRemove(keywordId, event.currentTarget)}
-          className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs hover:bg-muted"
+          className="inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-label hover:bg-muted"
         >
           <span
             data-swatch

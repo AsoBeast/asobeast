@@ -15,7 +15,7 @@ import { KEYWORD_CLASS_LABELS } from "./keyword-class";
 import { matchesKeywordSearch, parseKeywordSearch } from "./keyword-search";
 import { scorePair } from "@/lib/keyword-scores";
 import type { KeywordTableFeatures } from "./keyword-table-features";
-import { SOURCE_LABELS } from "./SourceBadge";
+import { SOURCE_LABELS } from "./SourceLabel";
 
 export type KeywordFilters = inferParserType<typeof keywordFilterParsers>;
 

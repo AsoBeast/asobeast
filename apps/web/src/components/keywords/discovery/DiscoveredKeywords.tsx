@@ -9,7 +9,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { useFocusAfterCommit } from "@/lib/focus-handoff";
 import { visibleDiscoveries } from "@/lib/keyword-discoveries";
 import { keywordDiscoveriesOptions } from "@/lib/queries";
-import { KeywordsToolbar } from "../KeywordsToolbar";
 import { DiscoveredSkeleton } from "../skeletons";
 import { DiscoveredTable } from "./DiscoveredTable";
 import { selectedIn } from "./discovery-actions";
@@ -24,35 +23,19 @@ interface DiscoveredProps {
   id: string;
   store: Store;
   market: string;
-  homeCountry: string;
 }
 
 export function DiscoveredKeywords(props: DiscoveredProps) {
   const heading = useRef<HTMLHeadingElement>(null);
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h2
-          ref={heading}
-          tabIndex={-1}
-          className="text-lg font-semibold text-balance outline-none"
-        >
-          Discovered keywords
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Phrases near your listing that you do not track yet, and where your
-          app ranks for them.
-        </p>
-      </div>
-      <Suspense fallback={null}>
-        <KeywordsToolbar
-          id={props.id}
-          store={props.store}
-          market={props.market}
-          homeCountry={props.homeCountry}
-          showTrackedControls={false}
-        />
-      </Suspense>
+    <div className="flex flex-col gap-4">
+      <h2
+        ref={heading}
+        tabIndex={-1}
+        className="sr-only rounded-sm text-heading outline-none focus:not-sr-only focus:ring-2 focus:ring-ring"
+      >
+        Discovered keywords
+      </h2>
       <Suspense fallback={<DiscoveredSkeleton />}>
         <DiscoveredList key={props.market} {...props} heading={heading} />
       </Suspense>

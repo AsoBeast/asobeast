@@ -10,6 +10,7 @@ import {
   resetImportKeywords,
 } from "./keyword-import-dialog.mts";
 import { seedViewer } from "./viewer.mts";
+import { showKeywordColumns } from "./keyword-controls.mts";
 
 test.describe.configure({ mode: "serial" });
 
@@ -59,7 +60,7 @@ const importRequests = (page: Page) => {
   return seen;
 };
 
-test("P-WEB-01 offers the import beside Add keywords and in the empty state", async ({
+test("P-WEB-01 offers the import beside Add keywords, above an empty list too", async ({
   page,
 }) => {
   await page.goto(KEYWORDS);
@@ -73,16 +74,22 @@ test("P-WEB-01 offers the import beside Add keywords and in the empty state", as
   ).toBeVisible();
 });
 
-test("P-WEB-01 keeps both import buttons inside a phone screen without squeezing the heading", async ({
+test("P-WEB-01 keeps both import buttons on one line inside a phone screen", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto(KEYWORDS);
 
-  const heading = await page
-    .getByRole("heading", { name: "Tracked keywords" })
-    .boundingBox();
-  expect(heading?.height).toBeLessThan(36);
+  const tops = await Promise.all(
+    ["Import CSV", "Add keywords"].map(async (name) => {
+      const box = await page
+        .getByRole("button", { name })
+        .first()
+        .boundingBox();
+      return box?.y;
+    }),
+  );
+  expect(tops[0]).toBe(tops[1]);
 
   for (const name of ["Import CSV", "Add keywords"]) {
     const box = await page.getByRole("button", { name }).first().boundingBox();
@@ -114,6 +121,7 @@ test("P-WEB-02 downloads a template the import reads back", async ({
 test("P-WEB-03 reviews every row, then imports the new and paused ones with their tags", async ({
   page,
 }) => {
+  await showKeywordColumns(page, ["tags"]);
   const sent = importRequests(page);
   const dialog = await openDialog(page);
 

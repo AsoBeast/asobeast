@@ -18,6 +18,7 @@ import { fulfillJson, routePlan } from "./plan-helpers.mts";
 import { SERP_HISTORY_DAYS } from "./serp-history.mts";
 import type { SerpEntryItem, SerpSnapshot } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
+import { translatedFiltersButton } from "./keyword-controls.mts";
 import { collectDomErrors, translateText } from "./translate.mts";
 import { openBilling } from "./trial-plans.mts";
 import { typeInto } from "./type.mts";
@@ -444,13 +445,13 @@ test("a translated keywords page filters by type and clears it", async ({
 }) => {
   const errors = collectDomErrors(page);
   await page.goto("/apps/app-1/keywords");
-  const typeFilter = await hydrated(
-    page.getByRole("button", { name: "Filter by type" }),
-  );
+  const filters = await hydrated(translatedFiltersButton(page));
 
   await translateText(page);
-  await typeFilter.click();
+  await filters.click();
+  await page.getByRole("button", { name: /^Filter by type/ }).click();
   await page.getByRole("option", { name: /Own brand/ }).click();
+  await page.keyboard.press("Escape");
   await page.keyboard.press("Escape");
   await expect(page).toHaveURL(/type=ownBrand/);
   await page.getByRole("button", { name: /^Remove Type/ }).click();
@@ -788,8 +789,10 @@ test.describe("a translated opportunity map", () => {
     const errors = collectDomErrors(page);
     await openTranslated(page);
 
-    await page.getByRole("button", { name: "Filter by tags" }).click();
+    await translatedFiltersButton(page).click();
+    await page.getByRole("button", { name: /^Filter by tags/ }).click();
     await page.getByRole("option", { name: /^core/ }).click();
+    await page.keyboard.press("Escape");
     await page.keyboard.press("Escape");
 
     await expect(page.locator("[data-map-keyword]")).toHaveCount(4);

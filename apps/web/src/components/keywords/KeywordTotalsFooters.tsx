@@ -72,6 +72,16 @@ export function positionFooter({ table }: FooterContext) {
   );
 }
 
+export function movedFooter({ table }: FooterContext) {
+  const { movedUp7d, movedDown7d } = totalsOf(table);
+  return (
+    <Figures
+      lead={`${formatNumber(movedUp7d)} up`}
+      detail={`${formatNumber(movedDown7d)} down`}
+    />
+  );
+}
+
 function Average({ value }: { value: number | null }) {
   return value === null ? (
     <Missing label="No scored keywords" />

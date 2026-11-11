@@ -1,16 +1,29 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
+import { hydrated } from "./hydrated.mts";
+import { showKeywordColumns } from "./keyword-controls.mts";
 
 test.describe.configure({ mode: "serial" });
 
 const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
 const KEYWORDS = "/apps/app-tags/keywords";
 
+test.beforeEach(async ({ page }) => {
+  await showKeywordColumns(page, ["tags"]);
+});
+
 test.beforeEach(async ({ request }) => {
   await request.post(`${MOCK_API_URL}/__reset/keyword-annotations/app-tags`, {
     failOnStatusCode: true,
   });
 });
+
+async function openKeywords(page: Page) {
+  await page.goto(KEYWORDS);
+  await expect(
+    page.getByRole("columnheader", { name: "Tags", exact: true }),
+  ).toBeVisible();
+}
 
 const row = (page: Page, text: string) =>
   page.getByRole("row", { name: new RegExp(text) });
@@ -28,12 +41,14 @@ async function openEditor(page: Page, text: string) {
 test("the switch still pauses a keyword through the shared update", async ({
   page,
 }) => {
-  await page.goto(KEYWORDS);
+  await openKeywords(page);
 
   const patch = page.waitForRequest((request) => request.method() === "PATCH");
-  await row(page, "focus timer")
-    .getByRole("switch", { name: "Track keyword" })
-    .click();
+  await (
+    await hydrated(
+      row(page, "focus timer").getByRole("switch", { name: "Track keyword" }),
+    )
+  ).click();
 
   expect((await patch).postDataJSON()).toEqual({ active: false });
 });
@@ -41,13 +56,13 @@ test("the switch still pauses a keyword through the shared update", async ({
 test("the switch keeps one name whether the keyword is tracked or paused", async ({
   page,
 }) => {
-  await page.goto(KEYWORDS);
+  await openKeywords(page);
   const toggle = row(page, "focus timer").getByRole("switch", {
     name: "Track keyword",
   });
 
   await expect(toggle).toBeChecked();
-  await toggle.click();
+  await (await hydrated(toggle)).click();
 
   await expect(toggle).not.toBeChecked();
   await expect(
@@ -58,7 +73,7 @@ test("the switch keeps one name whether the keyword is tracked or paused", async
 test("tags are added with enter, a comma and a suggestion, and saved", async ({
   page,
 }) => {
-  await page.goto(KEYWORDS);
+  await openKeywords(page);
   const dialog = await openEditor(page, "focus timer");
   const input = dialog.getByRole("textbox", { name: "Tags" });
 
@@ -89,7 +104,7 @@ test("tags are added with enter, a comma and a suggestion, and saved", async ({
 });
 
 test("enter while composing text does not add a tag", async ({ page }) => {
-  await page.goto(KEYWORDS);
+  await openKeywords(page);
   const dialog = await openEditor(page, "focus timer");
   const input = dialog.getByRole("textbox", { name: "Tags" });
 
@@ -113,7 +128,7 @@ test("enter while composing text does not add a tag", async ({ page }) => {
 test("a duplicate left in the field does not block saving", async ({
   page,
 }) => {
-  await page.goto(KEYWORDS);
+  await openKeywords(page);
   const dialog = await openEditor(page, "focus timer");
   const input = dialog.getByRole("textbox", { name: "Tags" });
   await input.fill("core");
@@ -130,7 +145,7 @@ test("a duplicate left in the field does not block saving", async ({
 test("an invalid or a ninth tag is refused and the note counts", async ({
   page,
 }) => {
-  await page.goto(KEYWORDS);
+  await openKeywords(page);
   const dialog = await openEditor(page, "focus timer");
   const input = dialog.getByRole("textbox", { name: "Tags" });
 
@@ -153,7 +168,7 @@ test("an invalid or a ninth tag is refused and the note counts", async ({
 test("a note of 500 emoji counts as 500 and one more is refused", async ({
   page,
 }) => {
-  await page.goto(KEYWORDS);
+  await openKeywords(page);
   const dialog = await openEditor(page, "focus timer");
   const note = dialog.getByRole("textbox", { name: "Note" });
   const save = dialog.getByRole("button", { name: "Save" });
@@ -187,7 +202,7 @@ test("a failed save rolls the row back and keeps the dialog open", async ({
       path: "/",
     },
   ]);
-  await page.goto(KEYWORDS);
+  await openKeywords(page);
   const dialog = await openEditor(page, "focus timer");
   const input = dialog.getByRole("textbox", { name: "Tags" });
   await input.fill("core");
@@ -203,7 +218,7 @@ test("a failed save rolls the row back and keeps the dialog open", async ({
 });
 
 test("saved tags and a note survive a reload", async ({ page }) => {
-  await page.goto(KEYWORDS);
+  await openKeywords(page);
   const dialog = await openEditor(page, "pomodoro");
   const input = dialog.getByRole("textbox", { name: "Tags" });
   await input.fill("brand");
@@ -242,7 +257,7 @@ test.describe("bulk tagging", () => {
     });
 
   async function tagSelection(page: Page, texts: string[], tag: string) {
-    await page.goto(KEYWORDS);
+    await openKeywords(page);
     for (const text of texts) {
       await page.getByRole("checkbox", { name: `Select ${text}` }).check();
     }
@@ -301,7 +316,7 @@ test.describe("bulk tagging", () => {
   test("keeps focus in the table after the selection is cleared", async ({
     page,
   }) => {
-    await page.goto(KEYWORDS);
+    await openKeywords(page);
     await page.getByRole("checkbox", { name: "Select focus timer" }).check();
 
     await page
@@ -320,7 +335,7 @@ test.describe("bulk tagging", () => {
   test("returns focus to Remove when the removal is cancelled", async ({
     page,
   }) => {
-    await page.goto(KEYWORDS);
+    await openKeywords(page);
     await page.getByRole("checkbox", { name: "Select focus timer" }).check();
     const remove = page
       .getByRole("group", { name: "Bulk keyword actions" })
@@ -342,7 +357,7 @@ test.describe("bulk tagging", () => {
     await page.route("**/api/backend/apps/app-tags/keywords/bulk", (route) =>
       route.fulfill({ json: UNTRACKED_ONE }),
     );
-    await page.goto(KEYWORDS);
+    await openKeywords(page);
     await page.getByRole("checkbox", { name: "Select focus timer" }).check();
 
     await page
@@ -374,7 +389,7 @@ test.describe("bulk tagging", () => {
       const listed = new URL(request.url()).pathname.endsWith("/keywords");
       return removed && listed ? route.fulfill({ json: [] }) : route.fallback();
     });
-    await page.goto(KEYWORDS);
+    await openKeywords(page);
     await page.getByRole("checkbox", { name: "Select all keywords" }).check();
 
     await page
@@ -386,10 +401,9 @@ test.describe("bulk tagging", () => {
       .getByRole("button", { name: "Stop tracking" })
       .click();
 
-    const emptyState = page.locator('[data-slot="empty-state"]');
-    await expect(emptyState).toBeVisible();
+    await expect(page.locator('[data-slot="empty-state"]')).toBeVisible();
     await expect(
-      emptyState.getByRole("button", { name: "Add keywords" }),
+      page.getByRole("button", { name: "Add keywords" }),
     ).toBeFocused();
   });
 

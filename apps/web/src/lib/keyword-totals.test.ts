@@ -43,7 +43,21 @@ describe("keywordTotals", () => {
       topTen: 0,
       averagePopularity: null,
       averageDifficulty: null,
+      movedUp7d: 0,
+      movedDown7d: 0,
     });
+  });
+
+  it("counts a lower position over 7 days as a move up", () => {
+    const totals = keywordTotals([
+      keyword({ positionDelta7d: -7 }),
+      keyword({ positionDelta7d: 6 }),
+      keyword({ positionDelta7d: 5 }),
+      keyword({ positionDelta7d: 0 }),
+      keyword({ positionDelta7d: null }),
+    ]);
+
+    expect(totals).toMatchObject({ movedUp7d: 1, movedDown7d: 2 });
   });
 
   it("totals a mix of ranked, not found and never checked rows", () => {

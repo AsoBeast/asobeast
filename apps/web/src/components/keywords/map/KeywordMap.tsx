@@ -12,8 +12,8 @@ import { CHART_HEIGHT } from "@/components/charts/theme";
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -176,22 +176,25 @@ export function KeywordMap({
   return (
     <Card className="print:break-inside-avoid">
       <CardHeader>
-        <CardDescription>Opportunity map</CardDescription>
-        <CardTitle>Popularity by difficulty</CardTitle>
+        <CardTitle asChild>
+          <h3>Opportunity map</h3>
+        </CardTitle>
+        {ready ? (
+          <CardAction className="flex flex-wrap items-center justify-end gap-2">
+            <ThresholdsPopover />
+            <MapImageButtons
+              chartRef={chartRef}
+              appId={history.appId}
+              store={history.store}
+              market={market}
+              today={today}
+            />
+          </CardAction>
+        ) : null}
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {ready ? (
           <>
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <ThresholdsPopover />
-              <MapImageButtons
-                chartRef={chartRef}
-                appId={history.appId}
-                store={history.store}
-                market={market}
-                today={today}
-              />
-            </div>
             <MapZoneLegend
               counts={counts}
               thresholds={thresholds}
