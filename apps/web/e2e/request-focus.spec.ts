@@ -2,6 +2,7 @@ import type { BrowserContext, Locator, Page } from "@playwright/test";
 import type {
   ApiTokenItem,
   CompetitorItem,
+  TrackedKeywordItem,
   WebhookItem,
 } from "@asobeast/shared";
 import { holdRender } from "./chart-image.mts";
@@ -133,7 +134,7 @@ test("stopping a keyword keeps focus on the confirmation, then on a row that sta
   await page.route("**/api/backend/apps/app-1/keywords?*", async (route) => {
     if (!stopped || route.request().method() !== "GET") return route.fallback();
     await refetch.promise;
-    const rows: { text: string }[] = await (await route.fetch()).json();
+    const rows: TrackedKeywordItem[] = await (await route.fetch()).json();
     return route.fulfill({
       json: rows.filter((row) => row.text !== "pomodoro"),
     });
@@ -187,7 +188,7 @@ test("stopping a keyword keeps focus in the table when the list answers at once"
   page,
 }) => {
   await page.goto("/apps/app-1/keywords");
-  const listed: { text: string }[] = await (
+  const listed: TrackedKeywordItem[] = await (
     await page.request.get("/api/backend/apps/app-1/keywords?country=us")
   ).json();
   expect(listed.map((row) => row.text)).toContain("pomodoro");
@@ -232,7 +233,7 @@ test("stopping the only keyword a search shows moves focus to the search", async
   page,
 }) => {
   await page.goto("/apps/app-1/keywords");
-  const listed: { text: string }[] = await (
+  const listed: TrackedKeywordItem[] = await (
     await page.request.get("/api/backend/apps/app-1/keywords?country=us")
   ).json();
   let stopped = false;
