@@ -7,6 +7,16 @@ export interface TableColumnMeta {
   phone?: boolean;
   hiddenByDefault?: boolean;
   numeric?: boolean;
+  wideOnly?: boolean;
+}
+
+export function isWideOnlyColumn(meta: unknown): boolean {
+  return (
+    typeof meta === "object" &&
+    meta !== null &&
+    "wideOnly" in meta &&
+    meta.wideOnly === true
+  );
 }
 
 export function isNumericColumn(meta: unknown): boolean {

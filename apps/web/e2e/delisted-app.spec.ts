@@ -75,9 +75,9 @@ test("a delisted competitor carries a delisted badge on the competitors page", a
   await expect(notice(page)).toHaveCount(0);
 });
 
-test("the dashboard marks a delisted app", async ({ page }) => {
+test("the dashboard cards mark a delisted app", async ({ page }) => {
   await delist(page, APP_1_DETAIL.id);
-  await page.goto("/");
+  await page.goto("/?view=cards");
 
   const card = page
     .getByRole("link", { name: APP_1_DETAIL.name ?? "" })
@@ -88,7 +88,7 @@ test("the dashboard marks a delisted app", async ({ page }) => {
 
 test("the dashboard table marks a delisted app", async ({ page }) => {
   await delist(page, APP_1_DETAIL.id);
-  await page.goto("/?view=table");
+  await page.goto("/");
 
   const row = page
     .getByRole("row")

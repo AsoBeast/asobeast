@@ -40,7 +40,9 @@ const EVENT_SELECT = {
   after: true,
   detail: true,
   capturedAt: true,
-  app: { select: { name: true, isCompetitor: true, country: true } },
+  app: {
+    select: { name: true, iconUrl: true, isCompetitor: true, country: true },
+  },
 } as const;
 
 interface EventRow {
@@ -53,7 +55,12 @@ interface EventRow {
   after: string | null;
   detail: unknown;
   capturedAt: Date;
-  app: { name: string | null; isCompetitor: boolean; country: string };
+  app: {
+    name: string | null;
+    iconUrl: string | null;
+    isCompetitor: boolean;
+    country: string;
+  };
 }
 
 export interface CaptionChange {
@@ -84,6 +91,7 @@ const toChangeEventItem = (event: EventRow): ChangeEventItem => {
     id: event.id,
     appId: event.appId,
     appName: event.app.name,
+    iconUrl: event.app.iconUrl,
     isCompetitor: event.app.isCompetitor,
     field: event.field as ChangeField,
     before: event.before,

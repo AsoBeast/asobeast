@@ -87,6 +87,33 @@ export const PENDING_LINE_PROPS = {
   isAnimationActive: false,
 } as const;
 
+export const PENDING_DOT_PROPS = {
+  r: 3.5,
+  fill: "var(--card)",
+  strokeWidth: 2,
+} as const;
+
+export const MOVEMENT_COLORS = {
+  climbed: "var(--signal-up)",
+  fell: "var(--signal-down)",
+} as const;
+
+export const ACTION_COLORS = {
+  opened: "var(--chart-1)",
+  closed: "var(--chart-previous)",
+} as const;
+
+export const BAR_PROPS = {
+  radius: 2,
+  maxBarSize: 14,
+  fillOpacity: 0.85,
+  isAnimationActive: false,
+} as const;
+
+export const ZERO_LINE_PROPS = {
+  stroke: "var(--border)",
+} as const;
+
 export const CHANGE_MARKER_PROPS = {
   stroke: "var(--faint-foreground)",
   strokeDasharray: "3 3",

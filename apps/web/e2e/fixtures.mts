@@ -41,7 +41,11 @@ import type {
   CompetitorSuggestion,
   SimilarLookupState,
   WorkspaceRunStatus,
+  PortfolioHistory,
+  PortfolioHistoryDays,
+  PortfolioHistoryPoint,
   PortfolioSummary,
+  PortfolioVisibility,
   RankDistributionHistory,
   RankingPoint,
   RankingSeries,
@@ -275,6 +279,18 @@ export const APP_RUN_DELAYED = appRun("app-new", "delayed", [
 export const APP_RUN_PAUSED: AppRunStatus = {
   ...APP_RUN_RUNNING,
   paused: true,
+};
+
+export const RUN_STATUS_RUNNING: WorkspaceRunStatus = {
+  state: "running",
+  startedAt: `${utcDaysAgo(0)}T00:00:04.000Z`,
+  lastCaptureAt: `${utcDaysAgo(0)}T00:00:30.000Z`,
+  tracked: 11,
+  captured: 9,
+  stores: [
+    { store: "APP_STORE", tracked: 8, captured: 8 },
+    { store: "GOOGLE_PLAY", tracked: 3, captured: 1 },
+  ],
 };
 
 export const RUN_STATUS_DELAYED: WorkspaceRunStatus = {
@@ -1919,12 +1935,16 @@ export const APP_1_PL_CHANGES: ChangeTimeline = {
   ],
 };
 
+export const APP_1_CHANGE_ICON_URL =
+  "https://is1-ssl.mzstatic.com/image/thumb/e2e-focus-timer-change/512x512bb.png";
+
 const APP_1_CHANGES: ChangeTimeline = {
   events: [
     {
       id: "app-chg-1",
       appId: "app-1",
       appName: "Focus Timer",
+      iconUrl: APP_1_CHANGE_ICON_URL,
       isCompetitor: false,
       field: "title",
       before: "Focus Timer",
@@ -3953,6 +3973,102 @@ DATASETS[APP_IPAD_ONLY_DETAIL.id] = {
 
 export const INITIAL_APPS: AppListItem[] = [APP_1, APP_2, APP_LONG, APP_GP];
 
+const curve = (values: number[]) =>
+  values.map((visibility, index) => ({
+    date: utcDaysAgo(values.length - 1 - index),
+    visibility,
+  }));
+
+const FOCUS_TIMER_TREND = curve([
+  51.2, 51.9, 52.4, 52.1, 53.3, 54, 54.8, 54.2, 55.6, 56.1, 57, 56.4, 57.3,
+  57.9, 58.8, 58.1, 57.2, 57.8, 58.6, 58.3, 57.6, 57.1, 57.4, 58.2, 59.1, 59.8,
+  60.9, 61.4, 61.8, 62.4,
+]);
+
+const TOMATO_CLOCK_TREND = curve([
+  19.8, 20.1, 20.6, 20.2, 21, 21.4, 20.9, 21.6, 22.1, 21.7, 22.4, 22.9, 22.3,
+  22.8, 23.2, 22.6, 22.1, 21.8, 22.2, 22.7, 21.9, 21.6, 21.8, 22.3, 22.9, 23.4,
+  23.9, 24.2, 24.5, 24.8,
+]);
+
+export const PORTFOLIO_VISIBILITY: PortfolioVisibility = {
+  current: 47.3,
+  delta7d: 2.9,
+};
+
+const HISTORY_SPAN: Record<PortfolioHistoryDays, number> = {
+  7: 2.9,
+  30: 9.9,
+  90: 16.4,
+};
+
+const HISTORY_TOP10 = 7;
+
+const ripple = (index: number): number =>
+  Math.round(
+    (0.7 * Math.sin(index * 1.3) + 0.4 * Math.sin(index * 0.55)) * 10,
+  ) / 10;
+
+function historyPoints(
+  days: PortfolioHistoryDays,
+  ending: { visibility: number; top10: number; daysAgo: number },
+): PortfolioHistoryPoint[] {
+  const span = HISTORY_SPAN[days];
+  return Array.from({ length: days }, (_, index) => {
+    const last = index === days - 1;
+    const progress = index / (days - 1);
+    const visibility = ending.visibility - span * (1 - progress);
+    return {
+      date: utcDaysAgo(ending.daysAgo + days - 1 - index),
+      visibility: last
+        ? ending.visibility
+        : Math.round((visibility + ripple(index)) * 10) / 10,
+      top10: last
+        ? ending.top10
+        : Math.max(0, ending.top10 - 3 + Math.floor(3.5 * progress)),
+      climbed: index === 0 ? 0 : (index * 7) % 4,
+      fell: index === 0 ? 0 : (index * 5) % 3,
+    };
+  });
+}
+
+export function portfolioHistoryOf(
+  days: PortfolioHistoryDays,
+): Omit<PortfolioHistory, "change"> {
+  const points = historyPoints(days, {
+    visibility: PORTFOLIO_VISIBILITY.current,
+    top10: HISTORY_TOP10,
+    daysAgo: 0,
+  });
+  return {
+    days,
+    points,
+    previous: historyPoints(days, {
+      visibility: points[0].visibility - 0.6,
+      top10: Math.max(1, points[0].top10 - 1),
+      daysAgo: days,
+    }),
+  };
+}
+
+export function portfolioRangeDeltasOf(days: PortfolioHistoryDays): {
+  visibility: number;
+  top10: number;
+} {
+  const { points } = portfolioHistoryOf(days);
+  const first = points[0];
+  const last = points[points.length - 1];
+  return {
+    visibility: Math.round((last.visibility - first.visibility) * 10) / 10,
+    top10: last.top10 - first.top10,
+  };
+}
+
+export const EMPTY_PORTFOLIO_VISIBILITY: PortfolioVisibility = {
+  current: 0,
+  delta7d: null,
+};
+
 export const PORTFOLIO: PortfolioSummary = {
   apps: [
     {
@@ -3965,7 +4081,7 @@ export const PORTFOLIO: PortfolioSummary = {
       groupId: null,
       groupName: null,
       visibility: { current: 62.4, delta7d: 5 },
-      sparkline: APP_1_VISIBILITY.points,
+      sparkline: FOCUS_TIMER_TREND,
       trackedKeywords: 5,
       competitors: 1,
       lastCapturedAt: utcTimestampDaysAgo(0),
@@ -4012,7 +4128,7 @@ export const PORTFOLIO: PortfolioSummary = {
       groupId: null,
       groupName: null,
       visibility: { current: 24.8, delta7d: 3 },
-      sparkline: APP_GP_VISIBILITY.points,
+      sparkline: TOMATO_CLOCK_TREND,
       trackedKeywords: 3,
       competitors: 1,
       lastCapturedAt: utcTimestampDaysAgo(0),
@@ -4020,6 +4136,7 @@ export const PORTFOLIO: PortfolioSummary = {
   ],
   groups: [],
   totals: { apps: 4, competitors: 2, trackedKeywords: 11, changes7d: 3 },
+  visibility: PORTFOLIO_VISIBILITY,
 };
 
 export const APP_1_KEYWORD_COUNTRIES: KeywordCountrySummary[] = [
@@ -4264,6 +4381,12 @@ export const RECENT_CHANGES: ChangeTimeline = {
       capturedAt: utcTimestampDaysAgo(11),
     },
   ],
+};
+
+export const VARIED_RECENT_CHANGES: ChangeTimeline = {
+  events: RECENT_CHANGES.events.map((event) =>
+    event.field === "version" ? { ...event, field: "subtitle" } : event,
+  ),
 };
 
 export const WEBHOOKS: WebhookItem[] = [

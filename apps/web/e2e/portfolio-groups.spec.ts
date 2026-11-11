@@ -1,7 +1,7 @@
 import { expect, test } from "./session.mts";
 
 test("same-app storefronts group under one header", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/?view=cards");
 
   const group = page
     .getByRole("listitem")
@@ -18,7 +18,7 @@ test("same-app storefronts group under one header", async ({ page }) => {
 });
 
 test("an unrelated app stays a plain row", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/?view=cards");
 
   const habit = page
     .getByRole("listitem")

@@ -79,6 +79,7 @@ export class PortfolioService {
         visibility: groupVisibility(group.members),
         sparkline: groupVisibilityPoints(group.members),
       })),
+      visibility: groupVisibility(members),
       totals: {
         apps: portfolioApps.length,
         competitors: portfolioApps.reduce((sum, a) => sum + a.competitors, 0),

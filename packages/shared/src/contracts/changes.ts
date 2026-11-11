@@ -81,6 +81,7 @@ export interface ChangeEventItem {
   id: string;
   appId: string;
   appName: string | null;
+  iconUrl?: string | null;
   isCompetitor: boolean;
   field: ChangeField;
   before: string | null;

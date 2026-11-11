@@ -121,16 +121,23 @@ export function TrendChip({
   unit = "",
   digits = 0,
   form = "text",
+  labelled = true,
 }: {
   label: string;
   value: number | null;
   unit?: string;
   digits?: number;
   form?: DeltaForm;
+  labelled?: boolean;
 }) {
   if (value === null) {
-    return (
+    return labelled ? (
       <span className="text-label text-muted-foreground">{`no ${label} data`}</span>
+    ) : (
+      <span className="text-muted-foreground">
+        <span aria-hidden>—</span>
+        <span className="sr-only">{`no ${label} data`}</span>
+      </span>
     );
   }
 
@@ -150,7 +157,14 @@ export function TrendChip({
       )}
     >
       <Icon className="size-3.5" aria-hidden />
-      <span>{`${signed}${unit} ${label}`}</span>
+      {labelled ? (
+        <span>{`${signed}${unit} ${label}`}</span>
+      ) : (
+        <>
+          <span>{`${signed}${unit}`}</span>
+          <span className="sr-only">{` ${label}`}</span>
+        </>
+      )}
     </span>
   );
 }

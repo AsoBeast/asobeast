@@ -518,7 +518,7 @@ test.describe("alerts page", () => {
       await expect(dot(page)).toBeVisible();
     });
 
-    test("shows no dot and no error when the newest read fails", async ({
+    test("shows no dot when the newest read fails and leaves the error to the dashboard panel", async ({
       page,
       context,
     }) => {
@@ -527,7 +527,15 @@ test.describe("alerts page", () => {
       await page.waitForLoadState("networkidle");
 
       await expect(dot(page)).toHaveCount(0);
-      await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
+      const panel = page
+        .getByRole("main")
+        .getByRole("heading", { name: "Alerts", level: 2 })
+        .locator("xpath=ancestor::*[@data-slot='card'][1]");
+      await expect(panel.getByRole("alert")).toHaveText(
+        "Alerts could not be loaded.",
+      );
+      await expect(panel.getByRole("button", { name: "Retry" })).toBeVisible();
+      await expect(page.getByRole("main").getByRole("alert")).toHaveCount(1);
     });
   });
 

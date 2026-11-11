@@ -2,13 +2,57 @@
 
 import { useDeferredValue } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import type { PortfolioAppInsight, PortfolioGroup } from "@asobeast/shared";
 import { useQueryStates } from "nuqs";
+import { ColumnMenu } from "@/components/data-table/ColumnMenu";
 import { FilteredEmpty } from "@/components/data-table/FilteredEmpty";
 import { portfolioInsightsOptions, portfolioOptions } from "@/lib/queries";
 import { appListParsers } from "@/lib/search-params";
+import { isWideOnlyColumn } from "@/lib/table/column-visibility";
+import { useIsMobile } from "@/lib/use-is-mobile";
+import { useNarrowerThan } from "@/lib/use-narrower-than";
+import { AppsToolbar } from "./AppsToolbar";
 import { PortfolioGrid } from "./PortfolioGrid";
-import { PortfolioTable } from "./PortfolioTable";
-import { filterRows, matchesQuery, sortRows, toRows } from "./portfolio-rows";
+import {
+  PortfolioTable,
+  usePortfolioTable,
+  WIDE_COLUMNS_FROM_REM,
+} from "./PortfolioTable";
+import {
+  filterRows,
+  matchesQuery,
+  sortRows,
+  toRows,
+  type PortfolioRow,
+} from "./portfolio-rows";
+import {
+  APPS_HEADING_ID,
+  APPS_PANEL,
+  APPS_SECTION,
+  PANEL_FOOTER,
+} from "./layout-classes";
+
+function AppsBody({
+  table,
+  rows,
+  groups,
+  insights,
+}: {
+  table: ReturnType<typeof usePortfolioTable> | null;
+  rows: PortfolioRow[];
+  groups: PortfolioGroup[];
+  insights: ReadonlyMap<string, PortfolioAppInsight>;
+}) {
+  if (table === null) {
+    return <PortfolioGrid rows={rows} groups={groups} insights={insights} />;
+  }
+  return (
+    <>
+      <PortfolioTable table={table} />
+      <p className={PANEL_FOOTER}>Trend is visibility over the last 30 days</p>
+    </>
+  );
+}
 
 export function AppsDashboard() {
   const { data } = useSuspenseQuery(portfolioOptions);
@@ -19,32 +63,58 @@ export function AppsDashboard() {
   const insightById = new Map(
     insights.apps.map((insight) => [insight.appId, insight]),
   );
-  const rows = sortRows(
+  const tableRows = data.apps
+    .filter((app) => matchesQuery(app, query))
+    .map((app) => ({ app, insight: insightById.get(app.id) }));
+  const table = usePortfolioTable(tableRows);
+  const [section, narrow] = useNarrowerThan(WIDE_COLUMNS_FROM_REM);
+  const phone = useIsMobile();
+  const dropsWideColumns = narrow && !phone;
+  const menuColumns = table
+    .getAllLeafColumns()
+    .filter(
+      (column) =>
+        !(dropsWideColumns && isWideOnlyColumn(column.columnDef.meta)),
+    );
+  const cardRows = sortRows(
     filterRows(toRows(data.apps), query),
     { sort, dir },
     insightById,
   );
 
-  if (rows.length === 0) {
-    return (
-      <FilteredEmpty
-        title={`No apps match "${q}"`}
-        onClear={() => void setList({ q: null })}
-      />
-    );
-  }
-
-  if (view === "table") {
-    return (
-      <PortfolioTable
-        rows={data.apps
-          .filter((app) => matchesQuery(app, query))
-          .map((app) => ({ app, insight: insightById.get(app.id) }))}
-      />
-    );
-  }
+  const tabular = view === "table";
+  const frame = tabular ? APPS_PANEL : APPS_SECTION;
+  const empty = cardRows.length === 0;
 
   return (
-    <PortfolioGrid rows={rows} groups={data.groups} insights={insightById} />
+    <section
+      ref={section}
+      aria-labelledby={APPS_HEADING_ID}
+      className={frame.section}
+    >
+      <div className={frame.header}>
+        <h2 id={APPS_HEADING_ID} className="text-heading">
+          Apps
+        </h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <AppsToolbar
+            columns={tabular ? <ColumnMenu columns={menuColumns} /> : null}
+          />
+        </div>
+      </div>
+      {empty ? (
+        <FilteredEmpty
+          title={`No apps match "${q}"`}
+          onClear={() => void setList({ q: null })}
+        />
+      ) : (
+        <AppsBody
+          table={tabular ? table : null}
+          rows={cardRows}
+          groups={data.groups}
+          insights={insightById}
+        />
+      )}
+    </section>
   );
 }

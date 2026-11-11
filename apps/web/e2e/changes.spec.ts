@@ -31,6 +31,16 @@ const timeline = (page: Page) =>
     .getByText("Metadata change timeline")
     .locator("xpath=ancestor::*[@data-slot='card'][1]");
 
+test("a timeline row shows the icon its change carries", async ({ page }) => {
+  await page.goto("/apps/app-1/changes");
+
+  const row = timeline(page).locator('[data-change-field="title"]').first();
+  await expect(row.locator("img")).toHaveJSProperty("naturalWidth", 1);
+  await expect(
+    timeline(page).locator('[data-change-field="description"] img'),
+  ).toHaveCount(0);
+});
+
 test("what's new notes read as lines, exactly as stored, in the timeline", async ({
   page,
 }) => {

@@ -2,9 +2,11 @@ import { Suspense } from "react";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { getQueryClient } from "@/lib/get-query-client";
 import {
+  actionActivityOptions,
   actionsOptions,
   actionSummaryOptions,
   budgetOptions,
+  portfolioHistoryOptions,
   portfolioInsightsOptions,
   portfolioOptions,
   recentChangesOptions,
@@ -14,8 +16,9 @@ import { AppsDashboard } from "@/components/dashboard/AppsDashboard";
 import { FirstRunGate } from "@/components/dashboard/FirstRunGate";
 import { PortfolioPulse } from "@/components/dashboard/PortfolioPulse";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { AppsToolbar } from "@/components/dashboard/AppsToolbar";
-import { DashboardSection } from "@/components/dashboard/DashboardSection";
+import { DashboardLede } from "@/components/dashboard/DashboardLede";
+import { DoNextCard } from "@/components/dashboard/DoNextCard";
+import { AlertsCard } from "@/components/dashboard/AlertsCard";
 import { PortfolioMoversCard } from "@/components/dashboard/PortfolioMoversCard";
 import {
   OperatorPortfolioStatusLine,
@@ -23,23 +26,32 @@ import {
 } from "@/components/dashboard/PortfolioStatusLine";
 import {
   AppsDashboardSkeleton,
+  DashboardLedeSkeleton,
+  DoNextCardSkeleton,
   PortfolioMoversCardSkeleton,
   PortfolioStatusLineSkeleton,
   PortfolioPulseSkeleton,
 } from "@/components/dashboard/skeletons";
+import {
+  SPLIT_NARROW,
+  SPLIT_ROW,
+  SPLIT_WIDE,
+} from "@/components/dashboard/layout-classes";
 import { BudgetBanner } from "@/components/settings/BudgetBanner";
 import { RecentChangesCard } from "@/components/changes/RecentChangesCard";
 import { OnboardingBanner } from "@/components/onboarding/OnboardingBanner";
-import { ActionsSummaryCard } from "@/components/actions/ActionsSummaryCard";
 import { DASHBOARD_ACTION_LIMIT } from "@/lib/action-filters";
-import { appViewParser } from "@/lib/search-params";
+import {
+  appViewParser,
+  dashboardMetricParser,
+  dashboardRangeParser,
+} from "@/lib/search-params";
 import { viewerIsOperator } from "@/lib/viewer";
-import { ActionsSummaryCardSkeleton } from "@/components/actions/skeletons";
 
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string | string[] }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const queryClient = getQueryClient();
   void queryClient.prefetchQuery(recentChangesOptions());
@@ -49,6 +61,13 @@ export default async function Page({
     actionsOptions({ status: ["OPEN"], limit: DASHBOARD_ACTION_LIMIT }),
   );
   void queryClient.prefetchQuery(portfolioInsightsOptions);
+  const params = await searchParams;
+  const range = dashboardRangeParser.parseServerSide(params.range);
+  const metric = dashboardMetricParser.parseServerSide(params.metric);
+  void queryClient.prefetchQuery(portfolioHistoryOptions(range));
+  if (metric === "actions") {
+    void queryClient.prefetchQuery(actionActivityOptions({ days: range }));
+  }
   const [, operator] = await Promise.all([
     queryClient.fetchQuery(portfolioOptions),
     viewerIsOperator(),
@@ -56,7 +75,7 @@ export default async function Page({
   if (operator) void queryClient.prefetchQuery(budgetOptions);
 
   const today = new Date().toISOString().slice(0, 10);
-  const view = appViewParser.parseServerSide((await searchParams).view);
+  const view = appViewParser.parseServerSide(params.view);
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
@@ -71,7 +90,13 @@ export default async function Page({
             </Suspense>
           ) : null}
 
-          <DashboardHeader>
+          <DashboardHeader
+            lede={
+              <Suspense fallback={<DashboardLedeSkeleton />}>
+                <DashboardLede />
+              </Suspense>
+            }
+          >
             <Suspense fallback={<PortfolioStatusLineSkeleton />}>
               {operator ? (
                 <OperatorPortfolioStatusLine />
@@ -85,36 +110,29 @@ export default async function Page({
             <PortfolioPulse />
           </Suspense>
 
-          <div className="grid gap-6 @5xl/dashboard:grid-cols-12 [&>*]:min-w-0">
-            <div className="@5xl/dashboard:col-span-7">
-              <Suspense fallback={<ActionsSummaryCardSkeleton />}>
-                <ActionsSummaryCard />
-              </Suspense>
-            </div>
-            <div className="@5xl/dashboard:col-span-5">
+          <div className={SPLIT_ROW}>
+            <div className={SPLIT_WIDE}>
               <Suspense fallback={<PortfolioMoversCardSkeleton />}>
                 <PortfolioMoversCard />
               </Suspense>
             </div>
+            <div className={SPLIT_NARROW}>
+              <Suspense fallback={<DoNextCardSkeleton />}>
+                <DoNextCard />
+              </Suspense>
+            </div>
           </div>
 
-          <div className="grid gap-6 @6xl/dashboard:grid-cols-12 [&>*]:min-w-0">
-            <DashboardSection
-              id="apps"
-              title="Apps"
-              className="@6xl/dashboard:col-span-8"
-              toolbar={
-                <Suspense fallback={null}>
-                  <AppsToolbar />
-                </Suspense>
-              }
-            >
-              <Suspense fallback={<AppsDashboardSkeleton view={view} />}>
-                <AppsDashboard />
-              </Suspense>
-            </DashboardSection>
-            <div className="@6xl/dashboard:col-span-4">
+          <Suspense fallback={<AppsDashboardSkeleton view={view} />}>
+            <AppsDashboard />
+          </Suspense>
+
+          <div className={SPLIT_ROW}>
+            <div className={SPLIT_WIDE}>
               <RecentChangesCard today={today} />
+            </div>
+            <div className={SPLIT_NARROW}>
+              <AlertsCard today={today} />
             </div>
           </div>
         </div>

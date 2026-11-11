@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useQueryStates } from "nuqs";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { LayoutGrid, Rows3 } from "lucide-react";
@@ -33,7 +34,7 @@ const SORT_LABELS: Record<AppSort, string> = {
   updated: "Last collected",
 };
 
-export function AppsToolbar() {
+export function AppsToolbar({ columns }: { columns: ReactNode }) {
   const { data } = useSuspenseQuery(portfolioOptions);
   const [{ q, sort, view }, setList] = useQueryStates(appListParsers);
 
@@ -66,6 +67,7 @@ export function AppsToolbar() {
           </SelectContent>
         </Select>
       ) : null}
+      {columns}
       <Tabs
         value={view}
         onValueChange={(next) =>
@@ -73,11 +75,11 @@ export function AppsToolbar() {
         }
       >
         <TabsList>
-          <TabsOption value="cards" aria-label="Cards">
-            <LayoutGrid aria-hidden />
-          </TabsOption>
           <TabsOption value="table" aria-label="Table">
             <Rows3 aria-hidden />
+          </TabsOption>
+          <TabsOption value="cards" aria-label="Cards">
+            <LayoutGrid aria-hidden />
           </TabsOption>
         </TabsList>
       </Tabs>

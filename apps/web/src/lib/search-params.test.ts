@@ -9,6 +9,7 @@ import {
   KEYWORD_SOURCES,
   KEYWORD_SUGGESTION_STRATEGIES,
   APP_STORE_LOCALIZATION_IDS,
+  PORTFOLIO_HISTORY_DAYS,
 } from "@asobeast/shared";
 import { createSerializer } from "nuqs/server";
 import { describe, expect, it } from "vitest";
@@ -62,6 +63,9 @@ import {
   CHART_VIEWS,
   appSortParser,
   appViewParser,
+  DASHBOARD_METRICS,
+  dashboardMetricParser,
+  dashboardRangeParser,
   chartViewParser,
   CHANGE_OWNERS,
   changeDaysParser,
@@ -138,7 +142,8 @@ const LITERAL_PARSERS: readonly LiteralParserCase[] = [
   ["discoverySort", discoverySortParser, DISCOVERY_SORTS, "appearances"],
   ["changeOwner", changeOwnerParser, CHANGE_OWNERS, "all"],
   ["appSort", appSortParser, APP_SORTS, "visibility"],
-  ["appView", appViewParser, APP_VIEWS, "cards"],
+  ["appView", appViewParser, APP_VIEWS, "table"],
+  ["dashboardMetric", dashboardMetricParser, DASHBOARD_METRICS, "visibility"],
   ["chartView", chartViewParser, CHART_VIEWS, "columns"],
   ["keywordView", keywordViewParser, KEYWORD_VIEWS, "table"],
   ["keywordsTab", keywordsTabParser, KEYWORDS_TABS, "tracked"],
@@ -149,6 +154,7 @@ const NUMERIC_PARSERS = [
   ["discoveryDays", discoveryDaysParser, DISCOVERY_WINDOWS, 30],
   ["changeDays", changeDaysParser, CHANGE_WINDOWS, 90],
   ["moverDays", moverDaysParser, MOVER_WINDOWS, 7],
+  ["dashboardRange", dashboardRangeParser, PORTFOLIO_HISTORY_DAYS, 30],
 ] as const;
 
 const LIST_PARSERS = [

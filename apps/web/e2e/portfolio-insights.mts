@@ -3,6 +3,7 @@ import type {
   PortfolioInsights,
   PortfolioInsightTotals,
   PortfolioMovement,
+  PortfolioRangeChange,
   RankDistribution,
 } from "@asobeast/shared";
 import { MANY_PORTFOLIO_APPS } from "./fixtures.mts";
@@ -214,3 +215,20 @@ export const MANY_PORTFOLIO_INSIGHTS: PortfolioInsights = {
     })),
   ],
 };
+
+export function rangeChangeOf(
+  insights: PortfolioInsights,
+  deltas: { visibility: number; top10: number },
+): PortfolioRangeChange {
+  const compared = insights.totals.top10Delta7d !== null;
+  return {
+    compared,
+    visibilityDelta: compared ? deltas.visibility : null,
+    top10Delta: compared ? deltas.top10 : null,
+    movement: insights.totals.movement,
+    appsMoved: insights.apps.filter(
+      (app) => app.movement.up + app.movement.down > 0,
+    ).length,
+    movers: insights.movers,
+  };
+}

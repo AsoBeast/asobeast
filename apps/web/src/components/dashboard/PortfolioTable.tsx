@@ -2,7 +2,6 @@
 
 import { flexRender, useTable } from "@tanstack/react-table";
 import { useQueryStates } from "nuqs";
-import { ColumnMenu } from "@/components/data-table/ColumnMenu";
 import { dataTableFeatures } from "@/components/data-table/table-features";
 import { useStoredColumnVisibility } from "@/components/data-table/useStoredColumnVisibility";
 import { useUrlSorting } from "@/components/data-table/useUrlSorting";
@@ -16,10 +15,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { appListParsers, appSortParser } from "@/lib/search-params";
+import {
+  isNumericColumn,
+  isWideOnlyColumn,
+} from "@/lib/table/column-visibility";
 import { ariaSort } from "@/lib/table/sorting";
 import { portfolioColumns, type PortfolioTableRow } from "./portfolio-columns";
 
-export function PortfolioTable({ rows }: { rows: PortfolioTableRow[] }) {
+export const WIDE_COLUMNS_FROM_REM = 56;
+
+const widthClass = (meta: unknown): string | undefined =>
+  isWideOnlyColumn(meta) ? "md:@max-4xl/dashboard:hidden" : undefined;
+
+export function usePortfolioTable(rows: PortfolioTableRow[]) {
   const [{ sort, dir }, setList] = useQueryStates(appListParsers);
   const [visibility, setVisibility] = useStoredColumnVisibility(
     "portfolio",
@@ -35,7 +43,7 @@ export function PortfolioTable({ rows }: { rows: PortfolioTableRow[] }) {
       }),
   );
 
-  const table = useTable({
+  return useTable({
     features: dataTableFeatures,
     data: rows,
     columns: portfolioColumns,
@@ -46,43 +54,50 @@ export function PortfolioTable({ rows }: { rows: PortfolioTableRow[] }) {
     enableSortingRemoval: false,
     enableMultiSort: false,
   });
+}
 
+export function PortfolioTable({
+  table,
+}: {
+  table: ReturnType<typeof usePortfolioTable>;
+}) {
   return (
-    <div className="flex min-w-0 flex-col gap-3">
-      <div className="flex justify-end">
-        <ColumnMenu columns={table.getAllLeafColumns()} />
-      </div>
-      <Table containerClassName="rounded-xl border">
-        <TableCaption className="sr-only">Apps in this workspace</TableCaption>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <TableHead
-                  key={header.id}
-                  aria-sort={ariaSort(header.column.getIsSorted())}
-                >
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext(),
-                  )}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows.map((row) => (
-            <TableRow key={row.id}>
-              {row.getVisibleCells().map((cell) => (
-                <TableCell key={cell.id}>
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+    <Table>
+      <TableCaption className="sr-only">Apps in this workspace</TableCaption>
+      <TableHeader>
+        {table.getHeaderGroups().map((headerGroup) => (
+          <TableRow key={headerGroup.id}>
+            {headerGroup.headers.map((header) => (
+              <TableHead
+                key={header.id}
+                className={widthClass(header.column.columnDef.meta)}
+                numeric={isNumericColumn(header.column.columnDef.meta)}
+                aria-sort={ariaSort(header.column.getIsSorted())}
+              >
+                {flexRender(
+                  header.column.columnDef.header,
+                  header.getContext(),
+                )}
+              </TableHead>
+            ))}
+          </TableRow>
+        ))}
+      </TableHeader>
+      <TableBody>
+        {table.getRowModel().rows.map((row) => (
+          <TableRow key={row.id}>
+            {row.getVisibleCells().map((cell) => (
+              <TableCell
+                key={cell.id}
+                className={widthClass(cell.column.columnDef.meta)}
+                numeric={isNumericColumn(cell.column.columnDef.meta)}
+              >
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </TableCell>
+            ))}
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }

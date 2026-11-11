@@ -93,7 +93,7 @@ export class PortfolioInsightsService {
       ({ app, rank, audit }): PortfolioAppInsight => ({
         appId: app.id,
         rankDistribution: rank.rankDistribution,
-        top10Delta7d: rank.top10Delta7d,
+        top10Delta7d: rank.top10Delta,
         movement: rank.movement,
         rating: ratingTrend(
           app.snapshots[0] ?? null,

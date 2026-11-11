@@ -19,6 +19,7 @@ import type {
   Store,
   VisibilityComparison,
   WebhookItem,
+  PortfolioHistoryDays,
 } from "@asobeast/shared";
 import { isStoreSuggestionStrategy, QUERY_BOUNDS } from "@asobeast/shared";
 import {
@@ -92,6 +93,7 @@ import {
   searchStore,
   getMetadataAudit,
   getPortfolio,
+  getPortfolioHistory,
   getPortfolioInsights,
   getRankDistributionHistory,
   getRankings,
@@ -278,8 +280,13 @@ export const storeSearchKey = (store: Store, country: string, q: string) =>
   ["store-search", store, country, q] as const;
 export const portfolioInsightsKey = [...portfolioKey, "insights"] as const;
 
+export const portfolioHistoryKey = (days: PortfolioHistoryDays) =>
+  [...portfolioKey, "history", days] as const;
+
+const recentChangesRoot = ["changes", "recent"] as const;
+
 export const recentChangesKey = (limit?: number) =>
-  ["changes", "recent", { limit }] as const;
+  [...recentChangesRoot, { limit }] as const;
 
 export const webhookKeys = {
   all: ["webhooks"] as const,
@@ -309,6 +316,7 @@ export const alertEventKeys = {
   list: (filters: AlertEventFilters) =>
     ["alert-events", "list", filters] as const,
   newest: ["alert-events", "newest"] as const,
+  recent: (since: string) => ["alert-events", "recent", since] as const,
 };
 
 export function alertEventFilters(view: {
@@ -518,6 +526,20 @@ export const portfolioInsightsOptions = queryOptions({
   queryFn: getPortfolioInsights,
   staleTime: 60_000,
 });
+
+export function invalidateDailyRunResults(client: QueryClient): void {
+  void client.invalidateQueries({ queryKey: portfolioKey });
+  void client.invalidateQueries({ queryKey: actionKeys.all });
+  void client.invalidateQueries({ queryKey: alertEventKeys.all });
+  void client.invalidateQueries({ queryKey: recentChangesRoot });
+}
+
+export const portfolioHistoryOptions = (days: PortfolioHistoryDays) =>
+  queryOptions({
+    queryKey: portfolioHistoryKey(days),
+    queryFn: () => getPortfolioHistory(days),
+    staleTime: 60_000,
+  });
 
 export const chartKeys = {
   all: ["charts"] as const,
@@ -1096,6 +1118,16 @@ export const alertEventsOptions = (filters: AlertEventFilters) =>
     getNextPageParam: (last) => last.nextCursor ?? undefined,
   });
 
+export const RECENT_ALERTS = 5;
+
+export const alertRecentOptions = (since: string) =>
+  queryOptions({
+    queryKey: alertEventKeys.recent(since),
+    queryFn: () => getAlertEvents({ since, limit: RECENT_ALERTS }),
+    staleTime: 60_000,
+    retry: false,
+  });
+
 export const alertNewestOptions = queryOptions({
   queryKey: alertEventKeys.newest,
   queryFn: () => getAlertEvents({ limit: 1 }),
@@ -1266,6 +1298,7 @@ export function removeAppQueries(client: QueryClient, id: string): void {
   client.removeQueries({ queryKey: appKeys.detail(id) });
   client.removeQueries({ queryKey: appKeys.suggestionsRoot(id) });
   void client.invalidateQueries({ queryKey: alertEventKeys.all });
+  void client.invalidateQueries({ queryKey: recentChangesRoot });
   invalidateWorkspaceChecklist(client);
 }
 

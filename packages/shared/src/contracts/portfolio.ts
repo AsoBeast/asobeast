@@ -41,10 +41,30 @@ export interface PortfolioTotals {
   changes7d: number;
 }
 
+export interface PortfolioVisibility {
+  current: number;
+  delta7d: number | null;
+}
+
+export const PORTFOLIO_HISTORY_DAYS = [7, 30, 90] as const;
+
+export type PortfolioHistoryDays = (typeof PORTFOLIO_HISTORY_DAYS)[number];
+
+export const DEFAULT_PORTFOLIO_HISTORY_DAYS: PortfolioHistoryDays = 30;
+
+export interface PortfolioHistoryPoint {
+  date: string;
+  visibility: number;
+  top10: number;
+  climbed: number;
+  fell: number;
+}
+
 export interface PortfolioSummary {
   apps: PortfolioApp[];
   groups: PortfolioGroup[];
   totals: PortfolioTotals;
+  visibility?: PortfolioVisibility;
 }
 
 export interface AppActionCounts {
@@ -91,6 +111,22 @@ export interface PortfolioAppInsight {
 export interface PortfolioKeywordMover extends KeywordMover {
   appId: string;
   country: string;
+}
+
+export interface PortfolioRangeChange {
+  compared: boolean;
+  visibilityDelta: number | null;
+  top10Delta: number | null;
+  movement: PortfolioMovement;
+  appsMoved: number;
+  movers: { up: PortfolioKeywordMover[]; down: PortfolioKeywordMover[] };
+}
+
+export interface PortfolioHistory {
+  days: PortfolioHistoryDays;
+  points: PortfolioHistoryPoint[];
+  previous: PortfolioHistoryPoint[];
+  change: PortfolioRangeChange;
 }
 
 export interface PortfolioInsightTotals {

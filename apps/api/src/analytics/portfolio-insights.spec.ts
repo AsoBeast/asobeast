@@ -70,7 +70,7 @@ describe('rankInsight', () => {
       beyond: 0,
       unranked: 1,
     });
-    expect(result.top10Delta7d).toBeNull();
+    expect(result.top10Delta).toBeNull();
     expect(result.movement).toEqual({ up: 0, down: 0, entered: 0, lost: 0 });
   });
 
@@ -81,7 +81,7 @@ describe('rankInsight', () => {
       row('pomodoro', [capture(40, REFERENCE), capture(40, WEEK_AGO)]),
     ];
 
-    expect(rankInsight(rows, REFERENCE).top10Delta7d).toBe(1);
+    expect(rankInsight(rows, REFERENCE).top10Delta).toBe(1);
   });
 
   it('reports no top 10 trend without a capture seven days earlier', () => {
@@ -89,7 +89,7 @@ describe('rankInsight', () => {
       row('focus', [capture(3, REFERENCE), capture(14, TWO_DAYS_AGO)]),
     ];
 
-    expect(rankInsight(rows, REFERENCE).top10Delta7d).toBeNull();
+    expect(rankInsight(rows, REFERENCE).top10Delta).toBeNull();
   });
 
   it('counts entered and lost keywords inside the climbers and fallers', () => {

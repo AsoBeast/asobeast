@@ -78,7 +78,10 @@ export const positionAt = (rankings: Ranking[], date: Date): number | null =>
 export const metricAt = (metrics: Metric[], date: Date): Metric | null =>
   metrics.find((metric) => metric.date.getTime() <= date.getTime()) ?? null;
 
-const keywordsAt = (rows: TrackedRow[], date: Date): VisibilityKeyword[] =>
+export const keywordsAt = (
+  rows: TrackedRow[],
+  date: Date,
+): VisibilityKeyword[] =>
   rows.map((row) => ({
     traffic: metricAt(row.keyword.metrics, date)?.traffic ?? null,
     position: positionAt(row.keyword.rankings, date),
@@ -259,6 +262,7 @@ export async function trackedRows(
   { appId, country }: TrackedScope,
   windowStart: Date | null,
   window: Date | null,
+  metricRows?: number,
 ): Promise<TrackedRow[]> {
   return prisma.trackedKeyword.findMany({
     where: { appId, active: true, ...inMarket(country) },
@@ -274,6 +278,7 @@ export async function trackedRows(
           metrics: {
             where: window ? { date: { lte: window } } : undefined,
             orderBy: { date: 'desc' },
+            take: metricRows,
             select: {
               traffic: true,
               difficulty: true,
@@ -301,11 +306,12 @@ export async function keywordWindow(
   prisma: PrismaService,
   scope: TrackedScope,
   days: number,
+  metricRows?: number,
 ): Promise<KeywordWindow> {
   const reference = await referenceDate(prisma, scope);
   const windowStart = reference ? addDays(reference, -days) : null;
   return {
-    rows: await trackedRows(prisma, scope, windowStart, reference),
+    rows: await trackedRows(prisma, scope, windowStart, reference, metricRows),
     referenceDate: reference,
   };
 }

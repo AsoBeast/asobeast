@@ -1,60 +1,116 @@
 import type { AppView } from "@/lib/search-params";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { ChartSkeleton } from "@/components/charts/ChartStates";
+import { CHART_HEIGHT } from "@/components/charts/theme";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatTileGroup, StatTileSkeleton } from "@/components/ui/stat-tile";
+import {
+  APPS_PANEL,
+  APPS_SECTION,
+  APP_GRID,
+  LEDE,
+  PANEL_HEADER,
+  PULSE_STRIP,
+  PANEL_FOOTER,
+} from "./layout-classes";
 
-export const PULSE_GRID = "grid-cols-2 @3xl/dashboard:grid-cols-4";
-
-export const APP_GRID =
-  "grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(20rem,100%),1fr))]";
+export function MetricPanelSkeleton() {
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex min-h-5 items-center justify-between gap-4">
+        <Skeleton className="h-4 w-40 max-w-full" />
+        <Skeleton className="h-4 w-56 max-w-full" />
+      </div>
+      <ChartSkeleton height={CHART_HEIGHT.tall} />
+    </div>
+  );
+}
 
 export function PortfolioPulseSkeleton() {
   return (
-    <StatTileGroup className={PULSE_GRID}>
-      {Array.from({ length: 4 }).map((_, index) => (
-        <StatTileSkeleton key={index} />
-      ))}
-    </StatTileGroup>
+    <Card className="gap-0 py-0">
+      <StatTileGroup className={PULSE_STRIP}>
+        {Array.from({ length: 4 }).map((_, index) => (
+          <StatTileSkeleton key={index} />
+        ))}
+      </StatTileGroup>
+      <div className="border-t border-border px-4 pt-3 pb-4">
+        <MetricPanelSkeleton />
+      </div>
+    </Card>
   );
 }
 
 export function PortfolioStatusLineSkeleton() {
+  return <Skeleton className="h-4 w-96 max-w-full" />;
+}
+
+function RowsSkeleton({ rows, height }: { rows: number; height: string }) {
   return (
-    <div className="flex flex-col gap-1">
-      <Skeleton className="h-5 w-56" />
-      <Skeleton className="h-5 w-72 max-w-full" />
+    <div className="flex flex-col px-2">
+      {Array.from({ length: rows }).map((_, index) => (
+        <div key={index} className={`flex items-center ${height}`}>
+          <Skeleton className="h-4 w-full" />
+        </div>
+      ))}
     </div>
   );
 }
 
-function MoverListSkeleton() {
+function PanelSkeleton({
+  rows,
+  height,
+  columns = false,
+  footer = true,
+}: {
+  rows: number;
+  height: string;
+  columns?: boolean;
+  footer?: boolean;
+}) {
   return (
-    <div className="flex flex-col gap-2">
-      <Skeleton className="h-5 w-20" />
-      <div className="flex flex-col gap-0.5">
-        {Array.from({ length: 3 }).map((_, index) => (
-          <Skeleton key={index} className="h-10 w-full" />
-        ))}
-      </div>
-    </div>
+    <Card className="h-full">
+      <CardHeader className={PANEL_HEADER}>
+        <Skeleton className="h-5 w-32" />
+        {columns ? (
+          <CardAction>
+            <Skeleton className="h-8 w-44" />
+          </CardAction>
+        ) : null}
+      </CardHeader>
+      <CardContent className="flex flex-1 flex-col gap-1 px-2">
+        {columns ? <Skeleton className="mx-2 h-4 w-24" /> : null}
+        <RowsSkeleton rows={rows} height={height} />
+      </CardContent>
+      {footer ? (
+        <CardFooter>
+          <Skeleton className="h-4 w-48" />
+        </CardFooter>
+      ) : null}
+    </Card>
   );
+}
+
+export function FeedRowsSkeleton() {
+  return <RowsSkeleton rows={4} height="h-9" />;
+}
+
+export function FeedCardSkeleton() {
+  return <PanelSkeleton rows={4} height="h-9" footer={false} />;
 }
 
 export function PortfolioMoversCardSkeleton() {
-  return (
-    <Card className="@container/movers">
-      <CardHeader className="gap-1">
-        <Skeleton className="h-5.5 w-36" />
-        <Skeleton className="h-5 w-64 max-w-full" />
-      </CardHeader>
-      <CardContent className="grid gap-6 @md/movers:grid-cols-2">
-        <MoverListSkeleton />
-        <div className="hidden @md/movers:block">
-          <MoverListSkeleton />
-        </div>
-      </CardContent>
-    </Card>
-  );
+  return <PanelSkeleton rows={5} height="h-10 sm:h-9" columns />;
+}
+
+export function DoNextCardSkeleton() {
+  return <PanelSkeleton rows={5} height="h-16" />;
 }
 
 function AppCardSkeleton() {
@@ -84,29 +140,55 @@ function AppCardSkeleton() {
   );
 }
 
-function PortfolioTableSkeleton() {
+export function AppsDashboardSkeleton({ view = "table" }: { view?: AppView }) {
+  const tabular = view === "table";
+  const frame = tabular ? APPS_PANEL : APPS_SECTION;
   return (
-    <div className="flex flex-col gap-3">
-      <Skeleton className="h-8 w-24 self-end" />
-      <div className="flex flex-col gap-2 rounded-xl border p-3">
-        {Array.from({ length: 5 }).map((_, index) => (
-          <Skeleton key={index} className="h-10 w-full" />
-        ))}
+    <div className={frame.section}>
+      <div className={frame.header}>
+        <h2 className="text-heading">Apps</h2>
+        <Skeleton className="h-8 w-44" />
       </div>
+      {tabular ? (
+        <>
+          <div className="flex flex-col">
+            <div className="flex h-9 items-center px-4">
+              <Skeleton className="h-4 w-24" />
+            </div>
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div
+                key={index}
+                className="flex h-[47px] items-center gap-3 border-t border-border-subtle px-4"
+              >
+                <Skeleton className="size-6 rounded-md" />
+                <Skeleton className="h-4 w-full" />
+              </div>
+            ))}
+          </div>
+          <div className={PANEL_FOOTER}>
+            <Skeleton className="h-4 w-56 max-w-full" />
+          </div>
+        </>
+      ) : (
+        <ul className={APP_GRID}>
+          {Array.from({ length: 4 }).map((_, index) => (
+            <li key={index}>
+              <AppCardSkeleton />
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
 
-export function AppsDashboardSkeleton({ view = "cards" }: { view?: AppView }) {
-  if (view === "table") return <PortfolioTableSkeleton />;
-
+export function DashboardLedeSkeleton() {
   return (
-    <ul className={APP_GRID}>
-      {Array.from({ length: 4 }).map((_, index) => (
-        <li key={index}>
-          <AppCardSkeleton />
-        </li>
-      ))}
-    </ul>
+    <div aria-hidden className={LEDE}>
+      <Skeleton
+        shape="text"
+        className="inline-block w-80 max-w-full align-middle"
+      />
+    </div>
   );
 }

@@ -63,6 +63,7 @@ import {
   invalidateAiUsage,
   invalidateAppListing,
   invalidateRunResults,
+  recentChangesKey,
   removeAppQueries,
   invalidateAuth,
   invalidatePasswordChange,
@@ -1302,6 +1303,15 @@ describe("removing an app", () => {
     expect(client.getQueryState(workspaceChecklistKey)?.isInvalidated).toBe(
       true,
     );
+  });
+
+  it("refreshes the listing changes that may name it", () => {
+    const client = new QueryClient();
+    client.setQueryData(recentChangesKey(), { events: [] });
+
+    removeAppQueries(client, APP);
+
+    expect(client.getQueryState(recentChangesKey())?.isInvalidated).toBe(true);
   });
 
   it("refreshes the alert events that may name it", () => {

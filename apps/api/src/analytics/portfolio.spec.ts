@@ -98,6 +98,7 @@ describe('PortfolioService.portfolio', () => {
       trackedKeywords: 0,
       changes7d: 0,
     });
+    expect(result.visibility).toEqual({ current: 0, delta7d: null });
   });
 
   it('answers when the store stopped listing an app', async () => {
@@ -219,6 +220,10 @@ describe('PortfolioService.portfolio', () => {
 
     const result = await service.portfolio();
 
+    expect(result.visibility).toEqual({
+      current: result.groups[0].visibility.current,
+      delta7d: null,
+    });
     expect(result.groups).toHaveLength(1);
     const [group] = result.groups;
     expect(group.id).toBe('grp_1');

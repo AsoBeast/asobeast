@@ -1,95 +1,97 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
-import type {
-  PortfolioInsights,
-  PortfolioKeywordMover,
-} from "@asobeast/shared";
-import { AppIcon } from "@/components/AppIcon";
-import { MoverList } from "@/components/rankings/MoverRow";
+import type { PortfolioRangeChange } from "@asobeast/shared";
 import {
   Card,
+  CardAction,
   CardContent,
-  CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { portfolioInsightsOptions, portfolioOptions } from "@/lib/queries";
+import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
+import { useQueryState } from "nuqs";
+import { portfolioOptions } from "@/lib/queries";
+import {
+  MOVER_VIEWS,
+  moverViewParser,
+  type MoverView,
+} from "@/lib/search-params";
+import { byMagnitude } from "./mover-change";
+import { quietSentence } from "./movement-sentence";
+import { useRangeHistory } from "./use-range-history";
+import { MoverBreakdown } from "./MoverBreakdown";
+import { PANEL_ACTION, PANEL_HEADER } from "./layout-classes";
 
-const rankingsHref = (mover: PortfolioKeywordMover) =>
-  `/apps/${mover.appId}/rankings?keywords=${mover.keywordId}`;
+const ALL_MOVERS = 8;
 
-function quietSentence(insights: PortfolioInsights): string | null {
-  const { up, down } = insights.totals.movement;
-  if (up + down > 0) return null;
-  const weekOfHistory = insights.apps.some((app) => app.top10Delta7d !== null);
-  return weekOfHistory
-    ? "No keyword moved this week."
-    : "Movement appears after a week of daily runs.";
+const MOVER_LABELS: Record<MoverView, string> = {
+  all: "All",
+  up: "Climbers",
+  down: "Fallers",
+};
+
+const EMPTY: Record<MoverView, (days: number) => string> = {
+  all: (days) => `No movement in the last ${days} days.`,
+  up: (days) => `No keyword climbed in the last ${days} days.`,
+  down: (days) => `No keyword fell in the last ${days} days.`,
+};
+
+function quietOf(change: PortfolioRangeChange, days: number): string | null {
+  const { up, down } = change.movement;
+  return up + down > 0 ? null : quietSentence(change.compared, days);
 }
 
 export function PortfolioMoversCard() {
-  const { data: insights } = useSuspenseQuery(portfolioInsightsOptions);
+  const { days, history } = useRangeHistory();
   const { data: portfolio } = useSuspenseQuery(portfolioOptions);
   const apps = new Map(portfolio.apps.map((app) => [app.id, app]));
-  const quiet = quietSentence(insights);
+  const quiet = quietOf(history.change, days);
+  const [view, setView] = useQueryState("movers", moverViewParser);
+  const { up, down } = history.change.movers;
+  const all = byMagnitude([...up, ...down]).slice(0, ALL_MOVERS);
 
-  const moverContext = (mover: PortfolioKeywordMover) => {
-    const app = apps.get(mover.appId);
-    return (
-      <>
-        <AppIcon src={app?.iconUrl ?? null} size={16} />
-        <span className="sr-only">{app?.name ?? "Unknown app"}</span>
-        <span className="text-caption text-muted-foreground">
-          {mover.country.toUpperCase()}
-        </span>
-      </>
-    );
-  };
-
-  const list = (movers: PortfolioKeywordMover[], title?: string) => (
-    <MoverList
-      title={title}
-      movers={movers}
-      renderHref={rankingsHref}
-      renderContext={moverContext}
-      rowClassName="min-h-10"
-    />
-  );
+  const shown = { all, up, down }[view];
 
   return (
-    <Card className="@container/movers">
-      <CardHeader>
+    <Card className="h-full">
+      <CardHeader className={PANEL_HEADER}>
         <CardTitle asChild>
           <h2>Keyword movers</h2>
         </CardTitle>
-        <CardDescription>
-          Largest position changes in the last 7 days, across every app.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {quiet ? (
-          <p className="text-sm text-muted-foreground">{quiet}</p>
-        ) : (
-          <>
-            <div className="hidden gap-6 @md/movers:grid @md/movers:grid-cols-2">
-              {list(insights.movers.up, "Climbers")}
-              {list(insights.movers.down, "Fallers")}
-            </div>
-            <Tabs defaultValue="up" className="@md/movers:hidden">
-              <TabsList>
-                <TabsTrigger value="up">Climbers</TabsTrigger>
-                <TabsTrigger value="down">Fallers</TabsTrigger>
+        {quiet ? null : (
+          <CardAction className={PANEL_ACTION}>
+            <Tabs
+              value={view}
+              onValueChange={(next) =>
+                void setView(moverViewParser.parse(next))
+              }
+            >
+              <TabsList aria-label="Movers shown">
+                {MOVER_VIEWS.map((value) => (
+                  <TabsOption key={value} value={value}>
+                    {MOVER_LABELS[value]}
+                  </TabsOption>
+                ))}
               </TabsList>
-              <TabsContent value="up">{list(insights.movers.up)}</TabsContent>
-              <TabsContent value="down">
-                {list(insights.movers.down)}
-              </TabsContent>
             </Tabs>
-          </>
+          </CardAction>
+        )}
+      </CardHeader>
+      <CardContent className="flex-1 px-2">
+        {quiet ? (
+          <p className="px-2 text-body text-muted-foreground">{quiet}</p>
+        ) : (
+          <MoverBreakdown
+            movers={shown}
+            apps={apps}
+            days={days}
+            empty={EMPTY[view](days)}
+          />
         )}
       </CardContent>
+      <CardFooter>{`Largest position changes in the last ${days} days`}</CardFooter>
     </Card>
   );
 }

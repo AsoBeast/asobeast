@@ -41,6 +41,13 @@ export const ACTION_PRIORITY_LABEL: Record<ActionPriority, string> = {
   low: "Low",
 };
 
+export const ACTION_PRIORITY_TONE: Record<ActionPriority, string> = {
+  critical: "text-priority-critical",
+  high: "text-priority-high",
+  medium: "text-priority-medium",
+  low: "text-priority-low",
+};
+
 export const ACTION_CATEGORY_LABEL: Record<ActionCategory, string> = {
   metadata: "Metadata",
   competition: "Competition",

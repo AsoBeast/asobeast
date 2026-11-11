@@ -242,9 +242,13 @@ test.describe("a fast double click", () => {
       "DELETE",
       /\/api\/backend\/apps\/[^/]+$/,
     );
-    await page.goto("/");
+    await page.goto("/?view=cards");
 
-    await page.getByRole("button", { name: "App actions" }).first().click();
+    await page
+      .locator('[data-slot="app-grid"]')
+      .getByRole("button", { name: "App actions" })
+      .first()
+      .click();
     await page.getByRole("menuitem", { name: "Delete app" }).click();
     await page
       .getByRole("alertdialog")
