@@ -126,6 +126,26 @@ describe('AuditController (e2e)', () => {
               'https://video.example.com/preview-1.mp4',
               'https://video.example.com/preview-2.mp4',
             ],
+            appEvents: [
+              {
+                appEventId: '6822418007',
+                title: 'Habit Streak Challenge',
+                kind: 'SPECIAL EVENT',
+                badge: 'happening',
+                startsAt: '2026-11-14T15:00:00.000Z',
+                endsAt: '2026-11-16T04:00:00.000Z',
+              },
+            ],
+            featuredStories: [
+              {
+                storyId: 'story1523947211',
+                heading: 'Today',
+                title: 'Apps we love this week',
+              },
+            ],
+            editorsChoice: { showsBadge: true, notes: 'Editors Choice' },
+            accessibilityStatement:
+              'VoiceOver labels on every screen of the app.',
           },
         },
         capturedAt: D0,
@@ -383,7 +403,13 @@ describe('AuditController (e2e)', () => {
         description: 'Build better habits every single day.',
         raw: {
           screenshots: Array.from({ length: 8 }, (_, i) => `s${i}.png`),
-          pageExtract: { previewVideoUrls: [] },
+          pageExtract: {
+            previewVideoUrls: [],
+            appEvents: [],
+            featuredStories: [],
+            editorsChoice: null,
+            accessibilityStatement: null,
+          },
         },
         capturedAt: D0,
       },
