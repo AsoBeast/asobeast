@@ -1,4 +1,4 @@
-import type { TrackedKeywordItem } from "@asobeast/shared";
+import { addUtcDays, type TrackedKeywordItem } from "@asobeast/shared";
 import { formatList } from "./format";
 import { staleCheckDay } from "./keyword-checks";
 
@@ -23,8 +23,15 @@ const LOST: DayChange = { kind: "lost" };
 const ENTERED: DayChange = { kind: "entered" };
 const STEADY: DayChange = { kind: "steady" };
 
-const wasNotFoundBefore = (row: DayChangeRow): boolean =>
-  row.recentPositions?.at(-2)?.position === null;
+function wasNotFoundTheDayBefore(row: DayChangeRow): boolean {
+  const latest = row.recentPositions?.at(-1);
+  const before = row.recentPositions?.at(-2);
+  return (
+    latest !== undefined &&
+    before?.position === null &&
+    before.date === addUtcDays(latest.date, -1)
+  );
+}
 
 export function dayChange(row: DayChangeRow, today: string): DayChange | null {
   if (row.latestDepth === null || staleCheckDay(row, today) !== null) {
@@ -34,7 +41,7 @@ export function dayChange(row: DayChangeRow, today: string): DayChange | null {
     return row.previousPosition === null ? null : LOST;
   }
   if (row.previousPosition === null) {
-    return wasNotFoundBefore(row) ? ENTERED : null;
+    return wasNotFoundTheDayBefore(row) ? ENTERED : null;
   }
   const places =
     row.positionDelta1d ?? row.latestPosition - row.previousPosition;
@@ -84,6 +91,7 @@ export const matchesMoveFilter = (
 };
 
 export interface KeywordMoves {
+  compared: number;
   up: number;
   down: number;
   lost: number;
@@ -94,10 +102,18 @@ export function keywordMoves(
   rows: readonly DayChangeRow[],
   today: string,
 ): KeywordMoves {
-  const moves: KeywordMoves = { up: 0, down: 0, lost: 0, entered: 0 };
+  const moves: KeywordMoves = {
+    compared: 0,
+    up: 0,
+    down: 0,
+    lost: 0,
+    entered: 0,
+  };
   for (const row of rows) {
     const change = countedDayChange(row, today);
-    if (change === null || change.kind === "steady") continue;
+    if (change === null) continue;
+    moves.compared += 1;
+    if (change.kind === "steady") continue;
     if (change.kind === "moved") moves[change.places < 0 ? "up" : "down"] += 1;
     else moves[change.kind] += 1;
   }
@@ -105,11 +121,13 @@ export function keywordMoves(
 }
 
 export function movesSentence({
+  compared,
   up,
   down,
   lost,
   entered,
-}: KeywordMoves): string {
+}: KeywordMoves): string | null {
+  if (compared === 0) return null;
   const parts = [
     ...(up > 0 ? [`${up} moved up`] : []),
     ...(down > 0 ? [`${down} moved down`] : []),

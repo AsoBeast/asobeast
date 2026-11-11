@@ -5,7 +5,10 @@ import { cn } from "@/lib/utils";
 const WORD =
   "inline-flex h-[22px] items-center rounded-md px-[7px] text-label font-medium";
 
-const WORDS = {
+const WORDS: Record<
+  "lost" | "entered",
+  { label: string; name: string; tone: string }
+> = {
   lost: {
     label: "Lost",
     name: "Dropped out of the results since yesterday",
@@ -16,7 +19,7 @@ const WORDS = {
     name: "Entered the results since yesterday",
     tone: "bg-info-subtle text-info",
   },
-} as const;
+};
 
 const MUTED = "bg-transparent px-0 text-muted-foreground";
 

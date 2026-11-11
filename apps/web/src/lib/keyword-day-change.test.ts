@@ -89,6 +89,13 @@ describe("dayChange", () => {
     ["a first check", [{ date: TODAY, position: 41 }]],
     ["an answer without recent checks", undefined],
     [
+      "a miss two days before with no check yesterday",
+      [
+        { date: "2026-11-09", position: null },
+        { date: TODAY, position: 41 },
+      ],
+    ],
+    [
       "a ranked check before",
       [
         { date: "2026-11-10", position: 50 },
@@ -123,11 +130,12 @@ describe("dayChange", () => {
 
 describe("dayChangeRank", () => {
   it("orders lost above every fall and entered below every rise", () => {
-    const ranks = [entered, rose, steady, fell, lost].map((keyword) =>
-      dayChangeRank(dayChange(keyword, TODAY)),
-    );
+    const ranks = [entered, rose, steady, fell, lost]
+      .map((keyword) => dayChangeRank(dayChange(keyword, TODAY)))
+      .filter((rank) => rank !== null);
 
-    expect(ranks).toEqual([...ranks].sort((left, right) => left! - right!));
+    expect(ranks).toHaveLength(5);
+    expect(ranks).toEqual([...ranks].sort((left, right) => left - right));
     expect(dayChangeRank(null)).toBeNull();
   });
 });
@@ -157,7 +165,7 @@ describe("keywordMoves", () => {
   it("counts rises, falls, lost and entered keywords apart", () => {
     expect(
       keywordMoves([rose, fell, fell, steady, lost, entered], TODAY),
-    ).toEqual({ up: 1, down: 2, lost: 1, entered: 1 });
+    ).toEqual({ compared: 6, up: 1, down: 2, lost: 1, entered: 1 });
   });
 
   it("leaves out a paused keyword, a stale check and one never checked", () => {
@@ -171,12 +179,12 @@ describe("keywordMoves", () => {
         ],
         TODAY,
       ),
-    ).toEqual({ up: 0, down: 1, lost: 0, entered: 0 });
+    ).toEqual({ compared: 1, up: 0, down: 1, lost: 0, entered: 0 });
   });
 });
 
 describe("movesSentence", () => {
-  const none = { up: 0, down: 0, lost: 0, entered: 0 };
+  const none = { compared: 4, up: 0, down: 0, lost: 0, entered: 0 };
 
   it.each([
     [none, "No keyword moved since yesterday."],
@@ -188,10 +196,17 @@ describe("movesSentence", () => {
       "2 moved up and 1 moved down since yesterday.",
     ],
     [
-      { up: 2, down: 1, lost: 1, entered: 3 },
+      { compared: 7, up: 2, down: 1, lost: 1, entered: 3 },
       "2 moved up, 1 moved down, 1 dropped out, and 3 entered the results since yesterday.",
     ],
   ])("writes %o as %s", (moves, sentence) => {
     expect(movesSentence(moves)).toBe(sentence);
+  });
+
+  it("says nothing when no keyword has a check to compare", () => {
+    expect(movesSentence({ ...none, compared: 0 })).toBeNull();
+    expect(
+      movesSentence(keywordMoves([row({ latestDepth: null })], TODAY)),
+    ).toBeNull();
   });
 });

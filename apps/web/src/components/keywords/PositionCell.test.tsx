@@ -189,7 +189,7 @@ describe("PositionCell", () => {
     );
 
     expect(markup).not.toContain(">was #");
-    expect(markup).toContain('aria-label="Position');
+    expect(markup).toMatch(/title="Position \d+[^"]*"[^>]*min-w-9/);
   });
 
   it("W-POS-14 a stale lost keyword keeps the hint and the clock", () => {
