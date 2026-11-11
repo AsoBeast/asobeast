@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { TrendChip } from "@/components/ui/delta-chip";
 import { PortfolioGroupMember } from "./PortfolioAppCard";
 import { orderMembers, type GroupVariant } from "./portfolio-rows";
-import { Sparkline } from "./Sparkline";
+import { Sparkline } from "@/components/charts/Sparkline";
 
 function GroupVisibility({ group }: { group: PortfolioGroup | undefined }) {
   if (!group) {

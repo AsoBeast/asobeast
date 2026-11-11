@@ -15,8 +15,11 @@ const card = (page: Page, label: string) =>
 const tile = (page: Page, label: string) =>
   page.locator('[data-slot="stat-tile"]').filter({ hasText: label });
 
-const chartOf = (page: Page, scope: string) =>
-  page.getByRole("heading", { name: `Search visibility · ${scope}` });
+const chartOf = (page: Page, scope?: string) =>
+  page.getByRole("heading", {
+    name: scope ? `Search visibility · ${scope}` : "Search visibility",
+    exact: true,
+  });
 
 const pickMarket = async (page: Page, name: string) => {
   await page.getByRole("combobox", { name: SWITCHER }).click();
@@ -28,7 +31,7 @@ test("counts every market until a market is chosen", async ({ page }) => {
 
   const switcher = page.getByRole("combobox", { name: SWITCHER });
   await expect(switcher).toHaveText(ALL);
-  await expect(chartOf(page, "All markets")).toBeVisible();
+  await expect(chartOf(page)).toBeVisible();
   await expect(tile(page, "Visibility")).toContainText("62");
   await expect(tile(page, "Keywords in top 10")).toContainText("of 5 tracked");
   await switcher.click();
@@ -74,7 +77,7 @@ test("returns to every market", async ({ page }) => {
   await pickMarket(page, ALL);
 
   await expect(page).not.toHaveURL(/market=/);
-  await expect(chartOf(page, "All markets")).toBeVisible();
+  await expect(chartOf(page)).toBeVisible();
   await expect(tile(page, "Visibility")).toContainText("62");
 });
 
@@ -122,7 +125,7 @@ test("keeps the numbers on screen while the next market loads", async ({
   await expect(page.getByRole("combobox", { name: SWITCHER })).toHaveText(
     POLAND,
   );
-  await expect(chartOf(page, "All markets")).toBeVisible();
+  await expect(chartOf(page)).toBeVisible();
   await expect(tile(page, "Visibility")).toContainText("62");
   release();
   await expect(chartOf(page, "PL")).toBeVisible();

@@ -6,6 +6,8 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import type { Store, StoreFunnelReport } from "@asobeast/shared";
 import { useKeywordScope } from "@/components/app-detail/use-market";
 import { useAuth } from "@/components/auth/use-auth";
+import { MIN_TREND_POINTS } from "@/components/charts/ChartStates";
+import { TrendLine } from "@/components/charts/Sparkline";
 import {
   Card,
   CardAction,
@@ -26,6 +28,8 @@ import {
   formatCount,
   funnelState,
   funnelTiles,
+  funnelTrend,
+  type FunnelTile,
   searchShare,
   trendValue,
   windowOf,
@@ -105,6 +109,29 @@ function NotConnected({ id, store }: { id: string; store: Store }) {
   );
 }
 
+function FunnelTrend({
+  report,
+  tile,
+}: {
+  report: StoreFunnelReport;
+  tile: FunnelTile;
+}) {
+  const values = funnelTrend(report, tile.metric, FUNNEL_HEADLINE_DAYS);
+  const latest = values.at(-1) ?? null;
+  return values.length < MIN_TREND_POINTS ? null : (
+    <TrendLine
+      values={values}
+      label={`${tile.label}, last ${values.length} complete days`}
+      now={
+        tile.metric === "conversion"
+          ? formatConversion(latest)
+          : formatCount(latest)
+      }
+      className="max-sm:hidden print:hidden"
+    />
+  );
+}
+
 function FunnelTiles({ report }: { report: StoreFunnelReport }) {
   const headline = windowOf(report, FUNNEL_HEADLINE_DAYS);
   const week = windowOf(report, 7);
@@ -137,11 +164,14 @@ function FunnelTiles({ report }: { report: StoreFunnelReport }) {
               </span>
             }
             note={
-              <TrendChip
-                label="7d"
-                unit="%"
-                value={trendValue(week, tile.metric)}
-              />
+              <span className="flex items-center justify-between gap-3">
+                <TrendChip
+                  label="7d"
+                  unit="%"
+                  value={trendValue(week, tile.metric)}
+                />
+                <FunnelTrend report={report} tile={tile} />
+              </span>
             }
           />
         ))}

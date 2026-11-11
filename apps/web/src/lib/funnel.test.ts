@@ -9,6 +9,7 @@ import {
   formatCount,
   FUNNEL_COPY,
   funnelState,
+  funnelTrend,
   funnelTiles,
   noSearchTermsFact,
   searchShare,
@@ -113,6 +114,28 @@ describe("funnel helpers", () => {
       }),
     ).toBe("waiting");
     expect(funnelState(REPORT)).toBe("ready");
+  });
+});
+
+describe("funnelTrend", () => {
+  it("lists a metric over the newest complete days", () => {
+    expect(funnelTrend(REPORT, "impressions", 3)).toEqual([100, 100, 500]);
+    expect(funnelTrend(REPORT, "gets", 28)).toEqual([1, 1, 1, 1]);
+  });
+
+  it("leaves out a day still filling in and draws nothing over a missing day", () => {
+    const report = {
+      ...REPORT,
+      points: [
+        point("2026-10-12", 0, 0),
+        point("2026-10-13", 200, 100),
+        { ...point("2026-10-14", 900, 0), complete: false },
+      ],
+    };
+
+    expect(funnelTrend(report, "impressions", 28)).toEqual([0, 200]);
+    expect(funnelTrend(report, "conversion", 28)).toEqual([]);
+    expect(funnelTrend(report, "conversion", 1)).toEqual([1 / 200]);
   });
 });
 

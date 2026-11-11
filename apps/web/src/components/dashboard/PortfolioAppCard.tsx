@@ -18,7 +18,7 @@ import { DelistedBadge } from "@/components/apps/DelistedBadge";
 import { DeleteAppMenu } from "@/components/apps/DeleteAppMenu";
 import { AppFacts } from "./AppFacts";
 import { setupChipText } from "./setup-chip";
-import { Sparkline } from "./Sparkline";
+import { Sparkline } from "@/components/charts/Sparkline";
 
 export function AppStats({ app }: { app: PortfolioApp }) {
   return (

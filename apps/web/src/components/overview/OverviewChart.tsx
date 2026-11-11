@@ -15,26 +15,35 @@ import {
   type VisibilityView,
 } from "@/lib/search-params";
 import { RankBandsChart } from "./RankBandsChart";
+import { RatingTrendChart } from "./RatingTrendChart";
 import { OVERVIEW_VIEW_TITLES } from "./use-overview-view";
 import { ShareOfVoiceChart } from "./ShareOfVoiceChart";
 import { VisibilityAreaChart } from "./VisibilityAreaChart";
 
 interface ChartView {
   help?: ReactNode;
+  scoped: boolean;
   Chart: (props: { id: string; range: VisibilityRange }) => ReactNode;
 }
 
 const OVERVIEW_CHARTS: Record<VisibilityView, ChartView> = {
   visibility: {
     help: <VisibilityHelp />,
+    scoped: true,
     Chart: VisibilityAreaChart,
   },
   share: {
     help: <ShareOfVoiceHelp />,
+    scoped: true,
     Chart: ShareOfVoiceChart,
   },
   top10: {
+    scoped: true,
     Chart: RankBandsChart,
+  },
+  rating: {
+    scoped: false,
+    Chart: RatingTrendChart,
   },
 };
 
@@ -45,15 +54,13 @@ export function OverviewChart({
   id: string;
   view: VisibilityView;
 }) {
-  const { country, switchable } = useKeywordScope(id);
+  const { country } = useKeywordScope(id);
   const [range, setRange] = useQueryState("range", visibilityRangeParser);
   const shownRange = useDeferredValue(range);
   const shownView = useDeferredValue(view);
-  const { help, Chart } = OVERVIEW_CHARTS[shownView];
+  const { help, scoped, Chart } = OVERVIEW_CHARTS[shownView];
   const title = OVERVIEW_VIEW_TITLES[shownView];
-  const scope = switchable
-    ? ` · ${country?.toUpperCase() ?? "All markets"}`
-    : "";
+  const scope = scoped && country ? ` · ${country.toUpperCase()}` : "";
 
   return (
     <CardContent
