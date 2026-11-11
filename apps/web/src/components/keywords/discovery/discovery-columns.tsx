@@ -74,8 +74,15 @@ function ScoreValue({
 function NarrowOpportunity({ value }: { value: number | null }) {
   if (value === null) return null;
   return (
-    <span className="numeric basis-full text-caption text-muted-foreground sm:hidden">
-      {`Opportunity ${value}`}
+    <span className="flex basis-full items-center gap-1.5 text-caption sm:hidden">
+      <span aria-hidden className="text-muted-foreground">
+        Opportunity
+      </span>
+      <GradedNumber
+        value={`${value}`}
+        grade={grade("opportunity", value)}
+        label="Opportunity"
+      />
     </span>
   );
 }
