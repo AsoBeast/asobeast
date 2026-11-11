@@ -384,6 +384,28 @@ export const keywordsTabParser =
 export const discoveryStateParser =
   parseAsStringLiteral(DISCOVERY_STATES).withDefault("all");
 
+export const FOUND_KEYWORD_SORTS = [
+  "keyword",
+  "source",
+  "position",
+  "opportunity",
+  "popularity",
+  "difficulty",
+  "relevance",
+] as const;
+
+export const discoveryTableParsers = {
+  sort: parseAsStringLiteral(FOUND_KEYWORD_SORTS),
+  dir: sortDirectionParser,
+  q: searchParser,
+};
+
+export const DISCOVERY_URL_KEYS = {
+  sort: "foundSort",
+  dir: "foundDir",
+  q: "foundQ",
+} as const satisfies Record<keyof typeof discoveryTableParsers, string>;
+
 export const serpParser = parseAsString.withDefault("");
 
 export const breakdownParser = parseAsString.withDefault("");

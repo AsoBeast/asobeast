@@ -111,7 +111,9 @@ test("removing sends one untrack request after the confirmation", async ({
   await page.goto(BAR);
   await page.getByRole("checkbox", { name: "Select all keywords" }).check();
 
-  await bar(page).getByRole("button", { name: "Remove", exact: true }).click();
+  await bar(page)
+    .getByRole("button", { name: "Stop tracking", exact: true })
+    .click();
   await page
     .getByRole("alertdialog")
     .getByRole("button", { name: "Stop tracking" })
@@ -171,7 +173,7 @@ test.describe("when the request fails", () => {
     await page.getByRole("checkbox", { name: "Select all keywords" }).check();
 
     await bar(page)
-      .getByRole("button", { name: "Remove", exact: true })
+      .getByRole("button", { name: "Stop tracking", exact: true })
       .click();
     await page
       .getByRole("alertdialog")

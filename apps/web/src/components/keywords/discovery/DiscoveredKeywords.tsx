@@ -10,7 +10,8 @@ import { useFocusAfterCommit } from "@/lib/focus-handoff";
 import { visibleDiscoveries } from "@/lib/keyword-discoveries";
 import { keywordDiscoveriesOptions } from "@/lib/queries";
 import { DiscoveredSkeleton } from "../skeletons";
-import { DiscoveredTable } from "./DiscoveredTable";
+import { SearchInput } from "@/components/data-table/SearchInput";
+import { DiscoveredTable, useDiscoveryTableParams } from "./DiscoveredTable";
 import { selectedIn } from "./discovery-actions";
 import { DiscoveryRowActionsContext } from "./discovery-row-actions";
 import { DiscoveryToolbar } from "./DiscoveryToolbar";
@@ -73,6 +74,7 @@ function DiscoveredList({
     keywordDiscoveriesOptions(id, market),
   );
   const [state, setState] = useDiscoveryState();
+  const [{ q }, setTableParams] = useDiscoveryTableParams();
   const selection = useStateSelection(state);
   const actions = useDiscoveryActions(id, market, selection.clear);
   const handOffFocus = useFocusAfterCommit();
@@ -82,16 +84,27 @@ function DiscoveredList({
   );
   const selected = selectedIn(rows, selection.rows);
   const empty = emptyStateOf(list, rows.length, state);
+  const footer = <DiscoveryFooter list={list} updatedAt={dataUpdatedAt} />;
 
   return (
     <DiscoveryRowActionsContext value={{ actions, handOffFocus, heading }}>
       <div className="flex flex-col gap-4">
-        <DiscoveryStateTabs counts={list.counts} />
+        <div className="flex flex-wrap items-center gap-2">
+          <DiscoveryStateTabs counts={list.counts} />
+          <SearchInput
+            label="Search discovered keywords"
+            value={q}
+            onSearch={(next, options) =>
+              void setTableParams({ q: next || null }, options)
+            }
+          />
+        </div>
         <DiscoveryToolbar
           list={list}
           market={market}
           selected={selected}
           actions={actions}
+          onTrackSelected={(button) => handOffFocus(heading.current, button)}
         />
         {empty.kind === "never_run" ? (
           <EmptyState title="No discoveries yet" body={empty.body} />
@@ -123,9 +136,11 @@ function DiscoveredList({
             store={store}
             rowSelection={selection.rows}
             onRowSelectionChange={selection.onChange}
+            footer={footer}
           />
-        ) : null}
-        <DiscoveryFooter list={list} updatedAt={dataUpdatedAt} />
+        ) : (
+          footer
+        )}
       </div>
     </DiscoveryRowActionsContext>
   );

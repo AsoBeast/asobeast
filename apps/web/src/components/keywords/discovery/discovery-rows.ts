@@ -5,7 +5,6 @@ import {
   type KeywordDiscoveryItem,
   type KeywordDiscoveryList,
 } from "@asobeast/shared";
-import { grade, type Grade, type GradeMetric } from "@/lib/grade";
 
 export const DISCOVERY_PAGE_SIZE = 50;
 
@@ -22,30 +21,15 @@ export function rankLabel(
     : `Rank ${item.position}`;
 }
 
-export interface DiscoveryScore {
-  value: number | null;
-  grade: Grade | null;
-}
+export const shownScore = (value: number | null): number | null =>
+  value === null ? null : Math.round(value);
 
-const scored = (metric: GradeMetric, value: number | null): DiscoveryScore => {
-  const shown = value === null ? null : Math.round(value);
-  return { value: shown, grade: grade(metric, shown) };
-};
-
-export const popularityScore = (item: KeywordDiscoveryItem): DiscoveryScore =>
-  scored("popularity", item.volume);
-
-export const difficultyScore = (item: KeywordDiscoveryItem): DiscoveryScore =>
-  scored(
-    "difficulty",
-    item.difficulty === null ? null : toDifficulty100(item.difficulty),
-  );
-
-export const relevanceScore = (item: KeywordDiscoveryItem): DiscoveryScore =>
-  scored("relevance", item.relevance);
-
-export const opportunityScore = (item: KeywordDiscoveryItem): DiscoveryScore =>
-  scored("opportunity", item.opportunity);
+export const shownDifficulty = (
+  item: Pick<KeywordDiscoveryItem, "difficulty">,
+): number | null =>
+  item.difficulty === null
+    ? null
+    : shownScore(toDifficulty100(item.difficulty));
 
 export type DiscoveryEmptyState =
   | { kind: "none" }

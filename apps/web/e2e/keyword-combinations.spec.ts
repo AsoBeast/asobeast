@@ -8,7 +8,7 @@ import {
 import { seedViewer } from "./viewer.mts";
 
 const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
-const COMBOS_PAGE = `/apps/${APP_COMBOS_DETAIL.id}/keywords`;
+const COMBOS_PAGE = `/apps/${APP_COMBOS_DETAIL.id}/keywords?tab=discovered`;
 
 test.describe.configure({ mode: "serial" });
 
@@ -38,7 +38,10 @@ test("the combinations card opens on demand and lists the listing's phrases", as
   page,
 }) => {
   await page.goto(COMBOS_PAGE);
-  const toggle = page.getByRole("button", { name: "Keyword combinations" });
+  const toggle = page.getByRole("button", {
+    name: "Keyword combinations",
+    exact: true,
+  });
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
   await expect(combinations(page)).toHaveCount(0);
 
@@ -47,7 +50,7 @@ test("the combinations card opens on demand and lists the listing's phrases", as
   await expect(page).toHaveURL(/combos=true/);
   const card = combinations(page);
   await expect(card.getByText("231 of 231 combinations")).toBeVisible();
-  await expect(phrases(card)).toHaveCount(50);
+  await expect(phrases(card)).toHaveCount(20);
   await expect(phrases(card).nth(0)).toHaveText("mood");
   await expect(phrases(card).nth(11)).toHaveText("mood journal");
 });
@@ -55,7 +58,7 @@ test("the combinations card opens on demand and lists the listing's phrases", as
 test("each phrase names its status and where its words come from", async ({
   page,
 }) => {
-  await page.goto(`${COMBOS_PAGE}?combos=true&comboStatus=tracked`);
+  await page.goto(`${COMBOS_PAGE}&combos=true&comboStatus=tracked`);
   const card = combinations(page);
   await expect(phrases(card)).toHaveText([
     "water",
@@ -71,11 +74,11 @@ test("each phrase names its status and where its words come from", async ({
     "Title, Keyword field",
   );
 
-  await page.goto(`${COMBOS_PAGE}?combos=true&comboStatus=paused`);
+  await page.goto(`${COMBOS_PAGE}&combos=true&comboStatus=paused`);
   await expect(phrases(card)).toHaveText(["gratitude"]);
   await expect(rowOf(card, "gratitude")).toContainText("Paused");
 
-  await page.goto(`${COMBOS_PAGE}?combos=true&comboQ=evening`);
+  await page.goto(`${COMBOS_PAGE}&combos=true&comboQ=evening`);
   await expect(
     card.getByText("No combinations match these filters"),
   ).toBeVisible();
@@ -87,7 +90,7 @@ test("each phrase names its status and where its words come from", async ({
 test("search and facets live under their own address keys", async ({
   page,
 }) => {
-  await page.goto(`${COMBOS_PAGE}?combos=true`);
+  await page.goto(`${COMBOS_PAGE}&combos=true`);
   const card = combinations(page);
 
   await card
@@ -98,7 +101,7 @@ test("search and facets live under their own address keys", async ({
   await expect(page).not.toHaveURL(/[?&]q=/);
   await expect(card.getByText("56 of 231 combinations")).toBeVisible();
   await expect(
-    page.getByRole("textbox", { name: "Search keywords" }),
+    page.getByRole("textbox", { name: "Search discovered keywords" }),
   ).toHaveValue("");
 
   await card.getByRole("button", { name: "Filter by words" }).click();
@@ -116,29 +119,29 @@ test("search and facets live under their own address keys", async ({
   await expect(card.getByText("231 of 231 combinations")).toBeVisible();
 });
 
-test("rows arrive fifty at a time and a new filter starts over", async ({
+test("rows arrive twenty at a time and a new filter starts over", async ({
   page,
 }) => {
-  await page.goto(`${COMBOS_PAGE}?combos=true`);
+  await page.goto(`${COMBOS_PAGE}&combos=true`);
   const card = combinations(page);
-  await expect(phrases(card)).toHaveCount(50);
-  await expect(card.getByText("Showing 50 of 231")).toBeVisible();
+  await expect(phrases(card)).toHaveCount(20);
+  await expect(card.getByText("Showing 20 of 231")).toBeVisible();
 
-  await card.getByRole("button", { name: "Show 50 more" }).click();
+  await card.getByRole("button", { name: "Show 20 more" }).click();
 
-  await expect(phrases(card)).toHaveCount(100);
-  await expect(card.getByText("Showing 100 of 231")).toBeVisible();
+  await expect(phrases(card)).toHaveCount(40);
+  await expect(card.getByText("Showing 40 of 231")).toBeVisible();
 
   await card.getByRole("textbox", { name: "Search combinations" }).fill("mood");
 
-  await expect(card.getByText("Showing 50 of 56")).toBeVisible();
-  await expect(phrases(card)).toHaveCount(50);
+  await expect(card.getByText("Showing 20 of 56")).toBeVisible();
+  await expect(phrases(card)).toHaveCount(20);
 });
 
 test("another market points back to the home market listing", async ({
   page,
 }) => {
-  await page.goto(`${COMBOS_PAGE}?country=gb&combos=true`);
+  await page.goto(`${COMBOS_PAGE}&country=gb&combos=true`);
   const card = combinations(page);
   await expect(
     card.getByText(
@@ -164,7 +167,7 @@ test("a google play listing combines its title and short description", async ({
   });
 
   await page.goto(
-    `/apps/${APP_GP_DETAIL.id}/keywords?combos=true&comboStatus=tracked`,
+    `/apps/${APP_GP_DETAIL.id}/keywords?tab=discovered&combos=true&comboStatus=tracked`,
   );
   const card = combinations(page);
 
@@ -194,7 +197,7 @@ test("the track dialog leaves the daily request budget out for a customer", asyn
   context,
 }) => {
   await seedViewer(context, "customer");
-  await page.goto(`${COMBOS_PAGE}?combos=true`);
+  await page.goto(`${COMBOS_PAGE}&combos=true`);
   await expect(
     page.getByRole("button", { name: "Account menu" }),
   ).toBeVisible();
@@ -216,7 +219,7 @@ test("the track dialog leaves the daily request budget out for a customer", asyn
 test("selected combinations are tracked after one confirmation", async ({
   page,
 }) => {
-  await page.goto(`${COMBOS_PAGE}?combos=true`);
+  await page.goto(`${COMBOS_PAGE}&combos=true`);
   const card = combinations(page);
 
   await expect(
@@ -259,16 +262,16 @@ test("selected combinations are tracked after one confirmation", async ({
   await expect(page.getByText("Tracking 3 keywords")).toBeVisible();
   await expect(rowOf(card, "journal")).toContainText("Tracked");
   await expect(
-    card.getByRole("button", { name: "Track selected (0)" }),
-  ).toBeDisabled();
+    card.getByRole("button", { name: /^Track selected/ }),
+  ).toHaveCount(0);
 });
 
 test("every combination the filters show is tracked at once", async ({
   page,
 }) => {
-  await page.goto(`${COMBOS_PAGE}?combos=true&comboWords=1`);
+  await page.goto(`${COMBOS_PAGE}&combos=true&comboWords=1`);
   const card = combinations(page);
-  await expect(page.getByText("Tracking 7 keywords · 6 active")).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Tracked 7" })).toBeVisible();
 
   await card.getByRole("button", { name: "Track all shown (10)" }).click();
   const request = trackRequest(page);
@@ -296,10 +299,8 @@ test("every combination the filters show is tracked at once", async ({
   await expect(rowOf(card, "gratitude")).toContainText("Tracked");
   await expect(
     card.getByRole("button", { name: "Track all shown (0)" }),
-  ).toBeDisabled();
-  await expect(
-    page.getByText("Tracking 16 keywords · 16 active"),
-  ).toBeVisible();
+  ).toHaveAttribute("aria-disabled", "true");
+  await expect(page.getByRole("tab", { name: "Tracked 16" })).toBeVisible();
 });
 
 test("a quota error stops the run and names what was tracked", async ({
@@ -325,7 +326,7 @@ test("a quota error stops the run and names what was tracked", async ({
       );
     }
   });
-  await page.goto(`${COMBOS_PAGE}?combos=true&comboStatus=untracked`);
+  await page.goto(`${COMBOS_PAGE}&combos=true&comboStatus=untracked`);
   const card = combinations(page);
 
   await card.getByRole("button", { name: "Track all shown (224)" }).click();

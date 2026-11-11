@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, type RefObject } from "react";
+import { X } from "lucide-react";
 import type { KeywordDiscoveryItem } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { siblingControl } from "@/lib/focus-handoff";
@@ -60,7 +61,7 @@ export function DiscoveryRowActions({ item }: { item: KeywordDiscoveryItem }) {
         Track
       </Button>
       <Button
-        size="sm"
+        size="icon-sm"
         variant="ghost"
         data-discovery-dismiss
         aria-label={`Dismiss ${item.text}`}
@@ -72,7 +73,7 @@ export function DiscoveryRowActions({ item }: { item: KeywordDiscoveryItem }) {
           actions.dismissOnce(ids);
         }}
       >
-        Dismiss
+        <X />
       </Button>
     </span>
   );

@@ -1,6 +1,13 @@
+import { cookies } from "next/headers";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
+import { CollapsedSectionsProvider } from "@/components/layout/CollapsedSections";
+import { KNOWN_SECTIONS } from "@/components/layout/known-sections";
 import { KeywordsWorkspace } from "@/components/keywords/KeywordsWorkspace";
 import { hasMarketReads, ownsKeywordFields } from "@/lib/app-localizations";
+import {
+  COLLAPSED_COOKIE_NAME,
+  parseCollapsed,
+} from "@/lib/collapsed-sections";
 import { getQueryClient } from "@/lib/get-query-client";
 import {
   appDetailOptions,
@@ -31,6 +38,11 @@ export default async function KeywordsPage({
   const { id } = await params;
   const sp = await searchParams;
 
+  const collapsed = parseCollapsed(
+    (await cookies()).get(COLLAPSED_COOKIE_NAME)?.value,
+    KNOWN_SECTIONS,
+  );
+
   const queryClient = getQueryClient();
   const app = await queryClient.fetchQuery(appDetailOptions(id));
   const market = countryParser.parseServerSide(sp.country) || app.country;
@@ -60,13 +72,18 @@ export default async function KeywordsPage({
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <div className="page-full">
-        <KeywordsWorkspace
-          id={id}
-          homeCountry={app.country}
-          store={app.store}
-          keywordFields={keywordFields}
-          discoveries={discoveries}
-        />
+        <CollapsedSectionsProvider
+          initial={[...collapsed]}
+          known={KNOWN_SECTIONS}
+        >
+          <KeywordsWorkspace
+            id={id}
+            homeCountry={app.country}
+            store={app.store}
+            keywordFields={keywordFields}
+            discoveries={discoveries}
+          />
+        </CollapsedSectionsProvider>
       </div>
     </HydrationBoundary>
   );

@@ -12,6 +12,8 @@ import {
 } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
 
+export const DISCOVERED_TAB_ID = "keywords-discovered-tab";
+
 const TAB_PARAMS = {
   tab: keywordsTabParser.withOptions({ history: "push" }),
   state: discoveryStateParser,
@@ -42,6 +44,7 @@ export function KeywordsTabs({ id, market }: { id: string; market: string }) {
           {tracked ? `Tracked ${tracked.length}` : "Tracked"}
         </TabsOption>
         <TabsOption
+          id={DISCOVERED_TAB_ID}
           value="discovered"
           aria-label={
             unseen ? `${discoveredLabel}, new discoveries to review` : undefined

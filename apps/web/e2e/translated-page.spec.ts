@@ -777,9 +777,12 @@ test.describe("a translated opportunity map", () => {
     const errors = collectDomErrors(page);
     await openTranslated(page);
 
-    await page.getByRole("tab", { name: "Table" }).click();
+    const toggle = page
+      .locator("button[aria-pressed]")
+      .filter({ has: page.locator("svg.lucide-chart-scatter") });
+    await toggle.click();
     await expect(mapRegion(page)).toHaveCount(0);
-    await page.getByRole("tab", { name: "Map" }).click();
+    await toggle.click();
 
     await expect(mapRegion(page)).toBeVisible();
     expect(errors).toEqual([]);

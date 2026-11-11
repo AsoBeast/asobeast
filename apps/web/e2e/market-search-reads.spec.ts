@@ -48,7 +48,7 @@ test.describe("on the read lab", () => {
     await expect(rows.nth(1)).toContainText("12/100");
   });
 
-  test("shows Empty for a shipped localization without phrases", async ({
+  test("shows an empty keyword field for a shipped localization without phrases", async ({
     page,
   }) => {
     await seedLocalizations(page.request, APP, {
@@ -58,7 +58,9 @@ test.describe("on the read lab", () => {
 
     const us = card(page, "US");
     await expect(us).toContainText("0 unique words · 2 localizations");
-    await expect(us.getByText("Empty", { exact: true })).toHaveCount(2);
+    await expect(
+      us.getByText("Keyword field empty", { exact: true }),
+    ).toHaveCount(2);
   });
 
   test("links each row to its editor on the metadata page", async ({
@@ -121,16 +123,9 @@ test.describe("on the read lab", () => {
       "US also reads 8 localizations you don't ship · up to 800 more characters",
     );
     await fold.locator("summary").click();
-    await expect(fold.getByRole("listitem")).toHaveText([
-      "Arabic",
-      "Chinese (Simplified)",
-      "Chinese (Traditional)",
-      "French",
-      "Korean",
-      "Portuguese (Brazil)",
-      "Russian",
-      "Vietnamese",
-    ]);
+    await expect(fold).toContainText(
+      "Arabic, Chinese (Simplified), Chinese (Traditional), French, Korean, Portuguese (Brazil), Russian, and Vietnamese",
+    );
     await expect(
       fold.getByRole("link", { name: "Add one on the metadata page" }),
     ).toHaveAttribute("href", `/apps/${APP}/metadata#app-localizations`);
@@ -267,10 +262,7 @@ test.describe("on the read lab", () => {
     await expect(de).toContainText("0 unique words · 0 localizations");
     const fold = de.locator("details");
     await expect(fold).toHaveAttribute("open", "");
-    await expect(fold.getByRole("listitem")).toHaveText([
-      "German",
-      "English (U.K.)",
-    ]);
+    await expect(fold).toContainText("German and English (U.K.)");
   });
 });
 

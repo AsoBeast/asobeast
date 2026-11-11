@@ -295,7 +295,7 @@ test("a play app shows play installs per search term and sorts by them", async (
   const rows = table.getByRole("row");
 
   await expect(
-    table.getByRole("button", { name: "Play installs", exact: true }),
+    table.getByRole("button", { name: "Installs", exact: true }),
   ).toBeVisible();
   await table.getByRole("button", { name: "About Play installs" }).click();
   await expect(
@@ -312,9 +312,7 @@ test("a play app shows play installs per search term and sorts by them", async (
     rows.filter({ hasText: "fokus app" }).getByLabel("No Play Console data"),
   ).toBeVisible();
 
-  await table
-    .getByRole("button", { name: "Play installs", exact: true })
-    .click();
+  await table.getByRole("button", { name: "Installs", exact: true }).click();
   await expect(page).toHaveURL(/sort=acquisitions/);
   await expect(rows.nth(1)).toContainText("lernphasen timer");
   await expect(rows.nth(2)).toContainText("pomodoro timer");
@@ -358,7 +356,7 @@ test("an app store app has no play installs column, even from a play sort link",
     table.getByRole("columnheader", { name: /Opportunity/ }),
   ).toHaveAttribute("aria-sort", "descending");
   await expect(
-    table.getByRole("button", { name: "Play installs", exact: true }),
+    table.getByRole("button", { name: "Installs", exact: true }),
   ).toHaveCount(0);
   await expect(table).not.toHaveAccessibleName(/Play installs/);
 });
@@ -988,13 +986,14 @@ test("a phone starts with the columns that fit and offers the rest", async ({
   await page.goto("/apps/app-1/keywords");
   await page.waitForLoadState("networkidle");
 
-  for (const name of ["Keyword", "Position", "Opportunity"]) {
+  for (const name of ["Keyword", "Position", "Change"]) {
     await expect(
       page.getByRole("columnheader", { name, exact: true }),
     ).toBeVisible();
   }
   for (const name of [
     "Source",
+    "Opportunity",
     "Popularity",
     "Difficulty",
     "Last 7 days",
@@ -1337,7 +1336,9 @@ test.describe("a market typed into the add keywords dialog", () => {
     await page
       .getByRole("textbox", { name: "Storefront country code" })
       .fill(code);
-    await page.getByRole("textbox", { name: /fitness tracker/ }).fill("focus");
+    await page
+      .getByRole("textbox", { name: "Keywords", exact: true })
+      .fill("focus");
   };
 
   test("refuses a code that is not an app store storefront before sending it", async ({
@@ -1542,7 +1543,7 @@ test("tells the user an add failed while offline instead of waiting for the netw
   await (await hydrated(add)).click();
   const dialog = page.getByRole("dialog");
   await dialog
-    .getByRole("textbox", { name: /fitness tracker/ })
+    .getByRole("textbox", { name: "Keywords", exact: true })
     .fill("offline test phrase");
 
   await context.setOffline(true);

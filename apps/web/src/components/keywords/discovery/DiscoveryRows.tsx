@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { flexRender, type Table as TanstackTable } from "@tanstack/react-table";
 import type { KeywordDiscoveryItem } from "@asobeast/shared";
+import { FilteredEmpty } from "@/components/data-table/FilteredEmpty";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -15,7 +16,11 @@ import {
 } from "@/components/ui/table";
 import { focusIsLost } from "@/lib/focus-handoff";
 import { formatNumber } from "@/lib/format";
-import { isNumericColumn } from "@/lib/table/column-visibility";
+import {
+  isNumericColumn,
+  isWideOnlyColumn,
+} from "@/lib/table/column-visibility";
+import { ariaSort } from "@/lib/table/sorting";
 import type { KeywordTableFeatures } from "../keyword-table-features";
 import { DISCOVERY_PAGE_SIZE } from "./discovery-rows";
 
@@ -24,7 +29,18 @@ export type DiscoveryTable = TanstackTable<
   KeywordDiscoveryItem
 >;
 
-export function DiscoveryRows({ table }: { table: DiscoveryTable }) {
+const narrowHidden = (meta: unknown): string | undefined =>
+  isWideOnlyColumn(meta) ? "max-sm:hidden" : undefined;
+
+export function DiscoveryRows({
+  table,
+  footer,
+  onClearSearch,
+}: {
+  table: DiscoveryTable;
+  footer: ReactNode;
+  onClearSearch: () => void;
+}) {
   const [pages, setPages] = useState(1);
   const rows = table.getRowModel().rows;
   const shown = rows.slice(0, pages * DISCOVERY_PAGE_SIZE);
@@ -44,61 +60,83 @@ export function DiscoveryRows({ table }: { table: DiscoveryTable }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <Table
-        density="compact"
-        containerClassName="rounded-lg border bg-card"
-        scrollLabel="Keyword discoveries"
-        scrollFocus="overflow"
-      >
-        <TableCaption className="sr-only">
-          Keyword discoveries: keywords near your listing that you do not track
-          yet, with where your app ranks for each.
-        </TableCaption>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <TableHead
-                  key={header.id}
-                  numeric={isNumericColumn(header.column.columnDef.meta)}
-                >
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext(),
-                  )}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody ref={body}>
-          {shown.map((row) => (
-            <TableRow
-              key={row.id}
-              data-state={row.getIsSelected() ? "selected" : undefined}
-            >
-              {row.getVisibleCells().map((cell) =>
-                cell.column.id === "keyword" ? (
-                  <th
-                    key={cell.id}
-                    scope="row"
-                    className="px-2 py-1 text-left font-normal md:px-3"
+      <div className="overflow-hidden rounded-lg border bg-card">
+        <Table
+          className="[&_td]:md:px-3 [&_th]:md:px-3"
+          scrollLabel="Keyword discoveries"
+          scrollFocus="overflow"
+        >
+          <TableCaption className="sr-only">
+            Keyword discoveries: keywords near your listing that you do not
+            track yet, with where your app ranks for each.
+          </TableCaption>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead
+                    key={header.id}
+                    aria-sort={ariaSort(header.column.getIsSorted())}
+                    numeric={isNumericColumn(header.column.columnDef.meta)}
+                    className={narrowHidden(header.column.columnDef.meta)}
                   >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </th>
-                ) : (
-                  <TableCell
-                    key={cell.id}
-                    numeric={isNumericColumn(cell.column.columnDef.meta)}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ),
-              )}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext(),
+                    )}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody ref={body}>
+            {rows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={table.getVisibleLeafColumns().length}>
+                  <FilteredEmpty
+                    title="No discovered keywords match this search"
+                    body="Change or clear the search to see the rows again."
+                    onClear={onClearSearch}
+                  />
+                </TableCell>
+              </TableRow>
+            ) : null}
+            {shown.map((row) => (
+              <TableRow
+                key={row.id}
+                data-state={row.getIsSelected() ? "selected" : undefined}
+              >
+                {row.getVisibleCells().map((cell) =>
+                  cell.column.id === "keyword" ? (
+                    <th
+                      key={cell.id}
+                      scope="row"
+                      className="h-11 px-2 py-1.5 text-left font-normal md:px-3"
+                    >
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
+                    </th>
+                  ) : (
+                    <TableCell
+                      key={cell.id}
+                      numeric={isNumericColumn(cell.column.columnDef.meta)}
+                      className={narrowHidden(cell.column.columnDef.meta)}
+                    >
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
+                    </TableCell>
+                  ),
+                )}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        <div className="border-t px-3 py-2">{footer}</div>
+      </div>
       {rows.length > DISCOVERY_PAGE_SIZE ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-caption text-muted-foreground" aria-live="polite">

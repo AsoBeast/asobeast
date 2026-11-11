@@ -16,6 +16,9 @@ const CHIP_TIER: Partial<Record<Grade, string>> = {
   fair: "bg-secondary shadow-[inset_0_0_0_1px_var(--border)]",
 };
 
+export const positionChipClass = (tier: Grade | null): string =>
+  cn(CHIP, tier && CHIP_TIER[tier]);
+
 export function PositionReadout({
   keyword,
   label,
@@ -58,11 +61,7 @@ export function PositionReadout({
           grade={tier}
           label="Position"
           marker={!chip}
-          className={cn(
-            chip && CHIP,
-            chip && tier && CHIP_TIER[tier],
-            className,
-          )}
+          className={cn(chip && positionChipClass(tier), className)}
         />
       )}
       {chip ? null : (

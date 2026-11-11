@@ -2,25 +2,29 @@
 
 import { createColumnHelper } from "@tanstack/react-table";
 import type { KeywordDiscoveryItem, Store } from "@asobeast/shared";
+import { SortableHeader } from "@/components/data-table/SortableHeader";
 import { Checkbox } from "@/components/ui/checkbox";
 import { GradedNumber } from "@/components/ui/graded";
 import { InfoTip } from "@/components/ui/info-tip";
-import { grade } from "@/lib/grade";
+import { grade, type GradeMetric } from "@/lib/grade";
 import { discoverySourceLabel } from "@/lib/keyword-discoveries";
-import { DiscoveryRowActions } from "./discovery-row-actions";
+import { nullsLast } from "@/lib/table/sorting";
+import { SORTABLE } from "../keyword-column-helper";
 import type { KeywordTableFeatures } from "../keyword-table-features";
+import { positionChipClass } from "../PositionReadout";
+import { ScoreReadout } from "../score-cells";
+import { DiscoveryRowActions } from "./discovery-row-actions";
 import {
-  difficultyScore,
-  opportunityScore,
-  popularityScore,
   rankLabel,
   rankText,
-  relevanceScore,
-  type DiscoveryScore,
+  shownDifficulty,
+  shownScore,
 } from "./discovery-rows";
 
 const DISCOVERY_GUIDE =
   "https://docs.asobeast.com/guides/keyword-discovery#how-the-rank-is-found";
+
+export const SELECT_ALL_DISCOVERIES = "Select all discovered keywords";
 
 const columnHelper = createColumnHelper<
   KeywordTableFeatures,
@@ -37,25 +41,29 @@ function Missing({ label }: { label: string }) {
 }
 
 function ScoreValue({
-  score,
+  value,
   label,
+  metric,
+  emphasize,
 }: {
-  score: DiscoveryScore;
+  value: number | null;
   label: string;
+  metric: GradeMetric;
+  emphasize?: boolean;
 }) {
-  return score.value === null ? (
+  return value === null ? (
     <Missing label={`No ${label.toLowerCase()} score`} />
   ) : (
-    <GradedNumber
-      value={`${score.value}`}
-      grade={score.grade}
+    <ScoreReadout
+      value={value}
       label={label}
-      aligned
+      metric={metric}
+      emphasize={emphasize}
     />
   );
 }
 
-function RankCell({ item }: { item: KeywordDiscoveryItem }) {
+function PositionValue({ item }: { item: KeywordDiscoveryItem }) {
   const text = rankText(item);
   if (text === null) {
     return (
@@ -72,50 +80,53 @@ function RankCell({ item }: { item: KeywordDiscoveryItem }) {
       </span>
     );
   }
+  const tier = grade("position", item.position);
   return (
     <GradedNumber
       value={text}
-      grade={grade("position", item.position)}
-      label="Rank"
-      aligned
+      grade={tier}
+      label="Position"
+      marker={false}
+      className={positionChipClass(tier)}
     />
   );
 }
 
-function MetricHeader({
-  label,
-  title,
-  summary,
-}: {
-  label: string;
-  title: string;
-  summary: string;
-}) {
+function MetricTip({ label, summary }: { label: string; summary: string }) {
   return (
-    <span className="inline-flex items-center gap-1">
-      <span>{label}</span>
-      <InfoTip
-        label={`About ${label.toLowerCase()}`}
-        title={title}
-        summary={summary}
+    <InfoTip
+      label={`About ${label.toLowerCase()}`}
+      title={label}
+      summary={summary}
+    >
+      <a
+        href={DISCOVERY_GUIDE}
+        target="_blank"
+        rel="noreferrer"
+        className="font-medium text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-2"
       >
-        <a
-          href={DISCOVERY_GUIDE}
-          target="_blank"
-          rel="noreferrer"
-          className="font-medium text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-2"
-        >
-          Read about keyword discovery
-        </a>
-      </InfoTip>
-    </span>
+        Read about keyword discovery
+      </a>
+    </InfoTip>
   );
 }
 
 const selectColumn = columnHelper.display({
   id: "select",
   enableHiding: false,
-  header: () => <span className="sr-only">Select</span>,
+  header: ({ table }) => (
+    <Checkbox
+      checked={
+        table.getIsAllRowsSelected()
+          ? true
+          : table.getIsSomeRowsSelected()
+            ? "indeterminate"
+            : false
+      }
+      onCheckedChange={(value) => table.toggleAllRowsSelected(!!value)}
+      aria-label={SELECT_ALL_DISCOVERIES}
+    />
+  ),
   cell: ({ row }) => (
     <Checkbox
       data-discovery-select
@@ -128,85 +139,114 @@ const selectColumn = columnHelper.display({
 
 const keywordColumn = columnHelper.accessor("text", {
   id: "keyword",
-  header: "Keyword",
+  sortFn: "text",
+  sortDescFirst: false,
+  header: ({ column }) => <SortableHeader column={column} label="Keyword" />,
   cell: ({ row }) => (
-    <span className="flex flex-wrap items-center gap-2">
+    <span className="flex flex-wrap items-center gap-x-2">
       <span className="font-medium wrap-anywhere">{row.original.text}</span>
       {row.original.recommended ? (
-        <span className="text-label text-muted-foreground">Recommended</span>
+        <span className="text-label text-muted-foreground max-sm:hidden">
+          Recommended
+        </span>
       ) : null}
     </span>
   ),
 });
 
 const sourceColumn = (store: Store) =>
-  columnHelper.accessor("source", {
+  columnHelper.accessor((row) => discoverySourceLabel(row.source, store), {
     id: "source",
-    header: "Source",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground">
-        {discoverySourceLabel(row.original.source, store)}
-      </span>
+    meta: { wideOnly: true },
+    sortFn: "text",
+    sortDescFirst: false,
+    header: ({ column }) => <SortableHeader column={column} label="Source" />,
+    cell: ({ getValue }) => (
+      <span className="text-muted-foreground">{getValue()}</span>
     ),
   });
 
-const rankColumn = columnHelper.accessor("position", {
-  id: "rank",
-  meta: { numeric: true },
-  header: () => (
-    <MetricHeader
-      label="Rank"
-      title="Rank"
-      summary="Where your app appears in the store search for this phrase. A rank up to 50 can come from another search made today or yesterday; a dash means not checked yet."
-    />
+const positionColumn = columnHelper.accessor((row) => nullsLast(row.position), {
+  id: "position",
+  ...SORTABLE,
+  sortDescFirst: false,
+  header: ({ column }) => (
+    <span className="inline-flex items-center gap-1">
+      <SortableHeader column={column} label="Position" />
+      <MetricTip
+        label="Position"
+        summary="Where your app appears in the store search for this phrase. A position up to 50 can come from another search made today or yesterday; a dash means not checked yet."
+      />
+    </span>
   ),
-  cell: ({ row }) => <RankCell item={row.original} />,
+  cell: ({ row }) => <PositionValue item={row.original} />,
 });
 
+const scoreColumn = ({
+  id,
+  label,
+  metric,
+  value,
+  summary,
+  emphasize,
+}: {
+  id: string;
+  label: string;
+  metric: GradeMetric;
+  value: (item: KeywordDiscoveryItem) => number | null;
+  summary?: string;
+  emphasize?: boolean;
+}) =>
+  columnHelper.accessor((row) => nullsLast(value(row)), {
+    id,
+    meta: { numeric: true },
+    ...SORTABLE,
+    sortDescFirst: true,
+    header: ({ column }) => (
+      <span className="inline-flex items-center gap-1">
+        <SortableHeader column={column} label={label} />
+        {summary ? <MetricTip label={label} summary={summary} /> : null}
+      </span>
+    ),
+    cell: ({ row }) => (
+      <ScoreValue
+        value={value(row.original)}
+        label={label}
+        metric={metric}
+        emphasize={emphasize}
+      />
+    ),
+  });
+
 const scoreColumns = [
-  columnHelper.accessor("volume", {
-    id: "popularity",
-    meta: { numeric: true },
-    header: "Popularity",
-    cell: ({ row }) => (
-      <ScoreValue score={popularityScore(row.original)} label="Popularity" />
-    ),
-  }),
-  columnHelper.accessor("difficulty", {
-    id: "difficulty",
-    meta: { numeric: true },
-    header: "Difficulty",
-    cell: ({ row }) => (
-      <ScoreValue score={difficultyScore(row.original)} label="Difficulty" />
-    ),
-  }),
-  columnHelper.accessor("relevance", {
-    id: "relevance",
-    meta: { numeric: true },
-    header: () => (
-      <MetricHeader
-        label="Relevance"
-        title="Relevance"
-        summary="How relevant the phrase is to your listing, from where it was found and how many of its words your listing holds."
-      />
-    ),
-    cell: ({ row }) => (
-      <ScoreValue score={relevanceScore(row.original)} label="Relevance" />
-    ),
-  }),
-  columnHelper.accessor("opportunity", {
+  scoreColumn({
     id: "opportunity",
-    meta: { numeric: true },
-    header: () => (
-      <MetricHeader
-        label="Opportunity"
-        title="Opportunity"
-        summary="Popularity weighed against difficulty. It needs both scores, which a keyword gets once it is tracked."
-      />
-    ),
-    cell: ({ row }) => (
-      <ScoreValue score={opportunityScore(row.original)} label="Opportunity" />
-    ),
+    label: "Opportunity",
+    metric: "opportunity",
+    value: (item) => shownScore(item.opportunity),
+    summary:
+      "Popularity weighed against difficulty. It needs both scores, which a keyword gets once it is tracked.",
+    emphasize: true,
+  }),
+  scoreColumn({
+    id: "popularity",
+    label: "Popularity",
+    metric: "popularity",
+    value: (item) => shownScore(item.volume),
+  }),
+  scoreColumn({
+    id: "difficulty",
+    label: "Difficulty",
+    metric: "difficulty",
+    value: shownDifficulty,
+  }),
+  scoreColumn({
+    id: "relevance",
+    label: "Relevance",
+    metric: "relevance",
+    value: (item) => shownScore(item.relevance),
+    summary:
+      "How relevant the phrase is to your listing, from where it was found and how many of its words your listing holds.",
   }),
 ];
 
@@ -223,7 +263,7 @@ export const discoveryColumns = (store: Store) =>
     selectColumn,
     keywordColumn,
     sourceColumn(store),
-    rankColumn,
+    positionColumn,
     ...scoreColumns,
     actionsColumn,
   ]);

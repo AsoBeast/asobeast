@@ -1422,9 +1422,12 @@ test.describe("keyword bulk actions keep focus", () => {
     page,
     context,
   }) => {
+    await page.goto(KEYWORDS);
+    await selectAll(page).check();
+    await bar(page).getByRole("button", { name: "Pause" }).click();
+    await expect(bar(page)).toHaveCount(0);
     await seedCookie(context, "e2e-bulk-over-quota");
     const held = await holdRequest(page, BULK, "POST");
-    await page.goto(KEYWORDS);
     await selectAll(page).check();
     const activate = bar(page).getByRole("button", { name: "Activate" });
 
@@ -1469,7 +1472,7 @@ test.describe("keyword bulk actions keep focus", () => {
     await page.goto(KEYWORDS);
     await selectAll(page).check();
     await pressFromKeyboard(
-      bar(page).getByRole("button", { name: "Remove", exact: true }),
+      bar(page).getByRole("button", { name: "Stop tracking", exact: true }),
     );
     const confirm = page
       .getByRole("alertdialog")
@@ -1489,7 +1492,7 @@ test.describe("keyword bulk actions keep focus", () => {
     await page.goto(KEYWORDS);
     await page.getByRole("checkbox", { name: "Select focus timer" }).check();
     await pressFromKeyboard(
-      bar(page).getByRole("button", { name: "Remove", exact: true }),
+      bar(page).getByRole("button", { name: "Stop tracking", exact: true }),
     );
     const confirm = page
       .getByRole("alertdialog")

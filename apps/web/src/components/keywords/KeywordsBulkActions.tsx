@@ -77,7 +77,7 @@ function ConfirmRemove({
       <AlertDialogTrigger asChild>
         <Button variant="outline" size="sm" aria-disabled={busy || undefined}>
           <Trash2 />
-          Remove
+          Stop tracking
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent
@@ -169,6 +169,8 @@ export function KeywordsBulkActions({
   });
 
   const busy = change.isPending || tagSelected.isPending;
+  const anyActive = selectedKeywords.some((keyword) => keyword.active);
+  const anyPaused = selectedKeywords.some((keyword) => !keyword.active);
   const run = (action: KeywordBulkAction) => {
     if (!busy) changeOnce({ action, keywordIds: selectedIds });
   };
@@ -200,24 +202,28 @@ export function KeywordsBulkActions({
             {chartLimitLine()}
           </span>
         ) : null}
-        <Button
-          variant="outline"
-          size="sm"
-          aria-disabled={busy || undefined}
-          onClick={() => run("pause")}
-        >
-          <Pause />
-          Pause
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          aria-disabled={busy || undefined}
-          onClick={() => run("resume")}
-        >
-          <Play />
-          Activate
-        </Button>
+        {anyActive ? (
+          <Button
+            variant="outline"
+            size="sm"
+            aria-disabled={busy || undefined}
+            onClick={() => run("pause")}
+          >
+            <Pause />
+            Pause
+          </Button>
+        ) : null}
+        {anyPaused ? (
+          <Button
+            variant="outline"
+            size="sm"
+            aria-disabled={busy || undefined}
+            onClick={() => run("resume")}
+          >
+            <Play />
+            Activate
+          </Button>
+        ) : null}
         <BulkTagPopover
           keywords={selectedKeywords}
           marketTags={marketTags}

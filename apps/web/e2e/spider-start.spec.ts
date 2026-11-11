@@ -57,7 +57,7 @@ async function routeSpider(
 }
 
 async function openDeepSearch(page: Page) {
-  await page.goto("/apps/app-1/keywords");
+  await page.goto("/apps/app-1/keywords?tab=discovered");
   await (
     await hydrated(page.getByRole("button", { name: /^Suggestions/ }))
   ).click();

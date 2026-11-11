@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, type RefObject } from "react";
+import { Suspense, type ReactNode, type RefObject } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import type { Store } from "@asobeast/shared";
@@ -16,8 +16,6 @@ import { KeywordDynamicsPanel } from "./KeywordDynamicsPanel";
 import { MarketSearchReadsCard } from "./MarketSearchReadsCard";
 import { KeywordsTable } from "./KeywordsTable";
 import { KeywordMapSkeleton, KeywordsTableSkeleton } from "./skeletons";
-import { KeywordCombinations } from "./KeywordCombinations";
-import { SuggestionsPanel } from "./SuggestionsPanel";
 import { TrackedSummary } from "./TrackedSummary";
 import { useEmptiedListFocus } from "./use-keywords-table-focus";
 
@@ -27,12 +25,16 @@ export function TrackedKeywordsTab({
   store,
   keywordFields,
   clearFocus,
+  onFindKeywords,
+  children,
 }: {
   id: string;
   homeCountry: string;
   store: Store;
   keywordFields: boolean;
   clearFocus: RefObject<HTMLButtonElement | null>;
+  onFindKeywords?: (leaving: HTMLElement) => void;
+  children?: ReactNode;
 }) {
   const [country] = useQueryState("country", countryParser);
   const [view] = useQueryState("view", keywordViewParser);
@@ -57,15 +59,10 @@ export function TrackedKeywordsTab({
           store={store}
           selection={selection}
           clearFocus={clearFocus}
+          onFindKeywords={onFindKeywords}
         />
       </Suspense>
-      <SuggestionsPanel id={id} country={market} store={store} />
-      <KeywordCombinations
-        id={id}
-        store={store}
-        homeCountry={homeCountry}
-        market={market}
-      />
+      {children}
       {keywordFields ? (
         <MarketSearchReadsCard
           id={id}
@@ -84,6 +81,7 @@ function KeywordsMarketScope({
   store,
   selection,
   clearFocus,
+  onFindKeywords,
 }: {
   id: string;
   market: string;
@@ -91,6 +89,7 @@ function KeywordsMarketScope({
   store: Store;
   selection: KeywordChartSelection;
   clearFocus: RefObject<HTMLButtonElement | null>;
+  onFindKeywords?: (leaving: HTMLElement) => void;
 }) {
   const { data: tracked } = useSuspenseQuery(keywordsOptions(id, market));
   const chart = resolveChartSelection(selection, tracked);
@@ -114,6 +113,7 @@ function KeywordsMarketScope({
         country={market}
         homeCountry={homeCountry}
         chartedIds={open ? chart.charted : []}
+        onFindKeywords={onFindKeywords}
       />
     </>
   );

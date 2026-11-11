@@ -10,17 +10,26 @@ import {
 import { ChevronDown, Search } from "lucide-react";
 import { useQueryState } from "nuqs";
 import { toast } from "sonner";
-import type { KeywordSuggestionStrategy, Store } from "@asobeast/shared";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  LEDE,
+  isStoreSuggestionStrategy,
+  type KeywordSuggestionStrategy,
+  type Store,
+} from "@asobeast/shared";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
   SECTION_CHEVRON,
   SECTION_TOGGLE,
 } from "@/components/layout/panel-classes";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { addKeywords, ApiError } from "@/lib/api";
-import { formatList, storeLabel } from "@/lib/format";
+import { storeLabel } from "@/lib/format";
 import {
   invalidateKeywordMutation,
   keywordsOptions,
@@ -31,7 +40,7 @@ import { useKeyedSingleFlight } from "@/lib/single-flight";
 import { cn } from "@/lib/utils";
 import { SpiderDialog } from "./SpiderDialog";
 import { SuggestionList, suggestionListState } from "./SuggestionList";
-import { STRATEGIES, storeLookupLabels } from "./suggestion-strategies";
+import { STRATEGIES } from "./suggestion-strategies";
 
 export function SuggestionsPanel({
   id,
@@ -43,13 +52,16 @@ export function SuggestionsPanel({
   store: Store;
 }) {
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
   const [strategy, setStrategy] = useQueryState(
     "strategy",
     suggestionStrategyParser,
   );
+  const liveLookup = isStoreSuggestionStrategy(strategy);
 
   const tracked = useQuery(keywordsOptions(id, country));
+  const [open, setOpen] = useState(
+    () => tracked.data?.length === 0 && !liveLookup,
+  );
   const trackedTexts = new Set(
     (tracked.data ?? []).map((keyword) => keyword.text),
   );
@@ -103,14 +115,14 @@ export function SuggestionsPanel({
             </button>
           </h3>
         </CardTitle>
+        <CardDescription>
+          Phrases from your listing, your competitors, your reviews and store
+          search that you do not track yet.
+        </CardDescription>
       </CardHeader>
 
       {open ? (
         <CardContent className="flex flex-col gap-4">
-          <p className={LEDE}>
-            {formatList(storeLookupLabels())} run a live {storeLabel(store)}{" "}
-            lookup, so results can take a few seconds.
-          </p>
           <Tabs
             value={strategy}
             onValueChange={(value) =>
@@ -128,7 +140,15 @@ export function SuggestionsPanel({
 
           <div className="flex items-center justify-between gap-4">
             <p className="text-caption text-muted-foreground">
-              {STRATEGIES.find((item) => item.value === strategy)?.description}
+              <span>
+                {
+                  STRATEGIES.find((item) => item.value === strategy)
+                    ?.description
+                }
+              </span>
+              {liveLookup ? (
+                <span>{`. Runs a live ${storeLabel(store)} lookup, so it can take a few seconds.`}</span>
+              ) : null}
             </p>
             <SpiderDialog appId={id} country={country}>
               <Button variant="outline" size="sm">

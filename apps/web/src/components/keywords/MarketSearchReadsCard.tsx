@@ -1,21 +1,15 @@
 "use client";
 
-import { Suspense, useId, type ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { ChevronDown } from "lucide-react";
 import {
   KEYWORD_FIELD_CHAR_LIMIT,
   type MarketLocalizationRead,
 } from "@asobeast/shared";
 import { ReadRoleBadge } from "@/components/localizations/ReadRoleBadge";
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { CollapsibleCard } from "@/components/layout/CollapsibleCard";
 import { InfoTip } from "@/components/ui/info-tip";
 import { Meter } from "@/components/ui/meter";
 import {
@@ -25,10 +19,14 @@ import {
   uniqueWordCount,
   unshippedReads,
 } from "@/lib/app-localizations";
-import { formatNumber, pluralize } from "@/lib/format";
+import { formatList, formatNumber, pluralize } from "@/lib/format";
 import { localizationName } from "@/lib/localizations";
 import { marketKeywordFieldsOptions } from "@/lib/queries";
-import { FOOTER_LINK } from "@/components/layout/panel-classes";
+import {
+  FOOTER_LINK,
+  SECTION_CHEVRON,
+} from "@/components/layout/panel-classes";
+import { KEYWORD_SECTION } from "./keyword-sections";
 import { cn } from "@/lib/utils";
 import { MarketWastedWords } from "./MarketWastedWords";
 import { MarketSearchReadsSkeleton } from "./skeletons";
@@ -42,17 +40,14 @@ function ReadsCard({
   aside?: ReactNode;
   children: ReactNode;
 }) {
-  const titleId = useId();
   return (
-    <Card role="region" aria-labelledby={titleId} className="min-w-0">
-      <CardHeader>
-        <CardTitle asChild>
-          <h3 id={titleId}>{`What ${market.toUpperCase()} search reads`}</h3>
-        </CardTitle>
-        {aside ? <CardAction>{aside}</CardAction> : null}
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">{children}</CardContent>
-    </Card>
+    <CollapsibleCard
+      section={KEYWORD_SECTION.reads}
+      title={`What ${market.toUpperCase()} search reads`}
+      actions={aside}
+    >
+      <div className="flex flex-col gap-4">{children}</div>
+    </CollapsibleCard>
   );
 }
 
@@ -72,8 +67,8 @@ function ReadRow({ id, read }: { id: string; read: MarketLocalizationRead }) {
         />
         <span className="numeric shrink-0 text-caption text-muted-foreground">
           {read.phrases.length === 0
-            ? "Empty"
-            : `${read.charactersUsed}/${read.charactersLimit}`}
+            ? "Keyword field empty"
+            : `Keyword field ${read.charactersUsed}/${read.charactersLimit}`}
         </span>
       </span>
       <Link
@@ -100,19 +95,22 @@ function UnshippedReads({
 }) {
   if (reads.length === 0) return null;
   return (
-    <details open={open} className="border-t border-border-subtle pt-3">
-      <summary className="cursor-pointer text-body">
-        {`${market.toUpperCase()} also reads ${pluralize(reads.length, "localization")} you don't ship · up to ${formatNumber(reads.length * KEYWORD_FIELD_CHAR_LIMIT)} more characters`}
+    <details
+      open={open}
+      className="group/unshipped border-t border-border-subtle pt-3"
+    >
+      <summary className="flex cursor-pointer list-none items-center gap-2 rounded-sm text-body outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+        <span>
+          {`${market.toUpperCase()} also reads ${pluralize(reads.length, "localization")} you don't ship · up to ${formatNumber(reads.length * KEYWORD_FIELD_CHAR_LIMIT)} more characters`}
+        </span>
+        <ChevronDown
+          aria-hidden
+          className={cn(SECTION_CHEVRON, "group-open/unshipped:rotate-180")}
+        />
       </summary>
-      <ul className="mt-3 flex flex-wrap gap-2">
-        {reads.map((read) => (
-          <li key={read.localization}>
-            <Badge variant="secondary">
-              {localizationName(read.localization)}
-            </Badge>
-          </li>
-        ))}
-      </ul>
+      <p className="mt-3 max-w-prose text-dense text-muted-foreground">
+        {formatList(reads.map((read) => localizationName(read.localization)))}
+      </p>
       <Link
         href={localizationsSectionHref(id)}
         className={cn(FOOTER_LINK, "mt-2")}

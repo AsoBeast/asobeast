@@ -4,13 +4,11 @@ import type {
 } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
 import {
-  difficultyScore,
   emptyStateOf,
-  opportunityScore,
-  popularityScore,
   rankLabel,
   rankText,
-  relevanceScore,
+  shownDifficulty,
+  shownScore,
 } from "./discovery-rows";
 
 const item = (
@@ -73,21 +71,17 @@ describe("rankLabel", () => {
 });
 
 describe("scores", () => {
-  it("grades each score on its own scale", () => {
-    const row = item();
+  it("shows each score as the whole number the tracked table shows", () => {
+    const row = item({ volume: 51.6 });
 
-    expect(popularityScore(row)).toEqual({ value: 52, grade: "fair" });
-    expect(difficultyScore(row)).toEqual({ value: 41, grade: "fair" });
-    expect(relevanceScore(row)).toEqual({ value: 85, grade: "strong" });
-    expect(opportunityScore(row)).toEqual({ value: 41, grade: "fair" });
+    expect(shownScore(row.volume)).toBe(52);
+    expect(shownDifficulty(row)).toBe(41);
+    expect(shownScore(row.relevance)).toBe(85);
   });
 
-  it("leaves a missing score ungraded", () => {
-    const row = item({ volume: null, difficulty: null, opportunity: null });
-
-    expect(popularityScore(row)).toEqual({ value: null, grade: null });
-    expect(difficultyScore(row)).toEqual({ value: null, grade: null });
-    expect(opportunityScore(row)).toEqual({ value: null, grade: null });
+  it("keeps a missing score missing", () => {
+    expect(shownScore(null)).toBeNull();
+    expect(shownDifficulty(item({ difficulty: null }))).toBeNull();
   });
 });
 

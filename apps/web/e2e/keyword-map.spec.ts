@@ -182,19 +182,17 @@ test.describe("the zone filter", () => {
 test.describe("the opportunity map", () => {
   test("the switch", async ({ page }) => {
     await page.goto(KEYWORDS);
-    const views = page.getByRole("tablist", { name: "Keyword view" });
+    const toggle = page.getByRole("button", { name: "Map", exact: true });
     await expect(mapRegion(page)).toHaveCount(0);
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
 
-    await views.getByRole("tab", { name: "Map" }).click();
+    await toggle.click();
 
     await expect(page).toHaveURL(/view=map/);
-    await expect(views.getByRole("tab", { name: "Map" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
     await expect(mapRegion(page)).toBeVisible();
 
-    await views.getByRole("tab", { name: "Table" }).click();
+    await toggle.click();
 
     await expect(page).not.toHaveURL(/view=/);
     await expect(mapRegion(page)).toHaveCount(0);
@@ -203,10 +201,9 @@ test.describe("the opportunity map", () => {
   test("a link opens the map", async ({ page }) => {
     await page.goto(MAP_URL);
     await expect(mapRegion(page)).toBeVisible();
-    await expect(page.getByRole("tab", { name: "Map" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    await expect(
+      page.getByRole("button", { name: "Map", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
     await page.reload();
     await expect(mapRegion(page)).toBeVisible();
 

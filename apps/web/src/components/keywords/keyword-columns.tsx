@@ -276,7 +276,7 @@ function scoreColumns() {
   return [
     columnHelper.accessor((row) => nullsLast(row.opportunity), {
       id: "opportunity",
-      meta: { label: "Opportunity", phone: true, numeric: true },
+      meta: { label: "Opportunity", numeric: true },
       ...SORTABLE,
       sortDescFirst: true,
       filterFn: gradeFilter("opportunity"),
@@ -365,7 +365,7 @@ function acquisitionsColumn() {
       sortDescFirst: true,
       header: ({ column }) => (
         <span className="inline-flex items-center gap-1">
-          <SortableHeader column={column} label="Play installs" />
+          <SortableHeader column={column} label="Installs" />
           <PlayInstallsTip />
         </span>
       ),
