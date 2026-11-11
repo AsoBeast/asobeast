@@ -315,3 +315,15 @@ export function CompetitorsInTop10Cell({ value }: { value: number | null }) {
     </span>
   );
 }
+
+export function RevealCell({ label }: { label: string | null }) {
+  if (label === null) {
+    return (
+      <span className="text-muted-foreground">
+        <span aria-hidden="true">—</span>
+        <span className="sr-only">Reveal: not available</span>
+      </span>
+    );
+  }
+  return <span className="font-mono text-sm">{label}</span>;
+}

@@ -163,6 +163,30 @@ test("a second click on a sort header flips the direction", async ({
   expect(requests).toEqual([]);
 });
 
+test("the reveal column sorts the earliest suggestion first", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+
+  await page.getByRole("button", { name: "Columns" }).click();
+  await page
+    .getByRole("menu")
+    .getByRole("menuitemcheckbox", { name: "Reveal" })
+    .click();
+  await page.keyboard.press("Escape");
+
+  await page.getByRole("button", { name: "Reveal", exact: true }).click();
+
+  await expect(page).toHaveURL(/sort=reveal/);
+  await expect(firstDataRow(page)).toContainText("focus timer");
+  await expect(
+    page
+      .getByRole("table", { name: /Tracked keywords/ })
+      .getByRole("row")
+      .nth(2),
+  ).toContainText("pomodoro");
+});
+
 test("a pasted link with a direction loads in that order and announces it", async ({
   page,
 }) => {
@@ -883,7 +907,7 @@ test("the columns menu hides a column and remembers it", async ({ page }) => {
   ).toHaveCount(0);
   await expect(
     menu.getByRole("menuitemcheckbox").filter({ hasNotText: "Listing marks" }),
-  ).toHaveCount(11);
+  ).toHaveCount(12);
   await menu.getByRole("menuitemcheckbox", { name: "Source" }).click();
   await page.keyboard.press("Escape");
 
