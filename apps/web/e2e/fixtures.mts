@@ -6512,11 +6512,35 @@ export const PLAY_AUDIT: AppAuditResult = {
 
 export const AUDIT_HISTORY_POINTS = [
   {
-    date: utcDaysAgo(1),
+    date: utcDaysAgo(7),
+    overall: 62.4,
+    coveredWeight: 90,
+    totalWeight: 110,
+    rubricVersion: "v1",
+    confidence: 0.78,
+  },
+  {
+    date: utcDaysAgo(5),
+    overall: 65.1,
+    coveredWeight: 90,
+    totalWeight: 110,
+    rubricVersion: "v1",
+    confidence: 0.8,
+  },
+  {
+    date: utcDaysAgo(3),
     overall: 68.4,
     coveredWeight: 90,
     totalWeight: 110,
     rubricVersion: "v2",
+    confidence: 0.82,
+  },
+  {
+    date: utcDaysAgo(1),
+    overall: 71.8,
+    coveredWeight: 95,
+    totalWeight: 110,
+    rubricVersion: "v3",
     confidence: 0.82,
   },
 ];

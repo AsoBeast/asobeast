@@ -29,6 +29,22 @@ test("never labels the history snapshot as the latest score", async ({
   ).toBeVisible();
 });
 
+test("marks every rubric version change and keeps the labels inside the chart", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-gp/audit");
+
+  const chart = page.getByRole("region", { name: "Score history" });
+  await expect(chart.getByText("Rubric v2")).toBeVisible();
+  const newest = chart.getByText("Rubric v3");
+  await expect(newest).toBeVisible();
+
+  const label = (await newest.boundingBox())!;
+  const bounds = (await chart.boundingBox())!;
+  expect(label.x).toBeGreaterThanOrEqual(bounds.x);
+  expect(label.x + label.width).toBeLessThanOrEqual(bounds.x + bounds.width);
+});
+
 test("shows the score without scrolling on a phone", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/apps/app-1/audit");
@@ -46,7 +62,7 @@ test("labels a low confidence grade provisional", async ({ page, context }) => {
 });
 
 test("names the date of the history snapshot it shows", async ({ page }) => {
-  await page.goto("/apps/app-gp/audit");
+  await page.goto("/apps/app-long/audit");
 
   await expect(page.getByText(/Last daily snapshot · /)).toBeVisible();
 });
