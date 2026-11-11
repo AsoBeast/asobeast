@@ -143,8 +143,12 @@ export function KeywordRowActions({
             Score now
           </DropdownMenuItem>
           <DropdownMenuItem
-            disabled={update.isPending}
-            onSelect={() => update.mutate({ active: !keyword.active })}
+            aria-disabled={update.isPending || undefined}
+            className="aria-disabled:opacity-60"
+            onSelect={(event) => {
+              if (update.isPending) event.preventDefault();
+              else update.mutate({ active: !keyword.active });
+            }}
           >
             {keyword.active ? <Pause /> : <Play />}
             <span>{keyword.active ? "Pause tracking" : "Resume tracking"}</span>

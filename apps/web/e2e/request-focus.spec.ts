@@ -228,6 +228,83 @@ test("stopping a keyword keeps focus in the table when the list answers at once"
   ).toHaveCount(1);
 });
 
+test("stopping the only keyword a search shows moves focus to the search", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+  const listed: { text: string }[] = await (
+    await page.request.get("/api/backend/apps/app-1/keywords?country=us")
+  ).json();
+  let stopped = false;
+  await page.route("**/api/backend/apps/app-1/keywords?*", (route) =>
+    stopped && route.request().method() === "GET"
+      ? route.fulfill({
+          json: listed.filter((row) => row.text !== "pomodoro"),
+        })
+      : route.fallback(),
+  );
+  await page.route(
+    /\/api\/backend\/apps\/app-1\/keywords\/[^/?]+$/,
+    (route) => {
+      if (route.request().method() !== "DELETE") return route.fallback();
+      stopped = true;
+      return route.fulfill({ status: 204 });
+    },
+  );
+  await page.goto("/apps/app-1/keywords?q=pomodoro");
+  const actions = page.getByRole("button", {
+    name: "Keyword actions for pomodoro",
+  });
+  await expect(
+    page.getByRole("button", { name: /^Keyword actions for / }),
+  ).toHaveCount(1);
+
+  await pressFromKeyboard(actions);
+  await page.getByRole("menuitem", { name: "Stop tracking" }).click();
+  const dialog = page.getByRole("alertdialog", {
+    name: "Stop tracking pomodoro?",
+  });
+  await dialog.getByRole("button", { name: "Stop tracking" }).press("Enter");
+
+  await expect(dialog).toBeHidden();
+  await expect(actions).toHaveCount(0);
+  await expect(page.getByText("No keywords match these filters")).toBeVisible();
+  await expect(
+    page
+      .getByRole("searchbox", { name: "Search keywords" })
+      .or(page.getByRole("textbox", { name: "Search keywords" })),
+  ).toBeFocused();
+});
+
+test("pausing a keyword from the keyboard keeps focus on its row menu", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+  const actions = page.getByRole("button", {
+    name: "Keyword actions for pomodoro",
+  });
+  const held = await holdRequest(
+    page,
+    /\/api\/backend\/apps\/app-1\/keywords\/[^/?]+$/,
+    "PATCH",
+  );
+
+  await pressFromKeyboard(actions);
+  await page.getByRole("menuitem", { name: "Pause tracking" }).press("Enter");
+  await expect(actions).toBeFocused();
+  await actions.press("Enter");
+  const pending = page.getByRole("menuitem", {
+    name: /Pause tracking|Resume tracking/,
+  });
+
+  await expect(pending).toHaveAttribute("aria-disabled", "true");
+  await pending.focus();
+  await expect(pending).toBeFocused();
+  await pending.press("Enter");
+  await expect(pending).toBeVisible();
+  held.release();
+});
+
 test.describe("store connection controls keep focus", () => {
   test.beforeEach(({ context }) =>
     seedCookie(context, STORE_CONNECTION_COOKIE, "active"),

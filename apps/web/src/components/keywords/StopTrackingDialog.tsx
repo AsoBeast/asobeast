@@ -25,8 +25,11 @@ import { invalidateKeywordMutation } from "@/lib/queries";
 
 const ROW_MENU = 'button[aria-label^="Keyword actions for "]';
 
-const neighbouringMenu = (menu: HTMLElement | null): HTMLElement | null =>
-  siblingControl(menu?.closest("tr") ?? null, ROW_MENU);
+const KEYWORD_SEARCH = 'input[aria-label="Search keywords"]';
+
+const focusSuccessor = (menu: HTMLElement | null): HTMLElement | null =>
+  siblingControl(menu?.closest("tr") ?? null, ROW_MENU) ??
+  document.querySelector<HTMLElement>(KEYWORD_SEARCH);
 
 export function StopTrackingDialog({
   open,
@@ -75,7 +78,7 @@ export function StopTrackingDialog({
           label="Stop tracking"
           pendingLabel="Removing…"
           onConfirm={() => {
-            const successor = neighbouringMenu(returnFocus.current);
+            const successor = focusSuccessor(returnFocus.current);
             void remove.mutateAsync().then(
               () => {
                 handOff(successor);
