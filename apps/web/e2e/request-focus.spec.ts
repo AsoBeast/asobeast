@@ -183,6 +183,51 @@ test("stopping a keyword keeps focus on the confirmation, then on a row that sta
   ).toBe(false);
 });
 
+test("stopping a keyword keeps focus in the table when the list answers at once", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+  const listed: { text: string }[] = await (
+    await page.request.get("/api/backend/apps/app-1/keywords?country=us")
+  ).json();
+  expect(listed.map((row) => row.text)).toContain("pomodoro");
+  let stopped = false;
+  await page.route("**/api/backend/apps/app-1/keywords?*", (route) =>
+    stopped && route.request().method() === "GET"
+      ? route.fulfill({
+          json: listed.filter((row) => row.text !== "pomodoro"),
+        })
+      : route.fallback(),
+  );
+  await page.route(
+    /\/api\/backend\/apps\/app-1\/keywords\/[^/?]+$/,
+    (route) => {
+      if (route.request().method() !== "DELETE") return route.fallback();
+      stopped = true;
+      return route.fulfill({ status: 204 });
+    },
+  );
+  const actions = page.getByRole("button", {
+    name: "Keyword actions for pomodoro",
+  });
+
+  await pressFromKeyboard(actions);
+  await page.getByRole("menuitem", { name: "Stop tracking" }).click();
+  const dialog = page.getByRole("alertdialog", {
+    name: "Stop tracking pomodoro?",
+  });
+  await dialog.getByRole("button", { name: "Stop tracking" }).press("Enter");
+
+  await expect(dialog).toBeHidden();
+  await expect(actions).toHaveCount(0);
+  await expect(page.getByRole("row", { name: /focus timer/ })).toBeVisible();
+  await expect(
+    page
+      .getByRole("button", { name: /^Keyword actions for / })
+      .and(page.locator(":focus")),
+  ).toHaveCount(1);
+});
+
 test.describe("store connection controls keep focus", () => {
   test.beforeEach(({ context }) =>
     seedCookie(context, STORE_CONNECTION_COOKIE, "active"),
