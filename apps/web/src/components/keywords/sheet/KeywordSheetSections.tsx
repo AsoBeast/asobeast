@@ -4,7 +4,7 @@ import {
 } from "@asobeast/shared";
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
-import { lostPosition, staleCheckDay } from "@/lib/keyword-checks";
+import { isChecking, lostPosition, staleCheckDay } from "@/lib/keyword-checks";
 import { dayChange } from "@/lib/keyword-day-change";
 import {
   INSIGHT_LABELS,
@@ -45,16 +45,26 @@ function Missing({ label }: { label: string }) {
   );
 }
 
+function UncheckedPosition({ checking }: { checking: boolean }) {
+  return checking ? (
+    <span className="text-muted-foreground">Checking…</span>
+  ) : (
+    <Missing label="Position: not checked yet" />
+  );
+}
+
 function ScoreFact({
   label,
   metric,
   value,
   emphasize,
+  outdated,
 }: {
   label: string;
   metric: "opportunity" | "popularity" | "difficulty";
   value: number | null;
   emphasize?: boolean;
+  outdated?: boolean;
 }) {
   const shown = shownScore(value);
   return (
@@ -67,6 +77,7 @@ function ScoreFact({
           label={label}
           metric={metric}
           emphasize={emphasize}
+          outdated={outdated}
           className="ml-0 items-start"
         />
       )}
@@ -89,7 +100,7 @@ export function KeywordSheetFacts({
     <dl className="grid grid-cols-2 gap-x-4 gap-y-3 px-4 pt-4 pb-4 sm:grid-cols-4">
       <Fact label="Position">
         {label === null ? (
-          <Missing label="Position: not checked yet" />
+          <UncheckedPosition checking={isChecking(keyword)} />
         ) : (
           <>
             <PositionReadout
@@ -110,13 +121,14 @@ export function KeywordSheetFacts({
         opportunityEvidence(keyword),
         popularityEvidence(keyword),
         difficultyEvidence(keyword),
-      ].map(({ label, metric, value }) => (
+      ].map((evidence) => (
         <ScoreFact
-          key={metric}
-          label={label}
-          metric={metric}
-          value={value}
-          emphasize={metric === "opportunity"}
+          key={evidence.metric}
+          label={evidence.label}
+          metric={evidence.metric}
+          value={evidence.value}
+          emphasize={evidence.metric === "opportunity"}
+          outdated={"outdated" in evidence && evidence.outdated}
         />
       ))}
     </dl>

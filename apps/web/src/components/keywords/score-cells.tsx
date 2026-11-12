@@ -42,18 +42,21 @@ export function ScoreReadout({
   label,
   metric,
   emphasize,
+  outdated,
   className,
 }: {
   value: number;
   label: string;
   metric: GradeMetric;
   emphasize?: boolean;
+  outdated?: boolean;
   className?: string;
 }) {
   const graded = grade(metric, value);
-  const spoken = graded
+  const grading = graded
     ? `${label} ${value}, ${gradeLabel(graded)}`
     : `${label} ${value}`;
+  const spoken = outdated ? `${grading}. Older formula` : grading;
   return (
     <span
       data-grade={graded ?? undefined}
@@ -61,10 +64,14 @@ export function ScoreReadout({
       className={cn(
         SCORE_STACK,
         emphasize ? "font-semibold" : "font-medium",
+        outdated && "text-muted-foreground",
         className,
       )}
     >
-      <span aria-hidden>{value}</span>
+      <span aria-hidden className="inline-flex items-center gap-1">
+        {outdated ? <RefreshCcw className="size-3" /> : null}
+        <span>{value}</span>
+      </span>
       {graded ? <Meter value={value} fill={gradeFill(graded)} /> : null}
       <span className="sr-only">{spoken}</span>
     </span>
