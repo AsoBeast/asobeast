@@ -69,6 +69,7 @@ describe('outcomeOfError', () => {
   it.each([
     'Unexpected token } in JSON at position 1503',
     'Unexpected token } in JSON at position 503',
+    'Unexpected token } in JSON at position (503)',
     'no listing for app 64290017',
     'no listing for app 429',
   ])('calls %s broken although it holds the digits of a status', (cause) => {

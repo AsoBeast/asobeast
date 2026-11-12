@@ -19,6 +19,7 @@ export const TRANSPORT_MESSAGES = [
   'tunneling socket',
   'timeout',
   'fetch failed',
+  'rate limited',
 ] as const;
 
 export const TRANSPORT_STATUSES = [429, 503] as const;
@@ -26,7 +27,7 @@ export const TRANSPORT_STATUSES = [429, 503] as const;
 const STATUSES = TRANSPORT_STATUSES.join('|');
 
 const TRANSPORT_STATUS = new RegExp(
-  `(?:status|http)\\s+(?:${STATUSES})(?!\\d)|\\((?:${STATUSES})\\)`,
+  `(?:status|http)\\s+(?:${STATUSES})(?!\\d)`,
   'i',
 );
 
