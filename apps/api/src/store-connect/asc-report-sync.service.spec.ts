@@ -23,6 +23,7 @@ import {
   AscReportSync,
 } from './asc-report-sync.service';
 import { DiscoveryHeaderError } from './discovery-report';
+import { StoreConnectionRejectedError } from './store-sync-summary';
 
 const instance = (id: string, processingDate: string): AscInstance => ({
   id,
@@ -294,7 +295,9 @@ describe('AscReportSync', () => {
       new AscRejectedKeyError('revoked', 401, 'NOT_AUTHORIZED'),
     );
 
-    await expect(service.run()).rejects.toBeInstanceOf(UnrecoverableError);
+    await expect(service.run()).rejects.toBeInstanceOf(
+      StoreConnectionRejectedError,
+    );
     expect(connections.markRejected).toHaveBeenCalledWith(
       'APP_STORE',
       expect.stringContaining('refused this key'),
@@ -312,7 +315,9 @@ describe('AscReportSync', () => {
       ),
     );
 
-    await expect(service.run()).rejects.toBeInstanceOf(UnrecoverableError);
+    await expect(service.run()).rejects.toBeInstanceOf(
+      StoreConnectionRejectedError,
+    );
     expect(connections.markRejected).toHaveBeenCalledWith(
       'APP_STORE',
       AGREEMENT_MISSING,
@@ -519,7 +524,9 @@ describe('AscReportSync', () => {
       new AscRejectedKeyError('no', 403, 'FORBIDDEN_ERROR'),
     );
 
-    await expect(service.run()).rejects.toBeInstanceOf(UnrecoverableError);
+    await expect(service.run()).rejects.toBeInstanceOf(
+      StoreConnectionRejectedError,
+    );
     expect(connections.markRejected).toHaveBeenCalled();
   });
 

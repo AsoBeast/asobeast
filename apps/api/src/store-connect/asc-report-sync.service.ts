@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { StoreReportRequest } from '@prisma/client';
-import { UnrecoverableError } from 'bullmq';
 import { toDateKey } from '../analytics/analytics.support';
 import { PrismaService } from '../prisma/prisma.service';
 import type { DiscoveryVariant } from './asc-analytics-api';
@@ -24,6 +23,7 @@ import {
 } from './store-report-applier';
 import { StoreReportRequester } from './store-report-requester';
 import {
+  StoreConnectionRejectedError,
   emptySummary,
   retriesFailures,
   type SyncSummary,
@@ -119,7 +119,7 @@ export class AscReportSync {
       if (error instanceof AscRejectedKeyError) {
         const reason = refusalOf(error);
         await this.connections.markRejected(STORE, reason);
-        throw new UnrecoverableError(reason);
+        throw new StoreConnectionRejectedError(reason);
       }
       if (!(error instanceof AscRateLimitedError)) throw error;
       summary.rateLimited = true;

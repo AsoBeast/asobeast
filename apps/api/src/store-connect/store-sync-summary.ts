@@ -1,3 +1,5 @@
+import { UnrecoverableError } from 'bullmq';
+
 export interface SyncSummary {
   apps: number;
   instances: number;
@@ -37,3 +39,5 @@ export class PartialSyncRetryError extends Error {
     this.name = 'PartialSyncRetryError';
   }
 }
+
+export class StoreConnectionRejectedError extends UnrecoverableError {}

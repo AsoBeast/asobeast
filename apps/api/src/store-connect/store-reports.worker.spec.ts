@@ -3,11 +3,15 @@ import type { Job } from 'bullmq';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import type { SyncStoreReportsPayload } from '../jobs/jobs.types';
 import type { ErrorTracking } from '../observability/error-tracking.service';
+import { KEY_REFUSED } from './asc-http-errors';
 import type { AscReportSync } from './asc-report-sync.service';
 import type { PlayReportSync } from './play/play-report-sync.service';
 import { StoreReportSyncService } from './store-report-sync.service';
 import { StoreReportsWorker } from './store-reports.worker';
-import { emptySummary } from './store-sync-summary';
+import {
+  StoreConnectionRejectedError,
+  emptySummary,
+} from './store-sync-summary';
 
 describe('StoreReportsWorker', () => {
   const job = {
@@ -104,6 +108,30 @@ describe('StoreReportsWorker', () => {
 
     expect(tracking.capture).toHaveBeenCalled();
   });
+
+  it('keeps a key the store refused out of error tracking and still logs it', () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    const tracking = { capture: jest.fn() };
+    const worker = new StoreReportsWorker(
+      {} as StoreReportSyncService,
+      new WorkspaceContext(),
+      tracking as unknown as ErrorTracking,
+    );
+
+    const refused = {
+      ...job,
+      attemptsMade: 1,
+    } as unknown as Job<SyncStoreReportsPayload>;
+
+    worker.onFailed(refused, new StoreConnectionRejectedError(KEY_REFUSED));
+
+    expect(tracking.capture).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(
+      `store report sync APP_STORE failed on attempt 1 of 3: ${KEY_REFUSED}`,
+    );
+    warn.mockRestore();
+  });
+
   it('logs every failed attempt with the store and the reason', () => {
     const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
     const worker = new StoreReportsWorker(

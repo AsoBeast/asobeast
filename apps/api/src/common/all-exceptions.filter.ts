@@ -80,6 +80,10 @@ function exposedClientError(exception: unknown): ResolvedError | undefined {
   return { statusCode: status, error, message: exception.message };
 }
 
+const isReportable = (exception: unknown, statusCode: number): boolean =>
+  statusCode >= SERVER_ERROR_STATUS &&
+  !(exception instanceof StoreRequestError && exception.unreachable);
+
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
@@ -91,7 +95,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const request = http.getRequest<Request>();
     const response = http.getResponse<Response>();
     const resolved = this.resolve(exception);
-    if (resolved.statusCode >= SERVER_ERROR_STATUS) {
+    if (isReportable(exception, resolved.statusCode)) {
       this.tracking.capture(exception);
     }
     const { health, ...error } = resolved;
