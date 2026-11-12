@@ -50,9 +50,9 @@ function useSerpApp(appId: string) {
   return { viewer, homeCountry: data?.country };
 }
 
-type CapturedSerp = SerpSnapshot & { date: string };
+export type CapturedSerp = SerpSnapshot & { date: string };
 
-const isCaptured = (
+export const isCaptured = (
   snapshot: SerpSnapshot | undefined,
 ): snapshot is CapturedSerp => typeof snapshot?.date === "string";
 

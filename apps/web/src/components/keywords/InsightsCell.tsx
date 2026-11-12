@@ -19,7 +19,7 @@ import {
   type KeywordInsight,
 } from "@/lib/keyword-insights";
 
-const INSIGHT_VARIANTS: Record<
+export const INSIGHT_VARIANTS: Record<
   KeywordInsight,
   "destructive" | "info" | "success" | "warning"
 > = {
