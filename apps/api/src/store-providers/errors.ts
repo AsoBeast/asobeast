@@ -5,6 +5,24 @@ const STORE_NAMES: Record<Store, string> = {
   GOOGLE_PLAY: 'Google Play',
 };
 
+export const TRANSPORT_MESSAGES = [
+  'ECONNRESET',
+  'ECONNREFUSED',
+  'ETIMEDOUT',
+  'EHOSTUNREACH',
+  'ENETUNREACH',
+  'EPIPE',
+  'EAI_AGAIN',
+  'ENOTFOUND',
+  'UND_ERR',
+  'socket hang up',
+  'tunneling socket',
+  'timeout',
+  'fetch failed',
+  '429',
+  '503',
+] as const;
+
 export class StoreRequestError extends Error {
   constructor(
     readonly store: Store,
@@ -17,6 +35,13 @@ export class StoreRequestError extends Error {
 
   get userMessage(): string {
     return `${STORE_NAMES[this.store]} did not answer. Try again in a few minutes.`;
+  }
+
+  get unreachable(): boolean {
+    const lowered = this.causeMessage.toLowerCase();
+    return TRANSPORT_MESSAGES.some((marker) =>
+      lowered.includes(marker.toLowerCase()),
+    );
   }
 }
 

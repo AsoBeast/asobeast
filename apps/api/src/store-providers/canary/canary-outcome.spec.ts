@@ -4,9 +4,10 @@ import {
   StoreAppNotFoundError,
   StoreNotSupportedError,
   StoreRequestError,
+  TRANSPORT_MESSAGES,
 } from '../errors';
 import { CanaryShapeError } from './canary-checks';
-import { outcomeOfError, TRANSPORT_MESSAGES } from './canary-outcome';
+import { outcomeOfError } from './canary-outcome';
 
 function requestError(causeMessage: string): StoreRequestError {
   return new StoreRequestError(Store.APP_STORE, 'getApp', causeMessage);
