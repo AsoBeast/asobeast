@@ -150,6 +150,17 @@ describe('preview-video-present', () => {
     });
   });
 
+  it('writes one preview video in the singular', () => {
+    const single = previewVideoChecks(
+      appStoreContext({ facts: { previewVideoCount: 1 } }),
+    );
+
+    expect(single[0]).toMatchObject({
+      score: 10,
+      detail: 'The store page shows 1 preview video.',
+    });
+  });
+
   it('fails an App Store page whose extract holds no preview videos', () => {
     const missing = previewVideoChecks(
       appStoreContext({ facts: { previewVideoCount: 0 } }),

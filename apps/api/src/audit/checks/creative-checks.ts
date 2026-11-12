@@ -363,7 +363,7 @@ export const previewVideoChecks = (context: AuditContext): RubricCheck[] => {
         score: count > 0 ? 10 : 0,
         detail:
           count > 0
-            ? `The store page shows ${count} preview videos.`
+            ? `The store page shows ${count} preview ${count === 1 ? 'video' : 'videos'}.`
             : 'No preview video is on the store page.',
         advice: {
           title: 'Add a preview video',
