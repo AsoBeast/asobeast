@@ -69,7 +69,7 @@ export function KeywordsTable({
   const [sheetId, setSheet] = useKeywordSheet();
   const sheetKeyword = keywords.find((row) => row.keywordId === sheetId);
   const openSheet = useCallback(
-    (keywordId: string) => void setSheet(keywordId),
+    (keywordId: string) => void setSheet(keywordId, { history: "push" }),
     [setSheet],
   );
   const { data: markets } = useQuery(keywordCountriesOptions(id));

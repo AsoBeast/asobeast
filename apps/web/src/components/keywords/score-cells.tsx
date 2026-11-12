@@ -42,11 +42,13 @@ export function ScoreReadout({
   label,
   metric,
   emphasize,
+  className,
 }: {
   value: number;
   label: string;
   metric: GradeMetric;
   emphasize?: boolean;
+  className?: string;
 }) {
   const graded = grade(metric, value);
   const spoken = graded
@@ -56,7 +58,11 @@ export function ScoreReadout({
     <span
       data-grade={graded ?? undefined}
       title={spoken}
-      className={cn(SCORE_STACK, emphasize ? "font-semibold" : "font-medium")}
+      className={cn(
+        SCORE_STACK,
+        emphasize ? "font-semibold" : "font-medium",
+        className,
+      )}
     >
       <span aria-hidden>{value}</span>
       {graded ? <Meter value={value} fill={gradeFill(graded)} /> : null}

@@ -21,7 +21,7 @@ import {
   KeywordSheetInsights,
   KeywordSheetNotes,
   KeywordSheetScores,
-} from "./KeywordSheetFacts";
+} from "./KeywordSheetSections";
 import { KeywordSheetListing, KeywordSheetResults } from "./KeywordSheetReads";
 import { SheetSection } from "./SheetSection";
 
@@ -54,7 +54,7 @@ function KeywordSheetBody({
 }) {
   const [range, setRange] = useState<RangePreset>("30d");
   return (
-    <div className="flex flex-col overflow-y-auto pb-6">
+    <>
       <SheetHeader className="flex-row items-start justify-between gap-3 px-4 pt-4 pr-12">
         <div className="flex min-w-0 flex-col gap-1">
           <SheetTitle className="flex items-center gap-2">
@@ -78,26 +78,28 @@ function KeywordSheetBody({
         />
       </SheetHeader>
       <KeywordSheetFacts keyword={keyword} today={today} />
-      <KeywordSheetInsights keyword={keyword} today={today} />
-      <SheetSection title="Position history">
-        <PositionHistoryPanel
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-6">
+        <KeywordSheetInsights keyword={keyword} today={today} />
+        <SheetSection title="Position history">
+          <PositionHistoryPanel
+            appId={appId}
+            store={store}
+            keyword={keyword}
+            homeCountry={homeCountry}
+            range={range}
+            onRange={setRange}
+          />
+        </SheetSection>
+        <KeywordSheetResults
           appId={appId}
-          store={store}
           keyword={keyword}
-          homeCountry={homeCountry}
-          range={range}
-          onRange={setRange}
+          onOpenAll={onOpenSerp}
         />
-      </SheetSection>
-      <KeywordSheetResults
-        appId={appId}
-        keyword={keyword}
-        onOpenAll={onOpenSerp}
-      />
-      <KeywordSheetListing appId={appId} keywordId={keyword.keywordId} />
-      <KeywordSheetScores keyword={keyword} />
-      <KeywordSheetNotes keyword={keyword} />
-    </div>
+        <KeywordSheetListing appId={appId} keywordId={keyword.keywordId} />
+        <KeywordSheetScores keyword={keyword} />
+        <KeywordSheetNotes keyword={keyword} />
+      </div>
+    </>
   );
 }
 

@@ -48,6 +48,35 @@ test("escape closes the sheet and returns to the keyword", async ({ page }) => {
   await expect(opener(page, "study timer")).toBeFocused();
 });
 
+test("back closes the sheet and stays on the page", async ({ page }) => {
+  await page.goto(KEYWORDS);
+  await (await hydrated(opener(page, "study timer"))).click();
+  await expect(sheet(page, "study timer")).toBeVisible();
+
+  await page.goBack();
+
+  await expect(sheet(page, "study timer")).toHaveCount(0);
+  await expect(page).toHaveURL(/\/apps\/app-1\/keywords$/);
+});
+
+test("the header stays in view while the sections scroll", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 600 });
+  await page.goto(`${KEYWORDS}?keyword=kw-1`);
+  const dialog = sheet(page, "focus timer");
+  await expect(dialog).toBeVisible();
+
+  await dialog
+    .getByRole("heading", { name: "Scores and where they come from" })
+    .scrollIntoViewIfNeeded();
+
+  await expect(
+    dialog.getByRole("heading", { name: /^focus timer/ }),
+  ).toBeInViewport();
+  await expect(
+    dialog.getByRole("button", { name: "Keyword actions for focus timer" }),
+  ).toBeInViewport();
+});
+
 test("a link opens the sheet of its keyword", async ({ page }) => {
   await page.goto(`${KEYWORDS}?keyword=kw-1`);
 

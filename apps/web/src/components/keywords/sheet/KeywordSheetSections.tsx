@@ -2,6 +2,7 @@ import {
   formatCheckedPosition,
   type TrackedKeywordItem,
 } from "@asobeast/shared";
+import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { lostPosition, staleCheckDay } from "@/lib/keyword-checks";
 import { dayChange } from "@/lib/keyword-day-change";
@@ -26,13 +27,7 @@ import {
 } from "../score-evidence";
 import { SheetSection } from "./SheetSection";
 
-function Fact({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex min-w-0 flex-col gap-1">
       <dt className="text-label text-faint-foreground">{label}</dt>
@@ -67,14 +62,13 @@ function ScoreFact({
       {shown === null ? (
         <Missing label={`${label}: not scored yet`} />
       ) : (
-        <span className="flex w-14">
-          <ScoreReadout
-            value={shown}
-            label={label}
-            metric={metric}
-            emphasize={emphasize}
-          />
-        </span>
+        <ScoreReadout
+          value={shown}
+          label={label}
+          metric={metric}
+          emphasize={emphasize}
+          className="ml-0 items-start"
+        />
       )}
     </Fact>
   );
@@ -112,9 +106,19 @@ export function KeywordSheetFacts({
           </>
         )}
       </Fact>
-      <ScoreFact {...opportunityEvidence(keyword)} />
-      <ScoreFact {...popularityEvidence(keyword)} />
-      <ScoreFact {...difficultyEvidence(keyword)} />
+      {[
+        opportunityEvidence(keyword),
+        popularityEvidence(keyword),
+        difficultyEvidence(keyword),
+      ].map(({ label, metric, value }) => (
+        <ScoreFact
+          key={metric}
+          label={label}
+          metric={metric}
+          value={value}
+          emphasize={metric === "opportunity"}
+        />
+      ))}
     </dl>
   );
 }
@@ -155,7 +159,7 @@ function EvidenceRow({
 }: {
   label: string;
   value: number | null;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   const shown = shownScore(value);
   return (
