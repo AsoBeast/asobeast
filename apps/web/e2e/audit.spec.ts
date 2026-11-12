@@ -2,6 +2,7 @@ import type { AppAuditResult, AuditAiRunResult } from "@asobeast/shared";
 import type { Response } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { seedCookies } from "./routes.mts";
+import { layoutBox } from "./layout-box.mts";
 
 test("shows one score with its grade, measured share and potential", async ({
   page,
@@ -39,8 +40,8 @@ test("marks every rubric version change and keeps the labels inside the chart", 
   const newest = chart.getByText("Rubric v3");
   await expect(newest).toBeVisible();
 
-  const label = (await newest.boundingBox())!;
-  const bounds = (await chart.boundingBox())!;
+  const label = await layoutBox(newest);
+  const bounds = await layoutBox(chart);
   expect(label.x).toBeGreaterThanOrEqual(bounds.x);
   expect(label.x + label.width).toBeLessThanOrEqual(bounds.x + bounds.width);
 });
@@ -542,13 +543,11 @@ test("keeps the skeleton and the loaded hero the same height", async ({
 
   const skeleton = page.locator('[data-slot="score-ring-skeleton"]');
   await expect(skeleton).toBeVisible();
-  const before = await skeleton.boundingBox();
+  const before = await layoutBox(skeleton);
 
   const ring = page.locator('[data-slot="score-ring"]').first();
   await expect(ring).toBeVisible();
-  const after = await ring.boundingBox();
+  const after = await layoutBox(ring);
 
-  expect(before).not.toBeNull();
-  expect(after).not.toBeNull();
-  expect(Math.abs(before!.height - after!.height)).toBeLessThanOrEqual(8);
+  expect(Math.abs(before.height - after.height)).toBeLessThanOrEqual(8);
 });
