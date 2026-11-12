@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { UnrecoverableError } from 'bullmq';
 import { toDateKey } from '../../analytics/analytics.support';
 import { WorkspaceContext } from '../../common/tenancy/workspace-context';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -8,6 +7,7 @@ import { StoreConnectionService } from '../store-connection.service';
 import { PLAY_ALL_MARKETS } from '../store-funnel';
 import { funnelUpserts, reportTransaction } from '../store-funnel-rows';
 import {
+  StoreConnectionRejectedError,
   emptySummary,
   retriesFailures,
   type SyncSummary,
@@ -264,7 +264,7 @@ export class PlayReportSync {
     const refusal = playRefusal(error, api);
     if (refusal) {
       await this.connections.markRejected(STORE, refusal);
-      throw new UnrecoverableError(refusal);
+      throw new StoreConnectionRejectedError(refusal);
     }
     if (!(error instanceof GcsRateLimitedError)) throw error;
     summary.rateLimited = true;

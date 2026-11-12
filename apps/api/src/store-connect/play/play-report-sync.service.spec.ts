@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { UnrecoverableError } from 'bullmq';
 import { SignInOffError } from './google-sign-in';
 import type { WorkspaceContext } from '../../common/tenancy/workspace-context';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { StoreConnectionService } from '../store-connection.service';
 import { FUNNEL_UPSERT_BATCH } from '../store-funnel-rows';
+import { StoreConnectionRejectedError } from '../store-sync-summary';
 import {
   GcsBucketError,
   GcsRateLimitedError,
@@ -376,7 +376,9 @@ describe('PlayReportSync', () => {
       const { service, api, connections } = harness(twoMonths);
       api.verify.mockRejectedValueOnce(error);
 
-      await expect(service.run(NOW)).rejects.toBeInstanceOf(UnrecoverableError);
+      await expect(service.run(NOW)).rejects.toBeInstanceOf(
+        StoreConnectionRejectedError,
+      );
       expect(connections.markRejected).toHaveBeenCalledWith(
         'GOOGLE_PLAY',
         expect.stringContaining(reason),
@@ -530,7 +532,9 @@ describe('PlayReportSync', () => {
         api.download.mockRejectedValue(refused);
       }
 
-      await expect(service.run(NOW)).rejects.toBeInstanceOf(UnrecoverableError);
+      await expect(service.run(NOW)).rejects.toBeInstanceOf(
+        StoreConnectionRejectedError,
+      );
 
       expect(connections.markRejected).toHaveBeenCalledWith(
         'GOOGLE_PLAY',
