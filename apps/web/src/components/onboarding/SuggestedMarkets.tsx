@@ -147,7 +147,7 @@ export function MarketCostTip({ store }: { store: Store }) {
         href={MARKET_COST_GUIDE}
         target="_blank"
         rel="noreferrer"
-        className="font-medium text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-foreground"
+        className="font-medium text-foreground link-underline"
       >
         Read what a market costs
       </a>

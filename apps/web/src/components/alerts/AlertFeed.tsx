@@ -39,7 +39,7 @@ function AlertFeedHeader() {
           href={ALERTS_GUIDE}
           target="_blank"
           rel="noreferrer"
-          className="font-medium text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-foreground"
+          className="font-medium text-foreground link-underline"
         >
           Read how alerts work
         </a>

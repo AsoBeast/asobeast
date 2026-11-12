@@ -42,3 +42,13 @@
     "tnum" 1,
     "lnum" 1;
 }
+
+@utility link-underline {
+  text-decoration-line: underline;
+  text-decoration-color: var(--color-faint-foreground);
+  text-underline-offset: 4px;
+
+  &:hover {
+    text-decoration-color: var(--color-foreground);
+  }
+}

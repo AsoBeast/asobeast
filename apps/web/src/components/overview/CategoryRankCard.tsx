@@ -140,10 +140,7 @@ function HeaderStat({
 
   return (
     <p className="text-body">
-      <Link
-        href={href}
-        className="underline decoration-faint-foreground underline-offset-4 hover:decoration-foreground"
-      >
+      <Link href={href} className="link-underline">
         {headline.current === null ? (
           <span className="text-muted-foreground">
             {notInChartLabel(headline)}

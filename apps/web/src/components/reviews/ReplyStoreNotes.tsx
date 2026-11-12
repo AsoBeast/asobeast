@@ -38,7 +38,7 @@ export function ReplyFooter({
             {" "}
             <Link
               href={STORE_CONNECTIONS_PATH}
-              className="font-medium text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-foreground"
+              className="font-medium text-foreground link-underline"
             >
               Open store connections
             </Link>

@@ -14,7 +14,7 @@ export function GuideLink({
       href={href}
       target="_blank"
       rel="noreferrer noopener"
-      className="inline-flex w-fit items-center gap-1.5 rounded-sm text-sm font-medium text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      className="inline-flex w-fit items-center gap-1.5 rounded-sm text-sm font-medium text-foreground link-underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
     >
       <BookOpen aria-hidden className="size-4 shrink-0" />
       <span>{children}</span>

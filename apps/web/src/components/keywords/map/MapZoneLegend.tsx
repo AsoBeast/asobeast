@@ -67,7 +67,7 @@ export function MapZoneLegend({
                 href={OPPORTUNITY_MAP_GUIDE}
                 target="_blank"
                 rel="noreferrer"
-                className="font-medium text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-foreground"
+                className="font-medium text-foreground link-underline"
               >
                 Read the opportunity map
               </a>

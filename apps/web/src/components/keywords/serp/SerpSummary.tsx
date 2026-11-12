@@ -34,7 +34,7 @@ function GuideLink() {
       href={SEARCH_RESULTS_GUIDE}
       target="_blank"
       rel="noreferrer"
-      className="underline decoration-faint-foreground underline-offset-4 hover:decoration-foreground"
+      className="link-underline"
     >
       Read about search results
     </a>

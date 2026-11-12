@@ -113,7 +113,7 @@ export function LocalizationMatrix({
           {hint.text}{" "}
           <Link
             href={hint.href}
-            className="font-medium text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-foreground"
+            className="font-medium text-foreground link-underline"
           >
             {hint.link}
           </Link>
