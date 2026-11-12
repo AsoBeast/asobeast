@@ -2,8 +2,9 @@ import {
   formatCheckedPosition,
   type TrackedKeywordItem,
 } from "@asobeast/shared";
-import type { ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { isChecking, lostPosition, staleCheckDay } from "@/lib/keyword-checks";
 import { dayChange } from "@/lib/keyword-day-change";
 import {
@@ -14,6 +15,9 @@ import {
 import { shownScore } from "@/lib/keyword-scores";
 import { DayChangeCell } from "../DayChangeCell";
 import { INSIGHT_VARIANTS } from "../InsightsCell";
+import { CheckingMark } from "../keyword-cells";
+import { KeywordAnnotationsDialog } from "../KeywordAnnotationsDialog";
+import { StaleCheckMark } from "../StaleCheckMark";
 import { PositionReadout } from "../PositionReadout";
 import {
   DerivedScoreDetails,
@@ -47,7 +51,7 @@ function Missing({ label }: { label: string }) {
 
 function UncheckedPosition({ checking }: { checking: boolean }) {
   return checking ? (
-    <span className="text-muted-foreground">Checking…</span>
+    <CheckingMark />
   ) : (
     <Missing label="Position: not checked yet" />
   );
@@ -59,12 +63,14 @@ function ScoreFact({
   value,
   emphasize,
   outdated,
+  floorAnswer,
 }: {
   label: string;
   metric: "opportunity" | "popularity" | "difficulty";
   value: number | null;
   emphasize?: boolean;
   outdated?: boolean;
+  floorAnswer?: boolean;
 }) {
   const shown = shownScore(value);
   return (
@@ -78,6 +84,7 @@ function ScoreFact({
           metric={metric}
           emphasize={emphasize}
           outdated={outdated}
+          floorAnswer={floorAnswer}
           className="ml-0 items-start"
         />
       )}
@@ -96,6 +103,7 @@ export function KeywordSheetFacts({
     keyword.latestPosition,
     keyword.latestDepth,
   );
+  const staleOn = staleCheckDay(keyword, today);
   return (
     <dl className="grid grid-cols-2 gap-x-4 gap-y-3 px-4 pt-4 pb-4 sm:grid-cols-4">
       <Fact label="Position">
@@ -106,10 +114,11 @@ export function KeywordSheetFacts({
             <PositionReadout
               keyword={keyword}
               label={label}
-              staleOn={staleCheckDay(keyword, today)}
+              staleOn={staleOn}
               lost={lostPosition(keyword)}
               chip
             />
+            {staleOn === null ? null : <StaleCheckMark day={staleOn} />}
             <DayChangeCell
               change={dayChange(keyword, today)}
               muted={!keyword.active}
@@ -129,6 +138,7 @@ export function KeywordSheetFacts({
           value={evidence.value}
           emphasize={evidence.metric === "opportunity"}
           outdated={"outdated" in evidence && evidence.outdated}
+          floorAnswer={"floorAnswer" in evidence && evidence.floorAnswer}
         />
       ))}
     </dl>
@@ -143,21 +153,29 @@ export function KeywordSheetInsights({
   today: string;
 }) {
   const insights = insightsOf(keyword, today);
-  if (insights.length === 0) return null;
+  if (keyword.active && insights.length === 0) return null;
   return (
     <SheetSection title="What to know">
-      <ul className="flex flex-col gap-2">
-        {insights.map((insight) => (
-          <li key={insight} className="flex flex-wrap items-center gap-2">
-            <Badge variant={INSIGHT_VARIANTS[insight]}>
-              {INSIGHT_LABELS[insight]}
-            </Badge>
-            <span className="text-muted-foreground">
-              {insightDetail(keyword, insight)}
-            </span>
-          </li>
-        ))}
-      </ul>
+      {keyword.active ? null : (
+        <p className="text-muted-foreground">
+          Tracking is paused, so this keyword is no longer checked. Resume it
+          from the keyword actions menu.
+        </p>
+      )}
+      {insights.length === 0 ? null : (
+        <ul className="flex flex-col gap-2">
+          {insights.map((insight) => (
+            <li key={insight} className="flex flex-wrap items-center gap-2">
+              <Badge variant={INSIGHT_VARIANTS[insight]}>
+                {INSIGHT_LABELS[insight]}
+              </Badge>
+              <span className="text-muted-foreground">
+                {insightDetail(keyword, insight)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </SheetSection>
   );
 }
@@ -178,9 +196,9 @@ function EvidenceRow({
     <div className="flex flex-col gap-1">
       <p className="flex items-baseline gap-2">
         <span className="font-medium">{label}</span>
-        <span className="numeric text-muted-foreground">
-          {shown === null ? "not scored yet" : `${shown}`}
-        </span>
+        {shown === null ? (
+          <span className="text-muted-foreground">not scored yet</span>
+        ) : null}
       </p>
       {shown === null ? null : <div className={EVIDENCE}>{children}</div>}
     </div>
@@ -211,14 +229,19 @@ export function KeywordSheetScores({
 }
 
 export function KeywordSheetNotes({
+  appId,
   keyword,
+  marketTags,
 }: {
+  appId: string;
   keyword: TrackedKeywordItem;
+  marketTags: () => string[];
 }) {
+  const [editing, setEditing] = useState(false);
+  const edit = useRef<HTMLButtonElement>(null);
   const tags = keyword.tags ?? [];
-  if (tags.length === 0 && !keyword.note) return null;
   return (
-    <SheetSection title="Tags and note" aside="Edit from the menu above">
+    <SheetSection title="Tags and note">
       {tags.length > 0 ? (
         <ul className="flex flex-wrap gap-1.5">
           {tags.map((tag) => (
@@ -236,6 +259,27 @@ export function KeywordSheetNotes({
           {keyword.note}
         </p>
       ) : null}
+      {tags.length === 0 && !keyword.note ? (
+        <p className="text-muted-foreground">No tags or note yet.</p>
+      ) : null}
+      <div>
+        <Button
+          ref={edit}
+          variant="outline"
+          size="sm"
+          onClick={() => setEditing(true)}
+        >
+          Edit tags and note
+        </Button>
+      </div>
+      <KeywordAnnotationsDialog
+        open={editing}
+        onOpenChange={setEditing}
+        appId={appId}
+        keyword={keyword}
+        marketTags={marketTags}
+        returnFocus={edit}
+      />
     </SheetSection>
   );
 }

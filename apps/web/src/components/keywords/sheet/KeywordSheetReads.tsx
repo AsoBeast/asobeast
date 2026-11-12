@@ -60,7 +60,12 @@ function CapturedResults({
         ) : null}
       </div>
       <div>
-        <Button variant="outline" size="sm" onClick={onOpenAll}>
+        <Button
+          variant="outline"
+          size="sm"
+          data-serp-keyword={keyword.keywordId}
+          onClick={onOpenAll}
+        >
           All results and earlier days
         </Button>
       </div>

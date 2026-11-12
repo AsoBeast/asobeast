@@ -36,7 +36,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "new",
         title: "Press a keyword to see everything about it",
-        text: "Pressing a keyword in the keywords table opens a sheet beside it: its position and what changed since yesterday, its scores and where each one comes from, the reason behind every insight, the position history with the days your listing changed, the top 10 search results with you and your competitors marked, and where the phrase sits in your title, subtitle and keyword field. The keyword's menu is at the top of the sheet, and a copied link opens the same sheet.",
+        text: "Pressing a keyword in the keywords table opens a sheet beside it: its position and what changed since yesterday, its scores and where each one comes from, the reason behind every insight, the position history with the days your listing changed, the top 10 search results with you and your competitors marked, and where the phrase sits in your title, subtitle and keyword field. The keyword's menu is at the top of the sheet beside arrows that step to the previous and the next keyword, and a copied link opens the same sheet. The line in the Last 7 days column now opens the position history, and every button shows a hand when you point at it.",
       },
       {
         kind: "improved",
