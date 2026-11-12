@@ -125,7 +125,7 @@ function ScoreButton({
           aria-label={`${label} ${valueLabel}${gradeWords}. ${summary}. Show scoring details`}
           className={cn(
             SCORE_STACK,
-            "cursor-pointer rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            "rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
             outdated ? "text-muted-foreground" : "text-foreground",
             emphasize ? "font-semibold" : "font-medium",
           )}

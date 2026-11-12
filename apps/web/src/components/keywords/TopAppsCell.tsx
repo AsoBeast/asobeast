@@ -45,7 +45,7 @@ export function TopAppsCell({
         rememberSerpOpener(event.currentTarget);
         onOpen();
       }}
-      className="group/apps -m-1 flex cursor-pointer items-center rounded-md p-1 outline-none transition-colors duration-150 ease-out hover:bg-card hover:shadow-[inset_0_0_0_1px_var(--border)] focus-visible:ring-2 focus-visible:ring-ring"
+      className="group/apps -m-1 flex items-center rounded-md p-1 outline-none transition-colors duration-150 ease-out hover:bg-card hover:shadow-[inset_0_0_0_1px_var(--border)] focus-visible:ring-2 focus-visible:ring-ring"
     >
       <span id={appsId} className="sr-only">
         {`Top apps: ${apps.map(appLine).join(", ")}`}

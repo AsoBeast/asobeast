@@ -155,6 +155,12 @@
     outline-offset: 2px;
   }
 
+  button,
+  [role="button"],
+  summary {
+    cursor: pointer;
+  }
+
   :disabled,
   [aria-disabled="true"],
   [data-disabled] {

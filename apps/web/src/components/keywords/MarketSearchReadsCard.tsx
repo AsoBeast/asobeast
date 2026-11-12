@@ -99,7 +99,7 @@ function UnshippedReads({
       open={open}
       className="group/unshipped border-t border-border-subtle pt-3"
     >
-      <summary className="flex cursor-pointer list-none items-center gap-2 rounded-sm text-body outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+      <summary className="flex list-none items-center gap-2 rounded-sm text-body outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
         <span>
           {`${market.toUpperCase()} also reads ${pluralize(reads.length, "localization")} you don't ship · up to ${formatNumber(reads.length * KEYWORD_FIELD_CHAR_LIMIT)} more characters`}
         </span>
