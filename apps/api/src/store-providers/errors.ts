@@ -19,16 +19,16 @@ export const TRANSPORT_MESSAGES = [
   'tunneling socket',
   'timeout',
   'fetch failed',
-  '429',
-  '503',
 ] as const;
 
-const STATUS_CODE = /^\d+$/;
+export const TRANSPORT_STATUSES = [429, 503] as const;
 
-const names = (lowered: string, marker: string): boolean =>
-  STATUS_CODE.test(marker)
-    ? new RegExp(`(?<!\\d)${marker}(?!\\d)`).test(lowered)
-    : lowered.includes(marker.toLowerCase());
+const STATUSES = TRANSPORT_STATUSES.join('|');
+
+const TRANSPORT_STATUS = new RegExp(
+  `(?:status|http)\\s+(?:${STATUSES})(?!\\d)|\\((?:${STATUSES})\\)`,
+  'i',
+);
 
 export class StoreRequestError extends Error {
   constructor(
@@ -46,7 +46,12 @@ export class StoreRequestError extends Error {
 
   get unreachable(): boolean {
     const lowered = this.causeMessage.toLowerCase();
-    return TRANSPORT_MESSAGES.some((marker) => names(lowered, marker));
+    return (
+      TRANSPORT_STATUS.test(this.causeMessage) ||
+      TRANSPORT_MESSAGES.some((marker) =>
+        lowered.includes(marker.toLowerCase()),
+      )
+    );
   }
 }
 

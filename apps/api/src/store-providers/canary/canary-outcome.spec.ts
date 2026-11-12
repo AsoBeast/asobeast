@@ -68,15 +68,20 @@ describe('outcomeOfError', () => {
 
   it.each([
     'Unexpected token } in JSON at position 1503',
+    'Unexpected token } in JSON at position 503',
     'no listing for app 64290017',
+    'no listing for app 429',
   ])('calls %s broken although it holds the digits of a status', (cause) => {
     expect(outcomeOfError(requestError(cause))).toBe('broken');
   });
 
-  it('calls a status named in the message unreachable', () => {
-    expect(outcomeOfError(requestError('Request failed with status 429'))).toBe(
-      'unreachable',
-    );
+  it.each([
+    'Request failed with status 429',
+    'Rate limited by Google Play (429)',
+    'Request to https://play.google.com/store/apps/details?id=a failed with status 503',
+    'HTTP 503',
+  ])('calls the status in %s unreachable', (cause) => {
+    expect(outcomeOfError(requestError(cause))).toBe('unreachable');
   });
 
   it('calls a request failure with no transport marker broken', () => {
