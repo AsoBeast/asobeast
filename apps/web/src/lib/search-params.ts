@@ -410,6 +410,8 @@ export const serpParser = parseAsString.withDefault("");
 
 export const breakdownParser = parseAsString.withDefault("");
 
+export const keywordSheetParser = parseAsString.withDefault("");
+
 export const spiderTermParser = parseAsString.withDefault("");
 
 export const ratingsRangeParser =

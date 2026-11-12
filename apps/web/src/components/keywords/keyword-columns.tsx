@@ -54,17 +54,12 @@ import {
   positionFooter,
 } from "./KeywordTotalsFooters";
 import { DerivedScoreCell, ScoreCell } from "./score-cells";
+import { scoreValue, shownScore } from "@/lib/keyword-scores";
 import {
-  hasFloorAnswer,
-  isScoreOutdated,
-  scoreValue,
-  shownScore,
-} from "@/lib/keyword-scores";
-import {
-  difficultySignalLines,
-  lowerConfidenceLines,
-  popularitySignalLines,
-} from "./score-signals";
+  difficultyEvidence,
+  opportunityEvidence,
+  popularityEvidence,
+} from "./score-evidence";
 import type { Grade, GradeMetric } from "@/lib/grade";
 import {
   gradeIn,
@@ -285,17 +280,7 @@ function scoreColumns() {
       ),
       footer: opportunityFooter,
       cell: ({ row }) => (
-        <DerivedScoreCell
-          value={scoreValue(row.original, "opportunity")}
-          label="Opportunity"
-          metric="opportunity"
-          emphasize
-          lowerConfidence={hasFloorAnswer(row.original)}
-          details={lowerConfidenceLines(
-            "opportunity",
-            row.original.scoreSignals ?? null,
-          )}
-        />
+        <DerivedScoreCell {...opportunityEvidence(row.original)} />
       ),
     }),
     columnHelper.accessor((row) => nullsLast(scoreValue(row, "traffic")), {
@@ -315,21 +300,7 @@ function scoreColumns() {
         </span>
       ),
       footer: popularityFooter,
-      cell: ({ row }) => (
-        <ScoreCell
-          value={scoreValue(row.original, "traffic")}
-          label="Popularity"
-          metric="popularity"
-          provenance={row.original.scoreProvenance}
-          details={popularitySignalLines(
-            row.original.scoreSignals ?? null,
-            row.original.scoreProvenance?.source,
-            scoreValue(row.original, "traffic"),
-          )}
-          outdated={isScoreOutdated(row.original)}
-          floorAnswer={hasFloorAnswer(row.original)}
-        />
-      ),
+      cell: ({ row }) => <ScoreCell {...popularityEvidence(row.original)} />,
     }),
     columnHelper.accessor((row) => nullsLast(scoreValue(row, "difficulty")), {
       id: "difficulty",
@@ -341,16 +312,7 @@ function scoreColumns() {
         <SortableHeader column={column} label="Difficulty" />
       ),
       footer: difficultyFooter,
-      cell: ({ row }) => (
-        <ScoreCell
-          value={scoreValue(row.original, "difficulty")}
-          label="Difficulty"
-          metric="difficulty"
-          provenance={row.original.scoreProvenance}
-          details={difficultySignalLines(row.original.scoreSignals ?? null)}
-          outdated={isScoreOutdated(row.original)}
-        />
-      ),
+      cell: ({ row }) => <ScoreCell {...difficultyEvidence(row.original)} />,
     }),
   ];
 }

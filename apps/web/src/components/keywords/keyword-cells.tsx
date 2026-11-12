@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 import { ChartLine, LoaderCircle, StickyNote } from "lucide-react";
 import type { PlayAcquisitions, TrackedKeywordItem } from "@asobeast/shared";
 import { formatCheckedPosition } from "@asobeast/shared";
@@ -215,18 +215,53 @@ export const ChartedKeywordsContext = createContext<ReadonlySet<string>>(
   new Set(),
 );
 
+export const KeywordSheetContext = createContext<
+  ((keywordId: string) => void) | null
+>(null);
+
+const KEYWORD_OPENER =
+  "truncate rounded-sm text-left underline decoration-transparent underline-offset-4 outline-none transition-colors hover:decoration-faint-foreground focus-visible:ring-2 focus-visible:ring-ring";
+
+function KeywordName({
+  keyword,
+  children,
+}: {
+  keyword: TrackedKeywordItem;
+  children: ReactNode;
+}) {
+  const openSheet = useContext(KeywordSheetContext);
+  if (!openSheet) {
+    return (
+      <span title={keyword.text} className="truncate">
+        {children}
+      </span>
+    );
+  }
+  return (
+    <button
+      type="button"
+      title={keyword.text}
+      data-keyword-sheet={keyword.keywordId}
+      className={KEYWORD_OPENER}
+      onClick={() => openSheet(keyword.keywordId)}
+    >
+      {children}
+    </button>
+  );
+}
+
 export function KeywordCell({ keyword }: { keyword: TrackedKeywordItem }) {
   const marks = useContext(ListingMarksContext);
   const onChart = useContext(ChartedKeywordsContext).has(keyword.keywordId);
   return (
     <span className="flex max-w-40 items-center gap-2 font-medium md:max-w-72 md:keywords-snug:max-w-52 md:keywords-cramped:max-w-44">
-      <span title={keyword.text} className="truncate">
+      <KeywordName keyword={keyword}>
         <MatchedText
           segments={marks ? keyword.matchedIn : null}
           fallback={keyword.text}
         />
         {onChart ? <span className="sr-only">, on the chart</span> : null}
-      </span>
+      </KeywordName>
       {onChart ? (
         <ChartLine
           aria-hidden

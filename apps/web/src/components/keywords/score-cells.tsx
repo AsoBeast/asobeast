@@ -42,23 +42,36 @@ export function ScoreReadout({
   label,
   metric,
   emphasize,
+  outdated,
+  className,
 }: {
   value: number;
   label: string;
   metric: GradeMetric;
   emphasize?: boolean;
+  outdated?: boolean;
+  className?: string;
 }) {
   const graded = grade(metric, value);
-  const spoken = graded
+  const grading = graded
     ? `${label} ${value}, ${gradeLabel(graded)}`
     : `${label} ${value}`;
+  const spoken = outdated ? `${grading}. Older formula` : grading;
   return (
     <span
       data-grade={graded ?? undefined}
       title={spoken}
-      className={cn(SCORE_STACK, emphasize ? "font-semibold" : "font-medium")}
+      className={cn(
+        SCORE_STACK,
+        emphasize ? "font-semibold" : "font-medium",
+        outdated && "text-muted-foreground",
+        className,
+      )}
     >
-      <span aria-hidden>{value}</span>
+      <span aria-hidden className="inline-flex items-center gap-1">
+        {outdated ? <RefreshCcw className="size-3" /> : null}
+        <span>{value}</span>
+      </span>
       {graded ? <Meter value={value} fill={gradeFill(graded)} /> : null}
       <span className="sr-only">{spoken}</span>
     </span>
@@ -172,6 +185,33 @@ function DetailList({ lines }: { lines?: string[] }) {
   ) : null;
 }
 
+export function ScoreDetails({
+  provenance,
+  details,
+  outdated,
+}: {
+  provenance: ScoreProvenance | null;
+  details?: string[];
+  outdated?: boolean;
+}) {
+  return (
+    <>
+      {outdated ? <span>{OUTDATED_SCORE_DETAIL}</span> : null}
+      <DetailList lines={details} />
+      <ScoreProvenanceDetails provenance={provenance} />
+    </>
+  );
+}
+
+export function DerivedScoreDetails({ details }: { details?: string[] }) {
+  return (
+    <>
+      <span>{DERIVED_SCORE_DETAIL}</span>
+      <DetailList lines={details} />
+    </>
+  );
+}
+
 export function ScoreCell({
   value,
   label,
@@ -201,9 +241,11 @@ export function ScoreCell({
       outdated={outdated}
       summary={scoreSummary(provenance, outdated, floorAnswer)}
     >
-      {outdated ? <span>{OUTDATED_SCORE_DETAIL}</span> : null}
-      <DetailList lines={details} />
-      <ScoreProvenanceDetails provenance={provenance} />
+      <ScoreDetails
+        provenance={provenance}
+        details={details}
+        outdated={outdated}
+      />
     </ScoreButton>
   );
 }
@@ -233,8 +275,7 @@ export function DerivedScoreCell({
         lowerConfidence ? "Derived score, lower confidence" : "Derived score"
       }
     >
-      <span>{DERIVED_SCORE_DETAIL}</span>
-      <DetailList lines={details} />
+      <DerivedScoreDetails details={details} />
     </ScoreButton>
   );
 }

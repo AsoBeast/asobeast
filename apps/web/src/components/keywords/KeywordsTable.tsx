@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import {
   utcDayOf,
@@ -26,7 +26,12 @@ import { useShowDynamics } from "./KeywordDynamicsPanel";
 import { KeywordsEmptyState } from "./KeywordsEmptyState";
 import { KeywordsDataTable } from "./KeywordsDataTable";
 import { KeywordsFilterBar } from "./KeywordsFilterBar";
-import { ChartedKeywordsContext, ListingMarksContext } from "./keyword-cells";
+import {
+  ChartedKeywordsContext,
+  KeywordSheetContext,
+  ListingMarksContext,
+} from "./keyword-cells";
+import { KeywordSheet, useKeywordSheet } from "./sheet/KeywordSheet";
 import { NoSearchTermsContext } from "./PlayInstallsTip";
 import { SerpSheet } from "./serp/SerpSheet";
 import { useClearedSelectionFocus } from "./use-keywords-table-focus";
@@ -61,6 +66,12 @@ export function KeywordsTable({
   );
   const today = utcDayOf(dataUpdatedAt);
   const serpKeyword = keywords.find((row) => row.keywordId === serpId);
+  const [sheetId, setSheet] = useKeywordSheet();
+  const sheetKeyword = keywords.find((row) => row.keywordId === sheetId);
+  const openSheet = useCallback(
+    (keywordId: string) => void setSheet(keywordId, { history: "push" }),
+    [setSheet],
+  );
   const { data: markets } = useQuery(keywordCountriesOptions(id));
   const multiMarket = (markets?.length ?? 0) > 1;
   const [selection, setSelection] = useState<RowSelectionState>({});
@@ -162,12 +173,14 @@ export function KeywordsTable({
         <NoSearchTermsContext value={noSearchTerms}>
           <ListingMarksContext value={marks.checked}>
             <ChartedKeywordsContext value={chartedSet}>
-              <KeywordsDataTable
-                table={table}
-                chartedSet={chartedSet}
-                emptyBody={exactSearchEmptyBody(filters.q)}
-                onClearFilters={() => void setFilters(null)}
-              />
+              <KeywordSheetContext value={openSheet}>
+                <KeywordsDataTable
+                  table={table}
+                  chartedSet={chartedSet}
+                  emptyBody={exactSearchEmptyBody(filters.q)}
+                  onClearFilters={() => void setFilters(null)}
+                />
+              </KeywordSheetContext>
             </ChartedKeywordsContext>
           </ListingMarksContext>
         </NoSearchTermsContext>
@@ -186,6 +199,18 @@ export function KeywordsTable({
         ) : null}
       </div>
       <SerpSheet appId={id} store={store} keyword={serpKeyword} />
+      <KeywordSheet
+        appId={id}
+        store={store}
+        homeCountry={homeCountry}
+        keyword={sheetKeyword}
+        today={today}
+        marketTags={() => tagsIn(keywords)}
+        onOpenSerp={(keywordId) => {
+          void setSheet("");
+          void setSerpState({ serp: keywordId, serpDate: null });
+        }}
+      />
     </>
   );
 }

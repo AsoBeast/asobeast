@@ -34,6 +34,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "The overview of an app now opens with four figures: visibility, share of voice, keywords in the top 10 and the store rating. Select any of them to draw its chart. The visibility chart shows the range before as a second line and marks the days your listing changed, with a link to what each change did. Keyword movers sit right under it with a small line of each keyword's last 30 days, followed by the keywords closest to the top 10, the next things to do and how many tracked keywords each part of your listing covers. The store funnel shows a trend line under each number, category ranks and ratings by market follow as reference, and the app's own icon now sits beside its name on every page.",
       },
       {
+        kind: "new",
+        title: "Press a keyword to see everything about it",
+        text: "Pressing a keyword in the keywords table opens a sheet beside it: its position and what changed since yesterday, its scores and where each one comes from, the reason behind every insight, the position history with the days your listing changed, the top 10 search results with you and your competitors marked, and where the phrase sits in your title, subtitle and keyword field. The keyword's menu is at the top of the sheet, and a copied link opens the same sheet.",
+      },
+      {
         kind: "improved",
         title: "One place to find new keywords",
         text: "The Discovered tab of the keywords page now holds everything that proposes keywords: the discovered list, Suggestions and Keyword combinations. The discovered list reads like the tracked table, with the position in a chip and a meter under each score, and you can sort it by any column, search it and select every row at once. Suggestions sit in columns with the Track button beside each phrase, Keyword combinations says how many phrases you do not track yet, and What search reads can be folded away and stays that way. On the tracked table the bar for selected keywords only offers what applies, the filters you use most come first, and a keywords page without keywords links straight to finding some.",
