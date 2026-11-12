@@ -55,6 +55,16 @@ test("the combinations card opens on demand and lists the listing's phrases", as
   await expect(phrases(card).nth(11)).toHaveText("mood journal");
 });
 
+test("a link saved before the panel moved still opens it", async ({ page }) => {
+  await page.goto(
+    `/apps/${APP_COMBOS_DETAIL.id}/keywords?combos=true&comboQ=evening`,
+  );
+
+  await expect(page).toHaveURL(/tab=discovered/);
+  await expect(page).toHaveURL(/comboQ=evening/);
+  await expect(combinations(page)).toBeVisible();
+});
+
 test("each phrase names its status and where its words come from", async ({
   page,
 }) => {
