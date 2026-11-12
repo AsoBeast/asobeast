@@ -42,6 +42,7 @@ import {
 } from "@/components/charts/theme";
 import { formatDate } from "@/lib/format";
 import { auditHistoryOptions } from "@/lib/queries";
+import { rubricChanges } from "./rubric-changes";
 
 const chartConfig = {
   overall: { label: "ASO score", color: seriesColor(0) },
@@ -66,18 +67,6 @@ function computeDelta(points: AuditScorePoint[]): number | null {
   return (current.overall as number) - (baseline.overall as number);
 }
 
-const RUBRIC_V2 = "v2";
-
-function rubricChangeDate(points: AuditScorePoint[]): string | null {
-  const versions = new Set(
-    points.map((point) => point.rubricVersion).filter(Boolean),
-  );
-  if (versions.size < 2) return null;
-  return (
-    points.find((point) => point.rubricVersion === RUBRIC_V2)?.date ?? null
-  );
-}
-
 function DeltaChip({ delta }: { delta: number | null }) {
   if (delta === null) return null;
   const rounded = Math.round(delta);
@@ -96,7 +85,7 @@ export function AuditHealthChart({ id }: { id: string }) {
   const { data } = useSuspenseQuery(auditHistoryOptions(id));
   const points = scored(data.points);
   const state = trendState(points.length);
-  const rubricChange = rubricChangeDate(data.points);
+  const changes = rubricChanges(data.points);
   const lastPoint = points[points.length - 1];
 
   return (
@@ -129,13 +118,21 @@ export function AuditHealthChart({ id }: { id: string }) {
               <ChartTooltip
                 content={<ChartTooltipContent {...TIME_TOOLTIP_PROPS} />}
               />
-              {rubricChange ? (
+              {changes.map((change) => (
                 <ReferenceLine
-                  x={rubricChange}
+                  key={`${change.date}-${change.version}`}
+                  x={change.date}
                   stroke="var(--border)"
-                  label="Rubric v2"
+                  label={
+                    change.labelPosition
+                      ? {
+                          value: `Rubric ${change.version}`,
+                          position: change.labelPosition,
+                        }
+                      : `Rubric ${change.version}`
+                  }
                 />
-              ) : null}
+              ))}
               <Line
                 {...LINE_PROPS}
                 dataKey="overall"

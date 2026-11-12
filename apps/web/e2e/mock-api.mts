@@ -4278,7 +4278,12 @@ const routes: Route[] = [
     handler: ([id], req, res) =>
       apps.some((app) => app.id === id)
         ? json(res, 200, {
-            points: id === "app-gp" ? AUDIT_HISTORY_POINTS : [],
+            points:
+              id === "app-gp"
+                ? AUDIT_HISTORY_POINTS
+                : id === "app-long"
+                  ? AUDIT_HISTORY_POINTS.slice(-1)
+                  : [],
           })
         : json(res, 404, errorEnvelope(404, req.url ?? "/", "App not found")),
   },

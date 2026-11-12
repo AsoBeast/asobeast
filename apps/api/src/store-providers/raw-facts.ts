@@ -18,6 +18,7 @@ export interface RawAppFacts {
   genreName: string | null;
   videoUrl: string | null;
   featureGraphicUrl: string | null;
+  previewVideoCount: number | null;
   supportsIpad: boolean;
   developerName: string | null;
   currentVersionScore: number | null;
@@ -38,6 +39,7 @@ const EMPTY_FACTS: RawAppFacts = {
   genreName: null,
   videoUrl: null,
   featureGraphicUrl: null,
+  previewVideoCount: null,
   supportsIpad: false,
   developerName: null,
   currentVersionScore: null,
@@ -117,6 +119,11 @@ const supportsIpad = (raw: unknown): boolean =>
   stringArray(asRecord(raw)?.supportedDevices).some((device) =>
     device.startsWith('iPad'),
   );
+
+export function previewVideoCount(raw: unknown): number | null {
+  const extract = asRecord(asRecord(raw)?.pageExtract);
+  return extract === null ? null : arrayLength(extract.previewVideoUrls);
+}
 
 export function screenshotsCount(raw: unknown): number | null {
   return arrayLength(asRecord(raw)?.screenshots);
@@ -221,6 +228,7 @@ export function extractAppStoreRawFacts(raw: unknown): RawAppFacts {
     genreName: nonEmptyString(record.primaryGenre),
     videoUrl: null,
     featureGraphicUrl: null,
+    previewVideoCount: previewVideoCount(record),
     supportsIpad: supportsIpad(record),
     developerName: trimmedString(record.developer),
     currentVersionScore: numeric(record.currentVersionScore),
@@ -247,6 +255,7 @@ export function extractGooglePlayRawFacts(raw: unknown): RawAppFacts {
     genreName: nonEmptyString(record.genre),
     videoUrl: nonEmptyString(record.video),
     featureGraphicUrl: nonEmptyString(record.headerImage),
+    previewVideoCount: null,
     supportsIpad: false,
     developerName: trimmedString(record.developer),
     currentVersionScore: null,

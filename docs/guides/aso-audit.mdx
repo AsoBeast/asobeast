@@ -32,7 +32,7 @@ Each factor carries a store specific weight. Google Play has no subtitle or keyw
 | Freshness and trust | 5 | 5 |
 | **Total** | **110** | **105** |
 
-The description weighs 15 on Google Play because Google Play indexes it. On the App Store, preview videos are not visible in public store data, so that factor is reported as not measurable rather than scored.
+The description weighs 15 on Google Play because Google Play indexes it. On the App Store, preview videos are read from the public store page, so the factor scores from what the page shows. A snapshot recorded before the page was read, or a page that could not be read, leaves the factor not measurable rather than scoring it as a miss. An audit that runs without a store page read lists App previews as a limitation.
 
 Every factor is a group of checks scored 0 to 10. A check that cannot be answered yet, for example because it needs competitors or the creative analysis, is listed as unanswered with what would answer it. The share of a factor's checks that are answered is its confidence, and the overall score weights each factor by its weight times its confidence. A factor measured by one light check therefore moves the overall far less than a factor measured completely, and missing data neither inflates nor lowers the score.
 
@@ -76,6 +76,7 @@ Each check reads one kind of data: the store listing, your tracked keywords, you
 | Keywords in screenshot captions | App Store | Read screenshot text, or the AI creative analysis when one exists, keywords |
 | Caption localization | App Store | AI creative analysis |
 | Promo video linked | Google Play | Listing |
+| Preview video present | App Store | Public store page |
 | Icon text, simplicity, contrast and distinctness | Both | AI creative analysis, competitors |
 | Average rating and rating volume | Both | Listing, competitors |
 | Recent review sentiment | Both | Reviews |
@@ -125,7 +126,6 @@ Public store data leaves some things out. The audit lists them on every run inst
 
 | Limitation | Why |
 | --- | --- |
-| App previews | asobeast cannot see App Store previews. Check them in App Store Connect. |
 | Promotional text | Not in the data asobeast reads, and not indexed. |
 | In-app events | Not visible to asobeast, although events can appear in search. |
 | Custom product pages | Not visible to asobeast, although pages with assigned keywords appear in organic search. |
@@ -149,13 +149,13 @@ Public store data leaves some things out. The audit lists them on every run inst
 
 A score snapshot is written daily on `CRON_AUDIT`, which defaults to `0 6 * * *`, meaning 06:00 UTC, after the daily pipeline. A finished creative analysis also records today's point, so the chart moves as soon as the checks it answers are scored.
 
-Snapshots recorded before this rubric are kept, and the chart marks the day the rubric changed with a "Rubric v2" line so a jump on that day is not mistaken for a change in the listing.
+Snapshots recorded before this rubric are kept, and the chart marks the day the rubric changed with a "Rubric v3" line so a jump on that day is not mistaken for a change in the listing. Earlier version changes keep their own line when the history reaches back that far.
 
 Audit score rows follow `RETENTION_AUDIT_SCORES_DAYS`, which defaults to `0` and therefore keeps them forever.
 
 ## Troubleshooting
 
-- **The score changed after upgrading.** The rubric changed to v2: new checks, confidence weighting and store specific factors. Compare points after the "Rubric v2" marker with each other, not with the points before it.
+- **The score changed after upgrading.** The rubric changed to v3: the preview video factor now scores from the App Store page instead of being reported as not measurable. Compare points after the "Rubric v3" marker with each other, not with the points before it.
 - **A factor says not measured.** None of its checks can be answered yet. Follow the unlock it shows, or read the limitation if public data cannot measure it.
 - **The analysis is outdated.** Your icon, screenshots, competitor icons or `AI_MODEL` changed since the last analysis. Its checks stay unanswered until you analyze again.
 - **The analysis failed.** The page shows the reason. See the error table in [Enable the optional AI features](/guides/ai-features#troubleshooting).

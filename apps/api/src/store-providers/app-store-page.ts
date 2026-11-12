@@ -21,7 +21,7 @@ export interface PageEditorsChoice {
 }
 
 export interface AppStorePageExtract {
-  previewVideoUrls: string[];
+  previewVideoUrls: string[] | null;
   appEvents: PageAppEvent[];
   featuredStories: PageFeaturedStory[];
   editorsChoice: PageEditorsChoice | null;
@@ -86,12 +86,14 @@ function readShelves(shelves: Record<string, unknown>): AppStorePageExtract {
   };
 }
 
-function previewVideoUrls(shelves: Record<string, unknown>): string[] {
+function previewVideoUrls(shelves: Record<string, unknown>): string[] | null {
   const urls: string[] = [];
+  let mediaShelves = 0;
   for (const [key, shelf] of Object.entries(shelves)) {
     if (!PRODUCT_MEDIA_KEY.test(key)) {
       continue;
     }
+    mediaShelves += 1;
     for (const item of itemsOf(shelf)) {
       const url = nonEmptyString(asRecord(item.video)?.videoUrl);
       if (url !== null) {
@@ -99,7 +101,7 @@ function previewVideoUrls(shelves: Record<string, unknown>): string[] {
       }
     }
   }
-  return [...new Set(urls)];
+  return mediaShelves === 0 ? null : [...new Set(urls)];
 }
 
 function appEvents(shelves: Record<string, unknown>): PageAppEvent[] {

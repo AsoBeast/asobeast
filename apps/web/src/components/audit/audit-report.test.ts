@@ -62,7 +62,7 @@ describe("auditMarkdown", () => {
 
     expect(report).toContain("# ASO audit: Where Am I? GeoGuess Map Quiz");
     expect(report).toContain(
-      "**72/100 · Grade B, Good · 82% measured · Potential 86**",
+      "**74/100 · Grade B, Good · 82% measured · Potential 86**",
     );
     expect(report).toMatch(/^\| Title \| 9\.1\/10 \| Pass \|/m);
     expect(report).toContain("## Quick wins · Today");
@@ -120,7 +120,7 @@ describe("auditMarkdown", () => {
       APP,
     );
 
-    expect(report).toContain("**72/100 · Grade B, Good · Potential 86**");
+    expect(report).toContain("**74/100 · Grade B, Good · Potential 86**");
     expect(report).not.toContain("% measured");
   });
 
