@@ -6108,7 +6108,7 @@ const CREATIVE_SCREENSHOTS = [
 export const APP_AUDIT: AppAuditResult = {
   appId: "app-1",
   store: "APP_STORE",
-  overall: 71.8,
+  overall: 74.2,
   coveredWeight: 95,
   totalWeight: 110,
   rubricVersion: "v3",
@@ -6537,7 +6537,7 @@ export const AUDIT_HISTORY_POINTS = [
   },
   {
     date: utcDaysAgo(1),
-    overall: 71.8,
+    overall: 74.2,
     coveredWeight: 95,
     totalWeight: 110,
     rubricVersion: "v3",

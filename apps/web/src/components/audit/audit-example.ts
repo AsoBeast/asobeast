@@ -97,7 +97,7 @@ const CREATIVE_SCREENSHOTS = [
 export const APP_AUDIT_EXAMPLE: AppAuditResult = {
   appId: "app-1",
   store: "APP_STORE",
-  overall: 71.8,
+  overall: 74.2,
   coveredWeight: 95,
   totalWeight: 110,
   rubricVersion: "v3",
