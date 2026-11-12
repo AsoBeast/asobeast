@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import {
   utcDayOf,
@@ -33,7 +33,10 @@ import {
 } from "./keyword-cells";
 import { KeywordSheet } from "./sheet/KeywordSheet";
 import { keywordSteps, NO_STEPS } from "./sheet/keyword-steps";
-import { useKeywordSheet } from "./sheet/use-keyword-sheet";
+import {
+  useCloseWhenShownKeywordLeaves,
+  useKeywordSheet,
+} from "./sheet/use-keyword-sheet";
 import { NoSearchTermsContext } from "./PlayInstallsTip";
 import { SerpSheet } from "./serp/SerpSheet";
 import { useClearedSelectionFocus } from "./use-keywords-table-focus";
@@ -72,11 +75,11 @@ export function KeywordsTable({
   const sheetKeyword = keywords.find(
     (row) => row.keywordId === sheet.keywordId,
   );
-  const sheetLeftTheMarket = sheet.keywordId !== "" && !sheetKeyword;
-  const closeSheet = sheet.close;
-  useEffect(() => {
-    if (sheetLeftTheMarket) closeSheet();
-  }, [sheetLeftTheMarket, closeSheet]);
+  useCloseWhenShownKeywordLeaves(
+    sheet.keywordId,
+    sheetKeyword !== undefined,
+    sheet.close,
+  );
   const { data: markets } = useQuery(keywordCountriesOptions(id));
   const multiMarket = (markets?.length ?? 0) > 1;
   const [selection, setSelection] = useState<RowSelectionState>({});

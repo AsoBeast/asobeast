@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryState } from "nuqs";
 import { keywordSheetParser } from "@/lib/search-params";
+import { sheetHistory } from "./sheet-history";
 
 export const KEYWORD_SHEET_KEY = "keyword";
 
@@ -9,17 +10,14 @@ export function useKeywordSheet() {
     KEYWORD_SHEET_KEY,
     keywordSheetParser,
   );
-  const openedHere = useRef(false);
+  const [history] = useState(sheetHistory);
   useEffect(() => {
-    if (keywordId === "") openedHere.current = false;
-  }, [keywordId]);
+    if (keywordId === "") history.cleared();
+  }, [keywordId, history]);
 
   const open = useCallback(
-    (next: string) => {
-      openedHere.current = true;
-      void setKeywordId(next, { history: "push" });
-    },
-    [setKeywordId],
+    (next: string) => history.opened(setKeywordId(next, { history: "push" })),
+    [history, setKeywordId],
   );
 
   const step = useCallback(
@@ -28,13 +26,26 @@ export function useKeywordSheet() {
   );
 
   const close = useCallback(() => {
-    if (!openedHere.current) {
-      void setKeywordId("");
-      return;
-    }
-    openedHere.current = false;
-    window.history.back();
-  }, [setKeywordId]);
+    if (history.closing() === "back") window.history.back();
+    else void setKeywordId("");
+  }, [history, setKeywordId]);
 
   return { keywordId, open, step, close };
+}
+
+export function useCloseWhenShownKeywordLeaves(
+  keywordId: string,
+  shown: boolean,
+  close: () => void,
+) {
+  const lastShown = useRef("");
+  useEffect(() => {
+    if (shown) {
+      lastShown.current = keywordId;
+      return;
+    }
+    const left = keywordId !== "" && lastShown.current === keywordId;
+    lastShown.current = "";
+    if (left) close();
+  }, [keywordId, shown, close]);
 }

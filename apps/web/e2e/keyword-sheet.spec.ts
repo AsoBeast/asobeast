@@ -94,6 +94,47 @@ test("a keyword the market does not track opens nothing", async ({ page }) => {
 
   await expect(opener(page, "focus timer")).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  await (await hydrated(opener(page, "focus timer"))).click();
+  await expect(sheet(page, "focus timer")).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await expect(sheet(page, "focus timer")).toHaveCount(0);
+  await expect(page).toHaveURL(/keyword=missing/);
+});
+
+test("stopping the keyword the sheet shows closes the sheet", async ({
+  page,
+}) => {
+  let stopped = false;
+  await page.route("**/api/backend/apps/app-1/keywords/kw-3", (route) => {
+    if (route.request().method() !== "DELETE") return route.fallback();
+    stopped = true;
+    return route.fulfill({ status: 204 });
+  });
+  await page.route("**/api/backend/apps/app-1/keywords?**", async (route) => {
+    if (!stopped) return route.fallback();
+    const listed = (await (await route.fetch()).json()) as {
+      keywordId: string;
+    }[];
+    return route.fulfill({
+      json: listed.filter((row) => row.keywordId !== "kw-3"),
+    });
+  });
+  await page.goto(`${KEYWORDS}?keyword=kw-3`);
+  const dialog = sheet(page, "study timer");
+
+  await dialog
+    .getByRole("button", { name: "Keyword actions for study timer" })
+    .click();
+  await page.getByRole("menuitem", { name: "Stop tracking" }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Stop tracking" })
+    .click();
+
+  await expect(dialog).toHaveCount(0);
+  await expect(page).not.toHaveURL(/keyword=/);
 });
 
 test("all results opens the search results and closing them returns to the sheet", async ({
