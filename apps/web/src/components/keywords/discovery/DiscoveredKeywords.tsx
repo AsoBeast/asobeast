@@ -93,7 +93,6 @@ function DiscoveredList({
     <DiscoveryRowActionsContext value={{ actions, handOffFocus, heading }}>
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center gap-2">
-          <DiscoveryStateTabs counts={list.counts} />
           <SearchInput
             label="Search discovered keywords"
             value={q}
@@ -101,6 +100,7 @@ function DiscoveredList({
               void setTableParams({ q: next || null }, options)
             }
           />
+          <DiscoveryStateTabs counts={list.counts} />
         </div>
         <DiscoveryToolbar
           list={list}
