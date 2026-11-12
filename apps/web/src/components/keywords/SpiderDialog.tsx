@@ -59,8 +59,8 @@ export function SpiderDialog({
     onSuccess: (_result, value) => {
       void setTerm(value);
       queuedToast(
-        "27 lookups — usually about two minutes",
-        "Results fill in as probes complete. It takes longer while the daily run is collecting.",
+        "27 lookups, usually about two minutes",
+        "Results fill in as each lookup completes. It takes longer while the daily run is collecting.",
       );
     },
     onError: (error) =>
@@ -107,9 +107,9 @@ export function SpiderDialog({
         <DialogHeader>
           <DialogTitle>Deep search</DialogTitle>
           <DialogDescription>
-            Probes App Store autocomplete for your term plus every a–z prefix —
-            27 rate-limited lookups, usually about two minutes and longer while
-            the daily run is collecting.
+            Asks the store&apos;s search suggestions for your term on its own
+            and followed by each letter from a to z. That is 27 lookups, usually
+            about two minutes, and longer while the daily run is collecting.
           </DialogDescription>
         </DialogHeader>
 

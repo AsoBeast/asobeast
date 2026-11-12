@@ -1,7 +1,6 @@
 "use client";
 
 import { createColumnHelper } from "@tanstack/react-table";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import type {
   CombinationField,
@@ -18,15 +17,6 @@ export const COMBINATION_STATUS_LABELS: Record<CombinationStatus, string> = {
   untracked: "Not tracked",
 };
 
-const STATUS_VARIANT: Record<
-  CombinationStatus,
-  "success" | "secondary" | "outline"
-> = {
-  tracked: "success",
-  paused: "secondary",
-  untracked: "outline",
-};
-
 export const HIDDEN_COMBINATION_COLUMNS = { words: false };
 
 export function wordCountLabel(count: number): string {
@@ -41,9 +31,11 @@ function StatusCell({ combination }: { combination: KeywordCombination }) {
   const { phrase, status, trackedAs } = combination;
   return (
     <span className="flex items-center gap-2">
-      <Badge variant={STATUS_VARIANT[status]}>
-        {COMBINATION_STATUS_LABELS[status]}
-      </Badge>
+      {status === "untracked" ? (
+        <span className="sr-only">{COMBINATION_STATUS_LABELS[status]}</span>
+      ) : (
+        <span className="font-medium">{COMBINATION_STATUS_LABELS[status]}</span>
+      )}
       {trackedAs !== null && trackedAs !== phrase ? (
         <span className="text-caption text-muted-foreground">
           as {trackedAs}

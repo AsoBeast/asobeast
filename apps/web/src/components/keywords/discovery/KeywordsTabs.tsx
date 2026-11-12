@@ -6,21 +6,38 @@ import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { discoveryTabLabel } from "@/lib/keyword-discoveries";
 import { keywordDiscoveriesOptions, keywordsOptions } from "@/lib/queries";
 import {
+  DISCOVERY_URL_KEYS,
   discoveryStateParser,
+  discoveryTableParsers,
   keywordsTabParser,
   type KeywordsTab,
 } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
 
+export const DISCOVERED_TAB_ID = "keywords-discovered-tab";
+
 const TAB_PARAMS = {
   tab: keywordsTabParser.withOptions({ history: "push" }),
   state: discoveryStateParser,
+  [DISCOVERY_URL_KEYS.sort]: discoveryTableParsers.sort,
+  [DISCOVERY_URL_KEYS.dir]: discoveryTableParsers.dir,
+  [DISCOVERY_URL_KEYS.q]: discoveryTableParsers.q,
+};
+
+const CLEARED_TABLE = {
+  [DISCOVERY_URL_KEYS.sort]: null,
+  [DISCOVERY_URL_KEYS.dir]: null,
+  [DISCOVERY_URL_KEYS.q]: null,
 };
 
 export function useKeywordsTab() {
   const [{ tab }, setParams] = useQueryStates(TAB_PARAMS);
   const setTab = (next: KeywordsTab) =>
-    void setParams({ tab: next === "tracked" ? null : next, state: null });
+    void setParams({
+      tab: next === "tracked" ? null : next,
+      state: null,
+      ...CLEARED_TABLE,
+    });
   return [tab, setTab] as const;
 }
 
@@ -42,6 +59,7 @@ export function KeywordsTabs({ id, market }: { id: string; market: string }) {
           {tracked ? `Tracked ${tracked.length}` : "Tracked"}
         </TabsOption>
         <TabsOption
+          id={DISCOVERED_TAB_ID}
           value="discovered"
           aria-label={
             unseen ? `${discoveredLabel}, new discoveries to review` : undefined

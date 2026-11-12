@@ -114,24 +114,34 @@ export function KeywordFacets({
   return (
     <>
       <FacetFilter
-        title="Source"
-        options={SOURCE_OPTIONS}
-        selected={filters.source}
-        counts={facetCounts(table, "source", (row) => row.original.source)}
-        onChange={(source) => void setFilters({ source })}
+        title="Position"
+        options={POSITION_OPTIONS}
+        selected={filters.pos}
+        counts={facetCounts(table, "position", (row) =>
+          positionBandOf(row.original.latestPosition, row.original.latestDepth),
+        )}
+        onChange={(pos) => void setFilters({ pos })}
       />
       <FacetFilter
-        title="Bucket"
-        options={BUCKET_OPTIONS}
-        selected={filters.bucket}
-        counts={facetCounts(table, "bucket", (row) => row.original.bucket)}
-        onChange={(bucket) => void setFilters({ bucket })}
+        title="Opportunity"
+        options={GRADE_OPTIONS}
+        selected={filters.opp}
+        counts={gradeCounts(table, "opportunity", "opportunity")}
+        onChange={(opp) => void setFilters({ opp })}
       />
-      <SelectFilter
-        title="Status"
-        value={filters.status}
-        options={STATUS_OPTIONS}
-        onChange={(status) => void setFilters({ status })}
+      <FacetFilter
+        title="Popularity"
+        options={GRADE_OPTIONS}
+        selected={filters.pop}
+        counts={gradeCounts(table, "traffic", "popularity")}
+        onChange={(pop) => void setFilters({ pop })}
+      />
+      <FacetFilter
+        title="Difficulty"
+        options={GRADE_OPTIONS}
+        selected={filters.diff}
+        counts={gradeCounts(table, "difficulty", "difficulty")}
+        onChange={(diff) => void setFilters({ diff })}
       />
       <span className="inline-flex items-center gap-1">
         <FacetFilter
@@ -148,35 +158,25 @@ export function KeywordFacets({
         <KeywordTypeTip />
       </span>
       <TagFacet table={table} selected={filters.tag} setFilters={setFilters} />
-      <FacetFilter
-        title="Popularity"
-        options={GRADE_OPTIONS}
-        selected={filters.pop}
-        counts={gradeCounts(table, "traffic", "popularity")}
-        onChange={(pop) => void setFilters({ pop })}
+      <SelectFilter
+        title="Status"
+        value={filters.status}
+        options={STATUS_OPTIONS}
+        onChange={(status) => void setFilters({ status })}
       />
       <FacetFilter
-        title="Difficulty"
-        options={GRADE_OPTIONS}
-        selected={filters.diff}
-        counts={gradeCounts(table, "difficulty", "difficulty")}
-        onChange={(diff) => void setFilters({ diff })}
+        title="Source"
+        options={SOURCE_OPTIONS}
+        selected={filters.source}
+        counts={facetCounts(table, "source", (row) => row.original.source)}
+        onChange={(source) => void setFilters({ source })}
       />
       <FacetFilter
-        title="Opportunity"
-        options={GRADE_OPTIONS}
-        selected={filters.opp}
-        counts={gradeCounts(table, "opportunity", "opportunity")}
-        onChange={(opp) => void setFilters({ opp })}
-      />
-      <FacetFilter
-        title="Position"
-        options={POSITION_OPTIONS}
-        selected={filters.pos}
-        counts={facetCounts(table, "position", (row) =>
-          positionBandOf(row.original.latestPosition, row.original.latestDepth),
-        )}
-        onChange={(pos) => void setFilters({ pos })}
+        title="Bucket"
+        options={BUCKET_OPTIONS}
+        selected={filters.bucket}
+        counts={facetCounts(table, "bucket", (row) => row.original.bucket)}
+        onChange={(bucket) => void setFilters({ bucket })}
       />
     </>
   );

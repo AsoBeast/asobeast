@@ -30,8 +30,8 @@ export function CombinationRows({
   const next = Math.min(COMBINATION_PAGE_SIZE, rows.length - shown.length);
 
   return (
-    <div className="flex flex-col gap-3">
-      <Table containerClassName="rounded-xl border bg-card">
+    <div className="flex max-w-3xl flex-col gap-3">
+      <Table density="compact" containerClassName="rounded-lg border bg-card">
         <TableCaption className="sr-only">
           Keyword combinations built from the words of your listing, where those
           words appear, and whether each phrase is tracked.
@@ -68,7 +68,7 @@ export function CombinationRows({
                   <th
                     key={cell.id}
                     scope="row"
-                    className="px-2 py-1.5 text-left font-medium"
+                    className="px-2 py-1 text-left font-medium md:px-3"
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </th>
@@ -93,7 +93,7 @@ export function CombinationRows({
               size="sm"
               onClick={() => setPages((count) => count + 1)}
             >
-              Show {next} more
+              {`Show ${next} more`}
             </Button>
           ) : null}
         </div>

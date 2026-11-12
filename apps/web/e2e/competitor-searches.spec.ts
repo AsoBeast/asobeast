@@ -9,10 +9,13 @@ import {
 import { expect, test } from "./session.mts";
 
 const openSuggestions = async (page: Page, path: string) => {
-  await page.goto(path);
-  await (
-    await hydrated(page.getByRole("button", { name: /^Suggestions/ }))
-  ).click();
+  await page.goto(`${path}${path.includes("?") ? "&" : "?"}tab=discovered`);
+  const toggle = await hydrated(
+    page.getByRole("button", { name: /^Suggestions/ }),
+  );
+  if ((await toggle.getAttribute("aria-expanded")) === "false") {
+    await toggle.click();
+  }
 };
 
 const openTab = async (page: Page, path: string) => {

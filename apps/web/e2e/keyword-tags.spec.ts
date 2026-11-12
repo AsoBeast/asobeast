@@ -333,14 +333,14 @@ test.describe("bulk tagging", () => {
     ).toBeFocused();
   });
 
-  test("returns focus to Remove when the removal is cancelled", async ({
+  test("returns focus to Stop tracking when the removal is cancelled", async ({
     page,
   }) => {
     await openKeywords(page);
     await page.getByRole("checkbox", { name: "Select focus timer" }).check();
     const remove = page
       .getByRole("group", { name: "Bulk keyword actions" })
-      .getByRole("button", { name: "Remove", exact: true });
+      .getByRole("button", { name: "Stop tracking", exact: true });
 
     await remove.click();
     await page
@@ -363,7 +363,7 @@ test.describe("bulk tagging", () => {
 
     await page
       .getByRole("group", { name: "Bulk keyword actions" })
-      .getByRole("button", { name: "Remove", exact: true })
+      .getByRole("button", { name: "Stop tracking", exact: true })
       .click();
     await page
       .getByRole("alertdialog")
@@ -395,7 +395,7 @@ test.describe("bulk tagging", () => {
 
     await page
       .getByRole("group", { name: "Bulk keyword actions" })
-      .getByRole("button", { name: "Remove", exact: true })
+      .getByRole("button", { name: "Stop tracking", exact: true })
       .click();
     await page
       .getByRole("alertdialog")

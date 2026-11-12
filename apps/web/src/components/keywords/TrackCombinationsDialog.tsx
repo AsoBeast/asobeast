@@ -23,6 +23,7 @@ export function TrackCombinationsDialog({
   pending,
   onOpenChange,
   onConfirm,
+  onCloseAutoFocus,
 }: {
   count: number;
   market: string;
@@ -30,12 +31,13 @@ export function TrackCombinationsDialog({
   pending: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
+  onCloseAutoFocus: (event: Event) => void;
 }) {
   const storefront = formatCountry(market);
   const { isOperator } = useAuth();
   return (
     <Dialog open={open} onOpenChange={(next) => !pending && onOpenChange(next)}>
-      <DialogContent>
+      <DialogContent onCloseAutoFocus={onCloseAutoFocus}>
         <DialogHeader>
           <DialogTitle>
             Track {keywordCount(count)} in {storefront}?

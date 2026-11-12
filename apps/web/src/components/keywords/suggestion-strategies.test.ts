@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  EMPTY_COPY,
-  STRATEGIES,
-  storeLookupLabels,
-  USED_BY_NOUN,
-} from "./suggestion-strategies";
+import { EMPTY_COPY, STRATEGIES, USED_BY_NOUN } from "./suggestion-strategies";
 
 describe("suggestion strategies", () => {
   it("lists competitor searches after competitors", () => {
@@ -23,14 +18,5 @@ describe("suggestion strategies", () => {
     expect(EMPTY_COPY.competitorSearch).toBe(
       "No new searches found around your competitors' phrases in this market. Competitors need a phrase of two or more words in their listing here, or in their home listing when they have none here.",
     );
-  });
-
-  it("every store strategy is described as a live lookup", () => {
-    expect(storeLookupLabels()).toEqual([
-      "Search",
-      "Similar apps",
-      "More by developer",
-      "Competitor searches",
-    ]);
   });
 });

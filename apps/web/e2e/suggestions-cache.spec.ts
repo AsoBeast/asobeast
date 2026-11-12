@@ -36,7 +36,7 @@ test("refreshing the listing does not look up a store suggestion again", async (
 }) => {
   const strategies: string[] = [];
   track(page, strategies);
-  await page.goto("/apps/app-1/keywords?strategy=search");
+  await page.goto("/apps/app-1/keywords?tab=discovered&strategy=search");
   await openSuggestions(page);
   await expect(page.getByText("focus timer app")).toBeVisible();
   expect(strategies).toEqual(["search"]);
@@ -51,7 +51,7 @@ test("refreshing the listing still refreshes the listing source", async ({
 }) => {
   const strategies: string[] = [];
   track(page, strategies);
-  await page.goto("/apps/app-1/keywords");
+  await page.goto("/apps/app-1/keywords?tab=discovered");
   await openSuggestions(page);
   await expect.poll(() => strategies).toEqual(["metadata"]);
 

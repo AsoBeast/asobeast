@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,12 @@ export function TrackCombinations({
 }) {
   const queryClient = useQueryClient();
   const [pending, setPending] = useState<string[] | null>(null);
+  const opener = useRef<HTMLButtonElement | null>(null);
+  const trackShown = useRef<HTMLButtonElement>(null);
+  const confirm = (phrases: string[], button: HTMLButtonElement) => {
+    opener.current = button;
+    setPending(phrases);
+  };
   const selected = phrasesToTrack(
     table.getFilteredSelectedRowModel().rows.map((row) => row.original),
   );
@@ -63,22 +69,32 @@ export function TrackCombinations({
   });
   const trackOnce = useSingleFlight(track);
 
+  const busy = track.isPending;
+
   return (
     <>
+      {selected.length > 0 ? (
+        <Button
+          size="sm"
+          variant="outline"
+          aria-disabled={busy || undefined}
+          onClick={(event) => {
+            if (!busy) confirm(selected, event.currentTarget);
+          }}
+        >
+          {`Track selected (${selected.length})`}
+        </Button>
+      ) : null}
       <Button
+        ref={trackShown}
         size="sm"
         variant="outline"
-        disabled={selected.length === 0 || track.isPending}
-        onClick={() => setPending(selected)}
+        aria-disabled={shown.length === 0 || busy || undefined}
+        onClick={(event) => {
+          if (shown.length > 0 && !busy) confirm(shown, event.currentTarget);
+        }}
       >
-        Track selected ({selected.length})
-      </Button>
-      <Button
-        size="sm"
-        disabled={shown.length === 0 || track.isPending}
-        onClick={() => setPending(shown)}
-      >
-        Track all shown ({shown.length})
+        {`Track all shown (${shown.length})`}
       </Button>
       <TrackCombinationsDialog
         count={pending?.length ?? 0}
@@ -89,6 +105,13 @@ export function TrackCombinations({
           if (!open) setPending(null);
         }}
         onConfirm={() => pending && trackOnce(pending)}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          const survivor = opener.current?.isConnected
+            ? opener.current
+            : trackShown.current;
+          survivor?.focus();
+        }}
       />
     </>
   );

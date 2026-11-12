@@ -1,9 +1,8 @@
 "use client";
 
-import { Download } from "lucide-react";
+import { Download, FileUp } from "lucide-react";
 import { KEYWORD_IMPORT_LIMIT } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { downloadCsv, toCsv } from "@/lib/csv";
 import { formatNumber } from "@/lib/format";
@@ -31,14 +30,25 @@ export function ImportFileStep({
     <div className="flex flex-col gap-2">
       <Label htmlFor="keyword-import-file">Keyword file</Label>
       <div className="flex flex-wrap items-center gap-2">
-        <Input
+        <input
           id="keyword-import-file"
           type="file"
           accept=".csv,.tsv,.txt,text/csv,text/plain"
-          className="max-w-xs"
+          className="peer sr-only"
           disabled={disabled}
           onChange={(event) => onChoose(event.target.files?.[0])}
         />
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className="cursor-pointer peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-disabled:pointer-events-none peer-disabled:text-muted-foreground"
+        >
+          <label htmlFor="keyword-import-file">
+            <FileUp aria-hidden />
+            {fileName ? "Choose another file" : "Choose a file"}
+          </label>
+        </Button>
         <Button
           variant="outline"
           size="sm"

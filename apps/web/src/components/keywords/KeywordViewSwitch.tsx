@@ -1,29 +1,22 @@
 "use client";
 
-import { ChartScatter, TableProperties } from "lucide-react";
+import { ChartScatter } from "lucide-react";
 import { useQueryState } from "nuqs";
-import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { keywordViewParser } from "@/lib/search-params";
 
 export function KeywordViewSwitch() {
   const [view, setView] = useQueryState("view", keywordViewParser);
+  const shown = view === "map";
   return (
-    <Tabs
-      value={view}
-      onValueChange={(next) =>
-        void setView(keywordViewParser.parse(next) ?? view)
-      }
+    <Button
+      variant="outline"
+      aria-pressed={shown}
+      className="aria-pressed:bg-accent"
+      onClick={() => void setView(shown ? "table" : "map")}
     >
-      <TabsList aria-label="Keyword view">
-        <TabsOption value="table">
-          <TableProperties aria-hidden />
-          <span className="max-sm:sr-only">Table</span>
-        </TabsOption>
-        <TabsOption value="map">
-          <ChartScatter aria-hidden />
-          <span className="max-sm:sr-only">Map</span>
-        </TabsOption>
-      </TabsList>
-    </Tabs>
+      <ChartScatter aria-hidden />
+      <span className="max-sm:sr-only">Map</span>
+    </Button>
   );
 }

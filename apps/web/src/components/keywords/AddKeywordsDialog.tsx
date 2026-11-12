@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogBody,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -141,19 +142,23 @@ export function AddKeywordsDialog({
               country={market}
             />
           </div>
-          <Textarea
-            value={raw}
-            onChange={(event) => {
-              setRaw(event.target.value);
-              setError(null);
-            }}
-            rows={4}
-            spellCheck={false}
-            autoComplete="off"
-            placeholder="fitness tracker, workout log…"
-            autoFocus
-            aria-invalid={error !== null}
-          />
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="add-keywords-text">Keywords</Label>
+            <Textarea
+              id="add-keywords-text"
+              value={raw}
+              onChange={(event) => {
+                setRaw(event.target.value);
+                setError(null);
+              }}
+              rows={4}
+              spellCheck={false}
+              autoComplete="off"
+              placeholder="One phrase per line, or separated by commas"
+              autoFocus
+              aria-invalid={error !== null}
+            />
+          </div>
           {chips.length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
               {chips.map((chip) => (
@@ -170,6 +175,9 @@ export function AddKeywordsDialog({
         </DialogBody>
 
         <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline">Cancel</Button>
+          </DialogClose>
           <Button
             disabled={mutation.isPending || chips.length === 0 || !validMarket}
             onClick={submit}

@@ -1,7 +1,4 @@
-import {
-  isStoreSuggestionStrategy,
-  type KeywordSuggestionStrategy,
-} from "@asobeast/shared";
+import type { KeywordSuggestionStrategy } from "@asobeast/shared";
 
 export const STRATEGIES: {
   value: KeywordSuggestionStrategy;
@@ -16,7 +13,7 @@ export const STRATEGIES: {
   {
     value: "search",
     label: "Search",
-    description: "App Store autocomplete terms",
+    description: "Autocomplete terms from the store search",
   },
   {
     value: "similar",
@@ -58,8 +55,3 @@ export const EMPTY_COPY: Partial<Record<KeywordSuggestionStrategy, string>> = {
   developer:
     "No other apps found for this developer, or the latest snapshot carries no developer id.",
 };
-
-export const storeLookupLabels = (): string[] =>
-  STRATEGIES.filter((entry) => isStoreSuggestionStrategy(entry.value)).map(
-    (entry) => entry.label,
-  );

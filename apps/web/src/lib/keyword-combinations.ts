@@ -13,7 +13,7 @@ import {
 export const COMBINATION_MIN_WORD_LENGTH = 2;
 export const COMBINATION_MAX_WORDS = 3;
 export const COMBINATION_LIMIT = 2000;
-export const COMBINATION_PAGE_SIZE = 50;
+export const COMBINATION_PAGE_SIZE = 20;
 
 export const COMBINATION_WORD_COUNTS = [1, 2, COMBINATION_MAX_WORDS] as const;
 export type CombinationWordCount = (typeof COMBINATION_WORD_COUNTS)[number];

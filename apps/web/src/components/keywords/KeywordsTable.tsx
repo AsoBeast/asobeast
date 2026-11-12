@@ -43,12 +43,14 @@ export function KeywordsTable({
   country,
   homeCountry,
   chartedIds,
+  onFindKeywords,
 }: {
   id: string;
   store: Store;
   country: string;
   homeCountry: string;
   chartedIds: readonly string[];
+  onFindKeywords?: (leaving: HTMLElement) => void;
 }) {
   const [{ serp: serpId }, setSerpState] = useSerpParams();
   const showDynamics = useShowDynamics();
@@ -131,7 +133,9 @@ export function KeywordsTable({
   const isEmpty = keywords.length === 0;
 
   if (isEmpty) {
-    return <KeywordsEmptyState country={country} />;
+    return (
+      <KeywordsEmptyState country={country} onFindKeywords={onFindKeywords} />
+    );
   }
 
   return (

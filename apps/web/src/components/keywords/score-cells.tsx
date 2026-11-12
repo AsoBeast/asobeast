@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { ArrowDownToLine, History } from "lucide-react";
+import { ArrowDownToLine, RefreshCcw } from "lucide-react";
 import type {
   ScoreProvenance,
   ScoringConfidence,
@@ -34,6 +34,36 @@ type ScoreMetric = Extract<
   GradeMetric,
   "popularity" | "difficulty" | "opportunity"
 >;
+
+const SCORE_STACK = "ml-auto flex w-14 flex-col items-end gap-1 numeric";
+
+export function ScoreReadout({
+  value,
+  label,
+  metric,
+  emphasize,
+}: {
+  value: number;
+  label: string;
+  metric: GradeMetric;
+  emphasize?: boolean;
+}) {
+  const graded = grade(metric, value);
+  const spoken = graded
+    ? `${label} ${value}, ${gradeLabel(graded)}`
+    : `${label} ${value}`;
+  return (
+    <span
+      data-grade={graded ?? undefined}
+      title={spoken}
+      className={cn(SCORE_STACK, emphasize ? "font-semibold" : "font-medium")}
+    >
+      <span aria-hidden>{value}</span>
+      {graded ? <Meter value={value} fill={gradeFill(graded)} /> : null}
+      <span className="sr-only">{spoken}</span>
+    </span>
+  );
+}
 
 function ScoreButton({
   value,
@@ -81,14 +111,15 @@ function ScoreButton({
           data-outdated={outdated || undefined}
           aria-label={`${label} ${valueLabel}${gradeWords}. ${summary}. Show scoring details`}
           className={cn(
-            "ml-auto flex w-14 cursor-pointer flex-col items-end gap-1 rounded-sm numeric outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            SCORE_STACK,
+            "cursor-pointer rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
             outdated ? "text-muted-foreground" : "text-foreground",
             emphasize ? "font-semibold" : "font-medium",
           )}
         >
           <span className="inline-flex items-center gap-1">
             {outdated ? (
-              <History
+              <RefreshCcw
                 aria-hidden="true"
                 className="size-3 text-muted-foreground"
               />

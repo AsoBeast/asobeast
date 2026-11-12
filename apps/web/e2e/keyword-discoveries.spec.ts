@@ -152,18 +152,18 @@ test("the state tabs filter the one list in the browser", async ({ page }) => {
   expect(reads.length).toBe(before);
 });
 
-test("each row names its source, rank and scores", async ({ page }) => {
+test("each row names its source, position and scores", async ({ page }) => {
   await page.goto(DISCOVERED);
 
   const headers = table(page).getByRole("columnheader");
   await expect(headers).toContainText([
     "Keyword",
     "Source",
-    "Rank",
+    "Position",
+    "Opportunity",
     "Popularity",
     "Difficulty",
     "Relevance",
-    "Opportunity",
   ]);
   await expect(rowOf(page, "focus timer app")).toContainText("Your title");
   await expect(rowOf(page, "deep work")).toContainText("Competitors");
@@ -174,8 +174,8 @@ test("each row names its source, rank and scores", async ({ page }) => {
   );
   await expect(rowOf(page, "concentration")).toContainText("Your description");
 
-  await expect(rowOf(page, "focus timer app")).toContainText("Rank 3");
-  await expect(rowOf(page, "deep work")).toContainText("Rank 120");
+  await expect(rowOf(page, "focus timer app")).toContainText("Position 3");
+  await expect(rowOf(page, "deep work")).toContainText("Position 120");
   await expect(rowOf(page, "study planner")).toContainText(
     "Not found in the top 200",
   );
@@ -183,7 +183,7 @@ test("each row names its source, rank and scores", async ({ page }) => {
     "Not found in the top 50",
   );
   await expect(rowOf(page, "work sprint")).toContainText("Not checked yet");
-  await expect(table(page)).not.toContainText("Rank 0");
+  await expect(table(page)).not.toContainText("Position 0");
 
   await expect(rowOf(page, "study planner")).toContainText(
     "Opportunity 41, fair",
@@ -195,6 +195,72 @@ test("each row names its source, rank and scores", async ({ page }) => {
   await expect(
     rowOf(page, "focus timer app").getByText("Recommended"),
   ).toBeVisible();
+});
+
+test("a header sorts the list and the search narrows it, both in the address", async ({
+  page,
+}) => {
+  await page.goto(DISCOVERED);
+  await expect(keywordsIn(page).first()).toContainText("focus timer app");
+
+  await table(page).getByRole("button", { name: "Keyword" }).click();
+
+  await expect(page).toHaveURL(/foundSort=keyword/);
+  await expect(keywordsIn(page).first()).toContainText("concentration");
+
+  const search = page.getByRole("textbox", {
+    name: "Search discovered keywords",
+  });
+  await search.fill("focus");
+
+  await expect(page).toHaveURL(/foundQ=focus/);
+  await expect(keywordsIn(page)).toHaveCount(2);
+
+  await search.fill("zzzz");
+
+  await expect(
+    page.getByText("No discovered keywords match this search"),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  await expect(page).not.toHaveURL(/foundQ=/);
+  await expect(keywordsIn(page)).toHaveCount(9);
+});
+
+test("the header box selects every row and offers to track them", async ({
+  page,
+}) => {
+  await page.goto(DISCOVERED);
+  await expect(
+    page.getByRole("button", { name: /^Track selected/ }),
+  ).toHaveCount(0);
+
+  await (
+    await hydrated(
+      page.getByRole("checkbox", { name: "Select all discovered keywords" }),
+    )
+  ).check();
+
+  await expect(
+    page.getByRole("button", { name: "Track selected (9)" }),
+  ).toBeVisible();
+});
+
+test("a market without keywords links to the discovered tab and opens the suggestions", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-2/keywords");
+
+  await pressFromKeyboard(
+    page.getByRole("button", { name: "Find keywords to track" }),
+  );
+
+  await expect(page).toHaveURL(/tab=discovered/);
+  await expect(
+    lists(page).getByRole("tab", { name: /^Discovered/ }),
+  ).toBeFocused();
+  await expect(
+    page.getByRole("button", { name: "Suggestions", exact: true }),
+  ).toHaveAttribute("aria-expanded", "true");
 });
 
 test("the market menu scopes the list and its counts", async ({ page }) => {
@@ -437,8 +503,8 @@ test.describe("discovery actions", () => {
   test("the selected rows are tracked in one request", async ({ page }) => {
     const bodies = writes(page, "track");
     await page.goto(DISCOVERED);
-    const trackSelected = control(page, "Track selected (0)");
-    await expect(trackSelected).toHaveAttribute("aria-disabled", "true");
+    const trackSelected = page.getByRole("button", { name: /^Track selected/ });
+    await expect(trackSelected).toHaveCount(0);
 
     for (const keyword of ["deep work", "concentration", "focus music"]) {
       await (
@@ -451,7 +517,7 @@ test.describe("discovery actions", () => {
 
     await expect(toast(page, "Tracking 3 keywords")).toBeVisible();
     await expect(keywordsIn(page)).toHaveCount(6);
-    await expect(control(page, "Track selected (0)")).toBeVisible();
+    await expect(trackSelected).toHaveCount(0);
     expect(bodies).toHaveLength(1);
     expect((bodies[0] as { keywordIds: string[] }).keywordIds).toHaveLength(3);
   });
@@ -618,9 +684,9 @@ test.describe("discovery actions", () => {
     ).focus();
 
     for (const next of [
+      page.getByRole("textbox", { name: "Search discovered keywords" }),
       page.getByRole("switch", { name: "Auto-track ranked" }),
       control(page, "Refresh discoveries"),
-      control(page, "Track selected (0)"),
       control(page, "Track recommended (9)"),
       control(page, "Track all ranked (3)"),
     ]) {

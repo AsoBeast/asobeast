@@ -2,15 +2,14 @@ import { expect, test } from "./session.mts";
 import { APP_1_DETAIL, APP_GP_DETAIL } from "./fixtures.mts";
 
 const suggestionsHint = (store: string) =>
-  new RegExp(
-    `Search, Similar apps, More by developer, and Competitor searches run a live ${store} lookup`,
-  );
+  new RegExp(`Runs a live ${store} lookup`);
 
 test("a google play keywords page names google play in the suggestions hint", async ({
   page,
 }) => {
-  await page.goto(`/apps/${APP_GP_DETAIL.id}/keywords`);
+  await page.goto(`/apps/${APP_GP_DETAIL.id}/keywords?tab=discovered`);
   await page.getByRole("button", { name: /^Suggestions/ }).click();
+  await page.getByRole("tab", { name: "Search", exact: true }).click();
 
   await expect(page.getByText(suggestionsHint("Google Play"))).toBeVisible();
   await expect(page.getByText(suggestionsHint("App Store"))).toHaveCount(0);
@@ -19,8 +18,10 @@ test("a google play keywords page names google play in the suggestions hint", as
 test("an app store keywords page names the app store in the suggestions hint", async ({
   page,
 }) => {
-  await page.goto(`/apps/${APP_1_DETAIL.id}/keywords`);
+  await page.goto(`/apps/${APP_1_DETAIL.id}/keywords?tab=discovered`);
   await page.getByRole("button", { name: /^Suggestions/ }).click();
+  await expect(page.getByText(suggestionsHint("App Store"))).toHaveCount(0);
+  await page.getByRole("tab", { name: "Search", exact: true }).click();
 
   await expect(page.getByText(suggestionsHint("App Store"))).toBeVisible();
 });
@@ -30,7 +31,7 @@ for (const width of [375, 1440] as const) {
     page,
   }) => {
     await page.setViewportSize({ width, height: 900 });
-    await page.goto(`/apps/${APP_1_DETAIL.id}/keywords`);
+    await page.goto(`/apps/${APP_1_DETAIL.id}/keywords?tab=discovered`);
     await page.getByRole("button", { name: /^Suggestions/ }).click();
 
     const sources = page

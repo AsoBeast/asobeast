@@ -35,6 +35,11 @@ export const LATER_RELEASES: readonly Release[] = [
       },
       {
         kind: "improved",
+        title: "One place to find new keywords",
+        text: "The Discovered tab of the keywords page now holds everything that proposes keywords: the discovered list, Suggestions and Keyword combinations. The discovered list reads like the tracked table, with the position in a chip and a meter under each score, and you can sort it by any column, search it and select every row at once. Suggestions sit in columns with the Track button beside each phrase, Keyword combinations says how many phrases you do not track yet, and What search reads can be folded away and stays that way. On the tracked table the bar for selected keywords only offers what applies, the filters you use most come first, and a keywords page without keywords links straight to finding some.",
+      },
+      {
+        kind: "improved",
         title: "A keywords page that gets to the numbers",
         text: "The keywords page now fits its controls on one row: the tracked and discovered lists, a market menu with the keyword count of each market, the table or map switch and Add keywords. One sentence under it says how many keywords moved up and down since yesterday. Every filter sits behind one Filters button, and the table shows more at a glance: the position is a chip that turns green in the top 3, a Change column says how far each keyword moved since yesterday and names the ones that dropped out or entered the results, with one press beside the search to see only what moved, fell or was lost, a line draws the last 7 days beside the weekly change, the icons of the three apps that rank highest sit in their own column and open the search results when pressed, and a footer counts how many keywords moved. For an App Store app the default columns fit a small laptop without scrolling sideways, and each row keeps one menu at its right edge for search results, tags, scoring and pausing. Tags, Source and Volatility are hidden until you turn them on under Columns, and the note about comparing the two stores moved to the info button beside Popularity. Suggestions and Keyword combinations take one line until you open them.",
       },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, type MouseEvent } from "react";
 import { RefreshCw } from "lucide-react";
 import type { KeywordDiscoveryList } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ function BulkTrack({
   label: string;
   count: number;
   pending: boolean;
-  onTrack: () => void;
+  onTrack: (event: MouseEvent<HTMLButtonElement>) => void;
 }) {
   const inactive = pending || count === 0;
   return (
@@ -27,8 +27,8 @@ function BulkTrack({
       size="sm"
       variant="outline"
       aria-disabled={inactive || undefined}
-      onClick={() => {
-        if (!inactive) onTrack();
+      onClick={(event) => {
+        if (!inactive) onTrack(event);
       }}
     >
       {label}
@@ -41,11 +41,13 @@ export function DiscoveryToolbar({
   market,
   selected,
   actions,
+  onTrackSelected,
 }: {
   list: KeywordDiscoveryList;
   market: string;
   selected: readonly string[];
   actions: DiscoveryActions;
+  onTrackSelected: (button: HTMLElement) => void;
 }) {
   const switchId = useId();
   const hintId = useId();
@@ -83,7 +85,6 @@ export function DiscoveryToolbar({
         <Button
           size="sm"
           variant="outline"
-          aria-label="Refresh discoveries"
           aria-busy={refreshing || undefined}
           aria-disabled={refreshing || undefined}
           onClick={() => {
@@ -94,19 +95,22 @@ export function DiscoveryToolbar({
             aria-hidden
             className={cn(refreshing && "motion-safe:animate-spin")}
           />
-          Refresh
+          Refresh discoveries
         </Button>
-        <BulkTrack
-          label={labels.selected}
-          count={selected.length}
-          pending={tracking}
-          onTrack={() =>
-            actions.trackOnce({
-              request: { keywordIds: [...selected] },
-              removes: selected,
-            })
-          }
-        />
+        {selected.length > 0 ? (
+          <BulkTrack
+            label={labels.selected}
+            count={selected.length}
+            pending={tracking}
+            onTrack={(event) => {
+              onTrackSelected(event.currentTarget);
+              actions.trackOnce({
+                request: { keywordIds: [...selected] },
+                removes: selected,
+              });
+            }}
+          />
+        ) : null}
         <BulkTrack
           label={labels.recommended}
           count={recommended.length}
