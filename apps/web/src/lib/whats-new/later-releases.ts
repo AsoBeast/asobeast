@@ -46,7 +46,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "improved",
         title: "The audit now sees preview videos",
-        text: "The audit reads the App Store page itself, so the preview video factor is scored for App Store apps instead of being left unmeasured. A listing without a preview sees the gap in its plan. Because the rubric measures one more factor, grades can shift a little the next time the audit runs.",
+        text: "The audit reads the App Store page itself, so the preview video factor is scored for App Store apps instead of being left unmeasured. A listing without a preview sees the gap in its plan. An app without a preview video scores about three to four points lower the next time the audit runs, and a score close to a grade line can drop a grade.",
       },
     ],
   },
