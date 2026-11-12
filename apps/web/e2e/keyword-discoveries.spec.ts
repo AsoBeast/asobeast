@@ -735,3 +735,13 @@ test("the discovered list puts its search first, as the tracked list does", asyn
 
   expect(search?.x ?? Infinity).toBeLessThan(states?.x ?? -Infinity);
 });
+
+test("suggestions and combinations are sections like the rest of the page", async ({
+  page,
+}) => {
+  await page.goto(DISCOVERED);
+
+  for (const name of ["Suggestions", "Keyword combinations"]) {
+    await expect(page.getByRole("heading", { level: 2, name })).toBeVisible();
+  }
+});
