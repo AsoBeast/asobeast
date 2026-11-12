@@ -1,3 +1,4 @@
+import { MarketSwitcherSkeleton } from "@/components/app-detail/skeletons";
 import {
   DoNextCardSkeleton,
   PortfolioMoversCardSkeleton,
@@ -20,7 +21,7 @@ export default function Loading() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <SnapshotFactsSkeleton />
         <div className="flex flex-wrap items-center gap-3">
-          <Skeleton className="h-[34px] w-60" />
+          <MarketSwitcherSkeleton />
           <Skeleton className="h-[34px] w-28" />
         </div>
       </div>

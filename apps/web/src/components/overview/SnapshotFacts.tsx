@@ -1,7 +1,7 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { LEDE, META_LINE } from "@/components/layout/panel-classes";
+import { META_LINE } from "@/components/layout/panel-classes";
 import { useMarket } from "@/components/app-detail/use-market";
 import {
   formatCompact,
@@ -33,7 +33,9 @@ export function SnapshotFacts({ id }: { id: string }) {
 
   if (facts.length === 0) {
     return (
-      <p className={LEDE}>No store snapshot yet. Refresh to capture one.</p>
+      <p className={META_LINE}>
+        No store snapshot yet. Refresh to capture one.
+      </p>
     );
   }
 
