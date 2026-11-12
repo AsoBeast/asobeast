@@ -27,8 +27,11 @@ const TRANSLUCENT_RING = /\bring-ring\/\d+/g;
 const MONOSPACE_NUMBER =
   /["'`][^"'`\n]*\b(?:numeric\b[^"'`\n]*\bfont-mono|font-mono\b[^"'`\n]*\bnumeric)\b[^"'`\n]*["'`]/g;
 
-const THICKENING_LINK =
-  /\bdecoration-faint-foreground\b[^"'`\n]*\bhover:decoration-2\b/g;
+const RAW_LINK_UNDERLINE = /\bdecoration-faint-foreground\b/g;
+
+const UNDERLINED_ON_HOVER = [
+  "components/alerts/AlertEventRow.tsx: decoration-faint-foreground",
+];
 
 const POINTER_CURSOR = /\bcursor-pointer\b/g;
 
@@ -63,8 +66,8 @@ describe("utility classes", () => {
     expect(offenders(TRANSLUCENT_TEXT)).toEqual([]);
   });
 
-  it("darkens a link underline on hover rather than thickening it", () => {
-    expect(offenders(THICKENING_LINK)).toEqual([]);
+  it("draws a faint link underline that darkens on hover through one utility", () => {
+    expect(offenders(RAW_LINK_UNDERLINE)).toEqual(UNDERLINED_ON_HOVER);
   });
 
   it("leaves no opacity modifier detached from its utility", () => {

@@ -39,7 +39,7 @@ export function PaywallFaq({ items }: { items: readonly FaqItem[] }) {
                   href={href}
                   target="_blank"
                   rel="noreferrer"
-                  className="font-medium text-foreground underline decoration-faint-foreground underline-offset-4"
+                  className="font-medium text-foreground link-underline"
                 >
                   {READ_MORE}
                   <span className="sr-only">{readMoreContext(question)}</span>

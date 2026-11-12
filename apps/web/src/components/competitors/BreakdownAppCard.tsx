@@ -75,7 +75,7 @@ function ListingBlock({
           No keyword field saved for {localizationName(localization)}.{" "}
           <Link
             href={editLocalizationHref(appId, localization)}
-            className="underline decoration-faint-foreground underline-offset-4"
+            className="link-underline"
           >
             Edit it on the metadata page
           </Link>
