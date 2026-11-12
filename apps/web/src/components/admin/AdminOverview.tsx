@@ -45,7 +45,7 @@ function ActivationTile({ activation }: { activation: AdminActivation }) {
             href={ACTIVATION_GUIDE}
             target="_blank"
             rel="noreferrer"
-            className="font-medium text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-2"
+            className="font-medium text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-foreground"
           >
             Read how activation is counted
           </a>

@@ -27,6 +27,9 @@ const TRANSLUCENT_RING = /\bring-ring\/\d+/g;
 const MONOSPACE_NUMBER =
   /["'`][^"'`\n]*\b(?:numeric\b[^"'`\n]*\bfont-mono|font-mono\b[^"'`\n]*\bnumeric)\b[^"'`\n]*["'`]/g;
 
+const THICKENING_LINK =
+  /\bdecoration-faint-foreground\b[^"'`\n]*\bhover:decoration-2\b/g;
+
 const POINTER_CURSOR = /\bcursor-pointer\b/g;
 
 const POINTER_ON_A_NON_BUTTON = [
@@ -56,6 +59,10 @@ describe("utility classes", () => {
 
   it("draws text in a token colour rather than a translucent one", () => {
     expect(offenders(TRANSLUCENT_TEXT)).toEqual([]);
+  });
+
+  it("darkens a link underline on hover rather than thickening it", () => {
+    expect(offenders(THICKENING_LINK)).toEqual([]);
   });
 
   it("leaves no opacity modifier detached from its utility", () => {

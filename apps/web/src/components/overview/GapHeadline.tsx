@@ -63,7 +63,7 @@ export function GapHeadline({ id, home }: { id: string; home: string }) {
           href="https://docs.asobeast.com/guides/competitors#gap-analysis"
           target="_blank"
           rel="noreferrer"
-          className="font-medium text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-2"
+          className="font-medium text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-foreground"
         >
           Read how the lists are chosen
         </a>

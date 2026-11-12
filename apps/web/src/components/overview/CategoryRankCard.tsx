@@ -142,7 +142,7 @@ function HeaderStat({
     <p className="text-body">
       <Link
         href={href}
-        className="underline decoration-faint-foreground underline-offset-4 hover:decoration-2"
+        className="underline decoration-faint-foreground underline-offset-4 hover:decoration-foreground"
       >
         {headline.current === null ? (
           <span className="text-muted-foreground">
