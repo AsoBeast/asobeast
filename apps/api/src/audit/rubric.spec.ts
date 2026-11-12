@@ -374,6 +374,7 @@ describe('computeAudit', () => {
   it('leaves the App Store preview video not measurable without a page extract', () => {
     const result = computeAudit({
       ...perfectContext(),
+      hasPageExtract: false,
       rawFacts: { ...perfectContext().rawFacts, previewVideoCount: null },
     });
     const video = result.factors.find((factor) => factor.id === 'previewVideo');
@@ -384,6 +385,17 @@ describe('computeAudit', () => {
       score: null,
       needsInput: true,
     });
+    expect(result.limitations?.map((item) => item.id)).toContain(
+      'preview-video-page',
+    );
+  });
+
+  it('names no store page limitation on Google Play', () => {
+    const result = computeAudit(perfectPlayContext());
+
+    expect(result.limitations?.map((item) => item.id)).not.toContain(
+      'preview-video-page',
+    );
   });
 
   it('waits for the keyword field instead of scoring without it', () => {

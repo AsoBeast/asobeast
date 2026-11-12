@@ -84,6 +84,7 @@ export interface AuditContext {
   storeUpdatedAt: Date | null;
   now: Date;
   rawFacts: RawAppFacts;
+  hasPageExtract: boolean;
   keywords: AuditKeyword[];
   visibility: AuditVisibility;
   comparison: KeywordComparison;

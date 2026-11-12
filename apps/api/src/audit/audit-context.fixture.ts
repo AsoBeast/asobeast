@@ -168,6 +168,7 @@ const contextFor = (
     storeUpdatedAt: null,
     now: FIXTURE_NOW,
     rawFacts: { ...emptyFacts, ...facts },
+    hasPageExtract: store === Store.APP_STORE,
     keywords: [],
     visibility: { latest: null, latestDate: null, weekAgo: null },
     comparison: { competitors: [], rows: [] },

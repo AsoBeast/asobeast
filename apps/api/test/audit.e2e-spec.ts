@@ -508,6 +508,12 @@ describe('AuditController (e2e)', () => {
       availability: 'not-measurable',
       score: null,
     });
+    expect(result.limitations?.map((item) => item.id)).toContain(
+      'preview-video-page',
+    );
+    expect(result.limitations?.map((item) => item.id)).not.toContain(
+      'preview-video',
+    );
   });
 
   it('runs the AI audit, caches it, and raises the overall', async () => {
