@@ -241,6 +241,38 @@ describe('AllExceptionsFilter', () => {
     warn.mockRestore();
   });
 
+  it('keeps a store that did not answer out of error tracking', () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+
+    const { status, tracked } = capture(
+      new StoreRequestError(
+        Store.GOOGLE_PLAY,
+        'getApp',
+        'TimeoutError: The operation was aborted due to timeout',
+      ),
+    );
+
+    expect(status).toBe(HttpStatus.BAD_GATEWAY);
+    expect(tracked).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('still reports a store answer it could not read', () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+
+    const { status, tracked } = capture(
+      new StoreRequestError(
+        Store.GOOGLE_PLAY,
+        'getApp',
+        "Cannot read properties of undefined (reading 'title')",
+      ),
+    );
+
+    expect(status).toBe(HttpStatus.BAD_GATEWAY);
+    expect(tracked).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+  });
+
   it.each([
     [413, 'Payload Too Large', 'request entity too large', 'entity.too.large'],
     [413, 'Payload Too Large', 'too many parameters', 'parameters.too.many'],
