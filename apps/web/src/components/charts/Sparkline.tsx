@@ -77,7 +77,7 @@ export function Sparkline({ points }: { points: VisibilityPoint[] }) {
   const [endX, endY] = plotted[plotted.length - 1];
 
   return (
-    <div className="relative h-12 w-full" style={{ color: seriesColor(0) }}>
+    <div className="relative h-12 w-full">
       <svg
         role="img"
         aria-label={`visibility, last 30 days: ${direction}, now ${Math.round(last)}`}
@@ -88,7 +88,7 @@ export function Sparkline({ points }: { points: VisibilityPoint[] }) {
         <path
           d={monotonePath(plotted)}
           fill="none"
-          stroke="currentColor"
+          stroke={seriesColor(0)}
           strokeWidth={1.5}
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -98,8 +98,9 @@ export function Sparkline({ points }: { points: VisibilityPoint[] }) {
       <span
         aria-hidden
         data-slot="sparkline-end"
-        className="absolute size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-current"
+        className="absolute size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full"
         style={{
+          backgroundColor: seriesColor(0),
           left: `${(endX / BOX.width) * 100}%`,
           top: `${(endY / BOX.height) * 100}%`,
         }}
