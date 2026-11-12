@@ -8,6 +8,7 @@ import { requireJobScope } from '../jobs/job-workspace';
 import { QUEUES, type SyncStoreReportsPayload } from '../jobs/jobs.types';
 import { ErrorTracking } from '../observability/error-tracking.service';
 import { StoreReportSyncService } from './store-report-sync.service';
+import { StoreConnectionRejectedError } from './store-sync-summary';
 
 export const STORE_REPORTS_WORKER_CONCURRENCY = 1;
 
@@ -42,6 +43,7 @@ export class StoreReportsWorker extends WorkerHost {
   @OnWorkerEvent('failed')
   onFailed(job: Job<SyncStoreReportsPayload> | undefined, error: Error): void {
     this.logger.warn(failureLine(job, error));
+    if (error instanceof StoreConnectionRejectedError) return;
     reportJobFailure(this.tracking, job, error);
   }
 }

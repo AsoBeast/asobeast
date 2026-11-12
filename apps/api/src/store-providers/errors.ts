@@ -5,6 +5,32 @@ const STORE_NAMES: Record<Store, string> = {
   GOOGLE_PLAY: 'Google Play',
 };
 
+export const TRANSPORT_MESSAGES = [
+  'ECONNRESET',
+  'ECONNREFUSED',
+  'ETIMEDOUT',
+  'EHOSTUNREACH',
+  'ENETUNREACH',
+  'EPIPE',
+  'EAI_AGAIN',
+  'ENOTFOUND',
+  'UND_ERR',
+  'socket hang up',
+  'tunneling socket',
+  'timeout',
+  'fetch failed',
+  'rate limited',
+] as const;
+
+export const TRANSPORT_STATUSES = [429, 503] as const;
+
+const STATUSES = TRANSPORT_STATUSES.join('|');
+
+const TRANSPORT_STATUS = new RegExp(
+  `(?:status|http)\\s+(?:${STATUSES})(?!\\d)`,
+  'i',
+);
+
 export class StoreRequestError extends Error {
   constructor(
     readonly store: Store,
@@ -17,6 +43,16 @@ export class StoreRequestError extends Error {
 
   get userMessage(): string {
     return `${STORE_NAMES[this.store]} did not answer. Try again in a few minutes.`;
+  }
+
+  get unreachable(): boolean {
+    const lowered = this.causeMessage.toLowerCase();
+    return (
+      TRANSPORT_STATUS.test(this.causeMessage) ||
+      TRANSPORT_MESSAGES.some((marker) =>
+        lowered.includes(marker.toLowerCase()),
+      )
+    );
   }
 }
 
