@@ -245,7 +245,7 @@ describe('AppStoreProvider', () => {
     expect(result.subtitleUnavailable).toBe(true);
     expect(result.pageUnavailable).toBe(false);
     expect(result.raw).toHaveProperty('pageExtract', {
-      previewVideoUrls: [],
+      previewVideoUrls: null,
       appEvents: [],
       featuredStories: [],
       editorsChoice: null,
@@ -254,6 +254,45 @@ describe('AppStoreProvider', () => {
     expect(result.pageExtractUnavailable).toBe(false);
     expect(page).toHaveBeenCalledTimes(3);
     jest.useRealTimers();
+  });
+
+  it('answers an empty preview video list when the shelf mapping reads screenshots only', async () => {
+    const app = jest.fn().mockResolvedValue({
+      id: 1,
+      title: 'App',
+      description: 'desc',
+    });
+    const page = jest.fn().mockResolvedValue(
+      `<h1>App</h1><script type="application/json" id="serialized-server-data">${JSON.stringify(
+        {
+          data: [
+            {
+              data: {
+                shelfMapping: {
+                  product_media_phone_: {
+                    items: [
+                      { screenshot: { template: 'https://shot/{w}x{h}' } },
+                    ],
+                  },
+                },
+              },
+            },
+          ],
+        },
+      )}</script>`,
+    );
+    const provider = new AppStoreProvider(makeLib({ app, page }));
+
+    const result = await provider.getApp('1', 'us');
+
+    expect(result.raw).toHaveProperty('pageExtract', {
+      previewVideoUrls: [],
+      appEvents: [],
+      featuredStories: [],
+      editorsChoice: null,
+      accessibilityStatement: null,
+    });
+    expect(result.pageExtractUnavailable).toBe(false);
   });
 
   it('reads no subtitle when the product page renders the primary category in its place', async () => {

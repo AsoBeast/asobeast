@@ -6113,11 +6113,6 @@ const recommendation = (
 
 const APP_STORE_LIMITATIONS = [
   {
-    id: "preview-video",
-    label: "App previews",
-    detail: "asobeast cannot see App Store previews.",
-  },
-  {
     id: "promotional-text",
     label: "Promotional text",
     detail: "Not in the data asobeast reads.",
@@ -6162,10 +6157,10 @@ const CREATIVE_SCREENSHOTS = [
 export const APP_AUDIT: AppAuditResult = {
   appId: "app-1",
   store: "APP_STORE",
-  overall: 71.8,
-  coveredWeight: 90,
+  overall: 74.2,
+  coveredWeight: 95,
   totalWeight: 110,
-  rubricVersion: "v2",
+  rubricVersion: "v3",
   grade: "B",
   confidence: 0.82,
   potential: 86.4,
@@ -6256,10 +6251,15 @@ export const APP_AUDIT: AppAuditResult = {
         { kind: "ai", source: "ai" },
       ),
     ]),
-    auditFactor("previewVideo", "Preview video", 5, null, "conversion", [], {
-      availability: "not-measurable",
-      confidence: 0,
-    }),
+    auditFactor("previewVideo", "Preview video", 5, 10, "conversion", [
+      auditCheck(
+        "preview-video-present",
+        "Preview video present",
+        "pass",
+        10,
+        "The store page shows 2 preview videos.",
+      ),
+    ]),
     auditFactor("ratings", "Ratings & reviews", 15, 8.2, "conversion", [
       auditCheck(
         "ratings-average",
@@ -6561,11 +6561,35 @@ export const PLAY_AUDIT: AppAuditResult = {
 
 export const AUDIT_HISTORY_POINTS = [
   {
-    date: utcDaysAgo(1),
+    date: utcDaysAgo(7),
+    overall: 62.4,
+    coveredWeight: 90,
+    totalWeight: 110,
+    rubricVersion: "v1",
+    confidence: 0.78,
+  },
+  {
+    date: utcDaysAgo(5),
+    overall: 65.1,
+    coveredWeight: 90,
+    totalWeight: 110,
+    rubricVersion: "v1",
+    confidence: 0.8,
+  },
+  {
+    date: utcDaysAgo(3),
     overall: 68.4,
     coveredWeight: 90,
     totalWeight: 110,
     rubricVersion: "v2",
+    confidence: 0.82,
+  },
+  {
+    date: utcDaysAgo(1),
+    overall: 74.2,
+    coveredWeight: 95,
+    totalWeight: 110,
+    rubricVersion: "v3",
     confidence: 0.82,
   },
 ];

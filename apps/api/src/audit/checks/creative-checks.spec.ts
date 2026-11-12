@@ -136,7 +136,45 @@ describe('preview-video-present', () => {
     });
   });
 
-  it('lists nothing on the App Store', () => {
+  it('scores a preview video on the App Store page extract', () => {
+    const present = previewVideoChecks(
+      appStoreContext({ facts: { previewVideoCount: 2 } }),
+    );
+
+    expect(present[0]).toMatchObject({
+      id: 'preview-video-present',
+      label: 'Preview video present',
+      source: 'store',
+      score: 10,
+      detail: 'The store page shows 2 preview videos.',
+    });
+  });
+
+  it('writes one preview video in the singular', () => {
+    const single = previewVideoChecks(
+      appStoreContext({ facts: { previewVideoCount: 1 } }),
+    );
+
+    expect(single[0]).toMatchObject({
+      score: 10,
+      detail: 'The store page shows 1 preview video.',
+    });
+  });
+
+  it('fails an App Store page whose extract holds no preview videos', () => {
+    const missing = previewVideoChecks(
+      appStoreContext({ facts: { previewVideoCount: 0 } }),
+    );
+
+    expect(missing[0]).toMatchObject({
+      id: 'preview-video-present',
+      score: 0,
+      detail: 'No preview video is on the store page.',
+    });
+    expect(missing[0]?.advice?.fix).toContain('App Store Connect');
+  });
+
+  it('lists nothing on the App Store without a page extract', () => {
     expect(previewVideoChecks(appStoreContext())).toEqual([]);
   });
 });

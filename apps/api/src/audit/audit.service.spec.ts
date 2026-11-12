@@ -146,7 +146,7 @@ describe('AuditService.recordToday', () => {
       appId: 'a',
       date: new Date('2026-07-22T00:00:00.000Z'),
     });
-    expect(create.rubricVersion).toBe('v2');
+    expect(create.rubricVersion).toBe('v3');
     expect(create.confidence).toBe(0.82);
   });
 

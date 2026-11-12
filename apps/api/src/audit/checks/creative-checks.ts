@@ -349,8 +349,28 @@ export const screenshotChecks = (context: AuditContext): RubricCheck[] => {
 };
 
 export const previewVideoChecks = (context: AuditContext): RubricCheck[] => {
-  if (context.store !== Store.GOOGLE_PLAY) {
-    return [];
+  if (context.store === Store.APP_STORE) {
+    const count = context.rawFacts.previewVideoCount;
+    if (count === null) {
+      return [];
+    }
+    return [
+      check({
+        id: 'preview-video-present',
+        label: 'Preview video present',
+        source: 'store',
+        weight: 1,
+        score: count > 0 ? 10 : 0,
+        detail:
+          count > 0
+            ? `The store page shows ${count} preview ${count === 1 ? 'video' : 'videos'}.`
+            : 'No preview video is on the store page.',
+        advice: {
+          title: 'Add a preview video',
+          fix: 'Upload a preview in App Store Connect. Previews autoplay muted in search results, so lead with your best benefit.',
+        },
+      }),
+    ];
   }
   const present = context.rawFacts.videoUrl !== null;
   return [

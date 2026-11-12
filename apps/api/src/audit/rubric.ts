@@ -7,6 +7,7 @@ import {
   AuditGroupId,
   AuditCreative,
   AuditGroupResult,
+  AuditLimitation,
   AuditScreenshotObservation,
   AuditUnlockKind,
   AuditUnlockSummary,
@@ -74,7 +75,14 @@ export const AUDIT_WEIGHTS = {
   },
 } as const;
 
-export const AUDIT_RUBRIC_VERSION = 'v2';
+export const AUDIT_RUBRIC_VERSION = 'v3';
+
+const PREVIEW_VIDEO_PAGE_LIMITATION: AuditLimitation = {
+  id: 'preview-video-page',
+  label: 'App previews',
+  detail:
+    'Preview videos are not measured because this audit ran without the store page.',
+};
 
 export const AUDIT_GROUP_LABELS: Readonly<Record<AuditGroupId, string>> =
   Object.freeze({
@@ -360,7 +368,12 @@ export function computeAudit(context: AuditContext): AppAuditResult {
     grade: gradeFor(totals.overall),
     confidence: totals.confidence,
     groups,
-    limitations: [...limitationsFor(context.store)],
+    limitations: [
+      ...limitationsFor(context.store),
+      ...(context.store === Store.APP_STORE && !context.hasPageExtract
+        ? [PREVIEW_VIDEO_PAGE_LIMITATION]
+        : []),
+    ],
     unlocks: deriveUnlocks(built),
     creative: toCreative(context),
     benchmarks: buildBenchmarks(context),

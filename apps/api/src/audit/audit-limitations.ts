@@ -3,12 +3,6 @@ import { AuditLimitation } from '@asobeast/shared';
 
 const APP_STORE_LIMITATIONS: readonly AuditLimitation[] = [
   {
-    id: 'preview-video',
-    label: 'App previews',
-    detail:
-      'asobeast cannot see App Store previews. Up to 3 per localization, up to 30 seconds, autoplaying muted in search. Check them in App Store Connect.',
-  },
-  {
     id: 'promotional-text',
     label: 'Promotional text',
     detail:

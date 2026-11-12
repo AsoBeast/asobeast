@@ -2,6 +2,7 @@ import type { AppAuditResult, AuditAiRunResult } from "@asobeast/shared";
 import type { Response } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { seedCookies } from "./routes.mts";
+import { layoutBox } from "./layout-box.mts";
 
 test("shows one score with its grade, measured share and potential", async ({
   page,
@@ -11,7 +12,7 @@ test("shows one score with its grade, measured share and potential", async ({
   const hero = page.getByRole("region", { name: "ASO score" });
   await expect(
     hero.getByRole("img", {
-      name: "ASO score 72 out of 100, grade B, Good, 82% measured",
+      name: "ASO score 74 out of 100, grade B, Good, 82% measured",
     }),
   ).toBeVisible();
   await expect(hero.getByText("Reach 86 by finishing the plan")).toBeVisible();
@@ -29,12 +30,28 @@ test("never labels the history snapshot as the latest score", async ({
   ).toBeVisible();
 });
 
+test("marks every rubric version change and keeps the labels inside the chart", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-gp/audit");
+
+  const chart = page.getByRole("region", { name: "Score history" });
+  await expect(chart.getByText("Rubric v2")).toBeVisible();
+  const newest = chart.getByText("Rubric v3");
+  await expect(newest).toBeVisible();
+
+  const label = await layoutBox(newest);
+  const bounds = await layoutBox(chart);
+  expect(label.x).toBeGreaterThanOrEqual(bounds.x);
+  expect(label.x + label.width).toBeLessThanOrEqual(bounds.x + bounds.width);
+});
+
 test("shows the score without scrolling on a phone", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/apps/app-1/audit");
 
   await expect(
-    page.getByRole("img", { name: /^ASO score 72/ }),
+    page.getByRole("img", { name: /^ASO score 74/ }),
   ).toBeInViewport();
 });
 
@@ -46,7 +63,7 @@ test("labels a low confidence grade provisional", async ({ page, context }) => {
 });
 
 test("names the date of the history snapshot it shows", async ({ page }) => {
-  await page.goto("/apps/app-gp/audit");
+  await page.goto("/apps/app-long/audit");
 
   await expect(page.getByText(/Last daily snapshot · /)).toBeVisible();
 });
@@ -159,7 +176,7 @@ test("says what the audit cannot see", async ({ page }) => {
   await page.goto("/apps/app-1/audit");
 
   await page.getByText("What this audit cannot see").click();
-  await expect(page.getByText("App previews")).toBeVisible();
+  await expect(page.getByText("Promotional text")).toBeVisible();
 });
 
 test("reports an audit that failed to load instead of hiding it", async ({
@@ -526,13 +543,11 @@ test("keeps the skeleton and the loaded hero the same height", async ({
 
   const skeleton = page.locator('[data-slot="score-ring-skeleton"]');
   await expect(skeleton).toBeVisible();
-  const before = await skeleton.boundingBox();
+  const before = await layoutBox(skeleton);
 
   const ring = page.locator('[data-slot="score-ring"]').first();
   await expect(ring).toBeVisible();
-  const after = await ring.boundingBox();
+  const after = await layoutBox(ring);
 
-  expect(before).not.toBeNull();
-  expect(after).not.toBeNull();
-  expect(Math.abs(before!.height - after!.height)).toBeLessThanOrEqual(8);
+  expect(Math.abs(before.height - after.height)).toBeLessThanOrEqual(8);
 });

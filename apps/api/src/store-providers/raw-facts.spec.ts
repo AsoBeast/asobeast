@@ -70,6 +70,7 @@ describe('extractAppStoreRawFacts', () => {
       genreName: 'Health & Fitness',
       videoUrl: null,
       featureGraphicUrl: null,
+      previewVideoCount: null,
       supportsIpad: true,
       developerName: 'Habit Labs',
       currentVersionScore: 4.2,
@@ -95,6 +96,7 @@ describe('extractAppStoreRawFacts', () => {
       genreName: null,
       videoUrl: null,
       featureGraphicUrl: null,
+      previewVideoCount: null,
       supportsIpad: false,
       developerName: null,
       currentVersionScore: null,
@@ -132,6 +134,7 @@ describe('extractGooglePlayRawFacts', () => {
       genreName: 'Tools',
       videoUrl: 'https://video',
       featureGraphicUrl: 'https://play-lh.googleusercontent.com/header',
+      previewVideoCount: null,
       supportsIpad: false,
       developerName: 'Example Labs',
       currentVersionScore: null,
@@ -170,6 +173,7 @@ describe('extractGooglePlayRawFacts', () => {
       genreName: null,
       videoUrl: null,
       featureGraphicUrl: null,
+      previewVideoCount: null,
       supportsIpad: false,
       developerName: null,
       currentVersionScore: null,
@@ -178,6 +182,42 @@ describe('extractGooglePlayRawFacts', () => {
       iconUrl: null,
       screenshotUrls: [],
     });
+  });
+});
+
+describe('previewVideoCount', () => {
+  it('counts the preview videos of the stored page extract', () => {
+    expect(
+      extractAppStoreRawFacts({
+        pageExtract: { previewVideoUrls: ['a.mp4', 'b.mp4'] },
+      }).previewVideoCount,
+    ).toBe(2);
+    expect(
+      extractAppStoreRawFacts({ pageExtract: { previewVideoUrls: [] } })
+        .previewVideoCount,
+    ).toBe(0);
+  });
+
+  it('answers null when the extract is absent or unreadable', () => {
+    for (const raw of [
+      {},
+      { pageExtract: null },
+      { pageExtract: 'nope' },
+      { pageExtract: {} },
+      { pageExtract: { previewVideoUrls: 'not-an-array' } },
+      { pageExtract: { previewVideoUrls: null } },
+    ]) {
+      expect(extractAppStoreRawFacts(raw).previewVideoCount).toBeNull();
+    }
+  });
+
+  it('stays null for Google Play snapshots', () => {
+    expect(
+      extractGooglePlayRawFacts({
+        video: 'https://video',
+        pageExtract: { previewVideoUrls: ['a.mp4'] },
+      }).previewVideoCount,
+    ).toBeNull();
   });
 });
 
