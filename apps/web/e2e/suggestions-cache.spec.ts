@@ -38,7 +38,9 @@ test("refreshing the listing does not look up a store suggestion again", async (
   track(page, strategies);
   await page.goto("/apps/app-1/keywords?tab=discovered&strategy=search");
   await openSuggestions(page);
-  await expect(page.getByText("focus timer app")).toBeVisible();
+  await expect(
+    page.getByRole("listitem").filter({ hasText: "focus timer app" }),
+  ).toBeVisible();
   expect(strategies).toEqual(["search"]);
 
   await refreshListing(page);
