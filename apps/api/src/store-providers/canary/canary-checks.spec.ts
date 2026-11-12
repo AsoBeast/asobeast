@@ -95,6 +95,44 @@ describe('assertPageExtract', () => {
     expect(() => assertPageExtract(appOf())).not.toThrow();
   });
 
+  it('rejects an extract that read no product media shelf', () => {
+    expect(() =>
+      assertPageExtract(
+        appOf({
+          raw: {
+            pageExtract: {
+              previewVideoUrls: null,
+              appEvents: [],
+              featuredStories: [],
+              editorsChoice: null,
+              accessibilityStatement: null,
+            },
+          },
+        }),
+      ),
+    ).toThrow(
+      new CanaryShapeError('the store page carries no product media shelf'),
+    );
+  });
+
+  it('accepts an extract whose media shelves carry screenshots only', () => {
+    expect(() =>
+      assertPageExtract(
+        appOf({
+          raw: {
+            pageExtract: {
+              previewVideoUrls: ['https://video/preview.m3u8'],
+              appEvents: [],
+              featuredStories: [],
+              editorsChoice: null,
+              accessibilityStatement: null,
+            },
+          },
+        }),
+      ),
+    ).not.toThrow();
+  });
+
   it('accepts an unavailable extract when the page never answered', () => {
     expect(() =>
       assertPageExtract(

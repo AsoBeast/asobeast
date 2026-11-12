@@ -205,6 +205,7 @@ describe('previewVideoCount', () => {
       { pageExtract: 'nope' },
       { pageExtract: {} },
       { pageExtract: { previewVideoUrls: 'not-an-array' } },
+      { pageExtract: { previewVideoUrls: null } },
     ]) {
       expect(extractAppStoreRawFacts(raw).previewVideoCount).toBeNull();
     }

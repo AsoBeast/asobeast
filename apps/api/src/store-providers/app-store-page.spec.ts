@@ -235,14 +235,23 @@ describe('parseAppStorePage', () => {
     expect(extract.previewVideoUrls).toEqual([TRAILER_URL]);
   });
 
-  it('answers an all empty extract for an empty shelf mapping', () => {
+  it('answers null preview videos for an empty shelf mapping', () => {
     expect(parseAppStorePage(pageOf({}))).toEqual({
-      previewVideoUrls: [],
+      previewVideoUrls: null,
       appEvents: [],
       featuredStories: [],
       editorsChoice: null,
       accessibilityStatement: null,
     });
+  });
+
+  it('answers null preview videos when the shelf mapping holds no media shelves', () => {
+    const extract = parseAppStorePage(
+      pageOf({ appEvents: shelfOf([POGO_EVENT]) }),
+    );
+
+    expect(extract.previewVideoUrls).toBeNull();
+    expect(extract.appEvents).toHaveLength(1);
   });
 
   it('throws when the page embeds no serialized server data', () => {

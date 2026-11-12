@@ -432,6 +432,50 @@ describe('AuditController (e2e)', () => {
     });
   });
 
+  it('leaves the App Store preview video not measurable when the extract read no media shelf', async () => {
+    const app = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '4234567890',
+        country: 'us',
+        name: 'No Media Shelf',
+      },
+    });
+    await prisma.appSnapshot.create({
+      data: {
+        appId: app.id,
+        title: 'No Media Shelf',
+        description: 'Build better habits every single day.',
+        raw: {
+          screenshots: Array.from({ length: 8 }, (_, i) => `s${i}.png`),
+          pageExtract: {
+            previewVideoUrls: null,
+            appEvents: [],
+            featuredStories: [],
+            editorsChoice: null,
+            accessibilityStatement: null,
+          },
+        },
+        capturedAt: D0,
+      },
+    });
+
+    const result = (await api.get(`/apps/${app.id}/audit`).expect(200))
+      .body as AppAuditResult;
+
+    expect(
+      result.factors.find((item) => item.id === 'previewVideo'),
+    ).toMatchObject({
+      checks: [],
+      availability: 'not-measurable',
+      score: null,
+    });
+    expect(result.limitations?.map((item) => item.id)).not.toContain(
+      'preview-video-page',
+    );
+  });
+
   it('leaves the App Store preview video not measurable without a page extract', async () => {
     const app = await prisma.app.create({
       data: {
