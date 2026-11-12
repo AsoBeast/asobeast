@@ -17,7 +17,7 @@ const WORDS: Record<
   entered: {
     label: "New",
     name: "Entered the results since yesterday",
-    tone: "bg-info-subtle text-info",
+    tone: "bg-signal-up-subtle text-signal-up",
   },
 };
 

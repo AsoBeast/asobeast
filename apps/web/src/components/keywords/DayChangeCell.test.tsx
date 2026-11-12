@@ -15,11 +15,12 @@ describe("DayChangeCell", () => {
     expect(markup).toContain("text-signal-down");
   });
 
-  it("names a keyword that entered the results as new", () => {
+  it("names a keyword that entered the results as new, in the climbing colour", () => {
     const markup = render({ kind: "entered" });
 
     expect(markup).toContain(">New<");
     expect(markup).toContain("Entered the results since yesterday");
+    expect(markup).toContain("text-signal-up");
   });
 
   it("draws a move as a pill that says its direction", () => {
