@@ -66,6 +66,19 @@ describe('outcomeOfError', () => {
     ).toBe('unreachable');
   });
 
+  it.each([
+    'Unexpected token } in JSON at position 1503',
+    'no listing for app 64290017',
+  ])('calls %s broken although it holds the digits of a status', (cause) => {
+    expect(outcomeOfError(requestError(cause))).toBe('broken');
+  });
+
+  it('calls a status named in the message unreachable', () => {
+    expect(outcomeOfError(requestError('Request failed with status 429'))).toBe(
+      'unreachable',
+    );
+  });
+
   it('calls a request failure with no transport marker broken', () => {
     expect(
       outcomeOfError(requestError('Cannot read properties of undefined')),

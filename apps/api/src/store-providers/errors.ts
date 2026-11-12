@@ -23,6 +23,13 @@ export const TRANSPORT_MESSAGES = [
   '503',
 ] as const;
 
+const STATUS_CODE = /^\d+$/;
+
+const names = (lowered: string, marker: string): boolean =>
+  STATUS_CODE.test(marker)
+    ? new RegExp(`(?<!\\d)${marker}(?!\\d)`).test(lowered)
+    : lowered.includes(marker.toLowerCase());
+
 export class StoreRequestError extends Error {
   constructor(
     readonly store: Store,
@@ -39,9 +46,7 @@ export class StoreRequestError extends Error {
 
   get unreachable(): boolean {
     const lowered = this.causeMessage.toLowerCase();
-    return TRANSPORT_MESSAGES.some((marker) =>
-      lowered.includes(marker.toLowerCase()),
-    );
+    return TRANSPORT_MESSAGES.some((marker) => names(lowered, marker));
   }
 }
 
