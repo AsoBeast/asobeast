@@ -2,6 +2,7 @@
 
 import { createContext, useContext, type ReactNode } from "react";
 import { ChartLine, LoaderCircle, StickyNote } from "lucide-react";
+import { DeltaChip } from "@/components/ui/delta-chip";
 import type { PlayAcquisitions, TrackedKeywordItem } from "@asobeast/shared";
 import { formatCheckedPosition } from "@asobeast/shared";
 import { MatchedText } from "@/components/keyword-match/MatchedText";
@@ -26,6 +27,8 @@ import {
   type PositionHistoryContext,
 } from "./PositionHistoryPopover";
 import { KeywordClassTag } from "./KeywordClassTag";
+import { PositionTrend } from "./PositionTrend";
+import { StaleCheckMark } from "./StaleCheckMark";
 
 function volatilityBand(value: number): { label: string; text: string } {
   if (value < 20) return { label: "Low", text: "text-muted-foreground" };
@@ -33,14 +36,21 @@ function volatilityBand(value: number): { label: string; text: string } {
   return { label: "High", text: "text-warning" };
 }
 
+export function CheckingMark() {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+      <LoaderCircle aria-hidden className="size-3.5 animate-spin" />
+      <span>Checking…</span>
+    </span>
+  );
+}
+
 export function PositionCell({
   keyword,
   today,
-  history,
 }: {
   keyword: TrackedKeywordItem;
   today: string;
-  history: PositionHistoryContext;
 }) {
   const label = formatCheckedPosition(
     keyword.latestPosition,
@@ -50,12 +60,8 @@ export function PositionCell({
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <span
-            aria-label="Position: checking"
-            className="inline-flex items-center gap-1.5 text-muted-foreground"
-          >
-            <LoaderCircle aria-hidden className="size-3.5 animate-spin" />
-            Checking…
+          <span aria-label="Position: checking" className="inline-flex">
+            <CheckingMark />
           </span>
         </TooltipTrigger>
         <TooltipContent>
@@ -90,13 +96,46 @@ export function PositionCell({
         lost={lostPosition(keyword)}
         chip
       />
-      <PositionHistoryPopover
-        keyword={keyword}
-        label={label}
-        staleOn={staleOn}
-        {...history}
-      />
+      {staleOn === null ? null : <StaleCheckMark day={staleOn} />}
     </span>
+  );
+}
+
+export function TrendCell({
+  keyword,
+  today,
+  history,
+}: {
+  keyword: TrackedKeywordItem;
+  today: string;
+  history: PositionHistoryContext;
+}) {
+  const label = formatCheckedPosition(
+    keyword.latestPosition,
+    keyword.latestDepth,
+  );
+  const trend = (
+    <>
+      <PositionTrend checks={keyword.recentPositions} />
+      <DeltaChip
+        value={keyword.positionDelta7d}
+        period="over 7 days"
+        className={keyword.active ? undefined : "text-muted-foreground"}
+      />
+    </>
+  );
+  if (label === null) {
+    return <span className="inline-flex items-center gap-2">{trend}</span>;
+  }
+  return (
+    <PositionHistoryPopover
+      keyword={keyword}
+      label={label}
+      staleOn={staleCheckDay(keyword, today)}
+      {...history}
+    >
+      {trend}
+    </PositionHistoryPopover>
   );
 }
 
@@ -220,7 +259,7 @@ export const KeywordSheetContext = createContext<
 >(null);
 
 const KEYWORD_OPENER =
-  "truncate rounded-sm text-left underline decoration-transparent underline-offset-4 outline-none transition-colors hover:decoration-faint-foreground focus-visible:ring-2 focus-visible:ring-ring";
+  "relative min-w-0 rounded-sm text-left underline decoration-transparent underline-offset-4 outline-none transition-colors after:absolute after:inset-x-0 after:-inset-y-3 hover:decoration-foreground focus-visible:ring-2 focus-visible:ring-ring";
 
 function KeywordName({
   keyword,
@@ -245,7 +284,7 @@ function KeywordName({
       className={KEYWORD_OPENER}
       onClick={() => openSheet(keyword.keywordId)}
     >
-      {children}
+      <span className="block truncate">{children}</span>
     </button>
   );
 }

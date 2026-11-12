@@ -3,6 +3,8 @@
 import { useId } from "react";
 import { keywordLabel, type TrackedKeywordItem } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { ROW_PEEK } from "./row-peek";
 import {
   Popover,
   PopoverContent,
@@ -55,7 +57,7 @@ export function InsightsCell({
           <button
             type="button"
             aria-label={`${labels.join(", ")}: reasons for ${subject}`}
-            className="-my-1 inline-flex items-center gap-1 rounded-md py-1 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className={cn("inline-flex items-center gap-1", ROW_PEEK)}
           >
             {insights.map((insight, index) => (
               <Badge
