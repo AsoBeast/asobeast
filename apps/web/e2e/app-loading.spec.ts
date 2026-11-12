@@ -15,6 +15,7 @@ test("the overview keeps one app header while it loads", async ({
     .first()
     .click();
 
+  await expect(page).toHaveURL(/\/apps\/app-1$/);
   const skeletons = page.locator("main [data-slot=skeleton]");
   await expect(skeletons.first()).toBeVisible();
   expect(await skeletons.and(page.locator(".size-8")).count()).toBe(0);
