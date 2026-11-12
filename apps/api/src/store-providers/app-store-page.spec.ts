@@ -214,7 +214,9 @@ describe('parseAppStorePage', () => {
       }),
     );
 
-    expect(extract.previewVideoUrls.sort()).toEqual([
+    const previewVideoUrls = extract.previewVideoUrls;
+    expect(previewVideoUrls).not.toBeNull();
+    expect([...(previewVideoUrls ?? [])].sort()).toEqual([
       `${TRAILER_URL}?pad`,
       `${TRAILER_URL}?watch`,
     ]);
