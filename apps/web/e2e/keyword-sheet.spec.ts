@@ -137,6 +137,23 @@ test("stopping the keyword the sheet shows closes the sheet", async ({
   await expect(page).not.toHaveURL(/keyword=/);
 });
 
+test("the sheet says when the store showed no apps", async ({ page }) => {
+  await page.route("**/api/backend/keywords/kw-3/serp**", async (route) => {
+    const snapshot = (await (await route.fetch()).json()) as object;
+    return route.fulfill({ json: { ...snapshot, entries: [] } });
+  });
+  await page.goto(`${KEYWORDS}?keyword=kw-3`);
+  const dialog = sheet(page, "study timer");
+
+  await expect(
+    dialog.getByText(/^The store showed no apps for this keyword on /),
+  ).toBeVisible();
+  await expect(dialog.getByText(/below the top 0/)).toHaveCount(0);
+  await expect(
+    dialog.getByRole("button", { name: "All results and earlier days" }),
+  ).toBeVisible();
+});
+
 test("all results opens the search results and closing them returns to the sheet", async ({
   page,
 }) => {

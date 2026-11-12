@@ -21,7 +21,7 @@ import {
 } from "@/lib/queries";
 import { SerpList } from "../serp/SerpList";
 import { isCaptured, type CapturedSerp } from "../serp/SerpSheet";
-import { SerpNeverChecked, SerpSkeleton } from "../serp/SerpStates";
+import { SerpNeverChecked, SerpNoApps, SerpSkeleton } from "../serp/SerpStates";
 import { SerpSummary } from "../serp/SerpSummary";
 import { serpSummary } from "../serp/serp-summary";
 import { SheetSection } from "./SheetSection";
@@ -46,18 +46,24 @@ function CapturedResults({
   return (
     <>
       <div className="-mx-4 flex flex-col">
-        <SerpSummary
-          facts={serpSummary(snapshot, viewer, keyword)}
-          comparedTo={comparedTo}
-        />
-        {topTen.length > 0 ? (
-          <SerpList
-            heading="Top 10"
-            entries={topTen}
-            viewer={viewer}
-            comparedTo={comparedTo}
-          />
-        ) : null}
+        {snapshot.entries.length === 0 ? (
+          <SerpNoApps date={snapshot.date} />
+        ) : (
+          <>
+            <SerpSummary
+              facts={serpSummary(snapshot, viewer, keyword)}
+              comparedTo={comparedTo}
+            />
+            {topTen.length > 0 ? (
+              <SerpList
+                heading="Top 10"
+                entries={topTen}
+                viewer={viewer}
+                comparedTo={comparedTo}
+              />
+            ) : null}
+          </>
+        )}
       </div>
       <div>
         <Button
