@@ -372,9 +372,6 @@ export const previewVideoChecks = (context: AuditContext): RubricCheck[] => {
       }),
     ];
   }
-  if (context.store !== Store.GOOGLE_PLAY) {
-    return [];
-  }
   const present = context.rawFacts.videoUrl !== null;
   return [
     check({
