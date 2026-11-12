@@ -42,6 +42,7 @@ import {
 } from "@/components/charts/theme";
 import { formatDate } from "@/lib/format";
 import { auditHistoryOptions } from "@/lib/queries";
+import { rubricChanges } from "./rubric-changes";
 
 const chartConfig = {
   overall: { label: "ASO score", color: seriesColor(0) },
@@ -66,44 +67,6 @@ function computeDelta(points: AuditScorePoint[]): number | null {
   return (current.overall as number) - (baseline.overall as number);
 }
 
-type RubricLabelPosition = "insideLeft" | "insideRight";
-
-interface RubricChange {
-  date: string;
-  version: string;
-  labelPosition: RubricLabelPosition | null;
-}
-
-const LABEL_EDGE_SHARE = 0.1;
-
-const labelPosition = (
-  index: number,
-  total: number,
-): RubricLabelPosition | null => {
-  const ratio = total > 1 ? index / (total - 1) : 1;
-  if (ratio >= 1 - LABEL_EDGE_SHARE) return "insideRight";
-  if (ratio <= LABEL_EDGE_SHARE) return "insideLeft";
-  return null;
-};
-
-function rubricChanges(points: AuditScorePoint[]): RubricChange[] {
-  const changes: RubricChange[] = [];
-  let previous: string | null = null;
-  points.forEach((point, index) => {
-    const version = point.rubricVersion;
-    if (version === undefined) return;
-    if (previous !== null && version !== previous) {
-      changes.push({
-        date: point.date,
-        version,
-        labelPosition: labelPosition(index, points.length),
-      });
-    }
-    previous = version;
-  });
-  return changes;
-}
-
 function DeltaChip({ delta }: { delta: number | null }) {
   if (delta === null) return null;
   const rounded = Math.round(delta);
@@ -122,7 +85,7 @@ export function AuditHealthChart({ id }: { id: string }) {
   const { data } = useSuspenseQuery(auditHistoryOptions(id));
   const points = scored(data.points);
   const state = trendState(points.length);
-  const rubricChange = rubricChanges(data.points);
+  const changes = rubricChanges(data.points);
   const lastPoint = points[points.length - 1];
 
   return (
@@ -155,7 +118,7 @@ export function AuditHealthChart({ id }: { id: string }) {
               <ChartTooltip
                 content={<ChartTooltipContent {...TIME_TOOLTIP_PROPS} />}
               />
-              {rubricChange.map((change) => (
+              {changes.map((change) => (
                 <ReferenceLine
                   key={`${change.date}-${change.version}`}
                   x={change.date}
