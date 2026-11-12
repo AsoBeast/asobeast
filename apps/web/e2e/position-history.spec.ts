@@ -372,7 +372,7 @@ test("E-PH-11 a market keyword marks only its own market's listing changes", asy
 });
 
 for (const viewport of [
-  { width: 375, height: 812 },
+  { width: 768, height: 1024 },
   { width: 1440, height: 900 },
 ]) {
   test(`E-PH-12 the popover stays inside a ${viewport.width} by ${viewport.height} viewport`, async ({

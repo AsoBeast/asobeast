@@ -10,7 +10,6 @@ import type {
 import type { KeywordTableFeatures } from "./keyword-table-features";
 import { Checkbox } from "@/components/ui/checkbox";
 import { InfoTip } from "@/components/ui/info-tip";
-import { DeltaChip } from "@/components/ui/delta-chip";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import {
   dayChange,
@@ -25,12 +24,12 @@ import { SCORE_COMPARABILITY } from "./keyword-csv";
 import { keywordZoneFilter } from "./keyword-filters";
 import { KeywordRowActions } from "./KeywordRowActions";
 import { PlayInstallsTip } from "./PlayInstallsTip";
-import { PositionTrend } from "./PositionTrend";
 import type { PositionHistoryContext } from "./PositionHistoryPopover";
 import {
   KeywordCell,
   PlayAcquisitionsCell,
   PositionCell,
+  TrendCell,
 } from "./keyword-cells";
 import {
   keywordColumnHelper as columnHelper,
@@ -108,9 +107,9 @@ export function keywordColumns({
 }) {
   return columnHelper.columns([
     ...identityColumns(),
-    positionColumn(today, { appId, store, homeCountry, multiMarket }),
+    positionColumn(today),
     changeColumn(today),
-    deltaColumn(),
+    deltaColumn(today, { appId, store, homeCountry, multiMarket }),
     ...scoreColumns(),
     insightsColumn(today, multiMarket),
     ...(store === "GOOGLE_PLAY" ? [acquisitionsColumn()] : []),
@@ -197,7 +196,7 @@ function filterColumns() {
   ];
 }
 
-function positionColumn(today: string, history: PositionHistoryContext) {
+function positionColumn(today: string) {
   return columnHelper.accessor((row) => nullsLast(row.latestPosition), {
     id: "position",
     meta: { label: "Position", phone: true },
@@ -211,9 +210,7 @@ function positionColumn(today: string, history: PositionHistoryContext) {
       ),
     header: ({ column }) => <SortableHeader column={column} label="Position" />,
     footer: positionFooter,
-    cell: ({ row }) => (
-      <PositionCell keyword={row.original} today={today} history={history} />
-    ),
+    cell: ({ row }) => <PositionCell keyword={row.original} today={today} />,
   });
 }
 
@@ -239,7 +236,7 @@ function changeColumn(today: string) {
   );
 }
 
-function deltaColumn() {
+function deltaColumn(today: string, history: PositionHistoryContext) {
   return columnHelper.accessor(
     (row) => (row.positionDelta7d === null ? undefined : -row.positionDelta7d),
     {
@@ -252,16 +249,7 @@ function deltaColumn() {
       ),
       footer: movedFooter,
       cell: ({ row }) => (
-        <span className="inline-flex items-center gap-2">
-          <PositionTrend checks={row.original.recentPositions} />
-          <DeltaChip
-            value={row.original.positionDelta7d}
-            period="over 7 days"
-            className={
-              row.original.active ? undefined : "text-muted-foreground"
-            }
-          />
-        </span>
+        <TrendCell keyword={row.original} today={today} history={history} />
       ),
     },
   );

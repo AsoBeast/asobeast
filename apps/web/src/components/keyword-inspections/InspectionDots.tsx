@@ -154,7 +154,7 @@ export function InspectionDot({ cx, cy, payload }: ScatterShapeProps) {
       aria-pressed={selected}
       data-inspection-id={payload.keywordId}
       data-inspection-keyword={payload.keyword}
-      className="group cursor-pointer outline-none"
+      className="group outline-none"
       onClick={() => state.onSelect(payload)}
       onFocus={() => state.onFocus(payload)}
       onBlur={(event) => state.onBlur(payload, event.currentTarget)}

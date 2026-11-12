@@ -53,7 +53,7 @@ export function StatTile({
       className={cn(
         TILE_SHAPE,
         onSelect &&
-          "cursor-pointer text-left transition-colors duration-150 ease-out outline-hidden hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset data-[selected=true]:shadow-[-1px_0_0_var(--border),0_-1px_0_var(--border),inset_0_-2px_0_var(--foreground)]",
+          "text-left transition-colors duration-150 ease-out outline-hidden hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset data-[selected=true]:shadow-[-1px_0_0_var(--border),0_-1px_0_var(--border),inset_0_-2px_0_var(--foreground)]",
         className,
       )}
     >

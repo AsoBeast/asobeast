@@ -27,6 +27,13 @@ const TRANSLUCENT_RING = /\bring-ring\/\d+/g;
 const MONOSPACE_NUMBER =
   /["'`][^"'`\n]*\b(?:numeric\b[^"'`\n]*\bfont-mono|font-mono\b[^"'`\n]*\bnumeric)\b[^"'`\n]*["'`]/g;
 
+const POINTER_CURSOR = /\bcursor-pointer\b/g;
+
+const POINTER_ON_A_NON_BUTTON = [
+  "components/keywords/ImportFileStep.tsx: cursor-pointer",
+  "components/keywords/map/zone-layers.tsx: cursor-pointer",
+];
+
 function sources(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
@@ -61,6 +68,10 @@ describe("utility classes", () => {
 
   it("draws every focus ring solid", () => {
     expect(offenders(TRANSLUCENT_RING)).toEqual([]);
+  });
+
+  it("leaves the pointer cursor of a button to the base layer", () => {
+    expect(offenders(POINTER_CURSOR).sort()).toEqual(POINTER_ON_A_NON_BUTTON);
   });
 
   it("sets a number in tabular figures rather than monospace", () => {

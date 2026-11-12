@@ -2,6 +2,7 @@ import { useId } from "react";
 import type { KeywordTopApp, TrackedKeywordItem } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { cn } from "@/lib/utils";
+import { ROW_PEEK } from "./row-peek";
 import { rememberSerpOpener } from "./serp/serp-opener";
 
 const ICON_SIZE = 24;
@@ -45,7 +46,7 @@ export function TopAppsCell({
         rememberSerpOpener(event.currentTarget);
         onOpen();
       }}
-      className="group/apps -m-1 flex cursor-pointer items-center rounded-md p-1 outline-none transition-colors duration-150 ease-out hover:bg-card hover:shadow-[inset_0_0_0_1px_var(--border)] focus-visible:ring-2 focus-visible:ring-ring"
+      className={cn("group/apps flex items-center", ROW_PEEK)}
     >
       <span id={appsId} className="sr-only">
         {`Top apps: ${apps.map(appLine).join(", ")}`}

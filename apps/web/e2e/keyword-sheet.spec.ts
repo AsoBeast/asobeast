@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { settleAnimations } from "./dialog.mts";
 import { pressFromKeyboard } from "./held-request.mts";
 import { hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
@@ -27,8 +28,9 @@ test("pressing a keyword opens its sheet with everything about it", async ({
     "What to know",
     "Position history",
     "Search results",
-    "In your listing",
     "Scores and where they come from",
+    "In your listing",
+    "Tags and note",
   ]) {
     await expect(dialog.getByRole("heading", { name: heading })).toBeVisible();
   }
@@ -79,8 +81,12 @@ test("the header stays in view while the sections scroll", async ({ page }) => {
 
 test("a link opens the sheet of its keyword", async ({ page }) => {
   await page.goto(`${KEYWORDS}?keyword=kw-1`);
-
   await expect(sheet(page, "focus timer")).toBeVisible();
+
+  await page.keyboard.press("Escape");
+
+  await expect(page).toHaveURL(/\/apps\/app-1\/keywords$/);
+  await expect(opener(page, "focus timer")).toBeFocused();
 });
 
 test("a keyword the market does not track opens nothing", async ({ page }) => {
@@ -88,9 +94,69 @@ test("a keyword the market does not track opens nothing", async ({ page }) => {
 
   await expect(opener(page, "focus timer")).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  await (await hydrated(opener(page, "focus timer"))).click();
+  await expect(sheet(page, "focus timer")).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await expect(sheet(page, "focus timer")).toHaveCount(0);
+  await expect(page).toHaveURL(/keyword=missing/);
 });
 
-test("all results swaps the sheet for the search results", async ({ page }) => {
+test("stopping the keyword the sheet shows closes the sheet", async ({
+  page,
+}) => {
+  let stopped = false;
+  await page.route("**/api/backend/apps/app-1/keywords/kw-3", (route) => {
+    if (route.request().method() !== "DELETE") return route.fallback();
+    stopped = true;
+    return route.fulfill({ status: 204 });
+  });
+  await page.route("**/api/backend/apps/app-1/keywords?**", async (route) => {
+    if (!stopped) return route.fallback();
+    const listed = (await (await route.fetch()).json()) as {
+      keywordId: string;
+    }[];
+    return route.fulfill({
+      json: listed.filter((row) => row.keywordId !== "kw-3"),
+    });
+  });
+  await page.goto(`${KEYWORDS}?keyword=kw-3`);
+  const dialog = sheet(page, "study timer");
+
+  await dialog
+    .getByRole("button", { name: "Keyword actions for study timer" })
+    .click();
+  await page.getByRole("menuitem", { name: "Stop tracking" }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Stop tracking" })
+    .click();
+
+  await expect(dialog).toHaveCount(0);
+  await expect(page).not.toHaveURL(/keyword=/);
+});
+
+test("the sheet says when the store showed no apps", async ({ page }) => {
+  await page.route("**/api/backend/keywords/kw-3/serp**", async (route) => {
+    const snapshot = (await (await route.fetch()).json()) as object;
+    return route.fulfill({ json: { ...snapshot, entries: [] } });
+  });
+  await page.goto(`${KEYWORDS}?keyword=kw-3`);
+  const dialog = sheet(page, "study timer");
+
+  await expect(
+    dialog.getByText(/^The store showed no apps for this keyword on /),
+  ).toBeVisible();
+  await expect(dialog.getByText(/below the top 0/)).toHaveCount(0);
+  await expect(
+    dialog.getByRole("button", { name: "All results and earlier days" }),
+  ).toBeVisible();
+});
+
+test("all results opens the search results and closing them returns to the sheet", async ({
+  page,
+}) => {
   await page.goto(`${KEYWORDS}?keyword=kw-3`);
   const dialog = sheet(page, "study timer");
 
@@ -99,8 +165,102 @@ test("all results swaps the sheet for the search results", async ({ page }) => {
     .click();
 
   await expect(page).toHaveURL(/serp=kw-3/);
+  const results = page.getByRole("dialog", { name: "Search results" });
+  await expect(results).toBeVisible();
+  await expect(dialog).toHaveCount(0);
+
+  await page.keyboard.press("Escape");
+
+  await expect(results).toHaveCount(0);
+  await expect(page).not.toHaveURL(/serp=/);
+  await expect(dialog).toBeVisible();
+});
+
+test("back leaves the page once the sheet was closed", async ({ page }) => {
+  await page.goto("/apps/app-1");
+  await page.goto(KEYWORDS);
+  await (await hydrated(opener(page, "study timer"))).click();
+  await expect(sheet(page, "study timer")).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(page).toHaveURL(/\/apps\/app-1\/keywords$/);
+  await page.goBack();
+
+  await expect(page).toHaveURL(/\/apps\/app-1$/);
+});
+
+test("the sheet says when the position comes from an older check", async ({
+  page,
+}) => {
+  await page.goto(`${KEYWORDS}?keyword=kw-3`);
+  const dialog = sheet(page, "study timer");
+
+  await expect(dialog.locator('[data-slot="stale-check"]')).toBeVisible();
+  await expect(dialog).toContainText(
+    /Last checked .+; the checks since then did not finish/,
+  );
+});
+
+test("the arrows step through the keywords in the order of the table", async ({
+  page,
+}) => {
+  await page.goto(KEYWORDS);
+  await pressFromKeyboard(await hydrated(opener(page, "study timer")));
+  const next = page.getByRole("button", { name: "Next keyword" });
+  const previous = page.getByRole("button", { name: "Previous keyword" });
+  await expect(sheet(page, "study timer")).toBeVisible();
+
+  await next.focus();
+  await page.keyboard.press("Enter");
+
+  await expect(sheet(page, "time blocking")).toBeVisible();
+  await expect(page).toHaveURL(/keyword=kw-5/);
+  await expect(next).toBeFocused();
+  await expect(next).toHaveAttribute("aria-disabled", "true");
+
+  await previous.click();
+  await expect(sheet(page, "study timer")).toBeVisible();
+
+  await page.keyboard.press("Escape");
   await expect(page).not.toHaveURL(/keyword=/);
+  await expect(opener(page, "study timer")).toBeFocused();
+});
+
+test("a phone reads the position history in the sheet", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto(KEYWORDS);
+  await expect(opener(page, "focus timer")).toBeVisible();
   await expect(
-    page.getByRole("dialog", { name: "Search results" }),
+    page.getByRole("button", { name: /^Position history: focus timer/ }),
+  ).toHaveCount(0);
+
+  await (await hydrated(opener(page, "focus timer"))).click();
+
+  await expect(
+    sheet(page, "focus timer").getByRole("region", {
+      name: "Position history of focus timer",
+    }),
   ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+});
+
+test("tags and note are edited from the sheet", async ({ page }) => {
+  await page.goto(`${KEYWORDS}?keyword=kw-4`);
+  const dialog = sheet(page, "productivity app");
+  const edit = dialog.getByRole("button", { name: "Edit tags and note" });
+
+  await edit.click();
+  const editor = page.getByRole("dialog", { name: "Edit tags and note" });
+  await expect(editor).toBeVisible();
+  await settleAnimations(editor);
+
+  await page.keyboard.press("Escape");
+
+  await expect(editor).toHaveCount(0);
+  await expect(dialog).toBeVisible();
+  await expect(edit).toBeFocused();
 });

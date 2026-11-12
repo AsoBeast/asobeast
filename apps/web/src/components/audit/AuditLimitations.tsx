@@ -9,7 +9,7 @@ export function AuditLimitations({
 
   return (
     <details className="rounded-xl border border-border px-4 py-3">
-      <summary className="cursor-pointer text-body font-medium">
+      <summary className="text-body font-medium">
         What this audit cannot see
       </summary>
       <ul className="mt-3 flex flex-col gap-3">

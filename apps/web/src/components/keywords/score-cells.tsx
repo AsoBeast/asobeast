@@ -43,6 +43,7 @@ export function ScoreReadout({
   metric,
   emphasize,
   outdated,
+  floorAnswer,
   className,
 }: {
   value: number;
@@ -50,13 +51,15 @@ export function ScoreReadout({
   metric: GradeMetric;
   emphasize?: boolean;
   outdated?: boolean;
+  floorAnswer?: boolean;
   className?: string;
 }) {
   const graded = grade(metric, value);
-  const grading = graded
-    ? `${label} ${value}, ${gradeLabel(graded)}`
-    : `${label} ${value}`;
-  const spoken = outdated ? `${grading}. Older formula` : grading;
+  const spoken = [
+    graded ? `${label} ${value}, ${gradeLabel(graded)}` : `${label} ${value}`,
+    ...(outdated ? ["Older formula"] : []),
+    ...(floorAnswer ? ["Floor answer"] : []),
+  ].join(". ");
   return (
     <span
       data-grade={graded ?? undefined}
@@ -70,6 +73,9 @@ export function ScoreReadout({
     >
       <span aria-hidden className="inline-flex items-center gap-1">
         {outdated ? <RefreshCcw className="size-3" /> : null}
+        {floorAnswer ? (
+          <ArrowDownToLine className="size-3 text-muted-foreground" />
+        ) : null}
         <span>{value}</span>
       </span>
       {graded ? <Meter value={value} fill={gradeFill(graded)} /> : null}
@@ -125,7 +131,7 @@ function ScoreButton({
           aria-label={`${label} ${valueLabel}${gradeWords}. ${summary}. Show scoring details`}
           className={cn(
             SCORE_STACK,
-            "cursor-pointer rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            "rounded-sm outline-none transition-shadow duration-150 ease-out hover:bg-card hover:shadow-[0_0_0_3px_var(--card),0_0_0_4px_var(--border)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
             outdated ? "text-muted-foreground" : "text-foreground",
             emphasize ? "font-semibold" : "font-medium",
           )}

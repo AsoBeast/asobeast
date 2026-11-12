@@ -1,13 +1,12 @@
 "use client";
 
-import { useId, useState, type ComponentProps } from "react";
-import { ChartLine, History } from "lucide-react";
+import { useId, useState, type ComponentProps, type ReactNode } from "react";
+import { History } from "lucide-react";
 import {
   keywordLabel,
   type Store,
   type TrackedKeywordItem,
 } from "@asobeast/shared";
-import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
@@ -19,9 +18,11 @@ import {
 import { formatCountry, storeLabel } from "@/lib/format";
 import { lostPosition } from "@/lib/keyword-checks";
 import type { RangePreset } from "@/lib/ranges";
+import { cn } from "@/lib/utils";
 import { positionHoldFacts } from "./position-hold";
 import { PositionHistoryPanel } from "./PositionHistoryPanel";
 import { lastRankedLine, PositionReadout } from "./PositionReadout";
+import { ROW_PEEK } from "./row-peek";
 import { staleCheckLabel, staleCheckLine } from "./stale-check";
 
 export interface PositionHistoryContext {
@@ -62,6 +63,27 @@ function HoldFacts({ keyword }: { keyword: TrackedKeywordItem }) {
   );
 }
 
+export function PositionHistoryNotes({
+  keyword,
+  staleOn,
+}: {
+  keyword: TrackedKeywordItem;
+  staleOn: string | null;
+}) {
+  return (
+    <>
+      {staleOn === null ? null : (
+        <p className="flex gap-1.5 text-caption text-muted-foreground">
+          <History aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+          <span>{staleCheckLine(staleOn)}</span>
+        </p>
+      )}
+      <LostDay keyword={keyword} />
+      <HoldFacts keyword={keyword} />
+    </>
+  );
+}
+
 function PositionHistoryContent({
   keyword,
   label,
@@ -95,14 +117,7 @@ function PositionHistoryContent({
           className="text-heading"
         />
       </div>
-      {staleOn === null ? null : (
-        <p className="flex gap-1.5 text-caption text-muted-foreground">
-          <History aria-hidden className="mt-0.5 size-3.5 shrink-0" />
-          {staleCheckLine(staleOn)}
-        </p>
-      )}
-      <LostDay keyword={keyword} />
-      <HoldFacts keyword={keyword} />
+      <PositionHistoryNotes keyword={keyword} staleOn={staleOn} />
       <PositionHistoryPanel
         appId={appId}
         store={store}
@@ -136,23 +151,28 @@ export function PositionHistoryPopoverContent({
   );
 }
 
-export function PositionHistoryPopover(props: PositionHistoryProps) {
+export function PositionHistoryPopover({
+  children,
+  ...props
+}: PositionHistoryProps & { children: ReactNode }) {
   const { keyword, staleOn, multiMarket } = props;
+  const summaryId = useId();
   const name = `Position history: ${multiMarket ? keywordLabel(keyword) : keyword.text}`;
-  const Icon = staleOn === null ? ChartLine : History;
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon-xs"
+        <button
+          type="button"
           aria-label={
             staleOn === null ? name : `${name}, ${staleCheckLabel(staleOn)}`
           }
-          className="-my-1 text-muted-foreground hover:text-foreground print:hidden"
+          aria-describedby={summaryId}
+          className={cn("inline-flex items-center", ROW_PEEK)}
         >
-          <Icon aria-hidden />
-        </Button>
+          <span id={summaryId} className="inline-flex items-center gap-2">
+            {children}
+          </span>
+        </button>
       </PopoverTrigger>
       <PositionHistoryPopoverContent {...props} />
     </Popover>

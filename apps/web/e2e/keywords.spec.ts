@@ -377,7 +377,7 @@ test("position deltas render arrows, a bare position and the captured-depth mark
   await expect(unrankedRow).toContainText(">200");
 });
 
-test("a stale position marks its history button with the day of its last check", async ({
+test("a stale position carries a clock and names the day of its last check", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/keywords");
@@ -387,7 +387,9 @@ test("a stale position marks its history button with the day of its last check",
     name: `Position history: study timer (US), last checked ${formatDayMonth(utcDaysAgo(3))}`,
   });
   await expect(history).toBeVisible();
-  await expect(staleRow).not.toContainText(formatDayMonth(utcDaysAgo(3)));
+  await expect(staleRow.locator('[data-slot="stale-check"]')).toHaveText(
+    `last checked ${formatDayMonth(utcDaysAgo(3))}`,
+  );
 
   await history.click();
   await expect(page.getByRole("dialog")).toContainText(
