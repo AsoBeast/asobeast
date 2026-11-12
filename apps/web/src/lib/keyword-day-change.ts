@@ -1,5 +1,5 @@
 import { addUtcDays, type TrackedKeywordItem } from "@asobeast/shared";
-import { formatList } from "./format";
+import { formatList, formatNumber } from "./format";
 import { staleCheckDay } from "./keyword-checks";
 
 export type DayChange =
@@ -129,10 +129,10 @@ export function movesSentence({
 }: KeywordMoves): string | null {
   if (compared === 0) return null;
   const parts = [
-    ...(up > 0 ? [`${up} moved up`] : []),
-    ...(down > 0 ? [`${down} moved down`] : []),
-    ...(lost > 0 ? [`${lost} dropped out`] : []),
-    ...(entered > 0 ? [`${entered} entered the results`] : []),
+    ...(up > 0 ? [`${formatNumber(up)} climbed`] : []),
+    ...(down > 0 ? [`${formatNumber(down)} fell`] : []),
+    ...(lost > 0 ? [`${formatNumber(lost)} dropped out`] : []),
+    ...(entered > 0 ? [`${formatNumber(entered)} started ranking`] : []),
   ];
   return parts.length === 0
     ? "No keyword moved since yesterday."

@@ -468,7 +468,7 @@ test.describe("the change since the check before", () => {
       ),
     );
     expect(colours[0]).not.toBe(colours[1]);
-    await expect(page.getByText(/1 moved up and 1 moved down/)).toBeVisible();
+    await expect(page.getByText(/1 climbed and 1 fell/)).toBeVisible();
   });
 
   test("a screen reader hears which way a keyword moved", async ({ page }) => {
