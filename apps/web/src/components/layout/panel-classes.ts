@@ -1,5 +1,7 @@
 export const LEDE = "max-w-[70ch] text-body text-muted-foreground";
 
+export const META_LINE = "text-label text-muted-foreground";
+
 export const PANEL_HEADER = "min-h-[47px] content-center";
 
 export const PANEL_ACTION = "row-span-1 self-center";

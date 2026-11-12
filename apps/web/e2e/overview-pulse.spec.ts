@@ -208,3 +208,19 @@ test("a market where nothing moved says so and offers no tabs", async ({
   await expect(card).toContainText("No keyword moved in the last 7 days.");
   await expect(card.getByRole("tablist")).toHaveCount(0);
 });
+
+test("the facts under the app header read at the size of the dashboard status line", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const status = await page
+    .locator("[data-slot=portfolio-status]")
+    .evaluate((node) => getComputedStyle(node).fontSize);
+
+  await page.goto("/apps/app-1");
+  const facts = await page
+    .getByText(/^Snapshot /)
+    .evaluate((node) => getComputedStyle(node.closest("ul") ?? node).fontSize);
+
+  expect(facts).toBe(status);
+});

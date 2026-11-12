@@ -1,7 +1,7 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { LEDE } from "@/components/layout/panel-classes";
+import { LEDE, META_LINE } from "@/components/layout/panel-classes";
 import { useMarket } from "@/components/app-detail/use-market";
 import {
   formatCompact,
@@ -38,7 +38,7 @@ export function SnapshotFacts({ id }: { id: string }) {
   }
 
   return (
-    <ul className={cn(LEDE, "flex flex-wrap items-center gap-x-2")}>
+    <ul className={cn(META_LINE, "flex flex-wrap items-center gap-x-2")}>
       {facts.map((fact, index) => (
         <li key={fact} className="flex items-center gap-x-2">
           {index > 0 ? <span aria-hidden>·</span> : null}

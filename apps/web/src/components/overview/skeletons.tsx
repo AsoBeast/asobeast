@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { PULSE_COLUMNS, PULSE_STRIP } from "./layout-classes";
 
 export function SnapshotFactsSkeleton() {
-  return <Skeleton className="h-5 w-80 max-w-full" />;
+  return <Skeleton className="h-4 w-80 max-w-full" />;
 }
 
 export function OverviewPulseSkeleton() {
