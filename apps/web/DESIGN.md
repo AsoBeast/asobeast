@@ -333,7 +333,7 @@ Four forms exist, each in `components/ui/delta-chip.tsx` or beside its list, and
 
 ### Links
 
-- A link is ink text with a 1 px underline in ink 3 (`decoration-faint-foreground`) offset 4 px, which darkens to ink on hover (`FOOTER_LINK`, the `link` button and badge variants). Never orange, never blue. A panel's footer link sits at its right.
+- A link is ink text with a 1 px underline in ink 3 offset 4 px, which darkens to ink on hover, all held by the `link-underline` utility (`FOOTER_LINK`, the `link` button and badge variants use it too). Never orange, never blue. A panel's footer link sits at its right.
 
 ### Page header
 
@@ -435,7 +435,7 @@ The app header as on the overview, then one row: the Tracked and Discovered segm
 ## Where it lives
 
 - **Tokens:** `src/styles/primitives.css` (raw values, both themes), `src/styles/semantic.css` (roles: background, card, muted, border, ink steps, signals, grades, chart series, elevation), `src/app/globals.css` (Tailwind theme mapping, radius scale, focus ring, reduced motion), `components/tokens/token-groups.ts` with `src/styles/tokens.test.ts` (the contrast pairs).
-- **Type and width:** `src/styles/typography.css` (the steps and the `numeric` utility, known to `cn` through `TYPE_STEPS` in `lib/utils.ts`); `src/styles/layout.css` (page widths, gutters, the keywords table width tiers).
+- **Type and width:** `src/styles/typography.css` (the steps, the `numeric` utility and the `link-underline` utility, known to `cn` through `TYPE_STEPS` in `lib/utils.ts`); `src/styles/layout.css` (page widths, gutters, the keywords table width tiers).
 - **Primitives:** `components/ui/` (button, badge, card, table, tabs, input, select, stat-tile, delta-chip, graded, meter, empty-state, skeleton, info-tip, sidebar).
 - **Shared classes:** `components/layout/panel-classes.ts` (`LEDE`, `META_LINE`, `PANEL_HEADER`, `PANEL_COUNT`, `LIST_ROW`, `LIST_HEAD`, `FOOTER_LINK`, `SECTION_TOGGLE`, `SECTION_CHEVRON`) and `components/layout/CollapsibleCard.tsx`.
 - **Shell:** `components/layout/AppSidebar.tsx`, `SidebarNav.tsx`, `InsetHeader.tsx`; `components/AppIcon.tsx` with `app-icon-radius.ts`.
