@@ -226,7 +226,7 @@ A warm neutral ground with one orange family and two signal hues, mirrored in a 
 
 ### Secondary
 
-- **Information Blue** (#1d4ed8 light, #60a5fa dark): reserved. It marks an informational badge and the `--info` tint behind it. The second series of a multi series chart is the brighter #2563eb (#60a5fa dark). It leads none of the dashboard, overview or keywords screens.
+- **Information Blue** (#1d4ed8 light, #60a5fa dark): reserved. It marks an informational badge (the Default localization read role) and the `--info` tint behind it. The second series of a multi series chart is the brighter #2563eb (#60a5fa dark). It leads none of the dashboard, overview or keywords screens.
 
 ### Signals
 
@@ -262,7 +262,8 @@ A warm neutral ground with one orange family and two signal hues, mirrored in a 
 - **Hero** (600, 36px, 1.1, -0.024em): the billing wall's heading and plan prices from `sm` only; no signed in screen uses it.
 - **Title** (600, 22px, 1.2, -0.02em): the page title, once per page.
 - **Metric** (600, 28px, 1.1, -0.02em): the value of a metric tab or a headline figure, with its delta pill beside it; at most one strip of them per page.
-- **Heading** (600, 14px, 1.4, -0.006em): a panel or section heading and a dialog, sheet or confirmation title, every section, one size.
+- **Dialog** (500, 16px, 1.25): the title of a dialog, sheet or confirmation, one step above the panels under it so the overlay reads first; the keyword in the keyword sheet's header included.
+- **Heading** (600, 14px, 1.4, -0.006em): a panel or section heading, every section, one size.
 - **Body** (400, 14px, 1.45): the lede sentence, action titles, dialog text; prose keeps to 70ch.
 - **Dense** (400, 13px, 1.45): table cells, list rows, navigation, controls. Names in a row take 500.
 - **Label** (500, 12px, sentence case, no tracking): column headers, metric tab labels, pill text. The line under a page title is label size at the step's default weight in ink 2 (`META_LINE`).
@@ -271,7 +272,7 @@ A warm neutral ground with one orange family and two signal hues, mirrored in a 
 
 ### Named Rules
 
-**The Five Sizes Rule.** A screen uses title, heading, body or dense, label or caption and tick, plus the metric size in one strip. No raw `text-sm` or `text-base` in a primitive; every size is a named step.
+**The Five Sizes Rule.** A screen uses title, heading, body or dense, label or caption and tick, plus the metric size in one strip and the dialog size in an overlay's title. No raw `text-sm` or `text-base` in a primitive; every size is a named step.
 
 **The Sentence Case Rule.** Labels and column headers are sentence case with no letter spacing; the old tracked uppercase label is retired.
 
@@ -320,7 +321,7 @@ A restrained radius scale by role: 4 px on tags and checkboxes, 6 px on buttons,
 ### Pills
 
 - **Style:** 22 px tall, 6 px radius, label size at 500, tinted fill with its own text colour. Variants: up (green), down (red), flat (surface 2 with ink 2), and the state words Paused and Checking in flat.
-- **Use:** a change (the delta beside a metric, the 7d column, the Change column, an alert's kind of move), a count that is a state (`1 critical`), a state that changes, an insight (Beatable, Dropping), or ownership in a change feed (yours, competitor). Further variants carry status tints: success, warning, info and destructive. Never a source, a store, a market, a tag or a category, which are text; never a pill that would appear on every row of a list. A localization's read role is a word in label size, Default in ink and Also in ink 2, and a new entrant in a search results or chart list is the word New in the up colour, as the delta beside it is coloured text.
+- **Use:** a change (the delta beside a metric, the 7d column, the Change column, an alert's kind of move), a count that is a state (`1 critical`), a state that changes, an insight (Beatable, Dropping), or ownership in a change feed (yours, competitor). Further variants carry status tints: success, warning, info and destructive. Never a source, a store, a market, a tag or a category, which are text; never a pill that would appear on every row of a list. A localization's read role is a pill on every screen (`ReadRoleBadge`): Default in the information tint and Also flat, prefixed with the market where several markets read one localization (`US · Default`). A new entrant in a search results or chart list is the word New in the up colour, as the delta beside it is coloured text.
 
 ### Change and delta
 
@@ -389,7 +390,7 @@ Four forms exist, each in `components/ui/delta-chip.tsx` or beside its list, and
 ### States
 
 - **Loading:** skeleton blocks in surface 2 at the real geometry; the pulse stops under reduced motion; a loading region announces itself.
-- **Empty:** one sentence saying what is missing and the one action that fills it, left aligned inside the panel, no icon and no box. A chart's empty and insufficient states (`ChartNotice`, `ChartStat`, `RankingStates`) are the same sentence and action, left aligned at the chart's real height; a page that is not found or a first run says it under its page title.
+- **Empty:** one sentence saying what is missing and the one action that fills it, centred inside the panel, no icon and no box (`EmptyState`). A chart's empty and insufficient states (`ChartNotice`, `ChartStat`, `RankingStates`) are the same sentence and action, centred at the chart's real height; the dashboard's first run and a page that is not found centre their title, sentence and action in the page column.
 - **Error:** the shared error state; a secondary section uses the inline query error.
 - **Stale and checking:** a 16 px clock with the day of the last check in label size; **Checking…** with a 14 px spinner; a found nothing position reads ">200" in ink 2 with "was #14" in tick size under it.
 

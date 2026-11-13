@@ -55,8 +55,8 @@ export const LATER_RELEASES: readonly Release[] = [
       },
       {
         kind: "improved",
-        title: "Plainer empty states and labels",
-        text: "A chart with nothing to draw yet says so in one line at its left instead of inside a dashed box, and so do a page that is not found and the first visit before any app is imported. Dialog titles are smaller and bolder, progress bars and the run indicator are no longer orange, a new entry in search results or a top chart reads New in green, and a localization's role reads Default or Also as a plain word.",
+        title: "Calmer empty charts",
+        text: "A chart with nothing to draw yet says so in the middle of the chart without a dashed box around it, and so do a page that is not found and the first visit before any app is imported. Progress bars and the run indicator are no longer orange, and a new entry in search results or a top chart reads New in green.",
       },
       {
         kind: "new",
