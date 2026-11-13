@@ -105,8 +105,10 @@ export function KeywordPicker({
       />
       <div className="flex flex-wrap items-center gap-3">
         <Button
-          disabled={selected.size === 0 || track.isPending}
-          onClick={() => trackOnce([...selected])}
+          aria-disabled={selected.size === 0 || track.isPending || undefined}
+          onClick={() => {
+            if (selected.size > 0) trackOnce([...selected]);
+          }}
         >
           {track.isPending ? <Loader2 className="animate-spin" /> : <Plus />}
           {pickerButtonLabel(selected.size)}

@@ -42,12 +42,12 @@ export function ActionStateControls({ item }: { item: ActionItem }) {
       <ActionSnoozeMenu
         status={item.status}
         snoozedUntil={item.snoozedUntil}
-        disabled={isPending}
+        busy={isPending}
         onSnooze={(snoozedUntil) => update({ status: "SNOOZED", snoozedUntil })}
         onWake={() => update({ status: "OPEN" })}
       />
       <ActionDismissMenu
-        disabled={isPending}
+        busy={isPending}
         onDismiss={(reason) => update({ status: "DISMISSED", reason })}
       />
     </div>

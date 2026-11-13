@@ -167,7 +167,8 @@ export function MetadataAssistantPanel({
           <div className="flex flex-col items-start gap-1.5">
             <Button
               onClick={() => draftOnce()}
-              disabled={mutation.isPending || selected.length === 0 || spent}
+              disabled={selected.length === 0 || spent}
+              aria-disabled={mutation.isPending || undefined}
             >
               {mutation.isPending ? (
                 <Loader2 className="animate-spin" />

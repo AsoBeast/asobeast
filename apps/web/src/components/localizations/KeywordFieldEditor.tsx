@@ -164,10 +164,11 @@ export function KeywordFieldEditor({
             <div>{leading}</div>
             <Button
               ref={saveButton}
-              disabled={
-                busy || over || (!field.changed && field.phrases.length === 0)
-              }
-              onClick={() => request(text)}
+              disabled={over || (!field.changed && field.phrases.length === 0)}
+              aria-disabled={busy || undefined}
+              onClick={() => {
+                if (!busy) request(text);
+              }}
             >
               {busy ? <Loader2 className="animate-spin" /> : null}
               {busy ? "Saving…" : "Save keyword field"}

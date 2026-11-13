@@ -79,7 +79,9 @@ export function SuggestedMarkets({
     }
     setTicked((current) => toggled(current, market.country, on));
   };
+  const inert = pending.length === 0 || seeding.length > 0;
   const add = () => {
+    if (inert) return;
     for (const market of plan.select) onSelect(market, true);
     setTicked(new Set());
     run(plan);
@@ -120,10 +122,7 @@ export function SuggestedMarkets({
         </fieldset>
       ))}
       <div className="flex flex-wrap items-center gap-3">
-        <Button
-          disabled={pending.length === 0 || seeding.length > 0}
-          onClick={add}
-        >
+        <Button aria-disabled={inert || undefined} onClick={add}>
           {seeding.length > 0 ? <Loader2 className="animate-spin" /> : null}
           {seedButtonLabel(pending.length, plan.seed.length)}
         </Button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import { toast } from "sonner";
@@ -9,12 +9,13 @@ import type {
   AppLocalizationsResult,
 } from "@asobeast/shared";
 import {
+  closeUnlessPending,
+  ConfirmActionFooter,
+} from "@/components/ConfirmActionFooter";
+import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
@@ -25,11 +26,15 @@ import {
   removeDescription,
   withoutLocalization,
 } from "@/lib/app-localizations";
+import { siblingControl, useCloseFocusHandoff } from "@/lib/focus-handoff";
 import { localizationName } from "@/lib/localizations";
 import { appKeys, invalidateLocalizationMutation } from "@/lib/queries";
 import { fieldLocaleParser } from "@/lib/search-params";
 import { useSingleFlight } from "@/lib/single-flight";
 import { apiErrorMessage } from "./api-error-message";
+
+const LOCALIZATION_ITEM = '[data-slot="accordion-item"]';
+const LOCALIZATION_TRIGGER = '[data-slot="accordion-trigger"]';
 
 export function RemoveLocalizationDialog({
   id,
@@ -45,10 +50,18 @@ export function RemoveLocalizationDialog({
     fieldLocaleParser,
   );
   const name = localizationName(item.localization);
+  const opener = useRef<HTMLButtonElement>(null);
+  const { handOff, onCloseAutoFocus } = useCloseFocusHandoff();
 
   const remove = useMutation({
     mutationFn: () => removeAppLocalization(id, item.localization),
     onSuccess: () => {
+      handOff(
+        siblingControl(
+          opener.current?.closest(LOCALIZATION_ITEM) ?? null,
+          LOCALIZATION_TRIGGER,
+        ),
+      );
       queryClient.setQueryData<AppLocalizationsResult>(
         appKeys.localizations(id),
         (current) => current && withoutLocalization(current, item.localization),
@@ -68,12 +81,11 @@ export function RemoveLocalizationDialog({
   return (
     <AlertDialog
       open={open}
-      onOpenChange={(next) => {
-        if (!remove.isPending) setOpen(next);
-      }}
+      onOpenChange={closeUnlessPending(remove.isPending, setOpen)}
     >
       <AlertDialogTrigger asChild>
         <Button
+          ref={opener}
           variant="ghost"
           size="sm"
           className="text-destructive hover:text-destructive"
@@ -81,28 +93,19 @@ export function RemoveLocalizationDialog({
           Remove localization
         </Button>
       </AlertDialogTrigger>
-      <AlertDialogContent>
+      <AlertDialogContent onCloseAutoFocus={onCloseAutoFocus}>
         <AlertDialogHeader>
           <AlertDialogTitle>Remove {name}?</AlertDialogTitle>
           <AlertDialogDescription>
             {removeDescription(item)}
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={remove.isPending}>
-            Cancel
-          </AlertDialogCancel>
-          <AlertDialogAction
-            variant="destructive"
-            disabled={remove.isPending}
-            onClick={(event) => {
-              event.preventDefault();
-              removeOnce();
-            }}
-          >
-            {remove.isPending ? "Removing…" : "Remove"}
-          </AlertDialogAction>
-        </AlertDialogFooter>
+        <ConfirmActionFooter
+          pending={remove.isPending}
+          label="Remove"
+          pendingLabel="Removing…"
+          onConfirm={removeOnce}
+        />
       </AlertDialogContent>
     </AlertDialog>
   );

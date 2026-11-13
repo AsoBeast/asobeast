@@ -49,6 +49,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ApiError, createApiToken } from "@/lib/api";
+import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
 import { formatDate, formatNumber } from "@/lib/format";
 import { apiTokensOptions, invalidateApiTokenMutation } from "@/lib/queries";
 import { useAuth } from "@/components/auth/use-auth";
@@ -69,6 +70,8 @@ const SCOPE_LABELS: Record<ApiTokenScope, string> = {
   write: "Read and write",
 };
 
+const TOKEN_DONE_FOCUS_KEY = "api-token-done";
+
 function TokenSecret({
   created,
   onDone,
@@ -77,6 +80,7 @@ function TokenSecret({
   onDone: () => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const claimFocus = useFocusClaim(TOKEN_DONE_FOCUS_KEY);
 
   async function copy() {
     try {
@@ -120,7 +124,7 @@ function TokenSecret({
         </div>
       </DialogBody>
       <DialogFooter>
-        <Button type="button" onClick={onDone}>
+        <Button ref={claimFocus} type="button" onClick={onDone}>
           Done
         </Button>
       </DialogFooter>
@@ -163,6 +167,7 @@ function TokenForm({ onCreated }: { onCreated: (t: ApiTokenCreated) => void }) {
       setError("Give the token a name.");
       return;
     }
+    armFocusHandoff(TOKEN_DONE_FOCUS_KEY);
     createOnce();
   }
 
@@ -227,7 +232,7 @@ function TokenForm({ onCreated }: { onCreated: (t: ApiTokenCreated) => void }) {
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
       </DialogBody>
       <DialogFooter>
-        <Button type="submit" disabled={mutation.isPending}>
+        <Button type="submit" aria-disabled={mutation.isPending || undefined}>
           {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
           Create token
         </Button>
