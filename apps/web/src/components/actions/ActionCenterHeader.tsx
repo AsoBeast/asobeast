@@ -40,7 +40,7 @@ export function ActionCenterHeader({
               href={ACTION_CENTER_GUIDE}
               target="_blank"
               rel="noreferrer"
-              className="font-medium text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-2"
+              className="font-medium text-foreground link-underline"
             >
               Read how the Action Center works
             </a>

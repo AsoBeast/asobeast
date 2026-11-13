@@ -79,7 +79,7 @@ export function ChartColumn({
           {page.capture ? capture : null}
           <Link
             href={tableHref(chart, search)}
-            className="text-sm underline decoration-faint-foreground underline-offset-4"
+            className="text-sm link-underline"
           >
             Open table<span className="sr-only">{` of ${label}`}</span>
           </Link>

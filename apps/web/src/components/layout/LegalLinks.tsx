@@ -19,7 +19,7 @@ export function LegalLinks() {
           key={href}
           href={href}
           {...NEW_TAB_LINK}
-          className="rounded-sm py-1 underline decoration-faint-foreground underline-offset-4 hover:text-foreground hover:decoration-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="rounded-sm py-1 link-underline hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           {label}
         </a>

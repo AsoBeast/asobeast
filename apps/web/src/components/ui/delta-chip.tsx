@@ -39,6 +39,17 @@ function direction(value: number, polarity: DeltaPolarity): Direction {
   return improved ? "up" : "down";
 }
 
+export function DirectionArrow({
+  way,
+  className,
+}: {
+  way: "up" | "down";
+  className?: string;
+}) {
+  const Icon = GLYPH[way];
+  return <Icon className={cn("size-3.5 shrink-0", className)} aria-hidden />;
+}
+
 export function DeltaChip({
   value,
   polarity = "lower-is-better",
@@ -79,7 +90,8 @@ export function DeltaChip({
   return (
     <span
       data-slot={slotOf(form)}
-      aria-label={`${way} ${magnitude} ${period}`}
+      role="img"
+      aria-label={`${way} ${magnitude}${unit} ${period}`}
       className={cn(
         "numeric inline-flex items-center gap-0.5 font-medium",
         TONE[way],
@@ -108,6 +120,7 @@ export function PositionDeltaChip({
 
   return (
     <span
+      role="img"
       aria-label={`${way} ${magnitude} ${period}`}
       className={cn(
         "numeric inline-flex items-center gap-0.5 text-label font-medium",

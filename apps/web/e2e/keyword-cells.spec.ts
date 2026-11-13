@@ -468,6 +468,21 @@ test.describe("the change since the check before", () => {
       ),
     );
     expect(colours[0]).not.toBe(colours[1]);
-    await expect(page.getByText(/1 moved up and 1 moved down/)).toBeVisible();
+    await expect(page.getByText(/1 climbed and 1 fell/)).toBeVisible();
+  });
+
+  test("a screen reader hears which way a keyword moved", async ({ page }) => {
+    await page.goto("/apps/app-1/keywords");
+
+    await expect(
+      rowOf(page, "pomodoro").getByRole("img", {
+        name: "down 3 since yesterday",
+      }),
+    ).toBeVisible();
+    await expect(
+      rowOf(page, "focus timer").getByRole("img", {
+        name: "up 2 since yesterday",
+      }),
+    ).toBeVisible();
   });
 });

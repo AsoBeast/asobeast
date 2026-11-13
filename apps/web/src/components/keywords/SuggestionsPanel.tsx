@@ -100,7 +100,7 @@ export function SuggestionsPanel({
     <Card>
       <CardHeader>
         <CardTitle asChild>
-          <h3>
+          <h2>
             <button
               type="button"
               onClick={() => setOpen((value) => !value)}
@@ -110,10 +110,10 @@ export function SuggestionsPanel({
               Suggestions
               <ChevronDown
                 aria-hidden
-                className={cn(SECTION_CHEVRON, open && "rotate-180")}
+                className={cn(SECTION_CHEVRON, !open && "-rotate-90")}
               />
             </button>
-          </h3>
+          </h2>
         </CardTitle>
         <CardDescription>
           Phrases from your listing, your competitors, your reviews and store

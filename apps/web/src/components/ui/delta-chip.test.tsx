@@ -56,4 +56,10 @@ describe("delta chips", () => {
       renderToString(<DeltaChip value={-3} period="over 7 days" />),
     ).toContain('aria-label="up 3 over 7 days"');
   });
+
+  it("names the unit of the change for assistive technology", () => {
+    expect(
+      renderToString(<DeltaChip value={-4} unit="%" period="over 7 days" />),
+    ).toContain('aria-label="up 4% over 7 days"');
+  });
 });

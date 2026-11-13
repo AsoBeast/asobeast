@@ -8,7 +8,6 @@ import {
 import { ActionsSummaryCard } from "@/components/actions/ActionsSummaryCard";
 import { MarketSwitcher } from "@/components/app-detail/MarketSwitcher";
 import { PrintReportButton } from "@/components/app-detail/PrintReportButton";
-import { MarketSwitcherSkeleton } from "@/components/app-detail/skeletons";
 import { TOP_ACTION_LIMIT } from "@/lib/action-filters";
 import { AlertsNudge } from "@/components/onboarding/AlertsNudge";
 import { FirstRunTimeline } from "@/components/onboarding/FirstRunTimeline";
@@ -24,6 +23,7 @@ import { RATING_CHANGE_RANGE } from "@/components/overview/rating-trend";
 import {
   CoverageCardSkeleton,
   FunnelCardSkeleton,
+  OverviewMarketSkeleton,
   OverviewPulseSkeleton,
   SnapshotFactsSkeleton,
 } from "@/components/overview/skeletons";
@@ -171,7 +171,7 @@ export default async function AppOverviewPage({
             <SnapshotFacts id={id} />
           </Suspense>
           <div className="flex flex-wrap items-center gap-3">
-            <Suspense fallback={<MarketSwitcherSkeleton />}>
+            <Suspense fallback={<OverviewMarketSkeleton />}>
               <MarketSwitcher id={id} allowAll />
             </Suspense>
             <PrintReportButton />

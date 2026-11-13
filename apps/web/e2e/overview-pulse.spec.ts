@@ -187,16 +187,16 @@ test("the movers narrow to climbers or fallers and keep the choice in the url", 
   await (await hydrated(card.getByRole("tab", { name: "Fallers" }))).click();
 
   await expect(page).toHaveURL(/movers=down/);
-  await expect(moverRows(page)).toHaveText([
-    "pomodoro6 → 12▼ 6down 6 in 7 days",
-  ]);
+  await expect(moverRows(page)).toHaveText(["pomodoro6 → 126down 6 in 7 days"]);
+  await expect(moverRows(page).locator("svg.lucide-arrow-down")).toHaveCount(1);
 
   await card.getByRole("tab", { name: "Climbers" }).click();
 
   await expect(page).toHaveURL(/movers=up/);
   await expect(moverRows(page)).toHaveText([
-    "focus timer10 → 3▲ 7up 7 in 7 days",
+    "focus timer10 → 37up 7 in 7 days",
   ]);
+  await expect(moverRows(page).locator("svg.lucide-arrow-up")).toHaveCount(1);
 });
 
 test("a market where nothing moved says so and offers no tabs", async ({
@@ -207,4 +207,20 @@ test("a market where nothing moved says so and offers no tabs", async ({
 
   await expect(card).toContainText("No keyword moved in the last 7 days.");
   await expect(card.getByRole("tablist")).toHaveCount(0);
+});
+
+test("the facts under the app header read at the size of the dashboard status line", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const status = await page
+    .locator("[data-slot=portfolio-status]")
+    .evaluate((node) => getComputedStyle(node).fontSize);
+
+  await page.goto("/apps/app-1");
+  const facts = await page
+    .getByText(/^Snapshot /)
+    .evaluate((node) => getComputedStyle(node.closest("ul") ?? node).fontSize);
+
+  expect(facts).toBe(status);
 });

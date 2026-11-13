@@ -1,5 +1,7 @@
 export const LEDE = "max-w-[70ch] text-body text-muted-foreground";
 
+export const META_LINE = "text-label text-muted-foreground";
+
 export const PANEL_HEADER = "min-h-[47px] content-center";
 
 export const PANEL_ACTION = "row-span-1 self-center";
@@ -12,10 +14,10 @@ export const LIST_ROW =
 export const LIST_HEAD = "text-label text-faint-foreground";
 
 export const FOOTER_LINK =
-  "inline-flex min-h-6 items-center text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-foreground print:hidden";
+  "inline-flex min-h-6 items-center text-foreground link-underline print:hidden";
 
 export const SECTION_TOGGLE =
-  "flex w-full items-center justify-between gap-4 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card";
+  "inline-flex max-w-full items-center gap-2 rounded-sm text-left outline-none hover:underline hover:decoration-foreground hover:underline-offset-4 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card";
 
 export const SECTION_CHEVRON =
   "size-4 shrink-0 text-muted-foreground transition-transform duration-150 motion-reduce:transition-none";

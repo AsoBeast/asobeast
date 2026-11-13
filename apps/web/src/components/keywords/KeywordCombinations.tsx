@@ -104,7 +104,7 @@ export function KeywordCombinations({
     <Card>
       <CardHeader>
         <CardTitle asChild>
-          <h3 id={TITLE_ID}>
+          <h2 id={TITLE_ID}>
             <button
               type="button"
               aria-expanded={params.open}
@@ -114,10 +114,10 @@ export function KeywordCombinations({
               Keyword combinations
               <ChevronDown
                 aria-hidden
-                className={cn(SECTION_CHEVRON, params.open && "rotate-180")}
+                className={cn(SECTION_CHEVRON, !params.open && "-rotate-90")}
               />
             </button>
-          </h3>
+          </h2>
         </CardTitle>
         <CardDescription className="flex items-center gap-1">
           <span>

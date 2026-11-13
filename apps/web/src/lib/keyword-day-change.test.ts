@@ -188,16 +188,13 @@ describe("movesSentence", () => {
 
   it.each([
     [none, "No keyword moved since yesterday."],
-    [{ ...none, up: 2 }, "2 moved up since yesterday."],
-    [{ ...none, down: 1 }, "1 moved down since yesterday."],
+    [{ ...none, up: 2 }, "2 climbed since yesterday."],
+    [{ ...none, down: 1 }, "1 fell since yesterday."],
     [{ ...none, lost: 1 }, "1 dropped out since yesterday."],
-    [
-      { ...none, up: 2, down: 1 },
-      "2 moved up and 1 moved down since yesterday.",
-    ],
+    [{ ...none, up: 2, down: 1 }, "2 climbed and 1 fell since yesterday."],
     [
       { compared: 7, up: 2, down: 1, lost: 1, entered: 3 },
-      "2 moved up, 1 moved down, 1 dropped out, and 3 entered the results since yesterday.",
+      "2 climbed, 1 fell, 1 dropped out, and 3 started ranking since yesterday.",
     ],
   ])("writes %o as %s", (moves, sentence) => {
     expect(movesSentence(moves)).toBe(sentence);

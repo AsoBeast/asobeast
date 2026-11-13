@@ -1,6 +1,7 @@
 "use client";
 
 import type { TrackedKeywordItem } from "@asobeast/shared";
+import { formatNumber } from "@/lib/format";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import {
   KEYWORD_MOVE_FILTERS,
@@ -38,7 +39,11 @@ export function KeywordMoveSwitch({
           <TabsOption key={filter} value={filter}>
             <span>{MOVE_FILTER_LABELS[filter]}</span>
             <span className="numeric text-muted-foreground">
-              {`${keywords.filter((keyword) => matchesMoveFilter(keyword, today, filter)).length}`}
+              {formatNumber(
+                keywords.filter((keyword) =>
+                  matchesMoveFilter(keyword, today, filter),
+                ).length,
+              )}
             </span>
           </TabsOption>
         ))}

@@ -108,7 +108,7 @@ export function AlertsNudge({ id }: { id: string }) {
               href={EMAIL_DELIVERY_GUIDE}
               target="_blank"
               rel="noreferrer"
-              className="text-foreground underline decoration-faint-foreground underline-offset-4"
+              className="text-foreground link-underline"
             >
               Set up email delivery
             </a>

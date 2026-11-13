@@ -160,6 +160,21 @@ test("the sparkline end marker stays round however wide the card is", async ({
   expect(Math.abs(box.width - box.height)).toBeLessThanOrEqual(1);
 });
 
+test("movers and moved counts draw the arrow the change pills draw", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+
+  const main = page.locator("main");
+  await expect(
+    main.getByRole("link").filter({ hasText: "→" }).first(),
+  ).toBeVisible();
+  await expect(main).not.toContainText(/[▲▼]/);
+  await expect(main.locator("svg.lucide-arrow-up").first()).toBeVisible();
+  await expect(main.locator("svg.lucide-arrow-down").first()).toBeVisible();
+});
+
 test("the summary tile numbers stay on one line when the strip narrows", async ({
   page,
 }) => {

@@ -680,11 +680,13 @@ test.describe("discovery actions", () => {
   }) => {
     await page.goto(DISCOVERED);
     await (
-      await hydrated(states(page).getByRole("tab", { name: "All 9" }))
+      await hydrated(
+        page.getByRole("textbox", { name: "Search discovered keywords" }),
+      )
     ).focus();
 
     for (const next of [
-      page.getByRole("textbox", { name: "Search discovered keywords" }),
+      states(page).getByRole("tab", { name: "All 9" }),
       page.getByRole("switch", { name: "Auto-track ranked" }),
       control(page, "Refresh discoveries"),
       control(page, "Track recommended (9)"),
@@ -717,4 +719,29 @@ test.describe("discovery actions", () => {
 
     expect(violations.map(({ id }) => id)).toEqual([]);
   });
+});
+
+test("the discovered list puts its search first, as the tracked list does", async ({
+  page,
+}) => {
+  await page.goto(DISCOVERED);
+
+  const search = await page
+    .getByRole("textbox", { name: "Search discovered keywords" })
+    .boundingBox();
+  const states = await page
+    .getByRole("tablist", { name: "Discovered keyword states" })
+    .boundingBox();
+
+  expect(search?.x ?? Infinity).toBeLessThan(states?.x ?? -Infinity);
+});
+
+test("suggestions and combinations are sections like the rest of the page", async ({
+  page,
+}) => {
+  await page.goto(DISCOVERED);
+
+  for (const name of ["Suggestions", "Keyword combinations"]) {
+    await expect(page.getByRole("heading", { level: 2, name })).toBeVisible();
+  }
 });

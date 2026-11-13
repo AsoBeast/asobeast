@@ -127,7 +127,7 @@ function MetricTip({ label, summary }: { label: string; summary: string }) {
         href={DISCOVERY_GUIDE}
         target="_blank"
         rel="noreferrer"
-        className="font-medium text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-2"
+        className="font-medium text-foreground link-underline"
       >
         Read about keyword discovery
       </a>

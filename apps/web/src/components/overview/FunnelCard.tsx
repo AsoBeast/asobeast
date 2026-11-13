@@ -45,8 +45,7 @@ import { FunnelHelp } from "./FunnelHelp";
 import { PULSE_COLUMNS, PULSE_STRIP } from "./layout-classes";
 import { FunnelTilesSkeleton } from "./skeletons";
 
-const CONNECT_LINK =
-  "text-body font-medium text-foreground underline decoration-faint-foreground underline-offset-4 hover:decoration-2";
+const CONNECT_LINK = "text-body font-medium text-foreground link-underline";
 
 function NotReporting({ store, reason }: { store: Store; reason: string }) {
   const copy = FUNNEL_COPY[store];

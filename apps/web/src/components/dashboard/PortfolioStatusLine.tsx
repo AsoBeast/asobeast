@@ -9,6 +9,7 @@ import type {
   RunState,
   WorkspaceRunStatus,
 } from "@asobeast/shared";
+import { META_LINE } from "@/components/layout/panel-classes";
 import { Separated } from "@/components/ui/separated";
 import { formatDate, pluralize } from "@/lib/format";
 import {
@@ -75,10 +76,7 @@ function StatusLine({ budget }: { budget: DailyBudget | null }) {
   const fresh = freshness(run, budget);
 
   return (
-    <p
-      data-slot="portfolio-status"
-      className="text-label text-muted-foreground"
-    >
+    <p data-slot="portfolio-status" className={META_LINE}>
       <Separated parts={[...inventory(portfolio.totals), ...fresh]} />
     </p>
   );

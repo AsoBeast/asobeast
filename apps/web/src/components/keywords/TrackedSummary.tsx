@@ -3,6 +3,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { utcDayOf } from "@asobeast/shared";
 import { LEDE } from "@/components/layout/panel-classes";
+import { formatNumber } from "@/lib/format";
 import { keywordMoves, movesSentence } from "@/lib/keyword-day-change";
 import { keywordCountriesOptions, keywordsOptions } from "@/lib/queries";
 
@@ -20,15 +21,15 @@ export function TrackedSummary({ id, market }: { id: string; market: string }) {
   return (
     <p className={LEDE} aria-live="polite">
       <span>
-        Tracking <span className={FIGURE}>{keywords.length}</span>
+        Tracking <span className={FIGURE}>{formatNumber(keywords.length)}</span>
         {keywords.length === total ? null : (
           <span>
             {" of "}
-            <span className={FIGURE}>{total}</span>
+            <span className={FIGURE}>{formatNumber(total)}</span>
           </span>
         )}
         <span>{` keyword${keywords.length === 1 ? "" : "s"} · `}</span>
-        <span className={FIGURE}>{active}</span> active
+        <span className={FIGURE}>{formatNumber(active)}</span> active
       </span>
       {moved === null ? null : <span>{`. ${moved}`}</span>}
     </p>

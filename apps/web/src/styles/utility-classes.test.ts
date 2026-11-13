@@ -27,6 +27,15 @@ const TRANSLUCENT_RING = /\bring-ring\/\d+/g;
 const MONOSPACE_NUMBER =
   /["'`][^"'`\n]*\b(?:numeric\b[^"'`\n]*\bfont-mono|font-mono\b[^"'`\n]*\bnumeric)\b[^"'`\n]*["'`]/g;
 
+const RAW_LINK_UNDERLINE = /\bdecoration-faint-foreground\b/g;
+
+const RESTYLED_LINK_HOVER =
+  /\blink-underline\b[^"'`\n]*\bhover:decoration-[\w-]+|\bhover:decoration-[\w-]+[^"'`\n]*\blink-underline\b/g;
+
+const UNDERLINED_ON_HOVER = [
+  "components/alerts/AlertEventRow.tsx: decoration-faint-foreground",
+];
+
 const POINTER_CURSOR = /\bcursor-pointer\b/g;
 
 const POINTER_ON_A_NON_BUTTON = [
@@ -38,7 +47,9 @@ function sources(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
     if (entry.isDirectory()) return sources(path);
-    return entry.name.endsWith(".tsx") ? [path] : [];
+    return /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name)
+      ? [path]
+      : [];
   });
 }
 
@@ -56,6 +67,14 @@ describe("utility classes", () => {
 
   it("draws text in a token colour rather than a translucent one", () => {
     expect(offenders(TRANSLUCENT_TEXT)).toEqual([]);
+  });
+
+  it("draws a faint link underline that darkens on hover through one utility", () => {
+    expect(offenders(RAW_LINK_UNDERLINE)).toEqual(UNDERLINED_ON_HOVER);
+  });
+
+  it("leaves the hover of a link underline to the utility", () => {
+    expect(offenders(RESTYLED_LINK_HOVER)).toEqual([]);
   });
 
   it("leaves no opacity modifier detached from its utility", () => {
