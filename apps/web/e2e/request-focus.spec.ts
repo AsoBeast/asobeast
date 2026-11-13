@@ -2,6 +2,7 @@ import type { BrowserContext, Locator, Page, Route } from "@playwright/test";
 import type {
   ActionListResult,
   ActionUpdateRequest,
+  ApiTokenCreated,
   ApiTokenItem,
   AppLocalizationItem,
   AppLocalizationsResult,
@@ -2699,6 +2700,39 @@ test.describe("token controls keep focus", () => {
     await expectFocusKeptWhileHeld(mint, held);
     await expect(dialog.getByText("down")).toBeVisible();
   });
+});
+
+test.describe("a created token hands focus to Done", () => {
+  const created: ApiTokenCreated = { ...token("t9", "ci"), token: "asob_t9" };
+
+  test.beforeEach(async ({ page }) => {
+    await serveTokens(page, []);
+    await page.route(/\/api\/backend\/auth\/tokens$/, (route) =>
+      route.request().method() === "POST"
+        ? route.fulfill(fulfillJson(201, created))
+        : route.fallback(),
+    );
+    await page.goto("/integrations");
+  });
+
+  for (const [opener, title, field, submit] of [
+    ["New token", "New API token", "Name", "Create token"],
+    ["Connect an agent", "Connect an agent", "Token name", "Mint token"],
+  ] as const) {
+    test(`from ${submit}`, async ({ page }) => {
+      await pressFromKeyboard(page.getByRole("button", { name: opener }));
+      await page
+        .getByRole("dialog", { name: title })
+        .getByLabel(field)
+        .fill("ci");
+
+      await pressFromKeyboard(page.getByRole("button", { name: submit }));
+
+      await expect(
+        page.getByRole("dialog").getByRole("button", { name: "Done" }),
+      ).toBeFocused();
+    });
+  }
 });
 
 test.describe("setup controls keep focus", () => {
