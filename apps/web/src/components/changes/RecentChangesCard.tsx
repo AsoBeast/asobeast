@@ -33,7 +33,7 @@ import { portfolioOptions, recentChangesOptions } from "@/lib/queries";
 import { changeOwnerParser, type ChangeOwner } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
 import { collapseVersions, entryEvent, type ChangeEntry } from "./change-runs";
-import { ChangeValue } from "./ChangeTimeline";
+import { ChangeValue } from "./ChangeValue";
 
 const VISIBLE_CHANGES = 8;
 
