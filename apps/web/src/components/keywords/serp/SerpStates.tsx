@@ -55,9 +55,9 @@ export function SerpSkeleton() {
         <div key={index} data-slot="serp-row" className={SERP_ROW_GRID}>
           <Skeleton className="col-start-1 row-start-1 ml-auto h-5 w-5" />
           <Skeleton className="col-start-2 row-start-1 size-10 rounded-lg" />
-          <div className="col-start-3 row-start-1 flex flex-col gap-1.5 pt-0.5">
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-3 w-1/3" />
+          <div className="col-start-3 row-start-1 flex flex-col gap-0.5">
+            <Skeleton className="h-lh w-3/4" />
+            <Skeleton className="h-lh w-1/3 text-caption" />
           </div>
           <Skeleton className="col-start-4 row-start-1 h-4 w-12" />
         </div>
