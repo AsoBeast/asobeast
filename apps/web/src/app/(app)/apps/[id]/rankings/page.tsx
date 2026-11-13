@@ -1,11 +1,14 @@
 import { Suspense } from "react";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { AnnotationsCard } from "@/components/annotations/AnnotationsCard";
-import { RankingsMarketPills } from "@/components/rankings/RankingsMarketPills";
+import { RankingsHeader } from "@/components/rankings/RankingsHeader";
 import { RankingsReportHeader } from "@/components/rankings/RankingsReportHeader";
 import { RankingsView } from "@/components/rankings/RankingsView";
 import { SerpMoversCard } from "@/components/rankings/SerpMoversCard";
-import { RankingChartSkeleton } from "@/components/rankings/skeletons";
+import {
+  RankingChartSkeleton,
+  RankingsHeaderSkeleton,
+} from "@/components/rankings/skeletons";
 import { selectionForMarket } from "@/components/rankings/selection";
 import { getQueryClient } from "@/lib/get-query-client";
 import {
@@ -60,18 +63,20 @@ export default async function RankingsPage({
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <div className="page-full flex flex-col gap-6">
-        <RankingsMarketPills id={id} />
-        <div className="grid gap-6 lg:grid-cols-3 print:grid-cols-1 [&>*]:min-w-0">
-          <Suspense fallback={null}>
-            <RankingsReportHeader id={id} />
-          </Suspense>
-          <div className="lg:col-span-2 print:col-span-1">
+      <div className="@container/rankings page-full flex flex-col gap-6">
+        <Suspense fallback={<RankingsHeaderSkeleton />}>
+          <RankingsHeader id={id} />
+        </Suspense>
+        <Suspense fallback={null}>
+          <RankingsReportHeader id={id} />
+        </Suspense>
+        <div className="grid gap-6 @5xl/rankings:grid-cols-12 print:grid-cols-1 [&>*]:min-w-0">
+          <div className="@5xl/rankings:col-span-8 print:col-span-1">
             <Suspense fallback={<RankingChartSkeleton />}>
               <RankingsView id={id} />
             </Suspense>
           </div>
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-6 @5xl/rankings:col-span-4 print:col-span-1">
             <SerpMoversCard id={id} />
             <AnnotationsCard id={id} />
           </div>

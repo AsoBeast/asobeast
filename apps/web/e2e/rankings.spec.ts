@@ -3,7 +3,24 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { hoverForTooltip } from "./hover.mts";
 import { utcDaysAgo } from "./fixtures.mts";
+import {
+  RANKINGS_EDGE_COOKIE,
+  RTL_ENTRANT_KEYWORD,
+} from "./rankings-fixtures.mts";
 import { formatDayMonth } from "../src/lib/format";
+
+const chartedKeywords = (page: Page) =>
+  page
+    .getByRole("table", { name: /^Charted keywords/ })
+    .locator("tbody tr bdi");
+
+const marketSelect = (page: Page) =>
+  page.getByRole("combobox", { name: "Report markets" });
+
+async function chooseMarket(page: Page, option: string) {
+  await marketSelect(page).click();
+  await page.getByRole("option", { name: option }).click();
+}
 
 test("rankings page renders the chart and filters series through the url", async ({
   page,
@@ -12,14 +29,12 @@ test("rankings page renders the chart and filters series through the url", async
 
   const chart = page.getByRole("region", { name: "Keyword rank positions" });
   await expect(chart).toBeVisible();
-  await expect(
-    chart.getByRole("list", { name: "Charted series" }).getByRole("listitem"),
-  ).toHaveText([
-    "focus timer (US)",
-    "pomodoro (US)",
-    "study timer (US)",
-    "productivity app (US)",
-    "time blocking (US)",
+  await expect(chartedKeywords(page)).toHaveText([
+    "focus timer",
+    "pomodoro",
+    "study timer",
+    "productivity app",
+    "time blocking",
   ]);
 
   await expect(page.getByRole("button", { name: "5 selected" })).toBeVisible();
@@ -42,38 +57,29 @@ test("a range preset writes to the url", async ({ page }) => {
   await expect(page).toHaveURL(/range=7d/);
 });
 
-test("the market pills scope the report to one storefront", async ({
+test("the market select scopes the report to one storefront", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/rankings");
 
-  const pills = page.getByRole("group", { name: "Report markets" });
-  await expect(pills).toBeVisible();
-  await expect(
-    pills.getByRole("button", { name: "All markets 5" }),
-  ).toHaveAttribute("aria-pressed", "true");
+  await expect(marketSelect(page)).toHaveText("All markets5");
+  await expect(page.getByText("5 keywords in all markets.")).toBeVisible();
 
-  await pills.getByRole("button", { name: "US 5" }).click();
+  await chooseMarket(page, "United States 5");
   await expect(page).toHaveURL(/country=us/);
-  await expect(pills.getByRole("button", { name: "US 5" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  await expect(marketSelect(page)).toHaveText("United States5");
+  await expect(marketSelect(page)).toBeFocused();
+  await expect(page.getByText("5 keywords in United States.")).toBeVisible();
   await expect(page.getByRole("button", { name: "5 selected" })).toBeVisible();
-  await expect(
-    page
-      .getByRole("region", { name: "Keyword rank positions" })
-      .getByRole("list", { name: "Charted series" })
-      .getByRole("listitem"),
-  ).toHaveText([
-    "focus timer (US)",
-    "pomodoro (US)",
-    "study timer (US)",
-    "productivity app (US)",
-    "time blocking (US)",
+  await expect(chartedKeywords(page)).toHaveText([
+    "focus timer",
+    "pomodoro",
+    "study timer",
+    "productivity app",
+    "time blocking",
   ]);
 
-  await pills.getByRole("button", { name: "PL 0" }).click();
+  await chooseMarket(page, "Poland 0");
   await expect(page).toHaveURL(/country=pl/);
   await expect(
     page.getByText("No keywords tracked in Poland yet"),
@@ -85,26 +91,138 @@ test("the market pills scope the report to one storefront", async ({
     page.getByRole("button", { name: "Copy image of the rankings chart" }),
   ).toHaveCount(0);
 
-  await pills.getByRole("button", { name: "All markets 5" }).click();
+  await chooseMarket(page, "All markets 5");
   await expect(page).not.toHaveURL(/country=/);
   await expect(
     page.getByRole("button", { name: "Export CSV of rankings" }),
   ).toBeEnabled();
 });
 
-test("the serp movers card lists entrants with badges and a track action", async ({
+test("the lede says what moved and who entered the top 10", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/rankings");
 
-  await expect(page.getByText(/New entrants in your keywords/)).toBeVisible();
+  const lede = page.locator("p", { hasText: "5 keywords in all markets." });
+  await expect(lede).toContainText("since yesterday.");
+  await expect(lede).toContainText(
+    "3 apps entered your top 10 in the last 7 days.",
+  );
+});
+
+test("the key table reads each charted keyword across the range", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/rankings");
+
+  const table = page.getByRole("table", { name: /^Charted keywords/ });
+  await expect(
+    table.getByRole("columnheader").filter({ hasText: /\S/ }),
+  ).toHaveText([
+    "Keyword",
+    "Position",
+    "30d change",
+    "Best",
+    "Average",
+    "Remove",
+  ]);
+
+  const focus = table.getByRole("row", { name: /focus timer/ });
+  await expect(focus.getByRole("cell").nth(1)).toHaveText("#3");
+  await expect(
+    focus.getByRole("img", { name: "up 7 in the last 30 days" }),
+  ).toBeVisible();
+  await expect(focus.getByRole("cell").nth(3)).toHaveText("#3");
+  await expect(focus.getByRole("cell").nth(4)).toHaveText("#6");
+
+  const stopped = table.getByRole("row", { name: /study timer/ });
+  await expect(stopped.getByRole("cell").nth(1)).toContainText("#7");
+  await expect(stopped.getByRole("cell").nth(1)).toContainText(
+    `last checked ${formatDayMonth(utcDaysAgo(3))}`,
+  );
+
+  const unranked = table.getByRole("row", { name: /productivity app/ });
+  await expect(unranked.getByRole("cell").nth(1)).toHaveText(">200");
+  await expect(unranked.getByRole("cell").nth(2)).toHaveText("Not ranked");
+});
+
+test("removing a keyword hands focus to the next row", async ({ page }) => {
+  await page.goto("/apps/app-1/rankings");
+
+  await page
+    .getByRole("button", { name: "Remove focus timer (US) from the chart" })
+    .press("Enter");
+
+  await expect(page.getByRole("button", { name: "4 selected" })).toBeVisible();
+  await expect(chartedKeywords(page)).toHaveCount(4);
+  await expect(
+    page.getByRole("button", { name: "Remove pomodoro (US) from the chart" }),
+  ).toBeFocused();
+});
+
+test("the by day view lists every checked day, newest first", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/rankings");
+
+  await page
+    .getByRole("tablist", { name: "Positions view" })
+    .getByRole("tab", { name: "By day" })
+    .click();
+  await expect(page).toHaveURL(/view=days/);
+  await expect(
+    page.getByRole("tab", { name: "By day", selected: true }),
+  ).toBeFocused();
+
+  const grid = page.getByRole("table", { name: /^The position of each/ });
+  await expect(grid.getByRole("columnheader")).toHaveText([
+    "Keyword",
+    ...[0, 1, 2, 3, 4, 6, 7].map((daysAgo) =>
+      formatDayMonth(utcDaysAgo(daysAgo)),
+    ),
+  ]);
+  await expect(
+    grid.getByRole("row", { name: /focus timer/ }).getByRole("cell"),
+  ).toHaveText(["3", "5", "5", "6", "7", "9", "10"]);
+  await expect(
+    grid.getByRole("row", { name: /study timer/ }).getByRole("cell"),
+  ).toHaveText([
+    "–Not checked",
+    "–Not checked",
+    "–Not checked",
+    "7",
+    "7",
+    "7",
+    "7",
+  ]);
+  await expect(
+    grid.getByRole("row", { name: /productivity app/ }).getByRole("cell"),
+  ).toHaveText([">200", ">200", ">200", ">200", ">100", ">100", ">100"]);
+  await expect(
+    page.getByRole("region", { name: "Keyword rank positions" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Copy image of the rankings chart" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Export CSV of rankings" }),
+  ).toBeEnabled();
+});
+
+test("the new entrants panel lists apps with their role and a track action", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/rankings");
+
+  await expect(
+    page.getByRole("heading", { name: "New in your top 10" }),
+  ).toBeVisible();
 
   const competitorRow = page
     .getByRole("listitem")
     .filter({ hasText: "Rival Focus" });
   await expect(competitorRow.getByText("Competitor")).toBeVisible();
-  await expect(competitorRow).toContainText("entered the top 10 for");
-  await expect(competitorRow).toContainText("at #4");
+  await expect(competitorRow).toContainText("focus timer · #4");
 
   const unknownRow = page
     .getByRole("listitem")
@@ -115,35 +233,72 @@ test("the serp movers card lists entrants with badges and a track action", async
   await expect(page).toHaveURL(/movers=14/);
 });
 
-test("the serp movers card follows the market pills", async ({ page }) => {
+test("the new entrants panel follows the market select", async ({ page }) => {
   await page.goto("/apps/app-1/rankings?country=us");
 
-  await expect(page.getByText("SERP movers (United States)")).toBeVisible();
+  const panel = page
+    .locator("[data-slot='card']")
+    .filter({ has: page.getByRole("heading", { name: "New in your top 10" }) });
+  await expect(panel.getByText("United States · last 7 days")).toBeVisible();
   await expect(
     page.getByRole("listitem").filter({ hasText: "Rival Focus" }),
   ).toBeVisible();
 
-  await page
-    .getByRole("group", { name: "Report markets" })
-    .getByRole("button", { name: "GB 0" })
-    .click();
+  await chooseMarket(page, "United Kingdom 0");
   await expect(page).toHaveURL(/country=gb/);
-  await expect(page.getByText("SERP movers (United Kingdom)")).toBeVisible();
+  await expect(panel.getByText("United Kingdom · last 7 days")).toBeVisible();
   await expect(
     page.getByText(
       "Nobody broke into the top 10 for your tracked keywords in United Kingdom",
     ),
   ).toBeVisible();
 
-  await page
-    .getByRole("group", { name: "Report markets" })
-    .getByRole("button", { name: "All markets 5" })
-    .click();
+  await panel.getByRole("button", { name: "Look back 30 days" }).click();
+  await expect(page).toHaveURL(/movers=30/);
+  await expect(
+    panel.getByRole("button", { name: "Look back 30 days" }),
+  ).toHaveCount(0);
+
+  await chooseMarket(page, "All markets 5");
   await expect(page).not.toHaveURL(/country=/);
-  await expect(page.getByText("SERP movers", { exact: true })).toBeVisible();
+  await expect(panel.getByText("All markets · last 30 days")).toBeVisible();
   await expect(
     page.getByRole("listitem").filter({ hasText: "Rival Focus" }),
   ).toBeVisible();
+});
+
+test("an entrant that is the tracked app reads You and offers no track", async ({
+  page,
+  context,
+}) => {
+  await context.addCookies([
+    {
+      name: RANKINGS_EDGE_COOKIE,
+      value: "1",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.goto("/apps/app-1/rankings");
+
+  const own = page
+    .getByRole("listitem")
+    .filter({ hasText: "focus timer · #3" });
+  await expect(own.getByText("You", { exact: true })).toBeVisible();
+  await expect(own.getByRole("button", { name: "Track" })).toHaveCount(0);
+  await expect(
+    page.getByText("2 apps entered your top 10 in the last 7 days."),
+  ).toBeVisible();
+
+  await expect(
+    page
+      .getByRole("listitem")
+      .filter({ hasText: RTL_ENTRANT_KEYWORD })
+      .getByRole("button", { name: "Track" }),
+  ).toBeVisible();
+  await expect(page.getByRole("list", { name: "Chart marks" })).toContainText(
+    "Annotation",
+  );
 });
 
 test("metadata change markers sit under the plot area", async ({ page }) => {

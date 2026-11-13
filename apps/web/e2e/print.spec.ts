@@ -337,10 +337,13 @@ test("prints the rankings controls as plain labels or not at all", async ({
   page,
 }) => {
   await open(page, RANKINGS);
-  const chip = page.getByRole("button", {
+  const remove = page.getByRole("button", {
     name: "Remove focus timer (US) from the chart",
   });
-  await expect(chip.locator("svg")).toBeVisible();
+  await expect(remove).toBeVisible();
+  const row = page
+    .getByRole("table", { name: /^Charted keywords/ })
+    .getByRole("row", { name: /focus timer/ });
 
   await printed(page);
 
@@ -350,15 +353,17 @@ test("prints the rankings controls as plain labels or not at all", async ({
     "Copy image of the rankings chart",
     "Download PNG of the rankings chart",
     "Track",
+    "Print report",
+    "Add annotation",
   ]) {
     await expect(page.getByRole("button", { name })).toHaveCount(0);
   }
-  await expect(chip).toBeVisible();
-  await expect(chip).toHaveText("focus timer (US)");
-  await expect(chip).toHaveCSS("border-top-width", "0px");
-  await expect(chip.locator("svg")).toBeHidden();
+  await expect(page.getByRole("combobox")).toHaveCount(0);
+  await expect(remove).toBeHidden();
+  await expect(row).toBeVisible();
+  await expect(row.getByRole("cell").first()).toHaveText("focus timerUS");
   expect(
-    await chip
+    await row
       .locator("[data-swatch]")
       .evaluate((node) =>
         getComputedStyle(node).getPropertyValue("print-color-adjust"),
@@ -381,7 +386,7 @@ test("prints the rankings in one column with the chart inside its card", async (
     .evaluate((node) => Math.round(node.getBoundingClientRect().width));
   expect(await cardWidth(page, "Keyword rank positions")).toBe(main);
   const movers = await page
-    .getByText("SERP movers", { exact: true })
+    .getByRole("heading", { name: "New in your top 10" })
     .evaluate((node) => {
       const card = node.closest("[data-slot='card']");
       if (!card) throw new Error("movers outside a card");
@@ -430,8 +435,24 @@ const REPORTS = [
 
 const MIN_REPORT_BYTES = 10_000;
 
+test("prints the rankings key table under its chart", async ({ page }) => {
+  await open(page, RANKINGS);
+  const chart = page.getByRole("region", { name: "Keyword rank positions" });
+  const table = page.getByRole("table", { name: /^Charted keywords/ });
+  await expect(chart).toBeVisible();
+
+  await printed(page);
+
+  await expect(chart.locator(".recharts-legend-wrapper")).toHaveCount(0);
+  const plot = await chart.boundingBox();
+  const key = await table.boundingBox();
+  if (!plot || !key) throw new Error("the chart or its key did not print");
+  expect(key.y).toBeGreaterThanOrEqual(plot.y + plot.height - 1);
+  await expect(table.getByRole("row")).toHaveCount(6);
+});
+
 test("prints every chart legend under its chart", async ({ page }) => {
-  for (const [, path] of REPORTS) {
+  for (const path of [OVERVIEW]) {
     await open(page, path);
     await expect(
       page.locator(".recharts-legend-wrapper").first(),

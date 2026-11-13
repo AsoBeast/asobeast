@@ -382,6 +382,11 @@ import {
   adminUserList,
 } from "./admin-fixtures.mts";
 
+import {
+  edgeSerpMovers,
+  RANKINGS_EDGE_COOKIE,
+  windowAnnotations,
+} from "./rankings-fixtures.mts";
 const PORT = Number(process.env.MOCK_API_PORT ?? 4100);
 const ERROR_ID = "err-app";
 const MCP_STREAM_MS = 3_000;
@@ -4467,6 +4472,9 @@ const routes: Route[] = [
       }
       const dataset = DATASETS[id];
       if (!dataset) return json(res, 404, errorEnvelope(404, path));
+      if (hasCookie(req, RANKINGS_EDGE_COOKIE, "1")) {
+        return json(res, 200, edgeSerpMovers());
+      }
       const query = new URL(path, "http://localhost").searchParams;
       const market = query.get("country");
       if (market === null) return json(res, 200, dataset.serpMovers);
@@ -4490,6 +4498,9 @@ const routes: Route[] = [
       const path = req.url ?? "/";
       if (id === ERROR_ID) return json(res, 500, errorEnvelope(500, path));
       if (!DATASETS[id]) return json(res, 404, errorEnvelope(404, path));
+      if (hasCookie(req, RANKINGS_EDGE_COOKIE, "1")) {
+        return json(res, 200, { annotations: windowAnnotations() });
+      }
       json(res, 200, {
         annotations: appAnnotations.filter((row) => row.appId === id),
       });

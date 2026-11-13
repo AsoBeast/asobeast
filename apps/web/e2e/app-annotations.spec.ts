@@ -15,6 +15,14 @@ const confirmRemoval = (page: Page) =>
     .getByRole("button", { name: "Remove", exact: true })
     .click();
 
+const addButton = (page: Page) =>
+  page.getByRole("button", { name: "Add annotation" });
+
+const submitButton = (page: Page) =>
+  page
+    .getByRole("dialog", { name: "Add an annotation" })
+    .getByRole("button", { name: "Add", exact: true });
+
 test.beforeEach(async ({ request }) => {
   await request.post(`${MOCK_API}/__reset/app-annotations`);
 });
@@ -31,7 +39,9 @@ test("hands focus to the surviving row when a removal lands", async ({
   await expect(removeButton(page, "Autumn campaign")).toBeFocused();
 });
 
-test("hands focus to the add form when the list empties", async ({ page }) => {
+test("hands focus to the add button when the list empties", async ({
+  page,
+}) => {
   await page.goto("/apps/app-1/rankings");
 
   for (const label of [
@@ -45,9 +55,7 @@ test("hands focus to the add form when the list empties", async ({ page }) => {
   }
 
   await expect(page.getByText("No annotations yet")).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Add annotation" }),
-  ).toBeFocused();
+  await expect(addButton(page)).toBeFocused();
 });
 
 test("removes an added annotation by its own id", async ({ page }) => {
@@ -57,9 +65,10 @@ test("removes an added annotation by its own id", async ({ page }) => {
   await confirmRemoval(page);
   await expect(removeButton(page, "Release 5.20.0")).toHaveCount(0);
 
+  await addButton(page).click();
   const dateBox = page.getByLabel("Date", { exact: true });
   const labelBox = page.getByLabel("Label", { exact: true });
-  const add = page.getByRole("button", { name: "Add annotation" });
+  const add = submitButton(page);
 
   await expect(async () => {
     await dateBox.fill("2030-02-01");
@@ -70,6 +79,8 @@ test("removes an added annotation by its own id", async ({ page }) => {
   await expect(add).toBeEnabled();
   await add.click();
 
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(addButton(page)).toBeFocused();
   const added = removeButton(page, "Fresh marker");
   await expect(added).toBeVisible();
 
@@ -82,9 +93,10 @@ test("removes an added annotation by its own id", async ({ page }) => {
 test("counts the label the way the api does", async ({ page }) => {
   await page.goto("/apps/app-1/rankings");
 
+  await addButton(page).click();
   const dateBox = page.getByLabel("Date", { exact: true });
   const labelBox = page.getByLabel("Label", { exact: true });
-  const add = page.getByRole("button", { name: "Add annotation" });
+  const add = submitButton(page);
 
   const heartsAtLimit = "❤️".repeat(ANNOTATION_LABEL_MAX_LENGTH);
   await expect(async () => {
