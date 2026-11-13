@@ -519,9 +519,12 @@ export const ALERT_EVENT_ITEMS: AlertEventItem[] = [
 
 export const NEWEST_ALERT_EVENT = ALERT_EVENT_ITEMS[0];
 
-const KNOWN_APPS = new Set(
-  ALERT_EVENT_ITEMS.flatMap((entry) => [entry.appId, entry.primaryAppId]),
-);
+export const QUIET_ALERT_APP_ID = "app-2";
+
+const KNOWN_APPS = new Set([
+  ...ALERT_EVENT_ITEMS.flatMap((entry) => [entry.appId, entry.primaryAppId]),
+  QUIET_ALERT_APP_ID,
+]);
 
 const CURSOR_PREFIX = "c";
 

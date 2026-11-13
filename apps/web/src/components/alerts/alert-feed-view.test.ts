@@ -5,7 +5,7 @@ import {
 } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
 import { formatDate } from "@/lib/format";
-import { dayGroups, searchEvents } from "./alert-feed-view";
+import { dayGroups, feedLede, searchEvents } from "./alert-feed-view";
 
 const NOW = Date.parse("2026-11-03T12:00:00.000Z");
 
@@ -191,5 +191,70 @@ describe("searchEvents", () => {
 
   it("matches nothing for an emoji the sentences never hold", () => {
     expect(searchEvents(events, "🔥")).toEqual([]);
+  });
+});
+
+describe("feedLede", () => {
+  const events = [
+    rankItem("c", "2026-11-03T03:00:00.000Z"),
+    rankItem("b", "2026-11-02T03:00:00.000Z"),
+    rankItem("a", "2026-11-01T03:00:00.000Z"),
+  ];
+
+  it("counts the events after the last visit", () => {
+    expect(
+      feedLede({ events, seenAt: "2026-11-01T03:00:00.000Z", hasMore: true }),
+    ).toEqual({ figure: "2 new", rest: " since your last visit" });
+  });
+
+  it("says nothing is new when every event was seen", () => {
+    expect(
+      feedLede({ events, seenAt: "2026-11-03T03:00:00.000Z", hasMore: true }),
+    ).toEqual({ figure: null, rest: "Nothing new since your last visit" });
+  });
+
+  it("says or more when every loaded event is new and another page exists", () => {
+    expect(
+      feedLede({ events, seenAt: "2026-10-01T00:00:00.000Z", hasMore: true })
+        .figure,
+    ).toBe("3 or more new");
+  });
+
+  it("gives the exact count when every event is new and loaded", () => {
+    expect(
+      feedLede({ events, seenAt: "2026-10-01T00:00:00.000Z", hasMore: false })
+        .figure,
+    ).toBe("3 new");
+  });
+
+  it("counts the events of the window on a first visit", () => {
+    expect(feedLede({ events, seenAt: null, hasMore: false })).toEqual({
+      figure: "3 events",
+      rest: " in the last 30 days",
+    });
+    expect(feedLede({ events, seenAt: null, hasMore: true }).figure).toBe(
+      "3 or more events",
+    );
+  });
+
+  it("counts none when a filter leaves no event", () => {
+    expect(feedLede({ events: [], seenAt: null, hasMore: false })).toEqual({
+      figure: "0 events",
+      rest: " in the last 30 days",
+    });
+    expect(
+      feedLede({
+        events: [],
+        seenAt: "2026-11-01T03:00:00.000Z",
+        hasMore: false,
+      }).rest,
+    ).toBe("Nothing new since your last visit");
+  });
+
+  it("names one event in the singular", () => {
+    expect(
+      feedLede({ events: events.slice(0, 1), seenAt: null, hasMore: false })
+        .figure,
+    ).toBe("1 event");
   });
 });

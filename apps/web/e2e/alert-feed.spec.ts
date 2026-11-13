@@ -4,6 +4,7 @@ import {
   ALERT_EVENTS_COOKIE,
   ALERT_EVENT_ITEMS,
   LONG_ALERT_KEYWORD,
+  QUIET_ALERT_APP_ID,
 } from "./alert-feed-fixtures.mts";
 import { hydrated } from "./hydrated.mts";
 import { revealAfterLoad } from "./late-reveal.mts";
@@ -48,6 +49,93 @@ test.describe("alerts page", () => {
       ALERT_EVENT_ITEMS[0].occurredAt,
     );
     await expect(first.locator(".sr-only")).toHaveText("Metadata changed: ");
+  });
+
+  test("opens with the settings link and no help icon beside the title", async ({
+    page,
+  }) => {
+    await page.goto("/alerts");
+    const main = page.getByRole("main");
+
+    await expect(
+      main.getByRole("link", { name: "Alert settings" }),
+    ).toHaveAttribute("href", "/settings#alerts");
+    await expect(
+      main.getByRole("link", { name: "How alerts work" }),
+    ).toHaveAttribute(
+      "href",
+      "https://docs.asobeast.com/guides/alerts#see-what-the-run-detected",
+    );
+    await expect(main.getByRole("heading", { level: 1 })).toHaveCount(1);
+    expect(
+      await main.getByRole("button", { name: "About the alerts page" }).count(),
+    ).toBe(0);
+  });
+
+  test("keeps every event in one panel, a day after the other", async ({
+    page,
+  }) => {
+    await page.goto("/alerts");
+    await expect(rows(page)).toHaveCount(ALERT_EVENT_PAGE_SIZE);
+
+    const panels = page.getByRole("main").locator('[data-slot="card"]');
+    await expect(panels).toHaveCount(1);
+    await expect(panels.getByRole("region")).toHaveCount(4);
+    await expect(panels.locator('[data-slot="feed-end"]')).toBeVisible();
+  });
+
+  test("sizes a move beside its sentence and leaves other events bare", async ({
+    page,
+  }) => {
+    await page.goto("/alerts");
+    const sizeOf = (text: string | RegExp) =>
+      rows(page).filter({ hasText: text }).locator('[data-slot="delta-pill"]');
+
+    await expect(sizeOf("fell from #4 to #12")).toHaveAccessibleName(
+      "down 8 positions",
+    );
+    await expect(sizeOf("climbed from #20 to #7")).toHaveAccessibleName(
+      "up 13 positions",
+    );
+    await expect(sizeOf("now #4 against #6")).toHaveAccessibleName(
+      "down 1 position",
+    );
+    await expect(sizeOf("rating fell from 4.7 to 4.5")).toHaveAccessibleName(
+      "down 0.2 stars",
+    );
+    await expect(sizeOf("rating fell from 4.7 to 4.5")).toHaveText("0.2");
+    await expect(sizeOf("changed its subtitle")).toHaveCount(0);
+    await expect(sizeOf("for the first time, at #37")).toHaveCount(0);
+  });
+
+  test("counts the window on a first visit, when nothing was seen before", async ({
+    page,
+  }) => {
+    await page.goto("/alerts");
+
+    await expect(
+      page.getByText(`${ALERT_EVENT_PAGE_SIZE} or more events`, {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(page.getByText("in the last 30 days")).toBeVisible();
+  });
+
+  test("says no event matches for an app the run recorded nothing for", async ({
+    page,
+  }) => {
+    await page.goto(`/alerts?app=${QUIET_ALERT_APP_ID}`);
+
+    await expect(page.getByText("No events match")).toBeVisible();
+    await expect(page.getByText(/^0 of 0 events$/)).toBeVisible();
+    await expect(page.getByText("0 events", { exact: true })).toBeVisible();
+    await expect(page.locator('[data-slot="feed-end"]')).toHaveCount(0);
+    await (
+      await hydrated(page.getByRole("button", { name: "Clear filters" }))
+    ).click();
+
+    await expect(page).toHaveURL("/alerts");
+    await expect(rows(page)).toHaveCount(ALERT_EVENT_PAGE_SIZE);
   });
 
   test("shows the UTC clock time of each event under its UTC day", async ({
@@ -486,6 +574,41 @@ test.describe("alerts page", () => {
 
       await expect(rows(page)).toHaveCount(ALERT_EVENT_PAGE_SIZE);
       await expect(newRows(page)).toHaveCount(0);
+    });
+
+    test("counts what is new since the last visit above the list", async ({
+      page,
+      context,
+    }) => {
+      await seen(context, BEFORE_THREE);
+      await page.goto("/alerts");
+
+      await expect(page.getByText("3 new", { exact: true })).toBeVisible();
+      await expect(page.getByText("since your last visit")).toBeVisible();
+    });
+
+    test("says nothing is new once every event was seen", async ({
+      page,
+      context,
+    }) => {
+      await seen(context, NEWEST);
+      await page.goto("/alerts");
+
+      await expect(
+        page.getByText("Nothing new since your last visit"),
+      ).toBeVisible();
+    });
+
+    test("says or more when the whole first page is new", async ({
+      page,
+      context,
+    }) => {
+      await seen(context, ALERT_EVENT_ITEMS.at(-1)?.occurredAt ?? NEWEST);
+      await page.goto("/alerts");
+
+      await expect(
+        page.getByText(`${ALERT_EVENT_PAGE_SIZE} or more new`, { exact: true }),
+      ).toBeVisible();
     });
 
     test("renders the new marks in the server html and never the dot", async ({

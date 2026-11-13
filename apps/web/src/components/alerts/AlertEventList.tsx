@@ -1,11 +1,20 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { CardFooter } from "@/components/ui/card";
+import { FOOTER_LINK } from "@/components/layout/panel-classes";
 import { isNewSince } from "@/lib/alerts-seen";
 import { useFocusAfterCommit } from "@/lib/focus-handoff";
 import { AlertEventRow } from "./AlertEventRow";
 import type { DayGroup } from "./alert-feed-view";
+import { ALERT_DAY, ALERT_DAY_HEADING, ALERT_ROWS } from "./alert-row-classes";
+
+const ALERTS_GUIDE =
+  "https://docs.asobeast.com/guides/alerts#see-what-the-run-detected";
+
+export const WHAT_THE_FEED_READS =
+  "Last 30 days, newest first. Events are recorded whether or not a channel delivers them.";
 
 export function AlertEventList({
   groups,
@@ -15,19 +24,22 @@ export function AlertEventList({
   seenAt: string | null;
 }) {
   return (
-    <div className="flex flex-col gap-6">
+    <div>
       {groups.map((group, index) => {
         const headingId = `alerts-day-${index}-${group.key}`;
         return (
           <section
             key={`${index}-${group.key}`}
             aria-labelledby={headingId}
-            className="flex flex-col gap-2"
+            className={ALERT_DAY}
           >
-            <h2 id={headingId} className="text-label text-muted-foreground">
-              {`${group.label} · ${group.events.length}`}
+            <h2 id={headingId} className={ALERT_DAY_HEADING}>
+              <span>
+                <span>{group.label}</span>
+                <span className="text-faint-foreground">{` · ${group.events.length}`}</span>
+              </span>
             </h2>
-            <ul className="flex list-none flex-col gap-2 p-0">
+            <ul className={ALERT_ROWS}>
               {group.events.map((item) => (
                 <AlertEventRow
                   key={item.id}
@@ -43,6 +55,31 @@ export function AlertEventList({
   );
 }
 
+export function AlertFeedFooter({
+  children,
+  action,
+}: {
+  children: ReactNode;
+  action?: ReactNode;
+}) {
+  return (
+    <CardFooter className="flex-wrap justify-between gap-x-4 gap-y-2">
+      {children}
+      <div className="flex items-center gap-4">
+        <a
+          href={ALERTS_GUIDE}
+          target="_blank"
+          rel="noreferrer"
+          className={FOOTER_LINK}
+        >
+          How alerts work
+        </a>
+        {action}
+      </div>
+    </CardFooter>
+  );
+}
+
 export function AlertFeedEnd({
   hasMore,
   loading,
@@ -54,42 +91,49 @@ export function AlertFeedEnd({
   failed: boolean;
   onLoadMore: () => Promise<unknown>;
 }) {
-  const footer = useRef<HTMLDivElement>(null);
+  const end = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const handOffFocus = useFocusAfterCommit();
 
   const loadMore = () => {
     if (loading) return;
-    handOffFocus(footer.current, button.current);
+    handOffFocus(end.current, button.current);
     void onLoadMore();
   };
 
   return (
-    <div
-      ref={footer}
-      data-slot="feed-end"
-      tabIndex={-1}
-      className="flex flex-col items-center gap-2 rounded-lg py-2 outline-none"
+    <AlertFeedFooter
+      action={
+        hasMore ? (
+          <Button
+            ref={button}
+            variant="outline"
+            size="sm"
+            aria-disabled={loading || undefined}
+            onClick={loadMore}
+          >
+            Load more
+          </Button>
+        ) : null
+      }
     >
-      {failed && !loading ? (
-        <p role="alert" className="text-caption text-destructive">
-          More events could not be loaded. Try again.
+      <div
+        ref={end}
+        data-slot="feed-end"
+        tabIndex={-1}
+        className="flex min-w-0 flex-col gap-1 rounded-sm outline-none"
+      >
+        {failed && !loading ? (
+          <p role="alert" className="text-destructive">
+            More events could not be loaded. Try again.
+          </p>
+        ) : null}
+        <p>
+          {hasMore
+            ? WHAT_THE_FEED_READS
+            : "That is every event of the last 30 days."}
         </p>
-      ) : null}
-      {hasMore ? (
-        <Button
-          ref={button}
-          variant="outline"
-          aria-disabled={loading || undefined}
-          onClick={loadMore}
-        >
-          Load more
-        </Button>
-      ) : (
-        <p className="text-caption text-muted-foreground">
-          That is every event of the last 30 days.
-        </p>
-      )}
-    </div>
+      </div>
+    </AlertFeedFooter>
   );
 }

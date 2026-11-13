@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { AlertEventItem } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { Badge } from "@/components/ui/badge";
+import { DeltaChip } from "@/components/ui/delta-chip";
 import { EVENT_LABELS } from "@/components/settings/alert-event-copy";
 import {
   formatCountry,
@@ -12,34 +13,74 @@ import {
 import { cn } from "@/lib/utils";
 import { ALERT_EVENT_ICONS, ALERT_TONE_CLASS } from "./alert-event-icons";
 import { alertEventHref } from "./alert-event-href";
+import { alertEventSize } from "./alert-event-size";
+import {
+  ALERT_ROW,
+  ALERT_ROW_APP,
+  ALERT_ROW_GLYPH,
+  ALERT_ROW_META,
+  ALERT_ROW_NEW,
+  ALERT_ROW_SENTENCE,
+  ALERT_ROW_SIZE,
+  ALERT_ROW_TEXT,
+  ALERT_ROW_TIME,
+} from "./alert-row-classes";
 
-function metaOf(item: AlertEventItem): string {
-  return [
-    item.store ? storeLabel(item.store) : null,
-    item.country ? formatCountry(item.country) : null,
-  ]
-    .filter((part) => part !== null)
-    .join(" · ");
+const ROW_LINK =
+  "outline-none after:absolute after:inset-0 after:rounded-md focus-visible:after:ring-2 focus-visible:after:ring-ring focus-visible:after:ring-inset";
+
+const SEPARATOR = "·";
+
+function marketNames(item: AlertEventItem): { full: string; short: string } {
+  const country = item.country;
+  return {
+    full: [
+      item.store ? storeLabel(item.store) : null,
+      country ? formatCountry(country) : null,
+    ]
+      .filter((part) => part !== null)
+      .join(` ${SEPARATOR} `),
+    short: country ? country.toUpperCase() : "",
+  };
 }
 
-function Sentence({ item }: { item: AlertEventItem }) {
-  const href = alertEventHref(item);
+function Market({ item }: { item: AlertEventItem }) {
+  const { full, short } = marketNames(item);
+  const lead = item.appName === null ? "" : `${SEPARATOR} `;
+  return (
+    <>
+      {full ? (
+        <span className="hidden min-w-0 truncate @2xl/alerts:inline">{`${lead}${full}`}</span>
+      ) : null}
+      {short ? (
+        <span className="shrink-0 @2xl/alerts:hidden">{`${lead}${short}`}</span>
+      ) : null}
+    </>
+  );
+}
+
+function Sentence({
+  item,
+  href,
+}: {
+  item: AlertEventItem;
+  href: string | null;
+}) {
   const content = (
     <>
       <span className="sr-only">{`${EVENT_LABELS[item.event]}: `}</span>
-      <span dir="auto" className="block wrap-anywhere">
+      <span
+        dir="auto"
+        className="line-clamp-3 wrap-anywhere @2xl/alerts:line-clamp-2"
+      >
         {item.sentence}
       </span>
     </>
   );
-  if (href === null) {
-    return <p className="text-body text-foreground">{content}</p>;
-  }
+  const text = cn(ALERT_ROW_TEXT, "font-medium text-foreground");
+  if (href === null) return <p className={text}>{content}</p>;
   return (
-    <Link
-      href={href}
-      className="rounded-sm text-body font-medium text-foreground underline-offset-4 decoration-faint-foreground hover:underline"
-    >
+    <Link href={href} className={cn(text, ROW_LINK)}>
       {content}
     </Link>
   );
@@ -53,40 +94,55 @@ export function AlertEventRow({
   isNew: boolean;
 }) {
   const { icon: Icon, tone } = ALERT_EVENT_ICONS[item.event];
-  const meta = metaOf(item);
+  const size = alertEventSize(item.payload);
+  const href = alertEventHref(item);
 
   return (
-    <li className="flex min-w-0 items-start gap-3 rounded-lg border bg-card px-3 py-3">
-      <span
-        className={cn(
-          "flex size-8 shrink-0 items-center justify-center rounded-md bg-muted",
-          ALERT_TONE_CLASS[tone],
-        )}
-      >
+    <li
+      className={cn(
+        ALERT_ROW,
+        href !== null &&
+          "transition-colors duration-150 ease-out hover:bg-muted motion-reduce:transition-none",
+      )}
+    >
+      <span className={cn(ALERT_ROW_GLYPH, ALERT_TONE_CLASS[tone])}>
         <Icon aria-hidden className="size-4" />
       </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <Sentence item={item} />
-        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-caption text-muted-foreground">
-          {item.appName === null ? null : (
-            <span className="flex min-w-0 items-center gap-1.5">
-              <AppIcon src={item.iconUrl} size={20} />
-              <bdi className="wrap-anywhere">{item.appName}</bdi>
-            </span>
-          )}
-          {meta ? <span>{meta}</span> : null}
-        </div>
+      <div className={ALERT_ROW_SENTENCE}>
+        <Sentence item={item} href={href} />
+        {isNew ? (
+          <Badge variant="info" className={ALERT_ROW_NEW}>
+            New
+          </Badge>
+        ) : null}
       </div>
-      <div className="flex shrink-0 flex-col items-end gap-1">
-        {isNew ? <Badge variant="info">New</Badge> : null}
+      <div className={ALERT_ROW_META}>
+        <span className={ALERT_ROW_APP}>
+          {item.appName === null ? null : (
+            <>
+              <AppIcon src={item.iconUrl} size={16} />
+              <bdi className="max-w-3/5 shrink-0 truncate">{item.appName}</bdi>
+            </>
+          )}
+          <Market item={item} />
+        </span>
         <time
           dateTime={item.occurredAt}
           title={formatDateTime(item.occurredAt)}
-          className="text-caption text-muted-foreground"
+          className={ALERT_ROW_TIME}
         >
           {formatUtcClock(item.occurredAt)}
         </time>
       </div>
+      {size ? (
+        <DeltaChip
+          value={size.value}
+          polarity={size.polarity}
+          period={size.period}
+          form="pill"
+          className={ALERT_ROW_SIZE}
+        />
+      ) : null}
     </li>
   );
 }

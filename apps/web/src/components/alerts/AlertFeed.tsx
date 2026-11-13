@@ -1,50 +1,63 @@
 "use client";
 
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useQuery, useSuspenseInfiniteQuery } from "@tanstack/react-query";
 import { isAlertFeedEvent } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
-import { InfoTip } from "@/components/ui/info-tip";
+import { Card } from "@/components/ui/card";
 import { useAlertsSeen } from "@/components/layout/AlertsSeen";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { FOOTER_LINK } from "@/components/layout/panel-classes";
 import {
   alertEventFilters,
   alertEventsOptions,
   alertNewestOnVisitOptions,
 } from "@/lib/queries";
-import { AlertEventList, AlertFeedEnd } from "./AlertEventList";
+import { cn } from "@/lib/utils";
+import {
+  AlertEventList,
+  AlertFeedEnd,
+  AlertFeedFooter,
+  WHAT_THE_FEED_READS,
+} from "./AlertEventList";
 import { AlertFeedEmpty } from "./AlertFeedStates";
 import {
   AlertFeedToolbar,
   CLEARED_ALERT_FEED,
   useAlertFeedView,
 } from "./AlertFeedToolbar";
-import { dayGroups, searchEvents } from "./alert-feed-view";
+import {
+  dayGroups,
+  feedLede,
+  searchEvents,
+  type FeedLede,
+} from "./alert-feed-view";
 
-const ALERTS_GUIDE =
-  "https://docs.asobeast.com/guides/alerts#see-what-the-run-detected";
+const ALERT_SETTINGS = "/settings#alerts";
 
-const WHAT_THE_PAGE_LISTS =
-  "Every event the daily run detected for your apps in the last 30 days, whether or not an alert channel is subscribed. Delivery is separate: channels are set up in Settings.";
-
-function AlertFeedHeader() {
+function AlertFeedHeader({ lede }: { lede: FeedLede | null }) {
   return (
-    <header className="flex items-center gap-2">
-      <h1 className="text-title tracking-tight text-balance">Alerts</h1>
-      <InfoTip
-        label="About the alerts page"
-        title="What the alerts page lists"
-        summary={WHAT_THE_PAGE_LISTS}
-      >
-        <a
-          href={ALERTS_GUIDE}
-          target="_blank"
-          rel="noreferrer"
-          className="font-medium text-foreground link-underline"
-        >
-          Read how alerts work
-        </a>
-      </InfoTip>
-    </header>
+    <PageHeader
+      title="Alerts"
+      controls={
+        <Link href={ALERT_SETTINGS} className={cn(FOOTER_LINK, "text-dense")}>
+          Alert settings
+        </Link>
+      }
+      lede={
+        lede ? (
+          <>
+            {lede.figure ? (
+              <span className="numeric font-medium text-foreground">
+                {lede.figure}
+              </span>
+            ) : null}
+            <span>{lede.rest}</span>
+          </>
+        ) : null
+      }
+    />
   );
 }
 
@@ -91,9 +104,17 @@ export function AlertFeed() {
     searchBox.current?.querySelector("input")?.focus();
   };
 
+  const recorded = events.length > 0;
+
   return (
     <>
-      <AlertFeedHeader />
+      <AlertFeedHeader
+        lede={
+          recorded || filtered
+            ? feedLede({ events, seenAt, hasMore: feed.hasNextPage })
+            : null
+        }
+      />
       <AlertFeedToolbar
         shown={shown.length}
         loaded={events.length}
@@ -101,32 +122,38 @@ export function AlertFeed() {
         searchBox={searchBox}
         onClearAll={clearAll}
       />
-      {shown.length === 0 ? (
-        <AlertFeedEmpty
-          filtered={filtered}
-          searchedOnly={
-            feed.hasNextPage && query.trim() !== "" ? events.length : null
-          }
-          action={
-            <Button variant="outline" onClick={clearAll}>
-              Clear filters
-            </Button>
-          }
-        />
-      ) : (
-        <AlertEventList
-          groups={dayGroups(shown, feed.dataUpdatedAt)}
-          seenAt={seenAt}
-        />
-      )}
-      {events.length === 0 ? null : (
-        <AlertFeedEnd
-          hasMore={feed.hasNextPage}
-          loading={feed.isFetchingNextPage}
-          failed={feed.isFetchNextPageError}
-          onLoadMore={() => feed.fetchNextPage({ cancelRefetch: false })}
-        />
-      )}
+      <Card className="gap-0 py-0">
+        {shown.length === 0 ? (
+          <AlertFeedEmpty
+            filtered={filtered}
+            searchedOnly={
+              feed.hasNextPage && query.trim() !== "" ? events.length : null
+            }
+            action={
+              <Button variant="outline" onClick={clearAll}>
+                Clear filters
+              </Button>
+            }
+          />
+        ) : (
+          <AlertEventList
+            groups={dayGroups(shown, feed.dataUpdatedAt)}
+            seenAt={seenAt}
+          />
+        )}
+        {recorded ? (
+          <AlertFeedEnd
+            hasMore={feed.hasNextPage}
+            loading={feed.isFetchingNextPage}
+            failed={feed.isFetchNextPageError}
+            onLoadMore={() => feed.fetchNextPage({ cancelRefetch: false })}
+          />
+        ) : (
+          <AlertFeedFooter>
+            <p>{WHAT_THE_FEED_READS}</p>
+          </AlertFeedFooter>
+        )}
+      </Card>
     </>
   );
 }
