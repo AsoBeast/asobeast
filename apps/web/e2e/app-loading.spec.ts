@@ -39,12 +39,17 @@ test("the overview's loading market control is as wide as the market select", as
   const skeletons = page.locator("main [data-slot=skeleton]");
   await expect(skeletons.first()).toBeVisible();
   const placeholders = await skeletons.evaluateAll((nodes) =>
-    nodes.map((node) => Math.round(node.getBoundingClientRect().width)),
+    nodes.map((node) => {
+      const box = node.getBoundingClientRect();
+      return `${Math.round(box.width)}x${Math.round(box.height)}`;
+    }),
   );
 
   const select = page.getByRole("combobox", { name: "Market" });
   await expect(select).toBeVisible({ timeout: 15_000 });
-  const width = Math.round((await select.boundingBox())?.width ?? 0);
+  const box = await select.boundingBox();
 
-  expect(placeholders).toContain(width);
+  expect(placeholders).toContain(
+    `${Math.round(box?.width ?? 0)}x${Math.round(box?.height ?? 0)}`,
+  );
 });

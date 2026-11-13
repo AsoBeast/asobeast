@@ -30,7 +30,7 @@ const MONOSPACE_NUMBER =
 const RAW_LINK_UNDERLINE = /\bdecoration-faint-foreground\b/g;
 
 const RESTYLED_LINK_HOVER =
-  /\blink-underline\b[^"'`\n]*\bhover:decoration-[\w-]+/g;
+  /\blink-underline\b[^"'`\n]*\bhover:decoration-[\w-]+|\bhover:decoration-[\w-]+[^"'`\n]*\blink-underline\b/g;
 
 const UNDERLINED_ON_HOVER = [
   "components/alerts/AlertEventRow.tsx: decoration-faint-foreground",
