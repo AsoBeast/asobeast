@@ -6,6 +6,7 @@ import {
   GAP_STATE_COOKIE,
   utcDaysAgo,
 } from "./fixtures.mts";
+import { FAIL_CHANGES_COOKIE } from "./competitors-fixtures.mts";
 import { hydrated } from "./hydrated.mts";
 import { seedCookies } from "./routes.mts";
 import { expect, test } from "./session.mts";
@@ -52,6 +53,19 @@ test("the lede asks for a first competitor when none is tracked", async ({
   await expect(
     standing(page).getByText("Nothing to compare yet"),
   ).toBeVisible();
+});
+
+test("a failed listing changes read leaves the count and the page up", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { [FAIL_CHANGES_COOKIE]: "1" });
+  await open(page);
+
+  await expect(page.getByText("1 competitor", { exact: true })).toBeVisible();
+  await expect(page.getByText("tracked.", { exact: true })).toBeVisible();
+  await expect(visibility(page).getByRole("listitem")).toHaveCount(2);
+  await expect(matrix(page)).toBeVisible();
 });
 
 test("how you compare ranks every app by visibility and marks the own app", async ({

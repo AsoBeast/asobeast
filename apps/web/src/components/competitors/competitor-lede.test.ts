@@ -23,6 +23,14 @@ describe("competitorLede", () => {
     });
   });
 
+  it("keeps to the count while the listing changes are unknown", () => {
+    expect(competitorLede(2, undefined)).toEqual({
+      count: "2 competitors",
+      rest: "tracked.",
+      changed: null,
+    });
+  });
+
   it("says nothing changed when only the own app has events", () => {
     expect(competitorLede(2, [event({ isCompetitor: false })])).toEqual({
       count: "2 competitors",

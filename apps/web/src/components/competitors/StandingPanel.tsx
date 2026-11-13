@@ -194,7 +194,8 @@ function StandingContent({
   const listings = [...analysis.metadataComparison].sort(
     (a, b) => Number(b.isYou) - Number(a.isYou),
   );
-  if (!hasRival(view === "visibility" ? analysis.positionMap : listings)) {
+  const compared = view === "visibility" ? analysis.positionMap : listings;
+  if (!hasRival(compared)) {
     return (
       <EmptyState
         className={SECTION_EMPTY}
@@ -203,24 +204,26 @@ function StandingContent({
       />
     );
   }
+  if (view === "text") {
+    return (
+      <div className={cn(SECTION_SHEET, "border-t-0")}>
+        <ListingText rows={listings} store={store} icons={icons} />
+        <p className={SECTION_FOOTER}>
+          Home storefront listing, from each app’s latest snapshot
+        </p>
+      </div>
+    );
+  }
   return (
     <div className={cn(SECTION_SHEET, "border-t-0")}>
-      {view === "visibility" ? (
-        <VisibilityList points={analysis.positionMap} icons={icons} />
-      ) : (
-        <ListingText rows={listings} store={store} icons={icons} />
-      )}
+      <VisibilityList points={analysis.positionMap} icons={icons} />
       <p className={SECTION_FOOTER}>
         <span>
-          {view === "visibility"
-            ? "Visibility over the keywords you track, from the latest checks"
-            : "Home storefront listing, from each app’s latest snapshot"}
+          Visibility over the keywords you track, from the latest checks
         </span>
-        {view === "visibility" ? (
-          <Link href={`/apps/${id}?visView=share`} className={FOOTER_LINK}>
-            Share of voice trend
-          </Link>
-        ) : null}
+        <Link href={`/apps/${id}?visView=share`} className={FOOTER_LINK}>
+          Share of voice trend
+        </Link>
       </p>
     </div>
   );

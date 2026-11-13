@@ -217,7 +217,7 @@ function CompetitorHeading({
         stacked ? "flex-col items-end md:w-20" : "items-center",
       )}
     >
-      <span aria-hidden className="shrink-0">
+      <span aria-hidden className="size-6 shrink-0">
         <AppIcon src={competitor.iconUrl} size={24} />
       </span>
       <span className="sr-only md:not-sr-only">

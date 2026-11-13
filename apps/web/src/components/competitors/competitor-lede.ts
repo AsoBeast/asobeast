@@ -25,7 +25,7 @@ function latestFirst(a: ChangeEventItem, b: ChangeEventItem): number {
 
 export function competitorLede(
   count: number,
-  events: readonly ChangeEventItem[],
+  events: readonly ChangeEventItem[] | undefined,
 ): CompetitorLede {
   if (count === 0) {
     return {
@@ -33,6 +33,9 @@ export function competitorLede(
       rest: "tracked yet. Add the apps you rank against to see where they beat you.",
       changed: null,
     };
+  }
+  if (events === undefined) {
+    return { count: countText(count), rest: "tracked.", changed: null };
   }
   const rivalEvents = events
     .filter((event) => event.isCompetitor)

@@ -7,6 +7,7 @@ import {
 
 const RTL_TITLE = "مؤقت التركيز";
 const LONG_TITLE = "Rival Focus Timer Pro: Deep Work";
+const SPECIAL_TITLES: readonly string[] = [RTL_TITLE, LONG_TITLE];
 
 export const NOT_COMPARED_ANALYSIS: CompetitorAnalysis = {
   ...APP_1_ANALYSIS,
@@ -36,7 +37,7 @@ export const CROWDED_ANALYSIS: CompetitorAnalysis = {
   metadataComparison: [
     YOUR_LISTING,
     ...CROWDED_RIVALS.map(({ id, name }, index) => {
-      const title = index === 0 ? RTL_TITLE : index === 1 ? LONG_TITLE : name;
+      const title = SPECIAL_TITLES[index] ?? name;
       return {
         appId: id,
         name,
@@ -71,3 +72,5 @@ export function withDiscoveryIcons(
     })),
   };
 }
+
+export const FAIL_CHANGES_COOKIE = "e2e_fail_changes";

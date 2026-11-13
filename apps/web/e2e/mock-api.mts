@@ -11,7 +11,10 @@ import {
   filterAlertEvents,
 } from "./alert-feed-fixtures.mts";
 import { BREAKDOWNS } from "./keyword-breakdowns.mts";
-import { withDiscoveryIcons } from "./competitors-fixtures.mts";
+import {
+  FAIL_CHANGES_COOKIE,
+  withDiscoveryIcons,
+} from "./competitors-fixtures.mts";
 import { analysisOf, visibilityComparedFor } from "./gap-mock.mts";
 import { SERP_HISTORY, serpOnDay } from "./serp-history.mts";
 import "./keyword-map.mts";
@@ -4407,8 +4410,11 @@ const routes: Route[] = [
       json(res, 200, base);
     },
   },
-  appRoute(/^\/apps\/([^/]+)\/changes$/, (dataset, query) =>
-    isPolishListingOf(dataset, query) ? APP_1_PL_CHANGES : dataset.changes,
+  appRoute(
+    /^\/apps\/([^/]+)\/changes$/,
+    (dataset, query) =>
+      isPolishListingOf(dataset, query) ? APP_1_PL_CHANGES : dataset.changes,
+    (req) => hasCookie(req, FAIL_CHANGES_COOKIE, "1"),
   ),
   appRoute(/^\/apps\/([^/]+)\/changes\/impact$/, (dataset, _query, req) =>
     dataset.detail.id === APP_GP_CHANGE_IMPACT.appId &&
