@@ -41,9 +41,10 @@ export function ChartTableView({
   date: string | null;
 }) {
   if (listsNoApps(page)) return <ChartNoApps page={page} />;
-  return page.capture ? (
+  const { capture } = page;
+  return capture ? (
     <div aria-busy={busy} className={CHART_GRID}>
-      <ChartTable page={page} apps={apps} />
+      <ChartTable page={{ ...page, capture }} apps={apps} />
       <aside aria-label="Trending" className={TRENDING_COLUMN}>
         <TrendingPanel pages={[page]} />
       </aside>

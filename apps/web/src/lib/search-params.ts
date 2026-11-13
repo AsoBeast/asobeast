@@ -615,10 +615,15 @@ export const loadChartSearch = createLoader(chartParsers);
 
 export const CHART_SORTS = ["position", "movement", "app", "genre"] as const;
 
+export const CHART_TABLE_VIEWS = ["rows", "history"] as const;
+
+export type ChartTableView = (typeof CHART_TABLE_VIEWS)[number];
+
 export const chartTableParsers = {
   sort: parseAsStringLiteral(CHART_SORTS).withDefault("position"),
   dir: sortDirectionParser,
   q: searchParser,
+  tableView: parseAsStringLiteral(CHART_TABLE_VIEWS).withDefault("rows"),
 };
 
 export const alertFeedParsers = {
