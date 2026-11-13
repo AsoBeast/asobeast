@@ -128,12 +128,14 @@ export function AlertFeedToolbar({
           selected={view.type}
           onChange={(type) => void setView({ type })}
         />
+        <div className="w-full sm:ml-auto sm:w-auto">
+          <RowCount shown={shown} total={loaded} noun="event" />
+        </div>
       </div>
       <FilterChips
         chips={chipsOf(view, labels, setView)}
         onClearAll={onClearAll}
       />
-      <RowCount shown={shown} total={loaded} noun="event" />
       {hasMore && view.q !== "" ? (
         <p className="text-caption text-muted-foreground">
           {`Searching the ${loaded} loaded events. Load more to search further.`}

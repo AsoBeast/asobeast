@@ -32,10 +32,6 @@ const RAW_LINK_UNDERLINE = /\bdecoration-faint-foreground\b/g;
 const RESTYLED_LINK_HOVER =
   /\blink-underline\b[^"'`\n]*\bhover:decoration-[\w-]+|\bhover:decoration-[\w-]+[^"'`\n]*\blink-underline\b/g;
 
-const UNDERLINED_ON_HOVER = [
-  "components/alerts/AlertEventRow.tsx: decoration-faint-foreground",
-];
-
 const INFORMATION_BLUE =
   /\b(?:bg|text|border|ring|outline|fill|stroke|shadow)-info(?:-subtle)?(?![\w-])/g;
 
@@ -81,7 +77,7 @@ describe("utility classes", () => {
   });
 
   it("draws a faint link underline that darkens on hover through one utility", () => {
-    expect(offenders(RAW_LINK_UNDERLINE)).toEqual(UNDERLINED_ON_HOVER);
+    expect(offenders(RAW_LINK_UNDERLINE)).toEqual([]);
   });
 
   it("leaves the hover of a link underline to the utility", () => {
