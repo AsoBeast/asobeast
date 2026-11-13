@@ -123,6 +123,9 @@ test("a competitor's suggestion is a section of its own", async ({ page }) => {
     page.getByRole("heading", { level: 2, name: /^Suggested keyword field/ }),
   ).toBeVisible();
   await expect(page.getByText("Adds habits")).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Edit this keyword field" }),
+  ).toHaveCount(0);
 });
 
 test("a lint issue is its severity word, the rule and the sentence", async ({

@@ -30,7 +30,8 @@ export function KeywordFieldSuggestionRow({
   home,
   suggestion,
   heading: Heading = "h3",
-}: SuggestionProps & { heading?: "h2" | "h3" }) {
+  editable = true,
+}: SuggestionProps & { heading?: "h2" | "h3"; editable?: boolean }) {
   const headingId = useId();
   const [copied, setCopied] = useState(false);
   const editHref = editLocalizationHref(
@@ -86,12 +87,14 @@ export function KeywordFieldSuggestionRow({
               <Copy aria-hidden />
               <span>{copied ? "Copied" : "Copy"}</span>
             </Button>
-            <Link
-              href={editHref}
-              className="text-dense text-foreground link-underline"
-            >
-              Edit this keyword field
-            </Link>
+            {editable ? (
+              <Link
+                href={editHref}
+                className="text-dense text-foreground link-underline"
+              >
+                Edit this keyword field
+              </Link>
+            ) : null}
           </div>
         </div>
       )}
@@ -102,7 +105,7 @@ export function KeywordFieldSuggestionRow({
 export function KeywordFieldSuggestionCard(props: SuggestionProps) {
   return (
     <Card className="gap-0 py-0">
-      <KeywordFieldSuggestionRow {...props} heading="h2" />
+      <KeywordFieldSuggestionRow {...props} heading="h2" editable={false} />
     </Card>
   );
 }

@@ -133,6 +133,7 @@ export function KeywordFieldEditor({
         readOnly={managed || busy}
         rows={3}
         spellCheck={false}
+        dir="auto"
         aria-label={`${name} keyword field`}
         aria-describedby={countId}
         aria-invalid={managed ? undefined : over}

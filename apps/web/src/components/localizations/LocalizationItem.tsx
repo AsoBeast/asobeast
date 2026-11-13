@@ -49,7 +49,7 @@ export function LocalizationItem({
         ref={claimFocus}
         className="min-h-11 items-center rounded-none px-4 py-2 hover:bg-muted hover:no-underline focus-visible:ring-inset"
       >
-        <span className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(0,1fr)_auto_auto_11rem]">
+        <span className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(0,1fr)_auto_auto_14rem]">
           <span className="flex min-w-0 flex-wrap items-baseline gap-x-2">
             <span className="font-medium">{name}</span>
             <OriginMark origin={item.origin} />

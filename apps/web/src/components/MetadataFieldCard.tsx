@@ -60,6 +60,7 @@ export function MetadataFieldCard({
         aria-label={label}
         aria-describedby={countId}
         aria-invalid={over}
+        dir="auto"
         className="resize-y"
       />
 
