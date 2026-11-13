@@ -4,6 +4,8 @@ export const META_LINE = "text-label text-muted-foreground";
 
 export const PANEL_HEADER = "min-h-[47px] content-center";
 
+export const PANEL_BLEED = "-my-(--card-spacing) px-0";
+
 export const PANEL_ACTION = "row-span-1 self-center";
 
 export const PANEL_COUNT = `${PANEL_ACTION} text-label text-faint-foreground`;
