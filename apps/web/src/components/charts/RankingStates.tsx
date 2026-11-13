@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { formatCheckedPosition } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
+import { CHART_NOTICE } from "./ChartStates";
 import { CHART_HEIGHT } from "./theme";
 import { formatCountry } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -20,14 +21,9 @@ function Frame({
   children?: React.ReactNode;
 }) {
   return (
-    <div
-      className={cn(
-        "flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-6 text-center",
-        CHART_HEIGHT.hero,
-      )}
-    >
-      <p className="text-body font-medium">{title}</p>
-      <p className="max-w-md text-caption text-muted-foreground">{body}</p>
+    <div className={cn(CHART_NOTICE, "gap-2", CHART_HEIGHT.hero)}>
+      <p className="max-w-prose text-body font-medium">{title}</p>
+      <p className="max-w-prose text-body text-muted-foreground">{body}</p>
       {children}
       {action}
     </div>
@@ -116,11 +112,11 @@ export function InsufficientHistory({ data }: { data: RankingChartData }) {
       title="Not enough history for a trend"
       body="A line needs at least four daily checks. These are the latest captured positions."
     >
-      <dl className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+      <dl className="flex flex-wrap items-start gap-x-6 gap-y-2">
         {data.keywordIds.map((keywordId) => {
           const value = row?.[keywordId];
           return (
-            <div key={keywordId} className="flex flex-col items-center">
+            <div key={keywordId} className="flex flex-col">
               <dt className="max-w-40 truncate text-caption text-muted-foreground">
                 {data.seriesLabels[keywordId] ?? keywordId}
               </dt>
