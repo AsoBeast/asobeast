@@ -41,6 +41,7 @@ const BADGE_VARIANTS = [
   "success",
   "warning",
   "info",
+  "brand",
   "destructive",
   "ghost",
 ] as const;

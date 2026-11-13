@@ -27,7 +27,7 @@ export function RowActions({
       {link ? (
         <Badge
           asChild
-          variant={link.role === "own" ? "info" : "secondary"}
+          variant={link.role === "own" ? "brand" : "secondary"}
           className="max-w-40 min-w-0 shrink"
         >
           <Link ref={claimFocus} href={link.href} title={link.label}>

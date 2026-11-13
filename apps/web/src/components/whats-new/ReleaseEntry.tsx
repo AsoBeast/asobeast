@@ -76,7 +76,7 @@ export function ReleaseEntry({
           >
             {formatDate(release.date)}
           </time>
-          {latest ? <Badge variant="info">Latest</Badge> : null}
+          {latest ? <Badge variant="brand">Latest</Badge> : null}
         </header>
         <div className="relative flex min-w-0 flex-col gap-4 pb-8 sm:border-l sm:border-border sm:pl-8">
           <span

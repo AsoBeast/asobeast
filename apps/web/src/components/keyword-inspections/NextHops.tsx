@@ -64,9 +64,12 @@ function HopChip({
         type="button"
         aria-disabled
         aria-label={`Inspecting ${term}`}
-        className={cn(CHIP, "border-info/40 bg-info/10 text-foreground")}
+        className={cn(CHIP, "border-border bg-muted text-foreground")}
       >
-        <Loader2 aria-hidden className="size-3.5 animate-spin text-info" />
+        <Loader2
+          aria-hidden
+          className="size-3.5 animate-spin text-muted-foreground"
+        />
         <span>{term}</span>
       </button>
     );

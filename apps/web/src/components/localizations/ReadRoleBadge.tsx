@@ -6,9 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { READ_ROLE_LABELS } from "@/lib/app-localizations";
 
 const ROLE_VARIANT = {
-  default: "info",
+  default: "brand",
   additional: "secondary",
-} as const satisfies Record<LocalizationReadRole, "info" | "secondary">;
+} as const satisfies Record<LocalizationReadRole, "brand" | "secondary">;
 
 export function ReadRoleBadge({
   role,

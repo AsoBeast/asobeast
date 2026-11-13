@@ -138,7 +138,7 @@ export function BreakdownAppCard({
           aria-label={
             app.isYou ? "Where you stand" : "Why it may rank above you"
           }
-          className="flex flex-col gap-1 border-l-2 border-info pl-3 text-sm"
+          className="flex flex-col gap-1 border-l-2 border-border pl-3 text-sm"
         >
           {note.map((line) => (
             <p key={line}>{line}</p>
