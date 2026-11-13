@@ -29,6 +29,9 @@ const MONOSPACE_NUMBER =
 
 const RAW_LINK_UNDERLINE = /\bdecoration-faint-foreground\b/g;
 
+const RESTYLED_LINK_HOVER =
+  /\blink-underline\b[^"'`\n]*\bhover:decoration-[\w-]+/g;
+
 const UNDERLINED_ON_HOVER = [
   "components/alerts/AlertEventRow.tsx: decoration-faint-foreground",
 ];
@@ -68,6 +71,10 @@ describe("utility classes", () => {
 
   it("draws a faint link underline that darkens on hover through one utility", () => {
     expect(offenders(RAW_LINK_UNDERLINE)).toEqual(UNDERLINED_ON_HOVER);
+  });
+
+  it("leaves the hover of a link underline to the utility", () => {
+    expect(offenders(RESTYLED_LINK_HOVER)).toEqual([]);
   });
 
   it("leaves no opacity modifier detached from its utility", () => {
