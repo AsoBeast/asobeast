@@ -1,5 +1,6 @@
 import type { AlertEventItem } from "@asobeast/shared";
 import { EVENT_LABELS } from "@/components/settings/alert-event-copy";
+import { isNewSince } from "@/lib/alerts-seen";
 import { formatCountry, formatDate } from "@/lib/format";
 import { matchesSearch } from "@/lib/search-text";
 
@@ -52,4 +53,38 @@ export function searchEvents(
 ): AlertEventItem[] {
   if (query.trim() === "") return [...events];
   return events.filter((event) => matchesSearch(searchParts(event), query));
+}
+
+export interface FeedLede {
+  figure: string | null;
+  rest: string;
+}
+
+export function feedLede({
+  events,
+  seenAt,
+  hasMore,
+}: {
+  events: readonly AlertEventItem[];
+  seenAt: string | null;
+  hasMore: boolean;
+}): FeedLede {
+  const orMore = hasMore ? " or more" : "";
+  if (seenAt === null) {
+    const noun = events.length === 1 && !hasMore ? "event" : "events";
+    return {
+      figure: `${events.length}${orMore} ${noun}`,
+      rest: " in the last 30 days",
+    };
+  }
+  const fresh = events.filter((event) =>
+    isNewSince(event.occurredAt, seenAt),
+  ).length;
+  if (fresh === 0) {
+    return { figure: null, rest: "Nothing new since your last visit" };
+  }
+  return {
+    figure: `${fresh}${fresh === events.length ? orMore : ""} new`,
+    rest: " since your last visit",
+  };
 }
