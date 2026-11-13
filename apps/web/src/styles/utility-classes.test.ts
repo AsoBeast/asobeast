@@ -37,7 +37,7 @@ const UNDERLINED_ON_HOVER = [
 ];
 
 const INFORMATION_BLUE =
-  /\b(?:bg|text|border|ring|outline|fill|stroke|shadow|after:bg|before:bg)-info(?:-subtle)?(?![\w-])/g;
+  /\b(?:bg|text|border|ring|outline|fill|stroke|shadow)-info(?:-subtle)?(?![\w-])/g;
 
 const SUBTITLE_MATCH_MARK = [
   "components/keyword-match/MatchedText.tsx: bg-info-subtle",
