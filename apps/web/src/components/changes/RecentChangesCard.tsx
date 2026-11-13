@@ -22,7 +22,7 @@ import {
   FEED_TEXT,
   FeedDay,
   feedDayLabel,
-} from "@/components/dashboard/feed-row";
+} from "@/components/layout/feed-row";
 import { FeedCardSkeleton } from "@/components/dashboard/skeletons";
 import { PANEL_ACTION, PANEL_HEADER } from "@/components/layout/panel-classes";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
