@@ -33,7 +33,7 @@ test("an app with nothing stored says so and draws no side panels", async ({
   ).toBe(0);
 });
 
-test("the ratings figure switches the chart to new ratings per day and keeps it on reload", async ({
+test("the ratings figure switches the chart to new ratings and keeps it on reload", async ({
   page,
 }) => {
   await page.goto(REVIEWS);
@@ -43,7 +43,7 @@ test("the ratings figure switches the chart to new ratings per day and keeps it 
 
   await expect(rating).toHaveAttribute("aria-pressed", "true");
   await expect(
-    page.getByRole("region", { name: "Average rating and review volume" }),
+    page.getByRole("region", { name: "Average rating over time" }),
   ).toBeVisible();
 
   await ratings.click();
@@ -52,13 +52,13 @@ test("the ratings figure switches the chart to new ratings per day and keeps it 
   await expect(ratings).toHaveAttribute("aria-pressed", "true");
   await expect(ratings).toBeFocused();
   await expect(
-    page.getByRole("region", { name: "New ratings per day" }),
+    page.getByRole("region", { name: "New ratings between daily reads" }),
   ).toBeVisible();
 
   await page.reload();
 
   await expect(
-    page.getByRole("region", { name: "New ratings per day" }),
+    page.getByRole("region", { name: "New ratings between daily reads" }),
   ).toBeVisible();
 });
 
@@ -153,4 +153,50 @@ test("a falling rating reads down in the sentence and on the figure", async ({
       .getByRole("group", { name: "Ratings figures" })
       .getByRole("button", { name: /^Rating\b(?!s)/ }),
   ).toContainText("-0.35");
+});
+
+test("a single read of the ratings shows the count instead of an empty chart", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { [RATINGS_HISTORY_COOKIE]: "single" });
+  await page.goto(`${REVIEWS}?ratingsView=volume`);
+
+  await expect(page.getByText("Ratings so far")).toBeVisible();
+  expect(await page.getByText("No ratings history yet").count()).toBe(0);
+});
+
+test("the reply status switch moves by arrow keys and filters on Enter only", async ({
+  page,
+}) => {
+  await page.goto(REVIEWS);
+  const tabs = page.getByRole("tablist", { name: "Reply status" });
+
+  await tabs.getByRole("tab", { name: /All/ }).focus();
+  await page.keyboard.press("ArrowRight");
+
+  await expect(tabs.getByRole("tab", { name: /Needs reply/ })).toBeFocused();
+  expect(page.url()).not.toContain("replyState");
+
+  await page.keyboard.press("Enter");
+
+  await expect(page).toHaveURL(/replyState=needs_reply/);
+  await expect(page).toHaveURL(/sort=lowest/);
+  await expect(tabs.getByRole("tab", { name: /Needs reply/ })).toBeFocused();
+});
+
+test("the panels read in the order they stack on a phone", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto(REVIEWS);
+
+  const tops = await Promise.all(
+    [
+      page.getByRole("group", { name: "Ratings figures" }),
+      page.getByRole("tablist", { name: "Reply status" }),
+      page.getByRole("region", { name: "Ratings distribution" }),
+      page.getByRole("region", { name: "Rating by version" }),
+      page.getByRole("region", { name: "What people mention" }),
+    ].map(async (panel) => (await panel.boundingBox())!.y),
+  );
+  expect(tops).toEqual([...tops].sort((a, b) => a - b));
 });

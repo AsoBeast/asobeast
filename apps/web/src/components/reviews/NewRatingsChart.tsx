@@ -23,7 +23,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { formatNumber } from "@/lib/format";
+import { formatCompact, formatNumber } from "@/lib/format";
 import { ratingsHistoryOptions } from "@/lib/queries";
 import { presetToRange, type RatingsRange } from "@/lib/ranges";
 import { latestRatingCount, newRatings } from "./ratings-volume";
@@ -47,8 +47,7 @@ export function NewRatingsChart({
   const bars = newRatings(data.points);
   const latest = latestRatingCount(data.points);
 
-  const state = trendState(bars.length);
-  if (latest === null || state === "empty") {
+  if (latest === null) {
     return (
       <ChartNotice
         height={HEIGHT}
@@ -57,7 +56,7 @@ export function NewRatingsChart({
       />
     );
   }
-  if (state === "insufficient") {
+  if (trendState(bars.length) !== "ready") {
     return (
       <ChartStat
         height={HEIGHT}
@@ -73,7 +72,7 @@ export function NewRatingsChart({
       config={chartConfig}
       className={`${HEIGHT} w-full`}
       role="region"
-      aria-label="New ratings per day"
+      aria-label="New ratings between daily reads"
     >
       <BarChart accessibilityLayer data={bars} margin={CHART_MARGIN}>
         <CartesianGrid {...GRID_PROPS} />
@@ -81,7 +80,7 @@ export function NewRatingsChart({
         <YAxis
           {...VALUE_AXIS_PROPS}
           allowDecimals={false}
-          tickFormatter={(value: number) => formatNumber(value)}
+          tickFormatter={(value: number) => formatCompact(value)}
         />
         <ChartTooltip
           cursor={false}

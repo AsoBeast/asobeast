@@ -60,6 +60,16 @@ describe("ratingsGrowth", () => {
   });
 });
 
+describe("a count the store lowered", () => {
+  const RESET = [point("2026-11-01", 5000), point("2026-11-02", 1000)];
+
+  it("draws no bar below zero and reports the net change as it is", () => {
+    expect(newRatings(RESET)).toEqual([{ date: "2026-11-02", added: 0 }]);
+    expect(ratingsGrowth(RESET)).toEqual({ added: -4000, since: "2026-11-01" });
+    expect(ratingsAdded(RESET, 1)).toBe(-4000);
+  });
+});
+
 describe("latestRatingCount", () => {
   it("reads the newest counted point", () => {
     expect(latestRatingCount([...HISTORY, point("2026-11-12", null)])).toBe(

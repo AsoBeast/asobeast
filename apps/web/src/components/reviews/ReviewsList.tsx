@@ -44,8 +44,16 @@ const SORT_WORDS: Record<ReviewSort, string> = {
 
 const EMPTY_STATE = "px-4 py-12";
 
+function searchCount(matches: number, shown: number, total: number): string {
+  const found = `${formatNumber(matches)} of ${formatNumber(shown)} match the search`;
+  return total > shown
+    ? `${found} · search covers the ${formatNumber(shown)} loaded of ${formatNumber(total)} reviews`
+    : found;
+}
+
 function ListFooter({
   shown,
+  matches,
   total,
   sort,
   searching,
@@ -53,6 +61,7 @@ function ListFooter({
   onShowAll,
 }: {
   shown: number;
+  matches: number;
   total: number;
   sort: ReviewSort;
   searching: boolean;
@@ -60,10 +69,9 @@ function ListFooter({
   onShowAll: () => void;
 }) {
   const partial = total > shown;
-  const counted =
-    searching && partial
-      ? `Search covers the ${formatNumber(shown)} loaded of ${formatNumber(total)} reviews`
-      : `Showing ${formatNumber(shown)} of ${formatNumber(total)} · ${SORT_WORDS[sort]}`;
+  const counted = searching
+    ? searchCount(matches, shown, total)
+    : `Showing ${formatNumber(shown)} of ${formatNumber(total)} · ${SORT_WORDS[sort]}`;
   return (
     <div className="flex min-h-12 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-border px-4 py-2.5 text-caption text-faint-foreground">
       <p>{counted}</p>
@@ -220,6 +228,7 @@ function ReviewCards({
       )}
       <ListFooter
         shown={data.reviews.length}
+        matches={shown.length}
         total={data.total}
         sort={view.sort}
         searching={query.trim() !== ""}
@@ -230,13 +239,7 @@ function ReviewCards({
   );
 }
 
-export function ReviewsList({
-  id,
-  className,
-}: {
-  id: string;
-  className?: string;
-}) {
+export function ReviewsList({ id }: { id: string }) {
   const {
     view,
     query,
@@ -251,7 +254,7 @@ export function ReviewsList({
   } = useReviewView();
 
   return (
-    <Card className={className}>
+    <Card>
       <CardHeader
         className={`${PANEL_HEADER} flex flex-wrap items-center justify-between gap-x-4 gap-y-2`}
       >

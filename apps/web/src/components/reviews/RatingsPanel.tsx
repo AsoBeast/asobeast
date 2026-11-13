@@ -32,23 +32,28 @@ import {
   ratingsViewParser,
   type RatingsView,
 } from "@/lib/search-params";
-import { cn } from "@/lib/utils";
 import { NewRatingsChart } from "./NewRatingsChart";
 import {
   latestRatingCount,
   ratingsAdded,
   ratingsGrowth,
+  type RatingsGrowth,
 } from "./ratings-volume";
 
 const RATING_CHANGE_DIGITS = 2;
 const CHANGE_LABEL = `${RATING_CHANGE_DAYS}d`;
 
-export const RATINGS_CHART_REGION = "Average rating and review volume";
-
 const CHART_TITLES: Record<RatingsView, string> = {
   average: "Average rating",
-  volume: "New ratings per day",
+  volume: "New ratings",
 };
+
+function growthNote({ added, since }: RatingsGrowth): string {
+  const day = formatDayMonth(since);
+  return added < 0
+    ? `${formatNumber(-added)} fewer since ${day}`
+    : `${formatNumber(added)} new since ${day}`;
+}
 
 function RatingsStrip({
   id,
@@ -101,11 +106,7 @@ function RatingsStrip({
             <TrendChip label={CHANGE_LABEL} value={added} form="pill" />
           )
         }
-        note={
-          growth === null
-            ? ""
-            : `${formatNumber(growth.added)} new since ${formatDayMonth(growth.since)}`
-        }
+        note={growth === null ? "" : growthNote(growth)}
         selected={view === "volume"}
         onSelect={() => onSelect("volume")}
       />
@@ -113,19 +114,13 @@ function RatingsStrip({
   );
 }
 
-export function RatingsPanel({
-  id,
-  className,
-}: {
-  id: string;
-  className?: string;
-}) {
+export function RatingsPanel({ id }: { id: string }) {
   const [view, setView] = useQueryState("ratingsView", ratingsViewParser);
   const [range, setRange] = useQueryState("range", ratingsRangeParser);
   const shownRange = useDeferredValue(range);
 
   return (
-    <Card className={cn("gap-0 py-0", className)}>
+    <Card className="gap-0 py-0">
       <Suspense fallback={<MetricStripSkeleton columns={2} framed={false} />}>
         <RatingsStrip
           id={id}
@@ -152,11 +147,7 @@ export function RatingsPanel({
           {view === "volume" ? (
             <NewRatingsChart id={id} range={shownRange} />
           ) : (
-            <RatingTrendChart
-              id={id}
-              range={shownRange}
-              label={RATINGS_CHART_REGION}
-            />
+            <RatingTrendChart id={id} range={shownRange} />
           )}
         </Suspense>
       </CardContent>

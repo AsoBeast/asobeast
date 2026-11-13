@@ -38,13 +38,7 @@ function distributionNote(
     .join(" · ");
 }
 
-export function RatingsDistribution({
-  id,
-  className,
-}: {
-  id: string;
-  className?: string;
-}) {
+export function RatingsDistribution({ id }: { id: string }) {
   const headingId = useId();
   const { data } = useSuspenseQuery(ratingsHistogramOptions(id));
   const { counts, total } = data;
@@ -53,7 +47,7 @@ export function RatingsDistribution({
   const largest = Math.max(...STARS_HIGH_TO_LOW.map((star) => counts[star]));
 
   return (
-    <section aria-labelledby={headingId} className={className}>
+    <section aria-labelledby={headingId}>
       <Card>
         <CardHeader className={PANEL_HEADER}>
           <CardTitle asChild>

@@ -12,8 +12,9 @@ import {
   REVIEWS_RAIL,
 } from "@/components/reviews/layout-classes";
 import { LedeSkeleton } from "@/components/reviews/skeletons";
+import { RATING_CHANGE_RANGE } from "@/components/overview/rating-trend";
 import { getQueryClient } from "@/lib/get-query-client";
-import { presetToRange } from "@/lib/ranges";
+import { presetToRange, type RatingsRange } from "@/lib/ranges";
 import {
   aiStatusOptions,
   ratingsHistogramOptions,
@@ -23,6 +24,7 @@ import {
   reviewThemesOptions,
 } from "@/lib/queries";
 import {
+  ratingsRangeParser,
   reviewQueryParser,
   reviewReplyStateParser,
   reviewScoreParser,
@@ -49,6 +51,7 @@ export default async function ReviewsPage({
     replyState?: string | string[];
     sort?: string | string[];
     q?: string | string[];
+    range?: string | string[];
   }>;
 }) {
   const { id } = await params;
@@ -60,6 +63,12 @@ export default async function ReviewsPage({
     replyState: reviewReplyStateParser.parseServerSide(sp.replyState),
     sort: reviewSortParser.parseServerSide(sp.sort),
   };
+
+  const chartRange = ratingsRangeParser.parseServerSide(sp.range);
+  const ranges: RatingsRange[] =
+    chartRange === RATING_CHANGE_RANGE
+      ? [chartRange]
+      : [RATING_CHANGE_RANGE, chartRange];
 
   const queryClient = getQueryClient();
   await Promise.all([
@@ -77,7 +86,11 @@ export default async function ReviewsPage({
     ),
     queryClient.prefetchQuery(reviewsOptions(id, countsFilters(view))),
     queryClient.prefetchQuery(reviewThemesOptions(id, reviewFilters(view))),
-    queryClient.prefetchQuery(ratingsHistoryOptions(id, presetToRange("30d"))),
+    ...ranges.map((range) =>
+      queryClient.prefetchQuery(
+        ratingsHistoryOptions(id, presetToRange(range)),
+      ),
+    ),
     queryClient.prefetchQuery(ratingsHistogramOptions(id)),
     queryClient.prefetchQuery(aiStatusOptions),
   ]);
@@ -91,17 +104,17 @@ export default async function ReviewsPage({
         </Suspense>
         <div className={REVIEWS_GRID}>
           <div className={REVIEWS_MAIN}>
-            <RatingsPanel id={id} className="order-1 min-w-0" />
-            <ReviewsList id={id} className="order-3 min-w-0" />
+            <RatingsPanel id={id} />
+            <ReviewsList id={id} />
           </div>
           <div className={REVIEWS_RAIL}>
             <Suspense fallback={null}>
-              <RatingsDistribution id={id} className="order-2 min-w-0" />
+              <RatingsDistribution id={id} />
             </Suspense>
             <Suspense fallback={null}>
-              <RatingByVersion id={id} className="order-4 min-w-0" />
+              <RatingByVersion id={id} />
             </Suspense>
-            <ReviewMentions id={id} className="order-5 min-w-0" />
+            <ReviewMentions id={id} />
           </div>
         </div>
       </div>

@@ -69,9 +69,8 @@ export function replyBadgeVariant(
   return replyStateVariant(replyStateOf(review));
 }
 
-export const REPLY_STATE_OPTIONS = REVIEW_REPLY_STATES.map((state) => ({
+const REPLY_STATE_OPTIONS = REVIEW_REPLY_STATES.map((state) => ({
   value: state,
-  label: replyStateLabel(state),
   short: SWITCH_LABELS[state],
 }));
 

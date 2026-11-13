@@ -35,13 +35,7 @@ function versionName(row: VersionRating): string {
     .join(", ");
 }
 
-export function RatingByVersion({
-  id,
-  className,
-}: {
-  id: string;
-  className?: string;
-}) {
+export function RatingByVersion({ id }: { id: string }) {
   const headingId = useId();
   const [version, setVersion] = useQueryState("version", reviewVersionParser);
   const { data } = useSuspenseQuery(reviewsOptions(id, {}));
@@ -54,7 +48,7 @@ export function RatingByVersion({
   const loaded = data.reviews.length;
 
   return (
-    <section aria-labelledby={headingId} className={className}>
+    <section aria-labelledby={headingId}>
       <Card>
         <CardHeader className={PANEL_HEADER}>
           <CardTitle asChild>

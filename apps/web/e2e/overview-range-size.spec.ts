@@ -33,7 +33,7 @@ const RANGE_CARDS = [
   {
     path: REVIEWS,
     label: "Average rating",
-    chart: "Average rating and review volume",
+    chart: "Average rating over time",
     param: "range",
     endpoint: /\/apps\/app-1\/ratings-history\?/,
   },

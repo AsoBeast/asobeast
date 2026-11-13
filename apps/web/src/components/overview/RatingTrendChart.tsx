@@ -74,11 +74,9 @@ function RatingTooltip({
 export function RatingTrendChart({
   id,
   range,
-  label = "Average rating over time",
 }: {
   id: string;
   range: RatingsRange;
-  label?: string;
 }) {
   const { data } = useSuspenseQuery(
     ratingsHistoryOptions(id, presetToRange(range)),
@@ -111,7 +109,7 @@ export function RatingTrendChart({
       config={chartConfig}
       className={`${HEIGHT} w-full`}
       role="region"
-      aria-label={label}
+      aria-label="Average rating over time"
     >
       <LineChart accessibilityLayer data={points} margin={CHART_MARGIN}>
         <CartesianGrid {...GRID_PROPS} />

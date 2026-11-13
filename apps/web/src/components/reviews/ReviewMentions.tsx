@@ -78,13 +78,7 @@ function ThemeRow({
   );
 }
 
-export function ReviewMentions({
-  id,
-  className,
-}: {
-  id: string;
-  className?: string;
-}) {
+export function ReviewMentions({ id }: { id: string }) {
   const headingId = useId();
   const { view, query, setQuery } = useReviewView();
   const themes = useQuery(reviewThemesOptions(id, reviewFilters(view)));
@@ -98,7 +92,7 @@ export function ReviewMentions({
   );
 
   return (
-    <section aria-labelledby={headingId} className={className}>
+    <section aria-labelledby={headingId}>
       <Card>
         <CardHeader className={PANEL_HEADER}>
           <CardTitle asChild>

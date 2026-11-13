@@ -31,9 +31,9 @@ export function ReviewsListSkeleton() {
   );
 }
 
-function RatingsPanelSkeleton({ className }: { className: string }) {
+function RatingsPanelSkeleton() {
   return (
-    <Card className={`gap-0 py-0 ${className}`}>
+    <Card className="gap-0 py-0">
       <MetricStripSkeleton columns={2} framed={false} />
       <CardContent className="flex flex-col gap-2 border-t border-border pt-3 pb-4">
         <div className="flex min-h-8 items-center justify-between gap-4">
@@ -46,9 +46,9 @@ function RatingsPanelSkeleton({ className }: { className: string }) {
   );
 }
 
-function DistributionSkeleton({ className }: { className: string }) {
+function DistributionSkeleton() {
   return (
-    <Card className={className}>
+    <Card>
       <CardHeader className={PANEL_HEADER}>
         <Skeleton className="h-5 w-40 max-w-full" />
       </CardHeader>
@@ -69,8 +69,8 @@ export function ReviewsPageSkeleton() {
       <LedeSkeleton />
       <div className={REVIEWS_GRID}>
         <div className={REVIEWS_MAIN}>
-          <RatingsPanelSkeleton className="order-1 min-w-0" />
-          <Card className="order-3 min-w-0">
+          <RatingsPanelSkeleton />
+          <Card>
             <CardHeader className={`${PANEL_HEADER} flex justify-between`}>
               <Skeleton className="h-5 w-24" />
               <ReplySwitchSkeleton />
@@ -81,7 +81,7 @@ export function ReviewsPageSkeleton() {
           </Card>
         </div>
         <div className={REVIEWS_RAIL}>
-          <DistributionSkeleton className="order-2 min-w-0" />
+          <DistributionSkeleton />
         </div>
       </div>
     </div>

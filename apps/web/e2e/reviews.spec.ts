@@ -20,7 +20,7 @@ test("reviews tab lists stored reviews and the ratings chart", async ({
   await page.goto("/apps/app-1/reviews");
 
   await expect(
-    page.getByRole("region", { name: "Average rating and review volume" }),
+    page.getByRole("region", { name: "Average rating over time" }),
   ).toBeVisible();
 
   await expect(page.getByText("Love the focus timer")).toBeVisible();
@@ -246,6 +246,7 @@ test("searching narrows the list in the browser", async ({ page }) => {
 
   await expect(page.getByRole("article")).toHaveCount(1);
   await expect(page).toHaveURL(/q=crash/);
+  await expect(page.getByText("1 of 5 match the search")).toBeVisible();
   await expect(replyTab(page, /Needs reply/)).toContainText("3");
 
   await page.getByRole("textbox", { name: "Search reviews" }).fill("zzz");
@@ -354,11 +355,7 @@ test("show more appears only for a review that runs past four lines", async ({
   expect((await text.boundingBox())?.height ?? 0).toBeGreaterThan(collapsed);
 });
 
-for (const [width, clamped] of [
-  [375, true],
-  [768, true],
-  [1440, true],
-] as const) {
+for (const width of [375, 768, 1440]) {
   test(`a long unbroken title, text and author wrap inside the card at ${width}px`, async ({
     page,
   }) => {
@@ -381,10 +378,6 @@ for (const [width, clamped] of [
     }
 
     const more = card.getByRole("button", { name: "Show more" });
-    if (!clamped) {
-      await expect(more).toHaveCount(0);
-      return;
-    }
     await expect(more).toBeVisible();
     const text = card.getByText(UNBROKEN_REVIEW_TEXT);
     const collapsed = (await text.boundingBox())!.height;
@@ -534,7 +527,7 @@ test("a failing themes request keeps the reviews page and offers a retry", async
   await expect(failure).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole("article")).toHaveCount(3);
   await expect(
-    page.getByRole("region", { name: "Average rating and review volume" }),
+    page.getByRole("region", { name: "Average rating over time" }),
   ).toBeVisible();
   await expect(page.getByText("Reviews could not be loaded")).toHaveCount(0);
 

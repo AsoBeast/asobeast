@@ -29,6 +29,7 @@ export function ReplyStateSwitch({
 
   return (
     <Tabs
+      activationMode="manual"
       className="max-sm:min-w-0 max-sm:flex-1"
       value={view.replyState ?? EVERY}
       onValueChange={(next) =>

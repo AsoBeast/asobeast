@@ -50,9 +50,14 @@ export function ratingsAdded(
   return before ? latest.count - before.count : null;
 }
 
+export interface RatingsGrowth {
+  added: number;
+  since: string;
+}
+
 export function ratingsGrowth(
   points: readonly RatingsPoint[],
-): { added: number; since: string } | null {
+): RatingsGrowth | null {
   const counted = countedPoints(points);
   const latest = counted.at(-1);
   if (!latest || counted.length < 2) return null;

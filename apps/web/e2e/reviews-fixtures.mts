@@ -18,7 +18,12 @@ const DROPPING_RATINGS_HISTORY: RatingsHistory = {
   })),
 };
 
+const SINGLE_RATINGS_HISTORY: RatingsHistory = {
+  points: [{ date: utcDaysAgo(0), ratingAvg: 4.4, ratingCount: 184 }],
+};
+
 export const RATINGS_HISTORY_SETS: Record<string, RatingsHistory> = {
+  single: SINGLE_RATINGS_HISTORY,
   short: SHORT_RATINGS_HISTORY,
   drop: DROPPING_RATINGS_HISTORY,
 };
