@@ -3,7 +3,7 @@ import type {
   ChartEntryItem,
   ChartPage,
 } from "@asobeast/shared";
-import { formatDayMonth } from "@/lib/format";
+import { formatDateTime, formatDayMonth } from "@/lib/format";
 
 export const CHART_COLUMN_ROWS = 25;
 
@@ -13,7 +13,7 @@ export function columnRows(page: Pick<ChartPage, "entries">): ChartEntryItem[] {
     .slice(0, CHART_COLUMN_ROWS);
 }
 
-export function columnCaption(
+export function columnCount(
   page: Pick<ChartPage, "capture" | "dates" | "entries" | "today">,
   date: string | null,
 ): string {
@@ -23,11 +23,13 @@ export function columnCaption(
   }
   const total = page.entries.length;
   if (total === 0) return `No apps · ${formatDayMonth(page.capture.date)}`;
-  const count =
-    total > CHART_COLUMN_ROWS
-      ? `Top ${CHART_COLUMN_ROWS} of ${total}`
-      : `${total} ${total === 1 ? "app" : "apps"}`;
-  return `${count} · ${formatDayMonth(page.capture.date)}`;
+  return total > CHART_COLUMN_ROWS
+    ? `Top ${CHART_COLUMN_ROWS} of ${total}`
+    : `${total} ${total === 1 ? "app" : "apps"}`;
+}
+
+export function capturedLine(capture: ChartCaptureSummary): string {
+  return `Captured ${formatDateTime(capture.capturedAt)}`;
 }
 
 export function listsNoApps<P extends Pick<ChartPage, "capture" | "entries">>(

@@ -7,11 +7,14 @@ import type {
   ChartPage,
   ChartTrending,
 } from "@asobeast/shared";
+import { CHART_TRENDING_LIMIT } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
+import { PANEL_ACTION, PANEL_HEADER } from "@/components/layout/panel-classes";
 import {
   Card,
+  CardAction,
   CardContent,
-  CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -23,18 +26,39 @@ import {
   TabsOption,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import { formatDayMonth } from "@/lib/format";
 import { COLLECTION_LABELS } from "./chart-params";
 import { compareLabel } from "./movement";
 
 type TrendingList = keyof ChartTrending;
 
-const LISTS: ReadonlyArray<{ id: TrendingList; label: string; empty: string }> =
-  [
-    { id: "climbers", label: "Climbers", empty: "No climbers" },
-    { id: "entries", label: "New", empty: "No new entries" },
-    { id: "fallers", label: "Fallers", empty: "No fallers" },
-    { id: "exits", label: "Dropped out", empty: "Nothing dropped out" },
-  ];
+const LISTS: ReadonlyArray<{
+  id: TrendingList;
+  label: string;
+  short?: string;
+  empty: string;
+}> = [
+  { id: "climbers", label: "Climbers", empty: "No climbers" },
+  { id: "entries", label: "New", empty: "No new entries" },
+  { id: "fallers", label: "Fallers", empty: "No fallers" },
+  {
+    id: "exits",
+    label: "Dropped out",
+    short: "Out",
+    empty: "Nothing dropped out",
+  },
+];
+
+const BAR_REACH_PERCENT = 60;
+const BAR_FULL_MOVE = 20;
+
+const ROW =
+  "relative grid h-10 grid-cols-[1rem_minmax(0,1fr)_auto] items-center gap-2 rounded-md px-2 text-dense sm:h-9";
+
+function barWidth(delta: number | null): number {
+  const share = Math.min(Math.abs(delta ?? 0), BAR_FULL_MOVE) / BAR_FULL_MOVE;
+  return Math.round(share * BAR_REACH_PERCENT);
+}
 
 function Place({
   list,
@@ -46,17 +70,26 @@ function Place({
   period: string;
 }) {
   if (list === "entries") {
-    return <span>{`New at #${mover.position}`}</span>;
+    return (
+      <span className="text-muted-foreground">{`New at #${mover.position}`}</span>
+    );
   }
   if (list === "exits") {
-    return <span>{`Was #${mover.previous}`}</span>;
+    return (
+      <span className="text-muted-foreground">{`Was #${mover.previous}`}</span>
+    );
   }
   return (
-    <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
-      <DeltaChip value={mover.delta} period={period} />
-      <span className="text-caption text-muted-foreground">
-        {`from #${mover.previous}`}
+    <span className="inline-flex items-center gap-3 whitespace-nowrap">
+      <span className="numeric text-muted-foreground">
+        <span>{`${mover.previous} → `}</span>
+        <span className="font-medium text-foreground">{mover.position}</span>
       </span>
+      <DeltaChip
+        value={mover.delta}
+        period={period}
+        className="min-w-8 justify-end text-label"
+      />
     </span>
   );
 }
@@ -74,21 +107,25 @@ function MoverList({
 }) {
   if (movers.length === 0) {
     return (
-      <p className="text-body text-muted-foreground">{`${empty} ${period}.`}</p>
+      <p className="px-2 py-2 text-body text-muted-foreground">{`${empty} ${period}.`}</p>
     );
   }
   return (
-    <ul className="flex flex-col divide-y">
+    <ul className="flex flex-col">
       {movers.map((mover) => (
-        <li
-          key={mover.storeAppId}
-          className="flex items-center gap-3 py-2 first:pt-0 last:pb-0"
-        >
-          <AppIcon src={mover.iconUrl} size={28} />
-          <span className="min-w-0 flex-1 truncate" translate="no">
-            {mover.title}
+        <li key={mover.storeAppId} className={ROW}>
+          <span
+            aria-hidden
+            className="absolute inset-y-1 left-0 rounded-md bg-chart-tint"
+            style={{ width: `${barWidth(mover.delta)}%` }}
+          />
+          <span className="relative">
+            <AppIcon src={mover.iconUrl} size={16} />
           </span>
-          <span className="text-body text-muted-foreground">
+          <span className="relative truncate font-medium" translate="no">
+            <bdi>{mover.title}</bdi>
+          </span>
+          <span className="numeric relative">
             <Place list={list} mover={mover} period={period} />
           </span>
         </li>
@@ -101,15 +138,26 @@ function TrendingLists({ page }: { page: ChartPage }) {
   const period = compareLabel(page.compare, page.comparison);
 
   return page.comparison ? (
-    <Tabs defaultValue="climbers">
+    <Tabs defaultValue="climbers" className="@container/trending gap-2">
       <TabsList
         aria-label="Trending list"
-        className="w-full flex-wrap group-data-horizontal/tabs:h-auto"
+        className="mx-2 w-auto self-stretch @xl/trending:self-start"
       >
-        {LISTS.map(({ id, label }) => (
-          <TabsTrigger key={id} value={id}>
-            {label}
-            <span className="numeric">{page.trending[id].length}</span>
+        {LISTS.map(({ id, label, short }) => (
+          <TabsTrigger key={id} value={id} className="px-1.5">
+            {short ? (
+              <>
+                <span className="@max-sm/trending:sr-only">{label}</span>
+                <span aria-hidden className="@sm/trending:hidden">
+                  {short}
+                </span>
+              </>
+            ) : (
+              <span>{label}</span>
+            )}
+            <span className="numeric font-normal text-muted-foreground">
+              {page.trending[id].length}
+            </span>
           </TabsTrigger>
         ))}
       </TabsList>
@@ -125,7 +173,7 @@ function TrendingLists({ page }: { page: ChartPage }) {
       ))}
     </Tabs>
   ) : (
-    <p className="text-body text-muted-foreground">
+    <p className="px-2 py-2 text-body text-muted-foreground">
       Capture more days to see movement.
     </p>
   );
@@ -139,30 +187,41 @@ export function TrendingPanel({ pages }: { pages: readonly ChartPage[] }) {
   const [kind, setKind] = useState(() => firstCompared(pages));
   const page =
     pages.find((candidate) => candidate.chart.collection === kind) ?? pages[0];
+  const title = page.comparison
+    ? `Trending since ${formatDayMonth(page.comparison.date)}`
+    : "Trending";
 
   return (
-    <Card>
-      <CardHeader>
-        <CardDescription>Trending</CardDescription>
-        <CardTitle>{compareLabel(page.compare, page.comparison)}</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+    <Card className="gap-3">
+      <CardHeader className={PANEL_HEADER}>
+        <CardTitle asChild>
+          <h2>{title}</h2>
+        </CardTitle>
         {pages.length > 1 ? (
-          <Tabs
-            value={page.chart.collection}
-            onValueChange={(next) => setKind(next as CategoryCollection)}
-          >
-            <TabsList aria-label="Chart kind">
-              {pages.map(({ chart }) => (
-                <TabsOption key={chart.collection} value={chart.collection}>
-                  {COLLECTION_LABELS[chart.collection]}
-                </TabsOption>
-              ))}
-            </TabsList>
-          </Tabs>
+          <CardAction className={PANEL_ACTION}>
+            <Tabs
+              value={page.chart.collection}
+              onValueChange={(next) => setKind(next as CategoryCollection)}
+            >
+              <TabsList aria-label="Chart kind">
+                {pages.map(({ chart }) => (
+                  <TabsOption key={chart.collection} value={chart.collection}>
+                    {COLLECTION_LABELS[chart.collection]}
+                  </TabsOption>
+                ))}
+              </TabsList>
+            </Tabs>
+          </CardAction>
         ) : null}
+      </CardHeader>
+      <CardContent className="px-2">
         <TrendingLists key={page.chart.collection} page={page} />
       </CardContent>
+      {page.comparison ? (
+        <CardFooter>
+          <span>{`Up to ${CHART_TRENDING_LIMIT} per list, from every captured place.`}</span>
+        </CardFooter>
+      ) : null}
     </Card>
   );
 }

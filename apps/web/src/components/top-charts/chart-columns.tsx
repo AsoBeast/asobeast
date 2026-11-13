@@ -5,7 +5,6 @@ import type { ChartEntryItem } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import type { DataTableFeatures } from "@/components/data-table/table-features";
-import { Badge } from "@/components/ui/badge";
 import { movementSortValue } from "./movement";
 import { MovementCell } from "@/components/movement/MovementCell";
 import type { ChartRowContext } from "./chart-actions";
@@ -15,7 +14,11 @@ const columnHelper = createColumnHelper<DataTableFeatures, ChartEntryItem>();
 
 function PriceCell({ free }: { free: boolean | null }) {
   if (free === null) return <span className="text-muted-foreground">—</span>;
-  return <Badge variant="outline">{free ? "Free" : "Paid"}</Badge>;
+  return (
+    <span className={free ? "text-muted-foreground" : undefined}>
+      {free ? "Free" : "Paid"}
+    </span>
+  );
 }
 
 function genreColumn() {
@@ -51,7 +54,7 @@ export function chartColumns(
       sortFn: "basic",
       sortDescFirst: false,
       enableHiding: false,
-      meta: { phone: true },
+      meta: { phone: true, numeric: true },
       header: ({ column }) => <SortableHeader column={column} label="#" />,
       cell: ({ row }) => (
         <span className="numeric">{row.original.position}</span>
@@ -62,7 +65,7 @@ export function chartColumns(
       sortFn: "basic",
       sortDescFirst: false,
       enableHiding: false,
-      meta: { label: "Change", phone: true },
+      meta: { label: "Change", phone: true, numeric: true },
       header: ({ column }) => <SortableHeader column={column} label="Change" />,
       cell: ({ row }) => <MovementCell entry={row.original} period={period} />,
     }),
@@ -75,13 +78,13 @@ export function chartColumns(
       header: ({ column }) => <SortableHeader column={column} label="App" />,
       cell: ({ row }) => (
         <div className="flex min-w-0 items-center gap-3">
-          <AppIcon src={row.original.iconUrl} size={32} />
+          <AppIcon src={row.original.iconUrl} size={24} />
           <div className="flex min-w-0 flex-col">
             <span className="font-medium" translate="no">
-              {row.original.title}
+              <bdi>{row.original.title}</bdi>
             </span>
             {row.original.developer ? (
-              <span className="text-caption text-muted-foreground">
+              <span className="text-tick text-faint-foreground">
                 {row.original.developer}
               </span>
             ) : null}

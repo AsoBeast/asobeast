@@ -2,14 +2,34 @@
 
 import { useId, useMemo, type ReactNode } from "react";
 import Link from "next/link";
-import type { AppListItem, ChartPage } from "@asobeast/shared";
+import type { AppListItem, ChartEntryItem, ChartPage } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
+import {
+  FOOTER_LINK,
+  PANEL_COUNT,
+  PANEL_HEADER,
+} from "@/components/layout/panel-classes";
+import { MovementCell } from "@/components/movement/MovementCell";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useFocusGroupClaim } from "@/lib/focus-handoff";
+import { cn } from "@/lib/utils";
 import { CaptureTodayButton } from "./CaptureTodayButton";
-import { captureFocusKey, rowContextOf } from "./chart-actions";
+import {
+  captureFocusKey,
+  rowContextOf,
+  type ChartRowContext,
+} from "./chart-actions";
 import {
   capturableToday,
-  columnCaption,
+  capturedLine,
+  columnCount,
   columnRows,
   listsNoApps,
 } from "./chart-column-rows";
@@ -21,9 +41,39 @@ import {
   tableHref,
   type ChartSearch,
 } from "./chart-params";
+import { MovementBar } from "./MovementBar";
 import { compareLabel } from "./movement";
-import { MovementCell } from "@/components/movement/MovementCell";
-import { RowActions } from "./RowActions";
+import { OWN_ROW_BAR, ROW_REVEAL_GROUP, RowActions } from "./RowActions";
+
+const ROW =
+  "grid h-10 grid-cols-[1.5rem_1rem_minmax(0,1fr)_auto_auto] items-center gap-2 rounded-md px-2 text-dense transition-colors duration-150 ease-out hover:bg-muted sm:h-9";
+
+function ChartRow({
+  entry,
+  context,
+  period,
+}: {
+  entry: ChartEntryItem;
+  context: ChartRowContext;
+  period: string;
+}) {
+  const own = context.links.get(entry.storeAppId)?.role === "own";
+  return (
+    <li className={cn(ROW_REVEAL_GROUP, ROW, own && OWN_ROW_BAR)}>
+      <span className="numeric text-right text-muted-foreground">
+        {entry.position}
+      </span>
+      <AppIcon src={entry.iconUrl} size={16} />
+      <span className="truncate font-medium" translate="no">
+        <bdi>{entry.title}</bdi>
+      </span>
+      <RowActions entry={entry} context={context} compact />
+      <span className="min-w-8 text-right text-label">
+        <MovementCell entry={entry} period={period} compact />
+      </span>
+    </li>
+  );
+}
 
 export function ChartColumn({
   page,
@@ -49,11 +99,11 @@ export function ChartColumn({
   ) : null;
   let empty: ReactNode = null;
   if (listsNoApps(page)) {
-    empty = <ChartNoApps page={page} className="px-4 py-8" />;
+    empty = <ChartNoApps page={page} className="px-2 py-8" />;
   } else if (!page.capture) {
     empty = (
       <ChartEmpty
-        className="px-4 py-8"
+        className="px-2 py-8"
         captured={page.dates.length > 0}
         date={search.date}
         action={capture}
@@ -62,58 +112,45 @@ export function ChartColumn({
   }
 
   return (
-    <section
-      aria-labelledby={headingId}
-      className="flex flex-col gap-3 rounded-xl border p-4"
-    >
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="flex flex-col gap-0.5">
-          <h2 id={headingId} className="text-heading">
-            {label}
-          </h2>
-          <p className="text-caption text-muted-foreground">
-            {columnCaption(page, search.date)}
-          </p>
-        </div>
-        <div ref={actions} className="flex flex-wrap items-center gap-2">
+    <Card role="region" aria-labelledby={headingId} className="gap-3">
+      <CardHeader className={PANEL_HEADER}>
+        <CardTitle asChild>
+          <h2 id={headingId}>{label}</h2>
+        </CardTitle>
+        <CardAction className={PANEL_COUNT}>
+          <span className="numeric">{columnCount(page, search.date)}</span>
+        </CardAction>
+      </CardHeader>
+      {page.comparison && !empty ? (
+        <MovementBar entries={page.entries} period={period} />
+      ) : null}
+      <CardContent className="px-2">
+        {empty ?? (
+          <ol className="flex flex-col">
+            {columnRows(page).map((entry) => (
+              <ChartRow
+                key={entry.storeAppId}
+                entry={entry}
+                context={context}
+                period={period}
+              />
+            ))}
+          </ol>
+        )}
+      </CardContent>
+      <CardFooter className="flex-wrap justify-between gap-x-4 gap-y-2">
+        {page.capture ? <span>{capturedLine(page.capture)}</span> : null}
+        <div
+          ref={actions}
+          className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-2"
+        >
           {page.capture ? capture : null}
-          <Link
-            href={tableHref(chart, search)}
-            className="text-sm link-underline"
-          >
-            Open table<span className="sr-only">{` of ${label}`}</span>
+          <Link href={tableHref(chart, search)} className={FOOTER_LINK}>
+            <span>Open table</span>
+            <span className="sr-only">{` of ${label}`}</span>
           </Link>
         </div>
-      </div>
-      {empty ?? (
-        <ol className="flex flex-col divide-y">
-          {columnRows(page).map((entry) => (
-            <li
-              key={entry.storeAppId}
-              className="flex items-center gap-2 py-2 first:pt-0 last:pb-0"
-            >
-              <span className="numeric w-6 shrink-0 text-right">
-                {entry.position}
-              </span>
-              <AppIcon src={entry.iconUrl} size={28} />
-              <div className="flex min-w-20 flex-1 flex-col">
-                <span className="truncate font-medium" translate="no">
-                  {entry.title}
-                </span>
-                {entry.developer ? (
-                  <span className="truncate text-caption text-muted-foreground">
-                    {entry.developer}
-                  </span>
-                ) : null}
-              </div>
-              <span className="shrink-0 text-right">
-                <MovementCell entry={entry} period={period} compact />
-              </span>
-              <RowActions entry={entry} context={context} />
-            </li>
-          ))}
-        </ol>
-      )}
-    </section>
+      </CardFooter>
+    </Card>
   );
 }
