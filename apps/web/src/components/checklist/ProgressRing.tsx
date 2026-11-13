@@ -18,7 +18,7 @@ export function ProgressRing({ done, total }: { done: number; total: number }) {
         cx={10}
         cy={10}
         r={RADIUS}
-        className="stroke-success"
+        className="stroke-brand-mark"
         strokeLinecap="round"
         strokeDasharray={`${filled} ${CIRCUMFERENCE}`}
       />

@@ -21,7 +21,7 @@ export function AlertsUnreadDot() {
       <span
         data-slot="alerts-unread"
         aria-hidden
-        className="absolute top-1.5 right-1.5 size-2 rounded-full bg-info ring-2 ring-sidebar"
+        className="absolute top-1.5 right-1.5 size-2 rounded-full bg-brand-mark ring-2 ring-sidebar"
       />
     </>
   );

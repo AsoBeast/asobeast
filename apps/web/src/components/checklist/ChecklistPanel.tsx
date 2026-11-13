@@ -170,7 +170,6 @@ export function ChecklistPanel({
         value={ringFraction(done, total) * 100}
         aria-label="Setup progress"
         getValueLabel={() => progress}
-        indicatorClassName="bg-success"
       />
       <FirstResults
         appId={items.find((item) => item.id === "import_app")?.appId ?? null}

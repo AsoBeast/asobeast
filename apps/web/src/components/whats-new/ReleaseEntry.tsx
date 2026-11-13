@@ -83,7 +83,7 @@ export function ReleaseEntry({
             aria-hidden
             className={cn(
               "absolute top-2 -left-[5px] hidden size-2.5 rounded-full ring-4 ring-background sm:block",
-              latest ? "bg-foreground" : "bg-border",
+              latest ? "bg-brand-mark" : "bg-border",
             )}
           />
           <div className="flex flex-col gap-1.5">

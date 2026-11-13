@@ -53,6 +53,6 @@
   text-underline-offset: 4px;
 
   @variant hover {
-    text-decoration-color: var(--color-foreground);
+    text-decoration-color: var(--color-brand-mark);
   }
 }
