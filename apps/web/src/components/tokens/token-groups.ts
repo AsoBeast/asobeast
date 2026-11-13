@@ -231,6 +231,7 @@ export const TEXT_PAIRS: TextPair[] = [
   textOn("--muted-foreground", "--chart-tint"),
   textOn("--signal-up", "--chart-tint"),
   textOn("--signal-down", "--chart-tint"),
+  textOn("--foreground", "--secondary"),
   textOn("--foreground", "--accent"),
   textOn("--muted-foreground", "--accent"),
   {
