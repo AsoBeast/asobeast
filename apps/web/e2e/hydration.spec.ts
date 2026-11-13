@@ -290,7 +290,7 @@ test("the ratings histogram is in the html the server sent", async ({
   const html = await page.request
     .get("/apps/app-1/reviews")
     .then((response) => response.text());
-  expect(sectionText(html, "Ratings distribution", "</ul>")).toContain(
+  expect(sectionText(html, "Ratings distribution", "</section>")).toContain(
     `${total} ratings`,
   );
 

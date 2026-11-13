@@ -2,10 +2,9 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { ReviewItem, Store } from "@asobeast/shared";
-import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { ReplyStateBadge } from "./ReplyStateBadge";
+import { ReplyStateMark } from "./ReplyStateMark";
 import {
   reviewActionLabel,
   reviewSubject,
@@ -16,25 +15,19 @@ type ActionLabel = (action: string) => string;
 import { translationCaption } from "./review-translation";
 import { useReviewTranslation } from "./use-review-translation";
 
-const LOW_SCORE = 2;
-
 const LINK_BUTTON =
   "rounded-sm text-caption font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:pointer-events-none";
 
 function Stars({ score }: { score: number }) {
-  const low = score <= LOW_SCORE;
   return (
     <span
-      className={cn(
-        "text-sm tracking-tight",
-        low ? "text-destructive" : "text-foreground",
-      )}
+      className="shrink-0 text-label leading-6 tracking-wide text-foreground"
       role="img"
       aria-label={`${score} out of 5 stars`}
     >
       <span aria-hidden>
         {"★".repeat(score)}
-        <span className="text-muted-foreground">{"☆".repeat(5 - score)}</span>
+        <span className="text-faint-foreground">{"☆".repeat(5 - score)}</span>
       </span>
     </span>
   );
@@ -103,6 +96,11 @@ function DeveloperReply({ review }: { review: ReviewItem }) {
   );
 }
 
+function reviewFacts(review: ReviewItem): string {
+  const version = review.version ? ` · v${review.version}` : "";
+  return ` · ${formatDate(review.reviewedAt)}${version}`;
+}
+
 type ReviewTranslationState = ReturnType<typeof useReviewTranslation>;
 
 function translateAction(translation: ReviewTranslationState): {
@@ -147,6 +145,7 @@ export function ReviewCard({
   fallbackLanguage,
   review,
   twin,
+  open = false,
   actions,
   children,
 }: {
@@ -155,10 +154,10 @@ export function ReviewCard({
   fallbackLanguage: string | null;
   review: ReviewItem;
   twin?: ReviewTwin;
+  open?: boolean;
   actions?: ReactNode;
   children?: ReactNode;
 }) {
-  const low = review.score <= LOW_SCORE;
   const translation = useReviewTranslation(appId, review, fallbackLanguage);
   const shown = translation.translation;
   const title = shown ? shown.title : review.title;
@@ -168,25 +167,25 @@ export function ReviewCard({
   return (
     <article
       aria-label={reviewSubject(review, twin)}
+      data-open={open || undefined}
       style={{ contentVisibility: "auto", containIntrinsicSize: "auto 8rem" }}
-      className={cn(
-        "flex flex-col gap-2 border-l-2 py-3 pl-4",
-        low ? "border-destructive/60" : "border-transparent",
-      )}
+      className="flex flex-col gap-2 p-4 data-[open]:bg-muted data-[open]:shadow-[inset_2px_0_0_var(--foreground)] max-sm:px-3"
     >
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-start gap-x-2.5 gap-y-1">
         <Stars score={review.score} />
         {title ? (
-          <span dir="auto" className="text-sm font-medium wrap-anywhere">
+          <span
+            dir="auto"
+            className="min-w-[40%] flex-1 text-body font-medium wrap-anywhere"
+          >
             {title}
           </span>
         ) : null}
-        {review.version ? (
-          <Badge variant="outline">v{review.version}</Badge>
-        ) : null}
-        <span className="ml-auto">
-          <ReplyStateBadge review={review} store={store} />
-        </span>
+        <ReplyStateMark
+          review={review}
+          store={store}
+          className="ml-auto leading-6"
+        />
       </div>
       {text.trim() ? (
         <ReviewText
@@ -195,7 +194,7 @@ export function ReviewCard({
           label={label}
         />
       ) : (
-        <p className="text-body text-muted-foreground">No written review</p>
+        <p className="text-body text-faint-foreground">No written review</p>
       )}
       {shown ? (
         <p className="text-caption text-muted-foreground">
@@ -203,10 +202,10 @@ export function ReviewCard({
         </p>
       ) : null}
       <DeveloperReply review={review} />
-      <div className="flex flex-wrap items-center gap-2">
-        <p className="text-xs text-muted-foreground wrap-anywhere">
-          <bdi>{review.userName ?? "Anonymous"}</bdi> ·{" "}
-          {formatDate(review.reviewedAt)}
+      <div className="flex min-h-7 flex-wrap items-center gap-x-3 gap-y-1">
+        <p className="text-caption text-faint-foreground wrap-anywhere">
+          <bdi>{review.userName ?? "Anonymous"}</bdi>
+          <span>{reviewFacts(review)}</span>
         </p>
         <TranslateButton translation={translation} label={label} />
         {actions}

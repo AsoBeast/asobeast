@@ -31,7 +31,7 @@ const composer = (page: Page) =>
   page.getByRole("region", { name: "Reply to review" });
 
 const strip = (page: Page) =>
-  page.getByRole("region", { name: "Reply status" });
+  page.getByRole("tablist", { name: "Reply status" });
 
 test("writing a reply by hand saves it and the list shows a draft", async ({
   page,
@@ -69,9 +69,9 @@ test("writing a reply by hand saves it and the list shows a draft", async ({
     "Dark mode is on our list, thanks for asking.",
   );
   await expect(article.getByText("Draft saved")).toBeVisible();
-  await expect(
-    strip(page).getByRole("button", { name: /Draft saved/ }),
-  ).toContainText("2");
+  await expect(strip(page).getByRole("tab", { name: /Draft/ })).toContainText(
+    "2",
+  );
 });
 
 test("the composer counts against the google play limit and refuses more", async ({
@@ -161,12 +161,12 @@ test("marking a review as replied and undoing it", async ({ page }) => {
   await composer(page).getByRole("button", { name: "Mark as replied" }).click();
 
   await expect(article.getByText("Marked replied")).toBeVisible();
-  await expect(
-    strip(page).getByRole("button", { name: /Replied/ }),
-  ).toContainText("2");
-  await expect(
-    strip(page).getByRole("button", { name: /Draft saved/ }),
-  ).toContainText("0");
+  await expect(strip(page).getByRole("tab", { name: /Replied/ })).toContainText(
+    "2",
+  );
+  await expect(strip(page).getByRole("tab", { name: /Draft/ })).toContainText(
+    "0",
+  );
 
   await composer(page).getByRole("button", { name: "Undo" }).click();
 
@@ -760,12 +760,14 @@ test("a queue with nothing left to answer says so", async ({ page }) => {
 
   await composer(page).getByRole("button", { name: "Mark as replied" }).click();
   await expect(
-    strip(page).getByRole("button", { name: /Needs reply/ }),
+    strip(page).getByRole("tab", { name: /Needs reply/ }),
   ).toContainText("0");
 
   await page.goto(`${GP_PAGE}?replyState=needs_reply`);
 
-  await expect(page.getByText("Nothing needs a reply")).toBeVisible();
+  await expect(
+    page.getByText("Nothing needs a reply", { exact: true }),
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "Show all reviews" }).click();
 

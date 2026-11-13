@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/chart";
 import { formatDayMonth, formatRating, pluralize } from "@/lib/format";
 import { ratingsHistoryOptions } from "@/lib/queries";
-import { presetToRange, type VisibilityRange } from "@/lib/ranges";
+import { presetToRange, type RatingsRange } from "@/lib/ranges";
 import { ratedPoints, ratingAxis, type RatedPoint } from "./rating-trend";
 
 const HEIGHT = CHART_HEIGHT.tall;
@@ -76,7 +76,7 @@ export function RatingTrendChart({
   range,
 }: {
   id: string;
-  range: VisibilityRange;
+  range: RatingsRange;
 }) {
   const { data } = useSuspenseQuery(
     ratingsHistoryOptions(id, presetToRange(range)),

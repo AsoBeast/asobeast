@@ -10,6 +10,11 @@ import {
   ALERT_EVENTS_SLOW_MS,
   filterAlertEvents,
 } from "./alert-feed-fixtures.mts";
+import {
+  HISTOGRAM_FAILING_COOKIE,
+  RATINGS_HISTORY_COOKIE,
+  RATINGS_HISTORY_SETS,
+} from "./reviews-fixtures.mts";
 import { BREAKDOWNS } from "./keyword-breakdowns.mts";
 import {
   FAIL_CHANGES_COOKIE,
@@ -5061,11 +5066,14 @@ const routes: Route[] = [
   },
   appRoute(
     /^\/apps\/([^/]+)\/ratings-history$/,
-    (dataset) => dataset.ratingsHistory,
+    (dataset, _query, req) =>
+      RATINGS_HISTORY_SETS[cookieValue(req, RATINGS_HISTORY_COOKIE) ?? ""] ??
+      dataset.ratingsHistory,
   ),
   appRoute(
     /^\/apps\/([^/]+)\/reviews\/histogram$/,
     (dataset) => dataset.ratingsHistogram,
+    (req) => hasCookie(req, HISTOGRAM_FAILING_COOKIE, "1"),
   ),
   appRoute(
     /^\/apps\/([^/]+)\/reviews\/themes$/,

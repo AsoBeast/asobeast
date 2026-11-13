@@ -35,8 +35,8 @@ const articleOf = (page: Page, text: string) =>
 
 const repliedCount = (page: Page) =>
   page
-    .getByRole("region", { name: "Reply status" })
-    .getByRole("button", { name: /^Replied/ });
+    .getByRole("tablist", { name: "Reply status" })
+    .getByRole("tab", { name: /^Replied/ });
 
 const connect = (context: BrowserContext, cookies: Record<string, string>) =>
   seedCookies(context, cookies);

@@ -9,12 +9,7 @@ import {
 } from "@tanstack/react-query";
 import type { Options } from "nuqs";
 import { toast } from "sonner";
-import {
-  REVIEW_REPLY_STATES,
-  REVIEW_SORTS,
-  type ReviewReplyState,
-  type ReviewSort,
-} from "@asobeast/shared";
+import { REVIEW_SORTS, type ReviewSort } from "@asobeast/shared";
 import { SearchInput } from "@/components/data-table/SearchInput";
 import { ExportCsvButton } from "@/components/ExportCsvButton";
 import { Button } from "@/components/ui/button";
@@ -39,17 +34,16 @@ import {
   exportReviews,
   truncatedExportNotice,
 } from "./review-csv";
-import {
-  countsFilters,
-  reviewFilters,
-  type ReviewView,
-} from "./review-filters";
+import { reviewFilters, type ReviewView } from "./review-filters";
 import { matchesReviewQuery } from "./review-search";
-import { shownReplyStates } from "./reply-state";
 import { ReplyGuidelinesDialog } from "./ReplyGuidelinesDialog";
 
 const STAR_FILTERS = [5, 4, 3, 2, 1] as const;
 const ALL = "all";
+const SELECT_WIDTH =
+  "w-[150px] max-sm:min-w-0 max-sm:flex-1 max-sm:basis-[40%]";
+const STAR_TOGGLE =
+  "-ml-px rounded-none first:ml-0 first:rounded-l-md last:rounded-r-md focus-visible:z-10 aria-pressed:bg-accent max-sm:flex-1";
 
 const SORT_OPTIONS: { value: ReviewSort; label: string }[] = [
   { value: "newest", label: "Newest first" },
@@ -63,7 +57,6 @@ export interface ReviewsToolbarProps {
   onScore: (score: number | null) => void;
   onVersion: (version: string) => void;
   onSince: (since: RatingsRange | null) => void;
-  onReplyState: (state: ReviewReplyState | null) => void;
   onSort: (sort: ReviewSort) => void;
   onQuery: (query: string, options: Options) => void;
 }
@@ -84,7 +77,7 @@ function VersionSelect({
       value={version || ALL}
       onValueChange={(next) => onChange(next === ALL ? "" : next)}
     >
-      <SelectTrigger className="w-[140px]" aria-label="Filter by version">
+      <SelectTrigger className={SELECT_WIDTH} aria-label="Filter by version">
         <SelectValue placeholder="All versions" />
       </SelectTrigger>
       <SelectContent>
@@ -92,39 +85,6 @@ function VersionSelect({
         {data.versions.map((item) => (
           <SelectItem key={item} value={item}>
             v{item}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
-
-function ReplyStateSelect({
-  id,
-  view,
-  onChange,
-}: {
-  id: string;
-  view: ReviewView;
-  onChange: (next: ReviewReplyState | null) => void;
-}) {
-  const { data } = useQuery(reviewsOptions(id, countsFilters(view)));
-
-  return (
-    <Select
-      value={view.replyState ?? ALL}
-      onValueChange={(next) =>
-        onChange(literalOf(REVIEW_REPLY_STATES, next) ?? null)
-      }
-    >
-      <SelectTrigger className="w-[170px]" aria-label="Filter by reply state">
-        <SelectValue placeholder="Any reply state" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value={ALL}>Any reply state</SelectItem>
-        {shownReplyStates(data?.counts, view.replyState).map((option) => (
-          <SelectItem key={option.value} value={option.value}>
-            {option.label}
           </SelectItem>
         ))}
       </SelectContent>
@@ -146,7 +106,7 @@ function SinceSelect({
         onChange(literalOf(RATINGS_RANGES, next) ?? null)
       }
     >
-      <SelectTrigger className="w-[150px]" aria-label="Filter by date">
+      <SelectTrigger className={SELECT_WIDTH} aria-label="Filter by date">
         <SelectValue placeholder="Any time" />
       </SelectTrigger>
       <SelectContent>
@@ -200,7 +160,6 @@ function ExportReviewsButton({
   return (
     <ExportCsvButton
       subject="reviews"
-      className="ml-auto"
       disabled={(data?.total ?? 0) === 0 || exporting.isPending}
       onClick={() => exportOnce()}
       title={`Exports the ${EXPORT_ORDER[view.sort]} ${REVIEWS_EXPORT_LIMIT} reviews that match the filters`}
@@ -215,23 +174,22 @@ export function ReviewsToolbar({
   onScore,
   onVersion,
   onSince,
-  onReplyState,
   onSort,
   onQuery,
 }: ReviewsToolbarProps) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
       <div
-        className="flex flex-wrap gap-1.5"
+        className="flex max-sm:w-full"
         role="group"
         aria-label="Filter by star rating"
       >
         {STAR_FILTERS.map((star) => (
           <Button
             key={star}
-            size="sm"
-            variant={view.score === star ? "default" : "outline"}
+            variant="outline"
             aria-pressed={view.score === star}
+            className={STAR_TOGGLE}
             onClick={() => onScore(view.score === star ? null : star)}
           >
             {star}
@@ -243,14 +201,13 @@ export function ReviewsToolbar({
         <VersionSelect id={id} version={view.version} onChange={onVersion} />
       </Suspense>
       <SinceSelect since={view.since} onChange={onSince} />
-      <ReplyStateSelect id={id} view={view} onChange={onReplyState} />
       <Select
         value={view.sort}
         onValueChange={(next) =>
           onSort(literalOf(REVIEW_SORTS, next) ?? "newest")
         }
       >
-        <SelectTrigger className="w-[140px]" aria-label="Sort reviews">
+        <SelectTrigger className={SELECT_WIDTH} aria-label="Sort reviews">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -262,8 +219,10 @@ export function ReviewsToolbar({
         </SelectContent>
       </Select>
       <SearchInput label="Search reviews" value={query} onSearch={onQuery} />
-      <ReplyGuidelinesDialog id={id} />
-      <ExportReviewsButton id={id} view={view} query={query} />
+      <div className="ml-auto flex flex-wrap items-center gap-2">
+        <ReplyGuidelinesDialog id={id} />
+        <ExportReviewsButton id={id} view={view} query={query} />
+      </div>
     </div>
   );
 }

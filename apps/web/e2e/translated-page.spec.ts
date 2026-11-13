@@ -230,7 +230,6 @@ test("a translated settings page edits the essential alert", async ({
 const REVIEW_FILTERS = [
   "Filter by date",
   "Filter by version",
-  "Filter by reply state",
   "Sort reviews",
 ] as const;
 
@@ -248,6 +247,12 @@ test("a translated reviews page opens each of its filters", async ({
     await page.keyboard.press("Escape");
     await expect(page.getByRole("listbox")).toHaveCount(0);
   }
+  await page
+    .getByRole("tablist", { name: "Reply status" })
+    .getByRole("tab")
+    .nth(1)
+    .click();
+  await expect(page).toHaveURL(/replyState=needs_reply/);
   await page.getByRole("combobox", { name: "Filter by date" }).click();
   await page.getByRole("option", { name: /last 30 days/i }).click();
 

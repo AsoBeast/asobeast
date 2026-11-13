@@ -9,13 +9,18 @@ import { hydrated } from "./hydrated.mts";
 import { seedCookies } from "./routes.mts";
 import { expect, test } from "./session.mts";
 
+const replyTab = (page: Page, name: RegExp) =>
+  page
+    .getByRole("tablist", { name: "Reply status" })
+    .getByRole("tab", { name });
+
 test("reviews tab lists stored reviews and the ratings chart", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/reviews");
 
   await expect(
-    page.getByRole("region", { name: "Average rating and review volume" }),
+    page.getByRole("region", { name: "Average rating over time" }),
   ).toBeVisible();
 
   await expect(page.getByText("Love the focus timer")).toBeVisible();
@@ -168,26 +173,24 @@ test("the reviews export is disabled when no review matches", async ({
   ).toBeDisabled();
 });
 
-test("the counts strip filters the list by reply state", async ({ page }) => {
+test("the reply status switch filters the list by reply state", async ({
+  page,
+}) => {
   await page.goto("/apps/app-1/reviews");
-  const strip = page.getByRole("region", { name: "Reply status" });
-  const needsReply = strip.getByRole("button", { name: /Needs reply/ });
+  const needsReply = replyTab(page, /Needs reply/);
 
+  await expect(replyTab(page, /All/)).toContainText("5");
   await expect(needsReply).toContainText("3");
-  await expect(
-    strip.getByRole("button", { name: /Draft saved/ }),
-  ).toContainText("1");
-  await expect(strip.getByRole("button", { name: /Replied/ })).toContainText(
-    "1",
-  );
+  await expect(replyTab(page, /Draft/)).toContainText("1");
+  await expect(replyTab(page, /Replied/)).toContainText("1");
 
   await needsReply.click();
 
   await expect(page).toHaveURL(/replyState=needs_reply/);
-  await expect(needsReply).toHaveAttribute("aria-pressed", "true");
+  await expect(needsReply).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("article")).toHaveCount(3);
 
-  await needsReply.click();
+  await replyTab(page, /All/).click();
 
   await expect(page).not.toHaveURL(/replyState=/);
   await expect(page.getByRole("article")).toHaveCount(5);
@@ -243,11 +246,8 @@ test("searching narrows the list in the browser", async ({ page }) => {
 
   await expect(page.getByRole("article")).toHaveCount(1);
   await expect(page).toHaveURL(/q=crash/);
-  await expect(
-    page
-      .getByRole("region", { name: "Reply status" })
-      .getByRole("button", { name: /Needs reply/ }),
-  ).toContainText("3");
+  await expect(page.getByText("1 of 5 match the search")).toBeVisible();
+  await expect(replyTab(page, /Needs reply/)).toContainText("3");
 
   await page.getByRole("textbox", { name: "Search reviews" }).fill("zzz");
   await page.getByRole("button", { name: "Reset search" }).click();
@@ -355,11 +355,7 @@ test("show more appears only for a review that runs past four lines", async ({
   expect((await text.boundingBox())?.height ?? 0).toBeGreaterThan(collapsed);
 });
 
-for (const [width, clamped] of [
-  [375, true],
-  [768, true],
-  [1440, false],
-] as const) {
+for (const width of [375, 768, 1440]) {
   test(`a long unbroken title, text and author wrap inside the card at ${width}px`, async ({
     page,
   }) => {
@@ -382,10 +378,6 @@ for (const [width, clamped] of [
     }
 
     const more = card.getByRole("button", { name: "Show more" });
-    if (!clamped) {
-      await expect(more).toHaveCount(0);
-      return;
-    }
     await expect(more).toBeVisible();
     const text = card.getByText(UNBROKEN_REVIEW_TEXT);
     const collapsed = (await text.boundingBox())!.height;
@@ -410,18 +402,22 @@ test("each ratings distribution row stays on one line on a laptop and a phone", 
   }
 });
 
-test("the reply status tiles share one row on a phone", async ({ page }) => {
+test("the reply status switch stays on one row inside the page on a phone", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/apps/app-1/reviews");
-  const tiles = page
-    .getByRole("region", { name: "Reply status" })
-    .getByRole("button", { name: /Needs reply|Draft saved|Replied/ });
+  const tabs = replyTab(page, /All|Needs reply|Draft|Replied/);
 
-  await expect(tiles).toHaveCount(3);
-  const tops = await tiles.evaluateAll((nodes) =>
-    nodes.map((node) => Math.round(node.getBoundingClientRect().top)),
+  await expect(tabs).toHaveCount(4);
+  const boxes = await tabs.evaluateAll((nodes) =>
+    nodes.map((node) => {
+      const box = node.getBoundingClientRect();
+      return { top: Math.round(box.top), right: box.right };
+    }),
   );
-  expect(new Set(tops).size).toBe(1);
+  expect(new Set(boxes.map((box) => box.top)).size).toBe(1);
+  expect(Math.max(...boxes.map((box) => box.right))).toBeLessThanOrEqual(375);
 });
 
 test("a since filter writes to the url and keeps the reviews of that period", async ({
@@ -489,9 +485,7 @@ test("a pressed theme lists as many reviews as its number counts", async ({
   const update = page
     .getByRole("region", { name: "What people mention" })
     .getByRole("button", { name: /^update in/ });
-  const counted = Number(
-    await update.locator("span[aria-hidden]").textContent(),
-  );
+  const counted = Number(await update.locator(".numeric").textContent());
 
   await update.click();
 
@@ -525,10 +519,7 @@ test("a failing themes request keeps the reviews page and offers a retry", async
   const themes = page.getByRole("region", { name: "What people mention" });
   await expect(themes).toBeVisible();
 
-  await page
-    .getByRole("region", { name: "Reply status" })
-    .getByRole("button", { name: /Needs reply/ })
-    .click();
+  await replyTab(page, /Needs reply/).click();
 
   const failure = page
     .getByRole("alert")
@@ -536,7 +527,7 @@ test("a failing themes request keeps the reviews page and offers a retry", async
   await expect(failure).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole("article")).toHaveCount(3);
   await expect(
-    page.getByRole("region", { name: "Average rating and review volume" }),
+    page.getByRole("region", { name: "Average rating over time" }),
   ).toBeVisible();
   await expect(page.getByText("Reviews could not be loaded")).toHaveCount(0);
 
@@ -554,10 +545,7 @@ test("retrying a failed themes request keeps focus on Retry", async ({
     route.fulfill({ status: 500, json: { statusCode: 500 } }),
   );
   await page.goto("/apps/app-1/reviews");
-  await page
-    .getByRole("region", { name: "Reply status" })
-    .getByRole("button", { name: /Needs reply/ })
-    .click();
+  await replyTab(page, /Needs reply/).click();
   const failure = page
     .getByRole("alert")
     .filter({ hasText: "Could not load what people mention." });
@@ -675,8 +663,7 @@ test("a play review edited after the reply says so and has its own filter", asyn
   page,
 }) => {
   await page.goto("/apps/app-gp/reviews");
-  const strip = page.getByRole("region", { name: "Reply status" });
-  const updated = strip.getByRole("button", { name: /Updated after reply/ });
+  const updated = replyTab(page, /Updated/);
 
   await expect(
     page
@@ -693,11 +680,8 @@ test("a play review edited after the reply says so and has its own filter", asyn
 
   await page.goto("/apps/app-1/reviews");
 
-  await expect(
-    page
-      .getByRole("region", { name: "Reply status" })
-      .getByRole("button", { name: /Updated after reply/ }),
-  ).toHaveCount(0);
+  await expect(replyTab(page, /Needs reply/)).toBeVisible();
+  expect(await replyTab(page, /Updated/).count()).toBe(0);
 });
 
 const REVIEW_DAY = /[A-Z][a-z]{2} \d{1,2}, \d{4}/;
@@ -829,15 +813,12 @@ test("reviews that share stars, author and day get names that tell them apart", 
   expect(new Set(buttonNames).size).toBe(buttonNames.length);
 });
 
-test("the needs reply tile opens the queue lowest score first", async ({
+test("the needs reply tab opens the queue lowest score first", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/reviews");
 
-  await page
-    .getByRole("region", { name: "Reply status" })
-    .getByRole("button", { name: /Needs reply/ })
-    .click();
+  await replyTab(page, /Needs reply/).click();
 
   await expect(page).toHaveURL(/replyState=needs_reply/);
   await expect(page).toHaveURL(/sort=lowest/);
