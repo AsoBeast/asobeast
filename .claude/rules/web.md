@@ -159,7 +159,7 @@ Specific components:
 ## Frontend rule 10: Orange is action, blue is information, status keeps its own hues
 
 - `--primary` is the brand orange (`--brand-500`) in both themes with dark ink text (`--primary-foreground`, 8.24:1), darkening to `--primary-hover`. It fills controls and is never text on a surface: it is 2.1:1 on the light background and reads as `--warning`.
-- A link is the text colour with a `decoration-faint-foreground` underline that darkens to the foreground on hover, never orange; an informational badge uses `--info` (blue); a meter reporting a level uses the status tokens, never `primary`.
+- A link is the text colour with the `link-underline` utility (`styles/typography.css`: a faint underline that darkens to the foreground on hover, guarded by `styles/utility-classes.test.ts`), never orange; an informational badge uses `--info` (blue); a meter reporting a level uses the status tokens, never `primary`.
 - One `default` button per independent task: a trigger opening a dialog is `outline`, the dialog's submit is `default`, a per row action is `secondary` or `outline`. Every focus ring is a solid 2 px ring in `--ring`, the ink colour, and the filled button's is offset from its fill.
 - Nothing else is orange: checkboxes and switches fill with the foreground when on, the active sidebar item is the `--sidebar-accent` surface in ink, and charts draw in the deeper `--brand-series` shade of the same hue (`--chart-1`), with the comparison period in `--chart-previous` and the inline bar tint in `--chart-tint`.
 - Panels are flat: `--elevation-raised` is none, a card is a surface with a hairline `--border`, only overlays carry `--elevation-overlay`, and the segmented control's raised option is the one `--elevation-segment`.
