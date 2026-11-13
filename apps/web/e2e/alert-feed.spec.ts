@@ -128,6 +128,7 @@ test.describe("alerts page", () => {
 
     await expect(page.getByText("No events match")).toBeVisible();
     await expect(page.getByText(/^0 of 0 events$/)).toBeVisible();
+    await expect(page.getByText("0 events", { exact: true })).toBeVisible();
     await expect(page.locator('[data-slot="feed-end"]')).toHaveCount(0);
     await (
       await hydrated(page.getByRole("button", { name: "Clear filters" }))

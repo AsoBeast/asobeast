@@ -110,7 +110,7 @@ export function AlertFeed() {
     <>
       <AlertFeedHeader
         lede={
-          recorded
+          recorded || filtered
             ? feedLede({ events, seenAt, hasMore: feed.hasNextPage })
             : null
         }

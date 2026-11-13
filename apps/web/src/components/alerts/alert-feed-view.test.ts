@@ -237,6 +237,20 @@ describe("feedLede", () => {
     );
   });
 
+  it("counts none when a filter leaves no event", () => {
+    expect(feedLede({ events: [], seenAt: null, hasMore: false })).toEqual({
+      figure: "0 events",
+      rest: " in the last 30 days",
+    });
+    expect(
+      feedLede({
+        events: [],
+        seenAt: "2026-11-01T03:00:00.000Z",
+        hasMore: false,
+      }).rest,
+    ).toBe("Nothing new since your last visit");
+  });
+
   it("names one event in the singular", () => {
     expect(
       feedLede({ events: events.slice(0, 1), seenAt: null, hasMore: false })
