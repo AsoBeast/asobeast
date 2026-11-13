@@ -86,7 +86,7 @@ export function FunnelFacts({ impact, store }: WindowProps) {
               <DeltaChip
                 value={gets === null ? null : Math.round(gets * 100)}
                 polarity="higher-is-better"
-                period={`percent in ${getsLabel}`}
+                period={`in ${getsLabel}`}
                 unit="%"
               />
             </dd>

@@ -80,7 +80,7 @@ export function DeltaChip({
     <span
       data-slot={slotOf(form)}
       role="img"
-      aria-label={`${way} ${magnitude} ${period}`}
+      aria-label={`${way} ${magnitude}${unit} ${period}`}
       className={cn(
         "numeric inline-flex items-center gap-0.5 font-medium",
         TONE[way],

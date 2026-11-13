@@ -243,7 +243,7 @@ test("a measured window reads Get taps and conversion from the console", async (
   const tile = windowTile(page, OLDER.changedOn, 7);
   await expect(tile).toContainText("Get taps412 → 486");
   await expect(tile).toContainText("Conversion3.1% → 3.6%");
-  await expect(tile.getByLabel("up 18 percent in Get taps")).toHaveText("18%");
+  await expect(tile.getByLabel("up 18% in Get taps")).toHaveText("18%");
 });
 
 test("a google play window names acquisitions, not Get taps", async ({
@@ -262,9 +262,7 @@ test("a google play window names acquisitions, not Get taps", async ({
   const tile = windowTile(page, APP_GP_CHANGE_IMPACT.items[0].changedOn, 7);
   await expect(tile).toContainText("Acquisitions35 → 70");
   await expect(tile).not.toContainText("Get taps");
-  await expect(tile.getByLabel("up 100 percent in Acquisitions")).toHaveText(
-    "100%",
-  );
+  await expect(tile.getByLabel("up 100% in Acquisitions")).toHaveText("100%");
 });
 
 test("a window still filling says when the console's numbers are final", async ({
