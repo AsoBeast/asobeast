@@ -28,6 +28,12 @@ export function isNumericColumn(meta: unknown): boolean {
   );
 }
 
+export function numericProps(column: { columnDef: { meta?: unknown } }): {
+  numeric: boolean;
+} {
+  return { numeric: isNumericColumn(column.columnDef.meta) };
+}
+
 function isVisibilityState(value: unknown): value is ColumnVisibilityState {
   return (
     typeof value === "object" &&
