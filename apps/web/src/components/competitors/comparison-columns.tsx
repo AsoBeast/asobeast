@@ -244,7 +244,7 @@ const shownRows = (
 
 function TopTenTotal({ count }: { count: number }) {
   return (
-    <span className="whitespace-normal">
+    <span className="whitespace-nowrap">
       <span className={TOTAL_FIGURE}>{String(count)}</span>{" "}
       <span>in top 10</span>
     </span>
@@ -253,12 +253,20 @@ function TopTenTotal({ count }: { count: number }) {
 
 function HeadToHeadTotal({ totals }: { totals: HeadToHead }) {
   return (
-    <span className="whitespace-normal">
-      <span aria-hidden>
-        <span>You lead </span>
-        <span className={TOTAL_FIGURE}>{String(totals.lead)}</span>
-        <span>, trail </span>
-        <span className={TOTAL_FIGURE}>{String(totals.trail)}</span>
+    <span>
+      <span
+        aria-hidden
+        className="flex flex-wrap justify-end gap-x-1 whitespace-nowrap"
+      >
+        <span>
+          <span>You lead </span>
+          <span className={TOTAL_FIGURE}>{String(totals.lead)}</span>
+          <span>,</span>
+        </span>
+        <span>
+          <span>trail </span>
+          <span className={TOTAL_FIGURE}>{String(totals.trail)}</span>
+        </span>
       </span>
       <span className="sr-only">{headToHeadText(totals)}</span>
     </span>

@@ -38,6 +38,7 @@ import {
 import { appDetailOptions } from "@/lib/queries";
 import { numericProps } from "@/lib/table/column-visibility";
 import { ariaSort } from "@/lib/table/sorting";
+import { cn } from "@/lib/utils";
 import {
   comparisonColumns,
   HIDDEN_COMPARISON_COLUMNS,
@@ -47,6 +48,8 @@ import { comparisonMarkets } from "./comparison-markets";
 import { ComparisonFilterBar } from "./ComparisonFilterBar";
 import { useOpenBreakdown } from "./breakdown-opener";
 import { SECTION_BODY, SECTION_SHEET } from "./section-layout";
+
+const TOTALS_CELL = "h-9 align-middle";
 
 const MARKET_PIN = "w-24 min-w-24 max-w-24 bg-inherit md:sticky md:left-0";
 
@@ -145,7 +148,7 @@ function MatrixSheet({
           <DataTableFooter
             table={table}
             rowIndex={rows.length + 2}
-            cellClassName={(columnId) => pins.cell[columnId]}
+            cellClassName={(columnId) => cn(TOTALS_CELL, pins.cell[columnId])}
           />
         ) : null}
       </Table>

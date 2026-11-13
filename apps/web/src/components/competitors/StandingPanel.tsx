@@ -65,7 +65,9 @@ function AppName({
       <span aria-hidden className="shrink-0">
         <AppIcon src={icons.get(appId) ?? null} size={size} />
       </span>
-      <bdi className="truncate font-medium">{name ?? UNNAMED_COMPETITOR}</bdi>
+      <bdi className="line-clamp-2 font-medium wrap-anywhere">
+        {name ?? UNNAMED_COMPETITOR}
+      </bdi>
       {isYou ? <Badge variant="brand">You</Badge> : null}
     </span>
   );
@@ -91,7 +93,7 @@ function VisibilityList({
             key={point.appId}
             className={cn(
               VISIBILITY_COLUMNS,
-              "relative h-10 text-dense sm:h-9",
+              "min-h-10 py-1 text-dense leading-tight sm:min-h-9",
             )}
           >
             <span className="relative flex h-full min-w-0 items-center">
