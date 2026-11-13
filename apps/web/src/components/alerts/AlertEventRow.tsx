@@ -59,8 +59,13 @@ function Market({ item }: { item: AlertEventItem }) {
   );
 }
 
-function Sentence({ item }: { item: AlertEventItem }) {
-  const href = alertEventHref(item);
+function Sentence({
+  item,
+  href,
+}: {
+  item: AlertEventItem;
+  href: string | null;
+}) {
   const content = (
     <>
       <span className="sr-only">{`${EVENT_LABELS[item.event]}: `}</span>
@@ -90,13 +95,13 @@ export function AlertEventRow({
 }) {
   const { icon: Icon, tone } = ALERT_EVENT_ICONS[item.event];
   const size = alertEventSize(item.payload);
-  const linked = alertEventHref(item) !== null;
+  const href = alertEventHref(item);
 
   return (
     <li
       className={cn(
         ALERT_ROW,
-        linked &&
+        href !== null &&
           "transition-colors duration-150 ease-out hover:bg-muted motion-reduce:transition-none",
       )}
     >
@@ -104,7 +109,7 @@ export function AlertEventRow({
         <Icon aria-hidden className="size-4" />
       </span>
       <div className={ALERT_ROW_SENTENCE}>
-        <Sentence item={item} />
+        <Sentence item={item} href={href} />
         {isNew ? (
           <Badge variant="info" className={ALERT_ROW_NEW}>
             New
