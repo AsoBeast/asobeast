@@ -6,7 +6,6 @@ import { CollapsibleCard } from "./CollapsibleCard";
 const card = (
   <CollapsibleCard
     section="a.one"
-    eyebrow="Eyebrow"
     title="Section title"
     actions={<span>Beside the title</span>}
   >

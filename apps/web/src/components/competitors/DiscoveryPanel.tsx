@@ -172,7 +172,6 @@ export function DiscoveryPanel({ id }: { id: string }) {
   return (
     <CollapsibleCard
       section={COMPETITOR_SECTION.discovery}
-      eyebrow="Discovery"
       title="Apps you don’t track yet"
       actions={
         <>

@@ -2,13 +2,7 @@
 
 import { useId, useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Collapsible,
   CollapsibleContent,
@@ -21,13 +15,11 @@ const OPEN_ANIMATION = "data-[state=open]:animate-collapsible-down";
 export function CollapsibleCard({
   section,
   title,
-  eyebrow,
   actions,
   children,
 }: {
   section: string;
   title: string;
-  eyebrow?: string;
   actions?: ReactNode;
   children: ReactNode;
 }) {
@@ -44,8 +36,7 @@ export function CollapsibleCard({
     <Collapsible open={open} onOpenChange={change} asChild>
       <Card data-slot="card" role="region" aria-labelledby={titleId}>
         <CardHeader className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
-          <div className="flex min-w-0 flex-col gap-1">
-            {eyebrow ? <CardDescription>{eyebrow}</CardDescription> : null}
+          <div className="min-w-0">
             <CardTitle asChild>
               <h2 id={titleId}>
                 <CollapsibleTrigger asChild>

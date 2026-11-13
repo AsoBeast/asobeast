@@ -158,7 +158,6 @@ export function GapAnalysis({ id }: { id: string }) {
   return (
     <CollapsibleCard
       section={COMPETITOR_SECTION.gaps}
-      eyebrow="Gap analysis"
       title="Where competitors beat you"
       actions={<GapHelp />}
     >
