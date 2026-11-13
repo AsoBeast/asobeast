@@ -16,10 +16,5 @@ export function AppHeaderSkeleton() {
 }
 
 export function MarketSwitcherSkeleton() {
-  return (
-    <div className="flex items-center gap-2">
-      <Skeleton className="h-4 w-12" />
-      <Skeleton className="h-[34px] w-[240px] max-w-full" />
-    </div>
-  );
+  return <Skeleton className="h-9 w-[340px] max-w-full" />;
 }
