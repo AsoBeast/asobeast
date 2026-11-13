@@ -239,7 +239,7 @@ A warm neutral ground with one orange family and two signal hues, mirrored in a 
 - **Brand Orange** (#f89820): the fill of the one primary button in a view and of a checked checkbox or switch (with a near black check or thumb), and in the dark theme the brand text, the brand mark and the chart series. In the light theme it is never text on a surface (2.1:1 on white).
 - **Brand Text** (#a8520a light, 5.4:1 on white and 4.7:1 on the brand tint; #f89820 dark, `--brand-text`): text and icons that mean selected or yours: the active sidebar item and a `brand` pill. Orange text is only ever this shade.
 - **Brand Mark** (#d2700a light, 3.5:1 on white; #f89820 dark, `--brand-mark`): marks of 2 px or more that need 3:1, not 4.5:1: the active metric tab and line tab underline, an unread or new dot (Alerts, the Discovered tab, What's New, the latest release), a progress bar or ring, and a link's underline on hover. It is also the chart series, sparklines and the end dot in the light theme, where the brand shade is too light to read as a line.
-- **Brand Tint** (#fbeedb light, #2b2114 dark, `--brand-subtle`): the background of the active sidebar item, of a `brand` pill and of the own app's row in the search results; inline bars behind list rows use the same tint (`--chart-tint`).
+- **Brand Tint** (#fbeedb light, #2b2114 dark, `--brand-subtle`): the background of the active sidebar item and of a `brand` pill (the own app's row in the search results carries a 3 px brand mark start bar instead, so its You pill stays visible); inline bars behind list rows use the same tint (`--chart-tint`).
 - **Previous Period** (#cdc8c0 light, #3d3933 dark): the comparison line under the series; always thinner and never filled.
 
 ### Secondary
