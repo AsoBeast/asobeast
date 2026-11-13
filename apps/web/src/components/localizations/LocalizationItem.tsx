@@ -12,11 +12,16 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
+import { useFocusClaim } from "@/lib/focus-handoff";
 import { localizationName } from "@/lib/localizations";
 import { KeywordFieldEditor } from "./KeywordFieldEditor";
 import { OriginBadge } from "./OriginBadge";
 import { ReaderChips } from "./ReadRoleBadge";
 import { RemoveLocalizationDialog } from "./RemoveLocalizationDialog";
+
+export const localizationFocusKey = (
+  localization: AppStoreLocalization,
+): string => `localization-${localization}`;
 
 export function LocalizationItem({
   id,
@@ -32,10 +37,14 @@ export function LocalizationItem({
   onDraft: ((localization: AppStoreLocalization) => void) | null;
 }) {
   const name = localizationName(item.localization);
+  const claimFocus = useFocusClaim(localizationFocusKey(item.localization));
 
   return (
     <AccordionItem value={item.localization}>
-      <AccordionTrigger className="items-center hover:no-underline">
+      <AccordionTrigger
+        ref={claimFocus}
+        className="items-center hover:no-underline"
+      >
         <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
           <span className="flex items-center gap-2">
             <span className="font-medium">{name}</span>

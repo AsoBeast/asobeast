@@ -3,6 +3,8 @@ import type {
   ActionListResult,
   ActionUpdateRequest,
   ApiTokenItem,
+  AppLocalizationItem,
+  AppLocalizationsResult,
   CompetitorItem,
   TrackedKeywordItem,
   WebhookItem,
@@ -2123,5 +2125,279 @@ test.describe("action center row controls keep focus", () => {
     await expect(page.getByRole("menu")).toHaveCount(0);
     await expect(menu).toBeFocused();
     held.release();
+  });
+});
+
+test.describe("metadata controls keep focus", () => {
+  const localizations = (page: Page) =>
+    page.getByRole("region", { name: "App Store localizations" });
+  const spanish = "/apps/app-1/metadata?fieldLocale=es-MX";
+  const LOCALIZATIONS = /\/api\/backend\/apps\/app-1\/localizations$/;
+
+  async function openSaveReview(page: Page) {
+    await page.goto(spanish);
+    const editor = page.getByRole("textbox", {
+      name: "Spanish (Mexico) keyword field",
+    });
+    await (await hydrated(editor)).fill("temporizador,enfoque,reloj");
+    await localizations(page)
+      .getByRole("button", { name: "Save keyword field" })
+      .click();
+    const dialog = page.getByRole("dialog", {
+      name: "Save the Spanish (Mexico) keyword field",
+    });
+    await expect(dialog).toBeVisible();
+    return dialog;
+  }
+
+  const holdSave = (page: Page) =>
+    holdRequest(
+      page,
+      /\/api\/backend\/apps\/app-1\/keyword-fields\/es-MX$/,
+      "PUT",
+      refuse,
+    );
+
+  test("Save keyword field keeps focus while the field is checked", async ({
+    page,
+  }) => {
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/apps\/app-1\/keyword-fields\/es-MX\/preview$/,
+      "POST",
+      refuse,
+    );
+    await page.goto(spanish);
+    await (
+      await hydrated(
+        page.getByRole("textbox", { name: "Spanish (Mexico) keyword field" }),
+      )
+    ).fill("temporizador,enfoque,reloj");
+    const save = localizations(page).getByRole("button", {
+      name: /^(Save keyword field|Saving…)$/,
+    });
+
+    await pressFromKeyboard(save);
+
+    await expectFocusKeptWhileHeld(save, held);
+    await expect(localizations(page).getByRole("alert")).toHaveText("down");
+  });
+
+  test("the save review confirm keeps focus while the save runs", async ({
+    page,
+  }) => {
+    const dialog = await openSaveReview(page);
+    const held = await holdSave(page);
+    const confirm = dialog.getByRole("button", {
+      name: /^(Save and track|Saving…)$/,
+    });
+
+    await pressFromKeyboard(confirm);
+    await expect(confirm).toHaveAttribute("aria-disabled", "true");
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeVisible();
+
+    await expectFocusKeptWhileHeld(confirm, held);
+    await expect(dialog.getByRole("alert")).toHaveText("down");
+  });
+
+  test("the save review Cancel stays focusable and keeps the dialog while the save runs", async ({
+    page,
+  }) => {
+    const dialog = await openSaveReview(page);
+    const held = await holdSave(page);
+    const cancel = dialog.getByRole("button", { name: "Cancel" });
+
+    await pressFromKeyboard(
+      dialog.getByRole("button", { name: "Save and track" }),
+    );
+    await expect(cancel).toHaveAttribute("aria-disabled", "true");
+    await cancel.focus();
+    await expect(cancel).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(dialog).toBeVisible();
+    held.release();
+
+    await expect(dialog.getByRole("alert")).toHaveText("down");
+    await expect(cancel).not.toHaveAttribute("aria-disabled", "true");
+    await cancel.press("Enter");
+    await expect(dialog).toBeHidden();
+    await expect(
+      localizations(page).getByRole("button", { name: "Save keyword field" }),
+    ).toBeFocused();
+  });
+
+  test("Find localizations keeps focus while it queues", async ({ page }) => {
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/apps\/app-1\/localizations\/detect$/,
+      "POST",
+      (route) => route.fulfill(fulfillJson(202, { queued: 0 })),
+    );
+    await page.goto("/apps/app-1/metadata");
+    const find = localizations(page).getByRole("button", {
+      name: "Find localizations",
+    });
+
+    await pressFromKeyboard(find);
+
+    await expectFocusKeptWhileHeld(find, held);
+  });
+
+  test("an unlisted Add keeps focus while it adds", async ({ page }) => {
+    const held = await holdRequest(page, LOCALIZATIONS, "POST", refuse);
+    await page.goto("/apps/app-1/metadata");
+    const add = localizations(page).getByRole("button", {
+      name: "Add Arabic",
+    });
+
+    await pressFromKeyboard(add);
+
+    await expectFocusKeptWhileHeld(add, held);
+    await expect(localizations(page).getByRole("alert")).toHaveText("down");
+  });
+
+  test("the remove confirmation keeps focus and stays open while it removes", async ({
+    page,
+  }) => {
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/apps\/app-1\/localizations\/es-MX$/,
+      "DELETE",
+      refuse,
+    );
+    await page.goto(spanish);
+    const opener = localizations(page).getByRole("button", {
+      name: "Remove localization",
+    });
+
+    await pressFromKeyboard(opener);
+    const dialog = page.getByRole("alertdialog", {
+      name: "Remove Spanish (Mexico)?",
+    });
+    const confirm = dialog.getByRole("button", {
+      name: /^(Remove|Removing…)$/,
+    });
+    const cancel = dialog.getByRole("button", { name: "Cancel" });
+    await confirm.press("Enter");
+    await expect(confirm).toHaveAttribute("aria-disabled", "true");
+    await expect(confirm).toBeFocused();
+    await page.keyboard.press("Escape");
+    await cancel.focus();
+    await expect(cancel).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(dialog).toBeVisible();
+    held.release();
+
+    await expect(confirm).not.toHaveAttribute("aria-disabled", "true");
+    await cancel.press("Enter");
+    await expect(dialog).toBeHidden();
+    await expect(opener).toBeFocused();
+  });
+
+  async function serveLocalizations(
+    page: Page,
+    change: (listed: AppLocalizationsResult) => AppLocalizationsResult,
+  ) {
+    const listed: AppLocalizationsResult = await (
+      await page.request.get("/api/backend/apps/app-1/localizations")
+    ).json();
+    let changed = false;
+    await page.route(LOCALIZATIONS, (route) =>
+      changed && route.request().method() === "GET"
+        ? route.fulfill({ json: change(listed) })
+        : route.fallback(),
+    );
+    return () => {
+      changed = true;
+    };
+  }
+
+  test("a confirmed removal hands focus to the localization before it", async ({
+    page,
+  }) => {
+    const remove = await serveLocalizations(page, (listed) => ({
+      ...listed,
+      localizations: listed.localizations.filter(
+        (item) => item.localization !== "es-MX",
+      ),
+    }));
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/apps\/app-1\/localizations\/es-MX$/,
+      "DELETE",
+      (route) => {
+        remove();
+        return route.fulfill({ status: 204 });
+      },
+    );
+    await page.goto(spanish);
+
+    await pressFromKeyboard(
+      localizations(page).getByRole("button", { name: "Remove localization" }),
+    );
+    await confirmIn(page, "Remove");
+    held.release();
+
+    await expect(page.getByRole("alertdialog")).toBeHidden();
+    await expect(
+      localizations(page).getByRole("button", { name: /^Polish/ }),
+    ).toBeFocused();
+  });
+
+  test("an unlisted Add hands focus to the localization it adds", async ({
+    page,
+  }) => {
+    const arabic: AppLocalizationItem = {
+      localization: "ar",
+      origin: "manual",
+      phrases: [],
+      charactersUsed: 0,
+      charactersLimit: 100,
+      readBy: [{ country: "us", role: "additional", home: true }],
+      updatedAt: null,
+    };
+    const add = await serveLocalizations(page, (listed) => ({
+      ...listed,
+      localizations: [...listed.localizations, arabic],
+    }));
+    const held = await holdRequest(page, LOCALIZATIONS, "POST", (route) => {
+      add();
+      return route.fulfill(fulfillJson(201, arabic));
+    });
+    await page.goto("/apps/app-1/metadata");
+
+    await pressFromKeyboard(
+      localizations(page).getByRole("button", { name: "Add Arabic" }),
+    );
+    held.release();
+
+    await expect(page.getByText("Added Arabic")).toBeVisible();
+    await expect(
+      localizations(page).getByRole("button", { name: /^Arabic/ }),
+    ).toBeFocused();
+  });
+
+  test.describe("Generate drafts", () => {
+    test.beforeEach(({ context }) => seedCookie(context, "e2e_metadata_ai"));
+
+    test("keeps focus while the drafts are written", async ({ page }) => {
+      const held = await holdRequest(
+        page,
+        /\/api\/backend\/apps\/app-1\/metadata\/assistant$/,
+        "POST",
+      );
+      await page.goto("/apps/app-1/metadata");
+      const generate = page.getByRole("button", { name: "Generate drafts" });
+
+      await pressFromKeyboard(generate);
+
+      await expect(generate).toHaveAttribute("aria-disabled", "true");
+      await expect(generate).toBeFocused();
+      held.release();
+      const regenerate = page.getByRole("button", { name: "Regenerate" });
+      await expect(regenerate).not.toHaveAttribute("aria-disabled", "true");
+      await expect(regenerate).toBeFocused();
+    });
   });
 });

@@ -66,7 +66,7 @@ export function FindLocalizationsButton({ appId }: { appId: string }) {
     <Button
       variant="outline"
       size="sm"
-      disabled={detect.isPending}
+      aria-disabled={detect.isPending || undefined}
       onClick={() => detectOnce()}
     >
       {detect.isPending ? <Loader2 className="animate-spin" /> : <ScanSearch />}

@@ -146,12 +146,21 @@ export function SaveKeywordFieldDialog({
         </DialogBody>
 
         <DialogFooter>
-          <Button variant="outline" disabled={pending} onClick={onClose}>
+          <Button
+            variant="outline"
+            aria-disabled={pending || undefined}
+            onClick={() => {
+              if (!pending) onClose();
+            }}
+          >
             Cancel
           </Button>
           <Button
-            disabled={pending || quota?.over === true}
-            onClick={() => onConfirm(trackIn)}
+            disabled={quota?.over === true}
+            aria-disabled={pending || undefined}
+            onClick={() => {
+              if (!pending) onConfirm(trackIn);
+            }}
           >
             {pending ? <Loader2 className="animate-spin" /> : null}
             {pending
