@@ -127,10 +127,12 @@ const POPOVERS: NamedPopover[] = [
     },
   },
   {
-    name: "How actions are generated",
+    name: "Filter by rule",
     path: "/actions",
-    open: (page) =>
-      page.getByRole("button", { name: /how actions are generated/i }).click(),
+    open: async (page) => {
+      await page.getByRole("button", { name: /^Filters/ }).click();
+      await page.getByRole("button", { name: /^Filter by rule/ }).click();
+    },
   },
   {
     name: "How ratings by market are read",

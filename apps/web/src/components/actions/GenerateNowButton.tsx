@@ -19,8 +19,10 @@ interface FollowedRun {
 
 export function GenerateNowButton({
   generatedAt,
+  variant = "default",
 }: {
   generatedAt: string | null;
+  variant?: "default" | "outline";
 }) {
   const queryClient = useQueryClient();
   const [followed, setFollowed] = useState<FollowedRun | null>(null);
@@ -71,6 +73,7 @@ export function GenerateNowButton({
 
   return (
     <Button
+      variant={variant}
       aria-disabled={busy || undefined}
       onClick={() => {
         if (!busy) runOnce();

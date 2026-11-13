@@ -14,25 +14,27 @@ It reads only the database. Generation makes zero store requests and consumes no
 ## Reading the queue
 
 <Frame>
-  ![The Action Center at desktop width: the header with its status line, four summary tiles, the toolbar, the queue grouped by priority and the progress rail beside it](/images/action-center/queue-light.png)
+  ![The Action Center at desktop width: the header with what the last run changed, four figures, the Start here panel, the toolbar, the queue grouped by priority and the progress rail beside it](/images/action-center/queue-light.png)
 </Frame>
 
-The header states how many actions are open, how many of them are critical or high, when the queue was last generated and how many new actions the per app cap withheld. **Generate now** queues an extra run.
+The header says what the day of the last run opened and closed, when the queue was last generated and how many new actions the per app cap withheld. **Generate now** queues an extra run.
 
-Four tiles sit under it:
+Four figures sit under it:
 
-| Tile | What it counts |
+| Figure | What it counts |
 | --- | --- |
 | Open | Open actions, with the critical and high share |
-| New this week | Actions opened in the last seven days, and how many resolved on their own |
+| New this week | Actions opened in the last seven days, against the seven days before |
 | Confirmed fixed | Done actions whose rule stopped firing in the last 30 days, against how many you marked done |
 | Snoozed | Snoozed actions, and when the next one wakes |
 
-The toolbar filters the queue without a round trip. Status tabs switch between to do (open and snoozed), done, dismissed and resolved. Search matches the headline, the keyword, the app and the market. Priority toggles, the rule, category, app, market and store facets, the grouping (priority, app or category) and the sort all live in the URL, so a filtered view can be bookmarked and shared.
+**Start here** shows the open action with the highest impact: the evidence behind it in one sentence, the steps to take and a button to the page where the fix happens. Mark it done or snooze it and the next action takes its place.
 
-Each row leads with its subject: the keyword, market, competitor or listing field the finding is about, and the numbers that made it fire. Below the headline sit the category, app, store, market and first seen date. A tag marks a snoozed action with its wake date, a done action that is still being verified or was confirmed fixed, a reopened action and a stored action whose evidence could not be read.
+The toolbar filters the queue without a round trip. Search matches the headline, the keyword, the app and the market. **Filters** holds the rule, category, app, market and store facets. The priority toggles, the grouping (priority, app or category) and the sort sit beside them, and all of it lives in the URL, so a filtered view can be bookmarked and shared. The tabs in the queue's header switch between to do (open and snoozed), done, dismissed and resolved.
 
-On the right, **Progress** charts 30 days of activity: actions opened, closed by you and resolved on their own. **Where the work is** splits the open work by app, or by market on an app's own page, and each bar filters the queue to it.
+Each row leads with its priority and its subject: the keyword, market, competitor or listing field the finding is about. The line under the headline names the app and market and says why the action is there in its own numbers, such as the positions you moved between or the apps that entered above you. A mark at the end of that line shows a snoozed action with its wake date, a done action that is still being verified or was confirmed fixed, a reopened action and a stored action whose evidence could not be read. **Done** sits on the row, and its menu holds snooze, dismiss and copy link.
+
+On the right, **Progress** charts 30 days of activity: actions opened above the line and closed below it, where closed counts those you closed and those that resolved on their own. **Where the work is** splits the open work by app, or by market on an app's own page, and by type of work, and each row filters the queue to it.
 
 ## Opening an action
 

@@ -10,6 +10,7 @@ const ACTION_STATE_SPECS = [
   "actions-queue",
   "actions-sheet",
   "actions-double-click",
+  "actions-states",
 ];
 
 export default defineConfig({

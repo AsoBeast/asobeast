@@ -12,7 +12,7 @@ const tiles = (summary = ACTION_SUMMARY) =>
   );
 
 describe("overviewTiles", () => {
-  it("counts the open actions by their open priorities", () => {
+  it("counts the open actions by their open priorities and claims no change", () => {
     expect(tiles().Open).toEqual({
       label: "Open",
       value: String(ACTION_SUMMARY.open),
@@ -20,17 +20,26 @@ describe("overviewTiles", () => {
     });
   });
 
-  it("sums the openings of the last seven days", () => {
-    const week = ACTION_ACTIVITY.days.slice(-7);
-    const opened = week.reduce(
-      (sum, day) => sum + day.opened + day.reopened,
-      0,
+  it("does not call the snoozed tile empty when the wake dates are not loaded", () => {
+    expect(overviewTiles(ACTION_SUMMARY, ACTION_ACTIVITY, [])[3]).toMatchObject(
+      {
+        value: "1",
+        note: "waiting for their wake date",
+      },
     );
-    const resolved = week.reduce((sum, day) => sum + day.resolved, 0);
+  });
 
-    expect(tiles()["New this week"]).toMatchObject({
-      value: String(opened),
-      note: `${resolved} resolved on their own`,
+  it("sums the openings of the last seven days against the week before", () => {
+    const opened = (days: typeof ACTION_ACTIVITY.days) =>
+      days.reduce((sum, day) => sum + day.opened + day.reopened, 0);
+    const week = opened(ACTION_ACTIVITY.days.slice(-7));
+    const before = opened(ACTION_ACTIVITY.days.slice(-14, -7));
+
+    expect(tiles()["New this week"]).toEqual({
+      label: "New this week",
+      value: String(week),
+      note: `${before} the week before`,
+      delta: `+${week - before}`,
     });
     expect(tiles()["Confirmed fixed"]).toMatchObject({
       value: String(ACTION_ACTIVITY.totals.verified),

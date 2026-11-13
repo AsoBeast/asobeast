@@ -97,9 +97,11 @@ test("the header states how fresh the queue is", async ({ page }) => {
 
   const status = page.locator('[data-slot="action-status"]');
   await expect(status).toHaveText(
-    /^20 open · 1 critical · 5 high · generated /,
+    /^Generated .+ UTC · 3 withheld by the per app cap$/,
   );
-  await expect(status).toContainText("withheld by the per app cap");
+  await expect(page.locator("main header p").first()).toHaveText(
+    "On the day of the last run 1 action opened and 1 was closed by you.",
+  );
 });
 
 test("the status tabs name their counts and control the queue", async ({
@@ -119,7 +121,7 @@ test("an app's header leaves out the workspace wide cap count", async ({
   await page.goto("/apps/app-1/actions");
 
   const status = page.locator('[data-slot="action-status"]');
-  await expect(status).toContainText("generated");
+  await expect(status).toContainText("Generated");
   await expect(status).not.toContainText("withheld");
 });
 
@@ -203,6 +205,7 @@ test.describe("the queue toolbar", () => {
     page,
   }) => {
     await page.goto("/actions");
+    await page.getByRole("button", { name: /^Filters/ }).click();
     await page.getByRole("button", { name: /^Filter by rule/ }).click();
     await page.getByRole("option", { name: /Keywords to defend/ }).click();
     await page.keyboard.press("Escape");
@@ -392,11 +395,11 @@ test("snoozing sets a wake date on the card", async ({ page }) => {
   const target = page.locator(card("act-audit"));
 
   await expect(target).toBeVisible(rendered);
-  await target.getByRole("button", { name: "Snooze" }).click();
-  await page.getByRole("menuitem", { name: "7 days" }).click();
+  await target.getByRole("button", { name: /^More actions for / }).click();
+  await page.getByRole("menuitem", { name: "Snooze 7 days" }).click();
 
   await expect(
-    page.locator(card("act-audit")).getByRole("button", { name: /Wakes/ }),
+    page.locator(card("act-audit")).getByText(/^Snoozed until /),
   ).toBeVisible();
 });
 
@@ -407,7 +410,8 @@ test("dismissing removes the card and it stays gone after a reload", async ({
   const target = page.locator(card("act-reviews"));
   await expect(target).toBeVisible();
 
-  await target.getByRole("button", { name: "Dismiss" }).click();
+  await target.getByRole("button", { name: /^More actions for / }).click();
+  await page.getByRole("menuitem", { name: "Dismiss" }).click();
   await page
     .getByRole("menuitem", { name: "Not relevant to this app" })
     .click();

@@ -1,12 +1,6 @@
 import type { ActionActivity } from "@asobeast/shared";
 import { formatNumber } from "@/lib/format";
 
-export const ACTIVITY_SERIES = [
-  { key: "opened", label: "Opened" },
-  { key: "closedByYou", label: "Closed by you" },
-  { key: "resolved", label: "Resolved on its own" },
-] as const;
-
 export interface ActivityRow {
   date: string;
   opened: number;

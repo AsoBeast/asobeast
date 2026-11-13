@@ -38,7 +38,7 @@ export default async function AppActionsPage({
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <div className="page-wide @container/actions flex flex-col gap-6">
-        <Suspense fallback={<ActionCenterSkeleton />}>
+        <Suspense fallback={<ActionCenterSkeleton titled={false} />}>
           <ActionCenter appId={id} />
         </Suspense>
       </div>

@@ -14,7 +14,7 @@ describe("actionStatusTag", () => {
           snoozedUntil: "2026-08-15T00:00:00.000Z",
         }),
       ),
-    ).toEqual({ label: "Snoozed until Aug 15, 2026", tone: "warning" });
+    ).toEqual({ label: "Snoozed until Aug 15, 2026", tone: "neutral" });
   });
 
   it("tells verifying, still detected and confirmed apart for a done action", () => {

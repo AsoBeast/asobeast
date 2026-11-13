@@ -23,7 +23,7 @@ export function PriorityToggles({
             key={priority}
             type="button"
             size="sm"
-            variant={pressed ? "default" : "outline"}
+            variant={pressed ? "secondary" : "outline"}
             aria-pressed={pressed}
             aria-label={`${ACTION_PRIORITY_LABEL[priority]}, ${pluralize(count, "action")}`}
             onClick={() =>
@@ -35,7 +35,7 @@ export function PriorityToggles({
             }
           >
             {ACTION_PRIORITY_LABEL[priority]}
-            <span aria-hidden className="numeric">
+            <span aria-hidden className="numeric text-muted-foreground">
               {formatNumber(count)}
             </span>
           </Button>

@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { StatTile, StatTileGroup } from "@/components/ui/stat-tile";
+import { Badge } from "@/components/ui/badge";
+import { MetricStrip, StatTile } from "@/components/ui/stat-tile";
 import { actionActivityScope, queueFilters } from "@/lib/action-filters";
 import {
   actionActivityOptions,
@@ -9,7 +10,6 @@ import {
   actionSummaryFor,
 } from "@/lib/queries";
 import { overviewTiles } from "./overview-tiles";
-import { OVERVIEW_GRID } from "./skeletons";
 
 export function ActionOverview({ appId }: { appId?: string }) {
   const { data: summary } = useSuspenseQuery(actionSummaryFor(appId));
@@ -19,15 +19,22 @@ export function ActionOverview({ appId }: { appId?: string }) {
   const { data: todo } = useQuery(actionsOptions(queueFilters(), appId));
 
   return (
-    <StatTileGroup className={OVERVIEW_GRID}>
+    <MetricStrip columns={4} label="Queue figures">
       {overviewTiles(summary, activity, todo?.items ?? []).map((tile) => (
         <StatTile
           key={tile.label}
           label={tile.label}
           value={tile.value}
           note={tile.note}
+          delta={
+            tile.delta ? (
+              <Badge variant="flat" className="numeric">
+                {tile.delta}
+              </Badge>
+            ) : null
+          }
         />
       ))}
-    </StatTileGroup>
+    </MetricStrip>
   );
 }

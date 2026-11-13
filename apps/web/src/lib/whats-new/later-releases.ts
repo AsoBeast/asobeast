@@ -55,6 +55,11 @@ export const LATER_RELEASES: readonly Release[] = [
       },
       {
         kind: "improved",
+        title: "An Action Center that says where to start",
+        text: "The Action Center now opens with what the day of the last run opened and closed, and a Start here panel with the action that matters most: why it is there, the steps to take and a button to the page where you fix it. The queue is one list instead of a card per action, and every row says why it is there in a line of its own numbers, such as the positions you moved between or the apps that entered above you. Done sits on each row and snooze, dismiss and copy link are in its menu. Every filter is behind one Filters button, progress is drawn as actions opened above and closed below, and Where the work is can be split by app or by type of work.",
+      },
+      {
+        kind: "improved",
         title: "A calmer, sharper look",
         text: "AsoBeast has a new typeface, warmer neutral colours and flatter panels with fine borders. Numbers line up in columns and labels are easier to read.",
       },
