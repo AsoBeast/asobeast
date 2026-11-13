@@ -227,7 +227,7 @@ function TokenForm({ onCreated }: { onCreated: (t: ApiTokenCreated) => void }) {
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
       </DialogBody>
       <DialogFooter>
-        <Button type="submit" disabled={mutation.isPending}>
+        <Button type="submit" aria-disabled={mutation.isPending || undefined}>
           {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
           Create token
         </Button>

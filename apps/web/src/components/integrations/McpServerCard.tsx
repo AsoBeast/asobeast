@@ -283,7 +283,10 @@ function ConnectDialog() {
               ) : null}
             </DialogBody>
             <DialogFooter>
-              <Button type="submit" disabled={mutation.isPending}>
+              <Button
+                type="submit"
+                aria-disabled={mutation.isPending || undefined}
+              >
                 {mutation.isPending ? (
                   <Loader2 className="animate-spin" />
                 ) : null}

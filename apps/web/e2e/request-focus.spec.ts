@@ -2590,3 +2590,46 @@ test.describe("settings controls keep focus", () => {
     });
   });
 });
+
+test.describe("token controls keep focus", () => {
+  test("Create token keeps focus while it creates", async ({ page }) => {
+    await serveTokens(page, []);
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/auth\/tokens$/,
+      "POST",
+      refuse,
+    );
+    await page.goto("/integrations");
+    await pressFromKeyboard(page.getByRole("button", { name: "New token" }));
+    const dialog = page.getByRole("dialog", { name: "New API token" });
+    await dialog.getByLabel("Name").fill("ci");
+    const create = dialog.getByRole("button", { name: "Create token" });
+
+    await pressFromKeyboard(create);
+
+    await expectFocusKeptWhileHeld(create, held);
+    await expect(dialog.getByText("down")).toBeVisible();
+  });
+
+  test("Mint token keeps focus while it mints", async ({ page }) => {
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/auth\/tokens$/,
+      "POST",
+      refuse,
+    );
+    await page.goto("/integrations");
+    await pressFromKeyboard(
+      page.getByRole("button", { name: "Connect an agent" }),
+    );
+    const dialog = page.getByRole("dialog", { name: "Connect an agent" });
+    await dialog.getByLabel("Token name").fill("desktop");
+    const mint = dialog.getByRole("button", { name: "Mint token" });
+
+    await pressFromKeyboard(mint);
+
+    await expectFocusKeptWhileHeld(mint, held);
+    await expect(dialog.getByText("down")).toBeVisible();
+  });
+});
