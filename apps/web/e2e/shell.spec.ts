@@ -40,7 +40,9 @@ test("the active section carries aria-current in the sidebar", async ({
   await expect(sections.locator('[aria-current="page"]')).toHaveCount(1);
 });
 
-test("the active section icon takes the ink colour", async ({ page }) => {
+test("the active section icon takes the brand text colour", async ({
+  page,
+}) => {
   await page.goto("/apps/app-1/keywords");
 
   const sections = page.getByRole("navigation", { name: "App sections" });
@@ -50,10 +52,12 @@ test("the active section icon takes the ink colour", async ({ page }) => {
     exact: true,
   });
   await expect(active).toHaveAttribute("aria-current", "page");
-  const ink = await renderedTokenRgb(page, "--sidebar-primary");
+  const brand = await renderedTokenRgb(page, "--brand-text");
 
-  expect(await renderedRgb(active.locator("svg"), "color")).toEqual(ink);
-  expect(await renderedRgb(inactive.locator("svg"), "color")).not.toEqual(ink);
+  expect(await renderedRgb(active.locator("svg"), "color")).toEqual(brand);
+  expect(await renderedRgb(inactive.locator("svg"), "color")).not.toEqual(
+    brand,
+  );
 });
 
 for (const width of DESKTOP_WIDTHS) {

@@ -401,7 +401,7 @@ test.describe("the billing wall", () => {
     expect(await fontSize()).toBe("36px");
 
     await page.setViewportSize({ width: 375, height: 812 });
-    expect(await fontSize()).toBe("22px");
+    expect(await fontSize()).toBe("24px");
   });
 
   test("marks each trust line with a check", async ({ page, context }) => {
