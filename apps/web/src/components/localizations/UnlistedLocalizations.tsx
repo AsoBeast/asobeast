@@ -7,6 +7,7 @@ import { armFocusHandoff } from "@/lib/focus-handoff";
 import { localizationName } from "@/lib/localizations";
 import { apiErrorMessage } from "./api-error-message";
 import { localizationFocusKey } from "./LocalizationItem";
+import { SUB_HEADER, SUB_HEADER_COUNT } from "./panel-rows";
 import { ReaderChips } from "./ReadRoleBadge";
 import { useAddLocalization } from "./useAddLocalization";
 
@@ -25,27 +26,23 @@ export function UnlistedLocalizations({
   if (reads.length === 0) return null;
 
   return (
-    <section aria-labelledby={HEADING_ID} className="flex flex-col gap-2">
-      <h3 id={HEADING_ID} className="font-medium">
-        Not listed yet
+    <section aria-labelledby={HEADING_ID} className="flex flex-col">
+      <h3 id={HEADING_ID} className={SUB_HEADER}>
+        <span>Not listed yet</span>
+        <span className={SUB_HEADER_COUNT}>{reads.length}</span>
       </h3>
-      <p className="text-body text-muted-foreground">
-        {managed
-          ? "Your markets read these localizations. Add one your app ships in App Store Connect and the import brings its keyword field; a localization the store serves is added on its own after the next capture of that market."
-          : "Your markets read these localizations. Add one your app ships in App Store Connect to type its keyword field; a localization the store serves is added on its own after the next capture of that market."}
-      </p>
       <ul
         aria-label="Localizations your markets read that are not listed"
-        className="flex flex-col divide-y divide-border rounded-lg border border-border px-3"
+        className="grid list-none grid-cols-1 gap-x-8 px-4 py-1 @3xl/metadata:grid-cols-2"
       >
         {reads.map(({ localization, readIn }) => {
           const name = localizationName(localization);
           return (
             <li
               key={localization}
-              className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2"
+              className="flex min-h-10 flex-wrap items-center gap-x-3 gap-y-1 border-b border-border-subtle py-1"
             >
-              <span className="font-medium">{name}</span>
+              <span className="text-dense font-medium">{name}</span>
               <span className="ml-auto flex flex-wrap items-center justify-end gap-2">
                 <ReaderChips readers={readIn} />
                 {managed ? null : (
@@ -68,8 +65,13 @@ export function UnlistedLocalizations({
           );
         })}
       </ul>
+      <p className="max-w-[90ch] px-4 pt-1 pb-3 text-caption text-faint-foreground">
+        {managed
+          ? "Your markets read these localizations. Add one your app ships in App Store Connect and the import brings its keyword field; a localization the store serves is added on its own after the next capture of that market."
+          : "Your markets read these localizations. Add one your app ships in App Store Connect to type its keyword field; a localization the store serves is added on its own after the next capture of that market."}
+      </p>
       {error ? (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="px-4 pb-3 text-dense text-destructive">
           {apiErrorMessage(error, "Could not add the localization")}
         </p>
       ) : null}

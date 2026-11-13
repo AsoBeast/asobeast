@@ -13,9 +13,10 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { useFocusClaim } from "@/lib/focus-handoff";
+import { ShareTrack } from "@/components/metadata/ShareTrack";
 import { localizationName } from "@/lib/localizations";
 import { KeywordFieldEditor } from "./KeywordFieldEditor";
-import { OriginBadge } from "./OriginBadge";
+import { OriginMark } from "./OriginMark";
 import { ReaderChips } from "./ReadRoleBadge";
 import { RemoveLocalizationDialog } from "./RemoveLocalizationDialog";
 
@@ -40,25 +41,36 @@ export function LocalizationItem({
   const claimFocus = useFocusClaim(localizationFocusKey(item.localization));
 
   return (
-    <AccordionItem value={item.localization}>
+    <AccordionItem
+      value={item.localization}
+      className="border-border-subtle data-[state=open]:bg-muted data-[state=open]:shadow-[inset_2px_0_0_var(--foreground)]"
+    >
       <AccordionTrigger
         ref={claimFocus}
-        className="items-center hover:no-underline"
+        className="min-h-11 items-center rounded-none px-4 py-2 hover:bg-muted hover:no-underline focus-visible:ring-inset"
       >
-        <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
-          <span className="flex items-center gap-2">
+        <span className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(0,1fr)_auto_auto_11rem]">
+          <span className="flex min-w-0 flex-wrap items-baseline gap-x-2">
             <span className="font-medium">{name}</span>
-            <OriginBadge origin={item.origin} />
+            <OriginMark origin={item.origin} />
           </span>
-          <span className="ml-auto flex flex-wrap items-center justify-end gap-2">
-            <span className="numeric text-caption text-muted-foreground">
-              {`${item.charactersUsed}/${item.charactersLimit}`}
-            </span>
+          <ShareTrack
+            share={
+              item.charactersLimit === 0
+                ? 0
+                : item.charactersUsed / item.charactersLimit
+            }
+            className="w-14 sm:w-28"
+          />
+          <span className="numeric min-w-14 text-right text-label font-normal text-faint-foreground">
+            {`${item.charactersUsed}/${item.charactersLimit}`}
+          </span>
+          <span className="col-span-3 flex flex-wrap items-center gap-1 sm:col-span-1 sm:justify-end">
             <ReaderChips readers={item.readBy} />
           </span>
         </span>
       </AccordionTrigger>
-      <AccordionContent forceMount>
+      <AccordionContent forceMount className="px-4 pb-4">
         <div className="flex flex-col gap-3">
           {onDraft && !managed ? (
             <div>

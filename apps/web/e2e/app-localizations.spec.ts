@@ -37,16 +37,26 @@ test("replaces the storefront card with the app store localizations section", as
 
   const section = page.getByRole("region", { name: SECTION });
   await expect(page.getByRole("heading", { level: 2 })).toHaveText([
-    "Screenshot captions",
-    SECTION,
+    "Metadata",
+    "Coverage by field",
     "Keyword coverage",
+    SECTION,
+    "Screenshot captions",
   ]);
   await expect(
     page.getByRole("region", { name: "Storefront localizations" }),
   ).toHaveCount(0);
+  await section
+    .getByRole("button", { name: "About App Store localizations" })
+    .click();
   await expect(
-    section.getByText("A keyword field belongs to a language"),
+    page
+      .getByRole("dialog", { name: "A keyword field belongs to a language" })
+      .getByText(
+        "Search in every storefront on its list reads it, and words combine only within one localization.",
+      ),
   ).toBeVisible();
+  await page.keyboard.press("Escape");
   await expect(
     section.getByRole("link", { name: /Apple.s localization table/ }),
   ).toHaveAttribute("href", APPLE_URL);
@@ -244,7 +254,7 @@ test.describe("on the locale lab", () => {
     const html = await page.request
       .get(LOCALES_METADATA)
       .then((response) => response.text());
-    expect(html).toContain("A keyword field belongs to a language");
+    expect(html).toContain("Each localization has its own");
     await seedLocalizations(page.request, LOCALES_APP);
 
     const requested: string[] = [];

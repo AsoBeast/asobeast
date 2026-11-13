@@ -1,15 +1,28 @@
 "use client";
 
-import { useMemo } from "react";
+import { useId, useMemo, type ComponentProps } from "react";
 import { flexRender, useTable } from "@tanstack/react-table";
 import { useQueryStates } from "nuqs";
-import type { KeywordCoverageRow, ScreenshotTextState } from "@asobeast/shared";
+import type { KeywordCoverageRow } from "@asobeast/shared";
 import { FilterChips } from "@/components/data-table/FilterChips";
 import { FilteredEmpty } from "@/components/data-table/FilteredEmpty";
 import { RowCount } from "@/components/data-table/RowCount";
 import { SearchInput } from "@/components/data-table/SearchInput";
 import { dataTableFeatures } from "@/components/data-table/table-features";
 import { useUrlSorting } from "@/components/data-table/useUrlSorting";
+import {
+  PANEL_BLEED,
+  PANEL_COUNT,
+  PANEL_HEADER,
+} from "@/components/layout/panel-classes";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -28,15 +41,14 @@ import {
   sortDirectionParser,
 } from "@/lib/search-params";
 import { ariaSort } from "@/lib/table/sorting";
+import { cn } from "@/lib/utils";
+import { coverageColumns, HIDDEN_COVERAGE_COLUMNS } from "./coverage-columns";
 import {
-  coverageColumns,
-  FIELD_ORDER,
-  HIDDEN_COVERAGE_COLUMNS,
-} from "./coverage-columns";
-import {
-  screenshotTextMark,
-  showsScreenshotText,
-} from "./screenshot-text-marks";
+  COVERAGE_SECTION_ID,
+  presentFields,
+  uncoveredRows,
+} from "./coverage-summary";
+import { screenshotTextMark } from "./screenshot-text-marks";
 
 const COVERAGE_PARAMS = {
   ...coverageFilterParsers,
@@ -49,31 +61,82 @@ function ScreenshotTextNote({ rows }: { rows: KeywordCoverageRow[] }) {
     (row) => screenshotTextMark(row) === "unread",
   );
   return (
-    <p className="text-body text-muted-foreground">
+    <span>
       {`Screenshot text is a weak signal that Apple has not confirmed. It never changes whether a keyword counts as covered.${
         withUnreadListing
           ? " A dashed circle means the screenshots of that keyword's listing have not been read yet."
           : ""
       }`}
-    </p>
+    </span>
   );
 }
 
+function CoverageToolbar({
+  q,
+  uncovered,
+  shown,
+  total,
+  onSearch,
+  onUncovered,
+  onClear,
+}: {
+  q: string;
+  uncovered: boolean;
+  shown: number;
+  total: number;
+  onSearch: ComponentProps<typeof SearchInput>["onSearch"];
+  onUncovered: (next: boolean) => void;
+  onClear: () => void;
+}) {
+  const chips = [
+    q
+      ? {
+          key: "q",
+          label: `Search: ${q}`,
+          onRemove: () => onSearch("", {}),
+        }
+      : null,
+    uncovered
+      ? {
+          key: "uncovered",
+          label: "Uncovered only",
+          onRemove: () => onUncovered(false),
+        }
+      : null,
+  ].filter((chip) => chip !== null);
+
+  return (
+    <div className="flex flex-col gap-3 border-b border-border px-4 py-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <SearchInput label="Search keywords" value={q} onSearch={onSearch} />
+        <div className="flex items-center gap-2">
+          <Switch
+            id="uncovered-only"
+            checked={uncovered}
+            onCheckedChange={onUncovered}
+          />
+          <Label htmlFor="uncovered-only">Uncovered only</Label>
+        </div>
+        <RowCount shown={shown} total={total} noun="keyword" />
+      </div>
+      <FilterChips chips={chips} onClearAll={onClear} />
+    </div>
+  );
+}
+
+const columnClass = (id: string, sortable: boolean): string | undefined =>
+  id === "bucket" ? "max-sm:hidden" : sortable ? undefined : "text-center";
+
 export function CoverageTable({
   rows,
-  screenshotText,
+  withScreenshotText,
 }: {
   rows: KeywordCoverageRow[];
-  screenshotText: ScreenshotTextState | null;
+  withScreenshotText: boolean;
 }) {
+  const headingId = useId();
   const [params, setParams] = useQueryStates(COVERAGE_PARAMS);
-  const fields = useMemo(() => {
-    const present = new Set(
-      rows.flatMap((row) => row.fields.map((field) => field.field)),
-    );
-    return FIELD_ORDER.filter((field) => present.has(field));
-  }, [rows]);
-  const withScreenshotText = showsScreenshotText(rows, screenshotText);
+  const fields = useMemo(() => presentFields(rows), [rows]);
   const columns = useMemo(
     () => coverageColumns(fields, withScreenshotText),
     [fields, withScreenshotText],
@@ -107,103 +170,98 @@ export function CoverageTable({
   });
   const shown = table.getRowModel().rows;
   const clearFilters = () => void setParams({ q: null, uncovered: null });
-  const chips = [
-    params.q
-      ? {
-          key: "q",
-          label: `Search: ${params.q}`,
-          onRemove: () => void setParams({ q: null }),
-        }
-      : null,
-    params.uncovered
-      ? {
-          key: "uncovered",
-          label: "Uncovered only",
-          onRemove: () => void setParams({ uncovered: null }),
-        }
-      : null,
-  ].filter((chip) => chip !== null);
-
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-3">
-        <SearchInput
-          label="Search keywords"
-          value={params.q}
-          onSearch={(q, options) => void setParams({ q }, options)}
-        />
-        <div className="flex items-center gap-2">
-          <Switch
-            id="uncovered-only"
-            checked={params.uncovered}
-            onCheckedChange={(next) =>
+    <section
+      id={COVERAGE_SECTION_ID}
+      aria-labelledby={headingId}
+      className="scroll-mt-20"
+    >
+      <Card>
+        <CardHeader className={PANEL_HEADER}>
+          <CardTitle asChild>
+            <h2 id={headingId}>Keyword coverage</h2>
+          </CardTitle>
+          <CardAction className={PANEL_COUNT}>
+            <span className="numeric">
+              {`${rows.length - uncoveredRows(rows).length} of ${rows.length} covered`}
+            </span>
+          </CardAction>
+        </CardHeader>
+        <CardContent className={cn(PANEL_BLEED, "flex flex-col")}>
+          <CoverageToolbar
+            q={params.q}
+            uncovered={params.uncovered}
+            shown={shown.length}
+            total={rows.length}
+            onSearch={(q, options) => void setParams({ q }, options)}
+            onUncovered={(next) =>
               void setParams({ uncovered: next ? true : null })
             }
+            onClear={clearFilters}
           />
-          <Label htmlFor="uncovered-only" className="text-sm">
-            Uncovered only
-          </Label>
-        </div>
-        <RowCount shown={shown.length} total={rows.length} noun="keyword" />
-      </div>
-      <FilterChips chips={chips} onClearAll={clearFilters} />
-      <Table containerClassName="rounded-xl border bg-card">
-        <TableCaption className="sr-only">
-          {`Keyword coverage across ${fields.map((field) => METADATA_FIELD_LABELS[field]).join(", ")}${withScreenshotText ? ", screenshot text" : ""}, with uncovered keywords highlighted.`}
-        </TableCaption>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <TableHead
-                  key={header.id}
-                  aria-sort={ariaSort(header.column.getIsSorted())}
-                  className={
-                    header.column.getCanSort() ? undefined : "text-center"
-                  }
-                >
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext(),
-                  )}
-                </TableHead>
+          <Table>
+            <TableCaption className="sr-only">
+              {`Keyword coverage across ${fields.map((field) => METADATA_FIELD_LABELS[field]).join(", ")}${withScreenshotText ? ", screenshot text" : ""}, with uncovered keywords marked.`}
+            </TableCaption>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <TableHead
+                      key={header.id}
+                      aria-sort={ariaSort(header.column.getIsSorted())}
+                      className={columnClass(
+                        header.column.id,
+                        header.column.getCanSort(),
+                      )}
+                    >
+                      {flexRender(
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      )}
+                    </TableHead>
+                  ))}
+                </TableRow>
               ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {shown.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={table.getVisibleLeafColumns().length}>
-                <FilteredEmpty
-                  title="No keywords match these filters"
-                  onClear={clearFilters}
-                />
-              </TableCell>
-            </TableRow>
-          ) : null}
-          {shown.map((row) => (
-            <TableRow
-              key={row.id}
-              className={
-                row.original.uncovered ? "bg-warning-subtle" : undefined
-              }
-            >
-              {row.getVisibleCells().map((cell) => (
-                <TableCell
-                  key={cell.id}
-                  className={
-                    cell.column.getCanSort() ? undefined : "text-center"
-                  }
-                >
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </TableCell>
+            </TableHeader>
+            <TableBody>
+              {shown.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={table.getVisibleLeafColumns().length}>
+                    <FilteredEmpty
+                      title="No keywords match these filters"
+                      onClear={clearFilters}
+                    />
+                  </TableCell>
+                </TableRow>
+              ) : null}
+              {shown.map((row) => (
+                <TableRow key={row.id}>
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell
+                      key={cell.id}
+                      className={columnClass(
+                        cell.column.id,
+                        cell.column.getCanSort(),
+                      )}
+                    >
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
               ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-      {withScreenshotText ? <ScreenshotTextNote rows={rows} /> : null}
-    </div>
+            </TableBody>
+          </Table>
+        </CardContent>
+        {withScreenshotText ? (
+          <CardFooter>
+            <ScreenshotTextNote rows={rows} />
+          </CardFooter>
+        ) : null}
+      </Card>
+    </section>
   );
 }

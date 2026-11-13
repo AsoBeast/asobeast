@@ -8,7 +8,7 @@ import {
 import { describe, expect, it } from "vitest";
 import {
   LINT_SEVERITY_LABEL,
-  LINT_SEVERITY_VARIANT,
+  LINT_SEVERITY_TONE,
   METADATA_FIELD_LABELS,
 } from "./metadata-display";
 
@@ -55,20 +55,15 @@ describe("store specific metadata fields", () => {
   });
 });
 
-describe("LINT_SEVERITY_VARIANT", () => {
-  it.each(SEVERITIES)("maps the severity %s to a badge variant", (severity) => {
-    expect(LINT_SEVERITY_VARIANT[severity]).toBeTruthy();
+describe("LINT_SEVERITY_TONE", () => {
+  it("gives each severity its own text colour", () => {
+    const tones = SEVERITIES.map((severity) => LINT_SEVERITY_TONE[severity]);
+    expect(new Set(tones).size).toBe(SEVERITIES.length);
   });
 
-  it("maps each severity to a distinct variant", () => {
-    const variants = SEVERITIES.map(
-      (severity) => LINT_SEVERITY_VARIANT[severity],
-    );
-    expect(new Set(variants).size).toBe(SEVERITIES.length);
-  });
-
-  it("escalates an error to the destructive variant", () => {
-    expect(LINT_SEVERITY_VARIANT.error).toBe("destructive");
+  it("writes an error in the down red and a warning in the warn amber", () => {
+    expect(LINT_SEVERITY_TONE.error).toBe("text-signal-down");
+    expect(LINT_SEVERITY_TONE.warn).toBe("text-warning");
   });
 });
 

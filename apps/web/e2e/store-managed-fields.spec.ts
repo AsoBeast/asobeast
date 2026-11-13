@@ -26,9 +26,9 @@ test("imports the keyword field read only when App Store Connect manages it", as
   await expect(
     panel.getByText("Imported from App Store Connect"),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Suggestion" })).toHaveCount(
-    0,
-  );
+  await expect(
+    page.getByRole("heading", { name: /^Suggested keyword field/ }),
+  ).toHaveCount(0);
   await expect(panel.getByText(/last read .+ UTC/)).toBeVisible();
   await expect(panel.getByRole("textbox")).not.toBeEditable();
   await expect(
@@ -79,7 +79,9 @@ test("starts the import from a confirmation dialog", async ({ page }) => {
 
   const section = page.getByRole("region", { name: SECTION });
   const panel = localizationItem(page, "English (U.S.)").panel;
-  await expect(page.getByRole("heading", { name: "Suggestion" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /^Suggested keyword field/ }),
+  ).toBeVisible();
   await expect(
     panel.getByRole("button", { name: "Save keyword field" }),
   ).toBeVisible();

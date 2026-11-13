@@ -1,19 +1,24 @@
 import type { LintIssue } from "@asobeast/shared";
-import { Badge } from "@/components/ui/badge";
 import {
   LINT_SEVERITY_LABEL,
-  LINT_SEVERITY_VARIANT,
+  LINT_SEVERITY_TONE,
 } from "@/lib/metadata-display";
+import { cn } from "@/lib/utils";
 
 export function LintIssueRow({ issue }: { issue: LintIssue }) {
   return (
-    <li className="flex flex-wrap items-center gap-x-2 gap-y-1 text-body text-muted-foreground">
-      <Badge
-        variant={LINT_SEVERITY_VARIANT[issue.severity]}
-        className="h-auto min-h-[22px] max-w-full py-px whitespace-normal"
+    <li className="flex flex-wrap items-baseline gap-x-2 text-dense text-muted-foreground">
+      <span
+        data-slot="lint-severity"
+        className="inline-flex h-5 max-w-full items-center gap-1 text-label"
       >
-        {LINT_SEVERITY_LABEL[issue.severity]} · {issue.rule}
-      </Badge>
+        <span className={cn("shrink-0", LINT_SEVERITY_TONE[issue.severity])}>
+          {LINT_SEVERITY_LABEL[issue.severity]}
+        </span>
+        <span className="truncate font-normal text-faint-foreground">
+          {`· ${issue.rule}`}
+        </span>
+      </span>
       <span className="min-w-0 wrap-anywhere">{issue.message}</span>
     </li>
   );

@@ -7,7 +7,6 @@ import {
   type MetadataField,
 } from "@asobeast/shared";
 import { LintIssueRow } from "@/components/metadata/LintIssueRow";
-import { Meter } from "@/components/ui/meter";
 import { Textarea } from "@/components/ui/textarea";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
 import { cn } from "@/lib/utils";
@@ -16,11 +15,13 @@ export function MetadataFieldCard({
   field,
   value,
   limit,
+  indexed,
   issues,
 }: {
   field: MetadataField;
   value: string;
   limit: number;
+  indexed: boolean;
   issues: LintIssue[];
 }) {
   const countId = useId();
@@ -30,27 +31,27 @@ export function MetadataFieldCard({
   const label = METADATA_FIELD_LABELS[field];
 
   return (
-    <div className="flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-card p-4">
-      <div className="flex items-center justify-between">
-        <span className="font-medium text-foreground">{label}</span>
+    <div className="flex min-w-0 flex-col gap-3 rounded-lg border border-border bg-card px-4 pt-3 pb-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+        <h3 className="flex min-w-0 flex-wrap items-baseline gap-x-2 text-heading font-semibold text-foreground">
+          <span>{label}</span>
+          {indexed ? null : (
+            <span className="text-caption font-normal text-faint-foreground">
+              Not searched by the store
+            </span>
+          )}
+        </h3>
         <span
           id={countId}
           aria-live="polite"
           className={cn(
-            "numeric text-body",
-            over ? "font-semibold text-signal-down" : "text-muted-foreground",
+            "numeric text-label",
+            over ? "text-signal-down" : "text-faint-foreground",
           )}
         >
           {`${used}/${limit}${over ? ` · ${used - limit} over` : ""}`}
         </span>
       </div>
-
-      <Meter
-        value={Math.min(used, limit)}
-        max={limit}
-        tone={over ? "neutral" : "score"}
-        className={over ? "bg-signal-down-subtle" : undefined}
-      />
 
       <Textarea
         value={draft}
@@ -63,14 +64,12 @@ export function MetadataFieldCard({
       />
 
       {issues.length > 0 ? (
-        <ul className="flex flex-col gap-1.5">
+        <ul className="flex list-none flex-col gap-1 p-0">
           {issues.map((issue, index) => (
             <LintIssueRow key={`${issue.rule}-${index}`} issue={issue} />
           ))}
         </ul>
-      ) : (
-        <p className="text-body text-success">No issues.</p>
-      )}
+      ) : null}
     </div>
   );
 }
