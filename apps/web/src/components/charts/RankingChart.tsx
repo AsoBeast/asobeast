@@ -109,23 +109,42 @@ function ChangeMarker(props: {
   );
 }
 
+export function chartMarks(
+  data: RankingChartData,
+  changeDates: readonly string[],
+  annotations: AppAnnotationItem[],
+) {
+  const today = todayUtc();
+  const plotted = new Set(data.rows.map((row) => String(row.date)));
+  return {
+    today,
+    plotted,
+    changes: [...new Set(changeDates)].filter(
+      (date) => date !== today && plotted.has(date),
+    ),
+    annotations: annotationLines(annotations, [...plotted], today),
+  };
+}
+
 export function RankingChart({
   data,
   changeDates = [],
   annotations = [],
   chartRef,
+  ownKey = false,
 }: {
   data: RankingChartData;
   changeDates?: string[];
   annotations?: AppAnnotationItem[];
   chartRef?: Ref<HTMLDivElement>;
+  ownKey?: boolean;
 }) {
-  const today = todayUtc();
-  const plotted = new Set(data.rows.map((row) => String(row.date)));
-  const marked = [...new Set(changeDates)].filter(
-    (date) => date !== today && plotted.has(date),
-  );
-  const annotated = annotationLines(annotations, [...plotted], today);
+  const {
+    today,
+    plotted,
+    changes: marked,
+    annotations: annotated,
+  } = chartMarks(data, changeDates, annotations);
 
   return (
     <div className="flex flex-col gap-2">
@@ -178,14 +197,16 @@ export function RankingChart({
             filterNull={false}
             content={<RankingTooltip data={data} annotations={annotations} />}
           />
-          <ChartLegend
-            content={
-              <SeriesLegend
-                labels={data.seriesLabels}
-                order={data.keywordIds}
-              />
-            }
-          />
+          {ownKey ? null : (
+            <ChartLegend
+              content={
+                <SeriesLegend
+                  labels={data.seriesLabels}
+                  order={data.keywordIds}
+                />
+              }
+            />
+          )}
           {data.keywordIds.map((keywordId, index) => (
             <Line
               {...LINE_PROPS}
@@ -218,7 +239,7 @@ export function RankingChart({
           ))}
         </LineChart>
       </ChartContainer>
-      {marked.length > 0 ? (
+      {marked.length > 0 && !ownKey ? (
         <p className="text-caption text-muted-foreground">
           The triangle marks a day the listing changed.
         </p>
