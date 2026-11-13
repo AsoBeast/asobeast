@@ -115,7 +115,12 @@ export function ActionCenter({ appId }: { appId?: string }) {
       <div className={ACTIONS_GRID}>
         <div className={QUEUE_COLUMN}>
           {isDefaultStatusSet(view.status) ? (
-            <StartHere items={data.items} iconOf={iconOf} onOpen={sheet.open} />
+            <StartHere
+              items={data.items}
+              truncated={data.total > data.items.length}
+              iconOf={iconOf}
+              onOpen={sheet.open}
+            />
           ) : null}
           <section
             id="queue"

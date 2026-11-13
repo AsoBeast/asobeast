@@ -29,7 +29,7 @@ export function ActionRail({
   setView: SetQueueView;
 }) {
   return (
-    <aside aria-label="Queue progress" className={RAIL_COLUMN}>
+    <aside aria-label="Progress and open work" className={RAIL_COLUMN}>
       <section aria-labelledby="progress-heading">
         <Card>
           <CardHeader className={PANEL_HEADER}>

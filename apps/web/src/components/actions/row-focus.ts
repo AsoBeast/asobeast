@@ -6,7 +6,8 @@ const SEARCH_SELECTOR = 'input[aria-label="Search actions"]';
 const queueRows = () => [
   ...document.querySelectorAll<HTMLElement>(ROW_SELECTOR),
 ];
-const searchInput = () => document.querySelector<HTMLElement>(SEARCH_SELECTOR);
+export const searchInput = () =>
+  document.querySelector<HTMLElement>(SEARCH_SELECTOR);
 
 export function focusAfterRemoval(id: string): void {
   const rows = queueRows();

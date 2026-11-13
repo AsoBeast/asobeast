@@ -1,8 +1,9 @@
 "use client";
 
+import { useRef } from "react";
 import Link from "next/link";
 import { ArrowRight, Check } from "lucide-react";
-import type { ActionItem } from "@asobeast/shared";
+import type { ActionItem, ActionUpdateRequest } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { PANEL_COUNT, PANEL_HEADER } from "@/components/layout/panel-classes";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useFocusAfterCommit } from "@/lib/focus-handoff";
 import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ACTION_EVIDENCE_UNAVAILABLE, summarizeEvidence } from "./action-copy";
@@ -21,41 +23,25 @@ import { actionHref, actionSection } from "./action-links";
 import { actionSteps } from "./action-steps";
 import { ActionSnoozeMenu } from "./ActionSnoozeMenu";
 import { ImpactFigure } from "./ImpactFigure";
+import { NumberedSteps } from "./NumberedSteps";
 import { PRIORITY_COLUMNS, PriorityWord } from "./PriorityWord";
+import { searchInput } from "./row-focus";
 import { useActionUpdate } from "./use-action-update";
-
-const STEP_NUMBER =
-  "numeric flex size-5 items-center justify-center rounded-md bg-muted text-tick font-medium text-muted-foreground";
-
-function Steps({ steps }: { steps: readonly string[] }) {
-  return (
-    <ol className="flex list-none flex-col gap-2 p-0 text-dense">
-      {steps.map((step, index) => (
-        <li
-          key={step}
-          className={cn(
-            "grid grid-cols-[1.25rem_minmax(0,1fr)] gap-x-2",
-            index === steps.length - 1 && "text-muted-foreground",
-          )}
-        >
-          <span aria-hidden className={STEP_NUMBER}>
-            {index + 1}
-          </span>
-          <span>{step}</span>
-        </li>
-      ))}
-    </ol>
-  );
-}
 
 function StartControls({
   item,
   onOpen,
+  onLeave,
 }: {
   item: ActionItem;
   onOpen: () => void;
+  onLeave: () => void;
 }) {
-  const { update, isPending: busy } = useActionUpdate(item);
+  const { update: send, isPending: busy } = useActionUpdate(item);
+  const update = (body: ActionUpdateRequest) => {
+    onLeave();
+    send(body);
+  };
   const href = actionHref(item);
 
   return (
@@ -91,13 +77,17 @@ function StartControls({
 
 export function StartHere({
   items,
+  truncated,
   iconOf,
   onOpen,
 }: {
   items: readonly ActionItem[];
+  truncated: boolean;
   iconOf?: (appId: string) => string | null;
   onOpen: (id: string) => void;
 }) {
+  const headline = useRef<HTMLParagraphElement>(null);
+  const handOffFocus = useFocusAfterCommit();
   const open = items.filter((item) => item.status === "OPEN");
   const top = open.reduce<ActionItem | null>(
     (best, item) => (best === null || item.impact > best.impact ? item : best),
@@ -112,9 +102,11 @@ export function StartHere({
           <CardTitle asChild>
             <h2 id="start-heading">Start here</h2>
           </CardTitle>
-          <CardAction className={PANEL_COUNT}>
-            {`highest impact of ${formatNumber(open.length)} open`}
-          </CardAction>
+          {truncated ? null : (
+            <CardAction className={PANEL_COUNT}>
+              {`highest impact of ${formatNumber(open.length)} open`}
+            </CardAction>
+          )}
         </CardHeader>
         <CardContent
           className={cn(
@@ -126,7 +118,11 @@ export function StartHere({
           <div className="flex min-w-0 flex-col gap-3">
             <div className="flex items-start justify-between gap-4">
               <div className="flex min-w-0 flex-col gap-1">
-                <p className="text-heading text-pretty">
+                <p
+                  ref={headline}
+                  tabIndex={-1}
+                  className="rounded-sm text-heading text-pretty outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
                   {actionHeadline(top)}
                 </p>
                 <div className="flex max-w-[70ch] flex-wrap items-center gap-x-2 gap-y-1 text-dense text-muted-foreground">
@@ -145,8 +141,19 @@ export function StartHere({
               </div>
               <ImpactFigure impact={top.impact} labelled />
             </div>
-            <Steps steps={actionSteps(top)} />
-            <StartControls item={top} onOpen={() => onOpen(top.id)} />
+            <NumberedSteps
+              steps={actionSteps(top)}
+              muteLast
+              className="gap-2"
+            />
+            <StartControls
+              key={top.id}
+              item={top}
+              onOpen={() => onOpen(top.id)}
+              onLeave={() =>
+                handOffFocus(open.length > 1 ? headline.current : searchInput())
+              }
+            />
           </div>
         </CardContent>
       </Card>

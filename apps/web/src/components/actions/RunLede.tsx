@@ -3,7 +3,7 @@
 import { Fragment } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { actionActivityScope } from "@/lib/action-filters";
-import { formatDateTime, formatNumber } from "@/lib/format";
+import { formatDateTime, formatNumber, pluralize } from "@/lib/format";
 import { actionActivityOptions, actionSummaryFor } from "@/lib/queries";
 import { NOT_GENERATED_LEDE, QUIET_RUN_LEDE, runChanges } from "./run-lede";
 
@@ -17,16 +17,21 @@ export function RunLede({ appId }: { appId?: string }) {
   const { data: activity } = useSuspenseQuery(
     actionActivityOptions(actionActivityScope(appId)),
   );
-  const changes = runChanges(summary, activity);
+  const run = runChanges(summary, activity);
 
-  if (changes === null) return <span>{NOT_GENERATED_LEDE}</span>;
-  if (changes.length === 0) return <span>{QUIET_RUN_LEDE}</span>;
+  if (run.kind === "never") return <span>{NOT_GENERATED_LEDE}</span>;
+  if (run.kind === "stale") {
+    return (
+      <span>{`The queue was last generated more than ${pluralize(run.days, "day")} ago.`}</span>
+    );
+  }
+  if (run.changes.length === 0) return <span>{QUIET_RUN_LEDE}</span>;
   return (
     <>
-      <span>Since the last run</span>
-      {changes.map((change, index) => (
+      <span>On the day of the last run</span>
+      {run.changes.map((change, index) => (
         <Fragment key={change}>
-          <span>{joiner(index, changes.length)}</span>
+          <span>{joiner(index, run.changes.length)}</span>
           <span className="font-medium text-foreground">{change}</span>
         </Fragment>
       ))}

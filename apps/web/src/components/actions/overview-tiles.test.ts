@@ -22,13 +22,25 @@ describe("overviewTiles", () => {
   });
 
   it("leaves the net change out of a week that opened as many as it closed", () => {
-    const quiet = {
+    const [day] = ACTION_ACTIVITY.days;
+    const even = {
       ...ACTION_ACTIVITY,
-      days: ACTION_ACTIVITY.days.slice(0, 1),
+      days: [
+        { ...day, opened: 2, reopened: 0, done: 1, dismissed: 0, resolved: 1 },
+      ],
     };
 
-    expect(overviewTiles(ACTION_SUMMARY, quiet, ACTIONS)[0]).not.toHaveProperty(
+    expect(overviewTiles(ACTION_SUMMARY, even, ACTIONS)[0]).not.toHaveProperty(
       "delta",
+    );
+  });
+
+  it("does not call the snoozed tile empty when the wake dates are not loaded", () => {
+    expect(overviewTiles(ACTION_SUMMARY, ACTION_ACTIVITY, [])[3]).toMatchObject(
+      {
+        value: "1",
+        note: "waiting for their wake date",
+      },
     );
   });
 

@@ -100,7 +100,7 @@ test("the header states how fresh the queue is", async ({ page }) => {
     /^Generated .+ UTC · 3 withheld by the per app cap$/,
   );
   await expect(page.locator("main header p").first()).toHaveText(
-    "Since the last run 1 action opened and 1 was closed by you.",
+    "On the day of the last run 1 action opened and 1 was closed by you.",
   );
 });
 

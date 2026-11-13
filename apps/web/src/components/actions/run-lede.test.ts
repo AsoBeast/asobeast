@@ -23,10 +23,10 @@ const activityOf = (day: Partial<ActionActivityDay>): ActionActivity => ({
 
 describe("runChanges", () => {
   it("reads what the day of the last run opened and closed", () => {
-    expect(runChanges(ACTION_SUMMARY, ACTION_ACTIVITY)).toEqual([
-      "1 action opened",
-      "1 was closed by you",
-    ]);
+    expect(runChanges(ACTION_SUMMARY, ACTION_ACTIVITY)).toEqual({
+      kind: "day",
+      changes: ["1 action opened", "1 was closed by you"],
+    });
   });
 
   it("counts reopened actions as opened and words each count", () => {
@@ -41,24 +41,33 @@ describe("runChanges", () => {
           verified: 1,
         }),
       ),
-    ).toEqual([
-      "2 actions opened",
-      "2 were closed by you",
-      "2 resolved on their own",
-      "1 was confirmed fixed",
-    ]);
+    ).toEqual({
+      kind: "day",
+      changes: [
+        "2 actions opened",
+        "2 were closed by you",
+        "2 resolved on their own",
+        "1 was confirmed fixed",
+      ],
+    });
   });
 
-  it("is empty for a run that changed nothing or fell outside the window", () => {
-    expect(runChanges(ACTION_SUMMARY, activityOf({}))).toEqual([]);
+  it("is empty for a run day on which nothing opened or closed", () => {
+    expect(runChanges(ACTION_SUMMARY, activityOf({}))).toEqual({
+      kind: "day",
+      changes: [],
+    });
+  });
+
+  it("says the run is older than the activity it can read", () => {
     expect(
       runChanges(ACTION_SUMMARY, activityOf({ date: "2020-01-01", opened: 3 })),
-    ).toEqual([]);
+    ).toEqual({ kind: "stale", days: 1 });
   });
 
   it("is absent before the first generation", () => {
     expect(
       runChanges({ ...ACTION_SUMMARY, generatedAt: null }, ACTION_ACTIVITY),
-    ).toBeNull();
+    ).toEqual({ kind: "never" });
   });
 });

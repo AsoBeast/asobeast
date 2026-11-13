@@ -5,6 +5,10 @@ import { useQuery } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
 import { AppIcon } from "@/components/AppIcon";
 import {
+  failedRead,
+  InlineQueryError,
+} from "@/components/layout/InlineQueryError";
+import {
   LIST_HEAD,
   LIST_ROW,
   PANEL_ACTION,
@@ -22,6 +26,7 @@ import { queueFilters } from "@/lib/action-filters";
 import { formatNumber, pluralize } from "@/lib/format";
 import { actionsOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
+import { opensInPlace } from "./opens-in-place";
 import type { SetQueueView } from "./use-queue-view";
 import {
   workByApp,
@@ -35,6 +40,19 @@ const SCOPE_COLUMNS = "grid grid-cols-[minmax(0,1fr)_auto_2rem] gap-3 px-2";
 const PRIORITY_COUNT = "text-tick font-semibold tracking-wide uppercase";
 
 type Split = "scope" | "type";
+
+function scopeName(row: WorkScopeRow): string {
+  return [
+    row.label,
+    row.counts.critical > 0
+      ? `${formatNumber(row.counts.critical)} critical`
+      : null,
+    row.counts.high > 0 ? `${formatNumber(row.counts.high)} high` : null,
+    `${formatNumber(row.total)} open`,
+  ]
+    .filter((part) => part !== null)
+    .join(", ");
+}
 
 function ScopeLine({
   row,
@@ -52,8 +70,9 @@ function ScopeLine({
   return (
     <a
       href={href}
-      aria-label={`${row.label}, ${formatNumber(row.total)} open`}
+      aria-label={scopeName(row)}
       onClick={(event) => {
+        if (!opensInPlace(event)) return;
         event.preventDefault();
         onFilter();
       }}
@@ -103,8 +122,9 @@ export function ActionWorkByScope({
 }) {
   const pathname = usePathname();
   const [split, setSplit] = useState<Split>("scope");
-  const { data } = useQuery(actionsOptions(queueFilters(), appId));
-  if (!data) return null;
+  const read = useQuery(actionsOptions(queueFilters(), appId));
+  const { data } = read;
+  if (!data && !failedRead(read)) return null;
 
   const scope = appId ? "market" : "app";
   const facet = split === "type" ? "category" : scope;
@@ -113,7 +133,7 @@ export function ActionWorkByScope({
     market: workByMarket,
     category: workByCategory,
   };
-  const rows = tally[facet](data.items);
+  const rows = tally[facet](data?.items ?? []);
   const open = rows.reduce((sum, row) => sum + row.total, 0);
   const hidden = rows.length - SHOWN_SCOPES;
   const scopeLabel = appId ? "Market" : "App";
@@ -140,7 +160,14 @@ export function ActionWorkByScope({
           </CardAction>
         </CardHeader>
         <CardContent className="flex flex-col gap-1 px-2">
-          {rows.length === 0 ? (
+          {!data ? (
+            <div className="px-2 py-2">
+              <InlineQueryError
+                message="Could not load the open work."
+                read={read}
+              />
+            </div>
+          ) : rows.length === 0 ? (
             <p className="py-4 text-center text-body text-muted-foreground">
               Nothing open.
             </p>
@@ -176,7 +203,7 @@ export function ActionWorkByScope({
               {`and ${formatNumber(hidden)} more`}
             </p>
           ) : null}
-          {data.total > data.items.length ? (
+          {data && data.total > data.items.length ? (
             <p className="px-2 text-caption text-muted-foreground">
               {`Counts cover the ${pluralize(data.items.length, "highest impact action")}.`}
             </p>

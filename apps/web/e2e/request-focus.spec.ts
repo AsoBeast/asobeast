@@ -11,6 +11,7 @@ import type {
   WebhookItem,
   WorkspaceTeam,
 } from "@asobeast/shared";
+import { CROWDED_COOKIE } from "./actions-fixtures.mts";
 import { holdRender } from "./chart-image.mts";
 import { openEmbedded } from "./embedded-checkout.mts";
 import {
@@ -2050,38 +2051,40 @@ test.describe("action center row controls keep focus", () => {
 
   const startHere = (page: Page) =>
     page.getByRole("region", { name: "Start here", exact: true });
+  const TOP_ACTION = 'Add "habit tracker" to your metadata';
+  const NEXT_ACTION = 'Defend "streak counter": 2 new apps in the top 10';
 
   for (const [control, item] of [
     ["Done", null],
     ["Snooze", "7 days"],
   ] as const) {
-    test(`${control} in Start here keeps focus while it saves and moves on to the next action`, async ({
+    test(`${control} in Start here hands focus to the next action it shows`, async ({
       page,
     }) => {
       await page.goto("/actions");
-      const button = startHere(page).getByRole("button", {
-        name: control,
-        exact: true,
-      });
+      const start = startHere(page);
+      const next = start.getByText(NEXT_ACTION, { exact: true });
       const held = await holdActionUpdate(page, "act-uncovered");
 
-      await pressFromKeyboard(button);
+      await expect(start.getByText(TOP_ACTION, { exact: true })).toBeVisible();
+      await pressFromKeyboard(
+        start.getByRole("button", { name: control, exact: true }),
+      );
       if (item) await page.getByRole("menuitem", { name: item }).press("Enter");
 
-      await expectFocusKeptWhileHeld(button, held);
+      await expect(next).toBeFocused();
+      held.release();
       await page.waitForLoadState("networkidle");
-      await expect(button).toBeFocused();
+      await expect(next).toBeFocused();
+      expect(await focusLeftForBody(page)).toBe(false);
     });
   }
 
-  test("a refused snooze in Start here leaves focus on Snooze", async ({
+  test("a refused snooze in Start here keeps focus on the action it brings back", async ({
     page,
   }) => {
     await page.goto("/actions");
-    const snooze = startHere(page).getByRole("button", {
-      name: "Snooze",
-      exact: true,
-    });
+    const start = startHere(page);
     const held = await holdRequest(
       page,
       /\/api\/backend\/actions\/act-uncovered$/,
@@ -2089,12 +2092,36 @@ test.describe("action center row controls keep focus", () => {
       refuse,
     );
 
-    await pressFromKeyboard(snooze);
+    await pressFromKeyboard(
+      start.getByRole("button", { name: "Snooze", exact: true }),
+    );
     await page.getByRole("menuitem", { name: "7 days" }).press("Enter");
-    await expect(snooze).toBeFocused();
+    await expect(start.getByText(NEXT_ACTION, { exact: true })).toBeFocused();
     held.release();
 
-    await expect(snooze).toBeFocused();
+    await expect(start.getByText(TOP_ACTION, { exact: true })).toBeFocused();
+    expect(await focusLeftForBody(page)).toBe(false);
+  });
+
+  test("Done on the last open action hands focus to the search field", async ({
+    page,
+    context,
+  }) => {
+    await context.addCookies([
+      { name: CROWDED_COOKIE, value: "1", url: "http://localhost:3000" },
+    ]);
+    await page.goto("/apps/app-2/actions");
+    const held = await holdActionUpdate(page, "act-crowd-3");
+
+    await pressFromKeyboard(
+      startHere(page).getByRole("button", { name: "Done", exact: true }),
+    );
+
+    const search = page.getByRole("textbox", { name: "Search actions" });
+    await expect(search).toBeFocused();
+    held.release();
+    await expect(startHere(page)).toHaveCount(0);
+    await expect(search).toBeFocused();
     expect(await focusLeftForBody(page)).toBe(false);
   });
 

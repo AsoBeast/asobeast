@@ -2,6 +2,17 @@ import type { BrowserContext, Page } from "@playwright/test";
 import { CROWDED_COOKIE, RTL_KEYWORD } from "./actions-fixtures.mts";
 import { expect, test } from "./session.mts";
 
+test.describe.configure({ mode: "serial" });
+
+const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
+const TOP_ACTION = 'Add "habit tracker" to your metadata';
+
+test.beforeEach(async ({ request }) => {
+  await request.post(`${MOCK_API_URL}/__reset/actions`, {
+    failOnStatusCode: true,
+  });
+});
+
 const cookie = (name: string, value: string) => ({
   name,
   value,
@@ -19,16 +30,17 @@ test("start here names the top action, its steps and where to fix it", async ({
 }) => {
   await page.goto("/actions");
   const start = region(page, "Start here");
-  const top = page.locator("#queue li[id^='action-']").first();
 
-  await expect(start.getByRole("listitem").first()).toBeVisible();
-  expect(await start.getByRole("listitem").count()).toBeGreaterThanOrEqual(2);
+  await expect(start.getByText(TOP_ACTION, { exact: true })).toBeVisible();
+  await expect(start.getByRole("listitem")).toHaveText([
+    "1Open the metadata workbench",
+    /^2Put "habit tracker" in the subtitle, or in the keyword field/,
+    "3Ship the change with your next release",
+    /^4AsoBeast confirms the fix/,
+  ]);
   await expect(
-    start.getByRole("link", { name: /^Fix it in / }),
-  ).toHaveAttribute("href", /^\/apps\//);
-  await expect(start).toContainText(
-    (await top.getByRole("link").first().textContent()) ?? "",
-  );
+    start.getByRole("link", { name: "Fix it in Metadata" }),
+  ).toHaveAttribute("href", "/apps/app-1/metadata?keyword=kw-1");
 
   await start.getByRole("button", { name: "See the evidence" }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
@@ -38,8 +50,8 @@ test("start here names the top action, its steps and where to fix it", async ({
 test("start here belongs to the to do list only", async ({ page }) => {
   await page.goto("/actions?status=DISMISSED");
 
-  await expect(region(page, "Queue")).toBeVisible();
-  expect(await region(page, "Start here").count()).toBe(0);
+  await expect(page.locator("[id='action-act-dismissed']")).toBeVisible();
+  await expect(region(page, "Start here")).toHaveCount(0);
 });
 
 test("a row says why its action is there", async ({ page }) => {
@@ -58,7 +70,7 @@ test("the open work can be split by type and filters the queue", async ({
 
   await where.getByRole("tab", { name: "Type" }).click();
   const first = where.getByRole("link").first();
-  await expect(first).toHaveAccessibleName(/^\w+, \d+ open$/);
+  await expect(first).toHaveAccessibleName(/^\w+, (\d+ \w+, )*\d+ open$/);
   await first.click();
 
   await expect(page).toHaveURL(/category=/);
@@ -91,12 +103,19 @@ test("a right to left keyword keeps its row inside a phone screen", async ({
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/actions");
 
+  const row = page.locator("[id='action-act-crowd-1']");
   await expect(
-    page.getByRole("link", { name: new RegExp(RTL_KEYWORD) }).first(),
+    row.getByRole("link", { name: new RegExp(RTL_KEYWORD) }),
   ).toBeVisible();
   expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth + 1,
+    await row.evaluate(
+      (node) =>
+        node.scrollWidth <= node.clientWidth &&
+        [...node.querySelectorAll("*")].every(
+          (child) =>
+            child.getBoundingClientRect().right <=
+            node.getBoundingClientRect().right + 1,
+        ),
     ),
   ).toBe(true);
 });
@@ -114,7 +133,7 @@ test("a cleared queue has nothing to start with and says so", async ({
   await expect(
     region(page, "Queue").getByText("Nothing to do right now"),
   ).toBeVisible();
-  expect(await region(page, "Start here").count()).toBe(0);
+  await expect(region(page, "Start here")).toHaveCount(0);
   await expect(
     region(page, "Where the work is").getByText("Nothing open."),
   ).toBeVisible();

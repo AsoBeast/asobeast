@@ -80,11 +80,13 @@ const BRIEFS: {
       evidence.latestPosition === null
         ? null
         : ["ranks ", strong(rank(evidence.latestPosition))],
-      [
-        evidence.uncoveredFields.length === evidence.indexedFields.length
-          ? "in no indexed field"
-          : `missing from the ${fieldWords(evidence.uncoveredFields)}`,
-      ],
+      evidence.uncoveredFields.length === 0
+        ? null
+        : [
+            evidence.uncoveredFields.length === evidence.indexedFields.length
+              ? "in no indexed field"
+              : `missing from the ${fieldWords(evidence.uncoveredFields)}`,
+          ],
       evidence.keywordFieldCharsFree
         ? [
             strong(formatNumber(evidence.keywordFieldCharsFree)),

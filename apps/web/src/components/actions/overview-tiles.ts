@@ -31,12 +31,13 @@ const openedOn = (days: ActionActivity["days"]): number =>
 const closedOn = (days: ActionActivity["days"]): number =>
   days.reduce((sum, day) => sum + day.done + day.dismissed + day.resolved, 0);
 
-function nextWake(items: readonly ActionItem[]): string {
+function nextWake(items: readonly ActionItem[], snoozed: number): string {
   const dates = items
     .map((item) => item.snoozedUntil)
     .filter((date): date is string => date !== null)
     .sort();
-  return dates.length > 0 ? `next wakes ${formatDate(dates[0])}` : "none";
+  if (dates.length > 0) return `next wakes ${formatDate(dates[0])}`;
+  return snoozed > 0 ? "waiting for their wake date" : "none";
 }
 
 export function overviewTiles(
@@ -72,12 +73,15 @@ export function overviewTiles(
     {
       label: "Confirmed fixed",
       value: formatNumber(activity.totals.verified),
-      note: `${formatNumber(activity.totals.done)} marked done · ${activity.days.length} days`,
+      note: `${formatNumber(activity.totals.done)} marked done · ${pluralize(activity.days.length, "day")}`,
     },
     {
       label: "Snoozed",
       value: formatNumber(summary.snoozed),
-      note: nextWake(todo.filter((item) => item.status === "SNOOZED")),
+      note: nextWake(
+        todo.filter((item) => item.status === "SNOOZED"),
+        summary.snoozed,
+      ),
     },
   ];
   if (summary.generatedAt !== null) return tiles;

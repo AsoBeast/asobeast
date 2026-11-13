@@ -1,6 +1,5 @@
 "use client";
 
-import type { MouseEvent } from "react";
 import { Check, RotateCcw, StickyNote } from "lucide-react";
 import type { ActionItem } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
@@ -15,26 +14,17 @@ import { ActionBrief } from "./ActionBrief";
 import { ActionRowMenu } from "./ActionRowMenu";
 import { isClosed } from "./ActionStateControls";
 import { ImpactFigure } from "./ImpactFigure";
+import { opensInPlace } from "./opens-in-place";
 import { PriorityWord } from "./PriorityWord";
 import { QUEUE_ROW_COLUMNS } from "./queue-layout";
 import { useActionUpdate } from "./use-action-update";
 import type { QueueSelection } from "./use-queue-selection";
 
 const ROW =
-  "relative items-center gap-y-1 border-b border-border-subtle py-1 pr-1 pb-3 outline-none transition-colors duration-150 ease-out last:border-b-0 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset data-[checked=true]:bg-muted data-[focused=true]:bg-muted data-[focused=true]:shadow-[inset_2px_0_0_var(--foreground)] @2xl/queue:items-start @2xl/queue:py-2.5 @2xl/queue:pr-4 @2xl/queue:pl-4";
+  "relative items-center gap-y-1 border-b border-border-subtle py-1 pr-1 pb-3 outline-none transition-colors duration-150 ease-out last:border-b-0 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset data-[checked=true]:bg-muted data-[focused=true]:bg-muted data-[focused=true]:shadow-[inset_2px_0_0_var(--foreground)] @2xl/queue:items-start @2xl/queue:py-3 @2xl/queue:pr-4 @2xl/queue:pl-4";
 
 const SELECT_CELL =
   "relative z-20 col-start-1 row-start-1 flex size-11 items-center justify-center @2xl/queue:size-6";
-
-function opensInPlace(event: MouseEvent<HTMLAnchorElement>): boolean {
-  return (
-    event.button === 0 &&
-    !event.metaKey &&
-    !event.ctrlKey &&
-    !event.shiftKey &&
-    !event.altKey
-  );
-}
 
 function StateMark({ tag }: { tag: ActionStatusTag }) {
   return tag.tone === "warning" ? (
@@ -58,7 +48,7 @@ function RowReason({
 
   return (
     <div className="col-span-3 col-start-2 row-start-3 flex min-w-0 flex-wrap items-start gap-x-2 gap-y-1 pr-2 text-caption text-muted-foreground @2xl/queue:pr-0">
-      <span className="inline-flex shrink-0 items-center gap-1.5">
+      <span className="inline-flex shrink-0 items-center gap-2">
         {iconUrl === undefined ? null : (
           <>
             <AppIcon src={iconUrl} size={16} />
@@ -191,7 +181,7 @@ export function ActionRow({
       <span className="col-start-2 row-start-1 flex">
         <PriorityWord priority={item.priority} />
       </span>
-      <div className="contents @2xl/queue:col-start-3 @2xl/queue:row-start-1 @2xl/queue:flex @2xl/queue:min-w-0 @2xl/queue:flex-col @2xl/queue:gap-0.5">
+      <div className="contents @2xl/queue:col-start-3 @2xl/queue:row-start-1 @2xl/queue:flex @2xl/queue:min-w-0 @2xl/queue:flex-col @2xl/queue:gap-1">
         <a
           href={href}
           className="col-span-3 col-start-2 row-start-2 line-clamp-2 pr-2 text-body font-medium outline-none after:absolute after:inset-0 focus-visible:underline @2xl/queue:pr-0"
