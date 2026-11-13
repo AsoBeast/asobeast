@@ -8,14 +8,16 @@ import {
   type WorkspaceDeletionStatus,
 } from "@asobeast/shared";
 import {
+  closeUnlessPending,
+  ConfirmActionFooter,
+} from "@/components/ConfirmActionFooter";
+import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,11 +35,15 @@ import {
   cancelWorkspaceDeletion,
   scheduleWorkspaceDeletion,
 } from "@/lib/api";
+import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
 import { formatDateTime, pluralize } from "@/lib/format";
 import {
   invalidateWorkspaceDeletion,
   workspaceDeletionOptions,
 } from "@/lib/queries";
+import { useSingleFlight } from "@/lib/single-flight";
+
+const DELETION_FOCUS_KEY = "workspace-deletion";
 
 function messageOf(error: unknown, fallback: string): string {
   return error instanceof ApiError ? error.envelope.message : fallback;
@@ -47,6 +53,7 @@ function ScheduleDeletionDialog({ graceDays }: { graceDays: number }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
+  const claimFocus = useFocusClaim(DELETION_FOCUS_KEY);
 
   const schedule = useMutation({
     mutationFn: scheduleWorkspaceDeletion,
@@ -58,17 +65,21 @@ function ScheduleDeletionDialog({ graceDays }: { graceDays: number }) {
     onError: (err) =>
       toast.error(messageOf(err, "Could not schedule the deletion.")),
   });
+  const scheduleOnce = useSingleFlight(schedule);
+  const pending = schedule.isPending;
 
-  function onOpenChange(next: boolean) {
+  const onOpenChange = closeUnlessPending(pending, (next) => {
     setOpen(next);
     if (!next) setTyped("");
-  }
+  });
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <Button variant="destructive" onClick={() => setOpen(true)}>
-        Delete workspace
-      </Button>
+      <AlertDialogTrigger asChild>
+        <Button ref={claimFocus} variant="destructive">
+          Delete workspace
+        </Button>
+      </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete this workspace?</AlertDialogTitle>
@@ -89,21 +100,17 @@ function ScheduleDeletionDialog({ graceDays }: { graceDays: number }) {
             onChange={(event) => setTyped(event.target.value)}
           />
         </div>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={schedule.isPending}>
-            Keep workspace
-          </AlertDialogCancel>
-          <AlertDialogAction
-            variant="destructive"
-            disabled={typed !== DELETION_CONFIRMATION || schedule.isPending}
-            onClick={(event) => {
-              event.preventDefault();
-              schedule.mutate();
-            }}
-          >
-            {schedule.isPending ? "Scheduling…" : "Delete workspace"}
-          </AlertDialogAction>
-        </AlertDialogFooter>
+        <ConfirmActionFooter
+          pending={pending}
+          label="Delete workspace"
+          pendingLabel="Scheduling…"
+          cancelLabel="Keep workspace"
+          blocked={typed !== DELETION_CONFIRMATION}
+          onConfirm={() => {
+            armFocusHandoff(DELETION_FOCUS_KEY);
+            scheduleOnce();
+          }}
+        />
       </AlertDialogContent>
     </AlertDialog>
   );
@@ -111,6 +118,7 @@ function ScheduleDeletionDialog({ graceDays }: { graceDays: number }) {
 
 function CancelDeletionButton() {
   const queryClient = useQueryClient();
+  const claimFocus = useFocusClaim(DELETION_FOCUS_KEY);
   const cancel = useMutation({
     mutationFn: cancelWorkspaceDeletion,
     onSuccess: () => {
@@ -120,12 +128,18 @@ function CancelDeletionButton() {
     onError: (err) =>
       toast.error(messageOf(err, "Could not cancel the deletion.")),
   });
+  const cancelOnce = useSingleFlight(cancel);
 
   return (
     <Button
+      ref={claimFocus}
       variant="outline"
-      disabled={cancel.isPending}
-      onClick={() => cancel.mutate()}
+      aria-disabled={cancel.isPending || undefined}
+      onClick={() => {
+        if (cancel.isPending) return;
+        armFocusHandoff(DELETION_FOCUS_KEY);
+        cancelOnce();
+      }}
     >
       {cancel.isPending ? "Cancelling…" : "Cancel deletion"}
     </Button>

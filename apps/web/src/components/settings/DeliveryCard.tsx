@@ -19,6 +19,7 @@ import {
 import { flushAlerts } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import { alertDeliveryKey, alertDeliveryOptions } from "@/lib/queries";
+import { useSingleFlight } from "@/lib/single-flight";
 
 function Field({
   label,
@@ -63,6 +64,7 @@ export function DeliveryCard() {
     },
     onError: () => toast.error("Could not flush alerts"),
   });
+  const flushOnce = useSingleFlight(flush);
 
   return (
     <Card>
@@ -74,9 +76,9 @@ export function DeliveryCard() {
         <Button
           variant="outline"
           size="sm"
-          disabled={flush.isPending}
+          aria-disabled={flush.isPending || undefined}
           aria-busy={flush.isPending}
-          onClick={() => flush.mutate()}
+          onClick={() => flushOnce()}
         >
           {flush.isPending ? <Loader2 className="animate-spin" /> : <Send />}
           Flush now

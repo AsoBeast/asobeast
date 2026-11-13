@@ -3,8 +3,10 @@
 import type { AppLocalizationsResult } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { unlistedReads } from "@/lib/app-localizations";
+import { armFocusHandoff } from "@/lib/focus-handoff";
 import { localizationName } from "@/lib/localizations";
 import { apiErrorMessage } from "./api-error-message";
+import { localizationFocusKey } from "./LocalizationItem";
 import { ReaderChips } from "./ReadRoleBadge";
 import { useAddLocalization } from "./useAddLocalization";
 
@@ -51,8 +53,12 @@ export function UnlistedLocalizations({
                     variant="outline"
                     size="xs"
                     aria-label={`Add ${name}`}
-                    disabled={pending}
-                    onClick={() => add(localization)}
+                    aria-disabled={pending || undefined}
+                    onClick={() => {
+                      if (pending) return;
+                      armFocusHandoff(localizationFocusKey(localization));
+                      add(localization);
+                    }}
                   >
                     Add
                   </Button>

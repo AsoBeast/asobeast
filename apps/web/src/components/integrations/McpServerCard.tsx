@@ -30,6 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApiError, createApiToken } from "@/lib/api";
+import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
 import {
   Select,
   SelectContent,
@@ -162,6 +163,8 @@ function ConnectionSnippets({ token }: { token: string }) {
   );
 }
 
+const MINTED_DONE_FOCUS_KEY = "mcp-token-done";
+
 function ConnectDialog() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -169,6 +172,7 @@ function ConnectDialog() {
   const [created, setCreated] = useState<ApiTokenCreated | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [allowChanges, setAllowChanges] = useState(false);
+  const claimFocus = useFocusClaim(MINTED_DONE_FOCUS_KEY);
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -207,6 +211,7 @@ function ConnectDialog() {
       setError("Give the token a name.");
       return;
     }
+    armFocusHandoff(MINTED_DONE_FOCUS_KEY);
     createOnce();
   }
 
@@ -231,7 +236,11 @@ function ConnectDialog() {
               <ConnectionSnippets token={created.token} />
             </DialogBody>
             <DialogFooter>
-              <Button type="button" onClick={() => reset(false)}>
+              <Button
+                ref={claimFocus}
+                type="button"
+                onClick={() => reset(false)}
+              >
                 Done
               </Button>
             </DialogFooter>
@@ -283,7 +292,10 @@ function ConnectDialog() {
               ) : null}
             </DialogBody>
             <DialogFooter>
-              <Button type="submit" disabled={mutation.isPending}>
+              <Button
+                type="submit"
+                aria-disabled={mutation.isPending || undefined}
+              >
                 {mutation.isPending ? (
                   <Loader2 className="animate-spin" />
                 ) : null}

@@ -18,12 +18,16 @@ export function ConfirmActionFooter({
   pendingLabel,
   onConfirm,
   variant = "destructive",
+  cancelLabel = "Cancel",
+  blocked = false,
 }: {
   pending: boolean;
   label: string;
   pendingLabel: string;
   onConfirm: () => void;
   variant?: "default" | "destructive";
+  cancelLabel?: string;
+  blocked?: boolean;
 }) {
   return (
     <AlertDialogFooter>
@@ -33,10 +37,11 @@ export function ConfirmActionFooter({
           if (pending) event.preventDefault();
         }}
       >
-        Cancel
+        {cancelLabel}
       </AlertDialogCancel>
       <AlertDialogAction
         variant={variant}
+        disabled={blocked}
         aria-disabled={pending || undefined}
         onClick={(event) => {
           event.preventDefault();

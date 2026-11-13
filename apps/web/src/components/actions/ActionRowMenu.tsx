@@ -13,32 +13,34 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ActionDismissSubMenu } from "./ActionDismissMenu";
 import { SNOOZE_PRESET_DAYS, snoozeUntil } from "./ActionSnoozeMenu";
+import { useBusyMenu } from "./use-busy-menu";
 
 export function ActionRowMenu({
   item,
   headline,
   href,
-  disabled,
+  busy,
   onUpdate,
 }: {
   item: ActionItem;
   headline: string;
   href: string;
-  disabled: boolean;
+  busy: boolean;
   onUpdate: (body: ActionUpdateRequest) => void;
 }) {
+  const menu = useBusyMenu(busy);
   const copyLink = async () => {
     await navigator.clipboard.writeText(`${window.location.origin}${href}`);
     toast.success("Link copied");
   };
 
   return (
-    <DropdownMenu>
+    <DropdownMenu {...menu}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
           size="icon-sm"
-          disabled={disabled}
+          aria-disabled={busy || undefined}
           aria-label={`More actions for ${headline}`}
           data-command="more"
           className="size-11 @2xl/queue:size-7"

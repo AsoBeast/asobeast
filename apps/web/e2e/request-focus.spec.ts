@@ -1,9 +1,15 @@
-import type { BrowserContext, Locator, Page } from "@playwright/test";
+import type { BrowserContext, Locator, Page, Route } from "@playwright/test";
 import type {
+  ActionListResult,
+  ActionUpdateRequest,
+  ApiTokenCreated,
   ApiTokenItem,
+  AppLocalizationItem,
+  AppLocalizationsResult,
   CompetitorItem,
   TrackedKeywordItem,
   WebhookItem,
+  WorkspaceTeam,
 } from "@asobeast/shared";
 import { holdRender } from "./chart-image.mts";
 import { openEmbedded } from "./embedded-checkout.mts";
@@ -30,7 +36,7 @@ import {
   requestInspection,
 } from "./keyword-inspections-mock.mts";
 import { MOCK_API_URL, seedLocalizations } from "./localizations.mts";
-import { fulfillJson } from "./plan-helpers.mts";
+import { fulfillJson, routePlan } from "./plan-helpers.mts";
 import { activateTwiceInOneTask, hydrated } from "./hydrated.mts";
 import {
   answerTrack,
@@ -40,6 +46,7 @@ import {
 import { expect, test } from "./session.mts";
 import { STORE_CONNECTION_COOKIE } from "./store-connections.mts";
 import { startedSetup } from "./setup-session.mts";
+import { TRIALING_PLAN } from "./trial-plans.mts";
 import { seedChecklist } from "./workspace-checklist.mts";
 
 const seedCookie = (context: BrowserContext, name: string, value = "1") =>
@@ -1962,5 +1969,867 @@ test.describe("the keyword inspector keeps focus", () => {
     held.release();
     await expect(chip).toHaveAccessibleName("Inspecting focus hop app");
     await expect(chip).toBeFocused();
+  });
+});
+
+const refuse = (route: Route) =>
+  route.fulfill(
+    fulfillJson(500, {
+      statusCode: 500,
+      error: "Server Error",
+      message: "down",
+      path: new URL(route.request().url()).pathname,
+      timestamp: new Date().toISOString(),
+    }),
+  );
+
+const focusLeftForBody = (page: Page) =>
+  page.evaluate(() => document.activeElement === document.body);
+
+test.describe("action center row controls keep focus", () => {
+  const row = (page: Page, id: string) => page.locator(`[id='action-${id}']`);
+
+  async function holdActionUpdate(page: Page, id: string) {
+    let applied: ActionUpdateRequest | null = null;
+    await page.route(/\/api\/backend\/actions(\?.*)?$/, async (route) => {
+      const update = applied;
+      if (route.request().method() !== "GET" || update === null) {
+        return route.fallback();
+      }
+      const list: ActionListResult = await (await route.fetch()).json();
+      return route.fulfill({
+        json: {
+          ...list,
+          items: list.items.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  status: update.status,
+                  snoozedUntil:
+                    update.status === "SNOOZED"
+                      ? (update.snoozedUntil ?? null)
+                      : null,
+                }
+              : item,
+          ),
+        },
+      });
+    });
+    return holdRequest(
+      page,
+      new RegExp(`/api/backend/actions/${id}$`),
+      "PATCH",
+      (route) => {
+        applied = route.request().postDataJSON() as ActionUpdateRequest;
+        return route.fulfill({ json: {} });
+      },
+    );
+  }
+
+  for (const [id, item] of [
+    ["act-uncovered", "Snooze 7 days"],
+    ["act-snoozed", "Wake now"],
+  ] as const) {
+    test(`${item} from the row menu keeps focus on the menu while it saves`, async ({
+      page,
+    }) => {
+      await page.goto("/actions");
+      const menu = row(page, id).getByRole("button", {
+        name: /^More actions for /,
+      });
+      const held = await holdActionUpdate(page, id);
+
+      await pressFromKeyboard(menu);
+      await page.getByRole("menuitem", { name: item }).press("Enter");
+
+      await expectFocusKeptWhileHeld(menu, held);
+      await page.waitForLoadState("networkidle");
+      await expect(menu).toBeFocused();
+    });
+  }
+
+  test("snoozing from the row hands focus to the wake button while it saves", async ({
+    page,
+  }) => {
+    await page.goto("/actions");
+    const snooze = row(page, "act-uncovered").getByRole("button", {
+      name: "Snooze",
+      exact: true,
+    });
+    const wake = row(page, "act-uncovered").getByRole("button", {
+      name: /^Wakes /,
+    });
+    const held = await holdActionUpdate(page, "act-uncovered");
+
+    await pressFromKeyboard(snooze);
+    await page.getByRole("menuitem", { name: "7 days" }).press("Enter");
+
+    await expectFocusKeptWhileHeld(wake, held);
+    await page.waitForLoadState("networkidle");
+    await expect(wake).toBeFocused();
+  });
+
+  test("waking from the row hands focus to Snooze while it saves", async ({
+    page,
+  }) => {
+    await page.goto("/actions");
+    const wake = row(page, "act-snoozed").getByRole("button", {
+      name: /^Wakes /,
+    });
+    const snooze = row(page, "act-snoozed").getByRole("button", {
+      name: "Snooze",
+      exact: true,
+    });
+    const held = await holdActionUpdate(page, "act-snoozed");
+
+    await pressFromKeyboard(wake);
+
+    await expectFocusKeptWhileHeld(snooze, held);
+    await page.waitForLoadState("networkidle");
+    await expect(snooze).toBeFocused();
+  });
+
+  test("a refused snooze hands focus back to Snooze", async ({ page }) => {
+    await page.goto("/actions");
+    const snooze = row(page, "act-uncovered").getByRole("button", {
+      name: "Snooze",
+      exact: true,
+    });
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/actions\/act-uncovered$/,
+      "PATCH",
+      refuse,
+    );
+
+    await pressFromKeyboard(snooze);
+    await page.getByRole("menuitem", { name: "7 days" }).press("Enter");
+    await expect(
+      row(page, "act-uncovered").getByRole("button", { name: /^Wakes / }),
+    ).toBeFocused();
+    held.release();
+
+    await expect(snooze).toBeFocused();
+    expect(await focusLeftForBody(page)).toBe(false);
+  });
+
+  test("a busy row menu stays shut", async ({ page }) => {
+    await page.goto("/actions");
+    const menu = row(page, "act-uncovered").getByRole("button", {
+      name: /^More actions for /,
+    });
+    const held = await holdActionUpdate(page, "act-uncovered");
+
+    await pressFromKeyboard(menu);
+    await page.getByRole("menuitem", { name: "Snooze 7 days" }).press("Enter");
+    await expect(menu).toHaveAttribute("aria-disabled", "true");
+    await page.keyboard.press("Enter");
+
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    await expect(menu).toBeFocused();
+    held.release();
+  });
+});
+
+test.describe("metadata controls keep focus", () => {
+  const localizations = (page: Page) =>
+    page.getByRole("region", { name: "App Store localizations" });
+  const spanish = "/apps/app-1/metadata?fieldLocale=es-MX";
+  const LOCALIZATIONS = /\/api\/backend\/apps\/app-1\/localizations$/;
+
+  async function openSaveReview(page: Page) {
+    await page.goto(spanish);
+    const editor = page.getByRole("textbox", {
+      name: "Spanish (Mexico) keyword field",
+    });
+    await (await hydrated(editor)).fill("temporizador,enfoque,reloj");
+    await localizations(page)
+      .getByRole("button", { name: "Save keyword field" })
+      .click();
+    const dialog = page.getByRole("dialog", {
+      name: "Save the Spanish (Mexico) keyword field",
+    });
+    await expect(dialog).toBeVisible();
+    return dialog;
+  }
+
+  const holdSave = (page: Page) =>
+    holdRequest(
+      page,
+      /\/api\/backend\/apps\/app-1\/keyword-fields\/es-MX$/,
+      "PUT",
+      refuse,
+    );
+
+  test("Save keyword field keeps focus while the field is checked", async ({
+    page,
+  }) => {
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/apps\/app-1\/keyword-fields\/es-MX\/preview$/,
+      "POST",
+      refuse,
+    );
+    await page.goto(spanish);
+    await (
+      await hydrated(
+        page.getByRole("textbox", { name: "Spanish (Mexico) keyword field" }),
+      )
+    ).fill("temporizador,enfoque,reloj");
+    const save = localizations(page).getByRole("button", {
+      name: /^(Save keyword field|Saving…)$/,
+    });
+
+    await pressFromKeyboard(save);
+
+    await expectFocusKeptWhileHeld(save, held);
+    await expect(localizations(page).getByRole("alert")).toHaveText("down");
+  });
+
+  test("the save review confirm keeps focus while the save runs", async ({
+    page,
+  }) => {
+    const dialog = await openSaveReview(page);
+    const held = await holdSave(page);
+    const confirm = dialog.getByRole("button", {
+      name: /^(Save and track|Saving…)$/,
+    });
+
+    await pressFromKeyboard(confirm);
+    await expect(confirm).toHaveAttribute("aria-disabled", "true");
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeVisible();
+
+    await expectFocusKeptWhileHeld(confirm, held);
+    await expect(dialog.getByRole("alert")).toHaveText("down");
+  });
+
+  test("the save review Cancel stays focusable and keeps the dialog while the save runs", async ({
+    page,
+  }) => {
+    const dialog = await openSaveReview(page);
+    const held = await holdSave(page);
+    const cancel = dialog.getByRole("button", { name: "Cancel" });
+
+    await pressFromKeyboard(
+      dialog.getByRole("button", { name: "Save and track" }),
+    );
+    await expect(cancel).toHaveAttribute("aria-disabled", "true");
+    await cancel.focus();
+    await expect(cancel).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(dialog).toBeVisible();
+    held.release();
+
+    await expect(dialog.getByRole("alert")).toHaveText("down");
+    await expect(cancel).not.toHaveAttribute("aria-disabled", "true");
+    await cancel.press("Enter");
+    await expect(dialog).toBeHidden();
+    await expect(
+      localizations(page).getByRole("button", { name: "Save keyword field" }),
+    ).toBeFocused();
+  });
+
+  test("Find localizations keeps focus while it queues", async ({ page }) => {
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/apps\/app-1\/localizations\/detect$/,
+      "POST",
+      (route) => route.fulfill(fulfillJson(202, { queued: 0 })),
+    );
+    await page.goto("/apps/app-1/metadata");
+    const find = localizations(page).getByRole("button", {
+      name: "Find localizations",
+    });
+
+    await pressFromKeyboard(find);
+
+    await expectFocusKeptWhileHeld(find, held);
+  });
+
+  test("an unlisted Add keeps focus while it adds", async ({ page }) => {
+    const held = await holdRequest(page, LOCALIZATIONS, "POST", refuse);
+    await page.goto("/apps/app-1/metadata");
+    const add = localizations(page).getByRole("button", {
+      name: "Add Arabic",
+    });
+
+    await pressFromKeyboard(add);
+
+    await expectFocusKeptWhileHeld(add, held);
+    await expect(localizations(page).getByRole("alert")).toHaveText("down");
+  });
+
+  test("the remove confirmation keeps focus and stays open while it removes", async ({
+    page,
+  }) => {
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/apps\/app-1\/localizations\/es-MX$/,
+      "DELETE",
+      refuse,
+    );
+    await page.goto(spanish);
+    const opener = localizations(page).getByRole("button", {
+      name: "Remove localization",
+    });
+
+    await pressFromKeyboard(opener);
+    const dialog = page.getByRole("alertdialog", {
+      name: "Remove Spanish (Mexico)?",
+    });
+    const confirm = dialog.getByRole("button", {
+      name: /^(Remove|Removing…)$/,
+    });
+    const cancel = dialog.getByRole("button", { name: "Cancel" });
+    await confirm.press("Enter");
+    await expect(confirm).toHaveAttribute("aria-disabled", "true");
+    await expect(confirm).toBeFocused();
+    await page.keyboard.press("Escape");
+    await cancel.focus();
+    await expect(cancel).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(dialog).toBeVisible();
+    held.release();
+
+    await expect(confirm).not.toHaveAttribute("aria-disabled", "true");
+    await cancel.press("Enter");
+    await expect(dialog).toBeHidden();
+    await expect(opener).toBeFocused();
+  });
+
+  async function serveLocalizations(
+    page: Page,
+    change: (listed: AppLocalizationsResult) => AppLocalizationsResult,
+  ) {
+    const listed: AppLocalizationsResult = await (
+      await page.request.get("/api/backend/apps/app-1/localizations")
+    ).json();
+    let changed = false;
+    await page.route(LOCALIZATIONS, (route) =>
+      changed && route.request().method() === "GET"
+        ? route.fulfill({ json: change(listed) })
+        : route.fallback(),
+    );
+    return () => {
+      changed = true;
+    };
+  }
+
+  test("a confirmed removal hands focus to the localization before it", async ({
+    page,
+  }) => {
+    const remove = await serveLocalizations(page, (listed) => ({
+      ...listed,
+      localizations: listed.localizations.filter(
+        (item) => item.localization !== "es-MX",
+      ),
+    }));
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/apps\/app-1\/localizations\/es-MX$/,
+      "DELETE",
+      (route) => {
+        remove();
+        return route.fulfill({ status: 204 });
+      },
+    );
+    await page.goto(spanish);
+
+    await pressFromKeyboard(
+      localizations(page).getByRole("button", { name: "Remove localization" }),
+    );
+    await confirmIn(page, "Remove");
+    held.release();
+
+    await expect(page.getByRole("alertdialog")).toBeHidden();
+    await expect(
+      localizations(page).getByRole("button", { name: /^Polish/ }),
+    ).toBeFocused();
+  });
+
+  test("an unlisted Add hands focus to the localization it adds", async ({
+    page,
+  }) => {
+    const arabic: AppLocalizationItem = {
+      localization: "ar",
+      origin: "manual",
+      phrases: [],
+      charactersUsed: 0,
+      charactersLimit: 100,
+      readBy: [{ country: "us", role: "additional", home: true }],
+      updatedAt: null,
+    };
+    const add = await serveLocalizations(page, (listed) => ({
+      ...listed,
+      localizations: [...listed.localizations, arabic],
+    }));
+    const held = await holdRequest(page, LOCALIZATIONS, "POST", (route) => {
+      add();
+      return route.fulfill(fulfillJson(201, arabic));
+    });
+    await page.goto("/apps/app-1/metadata");
+
+    await pressFromKeyboard(
+      localizations(page).getByRole("button", { name: "Add Arabic" }),
+    );
+    held.release();
+
+    await expect(page.getByText("Added Arabic")).toBeVisible();
+    await expect(
+      localizations(page).getByRole("button", { name: /^Arabic/ }),
+    ).toBeFocused();
+  });
+
+  test("an unlisted Add leaves focus where the user moved it while adding", async ({
+    page,
+  }) => {
+    const arabic: AppLocalizationItem = {
+      localization: "ar",
+      origin: "manual",
+      phrases: [],
+      charactersUsed: 0,
+      charactersLimit: 100,
+      readBy: [{ country: "us", role: "additional", home: true }],
+      updatedAt: null,
+    };
+    const add = await serveLocalizations(page, (listed) => ({
+      ...listed,
+      localizations: [...listed.localizations, arabic],
+    }));
+    const held = await holdRequest(page, LOCALIZATIONS, "POST", (route) => {
+      add();
+      return route.fulfill(fulfillJson(201, arabic));
+    });
+    await page.goto("/apps/app-1/metadata");
+    const find = localizations(page).getByRole("button", {
+      name: "Find localizations",
+    });
+
+    await pressFromKeyboard(
+      localizations(page).getByRole("button", { name: "Add Arabic" }),
+    );
+    await find.focus();
+    held.release();
+
+    await expect(page.getByText("Added Arabic")).toBeVisible();
+    await expect(
+      localizations(page).getByRole("button", { name: /^Arabic/ }),
+    ).toBeVisible();
+    await expect(find).toBeFocused();
+  });
+
+  test.describe("Generate drafts", () => {
+    test.beforeEach(({ context }) => seedCookie(context, "e2e_metadata_ai"));
+
+    test("keeps focus while the drafts are written", async ({ page }) => {
+      const held = await holdRequest(
+        page,
+        /\/api\/backend\/apps\/app-1\/metadata\/assistant$/,
+        "POST",
+      );
+      await page.goto("/apps/app-1/metadata");
+      const generate = page.getByRole("button", { name: "Generate drafts" });
+
+      await pressFromKeyboard(generate);
+
+      await expect(generate).toHaveAttribute("aria-disabled", "true");
+      await expect(generate).toBeFocused();
+      held.release();
+      const regenerate = page.getByRole("button", { name: "Regenerate" });
+      await expect(regenerate).not.toHaveAttribute("aria-disabled", "true");
+      await expect(regenerate).toBeFocused();
+    });
+  });
+});
+
+test.describe("settings controls keep focus", () => {
+  test("Flush now keeps focus while it flushes", async ({ page }) => {
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/alerts\/flush$/,
+      "POST",
+      (route) =>
+        route.fulfill(
+          fulfillJson(200, { flushed: 0, channels: 0, notifications: 0 }),
+        ),
+    );
+    await page.goto("/settings");
+    const flush = page.getByRole("button", { name: "Flush now" });
+
+    await pressFromKeyboard(flush);
+
+    await expectFocusKeptWhileHeld(flush, held);
+    await expect(page.getByText("Nothing to flush")).toBeVisible();
+  });
+
+  test("Manage billing keeps focus while the portal opens", async ({
+    page,
+  }) => {
+    await routePlan(page, TRIALING_PLAN);
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/billing\/portal$/,
+      "POST",
+      refuse,
+    );
+    await page.goto("/settings");
+    const manage = page.getByRole("button", { name: "Manage billing" });
+
+    await pressFromKeyboard(manage);
+
+    await expectFocusKeptWhileHeld(manage, held);
+  });
+
+  test("Send invitation keeps focus while it sends", async ({ page }) => {
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/workspace\/invites$/,
+      "POST",
+      refuse,
+    );
+    await page.goto("/settings");
+    await pressFromKeyboard(
+      page.getByRole("button", { name: "Invite member" }),
+    );
+    const dialog = page.getByRole("dialog", { name: "Invite a member" });
+    await dialog.getByLabel("Email").fill("new@example.com");
+    const send = dialog.getByRole("button", { name: "Send invitation" });
+
+    await pressFromKeyboard(send);
+
+    await expectFocusKeptWhileHeld(send, held);
+    await expect(dialog.getByText("down")).toBeVisible();
+  });
+
+  for (const [name, id, path] of [
+    ["Remove teammate@example.com", "u2", "members"],
+    ["Revoke the invitation for pending@example.com", "inv1", "invites"],
+  ] as const) {
+    test(`${name} keeps focus while it runs, then hands it to Invite member`, async ({
+      page,
+    }) => {
+      let removed: string | null = null;
+      await page.route(/\/api\/backend\/workspace\/team$/, async (route) => {
+        const team: WorkspaceTeam = await (await route.fetch()).json();
+        return route.fulfill({
+          json: {
+            members: team.members.filter((member) => member.id !== removed),
+            invites: team.invites.filter((invite) => invite.id !== removed),
+          },
+        });
+      });
+      const held = await holdRequest(
+        page,
+        new RegExp(`/api/backend/workspace/${path}/${id}$`),
+        "DELETE",
+        (route) => {
+          removed = id;
+          return route.fulfill({ status: 204 });
+        },
+      );
+      await page.goto("/settings");
+      const control = page.getByRole("button", { name });
+
+      await pressFromKeyboard(control);
+      await expect(control).toHaveAttribute("aria-disabled", "true");
+      await expect(control).toBeFocused();
+      held.release();
+
+      await expect(control).toHaveCount(0);
+      await expect(
+        page.getByRole("button", { name: "Invite member" }),
+      ).toBeFocused();
+    });
+  }
+
+  test.describe("workspace deletion", () => {
+    const workspace = (page: Page) =>
+      page.getByRole("region", { name: "Workspace" });
+
+    for (const close of ["Escape", "Keep workspace"] as const) {
+      test(`closing the deletion dialog with ${close} returns focus to its opener`, async ({
+        page,
+      }) => {
+        await page.goto("/settings#workspace");
+        const opener = workspace(page).getByRole("button", {
+          name: "Delete workspace",
+        });
+
+        await pressFromKeyboard(opener);
+        const dialog = page.getByRole("alertdialog");
+        await expect(dialog).toBeVisible();
+        if (close === "Escape") await page.keyboard.press("Escape");
+        else await dialog.getByRole("button", { name: close }).press("Enter");
+
+        await expect(dialog).toBeHidden();
+        await expect(opener).toBeFocused();
+      });
+    }
+
+    test("the confirm keeps focus while it schedules, then hands it to Cancel deletion", async ({
+      page,
+    }) => {
+      const held = await holdRequest(
+        page,
+        /\/api\/backend\/account\/deletion$/,
+        "POST",
+      );
+      await page.goto("/settings#workspace");
+      await pressFromKeyboard(
+        workspace(page).getByRole("button", { name: "Delete workspace" }),
+      );
+      const dialog = page.getByRole("alertdialog");
+      await dialog.getByLabel("Type DELETE to confirm").fill("DELETE");
+      const confirm = dialog.getByRole("button", {
+        name: /^(Delete workspace|Scheduling…)$/,
+      });
+
+      await confirm.press("Enter");
+      await expect(confirm).toHaveAttribute("aria-disabled", "true");
+      await expect(confirm).toBeFocused();
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeVisible();
+      held.release();
+
+      await expect(dialog).toBeHidden();
+      await expect(
+        workspace(page).getByRole("button", { name: "Cancel deletion" }),
+      ).toBeFocused();
+    });
+
+    test("Cancel deletion leaves focus where the owner moved it while cancelling", async ({
+      page,
+      context,
+    }) => {
+      await seedCookie(
+        context,
+        "workspace_deletion_requested",
+        new Date().toISOString(),
+      );
+      const held = await holdRequest(
+        page,
+        /\/api\/backend\/account\/deletion$/,
+        "DELETE",
+      );
+      await page.goto("/settings#workspace");
+      const flush = page.getByRole("button", { name: "Flush now" });
+
+      await pressFromKeyboard(
+        workspace(page).getByRole("button", { name: "Cancel deletion" }),
+      );
+      await flush.focus();
+      held.release();
+
+      await expect(
+        workspace(page).getByRole("button", { name: "Delete workspace" }),
+      ).toBeVisible();
+      await expect(flush).toBeFocused();
+    });
+
+    test("Cancel deletion keeps focus while it cancels, then hands it to Delete workspace", async ({
+      page,
+      context,
+    }) => {
+      await seedCookie(
+        context,
+        "workspace_deletion_requested",
+        new Date().toISOString(),
+      );
+      const held = await holdRequest(
+        page,
+        /\/api\/backend\/account\/deletion$/,
+        "DELETE",
+      );
+      await page.goto("/settings#workspace");
+      const cancel = workspace(page).getByRole("button", {
+        name: /^(Cancel deletion|Cancelling…)$/,
+      });
+
+      await pressFromKeyboard(cancel);
+      await expect(cancel).toHaveAttribute("aria-disabled", "true");
+      await expect(cancel).toBeFocused();
+      held.release();
+
+      await expect(
+        workspace(page).getByRole("button", { name: "Delete workspace" }),
+      ).toBeFocused();
+      expect(await focusLeftForBody(page)).toBe(false);
+    });
+  });
+});
+
+test.describe("token controls keep focus", () => {
+  test("Create token keeps focus while it creates", async ({ page }) => {
+    await serveTokens(page, []);
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/auth\/tokens$/,
+      "POST",
+      refuse,
+    );
+    await page.goto("/integrations");
+    await pressFromKeyboard(page.getByRole("button", { name: "New token" }));
+    const dialog = page.getByRole("dialog", { name: "New API token" });
+    await dialog.getByLabel("Name").fill("ci");
+    const create = dialog.getByRole("button", { name: "Create token" });
+
+    await pressFromKeyboard(create);
+
+    await expectFocusKeptWhileHeld(create, held);
+    await expect(dialog.getByText("down")).toBeVisible();
+  });
+
+  test("Mint token keeps focus while it mints", async ({ page }) => {
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/auth\/tokens$/,
+      "POST",
+      refuse,
+    );
+    await page.goto("/integrations");
+    await pressFromKeyboard(
+      page.getByRole("button", { name: "Connect an agent" }),
+    );
+    const dialog = page.getByRole("dialog", { name: "Connect an agent" });
+    await dialog.getByLabel("Token name").fill("desktop");
+    const mint = dialog.getByRole("button", { name: "Mint token" });
+
+    await pressFromKeyboard(mint);
+
+    await expectFocusKeptWhileHeld(mint, held);
+    await expect(dialog.getByText("down")).toBeVisible();
+  });
+});
+
+test.describe("a created token hands focus to Done", () => {
+  const created: ApiTokenCreated = { ...token("t9", "ci"), token: "asob_t9" };
+
+  test.beforeEach(async ({ page }) => {
+    await serveTokens(page, []);
+    await page.route(/\/api\/backend\/auth\/tokens$/, (route) =>
+      route.request().method() === "POST"
+        ? route.fulfill(fulfillJson(201, created))
+        : route.fallback(),
+    );
+    await page.goto("/integrations");
+  });
+
+  for (const [opener, title, field, submit] of [
+    ["New token", "New API token", "Name", "Create token"],
+    ["Connect an agent", "Connect an agent", "Token name", "Mint token"],
+  ] as const) {
+    test(`from ${submit}`, async ({ page }) => {
+      await pressFromKeyboard(page.getByRole("button", { name: opener }));
+      await page
+        .getByRole("dialog", { name: title })
+        .getByLabel(field)
+        .fill("ci");
+
+      await pressFromKeyboard(page.getByRole("button", { name: submit }));
+
+      await expect(
+        page.getByRole("dialog").getByRole("button", { name: "Done" }),
+      ).toBeFocused();
+    });
+  }
+});
+
+test.describe("setup controls keep focus", () => {
+  const step = (page: Page, title: string) =>
+    page
+      .locator('[data-slot="card"]')
+      .filter({ has: page.getByRole("heading", { name: title, exact: true }) });
+
+  test.beforeEach(({ context }) => startedSetup(context, "app-1"));
+
+  test("Track selected keeps focus while it tracks and after the ticks clear", async ({
+    page,
+  }) => {
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/apps\/app-1\/keywords$/,
+      "POST",
+      (route) => route.fulfill(fulfillJson(201, [])),
+    );
+    await page.goto("/apps/app-1/setup");
+    const keywords = step(page, "Track keywords");
+    await keywords.getByLabel("deep focus").check();
+    const track = keywords.getByRole("button", {
+      name: /^Track (1 )?selected$/,
+    });
+
+    await pressFromKeyboard(track);
+    await expect(track).toHaveAttribute("aria-disabled", "true");
+    await expect(track).toBeFocused();
+    held.release();
+
+    await expect(
+      page.getByText("Tracking 1 keyword. Positions arrive within minutes."),
+    ).toBeVisible();
+    await expect(track).toHaveAccessibleName("Track selected");
+    await expect(track).toBeFocused();
+    expect(await focusLeftForBody(page)).toBe(false);
+  });
+
+  test("Add selected keeps focus while it adds and after the ticks clear", async ({
+    page,
+  }) => {
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/apps\/app-1\/competitors$/,
+      "POST",
+      (route) => route.fulfill(fulfillJson(201, {})),
+    );
+    await page.goto("/apps/app-1/setup");
+    const competitors = step(page, "Pick competitors");
+    await competitors
+      .getByRole("listitem")
+      .filter({ hasText: "Deep Work Sessions" })
+      .getByRole("checkbox")
+      .check();
+    const add = competitors.getByRole("button", {
+      name: /^Add (1 )?selected$/,
+    });
+
+    await pressFromKeyboard(add);
+    await expect(add).toHaveAttribute("aria-disabled", "true");
+    await expect(add).toBeFocused();
+    held.release();
+
+    await expect(
+      competitors
+        .getByRole("listitem")
+        .filter({ hasText: "Deep Work Sessions" })
+        .getByRole("status"),
+    ).toHaveText("Added");
+    await expect(add).toHaveAccessibleName("Add selected");
+    await expect(add).toBeFocused();
+    expect(await focusLeftForBody(page)).toBe(false);
+  });
+
+  test("adding a suggested country keeps focus while it seeds", async ({
+    page,
+  }) => {
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/apps\/app-1\/market-seed$/,
+      "POST",
+      refuse,
+    );
+    await page.goto("/apps/app-1/setup");
+    await page.getByLabel("Austria (AT)").check();
+    const add = page.getByRole("button", {
+      name: /^Add (countries|1 country and seed 1)$/,
+    });
+
+    await pressFromKeyboard(add);
+    await expect(add).toHaveAttribute("aria-disabled", "true");
+    await expect(add).toBeFocused();
+    held.release();
+
+    await expect(page.getByText("down")).toBeVisible();
+    await expect(add).toBeFocused();
+    expect(await focusLeftForBody(page)).toBe(false);
   });
 });
