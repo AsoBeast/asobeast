@@ -3,6 +3,7 @@ import Link from "next/link";
 import { formatRankPosition } from "@asobeast/shared";
 import type { KeywordMover } from "@asobeast/shared";
 import { LIST_HEAD, LIST_ROW } from "@/components/layout/panel-classes";
+import { DirectionArrow } from "@/components/ui/delta-chip";
 import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { moverChange, type MoverChange } from "./mover-change";
@@ -20,10 +21,13 @@ const CHANGE_TONE: Record<MoverChange["kind"], string> = {
 };
 
 function changeText(change: MoverChange): string {
-  if (change.kind === "new") return "▲ new";
-  if (change.kind === "lost") return "▼ lost";
-  return `${change.kind === "up" ? "▲" : "▼"} ${formatNumber(change.size)}`;
+  if (change.kind === "new") return "new";
+  if (change.kind === "lost") return "lost";
+  return formatNumber(change.size);
 }
+
+const changeWay = (change: MoverChange): "up" | "down" =>
+  change.kind === "up" || change.kind === "new" ? "up" : "down";
 
 function changeLabel(change: MoverChange, days: number): string {
   if (change.kind === "new") return "started ranking";
@@ -66,7 +70,10 @@ function MoverLine({
           CHANGE_TONE[change.kind],
         )}
       >
-        <span aria-hidden>{changeText(change)}</span>
+        <span aria-hidden className="inline-flex items-center gap-0.5">
+          <DirectionArrow way={changeWay(change)} />
+          <span>{changeText(change)}</span>
+        </span>
         <span className="sr-only">{changeLabel(change, days)}</span>
       </span>
     </Link>

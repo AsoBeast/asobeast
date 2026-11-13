@@ -10,7 +10,7 @@ import type {
 } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { TrendChip } from "@/components/ui/delta-chip";
+import { DirectionArrow, TrendChip } from "@/components/ui/delta-chip";
 import { StatTile, StatTileGroup } from "@/components/ui/stat-tile";
 import { formatNumber, pluralize } from "@/lib/format";
 import {
@@ -43,13 +43,15 @@ function MovedValue({ change }: { change: PortfolioRangeChange }) {
     <Figure value={formatNumber(up + down)}>
       {up > 0 ? (
         <Badge variant="up">
-          <span aria-hidden>{`▲ ${formatNumber(up)}`}</span>
+          <DirectionArrow way="up" />
+          <span aria-hidden>{formatNumber(up)}</span>
           <span className="sr-only">{`${formatNumber(up)} climbed`}</span>
         </Badge>
       ) : null}
       {down > 0 ? (
         <Badge variant="down">
-          <span aria-hidden>{`▼ ${formatNumber(down)}`}</span>
+          <DirectionArrow way="down" />
+          <span aria-hidden>{formatNumber(down)}</span>
           <span className="sr-only">{`${formatNumber(down)} fell`}</span>
         </Badge>
       ) : null}

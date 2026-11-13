@@ -187,15 +187,13 @@ test("the movers narrow to climbers or fallers and keep the choice in the url", 
   await (await hydrated(card.getByRole("tab", { name: "Fallers" }))).click();
 
   await expect(page).toHaveURL(/movers=down/);
-  await expect(moverRows(page)).toHaveText([
-    "pomodoro6 → 12▼ 6down 6 in 7 days",
-  ]);
+  await expect(moverRows(page)).toHaveText(["pomodoro6 → 126down 6 in 7 days"]);
 
   await card.getByRole("tab", { name: "Climbers" }).click();
 
   await expect(page).toHaveURL(/movers=up/);
   await expect(moverRows(page)).toHaveText([
-    "focus timer10 → 3▲ 7up 7 in 7 days",
+    "focus timer10 → 37up 7 in 7 days",
   ]);
 });
 

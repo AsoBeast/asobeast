@@ -39,6 +39,17 @@ function direction(value: number, polarity: DeltaPolarity): Direction {
   return improved ? "up" : "down";
 }
 
+export function DirectionArrow({
+  way,
+  className,
+}: {
+  way: "up" | "down";
+  className?: string;
+}) {
+  const Icon = GLYPH[way];
+  return <Icon className={cn("size-3.5 shrink-0", className)} aria-hidden />;
+}
+
 export function DeltaChip({
   value,
   polarity = "lower-is-better",

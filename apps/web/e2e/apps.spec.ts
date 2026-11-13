@@ -879,10 +879,10 @@ test("app overview renders summary numbers and a utc snapshot date", async ({
     page.getByRole("heading", { name: "Keyword movers", level: 2 }),
   ).toBeVisible();
   await expect(page.getByRole("link", { name: /focus timer/ })).toHaveText(
-    "focus timer10 → 3▲ 7up 7 in 7 days",
+    "focus timer10 → 37up 7 in 7 days",
   );
   await expect(page.getByRole("link", { name: /pomodoro/ })).toHaveText(
-    "pomodoro6 → 12▼ 6down 6 in 7 days",
+    "pomodoro6 → 126down 6 in 7 days",
   );
 
   const coverage = card(page, "Metadata coverage");
