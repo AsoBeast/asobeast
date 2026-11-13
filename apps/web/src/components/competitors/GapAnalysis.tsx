@@ -37,6 +37,8 @@ import { GapEmpty } from "./GapEmpty";
 import { GapHelp } from "./GapHelp";
 import { GapTable } from "./GapTable";
 import type { GapColumnScope } from "./gap-columns";
+import { coverageLine } from "./gap-coverage";
+import { SECTION_BODY, SECTION_TOOLBAR } from "./section-layout";
 import { GapAnalysisSkeleton } from "./skeletons";
 
 const GAP_TAB_STATE = gapTabParser.withOptions({ history: "push" });
@@ -86,36 +88,48 @@ function GapLists({
   const rows = gapRows(gaps, tab, country, home);
   const empty = gapEmpty(gaps.coverage, country);
 
+  const listed = empty === "none" && rows.length > 0;
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
-        {markets.length > 1 ? (
-          <SelectFilter
-            title="Gap market"
-            value={country === "" ? ALL_MARKETS : country}
-            options={marketOptions(markets)}
-            onChange={(next) =>
-              void setParams({ country: next === ALL_MARKETS ? null : next })
-            }
-          />
-        ) : null}
+    <div className={SECTION_BODY}>
+      <div className={SECTION_TOOLBAR}>
         <Tabs
           value={tab}
           onValueChange={(next) => void setTab(next as GapTab)}
           className="max-w-full min-w-0"
         >
           <TabsList aria-label="Gap lists" scrollable>
-            {GAP_TABS.map((value) => (
-              <TabsOption key={value} value={value}>
-                {`${GAP_TAB_LABELS[value]} (${empty === "none" ? counts[value] : 0})`}
-              </TabsOption>
-            ))}
+            {GAP_TABS.map((value) => {
+              const count = empty === "none" ? counts[value] : 0;
+              return (
+                <TabsOption
+                  key={value}
+                  value={value}
+                  aria-label={`${GAP_TAB_LABELS[value]} (${count})`}
+                >
+                  <span>{GAP_TAB_LABELS[value]}</span>
+                  <span className="numeric text-muted-foreground">
+                    {String(count)}
+                  </span>
+                </TabsOption>
+              );
+            })}
           </TabsList>
         </Tabs>
+        {markets.length > 1 ? (
+          <div className="sm:ml-auto">
+            <SelectFilter
+              title="Gap market"
+              value={country === "" ? ALL_MARKETS : country}
+              options={marketOptions(markets)}
+              onChange={(next) =>
+                void setParams({ country: next === ALL_MARKETS ? null : next })
+              }
+            />
+          </div>
+        ) : null}
       </div>
-      {empty !== "none" || rows.length === 0 ? (
-        <GapEmpty kind={empty} tab={tab} country={country} />
-      ) : (
+      {listed ? (
         <GapTable
           appId={appId}
           tab={tab}
@@ -124,7 +138,10 @@ function GapLists({
           scope={scope}
           params={params}
           setParams={setParams}
+          footer={coverageLine(gaps.coverage, country)}
         />
+      ) : (
+        <GapEmpty kind={empty} tab={tab} country={country} />
       )}
     </div>
   );

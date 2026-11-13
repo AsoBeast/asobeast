@@ -12,7 +12,6 @@ import { useStoredColumnVisibility } from "@/components/data-table/useStoredColu
 import { dataTableFeatures } from "@/components/data-table/table-features";
 import { useUrlSorting } from "@/components/data-table/useUrlSorting";
 import { CollapsibleCard } from "@/components/layout/CollapsibleCard";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -33,10 +32,19 @@ import {
   discoverySortParser,
   sortDirectionParser,
 } from "@/lib/search-params";
+import { numericProps } from "@/lib/table/column-visibility";
 import { ariaSort } from "@/lib/table/sorting";
 import { cn } from "@/lib/utils";
 import { COMPETITOR_SECTION } from "./competitor-sections";
 import { discoveryColumns } from "./discovery-columns";
+import {
+  PHONE_HIDES_IDLE_SORT,
+  SECTION_BODY,
+  SECTION_EMPTY,
+  SECTION_FOOTER,
+  SECTION_SHEET,
+  SECTION_TOOLBAR,
+} from "./section-layout";
 import { DiscoveryPanelSkeleton } from "./skeletons";
 
 const DISCOVERY_PARAMS = {
@@ -97,6 +105,7 @@ function DiscoveryTable({
   if (data.items.length === 0) {
     return (
       <EmptyState
+        className={SECTION_EMPTY}
         title={`Nothing discovered in the last ${days} days`}
         body="As daily checks accumulate, apps that keep appearing in your keyword results but you do not track surface here. Widen the window to look further back."
       />
@@ -104,8 +113,8 @@ function DiscoveryTable({
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className={SECTION_BODY}>
+      <div className={SECTION_TOOLBAR}>
         <SearchInput
           label="Search apps"
           value={params.q}
@@ -116,50 +125,58 @@ function DiscoveryTable({
           <ColumnMenu columns={table.getAllLeafColumns()} />
         </div>
       </div>
-      <Table containerClassName="rounded-xl border">
-        <TableCaption className="sr-only">
-          {`Untracked ${storeName} apps appearing in your keyword search results over the last ${days} days.`}
-        </TableCaption>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <TableHead
-                  key={header.id}
-                  aria-sort={ariaSort(header.column.getIsSorted())}
-                  className={cn(header.column.id === "track" && "w-0")}
-                >
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext(),
-                  )}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {rows.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={table.getVisibleLeafColumns().length}>
-                <FilteredEmpty
-                  title="No apps match this search"
-                  onClear={() => void setParams({ q: null })}
-                />
-              </TableCell>
-            </TableRow>
-          ) : null}
-          {rows.map((row) => (
-            <TableRow key={row.id}>
-              {row.getVisibleCells().map((cell) => (
-                <TableCell key={cell.id}>
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+      <div className={cn(SECTION_SHEET, PHONE_HIDES_IDLE_SORT)}>
+        <Table>
+          <TableCaption className="sr-only">
+            {`Untracked ${storeName} apps appearing in your keyword search results over the last ${days} days.`}
+          </TableCaption>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead
+                    key={header.id}
+                    aria-sort={ariaSort(header.column.getIsSorted())}
+                    className={cn(header.column.id === "track" && "w-0")}
+                    {...numericProps(header.column)}
+                  >
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext(),
+                    )}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {rows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={table.getVisibleLeafColumns().length}>
+                  <FilteredEmpty
+                    title="No apps match this search"
+                    onClear={() => void setParams({ q: null })}
+                  />
                 </TableCell>
-              ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+              </TableRow>
+            ) : null}
+            {rows.map((row) => (
+              <TableRow key={row.id}>
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id} {...numericProps(cell.column)}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        <p className={SECTION_FOOTER}>
+          <span>
+            <span>{storeName}</span> <span>{`results over ${days} days`}</span>
+          </span>
+        </p>
+      </div>
     </div>
   );
 }
@@ -175,12 +192,11 @@ export function DiscoveryPanel({ id }: { id: string }) {
       title="Apps you don’t track yet"
       actions={
         <>
-          <Badge variant="secondary">{storeName}</Badge>
           <Tabs
             value={String(days)}
             onValueChange={(next) => void setDays(Number(next) as typeof days)}
           >
-            <TabsList>
+            <TabsList aria-label="Discovery window">
               {DISCOVERY_WINDOWS.map((window) => (
                 <TabsOption key={window} value={String(window)}>
                   {window}d

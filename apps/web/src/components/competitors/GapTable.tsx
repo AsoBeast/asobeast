@@ -27,9 +27,17 @@ import {
   gapSortParser,
   type gapTableParsers,
 } from "@/lib/search-params";
+import { numericProps } from "@/lib/table/column-visibility";
 import { ariaSort } from "@/lib/table/sorting";
+import { cn } from "@/lib/utils";
 import { exportGaps } from "./gap-csv";
 import { gapColumns, type GapColumnScope } from "./gap-columns";
+import {
+  PHONE_HIDES_IDLE_SORT,
+  SECTION_FOOTER,
+  SECTION_SHEET,
+  SECTION_TOOLBAR,
+} from "./section-layout";
 
 type GapTableParams = inferParserType<typeof gapTableParsers>;
 
@@ -55,6 +63,7 @@ export function GapTable({
   scope,
   params,
   setParams,
+  footer,
 }: {
   appId: string;
   tab: GapTab;
@@ -63,6 +72,7 @@ export function GapTable({
   scope: GapColumnScope;
   params: GapTableParams;
   setParams: SetValues<typeof gapTableParsers>;
+  footer: string | null;
 }) {
   const columns = useMemo(() => gapColumns(scope), [scope]);
   const [visibility, setVisibility] = useStoredColumnVisibility(
@@ -107,8 +117,8 @@ export function GapTable({
   );
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
+    <>
+      <div className={SECTION_TOOLBAR}>
         <SearchInput
           label="Search gap keywords"
           value={params.q}
@@ -132,51 +142,51 @@ export function GapTable({
           />
         </div>
       </div>
-      <Table
-        containerClassName="rounded-xl border"
-        scrollLabel={TAB_CAPTIONS[tab]}
-        scrollFocus="overflow"
-      >
-        <TableCaption className="sr-only">{caption}</TableCaption>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <TableHead
-                  key={header.id}
-                  aria-sort={ariaSort(header.column.getIsSorted())}
-                >
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext(),
-                  )}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {visible.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={table.getVisibleLeafColumns().length}>
-                <FilteredEmpty
-                  title="No keywords match this search"
-                  onClear={() => void setParams({ q: null })}
-                />
-              </TableCell>
-            </TableRow>
-          ) : null}
-          {visible.map((row) => (
-            <TableRow key={row.id}>
-              {row.getVisibleCells().map((cell) => (
-                <TableCell key={cell.id}>
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+      <div className={cn(SECTION_SHEET, PHONE_HIDES_IDLE_SORT)}>
+        <Table scrollLabel={TAB_CAPTIONS[tab]} scrollFocus="overflow">
+          <TableCaption className="sr-only">{caption}</TableCaption>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead
+                    key={header.id}
+                    aria-sort={ariaSort(header.column.getIsSorted())}
+                    {...numericProps(header.column)}
+                  >
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext(),
+                    )}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {visible.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={table.getVisibleLeafColumns().length}>
+                  <FilteredEmpty
+                    title="No keywords match this search"
+                    onClear={() => void setParams({ q: null })}
+                  />
                 </TableCell>
-              ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+              </TableRow>
+            ) : null}
+            {visible.map((row) => (
+              <TableRow key={row.id}>
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id} {...numericProps(cell.column)}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        {footer === null ? null : <p className={SECTION_FOOTER}>{footer}</p>}
+      </div>
+    </>
   );
 }

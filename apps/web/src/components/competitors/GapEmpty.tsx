@@ -2,6 +2,7 @@ import { GAP_TOP } from "@asobeast/shared";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatCountry } from "@/lib/format";
 import type { GapEmpty as GapEmptyKind, GapTab } from "@/lib/gap-lists";
+import { SECTION_EMPTY } from "./section-layout";
 
 const TAB_EMPTY: Record<GapTab, { title: string; body?: string }> = {
   gaps: {
@@ -31,12 +32,13 @@ export function GapEmpty({
   if (kind === "noCompetitors") {
     return (
       <EmptyState
+        className={SECTION_EMPTY}
         title="Add a competitor to see gaps"
         body="One search serves every app, so this costs no extra store requests."
         action={
           <a
             href="#competitor-search"
-            className="text-sm font-medium link-underline"
+            className="text-dense font-medium link-underline"
           >
             Add a competitor
           </a>
@@ -47,6 +49,7 @@ export function GapEmpty({
   if (kind === "allDelisted") {
     return (
       <EmptyState
+        className={SECTION_EMPTY}
         title="Every competitor you track is delisted"
         body="There is nothing to compare against until you track one the store still lists."
       />
@@ -55,10 +58,11 @@ export function GapEmpty({
   if (kind === "notCompared") {
     return (
       <EmptyState
+        className={SECTION_EMPTY}
         title={notCompared(country)}
         body="They are compared from the next daily check."
       />
     );
   }
-  return <EmptyState {...TAB_EMPTY[tab]} />;
+  return <EmptyState className={SECTION_EMPTY} {...TAB_EMPTY[tab]} />;
 }
