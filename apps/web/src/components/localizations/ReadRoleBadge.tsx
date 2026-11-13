@@ -4,12 +4,11 @@ import type {
 } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { READ_ROLE_LABELS } from "@/lib/app-localizations";
-import { cn } from "@/lib/utils";
 
-const ROLE_TONE = {
-  default: "text-foreground",
-  additional: "text-muted-foreground",
-} as const satisfies Record<LocalizationReadRole, string>;
+const ROLE_VARIANT = {
+  default: "info",
+  additional: "secondary",
+} as const satisfies Record<LocalizationReadRole, "info" | "secondary">;
 
 export function ReadRoleBadge({
   role,
@@ -20,9 +19,9 @@ export function ReadRoleBadge({
 }) {
   const label = READ_ROLE_LABELS[role];
   return (
-    <span className={cn("text-label whitespace-nowrap", ROLE_TONE[role])}>
+    <Badge variant={ROLE_VARIANT[role]}>
       {prefix === undefined ? label : `${prefix} · ${label}`}
-    </span>
+    </Badge>
   );
 }
 
