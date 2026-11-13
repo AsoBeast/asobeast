@@ -27,9 +27,7 @@ function useListedItem(id: string): ActionItem | undefined {
 function PendingHeader({ missing }: { missing: boolean }) {
   return (
     <SheetHeader className="border-b p-4 pr-12">
-      <SheetTitle className="text-heading">
-        {missing ? "Action not found" : "Loading action"}
-      </SheetTitle>
+      <SheetTitle>{missing ? "Action not found" : "Loading action"}</SheetTitle>
       <SheetDescription>
         {missing ? ACTION_NOT_FOUND : "Reading the action and its history."}
       </SheetDescription>

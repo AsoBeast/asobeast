@@ -148,7 +148,7 @@ export function SpiderDialog({
           {active ? (
             <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-1.5">
-                <div className="flex items-center justify-between text-xs text-muted-foreground tabular-nums">
+                <div className="numeric flex items-center justify-between text-caption text-muted-foreground">
                   <span>{complete ? "Complete" : "Searching…"}</span>
                   <span>{`${probesDone}/${PROBES_TOTAL}`}</span>
                 </div>
@@ -161,14 +161,14 @@ export function SpiderDialog({
                   className="h-2 overflow-hidden rounded-full bg-muted"
                 >
                   <div
-                    className="h-full rounded-full bg-primary transition-[width]"
+                    className="h-full rounded-full bg-foreground transition-[width]"
                     style={{ width: `${(probesDone / PROBES_TOTAL) * 100}%` }}
                   />
                 </div>
               </div>
 
               {suggestions.length === 0 ? (
-                <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
+                <p className="p-4 text-center text-body text-muted-foreground">
                   {complete
                     ? "No new terms found for this seed."
                     : "Waiting for the first results…"}
@@ -185,10 +185,10 @@ export function SpiderDialog({
                         className="flex items-center justify-between gap-4 py-2"
                       >
                         <div className="flex min-w-0 flex-col gap-0.5">
-                          <span className="truncate text-sm font-medium">
+                          <span className="truncate text-dense font-medium">
                             {suggestion.text}
                           </span>
-                          <span className="flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
+                          <span className="numeric flex items-center gap-2 text-caption text-muted-foreground">
                             {suggestion.priority !== null ? (
                               <span>
                                 {`priority ${Math.round(suggestion.priority)}`}

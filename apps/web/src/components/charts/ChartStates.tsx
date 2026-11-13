@@ -22,6 +22,9 @@ export function ChartSkeleton({
   return <Skeleton className={cn("w-full", height, className)} />;
 }
 
+export const CHART_NOTICE =
+  "flex flex-col items-center justify-center gap-1 text-center";
+
 export function ChartNotice({
   height,
   title,
@@ -34,15 +37,10 @@ export function ChartNotice({
   action?: ReactNode;
 }) {
   return (
-    <div
-      className={cn(
-        "flex flex-col items-center justify-center gap-1 rounded-lg border border-dashed px-6 text-center",
-        height,
-      )}
-    >
-      <p className="text-body font-medium">{title}</p>
+    <div className={cn(CHART_NOTICE, height)}>
+      <p className="max-w-prose text-body font-medium">{title}</p>
       {body ? (
-        <p className="text-caption text-muted-foreground">{body}</p>
+        <p className="max-w-prose text-body text-muted-foreground">{body}</p>
       ) : null}
       {action}
     </div>
@@ -61,12 +59,7 @@ export function ChartStat({
   note: string;
 }) {
   return (
-    <div
-      className={cn(
-        "flex flex-col items-center justify-center gap-1 rounded-lg border border-dashed px-6 text-center",
-        height,
-      )}
-    >
+    <div className={cn(CHART_NOTICE, height)}>
       <p className="text-label text-muted-foreground">{label}</p>
       <p className="numeric text-title">{value}</p>
       <p className="text-caption text-muted-foreground">{note}</p>

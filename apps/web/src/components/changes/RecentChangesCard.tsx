@@ -22,7 +22,7 @@ import {
   FEED_TEXT,
   FeedDay,
   feedDayLabel,
-} from "@/components/dashboard/feed-row";
+} from "@/components/layout/feed-row";
 import { FeedCardSkeleton } from "@/components/dashboard/skeletons";
 import { PANEL_ACTION, PANEL_HEADER } from "@/components/layout/panel-classes";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
@@ -33,7 +33,7 @@ import { portfolioOptions, recentChangesOptions } from "@/lib/queries";
 import { changeOwnerParser, type ChangeOwner } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
 import { collapseVersions, entryEvent, type ChangeEntry } from "./change-runs";
-import { ChangeValue } from "./ChangeTimeline";
+import { ChangeValue } from "./ChangeValue";
 
 const VISIBLE_CHANGES = 8;
 

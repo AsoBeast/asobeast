@@ -21,7 +21,12 @@ import {
 import { alertRecentOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { ALERT_KINDS } from "./alert-kind";
-import { FEED_LINK, FEED_ROW, FeedDay, feedDayLabel } from "./feed-row";
+import {
+  FEED_LINK,
+  FEED_ROW,
+  FeedDay,
+  feedDayLabel,
+} from "@/components/layout/feed-row";
 import { FeedRowsSkeleton } from "./skeletons";
 import { PANEL_COUNT, PANEL_HEADER } from "@/components/layout/panel-classes";
 import { dayBefore } from "@/lib/utc-day";

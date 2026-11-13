@@ -9,12 +9,13 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
+  CardAction,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { InfoTip } from "@/components/ui/info-tip";
 import {
+  PANEL_ACTION,
   SECTION_CHEVRON,
   SECTION_TOGGLE,
 } from "@/components/layout/panel-classes";
@@ -119,19 +120,13 @@ export function KeywordCombinations({
             </button>
           </h2>
         </CardTitle>
-        <CardDescription className="flex items-center gap-1">
-          <span>
-            {countUntracked && market === homeCountry ? (
-              <UntrackedCount id={id} store={store} homeCountry={homeCountry} />
-            ) : null}
-            <span>{`Phrases the words in your ${LISTING_FIELDS[store]} can form.`}</span>
-          </span>
+        <CardAction className={PANEL_ACTION}>
           <InfoTip
             label="About keyword combinations"
             title="Keyword combinations"
             summary="Every phrase of one to three words that your listing words can form, in any order, and whether you track it in your home market. Coverage on the metadata page checks the reverse: whether each tracked keyword appears word for word in one field."
           />
-        </CardDescription>
+        </CardAction>
       </CardHeader>
       {params.open ? (
         <CardContent
@@ -139,6 +134,12 @@ export function KeywordCombinations({
           aria-labelledby={TITLE_ID}
           className="flex flex-col gap-4"
         >
+          <p className="text-body text-muted-foreground">
+            {countUntracked && market === homeCountry ? (
+              <UntrackedCount id={id} store={store} homeCountry={homeCountry} />
+            ) : null}
+            <span>{`Phrases the words in your ${LISTING_FIELDS[store]} can form.`}</span>
+          </p>
           {market === homeCountry ? (
             <Suspense fallback={<KeywordCombinationsSkeleton />}>
               <CombinationsTable
@@ -150,7 +151,7 @@ export function KeywordCombinations({
               />
             </Suspense>
           ) : (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-body text-muted-foreground">
                 Combinations come from the listing in your home market, {home}.
               </p>

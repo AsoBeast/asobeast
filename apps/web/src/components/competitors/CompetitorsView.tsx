@@ -39,7 +39,6 @@ export function CompetitorsView({
         <div className="flex flex-col gap-6">
           <CollapsibleCard
             section={COMPETITOR_SECTION.tracked}
-            eyebrow="Competitors"
             title="Track the apps you rank against"
           >
             <div className="flex flex-col gap-6">

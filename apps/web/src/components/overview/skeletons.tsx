@@ -9,10 +9,9 @@ import {
   CardHeader,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StatTileGroup, StatTileSkeleton } from "@/components/ui/stat-tile";
+import { MetricStripSkeleton } from "@/components/ui/stat-tile";
 import { funnelTiles } from "@/lib/funnel";
 import { cn } from "@/lib/utils";
-import { PULSE_COLUMNS, PULSE_STRIP } from "./layout-classes";
 
 export function OverviewMarketSkeleton() {
   return (
@@ -30,11 +29,7 @@ export function SnapshotFactsSkeleton() {
 export function OverviewPulseSkeleton() {
   return (
     <Card className="gap-0 py-0">
-      <StatTileGroup className={cn(PULSE_STRIP, PULSE_COLUMNS[4])}>
-        {Array.from({ length: 4 }).map((_, index) => (
-          <StatTileSkeleton key={index} />
-        ))}
-      </StatTileGroup>
+      <MetricStripSkeleton columns={4} framed={false} />
       <CardContent className="flex flex-col gap-2 border-t border-border pt-3 pb-4">
         <div className="flex min-h-8 items-center justify-between gap-4">
           <Skeleton className="h-4 w-40 max-w-full" />
@@ -64,14 +59,12 @@ export function CoverageCardSkeleton() {
 }
 
 export function FunnelTilesSkeleton({ store }: { store: Store }) {
-  const tiles = funnelTiles({ store });
   return (
     <>
-      <StatTileGroup className={cn(PULSE_STRIP, PULSE_COLUMNS[tiles.length])}>
-        {tiles.map((tile) => (
-          <StatTileSkeleton key={tile.label} />
-        ))}
-      </StatTileGroup>
+      <MetricStripSkeleton
+        columns={funnelTiles({ store }).length}
+        framed={false}
+      />
       <CardFooter>
         <Skeleton className="h-4 w-96 max-w-full" />
       </CardFooter>

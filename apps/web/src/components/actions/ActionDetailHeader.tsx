@@ -31,9 +31,7 @@ export function ActionDetailHeader({ item }: { item: ActionItem }) {
           <span>{ACTION_STATUS_LABEL[item.status]}</span>
         </Badge>
       </div>
-      <SheetTitle className="text-heading text-balance">
-        {actionHeadline(item)}
-      </SheetTitle>
+      <SheetTitle className="text-balance">{actionHeadline(item)}</SheetTitle>
       <SheetDescription>
         {ACTION_RULE_TITLES[item.rule]} · {item.scope.appName ?? "An app"} ·{" "}
         {storeLabel(item.scope.store)} · {formatCountry(item.scope.country)}

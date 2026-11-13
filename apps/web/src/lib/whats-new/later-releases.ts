@@ -54,6 +54,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "AsoBeast has a new typeface, warmer neutral colours and flatter panels with fine borders. Numbers line up in columns, labels are easier to read, and the brand orange is kept for the main action on each page.",
       },
       {
+        kind: "improved",
+        title: "Calmer empty charts",
+        text: "A chart with nothing to draw yet says so in the middle of the chart without a dashed box around it, and so do a page that is not found and the first visit before any app is imported. Progress bars and the run indicator are no longer orange, and a new entry in search results or a top chart reads New in green.",
+      },
+      {
         kind: "new",
         title: "Reveal column",
         text: "A Reveal column on the keywords table shows how many letters a shopper types before the store suggests a keyword and where it appears in the suggestions. It is hidden by default and can be turned on from the column menu.",

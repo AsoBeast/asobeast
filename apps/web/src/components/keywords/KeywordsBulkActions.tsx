@@ -179,7 +179,7 @@ export function KeywordsBulkActions({
     <div
       role="group"
       aria-label="Bulk keyword actions"
-      className="flex flex-wrap items-center gap-2 rounded-xl border bg-popover px-3 py-2 text-body shadow-overlay"
+      className="flex flex-wrap items-center gap-2 rounded-lg border bg-popover px-3 py-2 text-body shadow-overlay"
     >
       <span className="numeric font-medium">
         {`${selectedIds.length} selected`}

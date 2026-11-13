@@ -48,9 +48,10 @@ export function MapOverlay({
     const target = dotIn(surface, point.keywordId)?.querySelector(DOT_TARGET);
     if (!target) return;
     const box = surface.getBoundingClientRect();
+    const size = node.getBoundingClientRect();
     const position = placeOverlay(
       centreIn(target, box),
-      { width: node.offsetWidth, height: node.offsetHeight },
+      { width: size.width, height: size.height },
       { width: box.width, height: box.height },
     );
     node.style.left = `${position.left}px`;
@@ -62,7 +63,7 @@ export function MapOverlay({
       ref={overlayRef}
       data-slot="map-overlay"
       aria-hidden
-      className="pointer-events-none absolute top-0 left-0 z-10 grid w-56 max-w-full gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-overlay"
+      className="pointer-events-none absolute top-0 left-0 z-10 grid w-56 max-w-full gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-caption shadow-overlay"
     >
       <p className="font-medium wrap-anywhere">
         {pointName(point, multiMarket)}

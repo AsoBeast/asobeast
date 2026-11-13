@@ -62,7 +62,7 @@ export function MarketAvailabilityNotice({
     <p
       aria-live="polite"
       className={cn(
-        "flex min-h-5 items-center gap-1.5 text-xs",
+        "flex min-h-5 items-center gap-1.5 text-caption",
         style?.className ?? "text-muted-foreground",
       )}
     >

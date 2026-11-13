@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import { DeltaChip } from "@/components/ui/delta-chip";
 import { movementText, type Moved } from "./movement-text";
 
@@ -11,7 +10,9 @@ function Shown({
   period: string;
   compact: boolean;
 }) {
-  if (entry.movement === "new") return <Badge variant="info">New</Badge>;
+  if (entry.movement === "new") {
+    return <span className="font-medium text-signal-up">New</span>;
+  }
   if (entry.movement === "none" || entry.movement === "same") {
     return <span className="text-muted-foreground">—</span>;
   }

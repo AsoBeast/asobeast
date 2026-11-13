@@ -16,13 +16,7 @@ import {
   type Store,
 } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   SECTION_CHEVRON,
   SECTION_TOGGLE,
@@ -115,14 +109,14 @@ export function SuggestionsPanel({
             </button>
           </h2>
         </CardTitle>
-        <CardDescription>
-          Phrases from your listing, your competitors, your reviews and store
-          search that you do not track yet.
-        </CardDescription>
       </CardHeader>
 
       {open ? (
         <CardContent className="flex flex-col gap-4">
+          <p className="text-body text-muted-foreground">
+            Phrases from your listing, your competitors, your reviews and store
+            search that you do not track yet.
+          </p>
           <Tabs
             value={strategy}
             onValueChange={(value) =>

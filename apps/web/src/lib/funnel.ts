@@ -36,14 +36,19 @@ export const FUNNEL_GETS_LABEL: Record<Store, string> = {
   GOOGLE_PLAY: "Acquisitions",
 };
 
-const APP_STORE_TILES: FunnelTile[] = [
+const APP_STORE_TILES: readonly [
+  FunnelTile,
+  FunnelTile,
+  FunnelTile,
+  FunnelTile,
+] = [
   { label: "Impressions", metric: "impressions" },
   { label: "Product page views", metric: "pageViews" },
   { label: FUNNEL_GETS_LABEL.APP_STORE, metric: "gets" },
   { label: "Conversion", metric: "conversion" },
 ];
 
-const PLAY_TILES: FunnelTile[] = [
+const PLAY_TILES: readonly [FunnelTile, FunnelTile, FunnelTile] = [
   { label: "Store listing visitors", metric: "pageViews" },
   { label: FUNNEL_GETS_LABEL.GOOGLE_PLAY, metric: "gets" },
   { label: "Conversion", metric: "conversion" },

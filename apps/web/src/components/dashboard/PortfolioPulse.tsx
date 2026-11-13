@@ -1,6 +1,5 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import type {
@@ -11,7 +10,7 @@ import type {
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { DirectionArrow, TrendChip } from "@/components/ui/delta-chip";
-import { StatTile, StatTileGroup } from "@/components/ui/stat-tile";
+import { MetricStrip, StatTile } from "@/components/ui/stat-tile";
 import { formatNumber, pluralize } from "@/lib/format";
 import {
   actionSummaryOptions,
@@ -25,22 +24,18 @@ import {
   dashboardMetricParser,
   type DashboardMetric,
 } from "@/lib/search-params";
-import { PULSE_STRIP } from "./layout-classes";
 
-function Figure({ value, children }: { value: string; children?: ReactNode }) {
-  return (
-    <span className="flex flex-wrap items-center gap-2">
-      <span>{value}</span>
-      {children}
-    </span>
-  );
+function movedValue(change: PortfolioRangeChange): string {
+  if (!change.compared) return "—";
+  const { up, down } = change.movement;
+  return formatNumber(up + down);
 }
 
-function MovedValue({ change }: { change: PortfolioRangeChange }) {
-  if (!change.compared) return <Figure value="—" />;
+function MovedDelta({ change }: { change: PortfolioRangeChange }) {
+  if (!change.compared) return null;
   const { up, down } = change.movement;
   return (
-    <Figure value={formatNumber(up + down)}>
+    <>
       {up > 0 ? (
         <Badge variant="up">
           <DirectionArrow way="up" />
@@ -55,7 +50,7 @@ function MovedValue({ change }: { change: PortfolioRangeChange }) {
           <span className="sr-only">{`${formatNumber(down)} fell`}</span>
         </Badge>
       ) : null}
-    </Figure>
+    </>
   );
 }
 
@@ -67,16 +62,13 @@ function movedNote(change: PortfolioRangeChange, days: number): string {
   return `${formatNumber(entered)} started ranking · ${formatNumber(lost)} dropped out`;
 }
 
-function ActionsValue({ summary }: { summary: ActionSummary }) {
-  if (summary.generatedAt === null) return <Figure value="—" />;
+const actionsValue = (summary: ActionSummary): string =>
+  summary.generatedAt === null ? "—" : formatNumber(summary.open);
+
+function ActionsDelta({ summary }: { summary: ActionSummary }) {
   const { critical } = summary.openByPriority;
-  return (
-    <Figure value={formatNumber(summary.open)}>
-      {critical > 0 ? (
-        <Badge variant="down">{`${formatNumber(critical)} critical`}</Badge>
-      ) : null}
-    </Figure>
-  );
+  if (summary.generatedAt === null || critical === 0) return null;
+  return <Badge variant="down">{`${formatNumber(critical)} critical`}</Badge>;
 }
 
 function actionsNote(summary: ActionSummary): string {
@@ -113,15 +105,14 @@ export function PortfolioPulse() {
 
   return (
     <Card className="gap-0 py-0">
-      <StatTileGroup className={PULSE_STRIP}>
+      <MetricStrip columns={4} framed={false}>
         {visibility ? (
           <StatTile
             {...tab("visibility")}
             label="Visibility"
-            value={
-              <Figure value={formatNumber(Math.round(visibility.current))}>
-                <TrendChip label={unit} value={visibilityDelta} form="pill" />
-              </Figure>
+            value={formatNumber(Math.round(visibility.current))}
+            delta={
+              <TrendChip label={unit} value={visibilityDelta} form="pill" />
             }
             note={visibilityNote(portfolio.apps)}
           />
@@ -129,26 +120,25 @@ export function PortfolioPulse() {
         <StatTile
           {...tab("top10")}
           label="Keywords in top 10"
-          value={
-            <Figure value={formatNumber(top10)}>
-              <TrendChip label={unit} value={top10Delta} form="pill" />
-            </Figure>
-          }
+          value={formatNumber(top10)}
+          delta={<TrendChip label={unit} value={top10Delta} form="pill" />}
           note={`of ${formatNumber(portfolio.totals.trackedKeywords)} tracked`}
         />
         <StatTile
           {...tab("moved")}
           label={`Moved in ${days} days`}
-          value={<MovedValue change={history.change} />}
+          value={movedValue(history.change)}
+          delta={<MovedDelta change={history.change} />}
           note={movedNote(history.change, days)}
         />
         <StatTile
           {...tab("actions")}
           label="Open actions"
-          value={<ActionsValue summary={actions} />}
+          value={actionsValue(actions)}
+          delta={<ActionsDelta summary={actions} />}
           note={actionsNote(actions)}
         />
-      </StatTileGroup>
+      </MetricStrip>
       <MetricPanel metric={shown} />
     </Card>
   );

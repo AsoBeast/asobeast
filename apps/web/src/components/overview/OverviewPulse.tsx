@@ -1,14 +1,14 @@
 "use client";
 
-import { Suspense, useDeferredValue, type ReactNode } from "react";
+import { Suspense, useDeferredValue } from "react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import type { AppSummary, ShareOfVoice } from "@asobeast/shared";
 import { useMarket } from "@/components/app-detail/use-market";
 import { Card } from "@/components/ui/card";
 import { TrendChip } from "@/components/ui/delta-chip";
 import {
+  MetricStrip,
   StatTile,
-  StatTileGroup,
   StatTileSkeleton,
 } from "@/components/ui/stat-tile";
 import { formatNumber, formatRating, pluralize } from "@/lib/format";
@@ -16,8 +16,6 @@ import { queryMarket } from "@/lib/market";
 import { appListingOptions, ratingsHistoryOptions } from "@/lib/queries";
 import { presetToRange } from "@/lib/ranges";
 import type { VisibilityView } from "@/lib/search-params";
-import { cn } from "@/lib/utils";
-import { PULSE_COLUMNS, PULSE_STRIP } from "./layout-classes";
 import { OverviewChart } from "./OverviewChart";
 import {
   RATING_CHANGE_DAYS,
@@ -30,15 +28,6 @@ import {
   formatShare,
   shareLine,
 } from "./share-of-voice-text";
-
-function Figure({ value, children }: { value: string; children?: ReactNode }) {
-  return (
-    <span className="flex flex-wrap items-center gap-2">
-      <span>{value}</span>
-      {children}
-    </span>
-  );
-}
 
 function shareNote(share: ShareOfVoice, nonBranded?: ShareOfVoice): string {
   if (share.current === null) return shareLine(share);
@@ -86,12 +75,11 @@ function RatingTile({
     <StatTile
       {...selection}
       label="Rating"
-      value={
-        <Figure value={average === null ? "—" : formatRating(average)}>
-          {country === undefined && average !== null ? (
-            <RatingChange id={id} />
-          ) : null}
-        </Figure>
+      value={average === null ? "—" : formatRating(average)}
+      delta={
+        country === undefined && average !== null ? (
+          <RatingChange id={id} />
+        ) : null
       }
       note={ratingNote(average, snapshot?.ratingCount ?? null)}
     />
@@ -116,32 +104,28 @@ export function OverviewPulse({ id }: { id: string }) {
 
   return (
     <Card className="gap-0 py-0">
-      <StatTileGroup className={cn(PULSE_STRIP, PULSE_COLUMNS[4])}>
+      <MetricStrip columns={4} framed={false}>
         <StatTile
           {...tab("visibility")}
           label="Visibility"
-          value={
-            <Figure value={formatNumber(Math.round(visibility.current))}>
-              <TrendChip label="7d" value={visibility.delta7d} form="pill" />
-            </Figure>
+          value={formatNumber(Math.round(visibility.current))}
+          delta={
+            <TrendChip label="7d" value={visibility.delta7d} form="pill" />
           }
           note={<TrendChip label="30d" value={visibility.delta30d} />}
         />
         <StatTile
           {...tab("share")}
           label="Share of voice"
-          value={
-            share.current === null ? (
-              <Figure value="—" />
-            ) : (
-              <Figure value={formatShare(share.current)}>
-                <TrendChip
-                  label="7d"
-                  value={share.delta7d}
-                  digits={1}
-                  form="pill"
-                />
-              </Figure>
+          value={share.current === null ? "—" : formatShare(share.current)}
+          delta={
+            share.current === null ? null : (
+              <TrendChip
+                label="7d"
+                value={share.delta7d}
+                digits={1}
+                form="pill"
+              />
             )
           }
           note={shareNote(share, summary.nonBrandedShareOfVoice)}
@@ -149,15 +133,13 @@ export function OverviewPulse({ id }: { id: string }) {
         <StatTile
           {...tab("top10")}
           label="Keywords in top 10"
-          value={
-            <Figure value={formatNumber(summary.rankDistribution.top10)} />
-          }
+          value={formatNumber(summary.rankDistribution.top10)}
           note={top10Note(summary)}
         />
         <Suspense fallback={<StatTileSkeleton />}>
           <RatingTile id={id} selection={tab("rating")} />
         </Suspense>
-      </StatTileGroup>
+      </MetricStrip>
       <OverviewChart id={id} view={shown} />
     </Card>
   );

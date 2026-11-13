@@ -50,7 +50,6 @@ export function ComparisonMatrix({ id }: { id: string }) {
     <>
       <CollapsibleCard
         section={COMPETITOR_SECTION.matrix}
-        eyebrow="Comparison matrix"
         title="Your position against every competitor"
         actions={
           <div className="flex items-center gap-2">

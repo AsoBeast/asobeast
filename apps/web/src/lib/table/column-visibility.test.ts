@@ -3,6 +3,7 @@ import {
   columnChoices,
   defaultColumnVisibility,
   isNumericColumn,
+  numericProps,
   parseColumnVisibility,
   phoneColumnVisibility,
   readStoredColumns,
@@ -201,5 +202,17 @@ describe("isNumericColumn", () => {
     expect(isNumericColumn({ label: "Plan" })).toBe(false);
     expect(isNumericColumn({ numeric: "yes" })).toBe(false);
     expect(isNumericColumn(undefined)).toBe(false);
+  });
+});
+
+describe("numericProps", () => {
+  it("hands a table cell the numeric flag of its column", () => {
+    expect(numericProps({ columnDef: { meta: { numeric: true } } })).toEqual({
+      numeric: true,
+    });
+    expect(numericProps({ columnDef: { meta: { label: "Plan" } } })).toEqual({
+      numeric: false,
+    });
+    expect(numericProps({ columnDef: {} })).toEqual({ numeric: false });
   });
 });

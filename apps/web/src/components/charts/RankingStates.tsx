@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { formatCheckedPosition } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
+import { CHART_NOTICE } from "./ChartStates";
 import { CHART_HEIGHT } from "./theme";
 import { formatCountry } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -20,14 +21,9 @@ function Frame({
   children?: React.ReactNode;
 }) {
   return (
-    <div
-      className={cn(
-        "flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-6 text-center",
-        CHART_HEIGHT.hero,
-      )}
-    >
-      <p className="text-body font-medium">{title}</p>
-      <p className="max-w-md text-caption text-muted-foreground">{body}</p>
+    <div className={cn(CHART_NOTICE, "gap-2", CHART_HEIGHT.hero)}>
+      <p className="max-w-prose text-body font-medium">{title}</p>
+      <p className="max-w-prose text-body text-muted-foreground">{body}</p>
       {children}
       {action}
     </div>

@@ -58,7 +58,7 @@ export function ImportFileStep({
           Download template
         </Button>
       </div>
-      <p className="text-xs text-muted-foreground">
+      <p className="text-caption text-muted-foreground">
         {fileName
           ? `Reading ${fileName}. ${PARTS_HINT}`
           : `${PARTS_HINT} UTF-8 or UTF-16, separated by commas, semicolons, tabs or pipes.`}

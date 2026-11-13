@@ -64,7 +64,7 @@ export function ImportMapping({
       disabled={disabled}
       className="flex flex-col gap-3 rounded-lg border p-3"
     >
-      <legend className="px-1 text-sm font-medium">Columns</legend>
+      <legend className="px-1 text-body font-medium">Columns</legend>
       <div className="flex items-center gap-2">
         <Switch
           id="keyword-import-header"

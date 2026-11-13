@@ -226,7 +226,7 @@ A warm neutral ground with one orange family and two signal hues, mirrored in a 
 
 ### Secondary
 
-- **Information Blue** (#1d4ed8 light, #60a5fa dark): reserved. It marks an informational badge (the Default localization on the keywords page) and the `--info` tint behind it. The second series of a multi series chart is the brighter #2563eb (#60a5fa dark). It leads none of the dashboard, overview or keywords screens.
+- **Information Blue** (#1d4ed8 light, #60a5fa dark): reserved. It marks an informational badge (the Default localization read role) and the `--info` tint behind it. The second series of a multi series chart is the brighter #2563eb (#60a5fa dark). It leads none of the dashboard, overview or keywords screens.
 
 ### Signals
 
@@ -243,7 +243,7 @@ A warm neutral ground with one orange family and two signal hues, mirrored in a 
 
 ### Named Rules
 
-**The One Family Rule.** The brand orange and the data orange are shades of one hue; nothing else on a screen is orange. A warning is a word, not an orange fill, and the active navigation item is neutral.
+**The One Family Rule.** The brand orange and the data orange are shades of one hue; nothing else on a screen is orange. A warning is a word, not an orange fill, the active navigation item is neutral, a progress bar fills with ink and a spinner turns in ink 2.
 
 **The Direction Only Rule.** Green and red appear on a change, a signal or a critical word, and on nothing that is merely a category. Grades are words with a quiet marker, never a painted column.
 
@@ -262,6 +262,7 @@ A warm neutral ground with one orange family and two signal hues, mirrored in a 
 - **Hero** (600, 36px, 1.1, -0.024em): the billing wall's heading and plan prices from `sm` only; no signed in screen uses it.
 - **Title** (600, 22px, 1.2, -0.02em): the page title, once per page.
 - **Metric** (600, 28px, 1.1, -0.02em): the value of a metric tab or a headline figure, with its delta pill beside it; at most one strip of them per page.
+- **Dialog** (500, 16px, 1.25): the title of a dialog, sheet or confirmation, one step above the panels under it so the overlay reads first; the keyword in the keyword sheet's header included.
 - **Heading** (600, 14px, 1.4, -0.006em): a panel or section heading, every section, one size.
 - **Body** (400, 14px, 1.45): the lede sentence, action titles, dialog text; prose keeps to 70ch.
 - **Dense** (400, 13px, 1.45): table cells, list rows, navigation, controls. Names in a row take 500.
@@ -271,7 +272,7 @@ A warm neutral ground with one orange family and two signal hues, mirrored in a 
 
 ### Named Rules
 
-**The Five Sizes Rule.** A screen uses title, heading, body or dense, label or caption and tick, plus the metric size in one strip. No raw `text-sm` or `text-base` in a primitive; every size is a named step.
+**The Five Sizes Rule.** A screen uses title, heading, body or dense, label or caption and tick, plus the metric size in one strip and the dialog size in an overlay's title. No raw `text-sm` or `text-base` in a primitive; every size is a named step.
 
 **The Sentence Case Rule.** Labels and column headers are sentence case with no letter spacing; the old tracked uppercase label is retired.
 
@@ -320,7 +321,7 @@ A restrained radius scale by role: 4 px on tags and checkboxes, 6 px on buttons,
 ### Pills
 
 - **Style:** 22 px tall, 6 px radius, label size at 500, tinted fill with its own text colour. Variants: up (green), down (red), flat (surface 2 with ink 2), and the state words Paused and Checking in flat.
-- **Use:** a change (the delta beside a metric, the 7d column, the Change column, an alert's kind of move), a count that is a state (`1 critical`), a state that changes, an insight (Beatable, Dropping), or ownership in a change feed (yours, competitor). Further variants carry status tints: success, warning, info and destructive. Never a source, a store, a market, a tag or a category, which are text; never a pill that would appear on every row of a list.
+- **Use:** a change (the delta beside a metric, the 7d column, the Change column, an alert's kind of move), a count that is a state (`1 critical`), a state that changes, an insight (Beatable, Dropping), or ownership in a change feed (yours, competitor). Further variants carry status tints: success, warning, info and destructive. Never a source, a store, a market, a tag or a category, which are text; never a pill that would appear on every row of a list. A localization's read role is a pill on every screen (`ReadRoleBadge`): Default in the information tint and Also flat, prefixed with the market where several markets read one localization (`US · Default`). A new entrant in a search results or chart list is the word New in the up colour, as the delta beside it is coloured text.
 
 ### Change and delta
 
@@ -338,14 +339,15 @@ Four forms exist, each in `components/ui/delta-chip.tsx` or beside its list, and
 ### Page header
 
 - A page opens with its title; an app page sets the 32 px store icon beside it with store, home storefront and the store page link on one label size line under it. The line of facts under a title (`META_LINE`, label size in ink 2) joins its parts with a middle dot: counts and run state on the dashboard, version, price and snapshot day on the overview. A daily page adds the lede (`LEDE`, body size in ink 2, 70ch) with its figures at 500 in ink.
+- `PageHeader` (`components/layout/PageHeader.tsx`) draws it: the title, the controls at the right with the one primary last, then the lede and the facts line. A page under the app band passes `titleHidden`, which keeps its name as a visually hidden `h2` under the band's `h1`, and opens with its control row instead of a second visible heading.
 
 ### Collapsible sections
 
-- A section the viewer can fold (`CollapsibleCard`, or `SECTION_TOGGLE` with `SECTION_CHEVRON`) is a panel whose `h2` title is the trigger: the title, then a 16 px chevron in ink 2 beside it that points right while closed and down while open, turning in 150 ms. Hover underlines the title in ink. Header controls stay visible while closed, a one line description may sit under a closed title, and closed content is not mounted.
+- A section the viewer can fold (`CollapsibleCard`, or `SECTION_TOGGLE` with `SECTION_CHEVRON`) is a panel whose `h2` title is the trigger: the title, then a 16 px chevron in ink 2 beside it that points right while closed and down while open, turning in 150 ms. Hover underlines the title in ink. Header controls stay visible while closed, so a closed section is one line: its description is the first line of its open content, and an info tip sits at the right of the header. Closed content is not mounted.
 
 ### Priority words
 
-- Critical in the down red, High in warn, Medium and Low in ink 2, as 11 px uppercase words at 600 with wide tracking in a column before the action title, with the app named on a caption line under the title on the dashboard. They are the one uppercase label in the system, because a priority is read as a mark, not a word.
+- `PriorityWord` (`components/actions/PriorityWord.tsx`): Critical in the down red, High in warn, Medium and Low in ink 2, as 11 px uppercase words at 600 with wide tracking in a 72 px column (`PRIORITY_COLUMNS`) before the action title, with the app named on a caption line under the title on the dashboard. They are the one uppercase label in the system, because a priority is read as a mark, not a word.
 
 ### Panels
 
@@ -353,10 +355,12 @@ Four forms exist, each in `components/ui/delta-chip.tsx` or beside its list, and
 - **Background:** surface, with a hairline border; the header is at least 47 px tall with 16 px side padding, the heading at the left and a count in label size and ink 3, a segmented control or a range control at the right; a footer line in caption size and ink 3 says what the panel reads or over which window, with its link at the right.
 - **Shadow Strategy:** none (see Elevation).
 - **Internal Padding:** 16 px in headers and table cells, 8 px around a list so its 36 px rows can carry a hover and a bar.
+- **Full bleed:** a table or list that runs edge to edge in a panel sits in `CardContent` with `PANEL_BLEED`, which cancels the panel's side and vertical padding, and draws no frame of its own: never a bordered table inside a bordered panel.
 
 ### Metric strip
 
 - The first panel of a page: four metric tabs divided by hairlines, each a pressable button with a label, a 28 px value with its trend or count pills on the same line, then a one line note in caption size and ink 3. The active tab carries a 2 px ink underline and decides, through the URL, what the chart in the same panel shows; the chart's own title and range control sit on a row above the plot. On a phone the strip is a two by two grid.
+- `MetricStrip` (`ui/stat-tile.tsx`) draws every strip and lays out by its own width: four columns from 768 px of strip width (two by two below), three from 512 px (one below), or two. Unframed (`framed={false}`) it heads the panel that holds its chart; framed, the default, it is a bordered panel of its own. A tile is a tab (`onSelect`) only where it drives the chart below or a URL filter, otherwise a static figure, and its `delta` (a trend pill or a state badge) sits beside the value. `MetricStripSkeleton` draws the same geometry while it loads.
 
 ### Charts
 
@@ -369,6 +373,7 @@ Four forms exist, each in `components/ui/delta-chip.tsx` or beside its list, and
 ### Tables
 
 - The table kit, 44 px rows with 16 px cell padding from `md` (8 px below), 36 px header rows with 12 px sentence case headers in ink 3 over a hairline, 13 px cells, no zebra, a lighter line between rows, hover to surface 2. Numeric columns and their headers are right aligned and tabular; a name cell holds a 24 px app icon, the name at 500 and a 12 px ink 3 line under it. The keyword table keeps 44 px rows, right aligns its score columns, shows change beside position, fits its default columns inside its frame from 1280 px and keeps a slim meter under each score. A totals footer repeats the header style and counts: keywords, ranked, not ranking, in the top 10, moved up, moved down.
+- Facets sit behind one **Filters** control (`data-table/FiltersControl.tsx`): a popover from `md` and a bottom sheet below it, both a dialog named Filters, with the active count as a flat pill on the outline button. A renderer reads a column's numeric flag with `numericProps(column)`.
 
 ### Navigation
 
@@ -385,7 +390,7 @@ Four forms exist, each in `components/ui/delta-chip.tsx` or beside its list, and
 ### States
 
 - **Loading:** skeleton blocks in surface 2 at the real geometry; the pulse stops under reduced motion; a loading region announces itself.
-- **Empty:** one sentence saying what is missing and the one action that fills it, left aligned inside the panel, no icon.
+- **Empty:** one sentence saying what is missing and the one action that fills it, centred inside the panel, no icon and no box (`EmptyState`). A chart's empty and insufficient states (`ChartNotice`, `ChartStat`, `RankingStates`) are the same sentence and action, centred at the chart's real height; the dashboard's first run and a page that is not found centre their title, sentence and action in the page column.
 - **Error:** the shared error state; a secondary section uses the inline query error.
 - **Stale and checking:** a 16 px clock with the day of the last check in label size; **Checking…** with a 14 px spinner; a found nothing position reads ">200" in ink 2 with "was #14" in tick size under it.
 
@@ -418,7 +423,7 @@ Four forms exist, each in `components/ui/delta-chip.tsx` or beside its list, and
 
 ## Screens
 
-The per screen intent for the three main pages; the components above supply the parts.
+The per screen intent for each signed in page; the components above supply the parts. Each page's subsection describes it as shipped.
 
 ### Dashboard
 
@@ -430,15 +435,43 @@ The app header: the 32 px icon, the name as the title, store, home storefront an
 
 ### Keywords
 
-The app header as on the overview, then one row: the Tracked and Discovered segmented control with counts (a blue dot marks unseen discoveries), the market select with the keyword count of each market and an outline icon button to add a market; at the right the Map toggle (Tracked only), Import CSV as an outline button and the primary "Add keywords". Under it one sentence: how many keywords are tracked and active, and how many climbed and fell since yesterday. Then the table's own row: search, one Filters control (a popover from `md`, a bottom sheet below it) with its active chips under it, the All, Moved, Fell and Lost switch with counts, the shown count, Columns and Export CSV. The table keeps 44 px rows with Keyword (listing marks as tinted underlines, the class as a 4 px tag, Paused as a flat pill), Position as a chip (tinted for the top 3, outlined for the top 10), Change as a delta pill with the words Lost and New, Last 7 days as a position line with its position delta, then Opportunity, Popularity and Difficulty each as a number over a slim meter in the grade colour, up to two Insight badges and the Top apps column of three overlapping store icons in one button with a bar under the own app; Tags, Source, Volatility, Added, Competitors in top 10 and Reveal are hidden by default, one row menu stays pinned at the right edge, and the default columns fit the table frame from 1280 px: a narrower frame shortens the keyword and folds the second insight into a count, then drops the 7 day line and tightens the cell padding, then hides the sort arrows of unsorted headers. A lost ranking stacks `was #14` in tick size under `>200`, so the Position column keeps one width. The totals footer counts keywords, ranked and not found, the average position and the top 10, the moves of the day and of 7 days, beside the three averages. Under the table the market's search read is a collapsible panel of localizations, notes and a closed line for localizations not shipped. The Discovered tab puts its search first, then the All, Ranked and Opportunities tabs with counts, then the Auto-track ranked switch and the Refresh discoveries, Track recommended and Track all ranked outline buttons, then the discovered table (keyword with its recommendation, source, position chip, the three scores and relevance over meters, a Track button and a dismiss icon per row) with a footer naming the last check and the weekly budget. Suggestions and Keyword combinations sit under it as collapsible panels with a one line description while closed. The cross store note lives in the Popularity header's info tip.
+The app header as on the overview, then one row: the Tracked and Discovered segmented control with counts (a blue dot marks unseen discoveries), the market select with the keyword count of each market and an outline icon button to add a market; at the right the Map toggle (Tracked only), Import CSV as an outline button and the primary "Add keywords". Under it one sentence: how many keywords are tracked and active, and how many climbed and fell since yesterday. Then the table's own row: search, one Filters control (a popover from `md`, a bottom sheet below it) with its active chips under it, the All, Moved, Fell and Lost switch with counts, the shown count, Columns and Export CSV. The table keeps 44 px rows with Keyword (listing marks as tinted underlines, the class as a 4 px tag, Paused as a flat pill), Position as a chip (tinted for the top 3, outlined for the top 10), Change as a delta pill with the words Lost and New, Last 7 days as a position line with its position delta, then Opportunity, Popularity and Difficulty each as a number over a slim meter in the grade colour, up to two Insight badges and the Top apps column of three overlapping store icons in one button with a bar under the own app; Tags, Source, Volatility, Added, Competitors in top 10 and Reveal are hidden by default, one row menu stays pinned at the right edge, and the default columns fit the table frame from 1280 px: a narrower frame shortens the keyword and folds the second insight into a count, then drops the 7 day line and tightens the cell padding, then hides the sort arrows of unsorted headers. A lost ranking stacks `was #14` in tick size under `>200`, so the Position column keeps one width. The totals footer counts keywords, ranked and not found, the average position and the top 10, the moves of the day and of 7 days, beside the three averages. Under the table the market's search read is a collapsible panel of localizations, notes and a closed line for localizations not shipped. The Discovered tab puts its search first, then the All, Ranked and Opportunities tabs with counts, then the Auto-track ranked switch and the Refresh discoveries, Track recommended and Track all ranked outline buttons, then the discovered table (keyword with its recommendation, source, position chip, the three scores and relevance over meters, a Track button and a dismiss icon per row) with a footer naming the last check and the weekly budget. Suggestions and Keyword combinations sit under it as collapsible panels, one title line while closed, opening on their one sentence description; the combinations info tip sits at the right of its header. The cross store note lives in the Popularity header's info tip.
+
+### Action Center
+
+### Alerts
+
+### Rankings
+
+### Competitors
+
+### Reviews
+
+### Top charts
+
+### Metadata
+
+### Changes
+
+### Audit
+
+### Settings
+
+### Integrations
+
+### Setup
+
+### Keyword inspector
+
+### What's new
 
 ## Where it lives
 
 - **Tokens:** `src/styles/primitives.css` (raw values, both themes), `src/styles/semantic.css` (roles: background, card, muted, border, ink steps, signals, grades, chart series, elevation), `src/app/globals.css` (Tailwind theme mapping, radius scale, focus ring, reduced motion), `components/tokens/token-groups.ts` with `src/styles/tokens.test.ts` (the contrast pairs).
 - **Type and width:** `src/styles/typography.css` (the steps, known to `cn` through `TYPE_STEPS` in `lib/utils.ts`, and the `numeric` and `link-underline` utilities); `src/styles/layout.css` (page widths, gutters, the keywords table width tiers).
 - **Primitives:** `components/ui/` (button, badge, card, table, tabs, input, select, stat-tile, delta-chip, graded, meter, empty-state, skeleton, info-tip, sidebar).
-- **Shared classes:** `components/layout/panel-classes.ts` (`LEDE`, `META_LINE`, `PANEL_HEADER`, `PANEL_COUNT`, `LIST_ROW`, `LIST_HEAD`, `FOOTER_LINK`, `SECTION_TOGGLE`, `SECTION_CHEVRON`) and `components/layout/CollapsibleCard.tsx`.
+- **Shared classes:** `components/layout/panel-classes.ts` (`LEDE`, `META_LINE`, `PANEL_HEADER`, `PANEL_BLEED`, `PANEL_COUNT`, `LIST_ROW`, `LIST_HEAD`, `FOOTER_LINK`, `SECTION_TOGGLE`, `SECTION_CHEVRON`), `components/layout/PageHeader.tsx`, `CollapsibleCard.tsx` and `feed-row.tsx` (the dated feed row).
 - **Shell:** `components/layout/AppSidebar.tsx`, `SidebarNav.tsx`, `InsetHeader.tsx`; `components/AppIcon.tsx` with `app-icon-radius.ts`.
-- **Charts:** `components/charts/theme.ts`, `ChartKey.tsx`, `SeriesFade.tsx`, `rank-layers.tsx`, `Sparkline.tsx`.
-- **Lists and tables:** `components/rankings/MoversPanel.tsx` and `MoverList.tsx`, `components/actions/DoNextPanel.tsx`, `components/data-table/`, `lib/grade.ts`.
+- **Charts:** `components/charts/theme.ts`, `ChartKey.tsx`, `ChartStates.tsx`, `SeriesFade.tsx`, `rank-layers.tsx`, `Sparkline.tsx`, `DivergingBars.tsx` with `diverging-trend.ts` and `trend-axis.ts`.
+- **Lists and tables:** `components/rankings/MoversPanel.tsx` and `MoverList.tsx`, `components/actions/DoNextPanel.tsx` with `PriorityWord.tsx`, `components/data-table/` with `FiltersControl.tsx`, `lib/grade.ts`.
 - **Screens:** `components/dashboard/`, `components/overview/` with `components/app-detail/AppHeader.tsx`, `components/keywords/` with `keywords/discovery/`.

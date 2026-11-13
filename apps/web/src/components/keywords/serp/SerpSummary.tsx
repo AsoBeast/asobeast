@@ -64,7 +64,7 @@ function Item({
 }
 
 const Value = ({ children }: { children: ReactNode }) => (
-  <span className="numeric text-base font-medium">{children}</span>
+  <span className="numeric text-body font-medium">{children}</span>
 );
 
 const Note = ({ children }: { children: ReactNode }) => (
@@ -84,7 +84,7 @@ function PositionValue({
         <>
           <Button
             variant="link"
-            className="h-auto p-0 numeric text-base font-medium"
+            className="h-auto p-0 numeric text-body font-medium"
             aria-label={`Jump to your row at #${position.position}`}
             onClick={() => jumpToRow(position.position)}
           >

@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/card";
 import { TrendChip } from "@/components/ui/delta-chip";
 import { EmptyState } from "@/components/ui/empty-state";
-import { StatTile, StatTileGroup } from "@/components/ui/stat-tile";
+import { MetricStrip, StatTile } from "@/components/ui/stat-tile";
 import { formatDate } from "@/lib/format";
 import {
   FUNNEL_COPY,
@@ -42,7 +42,6 @@ import {
 import { PANEL_ACTION, PANEL_HEADER } from "@/components/layout/panel-classes";
 import { cn } from "@/lib/utils";
 import { FunnelHelp } from "./FunnelHelp";
-import { PULSE_COLUMNS, PULSE_STRIP } from "./layout-classes";
 import { FunnelTilesSkeleton } from "./skeletons";
 
 const CONNECT_LINK = "text-body font-medium text-foreground link-underline";
@@ -142,25 +141,23 @@ function FunnelTiles({ report }: { report: StoreFunnelReport }) {
 
   return (
     <>
-      <StatTileGroup className={cn(PULSE_STRIP, PULSE_COLUMNS[tiles.length])}>
+      <MetricStrip columns={tiles.length} framed={false}>
         {tiles.map((tile) => (
           <StatTile
             key={tile.label}
             label={tile.label}
             value={
-              <span className="flex flex-wrap items-center gap-2">
-                <span>
-                  {tile.metric === "conversion"
-                    ? formatConversion(headline?.current?.conversion ?? null)
-                    : formatCount(headline?.current?.[tile.metric] ?? null)}
-                </span>
-                <TrendChip
-                  label="28d"
-                  unit="%"
-                  value={trendValue(headline, tile.metric)}
-                  form="pill"
-                />
-              </span>
+              tile.metric === "conversion"
+                ? formatConversion(headline?.current?.conversion ?? null)
+                : formatCount(headline?.current?.[tile.metric] ?? null)
+            }
+            delta={
+              <TrendChip
+                label="28d"
+                unit="%"
+                value={trendValue(headline, tile.metric)}
+                form="pill"
+              />
             }
             note={
               <span className="flex items-center justify-between gap-3">
@@ -174,7 +171,7 @@ function FunnelTiles({ report }: { report: StoreFunnelReport }) {
             }
           />
         ))}
-      </StatTileGroup>
+      </MetricStrip>
       <CardFooter>
         {`${copy.console}. ${share === null ? "" : `Search: ${share}% of ${copy.base}. `}${
           headline && settled

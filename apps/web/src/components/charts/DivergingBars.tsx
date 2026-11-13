@@ -8,9 +8,16 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { ChartKey } from "@/components/charts/ChartKey";
-import { ChartNotice, trendState } from "@/components/charts/ChartStates";
-import { SeriesTooltip } from "@/components/charts/SeriesTooltip";
+import {
+  type ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+} from "@/components/ui/chart";
+import { formatDayMonth, formatNumber } from "@/lib/format";
+import { ChartKey } from "./ChartKey";
+import { ChartNotice, trendState } from "./ChartStates";
+import type { DivergingRow, DivergingTrend } from "./diverging-trend";
+import { SeriesTooltip, type SeriesTooltipItem } from "./SeriesTooltip";
 import {
   BAR_PROPS,
   CHART_HEIGHT,
@@ -19,14 +26,7 @@ import {
   TIME_AXIS_PROPS,
   VALUE_AXIS_PROPS,
   ZERO_LINE_PROPS,
-} from "@/components/charts/theme";
-import {
-  type ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-} from "@/components/ui/chart";
-import { formatDayMonth, formatNumber } from "@/lib/format";
-import type { DivergingTrend } from "./history-trend";
+} from "./theme";
 
 export interface DivergingSubject {
   region: string;
@@ -35,16 +35,22 @@ export interface DivergingSubject {
   down: { label: string; color: string };
 }
 
+export type DivergingDetails = (row: DivergingRow) => SeriesTooltipItem[];
+
+const NO_DETAILS: DivergingDetails = () => [];
+
 function DivergingTooltip({
   active,
   label,
   trend,
   subject,
+  details,
 }: {
   active?: boolean;
   label?: string | number;
   trend: DivergingTrend;
   subject: DivergingSubject;
+  details: DivergingDetails;
 }) {
   if (!active || label === undefined) return null;
   const row = trend.rows.find((candidate) => candidate.date === label);
@@ -71,6 +77,7 @@ function DivergingTooltip({
                 value: formatNumber(-row.down),
                 sortBy: 1,
               },
+              ...details(row),
             ]
           : []
       }
@@ -108,9 +115,11 @@ export function DivergingKey({
 export function DivergingBars({
   trend,
   subject,
+  details = NO_DETAILS,
 }: {
   trend: DivergingTrend;
   subject: DivergingSubject;
+  details?: DivergingDetails;
 }) {
   const height = CHART_HEIGHT.tall;
   const state = trendState(trend.checked);
@@ -155,7 +164,13 @@ export function DivergingBars({
         />
         <ReferenceLine y={0} {...ZERO_LINE_PROPS} />
         <ChartTooltip
-          content={<DivergingTooltip trend={trend} subject={subject} />}
+          content={
+            <DivergingTooltip
+              trend={trend}
+              subject={subject}
+              details={details}
+            />
+          }
         />
         <Bar
           {...BAR_PROPS}
