@@ -1,7 +1,3 @@
-const PULSE_GRID = "grid-cols-2 @3xl/dashboard:grid-cols-4";
-
-export const PULSE_STRIP = `${PULSE_GRID} rounded-none border-0`;
-
 export const SPLIT_ROW = "grid gap-6 @5xl/dashboard:grid-cols-12 [&>*]:min-w-0";
 
 export const SPLIT_WIDE = "@5xl/dashboard:col-span-7";

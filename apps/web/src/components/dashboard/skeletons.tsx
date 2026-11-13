@@ -9,12 +9,11 @@ import {
   CardHeader,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StatTileGroup, StatTileSkeleton } from "@/components/ui/stat-tile";
+import { MetricStripSkeleton } from "@/components/ui/stat-tile";
 import {
   APPS_PANEL,
   APPS_SECTION,
   APP_GRID,
-  PULSE_STRIP,
   PANEL_FOOTER,
 } from "./layout-classes";
 import { LEDE, PANEL_HEADER } from "@/components/layout/panel-classes";
@@ -34,11 +33,7 @@ export function MetricPanelSkeleton() {
 export function PortfolioPulseSkeleton() {
   return (
     <Card className="gap-0 py-0">
-      <StatTileGroup className={PULSE_STRIP}>
-        {Array.from({ length: 4 }).map((_, index) => (
-          <StatTileSkeleton key={index} />
-        ))}
-      </StatTileGroup>
+      <MetricStripSkeleton columns={4} framed={false} />
       <div className="border-t border-border px-4 pt-3 pb-4">
         <MetricPanelSkeleton />
       </div>

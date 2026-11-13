@@ -1,17 +1,23 @@
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 const TILE_SHAPE =
   "row-span-3 grid grid-rows-subgrid gap-1 bg-card px-5 pt-3.5 pb-4 shadow-[-1px_0_0_var(--border),0_-1px_0_var(--border)]";
 
+const STRIP_COLUMNS = {
+  2: "grid-cols-2",
+  3: "grid-cols-1 @lg/metric-strip:grid-cols-3",
+  4: "grid-cols-2 @3xl/metric-strip:grid-cols-4",
+} as const;
+
+export type MetricStripColumns = keyof typeof STRIP_COLUMNS;
+
 export function StatTileGroup({
   className,
   children,
-}: {
-  className?: string;
-  children: ReactNode;
-}) {
+  ...props
+}: ComponentProps<"div">) {
   return (
     <div
       data-slot="stat-tile-group"
@@ -19,8 +25,36 @@ export function StatTileGroup({
         "grid grid-cols-[repeat(auto-fit,minmax(min(100%,12rem),1fr))] overflow-hidden rounded-lg border border-border bg-card",
         className,
       )}
+      {...props}
     >
       {children}
+    </div>
+  );
+}
+
+export function MetricStrip({
+  columns,
+  framed = true,
+  label,
+  children,
+}: {
+  columns: MetricStripColumns;
+  framed?: boolean;
+  label?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="@container/metric-strip">
+      <StatTileGroup
+        role={label ? "group" : undefined}
+        aria-label={label}
+        className={cn(
+          STRIP_COLUMNS[columns],
+          !framed && "rounded-none border-0",
+        )}
+      >
+        {children}
+      </StatTileGroup>
     </div>
   );
 }
@@ -28,6 +62,7 @@ export function StatTileGroup({
 export function StatTile({
   label,
   value,
+  delta,
   note,
   info,
   selected,
@@ -36,6 +71,7 @@ export function StatTile({
 }: {
   label: string;
   value: ReactNode;
+  delta?: ReactNode;
   note?: ReactNode;
   info?: ReactNode;
   selected?: boolean;
@@ -61,7 +97,12 @@ export function StatTile({
         {label}
         {info ? <span className="ml-1">{info}</span> : null}
       </span>
-      <span className="numeric self-end text-metric">{value}</span>
+      <span className="numeric self-end text-metric">
+        <span className="flex flex-wrap items-center gap-2">
+          <span>{value}</span>
+          {delta}
+        </span>
+      </span>
       <span className="text-caption text-balance text-faint-foreground">
         {note}
       </span>
@@ -87,5 +128,21 @@ export function StatTileSkeleton() {
       <SkeletonLine step="self-end text-metric" width="w-12" />
       <SkeletonLine step="text-caption" width="w-28" />
     </div>
+  );
+}
+
+export function MetricStripSkeleton({
+  columns,
+  framed,
+}: {
+  columns: MetricStripColumns;
+  framed?: boolean;
+}) {
+  return (
+    <MetricStrip columns={columns} framed={framed}>
+      {Array.from({ length: columns }).map((_, index) => (
+        <StatTileSkeleton key={index} />
+      ))}
+    </MetricStrip>
   );
 }
