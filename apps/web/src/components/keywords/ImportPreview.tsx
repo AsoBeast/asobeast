@@ -73,11 +73,11 @@ export function ImportPreview({
       className="flex flex-col gap-3"
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <p role="status" className="text-sm font-medium">
+        <p role="status" className="text-body font-medium">
           {summarySentence(result.summary)}
         </p>
         {busy ? (
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5 text-caption text-muted-foreground">
             <Loader2 aria-hidden className="size-3.5 animate-spin" />
             Updating
           </span>
@@ -95,7 +95,7 @@ export function ImportPreview({
       </div>
       <Table
         scrollLabel="Rows of the file"
-        containerClassName="max-h-72 overflow-y-auto rounded-xl border bg-card"
+        containerClassName="max-h-72 overflow-y-auto rounded-lg border bg-card"
       >
         <TableCaption className="sr-only">
           Every row of the file, with what an import would do with it.

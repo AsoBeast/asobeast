@@ -168,10 +168,10 @@ export function AddKeywordsDialog({
               ))}
             </div>
           ) : null}
-          <p className="text-xs text-muted-foreground tabular-nums">
+          <p className="numeric text-caption text-muted-foreground">
             {`${chips.length} of ${KEYWORD_BULK_ADD_LIMIT} keyword${chips.length === 1 ? "" : "s"} ready`}
           </p>
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          {error ? <p className="text-body text-destructive">{error}</p> : null}
         </DialogBody>
 
         <DialogFooter>

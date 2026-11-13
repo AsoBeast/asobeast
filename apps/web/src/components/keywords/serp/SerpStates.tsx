@@ -6,9 +6,7 @@ import { SerpSummarySkeleton } from "./SerpSummary";
 
 function Panel({ children }: { children: ReactNode }) {
   return (
-    <p className="mx-4 mt-4 rounded-xl border border-dashed p-6 text-center text-body text-muted-foreground">
-      {children}
-    </p>
+    <p className="mx-4 mt-4 text-body text-muted-foreground">{children}</p>
   );
 }
 
@@ -54,7 +52,7 @@ export function SerpSkeleton() {
       {Array.from({ length: 10 }, (_, index) => (
         <div key={index} data-slot="serp-row" className={SERP_ROW_GRID}>
           <Skeleton className="col-start-1 row-start-1 ml-auto h-5 w-5" />
-          <Skeleton className="col-start-2 row-start-1 size-10 rounded-xl" />
+          <Skeleton className="col-start-2 row-start-1 size-10 rounded-lg" />
           <div className="col-start-3 row-start-1 flex flex-col gap-1.5 pt-0.5">
             <Skeleton className="h-4 w-3/4" />
             <Skeleton className="h-3 w-1/3" />

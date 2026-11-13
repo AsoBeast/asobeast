@@ -208,7 +208,7 @@ function PositionHistoryBody({
   return (
     <ChartSkeleton
       height={CHART_HEIGHT.compact}
-      className="border border-dashed"
+      className="border border-border"
     />
   );
 }

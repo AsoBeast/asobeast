@@ -176,7 +176,7 @@ export function KeywordSheetListing({
         />
       ) : null}
       {!read.data && !failedRead(read) ? (
-        <Skeleton className="h-40 w-full rounded-xl" />
+        <Skeleton className="h-40 w-full rounded-lg" />
       ) : null}
       {read.data && own ? (
         <ul className="flex flex-col">
