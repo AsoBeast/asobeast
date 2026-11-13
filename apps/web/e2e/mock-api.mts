@@ -11,6 +11,7 @@ import {
   filterAlertEvents,
 } from "./alert-feed-fixtures.mts";
 import {
+  HISTOGRAM_FAILING_COOKIE,
   RATINGS_HISTORY_COOKIE,
   RATINGS_HISTORY_SETS,
 } from "./reviews-fixtures.mts";
@@ -5059,6 +5060,7 @@ const routes: Route[] = [
   appRoute(
     /^\/apps\/([^/]+)\/reviews\/histogram$/,
     (dataset) => dataset.ratingsHistogram,
+    (req) => hasCookie(req, HISTOGRAM_FAILING_COOKIE, "1"),
   ),
   appRoute(
     /^\/apps\/([^/]+)\/reviews\/themes$/,

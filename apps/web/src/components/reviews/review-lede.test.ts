@@ -137,5 +137,14 @@ describe("reviewsLede", () => {
         }),
       ),
     ).toBe("No reviews are stored yet. Rating 4.8.");
+    expect(
+      sentence(
+        reviewsLede({
+          list: list([]),
+          points: [{ date: "2026-11-13", ratingAvg: null, ratingCount: 100 }],
+          today: TODAY,
+        }),
+      ),
+    ).toBe("No reviews are stored yet.");
   });
 });

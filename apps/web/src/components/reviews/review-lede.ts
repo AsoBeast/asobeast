@@ -74,7 +74,10 @@ export function reviewsLede({
   today: string;
 }): LedePart[] {
   const rating = ratingMove(points);
-  if (list.total === 0 && rating.length === 0) {
+  const rated = points.some(
+    (point) => point.ratingAvg !== null || point.ratingCount !== null,
+  );
+  if (list.total === 0 && !rated) {
     return [
       plain(
         "No reviews or ratings are stored yet. They are read on the daily run.",

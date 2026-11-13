@@ -1,4 +1,7 @@
-import { RATINGS_HISTORY_COOKIE } from "./reviews-fixtures.mts";
+import {
+  HISTOGRAM_FAILING_COOKIE,
+  RATINGS_HISTORY_COOKIE,
+} from "./reviews-fixtures.mts";
 import { seedCookies } from "./routes.mts";
 import { expect, test } from "./session.mts";
 
@@ -203,7 +206,9 @@ test("the panels read in the order they stack on a phone", async ({ page }) => {
       page.getByRole("region", { name: "Ratings distribution" }),
       page.getByRole("region", { name: "Rating by version" }),
       page.getByRole("region", { name: "What people mention" }),
-    ].map(async (panel) => (await panel.boundingBox())!.y),
+    ].map((panel) =>
+      panel.evaluate((node) => node.getBoundingClientRect().top),
+    ),
   );
   expect(tops).toEqual([...tops].sort((a, b) => a - b));
 });
@@ -221,14 +226,41 @@ test("a play app with five reply states fits a 320px phone", async ({
   const rights = await tabs.evaluateAll((nodes) =>
     nodes.map((node) => node.getBoundingClientRect().right),
   );
-  const info = (await page
+  const infoRight = await page
     .getByRole("button", { name: "About reply status" })
-    .boundingBox())!;
-  const title = (await page.getByText("Stürzt ab").boundingBox())!;
+    .evaluate((node) => node.getBoundingClientRect().right);
+  const titleWidth = await page
+    .getByText("Stürzt ab")
+    .evaluate((node) => node.getBoundingClientRect().width);
 
-  expect(Math.max(...rights, info.x + info.width)).toBeLessThanOrEqual(320);
-  expect(title.width).toBeGreaterThan(80);
+  expect(Math.max(...rights, infoRight)).toBeLessThanOrEqual(320);
+  expect(titleWidth).toBeGreaterThan(80);
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(320);
+});
+
+test("a failing distribution request keeps the reviews page and offers a retry", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { [HISTOGRAM_FAILING_COOKIE]: "1" });
+  await page.goto(REVIEWS);
+  const distribution = page.getByRole("region", {
+    name: "Ratings distribution",
+  });
+
+  await expect(
+    distribution
+      .getByRole("alert")
+      .filter({ hasText: "Could not load the ratings distribution." }),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("article")).toHaveCount(5);
+
+  await context.clearCookies({ name: HISTOGRAM_FAILING_COOKIE });
+  const retry = distribution.getByRole("button", { name: "Retry" });
+  await retry.focus();
+  await page.keyboard.press("Enter");
+
+  await expect(distribution.getByRole("listitem")).toHaveCount(5);
 });

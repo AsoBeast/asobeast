@@ -108,9 +108,7 @@ export default async function ReviewsPage({
             <ReviewsList id={id} />
           </div>
           <div className={REVIEWS_RAIL}>
-            <Suspense fallback={null}>
-              <RatingsDistribution id={id} />
-            </Suspense>
+            <RatingsDistribution id={id} />
             <Suspense fallback={null}>
               <RatingByVersion id={id} />
             </Suspense>

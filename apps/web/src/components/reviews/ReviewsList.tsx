@@ -74,7 +74,7 @@ function ListFooter({
     : `Showing ${formatNumber(shown)} of ${formatNumber(total)} · ${SORT_WORDS[sort]}`;
   return (
     <div className="flex min-h-12 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-border px-4 py-2.5 text-caption text-faint-foreground">
-      <p>{counted}</p>
+      <p role="status">{counted}</p>
       {partial && expanded ? (
         <p>
           {`The page shows at most ${REVIEWS_SHOW_ALL_LIMIT} reviews; narrow the filters to reach the others.`}
