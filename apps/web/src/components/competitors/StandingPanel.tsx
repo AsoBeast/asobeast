@@ -43,7 +43,7 @@ import {
 } from "./standing";
 
 const VISIBILITY_COLUMNS =
-  "grid grid-cols-[minmax(0,1fr)_3.5rem_4rem] items-center gap-3 px-2";
+  "grid grid-cols-[minmax(0,1fr)_4rem_4rem] items-center gap-3 px-2";
 
 type Icons = ReadonlyMap<string, string | null>;
 
@@ -115,7 +115,7 @@ function VisibilityList({
                   value={formatRating(point.ratingAvg)}
                   grade={grade("rating", point.ratingAvg)}
                   label="Rating"
-                  marker={false}
+                  aligned
                 />
               )}
             </span>
@@ -233,24 +233,27 @@ function StandingContent({
 
 function StandingBody({ id, view }: { id: string; view: StandingView }) {
   const read = useQuery(competitorAnalysisOptions(id));
-  const { data: app } = useQuery(appDetailOptions(id));
+  const appRead = useQuery(appDetailOptions(id));
   const { data: competitors } = useQuery(competitorsOptions(id));
-  if (failedRead(read)) {
+  const failed = [read, appRead].find(failedRead);
+  if (failed) {
     return (
       <InlineQueryError
         message="The comparison could not be loaded."
-        read={read}
+        read={failed}
       />
     );
   }
-  if (read.data === undefined || app === undefined) {
+  if (read.data === undefined || appRead.data === undefined) {
     return <StandingSkeleton />;
   }
+  const app = appRead.data;
   const icons = new Map<string, string | null>([
     [app.id, app.iconUrl],
-    ...(competitors ?? []).map(
-      (item) => [item.id, item.iconUrl] as [string, string | null],
-    ),
+    ...(competitors ?? []).map((item): [string, string | null] => [
+      item.id,
+      item.iconUrl,
+    ]),
   ]);
   return (
     <StandingContent
@@ -272,7 +275,9 @@ export function StandingPanel({ id }: { id: string }) {
       actions={
         <Tabs
           value={view}
-          onValueChange={(next) => setView(next as StandingView)}
+          onValueChange={(next) =>
+            setView(STANDING_VIEWS.find((value) => value === next) ?? view)
+          }
         >
           <TabsList aria-label="Comparison">
             {STANDING_VIEWS.map((value) => (
