@@ -34,6 +34,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "The overview of an app now opens with four figures: visibility, share of voice, keywords in the top 10 and the store rating. Select any of them to draw its chart. The visibility chart shows the range before as a second line and marks the days your listing changed, with a link to what each change did. Keyword movers sit right under it with a small line of each keyword's last 30 days, followed by the keywords closest to the top 10, the next things to do and how many tracked keywords each part of your listing covers. The store funnel shows a trend line under each number, category ranks and ratings by market follow as reference, and the app's own icon now sits beside its name on every page.",
       },
       {
+        kind: "improved",
+        title: "Alerts you can read at a glance",
+        text: "The alerts page is now one list instead of a card per event. It opens by saying how many events are new since your last visit, groups them by day, and shows the size of each move beside its sentence, such as 8 positions down or 13 up, so the big ones stand out without reading every line. The app, store and country of each event line up in their own column, and on a phone each event takes two short lines.",
+      },
+      {
         kind: "new",
         title: "Press a keyword to see everything about it",
         text: "Pressing a keyword in the keywords table opens a sheet beside it: its position and what changed since yesterday, its scores and where each one comes from, the reason behind every insight, the position history with the days your listing changed, the top 10 search results with you and your competitors marked, and where the phrase sits in your listing. The keyword's menu is at the top of the sheet beside arrows that step to the previous and the next keyword, and a copied link opens the same sheet. The line in the Last 7 days column now opens the position history, and every button shows a hand when you point at it.",
