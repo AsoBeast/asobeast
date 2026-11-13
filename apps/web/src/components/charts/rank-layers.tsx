@@ -1,27 +1,46 @@
 import { ReferenceArea } from "recharts";
 import { RANK_DEPTH } from "@asobeast/shared";
 import { RankBandLabel } from "./RankBandLabel";
+import { seriesColor } from "./theme";
 
 export const RANK_TICKS = [1, 10, 25, 50, 100, RANK_DEPTH];
 
 const RANK_TIERS = [
-  { from: 1, to: 3, fill: "var(--rank-band-1)", label: "Top 3" },
-  { from: 3, to: 10, fill: "var(--rank-band-2)", label: "Top 10" },
-  { from: 10, to: 25, fill: "var(--rank-band-3)", label: "Top 25" },
+  { from: 1, to: 3, opacity: 0.18, label: "Top 3" },
+  { from: 3, to: 10, opacity: 0.13, label: "Top 10" },
+  { from: 10, to: 25, opacity: 0.085, label: "Top 25" },
+  { from: 25, to: 50, opacity: 0.05 },
+  { from: 50, to: 100, opacity: 0.025 },
 ] as const;
 
+const UNRANKED_FROM = 100;
+
 export function rankTierAreas() {
-  return RANK_TIERS.map((tier) => (
+  return [
     <ReferenceArea
-      key={tier.label}
-      y1={tier.from}
-      y2={tier.to}
-      fill={tier.fill}
-      fillOpacity={0.06}
+      key="unranked"
+      y1={UNRANKED_FROM}
+      y2={RANK_DEPTH}
+      fill="var(--muted)"
+      fillOpacity={0.6}
       ifOverflow="hidden"
-      label={{ value: tier.label, content: RankBandLabel }}
-    />
-  ));
+    />,
+    ...RANK_TIERS.map((tier) => (
+      <ReferenceArea
+        key={tier.to}
+        y1={tier.from}
+        y2={tier.to}
+        fill={seriesColor(0)}
+        fillOpacity={tier.opacity}
+        ifOverflow="hidden"
+        label={
+          "label" in tier
+            ? { value: tier.label, content: RankBandLabel }
+            : undefined
+        }
+      />
+    )),
+  ];
 }
 
 export const markerLineProps = (
