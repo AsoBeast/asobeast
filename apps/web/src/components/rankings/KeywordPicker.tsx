@@ -21,6 +21,8 @@ import {
 import { cn } from "@/lib/utils";
 import { DEFAULT_SELECTION, pickerLabel, topByOpportunity } from "./selection";
 
+export const KEYWORD_PICKER_ID = "rankings-keyword-picker";
+
 export function KeywordPicker({
   tracked,
   value,
@@ -45,17 +47,18 @@ export function KeywordPicker({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          id={KEYWORD_PICKER_ID}
           variant="outline"
           className="justify-between gap-2 print:hidden"
         >
-          {value.length} selected
-          <ChevronsUpDown className="size-4 opacity-50" />
+          {`${value.length} selected`}
+          <ChevronsUpDown className="size-4 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
       <PopoverContent
         aria-label="Choose keywords"
         className="w-72 p-0"
-        align="start"
+        align="end"
       >
         <Command>
           <CommandInput placeholder="Search keywords…" />
