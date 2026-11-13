@@ -200,3 +200,28 @@ test("the panels read in the order they stack on a phone", async ({ page }) => {
   );
   expect(tops).toEqual([...tops].sort((a, b) => a - b));
 });
+
+test("a play app with five reply states fits a 320px phone", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 720 });
+  await page.goto("/apps/app-gp/reviews");
+  const tabs = page
+    .getByRole("tablist", { name: "Reply status" })
+    .getByRole("tab");
+  await expect(tabs).toHaveCount(5);
+
+  const rights = await tabs.evaluateAll((nodes) =>
+    nodes.map((node) => node.getBoundingClientRect().right),
+  );
+  const info = (await page
+    .getByRole("button", { name: "About reply status" })
+    .boundingBox())!;
+  const title = (await page.getByText("Stürzt ab").boundingBox())!;
+
+  expect(Math.max(...rights, info.x + info.width)).toBeLessThanOrEqual(320);
+  expect(title.width).toBeGreaterThan(80);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(320);
+});

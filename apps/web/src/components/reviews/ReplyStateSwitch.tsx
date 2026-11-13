@@ -12,7 +12,7 @@ import { shownReplyStates } from "./reply-state";
 
 const EVERY = "all";
 const COUNT = "numeric text-muted-foreground";
-const OPTION = "max-sm:flex-1 max-sm:px-1.5";
+const OPTION = "max-sm:flex-1 max-sm:px-1.5 max-[22.5rem]:h-7";
 
 export function ReplyStateSwitch({
   id,
@@ -36,7 +36,10 @@ export function ReplyStateSwitch({
         onSelect(literalOf(REVIEW_REPLY_STATES, next) ?? null)
       }
     >
-      <TabsList aria-label="Reply status" className="max-sm:w-full">
+      <TabsList
+        aria-label="Reply status"
+        className="max-sm:w-full max-[22.5rem]:h-auto max-[22.5rem]:flex-wrap"
+      >
         <TabsOption value={EVERY} className={OPTION}>
           <span>All</span>
           <span className={COUNT}>{formatNumber(data.total)}</span>

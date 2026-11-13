@@ -171,12 +171,12 @@ export function ReviewCard({
       style={{ contentVisibility: "auto", containIntrinsicSize: "auto 8rem" }}
       className="flex flex-col gap-2 p-4 data-[open]:bg-muted data-[open]:shadow-[inset_2px_0_0_var(--foreground)] max-sm:px-3"
     >
-      <div className="flex items-start gap-2.5">
+      <div className="flex flex-wrap items-start gap-x-2.5 gap-y-1">
         <Stars score={review.score} />
         {title ? (
           <span
             dir="auto"
-            className="min-w-0 text-body font-medium wrap-anywhere"
+            className="min-w-[40%] flex-1 text-body font-medium wrap-anywhere"
           >
             {title}
           </span>
