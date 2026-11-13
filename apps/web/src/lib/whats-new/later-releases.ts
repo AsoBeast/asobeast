@@ -61,7 +61,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "improved",
         title: "Calmer empty charts",
-        text: "A chart with nothing to draw yet says so in the middle of the chart without a dashed box around it, and so do a page that is not found and the first visit before any app is imported. Progress bars and the run indicator are no longer orange, and a new entry in search results or a top chart reads New in green.",
+        text: "A chart with nothing to draw yet says so in the middle of the chart without a dashed box around it, and so do a page that is not found and the first visit before any app is imported. The run indicator turns grey, and a new entry in search results or a top chart reads New in green.",
       },
       {
         kind: "new",
