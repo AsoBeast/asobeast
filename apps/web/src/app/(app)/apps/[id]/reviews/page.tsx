@@ -1,8 +1,17 @@
 import { Suspense } from "react";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
-import { RatingsChart } from "@/components/reviews/RatingsChart";
-import { RatingsHistogramCard } from "@/components/reviews/RatingsHistogramCard";
+import { RatingByVersion } from "@/components/reviews/RatingByVersion";
+import { RatingsDistribution } from "@/components/reviews/RatingsDistribution";
+import { RatingsPanel } from "@/components/reviews/RatingsPanel";
+import { ReviewMentions } from "@/components/reviews/ReviewMentions";
+import { ReviewsLede } from "@/components/reviews/ReviewsLede";
 import { ReviewsList } from "@/components/reviews/ReviewsList";
+import {
+  REVIEWS_GRID,
+  REVIEWS_MAIN,
+  REVIEWS_RAIL,
+} from "@/components/reviews/layout-classes";
+import { LedeSkeleton } from "@/components/reviews/skeletons";
 import { getQueryClient } from "@/lib/get-query-client";
 import { presetToRange } from "@/lib/ranges";
 import {
@@ -76,12 +85,25 @@ export default async function ReviewsPage({
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <div className="page-wide flex flex-col gap-6">
-        <RatingsChart id={id} />
-        <Suspense fallback={null}>
-          <RatingsHistogramCard id={id} />
+      <div className="@container/reviews page-wide flex flex-col gap-6">
+        <Suspense fallback={<LedeSkeleton />}>
+          <ReviewsLede id={id} />
         </Suspense>
-        <ReviewsList id={id} />
+        <div className={REVIEWS_GRID}>
+          <div className={REVIEWS_MAIN}>
+            <RatingsPanel id={id} className="order-1 min-w-0" />
+            <ReviewsList id={id} className="order-3 min-w-0" />
+          </div>
+          <div className={REVIEWS_RAIL}>
+            <Suspense fallback={null}>
+              <RatingsDistribution id={id} className="order-2 min-w-0" />
+            </Suspense>
+            <Suspense fallback={null}>
+              <RatingByVersion id={id} className="order-4 min-w-0" />
+            </Suspense>
+            <ReviewMentions id={id} className="order-5 min-w-0" />
+          </div>
+        </div>
       </div>
     </HydrationBoundary>
   );

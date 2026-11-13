@@ -2,33 +2,30 @@
 
 import { Suspense, startTransition, useDeferredValue, useState } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { useQueryState } from "nuqs";
-import { storefrontLanguage } from "@asobeast/shared";
+import { storefrontLanguage, type ReviewSort } from "@asobeast/shared";
+import {
+  PANEL_ACTION,
+  PANEL_BLEED,
+  PANEL_HEADER,
+} from "@/components/layout/panel-classes";
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { InfoTip } from "@/components/ui/info-tip";
 import { formatNumber } from "@/lib/format";
 import { appDetailOptions, reviewsOptions } from "@/lib/queries";
-import {
-  reviewQueryParser,
-  reviewReplyParser,
-  reviewReplyStateParser,
-  reviewScoreParser,
-  reviewSinceParser,
-  reviewSortParser,
-  reviewVersionParser,
-} from "@/lib/search-params";
+import { cn } from "@/lib/utils";
 import { ReplyComposer } from "./ReplyComposer";
+import { ReplyStateSwitch } from "./ReplyStateSwitch";
 import { ReviewCard } from "./ReviewCard";
-import { ReviewCountsStrip } from "./ReviewCountsStrip";
-import { ReviewThemesStrip } from "./ReviewThemesStrip";
 import { ReviewsToolbar } from "./ReviewsToolbar";
+import { REPLY_STATES_GUIDE } from "./reply-state";
 import {
   narrowsReviews,
   REVIEWS_SHOW_ALL_LIMIT,
@@ -37,39 +34,49 @@ import {
 } from "./review-filters";
 import { matchesReviewQuery, quotedPhrase } from "./review-search";
 import { reviewActionLabel, reviewTwins } from "./review-subject";
-import { ReviewCountsSkeleton, ReviewsListSkeleton } from "./skeletons";
+import { ReplySwitchSkeleton, ReviewsListSkeleton } from "./skeletons";
+import { useReviewView } from "./use-review-view";
 
-function ShowAll({
+const SORT_WORDS: Record<ReviewSort, string> = {
+  newest: "newest first",
+  lowest: "lowest first",
+};
+
+const EMPTY_STATE = "px-4 py-12";
+
+function ListFooter({
   shown,
   total,
+  sort,
   searching,
   expanded,
   onShowAll,
 }: {
   shown: number;
   total: number;
+  sort: ReviewSort;
   searching: boolean;
   expanded: boolean;
   onShowAll: () => void;
 }) {
-  if (total <= shown) return null;
+  const partial = total > shown;
+  const counted =
+    searching && partial
+      ? `Search covers the ${formatNumber(shown)} loaded of ${formatNumber(total)} reviews`
+      : `Showing ${formatNumber(shown)} of ${formatNumber(total)} · ${SORT_WORDS[sort]}`;
   return (
-    <div className="flex flex-wrap items-center gap-3 pt-2">
-      <p className="text-caption text-muted-foreground">
-        {searching
-          ? `Search covers the ${formatNumber(shown)} loaded of ${formatNumber(total)} reviews`
-          : `Showing ${formatNumber(shown)} of ${formatNumber(total)}`}
-      </p>
-      {expanded ? (
-        <p className="text-caption text-muted-foreground">
-          The page shows at most {REVIEWS_SHOW_ALL_LIMIT} reviews; narrow the
-          filters to reach the others.
+    <div className="flex min-h-12 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-border px-4 py-2.5 text-caption text-faint-foreground">
+      <p>{counted}</p>
+      {partial && expanded ? (
+        <p>
+          {`The page shows at most ${REVIEWS_SHOW_ALL_LIMIT} reviews; narrow the filters to reach the others.`}
         </p>
-      ) : (
+      ) : null}
+      {partial && !expanded ? (
         <Button variant="outline" size="sm" onClick={onShowAll}>
           Show all
         </Button>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -111,6 +118,7 @@ function ReviewCards({
   if (data.total === 0) {
     return filtered ? (
       <EmptyState
+        className={EMPTY_STATE}
         title={
           queueCleared
             ? "Nothing needs a reply"
@@ -129,6 +137,7 @@ function ReviewCards({
       />
     ) : (
       <EmptyState
+        className={EMPTY_STATE}
         title="No reviews stored yet"
         body="Reviews appear after the next daily sync."
       />
@@ -144,6 +153,7 @@ function ReviewCards({
     <div className="flex flex-col">
       {shown.length === 0 ? (
         <EmptyState
+          className={EMPTY_STATE}
           title="No reviews match this search"
           body={
             quotedPhrase(query) === null
@@ -157,7 +167,7 @@ function ReviewCards({
           }
         />
       ) : (
-        <div className="divide-y">
+        <div className="divide-y divide-border-subtle">
           {shown.map((review) => {
             const twin = twins.get(review.id);
             return (
@@ -168,6 +178,7 @@ function ReviewCards({
                 fallbackLanguage={storefrontLanguage(app.country)}
                 review={review}
                 twin={twin}
+                open={reply === review.id}
                 actions={
                   reply === review.id ? null : (
                     <Button
@@ -207,9 +218,10 @@ function ReviewCards({
           })}
         </div>
       )}
-      <ShowAll
+      <ListFooter
         shown={data.reviews.length}
         total={data.total}
+        sort={view.sort}
         searching={query.trim() !== ""}
         expanded={expanded}
         onShowAll={() => startTransition(() => setExpandedView(viewKey))}
@@ -218,36 +230,64 @@ function ReviewCards({
   );
 }
 
-export function ReviewsList({ id }: { id: string }) {
-  const [score, setScore] = useQueryState("score", reviewScoreParser);
-  const [version, setVersion] = useQueryState("version", reviewVersionParser);
-  const [since, setSince] = useQueryState("since", reviewSinceParser);
-  const [replyState, setReplyState] = useQueryState(
-    "replyState",
-    reviewReplyStateParser,
-  );
-  const [sort, setSort] = useQueryState("sort", reviewSortParser);
-  const [query, setQuery] = useQueryState("q", reviewQueryParser);
-  const [reply, setReply] = useQueryState("reply", reviewReplyParser);
-  const view: ReviewView = { score, version, since, replyState, sort };
+export function ReviewsList({
+  id,
+  className,
+}: {
+  id: string;
+  className?: string;
+}) {
+  const {
+    view,
+    query,
+    reply,
+    setScore,
+    setVersion,
+    setSince,
+    setReplyState,
+    setSort,
+    setQuery,
+    setReply,
+  } = useReviewView();
 
   return (
-    <Card>
-      <CardHeader>
-        <CardDescription>Reviews</CardDescription>
-        <CardTitle>User reviews</CardTitle>
+    <Card className={className}>
+      <CardHeader
+        className={`${PANEL_HEADER} flex flex-wrap items-center justify-between gap-x-4 gap-y-2`}
+      >
+        <CardTitle asChild>
+          <h2>Reviews</h2>
+        </CardTitle>
+        <CardAction
+          className={`${PANEL_ACTION} flex items-center gap-1 max-sm:w-full`}
+        >
+          <Suspense fallback={<ReplySwitchSkeleton />}>
+            <ReplyStateSwitch
+              id={id}
+              view={view}
+              onSelect={(next) => {
+                void setReplyState(next);
+                if (next === "needs_reply") void setSort("lowest");
+              }}
+            />
+          </Suspense>
+          <InfoTip
+            label="About reply status"
+            title="Reply status"
+            summary="Needs reply: no reply anywhere. Draft: a reply is kept here and not marked. Replied: the store shows a reply, posted from here or in the console, or you marked the review as replied. Updated: the reviewer edited the review after the Google Play reply, so read it again."
+          >
+            <a
+              href={REPLY_STATES_GUIDE}
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-foreground link-underline"
+            >
+              Read how replies work
+            </a>
+          </InfoTip>
+        </CardAction>
       </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <Suspense fallback={<ReviewCountsSkeleton />}>
-          <ReviewCountsStrip
-            id={id}
-            view={view}
-            onSelect={(next) => {
-              void setReplyState(next);
-              if (next === "needs_reply") void setSort("lowest");
-            }}
-          />
-        </Suspense>
+      <CardContent className={cn(PANEL_BLEED, "flex flex-col")}>
         <ReviewsToolbar
           id={id}
           view={view}
@@ -255,15 +295,8 @@ export function ReviewsList({ id }: { id: string }) {
           onScore={(next) => void setScore(next)}
           onVersion={(next) => void setVersion(next || null)}
           onSince={(next) => void setSince(next)}
-          onReplyState={(next) => void setReplyState(next)}
           onSort={(next) => void setSort(next === "newest" ? null : next)}
           onQuery={(next, options) => void setQuery(next || null, options)}
-        />
-        <ReviewThemesStrip
-          id={id}
-          view={view}
-          query={query}
-          onSelect={(next) => void setQuery(next || null)}
         />
         <Suspense fallback={<ReviewsListSkeleton />}>
           <ReviewCards

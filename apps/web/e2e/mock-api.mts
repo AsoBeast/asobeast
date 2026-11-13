@@ -10,6 +10,10 @@ import {
   ALERT_EVENTS_SLOW_MS,
   filterAlertEvents,
 } from "./alert-feed-fixtures.mts";
+import {
+  RATINGS_HISTORY_COOKIE,
+  RATINGS_HISTORY_SETS,
+} from "./reviews-fixtures.mts";
 import { BREAKDOWNS } from "./keyword-breakdowns.mts";
 import { analysisOf, visibilityComparedFor } from "./gap-mock.mts";
 import { SERP_HISTORY, serpOnDay } from "./serp-history.mts";
@@ -5048,7 +5052,9 @@ const routes: Route[] = [
   },
   appRoute(
     /^\/apps\/([^/]+)\/ratings-history$/,
-    (dataset) => dataset.ratingsHistory,
+    (dataset, _query, req) =>
+      RATINGS_HISTORY_SETS[cookieValue(req, RATINGS_HISTORY_COOKIE) ?? ""] ??
+      dataset.ratingsHistory,
   ),
   appRoute(
     /^\/apps\/([^/]+)\/reviews\/histogram$/,

@@ -417,6 +417,13 @@ export const spiderTermParser = parseAsString.withDefault("");
 export const ratingsRangeParser =
   parseAsStringLiteral(RATINGS_RANGES).withDefault("30d");
 
+export const RATINGS_VIEWS = ["average", "volume"] as const;
+
+export type RatingsView = (typeof RATINGS_VIEWS)[number];
+
+export const ratingsViewParser =
+  parseAsStringLiteral(RATINGS_VIEWS).withDefault("average");
+
 export const reviewScoreParser = createParser({
   parse(value) {
     const score = Number(value);

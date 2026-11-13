@@ -25,6 +25,13 @@ const STATE_VARIANTS = {
 export const REPLY_STATES_GUIDE =
   "https://docs.asobeast.com/guides/reviews#reply-to-reviews";
 
+const SWITCH_LABELS: Record<ReviewReplyState, string> = {
+  needs_reply: "Needs reply",
+  drafted: "Draft",
+  replied: "Replied",
+  updated: "Updated",
+};
+
 export function replyStateLabel(state: ReviewReplyState): string {
   return STATE_LABELS[state];
 }
@@ -65,6 +72,7 @@ export function replyBadgeVariant(
 export const REPLY_STATE_OPTIONS = REVIEW_REPLY_STATES.map((state) => ({
   value: state,
   label: replyStateLabel(state),
+  short: SWITCH_LABELS[state],
 }));
 
 export function shownReplyStates(

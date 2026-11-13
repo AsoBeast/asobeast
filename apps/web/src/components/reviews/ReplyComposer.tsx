@@ -239,10 +239,7 @@ export function ReplyComposer({
   });
 
   return (
-    <section
-      aria-label="Reply to review"
-      className="flex flex-col gap-3 rounded-lg border bg-muted/40 p-3"
-    >
+    <section aria-label="Reply to review" className="flex flex-col gap-3 pt-1">
       <StoreReplyNotice review={review} store={store} />
       <ReplyDraftControls
         review={review}

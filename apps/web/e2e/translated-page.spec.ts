@@ -230,7 +230,6 @@ test("a translated settings page edits the essential alert", async ({
 const REVIEW_FILTERS = [
   "Filter by date",
   "Filter by version",
-  "Filter by reply state",
   "Sort reviews",
 ] as const;
 
