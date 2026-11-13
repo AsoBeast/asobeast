@@ -26,7 +26,7 @@ export function StageRow({
         className={
           ready
             ? "mt-0.5 size-4 shrink-0 text-muted-foreground"
-            : "mt-0.5 size-4 shrink-0 animate-spin text-primary"
+            : "mt-0.5 size-4 shrink-0 animate-spin text-muted-foreground"
         }
       />
       <div className="flex flex-col gap-0.5">
