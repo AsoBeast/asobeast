@@ -213,7 +213,10 @@ export function ChartTable({
           <Tabs
             value={params.tableView}
             onValueChange={(next) =>
-              void setParams({ tableView: next as ChartTableView })
+              void setParams(
+                { tableView: next as ChartTableView },
+                { history: "push" },
+              )
             }
           >
             <TabsList aria-label="Chart display">
@@ -247,7 +250,7 @@ export function ChartTable({
               <ColumnMenu columns={table.getAllLeafColumns()} />
             </div>
           </CardContent>
-          <CardContent className={cn(PANEL_BLEED, "border-t")}>
+          <CardContent className={cn(PANEL_BLEED, "mt-0 border-t")}>
             <ChartRows
               table={table}
               caption={`${chartTitle(page.chart)} on ${formatDate(page.capture.date)}`}

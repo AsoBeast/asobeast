@@ -2071,6 +2071,16 @@ test.describe("chart history", () => {
     await expect(chart.locator(".recharts-line")).toHaveCount(10);
     await expect(chartTable(page)).toHaveCount(0);
 
+    await page.goBack();
+    await expect(page).not.toHaveURL(/tableView/);
+    await expect(chartTable(page)).toBeVisible();
+    await expect(display.getByRole("tab", { name: "Table" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+
+    await display.getByRole("tab", { name: "History" }).click();
+    await expect(chart).toBeVisible();
     await display.getByRole("tab", { name: "Table" }).click();
     await expect(page).not.toHaveURL(/tableView/);
     await expect(chartTable(page)).toBeVisible();
