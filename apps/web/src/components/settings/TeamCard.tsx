@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { FormEvent } from "react";
+import type { FormEvent, MouseEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
@@ -38,6 +38,11 @@ import {
 } from "@/components/ui/table";
 import { useAuth } from "@/components/auth/use-auth";
 import { ApiError, inviteMember, removeMember, revokeInvite } from "@/lib/api";
+import {
+  cardAction,
+  siblingControl,
+  useFocusAfterCommit,
+} from "@/lib/focus-handoff";
 import { formatDate } from "@/lib/format";
 import {
   invalidateWorkspaceTeamMutation,
@@ -131,7 +136,10 @@ function InviteDialog() {
               ) : null}
             </DialogBody>
             <DialogFooter>
-              <Button type="submit" disabled={mutation.isPending}>
+              <Button
+                type="submit"
+                aria-disabled={mutation.isPending || undefined}
+              >
                 {mutation.isPending ? (
                   <Loader2 className="animate-spin" />
                 ) : null}
@@ -150,6 +158,7 @@ export function TeamCard() {
   const { user } = useAuth();
   const { data: team } = useQuery(workspaceTeamOptions);
   const isOwner = user?.role === "owner";
+  const focusAfterCommit = useFocusAfterCommit();
 
   const revoke = useMutation({
     mutationFn: revokeInvite,
@@ -172,6 +181,17 @@ export function TeamCard() {
       toast.error(messageOf(err, "Could not remove the member.")),
   });
   const removeOnce = useSingleFlight(remove);
+  const busy = revoke.isPending || remove.isPending;
+
+  function removeRow(event: MouseEvent<HTMLButtonElement>, run: () => void) {
+    if (busy) return;
+    const control = event.currentTarget;
+    focusAfterCommit(
+      siblingControl(control.closest("tr"), "button") ?? cardAction(control),
+      control,
+    );
+    run();
+  }
 
   if (!team) return null;
 
@@ -218,8 +238,10 @@ export function TeamCard() {
                         size="icon"
                         variant="ghost"
                         aria-label={`Remove ${member.email}`}
-                        disabled={remove.isPending}
-                        onClick={() => removeOnce(member.id)}
+                        aria-disabled={busy || undefined}
+                        onClick={(event) =>
+                          removeRow(event, () => removeOnce(member.id))
+                        }
                       >
                         <Trash2 />
                       </Button>
@@ -262,8 +284,10 @@ export function TeamCard() {
                         size="icon"
                         variant="ghost"
                         aria-label={`Revoke the invitation for ${invite.email}`}
-                        disabled={revoke.isPending}
-                        onClick={() => revokeOnce(invite.id)}
+                        aria-disabled={busy || undefined}
+                        onClick={(event) =>
+                          removeRow(event, () => revokeOnce(invite.id))
+                        }
                       >
                         <Trash2 />
                       </Button>

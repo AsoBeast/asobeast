@@ -86,7 +86,7 @@ function ManageBillingButton() {
   return (
     <Button
       variant="outline"
-      disabled={portal.isPending}
+      aria-disabled={portal.isPending || undefined}
       onClick={() => portalOnce()}
     >
       {portal.isPending ? <Loader2 className="animate-spin" /> : null}

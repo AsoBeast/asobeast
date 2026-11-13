@@ -8,6 +8,7 @@ import type {
   CompetitorItem,
   TrackedKeywordItem,
   WebhookItem,
+  WorkspaceTeam,
 } from "@asobeast/shared";
 import { holdRender } from "./chart-image.mts";
 import { openEmbedded } from "./embedded-checkout.mts";
@@ -34,7 +35,7 @@ import {
   requestInspection,
 } from "./keyword-inspections-mock.mts";
 import { MOCK_API_URL, seedLocalizations } from "./localizations.mts";
-import { fulfillJson } from "./plan-helpers.mts";
+import { fulfillJson, routePlan } from "./plan-helpers.mts";
 import { activateTwiceInOneTask, hydrated } from "./hydrated.mts";
 import {
   answerTrack,
@@ -44,6 +45,7 @@ import {
 import { expect, test } from "./session.mts";
 import { STORE_CONNECTION_COOKIE } from "./store-connections.mts";
 import { startedSetup } from "./setup-session.mts";
+import { TRIALING_PLAN } from "./trial-plans.mts";
 import { seedChecklist } from "./workspace-checklist.mts";
 
 const seedCookie = (context: BrowserContext, name: string, value = "1") =>
@@ -2398,6 +2400,193 @@ test.describe("metadata controls keep focus", () => {
       const regenerate = page.getByRole("button", { name: "Regenerate" });
       await expect(regenerate).not.toHaveAttribute("aria-disabled", "true");
       await expect(regenerate).toBeFocused();
+    });
+  });
+});
+
+test.describe("settings controls keep focus", () => {
+  test("Flush now keeps focus while it flushes", async ({ page }) => {
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/alerts\/flush$/,
+      "POST",
+      (route) =>
+        route.fulfill(
+          fulfillJson(200, { flushed: 0, channels: 0, notifications: 0 }),
+        ),
+    );
+    await page.goto("/settings");
+    const flush = page.getByRole("button", { name: "Flush now" });
+
+    await pressFromKeyboard(flush);
+
+    await expectFocusKeptWhileHeld(flush, held);
+    await expect(page.getByText("Nothing to flush")).toBeVisible();
+  });
+
+  test("Manage billing keeps focus while the portal opens", async ({
+    page,
+  }) => {
+    await routePlan(page, TRIALING_PLAN);
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/billing\/portal$/,
+      "POST",
+      refuse,
+    );
+    await page.goto("/settings");
+    const manage = page.getByRole("button", { name: "Manage billing" });
+
+    await pressFromKeyboard(manage);
+
+    await expectFocusKeptWhileHeld(manage, held);
+  });
+
+  test("Send invitation keeps focus while it sends", async ({ page }) => {
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/workspace\/invites$/,
+      "POST",
+      refuse,
+    );
+    await page.goto("/settings");
+    await pressFromKeyboard(
+      page.getByRole("button", { name: "Invite member" }),
+    );
+    const dialog = page.getByRole("dialog", { name: "Invite a member" });
+    await dialog.getByLabel("Email").fill("new@example.com");
+    const send = dialog.getByRole("button", { name: "Send invitation" });
+
+    await pressFromKeyboard(send);
+
+    await expectFocusKeptWhileHeld(send, held);
+    await expect(dialog.getByText("down")).toBeVisible();
+  });
+
+  for (const [name, id, path] of [
+    ["Remove teammate@example.com", "u2", "members"],
+    ["Revoke the invitation for pending@example.com", "inv1", "invites"],
+  ] as const) {
+    test(`${name} keeps focus while it runs, then hands it to Invite member`, async ({
+      page,
+    }) => {
+      let removed: string | null = null;
+      await page.route(/\/api\/backend\/workspace\/team$/, async (route) => {
+        const team: WorkspaceTeam = await (await route.fetch()).json();
+        return route.fulfill({
+          json: {
+            members: team.members.filter((member) => member.id !== removed),
+            invites: team.invites.filter((invite) => invite.id !== removed),
+          },
+        });
+      });
+      const held = await holdRequest(
+        page,
+        new RegExp(`/api/backend/workspace/${path}/${id}$`),
+        "DELETE",
+        (route) => {
+          removed = id;
+          return route.fulfill({ status: 204 });
+        },
+      );
+      await page.goto("/settings");
+      const control = page.getByRole("button", { name });
+
+      await pressFromKeyboard(control);
+      await expect(control).toHaveAttribute("aria-disabled", "true");
+      await expect(control).toBeFocused();
+      held.release();
+
+      await expect(control).toHaveCount(0);
+      await expect(
+        page.getByRole("button", { name: "Invite member" }),
+      ).toBeFocused();
+    });
+  }
+
+  test.describe("workspace deletion", () => {
+    const workspace = (page: Page) =>
+      page.getByRole("region", { name: "Workspace" });
+
+    for (const close of ["Escape", "Keep workspace"] as const) {
+      test(`closing the deletion dialog with ${close} returns focus to its opener`, async ({
+        page,
+      }) => {
+        await page.goto("/settings#workspace");
+        const opener = workspace(page).getByRole("button", {
+          name: "Delete workspace",
+        });
+
+        await pressFromKeyboard(opener);
+        const dialog = page.getByRole("alertdialog");
+        await expect(dialog).toBeVisible();
+        if (close === "Escape") await page.keyboard.press("Escape");
+        else await dialog.getByRole("button", { name: close }).press("Enter");
+
+        await expect(dialog).toBeHidden();
+        await expect(opener).toBeFocused();
+      });
+    }
+
+    test("the confirm keeps focus while it schedules, then hands it to Cancel deletion", async ({
+      page,
+    }) => {
+      const held = await holdRequest(
+        page,
+        /\/api\/backend\/account\/deletion$/,
+        "POST",
+      );
+      await page.goto("/settings#workspace");
+      await pressFromKeyboard(
+        workspace(page).getByRole("button", { name: "Delete workspace" }),
+      );
+      const dialog = page.getByRole("alertdialog");
+      await dialog.getByLabel("Type DELETE to confirm").fill("DELETE");
+      const confirm = dialog.getByRole("button", {
+        name: /^(Delete workspace|Scheduling…)$/,
+      });
+
+      await confirm.press("Enter");
+      await expect(confirm).toHaveAttribute("aria-disabled", "true");
+      await expect(confirm).toBeFocused();
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeVisible();
+      held.release();
+
+      await expect(dialog).toBeHidden();
+      await expect(
+        workspace(page).getByRole("button", { name: "Cancel deletion" }),
+      ).toBeFocused();
+    });
+
+    test("Cancel deletion keeps focus while it cancels, then hands it to Delete workspace", async ({
+      page,
+      context,
+    }) => {
+      await seedCookie(
+        context,
+        "workspace_deletion_requested",
+        new Date().toISOString(),
+      );
+      const held = await holdRequest(
+        page,
+        /\/api\/backend\/account\/deletion$/,
+        "DELETE",
+      );
+      await page.goto("/settings#workspace");
+      const cancel = workspace(page).getByRole("button", {
+        name: /^(Cancel deletion|Cancelling…)$/,
+      });
+
+      await pressFromKeyboard(cancel);
+      await expect(cancel).toHaveAttribute("aria-disabled", "true");
+      await expect(cancel).toBeFocused();
+      held.release();
+
+      await expect(
+        workspace(page).getByRole("button", { name: "Delete workspace" }),
+      ).toBeFocused();
+      expect(await focusLeftForBody(page)).toBe(false);
     });
   });
 });

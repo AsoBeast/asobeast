@@ -16,6 +16,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,11 +34,15 @@ import {
   cancelWorkspaceDeletion,
   scheduleWorkspaceDeletion,
 } from "@/lib/api";
+import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
 import { formatDateTime, pluralize } from "@/lib/format";
 import {
   invalidateWorkspaceDeletion,
   workspaceDeletionOptions,
 } from "@/lib/queries";
+import { useSingleFlight } from "@/lib/single-flight";
+
+const DELETION_FOCUS_KEY = "workspace-deletion";
 
 function messageOf(error: unknown, fallback: string): string {
   return error instanceof ApiError ? error.envelope.message : fallback;
@@ -47,28 +52,35 @@ function ScheduleDeletionDialog({ graceDays }: { graceDays: number }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
+  const claimFocus = useFocusClaim(DELETION_FOCUS_KEY);
 
   const schedule = useMutation({
     mutationFn: scheduleWorkspaceDeletion,
     onSuccess: () => {
       toast.success("Workspace scheduled for deletion");
+      armFocusHandoff(DELETION_FOCUS_KEY);
       invalidateWorkspaceDeletion(queryClient);
       setOpen(false);
     },
     onError: (err) =>
       toast.error(messageOf(err, "Could not schedule the deletion.")),
   });
+  const scheduleOnce = useSingleFlight(schedule);
+  const pending = schedule.isPending;
 
   function onOpenChange(next: boolean) {
+    if (!next && pending) return;
     setOpen(next);
     if (!next) setTyped("");
   }
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <Button variant="destructive" onClick={() => setOpen(true)}>
-        Delete workspace
-      </Button>
+      <AlertDialogTrigger asChild>
+        <Button ref={claimFocus} variant="destructive">
+          Delete workspace
+        </Button>
+      </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete this workspace?</AlertDialogTitle>
@@ -90,18 +102,24 @@ function ScheduleDeletionDialog({ graceDays }: { graceDays: number }) {
           />
         </div>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={schedule.isPending}>
+          <AlertDialogCancel
+            aria-disabled={pending || undefined}
+            onClick={(event) => {
+              if (pending) event.preventDefault();
+            }}
+          >
             Keep workspace
           </AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
-            disabled={typed !== DELETION_CONFIRMATION || schedule.isPending}
+            disabled={typed !== DELETION_CONFIRMATION}
+            aria-disabled={pending || undefined}
             onClick={(event) => {
               event.preventDefault();
-              schedule.mutate();
+              if (!pending) scheduleOnce();
             }}
           >
-            {schedule.isPending ? "Scheduling…" : "Delete workspace"}
+            {pending ? "Scheduling…" : "Delete workspace"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -111,21 +129,25 @@ function ScheduleDeletionDialog({ graceDays }: { graceDays: number }) {
 
 function CancelDeletionButton() {
   const queryClient = useQueryClient();
+  const claimFocus = useFocusClaim(DELETION_FOCUS_KEY);
   const cancel = useMutation({
     mutationFn: cancelWorkspaceDeletion,
     onSuccess: () => {
       toast.success("Deletion cancelled");
+      armFocusHandoff(DELETION_FOCUS_KEY);
       invalidateWorkspaceDeletion(queryClient);
     },
     onError: (err) =>
       toast.error(messageOf(err, "Could not cancel the deletion.")),
   });
+  const cancelOnce = useSingleFlight(cancel);
 
   return (
     <Button
+      ref={claimFocus}
       variant="outline"
-      disabled={cancel.isPending}
-      onClick={() => cancel.mutate()}
+      aria-disabled={cancel.isPending || undefined}
+      onClick={() => cancelOnce()}
     >
       {cancel.isPending ? "Cancelling…" : "Cancel deletion"}
     </Button>
