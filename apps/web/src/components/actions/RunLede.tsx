@@ -19,7 +19,7 @@ export function RunLede({ appId }: { appId?: string }) {
   );
   const run = runChanges(summary, activity);
 
-  if (run.kind === "never") return <span>{NOT_GENERATED_LEDE}</span>;
+  if (run.kind === "unknown") return <span>{NOT_GENERATED_LEDE}</span>;
   if (run.kind === "stale") {
     return (
       <span>{`The queue was last generated more than ${pluralize(run.days, "day")} ago.`}</span>

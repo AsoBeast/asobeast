@@ -5,7 +5,7 @@ import type {
   ActionRule,
   ActionStatus,
 } from "@asobeast/shared";
-import { formatMeasure, pluralize } from "@/lib/format";
+import { formatDate, formatMeasure, pluralize } from "@/lib/format";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
 
 const measure = (value: number | null): string =>
@@ -75,7 +75,7 @@ export function summarizeEvidence(evidence: ActionEvidence): string {
     case "keyword.prune":
       return `Ranked on ${measure(evidence.rankedDays)} of ${measure(evidence.checkedDays)} checks and costs ${measure(evidence.dailyRequestsSaved)} request per day.`;
     case "rank.investigate_drop":
-      return `You changed ${evidence.fields.join(", ")} on ${evidence.changedAt} and ${measure(evidence.droppedKeywords.length)} tracked keywords fell.`;
+      return `You changed ${evidence.fields.join(", ")} on ${formatDate(evidence.changedAt)} and ${measure(evidence.droppedKeywords.length)} tracked keywords fell.`;
     case "serp.hold_volatile":
       return `These results churn at ${measure(evidence.volatility)}/100, so today's movement is not a reliable signal.`;
     case "audit.fix_factor":
@@ -89,7 +89,7 @@ export function summarizeEvidence(evidence: ActionEvidence): string {
     case "rank.investigate_unexplained_drop":
       return `${evidence.country.toUpperCase()} visibility fell from ${measure(evidence.visibilityBefore)} to ${measure(evidence.visibilityAfter)} and ${pluralize(evidence.droppedKeywords.length, "keyword")} fell, with no change of yours to explain it.`;
     case "competitor.investigate_overtake":
-      return `${evidence.competitorName ?? "A competitor"} changed its listing on ${evidence.changedAt} and has stayed ahead of you on ${pluralize(evidence.keywords.length, "keyword")} since.`;
+      return `${evidence.competitorName ?? "A competitor"} changed its listing on ${formatDate(evidence.changedAt)} and has stayed ahead of you on ${pluralize(evidence.keywords.length, "keyword")} since.`;
     case "reviews.investigate_rating_decline":
       return `Reviews from the last ${evidence.recentDays} days average ${measure(evidence.recentAverage)} against ${measure(evidence.baselineAverage)} before, with no single complaint theme behind it.`;
     case "reviews.reply_negative":

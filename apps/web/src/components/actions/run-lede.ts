@@ -8,7 +8,7 @@ export const QUIET_RUN_LEDE =
   "Nothing opened or closed on the day of the last run.";
 
 export type RunChanges =
-  | { kind: "never" }
+  | { kind: "unknown" }
   | { kind: "stale"; days: number }
   | { kind: "day"; changes: string[] };
 
@@ -18,10 +18,14 @@ export function runChanges(
   summary: ActionSummary,
   activity: ActionActivity,
 ): RunChanges {
-  if (summary.generatedAt === null) return { kind: "never" };
+  if (summary.generatedAt === null) return { kind: "unknown" };
   const runDay = summary.generatedAt.slice(0, 10);
   const day = activity.days.find((entry) => entry.date === runDay);
-  if (!day) return { kind: "stale", days: activity.days.length };
+  if (!day) {
+    return runDay < activity.from
+      ? { kind: "stale", days: activity.days.length }
+      : { kind: "unknown" };
+  }
   const opened = day.opened + day.reopened;
   const closed = day.done + day.dismissed;
   return {

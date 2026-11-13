@@ -18,6 +18,7 @@ const QUIET: ActionActivityDay = {
 
 const activityOf = (day: Partial<ActionActivityDay>): ActionActivity => ({
   ...ACTION_ACTIVITY,
+  from: RUN_DAY,
   days: [{ ...QUIET, ...day }],
 });
 
@@ -61,13 +62,25 @@ describe("runChanges", () => {
 
   it("says the run is older than the activity it can read", () => {
     expect(
-      runChanges(ACTION_SUMMARY, activityOf({ date: "2020-01-01", opened: 3 })),
+      runChanges(
+        { ...ACTION_SUMMARY, generatedAt: "2020-01-01T03:00:00.000Z" },
+        activityOf({ opened: 3 }),
+      ),
     ).toEqual({ kind: "stale", days: 1 });
+  });
+
+  it("claims nothing about a run newer than the activity it was read with", () => {
+    expect(
+      runChanges(
+        { ...ACTION_SUMMARY, generatedAt: "2099-01-01T03:00:00.000Z" },
+        ACTION_ACTIVITY,
+      ),
+    ).toEqual({ kind: "unknown" });
   });
 
   it("is absent before the first generation", () => {
     expect(
       runChanges({ ...ACTION_SUMMARY, generatedAt: null }, ACTION_ACTIVITY),
-    ).toEqual({ kind: "never" });
+    ).toEqual({ kind: "unknown" });
   });
 });
