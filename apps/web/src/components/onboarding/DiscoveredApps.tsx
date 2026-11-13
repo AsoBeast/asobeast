@@ -156,8 +156,10 @@ function SuggestionsBody({
       </ul>
       <Button
         className="w-fit"
-        disabled={selected.length === 0 || adding}
-        onClick={() => run(selected)}
+        aria-disabled={selected.length === 0 || adding || undefined}
+        onClick={() => {
+          if (selected.length > 0) run(selected);
+        }}
       >
         {adding ? <Loader2 className="animate-spin" /> : <Plus />}
         {addButtonLabel(selected.length)}

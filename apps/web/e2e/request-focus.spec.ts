@@ -2633,3 +2633,102 @@ test.describe("token controls keep focus", () => {
     await expect(dialog.getByText("down")).toBeVisible();
   });
 });
+
+test.describe("setup controls keep focus", () => {
+  const step = (page: Page, title: string) =>
+    page
+      .locator('[data-slot="card"]')
+      .filter({ has: page.getByRole("heading", { name: title, exact: true }) });
+
+  test.beforeEach(({ context }) => startedSetup(context, "app-1"));
+
+  test("Track selected keeps focus while it tracks and after the ticks clear", async ({
+    page,
+  }) => {
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/apps\/app-1\/keywords$/,
+      "POST",
+      (route) => route.fulfill(fulfillJson(201, [])),
+    );
+    await page.goto("/apps/app-1/setup");
+    const keywords = step(page, "Track keywords");
+    await keywords.getByLabel("deep focus").check();
+    const track = keywords.getByRole("button", {
+      name: /^Track (1 )?selected$/,
+    });
+
+    await pressFromKeyboard(track);
+    await expect(track).toHaveAttribute("aria-disabled", "true");
+    await expect(track).toBeFocused();
+    held.release();
+
+    await expect(
+      page.getByText("Tracking 1 keyword. Positions arrive within minutes."),
+    ).toBeVisible();
+    await expect(track).toHaveAccessibleName("Track selected");
+    await expect(track).toBeFocused();
+    expect(await focusLeftForBody(page)).toBe(false);
+  });
+
+  test("Add selected keeps focus while it adds and after the ticks clear", async ({
+    page,
+  }) => {
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/apps\/app-1\/competitors$/,
+      "POST",
+      (route) => route.fulfill(fulfillJson(201, {})),
+    );
+    await page.goto("/apps/app-1/setup");
+    const competitors = step(page, "Pick competitors");
+    await competitors
+      .getByRole("listitem")
+      .filter({ hasText: "Deep Work Sessions" })
+      .getByRole("checkbox")
+      .check();
+    const add = competitors.getByRole("button", {
+      name: /^Add (1 )?selected$/,
+    });
+
+    await pressFromKeyboard(add);
+    await expect(add).toHaveAttribute("aria-disabled", "true");
+    await expect(add).toBeFocused();
+    held.release();
+
+    await expect(
+      competitors
+        .getByRole("listitem")
+        .filter({ hasText: "Deep Work Sessions" })
+        .getByRole("status"),
+    ).toHaveText("Added");
+    await expect(add).toHaveAccessibleName("Add selected");
+    await expect(add).toBeFocused();
+    expect(await focusLeftForBody(page)).toBe(false);
+  });
+
+  test("adding a suggested country keeps focus while it seeds", async ({
+    page,
+  }) => {
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/apps\/app-1\/market-seed$/,
+      "POST",
+      refuse,
+    );
+    await page.goto("/apps/app-1/setup");
+    await page.getByLabel("Austria (AT)").check();
+    const add = page.getByRole("button", {
+      name: /^Add (countries|1 country and seed 1)$/,
+    });
+
+    await pressFromKeyboard(add);
+    await expect(add).toHaveAttribute("aria-disabled", "true");
+    await expect(add).toBeFocused();
+    held.release();
+
+    await expect(page.getByText("down")).toBeVisible();
+    await expect(add).toBeFocused();
+    expect(await focusLeftForBody(page)).toBe(false);
+  });
+});
