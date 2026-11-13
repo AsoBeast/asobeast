@@ -81,10 +81,11 @@ function Place({
   }
   return (
     <span className="inline-flex items-center gap-3 whitespace-nowrap">
-      <span className="numeric text-muted-foreground">
+      <span aria-hidden className="numeric text-muted-foreground">
         <span>{`${mover.previous} → `}</span>
         <span className="font-medium text-foreground">{mover.position}</span>
       </span>
+      <span className="sr-only">{`from #${mover.previous} to #${mover.position}`}</span>
       <DeltaChip
         value={mover.delta}
         period={period}

@@ -57,11 +57,13 @@ type SummaryPage = Pick<
 export interface LedePart {
   text: string;
   strong?: boolean;
+  app?: boolean;
 }
 
 interface Standing {
   entry: ChartEntryItem;
   collection: CategoryCollection;
+  since: string | null;
 }
 
 function linksOf(
@@ -82,43 +84,46 @@ export function ownStanding(pages: readonly SummaryPage[]): Standing | null {
     const entry = [...page.entries]
       .sort((a, b) => a.position - b.position)
       .find((candidate) => own.has(candidate.storeAppId));
-    if (entry) return { entry, collection: page.chart.collection };
+    if (entry) {
+      return {
+        entry,
+        collection: page.chart.collection,
+        since: page.comparison?.date ?? null,
+      };
+    }
   }
   return null;
 }
 
-function standingParts({ entry, collection }: Standing): LedePart[] {
+function standingText({ entry, collection }: Standing): [string, string] {
   const kind = COLLECTION_LABELS[collection];
   const place = `#${entry.position}`;
   const moved = Math.abs(entry.delta ?? 0);
   if (entry.movement === "up") {
-    return [
-      { text: `${entry.title} climbed ${moved} to ${place}`, strong: true },
-      { text: ` in ${kind}` },
-    ];
+    return [` climbed ${moved} to ${place}`, ` in ${kind}`];
   }
   if (entry.movement === "down") {
-    return [
-      { text: `${entry.title} fell ${moved} to ${place}`, strong: true },
-      { text: ` in ${kind}` },
-    ];
+    return [` fell ${moved} to ${place}`, ` in ${kind}`];
   }
-  if (entry.movement === "new") {
-    return [
-      { text: `${entry.title} entered ${kind} at ${place}`, strong: true },
-    ];
-  }
+  if (entry.movement === "new") return [` entered ${kind} at ${place}`, ""];
   if (entry.movement === "same") {
-    return [
-      { text: `${entry.title} holds ${place}`, strong: true },
-      { text: ` in ${kind}, unchanged` },
-    ];
+    return [` holds ${place}`, ` in ${kind}, unchanged`];
   }
+  return [` is ${place}`, ` in ${kind}`];
+}
+
+function standingParts(standing: Standing): LedePart[] {
+  const [stand, where] = standingText(standing);
   return [
-    { text: `${entry.title} is ${place}`, strong: true },
-    { text: ` in ${kind}` },
+    { text: standing.entry.title, strong: true, app: true },
+    { text: stand, strong: true },
+    ...(where ? [{ text: where }] : []),
   ];
 }
+
+const SCOPES = ["", "", "Across two charts ", "Across the three charts "];
+
+const sinceText = (date: string) => ` since ${formatDayMonth(date)}`;
 
 function countParts(counts: MovementCounts): LedePart[] {
   const moves = [
@@ -159,32 +164,34 @@ export function chartLede(
 ): LedePart[] {
   const captured = pages.filter((page) => page.capture);
   if (captured.length === 0) return uncapturedLede(pages, day);
-  const several = pages.length > 1;
   const standing = ownStanding(captured);
   const compared = captured.filter((page) => page.comparison);
-  const since = compared[0]?.comparison
-    ? ` since ${formatDayMonth(compared[0].comparison.date)}`
-    : null;
-  const dated = standing !== null && standing.entry.movement !== "none";
+  const dated = standing?.since && standing.entry.movement !== "none";
   const lead: LedePart[] = standing
-    ? [...standingParts(standing), { text: dated && since ? `${since}.` : "." }]
+    ? [
+        ...standingParts(standing),
+        {
+          text: dated && standing.since ? `${sinceText(standing.since)}.` : ".",
+        },
+      ]
     : [
         {
-          text: `None of your apps is in ${several ? "these charts" : "this chart"}.`,
+          text: `None of your apps is in ${pages.length > 1 ? "these charts" : "this chart"}.`,
         },
       ];
+  const since = compared[0]?.comparison;
   if (!since) return lead;
   const moved = countParts(
     movementCounts(compared.flatMap((page) => page.entries)),
   );
   if (moved.length === 0) {
-    return [...lead, { text: ` Nothing moved${since}.` }];
+    return [...lead, { text: ` Nothing moved${sinceText(since.date)}.` }];
   }
   return [
     ...lead,
-    { text: several ? " Across the three charts " : " " },
+    { text: ` ${SCOPES[compared.length] ?? ""}` },
     ...moved,
-    { text: dated ? "." : `${since}.` },
+    { text: dated ? "." : `${sinceText(since.date)}.` },
   ];
 }
 
@@ -237,12 +244,17 @@ export function trackedRows(pages: readonly SummaryPage[]): TrackedRow[] {
 
 export const HISTORY_DAYS = 7;
 export const HISTORY_APPS = 10;
+export const HISTORY_MIN_DAYS = 4;
+
+export function historyReady(dates: readonly string[], shown: string): boolean {
+  return historyDates(dates, shown).length >= HISTORY_MIN_DAYS;
+}
 
 export function historyDates(
   dates: readonly string[],
   shown: string,
 ): string[] {
-  return [...new Set(dates)]
+  return [...new Set([...dates, shown])]
     .filter((date) => date <= shown)
     .sort()
     .slice(-HISTORY_DAYS);

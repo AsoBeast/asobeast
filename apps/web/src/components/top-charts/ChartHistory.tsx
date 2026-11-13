@@ -4,19 +4,18 @@ import { useMemo } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import type { ChartCaptureSummary, ChartPage } from "@asobeast/shared";
-import {
-  ChartNotice,
-  ChartSkeleton,
-  trendState,
-} from "@/components/charts/ChartStates";
+import { ChartNotice, ChartSkeleton } from "@/components/charts/ChartStates";
 import {
   SeriesTooltip,
   type SeriesTooltipItem,
 } from "@/components/charts/SeriesTooltip";
 import {
   CHART_HEIGHT,
+  CHART_MARGIN,
   GRID_PROPS,
   LINE_PROPS,
+  PENDING_DOT_PROPS,
+  PREVIOUS_LINE_PROPS,
   RANK_AXIS_PROPS,
   seriesColor,
   TIME_AXIS_PROPS,
@@ -30,13 +29,15 @@ import {
   chartHistory,
   HISTORY_APPS,
   historyDates,
+  historyReady,
   type ChartHistory as History,
   type HistorySeries,
 } from "./chart-summary";
 
-const OTHER_COLOR = "var(--chart-6)";
 const OWN_SUFFIX = " · yours";
-const HISTORY_MARGIN = { left: 4, right: 168, top: 12, bottom: 4 } as const;
+const END_LABEL_ROOM = 168;
+const HISTORY_MARGIN = { ...CHART_MARGIN, right: END_LABEL_ROOM } as const;
+const OWN_LINE = { ...LINE_PROPS, stroke: seriesColor(0) } as const;
 const RANK_TICKS = Array.from(
   { length: HISTORY_APPS },
   (_, index) => index + 1,
@@ -44,8 +45,17 @@ const RANK_TICKS = Array.from(
 const RANK_DOMAIN = [0.5, HISTORY_APPS + 0.5];
 const DAY_PADDING = { left: 16, right: 16 } as const;
 
-const colorOf = (series: HistorySeries) =>
-  series.own ? seriesColor(0) : OTHER_COLOR;
+const lineOf = (series: HistorySeries) =>
+  series.own ? OWN_LINE : PREVIOUS_LINE_PROPS;
+
+const inTopOf =
+  (id: string) =>
+  (row: History["rows"][number]): number | null => {
+    const position = row[id];
+    return typeof position === "number" && position <= HISTORY_APPS
+      ? position
+      : null;
+  };
 
 const LABEL_LENGTH = 20;
 
@@ -106,7 +116,7 @@ function HistoryTooltip({
     return {
       key: series.id,
       index: 0,
-      color: colorOf(series),
+      color: lineOf(series).stroke,
       label: labelOf(series),
       value: typeof position === "number" ? `#${position}` : "Not listed",
       sortBy: typeof position === "number" ? position : Infinity,
@@ -142,13 +152,12 @@ function HistoryPlot({ history }: { history: History }) {
         />
         {ordered.map((series) => (
           <Line
-            {...LINE_PROPS}
+            {...lineOf(series)}
             key={series.id}
             type="linear"
-            dataKey={series.id}
-            stroke={colorOf(series)}
-            strokeWidth={series.own ? 2.5 : 1.25}
-            dot={{ r: series.own ? 3.5 : 2.5, fill: "var(--card)" }}
+            name={series.id}
+            dataKey={inTopOf(series.id)}
+            dot={PENDING_DOT_PROPS}
             connectNulls={false}
             label={<EndLabel last={last} series={series} />}
           />
@@ -167,7 +176,10 @@ export function ChartHistory({
     () => historyDates(page.dates, page.capture.date),
     [page.dates, page.capture.date],
   );
-  const earlier = dates.filter((date) => date !== page.capture.date);
+  const ready = historyReady(page.dates, page.capture.date);
+  const earlier = ready
+    ? dates.filter((date) => date !== page.capture.date)
+    : [];
   const reads = useQueries({
     queries: earlier.map((date) =>
       chartPageOptions({
@@ -180,7 +192,7 @@ export function ChartHistory({
   const failed = reads.find((read) => read.isError && read.data === undefined);
   const days = reads.flatMap((read) => (read.data ? [read.data] : []));
 
-  if (trendState(dates.length) !== "ready") {
+  if (!ready) {
     return (
       <ChartNotice
         height={CHART_HEIGHT.hero}

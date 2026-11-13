@@ -73,7 +73,7 @@ function RankTrend({
   genre: string;
 }) {
   const listed = row.places.find((place) => place.entry);
-  const { data } = useQuery(
+  const { data, isError } = useQuery(
     categoryRanksOptions(appId, presetToRange(TREND_RANGE)),
   );
   const series = data?.series.find(
@@ -83,7 +83,10 @@ function RankTrend({
   const ranks = (series?.points ?? []).flatMap((point) =>
     point.position === null ? [] : [point.position],
   );
-  if (!listed?.entry || ranks.length < 2) {
+  if (isError && !data) {
+    return <span className="text-muted-foreground">Unavailable</span>;
+  }
+  if (!listed || ranks.length < 2) {
     return <span className="text-muted-foreground">—</span>;
   }
   return (
@@ -91,18 +94,19 @@ function RankTrend({
       className="ml-auto"
       values={ranks.map((rank) => -rank)}
       label={`${row.title} in ${COLLECTION_LABELS[listed.collection]}, last 30 days`}
-      now={`#${listed.entry.position}`}
+      now={`#${ranks[ranks.length - 1]}`}
     />
   );
 }
 
 function AppCell({ row }: { row: TrackedRow }) {
   const link = rowLink(row.link);
+  if (!link) return null;
   return (
     <div className="flex min-w-0 items-center gap-3">
       <AppIcon src={row.iconUrl} size={24} />
       <Link
-        href={link?.href ?? "#"}
+        href={link.href}
         className="min-w-0 truncate rounded-sm font-medium outline-none hover:underline hover:underline-offset-4 focus-visible:ring-2 focus-visible:ring-ring"
         translate="no"
       >
@@ -114,7 +118,7 @@ function AppCell({ row }: { row: TrackedRow }) {
         </Badge>
       ) : (
         <span className="hidden truncate text-caption text-faint-foreground @2xl/charts:inline">
-          {link?.label}
+          {link.label}
         </span>
       )}
     </div>
@@ -131,7 +135,7 @@ export function TrackedAppsPanel({
   const rows = trackedRows(pages);
   if (rows.length === 0) return null;
   const [{ chart }] = pages;
-  const depth = pages.find((page) => page.capture)?.capture?.depth;
+  const captured = pages.some((page) => page.capture);
   const home = new Set(
     apps.filter((app) => app.country === chart.country).map((app) => app.id),
   );
@@ -201,9 +205,12 @@ export function TrackedAppsPanel({
           </TableBody>
         </Table>
       </CardContent>
-      {depth ? (
+      {captured ? (
         <CardFooter>
-          <span>{`Read from all ${depth} places of each capture, not only the rows listed below.`}</span>
+          <span>
+            Read from every listed place of each capture, not only the rows
+            shown below.
+          </span>
         </CardFooter>
       ) : null}
     </Card>

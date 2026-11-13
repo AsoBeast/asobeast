@@ -55,7 +55,7 @@ import { rowContextOf } from "./chart-actions";
 import { chartColumns } from "./chart-columns";
 import { ChartHistory } from "./ChartHistory";
 import { chartTitle, COLLECTION_LABELS } from "./chart-params";
-import { HISTORY_APPS, historyDates } from "./chart-summary";
+import { HISTORY_APPS, historyDates, historyReady } from "./chart-summary";
 import { compareLabel } from "./movement";
 import { OWN_ROW_BAR } from "./RowActions";
 
@@ -77,7 +77,7 @@ function footerLine(page: ChartPage & { capture: ChartCaptureSummary }) {
 
 function historyLine(page: ChartPage & { capture: ChartCaptureSummary }) {
   const days = historyDates(page.dates, page.capture.date).length;
-  return `The top ${Math.min(HISTORY_APPS, page.entries.length)} of ${formatDayMonth(page.capture.date)} across the last ${days} captured days. A line breaks on a day the app was not listed.`;
+  return `The top ${Math.min(HISTORY_APPS, page.entries.length)} of ${formatDayMonth(page.capture.date)} across the last ${days} captured days. A line breaks on a day the app was outside the top ${HISTORY_APPS}.`;
 }
 
 type ChartRowsTable = TableInstance<DataTableFeatures, ChartEntryItem>;
@@ -257,9 +257,11 @@ export function ChartTable({
           </CardContent>
         </>
       )}
-      <CardFooter>
-        <span>{history ? historyLine(page) : footerLine(page)}</span>
-      </CardFooter>
+      {history && !historyReady(page.dates, page.capture.date) ? null : (
+        <CardFooter>
+          <span>{history ? historyLine(page) : footerLine(page)}</span>
+        </CardFooter>
+      )}
     </Card>
   );
 }

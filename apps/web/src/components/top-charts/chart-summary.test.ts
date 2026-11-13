@@ -4,6 +4,7 @@ import {
   chartHistory,
   chartLede,
   historyDates,
+  historyReady,
   movementCounts,
   movementText,
   ownStanding,
@@ -116,7 +117,7 @@ describe("ownStanding", () => {
 describe("chartLede", () => {
   it("says where the own app holds and what moved across the charts", () => {
     expect(text(chartLede([page("free"), page("paid")], null))).toBe(
-      "App 3 holds #3 in Free, unchanged since Nov 11. Across the three charts 2 apps climbed, 2 fell and 2 entered.",
+      "App 3 holds #3 in Free, unchanged since Nov 11. Across two charts 2 apps climbed, 2 fell and 2 entered.",
     );
   });
 
@@ -169,12 +170,40 @@ describe("chartLede", () => {
     );
   });
 
+  it("names how many charts the counts cover and dates the own app by its own chart", () => {
+    const paid = page("paid", {
+      apps: [],
+      comparison: {
+        date: "2026-11-10",
+        depth: 100,
+        capturedAt: "2026-11-10T03:10:00.000Z",
+      },
+    });
+    const uncompared = page("grossing", { apps: [], comparison: null });
+    const uncaptured = page("grossing", { capture: null, entries: [] });
+    expect(text(chartLede([page("free"), paid, uncompared], null))).toBe(
+      "App 3 holds #3 in Free, unchanged since Nov 11. Across two charts 2 apps climbed, 2 fell and 2 entered.",
+    );
+    expect(text(chartLede([paid, page("free"), uncaptured], null))).toContain(
+      "unchanged since Nov 11. Across two charts",
+    );
+    expect(text(chartLede([page("free"), uncompared, uncaptured], null))).toBe(
+      "App 3 holds #3 in Free, unchanged since Nov 11. 1 app climbed, 1 fell and 1 entered.",
+    );
+  });
+
+  it("marks the app name so it is isolated and never translated", () => {
+    const [name] = chartLede([page("free")], null);
+    expect(name).toEqual({ text: "App 3", strong: true, app: true });
+  });
+
   it("marks the figures as strong", () => {
     const strong = chartLede([page("free")], null)
       .filter((part) => part.strong)
       .map((part) => part.text);
     expect(strong).toEqual([
-      "App 3 holds #3",
+      "App 3",
+      " holds #3",
       "1 app climbed",
       "1 fell",
       "1 entered",
@@ -226,6 +255,20 @@ describe("historyDates", () => {
       "2026-11-08",
       "2026-11-09",
     ]);
+  });
+});
+
+describe("historyReady", () => {
+  it("needs four captured days up to the shown one", () => {
+    const dates = ["2026-11-12", "2026-11-11", "2026-11-10", "2026-11-09"];
+    expect(historyReady(dates, "2026-11-12")).toBe(true);
+    expect(historyReady(dates, "2026-11-11")).toBe(false);
+  });
+});
+
+describe("historyDates for a day outside the listed dates", () => {
+  it("still counts the shown day", () => {
+    expect(historyDates(["2026-11-12"], "2026-08-01")).toEqual(["2026-08-01"]);
   });
 });
 

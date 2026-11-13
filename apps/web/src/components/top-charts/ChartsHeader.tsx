@@ -19,14 +19,18 @@ export function ChartsHeader({
           {actions}
         </>
       }
-      lede={lede.map((part, index) => (
-        <span
-          key={index}
-          className={part.strong ? "font-medium text-foreground" : undefined}
-        >
-          {part.text}
-        </span>
-      ))}
+      lede={lede.map((part, index) => {
+        const Part = part.app ? "bdi" : "span";
+        return (
+          <Part
+            key={index}
+            translate={part.app ? "no" : undefined}
+            className={part.strong ? "font-medium text-foreground" : undefined}
+          >
+            {part.text}
+          </Part>
+        );
+      })}
     />
   );
 }
