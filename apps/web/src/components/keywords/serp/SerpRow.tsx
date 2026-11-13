@@ -105,8 +105,7 @@ export function SerpRow({
       className={cn(
         SERP_ROW_GRID,
         "focus:outline-2 focus:-outline-offset-2 focus:outline-ring",
-        role === "you" &&
-          "bg-brand-subtle shadow-[inset_3px_0_0_var(--brand-mark)]",
+        role === "you" && "shadow-[inset_3px_0_0_var(--brand-mark)]",
       )}
     >
       <span className="col-start-1 row-span-2 row-start-1 flex flex-col items-end gap-0.5 text-right">

@@ -184,12 +184,7 @@ const BRAND_TEXT_SURFACES = [
   "--brand-subtle",
 ];
 
-const ON_BRAND_SUBTLE = [
-  "--foreground",
-  "--muted-foreground",
-  "--signal-up",
-  "--signal-down",
-];
+const ON_BRAND_SUBTLE = ["--foreground", "--muted-foreground"];
 
 const BRAND_MARK_SURFACES = ["--background", "--card", "--muted", "--sidebar"];
 
