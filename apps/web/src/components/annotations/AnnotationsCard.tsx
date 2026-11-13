@@ -2,7 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useIsMutating,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -203,6 +208,8 @@ function AnnotationsList({ id }: { id: string }) {
   );
 }
 
+const addAnnotationKey = (id: string) => ["annotation-add", id];
+
 function AddAnnotationForm({
   id,
   onAdded,
@@ -219,6 +226,7 @@ function AddAnnotationForm({
   const tagLimit = textLimit(tag, ANNOTATION_TAG_MAX_LENGTH);
 
   const mutation = useMutation({
+    mutationKey: addAnnotationKey(id),
     mutationFn: () =>
       addAnnotation(id, {
         date,
@@ -305,7 +313,7 @@ function AddAnnotationForm({
           className="ml-auto"
           aria-disabled={mutation.isPending || !addable || undefined}
         >
-          {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
+          {mutation.isPending ? <Loader2 className="animate-spin" /> : <Plus />}
           {mutation.isPending ? "Adding…" : "Add"}
         </Button>
       </div>
@@ -320,8 +328,9 @@ function AddAnnotationForm({
 
 function AddAnnotation({ id }: { id: string }) {
   const [open, setOpen] = useState(false);
+  const adding = useIsMutating({ mutationKey: addAnnotationKey(id) }) > 0;
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={closeUnlessPending(adding, setOpen)}>
       <PopoverTrigger asChild>
         <Button
           id="annotation-add"

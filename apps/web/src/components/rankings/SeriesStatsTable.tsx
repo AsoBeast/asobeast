@@ -88,7 +88,7 @@ export function SeriesStatsTable({
 }) {
   const period = `in the ${rangeLabel(range).toLowerCase()}`;
   return (
-    <Table density="compact">
+    <Table density="compact" containerClassName="print:overflow-visible">
       <TableCaption className="sr-only">
         Charted keywords with their position, change, best and average
       </TableCaption>

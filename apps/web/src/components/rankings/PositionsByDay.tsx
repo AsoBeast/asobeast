@@ -67,6 +67,7 @@ export function PositionsByDay({
   return (
     <Table
       density="compact"
+      containerClassName="print:overflow-visible"
       scrollLabel="Positions by day"
       scrollFocus="overflow"
     >

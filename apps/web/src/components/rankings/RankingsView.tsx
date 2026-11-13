@@ -78,13 +78,11 @@ function checkFacts(
 ): string | null {
   const depths = stats.flatMap((row) => (row.latest ? [row.latest.depth] : []));
   const facts = [
-    ...(totalSeries > MAX_SERIES
-      ? [`Showing ${MAX_SERIES} of ${totalSeries} keywords`]
-      : []),
-    ...(depths.length > 0
-      ? [`Checked daily to depth ${Math.max(...depths)}`]
-      : []),
+    ...(depths.length > 0 ? [`Checked to depth ${Math.max(...depths)}`] : []),
     ...(through === null ? [] : [`last check ${formatDate(through)}`]),
+    ...(totalSeries > MAX_SERIES
+      ? [`showing ${MAX_SERIES} of ${totalSeries} keywords`]
+      : []),
   ];
   return facts.length === 0 ? null : facts.join(" · ");
 }
@@ -219,18 +217,18 @@ function RankingsPanel({
 
   const remove = (keywordId: string, trigger: HTMLElement) => {
     const remaining = effective.filter((item) => item !== keywordId);
-    if (remaining.length > 0) {
-      const neighbour = survivingNeighbour(
-        stats,
-        (row) => row.keywordId === keywordId,
-      );
-      focusAfterCommit(
-        document.getElementById(
-          neighbour ? seriesRemoveId(neighbour.keywordId) : KEYWORD_PICKER_ID,
-        ),
-        trigger,
-      );
-    }
+    const neighbour = survivingNeighbour(
+      stats,
+      (row) => row.keywordId === keywordId,
+    );
+    focusAfterCommit(
+      document.getElementById(
+        remaining.length > 0 && neighbour
+          ? seriesRemoveId(neighbour.keywordId)
+          : KEYWORD_PICKER_ID,
+      ),
+      trigger,
+    );
     onSelect(remaining);
   };
 
