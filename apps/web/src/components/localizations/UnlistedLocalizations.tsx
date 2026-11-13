@@ -19,9 +19,7 @@ export function UnlistedLocalizations({
   id: string;
   result: AppLocalizationsResult;
 }) {
-  const { add, pending, error } = useAddLocalization(id, (item) =>
-    armFocusHandoff(localizationFocusKey(item.localization)),
-  );
+  const { add, pending, error } = useAddLocalization(id);
   const managed = result.storeManaged;
   const reads = unlistedReads(result);
   if (reads.length === 0) return null;
@@ -56,7 +54,11 @@ export function UnlistedLocalizations({
                     size="xs"
                     aria-label={`Add ${name}`}
                     aria-disabled={pending || undefined}
-                    onClick={() => add(localization)}
+                    onClick={() => {
+                      if (pending) return;
+                      armFocusHandoff(localizationFocusKey(localization));
+                      add(localization);
+                    }}
                   >
                     Add
                   </Button>

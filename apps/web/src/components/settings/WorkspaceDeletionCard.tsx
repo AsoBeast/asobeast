@@ -59,7 +59,6 @@ function ScheduleDeletionDialog({ graceDays }: { graceDays: number }) {
     mutationFn: scheduleWorkspaceDeletion,
     onSuccess: () => {
       toast.success("Workspace scheduled for deletion");
-      armFocusHandoff(DELETION_FOCUS_KEY);
       invalidateWorkspaceDeletion(queryClient);
       setOpen(false);
     },
@@ -107,7 +106,10 @@ function ScheduleDeletionDialog({ graceDays }: { graceDays: number }) {
           pendingLabel="Scheduling…"
           cancelLabel="Keep workspace"
           blocked={typed !== DELETION_CONFIRMATION}
-          onConfirm={scheduleOnce}
+          onConfirm={() => {
+            armFocusHandoff(DELETION_FOCUS_KEY);
+            scheduleOnce();
+          }}
         />
       </AlertDialogContent>
     </AlertDialog>
@@ -121,7 +123,6 @@ function CancelDeletionButton() {
     mutationFn: cancelWorkspaceDeletion,
     onSuccess: () => {
       toast.success("Deletion cancelled");
-      armFocusHandoff(DELETION_FOCUS_KEY);
       invalidateWorkspaceDeletion(queryClient);
     },
     onError: (err) =>
@@ -134,7 +135,11 @@ function CancelDeletionButton() {
       ref={claimFocus}
       variant="outline"
       aria-disabled={cancel.isPending || undefined}
-      onClick={() => cancelOnce()}
+      onClick={() => {
+        if (cancel.isPending) return;
+        armFocusHandoff(DELETION_FOCUS_KEY);
+        cancelOnce();
+      }}
     >
       {cancel.isPending ? "Cancelling…" : "Cancel deletion"}
     </Button>

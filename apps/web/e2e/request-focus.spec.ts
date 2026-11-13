@@ -2380,6 +2380,44 @@ test.describe("metadata controls keep focus", () => {
     ).toBeFocused();
   });
 
+  test("an unlisted Add leaves focus where the user moved it while adding", async ({
+    page,
+  }) => {
+    const arabic: AppLocalizationItem = {
+      localization: "ar",
+      origin: "manual",
+      phrases: [],
+      charactersUsed: 0,
+      charactersLimit: 100,
+      readBy: [{ country: "us", role: "additional", home: true }],
+      updatedAt: null,
+    };
+    const add = await serveLocalizations(page, (listed) => ({
+      ...listed,
+      localizations: [...listed.localizations, arabic],
+    }));
+    const held = await holdRequest(page, LOCALIZATIONS, "POST", (route) => {
+      add();
+      return route.fulfill(fulfillJson(201, arabic));
+    });
+    await page.goto("/apps/app-1/metadata");
+    const find = localizations(page).getByRole("button", {
+      name: "Find localizations",
+    });
+
+    await pressFromKeyboard(
+      localizations(page).getByRole("button", { name: "Add Arabic" }),
+    );
+    await find.focus();
+    held.release();
+
+    await expect(page.getByText("Added Arabic")).toBeVisible();
+    await expect(
+      localizations(page).getByRole("button", { name: /^Arabic/ }),
+    ).toBeVisible();
+    await expect(find).toBeFocused();
+  });
+
   test.describe("Generate drafts", () => {
     test.beforeEach(({ context }) => seedCookie(context, "e2e_metadata_ai"));
 
@@ -2557,6 +2595,35 @@ test.describe("settings controls keep focus", () => {
       await expect(
         workspace(page).getByRole("button", { name: "Cancel deletion" }),
       ).toBeFocused();
+    });
+
+    test("Cancel deletion leaves focus where the owner moved it while cancelling", async ({
+      page,
+      context,
+    }) => {
+      await seedCookie(
+        context,
+        "workspace_deletion_requested",
+        new Date().toISOString(),
+      );
+      const held = await holdRequest(
+        page,
+        /\/api\/backend\/account\/deletion$/,
+        "DELETE",
+      );
+      await page.goto("/settings#workspace");
+      const flush = page.getByRole("button", { name: "Flush now" });
+
+      await pressFromKeyboard(
+        workspace(page).getByRole("button", { name: "Cancel deletion" }),
+      );
+      await flush.focus();
+      held.release();
+
+      await expect(
+        workspace(page).getByRole("button", { name: "Delete workspace" }),
+      ).toBeVisible();
+      await expect(flush).toBeFocused();
     });
 
     test("Cancel deletion keeps focus while it cancels, then hands it to Delete workspace", async ({
