@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ACTION_DISMISS_REASON_LABEL } from "./action-history";
+import { useBusyMenu } from "./use-busy-menu";
 
 type OnDismiss = (reason?: ActionDismissReason) => void;
 
@@ -49,20 +50,22 @@ export function ActionDismissSubMenu({ onDismiss }: { onDismiss: OnDismiss }) {
 
 export function ActionDismissMenu({
   onDismiss,
-  disabled,
+  busy,
   className,
 }: {
   onDismiss: OnDismiss;
-  disabled: boolean;
+  busy: boolean;
   className?: string;
 }) {
+  const menu = useBusyMenu(busy);
+
   return (
-    <DropdownMenu>
+    <DropdownMenu {...menu}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
           size="sm"
-          disabled={disabled}
+          aria-disabled={busy || undefined}
           data-command="dismiss"
           className={className}
         >

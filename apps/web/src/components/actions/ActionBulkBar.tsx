@@ -77,7 +77,7 @@ export function ActionBulkBar({
       </DropdownMenu>
       <ActionDismissMenu
         className={BAR_BUTTON}
-        disabled={busy}
+        busy={busy}
         onDismiss={(reason) => onUpdate({ status: "DISMISSED", reason })}
       />
       {count < shown ? (

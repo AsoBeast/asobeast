@@ -1,5 +1,7 @@
-import type { BrowserContext, Locator, Page } from "@playwright/test";
+import type { BrowserContext, Locator, Page, Route } from "@playwright/test";
 import type {
+  ActionListResult,
+  ActionUpdateRequest,
   ApiTokenItem,
   CompetitorItem,
   TrackedKeywordItem,
@@ -1962,5 +1964,164 @@ test.describe("the keyword inspector keeps focus", () => {
     held.release();
     await expect(chip).toHaveAccessibleName("Inspecting focus hop app");
     await expect(chip).toBeFocused();
+  });
+});
+
+const refuse = (route: Route) =>
+  route.fulfill(
+    fulfillJson(500, {
+      statusCode: 500,
+      error: "Server Error",
+      message: "down",
+      path: new URL(route.request().url()).pathname,
+      timestamp: new Date().toISOString(),
+    }),
+  );
+
+const focusLeftForBody = (page: Page) =>
+  page.evaluate(() => document.activeElement === document.body);
+
+test.describe("action center row controls keep focus", () => {
+  const row = (page: Page, id: string) => page.locator(`[id='action-${id}']`);
+
+  async function holdActionUpdate(page: Page, id: string) {
+    let applied: ActionUpdateRequest | null = null;
+    await page.route(/\/api\/backend\/actions(\?.*)?$/, async (route) => {
+      const update = applied;
+      if (route.request().method() !== "GET" || update === null) {
+        return route.fallback();
+      }
+      const list: ActionListResult = await (await route.fetch()).json();
+      return route.fulfill({
+        json: {
+          ...list,
+          items: list.items.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  status: update.status,
+                  snoozedUntil:
+                    update.status === "SNOOZED"
+                      ? (update.snoozedUntil ?? null)
+                      : null,
+                }
+              : item,
+          ),
+        },
+      });
+    });
+    return holdRequest(
+      page,
+      new RegExp(`/api/backend/actions/${id}$`),
+      "PATCH",
+      (route) => {
+        applied = route.request().postDataJSON() as ActionUpdateRequest;
+        return route.fulfill({ json: {} });
+      },
+    );
+  }
+
+  for (const [id, item] of [
+    ["act-uncovered", "Snooze 7 days"],
+    ["act-snoozed", "Wake now"],
+  ] as const) {
+    test(`${item} from the row menu keeps focus on the menu while it saves`, async ({
+      page,
+    }) => {
+      await page.goto("/actions");
+      const menu = row(page, id).getByRole("button", {
+        name: /^More actions for /,
+      });
+      const held = await holdActionUpdate(page, id);
+
+      await pressFromKeyboard(menu);
+      await page.getByRole("menuitem", { name: item }).press("Enter");
+
+      await expectFocusKeptWhileHeld(menu, held);
+      await page.waitForLoadState("networkidle");
+      await expect(menu).toBeFocused();
+    });
+  }
+
+  test("snoozing from the row hands focus to the wake button while it saves", async ({
+    page,
+  }) => {
+    await page.goto("/actions");
+    const snooze = row(page, "act-uncovered").getByRole("button", {
+      name: "Snooze",
+      exact: true,
+    });
+    const wake = row(page, "act-uncovered").getByRole("button", {
+      name: /^Wakes /,
+    });
+    const held = await holdActionUpdate(page, "act-uncovered");
+
+    await pressFromKeyboard(snooze);
+    await page.getByRole("menuitem", { name: "7 days" }).press("Enter");
+
+    await expectFocusKeptWhileHeld(wake, held);
+    await page.waitForLoadState("networkidle");
+    await expect(wake).toBeFocused();
+  });
+
+  test("waking from the row hands focus to Snooze while it saves", async ({
+    page,
+  }) => {
+    await page.goto("/actions");
+    const wake = row(page, "act-snoozed").getByRole("button", {
+      name: /^Wakes /,
+    });
+    const snooze = row(page, "act-snoozed").getByRole("button", {
+      name: "Snooze",
+      exact: true,
+    });
+    const held = await holdActionUpdate(page, "act-snoozed");
+
+    await pressFromKeyboard(wake);
+
+    await expectFocusKeptWhileHeld(snooze, held);
+    await page.waitForLoadState("networkidle");
+    await expect(snooze).toBeFocused();
+  });
+
+  test("a refused snooze hands focus back to Snooze", async ({ page }) => {
+    await page.goto("/actions");
+    const snooze = row(page, "act-uncovered").getByRole("button", {
+      name: "Snooze",
+      exact: true,
+    });
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/actions\/act-uncovered$/,
+      "PATCH",
+      refuse,
+    );
+
+    await pressFromKeyboard(snooze);
+    await page.getByRole("menuitem", { name: "7 days" }).press("Enter");
+    await expect(
+      row(page, "act-uncovered").getByRole("button", { name: /^Wakes / }),
+    ).toBeFocused();
+    held.release();
+
+    await expect(snooze).toBeFocused();
+    expect(await focusLeftForBody(page)).toBe(false);
+  });
+
+  test("a busy row menu stays shut", async ({ page }) => {
+    await page.goto("/actions");
+    const menu = row(page, "act-uncovered").getByRole("button", {
+      name: /^More actions for /,
+    });
+    const held = await holdActionUpdate(page, "act-uncovered");
+
+    await pressFromKeyboard(menu);
+    await page.getByRole("menuitem", { name: "Snooze 7 days" }).press("Enter");
+    await expect(menu).toHaveAttribute("aria-disabled", "true");
+    await page.keyboard.press("Enter");
+
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    await expect(menu).toBeFocused();
+    held.release();
   });
 });

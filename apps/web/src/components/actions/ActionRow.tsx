@@ -90,7 +90,7 @@ function RowControls({
       <Button
         variant="outline"
         size="sm"
-        disabled={busy}
+        aria-disabled={busy || undefined}
         className="h-11 @2xl/queue:h-7"
         onClick={() => update({ status: "OPEN" })}
       >
@@ -105,7 +105,7 @@ function RowControls({
       <Button
         variant="secondary"
         size="sm"
-        disabled={busy}
+        aria-disabled={busy || undefined}
         aria-label="Done"
         data-command="done"
         className="size-11 @2xl/queue:h-7 @2xl/queue:w-auto"
@@ -118,14 +118,14 @@ function RowControls({
         <ActionSnoozeMenu
           status={item.status}
           snoozedUntil={item.snoozedUntil}
-          disabled={busy}
+          busy={busy}
           onSnooze={(snoozedUntil) =>
             update({ status: "SNOOZED", snoozedUntil })
           }
           onWake={() => update({ status: "OPEN" })}
         />
         <ActionDismissMenu
-          disabled={busy}
+          busy={busy}
           onDismiss={(reason) => update({ status: "DISMISSED", reason })}
         />
       </div>
@@ -133,7 +133,7 @@ function RowControls({
         item={item}
         headline={headline}
         href={href}
-        disabled={busy}
+        busy={busy}
         onUpdate={update}
       />
     </>
