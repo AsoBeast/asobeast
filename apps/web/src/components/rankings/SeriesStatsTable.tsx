@@ -2,6 +2,7 @@ import { formatRankPosition, keywordLabel } from "@asobeast/shared";
 import { Clock, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DeltaChip } from "@/components/ui/delta-chip";
+import { GradedNumber } from "@/components/ui/graded";
 import {
   Table,
   TableBody,
@@ -12,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDate, formatDayMonth } from "@/lib/format";
+import { grade } from "@/lib/grade";
 import { rangeLabel, type RangePreset } from "@/lib/ranges";
 import { cn } from "@/lib/utils";
 import { SeriesSwatch } from "./SeriesSwatch";
@@ -56,7 +58,12 @@ function PositionCell({ stats }: { stats: SeriesStats }) {
           {formatRankPosition(position, depth)}
         </span>
       ) : (
-        <span className="font-medium">{`#${position}`}</span>
+        <GradedNumber
+          value={`#${position}`}
+          grade={grade("position", position)}
+          label="Position"
+          className="font-medium"
+        />
       )}
       {stats.staleSince === null ? null : (
         <span
@@ -74,8 +81,16 @@ function PositionCell({ stats }: { stats: SeriesStats }) {
   );
 }
 
-const rank = (value: number | null) =>
-  value === null ? DASH : <span>{`#${value}`}</span>;
+function RankCell({ value, label }: { value: number | null; label: string }) {
+  if (value === null) return DASH;
+  return (
+    <GradedNumber
+      value={`#${value}`}
+      grade={grade("position", value)}
+      label={label}
+    />
+  );
+}
 
 export function SeriesStatsTable({
   rows,
@@ -129,10 +144,10 @@ export function SeriesStatsTable({
               <ChangeCell change={stats.change} period={period} />
             </TableCell>
             <TableCell numeric className={WIDE_ONLY}>
-              {rank(stats.best)}
+              <RankCell value={stats.best} label="Best position" />
             </TableCell>
             <TableCell numeric className={WIDE_ONLY}>
-              {rank(stats.average)}
+              <RankCell value={stats.average} label="Average position" />
             </TableCell>
             <TableCell className="pl-0 print:hidden">
               <Button

@@ -26,6 +26,9 @@ import { PrintRangeLabel } from "./RangePicker";
 
 const WIDEST_WINDOW = MOVER_WINDOWS[MOVER_WINDOWS.length - 1];
 
+const moverWindowId = (window: MoverWindow): string =>
+  `serp-movers-window-${window}`;
+
 function groupByDay(items: SerpMoverItem[]): [string, SerpMoverItem[]][] {
   const groups = new Map<string, SerpMoverItem[]>();
   for (const item of items) {
@@ -65,6 +68,7 @@ function EntrantRow({ item, id }: { item: SerpMoverItem; id: string }) {
           id={id}
           storeAppId={item.storeAppId}
           title={item.title}
+          label={`Track ${item.title}`}
           className="print:hidden"
         />
       ) : null}
@@ -163,11 +167,18 @@ export function SerpMoversCard({ id }: { id: string }) {
         <CardAction className={PANEL_ACTION}>
           <Tabs
             value={String(days)}
-            onValueChange={(next) => void setDays(Number(next) as typeof days)}
+            onValueChange={(next) => {
+              const window = moverDaysParser.parse(next);
+              if (window !== null) void setDays(window);
+            }}
           >
             <TabsList aria-label="SERP movers window" className="print:hidden">
               {MOVER_WINDOWS.map((window) => (
-                <TabsOption key={window} value={String(window)}>
+                <TabsOption
+                  key={window}
+                  id={moverWindowId(window)}
+                  value={String(window)}
+                >
                   {`${window}d`}
                 </TabsOption>
               ))}
@@ -182,7 +193,10 @@ export function SerpMoversCard({ id }: { id: string }) {
             id={id}
             days={days}
             country={country}
-            onWiden={() => void setDays(WIDEST_WINDOW)}
+            onWiden={() => {
+              document.getElementById(moverWindowId(WIDEST_WINDOW))?.focus();
+              void setDays(WIDEST_WINDOW);
+            }}
           />
         </Suspense>
       </CardContent>

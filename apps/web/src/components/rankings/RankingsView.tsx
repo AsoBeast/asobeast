@@ -343,11 +343,19 @@ function RankingsBody({
       </>
     );
   }
+  const key = (
+    <div className="-mb-(--card-spacing) border-t border-border">
+      <SeriesStatsTable rows={stats} range={range} onRemove={onRemove} />
+    </div>
+  );
   if (chart.checkedDays < MIN_TREND_POINTS) {
     return (
-      <CardContent>
-        <InsufficientHistory data={chart} />
-      </CardContent>
+      <>
+        <CardContent>
+          <InsufficientHistory data={chart} />
+        </CardContent>
+        {key}
+      </>
     );
   }
   const marks = chartMarks(chart, changeDates, annotations);
@@ -366,9 +374,7 @@ function RankingsBody({
           ownKey
         />
       </CardContent>
-      <div className="-mb-(--card-spacing) border-t border-border">
-        <SeriesStatsTable rows={stats} range={range} onRemove={onRemove} />
-      </div>
+      {key}
     </>
   );
 }

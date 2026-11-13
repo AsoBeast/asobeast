@@ -128,12 +128,18 @@ test("the key table reads each charted keyword across the range", async ({
   ]);
 
   const focus = table.getByRole("row", { name: /focus timer/ });
-  await expect(focus.getByRole("cell").nth(1)).toHaveText("#3");
+  await expect(focus.getByRole("cell").nth(1)).toContainText(
+    "Position #3, strong",
+  );
   await expect(
     focus.getByRole("img", { name: "up 7 in the last 30 days" }),
   ).toBeVisible();
-  await expect(focus.getByRole("cell").nth(3)).toHaveText("#3");
-  await expect(focus.getByRole("cell").nth(4)).toHaveText("#6");
+  await expect(focus.getByRole("cell").nth(3)).toContainText(
+    "Best position #3, strong",
+  );
+  await expect(focus.getByRole("cell").nth(4)).toContainText(
+    "Average position #6",
+  );
 
   const stopped = table.getByRole("row", { name: /study timer/ });
   await expect(stopped.getByRole("cell").nth(1)).toContainText("#7");
@@ -227,7 +233,9 @@ test("the new entrants panel lists apps with their role and a track action", asy
   const unknownRow = page
     .getByRole("listitem")
     .filter({ hasText: "Newcomer Timer" });
-  await expect(unknownRow.getByRole("button", { name: "Track" })).toBeVisible();
+  await expect(
+    unknownRow.getByRole("button", { name: "Track Newcomer Timer" }),
+  ).toBeVisible();
 
   await page.getByRole("tab", { name: "14d" }).click();
   await expect(page).toHaveURL(/movers=14/);
@@ -258,6 +266,7 @@ test("the new entrants panel follows the market select", async ({ page }) => {
   await expect(
     panel.getByRole("button", { name: "Look back 30 days" }),
   ).toHaveCount(0);
+  await expect(panel.getByRole("tab", { name: "30d" })).toBeFocused();
 
   await chooseMarket(page, "All markets 5");
   await expect(page).not.toHaveURL(/country=/);
