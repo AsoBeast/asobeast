@@ -16,7 +16,7 @@ export function EmptyState({
     <div
       data-slot="empty-state"
       className={cn(
-        "flex flex-col items-start gap-3 py-6 text-left",
+        "flex flex-col items-center gap-3 py-6 text-center",
         className,
       )}
     >

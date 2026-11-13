@@ -1,5 +1,5 @@
 import { CheckCircle2 } from "lucide-react";
-import { PageHeader } from "@/components/layout/PageHeader";
+import { LEDE } from "@/components/layout/panel-classes";
 import { Button } from "@/components/ui/button";
 import { ImportAppDialog } from "./ImportAppDialog";
 
@@ -11,12 +11,17 @@ const DELIVERIES = [
 
 export function FirstRun() {
   return (
-    <div className="page-reading flex flex-col items-start gap-4">
-      <PageHeader
-        title="Track your first app"
-        lede="Type your app's name or paste its store URL."
-      />
-      <ul aria-label="What you get" className="flex max-w-md flex-col gap-2">
+    <div className="page-reading flex flex-col items-center gap-4 py-20 text-center">
+      <div className="flex flex-col items-center gap-2">
+        <h1 className="text-title text-balance">Track your first app</h1>
+        <p className={LEDE}>
+          Type your app&apos;s name or paste its store URL.
+        </p>
+      </div>
+      <ul
+        aria-label="What you get"
+        className="flex max-w-md flex-col gap-2 text-left"
+      >
         {DELIVERIES.map((delivery) => (
           <li
             key={delivery}

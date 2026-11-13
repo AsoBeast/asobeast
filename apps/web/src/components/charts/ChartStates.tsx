@@ -22,7 +22,8 @@ export function ChartSkeleton({
   return <Skeleton className={cn("w-full", height, className)} />;
 }
 
-export const CHART_NOTICE = "flex flex-col items-start justify-center gap-1";
+export const CHART_NOTICE =
+  "flex flex-col items-center justify-center gap-1 text-center";
 
 export function ChartNotice({
   height,

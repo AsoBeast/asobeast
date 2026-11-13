@@ -112,11 +112,11 @@ export function InsufficientHistory({ data }: { data: RankingChartData }) {
       title="Not enough history for a trend"
       body="A line needs at least four daily checks. These are the latest captured positions."
     >
-      <dl className="flex flex-wrap items-start gap-x-6 gap-y-2">
+      <dl className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
         {data.keywordIds.map((keywordId) => {
           const value = row?.[keywordId];
           return (
-            <div key={keywordId} className="flex flex-col">
+            <div key={keywordId} className="flex flex-col items-center">
               <dt className="max-w-40 truncate text-caption text-muted-foreground">
                 {data.seriesLabels[keywordId] ?? keywordId}
               </dt>

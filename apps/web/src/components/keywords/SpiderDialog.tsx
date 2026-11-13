@@ -168,7 +168,7 @@ export function SpiderDialog({
               </div>
 
               {suggestions.length === 0 ? (
-                <p className="text-body text-muted-foreground">
+                <p className="p-4 text-center text-body text-muted-foreground">
                   {complete
                     ? "No new terms found for this seed."
                     : "Waiting for the first results…"}

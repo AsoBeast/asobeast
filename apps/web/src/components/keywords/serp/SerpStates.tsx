@@ -6,7 +6,9 @@ import { SerpSummarySkeleton } from "./SerpSummary";
 
 function Panel({ children }: { children: ReactNode }) {
   return (
-    <p className="mx-4 mt-4 text-body text-muted-foreground">{children}</p>
+    <p className="mx-4 mt-4 p-6 text-center text-body text-muted-foreground">
+      {children}
+    </p>
   );
 }
 
