@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { FormEvent } from "react";
+import type { ComponentProps, FormEvent } from "react";
 import {
   useMutation,
   useQueryClient,
@@ -24,7 +24,13 @@ const STORE_URL_EXAMPLES: Record<Store, string> = {
     "Focus Timer or https://play.google.com/store/apps/details?id=com.example.app",
 };
 
-export function AddCompetitorForm({ id }: { id: string }) {
+export function AddCompetitorForm({
+  id,
+  submitVariant = "default",
+}: {
+  id: string;
+  submitVariant?: ComponentProps<typeof Button>["variant"];
+}) {
   const queryClient = useQueryClient();
   const { data: detail } = useSuspenseQuery(appDetailOptions(id));
   const [url, setUrl] = useState("");
@@ -89,7 +95,7 @@ export function AddCompetitorForm({ id }: { id: string }) {
       <StoreSearchField
         id="competitor-search"
         label={`Competitor name or ${storeLabel(detail.store)} URL`}
-        hint="Type a name to search, or paste a store URL. A new competitor gets positions on the next keyword check."
+        hint="Type a name to search, or paste a store URL."
         placeholder={STORE_URL_EXAMPLES[detail.store]}
         store={detail.store}
         country={detail.country}
@@ -100,7 +106,11 @@ export function AddCompetitorForm({ id }: { id: string }) {
         error={error}
         note={note}
       >
-        <Button type="submit" aria-disabled={inert || undefined}>
+        <Button
+          type="submit"
+          variant={submitVariant}
+          aria-disabled={inert || undefined}
+        >
           {mutation.isPending ? <Loader2 className="animate-spin" /> : <Plus />}
           {mutation.isPending ? "Adding…" : "Add competitor"}
         </Button>

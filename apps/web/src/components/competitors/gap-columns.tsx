@@ -97,6 +97,7 @@ function ScoreCell({
       value={String(value)}
       grade={grade(metric, value)}
       label={label}
+      aligned
     />
   );
 }
@@ -128,7 +129,7 @@ function KeywordButton({
       {multiMarket && country ? (
         <span
           title={formatCountry(country)}
-          className="text-label text-muted-foreground"
+          className="text-tick text-faint-foreground"
         >
           <span aria-hidden>{country.toUpperCase()}</span>
           <span className="sr-only">{formatCountry(country)}</span>
@@ -151,7 +152,7 @@ function CompetitorCell({
   return (
     <span className="inline-flex items-center gap-2">
       <span aria-hidden>
-        <AppIcon src={competitor?.iconUrl ?? null} size={20} />
+        <AppIcon src={competitor?.iconUrl ?? null} size={16} />
       </span>
       <span className="max-w-40 truncate" title={name}>
         {name}
@@ -173,7 +174,7 @@ function YoursCell({
       ? row.lastCheckedOn
       : null;
   return (
-    <span className="inline-flex items-center gap-1.5">
+    <span className="inline-flex items-center justify-end gap-1.5">
       <PositionCell value={row.yourPosition} best={false} />
       {stale === null ? null : <StaleClock day={stale} />}
     </span>
@@ -188,7 +189,7 @@ function scoreColumn(
   return columnHelper.accessor((row) => nullsLast(value(row)), {
     id,
     ...SCORE_SORT,
-    meta: { label },
+    meta: { label, numeric: true },
     header: ({ column }) => <SortableHeader column={column} label={label} />,
     cell: ({ row }) => (
       <ScoreCell metric={id} label={label} value={value(row.original)} />
@@ -237,7 +238,7 @@ export function gapColumns(scope: GapColumnScope) {
     columnHelper.accessor((row) => gapSortValue("theirs", row), {
       id: "theirs",
       ...POSITION_SORT,
-      meta: { label: "Their position" },
+      meta: { label: "Their position", numeric: true, phone: true },
       header: ({ column }) => (
         <SortableHeader column={column} label="Their position" />
       ),
@@ -255,6 +256,7 @@ export function gapColumns(scope: GapColumnScope) {
       id: "yours",
       ...POSITION_SORT,
       enableHiding: false,
+      meta: { numeric: true },
       header: ({ column }) => (
         <SortableHeader column={column} label="Your position" />
       ),
@@ -276,6 +278,7 @@ export function gapColumns(scope: GapColumnScope) {
       id: "margin",
       ...SCORE_SORT,
       enableHiding: false,
+      meta: { numeric: true },
       header: ({ column }) => <SortableHeader column={column} label="Margin" />,
       cell: ({ row }) =>
         row.original.gap === null ? (

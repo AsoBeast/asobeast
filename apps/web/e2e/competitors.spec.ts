@@ -10,7 +10,7 @@ import {
 const matrix = (page: Page) =>
   page.getByRole("table", { name: /compared with each tracked competitor/ });
 
-const matrixRows = (page: Page) => matrix(page).getByRole("row");
+const matrixRows = (page: Page) => matrix(page).locator("thead tr, tbody tr");
 
 const keywordCell = (row: Locator) =>
   row.locator("td", { has: row.page().locator("[data-breakdown-keyword]") });
@@ -577,9 +577,7 @@ test("exporting competitors downloads one row per tracked competitor", async ({
 }) => {
   await page.goto("/apps/app-1/competitors");
   await page.waitForLoadState("networkidle");
-  await expect(
-    page.getByText("1 tracked competitor", { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText("1 tracked", { exact: true })).toBeVisible();
 
   const [download] = await Promise.all([
     page.waitForEvent("download"),

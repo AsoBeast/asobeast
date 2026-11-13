@@ -11,6 +11,10 @@ import {
   filterAlertEvents,
 } from "./alert-feed-fixtures.mts";
 import { BREAKDOWNS } from "./keyword-breakdowns.mts";
+import {
+  FAIL_CHANGES_COOKIE,
+  withDiscoveryIcons,
+} from "./competitors-fixtures.mts";
 import { analysisOf, visibilityComparedFor } from "./gap-mock.mts";
 import { SERP_HISTORY, serpOnDay } from "./serp-history.mts";
 import "./keyword-map.mts";
@@ -4411,8 +4415,11 @@ const routes: Route[] = [
       json(res, 200, base);
     },
   },
-  appRoute(/^\/apps\/([^/]+)\/changes$/, (dataset, query) =>
-    isPolishListingOf(dataset, query) ? APP_1_PL_CHANGES : dataset.changes,
+  appRoute(
+    /^\/apps\/([^/]+)\/changes$/,
+    (dataset, query) =>
+      isPolishListingOf(dataset, query) ? APP_1_PL_CHANGES : dataset.changes,
+    (req) => hasCookie(req, FAIL_CHANGES_COOKIE, "1"),
   ),
   appRoute(/^\/apps\/([^/]+)\/changes\/impact$/, (dataset, _query, req) =>
     dataset.detail.id === APP_GP_CHANGE_IMPACT.appId &&
@@ -4424,7 +4431,9 @@ const routes: Route[] = [
     /^\/apps\/([^/]+)\/competitors\/discovery$/,
     (dataset, _query, req) => {
       countLoggedRequest("discovery", req);
-      return dataset.discovery;
+      return hasCookie(req, CROWDED_COMPETITORS_COOKIE, "1")
+        ? withDiscoveryIcons(dataset.discovery)
+        : dataset.discovery;
     },
   ),
   {
@@ -4589,7 +4598,11 @@ const routes: Route[] = [
     /^\/apps\/([^/]+)\/competitors\/analysis$/,
     (dataset, _query, req) => {
       countLoggedRequest("analysis", req);
-      return analysisOf(dataset, cookieValue(req, GAP_STATE_COOKIE));
+      return analysisOf(
+        dataset,
+        cookieValue(req, GAP_STATE_COOKIE),
+        hasCookie(req, CROWDED_COMPETITORS_COOKIE, "1"),
+      );
     },
     (req) => hasCookie(req, FAIL_ANALYSIS_COOKIE, "1"),
   ),

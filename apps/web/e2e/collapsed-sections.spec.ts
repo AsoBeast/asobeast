@@ -13,7 +13,8 @@ const MATRIX = "Your position against every competitor";
 const GAPS = "Where competitors beat you";
 const COOKIE = "asobeast_collapsed";
 const LOG_COOKIE = "e2e_request_log";
-const SECTIONS = [TRACKED, GAPS, DISCOVERY, MATRIX];
+const STANDING = "How you compare";
+const SECTIONS = [TRACKED, STANDING, GAPS, DISCOVERY, MATRIX];
 
 const trigger = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
@@ -21,6 +22,8 @@ const discoveryTable = (page: Page) =>
   page.getByRole("table", { name: /appearing in your keyword search results/ });
 const matrixTable = (page: Page) =>
   page.getByRole("table", { name: /compared with each tracked competitor/ });
+const trackedList = (page: Page) =>
+  page.getByRole("list", { name: "Tracked competitors" });
 const addForm = (page: Page) =>
   page.getByRole("textbox", { name: "Competitor name or App Store URL" });
 
@@ -68,9 +71,7 @@ test("every section is open on a first visit", async ({ page, context }) => {
     await expect(page.getByRole("region", { name })).toHaveCount(1);
   }
   await expect(addForm(page)).toBeVisible();
-  await expect(
-    page.getByText("1 tracked competitor", { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText("1 tracked", { exact: true })).toBeVisible();
   await expect(discoveryTable(page)).toBeVisible();
   await expect(matrixTable(page)).toBeVisible();
   expect(await storedCollapsed(context)).toBeNull();
@@ -92,9 +93,6 @@ test("a section collapses behind its title and stays collapsed on reload", async
   await expect(discoveryTable(page)).toHaveCount(0);
   await expect(page.getByRole("region", { name: DISCOVERY })).toBeVisible();
   await expect(page.getByRole("tab", { name: "30d" })).toBeVisible();
-  await expect(
-    page.getByRole("region", { name: DISCOVERY }).getByText("App Store"),
-  ).toBeVisible();
   expect(await storedCollapsed(context)).toBe("competitors.discovery");
 
   const before = await reads(request, "discovery", token);
@@ -226,7 +224,7 @@ test("a collapsed matrix fetches nothing until it opens", async ({
 
   await trigger(page, MATRIX).click();
 
-  await expect(matrixTable(page).getByRole("row")).toHaveCount(2);
+  await expect(matrixTable(page).locator("thead tr, tbody tr")).toHaveCount(2);
   expect(await reads(request, "compare", token)).toBe(1);
 });
 
@@ -246,7 +244,7 @@ test("the only gaps switch works while the matrix is collapsed", async ({
 
   await trigger(page, MATRIX).click();
 
-  await expect(matrixTable(page).getByRole("row")).toHaveCount(2);
+  await expect(matrixTable(page).locator("thead tr, tbody tr")).toHaveCount(2);
   await expect(matrixTable(page)).toContainText("productivity app");
 });
 
@@ -262,10 +260,10 @@ test("a deep link with only gaps and a collapsed matrix shows the switch on and 
 
   await (await hydrated(trigger(page, MATRIX))).click();
 
-  await expect(matrixTable(page).getByRole("row")).toHaveCount(2);
+  await expect(matrixTable(page).locator("thead tr, tbody tr")).toHaveCount(2);
 });
 
-test("collapsing the tracked section hides the form and the list together", async ({
+test("collapsing the tracked section hides the form and the list and keeps the header controls", async ({
   page,
 }) => {
   await open(page);
@@ -276,18 +274,14 @@ test("collapsing the tracked section hides the form and the list together", asyn
   await (await hydrated(trigger(page, TRACKED))).click();
 
   await expect(addForm(page)).toHaveCount(0);
-  await expect(
-    page.getByText("1 tracked competitor", { exact: true }),
-  ).toHaveCount(0);
-  await expect(exportCompetitors).toHaveCount(0);
+  await expect(trackedList(page)).toHaveCount(0);
+  await expect(exportCompetitors).toHaveCount(1);
   await expect(trigger(page, TRACKED)).toBeVisible();
 
   await trigger(page, TRACKED).click();
 
   await expect(addForm(page)).toBeVisible();
-  await expect(
-    page.getByText("1 tracked competitor", { exact: true }),
-  ).toBeVisible();
+  await expect(trackedList(page).getByRole("listitem")).toHaveCount(1);
   await expect(exportCompetitors).toHaveCount(1);
 });
 
@@ -297,7 +291,8 @@ test("with no competitors the first section holds the form alone", async ({
   await open(page, "/apps/app-2/competitors");
 
   await expect(addForm(page)).toBeVisible();
-  await expect(page.getByText(/tracked competitor/)).toHaveCount(0);
+  await expect(page.getByText(/^\d+ tracked$/)).toHaveCount(0);
+  await expect(trackedList(page)).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: "Export CSV of competitors" }),
   ).toHaveCount(0);

@@ -29,7 +29,7 @@ function BreakdownSkeleton() {
   return (
     <div className="flex flex-col gap-3">
       {Array.from({ length: 3 }).map((_, index) => (
-        <Skeleton key={index} className="h-48 w-full rounded-xl" />
+        <Skeleton key={index} className="h-48 w-full rounded-lg" />
       ))}
     </div>
   );

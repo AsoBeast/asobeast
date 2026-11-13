@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { CompetitorItem } from "@asobeast/shared";
@@ -19,30 +19,28 @@ import {
   closeUnlessPending,
   ConfirmActionFooter,
 } from "@/components/ConfirmActionFooter";
-import { Badge } from "@/components/ui/badge";
 import { ExportCsvButton } from "@/components/ExportCsvButton";
+import { PANEL_COUNT } from "@/components/layout/panel-classes";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Separated } from "@/components/ui/separated";
 import { removeCompetitor } from "@/lib/api";
 import { siblingControl, useCloseFocusHandoff } from "@/lib/focus-handoff";
-import { invalidateCompetitorMutation } from "@/lib/queries";
 import {
-  formatNumber,
-  formatPrice,
-  formatRating,
-  storeLabel,
-} from "@/lib/format";
+  competitorsOptions,
+  invalidateCompetitorMutation,
+} from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 import { exportCompetitors } from "./competitor-csv";
+import { snapshotParts } from "./competitor-snapshot";
 
 const REMOVE_CONTROL = 'button[aria-label^="Remove "]';
 const COMPETITOR_FIELD = "competitor-search";
 
-const removalSuccessor = (card: HTMLElement | null): HTMLElement | null =>
-  siblingControl(card, REMOVE_CONTROL) ??
+const removalSuccessor = (row: HTMLElement | null): HTMLElement | null =>
+  siblingControl(row, REMOVE_CONTROL) ??
   document.getElementById(COMPETITOR_FIELD);
 
-function CompetitorCard({
+function CompetitorRow({
   id,
   competitor,
 }: {
@@ -51,16 +49,15 @@ function CompetitorCard({
 }) {
   const queryClient = useQueryClient();
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const card = useRef<HTMLDivElement>(null);
+  const row = useRef<HTMLLIElement>(null);
   const { handOff, onCloseAutoFocus } = useCloseFocusHandoff();
   const name = competitor.name ?? "Untitled app";
-  const snapshot = competitor.latestSnapshot;
 
   const mutation = useMutation({
     mutationFn: () => removeCompetitor(id, competitor.id),
     onSuccess: () => {
       invalidateCompetitorMutation(queryClient, id);
-      handOff(removalSuccessor(card.current));
+      handOff(removalSuccessor(row.current));
       setConfirmOpen(false);
       toast.success(`Removed ${name}`);
     },
@@ -71,67 +68,48 @@ function CompetitorCard({
   const removeOnce = useSingleFlight(mutation);
 
   return (
-    <Card ref={card} className="gap-0 p-4">
-      <div className="flex items-start gap-4">
-        <AppIcon src={competitor.iconUrl} />
-        <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <div className="flex min-w-0 flex-col gap-1">
-            <span className="truncate font-medium">{name}</span>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <Badge variant="secondary" className="w-fit">
-                {storeLabel(competitor.store)}
-              </Badge>
-              {competitor.delistedAt ? (
-                <DelistedBadge since={competitor.delistedAt} />
-              ) : null}
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-            {snapshot?.ratingAvg !== null && snapshot !== null ? (
-              <span>
-                ★ {formatRating(snapshot.ratingAvg)}
-                {snapshot.ratingCount !== null
-                  ? ` (${formatNumber(snapshot.ratingCount)})`
-                  : ""}
-              </span>
-            ) : null}
-            {snapshot?.price !== null && snapshot !== null ? (
-              <span>{formatPrice(snapshot.price, snapshot.currency)}</span>
-            ) : null}
-            {snapshot?.version ? <span>v{snapshot.version}</span> : null}
-          </div>
-        </div>
-        <AlertDialog
-          open={confirmOpen}
-          onOpenChange={closeUnlessPending(mutation.isPending, setConfirmOpen)}
-        >
-          <AlertDialogTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`Remove ${name}`}
-            >
-              <Trash2 />
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent onCloseAutoFocus={onCloseAutoFocus}>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Remove {name}?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This removes {name} from the comparison. Its keyword positions
-                are recaptured only if you add it back.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <ConfirmActionFooter
-              pending={mutation.isPending}
-              label="Remove"
-              pendingLabel="Removing…"
-              onConfirm={removeOnce}
-            />
-          </AlertDialogContent>
-        </AlertDialog>
+    <li
+      ref={row}
+      className="flex min-h-11 items-center gap-3 border-b border-border-subtle py-1 pr-2 pl-(--card-spacing) last:border-b-0"
+    >
+      <AppIcon src={competitor.iconUrl} size={24} />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <span className="flex min-w-0 items-center gap-2">
+          <bdi className="truncate text-dense font-medium">{name}</bdi>
+          {competitor.delistedAt ? (
+            <DelistedBadge since={competitor.delistedAt} />
+          ) : null}
+        </span>
+        <span className="numeric truncate text-caption text-faint-foreground">
+          <Separated parts={snapshotParts(competitor.latestSnapshot)} />
+        </span>
       </div>
-    </Card>
+      <AlertDialog
+        open={confirmOpen}
+        onOpenChange={closeUnlessPending(mutation.isPending, setConfirmOpen)}
+      >
+        <AlertDialogTrigger asChild>
+          <Button variant="ghost" size="icon" aria-label={`Remove ${name}`}>
+            <Trash2 />
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent onCloseAutoFocus={onCloseAutoFocus}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove {name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes {name} from the comparison. Its keyword positions are
+              recaptured only if you add it back.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <ConfirmActionFooter
+            pending={mutation.isPending}
+            label="Remove"
+            pendingLabel="Removing…"
+            onConfirm={removeOnce}
+          />
+        </AlertDialogContent>
+      </AlertDialog>
+    </li>
   );
 }
 
@@ -142,23 +120,25 @@ export function CompetitorList({
   id: string;
   competitors: CompetitorItem[];
 }) {
-  const count = competitors.length;
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-body text-muted-foreground">
-          {`${count} tracked ${count === 1 ? "competitor" : "competitors"}`}
-        </p>
-        <ExportCsvButton
-          subject="competitors"
-          onClick={() => exportCompetitors(id, competitors)}
-        />
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {competitors.map((competitor) => (
-          <CompetitorCard key={competitor.id} id={id} competitor={competitor} />
-        ))}
-      </div>
-    </div>
+    <ul aria-label="Tracked competitors">
+      {competitors.map((competitor) => (
+        <CompetitorRow key={competitor.id} id={id} competitor={competitor} />
+      ))}
+    </ul>
+  );
+}
+
+export function TrackedSummary({ id }: { id: string }) {
+  const { data: competitors } = useQuery(competitorsOptions(id));
+  if (competitors === undefined || competitors.length === 0) return null;
+  return (
+    <>
+      <span className={PANEL_COUNT}>{`${competitors.length} tracked`}</span>
+      <ExportCsvButton
+        subject="competitors"
+        onClick={() => exportCompetitors(id, competitors)}
+      />
+    </>
   );
 }

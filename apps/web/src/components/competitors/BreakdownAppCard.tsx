@@ -102,7 +102,7 @@ export function BreakdownAppCard({
   return (
     <li
       aria-labelledby={headingId}
-      className="flex flex-col gap-3 rounded-xl border bg-card p-4"
+      className="flex flex-col gap-3 rounded-lg border bg-card p-4"
     >
       <div className="flex items-start gap-3">
         <span aria-hidden>

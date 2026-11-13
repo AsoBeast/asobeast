@@ -272,7 +272,7 @@ test("keeps the page when the analysis fails and retries it", async ({
   await expect(tab(page, "Keyword gaps (4)")).toBeVisible();
 });
 
-test("asks for nothing while the section is collapsed", async ({
+test("asks for nothing while both sections that read the analysis are collapsed", async ({
   page,
   context,
   request,
@@ -280,7 +280,9 @@ test("asks for nothing while the section is collapsed", async ({
   const token = randomUUID();
   await seedCookies(context, {
     e2e_request_log: token,
-    asobeast_collapsed: encodeURIComponent("competitors.gaps"),
+    asobeast_collapsed: encodeURIComponent(
+      "competitors.gaps,competitors.standing",
+    ),
   });
   await page.goto(PAGE);
   await page.waitForLoadState("networkidle");

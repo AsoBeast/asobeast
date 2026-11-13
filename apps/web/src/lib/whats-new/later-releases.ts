@@ -65,6 +65,11 @@ export const LATER_RELEASES: readonly Release[] = [
       },
       {
         kind: "improved",
+        title: "A competitors page that shows who is ahead",
+        text: "The competitors page now opens with one sentence: how many competitors you track and the latest change one of them made to its listing. A new panel, How you compare, ranks your app and every competitor by visibility with their ratings, and switches to each app's title and subtitle with their character counts. Under the comparison a totals row counts your keywords in the top 10 and, for each competitor, how many keywords you lead and trail on. Positions use the same marks as the keywords page, numbers line up on the right, a phone shows the competitor's position beside yours, and the keywords of a discovered app open with a tap.",
+      },
+      {
+        kind: "improved",
         title: "A calmer, sharper look",
         text: "AsoBeast has a new typeface, warmer neutral colours and flatter panels with fine borders. Numbers line up in columns and labels are easier to read.",
       },

@@ -1,12 +1,24 @@
 "use client";
 
 import { useMemo } from "react";
-import { flexRender, useTable } from "@tanstack/react-table";
+import {
+  flexRender,
+  useTable,
+  type Table as TableInstance,
+} from "@tanstack/react-table";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryStates } from "nuqs";
-import type { CompetitorItem, KeywordComparison } from "@asobeast/shared";
+import type {
+  CompetitorItem,
+  KeywordComparison,
+  KeywordComparisonRow,
+} from "@asobeast/shared";
+import { DataTableFooter } from "@/components/data-table/DataTableFooter";
 import { FilteredEmpty } from "@/components/data-table/FilteredEmpty";
-import { dataTableFeatures } from "@/components/data-table/table-features";
+import {
+  dataTableFeatures,
+  type DataTableFeatures,
+} from "@/components/data-table/table-features";
 import { useStoredColumnVisibility } from "@/components/data-table/useStoredColumnVisibility";
 import { useUrlSorting } from "@/components/data-table/useUrlSorting";
 import {
@@ -24,6 +36,7 @@ import {
   sortDirectionParser,
 } from "@/lib/search-params";
 import { appDetailOptions } from "@/lib/queries";
+import { numericProps } from "@/lib/table/column-visibility";
 import { ariaSort } from "@/lib/table/sorting";
 import { cn } from "@/lib/utils";
 import {
@@ -34,6 +47,9 @@ import { exportComparison } from "./comparison-csv";
 import { comparisonMarkets } from "./comparison-markets";
 import { ComparisonFilterBar } from "./ComparisonFilterBar";
 import { useOpenBreakdown } from "./breakdown-opener";
+import { SECTION_BODY, SECTION_SHEET } from "./section-layout";
+
+const TOTALS_CELL = "h-9 align-middle";
 
 const MARKET_PIN = "w-24 min-w-24 max-w-24 bg-inherit md:sticky md:left-0";
 
@@ -47,14 +63,97 @@ function pinClasses(
     head: {
       market: `${MARKET_PIN} md:z-20`,
       keyword: `${keywordPin} z-20`,
-      you: "border-x bg-secondary text-center",
+      you: "bg-muted",
     },
     cell: {
       market: `${MARKET_PIN} md:z-10`,
       keyword: `${keywordPin} z-10`,
-      you: "border-x bg-secondary/40 text-center",
+      you: "bg-muted",
     },
   };
+}
+
+function MatrixSheet({
+  table,
+  pins,
+  multiMarket,
+  onClear,
+}: {
+  table: TableInstance<DataTableFeatures, KeywordComparisonRow>;
+  pins: ReturnType<typeof pinClasses>;
+  multiMarket: boolean;
+  onClear: () => void;
+}) {
+  const rows = table.getRowModel().rows;
+  return (
+    <div className={SECTION_SHEET}>
+      <Table aria-rowcount={rows.length + (rows.length > 0 ? 2 : 1)}>
+        <TableCaption className="sr-only">
+          Your keyword positions compared with each tracked competitor. Gap rows
+          are keywords a competitor ranks for and you do not.
+          {multiMarket
+            ? " The market column names the storefront of each row."
+            : null}
+        </TableCaption>
+        <TableHeader>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id} className="bg-card">
+              {headerGroup.headers.map((header) => (
+                <TableHead
+                  key={header.id}
+                  aria-sort={ariaSort(header.column.getIsSorted())}
+                  className={pins.head[header.column.id]}
+                  {...numericProps(header.column)}
+                >
+                  {flexRender(
+                    header.column.columnDef.header,
+                    header.getContext(),
+                  )}
+                </TableHead>
+              ))}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {rows.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={table.getVisibleLeafColumns().length}>
+                <FilteredEmpty
+                  title="No keywords match these filters"
+                  onClear={onClear}
+                />
+              </TableCell>
+            </TableRow>
+          ) : null}
+          {rows.map((row, index) => (
+            <TableRow
+              key={row.id}
+              aria-rowindex={index + 2}
+              data-gap={row.original.gap || undefined}
+              className="bg-card"
+            >
+              {row.getVisibleCells().map((cell) => (
+                <TableCell
+                  key={cell.id}
+                  className={pins.cell[cell.column.id]}
+                  {...numericProps(cell.column)}
+                >
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+        {rows.length > 0 ? (
+          <DataTableFooter
+            table={table}
+            rowIndex={rows.length + 2}
+            cellClassName={(columnId) => cn(TOTALS_CELL, pins.cell[columnId])}
+          />
+        ) : null}
+      </Table>
+    </div>
+  );
 }
 
 export function ComparisonTable({
@@ -134,7 +233,7 @@ export function ComparisonTable({
   const pins = pinClasses(table.getColumn("market")?.getIsVisible() ?? false);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className={SECTION_BODY}>
       <ComparisonFilterBar
         filters={filters}
         setFilters={setFilters}
@@ -153,60 +252,12 @@ export function ComparisonTable({
           )
         }
       />
-      <Table containerClassName="rounded-xl border">
-        <TableCaption className="sr-only">
-          Your keyword positions compared with each tracked competitor. Gap rows
-          are keywords a competitor ranks for and you do not.
-          {multiMarket
-            ? " The market column names the storefront of each row."
-            : null}
-        </TableCaption>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="bg-card">
-              {headerGroup.headers.map((header) => (
-                <TableHead
-                  key={header.id}
-                  aria-sort={ariaSort(header.column.getIsSorted())}
-                  className={pins.head[header.column.id] ?? "text-center"}
-                >
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext(),
-                  )}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {rows.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={table.getVisibleLeafColumns().length}>
-                <FilteredEmpty
-                  title="No keywords match these filters"
-                  onClear={() => void setFilters(null)}
-                />
-              </TableCell>
-            </TableRow>
-          ) : null}
-          {rows.map((row) => (
-            <TableRow
-              key={row.id}
-              className={cn(row.original.gap ? "bg-warning-subtle" : "bg-card")}
-            >
-              {row.getVisibleCells().map((cell) => (
-                <TableCell
-                  key={cell.id}
-                  className={pins.cell[cell.column.id] ?? "text-center"}
-                >
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <MatrixSheet
+        table={table}
+        pins={pins}
+        multiMarket={multiMarket}
+        onClear={() => void setFilters(null)}
+      />
     </div>
   );
 }

@@ -11,19 +11,47 @@ import { AddCompetitorForm } from "./AddCompetitorForm";
 import { BreakdownOpenerProvider } from "./breakdown-opener";
 import { ComparisonMatrix } from "./ComparisonMatrix";
 import { COMPETITOR_SECTION } from "./competitor-sections";
-import { CompetitorList } from "./CompetitorList";
+import { CompetitorLede } from "./CompetitorLede";
+import { CompetitorList, TrackedSummary } from "./CompetitorList";
 import { DiscoveryPanel } from "./DiscoveryPanel";
 import { GapAnalysis } from "./GapAnalysis";
+import { SECTION_BODY, SECTION_FOOTER, SECTION_SHEET } from "./section-layout";
 import {
   ComparisonMatrixSkeleton,
   CompetitorListSkeleton,
   DiscoveryCardSkeleton,
+  LedeSkeleton,
 } from "./skeletons";
+import { StandingPanel } from "./StandingPanel";
 
 function CompetitorListSection({ id }: { id: string }) {
   const { data: competitors } = useSuspenseQuery(competitorsOptions(id));
   if (competitors.length === 0) return null;
   return <CompetitorList id={id} competitors={competitors} />;
+}
+
+function TrackedPanel({ id }: { id: string }) {
+  return (
+    <CollapsibleCard
+      section={COMPETITOR_SECTION.tracked}
+      title="Track the apps you rank against"
+      actions={<TrackedSummary id={id} />}
+    >
+      <div className={SECTION_BODY}>
+        <Suspense fallback={<Skeleton className="h-9 w-full" />}>
+          <AddCompetitorForm id={id} />
+        </Suspense>
+        <div className={SECTION_SHEET}>
+          <Suspense fallback={<CompetitorListSkeleton />}>
+            <CompetitorListSection id={id} />
+          </Suspense>
+          <p className={SECTION_FOOTER}>
+            A new competitor gets positions on the next keyword check
+          </p>
+        </div>
+      </div>
+    </CollapsibleCard>
+  );
 }
 
 export function CompetitorsView({
@@ -36,20 +64,19 @@ export function CompetitorsView({
   return (
     <CollapsedSectionsProvider initial={collapsed} known={KNOWN_SECTIONS}>
       <BreakdownOpenerProvider>
-        <div className="flex flex-col gap-6">
-          <CollapsibleCard
-            section={COMPETITOR_SECTION.tracked}
-            title="Track the apps you rank against"
-          >
-            <div className="flex flex-col gap-6">
-              <Suspense fallback={<Skeleton className="h-9 w-full" />}>
-                <AddCompetitorForm id={id} />
-              </Suspense>
-              <Suspense fallback={<CompetitorListSkeleton />}>
-                <CompetitorListSection id={id} />
-              </Suspense>
+        <div className="@container/competitors flex flex-col gap-6">
+          <Suspense fallback={<LedeSkeleton />}>
+            <CompetitorLede id={id} />
+          </Suspense>
+
+          <div className="grid items-start gap-6 @5xl/competitors:grid-cols-12">
+            <div className="min-w-0 @5xl/competitors:col-span-7">
+              <TrackedPanel id={id} />
             </div>
-          </CollapsibleCard>
+            <div className="min-w-0 @5xl/competitors:col-span-5">
+              <StandingPanel id={id} />
+            </div>
+          </div>
 
           <GapAnalysis id={id} />
 

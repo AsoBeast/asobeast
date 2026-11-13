@@ -1,5 +1,9 @@
 import type { CompetitorAnalysis, VisibilityHistory } from "@asobeast/shared";
 import {
+  COMPETITOR_GAP_STATES,
+  CROWDED_ANALYSIS,
+} from "./competitors-fixtures.mts";
+import {
   APP_1_VISIBILITY_COMPARE_SHORT,
   EMPTY_ANALYSIS,
   GAP_STATES,
@@ -12,12 +16,14 @@ const SHORT_RANGE_DAYS = 3;
 export function analysisOf(
   dataset: AppDataset,
   gapState: string | undefined,
+  crowded = false,
 ): CompetitorAnalysis {
-  return (
-    (gapState === undefined ? undefined : GAP_STATES[gapState]) ??
-    dataset.competitorAnalysis ??
-    EMPTY_ANALYSIS
-  );
+  const state =
+    gapState === undefined
+      ? undefined
+      : (GAP_STATES[gapState] ?? COMPETITOR_GAP_STATES[gapState]);
+  if (state === undefined && crowded) return CROWDED_ANALYSIS;
+  return state ?? dataset.competitorAnalysis ?? EMPTY_ANALYSIS;
 }
 
 export function visibilityComparedFor(
