@@ -13,6 +13,7 @@ const STEPS = [
   "hero",
   "metric",
   "title",
+  "dialog",
   "body",
   "dense",
   "label",

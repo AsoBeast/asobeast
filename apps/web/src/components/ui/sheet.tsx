@@ -113,7 +113,7 @@ function SheetTitle({
   return (
     <SheetPrimitive.Title
       data-slot="sheet-title"
-      className={cn("font-heading text-heading", className)}
+      className={cn("font-heading text-dialog", className)}
       {...props}
     />
   );

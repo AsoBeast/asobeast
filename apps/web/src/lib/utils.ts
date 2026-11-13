@@ -5,6 +5,7 @@ export const TYPE_STEPS = [
   "hero",
   "metric",
   "title",
+  "dialog",
   "heading",
   "body",
   "dense",
