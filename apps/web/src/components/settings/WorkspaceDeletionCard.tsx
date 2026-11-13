@@ -8,12 +8,13 @@ import {
   type WorkspaceDeletionStatus,
 } from "@asobeast/shared";
 import {
+  closeUnlessPending,
+  ConfirmActionFooter,
+} from "@/components/ConfirmActionFooter";
+import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
@@ -68,11 +69,10 @@ function ScheduleDeletionDialog({ graceDays }: { graceDays: number }) {
   const scheduleOnce = useSingleFlight(schedule);
   const pending = schedule.isPending;
 
-  function onOpenChange(next: boolean) {
-    if (!next && pending) return;
+  const onOpenChange = closeUnlessPending(pending, (next) => {
     setOpen(next);
     if (!next) setTyped("");
-  }
+  });
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -101,27 +101,14 @@ function ScheduleDeletionDialog({ graceDays }: { graceDays: number }) {
             onChange={(event) => setTyped(event.target.value)}
           />
         </div>
-        <AlertDialogFooter>
-          <AlertDialogCancel
-            aria-disabled={pending || undefined}
-            onClick={(event) => {
-              if (pending) event.preventDefault();
-            }}
-          >
-            Keep workspace
-          </AlertDialogCancel>
-          <AlertDialogAction
-            variant="destructive"
-            disabled={typed !== DELETION_CONFIRMATION}
-            aria-disabled={pending || undefined}
-            onClick={(event) => {
-              event.preventDefault();
-              if (!pending) scheduleOnce();
-            }}
-          >
-            {pending ? "Scheduling…" : "Delete workspace"}
-          </AlertDialogAction>
-        </AlertDialogFooter>
+        <ConfirmActionFooter
+          pending={pending}
+          label="Delete workspace"
+          pendingLabel="Scheduling…"
+          cancelLabel="Keep workspace"
+          blocked={typed !== DELETION_CONFIRMATION}
+          onConfirm={scheduleOnce}
+        />
       </AlertDialogContent>
     </AlertDialog>
   );
