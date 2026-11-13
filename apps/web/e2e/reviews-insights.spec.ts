@@ -176,7 +176,14 @@ test("the reply status switch moves by arrow keys and filters on Enter only", as
   await page.keyboard.press("ArrowRight");
 
   await expect(tabs.getByRole("tab", { name: /Needs reply/ })).toBeFocused();
-  expect(page.url()).not.toContain("replyState");
+  await expect(tabs.getByRole("tab", { name: /All/ })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(tabs.getByRole("tab", { name: /Needs reply/ })).toHaveAttribute(
+    "aria-selected",
+    "false",
+  );
 
   await page.keyboard.press("Enter");
 
