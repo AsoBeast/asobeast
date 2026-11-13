@@ -188,6 +188,7 @@ test("the movers narrow to climbers or fallers and keep the choice in the url", 
 
   await expect(page).toHaveURL(/movers=down/);
   await expect(moverRows(page)).toHaveText(["pomodoro6 → 126down 6 in 7 days"]);
+  await expect(moverRows(page).locator("svg.lucide-arrow-down")).toHaveCount(1);
 
   await card.getByRole("tab", { name: "Climbers" }).click();
 
@@ -195,6 +196,7 @@ test("the movers narrow to climbers or fallers and keep the choice in the url", 
   await expect(moverRows(page)).toHaveText([
     "focus timer10 → 37up 7 in 7 days",
   ]);
+  await expect(moverRows(page).locator("svg.lucide-arrow-up")).toHaveCount(1);
 });
 
 test("a market where nothing moved says so and offers no tabs", async ({
