@@ -19,15 +19,15 @@ test("rank series are distinguishable without colour", async ({ page }) => {
   expect(new Set(patterns).size).toBe(patterns.length);
 });
 
-test("the rank legend carries the stroke pattern, not only a colour", async ({
+test("the rank key carries the stroke pattern, not only a colour", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/rankings");
   await page.waitForLoadState("networkidle");
 
-  const legend = page.getByRole("list", { name: "Charted series" }).first();
-  const swatches = await legend
-    .locator("svg line")
+  const key = page.getByRole("table", { name: /^Charted keywords/ });
+  const swatches = await key
+    .locator("[data-swatch] line")
     .evaluateAll((nodes) =>
       nodes.map((node) => node.getAttribute("stroke-dasharray") ?? "solid"),
     );
@@ -41,7 +41,7 @@ test("the rank chart shades the bands that matter in aso", async ({ page }) => {
   await page.waitForLoadState("networkidle");
 
   const region = page.getByRole("region", { name: "Keyword rank positions" });
-  await expect(region.locator(".recharts-reference-area-rect")).toHaveCount(3);
+  await expect(region.locator(".recharts-reference-area-rect")).toHaveCount(6);
 
   const labels = await region
     .locator(".recharts-label")

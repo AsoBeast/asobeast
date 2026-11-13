@@ -498,6 +498,13 @@ export type DashboardMetric = (typeof DASHBOARD_METRICS)[number];
 export const dashboardMetricParser =
   parseAsStringLiteral(DASHBOARD_METRICS).withDefault("visibility");
 
+export const RANKINGS_VIEWS = ["chart", "days"] as const;
+
+export type RankingsView = (typeof RANKINGS_VIEWS)[number];
+
+export const rankingsViewParser =
+  parseAsStringLiteral(RANKINGS_VIEWS).withDefault("chart");
+
 export const rankingsRangeParsers = {
   range: rangeParser,
   movers: moverDaysParser,

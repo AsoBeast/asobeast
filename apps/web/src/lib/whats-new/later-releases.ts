@@ -39,6 +39,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "The alerts page is now one list instead of a card per event. It opens by saying how many events are new since your last visit, groups them by day, and shows the size of each move beside its sentence, such as 8 positions down or 13 up, so the big ones stand out without reading every line. The app, store and country of each event line up in their own column, and on a phone each event takes two short lines.",
       },
       {
+        kind: "improved",
+        title: "Rankings you can read without hovering",
+        text: "The rankings page now opens by saying what climbed and fell since yesterday and how many apps entered your top 10. Under the chart, each keyword has a row with its position today, how far it moved over the days you chose, and its best and average position. A new By day view lists the position of every keyword on every day, shaded by how high it ranked. The market is one menu with the number of keywords in each country, new apps in your top 10 are grouped by day, and adding an annotation opens a small form instead of taking up the page.",
+      },
+      {
         kind: "new",
         title: "Press a keyword to see everything about it",
         text: "Pressing a keyword in the keywords table opens a sheet beside it: its position and what changed since yesterday, its scores and where each one comes from, the reason behind every insight, the position history with the days your listing changed, the top 10 search results with you and your competitors marked, and where the phrase sits in your listing. The keyword's menu is at the top of the sheet beside arrows that step to the previous and the next keyword, and a copied link opens the same sheet. The line in the Last 7 days column now opens the position history, and every button shows a hand when you point at it.",

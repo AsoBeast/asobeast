@@ -80,6 +80,12 @@ const POPOVERS: NamedPopover[] = [
     open: (page) => page.getByRole("button", { name: /selected$/ }).click(),
   },
   {
+    name: "Add an annotation",
+    path: "/apps/app-1/rankings",
+    open: (page) =>
+      page.getByRole("button", { name: "Add annotation" }).click(),
+  },
+  {
     name: "Tag keywords",
     path: "/apps/app-1/keywords",
     open: async (page) => {

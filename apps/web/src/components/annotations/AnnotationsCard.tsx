@@ -2,7 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useIsMutating,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -22,15 +27,21 @@ import {
   closeUnlessPending,
   ConfirmActionFooter,
 } from "@/components/ConfirmActionFooter";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
-  CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { PANEL_ACTION, PANEL_HEADER } from "@/components/layout/panel-classes";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,26 +73,24 @@ function AnnotationRow({
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
 
+  const facts = [
+    ...(annotation.tag === null ? [] : [annotation.tag]),
+    ...(annotation.market === null ? [] : [formatCountry(annotation.market)]),
+  ];
+
   return (
-    <div className="flex items-start gap-3 py-2">
-      <span className="w-24 shrink-0 pt-0.5 text-caption text-muted-foreground">
+    <li className="flex min-h-10 items-center gap-3 rounded-md py-1 pr-1 pl-2 text-dense transition-colors duration-150 ease-out hover:bg-muted sm:min-h-9">
+      <span className="numeric w-24 shrink-0 text-faint-foreground">
         {formatDate(annotation.date)}
       </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className="text-body break-words">{annotation.label}</span>
-        {annotation.tag !== null || annotation.market !== null ? (
-          <div className="flex flex-wrap items-center gap-1.5">
-            {annotation.tag !== null ? (
-              <Badge variant="secondary">{annotation.tag}</Badge>
-            ) : null}
-            {annotation.market !== null ? (
-              <Badge variant="outline">
-                {formatCountry(annotation.market)}
-              </Badge>
-            ) : null}
-          </div>
+      <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2">
+        <bdi className="font-medium wrap-anywhere">{annotation.label}</bdi>
+        {facts.length > 0 ? (
+          <span className="text-caption text-faint-foreground wrap-anywhere">
+            {facts.join(" · ")}
+          </span>
         ) : null}
-      </div>
+      </span>
       <AlertDialog
         open={confirmOpen}
         onOpenChange={closeUnlessPending(removing, setConfirmOpen)}
@@ -90,6 +99,7 @@ function AnnotationRow({
           <Button
             variant="ghost"
             size="icon-sm"
+            className="print:hidden"
             aria-label={`Remove ${annotation.label}`}
             ref={(button) => {
               if (button) registerButton(annotation.id, button);
@@ -113,7 +123,7 @@ function AnnotationRow({
           />
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </li>
   );
 }
 
@@ -179,7 +189,7 @@ function AnnotationsList({ id }: { id: string }) {
   }
 
   return (
-    <div className="divide-y">
+    <ul className="flex flex-col">
       {rows.map((annotation) => (
         <AnnotationRow
           key={annotation.id}
@@ -194,11 +204,19 @@ function AnnotationsList({ id }: { id: string }) {
           }}
         />
       ))}
-    </div>
+    </ul>
   );
 }
 
-function AddAnnotationForm({ id }: { id: string }) {
+const addAnnotationKey = (id: string) => ["annotation-add", id];
+
+function AddAnnotationForm({
+  id,
+  onAdded,
+}: {
+  id: string;
+  onAdded: () => void;
+}) {
   const queryClient = useQueryClient();
   const [date, setDate] = useState("");
   const [label, setLabel] = useState("");
@@ -208,6 +226,7 @@ function AddAnnotationForm({ id }: { id: string }) {
   const tagLimit = textLimit(tag, ANNOTATION_TAG_MAX_LENGTH);
 
   const mutation = useMutation({
+    mutationKey: addAnnotationKey(id),
     mutationFn: () =>
       addAnnotation(id, {
         date,
@@ -221,6 +240,7 @@ function AddAnnotationForm({ id }: { id: string }) {
       setTag("");
       setError(null);
       toast.success("Annotation added");
+      onAdded();
     },
     onError: (err) => {
       setError(
@@ -246,7 +266,7 @@ function AddAnnotationForm({ id }: { id: string }) {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
-      <div className="grid gap-3 sm:grid-cols-[10rem_1fr]">
+      <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="annotation-date">Date</Label>
           <Input
@@ -274,7 +294,7 @@ function AddAnnotationForm({ id }: { id: string }) {
         </div>
       </div>
       <div className="flex flex-wrap items-end gap-3">
-        <div className="flex w-40 flex-col gap-1.5">
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <Label htmlFor="annotation-tag">Tag (optional)</Label>
           <Input
             id="annotation-tag"
@@ -290,11 +310,11 @@ function AddAnnotationForm({ id }: { id: string }) {
         </div>
         <Button
           type="submit"
-          id="annotation-add"
+          className="ml-auto"
           aria-disabled={mutation.isPending || !addable || undefined}
         >
           {mutation.isPending ? <Loader2 className="animate-spin" /> : <Plus />}
-          {mutation.isPending ? "Adding…" : "Add annotation"}
+          {mutation.isPending ? "Adding…" : "Add"}
         </Button>
       </div>
       {error ? (
@@ -306,17 +326,50 @@ function AddAnnotationForm({ id }: { id: string }) {
   );
 }
 
+function AddAnnotation({ id }: { id: string }) {
+  const [open, setOpen] = useState(false);
+  const adding = useIsMutating({ mutationKey: addAnnotationKey(id) }) > 0;
+  return (
+    <Popover open={open} onOpenChange={closeUnlessPending(adding, setOpen)}>
+      <PopoverTrigger asChild>
+        <Button
+          id="annotation-add"
+          variant="outline"
+          size="sm"
+          className="print:hidden"
+        >
+          <Plus />
+          Add annotation
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        aria-label="Add an annotation"
+        align="end"
+        className="w-80 max-w-[calc(100vw-2rem)] p-4"
+      >
+        <AddAnnotationForm id={id} onAdded={() => setOpen(false)} />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function AnnotationsCard({ id }: { id: string }) {
   return (
     <Card>
-      <CardHeader>
-        <CardDescription>Event markers</CardDescription>
-        <CardTitle>Annotations</CardTitle>
+      <CardHeader className={PANEL_HEADER}>
+        <CardTitle asChild>
+          <h2>Annotations</h2>
+        </CardTitle>
+        <CardAction className={PANEL_ACTION}>
+          <AddAnnotation id={id} />
+        </CardAction>
       </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+      <CardContent className="px-2">
         <AnnotationsList id={id} />
-        <AddAnnotationForm id={id} />
       </CardContent>
+      <CardFooter>
+        <span>Drawn as dashed lines on this app’s charts</span>
+      </CardFooter>
     </Card>
   );
 }
