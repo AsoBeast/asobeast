@@ -12,27 +12,12 @@ const tiles = (summary = ACTION_SUMMARY) =>
   );
 
 describe("overviewTiles", () => {
-  it("counts the open actions by their open priorities with the week's net change", () => {
+  it("counts the open actions by their open priorities and claims no change", () => {
     expect(tiles().Open).toEqual({
       label: "Open",
       value: String(ACTION_SUMMARY.open),
       note: `${ACTION_SUMMARY.openByPriority.critical} critical · ${ACTION_SUMMARY.openByPriority.high} high`,
-      delta: "+1 this week",
     });
-  });
-
-  it("leaves the net change out of a week that opened as many as it closed", () => {
-    const [day] = ACTION_ACTIVITY.days;
-    const even = {
-      ...ACTION_ACTIVITY,
-      days: [
-        { ...day, opened: 2, reopened: 0, done: 1, dismissed: 0, resolved: 1 },
-      ],
-    };
-
-    expect(overviewTiles(ACTION_SUMMARY, even, ACTIONS)[0]).not.toHaveProperty(
-      "delta",
-    );
   });
 
   it("does not call the snoozed tile empty when the wake dates are not loaded", () => {

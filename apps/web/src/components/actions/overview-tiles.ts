@@ -28,9 +28,6 @@ const signed = (value: number): string =>
 const openedOn = (days: ActionActivity["days"]): number =>
   days.reduce((sum, day) => sum + day.opened + day.reopened, 0);
 
-const closedOn = (days: ActionActivity["days"]): number =>
-  days.reduce((sum, day) => sum + day.done + day.dismissed + day.resolved, 0);
-
 function nextWake(items: readonly ActionItem[], snoozed: number): string {
   const dates = items
     .map((item) => item.snoozedUntil)
@@ -48,7 +45,6 @@ export function overviewTiles(
   const week = activity.days.slice(-WEEK_DAYS);
   const weekBefore = activity.days.slice(-2 * WEEK_DAYS, -WEEK_DAYS);
   const opened = openedOn(week);
-  const net = opened - closedOn(week);
   const growth = opened - openedOn(weekBefore);
   const tiles: OverviewTile[] = [
     {
@@ -57,7 +53,6 @@ export function overviewTiles(
         Object.values(summary.openByPriority).reduce((sum, n) => sum + n, 0),
       ),
       note: openNote(summary),
-      ...(net === 0 ? {} : { delta: `${signed(net)} this week` }),
     },
     {
       label: "New this week",

@@ -508,8 +508,12 @@ let appAnnotations: AppAnnotationItem[] = structuredClone(APP_ANNOTATION_SEED);
 let appAnnotationIds = APP_ANNOTATION_SEED.length;
 
 const actions: ActionItem[] = ACTIONS.map((action) => structuredClone(action));
+const crowdedActions: ActionItem[] = CROWDED_ACTIONS.map((action) =>
+  structuredClone(action),
+);
+const SEEDED_ACTIONS = [...ACTIONS, ...CROWDED_ACTIONS];
 const actionEvents: Record<string, ActionEventItem[]> =
-  initialActionEvents(ACTIONS);
+  initialActionEvents(SEEDED_ACTIONS);
 const portfolioApps = [...PORTFOLIO.apps, PENDING_PORTFOLIO_APP];
 
 const setupSessions = new Map<string, Map<string, AppSetupState>>();
@@ -786,8 +790,13 @@ function resetActions(): void {
     actions.length,
     ...ACTIONS.map((action) => structuredClone(action)),
   );
+  crowdedActions.splice(
+    0,
+    crowdedActions.length,
+    ...CROWDED_ACTIONS.map((action) => structuredClone(action)),
+  );
   for (const id of Object.keys(actionEvents)) delete actionEvents[id];
-  Object.assign(actionEvents, initialActionEvents(ACTIONS));
+  Object.assign(actionEvents, initialActionEvents(SEEDED_ACTIONS));
 }
 
 interface ActionTransitionBody {
@@ -1164,13 +1173,17 @@ function splitValues(value: string | null): string[] {
   return value ? value.split(",").filter(Boolean) : [];
 }
 
-function filterActions(url: URL, appId?: string): ActionItem[] {
+function filterActions(
+  url: URL,
+  appId?: string,
+  rows: readonly ActionItem[] = actions,
+): ActionItem[] {
   const statuses = splitValues(url.searchParams.get("status"));
   const priorities = splitValues(url.searchParams.get("priority"));
   const rules = splitValues(url.searchParams.get("rule"));
   const wanted = statuses.length > 0 ? statuses : ["OPEN", "SNOOZED"];
 
-  return actions
+  return rows
     .filter((action) => wanted.includes(action.status))
     .filter(
       (action) =>
@@ -2127,6 +2140,10 @@ function actionsCrowded(req: IncomingMessage): boolean {
   return hasCookie(req, CROWDED_COOKIE, "1");
 }
 
+function actionRows(req: IncomingMessage): ActionItem[] {
+  return actionsCrowded(req) ? crowdedActions : actions;
+}
+
 function actionsUngenerated(req: IncomingMessage): boolean {
   return hasCookie(req, "e2e_actions_ungenerated", "1");
 }
@@ -2145,7 +2162,7 @@ function actionSummaryFor(req: IncomingMessage): ActionSummary {
   const country = url.searchParams.get("country");
   const scoped = actionsUngenerated(req)
     ? []
-    : (actionsCrowded(req) ? CROWDED_ACTIONS : actions).filter(
+    : actionRows(req).filter(
         (action) =>
           (!appId || action.scope.appId === appId) &&
           (!store || action.scope.store === store) &&
@@ -2192,9 +2209,7 @@ function actionListFor(
   const items = actionsUngenerated(req)
     ? []
     : actionsCrowded(req)
-      ? CROWDED_ACTIONS.filter(
-          (action) => !appId || action.scope.appId === appId,
-        )
+      ? filterActions(url, appId, crowdedActions)
       : filterActions(url, appId);
   return { items, total: items.length, generatedAt: actionsGeneratedAt(req) };
 }
@@ -5260,7 +5275,7 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/actions\/([^/]+)$/,
     handler: (params, req, res) => {
-      const action = actions.find((row) => row.id === params[0]);
+      const action = actionRows(req).find((row) => row.id === params[0]);
       if (!action) return json(res, 404, errorEnvelope(404, req.url ?? "/"));
       json(res, 200, actionDetail(action));
     },
@@ -5279,7 +5294,7 @@ const routes: Route[] = [
           conflicts: [],
         };
         for (const id of body.ids) {
-          const action = actions.find((row) => row.id === id);
+          const action = actionRows(req).find((row) => row.id === id);
           if (!action) {
             result.missing.push(id);
           } else if (action.status === "RESOLVED" && body.status !== "OPEN") {
@@ -5299,7 +5314,7 @@ const routes: Route[] = [
     handler: (params, req, res) => {
       withBody<ActionTransitionBody>(req, res, (body) => {
         const path = req.url ?? "/";
-        const action = actions.find((row) => row.id === params[0]);
+        const action = actionRows(req).find((row) => row.id === params[0]);
         if (!action) return json(res, 404, errorEnvelope(404, path));
         if (action.id === "act-degraded") {
           return json(res, 500, errorEnvelope(500, path));

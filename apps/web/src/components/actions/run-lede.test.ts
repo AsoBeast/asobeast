@@ -4,7 +4,11 @@ import { ACTION_SUMMARY } from "../../../e2e/fixtures.mts";
 import { ACTION_ACTIVITY } from "../../../e2e/action-details.mts";
 import { runChanges } from "./run-lede";
 
-const RUN_DAY = ACTION_SUMMARY.generatedAt!.slice(0, 10);
+if (ACTION_SUMMARY.generatedAt === null) {
+  throw new Error("The action summary fixture was never generated");
+}
+
+const RUN_DAY = ACTION_SUMMARY.generatedAt.slice(0, 10);
 
 const QUIET: ActionActivityDay = {
   date: RUN_DAY,

@@ -48,11 +48,11 @@ function RowReason({
 
   return (
     <div className="col-span-3 col-start-2 row-start-3 flex min-w-0 flex-wrap items-start gap-x-2 gap-y-1 pr-2 text-caption text-muted-foreground @2xl/queue:pr-0">
-      <span className="inline-flex shrink-0 items-center gap-2">
+      <span className="inline-flex max-w-full min-w-0 items-center gap-2">
         {iconUrl === undefined ? null : (
           <>
             <AppIcon src={iconUrl} size={16} />
-            <span className="font-medium text-foreground">
+            <span className="min-w-0 font-medium wrap-anywhere text-foreground">
               {item.scope.appName ?? "Unknown app"}
             </span>
           </>

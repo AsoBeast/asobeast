@@ -127,12 +127,19 @@ export function StartHere({
                   {actionHeadline(top)}
                 </p>
                 <div className="flex max-w-[70ch] flex-wrap items-center gap-x-2 gap-y-1 text-dense text-muted-foreground">
-                  {iconOf ? (
-                    <span className="inline-flex items-center gap-2 font-medium text-foreground">
-                      <AppIcon src={iconOf(top.scope.appId)} size={16} />
-                      <span>{top.scope.appName ?? "Unknown app"}</span>
+                  <span className="inline-flex max-w-full min-w-0 items-center gap-2">
+                    {iconOf ? (
+                      <>
+                        <AppIcon src={iconOf(top.scope.appId)} size={16} />
+                        <span className="min-w-0 font-medium wrap-anywhere text-foreground">
+                          {top.scope.appName ?? "Unknown app"}
+                        </span>
+                      </>
+                    ) : null}
+                    <span className="text-faint-foreground">
+                      {top.scope.country.toUpperCase()}
                     </span>
-                  ) : null}
+                  </span>
                   <span>
                     {top.evidence
                       ? summarizeEvidence(top.evidence)

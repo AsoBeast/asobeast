@@ -80,6 +80,30 @@ test("the open work can be split by type and filters the queue", async ({
   );
 });
 
+test("a row of the open work leaves a closed tab and a search behind", async ({
+  page,
+}) => {
+  await page.goto("/actions?status=DISMISSED&q=retired");
+  const where = region(page, "Where the work is");
+
+  await where.getByRole("link", { name: /^Focus Timer · US/ }).click();
+
+  await expect(page).toHaveURL(/\/actions\?app=app-1$/);
+  await expect(page.locator("[id='action-act-uncovered']")).toBeVisible();
+});
+
+test("a crowded workspace opens the detail of its own actions", async ({
+  page,
+  context,
+}) => {
+  await crowd(context);
+  await page.goto("/actions?action=act-crowd-2");
+
+  await expect(
+    page.getByRole("dialog").getByRole("heading", { level: 2 }),
+  ).toHaveText(/^Retire "phrase 2"/);
+});
+
 test("a crowded workspace folds the apps past the fifth and waits for history", async ({
   page,
   context,

@@ -40,6 +40,17 @@ const SHOWN_SCOPES = 5;
 const SCOPE_COLUMNS = "grid grid-cols-[minmax(0,1fr)_auto_2rem] gap-3 px-2";
 const PRIORITY_COUNT = "text-tick font-semibold tracking-wide uppercase";
 
+const OPEN_WORK_VIEW = {
+  status: null,
+  priority: null,
+  rule: null,
+  category: null,
+  app: null,
+  market: null,
+  store: null,
+  q: null,
+};
+
 type Split = "scope" | "type";
 
 function scopeName(row: WorkScopeRow): string {
@@ -213,7 +224,10 @@ export function ActionWorkByScope({
                 href={`${pathname}?${facet}=${encodeURIComponent(row.key)}`}
                 iconUrl={facet === "app" ? iconOf?.(row.key) : undefined}
                 onFilter={() =>
-                  void setView({ [facet]: [row.key] }, { history: "replace" })
+                  void setView(
+                    { ...OPEN_WORK_VIEW, [facet]: [row.key] },
+                    { history: "replace" },
+                  )
                 }
               />
             )}

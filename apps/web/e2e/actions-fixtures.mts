@@ -16,7 +16,13 @@ const CROWDED_APPS = [
   ["app-crowd-7", "Deep Work Log", "sa"],
 ] as const;
 
-const template = ACTIONS.find((action) => action.id === "act-prune")!;
+function fixtureAction(id: string): ActionItem {
+  const action = ACTIONS.find((candidate) => candidate.id === id);
+  if (!action) throw new Error(`The action fixture ${id} is missing`);
+  return action;
+}
+
+const template = fixtureAction("act-prune");
 
 export const CROWDED_ACTIONS: ActionItem[] = CROWDED_APPS.map(
   ([appId, appName, country], index) => ({
