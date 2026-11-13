@@ -4,6 +4,7 @@ import type { AppListItem, ChartPage } from "@asobeast/shared";
 import { ChartColumn } from "./ChartColumn";
 import type { ChartSearch } from "./chart-params";
 import { COLUMNS_GRID } from "./skeletons";
+import { TrackedAppsPanel } from "./TrackedAppsPanel";
 import { TrendingPanel } from "./TrendingPanel";
 
 export function ChartColumns({
@@ -19,6 +20,7 @@ export function ChartColumns({
 }) {
   return (
     <>
+      <TrackedAppsPanel pages={pages} apps={apps} />
       <div aria-busy={busy} className={COLUMNS_GRID}>
         {pages.map((page) => (
           <ChartColumn

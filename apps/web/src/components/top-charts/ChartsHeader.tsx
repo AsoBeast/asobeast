@@ -1,20 +1,32 @@
 import type { ReactNode } from "react";
+import { PageHeader } from "@/components/layout/PageHeader";
+import type { LedePart } from "./chart-summary";
 import { FollowedCharts } from "./FollowedCharts";
 
-export function ChartsHeader({ actions }: { actions: ReactNode }) {
+export function ChartsHeader({
+  actions,
+  lede,
+}: {
+  actions: ReactNode;
+  lede: readonly LedePart[];
+}) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-4">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-title tracking-tight text-balance">Top charts</h1>
-        <p className="text-body text-muted-foreground">
-          Free, paid and grossing charts by country and category, captured once
-          a day.
-        </p>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <FollowedCharts />
-        {actions}
-      </div>
-    </div>
+    <PageHeader
+      title="Top charts"
+      controls={
+        <>
+          <FollowedCharts />
+          {actions}
+        </>
+      }
+      lede={lede.map((part, index) => (
+        <span
+          key={index}
+          className={part.strong ? "font-medium text-foreground" : undefined}
+        >
+          {part.text}
+        </span>
+      ))}
+    />
   );
 }

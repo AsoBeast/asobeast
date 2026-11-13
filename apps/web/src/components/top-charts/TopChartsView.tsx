@@ -12,6 +12,7 @@ import { ChartColumns } from "./ChartColumns";
 import { ChartPending } from "./ChartPending";
 import { chartCategoryOf } from "./chart-follows";
 import { chartPageQueries, pagesOf } from "./chart-pages";
+import { chartLede } from "./chart-summary";
 import {
   chartKeyFrom,
   chartQueryFrom,
@@ -80,7 +81,10 @@ export function TopChartsView() {
 
   return (
     <>
-      <ChartsHeader actions={<HeaderActions inTable={inTable} page={page} />} />
+      <ChartsHeader
+        actions={<HeaderActions inTable={inTable} page={page} />}
+        lede={chartLede(pages, day)}
+      />
       <ChartToolbar
         chart={chartKeyFrom(search)}
         view={view}
