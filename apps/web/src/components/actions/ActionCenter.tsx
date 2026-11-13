@@ -93,10 +93,8 @@ export function ActionCenter({ appId }: { appId?: string }) {
     ...portfolioOptions,
     enabled: appId === undefined,
   });
-  const iconOf = appId
-    ? undefined
-    : (id: string) =>
-        portfolio?.apps.find((app) => app.id === id)?.iconUrl ?? null;
+  const icons = new Map(portfolio?.apps.map((app) => [app.id, app.iconUrl]));
+  const iconOf = appId ? undefined : (id: string) => icons.get(id) ?? null;
 
   const filtered = isFilteredView(view);
   const emptyStateGenerates =

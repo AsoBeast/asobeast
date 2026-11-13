@@ -69,24 +69,21 @@ function progressOf(activity: ActionActivity) {
   };
 }
 
-function useProgress(appId?: string) {
-  const { data: activity } = useSuspenseQuery(
-    actionActivityOptions(actionActivityScope(appId)),
-  );
-  return { activity, ...progressOf(activity) };
+function useActivity(appId?: string): ActionActivity {
+  return useSuspenseQuery(actionActivityOptions(actionActivityScope(appId)))
+    .data;
 }
 
 export function ActionProgressKey({ appId }: { appId?: string }) {
-  const { trend } = useProgress(appId);
+  const { trend } = progressOf(useActivity(appId));
   return <DivergingKey trend={trend} subject={PROGRESS} />;
 }
 
 export function ActionProgress({ appId }: { appId?: string }) {
-  const { trend, details } = useProgress(appId);
+  const { trend, details } = progressOf(useActivity(appId));
   return <DivergingBars trend={trend} subject={PROGRESS} details={details} />;
 }
 
 export function ActionProgressTotals({ appId }: { appId?: string }) {
-  const { activity } = useProgress(appId);
-  return <span>{activityTotalsLine(activity)}</span>;
+  return <span>{activityTotalsLine(useActivity(appId))}</span>;
 }

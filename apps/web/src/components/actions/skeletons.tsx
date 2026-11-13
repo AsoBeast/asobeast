@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { ChartSkeleton } from "@/components/charts/ChartStates";
 import { CHART_HEIGHT } from "@/components/charts/theme";
 import { PANEL_HEADER } from "@/components/layout/panel-classes";
@@ -52,7 +53,7 @@ function PanelSkeleton({
   children,
 }: {
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <Card>

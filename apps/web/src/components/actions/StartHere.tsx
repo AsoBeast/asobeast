@@ -39,6 +39,7 @@ function StartControls({
 }) {
   const { update: send, isPending: busy } = useActionUpdate(item);
   const update = (body: ActionUpdateRequest) => {
+    if (busy) return;
     onLeave();
     send(body);
   };

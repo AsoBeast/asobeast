@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
 import { AppIcon } from "@/components/AppIcon";
 import {
   failedRead,
   InlineQueryError,
+  type RetryableRead,
 } from "@/components/layout/InlineQueryError";
 import {
   LIST_HEAD,
@@ -111,6 +112,47 @@ function ScopeLine({
   );
 }
 
+function ScopeRows({
+  read,
+  rows,
+  head,
+  line,
+}: {
+  read: RetryableRead;
+  rows: readonly WorkScopeRow[];
+  head: string;
+  line: (row: WorkScopeRow) => ReactNode;
+}) {
+  if (read.data === undefined) {
+    return (
+      <div className="px-2 py-2">
+        <InlineQueryError message="Could not load the open work." read={read} />
+      </div>
+    );
+  }
+  if (rows.length === 0) {
+    return (
+      <p className="py-4 text-center text-body text-muted-foreground">
+        Nothing open.
+      </p>
+    );
+  }
+  return (
+    <>
+      <div aria-hidden className={cn(SCOPE_COLUMNS, LIST_HEAD)}>
+        <span>{head}</span>
+        <span />
+        <span className="text-right">Open</span>
+      </div>
+      <ul className="flex list-none flex-col p-0">
+        {rows.map((row) => (
+          <li key={row.key}>{line(row)}</li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
 export function ActionWorkByScope({
   appId,
   iconOf,
@@ -160,44 +202,22 @@ export function ActionWorkByScope({
           </CardAction>
         </CardHeader>
         <CardContent className="flex flex-col gap-1 px-2">
-          {!data ? (
-            <div className="px-2 py-2">
-              <InlineQueryError
-                message="Could not load the open work."
-                read={read}
+          <ScopeRows
+            read={read}
+            rows={rows.slice(0, SHOWN_SCOPES)}
+            head={split === "type" ? "Type" : scopeLabel}
+            line={(row) => (
+              <ScopeLine
+                row={row}
+                share={row.total / open}
+                href={`${pathname}?${facet}=${encodeURIComponent(row.key)}`}
+                iconUrl={facet === "app" ? iconOf?.(row.key) : undefined}
+                onFilter={() =>
+                  void setView({ [facet]: [row.key] }, { history: "replace" })
+                }
               />
-            </div>
-          ) : rows.length === 0 ? (
-            <p className="py-4 text-center text-body text-muted-foreground">
-              Nothing open.
-            </p>
-          ) : (
-            <>
-              <div aria-hidden className={cn(SCOPE_COLUMNS, LIST_HEAD)}>
-                <span>{split === "type" ? "Type" : scopeLabel}</span>
-                <span />
-                <span className="text-right">Open</span>
-              </div>
-              <ul className="flex list-none flex-col p-0">
-                {rows.slice(0, SHOWN_SCOPES).map((row) => (
-                  <li key={row.key}>
-                    <ScopeLine
-                      row={row}
-                      share={row.total / open}
-                      href={`${pathname}?${facet}=${encodeURIComponent(row.key)}`}
-                      iconUrl={facet === "app" ? iconOf?.(row.key) : undefined}
-                      onFilter={() =>
-                        void setView(
-                          { [facet]: [row.key] },
-                          { history: "replace" },
-                        )
-                      }
-                    />
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
+            )}
+          />
           {hidden > 0 ? (
             <p className="px-2 text-caption text-muted-foreground">
               {`and ${formatNumber(hidden)} more`}

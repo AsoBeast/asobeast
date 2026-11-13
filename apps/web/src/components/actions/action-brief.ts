@@ -212,6 +212,7 @@ const BRIEFS: {
       .slice(0, NAMED_KEYWORDS)
       .map((keyword) => keyword.text);
     const more = evidence.keywords.length - named.length;
+    const ahead = more > 0 ? [...named, `${more} more`] : named;
     return present([
       text === null
         ? null
@@ -219,11 +220,7 @@ const BRIEFS: {
             `New ${evidence.newTitle === null ? "subtitle" : "title"} `,
             strong(`"${text}"`),
           ],
-      named.length === 0
-        ? null
-        : [
-            `ahead of you on ${formatList(more > 0 ? [...named, `${more} more`] : named)}`,
-          ],
+      ahead.length === 0 ? null : [`ahead of you on ${formatList(ahead)}`],
     ]);
   },
   "reviews.investigate_rating_decline": (evidence) =>
