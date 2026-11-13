@@ -19,15 +19,18 @@ import { localizationName } from "@/lib/localizations";
 
 const COPIED_MS = 1500;
 
+interface SuggestionProps {
+  id: string;
+  home: string;
+  suggestion: KeywordFieldSuggestion;
+}
+
 export function KeywordFieldSuggestionRow({
   id,
   home,
   suggestion,
-}: {
-  id: string;
-  home: string;
-  suggestion: KeywordFieldSuggestion;
-}) {
+  heading: Heading = "h3",
+}: SuggestionProps & { heading?: "h2" | "h3" }) {
   const headingId = useId();
   const [copied, setCopied] = useState(false);
   const editHref = editLocalizationHref(
@@ -47,7 +50,7 @@ export function KeywordFieldSuggestionRow({
 
   return (
     <section aria-labelledby={headingId}>
-      <h3 id={headingId} className={SUB_HEADER}>
+      <Heading id={headingId} className={SUB_HEADER}>
         <span>
           {`Suggested keyword field${
             suggestion.localization
@@ -58,7 +61,7 @@ export function KeywordFieldSuggestionRow({
         <span className={SUB_HEADER_COUNT}>
           {`${suggestion.charactersUsed}/${suggestion.charactersLimit}`}
         </span>
-      </h3>
+      </Heading>
       {suggestion.value.length === 0 ? (
         <p className="px-4 py-3 text-dense text-muted-foreground">
           Every tracked keyword is already covered.
@@ -66,7 +69,7 @@ export function KeywordFieldSuggestionRow({
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3">
           <div className="flex min-w-0 flex-col gap-1">
-            <p translate="no" className="text-body wrap-anywhere">
+            <p translate="no" dir="auto" className="text-body wrap-anywhere">
               {suggestion.value}
             </p>
             {suggestion.addedTerms.length > 0 ? (
@@ -96,14 +99,10 @@ export function KeywordFieldSuggestionRow({
   );
 }
 
-export function KeywordFieldSuggestionCard(props: {
-  id: string;
-  home: string;
-  suggestion: KeywordFieldSuggestion;
-}) {
+export function KeywordFieldSuggestionCard(props: SuggestionProps) {
   return (
     <Card className="gap-0 py-0">
-      <KeywordFieldSuggestionRow {...props} />
+      <KeywordFieldSuggestionRow {...props} heading="h2" />
     </Card>
   );
 }

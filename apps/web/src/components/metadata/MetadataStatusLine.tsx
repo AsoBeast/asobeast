@@ -46,32 +46,50 @@ function CoveragePart({ status }: { status: MetadataStatus }) {
   );
 }
 
-function statusParts(status: MetadataStatus): ReactNode[] {
+interface StatusPart {
+  key: string;
+  node: ReactNode;
+}
+
+function statusParts(status: MetadataStatus): StatusPart[] {
   const { fieldsWithIssues, captions, keywordFieldSpace } = status;
-  return [
-    fieldsWithIssues > 0 ? (
-      <Part
-        key="issues"
-        figure={pluralize(fieldsWithIssues, "field")}
-        rest=" with issues"
-      />
-    ) : null,
-    <CoveragePart key="coverage" status={status} />,
-    captions ? (
-      <Part
-        key="captions"
-        figure={`${formatNumber(captions.read)} of ${formatNumber(captions.total)}`}
-        rest=" captions read"
-      />
-    ) : null,
-    keywordFieldSpace ? (
-      <Part
-        key="space"
-        figure={`${formatNumber(keywordFieldSpace.used)} of ${formatNumber(keywordFieldSpace.limit)}`}
-        rest=" keyword field characters used"
-      />
-    ) : null,
-  ].filter((part) => part !== null);
+  const parts: (StatusPart | null)[] = [
+    fieldsWithIssues > 0
+      ? {
+          key: "issues",
+          node: (
+            <Part
+              figure={pluralize(fieldsWithIssues, "field")}
+              rest=" with issues"
+            />
+          ),
+        }
+      : null,
+    { key: "coverage", node: <CoveragePart status={status} /> },
+    captions
+      ? {
+          key: "captions",
+          node: (
+            <Part
+              figure={`${formatNumber(captions.captioned)} of ${formatNumber(captions.total)}`}
+              rest=" screenshots with a caption"
+            />
+          ),
+        }
+      : null,
+    keywordFieldSpace
+      ? {
+          key: "space",
+          node: (
+            <Part
+              figure={`${formatNumber(keywordFieldSpace.used)} of ${formatNumber(keywordFieldSpace.limit)}`}
+              rest=" keyword field characters used"
+            />
+          ),
+        }
+      : null,
+  ];
+  return parts.filter((part) => part !== null);
 }
 
 export function MetadataStatusLine({
@@ -101,9 +119,9 @@ export function MetadataStatusLine({
       className="flex min-w-0 list-none flex-wrap items-center gap-x-2 p-0 text-body text-muted-foreground"
     >
       {parts.map((part, index) => (
-        <li key={index} className="flex items-center gap-x-2">
+        <li key={part.key} className="flex items-center gap-x-2">
           {index > 0 ? <span aria-hidden>·</span> : null}
-          <span>{part}</span>
+          <span>{part.node}</span>
         </li>
       ))}
     </ul>

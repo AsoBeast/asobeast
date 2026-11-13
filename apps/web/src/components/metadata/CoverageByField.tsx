@@ -82,7 +82,12 @@ function MissingKeywords({ rows }: { rows: KeywordCoverageRow[] }) {
               key={row.keywordId}
               className="flex min-h-9 items-center justify-between gap-3 text-dense"
             >
-              <span translate="no" className="truncate font-medium">
+              <span
+                translate="no"
+                dir="auto"
+                title={row.text}
+                className="truncate font-medium"
+              >
                 {row.text}
               </span>
               {row.bucket ? (

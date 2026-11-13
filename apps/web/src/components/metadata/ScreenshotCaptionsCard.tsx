@@ -16,6 +16,7 @@ import { formatDate } from "@/lib/format";
 import { screenshotsOptions } from "@/lib/queries";
 import {
   CAPTION_STATUS_LABELS,
+  hasPendingScreenshots,
   screenshotSummary,
 } from "@/lib/screenshot-captions";
 
@@ -36,7 +37,10 @@ export function ScreenshotCaptionsCard({
   );
 
   const empty = data.screenshots.length === 0;
-  const read = data.screenshots.filter((item) => item.caption !== null).length;
+  const captioned = data.screenshots.filter(
+    (item) => item.caption !== null,
+  ).length;
+  const settled = !hasPendingScreenshots(data);
 
   return (
     <section aria-labelledby={HEADING_ID}>
@@ -45,10 +49,10 @@ export function ScreenshotCaptionsCard({
           <CardTitle asChild>
             <h2 id={HEADING_ID}>Screenshot captions</h2>
           </CardTitle>
-          {!empty && data.reading === "on" ? (
+          {!empty && settled && data.reading === "on" ? (
             <CardAction className={PANEL_COUNT}>
               <span className="numeric">
-                {`${read} of ${data.screenshots.length} read`}
+                {`${captioned} of ${data.screenshots.length} with a caption`}
               </span>
             </CardAction>
           ) : null}

@@ -26,8 +26,8 @@ test("opens with one line that counts the work left", async ({ page }) => {
 
   await expect(status(page).getByRole("listitem")).toHaveText([
     "1 keyword not covered",
-    "·2 of 4 captions read",
-    "·30 of 400 keyword field characters used",
+    "·2 of 4 screenshots with a caption",
+    /^·\d+ of 400 keyword field characters used$/,
   ]);
   await expect(page.getByRole("heading", { level: 2 })).toHaveText([
     "Metadata",
@@ -112,6 +112,19 @@ test("without tracked keywords the coverage panel points at keywords", async ({
   ).toHaveAttribute("href", "/apps/app-1/keywords");
 });
 
+test("a competitor's suggestion is a section of its own", async ({ page }) => {
+  await withAudit(page, "suggestion");
+  await page.goto("/apps/app-rival/metadata");
+
+  await expect(
+    page.getByRole("region", { name: "App Store localizations" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { level: 2, name: /^Suggested keyword field/ }),
+  ).toBeVisible();
+  await expect(page.getByText("Adds habits")).toBeVisible();
+});
+
 test("a lint issue is its severity word, the rule and the sentence", async ({
   page,
 }) => {
@@ -136,7 +149,7 @@ test("a google play listing has no captions, localizations or keyword field", as
 }) => {
   await page.goto("/apps/app-gp/metadata");
 
-  await expect(status(page)).not.toContainText("captions");
+  await expect(status(page)).not.toContainText("screenshots");
   await expect(status(page)).not.toContainText("keyword field");
   await expect(
     page.getByRole("region", { name: "App Store localizations" }),

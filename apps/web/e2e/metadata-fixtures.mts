@@ -58,5 +58,16 @@ export function metadataAuditVariant(
       ],
     };
   }
+  if (variant === "suggestion") {
+    return {
+      ...audit,
+      keywordFieldSuggestion: {
+        value: "focus,timer,habits",
+        charactersUsed: 18,
+        charactersLimit: 100,
+        addedTerms: ["habits"],
+      },
+    };
+  }
   return audit;
 }

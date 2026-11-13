@@ -93,7 +93,11 @@ export function coverageColumns(
       ),
       cell: ({ row }) => (
         <span className="flex flex-wrap items-baseline gap-x-3">
-          <span translate="no" className="font-medium text-foreground">
+          <span
+            translate="no"
+            dir="auto"
+            className="font-medium text-foreground"
+          >
             {row.original.text}
           </span>
           {row.original.uncovered ? (

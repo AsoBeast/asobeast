@@ -34,6 +34,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatNumber } from "@/lib/format";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
 import {
   coverageFilterParsers,
@@ -124,8 +125,10 @@ function CoverageToolbar({
   );
 }
 
-const columnClass = (id: string, sortable: boolean): string | undefined =>
-  id === "bucket" ? "max-sm:hidden" : sortable ? undefined : "text-center";
+function columnClass(id: string, sortable: boolean): string | undefined {
+  if (id === "bucket") return "max-sm:hidden";
+  return sortable ? undefined : "text-center";
+}
 
 export function CoverageTable({
   rows,
@@ -183,7 +186,7 @@ export function CoverageTable({
           </CardTitle>
           <CardAction className={PANEL_COUNT}>
             <span className="numeric">
-              {`${rows.length - uncoveredRows(rows).length} of ${rows.length} covered`}
+              {`${formatNumber(rows.length - uncoveredRows(rows).length)} of ${formatNumber(rows.length)} covered`}
             </span>
           </CardAction>
         </CardHeader>

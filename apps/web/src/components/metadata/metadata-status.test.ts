@@ -71,6 +71,12 @@ describe("keywordFieldSpace", () => {
   it("is absent without a localization", () => {
     expect(keywordFieldSpace([])).toBeNull();
   });
+
+  it("is absent when no localization has room", () => {
+    expect(
+      keywordFieldSpace([{ ...localization("en-US", 0), charactersLimit: 0 }]),
+    ).toBeNull();
+  });
 });
 
 describe("metadataStatus", () => {
@@ -79,7 +85,7 @@ describe("metadataStatus", () => {
       fieldsWithIssues: 1,
       keywords: 2,
       uncovered: 1,
-      captions: { read: 2, total: 4 },
+      captions: { captioned: 2, total: 4 },
       keywordFieldSpace: { used: 10, limit: 100 },
     });
   });

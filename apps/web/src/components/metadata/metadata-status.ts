@@ -13,21 +13,21 @@ export interface MetadataStatus {
   fieldsWithIssues: number;
   keywords: number;
   uncovered: number;
-  captions: { read: number; total: number } | null;
+  captions: { captioned: number; total: number } | null;
   keywordFieldSpace: Tally | null;
 }
 
 export function keywordFieldSpace(
   localizations: readonly AppLocalizationItem[],
 ): Tally | null {
-  if (localizations.length === 0) return null;
-  return localizations.reduce<Tally>(
+  const space = localizations.reduce<Tally>(
     (sum, item) => ({
       used: sum.used + item.charactersUsed,
       limit: sum.limit + item.charactersLimit,
     }),
     { used: 0, limit: 0 },
   );
+  return space.limit === 0 ? null : space;
 }
 
 export function metadataStatus(
@@ -42,7 +42,7 @@ export function metadataStatus(
     uncovered: uncoveredRows(result.coverage).length,
     captions:
       text?.status === "ready" && text.total > 0
-        ? { read: text.read, total: text.total }
+        ? { captioned: text.read, total: text.total }
         : null,
     keywordFieldSpace:
       localizations === null ? null : keywordFieldSpace(localizations),
