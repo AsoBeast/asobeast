@@ -10,6 +10,7 @@ import {
   ALERT_EVENTS_SLOW_MS,
   filterAlertEvents,
 } from "./alert-feed-fixtures.mts";
+import { DEEP_CHART_COOKIE, deepChartPage } from "./top-charts-fixtures.mts";
 import {
   HISTOGRAM_FAILING_COOKIE,
   RATINGS_HISTORY_COOKIE,
@@ -2484,6 +2485,9 @@ function chartPageFor(
   }
   if (listsNoApps(req, "e2e_chart_lists_no_apps", key.collection)) {
     return pageWithoutApps();
+  }
+  if (hasCookie(req, DEEP_CHART_COOKIE, "1")) {
+    return deepChartPage(date, key.collection) ?? TOP_CHART_PAGE_EMPTY;
   }
   const captured = chartCaptures.some((body) => sameChart(body, key));
   if (captured && (!date || date === utcDaysAgo(0))) {
