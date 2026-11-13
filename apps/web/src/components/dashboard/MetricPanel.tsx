@@ -12,18 +12,16 @@ import {
 } from "@/lib/queries";
 import type { DashboardMetric } from "@/lib/search-params";
 import {
-  type DailyPair,
-  type DivergingTrend,
-  divergingTrend,
-  historyTrend,
-  movementPairs,
-  unfinishedSince,
-} from "./history-trend";
-import {
   DivergingBars,
   DivergingKey,
   type DivergingSubject,
-} from "./DivergingBars";
+} from "@/components/charts/DivergingBars";
+import {
+  type DailyPair,
+  type DivergingTrend,
+  divergingTrend,
+} from "@/components/charts/diverging-trend";
+import { historyTrend, movementPairs, unfinishedSince } from "./history-trend";
 import {
   PortfolioTrendChart,
   TrendLegend,
