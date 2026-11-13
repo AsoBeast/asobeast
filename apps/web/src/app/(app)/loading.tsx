@@ -21,8 +21,8 @@ export default function Loading() {
         <div className="flex items-center justify-between gap-4">
           <Skeleton className="h-7 w-32" />
           <div className="flex items-center gap-2">
-            <Skeleton className="h-[34px] w-36" />
-            <Skeleton className="h-[34px] w-28" />
+            <Skeleton className="h-9 w-36" />
+            <Skeleton className="h-9 w-28" />
           </div>
         </div>
         <DashboardLedeSkeleton />

@@ -9,6 +9,9 @@
   --primary-foreground: var(--brand-ink);
   --primary-hover: var(--brand-600);
   --primary-subtle: color-mix(in srgb, var(--brand-500) 10%, var(--card));
+  --brand-text: var(--brand-700);
+  --brand-mark: var(--brand-series);
+  --brand-subtle: var(--brand-tint);
   --secondary: var(--neutral-surface-2);
   --secondary-foreground: var(--neutral-ink);
   --muted: var(--neutral-surface-2);
@@ -91,6 +94,9 @@
     --primary-foreground: var(--brand-ink);
     --primary-hover: var(--brand-600);
     --primary-subtle: color-mix(in srgb, var(--brand-500) 12%, var(--card));
+    --brand-text: var(--brand-500);
+    --brand-mark: var(--brand-500);
+    --brand-subtle: var(--brand-dark-tint);
     --secondary: var(--neutral-dark-surface-2);
     --secondary-foreground: var(--neutral-dark-ink);
     --muted: var(--neutral-dark-surface-2);

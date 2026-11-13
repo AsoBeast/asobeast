@@ -51,12 +51,17 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "improved",
         title: "A calmer, sharper look",
-        text: "AsoBeast has a new typeface, warmer neutral colours and flatter panels with fine borders. Numbers line up in columns, labels are easier to read, and the brand orange is kept for the main action on each page.",
+        text: "AsoBeast has a new typeface, warmer neutral colours and flatter panels with fine borders. Numbers line up in columns and labels are easier to read.",
+      },
+      {
+        kind: "improved",
+        title: "Larger text and the brand orange back",
+        text: "Text, buttons and the sidebar are a step larger, so a long session is easier on the eyes. Orange now marks what you select and what is yours, such as the page you are on, your app in search results and your default language, and fills checked boxes and progress bars. Warnings turn yellow so they never look like the brand, and blue is left to charts.",
       },
       {
         kind: "improved",
         title: "Calmer empty charts",
-        text: "A chart with nothing to draw yet says so in the middle of the chart without a dashed box around it, and so do a page that is not found and the first visit before any app is imported. Progress bars and the run indicator are no longer orange, and a new entry in search results or a top chart reads New in green.",
+        text: "A chart with nothing to draw yet says so in the middle of the chart without a dashed box around it, and so do a page that is not found and the first visit before any app is imported. The run indicator turns grey, and a new entry in search results or a top chart reads New in green.",
       },
       {
         kind: "new",

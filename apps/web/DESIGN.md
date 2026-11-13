@@ -8,6 +8,10 @@ colors:
   series-tint: "#fbeedb"
   series-dark: "#f89820"
   series-tint-dark: "#2b2114"
+  brand-text: "#a8520a"
+  brand-text-dark: "#f89820"
+  brand-mark: "#d2700a"
+  brand-mark-dark: "#f89820"
   previous: "#cdc8c0"
   previous-dark: "#3d3933"
   info: "#1d4ed8"
@@ -21,8 +25,8 @@ colors:
   down-tint: "#fde6e6"
   down-dark: "#f87171"
   down-tint-dark: "#3b1414"
-  warn: "#a3520a"
-  warn-dark: "#f0b64a"
+  warn: "#7c6200"
+  warn-dark: "#e8c34a"
   page: "#faf9f7"
   surface: "#ffffff"
   surface-2: "#f4f2ee"
@@ -48,7 +52,7 @@ typography:
     letterSpacing: "-0.024em"
   title:
     fontFamily: "Geist, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
-    fontSize: "22px"
+    fontSize: "24px"
     fontWeight: 600
     lineHeight: 1.2
     letterSpacing: "-0.02em"
@@ -58,41 +62,46 @@ typography:
     fontWeight: 600
     lineHeight: 1.1
     letterSpacing: "-0.02em"
+  dialog:
+    fontFamily: "Geist, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
+    fontSize: "17px"
+    fontWeight: 500
+    lineHeight: 1.25
   heading:
     fontFamily: "Geist, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
-    fontSize: "14px"
+    fontSize: "15px"
     fontWeight: 600
     lineHeight: 1.4
     letterSpacing: "-0.006em"
   body:
     fontFamily: "Geist, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
-    fontSize: "14px"
+    fontSize: "15px"
     fontWeight: 400
     lineHeight: 1.45
   dense:
     fontFamily: "Geist, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
-    fontSize: "13px"
+    fontSize: "14px"
     fontWeight: 400
     lineHeight: 1.45
   control:
     fontFamily: "Geist, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
-    fontSize: "13px"
+    fontSize: "14px"
     fontWeight: 500
     lineHeight: 1.45
   label:
     fontFamily: "Geist, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
-    fontSize: "12px"
+    fontSize: "13px"
     fontWeight: 500
     lineHeight: 1.3
     letterSpacing: "0"
   caption:
     fontFamily: "Geist, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
-    fontSize: "12px"
+    fontSize: "13px"
     fontWeight: 400
     lineHeight: 1.35
   tick:
     fontFamily: "Geist, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
-    fontSize: "11px"
+    fontSize: "12px"
     fontWeight: 400
     lineHeight: 1.3
 rounded:
@@ -115,14 +124,14 @@ components:
     textColor: "{colors.brand-ink}"
     typography: "{typography.control}"
     rounded: "{rounded.control}"
-    height: "34px"
+    height: "36px"
     padding: "0 12px"
   button-outline:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
     typography: "{typography.control}"
     rounded: "{rounded.control}"
-    height: "34px"
+    height: "36px"
     padding: "0 12px"
   pill-up:
     backgroundColor: "{colors.up-tint}"
@@ -134,6 +143,13 @@ components:
   pill-down:
     backgroundColor: "{colors.down-tint}"
     textColor: "{colors.down}"
+    typography: "{typography.label}"
+    rounded: "{rounded.control}"
+    height: "22px"
+    padding: "0 7px"
+  pill-brand:
+    backgroundColor: "{colors.series-tint}"
+    textColor: "{colors.brand-text}"
     typography: "{typography.label}"
     rounded: "{rounded.control}"
     height: "22px"
@@ -178,21 +194,21 @@ components:
     textColor: "{colors.ink-2}"
     typography: "{typography.dense}"
     rounded: "{rounded.control}"
-    height: "32px"
+    height: "36px"
     padding: "0 8px"
   nav-item-active:
-    backgroundColor: "{colors.surface-2}"
-    textColor: "{colors.ink}"
+    backgroundColor: "{colors.series-tint}"
+    textColor: "{colors.brand-text}"
     typography: "{typography.dense}"
     rounded: "{rounded.control}"
-    height: "32px"
+    height: "36px"
     padding: "0 8px"
   input:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
     typography: "{typography.dense}"
     rounded: "{rounded.control}"
-    height: "34px"
+    height: "36px"
     padding: "0 10px"
 ---
 
@@ -209,7 +225,7 @@ The old look is the anti-reference. It boxed every section in the same card with
 **Key Characteristics:**
 
 - One sans face, Geist, with tabular figures everywhere a number can be compared.
-- One hue family for the brand and the data: the brightest shade on the single primary button, a deeper shade on chart lines, the palest tint behind inline bars.
+- One hue family for the brand and the data: the brightest shade on the single primary button, a darker text shade for what is selected or yours, a deeper shade on chart lines and marks, the palest tint behind inline bars and a selected item.
 - Green and red mean direction and nothing else, and never travel without a sign, an arrow or a word.
 - Flat panels with a hairline border on a warm neutral ground; no shadow below an overlay.
 - A metric strip that drives one chart, a sentence that says what moved, lists with inline bars, tables at 44 px.
@@ -220,34 +236,36 @@ A warm neutral ground with one orange family and two signal hues, mirrored in a 
 
 ### Primary
 
-- **Brand Orange** (#f89820): the fill of the one primary button in a view, the active chart series in the dark theme, and nothing else in the light theme. It is never text on a surface (2.1:1 on white) and never a decoration.
-- **Burnt Orange** (#d2700a): the chart series, sparklines and the end dot in the light theme, where the brand shade is too light to read as a line. Inline bars behind list rows use its palest tint (#fbeedb light, #2b2114 dark).
+- **Brand Orange** (#f89820): the fill of the one primary button in a view and of a checked checkbox or switch (with a near black check or thumb), and in the dark theme the brand text, the brand mark and the chart series. In the light theme it is never text on a surface (2.1:1 on white).
+- **Brand Text** (#a8520a light, 5.4:1 on white and 4.7:1 on the brand tint; #f89820 dark, `--brand-text`): text and icons that mean selected or yours: the active sidebar item and a `brand` pill. Orange text is only ever this shade.
+- **Brand Mark** (#d2700a light, 3.5:1 on white; #f89820 dark, `--brand-mark`): marks of 2 px or more that need 3:1, not 4.5:1: the active metric tab and line tab underline, an unread or new dot (Alerts, the Discovered tab, What's New, the latest release), a progress bar or ring, and a link's underline on hover. It is also the chart series, sparklines and the end dot in the light theme, where the brand shade is too light to read as a line.
+- **Brand Tint** (#fbeedb light, #2b2114 dark, `--brand-subtle`): the background of the active sidebar item and of a `brand` pill (the own app's row in the search results carries a 3 px brand mark start bar instead, so its You pill stays visible); inline bars behind list rows use the same tint (`--chart-tint`).
 - **Previous Period** (#cdc8c0 light, #3d3933 dark): the comparison line under the series; always thinner and never filled.
 
 ### Secondary
 
-- **Information Blue** (#1d4ed8 light, #60a5fa dark): reserved. It marks an informational badge (the Default localization read role) and the `--info` tint behind it. The second series of a multi series chart is the brighter #2563eb (#60a5fa dark). It leads none of the dashboard, overview or keywords screens.
+- **Information Blue** (#1d4ed8 light, #60a5fa dark, `--info`): reserved for the chart system and the subtitle match mark (`MatchedText`), never a tag, a dot or text. The second series of a multi series chart is the brighter #2563eb (#60a5fa dark). An informational pill (`info`, the Essential tag) is ink on surface 2, not blue.
 
 ### Signals
 
 - **Up** (#137a3a on #e4f5e9; dark #4ade80 on #0d2a18) and **Down** (#c2272d on #fde6e6; dark #f87171 on #3b1414): the direction of a change, as a pill or as coloured text with a sign. Up means better, so a position that fell from 14 to 6 is up.
-- **Warn** (#a3520a light, #f0b64a dark): the word "High" in a priority column and a stale check; never a fill. **Critical** uses the down red.
+- **Warn** (#7c6200 light, 5.8:1; #e8c34a dark, 10.9:1): a yellow amber, never orange, so a warning never reads as the brand: the word "High" in a priority column, a stale check and the weak grade; never a fill. **Critical** uses the down red.
 
 ### Neutral
 
 - **Page** (#faf9f7 light, #0c0b0a dark): the ground every panel sits on.
 - **Surface** (#ffffff light, #141311 dark): panels, the sidebar, the top bar, table rows.
-- **Surface 2** (#f4f2ee light, #1c1a17 dark): the segmented control track, the active sidebar item, a hover row, a flat pill.
+- **Surface 2** (#f4f2ee light, #1c1a17 dark): the segmented control track, a hover row or sidebar item, a flat pill and an informational pill.
 - **Line** (#e7e4df light, #2a2724 dark) and **Line 2** (#eeebe6 light, #221f1c dark): panel borders and header rules, then the lighter divider between rows.
 - **Ink** (#1c1917 light, #efece7 dark), **Ink 2** (#6b665f light, #a39d94 dark) and **Ink 3** (#716b64 light, #8a847b dark): text, secondary text, and labels, captions and axis ticks. Every pair passes 4.5:1 on its surface in both themes.
 
 ### Named Rules
 
-**The One Family Rule.** The brand orange and the data orange are shades of one hue; nothing else on a screen is orange. A warning is a word, not an orange fill, the active navigation item is neutral, a progress bar fills with ink and a spinner turns in ink 2.
+**The One Family Rule.** The brand orange and the data orange are shades of one hue, and the one accent of a screen: spent on action (the primary button, a checked control), selection (the active sidebar item, the active metric or line tab), ownership (a `brand` pill: Default, Detected, You, Yours, Latest, Next), unread dots and progress. Everything else is neutral, and status keeps its own hues: a warning is yellow amber, never orange, and a spinner turns in ink 2.
 
 **The Direction Only Rule.** Green and red appear on a change, a signal or a critical word, and on nothing that is merely a category. Grades are words with a quiet marker, never a painted column.
 
-**The No Blue By Default Rule.** Blue is held in reserve for information badges and a second series. It never leads a screen.
+**The No Blue By Default Rule.** Blue is held in reserve for a second chart series, chart markers and the subtitle match mark. It is never a tag, a dot or text, so it never competes with the orange (`styles/utility-classes.test.ts`).
 
 ## Typography
 
@@ -260,15 +278,15 @@ A warm neutral ground with one orange family and two signal hues, mirrored in a 
 ### Hierarchy
 
 - **Hero** (600, 36px, 1.1, -0.024em): the billing wall's heading and plan prices from `sm` only; no signed in screen uses it.
-- **Title** (600, 22px, 1.2, -0.02em): the page title, once per page.
+- **Title** (600, 24px, 1.2, -0.02em): the page title, once per page.
 - **Metric** (600, 28px, 1.1, -0.02em): the value of a metric tab or a headline figure, with its delta pill beside it; at most one strip of them per page.
-- **Dialog** (500, 16px, 1.25): the title of a dialog, sheet or confirmation, one step above the panels under it so the overlay reads first; the keyword in the keyword sheet's header included.
-- **Heading** (600, 14px, 1.4, -0.006em): a panel or section heading, every section, one size.
-- **Body** (400, 14px, 1.45): the lede sentence, action titles, dialog text; prose keeps to 70ch.
-- **Dense** (400, 13px, 1.45): table cells, list rows, navigation, controls. Names in a row take 500.
-- **Label** (500, 12px, sentence case, no tracking): column headers, metric tab labels, pill text. The line under a page title is label size at the step's default weight in ink 2 (`META_LINE`).
-- **Caption** (400, 12px): metadata lines and notes under a figure.
-- **Tick** (400, 11px): chart axis ticks, sidebar group labels and the priority words.
+- **Dialog** (500, 17px, 1.25): the title of a dialog, sheet or confirmation, one step above the panels under it so the overlay reads first; the keyword in the keyword sheet's header included.
+- **Heading** (600, 15px, 1.4, -0.006em): a panel or section heading, every section, one size.
+- **Body** (400, 15px, 1.45): the lede sentence, action titles, dialog text; prose keeps to 70ch.
+- **Dense** (400, 14px, 1.45): table cells, list rows, navigation, controls; the size a daily session reads for minutes at a time, so it never drops below 14 px. Names in a row take 500.
+- **Label** (500, 13px, sentence case, no tracking): column headers, metric tab labels, pill text. The line under a page title is label size at the step's default weight in ink 2 (`META_LINE`).
+- **Caption** (400, 13px): metadata lines and notes under a figure.
+- **Tick** (400, 12px): chart axis ticks, sidebar group labels and the priority words.
 
 ### Named Rules
 
@@ -282,7 +300,7 @@ A warm neutral ground with one orange family and two signal hues, mirrored in a 
 
 The shell is a 232 px sidebar on the surface colour with a hairline right border and a 52 px top bar that carries the breadcrumb, the run status and the command key. Page content sits on the page colour with 32 px side padding at desktop and the density gutter below `sm`, inside the existing width utilities (`page-wide` at 1600 px for the dashboard and overview, `page-full` for the keywords table).
 
-Vertical rhythm is a 4 px scale: 24 px between the page header and the first panel and between panels, 12 px between a panel header and its rows, 8 px inside a list, 16 px of horizontal padding in a table cell and a panel header. A panel header is at least 47 px tall with its 14 px heading centred and a hairline below; a panel footer is 12 px over and under in caption size and ink 3.
+Vertical rhythm is a 4 px scale: 24 px between the page header and the first panel and between panels, 12 px between a panel header and its rows, 8 px inside a list, 16 px of horizontal padding in a table cell and a panel header. A panel header is at least 47 px tall with its 15 px heading centred and a hairline below; a panel footer is 12 px over and under in caption size and ink 3.
 
 Sections are separated by space and panel edges, never by a tinted band. Two column areas split a 12 column grid 7 to 5 once the content box reaches 64 rem and stack below; the dashboard and the overview size their grids by container queries (`@container/dashboard`, `@container/overview`) so the sidebar's width is not a proxy for the content box. At 375 px the metric strip becomes a two by two grid, the page header's controls wrap under the title, the Apps table drops to app, visibility and 7d, lists keep their bars, and the top bar keeps only the breadcrumb, search, the health dot, the theme toggle and the account.
 
@@ -290,7 +308,7 @@ Sections are separated by space and panel edges, never by a tinted band. Two col
 
 **The Object Rule.** A panel exists only around a block that is an object: a metric strip with its chart, a list, a table, the action queue. Headings, sentences and a lone figure sit on the page.
 
-**The Two Densities Rule.** Lists are 36 px rows, tables 44 px with a 36 px compact option, navigation 32 px. Nothing in the shell is taller than 44 px except a chart.
+**The Two Densities Rule.** Lists are 36 px rows, tables 44 px with a 36 px compact option, navigation and controls 36 px. Nothing in the shell is taller than 44 px except a chart.
 
 ## Elevation & Depth
 
@@ -307,13 +325,13 @@ Flat by default. A panel is a surface with a 1 px line on the page colour; the d
 
 ## Shapes
 
-A restrained radius scale by role: 4 px on tags and checkboxes, 6 px on buttons, inputs, pills, segmented controls and list row hover, 8 px on panels and the table frame, 12 px on menus, popovers and dialogs. A child radius never exceeds its parent, and nothing in the shell is rounder than 8 px except an overlay. App icons are the exception by design: their radius is 22.5 percent of their size with a 4 px floor (4 px at 16, 5 px at 24, 7 px at 32), so they read as store icons. Borders are 1 px hairlines in the line colour; the metric strip divides its tabs with vertical hairlines and marks the active tab with a 2 px ink underline on the panel edge.
+A restrained radius scale by role: 4 px on tags and checkboxes, 6 px on buttons, inputs, pills, segmented controls and list row hover, 8 px on panels and the table frame, 12 px on menus, popovers and dialogs. A child radius never exceeds its parent, and nothing in the shell is rounder than 8 px except an overlay. App icons are the exception by design: their radius is 22.5 percent of their size with a 4 px floor (4 px at 16, 5 px at 24, 7 px at 32), so they read as store icons. Borders are 1 px hairlines in the line colour; the metric strip divides its tabs with vertical hairlines and marks the active tab with a 2 px brand mark underline on the panel edge.
 
 ## Components
 
 ### Buttons
 
-- **Shape:** gently rounded (6 px), 34 px tall with 12 px side padding, dense size (13 px) at 500; `sm` is 28 px in label size, `xs` 24 px, an icon button 34 px from `md` and 32 px below.
+- **Shape:** gently rounded (6 px), 36 px tall with 12 px side padding, dense size (14 px) at 500; `lg` is 40 px, `sm` 28 px in label size, `xs` 24 px, an icon button 36 px from `md` and 32 px below.
 - **Primary:** brand orange fill with near black ink (#1c1408), one per independent task in a view; hover darkens the fill one step. A trigger that only opens a dialog is outline, never primary.
 - **Outline:** surface fill with a hairline border, hover to surface 2; **Ghost:** no border, ink 2 text, hover to surface 2 and ink; **Link:** see Links. A control that starts a request stays focusable with `aria-disabled` and dims; it is never `disabled`.
 - **Focus:** a solid 2 px ink ring everywhere, offset by 2 px from a filled control (the primary button, a checked box, a switch); nothing translucent. An orange ring is about 2:1 on the page, so the ring is never orange.
@@ -321,7 +339,7 @@ A restrained radius scale by role: 4 px on tags and checkboxes, 6 px on buttons,
 ### Pills
 
 - **Style:** 22 px tall, 6 px radius, label size at 500, tinted fill with its own text colour. Variants: up (green), down (red), flat (surface 2 with ink 2), and the state words Paused and Checking in flat.
-- **Use:** a change (the delta beside a metric, the 7d column, the Change column, an alert's kind of move), a count that is a state (`1 critical`), a state that changes, an insight (Beatable, Dropping), or ownership in a change feed (yours, competitor). Further variants carry status tints: success, warning, info and destructive. Never a source, a store, a market, a tag or a category, which are text; never a pill that would appear on every row of a list. A localization's read role is a pill on every screen (`ReadRoleBadge`): Default in the information tint and Also flat, prefixed with the market where several markets read one localization (`US · Default`). A new entrant in a search results or chart list is the word New in the up colour, as the delta beside it is coloured text.
+- **Use:** a change (the delta beside a metric, the 7d column, the Change column, an alert's kind of move), a count that is a state (`1 critical`), a state that changes, an insight (Beatable, Dropping), or ownership in a change feed (yours, competitor). Ownership of a state is the `brand` pill (brand tint, brand text): a localization's Default role, a Detected localization, You in the search results, Yours in top charts, the Latest release and the Next checklist step. Further variants carry status tints: success, warning and destructive; `info` is ink on surface 2 (the Essential alert tag). Never a source, a store, a market, a tag or a category, which are text; never a pill that would appear on every row of a list. A localization's read role is a pill on every screen (`ReadRoleBadge`): Default in `brand` and Also flat, prefixed with the market where several markets read one localization (`US · Default`). A new entrant in a search results or chart list is the word New in the up colour, as the delta beside it is coloured text.
 
 ### Change and delta
 
@@ -334,7 +352,7 @@ Four forms exist, each in `components/ui/delta-chip.tsx` or beside its list, and
 
 ### Links
 
-- A link is ink text with a 1 px underline in ink 3 offset 4 px, which darkens to ink on hover, all held by the `link-underline` utility (`FOOTER_LINK`, the `link` button and badge variants use it too). Never orange, never blue. A panel's footer link sits at its right.
+- A link is ink text with a 1 px underline in ink 3 offset 4 px, which turns to the brand mark on hover, all held by the `link-underline` utility (`FOOTER_LINK`, the `link` button and badge variants use it too). The text is never orange and never blue. A panel's footer link sits at its right.
 
 ### Page header
 
@@ -347,7 +365,7 @@ Four forms exist, each in `components/ui/delta-chip.tsx` or beside its list, and
 
 ### Priority words
 
-- `PriorityWord` (`components/actions/PriorityWord.tsx`): Critical in the down red, High in warn, Medium and Low in ink 2, as 11 px uppercase words at 600 with wide tracking in a 72 px column (`PRIORITY_COLUMNS`) before the action title, with the app named on a caption line under the title on the dashboard. They are the one uppercase label in the system, because a priority is read as a mark, not a word.
+- `PriorityWord` (`components/actions/PriorityWord.tsx`): Critical in the down red, High in warn, Medium and Low in ink 2, as 12 px uppercase words at 600 with wide tracking in a 72 px column (`PRIORITY_COLUMNS`) before the action title, with the app named on a caption line under the title on the dashboard. They are the one uppercase label in the system, because a priority is read as a mark, not a word.
 
 ### Panels
 
@@ -359,12 +377,12 @@ Four forms exist, each in `components/ui/delta-chip.tsx` or beside its list, and
 
 ### Metric strip
 
-- The first panel of a page: four metric tabs divided by hairlines, each a pressable button with a label, a 28 px value with its trend or count pills on the same line, then a one line note in caption size and ink 3. The active tab carries a 2 px ink underline and decides, through the URL, what the chart in the same panel shows; the chart's own title and range control sit on a row above the plot. On a phone the strip is a two by two grid.
+- The first panel of a page: four metric tabs divided by hairlines, each a pressable button with a label, a 28 px value with its trend or count pills on the same line, then a one line note in caption size and ink 3. The active tab carries a 2 px brand mark underline and decides, through the URL, what the chart in the same panel shows; the chart's own title and range control sit on a row above the plot. On a phone the strip is a two by two grid.
 - `MetricStrip` (`ui/stat-tile.tsx`) draws every strip and lays out by its own width: four columns from 768 px of strip width (two by two below), three from 512 px (one below), or two. Unframed (`framed={false}`) it heads the panel that holds its chart; framed, the default, it is a bordered panel of its own. A tile is a tab (`onSelect`) only where it drives the chart below or a URL filter, otherwise a static figure, and its `delta` (a trend pill or a state badge) sits beside the value. `MetricStripSkeleton` draws the same geometry while it loads.
 
 ### Charts
 
-- One area or line chart per panel, 268 px tall at desktop and 200 px below `md`, drawn through the chart system in `components/charts/theme.ts`; the keywords map is 360 px (300 px below `md`). The series is the data orange at 2 px; the previous period is the previous grey at 1.5 px; the fill is a 16 percent to 0 vertical fade of the series; the grid is horizontal hairlines in the line 2 colour with 11 px ticks in ink 3; the axis has no line. A day whose checks are still running is a dashed segment that ends in a hollow dot; a listing change is a dashed vertical line in ink 3. The key (`ChartKey`) is label size in ink 2 with a short swatch per series, right aligned above the plot, or in a row under it beside a footer link when the chart carries change markers; never inside the plot. Lines are monotone; integer counts use step interpolation. Rank charts keep the reversed square root axis and draw rank bands as one orange ramp of five tints with unranked in surface 2; a multi series chart uses the eight colour series palette (orange, blue #2563eb, teal #0f766e, violet #7c3aed, rose #db2777, grey #6b7280, umber #8a5a2b, olive #5f6b1f) with eight dash patterns in the same order, and a legend in band or rank order. A sparkline in a table is 72 by 22 px, the series colour at 1.5 px, no fill, no axis. The trend on a dashboard app card is the one exception: 48 px tall across the card, a 2 px line in the direction colour (up green, down red, flat ink 2) over a 12 percent fill of the same colour, with an end dot.
+- One area or line chart per panel, 268 px tall at desktop and 200 px below `md`, drawn through the chart system in `components/charts/theme.ts`; the keywords map is 360 px (300 px below `md`). The series is the data orange at 2 px; the previous period is the previous grey at 1.5 px; the fill is a 16 percent to 0 vertical fade of the series; the grid is horizontal hairlines in the line 2 colour with 12 px ticks in ink 3; the axis has no line. A day whose checks are still running is a dashed segment that ends in a hollow dot; a listing change is a dashed vertical line in ink 3. The key (`ChartKey`) is label size in ink 2 with a short swatch per series, right aligned above the plot, or in a row under it beside a footer link when the chart carries change markers; never inside the plot. Lines are monotone; integer counts use step interpolation. Rank charts keep the reversed square root axis and draw rank bands as one orange ramp of five tints with unranked in surface 2; a multi series chart uses the eight colour series palette (orange, blue #2563eb, teal #0f766e, violet #7c3aed, rose #db2777, grey #6b7280, umber #8a5a2b, olive #5f6b1f) with eight dash patterns in the same order, and a legend in band or rank order. A sparkline in a table is 72 by 22 px, the series colour at 1.5 px, no fill, no axis. The trend on a dashboard app card is the one exception: 48 px tall across the card, a 2 px line in the direction colour (up green, down red, flat ink 2) over a 12 percent fill of the same colour, with an end dot.
 
 ### Breakdown lists
 
@@ -372,16 +390,16 @@ Four forms exist, each in `components/ui/delta-chip.tsx` or beside its list, and
 
 ### Tables
 
-- The table kit, 44 px rows with 16 px cell padding from `md` (8 px below), 36 px header rows with 12 px sentence case headers in ink 3 over a hairline, 13 px cells, no zebra, a lighter line between rows, hover to surface 2. Numeric columns and their headers are right aligned and tabular; a name cell holds a 24 px app icon, the name at 500 and a 12 px ink 3 line under it. The keyword table keeps 44 px rows, right aligns its score columns, shows change beside position, fits its default columns inside its frame from 1280 px and keeps a slim meter under each score. A totals footer repeats the header style and counts: keywords, ranked, not ranking, in the top 10, moved up, moved down.
+- The table kit, 44 px rows with 16 px cell padding from `md` (8 px below), 36 px header rows with 13 px sentence case headers in ink 3 over a hairline, 14 px cells, no zebra, a lighter line between rows, hover to surface 2. Numeric columns and their headers are right aligned and tabular; a name cell holds a 24 px app icon, the name at 500 and a 12 px ink 3 line under it. The keyword table keeps 44 px rows, right aligns its score columns, shows change beside position, fits its default columns inside its frame from 1280 px (its cell padding steps from 12 to 10, 8 and 6 px as the frame narrows) and keeps a slim meter under each score. A totals footer repeats the header style and counts: keywords, ranked, not ranking, in the top 10, moved up, moved down.
 - Facets sit behind one **Filters** control (`data-table/FiltersControl.tsx`): a popover from `md` and a bottom sheet below it, both a dialog named Filters, with the active count as a flat pill on the outline button. A renderer reads a column's numeric flag with `numericProps(column)`.
 
 ### Navigation
 
-- The sidebar: the mark and the product name at 14 px 600, a workspace switcher as an outlined 6 px control, then 32 px items at 13 px in ink 2 with a 16 px lucide icon, the active item on surface 2 in ink; a count sits at the right. Workspace and App are 11 px group labels; What's New, Documentation and the version sit at the foot. The top bar is 52 px on the surface with the sidebar toggle and breadcrumb at the left; on an app page the run status, Refresh and Run daily sit at the right, then search, the API health dot with its word, the theme toggle and the account. The health badge keeps only its mark below `sm`.
+- The sidebar: the mark and the product name at 14 px 600, a workspace switcher as an outlined 6 px control, then 36 px items at 14 px in ink 2 with an 18 px lucide icon, hover on surface 2 in ink, the active item on the brand tint with its text and icon in brand text; a count sits at the right. Workspace and App are 12 px group labels; What's New, Documentation and the version sit at the foot. The top bar is 52 px on the surface with the sidebar toggle and breadcrumb at the left; on an app page the run status, Refresh and Run daily sit at the right, then search, the API health dot with its word, the theme toggle and the account. The health badge keeps only its mark below `sm`.
 
 ### Inputs and selects
 
-- 34 px tall, 6 px radius, hairline border, surface fill, 13 px text; a select shows a 16 px calendar or chevron icon and opens a 12 px radius menu. Focus is a 2 px ink ring. The segmented control is a surface 2 track with a raised surface pill for the active option; it carries counts (`Tracked 5`, `Moved 2`) in ink 2 after the word.
+- 36 px tall, 6 px radius, hairline border, surface fill, 14 px text (16 px below `md`, so a phone does not zoom); a select shows a 16 px calendar or chevron icon and opens a 12 px radius menu. Focus is a 2 px ink ring. The segmented control is a surface 2 track with a raised surface pill for the active option; it carries counts (`Tracked 5`, `Moved 2`) in ink 2 after the word.
 
 ### App icons
 
@@ -415,7 +433,7 @@ Four forms exist, each in `components/ui/delta-chip.tsx` or beside its list, and
 - **Don't** put a muted sentence under a heading, an eyebrow above it, or an icon beside it.
 - **Don't** box a heading, a sentence or a lone figure in a panel, and never nest a panel in a panel.
 - **Don't** use a pill for a source, a store, a market, a tag or a category, or on every row of a list.
-- **Don't** use orange for a warning, a data bar on another page, a link underline or an active navigation item.
+- **Don't** use orange for a warning, a data bar on another page or a resting link underline, or the bright brand shade for text on a light surface.
 - **Don't** colour a position or a score by grade; show the grade word with a quiet marker: a filled dot for strong, a half filled one for weak, a ring for poor, none for fair.
 - **Don't** draw a sparkline fill (the dashboard app card's trend aside) or a shadow below an overlay. A meter under a number belongs to the keywords table only, where the owner asked for it.
 - **Don't** use uppercase tracked labels, a second typeface, or a monospace face for numbers.
@@ -435,7 +453,7 @@ The app header: the 32 px icon, the name as the title, store, home storefront an
 
 ### Keywords
 
-The app header as on the overview, then one row: the Tracked and Discovered segmented control with counts (a blue dot marks unseen discoveries), the market select with the keyword count of each market and an outline icon button to add a market; at the right the Map toggle (Tracked only), Import CSV as an outline button and the primary "Add keywords". Under it one sentence: how many keywords are tracked and active, and how many climbed and fell since yesterday. Then the table's own row: search, one Filters control (a popover from `md`, a bottom sheet below it) with its active chips under it, the All, Moved, Fell and Lost switch with counts, the shown count, Columns and Export CSV. The table keeps 44 px rows with Keyword (listing marks as tinted underlines, the class as a 4 px tag, Paused as a flat pill), Position as a chip (tinted for the top 3, outlined for the top 10), Change as a delta pill with the words Lost and New, Last 7 days as a position line with its position delta, then Opportunity, Popularity and Difficulty each as a number over a slim meter in the grade colour, up to two Insight badges and the Top apps column of three overlapping store icons in one button with a bar under the own app; Tags, Source, Volatility, Added, Competitors in top 10 and Reveal are hidden by default, one row menu stays pinned at the right edge, and the default columns fit the table frame from 1280 px: a narrower frame shortens the keyword and folds the second insight into a count, then drops the 7 day line and tightens the cell padding, then hides the sort arrows of unsorted headers. A lost ranking stacks `was #14` in tick size under `>200`, so the Position column keeps one width. The totals footer counts keywords, ranked and not found, the average position and the top 10, the moves of the day and of 7 days, beside the three averages. Under the table the market's search read is a collapsible panel of localizations, notes and a closed line for localizations not shipped. The Discovered tab puts its search first, then the All, Ranked and Opportunities tabs with counts, then the Auto-track ranked switch and the Refresh discoveries, Track recommended and Track all ranked outline buttons, then the discovered table (keyword with its recommendation, source, position chip, the three scores and relevance over meters, a Track button and a dismiss icon per row) with a footer naming the last check and the weekly budget. Suggestions and Keyword combinations sit under it as collapsible panels, one title line while closed, opening on their one sentence description; the combinations info tip sits at the right of its header. The cross store note lives in the Popularity header's info tip.
+The app header as on the overview, then one row: the Tracked and Discovered segmented control with counts (an orange dot marks unseen discoveries), the market select with the keyword count of each market and an outline icon button to add a market; at the right the Map toggle (Tracked only), Import CSV as an outline button and the primary "Add keywords". Under it one sentence: how many keywords are tracked and active, and how many climbed and fell since yesterday. Then the table's own row: search, one Filters control (a popover from `md`, a bottom sheet below it) with its active chips under it, the All, Moved, Fell and Lost switch with counts, the shown count, Columns and Export CSV. The table keeps 44 px rows with Keyword (listing marks as tinted underlines, the class as a 4 px tag, Paused as a flat pill), Position as a chip (tinted for the top 3, outlined for the top 10), Change as a delta pill with the words Lost and New, Last 7 days as a position line with its position delta, then Opportunity, Popularity and Difficulty each as a number over a slim meter in the grade colour, up to two Insight badges and the Top apps column of three overlapping store icons in one button with a bar under the own app; Tags, Source, Volatility, Added, Competitors in top 10 and Reveal are hidden by default, one row menu stays pinned at the right edge, and the default columns fit the table frame from 1280 px: a narrower frame shortens the keyword and folds the second insight into a count, then drops the 7 day line and tightens the cell padding, then hides the sort arrows of unsorted headers. A lost ranking stacks `was #14` in tick size under `>200`, so the Position column keeps one width. The totals footer counts keywords, ranked and not found, the average position and the top 10, the moves of the day and of 7 days, beside the three averages. Under the table the market's search read is a collapsible panel of localizations, notes and a closed line for localizations not shipped. The Discovered tab puts its search first, then the All, Ranked and Opportunities tabs with counts, then the Auto-track ranked switch and the Refresh discoveries, Track recommended and Track all ranked outline buttons, then the discovered table (keyword with its recommendation, source, position chip, the three scores and relevance over meters, a Track button and a dismiss icon per row) with a footer naming the last check and the weekly budget. Suggestions and Keyword combinations sit under it as collapsible panels, one title line while closed, opening on their one sentence description; the combinations info tip sits at the right of its header. The cross store note lives in the Popularity header's info tip.
 
 ### Action Center
 

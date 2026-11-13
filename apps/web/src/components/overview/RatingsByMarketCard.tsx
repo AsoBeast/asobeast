@@ -39,7 +39,11 @@ function RatingsTable({
   const rows = marketRatingRows(markets);
   const total = ratingTotal(rows);
   return (
-    <Table scrollLabel="Market ratings table" scrollFocus="overflow">
+    <Table
+      density="compact"
+      scrollLabel="Market ratings table"
+      scrollFocus="overflow"
+    >
       <TableCaption>
         Rating and number of ratings on the newest listing captured in each
         market

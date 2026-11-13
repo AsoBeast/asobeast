@@ -17,7 +17,7 @@ export function OverviewMarketSkeleton() {
   return (
     <div className="flex items-center gap-2">
       <Skeleton className="h-4 w-12" />
-      <Skeleton className="h-[34px] w-[240px]" />
+      <Skeleton className="h-9 w-[240px]" />
     </div>
   );
 }

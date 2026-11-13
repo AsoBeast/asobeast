@@ -17,7 +17,7 @@ export function DashboardHeader({
       title="Dashboard"
       controls={
         <>
-          <Suspense fallback={<Skeleton className="h-[34px] w-36" />}>
+          <Suspense fallback={<Skeleton className="h-9 w-36" />}>
             <DashboardRange />
           </Suspense>
           <ImportAppDialog>

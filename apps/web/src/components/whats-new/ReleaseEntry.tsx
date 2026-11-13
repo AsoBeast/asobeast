@@ -76,14 +76,14 @@ export function ReleaseEntry({
           >
             {formatDate(release.date)}
           </time>
-          {latest ? <Badge variant="info">Latest</Badge> : null}
+          {latest ? <Badge variant="brand">Latest</Badge> : null}
         </header>
         <div className="relative flex min-w-0 flex-col gap-4 pb-8 sm:border-l sm:border-border sm:pl-8">
           <span
             aria-hidden
             className={cn(
               "absolute top-2 -left-[5px] hidden size-2.5 rounded-full ring-4 ring-background sm:block",
-              latest ? "bg-foreground" : "bg-border",
+              latest ? "bg-brand-mark" : "bg-border",
             )}
           />
           <div className="flex flex-col gap-1.5">

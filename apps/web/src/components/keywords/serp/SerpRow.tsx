@@ -47,11 +47,7 @@ function Rating({
 
 function RoleBadge({ role }: { role: SerpRole }) {
   if (role === "you") {
-    return (
-      <Badge variant="outline" className="border-info text-info">
-        You
-      </Badge>
-    );
+    return <Badge variant="brand">You</Badge>;
   }
   return role === "competitor" ? (
     <Badge variant="secondary">Competitor</Badge>
@@ -109,7 +105,7 @@ export function SerpRow({
       className={cn(
         SERP_ROW_GRID,
         "focus:outline-2 focus:-outline-offset-2 focus:outline-ring",
-        role === "you" && "bg-info-subtle shadow-[inset_3px_0_0_var(--info)]",
+        role === "you" && "shadow-[inset_3px_0_0_var(--brand-mark)]",
       )}
     >
       <span className="col-start-1 row-span-2 row-start-1 flex flex-col items-end gap-0.5 text-right">

@@ -27,7 +27,7 @@ export function AlertFeedSkeleton() {
     >
       <TextLine type="text-title" width="w-24" />
       <div className="flex flex-col gap-2">
-        <Skeleton className="h-8 w-full max-w-xl" />
+        <Skeleton className="h-9 w-full max-w-xl" />
         <TextLine type="text-body" width="w-32" />
       </div>
       <div className="flex flex-col gap-2">

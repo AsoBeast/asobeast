@@ -36,6 +36,17 @@ const UNDERLINED_ON_HOVER = [
   "components/alerts/AlertEventRow.tsx: decoration-faint-foreground",
 ];
 
+const INFORMATION_BLUE =
+  /\b(?:bg|text|border|ring|outline|fill|stroke|shadow)-info(?:-subtle)?(?![\w-])/g;
+
+const SUBTITLE_MATCH_MARK = [
+  "components/keyword-match/MatchedText.tsx: bg-info-subtle",
+  "components/keyword-match/MatchedText.tsx: bg-info-subtle",
+];
+
+const ORANGE_TEXT =
+  /\btext-(?:primary|primary-hover|brand-mark|chart-1|rank-band-\d)(?![\w-])/g;
+
 const POINTER_CURSOR = /\bcursor-pointer\b/g;
 
 const POINTER_ON_A_NON_BUTTON = [
@@ -87,6 +98,14 @@ describe("utility classes", () => {
 
   it("draws every focus ring solid", () => {
     expect(offenders(TRANSLUCENT_RING)).toEqual([]);
+  });
+
+  it("keeps information blue off every tag, dot and text but the subtitle match mark", () => {
+    expect(offenders(INFORMATION_BLUE)).toEqual(SUBTITLE_MATCH_MARK);
+  });
+
+  it("writes orange text only in the brand text shade", () => {
+    expect(offenders(ORANGE_TEXT)).toEqual([]);
   });
 
   it("leaves the pointer cursor of a button to the base layer", () => {

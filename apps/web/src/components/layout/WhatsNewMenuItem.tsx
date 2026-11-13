@@ -43,7 +43,7 @@ export function WhatsNewMenuItem({ latest }: { latest: string | null }) {
             aria-hidden
             data-slot="unread-dot"
             className={cn(
-              "absolute top-1.5 left-[1.125rem] size-2 rounded-full bg-destructive ring-2 ring-sidebar",
+              "absolute top-1.5 left-[1.125rem] size-2 rounded-full bg-brand-mark ring-2 ring-sidebar",
               !unread && "hidden",
             )}
           />

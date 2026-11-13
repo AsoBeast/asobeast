@@ -25,6 +25,6 @@
   margin-inline: auto;
 }
 
-@custom-variant keywords-snug (@container keywords (width < 82.75rem));
-@custom-variant keywords-tight (@container keywords (width < 71.25rem));
-@custom-variant keywords-cramped (@container keywords (width < 65rem));
+@custom-variant keywords-snug (@container keywords (width < 80.75rem));
+@custom-variant keywords-tight (@container keywords (width < 70.6875rem));
+@custom-variant keywords-cramped (@container keywords (width < 67.1875rem));

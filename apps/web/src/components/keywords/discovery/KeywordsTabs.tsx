@@ -69,7 +69,7 @@ export function KeywordsTabs({ id, market }: { id: string; market: string }) {
           <span
             aria-hidden
             className={cn(
-              "size-1.5 rounded-full bg-info",
+              "size-1.5 rounded-full bg-brand-mark",
               unseen ? "visible" : "invisible",
             )}
           />

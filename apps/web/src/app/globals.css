@@ -83,6 +83,9 @@
   --color-secondary: var(--secondary);
   --color-primary-hover: var(--primary-hover);
   --color-primary-subtle: var(--primary-subtle);
+  --color-brand-text: var(--brand-text);
+  --color-brand-mark: var(--brand-mark);
+  --color-brand-subtle: var(--brand-subtle);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
   --color-popover-foreground: var(--popover-foreground);

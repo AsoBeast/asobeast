@@ -27,6 +27,7 @@
 
   --brand-500: #f89820;
   --brand-600: #e88010;
+  --brand-700: #a8520a;
   --brand-ink: #1c1408;
   --brand-series: #d2700a;
   --brand-tint: #fbeedb;
@@ -67,8 +68,8 @@
   --red-tint: #fde6e6;
   --red-400: #f87171;
   --red-dark-tint: #3b1414;
-  --warn-700: #a3520a;
-  --warn-400: #f0b64a;
+  --warn-700: #7c6200;
+  --warn-400: #e8c34a;
 
   --radius: 0.5rem;
 }

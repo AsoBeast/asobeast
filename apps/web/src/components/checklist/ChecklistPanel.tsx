@@ -114,7 +114,7 @@ function OpenRow({
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-medium">{item.title}</span>
-          {next ? <Badge variant="info">Next</Badge> : null}
+          {next ? <Badge variant="brand">Next</Badge> : null}
         </div>
         <p className="text-muted-foreground">{copy.description}</p>
         {href === null ? (
@@ -170,7 +170,6 @@ export function ChecklistPanel({
         value={ringFraction(done, total) * 100}
         aria-label="Setup progress"
         getValueLabel={() => progress}
-        indicatorClassName="bg-success"
       />
       <FirstResults
         appId={items.find((item) => item.id === "import_app")?.appId ?? null}

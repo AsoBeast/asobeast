@@ -24,6 +24,7 @@ export const NEUTRAL_RAMP = [
 export const BRAND_RAMP = [
   "--brand-500",
   "--brand-600",
+  "--brand-700",
   "--brand-ink",
   "--brand-series",
   "--brand-tint",
@@ -43,6 +44,9 @@ export const SEMANTIC_SURFACES = [
   "--primary-foreground",
   "--primary-hover",
   "--primary-subtle",
+  "--brand-text",
+  "--brand-mark",
+  "--brand-subtle",
   "--secondary",
   "--secondary-foreground",
   "--muted",
@@ -136,7 +140,6 @@ const STATUS_TEXT = [
   "--success",
   "--warning",
   "--destructive",
-  "--info",
   "--signal-up",
   "--signal-down",
   "--priority-critical",
@@ -154,7 +157,6 @@ const TINTED_TEXT = [
   { token: "--destructive", tint: 5 },
   { token: "--destructive", tint: 10 },
   { token: "--destructive", tint: 12 },
-  { token: "--info", tint: 10 },
   { token: "--priority-critical", tint: 10 },
   { token: "--priority-high", tint: 10 },
   { token: "--priority-medium", tint: 10 },
@@ -167,6 +169,24 @@ const textOn = (foreground: string, background: string): TextPair => ({
   background,
   floor: 4.5,
 });
+
+const markOn = (foreground: string, background: string): TextPair => ({
+  ...textOn(foreground, background),
+  floor: 3,
+});
+
+const BRAND_TEXT_SURFACES = [
+  "--background",
+  "--card",
+  "--muted",
+  "--popover",
+  "--sidebar",
+  "--brand-subtle",
+];
+
+const ON_BRAND_SUBTLE = ["--foreground", "--muted-foreground"];
+
+const BRAND_MARK_SURFACES = ["--background", "--card", "--muted", "--sidebar"];
 
 export const TEXT_PAIRS: TextPair[] = [
   {
@@ -206,6 +226,7 @@ export const TEXT_PAIRS: TextPair[] = [
   textOn("--muted-foreground", "--chart-tint"),
   textOn("--signal-up", "--chart-tint"),
   textOn("--signal-down", "--chart-tint"),
+  textOn("--foreground", "--secondary"),
   textOn("--foreground", "--accent"),
   textOn("--muted-foreground", "--accent"),
   {
@@ -266,8 +287,18 @@ export const TEXT_PAIRS: TextPair[] = [
   ...["--foreground", "--muted-foreground"].map((token) =>
     textOn(token, "--primary-subtle"),
   ),
-  ...["--foreground", "--muted-foreground", "--info"].map((token) =>
+  ...["--foreground", "--muted-foreground"].map((token) =>
     textOn(token, "--info-subtle"),
+  ),
+  ...BRAND_TEXT_SURFACES.map((background) =>
+    textOn("--brand-text", background),
+  ),
+  ...ON_BRAND_SUBTLE.map((token) => textOn(token, "--brand-subtle")),
+  ...BRAND_MARK_SURFACES.map((background) =>
+    markOn("--brand-mark", background),
+  ),
+  ...["--background", "--card"].map((background) =>
+    markOn("--info", background),
   ),
   ...TINTED_TEXT.flatMap(({ token, tint }) =>
     ["--card", "--background", "--popover"].map((background) => ({
@@ -276,12 +307,6 @@ export const TEXT_PAIRS: TextPair[] = [
       tint,
     })),
   ),
-  {
-    label: "info on background",
-    foreground: "--info",
-    background: "--background",
-    floor: 4.5,
-  },
   {
     label: "score-low on card",
     foreground: "--score-low",

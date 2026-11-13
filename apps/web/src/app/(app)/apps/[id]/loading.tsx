@@ -22,7 +22,7 @@ export default function Loading() {
         <SnapshotFactsSkeleton />
         <div className="flex flex-wrap items-center gap-3">
           <OverviewMarketSkeleton />
-          <Skeleton className="h-[34px] w-28" />
+          <Skeleton className="h-9 w-28" />
         </div>
       </div>
       <OverviewPulseSkeleton />

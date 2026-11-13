@@ -102,5 +102,5 @@ test("a lint badge that fits on one line keeps the standard badge height", async
     badges.map((badge) => badge.getBoundingClientRect().height),
   );
   expect(heights).toHaveLength(6);
-  expect(new Set(heights)).toEqual(new Set([20]));
+  expect(new Set(heights)).toEqual(new Set([22]));
 });
