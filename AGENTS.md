@@ -37,7 +37,7 @@ This file holds what applies everywhere. The detailed rules live in `.claude/rul
 7. The shell is a sidebar, and each page picks one width utility from `src/styles/layout.css`.
 8. Charts go through the chart system in `src/components/charts/`.
 9. Tables go through the table kit in `components/data-table/`; judged numbers go through `lib/grade.ts`, the figure in ink with its grade word in the accessible name.
-10. Orange is action, blue is information, status keeps its own hues; text takes a token colour, never an opacity modifier.
+10. Orange is action, selection and ownership, and orange text is only the brand text shade; blue is only a chart mark; status keeps its own hues; text takes a token colour, never an opacity modifier.
 
 ### Domain rules index
 
