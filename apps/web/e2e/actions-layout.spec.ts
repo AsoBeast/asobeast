@@ -63,9 +63,7 @@ test("the rail shows the open work by app and filters to it", async ({
   page,
 }) => {
   await page.goto("/actions");
-  const where = page
-    .getByRole("heading", { name: "Where the work is" })
-    .locator("xpath=..");
+  const where = page.getByRole("region", { name: "Where the work is" });
   const focus = where.getByRole("link", { name: /Focus Timer · US/ });
 
   await expect(focus).toContainText("18");
@@ -79,9 +77,7 @@ test("the rail shows the open work by app and filters to it", async ({
 test("an app's rail shows the open work by market", async ({ page }) => {
   await page.goto("/apps/app-1/actions");
 
-  const where = page
-    .getByRole("heading", { name: "Where the work is" })
-    .locator("xpath=..");
+  const where = page.getByRole("region", { name: "Where the work is" });
   await expect(where.getByRole("link", { name: /Germany/ })).toBeVisible();
   await expect(
     where.getByRole("link", { name: /United States/ }),
@@ -147,12 +143,18 @@ const LAYOUT_PAGES = [
   {
     name: "workspace",
     path: "/actions",
-    sections: ["Queue", "Progress", "Where the work is"],
+    sections: ["Start here", "Queue", "Progress", "Where the work is"],
   },
   {
     name: "app",
     path: "/apps/app-1/actions",
-    sections: ["Actions", "Queue", "Progress", "Where the work is"],
+    sections: [
+      "Actions",
+      "Start here",
+      "Queue",
+      "Progress",
+      "Where the work is",
+    ],
   },
 ] as const;
 

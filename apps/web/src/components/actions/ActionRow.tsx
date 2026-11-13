@@ -3,28 +3,28 @@
 import type { MouseEvent } from "react";
 import { Check, RotateCcw, StickyNote } from "lucide-react";
 import type { ActionItem } from "@asobeast/shared";
+import { AppIcon } from "@/components/AppIcon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { formatDate, storeLabel } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { ACTION_CATEGORY_LABEL } from "./action-copy";
+import { actionBrief, briefText } from "./action-brief";
 import { actionHeadline } from "./action-headline";
 import { actionStatusTag, type ActionStatusTag } from "./action-status-tag";
-import { ActionDismissMenu } from "./ActionDismissMenu";
-import { ActionImpactMeter } from "./ActionImpactMeter";
-import { ActionPriorityBadge } from "./ActionPriorityBadge";
+import { ActionBrief } from "./ActionBrief";
 import { ActionRowMenu } from "./ActionRowMenu";
-import { ActionSnoozeMenu } from "./ActionSnoozeMenu";
 import { isClosed } from "./ActionStateControls";
+import { ImpactFigure } from "./ImpactFigure";
+import { PriorityWord } from "./PriorityWord";
+import { QUEUE_ROW_COLUMNS } from "./queue-layout";
 import { useActionUpdate } from "./use-action-update";
 import type { QueueSelection } from "./use-queue-selection";
 
-const TAG_TONE: Record<ActionStatusTag["tone"], string> = {
-  warning: "border-warning/40 text-warning",
-  success: "border-success/40 text-success",
-  neutral: "",
-};
+const ROW =
+  "relative items-center gap-y-1 border-b border-border-subtle py-1 pr-1 pb-3 outline-none transition-colors duration-150 ease-out last:border-b-0 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset data-[checked=true]:bg-muted data-[focused=true]:bg-muted data-[focused=true]:shadow-[inset_2px_0_0_var(--foreground)] @2xl/queue:items-start @2xl/queue:py-2.5 @2xl/queue:pr-4 @2xl/queue:pl-4";
+
+const SELECT_CELL =
+  "relative z-20 col-start-1 row-start-1 flex size-11 items-center justify-center @2xl/queue:size-6";
 
 function opensInPlace(event: MouseEvent<HTMLAnchorElement>): boolean {
   return (
@@ -36,34 +36,52 @@ function opensInPlace(event: MouseEvent<HTMLAnchorElement>): boolean {
   );
 }
 
-function RowMeta({
+function StateMark({ tag }: { tag: ActionStatusTag }) {
+  return tag.tone === "warning" ? (
+    <span className="text-label text-warning">{tag.label}</span>
+  ) : (
+    <Badge variant={tag.tone === "success" ? "success" : "flat"}>
+      {tag.label}
+    </Badge>
+  );
+}
+
+function RowReason({
   item,
-  appScoped,
+  iconUrl,
 }: {
   item: ActionItem;
-  appScoped: boolean;
+  iconUrl: string | null | undefined;
 }) {
   const tag = actionStatusTag(item);
-  const parts = [
-    ACTION_CATEGORY_LABEL[item.category],
-    appScoped ? null : (item.scope.appName ?? "Unknown app"),
-    storeLabel(item.scope.store),
-    item.scope.country.toUpperCase(),
-    `since ${formatDate(item.firstSeenAt)}`,
-  ].filter((part) => part !== null);
+  const parts = item.evidence ? actionBrief(item.evidence) : [];
 
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-      <p className="min-w-0 truncate text-caption text-muted-foreground">
-        {parts.join(" · ")}
-      </p>
-      {tag ? (
-        <Badge variant="outline" className={cn("h-auto", TAG_TONE[tag.tone])}>
-          {tag.label}
-        </Badge>
+    <div className="col-span-3 col-start-2 row-start-3 flex min-w-0 flex-wrap items-start gap-x-2 gap-y-1 pr-2 text-caption text-muted-foreground @2xl/queue:pr-0">
+      <span className="inline-flex shrink-0 items-center gap-1.5">
+        {iconUrl === undefined ? null : (
+          <>
+            <AppIcon src={iconUrl} size={16} />
+            <span className="font-medium text-foreground">
+              {item.scope.appName ?? "Unknown app"}
+            </span>
+          </>
+        )}
+        <span className="text-faint-foreground">
+          {item.scope.country.toUpperCase()}
+        </span>
+      </span>
+      {parts.length > 0 ? (
+        <span
+          title={briefText(parts)}
+          className="line-clamp-2 min-w-0 flex-[1_1_12rem]"
+        >
+          <ActionBrief parts={parts} />
+        </span>
       ) : null}
+      {tag ? <StateMark tag={tag} /> : null}
       {item.note ? (
-        <span className="inline-flex text-muted-foreground">
+        <span className="inline-flex">
           <StickyNote aria-hidden className="size-3.5" />
           <span className="sr-only">Has a note</span>
         </span>
@@ -114,21 +132,6 @@ function RowControls({
         <Check aria-hidden />
         <span className="hidden @2xl/queue:inline">Done</span>
       </Button>
-      <div className="hidden items-center gap-2 @2xl/queue:flex">
-        <ActionSnoozeMenu
-          status={item.status}
-          snoozedUntil={item.snoozedUntil}
-          busy={busy}
-          onSnooze={(snoozedUntil) =>
-            update({ status: "SNOOZED", snoozedUntil })
-          }
-          onWake={() => update({ status: "OPEN" })}
-        />
-        <ActionDismissMenu
-          busy={busy}
-          onDismiss={(reason) => update({ status: "DISMISSED", reason })}
-        />
-      </div>
       <ActionRowMenu
         item={item}
         headline={headline}
@@ -140,30 +143,10 @@ function RowControls({
   );
 }
 
-function RowSelect({
-  headline,
-  checked,
-  onToggle,
-}: {
-  headline: string;
-  checked: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <label className="relative z-20 flex size-11 items-center justify-center @2xl/queue:size-6">
-      <Checkbox
-        checked={checked}
-        onCheckedChange={onToggle}
-        aria-label={`Select ${headline}`}
-      />
-    </label>
-  );
-}
-
 export function ActionRow({
   item,
   focused,
-  appScoped,
+  iconUrl,
   href,
   onOpen,
   selection,
@@ -172,7 +155,7 @@ export function ActionRow({
 }: {
   item: ActionItem;
   focused: boolean;
-  appScoped: boolean;
+  iconUrl: string | null | undefined;
   href: string;
   onOpen: () => void;
   selection: QueueSelection;
@@ -181,6 +164,7 @@ export function ActionRow({
 }) {
   const headline = actionHeadline(item);
   const selectable = selection.selectable.includes(item.id);
+  const checked = selectable && selection.isSelected(item.id);
 
   return (
     <li
@@ -190,40 +174,42 @@ export function ActionRow({
         if (event.target === event.currentTarget) onFocus();
       }}
       data-focused={focused ? "true" : undefined}
-      className="relative grid grid-cols-[auto_1fr] items-start gap-x-3 gap-y-1 @2xl/queue:grid-cols-[auto_1fr_auto] rounded-lg border bg-card px-3 py-3 outline-none transition-colors duration-150 hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring data-[focused=true]:ring-2 data-[focused=true]:ring-ring"
+      data-checked={checked ? "true" : undefined}
+      className={cn(QUEUE_ROW_COLUMNS, ROW)}
     >
       {selectable ? (
-        <RowSelect
-          headline={headline}
-          checked={selection.isSelected(item.id)}
-          onToggle={() => selection.toggle(item.id)}
-        />
+        <label className={SELECT_CELL}>
+          <Checkbox
+            checked={checked}
+            onCheckedChange={() => selection.toggle(item.id)}
+            aria-label={`Select ${headline}`}
+          />
+        </label>
       ) : (
-        <span aria-hidden className="w-11 @2xl/queue:w-5" />
+        <span aria-hidden className={SELECT_CELL} />
       )}
-      <div className="flex min-w-0 flex-col gap-1">
-        <div className="flex min-w-0 items-start gap-2">
-          <ActionPriorityBadge priority={item.priority} compact />
-          <a
-            href={href}
-            className="line-clamp-2 font-medium outline-none after:absolute after:inset-0 after:rounded-lg focus-visible:underline"
-            onClick={(event) => {
-              if (!opensInPlace(event)) return;
-              event.preventDefault();
-              onOpen();
-            }}
-          >
-            {headline}
-          </a>
-        </div>
-        <RowMeta item={item} appScoped={appScoped} />
+      <span className="col-start-2 row-start-1 flex">
+        <PriorityWord priority={item.priority} />
+      </span>
+      <div className="contents @2xl/queue:col-start-3 @2xl/queue:row-start-1 @2xl/queue:flex @2xl/queue:min-w-0 @2xl/queue:flex-col @2xl/queue:gap-0.5">
+        <a
+          href={href}
+          className="col-span-3 col-start-2 row-start-2 line-clamp-2 pr-2 text-body font-medium outline-none after:absolute after:inset-0 focus-visible:underline @2xl/queue:pr-0"
+          onClick={(event) => {
+            if (!opensInPlace(event)) return;
+            event.preventDefault();
+            onOpen();
+          }}
+        >
+          {headline}
+        </a>
+        <RowReason item={item} iconUrl={iconUrl} />
       </div>
-      <div className="relative z-20 col-start-2 flex items-center justify-end gap-2 @2xl/queue:col-start-3 @2xl/queue:row-start-1">
-        <ActionImpactMeter
-          impact={item.impact}
-          compact
-          className="hidden w-16 @3xl/queue:block"
-        />
+      <ImpactFigure
+        impact={item.impact}
+        className="col-start-3 row-start-1 px-2 @2xl/queue:col-start-4 @2xl/queue:self-center @2xl/queue:px-0"
+      />
+      <div className="relative z-20 col-start-4 row-start-1 flex items-center justify-end gap-1 @2xl/queue:col-start-5 @2xl/queue:self-center">
         <RowControls item={item} headline={headline} href={href} />
       </div>
     </li>

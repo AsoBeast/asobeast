@@ -1,13 +1,9 @@
 import { Suspense } from "react";
-import { InfoTip } from "@/components/ui/info-tip";
-import { ActionStatusLine } from "./ActionStatusLine";
-import { ActionStatusLineSkeleton } from "./skeletons";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { LEDE, META_LINE } from "@/components/layout/panel-classes";
 import { GenerateNowButton } from "./GenerateNowButton";
-
-const HOW_ACTIONS_ARE_GENERATED =
-  "What to do next and why. Every recommendation is computed deterministically from your stored data, and findings beyond the per app cap wait until the queue has room.";
-
-const ACTION_CENTER_GUIDE = "https://docs.asobeast.com/guides/action-center";
+import { RunFacts, RunLede } from "./RunLede";
+import { TextLineSkeleton } from "./skeletons";
 
 export function ActionCenterHeader({
   appId,
@@ -18,39 +14,41 @@ export function ActionCenterHeader({
   generatedAt: string | null;
   showGenerate: boolean;
 }) {
-  const Heading = appId ? "h2" : "h1";
+  const generate = showGenerate ? (
+    <GenerateNowButton generatedAt={generatedAt} variant="outline" />
+  ) : null;
+  const lede = (
+    <Suspense fallback={<TextLineSkeleton width="w-80" />}>
+      <RunLede appId={appId} />
+    </Suspense>
+  );
+  const facts = (
+    <Suspense fallback={<TextLineSkeleton width="w-56" />}>
+      <RunFacts appId={appId} />
+    </Suspense>
+  );
 
+  if (appId === undefined) {
+    return (
+      <header>
+        <PageHeader
+          title="Action Center"
+          controls={generate}
+          lede={lede}
+          meta={facts}
+        />
+      </header>
+    );
+  }
   return (
-    <header className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Heading
-            className={
-              appId ? "text-heading" : "text-title tracking-tight text-balance"
-            }
-          >
-            {appId ? "Actions" : "Action Center"}
-          </Heading>
-          <InfoTip
-            label="About how actions are generated"
-            title="How actions are generated"
-            summary={HOW_ACTIONS_ARE_GENERATED}
-          >
-            <a
-              href={ACTION_CENTER_GUIDE}
-              target="_blank"
-              rel="noreferrer"
-              className="font-medium text-foreground link-underline"
-            >
-              Read how the Action Center works
-            </a>
-          </InfoTip>
+    <PageHeader title="Actions" titleHidden>
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+        <div className="flex min-w-0 flex-col gap-2">
+          <p className={LEDE}>{lede}</p>
+          <p className={META_LINE}>{facts}</p>
         </div>
-        {showGenerate ? <GenerateNowButton generatedAt={generatedAt} /> : null}
+        {generate}
       </div>
-      <Suspense fallback={<ActionStatusLineSkeleton />}>
-        <ActionStatusLine appId={appId} />
-      </Suspense>
-    </header>
+    </PageHeader>
   );
 }

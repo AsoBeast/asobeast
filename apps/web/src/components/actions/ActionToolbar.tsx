@@ -1,18 +1,20 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import {
   ACTION_CATEGORIES,
   ACTION_RULES,
   STORES,
   type ActionItem,
 } from "@asobeast/shared";
-import { Keyboard } from "lucide-react";
 import { FacetFilter } from "@/components/data-table/FacetFilter";
 import { FilterChips } from "@/components/data-table/FilterChips";
+import {
+  FiltersPopover,
+  FiltersSheet,
+} from "@/components/data-table/FiltersControl";
 import { RowCount } from "@/components/data-table/RowCount";
 import { SearchInput } from "@/components/data-table/SearchInput";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -26,7 +28,6 @@ import { ACTION_CATEGORY_LABEL, ACTION_RULE_LABEL } from "./action-copy";
 import { PriorityToggles } from "./PriorityToggles";
 import { queueChips } from "./queue-chips";
 import { appLabel, facetCounts, type QueueFacetCounts } from "./queue-filters";
-import { StatusTabs } from "./StatusTabs";
 import type { QueueViewState, SetQueueView } from "./use-queue-view";
 
 const GROUP_LABEL: Record<ActionGroup, string> = {
@@ -43,11 +44,13 @@ const SORT_LABEL: Record<ActionSort, string> = {
 
 function QueueSelect<T extends string>({
   label,
+  prefix,
   value,
   labels,
   onChange,
 }: {
   label: string;
+  prefix: string;
   value: T;
   labels: Partial<Record<T, string>>;
   onChange: (next: T) => void;
@@ -62,6 +65,7 @@ function QueueSelect<T extends string>({
       }}
     >
       <SelectTrigger size="sm" aria-label={label}>
+        <span className="text-muted-foreground">{prefix}</span>
         <SelectValue>{labels[value]}</SelectValue>
       </SelectTrigger>
       <SelectContent>
@@ -193,95 +197,103 @@ function QueueFacets({
   );
 }
 
+const FILTERS_DESCRIPTION =
+  "Narrow the queue by rule, category, app, market and store.";
+
+const facetsChosen = (view: QueueViewState): number =>
+  view.rule.length +
+  view.category.length +
+  view.app.length +
+  view.market.length +
+  (view.store ? 1 : 0);
+
 export function ActionToolbar({
   appId,
   items,
   view,
   setView,
   shown,
-  loadedTotal,
-  onShowShortcuts,
 }: {
   appId?: string;
   items: readonly ActionItem[];
   view: QueueViewState;
   setView: SetQueueView;
   shown: number;
-  loadedTotal: number;
-  onShowShortcuts: () => void;
 }) {
   const counts = facetCounts(items, view);
   const options = useFacetOptions(items, view);
   const groups = appId
     ? { priority: GROUP_LABEL.priority, category: GROUP_LABEL.category }
     : GROUP_LABEL;
+  const widerFilters = useRef<HTMLDivElement>(null);
+  const narrowerFilters = useRef<HTMLDivElement>(null);
+  const facets = (
+    <QueueFacets
+      appId={appId}
+      view={view}
+      setView={setView}
+      counts={counts}
+      options={options}
+    />
+  );
+  const active = facetsChosen(view);
 
   return (
-    <div className="flex flex-col gap-2">
-      <div data-slot="action-toolbar" className="flex flex-col gap-2">
-        <StatusTabs
-          appId={appId}
-          status={view.status}
-          onChange={(status) => void setView({ status })}
+    <div data-slot="action-toolbar" className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <SearchInput
+          label="Search actions"
+          value={view.q}
+          className="sm:w-auto sm:min-w-48 sm:flex-1"
+          onSearch={(q, searchOptions) =>
+            void setView({ q: q === "" ? null : q }, searchOptions)
+          }
         />
-        <div className="flex flex-wrap items-center gap-2">
-          <SearchInput
-            label="Search actions"
-            value={view.q}
-            onSearch={(q, searchOptions) =>
-              void setView({ q: q === "" ? null : q }, searchOptions)
-            }
-          />
-          <PriorityToggles
-            selected={view.priority}
-            counts={counts.priority}
-            onChange={(priority) => void setView({ priority })}
-          />
+        <div ref={narrowerFilters} className="contents md:hidden">
+          <FiltersSheet
+            active={active}
+            otherWidth={widerFilters}
+            description={FILTERS_DESCRIPTION}
+          >
+            {facets}
+          </FiltersSheet>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <QueueFacets
-            appId={appId}
-            view={view}
-            setView={setView}
-            counts={counts}
-            options={options}
-          />
-          <div className="flex items-center gap-2 @3xl/actions:ml-auto">
-            <QueueSelect
-              label="Group by"
-              value={view.group}
-              labels={groups}
-              onChange={(group) => void setView({ group })}
-            />
-            <QueueSelect
-              label="Sort by"
-              value={view.sort}
-              labels={SORT_LABEL}
-              onChange={(sort) => void setView({ sort })}
-            />
-          </div>
+        <div ref={widerFilters} className="hidden md:contents">
+          <FiltersPopover active={active} otherWidth={narrowerFilters}>
+            {facets}
+          </FiltersPopover>
         </div>
-        <FilterChips
-          chips={queueChips(view, options.apps).map((chip) => ({
-            key: chip.key,
-            label: chip.label,
-            onRemove: () => void setView(chip.clear),
-          }))}
-          onClearAll={() => void setView(CLEARED_FACETS)}
+        <QueueSelect
+          label="Group by"
+          prefix="Group"
+          value={view.group}
+          labels={groups}
+          onChange={(group) => void setView({ group })}
+        />
+        <QueueSelect
+          label="Sort by"
+          prefix="Sort"
+          value={view.sort}
+          labels={SORT_LABEL}
+          onChange={(sort) => void setView({ sort })}
         />
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
+        <PriorityToggles
+          selected={view.priority}
+          counts={counts.priority}
+          onChange={(priority) => void setView({ priority })}
+        />
         <RowCount shown={shown} total={items.length} noun="action" />
-        <Button variant="link" size="sm" onClick={onShowShortcuts}>
-          <Keyboard aria-hidden />
-          Shortcuts
-        </Button>
       </div>
-      {loadedTotal > items.length ? (
-        <p className="text-caption text-muted-foreground">
-          {`Only the ${items.length} highest-impact actions are loaded; narrow the status or scope to see the rest.`}
-        </p>
-      ) : null}
+      <FilterChips
+        chips={queueChips(view, options.apps).map((chip) => ({
+          key: chip.key,
+          label: chip.label,
+          onRemove: () => void setView(chip.clear),
+        }))}
+        onClearAll={() => void setView(CLEARED_FACETS)}
+      />
     </div>
   );
 }

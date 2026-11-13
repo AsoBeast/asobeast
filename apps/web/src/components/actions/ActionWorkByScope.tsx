@@ -1,72 +1,188 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
+import { AppIcon } from "@/components/AppIcon";
+import {
+  LIST_HEAD,
+  LIST_ROW,
+  PANEL_ACTION,
+  PANEL_HEADER,
+} from "@/components/layout/panel-classes";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { queueFilters } from "@/lib/action-filters";
-import { formatNumber } from "@/lib/format";
+import { formatNumber, pluralize } from "@/lib/format";
 import { actionsOptions } from "@/lib/queries";
-import { PriorityBar } from "./PriorityBar";
+import { cn } from "@/lib/utils";
 import type { SetQueueView } from "./use-queue-view";
-import { workByApp, workByMarket } from "./work-by-scope";
+import {
+  workByApp,
+  workByCategory,
+  workByMarket,
+  type WorkScopeRow,
+} from "./work-by-scope";
 
 const SHOWN_SCOPES = 5;
+const SCOPE_COLUMNS = "grid grid-cols-[minmax(0,1fr)_auto_2rem] gap-3 px-2";
+const PRIORITY_COUNT = "text-tick font-semibold tracking-wide uppercase";
+
+type Split = "scope" | "type";
+
+function ScopeLine({
+  row,
+  share,
+  href,
+  iconUrl,
+  onFilter,
+}: {
+  row: WorkScopeRow;
+  share: number;
+  href: string;
+  iconUrl: string | null | undefined;
+  onFilter: () => void;
+}) {
+  return (
+    <a
+      href={href}
+      aria-label={`${row.label}, ${formatNumber(row.total)} open`}
+      onClick={(event) => {
+        event.preventDefault();
+        onFilter();
+      }}
+      className={cn(SCOPE_COLUMNS, LIST_ROW)}
+    >
+      <span
+        aria-hidden
+        className="absolute inset-y-1 left-0 rounded-md bg-chart-tint"
+        style={{ width: `${Math.max(2, Math.round(share * 100))}%` }}
+      />
+      <span className="relative flex min-w-0 items-center gap-2">
+        {iconUrl === undefined ? null : <AppIcon src={iconUrl} size={16} />}
+        <span className="truncate font-medium">{row.name}</span>
+        {row.detail ? (
+          <span className="text-caption text-muted-foreground">
+            {row.detail}
+          </span>
+        ) : null}
+      </span>
+      <span className="numeric relative flex items-center gap-2 whitespace-nowrap">
+        {row.counts.critical > 0 ? (
+          <span className={cn(PRIORITY_COUNT, "text-priority-critical")}>
+            {`${formatNumber(row.counts.critical)} critical`}
+          </span>
+        ) : null}
+        {row.counts.high > 0 ? (
+          <span className={cn(PRIORITY_COUNT, "text-priority-high")}>
+            {`${formatNumber(row.counts.high)} high`}
+          </span>
+        ) : null}
+      </span>
+      <span className="numeric relative text-right font-medium">
+        {formatNumber(row.total)}
+      </span>
+    </a>
+  );
+}
 
 export function ActionWorkByScope({
   appId,
+  iconOf,
   setView,
 }: {
   appId?: string;
+  iconOf?: (appId: string) => string | null;
   setView: SetQueueView;
 }) {
   const pathname = usePathname();
+  const [split, setSplit] = useState<Split>("scope");
   const { data } = useQuery(actionsOptions(queueFilters(), appId));
   if (!data) return null;
-  const facet = appId ? "market" : "app";
-  const rows = (appId ? workByMarket : workByApp)(data.items);
+
+  const scope = appId ? "market" : "app";
+  const facet = split === "type" ? "category" : scope;
+  const tally = {
+    app: workByApp,
+    market: workByMarket,
+    category: workByCategory,
+  };
+  const rows = tally[facet](data.items);
+  const open = rows.reduce((sum, row) => sum + row.total, 0);
   const hidden = rows.length - SHOWN_SCOPES;
+  const scopeLabel = appId ? "Market" : "App";
 
   return (
-    <section aria-labelledby="where-heading" className="flex flex-col gap-3">
-      <h2 id="where-heading" className="text-heading">
-        Where the work is
-      </h2>
-      {rows.length === 0 ? (
-        <p className="text-body text-muted-foreground">Nothing open.</p>
-      ) : (
-        <ul className="flex list-none flex-col gap-1 p-0">
-          {rows.slice(0, SHOWN_SCOPES).map((row) => (
-            <li key={row.key}>
-              <a
-                href={`${pathname}?${facet}=${encodeURIComponent(row.key)}`}
-                onClick={(event) => {
-                  event.preventDefault();
-                  void setView({ [facet]: [row.key] }, { history: "replace" });
-                }}
-                className="grid min-h-10 grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 rounded-md px-2 py-2 text-body outline-none transition-colors duration-150 hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <span className="truncate">{row.label}</span>
-                <span className="numeric">
-                  {formatNumber(row.total)}
-                  <span className="sr-only"> open</span>
-                </span>
-                <span className="col-span-2">
-                  <PriorityBar counts={row.counts} />
-                </span>
-              </a>
-            </li>
-          ))}
-        </ul>
-      )}
-      {hidden > 0 ? (
-        <p className="text-caption text-muted-foreground">
-          {`and ${formatNumber(hidden)} more`}
-        </p>
-      ) : null}
-      {data.total > data.items.length ? (
-        <p className="text-caption text-muted-foreground">
-          {`Counts cover the ${formatNumber(data.items.length)} highest-impact actions.`}
-        </p>
-      ) : null}
+    <section aria-labelledby="where-heading">
+      <Card>
+        <CardHeader className={PANEL_HEADER}>
+          <CardTitle asChild>
+            <h2 id="where-heading">Where the work is</h2>
+          </CardTitle>
+          <CardAction className={PANEL_ACTION}>
+            <Tabs
+              value={split}
+              onValueChange={(next) =>
+                setSplit(next === "type" ? "type" : "scope")
+              }
+            >
+              <TabsList aria-label="Split the open work by">
+                <TabsOption value="scope">{scopeLabel}</TabsOption>
+                <TabsOption value="type">Type</TabsOption>
+              </TabsList>
+            </Tabs>
+          </CardAction>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-1 px-2">
+          {rows.length === 0 ? (
+            <p className="py-4 text-center text-body text-muted-foreground">
+              Nothing open.
+            </p>
+          ) : (
+            <>
+              <div aria-hidden className={cn(SCOPE_COLUMNS, LIST_HEAD)}>
+                <span>{split === "type" ? "Type" : scopeLabel}</span>
+                <span />
+                <span className="text-right">Open</span>
+              </div>
+              <ul className="flex list-none flex-col p-0">
+                {rows.slice(0, SHOWN_SCOPES).map((row) => (
+                  <li key={row.key}>
+                    <ScopeLine
+                      row={row}
+                      share={row.total / open}
+                      href={`${pathname}?${facet}=${encodeURIComponent(row.key)}`}
+                      iconUrl={facet === "app" ? iconOf?.(row.key) : undefined}
+                      onFilter={() =>
+                        void setView(
+                          { [facet]: [row.key] },
+                          { history: "replace" },
+                        )
+                      }
+                    />
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {hidden > 0 ? (
+            <p className="px-2 text-caption text-muted-foreground">
+              {`and ${formatNumber(hidden)} more`}
+            </p>
+          ) : null}
+          {data.total > data.items.length ? (
+            <p className="px-2 text-caption text-muted-foreground">
+              {`Counts cover the ${pluralize(data.items.length, "highest impact action")}.`}
+            </p>
+          ) : null}
+        </CardContent>
+      </Card>
     </section>
   );
 }

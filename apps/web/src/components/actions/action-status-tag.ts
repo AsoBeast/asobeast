@@ -22,9 +22,9 @@ export function actionStatusTag(item: ActionItem): ActionStatusTag | null {
       return item.snoozedUntil
         ? {
             label: `Snoozed until ${formatDate(item.snoozedUntil)}`,
-            tone: "warning",
+            tone: "neutral",
           }
-        : { label: "Snoozed", tone: "warning" };
+        : { label: "Snoozed", tone: "neutral" };
     case "DONE":
       return doneTag(item);
     case "RESOLVED":

@@ -110,8 +110,9 @@ test("the queue sits under a queue heading with group headings below it", async 
       (heading) => `${heading.tagName}:${heading.textContent}`,
     ),
   );
-  expect(levels.slice(0, 3)).toEqual([
+  expect(levels.slice(0, 4)).toEqual([
     "H1:Action Center",
+    "H2:Start here",
     "H2:Queue",
     "H3:Critical · 1",
   ]);

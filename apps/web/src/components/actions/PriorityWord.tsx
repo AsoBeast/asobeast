@@ -2,7 +2,7 @@ import type { ActionItem } from "@asobeast/shared";
 import { cn } from "@/lib/utils";
 import { ACTION_PRIORITY_LABEL, ACTION_PRIORITY_TONE } from "./action-copy";
 
-export const PRIORITY_COLUMNS = "grid-cols-[4.5rem_minmax(0,1fr)]";
+export const PRIORITY_COLUMNS = "grid-cols-[4rem_minmax(0,1fr)]";
 
 export function PriorityWord({
   priority,

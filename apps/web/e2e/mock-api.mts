@@ -84,6 +84,11 @@ import {
   trendFor,
 } from "./action-details.mts";
 import {
+  CROWDED_ACTIONS,
+  CROWDED_COOKIE,
+  SPARSE_ACTION_ACTIVITY,
+} from "./actions-fixtures.mts";
+import {
   ACTIONS,
   ACTION_SUMMARY,
   APP_1_KEYWORDS,
@@ -2118,6 +2123,10 @@ function requestAuditRun(req: IncomingMessage, res: ServerResponse): void {
   );
 }
 
+function actionsCrowded(req: IncomingMessage): boolean {
+  return hasCookie(req, CROWDED_COOKIE, "1");
+}
+
 function actionsUngenerated(req: IncomingMessage): boolean {
   return hasCookie(req, "e2e_actions_ungenerated", "1");
 }
@@ -2136,7 +2145,7 @@ function actionSummaryFor(req: IncomingMessage): ActionSummary {
   const country = url.searchParams.get("country");
   const scoped = actionsUngenerated(req)
     ? []
-    : actions.filter(
+    : (actionsCrowded(req) ? CROWDED_ACTIONS : actions).filter(
         (action) =>
           (!appId || action.scope.appId === appId) &&
           (!store || action.scope.store === store) &&
@@ -2180,7 +2189,13 @@ function actionListFor(
   appId?: string,
 ): { items: ActionItem[]; total: number; generatedAt: string | null } {
   const url = new URL(req.url ?? "/", "http://localhost");
-  const items = actionsUngenerated(req) ? [] : filterActions(url, appId);
+  const items = actionsUngenerated(req)
+    ? []
+    : actionsCrowded(req)
+      ? CROWDED_ACTIONS.filter(
+          (action) => !appId || action.scope.appId === appId,
+        )
+      : filterActions(url, appId);
   return { items, total: items.length, generatedAt: actionsGeneratedAt(req) };
 }
 
@@ -5203,7 +5218,9 @@ const routes: Route[] = [
     handler: (_p, req, res) => {
       const activity = actionsUngenerated(req)
         ? EMPTY_ACTION_ACTIVITY
-        : ACTION_ACTIVITY;
+        : actionsCrowded(req)
+          ? SPARSE_ACTION_ACTIVITY
+          : ACTION_ACTIVITY;
       const token = cookieValue(req, "e2e_activity_hold");
       if (!token) return json(res, 200, activity);
       void activityHold(token).promise.then(() => json(res, 200, activity));

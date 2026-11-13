@@ -2048,50 +2048,37 @@ test.describe("action center row controls keep focus", () => {
     });
   }
 
-  test("snoozing from the row hands focus to the wake button while it saves", async ({
+  const startHere = (page: Page) =>
+    page.getByRole("region", { name: "Start here", exact: true });
+
+  for (const [control, item] of [
+    ["Done", null],
+    ["Snooze", "7 days"],
+  ] as const) {
+    test(`${control} in Start here keeps focus while it saves and moves on to the next action`, async ({
+      page,
+    }) => {
+      await page.goto("/actions");
+      const button = startHere(page).getByRole("button", {
+        name: control,
+        exact: true,
+      });
+      const held = await holdActionUpdate(page, "act-uncovered");
+
+      await pressFromKeyboard(button);
+      if (item) await page.getByRole("menuitem", { name: item }).press("Enter");
+
+      await expectFocusKeptWhileHeld(button, held);
+      await page.waitForLoadState("networkidle");
+      await expect(button).toBeFocused();
+    });
+  }
+
+  test("a refused snooze in Start here leaves focus on Snooze", async ({
     page,
   }) => {
     await page.goto("/actions");
-    const snooze = row(page, "act-uncovered").getByRole("button", {
-      name: "Snooze",
-      exact: true,
-    });
-    const wake = row(page, "act-uncovered").getByRole("button", {
-      name: /^Wakes /,
-    });
-    const held = await holdActionUpdate(page, "act-uncovered");
-
-    await pressFromKeyboard(snooze);
-    await page.getByRole("menuitem", { name: "7 days" }).press("Enter");
-
-    await expectFocusKeptWhileHeld(wake, held);
-    await page.waitForLoadState("networkidle");
-    await expect(wake).toBeFocused();
-  });
-
-  test("waking from the row hands focus to Snooze while it saves", async ({
-    page,
-  }) => {
-    await page.goto("/actions");
-    const wake = row(page, "act-snoozed").getByRole("button", {
-      name: /^Wakes /,
-    });
-    const snooze = row(page, "act-snoozed").getByRole("button", {
-      name: "Snooze",
-      exact: true,
-    });
-    const held = await holdActionUpdate(page, "act-snoozed");
-
-    await pressFromKeyboard(wake);
-
-    await expectFocusKeptWhileHeld(snooze, held);
-    await page.waitForLoadState("networkidle");
-    await expect(snooze).toBeFocused();
-  });
-
-  test("a refused snooze hands focus back to Snooze", async ({ page }) => {
-    await page.goto("/actions");
-    const snooze = row(page, "act-uncovered").getByRole("button", {
+    const snooze = startHere(page).getByRole("button", {
       name: "Snooze",
       exact: true,
     });
@@ -2104,9 +2091,7 @@ test.describe("action center row controls keep focus", () => {
 
     await pressFromKeyboard(snooze);
     await page.getByRole("menuitem", { name: "7 days" }).press("Enter");
-    await expect(
-      row(page, "act-uncovered").getByRole("button", { name: /^Wakes / }),
-    ).toBeFocused();
+    await expect(snooze).toBeFocused();
     held.release();
 
     await expect(snooze).toBeFocused();

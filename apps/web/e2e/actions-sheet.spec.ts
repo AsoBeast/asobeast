@@ -226,8 +226,9 @@ test("a dismissal keeps its reason in the history", async ({ page }) => {
   await page.goto("/actions");
   await page
     .locator(card("act-prune"))
-    .getByRole("button", { name: "Dismiss" })
+    .getByRole("button", { name: /^More actions for / })
     .click();
+  await page.getByRole("menuitem", { name: "Dismiss" }).click();
   await page.getByRole("menuitem", { name: "The data looks wrong" }).click();
   await expect(page.locator(card("act-prune"))).toHaveCount(0);
 

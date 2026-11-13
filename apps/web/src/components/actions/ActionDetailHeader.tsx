@@ -12,9 +12,9 @@ import { formatCountry, storeLabel } from "@/lib/format";
 import { ACTION_CATEGORY_LABEL, ACTION_STATUS_LABEL } from "./action-copy";
 import { actionHeadline } from "./action-headline";
 import { actionHref, actionSection } from "./action-links";
-import { ActionPriorityBadge } from "./ActionPriorityBadge";
 import { ActionStateControls } from "./ActionStateControls";
 import { StatusIcon } from "./ActionStatusIcon";
+import { PriorityWord } from "./PriorityWord";
 
 export function ActionDetailHeader({ item }: { item: ActionItem }) {
   const href = actionHref(item);
@@ -22,7 +22,7 @@ export function ActionDetailHeader({ item }: { item: ActionItem }) {
   return (
     <SheetHeader className="gap-3 border-b p-4 pr-12">
       <div className="flex flex-wrap items-center gap-2">
-        <ActionPriorityBadge priority={item.priority} />
+        <PriorityWord priority={item.priority} />
         <Badge variant="secondary">
           {ACTION_CATEGORY_LABEL[item.category]}
         </Badge>

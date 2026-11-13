@@ -7,6 +7,7 @@ import {
   actionActivityOptions,
   actionsOptions,
   actionSummaryOptions,
+  portfolioOptions,
 } from "@/lib/queries";
 import {
   actionActivityScope,
@@ -24,7 +25,10 @@ export default async function ActionsPage({
   const queryClient = getQueryClient();
   void queryClient.prefetchQuery(actionSummaryOptions);
   void queryClient.prefetchQuery(actionActivityOptions(actionActivityScope()));
-  await queryClient.prefetchQuery(actionsOptions(filters));
+  await Promise.all([
+    queryClient.prefetchQuery(actionsOptions(filters)),
+    queryClient.prefetchQuery(portfolioOptions),
+  ]);
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

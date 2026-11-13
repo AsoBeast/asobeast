@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { actionItem } from "./action-test-item";
-import { workByApp, workByMarket } from "./work-by-scope";
+import { workByApp, workByCategory, workByMarket } from "./work-by-scope";
 
 const ITEMS = [
   actionItem({ id: "a", priority: "high" }),
@@ -25,6 +25,8 @@ describe("workByApp", () => {
     expect(focus).toEqual({
       key: "app-1",
       label: "Focus Timer · US",
+      name: "Focus Timer",
+      detail: "US",
       counts: { critical: 0, high: 1, medium: 0, low: 1 },
       total: 2,
     });
@@ -49,5 +51,20 @@ describe("workByMarket", () => {
       ["Germany", 2],
       ["United States", 2],
     ]);
+  });
+});
+
+describe("workByCategory", () => {
+  it("counts the open actions of each kind of work", () => {
+    const rows = workByCategory([
+      ...ITEMS,
+      actionItem({ id: "f", priority: "medium", category: "reputation" }),
+    ]);
+
+    expect(rows.map((row) => [row.name, row.total])).toEqual([
+      ["Metadata", 4],
+      ["Reputation", 1],
+    ]);
+    expect(rows[1]).toMatchObject({ key: "reputation", detail: null });
   });
 });
