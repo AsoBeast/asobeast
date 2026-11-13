@@ -1,24 +1,25 @@
 import {
   ComparisonMatrixSkeleton,
-  CompetitorListSkeleton,
   DiscoveryCardSkeleton,
+  GapCardSkeleton,
+  LedeSkeleton,
+  StandingCardSkeleton,
+  TrackedCardSkeleton,
 } from "@/components/competitors/skeletons";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Loading() {
   return (
-    <div className="page-full flex flex-col gap-6">
-      <Card>
-        <CardHeader className="gap-2">
-          <Skeleton className="h-4 w-28" />
-          <Skeleton className="h-5 w-56" />
-        </CardHeader>
-        <CardContent className="flex flex-col gap-6">
-          <Skeleton className="h-9 w-full" />
-          <CompetitorListSkeleton />
-        </CardContent>
-      </Card>
+    <div className="page-full @container/competitors flex flex-col gap-6">
+      <LedeSkeleton />
+      <div className="grid items-start gap-6 @5xl/competitors:grid-cols-12">
+        <div className="min-w-0 @5xl/competitors:col-span-7">
+          <TrackedCardSkeleton />
+        </div>
+        <div className="min-w-0 @5xl/competitors:col-span-5">
+          <StandingCardSkeleton />
+        </div>
+      </div>
+      <GapCardSkeleton />
       <DiscoveryCardSkeleton />
       <ComparisonMatrixSkeleton />
     </div>

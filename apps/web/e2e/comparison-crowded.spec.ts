@@ -6,7 +6,7 @@ import {
   CROWDED_RIVALS,
 } from "./fixtures.mts";
 
-const ICON_SIZE = 20;
+const ICON_SIZE = 24;
 const SORT_ARROW_SIZE = 14;
 
 for (const width of [375, 768, 1440] as const) {

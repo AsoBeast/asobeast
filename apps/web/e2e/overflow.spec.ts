@@ -24,7 +24,7 @@ const ROUTES: ReadonlyArray<readonly [string, string, RouteSetup?]> = [
     {
       cookies: {
         asobeast_collapsed:
-          "competitors.tracked%2Ccompetitors.discovery%2Ccompetitors.matrix",
+          "competitors.tracked%2Ccompetitors.standing%2Ccompetitors.discovery%2Ccompetitors.matrix",
       },
     },
   ],

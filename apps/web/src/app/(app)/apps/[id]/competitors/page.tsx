@@ -8,7 +8,12 @@ import {
   parseCollapsed,
 } from "@/lib/collapsed-sections";
 import { getQueryClient } from "@/lib/get-query-client";
-import { comparisonOptions, competitorsOptions } from "@/lib/queries";
+import { LEDE_CHANGE_DAYS } from "@/components/competitors/competitor-lede";
+import {
+  changesOptions,
+  comparisonOptions,
+  competitorsOptions,
+} from "@/lib/queries";
 import { onlyGapsParser } from "@/lib/search-params";
 
 export default async function CompetitorsPage({
@@ -31,6 +36,7 @@ export default async function CompetitorsPage({
   const queryClient = getQueryClient();
   await Promise.all([
     queryClient.prefetchQuery(competitorsOptions(id)),
+    queryClient.prefetchQuery(changesOptions(id, LEDE_CHANGE_DAYS)),
     collapsed.has(COMPETITOR_SECTION.matrix)
       ? null
       : queryClient.prefetchQuery(comparisonOptions(id, onlyGaps)),
