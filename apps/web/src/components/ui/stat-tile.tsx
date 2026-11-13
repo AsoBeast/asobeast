@@ -5,13 +5,13 @@ import { cn } from "@/lib/utils";
 const TILE_SHAPE =
   "row-span-3 grid grid-rows-subgrid gap-1 bg-card px-5 pt-3.5 pb-4 shadow-[-1px_0_0_var(--border),0_-1px_0_var(--border)]";
 
-const STRIP_COLUMNS = {
+export type MetricStripColumns = 2 | 3 | 4;
+
+const STRIP_COLUMNS: Record<MetricStripColumns, string> = {
   2: "grid-cols-2",
   3: "grid-cols-1 @lg/metric-strip:grid-cols-3",
   4: "grid-cols-2 @3xl/metric-strip:grid-cols-4",
-} as const;
-
-export type MetricStripColumns = keyof typeof STRIP_COLUMNS;
+};
 
 export function StatTileGroup({
   className,
