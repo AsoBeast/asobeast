@@ -54,3 +54,11 @@ export function monotonePath(points: readonly Point[]): string {
     })
     .join(" ");
 }
+
+export function areaPath(points: readonly Point[], bottom: number): string {
+  const [firstX] = points[0];
+  const [lastX] = points[points.length - 1];
+  return `${monotonePath(points)} L${fixed(lastX)} ${fixed(bottom)} L${fixed(
+    firstX,
+  )} ${fixed(bottom)} Z`;
+}

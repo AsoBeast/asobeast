@@ -1,7 +1,7 @@
 import type { VisibilityPoint } from "@asobeast/shared";
 import { cn } from "@/lib/utils";
 import { seriesColor } from "./theme";
-import { monotonePath, sparklinePoints } from "./sparkline-path";
+import { areaPath, monotonePath, sparklinePoints } from "./sparkline-path";
 
 const BOX = { width: 120, height: 48, padding: 3 };
 
@@ -77,7 +77,14 @@ export function Sparkline({ points }: { points: VisibilityPoint[] }) {
   const [endX, endY] = plotted[plotted.length - 1];
 
   return (
-    <div className="relative h-12 w-full" style={{ color: seriesColor(0) }}>
+    <div
+      className={cn(
+        "relative h-12 w-full",
+        direction === "up" && "text-signal-up",
+        direction === "down" && "text-signal-down",
+        direction === "flat" && "text-muted-foreground",
+      )}
+    >
       <svg
         role="img"
         aria-label={`visibility, last 30 days: ${direction}, now ${Math.round(last)}`}
@@ -86,10 +93,16 @@ export function Sparkline({ points }: { points: VisibilityPoint[] }) {
         className="block h-full w-full"
       >
         <path
+          d={areaPath(plotted, BOX.height - BOX.padding)}
+          fill="currentColor"
+          fillOpacity={0.12}
+          stroke="none"
+        />
+        <path
           d={monotonePath(plotted)}
           fill="none"
           stroke="currentColor"
-          strokeWidth={1.5}
+          strokeWidth={2}
           strokeLinecap="round"
           strokeLinejoin="round"
           vectorEffect="non-scaling-stroke"

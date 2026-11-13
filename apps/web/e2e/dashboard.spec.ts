@@ -175,18 +175,6 @@ test("movers and moved counts draw the arrow the change pills draw", async ({
   await expect(main.locator("svg.lucide-arrow-down").first()).toBeVisible();
 });
 
-test("an app card draws its trend as one line without a fill", async ({
-  page,
-}) => {
-  await page.goto("/?view=cards");
-
-  const trend = page
-    .getByRole("img", { name: /^visibility, last 30 days/ })
-    .first();
-  await expect(trend).toBeVisible();
-  await expect(trend.locator("path")).toHaveCount(1);
-});
-
 test("the summary tile numbers stay on one line when the strip narrows", async ({
   page,
 }) => {

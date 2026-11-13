@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { monotonePath, sparklinePoints, type Point } from "./sparkline-path";
+import {
+  areaPath,
+  monotonePath,
+  sparklinePoints,
+  type Point,
+} from "./sparkline-path";
 
 const BOX = { width: 120, height: 48, padding: 3 };
 
@@ -75,5 +80,19 @@ describe("monotonePath", () => {
     const [[, beforePeak], [afterPeak]] = curves(path);
     expect(beforePeak[1]).toBe(5);
     expect(afterPeak[1]).toBe(5);
+  });
+});
+
+describe("areaPath", () => {
+  it("closes the line along the bottom edge", () => {
+    const points: Point[] = [
+      [3, 45],
+      [60, 24],
+      [117, 3],
+    ];
+
+    expect(areaPath(points, 45)).toBe(
+      `${monotonePath(points)} L117.0 45.0 L3.0 45.0 Z`,
+    );
   });
 });
