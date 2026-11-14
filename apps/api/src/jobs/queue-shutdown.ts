@@ -24,37 +24,51 @@ const elapse = (ms: number) =>
 
 const SETTLED_STATUSES = new Set(['ready', 'wait', 'end']);
 
+type BlockingClients = Map<Worker, RedisClient | null>;
+
+const isSettled = (client: RedisClient | null | undefined): boolean =>
+  client === null ||
+  (client !== undefined && SETTLED_STATUSES.has(client.status));
+
 const settled = (client: RedisClient): Promise<void> =>
-  SETTLED_STATUSES.has(client.status)
+  isSettled(client)
     ? Promise.resolve()
     : new Promise((resolve) => client.once('ready', () => resolve()));
 
-async function blockingSettled(worker: Worker): Promise<boolean> {
-  try {
-    const blocking = worker.getBackend().blockingClient;
-    if (blocking) await settled(await blocking);
-    return true;
-  } catch {
-    return false;
+async function trackBlocking(
+  worker: Worker,
+  clients: BlockingClients,
+): Promise<void> {
+  const blocking = worker.getBackend().blockingClient;
+  if (!blocking) {
+    clients.set(worker, null);
+    return;
   }
+  const client = await blocking;
+  clients.set(worker, client);
+  await settled(client);
 }
 
 async function stillReconnecting(
   workers: Worker[],
   graceMs: number,
 ): Promise<Worker[]> {
+  const clients: BlockingClients = new Map();
   let timer: NodeJS.Timeout | undefined;
-  const expired = new Promise<boolean>((resolve) => {
-    timer = setTimeout(resolve, graceMs, false);
+  const expired = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, graceMs);
   });
   try {
-    const closable = await Promise.all(
-      workers.map((worker) => Promise.race([blockingSettled(worker), expired])),
-    );
-    return workers.filter((_, index) => !closable[index]);
+    await Promise.race([
+      Promise.allSettled(
+        workers.map((worker) => trackBlocking(worker, clients)),
+      ),
+      expired,
+    ]);
   } finally {
     clearTimeout(timer);
   }
+  return workers.filter((worker) => !isSettled(clients.get(worker)));
 }
 
 @Injectable()

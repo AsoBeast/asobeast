@@ -146,9 +146,7 @@ describe('QueueShutdown', () => {
     );
   });
 
-  it('force closes only the worker still reconnecting when another has reconnected', async () => {
-    jest.useFakeTimers();
-    const closeStuck = jest.fn<Promise<void>, [boolean?]>();
+  const shutdownBesideStuck = (closeStuck: jest.Mock) => {
     const stuck = blockingClient('connecting');
     const discovery = {
       getProviders: () =>
@@ -159,18 +157,41 @@ describe('QueueShutdown', () => {
           ),
         ].map((instance) => ({ instance })),
     } as unknown as DiscoveryService;
-
-    const shutdown = new QueueShutdown(
+    return new QueueShutdown(
       discovery,
       new FailFastRedis({ ping: answers() } as unknown as Redis),
       drain,
     ).beforeApplicationShutdown();
+  };
+
+  it('force closes only the worker still reconnecting when another has reconnected', async () => {
+    jest.useFakeTimers();
+    const closeStuck = jest.fn<Promise<void>, [boolean?]>();
+
+    const shutdown = shutdownBesideStuck(closeStuck);
     await jest.advanceTimersByTimeAsync(RECONNECT_GRACE_MS);
     await shutdown;
 
     expect(closeWorker).not.toHaveBeenCalled();
     expect(closeStuck.mock.calls).toEqual([[true]]);
     expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  it('force closes a worker whose connection dropped while another was still reconnecting', async () => {
+    jest.useFakeTimers();
+    const closeStuck = jest.fn<Promise<void>, [boolean?]>();
+
+    const shutdown = shutdownBesideStuck(closeStuck);
+    await jest.advanceTimersByTimeAsync(RECONNECT_GRACE_MS - 100);
+    blocking.status = 'reconnecting';
+    await jest.advanceTimersByTimeAsync(100);
+    await shutdown;
+
+    expect(closeWorker.mock.calls).toEqual([[true]]);
+    expect(closeStuck.mock.calls).toEqual([[true]]);
+    expect(warn).toHaveBeenCalledWith(
+      `shutdown: 2 workers were still reconnecting to redis after ${RECONNECT_GRACE_MS} ms, force closed them`,
+    );
   });
 
   it('force closes a worker whose blocking connection never opened', async () => {
