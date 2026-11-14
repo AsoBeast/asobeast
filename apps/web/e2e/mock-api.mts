@@ -21,6 +21,7 @@ import {
   RATINGS_HISTORY_COOKIE,
   RATINGS_HISTORY_SETS,
 } from "./reviews-fixtures.mts";
+import { auditHistoryFor } from "./audit-fixtures.mts";
 import { BREAKDOWNS } from "./keyword-breakdowns.mts";
 import {
   FAIL_CHANGES_COOKIE,
@@ -109,7 +110,6 @@ import {
   APP_1_KEYWORDS,
   APP_1_MARKET_SUMMARIES,
   APP_AUDIT,
-  AUDIT_HISTORY_POINTS,
   LONG_AUDIT,
   APP_GP_CHANGE_IMPACT,
   PLAY_AUDIT,
@@ -4334,12 +4334,10 @@ const routes: Route[] = [
     handler: ([id], req, res) =>
       apps.some((app) => app.id === id)
         ? json(res, 200, {
-            points:
-              id === "app-gp"
-                ? AUDIT_HISTORY_POINTS
-                : id === "app-long"
-                  ? AUDIT_HISTORY_POINTS.slice(-1)
-                  : [],
+            points: auditHistoryFor(
+              id,
+              hasCookie(req, "e2e_audit", "provisional"),
+            ),
           })
         : json(res, 404, errorEnvelope(404, req.url ?? "/", "App not found")),
   },

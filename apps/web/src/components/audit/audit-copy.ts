@@ -124,9 +124,6 @@ export const measuredLine = (confidence: number | undefined): string | null =>
 export const potentialLine = (potential: number): string =>
   `Reach ${Math.round(potential)} by finishing the plan`;
 
-export const provisionalLine = (confidence: number): string =>
-  `Provisional · ${percent(confidence)}% measured`;
-
 export const availabilityLabel = (
   availability: AuditFactorAvailability | undefined,
   store: Store,
@@ -139,6 +136,23 @@ export const availabilityLabel = (
 
 export const liftLabel = (lift: number | undefined): string =>
   lift === undefined ? "Lift not estimated" : `+${lift} points`;
+
+const LIFT_DIGITS = 1;
+
+export const liftFigure = (lift: number | undefined): string =>
+  lift === undefined ? "—" : `+${lift}`;
+
+export function fixesWorth(fixes: readonly { lift?: number }[]): string | null {
+  const lifts = fixes.flatMap((fix) => fix.lift ?? []);
+  if (lifts.length === 0) return null;
+  const total = lifts.reduce((sum, lift) => sum + lift, 0);
+  return `+${total.toFixed(LIFT_DIGITS)} points`;
+}
+
+export const scoredFactorsLine = (scored: number, total: number): string =>
+  scored === total
+    ? `${pluralize(total, "factor")} scored`
+    : `${scored} of ${pluralize(total, "factor")} scored`;
 
 export const emptyBucketLine = (unanswered: number): string =>
   unanswered === 0

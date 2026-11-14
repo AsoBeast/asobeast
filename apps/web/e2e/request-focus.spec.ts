@@ -2845,3 +2845,27 @@ test.describe("setup controls keep focus", () => {
     expect(await focusLeftForBody(page)).toBe(false);
   });
 });
+
+test("Analyze creative keeps focus while it queues, then hands it to the panel heading", async ({
+  page,
+}) => {
+  const held = await holdRequest(
+    page,
+    /\/api\/backend\/apps\/app-gp\/audit\/ai\/runs$/,
+    "POST",
+  );
+  await page.goto("/apps/app-gp/audit");
+  const panel = page.getByRole("region", { name: "AI creative analysis" });
+  const control = panel.getByRole("button", { name: "Analyze creative" });
+
+  await pressFromKeyboard(control);
+
+  const queuing = panel.getByRole("button", { name: "Queuing" });
+  await expect(queuing).toHaveAttribute("aria-disabled", "true");
+  await expect(queuing).not.toHaveAttribute("disabled");
+  await expect(queuing).toBeFocused();
+  held.release();
+  await expect(
+    panel.getByRole("heading", { name: "AI creative analysis" }),
+  ).toBeFocused();
+});

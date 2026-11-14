@@ -8,15 +8,16 @@ export interface RubricChange {
   labelPosition: RubricLabelPosition | null;
 }
 
-const LABEL_EDGE_SHARE = 0.1;
+const LEFT_EDGE_SHARE = 0.1;
+const RIGHT_EDGE_SHARE = 0.25;
 
 export const labelPosition = (
   index: number,
   total: number,
 ): RubricLabelPosition | null => {
   const ratio = total > 1 ? index / (total - 1) : 1;
-  if (ratio >= 1 - LABEL_EDGE_SHARE) return "insideRight";
-  if (ratio <= LABEL_EDGE_SHARE) return "insideLeft";
+  if (ratio >= 1 - RIGHT_EDGE_SHARE) return "insideRight";
+  if (ratio <= LEFT_EDGE_SHARE) return "insideLeft";
   return null;
 };
 

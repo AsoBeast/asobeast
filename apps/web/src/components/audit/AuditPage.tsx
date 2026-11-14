@@ -1,18 +1,22 @@
 "use client";
 
-import { Suspense } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { AiAnalysisPanel } from "@/components/audit/AiAnalysisPanel";
 import { AuditActionPlan } from "@/components/audit/AuditActionPlan";
 import { AuditBenchmarks } from "@/components/audit/AuditBenchmarks";
-import { AuditFactorGrid } from "@/components/audit/AuditFactorGrid";
-import { AuditLimitations } from "@/components/audit/AuditLimitations";
+import { AuditChecks } from "@/components/audit/AuditChecks";
+import { AuditFactors } from "@/components/audit/AuditFactors";
+import { AuditFooter } from "@/components/audit/AuditFooter";
+import { AuditLede } from "@/components/audit/AuditLede";
+import { AuditScorePanel } from "@/components/audit/AuditScorePanel";
 import { AuditTopFixes } from "@/components/audit/AuditTopFixes";
 import { CopyReportButton } from "@/components/audit/CopyReportButton";
-import { CreativeInsights } from "@/components/audit/CreativeInsights";
-import { AuditHealthChart } from "@/components/audit/AuditHealthChart";
-import { AuditScoreHero } from "@/components/audit/AuditScoreHero";
-import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AUDIT_GRID,
+  AUDIT_MAIN,
+  AUDIT_RAIL,
+} from "@/components/audit/layout-classes";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { appDetailOptions, auditOptions } from "@/lib/queries";
 
 export function AuditPage({ appId }: { appId: string }) {
@@ -20,44 +24,39 @@ export function AuditPage({ appId }: { appId: string }) {
   const { data: app } = useSuspenseQuery(appDetailOptions(appId));
 
   return (
-    <div className="page-wide flex flex-col gap-8">
-      <div className="grid gap-4 xl:grid-cols-12">
-        <div className="min-w-0 xl:col-span-5">
-          <AuditScoreHero appId={appId} audit={audit} />
+    <div className="page-wide @container/audit flex flex-col gap-6">
+      <PageHeader title="Audit" titleHidden>
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+          <AuditLede audit={audit} />
+          <CopyReportButton
+            audit={audit}
+            app={{ name: app.name, country: app.country }}
+          />
         </div>
-        <div className="min-w-0 xl:col-span-7">
-          <AuditTopFixes recommendations={audit.recommendations} />
+      </PageHeader>
+
+      <div className={AUDIT_GRID}>
+        <div className={AUDIT_MAIN}>
+          <AuditScorePanel audit={audit} />
+        </div>
+        <div className={AUDIT_RAIL}>
+          <AuditTopFixes
+            appId={appId}
+            recommendations={audit.recommendations}
+          />
+          <AuditChecks factors={audit.factors} />
         </div>
       </div>
-
-      <AiAnalysisPanel appId={appId} audit={audit} />
 
       <AuditActionPlan appId={appId} audit={audit} />
 
-      <AuditFactorGrid appId={appId} audit={audit} />
+      <AuditFactors appId={appId} audit={audit} />
 
-      <CreativeInsights audit={audit} />
+      <AiAnalysisPanel appId={appId} audit={audit} />
 
-      <div className="grid gap-4 xl:grid-cols-12">
-        <div className="min-w-0 xl:col-span-7">
-          <AuditBenchmarks appId={appId} benchmarks={audit.benchmarks} />
-        </div>
-        <div className="min-w-0 xl:col-span-5">
-          <Suspense
-            fallback={<Skeleton className="h-[336px] w-full rounded-xl" />}
-          >
-            <AuditHealthChart id={appId} />
-          </Suspense>
-        </div>
-      </div>
+      <AuditBenchmarks appId={appId} benchmarks={audit.benchmarks} />
 
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <AuditLimitations limitations={audit.limitations ?? []} />
-        <CopyReportButton
-          audit={audit}
-          app={{ name: app.name, country: app.country }}
-        />
-      </div>
+      <AuditFooter audit={audit} />
     </div>
   );
 }

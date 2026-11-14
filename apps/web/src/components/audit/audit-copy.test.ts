@@ -12,11 +12,14 @@ import {
   availabilityLabel,
   EFFORT_LABEL,
   emptyBucketLine,
+  fixesWorth,
   IMPACT_LABEL,
+  liftFigure,
   liftLabel,
   MESSAGE_LABEL,
   provisional,
   measuredLine,
+  scoredFactorsLine,
   scoreRingLabel,
   SOURCE_LABEL,
   STATUS_LABEL,
@@ -154,5 +157,38 @@ describe("scoreRingLabel", () => {
     expect(scoreRingLabel(null, null, undefined)).toBe(
       "ASO score not available yet",
     );
+  });
+});
+
+describe("fixesWorth", () => {
+  it("totals the estimated lifts to one decimal", () => {
+    expect(fixesWorth([{ lift: 4.2 }, { lift: 3.4 }, { lift: 2.1 }])).toBe(
+      "+9.7 points",
+    );
+  });
+
+  it("leaves out a fix without an estimate", () => {
+    expect(fixesWorth([{ lift: 4.2 }, {}])).toBe("+4.2 points");
+  });
+
+  it("has no total when nothing is estimated", () => {
+    expect(fixesWorth([{}, {}])).toBeNull();
+    expect(fixesWorth([])).toBeNull();
+  });
+});
+
+describe("liftFigure", () => {
+  it("writes the lift with its sign, or a dash without an estimate", () => {
+    expect(liftFigure(4.2)).toBe("+4.2");
+    expect(liftFigure(undefined)).toBe("—");
+  });
+});
+
+describe("scoredFactorsLine", () => {
+  it("counts the factors, and how many of them are scored", () => {
+    expect(scoredFactorsLine(6, 6)).toBe("6 factors scored");
+    expect(scoredFactorsLine(1, 1)).toBe("1 factor scored");
+    expect(scoredFactorsLine(3, 4)).toBe("3 of 4 factors scored");
+    expect(scoredFactorsLine(0, 1)).toBe("0 of 1 factor scored");
   });
 });

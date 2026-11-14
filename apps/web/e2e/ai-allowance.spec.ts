@@ -8,6 +8,7 @@ import {
   type AiCallUsage,
   type ApiErrorEnvelope,
 } from "@asobeast/shared";
+import { holdRequest, pressFromKeyboard } from "./held-request.mts";
 import { fulfillJson, routePlan, seedSession } from "./plan-helpers.mts";
 import { expect, test } from "./reporting.mts";
 
@@ -265,4 +266,40 @@ test("refreshes the meter after an ai call", async ({ page }) => {
 
   await expect(sheet.getByText(EXPLANATION.explanation)).toBeVisible();
   await expect.poll(() => planRequests).toBeGreaterThan(0);
+});
+
+test("keeps Analyze creative focused when its request spends the last call", async ({
+  page,
+}) => {
+  await openWithPlan(
+    page,
+    indiePlan({ used: 199, limit: 200, resetsAt: RESETS_AT }),
+  );
+  const held = await holdRequest(
+    page,
+    /\/api\/backend\/apps\/app-gp\/audit\/ai\/runs$/,
+    "POST",
+    (route) =>
+      route.fulfill(
+        fulfillJson(429, { ...REFUSAL, path: "/apps/app-gp/audit/ai/runs" }),
+      ),
+  );
+  await page.goto("/apps/app-gp/audit");
+  const panel = page.getByRole("region", { name: "AI creative analysis" });
+
+  await pressFromKeyboard(
+    panel.getByRole("button", { name: "Analyze creative" }),
+  );
+  await expect(panel.getByRole("button", { name: "Queuing" })).toBeFocused();
+  await routePlan(
+    page,
+    indiePlan({ used: 200, limit: 200, resetsAt: RESETS_AT }),
+  );
+  held.release();
+
+  await expect(panel.getByText(SPENT_HINT)).toBeVisible();
+  const control = panel.getByRole("button", { name: "Analyze creative" });
+  await expect(control).toHaveAttribute("aria-disabled", "true");
+  await expect(control).not.toHaveAttribute("disabled");
+  await expect(control).toBeFocused();
 });

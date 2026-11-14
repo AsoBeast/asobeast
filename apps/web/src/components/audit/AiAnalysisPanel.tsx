@@ -1,6 +1,6 @@
 "use client";
 
-import { type RefObject, useEffect, useRef, useSyncExternalStore } from "react";
+import type { RefObject } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -10,14 +10,15 @@ import {
   useAiAllowanceSpent,
   useAiFailureToast,
 } from "@/components/ai/ai-allowance";
+import { PANEL_HEADER } from "@/components/layout/panel-classes";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requestAiAuditRun } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
-import { appKeys, invalidateAiUsage, invalidateAudit } from "@/lib/queries";
+import { appKeys, invalidateAiUsage } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
+import { cn } from "@/lib/utils";
 import {
   AI_FEATURES_GUIDE,
   ANALYSIS_ACTION,
@@ -28,87 +29,33 @@ import {
   progressLine,
   sendsCreative,
 } from "./analysis-state";
+import { CreativeObservations } from "./CreativeObservations";
+import { TEXT_LINK } from "./layout-classes";
+import {
+  useElapsed,
+  useFocusWhenQueued,
+  useRunTransitions,
+} from "./use-analysis-run";
 
-const ELAPSED_TICK_MS = 1_000;
+const STATE_MARK = "inline-flex items-center gap-1.5 text-caption";
 
-const subscribeClock = (tick: () => void): (() => void) => {
-  const timer = setInterval(tick, ELAPSED_TICK_MS);
-  return () => clearInterval(timer);
-};
-
-const subscribeNever = (): (() => void) => () => undefined;
-
-const clockSeconds = (): number => Math.floor(Date.now() / 1000);
-
-const serverClock = (): null => null;
-
-function useElapsed(
-  active: boolean,
-  requestedAt: string | null,
-): number | null {
-  const now = useSyncExternalStore(
-    active ? subscribeClock : subscribeNever,
-    clockSeconds,
-    serverClock,
-  );
-  if (!active || requestedAt === null || now === null) return null;
-  return Math.max(0, now - Math.floor(Date.parse(requestedAt) / 1000));
-}
-
-function useFocusWhenQueued(
-  requesting: boolean,
-  active: boolean,
-): RefObject<HTMLHeadingElement | null> {
-  const heading = useRef<HTMLHeadingElement>(null);
-  const requested = useRef(false);
-
-  useEffect(() => {
-    if (requesting) {
-      requested.current = true;
-      return;
-    }
-    if (requested.current && active) heading.current?.focus();
-    requested.current = false;
-  }, [requesting, active]);
-
-  return heading;
-}
-
-function useRunTransitions(appId: string, audit: AppAuditResult): void {
-  const queryClient = useQueryClient();
-  const previous = useRef(audit.ai.run?.state ?? null);
-  const overall = useRef(audit.overall);
-
-  useEffect(() => {
-    const state = audit.ai.run?.state ?? null;
-    const was = previous.current;
-    previous.current = state;
-    const wasActive = was === "queued" || was === "running";
-    if (!wasActive) {
-      overall.current = audit.overall;
-      return;
-    }
-    if (state === "completed") {
-      toast.success("Creative analysis finished", {
-        description: `Score ${overall.current ?? "—"} to ${audit.overall ?? "—"}`,
-      });
-      void invalidateAudit(queryClient, appId);
-      invalidateAiUsage(queryClient);
-    }
-    if (state === "failed") {
-      toast.error("Creative analysis failed", {
-        description: audit.ai.run?.error ?? undefined,
-      });
-      invalidateAiUsage(queryClient);
-    }
-    overall.current = audit.overall;
-  }, [
-    appId,
-    audit.ai.run?.state,
-    audit.ai.run?.error,
-    audit.overall,
-    queryClient,
-  ]);
+function StateMark({ state }: { state: AnalysisState }) {
+  if (state === "current") {
+    return (
+      <span className={cn(STATE_MARK, "text-muted-foreground")}>
+        <span aria-hidden className="size-2 rounded-full bg-foreground" />
+        <span>Up to date</span>
+      </span>
+    );
+  }
+  if (state === "stale") {
+    return (
+      <span className={cn(STATE_MARK, "font-medium text-warning")}>
+        Outdated
+      </span>
+    );
+  }
+  return null;
 }
 
 function RunProgress({
@@ -123,23 +70,24 @@ function RunProgress({
   const elapsed = useElapsed(active, requestedAt);
 
   return (
-    <div role="status" aria-live="polite" className="flex flex-col gap-2">
+    <div
+      role="status"
+      aria-live="polite"
+      className="flex max-w-[70ch] flex-col gap-2 empty:hidden"
+    >
       {active ? (
         <>
           <span
             aria-hidden
             className="block h-1 w-full overflow-hidden rounded-full bg-muted"
           >
-            <span className="block h-full w-1/3 animate-pulse rounded-full bg-primary" />
+            <span className="block h-full w-1/3 rounded-full bg-foreground motion-safe:animate-pulse" />
           </span>
-          <span className="text-sm text-muted-foreground">
+          <span className="text-dense text-muted-foreground">
             <span>{progressLine(analyzed)}</span>
             {elapsed === null ? null : (
               <span aria-hidden>{` · ${elapsed}s`}</span>
             )}
-          </span>
-          <span className="text-sm text-muted-foreground">
-            {ANALYSIS_COPY.active}
           </span>
         </>
       ) : null}
@@ -150,41 +98,24 @@ function RunProgress({
 function AnalysisIntro({
   state,
   audit,
-  heading,
 }: {
   state: AnalysisState;
   audit: AppAuditResult;
-  heading: RefObject<HTMLHeadingElement | null>;
 }) {
   return (
-    <div className="flex flex-col gap-1">
-      <h2
-        id="ai-analysis-heading"
-        ref={heading}
-        tabIndex={-1}
-        className="flex items-center gap-2 text-body font-medium"
-      >
-        AI creative analysis
-        {state === "current" ? (
-          <Badge variant="success">Up to date</Badge>
-        ) : null}
-        {state === "stale" ? <Badge variant="warning">Outdated</Badge> : null}
-      </h2>
-      <p className="text-sm text-muted-foreground">
+    <div className="flex max-w-[70ch] flex-col gap-1">
+      <p className="text-dense text-muted-foreground">
         {state === "current" && audit.creative
           ? `Analyzed ${formatDateTime(audit.creative.analyzedAt)} with ${audit.creative.model}`
           : ANALYSIS_COPY[state]}
       </p>
       {state === "unconfigured" ? (
-        <a
-          href={AI_FEATURES_GUIDE}
-          className="w-fit text-sm font-medium underline-offset-4 hover:underline"
-        >
+        <a href={AI_FEATURES_GUIDE} className={cn(TEXT_LINK, "text-dense")}>
           Read the AI features guide
         </a>
       ) : null}
       {sendsCreative(state) ? (
-        <p className="text-caption text-muted-foreground">
+        <p className="text-caption text-faint-foreground">
           {creativeSentLine(
             audit.ai.provider,
             state === "never" ? audit.ai.model : null,
@@ -192,6 +123,32 @@ function AnalysisIntro({
         </p>
       ) : null}
     </div>
+  );
+}
+
+function AnalysisHeader({
+  state,
+  heading,
+}: {
+  state: AnalysisState;
+  heading: RefObject<HTMLHeadingElement | null>;
+}) {
+  return (
+    <CardHeader className={cn(PANEL_HEADER, "border-b border-border pb-3")}>
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+        <CardTitle asChild>
+          <h2
+            id="ai-analysis-heading"
+            ref={heading}
+            tabIndex={-1}
+            className="outline-none"
+          >
+            AI creative analysis
+          </h2>
+        </CardTitle>
+        <StateMark state={state} />
+      </div>
+    </CardHeader>
   );
 }
 
@@ -237,34 +194,33 @@ export function AiAnalysisPanel({
 
   return (
     <section id="ai-analysis" aria-labelledby="ai-analysis-heading">
-      <Card>
-        <CardContent className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <AnalysisIntro state={state} audit={audit} heading={heading} />
-            {action ? (
-              <div className="flex flex-col items-end gap-1.5">
-                <Button
-                  onClick={() => analyzeOnce()}
-                  disabled={mutation.isPending || spent}
-                >
-                  {mutation.isPending ? (
-                    <Loader2 className="animate-spin" />
-                  ) : (
-                    <Sparkles />
-                  )}
-                  {action}
-                </Button>
-                <AiCallsLeft />
-              </div>
-            ) : null}
-          </div>
-
+      <Card className="gap-0 pb-0">
+        <AnalysisHeader state={state} heading={heading} />
+        <CardContent className="flex flex-col gap-3 py-4">
+          <AnalysisIntro state={state} audit={audit} />
+          {action ? (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <Button
+                onClick={() => {
+                  if (!mutation.isPending && !spent) analyzeOnce();
+                }}
+                aria-disabled={mutation.isPending || spent || undefined}
+              >
+                {mutation.isPending ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  <Sparkles />
+                )}
+                {action}
+              </Button>
+              <AiCallsLeft />
+            </div>
+          ) : null}
           <RunProgress
             active={active}
             analyzed={audit.creative?.screenshots.length ?? null}
             requestedAt={audit.ai.run?.requestedAt ?? null}
           />
-
           {state === "failed" ? (
             <Alert variant="destructive">
               <AlertTitle>{audit.ai.run?.error}</AlertTitle>
@@ -272,6 +228,9 @@ export function AiAnalysisPanel({
             </Alert>
           ) : null}
         </CardContent>
+        {audit.creative ? (
+          <CreativeObservations creative={audit.creative} />
+        ) : null}
       </Card>
     </section>
   );

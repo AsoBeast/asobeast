@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { AuditBenchmarkRow } from "@asobeast/shared";
 import {
-  benchmarkRatio,
   comparison,
   formatBenchmarkValue,
+  medianGap,
 } from "./benchmark-comparison";
 
 const row = (
@@ -34,26 +34,6 @@ describe("comparison", () => {
   });
 });
 
-describe("benchmarkRatio", () => {
-  const withBest = (
-    you: number | null,
-    best: number | null,
-    better: "higher" | "lower" = "higher",
-  ): AuditBenchmarkRow => ({ ...row(you, 10, better), best });
-
-  it.each([
-    [withBest(450, 900), 0.5],
-    [withBest(900, 900), 1],
-    [withBest(0, 0), 1],
-    [withBest(0, 0, "lower"), 1],
-    [withBest(10, 5, "lower"), 0.5],
-    [withBest(null, 900), 0],
-    [withBest(10, null), 0],
-  ])("reads %j as %s", (entry, expected) => {
-    expect(benchmarkRatio(entry)).toBe(expected);
-  });
-});
-
 describe("formatBenchmarkValue", () => {
   it.each([
     ["rating-average", 4.68104, "4.7"],
@@ -76,4 +56,31 @@ describe("formatBenchmarkValue", () => {
       expect(formatBenchmarkValue(metric, null)).toBe("—");
     },
   );
+});
+
+describe("medianGap", () => {
+  it("signs the distance from the competitor median", () => {
+    expect(medianGap(row(30853, 328427))).toBe("-297,574");
+    expect(medianGap(row(8, 6))).toBe("+2");
+    expect(medianGap(row(12, 20, "lower"))).toBe("-8");
+  });
+
+  it("keeps two decimals for a rating", () => {
+    expect(
+      medianGap({ ...row(4.68104, 4.65226), metric: "rating-average" }),
+    ).toBe("+0.03");
+    expect(medianGap({ ...row(4.651, 4.652), metric: "rating-average" })).toBe(
+      "0",
+    );
+  });
+
+  it("never writes a signed zero", () => {
+    expect(medianGap(row(10, 10.04))).toBe("0");
+  });
+
+  it("has no gap without both figures", () => {
+    expect(medianGap(row(null, 300))).toBeNull();
+    expect(medianGap(row(300, null))).toBeNull();
+    expect(medianGap(row(300, 300))).toBe("0");
+  });
 });
