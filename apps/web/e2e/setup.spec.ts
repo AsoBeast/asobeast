@@ -1011,6 +1011,9 @@ test("the steps and the actions stay beside a wide page and stack on a narrow on
   );
   await expect(steps.getByText("Next", { exact: true })).toBeVisible();
   await page.mouse.wheel(0, 1200);
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeGreaterThan(0);
   await expect(complete).toBeInViewport();
 
   await page.setViewportSize({ width: 390, height: 844 });
