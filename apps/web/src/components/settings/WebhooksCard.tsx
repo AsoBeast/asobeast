@@ -5,10 +5,8 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
-import { KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { webhookChannelOf, type WebhookItem } from "@asobeast/shared";
-import { Badge } from "@/components/ui/badge";
 import { deleteWebhook, testWebhook, updateWebhook } from "@/lib/api";
 import {
   invalidateWebhookMutation,
@@ -86,19 +84,10 @@ function WebhookRow({ webhook }: { webhook: WebhookItem }) {
       reviewScores={webhook.reviewScores}
       ratingDropTenths={webhook.ratingDropTenths}
       rankDropThreshold={webhook.rankDropThreshold}
-      tag={
-        <>
-          {channel !== "generic" && (
-            <Badge variant="outline">{WEBHOOK_CHANNEL_NAMES[channel]}</Badge>
-          )}
-          {webhook.hasSecret && (
-            <Badge variant="secondary">
-              <KeyRound />
-              Signed
-            </Badge>
-          )}
-        </>
-      }
+      facts={[
+        ...(channel === "generic" ? [] : [WEBHOOK_CHANNEL_NAMES[channel]]),
+        ...(webhook.hasSecret ? ["Signed"] : []),
+      ]}
       active={webhook.active}
       activePending={toggle.isPending}
       onActiveChange={toggleOnce}

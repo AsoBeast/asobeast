@@ -35,7 +35,7 @@ function confirmDrops(dialog: Locator): Locator {
 }
 
 function badges(row: Locator): Locator {
-  return row.locator('[data-slot="badge"]');
+  return row.locator('[data-slot="alert-rule"]');
 }
 
 async function keepOnlyMetadata(dialog: Locator): Promise<void> {

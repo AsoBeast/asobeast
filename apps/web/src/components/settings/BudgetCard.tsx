@@ -2,14 +2,8 @@
 
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { TriangleAlert } from "lucide-react";
+import { UtilizationMeter } from "@/components/capacity/UtilizationMeter";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { formatNumber, storeLabel } from "@/lib/format";
 import { budgetOptions } from "@/lib/queries";
 import {
@@ -17,10 +11,13 @@ import {
   utilizationPercent,
   utilizationStatus,
 } from "@/lib/utilization";
-import { UtilizationMeter } from "@/components/capacity/UtilizationMeter";
 import { budgetCompletionSentence } from "./budget-completion";
+import { BudgetSplit } from "./BudgetSplit";
 import { discoveryNote } from "./discovery-note";
 import { localizationsNote, marketListingsNote } from "./market-listings-note";
+import { PanelSubhead } from "./PanelSubhead";
+import { PanelBody, SettingsPanel } from "./SettingsPanel";
+import { StateWord } from "./StateWord";
 
 const WARNING_COPY =
   "Daily jobs may not finish within store rate limits; remove keywords or countries, or raise SCRAPE_ITUNES_RPM at your own risk.";
@@ -35,89 +32,51 @@ export function BudgetCard() {
     discoveryNote(budget.discovery),
   ].filter((note): note is string => note !== null);
 
-  const rows = [
-    { label: "Apps", value: budget.apps },
-    { label: "Keywords", value: budget.keywords },
-    { label: "Categories", value: budget.categories },
-    { label: "Reviews", value: budget.reviews },
-  ];
-
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Daily request budget</CardTitle>
-        <CardDescription>
-          Estimated store requests the daily pipeline enqueues, against your
-          rate limit.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-4">
-          {rows.map((row) => (
-            <div key={row.label} className="flex flex-col gap-0.5">
-              <dt className="text-muted-foreground">{row.label}</dt>
-              <dd className="text-lg font-semibold tabular-nums">
-                {formatNumber(row.value)}
-              </dd>
-            </div>
-          ))}
-        </dl>
-
+    <SettingsPanel
+      as="h2"
+      title="Daily request budget"
+      action={
+        <StateWord tone={level === "ok" ? "on" : "warning"}>
+          {`${utilizationStatus(budget.utilization)} · ${utilizationPercent(budget.utilization)}%`}
+        </StateWord>
+      }
+      footer={completion ? <p className="numeric">{completion}</p> : null}
+    >
+      <PanelBody>
+        <BudgetSplit budget={budget} />
         {notes.map((note) => (
-          <p key={note} className="text-sm text-muted-foreground">
+          <p key={note} className="text-caption text-muted-foreground">
             {note}
           </p>
         ))}
-
-        <div className="flex flex-col gap-4">
-          {budget.stores.map((store) => (
-            <div key={store.store} className="flex flex-col gap-2">
-              <div className="flex items-baseline justify-between text-sm">
-                <span className="font-medium">{storeLabel(store.store)}</span>
-                <span className="text-muted-foreground tabular-nums">
-                  {formatNumber(store.total)} of{" "}
-                  {formatNumber(store.capacityPerDay)} requests/day ·{" "}
-                  {utilizationPercent(store.utilization)}%
-                </span>
-              </div>
-              <UtilizationMeter
-                label={`${storeLabel(store.store)} daily request utilization`}
-                utilization={store.utilization}
-              />
-            </div>
-          ))}
-        </div>
-
-        <div className="flex flex-col gap-2 border-t pt-4">
-          <div className="flex items-baseline justify-between text-sm">
-            <span className="text-muted-foreground">
-              Peak store utilization · {formatNumber(budget.total)} of{" "}
-              {formatNumber(budget.capacityPerDay)} requests/day
-            </span>
-            <span className="font-medium tabular-nums">
-              {utilizationStatus(budget.utilization)} ·{" "}
-              {utilizationPercent(budget.utilization)}%
-            </span>
-          </div>
-          <UtilizationMeter
-            label="Peak store utilization"
-            utilization={budget.utilization}
-          />
-        </div>
-
-        {completion ? (
-          <p className="text-sm text-muted-foreground tabular-nums">
-            {completion}
-          </p>
-        ) : null}
-
         {level !== "ok" ? (
           <Alert variant={level === "danger" ? "destructive" : "default"}>
             <TriangleAlert />
             <AlertDescription>{WARNING_COPY}</AlertDescription>
           </Alert>
         ) : null}
-      </CardContent>
-    </Card>
+      </PanelBody>
+      <PanelSubhead as="p" title="By store" note="Used of the daily limit" />
+      <ul className="flex flex-col">
+        {budget.stores.map((store) => (
+          <li
+            key={store.store}
+            className="flex flex-col gap-2 border-b border-border-subtle px-(--card-spacing) py-3 last:border-b-0"
+          >
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 text-dense">
+              <span>{storeLabel(store.store)}</span>
+              <span className="numeric font-medium">
+                {`${formatNumber(store.total)} of ${formatNumber(store.capacityPerDay)} a day · ${utilizationPercent(store.utilization)}%`}
+              </span>
+            </div>
+            <UtilizationMeter
+              label={`${storeLabel(store.store)} daily request utilization`}
+              utilization={store.utilization}
+            />
+          </li>
+        ))}
+      </ul>
+    </SettingsPanel>
   );
 }

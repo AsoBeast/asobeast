@@ -5,16 +5,9 @@ import type { FormEvent, MouseEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
-import type { WorkspaceInviteCreated } from "@asobeast/shared";
+import type { WorkspaceInviteCreated, WorkspaceTeam } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   Dialog,
   DialogBody,
@@ -37,19 +30,39 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/components/auth/use-auth";
+import {
+  InlineQueryError,
+  failedRead,
+} from "@/components/layout/InlineQueryError";
 import { ApiError, inviteMember, removeMember, revokeInvite } from "@/lib/api";
 import {
   cardAction,
   siblingControl,
   useFocusAfterCommit,
 } from "@/lib/focus-handoff";
-import { formatDate } from "@/lib/format";
+import { formatDate, pluralize } from "@/lib/format";
 import {
   invalidateWorkspaceTeamMutation,
   workspaceTeamOptions,
 } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 import { inviteOutcome } from "./invite-outcome";
+import { PanelSubhead } from "./PanelSubhead";
+import { PanelBody, SettingsPanel } from "./SettingsPanel";
+import { PanelSkeleton } from "./skeletons";
+
+const DATE_COLUMN = "hidden sm:table-cell";
+
+function TeamColumns({ isOwner }: { isOwner: boolean }) {
+  return (
+    <colgroup>
+      <col />
+      <col className="w-24 sm:w-32" />
+      <col className="hidden w-44 sm:table-column" />
+      {isOwner ? <col className="w-14" /> : null}
+    </colgroup>
+  );
+}
 
 function messageOf(error: unknown, fallback: string): string {
   return error instanceof ApiError ? error.envelope.message : fallback;
@@ -153,10 +166,82 @@ function InviteDialog() {
   );
 }
 
+function Invitations({
+  invites,
+  isOwner,
+  busy,
+  onRevoke,
+}: {
+  invites: WorkspaceTeam["invites"];
+  isOwner: boolean;
+  busy: boolean;
+  onRevoke: (event: MouseEvent<HTMLButtonElement>, id: string) => void;
+}) {
+  return (
+    <>
+      <PanelSubhead
+        title="Invitations"
+        count={invites.length}
+        note="Waiting to be accepted"
+      />
+      <Table className="table-fixed">
+        <TableCaption className="sr-only">
+          Invitations waiting to be accepted
+        </TableCaption>
+        <TeamColumns isOwner={isOwner} />
+        <TableHeader className="sr-only">
+          <TableRow>
+            <TableHead>Email</TableHead>
+            <TableHead>Role</TableHead>
+            <TableHead className={DATE_COLUMN}>Expires</TableHead>
+            {isOwner ? (
+              <TableHead>
+                <span className="sr-only">Actions</span>
+              </TableHead>
+            ) : null}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {invites.map((invite) => (
+            <TableRow key={invite.id}>
+              <TableCell className="whitespace-normal">
+                <span className="wrap-anywhere">{invite.email}</span>
+                <span className="block text-caption text-faint-foreground sm:hidden">
+                  {`Expires ${formatDate(invite.expiresAt)}`}
+                </span>
+              </TableCell>
+              <TableCell className="text-muted-foreground capitalize">
+                <span>{invite.role}</span>
+              </TableCell>
+              <TableCell className={`${DATE_COLUMN} text-muted-foreground`}>
+                <span>{`Expires ${formatDate(invite.expiresAt)}`}</span>
+              </TableCell>
+              {isOwner ? (
+                <TableCell>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label={`Revoke the invitation for ${invite.email}`}
+                    aria-disabled={busy || undefined}
+                    onClick={(event) => onRevoke(event, invite.id)}
+                  >
+                    <Trash2 />
+                  </Button>
+                </TableCell>
+              ) : null}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </>
+  );
+}
+
 export function TeamCard() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { data: team } = useQuery(workspaceTeamOptions);
+  const read = useQuery(workspaceTeamOptions);
+  const team = read.data;
   const isOwner = user?.role === "owner";
   const focusAfterCommit = useFocusAfterCommit();
 
@@ -193,112 +278,108 @@ export function TeamCard() {
     run();
   }
 
-  if (!team) return null;
+  if (!team) {
+    if (failedRead(read)) {
+      return (
+        <SettingsPanel
+          as="h2"
+          title="Team"
+          action={isOwner ? <InviteDialog /> : null}
+        >
+          <PanelBody>
+            <InlineQueryError
+              message="Team members could not be loaded."
+              read={read}
+            />
+          </PanelBody>
+        </SettingsPanel>
+      );
+    }
+    return read.isPending ? (
+      <PanelSkeleton title="w-16" action rows={3} />
+    ) : null;
+  }
 
   return (
-    <Card>
-      <CardHeader className="flex-row items-start justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <CardTitle>Team</CardTitle>
-          <CardDescription>
-            Everyone who can sign in to this workspace.
-          </CardDescription>
-        </div>
-        {isOwner ? <InviteDialog /> : null}
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <Table>
-          <TableCaption>Members of this workspace</TableCaption>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead className="hidden sm:table-cell">Joined</TableHead>
+    <SettingsPanel
+      as="h2"
+      title="Team"
+      action={isOwner ? <InviteDialog /> : null}
+      footer={
+        <p className="numeric">
+          {[
+            pluralize(team.members.length, "member"),
+            ...(team.invites.length > 0
+              ? [pluralize(team.invites.length, "invitation")]
+              : []),
+          ].join(" · ")}
+        </p>
+      }
+    >
+      <Table className="table-fixed">
+        <TableCaption className="sr-only">
+          Members of this workspace
+        </TableCaption>
+        <TeamColumns isOwner={isOwner} />
+        <TableHeader>
+          <TableRow>
+            <TableHead>Email</TableHead>
+            <TableHead>Role</TableHead>
+            <TableHead className={DATE_COLUMN}>Joined</TableHead>
+            {isOwner ? (
+              <TableHead>
+                <span className="sr-only">Actions</span>
+              </TableHead>
+            ) : null}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {team.members.map((member) => (
+            <TableRow key={member.id}>
+              <TableCell className="whitespace-normal">
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="min-w-0 wrap-anywhere">{member.email}</span>
+                  {member.email === user?.email ? (
+                    <Badge variant="brand">You</Badge>
+                  ) : null}
+                </span>
+              </TableCell>
+              <TableCell className="capitalize">
+                <span>{member.role}</span>
+              </TableCell>
+              <TableCell className={DATE_COLUMN}>
+                <span>{formatDate(member.createdAt)}</span>
+              </TableCell>
               {isOwner ? (
-                <TableHead className="w-10">
-                  <span className="sr-only">Actions</span>
-                </TableHead>
+                <TableCell>
+                  {member.role === "owner" ? null : (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label={`Remove ${member.email}`}
+                      aria-disabled={busy || undefined}
+                      onClick={(event) =>
+                        removeRow(event, () => removeOnce(member.id))
+                      }
+                    >
+                      <Trash2 />
+                    </Button>
+                  )}
+                </TableCell>
               ) : null}
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {team.members.map((member) => (
-              <TableRow key={member.id}>
-                <TableCell className="break-all whitespace-normal">
-                  {member.email}
-                </TableCell>
-                <TableCell className="capitalize">{member.role}</TableCell>
-                <TableCell className="hidden sm:table-cell">
-                  {formatDate(member.createdAt)}
-                </TableCell>
-                {isOwner ? (
-                  <TableCell>
-                    {member.role === "owner" ? null : (
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        aria-label={`Remove ${member.email}`}
-                        aria-disabled={busy || undefined}
-                        onClick={(event) =>
-                          removeRow(event, () => removeOnce(member.id))
-                        }
-                      >
-                        <Trash2 />
-                      </Button>
-                    )}
-                  </TableCell>
-                ) : null}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+          ))}
+        </TableBody>
+      </Table>
 
-        {team.invites.length > 0 ? (
-          <Table>
-            <TableCaption>Invitations waiting to be accepted</TableCaption>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Email</TableHead>
-                <TableHead>Expires</TableHead>
-                {isOwner ? (
-                  <TableHead className="w-10">
-                    <span className="sr-only">Actions</span>
-                  </TableHead>
-                ) : null}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {team.invites.map((invite) => (
-                <TableRow key={invite.id}>
-                  <TableCell className="break-all whitespace-normal">
-                    {invite.email}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">
-                      {formatDate(invite.expiresAt)}
-                    </Badge>
-                  </TableCell>
-                  {isOwner ? (
-                    <TableCell>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        aria-label={`Revoke the invitation for ${invite.email}`}
-                        aria-disabled={busy || undefined}
-                        onClick={(event) =>
-                          removeRow(event, () => revokeOnce(invite.id))
-                        }
-                      >
-                        <Trash2 />
-                      </Button>
-                    </TableCell>
-                  ) : null}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : null}
-      </CardContent>
-    </Card>
+      {team.invites.length > 0 ? (
+        <Invitations
+          invites={team.invites}
+          isOwner={isOwner}
+          busy={busy}
+          onRevoke={(event, id) => removeRow(event, () => revokeOnce(id))}
+        />
+      ) : null}
+    </SettingsPanel>
   );
 }

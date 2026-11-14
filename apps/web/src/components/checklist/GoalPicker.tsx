@@ -2,7 +2,6 @@
 
 import { useId, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2 } from "lucide-react";
 import { WORKSPACE_GOALS, type WorkspaceGoal } from "@asobeast/shared";
 import { useAuth } from "@/components/auth/use-auth";
 import {
@@ -15,7 +14,13 @@ import { cn } from "@/lib/utils";
 import { GOAL_COPY } from "./checklist-copy";
 import { useChecklistSave } from "./use-checklist-save";
 
-export function GoalPicker({ as: Heading = "h2" }: { as?: "h2" | "h3" }) {
+export function GoalPicker({
+  as: Heading = "h2",
+  hint = true,
+}: {
+  as?: "h2" | "h3";
+  hint?: boolean;
+}) {
   const { authenticated } = useAuth();
   const read = useQuery({
     ...workspaceChecklistOptions,
@@ -45,44 +50,42 @@ export function GoalPicker({ as: Heading = "h2" }: { as?: "h2" | "h3" }) {
   };
 
   return (
-    <section aria-labelledby={headingId} className="flex flex-col gap-3">
+    <section aria-labelledby={headingId} className="flex flex-col gap-2">
       <div className="flex flex-col gap-1">
-        <Heading id={headingId} className="text-heading tracking-tight">
+        <Heading
+          id={headingId}
+          className={hint ? "text-heading" : "text-label"}
+        >
           What would you like to get done?
         </Heading>
-        <p className="text-body text-muted-foreground">
-          Pick one and the setup checklist starts with the steps that matter
-          most. You can change it any time.
-        </p>
+        {hint ? (
+          <p className="text-body text-muted-foreground">
+            Pick one and the setup checklist starts with the steps that matter
+            most. You can change it any time.
+          </p>
+        ) : null}
       </div>
       <div
         role="group"
         aria-labelledby={headingId}
-        className="grid gap-2 sm:grid-cols-3"
+        className="flex flex-col gap-1"
       >
         {WORKSPACE_GOALS.map((goal) => {
           const pressed = checklist.goal === goal;
           return (
             <Button
               key={goal}
-              variant="outline"
+              variant="ghost"
               aria-pressed={pressed}
               aria-disabled={pending || undefined}
               className={cn(
-                "h-auto min-w-0 flex-col items-start justify-start gap-1 p-3 text-left whitespace-normal",
-                pressed && "border-primary",
+                "relative h-auto min-w-0 flex-col items-start justify-start gap-1 px-4 py-2 text-left whitespace-normal text-foreground",
+                pressed &&
+                  "bg-muted before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-foreground",
               )}
               onClick={() => choose(goal)}
             >
-              <span className="flex items-center gap-1.5 font-medium">
-                <span>{GOAL_COPY[goal].label}</span>
-                {pressed ? (
-                  <CheckCircle2
-                    className="size-4 shrink-0 text-success"
-                    aria-hidden
-                  />
-                ) : null}
-              </span>
+              <span className="font-medium">{GOAL_COPY[goal].label}</span>
               <span className="text-caption font-normal text-muted-foreground">
                 {GOAL_COPY[goal].description}
               </span>

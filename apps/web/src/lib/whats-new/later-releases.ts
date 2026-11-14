@@ -40,6 +40,11 @@ export const LATER_RELEASES: readonly Release[] = [
       },
       {
         kind: "improved",
+        title: "Settings and Integrations you can scan",
+        text: "Settings and Integrations now put each action at the right of its panel and say their facts in plain text. Integrations opens by saying how many stores are connected and how many apps report, each store shows whether it is connected and how many days of store data each app has, and the token table shows how much each token is used. Settings lists its sections at the side on a wide screen, draws where the daily request budget goes as one bar, and shows what each alert channel sends in one line with its recent deliveries a click away.",
+      },
+      {
+        kind: "improved",
         title: "Rankings you can read without hovering",
         text: "The rankings page now opens by saying what climbed and fell since yesterday and how many apps entered your top 10. Under the chart, each keyword has a row with its position today, how far it moved over the days you chose, and its best and average position. A new By day view lists the position of every keyword on every day, shaded by how high it ranked. The market is one menu with the number of keywords in each country, new apps in your top 10 are grouped by day, and adding an annotation opens a small form instead of taking up the page.",
       },

@@ -7,13 +7,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { PANEL_HEADER } from "@/components/layout/panel-classes";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ApiError, completePlaySignIn } from "@/lib/api";
 import { invalidateStoreConnectionMutation } from "@/lib/queries";
 import { STORE_CONNECTIONS_PATH } from "@/lib/store-connection-copy";
@@ -29,15 +24,18 @@ function ReturnCard({
 }) {
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className={PANEL_HEADER}>
         <CardTitle asChild>
           <h1>{title}</h1>
         </CardTitle>
-        <CardDescription role={pending ? "status" : undefined}>
-          {description}
-        </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex flex-col items-start gap-4">
+        <p
+          role={pending ? "status" : undefined}
+          className="max-w-[70ch] text-body text-muted-foreground"
+        >
+          {description}
+        </p>
         {pending ? (
           <Loader2
             aria-hidden="true"

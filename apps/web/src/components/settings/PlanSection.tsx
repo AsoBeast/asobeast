@@ -13,11 +13,7 @@ export function PlanSection() {
   if (!plan?.billing) return null;
 
   return (
-    <SettingsSection
-      id="plan"
-      title="Plan"
-      description="The plan this workspace is on and how much of it you are using."
-    >
+    <SettingsSection id="plan" title="Plan" headed={false}>
       <Suspense fallback={<PlanCardSkeleton />}>
         <PlanCard />
       </Suspense>

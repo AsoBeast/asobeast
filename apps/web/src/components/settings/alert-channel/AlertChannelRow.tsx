@@ -1,14 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
-import {
-  CheckIcon,
-  Clock,
-  Loader2,
-  MailCheck,
-  MailX,
-  Send,
-} from "lucide-react";
+import { Fragment, type ReactNode } from "react";
+import { Clock, Loader2, MailCheck, MailX, Send } from "lucide-react";
 import type { WebhookEvent } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -86,13 +79,59 @@ function ConfirmationNotice({ awaiting }: { awaiting?: AwaitingConfirmation }) {
         "No alerts are sent until the recipient follows the link in the email.",
       ];
   return (
-    <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-      <Icon className="size-4 shrink-0" aria-hidden />
+    <p className="flex items-start gap-2 text-caption text-muted-foreground">
+      <Icon className="mt-px size-4 shrink-0" aria-hidden />
       <span>
         <strong className="font-medium text-foreground">{title}</strong>{" "}
         {detail}
       </span>
     </p>
+  );
+}
+
+interface Rule {
+  event: WebhookEvent;
+  label: string;
+}
+
+function RuleLine({
+  essential,
+  facts,
+  confirmDrops,
+  rules,
+}: {
+  essential: boolean;
+  facts: readonly string[];
+  confirmDrops: boolean;
+  rules: readonly Rule[];
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      {essential ? (
+        <Badge variant="info">{ESSENTIAL_ALERTS_BADGE}</Badge>
+      ) : null}
+      <p className="min-w-0 text-caption text-muted-foreground">
+        {facts.map((fact) => (
+          <Fragment key={fact}>
+            <span>{fact}</span>
+            <span> · </span>
+          </Fragment>
+        ))}
+        {confirmDrops ? (
+          <>
+            <span data-slot="alert-rule">{CONFIRM_DROPS_BADGE}</span>
+            <span> · </span>
+          </>
+        ) : null}
+        {rules.length > 0 ? <span>Sends </span> : <span>Sends nothing</span>}
+        {rules.map((rule, index) => (
+          <Fragment key={rule.event}>
+            {index > 0 ? <span>, </span> : null}
+            <span data-slot="alert-rule">{rule.label}</span>
+          </Fragment>
+        ))}
+      </p>
+    </div>
   );
 }
 
@@ -106,7 +145,7 @@ export function AlertChannelRow({
   ratingDropTenths,
   rankDropThreshold,
   essential = false,
-  tag,
+  facts = [],
   awaiting,
   active,
   activePending,
@@ -129,7 +168,7 @@ export function AlertChannelRow({
   ratingDropTenths?: number;
   rankDropThreshold?: number | null;
   essential?: boolean;
-  tag?: ReactNode;
+  facts?: readonly string[];
   awaiting?: AwaitingConfirmation;
   active: boolean;
   activePending: boolean;
@@ -144,9 +183,9 @@ export function AlertChannelRow({
   onEventsSave: (change: AlertSubscriptionChange) => Promise<unknown>;
 }) {
   return (
-    <li className="flex flex-col gap-3 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <span className="min-w-0 flex-1 basis-48 font-medium wrap-anywhere">
+    <li className="flex flex-col gap-2 border-b border-border-subtle px-(--card-spacing) py-3 last:border-b-0">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <span className="min-w-0 flex-1 basis-48 text-dense font-medium wrap-anywhere">
           {label}
         </span>
         <div className="flex items-center gap-2">
@@ -174,30 +213,27 @@ export function AlertChannelRow({
       </div>
 
       {essential ? (
-        <p className="text-sm text-muted-foreground">{ESSENTIAL_ALERTS_LINE}</p>
+        <p className="text-caption text-muted-foreground">
+          {ESSENTIAL_ALERTS_LINE}
+        </p>
       ) : null}
 
       <ConfirmationNotice awaiting={awaiting} />
 
-      <div className="flex flex-wrap items-center gap-1">
-        {essential ? (
-          <Badge variant="info">{ESSENTIAL_ALERTS_BADGE}</Badge>
-        ) : null}
-        {tag}
-        {confirmDrops ? (
-          <Badge variant="secondary">
-            <CheckIcon />
-            {CONFIRM_DROPS_BADGE}
-          </Badge>
-        ) : null}
-        {events.map((event) => (
-          <Badge key={event} variant="outline">
-            {eventBadgeLabel(event, reviewScores, {
-              ratingDropTenths,
-              rankDropThreshold,
-            })}
-          </Badge>
-        ))}
+      <RuleLine
+        essential={essential}
+        facts={facts}
+        confirmDrops={confirmDrops}
+        rules={events.map((event) => ({
+          event,
+          label: eventBadgeLabel(event, reviewScores, {
+            ratingDropTenths,
+            rankDropThreshold,
+          }),
+        }))}
+      />
+
+      <div className="-ml-2 flex flex-wrap items-center gap-x-2 gap-y-1">
         <EditEventsDialog
           label={label}
           events={events}
@@ -208,9 +244,8 @@ export function AlertChannelRow({
           pending={eventsPending}
           onSave={onEventsSave}
         />
+        <DeliveriesSection channel={channel} id={id} />
       </div>
-
-      <DeliveriesSection channel={channel} id={id} />
     </li>
   );
 }

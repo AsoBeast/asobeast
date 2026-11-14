@@ -8,13 +8,8 @@ import {
   failedRead,
   InlineQueryError,
 } from "@/components/layout/InlineQueryError";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { PanelBody, SettingsPanel } from "@/components/settings/SettingsPanel";
+import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { workspaceChecklistOptions } from "@/lib/queries";
@@ -28,11 +23,11 @@ function ChecklistVisibility({ checklist }: { checklist: WorkspaceChecklist }) {
   const hidden = checklist.dismissedAt !== null;
 
   return (
-    <>
+    <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Label htmlFor={switchId}>Show the setup checklist</Label>
         <div className="flex items-center gap-3">
-          <span className="text-muted-foreground">
+          <span className="numeric text-caption text-muted-foreground">
             {pillLabel(checklist.done, checklist.total)}
           </span>
           <Switch
@@ -49,12 +44,18 @@ function ChecklistVisibility({ checklist }: { checklist: WorkspaceChecklist }) {
           />
         </div>
       </div>
+      <Progress
+        aria-hidden
+        value={
+          checklist.total === 0 ? 0 : (checklist.done / checklist.total) * 100
+        }
+      />
       {hidden ? (
-        <p className="text-muted-foreground">
+        <p className="text-caption text-muted-foreground">
           The checklist is hidden for everyone in this workspace.
         </p>
       ) : null}
-    </>
+    </div>
   );
 }
 
@@ -66,18 +67,20 @@ export function ChecklistSettingsCard() {
   });
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Setup checklist</CardTitle>
-        <CardDescription>
+    <SettingsPanel
+      as="h2"
+      title="Getting started"
+      footer={
+        <p>
           The checklist floats at the bottom right of every page until every
           item is done.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+        </p>
+      }
+    >
+      <PanelBody className="gap-4">
         {read.data ? (
           <>
-            <GoalPicker as="h3" />
+            <GoalPicker as="h3" hint={false} />
             <ChecklistVisibility checklist={read.data} />
           </>
         ) : null}
@@ -87,7 +90,7 @@ export function ChecklistSettingsCard() {
             read={read}
           />
         ) : null}
-      </CardContent>
-    </Card>
+      </PanelBody>
+    </SettingsPanel>
   );
 }

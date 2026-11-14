@@ -2,23 +2,22 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseQueryResult,
+} from "@tanstack/react-query";
 import { Check, Copy, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import {
   API_TOKEN_SCOPES,
   DEFAULT_API_TOKEN_SCOPE,
   type ApiTokenCreated,
+  type ApiTokenItem,
   type ApiTokenScope,
 } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   Dialog,
   DialogBody,
@@ -38,23 +37,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { ApiError, createApiToken } from "@/lib/api";
 import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
-import { formatDate, formatNumber } from "@/lib/format";
+import { pluralize } from "@/lib/format";
 import { apiTokensOptions, invalidateApiTokenMutation } from "@/lib/queries";
 import { useAuth } from "@/components/auth/use-auth";
+import {
+  InlineQueryError,
+  failedRead,
+} from "@/components/layout/InlineQueryError";
 import { useSingleFlight } from "@/lib/single-flight";
-import { RevokeTokenButton } from "./RevokeTokenButton";
+import { PanelBody, SettingsPanel } from "@/components/settings/SettingsPanel";
+import { SCOPE_LABELS } from "./token-scopes";
+import { TokensTable } from "./TokensTable";
 
 const NEVER_EXPIRES = "never";
 
@@ -64,11 +59,6 @@ const EXPIRY_CHOICES = [
   { value: "90", label: "90 days" },
   { value: "365", label: "365 days" },
 ];
-
-const SCOPE_LABELS: Record<ApiTokenScope, string> = {
-  read: "Read only",
-  write: "Read and write",
-};
 
 const TOKEN_DONE_FOCUS_KEY = "api-token-done";
 
@@ -269,91 +259,51 @@ function CreateTokenDialog() {
   );
 }
 
+function tokensNote(tokens: ApiTokenItem[]): string {
+  const expired = tokens.filter((token) => token.expired).length;
+  const count = pluralize(tokens.length, "token");
+  return `${expired > 0 ? `${count}, ${expired} expired` : count} · Limits are per workspace, so a second token adds no capacity.`;
+}
+
+function TokensBody({ read }: { read: UseQueryResult<ApiTokenItem[]> }) {
+  if (failedRead(read)) {
+    return (
+      <PanelBody>
+        <InlineQueryError
+          message="API tokens could not be loaded."
+          read={read}
+        />
+      </PanelBody>
+    );
+  }
+  if (!read.data) return null;
+  if (read.data.length === 0) {
+    return (
+      <p className="mx-auto max-w-prose px-(--card-spacing) py-8 text-center text-body text-muted-foreground">
+        No tokens yet. Create one to authenticate scripts or the MCP server with
+        a Bearer header.
+      </p>
+    );
+  }
+  return <TokensTable tokens={read.data} />;
+}
+
 export function ApiTokensCard() {
   const { status, isLoading } = useAuth();
   const authenticated = Boolean(status?.authenticated);
-  const { data } = useQuery({ ...apiTokensOptions, enabled: authenticated });
+  const read = useQuery({ ...apiTokensOptions, enabled: authenticated });
 
   if (isLoading || !status?.authenticated) return null;
 
+  const tokens = read.data ?? [];
+
   return (
-    <Card>
-      <CardHeader className="flex-row items-start justify-between gap-4">
-        <div className="flex flex-col gap-1.5">
-          <CardDescription>Automation</CardDescription>
-          <CardTitle>API tokens</CardTitle>
-        </div>
-        <CreateTokenDialog />
-      </CardHeader>
-      <CardContent>
-        {!data || data.length === 0 ? (
-          <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-            No tokens yet. Create one to authenticate scripts or the MCP server
-            with a Bearer header.
-          </div>
-        ) : (
-          <div className="overflow-x-auto rounded-xl border">
-            <Table>
-              <TableCaption className="sr-only">
-                Personal API tokens for automation.
-              </TableCaption>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Prefix</TableHead>
-                  <TableHead>Scope</TableHead>
-                  <TableHead>Expires</TableHead>
-                  <TableHead>Last used</TableHead>
-                  <TableHead className="numeric text-right">Requests</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="w-0">
-                    <span className="sr-only">Actions</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.map((token) => (
-                  <TableRow key={token.id}>
-                    <TableCell className="max-w-48 truncate font-medium">
-                      {token.name}
-                    </TableCell>
-                    <TableCell
-                      translate="no"
-                      className="font-mono text-xs text-muted-foreground"
-                    >
-                      {token.prefix}…
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {SCOPE_LABELS[token.scope]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {token.expiresAt === null ? (
-                        <span className="text-muted-foreground">Never</span>
-                      ) : token.expired ? (
-                        <Badge variant="destructive">Expired</Badge>
-                      ) : (
-                        formatDate(token.expiresAt)
-                      )}
-                    </TableCell>
-                    <TableCell>{formatDate(token.lastUsedAt)}</TableCell>
-                    <TableCell className="numeric text-right">
-                      {formatNumber(token.usageCount)}
-                    </TableCell>
-                    <TableCell>{formatDate(token.createdAt)}</TableCell>
-                    <TableCell>
-                      <div className="flex justify-end">
-                        <RevokeTokenButton id={token.id} name={token.name} />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <SettingsPanel
+      title="API tokens"
+      action={<CreateTokenDialog />}
+      footer={tokens.length > 0 ? <p>{tokensNote(tokens)}</p> : null}
+    >
+      <TokensBody read={read} />
+    </SettingsPanel>
   );
 }
