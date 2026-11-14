@@ -2,9 +2,8 @@
 
 import { Suspense } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import type { AppAuditResult } from "@asobeast/shared";
+import type { AppAuditResult, AuditRecommendation } from "@asobeast/shared";
 import { LEDE } from "@/components/layout/panel-classes";
-import { pluralize } from "@/lib/format";
 import { auditHistoryOptions } from "@/lib/queries";
 import { presetToRange } from "@/lib/ranges";
 import { fixesWorth } from "./audit-copy";
@@ -13,12 +12,12 @@ import { weekChange } from "./score-history";
 import { topFixes } from "./top-fixes";
 import { useAuditRange } from "./use-audit-range";
 
-function WeekMove({ id }: { id: string }) {
+function WeekMove({ audit }: { audit: AppAuditResult }) {
   const { shownRange } = useAuditRange();
   const { data } = useSuspenseQuery(
-    auditHistoryOptions(id, presetToRange(shownRange)),
+    auditHistoryOptions(audit.appId, presetToRange(shownRange)),
   );
-  const change = weekChange(data.points);
+  const change = weekChange(data.points, audit);
   if (change === null) return null;
   if (change === 0) return <span>, unchanged since last week</span>;
   return (
@@ -30,9 +29,32 @@ function WeekMove({ id }: { id: string }) {
   );
 }
 
-export function AuditLede({ audit }: { audit: AppAuditResult }) {
-  const fixes = topFixes(audit.recommendations);
+function TopFixesClause({ fixes }: { fixes: AuditRecommendation[] }) {
+  if (fixes.length === 0) {
+    return <span>No change is waiting on you right now.</span>;
+  }
+  const one = fixes.length === 1;
+  const subject = one ? "The top fix" : `The top ${fixes.length} fixes`;
+  const worth = fixesWorth(fixes);
+  if (worth === null) {
+    return (
+      <>
+        <span className={FIGURE}>{subject}</span>
+        <span>{one ? " is listed below." : " are listed below."}</span>
+      </>
+    );
+  }
+  return (
+    <>
+      <span className={FIGURE}>{subject}</span>
+      <span>{one ? " is worth " : " are worth "}</span>
+      <span className={FIGURE}>{worth}</span>
+      <span>.</span>
+    </>
+  );
+}
 
+export function AuditLede({ audit }: { audit: AppAuditResult }) {
   if (audit.overall === null) {
     return <p className={LEDE}>The score is not available yet.</p>;
   }
@@ -42,21 +64,10 @@ export function AuditLede({ audit }: { audit: AppAuditResult }) {
       <span>Score </span>
       <span className={FIGURE}>{String(Math.round(audit.overall))}</span>
       <Suspense fallback={null}>
-        <WeekMove id={audit.appId} />
+        <WeekMove audit={audit} />
       </Suspense>
       <span>. </span>
-      {fixes.length === 0 ? (
-        <span>No change is waiting on you right now.</span>
-      ) : (
-        <>
-          <span className={FIGURE}>
-            {pluralize(fixes.length, "fix", "fixes")}
-          </span>
-          <span>{fixes.length === 1 ? " is worth " : " are worth "}</span>
-          <span className={FIGURE}>{fixesWorth(fixes)}</span>
-          <span>.</span>
-        </>
-      )}
+      <TopFixesClause fixes={topFixes(audit.recommendations)} />
     </p>
   );
 }

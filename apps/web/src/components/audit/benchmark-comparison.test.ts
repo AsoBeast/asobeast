@@ -74,6 +74,10 @@ describe("medianGap", () => {
     );
   });
 
+  it("never writes a signed zero", () => {
+    expect(medianGap(row(10, 10.04))).toBe("0");
+  });
+
   it("has no gap without both figures", () => {
     expect(medianGap(row(null, 300))).toBeNull();
     expect(medianGap(row(300, null))).toBeNull();

@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
-import { EFFORT_LABEL, fixesWorth, liftFigure } from "./audit-copy";
+import { EFFORT_LABEL, fixesWorth, liftFigure, liftLabel } from "./audit-copy";
 import { targetHref } from "./audit-links";
 import { topFixes } from "./top-fixes";
 
@@ -58,13 +58,15 @@ function FixRow({
       <span className="relative">
         {item.impact ? <PriorityWord priority={item.impact} /> : null}
       </span>
-      <span className="relative font-medium wrap-anywhere">{item.label}</span>
+      <span dir="auto" className="relative font-medium wrap-anywhere">
+        {item.label}
+      </span>
       <span className="relative hidden pt-px text-caption whitespace-nowrap text-faint-foreground sm:inline">
         {item.effort ? EFFORT_LABEL[item.effort] : ""}
       </span>
       <span className="numeric relative font-medium whitespace-nowrap">
-        <span>{liftFigure(item.lift)}</span>
-        <span className="sr-only"> points</span>
+        <span aria-hidden>{liftFigure(item.lift)}</span>
+        <span className="sr-only">{liftLabel(item.lift)}</span>
       </span>
     </>
   );
@@ -91,6 +93,7 @@ export function AuditTopFixes({
 }) {
   const headingId = useId();
   const fixes = topFixes(recommendations);
+  const worth = fixesWorth(fixes);
   const largest = Math.max(0, ...fixes.map((fix) => fix.lift ?? 0));
 
   return (
@@ -100,11 +103,11 @@ export function AuditTopFixes({
           <CardTitle asChild>
             <h2 id={headingId}>Top fixes</h2>
           </CardTitle>
-          {fixes.length > 0 ? (
+          {worth === null ? null : (
             <CardAction className={cn(PANEL_COUNT, "numeric")}>
-              {fixesWorth(fixes)}
+              {worth}
             </CardAction>
-          ) : null}
+          )}
         </CardHeader>
         {fixes.length === 0 ? (
           <CardContent>

@@ -95,7 +95,9 @@ export function FactorRow({
     >
       <div className={cn(FACTOR_COLUMNS, "min-h-14 py-2", open && OPEN_ROW)}>
         <div className="flex min-w-0 flex-col gap-0.5">
-          <h3 className="text-dense font-medium">{factor.label}</h3>
+          <h3 className="text-dense font-medium wrap-anywhere">
+            {factor.label}
+          </h3>
           <FactorNote appId={appId} factor={factor} store={store} />
         </div>
         <span
@@ -144,7 +146,7 @@ export function FactorRow({
             variant="ghost"
             size="icon-sm"
             aria-expanded={open}
-            aria-controls={panelId}
+            aria-controls={open ? panelId : undefined}
             aria-label={`${open ? "Hide" : "Show"} checks for ${factor.label}`}
             onClick={() => setOpen(!open)}
           >

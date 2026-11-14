@@ -32,7 +32,9 @@ export function RecommendationRow({
         {item.impact ? <PriorityWord priority={item.impact} /> : null}
       </span>
       <div className="flex min-w-0 flex-col gap-0.5">
-        <h4 className="text-body font-medium wrap-anywhere">{item.label}</h4>
+        <h4 dir="auto" className="text-body font-medium wrap-anywhere">
+          {item.label}
+        </h4>
         <p className="text-caption wrap-anywhere text-muted-foreground">
           {item.detail}
         </p>
@@ -43,14 +45,16 @@ export function RecommendationRow({
       <span className="numeric col-start-3 row-start-1 text-right font-medium whitespace-nowrap @3xl/plan:col-start-5">
         {liftLabel(item.lift)}
       </span>
-      <span
-        className={cn(
-          "col-start-2 text-muted-foreground @3xl/plan:col-start-3",
-          WIDE_ROW,
-        )}
-      >
-        {item.effort ? EFFORT_LABEL[item.effort] : ""}
-      </span>
+      {item.effort ? (
+        <span
+          className={cn(
+            "col-start-2 text-muted-foreground @3xl/plan:col-start-3",
+            WIDE_ROW,
+          )}
+        >
+          {EFFORT_LABEL[item.effort]}
+        </span>
+      ) : null}
       <span
         className={cn(
           "col-span-2 col-start-2 @3xl/plan:col-span-1 @3xl/plan:col-start-4",

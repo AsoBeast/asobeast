@@ -36,9 +36,9 @@ export function medianGap(row: AuditBenchmarkRow): string | null {
   const gap = rating
     ? Number((row.you - row.median).toFixed(RATING_GAP_DIGITS))
     : row.you - row.median;
-  if (gap === 0) return "0";
   const size = rating
     ? Math.abs(gap).toFixed(RATING_GAP_DIGITS)
     : formatMeasure(Math.abs(gap));
+  if (!/[1-9]/.test(size)) return "0";
   return `${gap > 0 ? "+" : "-"}${size}`;
 }

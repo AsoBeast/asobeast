@@ -92,9 +92,12 @@ function BucketPanel({
 
 function planNote(recommendations: AuditRecommendations): string {
   const all = BUCKETS.flatMap((bucket) => recommendations[bucket]);
-  return all.length === 0
-    ? "The plan fills as checks find something to change"
-    : `${pluralize(all.length, "fix", "fixes")} in the plan, worth ${fixesWorth(all)} together`;
+  if (all.length === 0) {
+    return "The plan fills as checks find something to change";
+  }
+  const count = `${pluralize(all.length, "fix", "fixes")} in the plan`;
+  const worth = fixesWorth(all);
+  return worth === null ? count : `${count}, worth ${worth} together`;
 }
 
 export function AuditActionPlan({

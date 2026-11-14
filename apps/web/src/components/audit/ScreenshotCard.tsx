@@ -45,7 +45,7 @@ export function ScreenshotCard({
           />
         )}
         <figcaption className="table-caption caption-bottom pt-2 text-dense">
-          <span className="block font-medium wrap-anywhere">
+          <span dir="auto" className="block font-medium wrap-anywhere">
             {screenshot.captionText ?? "No readable caption"}
           </span>
           <span className="block text-caption text-muted-foreground">

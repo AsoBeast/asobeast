@@ -28,7 +28,7 @@ test("opens with the score, its move over the week and what the top fixes are wo
     page
       .getByRole("main")
       .getByText(
-        "Score 74, up 9 since last week. 3 fixes are worth +9.7 points.",
+        "Score 74, up 9 since last week. The top 3 fixes are worth +9.7 points.",
       ),
   ).toBeVisible();
   await expect(
@@ -51,7 +51,7 @@ test("leaves the week out when no score is a week old", async ({ page }) => {
   await expect(
     page
       .getByRole("main")
-      .getByText("Score 74. 2 fixes are worth +5.8 points."),
+      .getByText("Score 74. The top 2 fixes are worth +5.8 points."),
   ).toBeVisible();
   await expect(page.getByText("since last week")).toHaveCount(0);
 });

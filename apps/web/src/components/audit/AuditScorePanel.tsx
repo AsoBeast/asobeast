@@ -34,12 +34,12 @@ const CELL = "bg-card shadow-[-1px_0_0_var(--border),0_-1px_0_var(--border)]";
 
 const CHANGE_LABEL = `${CHANGE_WINDOW_DAYS}d`;
 
-function WeekChange({ id }: { id: string }) {
+function WeekChange({ audit }: { audit: AppAuditResult }) {
   const { shownRange } = useAuditRange();
   const { data } = useSuspenseQuery(
-    auditHistoryOptions(id, presetToRange(shownRange)),
+    auditHistoryOptions(audit.appId, presetToRange(shownRange)),
   );
-  const change = weekChange(data.points);
+  const change = weekChange(data.points, audit);
   return change === null ? null : (
     <TrendChip label={CHANGE_LABEL} value={change} form="pill" />
   );
@@ -63,10 +63,7 @@ function ScoreSummary({ audit }: { audit: AppAuditResult }) {
   return (
     <section
       aria-labelledby={headingId}
-      className={cn(
-        CELL,
-        "col-span-3 flex items-center gap-4 p-4 @[40rem]/score:col-span-1",
-      )}
+      className={cn(CELL, "flex items-center gap-4 p-4")}
     >
       <ScoreRing
         value={overall}
@@ -86,7 +83,7 @@ function ScoreSummary({ audit }: { audit: AppAuditResult }) {
             {gradeLabel(grade)}
           </span>
           <Suspense fallback={null}>
-            <WeekChange id={audit.appId} />
+            <WeekChange audit={audit} />
           </Suspense>
         </p>
         <div className="flex flex-col gap-0.5 text-caption text-faint-foreground">
@@ -147,29 +144,33 @@ function ScoreFigures({ audit }: { audit: AppAuditResult }) {
   const { groups = [], confidence } = audit;
   return (
     <div className="@container/score">
-      <div className="grid grid-cols-3 overflow-hidden @[40rem]/score:grid-cols-[minmax(20rem,7fr)_repeat(3,minmax(0,3fr))]">
+      <div className="grid overflow-hidden @[40rem]/score:grid-cols-[minmax(20rem,7fr)_minmax(0,9fr)]">
         <ScoreSummary audit={audit} />
-        {groups.map((group) => (
-          <FigureTile
-            key={group.id}
-            label={GROUP_LABEL[group.id]}
-            value={
-              group.score === null ? "—" : String(Math.round(group.score * 10))
-            }
-            share={(group.score ?? 0) / 10}
-            tone="health"
-            note={groupNote(audit, group.id)}
-          />
-        ))}
-        {confidence === undefined ? null : (
-          <FigureTile
-            label="Measured"
-            value={`${percent(confidence)}%`}
-            share={confidence}
-            tone="neutral"
-            note="of the rubric"
-          />
-        )}
+        <div className="grid auto-cols-fr grid-flow-col">
+          {groups.map((group) => (
+            <FigureTile
+              key={group.id}
+              label={GROUP_LABEL[group.id]}
+              value={
+                group.score === null
+                  ? "—"
+                  : String(Math.round(group.score * 10))
+              }
+              share={(group.score ?? 0) / 10}
+              tone="health"
+              note={groupNote(audit, group.id)}
+            />
+          ))}
+          {confidence === undefined ? null : (
+            <FigureTile
+              label="Measured"
+              value={`${percent(confidence)}%`}
+              share={confidence}
+              tone="neutral"
+              note="of the rubric"
+            />
+          )}
+        </div>
       </div>
     </div>
   );
