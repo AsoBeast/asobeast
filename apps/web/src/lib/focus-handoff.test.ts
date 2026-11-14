@@ -6,7 +6,8 @@ import {
   focusIsLost,
   isClaimable,
   pendingFocusStep,
-  recoveryTarget,
+  focusFirstAvailable,
+  recoveryCandidates,
   returnFocusTo,
   siblingControl,
   survivingNeighbour,
@@ -289,39 +290,105 @@ describe("cardAction", () => {
   });
 });
 
-describe("recoveryTarget", () => {
+describe("recoveryCandidates", () => {
   class FakeElement {
     constructor(
-      readonly first: unknown,
+      readonly controls: unknown[],
       readonly tabbable = false,
       readonly isConnected = true,
     ) {}
-    querySelector() {
-      return this.first;
+    querySelectorAll(selector: string) {
+      this.selector = selector;
+      return this.controls;
     }
+    selector = "";
     hasAttribute(name: string) {
       return name === "tabindex" && this.tabbable;
     }
   }
   const container = (...args: ConstructorParameters<typeof FakeElement>) =>
-    new FakeElement(...args) as unknown as Element;
+    new FakeElement(...args);
+  const asElement = (fake: FakeElement) => fake as unknown as Element;
 
   beforeEach(() => vi.stubGlobal("HTMLElement", FakeElement));
   afterEach(() => vi.unstubAllGlobals());
 
-  it("takes the first control left in the container", () => {
-    const control = { name: "Invite member" };
-    expect(recoveryTarget(container(control))).toBe(control);
+  it("lists the controls left in the container in document order", () => {
+    const invite = { name: "Invite member" };
+    const search = { name: "Search" };
+    expect(recoveryCandidates(asElement(container([invite, search])))).toEqual([
+      invite,
+      search,
+    ]);
   });
 
-  it("falls back to the container only when it is already focusable", () => {
-    const focusable = container(null, true);
-    expect(recoveryTarget(focusable)).toBe(focusable);
-    expect(recoveryTarget(container(null))).toBeNull();
+  it("asks for form controls as well as links and buttons", () => {
+    const fake = container([]);
+    recoveryCandidates(asElement(fake));
+    for (const control of [
+      "input",
+      "select",
+      "textarea",
+      "a[href]",
+      "button",
+    ]) {
+      expect(fake.selector).toContain(control);
+    }
   });
 
-  it("answers nothing for a container that left the page or no container", () => {
-    expect(recoveryTarget(container({ name: "Add" }, false, false))).toBeNull();
-    expect(recoveryTarget(null)).toBeNull();
+  it("ends with the container only when it is already focusable", () => {
+    const focusable = container([], true);
+    expect(recoveryCandidates(asElement(focusable))).toEqual([focusable]);
+    expect(recoveryCandidates(asElement(container([])))).toEqual([]);
+  });
+
+  it("lists nothing for a container that left the page or no container", () => {
+    expect(
+      recoveryCandidates(asElement(container([{ name: "Add" }], false, false))),
+    ).toEqual([]);
+    expect(recoveryCandidates(null)).toEqual([]);
+  });
+});
+
+describe("focusFirstAvailable", () => {
+  const root: { activeElement: unknown; body: unknown } = {
+    activeElement: body,
+    body,
+  };
+  const control = (takesFocus: boolean) => {
+    const element = {
+      focus: vi.fn(() => {
+        if (takesFocus) root.activeElement = element;
+      }),
+    };
+    return element;
+  };
+  const asElements = (controls: unknown[]) =>
+    controls as unknown as HTMLElement[];
+
+  it("skips a control that cannot take focus, such as a hidden one", () => {
+    root.activeElement = body;
+    const hidden = control(false);
+    const visible = control(true);
+    expect(focusFirstAvailable(asElements([hidden, visible]), root)).toBe(
+      visible,
+    );
+    expect(hidden.focus).toHaveBeenCalled();
+    expect(root.activeElement).toBe(visible);
+  });
+
+  it("stops at the first control that takes focus", () => {
+    root.activeElement = body;
+    const first = control(true);
+    const second = control(true);
+    focusFirstAvailable(asElements([first, second]), root);
+    expect(second.focus).not.toHaveBeenCalled();
+  });
+
+  it("answers nothing when no control takes focus", () => {
+    root.activeElement = body;
+    expect(focusFirstAvailable(asElements([control(false)]), root)).toBe(
+      undefined,
+    );
   });
 });

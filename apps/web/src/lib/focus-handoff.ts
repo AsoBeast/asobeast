@@ -197,14 +197,33 @@ export function useFocusGroupClaim(
 
 const RETRY_CONTAINER = `${CARD}, [role="dialog"], section, main`;
 
-export function recoveryTarget(container: Element | null): HTMLElement | null {
-  if (!container?.isConnected) return null;
-  return (
-    firstFocusable(container) ??
-    (container instanceof HTMLElement && container.hasAttribute("tabindex")
-      ? container
-      : null)
-  );
+const RECOVERY_CANDIDATES = [
+  "a[href]",
+  "button:not(:disabled)",
+  'input:not(:disabled):not([type="hidden"])',
+  "select:not(:disabled)",
+  "textarea:not(:disabled)",
+  '[tabindex]:not([tabindex="-1"])',
+].join(", ");
+
+export function recoveryCandidates(container: Element | null): HTMLElement[] {
+  if (!container?.isConnected) return [];
+  const controls = [
+    ...container.querySelectorAll<HTMLElement>(RECOVERY_CANDIDATES),
+  ];
+  return container instanceof HTMLElement && container.hasAttribute("tabindex")
+    ? [...controls, container]
+    : controls;
+}
+
+export function focusFirstAvailable(
+  candidates: readonly HTMLElement[],
+  root: FocusRoot = document,
+): HTMLElement | undefined {
+  return candidates.find((candidate) => {
+    candidate.focus();
+    return root.activeElement === candidate;
+  });
 }
 
 export function useRetryRecoveryFocus(): RefObject<HTMLButtonElement | null> {
@@ -217,7 +236,7 @@ export function useRetryRecoveryFocus(): RefObject<HTMLButtonElement | null> {
       if (!button || document.activeElement !== button) return;
       queueMicrotask(() => {
         if (!focusIsLost()) return;
-        recoveryTarget(container)?.focus();
+        focusFirstAvailable(recoveryCandidates(container));
       });
     };
   }, []);
