@@ -93,6 +93,16 @@ export const FUNNEL_COPY: Record<Store, FunnelCopy> = {
   },
 };
 
+export function refusalBody(
+  store: Store,
+  reason: string | null,
+  isOwner: boolean,
+): string {
+  const copy = FUNNEL_COPY[store];
+  if (isOwner) return reason ?? copy.refusedBody;
+  return reason ? `${reason} ${copy.refusedAskOwner}` : copy.refusedAskOwner;
+}
+
 export const funnelTiles = (report: Pick<StoreFunnelReport, "store">) =>
   report.store === "GOOGLE_PLAY" ? PLAY_TILES : APP_STORE_TILES;
 

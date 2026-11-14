@@ -51,6 +51,14 @@ export const STORE_CONNECTION_REJECTED: StoreConnectionItem = {
     "App Store Connect refused this key. Check the issuer ID and the key ID, and that the key is active.",
 };
 
+export const AGREEMENT_MISSING =
+  "Apple asks the account holder to accept the latest agreement in App Store Connect, under Business. Accept it, then verify the key again.";
+
+export const STORE_CONNECTION_AGREEMENT: StoreConnectionItem = {
+  ...STORE_CONNECTION_REJECTED,
+  lastError: AGREEMENT_MISSING,
+};
+
 export const STORE_CONNECTION_READ_ONLY: StoreConnectionItem = {
   ...STORE_CONNECTION_ACTIVE,
   reportAccess: "readOnly",
@@ -102,6 +110,7 @@ const PLAY_CONNECTIONS: Record<string, StoreConnectionItem> = {
 const CONNECTIONS: Record<string, StoreConnectionItem> = {
   active: STORE_CONNECTION_ACTIVE,
   rejected: STORE_CONNECTION_REJECTED,
+  agreement: STORE_CONNECTION_AGREEMENT,
   readOnly: STORE_CONNECTION_READ_ONLY,
 };
 

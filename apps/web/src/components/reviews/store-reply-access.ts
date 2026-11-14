@@ -38,7 +38,9 @@ export function storeReplyAccess(
   if (item.status === "rejected") {
     return {
       kind: "rejected",
-      note: `${name} refused the connected key. Verify it or connect a new one in Integrations to post replies.`,
+      note: item.lastError
+        ? `${item.lastError} Until then, replies cannot be posted from here.`
+        : `${name} refused the connected key. Verify it or connect a new one in Integrations to post replies.`,
     };
   }
   if (item.replyAccess === "forbidden") {

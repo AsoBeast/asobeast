@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { settled } from "./page-errors.mts";
 import { expect, test } from "./session.mts";
 import {
+  AGREEMENT_MISSING,
   STORE_CONNECT_OFF_COOKIE,
   STORE_CONNECTION_COOKIE,
 } from "./store-connections.mts";
@@ -82,6 +83,27 @@ test("sends the owner to integrations when the store refused the key", async ({
     "App Store Connect refused the connected key.",
   );
   await expect(funnel).not.toContainText("belongs to the key's team");
+  await expect(
+    funnel.getByRole("link", { name: "Verify in Integrations" }),
+  ).toHaveAttribute("href", "/integrations#store-connections");
+});
+
+test("names the reason apple gave for refusing the key", async ({ page }) => {
+  await page.context().addCookies([
+    {
+      name: STORE_CONNECTION_COOKIE,
+      value: "agreement",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.goto("/apps/app-2");
+
+  const funnel = funnelCard(page);
+  await expect(funnel).toContainText(
+    "App Store Connect refused the connected key.",
+  );
+  await expect(funnel).toContainText(AGREEMENT_MISSING);
   await expect(
     funnel.getByRole("link", { name: "Verify in Integrations" }),
   ).toHaveAttribute("href", "/integrations#store-connections");

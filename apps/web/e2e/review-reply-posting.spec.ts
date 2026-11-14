@@ -4,6 +4,7 @@ import { APP_GP_POSTING_ID, APP_POSTING_ID } from "./fixtures.mts";
 import { REPLY_POST_COOKIE } from "./review-replies.mts";
 import { seedCookies } from "./routes.mts";
 import {
+  AGREEMENT_MISSING,
   PLAY_CONNECTION_COOKIE,
   REPLY_ACCESS_COOKIE,
   STORE_CONNECTION_COOKIE,
@@ -187,12 +188,12 @@ test("a key without the reply role or a rejected key shows why and no post butto
   ).toHaveCount(0);
 
   await connect(context, {
-    [STORE_CONNECTION_COOKIE]: "rejected",
+    [STORE_CONNECTION_COOKIE]: "agreement",
     [REPLY_ACCESS_COOKIE]: "",
   });
   await page.reload();
   await expect(composer(page)).toContainText(
-    "App Store Connect refused the connected key.",
+    `${AGREEMENT_MISSING} Until then, replies cannot be posted from here.`,
   );
   await expect(
     composer(page).getByRole("button", { name: "Post to App Store" }),
