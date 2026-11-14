@@ -11,8 +11,8 @@ export function useShowUncovered(): () => void {
   );
   return () => {
     void setUncovered(true);
-    document
-      .getElementById(COVERAGE_SECTION_ID)
-      ?.scrollIntoView({ block: "start" });
+    const section = document.getElementById(COVERAGE_SECTION_ID);
+    section?.scrollIntoView({ block: "start" });
+    section?.focus({ preventScroll: true });
   };
 }

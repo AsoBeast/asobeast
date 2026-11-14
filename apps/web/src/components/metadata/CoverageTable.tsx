@@ -177,7 +177,8 @@ export function CoverageTable({
     <section
       id={COVERAGE_SECTION_ID}
       aria-labelledby={headingId}
-      className="scroll-mt-20"
+      tabIndex={-1}
+      className="scroll-mt-20 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <Card>
         <CardHeader className={PANEL_HEADER}>

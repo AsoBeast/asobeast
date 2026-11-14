@@ -49,7 +49,7 @@ export function LocalizationItem({
         ref={claimFocus}
         className="min-h-11 items-center rounded-none px-4 py-2 hover:bg-muted hover:no-underline focus-visible:ring-inset"
       >
-        <span className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(0,1fr)_auto_auto_14rem]">
+        <span className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-1 @2xl/metadata:grid-cols-[minmax(0,1fr)_auto_auto_14rem]">
           <span className="flex min-w-0 flex-wrap items-baseline gap-x-2">
             <span className="font-medium">{name}</span>
             <OriginMark origin={item.origin} />
@@ -60,12 +60,12 @@ export function LocalizationItem({
                 ? 0
                 : item.charactersUsed / item.charactersLimit
             }
-            className="w-14 sm:w-28"
+            className="w-14 @2xl/metadata:w-28"
           />
           <span className="numeric min-w-14 text-right text-label font-normal text-faint-foreground">
             {`${item.charactersUsed}/${item.charactersLimit}`}
           </span>
-          <span className="col-span-3 flex flex-wrap items-center gap-1 sm:col-span-1 sm:justify-end">
+          <span className="col-span-3 flex flex-wrap items-center gap-1 @2xl/metadata:col-span-1 @2xl/metadata:justify-end">
             <ReaderChips readers={item.readBy} />
           </span>
         </span>

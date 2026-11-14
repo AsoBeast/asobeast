@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Page } from "@playwright/test";
 import { hydrated } from "./hydrated.mts";
 import { METADATA_AUDIT_COOKIE } from "./metadata-fixtures.mts";
@@ -47,7 +48,7 @@ test("the uncovered count turns the uncovered filter on", async ({ page }) => {
   await (await hydrated(link)).press("Enter");
 
   await expect(page).toHaveURL(/uncovered=true/);
-  await expect(link).toBeFocused();
+  await expect(coverage(page)).toBeFocused();
   await expect(
     coverage(page).getByRole("switch", { name: "Uncovered only" }),
   ).toBeChecked();
@@ -145,6 +146,28 @@ test("a lint issue is its severity word, the rule and the sentence", async ({
     "Info· no-benefitThe subtitle names no benefit.",
   ]);
   await expect(page.getByText("No issues.")).toHaveCount(0);
+});
+
+test("the audit is read again once pending captions settle", async ({
+  page,
+  context,
+}) => {
+  await context.addCookies([
+    {
+      name: "e2e_screenshots_pending",
+      value: randomUUID(),
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  const audit = page.waitForRequest(
+    (request) => request.url().includes("/metadata/audit"),
+    { timeout: 15_000 },
+  );
+  await page.goto("/apps/app-1/metadata");
+
+  await audit;
+  await expect(page.getByText("2 of 4 with a caption")).toBeVisible();
 });
 
 test("a google play listing has no captions, localizations or keyword field", async ({

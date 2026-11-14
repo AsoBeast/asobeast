@@ -1,6 +1,7 @@
 "use client";
 
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { ScreenshotThumb } from "@/components/screenshots/ScreenshotThumb";
 import { PANEL_COUNT, PANEL_HEADER } from "@/components/layout/panel-classes";
 import {
@@ -13,7 +14,7 @@ import {
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatDate } from "@/lib/format";
-import { screenshotsOptions } from "@/lib/queries";
+import { invalidateMetadataAudit, screenshotsOptions } from "@/lib/queries";
 import {
   CAPTION_STATUS_LABELS,
   hasPendingScreenshots,
@@ -41,6 +42,14 @@ export function ScreenshotCaptionsCard({
     (item) => item.caption !== null,
   ).length;
   const settled = !hasPendingScreenshots(data);
+  const queryClient = useQueryClient();
+  const wasPending = useRef(!settled);
+  useEffect(() => {
+    if (wasPending.current && settled) {
+      invalidateMetadataAudit(queryClient, id);
+    }
+    wasPending.current = !settled;
+  }, [settled, queryClient, id]);
 
   return (
     <section aria-labelledby={HEADING_ID}>
@@ -81,7 +90,7 @@ export function ScreenshotCaptionsCard({
                     className="mb-1 self-start"
                   />
                   {item.caption !== null ? (
-                    <p className="min-w-28 text-dense font-medium break-words text-foreground">
+                    <p className="min-w-28 text-dense font-medium wrap-anywhere text-foreground">
                       {item.caption}
                     </p>
                   ) : null}
