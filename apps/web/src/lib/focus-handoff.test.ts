@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   cardAction,
   CLAIM_WINDOW_MS,
@@ -6,6 +6,7 @@ import {
   focusIsLost,
   isClaimable,
   pendingFocusStep,
+  recoveryTarget,
   returnFocusTo,
   siblingControl,
   survivingNeighbour,
@@ -285,5 +286,42 @@ describe("cardAction", () => {
     expect(cardAction(elementIn(null))).toBeNull();
     expect(cardAction(elementIn({ querySelector: () => null }))).toBeNull();
     expect(cardAction(null)).toBeNull();
+  });
+});
+
+describe("recoveryTarget", () => {
+  class FakeElement {
+    constructor(
+      readonly first: unknown,
+      readonly tabbable = false,
+      readonly isConnected = true,
+    ) {}
+    querySelector() {
+      return this.first;
+    }
+    hasAttribute(name: string) {
+      return name === "tabindex" && this.tabbable;
+    }
+  }
+  const container = (...args: ConstructorParameters<typeof FakeElement>) =>
+    new FakeElement(...args) as unknown as Element;
+
+  beforeEach(() => vi.stubGlobal("HTMLElement", FakeElement));
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("takes the first control left in the container", () => {
+    const control = { name: "Invite member" };
+    expect(recoveryTarget(container(control))).toBe(control);
+  });
+
+  it("falls back to the container only when it is already focusable", () => {
+    const focusable = container(null, true);
+    expect(recoveryTarget(focusable)).toBe(focusable);
+    expect(recoveryTarget(container(null))).toBeNull();
+  });
+
+  it("answers nothing for a container that left the page or no container", () => {
+    expect(recoveryTarget(container({ name: "Add" }, false, false))).toBeNull();
+    expect(recoveryTarget(null)).toBeNull();
   });
 });
