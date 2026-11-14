@@ -4,7 +4,7 @@ import {
   DISCOVERY_PENDING_COOKIE,
 } from "./keyword-discoveries.mts";
 import { expect, test } from "./session.mts";
-import { storedSetup } from "./setup-session.mts";
+import { seedSetup, storedSetup } from "./setup-session.mts";
 
 test.describe.configure({ mode: "serial" });
 
@@ -78,6 +78,11 @@ test("a not started app offers to start and never enrols on a visit", async ({
   await expect(
     page.getByText("Start setup for this app", { exact: true }),
   ).toBeVisible();
+  await expect(page.getByRole("main").getByRole("listitem")).toHaveText([
+    "Pick competitors",
+    "Track keywords",
+    "Add countries",
+  ]);
   expect(await storedStatus(page, "app-2")).toBe("not_started");
 
   await page.goto("/");
@@ -155,9 +160,6 @@ test("direct setup is resumable and completes after live checks", async ({
     "Track keywords",
     "Add countries",
   ]);
-  for (const label of ["Step 1 of 3", "Step 2 of 3", "Step 3 of 3"]) {
-    await expect(page.getByText(label, { exact: true })).toBeVisible();
-  }
   await expect(page.getByText("United States (US)")).toBeVisible();
   await expect(page.getByText("1 tracked: Rival Focus")).toBeVisible();
   await expect(
@@ -168,6 +170,10 @@ test("direct setup is resumable and completes after live checks", async ({
   ).toBeVisible();
   const complete = page.getByRole("button", { name: "Complete setup" });
   await expect(complete).toBeDisabled();
+  const hint = page.getByText(/^Finish or skip .+ first\.$/);
+  await expect(hint).toHaveText(
+    "Finish or skip track keywords and add countries first.",
+  );
 
   const keywords = stepCard(page, "Track keywords");
   await keywords.getByRole("button", { name: "Skip this step" }).click();
@@ -186,6 +192,7 @@ test("direct setup is resumable and completes after live checks", async ({
       name: "Set up Focus Timer · 3 of 3 · ready to complete",
     }),
   ).toBeVisible();
+  await expect(hint).toHaveCount(0);
 
   await expect(
     page.getByText(
@@ -252,6 +259,13 @@ test("direct setup is resumable and completes after live checks", async ({
 
   await page.goto("/apps/app-1/setup");
   await expect(page.getByText("Setup complete", { exact: true })).toBeVisible();
+  for (const fact of [
+    "1 competitor",
+    "4 keywords in United States",
+    "2 countries",
+  ]) {
+    await expect(page.getByText(fact, { exact: true })).toBeVisible();
+  }
   await expect(
     page.getByRole("link", { name: "Open the overview" }),
   ).toHaveAttribute("href", "/apps/app-1");
@@ -973,4 +987,157 @@ test.describe("seeding suggested markets", () => {
       ),
     ).toBeVisible();
   });
+});
+
+test("the steps and the actions stay beside a wide page and stack on a narrow one", async ({
+  page,
+}) => {
+  await startSetup(page, "app-1");
+  const steps = page.getByRole("navigation", { name: "Setup steps" });
+  const competitors = stepCard(page, "Pick competitors");
+  const complete = page.getByRole("button", { name: "Complete setup" });
+  const edges = async () => ({
+    steps: await steps.boundingBox(),
+    panel: await competitors.boundingBox(),
+    complete: await complete.boundingBox(),
+  });
+
+  const wide = await edges();
+  expect(wide.steps?.x).toBeGreaterThan(
+    (wide.panel?.x ?? 0) + (wide.panel?.width ?? 0),
+  );
+  expect(wide.complete?.x).toBeGreaterThan(
+    (wide.panel?.x ?? 0) + (wide.panel?.width ?? 0),
+  );
+  await expect(steps.getByText("Next", { exact: true })).toBeVisible();
+  await page.mouse.wheel(0, 1200);
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeGreaterThan(0);
+  await expect(complete).toBeInViewport();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  const narrow = await edges();
+  expect(narrow.steps?.y).toBeLessThan(narrow.panel?.y ?? 0);
+  expect(narrow.complete?.y).toBeGreaterThan(
+    (narrow.panel?.y ?? 0) + (narrow.panel?.height ?? 0),
+  );
+  await expect(steps).toHaveCount(1);
+  await expect(complete).toHaveCount(1);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+});
+
+test("a step link moves keyboard focus to its panel", async ({ page }) => {
+  await startSetup(page, "app-1");
+
+  const link = page
+    .getByRole("navigation", { name: "Setup steps" })
+    .getByRole("link", { name: "Add countries" });
+  await link.focus();
+  await page.keyboard.press("Enter");
+
+  await expect(page).toHaveURL(/#setup-countries$/);
+  await expect(stepCard(page, "Add countries")).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(
+    stepCard(page, "Add countries").getByRole("button", {
+      name: "Skip this step",
+    }),
+  ).toBeFocused();
+});
+
+test("the home country leads the selected countries", async ({ page }) => {
+  await startSetup(page, "app-1");
+  await page.getByRole("combobox", { name: "Country to add" }).click();
+  await page.getByRole("option", { name: "DE · Germany" }).click();
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+
+  await expect(selectedMarkets(page).getByRole("listitem")).toContainText([
+    "United States (US)",
+    "Germany (DE)",
+  ]);
+});
+
+test("removing a selected country hands focus to a surviving row", async ({
+  page,
+}) => {
+  await startSetup(page, "app-1");
+  for (const option of ["DE · Germany", "PL · Poland"]) {
+    await page.getByRole("combobox", { name: "Country to add" }).click();
+    await page.getByRole("option", { name: option }).click();
+    await page.getByRole("button", { name: "Add", exact: true }).click();
+  }
+  const list = selectedMarkets(page);
+  await expect(list.getByRole("listitem")).toHaveCount(3);
+
+  await list.getByRole("button", { name: "Remove Germany" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(list.getByRole("listitem")).toHaveCount(2);
+  await expect(
+    list.getByRole("button", { name: "Remove Poland" }),
+  ).toBeFocused();
+
+  await page.keyboard.press("Enter");
+  await expect(list.getByRole("listitem")).toHaveCount(1);
+  await expect(
+    list.getByRole("link", { name: "Review US keywords" }),
+  ).toBeFocused();
+});
+
+test("starting, dismissing and restarting from the keyboard keeps focus on the page", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/setup");
+  const heading = page.getByRole("heading", { name: /^Set up Focus Timer/ });
+
+  await page.getByRole("button", { name: "Start this setup" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(heading).toBeFocused();
+
+  await page.getByRole("button", { name: "Dismiss setup" }).focus();
+  await page.keyboard.press("Enter");
+  const restart = page.getByRole("button", { name: "Restart setup" });
+  await expect(restart).toBeFocused();
+
+  await page.keyboard.press("Enter");
+  await expect(heading).toBeFocused();
+});
+
+test("a completed setup whose counts fail says so and retries", async ({
+  page,
+}) => {
+  await seedSetup(page.context(), "app-1", {
+    status: "completed",
+    skipped: [],
+    countriesReviewed: true,
+    selectedMarkets: ["us"],
+  });
+  await page.context().addCookies([
+    {
+      name: "e2e-fail-competitors",
+      value: "1",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.goto("/apps/app-1/setup");
+
+  await expect(page.getByText("Setup complete", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Some setup counts could not be loaded."),
+  ).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("1 country", { exact: true })).toBeVisible();
+
+  await page.context().clearCookies({ name: "e2e-fail-competitors" });
+  await page.getByRole("button", { name: "Retry" }).click();
+
+  await expect(page.getByText("1 competitor", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Some setup counts could not be loaded."),
+  ).toBeHidden();
 });

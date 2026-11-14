@@ -8,7 +8,6 @@ import {
   type Store,
 } from "@asobeast/shared";
 import { ReadRoleBadge } from "@/components/localizations/ReadRoleBadge";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { InfoTip } from "@/components/ui/info-tip";
@@ -44,13 +43,11 @@ const toggled = (
 
 export function SuggestedMarkets({
   appId,
-  store,
   result,
   selected,
   onSelect,
 }: {
   appId: string;
-  store: Store;
   result: MarketSuggestionsResult;
   selected: readonly string[];
   onSelect: (market: string, selected: boolean) => void;
@@ -89,19 +86,14 @@ export function SuggestedMarkets({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        <p className="text-body">Your listing ships {formatList(languages)}.</p>
-        <div className="flex flex-wrap gap-1.5">
-          {languages.map((language) => (
-            <Badge key={language} variant="secondary">
-              {language}
-            </Badge>
-          ))}
-        </div>
-      </div>
+      <p className="text-dense">
+        {`Your listing ships ${formatList(languages)}.`}
+      </p>
       {groupSuggestions(result).map((group) => (
-        <fieldset key={group.localization} className="flex flex-col gap-2">
-          <legend className="mb-1 text-body font-medium">{group.name}</legend>
+        <fieldset key={group.localization} className="flex flex-col">
+          <legend className="text-label text-faint-foreground">
+            {group.name}
+          </legend>
           {group.markets.map((market) => (
             <SuggestedMarket
               key={market.country}
@@ -121,16 +113,15 @@ export function SuggestedMarkets({
           ))}
         </fieldset>
       ))}
-      <div className="flex flex-wrap items-center gap-3">
-        <Button aria-disabled={inert || undefined} onClick={add}>
-          {seeding.length > 0 ? <Loader2 className="animate-spin" /> : null}
-          {seedButtonLabel(pending.length, plan.seed.length)}
-        </Button>
-        <p className="flex items-center gap-1 text-caption text-muted-foreground">
-          Each country adds requests a day to the daily run.
-          <MarketCostTip store={store} />
-        </p>
-      </div>
+      <Button
+        variant="outline"
+        className="w-fit"
+        aria-disabled={inert || undefined}
+        onClick={add}
+      >
+        {seeding.length > 0 ? <Loader2 className="animate-spin" /> : null}
+        {seedButtonLabel(pending.length, plan.seed.length)}
+      </Button>
     </div>
   );
 }
@@ -177,8 +168,8 @@ function SuggestedMarket({
   const seedId = `setup-seed-${market.country}`;
   const name = formatCountry(market.country);
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+    <div className="flex flex-col gap-1 py-2">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-dense">
         <Checkbox
           id={id}
           checked={market.tracked || selected || ticked}
@@ -189,8 +180,10 @@ function SuggestedMarket({
           {name} ({market.country.toUpperCase()})
         </Label>
         <ReadRoleBadge role={market.role} />
-        {market.tracked ? <Badge variant="outline">Tracked</Badge> : null}
-        <span className="text-caption text-muted-foreground">
+        {market.tracked ? (
+          <span className="text-caption text-faint-foreground">Tracked</span>
+        ) : null}
+        <span className="numeric text-caption text-muted-foreground sm:ml-auto">
           {marketCostText(market)}
         </span>
       </div>

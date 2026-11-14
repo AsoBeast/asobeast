@@ -1,118 +1,35 @@
 "use client";
 
-import { Suspense, useState, type FormEvent, type ReactNode } from "react";
-import { ExternalLink, Plus, X } from "lucide-react";
+import { Suspense, useState, type FormEvent } from "react";
+import { Plus } from "lucide-react";
 import Link from "next/link";
 import {
   SETUP_KEYWORD_TARGET,
   type CompetitorItem,
   type MarketSuggestionsResult,
-  type SetupStep,
-  type SetupStepState,
   type Store,
   type TrackedKeywordItem,
 } from "@asobeast/shared";
 import { CountrySelect } from "@/components/CountrySelect";
 import { AddCompetitorForm } from "@/components/competitors/AddCompetitorForm";
+import { FOOTER_LINK } from "@/components/layout/panel-classes";
 import { COUNTRY_OPTIONS, marketError } from "@/lib/countries";
 import { formatCountry, formatList } from "@/lib/format";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DiscoveredApps } from "./DiscoveredApps";
 import { KeywordPicker } from "./KeywordPicker";
 import { FirstDiscoveries } from "./FirstDiscoveries";
 import {
-  activeKeywordCount,
-  keywordsStepDescription,
-  STEP_TITLES,
-  stepLabel,
-} from "./setup-progress";
+  SelectedCountries,
+  type MarketKeywordCount,
+} from "./SelectedCountries";
+import { activeKeywordCount, keywordsStepDescription } from "./setup-progress";
+import { StepPanel, type StepProps } from "./StepPanel";
 import { MarketCostTip, SuggestedMarkets } from "./SuggestedMarkets";
 
-const SKIP_REASON: Record<SetupStep, string> = {
-  competitors:
-    "Positions are compared against nobody until a competitor is added.",
-  keywords: "Only the phrases from your listing are tracked.",
-  countries: "Keywords are tracked in your home storefront only.",
-};
-
-export interface StepProps {
-  state: SetupStepState;
-  onSkip: (skipped: boolean) => void;
-}
-
-function StepCard({
-  step,
-  state,
-  description,
-  onSkip,
-  children,
-}: StepProps & {
-  step: SetupStep;
-  description: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <Card id={`setup-${step}`} className="scroll-mt-20">
-      <CardHeader>
-        <CardDescription>{stepLabel(step)}</CardDescription>
-        <div className="flex flex-wrap items-center gap-2">
-          <CardTitle asChild>
-            <h3>{STEP_TITLES[step]}</h3>
-          </CardTitle>
-          <StepBadge state={state} />
-        </div>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        {children}
-        <SkipAction step={step} state={state} onSkip={onSkip} />
-      </CardContent>
-    </Card>
-  );
-}
-
-function StepBadge({ state }: { state: SetupStepState }) {
-  if (state === "done") return <Badge variant="success">Done</Badge>;
-  if (state === "skipped") return <Badge variant="outline">Skipped</Badge>;
-  return null;
-}
-
-function SkipAction({ step, state, onSkip }: StepProps & { step: SetupStep }) {
-  if (state === "skipped") {
-    return (
-      <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-        Skipped. {SKIP_REASON[step]}
-        <Button
-          variant="link"
-          className="h-auto px-0"
-          onClick={() => onSkip(false)}
-        >
-          Undo skip
-        </Button>
-      </p>
-    );
-  }
-  if (state !== "open") return null;
-  return (
-    <Button
-      variant="link"
-      className="h-auto w-fit px-0"
-      onClick={() => onSkip(true)}
-    >
-      Skip this step
-    </Button>
-  );
-}
+const COUNT_LINE = "numeric text-caption text-muted-foreground";
 
 const competitorName = (competitor: CompetitorItem): string =>
   competitor.name ?? competitor.latestSnapshot?.title ?? "Unnamed app";
@@ -140,29 +57,26 @@ export function CompetitorsStep({
   collecting: boolean;
 }) {
   return (
-    <StepCard
+    <StepPanel
       step="competitors"
       description="Track at least one app you compete with, so every keyword search compares you against it. Two or three is typical."
+      footer={
+        <>
+          <span>A new competitor gets positions on the next keyword check</span>
+          <Link href={`/apps/${appId}/competitors`} className={FOOTER_LINK}>
+            Manage competitors
+          </Link>
+        </>
+      }
       {...step}
     >
       <Suspense fallback={<Skeleton className="h-9 w-full" />}>
-        <AddCompetitorForm id={appId} />
+        <AddCompetitorForm id={appId} submitVariant="outline" />
       </Suspense>
-      <p className="text-sm text-muted-foreground">
-        {competitorsLine(competitors, error)}
-      </p>
+      <p className={COUNT_LINE}>{competitorsLine(competitors, error)}</p>
       <DiscoveredApps appId={appId} collecting={collecting} />
-      <Button asChild variant="link" className="h-auto w-fit px-0">
-        <Link href={`/apps/${appId}/competitors`}>Manage competitors</Link>
-      </Button>
-    </StepCard>
+    </StepPanel>
   );
-}
-
-export interface MarketKeywordCount {
-  market: string;
-  active: number | null;
-  error: boolean;
 }
 
 function homeKeywordsLine(
@@ -185,7 +99,6 @@ export function KeywordsStep({
   homeMarket,
   tracked,
   error,
-  counts,
   ...step
 }: StepProps & {
   appId: string;
@@ -193,46 +106,32 @@ export function KeywordsStep({
   homeMarket: string;
   tracked: TrackedKeywordItem[] | null;
   error: boolean;
-  counts: MarketKeywordCount[];
 }) {
   return (
-    <StepCard
+    <StepPanel
       step="keywords"
       description={keywordsStepDescription(store)}
+      footer={
+        <>
+          <span>A tracked keyword is checked on every daily run</span>
+          <Link
+            href={`/apps/${appId}/keywords?country=${homeMarket}`}
+            className={FOOTER_LINK}
+          >
+            Review keywords
+          </Link>
+        </>
+      }
       {...step}
     >
-      <p className="text-sm text-muted-foreground">
+      <p className={COUNT_LINE}>
         {homeKeywordsLine(tracked, error, homeMarket)}
       </p>
       <FirstDiscoveries id={appId} country={homeMarket} />
       {tracked ? (
         <KeywordPicker appId={appId} country={homeMarket} tracked={tracked} />
       ) : null}
-      {counts.length > 1 ? (
-        <ul className="grid gap-2 sm:grid-cols-2">
-          {counts.map(({ market, active, error: failed }) => (
-            <li
-              key={market}
-              className="flex items-center justify-between rounded-lg border p-3"
-            >
-              <span>{formatCountry(market)}</span>
-              <span className="text-muted-foreground">
-                {failed
-                  ? "Unavailable"
-                  : active === null
-                    ? "Loading…"
-                    : `${active} active`}
-              </span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      <Button asChild variant="link" className="h-auto w-fit px-0">
-        <Link href={`/apps/${appId}/keywords?country=${homeMarket}`}>
-          Review keywords
-        </Link>
-      </Button>
-    </StepCard>
+    </StepPanel>
   );
 }
 
@@ -243,7 +142,7 @@ export function CountriesStep({
   appId,
   store,
   homeMarket,
-  markets,
+  counts,
   suggestions,
   onSelect,
   onReviewed,
@@ -252,11 +151,12 @@ export function CountriesStep({
   appId: string;
   store: Store;
   homeMarket: string;
-  markets: string[];
+  counts: MarketKeywordCount[];
   suggestions: MarketSuggestionsResult | null;
   onSelect: (market: string, selected: boolean) => void;
   onReviewed: () => void;
 }) {
+  const markets = counts.map((count) => count.market);
   const suggested =
     suggestions !== null && suggestions.suggestions.length > 0
       ? suggestions
@@ -272,45 +172,31 @@ export function CountriesStep({
   };
 
   return (
-    <StepCard
+    <StepPanel
       step="countries"
-      description={
-        <>
-          Your home country is selected. Add the countries you sell in; each one
-          adds daily requests.{" "}
-          {suggested ? null : <MarketCostTip store={store} />}
-        </>
+      description="Your home country is selected. Add the countries you sell in."
+      footer={
+        <span className="flex items-center gap-1">
+          <span>Each country adds requests a day to the daily run</span>
+          <MarketCostTip store={store} />
+        </span>
       }
       {...step}
     >
       {suggested ? (
         <SuggestedMarkets
           appId={appId}
-          store={store}
           result={suggested}
           selected={markets}
           onSelect={onSelect}
         />
       ) : null}
-      <ul aria-label="Selected countries" className="flex flex-wrap gap-2">
-        {markets.map((market) => (
-          <li key={market}>
-            <Badge variant="secondary" className="h-7 gap-1 pl-2.5">
-              {formatCountry(market)} ({market.toUpperCase()})
-              {market !== homeMarket && markets.length > 1 ? (
-                <button
-                  type="button"
-                  aria-label={`Remove ${formatCountry(market)}`}
-                  onClick={() => onSelect(market, false)}
-                  className="rounded-full p-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <X />
-                </button>
-              ) : null}
-            </Badge>
-          </li>
-        ))}
-      </ul>
+      <SelectedCountries
+        appId={appId}
+        homeMarket={homeMarket}
+        counts={counts}
+        onRemove={(market) => onSelect(market, false)}
+      />
       <form onSubmit={submit} className="flex flex-col gap-1">
         <Label htmlFor="setup-country">
           {suggested ? "Add another country" : "Add a country"}
@@ -329,21 +215,11 @@ export function CountriesStep({
           </Button>
         </div>
       </form>
-      <div className="flex flex-wrap gap-2">
-        {markets.map((market) => (
-          <Button key={market} asChild variant="outline" size="sm">
-            <Link href={`/apps/${appId}/keywords?country=${market}`}>
-              Review {market.toUpperCase()} keywords
-              <ExternalLink />
-            </Link>
-          </Button>
-        ))}
-      </div>
       {step.state === "open" ? (
         <Button variant="outline" className="w-fit" onClick={onReviewed}>
           Countries reviewed
         </Button>
       ) : null}
-    </StepCard>
+    </StepPanel>
   );
 }

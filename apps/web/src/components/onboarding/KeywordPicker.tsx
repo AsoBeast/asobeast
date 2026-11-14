@@ -88,7 +88,7 @@ export function KeywordPicker({
           setSelected(NOTHING_SELECTED);
         }}
       >
-        <TabsList>
+        <TabsList scrollable>
           {PICKER_STRATEGIES.map((value) => (
             <TabsOption key={value} value={value}>
               {PICKER_LABELS[value]}
@@ -105,6 +105,7 @@ export function KeywordPicker({
       />
       <div className="flex flex-wrap items-center gap-3">
         <Button
+          variant="outline"
           aria-disabled={selected.size === 0 || track.isPending || undefined}
           onClick={() => {
             if (selected.size > 0) trackOnce([...selected]);

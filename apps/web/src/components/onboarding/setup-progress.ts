@@ -5,8 +5,15 @@ import {
   type PortfolioApp,
   type SetupStep,
   type SetupStepProgress,
+  type SetupStepState,
   type Store,
 } from "@asobeast/shared";
+import {
+  formatCountry,
+  formatDayMonth,
+  formatList,
+  pluralize,
+} from "@/lib/format";
 
 export const STEP_TITLES: Record<SetupStep, string> = {
   competitors: "Pick competitors",
@@ -42,8 +49,39 @@ export const progressPercent = ({ done, total }: SetupStepProgress): number =>
 export const progressValueLabel = ({ done, total }: SetupStepProgress) =>
   `${done} of ${total} steps`;
 
-export function stepLabel(step: SetupStep): string {
-  return `Step ${SETUP_STEPS.indexOf(step) + 1} of ${SETUP_STEPS.length}`;
+const isUnsettled = (state: SetupStepState): boolean =>
+  state === "open" || state === "loading";
+
+export function completionHint(
+  states: Record<SetupStep, SetupStepState>,
+): string | null {
+  const left = SETUP_STEPS.filter((step) => isUnsettled(states[step]));
+  return left.length === 0
+    ? null
+    : `Finish or skip ${formatList(left.map(nextLabel))} first.`;
+}
+
+export function completedFacts({
+  competitors,
+  keywords,
+  home,
+  markets,
+  completedAt,
+}: {
+  competitors: number | null;
+  keywords: number | null;
+  home: string;
+  markets: number;
+  completedAt: string | null;
+}): string[] {
+  return [
+    competitors === null ? null : pluralize(competitors, "competitor"),
+    keywords === null
+      ? null
+      : `${pluralize(keywords, "keyword")} in ${formatCountry(home)}`,
+    pluralize(markets, "country", "countries"),
+    completedAt === null ? null : `completed ${formatDayMonth(completedAt)}`,
+  ].filter((fact) => fact !== null);
 }
 
 export const activeKeywordCount = (

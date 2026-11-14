@@ -2,17 +2,11 @@
 
 import { useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { BellRing } from "lucide-react";
 import { AddEmailAlertDialog } from "@/components/settings/AddEmailAlertDialog";
 import { AddWebhookDialog } from "@/components/settings/AddWebhookDialog";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { PANEL_HEADER } from "@/components/layout/panel-classes";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   alertsConfigOptions,
   emailAlertsOptions,
@@ -76,17 +70,16 @@ export function AlertsNudge({ id }: { id: string }) {
 
   return (
     <Card className="print:hidden">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <BellRing aria-hidden className="size-4 text-muted-foreground" />
-          Get told when a position moves
+      <CardHeader className={PANEL_HEADER}>
+        <CardTitle asChild>
+          <h2>Get told when a position moves</h2>
         </CardTitle>
-        <CardDescription>
-          Two daily captures are in, so positions can now move. Email or a
-          webhook tells you when one drops, climbs or enters the top ten.
-        </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
+        <p className="max-w-[70ch] text-dense text-muted-foreground">
+          Two daily captures are in, so positions can now move. Email or a
+          webhook tells you when one drops, climbs or enters the top ten.
+        </p>
         <div className="flex flex-wrap items-center gap-2">
           {state === "email" ? (
             <AddEmailAlertDialog

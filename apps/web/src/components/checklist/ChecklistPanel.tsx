@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CheckCircle2, Circle } from "lucide-react";
+import { Check, Circle } from "lucide-react";
 import type {
   WorkspaceChecklist,
   WorkspaceChecklistItem,
@@ -33,7 +33,7 @@ export interface ChecklistPanelProps {
 function DoneRow({ item }: { item: WorkspaceChecklistItem }) {
   return (
     <li className="flex items-center gap-2" title={ITEM_COPY[item.id].doneText}>
-      <CheckCircle2 className="size-4 shrink-0 text-success" aria-hidden />
+      <Check className="size-4 shrink-0 text-foreground" aria-hidden />
       <span className="flex-1">{item.title}</span>
       <span className="text-caption text-muted-foreground">Done</span>
     </li>
@@ -108,7 +108,7 @@ function OpenRow({
   return (
     <li className="flex gap-2">
       <Circle
-        className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+        className="mt-0.5 size-4 shrink-0 text-faint-foreground"
         aria-hidden
       />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
