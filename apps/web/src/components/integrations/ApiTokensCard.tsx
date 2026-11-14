@@ -264,6 +264,19 @@ function CreateTokenDialog() {
   );
 }
 
+const WIDE_ONLY = "hidden sm:table-cell";
+
+function phoneLine(token: ApiTokenItem): string {
+  const expiry =
+    token.expiresAt === null
+      ? "Never expires"
+      : `${token.expired ? "Expired" : "Expires"} ${formatDate(token.expiresAt)}`;
+  const used = token.lastUsedAt
+    ? `last used ${formatDate(token.lastUsedAt)}`
+    : "never used";
+  return `${expiry} · ${used}`;
+}
+
 function Expiry({ token }: { token: ApiTokenItem }) {
   if (token.expiresAt === null) {
     return <span className="text-muted-foreground">Never</span>;
@@ -294,7 +307,7 @@ function TokenRow({
 
   return (
     <TableRow>
-      <TableCell className="max-w-48">
+      <TableCell className="max-w-48 whitespace-normal">
         <span className="block truncate font-medium">{token.name}</span>
         <span
           translate="no"
@@ -302,14 +315,17 @@ function TokenRow({
         >
           {`${token.prefix}…`}
         </span>
+        <span className="block text-caption text-faint-foreground sm:hidden">
+          {phoneLine(token)}
+        </span>
       </TableCell>
       <TableCell>
         <span>{SCOPE_LABELS[token.scope]}</span>
       </TableCell>
-      <TableCell>
+      <TableCell className={WIDE_ONLY}>
         <Expiry token={token} />
       </TableCell>
-      <TableCell>
+      <TableCell className={WIDE_ONLY}>
         <LastUsed token={token} />
         <span className="block text-caption text-faint-foreground">
           {`created ${formatDate(token.createdAt)}`}
@@ -370,8 +386,8 @@ export function ApiTokensCard() {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Scope</TableHead>
-              <TableHead>Expires</TableHead>
-              <TableHead>Last used</TableHead>
+              <TableHead className={WIDE_ONLY}>Expires</TableHead>
+              <TableHead className={WIDE_ONLY}>Last used</TableHead>
               <TableHead className="numeric text-right">Requests</TableHead>
               <TableHead className="w-0">
                 <span className="sr-only">Actions</span>

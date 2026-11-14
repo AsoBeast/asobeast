@@ -242,5 +242,24 @@ test("integrations fits a phone with a long app name and four tokens", async ({
   await expect(
     page.getByRole("listitem").filter({ hasText: "Sleep Sounds" }),
   ).toContainText("Stopped by Apple");
+  await expect(
+    page.getByRole("row").filter({ hasText: "old laptop" }),
+  ).toContainText("Expired Sep 1, 2026 · last used Aug 30, 2026");
   expect(await fitsTheViewport(page)).toBe(true);
+});
+
+test("a deep link marks its section in the index, and a part of one marks the section around it", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/settings#workspace");
+
+  const current = index(page).locator('[aria-current="location"]');
+  await expect(current).toHaveText("Workspace");
+
+  await page.goto("/settings#email-alerts");
+  await expect(
+    page.getByRole("heading", { name: "Email", exact: true }),
+  ).toBeInViewport();
+  await expect(current).toHaveText("Alerts");
 });
