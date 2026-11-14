@@ -560,7 +560,13 @@ test("a failed api tokens read says so and retries instead of claiming there are
       : route.fulfill(fulfillJson(200, [])),
   );
 
+  const firstFailure = page.waitForResponse("**/api/backend/auth/tokens");
   await page.goto("/integrations");
+  await firstFailure;
+  await expect(page.getByText("API tokens", { exact: true })).toBeVisible();
+  await expect(page.getByText("No tokens yet.", { exact: false })).toHaveCount(
+    0,
+  );
   await expect(page.getByText("API tokens could not be loaded.")).toBeVisible({
     timeout: 20_000,
   });

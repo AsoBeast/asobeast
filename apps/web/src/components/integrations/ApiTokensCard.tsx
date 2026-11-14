@@ -296,7 +296,7 @@ export function ApiTokensCard() {
             message="API tokens could not be loaded."
             read={read}
           />
-        ) : !data || data.length === 0 ? (
+        ) : !data ? null : data.length === 0 ? (
           <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
             No tokens yet. Create one to authenticate scripts or the MCP server
             with a Bearer header.
