@@ -2,6 +2,7 @@
 
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useRetryRecoveryFocus } from "@/lib/focus-handoff";
 import { cn } from "@/lib/utils";
 
 export interface RetryableRead {
@@ -24,10 +25,12 @@ export function InlineQueryError({
   read: RetryableRead;
 }) {
   const retrying = read.isFetching;
+  const retry = useRetryRecoveryFocus();
   return (
     <div className="flex flex-wrap items-center gap-3 text-body text-muted-foreground">
       <span role="alert">{message}</span>
       <Button
+        ref={retry}
         size="sm"
         variant="outline"
         aria-disabled={retrying || undefined}

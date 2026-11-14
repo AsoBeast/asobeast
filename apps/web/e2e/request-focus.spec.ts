@@ -11,6 +11,7 @@ import type {
   WebhookItem,
   WorkspaceTeam,
 } from "@asobeast/shared";
+import { ALERT_EVENTS_COOKIE } from "./alert-feed-fixtures.mts";
 import { CROWDED_COOKIE } from "./actions-fixtures.mts";
 import { holdRender } from "./chart-image.mts";
 import { openEmbedded } from "./embedded-checkout.mts";
@@ -2868,4 +2869,24 @@ test("Analyze creative keeps focus while it queues, then hands it to the panel h
   await expect(
     panel.getByRole("heading", { name: "AI creative analysis" }),
   ).toBeFocused();
+});
+
+test("Retry keeps focus in the alerts card when the read recovers", async ({
+  page,
+  context,
+}) => {
+  await seedCookie(context, ALERT_EVENTS_COOKIE, "error");
+  await page.goto("/");
+  const card = page
+    .getByRole("heading", { name: "Alerts", level: 2 })
+    .locator("xpath=ancestor::*[@data-slot='card'][1]");
+  const retry = card.getByRole("button", { name: "Retry" });
+  await expect(retry).toBeVisible();
+  await context.clearCookies({ name: ALERT_EVENTS_COOKIE });
+
+  await pressFromKeyboard(retry);
+
+  await expect(card.getByRole("alert")).toHaveCount(0);
+  await expect(card.locator(":focus")).toHaveCount(1);
+  expect(await focusLeftForBody(page)).toBe(false);
 });
