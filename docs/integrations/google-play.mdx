@@ -125,7 +125,7 @@ The card lists the service account or the Google account, the bucket, the key ID
 | Google refused … access to … | The bucket exists and the service account may not read it | Grant **View app information and download bulk reports** on the **Account permissions** tab, and wait up to two days |
 | Your Google account … cannot read … | You signed in with an account without report access | Sign in with the account that owns the developer account |
 | Google refused the key of … | The key was deleted or disabled, or the service account was removed | Create a new JSON key and connect it |
-| Google no longer accepts the sign in of … | You revoked it, or the OAuth app of the instance is still in testing | Sign in with Google again; the operator publishes the consent screen to production |
+| Google no longer accepts the sign in of … | You revoked it, or the OAuth app of the instance is still in testing | Press **Reconnect** and sign in again or connect a service account key; the operator publishes the consent screen to production |
 | Google did not grant access to Cloud Storage. | **View your data in Google Cloud Storage** was unticked | Sign in again and keep it ticked |
 | Google refused the OAuth client of this instance. | The operator's client ID, secret or redirect URI does not match | The operator checks [Set up Google sign in for the instance](#set-up-google-sign-in) |
 | This service account cannot reply to reviews. Give it the Reply to reviews permission in Play Console. | Google refused a reply because of the account's permissions | Tick **Reply to reviews** for the service account in **Users and permissions** |
@@ -134,14 +134,14 @@ The card lists the service account or the Google account, the bucket, the key ID
 
 ## Set up Google sign in for the instance {#set-up-google-sign-in}
 
-An operator turns sign in with Google on once for a self hosted instance. The hosted service already has it.
+An operator turns sign in with Google on once for a self hosted instance. The hosted service offers it once Google has verified its consent screen; until then it connects with a service account key.
 
 <Steps>
   <Step title="Create the OAuth client">
     In the Google Cloud console, open **APIs and services**, then **Credentials**, press **Create credentials**, **OAuth client ID**, and choose **Web application**. Add the authorized redirect URI `WEB_PUBLIC_URL` followed by `/integrations/google-play`, for example `https://aso.example.com/integrations/google-play`.
   </Step>
   <Step title="Publish the consent screen">
-    Add the scopes `https://www.googleapis.com/auth/devstorage.read_only` and `https://www.googleapis.com/auth/androidpublisher` to the consent screen, enable the Google Play Android Developer API in the same project, and publish the app to production. Google expires every sign in of an app left in testing after seven days. Until Google verifies the app, the consent screen warns that it is unverified, which is enough for a team that knows the instance.
+    Add the scopes `https://www.googleapis.com/auth/devstorage.read_only` and `https://www.googleapis.com/auth/androidpublisher` to the consent screen, enable the Google Play Android Developer API in the same project, and publish the app to production. Google expires every sign in of an app left in testing after seven days, so while it is in testing set `GOOGLE_PLAY_OAUTH_PUBLISHED` to `false`: the dialog then offers only the service account key, and connections already signed in keep working until Google expires them. Until Google verifies the app, the consent screen warns that it is unverified, which is enough for a team that knows the instance.
   </Step>
   <Step title="Set the variables">
     Set `GOOGLE_PLAY_OAUTH_CLIENT_ID`, `GOOGLE_PLAY_OAUTH_CLIENT_SECRET` and `WEB_PUBLIC_URL`, described in the [configuration reference](/configuration/reference#store-consoles), and restart the API. The dialog then offers **Sign in with Google**.
