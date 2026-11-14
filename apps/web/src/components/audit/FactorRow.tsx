@@ -19,7 +19,7 @@ import { TEXT_LINK } from "./layout-classes";
 import { STATUS_ICON, STATUS_TONE } from "./status-icons";
 
 export const FACTOR_COLUMNS =
-  "grid grid-cols-[minmax(0,1fr)_6.5rem_1.75rem] items-center gap-x-3 pr-2 pl-4 @lg/factors:grid-cols-[minmax(0,1fr)_6.75rem_3.25rem_8.5rem_1.75rem]";
+  "grid grid-cols-[minmax(0,1fr)_1rem_6.5rem_1.75rem] items-center gap-x-3 pr-2 pl-4 @lg/factors:grid-cols-[minmax(0,1fr)_6.75rem_3.25rem_8.5rem_1.75rem]";
 
 export const FACTOR_WIDE_CELL = "hidden @lg/factors:block";
 
@@ -102,7 +102,6 @@ export function FactorRow({
         </div>
         <span
           className={cn(
-            FACTOR_WIDE_CELL,
             "text-dense whitespace-nowrap",
             status === "unanswered" && "text-muted-foreground",
           )}
@@ -112,7 +111,9 @@ export function FactorRow({
               aria-hidden
               className={cn("size-4 shrink-0", STATUS_TONE[status])}
             />
-            <span>{STATUS_LABEL[status]}</span>
+            <span className="sr-only @lg/factors:not-sr-only">
+              {STATUS_LABEL[status]}
+            </span>
           </span>
         </span>
         <span

@@ -3,7 +3,11 @@
 import { Suspense, useId } from "react";
 import Link from "next/link";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import type { AppAuditResult, AuditGroupId } from "@asobeast/shared";
+import type {
+  AppAuditResult,
+  AuditCheckStatus,
+  AuditGroupId,
+} from "@asobeast/shared";
 import { ChartSkeleton } from "@/components/charts/ChartStates";
 import { CHART_HEIGHT } from "@/components/charts/theme";
 import { RangePicker } from "@/components/rankings/RangePicker";
@@ -23,11 +27,14 @@ import {
   provisional,
   scoredFactorsLine,
   scoreRingLabel,
+  scoreStatus,
+  STATUS_LABEL,
 } from "./audit-copy";
 import { unlockHref } from "./audit-links";
 import { AuditHealthChart } from "./AuditHealthChart";
 import { TEXT_LINK } from "./layout-classes";
 import { CHANGE_WINDOW_DAYS, weekChange } from "./score-history";
+import { STATUS_ICON, STATUS_TONE } from "./status-icons";
 import { useAuditRange } from "./use-audit-range";
 
 const CELL = "bg-card shadow-[-1px_0_0_var(--border),0_-1px_0_var(--border)]";
@@ -97,32 +104,50 @@ function ScoreSummary({ audit }: { audit: AppAuditResult }) {
   );
 }
 
+function FigureStatus({ status }: { status: AuditCheckStatus }) {
+  const Icon = STATUS_ICON[status];
+  return (
+    <>
+      <Icon
+        aria-hidden
+        className={cn("size-4 shrink-0", STATUS_TONE[status])}
+      />
+      <span className="sr-only">{STATUS_LABEL[status]}</span>
+    </>
+  );
+}
+
 function FigureTile({
   label,
   value,
   share,
   tone,
+  status,
   note,
 }: {
   label: string;
   value: string;
   share: number;
   tone: MeterTone;
+  status?: AuditCheckStatus;
   note: string;
 }) {
   return (
     <div
       className={cn(
         CELL,
-        "flex flex-col justify-center gap-1.5 px-3 py-4 sm:px-4",
+        "row-span-4 grid grid-rows-subgrid gap-y-1.5 px-3 py-4 sm:px-4",
       )}
     >
-      <span className="text-label text-balance text-muted-foreground">
+      <span className="self-end text-label text-balance text-muted-foreground">
         {label}
       </span>
-      <span className="numeric text-metric">{value}</span>
+      <span className="flex items-center gap-1.5">
+        <span className="numeric text-metric">{value}</span>
+        {status ? <FigureStatus status={status} /> : null}
+      </span>
       <Meter value={share} max={1} tone={tone} className="h-1.5" />
-      <span className="text-caption text-balance text-faint-foreground">
+      <span className="self-start text-caption text-balance text-faint-foreground">
         {note}
       </span>
     </div>
@@ -146,7 +171,7 @@ function ScoreFigures({ audit }: { audit: AppAuditResult }) {
     <div className="@container/score">
       <div className="grid overflow-hidden @[40rem]/score:grid-cols-[minmax(20rem,7fr)_minmax(0,9fr)]">
         <ScoreSummary audit={audit} />
-        <div className="grid auto-cols-fr grid-flow-col">
+        <div className="grid auto-cols-fr grid-flow-col grid-rows-[1fr_auto_auto_1fr]">
           {groups.map((group) => (
             <FigureTile
               key={group.id}
@@ -158,6 +183,7 @@ function ScoreFigures({ audit }: { audit: AppAuditResult }) {
               }
               share={(group.score ?? 0) / 10}
               tone="health"
+              status={scoreStatus(group.score)}
               note={groupNote(audit, group.id)}
             />
           ))}

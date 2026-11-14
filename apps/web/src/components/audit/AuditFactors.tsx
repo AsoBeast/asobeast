@@ -50,7 +50,9 @@ export function AuditFactors({
               )}
             >
               <span>Factor</span>
-              <span className={FACTOR_WIDE_CELL}>Status</span>
+              <span>
+                <span className={FACTOR_WIDE_CELL}>Status</span>
+              </span>
               <span className={cn(FACTOR_WIDE_CELL, "text-right")}>Worth</span>
               <span className="text-right">Score /10</span>
               <span />
