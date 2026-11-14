@@ -17,8 +17,8 @@ function Strip({
   ring: string;
 }) {
   return (
-    <span className="flex flex-col gap-1">
-      <span className="text-label text-muted-foreground">{label}</span>
+    <span className="flex min-w-0 flex-col gap-1">
+      <span className="text-label text-faint-foreground">{label}</span>
       <span
         role="group"
         aria-label={`${label} screenshots`}
@@ -50,13 +50,20 @@ function CaptionList({
 }) {
   if (captions.length === 0) return null;
   return (
-    <span className={cn("flex flex-col gap-0.5 rounded-md px-2 py-1", tone)}>
-      <span className="text-label text-muted-foreground">{label}</span>
-      {captions.map((caption, index) => (
-        <span key={`${index}-${caption}`} className="font-medium break-words">
-          {caption}
-        </span>
-      ))}
+    <span className="flex gap-3">
+      <span className="w-16 shrink-0 text-label text-faint-foreground">
+        {label}
+      </span>
+      <span className="flex min-w-0 flex-col gap-0.5">
+        {captions.map((caption, index) => (
+          <span
+            key={`${index}-${caption}`}
+            className={cn("wrap-anywhere", tone)}
+          >
+            {caption}
+          </span>
+        ))}
+      </span>
     </span>
   );
 }
@@ -77,17 +84,13 @@ export function ScreenshotChangeValue({
 
   if (detail.kind === "captions") {
     return (
-      <span className="grid gap-1 sm:grid-cols-2">
+      <span className="flex min-w-0 flex-col gap-1">
         <CaptionList
           label="Removed"
           captions={detail.removed}
-          tone="bg-muted/50"
+          tone="text-muted-foreground line-through"
         />
-        <CaptionList
-          label="Added"
-          captions={detail.added}
-          tone="bg-success-subtle"
-        />
+        <CaptionList label="Added" captions={detail.added} tone="font-medium" />
       </span>
     );
   }
@@ -95,18 +98,20 @@ export function ScreenshotChangeValue({
   return (
     <span className="flex min-w-0 flex-col gap-2">
       <span className="break-words">{summary}</span>
-      <Strip
-        label="Before"
-        refs={detail.before}
-        marked={detail.removed}
-        ring="ring-destructive"
-      />
-      <Strip
-        label="After"
-        refs={detail.after}
-        marked={detail.added}
-        ring="ring-success"
-      />
+      <span className="flex min-w-0 flex-wrap gap-x-6 gap-y-2">
+        <Strip
+          label="Before"
+          refs={detail.before}
+          marked={detail.removed}
+          ring="ring-destructive"
+        />
+        <Strip
+          label="After"
+          refs={detail.after}
+          marked={detail.added}
+          ring="ring-success"
+        />
+      </span>
     </span>
   );
 }

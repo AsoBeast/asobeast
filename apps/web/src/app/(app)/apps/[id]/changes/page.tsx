@@ -1,6 +1,6 @@
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
-import { ChangeImpactCard } from "@/components/changes/ChangeImpactCard";
-import { ChangeTimeline } from "@/components/changes/ChangeTimeline";
+import { changeWindowRange } from "@/components/changes/change-activity";
+import { ChangesView } from "@/components/changes/ChangesView";
 import { getQueryClient } from "@/lib/get-query-client";
 import { queryMarket, resolveMarket } from "@/lib/market";
 import {
@@ -9,7 +9,9 @@ import {
   changesOptions,
   keywordCountriesOptions,
   listingMarketsOptions,
+  visibilityOptions,
 } from "@/lib/queries";
+import { todayUtc } from "@/lib/ranges";
 import {
   changeDaysParser,
   countryParser,
@@ -48,14 +50,14 @@ export default async function ChangesPage({
     ),
     queryClient.prefetchQuery(keywordCountriesOptions(id)),
     queryClient.prefetchQuery(changeImpactOptions(id, days, market)),
+    queryClient.prefetchQuery(
+      visibilityOptions(id, changeWindowRange(todayUtc(), days), market),
+    ),
   ]);
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <div className="page-wide flex flex-col gap-6">
-        <ChangeImpactCard id={id} store={app.store} homeCountry={app.country} />
-        <ChangeTimeline id={id} />
-      </div>
+      <ChangesView id={id} store={app.store} homeCountry={app.country} />
     </HydrationBoundary>
   );
 }
