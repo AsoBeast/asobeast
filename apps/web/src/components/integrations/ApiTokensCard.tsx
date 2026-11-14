@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseQueryResult,
+} from "@tanstack/react-query";
 import { Check, Copy, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -47,8 +52,12 @@ import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
 import { formatDate, formatNumber, pluralize } from "@/lib/format";
 import { apiTokensOptions, invalidateApiTokenMutation } from "@/lib/queries";
 import { useAuth } from "@/components/auth/use-auth";
+import {
+  InlineQueryError,
+  failedRead,
+} from "@/components/layout/InlineQueryError";
 import { useSingleFlight } from "@/lib/single-flight";
-import { SettingsPanel } from "@/components/settings/SettingsPanel";
+import { PanelBody, SettingsPanel } from "@/components/settings/SettingsPanel";
 import { RevokeTokenButton } from "./RevokeTokenButton";
 
 const NEVER_EXPIRES = "never";
@@ -356,15 +365,66 @@ function tokensNote(tokens: ApiTokenItem[]): string {
   return `${expired > 0 ? `${count}, ${expired} expired` : count} · Limits are per workspace, so a second token adds no capacity.`;
 }
 
+function TokensTable({ tokens }: { tokens: ApiTokenItem[] }) {
+  const busiest = Math.max(0, ...tokens.map((token) => token.usageCount));
+
+  return (
+    <Table>
+      <TableCaption className="sr-only">
+        Personal API tokens for automation.
+      </TableCaption>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Name</TableHead>
+          <TableHead>Scope</TableHead>
+          <TableHead className={WIDE_ONLY}>Expires</TableHead>
+          <TableHead className={WIDE_ONLY}>Last used</TableHead>
+          <TableHead className="numeric text-right">Requests</TableHead>
+          <TableHead className="w-0">
+            <span className="sr-only">Actions</span>
+          </TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {tokens.map((token) => (
+          <TokenRow key={token.id} token={token} busiest={busiest} />
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+function TokensBody({ read }: { read: UseQueryResult<ApiTokenItem[]> }) {
+  if (failedRead(read)) {
+    return (
+      <PanelBody>
+        <InlineQueryError
+          message="API tokens could not be loaded."
+          read={read}
+        />
+      </PanelBody>
+    );
+  }
+  if (!read.data) return null;
+  if (read.data.length === 0) {
+    return (
+      <p className="mx-auto max-w-prose px-(--card-spacing) py-8 text-center text-body text-muted-foreground">
+        No tokens yet. Create one to authenticate scripts or the MCP server with
+        a Bearer header.
+      </p>
+    );
+  }
+  return <TokensTable tokens={read.data} />;
+}
+
 export function ApiTokensCard() {
   const { status, isLoading } = useAuth();
   const authenticated = Boolean(status?.authenticated);
-  const { data } = useQuery({ ...apiTokensOptions, enabled: authenticated });
+  const read = useQuery({ ...apiTokensOptions, enabled: authenticated });
 
   if (isLoading || !status?.authenticated) return null;
 
-  const tokens = data ?? [];
-  const busiest = Math.max(0, ...tokens.map((token) => token.usageCount));
+  const tokens = read.data ?? [];
 
   return (
     <SettingsPanel
@@ -372,35 +432,7 @@ export function ApiTokensCard() {
       action={<CreateTokenDialog />}
       footer={tokens.length > 0 ? <p>{tokensNote(tokens)}</p> : null}
     >
-      {tokens.length === 0 ? (
-        <p className="mx-auto max-w-prose px-(--card-spacing) py-8 text-center text-body text-muted-foreground">
-          No tokens yet. Create one to authenticate scripts or the MCP server
-          with a Bearer header.
-        </p>
-      ) : (
-        <Table>
-          <TableCaption className="sr-only">
-            Personal API tokens for automation.
-          </TableCaption>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Scope</TableHead>
-              <TableHead className={WIDE_ONLY}>Expires</TableHead>
-              <TableHead className={WIDE_ONLY}>Last used</TableHead>
-              <TableHead className="numeric text-right">Requests</TableHead>
-              <TableHead className="w-0">
-                <span className="sr-only">Actions</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {tokens.map((token) => (
-              <TokenRow key={token.id} token={token} busiest={busiest} />
-            ))}
-          </TableBody>
-        </Table>
-      )}
+      <TokensBody read={read} />
     </SettingsPanel>
   );
 }

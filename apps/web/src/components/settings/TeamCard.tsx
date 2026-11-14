@@ -30,6 +30,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/components/auth/use-auth";
+import {
+  InlineQueryError,
+  failedRead,
+} from "@/components/layout/InlineQueryError";
 import { ApiError, inviteMember, removeMember, revokeInvite } from "@/lib/api";
 import {
   cardAction,
@@ -44,7 +48,7 @@ import {
 import { useSingleFlight } from "@/lib/single-flight";
 import { inviteOutcome } from "./invite-outcome";
 import { PanelSubhead } from "./PanelSubhead";
-import { SettingsPanel } from "./SettingsPanel";
+import { PanelBody, SettingsPanel } from "./SettingsPanel";
 import { PanelSkeleton } from "./skeletons";
 
 const DATE_COLUMN = "hidden sm:table-cell";
@@ -236,7 +240,8 @@ function Invitations({
 export function TeamCard() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { data: team, isPending } = useQuery(workspaceTeamOptions);
+  const read = useQuery(workspaceTeamOptions);
+  const team = read.data;
   const isOwner = user?.role === "owner";
   const focusAfterCommit = useFocusAfterCommit();
 
@@ -273,8 +278,27 @@ export function TeamCard() {
     run();
   }
 
-  if (isPending) return <PanelSkeleton title="w-16" action rows={3} />;
-  if (!team) return null;
+  if (!team) {
+    if (failedRead(read)) {
+      return (
+        <SettingsPanel
+          as="h2"
+          title="Team"
+          action={isOwner ? <InviteDialog /> : null}
+        >
+          <PanelBody>
+            <InlineQueryError
+              message="Team members could not be loaded."
+              read={read}
+            />
+          </PanelBody>
+        </SettingsPanel>
+      );
+    }
+    return read.isPending ? (
+      <PanelSkeleton title="w-16" action rows={3} />
+    ) : null;
+  }
 
   return (
     <SettingsPanel
