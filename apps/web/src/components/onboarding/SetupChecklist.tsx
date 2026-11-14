@@ -15,6 +15,7 @@ import { GoalPicker } from "@/components/checklist/GoalPicker";
 import { META_LINE } from "@/components/layout/panel-classes";
 import { Button } from "@/components/ui/button";
 import { Separated } from "@/components/ui/separated";
+import { cn } from "@/lib/utils";
 import {
   appDetailOptions,
   keywordsOptions,
@@ -28,7 +29,6 @@ import {
 } from "./setup-progress";
 import { CompetitorsStep, CountriesStep, KeywordsStep } from "./setup-steps";
 import { SetupProgress, SetupStepList, SetupStepNav } from "./SetupProgress";
-import { cn } from "@/lib/utils";
 import { SetupStatusPanel } from "./SetupStatusPanel";
 import {
   beginSetup,

@@ -78,6 +78,11 @@ test("a not started app offers to start and never enrols on a visit", async ({
   await expect(
     page.getByText("Start setup for this app", { exact: true }),
   ).toBeVisible();
+  await expect(page.getByRole("main").getByRole("listitem")).toHaveText([
+    "Pick competitors",
+    "Track keywords",
+    "Add countries",
+  ]);
   expect(await storedStatus(page, "app-2")).toBe("not_started");
 
   await page.goto("/");
@@ -165,6 +170,10 @@ test("direct setup is resumable and completes after live checks", async ({
   ).toBeVisible();
   const complete = page.getByRole("button", { name: "Complete setup" });
   await expect(complete).toBeDisabled();
+  const hint = page.getByText(/^Finish or skip .+ first\.$/);
+  await expect(hint).toHaveText(
+    "Finish or skip track keywords and add countries first.",
+  );
 
   const keywords = stepCard(page, "Track keywords");
   await keywords.getByRole("button", { name: "Skip this step" }).click();
@@ -183,6 +192,7 @@ test("direct setup is resumable and completes after live checks", async ({
       name: "Set up Focus Timer · 3 of 3 · ready to complete",
     }),
   ).toBeVisible();
+  await expect(hint).toHaveCount(0);
 
   await expect(
     page.getByText(
@@ -249,6 +259,13 @@ test("direct setup is resumable and completes after live checks", async ({
 
   await page.goto("/apps/app-1/setup");
   await expect(page.getByText("Setup complete", { exact: true })).toBeVisible();
+  for (const fact of [
+    "1 competitor",
+    "4 keywords in United States",
+    "2 countries",
+  ]) {
+    await expect(page.getByText(fact, { exact: true })).toBeVisible();
+  }
   await expect(
     page.getByRole("link", { name: "Open the overview" }),
   ).toHaveAttribute("href", "/apps/app-1");
@@ -970,4 +987,44 @@ test.describe("seeding suggested markets", () => {
       ),
     ).toBeVisible();
   });
+});
+
+test("the steps and the actions stay beside a wide page and stack on a narrow one", async ({
+  page,
+}) => {
+  await startSetup(page, "app-1");
+  const steps = page.getByRole("navigation", { name: "Setup steps" });
+  const competitors = stepCard(page, "Pick competitors");
+  const complete = page.getByRole("button", { name: "Complete setup" });
+  const edges = async () => ({
+    steps: await steps.boundingBox(),
+    panel: await competitors.boundingBox(),
+    complete: await complete.boundingBox(),
+  });
+
+  const wide = await edges();
+  expect(wide.steps?.x).toBeGreaterThan(
+    (wide.panel?.x ?? 0) + (wide.panel?.width ?? 0),
+  );
+  expect(wide.complete?.x).toBeGreaterThan(
+    (wide.panel?.x ?? 0) + (wide.panel?.width ?? 0),
+  );
+  await expect(steps.getByText("Next", { exact: true })).toBeVisible();
+  await page.mouse.wheel(0, 1200);
+  await expect(complete).toBeInViewport();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  const narrow = await edges();
+  expect(narrow.steps?.y).toBeLessThan(narrow.panel?.y ?? 0);
+  expect(narrow.complete?.y).toBeGreaterThan(
+    (narrow.panel?.y ?? 0) + (narrow.panel?.height ?? 0),
+  );
+  await expect(steps).toHaveCount(1);
+  await expect(complete).toHaveCount(1);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
 });
