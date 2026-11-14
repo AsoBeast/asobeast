@@ -548,38 +548,50 @@ test("a failed api tokens read says so and retries instead of claiming there are
   await routeMe(page, TRIAL_USER);
 
   let failing = true;
-  await page.route("**/api/backend/auth/tokens", (route) =>
-    failing
-      ? route.fulfill(
-          fulfillJson(500, {
-            statusCode: 500,
-            error: "Internal Server Error",
-            message: "Something went wrong.",
-          }),
-        )
-      : route.fulfill(fulfillJson(200, [])),
-  );
+  let failures = 0;
+  const { promise: retrying, resolve: retryStarted } =
+    Promise.withResolvers<void>();
+  const { promise: retryReleased, resolve: releaseRetry } =
+    Promise.withResolvers<void>();
+  await page.route("**/api/backend/auth/tokens", async (route) => {
+    if (!failing) return route.fulfill(fulfillJson(200, []));
+    failures += 1;
+    if (failures === 2) {
+      retryStarted();
+      await retryReleased;
+    }
+    return route.fulfill(
+      fulfillJson(500, {
+        statusCode: 500,
+        error: "Internal Server Error",
+        message: "Something went wrong.",
+      }),
+    );
+  });
 
-  const firstFailure = page.waitForResponse("**/api/backend/auth/tokens");
+  const card = page
+    .locator('[data-slot="card"]')
+    .filter({ has: page.getByText("API tokens", { exact: true }) });
   await page.goto("/integrations");
-  await firstFailure;
-  await expect(page.getByText("API tokens", { exact: true })).toBeVisible();
-  await expect(page.getByText("No tokens yet.", { exact: false })).toHaveCount(
+  await retrying;
+  await expect(card).toBeVisible();
+  await expect(card.getByText("No tokens yet.", { exact: false })).toHaveCount(
     0,
   );
-  await expect(page.getByText("API tokens could not be loaded.")).toBeVisible({
+  releaseRetry();
+  await expect(card.getByText("API tokens could not be loaded.")).toBeVisible({
     timeout: 20_000,
   });
-  await expect(page.getByText("No tokens yet.", { exact: false })).toHaveCount(
+  await expect(card.getByText("No tokens yet.", { exact: false })).toHaveCount(
     0,
   );
 
   failing = false;
-  await page.getByRole("button", { name: "Retry" }).click();
+  await card.getByRole("button", { name: "Retry" }).click();
   await expect(
-    page.getByText("No tokens yet.", { exact: false }),
+    card.getByText("No tokens yet.", { exact: false }),
   ).toBeVisible();
-  await expect(page.getByText("API tokens could not be loaded.")).toHaveCount(
+  await expect(card.getByText("API tokens could not be loaded.")).toHaveCount(
     0,
   );
 });
@@ -1901,16 +1913,21 @@ test("a failed team read keeps the team card and offers a retry", async ({
       : route.fallback(),
   );
 
+  const card = page.locator('[data-slot="card"]').filter({
+    has: page.locator('[data-slot="card-title"]', { hasText: /^Team$/ }),
+  });
   await page.goto("/settings");
-  await expect(page.getByRole("heading", { name: "Team" })).toBeVisible();
-  await expect(page.getByText("Team members could not be loaded.")).toBeVisible(
+  await expect(card.getByText("Team members could not be loaded.")).toBeVisible(
     { timeout: 20_000 },
   );
+  await expect(
+    card.getByRole("button", { name: "Invite member" }),
+  ).toBeVisible();
 
   failing = false;
-  await page.getByRole("button", { name: "Retry" }).click();
+  await card.getByRole("button", { name: "Retry" }).click();
   await expect(
-    page.getByRole("cell", { name: "teammate@example.com", exact: true }),
+    card.getByRole("cell", { name: "teammate@example.com", exact: true }),
   ).toBeVisible();
 });
 
