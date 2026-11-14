@@ -26,14 +26,11 @@ import {
   ConfirmActionFooter,
 } from "@/components/ConfirmActionFooter";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { FactList } from "@/components/settings/FactList";
+import { PanelBody, SettingsPanel } from "@/components/settings/SettingsPanel";
+import { StateWord } from "@/components/settings/StateWord";
 import { ApiError, disconnectStore, syncStore, verifyStore } from "@/lib/api";
+import { formatDate } from "@/lib/format";
 import { armFocusHandoff, useFocusGroupClaim } from "@/lib/focus-handoff";
 import {
   invalidateStoreConnectionMutation,
@@ -49,8 +46,8 @@ import {
   needsAdminKey,
   replyAccessLine,
 } from "@/lib/store-connection-copy";
-import { cn } from "@/lib/utils";
 import { ConnectAppStoreDialog } from "./ConnectAppStoreDialog";
+import { connectionMark } from "./connection-summary";
 import { ConnectPlayDialog } from "./ConnectPlayDialog";
 import { GuideLink } from "./GuideLink";
 import { StoreConnectionApps } from "./StoreConnectionApps";
@@ -183,6 +180,8 @@ function ConnectionActions({ item }: { item: StoreConnectionItem }) {
   );
 }
 
+const CONNECTED_TERM = "Connected";
+
 function ConnectionDetails({
   item,
   actions,
@@ -191,44 +190,77 @@ function ConnectionDetails({
   actions: ReactNode;
 }) {
   const status = connectionStatusLine(item);
-  const facts = STORE_CONSOLES[item.store].facts(item);
   const replies = replyAccessLine(item);
+  const warned = status.tone === "warning";
 
   return (
-    <div className="flex flex-col gap-4">
-      <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-[auto_1fr]">
-        {facts.map(([term, value]) => (
-          <div key={term} className="contents">
-            <dt className="text-muted-foreground">{term}</dt>
-            <dd translate="no" className="min-w-0 font-mono text-xs break-all">
-              {value}
-            </dd>
-          </div>
-        ))}
-        <dt className="text-muted-foreground">Review replies</dt>
-        <dd
-          className={cn(
-            "min-w-0",
-            replies.tone === "warning"
-              ? "text-warning"
-              : "text-muted-foreground",
-          )}
-        >
-          {replies.text}
-        </dd>
-      </dl>
-      <p
-        role="status"
-        className={cn(
-          "text-body",
-          status.tone === "warning" ? "text-warning" : "text-muted-foreground",
-        )}
-      >
-        {status.text}
+    <>
+      <PanelBody className="gap-4">
+        <FactList
+          facts={[
+            ...STORE_CONSOLES[item.store].facts(item).map(([term, value]) => ({
+              term,
+              value,
+              identifier: term !== CONNECTED_TERM,
+            })),
+            {
+              term: "Review replies",
+              value: (
+                <span
+                  className={
+                    replies.tone === "warning"
+                      ? "text-warning"
+                      : "text-muted-foreground"
+                  }
+                >
+                  {replies.text}
+                </span>
+              ),
+            },
+          ]}
+        />
+        {warned ? (
+          <p role="status" className="max-w-[70ch] text-body text-warning">
+            {status.text}
+          </p>
+        ) : null}
+        {actions}
+      </PanelBody>
+      <StoreConnectionApps
+        store={item.store}
+        apps={item.apps}
+        lastSyncedAt={item.lastSyncedAt}
+      />
+    </>
+  );
+}
+
+function ConnectionFooter({
+  item,
+  guide,
+}: {
+  item: StoreConnectionItem;
+  guide: ReactNode;
+}) {
+  const status = connectionStatusLine(item);
+
+  return (
+    <>
+      <p className="min-w-0 flex-1 basis-64">
+        {item.verifiedAt ? (
+          <>
+            <span>{`Verified ${formatDate(item.verifiedAt)}`}</span>
+            {status.tone === "muted" ? <span aria-hidden> · </span> : null}
+          </>
+        ) : null}
+        {status.tone === "muted" ? (
+          <span role="status" className="text-muted-foreground">
+            {status.text}
+          </span>
+        ) : null}
       </p>
-      {actions}
-      <StoreConnectionApps store={item.store} apps={item.apps} />
-    </div>
+      {guide}
+    </>
   );
 }
 
@@ -249,7 +281,7 @@ function BeforeYouStart({
       </p>
       <ul
         aria-labelledby={labelId}
-        className="flex list-disc flex-col gap-1 pl-4 text-body text-muted-foreground"
+        className="flex max-w-[70ch] list-disc flex-col gap-1 pl-4 text-body text-muted-foreground"
       >
         {copy.before.map((line) => (
           <li key={line}>{line}</li>
@@ -274,37 +306,46 @@ function StoreConsoleCard({
     Boolean(connection),
   );
 
+  const mark = connection ? connectionMark(connection) : null;
+  const guide = (
+    <GuideLink href={copy.guide} subject={copy.name}>
+      Setup guide
+    </GuideLink>
+  );
+
   return (
-    <Card>
-      <CardHeader
-        ref={header}
-        className="flex-row items-start justify-between gap-4"
-      >
-        <div className="flex flex-col gap-1.5">
-          <CardDescription>Store console</CardDescription>
-          <CardTitle>{copy.name}</CardTitle>
-        </div>
-        {owner && !connection ? (
+    <SettingsPanel
+      title={copy.name}
+      headerRef={header}
+      action={
+        mark ? (
+          <StateWord tone={mark.tone}>{mark.word}</StateWord>
+        ) : owner ? (
           <ConnectDialog store={store} label={copy.connectLabel} />
-        ) : null}
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <GuideLink href={copy.guide} subject={copy.name}>
-          Setup guide
-        </GuideLink>
-        {connection ? (
-          <ConnectionDetails
-            item={connection}
-            actions={owner ? <ConnectionActions item={connection} /> : null}
-          />
+        ) : null
+      }
+      footer={
+        connection ? (
+          <ConnectionFooter item={connection} guide={guide} />
         ) : (
-          <>
-            <p className="text-body text-muted-foreground">{copy.empty}</p>
-            {owner ? <BeforeYouStart store={store} copy={copy} /> : null}
-          </>
-        )}
-      </CardContent>
-    </Card>
+          <span className="ml-auto">{guide}</span>
+        )
+      }
+    >
+      {connection ? (
+        <ConnectionDetails
+          item={connection}
+          actions={owner ? <ConnectionActions item={connection} /> : null}
+        />
+      ) : (
+        <PanelBody className="gap-4">
+          <p className="max-w-[70ch] text-body text-muted-foreground">
+            {copy.empty}
+          </p>
+          {owner ? <BeforeYouStart store={store} copy={copy} /> : null}
+        </PanelBody>
+      )}
+    </SettingsPanel>
   );
 }
 
@@ -324,26 +365,30 @@ export function StoreConnectionsCard() {
 
   if (!data.available) {
     return (
-      <Card>
-        <CardHeader>
-          <CardDescription>Store console</CardDescription>
-          <CardTitle>Store connections</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <p className="text-body text-muted-foreground">{STORE_CONNECT_OFF}</p>
-          <GuideLink
-            href={STORE_CONNECT_SETTING_GUIDE}
-            subject="store connections"
-          >
-            How to turn them on
-          </GuideLink>
-        </CardContent>
-      </Card>
+      <SettingsPanel
+        title="Store connections are off"
+        footer={
+          <span className="ml-auto">
+            <GuideLink
+              href={STORE_CONNECT_SETTING_GUIDE}
+              subject="store connections"
+            >
+              How to turn them on
+            </GuideLink>
+          </span>
+        }
+      >
+        <PanelBody>
+          <p className="max-w-[70ch] text-body text-muted-foreground">
+            {STORE_CONNECT_OFF}
+          </p>
+        </PanelBody>
+      </SettingsPanel>
     );
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-3">
       {SUPPORTED_STORES.map((store) => (
         <StoreConsoleCard
           key={store}

@@ -10,6 +10,14 @@ import {
   ALERT_EVENTS_SLOW_MS,
   filterAlertEvents,
 } from "./alert-feed-fixtures.mts";
+import {
+  API_TOKENS,
+  API_TOKENS_COOKIE,
+  LONG_ALERT,
+  LONG_ALERT_COOKIE,
+  SOLO_TEAM,
+  SOLO_TEAM_COOKIE,
+} from "./settings-fixtures.mts";
 import { DEEP_CHART_COOKIE, deepChartPage } from "./top-charts-fixtures.mts";
 import { CHANGES_STATE_COOKIE, changesState } from "./changes-fixtures.mts";
 import {
@@ -3097,8 +3105,22 @@ const routes: Route[] = [
       if (!hasCookie(req, SESSION_COOKIE)) {
         return json(res, 401, errorEnvelope(401, req.url ?? "/workspace/team"));
       }
-      json(res, 200, TEAM);
+      json(
+        res,
+        200,
+        hasCookie(req, SOLO_TEAM_COOKIE, "solo") ? SOLO_TEAM : TEAM,
+      );
     },
+  },
+  {
+    method: "GET",
+    pattern: /^\/auth\/tokens$/,
+    handler: (_p, req, res) =>
+      json(
+        res,
+        200,
+        hasCookie(req, API_TOKENS_COOKIE, "many") ? API_TOKENS : [],
+      ),
   },
   {
     method: "GET",
@@ -3566,7 +3588,9 @@ const routes: Route[] = [
               ? [UNSUBSCRIBED_ALERT, ...emailAlerts]
               : hasCookie(req, AWAITING_ALERT_COOKIE, "1")
                 ? [AWAITING_ALERT]
-                : emailAlerts,
+                : hasCookie(req, LONG_ALERT_COOKIE, "1")
+                  ? [LONG_ALERT, ...emailAlerts]
+                  : emailAlerts,
       ),
   },
   {

@@ -107,7 +107,29 @@ const PLAY_CONNECTIONS: Record<string, StoreConnectionItem> = {
   google: PLAY_CONNECTION_GOOGLE,
 };
 
+export const STORE_CONNECTION_LONG_NAME: StoreConnectionItem = {
+  ...STORE_CONNECTION_ACTIVE,
+  apps: [
+    {
+      appId: "app-1",
+      name: "Focus Timer: Pomodoro, Study Planner and Deep Work Sessions for Students",
+      state: "requested",
+      firstDate: "2026-08-01",
+      lastDate: "2026-10-12",
+    },
+    ...STORE_CONNECTION_ACTIVE.apps.slice(1),
+    {
+      appId: "app-3",
+      name: "Sleep Sounds",
+      state: "stopped",
+      firstDate: "2025-03-01",
+      lastDate: "2026-02-01",
+    },
+  ],
+};
+
 const CONNECTIONS: Record<string, StoreConnectionItem> = {
+  longName: STORE_CONNECTION_LONG_NAME,
   active: STORE_CONNECTION_ACTIVE,
   rejected: STORE_CONNECTION_REJECTED,
   agreement: STORE_CONNECTION_AGREEMENT,

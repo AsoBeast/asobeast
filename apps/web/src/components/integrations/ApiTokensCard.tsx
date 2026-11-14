@@ -9,16 +9,10 @@ import {
   API_TOKEN_SCOPES,
   DEFAULT_API_TOKEN_SCOPE,
   type ApiTokenCreated,
+  type ApiTokenItem,
   type ApiTokenScope,
 } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   Dialog,
   DialogBody,
@@ -50,10 +44,11 @@ import {
 } from "@/components/ui/table";
 import { ApiError, createApiToken } from "@/lib/api";
 import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
-import { formatDate, formatNumber } from "@/lib/format";
+import { formatDate, formatNumber, pluralize } from "@/lib/format";
 import { apiTokensOptions, invalidateApiTokenMutation } from "@/lib/queries";
 import { useAuth } from "@/components/auth/use-auth";
 import { useSingleFlight } from "@/lib/single-flight";
+import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { RevokeTokenButton } from "./RevokeTokenButton";
 
 const NEVER_EXPIRES = "never";
@@ -269,6 +264,82 @@ function CreateTokenDialog() {
   );
 }
 
+function Expiry({ token }: { token: ApiTokenItem }) {
+  if (token.expiresAt === null) {
+    return <span className="text-muted-foreground">Never</span>;
+  }
+  return token.expired ? (
+    <Badge variant="destructive">Expired</Badge>
+  ) : (
+    <span>{formatDate(token.expiresAt)}</span>
+  );
+}
+
+function LastUsed({ token }: { token: ApiTokenItem }) {
+  return token.lastUsedAt ? (
+    <span>{formatDate(token.lastUsedAt)}</span>
+  ) : (
+    <span className="text-muted-foreground">Never</span>
+  );
+}
+
+function TokenRow({
+  token,
+  busiest,
+}: {
+  token: ApiTokenItem;
+  busiest: number;
+}) {
+  const share = busiest === 0 ? 0 : (token.usageCount / busiest) * 100;
+
+  return (
+    <TableRow>
+      <TableCell className="max-w-48">
+        <span className="block truncate font-medium">{token.name}</span>
+        <span
+          translate="no"
+          className="block font-mono text-caption text-faint-foreground"
+        >
+          {`${token.prefix}…`}
+        </span>
+      </TableCell>
+      <TableCell>
+        <span>{SCOPE_LABELS[token.scope]}</span>
+      </TableCell>
+      <TableCell>
+        <Expiry token={token} />
+      </TableCell>
+      <TableCell>
+        <LastUsed token={token} />
+        <span className="block text-caption text-faint-foreground">
+          {`created ${formatDate(token.createdAt)}`}
+        </span>
+      </TableCell>
+      <TableCell className="numeric text-right">
+        <span className="relative inline-block min-w-16 px-2 py-1">
+          <span
+            aria-hidden
+            className="absolute inset-y-0 right-0 rounded-sm bg-chart-tint"
+            style={{ inlineSize: `${share}%` }}
+          />
+          <span className="relative">{formatNumber(token.usageCount)}</span>
+        </span>
+      </TableCell>
+      <TableCell>
+        <div className="flex justify-end">
+          <RevokeTokenButton id={token.id} name={token.name} />
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function tokensNote(tokens: ApiTokenItem[]): string {
+  const expired = tokens.filter((token) => token.expired).length;
+  const count = pluralize(tokens.length, "token");
+  return `${expired > 0 ? `${count}, ${expired} expired` : count} · Limits are per workspace, so a second token adds no capacity.`;
+}
+
 export function ApiTokensCard() {
   const { status, isLoading } = useAuth();
   const authenticated = Boolean(status?.authenticated);
@@ -276,84 +347,44 @@ export function ApiTokensCard() {
 
   if (isLoading || !status?.authenticated) return null;
 
+  const tokens = data ?? [];
+  const busiest = Math.max(0, ...tokens.map((token) => token.usageCount));
+
   return (
-    <Card>
-      <CardHeader className="flex-row items-start justify-between gap-4">
-        <div className="flex flex-col gap-1.5">
-          <CardDescription>Automation</CardDescription>
-          <CardTitle>API tokens</CardTitle>
-        </div>
-        <CreateTokenDialog />
-      </CardHeader>
-      <CardContent>
-        {!data || data.length === 0 ? (
-          <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-            No tokens yet. Create one to authenticate scripts or the MCP server
-            with a Bearer header.
-          </div>
-        ) : (
-          <div className="overflow-x-auto rounded-xl border">
-            <Table>
-              <TableCaption className="sr-only">
-                Personal API tokens for automation.
-              </TableCaption>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Prefix</TableHead>
-                  <TableHead>Scope</TableHead>
-                  <TableHead>Expires</TableHead>
-                  <TableHead>Last used</TableHead>
-                  <TableHead className="numeric text-right">Requests</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="w-0">
-                    <span className="sr-only">Actions</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.map((token) => (
-                  <TableRow key={token.id}>
-                    <TableCell className="max-w-48 truncate font-medium">
-                      {token.name}
-                    </TableCell>
-                    <TableCell
-                      translate="no"
-                      className="font-mono text-xs text-muted-foreground"
-                    >
-                      {token.prefix}…
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {SCOPE_LABELS[token.scope]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {token.expiresAt === null ? (
-                        <span className="text-muted-foreground">Never</span>
-                      ) : token.expired ? (
-                        <Badge variant="destructive">Expired</Badge>
-                      ) : (
-                        formatDate(token.expiresAt)
-                      )}
-                    </TableCell>
-                    <TableCell>{formatDate(token.lastUsedAt)}</TableCell>
-                    <TableCell className="numeric text-right">
-                      {formatNumber(token.usageCount)}
-                    </TableCell>
-                    <TableCell>{formatDate(token.createdAt)}</TableCell>
-                    <TableCell>
-                      <div className="flex justify-end">
-                        <RevokeTokenButton id={token.id} name={token.name} />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <SettingsPanel
+      title="API tokens"
+      action={<CreateTokenDialog />}
+      footer={tokens.length > 0 ? <p>{tokensNote(tokens)}</p> : null}
+    >
+      {tokens.length === 0 ? (
+        <p className="mx-auto max-w-prose px-(--card-spacing) py-8 text-center text-body text-muted-foreground">
+          No tokens yet. Create one to authenticate scripts or the MCP server
+          with a Bearer header.
+        </p>
+      ) : (
+        <Table>
+          <TableCaption className="sr-only">
+            Personal API tokens for automation.
+          </TableCaption>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Scope</TableHead>
+              <TableHead>Expires</TableHead>
+              <TableHead>Last used</TableHead>
+              <TableHead className="numeric text-right">Requests</TableHead>
+              <TableHead className="w-0">
+                <span className="sr-only">Actions</span>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {tokens.map((token) => (
+              <TokenRow key={token.id} token={token} busiest={busiest} />
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </SettingsPanel>
   );
 }

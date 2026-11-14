@@ -3,6 +3,8 @@ import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { ApiTokensCard } from "@/components/integrations/ApiTokensCard";
 import { McpServerCard } from "@/components/integrations/McpServerCard";
 import { GuideLink } from "@/components/integrations/GuideLink";
+import { IntegrationsStatus } from "@/components/integrations/IntegrationsStatus";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { StoreConnectionsCard } from "@/components/integrations/StoreConnectionsCard";
 import { StoreConnectionsSkeleton } from "@/components/integrations/skeletons";
 import { SettingsSection } from "@/components/settings/SettingsSection";
@@ -20,42 +22,33 @@ export default async function IntegrationsPage() {
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <div className="page-reading flex flex-col gap-8">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-title tracking-tight text-balance">
-            Integrations
-          </h1>
-          <p className="text-body text-muted-foreground">
-            Your store consoles, personal API tokens and the MCP server.
-          </p>
-        </div>
+        <PageHeader
+          title="Integrations"
+          lede={
+            <Suspense fallback={null}>
+              <IntegrationsStatus />
+            </Suspense>
+          }
+          meta={
+            <GuideLink
+              href={INTEGRATIONS_GUIDE}
+              subject="store connections, API tokens and MCP"
+            >
+              Read the integrations overview
+            </GuideLink>
+          }
+        />
 
         <SettingsSection
           id={STORE_CONNECTIONS_SECTION_ID}
           title="Store connections"
-          description={
-            <>
-              Connect App Store Connect or the Google Play Console so store
-              listing visits, downloads and conversion appear beside your
-              rankings.{" "}
-              <GuideLink
-                href={INTEGRATIONS_GUIDE}
-                subject="store connections, API tokens and MCP"
-              >
-                Read the integrations overview
-              </GuideLink>
-            </>
-          }
         >
           <Suspense fallback={<StoreConnectionsSkeleton />}>
             <StoreConnectionsCard />
           </Suspense>
         </SettingsSection>
 
-        <SettingsSection
-          id="api-and-mcp"
-          title="API and MCP"
-          description="Personal tokens and the MCP server for your editor or agent."
-        >
+        <SettingsSection id="api-and-mcp" title="API and MCP">
           <ApiTokensCard />
           <McpServerCard />
         </SettingsSection>

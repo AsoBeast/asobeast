@@ -7,15 +7,10 @@ import { Check, Copy, Loader2, Plug } from "lucide-react";
 import { useQueryState } from "nuqs";
 import { toast } from "sonner";
 import type { ApiTokenCreated } from "@asobeast/shared";
+import { FOOTER_LINK } from "@/components/layout/panel-classes";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { PanelBody, SettingsPanel } from "@/components/settings/SettingsPanel";
 import {
   Dialog,
   DialogBody,
@@ -309,46 +304,82 @@ function ConnectDialog() {
   );
 }
 
+function EndpointField() {
+  const endpoint = remoteEndpoint();
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    try {
+      if (!navigator.clipboard) throw new Error("clipboard unavailable");
+      await navigator.clipboard.writeText(endpoint);
+      setCopied(true);
+      toast.success("Endpoint copied");
+    } catch {
+      toast.error("Copy failed — select the text and copy it manually.");
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <span id="mcp-endpoint-label" className="text-label">
+        Endpoint
+      </span>
+      <div className="flex min-w-0 items-center gap-2 rounded-md border bg-muted py-1 pr-1 pl-3">
+        <code
+          translate="no"
+          aria-labelledby="mcp-endpoint-label"
+          className="min-w-0 flex-1 overflow-x-auto font-mono text-caption whitespace-nowrap"
+        >
+          {endpoint}
+        </code>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          aria-label="Copy endpoint"
+          onClick={() => void copy()}
+        >
+          {copied ? <Check /> : <Copy />}
+          Copy
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function McpServerCard() {
   const { status, isLoading } = useAuth();
 
   if (isLoading || !status?.authenticated) return null;
 
   return (
-    <Card>
-      <CardHeader className="flex-row items-start justify-between gap-4">
-        <div className="flex flex-col gap-1.5">
-          <CardDescription>Automation</CardDescription>
-          <CardTitle>MCP server</CardTitle>
-        </div>
-        <ConnectDialog />
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <p className="text-sm text-muted-foreground">
-          Point any MCP client at this instance to ask about your apps,
-          keywords, rankings and audits in plain language. Tools are read-only
-          unless you allow an agent to make changes when you connect it, and
-          every connection is authenticated with a personal API token.{" "}
+    <SettingsPanel
+      title="MCP server"
+      action={<ConnectDialog />}
+      footer={
+        <>
+          <p className="min-w-0 flex-1 basis-64">
+            Every connection is authenticated with a personal API token.
+          </p>
           <a
             href={DOCS_URL}
             target="_blank"
             rel="noreferrer"
-            className="font-medium text-foreground underline underline-offset-4"
+            className={FOOTER_LINK}
           >
             Read the setup guide
           </a>
-          .
+        </>
+      }
+    >
+      <PanelBody className="gap-4">
+        <p className="max-w-[70ch] text-body text-muted-foreground">
+          Point any MCP client at this instance to ask about your apps,
+          keywords, rankings and audits in plain language. Tools are read-only
+          unless you allow an agent to make changes when you connect it.
         </p>
-        <div className="flex flex-col gap-1.5">
-          <Label className="text-xs font-medium">Endpoint</Label>
-          <code
-            translate="no"
-            className="block overflow-x-auto rounded-lg border bg-muted px-3 py-2 font-mono text-xs"
-          >
-            {remoteEndpoint()}
-          </code>
-        </div>
-      </CardContent>
-    </Card>
+        <EndpointField />
+      </PanelBody>
+    </SettingsPanel>
   );
 }

@@ -523,16 +523,12 @@ test("integrations creates, reveals and revokes an api token", async ({
   ).toHaveValue(`asob_${"a".repeat(48)}`);
   await page.getByRole("button", { name: "Done" }).click();
 
-  await expect(
-    page.getByRole("cell", { name: "ci", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole("cell", { name: /^ci\b/ })).toBeVisible();
 
   await page.getByRole("button", { name: "Revoke ci" }).click();
   await page.getByRole("button", { name: "Revoke", exact: true }).click();
 
-  await expect(
-    page.getByRole("cell", { name: "ci", exact: true }),
-  ).toBeHidden();
+  await expect(page.getByRole("cell", { name: /^ci\b/ })).toBeHidden();
 });
 
 test("a double click on Create token creates one token", async ({ page }) => {
@@ -582,9 +578,7 @@ test("a double click on Create token creates one token", async ({ page }) => {
     page.getByRole("dialog", { name: "Copy your token" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Done" }).click();
-  await expect(page.getByRole("cell", { name: "ci", exact: true })).toHaveCount(
-    1,
-  );
+  await expect(page.getByRole("cell", { name: /^ci\b/ })).toHaveCount(1);
   expect(tokens).toHaveLength(1);
 });
 
@@ -685,7 +679,7 @@ test("settings hides the plan section on a self hosted instance", async ({
   await seedSession(page);
 
   await page.goto("/settings");
-  await expect(page.getByRole("heading", { name: "Capacity" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Capacity" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Plan" })).toBeHidden();
 });
 
