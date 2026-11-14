@@ -15,6 +15,14 @@ export interface CoverageSpan {
   width: number;
 }
 
+const syncDay = (lastSyncedAt: string) =>
+  new Date(lastSyncedAt).toISOString().slice(0, 10);
+
+export const endsOnSync = (
+  scale: CoverageScale,
+  lastSyncedAt: string | null,
+): boolean => lastSyncedAt !== null && syncDay(lastSyncedAt) === scale.to;
+
 const reported = (app: StoreConnectionApp) =>
   app.firstDate !== null && app.lastDate !== null;
 
@@ -25,7 +33,7 @@ export function coverageScale(
   const firsts = apps.flatMap((app) => (reported(app) ? [app.firstDate!] : []));
   const lasts = apps.flatMap((app) => (reported(app) ? [app.lastDate!] : []));
   if (firsts.length === 0) return null;
-  const ends = lastSyncedAt ? [...lasts, lastSyncedAt.slice(0, 10)] : lasts;
+  const ends = lastSyncedAt ? [...lasts, syncDay(lastSyncedAt)] : lasts;
   return { from: firsts.toSorted()[0], to: ends.toSorted().at(-1)! };
 }
 

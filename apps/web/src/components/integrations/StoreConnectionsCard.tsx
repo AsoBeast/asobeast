@@ -219,11 +219,16 @@ function ConnectionDetails({
             },
           ]}
         />
-        {warned ? (
-          <p role="status" className="max-w-[70ch] text-body text-warning">
-            {status.text}
-          </p>
-        ) : null}
+        <p
+          role="status"
+          className={
+            warned
+              ? "max-w-[70ch] text-body text-warning"
+              : "text-caption text-muted-foreground"
+          }
+        >
+          {status.text}
+        </p>
         {actions}
       </PanelBody>
       <StoreConnectionApps
@@ -242,24 +247,14 @@ function ConnectionFooter({
   item: StoreConnectionItem;
   guide: ReactNode;
 }) {
-  const status = connectionStatusLine(item);
-
   return (
     <>
-      <p className="min-w-0 flex-1 basis-64">
-        {item.verifiedAt ? (
-          <>
-            <span>{`Verified ${formatDate(item.verifiedAt)}`}</span>
-            {status.tone === "muted" ? <span aria-hidden> · </span> : null}
-          </>
-        ) : null}
-        {status.tone === "muted" ? (
-          <span role="status" className="text-muted-foreground">
-            {status.text}
-          </span>
-        ) : null}
-      </p>
-      {guide}
+      {item.verifiedAt ? (
+        <p className="min-w-0 flex-1 basis-64">
+          {`Verified ${formatDate(item.verifiedAt)}`}
+        </p>
+      ) : null}
+      <span className="ml-auto">{guide}</span>
     </>
   );
 }

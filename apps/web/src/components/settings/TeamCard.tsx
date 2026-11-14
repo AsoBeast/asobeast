@@ -184,7 +184,7 @@ function Invitations({
         <TableCaption className="sr-only">
           Invitations waiting to be accepted
         </TableCaption>
-        <TeamColumns isOwner={isOwner} />{" "}
+        <TeamColumns isOwner={isOwner} />
         <TableHeader className="sr-only">
           <TableRow>
             <TableHead>Email</TableHead>

@@ -89,6 +89,11 @@ function ConfirmationNotice({ awaiting }: { awaiting?: AwaitingConfirmation }) {
   );
 }
 
+interface Rule {
+  event: WebhookEvent;
+  label: string;
+}
+
 function RuleLine({
   essential,
   facts,
@@ -98,7 +103,7 @@ function RuleLine({
   essential: boolean;
   facts: readonly string[];
   confirmDrops: boolean;
-  rules: readonly string[];
+  rules: readonly Rule[];
 }) {
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -109,20 +114,20 @@ function RuleLine({
         {facts.map((fact) => (
           <Fragment key={fact}>
             <span>{fact}</span>
-            <span aria-hidden> · </span>
+            <span> · </span>
           </Fragment>
         ))}
         {confirmDrops ? (
           <>
             <span data-slot="alert-rule">{CONFIRM_DROPS_BADGE}</span>
-            <span aria-hidden> · </span>
+            <span> · </span>
           </>
         ) : null}
-        <span>Sends </span>
+        {rules.length > 0 ? <span>Sends </span> : <span>Sends nothing</span>}
         {rules.map((rule, index) => (
-          <Fragment key={rule}>
+          <Fragment key={rule.event}>
             {index > 0 ? <span>, </span> : null}
-            <span data-slot="alert-rule">{rule}</span>
+            <span data-slot="alert-rule">{rule.label}</span>
           </Fragment>
         ))}
       </p>
@@ -219,12 +224,13 @@ export function AlertChannelRow({
         essential={essential}
         facts={facts}
         confirmDrops={confirmDrops}
-        rules={events.map((event) =>
-          eventBadgeLabel(event, reviewScores, {
+        rules={events.map((event) => ({
+          event,
+          label: eventBadgeLabel(event, reviewScores, {
             ratingDropTenths,
             rankDropThreshold,
           }),
-        )}
+        }))}
       />
 
       <div className="-ml-2 flex flex-wrap items-center gap-x-2 gap-y-1">

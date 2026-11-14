@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { StoreConnectionApp } from "@asobeast/shared";
-import { coverageScale, coverageSpan } from "./data-coverage";
+import { coverageScale, coverageSpan, endsOnSync } from "./data-coverage";
 
 const app = (
   firstDate: string | null,
@@ -67,5 +67,19 @@ describe("coverageSpan", () => {
     expect(coverageSpan(app(null, null), scale)).toBeNull();
     expect(coverageSpan(app("2026-10-09", "2026-09-01"), scale)).toBeNull();
     expect(coverageSpan(app("2026-09-01", "2026-10-09"), null)).toBeNull();
+  });
+});
+
+describe("endsOnSync", () => {
+  const scale = { from: "2026-09-01", to: "2026-10-15" };
+
+  it("is true when the scale ends on the day of the last sync", () => {
+    expect(endsOnSync(scale, "2026-10-15T05:31:00.000Z")).toBe(true);
+    expect(endsOnSync(scale, "2026-10-16T01:00:00+02:00")).toBe(true);
+  });
+
+  it("is false when a newer report day or no sync ends the scale", () => {
+    expect(endsOnSync(scale, "2026-10-10T05:31:00.000Z")).toBe(false);
+    expect(endsOnSync(scale, null)).toBe(false);
   });
 });

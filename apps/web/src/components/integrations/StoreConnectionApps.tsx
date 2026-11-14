@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import {
   coverageScale,
   coverageSpan,
+  endsOnSync,
   type CoverageScale,
 } from "./data-coverage";
 
@@ -110,7 +111,7 @@ export function StoreConnectionApps({
         as="p"
         title={copy.appsLabel}
         count={apps.length}
-        note="Days of store data on hand"
+        note="First to newest report day"
       />
       <ul aria-label={copy.appsLabel} className="flex flex-col py-1">
         {apps.map((app) => (
@@ -127,7 +128,7 @@ export function StoreConnectionApps({
         >
           <div className="col-start-2 flex justify-between gap-2">
             <span>{formatDate(scale.from)}</span>
-            <span>{`${lastSyncedAt ? "Last sync" : "Newest report"}, ${formatDate(scale.to)}`}</span>
+            <span>{`${endsOnSync(scale, lastSyncedAt) ? "Last sync" : "Newest report"}, ${formatDate(scale.to)}`}</span>
           </div>
         </div>
       ) : null}

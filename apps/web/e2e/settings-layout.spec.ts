@@ -157,6 +157,9 @@ test("integrations opens with what is connected and how much data each app has",
   await expect(focus).toContainText("1,016 days");
   await expect(focus).toContainText("through Oct 12, 2026");
   await expect(
+    page.getByRole("region", { name: "Store connections" }).getByRole("status"),
+  ).toHaveText([/^Last synced/, /^Last synced/]);
+  await expect(
     focus.getByRole("img", {
       name: "Data from Jan 1, 2024 to Oct 12, 2026",
     }),

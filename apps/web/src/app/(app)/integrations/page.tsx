@@ -18,6 +18,9 @@ import {
 export default async function IntegrationsPage() {
   const queryClient = getQueryClient();
   await queryClient.prefetchQuery(storeConnectionsOptions);
+  const connections = queryClient.getQueryData(
+    storeConnectionsOptions.queryKey,
+  );
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
@@ -25,9 +28,11 @@ export default async function IntegrationsPage() {
         <PageHeader
           title="Integrations"
           lede={
-            <Suspense fallback={null}>
-              <IntegrationsStatus />
-            </Suspense>
+            connections?.available === false ? undefined : (
+              <Suspense fallback={null}>
+                <IntegrationsStatus />
+              </Suspense>
+            )
           }
           meta={
             <GuideLink

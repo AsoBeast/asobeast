@@ -178,11 +178,13 @@ function DeletionControl({ deletion }: { deletion: WorkspaceDeletionStatus }) {
 }
 
 export function WorkspaceDeletionCard() {
-  const { user, isOperator } = useAuth();
+  const { user, isOperator, isLoading } = useAuth();
   const { data: deletion, isPending } = useQuery(workspaceDeletionOptions);
 
-  if (isPending || !user) return <PanelSkeleton title="w-36" rows={2} />;
-  if (!deletion) return null;
+  if (isPending || isLoading) {
+    return <PanelSkeleton title="w-36" rows={2} />;
+  }
+  if (!deletion || !user) return null;
 
   const isOwner = user.role === "owner";
 
