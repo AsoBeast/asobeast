@@ -20,29 +20,55 @@ const READING_LINE = 120;
 
 const sectionOf = (id: string) => document.getElementById(id);
 
+function markAt(ids: readonly SettingsSectionId[], scrolled: number) {
+  const end = document.documentElement.scrollHeight - window.innerHeight;
+  const shown = ids.flatMap((id) => {
+    const section = sectionOf(id);
+    return section
+      ? [
+          {
+            id,
+            at: section.getBoundingClientRect().top + scrolled - READING_LINE,
+          },
+        ]
+      : [];
+  });
+  const reachable = shown.filter((mark) => mark.at <= end);
+  const beyond = shown.slice(reachable.length);
+  const from = Math.max(0, reachable.at(-1)?.at ?? 0);
+  return [
+    ...reachable,
+    ...beyond.map((mark, index) => ({
+      id: mark.id,
+      at: from + ((end - from) * (index + 1)) / beyond.length,
+    })),
+  ];
+}
+
 function sectionAtReadingLine(
   ids: readonly SettingsSectionId[],
 ): SettingsSectionId | null {
+  const scrolled = window.scrollY;
   return (
-    ids.findLast((id) => {
-      const section = sectionOf(id);
-      return section
-        ? section.getBoundingClientRect().top <= READING_LINE
-        : false;
-    }) ?? null
+    markAt(ids, scrolled).findLast((mark) => mark.at <= scrolled + 1)?.id ??
+    null
   );
 }
 
-function startsInView(id: string): boolean {
-  const top = sectionOf(id)?.getBoundingClientRect().top;
-  return top !== undefined && top >= 0 && top < window.innerHeight;
+interface Picked {
+  id: SettingsSectionId;
+  anchor: Element;
 }
 
-function hashSection(
-  ids: readonly SettingsSectionId[],
-): SettingsSectionId | null {
-  const hash = window.location.hash.slice(1);
-  return ids.find((id) => id === hash) ?? null;
+function startsInView(anchor: Element): boolean {
+  const { top } = anchor.getBoundingClientRect();
+  return top >= 0 && top < window.innerHeight;
+}
+
+function hashSection(ids: readonly SettingsSectionId[]): Picked | null {
+  const anchor = sectionOf(window.location.hash.slice(1));
+  const id = ids.find((known) => sectionOf(known)?.contains(anchor ?? null));
+  return anchor && id ? { id, anchor } : null;
 }
 
 function useSectionInView(ids: readonly SettingsSectionId[]) {
@@ -53,8 +79,8 @@ function useSectionInView(ids: readonly SettingsSectionId[]) {
     const known = key.split(" ") as SettingsSectionId[];
     let picked = hashSection(known);
     const read = () => {
-      if (picked && !startsInView(picked)) picked = null;
-      setInView(picked ?? sectionAtReadingLine(known));
+      if (picked && !startsInView(picked.anchor)) picked = null;
+      setInView(picked?.id ?? sectionAtReadingLine(known));
     };
     const pick = () => {
       picked = hashSection(known);

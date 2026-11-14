@@ -325,7 +325,7 @@ function EndpointField() {
       <div className="flex min-w-0 items-center gap-2 rounded-md border bg-muted py-1 pr-1 pl-3">
         <code
           translate="no"
-          className="min-w-0 flex-1 overflow-x-auto font-mono text-caption whitespace-nowrap"
+          className="min-w-0 flex-1 py-1 font-mono text-caption wrap-anywhere"
         >
           {endpoint}
         </code>

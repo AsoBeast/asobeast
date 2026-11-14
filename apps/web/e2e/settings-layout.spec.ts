@@ -263,3 +263,58 @@ test("a deep link marks its section in the index, and a part of one marks the se
   ).toBeInViewport();
   await expect(current).toHaveText("Alerts");
 });
+
+test("scrolling to the end of settings marks each last section on the way", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/settings");
+  const current = index(page).locator('[aria-current="location"]');
+  await expect(current).toHaveText("Capacity");
+
+  await expect(page.getByRole("heading", { name: "Team" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Delete workspace" }),
+  ).toBeVisible();
+  const marked = new Set<string>();
+  const end = await page.evaluate(
+    () => document.documentElement.scrollHeight - window.innerHeight,
+  );
+  for (let top = 0; top <= end + 40; top += 40) {
+    await page.evaluate((y) => window.scrollTo(0, y), top);
+    await page.evaluate(
+      () => new Promise((resolve) => requestAnimationFrame(resolve)),
+    );
+    marked.add((await current.textContent()) ?? "");
+  }
+  await expect(current).toHaveText("Workspace");
+  marked.add("Workspace");
+
+  expect([...marked]).toEqual([
+    "Capacity",
+    "Getting started",
+    "Alerts",
+    "Team",
+    "Workspace",
+  ]);
+});
+
+test("the days of data bars share one scale across a connection's apps", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await seed(page.context(), { [STORE_CONNECTION_COOKIE]: "longName" });
+  await page.goto("/integrations");
+
+  const tracks = page
+    .getByRole("list", { name: "Apps this key reports" })
+    .getByRole("img");
+  await expect(tracks).toHaveCount(3);
+  const boxes = await tracks.evaluateAll((nodes) =>
+    nodes.map((node) => {
+      const box = node.getBoundingClientRect();
+      return [Math.round(box.left), Math.round(box.width)];
+    }),
+  );
+  expect(new Set(boxes.map(String)).size).toBe(1);
+});

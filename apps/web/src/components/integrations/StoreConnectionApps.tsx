@@ -15,7 +15,7 @@ import {
 } from "./data-coverage";
 
 const COLUMNS =
-  "grid grid-cols-[minmax(0,1fr)_max-content] gap-x-4 sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)_max-content]";
+  "grid grid-cols-[minmax(0,1fr)_max-content] gap-x-4 sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)_9rem]";
 
 const NEEDS_ACTION = new Set(["forbidden", "stopped"]);
 

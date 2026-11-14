@@ -33,7 +33,7 @@ function DeliveryStatus({ delivery }: { delivery: AlertDeliveryItem }) {
 
 function DeliveryRow({ delivery }: { delivery: AlertDeliveryItem }) {
   return (
-    <li className="grid grid-cols-[max-content_minmax(0,1fr)] items-baseline gap-x-3 gap-y-1 border-t border-border-subtle py-2 text-dense sm:grid-cols-[max-content_minmax(0,1fr)_max-content]">
+    <li className="grid grid-cols-[max-content_minmax(0,1fr)] items-center gap-x-3 gap-y-1 border-t border-border-subtle py-2 text-dense sm:grid-cols-[max-content_minmax(0,1fr)_max-content]">
       <DeliveryStatus delivery={delivery} />
       <span className="min-w-0 text-muted-foreground wrap-anywhere">
         <Separated
