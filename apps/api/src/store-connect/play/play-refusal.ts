@@ -17,7 +17,7 @@ function tokenRefused(
     return `Google refused the key of ${email}. It was deleted or disabled in Google Cloud, or the service account was removed. Create a new JSON key and connect it.`;
   }
   if (isClientRefusal(code)) return CLIENT_REFUSED;
-  return `Google no longer accepts the sign in of ${email}. It was revoked, or it expired because the Google Cloud OAuth app is still in testing. Sign in with Google again.`;
+  return `Google no longer accepts the sign in of ${email}. It was revoked, or it expired because the Google Cloud OAuth app is still in testing. Reconnect Google Play.`;
 }
 
 const accessRefused = ({ kind, email }: PlayAccount, bucket: string): string =>
