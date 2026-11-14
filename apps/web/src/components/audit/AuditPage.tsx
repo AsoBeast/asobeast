@@ -16,6 +16,7 @@ import {
   AUDIT_MAIN,
   AUDIT_RAIL,
 } from "@/components/audit/layout-classes";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { appDetailOptions, auditOptions } from "@/lib/queries";
 
 export function AuditPage({ appId }: { appId: string }) {
@@ -24,14 +25,15 @@ export function AuditPage({ appId }: { appId: string }) {
 
   return (
     <div className="page-wide @container/audit flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-        <h2 className="sr-only">Audit</h2>
-        <AuditLede audit={audit} />
-        <CopyReportButton
-          audit={audit}
-          app={{ name: app.name, country: app.country }}
-        />
-      </div>
+      <PageHeader title="Audit" titleHidden>
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+          <AuditLede audit={audit} />
+          <CopyReportButton
+            audit={audit}
+            app={{ name: app.name, country: app.country }}
+          />
+        </div>
+      </PageHeader>
 
       <div className={AUDIT_GRID}>
         <div className={AUDIT_MAIN}>
