@@ -48,7 +48,10 @@ export function connectionSummary(
   if (connections.length === 0) return [{ text: NOTHING_CONNECTED }];
 
   const apps = connections.flatMap((item) => item.apps);
-  const reporting = apps.filter((app) => app.state === "requested").length;
+  const reporting = connections
+    .filter((item) => item.status !== "rejected")
+    .flatMap((item) => item.apps)
+    .filter((app) => app.state === "requested").length;
   const newest = apps
     .flatMap((app) => (app.lastDate ? [app.lastDate] : []))
     .toSorted()

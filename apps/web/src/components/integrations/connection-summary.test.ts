@@ -108,4 +108,16 @@ describe("connectionSummary", () => {
       { text: "App Store Connect: key refused", warning: true },
     ]);
   });
+
+  it("does not count the apps of a refused connection as reporting", () => {
+    expect(
+      connectionSummary({
+        available: true,
+        connections: [
+          item(),
+          item({ store: "GOOGLE_PLAY", status: "rejected" }),
+        ],
+      }),
+    ).toContainEqual({ figure: "1 of 4", text: "apps reporting" });
+  });
 });
