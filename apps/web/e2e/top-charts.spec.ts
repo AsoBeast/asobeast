@@ -22,7 +22,7 @@ import {
   TOP_PAID_CHART_APPS,
   utcDaysAgo,
 } from "./fixtures.mts";
-import { holdRequest } from "./held-request.mts";
+import { holdRequest, type HeldRequest } from "./held-request.mts";
 import { routePlan } from "./plan-helpers.mts";
 import { DEEP_CHART_COOKIE } from "./top-charts-fixtures.mts";
 
@@ -2047,6 +2047,45 @@ test.describe("what moved and where the tracked apps stand", () => {
   });
 });
 
+const historyRegion = (page: Page) =>
+  page.getByRole("region", {
+    name: "Positions of the top 10 apps over 5 captured days",
+  });
+
+async function retryWhileOneCaptureLoads(page: Page): Promise<HeldRequest> {
+  const [, ...earlier] = TOP_CHART_DATES;
+  const slow = earlier[earlier.length - 1];
+  const retried = earlier.filter((date) => date !== slow);
+  let failing = true;
+  await page.route(/\/charts\?.*date=/, (route) =>
+    failing ? route.fulfill({ status: 500, body: "{}" }) : route.continue(),
+  );
+  const held = await holdRequest(
+    page,
+    new RegExp(`/charts\\?.*date=${slow}`),
+    "GET",
+  );
+  await page.goto("/charts?view=table&tableView=history");
+  const retry = page.getByRole("button", { name: "Retry" });
+  await expect(retry).toBeVisible({ timeout: 30_000 });
+
+  failing = false;
+  const answered = Promise.all(
+    retried.map((date) =>
+      page.waitForResponse(
+        (response) => response.url().includes(`date=${date}`) && response.ok(),
+      ),
+    ),
+  );
+  await (await hydrated(retry)).focus();
+  await page.keyboard.press("Enter");
+  await answered;
+
+  await expect(retry).toHaveAttribute("aria-disabled", "true");
+  await expect(retry).toBeFocused();
+  return held;
+}
+
 test.describe("chart history", () => {
   test("draws the top ten over the captured days and keeps the choice in the URL", async ({
     page,
@@ -2140,43 +2179,40 @@ test.describe("chart history", () => {
     page,
   }) => {
     test.setTimeout(90_000);
-    const [, ...earlier] = TOP_CHART_DATES;
-    const slow = earlier[earlier.length - 1];
-    const retried = earlier.filter((date) => date !== slow);
-    let failing = true;
-    await page.route(/\/charts\?.*date=/, (route) =>
-      failing ? route.fulfill({ status: 500, body: "{}" }) : route.continue(),
-    );
-    const held = await holdRequest(
-      page,
-      new RegExp(`/charts\\?.*date=${slow}`),
-      "GET",
-    );
-    await page.goto("/charts?view=table&tableView=history");
-    const retry = page.getByRole("button", { name: "Retry" });
-    await expect(retry).toBeVisible({ timeout: 30_000 });
+    const held = await retryWhileOneCaptureLoads(page);
 
-    failing = false;
-    const answered = Promise.all(
-      retried.map((date) =>
-        page.waitForResponse(
-          (response) =>
-            response.url().includes(`date=${date}`) && response.ok(),
-        ),
-      ),
-    );
-    await (await hydrated(retry)).focus();
-    await page.keyboard.press("Enter");
-    await answered;
-
-    await expect(retry).toHaveAttribute("aria-disabled", "true");
-    await expect(retry).toBeFocused();
     held.release();
-    const chart = page.getByRole("region", {
-      name: "Positions of the top 10 apps over 5 captured days",
-    });
-    await expect(chart).toBeVisible();
-    await expect(chart).toBeFocused();
+
+    await expect(historyRegion(page)).toBeFocused();
+  });
+
+  test("hands focus to the chart when the retry outlasts the claim window", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await page.clock.install();
+    const held = await retryWhileOneCaptureLoads(page);
+
+    await page.clock.fastForward("00:31");
+    held.release();
+
+    await expect(historyRegion(page)).toBeFocused();
+  });
+
+  test("leaves focus where the user moved it during the retry", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    const held = await retryWhileOneCaptureLoads(page);
+    const history = page
+      .getByRole("tablist", { name: "Chart display" })
+      .getByRole("tab", { name: "History" });
+
+    await history.focus();
+    held.release();
+
+    await expect(historyRegion(page)).toBeVisible();
+    await expect(history).toBeFocused();
   });
 
   test("says when too few days are captured", async ({ page }) => {

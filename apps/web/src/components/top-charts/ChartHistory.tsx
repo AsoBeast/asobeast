@@ -213,9 +213,14 @@ export function ChartHistory({
   const days = reads.flatMap((read) => (read.data ? [read.data] : []));
 
   const retry = async () => {
+    const origin = document.activeElement;
     setRetrying(true);
     try {
-      await Promise.all(missing.map((read) => read.refetch()));
+      const results = await Promise.all(missing.map((read) => read.refetch()));
+      const loaded = results.every((result) => result.isSuccess);
+      if (loaded && document.activeElement === origin) {
+        armFocusHandoff(HISTORY_FOCUS_KEY);
+      }
     } finally {
       setRetrying(false);
     }
@@ -232,10 +237,7 @@ export function ChartHistory({
   }
   if (failed.length > 0 || retrying) {
     return (
-      <div
-        className={`${CHART_HEIGHT.hero} flex items-center justify-center`}
-        onClickCapture={() => armFocusHandoff(HISTORY_FOCUS_KEY)}
-      >
+      <div className={`${CHART_HEIGHT.hero} flex items-center justify-center`}>
         <InlineQueryError
           message="Could not load the earlier captures."
           read={{
