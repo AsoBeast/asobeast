@@ -88,7 +88,7 @@ export function KeywordPicker({
           setSelected(NOTHING_SELECTED);
         }}
       >
-        <TabsList>
+        <TabsList scrollable>
           {PICKER_STRATEGIES.map((value) => (
             <TabsOption key={value} value={value}>
               {PICKER_LABELS[value]}

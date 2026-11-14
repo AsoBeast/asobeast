@@ -1028,3 +1028,34 @@ test("the steps and the actions stay beside a wide page and stack on a narrow on
     ),
   ).toBe(true);
 });
+
+test("a step link moves keyboard focus to its panel", async ({ page }) => {
+  await startSetup(page, "app-1");
+
+  const link = page
+    .getByRole("navigation", { name: "Setup steps" })
+    .getByRole("link", { name: "Add countries" });
+  await link.focus();
+  await page.keyboard.press("Enter");
+
+  await expect(page).toHaveURL(/#setup-countries$/);
+  await expect(stepCard(page, "Add countries")).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(
+    stepCard(page, "Add countries").getByRole("button", {
+      name: "Skip this step",
+    }),
+  ).toBeFocused();
+});
+
+test("the home country leads the selected countries", async ({ page }) => {
+  await startSetup(page, "app-1");
+  await page.getByRole("combobox", { name: "Country to add" }).click();
+  await page.getByRole("option", { name: "DE · Germany" }).click();
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+
+  await expect(selectedMarkets(page).getByRole("listitem")).toContainText([
+    "United States (US)",
+    "Germany (DE)",
+  ]);
+});

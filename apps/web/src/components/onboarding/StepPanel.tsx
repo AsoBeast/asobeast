@@ -56,7 +56,11 @@ export function StepPanel({
 }) {
   const pill = STATE_PILLS[state];
   return (
-    <Card id={`setup-${step}`} className="scroll-mt-20">
+    <Card
+      id={`setup-${step}`}
+      tabIndex={-1}
+      className="scroll-mt-20 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
       <CardHeader className={PANEL_HEADER}>
         <CardTitle asChild>
           <h3>{STEP_TITLES[step]}</h3>

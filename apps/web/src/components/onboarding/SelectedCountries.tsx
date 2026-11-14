@@ -29,6 +29,10 @@ export function SelectedCountries({
   onRemove: (market: string) => void;
 }) {
   const headingId = useId();
+  const homeFirst = [
+    ...counts.filter((count) => count.market === homeMarket),
+    ...counts.filter((count) => count.market !== homeMarket),
+  ];
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-1">
       <h4 id={headingId} className="text-dense font-medium">
@@ -38,7 +42,7 @@ export function SelectedCountries({
         aria-labelledby={headingId}
         className="flex flex-col divide-y divide-border-subtle"
       >
-        {counts.map((count) => {
+        {homeFirst.map((count) => {
           const name = formatCountry(count.market);
           const removable = count.market !== homeMarket && counts.length > 1;
           return (

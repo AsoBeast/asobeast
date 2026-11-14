@@ -52,7 +52,7 @@ function StepState({ state, next }: { state: SetupStepState; next: boolean }) {
 
 const LIST_LAYOUTS = {
   inline: { list: "flex-wrap gap-x-6 gap-y-1", item: "" },
-  stacked: { list: "flex-col", item: "justify-between" },
+  stacked: { list: "flex-col", item: "" },
   rail: {
     list: "flex-wrap gap-x-6 gap-y-1 @4xl/setup:flex-col @4xl/setup:flex-nowrap @4xl/setup:gap-0",
     item: "@4xl/setup:justify-between",
