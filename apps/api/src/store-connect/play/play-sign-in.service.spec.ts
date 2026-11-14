@@ -20,6 +20,7 @@ import {
   CLIENT_REFUSED,
   type GoogleOAuthClient,
   SIGN_IN_OFF,
+  SIGN_IN_UNPUBLISHED,
 } from './google-sign-in';
 import {
   PlaySignIn,
@@ -35,6 +36,7 @@ const CLIENT: GoogleOAuthClient = {
   id: 'client.apps.googleusercontent.com',
   secret: 'test-oauth-client-secret',
   redirectUri: 'https://aso.example.com/integrations/google-play',
+  published: true,
 };
 const ID_TOKEN = `e30.${Buffer.from(JSON.stringify({ email: 'owner@example.com', sub: '1098765' })).toString('base64url')}.sig`;
 const GRANTED: GcsResponse = {
@@ -218,5 +220,19 @@ describe('PlaySignIn', () => {
     await expect(
       noClient.complete({ code: 'c', state: 's' }, 'user_1'),
     ).rejects.toThrow(SIGN_IN_OFF);
+  });
+
+  it('starts no sign in while the consent screen is in testing, and finishes one already started', async () => {
+    const started = harness();
+    const url = started.signIn.start(BUCKET, 'user_1').url;
+    const { signIn, connections } = harness({
+      box: started.box,
+      client: { ...CLIENT, published: false },
+    });
+
+    expect(() => signIn.start(BUCKET, 'user_1')).toThrow(ConflictException);
+    expect(() => signIn.start(BUCKET, 'user_1')).toThrow(SIGN_IN_UNPUBLISHED);
+    await signIn.complete({ code: 'c', state: started.stateOf(url) }, 'user_1');
+    expect(connections.connectGoogleAccount).toHaveBeenCalled();
   });
 });

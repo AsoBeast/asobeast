@@ -112,7 +112,7 @@ export class StoreConnectionService {
     if (!this.box) return { available: false, connections: [] };
     return {
       available: true,
-      googleSignIn: this.signInClient !== null,
+      googleSignIn: this.signInClient?.published === true,
       connections: await this.items(),
     };
   }

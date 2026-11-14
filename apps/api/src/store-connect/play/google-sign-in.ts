@@ -21,6 +21,9 @@ export const GOOGLE_OAUTH_CLIENT = Symbol('GOOGLE_OAUTH_CLIENT');
 export const SIGN_IN_OFF =
   'Sign in with Google is off on this instance. Set GOOGLE_PLAY_OAUTH_CLIENT_ID, GOOGLE_PLAY_OAUTH_CLIENT_SECRET and WEB_PUBLIC_URL to turn it on, or connect a service account key.';
 
+export const SIGN_IN_UNPUBLISHED =
+  'Sign in with Google is not offered on this instance while its Google consent screen is in testing, because Google expires those sign ins after seven days. Connect a service account key, or set GOOGLE_PLAY_OAUTH_PUBLISHED=true once the consent screen is published.';
+
 export const CLIENT_REFUSED = `Google refused the OAuth client of this instance. Check GOOGLE_PLAY_OAUTH_CLIENT_ID and GOOGLE_PLAY_OAUTH_CLIENT_SECRET, and that WEB_PUBLIC_URL followed by ${PLAY_SIGN_IN_PATH} is an authorized redirect URI of that client.`;
 const CLIENT_ERRORS = new Set([
   'invalid_client',
@@ -44,6 +47,7 @@ export interface GoogleOAuthClient {
   id: string;
   secret: string;
   redirectUri: string;
+  published: boolean;
 }
 
 export interface SignedInAccount {
@@ -88,6 +92,7 @@ export const googleOAuthClientProvider: Provider = {
       id,
       secret,
       redirectUri: new URL(PLAY_SIGN_IN_PATH, origin).toString(),
+      published: config.get('GOOGLE_PLAY_OAUTH_PUBLISHED', { infer: true }),
     };
   },
 };

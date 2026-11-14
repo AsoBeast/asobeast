@@ -254,6 +254,7 @@ Optional, off by default. Owners connect their store consoles in Integrations; t
 | `STORE_CONNECT_ENCRYPTION_KEY_PREVIOUS` | Empty | No | The key being rotated away from. A stored credential sealed with it is opened and resealed with the current key on first use. Refuses to boot when set without `STORE_CONNECT_ENCRYPTION_KEY` |
 | `GOOGLE_PLAY_OAUTH_CLIENT_ID` | Empty | No | Client ID of a Google Cloud OAuth client of type Web application whose authorized redirect URI is `WEB_PUBLIC_URL` followed by `/integrations/google-play`. With the secret and `WEB_PUBLIC_URL` it lets owners connect Google Play by signing in with Google instead of a service account key. Set both `GOOGLE_PLAY_OAUTH_` variables or neither; one alone refuses to boot |
 | `GOOGLE_PLAY_OAUTH_CLIENT_SECRET` | Empty | No | Client secret of that OAuth client. Publish its consent screen to production, or Google expires every sign in after seven days. Never logged |
+| `GOOGLE_PLAY_OAUTH_PUBLISHED` | `true` | No | Whether the consent screen of that OAuth client is published to production. `false` keeps the client for the Google sign ins already connected but no longer offers **Sign in with Google**, because Google expires every sign in of a client in testing after seven days |
 | `CRON_STORE_REPORTS` | `30 5 * * *` | No | When the daily download of the reports each connected console published runs, UTC. Never scheduled while `STORE_CONNECT_ENCRYPTION_KEY` is empty |
 
 ## Admin surfaces

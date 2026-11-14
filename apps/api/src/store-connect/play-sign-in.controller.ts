@@ -23,7 +23,7 @@ export class PlaySignInController {
   @UseGuards(OwnerGuard)
   @ApiOperation({
     summary: 'Start connecting Google Play with a Google account',
-    description: `Answers the Google consent address to send the owner to, asking for read only Cloud Storage access, with a state sealed to this owner and workspace that expires in ten minutes. Google returns to the web page ${PLAY_SIGN_IN_PATH}. Owner only, through a signed in session. Answers 409 when the instance has store connections off or no Google OAuth client.`,
+    description: `Answers the Google consent address to send the owner to, asking for read only Cloud Storage access, with a state sealed to this owner and workspace that expires in ten minutes. Google returns to the web page ${PLAY_SIGN_IN_PATH}. Owner only, through a signed in session. Answers 409 when the instance has store connections off, no Google OAuth client, or GOOGLE_PLAY_OAUTH_PUBLISHED set to false.`,
   })
   start(
     @Body() { bucket }: PlaySignInDto,

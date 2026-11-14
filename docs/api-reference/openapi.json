@@ -2344,7 +2344,7 @@
     },
     "/store-connections/GOOGLE_PLAY/sign-in": {
       "post": {
-        "description": "Answers the Google consent address to send the owner to, asking for read only Cloud Storage access, with a state sealed to this owner and workspace that expires in ten minutes. Google returns to the web page /integrations/google-play. Owner only, through a signed in session. Answers 409 when the instance has store connections off or no Google OAuth client.",
+        "description": "Answers the Google consent address to send the owner to, asking for read only Cloud Storage access, with a state sealed to this owner and workspace that expires in ten minutes. Google returns to the web page /integrations/google-play. Owner only, through a signed in session. Answers 409 when the instance has store connections off, no Google OAuth client, or GOOGLE_PLAY_OAUTH_PUBLISHED set to false.",
         "operationId": "PlaySignInController_start",
         "parameters": [],
         "requestBody": {
