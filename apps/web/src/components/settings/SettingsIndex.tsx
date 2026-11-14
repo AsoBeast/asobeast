@@ -33,14 +33,15 @@ function markAt(ids: readonly SettingsSectionId[], scrolled: number) {
         ]
       : [];
   });
+  if (end <= 0) return shown.slice(0, 1);
   const reachable = shown.filter((mark) => mark.at <= end);
-  const beyond = shown.slice(reachable.length);
+  const beyond = shown.filter((mark) => mark.at > end);
   const from = Math.max(0, reachable.at(-1)?.at ?? 0);
   return [
     ...reachable,
     ...beyond.map((mark, index) => ({
       id: mark.id,
-      at: from + ((end - from) * (index + 1)) / beyond.length,
+      at: from + ((end - from) * (index + 1)) / (beyond.length + 1),
     })),
   ];
 }
@@ -62,7 +63,7 @@ interface Picked {
 
 function startsInView(anchor: Element): boolean {
   const { top } = anchor.getBoundingClientRect();
-  return top >= 0 && top < window.innerHeight;
+  return anchor.isConnected && top >= 0 && top < window.innerHeight;
 }
 
 function hashSection(ids: readonly SettingsSectionId[]): Picked | null {

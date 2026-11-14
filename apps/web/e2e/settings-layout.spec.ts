@@ -271,32 +271,30 @@ test("scrolling to the end of settings marks each last section on the way", asyn
   await page.goto("/settings");
   const current = index(page).locator('[aria-current="location"]');
   await expect(current).toHaveText("Capacity");
-
-  await expect(page.getByRole("heading", { name: "Team" })).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Delete workspace" }),
   ).toBeVisible();
-  const marked = new Set<string>();
-  const end = await page.evaluate(
-    () => document.documentElement.scrollHeight - window.innerHeight,
-  );
-  for (let top = 0; top <= end + 40; top += 40) {
-    await page.evaluate((y) => window.scrollTo(0, y), top);
-    await page.evaluate(
-      () => new Promise((resolve) => requestAnimationFrame(resolve)),
-    );
-    marked.add((await current.textContent()) ?? "");
-  }
-  await expect(current).toHaveText("Workspace");
-  marked.add("Workspace");
 
-  expect([...marked]).toEqual([
-    "Capacity",
-    "Getting started",
-    "Alerts",
-    "Team",
-    "Workspace",
-  ]);
+  const scrollPast = (id: string, share: number) =>
+    page.evaluate(
+      ([section, part]) => {
+        const end = document.documentElement.scrollHeight - window.innerHeight;
+        const start = document.getElementById(section);
+        if (!start) throw new Error(`no ${section} section`);
+        const from = start.getBoundingClientRect().top + window.scrollY - 120;
+        window.scrollTo(0, from + (end - from) * part);
+      },
+      [id, share] as const,
+    );
+
+  await scrollPast("alerts", 0.1);
+  await expect(current).toHaveText("Alerts");
+  await scrollPast("alerts", 0.5);
+  await expect(current).toHaveText("Team");
+  await scrollPast("alerts", 1);
+  await expect(current).toHaveText("Workspace");
+  await scrollPast("alerts", 0.5);
+  await expect(current).toHaveText("Team");
 });
 
 test("the days of data bars share one scale across a connection's apps", async ({

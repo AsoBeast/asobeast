@@ -274,7 +274,7 @@ function phoneLine(token: ApiTokenItem): string {
   const used = token.lastUsedAt
     ? `last used ${formatDate(token.lastUsedAt)}`
     : "never used";
-  return `${expiry} · ${used}`;
+  return `${expiry} · ${used} · created ${formatDate(token.createdAt)}`;
 }
 
 function Expiry({ token }: { token: ApiTokenItem }) {
