@@ -37,6 +37,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/components/auth/use-auth";
+import {
+  InlineQueryError,
+  failedRead,
+} from "@/components/layout/InlineQueryError";
 import { ApiError, inviteMember, removeMember, revokeInvite } from "@/lib/api";
 import {
   cardAction,
@@ -156,7 +160,8 @@ function InviteDialog() {
 export function TeamCard() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { data: team } = useQuery(workspaceTeamOptions);
+  const read = useQuery(workspaceTeamOptions);
+  const team = read.data;
   const isOwner = user?.role === "owner";
   const focusAfterCommit = useFocusAfterCommit();
 
@@ -193,19 +198,36 @@ export function TeamCard() {
     run();
   }
 
-  if (!team) return null;
+  const header = (
+    <CardHeader className="flex-row items-start justify-between gap-4">
+      <div className="flex flex-col gap-1">
+        <CardTitle>Team</CardTitle>
+        <CardDescription>
+          Everyone who can sign in to this workspace.
+        </CardDescription>
+      </div>
+      {isOwner ? <InviteDialog /> : null}
+    </CardHeader>
+  );
+
+  if (!team) {
+    if (!failedRead(read)) return null;
+    return (
+      <Card>
+        {header}
+        <CardContent>
+          <InlineQueryError
+            message="Team members could not be loaded."
+            read={read}
+          />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
-      <CardHeader className="flex-row items-start justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <CardTitle>Team</CardTitle>
-          <CardDescription>
-            Everyone who can sign in to this workspace.
-          </CardDescription>
-        </div>
-        {isOwner ? <InviteDialog /> : null}
-      </CardHeader>
+      {header}
       <CardContent className="flex flex-col gap-4">
         <Table>
           <TableCaption>Members of this workspace</TableCaption>

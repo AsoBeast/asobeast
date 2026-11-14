@@ -1878,6 +1878,36 @@ test("settings lists the workspace team and its pending invitations", async ({
   ).toBeVisible();
 });
 
+test("a failed team read keeps the team card and offers a retry", async ({
+  page,
+}) => {
+  await seedSession(page);
+  let failing = true;
+  await page.route("**/api/backend/workspace/team", (route) =>
+    failing
+      ? route.fulfill(
+          fulfillJson(500, {
+            statusCode: 500,
+            error: "Internal Server Error",
+            message: "Something went wrong.",
+          }),
+        )
+      : route.fallback(),
+  );
+
+  await page.goto("/settings");
+  await expect(page.getByRole("heading", { name: "Team" })).toBeVisible();
+  await expect(page.getByText("Team members could not be loaded.")).toBeVisible(
+    { timeout: 20_000 },
+  );
+
+  failing = false;
+  await page.getByRole("button", { name: "Retry" }).click();
+  await expect(
+    page.getByRole("cell", { name: "teammate@example.com", exact: true }),
+  ).toBeVisible();
+});
+
 test("an invitation link without a token explains itself", async ({ page }) => {
   await page.goto("/invite");
   await expect(
