@@ -2,13 +2,19 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseQueryResult,
+} from "@tanstack/react-query";
 import { Check, Copy, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import {
   API_TOKEN_SCOPES,
   DEFAULT_API_TOKEN_SCOPE,
   type ApiTokenCreated,
+  type ApiTokenItem,
   type ApiTokenScope,
 } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
@@ -53,6 +59,10 @@ import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
 import { formatDate, formatNumber } from "@/lib/format";
 import { apiTokensOptions, invalidateApiTokenMutation } from "@/lib/queries";
 import { useAuth } from "@/components/auth/use-auth";
+import {
+  InlineQueryError,
+  failedRead,
+} from "@/components/layout/InlineQueryError";
 import { useSingleFlight } from "@/lib/single-flight";
 import { RevokeTokenButton } from "./RevokeTokenButton";
 
@@ -269,10 +279,91 @@ function CreateTokenDialog() {
   );
 }
 
+function TokensTable({ tokens }: { tokens: ApiTokenItem[] }) {
+  return (
+    <div className="overflow-x-auto rounded-xl border">
+      <Table>
+        <TableCaption className="sr-only">
+          Personal API tokens for automation.
+        </TableCaption>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Prefix</TableHead>
+            <TableHead>Scope</TableHead>
+            <TableHead>Expires</TableHead>
+            <TableHead>Last used</TableHead>
+            <TableHead className="numeric text-right">Requests</TableHead>
+            <TableHead>Created</TableHead>
+            <TableHead className="w-0">
+              <span className="sr-only">Actions</span>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {tokens.map((token) => (
+            <TableRow key={token.id}>
+              <TableCell className="max-w-48 truncate font-medium">
+                {token.name}
+              </TableCell>
+              <TableCell
+                translate="no"
+                className="font-mono text-xs text-muted-foreground"
+              >
+                {token.prefix}…
+              </TableCell>
+              <TableCell>
+                <Badge variant="outline">{SCOPE_LABELS[token.scope]}</Badge>
+              </TableCell>
+              <TableCell>
+                {token.expiresAt === null ? (
+                  <span className="text-muted-foreground">Never</span>
+                ) : token.expired ? (
+                  <Badge variant="destructive">Expired</Badge>
+                ) : (
+                  formatDate(token.expiresAt)
+                )}
+              </TableCell>
+              <TableCell>{formatDate(token.lastUsedAt)}</TableCell>
+              <TableCell className="numeric text-right">
+                {formatNumber(token.usageCount)}
+              </TableCell>
+              <TableCell>{formatDate(token.createdAt)}</TableCell>
+              <TableCell>
+                <div className="flex justify-end">
+                  <RevokeTokenButton id={token.id} name={token.name} />
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+function TokensBody({ read }: { read: UseQueryResult<ApiTokenItem[]> }) {
+  if (failedRead(read)) {
+    return (
+      <InlineQueryError message="API tokens could not be loaded." read={read} />
+    );
+  }
+  if (!read.data) return null;
+  if (read.data.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+        No tokens yet. Create one to authenticate scripts or the MCP server with
+        a Bearer header.
+      </div>
+    );
+  }
+  return <TokensTable tokens={read.data} />;
+}
+
 export function ApiTokensCard() {
   const { status, isLoading } = useAuth();
   const authenticated = Boolean(status?.authenticated);
-  const { data } = useQuery({ ...apiTokensOptions, enabled: authenticated });
+  const read = useQuery({ ...apiTokensOptions, enabled: authenticated });
 
   if (isLoading || !status?.authenticated) return null;
 
@@ -286,73 +377,7 @@ export function ApiTokensCard() {
         <CreateTokenDialog />
       </CardHeader>
       <CardContent>
-        {!data || data.length === 0 ? (
-          <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-            No tokens yet. Create one to authenticate scripts or the MCP server
-            with a Bearer header.
-          </div>
-        ) : (
-          <div className="overflow-x-auto rounded-xl border">
-            <Table>
-              <TableCaption className="sr-only">
-                Personal API tokens for automation.
-              </TableCaption>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Prefix</TableHead>
-                  <TableHead>Scope</TableHead>
-                  <TableHead>Expires</TableHead>
-                  <TableHead>Last used</TableHead>
-                  <TableHead className="numeric text-right">Requests</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="w-0">
-                    <span className="sr-only">Actions</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.map((token) => (
-                  <TableRow key={token.id}>
-                    <TableCell className="max-w-48 truncate font-medium">
-                      {token.name}
-                    </TableCell>
-                    <TableCell
-                      translate="no"
-                      className="font-mono text-xs text-muted-foreground"
-                    >
-                      {token.prefix}…
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {SCOPE_LABELS[token.scope]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {token.expiresAt === null ? (
-                        <span className="text-muted-foreground">Never</span>
-                      ) : token.expired ? (
-                        <Badge variant="destructive">Expired</Badge>
-                      ) : (
-                        formatDate(token.expiresAt)
-                      )}
-                    </TableCell>
-                    <TableCell>{formatDate(token.lastUsedAt)}</TableCell>
-                    <TableCell className="numeric text-right">
-                      {formatNumber(token.usageCount)}
-                    </TableCell>
-                    <TableCell>{formatDate(token.createdAt)}</TableCell>
-                    <TableCell>
-                      <div className="flex justify-end">
-                        <RevokeTokenButton id={token.id} name={token.name} />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+        <TokensBody read={read} />
       </CardContent>
     </Card>
   );
