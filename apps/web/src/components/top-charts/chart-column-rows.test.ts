@@ -4,7 +4,7 @@ import {
   capturableToday,
   categoryDates,
   CHART_COLUMN_ROWS,
-  columnCaption,
+  columnCount,
   columnRows,
   listsNoApps,
 } from "./chart-column-rows";
@@ -53,34 +53,34 @@ describe("columnRows", () => {
   });
 });
 
-describe("columnCaption", () => {
+describe("columnCount", () => {
   it("names how many rows show and the capture day", () => {
-    expect(columnCaption(CAPTURED, null)).toBe("Top 25 of 100 · Oct 14");
+    expect(columnCount(CAPTURED, null)).toBe("Top 25 of 100");
   });
 
   it("counts a chart shorter than a column", () => {
-    expect(columnCaption({ ...CAPTURED, entries: entries(10) }, null)).toBe(
-      "10 apps · Oct 14",
+    expect(columnCount({ ...CAPTURED, entries: entries(10) }, null)).toBe(
+      "10 apps",
     );
-    expect(columnCaption({ ...CAPTURED, entries: entries(1) }, null)).toBe(
-      "1 app · Oct 14",
+    expect(columnCount({ ...CAPTURED, entries: entries(1) }, null)).toBe(
+      "1 app",
     );
   });
 
   it("names the day asked for that has no capture", () => {
-    expect(columnCaption({ ...CAPTURED, capture: null }, "2026-10-12")).toBe(
+    expect(columnCount({ ...CAPTURED, capture: null }, "2026-10-12")).toBe(
       "Not captured on Oct 12",
     );
   });
 
   it("names today when no day was asked for", () => {
-    expect(columnCaption({ ...CAPTURED, capture: null }, null)).toBe(
+    expect(columnCount({ ...CAPTURED, capture: null }, null)).toBe(
       "Not captured on Oct 15",
     );
   });
 
   it("says a chart was never captured", () => {
-    expect(columnCaption({ ...CAPTURED, capture: null, dates: [] }, null)).toBe(
+    expect(columnCount({ ...CAPTURED, capture: null, dates: [] }, null)).toBe(
       "Not captured yet",
     );
   });
@@ -122,7 +122,7 @@ describe("listsNoApps", () => {
   });
 
   it("captions a capture without rows as no apps", () => {
-    expect(columnCaption({ ...CAPTURED, entries: [] }, null)).toBe(
+    expect(columnCount({ ...CAPTURED, entries: [] }, null)).toBe(
       "No apps · Oct 14",
     );
   });

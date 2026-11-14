@@ -33,5 +33,5 @@ Ranks and follows:
 Reading and the page:
 
 - Movement and trending are pure functions of two captures (`charts/chart-movement.ts`): the newest capture at or before the day minus the window, no older than one more window. Reading never calls a store.
-- The page shows a category's three kinds side by side, the top `CHART_COLUMN_ROWS` (25) of each, and one kind's table behind `?view=table` (`chartHref` links a category, `tableHref` a kind).
+- The page shows a category's three kinds side by side, the top `CHART_COLUMN_ROWS` (25) of each, and one kind's table behind `?view=table` (`chartHref` links a category, `tableHref` a kind). The lede, each column's movement bar and the tracked apps panel count over every entry of a capture (`chart-summary.ts`), and the table's history view asks for earlier stored captures by `date`, never for a new one.
 - A capture with no entries is a page with `capture` set and `entries: []`: the web reads it with `listsNoApps` as **No apps in this chart**, offers no **Capture today** for that day and never treats it as uncaptured. An `answeredNoApps` answer is toasted, neither seeded nor stored.

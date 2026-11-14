@@ -22,8 +22,9 @@ import {
   TOP_PAID_CHART_APPS,
   utcDaysAgo,
 } from "./fixtures.mts";
-import { holdRequest } from "./held-request.mts";
+import { holdRequest, type HeldRequest } from "./held-request.mts";
 import { routePlan } from "./plan-helpers.mts";
+import { DEEP_CHART_COOKIE } from "./top-charts-fixtures.mts";
 
 const formatDayMonth = (date: string) =>
   new Intl.DateTimeFormat("en-US", {
@@ -103,7 +104,7 @@ test("opens on the three charts side by side", async ({ page }) => {
   await expect(
     kindRegion(page, "Paid").getByText("Puzzle Quest", { exact: true }),
   ).toHaveCount(0);
-  await expect(page.getByRole("table")).toHaveCount(0);
+  await expect(page.getByRole("table", { name: /^Top free/ })).toHaveCount(0);
   await expect(
     page.getByRole("tablist", { name: "Chart", exact: true }),
   ).toHaveCount(0);
@@ -616,7 +617,9 @@ test("compares against the chosen window", async ({ page }) => {
   await expect(page).toHaveURL(/compare=7d/);
   await request;
   await expect(
-    page.getByText(`vs ${formatDayMonth(TOP_CHART_DATES[1])}`, { exact: true }),
+    page.getByRole("heading", {
+      name: `Trending since ${formatDayMonth(TOP_CHART_DATES[1])}`,
+    }),
   ).toBeVisible();
 });
 
@@ -666,7 +669,7 @@ test("sorts by movement", async ({ page }) => {
   );
 });
 
-const MOCK_API = "http://localhost:4100";
+const MOCK_API = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
 
 test("captures today", async ({ page, request }) => {
   await request.get(`${MOCK_API}/__forget-chart-captures/6014`);
@@ -1556,12 +1559,20 @@ test("shows a dash for an unchanged row", async ({ page }) => {
 test("offers the row actions in a column", async ({ page }) => {
   await page.goto("/charts");
   const first = kindRegion(page, "Free").getByRole("listitem").first();
+  const add = first.getByRole("button", {
+    name: `Add ${TOP_CHART_APPS[0].title} as competitor`,
+  });
 
-  await expect(
-    first.getByRole("button", {
-      name: `Add ${TOP_CHART_APPS[0].title} as competitor`,
-    }),
-  ).toBeVisible();
+  const reveal = add.locator("xpath=..");
+
+  await expect(reveal).toHaveCSS("opacity", "0");
+  await first.hover();
+  await expect(reveal).toHaveCSS("opacity", "1");
+  await page.mouse.move(0, 0);
+  await expect(reveal).toHaveCSS("opacity", "0");
+  await add.focus();
+  await expect(reveal).toHaveCSS("opacity", "1");
+  await expect(add).toBeVisible();
   await expect(
     first.getByRole("link", {
       name: `Open ${TOP_CHART_APPS[0].title} in the store`,
@@ -1966,5 +1977,267 @@ test.describe("focus after Capture today", () => {
       await request.get(`${MOCK_API}/__chart-captures`)
     ).json()) as Array<Record<string, string>>;
     expect(captures.filter((item) => item.genre === "6012")).toHaveLength(1);
+  });
+});
+
+test.describe("what moved and where the tracked apps stand", () => {
+  test("opens with the own app's place and the moves across the charts", async ({
+    page,
+  }) => {
+    await page.goto("/charts");
+
+    await expect(page.getByRole("main")).toContainText(
+      `${TOP_CHART_APPS[2].title} holds #3 in Free, unchanged since ${formatDayMonth(TOP_CHART_DATES[1])}. Across the three charts 18 apps climbed, 8 fell and 2 entered.`,
+    );
+    await expect(
+      kindRegion(page, "Free").getByRole("img", {
+        name: `3 climbed, 2 new, 2 held, 3 fell vs ${formatDayMonth(TOP_CHART_DATES[1])}`,
+      }),
+    ).toBeVisible();
+  });
+
+  test("lists a tracked app that sits below the rows a column shows", async ({
+    page,
+    context,
+  }) => {
+    await context.addCookies([
+      { name: DEEP_CHART_COOKIE, value: "1", domain: "localhost", path: "/" },
+    ]);
+    await page.goto("/charts?genre=6014");
+
+    const tracked = page.getByRole("table", {
+      name: "Your apps and competitors in Games",
+    });
+    await expect(tracked.getByRole("row")).toHaveCount(3);
+    await expect(
+      tracked.getByRole("row", { name: /Card Castle/ }),
+    ).toContainText("#28");
+    await expect(
+      tracked.getByRole("link", { name: TOP_CHART_APPS[2].title }),
+    ).toHaveAttribute("href", "/apps/app-1");
+    const free = kindRegion(page, "Free");
+    await expect(free.getByText("Top 25 of 40")).toBeVisible();
+    await expect(free.getByRole("listitem")).toHaveCount(25);
+    await expect(free.getByText("Card Castle")).toHaveCount(0);
+    await expect(page.getByRole("main")).toContainText(
+      `${TOP_CHART_APPS[2].title} climbed 2 to #3 in Free`,
+    );
+  });
+
+  test("leaves the tracked apps panel out when no chart lists one", async ({
+    page,
+    context,
+  }) => {
+    await context.addCookies([
+      {
+        name: "e2e_chart_uncaptured",
+        value: "1",
+        domain: "localhost",
+        path: "/",
+      },
+    ]);
+    await page.goto("/charts");
+
+    await expect(
+      page.getByRole("heading", { name: /^Your apps and competitors/ }),
+    ).toHaveCount(0);
+    await expect(page.getByRole("main")).toContainText(
+      "has not been captured yet.",
+    );
+  });
+});
+
+const historyRegion = (page: Page) =>
+  page.getByRole("region", {
+    name: "Positions of the top 10 apps over 5 captured days",
+  });
+
+async function retryWhileOneCaptureLoads(page: Page): Promise<HeldRequest> {
+  const [, ...earlier] = TOP_CHART_DATES;
+  const slow = earlier[earlier.length - 1];
+  const retried = earlier.filter((date) => date !== slow);
+  let failing = true;
+  await page.route(/\/charts\?.*date=/, (route) =>
+    failing ? route.fulfill({ status: 500, body: "{}" }) : route.continue(),
+  );
+  const held = await holdRequest(
+    page,
+    new RegExp(`/charts\\?.*date=${slow}`),
+    "GET",
+  );
+  await page.goto("/charts?view=table&tableView=history");
+  const retry = page.getByRole("button", { name: "Retry" });
+  await expect(retry).toBeVisible({ timeout: 30_000 });
+
+  failing = false;
+  const answered = Promise.all(
+    retried.map((date) =>
+      page.waitForResponse(
+        (response) => response.url().includes(`date=${date}`) && response.ok(),
+      ),
+    ),
+  );
+  await (await hydrated(retry)).focus();
+  await page.keyboard.press("Enter");
+  await answered;
+
+  await expect(retry).toHaveAttribute("aria-disabled", "true");
+  await expect(retry).toBeFocused();
+  return held;
+}
+
+test.describe("chart history", () => {
+  test("draws the top ten over the captured days and keeps the choice in the URL", async ({
+    page,
+    context,
+  }) => {
+    await context.addCookies([
+      { name: DEEP_CHART_COOKIE, value: "1", domain: "localhost", path: "/" },
+    ]);
+    await page.goto("/charts?genre=6014&view=table");
+    const display = page.getByRole("tablist", { name: "Chart display" });
+
+    await display.getByRole("tab", { name: "History" }).click();
+
+    await expect(page).toHaveURL(/tableView=history/);
+    const chart = page.getByRole("region", {
+      name: "Positions of the top 10 apps over 5 captured days",
+    });
+    await expect(chart).toBeVisible();
+    await expect(
+      chart.getByText(`${TOP_CHART_APPS[2].title} · yours`),
+    ).toBeVisible();
+    await expect(chart.locator(".recharts-line")).toHaveCount(10);
+    await expect(chartTable(page)).toHaveCount(0);
+
+    await page.goBack();
+    await expect(page).not.toHaveURL(/tableView/);
+    await expect(chartTable(page)).toBeVisible();
+    await expect(display.getByRole("tab", { name: "Table" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+
+    await display.getByRole("tab", { name: "History" }).click();
+    await expect(chart).toBeVisible();
+    await display.getByRole("tab", { name: "Table" }).click();
+    await expect(page).not.toHaveURL(/tableView/);
+    await expect(chartTable(page)).toBeVisible();
+  });
+
+  test("hands focus to the chart when Retry loads the earlier captures", async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    let failing = true;
+    await page.route(/\/charts\?.*date=/, (route) =>
+      failing ? route.fulfill({ status: 500, body: "{}" }) : route.continue(),
+    );
+    await page.goto("/charts?view=table&tableView=history");
+    const retry = page.getByRole("button", { name: "Retry" });
+    await expect(retry).toBeVisible({ timeout: 30_000 });
+
+    failing = false;
+    await retry.focus();
+    await page.keyboard.press("Enter");
+
+    const chart = page.getByRole("region", {
+      name: "Positions of the top 10 apps over 5 captured days",
+    });
+    await expect(chart).toBeVisible();
+    await expect(chart).toBeFocused();
+  });
+
+  test("keeps focus on Retry while the earlier captures load again", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await page.route(/\/charts\?.*date=/, (route) =>
+      route.fulfill({ status: 500, body: "{}" }),
+    );
+    await page.goto("/charts?view=table&tableView=history");
+    const retry = page.getByRole("button", { name: "Retry" });
+    await expect(retry).toBeVisible({ timeout: 30_000 });
+    const held = await holdRequest(page, /\/charts\?.*date=/, "GET");
+
+    await (await hydrated(retry)).focus();
+    await page.keyboard.press("Enter");
+
+    await expect(retry).toHaveAttribute("aria-disabled", "true");
+    await expect(retry).toBeFocused();
+    held.release();
+    await expect(retry).not.toHaveAttribute("aria-disabled", "true", {
+      timeout: 30_000,
+    });
+    await expect(retry).toBeFocused();
+    await expect(
+      page.getByText("Could not load the earlier captures."),
+    ).toBeVisible();
+  });
+
+  test("keeps focus on Retry until every earlier capture has loaded", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    const held = await retryWhileOneCaptureLoads(page);
+
+    held.release();
+
+    await expect(historyRegion(page)).toBeFocused();
+  });
+
+  test("hands focus to the chart when the retry outlasts the claim window", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await page.clock.install();
+    const held = await retryWhileOneCaptureLoads(page);
+
+    await page.clock.fastForward("00:31");
+    held.release();
+
+    await expect(historyRegion(page)).toBeFocused();
+  });
+
+  test("leaves focus where the user moved it during the retry", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    const held = await retryWhileOneCaptureLoads(page);
+    const history = page
+      .getByRole("tablist", { name: "Chart display" })
+      .getByRole("tab", { name: "History" });
+
+    await history.focus();
+    held.release();
+
+    await expect(historyRegion(page)).toBeVisible();
+    await expect(history).toBeFocused();
+  });
+
+  test("says when too few days are captured", async ({ page }) => {
+    await page.goto(
+      `/charts?view=table&tableView=history&date=${TOP_CHART_DATES[3]}`,
+    );
+
+    await expect(
+      page.getByText("History needs four captured days"),
+    ).toBeVisible();
+    await expect(page.getByText(/^2 captured so far\./)).toBeVisible();
+  });
+
+  test("the trending list tabs fit one line on a phone", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 800 });
+    await page.goto("/charts");
+    const tabs = page
+      .getByRole("tablist", { name: "Trending list" })
+      .getByRole("tab");
+
+    await expect(tabs).toHaveCount(4);
+    const tops = await tabs.evaluateAll((nodes) =>
+      nodes.map((node) => Math.round(node.getBoundingClientRect().top)),
+    );
+    expect(new Set(tops).size).toBe(1);
+    await expect(tabs.nth(3)).toHaveAccessibleName(/^Dropped out/);
   });
 });
