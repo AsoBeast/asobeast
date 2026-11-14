@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   type RefCallback,
   type RefObject,
@@ -192,4 +193,34 @@ export function useFocusGroupClaim(
   }, [key, controlPresent]);
 
   return group;
+}
+
+const RETRY_CONTAINER = `${CARD}, [role="dialog"], section, main`;
+
+export function recoveryTarget(container: Element | null): HTMLElement | null {
+  if (!container?.isConnected) return null;
+  return (
+    firstFocusable(container) ??
+    (container instanceof HTMLElement && container.hasAttribute("tabindex")
+      ? container
+      : null)
+  );
+}
+
+export function useRetryRecoveryFocus(): RefObject<HTMLButtonElement | null> {
+  const retry = useRef<HTMLButtonElement>(null);
+
+  useLayoutEffect(() => {
+    const button = retry.current;
+    const container = button?.closest(RETRY_CONTAINER) ?? null;
+    return () => {
+      if (!button || document.activeElement !== button) return;
+      queueMicrotask(() => {
+        if (!focusIsLost()) return;
+        recoveryTarget(container)?.focus();
+      });
+    };
+  }, []);
+
+  return retry;
 }
