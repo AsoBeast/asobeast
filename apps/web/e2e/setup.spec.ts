@@ -4,7 +4,7 @@ import {
   DISCOVERY_PENDING_COOKIE,
 } from "./keyword-discoveries.mts";
 import { expect, test } from "./session.mts";
-import { storedSetup } from "./setup-session.mts";
+import { seedSetup, storedSetup } from "./setup-session.mts";
 
 test.describe.configure({ mode: "serial" });
 
@@ -1061,4 +1061,83 @@ test("the home country leads the selected countries", async ({ page }) => {
     "United States (US)",
     "Germany (DE)",
   ]);
+});
+
+test("removing a selected country hands focus to a surviving row", async ({
+  page,
+}) => {
+  await startSetup(page, "app-1");
+  for (const option of ["DE · Germany", "PL · Poland"]) {
+    await page.getByRole("combobox", { name: "Country to add" }).click();
+    await page.getByRole("option", { name: option }).click();
+    await page.getByRole("button", { name: "Add", exact: true }).click();
+  }
+  const list = selectedMarkets(page);
+  await expect(list.getByRole("listitem")).toHaveCount(3);
+
+  await list.getByRole("button", { name: "Remove Germany" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(list.getByRole("listitem")).toHaveCount(2);
+  await expect(
+    list.getByRole("button", { name: "Remove Poland" }),
+  ).toBeFocused();
+
+  await page.keyboard.press("Enter");
+  await expect(list.getByRole("listitem")).toHaveCount(1);
+  await expect(
+    list.getByRole("link", { name: "Review US keywords" }),
+  ).toBeFocused();
+});
+
+test("starting, dismissing and restarting from the keyboard keeps focus on the page", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/setup");
+  const heading = page.getByRole("heading", { name: /^Set up Focus Timer/ });
+
+  await page.getByRole("button", { name: "Start this setup" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(heading).toBeFocused();
+
+  await page.getByRole("button", { name: "Dismiss setup" }).focus();
+  await page.keyboard.press("Enter");
+  const restart = page.getByRole("button", { name: "Restart setup" });
+  await expect(restart).toBeFocused();
+
+  await page.keyboard.press("Enter");
+  await expect(heading).toBeFocused();
+});
+
+test("a completed setup whose counts fail says so and retries", async ({
+  page,
+}) => {
+  await seedSetup(page.context(), "app-1", {
+    status: "completed",
+    skipped: [],
+    countriesReviewed: true,
+    selectedMarkets: ["us"],
+  });
+  await page.context().addCookies([
+    {
+      name: "e2e-fail-competitors",
+      value: "1",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.goto("/apps/app-1/setup");
+
+  await expect(page.getByText("Setup complete", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Some setup counts could not be loaded."),
+  ).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("1 country", { exact: true })).toBeVisible();
+
+  await page.context().clearCookies({ name: "e2e-fail-competitors" });
+  await page.getByRole("button", { name: "Retry" }).click();
+
+  await expect(page.getByText("1 competitor", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Some setup counts could not be loaded."),
+  ).toBeHidden();
 });

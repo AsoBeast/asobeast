@@ -1,3 +1,4 @@
+import type { Ref } from "react";
 import { Check, Circle, Minus, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -132,13 +133,19 @@ export function SetupStepNav({
 export function SetupProgress({
   name,
   progress,
+  headingRef,
 }: {
   name: string | null;
   progress: SetupStepProgress;
+  headingRef?: Ref<HTMLHeadingElement>;
 }) {
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-heading text-balance wrap-anywhere">
+      <h2
+        ref={headingRef}
+        tabIndex={-1}
+        className="rounded-sm text-heading text-balance wrap-anywhere outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
         {progressSentence(name, progress)}
       </h2>
       <Progress

@@ -12,9 +12,16 @@ import {
   type SetupStep,
 } from "@asobeast/shared";
 import { GoalPicker } from "@/components/checklist/GoalPicker";
+import {
+  failedRead,
+  InlineQueryError,
+  type RetryableRead,
+} from "@/components/layout/InlineQueryError";
 import { META_LINE } from "@/components/layout/panel-classes";
 import { Button } from "@/components/ui/button";
 import { Separated } from "@/components/ui/separated";
+import { Skeleton } from "@/components/ui/skeleton";
+import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
 import { cn } from "@/lib/utils";
 import {
   appDetailOptions,
@@ -58,10 +65,19 @@ const RAIL_CELL =
 
 const NOT_STARTED = { skipped: [], countriesReviewed: false };
 
+const SETUP_VIEW_FOCUS_KEY = "setup.view";
+
+const replacingView =
+  (action: () => void): (() => void) =>
+  () => {
+    armFocusHandoff(SETUP_VIEW_FOCUS_KEY);
+    action();
+  };
+
 export function SetupChecklist({ id }: { id: string }) {
   const { data: app } = useSuspenseQuery(appDetailOptions(id));
   const { setup, apply } = useSetup(id);
-  const start = () => apply(beginSetup(app.country));
+  const start = replacingView(() => apply(beginSetup(app.country)));
 
   if (setup.status === "in_progress") {
     return <ActiveSetup app={app} setup={setup} apply={apply} />;
@@ -95,11 +111,30 @@ function StatusPanel({
       sentence="The checklist will not resume automatically. You can restart it whenever you need it."
       actions={
         <>
-          <Button onClick={onStart}>Restart setup</Button>
+          <RestartButton onRestart={onStart} />
           <BackToApps />
         </>
       }
     />
+  );
+}
+
+function retryAll(reads: RetryableRead[]): RetryableRead {
+  return {
+    data: undefined,
+    isError: true,
+    isFetching: reads.some((read) => read.isFetching),
+    errorUpdatedAt: Math.max(...reads.map((read) => read.errorUpdatedAt)),
+    refetch: () => Promise.all(reads.map((read) => read.refetch())),
+  };
+}
+
+function RestartButton({ onRestart }: { onRestart: () => void }) {
+  const claimFocus = useFocusClaim(SETUP_VIEW_FOCUS_KEY);
+  return (
+    <Button ref={claimFocus} onClick={onRestart}>
+      Restart setup
+    </Button>
   );
 }
 
@@ -121,6 +156,7 @@ function ActiveSetup({
   apply: Apply;
 }) {
   const router = useRouter();
+  const claimFocus = useFocusClaim(SETUP_VIEW_FOCUS_KEY);
   const { competitors, homeKeywords, counts } = useSetupCounts(app);
   const collecting = useFirstRunDiscovery(app.id);
   const suggestions = useQuery({
@@ -158,9 +194,10 @@ function ActiveSetup({
         if (query.isError) void query.refetch();
       }
     },
-    onDismiss: () => apply(dismissSetup()),
-    onComplete: () =>
+    onDismiss: replacingView(() => apply(dismissSetup())),
+    onComplete: replacingView(() =>
       apply(completeSetup(), () => router.push(`/apps/${app.id}`)),
+    ),
   };
 
   return (
@@ -170,7 +207,11 @@ function ActiveSetup({
           <GoalPicker />
         </div>
         <div className={MAIN_CELL}>
-          <SetupProgress name={app.name} progress={progress} />
+          <SetupProgress
+            name={app.name}
+            progress={progress}
+            headingRef={claimFocus}
+          />
         </div>
         <SetupStepNav
           states={states}
@@ -260,14 +301,20 @@ function CompletedStatus({
   setup: AppSetupState;
   onRestart: () => void;
 }) {
-  const { counts } = useSetupCounts(app);
+  const claimFocus = useFocusClaim(SETUP_VIEW_FOCUS_KEY);
+  const { competitors, homeKeywords, counts } = useSetupCounts(app);
+  const countReads = [competitors, homeKeywords];
+  const failed = countReads.filter(failedRead);
+  const loading = countReads.some(
+    (read) => read.data === undefined && !failedRead(read),
+  );
   return (
     <SetupStatusPanel
       title="Setup complete"
       sentence="Positions, competitors and countries are collected on every daily run."
       actions={
         <>
-          <Button asChild>
+          <Button ref={claimFocus} asChild>
             <Link href={`/apps/${app.id}`}>Open the overview</Link>
           </Button>
           <Button variant="outline" onClick={onRestart}>
@@ -276,16 +323,26 @@ function CompletedStatus({
         </>
       }
     >
-      <p className={META_LINE}>
-        <Separated
-          parts={completedFacts({
-            ...counts,
-            home: app.country,
-            markets: setup.selectedMarkets.length,
-            completedAt: setup.completedAt,
-          })}
+      {loading ? (
+        <Skeleton className="h-5 w-72 max-w-full" />
+      ) : (
+        <p className={META_LINE}>
+          <Separated
+            parts={completedFacts({
+              ...counts,
+              home: app.country,
+              markets: setup.selectedMarkets.length,
+              completedAt: setup.completedAt,
+            })}
+          />
+        </p>
+      )}
+      {failed.length > 0 ? (
+        <InlineQueryError
+          message="Some setup counts could not be loaded."
+          read={retryAll(failed)}
         />
-      </p>
+      ) : null}
     </SetupStatusPanel>
   );
 }
