@@ -40,7 +40,10 @@ function IconObservations({ icon }: { icon: AuditIconObservation }) {
       <h3 className={SUB_HEADER}>Icon</h3>
       <div className="flex flex-wrap items-end gap-x-6 gap-y-4 border-t border-border-subtle p-4">
         {ICON_SIZES.map((size) => (
-          <figure key={size} className="flex flex-col items-center gap-1.5">
+          <figure
+            key={`${icon.url}:${size}`}
+            className="flex flex-col items-center gap-1.5"
+          >
             <AppIconImage
               src={icon.url}
               size={size}
