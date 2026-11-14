@@ -266,6 +266,10 @@ export const EnvSchema = z.object({
   STORE_CONNECT_ENCRYPTION_KEY_PREVIOUS: optionalText,
   GOOGLE_PLAY_OAUTH_CLIENT_ID: optionalText,
   GOOGLE_PLAY_OAUTH_CLIENT_SECRET: optionalText,
+  GOOGLE_PLAY_OAUTH_PUBLISHED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
   CRON_STORE_REPORTS: cronPattern('30 5 * * *'),
   LOG_LEVEL: z
     .enum(['error', 'warn', 'log', 'debug', 'verbose'])

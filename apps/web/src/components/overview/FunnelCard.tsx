@@ -30,6 +30,7 @@ import {
   funnelTiles,
   funnelTrend,
   type FunnelTile,
+  refusalBody,
   searchShare,
   trendValue,
   windowOf,
@@ -56,13 +57,18 @@ function NotReporting({ store, reason }: { store: Store; reason: string }) {
   );
 }
 
-function ConnectionRefused({ store }: { store: Store }) {
+function ConnectionRefused({
+  store,
+  reason,
+}: {
+  store: Store;
+  reason: string | null;
+}) {
   const { isOwner } = useAuth();
-  const copy = FUNNEL_COPY[store];
   return (
     <EmptyState
-      title={copy.refusedTitle}
-      body={isOwner ? copy.refusedBody : copy.refusedAskOwner}
+      title={FUNNEL_COPY[store].refusedTitle}
+      body={refusalBody(store, reason, isOwner)}
       action={
         isOwner ? (
           <Link href={STORE_CONNECTIONS_PATH} className={CONNECT_LINK}>
@@ -82,7 +88,7 @@ function NotConnected({ id, store }: { id: string; store: Store }) {
     (item) => item.store === store,
   );
   if (connection?.status === "rejected")
-    return <ConnectionRefused store={store} />;
+    return <ConnectionRefused store={store} reason={connection.lastError} />;
   if (connection) {
     const app = connection.apps.find((item) => item.appId === id);
     return (

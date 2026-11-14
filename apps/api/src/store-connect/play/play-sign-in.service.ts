@@ -35,6 +35,7 @@ import {
   oauthErrorOf,
   pkcePair,
   SIGN_IN_OFF,
+  SIGN_IN_UNPUBLISHED,
   type SignedInAccount,
   signedInAccount,
   UnreadableSignInError,
@@ -69,6 +70,7 @@ export class PlaySignIn {
 
   start(bucket: string, userId: string): PlaySignInStart {
     const { box, client } = this.ready();
+    if (!client.published) throw new ConflictException(SIGN_IN_UNPUBLISHED);
     const { verifier, challenge } = pkcePair();
     const state = sealSignInState(box, this.ownerOf(userId), {
       bucket,

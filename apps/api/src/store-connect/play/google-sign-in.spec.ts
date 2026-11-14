@@ -24,6 +24,7 @@ const CLIENT: GoogleOAuthClient = {
   id: 'client.apps.googleusercontent.com',
   secret: 'test-oauth-client-secret',
   redirectUri: 'https://aso.example.com/integrations/google-play',
+  published: true,
 };
 
 const idToken = (claims: unknown): string =>
@@ -37,7 +38,7 @@ const answer = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-const providerWith = (env: Record<string, string | undefined>) =>
+const providerWith = (env: Record<string, unknown>) =>
   (
     googleOAuthClientProvider as {
       useFactory: (config: ConfigService) => GoogleOAuthClient | null;
@@ -51,8 +52,20 @@ describe('googleOAuthClientProvider', () => {
         GOOGLE_PLAY_OAUTH_CLIENT_ID: CLIENT.id,
         GOOGLE_PLAY_OAUTH_CLIENT_SECRET: CLIENT.secret,
         WEB_PUBLIC_URL: 'https://aso.example.com',
+        GOOGLE_PLAY_OAUTH_PUBLISHED: true,
       }),
     ).toEqual(CLIENT);
+  });
+
+  it('keeps the client of a consent screen still in testing, marked unpublished', () => {
+    expect(
+      providerWith({
+        GOOGLE_PLAY_OAUTH_CLIENT_ID: CLIENT.id,
+        GOOGLE_PLAY_OAUTH_CLIENT_SECRET: CLIENT.secret,
+        WEB_PUBLIC_URL: 'https://aso.example.com',
+        GOOGLE_PLAY_OAUTH_PUBLISHED: false,
+      }),
+    ).toEqual({ ...CLIENT, published: false });
   });
 
   it.each([
@@ -60,7 +73,7 @@ describe('googleOAuthClientProvider', () => {
     'GOOGLE_PLAY_OAUTH_CLIENT_SECRET',
     'WEB_PUBLIC_URL',
   ])('is off without %s', (name) => {
-    const env: Record<string, string | undefined> = {
+    const env: Record<string, unknown> = {
       GOOGLE_PLAY_OAUTH_CLIENT_ID: CLIENT.id,
       GOOGLE_PLAY_OAUTH_CLIENT_SECRET: CLIENT.secret,
       WEB_PUBLIC_URL: 'https://aso.example.com',

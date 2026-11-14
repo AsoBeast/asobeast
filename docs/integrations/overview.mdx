@@ -34,12 +34,12 @@ Every member creates their own API tokens and connects their own AI assistant. A
 
 ## What the instance needs first
 
-An operator turns these on once for the whole instance. On the hosted service they are already on.
+An operator turns these on once for the whole instance. On the hosted service store connections are on, and sign in with Google is offered once Google has verified its consent screen.
 
 | Setting | Needed for | Without it |
 | --- | --- | --- |
 | `STORE_CONNECT_ENCRYPTION_KEY` | Every store connection, because AsoBeast seals each key with it before storing it | The section says that store connections are off on this instance and offers no connect button |
-| `GOOGLE_PLAY_OAUTH_CLIENT_ID`, `GOOGLE_PLAY_OAUTH_CLIENT_SECRET` and `WEB_PUBLIC_URL` | Connecting Google Play by signing in with Google | Google Play connects with a service account key only |
+| `GOOGLE_PLAY_OAUTH_CLIENT_ID`, `GOOGLE_PLAY_OAUTH_CLIENT_SECRET` and `WEB_PUBLIC_URL`, with `GOOGLE_PLAY_OAUTH_PUBLISHED` left `true` | Connecting Google Play by signing in with Google | Google Play connects with a service account key only |
 
 How to create the key and the OAuth client is in the [configuration reference](/configuration/reference#store-consoles) and in [Set up Google sign in for the instance](/integrations/google-play#set-up-google-sign-in). How a stored key is protected is on [Store console credentials](/security/store-credentials).
 

@@ -286,6 +286,27 @@ describe('STORE_CONNECT_ENCRYPTION_KEY', () => {
   });
 });
 
+describe('GOOGLE_PLAY_OAUTH_PUBLISHED', () => {
+  const published = (value?: string) =>
+    validateEnv({
+      AUTH_SECRET: 'a'.repeat(32),
+      GOOGLE_PLAY_OAUTH_PUBLISHED: value,
+    }).GOOGLE_PLAY_OAUTH_PUBLISHED;
+
+  it('trusts a configured consent screen to be published by default', () => {
+    expect(published()).toBe(true);
+  });
+
+  it('reads false for a consent screen still in testing', () => {
+    expect(published('false')).toBe(false);
+    expect(published('true')).toBe(true);
+  });
+
+  it('refuses anything but true or false', () => {
+    expect(() => published('no')).toThrow();
+  });
+});
+
 describe('CRON_STORE_REPORTS', () => {
   const base = { AUTH_SECRET: 'a'.repeat(32) };
 

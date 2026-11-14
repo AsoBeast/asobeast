@@ -12,6 +12,7 @@ import {
   funnelTrend,
   funnelTiles,
   noSearchTermsFact,
+  refusalBody,
   searchShare,
   trendValue,
   windowOf,
@@ -175,6 +176,30 @@ describe("refused connection copy", () => {
     for (const line of lines) {
       expect(line).not.toMatch(/\bkey\b|service account/i);
     }
+  });
+});
+
+describe("refusalBody", () => {
+  const AGREEMENT =
+    "Apple asks the account holder to accept the latest agreement in App Store Connect, under Business. Accept it, then verify the key again.";
+
+  it("tells the owner the reason the store gave", () => {
+    expect(refusalBody("APP_STORE", AGREEMENT, true)).toBe(AGREEMENT);
+  });
+
+  it("tells a member the reason and who can act on it", () => {
+    expect(refusalBody("APP_STORE", AGREEMENT, false)).toBe(
+      `${AGREEMENT} Ask the workspace owner to verify the key in Integrations.`,
+    );
+  });
+
+  it("falls back to the general copy when no reason was kept", () => {
+    expect(refusalBody("GOOGLE_PLAY", null, true)).toBe(
+      FUNNEL_COPY.GOOGLE_PLAY.refusedBody,
+    );
+    expect(refusalBody("GOOGLE_PLAY", null, false)).toBe(
+      FUNNEL_COPY.GOOGLE_PLAY.refusedAskOwner,
+    );
   });
 });
 

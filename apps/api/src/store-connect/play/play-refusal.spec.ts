@@ -49,6 +49,16 @@ describe('playRefusal', () => {
     );
   });
 
+  it('sends a lapsed sign in to reconnect, which offers whatever the instance allows', () => {
+    const message = playRefusal(
+      new GcsTokenRefusedError('no', 400, 'invalid_grant'),
+      GOOGLE_ACCOUNT,
+    );
+
+    expect(message).toMatch(/Reconnect Google Play\.$/);
+    expect(message).not.toContain('Sign in with Google again');
+  });
+
   it('blames the OAuth client of the instance, not the sign in, when Google refuses the client', () => {
     expect(
       playRefusal(

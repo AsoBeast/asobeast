@@ -73,6 +73,7 @@ const CLIENT: GoogleOAuthClient = {
   id: 'client.apps.googleusercontent.com',
   secret: 'test-oauth-client-secret',
   redirectUri: 'https://aso.example.com/integrations/google-play',
+  published: true,
 };
 
 const CREATED_AT = new Date('2026-10-01T10:00:00.000Z');
@@ -476,6 +477,12 @@ describe('StoreConnectionService', () => {
     expect(state.connections[0].credential).toBe('key');
     await expect(
       harness(undefined, null).service.state(),
+    ).resolves.toMatchObject({ available: true, googleSignIn: false });
+  });
+
+  it('offers no google sign in while the consent screen is in testing', async () => {
+    await expect(
+      harness(undefined, { ...CLIENT, published: false }).service.state(),
     ).resolves.toMatchObject({ available: true, googleSignIn: false });
   });
 

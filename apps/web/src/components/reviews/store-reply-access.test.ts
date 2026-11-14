@@ -95,6 +95,32 @@ describe("storeReplyAccess", () => {
     ).toContain(PLAY_REPLIES_NEED_CONSENT);
   });
 
+  it("names the reason the store gave when it refused the key", () => {
+    const reason =
+      "Apple asks the account holder to accept the latest agreement in App Store Connect, under Business. Accept it, then verify the key again.";
+
+    expect(
+      storeReplyAccess(
+        stateWith({ ...CONNECTION, status: "rejected", lastError: reason }),
+        "APP_STORE",
+      ),
+    ).toEqual({
+      kind: "rejected",
+      note: `${reason} Until then, replies cannot be posted from here.`,
+    });
+  });
+
+  it("falls back to the refused key note when no reason was kept", () => {
+    expect(
+      storeReplyAccess(
+        stateWith({ ...CONNECTION, status: "rejected" }),
+        "APP_STORE",
+      ).note,
+    ).toBe(
+      "App Store Connect refused the connected key. Verify it or connect a new one in Integrations to post replies.",
+    );
+  });
+
   it("is ready for a usable connection whose access is unknown or allowed", () => {
     expect(storeReplyAccess(stateWith(CONNECTION), "APP_STORE")).toEqual({
       kind: "ready",
