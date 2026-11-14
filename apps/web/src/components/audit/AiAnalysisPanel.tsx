@@ -202,10 +202,9 @@ export function AiAnalysisPanel({
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
               <Button
                 onClick={() => {
-                  if (!mutation.isPending) analyzeOnce();
+                  if (!mutation.isPending && !spent) analyzeOnce();
                 }}
-                aria-disabled={mutation.isPending || undefined}
-                disabled={spent}
+                aria-disabled={mutation.isPending || spent || undefined}
               >
                 {mutation.isPending ? (
                   <Loader2 className="animate-spin" />
