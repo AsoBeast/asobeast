@@ -1,4 +1,4 @@
-import { Check, Circle, Minus } from "lucide-react";
+import { Check, Circle, Minus, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -22,8 +22,15 @@ const STATE_WORDS: Partial<Record<SetupStepState, string>> = {
   skipped: "Skipped",
 };
 
+const STATE_GLYPHS: Record<SetupStepState, LucideIcon> = {
+  done: Check,
+  skipped: Minus,
+  open: Circle,
+  loading: Circle,
+};
+
 function StepGlyph({ state }: { state: SetupStepState }) {
-  const Glyph = state === "done" ? Check : state === "skipped" ? Minus : Circle;
+  const Glyph = STATE_GLYPHS[state];
   return (
     <Glyph
       aria-hidden="true"

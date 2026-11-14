@@ -69,23 +69,37 @@ export function SetupChecklist({ id }: { id: string }) {
   return (
     <div className={COLUMN}>
       <GoalPicker />
-      {setup.status === "not_started" ? (
-        <StartStatus app={app} onStart={start} />
-      ) : setup.status === "completed" ? (
-        <CompletedStatus app={app} setup={setup} onRestart={start} />
-      ) : (
-        <SetupStatusPanel
-          title="Setup dismissed"
-          sentence="The checklist will not resume automatically. You can restart it whenever you need it."
-          actions={
-            <>
-              <Button onClick={start}>Restart setup</Button>
-              <BackToApps />
-            </>
-          }
-        />
-      )}
+      <StatusPanel app={app} setup={setup} onStart={start} />
     </div>
+  );
+}
+
+function StatusPanel({
+  app,
+  setup,
+  onStart,
+}: {
+  app: AppDetail;
+  setup: AppSetupState;
+  onStart: () => void;
+}) {
+  if (setup.status === "not_started") {
+    return <StartStatus app={app} onStart={onStart} />;
+  }
+  if (setup.status === "completed") {
+    return <CompletedStatus app={app} setup={setup} onRestart={onStart} />;
+  }
+  return (
+    <SetupStatusPanel
+      title="Setup dismissed"
+      sentence="The checklist will not resume automatically. You can restart it whenever you need it."
+      actions={
+        <>
+          <Button onClick={onStart}>Restart setup</Button>
+          <BackToApps />
+        </>
+      }
+    />
   );
 }
 
