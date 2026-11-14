@@ -29,8 +29,12 @@ import {
 import { AddEmailAlertDialog } from "./AddEmailAlertDialog";
 import type { AlertSubscriptionChange } from "./alert-event-copy";
 import { AlertChannelRow } from "./alert-channel/AlertChannelRow";
-import { ESSENTIAL_ALERTS_EMPTY } from "./essential-alerts-copy";
+import {
+  ESSENTIAL_ALERTS_EMPTY,
+  essentialNeedCopy,
+} from "./essential-alerts-copy";
 import { EssentialAlertsNotice } from "./essential-alerts-notice";
+import { PanelBody } from "./SettingsPanel";
 import { useSharedFlight, useSingleFlight } from "@/lib/single-flight";
 
 const SMTP_VARS = [
@@ -143,29 +147,18 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
 
 function SetupHint({ need }: { need: EssentialAlertsNeed | null | undefined }) {
   return (
-    <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
+    <PanelBody className="text-body text-muted-foreground">
       <p className="font-medium text-foreground">Email alerts are disabled.</p>
-      <p className="mt-1">
-        Set the SMTP environment variables on the API to enable them:
+      <p>Set the SMTP environment variables on the API to enable them:</p>
+      <p translate="no" className="font-mono text-caption text-foreground">
+        {SMTP_VARS.join(" ")}
       </p>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {SMTP_VARS.map((name) => (
-          <code
-            key={name}
-            className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground"
-          >
-            {name}
-          </code>
-        ))}
-      </div>
-      <p className="mt-3">
-        <code className="font-mono text-xs">SMTP_HOST</code> and{" "}
-        <code className="font-mono text-xs">SMTP_FROM</code> are required.
+      <p>
+        <code className="font-mono text-caption">SMTP_HOST</code> and{" "}
+        <code className="font-mono text-caption">SMTP_FROM</code> are required.
       </p>
-      <div className="mt-3">
-        <EssentialAlertsNotice need={need} />
-      </div>
-    </div>
+      <EssentialAlertsNotice need={need} />
+    </PanelBody>
   );
 }
 
@@ -182,8 +175,10 @@ export function EmailAlertsCard() {
       title="Email"
       action={config.emailEnabled ? <AddEmailAlertDialog /> : null}
     >
-      {config.emailEnabled ? (
-        <EssentialAlertsNotice need={essentialNeed} />
+      {config.emailEnabled && essentialNeedCopy(essentialNeed) ? (
+        <PanelBody className="border-b border-border-subtle">
+          <EssentialAlertsNotice need={essentialNeed} />
+        </PanelBody>
       ) : null}
       {!config.emailEnabled ? (
         <SetupHint need={essentialNeed} />

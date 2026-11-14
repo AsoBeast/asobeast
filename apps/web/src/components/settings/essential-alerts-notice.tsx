@@ -10,13 +10,13 @@ export function EssentialAlertsNotice({
   if (!copy) return null;
   const [before, after] = copy.split(HTTPS_VARIABLE);
   return (
-    <p className="text-sm text-muted-foreground">
+    <p className="text-body text-muted-foreground">
       {after === undefined ? (
         copy
       ) : (
         <>
           <span>{before}</span>
-          <code className="font-mono text-xs text-foreground">
+          <code className="font-mono text-caption text-foreground">
             {HTTPS_VARIABLE}
           </code>
           <span>{after}</span>

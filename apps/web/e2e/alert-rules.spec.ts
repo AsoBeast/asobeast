@@ -197,7 +197,9 @@ for (const channel of CHANNELS) {
     });
     const row = page.getByRole("listitem").filter({ hasText: target }).first();
     await expect(
-      row.locator('[data-slot="badge"]').filter({ hasText: "Rank dropped" }),
+      row
+        .locator('[data-slot="alert-rule"]')
+        .filter({ hasText: "Rank dropped" }),
     ).toHaveText("Rank dropped · 10+");
   });
 
@@ -288,7 +290,7 @@ test("the essential alert reopens on its positions and clears them", async ({
     .filter({ hasText: "owner@example.com" })
     .first();
   await expect(
-    row.locator('[data-slot="badge"]').filter({ hasText: "Rank dropped" }),
+    row.locator('[data-slot="alert-rule"]').filter({ hasText: "Rank dropped" }),
   ).toHaveText("Rank dropped · 10+");
   const dialog = await openSettledDialog(page, "Edit rules", row);
   await expect(rankField(dialog)).toHaveValue("10");

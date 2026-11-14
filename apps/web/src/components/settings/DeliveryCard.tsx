@@ -7,34 +7,37 @@ import {
 } from "@tanstack/react-query";
 import { Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { flushAlerts } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import { alertDeliveryKey, alertDeliveryOptions } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
+import { PanelBody, SettingsPanel } from "./SettingsPanel";
 
 function Field({
   label,
+  inline = false,
   children,
 }: {
   label: string;
+  inline?: boolean;
   children: React.ReactNode;
 }) {
   const id = `delivery-field-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
-    <div role="group" aria-labelledby={id} className="flex flex-col gap-1">
-      <span id={id} className="text-xs text-muted-foreground">
+    <div
+      role="group"
+      aria-labelledby={id}
+      className={inline ? "flex items-baseline gap-1" : "contents"}
+    >
+      <span id={id} className={inline ? undefined : "text-muted-foreground"}>
         {label}
       </span>
-      <span className="text-sm font-medium">{children}</span>
+      <span
+        className={inline ? "numeric font-medium text-foreground" : "min-w-0"}
+      >
+        {children}
+      </span>
     </div>
   );
 }
@@ -67,12 +70,9 @@ export function DeliveryCard() {
   const flushOnce = useSingleFlight(flush);
 
   return (
-    <Card>
-      <CardHeader className="flex-row items-start justify-between gap-4">
-        <div className="flex flex-col gap-1.5">
-          <CardDescription>Alerts</CardDescription>
-          <CardTitle>Delivery</CardTitle>
-        </div>
+    <SettingsPanel
+      title="Delivery"
+      action={
         <Button
           variant="outline"
           size="sm"
@@ -83,32 +83,39 @@ export function DeliveryCard() {
           {flush.isPending ? <Loader2 className="animate-spin" /> : <Send />}
           Flush now
         </Button>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <p className="text-sm text-muted-foreground">
+      }
+      footer={
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <Field inline label="Last flush">
+            {data.lastFlushAt ? formatDateTime(data.lastFlushAt) : "Never"}
+          </Field>
+          <Field inline label="Pending">
+            {data.pending}
+          </Field>
+          <Field inline label="Claimed">
+            {data.claimed}
+          </Field>
+        </div>
+      }
+    >
+      <PanelBody>
+        <p className="max-w-[70ch] text-body text-muted-foreground">
           {data.mode === "batched"
             ? "Daily events are sent after processing as an app update, followed by a competitor watch when each has activity."
             : "Each event is delivered instantly, one notification per event."}
         </p>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
+        <div className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-2 text-dense">
           <Field label="Mode">
-            <Badge variant={data.mode === "batched" ? "default" : "outline"}>
-              {data.mode === "batched" ? "Batched" : "Instant"}
-            </Badge>
+            {data.mode === "batched" ? "Batched" : "Instant"}
           </Field>
-          <Field label="Trigger">
-            <Badge variant="outline">After completion</Badge>
-          </Field>
+          <Field label="Trigger">After completion</Field>
           <Field label="Pipeline starts">
-            <code className="font-mono text-xs">{data.pipelineCron}</code>
+            <code translate="no" className="font-mono text-caption">
+              {data.pipelineCron}
+            </code>
           </Field>
-          <Field label="Last flush">
-            {data.lastFlushAt ? formatDateTime(data.lastFlushAt) : "Never"}
-          </Field>
-          <Field label="Pending">{data.pending}</Field>
-          <Field label="Claimed">{data.claimed}</Field>
         </div>
-      </CardContent>
-    </Card>
+      </PanelBody>
+    </SettingsPanel>
   );
 }

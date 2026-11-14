@@ -534,12 +534,10 @@ test("an empty card lists what the owner needs before starting", async ({
   }
 });
 
-test("the section description links the integrations overview", async ({
-  page,
-}) => {
+test("the page header links the integrations overview", async ({ page }) => {
   await page.goto("/integrations#store-connections");
 
-  const link = section(page).getByRole("link", {
+  const link = page.getByRole("link", {
     name: /^Read the integrations overview/,
   });
   await expect(link).toHaveAttribute(

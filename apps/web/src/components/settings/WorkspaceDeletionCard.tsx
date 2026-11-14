@@ -20,13 +20,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/components/auth/use-auth";
@@ -42,6 +35,8 @@ import {
   workspaceDeletionOptions,
 } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
+import { PanelBody, SettingsPanel } from "./SettingsPanel";
+import { PanelSkeleton } from "./skeletons";
 
 const DELETION_FOCUS_KEY = "workspace-deletion";
 
@@ -76,7 +71,7 @@ function ScheduleDeletionDialog({ graceDays }: { graceDays: number }) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogTrigger asChild>
-        <Button ref={claimFocus} variant="destructive">
+        <Button ref={claimFocus} variant="destructive" size="sm">
           Delete workspace
         </Button>
       </AlertDialogTrigger>
@@ -134,6 +129,7 @@ function CancelDeletionButton() {
     <Button
       ref={claimFocus}
       variant="outline"
+      size="sm"
       aria-disabled={cancel.isPending || undefined}
       onClick={() => {
         if (cancel.isPending) return;
@@ -162,7 +158,7 @@ function ScheduledStatus({ deletion }: { deletion: WorkspaceDeletionStatus }) {
 
 function OperatorNote() {
   return (
-    <p className="text-body text-muted-foreground">
+    <p className="max-w-[70ch] text-body text-muted-foreground">
       This workspace holds the platform operator. It cannot be deleted while
       other accounts exist, because the admin area, the queue dashboard and the
       support tools would go with it and no account could take them over.
@@ -173,21 +169,7 @@ function OperatorNote() {
   );
 }
 
-function DeletionControl({
-  deletion,
-  isOwner,
-}: {
-  deletion: WorkspaceDeletionStatus;
-  isOwner: boolean;
-}) {
-  if (!isOwner) {
-    return (
-      <p className="text-body text-muted-foreground">
-        Only the workspace owner can{" "}
-        {deletion.scheduled ? "cancel this" : "delete this workspace"}.
-      </p>
-    );
-  }
+function DeletionControl({ deletion }: { deletion: WorkspaceDeletionStatus }) {
   return deletion.scheduled ? (
     <CancelDeletionButton />
   ) : (
@@ -196,28 +178,37 @@ function DeletionControl({
 }
 
 export function WorkspaceDeletionCard() {
-  const { user, isOperator } = useAuth();
-  const { data: deletion } = useQuery(workspaceDeletionOptions);
+  const { user, isOperator, isLoading } = useAuth();
+  const { data: deletion, isPending } = useQuery(workspaceDeletionOptions);
 
+  if (isPending || isLoading) {
+    return <PanelSkeleton title="w-36" rows={2} />;
+  }
   if (!deletion || !user) return null;
 
   const isOwner = user.role === "owner";
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Delete workspace</CardTitle>
-        <CardDescription>
+    <SettingsPanel
+      as="h2"
+      title="Delete workspace"
+      action={isOwner ? <DeletionControl deletion={deletion} /> : null}
+    >
+      <PanelBody>
+        <p className="max-w-[70ch] text-body text-muted-foreground">
           Deleting erases every app, keyword and history in this workspace after
           a grace period of {pluralize(deletion.graceDays, "day")}, during which
           the owner can cancel it.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col items-start gap-4">
+        </p>
         {isOperator ? <OperatorNote /> : null}
         {deletion.scheduled ? <ScheduledStatus deletion={deletion} /> : null}
-        <DeletionControl deletion={deletion} isOwner={isOwner} />
-      </CardContent>
-    </Card>
+        {isOwner ? null : (
+          <p className="text-body text-muted-foreground">
+            Only the workspace owner can{" "}
+            {deletion.scheduled ? "cancel this" : "delete this workspace"}.
+          </p>
+        )}
+      </PanelBody>
+    </SettingsPanel>
   );
 }

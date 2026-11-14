@@ -3,6 +3,8 @@ import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { PlanSection } from "@/components/settings/PlanSection";
 import { TeamCard } from "@/components/settings/TeamCard";
 import { ChecklistSettingsCard } from "@/components/checklist/ChecklistSettingsCard";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { SettingsIndex } from "@/components/settings/SettingsIndex";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import { BudgetCard } from "@/components/settings/BudgetCard";
 import { DeliveryCard } from "@/components/settings/DeliveryCard";
@@ -48,71 +50,62 @@ export default async function SettingsPage({
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <div className="page-reading flex flex-col gap-8">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-title tracking-tight text-balance">Settings</h1>
-          <p className="text-body text-muted-foreground">
-            Your plan, alerts, team and workspace.
-          </p>
+      <div className="@container/settings">
+        <div className="mx-auto grid w-full max-w-[59rem] grid-cols-1 gap-x-12 @[59rem]/settings:grid-cols-[11rem_minmax(0,1fr)]">
+          <SettingsIndex
+            operator={operator}
+            className="hidden @[59rem]/settings:block"
+          />
+          <div className="page-reading flex flex-col gap-8">
+            <PageHeader title="Settings" />
+
+            <PlanSection />
+
+            {operator ? (
+              <SettingsSection
+                id="daily-capacity"
+                title="Capacity"
+                headed={false}
+              >
+                <Suspense fallback={<BudgetCardSkeleton />}>
+                  <BudgetCard />
+                </Suspense>
+              </SettingsSection>
+            ) : null}
+
+            <SettingsSection
+              id="getting-started"
+              title="Getting started"
+              headed={false}
+            >
+              <ChecklistSettingsCard />
+            </SettingsSection>
+
+            <SettingsSection id="alerts" title="Alerts">
+              <Suspense fallback={<DeliveryCardSkeleton />}>
+                <DeliveryCard />
+              </Suspense>
+              <div id="webhooks" className="scroll-mt-20">
+                <Suspense fallback={<WebhooksCardSkeleton />}>
+                  <WebhooksCard />
+                </Suspense>
+              </div>
+              <div id="email-alerts" className="scroll-mt-20">
+                <Suspense fallback={<EmailAlertsCardSkeleton />}>
+                  <EmailAlertsCard />
+                </Suspense>
+              </div>
+            </SettingsSection>
+
+            <SettingsSection id="team" title="Team" headed={false}>
+              <TeamCard />
+            </SettingsSection>
+
+            <SettingsSection id="workspace" title="Workspace" headed={false}>
+              <WorkspaceDeletionCard />
+            </SettingsSection>
+          </div>
         </div>
-
-        <PlanSection />
-
-        {operator ? (
-          <SettingsSection
-            id="daily-capacity"
-            title="Capacity"
-            description="How much of your daily store request budget the pipeline uses. It governs how many markets you can track."
-          >
-            <Suspense fallback={<BudgetCardSkeleton />}>
-              <BudgetCard />
-            </Suspense>
-          </SettingsSection>
-        ) : null}
-
-        <SettingsSection
-          id="getting-started"
-          title="Getting started"
-          description="Your goal and the setup checklist that follows you across every page."
-        >
-          <ChecklistSettingsCard />
-        </SettingsSection>
-
-        <SettingsSection
-          id="alerts"
-          title="Alerts"
-          description="When AsoBeast tells you something changed, and where it sends that."
-        >
-          <Suspense fallback={<DeliveryCardSkeleton />}>
-            <DeliveryCard />
-          </Suspense>
-          <div id="webhooks" className="scroll-mt-20">
-            <Suspense fallback={<WebhooksCardSkeleton />}>
-              <WebhooksCard />
-            </Suspense>
-          </div>
-          <div id="email-alerts" className="scroll-mt-20">
-            <Suspense fallback={<EmailAlertsCardSkeleton />}>
-              <EmailAlertsCard />
-            </Suspense>
-          </div>
-        </SettingsSection>
-
-        <SettingsSection
-          id="team"
-          title="Team"
-          description="Who can sign in to this workspace, and how to invite someone else."
-        >
-          <TeamCard />
-        </SettingsSection>
-
-        <SettingsSection
-          id="workspace"
-          title="Workspace"
-          description="Delete this workspace and everything in it, or cancel a deletion that is pending."
-        >
-          <WorkspaceDeletionCard />
-        </SettingsSection>
       </div>
     </HydrationBoundary>
   );
