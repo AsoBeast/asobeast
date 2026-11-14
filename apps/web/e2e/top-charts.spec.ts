@@ -2136,6 +2136,49 @@ test.describe("chart history", () => {
     ).toBeVisible();
   });
 
+  test("keeps focus on Retry until every earlier capture has loaded", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    const [, ...earlier] = TOP_CHART_DATES;
+    const slow = earlier[earlier.length - 1];
+    const retried = earlier.filter((date) => date !== slow);
+    let failing = true;
+    await page.route(/\/charts\?.*date=/, (route) =>
+      failing ? route.fulfill({ status: 500, body: "{}" }) : route.continue(),
+    );
+    const held = await holdRequest(
+      page,
+      new RegExp(`/charts\\?.*date=${slow}`),
+      "GET",
+    );
+    await page.goto("/charts?view=table&tableView=history");
+    const retry = page.getByRole("button", { name: "Retry" });
+    await expect(retry).toBeVisible({ timeout: 30_000 });
+
+    failing = false;
+    const answered = Promise.all(
+      retried.map((date) =>
+        page.waitForResponse(
+          (response) =>
+            response.url().includes(`date=${date}`) && response.ok(),
+        ),
+      ),
+    );
+    await (await hydrated(retry)).focus();
+    await page.keyboard.press("Enter");
+    await answered;
+
+    await expect(retry).toHaveAttribute("aria-disabled", "true");
+    await expect(retry).toBeFocused();
+    held.release();
+    const chart = page.getByRole("region", {
+      name: "Positions of the top 10 apps over 5 captured days",
+    });
+    await expect(chart).toBeVisible();
+    await expect(chart).toBeFocused();
+  });
+
   test("says when too few days are captured", async ({ page }) => {
     await page.goto(
       `/charts?view=table&tableView=history&date=${TOP_CHART_DATES[3]}`,

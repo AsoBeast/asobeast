@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import type { ChartCaptureSummary, ChartPage } from "@asobeast/shared";
@@ -207,8 +207,19 @@ export function ChartHistory({
       }),
     ),
   });
+  const [retrying, setRetrying] = useState(false);
   const failed = reads.filter(failedRead);
+  const missing = reads.filter((read) => read.data === undefined);
   const days = reads.flatMap((read) => (read.data ? [read.data] : []));
+
+  const retry = async () => {
+    setRetrying(true);
+    try {
+      await Promise.all(missing.map((read) => read.refetch()));
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   if (!ready) {
     return (
@@ -219,7 +230,7 @@ export function ChartHistory({
       />
     );
   }
-  if (failed.length > 0) {
+  if (failed.length > 0 || retrying) {
     return (
       <div
         className={`${CHART_HEIGHT.hero} flex items-center justify-center`}
@@ -230,9 +241,11 @@ export function ChartHistory({
           read={{
             data: undefined,
             isError: true,
-            isFetching: failed.some((read) => read.isFetching),
-            errorUpdatedAt: failed[0].errorUpdatedAt,
-            refetch: () => Promise.all(failed.map((read) => read.refetch())),
+            isFetching: retrying || failed.some((read) => read.isFetching),
+            errorUpdatedAt: Math.max(
+              ...reads.map((read) => read.errorUpdatedAt),
+            ),
+            refetch: retry,
           }}
         />
       </div>
