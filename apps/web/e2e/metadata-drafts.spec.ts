@@ -113,7 +113,7 @@ test("a deep link to another app store language keeps it and hydrates cleanly", 
 });
 
 for (const width of [375, 768, 820, 1440]) {
-  test(`a draft with an issue keeps its copy button and lint rows inside the card at ${width}`, async ({
+  test(`a draft with an issue keeps its copy button and lint rows inside its row at ${width}`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 900 });
@@ -125,8 +125,8 @@ for (const width of [375, 768, 820, 1440]) {
 
     const escapes = await copies.evaluateAll((buttons) =>
       buttons.flatMap((button) => {
-        const card = button.closest(".rounded-xl");
-        if (!card) return ["no card"];
+        const card = button.closest("li");
+        if (!card) return ["no row"];
         const inner = button.getBoundingClientRect();
         const outer = card.getBoundingClientRect();
         return inner.left >= outer.left &&

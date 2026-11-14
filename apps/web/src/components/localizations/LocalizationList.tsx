@@ -44,7 +44,6 @@ export function LocalizationList({
           history: "replace",
         })
       }
-      className="rounded-lg border border-border px-3"
     >
       {result.localizations.map((item) => (
         <LocalizationItem

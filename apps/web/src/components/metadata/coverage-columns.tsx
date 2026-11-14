@@ -8,15 +8,9 @@ import {
   type KeywordCoverageRow,
   type MetadataField,
 } from "@asobeast/shared";
-import { BucketBadge } from "@/components/BucketBadge";
+import { BucketLabel } from "@/components/BucketBadge";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import type { DataTableFeatures } from "@/components/data-table/table-features";
-import { Badge } from "@/components/ui/badge";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { localizationName } from "@/lib/localizations";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
 import { cn } from "@/lib/utils";
@@ -24,37 +18,29 @@ import { screenshotTextMark } from "./screenshot-text-marks";
 
 export const HIDDEN_COVERAGE_COLUMNS = { uncovered: false };
 
-export const FIELD_ORDER: MetadataField[] = [
-  "title",
-  "subtitle",
-  "shortDescription",
-  "keywordField",
-  "description",
-];
-
 const columnHelper = createColumnHelper<
   DataTableFeatures,
   KeywordCoverageRow
 >();
 
+const MARK = "inline-flex size-6 items-center justify-center";
+
 function CoverageMark({ covered, label }: { covered: boolean; label: string }) {
+  const name = `${covered ? "in" : "missing from"} ${label}`;
   return (
     <span
+      title={name}
       className={cn(
-        "inline-flex size-6 items-center justify-center rounded-full",
-        covered
-          ? "bg-success-subtle text-success"
-          : "bg-muted text-muted-foreground",
+        MARK,
+        covered ? "text-foreground" : "text-faint-foreground",
       )}
     >
       {covered ? (
-        <Check className="size-3.5" />
+        <Check className="size-4" strokeWidth={2.25} aria-hidden />
       ) : (
-        <Minus className="size-3.5" />
+        <Minus className="size-3.5" aria-hidden />
       )}
-      <span className="sr-only">
-        {covered ? "in" : "missing from"} {label}
-      </span>
+      <span className="sr-only">{name}</span>
     </span>
   );
 }
@@ -66,30 +52,20 @@ function FieldMark({
   field: MetadataField;
   status: CoverageFieldStatus | undefined;
 }) {
+  const name = METADATA_FIELD_LABELS[field];
   const covered = status?.covered ?? false;
-  if (!covered || status?.localization === undefined) {
-    return (
-      <CoverageMark covered={covered} label={METADATA_FIELD_LABELS[field]} />
-    );
-  }
-  const label = `${METADATA_FIELD_LABELS[field]} (${localizationName(status.localization)})`;
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span tabIndex={0} className="inline-flex rounded-full">
-          <CoverageMark covered label={label} />
-        </span>
-      </TooltipTrigger>
-      <TooltipContent>in {label}</TooltipContent>
-    </Tooltip>
-  );
+  const label =
+    covered && status?.localization !== undefined
+      ? `${name} (${localizationName(status.localization)})`
+      : name;
+  return <CoverageMark covered={covered} label={label} />;
 }
 
 function NotReadMark({ label }: { label: string }) {
   return (
-    <span className="inline-flex size-6 items-center justify-center rounded-full text-muted-foreground">
-      <CircleDashed className="size-4" />
-      <span className="sr-only">{label} not read</span>
+    <span className={cn(MARK, "text-faint-foreground")}>
+      <CircleDashed className="size-4" aria-hidden />
+      <span className="sr-only">{`${label} not read`}</span>
     </span>
   );
 }
@@ -116,12 +92,16 @@ export function coverageColumns(
         <SortableHeader column={column} label="Keyword" />
       ),
       cell: ({ row }) => (
-        <span className="flex items-center gap-2 font-medium text-foreground">
-          {row.original.text}
+        <span className="flex flex-wrap items-baseline gap-x-3">
+          <span
+            translate="no"
+            dir="auto"
+            className="font-medium text-foreground"
+          >
+            {row.original.text}
+          </span>
           {row.original.uncovered ? (
-            <Badge variant="outline" className="border-warning/40 text-warning">
-              Uncovered
-            </Badge>
+            <span className="text-label text-warning">Uncovered</span>
           ) : null}
         </span>
       ),
@@ -137,7 +117,7 @@ export function coverageColumns(
         header: ({ column }) => (
           <SortableHeader column={column} label="Bucket" />
         ),
-        cell: ({ row }) => <BucketBadge bucket={row.original.bucket} />,
+        cell: ({ row }) => <BucketLabel bucket={row.original.bucket} />,
       },
     ),
     ...fields.map((field) =>

@@ -75,6 +75,11 @@ export const LATER_RELEASES: readonly Release[] = [
       },
       {
         kind: "improved",
+        title: "A metadata page that shows what to work on",
+        text: "The metadata page now opens with one line that counts the work left: fields with issues, keywords your listing does not cover, screenshots with a caption and how much of your keyword fields you use. A new panel beside the fields, Coverage by field, shows how many tracked keywords your title, subtitle and keyword field each carry and lists the keywords missing from the listing. Keyword coverage comes right after the fields, each localization shows how full its keyword field is, and the suggested keyword field says which words it adds and sits beside the fields it fills.",
+      },
+      {
+        kind: "improved",
         title: "A calmer, sharper look",
         text: "AsoBeast has a new typeface, warmer neutral colours and flatter panels with fine borders. Numbers line up in columns and labels are easier to read.",
       },

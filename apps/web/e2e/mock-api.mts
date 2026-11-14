@@ -11,6 +11,10 @@ import {
   filterAlertEvents,
 } from "./alert-feed-fixtures.mts";
 import {
+  METADATA_AUDIT_COOKIE,
+  metadataAuditVariant,
+} from "./metadata-fixtures.mts";
+import {
   HISTOGRAM_FAILING_COOKIE,
   RATINGS_HISTORY_COOKIE,
   RATINGS_HISTORY_SETS,
@@ -4228,7 +4232,10 @@ const routes: Route[] = [
           errorEnvelope(404, path, `No listing captured for ${market}`),
         );
       }
-      const audit = METADATA_AUDITS[id] ?? METADATA_AUDIT;
+      const audit = metadataAuditVariant(
+        cookieValue(req, METADATA_AUDIT_COOKIE),
+        METADATA_AUDITS[id] ?? METADATA_AUDIT,
+      );
       const home = DATASETS[id]?.detail.country;
       json(
         res,

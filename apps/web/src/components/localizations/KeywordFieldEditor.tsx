@@ -9,7 +9,6 @@ import {
   type AppLocalizationStoreSync,
 } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
-import { Meter } from "@/components/ui/meter";
 import { Textarea } from "@/components/ui/textarea";
 import {
   keywordFieldDraft,
@@ -33,12 +32,6 @@ function KeywordFieldUsage({
   const over = field.over > 0;
   return (
     <>
-      <Meter
-        value={Math.min(field.used, KEYWORD_FIELD_CHAR_LIMIT)}
-        max={KEYWORD_FIELD_CHAR_LIMIT}
-        tone="health"
-        fill={over ? "bg-destructive" : undefined}
-      />
       <div className="flex items-center justify-between gap-3 text-caption">
         <span className="text-muted-foreground">
           Separate keywords with commas.
@@ -78,7 +71,7 @@ function StoreFieldNotice({ sync }: { sync: AppLocalizationStoreSync | null }) {
         release. The connection lives in{" "}
         <Link
           href={STORE_CONNECTIONS_PATH}
-          className="font-medium text-foreground underline underline-offset-4"
+          className="font-medium text-foreground link-underline"
         >
           Integrations
         </Link>
@@ -140,9 +133,11 @@ export function KeywordFieldEditor({
         readOnly={managed || busy}
         rows={3}
         spellCheck={false}
+        dir="auto"
         aria-label={`${name} keyword field`}
         aria-describedby={countId}
         aria-invalid={managed ? undefined : over}
+        className="bg-card"
         placeholder={managed ? undefined : "fitness,workout,running,cardio"}
       />
       <KeywordFieldUsage field={field} countId={countId} />

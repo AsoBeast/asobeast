@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useId, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Copy, Loader2, Sparkles } from "lucide-react";
 import { useQueryState } from "nuqs";
@@ -16,10 +16,21 @@ import {
   useAiAllowanceSpent,
   useAiFailureToast,
 } from "@/components/ai/ai-allowance";
-import { Badge } from "@/components/ui/badge";
+import { PANEL_HEADER } from "@/components/layout/panel-classes";
+import { SUB_HEADER } from "@/components/localizations/panel-rows";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { generateMetadataDrafts } from "@/lib/api";
+import { PRODUCT_NAME } from "@/lib/brand";
 import { invalidateAiUsage } from "@/lib/queries";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
 import { draftLocaleParser } from "@/lib/search-params";
@@ -33,52 +44,53 @@ const STORE_FIELDS: Record<Store, MetadataField[]> = {
   GOOGLE_PLAY: ["title", "shortDescription", "description"],
 };
 
-function DraftCard({ draft }: { draft: MetadataDraft }) {
+function DraftRow({ draft }: { draft: MetadataDraft }) {
+  const label = METADATA_FIELD_LABELS[draft.field];
+
   async function copy() {
     try {
       await navigator.clipboard.writeText(draft.value);
-      toast.success(`${METADATA_FIELD_LABELS[draft.field]} copied`);
+      toast.success(`${label} copied`);
     } catch {
-      toast.error("Couldn't copy — select and copy it manually");
+      toast.error("Couldn't copy. Select and copy it manually.");
     }
   }
 
   return (
-    <div className="min-w-0 rounded-xl border border-border bg-card p-4">
-      <div className="flex items-center justify-between">
-        <span className="font-medium text-foreground">
-          {METADATA_FIELD_LABELS[draft.field]}
-        </span>
-        <span className="text-sm tabular-nums text-muted-foreground">
-          {`${draft.chars}/${draft.limit}`}
-        </span>
-      </div>
-      <pre className="mt-2 overflow-x-auto whitespace-pre-wrap rounded-lg border border-border bg-muted p-2 font-mono text-sm text-foreground">
-        {draft.value}
-      </pre>
-      <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
-        {draft.issues.length === 0 ? (
-          <Badge variant="success">no issues</Badge>
-        ) : (
-          <ul className="flex min-w-0 flex-col gap-1.5">
-            {draft.issues.map((issue, index) => (
-              <LintIssueRow key={`${issue.rule}-${index}`} issue={issue} />
-            ))}
-          </ul>
-        )}
+    <li className="flex min-w-0 flex-col gap-2 px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <h3 className="flex items-baseline gap-2 text-label">
+          <span>{label}</span>
+          <span className="numeric font-normal text-faint-foreground">
+            {`${draft.chars}/${draft.limit}`}
+          </span>
+        </h3>
         <Button
           variant="outline"
-          aria-label={`Copy ${METADATA_FIELD_LABELS[draft.field]} draft`}
+          size="sm"
+          aria-label={`Copy ${label} draft`}
           onClick={copy}
         >
-          <Copy />
-          Copy
+          <Copy aria-hidden />
+          <span>Copy</span>
         </Button>
       </div>
-      {draft.rationale ? (
-        <p className="mt-2 text-xs text-muted-foreground">{draft.rationale}</p>
+      <p className="text-body whitespace-pre-wrap wrap-anywhere">
+        {draft.value}
+      </p>
+      {draft.issues.length > 0 ? (
+        <ul className="flex min-w-0 list-none flex-col gap-1 p-0">
+          {draft.issues.map((issue, index) => (
+            <LintIssueRow key={`${issue.rule}-${index}`} issue={issue} />
+          ))}
+        </ul>
       ) : null}
-    </div>
+      {draft.rationale ? (
+        <p className="max-w-[70ch] text-caption text-muted-foreground">
+          {draft.rationale}
+        </p>
+      ) : null}
+    </li>
   );
 }
 
@@ -98,6 +110,8 @@ export function MetadataAssistantPanel({
   const queryClient = useQueryClient();
   const spent = useAiAllowanceSpent();
   const failAi = useAiFailureToast();
+  const headingId = useId();
+  const instructionsId = useId();
 
   const mutation = useMutation({
     mutationKey: ["metadata-assistant", appId],
@@ -122,49 +136,43 @@ export function MetadataAssistantPanel({
   }
 
   return (
-    <section className="flex flex-col gap-3">
-      <h2 className="text-lg font-medium">AI drafts</h2>
+    <section aria-labelledby={headingId}>
       <Card>
+        <CardHeader className={PANEL_HEADER}>
+          <CardTitle asChild>
+            <h2 id={headingId}>AI drafts</h2>
+          </CardTitle>
+        </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {canLocalize ? (
             <Suspense fallback={<DraftLocalizationSkeleton />}>
               <DraftLocalizationSelect appId={appId} />
             </Suspense>
           ) : null}
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="assistant-instructions"
-              className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-            >
-              Instructions (optional)
-            </label>
-            <textarea
-              id="assistant-instructions"
+          <div className="flex flex-col gap-2">
+            <Label htmlFor={instructionsId}>Instructions (optional)</Label>
+            <Textarea
+              id={instructionsId}
               value={instructions}
               onChange={(event) => setInstructions(event.target.value)}
               maxLength={500}
               rows={2}
-              placeholder="Steer tone or angle — e.g. emphasise sleep tracking."
-              className="w-full resize-y rounded-lg border border-border bg-muted p-2 text-sm text-foreground"
+              placeholder="Steer tone or angle, for example: emphasise sleep tracking."
+              className="max-w-[70ch] resize-y"
             />
           </div>
           <div className="flex flex-wrap gap-4">
             {available.map((field) => (
-              <label
-                key={field}
-                className="flex items-center gap-2 text-sm text-foreground"
-              >
-                <input
-                  type="checkbox"
+              <Label key={field} className="font-normal">
+                <Checkbox
                   checked={selected.includes(field)}
-                  onChange={(event) => toggle(field, event.target.checked)}
-                  className="h-4 w-4 rounded border-border"
+                  onCheckedChange={(checked) => toggle(field, checked === true)}
                 />
-                {METADATA_FIELD_LABELS[field]}
-              </label>
+                <span>{METADATA_FIELD_LABELS[field]}</span>
+              </Label>
             ))}
           </div>
-          <div className="flex flex-col items-start gap-1.5">
+          <div className="flex flex-col items-start gap-2">
             <Button
               onClick={() => draftOnce()}
               disabled={selected.length === 0 || spent}
@@ -180,22 +188,24 @@ export function MetadataAssistantPanel({
             <AiCallsLeft />
           </div>
         </CardContent>
+        {drafts.length > 0 ? (
+          <div className="border-t border-border">
+            {drafted ? (
+              <p className={SUB_HEADER}>
+                {`Drafted in ${APP_STORE_LOCALIZATIONS[drafted]}`}
+              </p>
+            ) : null}
+            <ul className="flex list-none flex-col divide-y divide-border-subtle p-0">
+              {drafts.map((draft) => (
+                <DraftRow key={draft.field} draft={draft} />
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        <CardFooter>
+          <span>{`Drafts are suggestions. ${PRODUCT_NAME} never writes to the store.`}</span>
+        </CardFooter>
       </Card>
-      {drafted ? (
-        <p className="text-sm text-muted-foreground">
-          {`Drafted in ${APP_STORE_LOCALIZATIONS[drafted]}`}
-        </p>
-      ) : null}
-      {drafts.length > 0 ? (
-        <div className="grid grid-cols-1 gap-4 @2xl/metadata:grid-cols-2">
-          {drafts.map((draft) => (
-            <DraftCard key={draft.field} draft={draft} />
-          ))}
-        </div>
-      ) : null}
-      <p className="text-xs text-muted-foreground">
-        Drafts are suggestions — AsoBeast never writes to the store.
-      </p>
     </section>
   );
 }
