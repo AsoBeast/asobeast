@@ -4,8 +4,14 @@ import { notFound } from "next/navigation";
 import { LocalizationSwitcher } from "@/components/app-detail/LocalizationSwitcher";
 import { MarketSwitcher } from "@/components/app-detail/MarketSwitcher";
 import { MarketSwitcherSkeleton } from "@/components/app-detail/skeletons";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { MetadataAuditView } from "@/components/metadata/MetadataAuditView";
-import { MetadataAuditSkeleton } from "@/components/metadata/skeletons";
+import { MetadataStatusLine } from "@/components/metadata/MetadataStatusLine";
+import {
+  MetadataAuditSkeleton,
+  MetadataStatusSkeleton,
+} from "@/components/metadata/skeletons";
+import { EmptyState } from "@/components/ui/empty-state";
 import { ApiError, getMetadataAssistantStatus } from "@/lib/api";
 import { ownsKeywordFields } from "@/lib/app-localizations";
 import { getQueryClient } from "@/lib/get-query-client";
@@ -58,9 +64,11 @@ export default async function MetadataPage({
     });
   if (!result) {
     return (
-      <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-        Metadata audit is not available for this app yet.
-      </div>
+      <EmptyState
+        title="No metadata audit yet"
+        body="The audit appears once a snapshot of this listing is stored."
+        className="page-wide"
+      />
     );
   }
   const isAppStore = result.store === "APP_STORE";
@@ -85,13 +93,20 @@ export default async function MetadataPage({
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <div className="page-wide @container/metadata flex flex-col gap-8">
-        <Suspense fallback={<MarketSwitcherSkeleton />}>
-          <div className="flex flex-wrap items-center gap-4">
-            <MarketSwitcher id={id} />
-            <LocalizationSwitcher id={id} />
+      <div className="page-wide @container/metadata flex flex-col gap-6">
+        <PageHeader title="Metadata" titleHidden>
+          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+            <Suspense fallback={<MetadataStatusSkeleton />}>
+              <MetadataStatusLine id={id} keywordFields={keywordFields} />
+            </Suspense>
+            <Suspense fallback={<MarketSwitcherSkeleton />}>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <MarketSwitcher id={id} />
+                <LocalizationSwitcher id={id} />
+              </div>
+            </Suspense>
           </div>
-        </Suspense>
+        </PageHeader>
         <Suspense fallback={<MetadataAuditSkeleton />}>
           <MetadataAuditView
             id={id}

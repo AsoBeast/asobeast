@@ -6,6 +6,7 @@ import {
   APP_STORE_LOCALIZATIONS,
   isAppStoreLocalization,
 } from "@asobeast/shared";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -41,13 +42,8 @@ export function DraftLocalizationSelect({ appId }: { appId: string }) {
   if (options.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <label
-        htmlFor={DRAFT_LOCALIZATION_ID}
-        className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-      >
-        Localization
-      </label>
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={DRAFT_LOCALIZATION_ID}>Localization</Label>
       <Select
         value={draftLocale ?? PRIMARY_LISTING}
         onValueChange={(next) =>
@@ -71,7 +67,7 @@ export function DraftLocalizationSelect({ appId }: { appId: string }) {
         </SelectContent>
       </Select>
       {draftLocale ? (
-        <p id={hintId} className="text-xs text-muted-foreground">
+        <p id={hintId} className="text-caption text-muted-foreground">
           {`Drafts are written in ${APP_STORE_LOCALIZATIONS[draftLocale]}. To fill its keyword field with keywords in another language instead, say so in the instructions.`}
         </p>
       ) : null}

@@ -1252,6 +1252,10 @@ export function invalidateKeywordFieldMutation(
   void client.invalidateQueries({ queryKey: appKeys.metadataAuditRoot(id) });
 }
 
+export function invalidateMetadataAudit(client: QueryClient, id: string): void {
+  void client.invalidateQueries({ queryKey: appKeys.metadataAuditRoot(id) });
+}
+
 export function invalidateLocalizationMutation(
   client: QueryClient,
   id: string,

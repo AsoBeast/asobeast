@@ -16,9 +16,11 @@ test("the metadata page lists what the home storefront and each market read", as
   const section = page.getByRole("region", { name: SECTION });
 
   await expect(page.getByRole("heading", { level: 2 })).toHaveText([
-    "Screenshot captions",
-    SECTION,
+    "Metadata",
+    "Coverage by field",
     "Keyword coverage",
+    SECTION,
+    "Screenshot captions",
   ]);
   await expect(
     section.getByText(
@@ -59,7 +61,7 @@ test("the section arrives with the page and the browser never asks for it", asyn
   const html = await page.request
     .get("/apps/app-1/metadata")
     .then((response) => response.text());
-  expect(html).toContain("A keyword field belongs to a language");
+  expect(html).toContain("Each localization has its own");
 
   await page.goto("/apps/app-1/metadata");
   await expect(page.getByRole("region", { name: SECTION })).toBeVisible();

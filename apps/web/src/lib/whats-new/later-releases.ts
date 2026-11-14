@@ -75,6 +75,11 @@ export const LATER_RELEASES: readonly Release[] = [
       },
       {
         kind: "improved",
+        title: "A metadata page that shows what to work on",
+        text: "The metadata page now opens with one line that counts the work left: fields with issues, keywords your listing does not cover, screenshots with a caption and how much of your keyword fields you use. A new panel beside the fields, Coverage by field, shows how many tracked keywords your title, subtitle and keyword field each carry and lists the keywords missing from the listing. Keyword coverage comes right after the fields, each localization shows how full its keyword field is, and the suggested keyword field says which words it adds and sits beside the fields it fills.",
+      },
+      {
+        kind: "improved",
         title: "Top charts that show where you stand",
         text: "Top charts now opens with one sentence about where your app sits and how many apps climbed, fell and entered. A panel above the charts lists your apps and competitors with their place in the free, paid and grossing charts, even when they sit below the rows shown, with a line of the last 30 days for your own app. Each chart shows at a glance how much of it moved, rows are shorter so more fit on a screen, and the table of a chart has a History view that draws the top ten over the last captured days with your app picked out.",
       },

@@ -14,13 +14,10 @@ export const METADATA_FIELD_LABELS: Record<MetadataField, string> = {
   shortDescription: CHANGE_FIELD_LABELS.summary,
 };
 
-export const LINT_SEVERITY_VARIANT: Record<
-  LintSeverity,
-  "destructive" | "warning" | "info"
-> = {
-  error: "destructive",
-  warn: "warning",
-  info: "info",
+export const LINT_SEVERITY_TONE: Record<LintSeverity, string> = {
+  error: "text-signal-down",
+  warn: "text-warning",
+  info: "text-muted-foreground",
 };
 
 export const LINT_SEVERITY_LABEL: Record<LintSeverity, string> = {
