@@ -14,6 +14,7 @@ import { pauseQueues } from './obliterate-queues';
 const SHUTDOWN_DEADLINE_MS = 8_000;
 const RECONNECT_HELD_MS = 60_000;
 const STATUS_POLL_MS = 10;
+const RECONNECTING_DEADLINE_MS = 2_000;
 const NO_STORE = {
   get: () => {
     throw new Error('no store request may leave in this spec');
@@ -26,7 +27,15 @@ const elapse = (ms: number) =>
 async function holdReconnecting(client: RedisClient): Promise<void> {
   client.options.retryStrategy = () => RECONNECT_HELD_MS;
   client.disconnect(true);
-  while (client.status !== 'reconnecting') await elapse(STATUS_POLL_MS);
+  const deadline = Date.now() + RECONNECTING_DEADLINE_MS;
+  while (client.status !== 'reconnecting') {
+    if (Date.now() > deadline) {
+      throw new Error(
+        `the worker connection stayed ${client.status} instead of waiting to reconnect`,
+      );
+    }
+    await elapse(STATUS_POLL_MS);
+  }
 }
 
 describe('Shutdown while a worker connection waits to reconnect (e2e)', () => {
