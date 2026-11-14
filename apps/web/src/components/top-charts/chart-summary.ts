@@ -158,41 +158,59 @@ function uncapturedLede(pages: readonly SummaryPage[], day: string | null) {
   ];
 }
 
-export function chartLede(
-  pages: readonly SummaryPage[],
-  day: string | null,
+const isDated = (standing: Standing | null): standing is Standing =>
+  standing !== null &&
+  standing.since !== null &&
+  standing.entry.movement !== "none";
+
+function leadParts(standing: Standing | null, several: boolean): LedePart[] {
+  if (!standing) {
+    return [
+      {
+        text: `None of your apps is in ${several ? "these charts" : "this chart"}.`,
+      },
+    ];
+  }
+  const since =
+    isDated(standing) && standing.since ? sinceText(standing.since) : "";
+  return [...standingParts(standing), { text: `${since}.` }];
+}
+
+function movedParts(
+  compared: readonly SummaryPage[],
+  standing: Standing | null,
 ): LedePart[] {
-  const captured = pages.filter((page) => page.capture);
-  if (captured.length === 0) return uncapturedLede(pages, day);
-  const standing = ownStanding(captured);
-  const compared = captured.filter((page) => page.comparison);
-  const dated = standing?.since && standing.entry.movement !== "none";
-  const lead: LedePart[] = standing
-    ? [
-        ...standingParts(standing),
-        {
-          text: dated && standing.since ? `${sinceText(standing.since)}.` : ".",
-        },
-      ]
-    : [
-        {
-          text: `None of your apps is in ${pages.length > 1 ? "these charts" : "this chart"}.`,
-        },
-      ];
-  const since = compared[0]?.comparison;
-  if (!since) return lead;
+  const days = new Set(compared.map((page) => page.comparison?.date));
+  const [only] = days;
+  const since =
+    days.size === 1 && only
+      ? sinceText(only)
+      : " since each chart's earlier day";
   const moved = countParts(
     movementCounts(compared.flatMap((page) => page.entries)),
   );
-  if (moved.length === 0) {
-    return [...lead, { text: ` Nothing moved${sinceText(since.date)}.` }];
-  }
+  if (moved.length === 0) return [{ text: ` Nothing moved${since}.` }];
+  const sameDay =
+    isDated(standing) && days.size === 1 && only === standing.since;
   return [
-    ...lead,
     { text: ` ${SCOPES[compared.length] ?? ""}` },
     ...moved,
-    { text: dated ? "." : `${sinceText(since.date)}.` },
+    { text: sameDay ? "." : `${since}.` },
   ];
+}
+
+export function chartLede(
+  pages: readonly SummaryPage[],
+  shown: string | null,
+): LedePart[] {
+  const captured = pages.filter((page) => page.capture);
+  if (captured.length === 0) return uncapturedLede(pages, shown);
+  const standing = ownStanding(captured);
+  const compared = captured.filter((page) => page.comparison);
+  const lead = leadParts(standing, pages.length > 1);
+  return compared.length === 0
+    ? lead
+    : [...lead, ...movedParts(compared, standing)];
 }
 
 export interface TrackedPlace {

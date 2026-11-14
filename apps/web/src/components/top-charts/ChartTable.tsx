@@ -212,12 +212,12 @@ export function ChartTable({
         <CardAction className={PANEL_ACTION}>
           <Tabs
             value={params.tableView}
-            onValueChange={(next) =>
-              void setParams(
-                { tableView: next as ChartTableView },
-                { history: "push" },
-              )
-            }
+            onValueChange={(next) => {
+              const chosen = TABLE_VIEWS.find(({ id }) => id === next);
+              if (chosen) {
+                void setParams({ tableView: chosen.id }, { history: "push" });
+              }
+            }}
           >
             <TabsList aria-label="Chart display">
               {TABLE_VIEWS.map(({ id, label }) => (

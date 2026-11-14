@@ -2086,6 +2086,29 @@ test.describe("chart history", () => {
     await expect(chartTable(page)).toBeVisible();
   });
 
+  test("hands focus to the chart when Retry loads the earlier captures", async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    let failing = true;
+    await page.route(/\/charts\?.*date=/, (route) =>
+      failing ? route.fulfill({ status: 500, body: "{}" }) : route.continue(),
+    );
+    await page.goto("/charts?view=table&tableView=history");
+    const retry = page.getByRole("button", { name: "Retry" });
+    await expect(retry).toBeVisible({ timeout: 30_000 });
+
+    failing = false;
+    await retry.focus();
+    await page.keyboard.press("Enter");
+
+    const chart = page.getByRole("region", {
+      name: "Positions of the top 10 apps over 5 captured days",
+    });
+    await expect(chart).toBeVisible();
+    await expect(chart).toBeFocused();
+  });
+
   test("says when too few days are captured", async ({ page }) => {
     await page.goto(
       `/charts?view=table&tableView=history&date=${TOP_CHART_DATES[3]}`,

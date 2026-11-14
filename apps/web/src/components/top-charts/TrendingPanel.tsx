@@ -202,7 +202,12 @@ export function TrendingPanel({ pages }: { pages: readonly ChartPage[] }) {
           <CardAction className={PANEL_ACTION}>
             <Tabs
               value={page.chart.collection}
-              onValueChange={(next) => setKind(next as CategoryCollection)}
+              onValueChange={(next) => {
+                const chosen = pages.find(
+                  ({ chart }) => chart.collection === next,
+                );
+                if (chosen) setKind(chosen.chart.collection);
+              }}
             >
               <TabsList aria-label="Chart kind">
                 {pages.map(({ chart }) => (

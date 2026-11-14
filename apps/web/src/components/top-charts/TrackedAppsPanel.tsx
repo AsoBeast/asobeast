@@ -80,9 +80,11 @@ function RankTrend({
     (candidate) =>
       candidate.genre === genre && candidate.collection === listed?.collection,
   );
-  const ranks = (series?.points ?? []).flatMap((point) =>
+  const points = series?.points ?? [];
+  const ranks = points.flatMap((point) =>
     point.position === null ? [] : [point.position],
   );
+  const latest = points[points.length - 1]?.position ?? null;
   if (isError && !data) {
     return <span className="text-muted-foreground">Unavailable</span>;
   }
@@ -94,7 +96,7 @@ function RankTrend({
       className="ml-auto"
       values={ranks.map((rank) => -rank)}
       label={`${row.title} in ${COLLECTION_LABELS[listed.collection]}, last 30 days`}
-      now={`#${ranks[ranks.length - 1]}`}
+      now={latest === null ? "not listed" : `#${latest}`}
     />
   );
 }
@@ -117,8 +119,14 @@ function AppCell({ row }: { row: TrackedRow }) {
           Yours
         </Badge>
       ) : (
-        <span className="hidden truncate text-caption text-faint-foreground @2xl/charts:inline">
-          {link.label}
+        <span
+          className="shrink-0 truncate text-caption text-faint-foreground @2xl/charts:shrink"
+          title={link.label}
+        >
+          <span>Competitor</span>
+          <span className="sr-only @2xl/charts:not-sr-only">
+            {link.label.slice("Competitor".length)}
+          </span>
         </span>
       )}
     </div>

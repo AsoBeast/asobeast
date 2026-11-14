@@ -18,10 +18,12 @@ import {
   PREVIOUS_LINE_PROPS,
   RANK_AXIS_PROPS,
   seriesColor,
+  seriesDash,
   TIME_AXIS_PROPS,
 } from "@/components/charts/theme";
 import { InlineQueryError } from "@/components/layout/InlineQueryError";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
+import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
 import { formatDayMonth } from "@/lib/format";
 import { chartPageOptions } from "@/lib/queries";
 import { shownChartKey } from "./chart-params";
@@ -45,8 +47,20 @@ const RANK_TICKS = Array.from(
 const RANK_DOMAIN = [0.5, HISTORY_APPS + 0.5];
 const DAY_PADDING = { left: 16, right: 16 } as const;
 
+const HISTORY_FOCUS_KEY = "chart-history";
+
 const lineOf = (series: HistorySeries) =>
   series.own ? OWN_LINE : PREVIOUS_LINE_PROPS;
+
+function patternsOf(series: readonly HistorySeries[]): Map<string, number> {
+  const others = series.filter((candidate) => !candidate.own);
+  return new Map(
+    series.map((candidate) => [
+      candidate.id,
+      candidate.own ? 0 : others.indexOf(candidate) + 1,
+    ]),
+  );
+}
 
 const inTopOf =
   (id: string) =>
@@ -111,11 +125,12 @@ function HistoryTooltip({
 }) {
   const row = history.rows.find((candidate) => candidate.date === label);
   if (!active || !row) return null;
+  const patterns = patternsOf(history.series);
   const items: SeriesTooltipItem[] = history.series.map((series) => {
     const position = row[series.id];
     return {
       key: series.id,
-      index: 0,
+      index: patterns.get(series.id) ?? 0,
       color: lineOf(series).stroke,
       label: labelOf(series),
       value: typeof position === "number" ? `#${position}` : "Not listed",
@@ -130,8 +145,12 @@ function HistoryPlot({ history }: { history: History }) {
   const ordered = [...history.series].sort(
     (a, b) => Number(a.own) - Number(b.own),
   );
+  const patterns = patternsOf(history.series);
+  const claimFocus = useFocusClaim(HISTORY_FOCUS_KEY);
   return (
     <ChartContainer
+      ref={claimFocus}
+      tabIndex={-1}
       config={{}}
       className={`${CHART_HEIGHT.hero} w-full`}
       role="region"
@@ -140,12 +159,7 @@ function HistoryPlot({ history }: { history: History }) {
       <LineChart accessibilityLayer data={history.rows} margin={HISTORY_MARGIN}>
         <CartesianGrid {...GRID_PROPS} />
         <XAxis {...TIME_AXIS_PROPS} padding={DAY_PADDING} />
-        <YAxis
-          {...RANK_AXIS_PROPS}
-          scale="linear"
-          domain={RANK_DOMAIN}
-          ticks={RANK_TICKS}
-        />
+        <YAxis {...RANK_AXIS_PROPS} domain={RANK_DOMAIN} ticks={RANK_TICKS} />
         <ChartTooltip
           filterNull={false}
           content={<HistoryTooltip history={history} />}
@@ -157,6 +171,7 @@ function HistoryPlot({ history }: { history: History }) {
             type="linear"
             name={series.id}
             dataKey={inTopOf(series.id)}
+            strokeDasharray={seriesDash(patterns.get(series.id) ?? 0)}
             dot={PENDING_DOT_PROPS}
             connectNulls={false}
             label={<EndLabel last={last} series={series} />}
@@ -189,7 +204,9 @@ export function ChartHistory({
       }),
     ),
   });
-  const failed = reads.find((read) => read.isError && read.data === undefined);
+  const failed = reads.filter(
+    (read) => read.isError && read.data === undefined,
+  );
   const days = reads.flatMap((read) => (read.data ? [read.data] : []));
 
   if (!ready) {
@@ -201,12 +218,21 @@ export function ChartHistory({
       />
     );
   }
-  if (failed) {
+  if (failed.length > 0) {
     return (
-      <div className={`${CHART_HEIGHT.hero} flex items-center justify-center`}>
+      <div
+        className={`${CHART_HEIGHT.hero} flex items-center justify-center`}
+        onClickCapture={() => armFocusHandoff(HISTORY_FOCUS_KEY)}
+      >
         <InlineQueryError
           message="Could not load the earlier captures."
-          read={failed}
+          read={{
+            data: undefined,
+            isError: true,
+            isFetching: failed.some((read) => read.isFetching),
+            errorUpdatedAt: failed[0].errorUpdatedAt,
+            refetch: () => Promise.all(failed.map((read) => read.refetch())),
+          }}
         />
       </div>
     );

@@ -182,10 +182,13 @@ describe("chartLede", () => {
     const uncompared = page("grossing", { apps: [], comparison: null });
     const uncaptured = page("grossing", { capture: null, entries: [] });
     expect(text(chartLede([page("free"), paid, uncompared], null))).toBe(
-      "App 3 holds #3 in Free, unchanged since Nov 11. Across two charts 2 apps climbed, 2 fell and 2 entered.",
+      "App 3 holds #3 in Free, unchanged since Nov 11. Across two charts 2 apps climbed, 2 fell and 2 entered since each chart's earlier day.",
     );
     expect(text(chartLede([paid, page("free"), uncaptured], null))).toContain(
       "unchanged since Nov 11. Across two charts",
+    );
+    expect(text(chartLede([paid, page("free", { apps: [] })], null))).toBe(
+      "None of your apps is in these charts. Across two charts 2 apps climbed, 2 fell and 2 entered since each chart's earlier day.",
     );
     expect(text(chartLede([page("free"), uncompared, uncaptured], null))).toBe(
       "App 3 holds #3 in Free, unchanged since Nov 11. 1 app climbed, 1 fell and 1 entered.",
