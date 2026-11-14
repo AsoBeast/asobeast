@@ -3,6 +3,58 @@
 All notable changes to asobeast are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.17.0](https://github.com/AsoBeast/asobeast/compare/v1.16.0...v1.17.0) (2026-11-14)
+
+
+### Features
+
+* **api:** answer the month whose play report named no search terms ([8b940af](https://github.com/AsoBeast/asobeast/commit/8b940af364ad1a09be72102f276fa44b4886b9dc))
+* **api:** offer google sign in only once its consent is published ([ddbcda6](https://github.com/AsoBeast/asobeast/commit/ddbcda623304d481163f8f794e9352723c2cb5d0))
+* **audit:** score preview video from the store page extract ([#766](https://github.com/AsoBeast/asobeast/issues/766)) ([49d2658](https://github.com/AsoBeast/asobeast/commit/49d2658a6cfef6898f0a2680e2756a713f70e613))
+* **keywords:** inspect any keyword on demand ([#754](https://github.com/AsoBeast/asobeast/issues/754)) ([035b5c3](https://github.com/AsoBeast/asobeast/commit/035b5c3d92a9627092f08785b4496d3fb69d19dc))
+* **providers:** parse app store page shelves into snapshot raw ([#752](https://github.com/AsoBeast/asobeast/issues/752)) ([ffef243](https://github.com/AsoBeast/asobeast/commit/ffef243979c63ccb1d2f2259310fd26385bf0e4b))
+* **web:** bring the brand orange back and make the app readable again ([#793](https://github.com/AsoBeast/asobeast/issues/793)) ([bd26a1f](https://github.com/AsoBeast/asobeast/commit/bd26a1fea54cd0133b66676ec3cde767fbb3ec17))
+* **web:** chart every overview figure and fill the movers panel ([#762](https://github.com/AsoBeast/asobeast/issues/762)) ([cedaa31](https://github.com/AsoBeast/asobeast/commit/cedaa31351cd905085698e2f586304ee7bb3a2a9))
+* **web:** fix the shared parts every screen is built from ([#790](https://github.com/AsoBeast/asobeast/issues/790)) ([64ceb45](https://github.com/AsoBeast/asobeast/commit/64ceb4544b5e90aa977145300313afb700fa7f42))
+* **web:** gather keyword finding on the discovered tab ([#767](https://github.com/AsoBeast/asobeast/issues/767)) ([e88c71c](https://github.com/AsoBeast/asobeast/commit/e88c71cb70afa6f9d78270b500e5ba3d8323225b))
+* **web:** keep the setup steps and their one button in view ([#812](https://github.com/AsoBeast/asobeast/issues/812)) ([c0d2422](https://github.com/AsoBeast/asobeast/commit/c0d2422f269d7835248ed12185c3387b7a2951b3))
+* **web:** lead the app overview with four figures and what moved ([#759](https://github.com/AsoBeast/asobeast/issues/759)) ([83c5088](https://github.com/AsoBeast/asobeast/commit/83c5088d54c6ec7efafc301b9c7271295ca30c56))
+* **web:** lead the audit page with the score and the fixes ([#806](https://github.com/AsoBeast/asobeast/issues/806)) ([e12dbe2](https://github.com/AsoBeast/asobeast/commit/e12dbe2765b8b189df8bb0bd4ce7d5465e1b6a37))
+* **web:** make rankings readable without hovering the chart ([#798](https://github.com/AsoBeast/asobeast/issues/798)) ([516efab](https://github.com/AsoBeast/asobeast/commit/516efab143699f8efcd41415aa70a88018756da2))
+* **web:** make settings and integrations scannable panels ([#811](https://github.com/AsoBeast/asobeast/issues/811)) ([35917ff](https://github.com/AsoBeast/asobeast/commit/35917ffd1e54a2d7b5c07a68f27c2bef10707ab0))
+* **web:** make the alerts page one feed that says what is new ([#795](https://github.com/AsoBeast/asobeast/issues/795)) ([e91ee8e](https://github.com/AsoBeast/asobeast/commit/e91ee8eb0b3dc2720b8a421143f528328a5a78b1))
+* **web:** make the keywords row pressable and step through the sheet ([#770](https://github.com/AsoBeast/asobeast/issues/770)) ([9d20889](https://github.com/AsoBeast/asobeast/commit/9d208896c01ffecf4cdf5fe51b00bfe1e5c7e7c8))
+* **web:** open a sheet with everything about a keyword ([#769](https://github.com/AsoBeast/asobeast/issues/769)) ([7ed5f8e](https://github.com/AsoBeast/asobeast/commit/7ed5f8e212c8a63107bab44934b7856e7540d703))
+* **web:** open the metadata page with the work left ([#802](https://github.com/AsoBeast/asobeast/issues/802)) ([b9a3935](https://github.com/AsoBeast/asobeast/commit/b9a3935e1585bb02c9b5fd9c01a6e525c7ccff53))
+* **web:** open the reviews page with what needs a reply ([#800](https://github.com/AsoBeast/asobeast/issues/800)) ([facf2ce](https://github.com/AsoBeast/asobeast/commit/facf2ce543742fc38e0e4005ee2937ec290b0a13))
+* **web:** rebuild the action center around what to do first ([#797](https://github.com/AsoBeast/asobeast/issues/797)) ([750a524](https://github.com/AsoBeast/asobeast/commit/750a524df0aadc68db669026e614c6180a314633))
+* **web:** rebuild the dashboard around a range and four charts ([#724](https://github.com/AsoBeast/asobeast/issues/724)) ([bb43208](https://github.com/AsoBeast/asobeast/commit/bb432081514895f53ea38424db922ed6be276ffb))
+* **web:** rebuild the keywords page with a trend line and top apps ([#764](https://github.com/AsoBeast/asobeast/issues/764)) ([6e34de1](https://github.com/AsoBeast/asobeast/commit/6e34de1f7e5abf917479ba08c03a7841bcfdc8f5))
+* **web:** refresh the design tokens and shared components ([#722](https://github.com/AsoBeast/asobeast/issues/722)) ([ff674a1](https://github.com/AsoBeast/asobeast/commit/ff674a192c2e2d6a1d2c528861d1fa07baf182eb))
+* **web:** say when the play report named no search terms ([8b940af](https://github.com/AsoBeast/asobeast/commit/8b940af364ad1a09be72102f276fa44b4886b9dc))
+* **web:** show how early the store suggests a keyword ([#751](https://github.com/AsoBeast/asobeast/issues/751)) ([b7d9bb9](https://github.com/AsoBeast/asobeast/commit/b7d9bb925b14adfe1809bbaabb8d218efae39832))
+* **web:** show what each listing change did on the changes page ([#805](https://github.com/AsoBeast/asobeast/issues/805)) ([39a3de1](https://github.com/AsoBeast/asobeast/commit/39a3de1ecfce7d1b39e5afcd5cd72a66369b9ca2))
+* **web:** show what moved in the keywords table and fit a laptop ([#765](https://github.com/AsoBeast/asobeast/issues/765)) ([04edbe7](https://github.com/AsoBeast/asobeast/commit/04edbe7f72545cd574323385a7ceaad2ee08896e))
+* **web:** show where you stand at the top of top charts ([#801](https://github.com/AsoBeast/asobeast/issues/801)) ([e7a08a3](https://github.com/AsoBeast/asobeast/commit/e7a08a393709e58c77ae068fc76d79178197d7c9))
+* **web:** show who is ahead on the competitors page ([#799](https://github.com/AsoBeast/asobeast/issues/799)) ([0df6c69](https://github.com/AsoBeast/asobeast/commit/0df6c69387b97ad83ace546439da0af51a265284))
+
+
+### Bug Fixes
+
+* **api:** make hosted sign-up and trial billing clear and accurate ([#740](https://github.com/AsoBeast/asobeast/issues/740)) ([44de0b8](https://github.com/AsoBeast/asobeast/commit/44de0b8b71472cb73abd32a5372f0f3dff4b0934))
+* **api:** read play search terms from explore and map referral sources ([#755](https://github.com/AsoBeast/asobeast/issues/755)) ([8b940af](https://github.com/AsoBeast/asobeast/commit/8b940af364ad1a09be72102f276fa44b4886b9dc))
+* **api:** stop ai calls failing on image downloads and output limits ([#753](https://github.com/AsoBeast/asobeast/issues/753)) ([00757b0](https://github.com/AsoBeast/asobeast/commit/00757b002ce040b636dedf3a05543d589aa7d944))
+* **api:** stop reporting refused console keys and unreachable stores ([#768](https://github.com/AsoBeast/asobeast/issues/768)) ([57707f3](https://github.com/AsoBeast/asobeast/commit/57707f35cf0ba11fb4107f573f9c39dd1951946e))
+* **jobs:** keep store queues running through database and proxy faults ([#743](https://github.com/AsoBeast/asobeast/issues/743)) ([b17b62d](https://github.com/AsoBeast/asobeast/commit/b17b62d8eee596cb2715cb9a36a7e12c75ee1b2e))
+* **web:** keep a trialing owner off the wall on a stale account answer ([#741](https://github.com/AsoBeast/asobeast/issues/741)) ([9cfcd35](https://github.com/AsoBeast/asobeast/commit/9cfcd35759b6821caa641af8f26fc8097bb1bb9d))
+* **web:** keep request controls focusable while they run ([#791](https://github.com/AsoBeast/asobeast/issues/791)) ([df0c6b9](https://github.com/AsoBeast/asobeast/commit/df0c6b91ef829898618e3e8e945f02c7ea3c2feb))
+* **web:** make the dashboard, overview and keywords pages agree ([#771](https://github.com/AsoBeast/asobeast/issues/771)) ([b825663](https://github.com/AsoBeast/asobeast/commit/b82566393fb9a0926d0a481d5756076d9b3915a3))
+* **web:** offer a retry when the paywall cannot load the plan or prices ([#757](https://github.com/AsoBeast/asobeast/issues/757)) ([deeb1de](https://github.com/AsoBeast/asobeast/commit/deeb1deb97815ed8b21706148a20d8d404a66875))
+* **web:** say when api tokens or the team cannot be loaded ([#808](https://github.com/AsoBeast/asobeast/issues/808)) ([f38a18a](https://github.com/AsoBeast/asobeast/commit/f38a18a556e15320feb1611dc87ae9d6f57e8415))
+* **web:** say why a store refused the console connection ([#804](https://github.com/AsoBeast/asobeast/issues/804)) ([ddbcda6](https://github.com/AsoBeast/asobeast/commit/ddbcda623304d481163f8f794e9352723c2cb5d0))
+* **web:** stop a stale account answer sending a checkout return to the wall ([#744](https://github.com/AsoBeast/asobeast/issues/744)) ([c32c80e](https://github.com/AsoBeast/asobeast/commit/c32c80eea354011db3ed71d4e289c02885388b5a))
+* **web:** stop cached app reads updating during another render ([#807](https://github.com/AsoBeast/asobeast/issues/807)) ([21f0d1c](https://github.com/AsoBeast/asobeast/commit/21f0d1c0f65075fb00d5819bea2b7324da354cb5))
+
 ## [1.16.0](https://github.com/AsoBeast/asobeast/compare/v1.15.0...v1.16.0) (2026-11-07)
 
 
