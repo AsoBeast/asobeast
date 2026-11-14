@@ -100,9 +100,9 @@ export function ChangesHeader({
           onValueChange={(next) => void setDays(Number(next) as typeof days)}
         >
           <TabsList aria-label="Window">
-            {CHANGE_WINDOWS.map((window) => (
-              <TabsOption key={window} value={String(window)}>
-                {`${window}d`}
+            {CHANGE_WINDOWS.map((option) => (
+              <TabsOption key={option} value={String(option)}>
+                {`${option}d`}
               </TabsOption>
             ))}
           </TabsList>

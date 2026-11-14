@@ -1,19 +1,16 @@
 import type { ChangeEventItem, ChangeImpactReport } from "@asobeast/shared";
 import { formatDayMonth, pluralize } from "@/lib/format";
 import { changeEffect, visibilityMove } from "./change-effects";
-import { changedFieldWords, dayOf } from "./change-fields";
+import {
+  changedFieldWords,
+  dayOf,
+  fieldPhrase,
+  namesFields,
+} from "./change-fields";
 
 export interface LedePart {
   text: string;
   strong?: boolean;
-}
-
-function ownedFields(
-  events: readonly ChangeEventItem[],
-  article: string,
-): string {
-  const words = changedFieldWords(events.map((event) => event.field));
-  return /^\d/.test(words) ? words : `${article} ${words}`;
 }
 
 function newestDayParts(events: readonly ChangeEventItem[]): LedePart[] {
@@ -26,12 +23,18 @@ function newestDayParts(events: readonly ChangeEventItem[]): LedePart[] {
   const parts: LedePart[] = [
     { text: "On " },
     { text: formatDayMonth(day), strong: true },
-    { text: " " },
+    { text: ", " },
   ];
   if (own.length > 0) {
     parts.push(
       { text: "you changed " },
-      { text: ownedFields(own, "the"), strong: true },
+      {
+        text: fieldPhrase(
+          own.map((event) => event.field),
+          "the",
+        ),
+        strong: true,
+      },
     );
   }
   if (rivalIds.length > 0) {
@@ -40,7 +43,13 @@ function newestDayParts(events: readonly ChangeEventItem[]): LedePart[] {
       parts.push(
         { text: rivals[0].appName ?? "A competitor", strong: true },
         { text: " changed " },
-        { text: ownedFields(rivals, "its"), strong: true },
+        {
+          text: fieldPhrase(
+            rivals.map((event) => event.field),
+            "its",
+          ),
+          strong: true,
+        },
       );
     } else {
       parts.push(
@@ -65,10 +74,12 @@ function impactParts(impact: ChangeImpactReport): LedePart[] {
   for (const item of impact.items) {
     const effect = changeEffect(item);
     if (effect?.kind !== "measured") continue;
-    const fields = changedFieldWords(item.fields);
+    const subject = namesFields(item.fields)
+      ? `Your ${changedFieldWords(item.fields)} change`
+      : "Your change";
     parts.push(
       {
-        text: ` Your ${fields} change of ${formatDayMonth(item.changedOn)} was followed by visibility `,
+        text: ` ${subject} of ${formatDayMonth(item.changedOn)} was followed by visibility `,
       },
       { text: visibilityMove(effect.change), strong: true },
       { text: ` after ${effect.days} days.` },

@@ -23,10 +23,10 @@ function shape(kind: ChangeKind) {
 
 export function KindMark({
   kind,
-  className,
+  own = false,
 }: {
   kind: ChangeKind;
-  className?: string;
+  own?: boolean;
 }) {
   return (
     <svg
@@ -35,7 +35,7 @@ export function KindMark({
       height={SIZE}
       viewBox="0 0 10 10"
       fill="currentColor"
-      className={className}
+      style={own ? { color: "var(--brand-mark)" } : undefined}
     >
       {shape(kind)}
     </svg>

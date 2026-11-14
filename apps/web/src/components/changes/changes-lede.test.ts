@@ -86,7 +86,7 @@ describe("changesLede", () => {
     });
 
     expect(text(parts)).toBe(
-      "On Nov 11 you changed the title and description. Your change of Nov 11 is measurable on Nov 18. Your icon change of Oct 31 was followed by visibility up 3.7 after 7 days.",
+      "On Nov 11, you changed the title and description. Your change of Nov 11 is measurable on Nov 18. Your icon change of Oct 31 was followed by visibility up 3.7 after 7 days.",
     );
     expect(
       parts.filter((part) => part.strong).map((part) => part.text),
@@ -105,7 +105,7 @@ describe("changesLede", () => {
     });
 
     expect(text(parts)).toBe(
-      "On Nov 11 you changed the title; Rival Focus changed its screenshots.",
+      "On Nov 11, you changed the title; Rival Focus changed its screenshots.",
     );
   });
 
@@ -119,7 +119,9 @@ describe("changesLede", () => {
       days: 30,
     });
 
-    expect(text(parts)).toBe("On Nov 11 2 competitors changed their listings.");
+    expect(text(parts)).toBe(
+      "On Nov 11, 2 competitors changed their listings.",
+    );
   });
 
   it("counts the fields when more than three changed", () => {
@@ -134,7 +136,25 @@ describe("changesLede", () => {
       days: 30,
     });
 
-    expect(text(parts)).toBe("On Nov 11 you changed 4 fields.");
+    expect(text(parts)).toBe("On Nov 11, you changed 4 fields.");
+  });
+
+  it("leaves the fields out of the effect when more than three changed", () => {
+    const [, measured] = IMPACT.items;
+    const parts = changesLede({
+      events: [event("2026-10-31", "title")],
+      impact: {
+        ...IMPACT,
+        items: [
+          { ...measured, fields: ["title", "subtitle", "icon", "price"] },
+        ],
+      },
+      days: 90,
+    });
+
+    expect(text(parts)).toContain(
+      "Your change of Oct 31 was followed by visibility up 3.7 after 7 days.",
+    );
   });
 
   it("says so when the window holds no change", () => {

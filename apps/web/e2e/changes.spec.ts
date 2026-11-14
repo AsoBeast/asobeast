@@ -338,7 +338,7 @@ test("the page opens with the newest change and the last measured effect", async
 
   const lede = page.getByText(/^On .* you changed the/);
   await expect(lede).toContainText(
-    `On ${formatDayMonth(RECENT.changedOn)} you changed the title and description.`,
+    `On ${formatDayMonth(RECENT.changedOn)}, you changed the title and description.`,
   );
   await expect(lede).toContainText(
     `Your icon change of ${formatDayMonth(MEASURED.changedOn)} was followed by visibility up 3.7 after 7 days.`,
@@ -415,7 +415,7 @@ test("a day you changed the listing links its measured effect", async ({
   await page.goto("/apps/app-1/changes");
 
   const effect = timeline(page).getByRole("link", {
-    name: /Visibility up 3\.7 in visibility after 7 days/,
+    name: /Visibility up 3\.7 points after 7 days/,
   });
   await expect(effect).toBeVisible();
   await effect.click();
@@ -429,24 +429,45 @@ test("a day you changed the listing links its measured effect", async ({
   ).toBeInViewport();
 });
 
-test("several versions of one app collapse into a row that opens", async ({
+test("a competitor's versions fold into a row that opens and yours stay on their days", async ({
   page,
 }) => {
   await changeState(page, "busy");
   await page.goto("/apps/app-1/changes");
 
   const versions = timeline(page).locator('[data-change-field="version"]');
-  await expect(versions).toHaveCount(2);
+  await expect(versions).toHaveCount(4);
+  await expect(versions.filter({ hasText: "Focus Timer" })).toHaveCount(3);
   const run = versions.filter({ hasText: "3 versions" });
-  await expect(run).toContainText("latest 2.6.0");
-  await expect(run).not.toContainText("2.3.0");
+  await expect(run).toContainText("Deep Work Clock");
+  await expect(run).toContainText("latest 1.3");
+  await expect(run).not.toContainText("1.0");
 
   await run.getByRole("button", { name: "Show versions" }).click();
 
-  await expect(run).toContainText("2.3.0");
+  await expect(run).toContainText("1.0");
   await expect(
     run.getByRole("button", { name: "Hide versions" }),
   ).toBeFocused();
+});
+
+test("a mark of a version folded into a newer row opens the day that shows it", async ({
+  page,
+}) => {
+  await changeState(page, "busy");
+  await page.goto("/apps/app-1/changes");
+
+  const marks = activity(page).getByRole("button", {
+    name: /Deep Work Clock changed the version$/,
+  });
+  await expect(marks).toHaveCount(3);
+  await marks.first().focus();
+  await page.keyboard.press("Enter");
+
+  const run = timeline(page)
+    .locator("section")
+    .filter({ hasText: "3 versions" });
+  await expect(run.getByRole("heading", { level: 2 })).toBeFocused();
 });
 
 test("a long title and a right to left subtitle stay inside the page", async ({

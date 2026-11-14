@@ -2,7 +2,6 @@
 
 import { Suspense } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { useQueryState } from "nuqs";
 import {
   CHANGE_IMPACT_WINDOWS,
   type ChangeImpactItem,
@@ -25,7 +24,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { VisibilityHelp } from "@/components/visibility/VisibilityHelp";
 import { formatCountry, formatDate } from "@/lib/format";
 import { changeImpactOptions, keywordCountriesOptions } from "@/lib/queries";
-import { changeDaysParser } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
 import { impactAnchor } from "./change-effects";
 import { changedFieldsText } from "./change-fields";
@@ -35,7 +33,7 @@ import {
   FunnelOnlyCell,
 } from "./ChangeImpactWindowTile";
 import { ChangeImpactSkeleton } from "./skeletons";
-import { useImpactCountry } from "./use-change-view";
+import { useChangeWindow, useImpactCountry } from "./use-change-view";
 
 const REGION_NAME = "How rankings moved after each change";
 const COLUMNS = "@3xl/impact:grid-cols-[minmax(11rem,0.9fr)_3fr]";
@@ -199,7 +197,7 @@ export function ChangeImpactCard({
   store: Store;
   homeCountry: string;
 }) {
-  const [days] = useQueryState("days", changeDaysParser);
+  const days = useChangeWindow();
   const market = useImpactCountry(homeCountry);
 
   return (

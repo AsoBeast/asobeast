@@ -46,7 +46,7 @@ import { changeImpactOptions, visibilityOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import {
   activityLanes,
-  changesOn,
+  changeLinesOn,
   changeWindowRange,
   markLabel,
   ownChangeDays,
@@ -59,6 +59,7 @@ import { effectLine, effectsByDay, type ChangeEffect } from "./change-effects";
 import { CHANGE_KIND_LABELS, CHANGE_KINDS } from "./change-fields";
 import { KindMark } from "./KindMark";
 import { ChangeActivitySkeleton } from "./skeletons";
+import type { ShownChange } from "./timeline-days";
 import { useChangeEvents, useImpactCountry } from "./use-change-view";
 
 const chartConfig = {
@@ -88,7 +89,7 @@ function ActivityTooltip({
   const day = String(label);
   const row = rows.find((candidate) => candidate.date === day);
   if (!row) return null;
-  const changed = changesOn(lanes, day);
+  const changed = changeLinesOn(lanes, day);
   const effect = effects.get(day);
 
   return (
@@ -226,10 +227,10 @@ function VisibilityPlot({
 
 function LaneRow({
   lane,
-  onShowDay,
+  onShowChange,
 }: {
   lane: Lane;
-  onShowDay: (day: string) => void;
+  onShowChange: (change: ShownChange) => void;
 }) {
   return (
     <Fragment>
@@ -238,7 +239,8 @@ function LaneRow({
         <bdi className="truncate font-medium">{lane.appName}</bdi>
         {lane.own ? <Badge variant="brand">You</Badge> : null}
         <span className="numeric ml-auto text-label text-faint-foreground">
-          {lane.count}
+          <span>{lane.count}</span>
+          <span className="sr-only">{" changes"}</span>
         </span>
       </div>
       <div className="relative h-9 border-t border-border-subtle">
@@ -248,17 +250,14 @@ function LaneRow({
             type="button"
             aria-label={markLabel(lane, mark)}
             title={markLabel(lane, mark)}
-            onClick={() => onShowDay(mark.day)}
-            className={cn(
-              "absolute inset-y-0 flex w-4 -translate-x-1/2 flex-col items-center justify-center gap-0.5 rounded-sm outline-none transition-colors duration-150 ease-out hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring",
-              lane.own ? "text-brand-mark" : "text-muted-foreground",
-            )}
+            onClick={() => onShowChange({ appId: lane.appId, day: mark.day })}
+            className="absolute inset-y-0 flex w-4 -translate-x-1/2 flex-col items-center justify-center gap-0.5 rounded-sm text-muted-foreground outline-none transition-colors duration-150 ease-out hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
             style={{
               left: `calc(${PLOT_LEFT}px + (100% - ${PLOT_INSET}px) * ${mark.position})`,
             }}
           >
             {mark.kinds.map((kind) => (
-              <KindMark key={kind} kind={kind} />
+              <KindMark key={kind} kind={kind} own={lane.own} />
             ))}
           </button>
         ))}
@@ -270,24 +269,24 @@ function LaneRow({
 function Activity({
   id,
   homeCountry,
-  onShowDay,
+  onShowChange,
 }: {
   id: string;
   homeCountry: string;
-  onShowDay: (day: string) => void;
+  onShowChange: (change: ShownChange) => void;
 }) {
   const headingId = useId();
   const { events, days, homeListing, today } = useChangeEvents(id);
   const country = useImpactCountry(homeCountry);
-  const window = windowDays(today, days);
+  const span = windowDays(today, days);
   const { data: visibility } = useSuspenseQuery(
     visibilityOptions(id, changeWindowRange(today, days), country),
   );
   const { data: impact } = useQuery(changeImpactOptions(id, days, country));
 
-  const lanes = activityLanes(events, window);
+  const lanes = activityLanes(events, span);
   if (lanes.length === 0) return null;
-  const rows = visibilityRows(visibility.points, window);
+  const rows = visibilityRows(visibility.points, span);
   const effects =
     homeListing && impact
       ? effectsByDay(impact)
@@ -310,11 +309,15 @@ function Activity({
             <VisibilityPlot
               rows={rows}
               lanes={lanes}
-              markers={ownChangeDays(events, window)}
+              markers={ownChangeDays(events, span)}
               effects={effects}
             />
             {lanes.map((lane) => (
-              <LaneRow key={lane.appId} lane={lane} onShowDay={onShowDay} />
+              <LaneRow
+                key={lane.appId}
+                lane={lane}
+                onShowChange={onShowChange}
+              />
             ))}
           </div>
         </CardContent>
@@ -332,7 +335,7 @@ function Activity({
 export function ChangeActivity(props: {
   id: string;
   homeCountry: string;
-  onShowDay: (day: string) => void;
+  onShowChange: (change: ShownChange) => void;
 }) {
   return (
     <Suspense fallback={<ChangeActivitySkeleton />}>

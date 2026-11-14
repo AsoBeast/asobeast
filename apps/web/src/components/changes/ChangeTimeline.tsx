@@ -34,21 +34,26 @@ import {
 } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
 import { changeEffect, impactAnchor, timelineAnchor } from "./change-effects";
-import {
-  dayOf,
-  fieldGroupLabel,
-  matchesFilter,
-  ownerCounts,
-} from "./change-fields";
+import { fieldGroupLabel, matchesFilter, ownerCounts } from "./change-fields";
 import { conversionChip, funnelByDay } from "./change-funnel";
-import { collapseVersions, entryEvent, type ChangeEntry } from "./change-runs";
+import { entryEvent } from "./change-runs";
 import { ChangeTimelineRow } from "./ChangeTimelineRow";
+import {
+  changesShownOn,
+  dayShowing,
+  timelineDays,
+  type ShownChange,
+  type TimelineDay,
+} from "./timeline-days";
 import { ChangesCardSkeleton } from "./skeletons";
 import {
   useChangeEvents,
   useChangeFilter,
   useImpactCountry,
 } from "./use-change-view";
+
+const isCompetitor = (event: ChangeEventItem): boolean => event.isCompetitor;
+const isOwn = (event: ChangeEventItem): boolean => !event.isCompetitor;
 
 const WIDEST_WINDOW: ChangeWindow = CHANGE_WINDOWS[CHANGE_WINDOWS.length - 1];
 
@@ -58,8 +63,11 @@ const OWNER_TABS: ReadonlyArray<{ value: ChangeOwner; label: string }> = [
   { value: "competitors", label: "Competitors" },
 ];
 
+const DAY_BAR =
+  "flex min-h-9 flex-wrap items-center gap-x-3 gap-y-0.5 border-b border-border-subtle px-3 py-1.5 text-label @2xl/timeline:px-4";
+
 const DAY_HEADING =
-  "flex min-h-9 scroll-mt-16 flex-wrap items-center gap-x-3 gap-y-0.5 border-b border-border-subtle px-3 py-1.5 text-label text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset @2xl/timeline:px-4";
+  "flex min-w-0 flex-1 scroll-mt-16 flex-wrap items-center justify-between gap-x-3 gap-y-0.5 rounded-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 function ConversionChip({ value }: { value: number }) {
   const tone =
@@ -75,65 +83,50 @@ function ConversionChip({ value }: { value: number }) {
   );
 }
 
-function DayEffects({
-  id,
-  days,
-  day,
-  homeCountry,
-}: {
+interface DayScope {
   id: string;
   days: number;
   day: string;
   homeCountry: string;
-}) {
+}
+
+function DayConversion({ id, days, day, homeCountry }: DayScope) {
+  const country = useImpactCountry(homeCountry);
+  const { data: impact } = useSuspenseQuery(
+    changeImpactOptions(id, days, country),
+  );
+  const conversion = conversionChip(funnelByDay(impact).get(day));
+  return conversion === null ? null : <ConversionChip value={conversion} />;
+}
+
+function DayEffect({ id, days, day, homeCountry }: DayScope) {
   const country = useImpactCountry(homeCountry);
   const { data: impact } = useSuspenseQuery(
     changeImpactOptions(id, days, country),
   );
   const item = impact.items.find((entry) => entry.changedOn === day);
   const effect = item ? changeEffect(item) : null;
-  const conversion = conversionChip(funnelByDay(impact).get(day));
-  if (effect === null && conversion === null) return null;
-
+  if (effect === null) return null;
+  if (effect.kind === "pending") {
+    return (
+      <span className="text-muted-foreground">{`Measurable on ${formatDayMonth(effect.measurableOn)}`}</span>
+    );
+  }
   return (
-    <span className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-0.5 font-normal text-muted-foreground">
-      {effect?.kind === "measured" ? (
-        <a
-          href={`#${impactAnchor(day)}`}
-          className="inline-flex items-center gap-1 rounded-sm text-foreground link-underline outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <span>Visibility</span>
-          <DeltaChip
-            value={effect.change}
-            polarity="higher-is-better"
-            period="in visibility"
-          />
-          <span>{`after ${effect.days} days`}</span>
-        </a>
-      ) : null}
-      {effect?.kind === "pending" ? (
-        <span>{`Measurable on ${formatDayMonth(effect.measurableOn)}`}</span>
-      ) : null}
-      {conversion === null ? null : <ConversionChip value={conversion} />}
-    </span>
+    <a
+      href={`#${impactAnchor(day)}`}
+      className="inline-flex items-center gap-1 rounded-sm text-foreground link-underline outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <span>Visibility</span>
+      <DeltaChip
+        value={effect.change}
+        polarity="higher-is-better"
+        period="points"
+      />
+      <span>{`after ${effect.days} days`}</span>
+    </a>
   );
 }
-
-function dayGroups(entries: ChangeEntry[]): Array<[string, ChangeEntry[]]> {
-  const groups = new Map<string, ChangeEntry[]>();
-  for (const entry of entries) {
-    const day = dayOf(entryEvent(entry));
-    groups.set(day, [...(groups.get(day) ?? []), entry]);
-  }
-  return [...groups.entries()];
-}
-
-const changesOn = (entries: ChangeEntry[], day: string): number =>
-  entries
-    .flatMap((entry) =>
-      entry.kind === "versions" ? entry.events : entry.event,
-    )
-    .filter((event) => dayOf(event) === day).length;
 
 function footerLine({
   readOn,
@@ -210,43 +203,56 @@ function TimelineDays({
   id: string;
   days: number;
   homeCountry: string | null;
-  groups: Array<[string, ChangeEntry[]]>;
+  groups: TimelineDay[];
 }) {
-  return groups.map(([day, entries]) => (
-    <section key={day} className="border-t border-border first:border-t-0">
-      <h2 id={timelineAnchor(day)} tabIndex={-1} className={DAY_HEADING}>
-        <span>
-          <span>{formatDate(day)}</span>
-          <span className="font-normal text-faint-foreground">{` · ${pluralize(changesOn(entries, day), "change")}`}</span>
-        </span>
-        {homeCountry === null ? null : (
-          <Suspense fallback={null}>
-            <DayEffects
-              id={id}
-              days={days}
-              day={day}
-              homeCountry={homeCountry}
-            />
-          </Suspense>
-        )}
-      </h2>
-      <ul>
-        {entries.map((entry) => (
-          <ChangeTimelineRow key={entryEvent(entry).id} entry={entry} />
-        ))}
-      </ul>
-    </section>
-  ));
+  return groups.map((group) => {
+    const scope =
+      homeCountry === null ? null : { id, days, day: group.day, homeCountry };
+    return (
+      <section
+        key={group.day}
+        className="border-t border-border first:border-t-0"
+      >
+        <div className={DAY_BAR}>
+          <h2
+            id={timelineAnchor(group.day)}
+            tabIndex={-1}
+            className={DAY_HEADING}
+          >
+            <span>
+              <span>{formatDate(group.day)}</span>
+              <span className="font-normal text-faint-foreground">{` · ${pluralize(changesShownOn(group), "change")}`}</span>
+            </span>
+            {scope ? (
+              <Suspense fallback={null}>
+                <DayConversion {...scope} />
+              </Suspense>
+            ) : null}
+          </h2>
+          {scope ? (
+            <Suspense fallback={null}>
+              <DayEffect {...scope} />
+            </Suspense>
+          ) : null}
+        </div>
+        <ul>
+          {group.entries.map((entry) => (
+            <ChangeTimelineRow key={entryEvent(entry).id} entry={entry} />
+          ))}
+        </ul>
+      </section>
+    );
+  });
 }
 
 function Timeline({
   id,
-  focusDay,
-  onFocused,
+  shown: target,
+  onShown,
 }: {
   id: string;
-  focusDay: string | null;
-  onFocused: () => void;
+  shown: ShownChange | null;
+  onShown: () => void;
 }) {
   const headingId = useId();
   const panel = useRef<HTMLDivElement>(null);
@@ -254,14 +260,6 @@ function Timeline({
   const { home, markets } = useMarket(id);
   const [, setDays] = useQueryState("days", changeDaysParser);
   const { filter, setFilter, clearFilter } = useChangeFilter();
-
-  useEffect(() => {
-    if (focusDay === null) return;
-    const heading = document.getElementById(timelineAnchor(focusDay));
-    heading?.scrollIntoView({ block: "start" });
-    heading?.focus({ preventScroll: true });
-    onFocused();
-  }, [focusDay, onFocused]);
 
   const counted = events.filter((event) =>
     matchesFilter(event, { owner: "all", field: filter.field }),
@@ -272,6 +270,20 @@ function Timeline({
   const shown = events.filter((event) =>
     matchesFilter(event, { owner, field: filter.field }),
   );
+  const groups = timelineDays(shown);
+  const targetDay = target === null ? null : dayShowing(groups, target);
+
+  useEffect(() => {
+    if (target === null) return;
+    const heading =
+      targetDay === null
+        ? null
+        : document.getElementById(timelineAnchor(targetDay));
+    heading?.scrollIntoView({ block: "start" });
+    heading?.focus({ preventScroll: true });
+    onShown();
+  }, [target, targetDay, onShown]);
+
   const readOn = markets.find((entry) => entry.country === listing)?.capturedAt;
   const filtered = owner !== "all" || filter.field !== null;
 
@@ -330,7 +342,7 @@ function Timeline({
             id={id}
             days={days}
             homeCountry={homeListing ? home : null}
-            groups={dayGroups(collapseVersions(shown))}
+            groups={groups}
           />
         </CardContent>
         {events.length > 0 ? (
@@ -357,13 +369,10 @@ function Timeline({
   );
 }
 
-const isCompetitor = (event: ChangeEventItem): boolean => event.isCompetitor;
-const isOwn = (event: ChangeEventItem): boolean => !event.isCompetitor;
-
 export function ChangeTimeline(props: {
   id: string;
-  focusDay: string | null;
-  onFocused: () => void;
+  shown: ShownChange | null;
+  onShown: () => void;
 }) {
   return (
     <Suspense fallback={<ChangesCardSkeleton />}>

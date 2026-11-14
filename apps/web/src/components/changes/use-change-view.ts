@@ -14,7 +14,8 @@ import {
   changeOwnerParser,
   countryParser,
 } from "@/lib/search-params";
-import type { ChangeFilter } from "./change-fields";
+import { changeWindowRange } from "./change-activity";
+import { dayOf, type ChangeFilter } from "./change-fields";
 
 const filterParsers = {
   owner: changeOwnerParser,
@@ -42,24 +43,30 @@ export interface ChangeEvents {
   today: string;
 }
 
+export function useChangeWindow(): ChangeWindow {
+  const [days] = useQueryState("days", changeDaysParser);
+  return useDeferredValue(days);
+}
+
 export function useChangeEvents(id: string): ChangeEvents {
-  const [requestedDays] = useQueryState("days", changeDaysParser);
+  const days = useChangeWindow();
   const { market, home } = useMarket(id);
-  const days = useDeferredValue(requestedDays);
   const listing = useDeferredValue(market);
   const { data, dataUpdatedAt } = useSuspenseQuery(
     changesOptions(id, days, queryMarket(listing, home)),
   );
+  const today = new Date(dataUpdatedAt).toISOString().slice(0, 10);
+  const { from } = changeWindowRange(today, days);
   return {
-    events: data.events,
+    events: data.events.filter((event) => dayOf(event) >= from),
     days,
     listing,
     homeListing: listing === home,
-    today: new Date(dataUpdatedAt).toISOString().slice(0, 10),
+    today,
   };
 }
 
 export function useImpactCountry(homeCountry: string): string {
   const [country] = useQueryState("country", countryParser);
-  return country || homeCountry;
+  return useDeferredValue(country || homeCountry);
 }

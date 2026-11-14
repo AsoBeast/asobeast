@@ -74,11 +74,23 @@ const BUSY: ChangeTimeline = {
     }),
     change(9, { field: "version", before: "2.4.0", after: "2.5.0" }),
     change(20, { field: "version", before: "2.3.0", after: "2.4.0" }),
-    change(20, {
+    change(2, {
+      ...rival("Deep Work Clock", "comp-2"),
+      field: "version",
+      before: "1.2",
+      after: "1.3",
+    }),
+    change(9, {
       ...rival("Deep Work Clock", "comp-2"),
       field: "version",
       before: "1.1",
       after: "1.2",
+    }),
+    change(20, {
+      ...rival("Deep Work Clock", "comp-2"),
+      field: "version",
+      before: "1.0",
+      after: "1.1",
     }),
   ],
 };

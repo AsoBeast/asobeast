@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ChangeEventItem, ChangeField } from "@asobeast/shared";
 import {
   activityLanes,
-  changesOn,
+  changeLinesOn,
   changeWindowRange,
   markLabel,
   ownChangeDays,
@@ -77,8 +77,8 @@ describe("activityLanes", () => {
     expect(own.marks[0].position).toBeCloseTo(28 / 29);
     expect(rival).toMatchObject({ own: false, count: 4 });
     expect(rival.marks.map((mark) => mark.day)).toEqual([
-      "2026-11-08",
       "2026-11-02",
+      "2026-11-08",
     ]);
   });
 
@@ -89,13 +89,41 @@ describe("activityLanes", () => {
   });
 
   it("joins the days of a week into one mark on a year window", () => {
-    const lanes = activityLanes(events, windowDays(TODAY, 365));
-    const rival = lanes.find((lane) => !lane.own);
+    const week = [
+      event("2026-11-09", "title"),
+      event("2026-11-06", "icon"),
+      event("2026-07-01", "price"),
+    ];
+    const [own] = activityLanes(week, windowDays(TODAY, 365));
 
-    expect(rival?.marks).toHaveLength(2);
-    const [own] = lanes;
-    expect(own.count).toBe(4);
+    expect(own.count).toBe(3);
     expect(own.marks).toHaveLength(2);
+    const [older, newest] = own.marks;
+    expect(older.day).toBe("2026-07-01");
+    expect(newest).toMatchObject({
+      from: "2026-11-06",
+      day: "2026-11-09",
+      kinds: ["text", "visuals"],
+    });
+    expect(newest.position).toBeCloseTo(361 / 364);
+    expect(markLabel(own, newest)).toBe(
+      "Nov 6 to Nov 9: you changed the title and icon",
+    );
+    expect(changeLinesOn([own], "2026-11-07")).toEqual(["You: title and icon"]);
+  });
+
+  it("counts the fields of a mark that holds more than three", () => {
+    const [own] = activityLanes(
+      [
+        event("2026-11-11", "title"),
+        event("2026-11-11", "price"),
+        event("2026-11-11", "icon"),
+        event("2026-11-11", "version"),
+      ],
+      windowDays(TODAY, 30),
+    );
+
+    expect(markLabel(own, own.marks[0])).toBe("Nov 11: you changed 4 fields");
   });
 
   it("names a mark by its day, owner and fields", () => {
@@ -104,10 +132,10 @@ describe("activityLanes", () => {
     expect(markLabel(lanes[0], lanes[0].marks[0])).toBe(
       "Nov 11: you changed the title, description, and screenshots",
     );
-    expect(markLabel(lanes[1], lanes[1].marks[1])).toBe(
+    expect(markLabel(lanes[1], lanes[1].marks[0])).toBe(
       "Nov 2: Rival Focus changed the version",
     );
-    expect(changesOn(lanes, "2026-11-08")).toEqual([
+    expect(changeLinesOn(lanes, "2026-11-08")).toEqual([
       "Rival Focus: price, what's new, and icon",
     ]);
   });

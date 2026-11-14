@@ -7,7 +7,7 @@ import {
   type ChangeOwner,
 } from "@/lib/search-params";
 
-export const FIELD_GROUP: Record<ChangeField, ChangeFieldGroup> = {
+const FIELD_GROUP: Record<ChangeField, ChangeFieldGroup> = {
   title: "title",
   subtitle: "subtitle",
   summary: "summary",
@@ -55,11 +55,26 @@ export const fieldGroupLabel = (group: ChangeFieldGroup): string =>
 
 const NAMED_FIELDS = 3;
 
+const groupsOf = (fields: readonly ChangeField[]): ChangeFieldGroup[] => [
+  ...new Set(fields.map((field) => FIELD_GROUP[field])),
+];
+
+export const namesFields = (fields: readonly ChangeField[]): boolean =>
+  groupsOf(fields).length <= NAMED_FIELDS;
+
 export function changedFieldWords(fields: readonly ChangeField[]): string {
-  const groups = [...new Set(fields.map((field) => FIELD_GROUP[field]))];
+  const groups = groupsOf(fields);
   return groups.length > NAMED_FIELDS
     ? `${groups.length} fields`
     : formatList(groups.map((group) => fieldGroupLabel(group).toLowerCase()));
+}
+
+export function fieldPhrase(
+  fields: readonly ChangeField[],
+  article: string,
+): string {
+  const words = changedFieldWords(fields);
+  return namesFields(fields) ? `${article} ${words}` : words;
 }
 
 export const changedFieldsText = (fields: readonly ChangeField[]): string[] =>

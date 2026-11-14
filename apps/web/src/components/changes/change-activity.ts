@@ -8,6 +8,7 @@ import { dayBefore } from "@/lib/utc-day";
 import {
   CHANGE_KINDS,
   changedFieldWords,
+  fieldPhrase,
   changeKind,
   dayOf,
   type ChangeKind,
@@ -73,19 +74,21 @@ function laneMarks(
     const bucket = Math.floor((days.length - 1 - index) / size);
     buckets.set(bucket, [...(buckets.get(bucket) ?? []), event]);
   }
-  return [...buckets.values()].map((bucket) => {
-    const eventDays = bucket.map(dayOf).sort();
-    const day = eventDays[eventDays.length - 1];
-    const fields = [...new Set(bucket.map((event) => event.field))];
-    const kinds = new Set(fields.map(changeKind));
-    return {
-      day,
-      from: eventDays[0],
-      position: (indexOf.get(day) ?? 0) / last,
-      kinds: CHANGE_KINDS.filter((kind) => kinds.has(kind)),
-      fields,
-    };
-  });
+  return [...buckets.entries()]
+    .map(([bucket, bucketEvents]) => {
+      const eventDays = bucketEvents.map(dayOf).sort();
+      const fields = [...new Set(bucketEvents.map((event) => event.field))];
+      const kinds = new Set(fields.map(changeKind));
+      const centre = days.length - 1 - bucket * size - (size - 1) / 2;
+      return {
+        day: eventDays[eventDays.length - 1],
+        from: eventDays[0],
+        position: Math.max(centre, 0) / last,
+        kinds: CHANGE_KINDS.filter((kind) => kinds.has(kind)),
+        fields,
+      };
+    })
+    .sort((a, b) => a.position - b.position);
 }
 
 export function activityLanes(
@@ -121,8 +124,7 @@ export function markLabel(lane: Lane, mark: LaneMark): string {
       ? formatDayMonth(mark.day)
       : `${formatDayMonth(mark.from)} to ${formatDayMonth(mark.day)}`;
   const who = lane.own ? "you changed" : `${lane.appName} changed`;
-  const words = changedFieldWords(mark.fields);
-  return `${when}: ${who} ${/^\d/.test(words) ? words : `the ${words}`}`;
+  return `${when}: ${who} ${fieldPhrase(mark.fields, "the")}`;
 }
 
 export function ownChangeDays(
@@ -140,7 +142,7 @@ export function ownChangeDays(
   ];
 }
 
-export function changesOn(lanes: readonly Lane[], day: string): string[] {
+export function changeLinesOn(lanes: readonly Lane[], day: string): string[] {
   return lanes.flatMap((lane) =>
     lane.marks
       .filter((mark) => mark.from <= day && day <= mark.day)

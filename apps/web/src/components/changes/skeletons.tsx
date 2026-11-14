@@ -58,7 +58,7 @@ export function ChangeImpactSkeleton() {
   );
 }
 
-export function ChangeImpactCardSkeleton() {
+function ChangeImpactCardSkeleton() {
   return (
     <Card>
       <PanelHeaderSkeleton width="w-32" />
