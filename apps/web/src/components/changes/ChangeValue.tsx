@@ -92,26 +92,11 @@ export function ChangeValue({
     to = text(after);
   }
 
-  if (dense) {
-    return (
-      <span className="break-words">
-        <span className="text-muted-foreground line-through">{from}</span>
-        <span className="mx-1.5 text-muted-foreground">→</span>
-        <span className="font-medium">{to}</span>
-      </span>
-    );
-  }
-
   return (
-    <span className="grid gap-1 sm:grid-cols-2">
-      <span className="flex flex-col gap-0.5 rounded-md bg-muted/50 px-2 py-1">
-        <span className="text-label text-muted-foreground">Before</span>
-        <span className="break-words text-muted-foreground">{from}</span>
-      </span>
-      <span className="flex flex-col gap-0.5 rounded-md bg-success-subtle px-2 py-1">
-        <span className="text-label text-muted-foreground">After</span>
-        <span className="break-words font-medium">{to}</span>
-      </span>
+    <span className="break-words">
+      <span className="text-muted-foreground line-through">{from}</span>
+      <span className="mx-1.5 text-muted-foreground">→</span>
+      <span className="font-medium">{to}</span>
     </span>
   );
 }

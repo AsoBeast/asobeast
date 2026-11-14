@@ -85,6 +85,11 @@ export const LATER_RELEASES: readonly Release[] = [
       },
       {
         kind: "improved",
+        title: "A changes page that shows what each edit did",
+        text: "The changes page now opens with one sentence about the newest change and the effect of the last one that could be measured. A chart draws your visibility over the days you choose with a marker on each day you changed your listing, and under it a line per app shows when you and each competitor changed text, screenshots or the icon, or shipped a release or a new price; press a mark to jump to that day. The effect of each change reads across 7, 14 and 28 days in one table, with a bar for how many keywords improved and declined. The list of changes is shorter rows under each day, a run of version updates folds into one row, and a panel counts what changed, yours beside your competitors, and filters the list when you press a row.",
+      },
+      {
+        kind: "improved",
         title: "A calmer, sharper look",
         text: "AsoBeast has a new typeface, warmer neutral colours and flatter panels with fine borders. Numbers line up in columns and labels are easier to read.",
       },

@@ -571,6 +571,22 @@ export const moverViewParser =
 export const changeOwnerParser =
   parseAsStringLiteral(CHANGE_OWNERS).withDefault("all");
 
+export const CHANGE_FIELD_GROUPS = [
+  "title",
+  "subtitle",
+  "summary",
+  "description",
+  "screenshots",
+  "icon",
+  "version",
+  "whatsNew",
+  "price",
+] as const;
+
+export type ChangeFieldGroup = (typeof CHANGE_FIELD_GROUPS)[number];
+
+export const changeFieldGroupParser = parseAsStringLiteral(CHANGE_FIELD_GROUPS);
+
 export const mcpClientParser =
   parseAsStringLiteral(MCP_CLIENTS).withDefault(DEFAULT_MCP_CLIENT);
 

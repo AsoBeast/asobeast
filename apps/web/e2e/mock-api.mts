@@ -11,6 +11,7 @@ import {
   filterAlertEvents,
 } from "./alert-feed-fixtures.mts";
 import { DEEP_CHART_COOKIE, deepChartPage } from "./top-charts-fixtures.mts";
+import { CHANGES_STATE_COOKIE, changesState } from "./changes-fixtures.mts";
 import {
   METADATA_AUDIT_COOKIE,
   metadataAuditVariant,
@@ -4433,8 +4434,9 @@ const routes: Route[] = [
   },
   appRoute(
     /^\/apps\/([^/]+)\/changes$/,
-    (dataset, query) =>
-      isPolishListingOf(dataset, query) ? APP_1_PL_CHANGES : dataset.changes,
+    (dataset, query, req) =>
+      changesState(cookieValue(req, CHANGES_STATE_COOKIE)) ??
+      (isPolishListingOf(dataset, query) ? APP_1_PL_CHANGES : dataset.changes),
     (req) => hasCookie(req, FAIL_CHANGES_COOKIE, "1"),
   ),
   appRoute(/^\/apps\/([^/]+)\/changes\/impact$/, (dataset, _query, req) =>

@@ -5,9 +5,7 @@ const LANDSCAPE_PIXELS =
   "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAAC0lEQVR4nGNoAAMACocDAcTGH2YAAAAASUVORK5CYII=";
 
 const timeline = (page: Page) =>
-  page
-    .getByText("Metadata change timeline")
-    .locator("xpath=ancestor::*[@data-slot='card'][1]");
+  page.getByRole("region", { name: /^Listing changes/ });
 
 const rows = (page: Page, field: string) =>
   timeline(page).locator(`[data-change-field="${field}"]`);
