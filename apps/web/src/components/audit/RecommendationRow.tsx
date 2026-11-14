@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { AuditRecommendation } from "@asobeast/shared";
+import type { AuditRecommendation, AuditTarget } from "@asobeast/shared";
 import { PriorityWord } from "@/components/actions/PriorityWord";
 import { cn } from "@/lib/utils";
 import { EFFORT_LABEL, liftLabel, TARGET_LABEL } from "./audit-copy";
@@ -11,6 +11,27 @@ export const PLAN_COLUMNS =
 
 const WIDE_ROW = "@3xl/plan:row-start-1";
 
+function Where({
+  appId,
+  target,
+}: {
+  appId: string;
+  target: AuditTarget | undefined;
+}) {
+  if (!target) return null;
+  const href = targetHref(appId, target);
+  if (href === null) {
+    return (
+      <span className="text-muted-foreground">{TARGET_LABEL[target]}</span>
+    );
+  }
+  return (
+    <Link href={href} className={TEXT_LINK}>
+      {TARGET_LABEL[target]}
+    </Link>
+  );
+}
+
 export function RecommendationRow({
   appId,
   item,
@@ -18,9 +39,6 @@ export function RecommendationRow({
   appId: string;
   item: AuditRecommendation;
 }) {
-  const href = item.target ? targetHref(appId, item.target) : null;
-  const where = item.target ? TARGET_LABEL[item.target] : null;
-
   return (
     <li
       className={cn(
@@ -61,13 +79,7 @@ export function RecommendationRow({
           WIDE_ROW,
         )}
       >
-        {where === null ? null : href ? (
-          <Link href={href} className={TEXT_LINK}>
-            {where}
-          </Link>
-        ) : (
-          <span className="text-muted-foreground">{where}</span>
-        )}
+        <Where appId={appId} target={item.target} />
       </span>
     </li>
   );

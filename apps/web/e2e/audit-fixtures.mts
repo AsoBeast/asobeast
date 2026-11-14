@@ -9,11 +9,14 @@ const FALLING_SCORES = [
   61.4, 61.4, 61.4, 61.0, 61.0, 61.0, 60.2, 60.2, 59.6, 59.6, 58.9, 58.2, 58.2,
 ];
 
-const RUBRIC_V2_FROM = 5;
-const RUBRIC_V3_FROM = 10;
+const RUBRIC_STARTS: readonly [number, string][] = [
+  [10, "v3"],
+  [5, "v2"],
+  [0, "v1"],
+];
 
 const rubricAt = (index: number): string =>
-  index >= RUBRIC_V3_FROM ? "v3" : index >= RUBRIC_V2_FROM ? "v2" : "v1";
+  RUBRIC_STARTS.find(([start]) => index >= start)?.[1] ?? "v1";
 
 const dailyHistory = (
   scores: number[],
