@@ -34,7 +34,7 @@ export default async function SetupPage({
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <div className="page-reading">
+      <div className="page-wide">
         <SetupChecklist id={id} />
       </div>
     </HydrationBoundary>

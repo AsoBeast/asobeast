@@ -1,7 +1,6 @@
 "use client";
 
 import { useQueries, useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { CheckCircle2, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -10,27 +9,27 @@ import {
   stepStates,
   type AppDetail,
   type AppSetupState,
-  type SetupCounts,
   type SetupStep,
 } from "@asobeast/shared";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { GoalPicker } from "@/components/checklist/GoalPicker";
+import { META_LINE } from "@/components/layout/panel-classes";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Separated } from "@/components/ui/separated";
 import {
   appDetailOptions,
-  competitorsOptions,
   keywordsOptions,
   marketSuggestionsOptions,
 } from "@/lib/queries";
-import { activeKeywordCount } from "./setup-progress";
+import { SetupActions } from "./SetupActions";
+import {
+  activeKeywordCount,
+  completedFacts,
+  completionHint,
+} from "./setup-progress";
 import { CompetitorsStep, CountriesStep, KeywordsStep } from "./setup-steps";
-import { SetupProgress } from "./SetupProgress";
+import { SetupProgress, SetupStepList, SetupStepNav } from "./SetupProgress";
+import { cn } from "@/lib/utils";
+import { SetupStatusPanel } from "./SetupStatusPanel";
 import {
   beginSetup,
   completeSetup,
@@ -40,30 +39,26 @@ import {
   skipStep,
   type SetupTransition,
 } from "./setup-transitions";
-import { GoalPicker } from "@/components/checklist/GoalPicker";
 import { useFirstRunDiscovery } from "./use-first-run-discovery";
 import { useSetup } from "./use-setup";
+import { useSetupCounts } from "./use-setup-counts";
 
 type Apply = (transition: SetupTransition, onSaved?: () => void) => void;
 type LiveQuery = { data: unknown; isError: boolean; refetch: () => unknown };
 
-const lengthOrNull = <T,>(value: T[] | undefined): number | null =>
-  value ? value.length : null;
+const COLUMN = "flex min-w-0 max-w-[45rem] flex-col gap-6";
 
-const activeCount = (
-  keywords: { active: boolean }[] | undefined,
-): number | null => (keywords ? activeKeywordCount(keywords) : null);
+const ACTIVE_GRID =
+  "grid gap-6 [--rail-steps:--spacing(31)] @4xl/setup:grid-cols-[minmax(0,45rem)_15rem] @4xl/setup:gap-x-8";
+
+const MAIN_CELL = "min-w-0 max-w-[45rem] @4xl/setup:col-start-1";
+
+const RAIL_CELL =
+  "@4xl/setup:sticky @4xl/setup:col-start-2 @4xl/setup:row-start-1 @4xl/setup:row-span-5 @4xl/setup:self-start";
+
+const NOT_STARTED = { skipped: [], countriesReviewed: false };
 
 export function SetupChecklist({ id }: { id: string }) {
-  return (
-    <div className="flex flex-col gap-6">
-      <GoalPicker />
-      <SetupBody id={id} />
-    </div>
-  );
-}
-
-function SetupBody({ id }: { id: string }) {
   const { data: app } = useSuspenseQuery(appDetailOptions(id));
   const { setup, apply } = useSetup(id);
   const start = () => apply(beginSetup(app.country));
@@ -71,13 +66,34 @@ function SetupBody({ id }: { id: string }) {
   if (setup.status === "in_progress") {
     return <ActiveSetup app={app} setup={setup} apply={apply} />;
   }
-  if (setup.status === "not_started") return <StartStatus onStart={start} />;
   return (
-    <TerminalStatus
-      appId={id}
-      completed={setup.status === "completed"}
-      onRestart={start}
-    />
+    <div className={COLUMN}>
+      <GoalPicker />
+      {setup.status === "not_started" ? (
+        <StartStatus app={app} onStart={start} />
+      ) : setup.status === "completed" ? (
+        <CompletedStatus app={app} setup={setup} onRestart={start} />
+      ) : (
+        <SetupStatusPanel
+          title="Setup dismissed"
+          sentence="The checklist will not resume automatically. You can restart it whenever you need it."
+          actions={
+            <>
+              <Button onClick={start}>Restart setup</Button>
+              <BackToApps />
+            </>
+          }
+        />
+      )}
+    </div>
+  );
+}
+
+function BackToApps() {
+  return (
+    <Button asChild variant="outline">
+      <Link href="/">Back to apps</Link>
+    </Button>
   );
 }
 
@@ -91,9 +107,8 @@ function ActiveSetup({
   apply: Apply;
 }) {
   const router = useRouter();
-  const competitors = useQuery(competitorsOptions(app.id));
+  const { competitors, homeKeywords, counts } = useSetupCounts(app);
   const collecting = useFirstRunDiscovery(app.id);
-  const homeKeywords = useQuery(keywordsOptions(app.id, app.country));
   const suggestions = useQuery({
     ...marketSuggestionsOptions(app.id),
     retry: false,
@@ -104,200 +119,159 @@ function ActiveSetup({
     ),
   });
   const countQueries: LiveQuery[] = [competitors, homeKeywords];
-  const liveQueries = countQueries.concat(keywordQueries);
-  const counts: SetupCounts = {
-    competitors: lengthOrNull(competitors.data),
-    keywords: activeCount(homeKeywords.data),
-  };
-  const keywordCounts = setup.selectedMarkets.map((market, index) => ({
-    market,
-    active: activeCount(keywordQueries[index]?.data),
-    error: keywordQueries[index]?.isError ?? false,
-  }));
+  const keywordCounts = setup.selectedMarkets.map((market, index) => {
+    const keywords = keywordQueries[index]?.data;
+    return {
+      market,
+      active: keywords ? activeKeywordCount(keywords) : null,
+      error: keywordQueries[index]?.isError ?? false,
+    };
+  });
   const ready = countQueries.every((query) => query.data !== undefined);
-  const failed = countQueries.some((query) => query.isError);
-  const retry = () => {
-    for (const query of liveQueries) {
-      if (query.isError) void query.refetch();
-    }
-  };
   const states = stepStates(setup, counts);
+  const progress = setupProgress(setup, counts);
   const step = (name: SetupStep) => ({
     state: states[name],
     onSkip: (skipped: boolean) => apply(skipStep(name, skipped)),
   });
+  const actions = {
+    ready,
+    failed: countQueries.some((query) => query.isError),
+    completable: ready && canCompleteSetup(setup, counts),
+    hint: completionHint(states),
+    onRetry: () => {
+      for (const query of countQueries.concat(keywordQueries)) {
+        if (query.isError) void query.refetch();
+      }
+    },
+    onDismiss: () => apply(dismissSetup()),
+    onComplete: () =>
+      apply(completeSetup(), () => router.push(`/apps/${app.id}`)),
+  };
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-3">
-        <SetupProgress
-          name={app.name}
-          progress={setupProgress(setup, counts)}
+    <div className="@container/setup">
+      <div className={ACTIVE_GRID}>
+        <div className={cn(MAIN_CELL, "empty:hidden")}>
+          <GoalPicker />
+        </div>
+        <div className={MAIN_CELL}>
+          <SetupProgress name={app.name} progress={progress} />
+        </div>
+        <SetupStepNav
           states={states}
+          next={progress.next}
+          className={cn(RAIL_CELL, "-mt-3 @4xl/setup:top-20 @4xl/setup:mt-0")}
         />
-        <p className="text-sm text-muted-foreground">
-          Three short steps. Each one is done once its number is reached, or
-          skipped when it does not apply.
-        </p>
+        <div className={MAIN_CELL}>
+          <CompetitorsStep
+            {...step("competitors")}
+            appId={app.id}
+            competitors={competitors.data ?? null}
+            error={competitors.isError}
+            collecting={collecting}
+          />
+        </div>
+        <div className={MAIN_CELL}>
+          <KeywordsStep
+            {...step("keywords")}
+            appId={app.id}
+            store={app.store}
+            homeMarket={app.country}
+            tracked={homeKeywords.data ?? null}
+            error={homeKeywords.isError}
+          />
+        </div>
+        <div className={MAIN_CELL}>
+          <CountriesStep
+            {...step("countries")}
+            appId={app.id}
+            store={app.store}
+            homeMarket={app.country}
+            counts={keywordCounts}
+            suggestions={suggestions.data ?? null}
+            onSelect={(market, selected) =>
+              apply(selectMarket(market, selected))
+            }
+            onReviewed={() => apply(reviewCountries())}
+          />
+        </div>
+        <SetupActions
+          {...actions}
+          className={cn(
+            RAIL_CELL,
+            "max-w-[45rem] border-t pt-6 @4xl/setup:top-[calc(--spacing(20)+var(--rail-steps))] @4xl/setup:mt-(--rail-steps) @4xl/setup:pt-4",
+          )}
+        />
       </div>
-      <CompetitorsStep
-        {...step("competitors")}
-        appId={app.id}
-        competitors={competitors.data ?? null}
-        error={competitors.isError}
-        collecting={collecting}
-      />
-      <KeywordsStep
-        {...step("keywords")}
-        appId={app.id}
-        store={app.store}
-        homeMarket={app.country}
-        tracked={homeKeywords.data ?? null}
-        error={homeKeywords.isError}
-        counts={keywordCounts}
-      />
-      <CountriesStep
-        {...step("countries")}
-        appId={app.id}
-        store={app.store}
-        homeMarket={app.country}
-        markets={setup.selectedMarkets}
-        suggestions={suggestions.data ?? null}
-        onSelect={(market, selected) => apply(selectMarket(market, selected))}
-        onReviewed={() => apply(reviewCountries())}
-      />
-      <SetupActions
-        ready={ready}
-        failed={failed}
-        completable={ready && canCompleteSetup(setup, counts)}
-        onRetry={retry}
-        onDismiss={() => apply(dismissSetup())}
-        onComplete={() =>
-          apply(completeSetup(), () => router.push(`/apps/${app.id}`))
-        }
-      />
     </div>
   );
 }
 
-function SetupActions({
-  ready,
-  failed,
-  completable,
-  onRetry,
-  onDismiss,
-  onComplete,
+function StartStatus({
+  app,
+  onStart,
 }: {
-  ready: boolean;
-  failed: boolean;
-  completable: boolean;
-  onRetry: () => void;
-  onDismiss: () => void;
-  onComplete: () => void;
+  app: AppDetail;
+  onStart: () => void;
 }) {
+  const { counts } = useSetupCounts(app);
   return (
-    <>
-      {!ready ? (
-        <Alert role="status" className="items-center">
-          <AlertDescription className="flex flex-wrap items-center gap-3">
-            {failed
-              ? "Some live counts could not be loaded."
-              : "Finish loading every live count before completing setup."}
-            {failed ? (
-              <Button size="sm" variant="outline" onClick={onRetry}>
-                <RefreshCw />
-                Retry
-              </Button>
-            ) : null}
-          </AlertDescription>
-        </Alert>
-      ) : null}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-6">
-        <Button variant="ghost" onClick={onDismiss}>
-          Dismiss setup
-        </Button>
-        <Button disabled={!completable} onClick={onComplete}>
-          <CheckCircle2 />
-          Complete setup
-        </Button>
-      </div>
-    </>
-  );
-}
-
-function StartStatus({ onStart }: { onStart: () => void }) {
-  return (
-    <SetupStatus
+    <SetupStatusPanel
       title="Start setup for this app"
-      description="This checklist helps you reach a first set of positions. Nothing is changed until you add something."
-      action="Start this setup"
-      onAction={onStart}
-    />
+      sentence="Three short steps to a first set of positions. Each one is done once its number is reached, or skipped when it does not apply. Nothing is changed until you add something."
+      actions={
+        <>
+          <Button onClick={onStart}>Start this setup</Button>
+          <BackToApps />
+        </>
+      }
+    >
+      <SetupStepList
+        states={stepStates(NOT_STARTED, counts)}
+        next={null}
+        layout="stacked"
+        className="max-w-64"
+      />
+    </SetupStatusPanel>
   );
 }
 
-function TerminalStatus({
-  appId,
-  completed,
+function CompletedStatus({
+  app,
+  setup,
   onRestart,
 }: {
-  appId: string;
-  completed: boolean;
+  app: AppDetail;
+  setup: AppSetupState;
   onRestart: () => void;
 }) {
-  if (!completed) {
-    return (
-      <SetupStatus
-        title="Setup dismissed"
-        description="The checklist will not resume automatically. You can restart it whenever you need it."
-        action="Restart setup"
-        onAction={onRestart}
-      />
-    );
-  }
+  const { counts } = useSetupCounts(app);
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Setup complete</CardTitle>
-        <CardDescription>
-          Positions, competitors and countries are being collected.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-wrap gap-2">
-        <Button asChild>
-          <Link href={`/apps/${appId}`}>Open the overview</Link>
-        </Button>
-        <Button variant="outline" onClick={onRestart}>
-          Restart setup
-        </Button>
-      </CardContent>
-    </Card>
-  );
-}
-
-function SetupStatus({
-  title,
-  description,
-  action,
-  onAction,
-}: {
-  title: string;
-  description: string;
-  action: string;
-  onAction: () => void;
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-wrap gap-2">
-        <Button onClick={onAction}>{action}</Button>
-        <Button asChild variant="outline">
-          <Link href="/">Back to apps</Link>
-        </Button>
-      </CardContent>
-    </Card>
+    <SetupStatusPanel
+      title="Setup complete"
+      sentence="Positions, competitors and countries are collected on every daily run."
+      actions={
+        <>
+          <Button asChild>
+            <Link href={`/apps/${app.id}`}>Open the overview</Link>
+          </Button>
+          <Button variant="outline" onClick={onRestart}>
+            Restart setup
+          </Button>
+        </>
+      }
+    >
+      <p className={META_LINE}>
+        <Separated
+          parts={completedFacts({
+            ...counts,
+            home: app.country,
+            markets: setup.selectedMarkets.length,
+            completedAt: setup.completedAt,
+          })}
+        />
+      </p>
+    </SetupStatusPanel>
   );
 }

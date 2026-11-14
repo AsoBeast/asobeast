@@ -3,12 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   activeKeywordCount,
   bannerApps,
+  completedFacts,
+  completionHint,
   keywordsStepDescription,
   nextLabel,
   progressPercent,
   progressValueLabel,
   progressSentence,
-  stepLabel,
 } from "./setup-progress";
 
 describe("progressSentence", () => {
@@ -52,11 +53,66 @@ describe("progressPercent", () => {
   });
 });
 
-describe("stepLabel", () => {
-  it("numbers a step among three", () => {
-    expect(stepLabel("competitors")).toBe("Step 1 of 3");
-    expect(stepLabel("keywords")).toBe("Step 2 of 3");
-    expect(stepLabel("countries")).toBe("Step 3 of 3");
+describe("completedFacts", () => {
+  it("counts what the app tracks and names the day it was completed", () => {
+    expect(
+      completedFacts({
+        competitors: 1,
+        keywords: 4,
+        home: "us",
+        markets: 2,
+        completedAt: "2026-11-12T08:30:00.000Z",
+      }),
+    ).toEqual([
+      "1 competitor",
+      "4 keywords in United States",
+      "2 countries",
+      "completed Nov 12",
+    ]);
+  });
+
+  it("leaves out a count that has not loaded and a missing day", () => {
+    expect(
+      completedFacts({
+        competitors: null,
+        keywords: null,
+        home: "us",
+        markets: 1,
+        completedAt: null,
+      }),
+    ).toEqual(["1 country"]);
+  });
+});
+
+describe("completionHint", () => {
+  it("names every step that is neither done nor skipped", () => {
+    expect(
+      completionHint({
+        competitors: "done",
+        keywords: "open",
+        countries: "loading",
+      }),
+    ).toBe("Finish or skip track keywords and add countries first.");
+  });
+
+  it("names the one step left", () => {
+    expect(
+      completionHint({
+        competitors: "done",
+        keywords: "skipped",
+        countries: "open",
+      }),
+    ).toBe("Finish or skip add countries first.");
+  });
+
+  it("says nothing once every step is settled", () => {
+    expect(
+      completionHint({
+        competitors: "done",
+        keywords: "skipped",
+        countries: "done",
+      }),
+    ).toBeNull();
   });
 });
 

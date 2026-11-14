@@ -155,9 +155,6 @@ test("direct setup is resumable and completes after live checks", async ({
     "Track keywords",
     "Add countries",
   ]);
-  for (const label of ["Step 1 of 3", "Step 2 of 3", "Step 3 of 3"]) {
-    await expect(page.getByText(label, { exact: true })).toBeVisible();
-  }
   await expect(page.getByText("United States (US)")).toBeVisible();
   await expect(page.getByText("1 tracked: Rival Focus")).toBeVisible();
   await expect(

@@ -7,10 +7,11 @@ import {
   failedRead,
   InlineQueryError,
 } from "@/components/layout/InlineQueryError";
-import { Button } from "@/components/ui/button";
+import { FOOTER_LINK } from "@/components/layout/panel-classes";
 import { Skeleton } from "@/components/ui/skeleton";
 import { discoveriesHref } from "@/lib/keyword-discoveries";
 import { keywordDiscoveriesOptions } from "@/lib/queries";
+import { cn } from "@/lib/utils";
 import { firstDiscoveries } from "./first-discoveries";
 
 export function FirstDiscoveries({
@@ -40,30 +41,33 @@ export function FirstDiscoveries({
   if (summary === null) return null;
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-2">
-      <h4 id={headingId} className="text-sm font-medium">
+      <h4 id={headingId} className="text-dense font-medium">
         {summary.status === "ready"
           ? "Your first results are ready"
           : "Looking for keywords near your listing"}
       </h4>
       {summary.status === "ready" ? (
         <>
-          <p className="text-sm">{summary.headline}</p>
+          <p className="text-dense">{summary.headline}</p>
           <ul aria-labelledby={headingId} className="flex flex-col gap-1">
             {summary.rows.map((row) => (
               <li
                 key={row.keywordId}
-                className="text-sm text-muted-foreground wrap-anywhere"
+                className="numeric text-dense text-muted-foreground wrap-anywhere"
               >
                 {`“${row.text}” · ${row.rank}`}
               </li>
             ))}
           </ul>
-          <Button asChild variant="link" className="h-auto w-fit px-0">
-            <Link href={discoveriesHref(id, country)}>See all discoveries</Link>
-          </Button>
+          <Link
+            href={discoveriesHref(id, country)}
+            className={cn(FOOTER_LINK, "w-fit text-dense")}
+          >
+            See all discoveries
+          </Link>
         </>
       ) : (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-dense text-muted-foreground">
           AsoBeast is checking where your app ranks for the phrases of your
           listing. The first results appear here within minutes.
         </p>

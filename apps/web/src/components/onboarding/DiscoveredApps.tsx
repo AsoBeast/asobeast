@@ -33,7 +33,7 @@ function withoutIds(
   for (const id of ids) next.delete(id);
   return next;
 }
-const ICON_SIZE = 32;
+const ICON_SIZE = 24;
 
 function OutcomeLine({ outcome }: { outcome: AddOutcome | undefined }) {
   if (!outcome) return null;
@@ -66,7 +66,7 @@ function SuggestionRow({
   onToggle: (on: boolean) => void;
 }) {
   return (
-    <li className="flex items-center gap-3 py-2 first:pt-0 last:pb-0">
+    <li className="flex min-h-11 items-center gap-3 py-1">
       <Checkbox
         id={checkboxId}
         checked={ticked}
@@ -78,12 +78,11 @@ function SuggestionRow({
         htmlFor={checkboxId}
         className="flex min-w-0 flex-1 flex-col items-start gap-0.5 font-normal"
       >
-        <span className="truncate text-sm font-medium">{row.title}</span>
-        <span className="truncate text-caption text-muted-foreground">
-          {row.developer ?? "Unknown developer"}
+        <span className="max-w-full truncate text-dense font-medium">
+          {row.title}
         </span>
-        <span className="numeric text-caption text-muted-foreground">
-          {suggestionMeta(row, store)}
+        <span className="numeric max-w-full truncate text-tick text-faint-foreground">
+          {`${row.developer ?? "Unknown developer"} · ${suggestionMeta(row, store)}`}
         </span>
       </Label>
       <OutcomeLine outcome={outcome} />
@@ -130,14 +129,17 @@ function SuggestionsBody({
   if (!suggestions.data) return <Skeleton className="h-12 w-full" />;
   if (rows.length === 0) {
     return (
-      <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
+      <p className="text-dense text-muted-foreground">
         {discoveredEmptyText(collecting, suggestions.data.similar)}
       </p>
     );
   }
   return (
     <>
-      <ul aria-labelledby={headingId} className="flex flex-col divide-y">
+      <ul
+        aria-labelledby={headingId}
+        className="flex flex-col divide-y divide-border-subtle"
+      >
         {rows.map((row) => {
           const outcome = outcomes[row.storeAppId];
           return (
@@ -155,6 +157,7 @@ function SuggestionsBody({
         })}
       </ul>
       <Button
+        variant="outline"
         className="w-fit"
         aria-disabled={selected.length === 0 || adding || undefined}
         onClick={() => {
@@ -179,7 +182,7 @@ export function DiscoveredApps({
 
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-2">
-      <h4 id={headingId} className="text-sm font-medium">
+      <h4 id={headingId} className="text-dense font-medium">
         Suggested competitors
       </h4>
       <SuggestionsBody

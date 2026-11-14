@@ -2,7 +2,7 @@ import { SetupChecklistSkeleton } from "@/components/onboarding/SetupChecklistSk
 
 export default function SetupLoading() {
   return (
-    <div className="page-reading">
+    <div className="page-wide">
       <SetupChecklistSkeleton />
     </div>
   );
