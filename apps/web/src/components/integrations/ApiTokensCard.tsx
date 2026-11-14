@@ -53,6 +53,10 @@ import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
 import { formatDate, formatNumber } from "@/lib/format";
 import { apiTokensOptions, invalidateApiTokenMutation } from "@/lib/queries";
 import { useAuth } from "@/components/auth/use-auth";
+import {
+  InlineQueryError,
+  failedRead,
+} from "@/components/layout/InlineQueryError";
 import { useSingleFlight } from "@/lib/single-flight";
 import { RevokeTokenButton } from "./RevokeTokenButton";
 
@@ -272,7 +276,8 @@ function CreateTokenDialog() {
 export function ApiTokensCard() {
   const { status, isLoading } = useAuth();
   const authenticated = Boolean(status?.authenticated);
-  const { data } = useQuery({ ...apiTokensOptions, enabled: authenticated });
+  const read = useQuery({ ...apiTokensOptions, enabled: authenticated });
+  const { data } = read;
 
   if (isLoading || !status?.authenticated) return null;
 
@@ -286,7 +291,12 @@ export function ApiTokensCard() {
         <CreateTokenDialog />
       </CardHeader>
       <CardContent>
-        {!data || data.length === 0 ? (
+        {failedRead(read) ? (
+          <InlineQueryError
+            message="API tokens could not be loaded."
+            read={read}
+          />
+        ) : !data || data.length === 0 ? (
           <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
             No tokens yet. Create one to authenticate scripts or the MCP server
             with a Bearer header.

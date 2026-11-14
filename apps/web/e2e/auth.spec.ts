@@ -535,6 +535,49 @@ test("integrations creates, reveals and revokes an api token", async ({
   ).toBeHidden();
 });
 
+test("a failed api tokens read says so and retries instead of claiming there are none", async ({
+  page,
+}) => {
+  await seedSession(page);
+  await routeStatus(page, {
+    billing: false,
+    registrationOpen: false,
+    setupRequired: false,
+    authenticated: true,
+  });
+  await routeMe(page, TRIAL_USER);
+
+  let failing = true;
+  await page.route("**/api/backend/auth/tokens", (route) =>
+    failing
+      ? route.fulfill(
+          fulfillJson(500, {
+            statusCode: 500,
+            error: "Internal Server Error",
+            message: "Something went wrong.",
+          }),
+        )
+      : route.fulfill(fulfillJson(200, [])),
+  );
+
+  await page.goto("/integrations");
+  await expect(page.getByText("API tokens could not be loaded.")).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(page.getByText("No tokens yet.", { exact: false })).toHaveCount(
+    0,
+  );
+
+  failing = false;
+  await page.getByRole("button", { name: "Retry" }).click();
+  await expect(
+    page.getByText("No tokens yet.", { exact: false }),
+  ).toBeVisible();
+  await expect(page.getByText("API tokens could not be loaded.")).toHaveCount(
+    0,
+  );
+});
+
 test("a double click on Create token creates one token", async ({ page }) => {
   await seedSession(page);
   await routeStatus(page, {
