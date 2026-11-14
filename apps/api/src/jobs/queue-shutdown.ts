@@ -4,7 +4,9 @@ import {
   type BeforeApplicationShutdown,
 } from '@nestjs/common';
 import { DiscoveryService } from '@nestjs/core';
+import type { RedisClient, Worker } from 'bullmq';
 import { FailFastRedis } from '../redis/fail-fast-redis';
+import { MAX_RECONNECT_DELAY_MS } from '../redis/reconnect-delay';
 import {
   discoveredFlowProducers,
   discoveredQueues,
@@ -15,9 +17,45 @@ import { HttpDrain } from './http-drain';
 export const PING_ATTEMPTS = 3;
 export const PING_PAUSE_MS = 300;
 export const UNREACHABLE_DRAIN_MS = 2_000;
+export const RECONNECT_GRACE_MS = 2 * MAX_RECONNECT_DELAY_MS;
 
 const elapse = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+const SETTLED_STATUSES = new Set(['ready', 'wait', 'end']);
+
+const settled = (client: RedisClient): Promise<void> =>
+  SETTLED_STATUSES.has(client.status)
+    ? Promise.resolve()
+    : new Promise((resolve) => client.once('ready', () => resolve()));
+
+async function blockingSettled(worker: Worker): Promise<boolean> {
+  try {
+    const blocking = worker.getBackend().blockingClient;
+    if (blocking) await settled(await blocking);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function stillReconnecting(
+  workers: Worker[],
+  graceMs: number,
+): Promise<Worker[]> {
+  let timer: NodeJS.Timeout | undefined;
+  const expired = new Promise<boolean>((resolve) => {
+    timer = setTimeout(resolve, graceMs, false);
+  });
+  try {
+    const closable = await Promise.all(
+      workers.map((worker) => Promise.race([blockingSettled(worker), expired])),
+    );
+    return workers.filter((_, index) => !closable[index]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 @Injectable()
 export class QueueShutdown implements BeforeApplicationShutdown {
@@ -30,8 +68,11 @@ export class QueueShutdown implements BeforeApplicationShutdown {
   ) {}
 
   async beforeApplicationShutdown(): Promise<void> {
-    if (await this.redisAnswers()) return;
     const workers = discoveredWorkers(this.discovery);
+    if (await this.redisAnswers()) {
+      await this.forceCloseReconnecting(workers);
+      return;
+    }
     const backends = [
       ...discoveredQueues(this.discovery),
       ...discoveredFlowProducers(this.discovery),
@@ -44,6 +85,15 @@ export class QueueShutdown implements BeforeApplicationShutdown {
       ...workers.map((worker) => worker.close(true)),
       ...backends.map((backend) => backend.close(true)),
     ]);
+  }
+
+  private async forceCloseReconnecting(workers: Worker[]): Promise<void> {
+    const stuck = await stillReconnecting(workers, RECONNECT_GRACE_MS);
+    if (stuck.length === 0) return;
+    this.logger.warn(
+      `shutdown: ${stuck.length} workers were still reconnecting to redis after ${RECONNECT_GRACE_MS} ms, force closed them`,
+    );
+    await Promise.allSettled(stuck.map((worker) => worker.close(true)));
   }
 
   private async redisAnswers(): Promise<boolean> {

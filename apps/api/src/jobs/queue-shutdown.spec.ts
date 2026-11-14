@@ -1,3 +1,4 @@
+import { EventEmitter } from 'node:events';
 import { WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { DiscoveryService } from '@nestjs/core';
@@ -5,7 +6,11 @@ import { FlowProducer, Queue, Worker } from 'bullmq';
 import { Redis } from 'ioredis';
 import { FailFastRedis } from '../redis/fail-fast-redis';
 import type { HttpDrain } from './http-drain';
-import { QueueShutdown, UNREACHABLE_DRAIN_MS } from './queue-shutdown';
+import {
+  QueueShutdown,
+  RECONNECT_GRACE_MS,
+  UNREACHABLE_DRAIN_MS,
+} from './queue-shutdown';
 
 class ProbeWorker extends WorkerHost {
   constructor(private readonly probe: Worker) {
@@ -30,6 +35,19 @@ class UnstartedWorker extends WorkerHost {
 const refused = () =>
   Promise.reject(Object.assign(new Error(''), { code: 'ECONNREFUSED' }));
 
+const blockingClient = (status: string) =>
+  Object.assign(new EventEmitter(), { status });
+
+function probeWorker(
+  close: jest.Mock,
+  blocking: () => Promise<EventEmitter>,
+): Worker {
+  return {
+    close,
+    getBackend: () => ({ blockingClient: blocking() }),
+  } as unknown as Worker;
+}
+
 function withBackend<T extends object>(
   type: { prototype: T },
   close: jest.Mock,
@@ -45,11 +63,15 @@ describe('QueueShutdown', () => {
   const closeFlow = jest.fn<Promise<void>, [boolean?]>();
   const cutAfter = jest.fn<void, [number]>();
   const drain = { cutAfter } as unknown as HttpDrain;
+  const answers = () =>
+    jest.fn<Promise<string>, []>().mockResolvedValue('PONG');
+  let blocking: EventEmitter & { status: string };
+  let openBlocking: () => Promise<EventEmitter>;
   let warn: jest.SpyInstance;
 
   const shutdownWith = (ping: jest.Mock<Promise<string>, []>) => {
     const instances = [
-      new ProbeWorker({ close: closeWorker } as unknown as Worker),
+      new ProbeWorker(probeWorker(closeWorker, () => openBlocking())),
       new UnstartedWorker(),
       withBackend(Queue, closeQueue),
       withBackend(FlowProducer, closeFlow),
@@ -70,21 +92,96 @@ describe('QueueShutdown', () => {
       close.mockReset().mockResolvedValue(undefined);
     }
     cutAfter.mockReset();
+    blocking = blockingClient('ready');
+    openBlocking = () => Promise.resolve(blocking);
     warn = jest.spyOn(Logger.prototype, 'warn').mockReturnValue();
   });
 
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+  });
 
   it('leaves queues and workers to drain while redis answers', async () => {
-    await shutdownWith(
-      jest.fn<Promise<string>, []>().mockResolvedValue('PONG'),
-    ).beforeApplicationShutdown();
+    await shutdownWith(answers()).beforeApplicationShutdown();
 
     expect(closeWorker).not.toHaveBeenCalled();
     expect(closeQueue).not.toHaveBeenCalled();
     expect(closeFlow).not.toHaveBeenCalled();
     expect(cutAfter).not.toHaveBeenCalled();
     expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('drains a worker whose blocking connection reconnects within the grace', async () => {
+    jest.useFakeTimers();
+    blocking.status = 'reconnecting';
+
+    const shutdown = shutdownWith(answers()).beforeApplicationShutdown();
+    await jest.advanceTimersByTimeAsync(RECONNECT_GRACE_MS / 2);
+    blocking.status = 'ready';
+    blocking.emit('ready');
+    await shutdown;
+
+    expect(closeWorker).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it('force closes a worker still reconnecting to redis once the grace runs out', async () => {
+    jest.useFakeTimers();
+    blocking.status = 'reconnecting';
+
+    const shutdown = shutdownWith(answers()).beforeApplicationShutdown();
+    await jest.advanceTimersByTimeAsync(RECONNECT_GRACE_MS - 1);
+    expect(closeWorker).not.toHaveBeenCalled();
+    await jest.advanceTimersByTimeAsync(1);
+    await shutdown;
+
+    expect(closeWorker.mock.calls).toEqual([[true]]);
+    expect(closeQueue).not.toHaveBeenCalled();
+    expect(closeFlow).not.toHaveBeenCalled();
+    expect(cutAfter).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(
+      `shutdown: 1 workers were still reconnecting to redis after ${RECONNECT_GRACE_MS} ms, force closed them`,
+    );
+  });
+
+  it('force closes only the worker still reconnecting when another has reconnected', async () => {
+    jest.useFakeTimers();
+    const closeStuck = jest.fn<Promise<void>, [boolean?]>();
+    const stuck = blockingClient('connecting');
+    const discovery = {
+      getProviders: () =>
+        [
+          new ProbeWorker(probeWorker(closeWorker, () => openBlocking())),
+          new ProbeWorker(
+            probeWorker(closeStuck, () => Promise.resolve(stuck)),
+          ),
+        ].map((instance) => ({ instance })),
+    } as unknown as DiscoveryService;
+
+    const shutdown = new QueueShutdown(
+      discovery,
+      new FailFastRedis({ ping: answers() } as unknown as Redis),
+      drain,
+    ).beforeApplicationShutdown();
+    await jest.advanceTimersByTimeAsync(RECONNECT_GRACE_MS);
+    await shutdown;
+
+    expect(closeWorker).not.toHaveBeenCalled();
+    expect(closeStuck.mock.calls).toEqual([[true]]);
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  it('force closes a worker whose blocking connection never opened', async () => {
+    openBlocking = () => Promise.reject(new Error('Connection is closed.'));
+
+    await expect(
+      shutdownWith(answers()).beforeApplicationShutdown(),
+    ).resolves.toBeUndefined();
+
+    expect(closeWorker.mock.calls).toEqual([[true]]);
+    expect(cutAfter).not.toHaveBeenCalled();
   });
 
   it('drains as usual when redis answers on a second try', async () => {
