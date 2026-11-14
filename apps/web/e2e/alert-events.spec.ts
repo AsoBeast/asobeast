@@ -72,7 +72,9 @@ async function createChannel(
     .getByRole("button", { name: channel.trigger, exact: true })
     .click();
   const row = page.getByRole("listitem").filter({ hasText: target });
-  await expect(row.locator('[data-slot="badge"]')).toHaveText([SERP_ENTRANT]);
+  await expect(row.locator('[data-slot="alert-rule"]')).toHaveText([
+    SERP_ENTRANT,
+  ]);
   return row;
 }
 
@@ -205,7 +207,7 @@ for (const channel of CHANNELS) {
       events: ["rank.milestone", "serp.entrant"],
     });
     await expect(dialog).toBeHidden();
-    await expect(row.locator('[data-slot="badge"]')).toHaveText([
+    await expect(row.locator('[data-slot="alert-rule"]')).toHaveText([
       RANK_MILESTONE,
       SERP_ENTRANT,
     ]);
@@ -289,7 +291,9 @@ for (const channel of CHANNELS) {
 
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
-    await expect(row.locator('[data-slot="badge"]')).toHaveText([SERP_ENTRANT]);
+    await expect(row.locator('[data-slot="alert-rule"]')).toHaveText([
+      SERP_ENTRANT,
+    ]);
 
     const reopened = await openSettledDialog(page, EDIT_EVENTS, row);
     await expect(eventOption(reopened, RANK_MILESTONE)).toHaveAttribute(
@@ -338,7 +342,7 @@ for (const channel of CHANNELS) {
       .click();
 
     const row = page.getByRole("listitem").filter({ hasText: target });
-    await expect(row.locator('[data-slot="badge"]')).toHaveText(labels);
+    await expect(row.locator('[data-slot="alert-rule"]')).toHaveText(labels);
   });
 
   test(`${channel.trigger} saves the chart events`, async ({ page }) => {
@@ -367,7 +371,7 @@ for (const channel of CHANNELS) {
       "chart.milestone",
     ]);
     const row = page.getByRole("listitem").filter({ hasText: target });
-    await expect(row.locator('[data-slot="badge"]')).toHaveText([
+    await expect(row.locator('[data-slot="alert-rule"]')).toHaveText([
       CHART_ENTERED,
       CHART_MILESTONE,
     ]);
@@ -449,7 +453,7 @@ for (const channel of CHANNELS) {
       events: ["review.new"],
       reviewScores: [1, 2],
     });
-    await expect(row.locator('[data-slot="badge"]')).toHaveText([
+    await expect(row.locator('[data-slot="alert-rule"]')).toHaveText([
       "New review · 1 and 2 stars",
     ]);
   });
@@ -462,7 +466,9 @@ for (const channel of CHANNELS) {
     const { row, body } = await submitChannel(page, channel, dialog);
 
     expect(body).toMatchObject({ events: ["review.new"], reviewScores: [] });
-    await expect(row.locator('[data-slot="badge"]')).toHaveText([NEW_REVIEW]);
+    await expect(row.locator('[data-slot="alert-rule"]')).toHaveText([
+      NEW_REVIEW,
+    ]);
   });
 
   test(`${channel.trigger} sends no star filter without New review`, async ({
@@ -501,7 +507,7 @@ for (const channel of CHANNELS) {
       reviewScores: [5],
     });
     await expect(dialog).toBeHidden();
-    await expect(row.locator('[data-slot="badge"]')).toHaveText([
+    await expect(row.locator('[data-slot="alert-rule"]')).toHaveText([
       "New review · 5 stars",
     ]);
   });
@@ -744,7 +750,7 @@ for (const channel of CHANNELS) {
       events: ["rating.dropped"],
       ratingDropTenths: 3,
     });
-    await expect(row.locator('[data-slot="badge"]')).toHaveText([
+    await expect(row.locator('[data-slot="alert-rule"]')).toHaveText([
       "Rating dropped · 0.3 stars",
     ]);
 
@@ -760,7 +766,7 @@ for (const channel of CHANNELS) {
       events: ["rating.dropped"],
       ratingDropTenths: 5,
     });
-    await expect(row.locator('[data-slot="badge"]')).toHaveText([
+    await expect(row.locator('[data-slot="alert-rule"]')).toHaveText([
       "Rating dropped · 0.5 stars",
     ]);
   });
