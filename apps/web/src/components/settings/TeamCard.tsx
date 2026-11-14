@@ -207,10 +207,10 @@ function Invitations({
                 </span>
               </TableCell>
               <TableCell className="text-muted-foreground capitalize">
-                {invite.role}
+                <span>{invite.role}</span>
               </TableCell>
               <TableCell className={`${DATE_COLUMN} text-muted-foreground`}>
-                {`Expires ${formatDate(invite.expiresAt)}`}
+                <span>{`Expires ${formatDate(invite.expiresAt)}`}</span>
               </TableCell>
               {isOwner ? (
                 <TableCell>
@@ -320,9 +320,11 @@ export function TeamCard() {
                   ) : null}
                 </span>
               </TableCell>
-              <TableCell className="capitalize">{member.role}</TableCell>
+              <TableCell className="capitalize">
+                <span>{member.role}</span>
+              </TableCell>
               <TableCell className={DATE_COLUMN}>
-                {formatDate(member.createdAt)}
+                <span>{formatDate(member.createdAt)}</span>
               </TableCell>
               {isOwner ? (
                 <TableCell>
