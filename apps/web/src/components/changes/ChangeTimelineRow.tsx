@@ -33,7 +33,11 @@ function RowFrame({
   children: React.ReactNode;
 }) {
   return (
-    <li data-change-field={event.field} className={ROW}>
+    <li
+      data-change-field={event.field}
+      aria-label={`${event.appName ?? "Unknown app"}, ${field}`}
+      className={ROW}
+    >
       <span className={ICON}>
         <AppIcon src={event.iconUrl ?? null} size={24} />
       </span>
@@ -64,6 +68,7 @@ function VersionRun({ events }: { events: ChangeEventItem[] }) {
           <Button
             variant="outline"
             size="xs"
+            aria-label={`${open ? "Hide versions" : "Show versions"} of ${newest.appName ?? "Unknown app"}`}
             aria-expanded={open}
             aria-controls={listId}
             onClick={() => setOpen((shown) => !shown)}

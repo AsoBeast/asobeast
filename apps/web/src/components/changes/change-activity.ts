@@ -49,6 +49,7 @@ export interface LaneMark {
   position: number;
   kinds: ChangeKind[];
   fields: ChangeField[];
+  changes: Array<{ day: string; field: ChangeField }>;
 }
 
 export interface Lane {
@@ -86,6 +87,10 @@ function laneMarks(
         position: Math.max(centre, 0) / last,
         kinds: CHANGE_KINDS.filter((kind) => kinds.has(kind)),
         fields,
+        changes: bucketEvents.map((event) => ({
+          day: dayOf(event),
+          field: event.field,
+        })),
       };
     })
     .sort((a, b) => a.position - b.position);
@@ -143,12 +148,14 @@ export function ownChangeDays(
 }
 
 export function changeLinesOn(lanes: readonly Lane[], day: string): string[] {
-  return lanes.flatMap((lane) =>
-    lane.marks
-      .filter((mark) => mark.from <= day && day <= mark.day)
-      .map(
-        (mark) =>
-          `${lane.own ? "You" : lane.appName}: ${changedFieldWords(mark.fields)}`,
-      ),
-  );
+  return lanes.flatMap((lane) => {
+    const fields = lane.marks.flatMap((mark) =>
+      mark.changes
+        .filter((change) => change.day === day)
+        .map((change) => change.field),
+    );
+    return fields.length === 0
+      ? []
+      : [`${lane.own ? "You" : lane.appName}: ${changedFieldWords(fields)}`];
+  });
 }

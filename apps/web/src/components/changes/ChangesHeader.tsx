@@ -96,7 +96,12 @@ export function ChangesHeader({
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <Tabs
           value={String(days)}
-          onValueChange={(next) => void setDays(Number(next) as typeof days)}
+          onValueChange={(next) => {
+            const chosen = CHANGE_WINDOWS.find(
+              (option) => String(option) === next,
+            );
+            if (chosen !== undefined) void setDays(chosen);
+          }}
         >
           <TabsList aria-label="Window">
             {CHANGE_WINDOWS.map((option) => (

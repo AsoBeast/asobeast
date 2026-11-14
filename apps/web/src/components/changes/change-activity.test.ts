@@ -109,7 +109,9 @@ describe("activityLanes", () => {
     expect(markLabel(own, newest)).toBe(
       "Nov 6 to Nov 9: you changed the title and icon",
     );
-    expect(changeLinesOn([own], "2026-11-07")).toEqual(["You: title and icon"]);
+    expect(changeLinesOn([own], "2026-11-07")).toEqual([]);
+    expect(changeLinesOn([own], "2026-11-06")).toEqual(["You: icon"]);
+    expect(changeLinesOn([own], "2026-11-09")).toEqual(["You: title"]);
   });
 
   it("counts the fields of a mark that holds more than three", () => {
