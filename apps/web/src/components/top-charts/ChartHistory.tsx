@@ -21,7 +21,10 @@ import {
   seriesDash,
   TIME_AXIS_PROPS,
 } from "@/components/charts/theme";
-import { InlineQueryError } from "@/components/layout/InlineQueryError";
+import {
+  failedRead,
+  InlineQueryError,
+} from "@/components/layout/InlineQueryError";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
 import { formatDayMonth } from "@/lib/format";
@@ -204,9 +207,7 @@ export function ChartHistory({
       }),
     ),
   });
-  const failed = reads.filter(
-    (read) => read.isError && read.data === undefined,
-  );
+  const failed = reads.filter(failedRead);
   const days = reads.flatMap((read) => (read.data ? [read.data] : []));
 
   if (!ready) {

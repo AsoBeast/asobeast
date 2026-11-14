@@ -2109,6 +2109,33 @@ test.describe("chart history", () => {
     await expect(chart).toBeFocused();
   });
 
+  test("keeps focus on Retry while the earlier captures load again", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await page.route(/\/charts\?.*date=/, (route) =>
+      route.fulfill({ status: 500, body: "{}" }),
+    );
+    await page.goto("/charts?view=table&tableView=history");
+    const retry = page.getByRole("button", { name: "Retry" });
+    await expect(retry).toBeVisible({ timeout: 30_000 });
+    const held = await holdRequest(page, /\/charts\?.*date=/, "GET");
+
+    await (await hydrated(retry)).focus();
+    await page.keyboard.press("Enter");
+
+    await expect(retry).toHaveAttribute("aria-disabled", "true");
+    await expect(retry).toBeFocused();
+    held.release();
+    await expect(retry).not.toHaveAttribute("aria-disabled", "true", {
+      timeout: 30_000,
+    });
+    await expect(retry).toBeFocused();
+    await expect(
+      page.getByText("Could not load the earlier captures."),
+    ).toBeVisible();
+  });
+
   test("says when too few days are captured", async ({ page }) => {
     await page.goto(
       `/charts?view=table&tableView=history&date=${TOP_CHART_DATES[3]}`,
