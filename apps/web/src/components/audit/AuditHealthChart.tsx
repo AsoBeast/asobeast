@@ -44,6 +44,7 @@ import { scoredPoints } from "./score-history";
 const HEIGHT = CHART_HEIGHT.tall;
 const SERIES = seriesColor(0);
 const REACHABLE = "var(--muted-foreground)";
+const LABEL_STAGGER = 14;
 
 const chartConfig = {
   overall: { label: "ASO score", color: SERIES },
@@ -139,7 +140,7 @@ export function AuditHealthChart({
           <ChartTooltip
             content={<ChartTooltipContent {...TIME_TOOLTIP_PROPS} />}
           />
-          {changes.map((change) => (
+          {changes.map((change, index) => (
             <ReferenceLine
               key={`${change.date}-${change.version}`}
               x={change.date}
@@ -150,6 +151,7 @@ export function AuditHealthChart({
                   change.labelPosition === "insideRight"
                     ? "insideTopRight"
                     : "insideTopLeft",
+                dy: (index % 2) * LABEL_STAGGER,
               }}
             />
           ))}

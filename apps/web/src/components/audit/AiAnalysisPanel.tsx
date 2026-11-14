@@ -89,9 +89,6 @@ function RunProgress({
               <span aria-hidden>{` · ${elapsed}s`}</span>
             )}
           </span>
-          <span className="text-caption text-faint-foreground">
-            {ANALYSIS_COPY.active}
-          </span>
         </>
       ) : null}
     </div>
