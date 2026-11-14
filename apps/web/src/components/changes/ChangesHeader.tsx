@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useId } from "react";
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import { MarketSwitcher } from "@/components/app-detail/MarketSwitcher";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -16,12 +16,12 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { formatCountry } from "@/lib/format";
-import { changeImpactOptions, keywordCountriesOptions } from "@/lib/queries";
+import { keywordCountriesOptions } from "@/lib/queries";
 import { CHANGE_WINDOWS } from "@/lib/ranges";
 import { changeDaysParser, countryParser } from "@/lib/search-params";
 import { changesLede } from "./changes-lede";
 import { LedeSkeleton } from "./skeletons";
-import { useChangeEvents, useImpactCountry } from "./use-change-view";
+import { useChangeEvents, useChangeImpact } from "./use-change-view";
 
 function ImpactMarketSelect({
   id,
@@ -61,11 +61,10 @@ function ImpactMarketSelect({
 
 function ChangesLede({ id, homeCountry }: { id: string; homeCountry: string }) {
   const { events, days, homeListing } = useChangeEvents(id);
-  const country = useImpactCountry(homeCountry);
-  const { data: impact } = useQuery(changeImpactOptions(id, days, country));
+  const impact = useChangeImpact(id, days, homeCountry);
   const parts = changesLede({
     events,
-    impact: homeListing ? (impact ?? null) : null,
+    impact: homeListing ? impact : null,
     days,
   });
 

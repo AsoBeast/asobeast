@@ -43,7 +43,7 @@ describe("timelineDays", () => {
 
     expect(newest.entries).toHaveLength(1);
     expect(newest.entries[0]).toMatchObject({ kind: "versions" });
-    expect(changesShownOn(newest)).toBe(1);
+    expect(changesShownOn(newest)).toBe(3);
   });
 
   it("finds the day that shows a change folded into a newer row", () => {

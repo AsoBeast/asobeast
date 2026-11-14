@@ -523,3 +523,15 @@ test("an app without changes offers the widest window", async ({ page }) => {
     await page.evaluate(() => document.activeElement === document.body),
   ).toBe(false);
 });
+
+test("a market without keywords reads no effect in the opening sentence", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/changes?country=pl");
+
+  const lede = page.getByText(/^On .* you changed the/);
+  await expect(lede).toBeVisible();
+  await expect(lede).not.toContainText("visibility");
+  await expect(lede).not.toContainText("measurable");
+  await expect(timeline(page).getByText(/after 7 days/)).toHaveCount(0);
+});

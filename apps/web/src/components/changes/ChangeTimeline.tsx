@@ -1,7 +1,6 @@
 "use client";
 
 import { Suspense, useEffect, useId, useRef } from "react";
-import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import type { ChangeEventItem } from "@asobeast/shared";
 import { useMarket } from "@/components/app-detail/use-market";
@@ -24,7 +23,6 @@ import {
   formatDayMonth,
   pluralize,
 } from "@/lib/format";
-import { changeImpactOptions } from "@/lib/queries";
 import { CHANGE_WINDOWS, type ChangeWindow } from "@/lib/ranges";
 import {
   changeDaysParser,
@@ -49,7 +47,7 @@ import { ChangesCardSkeleton } from "./skeletons";
 import {
   useChangeEvents,
   useChangeFilter,
-  useImpactCountry,
+  useChangeImpact,
 } from "./use-change-view";
 
 const isCompetitor = (event: ChangeEventItem): boolean => event.isCompetitor;
@@ -91,20 +89,16 @@ interface DayScope {
 }
 
 function DayConversion({ id, days, day, homeCountry }: DayScope) {
-  const country = useImpactCountry(homeCountry);
-  const { data: impact } = useSuspenseQuery(
-    changeImpactOptions(id, days, country),
-  );
-  const conversion = conversionChip(funnelByDay(impact).get(day));
+  const impact = useChangeImpact(id, days, homeCountry);
+  const conversion = impact
+    ? conversionChip(funnelByDay(impact).get(day))
+    : null;
   return conversion === null ? null : <ConversionChip value={conversion} />;
 }
 
 function DayEffect({ id, days, day, homeCountry }: DayScope) {
-  const country = useImpactCountry(homeCountry);
-  const { data: impact } = useSuspenseQuery(
-    changeImpactOptions(id, days, country),
-  );
-  const item = impact.items.find((entry) => entry.changedOn === day);
+  const impact = useChangeImpact(id, days, homeCountry);
+  const item = impact?.items.find((entry) => entry.changedOn === day);
   const effect = item ? changeEffect(item) : null;
   if (effect === null) return null;
   if (effect.kind === "pending") {

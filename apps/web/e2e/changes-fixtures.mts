@@ -107,8 +107,8 @@ const PLAY: ChangeTimeline = {
       appName: "Word Garden",
       isCompetitor: false,
       field: "summary",
-      before: "Grow your vocabulary",
-      after: "Grow your vocabulary one word a day",
+      before: "24",
+      after: "38",
       capturedAt: utcTimestampDaysAgo(3),
     },
     {

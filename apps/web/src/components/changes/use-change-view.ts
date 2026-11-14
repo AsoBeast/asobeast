@@ -3,10 +3,14 @@
 import { useDeferredValue } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState, useQueryStates } from "nuqs";
-import type { ChangeEventItem } from "@asobeast/shared";
+import type { ChangeEventItem, ChangeImpactReport } from "@asobeast/shared";
 import { useMarket } from "@/components/app-detail/use-market";
 import { queryMarket } from "@/lib/market";
-import { changesOptions } from "@/lib/queries";
+import {
+  changeImpactOptions,
+  changesOptions,
+  keywordCountriesOptions,
+} from "@/lib/queries";
 import type { ChangeWindow } from "@/lib/ranges";
 import {
   changeDaysParser,
@@ -64,6 +68,22 @@ export function useChangeEvents(id: string): ChangeEvents {
     homeListing: listing === home,
     today,
   };
+}
+
+export function useChangeImpact(
+  id: string,
+  days: number,
+  homeCountry: string,
+): ChangeImpactReport | null {
+  const country = useImpactCountry(homeCountry);
+  const { data: markets } = useSuspenseQuery(keywordCountriesOptions(id));
+  const { data: impact } = useSuspenseQuery(
+    changeImpactOptions(id, days, country),
+  );
+  const tracked = markets.some(
+    (entry) => entry.country === country && entry.keywordCount > 0,
+  );
+  return tracked ? impact : null;
 }
 
 export function useImpactCountry(homeCountry: string): string {

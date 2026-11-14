@@ -2,7 +2,7 @@
 
 import { Fragment, Suspense, useId } from "react";
 import Link from "next/link";
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import {
   Area,
   CartesianGrid,
@@ -42,7 +42,7 @@ import {
 } from "@/components/ui/chart";
 import { VisibilityHelp } from "@/components/visibility/VisibilityHelp";
 import { formatCountry, formatDayMonth, formatNumber } from "@/lib/format";
-import { changeImpactOptions, visibilityOptions } from "@/lib/queries";
+import { visibilityOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import {
   activityLanes,
@@ -60,7 +60,11 @@ import { CHANGE_KIND_LABELS, CHANGE_KINDS } from "./change-fields";
 import { KindMark } from "./KindMark";
 import { ChangeActivitySkeleton } from "./skeletons";
 import type { ShownChange } from "./timeline-days";
-import { useChangeEvents, useImpactCountry } from "./use-change-view";
+import {
+  useChangeEvents,
+  useChangeImpact,
+  useImpactCountry,
+} from "./use-change-view";
 
 const chartConfig = {
   visibility: { label: "Visibility", color: seriesColor(0) },
@@ -282,7 +286,7 @@ function Activity({
   const { data: visibility } = useSuspenseQuery(
     visibilityOptions(id, changeWindowRange(today, days), country),
   );
-  const { data: impact } = useQuery(changeImpactOptions(id, days, country));
+  const impact = useChangeImpact(id, days, homeCountry);
 
   const lanes = activityLanes(events, span);
   if (lanes.length === 0) return null;

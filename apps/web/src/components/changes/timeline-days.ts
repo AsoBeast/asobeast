@@ -29,8 +29,8 @@ export function timelineDays(events: ChangeEventItem[]): TimelineDay[] {
     .sort((a, b) => b.day.localeCompare(a.day));
 }
 
-export const changesShownOn = ({ day, entries }: TimelineDay): number =>
-  entries.flatMap(entryEvents).filter((event) => dayOf(event) === day).length;
+export const changesShownOn = ({ entries }: TimelineDay): number =>
+  entries.flatMap(entryEvents).length;
 
 export interface ShownChange {
   appId: string;
