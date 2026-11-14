@@ -49,6 +49,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "The reviews page now opens with one sentence: how many reviews arrived since yesterday, how many wait for a reply and how the rating moved over the week. The rating and the number of ratings each draw their own chart, the average on a scale that shows small moves and the ratings gained day by day. Beside them sit the spread of stars, a new list of the average rating per app version, so a release that upset people stands out, and what people mention as a list you can press to find those reviews. The reviews are one list with a switch for all, needs reply, draft and replied, each review says its reply state in words, and the reply editor opens inside the review you are answering.",
       },
       {
+        kind: "improved",
+        title: "An audit that leads with the score and the fixes",
+        text: "The audit page now opens with one sentence: your score, how it moved since last week and what the top fixes are worth. The score sits in a large ring beside search visibility, conversion and the share of the audit that could be measured, with the score history right under them and a dashed line for the score the plan leads to. The top fixes and a count of the checks that pass sit beside it. The plan is one list with the impact, effort and points of each fix, every factor is a row with a coloured line for its score and its checks one press away, and the comparison with your competitors says how far you are from their median.",
+      },
+      {
         kind: "new",
         title: "Press a keyword to see everything about it",
         text: "Pressing a keyword in the keywords table opens a sheet beside it: its position and what changed since yesterday, its scores and where each one comes from, the reason behind every insight, the position history with the days your listing changed, the top 10 search results with you and your competitors marked, and where the phrase sits in your listing. The keyword's menu is at the top of the sheet beside arrows that step to the previous and the next keyword, and a copied link opens the same sheet. The line in the Last 7 days column now opens the position history, and every button shows a hand when you point at it.",

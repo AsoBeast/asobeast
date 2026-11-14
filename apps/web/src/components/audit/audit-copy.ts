@@ -140,6 +140,19 @@ export const availabilityLabel = (
 export const liftLabel = (lift: number | undefined): string =>
   lift === undefined ? "Lift not estimated" : `+${lift} points`;
 
+const LIFT_DIGITS = 1;
+
+export const liftFigure = (lift: number | undefined): string =>
+  lift === undefined ? "—" : `+${lift}`;
+
+export const fixesWorth = (fixes: readonly { lift?: number }[]): string =>
+  `+${fixes.reduce((sum, fix) => sum + (fix.lift ?? 0), 0).toFixed(LIFT_DIGITS)} points`;
+
+export const scoredFactorsLine = (scored: number, total: number): string =>
+  scored === total
+    ? `${pluralize(total, "factor")} scored`
+    : `${scored} of ${pluralize(total, "factor")} scored`;
+
 export const emptyBucketLine = (unanswered: number): string =>
   unanswered === 0
     ? "Nothing to change here."

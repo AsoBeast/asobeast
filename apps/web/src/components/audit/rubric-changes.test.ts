@@ -24,6 +24,11 @@ describe("labelPosition", () => {
     expect(labelPosition(5, 10)).toBeNull();
   });
 
+  it("turns a label in the last quarter back into the chart", () => {
+    expect(labelPosition(10, 13)).toBe("insideRight");
+    expect(labelPosition(8, 13)).toBeNull();
+  });
+
   it("pins the label of a one point series to the right edge", () => {
     expect(labelPosition(0, 1)).toBe("insideRight");
   });

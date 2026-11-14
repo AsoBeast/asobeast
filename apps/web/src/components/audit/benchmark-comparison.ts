@@ -18,14 +18,6 @@ export function comparison(row: AuditBenchmarkRow): Comparison {
   return youLead === higherIsBetter ? "ahead" : "behind";
 }
 
-export function benchmarkRatio(row: AuditBenchmarkRow): number {
-  const { you, best } = row;
-  if (you === null || best === null) return 0;
-  const [value, target] = row.better === "higher" ? [you, best] : [best, you];
-  if (target === 0) return 1;
-  return Math.max(0, Math.min(1, value / target));
-}
-
 export function formatBenchmarkValue(
   metric: AuditBenchmarkMetric,
   value: number | null,
@@ -34,4 +26,19 @@ export function formatBenchmarkValue(
   return metric === "rating-average"
     ? formatRating(value)
     : formatMeasure(value);
+}
+
+const RATING_GAP_DIGITS = 2;
+
+export function medianGap(row: AuditBenchmarkRow): string | null {
+  if (row.you === null || row.median === null) return null;
+  const rating = row.metric === "rating-average";
+  const gap = rating
+    ? Number((row.you - row.median).toFixed(RATING_GAP_DIGITS))
+    : row.you - row.median;
+  if (gap === 0) return "0";
+  const size = rating
+    ? Math.abs(gap).toFixed(RATING_GAP_DIGITS)
+    : formatMeasure(Math.abs(gap));
+  return `${gap > 0 ? "+" : "-"}${size}`;
 }

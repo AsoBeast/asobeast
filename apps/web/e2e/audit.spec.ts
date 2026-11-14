@@ -19,6 +19,97 @@ test("shows one score with its grade, measured share and potential", async ({
   await expect(hero.getByText("82% of the rubric measured")).toBeVisible();
 });
 
+test("opens with the score, its move over the week and what the top fixes are worth", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/audit");
+
+  await expect(
+    page
+      .getByRole("main")
+      .getByText(
+        "Score 74, up 9 since last week. 3 fixes are worth +9.7 points.",
+      ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "ASO score" }).getByText("+9 7d"),
+  ).toBeVisible();
+});
+
+test("says a falling score fell", async ({ page, context }) => {
+  await seedCookies(context, { e2e_audit: "provisional" });
+  await page.goto("/apps/app-1/audit");
+
+  await expect(
+    page.getByRole("main").getByText(/^Score 58, down 3 since last week\./),
+  ).toBeVisible();
+});
+
+test("leaves the week out when no score is a week old", async ({ page }) => {
+  await page.goto("/apps/app-gp/audit");
+
+  await expect(
+    page
+      .getByRole("main")
+      .getByText("Score 74. 2 fixes are worth +5.8 points."),
+  ).toBeVisible();
+  await expect(page.getByText("since last week")).toHaveCount(0);
+});
+
+test("counts the checks by result", async ({ page }) => {
+  await page.goto("/apps/app-1/audit");
+
+  await expect(page.getByText("7 of 12 pass")).toBeVisible();
+  await expect(
+    page.getByRole("img", {
+      name: "Checks by result: 7 pass, 3 need work, 1 fail, 1 not scored",
+    }),
+  ).toBeVisible();
+  await expect(page.getByText("12 checks across 10 factors")).toBeVisible();
+});
+
+test("opens the checks of a factor in its row and names the control with it", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/audit");
+  const title = page.getByRole("article", { name: "Title" });
+
+  await title.getByRole("button", { name: "Show checks for Title" }).click();
+
+  await expect(title.getByText(/^Worth 20 points of 110/)).toBeVisible();
+  await expect(title.getByText("Primary keyword in title")).toBeVisible();
+  await expect(
+    title.getByRole("button", { name: "Hide checks for Title" }),
+  ).toBeFocused();
+});
+
+test("keeps the range in the address and focus on its control", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/audit");
+  const range = page.getByRole("tablist", { name: "Date range" });
+
+  await range.getByRole("tab", { name: "90d" }).click();
+
+  await expect(page).toHaveURL(/[?&]range=90d/);
+  await expect(range.getByRole("tab", { name: "90d" })).toBeFocused();
+  await expect(
+    page.getByRole("region", { name: "Score history" }),
+  ).toBeVisible();
+});
+
+test("draws the score the plan leads to beside the history", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/audit");
+
+  await expect(
+    page
+      .getByRole("list", { name: "Score history key" })
+      .getByText("Reachable 86"),
+  ).toBeVisible();
+});
+
 test("never labels the history snapshot as the latest score", async ({
   page,
 }) => {
