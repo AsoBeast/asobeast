@@ -23,18 +23,27 @@ export const endsOnSync = (
   lastSyncedAt: string | null,
 ): boolean => lastSyncedAt !== null && syncDay(lastSyncedAt) === scale.to;
 
-const reported = (app: StoreConnectionApp) =>
-  app.firstDate !== null && app.lastDate !== null;
+const reportedRange = ({ firstDate, lastDate }: StoreConnectionApp) =>
+  firstDate !== null && lastDate !== null
+    ? [{ from: firstDate, to: lastDate }]
+    : [];
 
 export function coverageScale(
   apps: readonly StoreConnectionApp[],
   lastSyncedAt: string | null,
 ): CoverageScale | null {
-  const firsts = apps.flatMap((app) => (reported(app) ? [app.firstDate!] : []));
-  const lasts = apps.flatMap((app) => (reported(app) ? [app.lastDate!] : []));
-  if (firsts.length === 0) return null;
-  const ends = lastSyncedAt ? [...lasts, syncDay(lastSyncedAt)] : lasts;
-  return { from: firsts.toSorted()[0], to: ends.toSorted().at(-1)! };
+  const ranges = apps.flatMap(reportedRange);
+  const from = ranges
+    .map((range) => range.from)
+    .toSorted()
+    .at(0);
+  const to = [
+    ...ranges.map((range) => range.to),
+    ...(lastSyncedAt ? [syncDay(lastSyncedAt)] : []),
+  ]
+    .toSorted()
+    .at(-1);
+  return from !== undefined && to !== undefined ? { from, to } : null;
 }
 
 export function coverageSpan(

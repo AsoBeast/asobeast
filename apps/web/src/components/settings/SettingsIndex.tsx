@@ -12,9 +12,12 @@ export const SETTINGS_SECTIONS = {
   alerts: "Alerts",
   team: "Team",
   workspace: "Workspace",
-} as const;
+};
 
 export type SettingsSectionId = keyof typeof SETTINGS_SECTIONS;
+
+const isSectionId = (id: string): id is SettingsSectionId =>
+  Object.hasOwn(SETTINGS_SECTIONS, id);
 
 const READING_LINE = 120;
 
@@ -77,7 +80,7 @@ function useSectionInView(ids: readonly SettingsSectionId[]) {
   const key = ids.join(" ");
 
   useEffect(() => {
-    const known = key.split(" ") as SettingsSectionId[];
+    const known = key.split(" ").filter(isSectionId);
     let picked = hashSection(known);
     const read = () => {
       if (picked && !startsInView(picked.anchor)) picked = null;
@@ -109,11 +112,13 @@ export function SettingsIndex({
   className?: string;
 }) {
   const { data: plan } = useQuery(accountPlanOptions);
-  const ids = (Object.keys(SETTINGS_SECTIONS) as SettingsSectionId[]).filter(
-    (id) =>
-      (id !== "plan" || plan?.billing === true) &&
-      (id !== "daily-capacity" || operator),
-  );
+  const ids = Object.keys(SETTINGS_SECTIONS)
+    .filter(isSectionId)
+    .filter(
+      (id) =>
+        (id !== "plan" || plan?.billing === true) &&
+        (id !== "daily-capacity" || operator),
+    );
   const inView = useSectionInView(ids) ?? ids[0];
 
   return (
