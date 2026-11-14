@@ -10,6 +10,11 @@ export const LATER_RELEASES: readonly Release[] = [
     changes: [
       {
         kind: "new",
+        title: "A ratings goal that counts the fives you need",
+        text: "The reviews page now says how many five star ratings you need to show the average you want, such as 4.5, and how many a day that is over the days you choose.",
+      },
+      {
+        kind: "new",
         title: "Inspect any keyword",
         text: "Keyword inspector in the sidebar reads any keyword in any country straight from the store, without tracking it: the top 50 apps, the autocomplete, popularity, difficulty and opportunity, and how strong the top ten are. Each keyword you inspect lands on a map beside the others, its store suggestions inspect in one click, and the next inspection of the same keyword shows what changed since.",
       },
