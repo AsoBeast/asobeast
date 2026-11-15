@@ -220,6 +220,105 @@ test.describe("the what's new page", () => {
   });
 });
 
+test.describe("the what's new releases", () => {
+  const release = (page: Page, shown: string) =>
+    page.getByRole("article", { name: `Version ${shown}` });
+  const toggle = (page: Page, shown: string) =>
+    release(page, shown).getByRole("heading", { level: 2 }).getByRole("button");
+
+  test("opens the newest release and folds the ones already read", async ({
+    context,
+    page,
+  }) => {
+    await seedSeen(context, "1.15.0");
+    await page.goto("/whats-new");
+
+    await expect(toggle(page, version)).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    await expect(toggle(page, "1.15.0")).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    await expect(
+      release(page, "1.15.0").getByRole("heading", { level: 3 }),
+    ).toHaveCount(0);
+
+    await toggle(page, "1.15.0").click();
+    await expect(toggle(page, "1.15.0")).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    await expect(
+      release(page, "1.15.0").getByRole("heading", { level: 3 }).first(),
+    ).toBeVisible();
+  });
+
+  test("opens every release newer than the one last read", async ({
+    context,
+    page,
+  }) => {
+    await seedSeen(context, "1.14.0");
+    await page.goto("/whats-new");
+
+    await expect(toggle(page, "1.15.0")).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    await expect(toggle(page, "1.14.0")).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+  });
+
+  const openRelease = async (page: Page, shown: string) => {
+    if ((await toggle(page, shown).getAttribute("aria-expanded")) === "false") {
+      await toggle(page, shown).click();
+    }
+    await expect(toggle(page, shown)).toHaveAttribute("aria-expanded", "true");
+  };
+
+  test("shows one line per change and the rest on a press", async ({
+    page,
+  }) => {
+    await page.goto("/whats-new");
+    await openRelease(page, "1.16.0");
+    const row = release(page, "1.16.0")
+      .getByRole("listitem")
+      .filter({ hasText: "Setup checklist" });
+    const change = row.getByRole("button", { name: "Setup checklist." });
+    await expect(change).toHaveAttribute("aria-expanded", "false");
+    await expect(row).not.toContainText("Tell AsoBeast what you want");
+
+    await change.click();
+    await expect(change).toHaveAttribute("aria-expanded", "true");
+    await expect(row).toContainText("Tell AsoBeast what you want");
+  });
+
+  test("shows every change of a group on request", async ({ page }) => {
+    await page.goto("/whats-new");
+    await openRelease(page, "1.16.0");
+    const group = release(page, "1.16.0")
+      .getByRole("region")
+      .filter({ has: page.getByRole("heading", { name: "New", exact: true }) });
+    await expect(group.getByRole("listitem")).toHaveCount(5);
+
+    await group.getByRole("button", { name: "Show all 15 new" }).click();
+    await expect(group.getByRole("listitem")).toHaveCount(15);
+  });
+
+  test("opens a release a link names", async ({ page }) => {
+    await page.goto("/whats-new#release-1-0-0");
+
+    await expect(toggle(page, "1.0.0")).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    await expect(page.locator("#release-1-0-0")).toBeInViewport();
+  });
+});
+
 test.describe("the what's new sidebar item", () => {
   test("sits just before documentation", async ({ page }) => {
     await page.goto("/");

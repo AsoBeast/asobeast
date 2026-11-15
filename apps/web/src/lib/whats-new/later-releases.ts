@@ -64,6 +64,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "Setting up an app now keeps the three steps and the button that completes the setup beside the page while you scroll, and the button says which steps are still open. Each step is one panel with its state and Skip at the top, the countries you selected are one list with the keywords tracked in each and a link to review them, and the page of an app you have not started shows what already counts before you begin.",
       },
       {
+        kind: "improved",
+        title: "A keyword inspector and release notes that read faster",
+        text: "The keyword inspector now shows each score with a line in its grade colour and its value at the previous inspection, says in one sentence whether a keyword is worth going after, how autocomplete suggests it and where else you inspected it, and keeps every inspection in a list right under the map. What's New shows one line per change that opens when you press it, opens the releases you have not read yet and folds each older release into a single line.",
+      },
+      {
         kind: "new",
         title: "Press a keyword to see everything about it",
         text: "Pressing a keyword in the keywords table opens a sheet beside it: its position and what changed since yesterday, its scores and where each one comes from, the reason behind every insight, the position history with the days your listing changed, the top 10 search results with you and your competitors marked, and where the phrase sits in your listing. The keyword's menu is at the top of the sheet beside arrows that step to the previous and the next keyword, and a copied link opens the same sheet. The line in the Last 7 days column now opens the position history, and every button shows a hand when you point at it.",
