@@ -22,6 +22,7 @@ import {
   APP_IMPORT_FOCUS_ID,
   AWAITING_ALERT_COOKIE,
   CROWDED_COMPETITORS_COOKIE,
+  RANKINGS_FAIL_COOKIE,
   TOP_CHART_DATES,
   WEBHOOK_PAIR,
   WEBHOOK_PAIR_COOKIE,
@@ -2889,4 +2890,26 @@ test("Retry keeps focus in the alerts card when the read recovers", async ({
   await expect(card.getByRole("alert")).toHaveCount(0);
   await expect(card.locator(":focus")).toHaveCount(1);
   expect(await focusLeftForBody(page)).toBe(false);
+});
+
+test("Retry keeps the chart range when keyword dynamics recover", async ({
+  page,
+  context,
+}) => {
+  await seedCookie(context, RANKINGS_FAIL_COOKIE);
+  await page.goto("/apps/app-1/keywords?keywords=kw-1,kw-2,kw-3");
+  const panel = page.getByRole("region", { name: "Keyword dynamics" });
+  const retry = panel.getByRole("button", { name: "Retry" });
+  await expect(retry).toBeVisible({ timeout: 15_000 });
+  await context.clearCookies({ name: RANKINGS_FAIL_COOKIE });
+
+  await pressFromKeyboard(retry);
+
+  await expect(
+    panel.getByRole("region", { name: "Keyword rank positions" }),
+  ).toBeVisible();
+  const thirtyDays = panel.getByRole("tab", { name: "30d" });
+  await expect(thirtyDays).toHaveAttribute("aria-selected", "true");
+  await expect(thirtyDays).toBeFocused();
+  expect(new URL(page.url()).searchParams.get("range")).toBeNull();
 });

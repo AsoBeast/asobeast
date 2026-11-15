@@ -3,10 +3,11 @@ import {
   cardAction,
   CLAIM_WINDOW_MS,
   focusCanMoveTo,
+  focusFirstAvailable,
   focusIsLost,
   isClaimable,
   pendingFocusStep,
-  focusFirstAvailable,
+  recoverFocusIn,
   recoveryCandidates,
   returnFocusTo,
   siblingControl,
@@ -290,50 +291,64 @@ describe("cardAction", () => {
   });
 });
 
-describe("recoveryCandidates", () => {
-  class FakeElement {
-    constructor(
-      readonly controls: unknown[],
-      readonly tabbable = false,
-      readonly isConnected = true,
-    ) {}
-    querySelectorAll(selector: string) {
-      this.selector = selector;
-      return this.controls;
-    }
-    selector = "";
-    hasAttribute(name: string) {
-      return name === "tabindex" && this.tabbable;
-    }
-  }
-  const container = (...args: ConstructorParameters<typeof FakeElement>) =>
-    new FakeElement(...args);
-  const asElement = (fake: FakeElement) => fake as unknown as Element;
+const control = (name: string, hiddenFromUser = false) => ({
+  name,
+  closest: () => (hiddenFromUser ? { tag: "aria-hidden" } : null),
+});
 
+class FakeElement {
+  constructor(
+    readonly controls: unknown[],
+    readonly tabbable = false,
+    readonly isConnected = true,
+  ) {}
+  querySelectorAll(selector: string) {
+    this.selector = selector;
+    return this.controls;
+  }
+  selector = "";
+  hasAttribute(name: string) {
+    return name === "tabindex" && this.tabbable;
+  }
+}
+const container = (...args: ConstructorParameters<typeof FakeElement>) =>
+  new FakeElement(...args);
+const asElement = (fake: FakeElement) => fake as unknown as Element;
+
+describe("recoveryCandidates", () => {
   beforeEach(() => vi.stubGlobal("HTMLElement", FakeElement));
   afterEach(() => vi.unstubAllGlobals());
 
   it("lists the controls left in the container in document order", () => {
-    const invite = { name: "Invite member" };
-    const search = { name: "Search" };
+    const invite = control("Invite member");
+    const search = control("Search");
     expect(recoveryCandidates(asElement(container([invite, search])))).toEqual([
       invite,
       search,
     ]);
   });
 
-  it("asks for form controls as well as links and buttons", () => {
+  it("asks for form controls as well as links and buttons, each in the tab order", () => {
     const fake = container([]);
     recoveryCandidates(asElement(fake));
-    for (const control of [
-      "input",
-      "select",
-      "textarea",
+    for (const kind of [
+      'input:not(:disabled):not([type="hidden"])',
+      "select:not(:disabled)",
+      "textarea:not(:disabled)",
       "a[href]",
-      "button",
+      "button:not(:disabled)",
+      "[tabindex]",
     ]) {
-      expect(fake.selector).toContain(control);
+      expect(fake.selector).toContain(`${kind}:not([tabindex="-1"])`);
     }
+  });
+
+  it("skips a control hidden from assistive technology or inert", () => {
+    const hidden = control("Backdrop close", true);
+    const invite = control("Invite member");
+    expect(recoveryCandidates(asElement(container([hidden, invite])))).toEqual([
+      invite,
+    ]);
   });
 
   it("ends with the container only when it is already focusable", () => {
@@ -344,7 +359,7 @@ describe("recoveryCandidates", () => {
 
   it("lists nothing for a container that left the page or no container", () => {
     expect(
-      recoveryCandidates(asElement(container([{ name: "Add" }], false, false))),
+      recoveryCandidates(asElement(container([control("Add")], false, false))),
     ).toEqual([]);
     expect(recoveryCandidates(null)).toEqual([]);
   });
@@ -355,11 +370,12 @@ describe("focusFirstAvailable", () => {
     activeElement: body,
     body,
   };
-  const control = (takesFocus: boolean) => {
+  const control = (takesFocus: boolean, child?: unknown) => {
     const element = {
       focus: vi.fn(() => {
-        if (takesFocus) root.activeElement = element;
+        if (takesFocus) root.activeElement = child ?? element;
       }),
+      contains: (node: unknown) => node === element || node === child,
     };
     return element;
   };
@@ -377,6 +393,18 @@ describe("focusFirstAvailable", () => {
     expect(root.activeElement).toBe(visible);
   });
 
+  it("accepts a control that hands focus to a child, such as a tab list", () => {
+    root.activeElement = body;
+    const activeTab = { tag: "tab" };
+    const tabList = control(true, activeTab);
+    const clear = control(true);
+    expect(focusFirstAvailable(asElements([tabList, clear]), root)).toBe(
+      tabList,
+    );
+    expect(clear.focus).not.toHaveBeenCalled();
+    expect(root.activeElement).toBe(activeTab);
+  });
+
   it("stops at the first control that takes focus", () => {
     root.activeElement = body;
     const first = control(true);
@@ -385,10 +413,52 @@ describe("focusFirstAvailable", () => {
     expect(second.focus).not.toHaveBeenCalled();
   });
 
+  it("focuses without scrolling the page", () => {
+    root.activeElement = body;
+    const first = control(true);
+    focusFirstAvailable(asElements([first]), root);
+    expect(first.focus).toHaveBeenCalledWith({ preventScroll: true });
+  });
+
   it("answers nothing when no control takes focus", () => {
     root.activeElement = body;
     expect(focusFirstAvailable(asElements([control(false)]), root)).toBe(
       undefined,
     );
+  });
+});
+
+describe("recoverFocusIn", () => {
+  beforeEach(() => vi.stubGlobal("HTMLElement", FakeElement));
+  afterEach(() => vi.unstubAllGlobals());
+
+  const focusRoot = (activeElement: unknown) => ({ activeElement, body });
+  const focusable = (root: { activeElement: unknown }) => {
+    const element = {
+      ...control("Invite member"),
+      focus: vi.fn(() => {
+        root.activeElement = element;
+      }),
+      contains: (node: unknown) => node === element,
+    };
+    return element;
+  };
+
+  it("focuses the first control left when focus fell to the body", () => {
+    const root = focusRoot(body);
+    const invite = focusable(root);
+    expect(recoverFocusIn(asElement(container([invite])), root)).toBe(invite);
+    expect(root.activeElement).toBe(invite);
+  });
+
+  it("never moves focus a person already moved elsewhere", () => {
+    const search = { tag: "search" };
+    const root = focusRoot(search);
+    const invite = focusable(root);
+    expect(
+      recoverFocusIn(asElement(container([invite])), root),
+    ).toBeUndefined();
+    expect(invite.focus).not.toHaveBeenCalled();
+    expect(root.activeElement).toBe(search);
   });
 });

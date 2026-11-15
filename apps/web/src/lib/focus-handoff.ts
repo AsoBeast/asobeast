@@ -173,10 +173,30 @@ export function useFocusClaim(key: string): RefCallback<HTMLElement> {
   );
 }
 
-const FOCUSABLE = "a[href], button:not(:disabled)";
+const OUT_OF_REACH = '[aria-hidden="true"], [inert]';
+
+const tabbable = (...kinds: string[]) =>
+  kinds.map((kind) => `${kind}:not([tabindex="-1"])`).join(", ");
+
+const FOCUSABLE = tabbable("a[href]", "button:not(:disabled)");
+
+const RECOVERY_CANDIDATES = tabbable(
+  "a[href]",
+  "button:not(:disabled)",
+  'input:not(:disabled):not([type="hidden"])',
+  "select:not(:disabled)",
+  "textarea:not(:disabled)",
+  "[tabindex]",
+);
+
+const withinReach = (element: Element): boolean =>
+  element.closest(OUT_OF_REACH) === null;
+
+const reachableIn = (group: Element, selector: string): HTMLElement[] =>
+  [...group.querySelectorAll<HTMLElement>(selector)].filter(withinReach);
 
 export const firstFocusable = (group: Element | null): HTMLElement | null =>
-  group?.querySelector<HTMLElement>(FOCUSABLE) ?? null;
+  (group && reachableIn(group, FOCUSABLE)[0]) ?? null;
 
 export function useFocusGroupClaim(
   key: string,
@@ -195,35 +215,36 @@ export function useFocusGroupClaim(
   return group;
 }
 
-const RETRY_CONTAINER = `${CARD}, [role="dialog"], section, main`;
-
-const RECOVERY_CANDIDATES = [
-  "a[href]",
-  "button:not(:disabled)",
-  'input:not(:disabled):not([type="hidden"])',
-  "select:not(:disabled)",
-  "textarea:not(:disabled)",
-  '[tabindex]:not([tabindex="-1"])',
-].join(", ");
+const RETRY_CONTAINER = `${CARD}, [role="dialog"], section`;
 
 export function recoveryCandidates(container: Element | null): HTMLElement[] {
   if (!container?.isConnected) return [];
-  const controls = [
-    ...container.querySelectorAll<HTMLElement>(RECOVERY_CANDIDATES),
-  ];
+  const controls = reachableIn(container, RECOVERY_CANDIDATES);
   return container instanceof HTMLElement && container.hasAttribute("tabindex")
     ? [...controls, container]
     : controls;
 }
+
+const holdsFocus = (candidate: HTMLElement, root: FocusRoot): boolean =>
+  root.activeElement === candidate ||
+  candidate.contains(root.activeElement as Node | null);
 
 export function focusFirstAvailable(
   candidates: readonly HTMLElement[],
   root: FocusRoot = document,
 ): HTMLElement | undefined {
   return candidates.find((candidate) => {
-    candidate.focus();
-    return root.activeElement === candidate;
+    candidate.focus({ preventScroll: true });
+    return holdsFocus(candidate, root);
   });
+}
+
+export function recoverFocusIn(
+  container: Element | null,
+  root: FocusRoot = document,
+): HTMLElement | undefined {
+  if (!focusIsLost(root)) return undefined;
+  return focusFirstAvailable(recoveryCandidates(container), root);
 }
 
 export function useRetryRecoveryFocus(): RefObject<HTMLButtonElement | null> {
@@ -234,10 +255,7 @@ export function useRetryRecoveryFocus(): RefObject<HTMLButtonElement | null> {
     const container = button?.closest(RETRY_CONTAINER) ?? null;
     return () => {
       if (!button || document.activeElement !== button) return;
-      queueMicrotask(() => {
-        if (!focusIsLost()) return;
-        focusFirstAvailable(recoveryCandidates(container));
-      });
+      queueMicrotask(() => recoverFocusIn(container));
     };
   }, []);
 
