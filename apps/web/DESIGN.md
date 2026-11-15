@@ -399,7 +399,7 @@ Four forms exist, each in `components/ui/delta-chip.tsx` or beside its list, and
 
 ### Inputs and selects
 
-- 36 px tall, 6 px radius, hairline border, surface fill, 14 px text (16 px below `md`, so a phone does not zoom); a select shows a 16 px calendar or chevron icon and opens a 12 px radius menu. Focus is a 2 px ink ring. The segmented control is a surface 2 track with a raised surface pill for the active option; it carries counts (`Tracked 5`, `Moved 2`) in ink 2 after the word.
+- 36 px tall, 6 px radius, hairline border, surface fill, 14 px text (16 px below `md`, so a phone does not zoom; a field set smaller, such as a monospace key, shrinks from `md` only); a select shows a 16 px calendar or chevron icon and opens a 12 px radius menu. Focus is a 2 px ink ring. The segmented control is a surface 2 track with a raised surface pill for the active option; it carries counts (`Tracked 5`, `Moved 2`) in ink 2 after the word.
 
 ### App icons
 
