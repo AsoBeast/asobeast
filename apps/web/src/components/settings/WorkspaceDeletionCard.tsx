@@ -22,6 +22,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAuth } from "@/components/auth/use-auth";
 import {
   ApiError,
@@ -34,6 +41,11 @@ import {
   invalidateWorkspaceDeletion,
   workspaceDeletionOptions,
 } from "@/lib/queries";
+import {
+  DELETION_REASON_CHOICES,
+  UNANSWERED_REASON,
+  deletionReasonOf,
+} from "@/lib/deletion-reasons";
 import { useSingleFlight } from "@/lib/single-flight";
 import { PanelBody, SettingsPanel } from "./SettingsPanel";
 import { PanelSkeleton } from "./skeletons";
@@ -48,10 +60,11 @@ function ScheduleDeletionDialog({ graceDays }: { graceDays: number }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
+  const [reason, setReason] = useState<string>(UNANSWERED_REASON);
   const claimFocus = useFocusClaim(DELETION_FOCUS_KEY);
 
   const schedule = useMutation({
-    mutationFn: scheduleWorkspaceDeletion,
+    mutationFn: () => scheduleWorkspaceDeletion(deletionReasonOf(reason)),
     onSuccess: () => {
       toast.success("Workspace scheduled for deletion");
       invalidateWorkspaceDeletion(queryClient);
@@ -65,7 +78,9 @@ function ScheduleDeletionDialog({ graceDays }: { graceDays: number }) {
 
   const onOpenChange = closeUnlessPending(pending, (next) => {
     setOpen(next);
-    if (!next) setTyped("");
+    if (next) return;
+    setTyped("");
+    setReason(UNANSWERED_REASON);
   });
 
   return (
@@ -83,6 +98,23 @@ function ScheduleDeletionDialog({ graceDays }: { graceDays: number }) {
             {pluralize(graceDays, "day")}. You can cancel until then.
           </AlertDialogDescription>
         </AlertDialogHeader>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="workspace-deletion-reason">
+            Why are you leaving? Optional
+          </Label>
+          <Select value={reason} onValueChange={setReason}>
+            <SelectTrigger id="workspace-deletion-reason" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {DELETION_REASON_CHOICES.map((choice) => (
+                <SelectItem key={choice.value} value={choice.value}>
+                  {choice.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="workspace-deletion-confirm">
             Type {DELETION_CONFIRMATION} to confirm
