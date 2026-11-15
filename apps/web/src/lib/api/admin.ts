@@ -1,5 +1,8 @@
 import type {
   AdminAppList,
+  AdminConversion,
+  AdminConversionWindow,
+  AdminDepartureList,
   AdminOverview,
   AdminUserList,
   CapacityReport,
@@ -13,6 +16,21 @@ const byWorkspace = (workspaceId?: string) =>
 
 export function getAdminOverview(): Promise<AdminOverview> {
   return apiFetch<AdminOverview>("/admin/support/overview");
+}
+
+export function getAdminConversion(
+  days: AdminConversionWindow,
+): Promise<AdminConversion> {
+  return apiFetch<AdminConversion>(
+    withQuery(
+      "/admin/support/conversion",
+      new URLSearchParams({ days: String(days) }),
+    ),
+  );
+}
+
+export function getAdminDepartures(): Promise<AdminDepartureList> {
+  return apiFetch<AdminDepartureList>("/admin/support/departures");
 }
 
 export function getAdminUsers(workspaceId?: string): Promise<AdminUserList> {
