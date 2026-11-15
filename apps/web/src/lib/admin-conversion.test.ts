@@ -44,7 +44,7 @@ describe("funnelRows", () => {
         key: "ranked-within-a-day",
         label: "Ranked within a day",
         count: 0,
-        ofPrevious: 0,
+        ofPrevious: null,
         ofFirst: 0,
       },
     ]);
@@ -70,16 +70,23 @@ describe("funnelRows", () => {
     ]);
   });
 
-  it("answers zero shares on an empty window instead of dividing by zero", () => {
+  it("has no share where the step it divides by is empty", () => {
     expect(
       funnelRows([
         { key: "signed-up", count: 0 },
         { key: "confirmed-email", count: 0 },
       ]).map((row) => [row.ofPrevious, row.ofFirst]),
     ).toEqual([
-      [null, 0],
-      [0, 0],
+      [null, null],
+      [null, null],
     ]);
+    expect(
+      funnelRows([
+        { key: "signed-up", count: 4 },
+        { key: "ranked-within-a-day", count: 0 },
+        { key: "paid", count: 1 },
+      ]).map((row) => row.ofPrevious),
+    ).toEqual([null, 0, null]);
   });
 });
 

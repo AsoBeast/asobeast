@@ -61,14 +61,12 @@ function WorkspaceStanding({
 }: {
   workspace: SupportWorkspaceSummary;
 }) {
-  const stage =
-    workspace.stage && workspace.stage !== "self-hosted"
-      ? workspace.stage
-      : null;
+  const stage = workspace.stage;
+  const named = stage !== "self-hosted" && stage !== "payment-failed";
   const held = stage ? heldPlanLabel(workspace.plan) : null;
   return (
     <div className="flex max-w-64 flex-col items-start gap-1">
-      {stage && stage !== "payment-failed" ? (
+      {named ? (
         <span>
           {held
             ? `${stageLabel(stage, workspace.plan)} · ${held}`
@@ -77,12 +75,12 @@ function WorkspaceStanding({
       ) : null}
       <StatePills workspace={workspace} />
       {workspace.suspendedReason ? (
-        <span className="text-caption text-muted-foreground">
+        <span className="text-caption wrap-anywhere text-muted-foreground">
           {workspace.suspendedReason}
         </span>
       ) : null}
       {workspace.deletionRequestedBy ? (
-        <span className="text-caption text-muted-foreground">
+        <span className="text-caption wrap-anywhere text-muted-foreground">
           {`Asked by ${workspace.deletionRequestedBy}`}
         </span>
       ) : null}

@@ -71,13 +71,20 @@ export function FunnelPanel({
   conversion: AdminConversion;
   segment: ReactNode;
 }) {
-  const rows: BreakdownRow[] = funnelRows(conversion.funnel).map((row) => ({
-    key: row.key,
-    label: row.label,
-    count: row.count,
-    share: row.ofFirst,
-    detail: row.ofPrevious === null ? undefined : formatShare(row.ofPrevious),
-  }));
+  const rows: BreakdownRow[] = funnelRows(conversion.funnel).map(
+    (row, index) => ({
+      key: row.key,
+      label: row.label,
+      count: row.count,
+      share: row.ofFirst ?? 0,
+      detail:
+        index === 0
+          ? undefined
+          : row.ofPrevious === null
+            ? "—"
+            : formatShare(row.ofPrevious),
+    }),
+  );
   const medians = medianLine(conversion.medianDays);
   const note = unrecordedNote(
     conversion.departuresRecordedSince,
@@ -219,7 +226,6 @@ export function InstancePanel({ overview }: { overview: AdminOverview }) {
       key: "searched",
       label: "Searched keywords",
       count: keywords.searched,
-      detail: "daily",
     },
     {
       key: "ai",

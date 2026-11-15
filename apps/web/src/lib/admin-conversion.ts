@@ -23,11 +23,11 @@ export interface FunnelRow {
   label: string;
   count: number;
   ofPrevious: number | null;
-  ofFirst: number;
+  ofFirst: number | null;
 }
 
 const shareOf = (part: number, whole: number) =>
-  whole === 0 ? 0 : part / whole;
+  whole === 0 ? null : part / whole;
 
 const ENTRY_ORDER: readonly AdminFunnelStepKey[] = [
   "signed-up",

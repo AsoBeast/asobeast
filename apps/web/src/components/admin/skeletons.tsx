@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PANEL_BLEED, PANEL_HEADER } from "@/components/layout/panel-classes";
 import { MetricStripSkeleton } from "@/components/ui/stat-tile";
+import { OVERVIEW_COLUMNS } from "./overview-layout";
 
 function CardHeaderSkeleton() {
   return (
@@ -14,7 +15,7 @@ function CardHeaderSkeleton() {
   );
 }
 
-function ListPanelSkeleton({ rows }: { rows: number }) {
+export function ListPanelSkeleton({ rows }: { rows: number }) {
   return (
     <Card>
       <CardHeader className={PANEL_HEADER}>
@@ -31,9 +32,9 @@ function ListPanelSkeleton({ rows }: { rows: number }) {
 
 export function AdminOverviewSkeleton() {
   return (
-    <div className="flex flex-col gap-6">
+    <div className="@container/admin-overview flex flex-col gap-6">
       <MetricStripSkeleton columns={4} />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+      <div className={OVERVIEW_COLUMNS}>
         <div className="flex min-w-0 flex-col gap-6">
           <ListPanelSkeleton rows={6} />
           <Card>

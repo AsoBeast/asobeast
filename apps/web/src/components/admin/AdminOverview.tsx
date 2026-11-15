@@ -15,6 +15,7 @@ import { pluralize } from "@/lib/format";
 import { adminConversionOptions, adminOverviewOptions } from "@/lib/queries";
 import { adminOverviewParsers } from "@/lib/search-params";
 import { OverviewStrip } from "./OverviewStrip";
+import { OVERVIEW_COLUMNS } from "./overview-layout";
 import { SignupsChart } from "./SignupsChart";
 import {
   DeparturesPanel,
@@ -34,9 +35,9 @@ export function AdminOverview() {
   );
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="@container/admin-overview flex flex-col gap-6">
       <OverviewStrip overview={overview} conversion={conversion} />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+      <div className={OVERVIEW_COLUMNS}>
         <div className="flex min-w-0 flex-col gap-6">
           <FunnelPanel
             conversion={conversion}
