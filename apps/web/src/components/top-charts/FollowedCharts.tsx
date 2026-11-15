@@ -49,7 +49,7 @@ function FollowRow({
         onClick={onNavigate}
         className="flex min-w-0 flex-1 flex-col rounded-md px-2 py-1.5 hover:bg-accent"
       >
-        <span className="truncate text-sm">{title}</span>
+        <span className="truncate text-dense">{title}</span>
         <span className="text-caption text-muted-foreground">
           {storeLabel(category.store)} · {kinds}
         </span>
@@ -88,7 +88,7 @@ function FollowList({ onNavigate }: { onNavigate: () => void }) {
         </p>
       )}
       {categories.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-dense text-muted-foreground">
           No categories followed yet. Follow a category to have the daily run
           capture its charts.
         </p>

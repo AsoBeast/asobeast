@@ -135,7 +135,7 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
           aria-describedby={hint ? HINT_ID : undefined}
         />
         {hint && (
-          <p id={HINT_ID} className="text-sm text-muted-foreground">
+          <p id={HINT_ID} className="text-caption text-muted-foreground">
             {hint}
           </p>
         )}

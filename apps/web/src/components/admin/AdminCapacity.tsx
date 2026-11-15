@@ -54,7 +54,7 @@ function DemandLine({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 text-sm">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 text-dense">
         <span className="font-medium">{label}</span>
         <span className="text-muted-foreground tabular-nums">
           {formatNumber(requests)} of {formatNumber(capacity)} requests/day ·{" "}
@@ -132,11 +132,11 @@ function TopConsumers({
       description="The workspaces whose tracking costs the most requests per day."
     >
       {report.workspaces.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-dense text-muted-foreground">
           No workspace is tracking anything yet.
         </p>
       ) : (
-        <ol className="flex flex-col divide-y text-sm">
+        <ol className="flex flex-col divide-y text-dense">
           {report.workspaces.map((consumer) => (
             <li
               key={consumer.workspaceId}
@@ -166,7 +166,7 @@ function ProxyPool({ pool }: { pool: ProxyPoolHealth }) {
       title="Proxy pool"
       description={`Store requests leave through ${pool.provider} endpoints instead of the host address.`}
     >
-      <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-dense sm:grid-cols-4">
         <div className="flex flex-col gap-0.5">
           <dt className="text-muted-foreground">Provider</dt>
           <dd className="font-medium">{pool.provider}</dd>
@@ -190,7 +190,7 @@ function ProxyPool({ pool }: { pool: ProxyPoolHealth }) {
           </dd>
         </div>
       </dl>
-      <ul className="flex flex-col gap-1 text-sm">
+      <ul className="flex flex-col gap-1 text-dense">
         {pool.stores.map((store) => (
           <li key={store.store} className="flex justify-between gap-4">
             <span>{storeLabel(store.store)}</span>
@@ -220,7 +220,7 @@ function ProxyPool({ pool }: { pool: ProxyPoolHealth }) {
         href="/api/backend/admin/proxy-pool"
         target="_blank"
         rel="noreferrer"
-        className="w-fit text-sm font-medium underline underline-offset-4"
+        className="w-fit text-dense font-medium underline underline-offset-4"
       >
         Raw pool health
         <span className="sr-only"> (opens in a new tab)</span>
@@ -239,7 +239,7 @@ export function AdminCapacity() {
       <InstanceDemand report={report} />
       <TopConsumers report={report} workspaces={workspaces} />
       {pool.enabled ? <ProxyPool pool={pool} /> : null}
-      <p className="text-sm text-muted-foreground">
+      <p className="text-dense text-muted-foreground">
         Each workspace sees only its own plan usage. Capacity is shown to the
         platform operator only.
       </p>

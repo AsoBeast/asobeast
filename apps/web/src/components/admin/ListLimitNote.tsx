@@ -14,7 +14,7 @@ export function ListLimitNote({
   if (total <= shown) return null;
 
   return (
-    <p className="text-sm text-muted-foreground">
+    <p className="text-dense text-muted-foreground">
       {`Showing the newest ${formatNumber(shown)} of ${formatNumber(total)} ${noun}s.`}{" "}
       <Link
         href={adminHref("workspaces")}

@@ -14,7 +14,7 @@ export function FieldErrorMessage({
     <p
       id={id}
       role={field === "form" ? "alert" : undefined}
-      className="text-sm text-destructive"
+      className="text-dense text-destructive"
     >
       {error.message}
     </p>

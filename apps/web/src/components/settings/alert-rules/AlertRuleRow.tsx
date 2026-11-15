@@ -38,7 +38,7 @@ export function AlertRuleRow({
           <Label id={titleId} htmlFor={switchId}>
             {rule.title}
           </Label>
-          <p id={detailId} className="text-sm text-muted-foreground">
+          <p id={detailId} className="text-dense text-muted-foreground">
             {rule.detail}
           </p>
           {on && children ? <div className="pt-2">{children}</div> : null}

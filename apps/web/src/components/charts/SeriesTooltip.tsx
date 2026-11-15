@@ -24,7 +24,7 @@ export function SeriesTooltip({
   return (
     <div
       role="tooltip"
-      className="grid min-w-40 gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-overlay"
+      className="grid min-w-40 gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-caption shadow-overlay"
     >
       <div className="font-medium">{title}</div>
       <div className="grid gap-1.5">

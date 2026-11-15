@@ -84,7 +84,7 @@ export function ReviewStarSelection({
           </ToggleChip>
         ))}
       </div>
-      <p id={helpId} className="text-sm text-muted-foreground">
+      <p id={helpId} className="text-caption text-muted-foreground">
         {value.length === 0 ? "Pick at least one star." : STARS_HELP}
       </p>
     </div>
@@ -131,7 +131,7 @@ export function RatingDropSelection({
           ))}
         </SelectContent>
       </Select>
-      <p id={helpId} className="text-sm text-muted-foreground">
+      <p id={helpId} className="text-caption text-muted-foreground">
         {RATING_DROP_HELP}
       </p>
     </div>
@@ -173,14 +173,14 @@ export function RankDropField({
           className="w-24"
           onChange={(event) => onChange(event.target.value)}
         />
-        <span className="text-sm text-muted-foreground">positions</span>
+        <span className="text-dense text-muted-foreground">positions</span>
       </div>
       {error ? (
-        <p id={errorId} className="text-sm text-destructive">
+        <p id={errorId} className="text-dense text-destructive">
           {error}
         </p>
       ) : null}
-      <p id={helpId} className="text-sm text-muted-foreground">
+      <p id={helpId} className="text-caption text-muted-foreground">
         {rankHelp(instance)}
       </p>
     </div>

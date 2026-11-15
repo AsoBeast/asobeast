@@ -57,7 +57,7 @@ export function LoginForm() {
         </CardHeader>
         <CardContent>
           {params.get("registration") === "closed" ? (
-            <p className="mb-4 text-sm text-muted-foreground">
+            <p className="mb-4 text-dense text-muted-foreground">
               Registration is closed on this deployment. Ask the owner for an
               account.
             </p>
@@ -83,7 +83,7 @@ export function LoginForm() {
                 <Label htmlFor="password">Password</Label>
                 <Link
                   href="/forgot-password"
-                  className="text-sm text-muted-foreground underline"
+                  className="text-dense text-muted-foreground underline"
                 >
                   Forgot password?
                 </Link>
@@ -99,7 +99,9 @@ export function LoginForm() {
                 required
               />
             </div>
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            {error ? (
+              <p className="text-dense text-destructive">{error}</p>
+            ) : null}
             {sessionDropped ? (
               <SessionNotKeptAlert outcome="Your password was accepted." />
             ) : null}
@@ -111,7 +113,7 @@ export function LoginForm() {
         </CardContent>
       </Card>
       {status?.registrationOpen ? (
-        <p className="text-center text-sm text-muted-foreground">
+        <p className="text-center text-dense text-muted-foreground">
           Need an account?{" "}
           <Link href="/register" className="font-medium underline">
             Create one

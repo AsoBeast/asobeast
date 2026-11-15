@@ -58,7 +58,7 @@ export function AlertChannelDialog({
             {children}
 
             {error ? (
-              <p role="alert" className="text-sm text-destructive">
+              <p role="alert" className="text-dense text-destructive">
                 {error}
               </p>
             ) : null}

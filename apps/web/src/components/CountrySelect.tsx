@@ -64,7 +64,7 @@ export function CountrySelect({
         />
       ) : null}
       {error ? (
-        <p id={errorId} className="text-xs text-destructive">
+        <p id={errorId} className="text-caption text-destructive">
           {error}
         </p>
       ) : null}

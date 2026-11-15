@@ -100,7 +100,7 @@ function TokenSecret({
             readOnly
             value={created.token}
             aria-label="New api token"
-            className="font-mono text-xs"
+            className="font-mono text-caption"
           />
           <Button
             type="button"
@@ -198,7 +198,7 @@ function TokenForm({ onCreated }: { onCreated: (t: ApiTokenCreated) => void }) {
               ))}
             </SelectContent>
           </Select>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             Read only is the safer default. Choose read and write for a script
             that changes data, or for an agent you allow to track keywords,
             manage competitors and update actions.
@@ -219,7 +219,7 @@ function TokenForm({ onCreated }: { onCreated: (t: ApiTokenCreated) => void }) {
             </SelectContent>
           </Select>
         </div>
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        {error ? <p className="text-dense text-destructive">{error}</p> : null}
       </DialogBody>
       <DialogFooter>
         <Button type="submit" aria-disabled={mutation.isPending || undefined}>

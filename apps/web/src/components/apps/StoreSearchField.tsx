@@ -193,7 +193,7 @@ export function StoreSearchField({
         />
         {children}
       </div>
-      <p id={hintId} className="text-xs text-muted-foreground">
+      <p id={hintId} className="text-caption text-muted-foreground">
         {hint}
       </p>
       {shownError ? (

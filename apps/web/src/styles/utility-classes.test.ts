@@ -50,6 +50,13 @@ const POINTER_ON_A_NON_BUTTON = [
   "components/keywords/map/zone-layers.tsx: cursor-pointer",
 ];
 
+const RAW_TYPE_SIZE = /\btext-(?:xs|sm|base)(?![\w-])/g;
+
+const PHONE_SIZED_INPUTS = [
+  "components/ui/input.tsx: text-base",
+  "components/ui/textarea.tsx: text-base",
+];
+
 function sources(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
@@ -110,5 +117,9 @@ describe("utility classes", () => {
 
   it("sets a number in tabular figures rather than monospace", () => {
     expect(offenders(MONOSPACE_NUMBER)).toEqual([]);
+  });
+
+  it("sizes text with a named step but where a phone would zoom an input", () => {
+    expect(offenders(RAW_TYPE_SIZE).sort()).toEqual(PHONE_SIZED_INPUTS);
   });
 });

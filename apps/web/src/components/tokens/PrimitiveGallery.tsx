@@ -64,7 +64,7 @@ function Row({
 export function PrimitiveGallery() {
   return (
     <section aria-label="Primitives" className="flex flex-col gap-6">
-      <h2 className="text-sm font-semibold">Primitives</h2>
+      <h2 className="text-heading">Primitives</h2>
 
       <Row title="button variants">
         {BUTTON_VARIANTS.map((variant) => (
@@ -158,9 +158,9 @@ export function PrimitiveGallery() {
 
       <Row title="separator">
         <div className="flex w-64 flex-col gap-2">
-          <span className="text-sm">Above</span>
+          <span className="text-dense">Above</span>
           <Separator />
-          <span className="text-sm">Below</span>
+          <span className="text-dense">Below</span>
         </div>
       </Row>
 

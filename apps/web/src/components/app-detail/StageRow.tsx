@@ -30,13 +30,13 @@ export function StageRow({
         }
       />
       <div className="flex flex-col gap-0.5">
-        <p className="flex flex-wrap items-baseline gap-x-2 text-sm font-medium">
+        <p className="flex flex-wrap items-baseline gap-x-2 text-dense font-medium">
           <span>{label}</span>
-          <span className="text-xs font-normal text-muted-foreground">
+          <span className="text-caption font-normal text-muted-foreground">
             {`${ready ? states.ready : states.waiting}${progress ? ` · ${progress}` : ""}`}
           </span>
         </p>
-        <p className="text-sm text-muted-foreground">{detail}</p>
+        <p className="text-dense text-muted-foreground">{detail}</p>
       </div>
     </li>
   );

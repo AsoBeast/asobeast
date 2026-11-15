@@ -119,7 +119,7 @@ export function ChangePasswordDialog({ trigger }: { trigger: ReactNode }) {
               />
               <p
                 id="next-password-rule"
-                className="text-xs text-muted-foreground"
+                className="text-caption text-muted-foreground"
               >
                 {PASSWORD_RULE}
               </p>

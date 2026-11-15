@@ -116,7 +116,10 @@ export function RegisterForm({ billing }: { billing: boolean }) {
                 )}
                 required
               />
-              <p id="password-rule" className="text-xs text-muted-foreground">
+              <p
+                id="password-rule"
+                className="text-caption text-muted-foreground"
+              >
                 {PASSWORD_RULE}
               </p>
               <FieldErrorMessage
@@ -143,7 +146,7 @@ export function RegisterForm({ billing }: { billing: boolean }) {
           </form>
         </CardContent>
       </Card>
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-center text-dense text-muted-foreground">
         Already have an account?{" "}
         <Link href="/login" className="font-medium underline">
           Sign in

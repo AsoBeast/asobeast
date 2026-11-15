@@ -93,7 +93,7 @@ export function SnapshotDiffDialog({
               </TableBody>
             </Table>
           ) : (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-dense text-muted-foreground">
               No changes detected.
             </p>
           )}

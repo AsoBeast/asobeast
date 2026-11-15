@@ -124,7 +124,7 @@ export function ConnectAppStoreDialog({
           placeholder="57246542-96fe-1a63-e053-0824d011072a"
           autoComplete="off"
           spellCheck={false}
-          className="font-mono text-xs"
+          className="font-mono text-caption"
         />
       </div>
       <div className="flex flex-col gap-2">
@@ -136,7 +136,7 @@ export function ConnectAppStoreDialog({
           placeholder="2X9R4HXF34"
           autoComplete="off"
           spellCheck={false}
-          className="font-mono text-xs"
+          className="font-mono text-caption"
         />
       </div>
       <div className="flex flex-col gap-2">
@@ -163,7 +163,7 @@ export function ConnectAppStoreDialog({
           className="max-w-xs"
           onChange={(event) => void choose(event.target.files?.[0])}
         />
-        <p className="text-xs text-muted-foreground">
+        <p className="text-caption text-muted-foreground">
           Paste the key or choose the .p8 file you downloaded. A team key with
           the Admin role covers reports and replies; Sales and Reports reads
           reports only, Customer Support replies only.

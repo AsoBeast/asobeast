@@ -152,7 +152,7 @@ function LinkTrigger({ detail }: { detail: AppDetail }) {
         <DialogBody>
           <Suspense
             fallback={
-              <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 py-6 text-dense text-muted-foreground">
                 <Loader2 className="animate-spin" />
                 Loading apps…
               </div>
@@ -196,7 +196,7 @@ function LinkCandidates({
 
   if (candidates.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">
+      <p className="text-dense text-muted-foreground">
         No unlinked {storeLabel(otherStore)} apps to link. Import one first.
       </p>
     );
@@ -214,10 +214,10 @@ function LinkCandidates({
           >
             <AppIcon src={candidate.iconUrl} size={36} />
             <span className="flex flex-col">
-              <span className="text-sm font-medium">
+              <span className="text-dense font-medium">
                 {candidate.name ?? "Untitled app"}
               </span>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-caption text-muted-foreground">
                 {candidate.country.toUpperCase()}
               </span>
             </span>

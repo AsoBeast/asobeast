@@ -29,7 +29,7 @@ export function ConfirmDropsField({
       />
       <div className="flex min-w-0 flex-col gap-1">
         <Label htmlFor={id}>{CONFIRM_DROPS_LABEL}</Label>
-        <p id={helpId} className="text-sm text-muted-foreground">
+        <p id={helpId} className="text-caption text-muted-foreground">
           {CONFIRM_DROPS_HELP}
         </p>
       </div>

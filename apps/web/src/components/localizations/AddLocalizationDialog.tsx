@@ -103,7 +103,7 @@ export function AddLocalizationDialog({
             </CommandList>
           </Command>
           {message ? (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="text-dense text-destructive">
               {message}
             </p>
           ) : null}

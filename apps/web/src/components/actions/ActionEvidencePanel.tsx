@@ -49,7 +49,7 @@ export function ActionEvidencePanel({
 }) {
   if (!evidence) {
     return (
-      <p className="text-sm text-muted-foreground">
+      <p className="text-dense text-muted-foreground">
         {ACTION_EVIDENCE_UNAVAILABLE}
       </p>
     );

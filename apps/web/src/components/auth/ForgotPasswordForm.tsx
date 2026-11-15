@@ -80,7 +80,7 @@ export function ForgotPasswordForm() {
                 />
               </div>
               {error ? (
-                <p className="text-sm text-destructive">{error}</p>
+                <p className="text-dense text-destructive">{error}</p>
               ) : null}
               <Button type="submit" disabled={mutation.isPending}>
                 {mutation.isPending ? (
@@ -92,7 +92,7 @@ export function ForgotPasswordForm() {
           )}
         </CardContent>
       </Card>
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-center text-dense text-muted-foreground">
         Remembered it?{" "}
         <Link href="/login" className="font-medium underline">
           Sign in

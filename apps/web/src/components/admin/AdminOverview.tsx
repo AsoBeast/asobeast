@@ -107,7 +107,7 @@ function CountList({
   rows: { key: string; label: string; count: number }[];
 }) {
   return (
-    <dl className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-2 text-sm">
+    <dl className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-2 text-dense">
       {rows.map((row) => (
         <div key={row.key} className="contents">
           <dt className="text-muted-foreground">{row.label}</dt>

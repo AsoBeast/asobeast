@@ -175,7 +175,7 @@ function KeywordCell({
         {row.gap ? <Badge variant="flat">Gap</Badge> : null}
       </span>
       {market !== null || scores.length > 0 ? (
-        <span className="flex items-center gap-2 text-xs text-muted-foreground">
+        <span className="flex items-center gap-2 text-caption text-muted-foreground">
           {market === null ? null : <MarketCell country={market} />}
           {scores.map((score) => (
             <span key={score}>
