@@ -7,7 +7,7 @@ import { SortableHeader } from "@/components/data-table/SortableHeader";
 import type { DataTableFeatures } from "@/components/data-table/table-features";
 import { Badge } from "@/components/ui/badge";
 import { workspaceListHref } from "@/lib/admin-sections";
-import { stageLabel } from "@/lib/admin-stages";
+import { heldPlanLabel, stageLabel } from "@/lib/admin-stages";
 import { formatDate } from "@/lib/format";
 import { WorkspaceName } from "./cells";
 
@@ -45,6 +45,18 @@ function Confirmation({ confirmed }: { confirmed: boolean }) {
       />
       {confirmed ? "Confirmed" : "Not confirmed"}
     </span>
+  );
+}
+
+function UserStage({ user }: { user: AdminUser }) {
+  const held = user.workspaceStage ? heldPlanLabel(user.workspacePlan) : null;
+  return (
+    <div className="flex flex-col">
+      <span>{stageLabel(user.workspaceStage, user.workspacePlan)}</span>
+      {held ? (
+        <span className="text-caption text-muted-foreground">{held}</span>
+      ) : null}
+    </div>
   );
 }
 
@@ -96,11 +108,7 @@ export const userColumns = columnHelper.columns([
       sortDescFirst: false,
       meta: { label: "Plan" },
       header: ({ column }) => <SortableHeader column={column} label="Plan" />,
-      cell: ({ row }) => (
-        <span>
-          {stageLabel(row.original.workspaceStage, row.original.workspacePlan)}
-        </span>
-      ),
+      cell: ({ row }) => <UserStage user={row.original} />,
     },
   ),
   columnHelper.accessor("createdAt", {

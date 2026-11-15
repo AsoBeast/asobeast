@@ -387,9 +387,11 @@ test.describe("accounts in the admin area", () => {
     await expect(
       page.getByRole("columnheader", { name: "Plan" }),
     ).toBeVisible();
-    await expect(
-      page.getByRole("row").filter({ hasText: "nia@northwind.example.com" }),
-    ).toContainText("On trial");
+    const nia = page
+      .getByRole("row")
+      .filter({ hasText: "nia@northwind.example.com" });
+    await expect(nia).toContainText("On trial");
+    await expect(nia).toContainText("Indie");
   });
 
   test("drops the plan column on a self hosted instance", async ({ page }) => {
