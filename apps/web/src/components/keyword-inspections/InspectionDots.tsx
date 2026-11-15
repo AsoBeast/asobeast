@@ -87,10 +87,10 @@ export function SelectedMark({ cx, cy, payload }: ScatterShapeProps) {
       <circle
         r={SELECTED_RING}
         fill="none"
-        stroke="var(--primary)"
+        stroke={seriesColor(0)}
         strokeWidth={2.5}
       />
-      <circle r={SELECTED_RADIUS} fill="var(--primary)" />
+      <circle r={SELECTED_RADIUS} fill={seriesColor(0)} />
       <SelectedTag point={payload} />
     </g>
   );

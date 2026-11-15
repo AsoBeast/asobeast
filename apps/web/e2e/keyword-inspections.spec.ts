@@ -10,10 +10,15 @@ import {
   INSPECTION_FAILURE,
   QUEUED_KEYWORD,
 } from "./keyword-inspections-mock.mts";
+import {
+  SEEDED_ID,
+  SEEDED_KEYWORD,
+  SEEDED_PLAY_ID,
+} from "./keyword-inspection-fixtures.mts";
 
 test.describe.configure({ mode: "serial" });
 
-const MOCK_API = "http://localhost:4100";
+const MOCK_API = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
 
 test.beforeEach(async ({ page, request }) => {
   await request.get(`${MOCK_API}/__reset-keyword-inspections`);
@@ -153,4 +158,86 @@ test("deletes an inspection and returns focus to the keyword box", async ({
   ).toHaveCount(0);
   await expect(page.getByText("No inspection selected")).toBeVisible();
   await expect(page.getByLabel("Keyword", { exact: true })).toBeFocused();
+});
+
+const seededPage = (id: string) =>
+  `/inspect?id=${id}&keyword=${encodeURIComponent(SEEDED_KEYWORD)}&store=APP_STORE&country=us`;
+
+test("reads an inspection at a glance: grades, verdict and evidence", async ({
+  page,
+  request,
+}) => {
+  await request.get(`${MOCK_API}/__seed-keyword-inspections`);
+  await page.goto(seededPage(SEEDED_ID));
+
+  const scores = page.getByRole("definition").filter({ hasText: "was 42" });
+  await expect(scores).toContainText("fair");
+  await expect(
+    page.getByRole("article").getByText("Worth fighting for", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "Autocomplete suggests it in position 1 after 5 typed characters",
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Each inspection reads the store once."),
+  ).toBeVisible();
+
+  const competition = page.getByRole("region", {
+    name: "Competition in the top 10",
+  });
+  await expect(competition).toContainText("Newcomers");
+  await expect(competition).toContainText("2 of 10");
+
+  const change = page.getByRole("region", {
+    name: "Since the previous inspection",
+  });
+  await expect(change).toContainText("Routine Builder entered the top 10");
+  await expect(change).toContainText("Habit Journal Plus left the top 10");
+  await expect(change).toContainText("+4");
+
+  const results = page.getByRole("table");
+  await expect(results.getByRole("row")).toHaveCount(11);
+  await expect(results).toContainText("updated 3 days ago");
+  await page.getByRole("button", { name: "Show all 12 results" }).click();
+  await expect(results.getByRole("row")).toHaveCount(13);
+});
+
+test("lists every inspection with its state and storefront", async ({
+  page,
+  request,
+}) => {
+  await request.get(`${MOCK_API}/__seed-keyword-inspections`);
+  await page.goto(seededPage(SEEDED_ID));
+
+  const log = page.getByRole("region", { name: "All inspections" });
+  await expect(log).toContainText("15 · latest 50");
+  await expect(
+    log.getByRole("listitem").filter({ hasText: "store timeout" }),
+  ).toContainText("Failed");
+  await expect(
+    log.getByRole("listitem").filter({ hasText: "sleep sounds" }),
+  ).toContainText("Running");
+  await expect(
+    log
+      .getByRole("button", { name: /habit tracker/ })
+      .and(page.locator('[aria-current="true"]')),
+  ).toContainText("App Store · US");
+});
+
+test("opens the same keyword in another storefront", async ({
+  page,
+  request,
+}) => {
+  await request.get(`${MOCK_API}/__seed-keyword-inspections`);
+  await page.goto(seededPage(SEEDED_ID));
+
+  await page.getByRole("button", { name: "Google Play · US" }).click();
+
+  await expect(page).toHaveURL(new RegExp(`[?&]id=${SEEDED_PLAY_ID}`));
+  await expect(
+    page.getByRole("heading", { name: `“${SEEDED_KEYWORD}”`, level: 2 }),
+  ).toBeVisible();
+  await expect(page.getByText("Google Play · US").first()).toBeVisible();
 });

@@ -80,7 +80,7 @@ export function InspectForm({
         if (ready) submit({ keyword: keyword.trim(), store, country });
       }}
     >
-      <div className="flex min-w-56 flex-1 flex-col gap-2">
+      <div className="flex w-full min-w-56 flex-col gap-2 sm:w-auto sm:flex-1">
         <Label htmlFor="inspect-keyword" className="xl:sr-only">
           Keyword
         </Label>
@@ -92,7 +92,7 @@ export function InspectForm({
           onChange={(event) => setKeyword(event.target.value)}
         />
       </div>
-      <div className="flex flex-col gap-2">
+      <div className="flex w-full flex-col gap-2 sm:w-auto">
         <Label htmlFor="inspect-store" className="xl:sr-only">
           Store
         </Label>
@@ -102,7 +102,7 @@ export function InspectForm({
             setStore(STORES.find((option) => option === next) ?? store)
           }
         >
-          <SelectTrigger id="inspect-store" className="w-[180px]">
+          <SelectTrigger id="inspect-store" className="w-full sm:w-[180px]">
             <SelectValue>{storeLabel(store)}</SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -114,7 +114,7 @@ export function InspectForm({
           </SelectContent>
         </Select>
       </div>
-      <div className="flex flex-col gap-2">
+      <div className="flex w-full flex-col gap-2 sm:w-auto max-sm:[&_[data-slot=select-trigger]]:w-full">
         <Label htmlFor="inspect-country" className="xl:sr-only">
           Country
         </Label>
@@ -128,6 +128,7 @@ export function InspectForm({
       </div>
       <Button
         type="submit"
+        className="w-full sm:w-auto"
         disabled={!ready}
         aria-disabled={inspect.isPending || undefined}
       >
