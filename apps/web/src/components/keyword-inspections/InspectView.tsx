@@ -70,7 +70,7 @@ function InspectWorkspace({
   };
 
   return (
-    <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_30rem]">
+    <div className="grid items-start gap-6 @5xl/inspect:grid-cols-[minmax(0,1fr)_30rem]">
       <InspectionMap
         points={points}
         storefront={storefront}
@@ -88,7 +88,7 @@ function InspectWorkspace({
           ) : null
         }
       />
-      <div className="min-w-0 xl:col-start-2 xl:row-span-2 xl:row-start-1">
+      <div className="min-w-0 @5xl/inspect:col-start-2 @5xl/inspect:row-span-2 @5xl/inspect:row-start-1">
         {selected ? (
           <InspectionDetail
             id={selected}
@@ -103,7 +103,7 @@ function InspectWorkspace({
           />
         )}
       </div>
-      <div className="min-w-0 xl:col-start-1 xl:row-start-2">
+      <div className="min-w-0 @5xl/inspect:col-start-1 @5xl/inspect:row-start-2">
         <InspectionLog
           items={data.items}
           selected={selected}

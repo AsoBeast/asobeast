@@ -30,9 +30,9 @@ import { DeleteInspectionButton } from "./DeleteInspectionButton";
 import { shownScore, storefrontCode } from "./inspection-format";
 
 const ROW =
-  "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 md:grid-cols-[minmax(0,1fr)_7.25rem_repeat(3,4.75rem)_3.75rem_1.75rem]";
+  "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 @[38rem]/log:grid-cols-[minmax(0,1fr)_7.25rem_repeat(3,4.75rem)_3.75rem_1.75rem]";
 
-const SCORE = "numeric hidden text-right md:block";
+const SCORE = "numeric hidden text-right @[38rem]/log:block";
 
 function zoneWord(
   item: KeywordInspectionSummary,
@@ -81,7 +81,7 @@ function LogRow({
     <li
       className={cn(
         ROW,
-        "relative min-h-10 rounded-md px-2 text-dense transition-colors duration-150 ease-out hover:bg-muted md:min-h-9",
+        "relative min-h-10 rounded-md px-2 text-dense transition-colors duration-150 ease-out hover:bg-muted @[38rem]/log:min-h-9",
         selected &&
           "bg-muted before:absolute before:inset-y-1.5 before:left-0 before:w-0.5 before:rounded-full before:bg-foreground",
       )}
@@ -90,12 +90,12 @@ function LogRow({
         type="button"
         aria-current={selected || undefined}
         onClick={() => onSelect(item.id)}
-        className="grid min-w-0 items-center gap-x-2 gap-y-0.5 rounded-sm py-1.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring md:col-span-6 md:grid-cols-subgrid md:py-0"
+        className="grid min-w-0 items-center gap-x-2 gap-y-0.5 rounded-sm py-1.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring @[38rem]/log:col-span-6 @[38rem]/log:grid-cols-subgrid @[38rem]/log:py-0"
       >
         <span className="min-w-0 truncate font-medium">
           <bdi>{item.keyword}</bdi>
         </span>
-        <span className="truncate text-caption text-muted-foreground md:hidden">
+        <span className="truncate text-caption text-muted-foreground @[38rem]/log:hidden">
           {done ? (
             <span>{`${storefront} · ${zoneWord(item, thresholds)} · ${day}`}</span>
           ) : (
@@ -105,7 +105,7 @@ function LogRow({
             </span>
           )}
         </span>
-        <span className="hidden truncate text-muted-foreground md:block">
+        <span className="hidden truncate text-muted-foreground @[38rem]/log:block">
           {storefront}
         </span>
         {done ? (
@@ -115,11 +115,11 @@ function LogRow({
             <span className={SCORE}>{shownScore(item.opportunity)}</span>
           </>
         ) : (
-          <span className="hidden md:col-span-3 md:block">
+          <span className="hidden @[38rem]/log:col-span-3 @[38rem]/log:block">
             <RunState item={item} />
           </span>
         )}
-        <span className="numeric hidden pl-2 text-muted-foreground md:block">
+        <span className="numeric hidden pl-2 text-muted-foreground @[38rem]/log:block">
           {day}
         </span>
       </button>
@@ -149,7 +149,11 @@ export function InspectionLog({
 }) {
   const { thresholds } = useZoneThresholds();
   return (
-    <Card aria-labelledby="inspection-log" className="min-w-0" role="region">
+    <Card
+      aria-labelledby="inspection-log"
+      className="@container/log min-w-0"
+      role="region"
+    >
       <CardHeader className={PANEL_HEADER}>
         <CardTitle asChild>
           <h2 id="inspection-log">All inspections</h2>
@@ -173,7 +177,7 @@ export function InspectionLog({
               aria-hidden
               className={cn(
                 ROW,
-                "hidden min-h-9 border-b px-2 text-label text-faint-foreground md:grid",
+                "hidden min-h-9 border-b px-2 text-label text-faint-foreground @[38rem]/log:grid",
               )}
             >
               <span>Keyword</span>

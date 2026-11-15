@@ -81,12 +81,12 @@ function DetailPanelSkeleton() {
 
 export function InspectWorkspaceSkeleton() {
   return (
-    <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_30rem]">
+    <div className="grid items-start gap-6 @5xl/inspect:grid-cols-[minmax(0,1fr)_30rem]">
       <InspectionMapSkeleton />
-      <div className="xl:col-start-2 xl:row-span-2 xl:row-start-1">
+      <div className="@5xl/inspect:col-start-2 @5xl/inspect:row-span-2 @5xl/inspect:row-start-1">
         <DetailPanelSkeleton />
       </div>
-      <div className="xl:col-start-1 xl:row-start-2">
+      <div className="@5xl/inspect:col-start-1 @5xl/inspect:row-start-2">
         <InspectionLogSkeleton />
       </div>
     </div>
