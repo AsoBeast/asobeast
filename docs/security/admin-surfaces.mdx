@@ -50,7 +50,7 @@ The web app has an **Admin** area at `/admin` for the platform operator. It appe
 
 | Tab | What it shows | Endpoint |
 | --- | --- | --- |
-| Overview | paying, on trial, trial to paid and sign ups; the [funnel](#conversion) over 30 or 90 days; what needs a look; workspaces by [stage](#workspace-stages); who left and why; accounts per day over 30 days; the instance totals and activation | `GET /admin/support/overview`, `GET /admin/support/conversion` |
+| Overview | paying, on trial, trial to paid and sign ups; the [funnel](#conversion) over 30 or 90 days; what needs a look; workspaces by [stage](#workspace-stages); paying workspaces by plan and billing interval; who left and why; accounts per day over 30 days; the instance totals and activation | `GET /admin/support/overview`, `GET /admin/support/conversion` |
 | Conversion | eight weekly cohorts of sign ups and every departure record | `GET /admin/support/conversion`, `GET /admin/support/departures` |
 | Capacity | daily demand against capacity, per store, the top consumers by name, and the proxy pool when one is configured | `GET /admin/capacity`, `GET /admin/proxy-pool`, `GET /admin/support/workspaces` |
 | Workspaces | every workspace with its stage and plan, a trial's end, a renewal that stops, a failed payment, a suspension and a pending deletion with who asked, members, apps and keyword markets; filtered by stage and by what needs a look through `?stage=` and `?flag=` | `GET /admin/support/workspaces` |
@@ -81,7 +81,7 @@ With billing on, each workspace is in one stage, read from its plan and subscrip
 | Churned | no plan now, paid before |
 | No plan | never started a trial or paid |
 
-A card trial holds the paid plan it will renew into, so the plan column of the Workspaces and Users tabs still names that plan while the stage says the workspace is on trial. On a self hosted instance every workspace is **Self hosted**.
+A card trial holds the paid plan it will renew into, so the plan column of the Workspaces and Users tabs still names that plan while the stage says the workspace is on trial. The Overview splits the Paying stage by the plan each workspace holds and whether it renews monthly or yearly; a paying workspace whose interval was never recorded gets a row of its own. On a self hosted instance every workspace is **Self hosted**.
 
 ### Conversion and departures {#conversion}
 
