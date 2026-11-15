@@ -74,6 +74,10 @@ const PRIMARY_FILL_HOMES = [
   "components/billing/",
 ];
 
+const CARD_DESCRIPTION = /\bCardDescription\b/g;
+
+const CARD_DESCRIPTION_HOMES = ["components/ui/card.tsx", "components/auth/"];
+
 function sources(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
@@ -152,5 +156,9 @@ describe("utility classes", () => {
 
   it("fills with the brand orange only the primary button and a checked control", () => {
     expect(outside(PRIMARY_FILL, PRIMARY_FILL_HOMES)).toEqual([]);
+  });
+
+  it("puts a sentence under a card title only on the sign in cards", () => {
+    expect(outside(CARD_DESCRIPTION, CARD_DESCRIPTION_HOMES)).toEqual([]);
   });
 });

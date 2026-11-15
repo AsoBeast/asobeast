@@ -16,10 +16,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Card,
   CardContent,
-  CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { PANEL_HEADER } from "@/components/layout/panel-classes";
 import { formatNumber, formatUsd, pluralize, storeLabel } from "@/lib/format";
 import {
   adminCapacityOptions,
@@ -78,13 +79,13 @@ function SectionCard({
   const id = useId();
   return (
     <Card role="region" aria-labelledby={id}>
-      <CardHeader>
+      <CardHeader className={PANEL_HEADER}>
         <CardTitle asChild>
           <h2 id={id}>{title}</h2>
         </CardTitle>
-        <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">{children}</CardContent>
+      <CardFooter>{description}</CardFooter>
     </Card>
   );
 }
