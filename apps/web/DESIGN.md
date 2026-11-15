@@ -237,7 +237,7 @@ A warm neutral ground with one orange family and two signal hues, mirrored in a 
 ### Primary
 
 - **Brand Orange** (#f89820): the fill of the one primary button in a view and of a checked checkbox or switch (with a near black check or thumb), and in the dark theme the brand text, the brand mark and the chart series. In the light theme it is never text on a surface (2.1:1 on white).
-- **Brand Text** (#a8520a light, 5.4:1 on white and 4.7:1 on the brand tint; #f89820 dark, `--brand-text`): text and icons that mean selected or yours: the active sidebar item and a `brand` pill. Orange text is only ever this shade.
+- **Brand Text** (#a8520a light, 5.4:1 on white and 4.7:1 on the brand tint; #f89820 dark, `--brand-text`): text and icons that mean selected or yours: the active sidebar item, a `brand` pill, the chosen day of the captured day picker and the current sign up step, each on the brand tint. Orange text is only ever this shade.
 - **Brand Mark** (#d2700a light, 3.5:1 on white; #f89820 dark, `--brand-mark`): marks of 2 px or more that need 3:1, not 4.5:1: the active metric tab and line tab underline, an unread or new dot (Alerts, the Discovered tab, What's New, the latest release), a progress bar or ring, and a link's underline on hover. It is also the chart series, sparklines and the end dot in the light theme, where the brand shade is too light to read as a line.
 - **Brand Tint** (#fbeedb light, #2b2114 dark, `--brand-subtle`): the background of the active sidebar item and of a `brand` pill (the own app's row in the search results carries a 3 px brand mark start bar instead, so its You pill stays visible); inline bars behind list rows use the same tint (`--chart-tint`).
 - **Previous Period** (#cdc8c0 light, #3d3933 dark): the comparison line under the series; always thinner and never filled.
@@ -261,7 +261,7 @@ A warm neutral ground with one orange family and two signal hues, mirrored in a 
 
 ### Named Rules
 
-**The One Family Rule.** The brand orange and the data orange are shades of one hue, and the one accent of a screen: spent on action (the primary button, a checked control), selection (the active sidebar item, the active metric or line tab), ownership (a `brand` pill: Default, Detected, You, Yours, Latest, Next), unread dots and progress. Everything else is neutral, and status keeps its own hues: a warning is yellow amber, never orange, and a spinner turns in ink 2.
+**The One Family Rule.** The brand orange and the data orange are shades of one hue, and the one accent of a screen: spent on action (the primary button, a checked control), selection (the active sidebar item, the active metric or line tab), ownership (a `brand` pill: Default, You, Yours, Latest, Next), unread dots and progress. Everything else is neutral, and status keeps its own hues: a warning is yellow amber, never orange, and a spinner turns in ink 2.
 
 **The Direction Only Rule.** Green and red appear on a change, a signal or a critical word, and on nothing that is merely a category. Grades are words with a quiet marker, never a painted column.
 
@@ -290,7 +290,7 @@ A warm neutral ground with one orange family and two signal hues, mirrored in a 
 
 ### Named Rules
 
-**The Five Sizes Rule.** A screen uses title, heading, body or dense, label or caption and tick, plus the metric size in one strip and the dialog size in an overlay's title. No raw `text-sm` or `text-base` in a primitive; every size is a named step.
+**The Five Sizes Rule.** A screen uses title, heading, body or dense, label or caption and tick, plus the metric size in one strip and the dialog size in an overlay's title. Every size is a named step: no raw `text-xs`, `text-sm` or `text-base` anywhere, except the 16 px of an input and a text area below `md`, so a phone does not zoom (`styles/utility-classes.test.ts`).
 
 **The Sentence Case Rule.** Labels and column headers are sentence case with no letter spacing; the old tracked uppercase label is retired.
 
@@ -325,7 +325,7 @@ Flat by default. A panel is a surface with a 1 px line on the page colour; the d
 
 ## Shapes
 
-A restrained radius scale by role: 4 px on tags and checkboxes, 6 px on buttons, inputs, pills, segmented controls and list row hover, 8 px on panels and the table frame, 12 px on menus, popovers and dialogs. A child radius never exceeds its parent, and nothing in the shell is rounder than 8 px except an overlay. App icons are the exception by design: their radius is 22.5 percent of their size with a 4 px floor (4 px at 16, 5 px at 24, 7 px at 32), so they read as store icons. Borders are 1 px hairlines in the line colour; the metric strip divides its tabs with vertical hairlines and marks the active tab with a 2 px brand mark underline on the panel edge.
+A restrained radius scale by role: 4 px on tags and checkboxes, 6 px on buttons, inputs, pills, segmented controls and list row hover, 8 px on panels and the table frame, 12 px on menus, popovers and dialogs. A child radius never exceeds its parent, and nothing in the shell is rounder than 8 px except an overlay; `rounded-xl` and `rounded-2xl` live only in `components/ui` and on the billing wall (`styles/utility-classes.test.ts`). App icons are the exception by design: their radius is 22.5 percent of their size with a 4 px floor (4 px at 16, 5 px at 24, 7 px at 32), so they read as store icons. Borders are 1 px hairlines in the line colour; the metric strip divides its tabs with vertical hairlines and marks the active tab with a 2 px brand mark underline on the panel edge.
 
 ## Components
 
@@ -339,7 +339,7 @@ A restrained radius scale by role: 4 px on tags and checkboxes, 6 px on buttons,
 ### Pills
 
 - **Style:** 22 px tall, 6 px radius, label size at 500, tinted fill with its own text colour. Variants: up (green), down (red), flat (surface 2 with ink 2), and the state words Paused and Checking in flat.
-- **Use:** a change (the delta beside a metric, the 7d column, the Change column, an alert's kind of move), a count that is a state (`1 critical`), a state that changes, an insight (Beatable, Dropping), or ownership in a change feed (yours, competitor). Ownership of a state is the `brand` pill (brand tint, brand text): a localization's Default role, a Detected localization, You in the search results, Yours in top charts, the Latest release and the Next checklist step. Further variants carry status tints: success, warning and destructive; `info` is ink on surface 2 (the Essential alert tag). Never a source, a store, a market, a tag or a category, which are text; never a pill that would appear on every row of a list. A localization's read role is a pill on every screen (`ReadRoleBadge`): Default in `brand` and Also flat, prefixed with the market where several markets read one localization (`US · Default`). A new entrant in a search results or chart list is the word New in the up colour, as the delta beside it is coloured text.
+- **Use:** a change (the delta beside a metric, the 7d column, the Change column, an alert's kind of move), a count that is a state (`1 critical`), a state that changes, an insight (Beatable, Dropping), or ownership in a change feed (yours, competitor). Ownership of a state is the `brand` pill (brand tint, brand text): a localization's Default role, You in the search results, Yours in top charts, the Latest release and the Next checklist step. Further variants carry status tints: success, warning and destructive; `info` is ink on surface 2 (the Essential alert tag). Never a source, a store, a market, a tag or a category, which are text; never a pill that would appear on every row of a list. A localization's read role is a pill on every screen (`ReadRoleBadge`): Default in `brand` and Also flat, prefixed with the market where several markets read one localization (`US · Default`). A new entrant in a search results or chart list is the word New in the up colour, as the delta beside it is coloured text.
 
 ### Change and delta
 
@@ -352,7 +352,7 @@ Four forms exist, each in `components/ui/delta-chip.tsx` or beside its list, and
 
 ### Links
 
-- A link is ink text with a 1 px underline in ink 3 offset 4 px, which turns to the brand mark on hover, all held by the `link-underline` utility (`FOOTER_LINK`, the `link` button and badge variants use it too). The text is never orange and never blue. A panel's footer link sits at its right.
+- A link is ink text with a 1 px underline in ink 3 offset 4 px, which turns to the brand mark on hover, all held by the `link-underline` utility (`FOOTER_LINK` and the `link` button variant use it too). The text is never orange and never blue. A panel's footer link sits at its right.
 
 ### Page header
 
@@ -370,7 +370,7 @@ Four forms exist, each in `components/ui/delta-chip.tsx` or beside its list, and
 ### Panels
 
 - **Corner Style:** 8 px.
-- **Background:** surface, with a hairline border; the header is at least 47 px tall with 16 px side padding, the heading at the left and a count in label size and ink 3, a segmented control or a range control at the right; a footer line in caption size and ink 3 says what the panel reads or over which window, with its link at the right.
+- **Background:** surface, with a hairline border; the header is at least 47 px tall with 16 px side padding, the heading at the left and a count in label size and ink 3, a segmented control or a range control at the right; a footer line in caption size and ink 3 says what the panel reads or over which window, with its link at the right. No sentence sits under a panel's title: what a panel reads goes in its footer. `CardDescription` exists only for the sign in cards (`components/auth`).
 - **Shadow Strategy:** none (see Elevation).
 - **Internal Padding:** 16 px in headers and table cells, 8 px around a list so its 36 px rows can carry a hover and a bar.
 - **Full bleed:** a table or list that runs edge to edge in a panel sits in `CardContent` with `PANEL_BLEED`, which cancels the panel's side and vertical padding, and draws no frame of its own: never a bordered table inside a bordered panel.
@@ -408,7 +408,7 @@ Four forms exist, each in `components/ui/delta-chip.tsx` or beside its list, and
 ### States
 
 - **Loading:** skeleton blocks in surface 2 at the real geometry; the pulse stops under reduced motion; a loading region announces itself.
-- **Empty:** one sentence saying what is missing and the one action that fills it, centred inside the panel, no icon and no box (`EmptyState`). A chart's empty and insufficient states (`ChartNotice`, `ChartStat`, `RankingStates`) are the same sentence and action, centred at the chart's real height; the dashboard's first run and a page that is not found centre their title, sentence and action in the page column.
+- **Empty:** one sentence saying what is missing and the one action that fills it, centred inside the panel, no icon and no box (`EmptyState`); a list panel with nothing to list (movers, Do next, alerts, listing changes, trending) says so the same way. A chart's empty and insufficient states (`ChartNotice`, `ChartStat`, `RankingStates`) are the same sentence and action, centred at the chart's real height; the dashboard's first run and a page that is not found centre their title, sentence and action in the page column.
 - **Error:** the shared error state; a secondary section uses the inline query error.
 - **Stale and checking:** a 16 px clock with the day of the last check in label size; **Checking…** with a 14 px spinner; a found nothing position reads ">200" in ink 2 with "was #14" in tick size under it.
 
@@ -445,7 +445,7 @@ The per screen intent for each signed in page; the components above supply the p
 
 ### Dashboard
 
-Page title "Dashboard" with the range select (a calendar icon, `Last 30 days`) and the primary "Import app" at the right. Under the title the lede sentence, `In the last 30 days 4 keywords climbed and 3 fell across 3 apps`, with the counts at 500 in ink, then the status line: apps, keywords and competitors counted, when the data was collected, the run state and the share of the daily request budget used. Metric strip: Visibility, Keywords in top 10, Moved in the range (its total with up and down arrow pills), Open actions (with a critical pill), each tab choosing through `?metric=` what the chart in the same panel draws, with the previous period under it. Then Keyword movers (All, Climbers, Fallers) beside Do next, five priority rows each naming its app, store and market under the title and an Action Center link in the footer. Then the Apps panel: a table by default (app with store, market and keyword count, trend sparkline, visibility, 7d, in top 10, moved, rating, open actions, a row menu) with Columns and a table or cards toggle in the header; the card view lays the same apps out as cards. An app with no history reads "Not enough history" in the trend cell. Then Listing changes (All, Yours, Competitors; a version run collapsed to one row) beside Alerts for the last 7 days.
+Page title "Dashboard" with the range select (a calendar icon, `Last 30 days`) and the primary "Import app" at the right. Under the title the lede sentence, `In the last 30 days 4 keywords climbed and 3 fell across 3 apps`, with the counts at 500 in ink, then the status line: apps, keywords and competitors counted, when the data was collected, the run state and the share of the daily request budget used. Metric strip: Visibility, Keywords in top 10, Moved in the range (its total with up and down arrow pills), Open actions (with a critical pill), each tab choosing through `?metric=` what the chart in the same panel draws, with the previous period under it. Then Keyword movers (All, Climbers, Fallers) beside Do next, five priority rows each naming its app, store and market under the title and an Action Center link in the footer. Then the Apps panel: a table by default (app with store, market and keyword count, trend sparkline, visibility, 7d, in top 10, moved, rating, open actions, a row menu) with Columns and a table or cards toggle in the header; the card view lays the same apps out as cards. An app with no history reads "Not enough history" in the trend cell. Then Listing changes (All, Yours, Competitors; a version run collapsed to one row) beside Alerts for the last 7 days, dated feed rows that end with the Alerts page's size pill where the event measures a move (`↓ 8` positions, `↓ 0.2` stars) and with nothing otherwise.
 
 ### App overview
 
@@ -520,4 +520,4 @@ A page read once per release, set as prose on the page with no panels in the rea
 - **Shell:** `components/layout/AppSidebar.tsx`, `SidebarNav.tsx`, `InsetHeader.tsx`; `components/AppIcon.tsx` with `app-icon-radius.ts`.
 - **Charts:** `components/charts/theme.ts`, `ChartKey.tsx`, `ChartStates.tsx`, `SeriesFade.tsx`, `rank-layers.tsx`, `Sparkline.tsx`, `DivergingBars.tsx` with `diverging-trend.ts` and `trend-axis.ts`.
 - **Lists and tables:** `components/rankings/MoversPanel.tsx` and `MoverList.tsx`, `components/actions/DoNextPanel.tsx` with `PriorityWord.tsx`, `components/data-table/` with `FiltersControl.tsx`, `lib/grade.ts`.
-- **Screens:** `components/dashboard/`, `components/overview/` with `components/app-detail/AppHeader.tsx`, `components/keywords/` with `keywords/discovery/`.
+- **Screens:** one folder per screen under `components/` (`dashboard/`, `overview/` with `app-detail/AppHeader.tsx`, `keywords/` with `keywords/discovery/`, `actions/`, `alerts/`, `rankings/`, `competitors/`, `reviews/`, `top-charts/`, `metadata/` with `localizations/`, `changes/`, `audit/`, `settings/`, `integrations/`, `onboarding/` with `checklist/`, `keyword-inspections/`, `whats-new/`).
