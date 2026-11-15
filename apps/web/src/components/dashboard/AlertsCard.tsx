@@ -30,6 +30,7 @@ import {
 import { FeedRowsSkeleton } from "./skeletons";
 import { PANEL_COUNT, PANEL_HEADER } from "@/components/layout/panel-classes";
 import { dayBefore } from "@/lib/utc-day";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const WINDOW_DAYS = 7;
 const DAYS_BEFORE_TODAY = WINDOW_DAYS - 1;
@@ -82,11 +83,7 @@ function AlertList({ today }: { today: string }) {
     );
   }
   if (read.data.events.length === 0) {
-    return (
-      <p className="px-2 text-body text-muted-foreground">
-        No alerts in the last 7 days.
-      </p>
-    );
+    return <EmptyState title="No alerts in the last 7 days." />;
   }
   return (
     <ul className="flex flex-col">

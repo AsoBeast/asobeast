@@ -13,12 +13,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export function NoOpenActions({ generated }: { generated: boolean }) {
   return (
-    <p className="px-2 text-body text-muted-foreground">
-      {generated ? "Nothing needs you right now." : "No actions generated yet."}
-    </p>
+    <EmptyState
+      title={
+        generated ? "Nothing needs you right now." : "No actions generated yet."
+      }
+    />
   );
 }
 

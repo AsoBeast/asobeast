@@ -20,6 +20,7 @@ import {
 } from "@/lib/search-params";
 import { MoverList } from "./MoverList";
 import { byMagnitude } from "./mover-change";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const ALL_MOVERS = 8;
 
@@ -88,7 +89,7 @@ export function MoversPanel<Mover extends KeywordMover>({
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-4 px-2">
         {quiet ? (
-          <p className="px-2 text-body text-muted-foreground">{quiet}</p>
+          <EmptyState title={quiet} />
         ) : (
           <MoverList
             movers={shown}

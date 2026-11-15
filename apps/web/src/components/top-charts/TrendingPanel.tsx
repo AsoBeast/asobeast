@@ -29,6 +29,7 @@ import {
 import { formatDayMonth } from "@/lib/format";
 import { COLLECTION_LABELS } from "./chart-params";
 import { compareLabel } from "./movement";
+import { EmptyState } from "@/components/ui/empty-state";
 
 type TrendingList = keyof ChartTrending;
 
@@ -107,9 +108,7 @@ function MoverList({
   empty: string;
 }) {
   if (movers.length === 0) {
-    return (
-      <p className="px-2 py-2 text-body text-muted-foreground">{`${empty} ${period}.`}</p>
-    );
+    return <EmptyState title={`${empty} ${period}.`} />;
   }
   return (
     <ul className="flex flex-col">
@@ -174,9 +173,7 @@ function TrendingLists({ page }: { page: ChartPage }) {
       ))}
     </Tabs>
   ) : (
-    <p className="px-2 py-2 text-body text-muted-foreground">
-      Capture more days to see movement.
-    </p>
+    <EmptyState title="Capture more days to see movement." />
   );
 }
 

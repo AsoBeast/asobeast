@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { nearTopTen } from "@/lib/near-top-ten";
 import { keywordsOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const SHOWN = 5;
 
@@ -41,11 +42,7 @@ function NearTopTenRows({ id }: { id: string }) {
 
   const near = nearTopTen(read.data, SHOWN);
   if (near.length === 0) {
-    return (
-      <p className="px-2 text-body text-muted-foreground">
-        No keyword sits just outside the top 10.
-      </p>
-    );
+    return <EmptyState title="No keyword sits just outside the top 10." />;
   }
 
   return (

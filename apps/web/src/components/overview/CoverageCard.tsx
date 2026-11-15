@@ -20,6 +20,7 @@ import { formatNumber } from "@/lib/format";
 import { discoveriesHref, discoveriesLine } from "@/lib/keyword-discoveries";
 import { appDetailOptions, appSummaryOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const COLUMNS = "grid grid-cols-[minmax(0,1fr)_auto] gap-3 px-2";
 
@@ -95,9 +96,7 @@ export function CoverageCard({ id }: { id: string }) {
           ))}
         </dl>
         {coverage.uncoveredHighOpportunity.length === 0 ? (
-          <p className="px-2 text-body text-muted-foreground">
-            Your metadata covers your top opportunities.
-          </p>
+          <EmptyState title="Your metadata covers your top opportunities." />
         ) : (
           <div className="flex flex-col gap-1">
             <div aria-hidden className={cn(COLUMNS, LIST_HEAD)}>

@@ -436,6 +436,9 @@ test("the alerts panel says so when the week was quiet", async ({
 
   const card = alertsCard(page);
   await expect(card.getByText("No alerts in the last 7 days.")).toBeVisible();
+  await expect(card.locator('[data-slot="empty-state"]')).toHaveText(
+    "No alerts in the last 7 days.",
+  );
   await expect(card.getByRole("list")).toHaveCount(0);
   await expect(card.getByRole("alert")).toHaveCount(0);
 });

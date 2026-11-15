@@ -205,7 +205,9 @@ test("a market where nothing moved says so and offers no tabs", async ({
   await page.goto("/apps/app-1?market=pl");
   const card = movers(page);
 
-  await expect(card).toContainText("No keyword moved in the last 7 days.");
+  await expect(card.locator('[data-slot="empty-state"]')).toHaveText(
+    "No keyword moved in the last 7 days.",
+  );
   await expect(card.getByRole("tablist")).toHaveCount(0);
 });
 
