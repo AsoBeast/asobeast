@@ -183,6 +183,7 @@ test("a google play listing has no captions, localizations or keyword field", as
   await expect(
     page.getByRole("heading", { name: "Screenshot captions" }),
   ).toHaveCount(0);
+  await expect(page.getByText("Not searched by the store")).toHaveCount(0);
 });
 
 test("the workbench fits a phone without sideways scroll", async ({ page }) => {
