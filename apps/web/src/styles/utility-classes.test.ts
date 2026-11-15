@@ -65,6 +65,15 @@ const OVERLAY_RADIUS_HOMES = [
   "app/(wall)/",
 ];
 
+const PRIMARY_FILL = /\b(?:bg|border|text)-primary(?![\w-])/g;
+
+const PRIMARY_FILL_HOMES = [
+  "components/ui/button.tsx",
+  "components/ui/checkbox.tsx",
+  "components/ui/switch.tsx",
+  "components/billing/",
+];
+
 function sources(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
@@ -139,5 +148,9 @@ describe("utility classes", () => {
 
   it("keeps the overlay radius to overlays and the billing wall", () => {
     expect(outside(OVERLAY_RADIUS, OVERLAY_RADIUS_HOMES)).toEqual([]);
+  });
+
+  it("fills with the brand orange only the primary button and a checked control", () => {
+    expect(outside(PRIMARY_FILL, PRIMARY_FILL_HOMES)).toEqual([]);
   });
 });

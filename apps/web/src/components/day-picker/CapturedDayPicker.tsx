@@ -167,7 +167,7 @@ function DayGrid({
                     className={cn(
                       "numeric size-9 rounded-md text-dense text-muted-foreground disabled:cursor-not-allowed",
                       date === value
-                        ? "bg-primary text-primary-foreground hover:bg-primary-hover"
+                        ? "bg-brand-subtle font-medium text-brand-text"
                         : "data-captured:bg-secondary data-captured:text-foreground data-captured:hover:bg-accent",
                       "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-1 focus-visible:outline-ring",
                     )}

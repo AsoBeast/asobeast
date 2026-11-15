@@ -1771,7 +1771,7 @@ test("marks the chosen day apart from the other captured days", async ({
       return color;
     }, className);
 
-  expect(await background(chosen)).toBe(await fill("bg-primary"));
+  expect(await background(chosen)).toBe(await fill("bg-brand-subtle"));
   expect(await background(other)).toBe(await fill("bg-secondary"));
 });
 
