@@ -301,7 +301,9 @@ class FakeElement {
     readonly controls: unknown[],
     readonly tabbable = false,
     readonly isConnected = true,
+    readonly hiddenFromUser = false,
   ) {}
+  closest = () => (this.hiddenFromUser ? { tag: "aria-hidden" } : null);
   querySelectorAll(selector: string) {
     this.selector = selector;
     return this.controls;
@@ -351,10 +353,12 @@ describe("recoveryCandidates", () => {
     ]);
   });
 
-  it("ends with the container only when it is already focusable", () => {
+  it("ends with the container only when it is focusable and within reach", () => {
     const focusable = container([], true);
     expect(recoveryCandidates(asElement(focusable))).toEqual([focusable]);
     expect(recoveryCandidates(asElement(container([])))).toEqual([]);
+    const hidden = asElement(container([], true, true, true));
+    expect(recoveryCandidates(hidden).length).toBe(0);
   });
 
   it("lists nothing for a container that left the page or no container", () => {

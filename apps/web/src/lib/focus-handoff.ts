@@ -220,7 +220,9 @@ const RETRY_CONTAINER = `${CARD}, [role="dialog"], section`;
 export function recoveryCandidates(container: Element | null): HTMLElement[] {
   if (!container?.isConnected) return [];
   const controls = reachableIn(container, RECOVERY_CANDIDATES);
-  return container instanceof HTMLElement && container.hasAttribute("tabindex")
+  return container instanceof HTMLElement &&
+    container.hasAttribute("tabindex") &&
+    withinReach(container)
     ? [...controls, container]
     : controls;
 }
