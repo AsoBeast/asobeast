@@ -1,7 +1,8 @@
-import type {
-  KeywordInspection,
-  KeywordInspectionResult,
-  Store,
+import {
+  CURRENT_FORMULA_VERSIONS,
+  type KeywordInspection,
+  type KeywordInspectionResult,
+  type Store,
 } from "@asobeast/shared";
 
 export const SEEDED_KEYWORD = "habit tracker";
@@ -300,8 +301,11 @@ function inspectionOf(seed: Seed): KeywordInspection {
     resultCount: done ? 3 : null,
     provenance: done
       ? {
-          source: "APPLE_SEARCH_SIGNALS",
-          formulaVersion: "app-store-v5",
+          source:
+            store === "GOOGLE_PLAY"
+              ? "GOOGLE_PLAY_PREFIX_SEARCH"
+              : "APPLE_SEARCH_SIGNALS",
+          formulaVersion: CURRENT_FORMULA_VERSIONS[store],
           confidence: "HIGH",
         }
       : null,
