@@ -21,6 +21,7 @@ export const INSPECTED_APPS = [
 interface StoredInspection {
   pending: KeywordInspection;
   reads: number;
+  fixed?: KeywordInspection;
 }
 
 const inspections: StoredInspection[] = [];
@@ -115,6 +116,7 @@ function settled(stored: StoredInspection): KeywordInspection {
 }
 
 function current(stored: StoredInspection): KeywordInspection {
+  if (stored.fixed) return stored.fixed;
   const waiting = stored.pending.keyword === QUEUED_KEYWORD && !queueReleased;
   return stored.reads > 0 && !waiting ? settled(stored) : stored.pending;
 }
@@ -196,6 +198,17 @@ export function deleteInspection(id: string): boolean {
 
 export function releaseQueuedInspections(): void {
   queueReleased = true;
+}
+
+export function seedInspections(seeded: readonly KeywordInspection[]): void {
+  resetInspections();
+  inspections.push(
+    ...seeded.map((inspection) => ({
+      pending: inspection,
+      reads: 0,
+      fixed: inspection,
+    })),
+  );
 }
 
 export function resetInspections(): void {
