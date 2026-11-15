@@ -22,10 +22,10 @@ export function AdminAccessNotice({ access }: { access: ClosedAdminAccess }) {
   return (
     <section
       aria-labelledby="admin-access-title"
-      className="flex flex-col items-center gap-4 rounded-xl border border-dashed py-16 text-center"
+      className="flex flex-col items-center gap-4 py-16 text-center"
     >
       <div className="flex flex-col gap-1">
-        <h2 id="admin-access-title" className="font-medium">
+        <h2 id="admin-access-title" className="text-heading">
           {title}
         </h2>
         <p className="max-w-lg text-body text-muted-foreground">{body}</p>

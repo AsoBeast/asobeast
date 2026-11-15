@@ -8,6 +8,7 @@ import {
   CardFooter,
   CardHeader,
 } from "@/components/ui/card";
+import { iconRadius } from "@/components/app-icon-radius";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MetricStripSkeleton } from "@/components/ui/stat-tile";
 import {
@@ -107,12 +108,17 @@ export function DoNextCardSkeleton() {
   return <PanelSkeleton rows={5} height="h-16" />;
 }
 
+const CARD_ICON_SIZE = 48;
+
 function AppCardSkeleton() {
   return (
     <Card className="h-full gap-0 p-4">
       <div className="flex flex-col gap-3">
         <div className="flex items-start gap-4">
-          <Skeleton className="size-12 rounded-xl" />
+          <Skeleton
+            className="size-12"
+            style={{ borderRadius: iconRadius(CARD_ICON_SIZE) }}
+          />
           <div className="flex flex-1 flex-col gap-2">
             <Skeleton className="h-4 w-32" />
             <Skeleton className="h-[22px] w-24 rounded-md" />

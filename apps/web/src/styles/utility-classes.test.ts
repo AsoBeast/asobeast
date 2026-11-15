@@ -57,6 +57,14 @@ const PHONE_SIZED_INPUTS = [
   "components/ui/textarea.tsx: text-base",
 ];
 
+const OVERLAY_RADIUS = /\brounded-(?:xl|2xl)(?![\w-])/g;
+
+const OVERLAY_RADIUS_HOMES = [
+  "components/ui/",
+  "components/billing/",
+  "app/(wall)/",
+];
+
 function sources(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
@@ -72,6 +80,12 @@ function offenders(pattern: RegExp): string[] {
     const matches = readFileSync(path, "utf8").match(pattern) ?? [];
     return matches.map((match) => `${path.slice(ROOT.length + 1)}: ${match}`);
   });
+}
+
+function outside(pattern: RegExp, homes: string[]): string[] {
+  return offenders(pattern).filter(
+    (offender) => !homes.some((home) => offender.startsWith(home)),
+  );
 }
 
 describe("utility classes", () => {
@@ -121,5 +135,9 @@ describe("utility classes", () => {
 
   it("sizes text with a named step but where a phone would zoom an input", () => {
     expect(offenders(RAW_TYPE_SIZE).sort()).toEqual(PHONE_SIZED_INPUTS);
+  });
+
+  it("keeps the overlay radius to overlays and the billing wall", () => {
+    expect(outside(OVERLAY_RADIUS, OVERLAY_RADIUS_HOMES)).toEqual([]);
   });
 });
