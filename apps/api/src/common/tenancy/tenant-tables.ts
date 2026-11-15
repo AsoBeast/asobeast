@@ -57,4 +57,5 @@ export const OPERATOR_TABLES = [
   'Session',
   'SupportAccess',
   'TrialClaim',
+  'WorkspaceDeparture',
 ] as const;

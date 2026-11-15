@@ -31,6 +31,19 @@ export function keywordMarketsByWorkspace(
   `;
 }
 
+export async function countWorkspaceKeywordMarkets(
+  client: Client,
+  workspaceId: string,
+): Promise<number> {
+  const [row] = await client.$queryRaw<{ markets: number }[]>`
+    SELECT COUNT(DISTINCT t."keywordId")::int AS markets
+    FROM "TrackedKeyword" t
+    JOIN "App" a ON a."id" = t."appId"
+    WHERE t."active" = true AND a."workspaceId" = ${workspaceId}
+  `;
+  return row?.markets ?? 0;
+}
+
 export function sumKeywordMarkets(rows: readonly KeywordMarketRow[]): number {
   return rows.reduce((total, row) => total + row.count, 0);
 }

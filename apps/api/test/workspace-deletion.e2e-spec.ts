@@ -9,6 +9,10 @@ import { AccountDeletionService } from '../src/account/account-deletion.service'
 import { STRIPE_CLIENT } from '../src/billing/stripe.client';
 import { WorkspaceContext } from '../src/common/tenancy/workspace-context';
 import { PrismaService } from '../src/prisma/prisma.service';
+import {
+  keywordMarketsByWorkspace,
+  sumKeywordMarkets,
+} from '../src/auth/keyword-markets';
 import { TENANT_TABLES } from '../src/common/tenancy/tenant-tables';
 import { restoreAuthEnv } from './helpers/auth-env';
 import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
@@ -46,6 +50,7 @@ describe('Workspace deletion (e2e)', () => {
   let prisma: PrismaClient;
   let deletion: AccountDeletionService;
   let seeded: Seeded;
+  let sizesBeforeErasure = { members: 0, apps: 0, keywordMarkets: 0 };
   const deletedCustomers: string[] = [];
   let whileDeleting: () => Promise<unknown> = () => Promise.resolve();
   const stripe = {
@@ -578,6 +583,7 @@ describe('Workspace deletion (e2e)', () => {
       });
       await prisma.supportAccess.deleteMany({ where: { workspaceId } });
     }
+    await prisma.workspaceDeparture.deleteMany({});
     seeded = await seed(WORKSPACE);
     await seed(NEIGHBOUR);
   });
@@ -624,6 +630,17 @@ describe('Workspace deletion (e2e)', () => {
         billingCustomerId: CUSTOMER,
       },
     });
+    sizesBeforeErasure = {
+      members: await prisma.user.count({ where: { workspaceId: WORKSPACE } }),
+      apps: await prisma.app.count({
+        where: { workspaceId: WORKSPACE, isCompetitor: false },
+      }),
+      keywordMarkets: sumKeywordMarkets(
+        (await keywordMarketsByWorkspace(prisma)).filter(
+          (row) => row.workspaceId === WORKSPACE,
+        ),
+      ),
+    };
 
     await expect(deletion.eraseDue()).resolves.toEqual([WORKSPACE]);
     expect(deletedCustomers).toEqual([CUSTOMER]);
@@ -671,6 +688,32 @@ describe('Workspace deletion (e2e)', () => {
 
     expect(event).not.toBeNull();
     expect(event?.workspaceId).toBeNull();
+  });
+
+  it('records the departure with nothing that names the workspace or a person', async () => {
+    const departures = await prisma.workspaceDeparture.findMany();
+    const today = new Date(new Date().toISOString().slice(0, 10));
+
+    expect(departures).toHaveLength(1);
+    expect(departures[0]).toEqual({
+      id: expect.any(String) as string,
+      erasedOn: today,
+      createdOn: today,
+      requestedOn: today,
+      stage: 'no-plan',
+      plan: 'free',
+      everPaid: false,
+      apps: sizesBeforeErasure.apps,
+      keywordMarkets: sizesBeforeErasure.keywordMarkets,
+      members: sizesBeforeErasure.members,
+      reason: null,
+    });
+    expect(JSON.stringify(departures)).not.toContain(WORKSPACE);
+    expect(departures[0]?.id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+    expect(sizesBeforeErasure.apps).toBeGreaterThan(0);
+    expect(sizesBeforeErasure.keywordMarkets).toBeGreaterThan(0);
   });
 
   it('keeps the support audit trail, which outlives the workspace', async () => {

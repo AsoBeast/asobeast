@@ -49,6 +49,9 @@ export interface SupportWorkspaceSummary {
   trialStartedAt?: string | null;
   firstPaidAt?: string | null;
   billingInterval?: BillingInterval | null;
+  deletionRequestedAt?: string | null;
+  deletionRequestedBy?: string | null;
+  deletionDueAt?: string | null;
 }
 
 export interface SupportRunDay {

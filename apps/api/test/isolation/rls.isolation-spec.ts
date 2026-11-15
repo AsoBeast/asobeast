@@ -168,6 +168,44 @@ describe('Row level security', () => {
     await expect(prisma.session.count()).resolves.toBe(0);
   });
 
+  it('keeps the departure record out of reach of a workspace scope and of no scope at all', async () => {
+    const recorded = await crossTenant.becauseThisWorkIsNotOwnedByOneWorkspace(
+      'the isolation suite records a departure on purpose',
+      () =>
+        prisma.workspaceDeparture.create({
+          data: {
+            erasedOn: new Date('2026-11-15'),
+            createdOn: new Date('2026-10-01'),
+            requestedOn: new Date('2026-11-08'),
+            stage: 'paying',
+            plan: 'indie',
+            everPaid: true,
+            apps: 1,
+            keywordMarkets: 4,
+            members: 1,
+          },
+        }),
+    );
+    try {
+      const insideWorkspace = await workspace.run(fixture.a.id, () =>
+        prisma.workspaceDeparture.count(),
+      );
+
+      expect(insideWorkspace).toBe(0);
+      await expect(prisma.workspaceDeparture.count()).resolves.toBe(0);
+      await expect(
+        workspace.run(fixture.a.id, () =>
+          prisma.workspaceDeparture.deleteMany({}),
+        ),
+      ).resolves.toEqual({ count: 0 });
+    } finally {
+      await crossTenant.becauseThisWorkIsNotOwnedByOneWorkspace(
+        'the isolation suite removes the departure it recorded',
+        () => prisma.workspaceDeparture.delete({ where: { id: recorded.id } }),
+      );
+    }
+  });
+
   it('keeps a policy on every table the application calls tenant-owned', async () => {
     const rows = await prisma.$queryRaw<{ relname: string }[]>`
       SELECT c.relname

@@ -12,6 +12,7 @@ import {
   keywordMarketsByWorkspace,
   sumKeywordMarkets,
 } from '../auth/keyword-markets';
+import { WORKSPACE_STAGE_SELECT } from '../billing/workspace-stage';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
@@ -79,13 +80,7 @@ export class SupportOverviewService {
   private workspaceRows() {
     return this.prisma.workspace.findMany({
       select: {
-        plan: true,
-        trialEndsAt: true,
-        planExpiresAt: true,
-        subscriptionId: true,
-        subscriptionStatus: true,
-        trialStartedAt: true,
-        firstPaidAt: true,
+        ...WORKSPACE_STAGE_SELECT,
         cancelAtPeriodEnd: true,
         suspendedAt: true,
         deletionDueAt: true,

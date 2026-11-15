@@ -6,6 +6,8 @@ import {
   PLAN_NAMES,
   STORES,
   type AdminAppList,
+  type AdminConversion,
+  type AdminDepartureList,
   type AdminOverview,
   type AdminUserList,
 } from '@asobeast/shared';
@@ -29,6 +31,8 @@ const HOUR_MS = 60 * 60_000;
 const DAY_MS = 24 * HOUR_MS;
 const USERS = '/admin/support/users';
 const APPS = '/admin/support/apps';
+const CONVERSION = '/admin/support/conversion';
+const DEPARTURES = '/admin/support/departures';
 const SECRET_FIELDS = [
   'passwordHash',
   'verificationHash',
@@ -252,7 +256,7 @@ describe('Support directory (e2e)', () => {
     });
   });
 
-  describe.each([USERS, APPS])(
+  describe.each([USERS, APPS, CONVERSION, DEPARTURES])(
     '%s refuses everyone but the operator',
     (path) => {
       it('is not found without credentials', async () => {
@@ -373,6 +377,123 @@ describe('Support directory (e2e)', () => {
       expect(
         body.items.find((item) => item.store === 'GOOGLE_PLAY'),
       ).toMatchObject({ competitors: 0, keywordMarkets: 0 });
+    });
+  });
+
+  describe('GET /admin/support/conversion', () => {
+    it('answers the funnel up to the first ranking when billing is off', async () => {
+      const res = await owner.get(CONVERSION).expect(200);
+      const body = res.body as AdminConversion;
+
+      expect(body.billing).toBe(false);
+      expect(body.days).toBe(30);
+      expect(body.funnel.map((step) => step.key)).toEqual([
+        'signed-up',
+        'confirmed-email',
+        'first-app',
+        'ranked-within-a-day',
+      ]);
+      expect(body.funnel[0]?.count).toBeGreaterThanOrEqual(1);
+      expect(body.funnel[2]?.count).toBeGreaterThanOrEqual(1);
+      expect(body.trialToPaid).toBeUndefined();
+      expect(body.trials).toBeUndefined();
+      expect(body.cohorts).toHaveLength(8);
+      expect(body.departures.byReason.map((row) => row.key)).toContain(
+        'unanswered',
+      );
+      expect(body.departuresRecordedSince).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
+
+    it('accepts the ninety day window', async () => {
+      const res = await owner.get(CONVERSION).query({ days: 90 }).expect(200);
+      expect((res.body as AdminConversion).days).toBe(90);
+    });
+
+    it.each([
+      ['an unknown window', { days: 7 }],
+      ['a word', { days: 'all' }],
+    ])('refuses %s', async (_, query) => {
+      await owner.get(CONVERSION).query(query).expect(400);
+    });
+
+    it('is not written to the support audit trail, because it holds counts only', async () => {
+      await prisma.supportAccess.deleteMany({});
+      await owner.get(CONVERSION).expect(200);
+      await expect(prisma.supportAccess.count()).resolves.toBe(0);
+    });
+  });
+
+  describe('GET /admin/support/departures', () => {
+    afterEach(() => prisma.workspaceDeparture.deleteMany({}));
+
+    it('lists erased workspaces newest first without any personal data', async () => {
+      await prisma.workspaceDeparture.deleteMany({});
+      await prisma.workspaceDeparture.createMany({
+        data: [
+          {
+            erasedOn: new Date('2026-11-01'),
+            createdOn: new Date('2026-10-01'),
+            requestedOn: new Date('2026-10-25'),
+            stage: 'trial-ended',
+            plan: 'free',
+            everPaid: false,
+            apps: 1,
+            keywordMarkets: 3,
+            members: 1,
+            reason: 'not-using',
+          },
+          {
+            erasedOn: new Date('2026-11-10'),
+            createdOn: new Date('2026-08-01'),
+            requestedOn: new Date('2026-11-03'),
+            stage: 'paying',
+            plan: 'ultimate',
+            everPaid: true,
+            apps: 4,
+            keywordMarkets: 120,
+            members: 3,
+          },
+        ],
+      });
+
+      const res = await owner.get(DEPARTURES).expect(200);
+      const body = res.body as AdminDepartureList;
+
+      expect(body.total).toBe(2);
+      expect(body.limit).toBe(ADMIN_LIST_LIMIT);
+      expect(body.items.map((item) => item.erasedOn)).toEqual([
+        '2026-11-10',
+        '2026-11-01',
+      ]);
+      expect(body.items[0]).toMatchObject({
+        createdOn: '2026-08-01',
+        requestedOn: '2026-11-03',
+        stage: 'paying',
+        plan: 'ultimate',
+        everPaid: true,
+        apps: 4,
+        keywordMarkets: 120,
+        members: 3,
+        reason: null,
+      });
+      expect(body.items[1]?.reason).toBe('not-using');
+      for (const item of body.items) {
+        expect(Object.keys(item).sort()).toEqual(
+          [
+            'apps',
+            'createdOn',
+            'erasedOn',
+            'everPaid',
+            'id',
+            'keywordMarkets',
+            'members',
+            'plan',
+            'reason',
+            'requestedOn',
+            'stage',
+          ].sort(),
+        );
+      }
     });
   });
 

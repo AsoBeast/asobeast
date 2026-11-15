@@ -221,10 +221,14 @@ describe('Deleting the operator workspace (e2e)', () => {
     const operator = await register(OPERATOR);
     await schedule(operator).expect(201);
     await makeDue(DEFAULT_WORKSPACE_ID);
+    const departuresBefore = await prisma.workspaceDeparture.count();
 
     await expect(deletion.eraseDue()).resolves.toEqual([DEFAULT_WORKSPACE_ID]);
 
     await expect(prisma.user.count()).resolves.toBe(0);
+    await expect(prisma.workspaceDeparture.count()).resolves.toBe(
+      departuresBefore,
+    );
     const later = await register(LATER);
     await expect(me(later)).resolves.toMatchObject({
       role: 'owner',

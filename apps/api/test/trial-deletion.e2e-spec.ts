@@ -9,6 +9,7 @@ import {
 } from './helpers/billing-harness';
 import { trialingSubscription } from './helpers/fake-stripe';
 import type Stripe from 'stripe';
+import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 
 const CUSTOMER = 'cus_test_trial';
 
@@ -62,6 +63,51 @@ describe('Deleting a workspace that holds a subscription (e2e)', () => {
     expect(update.idempotencyKey).toMatch(/^cancel-at-end:sub_trial:\d+$/);
     const status = await harness.owner.get('/account/deletion').expect(200);
     expect((status.body as WorkspaceDeletionStatus).scheduled).toBe(true);
+  });
+
+  it('keeps the trial stage and the reason the owner chose until it is cancelled', async () => {
+    await holdSubscription('trialing');
+    const kept = () =>
+      harness.prisma.workspace.findUniqueOrThrow({
+        where: { id: DEFAULT_WORKSPACE_ID },
+        select: {
+          deletionStage: true,
+          deletionPlan: true,
+          deletionReason: true,
+        },
+      });
+
+    await harness.owner
+      .post('/account/deletion')
+      .send({ confirm: 'DELETE', reason: 'too-expensive' })
+      .expect(201);
+    await expect(kept()).resolves.toEqual({
+      deletionStage: 'trialing',
+      deletionPlan: 'indie',
+      deletionReason: 'too-expensive',
+    });
+
+    await harness.owner.delete('/account/deletion').expect(200);
+    await expect(kept()).resolves.toEqual({
+      deletionStage: null,
+      deletionPlan: null,
+      deletionReason: null,
+    });
+  });
+
+  it.each([
+    ['free text', 'my boss said so'],
+    ['an empty reason', ''],
+  ])('refuses %s as a reason and schedules nothing', async (_, reason) => {
+    await holdSubscription('trialing');
+
+    await harness.owner
+      .post('/account/deletion')
+      .send({ confirm: 'DELETE', reason })
+      .expect(400);
+
+    const status = await harness.owner.get('/account/deletion').expect(200);
+    expect((status.body as WorkspaceDeletionStatus).scheduled).toBe(false);
   });
 
   it('renews again when the deletion is cancelled', async () => {

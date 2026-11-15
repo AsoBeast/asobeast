@@ -98,6 +98,9 @@ model Workspace {
   deletionRequestedBy           String?
   deletionDueAt                 DateTime?
   deletionStoppedSubscriptionId String?
+  deletionReason                String?
+  deletionStage                 String?
+  deletionPlan                  String?
   erasureClaimedAt              DateTime?
   checklistGoal                 String?
   checklistDismissedAt          DateTime?
@@ -158,6 +161,22 @@ model BillingEvent {
 
   @@index([processedAt])
   @@index([outcome, receivedAt])
+}
+
+model WorkspaceDeparture {
+  id             String   @id @default(uuid(4))
+  erasedOn       DateTime @db.Date
+  createdOn      DateTime @db.Date
+  requestedOn    DateTime @db.Date
+  stage          String
+  plan           String
+  everPaid       Boolean
+  apps           Int
+  keywordMarkets Int
+  members        Int
+  reason         String?
+
+  @@index([erasedOn])
 }
 
 model TrialClaim {

@@ -7274,6 +7274,64 @@
         ]
       }
     },
+    "/admin/support/conversion": {
+      "get": {
+        "operationId": "SupportDirectoryController_conversion",
+        "parameters": [
+          {
+            "name": "days",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 30,
+              "type": "number",
+              "enum": [
+                30,
+                90
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Sign up to paid conversion and departures for the operator",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/support/departures": {
+      "get": {
+        "operationId": "SupportDirectoryController_departures",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Erased workspaces, newest first, without any personal data",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/admin/support/users": {
       "get": {
         "operationId": "SupportDirectoryController_users",
@@ -7857,6 +7915,17 @@
             "enum": [
               "DELETE"
             ]
+          },
+          "reason": {
+            "enum": [
+              "too-expensive",
+              "missing-feature",
+              "not-using",
+              "switched-tool",
+              "other"
+            ],
+            "type": "string",
+            "description": "Why the workspace is leaving, from a fixed list; kept without any personal data after erasure"
           }
         },
         "required": [

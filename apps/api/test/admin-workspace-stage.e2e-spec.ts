@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import type {
+  AdminConversion,
   AdminOverview,
   AdminUserList,
   SupportWorkspaceSummary,
@@ -28,6 +29,20 @@ describe('Admin area workspace stages (billing mode)', () => {
 
   const daysFromNow = (days: number) => new Date(Date.now() + days * DAY_MS);
 
+  const COMPED_OPERATOR = {
+    plan: 'indie',
+    planExpiresAt: daysFromNow(30),
+    trialStartedAt: null,
+    trialEndsAt: null,
+    subscriptionId: null,
+    subscriptionStatus: null,
+    firstPaidAt: null,
+    cancelAtPeriodEnd: false,
+    deletionRequestedAt: null,
+    deletionRequestedBy: null,
+    deletionDueAt: null,
+  };
+
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -39,16 +54,13 @@ describe('Admin area workspace stages (billing mode)', () => {
     await pauseQueues(app);
 
     prisma = testDb();
-    await prisma.workspace.deleteMany({ where: { id: CARD_TRIAL_WORKSPACE } });
+    await prisma.workspace.deleteMany({
+      where: { id: { not: DEFAULT_WORKSPACE_ID } },
+    });
     await prisma.workspace.upsert({
       where: { id: DEFAULT_WORKSPACE_ID },
-      update: { plan: 'indie', planExpiresAt: daysFromNow(30) },
-      create: {
-        id: DEFAULT_WORKSPACE_ID,
-        name: 'Default',
-        plan: 'indie',
-        planExpiresAt: daysFromNow(30),
-      },
+      update: COMPED_OPERATOR,
+      create: { id: DEFAULT_WORKSPACE_ID, name: 'Default', ...COMPED_OPERATOR },
     });
     await truncateUsers(prisma);
     operator = await ownerAgent(app);
@@ -116,6 +128,56 @@ describe('Admin area workspace stages (billing mode)', () => {
       cancelAtPeriodEnd: false,
       billingInterval: 'month',
       firstPaidAt: null,
+    });
+  });
+
+  it('counts the card trial in the conversion funnel and among trials ending soon', async () => {
+    const conversion = (
+      await operator.get('/admin/support/conversion').expect(200)
+    ).body as AdminConversion;
+    const step = (key: string) =>
+      conversion.funnel.find((row) => row.key === key)?.count;
+
+    expect(conversion.billing).toBe(true);
+    expect(step('trial-started')).toBe(1);
+    expect(step('paid')).toBe(0);
+    expect(conversion.trials).toEqual({ inProgress: 1, endingSoon: 0 });
+    expect(conversion.trialToPaid?.current).toEqual({ ended: 0, paid: 0 });
+    expect(conversion.medianDays.signupToTrial).not.toBeUndefined();
+    expect(conversion.cohorts.at(-1)).toHaveProperty('stillPaying');
+  });
+
+  it('names who scheduled a deletion and when it erases', async () => {
+    const dueAt = daysFromNow(7);
+    await prisma.workspace.update({
+      where: { id: CARD_TRIAL_WORKSPACE },
+      data: {
+        deletionRequestedAt: new Date(),
+        deletionRequestedBy: CARD_TRIAL_OWNER,
+        deletionDueAt: dueAt,
+      },
+    });
+
+    const workspaces = (
+      await operator.get('/admin/support/workspaces').expect(200)
+    ).body as SupportWorkspaceSummary[];
+
+    expect(
+      workspaces.find(
+        (workspace) => workspace.workspaceId === CARD_TRIAL_WORKSPACE,
+      ),
+    ).toMatchObject({
+      deletionRequestedBy: CARD_TRIAL_OWNER,
+      deletionDueAt: dueAt.toISOString(),
+    });
+    expect(
+      workspaces.find(
+        (workspace) => workspace.workspaceId === DEFAULT_WORKSPACE_ID,
+      ),
+    ).toMatchObject({
+      deletionRequestedAt: null,
+      deletionRequestedBy: null,
+      deletionDueAt: null,
     });
   });
 
