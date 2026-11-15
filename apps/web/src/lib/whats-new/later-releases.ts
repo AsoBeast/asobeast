@@ -20,6 +20,11 @@ export const LATER_RELEASES: readonly Release[] = [
       },
       {
         kind: "improved",
+        title: "Fields the store does not search say so",
+        text: "On the metadata page, a field the App Store does not search is now labelled next to its name, so you know not to spend keywords there.",
+      },
+      {
+        kind: "improved",
         title: "An empty month says so",
         text: "When the newest monthly report names no search term on any source, the column now states that fact with the month, instead of leaving a row of unexplained dashes.",
       },
