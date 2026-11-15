@@ -2,11 +2,12 @@
 
 import { createColumnHelper } from "@tanstack/react-table";
 import { CheckCircle2, CircleDashed } from "lucide-react";
-import { PLANS, type AdminUser } from "@asobeast/shared";
+import type { AdminUser } from "@asobeast/shared";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import type { DataTableFeatures } from "@/components/data-table/table-features";
 import { Badge } from "@/components/ui/badge";
 import { workspaceListHref } from "@/lib/admin-sections";
+import { heldPlanLabel, stageLabel } from "@/lib/admin-stages";
 import { formatDate } from "@/lib/format";
 import { WorkspaceName } from "./cells";
 
@@ -44,6 +45,18 @@ function Confirmation({ confirmed }: { confirmed: boolean }) {
       />
       {confirmed ? "Confirmed" : "Not confirmed"}
     </span>
+  );
+}
+
+function UserStage({ user }: { user: AdminUser }) {
+  const held = user.workspaceStage ? heldPlanLabel(user.workspacePlan) : null;
+  return (
+    <div className="flex flex-col">
+      <span>{stageLabel(user.workspaceStage, user.workspacePlan)}</span>
+      {held ? (
+        <span className="text-caption text-muted-foreground">{held}</span>
+      ) : null}
+    </div>
   );
 }
 
@@ -87,14 +100,17 @@ export const userColumns = columnHelper.columns([
       />
     ),
   }),
-  columnHelper.accessor("workspacePlan", {
-    id: "plan",
-    sortFn: "text",
-    sortDescFirst: false,
-    meta: { label: "Plan" },
-    header: ({ column }) => <SortableHeader column={column} label="Plan" />,
-    cell: ({ row }) => PLANS[row.original.workspacePlan].displayName,
-  }),
+  columnHelper.accessor(
+    (user) => stageLabel(user.workspaceStage, user.workspacePlan),
+    {
+      id: "plan",
+      sortFn: "text",
+      sortDescFirst: false,
+      meta: { label: "Plan" },
+      header: ({ column }) => <SortableHeader column={column} label="Plan" />,
+      cell: ({ row }) => <UserStage user={row.original} />,
+    },
+  ),
   columnHelper.accessor("createdAt", {
     id: "joined",
     sortFn: "text",

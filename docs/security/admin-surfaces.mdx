@@ -50,10 +50,10 @@ The web app has an **Admin** area at `/admin` for the platform operator. It appe
 
 | Tab | What it shows | Endpoint |
 | --- | --- | --- |
-| Overview | workspaces by plan, accounts and sign ups over 30 days, tracked apps by store, keyword markets, searched keywords, AI calls this month, activation | `GET /admin/support/overview` |
+| Overview | workspaces by [stage](#workspace-stages), accounts and sign ups over 30 days, tracked apps by store, keyword markets, searched keywords, AI calls this month, activation | `GET /admin/support/overview` |
 | Capacity | daily demand against capacity, per store, the top consumers by name, and the proxy pool when one is configured | `GET /admin/capacity`, `GET /admin/proxy-pool`, `GET /admin/support/workspaces` |
-| Workspaces | every workspace with its plan, members, apps and keyword markets | `GET /admin/support/workspaces` |
-| Users | every account, newest first, with its workspace and whether its email is confirmed | `GET /admin/support/users` |
+| Workspaces | every workspace with its stage and plan, members, apps and keyword markets | `GET /admin/support/workspaces` |
+| Users | every account, newest first, with its workspace, the workspace's stage and whether its email is confirmed | `GET /admin/support/users` |
 | Apps | every tracked app with its workspace, store, home market, competitors and keyword markets | `GET /admin/support/apps` |
 
 Keyword markets count one phrase once per workspace, however many of its apps track it, which is the number the workspace's own plan card shows. The Overview and Workspaces tabs follow that rule, and the Overview total adds the workspaces together, so a phrase two workspaces track counts once in each. The Apps tab counts what each app tracks, so its rows can add up to more than the workspace figure.
@@ -65,6 +65,22 @@ The admin area is read only. It lists accounts and apps; it never opens a worksp
 ### Activation {#activation}
 
 The Activation tile counts the apps imported in the last 30 days, across every workspace, that had a position for one of their keywords within 24 hours of the import, as **9 of 12**. That is the time to value the guided setup is built for. Its note adds how many of those apps completed the guided setup. Competitors are left out, and the count reads the positions and setup rows the instance already keeps, so it needs no configuration.
+
+### Workspace stages {#workspace-stages}
+
+With billing on, each workspace is in one stage, read from its plan and subscription. The first row that matches wins.
+
+| Stage | When |
+| --- | --- |
+| Payment failed | a charge failed and Stripe is retrying it, or the subscription is unpaid or paused |
+| On trial | a card trial in Stripe, including the minutes between the trial's end and its first paid invoice, or a trial from before card trials |
+| Paying | a paid plan with at least one paid invoice |
+| Comped | a paid plan without a subscription, set by hand |
+| Trial ended | no plan now, a trial started and nothing was ever paid |
+| Churned | no plan now, paid before |
+| No plan | never started a trial or paid |
+
+A card trial holds the paid plan it will renew into, so the plan column of the Workspaces and Users tabs still names that plan while the stage says the workspace is on trial. On a self hosted instance every workspace is **Self hosted**.
 
 ## When the operator's workspace has no plan {#when-the-operators-workspace-has-no-plan}
 

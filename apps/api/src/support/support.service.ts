@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { Job, Queue } from 'bullmq';
 import type { Workspace } from '@prisma/client';
 import {
+  billingIntervalOf,
   type SupportFailedJob,
   type SupportRunDay,
   type SupportWorkspaceDetail,
@@ -15,6 +16,7 @@ import {
   type KeywordMarketRow,
 } from '../auth/keyword-markets';
 import { planScopeOf } from '../auth/plan-limits';
+import { workspaceStageOf } from '../billing/workspace-stage';
 import { scrubText } from '../common/logging/log-redaction';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
@@ -127,15 +129,20 @@ export class SupportService {
       keywordMarkets: sumKeywordMarkets(
         counts.keywords.filter((row) => row.workspaceId === workspace.id),
       ),
+      stage: workspaceStageOf(this.billing(), workspace, now),
+      cancelAtPeriodEnd: workspace.cancelAtPeriodEnd,
+      trialStartedAt: workspace.trialStartedAt?.toISOString() ?? null,
+      firstPaidAt: workspace.firstPaidAt?.toISOString() ?? null,
+      billingInterval: billingIntervalOf(workspace.billingInterval),
     };
   }
 
+  private billing(): boolean {
+    return this.config.get('BILLING_ENABLED', { infer: true });
+  }
+
   private scopeOf(workspace: Workspace, now: Date) {
-    return planScopeOf(
-      this.config.get('BILLING_ENABLED', { infer: true }),
-      workspace,
-      now,
-    );
+    return planScopeOf(this.billing(), workspace, now);
   }
 
   private async counts() {

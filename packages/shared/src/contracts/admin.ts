@@ -7,6 +7,19 @@ export const ADMIN_SIGNUP_DAYS = 30;
 
 export const ACTIVATION_WINDOW_DAYS = 30;
 
+export const WORKSPACE_STAGES = [
+  'trialing',
+  'paying',
+  'payment-failed',
+  'comped',
+  'trial-ended',
+  'churned',
+  'no-plan',
+  'self-hosted',
+] as const;
+
+export type WorkspaceStage = (typeof WORKSPACE_STAGES)[number];
+
 export interface AdminCount<K extends string> {
   key: K;
   count: number;
@@ -32,6 +45,8 @@ export interface AdminOverview {
     suspended: number;
     pendingDeletion: number;
     byPlan: AdminCount<PlanName>[];
+    byStage?: AdminCount<WorkspaceStage>[];
+    canceling?: number;
   };
   users: {
     total: number;
@@ -65,6 +80,7 @@ export interface AdminUser {
   workspaceId: string;
   workspaceName: string;
   workspacePlan: PlanName;
+  workspaceStage?: WorkspaceStage;
 }
 
 export interface AdminUserList {

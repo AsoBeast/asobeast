@@ -3,7 +3,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import {
   ACTIVATION_WINDOW_DAYS,
-  PLANS,
   type AdminActivation,
   type AdminOverview as Overview,
 } from "@asobeast/shared";
@@ -17,6 +16,7 @@ import {
 import { PANEL_HEADER } from "@/components/layout/panel-classes";
 import { InfoTip } from "@/components/ui/info-tip";
 import { StatTile, StatTileGroup } from "@/components/ui/stat-tile";
+import { WORKSPACE_STAGE_LABELS } from "@/lib/admin-stages";
 import { formatNumber, pluralize, storeLabel } from "@/lib/format";
 import { adminOverviewOptions } from "@/lib/queries";
 import { SignupsChart } from "./SignupsChart";
@@ -144,19 +144,23 @@ export function AdminOverview() {
             <Card>
               <CardHeader className={PANEL_HEADER}>
                 <CardTitle asChild>
-                  <h2>Plans</h2>
+                  <h2>Workspaces by stage</h2>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <CountList
-                  rows={overview.workspaces.byPlan.map(({ key, count }) => ({
-                    key,
-                    label: PLANS[key].displayName,
-                    count,
-                  }))}
+                  rows={(overview.workspaces.byStage ?? []).map(
+                    ({ key, count }) => ({
+                      key,
+                      label: WORKSPACE_STAGE_LABELS[key],
+                      count,
+                    }),
+                  )}
                 />
               </CardContent>
-              <CardFooter>The plan each workspace is on right now.</CardFooter>
+              <CardFooter>
+                Where each workspace stands with billing right now.
+              </CardFooter>
             </Card>
           ) : null}
           <Card>

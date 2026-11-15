@@ -7,6 +7,7 @@ import {
 } from '@asobeast/shared';
 import { planScopeOf } from '../auth/plan-limits';
 import { isPlatformOperator } from '../auth/platform-operator';
+import { workspaceStageOf } from '../billing/workspace-stage';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
@@ -57,7 +58,10 @@ export class SupportDirectoryService {
                   plan: true,
                   trialEndsAt: true,
                   planExpiresAt: true,
+                  subscriptionId: true,
                   subscriptionStatus: true,
+                  trialStartedAt: true,
+                  firstPaidAt: true,
                 },
               },
             },
@@ -77,6 +81,7 @@ export class SupportDirectoryService {
             workspaceId: row.workspaceId,
             workspaceName: row.workspace.name,
             workspacePlan: planScopeOf(billing, row.workspace, now).plan,
+            workspaceStage: workspaceStageOf(billing, row.workspace, now),
           })),
           total,
           limit: ADMIN_LIST_LIMIT,

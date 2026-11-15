@@ -33,7 +33,7 @@ test.describe("the admin area for the platform operator", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: "Admin" }),
     ).toBeVisible();
-    await expect(tile(page, "Workspaces")).toContainText("3");
+    await expect(tile(page, "Workspaces")).toContainText("6");
     await expect(tile(page, "Users")).toContainText("5");
     await expect(tile(page, "Tracked apps")).toContainText("4");
     await expect(tile(page, "Keyword markets")).toContainText("1,234");
@@ -50,7 +50,29 @@ test.describe("the admin area for the platform operator", () => {
       "href",
       "https://docs.asobeast.com/security/admin-surfaces#activation",
     );
-    await expect(page.getByRole("heading", { name: "Plans" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Workspaces by stage" }),
+    ).toBeVisible();
+  });
+
+  test("the stages panel counts a card trial as a trial", async ({ page }) => {
+    await page.goto("/admin");
+
+    const stages = page.locator('[data-slot="card"]').filter({
+      has: page.getByRole("heading", { name: "Workspaces by stage" }),
+    });
+    await expect(stages.getByRole("definition")).toHaveText([
+      "2",
+      "2",
+      "0",
+      "0",
+      "0",
+      "1",
+      "1",
+      "0",
+    ]);
+    await expect(stages.getByRole("term").first()).toHaveText("On trial");
+    await expect(stages).not.toContainText("Indie");
   });
 
   test("moves between tabs that are real links", async ({ page }) => {
@@ -124,7 +146,9 @@ test.describe("the admin area for the platform operator", () => {
     await page.goto("/admin");
 
     await expect(tile(page, "Workspaces")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Plans" })).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: "Workspaces by stage" }),
+    ).toHaveCount(0);
     await expect(
       page.getByRole("region", {
         name: "Accounts and workspaces created per day",
@@ -221,13 +245,21 @@ test.describe("workspaces in the admin area", () => {
     const table = page.getByRole("table", {
       name: "Workspaces on this instance",
     });
-    await expect(table.getByRole("row")).toHaveCount(4);
+    await expect(table.getByRole("row")).toHaveCount(7);
     const lapsed = table.getByRole("row").filter({ hasText: "Lapsed Studio" });
     await expect(lapsed).toContainText("Suspended");
     await expect(lapsed).toContainText("Sustained rate limit abuse");
     await expect(
       table.getByRole("columnheader", { name: "Plan" }),
     ).toBeVisible();
+    const cardTrial = table
+      .getByRole("row")
+      .filter({ hasText: "Northwind Labs" });
+    await expect(cardTrial).toContainText("On trial");
+    await expect(cardTrial).toContainText("Indie");
+    await expect(
+      table.getByRole("row").filter({ hasText: "Quiet Pixel" }),
+    ).not.toContainText(/canceled/i);
   });
 
   test("keeps the search in the address", async ({ page }) => {
@@ -275,9 +307,10 @@ test.describe("accounts in the admin area", () => {
     const rows = page
       .getByRole("table", { name: "Accounts on this instance" })
       .getByRole("row");
-    await expect(rows).toHaveCount(6);
-    await expect(rows.nth(1)).toContainText("lee@lapsed.example.com");
-    await expect(rows.nth(1)).toContainText("Not confirmed");
+    await expect(rows).toHaveCount(7);
+    await expect(rows.nth(1)).toContainText("nia@northwind.example.com");
+    await expect(rows.nth(2)).toContainText("lee@lapsed.example.com");
+    await expect(rows.nth(2)).toContainText("Not confirmed");
     await expect(rows.filter({ hasText: "ana@example.com" })).toContainText(
       "Confirmed",
     );
@@ -311,7 +344,7 @@ test.describe("accounts in the admin area", () => {
       .click();
 
     await expect(page).toHaveURL("/admin/users");
-    await expect(rows).toHaveCount(6);
+    await expect(rows).toHaveCount(7);
   });
 
   test("says when the list stops short of every account", async ({
@@ -322,7 +355,7 @@ test.describe("accounts in the admin area", () => {
     await page.goto("/admin/users");
 
     await expect(
-      page.getByText("Showing the newest 5 of 1,204 accounts."),
+      page.getByText("Showing the newest 6 of 1,204 accounts."),
     ).toBeVisible();
     await expect(
       page.getByRole("link", { name: "Open a workspace" }),
@@ -337,7 +370,7 @@ test.describe("accounts in the admin area", () => {
         page
           .getByRole("table", { name: "Accounts on this instance" })
           .getByRole("row"),
-      ).toHaveCount(6);
+      ).toHaveCount(7);
       await expect(
         page.getByRole("list", { name: "Active filters" }),
       ).toHaveCount(0);
@@ -354,6 +387,11 @@ test.describe("accounts in the admin area", () => {
     await expect(
       page.getByRole("columnheader", { name: "Plan" }),
     ).toBeVisible();
+    const nia = page
+      .getByRole("row")
+      .filter({ hasText: "nia@northwind.example.com" });
+    await expect(nia).toContainText("On trial");
+    await expect(nia).toContainText("Indie");
   });
 
   test("drops the plan column on a self hosted instance", async ({ page }) => {
