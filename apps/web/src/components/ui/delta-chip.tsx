@@ -23,6 +23,8 @@ const PILL: Record<Direction, string> = {
   flat: "bg-secondary",
 };
 
+const ARROW_LIFT = "-translate-y-[0.07em]";
+
 export type DeltaForm = "text" | "pill";
 
 const PILL_SHAPE = "h-[22px] rounded-md px-[7px] text-label";
@@ -47,7 +49,12 @@ export function DirectionArrow({
   className?: string;
 }) {
   const Icon = GLYPH[way];
-  return <Icon className={cn("size-3.5 shrink-0", className)} aria-hidden />;
+  return (
+    <Icon
+      className={cn("size-3.5 shrink-0", ARROW_LIFT, className)}
+      aria-hidden
+    />
+  );
 }
 
 export function DeltaChip({
@@ -99,7 +106,7 @@ export function DeltaChip({
         className,
       )}
     >
-      <Icon className="size-3.5" aria-hidden />
+      <Icon className={cn("size-3.5", ARROW_LIFT)} aria-hidden />
       <span>{`${magnitude}${unit}`}</span>
     </span>
   );
@@ -127,7 +134,7 @@ export function PositionDeltaChip({
         TONE[way],
       )}
     >
-      <Icon className="size-3" aria-hidden />
+      <Icon className={cn("size-3", ARROW_LIFT)} aria-hidden />
       <span>{magnitude}</span>
     </span>
   );
@@ -175,7 +182,7 @@ export function TrendChip({
         formOf(way, form),
       )}
     >
-      <Icon className="size-3.5" aria-hidden />
+      <Icon className={cn("size-3.5", ARROW_LIFT)} aria-hidden />
       {labelled ? (
         <span>{`${signed}${unit} ${label}`}</span>
       ) : (

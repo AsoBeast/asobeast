@@ -1,12 +1,37 @@
 import type * as React from "react";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { DeltaChip, PositionDeltaChip, TrendChip } from "./delta-chip";
+import {
+  DeltaChip,
+  DirectionArrow,
+  PositionDeltaChip,
+  TrendChip,
+} from "./delta-chip";
 
 const textOf = (chip: React.ReactElement) =>
   renderToString(chip).replace(/^<span[^>]*><svg.*?<\/svg>|<\/span>$/g, "");
 
+const arrowClasses = (chip: React.ReactElement) =>
+  [...renderToString(chip).matchAll(/<svg[^>]*class="([^"]*)"/g)].map(
+    ([, classes]) => classes,
+  );
+
 describe("delta chips", () => {
+  it("lifts every arrow to the middle of the digits beside it", () => {
+    const arrows = [
+      <DeltaChip key="delta" value={-3} period="over 7 days" form="pill" />,
+      <DeltaChip key="flat" value={0} period="over 7 days" />,
+      <PositionDeltaChip key="position" value={2} />,
+      <TrendChip key="trend" label="7d" value={4} form="pill" />,
+      <TrendChip key="zero" label="7d" value={0} />,
+      <DirectionArrow key="arrow" way="down" />,
+    ].flatMap(arrowClasses);
+    expect(arrows).toHaveLength(5);
+    for (const classes of arrows) {
+      expect(classes.split(" ")).toContain("-translate-y-[0.07em]");
+    }
+  });
+
   it("keeps the change and its unit in one span beside the arrow", () => {
     expect(textOf(<DeltaChip value={-3} period="over 7 days" />)).toBe(
       "<span>3</span>",
