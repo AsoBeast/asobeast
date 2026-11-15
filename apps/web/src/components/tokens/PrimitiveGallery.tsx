@@ -43,7 +43,6 @@ const BADGE_VARIANTS = [
   "info",
   "brand",
   "destructive",
-  "ghost",
 ] as const;
 
 function Row({
