@@ -5,12 +5,12 @@ import { useQuery } from "@tanstack/react-query";
 import type { AlertEventItem } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { alertEventHref } from "@/components/alerts/alert-event-href";
+import { alertEventSize } from "@/components/alerts/alert-event-size";
 import {
   failedRead,
   InlineQueryError,
 } from "@/components/layout/InlineQueryError";
 import { EVENT_LABELS } from "@/components/settings/alert-event-copy";
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardAction,
@@ -19,8 +19,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { alertRecentOptions } from "@/lib/queries";
+import { DeltaChip } from "@/components/ui/delta-chip";
 import { cn } from "@/lib/utils";
-import { ALERT_KINDS } from "./alert-kind";
 import {
   FEED_LINK,
   FEED_ROW,
@@ -37,7 +37,7 @@ const DAYS_BEFORE_TODAY = WINDOW_DAYS - 1;
 
 function AlertLine({ item, today }: { item: AlertEventItem; today: string }) {
   const href = alertEventHref(item);
-  const kind = ALERT_KINDS[item.event];
+  const size = alertEventSize(item.payload);
   const body = (
     <>
       <FeedDay>{feedDayLabel(item.occurredAt.slice(0, 10), today)}</FeedDay>
@@ -50,7 +50,14 @@ function AlertLine({ item, today }: { item: AlertEventItem; today: string }) {
           </span>
         </span>
       </span>
-      <Badge variant={kind.tone}>{kind.word}</Badge>
+      {size ? (
+        <DeltaChip
+          value={size.value}
+          polarity={size.polarity}
+          period={size.period}
+          form="pill"
+        />
+      ) : null}
     </>
   );
   return href === null ? (

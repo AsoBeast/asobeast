@@ -389,13 +389,16 @@ test("the alerts panel lists the newest events of the last 7 days", async ({
   await expect(
     rows.first().locator(":scope > * > span:first-child"),
   ).toHaveText("Today");
-  await expect(rows.locator('[data-slot="badge"]')).toHaveText([
-    "listing",
-    "fell",
-    "climbed",
-    "climbed",
-    "milestone",
-  ]);
+  const sizeOf = (text: string) =>
+    rows.filter({ hasText: text }).locator('[data-slot="delta-pill"]');
+  await expect(sizeOf("fell from #4 to #12")).toHaveAccessibleName(
+    "down 8 positions",
+  );
+  await expect(sizeOf("climbed from #20 to #7")).toHaveAccessibleName(
+    "up 13 positions",
+  );
+  await expect(sizeOf("changed its subtitle")).toHaveCount(0);
+  await expect(rows.locator('[data-slot="badge"]')).toHaveCount(0);
   await expect(rows.first().locator(".sr-only")).toHaveText(
     "Metadata changed: ",
   );
