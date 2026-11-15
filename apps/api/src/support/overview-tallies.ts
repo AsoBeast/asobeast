@@ -1,12 +1,17 @@
 import {
   ADMIN_SIGNUP_DAYS,
   PLAN_NAMES,
+  WORKSPACE_STAGES,
   type AdminCount,
   type AdminOverview,
   type AdminSignupDay,
-  type PlanEntitlement,
 } from '@asobeast/shared';
 import { planScopeOf } from '../auth/plan-limits';
+import {
+  cancelingOf,
+  workspaceStageOf,
+  type WorkspaceFlagSource,
+} from '../billing/workspace-stage';
 
 const DAY_MS = 24 * 60 * 60_000;
 
@@ -20,8 +25,7 @@ export interface KeyedCount {
   count: number;
 }
 
-export interface WorkspaceRow extends PlanEntitlement {
-  subscriptionStatus: string | null;
+export interface WorkspaceRow extends WorkspaceFlagSource {
   suspendedAt: Date | null;
   deletionDueAt: Date | null;
 }
@@ -77,10 +81,20 @@ export function tallyWorkspaces(
     key: planScopeOf(billing, row, now).plan,
     count: 1,
   }));
+  const staged = rows.map((row) => ({
+    row,
+    stage: workspaceStageOf(billing, row, now),
+  }));
   return {
     total: rows.length,
     suspended: rows.filter((row) => row.suspendedAt !== null).length,
     pendingDeletion: rows.filter((row) => row.deletionDueAt !== null).length,
     byPlan: countsByKey(PLAN_NAMES, plans),
+    byStage: countsByKey(
+      WORKSPACE_STAGES,
+      staged.map(({ stage }) => ({ key: stage, count: 1 })),
+    ),
+    canceling: staged.filter(({ row, stage }) => cancelingOf(stage, row))
+      .length,
   };
 }

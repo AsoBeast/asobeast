@@ -1,3 +1,5 @@
+import type { WorkspaceStage } from './admin';
+import type { BillingInterval } from './billing';
 import type { PlanLimits, PlanName } from './plans';
 
 export const SUPPORT_ACTIONS = [
@@ -42,6 +44,11 @@ export interface SupportWorkspaceSummary {
   apps: number;
   competitors: number;
   keywordMarkets: number;
+  stage?: WorkspaceStage;
+  cancelAtPeriodEnd?: boolean;
+  trialStartedAt?: string | null;
+  firstPaidAt?: string | null;
+  billingInterval?: BillingInterval | null;
 }
 
 export interface SupportRunDay {

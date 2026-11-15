@@ -1,4 +1,4 @@
-import { PLAN_NAMES, STORES } from '@asobeast/shared';
+import { PLAN_NAMES, STORES, WORKSPACE_STAGES } from '@asobeast/shared';
 import {
   countsByKey,
   signupSeries,
@@ -15,7 +15,11 @@ const workspace = (overrides: Partial<WorkspaceRow> = {}): WorkspaceRow => ({
   plan: 'free',
   trialEndsAt: null,
   planExpiresAt: null,
+  subscriptionId: null,
   subscriptionStatus: null,
+  trialStartedAt: null,
+  firstPaidAt: null,
+  cancelAtPeriodEnd: false,
   suspendedAt: null,
   deletionDueAt: null,
   ...overrides,
@@ -124,6 +128,65 @@ describe('tallyWorkspaces', () => {
     expect(planCount(tally, 'free')).toBe(2);
     expect(planCount(tally, 'indie')).toBe(0);
     expect(planCount(tally, 'trial')).toBe(0);
+  });
+});
+
+describe('tallyWorkspaces stages', () => {
+  const stageCount = (
+    tally: ReturnType<typeof tallyWorkspaces>,
+    stage: (typeof WORKSPACE_STAGES)[number],
+  ) => tally.byStage?.find((row) => row.key === stage)?.count;
+
+  const cardTrial = workspace({
+    plan: 'indie',
+    planExpiresAt: FUTURE,
+    subscriptionId: 'sub_trial',
+    subscriptionStatus: 'trialing',
+    trialStartedAt: PAST,
+    trialEndsAt: FUTURE,
+  });
+
+  it('counts a card trial as a trial while its plan stays the paid one', () => {
+    const tally = tallyWorkspaces(
+      [
+        cardTrial,
+        workspace({
+          plan: 'indie',
+          planExpiresAt: FUTURE,
+          subscriptionId: 'sub_paid',
+          subscriptionStatus: 'active',
+          firstPaidAt: PAST,
+        }),
+      ],
+      true,
+      NOW,
+    );
+    expect(tally.byStage?.map((row) => row.key)).toEqual([...WORKSPACE_STAGES]);
+    expect(stageCount(tally, 'trialing')).toBe(1);
+    expect(stageCount(tally, 'paying')).toBe(1);
+    expect(planCount(tally, 'indie')).toBe(2);
+    expect(planCount(tally, 'trial')).toBe(0);
+  });
+
+  it('counts the trials and customers that stop at period end', () => {
+    const tally = tallyWorkspaces(
+      [
+        { ...cardTrial, cancelAtPeriodEnd: true },
+        workspace({ cancelAtPeriodEnd: true, firstPaidAt: PAST }),
+        cardTrial,
+      ],
+      true,
+      NOW,
+    );
+    expect(tally.canceling).toBe(1);
+    expect(stageCount(tally, 'churned')).toBe(1);
+  });
+
+  it('places every workspace as self hosted when billing is off', () => {
+    const tally = tallyWorkspaces([cardTrial, workspace()], false, NOW);
+    expect(stageCount(tally, 'self-hosted')).toBe(2);
+    expect(stageCount(tally, 'trialing')).toBe(0);
+    expect(tally.canceling).toBe(0);
   });
 });
 
