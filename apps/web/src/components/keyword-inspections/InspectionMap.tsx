@@ -54,6 +54,7 @@ import {
   type InspectionPoint,
   type Storefront,
 } from "./inspection-map";
+import { storefrontName } from "./inspection-format";
 
 const SELECT_KEYS = new Set(["Enter", " "]);
 const EDGE_KEYS: Readonly<Record<string, "first" | "last">> = {
@@ -88,7 +89,7 @@ function mapFooter(
   points: readonly InspectionPoint[],
   storefront: Storefront,
 ): string {
-  const place = `${storeLabel(storefront.store)} · ${formatCountry(storefront.country)}`;
+  const place = storefrontName(storefront.store, storefront.country);
   const latest = points.reduce<string | null>(
     (newest, point) =>
       point.completedAt !== null &&

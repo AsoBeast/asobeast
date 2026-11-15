@@ -47,9 +47,12 @@ export function ReleaseTimeline({
       <p className="text-body text-muted-foreground">No release notes yet.</p>
     );
   }
+  const newestOnly = new Set(
+    releases.slice(0, 1).map((release) => release.version),
+  );
   const opened = arrival
     ? openOnArrival(releases, arrival.seen, arrival.linked)
-    : new Set(newest === null ? [] : [newest]);
+    : newestOnly;
   const unread = arrival ? unreadOnArrival(releases, arrival.seen) : NOTHING;
   const isOpen = (version: string) =>
     toggled.get(version) ?? opened.has(version);

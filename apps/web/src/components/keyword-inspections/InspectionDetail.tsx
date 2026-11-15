@@ -22,7 +22,7 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { isNotFound, requestKeywordInspection } from "@/lib/api";
 import { useFocusAfterCommit } from "@/lib/focus-handoff";
-import { formatCountry, formatDateTime, storeLabel } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import { inspectionPollInterval } from "@/lib/keyword-inspection-polling";
 import {
   keywordInspectionKeys,
@@ -39,7 +39,11 @@ import {
   InspectionSource,
   SUB_HEADER,
 } from "./InspectionScores";
-import { otherStorefronts, storefrontCode } from "./inspection-format";
+import {
+  otherStorefronts,
+  storefrontCode,
+  storefrontName,
+} from "./inspection-format";
 import {
   InspectionDetailSkeleton,
   InspectionScoresSkeleton,
@@ -250,7 +254,7 @@ function CompletedInspection({
 }
 
 function inspectionFooter(inspection: KeywordInspection): ReactNode {
-  const place = `${storeLabel(inspection.store)} · ${formatCountry(inspection.country)}`;
+  const place = storefrontName(inspection.store, inspection.country);
   const when =
     inspection.status === "DONE" && inspection.completedAt
       ? formatDateTime(inspection.completedAt)

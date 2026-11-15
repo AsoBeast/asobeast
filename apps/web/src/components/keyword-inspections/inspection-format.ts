@@ -11,6 +11,7 @@ import {
 } from "@asobeast/shared";
 import {
   formatCompact,
+  formatCountry,
   formatNumber,
   formatRating,
   pluralize,
@@ -135,6 +136,9 @@ const MONTHS_FROM_DAYS = 60;
 
 export const storefrontCode = (store: Store, country: string): string =>
   `${storeLabel(store)} · ${country.toUpperCase()}`;
+
+export const storefrontName = (store: Store, country: string): string =>
+  `${storeLabel(store)} · ${formatCountry(country)}`;
 
 const daysBetween = (from: string, to: string): number =>
   Math.floor((Date.parse(to) - Date.parse(from)) / DAY_MS);
