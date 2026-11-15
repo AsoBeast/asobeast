@@ -139,11 +139,18 @@ function summaryOf(inspection: KeywordInspection): KeywordInspectionSummary {
   };
 }
 
+export const keywordIdOf = ({
+  keyword,
+  store,
+  country,
+}: KeywordInspectionRequest): string =>
+  `inspected-keyword-${store}-${country}-${normalizeText(keyword)}`;
+
 export function requestInspection(
   request: KeywordInspectionRequest,
 ): KeywordInspection {
   const keyword = normalizeText(request.keyword);
-  const keywordId = `inspected-keyword-${request.store}-${request.country}-${keyword}`;
+  const keywordId = keywordIdOf(request);
   const running = inspections.find(
     (entry) =>
       entry.pending.keywordId === keywordId &&

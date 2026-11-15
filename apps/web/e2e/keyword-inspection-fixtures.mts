@@ -4,6 +4,7 @@ import {
   type KeywordInspectionResult,
   type Store,
 } from "@asobeast/shared";
+import { keywordIdOf } from "./keyword-inspections-mock.mts";
 
 export const SEEDED_KEYWORD = "habit tracker";
 
@@ -287,7 +288,7 @@ function inspectionOf(seed: Seed): KeywordInspection {
   const done = status === "DONE";
   return {
     id: seed.id,
-    keywordId: `seeded-keyword-${store}-${country}-${seed.keyword}`,
+    keywordId: keywordIdOf({ keyword: seed.keyword, store, country }),
     keyword: seed.keyword,
     store,
     country,
