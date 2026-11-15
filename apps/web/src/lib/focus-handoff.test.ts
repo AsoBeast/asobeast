@@ -361,6 +361,14 @@ describe("recoveryCandidates", () => {
     ).toEqual([selected]);
   });
 
+  it("skips a tab list whose selected tab is hidden or inert", () => {
+    const invite = control("Invite member");
+    const tabs = tabList(control("30d", true));
+    expect(recoveryCandidates(asElement(container([tabs, invite])))).toEqual([
+      invite,
+    ]);
+  });
+
   it("keeps a tab list that has no selected tab", () => {
     const tabs = tabList(null);
     expect(recoveryCandidates(asElement(container([tabs])))).toEqual([tabs]);

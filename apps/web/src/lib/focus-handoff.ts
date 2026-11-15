@@ -192,13 +192,15 @@ const RECOVERY_CANDIDATES = tabbable(
 const TAB_LIST = '[role="tablist"]';
 const SELECTED_TAB = '[role="tab"][aria-selected="true"]';
 
-const focusTarget = (control: HTMLElement): HTMLElement =>
-  control.matches(TAB_LIST)
-    ? (control.querySelector<HTMLElement>(SELECTED_TAB) ?? control)
-    : control;
-
 const withinReach = (element: Element): boolean =>
   element.closest(OUT_OF_REACH) === null;
+
+const focusTargets = (control: HTMLElement): HTMLElement[] => {
+  if (!control.matches(TAB_LIST)) return [control];
+  const selected = control.querySelector<HTMLElement>(SELECTED_TAB);
+  if (!selected) return [control];
+  return withinReach(selected) ? [selected] : [];
+};
 
 const reachableIn = (group: Element, selector: string): HTMLElement[] =>
   [...group.querySelectorAll<HTMLElement>(selector)].filter(withinReach);
@@ -227,7 +229,9 @@ const RETRY_CONTAINER = `${CARD}, [role="dialog"], section`;
 
 export function recoveryCandidates(container: Element | null): HTMLElement[] {
   if (!container?.isConnected) return [];
-  const controls = reachableIn(container, RECOVERY_CANDIDATES).map(focusTarget);
+  const controls = reachableIn(container, RECOVERY_CANDIDATES).flatMap(
+    focusTargets,
+  );
   return container instanceof HTMLElement &&
     container.hasAttribute("tabindex") &&
     withinReach(container)
