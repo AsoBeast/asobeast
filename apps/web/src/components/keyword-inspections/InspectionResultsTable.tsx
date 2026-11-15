@@ -53,7 +53,10 @@ function ResultName({
           ) : null}
         </span>
         {line === "" ? null : (
-          <span className="truncate text-caption text-faint-foreground">
+          <span
+            title={line}
+            className="truncate text-caption text-faint-foreground"
+          >
             {line}
           </span>
         )}
