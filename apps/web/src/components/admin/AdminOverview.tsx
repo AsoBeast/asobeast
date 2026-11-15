@@ -22,6 +22,7 @@ import {
   FunnelPanel,
   InstancePanel,
   NeedsALookPanel,
+  PayingPanel,
   StagesPanel,
   WindowSegment,
 } from "./overview-panels";
@@ -66,6 +67,9 @@ export function AdminOverview() {
         <div className="flex min-w-0 flex-col gap-6">
           <NeedsALookPanel overview={overview} conversion={conversion} />
           {overview.billing ? <StagesPanel overview={overview} /> : null}
+          {overview.billing && overview.workspaces.payingByPlan ? (
+            <PayingPanel payingByPlan={overview.workspaces.payingByPlan} />
+          ) : null}
           <InstancePanel overview={overview} />
         </div>
       </div>

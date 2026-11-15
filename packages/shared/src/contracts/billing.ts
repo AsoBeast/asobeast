@@ -25,7 +25,7 @@ export function planPriceLabel(
   return `$${(interval === 'month' ? monthlyUsd : annualUsd) ?? 0} per ${interval}`;
 }
 
-const RENEWAL_CADENCE: Record<BillingInterval, string> = {
+export const RENEWAL_CADENCE: Record<BillingInterval, string> = {
   month: 'monthly',
   year: 'yearly',
 };

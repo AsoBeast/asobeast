@@ -8,6 +8,7 @@ import {
   flagHref,
   heldPlanLabel,
   matchesStanding,
+  payingPlanLabel,
   stageHref,
   stageLabel,
   workspaceFlags,
@@ -34,6 +35,19 @@ describe("heldPlanLabel", () => {
     expect(heldPlanLabel("indie")).toBe("Indie");
     expect(heldPlanLabel("trial")).toBeNull();
     expect(heldPlanLabel("free")).toBeNull();
+  });
+});
+
+describe("payingPlanLabel", () => {
+  it("names the plan and how often it renews", () => {
+    expect(payingPlanLabel("indie", "month")).toBe("Indie · monthly");
+    expect(payingPlanLabel("ultimate", "year")).toBe("Ultimate · yearly");
+  });
+
+  it("says so when the interval was never recorded", () => {
+    expect(payingPlanLabel("indie", null)).toBe(
+      "Indie · interval not recorded",
+    );
   });
 });
 

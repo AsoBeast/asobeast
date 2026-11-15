@@ -2,6 +2,7 @@ import type {
   AdminApp,
   AdminAppList,
   AdminOverview,
+  AdminPayingCount,
   AdminSignupDay,
   AdminUser,
   AdminUserList,
@@ -32,6 +33,13 @@ const SIGNUPS: AdminSignupDay[] = Array.from(
   },
 );
 
+const NOBODY_PAYING: AdminPayingCount[] = [
+  { plan: "indie", interval: "month", count: 0 },
+  { plan: "indie", interval: "year", count: 0 },
+  { plan: "ultimate", interval: "month", count: 0 },
+  { plan: "ultimate", interval: "year", count: 0 },
+];
+
 export const ADMIN_OVERVIEW: AdminOverview = {
   generatedAt: new Date().toISOString(),
   billing: true,
@@ -56,6 +64,12 @@ export const ADMIN_OVERVIEW: AdminOverview = {
       { key: "self-hosted", count: 0 },
     ],
     canceling: 1,
+    payingByPlan: [
+      { plan: "indie", interval: "month", count: 1 },
+      { plan: "indie", interval: "year", count: 0 },
+      { plan: "ultimate", interval: "month", count: 0 },
+      { plan: "ultimate", interval: "year", count: 1 },
+    ],
   },
   users: {
     total: 5,
@@ -103,7 +117,13 @@ export const ADMIN_OVERVIEW_SELF_HOSTED: AdminOverview = {
       { key: "self-hosted", count: 8 },
     ],
     canceling: 0,
+    payingByPlan: NOBODY_PAYING,
   },
+};
+
+export const ADMIN_OVERVIEW_NOBODY_PAYING: AdminOverview = {
+  ...ADMIN_OVERVIEW,
+  workspaces: { ...ADMIN_OVERVIEW.workspaces, payingByPlan: NOBODY_PAYING },
 };
 
 export const CAPACITY_REPORT: CapacityReport = {

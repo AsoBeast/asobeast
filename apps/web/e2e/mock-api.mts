@@ -404,6 +404,7 @@ import {
 } from "./viewer.mts";
 import {
   ADMIN_OVERVIEW,
+  ADMIN_OVERVIEW_NOBODY_PAYING,
   ADMIN_OVERVIEW_SELF_HOSTED,
   CAPACITY_REPORT,
   PROXY_POOL_OFF,
@@ -2853,11 +2854,14 @@ const routes: Route[] = [
       res.end();
     },
   },
-  supportRoute(/^\/admin\/support\/overview$/, (req) =>
-    hasCookie(req, "e2e_admin_self_hosted", "1")
-      ? ADMIN_OVERVIEW_SELF_HOSTED
-      : ADMIN_OVERVIEW,
-  ),
+  supportRoute(/^\/admin\/support\/overview$/, (req) => {
+    if (hasCookie(req, "e2e_admin_self_hosted", "1")) {
+      return ADMIN_OVERVIEW_SELF_HOSTED;
+    }
+    return hasCookie(req, "e2e_admin_nobody_paying", "1")
+      ? ADMIN_OVERVIEW_NOBODY_PAYING
+      : ADMIN_OVERVIEW;
+  }),
   operatorRoute(/^\/admin\/capacity$/, () => CAPACITY_REPORT),
   {
     method: "GET",
