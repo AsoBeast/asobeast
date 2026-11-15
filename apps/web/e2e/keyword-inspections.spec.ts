@@ -244,3 +244,26 @@ test("opens the same keyword in another storefront", async ({
   ).toBeFocused();
   await expect(page.getByText("Google Play · US").first()).toBeVisible();
 });
+
+test("keeps focus in the panel when another storefront's inspection is gone", async ({
+  page,
+  request,
+}) => {
+  await request.get(`${MOCK_API}/__seed-keyword-inspections`);
+  await page.route(
+    new RegExp(`/api/backend/keyword-inspections/${SEEDED_PLAY_ID}$`),
+    (route) => route.fulfill({ status: 404, json: { statusCode: 404 } }),
+  );
+  await page.goto(seededPage(SEEDED_ID));
+  await page
+    .getByRole("button", { name: "Google Play · US", exact: true })
+    .focus();
+  await page.keyboard.press("Enter");
+
+  await expect(
+    page.getByText("This inspection no longer exists"),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Inspection", level: 2, exact: true }),
+  ).toBeFocused();
+});

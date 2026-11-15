@@ -86,6 +86,19 @@ function DetailPanel({
   );
 }
 
+function FallbackHeading() {
+  const claimFocus = useFocusClaim(INSPECTION_HEADING);
+  return (
+    <h2
+      ref={claimFocus}
+      tabIndex={-1}
+      className="rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      Inspection
+    </h2>
+  );
+}
+
 export function EmptyInspection({
   title,
   body,
@@ -94,7 +107,7 @@ export function EmptyInspection({
   body: string;
 }) {
   return (
-    <DetailPanel heading={<h2>Inspection</h2>}>
+    <DetailPanel heading={<FallbackHeading />}>
       <EmptyState title={title} body={body} className="px-6 py-8" />
     </DetailPanel>
   );
@@ -308,7 +321,7 @@ export function InspectionDetail({
   }
   if (!read.data) {
     return (
-      <DetailPanel heading={<h2>Inspection</h2>}>
+      <DetailPanel heading={<FallbackHeading />}>
         <div className="p-4">
           <InlineQueryError
             message="The inspection could not be loaded."
