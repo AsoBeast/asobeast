@@ -46,5 +46,6 @@ Entry steps and the wall:
 Deletion and terms:
 
 - A deletion request stops the renewal of a `trialing`, `active` or `past_due` subscription (`AccountDeletionService.stopRenewal`, releasing a schedule first and recording `Workspace.deletionStoppedSubscriptionId` only when it stopped it); cancelling the deletion restores it.
+- A deletion request stores the workspace's stage and plan (`WorkspaceDepartures.standing`, read before the renewal stops) and an optional `reason` from `DELETION_REASONS`, never free text; cancelling clears them. Erasure writes one `WorkspaceDeparture` (an operator table, `operator_only`, no foreign key, a random uuid id) inside the erasing transaction before the workspace row is deleted, never for the operator workspace, and with nothing that names the workspace or a person: dates by day, stage, plan, sizes and the reason.
 - Terms acceptance is `User.termsAcceptedAt` and `termsVersion` (`auth/terms-acceptance.ts`), written at registration and invite acceptance on a billing instance; bump `TERMS_VERSION` when asobeast.com/terms changes.
 - `normalizeEmail` and the stored login email never change; the mailbox is only the trial key and the confirmation mail recipient key (domain rule 19).
