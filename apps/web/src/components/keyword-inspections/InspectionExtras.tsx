@@ -23,7 +23,8 @@ function spokenChange(
   label: string,
   change: number | null,
   higherIsBetter: boolean,
-): string {
+): string | null {
+  if (change === null) return null;
   const tone = changeTone(change, higherIsBetter);
   return `${label} ${signedChange(change)}${tone === "same" ? "" : ` (${tone})`}`;
 }
@@ -89,7 +90,9 @@ function InspectionDelta({
             scoreChange(inspection.difficulty100, previous.difficulty100),
             false,
           ),
-        ].join(", ")}
+        ]
+          .filter((line) => line !== null)
+          .join(", ")}
       </p>
     </section>
   );
