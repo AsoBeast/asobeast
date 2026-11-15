@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { TYPE_STEPS } from "@/lib/utils";
 
 const ROOT = join(import.meta.dirname, "..");
 
@@ -73,6 +74,11 @@ const PRIMARY_FILL_HOMES = [
   "components/ui/switch.tsx",
   "components/billing/",
 ];
+
+const PHONE_SIZE_OVERRIDE = new RegExp(
+  `<(?:Input|Textarea)\\b(?:(?!\\/>)[\\s\\S])*?className="[^"]*(?<![:\\w-])text-(?:${TYPE_STEPS.join("|")})\\b`,
+  "g",
+);
 
 const CARD_DESCRIPTION = /\bCardDescription\b/g;
 
@@ -148,6 +154,10 @@ describe("utility classes", () => {
 
   it("sizes text with a named step but where a phone would zoom an input", () => {
     expect(offenders(RAW_TYPE_SIZE).sort()).toEqual(PHONE_SIZED_INPUTS);
+  });
+
+  it("leaves a field its 16 px below md, so a phone does not zoom on focus", () => {
+    expect(offenders(PHONE_SIZE_OVERRIDE)).toEqual([]);
   });
 
   it("keeps the overlay radius to overlays and the billing wall", () => {

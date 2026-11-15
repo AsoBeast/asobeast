@@ -124,7 +124,7 @@ export function ConnectAppStoreDialog({
           placeholder="57246542-96fe-1a63-e053-0824d011072a"
           autoComplete="off"
           spellCheck={false}
-          className="font-mono text-caption"
+          className="font-mono md:text-caption"
         />
       </div>
       <div className="flex flex-col gap-2">
@@ -136,7 +136,7 @@ export function ConnectAppStoreDialog({
           placeholder="2X9R4HXF34"
           autoComplete="off"
           spellCheck={false}
-          className="font-mono text-caption"
+          className="font-mono md:text-caption"
         />
       </div>
       <div className="flex flex-col gap-2">

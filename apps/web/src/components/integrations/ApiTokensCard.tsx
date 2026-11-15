@@ -100,7 +100,7 @@ function TokenSecret({
             readOnly
             value={created.token}
             aria-label="New api token"
-            className="font-mono text-caption"
+            className="font-mono md:text-caption"
           />
           <Button
             type="button"
