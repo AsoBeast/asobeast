@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { createColumnHelper } from "@tanstack/react-table";
-import { PLANS, type SupportWorkspaceSummary } from "@asobeast/shared";
+import type { SupportWorkspaceSummary } from "@asobeast/shared";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import type { DataTableFeatures } from "@/components/data-table/table-features";
 import { Badge } from "@/components/ui/badge";
 import { workspaceListHref } from "@/lib/admin-sections";
+import { heldPlanLabel, stageLabel } from "@/lib/admin-stages";
 import { formatDate, formatNumber, pluralize } from "@/lib/format";
 import { NUMBER_SORT, WorkspaceName } from "./cells";
 
@@ -14,10 +15,6 @@ const columnHelper = createColumnHelper<
   DataTableFeatures,
   SupportWorkspaceSummary
 >();
-
-const subscriptionOf = (workspace: SupportWorkspaceSummary) =>
-  workspace.subscriptionStatus ??
-  (workspace.hasSubscription ? "subscribed" : null);
 
 function WorkspaceStatus({
   workspace,
@@ -64,26 +61,29 @@ export const workspaceColumns = columnHelper.columns([
       />
     ),
   }),
-  columnHelper.accessor("plan", {
-    id: "plan",
-    sortFn: "text",
-    sortDescFirst: false,
-    meta: { label: "Plan", phone: true },
-    header: ({ column }) => <SortableHeader column={column} label="Plan" />,
-    cell: ({ row }) => {
-      const subscription = subscriptionOf(row.original);
-      return (
-        <div className="flex flex-col">
-          <span>{PLANS[row.original.plan].displayName}</span>
-          {subscription ? (
-            <span className="text-caption text-muted-foreground capitalize">
-              {subscription}
-            </span>
-          ) : null}
-        </div>
-      );
+  columnHelper.accessor(
+    (workspace) => stageLabel(workspace.stage, workspace.plan),
+    {
+      id: "plan",
+      sortFn: "text",
+      sortDescFirst: false,
+      meta: { label: "Plan", phone: true },
+      header: ({ column }) => <SortableHeader column={column} label="Plan" />,
+      cell: ({ row }) => {
+        const held = row.original.stage
+          ? heldPlanLabel(row.original.plan)
+          : null;
+        return (
+          <div className="flex flex-col">
+            <span>{stageLabel(row.original.stage, row.original.plan)}</span>
+            {held ? (
+              <span className="text-caption text-muted-foreground">{held}</span>
+            ) : null}
+          </div>
+        );
+      },
     },
-  }),
+  ),
   columnHelper.accessor("members", {
     id: "members",
     ...NUMBER_SORT,
