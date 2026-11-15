@@ -6,6 +6,7 @@ const DELETED_RECORD_COPY = "This app or record no longer exists";
 
 const ADMIN_PATHS = [
   "/admin",
+  "/admin/conversion",
   "/admin/capacity",
   "/admin/workspaces",
   "/admin/users",
@@ -120,6 +121,7 @@ test.describe("an admin endpoint that refuses an operator with a plan", () => {
 
   for (const [path, title] of [
     ["/admin", "Admin overview could not be loaded"],
+    ["/admin/conversion", "Conversion could not be loaded"],
     ["/admin/workspaces", "Workspaces could not be loaded"],
     ["/admin/users", "Accounts could not be loaded"],
     ["/admin/apps", "Tracked apps could not be loaded"],

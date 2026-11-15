@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ExternalLink } from "lucide-react";
@@ -8,18 +9,34 @@ import {
   adminHref,
   adminSectionFrom,
 } from "@/lib/admin-sections";
+import { cn } from "@/lib/utils";
 import { ADMIN_TOOLS } from "./admin-links";
+import { useScrollEdges, type ScrollEdges } from "./scroll-edges";
 
 const TAB_CLASS =
   "relative shrink-0 border-b-2 border-transparent px-3 py-2 text-dense whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset focus-visible:outline-none aria-[current=page]:border-foreground aria-[current=page]:font-medium aria-[current=page]:text-foreground";
 
+const EDGE_FADE: Record<ScrollEdges, string | undefined> = {
+  none: undefined,
+  start: "[mask-image:linear-gradient(to_right,transparent,black_2.5rem)]",
+  end: "[mask-image:linear-gradient(to_right,black_calc(100%-2.5rem),transparent)]",
+  both: "[mask-image:linear-gradient(to_right,transparent,black_2.5rem,black_calc(100%-2.5rem),transparent)]",
+};
+
 export function AdminNav() {
   const current = adminSectionFrom(usePathname());
+  const row = useRef<HTMLElement>(null);
+  const edges = useScrollEdges(row);
 
   return (
     <nav
+      ref={row}
       aria-label="Admin"
-      className="flex min-w-0 items-end gap-1 overflow-x-auto shadow-[inset_0_-1px_0_var(--color-border)]"
+      data-edges={edges}
+      className={cn(
+        "flex min-w-0 items-end gap-1 overflow-x-auto shadow-[inset_0_-1px_0_var(--color-border)]",
+        EDGE_FADE[edges],
+      )}
     >
       {ADMIN_SECTIONS.map(({ segment, label }) => (
         <Link

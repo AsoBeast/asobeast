@@ -83,6 +83,7 @@ export function AdminApps() {
           () => void setList({ workspace: null }),
         ),
       ]}
+      reads="Competitors aside. Each read is written to the support audit trail."
       onClearFilters={() =>
         void setList({ q: null, store: null, workspace: null })
       }

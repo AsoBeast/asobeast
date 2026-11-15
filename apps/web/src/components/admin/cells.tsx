@@ -22,7 +22,7 @@ export function WorkspaceName({
         <Link
           href={href}
           title={title}
-          className="truncate font-medium underline-offset-4 hover:underline"
+          className="truncate font-medium link-underline"
         >
           {name}
         </Link>

@@ -342,6 +342,7 @@ import {
   WORKSPACE_GOALS,
   COUNTRY_PATTERN,
   DELETION_CONFIRMATION,
+  DELETION_REASONS,
   KEYWORD_BULK_ADD_LIMIT,
   KEYWORD_IMPORT_LIMIT,
   isKeywordClass,
@@ -411,6 +412,10 @@ import {
   adminAppList,
   adminUserList,
 } from "./admin-fixtures.mts";
+import {
+  adminConversion,
+  adminDepartureList,
+} from "./admin-conversion-fixtures.mts";
 
 import {
   edgeSerpMovers,
@@ -2869,6 +2874,16 @@ const routes: Route[] = [
   operatorRoute(/^\/admin\/proxy-pool$/, (req) =>
     hasCookie(req, "e2e_proxy_pool", "1") ? PROXY_POOL_ON : PROXY_POOL_OFF,
   ),
+  supportRoute(/^\/admin\/support\/conversion$/, (req, query) =>
+    adminConversion(
+      query.get("days") === "90" ? 90 : 30,
+      !hasCookie(req, "e2e_admin_self_hosted", "1"),
+      hasCookie(req, "e2e_admin_conversion_empty", "1"),
+    ),
+  ),
+  supportRoute(/^\/admin\/support\/departures$/, (req) =>
+    adminDepartureList(hasCookie(req, "e2e_admin_conversion_empty", "1")),
+  ),
   supportRoute(/^\/admin\/support\/workspaces$/, () => SUPPORT_WORKSPACES),
   supportRoute(/^\/admin\/support\/users$/, (req, query) =>
     adminUserList(
@@ -3296,15 +3311,20 @@ const routes: Route[] = [
     method: "POST",
     pattern: /^\/account\/deletion$/,
     handler: (_p, req, res) =>
-      withBody<{ confirm?: string }>(req, res, (body) => {
-        if (body.confirm !== DELETION_CONFIRMATION) {
+      withBody<{ confirm?: string; reason?: unknown }>(req, res, (body) => {
+        const reasonRefused =
+          body.reason !== undefined &&
+          !DELETION_REASONS.some((reason) => reason === body.reason);
+        if (body.confirm !== DELETION_CONFIRMATION || reasonRefused) {
           return json(
             res,
             400,
             errorEnvelope(
               400,
               req.url ?? "/account/deletion",
-              `confirm must be equal to ${DELETION_CONFIRMATION}`,
+              reasonRefused
+                ? `reason must be one of the following values: ${DELETION_REASONS.join(", ")}`
+                : `confirm must be equal to ${DELETION_CONFIRMATION}`,
             ),
           );
         }

@@ -20,12 +20,17 @@ import { ariaSort } from "@/lib/table/sorting";
 export function AdminTable<TData extends RowData>({
   table,
   caption,
+  scrollLabel,
 }: {
   table: TableInstance<DataTableFeatures, TData>;
   caption: string;
+  scrollLabel?: string;
 }) {
   return (
-    <Table containerClassName="rounded-lg border bg-card">
+    <Table
+      scrollLabel={scrollLabel}
+      scrollFocus={scrollLabel ? "overflow" : undefined}
+    >
       <TableCaption className="sr-only">{caption}</TableCaption>
       <TableHeader>
         {table.getHeaderGroups().map((headerGroup) => (

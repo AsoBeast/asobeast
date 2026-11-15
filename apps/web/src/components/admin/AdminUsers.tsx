@@ -55,6 +55,7 @@ export function AdminUsers() {
         () => void setList({ workspace: null }),
       )}
       onClearFilters={() => void setList({ q: null, workspace: null })}
+      reads="Each read is written to the support audit trail."
     />
   );
 }

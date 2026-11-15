@@ -1,11 +1,9 @@
 "use client";
 
+import { useDeferredValue } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import {
-  ACTIVATION_WINDOW_DAYS,
-  type AdminActivation,
-  type AdminOverview as Overview,
-} from "@asobeast/shared";
+import { useQueryStates } from "nuqs";
+import { PANEL_HEADER } from "@/components/layout/panel-classes";
 import {
   Card,
   CardContent,
@@ -13,173 +11,61 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { PANEL_HEADER } from "@/components/layout/panel-classes";
-import { InfoTip } from "@/components/ui/info-tip";
-import { StatTile, StatTileGroup } from "@/components/ui/stat-tile";
-import { WORKSPACE_STAGE_LABELS } from "@/lib/admin-stages";
-import { formatNumber, pluralize, storeLabel } from "@/lib/format";
-import { adminOverviewOptions } from "@/lib/queries";
+import { pluralize } from "@/lib/format";
+import { adminConversionOptions, adminOverviewOptions } from "@/lib/queries";
+import { adminOverviewParsers } from "@/lib/search-params";
+import { OverviewStrip } from "./OverviewStrip";
 import { SignupsChart } from "./SignupsChart";
-
-const joinParts = (parts: (string | null)[]) =>
-  parts.filter(Boolean).join(" · ") || undefined;
-
-const countedPart = (count: number, label: string) =>
-  count > 0 ? `${formatNumber(count)} ${label}` : null;
-
-const ACTIVATION_GUIDE =
-  "https://docs.asobeast.com/security/admin-surfaces#activation";
-
-function ActivationTile({ activation }: { activation: AdminActivation }) {
-  return (
-    <StatTile
-      label="Activation"
-      value={`${formatNumber(activation.rankedWithinADay)} of ${formatNumber(activation.importedLast30Days)}`}
-      note={`ranked within a day of import · ${formatNumber(activation.completedSetup)} completed setup`}
-      info={
-        <InfoTip
-          label="What activation means"
-          title="Activation"
-          summary={`Of the apps imported in the last ${ACTIVATION_WINDOW_DAYS} days, how many had a position for one of their keywords within 24 hours of the import, which is the time to value the guided setup is built for.`}
-        >
-          <a
-            href={ACTIVATION_GUIDE}
-            target="_blank"
-            rel="noreferrer"
-            className="font-medium text-foreground link-underline"
-          >
-            Read how activation is counted
-          </a>
-        </InfoTip>
-      }
-    />
-  );
-}
-
-function OverviewTiles({ overview }: { overview: Overview }) {
-  const { workspaces, users, apps, keywords } = overview;
-  return (
-    <StatTileGroup>
-      <StatTile
-        label="Workspaces"
-        value={formatNumber(workspaces.total)}
-        note={joinParts([
-          countedPart(workspaces.suspended, "suspended"),
-          countedPart(workspaces.pendingDeletion, "pending deletion"),
-        ])}
-      />
-      <StatTile
-        label="Users"
-        value={formatNumber(users.total)}
-        note={joinParts([
-          `${formatNumber(users.emailVerified)} confirmed`,
-          `${formatNumber(users.joinedLast7Days)} joined this week`,
-        ])}
-      />
-      <StatTile
-        label="Tracked apps"
-        value={formatNumber(apps.tracked)}
-        note={pluralize(apps.competitors, "competitor")}
-      />
-      <StatTile
-        label="Keyword markets"
-        value={formatNumber(keywords.trackedMarkets)}
-        note={`tracked across ${pluralize(keywords.storefronts, "storefront")}`}
-      />
-      <StatTile
-        label="Searched keywords"
-        value={formatNumber(keywords.searched)}
-        note="one store search each per day"
-      />
-      <StatTile
-        label="AI calls this month"
-        value={formatNumber(overview.aiCallsThisMonth)}
-      />
-      {overview.activation ? (
-        <ActivationTile activation={overview.activation} />
-      ) : null}
-    </StatTileGroup>
-  );
-}
-
-function CountList({
-  rows,
-}: {
-  rows: { key: string; label: string; count: number }[];
-}) {
-  return (
-    <dl className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-2 text-dense">
-      {rows.map((row) => (
-        <div key={row.key} className="contents">
-          <dt className="text-muted-foreground">{row.label}</dt>
-          <dd className="numeric text-right">{formatNumber(row.count)}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
+import {
+  DeparturesPanel,
+  FunnelPanel,
+  InstancePanel,
+  NeedsALookPanel,
+  StagesPanel,
+  WindowSegment,
+} from "./overview-panels";
 
 export function AdminOverview() {
+  const [{ days }, setView] = useQueryStates(adminOverviewParsers);
+  const shownDays = useDeferredValue(days);
   const { data: overview } = useSuspenseQuery(adminOverviewOptions);
+  const { data: conversion } = useSuspenseQuery(
+    adminConversionOptions(shownDays),
+  );
 
   return (
     <div className="flex flex-col gap-6">
-      <OverviewTiles overview={overview} />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)]">
-        <Card>
-          <CardHeader className={PANEL_HEADER}>
-            <CardTitle asChild>
-              <h2>Sign ups, last 30 days</h2>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <SignupsChart signups={overview.signups} />
-          </CardContent>
-          <CardFooter>
-            {`${pluralize(overview.users.joinedLast30Days, "account")} joined in the last 30 days.`}
-          </CardFooter>
-        </Card>
-        <div className="flex flex-col gap-6">
-          {overview.billing ? (
-            <Card>
-              <CardHeader className={PANEL_HEADER}>
-                <CardTitle asChild>
-                  <h2>Workspaces by stage</h2>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CountList
-                  rows={(overview.workspaces.byStage ?? []).map(
-                    ({ key, count }) => ({
-                      key,
-                      label: WORKSPACE_STAGE_LABELS[key],
-                      count,
-                    }),
-                  )}
-                />
-              </CardContent>
-              <CardFooter>
-                Where each workspace stands with billing right now.
-              </CardFooter>
-            </Card>
-          ) : null}
-          <Card>
+      <OverviewStrip overview={overview} conversion={conversion} />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+        <div className="flex min-w-0 flex-col gap-6">
+          <FunnelPanel
+            conversion={conversion}
+            segment={
+              <WindowSegment
+                days={days}
+                onChange={(next) => void setView({ days: next })}
+              />
+            }
+          />
+          <Card className="min-w-0">
             <CardHeader className={PANEL_HEADER}>
               <CardTitle asChild>
-                <h2>Apps by store</h2>
+                <h2>Sign ups, last 30 days</h2>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <CountList
-                rows={overview.apps.byStore.map(({ key, count }) => ({
-                  key,
-                  label: storeLabel(key),
-                  count,
-                }))}
-              />
+              <SignupsChart signups={overview.signups} />
             </CardContent>
-            <CardFooter>Tracked apps, competitors aside.</CardFooter>
+            <CardFooter>
+              {`${pluralize(overview.users.joinedLast30Days, "account")} joined in the last 30 days.`}
+            </CardFooter>
           </Card>
+          <DeparturesPanel conversion={conversion} />
+        </div>
+        <div className="flex min-w-0 flex-col gap-6">
+          <NeedsALookPanel overview={overview} conversion={conversion} />
+          {overview.billing ? <StagesPanel overview={overview} /> : null}
+          <InstancePanel overview={overview} />
         </div>
       </div>
     </div>

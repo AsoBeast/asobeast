@@ -16,33 +16,78 @@ const columnHelper = createColumnHelper<
   SupportWorkspaceSummary
 >();
 
-function WorkspaceStatus({
+function StatePills({ workspace }: { workspace: SupportWorkspaceSummary }) {
+  const renews =
+    workspace.stage === "trialing" ||
+    workspace.stage === "paying" ||
+    workspace.stage === "payment-failed";
+  return (
+    <span className="flex flex-wrap gap-1">
+      {workspace.stage === "payment-failed" ? (
+        <Badge variant="destructive">Payment failed</Badge>
+      ) : null}
+      {workspace.stage === "trialing" && workspace.trialEndsAt ? (
+        <Badge variant="flat">{`Trial until ${formatDate(workspace.trialEndsAt)}`}</Badge>
+      ) : null}
+      {renews && workspace.cancelAtPeriodEnd && workspace.planExpiresAt ? (
+        <Badge variant="warning">{`Canceling ${formatDate(workspace.planExpiresAt)}`}</Badge>
+      ) : null}
+      {workspace.suspendedAt ? (
+        <Badge
+          variant="destructive"
+          title={workspace.suspendedReason ?? undefined}
+        >
+          Suspended
+        </Badge>
+      ) : null}
+      {workspace.deletionDueAt ? (
+        <Badge
+          variant="destructive"
+          title={
+            workspace.deletionRequestedBy && workspace.deletionRequestedAt
+              ? `Requested by ${workspace.deletionRequestedBy} on ${formatDate(workspace.deletionRequestedAt)}`
+              : undefined
+          }
+        >
+          {`Deletes ${formatDate(workspace.deletionDueAt)}`}
+        </Badge>
+      ) : null}
+    </span>
+  );
+}
+
+function WorkspaceStanding({
   workspace,
 }: {
   workspace: SupportWorkspaceSummary;
 }) {
-  if (workspace.suspendedAt) {
-    return (
-      <div className="flex max-w-56 flex-col items-start gap-1">
-        <Badge variant="destructive">Suspended</Badge>
-        {workspace.suspendedReason ? (
-          <span className="text-caption text-muted-foreground">
-            {workspace.suspendedReason}
-          </span>
-        ) : null}
-      </div>
-    );
-  }
-  const trial =
-    workspace.plan === "trial" || workspace.subscriptionStatus === "trialing";
-  if (trial && workspace.trialEndsAt) {
-    return (
-      <span className="text-dense whitespace-nowrap">
-        Trial until {formatDate(workspace.trialEndsAt)}
-      </span>
-    );
-  }
-  return null;
+  const stage =
+    workspace.stage && workspace.stage !== "self-hosted"
+      ? workspace.stage
+      : null;
+  const held = stage ? heldPlanLabel(workspace.plan) : null;
+  return (
+    <div className="flex max-w-64 flex-col items-start gap-1">
+      {stage && stage !== "payment-failed" ? (
+        <span>
+          {held
+            ? `${stageLabel(stage, workspace.plan)} · ${held}`
+            : stageLabel(stage, workspace.plan)}
+        </span>
+      ) : null}
+      <StatePills workspace={workspace} />
+      {workspace.suspendedReason ? (
+        <span className="text-caption text-muted-foreground">
+          {workspace.suspendedReason}
+        </span>
+      ) : null}
+      {workspace.deletionRequestedBy ? (
+        <span className="text-caption text-muted-foreground">
+          {`Asked by ${workspace.deletionRequestedBy}`}
+        </span>
+      ) : null}
+    </div>
+  );
 }
 
 export const workspaceColumns = columnHelper.columns([
@@ -67,21 +112,9 @@ export const workspaceColumns = columnHelper.columns([
       id: "plan",
       sortFn: "text",
       sortDescFirst: false,
-      meta: { label: "Plan", phone: true },
-      header: ({ column }) => <SortableHeader column={column} label="Plan" />,
-      cell: ({ row }) => {
-        const held = row.original.stage
-          ? heldPlanLabel(row.original.plan)
-          : null;
-        return (
-          <div className="flex flex-col">
-            <span>{stageLabel(row.original.stage, row.original.plan)}</span>
-            {held ? (
-              <span className="text-caption text-muted-foreground">{held}</span>
-            ) : null}
-          </div>
-        );
-      },
+      meta: { label: "Stage", phone: true },
+      header: ({ column }) => <SortableHeader column={column} label="Stage" />,
+      cell: ({ row }) => <WorkspaceStanding workspace={row.original} />,
     },
   ),
   columnHelper.accessor("members", {
@@ -93,7 +126,7 @@ export const workspaceColumns = columnHelper.columns([
       <Link
         href={workspaceListHref("users", row.original.workspaceId)}
         aria-label={`${pluralize(row.original.members, "member")} in ${row.original.name}`}
-        className="numeric underline-offset-4 hover:underline"
+        className="numeric link-underline"
       >
         {formatNumber(row.original.members)}
       </Link>
@@ -109,7 +142,7 @@ export const workspaceColumns = columnHelper.columns([
         <Link
           href={workspaceListHref("apps", row.original.workspaceId)}
           aria-label={`${pluralize(row.original.apps, "app")} in ${row.original.name}`}
-          className="numeric underline-offset-4 hover:underline"
+          className="numeric link-underline"
         >
           {formatNumber(row.original.apps)}
         </Link>
@@ -143,11 +176,5 @@ export const workspaceColumns = columnHelper.columns([
         {formatDate(row.original.createdAt)}
       </span>
     ),
-  }),
-  columnHelper.display({
-    id: "status",
-    meta: { label: "Status", phone: true },
-    header: () => "Status",
-    cell: ({ row }) => <WorkspaceStatus workspace={row.original} />,
   }),
 ]);

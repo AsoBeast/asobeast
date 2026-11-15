@@ -43,7 +43,9 @@ function Confirmation({ confirmed }: { confirmed: boolean }) {
           confirmed ? "size-4 text-success" : "size-4 text-muted-foreground"
         }
       />
-      {confirmed ? "Confirmed" : "Not confirmed"}
+      <span className="max-sm:sr-only">
+        {confirmed ? "Confirmed" : "Not confirmed"}
+      </span>
     </span>
   );
 }
@@ -106,8 +108,8 @@ export const userColumns = columnHelper.columns([
       id: "plan",
       sortFn: "text",
       sortDescFirst: false,
-      meta: { label: "Plan" },
-      header: ({ column }) => <SortableHeader column={column} label="Plan" />,
+      meta: { label: "Stage" },
+      header: ({ column }) => <SortableHeader column={column} label="Stage" />,
       cell: ({ row }) => <UserStage user={row.original} />,
     },
   ),

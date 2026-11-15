@@ -145,7 +145,7 @@ function TopConsumers({
             >
               <Link
                 href={workspaceListHref("apps", consumer.workspaceId)}
-                className="min-w-0 truncate font-medium underline-offset-4 hover:underline"
+                className="min-w-0 truncate font-medium link-underline"
                 translate="no"
               >
                 {names.get(consumer.workspaceId) ?? consumer.workspaceId}
