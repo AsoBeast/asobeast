@@ -341,7 +341,7 @@ describe("recoveryCandidates", () => {
       "textarea:not(:disabled)",
       "a[href]",
       "button:not(:disabled)",
-      "[tabindex]",
+      '[tabindex]:not([role="tablist"])',
     ]) {
       expect(fake.selector).toContain(`${kind}:not([tabindex="-1"])`);
     }

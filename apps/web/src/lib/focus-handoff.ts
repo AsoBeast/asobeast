@@ -186,7 +186,7 @@ const RECOVERY_CANDIDATES = tabbable(
   'input:not(:disabled):not([type="hidden"])',
   "select:not(:disabled)",
   "textarea:not(:disabled)",
-  "[tabindex]",
+  '[tabindex]:not([role="tablist"])',
 );
 
 const withinReach = (element: Element): boolean =>
