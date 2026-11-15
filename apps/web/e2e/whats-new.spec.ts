@@ -245,14 +245,23 @@ test.describe("the what's new releases", () => {
       release(page, "1.15.0").getByRole("heading", { level: 3 }),
     ).toHaveCount(0);
 
-    await toggle(page, "1.15.0").click();
+    await toggle(page, "1.15.0").focus();
+    await page.keyboard.press("Enter");
     await expect(toggle(page, "1.15.0")).toHaveAttribute(
       "aria-expanded",
       "true",
     );
+    await expect(toggle(page, "1.15.0")).toBeFocused();
     await expect(
       release(page, "1.15.0").getByRole("heading", { level: 3 }).first(),
     ).toBeVisible();
+
+    await page.keyboard.press("Enter");
+    await expect(toggle(page, "1.15.0")).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    await expect(toggle(page, "1.15.0")).toBeFocused();
   });
 
   test("opens every release newer than the one last read", async ({

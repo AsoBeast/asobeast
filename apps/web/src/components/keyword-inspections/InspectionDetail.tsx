@@ -21,7 +21,11 @@ import {
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { isNotFound, requestKeywordInspection } from "@/lib/api";
-import { useFocusAfterCommit } from "@/lib/focus-handoff";
+import {
+  armFocusHandoff,
+  useFocusAfterCommit,
+  useFocusClaim,
+} from "@/lib/focus-handoff";
 import { formatDateTime } from "@/lib/format";
 import { inspectionPollInterval } from "@/lib/keyword-inspection-polling";
 import {
@@ -48,6 +52,8 @@ import {
   InspectionDetailSkeleton,
   InspectionScoresSkeleton,
 } from "./skeletons";
+
+const INSPECTION_HEADING = "inspection-heading";
 
 function DetailPanel({
   heading,
@@ -284,6 +290,7 @@ export function InspectionDetail({
   const read = useQuery(keywordInspectionOptions(id));
   const heading = useRef<HTMLHeadingElement>(null);
   const handOffFocus = useFocusAfterCommit();
+  const claimHeading = useFocusClaim(INSPECTION_HEADING);
   if (read.isPending) {
     return (
       <DetailPanel heading={<h2>Inspection</h2>}>
@@ -314,7 +321,15 @@ export function InspectionDetail({
   const inspection = read.data;
   return (
     <DetailPanel
-      heading={<KeywordHeading inspection={inspection} ref={heading} />}
+      heading={
+        <KeywordHeading
+          inspection={inspection}
+          ref={(node) => {
+            heading.current = node;
+            claimHeading(node);
+          }}
+        />
+      }
       storefront={storefrontCode(inspection.store, inspection.country)}
       footer={inspectionFooter(inspection)}
     >
@@ -352,7 +367,10 @@ export function InspectionDetail({
           <CompletedInspection
             inspection={inspection}
             items={items}
-            onSelect={onSelect}
+            onSelect={(next) => {
+              armFocusHandoff(INSPECTION_HEADING);
+              onSelect(next);
+            }}
           />
         ) : null}
       </article>

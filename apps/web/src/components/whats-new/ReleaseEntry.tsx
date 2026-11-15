@@ -1,6 +1,7 @@
 import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatDate, pluralize } from "@/lib/format";
+import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
 import { cn } from "@/lib/utils";
 import type { Release } from "@/lib/whats-new/release-notes";
 import { ReleaseChanges } from "./ReleaseChanges";
@@ -25,6 +26,8 @@ function VersionToggle({
   className?: string;
 }) {
   const anchor = releaseAnchor(release.version);
+  const toggleKey = `${anchor}-toggle`;
+  const claimFocus = useFocusClaim(toggleKey);
   return (
     <h2
       id={`${anchor}-version`}
@@ -32,10 +35,14 @@ function VersionToggle({
       translate="no"
     >
       <button
+        ref={claimFocus}
         type="button"
         aria-expanded={open}
         aria-controls={open ? `${anchor}-body` : undefined}
-        onClick={onToggle}
+        onClick={() => {
+          armFocusHandoff(toggleKey);
+          onToggle();
+        }}
         className={cn(
           TOGGLE,
           stretched && "after:absolute after:inset-0 after:rounded-md",

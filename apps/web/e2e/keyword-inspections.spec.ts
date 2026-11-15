@@ -233,11 +233,14 @@ test("opens the same keyword in another storefront", async ({
   await request.get(`${MOCK_API}/__seed-keyword-inspections`);
   await page.goto(seededPage(SEEDED_ID));
 
-  await page.getByRole("button", { name: "Google Play · US" }).click();
+  await page
+    .getByRole("button", { name: "Google Play · US", exact: true })
+    .focus();
+  await page.keyboard.press("Enter");
 
   await expect(page).toHaveURL(new RegExp(`[?&]id=${SEEDED_PLAY_ID}`));
   await expect(
     page.getByRole("heading", { name: `“${SEEDED_KEYWORD}”`, level: 2 }),
-  ).toBeVisible();
+  ).toBeFocused();
   await expect(page.getByText("Google Play · US").first()).toBeVisible();
 });
