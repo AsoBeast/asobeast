@@ -50,7 +50,12 @@ export function SignupsChart({ signups }: { signups: AdminSignupDay[] }) {
         <ChartTooltip
           content={<ChartTooltipContent {...TIME_TOOLTIP_PROPS} />}
         />
-        <Bar dataKey="users" fill="var(--color-users)" radius={[3, 3, 0, 0]} />
+        <Bar
+          dataKey="users"
+          fill="var(--color-users)"
+          radius={[3, 3, 0, 0]}
+          isAnimationActive={false}
+        />
       </BarChart>
     </ChartContainer>
   );
