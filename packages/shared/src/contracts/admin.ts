@@ -1,6 +1,7 @@
 import type { Store } from '../index';
 import type { DeletionReason } from './account';
-import type { PlanName } from './plans';
+import type { BillingInterval } from './billing';
+import type { PaidPlanName, PlanName } from './plans';
 
 export const ADMIN_LIST_LIMIT = 1000;
 
@@ -26,6 +27,12 @@ export interface AdminCount<K extends string> {
   count: number;
 }
 
+export interface AdminPayingCount {
+  plan: PaidPlanName;
+  interval: BillingInterval | null;
+  count: number;
+}
+
 export interface AdminSignupDay {
   date: string;
   users: number;
@@ -48,6 +55,7 @@ export interface AdminOverview {
     byPlan: AdminCount<PlanName>[];
     byStage?: AdminCount<WorkspaceStage>[];
     canceling?: number;
+    payingByPlan?: AdminPayingCount[];
   };
   users: {
     total: number;

@@ -1,8 +1,11 @@
 import {
   PLANS,
+  RENEWAL_CADENCE,
   TRIAL_ENDING_SOON_DAYS,
   paidPlanOf,
   type AdminDepartureReason,
+  type BillingInterval,
+  type PaidPlanName,
   type PlanName,
   type SupportWorkspaceSummary,
   type WorkspaceStage,
@@ -35,6 +38,14 @@ export function stageLabel(
 export function heldPlanLabel(plan: PlanName): string | null {
   const paid = paidPlanOf(plan);
   return paid ? PLANS[paid].displayName : null;
+}
+
+export function payingPlanLabel(
+  plan: PaidPlanName,
+  interval: BillingInterval | null,
+): string {
+  const renews = interval ? RENEWAL_CADENCE[interval] : "interval not recorded";
+  return `${PLANS[plan].displayName} · ${renews}`;
 }
 
 const DAY_MS = 24 * 60 * 60_000;

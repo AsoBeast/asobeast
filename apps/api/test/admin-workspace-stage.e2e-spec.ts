@@ -21,6 +21,7 @@ import { obliterateQueues, pauseQueues } from './obliterate-queues';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const CARD_TRIAL_WORKSPACE = 'ws_card_trial';
 const CARD_TRIAL_OWNER = 'owner@card-trial.example.com';
+const YEARLY_CUSTOMER_WORKSPACE = 'ws_yearly_customer';
 
 describe('Admin area workspace stages (billing mode)', () => {
   let app: INestApplication<App>;
@@ -87,7 +88,9 @@ describe('Admin area workspace stages (billing mode)', () => {
 
   afterAll(async () => {
     await prisma.supportAccess.deleteMany({});
-    await prisma.workspace.deleteMany({ where: { id: CARD_TRIAL_WORKSPACE } });
+    await prisma.workspace.deleteMany({
+      where: { id: { in: [CARD_TRIAL_WORKSPACE, YEARLY_CUSTOMER_WORKSPACE] } },
+    });
     await prisma.workspace.update({
       where: { id: DEFAULT_WORKSPACE_ID },
       data: { plan: 'free', planExpiresAt: null },
@@ -191,5 +194,33 @@ describe('Admin area workspace stages (billing mode)', () => {
     expect(
       overview.workspaces.byPlan.find((row) => row.key === 'trial')?.count,
     ).toBe(0);
+  });
+
+  it('counts paying workspaces by plan and interval without writing an audit row', async () => {
+    await prisma.workspace.create({
+      data: {
+        id: YEARLY_CUSTOMER_WORKSPACE,
+        name: 'Yearly Customer Studio',
+        plan: 'ultimate',
+        subscriptionId: 'sub_yearly_customer',
+        subscriptionStatus: 'active',
+        planExpiresAt: daysFromNow(300),
+        firstPaidAt: daysFromNow(-65),
+        billingInterval: 'year',
+      },
+    });
+    const auditRows = await prisma.supportAccess.count();
+
+    const overview = (await operator.get('/admin/support/overview').expect(200))
+      .body as AdminOverview;
+
+    expect(overview.workspaces.payingByPlan).toEqual([
+      { plan: 'indie', interval: 'month', count: 0 },
+      { plan: 'indie', interval: 'year', count: 0 },
+      { plan: 'ultimate', interval: 'month', count: 0 },
+      { plan: 'ultimate', interval: 'year', count: 1 },
+    ]);
+    expect(await prisma.supportAccess.count()).toBe(auditRows);
+    await prisma.workspace.delete({ where: { id: YEARLY_CUSTOMER_WORKSPACE } });
   });
 });

@@ -61,6 +61,7 @@ test.describe("the admin area for the platform operator", () => {
       "Funnel",
       "Needs a look",
       "Workspaces by stage",
+      "Paying by plan and interval",
       "Instance",
       "Left in the last 30 days",
     ]) {
@@ -83,6 +84,36 @@ test.describe("the admin area for the platform operator", () => {
     ).toHaveAttribute("href", "/admin/workspaces?stage=trialing");
     await expect(stages.getByRole("link", { name: "Paying, 2" })).toBeVisible();
     await expect(stages).not.toContainText("Indie");
+  });
+
+  test("counts paying workspaces by plan and interval", async ({ page }) => {
+    await page.goto("/admin");
+
+    const paying = page.getByRole("list", {
+      name: "Paying by plan and interval",
+    });
+    await expect(paying.getByRole("listitem")).toHaveText([
+      /^Indie · monthly\s*1$/,
+      /^Indie · yearly\s*0$/,
+      /^Ultimate · monthly\s*0$/,
+      /^Ultimate · yearly\s*1$/,
+    ]);
+    await expect(paying.getByRole("link")).toHaveCount(0);
+  });
+
+  test("says so when no workspace is paying", async ({ page, context }) => {
+    await seedCookies(context, { e2e_admin_nobody_paying: "1" });
+    await page.goto("/admin");
+
+    await expect(
+      page.getByRole("heading", { name: "Paying by plan and interval" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("No workspace is paying right now."),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("list", { name: "Paying by plan and interval" }),
+    ).toHaveCount(0);
   });
 
   test("walks the funnel and switches its window in the address", async ({
@@ -273,9 +304,12 @@ test.describe("the admin area for the platform operator", () => {
       "https://docs.asobeast.com/security/admin-surfaces#activation",
     );
     await page.keyboard.press("Escape");
-    await expect(
-      page.getByRole("heading", { name: "Workspaces by stage" }),
-    ).toHaveCount(0);
+    for (const heading of [
+      "Workspaces by stage",
+      "Paying by plan and interval",
+    ]) {
+      await expect(page.getByRole("heading", { name: heading })).toHaveCount(0);
+    }
     await expect(
       page.getByRole("list", { name: "Sign up to paid" }).getByRole("listitem"),
     ).toHaveCount(4);

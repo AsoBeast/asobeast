@@ -81,6 +81,7 @@ export class SupportOverviewService {
     return this.prisma.workspace.findMany({
       select: {
         ...WORKSPACE_STAGE_SELECT,
+        billingInterval: true,
         cancelAtPeriodEnd: true,
         suspendedAt: true,
         deletionDueAt: true,

@@ -19,6 +19,7 @@ const workspace = (overrides: Partial<WorkspaceRow> = {}): WorkspaceRow => ({
   subscriptionStatus: null,
   trialStartedAt: null,
   firstPaidAt: null,
+  billingInterval: null,
   cancelAtPeriodEnd: false,
   suspendedAt: null,
   deletionDueAt: null,
@@ -187,6 +188,85 @@ describe('tallyWorkspaces stages', () => {
     expect(stageCount(tally, 'self-hosted')).toBe(2);
     expect(stageCount(tally, 'trialing')).toBe(0);
     expect(tally.canceling).toBe(0);
+  });
+});
+
+describe('tallyWorkspaces paying by plan and interval', () => {
+  const customer = (
+    plan: 'indie' | 'ultimate',
+    billingInterval: string | null,
+    overrides: Partial<WorkspaceRow> = {},
+  ) =>
+    workspace({
+      plan,
+      planExpiresAt: FUTURE,
+      subscriptionId: `sub_${plan}`,
+      subscriptionStatus: 'active',
+      firstPaidAt: PAST,
+      billingInterval,
+      ...overrides,
+    });
+
+  it('counts paying workspaces by the plan they hold and how often they renew', () => {
+    const tally = tallyWorkspaces(
+      [
+        customer('indie', 'month'),
+        customer('indie', 'month'),
+        customer('indie', 'year'),
+        customer('ultimate', 'year'),
+      ],
+      true,
+      NOW,
+    );
+    expect(tally.payingByPlan).toEqual([
+      { plan: 'indie', interval: 'month', count: 2 },
+      { plan: 'indie', interval: 'year', count: 1 },
+      { plan: 'ultimate', interval: 'month', count: 0 },
+      { plan: 'ultimate', interval: 'year', count: 1 },
+    ]);
+    expect(
+      tally.payingByPlan?.reduce((total, row) => total + row.count, 0),
+    ).toBe(tally.byStage?.find((row) => row.key === 'paying')?.count);
+  });
+
+  it('leaves out every workspace that is not paying right now', () => {
+    const tally = tallyWorkspaces(
+      [
+        customer('indie', 'month', {
+          subscriptionStatus: 'trialing',
+          firstPaidAt: null,
+          trialStartedAt: PAST,
+          trialEndsAt: FUTURE,
+        }),
+        customer('indie', 'month', { subscriptionStatus: 'past_due' }),
+        customer('ultimate', 'year', { planExpiresAt: PAST }),
+        workspace({ plan: 'indie', planExpiresAt: FUTURE }),
+        workspace({ trialEndsAt: FUTURE, billingInterval: 'month' }),
+      ],
+      true,
+      NOW,
+    );
+    expect(tally.payingByPlan?.every((row) => row.count === 0)).toBe(true);
+  });
+
+  it('adds a row for a paid plan whose interval is not recorded, only when one exists', () => {
+    const tally = tallyWorkspaces(
+      [customer('ultimate', null), customer('ultimate', 'week')],
+      true,
+      NOW,
+    );
+    expect(tally.payingByPlan).toEqual([
+      { plan: 'indie', interval: 'month', count: 0 },
+      { plan: 'indie', interval: 'year', count: 0 },
+      { plan: 'ultimate', interval: 'month', count: 0 },
+      { plan: 'ultimate', interval: 'year', count: 0 },
+      { plan: 'ultimate', interval: null, count: 2 },
+    ]);
+  });
+
+  it('counts nobody as paying when billing is off', () => {
+    const tally = tallyWorkspaces([customer('indie', 'month')], false, NOW);
+    expect(tally.payingByPlan?.every((row) => row.count === 0)).toBe(true);
   });
 });
 

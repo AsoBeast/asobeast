@@ -29,6 +29,7 @@ import {
   WORKSPACE_STAGE_LABELS,
   countOf,
   flagHref,
+  payingPlanLabel,
   stageHref,
 } from "@/lib/admin-stages";
 import { adminConversionWindowParser } from "@/lib/search-params";
@@ -198,6 +199,33 @@ export function StagesPanel({ overview }: { overview: AdminOverview }) {
       footer="Where each workspace stands with billing right now."
     >
       <BreakdownList label="Workspaces by stage" rows={rows} />
+    </AdminPanel>
+  );
+}
+
+export function PayingPanel({
+  payingByPlan,
+}: {
+  payingByPlan: NonNullable<AdminOverview["workspaces"]["payingByPlan"]>;
+}) {
+  const paying = payingByPlan.reduce((total, row) => total + row.count, 0);
+  const rows: BreakdownRow[] = payingByPlan.map((row) => ({
+    key: `${row.plan}-${row.interval ?? "unrecorded"}`,
+    label: payingPlanLabel(row.plan, row.interval),
+    count: row.count,
+    share: paying === 0 ? 0 : row.count / paying,
+  }));
+
+  return (
+    <AdminPanel
+      title="Paying by plan and interval"
+      footer="Paying workspaces by the plan they hold and how often it renews."
+    >
+      {paying > 0 ? (
+        <BreakdownList label="Paying by plan and interval" rows={rows} />
+      ) : (
+        <EmptyState title="No workspace is paying right now." />
+      )}
     </AdminPanel>
   );
 }

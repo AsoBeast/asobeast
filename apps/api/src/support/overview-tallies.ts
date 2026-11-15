@@ -1,10 +1,16 @@
 import {
   ADMIN_SIGNUP_DAYS,
+  BILLING_INTERVALS,
+  PAID_PLAN_NAMES,
   PLAN_NAMES,
   WORKSPACE_STAGES,
+  billingIntervalOf,
+  effectivePlan,
   type AdminCount,
   type AdminOverview,
+  type AdminPayingCount,
   type AdminSignupDay,
+  type WorkspaceStage,
 } from '@asobeast/shared';
 import { planScopeOf } from '../auth/plan-limits';
 import {
@@ -26,6 +32,7 @@ export interface KeyedCount {
 }
 
 export interface WorkspaceRow extends WorkspaceFlagSource {
+  billingInterval: string | null;
   suspendedAt: Date | null;
   deletionDueAt: Date | null;
 }
@@ -72,6 +79,31 @@ export function signupSeries(
   });
 }
 
+interface StagedRow {
+  row: WorkspaceRow;
+  stage: WorkspaceStage;
+}
+
+function payingByPlan(staged: StagedRow[], now: Date): AdminPayingCount[] {
+  const paying = staged
+    .filter(({ stage }) => stage === 'paying')
+    .map(({ row }) => ({
+      plan: effectivePlan(row, now),
+      interval: billingIntervalOf(row.billingInterval),
+    }));
+  return PAID_PLAN_NAMES.flatMap((plan) =>
+    [...BILLING_INTERVALS, null]
+      .map((interval) => ({
+        plan,
+        interval,
+        count: paying.filter(
+          (row) => row.plan === plan && row.interval === interval,
+        ).length,
+      }))
+      .filter((row) => row.interval !== null || row.count > 0),
+  );
+}
+
 export function tallyWorkspaces(
   rows: WorkspaceRow[],
   billing: boolean,
@@ -81,7 +113,7 @@ export function tallyWorkspaces(
     key: planScopeOf(billing, row, now).plan,
     count: 1,
   }));
-  const staged = rows.map((row) => ({
+  const staged: StagedRow[] = rows.map((row) => ({
     row,
     stage: workspaceStageOf(billing, row, now),
   }));
@@ -96,5 +128,6 @@ export function tallyWorkspaces(
     ),
     canceling: staged.filter(({ row, stage }) => cancelingOf(stage, row))
       .length,
+    payingByPlan: payingByPlan(staged, now),
   };
 }
