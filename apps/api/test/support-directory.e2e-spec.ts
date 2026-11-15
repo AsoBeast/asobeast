@@ -477,6 +477,23 @@ describe('Support directory (e2e)', () => {
         reason: null,
       });
       expect(body.items[1]?.reason).toBe('not-using');
+      for (const item of body.items) {
+        expect(Object.keys(item).sort()).toEqual(
+          [
+            'apps',
+            'createdOn',
+            'erasedOn',
+            'everPaid',
+            'id',
+            'keywordMarkets',
+            'members',
+            'plan',
+            'reason',
+            'requestedOn',
+            'stage',
+          ].sort(),
+        );
+      }
     });
   });
 
