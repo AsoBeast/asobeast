@@ -16,6 +16,9 @@ import {
 
 const body = { tag: "body" };
 
+beforeEach(() => vi.stubGlobal("Node", Object));
+afterEach(() => vi.unstubAllGlobals());
+
 describe("focusIsLost", () => {
   it("is true when nothing or the body has focus", () => {
     expect(focusIsLost({ activeElement: null, body })).toBe(true);
@@ -319,7 +322,6 @@ const asElement = (fake: FakeElement) => fake as unknown as Element;
 
 describe("recoveryCandidates", () => {
   beforeEach(() => vi.stubGlobal("HTMLElement", FakeElement));
-  afterEach(() => vi.unstubAllGlobals());
 
   it("lists the controls left in the container in document order", () => {
     const invite = control("Invite member");
@@ -434,7 +436,6 @@ describe("focusFirstAvailable", () => {
 
 describe("recoverFocusIn", () => {
   beforeEach(() => vi.stubGlobal("HTMLElement", FakeElement));
-  afterEach(() => vi.unstubAllGlobals());
 
   const focusRoot = (activeElement: unknown) => ({ activeElement, body });
   const focusable = (root: { activeElement: unknown }) => {

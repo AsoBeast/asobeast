@@ -227,9 +227,13 @@ export function recoveryCandidates(container: Element | null): HTMLElement[] {
     : controls;
 }
 
-const holdsFocus = (candidate: HTMLElement, root: FocusRoot): boolean =>
-  root.activeElement === candidate ||
-  candidate.contains(root.activeElement as Node | null);
+const holdsFocus = (candidate: HTMLElement, root: FocusRoot): boolean => {
+  const active = root.activeElement;
+  return (
+    active === candidate ||
+    (active instanceof Node && candidate.contains(active))
+  );
+};
 
 export function focusFirstAvailable(
   candidates: readonly HTMLElement[],
