@@ -82,6 +82,23 @@ With billing on, each workspace is in one stage, read from its plan and subscrip
 
 A card trial holds the paid plan it will renew into, so the plan column of the Workspaces and Users tabs still names that plan while the stage says the workspace is on trial. On a self hosted instance every workspace is **Self hosted**.
 
+### Conversion and departures {#conversion}
+
+`GET /admin/support/conversion?days=30` (or `90`) answers where sign ups stop on the way to paying. The window counts the workspaces created in it and leaves out the operator workspace and every **Comped** one, so a plan set by hand never flatters a rate.
+
+| Figure | What it counts |
+| --- | --- |
+| Funnel | workspaces signed up in the window, then those whose owner confirmed the email, that imported a first app of their own, that had a position for one of its keywords within a day of the import, that started a trial and that paid |
+| Trial to paid | trials that ended in the window and how many of them paid, beside the same figure for the window before |
+| Trials | workspaces on trial now, and those whose trial ends within three days |
+| Median days | from sign up to the first app, from sign up to the trial, and from the trial to the first payment |
+| Cohorts | eight weeks of sign ups, Monday to Sunday in UTC, each followed to confirmed, first app, trial, paid and still paying |
+| Departures | erased workspaces in the window, by their stage when they asked to leave and by the reason they chose |
+
+With billing off the trial and payment steps, the rates and the trial figures are left out. An erased workspace leaves every count, so the answer also says the day departures were first recorded (`departuresRecordedSince`): before it, a workspace that left is missing from the funnel and the departures alike.
+
+`GET /admin/support/departures` lists the departure records, newest first, up to 1,000 with the total. A record holds nothing that names a workspace or a person, as [What erasure does not remove](/legal/data-retention#what-erasure-does-not-remove) lists, so neither read is written to the support audit trail. The workspace list (`GET /admin/support/workspaces`) also says who scheduled a pending deletion, when, and when it erases.
+
 ## When the operator's workspace has no plan {#when-the-operators-workspace-has-no-plan}
 
 With billing on, the support tooling, the queue dashboard, the metrics scrape and the OpenAPI surface under the default `owner` setting need an entitled operator. An operator whose own workspace has no plan in force receives `404` from every one of them, exactly as a customer does, although `GET /auth/me` still reports `platformOperator: true` next to `entitled: false`. A plan is in force while a paid plan has not expired or a trial is running. The state is a natural one on a hosted instance: the bootstrap account starts its trial at checkout like everyone else, and a trial that ends without a plan closes the area again.

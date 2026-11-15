@@ -55,7 +55,7 @@ Deletion is confirmed, delayed and reversible. An immediate irreversible delete 
 
 <Steps>
   <Step title="Request it">
-    As the workspace owner, open **Settings**, go to **Workspace** and press **Delete workspace**. The dialog enables its action only once you type `DELETE`. From the API, send `POST /account/deletion` with `{"confirm":"DELETE"}`. Anything other than the literal `DELETE` is refused. The workspace of the platform operator answers `409 Conflict` while other accounts exist, as [Deleting the operator workspace](/security/admin-surfaces#deleting-the-operator-workspace) explains.
+    As the workspace owner, open **Settings**, go to **Workspace** and press **Delete workspace**. The dialog enables its action only once you type `DELETE`. From the API, send `POST /account/deletion` with `{"confirm":"DELETE"}`. Anything other than the literal `DELETE` is refused. An optional `reason` takes one value from a fixed list (`too-expensive`, `missing-feature`, `not-using`, `switched-tool` or `other`) and never free text, so it cannot carry personal data past the erasure. The workspace of the platform operator answers `409 Conflict` while other accounts exist, as [Deleting the operator workspace](/security/admin-surfaces#deleting-the-operator-workspace) explains.
   </Step>
   <Step title="Nothing happens yet">
     The workspace keeps running for the grace period, seven days by default and set by `ACCOUNT_DELETION_GRACE_DAYS`. The subscription is set to end with its period, so no further charge lands during the wait. Every member sees a banner on every page naming the earliest erasure date, and **Settings** shows who asked and when. `GET /account/deletion` reports the same.
@@ -76,7 +76,7 @@ An end to end test seeds a row in **every** tenant owned table, deletes the work
 
 ### What erasure does not remove
 
-Five things survive, deliberately, and pretending otherwise would be dishonest.
+Six things survive, deliberately, and pretending otherwise would be dishonest.
 
 | Survives | Why | For how long |
 | --- | --- | --- |
@@ -85,6 +85,7 @@ Five things survive, deliberately, and pretending otherwise would be dishonest.
 | Keyword rows | One search serves every workspace tracking that phrase and market. The row is shared and carries no owner | While anyone tracks it |
 | Top chart captures | One capture of a public store chart serves every workspace reading it. The rows are shared and carry no owner | `RETENTION_CHARTS_DAYS`, 365 days by default |
 | Trial claims | One free trial per mailbox and per card is only enforceable if the record outlives the workspace that took it. The row is a keyed hash of the mailbox or of the card fingerprint (an HMAC under the instance secret), not the address or any card data, and it holds no workspace or account reference | Until the instance secret is rotated. Hosted retention is stated in the privacy policy |
+| A departure record | So the operator can see how many workspaces leave, at which stage and why. The row has a random id and holds the days the workspace was created, asked to leave and was erased, its stage and plan when it asked, whether it ever paid, how many apps, keyword markets and members it had, and the optional reason. It holds no workspace id, name, email or anything else that names a person, and the dates are days, not times, so it cannot be matched to a log line. The operator workspace is never recorded | Indefinitely |
 
 Beyond the application:
 
