@@ -507,6 +507,35 @@ test.describe("workspaces in the admin area", () => {
     await expect(rows).toHaveCount(3);
   });
 
+  test("closes the Filters dialog with Escape and returns focus to Filters", async ({
+    page,
+    context,
+  }) => {
+    await seedCookies(context, { e2e_billing: "1" });
+    await page.goto("/admin/workspaces");
+
+    const filtersButton = page.getByRole("button", { name: "Filters" });
+    const filters = page.getByRole("dialog", { name: "Filters" });
+    await filtersButton.click();
+    await expect(filters).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(filters).toBeHidden();
+    await expect(filtersButton).toBeFocused();
+
+    await filtersButton.click();
+    await filters.getByRole("button", { name: "Filter by stage" }).click();
+    await page.getByRole("option", { name: /^Churned/ }).click();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("listbox")).toBeHidden();
+    await expect(
+      filters.getByRole("button", { name: /^Filter by stage/ }),
+    ).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(filters).toBeHidden();
+    await expect(page).toHaveURL(/[?&]stage=churned/);
+    await expect(filtersButton).toBeFocused();
+  });
+
   test("keeps pending deletions and suspensions on a self hosted instance", async ({
     page,
   }) => {
