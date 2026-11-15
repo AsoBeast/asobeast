@@ -1,11 +1,22 @@
 import {
   TRIAL_PLAN,
+  WORKSPACE_STAGES,
   effectivePlan,
   paidPlanOf,
   type PlanEntitlement,
   type WorkspaceStage,
 } from '@asobeast/shared';
 import { holdsSubscription, stalledBy } from './subscription-status';
+
+export const WORKSPACE_STAGE_SELECT = {
+  plan: true,
+  trialEndsAt: true,
+  planExpiresAt: true,
+  subscriptionId: true,
+  subscriptionStatus: true,
+  trialStartedAt: true,
+  firstPaidAt: true,
+} as const;
 
 export interface WorkspaceStageSource extends PlanEntitlement {
   subscriptionId: string | null;
@@ -40,11 +51,17 @@ function paidStageOf(workspace: WorkspaceStageSource): WorkspaceStage {
   return 'comped';
 }
 
+export const isWorkspaceStage = (
+  value: string | null,
+): value is WorkspaceStage => WORKSPACE_STAGES.some((stage) => stage === value);
+
+export function startedTrial(workspace: WorkspaceStageSource): boolean {
+  return workspace.trialStartedAt !== null || workspace.trialEndsAt !== null;
+}
+
 function freeStageOf(workspace: WorkspaceStageSource): WorkspaceStage {
   if (workspace.firstPaidAt !== null) return 'churned';
-  if (workspace.trialStartedAt !== null || workspace.trialEndsAt !== null) {
-    return 'trial-ended';
-  }
+  if (startedTrial(workspace)) return 'trial-ended';
   return 'no-plan';
 }
 

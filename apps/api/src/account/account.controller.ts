@@ -80,7 +80,7 @@ export class AccountController {
     @Body() dto: RequestDeletionDto,
   ): Promise<WorkspaceDeletionStatus> {
     this.requireOwner(user);
-    return this.deletion.request(user, dto.confirm);
+    return this.deletion.request(user, dto);
   }
 
   @Delete('deletion')

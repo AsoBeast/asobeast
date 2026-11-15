@@ -9,6 +9,7 @@ import type { User } from '@prisma/client';
 import type Stripe from 'stripe';
 import {
   DELETION_CONFIRMATION,
+  type WorkspaceDeletionRequest,
   type WorkspaceDeletionStatus,
 } from '@asobeast/shared';
 import { scheduleIdOf } from '../billing/scheduled-plan';
@@ -23,6 +24,7 @@ import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
+import { WorkspaceDepartures } from './workspace-departures';
 
 const DELETION_JUSTIFICATION =
   'erasing a workspace removes the very scope the query would otherwise run inside';
@@ -41,6 +43,9 @@ const NO_DELETION_SCHEDULED = {
   deletionRequestedBy: null,
   deletionDueAt: null,
   deletionStoppedSubscriptionId: null,
+  deletionReason: null,
+  deletionStage: null,
+  deletionPlan: null,
 };
 
 const RENEWING_STATUSES: ReadonlySet<Stripe.Subscription.Status> = new Set([
@@ -90,6 +95,7 @@ export class AccountDeletionService {
     private readonly crossTenant: CrossTenantAccess,
     private readonly stripe: StripeService,
     private readonly config: ConfigService<Env, true>,
+    private readonly departures: WorkspaceDepartures,
   ) {}
 
   get graceDays(): number {
@@ -110,10 +116,10 @@ export class AccountDeletionService {
 
   async request(
     actor: User,
-    confirmation: string,
+    { confirm, reason }: WorkspaceDeletionRequest,
     now = new Date(),
   ): Promise<WorkspaceDeletionStatus> {
-    if (confirmation !== DELETION_CONFIRMATION) {
+    if (confirm !== DELETION_CONFIRMATION) {
       throw new BadRequestException(
         `Deleting a workspace needs the literal confirmation ${DELETION_CONFIRMATION}`,
       );
@@ -127,6 +133,11 @@ export class AccountDeletionService {
     if (operatorWouldBeLost) {
       throw new ConflictException(OPERATOR_WORKSPACE_DELETION_REFUSED);
     }
+    const standing = await this.departures.standing(
+      this.prisma,
+      workspaceId,
+      now,
+    );
     const stopped = await this.stopRenewal(workspaceId, now);
     const dueAt = new Date(now.getTime() + this.graceDays * DAY_MS);
     const workspace = await this.prisma.workspace
@@ -136,6 +147,9 @@ export class AccountDeletionService {
           deletionRequestedAt: now,
           deletionRequestedBy: actor.email,
           deletionDueAt: dueAt,
+          deletionReason: reason ?? null,
+          deletionStage: standing.stage,
+          deletionPlan: standing.plan,
           ...(stopped ? { deletionStoppedSubscriptionId: stopped } : {}),
         },
         select: {
@@ -293,7 +307,7 @@ export class AccountDeletionService {
       });
       return false;
     }
-    return this.finish(workspaceId, claimed.billingCustomerId);
+    return this.finish(workspaceId, claimed.billingCustomerId, now);
   }
 
   private async claim(
@@ -314,6 +328,7 @@ export class AccountDeletionService {
   private finish(
     workspaceId: string,
     releasedCustomerId: string | null,
+    now: Date,
   ): Promise<boolean> {
     return this.prisma.withTransaction(async (tx) => {
       if (isOperatorWorkspace(workspaceId)) await lockRegistration(tx);
@@ -344,6 +359,7 @@ export class AccountDeletionService {
         where: { workspaceId },
         data: { workspaceId: null },
       });
+      await this.departures.record(tx, workspaceId, now);
       await tx.workspace.delete({ where: { id: workspaceId } });
       this.logger.warn(`workspace ${workspaceId} erased`);
       return true;
