@@ -101,6 +101,21 @@ describe("labelledKeywords", () => {
     ]);
   });
 
+  it("keeps a label clear of the taller tag of the selected keyword", () => {
+    const points = inspectionPoints(
+      [
+        point("habit tracker", 38, 46, 61),
+        point("habit tracker app", 33, 41, 58),
+      ],
+      US,
+      THRESHOLDS,
+    );
+
+    expect([...labelledKeywords(points, "habit tracker")]).toEqual([
+      "habit tracker",
+    ]);
+  });
+
   it("skips a label that would cover another dot", () => {
     const points = inspectionPoints(
       [point("alpha label", 10, 50, 90), point("b", 20, 50, 10)],
