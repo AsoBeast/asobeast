@@ -83,6 +83,11 @@ export const LATER_RELEASES: readonly Release[] = [
         title: "The audit now sees preview videos",
         text: "The audit reads the App Store page itself, so the preview video factor is scored for App Store apps instead of being left unmeasured. A listing without a preview sees the gap in its plan. An app without a preview video scores about three to four points lower the next time the audit runs, and a score close to a grade line can drop a grade.",
       },
+      {
+        kind: "new",
+        title: "Say why you leave, if you like",
+        text: "Deleting a workspace now asks, without insisting, why you are leaving, from a short list. Prefer not to say is the default. Once the workspace is erased, only the answer and a few counts are kept, with nothing that names you or the workspace.",
+      },
     ],
   },
   {

@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getAdminApps,
+  getAdminConversion,
+  getAdminDepartures,
   getAdminOverview,
   getAdminUsers,
   getCapacityReport,
@@ -29,6 +31,17 @@ afterEach(() => {
 describe("admin transport", () => {
   it.each([
     ["the overview", getAdminOverview, "/admin/support/overview"],
+    [
+      "the conversion over 30 days",
+      () => getAdminConversion(30),
+      "/admin/support/conversion?days=30",
+    ],
+    [
+      "the conversion over 90 days",
+      () => getAdminConversion(90),
+      "/admin/support/conversion?days=90",
+    ],
+    ["the departures", getAdminDepartures, "/admin/support/departures"],
     ["every user", () => getAdminUsers(), "/admin/support/users"],
     [
       "one workspace's users",

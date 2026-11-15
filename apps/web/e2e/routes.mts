@@ -19,6 +19,7 @@ export const SIGNED_IN_ROUTES = [
   ["whats-new", "/whats-new"],
   ["upgrade", "/upgrade"],
   ["admin-overview", "/admin"],
+  ["admin-conversion", "/admin/conversion"],
   ["admin-capacity", "/admin/capacity"],
   ["admin-workspaces", "/admin/workspaces"],
   ["admin-users", "/admin/users"],

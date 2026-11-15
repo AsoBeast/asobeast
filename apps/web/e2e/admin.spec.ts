@@ -1,14 +1,23 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { renderedRgb, renderedTokenRgb } from "./colour.mts";
 import { METRICS_SCRAPE, OPERATOR_TOKEN } from "./fixtures.mts";
 import { expect, test } from "./session.mts";
 import { seedCookies } from "./routes.mts";
 import { VIEWERS, seedViewer } from "./viewer.mts";
 
-const ADMIN_TABS = ["Overview", "Capacity", "Workspaces", "Users", "Apps"];
+const ADMIN_TABS = [
+  "Overview",
+  "Conversion",
+  "Capacity",
+  "Workspaces",
+  "Users",
+  "Apps",
+];
 
-const tile = (page: Page, label: string) =>
-  page.locator('[data-slot="stat-tile"]').filter({ hasText: label });
+const tile = (scope: Locator, label: string) =>
+  scope
+    .locator('[data-slot="stat-tile"]')
+    .filter({ has: scope.page().getByText(label, { exact: true }) });
 
 const adminRequests = (page: Page): string[] => {
   const seen: string[] = [];
@@ -33,46 +42,131 @@ test.describe("the admin area for the platform operator", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: "Admin" }),
     ).toBeVisible();
-    await expect(tile(page, "Workspaces")).toContainText("6");
-    await expect(tile(page, "Users")).toContainText("5");
-    await expect(tile(page, "Tracked apps")).toContainText("4");
-    await expect(tile(page, "Keyword markets")).toContainText("1,234");
-    await expect(tile(page, "Activation")).toContainText("9 of 12");
-    await expect(tile(page, "Activation")).toContainText(
-      "ranked within a day of import · 7 completed setup",
-    );
-    await tile(page, "Activation")
-      .getByRole("button", { name: "What activation means" })
-      .click();
     await expect(
-      page.getByRole("link", { name: "Read how activation is counted" }),
-    ).toHaveAttribute(
-      "href",
-      "https://docs.asobeast.com/security/admin-surfaces#activation",
-    );
-    await expect(
-      page.getByRole("heading", { name: "Workspaces by stage" }),
+      page.getByText(/^8 workspaces · 2 on trial · 2 paying · read /),
     ).toBeVisible();
+    const strip = page.getByRole("group", { name: "The instance at a glance" });
+    await expect(tile(strip, "Paying")).toContainText("2");
+    await expect(tile(strip, "Paying")).toContainText(
+      "1 canceling at period end",
+    );
+    await expect(tile(strip, "On trial")).toContainText("1 end within 3 days");
+    await expect(tile(strip, "Trial to paid")).toContainText("36%");
+    await expect(tile(strip, "Trial to paid")).toContainText("+14 pts");
+    await expect(tile(strip, "Trial to paid")).toContainText(
+      "4 of 11 trials ended in 30 days",
+    );
+    await expect(tile(strip, "Sign ups")).toContainText("11");
+    for (const heading of [
+      "Funnel",
+      "Needs a look",
+      "Workspaces by stage",
+      "Instance",
+      "Left in the last 30 days",
+    ]) {
+      await expect(page.getByRole("heading", { name: heading })).toBeVisible();
+    }
+    await expect(
+      page
+        .getByRole("list", { name: "Instance totals" })
+        .getByRole("listitem")
+        .filter({ hasText: "Keyword markets" }),
+    ).toContainText("1,234");
   });
 
   test("the stages panel counts a card trial as a trial", async ({ page }) => {
     await page.goto("/admin");
 
-    const stages = page.locator('[data-slot="card"]').filter({
-      has: page.getByRole("heading", { name: "Workspaces by stage" }),
-    });
-    await expect(stages.getByRole("definition")).toHaveText([
-      "2",
-      "2",
-      "0",
-      "0",
-      "0",
-      "1",
-      "1",
-      "0",
-    ]);
-    await expect(stages.getByRole("term").first()).toHaveText("On trial");
+    const stages = page.getByRole("list", { name: "Workspaces by stage" });
+    await expect(
+      stages.getByRole("link", { name: "On trial, 2" }),
+    ).toHaveAttribute("href", "/admin/workspaces?stage=trialing");
+    await expect(stages.getByRole("link", { name: "Paying, 2" })).toBeVisible();
     await expect(stages).not.toContainText("Indie");
+  });
+
+  test("walks the funnel and switches its window in the address", async ({
+    page,
+  }) => {
+    await page.goto("/admin");
+
+    const funnel = page.getByRole("list", { name: "Sign up to paid" });
+    await expect(funnel.getByRole("listitem")).toHaveText([
+      /Signed up\s*11/,
+      /Confirmed email\s*82%\s*9/,
+      /Started a trial\s*78%\s*7/,
+      /Imported a first app\s*86%\s*6/,
+      /Ranked within a day\s*67%\s*4/,
+      /Paid\s*50%\s*2/,
+    ]);
+    await expect(
+      page.getByText(
+        "Median 0.5 days to a first app · 1.5 days to a trial · 7 days from trial to paid",
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/^Workspaces erased before .+ are not counted\.$/),
+    ).toBeVisible();
+
+    const ninety = page.getByRole("tab", { name: "90d" });
+    await ninety.click();
+
+    await expect(page).toHaveURL(/[?&]days=90/);
+    await expect(funnel.getByRole("listitem").first()).toContainText("33");
+    await expect(
+      page.getByRole("heading", { name: "Left in the last 90 days" }),
+    ).toBeVisible();
+    await expect(ninety).toBeFocused();
+    await expect(ninety).toHaveAttribute("aria-selected", "true");
+  });
+
+  test("lands each look on the workspaces filtered to it", async ({ page }) => {
+    await page.goto("/admin");
+
+    const looks = page.getByRole("list", {
+      name: "Workspaces that need a look",
+    });
+    await expect(looks.getByRole("link")).toHaveText([
+      /Trial ends within 3 days\s*1/,
+      /Canceling at period end\s*1/,
+      /Payment failed\s*1/,
+      /Pending deletion\s*1/,
+      /Suspended\s*1/,
+    ]);
+
+    await looks.getByRole("link", { name: "Pending deletion, 1" }).click();
+
+    await expect(page).toHaveURL("/admin/workspaces?flag=deleting");
+    const rows = page
+      .getByRole("table", { name: "Workspaces on this instance" })
+      .getByRole("row");
+    await expect(rows).toHaveCount(2);
+    await expect(rows.nth(1)).toContainText("Kestrel Apps");
+    await expect(
+      page.getByRole("button", { name: "Remove Pending deletion" }),
+    ).toBeVisible();
+  });
+
+  test("says why workspaces left and opens every departure", async ({
+    page,
+  }) => {
+    await page.goto("/admin");
+
+    const reasons = page.getByRole("list", { name: "Why workspaces left" });
+    await expect(reasons.getByRole("listitem")).toHaveText([
+      /Too expensive\s*1/,
+      /Not using it\s*1/,
+      /No answer\s*1/,
+    ]);
+    await expect(
+      page.getByText(
+        "By stage when they asked to leave: 1 paying · 2 trial ended.",
+      ),
+    ).toBeVisible();
+
+    await page.getByRole("link", { name: "See every departure" }).click();
+
+    await expect(page).toHaveURL("/admin/conversion");
   });
 
   test("moves between tabs that are real links", async ({ page }) => {
@@ -103,6 +197,22 @@ test.describe("the admin area for the platform operator", () => {
         (element) => element.scrollHeight - element.clientHeight,
       ),
     ).toBe(0);
+  });
+
+  test("fades the tab row where tabs are out of view on a phone", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto("/admin");
+
+    const nav = page.getByRole("navigation", { name: "Admin" });
+    await expect(nav).toHaveAttribute("data-edges", "end");
+
+    await nav.evaluate((element) => {
+      element.scrollLeft = element.scrollWidth;
+    });
+
+    await expect(nav).toHaveAttribute("data-edges", "start");
   });
 
   test("is offered by the command palette", async ({ page }) => {
@@ -138,22 +248,119 @@ test.describe("the admin area for the platform operator", () => {
     ).toBeVisible();
   });
 
-  test("hides plans on a self hosted instance and still charts sign ups", async ({
+  test("leaves billing out on a self hosted instance and still charts sign ups", async ({
     page,
     context,
   }) => {
     await seedCookies(context, { e2e_admin_self_hosted: "1" });
     await page.goto("/admin");
 
-    await expect(tile(page, "Workspaces")).toBeVisible();
+    await expect(
+      page.getByText(/^8 workspaces · 5 accounts · read /),
+    ).toBeVisible();
+    const strip = page.getByRole("group", { name: "The instance at a glance" });
+    for (const label of ["Workspaces", "Accounts", "Sign ups", "Activation"]) {
+      await expect(tile(strip, label)).toBeVisible();
+    }
+    await expect(tile(strip, "Activation")).toContainText("9 of 12");
+    await tile(strip, "Activation")
+      .getByRole("button", { name: "What activation means" })
+      .click();
+    await expect(
+      page.getByRole("link", { name: "Read how activation is counted" }),
+    ).toHaveAttribute(
+      "href",
+      "https://docs.asobeast.com/security/admin-surfaces#activation",
+    );
+    await page.keyboard.press("Escape");
     await expect(
       page.getByRole("heading", { name: "Workspaces by stage" }),
     ).toHaveCount(0);
     await expect(
-      page.getByRole("region", {
-        name: "Accounts and workspaces created per day",
-      }),
+      page.getByRole("list", { name: "Sign up to paid" }).getByRole("listitem"),
+    ).toHaveCount(4);
+    await expect(
+      page
+        .getByRole("list", { name: "Workspaces that need a look" })
+        .getByRole("link"),
+    ).toHaveCount(2);
+    await expect(
+      page.getByRole("region", { name: "Accounts created per day" }),
     ).toBeVisible();
+  });
+});
+
+test.describe("conversion in the admin area", () => {
+  test("follows eight weekly cohorts and lists every departure", async ({
+    page,
+  }) => {
+    await page.goto("/admin/conversion");
+
+    const cohorts = page.getByRole("table", {
+      name: "Sign ups by week and how far each week got",
+    });
+    await expect(cohorts.getByRole("row")).toHaveCount(9);
+    for (const header of [
+      "Week of",
+      "Signed up",
+      "Confirmed",
+      "Trial",
+      "First app",
+      "Paid",
+      "Still paying",
+    ]) {
+      await expect(
+        cohorts.getByRole("columnheader", { name: header, exact: true }),
+      ).toBeVisible();
+    }
+    const departures = page.getByRole("table", {
+      name: "Erased workspaces, newest first",
+    });
+    await expect(departures.getByRole("row")).toHaveCount(4);
+    await expect(departures.getByRole("row").nth(1)).toContainText(
+      "Too expensive",
+    );
+    await expect(departures.getByRole("row").nth(1)).toContainText(
+      "Ultimate · paid before",
+    );
+    await expect(departures).not.toContainText("@");
+  });
+
+  test("says so when nobody signed up or left", async ({ page, context }) => {
+    await seedCookies(context, { e2e_admin_conversion_empty: "1" });
+    await page.goto("/admin/conversion");
+
+    await expect(
+      page.getByText("No workspace signed up in the last 8 weeks."),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/^No workspace has been erased since /),
+    ).toBeVisible();
+    await expect(page.getByRole("table")).toHaveCount(0);
+  });
+
+  test("drops the billing columns on a self hosted instance", async ({
+    page,
+    context,
+  }) => {
+    await seedCookies(context, { e2e_admin_self_hosted: "1" });
+    await page.goto("/admin/conversion");
+
+    const cohorts = page.getByRole("table", {
+      name: "Sign ups by week and how far each week got",
+    });
+    await expect(cohorts.getByRole("row").nth(1)).toBeVisible();
+    await expect(cohorts.getByRole("columnheader")).toHaveText([
+      "Week of",
+      "Signed up",
+      "Confirmed",
+      "First app",
+    ]);
+    await expect(
+      page
+        .getByRole("table", { name: "Erased workspaces, newest first" })
+        .getByRole("columnheader", { name: "Stage" }),
+    ).toHaveCount(0);
   });
 });
 
@@ -245,21 +452,106 @@ test.describe("workspaces in the admin area", () => {
     const table = page.getByRole("table", {
       name: "Workspaces on this instance",
     });
-    await expect(table.getByRole("row")).toHaveCount(7);
-    const lapsed = table.getByRole("row").filter({ hasText: "Lapsed Studio" });
-    await expect(lapsed).toContainText("Suspended");
-    await expect(lapsed).toContainText("Sustained rate limit abuse");
+    await expect(table.getByRole("row")).toHaveCount(9);
     await expect(
-      table.getByRole("columnheader", { name: "Plan" }),
+      table.getByRole("columnheader", { name: "Stage" }),
     ).toBeVisible();
-    const cardTrial = table
-      .getByRole("row")
-      .filter({ hasText: "Northwind Labs" });
-    await expect(cardTrial).toContainText("On trial");
-    await expect(cardTrial).toContainText("Indie");
+    const row = (name: string) =>
+      table.getByRole("row").filter({ hasText: name });
+    await expect(row("Lapsed Studio")).toContainText("Suspended");
+    await expect(row("Lapsed Studio")).toContainText(
+      "Sustained rate limit abuse",
+    );
+    await expect(row("Northwind Labs")).toContainText("On trial · Indie");
+    await expect(row("Northwind Labs")).toContainText(/Trial until /);
+    await expect(row("Harbor Apps")).toContainText("Paying · Ultimate");
+    await expect(row("Harbor Apps")).toContainText(/Canceling /);
+    await expect(row("Fjord Tools")).toContainText("Payment failed");
+    await expect(row("Kestrel Apps")).toContainText(/Deletes /);
+    await expect(row("Kestrel Apps")).toContainText(
+      "Asked by kai@kestrel.example.com",
+    );
+    await expect(row("Quiet Pixel")).not.toContainText(/canceled/i);
     await expect(
-      table.getByRole("row").filter({ hasText: "Quiet Pixel" }),
-    ).not.toContainText(/canceled/i);
+      page.getByText("Each read is written to the support audit trail."),
+    ).toBeVisible();
+  });
+
+  test("filters by stage and by what needs a look, kept in the address", async ({
+    page,
+    context,
+  }) => {
+    await seedCookies(context, { e2e_billing: "1" });
+    await page.goto("/admin/workspaces");
+
+    await page.getByRole("button", { name: "Filters" }).click();
+    const filters = page.getByRole("dialog", { name: "Filters" });
+    await filters.getByRole("button", { name: "Filter by stage" }).click();
+    await page.getByRole("option", { name: /^Paying/ }).click();
+    await page.keyboard.press("Escape");
+
+    await expect(page).toHaveURL(/[?&]stage=paying/);
+    const rows = page
+      .getByRole("table", { name: "Workspaces on this instance" })
+      .getByRole("row");
+    await expect(rows).toHaveCount(3);
+
+    await page.goto("/admin/workspaces?stage=paying&flag=canceling");
+    await expect(rows).toHaveCount(2);
+    await expect(rows.nth(1)).toContainText("Harbor Apps");
+
+    await page
+      .getByRole("button", { name: "Remove Canceling at period end" })
+      .click();
+    await expect(page).toHaveURL("/admin/workspaces?stage=paying");
+    await expect(rows).toHaveCount(3);
+  });
+
+  test("closes the Filters dialog with Escape and returns focus to Filters", async ({
+    page,
+    context,
+  }) => {
+    await seedCookies(context, { e2e_billing: "1" });
+    await page.goto("/admin/workspaces");
+
+    const filtersButton = page.getByRole("button", { name: "Filters" });
+    const filters = page.getByRole("dialog", { name: "Filters" });
+    await filtersButton.click();
+    await expect(filters).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(filters).toBeHidden();
+    await expect(filtersButton).toBeFocused();
+
+    await filtersButton.click();
+    await filters.getByRole("button", { name: "Filter by stage" }).click();
+    await page.getByRole("option", { name: /^Churned/ }).click();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("listbox")).toBeHidden();
+    await expect(
+      filters.getByRole("button", { name: /^Filter by stage/ }),
+    ).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(filters).toBeHidden();
+    await expect(page).toHaveURL(/[?&]stage=churned/);
+    await expect(filtersButton).toBeFocused();
+  });
+
+  test("keeps pending deletions and suspensions on a self hosted instance", async ({
+    page,
+  }) => {
+    await page.goto("/admin/workspaces?flag=suspended");
+
+    const rows = page
+      .getByRole("table", { name: "Workspaces on this instance" })
+      .getByRole("row");
+    await expect(rows).toHaveCount(2);
+    await expect(rows.nth(1)).toContainText("Suspended");
+    await page.getByRole("button", { name: "Filters" }).click();
+    await expect(
+      page
+        .getByRole("dialog", { name: "Filters" })
+        .getByRole("button", { name: "Filter by stage" }),
+    ).toHaveCount(0);
   });
 
   test("keeps the search in the address", async ({ page }) => {
@@ -377,7 +669,7 @@ test.describe("accounts in the admin area", () => {
     }
   });
 
-  test("shows the plan of each account when billing is on", async ({
+  test("shows the stage of each account's workspace when billing is on", async ({
     page,
     context,
   }) => {
@@ -385,7 +677,7 @@ test.describe("accounts in the admin area", () => {
     await page.goto("/admin/users");
 
     await expect(
-      page.getByRole("columnheader", { name: "Plan" }),
+      page.getByRole("columnheader", { name: "Stage" }),
     ).toBeVisible();
     const nia = page
       .getByRole("row")
@@ -394,18 +686,33 @@ test.describe("accounts in the admin area", () => {
     await expect(nia).toContainText("Indie");
   });
 
-  test("drops the plan column on a self hosted instance", async ({ page }) => {
-    for (const [path, name] of [
-      ["/admin/users", "Accounts on this instance"],
-      ["/admin/workspaces", "Workspaces on this instance"],
-    ]) {
-      await page.goto(path);
-      const table = page.getByRole("table", { name });
-      await expect(table.getByRole("row").nth(1)).toBeVisible();
-      await expect(
-        table.getByRole("columnheader", { name: "Plan" }),
-      ).toHaveCount(0);
-    }
+  test("drops the stage column of accounts on a self hosted instance", async ({
+    page,
+  }) => {
+    await page.goto("/admin/users");
+    const table = page.getByRole("table", {
+      name: "Accounts on this instance",
+    });
+    await expect(table.getByRole("row").nth(1)).toBeVisible();
+    await expect(
+      table.getByRole("columnheader", { name: "Stage" }),
+    ).toHaveCount(0);
+  });
+
+  test("keeps an account's confirmation named when a phone shows only its mark", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto("/admin/users");
+
+    const lee = page
+      .getByRole("row")
+      .filter({ hasText: "lee@lapsed.example.com" });
+    const word = await lee.getByText("Not confirmed").boundingBox();
+    expect(word?.width).toBeLessThanOrEqual(1);
+    await expect(lee.getByRole("cell", { name: /Not confirmed/ })).toHaveCount(
+      1,
+    );
   });
 });
 

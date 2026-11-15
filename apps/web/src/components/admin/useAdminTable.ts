@@ -25,6 +25,7 @@ export function useAdminTable<TData extends RowData>({
   sort,
   onSort,
   billing,
+  billingColumns = [PLAN_COLUMN],
 }: {
   name: string;
   data: TData[];
@@ -33,6 +34,7 @@ export function useAdminTable<TData extends RowData>({
   sort: UrlSort;
   onSort: (next: UrlSort) => void;
   billing: boolean;
+  billingColumns?: readonly string[];
 }) {
   const [visibility, setVisibility] = useStoredColumnVisibility(name, columns);
   const { sorting, onSortingChange } = useUrlSorting(sort, columns, onSort);
@@ -46,7 +48,10 @@ export function useAdminTable<TData extends RowData>({
       sorting,
       columnVisibility: billing
         ? visibility
-        : { ...visibility, [PLAN_COLUMN]: false },
+        : {
+            ...visibility,
+            ...Object.fromEntries(billingColumns.map((id) => [id, false])),
+          },
     },
     onSortingChange,
     onColumnVisibilityChange: setVisibility,

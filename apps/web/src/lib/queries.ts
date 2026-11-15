@@ -1,4 +1,5 @@
 import type {
+  AdminConversionWindow,
   KeywordInspection,
   KeywordInspectionList,
   AlertChannel,
@@ -41,6 +42,8 @@ import {
   getAction,
   getActionActivity,
   getAdminApps,
+  getAdminConversion,
+  getAdminDepartures,
   getAdminOverview,
   getAdminUsers,
   getCapacityReport,
@@ -362,6 +365,9 @@ export const billingCatalogKey = ["billing", "catalog"] as const;
 export const adminKeys = {
   all: ["admin"] as const,
   overview: () => [...adminKeys.all, "overview"] as const,
+  conversion: (days: AdminConversionWindow) =>
+    [...adminKeys.all, "conversion", days] as const,
+  departures: () => [...adminKeys.all, "departures"] as const,
   capacity: () => [...adminKeys.all, "capacity"] as const,
   proxyPool: () => [...adminKeys.all, "proxy-pool"] as const,
   workspaces: () => [...adminKeys.all, "workspaces"] as const,
@@ -376,6 +382,19 @@ const ADMIN_STALE_MS = 60 * 1000;
 export const adminOverviewOptions = queryOptions({
   queryKey: adminKeys.overview(),
   queryFn: getAdminOverview,
+  staleTime: ADMIN_STALE_MS,
+});
+
+export const adminConversionOptions = (days: AdminConversionWindow) =>
+  queryOptions({
+    queryKey: adminKeys.conversion(days),
+    queryFn: () => getAdminConversion(days),
+    staleTime: ADMIN_STALE_MS,
+  });
+
+export const adminDeparturesOptions = queryOptions({
+  queryKey: adminKeys.departures(),
+  queryFn: getAdminDepartures,
   staleTime: ADMIN_STALE_MS,
 });
 

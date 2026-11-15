@@ -2,6 +2,7 @@ export const ADMIN_ROOT = "/admin";
 
 export const ADMIN_SECTIONS = [
   { segment: "", label: "Overview" },
+  { segment: "conversion", label: "Conversion" },
   { segment: "capacity", label: "Capacity" },
   { segment: "workspaces", label: "Workspaces" },
   { segment: "users", label: "Users" },

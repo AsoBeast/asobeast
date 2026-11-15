@@ -18,7 +18,7 @@ export function ListLimitNote({
       {`Showing the newest ${formatNumber(shown)} of ${formatNumber(total)} ${noun}s.`}{" "}
       <Link
         href={adminHref("workspaces")}
-        className="font-medium text-foreground underline underline-offset-4"
+        className="font-medium text-foreground link-underline"
       >
         Open a workspace
       </Link>{" "}

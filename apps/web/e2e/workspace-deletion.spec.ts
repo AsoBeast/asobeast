@@ -54,6 +54,51 @@ test("the owner schedules deletion behind a typed confirmation and cancels it", 
   ).toBeVisible();
 });
 
+test("the owner may say why they leave, and saying nothing sends no reason", async ({
+  page,
+}) => {
+  await page.goto("/settings#workspace");
+  const section = page.getByRole("region", { name: "Workspace" });
+  const bodies: unknown[] = [];
+  page.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      request.url().endsWith("/account/deletion")
+    ) {
+      bodies.push(request.postDataJSON());
+    }
+  });
+
+  await section.getByRole("button", { name: "Delete workspace" }).click();
+  const dialog = page.getByRole("alertdialog");
+  const reason = dialog.getByRole("combobox", {
+    name: "Why are you leaving? Optional",
+  });
+  await expect(reason).toHaveText("Prefer not to say");
+  await reason.click();
+  await page.getByRole("option", { name: "Switched to another tool" }).click();
+  await dialog.getByLabel("Type DELETE to confirm").fill("DELETE");
+  await dialog.getByRole("button", { name: "Delete workspace" }).click();
+  await expect(
+    section.getByRole("button", { name: "Cancel deletion" }),
+  ).toBeVisible();
+  await section.getByRole("button", { name: "Cancel deletion" }).click();
+
+  await section.getByRole("button", { name: "Delete workspace" }).click();
+  await expect(reason).toHaveText("Prefer not to say");
+  await dialog.getByLabel("Type DELETE to confirm").fill("DELETE");
+  await dialog.getByRole("button", { name: "Delete workspace" }).click();
+  await expect(
+    section.getByRole("button", { name: "Cancel deletion" }),
+  ).toBeVisible();
+
+  expect(bodies).toEqual([
+    { confirm: "DELETE", reason: "switched-tool" },
+    { confirm: "DELETE" },
+  ]);
+  await section.getByRole("button", { name: "Cancel deletion" }).click();
+});
+
 test("a member sees a scheduled deletion without the controls", async ({
   page,
 }) => {

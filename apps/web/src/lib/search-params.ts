@@ -1,4 +1,5 @@
 import {
+  ADMIN_CONVERSION_WINDOWS,
   ALERT_FEED_EVENTS,
   ALL_WORKSPACES,
   ACTION_CATEGORIES,
@@ -23,8 +24,10 @@ import {
   REVIEW_REPLY_STATES,
   REVIEW_SORTS,
   STORES,
+  WORKSPACE_STAGES,
   isUtcCalendarDate,
   type ActionStatus,
+  type AdminConversionWindow,
   type PortfolioHistoryDays,
 } from "@asobeast/shared";
 import {
@@ -261,12 +264,41 @@ export const ADMIN_WORKSPACE_SORTS = [
   "keywordMarkets",
 ] as const;
 
+export const ADMIN_WORKSPACE_FLAGS = [
+  "ending-soon",
+  "canceling",
+  "deleting",
+  "suspended",
+] as const;
+
+export type AdminWorkspaceFlag = (typeof ADMIN_WORKSPACE_FLAGS)[number];
+
+export const adminStageParser = parseAsDistinctArrayOf(
+  parseAsStringLiteral(WORKSPACE_STAGES),
+).withDefault([]);
+
+export const adminFlagParser = parseAsDistinctArrayOf(
+  parseAsStringLiteral(ADMIN_WORKSPACE_FLAGS),
+).withDefault([]);
+
+export const adminConversionWindowParser = createParser({
+  parse: (value) =>
+    ADMIN_CONVERSION_WINDOWS.find((days) => String(days) === value) ?? null,
+  serialize: (value: AdminConversionWindow) => String(value),
+}).withDefault(ADMIN_CONVERSION_WINDOWS[0]);
+
+export const adminOverviewParsers = { days: adminConversionWindowParser };
+
+export const loadAdminOverviewSearch = createLoader(adminOverviewParsers);
+
 export const adminWorkspaceSortParser = parseAsStringLiteral(
   ADMIN_WORKSPACE_SORTS,
 ).withDefault("created");
 
 export const adminWorkspaceListParsers = {
   q: searchParser,
+  stage: adminStageParser,
+  flag: adminFlagParser,
   sort: adminWorkspaceSortParser,
   dir: sortDirectionParser,
 };
