@@ -99,7 +99,7 @@ export function InspectionResultsTable({
           {shown.map((result) => (
             <TableRow key={`${result.position}-${result.storeAppId}`}>
               <TableCell className="numeric pr-0 text-right text-faint-foreground">
-                {result.position}
+                <span>{result.position}</span>
               </TableCell>
               <TableCell className="w-full max-w-0 md:pr-2">
                 <ResultName
@@ -109,12 +109,14 @@ export function InspectionResultsTable({
                 />
               </TableCell>
               <TableCell className="hidden text-muted-foreground sm:table-cell md:px-2">
-                {TITLE_MATCH_LABELS[result.titleMatch]}
+                <span>{TITLE_MATCH_LABELS[result.titleMatch]}</span>
               </TableCell>
               <TableCell className="numeric text-right md:pl-2">
-                {result.ratingCount === null
-                  ? "—"
-                  : formatCompact(result.ratingCount)}
+                <span>
+                  {result.ratingCount === null
+                    ? "—"
+                    : formatCompact(result.ratingCount)}
+                </span>
               </TableCell>
             </TableRow>
           ))}
