@@ -307,7 +307,7 @@ export class AccountDeletionService {
       });
       return false;
     }
-    return this.finish(workspaceId, claimed.billingCustomerId, now);
+    return this.finish(workspaceId, claimed.billingCustomerId);
   }
 
   private async claim(
@@ -328,7 +328,6 @@ export class AccountDeletionService {
   private finish(
     workspaceId: string,
     releasedCustomerId: string | null,
-    now: Date,
   ): Promise<boolean> {
     return this.prisma.withTransaction(async (tx) => {
       if (isOperatorWorkspace(workspaceId)) await lockRegistration(tx);
@@ -359,7 +358,7 @@ export class AccountDeletionService {
         where: { workspaceId },
         data: { workspaceId: null },
       });
-      await this.departures.record(tx, workspaceId, now);
+      await this.departures.record(tx, workspaceId, new Date());
       await tx.workspace.delete({ where: { id: workspaceId } });
       this.logger.warn(`workspace ${workspaceId} erased`);
       return true;

@@ -103,10 +103,18 @@ describe('AccountDeletionService', () => {
   describe('eraseDue', () => {
     it('records the departure inside the erasing transaction, before the delete', async () => {
       claims(null);
+      const before = Date.now();
 
       await service.eraseDue(NOW);
 
-      expect(departures.record).toHaveBeenCalledWith(prisma, 'ws_due', NOW);
+      const [tx, workspaceId, erasedAt] = departures.record.mock.calls[0] as [
+        unknown,
+        string,
+        Date,
+      ];
+      expect(tx).toBe(prisma);
+      expect(workspaceId).toBe('ws_due');
+      expect(erasedAt.getTime()).toBeGreaterThanOrEqual(before);
       expect(departures.record.mock.invocationCallOrder[0]).toBeLessThan(
         prisma.workspace.delete.mock.invocationCallOrder[0],
       );

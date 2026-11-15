@@ -9,6 +9,10 @@ import { AccountDeletionService } from '../src/account/account-deletion.service'
 import { STRIPE_CLIENT } from '../src/billing/stripe.client';
 import { WorkspaceContext } from '../src/common/tenancy/workspace-context';
 import { PrismaService } from '../src/prisma/prisma.service';
+import {
+  keywordMarketsByWorkspace,
+  sumKeywordMarkets,
+} from '../src/auth/keyword-markets';
 import { TENANT_TABLES } from '../src/common/tenancy/tenant-tables';
 import { restoreAuthEnv } from './helpers/auth-env';
 import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
@@ -46,7 +50,7 @@ describe('Workspace deletion (e2e)', () => {
   let prisma: PrismaClient;
   let deletion: AccountDeletionService;
   let seeded: Seeded;
-  let sizesBeforeErasure = { members: 0, apps: 0 };
+  let sizesBeforeErasure = { members: 0, apps: 0, keywordMarkets: 0 };
   const deletedCustomers: string[] = [];
   let whileDeleting: () => Promise<unknown> = () => Promise.resolve();
   const stripe = {
@@ -631,6 +635,11 @@ describe('Workspace deletion (e2e)', () => {
       apps: await prisma.app.count({
         where: { workspaceId: WORKSPACE, isCompetitor: false },
       }),
+      keywordMarkets: sumKeywordMarkets(
+        (await keywordMarketsByWorkspace(prisma)).filter(
+          (row) => row.workspaceId === WORKSPACE,
+        ),
+      ),
     };
 
     await expect(deletion.eraseDue()).resolves.toEqual([WORKSPACE]);
@@ -695,7 +704,7 @@ describe('Workspace deletion (e2e)', () => {
       plan: 'free',
       everPaid: false,
       apps: sizesBeforeErasure.apps,
-      keywordMarkets: expect.any(Number) as number,
+      keywordMarkets: sizesBeforeErasure.keywordMarkets,
       members: sizesBeforeErasure.members,
       reason: null,
     });
@@ -704,6 +713,7 @@ describe('Workspace deletion (e2e)', () => {
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
     );
     expect(sizesBeforeErasure.apps).toBeGreaterThan(0);
+    expect(sizesBeforeErasure.keywordMarkets).toBeGreaterThan(0);
   });
 
   it('keeps the support audit trail, which outlives the workspace', async () => {

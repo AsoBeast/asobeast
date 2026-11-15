@@ -8,10 +8,7 @@ import {
   type PlanName,
   type WorkspaceStage,
 } from '@asobeast/shared';
-import {
-  keywordMarketsByWorkspace,
-  sumKeywordMarkets,
-} from '../auth/keyword-markets';
+import { countWorkspaceKeywordMarkets } from '../auth/keyword-markets';
 import { planScopeOf } from '../auth/plan-limits';
 import { isOperatorWorkspace } from '../auth/platform-operator';
 import {
@@ -102,7 +99,7 @@ export class WorkspaceDepartures {
     now: Date,
   ): Promise<void> {
     if (isOperatorWorkspace(workspaceId)) return;
-    const [workspace, members, apps, markets] = await Promise.all([
+    const [workspace, members, apps, keywordMarkets] = await Promise.all([
       tx.workspace.findUniqueOrThrow({
         where: { id: workspaceId },
         select: {
@@ -116,11 +113,8 @@ export class WorkspaceDepartures {
       }),
       tx.user.count({ where: { workspaceId } }),
       tx.app.count({ where: { workspaceId, isCompetitor: false } }),
-      keywordMarketsByWorkspace(tx),
+      countWorkspaceKeywordMarkets(tx, workspaceId),
     ]);
-    const keywordMarkets = sumKeywordMarkets(
-      markets.filter((row) => row.workspaceId === workspaceId),
-    );
     await tx.workspaceDeparture.create({
       data: departureOf(
         workspace,
