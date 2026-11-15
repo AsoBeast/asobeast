@@ -21,6 +21,7 @@ export interface WorkspaceFlagSource extends WorkspaceStageSource {
 const CANCELABLE_STAGES: ReadonlySet<WorkspaceStage> = new Set([
   'trialing',
   'paying',
+  'payment-failed',
 ]);
 
 function paymentFailed(workspace: WorkspaceStageSource): boolean {

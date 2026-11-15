@@ -136,6 +136,17 @@ describe('workspaceStageOf', () => {
 });
 
 describe('cancelingOf', () => {
+  it('flags a customer whose charge failed and who stops at period end', () => {
+    const pastDue = {
+      ...CUSTOMER,
+      subscriptionStatus: 'past_due',
+      cancelAtPeriodEnd: true,
+    };
+    const stage = workspaceStageOf(true, pastDue, NOW);
+    expect(stage).toBe('payment-failed');
+    expect(cancelingOf(stage, pastDue)).toBe(true);
+  });
+
   it('flags a trial or a customer that stops at period end', () => {
     expect(
       cancelingOf('trialing', { ...CARD_TRIAL, cancelAtPeriodEnd: true }),
