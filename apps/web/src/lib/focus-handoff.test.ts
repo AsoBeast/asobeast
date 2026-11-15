@@ -297,6 +297,13 @@ describe("cardAction", () => {
 const control = (name: string, hiddenFromUser = false) => ({
   name,
   closest: () => (hiddenFromUser ? { tag: "aria-hidden" } : null),
+  matches: () => false,
+});
+const tabList = (selectedTab: unknown) => ({
+  ...control("Range"),
+  matches: (selector: string) => selector === '[role="tablist"]',
+  querySelector: (selector: string) =>
+    selector === '[role="tab"][aria-selected="true"]' ? selectedTab : null,
 });
 
 class FakeElement {
@@ -341,10 +348,22 @@ describe("recoveryCandidates", () => {
       "textarea:not(:disabled)",
       "a[href]",
       "button:not(:disabled)",
-      '[tabindex]:not([role="tablist"])',
+      "[tabindex]",
     ]) {
       expect(fake.selector).toContain(`${kind}:not([tabindex="-1"])`);
     }
+  });
+
+  it("offers a tab list's selected tab in its place, so focus lands on the tab itself", () => {
+    const selected = control("30d");
+    expect(
+      recoveryCandidates(asElement(container([tabList(selected)]))),
+    ).toEqual([selected]);
+  });
+
+  it("keeps a tab list that has no selected tab", () => {
+    const tabs = tabList(null);
+    expect(recoveryCandidates(asElement(container([tabs])))).toEqual([tabs]);
   });
 
   it("skips a control hidden from assistive technology or inert", () => {

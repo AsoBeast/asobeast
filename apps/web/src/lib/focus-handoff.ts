@@ -186,8 +186,16 @@ const RECOVERY_CANDIDATES = tabbable(
   'input:not(:disabled):not([type="hidden"])',
   "select:not(:disabled)",
   "textarea:not(:disabled)",
-  '[tabindex]:not([role="tablist"])',
+  "[tabindex]",
 );
+
+const TAB_LIST = '[role="tablist"]';
+const SELECTED_TAB = '[role="tab"][aria-selected="true"]';
+
+const focusTarget = (control: HTMLElement): HTMLElement =>
+  control.matches(TAB_LIST)
+    ? (control.querySelector<HTMLElement>(SELECTED_TAB) ?? control)
+    : control;
 
 const withinReach = (element: Element): boolean =>
   element.closest(OUT_OF_REACH) === null;
@@ -219,7 +227,7 @@ const RETRY_CONTAINER = `${CARD}, [role="dialog"], section`;
 
 export function recoveryCandidates(container: Element | null): HTMLElement[] {
   if (!container?.isConnected) return [];
-  const controls = reachableIn(container, RECOVERY_CANDIDATES);
+  const controls = reachableIn(container, RECOVERY_CANDIDATES).map(focusTarget);
   return container instanceof HTMLElement &&
     container.hasAttribute("tabindex") &&
     withinReach(container)
