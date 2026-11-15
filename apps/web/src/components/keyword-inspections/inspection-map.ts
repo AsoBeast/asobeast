@@ -13,6 +13,8 @@ import {
 
 export const END_ANCHORED_FROM = 72;
 
+const SELECTED_TAG_HEIGHT = 1.75;
+
 export interface LabelScale {
   charWidth: number;
   halfHeight: number;
@@ -140,6 +142,7 @@ function labelBox(
     point.keyword.length * scale.charWidth * (selected ? 1.2 : 1) +
     (selected ? scale.offset * 2 : 0);
   const offset = selected ? scale.offset * 2.5 : scale.offset;
+  const halfHeight = scale.halfHeight * (selected ? SELECTED_TAG_HEIGHT : 1);
   const endAnchored = point.difficulty >= END_ANCHORED_FROM;
   const start = endAnchored
     ? point.difficulty - offset - width
@@ -147,8 +150,8 @@ function labelBox(
   return {
     left: start,
     right: start + width,
-    bottom: point.popularity - scale.halfHeight,
-    top: point.popularity + scale.halfHeight,
+    bottom: point.popularity - halfHeight,
+    top: point.popularity + halfHeight,
   };
 }
 

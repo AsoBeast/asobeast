@@ -65,7 +65,9 @@ import {
   releaseQueuedInspections,
   requestInspection,
   resetInspections,
+  seedInspections,
 } from "./keyword-inspections-mock.mts";
+import { seededInspections } from "./keyword-inspection-fixtures.mts";
 import { funnelFor } from "./store-funnel.mts";
 import {
   STORE_CONNECT_OFF_COOKIE,
@@ -2614,6 +2616,14 @@ const routes: Route[] = [
     pattern: /^\/__reset-keyword-inspections$/,
     handler: (_p, _req, res) => {
       resetInspections();
+      json(res, 200, { ok: true });
+    },
+  },
+  {
+    method: "GET",
+    pattern: /^\/__seed-keyword-inspections$/,
+    handler: (_p, _req, res) => {
+      seedInspections(seededInspections());
       json(res, 200, { ok: true });
     },
   },

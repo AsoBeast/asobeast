@@ -5,65 +5,60 @@ import {
   type KeywordInspectionSummary,
 } from "@asobeast/shared";
 import { Loader2 } from "lucide-react";
-import { ZONE_FILLS } from "@/components/keywords/map/zone-layers";
 import { useZoneThresholds } from "@/components/keywords/use-zone-thresholds";
-import { Badge } from "@/components/ui/badge";
+import { PANEL_BLEED, PANEL_HEADER } from "@/components/layout/panel-classes";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   formatCountry,
   formatDateTime,
+  formatDayMonth,
   formatNumber,
+  pluralize,
   storeLabel,
 } from "@/lib/format";
 import { ZONE_LABELS, zoneOf, type ZoneThresholds } from "@/lib/keyword-zones";
 import { cn } from "@/lib/utils";
 import { DeleteInspectionButton } from "./DeleteInspectionButton";
-import { shownScore } from "./inspection-format";
+import { shownScore, storefrontCode } from "./inspection-format";
 
 const ROW =
-  "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 md:grid-cols-[minmax(0,1.6fr)_repeat(3,5.5rem)_9rem_11rem_2rem]";
+  "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 @[38rem]/log:grid-cols-[minmax(0,1fr)_7.25rem_repeat(3,4.75rem)_3.75rem_1.75rem]";
 
-function ZoneMark({
-  item,
-  thresholds,
-}: {
-  item: KeywordInspectionSummary;
-  thresholds: ZoneThresholds;
-}) {
-  const zone =
-    item.volume === null || item.difficulty100 === null
-      ? null
-      : zoneOf(
-          {
-            popularity: Math.round(item.volume),
-            difficulty: Math.round(item.difficulty100),
-          },
-          thresholds,
-        );
-  if (zone === null) return <span className="text-muted-foreground">—</span>;
-  return (
-    <span className="inline-flex items-center gap-1.5 text-sm">
-      <span
-        aria-hidden
-        className="size-2 rounded-full"
-        style={{ background: ZONE_FILLS[zone] }}
-      />
-      {ZONE_LABELS[zone]}
-    </span>
+const SCORE = "numeric hidden text-right @[38rem]/log:block";
+
+function zoneWord(
+  item: KeywordInspectionSummary,
+  thresholds: ZoneThresholds,
+): string {
+  if (item.volume === null || item.difficulty100 === null) return "No score";
+  const zone = zoneOf(
+    {
+      popularity: Math.round(item.volume),
+      difficulty: Math.round(item.difficulty100),
+    },
+    thresholds,
   );
+  return zone === null ? "No score" : ZONE_LABELS[zone];
 }
 
-function RunStatus({ item }: { item: KeywordInspectionSummary }) {
+function RunState({ item }: { item: KeywordInspectionSummary }) {
   if (item.status === "PENDING") {
     return (
-      <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+      <span className="inline-flex items-center gap-1.5 text-muted-foreground">
         <Loader2 aria-hidden className="size-3.5 animate-spin" />
         <span>Running</span>
       </span>
     );
   }
-  if (item.status === "FAILED")
-    return <Badge variant="destructive">Failed</Badge>;
-  return null;
+  return <span className="font-medium text-signal-down">Failed</span>;
 }
 
 function LogRow({
@@ -80,66 +75,52 @@ function LogRow({
   onDeleted: (id: string) => void;
 }) {
   const done = item.status === "DONE";
-  const storefront = `${storeLabel(item.store)} · ${item.country.toUpperCase()}`;
+  const storefront = storefrontCode(item.store, item.country);
+  const day = formatDayMonth(item.completedAt ?? item.requestedAt);
   return (
     <li
       className={cn(
         ROW,
-        "rounded-md px-3 py-1 transition-colors hover:bg-muted/60",
-        selected && "bg-muted",
+        "relative min-h-10 rounded-md px-2 text-dense transition-colors duration-150 ease-out hover:bg-muted @[38rem]/log:min-h-9",
+        selected &&
+          "bg-muted before:absolute before:inset-y-1.5 before:left-0 before:w-0.5 before:rounded-full before:bg-foreground",
       )}
     >
       <button
         type="button"
         aria-current={selected || undefined}
         onClick={() => onSelect(item.id)}
-        className="col-span-1 grid min-w-0 items-center gap-x-4 rounded-sm py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring md:col-span-6 md:grid-cols-subgrid"
+        className="grid min-w-0 items-center gap-x-2 gap-y-0.5 rounded-sm py-1.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring @[38rem]/log:col-span-6 @[38rem]/log:grid-cols-subgrid @[38rem]/log:py-0"
       >
-        <span className="flex min-w-0 flex-col">
-          <span className="flex items-center gap-2">
-            <span
-              className={cn(
-                "truncate font-medium",
-                selected && "text-foreground",
-              )}
-            >
-              {item.keyword}
+        <span className="min-w-0 truncate font-medium">
+          <bdi>{item.keyword}</bdi>
+        </span>
+        <span className="truncate text-caption text-muted-foreground @[38rem]/log:hidden">
+          {done ? (
+            <span>{`${storefront} · ${zoneWord(item, thresholds)} · ${day}`}</span>
+          ) : (
+            <span className="inline-flex items-center gap-1">
+              <RunState item={item} />
+              <span>{`· ${storefront} · ${day}`}</span>
             </span>
-            <span className="md:hidden">
-              <RunStatus item={item} />
-            </span>
-          </span>
-          <span className="truncate text-xs text-muted-foreground">
-            {storefront}
-            <span className="md:hidden">
-              {done
-                ? ` · pop ${shownScore(item.volume)} · diff ${shownScore(item.difficulty100)} · opp ${shownScore(item.opportunity)}`
-                : null}
-            </span>
-          </span>
+          )}
+        </span>
+        <span className="hidden truncate text-muted-foreground @[38rem]/log:block">
+          {storefront}
         </span>
         {done ? (
           <>
-            <span className="numeric hidden text-right md:block">
-              {shownScore(item.volume)}
-            </span>
-            <span className="numeric hidden text-right md:block">
-              {shownScore(item.difficulty100)}
-            </span>
-            <span className="numeric hidden text-right md:block">
-              {shownScore(item.opportunity)}
-            </span>
-            <span className="hidden md:block">
-              <ZoneMark item={item} thresholds={thresholds} />
-            </span>
+            <span className={SCORE}>{shownScore(item.volume)}</span>
+            <span className={SCORE}>{shownScore(item.difficulty100)}</span>
+            <span className={SCORE}>{shownScore(item.opportunity)}</span>
           </>
         ) : (
-          <span className="hidden md:col-span-4 md:block">
-            <RunStatus item={item} />
+          <span className="hidden @[38rem]/log:col-span-3 @[38rem]/log:block">
+            <RunState item={item} />
           </span>
         )}
-        <span className="hidden text-sm text-muted-foreground md:block">
-          {formatDateTime(item.completedAt ?? item.requestedAt)}
+        <span className="numeric hidden pl-2 text-muted-foreground @[38rem]/log:block">
+          {day}
         </span>
       </button>
       <DeleteInspectionButton
@@ -151,6 +132,9 @@ function LogRow({
     </li>
   );
 }
+
+const storefrontCount = (items: readonly KeywordInspectionSummary[]) =>
+  new Set(items.map((item) => `${item.store}|${item.country}`)).size;
 
 export function InspectionLog({
   items,
@@ -165,52 +149,67 @@ export function InspectionLog({
 }) {
   const { thresholds } = useZoneThresholds();
   return (
-    <section aria-labelledby="inspection-log" className="flex flex-col gap-3">
-      <div className="flex items-baseline gap-2">
-        <h2 id="inspection-log" className="text-title">
-          All inspections
-        </h2>
-        <span className="text-sm text-muted-foreground">
-          {items.length >= KEYWORD_INSPECTION_LIST_LIMIT
-            ? `Latest ${formatNumber(items.length)} across every storefront`
-            : `${formatNumber(items.length)} across every storefront`}
-        </span>
-      </div>
-      {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Inspections you run are kept here so you can compare them later.
-        </p>
-      ) : (
-        <div className="flex flex-col">
-          <div
-            aria-hidden
-            className={cn(
-              ROW,
-              "hidden border-b px-3 pb-2 text-xs text-muted-foreground md:grid",
-            )}
-          >
-            <span>Keyword</span>
-            <span className="text-right">Popularity</span>
-            <span className="text-right">Difficulty</span>
-            <span className="text-right">Opportunity</span>
-            <span>Zone</span>
-            <span>Inspected</span>
-            <span />
+    <Card
+      aria-labelledby="inspection-log"
+      className="@container/log min-w-0"
+      role="region"
+    >
+      <CardHeader className={PANEL_HEADER}>
+        <CardTitle asChild>
+          <h2 id="inspection-log">All inspections</h2>
+        </CardTitle>
+        {items.length > 0 ? (
+          <CardAction className="numeric self-center text-label text-faint-foreground">
+            {`${formatNumber(items.length)} · latest ${formatNumber(KEYWORD_INSPECTION_LIST_LIMIT)}`}
+          </CardAction>
+        ) : null}
+      </CardHeader>
+      <CardContent className={items.length === 0 ? undefined : PANEL_BLEED}>
+        {items.length === 0 ? (
+          <EmptyState
+            title="No inspections yet"
+            body="Every keyword you inspect is kept here, across every store and country, so you can compare it later."
+            className="py-8"
+          />
+        ) : (
+          <div className="p-2">
+            <div
+              aria-hidden
+              className={cn(
+                ROW,
+                "hidden min-h-9 border-b px-2 text-label text-faint-foreground @[38rem]/log:grid",
+              )}
+            >
+              <span>Keyword</span>
+              <span>Storefront</span>
+              <span className="text-right">Popularity</span>
+              <span className="text-right">Difficulty</span>
+              <span className="text-right">Opportunity</span>
+              <span className="pl-2">Inspected</span>
+              <span />
+            </div>
+            <ul className="flex flex-col pt-1">
+              {items.map((item) => (
+                <LogRow
+                  key={item.id}
+                  item={item}
+                  selected={item.id === selected}
+                  thresholds={thresholds}
+                  onSelect={onSelect}
+                  onDeleted={onDeleted}
+                />
+              ))}
+            </ul>
           </div>
-          <ul className="flex flex-col gap-0.5 pt-1">
-            {items.map((item) => (
-              <LogRow
-                key={item.id}
-                item={item}
-                selected={item.id === selected}
-                thresholds={thresholds}
-                onSelect={onSelect}
-                onDeleted={onDeleted}
-              />
-            ))}
-          </ul>
-        </div>
-      )}
-    </section>
+        )}
+      </CardContent>
+      {items.length > 0 ? (
+        <CardFooter>
+          <span>
+            {`${pluralize(items.length, "inspection")} across ${pluralize(storefrontCount(items), "storefront")} · the newest ${formatNumber(KEYWORD_INSPECTION_LIST_LIMIT)} are kept`}
+          </span>
+        </CardFooter>
+      ) : null}
+    </Card>
   );
 }

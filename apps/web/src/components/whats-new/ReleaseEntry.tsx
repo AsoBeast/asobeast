@@ -1,101 +1,199 @@
+import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { formatDate } from "@/lib/format";
+import { formatDate, pluralize } from "@/lib/format";
+import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
 import { cn } from "@/lib/utils";
-import {
-  RELEASE_KINDS,
-  type Release,
-  type ReleaseKind,
-} from "@/lib/whats-new/release-notes";
-import { RELEASE_KIND_DISPLAY } from "./release-kinds";
+import type { Release } from "@/lib/whats-new/release-notes";
+import { ReleaseChanges } from "./ReleaseChanges";
+import { releaseAnchor } from "./release-view";
 
-export const releaseAnchor = (version: string) =>
-  `release-${version.replaceAll(".", "-")}`;
+const TOGGLE =
+  "inline-flex items-center gap-2 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
-function ChangeGroup({
+function VersionToggle({
   release,
-  kind,
+  open,
+  unread,
+  onToggle,
+  stretched,
+  className,
 }: {
   release: Release;
-  kind: ReleaseKind;
+  open: boolean;
+  unread: boolean;
+  onToggle: () => void;
+  stretched: boolean;
+  className?: string;
 }) {
-  const changes = release.changes.filter((change) => change.kind === kind);
-  if (changes.length === 0) return null;
-  const { label, icon: Icon, badge } = RELEASE_KIND_DISPLAY[kind];
-  const headingId = `${releaseAnchor(release.version)}-${kind}`;
-
+  const anchor = releaseAnchor(release.version);
+  const toggleKey = `${anchor}-toggle`;
+  const claimFocus = useFocusClaim(toggleKey);
   return (
-    <section aria-labelledby={headingId} className="flex flex-col gap-3">
-      <h3 id={headingId}>
-        <Badge variant={badge}>
-          <Icon aria-hidden />
-          <span>{label}</span>
-        </Badge>
-      </h3>
-      <ul className="flex flex-col gap-3">
-        {changes.map((change) => (
-          <li key={change.title} className="text-body wrap-anywhere">
-            <span className="font-medium text-foreground">{`${change.title}. `}</span>
-            <span className="text-muted-foreground">{change.text}</span>
-          </li>
-        ))}
-      </ul>
-    </section>
+    <h2
+      id={`${anchor}-version`}
+      className={cn("text-heading tracking-tight", className)}
+      translate="no"
+    >
+      <button
+        ref={claimFocus}
+        type="button"
+        aria-expanded={open}
+        aria-controls={open ? `${anchor}-body` : undefined}
+        onClick={() => {
+          armFocusHandoff(toggleKey);
+          onToggle();
+        }}
+        className={cn(
+          TOGGLE,
+          stretched && "after:absolute after:inset-0 after:rounded-md",
+        )}
+      >
+        <span className="sr-only">Version </span>
+        <span className="numeric">{release.version}</span>
+        {unread ? (
+          <span
+            aria-hidden
+            className="size-1.5 shrink-0 rounded-full bg-brand-mark"
+          />
+        ) : null}
+        {stretched ? null : (
+          <ChevronRight
+            aria-hidden
+            className="size-4 rotate-90 text-muted-foreground"
+          />
+        )}
+      </button>
+    </h2>
+  );
+}
+
+function UnreadNote({ unread }: { unread: boolean }) {
+  return unread ? <span className="sr-only">Not read yet</span> : null;
+}
+
+function FoldedRelease({
+  release,
+  unread,
+  onToggle,
+}: {
+  release: Release;
+  unread: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="relative grid grid-cols-[auto_minmax(0,1fr)_1rem] items-center gap-x-3 gap-y-0.5 rounded-md py-2.5 pr-2 pl-2 transition-colors duration-150 ease-out hover:bg-muted sm:min-h-10 sm:grid-cols-[8rem_minmax(0,1fr)_auto_1rem] sm:gap-x-0 sm:py-0">
+      <VersionToggle
+        release={release}
+        open={false}
+        unread={unread}
+        onToggle={onToggle}
+        stretched
+        className="col-start-1 row-start-1"
+      />
+      <UnreadNote unread={unread} />
+      <span
+        id={`${releaseAnchor(release.version)}-title`}
+        className="col-span-2 col-start-1 row-start-2 text-dense wrap-anywhere sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:truncate"
+      >
+        {release.title}
+      </span>
+      <span className="col-start-2 row-start-1 text-caption text-faint-foreground sm:col-start-3 sm:px-3">
+        <time dateTime={release.date}>{formatDate(release.date)}</time>
+        <span className="hidden sm:inline">{` · ${pluralize(release.changes.length, "change")}`}</span>
+      </span>
+      <ChevronRight
+        aria-hidden
+        className="col-start-3 row-span-2 row-start-1 size-4 text-muted-foreground sm:col-start-4 sm:row-span-1"
+      />
+    </div>
+  );
+}
+
+function OpenRelease({
+  release,
+  latest,
+  unread,
+  onToggle,
+}: {
+  release: Release;
+  latest: boolean;
+  unread: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="grid gap-3 py-6 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-0">
+      <header className="flex flex-wrap items-center gap-x-3 gap-y-1 pl-2 sm:sticky sm:top-20 sm:flex-col sm:items-start sm:self-start">
+        <VersionToggle
+          release={release}
+          open
+          unread={unread}
+          onToggle={onToggle}
+          stretched={false}
+        />
+        <UnreadNote unread={unread} />
+        <time
+          dateTime={release.date}
+          className="text-caption text-muted-foreground"
+        >
+          {formatDate(release.date)}
+        </time>
+        {latest ? <Badge variant="brand">Latest</Badge> : null}
+      </header>
+      <div
+        id={`${releaseAnchor(release.version)}-body`}
+        className="flex min-w-0 flex-col gap-4"
+      >
+        <div className="flex flex-col gap-1.5">
+          <p
+            id={`${releaseAnchor(release.version)}-title`}
+            className="text-heading font-semibold text-balance text-foreground"
+          >
+            {release.title}
+          </p>
+          <p className="max-w-[62ch] text-body text-foreground">
+            {release.summary}
+          </p>
+        </div>
+        <ReleaseChanges release={release} />
+      </div>
+    </div>
   );
 }
 
 export function ReleaseEntry({
   release,
   latest,
+  open,
+  unread,
+  onToggle,
 }: {
   release: Release;
   latest: boolean;
+  open: boolean;
+  unread: boolean;
+  onToggle: () => void;
 }) {
   const anchor = releaseAnchor(release.version);
-
   return (
-    <li
-      id={anchor}
-      className="scroll-mt-20 border-t border-border pt-8 first:border-t-0 first:pt-0 sm:border-t-0 sm:pt-0"
-    >
+    <li id={anchor} className="scroll-mt-20 border-b border-border">
       <article
         aria-labelledby={`${anchor}-version`}
-        className="grid gap-3 sm:grid-cols-[8rem_1fr] sm:gap-8"
+        aria-describedby={`${anchor}-title`}
       >
-        <header className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:sticky sm:top-20 sm:flex-col sm:items-start sm:self-start">
-          <h2
-            id={`${anchor}-version`}
-            className="text-heading tracking-tight"
-            translate="no"
-          >
-            <span className="sr-only">Version </span>
-            <span>{release.version}</span>
-          </h2>
-          <time
-            dateTime={release.date}
-            className="text-caption text-muted-foreground"
-          >
-            {formatDate(release.date)}
-          </time>
-          {latest ? <Badge variant="brand">Latest</Badge> : null}
-        </header>
-        <div className="relative flex min-w-0 flex-col gap-4 pb-8 sm:border-l sm:border-border sm:pl-8">
-          <span
-            aria-hidden
-            className={cn(
-              "absolute top-2 -left-[5px] hidden size-2.5 rounded-full ring-4 ring-background sm:block",
-              latest ? "bg-brand-mark" : "bg-border",
-            )}
+        {open ? (
+          <OpenRelease
+            release={release}
+            latest={latest}
+            unread={unread}
+            onToggle={onToggle}
           />
-          <div className="flex flex-col gap-1.5">
-            <p className="text-heading font-semibold text-balance text-foreground">
-              {release.title}
-            </p>
-            <p className="text-body text-muted-foreground">{release.summary}</p>
-          </div>
-          {RELEASE_KINDS.map((kind) => (
-            <ChangeGroup key={kind} release={release} kind={kind} />
-          ))}
-        </div>
+        ) : (
+          <FoldedRelease
+            release={release}
+            unread={unread}
+            onToggle={onToggle}
+          />
+        )}
       </article>
     </li>
   );

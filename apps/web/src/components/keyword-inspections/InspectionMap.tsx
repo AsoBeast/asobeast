@@ -21,8 +21,23 @@ import {
 } from "@/components/keywords/map/zone-layers";
 import { ThresholdsPopover } from "@/components/keywords/map/ThresholdsPopover";
 import { useZoneThresholds } from "@/components/keywords/use-zone-thresholds";
+import { PANEL_HEADER } from "@/components/layout/panel-classes";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { ChartContainer } from "@/components/ui/chart";
-import { formatCountry, formatNumber, storeLabel } from "@/lib/format";
+import { EmptyState } from "@/components/ui/empty-state";
+import {
+  formatCountry,
+  formatDateTime,
+  formatNumber,
+  storeLabel,
+} from "@/lib/format";
 import { useIsMobile } from "@/lib/use-is-mobile";
 import {
   DotContext,
@@ -39,6 +54,7 @@ import {
   type InspectionPoint,
   type Storefront,
 } from "./inspection-map";
+import { storefrontName } from "./inspection-format";
 
 const SELECT_KEYS = new Set(["Enter", " "]);
 const EDGE_KEYS: Readonly<Record<string, "first" | "last">> = {
@@ -61,15 +77,30 @@ const keepUnless =
 
 function EmptyMap({ storefront }: { storefront: Storefront }) {
   return (
-    <div
-      className={`${CHART_HEIGHT.hero} flex flex-col items-center justify-center gap-1 rounded-md border border-dashed px-6 text-center`}
-    >
-      <p className="font-medium">Nothing on the map yet</p>
-      <p className="max-w-sm text-sm text-muted-foreground">
-        {`Inspect a keyword in ${storeLabel(storefront.store)} ${formatCountry(storefront.country)} and it lands here, placed by its popularity and difficulty.`}
-      </p>
-    </div>
+    <EmptyState
+      title="Nothing on the map yet"
+      body={`Inspect a keyword in ${storeLabel(storefront.store)}, ${formatCountry(storefront.country)} and it lands here by its popularity and difficulty.`}
+      className={`${CHART_HEIGHT.hero} justify-center px-6`}
+    />
   );
+}
+
+function mapFooter(
+  points: readonly InspectionPoint[],
+  storefront: Storefront,
+): string {
+  const place = storefrontName(storefront.store, storefront.country);
+  const latest = points.reduce<string | null>(
+    (newest, point) =>
+      point.completedAt !== null &&
+      (newest === null || point.completedAt > newest)
+        ? point.completedAt
+        : newest,
+    null,
+  );
+  return latest === null
+    ? `${place} · nothing inspected yet`
+    : `${place} · latest ${formatDateTime(latest)}`;
 }
 
 const isNavigationKey = (key: string): boolean =>
@@ -134,14 +165,14 @@ export function InspectionMap({
   selectedKeywordId,
   previewKeyword = null,
   onSelect,
-  footer,
+  hops,
 }: {
   points: readonly InspectionPoint[];
   storefront: Storefront;
   selectedKeywordId: string | null;
   previewKeyword?: string | null;
   onSelect: (point: InspectionPoint) => void;
-  footer?: ReactNode;
+  hops?: ReactNode;
 }) {
   const { thresholds } = useZoneThresholds();
   const [freshSince] = useState(() => Date.now());
@@ -168,86 +199,95 @@ export function InspectionMap({
   };
 
   return (
-    <section
+    <Card
       aria-labelledby="inspection-map-title"
-      className="flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-4 shadow-raised sm:p-6 xl:sticky xl:top-4"
+      className="min-w-0"
+      role="region"
     >
-      <header className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <h2 id="inspection-map-title" className="text-title">
-            Keyword map
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {`${storeLabel(storefront.store)} · ${formatCountry(storefront.country)} · ${formatNumber(points.length)} ${points.length === 1 ? "keyword" : "keywords"} inspected`}
-          </p>
-        </div>
-        <ThresholdsPopover />
-      </header>
-      {points.length === 0 ? (
-        <EmptyMap storefront={storefront} />
-      ) : (
-        <DotContext.Provider value={state}>
-          <p id={helpId} className="sr-only">
-            {KEYBOARD_HELP}
-          </p>
-          <ChartContainer
-            ref={surfaceRef}
-            config={{}}
-            role="region"
-            aria-label="Inspected keywords by difficulty and popularity"
-            className={`aspect-auto ${CHART_HEIGHT.hero} w-full`}
-          >
-            <ScatterChart
-              accessibilityLayer
-              role="group"
-              tabIndex={-1}
-              aria-label="Inspected keywords"
-              aria-describedby={helpId}
-              margin={{ ...CHART_MARGIN, right: 16, top: 12 }}
+      <CardHeader className={PANEL_HEADER}>
+        <CardTitle asChild>
+          <h2 id="inspection-map-title">Keyword map</h2>
+        </CardTitle>
+        <CardAction className="flex items-center gap-3 self-center">
+          {points.length > 0 ? (
+            <span className="hidden text-label text-faint-foreground sm:inline">
+              {`${formatNumber(points.length)} in this storefront`}
+            </span>
+          ) : null}
+          <ThresholdsPopover />
+        </CardAction>
+      </CardHeader>
+      <CardContent className="px-2 sm:px-3">
+        {points.length === 0 ? (
+          <EmptyMap storefront={storefront} />
+        ) : (
+          <DotContext.Provider value={state}>
+            <p id={helpId} className="sr-only">
+              {KEYBOARD_HELP}
+            </p>
+            <ChartContainer
+              ref={surfaceRef}
+              config={{}}
+              role="region"
+              aria-label="Inspected keywords by difficulty and popularity"
+              className={`aspect-auto ${CHART_HEIGHT.hero} w-full`}
             >
-              {zoneAreas({ thresholds, selected: null })}
-              <CartesianGrid {...GRID_PROPS} />
-              <XAxis
-                {...SCORE_AXIS_PROPS}
-                dataKey="difficulty"
-                name="Difficulty"
-                height={44}
-                label={{
-                  value: "Difficulty",
-                  position: "insideBottom",
-                  fill: "var(--muted-foreground)",
-                  fontSize: 11,
-                }}
-              />
-              <YAxis
-                {...SCORE_AXIS_PROPS}
-                dataKey="popularity"
-                name="Popularity"
-                width={48}
-                label={{
-                  value: "Popularity",
-                  angle: -90,
-                  position: "insideLeft",
-                  fill: "var(--muted-foreground)",
-                  fontSize: 11,
-                }}
-              />
-              {thresholdLines(thresholds)}
-              <Scatter
-                data={ordered}
-                shape={InspectionDot}
-                isAnimationActive={false}
-              />
-              <Scatter
-                data={chosen}
-                shape={SelectedMark}
-                isAnimationActive={false}
-              />
-            </ScatterChart>
-          </ChartContainer>
-        </DotContext.Provider>
-      )}
-      {footer}
-    </section>
+              <ScatterChart
+                accessibilityLayer
+                role="group"
+                tabIndex={-1}
+                aria-label="Inspected keywords"
+                aria-describedby={helpId}
+                margin={{ ...CHART_MARGIN, right: 16, top: 12 }}
+              >
+                {zoneAreas({ thresholds, selected: null })}
+                <CartesianGrid {...GRID_PROPS} />
+                <XAxis
+                  {...SCORE_AXIS_PROPS}
+                  dataKey="difficulty"
+                  name="Difficulty"
+                  height={44}
+                  label={{
+                    value: "Difficulty",
+                    position: "insideBottom",
+                    fill: "var(--muted-foreground)",
+                    fontSize: 11,
+                  }}
+                />
+                <YAxis
+                  {...SCORE_AXIS_PROPS}
+                  dataKey="popularity"
+                  name="Popularity"
+                  width={48}
+                  label={{
+                    value: "Popularity",
+                    angle: -90,
+                    position: "insideLeft",
+                    fill: "var(--muted-foreground)",
+                    fontSize: 11,
+                  }}
+                />
+                {thresholdLines(thresholds)}
+                <Scatter
+                  data={ordered}
+                  shape={InspectionDot}
+                  isAnimationActive={false}
+                />
+                <Scatter
+                  data={chosen}
+                  shape={SelectedMark}
+                  isAnimationActive={false}
+                />
+              </ScatterChart>
+            </ChartContainer>
+          </DotContext.Provider>
+        )}
+      </CardContent>
+      {hops}
+      <CardFooter className="flex-wrap justify-between gap-x-4 gap-y-1">
+        <span>{mapFooter(points, storefront)}</span>
+        {hops ? <span>A suggestion inspects in one click</span> : null}
+      </CardFooter>
+    </Card>
   );
 }

@@ -12,7 +12,6 @@ import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { ApiError, requestKeywordInspection } from "@/lib/api";
 import { refreshKeywordInspections } from "@/lib/queries";
-import { cn } from "@/lib/utils";
 import {
   nextHops,
   suggestionState,
@@ -20,7 +19,7 @@ import {
 } from "./inspection-map";
 
 const CHIP =
-  "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring";
+  "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-label whitespace-nowrap outline-none transition-colors duration-150 ease-out hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring aria-disabled:opacity-60 aria-disabled:hover:bg-card";
 
 const startKey = ({ keyword, store, country }: KeywordInspectionRequest) =>
   `${store}|${country}|${normalizeText(keyword)}`;
@@ -49,11 +48,11 @@ function HopChip({
         type="button"
         onClick={() => onSelect(state.id)}
         aria-label={`${term}, inspected: popularity ${state.popularity}, difficulty ${state.difficulty}`}
-        className={cn(CHIP, "bg-muted/60 hover:bg-muted")}
+        className={CHIP}
       >
         <span>{term}</span>
-        <span className="numeric text-xs text-muted-foreground">
-          {state.popularity}·{state.difficulty}
+        <span className="numeric font-normal text-faint-foreground">
+          {`${state.popularity} · ${state.difficulty}`}
         </span>
       </button>
     );
@@ -64,7 +63,7 @@ function HopChip({
         type="button"
         aria-disabled
         aria-label={`Inspecting ${term}`}
-        className={cn(CHIP, "border-border bg-muted text-foreground")}
+        className={CHIP}
       >
         <Loader2
           aria-hidden
@@ -79,10 +78,7 @@ function HopChip({
       type="button"
       onClick={() => onInspect(term)}
       aria-label={`Inspect ${term}`}
-      className={cn(
-        CHIP,
-        "bg-card hover:border-foreground/30 hover:bg-muted/60",
-      )}
+      className={CHIP}
     >
       <Plus aria-hidden className="size-3.5 text-muted-foreground" />
       <span>{term}</span>
@@ -130,20 +126,17 @@ export function NextHops({
   return (
     <section
       aria-labelledby="inspection-next"
-      className="flex flex-col gap-2 border-t pt-3"
+      className="flex min-w-0 flex-col gap-2 border-t px-4 py-3"
     >
-      <h3 id="inspection-next" className="text-sm font-medium">
+      <h3 id="inspection-next" className="text-label font-medium">
         {`Next from “${inspection.keyword}”`}
-        <span className="ml-2 font-normal text-muted-foreground">
-          store autocomplete, one click to inspect
-        </span>
       </h3>
       {terms.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-caption text-faint-foreground">
           The store suggested nothing else for this keyword.
         </p>
       ) : (
-        <ol className="flex flex-wrap gap-2">
+        <ol className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-0.5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
           {terms.map((term) => (
             <li
               key={term}

@@ -1,6 +1,7 @@
 import {
   normalizeText,
   type KeywordInspection,
+  type KeywordInspectionDelta,
   type KeywordInspectionRequest,
   type KeywordInspectionSummary,
 } from "@asobeast/shared";
@@ -21,6 +22,7 @@ export const INSPECTED_APPS = [
 interface StoredInspection {
   pending: KeywordInspection;
   reads: number;
+  fixed?: KeywordInspection;
 }
 
 const inspections: StoredInspection[] = [];
@@ -98,23 +100,31 @@ function settled(stored: StoredInspection): KeywordInspection {
         entry.pending.keywordId === stored.pending.keywordId &&
         current(entry).status === "DONE",
     );
-  if (!earlier) return done;
+  return earlier ? { ...done, previous: previousOf(earlier) } : done;
+}
+
+const deltaOf = (before: KeywordInspection): KeywordInspectionDelta => ({
+  inspectionId: before.id,
+  completedAt: before.completedAt ?? before.requestedAt,
+  volume: before.volume,
+  difficulty100: before.difficulty100,
+  resultCount: before.resultCount,
+  entered: [],
+  left: [],
+});
+
+function previousOf(earlier: StoredInspection): KeywordInspectionDelta {
+  if (earlier.fixed) return deltaOf(earlier.fixed);
   const before = completed(earlier.pending);
-  return {
-    ...done,
-    previous: {
-      inspectionId: before.id,
-      completedAt: before.requestedAt,
-      volume: (before.volume ?? 0) - 4,
-      difficulty100: (before.difficulty100 ?? 0) + 6,
-      resultCount: before.resultCount,
-      entered: [],
-      left: [],
-    },
-  };
+  return deltaOf({
+    ...before,
+    volume: (before.volume ?? 0) - 4,
+    difficulty100: (before.difficulty100 ?? 0) + 6,
+  });
 }
 
 function current(stored: StoredInspection): KeywordInspection {
+  if (stored.fixed) return stored.fixed;
   const waiting = stored.pending.keyword === QUEUED_KEYWORD && !queueReleased;
   return stored.reads > 0 && !waiting ? settled(stored) : stored.pending;
 }
@@ -137,11 +147,18 @@ function summaryOf(inspection: KeywordInspection): KeywordInspectionSummary {
   };
 }
 
+export const keywordIdOf = ({
+  keyword,
+  store,
+  country,
+}: KeywordInspectionRequest): string =>
+  `inspected-keyword-${store}-${country}-${normalizeText(keyword)}`;
+
 export function requestInspection(
   request: KeywordInspectionRequest,
 ): KeywordInspection {
   const keyword = normalizeText(request.keyword);
-  const keywordId = `inspected-keyword-${request.store}-${request.country}-${keyword}`;
+  const keywordId = keywordIdOf(request);
   const running = inspections.find(
     (entry) =>
       entry.pending.keywordId === keywordId &&
@@ -196,6 +213,17 @@ export function deleteInspection(id: string): boolean {
 
 export function releaseQueuedInspections(): void {
   queueReleased = true;
+}
+
+export function seedInspections(seeded: readonly KeywordInspection[]): void {
+  resetInspections();
+  inspections.push(
+    ...seeded.map((inspection) => ({
+      pending: inspection,
+      reads: 0,
+      fixed: inspection,
+    })),
+  );
 }
 
 export function resetInspections(): void {
