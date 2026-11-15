@@ -15,6 +15,7 @@ import {
 } from "./inspection-format";
 
 const NOTE = "text-caption text-faint-foreground";
+const NOTE_FIGURE = "font-medium text-muted-foreground";
 const ELSEWHERE_LINK =
   "rounded-sm text-foreground link-underline outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
@@ -56,22 +57,24 @@ function InspectionDelta({
   previous: KeywordInspectionDelta;
 }) {
   const moves = [
-    previous.entered.length > 0
-      ? `${formatList(previous.entered.map((app) => app.title))} entered the top 10`
-      : null,
-    previous.left.length > 0
-      ? `${formatList(previous.left.map((app) => app.title))} left the top 10`
-      : null,
-  ].filter((move) => move !== null);
+    { apps: previous.entered, verb: "entered the top 10" },
+    { apps: previous.left, verb: "left the top 10" },
+  ].filter((move) => move.apps.length > 0);
   return (
     <section aria-labelledby="inspection-delta" className={NOTE}>
       <h3 id="inspection-delta" className="sr-only">
         Since the previous inspection
       </h3>
       <p>
-        <span>{`Compared with ${formatDateTime(previous.completedAt)}`}</span>
+        <span>{`Since ${formatDateTime(previous.completedAt)}`}</span>
         {moves.map((move) => (
-          <span key={move}>{` · ${move}`}</span>
+          <span key={move.verb}>
+            <span> · </span>
+            <span className={NOTE_FIGURE}>
+              {formatList(move.apps.map((app) => app.title))}
+            </span>
+            <span>{` ${move.verb}`}</span>
+          </span>
         ))}
       </p>
       <p className="sr-only">

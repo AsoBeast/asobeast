@@ -85,7 +85,7 @@ function ChangeGroup({
         <Button
           variant="ghost"
           size="sm"
-          className="self-start"
+          className="ml-4 self-start"
           aria-expanded={all}
           onClick={() => setAll((current) => !current)}
         >

@@ -99,7 +99,7 @@ function LogRow({
           {done ? (
             <span>{`${storefront} · ${zoneWord(item, thresholds)} · ${day}`}</span>
           ) : (
-            <span className="inline-flex items-center gap-1.5">
+            <span className="inline-flex items-center gap-1">
               <RunState item={item} />
               <span>{`· ${storefront} · ${day}`}</span>
             </span>

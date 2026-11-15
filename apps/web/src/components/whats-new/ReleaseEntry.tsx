@@ -74,7 +74,7 @@ function FoldedRelease({
   onToggle: () => void;
 }) {
   return (
-    <div className="relative grid grid-cols-[auto_minmax(0,1fr)_1rem] items-center gap-x-3 gap-y-0.5 rounded-md py-2.5 pr-2 pl-2 transition-colors duration-150 ease-out hover:bg-muted sm:min-h-10 sm:grid-cols-[8rem_minmax(0,1fr)_auto_1rem] sm:py-0">
+    <div className="relative grid grid-cols-[auto_minmax(0,1fr)_1rem] items-center gap-x-3 gap-y-0.5 rounded-md py-2.5 pr-2 pl-2 transition-colors duration-150 ease-out hover:bg-muted sm:min-h-10 sm:grid-cols-[8rem_minmax(0,1fr)_auto_1rem] sm:gap-x-0 sm:py-0">
       <VersionToggle
         release={release}
         open={false}
@@ -84,10 +84,13 @@ function FoldedRelease({
         className="col-start-1 row-start-1"
       />
       <UnreadNote unread={unread} />
-      <span className="col-span-2 col-start-1 row-start-2 text-dense wrap-anywhere sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:truncate">
+      <span
+        id={`${releaseAnchor(release.version)}-title`}
+        className="col-span-2 col-start-1 row-start-2 text-dense wrap-anywhere sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:truncate"
+      >
         {release.title}
       </span>
-      <span className="col-start-2 row-start-1 text-caption text-faint-foreground sm:col-start-3">
+      <span className="col-start-2 row-start-1 text-caption text-faint-foreground sm:col-start-3 sm:px-3">
         <time dateTime={release.date}>{formatDate(release.date)}</time>
         <span className="hidden sm:inline">{` · ${pluralize(release.changes.length, "change")}`}</span>
       </span>
@@ -134,7 +137,10 @@ function OpenRelease({
         className="flex min-w-0 flex-col gap-4"
       >
         <div className="flex flex-col gap-1.5">
-          <p className="text-heading font-semibold text-balance text-foreground">
+          <p
+            id={`${releaseAnchor(release.version)}-title`}
+            className="text-heading font-semibold text-balance text-foreground"
+          >
             {release.title}
           </p>
           <p className="max-w-[62ch] text-body text-foreground">
@@ -163,7 +169,10 @@ export function ReleaseEntry({
   const anchor = releaseAnchor(release.version);
   return (
     <li id={anchor} className="scroll-mt-20 border-b border-border">
-      <article aria-labelledby={`${anchor}-version`}>
+      <article
+        aria-labelledby={`${anchor}-version`}
+        aria-describedby={`${anchor}-title`}
+      >
         {open ? (
           <OpenRelease
             release={release}
