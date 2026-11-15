@@ -106,6 +106,11 @@ test.describe("alerts page", () => {
     await expect(sizeOf("rating fell from 4.7 to 4.5")).toHaveText("0.2");
     await expect(sizeOf("changed its subtitle")).toHaveCount(0);
     await expect(sizeOf("for the first time, at #37")).toHaveCount(0);
+
+    const fell = await sizeOf("fell from #4 to #12").boundingBox();
+    const climbed = await sizeOf("climbed from #20 to #7").boundingBox();
+    expect(climbed?.x).toBe(fell?.x);
+    expect(climbed?.width).toBe(fell?.width);
   });
 
   test("counts the window on a first visit, when nothing was seen before", async ({

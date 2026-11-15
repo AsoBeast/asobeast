@@ -398,6 +398,10 @@ test("the alerts panel lists the newest events of the last 7 days", async ({
     "up 13 positions",
   );
   await expect(sizeOf("changed its subtitle")).toHaveCount(0);
+  const fell = await sizeOf("fell from #4 to #12").boundingBox();
+  const climbed = await sizeOf("climbed from #20 to #7").boundingBox();
+  expect(climbed?.x).toBe(fell?.x);
+  expect(climbed?.width).toBe(fell?.width);
   await expect(rows.locator('[data-slot="badge"]')).toHaveCount(0);
   await expect(rows.first().locator(".sr-only")).toHaveText(
     "Metadata changed: ",
