@@ -389,13 +389,20 @@ test("the alerts panel lists the newest events of the last 7 days", async ({
   await expect(
     rows.first().locator(":scope > * > span:first-child"),
   ).toHaveText("Today");
-  await expect(rows.locator('[data-slot="badge"]')).toHaveText([
-    "listing",
-    "fell",
-    "climbed",
-    "climbed",
-    "milestone",
-  ]);
+  const sizeOf = (text: string) =>
+    rows.filter({ hasText: text }).locator('[data-slot="delta-pill"]');
+  await expect(sizeOf("fell from #4 to #12")).toHaveAccessibleName(
+    "down 8 positions",
+  );
+  await expect(sizeOf("climbed from #20 to #7")).toHaveAccessibleName(
+    "up 13 positions",
+  );
+  await expect(sizeOf("changed its subtitle")).toHaveCount(0);
+  const fell = await sizeOf("fell from #4 to #12").boundingBox();
+  const climbed = await sizeOf("climbed from #20 to #7").boundingBox();
+  expect(climbed?.x).toBe(fell?.x);
+  expect(climbed?.width).toBe(fell?.width);
+  await expect(rows.locator('[data-slot="badge"]')).toHaveCount(0);
   await expect(rows.first().locator(".sr-only")).toHaveText(
     "Metadata changed: ",
   );
@@ -436,6 +443,9 @@ test("the alerts panel says so when the week was quiet", async ({
 
   const card = alertsCard(page);
   await expect(card.getByText("No alerts in the last 7 days.")).toBeVisible();
+  await expect(card.locator('[data-slot="empty-state"]')).toHaveText(
+    "No alerts in the last 7 days.",
+  );
   await expect(card.getByRole("list")).toHaveCount(0);
   await expect(card.getByRole("alert")).toHaveCount(0);
 });

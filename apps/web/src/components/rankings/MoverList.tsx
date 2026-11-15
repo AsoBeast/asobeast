@@ -7,6 +7,7 @@ import { DirectionArrow } from "@/components/ui/delta-chip";
 import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { moverChange, type MoverChange } from "./mover-change";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export const MOVER_COLUMNS =
   "grid grid-cols-[minmax(0,1fr)_auto_4.5rem] gap-3 px-2";
@@ -96,7 +97,7 @@ export function MoverList<Mover extends KeywordMover>({
   lead: (mover: Mover) => ReactNode;
 }) {
   if (movers.length === 0) {
-    return <p className="px-2 py-2 text-body text-muted-foreground">{empty}</p>;
+    return <EmptyState title={empty} />;
   }
   return (
     <div className="flex flex-col gap-1">

@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { TYPE_STEPS } from "@/lib/utils";
 
 const ROOT = join(import.meta.dirname, "..");
 
@@ -50,6 +51,39 @@ const POINTER_ON_A_NON_BUTTON = [
   "components/keywords/map/zone-layers.tsx: cursor-pointer",
 ];
 
+const RAW_TYPE_SIZE = /\btext-(?:xs|sm|base)(?![\w-])/g;
+
+const PHONE_SIZED_INPUTS = [
+  "components/ui/input.tsx: text-base",
+  "components/ui/textarea.tsx: text-base",
+];
+
+const OVERLAY_RADIUS = /\brounded-(?:xl|2xl)(?![\w-])/g;
+
+const OVERLAY_RADIUS_HOMES = [
+  "components/ui/",
+  "components/billing/",
+  "app/(wall)/",
+];
+
+const PRIMARY_FILL = /\b(?:bg|border|text)-primary(?![\w-])/g;
+
+const PRIMARY_FILL_HOMES = [
+  "components/ui/button.tsx",
+  "components/ui/checkbox.tsx",
+  "components/ui/switch.tsx",
+  "components/billing/",
+];
+
+const PHONE_SIZE_OVERRIDE = new RegExp(
+  `<(?:Input|Textarea)\\b(?:(?!\\/>)[\\s\\S])*?className="[^"]*(?<![:\\w-])text-(?:${TYPE_STEPS.join("|")})\\b`,
+  "g",
+);
+
+const CARD_DESCRIPTION = /\bCardDescription\b/g;
+
+const CARD_DESCRIPTION_HOMES = ["components/ui/card.tsx", "components/auth/"];
+
 function sources(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
@@ -65,6 +99,12 @@ function offenders(pattern: RegExp): string[] {
     const matches = readFileSync(path, "utf8").match(pattern) ?? [];
     return matches.map((match) => `${path.slice(ROOT.length + 1)}: ${match}`);
   });
+}
+
+function outside(pattern: RegExp, homes: string[]): string[] {
+  return offenders(pattern).filter(
+    (offender) => !homes.some((home) => offender.startsWith(home)),
+  );
 }
 
 describe("utility classes", () => {
@@ -110,5 +150,25 @@ describe("utility classes", () => {
 
   it("sets a number in tabular figures rather than monospace", () => {
     expect(offenders(MONOSPACE_NUMBER)).toEqual([]);
+  });
+
+  it("sizes text with a named step but where a phone would zoom an input", () => {
+    expect(offenders(RAW_TYPE_SIZE).sort()).toEqual(PHONE_SIZED_INPUTS);
+  });
+
+  it("leaves a field its 16 px below md, so a phone does not zoom on focus", () => {
+    expect(offenders(PHONE_SIZE_OVERRIDE)).toEqual([]);
+  });
+
+  it("keeps the overlay radius to overlays and the billing wall", () => {
+    expect(outside(OVERLAY_RADIUS, OVERLAY_RADIUS_HOMES)).toEqual([]);
+  });
+
+  it("fills with the brand orange only the primary button and a checked control", () => {
+    expect(outside(PRIMARY_FILL, PRIMARY_FILL_HOMES)).toEqual([]);
+  });
+
+  it("puts a sentence under a card title only on the sign in cards", () => {
+    expect(outside(CARD_DESCRIPTION, CARD_DESCRIPTION_HOMES)).toEqual([]);
   });
 });

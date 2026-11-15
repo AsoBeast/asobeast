@@ -139,7 +139,7 @@ export function SaveKeywordFieldDialog({
             </Alert>
           ) : null}
           {error ? (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="text-dense text-destructive">
               {error}
             </p>
           ) : null}

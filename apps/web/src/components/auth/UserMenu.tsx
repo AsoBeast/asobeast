@@ -62,7 +62,7 @@ export function UserMenu() {
         {user.platformOperator && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-xs text-muted-foreground">
+            <DropdownMenuLabel className="text-caption text-muted-foreground">
               Admin
             </DropdownMenuLabel>
             <DropdownMenuItem asChild>

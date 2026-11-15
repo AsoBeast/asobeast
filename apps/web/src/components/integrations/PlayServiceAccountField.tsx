@@ -58,7 +58,7 @@ export function PlayServiceAccountField({
         className="max-w-xs"
         onChange={(event) => void choose(event.target.files?.[0])}
       />
-      <p className="text-xs text-muted-foreground">
+      <p className="text-caption text-muted-foreground">
         Choose the JSON key file or paste its contents. AsoBeast reads only the
         store performance files in the bucket, and posts only the review replies
         you send.

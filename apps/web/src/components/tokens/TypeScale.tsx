@@ -32,7 +32,7 @@ const RANKS = [
 export function TypeScale() {
   return (
     <section aria-label="Type scale" className="flex flex-col gap-6">
-      <h2 className="text-sm font-semibold">Type scale</h2>
+      <h2 className="text-heading">Type scale</h2>
 
       <div className="flex flex-col gap-4">
         {STEPS.map((step) => (
@@ -50,7 +50,7 @@ export function TypeScale() {
           columns align on tabular figures
         </code>
         <div className="overflow-x-auto">
-          <table className="w-full max-w-lg text-sm">
+          <table className="w-full max-w-lg text-dense">
             <caption className="sr-only">
               A rank column, a volume column and a score column rendered with
               the numeric treatment.
@@ -91,11 +91,13 @@ export function TypeScale() {
         </code>
         <div className="flex max-w-md items-center gap-3 rounded-lg border p-3">
           <div className="size-8 shrink-0 rounded bg-secondary" />
-          <span className="min-w-0 flex-1 truncate text-sm font-medium">
+          <span className="min-w-0 flex-1 truncate text-dense font-medium">
             Deep Focus Pomodoro Timer and Habit Builder for Students and Remote
             Teams Pro
           </span>
-          <span className="numeric shrink-0 text-sm text-signal-up">+12</span>
+          <span className="numeric shrink-0 text-dense text-signal-up">
+            +12
+          </span>
         </div>
       </div>
 
@@ -103,7 +105,7 @@ export function TypeScale() {
         <code className="text-[11px] text-muted-foreground">
           review prose wrapping
         </code>
-        <p className="max-w-prose text-sm text-pretty text-muted-foreground">
+        <p className="max-w-prose text-dense text-pretty text-muted-foreground">
           Love the focus timer, but the widget stopped refreshing after the last
           update and I had to reinstall. Please add a way to pause a session
           without losing the streak — otherwise this is the best timer I have

@@ -60,7 +60,7 @@ function ListingBlock({
   return (
     <section className="flex flex-col gap-2 rounded-lg bg-muted p-3">
       {localization === null ? null : (
-        <h4 className="flex flex-wrap items-center gap-2 text-xs font-medium">
+        <h4 className="flex flex-wrap items-center gap-2 text-label">
           {localizationName(localization)}
           {role === null ? null : <ReadRoleBadge role={role} />}
         </h4>
@@ -71,7 +71,7 @@ function ListingBlock({
           <BreakdownField key={field.field} field={field} />
         ))}
       {missingField ? (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-caption text-muted-foreground">
           No keyword field saved for {localizationName(localization)}.{" "}
           <Link
             href={editLocalizationHref(appId, localization)}
@@ -119,7 +119,7 @@ export function BreakdownAppCard({
             {app.isYou ? <Badge>You</Badge> : null}
           </h3>
           {app.ranking ? (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-caption text-muted-foreground">
               Checked {formatDate(app.ranking.date)}
             </span>
           ) : null}
@@ -138,7 +138,7 @@ export function BreakdownAppCard({
           aria-label={
             app.isYou ? "Where you stand" : "Why it may rank above you"
           }
-          className="flex flex-col gap-1 border-l-2 border-border pl-3 text-sm"
+          className="flex flex-col gap-1 border-l-2 border-border pl-3 text-dense"
         >
           {note.map((line) => (
             <p key={line}>{line}</p>
@@ -146,7 +146,7 @@ export function BreakdownAppCard({
         </div>
       ) : null}
       {source ? (
-        <p className="text-xs text-muted-foreground">{source}</p>
+        <p className="text-caption text-muted-foreground">{source}</p>
       ) : null}
       {app.listings.map((listing) => (
         <ListingBlock
@@ -157,12 +157,12 @@ export function BreakdownAppCard({
         />
       ))}
       {app.unread.length > 0 ? (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-caption text-muted-foreground">
           Not read: {formatList(app.unread.map(localizationName))}.
         </p>
       ) : null}
       {rating ? (
-        <p className="text-xs text-muted-foreground">{rating}</p>
+        <p className="text-caption text-muted-foreground">{rating}</p>
       ) : null}
     </li>
   );

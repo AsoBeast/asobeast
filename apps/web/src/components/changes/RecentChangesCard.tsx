@@ -34,6 +34,7 @@ import { changeOwnerParser, type ChangeOwner } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
 import { collapseVersions, entryEvent, type ChangeEntry } from "./change-runs";
 import { ChangeValue } from "./ChangeValue";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const VISIBLE_CHANGES = 8;
 
@@ -190,11 +191,13 @@ function RecentChanges({ today }: { today: string }) {
       <CardContent className="px-2">
         <div ref={list} className="flex flex-col gap-2">
           {entries.length === 0 ? (
-            <p className="px-2 text-body text-muted-foreground">
-              {data.events.length === 0
-                ? "Listing changes appear here after the daily refreshes."
-                : EMPTY_FILTER[active]}
-            </p>
+            <EmptyState
+              title={
+                data.events.length === 0
+                  ? "Listing changes appear here after the daily refreshes."
+                  : EMPTY_FILTER[active]
+              }
+            />
           ) : (
             <ul className="flex flex-col">
               {shown.map((entry) => {

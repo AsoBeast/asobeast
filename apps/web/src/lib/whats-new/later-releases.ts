@@ -35,38 +35,23 @@ export const LATER_RELEASES: readonly Release[] = [
       },
       {
         kind: "improved",
-        title: "Alerts you can read at a glance",
-        text: "The alerts page is now one list instead of a card per event. It opens by saying how many events are new since your last visit, groups them by day, and shows the size of each move beside its sentence, such as 8 positions down or 13 up, so the big ones stand out without reading every line. The app, store and country of each event line up in their own column, and on a phone each event takes two short lines.",
+        title: "Daily pages that open with what moved",
+        text: "Alerts, Rankings, Reviews, Competitors, Top charts and Changes now each open with one sentence about what changed since your last look, and show it the way the dashboard does. Alerts is one list grouped by day with the size of each move beside its sentence. Rankings has a row per keyword under the chart with today's position, the move and the best and average position, plus a By day view. Reviews draws the rating and the ratings gained as charts, lists the average rating per app version and keeps the reviews in one list with a switch for what needs a reply. Competitors ranks you against every competitor by visibility and counts the keywords you lead and trail on. Top charts lists your apps and competitors with their place in every chart and shows how much of each chart moved. Changes marks each listing change on a visibility chart and reads its effect after 7, 14 and 28 days in one table.",
       },
       {
         kind: "improved",
-        title: "Settings and Integrations you can scan",
-        text: "Settings and Integrations now put each action at the right of its panel and say their facts in plain text. Integrations opens by saying how many stores are connected and how many apps report, each store shows whether it is connected and how many days of store data each app has, and the token table shows how much each token is used. Settings lists its sections at the side on a wide screen, draws where the daily request budget goes as one bar, and shows what each alert channel sends in one line with its recent deliveries a click away.",
+        title: "Work pages that say where to start",
+        text: "The Action Center opens with the one action that matters most, its steps and a button to the page where you fix it, and every action in the queue says why it is there in its own numbers. The audit leads with your score, how it moved since last week and what the top fixes are worth. The metadata page counts the work left in one line and shows how many tracked keywords each field carries. Setting up an app keeps its three steps and the button that completes the setup in view while you scroll.",
       },
       {
         kind: "improved",
-        title: "Rankings you can read without hovering",
-        text: "The rankings page now opens by saying what climbed and fell since yesterday and how many apps entered your top 10. Under the chart, each keyword has a row with its position today, how far it moved over the days you chose, and its best and average position. A new By day view lists the position of every keyword on every day, shaded by how high it ranked. The market is one menu with the number of keywords in each country, new apps in your top 10 are grouped by day, and adding an annotation opens a small form instead of taking up the page.",
+        title: "Settings, integrations and lookups you can scan",
+        text: "Settings and Integrations put each action at the right of its panel and say their facts in plain text: how many stores are connected, how many days of store data each app has and where the daily request budget goes. The keyword inspector shows each score with a line in its grade colour and its value at the previous inspection, and says in one sentence whether a keyword is worth going after. What's New shows one line per change that opens when you press it and folds every release you have read.",
       },
       {
         kind: "improved",
-        title: "Reviews that start with what needs you",
-        text: "The reviews page now opens with one sentence: how many reviews arrived since yesterday, how many wait for a reply and how the rating moved over the week. The rating and the number of ratings each draw their own chart, the average on a scale that shows small moves and the ratings gained day by day. Beside them sit the spread of stars, a new list of the average rating per app version, so a release that upset people stands out, and what people mention as a list you can press to find those reviews. The reviews are one list with a switch for all, needs reply, draft and replied, each review says its reply state in words, and the reply editor opens inside the review you are answering.",
-      },
-      {
-        kind: "improved",
-        title: "An audit that leads with the score and the fixes",
-        text: "The audit page now opens with one sentence: your score, how it moved since last week and what the top fixes are worth. The score sits in a large ring beside search visibility, conversion and the share of the audit that could be measured, with the score history right under them and a dashed line for the score the plan leads to. The top fixes and a count of the checks that pass sit beside it. The plan is one list with the impact, effort and points of each fix, every factor is a row with a coloured line for its score and its checks one press away, and the comparison with your competitors says how far you are from their median.",
-      },
-      {
-        kind: "improved",
-        title: "A setup you can finish without scrolling back",
-        text: "Setting up an app now keeps the three steps and the button that completes the setup beside the page while you scroll, and the button says which steps are still open. Each step is one panel with its state and Skip at the top, the countries you selected are one list with the keywords tracked in each and a link to review them, and the page of an app you have not started shows what already counts before you begin.",
-      },
-      {
-        kind: "improved",
-        title: "A keyword inspector and release notes that read faster",
-        text: "The keyword inspector now shows each score with a line in its grade colour and its value at the previous inspection, says in one sentence whether a keyword is worth going after, how autocomplete suggests it and where else you inspected it, and keeps every inspection in a list right under the map. What's New shows one line per change that opens when you press it, opens the releases you have not read yet and folds each older release into a single line.",
+        title: "Larger text, the brand orange back and calmer empty states",
+        text: "Text, buttons and the sidebar are a step larger, so a long session is easier on the eyes. Orange marks what you select and what is yours, such as the page you are on, your app in search results and your default language, warnings turn yellow so they never look like the brand, and blue is left to charts. A chart, a list or a page with nothing to show yet says so in one centred sentence without a box around it, and the alerts on the dashboard show the size of each move instead of a word on every line.",
       },
       {
         kind: "new",
@@ -85,43 +70,8 @@ export const LATER_RELEASES: readonly Release[] = [
       },
       {
         kind: "improved",
-        title: "An Action Center that says where to start",
-        text: "The Action Center now opens with what the day of the last run opened and closed, and a Start here panel with the action that matters most: why it is there, the steps to take and a button to the page where you fix it. The queue is one list instead of a card per action, and every row says why it is there in a line of its own numbers, such as the positions you moved between or the apps that entered above you. Done sits on each row and snooze, dismiss and copy link are in its menu. Every filter is behind one Filters button, progress is drawn as actions opened above and closed below, and Where the work is can be split by app or by type of work.",
-      },
-      {
-        kind: "improved",
-        title: "A competitors page that shows who is ahead",
-        text: "The competitors page now opens with one sentence: how many competitors you track and the latest change one of them made to its listing. A new panel, How you compare, ranks your app and every competitor by visibility with their ratings, and switches to each app's title and subtitle with their character counts. Under the comparison a totals row counts your keywords in the top 10 and, for each competitor, how many keywords you lead and trail on. Positions use the same marks as the keywords page, numbers line up on the right, a phone shows the competitor's position beside yours, and the keywords of a discovered app open with a tap.",
-      },
-      {
-        kind: "improved",
-        title: "A metadata page that shows what to work on",
-        text: "The metadata page now opens with one line that counts the work left: fields with issues, keywords your listing does not cover, screenshots with a caption and how much of your keyword fields you use. A new panel beside the fields, Coverage by field, shows how many tracked keywords your title, subtitle and keyword field each carry and lists the keywords missing from the listing. Keyword coverage comes right after the fields, each localization shows how full its keyword field is, and the suggested keyword field says which words it adds and sits beside the fields it fills.",
-      },
-      {
-        kind: "improved",
-        title: "Top charts that show where you stand",
-        text: "Top charts now opens with one sentence about where your app sits and how many apps climbed, fell and entered. A panel above the charts lists your apps and competitors with their place in the free, paid and grossing charts, even when they sit below the rows shown, with a line of the last 30 days for your own app. Each chart shows at a glance how much of it moved, rows are shorter so more fit on a screen, and the table of a chart has a History view that draws the top ten over the last captured days with your app picked out.",
-      },
-      {
-        kind: "improved",
-        title: "A changes page that shows what each edit did",
-        text: "The changes page now opens with one sentence about the newest change and the effect of the last one that could be measured. A chart draws your visibility over the days you choose with a marker on each day you changed your listing, and under it a line per app shows when you and each competitor changed text, screenshots or the icon, or shipped a release or a new price; press a mark to jump to that day. The effect of each change reads across 7, 14 and 28 days in one table, with a bar for how many keywords improved and declined. The list of changes is shorter rows under each day, a competitor’s run of version updates folds into one row, and a panel counts what changed, yours beside your competitors, and filters the list when you press a row.",
-      },
-      {
-        kind: "improved",
         title: "A calmer, sharper look",
         text: "AsoBeast has a new typeface, warmer neutral colours and flatter panels with fine borders. Numbers line up in columns and labels are easier to read.",
-      },
-      {
-        kind: "improved",
-        title: "Larger text and the brand orange back",
-        text: "Text, buttons and the sidebar are a step larger, so a long session is easier on the eyes. Orange now marks what you select and what is yours, such as the page you are on, your app in search results and your default language, and fills checked boxes and progress bars. Warnings turn yellow so they never look like the brand, and blue is left to charts.",
-      },
-      {
-        kind: "improved",
-        title: "Calmer empty charts",
-        text: "A chart with nothing to draw yet says so in the middle of the chart without a dashed box around it, and so do a page that is not found and the first visit before any app is imported. The run indicator turns grey, and a new entry in search results or a top chart reads New in green.",
       },
       {
         kind: "new",

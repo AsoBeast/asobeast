@@ -39,14 +39,14 @@ function FirstPositionsBody({
   const summary = firstPositions(keywords.data);
   return (
     <>
-      <p className="text-sm font-medium">{summary.headline}</p>
+      <p className="text-dense font-medium">{summary.headline}</p>
       {summary.rows.length > 0 ? (
         <>
           <ul aria-labelledby={headingId} className="flex flex-col gap-1">
             {summary.rows.map((row) => (
               <li
                 key={row.keywordId}
-                className="numeric text-sm text-muted-foreground"
+                className="numeric text-dense text-muted-foreground"
               >
                 {`“${row.text}” · ${positionLabel(row)}`}
               </li>
@@ -72,7 +72,7 @@ export function FirstPositions({
 
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-2">
-      <h3 id={headingId} className="text-sm font-medium">
+      <h3 id={headingId} className="text-dense font-medium">
         First positions
       </h3>
       <FirstPositionsBody id={id} country={country} headingId={headingId} />

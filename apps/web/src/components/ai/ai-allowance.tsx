@@ -24,7 +24,7 @@ export function AiCallsLeft() {
   const usage = useAiUsage();
   const text = usage ? aiCallsLeftText(usage) : null;
   if (!text) return null;
-  return <p className="text-xs text-muted-foreground">{text}</p>;
+  return <p className="text-caption text-muted-foreground">{text}</p>;
 }
 
 export function useAiFailureToast(): (

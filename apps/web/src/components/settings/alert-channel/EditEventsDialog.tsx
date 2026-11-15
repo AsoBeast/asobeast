@@ -125,7 +125,7 @@ export function EditEventsDialog({
             />
             <ConfirmDropsField checked={confirming} onChange={setConfirming} />
             {selected.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-dense text-muted-foreground">
                 Switch on at least one rule to save.
               </p>
             ) : null}

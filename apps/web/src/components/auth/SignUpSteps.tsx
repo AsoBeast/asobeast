@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 const MARK: Record<SignUpStepState, string> = {
   done: "bg-success-subtle text-success",
-  current: "bg-primary text-primary-foreground",
+  current: "bg-brand-subtle text-brand-text",
   upcoming: "border border-border text-muted-foreground",
 };
 

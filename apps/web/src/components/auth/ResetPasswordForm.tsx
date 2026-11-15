@@ -109,12 +109,15 @@ export function ResetPasswordForm() {
                   }
                   required
                 />
-                <p id="password-rule" className="text-xs text-muted-foreground">
+                <p
+                  id="password-rule"
+                  className="text-caption text-muted-foreground"
+                >
                   {PASSWORD_RULE}
                 </p>
               </div>
               {error ? (
-                <p id="password-error" className="text-sm text-destructive">
+                <p id="password-error" className="text-dense text-destructive">
                   {error}
                 </p>
               ) : null}

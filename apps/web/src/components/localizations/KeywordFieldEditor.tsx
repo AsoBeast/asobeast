@@ -78,7 +78,7 @@ function StoreFieldNotice({ sync }: { sync: AppLocalizationStoreSync | null }) {
         .
       </p>
       {sync?.error ? (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-dense text-destructive">
           The last import stopped: {sync.error}
         </p>
       ) : null}
@@ -151,7 +151,7 @@ export function KeywordFieldEditor({
       {managed ? null : (
         <>
           {error && review === null ? (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="text-dense text-destructive">
               {error}
             </p>
           ) : null}

@@ -192,9 +192,9 @@ export function ConnectPlayDialog({
           placeholder="pubsite_prod_rev_01234567890987654321"
           autoComplete="off"
           spellCheck={false}
-          className="font-mono text-xs"
+          className="font-mono md:text-caption"
         />
-        <p className="text-xs text-muted-foreground">
+        <p className="text-caption text-muted-foreground">
           Play Console shows it under Download reports, as the Cloud Storage URI
           after gs://.
         </p>

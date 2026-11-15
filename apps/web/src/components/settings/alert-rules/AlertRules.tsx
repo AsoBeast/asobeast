@@ -45,7 +45,9 @@ function RuleControlField({
   }
   if (control === "rank-follows") {
     return (
-      <p className="text-sm text-muted-foreground">Uses the rank drop value.</p>
+      <p className="text-dense text-muted-foreground">
+        Uses the rank drop value.
+      </p>
     );
   }
   if (control === "review-stars") {
@@ -81,13 +83,13 @@ export function AlertRules(props: AlertRulesProps) {
     >
       <div className="flex items-baseline justify-between gap-3">
         <Label id={labelId}>Alert rules</Label>
-        <span id={summaryId} className="text-sm text-muted-foreground">
+        <span id={summaryId} className="text-dense text-muted-foreground">
           {ruleSummary(props.events)}
         </span>
       </div>
       {groupedRules(props.events).map(({ group, rules }) => (
         <fieldset key={group} className="min-w-0">
-          <legend className="text-sm font-medium text-muted-foreground">
+          <legend className="text-dense font-medium text-muted-foreground">
             {group}
           </legend>
           <ul className="divide-y">

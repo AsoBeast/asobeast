@@ -40,7 +40,7 @@ function WorkspaceStatus({
     workspace.plan === "trial" || workspace.subscriptionStatus === "trialing";
   if (trial && workspace.trialEndsAt) {
     return (
-      <span className="text-sm whitespace-nowrap">
+      <span className="text-dense whitespace-nowrap">
         Trial until {formatDate(workspace.trialEndsAt)}
       </span>
     );

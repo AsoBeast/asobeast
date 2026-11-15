@@ -10,10 +10,11 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { PANEL_HEADER } from "@/components/layout/panel-classes";
 import { InfoTip } from "@/components/ui/info-tip";
 import { StatTile, StatTileGroup } from "@/components/ui/stat-tile";
 import { formatNumber, pluralize, storeLabel } from "@/lib/format";
@@ -107,7 +108,7 @@ function CountList({
   rows: { key: string; label: string; count: number }[];
 }) {
   return (
-    <dl className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-2 text-sm">
+    <dl className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-2 text-dense">
       {rows.map((row) => (
         <div key={row.key} className="contents">
           <dt className="text-muted-foreground">{row.label}</dt>
@@ -126,29 +127,25 @@ export function AdminOverview() {
       <OverviewTiles overview={overview} />
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)]">
         <Card>
-          <CardHeader>
+          <CardHeader className={PANEL_HEADER}>
             <CardTitle asChild>
               <h2>Sign ups, last 30 days</h2>
             </CardTitle>
-            <CardDescription>
-              {pluralize(overview.users.joinedLast30Days, "account")} joined in
-              the last 30 days.
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <SignupsChart signups={overview.signups} />
           </CardContent>
+          <CardFooter>
+            {`${pluralize(overview.users.joinedLast30Days, "account")} joined in the last 30 days.`}
+          </CardFooter>
         </Card>
         <div className="flex flex-col gap-6">
           {overview.billing ? (
             <Card>
-              <CardHeader>
+              <CardHeader className={PANEL_HEADER}>
                 <CardTitle asChild>
                   <h2>Plans</h2>
                 </CardTitle>
-                <CardDescription>
-                  The plan each workspace is on right now.
-                </CardDescription>
               </CardHeader>
               <CardContent>
                 <CountList
@@ -159,16 +156,14 @@ export function AdminOverview() {
                   }))}
                 />
               </CardContent>
+              <CardFooter>The plan each workspace is on right now.</CardFooter>
             </Card>
           ) : null}
           <Card>
-            <CardHeader>
+            <CardHeader className={PANEL_HEADER}>
               <CardTitle asChild>
                 <h2>Apps by store</h2>
               </CardTitle>
-              <CardDescription>
-                Tracked apps, competitors aside.
-              </CardDescription>
             </CardHeader>
             <CardContent>
               <CountList
@@ -179,6 +174,7 @@ export function AdminOverview() {
                 }))}
               />
             </CardContent>
+            <CardFooter>Tracked apps, competitors aside.</CardFooter>
           </Card>
         </div>
       </div>

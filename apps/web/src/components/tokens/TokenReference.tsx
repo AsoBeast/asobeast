@@ -81,7 +81,7 @@ function SwatchGrid({
 }) {
   return (
     <section aria-label={title} className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold">{title}</h2>
+      <h2 className="text-heading">{title}</h2>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
         {tokens.map((token) => (
           <div key={token} className="flex flex-col gap-1">
@@ -103,15 +103,15 @@ function SwatchGrid({
 function ContrastTable({ values }: { values: Resolved }) {
   return (
     <section aria-label="Measured contrast" className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold">Measured contrast</h2>
+      <h2 className="text-heading">Measured contrast</h2>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-dense">
           <caption className="sr-only">
             Every reserved token pair with its measured contrast ratio against
             the required floor.
           </caption>
           <thead>
-            <tr className="border-b text-left text-xs text-muted-foreground">
+            <tr className="border-b text-left text-caption text-muted-foreground">
               <th scope="col" className="py-2 font-medium">
                 Pair
               </th>
@@ -159,12 +159,12 @@ function ContrastTable({ values }: { values: Resolved }) {
 function Elevations() {
   return (
     <section aria-label="Elevation" className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold">Elevation</h2>
+      <h2 className="text-heading">Elevation</h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {ELEVATIONS.map((level) => (
           <div
             key={level}
-            className="rounded-lg bg-card p-6 text-sm"
+            className="rounded-lg bg-card p-6 text-dense"
             style={{ boxShadow: `var(--elevation-${level})` }}
           >
             {level}
@@ -178,7 +178,7 @@ function Elevations() {
 function Radii() {
   return (
     <section aria-label="Radius" className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold">Radius</h2>
+      <h2 className="text-heading">Radius</h2>
       <div className="flex flex-wrap gap-4">
         {RADII.map((step) => (
           <div key={step} className="flex flex-col items-center gap-1">
@@ -205,7 +205,7 @@ export function TokenReference() {
           <h1 className="text-2xl font-semibold tracking-tight">
             Design tokens
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-dense text-muted-foreground">
             Development only. Every value is read from the live cascade, so this
             page cannot drift from the stylesheet.
           </p>

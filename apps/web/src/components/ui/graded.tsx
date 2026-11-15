@@ -14,19 +14,8 @@ const GRADE_FILL: Record<Grade, string> = {
   poor: "bg-grade-poor",
 };
 
-const GRADE_WASH: Record<Grade, string> = {
-  strong: "bg-grade-strong-subtle",
-  fair: "bg-grade-fair-subtle",
-  weak: "bg-grade-weak-subtle",
-  poor: "bg-grade-poor-subtle",
-};
-
 export function gradeFill(value: Grade): string {
   return GRADE_FILL[value];
-}
-
-export function gradeWash(value: Grade): string {
-  return GRADE_WASH[value];
 }
 
 export function GradedNumber({

@@ -31,8 +31,8 @@ function ExplanationNote({
 }) {
   return (
     <div className="rounded-md bg-muted/50 p-3">
-      <p className="text-sm">{explanation}</p>
-      <p className="mt-2 text-xs text-muted-foreground">
+      <p className="text-dense">{explanation}</p>
+      <p className="mt-2 text-caption text-muted-foreground">
         {ACTION_AI_DISCLAIMER}
         {model ? ` ${model}` : ""}
         {generatedAt ? ` · ${formatDateTime(generatedAt)}` : ""}
@@ -79,7 +79,7 @@ export function ActionExplain({ item }: { item: ActionItem }) {
         {item.category === "metadata" && (
           <Link
             href={`/apps/${item.scope.appId}/metadata`}
-            className="text-sm underline-offset-4 hover:underline"
+            className="text-dense underline-offset-4 hover:underline"
           >
             Draft metadata with the assistant
           </Link>

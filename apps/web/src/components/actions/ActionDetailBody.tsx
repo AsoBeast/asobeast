@@ -38,7 +38,7 @@ function SampleReviews({ item }: { item: ActionItem }) {
   return (
     <Link
       href={`/apps/${item.scope.appId}/reviews`}
-      className="self-start text-sm font-medium underline-offset-4 hover:underline"
+      className="self-start text-dense font-medium underline-offset-4 hover:underline"
     >
       Read the sample reviews
     </Link>

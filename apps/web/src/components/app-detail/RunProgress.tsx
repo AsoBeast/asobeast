@@ -76,7 +76,7 @@ export function RunProgress({ appId }: { appId: string }) {
           className="flex w-80 flex-col gap-3"
         >
           <div className="flex flex-col gap-0.5">
-            <h3 id={headingId} className="text-sm font-medium">
+            <h3 id={headingId} className="text-dense font-medium">
               Today&rsquo;s run
             </h3>
             <p className="text-caption text-muted-foreground">

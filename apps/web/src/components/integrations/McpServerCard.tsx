@@ -72,7 +72,7 @@ function CopyBlock({ snippet }: { snippet: ConnectSnippet }) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
-        <Label className="text-xs font-medium">{label}</Label>
+        <Label className="text-label">{label}</Label>
         <Button
           type="button"
           variant="outline"
@@ -83,8 +83,8 @@ function CopyBlock({ snippet }: { snippet: ConnectSnippet }) {
           {copied ? <Check /> : <Copy />}
         </Button>
       </div>
-      <p className="text-xs text-muted-foreground">{location}</p>
-      <pre className="overflow-x-auto rounded-lg border bg-muted p-3 font-mono text-xs">
+      <p className="text-caption text-muted-foreground">{location}</p>
+      <pre className="overflow-x-auto rounded-lg border bg-muted p-3 font-mono text-caption">
         {value}
       </pre>
     </div>
@@ -143,13 +143,13 @@ function ConnectionSnippets({ token }: { token: string }) {
         <TabsTrigger value="stdio">Local server</TabsTrigger>
       </TabsList>
       <TabsContent value="remote" className="flex flex-col gap-4">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-dense text-muted-foreground">
           Your client connects straight to this instance. Nothing to install.
         </p>
         <AgentSnippets id="mcp-hosted-agent" snippets={hostedSnippets(token)} />
       </TabsContent>
       <TabsContent value="stdio" className="flex flex-col gap-4">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-dense text-muted-foreground">
           For a checkout of the repository. Hosted users need nothing here.
         </p>
         <AgentSnippets id="mcp-local-agent" snippets={localSnippets(token)} />
@@ -276,14 +276,14 @@ function ConnectDialog() {
                   </Label>
                   <p
                     id="mcp-allow-changes-hint"
-                    className="text-xs text-muted-foreground"
+                    className="text-caption text-muted-foreground"
                   >
                     {MCP_CHANGES_HINT}
                   </p>
                 </div>
               </div>
               {error ? (
-                <p className="text-sm text-destructive">{error}</p>
+                <p className="text-dense text-destructive">{error}</p>
               ) : null}
             </DialogBody>
             <DialogFooter>

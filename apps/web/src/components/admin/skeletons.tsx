@@ -77,7 +77,7 @@ export function AdminListSkeleton() {
         <Skeleton className="ml-auto h-5 w-24" />
         <Skeleton className="h-8 w-24" />
       </div>
-      <div className="flex flex-col gap-px overflow-hidden rounded-xl border">
+      <div className="flex flex-col gap-px overflow-hidden rounded-lg border">
         {Array.from({ length: 8 }).map((_, index) => (
           <Skeleton key={index} className="h-12 w-full rounded-none" />
         ))}

@@ -2,7 +2,6 @@ import Link from "next/link";
 import type { AlertEventItem } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { Badge } from "@/components/ui/badge";
-import { DeltaChip } from "@/components/ui/delta-chip";
 import { EVENT_LABELS } from "@/components/settings/alert-event-copy";
 import {
   formatCountry,
@@ -13,7 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ALERT_EVENT_ICONS, ALERT_TONE_CLASS } from "./alert-event-icons";
 import { alertEventHref } from "./alert-event-href";
-import { alertEventSize } from "./alert-event-size";
+import { AlertSizePill } from "./AlertSizePill";
 import {
   ALERT_ROW,
   ALERT_ROW_APP,
@@ -94,7 +93,6 @@ export function AlertEventRow({
   isNew: boolean;
 }) {
   const { icon: Icon, tone } = ALERT_EVENT_ICONS[item.event];
-  const size = alertEventSize(item.payload);
   const href = alertEventHref(item);
 
   return (
@@ -134,15 +132,7 @@ export function AlertEventRow({
           {formatUtcClock(item.occurredAt)}
         </time>
       </div>
-      {size ? (
-        <DeltaChip
-          value={size.value}
-          polarity={size.polarity}
-          period={size.period}
-          form="pill"
-          className={ALERT_ROW_SIZE}
-        />
-      ) : null}
+      <AlertSizePill payload={item.payload} className={ALERT_ROW_SIZE} />
     </li>
   );
 }

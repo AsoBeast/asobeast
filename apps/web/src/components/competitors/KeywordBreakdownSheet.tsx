@@ -71,7 +71,7 @@ function BreakdownBody({
             />
           ))}
         </ul>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-caption text-muted-foreground">
           These are rules of thumb from what {PRODUCT_NAME} can see. Neither
           store publishes how it weighs a field, and installs are not visible
           for other apps.
@@ -81,7 +81,7 @@ function BreakdownBody({
   }
   if (isNotFound(read.error)) {
     return (
-      <div className="flex flex-col items-start gap-3 text-sm">
+      <div className="flex flex-col items-start gap-3 text-dense">
         <p>This keyword is not tracked any more.</p>
         <Button variant="outline" size="sm" onClick={onClose}>
           Close
@@ -99,7 +99,7 @@ function BreakdownBody({
   }
   if (waitsForConnection(read)) {
     return (
-      <p role="status" className="text-sm text-muted-foreground">
+      <p role="status" className="text-dense text-muted-foreground">
         You are offline. The breakdown loads when the connection is back.
       </p>
     );

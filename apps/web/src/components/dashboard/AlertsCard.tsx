@@ -5,12 +5,12 @@ import { useQuery } from "@tanstack/react-query";
 import type { AlertEventItem } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { alertEventHref } from "@/components/alerts/alert-event-href";
+import { AlertSizePill } from "@/components/alerts/AlertSizePill";
 import {
   failedRead,
   InlineQueryError,
 } from "@/components/layout/InlineQueryError";
 import { EVENT_LABELS } from "@/components/settings/alert-event-copy";
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardAction,
@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/card";
 import { alertRecentOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
-import { ALERT_KINDS } from "./alert-kind";
 import {
   FEED_LINK,
   FEED_ROW,
@@ -30,13 +29,13 @@ import {
 import { FeedRowsSkeleton } from "./skeletons";
 import { PANEL_COUNT, PANEL_HEADER } from "@/components/layout/panel-classes";
 import { dayBefore } from "@/lib/utc-day";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const WINDOW_DAYS = 7;
 const DAYS_BEFORE_TODAY = WINDOW_DAYS - 1;
 
 function AlertLine({ item, today }: { item: AlertEventItem; today: string }) {
   const href = alertEventHref(item);
-  const kind = ALERT_KINDS[item.event];
   const body = (
     <>
       <FeedDay>{feedDayLabel(item.occurredAt.slice(0, 10), today)}</FeedDay>
@@ -49,7 +48,7 @@ function AlertLine({ item, today }: { item: AlertEventItem; today: string }) {
           </span>
         </span>
       </span>
-      <Badge variant={kind.tone}>{kind.word}</Badge>
+      <AlertSizePill payload={item.payload} />
     </>
   );
   return href === null ? (
@@ -82,11 +81,7 @@ function AlertList({ today }: { today: string }) {
     );
   }
   if (read.data.events.length === 0) {
-    return (
-      <p className="px-2 text-body text-muted-foreground">
-        No alerts in the last 7 days.
-      </p>
-    );
+    return <EmptyState title="No alerts in the last 7 days." />;
   }
   return (
     <ul className="flex flex-col">
