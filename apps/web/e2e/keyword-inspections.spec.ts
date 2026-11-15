@@ -267,3 +267,23 @@ test("keeps focus in the panel when another storefront's inspection is gone", as
     page.getByRole("heading", { name: "Inspection", level: 2, exact: true }),
   ).toBeFocused();
 });
+
+test("compares a repeat with the seeded inspection and reuses a seeded run", async ({
+  page,
+  request,
+}) => {
+  await request.get(`${MOCK_API}/__seed-keyword-inspections`);
+  await page.goto("/inspect");
+  await page.getByLabel("Keyword", { exact: true }).fill(SEEDED_KEYWORD);
+  await page.getByRole("button", { name: "Inspect", exact: true }).click();
+  await expect(page).toHaveURL(/[?&]id=inspection-1/);
+  await nextPoll(page);
+
+  const scores = page.getByRole("definition");
+  await expect(scores.filter({ hasText: "was 46" })).toHaveCount(1);
+  await expect(scores.filter({ hasText: "was 38" })).toHaveCount(1);
+
+  await page.getByLabel("Keyword", { exact: true }).fill("sleep sounds");
+  await page.getByRole("button", { name: "Inspect", exact: true }).click();
+  await expect(page).toHaveURL(/[?&]id=seeded-sleep-sounds/);
+});

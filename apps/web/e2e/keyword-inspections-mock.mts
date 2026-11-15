@@ -1,6 +1,7 @@
 import {
   normalizeText,
   type KeywordInspection,
+  type KeywordInspectionDelta,
   type KeywordInspectionRequest,
   type KeywordInspectionSummary,
 } from "@asobeast/shared";
@@ -99,20 +100,27 @@ function settled(stored: StoredInspection): KeywordInspection {
         entry.pending.keywordId === stored.pending.keywordId &&
         current(entry).status === "DONE",
     );
-  if (!earlier) return done;
+  return earlier ? { ...done, previous: previousOf(earlier) } : done;
+}
+
+const deltaOf = (before: KeywordInspection): KeywordInspectionDelta => ({
+  inspectionId: before.id,
+  completedAt: before.completedAt ?? before.requestedAt,
+  volume: before.volume,
+  difficulty100: before.difficulty100,
+  resultCount: before.resultCount,
+  entered: [],
+  left: [],
+});
+
+function previousOf(earlier: StoredInspection): KeywordInspectionDelta {
+  if (earlier.fixed) return deltaOf(earlier.fixed);
   const before = completed(earlier.pending);
-  return {
-    ...done,
-    previous: {
-      inspectionId: before.id,
-      completedAt: before.requestedAt,
-      volume: (before.volume ?? 0) - 4,
-      difficulty100: (before.difficulty100 ?? 0) + 6,
-      resultCount: before.resultCount,
-      entered: [],
-      left: [],
-    },
-  };
+  return deltaOf({
+    ...before,
+    volume: (before.volume ?? 0) - 4,
+    difficulty100: (before.difficulty100 ?? 0) + 6,
+  });
 }
 
 function current(stored: StoredInspection): KeywordInspection {
