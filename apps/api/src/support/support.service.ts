@@ -134,6 +134,9 @@ export class SupportService {
       trialStartedAt: workspace.trialStartedAt?.toISOString() ?? null,
       firstPaidAt: workspace.firstPaidAt?.toISOString() ?? null,
       billingInterval: billingIntervalOf(workspace.billingInterval),
+      deletionRequestedAt: workspace.deletionRequestedAt?.toISOString() ?? null,
+      deletionRequestedBy: workspace.deletionRequestedBy,
+      deletionDueAt: workspace.deletionDueAt?.toISOString() ?? null,
     };
   }
 

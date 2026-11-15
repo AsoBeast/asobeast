@@ -2,16 +2,21 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { User } from '@prisma/client';
 import {
+  ADMIN_CONVERSION_WINDOWS,
   ALL_WORKSPACES,
   type AdminAppList,
+  type AdminConversion,
+  type AdminDepartureList,
   type AdminOverview,
   type AdminUserList,
 } from '@asobeast/shared';
 import { SUPPORT_NOT_FOUND } from '../auth/admin-access';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { requirePlatformOperator } from '../auth/platform-operator';
+import { AdminConversionQueryDto } from './dto/admin-conversion-query.dto';
 import { AdminDirectoryQueryDto } from './dto/admin-directory-query.dto';
 import { SupportAudit } from './support-audit.service';
+import { SupportConversionService } from './support-conversion.service';
 import { SupportDirectoryService } from './support-directory.service';
 import { SupportOverviewService } from './support-overview.service';
 
@@ -22,6 +27,7 @@ export class SupportDirectoryController {
     private readonly overview: SupportOverviewService,
     private readonly directory: SupportDirectoryService,
     private readonly audit: SupportAudit,
+    private readonly conversions: SupportConversionService,
   ) {}
 
   @Get('overview')
@@ -29,6 +35,29 @@ export class SupportDirectoryController {
   totals(@CurrentUser() user: User): Promise<AdminOverview> {
     requirePlatformOperator(user, SUPPORT_NOT_FOUND);
     return this.overview.overview();
+  }
+
+  @Get('conversion')
+  @ApiOperation({
+    summary: 'Sign up to paid conversion and departures for the operator',
+  })
+  conversion(
+    @CurrentUser() user: User,
+    @Query() query: AdminConversionQueryDto,
+  ): Promise<AdminConversion> {
+    requirePlatformOperator(user, SUPPORT_NOT_FOUND);
+    return this.conversions.conversion(
+      query.days ?? ADMIN_CONVERSION_WINDOWS[0],
+    );
+  }
+
+  @Get('departures')
+  @ApiOperation({
+    summary: 'Erased workspaces, newest first, without any personal data',
+  })
+  departures(@CurrentUser() user: User): Promise<AdminDepartureList> {
+    requirePlatformOperator(user, SUPPORT_NOT_FOUND);
+    return this.conversions.departures();
   }
 
   @Get('users')

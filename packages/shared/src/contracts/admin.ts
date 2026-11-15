@@ -1,4 +1,5 @@
 import type { Store } from '../index';
+import type { DeletionReason } from './account';
 import type { PlanName } from './plans';
 
 export const ADMIN_LIST_LIMIT = 1000;
@@ -105,6 +106,101 @@ export interface AdminApp {
 
 export interface AdminAppList {
   items: AdminApp[];
+  total: number;
+  limit: number;
+}
+
+export const ADMIN_CONVERSION_WINDOWS = [30, 90] as const;
+
+export type AdminConversionWindow = (typeof ADMIN_CONVERSION_WINDOWS)[number];
+
+export const ADMIN_COHORT_WEEKS = 8;
+
+export const TRIAL_ENDING_SOON_DAYS = 3;
+
+export const ADMIN_FUNNEL_STEPS = [
+  'signed-up',
+  'confirmed-email',
+  'first-app',
+  'ranked-within-a-day',
+  'trial-started',
+  'paid',
+] as const;
+
+export type AdminFunnelStepKey = (typeof ADMIN_FUNNEL_STEPS)[number];
+
+export const ADMIN_BILLING_FUNNEL_STEPS: readonly AdminFunnelStepKey[] = [
+  'trial-started',
+  'paid',
+];
+
+export type AdminDepartureReason = DeletionReason | 'unanswered';
+
+export const ADMIN_DEPARTURE_REASONS: readonly AdminDepartureReason[] = [
+  'too-expensive',
+  'missing-feature',
+  'not-using',
+  'switched-tool',
+  'other',
+  'unanswered',
+];
+
+export interface AdminTrialRate {
+  paid: number;
+  ended: number;
+}
+
+export interface AdminMedianDays {
+  signupToFirstApp: number | null;
+  signupToTrial?: number | null;
+  trialToPaid?: number | null;
+}
+
+export interface AdminCohortWeek {
+  weekStart: string;
+  signedUp: number;
+  confirmedEmail: number;
+  firstApp: number;
+  trialStarted?: number;
+  paid?: number;
+  stillPaying?: number;
+}
+
+export interface AdminDepartureTally {
+  total: number;
+  byStage: AdminCount<WorkspaceStage>[];
+  byReason: AdminCount<AdminDepartureReason>[];
+}
+
+export interface AdminConversion {
+  generatedAt: string;
+  billing: boolean;
+  days: AdminConversionWindow;
+  funnel: AdminCount<AdminFunnelStepKey>[];
+  trialToPaid?: { current: AdminTrialRate; previous: AdminTrialRate };
+  trials?: { inProgress: number; endingSoon: number };
+  medianDays: AdminMedianDays;
+  cohorts: AdminCohortWeek[];
+  departures: AdminDepartureTally;
+  departuresRecordedSince: string | null;
+}
+
+export interface AdminDeparture {
+  id: string;
+  erasedOn: string;
+  createdOn: string;
+  requestedOn: string;
+  stage: WorkspaceStage;
+  plan: PlanName;
+  everPaid: boolean;
+  apps: number;
+  keywordMarkets: number;
+  members: number;
+  reason: DeletionReason | null;
+}
+
+export interface AdminDepartureList {
+  items: AdminDeparture[];
   total: number;
   limit: number;
 }
