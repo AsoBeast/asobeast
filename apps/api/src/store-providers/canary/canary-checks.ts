@@ -30,6 +30,19 @@ export function assertPageExtract(app: NormalizedApp): void {
   }
 }
 
+export function assertPreviewVideo(app: NormalizedApp): void {
+  const urls = asRecord(asRecord(app.raw)?.pageExtract)?.previewVideoUrls;
+  if (urls === undefined) {
+    throw new CanaryShapeError('the store page carries no extract');
+  }
+  if (urls === null) {
+    throw new CanaryShapeError('the store page carries no product media shelf');
+  }
+  if (!Array.isArray(urls) || urls.length === 0) {
+    throw new CanaryShapeError('the store page carries no preview video');
+  }
+}
+
 export function assertSearchResults(results: SearchItem[]): void {
   if (results.length === 0) {
     throw new CanaryShapeError('search returned no results');

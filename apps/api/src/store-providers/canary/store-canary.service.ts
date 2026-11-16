@@ -5,9 +5,11 @@ import { storeCanaryKey } from '../../jobs/jobs.types';
 import { FailFastRedis } from '../../redis/fail-fast-redis';
 import { ProxyEgress } from '../egress/proxy-egress.service';
 import { StoreProviderRegistry } from '../store-provider.registry';
+import type { StoreProvider } from '../types';
 import {
   assertPageExtract,
   assertParsedApp,
+  assertPreviewVideo,
   assertSearchResults,
 } from './canary-checks';
 import {
@@ -26,6 +28,11 @@ export interface CanaryTarget {
   country: string;
 }
 
+export interface CanaryPreviewTarget {
+  storeAppId: string;
+  country: string;
+}
+
 export const CANARY_TARGETS: Record<Store, CanaryTarget> = {
   APP_STORE: { storeAppId: '284882215', term: 'photo editor', country: 'us' },
   GOOGLE_PLAY: {
@@ -33,6 +40,12 @@ export const CANARY_TARGETS: Record<Store, CanaryTarget> = {
     term: 'photo editor',
     country: 'us',
   },
+};
+
+export const CANARY_PREVIEW_TARGETS: Partial<
+  Record<Store, CanaryPreviewTarget>
+> = {
+  APP_STORE: { storeAppId: '1094591345', country: 'us' },
 };
 
 export interface StoreCanaryRecord {
@@ -100,10 +113,27 @@ export class StoreCanaryService {
           provider.search(target.term, target.country, CANARY_SEARCH_RESULTS),
         ),
       );
+      await this.probePreview(store, provider);
       return { outcome: 'ok', detail: null };
     } catch (error) {
       return { outcome: outcomeOfError(error), detail: detailOf(error) };
     }
+  }
+
+  private async probePreview(
+    store: Store,
+    provider: StoreProvider,
+  ): Promise<void> {
+    const target = CANARY_PREVIEW_TARGETS[store];
+    if (!target) {
+      return;
+    }
+    const app = await this.egress.through(store, target.country, () =>
+      provider.getApp(target.storeAppId, target.country),
+    );
+    assertParsedApp(app);
+    assertPageExtract(app);
+    assertPreviewVideo(app);
   }
 
   private async read(store: Store): Promise<StoreCanaryRecord | null> {
