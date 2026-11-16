@@ -31,6 +31,7 @@ export function ResetPasswordForm() {
 
   const mutation = useMutation({
     mutationFn: () => resetPassword(token, password),
+    onSuccess: () => armFocusHandoff(PASSWORD_SET_FOCUS_KEY),
     onError: (err) => {
       setError(
         err instanceof ApiError
@@ -51,7 +52,6 @@ export function ResetPasswordForm() {
       setError(problem);
       return;
     }
-    armFocusHandoff(PASSWORD_SET_FOCUS_KEY);
     submitOnce();
   }
 

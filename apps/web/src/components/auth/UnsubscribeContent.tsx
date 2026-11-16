@@ -19,6 +19,7 @@ export function UnsubscribeContent() {
   const token = params.get("token") ?? "";
   const mutation = useMutation({
     mutationFn: () => unsubscribeEmailAlert(alertId, token),
+    onSettled: armResultFocus,
   });
   const sendOnce = useSingleFlight(mutation);
 
@@ -65,9 +66,7 @@ export function UnsubscribeContent() {
       <Button
         aria-disabled={mutation.isPending || undefined}
         onClick={() => {
-          if (mutation.isPending) return;
-          armResultFocus();
-          sendOnce();
+          if (!mutation.isPending) sendOnce();
         }}
       >
         {mutation.isPending ? <Loader2 className="animate-spin" /> : null}

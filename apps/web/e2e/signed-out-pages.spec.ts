@@ -1,6 +1,7 @@
 import type { Page, Route } from "@playwright/test";
 import { VALID_CONFIRM_TOKEN, VALID_UNSUBSCRIBE_TOKEN } from "./fixtures.mts";
-import { pressFromKeyboard } from "./held-request.mts";
+import { CLAIM_WINDOW_MS } from "../src/lib/focus-handoff";
+import { holdRequest, pressFromKeyboard } from "./held-request.mts";
 import { fulfillJson, seedSession } from "./plan-helpers.mts";
 import { seedCookies } from "./routes.mts";
 import { expect, test } from "./reporting.mts";
@@ -245,28 +246,28 @@ for (const [status, invalid] of [
 
 const ANSWERED_REQUESTS = [
   {
-    request: "**/api/backend/auth/password/forgot",
+    request: /\/api\/backend\/auth\/password\/forgot$/,
     path: "/forgot-password",
     fill: { Email: "owner@example.com" },
     press: "Email me a link",
     claims: { role: "link", name: "Back to sign in" },
   },
   {
-    request: "**/api/backend/auth/password/reset",
+    request: /\/api\/backend\/auth\/password\/reset$/,
     path: "/reset-password?token=recovery-token",
     fill: { "New password": PASSWORD },
     press: "Set new password",
     claims: { role: "link", name: "Sign in" },
   },
   {
-    request: "**/api/backend/email-alerts/ea_handoff/confirm*",
+    request: /\/api\/backend\/email-alerts\/ea_handoff\/confirm/,
     path: "/confirm-alert?alert=ea_handoff&token=confirm-token",
     fill: {},
     press: "Confirm email address",
     claims: { role: "heading", name: "Alert emails confirmed" },
   },
   {
-    request: "**/api/backend/email-alerts/ea_handoff/unsubscribe*",
+    request: /\/api\/backend\/email-alerts\/ea_handoff\/unsubscribe/,
     path: "/unsubscribe?alert=ea_handoff&token=unsubscribe-token",
     fill: {},
     press: "Unsubscribe",
@@ -285,6 +286,29 @@ for (const { request, path, fill, press, claims } of ANSWERED_REQUESTS) {
     }
 
     await pressFromKeyboard(page.getByRole("button", { name: press }));
+
+    await expect(
+      page.getByRole(claims.role, { name: claims.name, exact: true }),
+    ).toBeFocused();
+  });
+}
+
+for (const { request, path, fill, press, claims } of ANSWERED_REQUESTS) {
+  test(`${press} hands focus to ${claims.name} after a slow answer`, async ({
+    page,
+  }) => {
+    await page.clock.install();
+    const held = await holdRequest(page, request, "POST", (route) =>
+      route.fulfill({ status: 204 }),
+    );
+    await page.goto(path);
+    for (const [label, value] of Object.entries(fill)) {
+      await page.getByLabel(label, { exact: true }).fill(value);
+    }
+
+    await pressFromKeyboard(page.getByRole("button", { name: press }));
+    await page.clock.fastForward(CLAIM_WINDOW_MS + 1_000);
+    held.release();
 
     await expect(
       page.getByRole(claims.role, { name: claims.name, exact: true }),

@@ -21,6 +21,7 @@ export function ConfirmAlertContent() {
   const token = params.get("token") ?? "";
   const mutation = useMutation({
     mutationFn: () => confirmEmailAlert(alertId, token),
+    onSettled: armResultFocus,
   });
   const sendOnce = useSingleFlight(mutation);
 
@@ -77,9 +78,7 @@ export function ConfirmAlertContent() {
       <Button
         aria-disabled={mutation.isPending || undefined}
         onClick={() => {
-          if (mutation.isPending) return;
-          armResultFocus();
-          sendOnce();
+          if (!mutation.isPending) sendOnce();
         }}
       >
         {mutation.isPending ? <Loader2 className="animate-spin" /> : null}

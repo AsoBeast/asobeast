@@ -28,6 +28,7 @@ export function ForgotPasswordForm() {
 
   const mutation = useMutation({
     mutationFn: () => requestPasswordReset(email),
+    onSuccess: () => armFocusHandoff(LINK_SENT_FOCUS_KEY),
     onError: (err) => {
       setError(
         err instanceof ApiError
@@ -46,7 +47,6 @@ export function ForgotPasswordForm() {
     event.preventDefault();
     if (mutation.isPending) return;
     setError(null);
-    armFocusHandoff(LINK_SENT_FOCUS_KEY);
     submitOnce();
   }
 
