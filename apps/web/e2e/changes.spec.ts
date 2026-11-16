@@ -509,6 +509,74 @@ test("a google play timeline names the short description", async ({ page }) => {
   await expect(timeline(page)).not.toContainText("Subtitle");
 });
 
+test("an in-app events row names the events it added and removed", async ({
+  page,
+}) => {
+  await changeState(page, "store");
+  await page.goto("/apps/app-1/changes");
+
+  const row = timeline(page).locator('[data-change-field="inAppEvents"]');
+  await expect(row).toContainText("Added");
+  await expect(row).toContainText("Winter Challenge");
+  await expect(row).toContainText("Challenge · Live now · Nov 20 to Dec 5");
+  await expect(row).toContainText("Removed");
+  await expect(row).toContainText("Competition");
+  await expect(row).toContainText("Until Nov 1");
+  await expect(row).not.toContainText("evt-");
+});
+
+test("a featuring row names its stories and falls back when unnamed", async ({
+  page,
+}) => {
+  await changeState(page, "store");
+  await page.goto("/apps/app-1/changes");
+
+  const row = timeline(page).locator('[data-change-field="featuring"]');
+  await expect(row).toContainText("App of the day · Calm your mind");
+  await expect(row).toContainText("Featured story");
+  await expect(row).not.toContainText("story-");
+});
+
+test("an Editors' Choice row says whether the badge appeared, with its notes", async ({
+  page,
+}) => {
+  await changeState(page, "store");
+  await page.goto("/apps/app-1/changes");
+
+  const rows = timeline(page).locator('[data-change-field="editorsChoice"]');
+  const added = rows.filter({ hasText: "badge added" });
+  await expect(added).toContainText("Editors' Choice badge added");
+  await expect(added).toContainText(
+    "Chosen for its focus tools and gentle reminders.",
+  );
+  await expect(rows.filter({ hasText: "badge removed" })).toContainText(
+    "Editors' Choice badge removed",
+  );
+});
+
+test("what changed lists the store surfaces and filters by them", async ({
+  page,
+}) => {
+  await changeState(page, "store");
+  await page.goto("/apps/app-1/changes");
+
+  await expect(
+    activity(page).getByText("Events, featuring and badges"),
+  ).toBeVisible();
+  await expect(
+    activity(page).getByRole("button", { name: /you changed the featuring/ }),
+  ).toBeVisible();
+
+  const events = breakdown(page).getByRole("button", {
+    name: "In-app events: 1 yours, 0 from competitors",
+  });
+  await events.click();
+
+  await expect(page).toHaveURL(/field=inAppEvents/);
+  await expect(timeline(page).locator("[data-change-field]")).toHaveCount(1);
+  await expect(timeline(page)).toContainText("In-app events only");
+});
+
 test("an app without changes offers the widest window", async ({ page }) => {
   await page.goto("/apps/app-2/changes");
 

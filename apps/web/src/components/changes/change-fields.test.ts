@@ -39,6 +39,20 @@ describe("fieldCounts", () => {
 
     expect(counts.map((count) => count.group)).toEqual(["title", "price"]);
   });
+
+  it("gives each store surface its own group", () => {
+    const counts = fieldCounts([
+      event("inAppEvents"),
+      event("featuring", true),
+      event("editorsChoice"),
+    ]);
+
+    expect(counts).toEqual([
+      { group: "inAppEvents", yours: 1, competitors: 0 },
+      { group: "featuring", yours: 0, competitors: 1 },
+      { group: "editorsChoice", yours: 1, competitors: 0 },
+    ]);
+  });
 });
 
 describe("matchesFilter", () => {
@@ -66,12 +80,15 @@ describe("ownerCounts", () => {
 });
 
 describe("changeKind", () => {
-  it("sorts every field into text, visuals or release", () => {
+  it("sorts every field into text, visuals, release or store", () => {
     expect(changeKind("summary")).toBe("text");
     expect(changeKind("screenshotCaptions")).toBe("visuals");
     expect(changeKind("icon")).toBe("visuals");
     expect(changeKind("whatsNew")).toBe("release");
     expect(changeKind("price")).toBe("release");
+    expect(changeKind("inAppEvents")).toBe("store");
+    expect(changeKind("featuring")).toBe("store");
+    expect(changeKind("editorsChoice")).toBe("store");
   });
 });
 
@@ -81,5 +98,9 @@ describe("changedFieldWords", () => {
       changedFieldWords(["title", "screenshots", "screenshotImages"]),
     ).toBe("title and screenshots");
     expect(changedFieldWords(["whatsNew"])).toBe("what's new");
+    expect(changedFieldWords(["inAppEvents", "featuring"])).toBe(
+      "in-app events and featuring",
+    );
+    expect(changedFieldWords(["editorsChoice"])).toBe("editors' choice");
   });
 });

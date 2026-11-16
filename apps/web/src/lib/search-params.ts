@@ -613,6 +613,9 @@ export const CHANGE_FIELD_GROUPS = [
   "version",
   "whatsNew",
   "price",
+  "inAppEvents",
+  "featuring",
+  "editorsChoice",
 ] as const;
 
 export type ChangeFieldGroup = (typeof CHANGE_FIELD_GROUPS)[number];
