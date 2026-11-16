@@ -1,17 +1,23 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   cardAction,
   CLAIM_WINDOW_MS,
   focusCanMoveTo,
+  focusFirstAvailable,
   focusIsLost,
   isClaimable,
   pendingFocusStep,
+  recoverFocusIn,
+  recoveryCandidates,
   returnFocusTo,
   siblingControl,
   survivingNeighbour,
 } from "./focus-handoff";
 
 const body = { tag: "body" };
+
+beforeEach(() => vi.stubGlobal("Node", Object));
+afterEach(() => vi.unstubAllGlobals());
 
 describe("focusIsLost", () => {
   it("is true when nothing or the body has focus", () => {
@@ -285,5 +291,206 @@ describe("cardAction", () => {
     expect(cardAction(elementIn(null))).toBeNull();
     expect(cardAction(elementIn({ querySelector: () => null }))).toBeNull();
     expect(cardAction(null)).toBeNull();
+  });
+});
+
+const control = (name: string, hiddenFromUser = false) => ({
+  name,
+  closest: () => (hiddenFromUser ? { tag: "aria-hidden" } : null),
+  matches: () => false,
+});
+const tabList = (selectedTab: unknown) => ({
+  ...control("Range"),
+  matches: (selector: string) => selector === '[role="tablist"]',
+  querySelector: (selector: string) =>
+    selector === '[role="tab"][aria-selected="true"]' ? selectedTab : null,
+});
+
+class FakeElement {
+  constructor(
+    readonly controls: unknown[],
+    readonly tabbable = false,
+    readonly isConnected = true,
+    readonly hiddenFromUser = false,
+  ) {}
+  closest = () => (this.hiddenFromUser ? { tag: "aria-hidden" } : null);
+  querySelectorAll(selector: string) {
+    this.selector = selector;
+    return this.controls;
+  }
+  selector = "";
+  hasAttribute(name: string) {
+    return name === "tabindex" && this.tabbable;
+  }
+}
+const container = (...args: ConstructorParameters<typeof FakeElement>) =>
+  new FakeElement(...args);
+const asElement = (fake: FakeElement) => fake as unknown as Element;
+
+describe("recoveryCandidates", () => {
+  beforeEach(() => vi.stubGlobal("HTMLElement", FakeElement));
+
+  it("lists the controls left in the container in document order", () => {
+    const invite = control("Invite member");
+    const search = control("Search");
+    expect(recoveryCandidates(asElement(container([invite, search])))).toEqual([
+      invite,
+      search,
+    ]);
+  });
+
+  it("asks for form controls as well as links and buttons, each in the tab order", () => {
+    const fake = container([]);
+    recoveryCandidates(asElement(fake));
+    for (const kind of [
+      'input:not(:disabled):not([type="hidden"])',
+      "select:not(:disabled)",
+      "textarea:not(:disabled)",
+      "a[href]",
+      "button:not(:disabled)",
+      "[tabindex]",
+    ]) {
+      expect(fake.selector).toContain(`${kind}:not([tabindex="-1"])`);
+    }
+  });
+
+  it("offers a tab list's selected tab in its place, so focus lands on the tab itself", () => {
+    const selected = control("30d");
+    expect(
+      recoveryCandidates(asElement(container([tabList(selected)]))),
+    ).toEqual([selected]);
+  });
+
+  it("skips a tab list whose selected tab is hidden or inert", () => {
+    const invite = control("Invite member");
+    const tabs = tabList(control("30d", true));
+    expect(recoveryCandidates(asElement(container([tabs, invite])))).toEqual([
+      invite,
+    ]);
+  });
+
+  it("keeps a tab list that has no selected tab", () => {
+    const tabs = tabList(null);
+    expect(recoveryCandidates(asElement(container([tabs])))).toEqual([tabs]);
+  });
+
+  it("skips a control hidden from assistive technology or inert", () => {
+    const hidden = control("Backdrop close", true);
+    const invite = control("Invite member");
+    expect(recoveryCandidates(asElement(container([hidden, invite])))).toEqual([
+      invite,
+    ]);
+  });
+
+  it("ends with the container only when it is focusable and within reach", () => {
+    const focusable = container([], true);
+    expect(recoveryCandidates(asElement(focusable))).toEqual([focusable]);
+    expect(recoveryCandidates(asElement(container([])))).toEqual([]);
+    const hidden = asElement(container([], true, true, true));
+    expect(recoveryCandidates(hidden).length).toBe(0);
+  });
+
+  it("lists nothing for a container that left the page or no container", () => {
+    expect(
+      recoveryCandidates(asElement(container([control("Add")], false, false))),
+    ).toEqual([]);
+    expect(recoveryCandidates(null)).toEqual([]);
+  });
+});
+
+describe("focusFirstAvailable", () => {
+  const root: { activeElement: unknown; body: unknown } = {
+    activeElement: body,
+    body,
+  };
+  const control = (takesFocus: boolean, child?: unknown) => {
+    const element = {
+      focus: vi.fn(() => {
+        if (takesFocus) root.activeElement = child ?? element;
+      }),
+      contains: (node: unknown) => node === element || node === child,
+    };
+    return element;
+  };
+  const asElements = (controls: unknown[]) =>
+    controls as unknown as HTMLElement[];
+
+  it("skips a control that cannot take focus, such as a hidden one", () => {
+    root.activeElement = body;
+    const hidden = control(false);
+    const visible = control(true);
+    expect(focusFirstAvailable(asElements([hidden, visible]), root)).toBe(
+      visible,
+    );
+    expect(hidden.focus).toHaveBeenCalled();
+    expect(root.activeElement).toBe(visible);
+  });
+
+  it("accepts a control that hands focus to a child, such as a tab list", () => {
+    root.activeElement = body;
+    const activeTab = { tag: "tab" };
+    const tabList = control(true, activeTab);
+    const clear = control(true);
+    expect(focusFirstAvailable(asElements([tabList, clear]), root)).toBe(
+      tabList,
+    );
+    expect(clear.focus).not.toHaveBeenCalled();
+    expect(root.activeElement).toBe(activeTab);
+  });
+
+  it("stops at the first control that takes focus", () => {
+    root.activeElement = body;
+    const first = control(true);
+    const second = control(true);
+    focusFirstAvailable(asElements([first, second]), root);
+    expect(second.focus).not.toHaveBeenCalled();
+  });
+
+  it("focuses without scrolling the page", () => {
+    root.activeElement = body;
+    const first = control(true);
+    focusFirstAvailable(asElements([first]), root);
+    expect(first.focus).toHaveBeenCalledWith({ preventScroll: true });
+  });
+
+  it("answers nothing when no control takes focus", () => {
+    root.activeElement = body;
+    expect(focusFirstAvailable(asElements([control(false)]), root)).toBe(
+      undefined,
+    );
+  });
+});
+
+describe("recoverFocusIn", () => {
+  beforeEach(() => vi.stubGlobal("HTMLElement", FakeElement));
+
+  const focusRoot = (activeElement: unknown) => ({ activeElement, body });
+  const focusable = (root: { activeElement: unknown }) => {
+    const element = {
+      ...control("Invite member"),
+      focus: vi.fn(() => {
+        root.activeElement = element;
+      }),
+      contains: (node: unknown) => node === element,
+    };
+    return element;
+  };
+
+  it("focuses the first control left when focus fell to the body", () => {
+    const root = focusRoot(body);
+    const invite = focusable(root);
+    expect(recoverFocusIn(asElement(container([invite])), root)).toBe(invite);
+    expect(root.activeElement).toBe(invite);
+  });
+
+  it("never moves focus a person already moved elsewhere", () => {
+    const search = { tag: "search" };
+    const root = focusRoot(search);
+    const invite = focusable(root);
+    expect(
+      recoverFocusIn(asElement(container([invite])), root),
+    ).toBeUndefined();
+    expect(invite.focus).not.toHaveBeenCalled();
+    expect(root.activeElement).toBe(search);
   });
 });

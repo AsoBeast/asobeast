@@ -11,6 +11,7 @@ import type {
   WebhookItem,
   WorkspaceTeam,
 } from "@asobeast/shared";
+import { ALERT_EVENTS_COOKIE } from "./alert-feed-fixtures.mts";
 import { CROWDED_COOKIE } from "./actions-fixtures.mts";
 import { holdRender } from "./chart-image.mts";
 import { openEmbedded } from "./embedded-checkout.mts";
@@ -21,6 +22,7 @@ import {
   APP_IMPORT_FOCUS_ID,
   AWAITING_ALERT_COOKIE,
   CROWDED_COMPETITORS_COOKIE,
+  RANKINGS_FAIL_COOKIE,
   TOP_CHART_DATES,
   WEBHOOK_PAIR,
   WEBHOOK_PAIR_COOKIE,
@@ -2868,4 +2870,46 @@ test("Analyze creative keeps focus while it queues, then hands it to the panel h
   await expect(
     panel.getByRole("heading", { name: "AI creative analysis" }),
   ).toBeFocused();
+});
+
+test("Retry keeps focus in the alerts card when the read recovers", async ({
+  page,
+  context,
+}) => {
+  await seedCookie(context, ALERT_EVENTS_COOKIE, "error");
+  await page.goto("/");
+  const card = page
+    .getByRole("heading", { name: "Alerts", level: 2 })
+    .locator("xpath=ancestor::*[@data-slot='card'][1]");
+  const retry = card.getByRole("button", { name: "Retry" });
+  await expect(retry).toBeVisible();
+  await context.clearCookies({ name: ALERT_EVENTS_COOKIE });
+
+  await pressFromKeyboard(retry);
+
+  await expect(card.getByRole("alert")).toHaveCount(0);
+  await expect(card.locator(":focus")).toHaveCount(1);
+  expect(await focusLeftForBody(page)).toBe(false);
+});
+
+test("Retry keeps the chart range when keyword dynamics recover", async ({
+  page,
+  context,
+}) => {
+  await seedCookie(context, RANKINGS_FAIL_COOKIE);
+  await page.goto("/apps/app-1/keywords?keywords=kw-1,kw-2,kw-3");
+  const panel = page.getByRole("region", { name: "Keyword dynamics" });
+  const retry = panel.getByRole("button", { name: "Retry" });
+  await expect(retry).toBeVisible({ timeout: 15_000 });
+  await context.clearCookies({ name: RANKINGS_FAIL_COOKIE });
+
+  await pressFromKeyboard(retry);
+
+  await expect(
+    panel.getByRole("region", { name: "Keyword rank positions" }),
+  ).toBeVisible();
+  const thirtyDays = panel.getByRole("tab", { name: "30d" });
+  await expect(thirtyDays).toHaveAttribute("aria-selected", "true");
+  await expect(thirtyDays).toBeFocused();
+  expect(new URL(page.url()).searchParams.get("range")).toBeNull();
 });

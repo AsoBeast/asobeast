@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   type RefCallback,
   type RefObject,
@@ -172,10 +173,40 @@ export function useFocusClaim(key: string): RefCallback<HTMLElement> {
   );
 }
 
-const FOCUSABLE = "a[href], button:not(:disabled)";
+const OUT_OF_REACH = '[aria-hidden="true"], [inert]';
+
+const tabbable = (...kinds: string[]) =>
+  kinds.map((kind) => `${kind}:not([tabindex="-1"])`).join(", ");
+
+const FOCUSABLE = tabbable("a[href]", "button:not(:disabled)");
+
+const RECOVERY_CANDIDATES = tabbable(
+  "a[href]",
+  "button:not(:disabled)",
+  'input:not(:disabled):not([type="hidden"])',
+  "select:not(:disabled)",
+  "textarea:not(:disabled)",
+  "[tabindex]",
+);
+
+const TAB_LIST = '[role="tablist"]';
+const SELECTED_TAB = '[role="tab"][aria-selected="true"]';
+
+const withinReach = (element: Element): boolean =>
+  element.closest(OUT_OF_REACH) === null;
+
+const focusTargets = (control: HTMLElement): HTMLElement[] => {
+  if (!control.matches(TAB_LIST)) return [control];
+  const selected = control.querySelector<HTMLElement>(SELECTED_TAB);
+  if (!selected) return [control];
+  return withinReach(selected) ? [selected] : [];
+};
+
+const reachableIn = (group: Element, selector: string): HTMLElement[] =>
+  [...group.querySelectorAll<HTMLElement>(selector)].filter(withinReach);
 
 export const firstFocusable = (group: Element | null): HTMLElement | null =>
-  group?.querySelector<HTMLElement>(FOCUSABLE) ?? null;
+  (group && reachableIn(group, FOCUSABLE)[0]) ?? null;
 
 export function useFocusGroupClaim(
   key: string,
@@ -192,4 +223,59 @@ export function useFocusGroupClaim(
   }, [key, controlPresent]);
 
   return group;
+}
+
+const RETRY_CONTAINER = `${CARD}, [role="dialog"], section`;
+
+export function recoveryCandidates(container: Element | null): HTMLElement[] {
+  if (!container?.isConnected) return [];
+  const controls = reachableIn(container, RECOVERY_CANDIDATES).flatMap(
+    focusTargets,
+  );
+  return container instanceof HTMLElement &&
+    container.hasAttribute("tabindex") &&
+    withinReach(container)
+    ? [...controls, container]
+    : controls;
+}
+
+const holdsFocus = (candidate: HTMLElement, root: FocusRoot): boolean => {
+  const active = root.activeElement;
+  return (
+    active === candidate ||
+    (active instanceof Node && candidate.contains(active))
+  );
+};
+
+export function focusFirstAvailable(
+  candidates: readonly HTMLElement[],
+  root: FocusRoot = document,
+): HTMLElement | undefined {
+  return candidates.find((candidate) => {
+    candidate.focus({ preventScroll: true });
+    return holdsFocus(candidate, root);
+  });
+}
+
+export function recoverFocusIn(
+  container: Element | null,
+  root: FocusRoot = document,
+): HTMLElement | undefined {
+  if (!focusIsLost(root)) return undefined;
+  return focusFirstAvailable(recoveryCandidates(container), root);
+}
+
+export function useRetryRecoveryFocus(): RefObject<HTMLButtonElement | null> {
+  const retry = useRef<HTMLButtonElement>(null);
+
+  useLayoutEffect(() => {
+    const button = retry.current;
+    const container = button?.closest(RETRY_CONTAINER) ?? null;
+    return () => {
+      if (!button || document.activeElement !== button) return;
+      queueMicrotask(() => recoverFocusIn(container));
+    };
+  }, []);
+
+  return retry;
 }
