@@ -129,7 +129,7 @@
     "eslint-plugin-prettier": "^5.5.7",
     "globals": "^17.13.0",
     "jest": "^30.5.2",
-    "mailauth": "^8.0.4",
+    "mailauth": "^8.0.6",
     "prettier": "^3.9.10",
     "prisma": "^7.10.1",
     "source-map-support": "^0.5.21",
