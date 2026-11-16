@@ -256,6 +256,27 @@ describe('parseAppStorePage', () => {
     expect(extract.appEvents).toHaveLength(1);
   });
 
+  it('answers null preview videos when a media shelf carries no item array', () => {
+    const extract = parseAppStorePage(
+      pageOf({ product_media_phone_: { $kind: 'Shelf' } }),
+    );
+
+    expect(extract.previewVideoUrls).toBeNull();
+  });
+
+  it('still counts a readable media shelf beside a malformed one', () => {
+    const extract = parseAppStorePage(
+      pageOf({
+        product_media_phone_: shelfOf([
+          { $kind: 'ProductMediaItem', video: { videoUrl: TRAILER_URL } },
+        ]),
+        product_media_pad_: { $kind: 'Shelf' },
+      }),
+    );
+
+    expect(extract.previewVideoUrls).toEqual([TRAILER_URL]);
+  });
+
   it('throws when the page embeds no serialized server data', () => {
     expect(() =>
       parseAppStorePage(

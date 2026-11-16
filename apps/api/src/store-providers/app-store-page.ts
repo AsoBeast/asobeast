@@ -90,7 +90,7 @@ function previewVideoUrls(shelves: Record<string, unknown>): string[] | null {
   const urls: string[] = [];
   let mediaShelves = 0;
   for (const [key, shelf] of Object.entries(shelves)) {
-    if (!PRODUCT_MEDIA_KEY.test(key)) {
+    if (!PRODUCT_MEDIA_KEY.test(key) || !hasItemArray(shelf)) {
       continue;
     }
     mediaShelves += 1;
@@ -102,6 +102,10 @@ function previewVideoUrls(shelves: Record<string, unknown>): string[] | null {
     }
   }
   return mediaShelves === 0 ? null : [...new Set(urls)];
+}
+
+function hasItemArray(shelf: unknown): boolean {
+  return Array.isArray(asRecord(shelf)?.items);
 }
 
 function appEvents(shelves: Record<string, unknown>): PageAppEvent[] {
