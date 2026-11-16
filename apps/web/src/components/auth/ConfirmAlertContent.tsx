@@ -4,12 +4,13 @@ import { useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useSingleFlight } from "@/lib/single-flight";
 import { confirmEmailAlert } from "@/lib/api";
 import {
   AlertLinkCard,
-  AlertSettingsLink,
   hasStatus,
   INVALID_LINK_STATUSES,
+  useResultFocus,
 } from "./AlertLinkCard";
 
 const EXPIRED_STATUS = 410;
@@ -18,18 +19,20 @@ export function ConfirmAlertContent() {
   const params = useSearchParams();
   const alertId = params.get("alert") ?? "";
   const token = params.get("token") ?? "";
+  const resultFocus = useResultFocus();
   const mutation = useMutation({
     mutationFn: () => confirmEmailAlert(alertId, token),
+    onSettled: resultFocus.hand,
   });
+  const sendOnce = useSingleFlight(mutation);
 
   if (alertId === "" || token === "") {
     return (
       <AlertLinkCard
         title="Confirmation link incomplete"
         description="Open the link from your confirmation email."
-      >
-        <AlertSettingsLink>Manage alerts in Settings</AlertSettingsLink>
-      </AlertLinkCard>
+        settingsLink="Manage alerts in Settings"
+      />
     );
   }
 
@@ -38,9 +41,8 @@ export function ConfirmAlertContent() {
       <AlertLinkCard
         title="Alert emails confirmed"
         description="This address will now receive the alerts it was added for. Every alert email has an unsubscribe link."
-      >
-        <AlertSettingsLink>Open settings</AlertSettingsLink>
-      </AlertLinkCard>
+        settingsLink="Open settings"
+      />
     );
   }
 
@@ -49,9 +51,8 @@ export function ConfirmAlertContent() {
       <AlertLinkCard
         title="This confirmation link is not valid"
         description="The alert may have been deleted, moved to another address or sent a newer link. Ask whoever added this address to resend the confirmation."
-      >
-        <AlertSettingsLink>Manage alerts in Settings</AlertSettingsLink>
-      </AlertLinkCard>
+        settingsLink="Manage alerts in Settings"
+      />
     );
   }
 
@@ -60,14 +61,14 @@ export function ConfirmAlertContent() {
       <AlertLinkCard
         title="This confirmation link has expired"
         description="Ask whoever added this address to resend the confirmation from Settings."
-      >
-        <AlertSettingsLink>Manage alerts in Settings</AlertSettingsLink>
-      </AlertLinkCard>
+        settingsLink="Manage alerts in Settings"
+      />
     );
   }
 
   return (
     <AlertLinkCard
+      key="ask"
       title={mutation.isError ? "Could not confirm" : "Confirm alert emails?"}
       description={
         mutation.isError
@@ -75,7 +76,14 @@ export function ConfirmAlertContent() {
           : "AsoBeast will start emailing this address about rank, listing and review changes. Every email has an unsubscribe link."
       }
     >
-      <Button disabled={mutation.isPending} onClick={() => mutation.mutate()}>
+      <Button
+        aria-disabled={mutation.isPending || undefined}
+        onClick={() => {
+          if (mutation.isPending) return;
+          resultFocus.hold();
+          sendOnce();
+        }}
+      >
         {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
         Confirm email address
       </Button>

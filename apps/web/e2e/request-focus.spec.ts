@@ -46,6 +46,7 @@ import {
   SERP_TRACK_PATH,
   showTrackedAfterAdd,
 } from "./serp-track.mts";
+import { test as signedOut } from "./reporting.mts";
 import { expect, test } from "./session.mts";
 import { STORE_CONNECTION_COOKIE } from "./store-connections.mts";
 import { startedSetup } from "./setup-session.mts";
@@ -2913,3 +2914,95 @@ test("Retry keeps the chart range when keyword dynamics recover", async ({
   await expect(thirtyDays).toBeFocused();
   expect(new URL(page.url()).searchParams.get("range")).toBeNull();
 });
+
+const answerServerError = (route: Route) =>
+  route.fulfill(
+    fulfillJson(500, {
+      statusCode: 500,
+      error: "Internal Server Error",
+      message: "The server encountered an unexpected error.",
+      path: new URL(route.request().url()).pathname,
+      timestamp: new Date().toISOString(),
+    }),
+  );
+
+const SIGNED_OUT_PASSWORD = "supersecret1";
+
+const SIGNED_OUT_CONTROLS: ReadonlyArray<{
+  name: string;
+  path: string;
+  request: RegExp;
+  cookie?: string;
+  fill: Record<string, string>;
+}> = [
+  {
+    name: "Sign in",
+    path: "/login",
+    request: /\/api\/backend\/auth\/login$/,
+    fill: { Email: "owner@example.com", Password: SIGNED_OUT_PASSWORD },
+  },
+  {
+    name: "Create account",
+    path: "/register",
+    request: /\/api\/backend\/auth\/register$/,
+    cookie: "e2e_setup_required",
+    fill: { Email: "owner@example.com", Password: SIGNED_OUT_PASSWORD },
+  },
+  {
+    name: "Email me a link",
+    path: "/forgot-password",
+    request: /\/api\/backend\/auth\/password\/forgot$/,
+    fill: { Email: "owner@example.com" },
+  },
+  {
+    name: "Set new password",
+    path: "/reset-password?token=recovery-token",
+    request: /\/api\/backend\/auth\/password\/reset$/,
+    fill: { "New password": SIGNED_OUT_PASSWORD },
+  },
+  {
+    name: "Accept invitation",
+    path: "/invite?token=invite-token",
+    request: /\/api\/backend\/workspace\/invites\/accept$/,
+    fill: { Password: SIGNED_OUT_PASSWORD },
+  },
+  {
+    name: "Confirm email address",
+    path: "/confirm-alert?alert=ea_focus&token=confirm-token",
+    request: /\/api\/backend\/email-alerts\/ea_focus\/confirm/,
+    fill: {},
+  },
+  {
+    name: "Unsubscribe",
+    path: "/unsubscribe?alert=ea_focus&token=unsubscribe-token",
+    request: /\/api\/backend\/email-alerts\/ea_focus\/unsubscribe/,
+    fill: {},
+  },
+];
+
+for (const control of SIGNED_OUT_CONTROLS) {
+  signedOut(
+    `${control.name} keeps focus while its signed out request runs`,
+    async ({ page, context }) => {
+      if (control.cookie) await seedCookie(context, control.cookie);
+      const held = await holdRequest(
+        page,
+        control.request,
+        "POST",
+        answerServerError,
+      );
+      await page.goto(control.path);
+      for (const [label, value] of Object.entries(control.fill)) {
+        await page.getByLabel(label, { exact: true }).fill(value);
+      }
+      const button = page.getByRole("button", {
+        name: control.name,
+        exact: true,
+      });
+
+      await pressFromKeyboard(button);
+
+      await expectFocusKeptWhileHeld(button, held);
+    },
+  );
+}

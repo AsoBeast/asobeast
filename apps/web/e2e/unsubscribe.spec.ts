@@ -47,9 +47,6 @@ test("unsubscribes with one request after the button is pressed", async ({
   await expect(
     page.getByRole("heading", { name: "You are unsubscribed" }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("link", { name: "Open settings" }),
-  ).toHaveAttribute("href", "/settings#email-alerts");
   expect(await callsFor(request, "ea_click")).toBe(1);
 });
 
@@ -63,12 +60,9 @@ test("explains a link that is no longer valid", async ({ page }) => {
   ).toBeVisible();
   await expect(
     page.getByText(
-      "The alert may have been deleted or moved to another address. Manage alerts in Settings instead.",
+      "The alert may have been deleted or moved to another address.",
     ),
   ).toBeVisible();
-  await expect(
-    page.getByRole("link", { name: "Manage alerts in Settings" }),
-  ).toHaveAttribute("href", "/settings#email-alerts");
 });
 
 test("asks for the link from the email when it is incomplete", async ({

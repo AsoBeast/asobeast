@@ -50,9 +50,11 @@ export function RegisterForm({ billing }: { billing: boolean }) {
       setError(authFieldError(err, "Could not create the account. Try again.")),
   });
   const submitOnce = useSingleFlight(mutation);
+  const locked = mutation.isPending || mutation.isSuccess || sessionDropped;
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (locked) return;
     setError(null);
     const problem = passwordError(password);
     if (problem) {
@@ -135,10 +137,7 @@ export function RegisterForm({ billing }: { billing: boolean }) {
                 offerSignIn
               />
             ) : null}
-            <Button
-              type="submit"
-              disabled={mutation.isPending || sessionDropped}
-            >
+            <Button type="submit" aria-disabled={locked || undefined}>
               {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
               Create account
             </Button>

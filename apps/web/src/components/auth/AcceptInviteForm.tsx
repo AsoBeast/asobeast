@@ -45,9 +45,11 @@ export function AcceptInviteForm({ billing }: { billing: boolean }) {
     },
   });
   const submitOnce = useSingleFlight(mutation);
+  const locked = mutation.isPending || mutation.isSuccess || sessionDropped;
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (locked) return;
     setError(null);
     const problem = passwordError(password);
     if (problem) {
@@ -125,7 +127,11 @@ export function AcceptInviteForm({ billing }: { billing: boolean }) {
               </p>
             </div>
             {error ? (
-              <p id="password-error" className="text-body text-destructive">
+              <p
+                id="password-error"
+                role="alert"
+                className="text-body text-destructive"
+              >
                 {error}
               </p>
             ) : null}
@@ -135,10 +141,7 @@ export function AcceptInviteForm({ billing }: { billing: boolean }) {
                 offerSignIn
               />
             ) : null}
-            <Button
-              type="submit"
-              disabled={mutation.isPending || sessionDropped}
-            >
+            <Button type="submit" aria-disabled={locked || undefined}>
               {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
               Accept invitation
             </Button>

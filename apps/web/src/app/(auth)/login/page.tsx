@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import { AuthCardSkeleton } from "@/components/auth/AuthCardSkeleton";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { getAuthStatus } from "@/lib/api";
 import { signedInDestination } from "@/lib/auth-routes";
@@ -17,7 +18,7 @@ export default async function LoginPage({
   }
 
   return (
-    <Suspense>
+    <Suspense fallback={<AuthCardSkeleton />}>
       <LoginForm />
     </Suspense>
   );

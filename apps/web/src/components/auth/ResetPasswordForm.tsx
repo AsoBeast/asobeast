@@ -19,15 +19,25 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useFocusClaim } from "@/lib/focus-handoff";
 import { useSingleFlight } from "@/lib/single-flight";
+import { useAnswerFocus } from "./use-answer-focus";
+
+const PASSWORD_SET_FOCUS_KEY = "password-set";
 
 export function ResetPasswordForm() {
   const token = useSearchParams().get("token") ?? "";
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  const {
+    watchForm,
+    hold: holdFocus,
+    hand: handFocus,
+  } = useAnswerFocus(PASSWORD_SET_FOCUS_KEY);
   const mutation = useMutation({
     mutationFn: () => resetPassword(token, password),
+    onSuccess: handFocus,
     onError: (err) => {
       setError(
         err instanceof ApiError
@@ -37,15 +47,18 @@ export function ResetPasswordForm() {
     },
   });
   const submitOnce = useSingleFlight(mutation);
+  const claimFocus = useFocusClaim(PASSWORD_SET_FOCUS_KEY);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (mutation.isPending) return;
     setError(null);
     const problem = passwordError(password);
     if (problem) {
       setError(problem);
       return;
     }
+    holdFocus();
     submitOnce();
   }
 
@@ -89,11 +102,17 @@ export function ResetPasswordForm() {
                 Your password is set. Sign in with it now.
               </p>
               <Button asChild>
-                <Link href="/login">Sign in</Link>
+                <Link ref={claimFocus} href="/login">
+                  Sign in
+                </Link>
               </Button>
             </div>
           ) : (
-            <form onSubmit={submit} className="flex flex-col gap-4">
+            <form
+              ref={watchForm}
+              onSubmit={submit}
+              className="flex flex-col gap-4"
+            >
               <div className="flex flex-col gap-2">
                 <Label htmlFor="password">New password</Label>
                 <Input
@@ -117,11 +136,18 @@ export function ResetPasswordForm() {
                 </p>
               </div>
               {error ? (
-                <p id="password-error" className="text-dense text-destructive">
+                <p
+                  id="password-error"
+                  role="alert"
+                  className="text-dense text-destructive"
+                >
                   {error}
                 </p>
               ) : null}
-              <Button type="submit" disabled={mutation.isPending}>
+              <Button
+                type="submit"
+                aria-disabled={mutation.isPending || undefined}
+              >
                 {mutation.isPending ? (
                   <Loader2 className="animate-spin" />
                 ) : null}

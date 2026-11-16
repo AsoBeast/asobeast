@@ -4,30 +4,33 @@ import { useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useSingleFlight } from "@/lib/single-flight";
 import { unsubscribeEmailAlert } from "@/lib/api";
 import {
   AlertLinkCard,
-  AlertSettingsLink,
   hasStatus,
   INVALID_LINK_STATUSES,
+  useResultFocus,
 } from "./AlertLinkCard";
 
 export function UnsubscribeContent() {
   const params = useSearchParams();
   const alertId = params.get("alert") ?? "";
   const token = params.get("token") ?? "";
+  const resultFocus = useResultFocus();
   const mutation = useMutation({
     mutationFn: () => unsubscribeEmailAlert(alertId, token),
+    onSettled: resultFocus.hand,
   });
+  const sendOnce = useSingleFlight(mutation);
 
   if (alertId === "" || token === "") {
     return (
       <AlertLinkCard
         title="Unsubscribe link incomplete"
         description="Open the link from your alert email."
-      >
-        <AlertSettingsLink>Manage alerts in Settings</AlertSettingsLink>
-      </AlertLinkCard>
+        settingsLink="Manage alerts in Settings"
+      />
     );
   }
 
@@ -36,9 +39,8 @@ export function UnsubscribeContent() {
       <AlertLinkCard
         title="You are unsubscribed"
         description="This address will not receive these alerts any more."
-      >
-        <AlertSettingsLink>Open settings</AlertSettingsLink>
-      </AlertLinkCard>
+        settingsLink="Open settings"
+      />
     );
   }
 
@@ -46,15 +48,15 @@ export function UnsubscribeContent() {
     return (
       <AlertLinkCard
         title="This unsubscribe link is not valid"
-        description="The alert may have been deleted or moved to another address. Manage alerts in Settings instead."
-      >
-        <AlertSettingsLink>Manage alerts in Settings</AlertSettingsLink>
-      </AlertLinkCard>
+        description="The alert may have been deleted or moved to another address."
+        settingsLink="Manage alerts in Settings"
+      />
     );
   }
 
   return (
     <AlertLinkCard
+      key="ask"
       title={mutation.isError ? "Could not unsubscribe" : "Stop email alerts?"}
       description={
         mutation.isError
@@ -62,7 +64,14 @@ export function UnsubscribeContent() {
           : "This address will stop receiving this AsoBeast email alert and will not be asked to confirm it again."
       }
     >
-      <Button disabled={mutation.isPending} onClick={() => mutation.mutate()}>
+      <Button
+        aria-disabled={mutation.isPending || undefined}
+        onClick={() => {
+          if (mutation.isPending) return;
+          resultFocus.hold();
+          sendOnce();
+        }}
+      >
         {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
         Unsubscribe
       </Button>

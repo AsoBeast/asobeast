@@ -6,7 +6,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { ApiError, login } from "@/lib/api";
-import { signedInDestination } from "@/lib/auth-routes";
+import { saysRegistrationClosed, signedInDestination } from "@/lib/auth-routes";
+import { useSingleFlight } from "@/lib/single-flight";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -20,6 +21,8 @@ import { Label } from "@/components/ui/label";
 import { SessionNotKeptAlert } from "./SessionNotKeptAlert";
 import { useAuth } from "./use-auth";
 import { useSessionEntry } from "./use-session-entry";
+
+const REFUSED_CREDENTIAL_STATUS = 401;
 
 export function LoginForm() {
   const params = useSearchParams();
@@ -39,11 +42,21 @@ export function LoginForm() {
       );
     },
   });
+  const submitOnce = useSingleFlight(mutation);
+  const locked = mutation.isPending || mutation.isSuccess;
+  const credentialRefused =
+    mutation.error instanceof ApiError &&
+    mutation.error.envelope.statusCode === REFUSED_CREDENTIAL_STATUS;
+  const credentialFieldProps = {
+    "aria-invalid": credentialRefused,
+    "aria-describedby": credentialRefused ? "login-error" : undefined,
+  };
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (locked) return;
     setError(null);
-    mutation.mutate();
+    submitOnce();
   }
 
   return (
@@ -56,7 +69,7 @@ export function LoginForm() {
           <CardDescription>Sign in to your AsoBeast workspace.</CardDescription>
         </CardHeader>
         <CardContent>
-          {params.get("registration") === "closed" ? (
+          {saysRegistrationClosed(params) ? (
             <p className="mb-4 text-dense text-muted-foreground">
               Registration is closed on this deployment. Ask the owner for an
               account.
@@ -74,7 +87,7 @@ export function LoginForm() {
                 spellCheck={false}
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                aria-invalid={error !== null}
+                {...credentialFieldProps}
                 required
               />
             </div>
@@ -95,17 +108,23 @@ export function LoginForm() {
                 autoComplete="current-password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                aria-invalid={error !== null}
+                {...credentialFieldProps}
                 required
               />
             </div>
             {error ? (
-              <p className="text-dense text-destructive">{error}</p>
+              <p
+                id="login-error"
+                role="alert"
+                className="text-dense text-destructive"
+              >
+                {error}
+              </p>
             ) : null}
             {sessionDropped ? (
               <SessionNotKeptAlert outcome="Your password was accepted." />
             ) : null}
-            <Button type="submit" disabled={mutation.isPending}>
+            <Button type="submit" aria-disabled={locked || undefined}>
               {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
               Sign in
             </Button>
