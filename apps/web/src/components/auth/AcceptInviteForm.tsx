@@ -127,7 +127,11 @@ export function AcceptInviteForm({ billing }: { billing: boolean }) {
               </p>
             </div>
             {error ? (
-              <p id="password-error" className="text-body text-destructive">
+              <p
+                id="password-error"
+                role="alert"
+                className="text-body text-destructive"
+              >
                 {error}
               </p>
             ) : null}

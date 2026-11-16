@@ -104,7 +104,9 @@ export function LoginForm() {
               />
             </div>
             {error ? (
-              <p className="text-dense text-destructive">{error}</p>
+              <p role="alert" className="text-dense text-destructive">
+                {error}
+              </p>
             ) : null}
             {sessionDropped ? (
               <SessionNotKeptAlert outcome="Your password was accepted." />
