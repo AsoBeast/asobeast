@@ -212,3 +212,32 @@ for (const link of ALERT_LINKS) {
     ).toHaveAttribute("href", "/settings#email-alerts");
   });
 }
+
+for (const [status, invalid] of [
+  [400, "true"],
+  [429, "false"],
+] as const) {
+  test(`a ${status} on the forgot password form leaves the email ${invalid === "true" ? "marked" : "valid"}`, async ({
+    page,
+  }) => {
+    await page.route(
+      "**/api/backend/auth/password/forgot",
+      refuse(status, "This address cannot get a recovery link."),
+    );
+    await page.goto("/forgot-password");
+    const email = page.getByLabel("Email");
+    await email.fill("owner@example.com");
+
+    await page.getByRole("button", { name: "Email me a link" }).click();
+
+    await expect(
+      page.getByText("This address cannot get a recovery link."),
+    ).toBeVisible();
+    await expect(email).toHaveAttribute("aria-invalid", invalid);
+    if (invalid === "true") {
+      await expect(email).toHaveAccessibleDescription(
+        "This address cannot get a recovery link.",
+      );
+    }
+  });
+}

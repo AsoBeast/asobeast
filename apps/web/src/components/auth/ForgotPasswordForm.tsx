@@ -18,6 +18,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useSingleFlight } from "@/lib/single-flight";
 
+const REFUSED_ADDRESS_STATUS = 400;
+
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +35,9 @@ export function ForgotPasswordForm() {
     },
   });
   const submitOnce = useSingleFlight(mutation);
+  const addressRefused =
+    mutation.error instanceof ApiError &&
+    mutation.error.envelope.statusCode === REFUSED_ADDRESS_STATUS;
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -78,12 +83,17 @@ export function ForgotPasswordForm() {
                   spellCheck={false}
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  aria-invalid={error !== null}
+                  aria-invalid={addressRefused}
+                  aria-describedby={addressRefused ? "email-error" : undefined}
                   required
                 />
               </div>
               {error ? (
-                <p role="alert" className="text-dense text-destructive">
+                <p
+                  id="email-error"
+                  role="alert"
+                  className="text-dense text-destructive"
+                >
                   {error}
                 </p>
               ) : null}
