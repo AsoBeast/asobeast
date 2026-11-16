@@ -341,3 +341,27 @@ for (const { request, path, fill, press, claims } of ANSWERED_REQUESTS) {
     await expect(home).toBeFocused();
   });
 }
+
+for (const { request, path, fill, press, claims } of ANSWERED_REQUESTS.filter(
+  (answered) => Object.keys(answered.fill).length > 0,
+)) {
+  test(`${press} hands focus on from a field the answer removes`, async ({
+    page,
+  }) => {
+    const held = await holdRequest(page, request, "POST", (route) =>
+      route.fulfill({ status: 204 }),
+    );
+    await page.goto(path);
+    for (const [label, value] of Object.entries(fill)) {
+      await page.getByLabel(label, { exact: true }).fill(value);
+    }
+
+    await pressFromKeyboard(page.getByRole("button", { name: press }));
+    await page.keyboard.press("Shift+Tab");
+    held.release();
+
+    await expect(
+      page.getByRole(claims.role, { name: claims.name, exact: true }),
+    ).toBeFocused();
+  });
+}

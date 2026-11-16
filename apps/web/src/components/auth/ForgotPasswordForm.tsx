@@ -27,10 +27,14 @@ export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const answerFocus = useAnswerFocus(LINK_SENT_FOCUS_KEY);
+  const {
+    watchForm,
+    hold: holdFocus,
+    hand: handFocus,
+  } = useAnswerFocus(LINK_SENT_FOCUS_KEY);
   const mutation = useMutation({
     mutationFn: () => requestPasswordReset(email),
-    onSuccess: answerFocus.hand,
+    onSuccess: handFocus,
     onError: (err) => {
       setError(
         err instanceof ApiError
@@ -49,7 +53,7 @@ export function ForgotPasswordForm() {
     event.preventDefault();
     if (mutation.isPending) return;
     setError(null);
-    answerFocus.hold();
+    holdFocus();
     submitOnce();
   }
 
@@ -80,7 +84,11 @@ export function ForgotPasswordForm() {
               </Button>
             </div>
           ) : (
-            <form onSubmit={submit} className="flex flex-col gap-4">
+            <form
+              ref={watchForm}
+              onSubmit={submit}
+              className="flex flex-col gap-4"
+            >
               <div className="flex flex-col gap-2">
                 <Label htmlFor="email">Email</Label>
                 <Input

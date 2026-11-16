@@ -30,10 +30,14 @@ export function ResetPasswordForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const answerFocus = useAnswerFocus(PASSWORD_SET_FOCUS_KEY);
+  const {
+    watchForm,
+    hold: holdFocus,
+    hand: handFocus,
+  } = useAnswerFocus(PASSWORD_SET_FOCUS_KEY);
   const mutation = useMutation({
     mutationFn: () => resetPassword(token, password),
-    onSuccess: answerFocus.hand,
+    onSuccess: handFocus,
     onError: (err) => {
       setError(
         err instanceof ApiError
@@ -54,7 +58,7 @@ export function ResetPasswordForm() {
       setError(problem);
       return;
     }
-    answerFocus.hold();
+    holdFocus();
     submitOnce();
   }
 
@@ -104,7 +108,11 @@ export function ResetPasswordForm() {
               </Button>
             </div>
           ) : (
-            <form onSubmit={submit} className="flex flex-col gap-4">
+            <form
+              ref={watchForm}
+              onSubmit={submit}
+              className="flex flex-col gap-4"
+            >
               <div className="flex flex-col gap-2">
                 <Label htmlFor="password">New password</Label>
                 <Input
