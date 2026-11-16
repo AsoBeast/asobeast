@@ -121,6 +121,30 @@ describe('detectExtractChanges', () => {
     ).toEqual(['e1']);
   });
 
+  it('keeps the first occurrence when one extract repeats an event id', () => {
+    const changes = detectExtractChanges(
+      factsOf(),
+      factsOf({
+        appEvents: [
+          eventOf('e1'),
+          eventOf('e1', { title: 'Duplicated event' }),
+        ],
+      }),
+    );
+
+    expect(changes).toHaveLength(1);
+    const detail = changes[0].detail as {
+      added: unknown[];
+      removed: unknown[];
+    };
+    expect(
+      detail.added.map((ref) => (ref as { appEventId: string }).appEventId),
+    ).toEqual(['e1']);
+    expect(detail.added.map((ref) => (ref as { title: string }).title)).toEqual(
+      ['Event e1'],
+    );
+  });
+
   it('ignores an event whose id stayed through title and date edits', () => {
     const changes = detectExtractChanges(
       factsOf({ appEvents: [eventOf('e1')] }),
@@ -185,6 +209,30 @@ describe('detectExtractChanges', () => {
     ]);
   });
 
+  it('keeps the first occurrence when one extract repeats a story id', () => {
+    const changes = detectExtractChanges(
+      factsOf(),
+      factsOf({
+        featuredStories: [
+          storyOf('s1'),
+          storyOf('s1', { title: 'Duplicated story' }),
+        ],
+      }),
+    );
+
+    expect(changes).toHaveLength(1);
+    const detail = changes[0].detail as {
+      added: unknown[];
+      removed: unknown[];
+    };
+    expect(
+      detail.added.map((ref) => (ref as { storyId: string }).storyId),
+    ).toEqual(['s1']);
+    expect(detail.added.map((ref) => (ref as { title: string }).title)).toEqual(
+      ['Story s1'],
+    );
+  });
+
   it('records the editors choice badge appearing with the next state', () => {
     const changes = detectExtractChanges(
       factsOf({ editorsChoice: { showsBadge: false, notes: null } }),
@@ -244,6 +292,17 @@ describe('detectExtractChanges', () => {
     const changes = detectExtractChanges(
       factsOf({ editorsChoice: { showsBadge: false, notes: null } }),
       factsOf({ editorsChoice: { showsBadge: false, notes: 'Still hidden' } }),
+    );
+
+    expect(changes).toEqual([]);
+  });
+
+  it('records nothing when a missing section becomes an unshown badge', () => {
+    const changes = detectExtractChanges(
+      factsOf({ editorsChoice: null }),
+      factsOf({
+        editorsChoice: { showsBadge: false, notes: 'Hidden beside a note' },
+      }),
     );
 
     expect(changes).toEqual([]);

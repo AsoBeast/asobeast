@@ -18,11 +18,17 @@ interface Keyed<T> {
   item: T;
 }
 
-const keyed = <T>(items: T[], idOf: (item: T) => string | null): Keyed<T>[] =>
-  items.flatMap((item) => {
+const keyed = <T>(items: T[], idOf: (item: T) => string | null): Keyed<T>[] => {
+  const seen = new Set<string>();
+  return items.flatMap((item) => {
     const id = idOf(item);
-    return id === null ? [] : [{ id, item }];
+    if (id === null || seen.has(id)) {
+      return [];
+    }
+    seen.add(id);
+    return [{ id, item }];
   });
+};
 
 function diffKeyed<T>(
   prev: Keyed<T>[],
