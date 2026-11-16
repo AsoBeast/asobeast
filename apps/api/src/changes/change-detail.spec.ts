@@ -20,6 +20,41 @@ describe('readChangeDetail', () => {
     expect(readChangeDetail(detail)).toEqual(detail);
   });
 
+  it('reads an app events detail', () => {
+    const detail = {
+      kind: 'events',
+      added: [
+        {
+          appEventId: 'e1',
+          title: 'Spring sale',
+          kind: 'APP_STORE_EVENT',
+          badge: 'AVAILABLE',
+          startsAt: '2026-11-20T00:00:00.000Z',
+          endsAt: null,
+        },
+      ],
+      removed: [],
+    };
+
+    expect(readChangeDetail(detail)).toEqual(detail);
+  });
+
+  it('reads a featuring detail', () => {
+    const detail = {
+      kind: 'featuring',
+      added: [{ storyId: 's1', heading: null, title: 'Editors talk' }],
+      removed: [{ storyId: 's2', heading: 'Featured', title: null }],
+    };
+
+    expect(readChangeDetail(detail)).toEqual(detail);
+  });
+
+  it('reads an editors choice detail', () => {
+    const detail = { kind: 'editorsChoice', showsBadge: true, notes: null };
+
+    expect(readChangeDetail(detail)).toEqual(detail);
+  });
+
   it.each([null, undefined, 'text', 7, {}, { kind: 'unknown' }])(
     'reads %j as no detail',
     (value) => {
@@ -30,6 +65,20 @@ describe('readChangeDetail', () => {
   it('refuses a detail whose lists are malformed', () => {
     expect(
       readChangeDetail({ kind: 'captions', added: [1], removed: [] }),
+    ).toBeNull();
+    expect(
+      readChangeDetail({
+        kind: 'events',
+        added: [{ title: 'No id' }],
+        removed: [],
+      }),
+    ).toBeNull();
+    expect(
+      readChangeDetail({
+        kind: 'editorsChoice',
+        showsBadge: 'yes',
+        notes: null,
+      }),
     ).toBeNull();
   });
 });

@@ -4,10 +4,11 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { App, Prisma, Store } from '@prisma/client';
+import { App, AppSnapshot, Prisma, Store } from '@prisma/client';
 import { assertStorefront, SnapshotDiffResult } from '@asobeast/shared';
 import { ChangesService } from '../changes/changes.service';
 import type { DetectedChange } from '../changes/change-detector';
+import { detectExtractChanges } from '../changes/extract-diff';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScreenshotQueue } from '../screenshots/screenshot-queue';
@@ -16,6 +17,7 @@ import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { StoreAppNotFoundError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { currencyOf } from '../store-providers/raw-facts';
+import { pageExtractFacts } from '../store-providers/page-extract-facts';
 import { NormalizedApp } from '../store-providers/types';
 import { StoreReportQueue } from '../store-connect/store-report-queue';
 import { snapshotIcon, toSnapshotData } from './apps.mapper';
@@ -167,6 +169,7 @@ export class ListingCaptureService {
           before,
           after,
         );
+    await this.recordExtractChanges(app, market, previous, snapshot);
     const listing = {
       ...snapshot,
       subtitleUnavailable: normalized.subtitleUnavailable,
@@ -205,6 +208,23 @@ export class ListingCaptureService {
       country: market,
       currency: currencyOf(snapshot.raw),
     };
+  }
+
+  private async recordExtractChanges(
+    app: App,
+    market: string,
+    previous: AppSnapshot | null,
+    snapshot: AppSnapshot,
+  ): Promise<void> {
+    const changes = detectExtractChanges(
+      pageExtractFacts(previous?.raw),
+      pageExtractFacts(snapshot.raw),
+    );
+    await this.changes.recordExtractChanges(
+      app.id,
+      { home: app.country, market },
+      changes,
+    );
   }
 
   private async releaseChangedFields(

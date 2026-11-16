@@ -3,6 +3,23 @@ import type { ChangeDetail } from '@asobeast/shared';
 
 const reference = z.object({ position: z.number().int(), url: z.string() });
 
+const nullableText = z.string().nullable();
+
+const appEventRef = z.object({
+  appEventId: z.string(),
+  title: nullableText,
+  kind: nullableText,
+  badge: nullableText,
+  startsAt: nullableText,
+  endsAt: nullableText,
+});
+
+const storyRef = z.object({
+  storyId: z.string(),
+  heading: nullableText,
+  title: nullableText,
+});
+
 const detailSchema = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('images'),
@@ -16,6 +33,21 @@ const detailSchema = z.discriminatedUnion('kind', [
     kind: z.literal('captions'),
     added: z.array(z.string()),
     removed: z.array(z.string()),
+  }),
+  z.object({
+    kind: z.literal('events'),
+    added: z.array(appEventRef),
+    removed: z.array(appEventRef),
+  }),
+  z.object({
+    kind: z.literal('featuring'),
+    added: z.array(storyRef),
+    removed: z.array(storyRef),
+  }),
+  z.object({
+    kind: z.literal('editorsChoice'),
+    showsBadge: z.boolean(),
+    notes: nullableText,
   }),
 ]);
 

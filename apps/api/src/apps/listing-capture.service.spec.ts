@@ -87,6 +87,7 @@ const build = (overrides: {
   syncFromSnapshot?: jest.Mock;
   recordRefresh?: jest.Mock;
   recordMarketRefresh?: jest.Mock;
+  recordExtractChanges?: jest.Mock;
   localized?: unknown[];
   app?: typeof APP | null;
   previous?: typeof SNAPSHOT | null;
@@ -149,6 +150,8 @@ const build = (overrides: {
     recordRefresh: overrides.recordRefresh ?? jest.fn().mockResolvedValue([]),
     recordMarketRefresh:
       overrides.recordMarketRefresh ?? jest.fn().mockResolvedValue([]),
+    recordExtractChanges:
+      overrides.recordExtractChanges ?? jest.fn().mockResolvedValue(undefined),
   } as unknown as ChangesService;
   const record = jest.fn().mockResolvedValue(2);
   const screenshots = { record } as unknown as ScreenshotRecorder;
@@ -525,6 +528,132 @@ describe('ListingCaptureService localized listings', () => {
     await service.refreshListing(APP.id, 'pl');
 
     expect(order).toEqual(['record', 'localizations']);
+  });
+});
+
+describe('ListingCaptureService extract changes', () => {
+  const extractOf = (eventIds: string[]): Record<string, unknown> => ({
+    pageExtract: {
+      previewVideoUrls: null,
+      appEvents: eventIds.map((appEventId) => ({
+        appEventId,
+        title: `Event ${appEventId}`,
+        kind: 'APP_STORE_EVENT',
+        badge: 'AVAILABLE',
+        startsAt: '2026-11-20T00:00:00.000Z',
+        endsAt: '2026-11-27T00:00:00.000Z',
+      })),
+      featuredStories: [],
+      editorsChoice: null,
+      accessibilityStatement: null,
+    },
+  });
+
+  const addedEvent = (appEventId: string) => ({
+    field: 'inAppEvents',
+    before: null,
+    after: null,
+    detail: {
+      kind: 'events',
+      added: [
+        {
+          appEventId,
+          title: `Event ${appEventId}`,
+          kind: 'APP_STORE_EVENT',
+          badge: 'AVAILABLE',
+          startsAt: '2026-11-20T00:00:00.000Z',
+          endsAt: '2026-11-27T00:00:00.000Z',
+        },
+      ],
+      removed: [],
+    },
+  });
+
+  it('records the extract changes of a home capture', async () => {
+    const recordExtractChanges = jest.fn().mockResolvedValue(undefined);
+    const { service } = build({
+      previous: { ...SNAPSHOT, raw: extractOf(['e1']) },
+      raw: extractOf(['e1', 'e2']),
+      recordExtractChanges,
+    });
+
+    await service.refresh(APP.id);
+
+    expect(recordExtractChanges).toHaveBeenCalledWith(
+      APP.id,
+      { home: APP.country, market: APP.country },
+      [addedEvent('e2')],
+    );
+  });
+
+  it('records the extract changes of a market capture in that market', async () => {
+    const recordExtractChanges = jest.fn().mockResolvedValue(undefined);
+    const { service } = build({
+      previous: { ...SNAPSHOT, raw: extractOf([]) },
+      raw: extractOf(['e1']),
+      recordExtractChanges,
+    });
+
+    await service.refreshListing(APP.id, 'de');
+
+    expect(recordExtractChanges).toHaveBeenCalledWith(
+      APP.id,
+      { home: APP.country, market: 'de' },
+      [addedEvent('e1')],
+    );
+  });
+
+  it('records nothing when neither raw carries a readable extract', async () => {
+    const recordExtractChanges = jest.fn().mockResolvedValue(undefined);
+    const { service } = build({
+      previous: SNAPSHOT,
+      raw: {},
+      recordExtractChanges,
+    });
+
+    await service.refresh(APP.id);
+
+    expect(recordExtractChanges).toHaveBeenCalledWith(
+      APP.id,
+      { home: APP.country, market: APP.country },
+      [],
+    );
+  });
+
+  it('records nothing when only the next capture read an extract', async () => {
+    const recordExtractChanges = jest.fn().mockResolvedValue(undefined);
+    const { service } = build({
+      raw: extractOf(['e1']),
+      recordExtractChanges,
+    });
+
+    await service.refresh(APP.id);
+
+    expect(recordExtractChanges).toHaveBeenCalledWith(
+      APP.id,
+      { home: APP.country, market: APP.country },
+      [],
+    );
+  });
+
+  it('records the extract changes after the metadata changes', async () => {
+    const order: string[] = [];
+    const { service } = build({
+      recordRefresh: jest.fn(() => {
+        order.push('metadata');
+        return Promise.resolve([]);
+      }),
+      recordExtractChanges: jest.fn(() => {
+        order.push('extract');
+        return Promise.resolve(undefined);
+      }),
+      previous: { ...SNAPSHOT, raw: extractOf([]) },
+      raw: extractOf(['e1']),
+    });
+
+    await service.refresh(APP.id);
+
+    expect(order).toEqual(['metadata', 'extract']);
   });
 });
 

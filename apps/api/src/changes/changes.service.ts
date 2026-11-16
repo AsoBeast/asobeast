@@ -263,6 +263,23 @@ export class ChangesService {
       : changes;
   }
 
+  async recordExtractChanges(
+    appId: string,
+    listing: { home: string; market: string },
+    changes: DetectedChange[],
+  ): Promise<void> {
+    if (changes.length === 0) {
+      return;
+    }
+    await this.prisma.changeEvent.createMany({
+      data: changes.map((change) => ({
+        ...eventData(appId, change),
+        country: storedMarket(listing.home, listing.market),
+        localization: null,
+      })),
+    });
+  }
+
   async recordCaptionChange(change: CaptionChange): Promise<void> {
     const recorded = await this.prisma.changeEvent.findFirst({
       where: {

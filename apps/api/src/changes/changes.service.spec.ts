@@ -847,4 +847,109 @@ describe('ChangesService', () => {
       expect(dispatch).not.toHaveBeenCalled();
     });
   });
+
+  describe('recordExtractChanges', () => {
+    const extractChanges = [
+      {
+        field: 'inAppEvents' as const,
+        before: null,
+        after: null,
+        detail: {
+          kind: 'events' as const,
+          added: [
+            {
+              appEventId: 'e1',
+              title: 'Spring sale',
+              kind: 'APP_STORE_EVENT',
+              badge: 'AVAILABLE',
+              startsAt: '2026-11-20T00:00:00.000Z',
+              endsAt: '2026-11-27T00:00:00.000Z',
+            },
+          ],
+          removed: [],
+        },
+      },
+      {
+        field: 'editorsChoice' as const,
+        before: null,
+        after: null,
+        detail: {
+          kind: 'editorsChoice' as const,
+          showsBadge: true,
+          notes: null,
+        },
+      },
+    ];
+
+    it('persists the extract rows of a home capture and sends no alert', async () => {
+      await service.recordExtractChanges(
+        'app_1',
+        { home: 'us', market: 'us' },
+        extractChanges,
+      );
+
+      expect(createMany).toHaveBeenCalledWith({
+        data: [
+          {
+            appId: 'app_1',
+            country: null,
+            localization: null,
+            field: 'inAppEvents',
+            before: null,
+            after: null,
+            detail: {
+              kind: 'events',
+              added: [
+                {
+                  appEventId: 'e1',
+                  title: 'Spring sale',
+                  kind: 'APP_STORE_EVENT',
+                  badge: 'AVAILABLE',
+                  startsAt: '2026-11-20T00:00:00.000Z',
+                  endsAt: '2026-11-27T00:00:00.000Z',
+                },
+              ],
+              removed: [],
+            },
+          },
+          {
+            appId: 'app_1',
+            country: null,
+            localization: null,
+            field: 'editorsChoice',
+            before: null,
+            after: null,
+            detail: { kind: 'editorsChoice', showsBadge: true, notes: null },
+          },
+        ],
+      });
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+
+    it('persists the extract rows of a market capture in that market', async () => {
+      await service.recordExtractChanges(
+        'app_1',
+        { home: 'us', market: 'de' },
+        extractChanges,
+      );
+
+      const [{ data }] = createMany.mock.calls[0] as [
+        { data: Array<Record<string, unknown>> },
+      ];
+      expect(data.map((row) => row.country)).toEqual(['de', 'de']);
+      expect(data.map((row) => row.localization)).toEqual([null, null]);
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+
+    it('writes nothing when the capture read no extract change', async () => {
+      await service.recordExtractChanges(
+        'app_1',
+        { home: 'us', market: 'us' },
+        [],
+      );
+
+      expect(createMany).not.toHaveBeenCalled();
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+  });
 });
