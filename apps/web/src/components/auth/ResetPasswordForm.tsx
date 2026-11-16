@@ -19,7 +19,10 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
 import { useSingleFlight } from "@/lib/single-flight";
+
+const PASSWORD_SET_FOCUS_KEY = "password-set";
 
 export function ResetPasswordForm() {
   const token = useSearchParams().get("token") ?? "";
@@ -37,6 +40,7 @@ export function ResetPasswordForm() {
     },
   });
   const submitOnce = useSingleFlight(mutation);
+  const claimFocus = useFocusClaim(PASSWORD_SET_FOCUS_KEY);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -47,6 +51,7 @@ export function ResetPasswordForm() {
       setError(problem);
       return;
     }
+    armFocusHandoff(PASSWORD_SET_FOCUS_KEY);
     submitOnce();
   }
 
@@ -90,7 +95,9 @@ export function ResetPasswordForm() {
                 Your password is set. Sign in with it now.
               </p>
               <Button asChild>
-                <Link href="/login">Sign in</Link>
+                <Link ref={claimFocus} href="/login">
+                  Sign in
+                </Link>
               </Button>
             </div>
           ) : (

@@ -16,9 +16,11 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
 import { useSingleFlight } from "@/lib/single-flight";
 
 const REFUSED_ADDRESS_STATUS = 400;
+const LINK_SENT_FOCUS_KEY = "recovery-link-sent";
 
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
@@ -35,6 +37,7 @@ export function ForgotPasswordForm() {
     },
   });
   const submitOnce = useSingleFlight(mutation);
+  const claimFocus = useFocusClaim(LINK_SENT_FOCUS_KEY);
   const addressRefused =
     mutation.error instanceof ApiError &&
     mutation.error.envelope.statusCode === REFUSED_ADDRESS_STATUS;
@@ -43,6 +46,7 @@ export function ForgotPasswordForm() {
     event.preventDefault();
     if (mutation.isPending) return;
     setError(null);
+    armFocusHandoff(LINK_SENT_FOCUS_KEY);
     submitOnce();
   }
 
@@ -67,7 +71,9 @@ export function ForgotPasswordForm() {
                 link expires in an hour.
               </p>
               <Button asChild variant="outline">
-                <Link href="/login">Back to sign in</Link>
+                <Link ref={claimFocus} href="/login">
+                  Back to sign in
+                </Link>
               </Button>
             </div>
           ) : (

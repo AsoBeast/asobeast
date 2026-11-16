@@ -12,11 +12,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ApiError } from "@/lib/api";
+import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
 import { useAuth } from "./use-auth";
 
 const ALERT_SETTINGS = `${SETTINGS_PATH}#email-alerts`;
 
 export const INVALID_LINK_STATUSES = [400, 404];
+
+const RESULT_FOCUS_KEY = "alert-link-result";
+
+export const armResultFocus = () => armFocusHandoff(RESULT_FOCUS_KEY);
 
 interface AlertLinkCardProps {
   title: string;
@@ -32,6 +37,7 @@ export function AlertLinkCard({
   children,
 }: AlertLinkCardProps) {
   const { authenticated } = useAuth();
+  const claimFocus = useFocusClaim(RESULT_FOCUS_KEY);
   const action =
     children ??
     (settingsLink && authenticated ? (
@@ -44,7 +50,9 @@ export function AlertLinkCard({
     <Card className="mx-auto w-full max-w-sm">
       <CardHeader>
         <CardTitle asChild>
-          <h1>{title}</h1>
+          <h1 ref={claimFocus} tabIndex={-1} className="outline-none">
+            {title}
+          </h1>
         </CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>

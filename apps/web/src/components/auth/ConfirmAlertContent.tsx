@@ -8,6 +8,7 @@ import { useSingleFlight } from "@/lib/single-flight";
 import { confirmEmailAlert } from "@/lib/api";
 import {
   AlertLinkCard,
+  armResultFocus,
   hasStatus,
   INVALID_LINK_STATUSES,
 } from "./AlertLinkCard";
@@ -65,6 +66,7 @@ export function ConfirmAlertContent() {
 
   return (
     <AlertLinkCard
+      key="ask"
       title={mutation.isError ? "Could not confirm" : "Confirm alert emails?"}
       description={
         mutation.isError
@@ -75,7 +77,9 @@ export function ConfirmAlertContent() {
       <Button
         aria-disabled={mutation.isPending || undefined}
         onClick={() => {
-          if (!mutation.isPending) sendOnce();
+          if (mutation.isPending) return;
+          armResultFocus();
+          sendOnce();
         }}
       >
         {mutation.isPending ? <Loader2 className="animate-spin" /> : null}

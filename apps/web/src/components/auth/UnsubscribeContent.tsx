@@ -8,6 +8,7 @@ import { useSingleFlight } from "@/lib/single-flight";
 import { unsubscribeEmailAlert } from "@/lib/api";
 import {
   AlertLinkCard,
+  armResultFocus,
   hasStatus,
   INVALID_LINK_STATUSES,
 } from "./AlertLinkCard";
@@ -53,6 +54,7 @@ export function UnsubscribeContent() {
 
   return (
     <AlertLinkCard
+      key="ask"
       title={mutation.isError ? "Could not unsubscribe" : "Stop email alerts?"}
       description={
         mutation.isError
@@ -63,7 +65,9 @@ export function UnsubscribeContent() {
       <Button
         aria-disabled={mutation.isPending || undefined}
         onClick={() => {
-          if (!mutation.isPending) sendOnce();
+          if (mutation.isPending) return;
+          armResultFocus();
+          sendOnce();
         }}
       >
         {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
