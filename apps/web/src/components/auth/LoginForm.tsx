@@ -22,6 +22,8 @@ import { SessionNotKeptAlert } from "./SessionNotKeptAlert";
 import { useAuth } from "./use-auth";
 import { useSessionEntry } from "./use-session-entry";
 
+const REFUSED_CREDENTIAL_STATUS = 401;
+
 export function LoginForm() {
   const params = useSearchParams();
   const { status } = useAuth();
@@ -42,6 +44,13 @@ export function LoginForm() {
   });
   const submitOnce = useSingleFlight(mutation);
   const locked = mutation.isPending || mutation.isSuccess;
+  const credentialRefused =
+    mutation.error instanceof ApiError &&
+    mutation.error.envelope.statusCode === REFUSED_CREDENTIAL_STATUS;
+  const credentialFieldProps = {
+    "aria-invalid": credentialRefused,
+    "aria-describedby": credentialRefused ? "login-error" : undefined,
+  };
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -78,7 +87,7 @@ export function LoginForm() {
                 spellCheck={false}
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                aria-invalid={error !== null}
+                {...credentialFieldProps}
                 required
               />
             </div>
@@ -99,12 +108,16 @@ export function LoginForm() {
                 autoComplete="current-password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                aria-invalid={error !== null}
+                {...credentialFieldProps}
                 required
               />
             </div>
             {error ? (
-              <p role="alert" className="text-dense text-destructive">
+              <p
+                id="login-error"
+                role="alert"
+                className="text-dense text-destructive"
+              >
                 {error}
               </p>
             ) : null}

@@ -54,6 +54,30 @@ test("a refused sign in announces why and marks both fields", async ({
   );
 });
 
+test("a throttled sign in leaves both fields valid", async ({ page }) => {
+  await signIn(
+    page,
+    refuse(
+      429,
+      "Too many attempts from this address. Try again in 42 seconds.",
+    ),
+  );
+
+  await expect(
+    page.getByText(
+      "Too many attempts from this address. Try again in 42 seconds.",
+    ),
+  ).toBeVisible();
+  await expect(page.getByLabel("Email")).toHaveAttribute(
+    "aria-invalid",
+    "false",
+  );
+  await expect(page.getByLabel("Password")).toHaveAttribute(
+    "aria-invalid",
+    "false",
+  );
+});
+
 const REFUSED_FORMS = [
   {
     form: "forgot password",
