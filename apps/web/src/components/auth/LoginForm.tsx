@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { ApiError, login } from "@/lib/api";
-import { signedInDestination } from "@/lib/auth-routes";
+import { saysRegistrationClosed, signedInDestination } from "@/lib/auth-routes";
 import { useSingleFlight } from "@/lib/single-flight";
 import { Button } from "@/components/ui/button";
 import {
@@ -60,7 +60,7 @@ export function LoginForm() {
           <CardDescription>Sign in to your AsoBeast workspace.</CardDescription>
         </CardHeader>
         <CardContent>
-          {params.get("registration") === "closed" ? (
+          {saysRegistrationClosed(params) ? (
             <p className="mb-4 text-dense text-muted-foreground">
               Registration is closed on this deployment. Ask the owner for an
               account.

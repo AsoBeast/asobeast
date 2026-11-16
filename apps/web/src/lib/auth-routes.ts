@@ -13,6 +13,17 @@ export function isPublicRoute(pathname: string): boolean {
   return (PUBLIC_ROUTES as readonly string[]).includes(pathname);
 }
 
+const REGISTRATION_PARAM = "registration";
+const REGISTRATION_CLOSED = "closed";
+
+export const REGISTRATION_CLOSED_LOGIN = `/login?${REGISTRATION_PARAM}=${REGISTRATION_CLOSED}`;
+
+export function saysRegistrationClosed(
+  params: Pick<URLSearchParams, "get">,
+): boolean {
+  return params.get(REGISTRATION_PARAM) === REGISTRATION_CLOSED;
+}
+
 export const REQUESTED_PATH_HEADER = "x-asobeast-requested-path";
 
 export function loginUrl(pathname: string, search: string): string {

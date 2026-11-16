@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { AuthUser } from "@asobeast/shared";
 import {
+  REGISTRATION_CLOSED_LOGIN,
+  saysRegistrationClosed,
   entryDestination,
   loginUrl,
   signInTarget,
@@ -106,5 +108,21 @@ describe("entryDestination", () => {
 
   it("lets an account that owes no step in, entitled or not", () => {
     expect(entryDestination(user({}), "indie")).toBe("/");
+  });
+});
+
+describe("saysRegistrationClosed", () => {
+  it("reads the notice the closed registration redirect carries", () => {
+    const { pathname, searchParams } = new URL(
+      REGISTRATION_CLOSED_LOGIN,
+      "http://placeholder",
+    );
+
+    expect(pathname).toBe("/login");
+    expect(saysRegistrationClosed(searchParams)).toBe(true);
+  });
+
+  it("stays quiet on a plain sign in address", () => {
+    expect(saysRegistrationClosed(new URLSearchParams())).toBe(false);
   });
 });
