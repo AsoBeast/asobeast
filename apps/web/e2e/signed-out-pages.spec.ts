@@ -135,3 +135,20 @@ test("a signed out page shows a skeleton while it loads", async ({
     page.getByRole("heading", { level: 1, name: "Reset your password" }),
   ).toBeVisible({ timeout: 15_000 });
 });
+
+test("a dead link sends a signed out visitor back to AsoBeast", async ({
+  page,
+}) => {
+  const response = await page.goto("/invite/expired-link");
+
+  expect(response?.status()).toBe(404);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Page not found" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Back to AsoBeast" }),
+  ).toHaveAttribute("href", "/");
+  await expect(
+    page.getByRole("link", { name: "Back to the dashboard" }),
+  ).toHaveCount(0);
+});
