@@ -16,8 +16,9 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
+import { useFocusClaim } from "@/lib/focus-handoff";
 import { useSingleFlight } from "@/lib/single-flight";
+import { useAnswerFocus } from "./use-answer-focus";
 
 const REFUSED_ADDRESS_STATUS = 400;
 const LINK_SENT_FOCUS_KEY = "recovery-link-sent";
@@ -26,9 +27,10 @@ export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  const answerFocus = useAnswerFocus(LINK_SENT_FOCUS_KEY);
   const mutation = useMutation({
     mutationFn: () => requestPasswordReset(email),
-    onSuccess: () => armFocusHandoff(LINK_SENT_FOCUS_KEY),
+    onSuccess: answerFocus.hand,
     onError: (err) => {
       setError(
         err instanceof ApiError
@@ -47,6 +49,7 @@ export function ForgotPasswordForm() {
     event.preventDefault();
     if (mutation.isPending) return;
     setError(null);
+    answerFocus.hold();
     submitOnce();
   }
 

@@ -8,18 +8,19 @@ import { useSingleFlight } from "@/lib/single-flight";
 import { unsubscribeEmailAlert } from "@/lib/api";
 import {
   AlertLinkCard,
-  armResultFocus,
   hasStatus,
   INVALID_LINK_STATUSES,
+  useResultFocus,
 } from "./AlertLinkCard";
 
 export function UnsubscribeContent() {
   const params = useSearchParams();
   const alertId = params.get("alert") ?? "";
   const token = params.get("token") ?? "";
+  const resultFocus = useResultFocus();
   const mutation = useMutation({
     mutationFn: () => unsubscribeEmailAlert(alertId, token),
-    onSettled: armResultFocus,
+    onSettled: resultFocus.hand,
   });
   const sendOnce = useSingleFlight(mutation);
 
@@ -66,7 +67,9 @@ export function UnsubscribeContent() {
       <Button
         aria-disabled={mutation.isPending || undefined}
         onClick={() => {
-          if (!mutation.isPending) sendOnce();
+          if (mutation.isPending) return;
+          resultFocus.hold();
+          sendOnce();
         }}
       >
         {mutation.isPending ? <Loader2 className="animate-spin" /> : null}

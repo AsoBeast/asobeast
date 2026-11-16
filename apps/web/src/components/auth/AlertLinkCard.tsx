@@ -12,7 +12,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ApiError } from "@/lib/api";
-import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
+import { useFocusClaim } from "@/lib/focus-handoff";
+import { useAnswerFocus } from "./use-answer-focus";
 import { useAuth } from "./use-auth";
 
 const ALERT_SETTINGS = `${SETTINGS_PATH}#email-alerts`;
@@ -21,7 +22,7 @@ export const INVALID_LINK_STATUSES = [400, 404];
 
 const RESULT_FOCUS_KEY = "alert-link-result";
 
-export const armResultFocus = () => armFocusHandoff(RESULT_FOCUS_KEY);
+export const useResultFocus = () => useAnswerFocus(RESULT_FOCUS_KEY);
 
 interface AlertLinkCardProps {
   title: string;

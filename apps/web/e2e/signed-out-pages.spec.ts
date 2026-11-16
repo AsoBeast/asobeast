@@ -315,3 +315,29 @@ for (const { request, path, fill, press, claims } of ANSWERED_REQUESTS) {
     ).toBeFocused();
   });
 }
+
+for (const { request, path, fill, press, claims } of ANSWERED_REQUESTS) {
+  test(`${press} leaves focus where the visitor moved it while the answer was on its way`, async ({
+    page,
+  }) => {
+    const held = await holdRequest(page, request, "POST", (route) =>
+      route.fulfill({ status: 204 }),
+    );
+    await page.goto(path);
+    for (const [label, value] of Object.entries(fill)) {
+      await page.getByLabel(label, { exact: true }).fill(value);
+    }
+    const home = page.getByRole("banner").getByRole("link", {
+      name: "AsoBeast",
+    });
+
+    await pressFromKeyboard(page.getByRole("button", { name: press }));
+    await home.focus();
+    held.release();
+
+    await expect(
+      page.getByRole(claims.role, { name: claims.name, exact: true }),
+    ).toBeVisible();
+    await expect(home).toBeFocused();
+  });
+}

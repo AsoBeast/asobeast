@@ -19,8 +19,9 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
+import { useFocusClaim } from "@/lib/focus-handoff";
 import { useSingleFlight } from "@/lib/single-flight";
+import { useAnswerFocus } from "./use-answer-focus";
 
 const PASSWORD_SET_FOCUS_KEY = "password-set";
 
@@ -29,9 +30,10 @@ export function ResetPasswordForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  const answerFocus = useAnswerFocus(PASSWORD_SET_FOCUS_KEY);
   const mutation = useMutation({
     mutationFn: () => resetPassword(token, password),
-    onSuccess: () => armFocusHandoff(PASSWORD_SET_FOCUS_KEY),
+    onSuccess: answerFocus.hand,
     onError: (err) => {
       setError(
         err instanceof ApiError
@@ -52,6 +54,7 @@ export function ResetPasswordForm() {
       setError(problem);
       return;
     }
+    answerFocus.hold();
     submitOnce();
   }
 
