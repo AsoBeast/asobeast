@@ -40,6 +40,7 @@ export function ResetPasswordForm() {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (mutation.isPending) return;
     setError(null);
     const problem = passwordError(password);
     if (problem) {
@@ -121,7 +122,10 @@ export function ResetPasswordForm() {
                   {error}
                 </p>
               ) : null}
-              <Button type="submit" disabled={mutation.isPending}>
+              <Button
+                type="submit"
+                aria-disabled={mutation.isPending || undefined}
+              >
                 {mutation.isPending ? (
                   <Loader2 className="animate-spin" />
                 ) : null}

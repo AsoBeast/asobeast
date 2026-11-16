@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { ApiError, login } from "@/lib/api";
 import { signedInDestination } from "@/lib/auth-routes";
+import { useSingleFlight } from "@/lib/single-flight";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -39,11 +40,14 @@ export function LoginForm() {
       );
     },
   });
+  const submitOnce = useSingleFlight(mutation);
+  const locked = mutation.isPending || mutation.isSuccess;
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (locked) return;
     setError(null);
-    mutation.mutate();
+    submitOnce();
   }
 
   return (
@@ -105,7 +109,7 @@ export function LoginForm() {
             {sessionDropped ? (
               <SessionNotKeptAlert outcome="Your password was accepted." />
             ) : null}
-            <Button type="submit" disabled={mutation.isPending}>
+            <Button type="submit" aria-disabled={locked || undefined}>
               {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
               Sign in
             </Button>

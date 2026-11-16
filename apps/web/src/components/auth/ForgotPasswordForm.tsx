@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useSingleFlight } from "@/lib/single-flight";
 
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
@@ -31,11 +32,13 @@ export function ForgotPasswordForm() {
       );
     },
   });
+  const submitOnce = useSingleFlight(mutation);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (mutation.isPending) return;
     setError(null);
-    mutation.mutate();
+    submitOnce();
   }
 
   return (
@@ -82,7 +85,10 @@ export function ForgotPasswordForm() {
               {error ? (
                 <p className="text-dense text-destructive">{error}</p>
               ) : null}
-              <Button type="submit" disabled={mutation.isPending}>
+              <Button
+                type="submit"
+                aria-disabled={mutation.isPending || undefined}
+              >
                 {mutation.isPending ? (
                   <Loader2 className="animate-spin" />
                 ) : null}

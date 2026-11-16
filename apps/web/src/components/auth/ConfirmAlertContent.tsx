@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useSingleFlight } from "@/lib/single-flight";
 import { confirmEmailAlert } from "@/lib/api";
 import {
   AlertLinkCard,
@@ -21,6 +22,7 @@ export function ConfirmAlertContent() {
   const mutation = useMutation({
     mutationFn: () => confirmEmailAlert(alertId, token),
   });
+  const sendOnce = useSingleFlight(mutation);
 
   if (alertId === "" || token === "") {
     return (
@@ -75,7 +77,12 @@ export function ConfirmAlertContent() {
           : "AsoBeast will start emailing this address about rank, listing and review changes. Every email has an unsubscribe link."
       }
     >
-      <Button disabled={mutation.isPending} onClick={() => mutation.mutate()}>
+      <Button
+        aria-disabled={mutation.isPending || undefined}
+        onClick={() => {
+          if (!mutation.isPending) sendOnce();
+        }}
+      >
         {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
         Confirm email address
       </Button>
