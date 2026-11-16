@@ -1,5 +1,6 @@
 import type { Page, Route } from "@playwright/test";
 import { fulfillJson } from "./plan-helpers.mts";
+import { seedCookies } from "./routes.mts";
 import { expect, test } from "./reporting.mts";
 
 const PASSWORD = "supersecret1";
@@ -115,3 +116,22 @@ for (const { form, path, request, fill, submit } of REFUSED_FORMS) {
     await expect(formAlert(page)).toHaveText("This link is no longer valid.");
   });
 }
+
+test("a signed out page shows a skeleton while it loads", async ({
+  page,
+  context,
+}) => {
+  await page.goto("/login");
+  await page.waitForLoadState("networkidle");
+  await seedCookies(context, { e2e_api_latency: "4000" });
+
+  await page.getByRole("link", { name: "Forgot password?" }).click();
+
+  await expect(page).toHaveURL(/\/forgot-password$/);
+  await expect(
+    page.getByRole("main").locator("[data-slot=skeleton]").first(),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Reset your password" }),
+  ).toBeVisible({ timeout: 15_000 });
+});
