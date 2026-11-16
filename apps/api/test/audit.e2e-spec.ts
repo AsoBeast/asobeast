@@ -432,7 +432,7 @@ describe('AuditController (e2e)', () => {
     });
   });
 
-  it('leaves the App Store preview video not measurable when the extract read no media shelf', async () => {
+  it('shows the App previews limitation when the extract read no media shelf', async () => {
     const app = await prisma.app.create({
       data: {
         workspaceId: DEFAULT_WORKSPACE_ID,
@@ -471,7 +471,7 @@ describe('AuditController (e2e)', () => {
       availability: 'not-measurable',
       score: null,
     });
-    expect(result.limitations?.map((item) => item.id)).not.toContain(
+    expect(result.limitations?.map((item) => item.id)).toContain(
       'preview-video-page',
     );
   });

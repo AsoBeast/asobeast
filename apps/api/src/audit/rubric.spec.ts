@@ -371,10 +371,9 @@ describe('computeAudit', () => {
     );
   });
 
-  it('leaves the App Store preview video not measurable without a page extract', () => {
+  it('shows the App previews limitation whenever the preview count is unknown', () => {
     const result = computeAudit({
       ...perfectContext(),
-      hasPageExtract: false,
       rawFacts: { ...perfectContext().rawFacts, previewVideoCount: null },
     });
     const video = result.factors.find((factor) => factor.id === 'previewVideo');
