@@ -175,6 +175,9 @@ test("a google play listing has no captions, localizations or keyword field", as
 }) => {
   await page.goto("/apps/app-gp/metadata");
 
+  await expect(
+    page.getByRole("region", { name: "Listing fields" }),
+  ).toBeVisible();
   await expect(status(page)).not.toContainText("screenshots");
   await expect(status(page)).not.toContainText("keyword field");
   await expect(
@@ -183,6 +186,7 @@ test("a google play listing has no captions, localizations or keyword field", as
   await expect(
     page.getByRole("heading", { name: "Screenshot captions" }),
   ).toHaveCount(0);
+  await expect(page.getByText("Not searched by the store")).toHaveCount(0);
 });
 
 test("the workbench fits a phone without sideways scroll", async ({ page }) => {
