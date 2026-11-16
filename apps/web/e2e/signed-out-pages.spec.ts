@@ -1,5 +1,6 @@
 import type { Page, Route } from "@playwright/test";
-import { fulfillJson } from "./plan-helpers.mts";
+import { VALID_CONFIRM_TOKEN, VALID_UNSUBSCRIBE_TOKEN } from "./fixtures.mts";
+import { fulfillJson, seedSession } from "./plan-helpers.mts";
 import { seedCookies } from "./routes.mts";
 import { expect, test } from "./reporting.mts";
 
@@ -152,3 +153,62 @@ test("a dead link sends a signed out visitor back to AsoBeast", async ({
     page.getByRole("link", { name: "Back to the dashboard" }),
   ).toHaveCount(0);
 });
+
+const ALERT_LINKS = [
+  {
+    page: "confirm alert",
+    path: "/confirm-alert",
+    alert: "ea_settings_confirm",
+    token: VALID_CONFIRM_TOKEN,
+    press: "Confirm email address",
+    done: "Alert emails confirmed",
+  },
+  {
+    page: "unsubscribe",
+    path: "/unsubscribe",
+    alert: "ea_settings_unsubscribe",
+    token: VALID_UNSUBSCRIBE_TOKEN,
+    press: "Unsubscribe",
+    done: "You are unsubscribed",
+  },
+] as const;
+
+for (const link of ALERT_LINKS) {
+  test(`the ${link.page} page offers no settings link to a visitor without an account`, async ({
+    page,
+  }) => {
+    await page.goto(link.path);
+    await page.waitForLoadState("networkidle");
+    expect(
+      await page
+        .getByRole("link", { name: "Manage alerts in Settings" })
+        .count(),
+    ).toBe(0);
+
+    await page.goto(`${link.path}?alert=${link.alert}&token=${link.token}`);
+    await page.getByRole("button", { name: link.press }).click();
+    await expect(page.getByRole("heading", { name: link.done })).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    expect(
+      await page.getByRole("link", { name: "Open settings" }).count(),
+    ).toBe(0);
+  });
+
+  test(`the ${link.page} page offers the settings link to a signed in viewer`, async ({
+    page,
+  }) => {
+    await seedSession(page);
+
+    await page.goto(link.path);
+    await expect(
+      page.getByRole("link", { name: "Manage alerts in Settings" }),
+    ).toHaveAttribute("href", "/settings#email-alerts");
+
+    await page.goto(`${link.path}?alert=${link.alert}&token=${link.token}`);
+    await page.getByRole("button", { name: link.press }).click();
+    await expect(page.getByRole("heading", { name: link.done })).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Open settings" }),
+    ).toHaveAttribute("href", "/settings#email-alerts");
+  });
+}

@@ -8,7 +8,6 @@ import { useSingleFlight } from "@/lib/single-flight";
 import { unsubscribeEmailAlert } from "@/lib/api";
 import {
   AlertLinkCard,
-  AlertSettingsLink,
   hasStatus,
   INVALID_LINK_STATUSES,
 } from "./AlertLinkCard";
@@ -27,9 +26,8 @@ export function UnsubscribeContent() {
       <AlertLinkCard
         title="Unsubscribe link incomplete"
         description="Open the link from your alert email."
-      >
-        <AlertSettingsLink>Manage alerts in Settings</AlertSettingsLink>
-      </AlertLinkCard>
+        settingsLink="Manage alerts in Settings"
+      />
     );
   }
 
@@ -38,9 +36,8 @@ export function UnsubscribeContent() {
       <AlertLinkCard
         title="You are unsubscribed"
         description="This address will not receive these alerts any more."
-      >
-        <AlertSettingsLink>Open settings</AlertSettingsLink>
-      </AlertLinkCard>
+        settingsLink="Open settings"
+      />
     );
   }
 
@@ -48,10 +45,9 @@ export function UnsubscribeContent() {
     return (
       <AlertLinkCard
         title="This unsubscribe link is not valid"
-        description="The alert may have been deleted or moved to another address. Manage alerts in Settings instead."
-      >
-        <AlertSettingsLink>Manage alerts in Settings</AlertSettingsLink>
-      </AlertLinkCard>
+        description="The alert may have been deleted or moved to another address."
+        settingsLink="Manage alerts in Settings"
+      />
     );
   }
 

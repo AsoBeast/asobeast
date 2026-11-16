@@ -1,3 +1,5 @@
+"use client";
+
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { SETTINGS_PATH } from "@asobeast/shared";
@@ -10,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ApiError } from "@/lib/api";
+import { useAuth } from "./use-auth";
 
 const ALERT_SETTINGS = `${SETTINGS_PATH}#email-alerts`;
 
@@ -18,14 +21,25 @@ export const INVALID_LINK_STATUSES = [400, 404];
 interface AlertLinkCardProps {
   title: string;
   description: string;
-  children: ReactNode;
+  settingsLink?: string;
+  children?: ReactNode;
 }
 
 export function AlertLinkCard({
   title,
   description,
+  settingsLink,
   children,
 }: AlertLinkCardProps) {
+  const { authenticated } = useAuth();
+  const action =
+    children ??
+    (settingsLink && authenticated ? (
+      <Button asChild variant="outline">
+        <Link href={ALERT_SETTINGS}>{settingsLink}</Link>
+      </Button>
+    ) : null);
+
   return (
     <Card className="mx-auto w-full max-w-sm">
       <CardHeader>
@@ -34,16 +48,10 @@ export function AlertLinkCard({
         </CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col gap-3">{children}</CardContent>
+      {action ? (
+        <CardContent className="flex flex-col gap-3">{action}</CardContent>
+      ) : null}
     </Card>
-  );
-}
-
-export function AlertSettingsLink({ children }: { children: ReactNode }) {
-  return (
-    <Button asChild variant="outline">
-      <Link href={ALERT_SETTINGS}>{children}</Link>
-    </Button>
   );
 }
 

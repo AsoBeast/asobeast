@@ -8,7 +8,6 @@ import { useSingleFlight } from "@/lib/single-flight";
 import { confirmEmailAlert } from "@/lib/api";
 import {
   AlertLinkCard,
-  AlertSettingsLink,
   hasStatus,
   INVALID_LINK_STATUSES,
 } from "./AlertLinkCard";
@@ -29,9 +28,8 @@ export function ConfirmAlertContent() {
       <AlertLinkCard
         title="Confirmation link incomplete"
         description="Open the link from your confirmation email."
-      >
-        <AlertSettingsLink>Manage alerts in Settings</AlertSettingsLink>
-      </AlertLinkCard>
+        settingsLink="Manage alerts in Settings"
+      />
     );
   }
 
@@ -40,9 +38,8 @@ export function ConfirmAlertContent() {
       <AlertLinkCard
         title="Alert emails confirmed"
         description="This address will now receive the alerts it was added for. Every alert email has an unsubscribe link."
-      >
-        <AlertSettingsLink>Open settings</AlertSettingsLink>
-      </AlertLinkCard>
+        settingsLink="Open settings"
+      />
     );
   }
 
@@ -51,9 +48,8 @@ export function ConfirmAlertContent() {
       <AlertLinkCard
         title="This confirmation link is not valid"
         description="The alert may have been deleted, moved to another address or sent a newer link. Ask whoever added this address to resend the confirmation."
-      >
-        <AlertSettingsLink>Manage alerts in Settings</AlertSettingsLink>
-      </AlertLinkCard>
+        settingsLink="Manage alerts in Settings"
+      />
     );
   }
 
@@ -62,9 +58,8 @@ export function ConfirmAlertContent() {
       <AlertLinkCard
         title="This confirmation link has expired"
         description="Ask whoever added this address to resend the confirmation from Settings."
-      >
-        <AlertSettingsLink>Manage alerts in Settings</AlertSettingsLink>
-      </AlertLinkCard>
+        settingsLink="Manage alerts in Settings"
+      />
     );
   }
 
