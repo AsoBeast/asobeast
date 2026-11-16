@@ -230,7 +230,7 @@ test("the tab runs once per visit", async ({ page }) => {
   await expect(row(page, "focus timer for adhd")).toBeVisible();
 
   await page.getByRole("tab", { name: "Search", exact: true }).click();
-  await expect(page.getByText("focus timer app")).toBeVisible();
+  await expect(row(page, "focus timer app")).toBeVisible();
   await page.getByRole("tab", { name: "Competitor searches" }).click();
   await expect(row(page, "focus timer for adhd")).toBeVisible();
 
