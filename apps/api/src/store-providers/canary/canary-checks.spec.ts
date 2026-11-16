@@ -116,7 +116,7 @@ describe('assertPageExtract', () => {
     );
   });
 
-  it('accepts an extract whose media shelves carry screenshots only', () => {
+  it('accepts an extract whose media shelves carry a preview video', () => {
     expect(() =>
       assertPageExtract(
         appOf({

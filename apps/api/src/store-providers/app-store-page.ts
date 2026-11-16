@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio';
+import { asRecord } from './record';
 
 export interface PageAppEvent {
   appEventId: string;
@@ -188,12 +189,6 @@ function itemsOf(shelf: unknown): Record<string, unknown>[] {
     const record = asRecord(item);
     return record === null ? [] : [record];
   });
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
 }
 
 function nonEmptyString(value: unknown): string | null {
