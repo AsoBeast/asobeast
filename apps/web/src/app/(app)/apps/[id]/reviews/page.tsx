@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { RatingByVersion } from "@/components/reviews/RatingByVersion";
 import { RatingsDistribution } from "@/components/reviews/RatingsDistribution";
+import { RatingsGoalCard } from "@/components/reviews/RatingsGoalCard";
 import { RatingsPanel } from "@/components/reviews/RatingsPanel";
 import { ReviewMentions } from "@/components/reviews/ReviewMentions";
 import { ReviewsLede } from "@/components/reviews/ReviewsLede";
@@ -109,6 +110,7 @@ export default async function ReviewsPage({
           </div>
           <div className={REVIEWS_RAIL}>
             <RatingsDistribution id={id} />
+            <RatingsGoalCard id={id} />
             <Suspense fallback={null}>
               <RatingByVersion id={id} />
             </Suspense>
