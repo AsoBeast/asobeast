@@ -88,6 +88,9 @@ describe('KeywordsService.syncFromSnapshot', () => {
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
         findMany: jest.fn().mockResolvedValue([]),
       },
+      keywordRanking: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
     };
   };
 
@@ -424,31 +427,54 @@ describe('KeywordsService.syncFromSnapshot', () => {
     expect(schedule).not.toHaveBeenCalled();
   });
 
-  it('checks the phrases a later snapshot adds before scoring them', async () => {
+  it('checks the phrases tracked today without a position before scoring them', async () => {
+    jest.useFakeTimers({
+      now: new Date('2026-11-17T15:26:01Z'),
+      doNotFake: ['nextTick', 'setImmediate'],
+    });
     const prisma = buildPrisma();
-    prisma.trackedKeyword.findMany.mockResolvedValue([{ keywordId: 'kw1' }]);
+    prisma.trackedKeyword.findMany.mockResolvedValue([
+      { keywordId: 'kw1' },
+      { keywordId: 'kw2' },
+    ]);
+    prisma.keywordRanking.findMany.mockResolvedValue([{ keywordId: 'kw1' }]);
     const queue = buildQueue();
     const schedule = jest.fn();
     const service = buildService(prisma, queue, schedule);
 
     await service.syncFromLaterSnapshot('app1');
+    jest.useRealTimers();
 
     const [{ data }] = prisma.trackedKeyword.createMany.mock.calls[0];
-    const added = data
-      .map((row) => row.keywordId)
-      .filter((keywordId) => keywordId !== 'kw1');
-    expect(added.length).toBeGreaterThan(0);
     expect(prisma.trackedKeyword.findMany).toHaveBeenCalledWith({
       where: {
         appId: 'app1',
+        active: true,
         keywordId: { in: data.map((row) => row.keywordId) },
+        createdAt: { gte: new Date('2026-11-17T00:00:00Z') },
       },
       select: { keywordId: true },
     });
-    expect(schedule).toHaveBeenCalledWith('app1', added);
+    expect(prisma.keywordRanking.findMany).toHaveBeenCalledWith({
+      where: { appId: 'app1', keywordId: { in: ['kw1', 'kw2'] } },
+      select: { keywordId: true },
+      distinct: ['keywordId'],
+    });
+    expect(schedule).toHaveBeenCalledWith('app1', ['kw2']);
     expect(schedule.mock.invocationCallOrder[0]).toBeLessThan(
       queue.add.mock.invocationCallOrder[0],
     );
+  });
+
+  it('reads no position when no phrase was tracked today', async () => {
+    const prisma = buildPrisma();
+    const schedule = jest.fn();
+    const service = buildService(prisma, buildQueue(), schedule);
+
+    await service.syncFromLaterSnapshot('app1');
+
+    expect(prisma.keywordRanking.findMany).not.toHaveBeenCalled();
+    expect(schedule).toHaveBeenCalledWith('app1', []);
   });
 
   it('checks nothing when a later snapshot adds no phrase', async () => {
