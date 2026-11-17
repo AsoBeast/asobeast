@@ -3,8 +3,8 @@ import {
   addUtcDays,
   DISCOVERY_CHECKS_PER_RUN,
   DISCOVERY_RECHECK_DAYS,
-  RANK_DEPTH,
 } from '@asobeast/shared';
+import { isCompleteReading } from './discovery-reading';
 
 export interface ScheduledRow {
   keywordId: string;
@@ -13,6 +13,7 @@ export interface ScheduledRow {
   relevance: number;
   position: number | null;
   depth: number | null;
+  ownSearch: boolean;
   checkedOn: string | null;
   dismissed: boolean;
 }
@@ -29,7 +30,7 @@ export function weekStartOf(now: Date): Date {
 }
 
 const missesDeepSearch = (row: ScheduledRow): boolean =>
-  row.position === null && row.depth !== null && row.depth < RANK_DEPTH;
+  row.position === null && row.depth !== null && !isCompleteReading(row);
 
 export function isDue(row: ScheduledRow, today: string): boolean {
   if (row.dismissed) return false;

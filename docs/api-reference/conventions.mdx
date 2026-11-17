@@ -20,13 +20,13 @@ A date you send must exist on the calendar, and a window must run forwards. A da
 
 ## Positions are 1 based and null is meaningful
 
-Position 1 is the top result. `null` means the keyword was checked and the app was not found within that row's `depth`, which defaults to 200.
+Position 1 is the top result. `null` means the keyword was checked and the app was not found within that row's `depth`.
 
 <Warning>
   Never coerce `null` to `0`. Zero is a better position than 1, so treating a missing app as zero makes every unranked keyword look like the best result and inverts every average, delta and trend you compute.
 </Warning>
 
-Render `null` as a bound derived from the row's own `depth`, such as `>200`. See [Positions and rank depth](/concepts/positions).
+Render `null` as a bound derived from the row's own `depth`, such as `>200` or `>30`. See [Positions and rank depth](/concepts/positions).
 
 ## Queued operations return 202
 

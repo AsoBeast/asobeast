@@ -52,7 +52,7 @@ curl --silent --fail "${auth[@]}" \
   "${ASOBEAST_URL}/apps/${app}/rankings?from=2026-07-01&to=2026-07-31" \
   > rankings.json
 
-jq -r '.series[] | [.text, (.points[-1].position // ">200")] | @csv' \
+jq -r '.series[] | [.text, (.points[-1] | .position // ">\(.depth)")] | @csv' \
   rankings.json > latest-positions.csv
 ```
 

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import {
   addUtcDays,
   CHECK_FRESH_DAYS,
@@ -10,12 +11,14 @@ import { PrismaService } from '../prisma/prisma.service';
 export interface CaptureReading {
   position: number | null;
   depth: number;
+  ownSearch: boolean;
   checkedOn: string;
 }
 
 interface KeywordCaptures {
   days: string[];
   positions: Map<string, number>;
+  held: Map<string, number>;
 }
 
 const utcDate = (day: string): Date => new Date(`${day}T00:00:00.000Z`);
@@ -28,13 +31,18 @@ const withinCapture = (position: number | undefined): position is number =>
 export function captureReading(
   captureDays: readonly string[],
   appPositions: ReadonlyMap<string, number>,
+  heldByDay: ReadonlyMap<string, number> = new Map(),
 ): CaptureReading | null {
   const newest = [...captureDays].sort().at(-1);
   if (newest === undefined) return null;
   const position = appPositions.get(newest);
   return {
     position: withinCapture(position) ? position : null,
-    depth: DISCOVERY_CAPTURE_DEPTH,
+    depth: Math.min(
+      heldByDay.get(newest) ?? DISCOVERY_CAPTURE_DEPTH,
+      DISCOVERY_CAPTURE_DEPTH,
+    ),
+    ownSearch: false,
     checkedOn: newest,
   };
 }
@@ -48,7 +56,11 @@ const capturesOf = (
 ): KeywordCaptures => {
   const known = byKeyword.get(keywordId);
   if (known) return known;
-  const created = { days: [], positions: new Map<string, number>() };
+  const created = {
+    days: [],
+    positions: new Map<string, number>(),
+    held: new Map<string, number>(),
+  };
   byKeyword.set(keywordId, created);
   return created;
 };
@@ -64,17 +76,32 @@ export class DiscoveryCaptures {
   ): Promise<Map<string, CaptureReading>> {
     const readings = new Map<string, CaptureReading>();
     if (keywordIds.length === 0) return readings;
-    const rows = await this.prisma.serpEntry.findMany({
-      where: {
-        keywordId: { in: [...keywordIds] },
-        date: {
-          gte: utcDate(addUtcDays(today, -CHECK_FRESH_DAYS)),
-          lte: utcDate(today),
-        },
-        OR: [{ position: 1 }, { storeAppId }],
+    const scope = {
+      keywordId: { in: [...keywordIds] },
+      date: {
+        gte: utcDate(addUtcDays(today, -CHECK_FRESH_DAYS)),
+        lte: utcDate(today),
       },
-      select: { keywordId: true, date: true, position: true, storeAppId: true },
-    });
+    };
+    const { rows, held } = await this.prisma.withTransaction(
+      async (tx) => ({
+        rows: await tx.serpEntry.findMany({
+          where: { ...scope, OR: [{ position: 1 }, { storeAppId }] },
+          select: {
+            keywordId: true,
+            date: true,
+            position: true,
+            storeAppId: true,
+          },
+        }),
+        held: await tx.serpEntry.groupBy({
+          by: ['keywordId', 'date'],
+          where: scope,
+          _max: { position: true },
+        }),
+      }),
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
     const byKeyword = new Map<string, KeywordCaptures>();
     for (const row of rows) {
       const { days, positions } = capturesOf(byKeyword, row.keywordId);
@@ -87,8 +114,16 @@ export class DiscoveryCaptures {
         );
       }
     }
-    for (const [keywordId, { days, positions }] of byKeyword) {
-      const reading = captureReading(days, positions);
+    for (const { keywordId, date, _max } of held) {
+      if (_max.position !== null) {
+        capturesOf(byKeyword, keywordId).held.set(
+          utcDayOf(date),
+          _max.position,
+        );
+      }
+    }
+    for (const [keywordId, { days, positions, held: depths }] of byKeyword) {
+      const reading = captureReading(days, positions, depths);
       if (reading) readings.set(keywordId, reading);
     }
     return readings;

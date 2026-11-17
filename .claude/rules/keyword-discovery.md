@@ -12,7 +12,7 @@ paths:
 
 The row:
 
-- `KeywordDiscovery` (RLS, `@@id([appId, keywordId])`) holds one proposed phrase per app. `source` is validated against `DISCOVERY_SOURCES` (`keywordSourceOf`, `keyword-discovery/discovery-pool.ts`, maps it to a `KeywordSource`); `depth` and `checkedOn` are null until checked; `queuedAt` is the weekly reservation; `seenAt` is stamped whenever the pool proposes the phrase and drives the 60 day retention (`KEYWORD_DISCOVERY_DAYS`); `dismissedAt` is permanent, and retention never prunes a dismissed row, because it keeps the phrase out of the pool.
+- `KeywordDiscovery` (RLS, `@@id([appId, keywordId])`) holds one proposed phrase per app. `source` is validated against `DISCOVERY_SOURCES` (`keywordSourceOf`, `keyword-discovery/discovery-pool.ts`, maps it to a `KeywordSource`); `depth` and `checkedOn` are null until checked; `ownSearch` is true when the reading came from the app's own `DISCOVER_KEYWORD` search; `queuedAt` is the weekly reservation; `seenAt` is stamped whenever the pool proposes the phrase and drives the 60 day retention (`KEYWORD_DISCOVERY_DAYS`); `dismissedAt` is permanent, and retention never prunes a dismissed row, because it keeps the phrase out of the pool.
 
 The pool:
 
@@ -21,7 +21,7 @@ The pool:
 
 Checking:
 
-- A position comes free from today's or yesterday's `SerpEntry` capture (`DiscoveryCaptures`, `depth` 50; a capture without the app is not final and the row stays due), or from one deferred `DISCOVER_KEYWORD` search to `RANK_DEPTH`. At most `DISCOVERY_CHECKS_PER_RUN` searches per app per ISO week, counted by `queuedAt` and reserved under a per app advisory lock (`DISCOVERY_LOCK`); a constant, not a plan limit, because it protects the host address. A row is due again after `DISCOVERY_RECHECK_DAYS`.
+- A position comes free from today's or yesterday's `SerpEntry` capture (`DiscoveryCaptures`, `depth` the deepest entry the capture holds, at most 50; a full 50 without the app is not final and the row stays due, `isCompleteReading`), or from one deferred `DISCOVER_KEYWORD` search, whose depth is as far as the store listed (`reachedDepth`: 200 for an empty list; a row searched before 1.17 keeps its stored 200 until searched again). At most `DISCOVERY_CHECKS_PER_RUN` searches per app per ISO week, counted by `queuedAt` and reserved under a per app advisory lock (`DISCOVERY_LOCK`); a constant, not a plan limit, because it protects the host address. A row is due again after `DISCOVERY_RECHECK_DAYS`.
 - `KeywordDiscoveryPlanner.plan` is the one entry for the weekly `CRON_DISCOVERY` sweep (`KeywordDiscoverySweep`, every still listed primary app of the workspaces `ActiveWorkspaces.forDailyRun` names, no spend) and for `POST /apps/{id}/keyword-discoveries/refresh`, which spends `spider` only when a check is queued and releases the reservation when the spend or enqueue fails. A delisted app and a market in `unlistedMarkets` get no search; only markets `loadAppMarkets` names are searched. A free capture that ranks a row is auto tracked as a check would be.
 - `DiscoveryCheck` runs in `StoreJobsHandler`, gated by `CollectionEligibility.forWorkspace`, searches through `SerpCapture`, stores the capture only when `CrossTenantAccess` counts no active tracker of the keyword, and never writes a `KeywordRanking` or `KeywordMetric`. No discovery check ever runs for a competitor.
 

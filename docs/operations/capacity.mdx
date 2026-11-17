@@ -32,7 +32,7 @@ These are measurements, taken against the memory ceilings the stack ships rather
 | `target` | 8,000 | 4,020 | 4.5 hours | 32,020 | 53.4 hours | 222% |
 | `stress` | 75,000 | 37,550 | 41.7 hours | 300,050 | 500.1 hours | 2,084% |
 
-Both columns count **requests**, which is what the store sees and what risks throttling. A depth 200 Google Play keyword search costs about eight requests where the Apple equivalent costs one, so a workload split evenly between the stores spends roughly eight times as long on Play as on Apple for the same number of keywords.
+Both columns count **requests**, which is what the store sees and what risks throttling. The estimate counts a Google Play keyword check as eight requests where the Apple equivalent costs one, so a workload split evenly between the stores spends roughly eight times as long on Play as on Apple for the same number of keywords. A Play check usually reads one page today, because Google usually lists about 30 apps, so the estimate is cautious for Play keywords.
 
 The `target` row does not finish inside a day. Apple's share does, comfortably; Play's does not, by a factor of two. That is the measured answer to whether one host carries 20 apps at 200 keywords across two storefronts and two stores: **it does not**, and the reason is `SCRAPE_GPLAY_RPM`, not the machine.
 

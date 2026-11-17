@@ -20,6 +20,7 @@ interface Row {
   relevance: number;
   position: number | null;
   depth: number | null;
+  ownSearch: boolean;
   checkedOn: Date | null;
   keyword: { text: string; country: string; metrics: Metric[] };
 }
@@ -30,6 +31,7 @@ const row = (keywordId: string, overrides: Partial<Row> = {}): Row => ({
   relevance: 70,
   position: null,
   depth: null,
+  ownSearch: false,
   checkedOn: null,
   keyword: { text: keywordId, country: 'us', metrics: [] },
   ...overrides,
@@ -39,7 +41,11 @@ interface Fixture {
   store?: Store;
   isCompetitor?: boolean;
   rows?: Row[];
-  queued?: { queuedAt: Date; checkedOn: Date | null; depth: number | null }[];
+  queued?: {
+    queuedAt: Date;
+    checkedOn: Date | null;
+    ownSearch: boolean;
+  }[];
   newestCheck?: Date | null;
   listed?: Map<string, number>;
   cron?: string;
@@ -159,7 +165,12 @@ describe('KeywordDiscoveryService.list', () => {
     const { service } = build({
       rows: [
         row('ranked a', { position: 3, depth: 50, relevance: 90 }),
-        row('ranked b', { position: 120, depth: 200, relevance: 80 }),
+        row('ranked b', {
+          position: 120,
+          depth: 200,
+          ownSearch: true,
+          relevance: 80,
+        }),
         row('open', { relevance: 60 }),
       ],
     });
@@ -176,7 +187,7 @@ describe('KeywordDiscoveryService.list', () => {
   it('reports the ranked rows the plan has no room for only while auto track is on', async () => {
     const rows = [
       row('ranked', { position: 3, depth: 50 }),
-      row('unranked', { depth: 200 }),
+      row('unranked', { depth: 200, ownSearch: true }),
     ];
     const off = build({ rows, unfit: 1 });
     expect((await off.service.list('app1', ALL, NOW)).unfit).toBe(0);
@@ -199,12 +210,12 @@ describe('KeywordDiscoveryService.list', () => {
         {
           queuedAt: new Date('2026-11-11T07:30:00Z'),
           checkedOn: null,
-          depth: null,
+          ownSearch: false,
         },
         {
           queuedAt: new Date('2026-11-09T07:30:00Z'),
           checkedOn: new Date('2026-11-09T00:00:00Z'),
-          depth: 200,
+          ownSearch: true,
         },
       ],
       newestCheck: new Date('2026-11-09T00:00:00Z'),
@@ -215,7 +226,7 @@ describe('KeywordDiscoveryService.list', () => {
         appId: 'app1',
         queuedAt: { gte: new Date('2026-11-09T00:00:00Z') },
       },
-      select: { queuedAt: true, checkedOn: true, depth: true },
+      select: { queuedAt: true, checkedOn: true, ownSearch: true },
     });
     expect(checks).toEqual({
       perWeek: 40,
@@ -233,12 +244,12 @@ describe('KeywordDiscoveryService.list', () => {
         {
           queuedAt: new Date('2026-11-08T22:00:00Z'),
           checkedOn: null,
-          depth: null,
+          ownSearch: false,
         },
         {
           queuedAt: new Date('2026-11-09T01:00:00Z'),
           checkedOn: null,
-          depth: null,
+          ownSearch: false,
         },
       ],
     });
@@ -248,7 +259,7 @@ describe('KeywordDiscoveryService.list', () => {
         appId: 'app1',
         queuedAt: { gte: new Date('2026-11-08T06:00:00Z') },
       },
-      select: { queuedAt: true, checkedOn: true, depth: true },
+      select: { queuedAt: true, checkedOn: true, ownSearch: true },
     });
     expect(checks).toMatchObject({ usedThisWeek: 1, pending: 2 });
   });

@@ -25,6 +25,7 @@ const row = (overrides: Partial<TrackRow> = {}): TrackRow => ({
   source: 'reviews',
   position: null,
   depth: null,
+  ownSearch: false,
   checkedOn: null,
   ...overrides,
 });
@@ -106,6 +107,7 @@ describe('DiscoveryTracker', () => {
           text: 'goals',
           position: null,
           depth: 200,
+          ownSearch: true,
           checkedOn: '2026-11-04',
         }),
         row({
@@ -113,6 +115,7 @@ describe('DiscoveryTracker', () => {
           text: 'old',
           position: 9,
           depth: 200,
+          ownSearch: true,
           checkedOn: '2026-11-02',
         }),
         row({ keywordId: 'k4', text: 'never' }),
@@ -146,6 +149,49 @@ describe('DiscoveryTracker', () => {
       ['k1', 'k2', 'k3', 'k4'],
       app,
     );
+  });
+
+  it('tracks an own search at depth 30 without the app as a known position', async () => {
+    const { service, tx, checks } = build(1);
+    await service.trackRows(
+      app,
+      [
+        row({
+          position: null,
+          depth: 30,
+          ownSearch: true,
+          checkedOn: TODAY,
+        }),
+      ],
+      TODAY,
+    );
+    expect(tx.keywordRanking.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          appId: 'app1',
+          workspaceId: 'ws',
+          keywordId: 'k1',
+          date: new Date(`${TODAY}T00:00:00.000Z`),
+          position: null,
+          depth: 30,
+        },
+      ],
+      skipDuplicates: true,
+    });
+    expect(checks.schedule).toHaveBeenCalledWith('app1', []);
+  });
+
+  it('tracks a short capture that held the whole list without the app as a known position', async () => {
+    const { service, tx } = build(1);
+    await service.trackRows(
+      app,
+      [row({ position: null, depth: 26, ownSearch: false, checkedOn: TODAY })],
+      TODAY,
+    );
+    expect(tx.keywordRanking.createMany).toHaveBeenCalledWith({
+      data: [expect.objectContaining({ position: null, depth: 26 })],
+      skipDuplicates: true,
+    });
   });
 
   it('schedules the deep check of a fresh capture that missed the app instead of recording it', async () => {

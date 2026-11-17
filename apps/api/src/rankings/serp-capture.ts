@@ -36,6 +36,9 @@ export function positionsByStoreAppId(
   return positions;
 }
 
+export const reachedDepth = (results: readonly SearchItem[]): number =>
+  results.length === 0 ? RANK_DEPTH : Math.min(results.length, RANK_DEPTH);
+
 export function serpEntryRows(
   keywordId: string,
   date: Date,
