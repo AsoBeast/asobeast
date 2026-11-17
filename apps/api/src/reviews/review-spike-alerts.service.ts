@@ -11,6 +11,7 @@ import {
   judgedDays,
   judgeSpike,
   REVIEW_SPIKE_BASELINE_DAYS,
+  reviewsOn,
   type DayCount,
 } from './review-spike';
 import { ReviewThemesService } from './review-themes.service';
@@ -80,9 +81,7 @@ export class ReviewSpikeAlerts {
       const spike = judgeSpike({
         day,
         counts,
-        insertedOnDay: inserted.filter(
-          (review) => review.updatedAt && utcDayOf(review.updatedAt) === day,
-        ).length,
+        insertedOnDay: reviewsOn(inserted, day).length,
         oldestDay: oldestAt ? utcDayOf(oldestAt) : null,
       });
       if (!spike) continue;

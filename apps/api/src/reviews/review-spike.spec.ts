@@ -3,6 +3,7 @@ import {
   judgedDays,
   judgeSpike,
   medianOf,
+  reviewsOn,
   spikeThreshold,
   type DayCount,
 } from './review-spike';
@@ -129,5 +130,25 @@ describe('judgedDays', () => {
         now,
       ),
     ).toEqual(['2026-11-02', '2026-11-03']);
+  });
+});
+
+describe('reviewsOn', () => {
+  const at = (iso?: string) => ({ updatedAt: iso ? new Date(iso) : undefined });
+
+  it('keeps the reviews dated that UTC day', () => {
+    const first = at('2026-11-02T00:00:00.000Z');
+    const last = at('2026-11-02T23:59:59.999Z');
+
+    expect(
+      reviewsOn(
+        [first, last, at('2026-11-03T00:00:00.000Z'), at()],
+        '2026-11-02',
+      ),
+    ).toEqual([first, last]);
+  });
+
+  it('keeps nothing for a day without reviews', () => {
+    expect(reviewsOn([at('2026-11-03T08:00:00.000Z')], DAY)).toEqual([]);
   });
 });

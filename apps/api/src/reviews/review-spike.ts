@@ -54,6 +54,15 @@ export function judgedDays(
   return [...new Set(days)].sort();
 }
 
+export const reviewsOn = <T extends { updatedAt?: Date }>(
+  reviews: readonly T[],
+  day: string,
+): T[] =>
+  reviews.filter(
+    (review) =>
+      review.updatedAt !== undefined && utcDayOf(review.updatedAt) === day,
+  );
+
 function baselineDays(day: string, oldestDay: string): string[] {
   return Array.from({ length: REVIEW_SPIKE_BASELINE_DAYS }, (_, back) =>
     addUtcDays(day, -(back + 1)),

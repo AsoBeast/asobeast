@@ -93,4 +93,71 @@ describe('ReviewThemesService.dayTheme', () => {
 
     await expect(service.dayTheme(APP, '2026-11-02')).resolves.toBeNull();
   });
+
+  it('merges pending reviews of the day into the shown set', async () => {
+    const findMany = jest
+      .fn()
+      .mockResolvedValueOnce(
+        Array.from({ length: 30 }, (_, index) => praise(index)),
+      )
+      .mockResolvedValueOnce([praise(99)]);
+    const service = new ReviewThemesService(
+      { review: { findMany } } as unknown as PrismaService,
+      { get: () => 2 } as unknown as ConfigService<Env, true>,
+    );
+    const pending = Array.from({ length: 4 }, (_, index) => ({
+      reviewId: `n${index}`,
+      score: 1,
+      text: 'the app crashes on launch every single time',
+      updatedAt: new Date('2026-11-02T09:00:00.000Z'),
+    }));
+
+    const theme = await service.dayTheme(APP, '2026-11-02', pending);
+
+    expect(theme).toEqual(
+      expect.objectContaining({
+        kind: 'complaint',
+        phrase: expect.stringContaining('crash') as string,
+      }),
+    );
+  });
+
+  it('keeps pending reviews of another day out of the shown set but in the baseline', async () => {
+    const without = build();
+    const withEarlier = build();
+    const earlier = [
+      {
+        reviewId: 'old',
+        score: 1,
+        text: 'the app crashes on launch every single time',
+        updatedAt: new Date('2026-11-01T09:00:00.000Z'),
+      },
+    ];
+
+    const expected = await without.service.dayTheme(APP, '2026-11-02');
+    const theme = await withEarlier.service.dayTheme(
+      APP,
+      '2026-11-02',
+      earlier,
+    );
+
+    expect(theme?.mentions).toBe(expected?.mentions);
+  });
+
+  it('reads the same two queries with pending reviews', async () => {
+    const plain = build();
+    const pending = build();
+
+    await plain.service.dayTheme(APP, '2026-11-02');
+    await pending.service.dayTheme(APP, '2026-11-02', [
+      {
+        reviewId: 'n1',
+        score: 1,
+        text: 'crashes',
+        updatedAt: new Date('2026-11-02T09:00:00.000Z'),
+      },
+    ]);
+
+    expect(pending.findMany.mock.calls).toEqual(plain.findMany.mock.calls);
+  });
 });

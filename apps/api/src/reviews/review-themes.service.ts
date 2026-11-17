@@ -13,11 +13,15 @@ import {
 import { Env } from '../config/env';
 import { listingLanguages } from '../keywords/listing-languages';
 import { PrismaService } from '../prisma/prisma.service';
+import type { ReviewResult } from '../store-providers/types';
 import { reviewOrder, ReviewScope, reviewsWhere } from './review-list-query';
+import { reviewsOn } from './review-spike';
 import {
+  newestFirst,
   REVIEW_THEMES_CAP,
   reviewThemes,
   themeIgnoredWords,
+  type DatedThemeReview,
   type ThemeOptions,
 } from './review-themes';
 
@@ -33,6 +37,16 @@ const THEMED_REVIEW = {
   text: true,
   score: true,
 } as const;
+
+const DAY_THEMED_REVIEW = { ...THEMED_REVIEW, reviewedAt: true } as const;
+
+const pendingThemeReview = (review: ReviewResult): DatedThemeReview => ({
+  id: `pending~${review.reviewId}`,
+  title: review.title ?? null,
+  text: review.text,
+  score: review.score,
+  reviewedAt: review.updatedAt ?? null,
+});
 
 @Injectable()
 export class ReviewThemesService {
@@ -92,13 +106,14 @@ export class ReviewThemesService {
   async dayTheme(
     app: ThemedApp & { id: string },
     day: string,
+    pending: readonly ReviewResult[] = [],
   ): Promise<ReviewSpikeTheme | null> {
     const [baseline, shown] = await Promise.all([
       this.prisma.review.findMany({
         where: { appId: app.id },
         orderBy: reviewOrder('newest'),
         take: REVIEW_THEMES_BASELINE,
-        select: THEMED_REVIEW,
+        select: DAY_THEMED_REVIEW,
       }),
       this.prisma.review.findMany({
         where: {
@@ -110,10 +125,22 @@ export class ReviewThemesService {
         },
         orderBy: reviewOrder('newest'),
         take: REVIEW_THEMES_CAP,
-        select: THEMED_REVIEW,
+        select: DAY_THEMED_REVIEW,
       }),
     ]);
-    const [top] = reviewThemes(baseline, shown, this.optionsFor(app));
+    const [top] = reviewThemes(
+      newestFirst(
+        baseline,
+        pending.map(pendingThemeReview),
+        REVIEW_THEMES_BASELINE,
+      ),
+      newestFirst(
+        shown,
+        reviewsOn(pending, day).map(pendingThemeReview),
+        REVIEW_THEMES_CAP,
+      ),
+      this.optionsFor(app),
+    );
     return top
       ? { phrase: top.phrase, kind: top.kind, mentions: top.mentions }
       : null;
