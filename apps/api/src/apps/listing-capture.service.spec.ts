@@ -104,6 +104,7 @@ const build = (overrides: {
       create: jest
         .fn()
         .mockResolvedValue({ ...SNAPSHOT, raw: overrides.raw ?? SNAPSHOT.raw }),
+      findFirst: jest.fn().mockResolvedValue(overrides.baseline ?? null),
     },
     app: { update: jest.fn().mockResolvedValue(APP), updateMany },
     $executeRaw: jest.fn().mockResolvedValue(1),
@@ -115,10 +116,7 @@ const build = (overrides: {
         .mockResolvedValue(overrides.app === undefined ? APP : overrides.app),
     },
     appSnapshot: {
-      findFirst: jest
-        .fn()
-        .mockResolvedValueOnce(overrides.previous ?? null)
-        .mockResolvedValue(overrides.baseline ?? null),
+      findFirst: jest.fn().mockResolvedValue(overrides.previous ?? null),
     },
     trackedKeyword: { count: jest.fn().mockResolvedValue(1) },
     keywordFieldSync: {
@@ -198,6 +196,7 @@ const build = (overrides: {
     tx,
     updateMany,
     findFirst: prisma.appSnapshot.findFirst,
+    txFindFirst: tx.appSnapshot.findFirst,
   };
 };
 
@@ -576,7 +575,7 @@ describe('ListingCaptureService extract changes', () => {
 
   it('records the extract changes of a home capture', async () => {
     const recordExtractChanges = jest.fn().mockResolvedValue(undefined);
-    const { service } = build({
+    const { service, tx } = build({
       previous: { ...SNAPSHOT, raw: extractOf(['e1']) },
       raw: extractOf(['e1', 'e2']),
       recordExtractChanges,
@@ -585,6 +584,7 @@ describe('ListingCaptureService extract changes', () => {
     await service.refresh(APP.id);
 
     expect(recordExtractChanges).toHaveBeenCalledWith(
+      tx,
       APP.id,
       { home: APP.country, market: APP.country },
       [addedEvent('e2')],
@@ -593,7 +593,7 @@ describe('ListingCaptureService extract changes', () => {
 
   it('records the extract changes of a market capture in that market', async () => {
     const recordExtractChanges = jest.fn().mockResolvedValue(undefined);
-    const { service } = build({
+    const { service, tx } = build({
       previous: { ...SNAPSHOT, raw: extractOf([]) },
       raw: extractOf(['e1']),
       recordExtractChanges,
@@ -602,6 +602,7 @@ describe('ListingCaptureService extract changes', () => {
     await service.refreshListing(APP.id, 'de');
 
     expect(recordExtractChanges).toHaveBeenCalledWith(
+      tx,
       APP.id,
       { home: APP.country, market: 'de' },
       [addedEvent('e1')],
@@ -610,7 +611,7 @@ describe('ListingCaptureService extract changes', () => {
 
   it('records nothing when neither raw carries a readable extract', async () => {
     const recordExtractChanges = jest.fn().mockResolvedValue(undefined);
-    const { service } = build({
+    const { service, tx } = build({
       previous: SNAPSHOT,
       raw: {},
       recordExtractChanges,
@@ -619,6 +620,7 @@ describe('ListingCaptureService extract changes', () => {
     await service.refresh(APP.id);
 
     expect(recordExtractChanges).toHaveBeenCalledWith(
+      tx,
       APP.id,
       { home: APP.country, market: APP.country },
       [],
@@ -627,7 +629,7 @@ describe('ListingCaptureService extract changes', () => {
 
   it('records nothing when no earlier snapshot read an extract', async () => {
     const recordExtractChanges = jest.fn().mockResolvedValue(undefined);
-    const { service } = build({
+    const { service, tx } = build({
       previous: { ...SNAPSHOT, raw: {} },
       raw: extractOf(['e1']),
       recordExtractChanges,
@@ -636,15 +638,41 @@ describe('ListingCaptureService extract changes', () => {
     await service.refresh(APP.id);
 
     expect(recordExtractChanges).toHaveBeenCalledWith(
+      tx,
       APP.id,
       { home: APP.country, market: APP.country },
       [],
     );
   });
 
+  it('records the extract changes inside the snapshot transaction', async () => {
+    const recordExtractChanges = jest
+      .fn()
+      .mockRejectedValue(new Error('extract write failed'));
+    const { service, tx } = build({
+      previous: { ...SNAPSHOT, raw: extractOf(['e1']) },
+      raw: extractOf(['e1', 'e2']),
+      recordExtractChanges,
+    });
+
+    await expect(service.refresh(APP.id)).rejects.toThrow(
+      'extract write failed',
+    );
+
+    expect(recordExtractChanges).toHaveBeenCalledWith(
+      tx,
+      APP.id,
+      { home: APP.country, market: APP.country },
+      [addedEvent('e2')],
+    );
+    expect(tx.appSnapshot.create.mock.invocationCallOrder[0]).toBeLessThan(
+      recordExtractChanges.mock.invocationCallOrder[0],
+    );
+  });
+
   it('diffs across a failed read against the newest earlier extract', async () => {
     const recordExtractChanges = jest.fn().mockResolvedValue(undefined);
-    const { service, findFirst } = build({
+    const { service, txFindFirst } = build({
       previous: { ...SNAPSHOT, raw: {} },
       baseline: { ...SNAPSHOT, id: 'snap_1', raw: extractOf(['e1']) },
       raw: extractOf(['e1', 'e2']),
@@ -654,11 +682,12 @@ describe('ListingCaptureService extract changes', () => {
     await service.refresh(APP.id);
 
     expect(recordExtractChanges).toHaveBeenCalledWith(
+      expect.anything(),
       APP.id,
       { home: APP.country, market: APP.country },
       [addedEvent('e2')],
     );
-    expect(findFirst).toHaveBeenNthCalledWith(2, {
+    expect(txFindFirst).toHaveBeenCalledWith({
       where: {
         appId: APP.id,
         country: null,
@@ -672,7 +701,7 @@ describe('ListingCaptureService extract changes', () => {
 
   it('diffs a market capture against the newest earlier market extract', async () => {
     const recordExtractChanges = jest.fn().mockResolvedValue(undefined);
-    const { service } = build({
+    const { service, tx } = build({
       previous: { ...SNAPSHOT, raw: {} },
       baseline: { ...SNAPSHOT, id: 'snap_1', raw: extractOf(['e1']) },
       raw: extractOf(['e1', 'e2']),
@@ -682,13 +711,14 @@ describe('ListingCaptureService extract changes', () => {
     await service.refreshListing(APP.id, 'de');
 
     expect(recordExtractChanges).toHaveBeenCalledWith(
+      tx,
       APP.id,
       { home: APP.country, market: 'de' },
       [addedEvent('e2')],
     );
   });
 
-  it('records the extract changes after the metadata changes', async () => {
+  it('records the extract changes with the snapshot before the metadata changes', async () => {
     const order: string[] = [];
     const { service } = build({
       recordRefresh: jest.fn(() => {
@@ -705,7 +735,7 @@ describe('ListingCaptureService extract changes', () => {
 
     await service.refresh(APP.id);
 
-    expect(order).toEqual(['metadata', 'extract']);
+    expect(order).toEqual(['extract', 'metadata']);
   });
 
   it('answers with the extract change the refresh recorded', async () => {

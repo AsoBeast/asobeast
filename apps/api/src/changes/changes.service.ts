@@ -264,6 +264,7 @@ export class ChangesService {
   }
 
   async recordExtractChanges(
+    tx: Prisma.TransactionClient,
     appId: string,
     listing: { home: string; market: string },
     changes: DetectedChange[],
@@ -271,7 +272,7 @@ export class ChangesService {
     if (changes.length === 0) {
       return [];
     }
-    await this.prisma.changeEvent.createMany({
+    await tx.changeEvent.createMany({
       data: changes.map((change) => ({
         ...eventData(appId, change),
         country: storedMarket(listing.home, listing.market),

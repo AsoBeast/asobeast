@@ -1,5 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { Prisma } from '@prisma/client';
 import { UnknownStorefrontError } from '@asobeast/shared';
 import { AlertsDispatcher } from '../alerts/alerts.dispatcher';
 import { PrismaService } from '../prisma/prisma.service';
@@ -849,6 +850,9 @@ describe('ChangesService', () => {
   });
 
   describe('recordExtractChanges', () => {
+    const tx = {
+      changeEvent: { createMany },
+    } as unknown as Prisma.TransactionClient;
     const extractChanges = [
       {
         field: 'inAppEvents' as const,
@@ -883,6 +887,7 @@ describe('ChangesService', () => {
 
     it('persists the extract rows of a home capture and sends no alert', async () => {
       await service.recordExtractChanges(
+        tx,
         'app_1',
         { home: 'us', market: 'us' },
         extractChanges,
@@ -928,6 +933,7 @@ describe('ChangesService', () => {
 
     it('persists the extract rows of a market capture in that market', async () => {
       await service.recordExtractChanges(
+        tx,
         'app_1',
         { home: 'us', market: 'de' },
         extractChanges,
@@ -943,6 +949,7 @@ describe('ChangesService', () => {
 
     it('writes nothing when the capture read no extract change', async () => {
       await service.recordExtractChanges(
+        tx,
         'app_1',
         { home: 'us', market: 'us' },
         [],

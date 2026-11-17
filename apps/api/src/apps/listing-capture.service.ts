@@ -125,6 +125,7 @@ export class ListingCaptureService {
     });
 
     let pending = 0;
+    let extractRecorded: DetectedChange[] = [];
     const snapshot = await this.prisma.withTransaction(async (tx) => {
       await lockListing(tx, app.id, market);
       const created = await tx.appSnapshot.create({
@@ -138,6 +139,13 @@ export class ListingCaptureService {
       pending = await this.screenshots.record(
         tx,
         { store: app.store, country: market },
+        created,
+      );
+      extractRecorded = await this.recordExtractChanges(
+        tx,
+        app,
+        market,
+        previous,
         created,
       );
       return created;
@@ -169,12 +177,6 @@ export class ListingCaptureService {
           before,
           after,
         );
-    const extractRecorded = await this.recordExtractChanges(
-      app,
-      market,
-      previous,
-      snapshot,
-    );
     const listing = {
       ...snapshot,
       subtitleUnavailable: normalized.subtitleUnavailable,
@@ -219,12 +221,14 @@ export class ListingCaptureService {
   }
 
   private async recordExtractChanges(
+    tx: Prisma.TransactionClient,
     app: App,
     market: string,
     previous: AppSnapshot | null,
     snapshot: AppSnapshot,
   ): Promise<DetectedChange[]> {
     const baseline = await this.extractBaseline(
+      tx,
       app,
       market,
       previous,
@@ -235,6 +239,7 @@ export class ListingCaptureService {
       pageExtractFacts(snapshot.raw),
     );
     await this.changes.recordExtractChanges(
+      tx,
       app.id,
       { home: app.country, market },
       changes,
@@ -243,6 +248,7 @@ export class ListingCaptureService {
   }
 
   private async extractBaseline(
+    tx: Prisma.TransactionClient,
     app: App,
     market: string,
     previous: AppSnapshot | null,
@@ -251,7 +257,7 @@ export class ListingCaptureService {
     if (previous && pageExtractFacts(previous.raw) !== null) {
       return previous;
     }
-    return this.prisma.appSnapshot.findFirst({
+    return tx.appSnapshot.findFirst({
       where: {
         appId: app.id,
         ...listingIn(app.country, market),
