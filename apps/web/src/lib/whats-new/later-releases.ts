@@ -101,7 +101,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "fixed",
         title: "A full list when you search the App Store",
-        text: "Searching the App Store by name when you import an app or add a competitor lists as many apps as you asked for, in the order your positions are checked.",
+        text: "Searching the App Store by name when you import an app or add a competitor lists as many apps as you asked for, in close to the order your positions are checked in.",
       },
     ],
   },
