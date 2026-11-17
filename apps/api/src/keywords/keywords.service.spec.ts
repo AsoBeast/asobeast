@@ -20,7 +20,11 @@ const quotaOff = (prisma: PrismaService) =>
 describe('KeywordsService.syncFromSnapshot', () => {
   const buildQueue = () => ({ add: jest.fn() });
 
-  const buildService = (prisma: unknown, queue: { add: jest.Mock }) =>
+  const buildService = (
+    prisma: unknown,
+    queue: { add: jest.Mock },
+    schedule: jest.Mock = jest.fn(),
+  ) =>
     new KeywordsService(
       prisma as PrismaService,
       new KeywordTracker(
@@ -31,7 +35,7 @@ describe('KeywordsService.syncFromSnapshot', () => {
       ),
       quotaOff(prisma as PrismaService),
       { request: jest.fn() } as unknown as MarketListingRequests,
-      { schedule: jest.fn() } as unknown as FirstPositionChecks,
+      { schedule } as unknown as FirstPositionChecks,
     );
 
   const buildPrisma = () => {
@@ -76,12 +80,14 @@ describe('KeywordsService.syncFromSnapshot', () => {
           Promise<{ count: number }>,
           [
             {
-              data: { source: string; active: boolean }[];
+              data: { keywordId: string; source: string; active: boolean }[];
               skipDuplicates: boolean;
             },
           ]
         >(),
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        findMany: jest.fn().mockResolvedValue([]),
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
     };
   };
@@ -408,6 +414,79 @@ describe('KeywordsService.syncFromSnapshot', () => {
     await service.syncFromSnapshot('app1');
 
     expect(prisma.trackedKeyword.createMany).not.toHaveBeenCalled();
+  });
+
+  it('leaves the first position checks of an import to its first run', async () => {
+    const schedule = jest.fn();
+    const service = buildService(buildPrisma(), buildQueue(), schedule);
+
+    await service.syncFromSnapshot('app1');
+
+    expect(schedule).not.toHaveBeenCalled();
+  });
+
+  it('checks the phrases a later snapshot adds before scoring them', async () => {
+    const prisma = buildPrisma();
+    prisma.trackedKeyword.findMany.mockResolvedValue([{ keywordId: 'kw1' }]);
+    const queue = buildQueue();
+    const schedule = jest.fn();
+    const service = buildService(prisma, queue, schedule);
+
+    await service.syncFromLaterSnapshot('app1');
+
+    const [{ data }] = prisma.trackedKeyword.createMany.mock.calls[0];
+    const added = data
+      .map((row) => row.keywordId)
+      .filter((keywordId) => keywordId !== 'kw1');
+    expect(added.length).toBeGreaterThan(0);
+    expect(prisma.trackedKeyword.findMany).toHaveBeenCalledWith({
+      where: {
+        appId: 'app1',
+        keywordId: { in: data.map((row) => row.keywordId) },
+      },
+      select: { keywordId: true },
+    });
+    expect(schedule).toHaveBeenCalledWith('app1', added);
+    expect(schedule.mock.invocationCallOrder[0]).toBeLessThan(
+      queue.add.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('stops tracking the phrases it added when their checks cannot be queued', async () => {
+    const prisma = buildPrisma();
+    prisma.trackedKeyword.findMany.mockResolvedValue([{ keywordId: 'kw1' }]);
+    const queue = buildQueue();
+    const schedule = jest
+      .fn()
+      .mockRejectedValue(new Error('redis is unreachable'));
+    const service = buildService(prisma, queue, schedule);
+
+    await expect(service.syncFromLaterSnapshot('app1')).rejects.toThrow(
+      'redis is unreachable',
+    );
+
+    const [, added] = schedule.mock.calls[0] as [string, string[]];
+    expect(added).not.toContain('kw1');
+    expect(prisma.trackedKeyword.deleteMany).toHaveBeenCalledWith({
+      where: { appId: 'app1', keywordId: { in: added } },
+    });
+    expect(queue.add).not.toHaveBeenCalled();
+  });
+
+  it('checks nothing when a later snapshot adds no phrase', async () => {
+    const prisma = buildPrisma();
+    prisma.app.findUnique.mockResolvedValue({
+      id: 'app1',
+      store: Store.APP_STORE,
+      country: 'us',
+      isCompetitor: true,
+    });
+    const schedule = jest.fn();
+    const service = buildService(prisma, buildQueue(), schedule);
+
+    await service.syncFromLaterSnapshot('app1');
+
+    expect(schedule).not.toHaveBeenCalled();
   });
 });
 

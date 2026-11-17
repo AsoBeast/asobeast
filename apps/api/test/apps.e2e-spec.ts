@@ -23,6 +23,8 @@ import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { KeywordDiscoveryPlanner } from '../src/keyword-discovery/discovery-planner.service';
 import { AppsService } from '../src/apps/apps.service';
 import { FirstRunScheduler } from '../src/apps/first-run.scheduler';
+import { FirstPositionChecks } from '../src/keywords/first-position-checks';
+import { ListingCaptureService } from '../src/apps/listing-capture.service';
 import { SubtitleBackfill } from '../src/apps/subtitle-backfill.service';
 import {
   firstRunCheckJobId,
@@ -1442,6 +1444,113 @@ describe('AppsController (e2e)', () => {
         (job) => job.name === JOBS.CHECK_KEYWORD,
       );
       expect(checks).toHaveLength(await trackedCount(imported.id));
+    });
+
+    const firstChecksMissing = async (
+      appId: string,
+      date: string,
+    ): Promise<string[]> => {
+      const queued = new Set(
+        (await jobsOn(QUEUES.APP_STORE))
+          .filter((job) => job.name === JOBS.CHECK_KEYWORD)
+          .map((job) => job.id),
+      );
+      const tracked = await prisma.trackedKeyword.findMany({
+        where: { appId, active: true },
+        select: { keywordId: true, keyword: { select: { text: true } } },
+      });
+      return tracked
+        .filter(
+          ({ keywordId }) =>
+            !queued.has(firstRunCheckJobId(appId, keywordId, date)),
+        )
+        .map(({ keyword }) => keyword.text);
+    };
+
+    it('checks the subtitle keywords a refresh tracks before the backfill lands', async () => {
+      const date = utcDateKey();
+      registry.subtitleUnavailable = true;
+      const imported = await importApp(APP_STORE_URL);
+      const [backfill] = (await jobsOn(QUEUES.APP_STORE)).filter(
+        (job) => job.name === JOBS.RESOLVE_SUBTITLE,
+      );
+      const trackedBefore = await trackedCount(imported.id);
+
+      registry.subtitleUnavailable = false;
+      await asWorkspace(app, () =>
+        app.get(ListingCaptureService).refreshListing(imported.id),
+      );
+      await asWorkspace(app, () =>
+        app
+          .get(SubtitleBackfill)
+          .resolve(backfill.data as ResolveSubtitlePayload),
+      );
+
+      expect(await trackedCount(imported.id)).toBeGreaterThan(trackedBefore);
+      expect(await firstChecksMissing(imported.id, date)).toEqual([]);
+    });
+
+    it('checks the keywords a refreshed title adds', async () => {
+      const date = utcDateKey();
+      const imported = await importApp(APP_STORE_URL);
+      const trackedBefore = await trackedCount(imported.id);
+
+      registry.title = 'Fixture App Quiz Maker';
+      await asWorkspace(app, () =>
+        app.get(ListingCaptureService).refreshListing(imported.id),
+      );
+
+      expect(await trackedCount(imported.id)).toBeGreaterThan(trackedBefore);
+      expect(await firstChecksMissing(imported.id, date)).toEqual([]);
+    });
+
+    it('checks the keywords a refresh tracked once a failed attempt is retried', async () => {
+      const date = utcDateKey();
+      const imported = await importApp(APP_STORE_URL);
+      const failing = jest
+        .spyOn(app.get(FirstPositionChecks), 'schedule')
+        .mockRejectedValueOnce(new Error('redis is unreachable'));
+
+      registry.title = 'Fixture App Quiz Maker';
+      await expect(
+        asWorkspace(app, () =>
+          app.get(ListingCaptureService).refreshListing(imported.id),
+        ),
+      ).rejects.toThrow('redis is unreachable');
+      await asWorkspace(app, () =>
+        app.get(ListingCaptureService).refreshListing(imported.id),
+      );
+
+      expect(failing).toHaveBeenCalledTimes(2);
+      failing.mockRestore();
+      expect(await firstChecksMissing(imported.id, date)).toEqual([]);
+    });
+
+    it('checks the subtitle keywords once a failed backfill attempt is retried', async () => {
+      const date = utcDateKey();
+      registry.subtitleUnavailable = true;
+      const imported = await importApp(APP_STORE_URL);
+      const [backfill] = (await jobsOn(QUEUES.APP_STORE)).filter(
+        (job) => job.name === JOBS.RESOLVE_SUBTITLE,
+      );
+      const trackedBefore = await trackedCount(imported.id);
+      const failing = jest
+        .spyOn(app.get(FirstPositionChecks), 'schedule')
+        .mockRejectedValueOnce(new Error('redis is unreachable'));
+
+      registry.subtitleUnavailable = false;
+      const resolve = () =>
+        asWorkspace(app, () =>
+          app
+            .get(SubtitleBackfill)
+            .resolve(backfill.data as ResolveSubtitlePayload),
+        );
+      await expect(resolve()).rejects.toThrow('redis is unreachable');
+      await resolve();
+
+      failing.mockRestore();
+      expect(await trackedCount(imported.id)).toBeGreaterThan(trackedBefore);
+      expect(await firstChecksMissing(imported.id, date)).toEqual([]);
     });
 
     it('fails the attempt while the product page stays unreadable', async () => {

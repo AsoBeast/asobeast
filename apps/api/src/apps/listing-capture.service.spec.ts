@@ -84,7 +84,7 @@ const lockCalls = (tx: { $executeRaw: jest.Mock }) =>
     .filter(({ call }) => statementOf(call).includes('pg_advisory_xact_lock'));
 
 const build = (overrides: {
-  syncFromSnapshot?: jest.Mock;
+  syncFromLaterSnapshot?: jest.Mock;
   recordRefresh?: jest.Mock;
   recordMarketRefresh?: jest.Mock;
   recordExtractChanges?: jest.Mock;
@@ -146,8 +146,8 @@ const build = (overrides: {
     through: (_store: Store, _country: string, work: () => unknown) => work(),
   } as unknown as ProxyEgress;
   const keywords = {
-    syncFromSnapshot:
-      overrides.syncFromSnapshot ?? jest.fn().mockResolvedValue(undefined),
+    syncFromLaterSnapshot:
+      overrides.syncFromLaterSnapshot ?? jest.fn().mockResolvedValue(undefined),
   } as unknown as KeywordsService;
   const changes = {
     recordRefresh: overrides.recordRefresh ?? jest.fn().mockResolvedValue([]),
@@ -244,7 +244,9 @@ describe('ListingCaptureService.refresh', () => {
 
   it('queues the screenshot read even when the keyword sync fails', async () => {
     const { service, request } = build({
-      syncFromSnapshot: jest.fn().mockRejectedValue(new Error('sync failed')),
+      syncFromLaterSnapshot: jest
+        .fn()
+        .mockRejectedValue(new Error('sync failed')),
     });
 
     await expect(service.refresh(APP.id)).rejects.toThrow('sync failed');
@@ -277,13 +279,13 @@ describe('ListingCaptureService.refreshListing', () => {
   });
 
   it('captures nothing once the app was deleted', async () => {
-    const syncFromSnapshot = jest.fn();
-    const { service, record } = build({ app: null, syncFromSnapshot });
+    const syncFromLaterSnapshot = jest.fn();
+    const { service, record } = build({ app: null, syncFromLaterSnapshot });
 
     await expect(service.refreshListing(APP.id)).resolves.toBeNull();
     await expect(service.refreshListing(APP.id, 'de')).resolves.toBeNull();
     expect(record).not.toHaveBeenCalled();
-    expect(syncFromSnapshot).not.toHaveBeenCalled();
+    expect(syncFromLaterSnapshot).not.toHaveBeenCalled();
   });
 });
 
@@ -485,7 +487,7 @@ describe('ListingCaptureService localized listings', () => {
   it('captures the localizations before the keyword sync reads them', async () => {
     const order: string[] = [];
     const { service, capture } = build({
-      syncFromSnapshot: jest.fn(() => {
+      syncFromLaterSnapshot: jest.fn(() => {
         order.push('sync');
         return Promise.resolve();
       }),

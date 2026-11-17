@@ -10,7 +10,6 @@ import {
   ResolveSubtitlePayload,
   resolveSubtitleJobId,
 } from '../jobs/jobs.types';
-import { FirstPositionChecks } from '../keywords/first-position-checks';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StoreRequestError } from '../store-providers/errors';
@@ -32,7 +31,6 @@ export class SubtitleBackfill {
     private readonly prisma: PrismaService,
     private readonly registry: StoreProviderRegistry,
     private readonly keywords: KeywordsService,
-    private readonly checks: FirstPositionChecks,
     private readonly workspace: WorkspaceContext,
     @InjectQueue(QUEUES.APP_STORE) private readonly appStoreQueue: Queue,
   ) {}
@@ -78,7 +76,7 @@ export class SubtitleBackfill {
     }
     if (listing.subtitle === undefined) return;
 
-    const { count } = await this.prisma.appSnapshot.updateMany({
+    await this.prisma.appSnapshot.updateMany({
       where: {
         appId,
         ...HOME_LISTING,
@@ -87,26 +85,7 @@ export class SubtitleBackfill {
       },
       data: { subtitle: listing.subtitle },
     });
-    if (count > 0) {
-      await this.trackSubtitleKeywords(appId);
-    }
-  }
-
-  private async trackSubtitleKeywords(appId: string): Promise<void> {
-    const before = new Set(await this.trackedKeywordIds(appId));
-    await this.keywords.syncFromSnapshot(appId);
-    const added = (await this.trackedKeywordIds(appId)).filter(
-      (keywordId) => !before.has(keywordId),
-    );
-    await this.checks.schedule(appId, added);
-  }
-
-  private async trackedKeywordIds(appId: string): Promise<string[]> {
-    const rows = await this.prisma.trackedKeyword.findMany({
-      where: { appId, active: true },
-      select: { keywordId: true },
-    });
-    return rows.map((row) => row.keywordId);
+    await this.keywords.syncFromLaterSnapshot(appId);
   }
 }
 
