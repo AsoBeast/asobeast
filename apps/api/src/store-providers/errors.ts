@@ -56,12 +56,22 @@ export class StoreRequestError extends Error {
   }
 }
 
+export interface MissingApp {
+  storeAppId: string;
+  country: string;
+}
+
 export class StoreAppNotFoundError extends Error {
   constructor(
     readonly store: Store,
     readonly storeAppId: string,
+    readonly country?: string,
   ) {
-    super(`${store} has no app ${storeAppId}`);
+    super(
+      country === undefined
+        ? `${store} has no app ${storeAppId}`
+        : `${store} has no app ${storeAppId} in ${country}`,
+    );
     this.name = 'StoreAppNotFoundError';
   }
 

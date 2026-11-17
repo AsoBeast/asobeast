@@ -194,7 +194,7 @@ export class KeywordDiscoveryService {
           appId: app.id,
           queuedAt: { gte: windowStart < weekStart ? windowStart : weekStart },
         },
-        select: { queuedAt: true, checkedOn: true, depth: true },
+        select: { queuedAt: true, checkedOn: true, ownSearch: true },
       }),
       this.prisma.keywordDiscovery.aggregate({
         where: { appId: app.id },
@@ -212,7 +212,7 @@ export class KeywordDiscoveryService {
           {
             queuedAt: row.queuedAt,
             checkedOn: dayOf(row.checkedOn),
-            depth: row.depth,
+            ownSearch: row.ownSearch,
           },
           now,
         ),

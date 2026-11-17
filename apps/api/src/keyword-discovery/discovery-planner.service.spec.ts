@@ -28,6 +28,7 @@ interface DiscoveryRow {
   relevance: number;
   position: number | null;
   depth: number | null;
+  ownSearch: boolean;
   checkedOn: Date | null;
   keyword: { text: string; country: string };
 }
@@ -41,6 +42,7 @@ const open = (
   relevance: 90,
   position: null,
   depth: null,
+  ownSearch: false,
   checkedOn: null,
   keyword: { text: keywordId, country: 'us' },
   ...overrides,
@@ -166,8 +168,19 @@ describe('KeywordDiscoveryPlanner', () => {
     const { planner, prisma, appStoreQueue } = build({
       rows: [open('found'), open('absent')],
       readings: new Map([
-        ['found', { position: 4, depth: 50, checkedOn: '2026-11-11' }],
-        ['absent', { position: null, depth: 50, checkedOn: '2026-11-11' }],
+        [
+          'found',
+          { position: 4, depth: 50, ownSearch: false, checkedOn: '2026-11-11' },
+        ],
+        [
+          'absent',
+          {
+            position: null,
+            depth: 50,
+            ownSearch: false,
+            checkedOn: '2026-11-11',
+          },
+        ],
       ]),
     });
     const result = await planner.plan('app1', undefined, NOW);
@@ -178,22 +191,73 @@ describe('KeywordDiscoveryPlanner', () => {
         keywordId: 'found',
         position: null,
         depth: null,
+        ownSearch: false,
         checkedOn: null,
       },
       data: expect.objectContaining({
         position: 4,
         depth: 50,
+        ownSearch: false,
         checkedOn: new Date('2026-11-11T00:00:00Z'),
       }) as object,
     });
     expect(queuedIds(appStoreQueue)).toEqual(['absent']);
   });
 
+  it('replaces an own search reading with the capture reading it now holds', async () => {
+    const { planner, prisma } = build({
+      rows: [
+        open('rechecked', {
+          position: 3,
+          depth: 200,
+          ownSearch: true,
+          checkedOn: new Date('2026-11-01T00:00:00Z'),
+        }),
+      ],
+      readings: new Map([
+        [
+          'rechecked',
+          {
+            position: 3,
+            depth: 50,
+            ownSearch: false,
+            checkedOn: '2026-11-11',
+          },
+        ],
+      ]),
+    });
+    await planner.plan('app1', undefined, NOW);
+    expect(prisma.keywordDiscovery.updateMany).toHaveBeenCalledWith({
+      where: {
+        appId: 'app1',
+        keywordId: 'rechecked',
+        position: 3,
+        depth: 200,
+        ownSearch: true,
+        checkedOn: new Date('2026-11-01T00:00:00Z'),
+      },
+      data: expect.objectContaining({
+        position: 3,
+        depth: 50,
+        ownSearch: false,
+        checkedOn: new Date('2026-11-11T00:00:00Z'),
+      }) as object,
+    });
+  });
+
   it('keeps a row a concurrent check already wrote and still queues nothing twice', async () => {
     const { planner, prisma, appStoreQueue } = build({
       rows: [open('raced')],
       readings: new Map([
-        ['raced', { position: null, depth: 50, checkedOn: '2026-11-11' }],
+        [
+          'raced',
+          {
+            position: null,
+            depth: 50,
+            ownSearch: false,
+            checkedOn: '2026-11-11',
+          },
+        ],
       ]),
     });
     prisma.keywordDiscovery.updateMany.mockResolvedValueOnce({ count: 0 });
@@ -212,6 +276,7 @@ describe('KeywordDiscoveryPlanner', () => {
           relevance: 95,
           position: 3,
           depth: 200,
+          ownSearch: true,
           checkedOn: new Date('2026-11-01T00:00:00Z'),
         }),
         open('missed today', {
@@ -222,7 +287,15 @@ describe('KeywordDiscoveryPlanner', () => {
       ],
       queuedThisWeek: 39,
       readings: new Map([
-        ['was ranked', { position: null, depth: 50, checkedOn: '2026-11-11' }],
+        [
+          'was ranked',
+          {
+            position: null,
+            depth: 50,
+            ownSearch: false,
+            checkedOn: '2026-11-11',
+          },
+        ],
       ]),
     });
     await planner.plan('app1', undefined, NOW);
@@ -230,7 +303,12 @@ describe('KeywordDiscoveryPlanner', () => {
   });
 
   it('auto tracks the rows a fresh capture ranked while auto track is on', async () => {
-    const reading = { position: 4, depth: 50, checkedOn: '2026-11-11' };
+    const reading = {
+      position: 4,
+      depth: 50,
+      ownSearch: false,
+      checkedOn: '2026-11-11',
+    };
     const on = build({
       rows: [open('found'), open('other')],
       readings: new Map([['found', reading]]),

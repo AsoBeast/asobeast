@@ -17,6 +17,7 @@ const row = (overrides: Partial<ScheduledRow> = {}): ScheduledRow => ({
   relevance: 60,
   position: null,
   depth: null,
+  ownSearch: false,
   checkedOn: null,
   dismissed: false,
   ...overrides,
@@ -51,13 +52,55 @@ describe('isDue', () => {
     expect(isDue(row({ depth: 50, checkedOn: TODAY }), TODAY)).toBe(true);
   });
 
+  it('is not due again after an own search that listed 30 apps without the app', () => {
+    expect(
+      isDue(
+        row({ position: null, depth: 30, ownSearch: true, checkedOn: TODAY }),
+        TODAY,
+      ),
+    ).toBe(false);
+  });
+
+  it('stays due after a full capture without the app', () => {
+    expect(
+      isDue(
+        row({ position: null, depth: 50, ownSearch: false, checkedOn: TODAY }),
+        TODAY,
+      ),
+    ).toBe(true);
+  });
+
+  it('is not due after a short capture that held the whole list', () => {
+    expect(
+      isDue(
+        row({ position: null, depth: 26, ownSearch: false, checkedOn: TODAY }),
+        TODAY,
+      ),
+    ).toBe(false);
+  });
+
+  it('is not due again after an own search that listed exactly 50 apps', () => {
+    expect(
+      isDue(
+        row({ position: null, depth: 50, ownSearch: true, checkedOn: TODAY }),
+        TODAY,
+      ),
+    ).toBe(false);
+  });
+
   it('waits a week after a deep search that found nothing', () => {
-    expect(isDue(row({ depth: 200, checkedOn: '2026-11-09' }), TODAY)).toBe(
-      false,
-    );
-    expect(isDue(row({ depth: 200, checkedOn: '2026-11-05' }), TODAY)).toBe(
-      true,
-    );
+    expect(
+      isDue(
+        row({ depth: 200, ownSearch: true, checkedOn: '2026-11-09' }),
+        TODAY,
+      ),
+    ).toBe(false);
+    expect(
+      isDue(
+        row({ depth: 200, ownSearch: true, checkedOn: '2026-11-05' }),
+        TODAY,
+      ),
+    ).toBe(true);
   });
 
   it('waits a week after a position was found', () => {
@@ -65,7 +108,15 @@ describe('isDue', () => {
       isDue(row({ position: 4, depth: 50, checkedOn: '2026-11-10' }), TODAY),
     ).toBe(false);
     expect(
-      isDue(row({ position: 4, depth: 200, checkedOn: '2026-11-04' }), TODAY),
+      isDue(
+        row({
+          position: 4,
+          depth: 200,
+          ownSearch: true,
+          checkedOn: '2026-11-04',
+        }),
+        TODAY,
+      ),
     ).toBe(true);
   });
 
@@ -77,9 +128,24 @@ describe('isDue', () => {
 describe('selectChecks', () => {
   it('orders never checked first, then the oldest check, then relevance and text', () => {
     const rows = [
-      row({ keywordId: 'old', depth: 200, checkedOn: '2026-10-01' }),
-      row({ keywordId: 'older', depth: 200, checkedOn: '2026-09-01' }),
-      row({ keywordId: 'fresh', depth: 200, checkedOn: TODAY }),
+      row({
+        keywordId: 'old',
+        depth: 200,
+        ownSearch: true,
+        checkedOn: '2026-10-01',
+      }),
+      row({
+        keywordId: 'older',
+        depth: 200,
+        ownSearch: true,
+        checkedOn: '2026-09-01',
+      }),
+      row({
+        keywordId: 'fresh',
+        depth: 200,
+        ownSearch: true,
+        checkedOn: TODAY,
+      }),
       row({ keywordId: 'b', text: 'b' }),
       row({ keywordId: 'a', text: 'a' }),
       row({ keywordId: 'top', text: 'z', relevance: 90 }),

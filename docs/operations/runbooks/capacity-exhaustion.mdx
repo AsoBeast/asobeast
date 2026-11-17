@@ -30,7 +30,7 @@ The commands run on the host and read a personal API token of the [platform oper
     This reports demand against capacity for both stores. `GET /jobs/budget` gives the same view for one workspace.
   </Step>
   <Step title="Separate growth from a store mix change">
-    A Google Play keyword check costs roughly eight store requests against one for the App Store, so a handful of customers moving to Play can multiply demand without any change in customer count. Compare the two `store` labels on `asobeast_workspace_daily_requests_estimated` week over week.
+    The capacity estimate counts a Google Play keyword check as eight store requests against one for the App Store, so a handful of customers moving to Play can multiply demand without any change in customer count. Compare the two `store` labels on `asobeast_workspace_daily_requests_estimated` week over week.
   </Step>
   <Step title="Name the heaviest tenants">
     Sort the same metric descending, then check `workspace.cost.unpaid` and `workspace.cost.exceeds-revenue`. A trial workspace taking a tenth of the pool is a different problem from healthy paid growth.
@@ -42,7 +42,7 @@ The commands run on the host and read a personal API token of the [platform oper
 1. **Close the door before the room fills.** Set `SIGNUP_CAPACITY_MAX_UTILIZATION` so that registration is refused once tracked collection passes that share of daily capacity. It only applies when billing is enabled, so self hosted installs are never gated.
 2. Leave existing customers untouched. Shedding work from paying tenants to admit new ones is the wrong trade in every direction.
 3. If one unpaid workspace dominates the pool, suspend it with a reason written for the customer, who sees it on every page (see [Support tooling](/operations/hosted-observability#support-tooling)), rather than degrading everyone. Suspension stops collection for that workspace even on keywords another tenant also tracks, because a shared search is judged per workspace before any row is written.
-4. Do not lower the depth of Google Play searches as a first move. It changes the data customers already have and is hard to explain.
+4. Do not look for savings in the depth of Google Play searches. A Play search is usually one request already, because Google usually lists about 30 apps.
 
 ## Recovery
 

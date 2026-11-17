@@ -135,6 +135,7 @@ describe('RankingsService.checkKeyword', () => {
               position: number | null;
               depth: number;
             };
+            update: { position: number | null; depth: number };
           },
         ]
       >()
@@ -514,6 +515,75 @@ describe('RankingsService.checkKeyword', () => {
     expect(writes.get('competitorB')?.depth).toBe(RANK_DEPTH);
   });
 
+  it('stores the number of results a short list reached as the depth', async () => {
+    const searchResults = Array.from({ length: 30 }, (_, index) => ({
+      storeAppId: `other-${index}`,
+      title: `Result ${index + 1}`,
+    }));
+    const { service, upsert } = setup({ searchResults });
+
+    await service.checkKeyword('kw1');
+
+    expect(upsert).toHaveBeenCalled();
+    for (const [args] of upsert.mock.calls) {
+      expect(args.create.depth).toBe(30);
+      expect(args.update.depth).toBe(30);
+    }
+  });
+
+  it('keeps the rank depth when the store listed no apps at all', async () => {
+    const { service, upsert } = setup({
+      searchResults: [],
+      rankedEarlier: null,
+    });
+
+    await service.checkKeyword('kw1');
+
+    expect(upsert).toHaveBeenCalled();
+    for (const [args] of upsert.mock.calls) {
+      expect(args.create).toMatchObject({ position: null, depth: RANK_DEPTH });
+      expect(args.update).toEqual({ position: null, depth: RANK_DEPTH });
+    }
+  });
+
+  it('hands the reached depth to the rank and milestone alerts', async () => {
+    const dropped = setup({
+      tracked: primaryOnly,
+      searchResults: placed({}).slice(0, 30),
+      previous: { position: 3 },
+    });
+    await dropped.service.checkKeyword('kw1');
+
+    const first = setup({
+      tracked: primaryOnly,
+      searchResults: placed({ 'primary-store': 7 }).slice(0, 30),
+      previous: { position: null },
+    });
+    await first.service.checkKeyword('kw1');
+
+    expect(dispatched(dropped.dispatch)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          event: 'rank.dropped',
+          from: 3,
+          to: null,
+          fromDepth: RANK_DEPTH,
+          toDepth: 30,
+        }),
+        expect.objectContaining({
+          event: 'rank.milestone',
+          direction: 'left',
+          toDepth: 30,
+        }),
+      ]),
+    );
+    expect(dispatched(first.dispatch)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ event: 'rank.first', depth: 30 }),
+      ]),
+    );
+  });
+
   it('replaces rather than duplicates when re-run on the same day', async () => {
     const { service, deleteMany, createMany } = setup();
 
@@ -593,7 +663,7 @@ describe('RankingsService.checkKeyword', () => {
       from: 3,
       to: null,
       fromDepth: 100,
-      toDepth: RANK_DEPTH,
+      toDepth: buildSearchResults().length,
     });
   });
 
@@ -1014,7 +1084,7 @@ describe('RankingsService.checkKeyword', () => {
         from: 14,
         to: 7,
         fromDepth: 200,
-        toDepth: 200,
+        toDepth: buildSearchResults().length,
       });
     });
 
@@ -1067,7 +1137,7 @@ describe('RankingsService.checkKeyword', () => {
       expect(events(dispatch)).toEqual(['rank.improved', 'rank.first']);
       expect(dispatched(dispatch)[1]).toMatchObject({
         position: 7,
-        depth: 200,
+        depth: buildSearchResults().length,
       });
       expect(rankingFindFirst).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -1242,7 +1312,7 @@ describe('RankingsService.checkKeyword', () => {
           from: 9,
           to: 12,
           fromDepth: 200,
-          toDepth: 200,
+          toDepth: placed({}).length,
           confirmed: true,
         }),
       ]);

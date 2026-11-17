@@ -9,29 +9,34 @@ export interface TrackRow {
   source: DiscoverySource;
   position: number | null;
   depth: number | null;
+  ownSearch: boolean;
   checkedOn: string | null;
 }
 
-export interface TrackPlan {
-  chosen: TrackRow[];
+export type TrackCandidate = Pick<TrackRow, 'keywordId' | 'text' | 'country'>;
+
+export interface TrackPlan<T extends TrackCandidate> {
+  chosen: T[];
   skipped: number;
 }
 
-function byCountry(rows: readonly TrackRow[]): Map<string, TrackRow[]> {
-  const grouped = new Map<string, TrackRow[]>();
+function byCountry<T extends TrackCandidate>(
+  rows: readonly T[],
+): Map<string, T[]> {
+  const grouped = new Map<string, T[]>();
   for (const row of rows) {
     grouped.set(row.country, [...(grouped.get(row.country) ?? []), row]);
   }
   return grouped;
 }
 
-export function planDiscoveryTrack(
-  rows: readonly TrackRow[],
+export function planDiscoveryTrack<T extends TrackCandidate>(
+  rows: readonly T[],
   tracking: TrackingLookup,
   room: number | null,
-): TrackPlan {
+): TrackPlan<T> {
   let remaining = room;
-  const plan: TrackPlan = { chosen: [], skipped: 0 };
+  const plan: TrackPlan<T> = { chosen: [], skipped: 0 };
   for (const [country, group] of byCountry(rows)) {
     const seeded = planSeed(group, tracking, country, remaining);
     plan.chosen.push(...seeded.chosen);
