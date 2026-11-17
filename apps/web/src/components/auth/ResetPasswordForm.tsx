@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useFocusClaim } from "@/lib/focus-handoff";
 import { useSingleFlight } from "@/lib/single-flight";
 import { AuthActions, AuthCard, AuthPanel } from "./AuthCard";
-import { authFieldError, type AuthFieldError } from "./field-error";
+import { passwordFormError, type AuthFieldError } from "./field-error";
 import { FieldErrorMessage } from "./FieldErrorMessage";
 import { PasswordField } from "./PasswordField";
 import { useAnswerFocus } from "./use-answer-focus";
@@ -34,7 +34,7 @@ export function ResetPasswordForm() {
     onSuccess: handFocus,
     onError: (err) =>
       setError(
-        authFieldError(
+        passwordFormError(
           err,
           "Could not set the new password. Ask for a fresh link.",
         ),
@@ -75,12 +75,10 @@ export function ResetPasswordForm() {
     return (
       <AuthCard
         title="Choose a new password"
-        description="Every other session has been signed out and your API tokens were revoked."
+        description="Your password is set. Every other session has been signed out and your API tokens were revoked."
+        announce
       >
         <AuthActions>
-          <p className="text-body" role="status">
-            Your password is set. Sign in with it now.
-          </p>
           <Button asChild>
             <Link ref={claimFocus} href="/login">
               Sign in

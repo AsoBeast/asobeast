@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,15 @@ export function PasswordField({
   describedBy,
 }: PasswordFieldProps) {
   const [shown, setShown] = useState(false);
+  const input = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const form = input.current?.form;
+    if (!form) return;
+    const hide = () => setShown(false);
+    form.addEventListener("submit", hide);
+    return () => form.removeEventListener("submit", hide);
+  }, []);
   const ownDescription = error ? ERROR_ID : hint ? HINT_ID : undefined;
 
   return (
@@ -44,6 +53,7 @@ export function PasswordField({
       </div>
       <div className="relative">
         <Input
+          ref={input}
           id="password"
           name="password"
           type={shown ? "text" : "password"}
@@ -61,10 +71,10 @@ export function PasswordField({
         <Button
           type="button"
           variant="ghost"
-          size="icon-lg"
+          size="icon-sm"
           aria-label={shown ? "Hide password" : "Show password"}
           aria-controls="password"
-          className="absolute top-0 right-0"
+          className="absolute top-1 right-1"
           onClick={() => setShown((current) => !current)}
         >
           {shown ? <EyeOff /> : <Eye />}

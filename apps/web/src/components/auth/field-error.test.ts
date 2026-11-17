@@ -5,6 +5,7 @@ import {
   authFieldError,
   fieldErrorProps,
   fieldOfAuthError,
+  passwordFormError,
 } from "./field-error";
 
 const envelope = (statusCode: number, message: string) => ({
@@ -53,6 +54,23 @@ describe("authFieldError", () => {
       field: "form",
       message: "fallback",
     });
+  });
+});
+
+describe("passwordFormError", () => {
+  it("keeps a refusal about the password on the password field", () => {
+    expect(
+      passwordFormError(new ApiError(envelope(400, PASSWORD_RULE)), "x"),
+    ).toEqual({ field: "password", message: PASSWORD_RULE });
+  });
+
+  it("puts a refusal about a field the form does not show on the form", () => {
+    expect(
+      passwordFormError(
+        new ApiError(envelope(409, "That email already has an account")),
+        "x",
+      ),
+    ).toEqual({ field: "form", message: "That email already has an account" });
   });
 });
 

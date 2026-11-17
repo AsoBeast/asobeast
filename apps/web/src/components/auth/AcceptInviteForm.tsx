@@ -12,7 +12,7 @@ import { acceptInvite } from "@/lib/api";
 import { PASSWORD_HINT, passwordError } from "@/lib/password";
 import { useSingleFlight } from "@/lib/single-flight";
 import { AuthActions, AuthCard, AuthPanel, INLINE_LINK } from "./AuthCard";
-import { authFieldError, type AuthFieldError } from "./field-error";
+import { passwordFormError, type AuthFieldError } from "./field-error";
 import { FieldErrorMessage } from "./FieldErrorMessage";
 import { LegalConsent } from "./LegalConsent";
 import { PasswordField } from "./PasswordField";
@@ -34,7 +34,7 @@ export function AcceptInviteForm({ billing }: { billing: boolean }) {
       }),
     onFailure: (err) =>
       setError(
-        authFieldError(err, "Could not accept the invitation. Try again."),
+        passwordFormError(err, "Could not accept the invitation. Try again."),
       ),
   });
   const submitOnce = useSingleFlight(mutation);

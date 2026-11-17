@@ -61,7 +61,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "improved",
         title: "Simpler sign in and sign up pages",
-        text: "Sign in, create account, password recovery and the pages your email links open now share one calm centred layout with larger buttons. Every password field has a button to show what you typed, and the password rule is one short line that turns into the error when a password is too short.",
+        text: "Sign in, create account, password recovery and the pages your email links open now share one calm centred layout with larger buttons. Every password field on these pages has a button to show what you typed, and the password rule is one short line that turns into the error when a password is too short.",
       },
       {
         kind: "improved",

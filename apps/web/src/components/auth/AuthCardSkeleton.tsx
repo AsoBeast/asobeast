@@ -15,11 +15,16 @@ function TextLine({ step, width }: { step: string; width: string }) {
   );
 }
 
-export function AuthCardSkeleton() {
+export function AuthCardSkeleton({
+  description = false,
+}: {
+  description?: boolean;
+}) {
   return (
     <div className="mx-auto flex w-full max-w-90 flex-col gap-6">
-      <div className="text-center">
+      <div className="flex flex-col gap-2 text-center">
         <TextLine step="text-title" width="w-40" />
+        {description ? <TextLine step="text-body" width="w-64" /> : null}
       </div>
       <AuthPanel>
         <div className="flex flex-col gap-4">

@@ -435,3 +435,58 @@ test("showing the password does not submit the form", async ({ page }) => {
   ).toBeVisible();
   expect(attempts).toBe(0);
 });
+
+test("an invitation for an address that already has an account says so", async ({
+  page,
+}) => {
+  await page.route(
+    "**/api/backend/workspace/invites/accept",
+    refuse(409, "That email already has an account"),
+  );
+  await page.goto("/invite?token=invite-token");
+  const password = page.getByLabel("Password", { exact: true });
+  await password.fill(PASSWORD);
+
+  await page.getByRole("button", { name: "Accept invitation" }).click();
+
+  await expect(formAlert(page)).toHaveText("That email already has an account");
+  await expect(password).toHaveAttribute("aria-invalid", "false");
+});
+
+test("a shown password is hidden again when the form is sent", async ({
+  page,
+}) => {
+  await signIn(page, refuse(401, "Invalid email or password"));
+  const password = page.getByLabel("Password", { exact: true });
+  await page.getByRole("button", { name: "Show password" }).click();
+  await expect(password).toHaveAttribute("type", "text");
+
+  await page.getByRole("button", { name: "Sign in" }).click();
+
+  await expect(password).toHaveAttribute("type", "password");
+  await expect(password).toHaveValue(PASSWORD);
+});
+
+test("create account refuses a password that is too long before sending it", async ({
+  page,
+  context,
+}) => {
+  let attempts = 0;
+  await page.route("**/api/backend/auth/register", async (route) => {
+    attempts += 1;
+    await route.abort();
+  });
+  await seedCookies(context, { e2e_setup_required: "1" });
+  await page.goto("/register");
+  await page.getByLabel("Email").fill("owner@example.com");
+  const password = page.getByLabel("Password", { exact: true });
+  await password.fill("a".repeat(129));
+
+  await page.getByRole("button", { name: "Create account" }).click();
+
+  await expect(password).toHaveAccessibleDescription(
+    "Use 128 characters or fewer.",
+  );
+  await expect(password).toHaveAttribute("aria-invalid", "true");
+  expect(attempts).toBe(0);
+});

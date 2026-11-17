@@ -7,7 +7,7 @@ export default async function InvitePage() {
   const { billing } = await getAuthStatus();
 
   return (
-    <Suspense fallback={<AuthCardSkeleton />}>
+    <Suspense fallback={<AuthCardSkeleton description />}>
       <AcceptInviteForm billing={billing} />
     </Suspense>
   );
