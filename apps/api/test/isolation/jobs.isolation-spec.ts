@@ -6,7 +6,7 @@ import { ListingCaptureService } from '../../src/apps/listing-capture.service';
 import { AuditService } from '../../src/audit/audit.service';
 import { WorkspaceContext } from '../../src/common/tenancy/workspace-context';
 import { JobWorkspaceMissingError } from '../../src/jobs/job-workspace';
-import { QUEUES } from '../../src/jobs/jobs.types';
+import { JOBS, QUEUES } from '../../src/jobs/jobs.types';
 import { DefaultAlertsRun } from '../../src/jobs/default-alerts-run';
 import { utcDateKey } from '../../src/jobs/jobs.types';
 import { PipelineService } from '../../src/jobs/pipeline.service';
@@ -33,6 +33,9 @@ describe('Job isolation', () => {
 
   const jobsOn = (name: string): Promise<Job[]> =>
     queue(name).getJobs(['wait', 'paused', 'delayed', 'waiting-children']);
+
+  const deliveriesOn = async (name: string): Promise<Job[]> =>
+    (await jobsOn(name)).filter((job) => job.name !== JOBS.RELAY_ALERTS);
 
   beforeAll(async () => {
     fixture = await createIsolationFixture();
@@ -107,7 +110,7 @@ describe('Job isolation', () => {
       .flushEveryWorkspace();
     expect(result.flushed).toBe(2);
 
-    const delivered = (await jobsOn(QUEUES.ALERTS)).map(
+    const delivered = (await deliveriesOn(QUEUES.ALERTS)).map(
       (job) => job.data as AlertBatchJob,
     );
     expect(delivered.length).toBeGreaterThan(0);
@@ -122,7 +125,7 @@ describe('Job isolation', () => {
   });
 
   it('targets each webhook from its own workspace only', async () => {
-    const delivered = (await jobsOn(QUEUES.ALERTS)).map(
+    const delivered = (await deliveriesOn(QUEUES.ALERTS)).map(
       (job) => job.data as AlertBatchJob,
     );
 

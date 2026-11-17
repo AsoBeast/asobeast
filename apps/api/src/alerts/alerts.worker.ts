@@ -1,7 +1,7 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Logger } from '@nestjs/common';
+import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
+import { Logger, OnModuleInit } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { Job } from 'bullmq';
+import { Job, JobsOptions, Queue } from 'bullmq';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { JOB_OPTIONS } from '../jobs/job-options';
 import { requireJobScope } from '../jobs/job-workspace';
@@ -11,10 +11,14 @@ import {
   JOBS,
   QUEUES,
 } from '../jobs/jobs.types';
+import { reportQueueError } from '../jobs/queue-error-reporter';
+import { registerInBackground } from '../jobs/schedule-registration';
 import { PrismaService } from '../prisma/prisma.service';
+import { RedisOutageLog } from '../redis/redis-outage-log';
 import { AlertMail } from './alert-mail';
 import { DefaultAlertIntro } from './default-alert-intro';
 import { isDeliverable } from './deliverable-email-alerts';
+import { ALERT_RELAY_EVERY_MS, InstantAlertRelay } from './instant-alert-relay';
 import { MailerService } from './mailer.service';
 import { WebhookDelivery, WebhookRateLimitedError } from './webhook-delivery';
 
@@ -31,12 +35,19 @@ type AlertJob = Job<DeliverAlertPayload | DeliverEmailPayload>;
 
 const DETAIL_MAX = 500;
 
+const RELAY_SCHEDULE_OPTIONS = {
+  attempts: 1,
+  removeOnComplete: true,
+  removeOnFail: 100,
+} satisfies JobsOptions;
+
 @Processor(QUEUES.ALERTS, {
   concurrency: 5,
   settings: { backoffStrategy: alertBackoff },
 })
-export class AlertsWorker extends WorkerHost {
+export class AlertsWorker extends WorkerHost implements OnModuleInit {
   private readonly logger = new Logger(AlertsWorker.name);
+  private registration: Promise<void> = Promise.resolve();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -45,11 +56,38 @@ export class AlertsWorker extends WorkerHost {
     private readonly workspace: WorkspaceContext,
     private readonly alertMail: AlertMail,
     private readonly intro: DefaultAlertIntro,
+    @InjectQueue(QUEUES.ALERTS) private readonly queue: Queue,
+    private readonly relay: InstantAlertRelay,
+    private readonly outage: RedisOutageLog,
   ) {
     super();
   }
 
+  onModuleInit(): void {
+    this.registration = registerInBackground(
+      this.queue,
+      () => this.registerSchedules(),
+      (error) => reportQueueError(error, this.outage, this.logger),
+    );
+  }
+
+  schedulesRegistered(): Promise<void> {
+    return this.registration;
+  }
+
+  async registerSchedules(): Promise<void> {
+    await this.queue.upsertJobScheduler(
+      JOBS.RELAY_ALERTS,
+      { every: ALERT_RELAY_EVERY_MS },
+      { name: JOBS.RELAY_ALERTS, opts: RELAY_SCHEDULE_OPTIONS },
+    );
+  }
+
   async process(job: AlertJob): Promise<void> {
+    if (job.name === JOBS.RELAY_ALERTS) {
+      await this.relay.relayEveryWorkspace();
+      return;
+    }
     await this.workspace.runScope(requireJobScope(job), () =>
       this.deliver(job),
     );

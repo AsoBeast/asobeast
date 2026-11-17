@@ -163,7 +163,7 @@ const build = (overrides: {
     overrides.recordDefault ?? jest.fn().mockResolvedValue(undefined);
   const storeReports = { enqueue: jest.fn().mockResolvedValue({}) };
   const ratingDropped = jest.fn().mockResolvedValue(undefined);
-  const listingLost = jest.fn().mockResolvedValue(undefined);
+  const recordLoss = jest.fn().mockResolvedValue(undefined);
   const service = new ListingCaptureService(
     prisma,
     registry,
@@ -176,7 +176,7 @@ const build = (overrides: {
     { request: detect } as unknown as LocalizationDetection,
     { record: recordDefault } as unknown as MarketLocalizationRecorder,
     storeReports as unknown as StoreReportQueue,
-    { ratingDropped, listingLost } as unknown as ListingAlerts,
+    { ratingDropped, recordLoss } as unknown as ListingAlerts,
   );
   return {
     service,
@@ -187,7 +187,7 @@ const build = (overrides: {
     recordDefault,
     storeReports,
     ratingDropped,
-    listingLost,
+    recordLoss,
     tx,
     updateMany,
   };
@@ -710,12 +710,13 @@ describe('ListingCaptureService listing loss alerts', () => {
   ])(
     'alerts once when the market %p just lost the listing',
     async (country, market) => {
-      const { service, listingLost } = build({ getApp: missing() });
+      const { service, recordLoss, tx } = build({ getApp: missing() });
 
       await expect(service.refreshListing(APP.id, country)).resolves.toBeNull();
 
-      expect(listingLost).toHaveBeenCalledTimes(1);
-      expect(listingLost).toHaveBeenCalledWith(
+      expect(recordLoss).toHaveBeenCalledTimes(1);
+      expect(recordLoss).toHaveBeenCalledWith(
+        tx,
         expect.objectContaining({ id: APP.id }),
         market,
         expect.any(Date),
@@ -724,14 +725,17 @@ describe('ListingCaptureService listing loss alerts', () => {
   );
 
   it('dates the alert with the moment it records the loss', async () => {
-    const { service, listingLost, updateMany } = build({ getApp: missing() });
+    const { service, recordLoss, updateMany, tx } = build({
+      getApp: missing(),
+    });
 
     await service.refreshListing(APP.id);
 
     const [{ data }] = updateMany.mock.calls[0] as [
       { data: { delistedAt: Date } },
     ];
-    expect(listingLost).toHaveBeenCalledWith(
+    expect(recordLoss).toHaveBeenCalledWith(
+      tx,
       expect.objectContaining({ id: APP.id }),
       'us',
       data.delistedAt,
@@ -739,30 +743,40 @@ describe('ListingCaptureService listing loss alerts', () => {
   });
 
   it('alerts nothing when the loss was already recorded', async () => {
-    const { service, listingLost, updateMany } = build({ getApp: missing() });
+    const { service, recordLoss, updateMany } = build({ getApp: missing() });
     updateMany.mockResolvedValue({ count: 0 });
 
     await expect(service.refreshListing(APP.id)).resolves.toBeNull();
     await expect(service.refreshListing(APP.id, 'de')).resolves.toBeNull();
 
-    expect(listingLost).not.toHaveBeenCalled();
+    expect(recordLoss).not.toHaveBeenCalled();
   });
 
-  it('still answers the store error on an on demand refresh', async () => {
-    const { service, listingLost } = build({ getApp: missing() });
+  it('still answers the store error when the loss was already recorded', async () => {
+    const { service, recordLoss, updateMany } = build({ getApp: missing() });
+    updateMany.mockResolvedValue({ count: 0 });
 
     await expect(service.refresh(APP.id)).rejects.toThrow(
       StoreAppNotFoundError,
     );
-    expect(listingLost).toHaveBeenCalledTimes(1);
+    expect(recordLoss).not.toHaveBeenCalled();
+  });
+
+  it('still answers the store error on an on demand refresh', async () => {
+    const { service, recordLoss } = build({ getApp: missing() });
+
+    await expect(service.refresh(APP.id)).rejects.toThrow(
+      StoreAppNotFoundError,
+    );
+    expect(recordLoss).toHaveBeenCalledTimes(1);
   });
 
   it('alerts nothing for a capture that succeeds', async () => {
-    const { service, listingLost } = build({});
+    const { service, recordLoss } = build({});
 
     await service.refreshListing(APP.id);
 
-    expect(listingLost).not.toHaveBeenCalled();
+    expect(recordLoss).not.toHaveBeenCalled();
   });
 });
 

@@ -1,5 +1,7 @@
 import { Logger } from '@nestjs/common';
-import type { App } from '@prisma/client';
+import type { App, Prisma } from '@prisma/client';
+import type { AlertPayload } from '@asobeast/shared';
+import type { AlertBuild, AlertOutbox } from '../alerts/alert-outbox';
 import type { AlertsDispatcher } from '../alerts/alerts.dispatcher';
 import type { PrismaService } from '../prisma/prisma.service';
 import { ListingAlerts } from './listing-alerts.service';
@@ -29,6 +31,7 @@ const build = (
       trackedKeyword: { count: jest.fn() },
     } as unknown as PrismaService,
     { dispatch } as unknown as AlertsDispatcher,
+    {} as AlertOutbox,
   );
   return { service, findMany, findFirst, dispatch };
 };
@@ -118,13 +121,14 @@ describe('ListingAlerts.ratingDropped', () => {
   });
 });
 
-describe('ListingAlerts.listingLost', () => {
+describe('ListingAlerts.recordLoss', () => {
   const LOST_AT = new Date('2026-11-03T23:59:59.000Z');
   const OWN = {
     id: 'app_1',
     name: 'My App',
     country: 'us',
     store: 'APP_STORE',
+    iconUrl: 'https://is1-ssl.mzstatic.com/icon.png',
     isCompetitor: false,
     primaryAppId: null,
   } as unknown as App;
@@ -138,39 +142,81 @@ describe('ListingAlerts.listingLost', () => {
   const lost = (listing: { id: string } | null, keywords = 2) => {
     const findFirst = jest.fn().mockResolvedValue(listing);
     const count = jest.fn().mockResolvedValue(keywords);
-    const dispatch = jest.fn().mockResolvedValue(undefined);
+    const tx = {
+      appSnapshot: { findFirst },
+      trackedKeyword: { count },
+    } as unknown as Prisma.TransactionClient;
+    const prisma = {
+      appSnapshot: { findFirst: jest.fn() },
+      trackedKeyword: { count: jest.fn() },
+    };
+    const record = jest.fn<
+      Promise<void>,
+      [Prisma.TransactionClient, string, AlertBuild]
+    >();
     const service = new ListingAlerts(
-      {
-        appSnapshot: { findFirst },
-        trackedKeyword: { count },
-      } as unknown as PrismaService,
-      { dispatch } as unknown as AlertsDispatcher,
+      prisma as unknown as PrismaService,
+      {} as AlertsDispatcher,
+      { record } as unknown as AlertOutbox,
     );
-    return { service, findFirst, count, dispatch };
+    const built = async (): Promise<AlertPayload | null> => {
+      const [, , build] = record.mock.calls[0];
+      return build();
+    };
+    return { service, tx, prisma, findFirst, count, record, built };
   };
 
-  it('dispatches a delisting of the home storefront without a read', async () => {
-    const { service, findFirst, count, dispatch } = lost(null);
+  it('hands the outbox the transaction and a subject naming the app and market', async () => {
+    const { service, tx, record } = lost(null);
 
-    await service.listingLost(OWN, 'us', LOST_AT);
+    await service.recordLoss(tx, OWN, 'us', LOST_AT);
 
-    expect(findFirst).not.toHaveBeenCalled();
-    expect(count).not.toHaveBeenCalled();
-    expect(dispatch).toHaveBeenCalledWith(
+    expect(record).toHaveBeenCalledWith(
+      tx,
+      'the listing loss of app app_1 in us',
+      expect.any(Function),
+    );
+  });
+
+  it('builds a delisting of the home storefront with the identity in hand and without a read', async () => {
+    const { service, tx, findFirst, count, built } = lost(null);
+
+    await service.recordLoss(tx, OWN, 'us', LOST_AT);
+
+    await expect(built()).resolves.toEqual(
       expect.objectContaining({
         event: 'app.delisted',
         country: 'us',
         occurredAt: LOST_AT.toISOString(),
         date: '2026-11-03',
+        app: expect.objectContaining({
+          id: 'app_1',
+          iconUrl: 'https://is1-ssl.mzstatic.com/icon.png',
+          store: 'APP_STORE',
+          country: 'us',
+        }) as object,
       }),
     );
+    expect(findFirst).not.toHaveBeenCalled();
+    expect(count).not.toHaveBeenCalled();
   });
 
-  it('dispatches a lost market the app was listed in with its keywords', async () => {
-    const { service, findFirst, count, dispatch } = lost({ id: 'snap' }, 3);
+  it('builds a lost market the app was listed in with its keywords, read through the transaction', async () => {
+    const { service, tx, prisma, findFirst, count, built } = lost(
+      { id: 'snap' },
+      3,
+    );
 
-    await service.listingLost(OWN, 'de', LOST_AT);
+    await service.recordLoss(tx, OWN, 'de', LOST_AT);
 
+    await expect(built()).resolves.toEqual(
+      expect.objectContaining({
+        event: 'app.unlisted_market',
+        market: 'de',
+        trackedKeywords: 3,
+        app: expect.objectContaining({ iconUrl: OWN.iconUrl }) as object,
+      }),
+    );
     expect(findFirst).toHaveBeenCalledWith({
       where: { appId: 'app_1', country: 'de', localization: null },
       select: { id: true },
@@ -182,19 +228,15 @@ describe('ListingAlerts.listingLost', () => {
         keyword: { is: { country: 'de' } },
       },
     });
-    expect(dispatch).toHaveBeenCalledWith(
-      expect.objectContaining({
-        event: 'app.unlisted_market',
-        market: 'de',
-        trackedKeywords: 3,
-      }),
-    );
+    expect(prisma.appSnapshot.findFirst).not.toHaveBeenCalled();
+    expect(prisma.trackedKeyword.count).not.toHaveBeenCalled();
   });
 
   it('counts the keywords of a competitor primary', async () => {
-    const { service, count } = lost({ id: 'snap' });
+    const { service, tx, count, built } = lost({ id: 'snap' });
 
-    await service.listingLost(RIVAL, 'de', LOST_AT);
+    await service.recordLoss(tx, RIVAL, 'de', LOST_AT);
+    await built();
 
     expect(count).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -203,24 +245,12 @@ describe('ListingAlerts.listingLost', () => {
     );
   });
 
-  it('dispatches nothing for a market the app was never listed in', async () => {
-    const { service, count, dispatch } = lost(null);
+  it('builds nothing for a market the app was never listed in', async () => {
+    const { service, tx, count, built } = lost(null);
 
-    await service.listingLost(OWN, 'fr', LOST_AT);
+    await service.recordLoss(tx, OWN, 'fr', LOST_AT);
 
+    await expect(built()).resolves.toBeNull();
     expect(count).not.toHaveBeenCalled();
-    expect(dispatch).not.toHaveBeenCalled();
-  });
-
-  it('logs a failing dispatch instead of throwing', async () => {
-    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
-    const { service, dispatch } = lost(null);
-    dispatch.mockRejectedValue(new Error('outbox down'));
-
-    await expect(
-      service.listingLost(OWN, 'us', LOST_AT),
-    ).resolves.toBeUndefined();
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('app_1'));
-    warn.mockRestore();
   });
 });

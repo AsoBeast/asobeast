@@ -4,6 +4,7 @@ export const TENANT_TABLES = [
   'AiCall',
   'AlertDelivery',
   'AlertEvent',
+  'AlertRelay',
   'ApiToken',
   'App',
   'AppAnnotation',

@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { App } from '@prisma/client';
-import type { ActionRule, ActionStatus } from '@asobeast/shared';
+import type { App, Prisma } from '@prisma/client';
+import type { ActionRule, ActionStatus, AlertPayload } from '@asobeast/shared';
+import { identityOf, withAppIdentity } from '../alerts/alert-app-identities';
+import { AlertOutbox } from '../alerts/alert-outbox';
 import { AlertsDispatcher } from '../alerts/alerts.dispatcher';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -16,6 +18,32 @@ const DAY_MS = 86_400_000;
 const RATING_DECLINE_RULE: ActionRule = 'reviews.investigate_rating_decline';
 const OPEN_ACTION: ActionStatus = 'OPEN';
 
+async function wasListedIn(
+  tx: Prisma.TransactionClient,
+  app: App,
+  market: string,
+): Promise<boolean> {
+  const listing = await tx.appSnapshot.findFirst({
+    where: { appId: app.id, ...listingIn(app.country, market) },
+    select: { id: true },
+  });
+  return listing !== null;
+}
+
+function keywordsIn(
+  tx: Prisma.TransactionClient,
+  app: App,
+  market: string,
+): Promise<number> {
+  return tx.trackedKeyword.count({
+    where: {
+      appId: app.primaryAppId ?? app.id,
+      active: true,
+      keyword: { is: { country: market } },
+    },
+  });
+}
+
 @Injectable()
 export class ListingAlerts {
   private readonly logger = new Logger(ListingAlerts.name);
@@ -23,6 +51,7 @@ export class ListingAlerts {
   constructor(
     private readonly prisma: PrismaService,
     private readonly alerts: AlertsDispatcher,
+    private readonly outbox: AlertOutbox,
   ) {}
 
   async ratingDropped(app: ListingAlertApp, capturedAt: Date): Promise<void> {
@@ -35,52 +64,38 @@ export class ListingAlerts {
     }
   }
 
-  async listingLost(app: App, market: string, lostAt: Date): Promise<void> {
-    try {
-      await this.raiseListingLoss(app, market, lostAt);
-    } catch (error: unknown) {
-      this.logger.warn(
-        `listing loss alert for app ${app.id} in ${market} failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-  }
-
-  private async raiseListingLoss(
+  recordLoss(
+    tx: Prisma.TransactionClient,
     app: App,
     market: string,
-    now: Date,
+    lostAt: Date,
   ): Promise<void> {
-    if (market === app.country) {
-      await this.alerts.dispatch(delistedPayload(app, now));
-      return;
-    }
-    if (!(await this.wasListedIn(app, market))) return;
-    await this.alerts.dispatch(
-      unlistedMarketPayload(
-        app,
-        market,
-        await this.keywordsIn(app, market),
-        now,
-      ),
+    return this.outbox.record(
+      tx,
+      `the listing loss of app ${app.id} in ${market}`,
+      () => this.lossOf(tx, app, market, lostAt),
     );
   }
 
-  private async wasListedIn(app: App, market: string): Promise<boolean> {
-    const listing = await this.prisma.appSnapshot.findFirst({
-      where: { appId: app.id, ...listingIn(app.country, market) },
-      select: { id: true },
-    });
-    return listing !== null;
-  }
-
-  private keywordsIn(app: App, market: string): Promise<number> {
-    return this.prisma.trackedKeyword.count({
-      where: {
-        appId: app.primaryAppId ?? app.id,
-        active: true,
-        keyword: { is: { country: market } },
-      },
-    });
+  private async lossOf(
+    tx: Prisma.TransactionClient,
+    app: App,
+    market: string,
+    lostAt: Date,
+  ): Promise<AlertPayload | null> {
+    if (market === app.country) {
+      return withAppIdentity(delistedPayload(app, lostAt), identityOf(app));
+    }
+    if (!(await wasListedIn(tx, app, market))) return null;
+    return withAppIdentity(
+      unlistedMarketPayload(
+        app,
+        market,
+        await keywordsIn(tx, app, market),
+        lostAt,
+      ),
+      identityOf(app),
+    );
   }
 
   private async raiseRatingDrop(
