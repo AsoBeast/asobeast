@@ -66,6 +66,10 @@ export interface ReviewResult {
   replyText?: string;
 }
 
+export interface SearchOptions {
+  fromEdgeCache?: boolean;
+}
+
 export interface StoreProvider {
   readonly store: Store;
   getApp(
@@ -73,7 +77,12 @@ export interface StoreProvider {
     country: string,
     localization?: AppStoreLocalization,
   ): Promise<NormalizedApp>;
-  search(term: string, country: string, num: number): Promise<SearchItem[]>;
+  search(
+    term: string,
+    country: string,
+    num: number,
+    options?: SearchOptions,
+  ): Promise<SearchItem[]>;
   suggest(term: string, country: string): Promise<SuggestItem[]>;
   similar(storeAppId: string, country: string): Promise<SearchItem[]>;
   topCharts(

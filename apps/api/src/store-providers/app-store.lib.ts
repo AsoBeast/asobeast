@@ -97,6 +97,7 @@ export interface AppStoreLib {
       term: string;
       country: string;
       num: number;
+      fromEdgeCache?: boolean;
     } & Abortable,
   ): Promise<AppStoreSearchResult[]>;
   suggest(
@@ -226,8 +227,12 @@ export const appStoreLib: AppStoreLib = {
   app: (options) => scrape(options, appStore.app),
   page: ({ id, country, language, signal }) =>
     fetchText(pageUrl(id, country, language), PAGE_USER_AGENT, signal),
-  search: (options) =>
-    scrape(options, appStore.search) as Promise<AppStoreSearchResult[]>,
+  search: ({ fromEdgeCache, ...options }) =>
+    scrape(
+      options,
+      appStore.search,
+      fromEdgeCache ? egressFetch : pastEdgeCache,
+    ) as Promise<AppStoreSearchResult[]>,
   suggest: (options) => scrape(options, appStore.suggest),
   similar: similarApps,
   list: (options) =>

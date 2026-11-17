@@ -32,6 +32,7 @@ import {
   NormalizedApp,
   ReviewResult,
   SearchItem,
+  SearchOptions,
   StoreProvider,
   SuggestItem,
 } from './types';
@@ -91,9 +92,10 @@ export class AppStoreProvider implements StoreProvider {
     term: string,
     country: string,
     num: number,
+    options: SearchOptions = {},
   ): Promise<SearchItem[]> {
     const results = await this.withRetry('search', (deadline) =>
-      this.lib.search({ term, country, num, ...deadline }),
+      this.lib.search({ term, country, num, ...options, ...deadline }),
     );
     return results.map((item) => this.toSearchItem(item));
   }

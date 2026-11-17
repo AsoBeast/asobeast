@@ -103,6 +103,11 @@ export const LATER_RELEASES: readonly Release[] = [
         title: "Positions say how far the store looked",
         text: "When your app is not found for a keyword, the position now shows how far that day's check looked, up to 200 apps, such as more than 30 on Google Play, instead of always saying more than 200. Google Play's search usually lists about 30 apps, so the old number promised a deeper look than most checks could make. A search that lists no apps at all still shows more than 200, and checks from before this update keep the number they were stored with.",
       },
+      {
+        kind: "fixed",
+        title: "A full list when you search the App Store",
+        text: "Searching the App Store by name when you import an app or add a competitor lists as many apps as you asked for, in close to the order your positions are checked in.",
+      },
     ],
   },
   {

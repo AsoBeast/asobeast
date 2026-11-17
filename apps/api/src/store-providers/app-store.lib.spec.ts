@@ -85,6 +85,21 @@ describe('appStoreLib edge cache', () => {
     expect(first.href).toBe(SEARCH_URL);
   });
 
+  it('lets a search that may answer from the edge cache ask without a nonce', async () => {
+    await appStoreLib.search({
+      term: 'explorer',
+      country: 'us',
+      num: 200,
+      fromEdgeCache: true,
+    });
+    const [options] = jest.mocked(appStore.search).mock.lastCall ?? [];
+    await options?.requestOptions?.fetch?.(SEARCH_URL, { method: 'GET' });
+    const [requested] = fetchMock.mock.lastCall ?? [];
+
+    expect(new URL(requested as URL | string).href).toBe(SEARCH_URL);
+    expect(options).not.toHaveProperty('fromEdgeCache');
+  });
+
   it('leaves the product page and the search hints as they are', async () => {
     const page = 'https://apps.apple.com/us/app/id1475326567';
     const hints =

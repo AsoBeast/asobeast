@@ -3,6 +3,7 @@ import { assertStorefront, Store, StoreSearchResult } from '@asobeast/shared';
 import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem } from '../store-providers/types';
+import { storeSearchRequest } from './store-search-request';
 
 export interface StoreSearchQuery {
   store: Store;
@@ -41,7 +42,12 @@ export class StoreSearchService {
       () =>
         this.registry
           .get(query.store)
-          .search(query.q, query.country, query.limit),
+          .search(
+            query.q,
+            query.country,
+            storeSearchRequest(query.store, query.limit),
+            { fromEdgeCache: true },
+          ),
       { waitForLocal: false },
     );
     return items.slice(0, query.limit).map(toStoreSearchResult);

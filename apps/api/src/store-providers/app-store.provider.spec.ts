@@ -506,6 +506,20 @@ describe('AppStoreProvider', () => {
     expect(result.ratingCount).toBe(42);
   });
 
+  it('asks past the edge cache unless the caller lets the search answer from it', async () => {
+    const search = jest.fn().mockResolvedValue([]);
+    const provider = new AppStoreProvider(makeLib({ search }));
+
+    await provider.search('puzzle', 'us', 200);
+    await provider.search('puzzle', 'us', 200, { fromEdgeCache: true });
+
+    const [past, cached] = search.mock.calls.map(
+      ([options]) => options as Record<string, unknown>,
+    );
+    expect(past).not.toHaveProperty('fromEdgeCache');
+    expect(cached).toMatchObject({ num: 200, fromEdgeCache: true });
+  });
+
   it('maps search items including updatedAt', async () => {
     const search = jest.fn().mockResolvedValue([
       {
