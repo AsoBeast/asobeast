@@ -3,10 +3,6 @@ import { Prisma } from '@prisma/client';
 import type { AlertPayload } from '@asobeast/shared';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
-import {
-  WorkspaceFailure,
-  workspaceFailure,
-} from '../common/tenancy/workspace-fanout';
 import { PrismaService } from '../prisma/prisma.service';
 import { ALERT_DELIVERY_JOB_OPTIONS } from './alert-delivery-flow';
 import { InstantDeliveries, InstantJobOptions } from './instant-deliveries';
@@ -55,19 +51,15 @@ export class InstantAlertRelay {
       return 0;
     }
     let relayed = 0;
-    const failures: WorkspaceFailure[] = [];
     for (const workspaceId of workspaceIds) {
       try {
         relayed += await this.workspace.run(workspaceId, () => this.relay(now));
       } catch (error) {
-        failures.push({ workspaceId, error });
+        this.logger.warn(
+          `workspace ${workspaceId} keeps its instant alerts for the next relay: ${reasonOf(error)}`,
+        );
       }
     }
-    const failure = workspaceFailure(
-      failures,
-      'keeps its instant alerts for the next relay',
-    );
-    if (failure) this.logger.warn(failure.message);
     return relayed;
   }
 

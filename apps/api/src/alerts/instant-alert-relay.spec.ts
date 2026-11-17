@@ -159,6 +159,18 @@ describe('InstantAlertRelay.relayEveryWorkspace', () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('workspace w1'));
   });
 
+  it('names every workspace that failed', async () => {
+    const { relay } = build({
+      w1: new Error('database busy'),
+      w2: new Error('database busy'),
+    });
+
+    await expect(relay.relayEveryWorkspace(NOW)).resolves.toBe(0);
+
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('workspace w1'));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('workspace w2'));
+  });
+
   it('resolves zero and warns when the workspaces cannot be listed', async () => {
     const { relay, enqueue, becauseThisWorkIsNotOwnedByOneWorkspace } = build(
       {},
