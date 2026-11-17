@@ -280,7 +280,11 @@ describe('newestFirst', () => {
   });
 
   it('returns the stored reviews unchanged when nothing is pending', () => {
-    const stored = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+    const stored = [
+      { id: 'a', reviewedAt: undefined },
+      { id: 'b', reviewedAt: undefined },
+      { id: 'c', reviewedAt: undefined },
+    ];
 
     const merged = newestFirst(stored, [], 10);
 
