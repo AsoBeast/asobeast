@@ -2,14 +2,6 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { AuthUser } from "@asobeast/shared";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { entryDestination } from "@/lib/auth-routes";
 import {
   CONFIRM_EMAIL_CAPTION,
@@ -24,6 +16,7 @@ import {
   confirmEmailViewerOptions,
 } from "@/lib/queries";
 import { signUpSteps } from "@/lib/sign-up-steps";
+import { AuthActions, AuthAside, AuthCard } from "./AuthCard";
 import { ResendConfirmationButton } from "./ResendConfirmationButton";
 import { SessionCheck } from "./SessionCheck";
 import { SignOutButton } from "./SignOutButton";
@@ -51,33 +44,35 @@ export function ConfirmEmailContent({ user }: { user: AuthUser }) {
   }
 
   return (
-    <div className="mx-auto my-auto flex w-full max-w-lg flex-col gap-6">
+    <div className="my-auto flex w-full flex-col items-center gap-6">
       <SignUpSteps steps={signUpSteps(user)} />
-      <Card>
-        <CardHeader>
-          <CardTitle asChild className="text-title">
-            <h1>{CONFIRM_EMAIL_TITLE}</h1>
-          </CardTitle>
-          <CardDescription>
+      <AuthCard
+        title={CONFIRM_EMAIL_TITLE}
+        width="wall"
+        description={
+          <>
             <span>{before}</span>
             <strong className="font-medium wrap-anywhere text-foreground">
               {address}
             </strong>
             <span>{after}</span>
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col items-start gap-3">
+          </>
+        }
+      >
+        <AuthActions>
           <ResendConfirmationButton />
-          <p className="text-caption text-muted-foreground">
+          <p className="text-caption text-balance text-muted-foreground">
             {CONFIRM_EMAIL_CAPTION}
           </p>
-        </CardContent>
-        <CardFooter className="flex flex-wrap items-center gap-x-1 text-body text-muted-foreground">
-          <span>{WRONG_ADDRESS}</span>
-          <SignOutButton variant="link" size="sm" className="h-auto px-0" />
-          <span>{REGISTER_AGAIN}</span>
-        </CardFooter>
-      </Card>
+        </AuthActions>
+        <AuthAside>
+          <div className="flex flex-wrap items-center justify-center gap-x-1 text-dense">
+            <span>{WRONG_ADDRESS}</span>
+            <SignOutButton variant="link" size="sm" className="h-auto px-0" />
+            <span>{REGISTER_AGAIN}</span>
+          </div>
+        </AuthAside>
+      </AuthCard>
     </div>
   );
 }

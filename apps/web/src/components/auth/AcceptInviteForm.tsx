@@ -5,21 +5,17 @@ import type { FormEvent } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { PASSWORD_RULE } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ApiError, acceptInvite } from "@/lib/api";
-import { passwordError } from "@/lib/password";
+import { acceptInvite } from "@/lib/api";
+import { PASSWORD_HINT, passwordError } from "@/lib/password";
 import { useSingleFlight } from "@/lib/single-flight";
+import { AuthActions, AuthCard, AuthPanel, INLINE_LINK } from "./AuthCard";
+import { authFieldError, type AuthFieldError } from "./field-error";
+import { FieldErrorMessage } from "./FieldErrorMessage";
 import { LegalConsent } from "./LegalConsent";
+import { PasswordField } from "./PasswordField";
 import { SessionNotKeptAlert } from "./SessionNotKeptAlert";
 import { useSessionEntry } from "./use-session-entry";
 
@@ -27,7 +23,7 @@ export function AcceptInviteForm({ billing }: { billing: boolean }) {
   const token = useSearchParams().get("token") ?? "";
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<AuthFieldError | null>(null);
 
   const { mutation, sessionDropped } = useSessionEntry({
     establish: () =>
@@ -36,13 +32,10 @@ export function AcceptInviteForm({ billing }: { billing: boolean }) {
         password,
         name: name.trim() === "" ? undefined : name.trim(),
       }),
-    onFailure: (err) => {
+    onFailure: (err) =>
       setError(
-        err instanceof ApiError
-          ? err.envelope.message
-          : "Could not accept the invitation. Try again.",
-      );
-    },
+        authFieldError(err, "Could not accept the invitation. Try again."),
+      ),
   });
   const submitOnce = useSingleFlight(mutation);
   const locked = mutation.isPending || mutation.isSuccess || sessionDropped;
@@ -53,7 +46,7 @@ export function AcceptInviteForm({ billing }: { billing: boolean }) {
     setError(null);
     const problem = passwordError(password);
     if (problem) {
-      setError(problem);
+      setError({ field: "password", message: problem });
       return;
     }
     submitOnce();
@@ -61,100 +54,63 @@ export function AcceptInviteForm({ billing }: { billing: boolean }) {
 
   if (token === "") {
     return (
-      <Card className="mx-auto w-full max-w-sm">
-        <CardHeader>
-          <CardTitle asChild>
-            <h1>Invitation link incomplete</h1>
-          </CardTitle>
-          <CardDescription>
-            Open the link from your invitation email, or ask the workspace owner
-            to send it again.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <AuthCard
+        title="Invitation link incomplete"
+        description="Open the link from your invitation email, or ask the workspace owner to send it again."
+      >
+        <AuthActions>
           <Button asChild variant="outline">
             <Link href="/login">Back to sign in</Link>
           </Button>
-        </CardContent>
-      </Card>
+        </AuthActions>
+      </AuthCard>
     );
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-sm flex-col gap-4">
-      <Card>
-        <CardHeader>
-          <CardTitle asChild>
-            <h1>Join the workspace</h1>
-          </CardTitle>
-          <CardDescription>
-            Choose a password and you are in. Your email came with the
-            invitation.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={submit} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="name">Name (optional)</Label>
-              <Input
-                id="name"
-                name="name"
-                autoComplete="name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                aria-invalid={error !== null}
-                aria-describedby={
-                  error ? "password-rule password-error" : "password-rule"
-                }
-                required
-              />
-              <p
-                id="password-rule"
-                className="text-caption text-muted-foreground"
-              >
-                {PASSWORD_RULE}
-              </p>
-            </div>
-            {error ? (
-              <p
-                id="password-error"
-                role="alert"
-                className="text-body text-destructive"
-              >
-                {error}
-              </p>
-            ) : null}
-            {sessionDropped ? (
-              <SessionNotKeptAlert
-                outcome="You joined the workspace."
-                offerSignIn
-              />
-            ) : null}
-            <Button type="submit" aria-disabled={locked || undefined}>
-              {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
-              Accept invitation
-            </Button>
-            {billing ? <LegalConsent /> : null}
-          </form>
-        </CardContent>
-      </Card>
-      <p className="text-center text-body text-muted-foreground">
-        Already have an account?{" "}
-        <Link href="/login" className="font-medium underline">
-          Sign in
-        </Link>
-      </p>
-    </div>
+    <AuthCard
+      title="Join the workspace"
+      description="Choose a password and you are in. Your email came with the invitation."
+      footer={
+        <>
+          Already have an account?{" "}
+          <Link href="/login" className={INLINE_LINK}>
+            Sign in
+          </Link>
+        </>
+      }
+    >
+      {sessionDropped ? (
+        <SessionNotKeptAlert outcome="You joined the workspace." offerSignIn />
+      ) : null}
+      <AuthPanel>
+        <form onSubmit={submit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="name">Name (optional)</Label>
+            <Input
+              id="name"
+              name="name"
+              autoComplete="name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </div>
+          <PasswordField
+            label="Password"
+            autoComplete="new-password"
+            value={password}
+            onChange={setPassword}
+            hint={PASSWORD_HINT}
+            error={error?.field === "password" ? error.message : null}
+          />
+          <FieldErrorMessage error={error} field="form" id="form-error" />
+          <Button type="submit" size="lg" aria-disabled={locked || undefined}>
+            {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
+            Accept invitation
+          </Button>
+          {billing ? <LegalConsent /> : null}
+        </form>
+      </AuthPanel>
+    </AuthCard>
   );
 }

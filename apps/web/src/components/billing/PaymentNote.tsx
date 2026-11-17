@@ -36,7 +36,10 @@ export function PaymentNote({
           <span>{`${trialPaymentNote(catalog, offer, clock)} `}</span>
         )}
         <span>{NEED_HELP}</span>{" "}
-        <a href={`mailto:${SUPPORT_EMAIL}`} className="font-medium underline">
+        <a
+          href={`mailto:${SUPPORT_EMAIL}`}
+          className="text-foreground link-underline"
+        >
           {CONTACT_SUPPORT}
         </a>
         .

@@ -3,7 +3,7 @@ import { VALID_CONFIRM_TOKEN, VALID_UNSUBSCRIBE_TOKEN } from "./fixtures.mts";
 import { CLAIM_WINDOW_MS } from "../src/lib/focus-handoff";
 import { holdRequest, pressFromKeyboard } from "./held-request.mts";
 import { fulfillJson, seedSession } from "./plan-helpers.mts";
-import { seedCookies } from "./routes.mts";
+import { seedCookies, SIGNED_OUT_ROUTES } from "./routes.mts";
 import { expect, test } from "./reporting.mts";
 
 const PASSWORD = "supersecret1";
@@ -23,7 +23,7 @@ async function signIn(page: Page, refusal: (route: Route) => Promise<void>) {
   await page.route("**/api/backend/auth/login", refusal);
   await page.goto("/login");
   await page.getByLabel("Email").fill("owner@example.com");
-  await page.getByLabel("Password").fill(PASSWORD);
+  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
 }
 
@@ -52,7 +52,7 @@ test("a refused sign in announces why and marks both fields", async ({
     "aria-invalid",
     "true",
   );
-  await expect(page.getByLabel("Password")).toHaveAttribute(
+  await expect(page.getByLabel("Password", { exact: true })).toHaveAttribute(
     "aria-invalid",
     "true",
   );
@@ -76,7 +76,7 @@ test("a throttled sign in leaves both fields valid", async ({ page }) => {
     "aria-invalid",
     "false",
   );
-  await expect(page.getByLabel("Password")).toHaveAttribute(
+  await expect(page.getByLabel("Password", { exact: true })).toHaveAttribute(
     "aria-invalid",
     "false",
   );
@@ -365,3 +365,73 @@ for (const { request, path, fill, press, claims } of ANSWERED_REQUESTS.filter(
     ).toBeFocused();
   });
 }
+
+const TITLE_STEP_PX = 24;
+const NARROW_PHONE = { width: 320, height: 720 };
+
+for (const [name, path, cookies] of SIGNED_OUT_ROUTES) {
+  test(`${name} sets its one heading at the title step`, async ({
+    page,
+    context,
+  }) => {
+    await seedCookies(context, cookies);
+    await page.goto(path);
+
+    const heading = page.getByRole("heading", { level: 1 });
+    await expect(heading).toHaveCount(1);
+    await expect(heading).toHaveCSS("font-size", `${TITLE_STEP_PX}px`);
+  });
+
+  test(`${name} fits a 320 px phone without sideways scroll`, async ({
+    page,
+    context,
+  }) => {
+    await page.setViewportSize(NARROW_PHONE);
+    await seedCookies(context, cookies);
+    await page.goto(path);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+  });
+}
+
+test("the password can be shown and hidden without losing the field's name", async ({
+  page,
+}) => {
+  await page.goto("/login");
+  const password = page.getByLabel("Password", { exact: true });
+  await password.fill(PASSWORD);
+  await expect(password).toHaveAttribute("type", "password");
+
+  await pressFromKeyboard(page.getByRole("button", { name: "Show password" }));
+
+  await expect(password).toHaveAttribute("type", "text");
+  await expect(password).toHaveValue(PASSWORD);
+  const hide = page.getByRole("button", { name: "Hide password" });
+  await expect(hide).toBeFocused();
+
+  await hide.click();
+  await expect(password).toHaveAttribute("type", "password");
+});
+
+test("showing the password does not submit the form", async ({ page }) => {
+  let attempts = 0;
+  await page.route("**/api/backend/auth/login", async (route) => {
+    attempts += 1;
+    await refuse(401, "Invalid email or password")(route);
+  });
+  await page.goto("/login");
+  await page.getByLabel("Email").fill("owner@example.com");
+  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
+
+  await page.getByRole("button", { name: "Show password" }).click();
+
+  await expect(
+    page.getByRole("button", { name: "Hide password" }),
+  ).toBeVisible();
+  expect(attempts).toBe(0);
+});

@@ -6,21 +6,15 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
-import { PASSWORD_RULE } from "@asobeast/shared";
-import { ApiError, resetPassword } from "@/lib/api";
-import { passwordError } from "@/lib/password";
+import { resetPassword } from "@/lib/api";
+import { PASSWORD_HINT, passwordError } from "@/lib/password";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useFocusClaim } from "@/lib/focus-handoff";
 import { useSingleFlight } from "@/lib/single-flight";
+import { AuthActions, AuthCard, AuthPanel } from "./AuthCard";
+import { authFieldError, type AuthFieldError } from "./field-error";
+import { FieldErrorMessage } from "./FieldErrorMessage";
+import { PasswordField } from "./PasswordField";
 import { useAnswerFocus } from "./use-answer-focus";
 
 const PASSWORD_SET_FOCUS_KEY = "password-set";
@@ -28,7 +22,7 @@ const PASSWORD_SET_FOCUS_KEY = "password-set";
 export function ResetPasswordForm() {
   const token = useSearchParams().get("token") ?? "";
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<AuthFieldError | null>(null);
 
   const {
     watchForm,
@@ -38,13 +32,13 @@ export function ResetPasswordForm() {
   const mutation = useMutation({
     mutationFn: () => resetPassword(token, password),
     onSuccess: handFocus,
-    onError: (err) => {
+    onError: (err) =>
       setError(
-        err instanceof ApiError
-          ? err.envelope.message
-          : "Could not set the new password. Ask for a fresh link.",
-      );
-    },
+        authFieldError(
+          err,
+          "Could not set the new password. Ask for a fresh link.",
+        ),
+      ),
   });
   const submitOnce = useSingleFlight(mutation);
   const claimFocus = useFocusClaim(PASSWORD_SET_FOCUS_KEY);
@@ -55,7 +49,7 @@ export function ResetPasswordForm() {
     setError(null);
     const problem = passwordError(password);
     if (problem) {
-      setError(problem);
+      setError({ field: "password", message: problem });
       return;
     }
     holdFocus();
@@ -64,104 +58,70 @@ export function ResetPasswordForm() {
 
   if (token === "") {
     return (
-      <Card className="mx-auto w-full max-w-sm">
-        <CardHeader>
-          <CardTitle asChild>
-            <h1>Recovery link incomplete</h1>
-          </CardTitle>
-          <CardDescription>
-            Open the link from your recovery email, or ask for a new one.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <AuthCard
+        title="Recovery link incomplete"
+        description="Open the link from your recovery email, or ask for a new one."
+      >
+        <AuthActions>
           <Button asChild variant="outline">
             <Link href="/forgot-password">Ask for a new link</Link>
           </Button>
-        </CardContent>
-      </Card>
+        </AuthActions>
+      </AuthCard>
+    );
+  }
+
+  if (mutation.isSuccess) {
+    return (
+      <AuthCard
+        title="Choose a new password"
+        description="Every other session has been signed out and your API tokens were revoked."
+      >
+        <AuthActions>
+          <p className="text-body" role="status">
+            Your password is set. Sign in with it now.
+          </p>
+          <Button asChild>
+            <Link ref={claimFocus} href="/login">
+              Sign in
+            </Link>
+          </Button>
+        </AuthActions>
+      </AuthCard>
     );
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-sm flex-col gap-4">
-      <Card>
-        <CardHeader>
-          <CardTitle asChild>
-            <h1>Choose a new password</h1>
-          </CardTitle>
-          <CardDescription>
-            {mutation.isSuccess
-              ? "Every other session has been signed out and your API tokens were revoked."
-              : "Setting it signs out every device that was already signed in and revokes your API tokens."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {mutation.isSuccess ? (
-            <div className="flex flex-col gap-4">
-              <p className="text-body" role="status">
-                Your password is set. Sign in with it now.
-              </p>
-              <Button asChild>
-                <Link ref={claimFocus} href="/login">
-                  Sign in
-                </Link>
-              </Button>
-            </div>
-          ) : (
-            <form
-              ref={watchForm}
-              onSubmit={submit}
-              className="flex flex-col gap-4"
-            >
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="password">New password</Label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="new-password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  aria-invalid={error !== null}
-                  aria-describedby={
-                    error ? "password-rule password-error" : "password-rule"
-                  }
-                  required
-                />
-                <p
-                  id="password-rule"
-                  className="text-caption text-muted-foreground"
-                >
-                  {PASSWORD_RULE}
-                </p>
-              </div>
-              {error ? (
-                <p
-                  id="password-error"
-                  role="alert"
-                  className="text-dense text-destructive"
-                >
-                  {error}
-                </p>
-              ) : null}
-              <Button
-                type="submit"
-                aria-disabled={mutation.isPending || undefined}
-              >
-                {mutation.isPending ? (
-                  <Loader2 className="animate-spin" />
-                ) : null}
-                Set new password
-              </Button>
-              {mutation.isError ? (
-                <Button asChild variant="outline">
-                  <Link href="/forgot-password">Ask for a new link</Link>
-                </Button>
-              ) : null}
-            </form>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    <AuthCard
+      title="Choose a new password"
+      description="Setting it signs out every device that was already signed in and revokes your API tokens."
+    >
+      <AuthPanel>
+        <form ref={watchForm} onSubmit={submit} className="flex flex-col gap-4">
+          <PasswordField
+            label="New password"
+            autoComplete="new-password"
+            value={password}
+            onChange={setPassword}
+            hint={PASSWORD_HINT}
+            error={error?.field === "password" ? error.message : null}
+          />
+          <FieldErrorMessage error={error} field="form" id="form-error" />
+          <Button
+            type="submit"
+            size="lg"
+            aria-disabled={mutation.isPending || undefined}
+          >
+            {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
+            Set new password
+          </Button>
+          {mutation.isError ? (
+            <Button asChild variant="outline">
+              <Link href="/forgot-password">Ask for a new link</Link>
+            </Button>
+          ) : null}
+        </form>
+      </AuthPanel>
+    </AuthCard>
   );
 }

@@ -60,7 +60,7 @@ async function signInFrom(page: Page, path: string) {
 
   await page.goto(path);
   await page.getByLabel("Email").fill("owner@example.com");
-  await page.getByLabel("Password").fill("supersecret1");
+  await page.getByLabel("Password", { exact: true }).fill("supersecret1");
   await page.getByRole("button", { name: "Sign in" }).click();
 }
 

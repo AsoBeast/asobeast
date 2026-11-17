@@ -29,7 +29,7 @@ export default function AuthLayout({
       <main
         id="main-content"
         tabIndex={-1}
-        className="page-gutter flex flex-1 items-center justify-center py-6 outline-none sm:[--gutter:1.5rem]"
+        className="page-gutter flex flex-1 items-center justify-center pt-6 pb-12 outline-none sm:pb-24 sm:[--gutter:1.5rem]"
       >
         {children}
       </main>

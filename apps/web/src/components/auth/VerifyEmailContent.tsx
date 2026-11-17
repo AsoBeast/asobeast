@@ -5,17 +5,10 @@ import { useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { ApiError, resendVerification, verifyEmail } from "@/lib/api";
 import { entryDestination } from "@/lib/auth-routes";
 import { useSingleFlight } from "@/lib/single-flight";
+import { AuthActions, AuthAside, AuthCard } from "./AuthCard";
 import { SessionNotKeptAlert } from "./SessionNotKeptAlert";
 import { useSessionEntry } from "./use-session-entry";
 
@@ -36,21 +29,16 @@ export function VerifyEmailContent() {
 
   if (token === "") {
     return (
-      <Card className="mx-auto w-full max-w-sm">
-        <CardHeader>
-          <CardTitle asChild>
-            <h1>Confirmation link incomplete</h1>
-          </CardTitle>
-          <CardDescription>
-            Open the link from your confirmation email.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <AuthCard
+        title="Confirmation link incomplete"
+        description="Open the link from your confirmation email."
+      >
+        <AuthActions>
           <Button asChild variant="outline">
             <Link href="/login">Back to sign in</Link>
           </Button>
-        </CardContent>
-      </Card>
+        </AuthActions>
+      </AuthCard>
     );
   }
 
@@ -65,17 +53,14 @@ export function VerifyEmailContent() {
       : "Could not send a new link. Try again shortly.";
 
   return (
-    <Card className="mx-auto w-full max-w-sm">
-      <CardHeader>
-        <CardTitle asChild>
-          <h1>Confirm your email</h1>
-        </CardTitle>
-        <CardDescription>
-          Confirming marks this address as yours and signs you in on this
-          device.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
+    <AuthCard
+      title="Confirm your email"
+      description="Confirming marks this address as yours and signs you in on this device."
+    >
+      {sessionDropped ? (
+        <SessionNotKeptAlert outcome="Your email is confirmed." offerSignIn />
+      ) : null}
+      <AuthActions>
         <Button
           aria-disabled={confirmLocked || undefined}
           onClick={() => {
@@ -85,12 +70,9 @@ export function VerifyEmailContent() {
           {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
           Confirm my email
         </Button>
-        {sessionDropped ? (
-          <SessionNotKeptAlert outcome="Your email is confirmed." offerSignIn />
-        ) : null}
         {mutation.isError && !sessionDropped ? (
           <>
-            <p className="text-body text-destructive">{reason}</p>
+            <p className="text-dense text-destructive">{reason}</p>
             <Button
               variant="outline"
               aria-disabled={resendLocked || undefined}
@@ -102,16 +84,16 @@ export function VerifyEmailContent() {
               {resend.isSuccess ? "New link sent" : "Send me a new link"}
             </Button>
             {resend.isError ? (
-              <p className="text-body text-destructive">{resendReason}</p>
+              <p className="text-dense text-destructive">{resendReason}</p>
             ) : null}
           </>
         ) : null}
-      </CardContent>
-      <CardFooter>
-        <p className="text-caption text-muted-foreground">
+      </AuthActions>
+      <AuthAside>
+        <p className="text-caption">
           Signed in as someone else? Sign out first, then open this link again.
         </p>
-      </CardFooter>
-    </Card>
+      </AuthAside>
+    </AuthCard>
   );
 }

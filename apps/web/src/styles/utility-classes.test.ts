@@ -82,7 +82,7 @@ const PHONE_SIZE_OVERRIDE = new RegExp(
 
 const CARD_DESCRIPTION = /\bCardDescription\b/g;
 
-const CARD_DESCRIPTION_HOMES = ["components/ui/card.tsx", "components/auth/"];
+const CARD_DESCRIPTION_HOMES = ["components/ui/card.tsx"];
 
 function sources(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -168,7 +168,7 @@ describe("utility classes", () => {
     expect(outside(PRIMARY_FILL, PRIMARY_FILL_HOMES)).toEqual([]);
   });
 
-  it("puts a sentence under a card title only on the sign in cards", () => {
+  it("puts no sentence under a card title outside the card primitive", () => {
     expect(outside(CARD_DESCRIPTION, CARD_DESCRIPTION_HOMES)).toEqual([]);
   });
 });
