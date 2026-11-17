@@ -516,6 +516,245 @@ describe('AuditController (e2e)', () => {
     );
   });
 
+  it('answers the featuring readiness rows from the page extract and the graded checks', async () => {
+    const id = await seed();
+
+    const result = (await api.get(`/apps/${id}/audit`).expect(200))
+      .body as AppAuditResult;
+
+    expect(result.readiness?.items.map((item) => item.id)).toEqual([
+      'preview-video',
+      'in-app-events',
+      'accessibility',
+      'rating',
+      'update-recency',
+      'localizations',
+      'screenshots',
+    ]);
+    expect(result.readiness?.items.map((item) => item.status)).toEqual([
+      'pass',
+      'pass',
+      'pass',
+      'pass',
+      'pass',
+      'unmeasurable',
+      'pass',
+    ]);
+    expect(result.readiness?.items[0]).toMatchObject({
+      label: 'Preview video',
+      detail: 'The store page shows 2 preview videos.',
+      link: {
+        href: 'https://developer.apple.com/app-store/product-page/',
+        label: 'About the product page',
+      },
+    });
+    expect(result.readiness?.items[1]).toMatchObject({
+      label: 'In-app events',
+      detail: 'The store page lists 1 in-app event.',
+      link: {
+        href: 'https://developer.apple.com/app-store/in-app-events/',
+        label: 'About in-app events',
+      },
+    });
+    expect(result.readiness?.editorial).toEqual({
+      stories: 1,
+      editorsChoiceBadge: true,
+    });
+    expect(result.readiness?.extractAsOf).toBe(D0.toISOString().slice(0, 10));
+  });
+
+  it('fails the featuring readiness rows the extract shows are missing', async () => {
+    const app = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '6234567890',
+        country: 'us',
+        name: 'Bare Extract',
+      },
+    });
+    await prisma.appSnapshot.create({
+      data: {
+        appId: app.id,
+        title: 'Bare Extract',
+        description: 'Build better habits every single day.',
+        ratingAvg: 4.2,
+        ratingCount: 40,
+        storeUpdatedAt: new Date(),
+        raw: {
+          screenshots: Array.from({ length: 8 }, (_, i) => `s${i}.png`),
+          pageExtract: {
+            previewVideoUrls: [],
+            appEvents: [],
+            featuredStories: [],
+            editorsChoice: null,
+            accessibilityStatement: null,
+          },
+        },
+        capturedAt: D0,
+      },
+    });
+
+    const result = (await api.get(`/apps/${app.id}/audit`).expect(200))
+      .body as AppAuditResult;
+
+    expect(result.readiness?.items.map((item) => item.status)).toEqual([
+      'fail',
+      'fail',
+      'fail',
+      'warn',
+      'pass',
+      'unmeasurable',
+      'pass',
+    ]);
+    expect(result.readiness?.editorial).toEqual({
+      stories: 0,
+      editorsChoiceBadge: false,
+    });
+    expect(
+      result.readiness?.items.find((item) => item.id === 'rating')?.detail,
+    ).toBe('Average rating is 4.20.');
+  });
+
+  it('falls back to the newest home snapshot with an extract for the extract rows', async () => {
+    const app = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '7234567890',
+        country: 'us',
+        name: 'Stale Extract',
+      },
+    });
+    await prisma.appSnapshot.createMany({
+      data: [
+        {
+          appId: app.id,
+          title: 'Stale Extract',
+          description: 'Build better habits every single day.',
+          ratingAvg: 4.6,
+          ratingCount: 5000,
+          storeUpdatedAt: new Date(),
+          raw: {
+            screenshots: Array.from({ length: 8 }, (_, i) => `s${i}.png`),
+            pageExtract: {
+              previewVideoUrls: ['https://video.example.com/preview-1.mp4'],
+              appEvents: [
+                {
+                  appEventId: '6822418007',
+                  title: 'Habit Streak Challenge',
+                  kind: 'SPECIAL EVENT',
+                  badge: 'happening',
+                  startsAt: null,
+                  endsAt: null,
+                },
+              ],
+              featuredStories: [],
+              editorsChoice: null,
+              accessibilityStatement: 'VoiceOver labels on every screen.',
+            },
+          },
+          capturedAt: D0,
+        },
+        {
+          appId: app.id,
+          title: 'Stale Extract',
+          description: 'Build better habits every single day.',
+          ratingAvg: 4.6,
+          ratingCount: 5000,
+          storeUpdatedAt: new Date(),
+          raw: {
+            screenshots: Array.from({ length: 8 }, (_, i) => `s${i}.png`),
+          },
+          capturedAt: new Date(D0.getTime() + 86_400_000),
+        },
+      ],
+    });
+
+    const result = (await api.get(`/apps/${app.id}/audit`).expect(200))
+      .body as AppAuditResult;
+
+    expect(result.readiness?.extractAsOf).toBe(D0.toISOString().slice(0, 10));
+    expect(result.readiness?.items.map((item) => item.status)).toEqual([
+      'pass',
+      'pass',
+      'pass',
+      'pass',
+      'pass',
+      'unmeasurable',
+      'pass',
+    ]);
+    expect(result.readiness?.editorial).toEqual({
+      stories: 0,
+      editorsChoiceBadge: false,
+    });
+  });
+
+  it('leaves every readiness row unmeasurable when no snapshot carries an extract', async () => {
+    const app = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '8234567890',
+        country: 'us',
+        name: 'No Extract At All',
+      },
+    });
+    await prisma.appSnapshot.create({
+      data: {
+        appId: app.id,
+        title: 'No Extract At All',
+        description: 'Build better habits every single day.',
+        raw: {
+          screenshots: Array.from({ length: 8 }, (_, i) => `s${i}.png`),
+        },
+        capturedAt: D0,
+      },
+    });
+
+    const result = (await api.get(`/apps/${app.id}/audit`).expect(200))
+      .body as AppAuditResult;
+
+    expect(result.readiness?.items.map((item) => item.status)).toEqual([
+      'unmeasurable',
+      'unmeasurable',
+      'unmeasurable',
+      'unmeasurable',
+      'unmeasurable',
+      'unmeasurable',
+      'pass',
+    ]);
+    expect(result.readiness?.editorial).toBeNull();
+    expect(result.readiness?.extractAsOf).toBeNull();
+  });
+
+  it('omits readiness for a Google Play app', async () => {
+    const gplay = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.GOOGLE_PLAY,
+        storeAppId: 'com.example.readiness',
+        country: 'us',
+        name: 'Play Readiness',
+      },
+    });
+    await prisma.appSnapshot.create({
+      data: {
+        appId: gplay.id,
+        title: 'Play Readiness',
+        summary: 'Track daily habits and reach your goals',
+        description: 'Build better habits every single day.',
+        raw: { screenshots: Array.from({ length: 8 }, (_, i) => `p${i}.png`) },
+        capturedAt: D0,
+      },
+    });
+
+    const result = (await api.get(`/apps/${gplay.id}/audit`).expect(200))
+      .body as AppAuditResult;
+
+    expect(result.readiness).toBeUndefined();
+  });
+
   it('runs the AI audit, caches it, and raises the overall', async () => {
     const id = await seed();
 
