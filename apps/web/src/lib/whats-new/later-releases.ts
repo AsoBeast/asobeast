@@ -101,7 +101,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "fixed",
         title: "Positions say how far the store looked",
-        text: "When your app is not found for a keyword, the position now shows how many apps the store listed that day, such as more than 30 on Google Play, instead of always saying more than 200. Google Play's search lists at most 30 apps, so the old number promised a deeper look than any check could make.",
+        text: "When your app is not found for a keyword, the position now shows how many apps the store listed that day, such as more than 30 on Google Play, instead of always saying more than 200. Google Play's search lists at most 30 apps, so the old number promised a deeper look than any check could make. A search that lists no apps at all still shows more than 200, and checks from before this update keep the number they were stored with.",
       },
     ],
   },
