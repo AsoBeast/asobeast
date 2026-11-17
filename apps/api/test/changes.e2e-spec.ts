@@ -171,7 +171,7 @@ describe('ChangesController (e2e)', () => {
             added: [{ storyId: 's1', heading: null, title: 'Editors talk' }],
             removed: [],
           },
-          capturedAt: addDays(utcToday(), -2),
+          capturedAt: addDays(utcToday(), -3),
         },
         {
           appId: primary.id,
