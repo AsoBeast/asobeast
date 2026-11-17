@@ -41,7 +41,6 @@ import {
   reviewNewPayload,
 } from './review-alert-payloads';
 import { ReviewInserts } from './review-inserts';
-import { ReviewSpikeAlerts } from './review-spike-alerts.service';
 import { reviewLanguage } from './review-language';
 import { toReviewTranslation, TranslationColumns } from './review-translation';
 import { StoredReview, storedReviewChanges } from './stored-review-changes';
@@ -68,7 +67,6 @@ export class ReviewsService {
     private readonly registry: StoreProviderRegistry,
     private readonly config: ConfigService<Env, true>,
     private readonly alerts: AlertsDispatcher,
-    private readonly spikes: ReviewSpikeAlerts,
     private readonly inserts: ReviewInserts,
   ) {}
 
@@ -84,6 +82,7 @@ export class ReviewsService {
         store: true,
         storeAppId: true,
         country: true,
+        iconUrl: true,
       },
     });
     if (!app) {
@@ -123,9 +122,10 @@ export class ReviewsService {
     );
     const checkedAt = app.store === Store.GOOGLE_PLAY ? new Date() : null;
     const inserted = await this.inserts.store({
-      appId: app.id,
+      app,
       absent,
       checkedAt,
+      judgesSpikes: !payload.backfill,
     });
 
     if (checkedAt !== null && known.size > 0) {
@@ -136,7 +136,6 @@ export class ReviewsService {
       const alertApp = { id: app.id, name: app.name };
       await this.dispatchNegativeAlerts(alertApp, inserted);
       await this.dispatchNewReviewAlerts(alertApp, inserted);
-      if (inserted.length > 0) await this.spikes.raise(app, inserted);
     }
 
     return inserted;

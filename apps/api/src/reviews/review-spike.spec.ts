@@ -5,6 +5,7 @@ import {
   medianOf,
   reviewsOn,
   spikeThreshold,
+  withPending,
   type DayCount,
 } from './review-spike';
 
@@ -150,5 +151,92 @@ describe('reviewsOn', () => {
 
   it('keeps nothing for a day without reviews', () => {
     expect(reviewsOn([at('2026-11-03T08:00:00.000Z')], DAY)).toEqual([]);
+  });
+});
+
+describe('withPending', () => {
+  const pending = (score: number, iso?: string) => ({
+    score,
+    updatedAt: iso ? new Date(iso) : undefined,
+  });
+
+  it('adds each pending review to its own day and counts its low score', () => {
+    const merged = withPending(
+      {
+        counts: new Map([['2026-11-01', { count: 2, low: 0 }]]),
+        oldestDay: '2026-10-01',
+      },
+      [
+        pending(1, '2026-11-02T08:00:00.000Z'),
+        pending(1, '2026-11-02T09:00:00.000Z'),
+        pending(5, '2026-11-02T10:00:00.000Z'),
+        pending(1, '2026-11-01T10:00:00.000Z'),
+      ],
+      2,
+    );
+
+    expect(merged.counts.get('2026-11-01')).toEqual({ count: 3, low: 1 });
+    expect(merged.counts.get('2026-11-02')).toEqual({ count: 3, low: 2 });
+  });
+
+  it('ignores a pending review without a date', () => {
+    const merged = withPending(
+      { counts: new Map(), oldestDay: null },
+      [pending(1)],
+      2,
+    );
+
+    expect(merged).toEqual({ counts: new Map(), oldestDay: null });
+  });
+
+  it('moves the oldest day back to the oldest pending review, and sets it from null', () => {
+    expect(
+      withPending(
+        { counts: new Map(), oldestDay: '2026-11-01' },
+        [pending(5, '2026-10-30T10:00:00.000Z')],
+        2,
+      ).oldestDay,
+    ).toBe('2026-10-30');
+    expect(
+      withPending(
+        { counts: new Map(), oldestDay: null },
+        [pending(5, '2026-11-02T10:00:00.000Z')],
+        2,
+      ).oldestDay,
+    ).toBe('2026-11-02');
+  });
+
+  it('leaves the history it was given untouched', () => {
+    const counts = new Map([[DAY, { count: 2, low: 0 }]]);
+
+    withPending(
+      { counts, oldestDay: DAY },
+      [pending(1, `${DAY}T10:00:00.000Z`)],
+      2,
+    );
+
+    expect([...counts]).toEqual([[DAY, { count: 2, low: 0 }]]);
+  });
+
+  it('forecasts the crossing the insert will make', () => {
+    const quiet = { counts: history(() => 2), oldestDay: addUtcDays(DAY, -40) };
+    const nine = Array.from({ length: 9 }, () =>
+      pending(1, `${DAY}T10:00:00.000Z`),
+    );
+
+    expect(
+      judgeSpike({
+        day: DAY,
+        insertedOnDay: 9,
+        ...withPending(quiet, nine, 2),
+      }),
+    ).not.toBeNull();
+    expect(
+      judgeSpike({
+        day: DAY,
+        insertedOnDay: 0,
+        ...withPending(quiet, nine, 2),
+      }),
+    ).toBeNull();
   });
 });

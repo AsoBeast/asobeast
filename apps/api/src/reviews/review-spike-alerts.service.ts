@@ -1,19 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Store } from '@prisma/client';
-import { addUtcDays, utcDayOf } from '@asobeast/shared';
-import { AlertsDispatcher } from '../alerts/alerts.dispatcher';
+import { Prisma, Store } from '@prisma/client';
+import type { AlertPayload, ReviewSpikeTheme } from '@asobeast/shared';
+import { identityOf, withAppIdentity } from '../alerts/alert-app-identities';
+import { AlertOutbox } from '../alerts/alert-outbox';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import type { ReviewResult } from '../store-providers/types';
 import { reviewSpikePayload } from './review-alert-payloads';
-import {
-  judgedDays,
-  judgeSpike,
-  REVIEW_SPIKE_BASELINE_DAYS,
-  reviewsOn,
-  type DayCount,
-} from './review-spike';
+import { readDayHistory } from './review-day-history';
+import { judgedDays, judgeSpike, reviewsOn, withPending } from './review-spike';
 import { ReviewThemesService } from './review-themes.service';
 
 export interface ReviewSpikeApp {
@@ -21,15 +17,32 @@ export interface ReviewSpikeApp {
   name: string | null;
   store: Store;
   country: string;
+  iconUrl: string | null;
 }
 
-interface DayRow {
-  day: Date;
-  count: number;
-  low: number;
+export type SpikeThemes = ReadonlyMap<string, ReviewSpikeTheme>;
+
+export const NO_SPIKE_THEMES: SpikeThemes = new Map();
+
+export interface SpikeSync {
+  app: ReviewSpikeApp;
+  inserted: readonly ReviewResult[];
+  themes: SpikeThemes;
+  now: Date;
 }
 
-const startOf = (day: string): Date => new Date(`${day}T00:00:00.000Z`);
+interface JudgedDay {
+  day: string;
+  insertedOnDay: number;
+  topTheme: ReviewSpikeTheme | null;
+  now: Date;
+}
+
+const datesOf = (reviews: readonly ReviewResult[]) =>
+  reviews.map((review) => review.updatedAt);
+
+const reasonOf = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
 
 @Injectable()
 export class ReviewSpikeAlerts {
@@ -39,92 +52,86 @@ export class ReviewSpikeAlerts {
     private readonly prisma: PrismaService,
     private readonly themes: ReviewThemesService,
     private readonly config: ConfigService<Env, true>,
-    private readonly alerts: AlertsDispatcher,
+    private readonly outbox: AlertOutbox,
   ) {}
 
-  async raise(
+  async themesFor(
     app: ReviewSpikeApp,
-    inserted: readonly ReviewResult[],
-    now = new Date(),
-  ): Promise<void> {
-    try {
-      await this.judge(app, inserted, now);
-    } catch (error: unknown) {
-      this.logger.warn(
-        `review spike alert for app ${app.id} failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-  }
-
-  private async judge(
-    app: ReviewSpikeApp,
-    inserted: readonly ReviewResult[],
+    pending: readonly ReviewResult[],
     now: Date,
-  ): Promise<void> {
-    const days = judgedDays(
-      inserted.map((review) => review.updatedAt),
-      now,
-    );
-    if (days.length === 0) return;
-    const lowScoreMax = this.config.get('ALERT_REVIEW_SCORE_MAX', {
-      infer: true,
-    });
-    const [oldest, counts] = await Promise.all([
-      this.prisma.review.aggregate({
-        where: { appId: app.id },
-        _min: { reviewedAt: true },
-      }),
-      this.dayCounts(app.id, days[0], utcDayOf(now), lowScoreMax),
-    ]);
-    const oldestAt = oldest._min.reviewedAt;
-    for (const day of days) {
-      const spike = judgeSpike({
-        day,
-        counts,
-        insertedOnDay: reviewsOn(inserted, day).length,
-        oldestDay: oldestAt ? utcDayOf(oldestAt) : null,
-      });
-      if (!spike) continue;
-      const topTheme = await this.themes
-        .dayTheme(app, day)
-        .catch((error: unknown) => {
+  ): Promise<SpikeThemes> {
+    const themes = new Map<string, ReviewSpikeTheme>();
+    for (const day of judgedDays(datesOf(pending), now)) {
+      const theme = await this.forecastTheme(app, day, pending).catch(
+        (error: unknown) => {
           this.logger.warn(
-            `review theme for app ${app.id} on ${day} failed: ${error instanceof Error ? error.message : String(error)}`,
+            `review theme for app ${app.id} on ${day} failed: ${reasonOf(error)}`,
           );
           return null;
-        });
-      await this.alerts.dispatch(
-        reviewSpikePayload(
-          { id: app.id, name: app.name },
-          spike,
-          { lowScoreMax, topTheme },
-          now,
-        ),
+        },
+      );
+      if (theme) themes.set(day, theme);
+    }
+    return themes;
+  }
+
+  async record(tx: Prisma.TransactionClient, sync: SpikeSync): Promise<void> {
+    for (const day of judgedDays(datesOf(sync.inserted), sync.now)) {
+      await this.outbox.record(
+        tx,
+        `the review spike of app ${sync.app.id} on ${day}`,
+        () =>
+          this.spikeOn(tx, sync.app, {
+            day,
+            insertedOnDay: reviewsOn(sync.inserted, day).length,
+            topTheme: sync.themes.get(day) ?? null,
+            now: sync.now,
+          }),
       );
     }
   }
 
-  private async dayCounts(
-    appId: string,
-    firstDay: string,
-    today: string,
-    lowScoreMax: number,
-  ): Promise<Map<string, DayCount>> {
-    const from = startOf(addUtcDays(firstDay, -REVIEW_SPIKE_BASELINE_DAYS));
-    const to = startOf(addUtcDays(today, 1));
-    const rows = await this.prisma.$queryRaw<DayRow[]>`
-      SELECT "reviewedAt"::date AS day,
-             COUNT(*)::int AS count,
-             COUNT(*) FILTER (WHERE "score" <= ${lowScoreMax})::int AS low
-      FROM "Review"
-      WHERE "appId" = ${appId} AND "reviewedAt" >= ${from} AND "reviewedAt" < ${to}
-      GROUP BY 1
-    `;
-    return new Map(
-      rows.map((row) => [
-        utcDayOf(row.day),
-        { count: row.count, low: row.low },
-      ]),
+  private async forecastTheme(
+    app: ReviewSpikeApp,
+    day: string,
+    pending: readonly ReviewResult[],
+  ): Promise<ReviewSpikeTheme | null> {
+    const lowScoreMax = this.lowScoreMax();
+    const stored = await this.prisma.withTransaction((tx) =>
+      readDayHistory(tx, app.id, day, lowScoreMax),
     );
+    const forecast = judgeSpike({
+      day,
+      insertedOnDay: reviewsOn(pending, day).length,
+      ...withPending(stored, pending, lowScoreMax),
+    });
+    return forecast ? this.themes.dayTheme(app, day, pending) : null;
+  }
+
+  private async spikeOn(
+    tx: Prisma.TransactionClient,
+    app: ReviewSpikeApp,
+    judged: JudgedDay,
+  ): Promise<AlertPayload | null> {
+    const lowScoreMax = this.lowScoreMax();
+    const spike = judgeSpike({
+      day: judged.day,
+      insertedOnDay: judged.insertedOnDay,
+      ...(await readDayHistory(tx, app.id, judged.day, lowScoreMax)),
+    });
+    if (!spike) return null;
+    return withAppIdentity(
+      reviewSpikePayload(
+        { id: app.id, name: app.name },
+        spike,
+        { lowScoreMax, topTheme: judged.topTheme },
+        judged.now,
+      ),
+      identityOf(app),
+    );
+  }
+
+  private lowScoreMax(): number {
+    return this.config.get('ALERT_REVIEW_SCORE_MAX', { infer: true });
   }
 }
