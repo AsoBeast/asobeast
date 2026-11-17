@@ -134,13 +134,13 @@ describe('SubtitleBackfill', () => {
       expect(syncFromLaterSnapshot).toHaveBeenCalledWith(APP_ID);
     });
 
-    it('leaves a snapshot a refresh already filled alone', async () => {
+    it('still catches up the keywords when a refresh or an earlier attempt filled the snapshot', async () => {
       const { backfill, updateMany, syncFromLaterSnapshot } = backfillWith();
       updateMany.mockResolvedValueOnce({ count: 0 });
 
       await backfill.resolve(PAYLOAD);
 
-      expect(syncFromLaterSnapshot).not.toHaveBeenCalled();
+      expect(syncFromLaterSnapshot).toHaveBeenCalledWith(APP_ID);
     });
 
     it('completes quietly when the app was deleted meanwhile', async () => {

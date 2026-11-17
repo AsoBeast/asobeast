@@ -1526,6 +1526,33 @@ describe('AppsController (e2e)', () => {
       expect(await firstChecksMissing(imported.id, date)).toEqual([]);
     });
 
+    it('checks the subtitle keywords once a failed backfill attempt is retried', async () => {
+      const date = utcDateKey();
+      registry.subtitleUnavailable = true;
+      const imported = await importApp(APP_STORE_URL);
+      const [backfill] = (await jobsOn(QUEUES.APP_STORE)).filter(
+        (job) => job.name === JOBS.RESOLVE_SUBTITLE,
+      );
+      const trackedBefore = await trackedCount(imported.id);
+      const failing = jest
+        .spyOn(app.get(FirstPositionChecks), 'schedule')
+        .mockRejectedValueOnce(new Error('redis is unreachable'));
+
+      registry.subtitleUnavailable = false;
+      const resolve = () =>
+        asWorkspace(app, () =>
+          app
+            .get(SubtitleBackfill)
+            .resolve(backfill.data as ResolveSubtitlePayload),
+        );
+      await expect(resolve()).rejects.toThrow('redis is unreachable');
+      await resolve();
+
+      failing.mockRestore();
+      expect(await trackedCount(imported.id)).toBeGreaterThan(trackedBefore);
+      expect(await firstChecksMissing(imported.id, date)).toEqual([]);
+    });
+
     it('fails the attempt while the product page stays unreadable', async () => {
       registry.subtitleUnavailable = true;
       const imported = await importApp(APP_STORE_URL);

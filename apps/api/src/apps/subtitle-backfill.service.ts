@@ -76,7 +76,7 @@ export class SubtitleBackfill {
     }
     if (listing.subtitle === undefined) return;
 
-    const { count } = await this.prisma.appSnapshot.updateMany({
+    await this.prisma.appSnapshot.updateMany({
       where: {
         appId,
         ...HOME_LISTING,
@@ -85,9 +85,7 @@ export class SubtitleBackfill {
       },
       data: { subtitle: listing.subtitle },
     });
-    if (count > 0) {
-      await this.keywords.syncFromLaterSnapshot(appId);
-    }
+    await this.keywords.syncFromLaterSnapshot(appId);
   }
 }
 
