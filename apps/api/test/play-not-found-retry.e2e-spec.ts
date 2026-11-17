@@ -1,6 +1,5 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundError } from '@mradex77/google-play-scraper';
 import { PrismaClient, Store } from '@prisma/client';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
@@ -10,6 +9,7 @@ import {
   GOOGLE_PLAY_LIB,
   GooglePlayAppResult,
 } from '../src/store-providers/google-play.lib';
+import { playAppNotFound } from '../src/store-providers/google-play-scraped.fixture';
 import { useCookies } from './helpers/session';
 import { asWorkspace } from './helpers/tenancy';
 import { testDb } from './helpers/test-db';
@@ -35,13 +35,6 @@ const listing: GooglePlayAppResult = {
   screenshots: [],
   recentChanges: 'Bug fixes',
 };
-
-const notFound = () =>
-  new NotFoundError(
-    'App not found (404)',
-    404,
-    `https://play.google.com/store/apps/details?id=${STORE_APP_ID}`,
-  );
 
 describe('Google Play not found retry (e2e)', () => {
   let app: INestApplication<App>;
@@ -99,7 +92,9 @@ describe('Google Play not found retry (e2e)', () => {
 
   it('keeps a play app listed after one not found answer', async () => {
     const listed = await seedPlayApp();
-    playApp.mockRejectedValueOnce(notFound()).mockResolvedValue(listing);
+    playApp
+      .mockRejectedValueOnce(playAppNotFound(STORE_APP_ID))
+      .mockResolvedValue(listing);
 
     await refresh(listed.id);
 
