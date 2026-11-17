@@ -7,6 +7,7 @@ import {
   ChangeImpactStatus,
   ChangeImpactWindow,
   ChangeImpactWindowDays,
+  isChangeField,
   visibility,
 } from '@asobeast/shared';
 import {
@@ -23,10 +24,18 @@ export const IMPACT_BASELINE_MAX_AGE_DAYS = 3;
 export const IMPACT_WINDOW_TOLERANCE_DAYS = 2;
 export const CHANGE_IMPACT_MAX_CHANGES = 12;
 
+const STORE_DECIDED_FIELDS: readonly ChangeField[] = [
+  'featuring',
+  'editorsChoice',
+];
+
 export interface ImpactEvent {
   field: ChangeField;
   capturedAt: Date;
 }
+
+export const isImpactField = (field: string): field is ChangeField =>
+  isChangeField(field) && !STORE_DECIDED_FIELDS.includes(field);
 
 export interface ChangeDay {
   day: Date;

@@ -4,7 +4,6 @@ import {
   CHANGE_IMPACT_WINDOWS,
   ChangeImpactItem,
   ChangeImpactReport,
-  isChangeField,
 } from '@asobeast/shared';
 import { addDays, utcToday } from '../analytics/analytics.support';
 import { PrismaService } from '../prisma/prisma.service';
@@ -13,6 +12,7 @@ import {
   ImpactKeyword,
   impactReadPlan,
   ImpactReadPlan,
+  isImpactField,
   measureChangeImpact,
 } from './change-impact';
 import { HOME_EVENTS } from '../apps/listing';
@@ -56,7 +56,7 @@ export class ChangeImpactService {
     });
     const changes = changeDays(
       events.flatMap(({ field, capturedAt }) =>
-        isChangeField(field) ? [{ field, capturedAt }] : [],
+        isImpactField(field) ? [{ field, capturedAt }] : [],
       ),
     );
     const keywords = await this.keywords(

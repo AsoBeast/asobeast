@@ -1,3 +1,4 @@
+import { asRecord } from '../record';
 import { NormalizedApp, SearchItem } from '../types';
 
 const REQUIRED_APP_FIELDS = ['storeAppId', 'title', 'description'] as const;
@@ -15,11 +16,6 @@ export function assertParsedApp(app: NormalizedApp): void {
   assertStringFields('parsed app', REQUIRED_APP_FIELDS, app);
 }
 
-const asRecord = (value: unknown): Record<string, unknown> | null =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
-
 export function assertPageExtract(app: NormalizedApp): void {
   if (app.pageExtractUnavailable === true && app.pageUnavailable !== true) {
     throw new CanaryShapeError('product page extract is unavailable');
@@ -27,6 +23,19 @@ export function assertPageExtract(app: NormalizedApp): void {
   const extract = asRecord(app.raw)?.pageExtract;
   if (extract !== undefined && asRecord(extract)?.previewVideoUrls === null) {
     throw new CanaryShapeError('the store page carries no product media shelf');
+  }
+}
+
+export function assertPreviewVideo(app: NormalizedApp): void {
+  const urls = asRecord(asRecord(app.raw)?.pageExtract)?.previewVideoUrls;
+  if (urls === undefined) {
+    throw new CanaryShapeError('the store page carries no extract');
+  }
+  if (urls === null) {
+    throw new CanaryShapeError('the store page carries no product media shelf');
+  }
+  if (!Array.isArray(urls) || urls.length === 0) {
+    throw new CanaryShapeError('the store page carries no preview video');
   }
 }
 

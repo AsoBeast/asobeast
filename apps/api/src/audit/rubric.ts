@@ -81,7 +81,7 @@ const PREVIEW_VIDEO_PAGE_LIMITATION: AuditLimitation = {
   id: 'preview-video-page',
   label: 'App previews',
   detail:
-    'Preview videos are not measured because this audit ran without the store page.',
+    'Preview videos are not measured because the audit read no product media from the store page.',
 };
 
 export const AUDIT_GROUP_LABELS: Readonly<Record<AuditGroupId, string>> =
@@ -370,7 +370,8 @@ export function computeAudit(context: AuditContext): AppAuditResult {
     groups,
     limitations: [
       ...limitationsFor(context.store),
-      ...(context.store === Store.APP_STORE && !context.hasPageExtract
+      ...(context.store === Store.APP_STORE &&
+      context.rawFacts.previewVideoCount === null
         ? [PREVIEW_VIDEO_PAGE_LIMITATION]
         : []),
     ],

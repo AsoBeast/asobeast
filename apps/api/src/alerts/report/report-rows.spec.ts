@@ -199,6 +199,9 @@ describe('changeRows', () => {
       'Screenshot captions',
       'Icon changed',
       "What's new",
+      'In-app events',
+      'Featuring',
+      "Editors' Choice",
     ]);
     expect(rows[7]).toEqual({
       kind: 'text',

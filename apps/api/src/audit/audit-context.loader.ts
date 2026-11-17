@@ -54,9 +54,6 @@ const iconCompetitors = (
     )
     .slice(0, MAX_COMPETITOR_ICONS);
 
-const hasPageExtract = (raw: unknown): boolean =>
-  typeof raw === 'object' && raw !== null && 'pageExtract' in raw;
-
 @Injectable()
 export class AuditContextLoader {
   constructor(
@@ -278,7 +275,6 @@ export class AuditContextLoader {
       storeUpdatedAt: latest?.storeUpdatedAt ?? null,
       now: new Date(),
       rawFacts: facts,
-      hasPageExtract: hasPageExtract(latest?.raw),
       keywords: active.map(toAuditKeyword),
       visibility,
       comparison,

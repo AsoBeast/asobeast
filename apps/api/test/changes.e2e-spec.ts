@@ -119,6 +119,116 @@ describe('ChangesController (e2e)', () => {
     });
   });
 
+  it('returns the app events and featuring details of the recorded rows', async () => {
+    const primary = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '333',
+        country: 'us',
+        name: 'Mine',
+      },
+    });
+    await prisma.changeEvent.createMany({
+      data: [
+        {
+          appId: primary.id,
+          field: 'inAppEvents',
+          before: null,
+          after: null,
+          detail: {
+            kind: 'events',
+            added: [
+              {
+                appEventId: 'e1',
+                title: 'Double XP weekend',
+                kind: 'APP_STORE_EVENT',
+                badge: 'AVAILABLE',
+                startsAt: '2026-11-20T00:00:00.000Z',
+                endsAt: '2026-11-27T00:00:00.000Z',
+              },
+            ],
+            removed: [
+              {
+                appEventId: 'e0',
+                title: 'Winter event',
+                kind: null,
+                badge: null,
+                startsAt: null,
+                endsAt: null,
+              },
+            ],
+          },
+          capturedAt: addDays(utcToday(), -2),
+        },
+        {
+          appId: primary.id,
+          field: 'featuring',
+          before: null,
+          after: null,
+          detail: {
+            kind: 'featuring',
+            added: [{ storyId: 's1', heading: null, title: 'Editors talk' }],
+            removed: [],
+          },
+          capturedAt: addDays(utcToday(), -3),
+        },
+        {
+          appId: primary.id,
+          field: 'editorsChoice',
+          before: null,
+          after: null,
+          detail: { kind: 'editorsChoice', showsBadge: true, notes: null },
+          capturedAt: addDays(utcToday(), -1),
+        },
+      ],
+    });
+
+    const response = await api.get(`/apps/${primary.id}/changes`).expect(200);
+
+    const events = (response.body as ChangeTimeline).events;
+    expect(events.map((event) => event.field)).toEqual([
+      'editorsChoice',
+      'inAppEvents',
+      'featuring',
+    ]);
+    expect(events[1].before).toBeNull();
+    expect(events[1].after).toBeNull();
+    expect(events[1].detail).toEqual({
+      kind: 'events',
+      added: [
+        {
+          appEventId: 'e1',
+          title: 'Double XP weekend',
+          kind: 'APP_STORE_EVENT',
+          badge: 'AVAILABLE',
+          startsAt: '2026-11-20T00:00:00.000Z',
+          endsAt: '2026-11-27T00:00:00.000Z',
+        },
+      ],
+      removed: [
+        {
+          appEventId: 'e0',
+          title: 'Winter event',
+          kind: null,
+          badge: null,
+          startsAt: null,
+          endsAt: null,
+        },
+      ],
+    });
+    expect(events[2].detail).toEqual({
+      kind: 'featuring',
+      added: [{ storyId: 's1', heading: null, title: 'Editors talk' }],
+      removed: [],
+    });
+    expect(events[0].detail).toEqual({
+      kind: 'editorsChoice',
+      showsBadge: true,
+      notes: null,
+    });
+  });
+
   it('lists recent workspace changes newest first within the limit', async () => {
     const primary = await prisma.app.create({
       data: {

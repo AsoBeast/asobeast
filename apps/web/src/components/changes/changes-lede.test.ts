@@ -124,6 +124,40 @@ describe("changesLede", () => {
     );
   });
 
+  it("credits the store with the featuring and the badge beside your edits", () => {
+    const parts = changesLede({
+      events: [
+        event("2026-11-11", "title"),
+        event("2026-11-11", "featuring"),
+        event("2026-11-11", "editorsChoice"),
+      ],
+      impact: null,
+      days: 30,
+    });
+
+    expect(text(parts)).toBe(
+      "On Nov 11, you changed the title; the store changed the featuring and editors' choice.",
+    );
+    expect(
+      parts.filter((part) => part.strong).map((part) => part.text),
+    ).toEqual(["Nov 11", "the title", "the featuring and editors' choice"]);
+  });
+
+  it("credits the store alone when the newest day holds only store kinds", () => {
+    const parts = changesLede({
+      events: [
+        event("2026-11-11", "featuring"),
+        event("2026-11-11", "editorsChoice"),
+      ],
+      impact: null,
+      days: 30,
+    });
+
+    expect(text(parts)).toBe(
+      "On Nov 11, the store changed the featuring and editors' choice.",
+    );
+  });
+
   it("counts the fields when more than three changed", () => {
     const parts = changesLede({
       events: [

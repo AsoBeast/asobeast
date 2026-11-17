@@ -4,10 +4,11 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { App, Prisma, Store } from '@prisma/client';
+import { App, AppSnapshot, Prisma, Store } from '@prisma/client';
 import { assertStorefront, SnapshotDiffResult } from '@asobeast/shared';
 import { ChangesService } from '../changes/changes.service';
 import type { DetectedChange } from '../changes/change-detector';
+import { detectExtractChanges } from '../changes/extract-diff';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScreenshotQueue } from '../screenshots/screenshot-queue';
@@ -16,6 +17,7 @@ import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { StoreAppNotFoundError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { currencyOf } from '../store-providers/raw-facts';
+import { pageExtractFacts } from '../store-providers/page-extract-facts';
 import { NormalizedApp } from '../store-providers/types';
 import { StoreReportQueue } from '../store-connect/store-report-queue';
 import { snapshotIcon, toSnapshotData } from './apps.mapper';
@@ -123,6 +125,7 @@ export class ListingCaptureService {
     });
 
     let pending = 0;
+    let extractRecorded: DetectedChange[] = [];
     const snapshot = await this.prisma.withTransaction(async (tx) => {
       await lockListing(tx, app.id, market);
       const created = await tx.appSnapshot.create({
@@ -136,6 +139,13 @@ export class ListingCaptureService {
       pending = await this.screenshots.record(
         tx,
         { store: app.store, country: market },
+        created,
+      );
+      extractRecorded = await this.recordExtractChanges(
+        tx,
+        app,
+        market,
+        previous,
         created,
       );
       return created;
@@ -199,12 +209,63 @@ export class ListingCaptureService {
     return {
       snapshotId: snapshot.id,
       changes: [
-        ...withRecordedChanges(diffSnapshots(previous, snapshot), recorded),
+        ...withRecordedChanges(diffSnapshots(previous, snapshot), [
+          ...recorded,
+          ...extractRecorded,
+        ]),
         ...localized.changes,
       ],
       country: market,
       currency: currencyOf(snapshot.raw),
     };
+  }
+
+  private async recordExtractChanges(
+    tx: Prisma.TransactionClient,
+    app: App,
+    market: string,
+    previous: AppSnapshot | null,
+    snapshot: AppSnapshot,
+  ): Promise<DetectedChange[]> {
+    const baseline = await this.extractBaseline(
+      tx,
+      app,
+      market,
+      previous,
+      snapshot,
+    );
+    const changes = detectExtractChanges(
+      pageExtractFacts(baseline?.raw),
+      pageExtractFacts(snapshot.raw),
+    );
+    await this.changes.recordExtractChanges(
+      tx,
+      app.id,
+      { home: app.country, market },
+      changes,
+    );
+    return changes;
+  }
+
+  private async extractBaseline(
+    tx: Prisma.TransactionClient,
+    app: App,
+    market: string,
+    previous: AppSnapshot | null,
+    snapshot: AppSnapshot,
+  ): Promise<AppSnapshot | null> {
+    if (previous && pageExtractFacts(previous.raw) !== null) {
+      return previous;
+    }
+    return tx.appSnapshot.findFirst({
+      where: {
+        appId: app.id,
+        ...listingIn(app.country, market),
+        capturedAt: { lt: snapshot.capturedAt },
+        raw: { path: ['pageExtract'], not: Prisma.AnyNull },
+      },
+      orderBy: NEWEST_FIRST,
+    });
   }
 
   private async releaseChangedFields(

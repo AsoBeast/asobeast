@@ -95,6 +95,10 @@ export function ScreenshotChangeValue({
     );
   }
 
+  if (detail.kind !== "images") {
+    return <span className="break-words">{summary}</span>;
+  }
+
   return (
     <span className="flex min-w-0 flex-col gap-2">
       <span className="break-words">{summary}</span>

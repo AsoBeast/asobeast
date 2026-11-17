@@ -6,6 +6,7 @@ import type {
 import { formatDayMonth } from "@/lib/format";
 import { dayBefore } from "@/lib/utc-day";
 import {
+  attributeFields,
   CHANGE_KINDS,
   changedFieldWords,
   fieldPhrase,
@@ -128,8 +129,22 @@ export function markLabel(lane: Lane, mark: LaneMark): string {
     mark.from === mark.day
       ? formatDayMonth(mark.day)
       : `${formatDayMonth(mark.from)} to ${formatDayMonth(mark.day)}`;
-  const who = lane.own ? "you changed" : `${lane.appName} changed`;
-  return `${when}: ${who} ${fieldPhrase(mark.fields, "the")}`;
+  return `${when}: ${changeSubject(lane, mark.fields)}`;
+}
+
+function changeSubject(lane: Lane, fields: readonly ChangeField[]): string {
+  if (!lane.own) {
+    return `${lane.appName} changed ${fieldPhrase(fields, "the")}`;
+  }
+  const { yours, storeDecided } = attributeFields(fields);
+  const parts: string[] = [];
+  if (yours.length > 0) {
+    parts.push(`you changed ${fieldPhrase(yours, "the")}`);
+  }
+  if (storeDecided.length > 0) {
+    parts.push(`the store changed ${fieldPhrase(storeDecided, "the")}`);
+  }
+  return parts.join("; ");
 }
 
 export function ownChangeDays(
@@ -154,8 +169,19 @@ export function changeLinesOn(lanes: readonly Lane[], day: string): string[] {
         .filter((change) => change.day === day)
         .map((change) => change.field),
     );
-    return fields.length === 0
-      ? []
-      : [`${lane.own ? "You" : lane.appName}: ${changedFieldWords(fields)}`];
+    return fields.length === 0 ? [] : dayLines(lane, fields);
   });
+}
+
+function dayLines(lane: Lane, fields: ChangeField[]): string[] {
+  if (!lane.own) {
+    return [`${lane.appName}: ${changedFieldWords(fields)}`];
+  }
+  const { yours, storeDecided } = attributeFields(fields);
+  const lines: string[] = [];
+  if (yours.length > 0) lines.push(`You: ${changedFieldWords(yours)}`);
+  if (storeDecided.length > 0) {
+    lines.push(`The store: ${changedFieldWords(storeDecided)}`);
+  }
+  return lines;
 }

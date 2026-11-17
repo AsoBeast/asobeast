@@ -1,7 +1,26 @@
 import { z } from 'zod';
-import type { ChangeDetail } from '@asobeast/shared';
+import { isoDateOrNull, type ChangeDetail } from '@asobeast/shared';
 
 const reference = z.object({ position: z.number().int(), url: z.string() });
+
+const nullableText = z.string().nullable();
+
+const nullableDate = z.preprocess(isoDateOrNull, nullableText);
+
+const appEventRef = z.object({
+  appEventId: z.string(),
+  title: nullableText,
+  kind: nullableText,
+  badge: nullableText,
+  startsAt: nullableDate,
+  endsAt: nullableDate,
+});
+
+const storyRef = z.object({
+  storyId: z.string(),
+  heading: nullableText,
+  title: nullableText,
+});
 
 const detailSchema = z.discriminatedUnion('kind', [
   z.object({
@@ -16,6 +35,21 @@ const detailSchema = z.discriminatedUnion('kind', [
     kind: z.literal('captions'),
     added: z.array(z.string()),
     removed: z.array(z.string()),
+  }),
+  z.object({
+    kind: z.literal('events'),
+    added: z.array(appEventRef),
+    removed: z.array(appEventRef),
+  }),
+  z.object({
+    kind: z.literal('featuring'),
+    added: z.array(storyRef),
+    removed: z.array(storyRef),
+  }),
+  z.object({
+    kind: z.literal('editorsChoice'),
+    showsBadge: z.boolean(),
+    notes: nullableText,
   }),
 ]);
 

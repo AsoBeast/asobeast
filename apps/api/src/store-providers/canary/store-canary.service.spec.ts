@@ -7,10 +7,21 @@ import { NormalizedApp, SearchItem, StoreProvider } from '../types';
 import { storeCanaryKey } from '../../jobs/jobs.types';
 import { FailFastRedis } from '../../redis/fail-fast-redis';
 import {
+  CANARY_PREVIEW_TARGETS,
   CANARY_TARGETS,
   StoreCanaryRecord,
   StoreCanaryService,
 } from './store-canary.service';
+
+const PREVIEW_ID = CANARY_PREVIEW_TARGETS.APP_STORE?.storeAppId ?? '';
+
+const PAGE_EXTRACT = {
+  previewVideoUrls: ['https://apptrailers.itunes.apple.com/trailer.m3u8'],
+  appEvents: [],
+  featuredStories: [],
+  editorsChoice: null,
+  accessibilityStatement: null,
+};
 
 function appOf(store: Store, overrides: Partial<NormalizedApp> = {}) {
   return {
@@ -18,7 +29,7 @@ function appOf(store: Store, overrides: Partial<NormalizedApp> = {}) {
     storeAppId: CANARY_TARGETS[store].storeAppId,
     title: 'Facebook',
     description: 'Connect with friends.',
-    raw: {},
+    raw: store === Store.APP_STORE ? { pageExtract: PAGE_EXTRACT } : {},
     searchable: true,
     ...overrides,
   } satisfies NormalizedApp;
@@ -39,7 +50,13 @@ function build(stored: Record<string, string> = {}) {
   };
   const providers: Record<Store, ProviderStub> = {
     APP_STORE: {
-      getApp: jest.fn(() => Promise.resolve(appOf(Store.APP_STORE))),
+      getApp: jest.fn((storeAppId: string) =>
+        Promise.resolve(
+          storeAppId === PREVIEW_ID
+            ? appOf(Store.APP_STORE, { storeAppId })
+            : appOf(Store.APP_STORE),
+        ),
+      ),
       search: jest.fn(() => Promise.resolve(RESULTS)),
     },
     GOOGLE_PLAY: {
@@ -103,8 +120,9 @@ describe('StoreCanaryService', () => {
 
     await service.run();
 
-    expect(egress.through).toHaveBeenCalledTimes(4);
+    expect(egress.through).toHaveBeenCalledTimes(5);
     expect(egress.through.mock.calls.map(([store]) => store)).toEqual([
+      Store.APP_STORE,
       Store.APP_STORE,
       Store.APP_STORE,
       Store.GOOGLE_PLAY,
@@ -118,10 +136,50 @@ describe('StoreCanaryService', () => {
     await service.run();
 
     expect(providers.APP_STORE.getApp).toHaveBeenCalledWith('284882215', 'us');
+    expect(providers.APP_STORE.getApp).toHaveBeenCalledWith('1094591345', 'us');
     expect(providers.GOOGLE_PLAY.getApp).toHaveBeenCalledWith(
       'com.facebook.katana',
       'us',
     );
+  });
+
+  it('records a preview page without a readable extract as a broken run', async () => {
+    const { service, providers } = build();
+    providers.APP_STORE.getApp = jest.fn((storeAppId: string) =>
+      Promise.resolve(
+        storeAppId === PREVIEW_ID
+          ? appOf(Store.APP_STORE, { storeAppId, raw: {} })
+          : appOf(Store.APP_STORE),
+      ),
+    );
+
+    const records = await service.run();
+
+    expect(records.APP_STORE).toMatchObject({
+      outcome: 'broken',
+      detail: 'the store page carries no extract',
+    });
+  });
+
+  it('records a preview page that lost its video url as a broken run', async () => {
+    const { service, providers } = build();
+    providers.APP_STORE.getApp = jest.fn((storeAppId: string) =>
+      Promise.resolve(
+        storeAppId === PREVIEW_ID
+          ? appOf(Store.APP_STORE, {
+              storeAppId,
+              raw: { pageExtract: { ...PAGE_EXTRACT, previewVideoUrls: [] } },
+            })
+          : appOf(Store.APP_STORE),
+      ),
+    );
+
+    const records = await service.run();
+
+    expect(records.APP_STORE).toMatchObject({
+      outcome: 'broken',
+      detail: 'the store page carries no preview video',
+    });
   });
 
   it('records a shape failure as a first broken run', async () => {

@@ -347,6 +347,10 @@ describe("actionHeadline", () => {
     expect(changedFields(["title", "summary", "description"])).toBe(
       "title, short description, and description",
     );
+    expect(changedFields(["inAppEvents", "featuring"])).toBe(
+      "in-app events and featuring",
+    );
+    expect(changedFields(["editorsChoice"])).toBe("editors' choice");
   });
 
   it("gives every open fixture action its own headline", () => {
