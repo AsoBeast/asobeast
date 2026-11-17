@@ -87,7 +87,9 @@ function editorsChoiceSummary(detail: EditorsChoiceDetail): string {
     : "Editors' Choice badge removed";
 }
 
-export function storeChangeSummary(event: ChangeEventItem): string {
+export function storeChangeSummary(
+  event: Pick<ChangeEventItem, "field" | "detail">,
+): string {
   const detail = event.detail;
   if (detail?.kind === "events") return eventsSummary(detail);
   if (detail?.kind === "featuring") return featuringSummary(detail);

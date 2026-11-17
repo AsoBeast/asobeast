@@ -5491,6 +5491,25 @@ const routes: Route[] = [
               before: "8 screenshots",
               after: "8 screenshots, reordered",
             },
+            {
+              field: "inAppEvents",
+              before: null,
+              after: null,
+              detail: {
+                kind: "events",
+                added: [
+                  {
+                    appEventId: "e1",
+                    title: "Double XP weekend",
+                    kind: "SPECIAL_EVENT",
+                    badge: "AVAILABLE",
+                    startsAt: "2026-11-20T00:00:00.000Z",
+                    endsAt: "2026-11-27T00:00:00.000Z",
+                  },
+                ],
+                removed: [],
+              },
+            },
           ],
           country: "us",
         });
