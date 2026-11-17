@@ -1,5 +1,5 @@
 import { Logger } from '@nestjs/common';
-import { Store } from '@prisma/client';
+import { Prisma, Store } from '@prisma/client';
 import type { ChangesService } from '../changes/changes.service';
 import type { KeywordsService } from '../keywords/keywords.service';
 import type { PrismaService } from '../prisma/prisma.service';
@@ -91,6 +91,7 @@ const build = (overrides: {
   localized?: unknown[];
   app?: typeof APP | null;
   previous?: typeof SNAPSHOT | null;
+  baseline?: typeof SNAPSHOT | null;
   detect?: jest.Mock;
   recordDefault?: jest.Mock;
   raw?: Record<string, unknown>;
@@ -114,7 +115,10 @@ const build = (overrides: {
         .mockResolvedValue(overrides.app === undefined ? APP : overrides.app),
     },
     appSnapshot: {
-      findFirst: jest.fn().mockResolvedValue(overrides.previous ?? null),
+      findFirst: jest
+        .fn()
+        .mockResolvedValueOnce(overrides.previous ?? null)
+        .mockResolvedValue(overrides.baseline ?? null),
     },
     trackedKeyword: { count: jest.fn().mockResolvedValue(1) },
     keywordFieldSync: {
@@ -193,6 +197,7 @@ const build = (overrides: {
     listingLost,
     tx,
     updateMany,
+    findFirst: prisma.appSnapshot.findFirst,
   };
 };
 
@@ -620,9 +625,10 @@ describe('ListingCaptureService extract changes', () => {
     );
   });
 
-  it('records nothing when only the next capture read an extract', async () => {
+  it('records nothing when no earlier snapshot read an extract', async () => {
     const recordExtractChanges = jest.fn().mockResolvedValue(undefined);
     const { service } = build({
+      previous: { ...SNAPSHOT, raw: {} },
       raw: extractOf(['e1']),
       recordExtractChanges,
     });
@@ -633,6 +639,52 @@ describe('ListingCaptureService extract changes', () => {
       APP.id,
       { home: APP.country, market: APP.country },
       [],
+    );
+  });
+
+  it('diffs across a failed read against the newest earlier extract', async () => {
+    const recordExtractChanges = jest.fn().mockResolvedValue(undefined);
+    const { service, findFirst } = build({
+      previous: { ...SNAPSHOT, raw: {} },
+      baseline: { ...SNAPSHOT, id: 'snap_1', raw: extractOf(['e1']) },
+      raw: extractOf(['e1', 'e2']),
+      recordExtractChanges,
+    });
+
+    await service.refresh(APP.id);
+
+    expect(recordExtractChanges).toHaveBeenCalledWith(
+      APP.id,
+      { home: APP.country, market: APP.country },
+      [addedEvent('e2')],
+    );
+    expect(findFirst).toHaveBeenNthCalledWith(2, {
+      where: {
+        appId: APP.id,
+        country: null,
+        localization: null,
+        id: { not: SNAPSHOT.id },
+        raw: { path: ['pageExtract'], not: Prisma.AnyNull },
+      },
+      orderBy: { capturedAt: 'desc' },
+    });
+  });
+
+  it('diffs a market capture against the newest earlier market extract', async () => {
+    const recordExtractChanges = jest.fn().mockResolvedValue(undefined);
+    const { service } = build({
+      previous: { ...SNAPSHOT, raw: {} },
+      baseline: { ...SNAPSHOT, id: 'snap_1', raw: extractOf(['e1']) },
+      raw: extractOf(['e1', 'e2']),
+      recordExtractChanges,
+    });
+
+    await service.refreshListing(APP.id, 'de');
+
+    expect(recordExtractChanges).toHaveBeenCalledWith(
+      APP.id,
+      { home: APP.country, market: 'de' },
+      [addedEvent('e2')],
     );
   });
 

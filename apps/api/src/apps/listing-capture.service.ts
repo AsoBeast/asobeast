@@ -215,9 +215,15 @@ export class ListingCaptureService {
     market: string,
     previous: AppSnapshot | null,
     snapshot: AppSnapshot,
-  ): Promise<void> {
+  ): Promise<DetectedChange[]> {
+    const baseline = await this.extractBaseline(
+      app,
+      market,
+      previous,
+      snapshot,
+    );
     const changes = detectExtractChanges(
-      pageExtractFacts(previous?.raw),
+      pageExtractFacts(baseline?.raw),
       pageExtractFacts(snapshot.raw),
     );
     await this.changes.recordExtractChanges(
@@ -225,6 +231,27 @@ export class ListingCaptureService {
       { home: app.country, market },
       changes,
     );
+    return changes;
+  }
+
+  private async extractBaseline(
+    app: App,
+    market: string,
+    previous: AppSnapshot | null,
+    snapshot: AppSnapshot,
+  ): Promise<AppSnapshot | null> {
+    if (previous && pageExtractFacts(previous.raw) !== null) {
+      return previous;
+    }
+    return this.prisma.appSnapshot.findFirst({
+      where: {
+        appId: app.id,
+        ...listingIn(app.country, market),
+        id: { not: snapshot.id },
+        raw: { path: ['pageExtract'], not: Prisma.AnyNull },
+      },
+      orderBy: NEWEST_FIRST,
+    });
   }
 
   private async releaseChangedFields(
