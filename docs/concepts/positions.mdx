@@ -22,7 +22,7 @@ The row is written even when the app was not found. That is deliberate: an absen
 
 ## Why does a keyword read `>30` instead of `>200`?
 
-The bound is how far the store's list went that day. Google Play's search lists at most 30 apps, and fewer for narrow terms, so a Play keyword that does not find you reads `>30` or lower. An App Store check reads as deep as Apple answered. A search that lists no apps at all keeps `>200`, because your app is not in it at any depth. Checks stored before version 1.17 keep the `>200` they were stored with.
+The bound is how far the store's list went that day. Google Play's search usually lists about 30 apps, fewer for narrow terms and more for a few others, such as single characters or some app names, so a Play keyword that does not find you usually reads `>30` or lower. An App Store check reads as deep as Apple answered. A search that lists no apps at all keeps `>200`, because your app is not in it at any depth. Checks stored before version 1.17 keep the `>200` they were stored with.
 
 ## What does null mean?
 
@@ -37,7 +37,7 @@ Checked, and not found within `depth`. It does not mean any of the following.
 
 ## How is null displayed?
 
-As a bound derived from that row's own depth, never as `0`. A row captured at depth 200 renders as `>200`, and a row captured at depth 100 renders as `>100`. A Google Play check usually reaches 30 or fewer, because Google's search lists at most 30 apps, so a Play keyword that does not find you reads `>30`.
+As a bound derived from that row's own depth, never as `0`. A row captured at depth 200 renders as `>200`, and a row captured at depth 100 renders as `>100`. A Google Play check usually reaches about 30, because Google's search usually lists about 30 apps, so a Play keyword that does not find you usually reads `>30`.
 
 Reading the bound from the row rather than from a constant matters, because historical rows may have been captured at a different depth than today's.
 
@@ -67,4 +67,4 @@ Ranking charts use a reversed Y axis, so position 1 sits at the top and an impro
 
 ## How deep does the SERP snapshot go?
 
-Position checks ask the store for 200 results. The App Store answers about 140 to 200 of them, and Google Play lists at most 30. The stored SERP snapshot keeps the top 50 results for each keyword and date. The top 10 is kept for `RETENTION_SERP_DAYS`, positions 11 to 50 for `RETENTION_SERP_DEEP_DAYS`. Entrant alerts, SERP movers, volatility, competitors in the top 10 and competitor discovery read the top 10 only.
+Position checks ask the store for 200 results. The App Store answers about 140 to 200 of them, and Google Play usually lists about 30. The stored SERP snapshot keeps the top 50 results for each keyword and date. The top 10 is kept for `RETENTION_SERP_DAYS`, positions 11 to 50 for `RETENTION_SERP_DEEP_DAYS`. Entrant alerts, SERP movers, volatility, competitors in the top 10 and competitor discovery read the top 10 only.
