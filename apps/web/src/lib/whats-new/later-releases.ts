@@ -98,6 +98,11 @@ export const LATER_RELEASES: readonly Release[] = [
         title: "Say why you leave, if you like",
         text: "Deleting a workspace now asks, without insisting, why you are leaving, from a short list. Prefer not to say is the default. Once the workspace is erased, only the answer and a few counts are kept, with nothing that names you or the workspace.",
       },
+      {
+        kind: "fixed",
+        title: "A full list when you search the App Store",
+        text: "Searching the App Store by name when you import an app or add a competitor lists as many apps as you asked for, in the order your positions are checked.",
+      },
     ],
   },
   {
