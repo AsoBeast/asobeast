@@ -2,7 +2,6 @@ import type {
   AppEventRef,
   AppEventsDetail,
   ChangeEventItem,
-  ChangeField,
   EditorsChoiceDetail,
   FeaturingDetail,
   StoryRef,
@@ -10,14 +9,7 @@ import type {
 import { isoDateOrNull } from "@asobeast/shared";
 import { formatDayMonth, pluralize } from "@/lib/format";
 
-const STORE_FIELDS: ReadonlySet<ChangeField> = new Set([
-  "inAppEvents",
-  "featuring",
-  "editorsChoice",
-]);
-
-export const isStoreField = (field: ChangeField): boolean =>
-  STORE_FIELDS.has(field);
+export { isStoreField } from "@asobeast/shared";
 
 export const EVENT_FALLBACK_TITLE = "In-app event";
 

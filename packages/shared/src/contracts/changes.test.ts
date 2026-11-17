@@ -22,10 +22,12 @@ import {
   RANK_DROP_THRESHOLD_MIN,
   GranularAlertPayload,
   isChangeField,
+  isStoreField,
   RankDroppedPayload,
   RankImprovedPayload,
   RankMilestonePayload,
   StoryRef,
+  STORE_CHANGE_FIELDS,
   WEBHOOK_EVENTS,
   WebhookCreateRequest,
   WebhookItem,
@@ -242,6 +244,27 @@ describe('isChangeField', () => {
 
   it('rejects a field the contract does not name', () => {
     expect(isChangeField('legacyField')).toBe(false);
+  });
+});
+
+describe('isStoreField', () => {
+  it('names the three fields the store decides on its own', () => {
+    expect([...STORE_CHANGE_FIELDS]).toEqual([
+      'inAppEvents',
+      'featuring',
+      'editorsChoice',
+    ]);
+  });
+
+  it('accepts only the store decided fields of the contract', () => {
+    expect(STORE_CHANGE_FIELDS.every((field) => isChangeField(field))).toBe(
+      true,
+    );
+    expect(isStoreField('inAppEvents')).toBe(true);
+    expect(isStoreField('featuring')).toBe(true);
+    expect(isStoreField('editorsChoice')).toBe(true);
+    expect(isStoreField('screenshots')).toBe(false);
+    expect(isStoreField('title')).toBe(false);
   });
 });
 
