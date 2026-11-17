@@ -13,6 +13,7 @@ import { StoreProviderRegistry } from '../store-providers/store-provider.registr
 import { ReviewResult } from '../store-providers/types';
 import { EMPTY_ANSWER_RETRIES } from '../store-providers/result-plausibility';
 import { WITH_POSTER } from './review-reply.mapper';
+import { ReviewInserts } from './review-inserts';
 import type { ReviewSpikeAlerts } from './review-spike-alerts.service';
 import { ReviewsService } from './reviews.service';
 
@@ -104,6 +105,7 @@ const buildDeps = (options: {
     config as unknown as ConfigService<Env, true>,
     alerts as unknown as AlertsDispatcher,
     { raise } as unknown as ReviewSpikeAlerts,
+    new ReviewInserts(prisma as unknown as PrismaService),
   );
   return {
     service,
@@ -350,6 +352,7 @@ describe('ReviewsService.syncReviews', () => {
       { get: jest.fn() } as unknown as ConfigService<Env, true>,
       { dispatch: jest.fn() } as unknown as AlertsDispatcher,
       { raise: jest.fn() } as unknown as ReviewSpikeAlerts,
+      new ReviewInserts(prisma as unknown as PrismaService),
     );
 
     await expect(
@@ -830,6 +833,7 @@ describe('ReviewsService.list', () => {
       {} as ConfigService<Env, true>,
       {} as AlertsDispatcher,
       {} as ReviewSpikeAlerts,
+      new ReviewInserts(prisma as unknown as PrismaService),
     );
 
     const list = await service.list('app1', {

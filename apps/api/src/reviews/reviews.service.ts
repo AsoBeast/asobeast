@@ -40,7 +40,7 @@ import {
   reviewNegativePayload,
   reviewNewPayload,
 } from './review-alert-payloads';
-import { newReviewRow } from './new-review-row';
+import { ReviewInserts } from './review-inserts';
 import { ReviewSpikeAlerts } from './review-spike-alerts.service';
 import { reviewLanguage } from './review-language';
 import { toReviewTranslation, TranslationColumns } from './review-translation';
@@ -69,6 +69,7 @@ export class ReviewsService {
     private readonly config: ConfigService<Env, true>,
     private readonly alerts: AlertsDispatcher,
     private readonly spikes: ReviewSpikeAlerts,
+    private readonly inserts: ReviewInserts,
   ) {}
 
   async syncReviews(
@@ -121,18 +122,11 @@ export class ReviewsService {
       (review) => !known.has(review.reviewId),
     );
     const checkedAt = app.store === Store.GOOGLE_PLAY ? new Date() : null;
-    const created =
-      absent.length === 0
-        ? []
-        : await this.prisma.review.createManyAndReturn({
-            data: absent.map((review) =>
-              newReviewRow(app.id, review, checkedAt),
-            ),
-            skipDuplicates: true,
-            select: { reviewId: true },
-          });
-    const createdIds = new Set(created.map((row) => row.reviewId));
-    const inserted = absent.filter((review) => createdIds.has(review.reviewId));
+    const inserted = await this.inserts.store({
+      appId: app.id,
+      absent,
+      checkedAt,
+    });
 
     if (checkedAt !== null && known.size > 0) {
       await this.recordUpdates(app.id, fetched, known, checkedAt);

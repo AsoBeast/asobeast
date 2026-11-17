@@ -4,6 +4,7 @@ import { AlertsModule } from '../alerts/alerts.module';
 import { StoreConnectModule } from '../store-connect/store-connect.module';
 import { StoreProvidersModule } from '../store-providers/store-providers.module';
 import { AscReviewLocator } from './asc-review-locator.service';
+import { ReviewInserts } from './review-inserts';
 import { ReviewRepliesController } from './review-replies.controller';
 import { ReviewRepliesService } from './review-replies.service';
 import { ReviewReplyAssistant } from './review-reply-assistant.service';
@@ -27,6 +28,7 @@ import { ReviewsService } from './reviews.service';
   providers: [
     AscReviewLocator,
     ReviewsService,
+    ReviewInserts,
     ReviewRepliesService,
     ReviewReplyAssistant,
     ReviewReplyPoster,
