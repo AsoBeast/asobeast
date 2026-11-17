@@ -25,7 +25,8 @@ import {
 import { StoreAppNotFoundError, StoreRequestError } from './errors';
 import { listedInIphoneSearch } from './iphone-search';
 import { ownSubtitle } from './own-subtitle';
-import { Abortable, pause, storeDeadline } from './store-deadline';
+import { Abortable, storeDeadline } from './store-deadline';
+import { retryStoreCall } from './store-retry';
 import {
   ChartItem,
   NormalizedApp,
@@ -35,8 +36,6 @@ import {
   SuggestItem,
 } from './types';
 import { toChartItem } from './chart-item';
-
-const RETRY_DELAYS_MS = [2000, 5000];
 
 const COLLECTION_CONSTANTS: Record<CategoryCollection, string> = {
   free: 'topfreeapplications',
@@ -318,29 +317,17 @@ export class AppStoreProvider implements StoreProvider {
     call: (deadline: Abortable) => Promise<T>,
     missingAppId?: string,
   ): Promise<T> {
-    const deadline = storeDeadline();
-    let lastError: unknown;
-    for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
-      try {
-        deadline.signal?.throwIfAborted();
-        const result = await call(deadline);
-        deadline.signal?.throwIfAborted();
-        return result;
-      } catch (error) {
-        lastError = error;
-        const delay = RETRY_DELAYS_MS[attempt];
-        if (delay === undefined || !(await pause(delay, deadline.signal))) {
-          break;
-        }
+    try {
+      return await retryStoreCall(call, () => true);
+    } catch (lastError) {
+      if (missingAppId !== undefined && isMissingApp(lastError)) {
+        throw new StoreAppNotFoundError(this.store, missingAppId);
       }
+      if (lastError instanceof ShellListingError) {
+        throw lastError;
+      }
+      throw new StoreRequestError(this.store, method, messageOf(lastError));
     }
-    if (missingAppId !== undefined && isMissingApp(lastError)) {
-      throw new StoreAppNotFoundError(this.store, missingAppId);
-    }
-    if (lastError instanceof ShellListingError) {
-      throw lastError;
-    }
-    throw new StoreRequestError(this.store, method, messageOf(lastError));
   }
 }
 
