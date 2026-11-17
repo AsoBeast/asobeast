@@ -46,6 +46,7 @@ export class StoreSearchService {
             query.q,
             query.country,
             storeSearchRequest(query.store, query.limit),
+            { fromEdgeCache: true },
           ),
       { waitForLocal: false },
     );

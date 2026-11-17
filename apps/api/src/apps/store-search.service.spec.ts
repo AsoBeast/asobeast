@@ -82,7 +82,9 @@ describe('StoreSearchService', () => {
     const results = await serviceWith(search).search(QUERY, spend);
 
     expect(order).toEqual(['spend', 'search']);
-    expect(search).toHaveBeenCalledWith('focus', 'us', RANK_DEPTH);
+    expect(search).toHaveBeenCalledWith('focus', 'us', RANK_DEPTH, {
+      fromEdgeCache: true,
+    });
     expect(results.map((result) => result.storeAppId)).toEqual(['1', '2']);
   });
 
@@ -91,7 +93,9 @@ describe('StoreSearchService', () => {
 
     await serviceWith(search).search({ ...QUERY, store: 'GOOGLE_PLAY' });
 
-    expect(search).toHaveBeenCalledWith('focus', 'us', 2);
+    expect(search).toHaveBeenCalledWith('focus', 'us', 2, {
+      fromEdgeCache: true,
+    });
   });
 
   it('takes any free endpoint rather than wait for one in the storefront', async () => {
