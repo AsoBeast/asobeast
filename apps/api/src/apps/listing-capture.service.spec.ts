@@ -707,6 +707,17 @@ describe('ListingCaptureService extract changes', () => {
 
     expect(order).toEqual(['metadata', 'extract']);
   });
+
+  it('answers with the extract change the refresh recorded', async () => {
+    const { service } = build({
+      previous: { ...SNAPSHOT, raw: extractOf(['e1']) },
+      raw: extractOf(['e1', 'e2']),
+    });
+
+    await expect(service.refresh(APP.id)).resolves.toMatchObject({
+      changes: [{ field: 'inAppEvents', before: null, after: null }],
+    });
+  });
 });
 
 describe('ListingCaptureService screenshots', () => {

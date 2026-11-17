@@ -267,9 +267,9 @@ export class ChangesService {
     appId: string,
     listing: { home: string; market: string },
     changes: DetectedChange[],
-  ): Promise<void> {
+  ): Promise<DetectedChange[]> {
     if (changes.length === 0) {
-      return;
+      return [];
     }
     await this.prisma.changeEvent.createMany({
       data: changes.map((change) => ({
@@ -278,6 +278,7 @@ export class ChangesService {
         localization: null,
       })),
     });
+    return changes;
   }
 
   async recordCaptionChange(change: CaptionChange): Promise<void> {

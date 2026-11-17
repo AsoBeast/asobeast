@@ -169,7 +169,12 @@ export class ListingCaptureService {
           before,
           after,
         );
-    await this.recordExtractChanges(app, market, previous, snapshot);
+    const extractRecorded = await this.recordExtractChanges(
+      app,
+      market,
+      previous,
+      snapshot,
+    );
     const listing = {
       ...snapshot,
       subtitleUnavailable: normalized.subtitleUnavailable,
@@ -202,7 +207,10 @@ export class ListingCaptureService {
     return {
       snapshotId: snapshot.id,
       changes: [
-        ...withRecordedChanges(diffSnapshots(previous, snapshot), recorded),
+        ...withRecordedChanges(diffSnapshots(previous, snapshot), [
+          ...recorded,
+          ...extractRecorded,
+        ]),
         ...localized.changes,
       ],
       country: market,
