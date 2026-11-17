@@ -41,6 +41,11 @@ import {
   settleBootRegistration,
 } from './obliterate-queues';
 
+const positionShot = (shot: number, index: number) => ({
+  position: index + 1,
+  url: appleShot(shot),
+});
+
 describe('Screenshots of market listings (e2e)', () => {
   jest.setTimeout(30_000);
   let app: INestApplication<App>;
@@ -260,6 +265,14 @@ describe('Screenshots of market listings (e2e)', () => {
         field: 'screenshotImages',
         before: '2 screenshots',
         after: '2 screenshots, reordered',
+        detail: {
+          kind: 'images',
+          before: [5, 6].map(positionShot),
+          after: [6, 5].map(positionShot),
+          added: [],
+          removed: [],
+          reordered: true,
+        },
       },
     ]);
   });
