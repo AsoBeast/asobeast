@@ -153,6 +153,23 @@ describe('ChangeImpactService', () => {
     expect(report.items.map((item) => item.fields)).toEqual([['title']]);
   });
 
+  it('leaves the featuring and the badge out of the impact days and keeps in-app events', async () => {
+    eventFindMany.mockResolvedValue([
+      titleEvent,
+      { field: 'featuring', capturedAt: changedOn },
+      { field: 'editorsChoice', capturedAt: changedOn },
+      { field: 'inAppEvents', capturedAt: addDays(today, -5) },
+    ]);
+
+    const report = await service.report('app_1', 90);
+
+    expect(report.totalChanges).toBe(2);
+    expect(report.items.map((item) => item.fields)).toEqual([
+      ['inAppEvents'],
+      ['title'],
+    ]);
+  });
+
   it('leaves the funnel out of every window for a store without a connection', async () => {
     eventFindMany.mockResolvedValue([titleEvent]);
 

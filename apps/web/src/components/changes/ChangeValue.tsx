@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 import { releaseNotesInline } from "./release-notes";
 import { hasScreenshotDetail } from "./screenshot-change";
 import { ScreenshotChangeValue } from "./ScreenshotChangeValue";
+import { isStoreField } from "./store-change";
+import { StoreChangeValue } from "./StoreChangeValue";
 
 function text(value: string | null): string {
   return value === null || value === "" ? "—" : value;
@@ -45,6 +47,10 @@ export function ChangeValue({
 
   if (hasScreenshotDetail(event)) {
     return <ScreenshotChangeValue event={event} dense={dense} />;
+  }
+
+  if (isStoreField(field)) {
+    return <StoreChangeValue event={event} dense={dense} />;
   }
 
   if (field === "icon") {

@@ -99,6 +99,75 @@ const COMPETITORS_ONLY: ChangeTimeline = {
   events: BUSY.events.filter((event) => event.isCompetitor),
 };
 
+const STORE: ChangeTimeline = {
+  events: [
+    change(1, {
+      field: "inAppEvents",
+      before: null,
+      after: null,
+      detail: {
+        kind: "events",
+        added: [
+          {
+            appEventId: "evt-1",
+            title: "Winter Challenge",
+            kind: "Challenge",
+            badge: "Live now",
+            startsAt: "2026-11-20T09:00:00Z",
+            endsAt: "2026-12-05T21:00:00Z",
+          },
+        ],
+        removed: [
+          {
+            appEventId: "evt-0",
+            title: null,
+            kind: "Competition",
+            badge: null,
+            startsAt: null,
+            endsAt: "2026-11-01T21:00:00Z",
+          },
+        ],
+      },
+    }),
+    change(2, {
+      field: "featuring",
+      before: null,
+      after: null,
+      detail: {
+        kind: "featuring",
+        added: [
+          {
+            storyId: "story-1",
+            heading: "App of the day",
+            title: "Calm your mind",
+          },
+        ],
+        removed: [{ storyId: "story-0", heading: null, title: null }],
+      },
+    }),
+    change(3, {
+      field: "editorsChoice",
+      before: null,
+      after: null,
+      detail: {
+        kind: "editorsChoice",
+        showsBadge: true,
+        notes: "Chosen for its focus tools and gentle reminders.",
+      },
+    }),
+    change(6, {
+      field: "editorsChoice",
+      before: null,
+      after: null,
+      detail: {
+        kind: "editorsChoice",
+        showsBadge: false,
+        notes: null,
+      },
+    }),
+  ],
+};
+
 const PLAY: ChangeTimeline = {
   events: [
     {
@@ -128,6 +197,7 @@ const STATES: Record<string, ChangeTimeline> = {
   busy: BUSY,
   competitors: COMPETITORS_ONLY,
   play: PLAY,
+  store: STORE,
 };
 
 export const changesState = (

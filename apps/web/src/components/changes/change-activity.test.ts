@@ -147,4 +147,33 @@ describe("activityLanes", () => {
       "2026-11-11",
     ]);
   });
+
+  it("credits the store with a featuring mark and keeps yours", () => {
+    const [own] = activityLanes(
+      [event("2026-11-11", "title"), event("2026-11-11", "featuring")],
+      windowDays(TODAY, 30),
+    );
+
+    expect(markLabel(own, own.marks[0])).toBe(
+      "Nov 11: you changed the title; the store changed the featuring",
+    );
+    expect(changeLinesOn([own], "2026-11-11")).toEqual([
+      "You: title",
+      "The store: featuring",
+    ]);
+  });
+
+  it("names a store kinds only mark as the store's", () => {
+    const [own] = activityLanes(
+      [event("2026-11-11", "featuring"), event("2026-11-11", "editorsChoice")],
+      windowDays(TODAY, 30),
+    );
+
+    expect(markLabel(own, own.marks[0])).toBe(
+      "Nov 11: the store changed the featuring and editors' choice",
+    );
+    expect(changeLinesOn([own], "2026-11-11")).toEqual([
+      "The store: featuring and editors' choice",
+    ]);
+  });
 });

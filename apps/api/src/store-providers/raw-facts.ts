@@ -6,6 +6,7 @@ import {
   releaseNotesText,
 } from '@asobeast/shared';
 import { Store } from '@prisma/client';
+import { asRecord } from './record';
 
 export interface RawAppFacts {
   screenshotCount: number | null;
@@ -48,11 +49,6 @@ const EMPTY_FACTS: RawAppFacts = {
   iconUrl: null,
   screenshotUrls: [],
 };
-
-const asRecord = (value: unknown): Record<string, unknown> | null =>
-  typeof value === 'object' && value !== null
-    ? (value as Record<string, unknown>)
-    : null;
 
 const arrayLength = (value: unknown): number | null =>
   Array.isArray(value) ? value.length : null;
