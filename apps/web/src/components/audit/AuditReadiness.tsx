@@ -102,7 +102,7 @@ function editorialLine(readiness: NonNullable<AppAuditResult["readiness"]>) {
   const stories =
     editorial.stories === 0
       ? "In no featured stories"
-      : `In ${pluralize(editorial.stories, "featured story")}`;
+      : `In ${pluralize(editorial.stories, "featured story", "featured stories")}`;
   const day = isoDateOrNull(readiness.extractAsOf);
   return [
     editorial.editorsChoiceBadge
