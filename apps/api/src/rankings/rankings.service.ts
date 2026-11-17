@@ -268,6 +268,7 @@ export class RankingsService {
       where: {
         appId,
         ...(requested ? { keywordId: { in: requested } } : { active: true }),
+        ...(query.country ? { keyword: { country: query.country } } : {}),
       },
       orderBy: { createdAt: 'asc' },
       select: {

@@ -4033,6 +4033,17 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "description": "Only the tracked keywords of this storefront. Omitted means every market the app tracks.",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "us",
+              "type": "string"
+            }
           }
         ],
         "responses": {

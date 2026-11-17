@@ -1,4 +1,6 @@
-import { IsISO8601, IsOptional, IsString } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { COUNTRY_PATTERN } from '@asobeast/shared';
+import { IsISO8601, IsOptional, IsString, Matches } from 'class-validator';
 import { NotBefore } from '../../common/validation/not-before.decorator';
 
 export class RankingHistoryQueryDto {
@@ -14,4 +16,14 @@ export class RankingHistoryQueryDto {
   @IsOptional()
   @IsString()
   keywordIds?: string;
+
+  @ApiPropertyOptional({
+    example: 'us',
+    pattern: COUNTRY_PATTERN.source,
+    description:
+      'Only the tracked keywords of this storefront. Omitted means every market the app tracks.',
+  })
+  @IsOptional()
+  @Matches(COUNTRY_PATTERN)
+  country?: string;
 }
