@@ -28,7 +28,7 @@ const utcClock = (now = new Date()) => ({ now, timeZone: "UTC" });
 async function register(page: Page, path = "/register") {
   await page.goto(path);
   await page.getByLabel("Email").fill("owner@example.com");
-  await page.getByLabel("Password").fill("supersecret1");
+  await page.getByLabel("Password", { exact: true }).fill("supersecret1");
   await page.getByRole("button", { name: "Create account" }).click();
 }
 

@@ -60,6 +60,11 @@ export const LATER_RELEASES: readonly Release[] = [
       },
       {
         kind: "improved",
+        title: "Simpler sign in and sign up pages",
+        text: "Sign in, create account, password recovery and the pages your email links open now share one calm centred layout with larger buttons. Every password field on these pages has a button to show what you typed, and the password rule is one short line that turns into the error when a password is too short.",
+      },
+      {
+        kind: "improved",
         title: "Larger text, the brand orange back and calmer empty states",
         text: "Text, buttons and the sidebar are a step larger, so a long session is easier on the eyes. Orange marks what you select and what is yours, such as the page you are on, your app in search results and your default language, warnings turn yellow so they never look like the brand, and blue is left to charts. A chart, a list or a page with nothing to show yet says so in one centred sentence without a box around it, and the alerts on the dashboard show the size of each move instead of a word on every line.",
       },

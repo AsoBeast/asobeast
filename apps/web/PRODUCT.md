@@ -6,7 +6,7 @@ web
 
 ## Scope
 
-This record covers the signed-in application in `apps/web`: the dashboard, apps and their keywords, rankings, competitors, metadata, audit, changes, reviews and setup, the Action Center, alerts, top charts, integrations, settings and the operator `/admin` area. The sign in and registration pages, the `/upgrade` billing wall, the documentation site in `/docs` and the asobeast.com marketing page (which lives outside this repository) are out of scope for the current redesign.
+This record covers the signed-in application in `apps/web`: the dashboard, apps and their keywords, rankings, competitors, metadata, audit, changes, reviews and setup, the Action Center, alerts, top charts, integrations, settings and the operator `/admin` area, and the signed out pages a visitor meets before it: sign in, registration, password recovery, the invitation and the email link landings. The `/upgrade` billing wall, the documentation site in `/docs` and the asobeast.com marketing page (which lives outside this repository) are out of scope for the current redesign.
 
 ## Users
 

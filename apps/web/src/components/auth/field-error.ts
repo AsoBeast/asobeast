@@ -46,6 +46,14 @@ export function authFieldError(
     : { field: "form", message: fallback };
 }
 
+export function passwordFormError(
+  error: unknown,
+  fallback: string,
+): AuthFieldError {
+  const found = authFieldError(error, fallback);
+  return found.field === "password" ? found : { ...found, field: "form" };
+}
+
 export function fieldErrorProps(
   error: AuthFieldError | null,
   field: AuthField,
