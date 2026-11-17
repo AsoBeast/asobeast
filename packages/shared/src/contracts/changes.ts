@@ -34,6 +34,9 @@ export const CHANGE_FIELDS = [
   'screenshotCaptions',
   'icon',
   'whatsNew',
+  'inAppEvents',
+  'featuring',
+  'editorsChoice',
 ] as const;
 export type ChangeField = (typeof CHANGE_FIELDS)[number];
 
@@ -49,6 +52,9 @@ export const CHANGE_FIELD_LABELS: Record<ChangeField, string> = {
   screenshotCaptions: 'Screenshot captions',
   icon: 'Icon',
   whatsNew: "What's new",
+  inAppEvents: 'In-app events',
+  featuring: 'Featuring',
+  editorsChoice: "Editors' Choice",
 };
 
 export function isChangeField(value: string): value is ChangeField {
@@ -75,7 +81,45 @@ export interface ScreenshotCaptionsDetail {
   removed: string[];
 }
 
-export type ChangeDetail = ScreenshotImagesDetail | ScreenshotCaptionsDetail;
+export interface AppEventRef {
+  appEventId: string;
+  title: string | null;
+  kind: string | null;
+  badge: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
+}
+
+export interface StoryRef {
+  storyId: string;
+  heading: string | null;
+  title: string | null;
+}
+
+export interface AppEventsDetail {
+  kind: 'events';
+  added: AppEventRef[];
+  removed: AppEventRef[];
+}
+
+export interface FeaturingDetail {
+  kind: 'featuring';
+  added: StoryRef[];
+  removed: StoryRef[];
+}
+
+export interface EditorsChoiceDetail {
+  kind: 'editorsChoice';
+  showsBadge: boolean;
+  notes: string | null;
+}
+
+export type ChangeDetail =
+  | ScreenshotImagesDetail
+  | ScreenshotCaptionsDetail
+  | AppEventsDetail
+  | FeaturingDetail
+  | EditorsChoiceDetail;
 
 export interface ChangeEventItem {
   id: string;

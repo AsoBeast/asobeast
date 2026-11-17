@@ -1,8 +1,9 @@
-import { Store } from '@prisma/client';
+import { Prisma, Store } from '@prisma/client';
 import { NormalizedApp, SearchItem } from '../types';
 import {
   assertPageExtract,
   assertParsedApp,
+  assertPreviewVideo,
   assertSearchResults,
   CanaryShapeError,
 } from './canary-checks';
@@ -115,7 +116,7 @@ describe('assertPageExtract', () => {
     );
   });
 
-  it('accepts an extract whose media shelves carry screenshots only', () => {
+  it('accepts an extract whose media shelves carry a preview video', () => {
     expect(() =>
       assertPageExtract(
         appOf({
@@ -157,6 +158,51 @@ describe('assertPageExtract', () => {
     expect(() =>
       assertPageExtract(appOf({ pageExtractUnavailable: true })),
     ).toThrow(new CanaryShapeError('product page extract is unavailable'));
+  });
+});
+
+describe('assertPreviewVideo', () => {
+  const extractWith = (previewVideoUrls: Prisma.InputJsonValue | null) =>
+    appOf({
+      raw: {
+        pageExtract: {
+          previewVideoUrls,
+          appEvents: [],
+          featuredStories: [],
+          editorsChoice: null,
+          accessibilityStatement: null,
+        },
+      },
+    });
+
+  it('accepts an extract that carries a preview video', () => {
+    expect(() =>
+      assertPreviewVideo(extractWith(['https://video/preview.m3u8'])),
+    ).not.toThrow();
+  });
+
+  it('rejects an app that carries no extract', () => {
+    expect(() => assertPreviewVideo(appOf())).toThrow(
+      new CanaryShapeError('the store page carries no extract'),
+    );
+  });
+
+  it('rejects an extract that read no product media shelf', () => {
+    expect(() => assertPreviewVideo(extractWith(null))).toThrow(
+      new CanaryShapeError('the store page carries no product media shelf'),
+    );
+  });
+
+  it('rejects an extract that read media shelves without a video', () => {
+    expect(() => assertPreviewVideo(extractWith([]))).toThrow(
+      new CanaryShapeError('the store page carries no preview video'),
+    );
+  });
+
+  it('rejects an extract whose preview urls are not a list', () => {
+    expect(() => assertPreviewVideo(extractWith('gone'))).toThrow(
+      new CanaryShapeError('the store page carries no preview video'),
+    );
   });
 });
 

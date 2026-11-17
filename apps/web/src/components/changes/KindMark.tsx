@@ -18,6 +18,9 @@ function shape(kind: ChangeKind) {
       />
     );
   }
+  if (kind === "store") {
+    return <path d="M5 0 10 10 0 10Z" />;
+  }
   return <path d="M5 0 10 5 5 10 0 5Z" />;
 }
 

@@ -19,20 +19,25 @@ const FIELD_GROUP: Record<ChangeField, ChangeFieldGroup> = {
   screenshotCaptions: "screenshots",
   icon: "icon",
   whatsNew: "whatsNew",
+  inAppEvents: "inAppEvents",
+  featuring: "featuring",
+  editorsChoice: "editorsChoice",
 };
 
-export type ChangeKind = "text" | "visuals" | "release";
+export type ChangeKind = "text" | "visuals" | "release" | "store";
 
 export const CHANGE_KINDS: readonly ChangeKind[] = [
   "text",
   "visuals",
   "release",
+  "store",
 ];
 
 export const CHANGE_KIND_LABELS: Record<ChangeKind, string> = {
   text: "Text",
   visuals: "Screenshots and icon",
   release: "Release and price",
+  store: "Events, featuring and badges",
 };
 
 const GROUP_KIND: Record<ChangeFieldGroup, ChangeKind> = {
@@ -45,10 +50,30 @@ const GROUP_KIND: Record<ChangeFieldGroup, ChangeKind> = {
   version: "release",
   whatsNew: "release",
   price: "release",
+  inAppEvents: "store",
+  featuring: "store",
+  editorsChoice: "store",
 };
 
 export const changeKind = (field: ChangeField): ChangeKind =>
   GROUP_KIND[FIELD_GROUP[field]];
+
+const STORE_DECIDED_FIELDS: ReadonlySet<ChangeField> = new Set([
+  "featuring",
+  "editorsChoice",
+]);
+
+export interface AttributedFields {
+  yours: ChangeField[];
+  storeDecided: ChangeField[];
+}
+
+export const attributeFields = (
+  fields: readonly ChangeField[],
+): AttributedFields => ({
+  yours: fields.filter((field) => !STORE_DECIDED_FIELDS.has(field)),
+  storeDecided: fields.filter((field) => STORE_DECIDED_FIELDS.has(field)),
+});
 
 export const fieldGroupLabel = (group: ChangeFieldGroup): string =>
   CHANGE_FIELD_LABELS[group];

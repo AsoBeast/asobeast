@@ -1,4 +1,6 @@
 import * as cheerio from 'cheerio';
+import { isoDateOrNull } from '@asobeast/shared';
+import { asRecord } from './record';
 
 export interface PageAppEvent {
   appEventId: string;
@@ -90,7 +92,7 @@ function previewVideoUrls(shelves: Record<string, unknown>): string[] | null {
   const urls: string[] = [];
   let mediaShelves = 0;
   for (const [key, shelf] of Object.entries(shelves)) {
-    if (!PRODUCT_MEDIA_KEY.test(key)) {
+    if (!PRODUCT_MEDIA_KEY.test(key) || !hasItemArray(shelf)) {
       continue;
     }
     mediaShelves += 1;
@@ -102,6 +104,10 @@ function previewVideoUrls(shelves: Record<string, unknown>): string[] | null {
     }
   }
   return mediaShelves === 0 ? null : [...new Set(urls)];
+}
+
+function hasItemArray(shelf: unknown): boolean {
+  return Array.isArray(asRecord(shelf)?.items);
 }
 
 function appEvents(shelves: Record<string, unknown>): PageAppEvent[] {
@@ -116,8 +122,8 @@ function appEvents(shelves: Record<string, unknown>): PageAppEvent[] {
         title: nonEmptyString(item.title),
         kind: nonEmptyString(item.kind),
         badge: nonEmptyString(item.appEventBadgeKind),
-        startsAt: nonEmptyString(item.startDate),
-        endsAt: nonEmptyString(item.endDate),
+        startsAt: isoDateOrNull(item.startDate),
+        endsAt: isoDateOrNull(item.endDate),
       },
     ];
   });
@@ -184,12 +190,6 @@ function itemsOf(shelf: unknown): Record<string, unknown>[] {
     const record = asRecord(item);
     return record === null ? [] : [record];
   });
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
 }
 
 function nonEmptyString(value: unknown): string | null {

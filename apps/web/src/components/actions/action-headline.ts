@@ -26,6 +26,9 @@ export const CHANGE_FIELD_WORD: Record<ChangeField, string> = {
   screenshotCaptions: "screenshot captions",
   icon: "icon",
   whatsNew: "what's new",
+  inAppEvents: "in-app events",
+  featuring: "featuring",
+  editorsChoice: "editors' choice",
 };
 
 const quoted = (text: string): string => `"${text}"`;

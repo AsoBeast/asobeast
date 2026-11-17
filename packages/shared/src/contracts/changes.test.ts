@@ -7,10 +7,12 @@ import {
   AlertDeliveryStatus,
   AlertFlushResult,
   AlertsConfig,
+  AppEventRef,
   CHANGE_FIELD_LABELS,
   CHANGE_FIELDS,
   ChangeDetail,
   ChangeEventItem,
+  EditorsChoiceDetail,
   EmailAlertCreateRequest,
   EmailAlertItem,
   EmailAlertUpdateRequest,
@@ -23,6 +25,7 @@ import {
   RankDroppedPayload,
   RankImprovedPayload,
   RankMilestonePayload,
+  StoryRef,
   WEBHOOK_EVENTS,
   WebhookCreateRequest,
   WebhookItem,
@@ -292,6 +295,85 @@ describe('the screenshot change fields', () => {
       capturedAt: '2026-10-07T00:00:00.000Z',
     };
     expect({ ...plain, detail }.detail).toBe(detail);
+    expect(plain.detail).toBeUndefined();
+  });
+});
+
+describe('the app events and featuring change fields', () => {
+  it('appends the three fields after the released ones', () => {
+    expect(CHANGE_FIELDS.slice(-3)).toEqual([
+      'inAppEvents',
+      'featuring',
+      'editorsChoice',
+    ]);
+  });
+
+  it('recognises the three new fields', () => {
+    expect(isChangeField('inAppEvents')).toBe(true);
+    expect(isChangeField('featuring')).toBe(true);
+    expect(isChangeField('editorsChoice')).toBe(true);
+  });
+
+  it('labels the fields the way the consoles name them', () => {
+    expect(CHANGE_FIELD_LABELS.inAppEvents).toBe('In-app events');
+    expect(CHANGE_FIELD_LABELS.featuring).toBe('Featuring');
+    expect(CHANGE_FIELD_LABELS.editorsChoice).toBe("Editors' Choice");
+  });
+
+  it('keeps the reference fields the store page read', () => {
+    expectTypeOf<AppEventRef['appEventId']>().toEqualTypeOf<string>();
+    expectTypeOf<AppEventRef['title']>().toEqualTypeOf<string | null>();
+    expectTypeOf<AppEventRef['startsAt']>().toEqualTypeOf<string | null>();
+    expectTypeOf<AppEventRef['endsAt']>().toEqualTypeOf<string | null>();
+    expectTypeOf<StoryRef['storyId']>().toEqualTypeOf<string>();
+    expectTypeOf<StoryRef['heading']>().toEqualTypeOf<string | null>();
+    expectTypeOf<EditorsChoiceDetail['showsBadge']>().toEqualTypeOf<boolean>();
+    expectTypeOf<EditorsChoiceDetail['notes']>().toEqualTypeOf<string | null>();
+  });
+
+  it('lets the new details ride on an event without requiring one', () => {
+    const events: ChangeDetail = {
+      kind: 'events',
+      added: [
+        {
+          appEventId: 'e1',
+          title: 'Double XP weekend',
+          kind: 'APP_STORE_EVENT',
+          badge: 'AVAILABLE',
+          startsAt: '2026-11-20T00:00:00.000Z',
+          endsAt: '2026-11-27T00:00:00.000Z',
+        },
+      ],
+      removed: [],
+    };
+    const featuring: ChangeDetail = {
+      kind: 'featuring',
+      added: [{ storyId: 's1', heading: null, title: 'Editors talk' }],
+      removed: [],
+    };
+    const editorsChoice: EditorsChoiceDetail = {
+      kind: 'editorsChoice',
+      showsBadge: true,
+      notes: null,
+    };
+    const plain: ChangeEventItem = {
+      id: 'e9',
+      appId: 'a1',
+      appName: null,
+      isCompetitor: false,
+      field: 'inAppEvents',
+      before: null,
+      after: null,
+      capturedAt: '2026-11-16T00:00:00.000Z',
+    };
+    expect({ ...plain, detail: events }.detail).toEqual(events);
+    expect(
+      { ...plain, field: 'featuring' as const, detail: featuring }.detail,
+    ).toEqual(featuring);
+    expect(
+      { ...plain, field: 'editorsChoice' as const, detail: editorsChoice }
+        .detail,
+    ).toEqual(editorsChoice);
     expect(plain.detail).toBeUndefined();
   });
 });

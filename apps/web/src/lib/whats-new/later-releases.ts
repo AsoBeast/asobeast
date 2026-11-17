@@ -19,6 +19,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "Google writes most search terms under explore traffic rather than search, and the column used to read only search, so months could look empty that never were. It now reads both, while the placeholders Google writes when it names no term stay out of the column.",
       },
       {
+        kind: "new",
+        title: "In-app events, featuring and badges in the feed",
+        text: "The changes feed now also notices what the store itself adds around an app: when in-app events appear or disappear, when the app enters or leaves a featured story and when an Editors' Choice badge is gained or lost, for your apps and your competitors alike. Each row carries what changed with it, so an event keeps its name, kind and dates and a story keeps its title, even when the store names nothing.",
+      },
+      {
         kind: "improved",
         title: "Fields the store does not search say so",
         text: "On the metadata page, a field the App Store does not search is now labelled next to its name, so you know not to spend keywords there.",
