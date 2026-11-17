@@ -4044,6 +4044,19 @@
               "example": "us",
               "type": "string"
             }
+          },
+          {
+            "name": "includePaused",
+            "required": false,
+            "in": "query",
+            "description": "Also return the paused keywords. Ignored when keywordIds is given. Defaults to false.",
+            "schema": {
+              "enum": [
+                "true",
+                "false"
+              ],
+              "type": "string"
+            }
           }
         ],
         "responses": {

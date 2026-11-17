@@ -267,7 +267,11 @@ export class RankingsService {
     const tracked = await this.prisma.trackedKeyword.findMany({
       where: {
         appId,
-        ...(requested ? { keywordId: { in: requested } } : { active: true }),
+        ...(requested
+          ? { keywordId: { in: requested } }
+          : query.includePaused === 'true'
+            ? {}
+            : { active: true }),
         ...(query.country ? { keyword: { country: query.country } } : {}),
       },
       orderBy: { createdAt: 'asc' },

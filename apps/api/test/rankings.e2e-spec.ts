@@ -146,6 +146,32 @@ describe('RankingsController serp-movers (e2e)', () => {
       expect((everyMarket.body as RankingSeries).series).toHaveLength(2);
     });
 
+    it('returns paused keywords only when asked to', async () => {
+      const id = await appId();
+      const keyword = await prisma.keyword.create({
+        data: { text: 'habit paused', store: Store.APP_STORE, country: 'us' },
+      });
+      await prisma.trackedKeyword.create({
+        data: {
+          appId: id,
+          keywordId: keyword.id,
+          source: 'MANUAL',
+          active: false,
+        },
+      });
+
+      const plain = await api.get(`/apps/${id}/rankings`).expect(200);
+      const withPaused = await api
+        .get(`/apps/${id}/rankings?includePaused=true`)
+        .expect(200);
+      await api.get(`/apps/${id}/rankings?includePaused=yes`).expect(400);
+
+      expect((plain.body as RankingSeries).series).toHaveLength(0);
+      expect(
+        (withPaused.body as RankingSeries).series.map((e) => e.keywordId),
+      ).toEqual([keyword.id]);
+    });
+
     it('accepts a timestamp start with a date end', async () => {
       await api
         .get(
