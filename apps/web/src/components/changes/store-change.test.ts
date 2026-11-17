@@ -93,6 +93,18 @@ describe("eventMeta", () => {
     ).toBe("Live now · From Nov 20");
   });
 
+  it("drops a stored value that is not a date instead of throwing", () => {
+    expect(
+      eventMeta(appEvent({ startsAt: "soon", badge: null, kind: null })),
+    ).toBe("Until Dec 5");
+    expect(eventMeta(appEvent({ startsAt: "soon", endsAt: "later" }))).toBe(
+      "Challenge · Live now",
+    );
+    expect(eventMeta(appEvent({ endsAt: "later" }))).toBe(
+      "Challenge · Live now · From Nov 20",
+    );
+  });
+
   it("reads a range with one side as from or until", () => {
     expect(eventMeta(appEvent({ endsAt: null }))).toBe(
       "Challenge · Live now · From Nov 20",

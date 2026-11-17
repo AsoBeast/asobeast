@@ -7,6 +7,7 @@ import type {
   FeaturingDetail,
   StoryRef,
 } from "@asobeast/shared";
+import { isoDateOrNull } from "@asobeast/shared";
 import { formatDayMonth, pluralize } from "@/lib/format";
 
 const STORE_FIELDS: ReadonlySet<ChangeField> = new Set([
@@ -29,11 +30,13 @@ export const storyTitle = (ref: StoryRef): string =>
   ref.title ?? ref.heading ?? STORY_FALLBACK_TITLE;
 
 function eventRange(ref: AppEventRef): string | null {
-  if (ref.startsAt !== null && ref.endsAt !== null) {
-    return `${formatDayMonth(ref.startsAt)} to ${formatDayMonth(ref.endsAt)}`;
+  const startsAt = isoDateOrNull(ref.startsAt);
+  const endsAt = isoDateOrNull(ref.endsAt);
+  if (startsAt !== null && endsAt !== null) {
+    return `${formatDayMonth(startsAt)} to ${formatDayMonth(endsAt)}`;
   }
-  if (ref.startsAt !== null) return `From ${formatDayMonth(ref.startsAt)}`;
-  if (ref.endsAt !== null) return `Until ${formatDayMonth(ref.endsAt)}`;
+  if (startsAt !== null) return `From ${formatDayMonth(startsAt)}`;
+  if (endsAt !== null) return `Until ${formatDayMonth(endsAt)}`;
   return null;
 }
 
