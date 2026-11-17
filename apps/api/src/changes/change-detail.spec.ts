@@ -39,6 +39,38 @@ describe('readChangeDetail', () => {
     expect(readChangeDetail(detail)).toEqual(detail);
   });
 
+  it('nulls a stored event date that is not a date and keeps the row', () => {
+    expect(
+      readChangeDetail({
+        kind: 'events',
+        added: [
+          {
+            appEventId: 'e1',
+            title: 'Spring sale',
+            kind: null,
+            badge: null,
+            startsAt: 'soon',
+            endsAt: '2026-11-27T00:00:00.000Z',
+          },
+        ],
+        removed: [],
+      }),
+    ).toEqual({
+      kind: 'events',
+      added: [
+        {
+          appEventId: 'e1',
+          title: 'Spring sale',
+          kind: null,
+          badge: null,
+          startsAt: null,
+          endsAt: '2026-11-27T00:00:00.000Z',
+        },
+      ],
+      removed: [],
+    });
+  });
+
   it('reads a featuring detail', () => {
     const detail = {
       kind: 'featuring',

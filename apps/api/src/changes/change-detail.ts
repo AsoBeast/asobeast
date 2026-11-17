@@ -1,17 +1,19 @@
 import { z } from 'zod';
-import type { ChangeDetail } from '@asobeast/shared';
+import { isoDateOrNull, type ChangeDetail } from '@asobeast/shared';
 
 const reference = z.object({ position: z.number().int(), url: z.string() });
 
 const nullableText = z.string().nullable();
+
+const nullableDate = z.preprocess(isoDateOrNull, nullableText);
 
 const appEventRef = z.object({
   appEventId: z.string(),
   title: nullableText,
   kind: nullableText,
   badge: nullableText,
-  startsAt: nullableText,
-  endsAt: nullableText,
+  startsAt: nullableDate,
+  endsAt: nullableDate,
 });
 
 const storyRef = z.object({
