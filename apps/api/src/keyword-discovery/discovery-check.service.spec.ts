@@ -125,12 +125,13 @@ describe('DiscoveryCheck', () => {
     expect(prisma.keywordDiscovery.update).not.toHaveBeenCalled();
   });
 
-  it('records the position the search found to depth 200', async () => {
+  it('records the position and the depth the search reached', async () => {
     const { check, prisma } = build();
     await check.run(payload, false);
     expect(updateOf(prisma)).toEqual({
       position: 12,
       depth: 200,
+      ownSearch: true,
       checkedOn: utcToday(),
       relevance: 70,
     });
@@ -142,9 +143,30 @@ describe('DiscoveryCheck', () => {
     await check.run(payload, false);
     expect(updateOf(prisma)).toMatchObject({
       position: null,
-      depth: 200,
+      depth: 60,
+      ownSearch: true,
       checkedOn: utcToday(),
     });
+  });
+
+  it('records the depth of a store that listed only a short list', async () => {
+    const { check, prisma, capture } = build();
+    capture.search.mockResolvedValueOnce(results(18, 5));
+    await check.run(payload, false);
+    expect(updateOf(prisma)).toMatchObject({
+      position: 5,
+      depth: 18,
+      ownSearch: true,
+    });
+  });
+
+  it('hands the reached depth to auto track', async () => {
+    const { check, tracker, capture } = build({ autoTrackRanked: true });
+    capture.search.mockResolvedValueOnce(results(60, 12));
+    await check.run(payload, false);
+    expect(tracker.autoTrack).toHaveBeenCalledWith(expect.anything(), [
+      expect.objectContaining({ position: 12, depth: 60, ownSearch: true }),
+    ]);
   });
 
   it('leaves the row as it was when the search settled empty', async () => {
@@ -202,6 +224,7 @@ describe('DiscoveryCheck', () => {
         source: 'reviews',
         position: 12,
         depth: 200,
+        ownSearch: true,
         checkedOn: utcToday().toISOString().slice(0, 10),
       },
     ]);

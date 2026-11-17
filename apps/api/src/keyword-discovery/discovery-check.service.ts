@@ -1,11 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { isDiscoverySource, RANK_DEPTH } from '@asobeast/shared';
+import { isDiscoverySource } from '@asobeast/shared';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { DiscoverKeywordPayload } from '../jobs/jobs.types';
 import { listingFacts } from '../keywords/listing-facts';
 import { KeywordApp } from '../keywords/keywords.support';
 import { PrismaService } from '../prisma/prisma.service';
-import { positionsByStoreAppId, SerpCapture } from '../rankings/serp-capture';
+import {
+  positionsByStoreAppId,
+  reachedDepth,
+  SerpCapture,
+} from '../rankings/serp-capture';
 import { toDateKey, utcToday } from '../rankings/rankings.support';
 import { discoveryRelevance } from './discovery-pool';
 import { DiscoveryTracker } from './discovery-tracker.service';
@@ -51,6 +55,7 @@ export class DiscoveryCheck {
     const results = await this.capture.search(keyword, finalAttempt);
     if (!results) return;
     const position = positionsByStoreAppId(results).get(app.storeAppId) ?? null;
+    const depth = reachedDepth(results);
     const date = utcToday();
     if (await this.nobodyTracks(keywordId)) {
       await this.capture.store(keywordId, date, results);
@@ -63,7 +68,7 @@ export class DiscoveryCheck {
     );
     await this.prisma.keywordDiscovery.update({
       where: { appId_keywordId: { appId, keywordId } },
-      data: { position, depth: RANK_DEPTH, checkedOn: date, relevance },
+      data: { position, depth, ownSearch: true, checkedOn: date, relevance },
     });
     if (!app.autoTrackRanked || position === null) return;
     await this.tracker.autoTrack(app, [
@@ -73,7 +78,8 @@ export class DiscoveryCheck {
         country: keyword.country,
         source,
         position,
-        depth: RANK_DEPTH,
+        depth,
+        ownSearch: true,
         checkedOn: toDateKey(date),
       },
     ]);

@@ -30,6 +30,7 @@ describe('keyword discovery check (e2e)', () => {
   let harness: CapacityHarness;
   let appId: string;
   let keywordId: string;
+  let answer = searchResults;
 
   const today = () => new Date(`${utcDayOf(new Date())}T00:00:00.000Z`);
 
@@ -77,7 +78,7 @@ describe('keyword discovery check (e2e)', () => {
     const get = registry.get.bind(registry);
     jest.spyOn(registry, 'get').mockImplementation((store: Store) => ({
       ...get(store),
-      search: () => Promise.resolve(searchResults),
+      search: () => Promise.resolve(answer),
     }));
     await harness.prisma.workspace.upsert({
       where: { id: OTHER_WORKSPACE_ID },
@@ -87,6 +88,7 @@ describe('keyword discovery check (e2e)', () => {
   }, 60_000);
 
   beforeEach(async () => {
+    answer = searchResults;
     await resetCapacity(harness);
     appId = (
       await harness.prisma.app.create({
@@ -122,10 +124,27 @@ describe('keyword discovery check (e2e)', () => {
 
     expect(await discovery()).toMatchObject({
       position: APP_POSITION,
-      depth: 200,
+      depth: searchResults.length,
+      ownSearch: true,
       checkedOn: today(),
     });
     expect(await capturedToday()).toBe(50);
+  });
+
+  it('records the depth a short list reached for a phrase the app misses', async () => {
+    answer = searchResults
+      .filter(({ storeAppId }) => storeAppId !== STORE_APP_ID)
+      .slice(0, 30);
+
+    await runCheck();
+
+    expect(await discovery()).toMatchObject({
+      position: null,
+      depth: 30,
+      ownSearch: true,
+      checkedOn: today(),
+    });
+    expect(await capturedToday()).toBe(30);
   });
 
   it('stores no capture of a phrase another workspace tracks', async () => {
@@ -186,7 +205,7 @@ describe('keyword discovery check (e2e)', () => {
       await harness.prisma.keywordRanking.findUniqueOrThrow({
         where: { appId_keywordId_date: { appId, keywordId, date: today() } },
       }),
-    ).toMatchObject({ position: APP_POSITION, depth: 200 });
+    ).toMatchObject({ position: APP_POSITION, depth: searchResults.length });
   });
 
   it('keeps a ranked discovery that does not fit the plan and still completes', async () => {
