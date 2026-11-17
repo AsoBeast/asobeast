@@ -43,7 +43,8 @@ export function PasswordField({
     form.addEventListener("submit", hide);
     return () => form.removeEventListener("submit", hide);
   }, []);
-  const ownDescription = error ? ERROR_ID : hint ? HINT_ID : undefined;
+  const messageId = error ? ERROR_ID : HINT_ID;
+  const ownDescription = error || hint ? messageId : undefined;
 
   return (
     <div className="flex flex-col gap-2">
@@ -84,7 +85,8 @@ export function PasswordField({
         <p id={ERROR_ID} role="alert" className="text-dense text-destructive">
           {error}
         </p>
-      ) : hint ? (
+      ) : null}
+      {hint && !error ? (
         <p id={HINT_ID} className="text-caption text-muted-foreground">
           {hint}
         </p>
