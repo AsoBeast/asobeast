@@ -438,6 +438,13 @@ describe('KeywordsService.syncFromSnapshot', () => {
       .map((row) => row.keywordId)
       .filter((keywordId) => keywordId !== 'kw1');
     expect(added.length).toBeGreaterThan(0);
+    expect(prisma.trackedKeyword.findMany).toHaveBeenCalledWith({
+      where: {
+        appId: 'app1',
+        keywordId: { in: data.map((row) => row.keywordId) },
+      },
+      select: { keywordId: true },
+    });
     expect(schedule).toHaveBeenCalledWith('app1', added);
     expect(schedule.mock.invocationCallOrder[0]).toBeLessThan(
       queue.add.mock.invocationCallOrder[0],

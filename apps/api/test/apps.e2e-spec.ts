@@ -1445,8 +1445,10 @@ describe('AppsController (e2e)', () => {
       expect(checks).toHaveLength(await trackedCount(imported.id));
     });
 
-    const firstChecksMissing = async (appId: string): Promise<string[]> => {
-      const date = utcDateKey();
+    const firstChecksMissing = async (
+      appId: string,
+      date: string,
+    ): Promise<string[]> => {
       const queued = new Set(
         (await jobsOn(QUEUES.APP_STORE))
           .filter((job) => job.name === JOBS.CHECK_KEYWORD)
@@ -1465,6 +1467,7 @@ describe('AppsController (e2e)', () => {
     };
 
     it('checks the subtitle keywords a refresh tracks before the backfill lands', async () => {
+      const date = utcDateKey();
       registry.subtitleUnavailable = true;
       const imported = await importApp(APP_STORE_URL);
       const [backfill] = (await jobsOn(QUEUES.APP_STORE)).filter(
@@ -1483,10 +1486,11 @@ describe('AppsController (e2e)', () => {
       );
 
       expect(await trackedCount(imported.id)).toBeGreaterThan(trackedBefore);
-      expect(await firstChecksMissing(imported.id)).toEqual([]);
+      expect(await firstChecksMissing(imported.id, date)).toEqual([]);
     });
 
     it('checks the keywords a refreshed title adds', async () => {
+      const date = utcDateKey();
       const imported = await importApp(APP_STORE_URL);
       const trackedBefore = await trackedCount(imported.id);
 
@@ -1496,7 +1500,7 @@ describe('AppsController (e2e)', () => {
       );
 
       expect(await trackedCount(imported.id)).toBeGreaterThan(trackedBefore);
-      expect(await firstChecksMissing(imported.id)).toEqual([]);
+      expect(await firstChecksMissing(imported.id, date)).toEqual([]);
     });
 
     it('fails the attempt while the product page stays unreadable', async () => {
