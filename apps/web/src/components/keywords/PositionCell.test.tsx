@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { formatDate } from "@/lib/format";
-import type { TrendSeries, TrendWindow } from "@/lib/trend-window";
+import type { TrendSeries, TrendState, TrendWindow } from "@/lib/trend-window";
 import { PositionCell, TrendCell } from "./keyword-cells";
 
 const TODAY = "2026-10-22";
@@ -53,6 +53,7 @@ const renderTrend = (
   multiMarket = false,
   trendWindow: TrendWindow = "7d",
   series?: TrendSeries,
+  state?: TrendState,
 ) =>
   renderToStaticMarkup(
     <TrendCell
@@ -61,6 +62,7 @@ const renderTrend = (
       history={{ ...HISTORY, multiMarket }}
       trendWindow={trendWindow}
       series={series}
+      state={state}
     />,
   );
 
@@ -186,11 +188,48 @@ describe("PositionCell", () => {
     expect(markup).not.toContain('data-slot="position-trend"');
   });
 
-  it("W-POS-32 keeps an empty cell while the 30 day series is missing", () => {
-    const markup = renderTrend(keyword({}), false, "30d", undefined);
+  it("W-POS-32 says Loading, not no change, while the 30 day series is pending", () => {
+    const markup = renderTrend(
+      keyword({ positionDelta7d: 0 }),
+      false,
+      "30d",
+      undefined,
+      "pending",
+    );
 
+    expect(markup).toContain("Loading");
     expect(markup).not.toContain("Not enough checks");
     expect(markup).not.toContain('data-slot="position-trend"');
+    expect(markup).not.toContain("—");
+  });
+
+  it("W-POS-33 says Not loaded when the 30 day series failed", () => {
+    const markup = renderTrend(keyword({}), false, "30d", undefined, "failed");
+
+    expect(markup).toContain("Not loaded");
+    expect(markup).not.toContain("Not enough checks");
+  });
+
+  it("W-POS-34 draws a paused row's 30 day line from its series", () => {
+    const series: TrendSeries = new Map([
+      [
+        "kw-1",
+        [
+          { date: "2026-10-18", position: 20, depth: 200 },
+          { date: "2026-10-19", position: 18, depth: 200 },
+          { date: "2026-10-20", position: 15, depth: 200 },
+        ],
+      ],
+    ]);
+    const markup = renderTrend(
+      keyword({ active: false, keywordId: "kw-1" }),
+      false,
+      "30d",
+      series,
+    );
+
+    expect(markup).toContain('data-slot="position-trend"');
+    expect(markup).toContain("text-muted-foreground");
   });
 
   it("W-POS-08 names the market when the app tracks several", () => {

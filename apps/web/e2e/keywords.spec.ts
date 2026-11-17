@@ -12,6 +12,7 @@ import { seedCookies } from "./routes.mts";
 import {
   APP_GP_NO_TERMS_ID,
   PL_HISTORY_COOKIE,
+  RANKINGS_FAIL_COOKIE,
   utcDaysAgo,
 } from "./fixtures.mts";
 import { formatDayMonth } from "../src/lib/format";
@@ -1628,6 +1629,12 @@ test("the trend column switches to 30 days through the URL", async ({
   ).toBeAttached();
   expect(requests).toHaveLength(1);
   expect(new URL(requests[0]).searchParams.get("country")).toBe("us");
+  expect(new URL(requests[0]).searchParams.get("includePaused")).toBe("true");
+  await expect(
+    page
+      .getByRole("row", { name: /time blocking/ })
+      .getByRole("img", { name: /Position over the last 30 days/ }),
+  ).toBeAttached();
 
   await page.getByRole("button", { name: "Last 30 days", exact: true }).click();
   await expect(page).toHaveURL(/sort=delta7d/);
@@ -1664,4 +1671,27 @@ test("a hidden trend column asks for no series on the 30 day window", async ({
   await page.waitForLoadState("networkidle");
 
   expect(requests).toEqual([]);
+});
+
+test("a failed 30 day read says so and retries", async ({ page, context }) => {
+  await seedCookies(context, { [RANKINGS_FAIL_COOKIE]: "1" });
+  await page.goto("/apps/app-1/keywords?trend=30d");
+
+  await expect(
+    page
+      .getByRole("alert")
+      .filter({ hasText: "Could not load the 30 day trend." }),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(
+    page.getByRole("row", { name: /pomodoro/ }).getByText("Not loaded"),
+  ).toBeVisible();
+
+  await context.clearCookies({ name: RANKINGS_FAIL_COOKIE });
+  await page.getByRole("button", { name: "Retry" }).click();
+  await expect(page.getByText("Could not load the 30 day trend.")).toBeHidden();
+  await expect(
+    page
+      .getByRole("row", { name: /pomodoro/ })
+      .getByLabel("down 6 over 30 days"),
+  ).toBeAttached();
 });

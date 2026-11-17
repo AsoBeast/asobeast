@@ -23,6 +23,7 @@ import {
   TREND_WINDOWS,
   trendLabel,
   type TrendSeries,
+  type TrendState,
 } from "@/lib/trend-window";
 import { FUNNEL_SERIES_DAYS, noSearchTermsFact } from "@/lib/funnel";
 import { HIDDEN_KEYWORD_COLUMNS, keywordColumns } from "./keyword-columns";
@@ -35,6 +36,7 @@ import { useShowDynamics } from "./KeywordDynamicsPanel";
 import { KeywordsEmptyState } from "./KeywordsEmptyState";
 import { KeywordsDataTable } from "./KeywordsDataTable";
 import { KeywordsFilterBar } from "./KeywordsFilterBar";
+import { InlineQueryError } from "@/components/layout/InlineQueryError";
 import {
   ChartedKeywordsContext,
   KeywordSheetContext,
@@ -114,14 +116,14 @@ export function KeywordsTable({
     [setSerpState],
   );
   const buildColumns = useCallback(
-    (series: TrendSeries | undefined) =>
+    (series: TrendSeries | undefined, state: TrendState = "ready") =>
       keywordColumns({
         appId: id,
         store,
         homeCountry,
         multiMarket,
         today,
-        trend: { window: trendWindow, series },
+        trend: { window: trendWindow, series, state },
         onOpenSerp: openSerp,
       }),
     [id, store, homeCountry, multiMarket, today, trendWindow, openSerp],
@@ -130,13 +132,20 @@ export function KeywordsTable({
 
   const { sorting, onSortingChange, visibility, setVisibility, marks } =
     useKeywordsTableControls({ store, columns: shellColumns });
-  const series = useTrendSeries({
+  const {
+    series,
+    state,
+    read: trendRead,
+  } = useTrendSeries({
     appId: id,
     country,
     trendWindow,
     columnShown: visibility.delta7d !== false,
   });
-  const columns = useMemo(() => buildColumns(series), [buildColumns, series]);
+  const columns = useMemo(
+    () => buildColumns(series, state),
+    [buildColumns, series, state],
+  );
   const columnFilters = useKeywordColumnFilters(filters);
 
   const table = useTable({
@@ -208,6 +217,12 @@ export function KeywordsTable({
             },
           ]}
         />
+        {state === "failed" ? (
+          <InlineQueryError
+            message="Could not load the 30 day trend."
+            read={trendRead}
+          />
+        ) : null}
         {view === "map" ? (
           <KeywordMap
             keywords={mapKeywords}

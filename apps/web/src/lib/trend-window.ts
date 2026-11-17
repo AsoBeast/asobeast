@@ -18,6 +18,8 @@ export const trendLabel = (window: TrendWindow): string =>
 export const trendPeriod = (window: TrendWindow): string =>
   `over ${TREND_WINDOW_DAYS[window]} days`;
 
+export type TrendState = "ready" | "pending" | "failed";
+
 export type TrendSeries = ReadonlyMap<string, readonly RankingPoint[]>;
 
 export function seriesByKeyword(

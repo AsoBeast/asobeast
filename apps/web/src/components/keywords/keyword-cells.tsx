@@ -28,11 +28,13 @@ import {
 } from "./PositionHistoryPopover";
 import { KeywordClassTag } from "./KeywordClassTag";
 import { PositionTrend } from "./PositionTrend";
+import { TREND_WIDTH } from "./position-trend";
 import {
   trendChecks,
   trendDelta,
   trendPeriod,
   type TrendSeries,
+  type TrendState,
   type TrendWindow,
 } from "@/lib/trend-window";
 import { StaleCheckMark } from "./StaleCheckMark";
@@ -114,30 +116,40 @@ export function TrendCell({
   history,
   trendWindow,
   series,
+  state = "ready",
 }: {
   keyword: TrackedKeywordItem;
   today: string;
   history: PositionHistoryContext;
   trendWindow: TrendWindow;
   series: TrendSeries | undefined;
+  state?: TrendState;
 }) {
   const label = formatCheckedPosition(
     keyword.latestPosition,
     keyword.latestDepth,
   );
-  const trend = (
-    <>
-      <PositionTrend
-        checks={trendChecks(keyword, trendWindow, series)}
-        trendWindow={trendWindow}
-      />
-      <DeltaChip
-        value={trendDelta(keyword, trendWindow, series)}
-        period={trendPeriod(trendWindow)}
-        className={keyword.active ? undefined : "text-muted-foreground"}
-      />
-    </>
-  );
+  const trend =
+    state !== "ready" ? (
+      <span
+        style={{ width: TREND_WIDTH }}
+        className="shrink-0 text-caption leading-tight text-muted-foreground"
+      >
+        {state === "pending" ? "Loading" : "Not loaded"}
+      </span>
+    ) : (
+      <>
+        <PositionTrend
+          checks={trendChecks(keyword, trendWindow, series)}
+          trendWindow={trendWindow}
+        />
+        <DeltaChip
+          value={trendDelta(keyword, trendWindow, series)}
+          period={trendPeriod(trendWindow)}
+          className={keyword.active ? undefined : "text-muted-foreground"}
+        />
+      </>
+    );
   if (label === null) {
     return <span className="inline-flex items-center gap-2">{trend}</span>;
   }

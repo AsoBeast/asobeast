@@ -56,6 +56,7 @@ import {
   trendDelta,
   trendLabel,
   type TrendSeries,
+  type TrendState,
   type TrendWindow,
 } from "@/lib/trend-window";
 import { DerivedScoreCell, ScoreCell } from "./score-cells";
@@ -79,6 +80,7 @@ import { nullsLast } from "@/lib/table/sorting";
 export interface TrendView {
   window: TrendWindow;
   series: TrendSeries | undefined;
+  state?: TrendState;
 }
 
 export const SELECT_ALL_KEYWORDS = "Select all keywords";
@@ -251,7 +253,7 @@ function changeColumn(today: string) {
 
 function deltaColumn(
   today: string,
-  { window: trendWindow, series }: TrendView,
+  { window: trendWindow, series, state = "ready" }: TrendView,
   history: PositionHistoryContext,
 ) {
   const label = trendLabel(trendWindow);
@@ -277,6 +279,7 @@ function deltaColumn(
           history={history}
           trendWindow={trendWindow}
           series={series}
+          state={state}
         />
       ),
     },

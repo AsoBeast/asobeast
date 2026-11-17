@@ -9,7 +9,7 @@ import type { RangeParams, RankingParams } from "./client";
 
 export function getRankings(
   appId: string,
-  { from, to, keywordIds, country }: RankingParams = {},
+  { from, to, keywordIds, country, includePaused }: RankingParams = {},
 ): Promise<RankingSeries> {
   const params = new URLSearchParams();
   if (from) params.set("from", from);
@@ -18,6 +18,7 @@ export function getRankings(
     params.set("keywordIds", keywordIds.join(","));
   }
   if (country) params.set("country", country);
+  if (includePaused) params.set("includePaused", "true");
   return apiFetch<RankingSeries>(withQuery(`/apps/${appId}/rankings`, params));
 }
 
