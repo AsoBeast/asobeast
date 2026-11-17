@@ -8,7 +8,7 @@ import {
   storefrontLanguage,
 } from '@asobeast/shared';
 import { Prisma, Store } from '@prisma/client';
-import { StoreAppNotFoundError, StoreRequestError } from './errors';
+import { MissingApp, StoreAppNotFoundError, StoreRequestError } from './errors';
 import { Abortable, storeDeadline } from './store-deadline';
 import { retryStoreCall } from './store-retry';
 import {
@@ -74,7 +74,7 @@ export class GooglePlayProvider implements StoreProvider {
       'getApp',
       (deadline) =>
         this.lib.app({ appId: storeAppId, country, lang, ...deadline }),
-      storeAppId,
+      { storeAppId, country },
     );
     return {
       store: this.store,
@@ -260,16 +260,20 @@ export class GooglePlayProvider implements StoreProvider {
   private async call<T>(
     method: string,
     fn: (deadline: Abortable) => Promise<T>,
-    missingAppId?: string,
+    missing?: MissingApp,
   ): Promise<T> {
     try {
       return await retryStoreCall(
         fn,
-        (error) => missingAppId !== undefined && isMissingApp(error),
+        (error) => missing !== undefined && isMissingApp(error),
       );
     } catch (error) {
-      if (missingAppId !== undefined && isMissingApp(error)) {
-        throw new StoreAppNotFoundError(this.store, missingAppId);
+      if (missing !== undefined && isMissingApp(error)) {
+        throw new StoreAppNotFoundError(
+          this.store,
+          missing.storeAppId,
+          missing.country,
+        );
       }
       throw new StoreRequestError(this.store, method, messageOf(error));
     }

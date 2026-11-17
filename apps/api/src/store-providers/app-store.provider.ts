@@ -22,7 +22,7 @@ import {
   AppStorePageExtract,
   parseAppStorePageDocument,
 } from './app-store-page';
-import { StoreAppNotFoundError, StoreRequestError } from './errors';
+import { MissingApp, StoreAppNotFoundError, StoreRequestError } from './errors';
 import { listedInIphoneSearch } from './iphone-search';
 import { ownSubtitle } from './own-subtitle';
 import { Abortable, storeDeadline } from './store-deadline';
@@ -73,7 +73,7 @@ export class AppStoreProvider implements StoreProvider {
           ...deadline,
           ...(localization ? { lang: lookupLanguage(localization) } : {}),
         }),
-      storeAppId,
+      { storeAppId, country },
     );
     const read: PageRead =
       raw.subtitle === undefined
@@ -315,13 +315,17 @@ export class AppStoreProvider implements StoreProvider {
   private async withRetry<T>(
     method: string,
     call: (deadline: Abortable) => Promise<T>,
-    missingAppId?: string,
+    missing?: MissingApp,
   ): Promise<T> {
     try {
       return await retryStoreCall(call, () => true);
     } catch (lastError) {
-      if (missingAppId !== undefined && isMissingApp(lastError)) {
-        throw new StoreAppNotFoundError(this.store, missingAppId);
+      if (missing !== undefined && isMissingApp(lastError)) {
+        throw new StoreAppNotFoundError(
+          this.store,
+          missing.storeAppId,
+          missing.country,
+        );
       }
       if (lastError instanceof ShellListingError) {
         throw lastError;

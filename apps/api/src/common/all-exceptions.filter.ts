@@ -143,6 +143,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       };
     }
     if (exception instanceof StoreAppNotFoundError) {
+      this.logger.warn(exception.message);
       return {
         statusCode: HttpStatus.NOT_FOUND,
         error: 'Not Found',
