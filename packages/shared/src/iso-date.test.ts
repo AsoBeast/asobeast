@@ -32,6 +32,15 @@ describe('isoDateOrNull', () => {
     expect(isoDateOrNull('2026-11-20T25:00:00Z')).toBeNull();
   });
 
+  it('answers null for an offset or a second the clock cannot hold', () => {
+    expect(isoDateOrNull('2026-11-20T09:00+99:99')).toBeNull();
+    expect(isoDateOrNull('2026-11-20T09:00-24:00')).toBeNull();
+    expect(isoDateOrNull('2026-11-20T09:00:60Z')).toBeNull();
+    expect(isoDateOrNull('2026-11-20T09:00+23:59')).toBe(
+      '2026-11-20T09:00+23:59',
+    );
+  });
+
   it('answers null for a value that is not a string', () => {
     expect(isoDateOrNull(null)).toBeNull();
     expect(isoDateOrNull(7)).toBeNull();
