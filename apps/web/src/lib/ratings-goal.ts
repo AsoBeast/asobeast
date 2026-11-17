@@ -13,6 +13,10 @@ export function displayedTenths(average: number): number {
   return Math.floor(average * 10 + 0.5 + ROUNDING_TOLERANCE);
 }
 
+export function displayedRating(average: number): number {
+  return displayedTenths(average) / 10;
+}
+
 export function defaultTargetTenths(average: number): number {
   return Math.min(MAX_TARGET_TENTHS, displayedTenths(average) + 1);
 }
@@ -20,10 +24,13 @@ export function defaultTargetTenths(average: number): number {
 export function parseTargetTenths(text: string): number | null {
   const value = Number(text);
   if (text.trim() === "" || !Number.isFinite(value)) return null;
-  const tenths = Math.round(value * 10);
-  return tenths >= MIN_TARGET_TENTHS && tenths <= MAX_TARGET_TENTHS
-    ? tenths
-    : null;
+  if (
+    value < MIN_TARGET_TENTHS / 10 - ROUNDING_TOLERANCE ||
+    value > MAX_TARGET_TENTHS / 10 + ROUNDING_TOLERANCE
+  ) {
+    return null;
+  }
+  return Math.round(value * 10);
 }
 
 export function parseGoalDays(text: string): number | null {

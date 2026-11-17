@@ -17,6 +17,7 @@ import { appDetailOptions } from "@/lib/queries";
 import {
   DEFAULT_GOAL_DAYS,
   defaultTargetTenths,
+  displayedRating,
   fiveStarRatingsToReach,
   parseGoalDays,
   parseTargetTenths,
@@ -40,17 +41,13 @@ function GoalSentence({
   if (goal.kind === "reached") {
     return (
       <p className="text-body">
-        <span>{`The store already shows ${formatRating(average)}, which is ${shown} or more.`}</span>
+        {`The store already shows ${formatRating(displayedRating(average))}, which is ${shown} or more.`}
       </p>
     );
   }
   return (
     <p className="text-body">
-      <span>{`To show ${shown} you need `}</span>
-      <span className="numeric font-medium text-foreground">
-        {`${formatNumber(goal.ratings)} more five star ${goal.ratings === 1 ? "rating" : "ratings"}`}
-      </span>
-      <span>{`, about ${formatNumber(goal.perDay)} a day for ${pluralize(days, "day")}.`}</span>
+      {`To show ${shown} you need ${formatNumber(goal.ratings)} more five star ${goal.ratings === 1 ? "rating" : "ratings"}, about ${formatNumber(goal.perDay)} a day for ${pluralize(days, "day")}.`}
     </p>
   );
 }

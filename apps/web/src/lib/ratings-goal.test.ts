@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   defaultTargetTenths,
+  displayedRating,
   displayedTenths,
   fiveStarRatingsToReach,
   parseGoalDays,
@@ -14,6 +15,13 @@ describe("displayedTenths", () => {
     expect(displayedTenths(4.35)).toBe(44);
     expect(displayedTenths(4.449)).toBe(44);
     expect(displayedTenths(4.45)).toBe(45);
+  });
+});
+
+describe("displayedRating", () => {
+  it("uses the same rounding as the reached check", () => {
+    expect(displayedRating(4.35)).toBe(4.4);
+    expect(displayedRating(4.8)).toBe(4.8);
   });
 });
 
@@ -42,6 +50,8 @@ describe("parseTargetTenths", () => {
     expect(parseTargetTenths("abc")).toBeNull();
     expect(parseTargetTenths("0")).toBeNull();
     expect(parseTargetTenths("5.1")).toBeNull();
+    expect(parseTargetTenths("5.04")).toBeNull();
+    expect(parseTargetTenths("0.05")).toBeNull();
   });
 });
 
