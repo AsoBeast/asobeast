@@ -18,6 +18,7 @@ import { EmailAlertConfirmationClaim } from './email-alert-confirmation-claim.se
 import { EmailAlertConfirmation } from './email-alert-confirmation.service';
 import { EmailAlertUnsubscribe } from './email-alert-unsubscribe.service';
 import { EmailAlertsService } from './email-alerts.service';
+import { InstantDeliveries } from './instant-deliveries';
 import { MailerService } from './mailer.service';
 import { WebhookDelivery } from './webhook-delivery';
 import { WebhooksController } from './webhooks.controller';
@@ -44,6 +45,7 @@ import { WebhooksService } from './webhooks.service';
     MailerService,
     AlertAppIdentities,
     AlertsDispatcher,
+    InstantDeliveries,
     AlertsWorker,
     DefaultAlertIntro,
     DefaultAlertsMarker,
