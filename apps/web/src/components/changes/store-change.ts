@@ -52,39 +52,41 @@ export function eventMeta(ref: AppEventRef): string | null {
 const named = (label: string, name: string | null): string =>
   name === null ? label : `${label}: ${name}`;
 
-const eventLine = (label: string, ref: AppEventRef): string =>
-  named(label, ref.title ?? ref.kind);
-
 const storyName = (ref: StoryRef): string | null => ref.title ?? ref.heading;
 
+function summaryLine<T>(
+  items: readonly T[],
+  noun: string,
+  verb: string,
+  nameOf: (item: T) => string | null,
+): string | null {
+  const [one] = items;
+  if (one && items.length === 1) return named(`${noun} ${verb}`, nameOf(one));
+  return items.length > 1
+    ? `${pluralize(items.length, noun.toLowerCase())} ${verb}`
+    : null;
+}
+
+const joined = (lines: Array<string | null>): string =>
+  lines.filter((line) => line !== null).join(", ");
+
 function eventsSummary(detail: AppEventsDetail): string {
-  const parts: string[] = [];
-  if (detail.added.length === 1) {
-    parts.push(eventLine("Event added", detail.added[0]!));
-  } else if (detail.added.length > 1) {
-    parts.push(`${pluralize(detail.added.length, "event")} added`);
-  }
-  if (detail.removed.length === 1) {
-    parts.push(eventLine("Event removed", detail.removed[0]!));
-  } else if (detail.removed.length > 1) {
-    parts.push(`${pluralize(detail.removed.length, "event")} removed`);
-  }
-  return parts.join(", ");
+  return joined([
+    summaryLine(detail.added, "Event", "added", (ref) => ref.title ?? ref.kind),
+    summaryLine(
+      detail.removed,
+      "Event",
+      "removed",
+      (ref) => ref.title ?? ref.kind,
+    ),
+  ]);
 }
 
 function featuringSummary(detail: FeaturingDetail): string {
-  const parts: string[] = [];
-  if (detail.added.length === 1) {
-    parts.push(named("Featured story added", storyName(detail.added[0]!)));
-  } else if (detail.added.length > 1) {
-    parts.push(`${pluralize(detail.added.length, "story")} added`);
-  }
-  if (detail.removed.length === 1) {
-    parts.push(named("Featured story removed", storyName(detail.removed[0]!)));
-  } else if (detail.removed.length > 1) {
-    parts.push(`${pluralize(detail.removed.length, "story")} removed`);
-  }
-  return parts.join(", ");
+  return joined([
+    summaryLine(detail.added, "Featured story", "added", storyName),
+    summaryLine(detail.removed, "Featured story", "removed", storyName),
+  ]);
 }
 
 function editorsChoiceSummary(detail: EditorsChoiceDetail): string {
