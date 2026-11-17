@@ -385,6 +385,9 @@ describe('Workspace deletion (e2e)', () => {
         payload: {},
       },
     });
+    await prisma.alertRelay.create({
+      data: { alertEventId: alertEvent.id, workspaceId },
+    });
     await prisma.chartFollow.create({
       data: {
         workspaceId,
@@ -475,6 +478,7 @@ describe('Workspace deletion (e2e)', () => {
       emailAlert,
       alertDelivery,
       alertEvent,
+      alertRelay,
     ] = await Promise.all([
       prisma.workspace.count({ where: { id: WORKSPACE } }),
       prisma.user.count({ where: { id: target.userId } }),
@@ -518,6 +522,9 @@ describe('Workspace deletion (e2e)', () => {
       prisma.emailAlert.count({ where: { id: target.emailAlertId } }),
       prisma.alertDelivery.count({ where: { id: target.deliveryId } }),
       prisma.alertEvent.count({ where: { id: target.alertEventId } }),
+      prisma.alertRelay.count({
+        where: { alertEventId: target.alertEventId },
+      }),
     ]);
 
     return {
@@ -559,6 +566,7 @@ describe('Workspace deletion (e2e)', () => {
       EmailAlert: emailAlert,
       AlertDelivery: alertDelivery,
       AlertEvent: alertEvent,
+      AlertRelay: alertRelay,
     };
   }
 

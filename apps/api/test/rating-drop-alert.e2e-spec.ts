@@ -12,6 +12,7 @@ import type {
 import { Queue } from 'bullmq';
 import { App } from 'supertest/types';
 import { formatBatchEmail } from '../src/alerts/email-format';
+import { InstantAlertRelay } from '../src/alerts/instant-alert-relay';
 import { MailerService } from '../src/alerts/mailer.service';
 import { AppModule } from '../src/app.module';
 import { ListingCaptureService } from '../src/apps/listing-capture.service';
@@ -217,10 +218,12 @@ describe('rating drop alert (e2e)', () => {
       );
 
     await refresh(rated.id);
+    await app.get(InstantAlertRelay).relayEveryWorkspace();
     expect(await queued()).toHaveLength(0);
 
     registry.rating = { ratingAvg: 4.3, ratingCount: 840, version: '1.1.0' };
     await refresh(rated.id);
+    await app.get(InstantAlertRelay).relayEveryWorkspace();
     const jobs = await queued();
     expect(jobs).toHaveLength(1);
     expect((jobs[0].data.payload as RatingDroppedPayload).dropTenths).toBe(3);

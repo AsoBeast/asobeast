@@ -109,6 +109,9 @@ const build = (overrides: {
     app: { update: jest.fn().mockResolvedValue(APP), updateMany },
     $executeRaw: jest.fn().mockResolvedValue(1),
   };
+  const withTransaction = jest.fn(
+    (work: (client: typeof tx) => unknown): unknown => work(tx),
+  );
   const prisma = {
     app: {
       findFirst: jest
@@ -122,9 +125,7 @@ const build = (overrides: {
     keywordFieldSync: {
       findFirst: jest.fn().mockResolvedValue(overrides.fieldSyncRow ?? null),
     },
-    withTransaction: jest.fn((work: (client: typeof tx) => unknown) =>
-      work(tx),
-    ),
+    withTransaction,
   } as unknown as PrismaService;
   const registry = {
     get: () => ({
@@ -167,8 +168,8 @@ const build = (overrides: {
   const recordDefault =
     overrides.recordDefault ?? jest.fn().mockResolvedValue(undefined);
   const storeReports = { enqueue: jest.fn().mockResolvedValue({}) };
-  const ratingDropped = jest.fn().mockResolvedValue(undefined);
-  const listingLost = jest.fn().mockResolvedValue(undefined);
+  const recordRatingDrop = jest.fn().mockResolvedValue(undefined);
+  const recordLoss = jest.fn().mockResolvedValue(undefined);
   const service = new ListingCaptureService(
     prisma,
     registry,
@@ -181,7 +182,7 @@ const build = (overrides: {
     { request: detect } as unknown as LocalizationDetection,
     { record: recordDefault } as unknown as MarketLocalizationRecorder,
     storeReports as unknown as StoreReportQueue,
-    { ratingDropped, listingLost } as unknown as ListingAlerts,
+    { recordRatingDrop, recordLoss } as unknown as ListingAlerts,
   );
   return {
     service,
@@ -191,10 +192,11 @@ const build = (overrides: {
     detect,
     recordDefault,
     storeReports,
-    ratingDropped,
-    listingLost,
+    recordRatingDrop,
+    recordLoss,
     tx,
     updateMany,
+    withTransaction,
     findFirst: prisma.appSnapshot.findFirst,
     txFindFirst: tx.appSnapshot.findFirst,
   };
@@ -901,37 +903,58 @@ describe('ListingCaptureService market default localization', () => {
 describe('ListingCaptureService rating drop alerts', () => {
   it('judges the rating of a home capture once, before the changes', async () => {
     const recordRefresh = jest.fn().mockResolvedValue([]);
-    const { service, ratingDropped } = build({ recordRefresh });
+    const { service, recordRatingDrop, tx } = build({ recordRefresh });
 
     await service.refreshListing(APP.id);
 
-    expect(ratingDropped).toHaveBeenCalledTimes(1);
-    expect(ratingDropped).toHaveBeenCalledWith(
+    expect(recordRatingDrop).toHaveBeenCalledTimes(1);
+    expect(recordRatingDrop).toHaveBeenCalledWith(
+      tx,
       expect.objectContaining({ id: APP.id }),
       SNAPSHOT.capturedAt,
     );
-    expect(ratingDropped.mock.invocationCallOrder[0]).toBeLessThan(
+    expect(recordRatingDrop.mock.invocationCallOrder[0]).toBeLessThan(
       recordRefresh.mock.invocationCallOrder[0],
     );
+  });
+
+  it('judges the rating inside the snapshot transaction, before it resolves', async () => {
+    const { service, recordRatingDrop, withTransaction, tx } = build({});
+    let settled = false;
+    withTransaction.mockImplementation(
+      async (work: (client: typeof tx) => unknown) => {
+        const created = await work(tx);
+        settled = true;
+        return created;
+      },
+    );
+    recordRatingDrop.mockImplementation(() => {
+      expect(settled).toBe(false);
+      return Promise.resolve();
+    });
+
+    await service.refreshListing(APP.id);
+
+    expect(recordRatingDrop).toHaveBeenCalledTimes(1);
   });
 
   it('judges no market capture and no competitor', async () => {
     const market = build({});
     await market.service.refreshListing(APP.id, 'de');
-    expect(market.ratingDropped).not.toHaveBeenCalled();
+    expect(market.recordRatingDrop).not.toHaveBeenCalled();
 
     const rival = build({ app: { ...APP, isCompetitor: true } });
     await rival.service.refreshListing(APP.id);
-    expect(rival.ratingDropped).not.toHaveBeenCalled();
+    expect(rival.recordRatingDrop).not.toHaveBeenCalled();
   });
 
   it('judges nothing when the capture fails', async () => {
-    const { service, ratingDropped } = build({
+    const { service, recordRatingDrop } = build({
       getApp: jest.fn().mockRejectedValue(new Error('timeout')),
     });
 
     await expect(service.refreshListing(APP.id)).rejects.toThrow('timeout');
-    expect(ratingDropped).not.toHaveBeenCalled();
+    expect(recordRatingDrop).not.toHaveBeenCalled();
   });
 });
 
@@ -949,12 +972,13 @@ describe('ListingCaptureService listing loss alerts', () => {
   ])(
     'alerts once when the market %p just lost the listing',
     async (country, market) => {
-      const { service, listingLost } = build({ getApp: missing() });
+      const { service, recordLoss, tx } = build({ getApp: missing() });
 
       await expect(service.refreshListing(APP.id, country)).resolves.toBeNull();
 
-      expect(listingLost).toHaveBeenCalledTimes(1);
-      expect(listingLost).toHaveBeenCalledWith(
+      expect(recordLoss).toHaveBeenCalledTimes(1);
+      expect(recordLoss).toHaveBeenCalledWith(
+        tx,
         expect.objectContaining({ id: APP.id }),
         market,
         expect.any(Date),
@@ -963,14 +987,17 @@ describe('ListingCaptureService listing loss alerts', () => {
   );
 
   it('dates the alert with the moment it records the loss', async () => {
-    const { service, listingLost, updateMany } = build({ getApp: missing() });
+    const { service, recordLoss, updateMany, tx } = build({
+      getApp: missing(),
+    });
 
     await service.refreshListing(APP.id);
 
     const [{ data }] = updateMany.mock.calls[0] as [
       { data: { delistedAt: Date } },
     ];
-    expect(listingLost).toHaveBeenCalledWith(
+    expect(recordLoss).toHaveBeenCalledWith(
+      tx,
       expect.objectContaining({ id: APP.id }),
       'us',
       data.delistedAt,
@@ -978,30 +1005,40 @@ describe('ListingCaptureService listing loss alerts', () => {
   });
 
   it('alerts nothing when the loss was already recorded', async () => {
-    const { service, listingLost, updateMany } = build({ getApp: missing() });
+    const { service, recordLoss, updateMany } = build({ getApp: missing() });
     updateMany.mockResolvedValue({ count: 0 });
 
     await expect(service.refreshListing(APP.id)).resolves.toBeNull();
     await expect(service.refreshListing(APP.id, 'de')).resolves.toBeNull();
 
-    expect(listingLost).not.toHaveBeenCalled();
+    expect(recordLoss).not.toHaveBeenCalled();
   });
 
-  it('still answers the store error on an on demand refresh', async () => {
-    const { service, listingLost } = build({ getApp: missing() });
+  it('still answers the store error when the loss was already recorded', async () => {
+    const { service, recordLoss, updateMany } = build({ getApp: missing() });
+    updateMany.mockResolvedValue({ count: 0 });
 
     await expect(service.refresh(APP.id)).rejects.toThrow(
       StoreAppNotFoundError,
     );
-    expect(listingLost).toHaveBeenCalledTimes(1);
+    expect(recordLoss).not.toHaveBeenCalled();
+  });
+
+  it('still answers the store error on an on demand refresh', async () => {
+    const { service, recordLoss } = build({ getApp: missing() });
+
+    await expect(service.refresh(APP.id)).rejects.toThrow(
+      StoreAppNotFoundError,
+    );
+    expect(recordLoss).toHaveBeenCalledTimes(1);
   });
 
   it('alerts nothing for a capture that succeeds', async () => {
-    const { service, listingLost } = build({});
+    const { service, recordLoss } = build({});
 
     await service.refreshListing(APP.id);
 
-    expect(listingLost).not.toHaveBeenCalled();
+    expect(recordLoss).not.toHaveBeenCalled();
   });
 });
 
@@ -1010,14 +1047,21 @@ describe('ListingCaptureService rating drop timing', () => {
     const recordRefresh = jest
       .fn()
       .mockRejectedValue(new Error('changes down'));
-    const { service, ratingDropped } = build({ recordRefresh });
+    const { service, recordRatingDrop } = build({ recordRefresh });
 
     await expect(service.refreshListing(APP.id)).rejects.toThrow(
       'changes down',
     );
 
-    expect(ratingDropped).toHaveBeenCalledWith(
-      { id: APP.id, name: 'Fixture', country: APP.country },
+    expect(recordRatingDrop).toHaveBeenCalledWith(
+      expect.anything(),
+      {
+        id: APP.id,
+        name: 'Fixture',
+        country: APP.country,
+        store: APP.store,
+        iconUrl: APP.iconUrl,
+      },
       SNAPSHOT.capturedAt,
     );
   });

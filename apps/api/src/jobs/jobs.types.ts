@@ -68,6 +68,7 @@ export const JOBS = {
   SYNC_REVIEWS: 'sync-reviews',
   DELIVER_ALERT: 'deliver-alert',
   DELIVER_EMAIL: 'deliver-email',
+  RELAY_ALERTS: 'relay-alerts',
   DAILY_COMPLETE: 'daily-pipeline-complete',
   ACTIONS: 'generate-actions',
   AUDIT_CREATIVE: 'audit-creative',

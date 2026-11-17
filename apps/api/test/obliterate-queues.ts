@@ -2,6 +2,7 @@ import { getQueueToken, WorkerHost } from '@nestjs/bullmq';
 import { INestApplication } from '@nestjs/common';
 import { DiscoveryService } from '@nestjs/core';
 import { Queue } from 'bullmq';
+import { AlertsWorker } from '../src/alerts/alerts.worker';
 import { QUEUES } from '../src/jobs/jobs.types';
 import { PipelineWorker } from '../src/jobs/pipeline.worker';
 
@@ -37,7 +38,10 @@ export async function closeWorkers(app: INestApplication): Promise<void> {
 export async function settleBootRegistration(
   app: INestApplication,
 ): Promise<void> {
-  await app.get(PipelineWorker, { strict: false }).schedulesRegistered();
+  await Promise.all([
+    app.get(PipelineWorker, { strict: false }).schedulesRegistered(),
+    app.get(AlertsWorker, { strict: false }).schedulesRegistered(),
+  ]);
 }
 
 export async function pauseQueues(app: INestApplication): Promise<void> {

@@ -10,6 +10,7 @@ import type {
 } from '@asobeast/shared';
 import { Queue } from 'bullmq';
 import { App } from 'supertest/types';
+import { InstantAlertRelay } from '../src/alerts/instant-alert-relay';
 import { AppModule } from '../src/app.module';
 import { ListingCaptureService } from '../src/apps/listing-capture.service';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
@@ -273,6 +274,7 @@ describe('listing loss alerts (e2e)', () => {
     });
 
     await lost(own.id);
+    await app.get(InstantAlertRelay).relayEveryWorkspace();
 
     const jobs = (
       await app
@@ -283,5 +285,6 @@ describe('listing loss alerts (e2e)', () => {
     ).filter((job) => job.data.webhookId === hook.id);
     expect(jobs).toHaveLength(1);
     expect(jobs[0].data.payload).toMatchObject({ event: 'app.delisted' });
+    expect(jobs[0].opts.jobId).toMatch(/^instant~/);
   });
 });

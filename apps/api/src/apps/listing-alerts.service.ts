@@ -1,8 +1,13 @@
-import { Injectable, Logger } from '@nestjs/common';
-import type { App } from '@prisma/client';
-import type { ActionRule, ActionStatus } from '@asobeast/shared';
-import { AlertsDispatcher } from '../alerts/alerts.dispatcher';
-import { PrismaService } from '../prisma/prisma.service';
+import { Injectable } from '@nestjs/common';
+import type { App, Prisma } from '@prisma/client';
+import type {
+  ActionRule,
+  ActionStatus,
+  AlertPayload,
+  Store,
+} from '@asobeast/shared';
+import { identityOf, withAppIdentity } from '../alerts/alert-app-identities';
+import { AlertOutbox } from '../alerts/alert-outbox';
 import {
   delistedPayload,
   ratingDroppedPayload,
@@ -16,104 +21,123 @@ const DAY_MS = 86_400_000;
 const RATING_DECLINE_RULE: ActionRule = 'reviews.investigate_rating_decline';
 const OPEN_ACTION: ActionStatus = 'OPEN';
 
+export interface RatedListingApp extends ListingAlertApp {
+  store: Store;
+  iconUrl: string | null;
+}
+
+async function wasListedIn(
+  tx: Prisma.TransactionClient,
+  app: App,
+  market: string,
+): Promise<boolean> {
+  const listing = await tx.appSnapshot.findFirst({
+    where: { appId: app.id, ...listingIn(app.country, market) },
+    select: { id: true },
+  });
+  return listing !== null;
+}
+
+function ratedHistory(
+  tx: Prisma.TransactionClient,
+  appId: string,
+  capturedAt: Date,
+) {
+  return tx.appSnapshot.findMany({
+    where: {
+      appId,
+      ...HOME_LISTING,
+      capturedAt: {
+        gte: new Date(capturedAt.getTime() - RATING_DROP_HISTORY_DAYS * DAY_MS),
+        lte: capturedAt,
+      },
+    },
+    orderBy: NEWEST_FIRST,
+    select: {
+      capturedAt: true,
+      ratingAvg: true,
+      ratingCount: true,
+      version: true,
+    },
+  });
+}
+
+function keywordsIn(
+  tx: Prisma.TransactionClient,
+  app: App,
+  market: string,
+): Promise<number> {
+  return tx.trackedKeyword.count({
+    where: {
+      appId: app.primaryAppId ?? app.id,
+      active: true,
+      keyword: { is: { country: market } },
+    },
+  });
+}
+
 @Injectable()
 export class ListingAlerts {
-  private readonly logger = new Logger(ListingAlerts.name);
+  constructor(private readonly outbox: AlertOutbox) {}
 
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly alerts: AlertsDispatcher,
-  ) {}
-
-  async ratingDropped(app: ListingAlertApp, capturedAt: Date): Promise<void> {
-    try {
-      await this.raiseRatingDrop(app, capturedAt);
-    } catch (error: unknown) {
-      this.logger.warn(
-        `rating drop alert for app ${app.id} failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-  }
-
-  async listingLost(app: App, market: string, lostAt: Date): Promise<void> {
-    try {
-      await this.raiseListingLoss(app, market, lostAt);
-    } catch (error: unknown) {
-      this.logger.warn(
-        `listing loss alert for app ${app.id} in ${market} failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-  }
-
-  private async raiseListingLoss(
-    app: App,
-    market: string,
-    now: Date,
+  recordRatingDrop(
+    tx: Prisma.TransactionClient,
+    app: RatedListingApp,
+    capturedAt: Date,
   ): Promise<void> {
-    if (market === app.country) {
-      await this.alerts.dispatch(delistedPayload(app, now));
-      return;
-    }
-    if (!(await this.wasListedIn(app, market))) return;
-    await this.alerts.dispatch(
-      unlistedMarketPayload(
-        app,
-        market,
-        await this.keywordsIn(app, market),
-        now,
-      ),
+    return this.outbox.record(tx, `the rating drop of app ${app.id}`, () =>
+      this.dropOf(tx, app, capturedAt),
     );
   }
 
-  private async wasListedIn(app: App, market: string): Promise<boolean> {
-    const listing = await this.prisma.appSnapshot.findFirst({
-      where: { appId: app.id, ...listingIn(app.country, market) },
-      select: { id: true },
-    });
-    return listing !== null;
-  }
-
-  private keywordsIn(app: App, market: string): Promise<number> {
-    return this.prisma.trackedKeyword.count({
-      where: {
-        appId: app.primaryAppId ?? app.id,
-        active: true,
-        keyword: { is: { country: market } },
-      },
-    });
-  }
-
-  private async raiseRatingDrop(
-    app: ListingAlertApp,
-    capturedAt: Date,
+  recordLoss(
+    tx: Prisma.TransactionClient,
+    app: App,
+    market: string,
+    lostAt: Date,
   ): Promise<void> {
-    const history = await this.prisma.appSnapshot.findMany({
-      where: {
-        appId: app.id,
-        ...HOME_LISTING,
-        capturedAt: {
-          gte: new Date(
-            capturedAt.getTime() - RATING_DROP_HISTORY_DAYS * DAY_MS,
-          ),
-          lte: capturedAt,
-        },
-      },
-      orderBy: NEWEST_FIRST,
-      select: {
-        capturedAt: true,
-        ratingAvg: true,
-        ratingCount: true,
-        version: true,
-      },
-    });
-    const drop = newRatingDrop(history);
-    if (!drop) return;
-    const action = await this.prisma.actionItem.findFirst({
+    return this.outbox.record(
+      tx,
+      `the listing loss of app ${app.id} in ${market}`,
+      () => this.lossOf(tx, app, market, lostAt),
+    );
+  }
+
+  private async lossOf(
+    tx: Prisma.TransactionClient,
+    app: App,
+    market: string,
+    lostAt: Date,
+  ): Promise<AlertPayload | null> {
+    if (market === app.country) {
+      return withAppIdentity(delistedPayload(app, lostAt), identityOf(app));
+    }
+    if (!(await wasListedIn(tx, app, market))) return null;
+    return withAppIdentity(
+      unlistedMarketPayload(
+        app,
+        market,
+        await keywordsIn(tx, app, market),
+        lostAt,
+      ),
+      identityOf(app),
+    );
+  }
+
+  private async dropOf(
+    tx: Prisma.TransactionClient,
+    app: RatedListingApp,
+    capturedAt: Date,
+  ): Promise<AlertPayload | null> {
+    const drop = newRatingDrop(await ratedHistory(tx, app.id, capturedAt));
+    if (!drop) return null;
+    const action = await tx.actionItem.findFirst({
       where: { appId: app.id, rule: RATING_DECLINE_RULE, status: OPEN_ACTION },
       select: { id: true },
     });
-    await this.alerts.dispatch(
+    return withAppIdentity(
       ratingDroppedPayload(app, drop, action?.id ?? null, capturedAt),
+      identityOf(app),
     );
   }
 }

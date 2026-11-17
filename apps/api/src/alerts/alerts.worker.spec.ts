@@ -1,5 +1,6 @@
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Job } from 'bullmq';
+import { Job, Queue } from 'bullmq';
 import { MetadataChangedPayload } from '@asobeast/shared';
 import {
   DeliverAlertPayload,
@@ -10,12 +11,31 @@ import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { PrismaService } from '../prisma/prisma.service';
+import { RedisOutageLog } from '../redis/redis-outage-log';
 import { AlertMail } from './alert-mail';
 import { alertBackoff, AlertsWorker } from './alerts.worker';
 import type { DefaultAlertIntro } from './default-alert-intro';
 import { EmailAlertUnsubscribe } from './email-alert-unsubscribe.service';
+import { InstantAlertRelay } from './instant-alert-relay';
 import { MailerService } from './mailer.service';
 import { WebhookDelivery, WebhookRateLimitedError } from './webhook-delivery';
+
+const relayScheduling = () => {
+  const queue = {
+    upsertJobScheduler: jest.fn().mockResolvedValue(undefined),
+    closing: undefined as Promise<void> | undefined,
+  };
+  const relay = { relayEveryWorkspace: jest.fn().mockResolvedValue(0) };
+  return {
+    queue,
+    relay,
+    doubles: [
+      queue as unknown as Queue,
+      relay as unknown as InstantAlertRelay,
+      new RedisOutageLog(),
+    ] as const,
+  };
+};
 
 const mockFetch = jest.fn<Promise<unknown>, unknown[]>();
 jest.mock('undici', () => ({
@@ -95,6 +115,7 @@ describe('AlertsWorker', () => {
         new WorkspaceContext(),
         new AlertMail(linked, unsubscribes),
         { claim, restore } as unknown as DefaultAlertIntro,
+        ...relayScheduling().doubles,
       );
     };
     worker = buildWorker(mailer.origin);
@@ -340,6 +361,7 @@ describe('AlertsWorker essential alerts intro', () => {
       new WorkspaceContext(),
       new AlertMail(mailer, {} as EmailAlertUnsubscribe),
       { claim, restore } as unknown as DefaultAlertIntro,
+      ...relayScheduling().doubles,
     );
   });
 
@@ -386,5 +408,72 @@ describe('AlertsWorker essential alerts intro', () => {
     await worker.process(emailJob('ea_1'));
 
     expect(claim).not.toHaveBeenCalled();
+  });
+});
+
+describe('AlertsWorker relay scheduling', () => {
+  const build = () => {
+    const scheduling = relayScheduling();
+    const worker = new AlertsWorker(
+      {} as PrismaService,
+      {} as WebhookDelivery,
+      {} as MailerService,
+      new WorkspaceContext(),
+      {} as AlertMail,
+      {} as DefaultAlertIntro,
+      ...scheduling.doubles,
+    );
+    return { worker, ...scheduling };
+  };
+
+  afterEach(() => jest.restoreAllMocks());
+
+  it('routes the relay job to the relay without a workspace scope', async () => {
+    const { worker, relay } = build();
+
+    await worker.process({ name: JOBS.RELAY_ALERTS, data: {} } as Job<
+      DeliverAlertPayload | DeliverEmailPayload
+    >);
+
+    expect(relay.relayEveryWorkspace).toHaveBeenCalledTimes(1);
+  });
+
+  it('registers the relay scheduler every 15 seconds with one attempt', async () => {
+    const { worker, queue } = build();
+
+    await worker.registerSchedules();
+
+    expect(queue.upsertJobScheduler).toHaveBeenCalledWith(
+      JOBS.RELAY_ALERTS,
+      { every: 15_000 },
+      {
+        name: JOBS.RELAY_ALERTS,
+        opts: { attempts: 1, removeOnComplete: true, removeOnFail: 100 },
+      },
+    );
+  });
+
+  it('boots without waiting for redis to register the relay scheduler', () => {
+    const { worker, queue } = build();
+    queue.upsertJobScheduler.mockReturnValue(new Promise(() => {}));
+
+    expect(worker.onModuleInit()).toBeUndefined();
+    expect(queue.upsertJobScheduler).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a failed registration without throwing from onModuleInit', async () => {
+    const { worker, queue } = build();
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockReturnValue();
+    queue.upsertJobScheduler.mockImplementation(() => {
+      queue.closing = Promise.resolve();
+      return Promise.reject(new Error('Connection is closed.'));
+    });
+
+    expect(worker.onModuleInit()).toBeUndefined();
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringMatching(/^redis is unreachable.*Connection is closed\.$/),
+    );
   });
 });

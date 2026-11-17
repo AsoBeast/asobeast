@@ -2,6 +2,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { FLOW_PRODUCERS, QUEUES } from '../jobs/jobs.types';
 import { AlertAppIdentities } from './alert-app-identities';
+import { AlertOutbox } from './alert-outbox';
 import { AlertEventFeed } from './alert-event-feed.service';
 import { AlertDeliveriesService } from './alert-deliveries.service';
 import { AlertMail } from './alert-mail';
@@ -18,6 +19,8 @@ import { EmailAlertConfirmationClaim } from './email-alert-confirmation-claim.se
 import { EmailAlertConfirmation } from './email-alert-confirmation.service';
 import { EmailAlertUnsubscribe } from './email-alert-unsubscribe.service';
 import { EmailAlertsService } from './email-alerts.service';
+import { InstantAlertRelay } from './instant-alert-relay';
+import { InstantDeliveries } from './instant-deliveries';
 import { MailerService } from './mailer.service';
 import { WebhookDelivery } from './webhook-delivery';
 import { WebhooksController } from './webhooks.controller';
@@ -44,6 +47,9 @@ import { WebhooksService } from './webhooks.service';
     MailerService,
     AlertAppIdentities,
     AlertsDispatcher,
+    InstantDeliveries,
+    InstantAlertRelay,
+    AlertOutbox,
     AlertsWorker,
     DefaultAlertIntro,
     DefaultAlertsMarker,
@@ -51,6 +57,7 @@ import { WebhooksService } from './webhooks.service';
   ],
   exports: [
     AlertsDispatcher,
+    AlertOutbox,
     AlertFlushService,
     DefaultAlertsService,
     MailerService,

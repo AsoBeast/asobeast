@@ -6,7 +6,11 @@ import {
   SerpEntrantPayload,
 } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
-import { AlertAppIdentities, withAppIdentity } from './alert-app-identities';
+import {
+  AlertAppIdentities,
+  identityOf,
+  withAppIdentity,
+} from './alert-app-identities';
 
 const identity = {
   iconUrl: 'https://play-lh.googleusercontent.com/icon',
@@ -78,6 +82,14 @@ describe('withAppIdentity', () => {
   it('never changes the payload it was given', () => {
     withAppIdentity(drop, identity);
     expect(drop.app).toEqual({ id: 'app1', name: 'App One' });
+  });
+});
+
+describe('identityOf', () => {
+  it('keeps only the icon, store and storefront of an app row in hand', () => {
+    const row = { ...identity, id: 'app1', name: 'App One' };
+
+    expect(identityOf(row)).toEqual(identity);
   });
 });
 

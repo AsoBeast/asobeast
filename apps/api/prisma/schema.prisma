@@ -47,6 +47,7 @@ model Workspace {
   webhooks                      Webhook[]
   emailAlerts                   EmailAlert[]
   alertEvents                   AlertEvent[]
+  alertRelays                   AlertRelay[]
   users                         User[]
   invites                       WorkspaceInvite[]
   actions                       ActionItem[]
@@ -752,24 +753,36 @@ model AlertDelivery {
 }
 
 model AlertEvent {
-  id          String    @id @default(cuid())
+  id          String      @id @default(cuid())
   workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   event       String
   appId       String?
   keywordId   String?
   dedupeKey   String?
   payload     Json
-  createdAt   DateTime  @default(now())
+  createdAt   DateTime    @default(now())
   flushedAt   DateTime?
   flushId     String?
   claimedAt   DateTime?
+  relay       AlertRelay?
 
   @@unique([workspaceId, dedupeKey])
   @@index([workspaceId, flushedAt, claimedAt])
   @@index([workspaceId, flushId])
   @@index([workspaceId, createdAt(sort: Desc), id(sort: Desc)])
   @@index([createdAt])
+}
+
+model AlertRelay {
+  alertEventId String     @id
+  alertEvent   AlertEvent @relation(fields: [alertEventId], references: [id], onDelete: Cascade)
+  workspaceId  String
+  workspace    Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  attempts     Int        @default(0)
+  createdAt    DateTime   @default(now())
+
+  @@index([workspaceId, createdAt])
 }
 
 model SuggestProbe {

@@ -64,7 +64,7 @@ This file holds what applies everywhere. The detailed rules live in `.claude/rul
 21. A review reply is a stored row the owner approves; the store is written only by `ReviewReplyPoster` on a person's click.
 22. The keyword breakdown judges with coverage's own functions and reads stored rows only.
 23. A console key is sealed and owner only; the funnel comes from the store's own report and is never estimated.
-24. The alert feed reads what the run recorded, never what a channel received.
+24. The alert feed reads what the run recorded, never what a channel received. A transition alert is committed with its fact and relayed from a worker.
 25. A keyword's class comes from one matcher, `classifyKeyword`; only the owner overrides it.
 26. Keyword discovery never scores, never writes a position history and never spends keyword room.
 27. The workspace checklist is derived on read; the workspace stores only a goal and a dismissal.
@@ -194,6 +194,7 @@ Decompose by responsibility, not by syntactic kind: the target is fewer concepts
 - No chart fetched outside `ChartCaptureService.captureToday`, and no `CategoryRank` written from a provider call.
 - No console credential read outside `StoreConnectionService.openAppStore` and `openPlay`, no store report request outside the `store-connect` queue, and no estimate where Apple or Google report nothing.
 - No review reply written outside `ReviewRepliesService` and `ReviewReplyAssistant`, no review translation written outside `ReviewTranslator`, no review reply posted outside `ReviewReplyPoster` or without a person's click, and no AI draft or translation that bypasses `AiGateway`.
+- No `app.delisted`, `app.unlisted_market` or `rating.dropped` alert dispatched through `AlertsDispatcher` or written outside `AlertOutbox.record` in the transaction of its fact, and no instant enqueue of one outside `InstantAlertRelay`.
 - No trial stamped on a workspace outside the Stripe projection, no trial offered outside `TrialOffers`, no read of `TrialClaim` outside `CrossTenantAccess`.
 - No sentence on the billing wall, the trial bar, the trust row or the FAQ outside `lib/plan-choice.ts`, `lib/order-summary.ts`, `lib/paywall-faq.ts` and `planRenewalTerms` in `@asobeast/shared`; no claim on the wall the documentation does not make; no Checkout Elements and no `payment_method_types` on a session while the instance sells through Managed Payments.
 - No comments inside code. DRY, KISS, clean code.

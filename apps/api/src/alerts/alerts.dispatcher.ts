@@ -1,26 +1,15 @@
-import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
-import { Queue } from 'bullmq';
 import { AlertPayload, WebhookEvent } from '@asobeast/shared';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
-import {
-  DeliverAlertPayload,
-  DeliverEmailPayload,
-  JOBS,
-  QUEUES,
-} from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { AlertAppIdentities } from './alert-app-identities';
-import { ALERT_BACKOFF } from './alert-delivery-flow';
-import { confirmDropsWhere } from './confirm-drops';
-import { subscriptionThreshold, withThreshold } from './rank-threshold';
 import { DELIVERABLE_EMAIL_ALERTS } from './deliverable-email-alerts';
+import { InstantDeliveries } from './instant-deliveries';
 import { MailerService } from './mailer.service';
 import { OutboxRow, outboxRows } from './outbox-rows';
-import { receivesInstant } from './review-routing';
 
 function outboxWrite(row: OutboxRow, settledAt: Date | null) {
   const data = {
@@ -49,10 +38,9 @@ export class AlertsDispatcher {
     private readonly prisma: PrismaService,
     private readonly mailer: MailerService,
     private readonly config: ConfigService<Env, true>,
-    @InjectQueue(QUEUES.ALERTS)
-    private readonly queue: Queue<DeliverAlertPayload | DeliverEmailPayload>,
     private readonly workspace: WorkspaceContext,
     private readonly identities: AlertAppIdentities,
+    private readonly deliveries: InstantDeliveries,
   ) {}
 
   async dispatch(raw: AlertPayload): Promise<void> {
@@ -63,10 +51,7 @@ export class AlertsDispatcher {
         return;
       }
       await this.recordSettled(payload);
-      await Promise.all([
-        this.dispatchWebhooks(payload),
-        this.dispatchEmails(payload),
-      ]);
+      await this.deliveries.enqueue(payload);
     } catch (error) {
       this.logger.warn(`alert dispatch failed: ${(error as Error).message}`);
     }
@@ -82,10 +67,6 @@ export class AlertsDispatcher {
       where: { ...DELIVERABLE_EMAIL_ALERTS, events: { has: event } },
     });
     return emails > 0;
-  }
-
-  private instanceThreshold(): number {
-    return this.config.get('ALERT_RANK_DROP_THRESHOLD', { infer: true });
   }
 
   private batched(payload: AlertPayload): boolean {
@@ -138,85 +119,5 @@ export class AlertsDispatcher {
       }
       await this.prisma.alertEvent.updateMany({ where, data });
     }
-  }
-
-  private async dispatchWebhooks(payload: AlertPayload): Promise<void> {
-    const webhooks = await this.prisma.webhook.findMany({
-      where: {
-        active: true,
-        events: { has: payload.event },
-        ...confirmDropsWhere(payload),
-      },
-      select: {
-        id: true,
-        events: true,
-        reviewScores: true,
-        ratingDropTenths: true,
-        rankDropThreshold: true,
-      },
-    });
-    const instance = this.instanceThreshold();
-    const targets = webhooks.filter((webhook) =>
-      receivesInstant(webhook, payload, instance),
-    );
-    const scope = this.workspace.scopeFor('instant alert delivery');
-    await Promise.all(
-      targets.map((webhook) =>
-        this.queue.add(
-          JOBS.DELIVER_ALERT,
-          {
-            webhookId: webhook.id,
-            payload: withThreshold(
-              payload,
-              subscriptionThreshold(webhook, instance),
-            ),
-            ...scope,
-          },
-          { backoff: ALERT_BACKOFF },
-        ),
-      ),
-    );
-  }
-
-  private async dispatchEmails(payload: AlertPayload): Promise<void> {
-    if (!this.mailer.enabled) {
-      this.logger.debug(`email disabled, skipping ${payload.event} fan-out`);
-      return;
-    }
-    const alerts = await this.prisma.emailAlert.findMany({
-      where: {
-        ...DELIVERABLE_EMAIL_ALERTS,
-        events: { has: payload.event },
-        ...confirmDropsWhere(payload),
-      },
-      select: {
-        id: true,
-        events: true,
-        reviewScores: true,
-        ratingDropTenths: true,
-        rankDropThreshold: true,
-      },
-    });
-    const instance = this.instanceThreshold();
-    const targets = alerts.filter((alert) =>
-      receivesInstant(alert, payload, instance),
-    );
-    const scope = this.workspace.scopeFor('instant alert delivery');
-    await Promise.all(
-      targets.map((alert) =>
-        this.queue.add(
-          JOBS.DELIVER_EMAIL,
-          {
-            emailAlertId: alert.id,
-            payload: withThreshold(
-              payload,
-              subscriptionThreshold(alert, instance),
-            ),
-            ...scope,
-          },
-          { backoff: ALERT_BACKOFF },
-        ),
-      ),
-    );
   }
 }

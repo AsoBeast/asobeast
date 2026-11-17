@@ -12,6 +12,10 @@ export function withAppIdentity<T extends AlertPayload>(
   return { ...payload, app: { ...payload.app, ...identity } };
 }
 
+export function identityOf(app: ResolvedAppIdentity): ResolvedAppIdentity {
+  return { iconUrl: app.iconUrl, store: app.store, country: app.country };
+}
+
 @Injectable()
 export class AlertAppIdentities {
   private readonly logger = new Logger(AlertAppIdentities.name);

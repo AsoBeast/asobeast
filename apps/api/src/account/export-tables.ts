@@ -107,6 +107,7 @@ export const EXPORT_TABLE_KEYS: readonly ExportTableKey[] = [
   { name: 'emailAlert', key: ID },
   { name: 'alertDelivery', key: ID },
   { name: 'alertEvent', key: ID },
+  { name: 'alertRelay', key: ['alertEventId'] },
   { name: 'suggestProbe', key: ['appId', 'term', 'country', 'day', 'probe'] },
 ];
 

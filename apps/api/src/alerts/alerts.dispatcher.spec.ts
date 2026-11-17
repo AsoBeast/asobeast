@@ -20,8 +20,10 @@ import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { appDelisted, ratingDropped } from './listing-events.fixture';
 import { AlertAppIdentities } from './alert-app-identities';
+import { ALERT_DELIVERY_JOB_OPTIONS } from './alert-delivery-flow';
 import { AlertsDispatcher } from './alerts.dispatcher';
 import { chartEntered } from './chart-events.fixture';
+import { InstantDeliveries } from './instant-deliveries';
 import { MailerService } from './mailer.service';
 
 const rankPayload: RankDroppedPayload = {
@@ -121,6 +123,27 @@ const buildQueue = () => {
 
 const workspace = new WorkspaceContext();
 
+const buildDispatcher = (
+  prisma: ReturnType<typeof buildPrisma>,
+  mailer: MailerService,
+  config: ConfigService<Env, true>,
+  queue: Queue<DeliverAlertPayload | DeliverEmailPayload>,
+) =>
+  new AlertsDispatcher(
+    prisma as unknown as PrismaService,
+    mailer,
+    config,
+    workspace,
+    new AlertAppIdentities(prisma as unknown as PrismaService),
+    new InstantDeliveries(
+      prisma as unknown as PrismaService,
+      mailer,
+      config,
+      queue,
+      workspace,
+    ),
+  );
+
 function inWorkspace(work: () => Promise<void>): Promise<void> {
   return workspace.run(DEFAULT_WORKSPACE_ID, async () => {
     await work();
@@ -131,13 +154,11 @@ describe('AlertsDispatcher', () => {
   it('collects into the outbox in batched mode', async () => {
     const prisma = buildPrisma();
     const { add, queue } = buildQueue();
-    const dispatcher = new AlertsDispatcher(
-      prisma as unknown as PrismaService,
+    const dispatcher = buildDispatcher(
+      prisma,
       { enabled: true } as MailerService,
       buildConfig('batched'),
       queue,
-      workspace,
-      new AlertAppIdentities(prisma as unknown as PrismaService),
     );
 
     await inWorkspace(() => dispatcher.dispatch(rankPayload));
@@ -167,13 +188,11 @@ describe('AlertsDispatcher', () => {
     async (_case, payload, keywordId) => {
       const prisma = buildPrisma();
       const { queue } = buildQueue();
-      const dispatcher = new AlertsDispatcher(
-        prisma as unknown as PrismaService,
+      const dispatcher = buildDispatcher(
+        prisma,
         { enabled: true } as MailerService,
         buildConfig('batched'),
         queue,
-        workspace,
-        new AlertAppIdentities(prisma as unknown as PrismaService),
       );
 
       await inWorkspace(() => dispatcher.dispatch(payload));
@@ -192,13 +211,11 @@ describe('AlertsDispatcher', () => {
     const prisma = buildPrisma();
     prisma.alertEvent.updateMany.mockResolvedValue({ count: 1 });
     const { queue } = buildQueue();
-    const dispatcher = new AlertsDispatcher(
-      prisma as unknown as PrismaService,
+    const dispatcher = buildDispatcher(
+      prisma,
       { enabled: true } as MailerService,
       buildConfig('batched'),
       queue,
-      workspace,
-      new AlertAppIdentities(prisma as unknown as PrismaService),
     );
 
     await inWorkspace(() => dispatcher.dispatch(rankPayload));
@@ -216,13 +233,11 @@ describe('AlertsDispatcher', () => {
       }),
     );
     const { queue } = buildQueue();
-    const dispatcher = new AlertsDispatcher(
-      prisma as unknown as PrismaService,
+    const dispatcher = buildDispatcher(
+      prisma,
       { enabled: true } as MailerService,
       buildConfig('batched'),
       queue,
-      workspace,
-      new AlertAppIdentities(prisma as unknown as PrismaService),
     );
 
     await inWorkspace(() => dispatcher.dispatch(rankPayload));
@@ -246,13 +261,11 @@ describe('AlertsDispatcher', () => {
       }),
     );
     const { queue } = buildQueue();
-    const dispatcher = new AlertsDispatcher(
-      prisma as unknown as PrismaService,
+    const dispatcher = buildDispatcher(
+      prisma,
       { enabled: true } as MailerService,
       buildConfig('batched'),
       queue,
-      workspace,
-      new AlertAppIdentities(prisma as unknown as PrismaService),
     );
 
     await inWorkspace(() => dispatcher.dispatch(rankPayload));
@@ -264,13 +277,11 @@ describe('AlertsDispatcher', () => {
   it('bypasses the outbox for the weekly digest', async () => {
     const prisma = buildPrisma();
     const { queue } = buildQueue();
-    const dispatcher = new AlertsDispatcher(
-      prisma as unknown as PrismaService,
+    const dispatcher = buildDispatcher(
+      prisma,
       { enabled: false } as MailerService,
       buildConfig('batched'),
       queue,
-      workspace,
-      new AlertAppIdentities(prisma as unknown as PrismaService),
     );
 
     await dispatcher.dispatch({
@@ -288,13 +299,11 @@ describe('AlertsDispatcher', () => {
   it('delivers per event in instant mode', async () => {
     const prisma = buildPrisma();
     const { queue } = buildQueue();
-    const dispatcher = new AlertsDispatcher(
-      prisma as unknown as PrismaService,
+    const dispatcher = buildDispatcher(
+      prisma,
       { enabled: false } as MailerService,
       buildConfig('instant'),
       queue,
-      workspace,
-      new AlertAppIdentities(prisma as unknown as PrismaService),
     );
 
     await inWorkspace(() => dispatcher.dispatch(rankPayload));
@@ -306,13 +315,11 @@ describe('AlertsDispatcher', () => {
   it('collects a milestone into the outbox under its own key', async () => {
     const prisma = buildPrisma();
     const { queue } = buildQueue();
-    const dispatcher = new AlertsDispatcher(
-      prisma as unknown as PrismaService,
+    const dispatcher = buildDispatcher(
+      prisma,
       { enabled: true } as MailerService,
       buildConfig('batched'),
       queue,
-      workspace,
-      new AlertAppIdentities(prisma as unknown as PrismaService),
     );
 
     await inWorkspace(() => dispatcher.dispatch(milestone));
@@ -331,13 +338,11 @@ describe('AlertsDispatcher', () => {
   it('collects a chart entry into the outbox under its chart key', async () => {
     const prisma = buildPrisma();
     const { queue } = buildQueue();
-    const dispatcher = new AlertsDispatcher(
-      prisma as unknown as PrismaService,
+    const dispatcher = buildDispatcher(
+      prisma,
       { enabled: true } as MailerService,
       buildConfig('batched'),
       queue,
-      workspace,
-      new AlertAppIdentities(prisma as unknown as PrismaService),
     );
 
     await inWorkspace(() => dispatcher.dispatch(chartEntered()));
@@ -359,13 +364,11 @@ describe('AlertsDispatcher', () => {
       { id: 'wh1', events: ['chart.entered'], reviewScores: [] },
     ]);
     const { add, queue } = buildQueue();
-    const dispatcher = new AlertsDispatcher(
-      prisma as unknown as PrismaService,
+    const dispatcher = buildDispatcher(
+      prisma,
       { enabled: false } as MailerService,
       buildConfig('instant'),
       queue,
-      workspace,
-      new AlertAppIdentities(prisma as unknown as PrismaService),
     );
 
     await inWorkspace(() => dispatcher.dispatch(chartEntered()));
@@ -384,20 +387,18 @@ describe('AlertsDispatcher', () => {
     expect(add).toHaveBeenCalledWith(
       JOBS.DELIVER_ALERT,
       expect.objectContaining({ webhookId: 'wh1', payload: chartEntered() }),
-      { backoff: { type: 'custom' } },
+      ALERT_DELIVERY_JOB_OPTIONS,
     );
   });
 
   it('looks up the subscribers of an overtake in instant mode', async () => {
     const prisma = buildPrisma();
     const { queue } = buildQueue();
-    const dispatcher = new AlertsDispatcher(
-      prisma as unknown as PrismaService,
+    const dispatcher = buildDispatcher(
+      prisma,
       { enabled: false } as MailerService,
       buildConfig('instant'),
       queue,
-      workspace,
-      new AlertAppIdentities(prisma as unknown as PrismaService),
     );
 
     await inWorkspace(() => dispatcher.dispatch(overtake));
@@ -417,13 +418,11 @@ describe('AlertsDispatcher', () => {
   it('fans an instant event out only to confirmed, active email alerts', async () => {
     const prisma = buildPrisma();
     const { queue } = buildQueue();
-    const dispatcher = new AlertsDispatcher(
-      prisma as unknown as PrismaService,
+    const dispatcher = buildDispatcher(
+      prisma,
       { enabled: true } as MailerService,
       buildConfig('instant'),
       queue,
-      workspace,
-      new AlertAppIdentities(prisma as unknown as PrismaService),
     );
 
     await inWorkspace(() => dispatcher.dispatch(overtake));
@@ -447,13 +446,11 @@ describe('AlertsDispatcher', () => {
   describe('review alerts in instant mode', () => {
     const instant = (prisma: ReturnType<typeof buildPrisma>, mail = true) => {
       const { add, queue } = buildQueue();
-      const dispatcher = new AlertsDispatcher(
-        prisma as unknown as PrismaService,
+      const dispatcher = buildDispatcher(
+        prisma,
         { enabled: mail } as MailerService,
         buildConfig('instant'),
         queue,
-        workspace,
-        new AlertAppIdentities(prisma as unknown as PrismaService),
       );
       return { add, dispatcher };
     };
@@ -518,13 +515,11 @@ describe('AlertsDispatcher', () => {
 
   describe('listensTo', () => {
     const listener = (prisma: ReturnType<typeof buildPrisma>, mail: boolean) =>
-      new AlertsDispatcher(
-        prisma as unknown as PrismaService,
+      buildDispatcher(
+        prisma,
         { enabled: mail } as MailerService,
         buildConfig('batched'),
         buildQueue().queue,
-        workspace,
-        new AlertAppIdentities(prisma as unknown as PrismaService),
       );
 
     it('listens while an active webhook holds the event', async () => {
@@ -570,13 +565,11 @@ describe('AlertsDispatcher', () => {
     const dispatcherFor = (delivery: 'batched' | 'instant') => {
       const prisma = buildPrisma();
       const { queue } = buildQueue();
-      const dispatcher = new AlertsDispatcher(
-        prisma as unknown as PrismaService,
+      const dispatcher = buildDispatcher(
+        prisma,
         { enabled: true } as MailerService,
         buildConfig(delivery),
         queue,
-        workspace,
-        new AlertAppIdentities(prisma as unknown as PrismaService),
       );
       return { prisma, dispatcher };
     };
@@ -701,13 +694,11 @@ describe('AlertsDispatcher', () => {
         { id: 'wh1', events: ['rank.dropped'], reviewScores: [] },
       ]);
       const { add, queue } = buildQueue();
-      const dispatcher = new AlertsDispatcher(
-        prisma as unknown as PrismaService,
+      const dispatcher = buildDispatcher(
+        prisma,
         { enabled: false } as MailerService,
         buildConfig('instant'),
         queue,
-        workspace,
-        new AlertAppIdentities(prisma as unknown as PrismaService),
       );
 
       await inWorkspace(() => dispatcher.dispatch(rankPayload));
@@ -722,20 +713,18 @@ describe('AlertsDispatcher', () => {
           webhookId: 'wh1',
           payload: { ...rankPayload, app: { ...rankPayload.app, ...identity } },
         }),
-        { backoff: { type: 'custom' } },
+        ALERT_DELIVERY_JOB_OPTIONS,
       );
     });
 
     it('stores the icon and storefront in the outbox row', async () => {
       const prisma = identified();
       const { queue } = buildQueue();
-      const dispatcher = new AlertsDispatcher(
-        prisma as unknown as PrismaService,
+      const dispatcher = buildDispatcher(
+        prisma,
         { enabled: true } as MailerService,
         buildConfig('batched'),
         queue,
-        workspace,
-        new AlertAppIdentities(prisma as unknown as PrismaService),
       );
 
       await inWorkspace(() => dispatcher.dispatch(rankPayload));
@@ -750,13 +739,11 @@ describe('AlertsDispatcher', () => {
     it('reads no app for an event that names none', async () => {
       const prisma = identified();
       const { queue } = buildQueue();
-      const dispatcher = new AlertsDispatcher(
-        prisma as unknown as PrismaService,
+      const dispatcher = buildDispatcher(
+        prisma,
         { enabled: false } as MailerService,
         buildConfig('instant'),
         queue,
-        workspace,
-        new AlertAppIdentities(prisma as unknown as PrismaService),
       );
 
       await inWorkspace(() =>
@@ -779,13 +766,11 @@ describe('AlertsDispatcher rating drops', () => {
   const dispatcherWith = (delivery: 'batched' | 'instant') => {
     const prisma = buildPrisma();
     const { add, queue } = buildQueue();
-    const dispatcher = new AlertsDispatcher(
-      prisma as unknown as PrismaService,
+    const dispatcher = buildDispatcher(
+      prisma,
       { enabled: false } as MailerService,
       buildConfig(delivery),
       queue,
-      workspace,
-      new AlertAppIdentities(prisma as unknown as PrismaService),
     );
     return { prisma, add, dispatcher };
   };
@@ -813,7 +798,7 @@ describe('AlertsDispatcher rating drops', () => {
     expect(add).toHaveBeenCalledWith(
       JOBS.DELIVER_ALERT,
       expect.objectContaining({ webhookId: 'wh2' }),
-      { backoff: { type: 'custom' } },
+      ALERT_DELIVERY_JOB_OPTIONS,
     );
   });
 
@@ -832,13 +817,11 @@ describe('AlertsDispatcher availability events', () => {
   const dispatcherWith = (delivery: 'batched' | 'instant') => {
     const prisma = buildPrisma();
     const { add, queue } = buildQueue();
-    const dispatcher = new AlertsDispatcher(
-      prisma as unknown as PrismaService,
+    const dispatcher = buildDispatcher(
+      prisma,
       { enabled: false } as MailerService,
       buildConfig(delivery),
       queue,
-      workspace,
-      new AlertAppIdentities(prisma as unknown as PrismaService),
     );
     return { prisma, add, dispatcher };
   };
@@ -859,7 +842,7 @@ describe('AlertsDispatcher availability events', () => {
     expect(add).toHaveBeenCalledWith(
       JOBS.DELIVER_ALERT,
       expect.objectContaining({ webhookId: 'wh1' }),
-      { backoff: { type: 'custom' } },
+      ALERT_DELIVERY_JOB_OPTIONS,
     );
   });
 
@@ -878,13 +861,11 @@ describe('AlertsDispatcher rank thresholds in instant mode', () => {
   const instant = () => {
     const prisma = buildPrisma();
     const { add, queue } = buildQueue();
-    const dispatcher = new AlertsDispatcher(
-      prisma as unknown as PrismaService,
+    const dispatcher = buildDispatcher(
+      prisma,
       { enabled: true } as MailerService,
       buildConfig('instant'),
       queue,
-      workspace,
-      new AlertAppIdentities(prisma as unknown as PrismaService),
     );
     prisma.webhook.findMany.mockResolvedValue([
       {
@@ -962,13 +943,11 @@ describe('AlertsDispatcher records instant events', () => {
       { id: 'wh1', events: ['rank.dropped'], reviewScores: [] },
     ]);
     const { add, queue } = buildQueue();
-    const dispatcher = new AlertsDispatcher(
-      prisma as unknown as PrismaService,
+    const dispatcher = buildDispatcher(
+      prisma,
       { enabled: false } as MailerService,
       buildConfig('instant'),
       queue,
-      workspace,
-      new AlertAppIdentities(prisma as unknown as PrismaService),
     );
     return { add, dispatcher };
   };
@@ -977,7 +956,7 @@ describe('AlertsDispatcher records instant events', () => {
     expect(add).toHaveBeenCalledWith(
       JOBS.DELIVER_ALERT,
       expect.objectContaining({ webhookId: 'wh1', payload: rankPayload }),
-      { backoff: { type: 'custom' } },
+      ALERT_DELIVERY_JOB_OPTIONS,
     );
   };
 
