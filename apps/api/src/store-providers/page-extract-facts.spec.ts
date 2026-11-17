@@ -58,6 +58,36 @@ describe('pageExtractFacts', () => {
     });
   });
 
+  it('drops a stored event date that is not a date', () => {
+    const facts = pageExtractFacts({
+      pageExtract: {
+        appEvents: [
+          {
+            appEventId: 'e1',
+            title: 'Spring sale',
+            kind: null,
+            badge: null,
+            startsAt: 'mid November',
+            endsAt: '2026-11-27T00:00:00.000Z',
+          },
+        ],
+        featuredStories: [],
+        editorsChoice: null,
+      },
+    });
+
+    expect(facts?.appEvents).toEqual([
+      {
+        appEventId: 'e1',
+        title: 'Spring sale',
+        kind: null,
+        badge: null,
+        startsAt: null,
+        endsAt: '2026-11-27T00:00:00.000Z',
+      },
+    ]);
+  });
+
   it('narrows the featured stories keeping the idless ones', () => {
     const facts = pageExtractFacts({
       pageExtract: {

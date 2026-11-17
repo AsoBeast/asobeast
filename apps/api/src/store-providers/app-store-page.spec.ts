@@ -366,6 +366,27 @@ describe('parseAppStorePage', () => {
     ]);
   });
 
+  it('drops an app event date the store sent that is not a date', () => {
+    const extract = parseAppStorePage(
+      pageOf({
+        appEvents: shelfOf([
+          { ...POGO_EVENT, startDate: 'in November', endDate: '2026-02-30' },
+        ]),
+      }),
+    );
+
+    expect(extract.appEvents).toEqual([
+      {
+        appEventId: '6822418007',
+        title: POGO_EVENT.title,
+        kind: POGO_EVENT.kind,
+        badge: 'happening',
+        startsAt: null,
+        endsAt: null,
+      },
+    ]);
+  });
+
   it('keeps a featured story whose click action names no story', () => {
     const extract = parseAppStorePage(
       pageOf({

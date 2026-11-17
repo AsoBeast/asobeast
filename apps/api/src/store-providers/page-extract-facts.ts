@@ -3,6 +3,7 @@ import {
   PageEditorsChoice,
   PageFeaturedStory,
 } from './app-store-page';
+import { isoDateOrNull } from '@asobeast/shared';
 import { asRecord } from './record';
 
 export interface PageExtractFacts {
@@ -30,8 +31,8 @@ const eventOf = (item: unknown): PageAppEvent | null => {
     title: stringOrNull(record.title),
     kind: stringOrNull(record.kind),
     badge: stringOrNull(record.badge),
-    startsAt: stringOrNull(record.startsAt),
-    endsAt: stringOrNull(record.endsAt),
+    startsAt: isoDateOrNull(record.startsAt),
+    endsAt: isoDateOrNull(record.endsAt),
   };
 };
 

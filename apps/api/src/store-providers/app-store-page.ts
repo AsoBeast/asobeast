@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio';
+import { isoDateOrNull } from '@asobeast/shared';
 import { asRecord } from './record';
 
 export interface PageAppEvent {
@@ -121,8 +122,8 @@ function appEvents(shelves: Record<string, unknown>): PageAppEvent[] {
         title: nonEmptyString(item.title),
         kind: nonEmptyString(item.kind),
         badge: nonEmptyString(item.appEventBadgeKind),
-        startsAt: nonEmptyString(item.startDate),
-        endsAt: nonEmptyString(item.endDate),
+        startsAt: isoDateOrNull(item.startDate),
+        endsAt: isoDateOrNull(item.endDate),
       },
     ];
   });
