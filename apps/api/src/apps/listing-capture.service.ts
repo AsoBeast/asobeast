@@ -251,6 +251,9 @@ export class ListingCaptureService {
     previous: AppSnapshot | null,
     snapshot: AppSnapshot,
   ): Promise<AppSnapshot | null> {
+    if (pageExtractFacts(snapshot.raw) === null) {
+      return null;
+    }
     if (previous && pageExtractFacts(previous.raw) !== null) {
       return previous;
     }

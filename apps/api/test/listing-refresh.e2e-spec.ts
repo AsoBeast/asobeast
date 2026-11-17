@@ -315,6 +315,19 @@ describe('market listing refresh (e2e)', () => {
     expect(recorded).toHaveLength(2);
   });
 
+  it('records no extract change when the refreshed snapshot has no extract', async () => {
+    const appId = await importApp();
+    registry.raws.set('us', extractWithEvents(['e1']));
+    await api.post(`/apps/${appId}/refresh`).expect(200);
+    registry.raws.set('us', { source: 'fixture' });
+    await api.post(`/apps/${appId}/refresh`).expect(200);
+
+    const response = await api.post(`/apps/${appId}/refresh`).expect(200);
+
+    expect((response.body as SnapshotDiffResult).changes).toEqual([]);
+    await expect(prisma.changeEvent.count()).resolves.toBe(0);
+  });
+
   it('refreshes a competitor in the market of its primary', async () => {
     const appId = await importApp();
     const added = await api
