@@ -1784,10 +1784,12 @@ describe('KeywordsController (e2e)', () => {
       where: { appId: you.id, keywordId: keyword.id },
     });
     expect(ranking?.position).toBe(1);
-    expect(ranking?.depth).toBe(200);
+    expect(ranking?.depth).toBe(PLAY_SERP.length);
 
     const tracked = await api.get(`/apps/${you.id}/keywords`).expect(200);
-    expect((tracked.body as TrackedKeywordItem[])[0].latestDepth).toBe(200);
+    expect((tracked.body as TrackedKeywordItem[])[0].latestDepth).toBe(
+      PLAY_SERP.length,
+    );
     expect((tracked.body as TrackedKeywordItem[])[0].latestCheckedOn).toBe(
       ranking && utcDayOf(ranking.date),
     );
@@ -1799,6 +1801,52 @@ describe('KeywordsController (e2e)', () => {
     expect(serp).toHaveLength(2);
     expect(serp[0].storeAppId).toBe('com.example.game');
     expect(serp[0].ratingCount).toBeNull();
+  });
+
+  it('records the depth a short store list reached for a keyword it misses', async () => {
+    const you = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: 'missing-1',
+        country: 'us',
+        name: 'Missing One',
+      },
+    });
+    const keyword = await prisma.keyword.create({
+      data: { text: 'short list', store: Store.APP_STORE, country: 'us' },
+    });
+    await prisma.trackedKeyword.create({
+      data: {
+        appId: you.id,
+        keywordId: keyword.id,
+        source: 'MANUAL',
+        active: true,
+      },
+    });
+    registry.appStoreSearch = Array.from({ length: 30 }, (_, index) => ({
+      storeAppId: `listed-${index + 1}`,
+      title: `Listed ${index + 1}`,
+    }));
+
+    try {
+      await asWorkspace(app, () =>
+        app.get(RankingsService).checkKeyword(keyword.id),
+      );
+    } finally {
+      registry.appStoreSearch = [];
+    }
+
+    const ranking = await prisma.keywordRanking.findFirst({
+      where: { appId: you.id, keywordId: keyword.id },
+    });
+    expect(ranking?.position).toBeNull();
+    expect(ranking?.depth).toBe(30);
+    const tracked = await api.get(`/apps/${you.id}/keywords`).expect(200);
+    expect((tracked.body as TrackedKeywordItem[])[0]).toMatchObject({
+      latestPosition: null,
+      latestDepth: 30,
+    });
   });
 
   it('keeps the top 50 results of an app store check', async () => {

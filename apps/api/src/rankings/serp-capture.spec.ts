@@ -1,6 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { Store } from '@prisma/client';
-import { KeywordScope, SERP_CAPTURE_DEPTH } from '@asobeast/shared';
+import { KeywordScope, RANK_DEPTH, SERP_CAPTURE_DEPTH } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { ImplausibleResultError } from '../store-providers/errors';
 import { EMPTY_ANSWER_RETRIES } from '../store-providers/result-plausibility';
@@ -8,6 +8,7 @@ import { StoreProviderRegistry } from '../store-providers/store-provider.registr
 import { SearchItem } from '../store-providers/types';
 import {
   positionsByStoreAppId,
+  reachedDepth,
   SerpCapture,
   serpEntryRows,
 } from './serp-capture';
@@ -89,6 +90,21 @@ describe('positionsByStoreAppId', () => {
 
   it('answers an empty map for no results', () => {
     expect(positionsByStoreAppId([]).size).toBe(0);
+  });
+});
+
+describe('reachedDepth', () => {
+  it('reaches as deep as the store listed', () => {
+    expect(reachedDepth(items(30))).toBe(30);
+    expect(reachedDepth(items(1))).toBe(1);
+  });
+
+  it('never reaches past the rank depth', () => {
+    expect(reachedDepth(items(RANK_DEPTH + 5))).toBe(RANK_DEPTH);
+  });
+
+  it('keeps the rank depth for a store that listed no apps at all', () => {
+    expect(reachedDepth([])).toBe(RANK_DEPTH);
   });
 });
 

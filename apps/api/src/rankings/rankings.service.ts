@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Store } from '@prisma/client';
-import { KeywordScope, RANK_DEPTH, RankingSeries } from '@asobeast/shared';
+import { KeywordScope, RankingSeries } from '@asobeast/shared';
 import { CollectionEligibility } from '../auth/collection-eligibility.service';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
@@ -9,7 +9,11 @@ import { RankingHistoryQueryDto } from './dto/ranking-history-query.dto';
 import { CompetitorCapture, RankCapture } from './rank-milestones';
 import { RankingAlertsService } from './ranking-alerts.service';
 import { DAY_MS, toDateKey, utcToday } from './rankings.support';
-import { positionsByStoreAppId, SerpCapture } from './serp-capture';
+import {
+  positionsByStoreAppId,
+  reachedDepth,
+  SerpCapture,
+} from './serp-capture';
 import { SerpSnapshotDay } from './serp-movers';
 import { topTenOf } from './top-ten';
 
@@ -36,6 +40,7 @@ interface RecordInput {
   keyword: KeywordScope;
   date: Date;
   positionByStoreAppId: Map<string, number>;
+  depth: number;
   primaryNames: Map<string, string | null>;
   competitorsOf: Map<string, CompetitorRef[]>;
 }
@@ -77,6 +82,7 @@ export class RankingsService {
     if (!results) return;
 
     const positionByStoreAppId = positionsByStoreAppId(results);
+    const depth = reachedDepth(results);
     const date = utcToday();
     const baseline = await this.rankingAlerts.entrantBaseline(keywordId, date);
     const entries = await this.capture.store(keywordId, date, results);
@@ -97,6 +103,7 @@ export class RankingsService {
           keyword,
           date,
           positionByStoreAppId,
+          depth,
           primaryNames,
           competitorsOf,
         });
@@ -133,7 +140,8 @@ export class RankingsService {
   }
 
   private async recordPositions(input: RecordInput): Promise<void> {
-    const { owned, keyword, date, positionByStoreAppId, primaryNames } = input;
+    const { owned, keyword, date, positionByStoreAppId, depth, primaryNames } =
+      input;
     const captures = new Map<string, RankCapture>();
     for (const [appId, { storeAppId, workspaceId }] of owned) {
       const position = positionByStoreAppId.get(storeAppId) ?? null;
@@ -149,9 +157,9 @@ export class RankingsService {
           keywordId: keyword.id,
           date,
           position,
-          depth: RANK_DEPTH,
+          depth,
         },
-        update: { position, depth: RANK_DEPTH },
+        update: { position, depth },
       });
 
       const changed = existing === null || existing.position !== position;
@@ -161,7 +169,7 @@ export class RankingsService {
           { id: appId, name: primaryNames.get(appId) ?? null },
           keyword,
           date,
-          { position, depth: RANK_DEPTH },
+          { position, depth },
         );
       }
     }
@@ -184,7 +192,7 @@ export class RankingsService {
         app: { id: appId, name: input.primaryNames.get(appId) ?? null },
         keyword: input.keyword,
         date: input.date,
-        depth: RANK_DEPTH,
+        depth: input.depth,
         capture,
         competitors,
       });
