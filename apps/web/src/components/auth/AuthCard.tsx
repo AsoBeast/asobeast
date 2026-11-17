@@ -1,7 +1,7 @@
 import type { ReactNode, Ref } from "react";
 import { cn } from "@/lib/utils";
 
-const WIDTH = { form: "max-w-90", wall: "max-w-100" } as const;
+const WIDTH = { form: "max-w-90", wall: "max-w-100" };
 
 export const INLINE_LINK = "text-foreground link-underline";
 

@@ -27,7 +27,7 @@ export function ForgotPasswordForm() {
     hand: handFocus,
   } = useAnswerFocus(LINK_SENT_FOCUS_KEY);
   const mutation = useMutation({
-    mutationFn: () => requestPasswordReset(email),
+    mutationFn: (address: string) => requestPasswordReset(address),
     onSuccess: handFocus,
     onError: (err) => {
       setError(
@@ -48,14 +48,14 @@ export function ForgotPasswordForm() {
     if (mutation.isPending) return;
     setError(null);
     holdFocus();
-    submitOnce();
+    submitOnce(email);
   }
 
   if (mutation.isSuccess) {
     return (
       <AuthCard
         title="Reset your password"
-        description={`If ${email} has an account, a recovery link is on its way. The link expires in an hour.`}
+        description={`If ${mutation.variables} has an account, a recovery link is on its way. The link expires in an hour.`}
         announce
       >
         <AuthActions>

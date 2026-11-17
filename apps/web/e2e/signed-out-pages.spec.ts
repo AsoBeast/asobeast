@@ -490,3 +490,25 @@ test("create account refuses a password that is too long before sending it", asy
   await expect(password).toHaveAttribute("aria-invalid", "true");
   expect(attempts).toBe(0);
 });
+
+test("the recovery page names the address the request was sent for", async ({
+  page,
+}) => {
+  const held = await holdRequest(
+    page,
+    /\/api\/backend\/auth\/password\/forgot$/,
+    "POST",
+    (route) => route.fulfill({ status: 204 }),
+  );
+  await page.goto("/forgot-password");
+  const email = page.getByLabel("Email");
+  await email.fill("first@example.com");
+
+  await page.getByRole("button", { name: "Email me a link" }).click();
+  await email.fill("second@example.com");
+  held.release();
+
+  await expect(page.getByRole("status")).toContainText(
+    "If first@example.com has an account",
+  );
+});
