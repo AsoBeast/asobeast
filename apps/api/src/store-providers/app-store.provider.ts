@@ -22,10 +22,11 @@ import {
   AppStorePageExtract,
   parseAppStorePageDocument,
 } from './app-store-page';
-import { StoreAppNotFoundError, StoreRequestError } from './errors';
+import { MissingApp, StoreAppNotFoundError, StoreRequestError } from './errors';
 import { listedInIphoneSearch } from './iphone-search';
 import { ownSubtitle } from './own-subtitle';
-import { Abortable, pause, storeDeadline } from './store-deadline';
+import { Abortable, storeDeadline } from './store-deadline';
+import { retryStoreCall } from './store-retry';
 import {
   ChartItem,
   NormalizedApp,
@@ -35,8 +36,6 @@ import {
   SuggestItem,
 } from './types';
 import { toChartItem } from './chart-item';
-
-const RETRY_DELAYS_MS = [2000, 5000];
 
 const COLLECTION_CONSTANTS: Record<CategoryCollection, string> = {
   free: 'topfreeapplications',
@@ -74,7 +73,7 @@ export class AppStoreProvider implements StoreProvider {
           ...deadline,
           ...(localization ? { lang: lookupLanguage(localization) } : {}),
         }),
-      storeAppId,
+      { storeAppId, country },
     );
     const read: PageRead =
       raw.subtitle === undefined
@@ -316,31 +315,23 @@ export class AppStoreProvider implements StoreProvider {
   private async withRetry<T>(
     method: string,
     call: (deadline: Abortable) => Promise<T>,
-    missingAppId?: string,
+    missing?: MissingApp,
   ): Promise<T> {
-    const deadline = storeDeadline();
-    let lastError: unknown;
-    for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
-      try {
-        deadline.signal?.throwIfAborted();
-        const result = await call(deadline);
-        deadline.signal?.throwIfAborted();
-        return result;
-      } catch (error) {
-        lastError = error;
-        const delay = RETRY_DELAYS_MS[attempt];
-        if (delay === undefined || !(await pause(delay, deadline.signal))) {
-          break;
-        }
+    try {
+      return await retryStoreCall(call, () => true);
+    } catch (lastError) {
+      if (missing !== undefined && isMissingApp(lastError)) {
+        throw new StoreAppNotFoundError(
+          this.store,
+          missing.storeAppId,
+          missing.country,
+        );
       }
+      if (lastError instanceof ShellListingError) {
+        throw lastError;
+      }
+      throw new StoreRequestError(this.store, method, messageOf(lastError));
     }
-    if (missingAppId !== undefined && isMissingApp(lastError)) {
-      throw new StoreAppNotFoundError(this.store, missingAppId);
-    }
-    if (lastError instanceof ShellListingError) {
-      throw lastError;
-    }
-    throw new StoreRequestError(this.store, method, messageOf(lastError));
   }
 }
 

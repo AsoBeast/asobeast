@@ -9,6 +9,7 @@ import {
 import { NotFoundError, ParseError } from '@mradex77/google-play-scraper';
 import { GooglePlayLib } from './google-play.lib';
 import { GooglePlayProvider } from './google-play.provider';
+import { withinStoreDeadline } from './store-deadline';
 import { StoreProviderRegistry } from './store-provider.registry';
 
 const APP_STORE_ATTEMPTS = 3;
@@ -261,5 +262,78 @@ describe('provider error taxonomy', () => {
         StoreNotSupportedError,
       );
     });
+  });
+});
+
+describe('StoreAppNotFoundError', () => {
+  it('names the storefront for the operator when it is known', () => {
+    expect(
+      new StoreAppNotFoundError(Store.GOOGLE_PLAY, 'com.example', 'us').message,
+    ).toBe('GOOGLE_PLAY has no app com.example in us');
+    expect(new StoreAppNotFoundError(Store.APP_STORE, '1').message).toBe(
+      'APP_STORE has no app 1',
+    );
+  });
+
+  it('tells a person the same thing with or without the storefront', () => {
+    expect(
+      new StoreAppNotFoundError(Store.APP_STORE, '1', 'us').userMessage,
+    ).toBe(new StoreAppNotFoundError(Store.APP_STORE, '1').userMessage);
+    expect(
+      new StoreAppNotFoundError(Store.GOOGLE_PLAY, 'com.example', 'de')
+        .userMessage,
+    ).toBe('Google Play has no app com.example.');
+  });
+
+  it('carries the storefront both providers looked in', async () => {
+    jest.useFakeTimers();
+    const appStore = new AppStoreProvider(
+      makeAppStoreLib({ app: jest.fn().mockRejectedValue(NOT_FOUND_ERROR) }),
+    );
+    const play = new GooglePlayProvider(
+      makeGooglePlayLib({
+        app: jest.fn().mockRejectedValue(PLAY_NOT_FOUND_ERROR),
+      }),
+    );
+
+    const errors = Promise.all([
+      appStore.getApp('1', 'de').catch((error: unknown) => error),
+      play.getApp('com.example', 'jp').catch((error: unknown) => error),
+    ]);
+    await jest.runAllTimersAsync();
+    const [apple, google] = await errors;
+    jest.useRealTimers();
+
+    expect((apple as StoreAppNotFoundError).message).toBe(
+      'APP_STORE has no app 1 in de',
+    );
+    expect((google as StoreAppNotFoundError).message).toBe(
+      'GOOGLE_PLAY has no app com.example in jp',
+    );
+  });
+
+  it('trusts no not found answer the deadline cut short, on either store', async () => {
+    const appStore = new AppStoreProvider(
+      makeAppStoreLib({ app: jest.fn().mockRejectedValue(NOT_FOUND_ERROR) }),
+    );
+    const play = new GooglePlayProvider(
+      makeGooglePlayLib({
+        app: jest.fn().mockRejectedValue(PLAY_NOT_FOUND_ERROR),
+      }),
+    );
+
+    const [apple, google] = await Promise.all([
+      withinStoreDeadline(
+        () => appStore.getApp('1', 'us').catch((error: unknown) => error),
+        50,
+      ),
+      withinStoreDeadline(
+        () => play.getApp('com.example', 'us').catch((error: unknown) => error),
+        50,
+      ),
+    ]);
+
+    expect(apple).toBeInstanceOf(StoreRequestError);
+    expect(google).toBeInstanceOf(StoreRequestError);
   });
 });

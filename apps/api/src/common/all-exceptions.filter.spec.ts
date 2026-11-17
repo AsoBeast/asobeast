@@ -241,6 +241,24 @@ describe('AllExceptionsFilter', () => {
     warn.mockRestore();
   });
 
+  it('logs the not found answer that ended the request, with its storefront', () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+
+    const { status } = capture(
+      new StoreAppNotFoundError(
+        Store.GOOGLE_PLAY,
+        'com.ihg.apps.android',
+        'us',
+      ),
+    );
+
+    expect(status).toBe(HttpStatus.NOT_FOUND);
+    expect(warn).toHaveBeenCalledWith(
+      'GOOGLE_PLAY has no app com.ihg.apps.android in us',
+    );
+    warn.mockRestore();
+  });
+
   it('keeps a store that did not answer out of error tracking', () => {
     const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
 

@@ -110,7 +110,7 @@ Every app page shows a pill beside **Run daily** with where today's run of that 
 
 ## What happens when the store stops listing an app?
 
-A store can stop listing an app you or a competitor tracks: the developer removed it, the store took it down or it moved to a new store id. A listing refresh in the app's home storefront then gets an answer that the app does not exist, the iTunes lookup with no result or a Google Play not found, and records the time of that first answer as `delistedAt` on the app. The refresh job finishes instead of failing and being retried, and an on demand **Refresh** still answers the store's `404`.
+A store can stop listing an app you or a competitor tracks: the developer removed it, the store took it down or it moved to a new store id. A listing refresh in the app's home storefront then gets an answer that the app does not exist, the iTunes lookup with no result or a Google Play not found, and records the time of that first answer as `delistedAt` on the app. Both stores are asked again twice, two and five seconds apart, before that answer is trusted, so one stray not found never delists an app. The refresh job finishes instead of failing and being retried, and an on demand **Refresh** still answers the store's `404`.
 
 While `delistedAt` is set:
 
