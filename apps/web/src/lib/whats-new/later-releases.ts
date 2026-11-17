@@ -98,6 +98,11 @@ export const LATER_RELEASES: readonly Release[] = [
         title: "Say why you leave, if you like",
         text: "Deleting a workspace now asks, without insisting, why you are leaving, from a short list. Prefer not to say is the default. Once the workspace is erased, only the answer and a few counts are kept, with nothing that names you or the workspace.",
       },
+      {
+        kind: "fixed",
+        title: "Positions say how far the store looked",
+        text: "When your app is not found for a keyword, the position now shows how many apps the store listed that day, such as more than 30 on Google Play, instead of always saying more than 200. Google Play's search lists at most 30 apps, so the old number promised a deeper look than any check could make.",
+      },
     ],
   },
   {
