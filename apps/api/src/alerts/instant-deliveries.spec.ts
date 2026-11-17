@@ -71,7 +71,7 @@ describe('InstantDeliveries', () => {
     );
   });
 
-  it('keeps the immediate backoff when no options are given', async () => {
+  it('keeps an immediate delivery for the whole dedupe window, never trimmed by count', async () => {
     const { add, deliveries, inWorkspace } = build({ emails: [] });
 
     await inWorkspace(() => deliveries.enqueue(appDelisted()));
@@ -80,7 +80,10 @@ describe('InstantDeliveries', () => {
     expect(add).toHaveBeenCalledWith(
       JOBS.DELIVER_ALERT,
       expect.objectContaining({ webhookId: 'w1' }),
-      { backoff: { type: 'custom' } },
+      expect.objectContaining({
+        backoff: { type: 'custom' },
+        removeOnComplete: { age: 604800 },
+      }),
     );
   });
 

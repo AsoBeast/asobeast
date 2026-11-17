@@ -20,6 +20,7 @@ import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { appDelisted, ratingDropped } from './listing-events.fixture';
 import { AlertAppIdentities } from './alert-app-identities';
+import { ALERT_DELIVERY_JOB_OPTIONS } from './alert-delivery-flow';
 import { AlertsDispatcher } from './alerts.dispatcher';
 import { chartEntered } from './chart-events.fixture';
 import { InstantDeliveries } from './instant-deliveries';
@@ -386,7 +387,7 @@ describe('AlertsDispatcher', () => {
     expect(add).toHaveBeenCalledWith(
       JOBS.DELIVER_ALERT,
       expect.objectContaining({ webhookId: 'wh1', payload: chartEntered() }),
-      { backoff: { type: 'custom' } },
+      ALERT_DELIVERY_JOB_OPTIONS,
     );
   });
 
@@ -712,7 +713,7 @@ describe('AlertsDispatcher', () => {
           webhookId: 'wh1',
           payload: { ...rankPayload, app: { ...rankPayload.app, ...identity } },
         }),
-        { backoff: { type: 'custom' } },
+        ALERT_DELIVERY_JOB_OPTIONS,
       );
     });
 
@@ -797,7 +798,7 @@ describe('AlertsDispatcher rating drops', () => {
     expect(add).toHaveBeenCalledWith(
       JOBS.DELIVER_ALERT,
       expect.objectContaining({ webhookId: 'wh2' }),
-      { backoff: { type: 'custom' } },
+      ALERT_DELIVERY_JOB_OPTIONS,
     );
   });
 
@@ -841,7 +842,7 @@ describe('AlertsDispatcher availability events', () => {
     expect(add).toHaveBeenCalledWith(
       JOBS.DELIVER_ALERT,
       expect.objectContaining({ webhookId: 'wh1' }),
-      { backoff: { type: 'custom' } },
+      ALERT_DELIVERY_JOB_OPTIONS,
     );
   });
 
@@ -955,7 +956,7 @@ describe('AlertsDispatcher records instant events', () => {
     expect(add).toHaveBeenCalledWith(
       JOBS.DELIVER_ALERT,
       expect.objectContaining({ webhookId: 'wh1', payload: rankPayload }),
-      { backoff: { type: 'custom' } },
+      ALERT_DELIVERY_JOB_OPTIONS,
     );
   };
 

@@ -12,7 +12,7 @@ import {
   QUEUES,
 } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
-import { ALERT_BACKOFF } from './alert-delivery-flow';
+import { ALERT_DELIVERY_JOB_OPTIONS } from './alert-delivery-flow';
 import { confirmDropsWhere } from './confirm-drops';
 import { DELIVERABLE_EMAIL_ALERTS } from './deliverable-email-alerts';
 import { MailerService } from './mailer.service';
@@ -26,7 +26,7 @@ export type InstantJobOptions = (
   subscriptionId: string,
 ) => JobsOptions;
 
-const IMMEDIATE: InstantJobOptions = () => ({ backoff: ALERT_BACKOFF });
+const IMMEDIATE: InstantJobOptions = () => ALERT_DELIVERY_JOB_OPTIONS;
 
 const SUBSCRIPTION_SELECT = {
   id: true,
