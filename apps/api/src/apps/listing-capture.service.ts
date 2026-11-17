@@ -189,7 +189,7 @@ export class ListingCaptureService {
       await this.requestDetection(app.id, market);
     }
     if (home) {
-      await this.keywords.syncFromSnapshot(app.id);
+      await this.keywords.syncFromLaterSnapshot(app.id);
       if (await this.releaseChangedFields(app, recorded)) {
         try {
           await this.storeReports.enqueue(app.workspaceId, app.store);

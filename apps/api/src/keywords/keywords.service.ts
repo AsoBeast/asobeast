@@ -328,6 +328,30 @@ export class KeywordsService {
   }
 
   async syncFromSnapshot(appId: string): Promise<void> {
+    const synced = await this.trackSnapshotCandidates(appId);
+    if (!synced) return;
+    await this.enqueueSnapshotScores(synced);
+  }
+
+  async syncFromLaterSnapshot(appId: string): Promise<void> {
+    const synced = await this.trackSnapshotCandidates(appId);
+    if (!synced) return;
+    await this.checks.schedule(appId, synced.added);
+    await this.enqueueSnapshotScores(synced);
+  }
+
+  private async enqueueSnapshotScores({
+    app,
+    tracked,
+  }: SnapshotSync): Promise<void> {
+    for (const row of tracked) {
+      await this.tracker.enqueueFirstScore(row.keywordId, app);
+    }
+  }
+
+  private async trackSnapshotCandidates(
+    appId: string,
+  ): Promise<SnapshotSync | null> {
     const app = await this.prisma.app.findUnique({
       where: { id: appId },
       select: {
@@ -339,12 +363,12 @@ export class KeywordsService {
       },
     });
     if (!app || app.isCompetitor) {
-      return;
+      return null;
     }
 
     const listings = await listingTexts(this.prisma, app);
     if (listings.length === 0) {
-      return;
+      return null;
     }
 
     const candidates = seedCandidates(app.store, listings);
@@ -384,15 +408,27 @@ export class KeywordsService {
         : [];
     });
 
+    const existing = await this.prisma.trackedKeyword.findMany({
+      where: {
+        appId: app.id,
+        keywordId: { in: tracked.map((row) => row.keywordId) },
+      },
+      select: { keywordId: true },
+    });
     await this.prisma.trackedKeyword.createMany({
       data: tracked,
       skipDuplicates: true,
     });
     await this.claimForSnapshot(app.id, tracked);
 
-    for (const row of tracked) {
-      await this.tracker.enqueueFirstScore(row.keywordId, app);
-    }
+    const before = new Set(existing.map((row) => row.keywordId));
+    return {
+      app,
+      tracked,
+      added: tracked
+        .map((row) => row.keywordId)
+        .filter((keywordId) => !before.has(keywordId)),
+    };
   }
 
   private async claimForSnapshot(
@@ -444,4 +480,10 @@ export class KeywordsService {
     }
     return item;
   }
+}
+
+interface SnapshotSync {
+  app: { store: Store; workspaceId: string };
+  tracked: { keywordId: string }[];
+  added: string[];
 }
