@@ -26,7 +26,7 @@ paths:
 ## Domain rule 3: Rate limits
 
 - Without a proxy pool, the `appstore` worker runs at concurrency 1 behind `SCRAPE_ITUNES_RPM` (default 15; iTunes tolerates about 20 a minute per IP) and the `gplay` worker at concurrency 1 behind `SCRAPE_GPLAY_RPM` (default 10), which spaces job starts, because Play is stricter. With `PROXY_PROVIDER` set, `storeWorkerOptions` drops that limiter and runs up to `PROXY_WORKER_MAX_CONCURRENCY`, tracking the healthy endpoint count, each endpoint limited by `PROXY_ENDPOINT_RPM`; never assume store jobs run one at a time.
-- Request fan-out: a Play score job makes 12 to 20 requests (a search, 1 to 9 suggest probes, 10 `getApp` enrichments), an App Store score job 3 to 11 (a search, 1 to 9 probes, a continuation lookup); a Play rank job makes one request (Google lists at most 30 apps), and so does an Apple one. `jobs/request-weights.ts` still prices a Play keyword check at eight requests, a cautious estimate.
+- Request fan-out: a Play score job makes 12 to 20 requests (a search, 1 to 9 suggest probes, 10 `getApp` enrichments), an App Store score job 3 to 11 (a search, 1 to 9 probes, a continuation lookup); a Play rank job usually makes one request (Google usually lists about 30 apps; a few terms continue to a second page, up to 250 in all), and an Apple one makes one. `jobs/request-weights.ts` still prices a Play keyword check at eight requests, a cautious estimate.
 - Never call a store in bulk outside the queue. The only exceptions are small user initiated lookups (keyword suggestions, a name search, similar apps), each behind an hourly allowance.
 
 ## Domain rule 4: One app, per-market keyword tracking; one search serves everyone, including across tenants
