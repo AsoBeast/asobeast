@@ -10,6 +10,7 @@ import {
 import { Prisma, Store } from '@prisma/client';
 import { StoreAppNotFoundError, StoreRequestError } from './errors';
 import { Abortable, storeDeadline } from './store-deadline';
+import { retryStoreCall } from './store-retry';
 import {
   isMissingApp,
   GOOGLE_PLAY_LIB,
@@ -261,12 +262,11 @@ export class GooglePlayProvider implements StoreProvider {
     fn: (deadline: Abortable) => Promise<T>,
     missingAppId?: string,
   ): Promise<T> {
-    const deadline = storeDeadline();
     try {
-      deadline.signal?.throwIfAborted();
-      const result = await fn(deadline);
-      deadline.signal?.throwIfAborted();
-      return result;
+      return await retryStoreCall(
+        fn,
+        (error) => missingAppId !== undefined && isMissingApp(error),
+      );
     } catch (error) {
       if (missingAppId !== undefined && isMissingApp(error)) {
         throw new StoreAppNotFoundError(this.store, missingAppId);
