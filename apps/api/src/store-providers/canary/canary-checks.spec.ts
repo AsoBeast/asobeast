@@ -1,4 +1,4 @@
-import { Store } from '@prisma/client';
+import { Prisma, Store } from '@prisma/client';
 import { NormalizedApp, SearchItem } from '../types';
 import {
   assertPageExtract,
@@ -162,7 +162,7 @@ describe('assertPageExtract', () => {
 });
 
 describe('assertPreviewVideo', () => {
-  const extractWith = (previewVideoUrls: unknown) =>
+  const extractWith = (previewVideoUrls: Prisma.InputJsonValue | null) =>
     appOf({
       raw: {
         pageExtract: {
