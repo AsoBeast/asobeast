@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import {
   addUtcDays,
   CHECK_FRESH_DAYS,
@@ -82,22 +83,25 @@ export class DiscoveryCaptures {
         lte: utcDate(today),
       },
     };
-    const [rows, held] = await Promise.all([
-      this.prisma.serpEntry.findMany({
-        where: { ...scope, OR: [{ position: 1 }, { storeAppId }] },
-        select: {
-          keywordId: true,
-          date: true,
-          position: true,
-          storeAppId: true,
-        },
+    const { rows, held } = await this.prisma.withTransaction(
+      async (tx) => ({
+        rows: await tx.serpEntry.findMany({
+          where: { ...scope, OR: [{ position: 1 }, { storeAppId }] },
+          select: {
+            keywordId: true,
+            date: true,
+            position: true,
+            storeAppId: true,
+          },
+        }),
+        held: await tx.serpEntry.groupBy({
+          by: ['keywordId', 'date'],
+          where: scope,
+          _max: { position: true },
+        }),
       }),
-      this.prisma.serpEntry.groupBy({
-        by: ['keywordId', 'date'],
-        where: scope,
-        _max: { position: true },
-      }),
-    ]);
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
     const byKeyword = new Map<string, KeywordCaptures>();
     for (const row of rows) {
       const { days, positions } = capturesOf(byKeyword, row.keywordId);

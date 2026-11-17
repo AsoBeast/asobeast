@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { DISCOVERY_CAPTURE_DEPTH } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -147,11 +148,31 @@ describe('DiscoveryCaptures.read', () => {
   ) => {
     const findMany = jest.fn().mockResolvedValue(rows);
     const groupBy = jest.fn().mockResolvedValue(depths);
+    const serpEntry = { findMany, groupBy };
+    const withTransaction = jest.fn(
+      (run: (tx: { serpEntry: typeof serpEntry }) => Promise<unknown>) =>
+        run({ serpEntry }),
+    );
     const captures = new DiscoveryCaptures({
-      serpEntry: { findMany, groupBy },
+      withTransaction,
     } as unknown as PrismaService);
-    return { captures, findMany, groupBy };
+    return { captures, findMany, groupBy, withTransaction };
   };
+
+  it('reads the rows and the depth they held from one snapshot', async () => {
+    const { captures, findMany, groupBy, withTransaction } = setup([
+      row('kw', TODAY, 1),
+    ]);
+
+    await captures.read('store1', ['kw'], TODAY);
+
+    expect(withTransaction).toHaveBeenCalledTimes(1);
+    expect(withTransaction).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
+    });
+    expect(findMany).toHaveBeenCalledTimes(1);
+    expect(groupBy).toHaveBeenCalledTimes(1);
+  });
 
   it('reads the depth each capture held beside its rows', async () => {
     const { captures, groupBy } = setup(
