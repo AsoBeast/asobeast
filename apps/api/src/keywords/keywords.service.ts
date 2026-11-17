@@ -336,14 +336,14 @@ export class KeywordsService {
   async syncFromLaterSnapshot(appId: string): Promise<void> {
     const synced = await this.trackSnapshotCandidates(appId);
     if (!synced) return;
-    await this.checks.schedule(
-      appId,
-      await this.uncheckedSince(
-        appId,
-        synced.tracked.map((row) => row.keywordId),
-        new Date(utcDayOf(new Date())),
-      ),
-    );
+    try {
+      await this.checks.schedule(appId, synced.added);
+    } catch (error: unknown) {
+      await this.prisma.trackedKeyword.deleteMany({
+        where: { appId, keywordId: { in: synced.added } },
+      });
+      throw error;
+    }
     await this.enqueueSnapshotScores(synced);
   }
 
@@ -415,38 +415,27 @@ export class KeywordsService {
         : [];
     });
 
+    const existing = await this.prisma.trackedKeyword.findMany({
+      where: {
+        appId: app.id,
+        keywordId: { in: tracked.map((row) => row.keywordId) },
+      },
+      select: { keywordId: true },
+    });
     await this.prisma.trackedKeyword.createMany({
       data: tracked,
       skipDuplicates: true,
     });
     await this.claimForSnapshot(app.id, tracked);
 
-    return { app, tracked };
-  }
-
-  private async uncheckedSince(
-    appId: string,
-    keywordIds: string[],
-    since: Date,
-  ): Promise<string[]> {
-    const fresh = await this.prisma.trackedKeyword.findMany({
-      where: {
-        appId,
-        active: true,
-        keywordId: { in: keywordIds },
-        createdAt: { gte: since },
-      },
-      select: { keywordId: true },
-    });
-    const freshIds = fresh.map((row) => row.keywordId);
-    if (freshIds.length === 0) return [];
-    const checked = await this.prisma.keywordRanking.findMany({
-      where: { appId, keywordId: { in: freshIds } },
-      select: { keywordId: true },
-      distinct: ['keywordId'],
-    });
-    const done = new Set(checked.map((row) => row.keywordId));
-    return freshIds.filter((keywordId) => !done.has(keywordId));
+    const before = new Set(existing.map((row) => row.keywordId));
+    return {
+      app,
+      tracked,
+      added: tracked
+        .map((row) => row.keywordId)
+        .filter((keywordId) => !before.has(keywordId)),
+    };
   }
 
   private async claimForSnapshot(
@@ -503,4 +492,5 @@ export class KeywordsService {
 interface SnapshotSync {
   app: { store: Store; workspaceId: string };
   tracked: { keywordId: string }[];
+  added: string[];
 }
