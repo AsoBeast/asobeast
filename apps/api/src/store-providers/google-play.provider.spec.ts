@@ -936,7 +936,7 @@ describe('GooglePlayProvider not found answers', () => {
     expect(similar).toHaveBeenCalledTimes(1);
   });
 
-  it('trusts the not found answer the deadline left standing', async () => {
+  it('never trusts a not found answer the deadline cut short', async () => {
     const app = jest.fn().mockRejectedValue(notFound());
     const provider = new GooglePlayProvider(makeLib({ app }));
     const started = Date.now();
@@ -949,7 +949,10 @@ describe('GooglePlayProvider not found answers', () => {
       50,
     );
 
-    expect(failure).toBeInstanceOf(StoreAppNotFoundError);
+    expect(failure).toBeInstanceOf(StoreRequestError);
+    expect((failure as StoreRequestError).userMessage).toBe(
+      'Google Play did not answer. Try again in a few minutes.',
+    );
     expect(app).toHaveBeenCalledTimes(1);
     expect(Date.now() - started).toBeLessThan(2000);
   });

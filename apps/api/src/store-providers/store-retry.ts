@@ -17,12 +17,9 @@ export async function retryStoreCall<T>(
     } catch (error) {
       lastError = error;
       const delay = STORE_RETRY_DELAYS_MS[attempt];
-      if (
-        delay === undefined ||
-        !retryable(error) ||
-        !(await pause(delay, deadline.signal))
-      ) {
-        break;
+      if (delay === undefined || !retryable(error)) break;
+      if (!(await pause(delay, deadline.signal))) {
+        throw deadline.signal?.reason ?? error;
       }
     }
   }

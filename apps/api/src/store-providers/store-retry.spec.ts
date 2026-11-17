@@ -84,14 +84,18 @@ describe('retryStoreCall', () => {
     expect(retryable.mock.calls).toEqual([[first], [second]]);
   });
 
-  it('stops when the deadline cuts the pause short', async () => {
+  it('answers the deadline, not the unconfirmed error, when the deadline cuts the pause short', async () => {
     const failure = new Error('missing');
     const call = jest.fn().mockRejectedValue(failure);
     const started = Date.now();
 
-    await expect(
-      withinStoreDeadline(() => retryStoreCall(call, always), 50),
-    ).rejects.toBe(failure);
+    const settled = await withinStoreDeadline(
+      () => retryStoreCall(call, always).catch((error: unknown) => error),
+      50,
+    );
+
+    expect(settled).not.toBe(failure);
+    expect(settled).toMatchObject({ name: 'TimeoutError' });
 
     expect(call).toHaveBeenCalledTimes(1);
     expect(Date.now() - started).toBeLessThan(STORE_RETRY_DELAYS_MS[0]);

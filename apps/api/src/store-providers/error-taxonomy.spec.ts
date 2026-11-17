@@ -9,6 +9,7 @@ import {
 import { NotFoundError, ParseError } from '@mradex77/google-play-scraper';
 import { GooglePlayLib } from './google-play.lib';
 import { GooglePlayProvider } from './google-play.provider';
+import { withinStoreDeadline } from './store-deadline';
 import { StoreProviderRegistry } from './store-provider.registry';
 
 const APP_STORE_ATTEMPTS = 3;
@@ -309,5 +310,30 @@ describe('StoreAppNotFoundError', () => {
     expect((google as StoreAppNotFoundError).message).toBe(
       'GOOGLE_PLAY has no app com.example in jp',
     );
+  });
+
+  it('trusts no not found answer the deadline cut short, on either store', async () => {
+    const appStore = new AppStoreProvider(
+      makeAppStoreLib({ app: jest.fn().mockRejectedValue(NOT_FOUND_ERROR) }),
+    );
+    const play = new GooglePlayProvider(
+      makeGooglePlayLib({
+        app: jest.fn().mockRejectedValue(PLAY_NOT_FOUND_ERROR),
+      }),
+    );
+
+    const [apple, google] = await Promise.all([
+      withinStoreDeadline(
+        () => appStore.getApp('1', 'us').catch((error: unknown) => error),
+        50,
+      ),
+      withinStoreDeadline(
+        () => play.getApp('com.example', 'us').catch((error: unknown) => error),
+        50,
+      ),
+    ]);
+
+    expect(apple).toBeInstanceOf(StoreRequestError);
+    expect(google).toBeInstanceOf(StoreRequestError);
   });
 });
