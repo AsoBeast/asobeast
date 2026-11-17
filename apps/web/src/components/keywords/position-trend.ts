@@ -1,7 +1,5 @@
-import {
-  KEYWORD_RECENT_POSITION_DAYS,
-  type KeywordRecentPosition,
-} from "@asobeast/shared";
+import type { KeywordRecentPosition } from "@asobeast/shared";
+import { DEFAULT_TREND_WINDOW, TREND_WINDOW_DAYS } from "@/lib/trend-window";
 
 export const TREND_WIDTH = 72;
 export const TREND_HEIGHT = 22;
@@ -23,28 +21,34 @@ interface Ranked {
 
 const round = (value: number): number => Math.round(value * 10) / 10;
 
-function rankedChecks(checks: readonly KeywordRecentPosition[]): Ranked[][] {
+function rankedChecks(
+  checks: readonly KeywordRecentPosition[],
+  days: number,
+): Ranked[][] {
   const newest = Date.parse(checks[checks.length - 1].date);
-  const start = newest - (KEYWORD_RECENT_POSITION_DAYS - 1) * DAY_MS;
+  const start = newest - (days - 1) * DAY_MS;
   const runs: Ranked[][] = [[]];
   for (const check of checks) {
-    if (check.position === null) {
+    const day = Math.round((Date.parse(check.date) - start) / DAY_MS);
+    if (day < 0) continue;
+    const run = runs[runs.length - 1];
+    const previous = run[run.length - 1];
+    if (check.position === null || (previous && day - previous.day > 1)) {
       runs.push([]);
-      continue;
     }
-    runs[runs.length - 1].push({
-      day: Math.round((Date.parse(check.date) - start) / DAY_MS),
-      position: check.position,
-    });
+    if (check.position !== null) {
+      runs[runs.length - 1].push({ day, position: check.position });
+    }
   }
   return runs.filter((run) => run.length > 0);
 }
 
 export function positionTrendShape(
   checks: readonly KeywordRecentPosition[] | undefined,
+  days: number = TREND_WINDOW_DAYS[DEFAULT_TREND_WINDOW],
 ): PositionTrendShape | null {
   if (!checks || checks.length === 0) return null;
-  const runs = rankedChecks(checks);
+  const runs = rankedChecks(checks, days);
   const ranked = runs.flat();
   if (ranked.length < 2) return null;
 
@@ -52,10 +56,7 @@ export function positionTrendShape(
   const best = Math.min(...roots);
   const span = Math.max(...roots) - best;
   const x = (day: number) =>
-    round(
-      INSET +
-        (day / (KEYWORD_RECENT_POSITION_DAYS - 1)) * (TREND_WIDTH - 2 * INSET),
-    );
+    round(INSET + (day / (days - 1)) * (TREND_WIDTH - 2 * INSET));
   const y = (position: number) =>
     round(
       span === 0
@@ -73,7 +74,8 @@ export function positionTrendShape(
             (point, index) =>
               `${index === 0 ? "M" : "L"}${x(point.day)} ${y(point.position)}`,
           )
-          .join(""),
+          .join("")
+          .concat(run.length === 1 ? "h0" : ""),
       )
       .join(""),
     end: { x: x(last.day), y: y(last.position) },

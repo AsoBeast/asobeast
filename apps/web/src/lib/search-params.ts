@@ -57,6 +57,7 @@ import {
 import { DEFAULT_MCP_CLIENT, MCP_CLIENTS } from "./mcp-snippets";
 import { GAP_TABS } from "./gap-lists";
 import { GRADES } from "./grade";
+import { DEFAULT_TREND_WINDOW, TREND_WINDOWS } from "./trend-window";
 import { KEYWORD_MOVE_FILTERS } from "./keyword-day-change";
 import { KEYWORD_ZONES } from "./keyword-zones";
 import { POSITION_BANDS, VERSUS, type ActivityStatus } from "./table/facets";
@@ -127,6 +128,9 @@ export const keywordMoveParser = parseAsStringLiteral(KEYWORD_MOVE_FILTERS);
 export const keywordClassParser = parseAsDistinctArrayOf(
   parseAsStringLiteral(KEYWORD_CLASSES),
 ).withDefault([]);
+
+export const trendWindowParser =
+  parseAsStringLiteral(TREND_WINDOWS).withDefault(DEFAULT_TREND_WINDOW);
 
 export const keywordFilterParsers = {
   q: searchParser,

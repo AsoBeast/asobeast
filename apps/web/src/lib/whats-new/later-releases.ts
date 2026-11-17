@@ -108,6 +108,11 @@ export const LATER_RELEASES: readonly Release[] = [
         title: "A full list when you search the App Store",
         text: "Searching the App Store by name when you import an app or add a competitor lists as many apps as you asked for, in close to the order your positions are checked in.",
       },
+      {
+        kind: "improved",
+        title: "Thirty days on the keywords trend",
+        text: "The trend column of the keywords table can now show the last 30 days instead of the last 7. Open Columns and pick the window; the line, the change beside it and the sort follow, and the choice stays in the page address. A day with no ranked check now leaves a gap in the line instead of a slope, and a row with too few ranked checks says so in words.",
+      },
     ],
   },
   {

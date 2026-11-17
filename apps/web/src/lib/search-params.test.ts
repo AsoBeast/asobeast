@@ -30,6 +30,7 @@ import { GRADES } from "./grade";
 import { KEYWORD_MOVE_FILTERS } from "./keyword-day-change";
 import { KEYWORD_ZONES } from "./keyword-zones";
 import { POSITION_BANDS } from "./table/facets";
+import { TREND_WINDOWS } from "./trend-window";
 import { GAP_TABS } from "./gap-lists";
 import {
   GAP_SORTS,
@@ -94,6 +95,7 @@ import {
   keywordIdsParser,
   keywordSourceParser,
   keywordStatusParser,
+  trendWindowParser,
   keywordSortParser,
   keywordTagsParser,
   marketParser,
@@ -150,6 +152,7 @@ const LITERAL_PARSERS: readonly LiteralParserCase[] = [
   ["keywordView", keywordViewParser, KEYWORD_VIEWS, "table"],
   ["keywordsTab", keywordsTabParser, KEYWORDS_TABS, "tracked"],
   ["discoveryState", discoveryStateParser, DISCOVERY_STATES, "all"],
+  ["trendWindow", trendWindowParser, TREND_WINDOWS, "7d"],
 ] as const;
 
 const NUMERIC_PARSERS = [

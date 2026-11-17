@@ -28,6 +28,13 @@ import {
 } from "./PositionHistoryPopover";
 import { KeywordClassTag } from "./KeywordClassTag";
 import { PositionTrend } from "./PositionTrend";
+import {
+  trendChecks,
+  trendDelta,
+  trendPeriod,
+  type TrendSeries,
+  type TrendWindow,
+} from "@/lib/trend-window";
 import { StaleCheckMark } from "./StaleCheckMark";
 
 function volatilityBand(value: number): { label: string; text: string } {
@@ -105,10 +112,14 @@ export function TrendCell({
   keyword,
   today,
   history,
+  trendWindow,
+  series,
 }: {
   keyword: TrackedKeywordItem;
   today: string;
   history: PositionHistoryContext;
+  trendWindow: TrendWindow;
+  series: TrendSeries | undefined;
 }) {
   const label = formatCheckedPosition(
     keyword.latestPosition,
@@ -116,10 +127,13 @@ export function TrendCell({
   );
   const trend = (
     <>
-      <PositionTrend checks={keyword.recentPositions} />
+      <PositionTrend
+        checks={trendChecks(keyword, trendWindow, series)}
+        trendWindow={trendWindow}
+      />
       <DeltaChip
-        value={keyword.positionDelta7d}
-        period="over 7 days"
+        value={trendDelta(keyword, trendWindow, series)}
+        period={trendPeriod(trendWindow)}
         className={keyword.active ? undefined : "text-muted-foreground"}
       />
     </>

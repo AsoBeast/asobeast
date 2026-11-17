@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { formatDate } from "@/lib/format";
+import type { TrendSeries, TrendWindow } from "@/lib/trend-window";
 import { PositionCell, TrendCell } from "./keyword-cells";
 
 const TODAY = "2026-10-22";
@@ -47,12 +48,19 @@ const render = (row: TrackedKeywordItem) =>
     </TooltipProvider>,
   );
 
-const renderTrend = (row: TrackedKeywordItem, multiMarket = false) =>
+const renderTrend = (
+  row: TrackedKeywordItem,
+  multiMarket = false,
+  trendWindow: TrendWindow = "7d",
+  series?: TrendSeries,
+) =>
   renderToStaticMarkup(
     <TrendCell
       keyword={row}
       today={TODAY}
       history={{ ...HISTORY, multiMarket }}
+      trendWindow={trendWindow}
+      series={series}
     />,
   );
 
@@ -141,6 +149,48 @@ describe("PositionCell", () => {
         `id="${described}"[^>]*>.*Position over the last 7 days, from 10 to 7.*up 3 over 7 days`,
       ),
     );
+  });
+
+  it("W-POS-30 draws the 30 day window and names its delta", () => {
+    const series: TrendSeries = new Map([
+      [
+        "kw-1",
+        [
+          { date: "2026-09-22", position: 30, depth: 200 },
+          { date: "2026-10-01", position: 20, depth: 200 },
+          { date: "2026-10-21", position: 12, depth: 200 },
+          { date: "2026-10-22", position: 10, depth: 200 },
+        ],
+      ],
+    ]);
+
+    const markup = renderTrend(
+      keyword({ positionDelta7d: -1 }),
+      false,
+      "30d",
+      series,
+    );
+
+    expect(markup).toContain("Position over the last 30 days, from 20 to 10");
+    expect(markup).toContain('aria-label="up 10 over 30 days"');
+  });
+
+  it("W-POS-31 says so when the window has too few ranked checks", () => {
+    const series: TrendSeries = new Map([
+      ["kw-1", [{ date: "2026-10-22", position: 10, depth: 200 }]],
+    ]);
+
+    const markup = renderTrend(keyword({}), false, "30d", series);
+
+    expect(markup).toContain("Not enough checks");
+    expect(markup).not.toContain('data-slot="position-trend"');
+  });
+
+  it("W-POS-32 keeps an empty cell while the 30 day series is missing", () => {
+    const markup = renderTrend(keyword({}), false, "30d", undefined);
+
+    expect(markup).not.toContain("Not enough checks");
+    expect(markup).not.toContain('data-slot="position-trend"');
   });
 
   it("W-POS-08 names the market when the app tracks several", () => {
