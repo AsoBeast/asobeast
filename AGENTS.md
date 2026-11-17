@@ -32,7 +32,7 @@ This file holds what applies everywhere. The detailed rules live in `.claude/rul
 2. The query cache owns freshness: keys, options and invalidation live in `src/lib/queries.ts`; `router.refresh()` is banned.
 3. The URL is the state through `nuqs` parsers in `src/lib/search-params.ts`; transient input and per viewer preferences are the listed exceptions.
 4. Every segment has `loading.tsx` and `error.tsx`; `useSuspenseQuery` sits under a local `Suspense`; on demand dialogs, sheets and popovers read with `useQuery` and `InlineQueryError`.
-5. Domain rendering: a `null` position renders `>100` or `>200`, never `0`; dates are UTC; no engine worded date times or storefront names; prices go through `formatPrice`.
+5. Domain rendering: a `null` position renders `>` its row's depth, never `0`; dates are UTC; no engine worded date times or storefront names; prices go through `formatPrice`.
 6. Theming and accessibility: focus never falls to `body`, a running request keeps its control focusable with `aria-disabled`, and text sits in its own `<span>` so a page translator cannot break React.
 7. The shell is a sidebar, and each page picks one width utility from `src/styles/layout.css`.
 8. Charts go through the chart system in `src/components/charts/`.

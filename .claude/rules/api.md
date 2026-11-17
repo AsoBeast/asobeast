@@ -26,7 +26,7 @@ paths:
 ## Domain rule 3: Rate limits
 
 - Without a proxy pool, the `appstore` worker runs at concurrency 1 behind `SCRAPE_ITUNES_RPM` (default 15; iTunes tolerates about 20 a minute per IP) and the `gplay` worker at concurrency 1 behind `SCRAPE_GPLAY_RPM` (default 10), which spaces job starts, because Play is stricter. With `PROXY_PROVIDER` set, `storeWorkerOptions` drops that limiter and runs up to `PROXY_WORKER_MAX_CONCURRENCY`, tracking the healthy endpoint count, each endpoint limited by `PROXY_ENDPOINT_RPM`; never assume store jobs run one at a time.
-- Request fan-out: a Play score job makes 12 to 20 requests (a search, 1 to 9 suggest probes, 10 `getApp` enrichments), an App Store score job 3 to 11 (a search, 1 to 9 probes, a continuation lookup); a depth 200 Play rank job makes about eight, an Apple one makes one.
+- Request fan-out: a Play score job makes 12 to 20 requests (a search, 1 to 9 suggest probes, 10 `getApp` enrichments), an App Store score job 3 to 11 (a search, 1 to 9 probes, a continuation lookup); a Play rank job makes one request (Google lists at most 30 apps), and so does an Apple one. `jobs/request-weights.ts` still prices a Play keyword check at eight requests, a cautious estimate.
 - Never call a store in bulk outside the queue. The only exceptions are small user initiated lookups (keyword suggestions, a name search, similar apps), each behind an hourly allowance.
 
 ## Domain rule 4: One app, per-market keyword tracking; one search serves everyone, including across tenants
@@ -67,7 +67,7 @@ Localization detection and judging:
 
 ## Domain rule 6: Position semantics
 
-1 based; `null` means checked and not found within `depth` (default 200). Store the row even when `null`.
+1 based; `null` means checked and not found within `depth`, the number of apps the store listed (`reachedDepth`, at most `RANK_DEPTH`, and `RANK_DEPTH` for an empty list). Store the row even when `null`. Never write the constant as a depth.
 
 ## Domain rule 7: Tenancy is enforced by the database, not by remembering to filter
 
