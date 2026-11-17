@@ -692,11 +692,28 @@ describe('ListingCaptureService extract changes', () => {
         appId: APP.id,
         country: null,
         localization: null,
-        id: { not: SNAPSHOT.id },
+        capturedAt: { lt: SNAPSHOT.capturedAt },
         raw: { path: ['pageExtract'], not: Prisma.AnyNull },
       },
       orderBy: { capturedAt: 'desc' },
     });
+  });
+
+  it('never diffs the fallback against a snapshot the current one follows', async () => {
+    const recordExtractChanges = jest.fn().mockResolvedValue(undefined);
+    const { service, txFindFirst } = build({
+      previous: { ...SNAPSHOT, raw: {} },
+      baseline: { ...SNAPSHOT, id: 'snap_1', raw: extractOf(['e1']) },
+      raw: extractOf(['e1', 'e2']),
+      recordExtractChanges,
+    });
+
+    await service.refresh(APP.id);
+
+    const [call] = txFindFirst.mock.calls[0] as [
+      { where: { capturedAt: { lt: Date } } },
+    ];
+    expect(call.where.capturedAt).toEqual({ lt: SNAPSHOT.capturedAt });
   });
 
   it('diffs a market capture against the newest earlier market extract', async () => {

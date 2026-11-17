@@ -261,7 +261,7 @@ export class ListingCaptureService {
       where: {
         appId: app.id,
         ...listingIn(app.country, market),
-        id: { not: snapshot.id },
+        capturedAt: { lt: snapshot.capturedAt },
         raw: { path: ['pageExtract'], not: Prisma.AnyNull },
       },
       orderBy: NEWEST_FIRST,
