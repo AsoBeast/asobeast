@@ -138,15 +138,12 @@ export class ListingCaptureService {
         { store: app.store, country: market },
         created,
       );
+      if (home && !app.isCompetitor) {
+        await this.recordRatingDrop(tx, app, normalized, created.capturedAt);
+      }
       return created;
     });
     if (pending > 0) await this.screenshotQueue.request(app.id, snapshot.id);
-    if (home && !app.isCompetitor) {
-      await this.listingAlerts.ratingDropped(
-        { id: app.id, name: normalized.title, country: app.country },
-        snapshot.capturedAt,
-      );
-    }
 
     const icons = home
       ? { before: app.iconUrl, after: normalized.iconUrl ?? null }
@@ -256,6 +253,25 @@ export class ListingCaptureService {
         WHERE "id" = ${app.id} AND ${market} = ANY("unlistedMarkets")
       `;
     }
+  }
+
+  private recordRatingDrop(
+    tx: Prisma.TransactionClient,
+    app: App,
+    normalized: NormalizedApp,
+    capturedAt: Date,
+  ): Promise<void> {
+    return this.listingAlerts.recordRatingDrop(
+      tx,
+      {
+        id: app.id,
+        name: normalized.title,
+        country: app.country,
+        store: app.store,
+        iconUrl: normalized.iconUrl ?? app.iconUrl,
+      },
+      capturedAt,
+    );
   }
 
   private recordUnlisted(

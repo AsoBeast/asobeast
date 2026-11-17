@@ -21,8 +21,17 @@ import { asWorkspace } from './helpers/tenancy';
 import { testDb } from './helpers/test-db';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
 
+const DAY_MS = 86_400_000;
+const UNCHANGED_RATING = {
+  ratingAvg: 4.38,
+  ratingCount: 830,
+  version: '1.1.0',
+};
+const DROPPED_RATING = { ratingAvg: 4.3, ratingCount: 840, version: '1.1.0' };
+
 class LossRegistry {
   missing = false;
+  rating = UNCHANGED_RATING;
 
   get(store: Store): StoreProvider {
     return {
@@ -37,6 +46,7 @@ class LossRegistry {
               description: 'Listed app',
               raw: {},
               searchable: true,
+              ...this.rating,
             }),
       search: () => Promise.resolve([]),
       suggest: () => Promise.resolve([]),
@@ -122,6 +132,7 @@ describe('transition alert durability (e2e)', () => {
 
   beforeEach(async () => {
     registry.missing = false;
+    registry.rating = UNCHANGED_RATING;
     registryInUse = registry;
     jest.restoreAllMocks();
     await prisma.$executeRawUnsafe(
@@ -210,6 +221,40 @@ describe('transition alert durability (e2e)', () => {
 
   const rows = (event: string) =>
     prisma.alertEvent.findMany({ where: { event } });
+
+  const drops = () => rows('rating.dropped');
+
+  const seedRated = ({
+    name = 'Rated',
+    primaryAppId = null as string | null,
+  } = {}) => {
+    const now = Date.now();
+    return prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: `${name}-store`,
+        country: 'us',
+        name,
+        isCompetitor: primaryAppId !== null,
+        primaryAppId,
+        snapshots: {
+          create: Array.from({ length: 8 }, (_, index) => ({
+            title: name,
+            description: 'desc',
+            raw: {},
+            ratingAvg: 4.6,
+            ratingCount: 800,
+            version: '1.0.0',
+            capturedAt: new Date(now - (index + 1) * DAY_MS),
+          })),
+        },
+      },
+    });
+  };
+
+  const homeSnapshots = (appId: string) =>
+    prisma.appSnapshot.count({ where: { appId, country: null } });
 
   const faultOnce = async () => {
     await prisma.$executeRawUnsafe('CREATE SEQUENCE e2e_alert_fault');
@@ -354,6 +399,74 @@ describe('transition alert durability (e2e)', () => {
       });
       expect(stored.delistedAt).toBeNull();
       expect(await rows('app.delisted')).toEqual([]);
+    });
+  });
+
+  describe('rating drop', () => {
+    it('delivers an instant rating drop whose first delivery failed, without another state change', async () => {
+      instant();
+      const hook = await subscribe();
+      const rated = await seedRated();
+      registry.rating = DROPPED_RATING;
+      failFirstDelivery();
+
+      await refresh(rated.id);
+      await deliverPending();
+      await refresh(rated.id);
+      await deliverPending();
+
+      const jobs = await deliveriesTo(hook.id);
+      expect(jobs).toHaveLength(1);
+      expect(jobs[0].data.payload).toMatchObject({
+        event: 'rating.dropped',
+        dropTenths: 3,
+      });
+      expect(await drops()).toHaveLength(1);
+    });
+
+    it('keeps a batched rating drop whose dispatch after the snapshot never ran', async () => {
+      const rated = await seedRated();
+      registry.rating = DROPPED_RATING;
+      jest
+        .spyOn(app.get(AlertsDispatcher), 'dispatch')
+        .mockResolvedValueOnce(undefined);
+
+      await refresh(rated.id);
+      await refresh(rated.id);
+
+      const recorded = await drops();
+      expect(recorded).toHaveLength(1);
+      expect(recorded[0]).toMatchObject({ flushedAt: null, flushId: null });
+    });
+
+    it('never fails a capture whose rating drop alert write fails and still stores the snapshot', async () => {
+      const rated = await seedRated();
+      registry.rating = DROPPED_RATING;
+      const before = await homeSnapshots(rated.id);
+      await faultOnce();
+      try {
+        await expect(refresh(rated.id)).resolves.toMatchObject({
+          snapshotId: expect.any(String) as string,
+        });
+      } finally {
+        await clearFault();
+      }
+
+      expect(await homeSnapshots(rated.id)).toBe(before + 1);
+      expect(await drops()).toEqual([]);
+    });
+
+    it('raises no rating drop for a competitor or a market capture', async () => {
+      const own = await seedRated();
+      const rival = await seedRated({ name: 'Rival', primaryAppId: own.id });
+      await track(own.id, 'de', ['bewertung']);
+      registry.rating = DROPPED_RATING;
+
+      await refresh(rival.id);
+      await refresh(own.id, 'de');
+      await refresh(own.id, 'de');
+
+      expect(await drops()).toEqual([]);
     });
   });
 });
