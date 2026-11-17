@@ -3,7 +3,11 @@ import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
-import { ApiErrorEnvelope, StoreSearchResult } from '@asobeast/shared';
+import {
+  ApiErrorEnvelope,
+  RANK_DEPTH,
+  StoreSearchResult,
+} from '@asobeast/shared';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
@@ -28,11 +32,22 @@ const RESULTS: SearchItem[] = [
   { storeAppId: '987654321', title: 'Focus Plain' },
 ];
 
+const APPLE_LIKE: SearchItem[] = Array.from({ length: 200 }, (_, index) => ({
+  storeAppId: String(100000000 + index),
+  title: `Focus ${index + 1}`,
+}));
+
+const answeredLikeApple = (num: number): SearchItem[] => {
+  const kept = APPLE_LIKE.slice(0, Math.floor(num * 0.68));
+  return num < RANK_DEPTH ? [...kept].reverse() : kept;
+};
+
 type SearchCall = [store: Store, term: string, country: string, num: number];
 
 class SearchRegistry {
   calls: SearchCall[] = [];
   failure: Error | null = null;
+  appleLike = false;
 
   get(store: Store): StoreProvider {
     return {
@@ -41,7 +56,7 @@ class SearchRegistry {
         this.calls.push([store, term, country, num]);
         return this.failure
           ? Promise.reject(this.failure)
-          : Promise.resolve(RESULTS);
+          : Promise.resolve(this.appleLike ? answeredLikeApple(num) : RESULTS);
       },
     } as unknown as StoreProvider;
   }
@@ -82,6 +97,7 @@ describe('Store search (e2e)', () => {
   beforeEach(() => {
     registry.calls = [];
     registry.failure = null;
+    registry.appleLike = false;
   });
 
   afterAll(async () => {
@@ -113,25 +129,63 @@ describe('Store search (e2e)', () => {
         iconUrl: null,
       },
     ]);
-    expect(registry.calls).toEqual([[Store.APP_STORE, 'focus', 'us', 10]]);
+    expect(registry.calls).toEqual([
+      [Store.APP_STORE, 'focus', 'us', RANK_DEPTH],
+    ]);
   });
 
-  it('passes the limit through and caps it', async () => {
+  it('answers at most the limit and caps it', async () => {
     const res = await search(
       'store=APP_STORE&country=us&q=focus&limit=1',
     ).expect(200);
 
     expect(res.body as StoreSearchResult[]).toHaveLength(1);
-    expect(registry.calls).toEqual([[Store.APP_STORE, 'focus', 'us', 1]]);
+    expect(registry.calls).toEqual([
+      [Store.APP_STORE, 'focus', 'us', RANK_DEPTH],
+    ]);
     await search('store=APP_STORE&country=us&q=focus&limit=26').expect(400);
     await search('store=APP_STORE&country=us&q=focus&limit=0').expect(400);
     expect(registry.calls).toHaveLength(1);
   });
 
+  it('fills an app store search to its limit when the store answers short', async () => {
+    registry.appleLike = true;
+
+    const res = await search(
+      'store=APP_STORE&country=us&q=focus&limit=25',
+    ).expect(200);
+
+    expect(res.body as StoreSearchResult[]).toHaveLength(25);
+  });
+
+  it('lists app store apps in the order a rank check reads them', async () => {
+    registry.appleLike = true;
+
+    const res = await search(
+      'store=APP_STORE&country=us&q=focus&limit=5',
+    ).expect(200);
+
+    expect(
+      (res.body as StoreSearchResult[]).map(({ storeAppId }) => storeAppId),
+    ).toEqual(
+      answeredLikeApple(RANK_DEPTH)
+        .slice(0, 5)
+        .map(({ storeAppId }) => storeAppId),
+    );
+  });
+
+  it('asks google play for exactly the limit', async () => {
+    await search('store=GOOGLE_PLAY&country=us&q=focus&limit=25').expect(200);
+
+    expect(registry.calls).toEqual([[Store.GOOGLE_PLAY, 'focus', 'us', 25]]);
+  });
+
   it('trims the query', async () => {
     await search('store=APP_STORE&country=us&q=%20focus%20').expect(200);
 
-    expect(registry.calls).toEqual([[Store.APP_STORE, 'focus', 'us', 10]]);
+    expect(registry.calls).toEqual([
+      [Store.APP_STORE, 'focus', 'us', RANK_DEPTH],
+    ]);
   });
 
   it('refuses a bad store, a bad country and a bad query', async () => {

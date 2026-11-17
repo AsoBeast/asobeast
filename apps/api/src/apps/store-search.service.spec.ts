@@ -1,4 +1,4 @@
-import { Store, UnknownStorefrontError } from '@asobeast/shared';
+import { RANK_DEPTH, Store, UnknownStorefrontError } from '@asobeast/shared';
 import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem, StoreProvider } from '../store-providers/types';
@@ -82,8 +82,16 @@ describe('StoreSearchService', () => {
     const results = await serviceWith(search).search(QUERY, spend);
 
     expect(order).toEqual(['spend', 'search']);
-    expect(search).toHaveBeenCalledWith('focus', 'us', 2);
+    expect(search).toHaveBeenCalledWith('focus', 'us', RANK_DEPTH);
     expect(results.map((result) => result.storeAppId)).toEqual(['1', '2']);
+  });
+
+  it('asks google play for exactly the limit', async () => {
+    const search = jest.fn().mockResolvedValue(ITEMS);
+
+    await serviceWith(search).search({ ...QUERY, store: 'GOOGLE_PLAY' });
+
+    expect(search).toHaveBeenCalledWith('focus', 'us', 2);
   });
 
   it('takes any free endpoint rather than wait for one in the storefront', async () => {
