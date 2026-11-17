@@ -58,6 +58,23 @@ const GROUP_KIND: Record<ChangeFieldGroup, ChangeKind> = {
 export const changeKind = (field: ChangeField): ChangeKind =>
   GROUP_KIND[FIELD_GROUP[field]];
 
+const STORE_DECIDED_FIELDS: ReadonlySet<ChangeField> = new Set([
+  "featuring",
+  "editorsChoice",
+]);
+
+export interface AttributedFields {
+  yours: ChangeField[];
+  storeDecided: ChangeField[];
+}
+
+export const attributeFields = (
+  fields: readonly ChangeField[],
+): AttributedFields => ({
+  yours: fields.filter((field) => !STORE_DECIDED_FIELDS.has(field)),
+  storeDecided: fields.filter((field) => STORE_DECIDED_FIELDS.has(field)),
+});
+
 export const fieldGroupLabel = (group: ChangeFieldGroup): string =>
   CHANGE_FIELD_LABELS[group];
 

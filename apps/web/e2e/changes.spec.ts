@@ -564,7 +564,9 @@ test("what changed lists the store surfaces and filters by them", async ({
     activity(page).getByText("Events, featuring and badges"),
   ).toBeVisible();
   await expect(
-    activity(page).getByRole("button", { name: /you changed the featuring/ }),
+    activity(page).getByRole("button", {
+      name: /the store changed the featuring/,
+    }),
   ).toBeVisible();
 
   const events = breakdown(page).getByRole("button", {

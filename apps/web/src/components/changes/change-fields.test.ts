@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ChangeEventItem, ChangeField } from "@asobeast/shared";
 import {
+  attributeFields,
   changedFieldWords,
   changeKind,
   fieldCounts,
@@ -102,5 +103,23 @@ describe("changedFieldWords", () => {
       "in-app events and featuring",
     );
     expect(changedFieldWords(["editorsChoice"])).toBe("editors' choice");
+  });
+});
+
+describe("attributeFields", () => {
+  it("splits the featuring and the badge from the fields you edit", () => {
+    expect(
+      attributeFields(["title", "featuring", "editorsChoice", "inAppEvents"]),
+    ).toEqual({
+      yours: ["title", "inAppEvents"],
+      storeDecided: ["featuring", "editorsChoice"],
+    });
+  });
+
+  it("keeps every field yours when none is a store decision", () => {
+    expect(attributeFields(["title", "inAppEvents"])).toEqual({
+      yours: ["title", "inAppEvents"],
+      storeDecided: [],
+    });
   });
 });
