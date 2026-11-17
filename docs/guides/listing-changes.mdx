@@ -5,7 +5,7 @@ icon: git-compare
 keywords: ["changes","metadata changed","diff","competitor changes","change events","change impact"]
 ---
 
-The changes feed is the answer to "what did they change, and when". It records field level differences between consecutive snapshots for your own apps and for every competitor you track. For your own changes, the card above the feed also shows how your positions moved afterwards.
+The changes feed is the answer to "what did they change, and when". It records field level differences between the snapshots asobeast captures, for your own apps and for every competitor you track. For your own changes, the card above the feed also shows how your positions moved afterwards.
 
 ## Read the changes feed
 
@@ -44,6 +44,8 @@ The row keeps its content inside the change itself. A text change shows the prev
 | Featuring | The app entered or left a featured story | The heading and the title of every story the app entered or left. A story with neither reads Featured story |
 | Editors' Choice | The badge appeared on the page or went away | Whether the badge was added or removed, with the editorial notes the store attaches, when there are any |
 
+These kinds wait for a page they could read, so a capture whose page read failed in between cannot hide an event that started or ended during the gap: the diff runs against the newest earlier snapshot of the same listing whose page extract was read, not just the previous one. Until one snapshot has read an extract, nothing is recorded.
+
 No alert or webhook carries these three kinds.
 
 ## Measure the impact of a change
@@ -52,7 +54,7 @@ A change to your own listing is only worth repeating if it worked. The card at t
 
 ### What counts as one change
 
-Every edit asobeast detects on your listing on one UTC day is one change, whatever the fields: a new title and a new subtitle found on the same day are measured together, and the card lists both. Version, price, screenshots, screenshot images, screenshot captions, icon, What's New, in-app events, featuring and Editors' Choice count too. The icon counts only when the picture itself changes: the store can reshuffle the icon's address without changing it, so asobeast downloads both versions and compares the pixels before it records one, whether or not `SCREENSHOT_OCR` is on. On the App Store a new keyword field only takes effect with a new version, so a version change is where a keyword field edit lands. The dashboard tile counts the same way, once per app per UTC day, for your competitors as well.
+Every edit asobeast detects on your listing on one UTC day is one change, whatever the fields: a new title and a new subtitle found on the same day are measured together, and the card lists both. Version, price, screenshots, screenshot images, screenshot captions, icon, What's New and in-app events count too. Featuring and the Editors' Choice badge are the store's own decisions, so the card leaves them out rather than let them take the credit; in-app events are yours, so they stay. The icon counts only when the picture itself changes: the store can reshuffle the icon's address without changing it, so asobeast downloads both versions and compares the pixels before it records one, whether or not `SCREENSHOT_OCR` is on. On the App Store a new keyword field only takes effect with a new version, so a version change is where a keyword field edit lands. The dashboard tile counts every recorded change instead, once per app per UTC day, for your competitors as well.
 
 Competitor changes are never measured here. They stay in the feed below the card.
 
