@@ -642,3 +642,50 @@ test("keeps the skeleton and the loaded hero the same height", async ({
 
   expect(Math.abs(before.height - after.height)).toBeLessThanOrEqual(8);
 });
+
+test("answers featuring readiness beside the score", async ({ page }) => {
+  await page.goto("/apps/app-1/audit");
+
+  const readiness = page.getByRole("region", { name: "Featuring readiness" });
+  await expect(readiness.getByText("5 of 7 pass")).toBeVisible();
+  await expect(
+    readiness.getByText("The store page shows 2 preview videos."),
+  ).toBeVisible();
+  await expect(
+    readiness.getByText("The store page lists 1 in-app event."),
+  ).toBeVisible();
+  await expect(
+    readiness.getByText("The store page shows no accessibility statement."),
+  ).toBeVisible();
+  await expect(readiness.getByText("Not measured")).toBeVisible();
+  await expect(
+    readiness.getByRole("link", { name: "About in-app events" }),
+  ).toBeVisible();
+  await expect(
+    readiness.getByText("In 1 featured story · Editors' Choice badge"),
+  ).toBeVisible();
+  await expect(readiness.getByText("Page read Nov 14")).toBeVisible();
+});
+
+test("sends the readiness rows to where the audit scores them", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/audit");
+
+  await page
+    .getByRole("region", { name: "Featuring readiness" })
+    .getByRole("link", { name: "Where the audit scores it" })
+    .first()
+    .click();
+
+  await expect(page).toHaveURL(/#factors-conversion$/);
+  await expect(page.locator("#factors-conversion")).toBeInViewport();
+});
+
+test("hides featuring readiness on a Google Play app", async ({ page }) => {
+  await page.goto("/apps/app-gp/audit");
+
+  await expect(
+    page.getByRole("region", { name: "Featuring readiness" }),
+  ).toHaveCount(0);
+});
