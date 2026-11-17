@@ -11,11 +11,14 @@ export interface DayCount {
   low: number;
 }
 
-export interface SpikeInput {
-  day: string;
+export interface DayHistory {
   counts: ReadonlyMap<string, DayCount>;
-  insertedOnDay: number;
   oldestDay: string | null;
+}
+
+export interface SpikeInput extends DayHistory {
+  day: string;
+  insertedOnDay: number;
 }
 
 export interface Spike {
@@ -52,6 +55,35 @@ export function judgedDays(
     date && judged.has(utcDayOf(date)) ? [utcDayOf(date)] : [],
   );
   return [...new Set(days)].sort();
+}
+
+export const reviewsOn = <T extends { updatedAt?: Date }>(
+  reviews: readonly T[],
+  day: string,
+): T[] =>
+  reviews.filter(
+    (review) =>
+      review.updatedAt !== undefined && utcDayOf(review.updatedAt) === day,
+  );
+
+export function withPending(
+  history: DayHistory,
+  pending: readonly { score: number; updatedAt?: Date }[],
+  lowScoreMax: number,
+): DayHistory {
+  const counts = new Map(history.counts);
+  let oldestDay = history.oldestDay;
+  for (const review of pending) {
+    if (review.updatedAt === undefined) continue;
+    const day = utcDayOf(review.updatedAt);
+    const { count = 0, low = 0 } = counts.get(day) ?? {};
+    counts.set(day, {
+      count: count + 1,
+      low: low + (review.score <= lowScoreMax ? 1 : 0),
+    });
+    if (oldestDay === null || day < oldestDay) oldestDay = day;
+  }
+  return { counts, oldestDay };
 }
 
 function baselineDays(day: string, oldestDay: string): string[] {

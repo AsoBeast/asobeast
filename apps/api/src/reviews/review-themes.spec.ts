@@ -1,4 +1,5 @@
 import {
+  newestFirst,
   REVIEW_THEME_LIMITS,
   reviewThemes,
   themeIgnoredWords,
@@ -222,5 +223,72 @@ describe('themeIgnoredWords', () => {
     expect(themeIgnoredWords('Where Am I?').has('where')).toBe(true);
     expect(themeIgnoredWords(null).has('good')).toBe(true);
     expect(themeIgnoredWords(null).has('')).toBe(false);
+  });
+});
+
+describe('newestFirst', () => {
+  const dated = (id: string, iso: string | null) => ({
+    id,
+    reviewedAt: iso ? new Date(iso) : null,
+  });
+
+  it('merges pending and stored reviews newest first', () => {
+    const stored = [
+      dated('s2', '2026-11-02T10:00:00.000Z'),
+      dated('s1', '2026-11-01T10:00:00.000Z'),
+    ];
+    const pending = [dated('p1', '2026-11-01T20:00:00.000Z')];
+
+    expect(newestFirst(stored, pending, 10).map(({ id }) => id)).toEqual([
+      's2',
+      'p1',
+      's1',
+    ]);
+  });
+
+  it('keeps the stored order among reviews of the same instant and puts the pending one first', () => {
+    const instant = '2026-11-02T10:00:00.000Z';
+    const stored = [dated('s9', instant), dated('s3', instant)];
+
+    expect(
+      newestFirst(stored, [dated('p1', instant)], 10).map(({ id }) => id),
+    ).toEqual(['p1', 's9', 's3']);
+  });
+
+  it('puts undated reviews last, pending or stored', () => {
+    const stored = [dated('s1', null), dated('s2', '2026-11-01T10:00:00.000Z')];
+    const pending = [dated('p1', null)];
+
+    expect(newestFirst(stored, pending, 10).map(({ id }) => id)).toEqual([
+      's2',
+      'p1',
+      's1',
+    ]);
+  });
+
+  it('cuts the merged list to take', () => {
+    const stored = [
+      dated('s2', '2026-11-02T10:00:00.000Z'),
+      dated('s1', '2026-11-01T10:00:00.000Z'),
+    ];
+
+    expect(
+      newestFirst(stored, [dated('p1', '2026-11-03T10:00:00.000Z')], 2).map(
+        ({ id }) => id,
+      ),
+    ).toEqual(['p1', 's2']);
+  });
+
+  it('returns the stored reviews unchanged when nothing is pending', () => {
+    const stored = [
+      { id: 'a', reviewedAt: undefined },
+      { id: 'b', reviewedAt: undefined },
+      { id: 'c', reviewedAt: undefined },
+    ];
+
+    const merged = newestFirst(stored, [], 10);
+
+    expect(merged).toEqual(stored);
+    merged.forEach((review, index) => expect(review).toBe(stored[index]));
   });
 });

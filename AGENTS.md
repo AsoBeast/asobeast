@@ -194,7 +194,7 @@ Decompose by responsibility, not by syntactic kind: the target is fewer concepts
 - No chart fetched outside `ChartCaptureService.captureToday`, and no `CategoryRank` written from a provider call.
 - No console credential read outside `StoreConnectionService.openAppStore` and `openPlay`, no store report request outside the `store-connect` queue, and no estimate where Apple or Google report nothing.
 - No review reply written outside `ReviewRepliesService` and `ReviewReplyAssistant`, no review translation written outside `ReviewTranslator`, no review reply posted outside `ReviewReplyPoster` or without a person's click, and no AI draft or translation that bypasses `AiGateway`.
-- No `app.delisted`, `app.unlisted_market` or `rating.dropped` alert dispatched through `AlertsDispatcher` or written outside `AlertOutbox.record` in the transaction of its fact, and no instant enqueue of one outside `InstantAlertRelay`.
+- No `app.delisted`, `app.unlisted_market`, `rating.dropped` or `review.spike` alert dispatched through `AlertsDispatcher` or written outside `AlertOutbox.record` in the transaction of its fact, and no instant enqueue of one outside `InstantAlertRelay`.
 - No trial stamped on a workspace outside the Stripe projection, no trial offered outside `TrialOffers`, no read of `TrialClaim` outside `CrossTenantAccess`.
 - No sentence on the billing wall, the trial bar, the trust row or the FAQ outside `lib/plan-choice.ts`, `lib/order-summary.ts`, `lib/paywall-faq.ts` and `planRenewalTerms` in `@asobeast/shared`; no claim on the wall the documentation does not make; no Checkout Elements and no `payment_method_types` on a session while the instance sells through Managed Payments.
 - No comments inside code. DRY, KISS, clean code.

@@ -43,6 +43,23 @@ export interface ThemeReview extends MinableReview {
   score: number;
 }
 
+export interface DatedThemeReview extends ThemeReview {
+  reviewedAt: Date | null;
+}
+
+const timeOf = (review: { reviewedAt?: Date | null }): number =>
+  review.reviewedAt?.getTime() ?? 0;
+
+export function newestFirst<T extends { reviewedAt?: Date | null }>(
+  stored: readonly T[],
+  pending: readonly T[],
+  take: number,
+): T[] {
+  return [...pending, ...stored]
+    .sort((left, right) => timeOf(right) - timeOf(left))
+    .slice(0, take);
+}
+
 export interface ThemeOptions {
   languages: readonly string[];
   negativeScoreMax: number;

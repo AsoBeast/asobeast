@@ -40,8 +40,7 @@ import {
   reviewNegativePayload,
   reviewNewPayload,
 } from './review-alert-payloads';
-import { newReviewRow } from './new-review-row';
-import { ReviewSpikeAlerts } from './review-spike-alerts.service';
+import { ReviewInserts } from './review-inserts';
 import { reviewLanguage } from './review-language';
 import { toReviewTranslation, TranslationColumns } from './review-translation';
 import { StoredReview, storedReviewChanges } from './stored-review-changes';
@@ -68,7 +67,7 @@ export class ReviewsService {
     private readonly registry: StoreProviderRegistry,
     private readonly config: ConfigService<Env, true>,
     private readonly alerts: AlertsDispatcher,
-    private readonly spikes: ReviewSpikeAlerts,
+    private readonly inserts: ReviewInserts,
   ) {}
 
   async syncReviews(
@@ -83,6 +82,7 @@ export class ReviewsService {
         store: true,
         storeAppId: true,
         country: true,
+        iconUrl: true,
       },
     });
     if (!app) {
@@ -121,18 +121,12 @@ export class ReviewsService {
       (review) => !known.has(review.reviewId),
     );
     const checkedAt = app.store === Store.GOOGLE_PLAY ? new Date() : null;
-    const created =
-      absent.length === 0
-        ? []
-        : await this.prisma.review.createManyAndReturn({
-            data: absent.map((review) =>
-              newReviewRow(app.id, review, checkedAt),
-            ),
-            skipDuplicates: true,
-            select: { reviewId: true },
-          });
-    const createdIds = new Set(created.map((row) => row.reviewId));
-    const inserted = absent.filter((review) => createdIds.has(review.reviewId));
+    const inserted = await this.inserts.store({
+      app,
+      absent,
+      checkedAt,
+      judgesSpikes: !payload.backfill,
+    });
 
     if (checkedAt !== null && known.size > 0) {
       await this.recordUpdates(app.id, fetched, known, checkedAt);
@@ -142,7 +136,6 @@ export class ReviewsService {
       const alertApp = { id: app.id, name: app.name };
       await this.dispatchNegativeAlerts(alertApp, inserted);
       await this.dispatchNewReviewAlerts(alertApp, inserted);
-      if (inserted.length > 0) await this.spikes.raise(app, inserted);
     }
 
     return inserted;

@@ -20,7 +20,7 @@ In batched mode each subscribed channel receives the owned app report first and 
 
 Batched delivery is durable. A flush claims a fixed snapshot of pending rows before sending, so a queue or process failure leaves that claim resumable with the same rows, timestamp and delivery identifiers. Later facts wait for a later claim rather than joining the retry. Re runs and multi market checks deduplicate the same fact before it is claimed, with the latest values winning.
 
-A delisting, a lost market and a rating drop are recorded in the same database write as the change they report, so the alert exists exactly when the change does, in either mode. With `instant`, these three go out through a short sweep that runs every 15 seconds, not from the capture itself. If Redis is unreachable they wait and go out once it returns, and an alert that could not be sent for seven days is dropped. Every other event in `instant` mode is sent as the run detects it.
+A delisting, a lost market, a rating drop and a review spike are recorded in the same database write as the change they report, so the alert exists exactly when the change does, in either mode. With `instant`, these four go out through a short sweep that runs every 15 seconds, not from the capture itself. If Redis is unreachable they wait and go out once it returns, and an alert that could not be sent for seven days is dropped. Every other event in `instant` mode is sent as the run detects it.
 
 There is no separate alert schedule. `CRON_DAILY` controls when processing starts, while workload and retry duration decide when the report goes out.
 
@@ -189,7 +189,7 @@ When the snapshots show that a new version shipped in between, the alert names i
 | A steady app | 4 | 13 |
 | A busy game | 200 | 601 |
 
-A sync raises the spike only when the reviews it inserted carried the day over the line, so a later sync of the same day never raises it twice. The payload carries `count`, `median`, `threshold`, `lowShare` (the share at or below `ALERT_REVIEW_SCORE_MAX`), `lowScoreMax` and `topTheme`, the first theme of the day's reviews when one stands out.
+A sync raises the spike only when the reviews it inserted carried the day over the line, so a later sync of the same day never raises it twice. The spike is stored together with those reviews, so it is sent even when the first attempt fails or Redis is briefly unreachable, and two syncs running at once raise it once. The theme is read before the reviews are stored; when it cannot be read, the alert goes out with `topTheme` empty. The payload carries `count`, `median`, `threshold`, `lowShare` (the share at or below `ALERT_REVIEW_SCORE_MAX`), `lowScoreMax` and `topTheme`, the first theme of the day's reviews when one stands out.
 
 In batched delivery both are deduplicated per app and day and folded into the owned app report as **Rating drops** and **Review spikes** groups. Instant delivery sends each as it happens. Both appear in the delivery log like any event.
 
