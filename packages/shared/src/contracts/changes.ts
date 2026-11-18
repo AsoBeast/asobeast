@@ -68,7 +68,7 @@ export const STORE_CHANGE_FIELDS = [
 ] as const satisfies readonly ChangeField[];
 
 export function isStoreField(field: ChangeField): boolean {
-  return (STORE_CHANGE_FIELDS as readonly ChangeField[]).includes(field);
+  return STORE_CHANGE_FIELDS.some((value) => value === field);
 }
 
 export interface ScreenshotRef {
