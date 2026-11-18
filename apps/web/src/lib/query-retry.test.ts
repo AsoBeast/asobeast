@@ -5,8 +5,8 @@ import {
   busyRetry,
   retryDelayFor,
   shouldRetry,
+  noteWhileBusy,
   tryAgainIfBusy,
-  waitingOutBusyServer,
 } from "./query-retry";
 
 function apiError(statusCode: number, retryAfterSeconds?: number): ApiError {
@@ -91,17 +91,25 @@ describe("busyRetry", () => {
   });
 });
 
-describe("waitingOutBusyServer", () => {
-  it("says a mutation is waiting out a busy server only between tries", () => {
-    expect(waitingOutBusyServer({ isPending: true, failureCount: 1 })).toBe(
-      true,
+describe("noteWhileBusy", () => {
+  const BUSY = "The server is busy. Trying again in a few seconds.";
+
+  it("says the server is busy only while a mutation waits between tries", () => {
+    expect(noteWhileBusy({ isPending: true, failureCount: 1 }, null)).toBe(
+      BUSY,
     );
-    expect(waitingOutBusyServer({ isPending: true, failureCount: 0 })).toBe(
-      false,
+    expect(noteWhileBusy({ isPending: true, failureCount: 0 }, null)).toBe(
+      null,
     );
-    expect(waitingOutBusyServer({ isPending: false, failureCount: 1 })).toBe(
-      false,
+    expect(noteWhileBusy({ isPending: false, failureCount: 1 }, null)).toBe(
+      null,
     );
+  });
+
+  it("keeps the form's own note when nothing waits", () => {
+    expect(
+      noteWhileBusy({ isPending: false, failureCount: 0 }, "Not supported"),
+    ).toBe("Not supported");
   });
 });
 

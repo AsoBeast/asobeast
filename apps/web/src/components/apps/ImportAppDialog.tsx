@@ -30,11 +30,7 @@ import {
   invalidateWorkspaceChecklist,
   portfolioKey,
 } from "@/lib/queries";
-import {
-  BUSY_RETRY_NOTE,
-  busyRetry,
-  waitingOutBusyServer,
-} from "@/lib/query-retry";
+import { busyRetry, noteWhileBusy } from "@/lib/query-retry";
 import { useSingleFlight } from "@/lib/single-flight";
 import { classifyInput, isStoreAddress } from "./store-search";
 import { StoreSearchField } from "./StoreSearchField";
@@ -223,9 +219,7 @@ export function ImportAppDialog({
               onPick={pick}
               search={search}
               error={outcome.error}
-              note={
-                waitingOutBusyServer(mutation) ? BUSY_RETRY_NOTE : outcome.note
-              }
+              note={noteWhileBusy(mutation, outcome.note)}
               autoFocus
             />
 

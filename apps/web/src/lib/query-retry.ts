@@ -28,8 +28,7 @@ export function retryDelayFor(failureCount: number, error: unknown): number {
 const BUSY_RETRIES = 1;
 const BUSY_STATUS = 503;
 
-export const BUSY_RETRY_NOTE =
-  "The server is busy. Trying again in a few seconds.";
+const BUSY_RETRY_NOTE = "The server is busy. Trying again in a few seconds.";
 
 function busyServer(error: unknown): boolean {
   return (
@@ -45,11 +44,12 @@ export const busyRetry = {
   retryDelay: retryDelayFor,
 } as const;
 
-export function waitingOutBusyServer(mutation: {
-  isPending: boolean;
-  failureCount: number;
-}): boolean {
-  return mutation.isPending && mutation.failureCount > 0;
+export function noteWhileBusy(
+  mutation: { isPending: boolean; failureCount: number },
+  note: string | null,
+): string | null {
+  const waitingOutBusyServer = mutation.isPending && mutation.failureCount > 0;
+  return waitingOutBusyServer ? BUSY_RETRY_NOTE : note;
 }
 
 export async function tryAgainIfBusy<T>(request: () => Promise<T>): Promise<T> {

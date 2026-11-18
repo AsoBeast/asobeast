@@ -17,11 +17,7 @@ import { Button } from "@/components/ui/button";
 import { addCompetitor } from "@/lib/api";
 import { storeLabel } from "@/lib/format";
 import { appDetailOptions, invalidateCompetitorMutation } from "@/lib/queries";
-import {
-  BUSY_RETRY_NOTE,
-  busyRetry,
-  waitingOutBusyServer,
-} from "@/lib/query-retry";
+import { busyRetry, noteWhileBusy } from "@/lib/query-retry";
 import { useSingleFlight } from "@/lib/single-flight";
 
 const STORE_URL_EXAMPLES: Record<Store, string> = {
@@ -97,7 +93,7 @@ export function AddCompetitorForm({
         onPick={pick}
         search={search}
         error={outcome.error}
-        note={waitingOutBusyServer(mutation) ? BUSY_RETRY_NOTE : outcome.note}
+        note={noteWhileBusy(mutation, outcome.note)}
       >
         <Button
           type="submit"
