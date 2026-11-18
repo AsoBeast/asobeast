@@ -1,0 +1,50 @@
+---
+title: Claude Code skills
+sidebarTitle: Skills
+description: "Install the asobeast plugin for Claude Code: forty ASO and app marketing skills that answer with your own asobeast data through the MCP server."
+icon: book-open
+keywords: ["Claude Code","plugin","skills","marketplace","ASO audit","keyword research","competitor tracking"]
+---
+
+The asobeast plugin adds forty skills to Claude Code. Each one is a method for one ASO or app marketing job, such as an audit, keyword research, metadata writing, competitor tracking, top charts, localization, Apple Search Ads or a launch plan. The skills read your apps, keywords, competitors and charts through the MCP server, so the answers use your numbers instead of generic advice.
+
+## Install the plugin
+
+<Steps>
+  <Step title="Connect the MCP server">
+    Follow [Connect an agent](/mcp/setup) for Claude Code. A read only token is enough for every skill.
+  </Step>
+  <Step title="Add the marketplace and install">
+    Run in a terminal.
+    ```bash
+    claude plugin marketplace add AsoBeast/asobeast
+    claude plugin install asobeast@asobeast
+    ```
+  </Step>
+  <Step title="Ask">
+    Ask for what you need, for example "run an ASO audit of my app in Germany" or "what did my competitors change this week". When you are not sure which skill fits, start with `/asobeast:aso-router`.
+  </Step>
+</Steps>
+
+## What the skills read
+
+Ten skills fetch data. The other thirty are methods that work on what you tell them and on what the first ten found.
+
+| Skill | Reads |
+| --- | --- |
+| `aso-audit` | `app_audit`, `metadata_audit`, `app_localizations`, `list_keywords`, `keyword_breakdown`, `competitor_analysis`, `category_ranks`, `ratings_history`, `list_reviews`, `app_actions` |
+| `competitor-tracking` | `alert_events`, `competitor_suggestions`, `keyword_comparison`, `competitor_analysis`, `serp_movers`, `serp_snapshot`, `top_chart` |
+| `market-movers` and `market-pulse` | `top_chart`, `chart_genres`, `category_ranks`, `serp_movers`, `alert_events`, `portfolio` |
+| `android-aso`, `apple-search-ads` and `seasonal-aso` | `keyword_suggestions`, `inspect_keyword`, `list_keywords`, `keyword_discoveries` |
+| `asc-metrics` | `change_impact` for the store funnel; sales come from an App Store Connect export you provide |
+| `category-positioning` and `app-icon-optimization` | `top_chart`, `category_ranks` |
+
+The audit skill explains the asobeast audit rather than scoring the listing again, so its numbers match the [ASO audit](/guides/aso-audit) page. Skills that track keywords or add competitors need a token with the write scope; with a read only token they propose the change instead.
+
+## What they cannot see
+
+asobeast reports positions, scores and the store funnel. It has no download or revenue estimates, no featured apps and no new release feed, so the skills that mention those ask you for the figures or leave the section out.
+
+## Credits
+
+The skills are adapted from [ASO Skills](https://github.com/appeeky/aso-skills) by Appeeky under the MIT License. The plugin folder keeps that license and a notice of the changes.

@@ -268,7 +268,8 @@
               "mcp/introduction",
               "mcp/setup",
               "mcp/tools",
-              "mcp/recipes"
+              "mcp/recipes",
+              "mcp/skills"
             ]
           }
         ]
