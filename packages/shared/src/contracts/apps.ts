@@ -1,4 +1,5 @@
 import { Store } from '../index';
+import type { ChangeDetail } from './changes';
 
 export interface AppSnapshotSummary {
   id: string;
@@ -97,6 +98,7 @@ export interface SnapshotChange {
   before: string | number | null;
   after: string | number | null;
   localization?: string;
+  detail?: ChangeDetail | null;
 }
 
 export interface SnapshotDiffResult {

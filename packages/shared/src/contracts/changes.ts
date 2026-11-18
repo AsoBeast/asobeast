@@ -61,6 +61,16 @@ export function isChangeField(value: string): value is ChangeField {
   return CHANGE_FIELDS.some((field) => field === value);
 }
 
+export const STORE_CHANGE_FIELDS = [
+  'inAppEvents',
+  'featuring',
+  'editorsChoice',
+] as const satisfies readonly ChangeField[];
+
+export function isStoreField(field: ChangeField): boolean {
+  return STORE_CHANGE_FIELDS.some((value) => value === field);
+}
+
 export interface ScreenshotRef {
   position: number;
   url: string;

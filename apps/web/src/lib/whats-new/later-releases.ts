@@ -100,6 +100,11 @@ export const LATER_RELEASES: readonly Release[] = [
       },
       {
         kind: "new",
+        title: "Featuring readiness on the audit page",
+        text: "The audit page for an App Store app now carries a featuring readiness checklist beside the score: whether the store page shows a preview video and lists an in-app event, next to what the audit already measures about ratings, updates, localizations and screenshots. A row the data cannot answer reads Not measured, and the footer shows how many featured stories and whether the Editors' Choice badge is on the page, together with the day that page was read.",
+      },
+      {
+        kind: "new",
         title: "Say why you leave, if you like",
         text: "Deleting a workspace now asks, without insisting, why you are leaving, from a short list. Prefer not to say is the default. Once the workspace is erased, only the answer and a few counts are kept, with nothing that names you or the workspace.",
       },

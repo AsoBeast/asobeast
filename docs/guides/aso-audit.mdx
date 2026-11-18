@@ -88,6 +88,16 @@ Each check reads one kind of data: the store listing, your tracked keywords, you
 
 Caption localization compares captions with the storefront's language only when your app declares that language, so an English only app in a non English storefront is not penalised.
 
+## Featuring readiness
+
+App Store featuring editors look at more than the words on the listing, so for an App Store app the audit page carries a Featuring readiness panel beside the score. The panel is a checklist, never a score: it does not move the audit score and carries no grade of its own.
+
+Whether the store page lists an in-app event is read from the public page itself. The preview video row reuses the answer the preview video factor scores with, so the panel and the factor share one answer, and four more rows reuse what the audit already measured the same way: the average rating, the update recency, the declared localizations and the screenshot count. The Accessibility row stays Not measured until the page read can tell the accessibility features the app declares from the sentence Apple shows when none are declared. Each row answers Pass, Needs work, Fail or Not measured. A row the data answers carries one line of evidence and a link, to Apple's guidance for the events row and to the factor that scores it for the rest. A reused row whose check is unanswered keeps the check's own line and the same link beside Not measured, and a row with nothing behind it reads Not measured alone.
+
+The in-app events row reads the newest home snapshot that carries a page extract. When the newest snapshot could not read the page, the panel answers from the last one that did, its footer names the day that page was read, and events that have ended since that read are not counted. A page that was never read never fails a row: the row answers Not measured, and the footer says so.
+
+The footer also reports what the page advertises: the featured stories the app appears in and whether it carries the Editors' Choice badge. That line is informational, and nothing in the score reads it. Google Play apps have no readiness panel, because the page extract is an App Store read.
+
 ## Follow the plan
 
 Every check that warns or fails carries a title, the evidence behind it and a fix. The plan ranks them in three buckets.
@@ -127,7 +137,8 @@ Public store data leaves some things out. The audit lists them on every run inst
 | Limitation | Why |
 | --- | --- |
 | Promotional text | Not in the data asobeast reads, and not indexed. |
-| In-app events | Not visible to asobeast, although events can appear in search. |
+| Past in-app events and their performance | The page shows the events that are live or upcoming; events that have ended and how each event performed are App Store Connect only. |
+| Declared accessibility features | The page read cannot yet tell the features a developer declares from the sentence Apple shows when none are declared. |
 | Custom product pages | Not visible to asobeast, although pages with assigned keywords appear in organic search. |
 | Replies to reviews | The App Store review feed carries no developer replies. |
 | Rating prompts | Happen inside your app. |

@@ -23,6 +23,11 @@ import {
 import { testDb } from './helpers/test-db';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
 
+const positionShot = (shot: number, index: number) => ({
+  position: index + 1,
+  url: appleShot(shot),
+});
+
 describe('Screenshot change events (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaClient;
@@ -97,6 +102,14 @@ describe('Screenshot change events (e2e)', () => {
         field: 'screenshotImages',
         before: '3 screenshots',
         after: '3 screenshots, 1 replaced',
+        detail: {
+          kind: 'images',
+          before: [1, 2, 3].map(positionShot),
+          after: [1, 9, 3].map(positionShot),
+          added: [2],
+          removed: [2],
+          reordered: false,
+        },
       },
     ]);
 
@@ -119,6 +132,14 @@ describe('Screenshot change events (e2e)', () => {
         field: 'screenshotImages',
         before: '3 screenshots',
         after: '3 screenshots, reordered',
+        detail: {
+          kind: 'images',
+          before: [1, 2, 3].map(positionShot),
+          after: [3, 2, 1].map(positionShot),
+          added: [],
+          removed: [],
+          reordered: true,
+        },
       },
     ]);
 
@@ -136,7 +157,19 @@ describe('Screenshot change events (e2e)', () => {
     registry.screenshots = [1, 2, 3, 4].map(appleShot);
 
     await expect(refreshedChanges(appId)).resolves.toEqual([
-      { field: 'screenshots', before: '3', after: '4' },
+      {
+        field: 'screenshots',
+        before: '3',
+        after: '4',
+        detail: {
+          kind: 'images',
+          before: [1, 2, 3].map(positionShot),
+          after: [1, 2, 3, 4].map(positionShot),
+          added: [4],
+          removed: [],
+          reordered: false,
+        },
+      },
     ]);
 
     const events = await screenshotEvents(appId);

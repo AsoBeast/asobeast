@@ -11,7 +11,7 @@ test("the refresh dialog lists screenshot and icon changes", async ({
 
   const dialog = page.getByRole("dialog", { name: "Snapshot refreshed" });
   await expect(dialog).toContainText(
-    "2 fields changed since the last snapshot.",
+    "3 fields changed since the last snapshot.",
   );
   await expect(
     dialog.getByRole("row", {
@@ -22,6 +22,22 @@ test("the refresh dialog lists screenshot and icon changes", async ({
     dialog.getByRole("row", { name: "Icon — Icon updated" }),
   ).toBeVisible();
   await expect(dialog).not.toContainText("mzstatic");
+  await expect(dialog).not.toContainText("No changes detected");
+});
+
+test("the refresh dialog summarizes a new in-app event", async ({ page }) => {
+  await page.goto("/apps/app-2/metadata");
+  await page
+    .getByRole("banner")
+    .getByRole("button", { name: "Refresh", exact: true })
+    .click();
+
+  const dialog = page.getByRole("dialog", { name: "Snapshot refreshed" });
+  await expect(
+    dialog.getByRole("row", {
+      name: "In-app events — Event added: Double XP weekend",
+    }),
+  ).toBeVisible();
   await expect(dialog).not.toContainText("No changes detected");
 });
 

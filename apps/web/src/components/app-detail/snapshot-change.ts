@@ -1,11 +1,13 @@
 import {
   CHANGE_FIELD_LABELS,
   isChangeField,
+  isStoreField,
   type SnapshotChange,
 } from "@asobeast/shared";
 import { formatNumber, formatPrice, formatRating } from "@/lib/format";
 import { localizedLabel } from "@/lib/localizations";
 import { releaseNotesInline } from "@/components/changes/release-notes";
+import { storeChangeSummary } from "@/components/changes/store-change";
 
 type ChangeValue = SnapshotChange["before"];
 
@@ -87,7 +89,7 @@ function numberCells(
 }
 
 export function snapshotChangeCells(
-  { field, before, after }: SnapshotChange,
+  { field, before, after, detail }: SnapshotChange,
   currency?: string | null,
 ): {
   before: string;
@@ -96,6 +98,10 @@ export function snapshotChangeCells(
   if (field === "icon") return { before: EMPTY, after: "Icon updated" };
   if (field === "whatsNew")
     return { before: notes(before), after: notes(after) };
+  if (isChangeField(field) && isStoreField(field)) {
+    const summary = storeChangeSummary({ field, detail });
+    return { before: EMPTY, after: summary === "" ? EMPTY : summary };
+  }
   if (TEXT_LENGTH_FIELDS.has(field)) {
     return { before: length(before), after: length(after) };
   }

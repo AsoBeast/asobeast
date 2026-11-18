@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Store } from '@prisma/client';
+import { AppSnapshot, Prisma, Store } from '@prisma/client';
 import { tokenize, TrackedKeywordItem } from '@asobeast/shared';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { Env } from '../config/env';
@@ -8,6 +8,7 @@ import { KeywordFieldService } from '../keywords/keyword-field.service';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScreenshotsService } from '../screenshots/screenshots.service';
+import { pageExtractFacts } from '../store-providers/page-extract-facts';
 import { extractRawFacts } from '../store-providers/raw-facts';
 import { effectiveRun } from './audit-run-state';
 import { AuditAiService } from './audit-ai.service';
@@ -16,6 +17,7 @@ import {
   AuditCompetitor,
   AuditContext,
   AuditCreativeState,
+  AuditExtract,
   AuditKeyword,
   AuditVisibility,
   DAY_MS,
@@ -53,6 +55,19 @@ const iconCompetitors = (
       iconUrl === null ? [] : [{ appId: id, iconUrl }],
     )
     .slice(0, MAX_COMPETITOR_ICONS);
+
+const extractOf = (
+  snapshot: AppSnapshot | null,
+  fallback: boolean,
+): AuditExtract | null => {
+  if (snapshot === null) {
+    return null;
+  }
+  const facts = pageExtractFacts(snapshot.raw);
+  return facts === null
+    ? null
+    : { facts, asOf: snapshot.capturedAt.toISOString().slice(0, 10), fallback };
+};
 
 @Injectable()
 export class AuditContextLoader {
@@ -185,6 +200,30 @@ export class AuditContextLoader {
     };
   }
 
+  private async extractSource(
+    store: Store,
+    appId: string,
+    latest: AppSnapshot | null,
+  ): Promise<{ snapshot: AppSnapshot | null; fallback: boolean }> {
+    if (store !== Store.APP_STORE || latest === null) {
+      return { snapshot: null, fallback: false };
+    }
+    if (pageExtractFacts(latest.raw) !== null) {
+      return { snapshot: latest, fallback: false };
+    }
+    return {
+      snapshot: await this.prisma.appSnapshot.findFirst({
+        where: {
+          appId,
+          ...HOME_LISTING,
+          raw: { path: ['pageExtract'], not: Prisma.AnyNull },
+        },
+        orderBy: NEWEST_FIRST,
+      }),
+      fallback: true,
+    };
+  }
+
   async load(appId: string): Promise<AuditContext> {
     const app = await this.app(appId);
     const reviewCutoff = new Date(Date.now() - REVIEW_WINDOW_DAYS * DAY_MS);
@@ -248,6 +287,12 @@ export class AuditContextLoader {
       (item) => item.active && item.country === app.country,
     );
     const facts = extractRawFacts(app.store, latest?.raw);
+    const { snapshot: extractSource, fallback } = await this.extractSource(
+      app.store,
+      appId,
+      latest,
+    );
+    const extract = extractOf(extractSource, fallback);
     const mapped = competitors.map(toAuditCompetitor);
     const creative = this.creativeState(
       {
@@ -275,6 +320,7 @@ export class AuditContextLoader {
       storeUpdatedAt: latest?.storeUpdatedAt ?? null,
       now: new Date(),
       rawFacts: facts,
+      extract,
       keywords: active.map(toAuditKeyword),
       visibility,
       comparison,

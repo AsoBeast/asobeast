@@ -35,6 +35,7 @@ describe('pageExtractFacts', () => {
     });
 
     expect(facts).toEqual({
+      previewVideoUrls: null,
       appEvents: [
         {
           appEventId: 'e1',
@@ -55,7 +56,42 @@ describe('pageExtractFacts', () => {
       ],
       featuredStories: [],
       editorsChoice: null,
+      accessibilityStatement: null,
     });
+  });
+
+  it('keeps the null and empty states of the preview videos and the statement', () => {
+    const unread = pageExtractFacts({
+      pageExtract: { appEvents: [], featuredStories: [], editorsChoice: null },
+    });
+    expect(unread?.previewVideoUrls).toBeNull();
+    expect(unread?.accessibilityStatement).toBeNull();
+
+    const read = pageExtractFacts({
+      pageExtract: {
+        previewVideoUrls: ['https://video.example.com/a.mp4', 7, null],
+        appEvents: [],
+        featuredStories: [],
+        editorsChoice: null,
+        accessibilityStatement: '  VoiceOver labels on every screen.  ',
+      },
+    });
+    expect(read?.previewVideoUrls).toEqual(['https://video.example.com/a.mp4']);
+    expect(read?.accessibilityStatement).toBe(
+      '  VoiceOver labels on every screen.  ',
+    );
+
+    const empty = pageExtractFacts({
+      pageExtract: {
+        previewVideoUrls: [],
+        appEvents: [],
+        featuredStories: [],
+        editorsChoice: null,
+        accessibilityStatement: '   ',
+      },
+    });
+    expect(empty?.previewVideoUrls).toEqual([]);
+    expect(empty?.accessibilityStatement).toBeNull();
   });
 
   it('drops a stored event date that is not a date', () => {

@@ -7,9 +7,11 @@ import { isoDateOrNull } from '@asobeast/shared';
 import { asRecord } from './record';
 
 export interface PageExtractFacts {
+  previewVideoUrls: string[] | null;
   appEvents: PageAppEvent[];
   featuredStories: PageFeaturedStory[];
   editorsChoice: PageEditorsChoice | null;
+  accessibilityStatement: string | null;
 }
 
 const stringOrNull = (value: unknown): string | null =>
@@ -19,6 +21,11 @@ const nonEmpty = (value: unknown): string | null =>
   typeof value === 'string' && value.trim().length > 0 ? value : null;
 
 const list = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
+
+const stringListOrNull = (value: unknown): string[] | null =>
+  Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : null;
 
 const eventOf = (item: unknown): PageAppEvent | null => {
   const record = asRecord(item);
@@ -76,8 +83,10 @@ export function pageExtractFacts(raw: unknown): PageExtractFacts | null {
     return null;
   }
   return {
+    previewVideoUrls: stringListOrNull(extract.previewVideoUrls),
     appEvents: narrowed(list(extract.appEvents), eventOf),
     featuredStories: narrowed(list(extract.featuredStories), storyOf),
     editorsChoice: editorsChoiceOf(extract.editorsChoice),
+    accessibilityStatement: nonEmpty(extract.accessibilityStatement),
   };
 }

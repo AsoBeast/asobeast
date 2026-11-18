@@ -6406,6 +6406,79 @@ export const APP_AUDIT: AppAuditResult = {
     ]),
   ],
   limitations: APP_STORE_LIMITATIONS,
+  readiness: {
+    items: [
+      {
+        id: "preview-video",
+        label: "Preview video",
+        status: "pass",
+        detail: "The store page shows 2 preview videos.",
+        link: {
+          href: "#factors-conversion",
+          label: "Where the audit scores it",
+        },
+      },
+      {
+        id: "in-app-events",
+        label: "In-app events",
+        status: "pass",
+        detail: "The store page lists 1 in-app event.",
+        link: {
+          href: "https://developer.apple.com/app-store/in-app-events/",
+          label: "About in-app events",
+        },
+      },
+      {
+        id: "accessibility",
+        label: "Accessibility",
+        status: "unmeasurable",
+        detail: "Declared accessibility features are not read yet.",
+        link: null,
+      },
+      {
+        id: "rating",
+        label: "Average rating",
+        status: "pass",
+        detail: "Average rating is 4.60.",
+        link: {
+          href: "#factors-conversion",
+          label: "Where the audit scores it",
+        },
+      },
+      {
+        id: "update-recency",
+        label: "Update recency",
+        status: "pass",
+        detail: "The last update was 12 days ago.",
+        link: {
+          href: "#factors-conversion",
+          label: "Where the audit scores it",
+        },
+      },
+      {
+        id: "localizations",
+        label: "Localizations",
+        status: "unmeasurable",
+        detail: null,
+        link: {
+          href: "#factors-conversion",
+          label: "Where the audit scores it",
+        },
+      },
+      {
+        id: "screenshots",
+        label: "Screenshots",
+        status: "pass",
+        detail: "8 of 8 recommended screenshots used.",
+        link: {
+          href: "#factors-conversion",
+          label: "Where the audit scores it",
+        },
+      },
+    ],
+    editorial: { stories: 1, editorsChoiceBadge: true },
+    extractAsOf: "2026-11-14",
+  },
   unlocks: [
     {
       kind: "keyword-field",
@@ -6522,6 +6595,7 @@ export const PLAY_AUDIT: AppAuditResult = {
   appId: "app-gp",
   store: "GOOGLE_PLAY",
   totalWeight: 105,
+  readiness: undefined,
   limitations: PLAY_LIMITATIONS,
   recommendations: {
     quickWins: [

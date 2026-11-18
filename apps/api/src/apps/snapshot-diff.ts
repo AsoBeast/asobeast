@@ -1,4 +1,4 @@
-import { SnapshotChange } from '@asobeast/shared';
+import { ChangeDetail, SnapshotChange } from '@asobeast/shared';
 
 export interface DiffableSnapshot {
   title: string;
@@ -15,6 +15,7 @@ interface RecordedChange {
   field: string;
   before: string | null;
   after: string | null;
+  detail?: ChangeDetail;
 }
 
 const TEXT_FIELDS = ['title', 'subtitle', 'summary', 'description'] as const;
@@ -66,7 +67,12 @@ export function withRecordedChanges(
     ...diff,
     ...recorded
       .filter((change) => !reported.has(change.field))
-      .map(({ field, before, after }) => ({ field, before, after })),
+      .map(({ field, before, after, detail }) => ({
+        field,
+        before,
+        after,
+        ...(detail === undefined ? {} : { detail }),
+      })),
   ];
 }
 

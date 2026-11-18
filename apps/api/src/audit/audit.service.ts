@@ -8,13 +8,14 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditAiService } from './audit-ai.service';
 import { AuditContextLoader } from './audit-context.loader';
-import { DAY_MS } from './audit-scoring';
+import { AuditContext, DAY_MS } from './audit-scoring';
 import { AuditHistoryQueryDto } from './dto/audit-history-query.dto';
 import {
   CREATIVE_PROMPT_VERSION,
   creativeFingerprint,
   toStoredCreative,
 } from './creative/creative-observations';
+import { buildReadiness } from './readiness';
 import { AUDIT_RUBRIC_VERSION, computeAudit } from './rubric';
 
 const DEFAULT_HISTORY_DAYS = 90;
@@ -34,7 +35,8 @@ export class AuditService {
   ) {}
 
   async audit(appId: string): Promise<AppAuditResult> {
-    return computeAudit(await this.loader.load(appId));
+    const context = await this.loader.load(appId);
+    return withReadiness(computeAudit(context), context);
   }
 
   async runAi(appId: string, userId: string): Promise<AppAuditResult> {
@@ -160,6 +162,18 @@ export class AuditService {
 
 const utcDate = (now = new Date()): Date =>
   new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+
+const withReadiness = (
+  result: AppAuditResult,
+  context: AuditContext,
+): AppAuditResult => {
+  const readiness = buildReadiness({
+    store: context.store,
+    factors: result.factors,
+    extract: context.extract,
+  });
+  return readiness === null ? result : { ...result, readiness };
+};
 
 const toSlimFactors = (result: AppAuditResult): Prisma.InputJsonValue =>
   result.factors.map((factor) => ({

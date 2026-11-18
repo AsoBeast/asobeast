@@ -167,4 +167,54 @@ describe("snapshotChangeCells", () => {
       }),
     ).toEqual({ before: "8 screenshots", after: "8 screenshots, reordered" });
   });
+
+  it("summarizes a store decided change from its detail", () => {
+    expect(
+      snapshotChangeCells({
+        field: "inAppEvents",
+        before: null,
+        after: null,
+        detail: {
+          kind: "events",
+          added: [
+            {
+              appEventId: "e1",
+              title: "Double XP weekend",
+              kind: null,
+              badge: null,
+              startsAt: null,
+              endsAt: null,
+            },
+          ],
+          removed: [],
+        },
+      }),
+    ).toEqual({ before: "—", after: "Event added: Double XP weekend" });
+    expect(
+      snapshotChangeCells({
+        field: "editorsChoice",
+        before: null,
+        after: null,
+        detail: { kind: "editorsChoice", showsBadge: true, notes: null },
+      }),
+    ).toEqual({ before: "—", after: "Editors' Choice badge added" });
+    expect(
+      snapshotChangeCells({
+        field: "featuring",
+        before: null,
+        after: null,
+        detail: {
+          kind: "featuring",
+          added: [],
+          removed: [{ storyId: "s1", heading: "Today", title: null }],
+        },
+      }),
+    ).toEqual({ before: "—", after: "Featured story removed: Today" });
+  });
+
+  it("leaves a store decided change without a detail as a dash", () => {
+    expect(
+      snapshotChangeCells({ field: "inAppEvents", before: null, after: null }),
+    ).toEqual({ before: "—", after: "—" });
+  });
 });

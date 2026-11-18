@@ -14,6 +14,7 @@ import {
 } from '@asobeast/shared';
 import { clamp } from '../scoring/formulas';
 import { round1 } from './audit-engine';
+import { PageExtractFacts } from '../store-providers/page-extract-facts';
 import { RawAppFacts } from '../store-providers/raw-facts';
 import {
   AnalyzedMedia,
@@ -70,6 +71,12 @@ export interface AuditCreativeState {
   stale: boolean;
 }
 
+export interface AuditExtract {
+  facts: PageExtractFacts;
+  asOf: string;
+  fallback: boolean;
+}
+
 export interface AuditContext {
   appId: string;
   store: Store;
@@ -84,6 +91,7 @@ export interface AuditContext {
   storeUpdatedAt: Date | null;
   now: Date;
   rawFacts: RawAppFacts;
+  extract: AuditExtract | null;
   keywords: AuditKeyword[];
   visibility: AuditVisibility;
   comparison: KeywordComparison;
