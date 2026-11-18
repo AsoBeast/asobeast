@@ -210,7 +210,7 @@ describe('AllExceptionsFilter', () => {
     expect(status).toBe(HttpStatus.BAD_GATEWAY);
     expect(envelope.error).toBe('Bad Gateway');
     expect(envelope.message).toBe(
-      'The App Store did not answer. Try again in a few minutes.',
+      'The App Store could not be reached. Try again in a few minutes.',
     );
     expect(envelope.message).not.toContain('fetch failed');
   });
@@ -221,8 +221,37 @@ describe('AllExceptionsFilter', () => {
     );
 
     expect(envelope.message).toBe(
-      'Google Play did not answer. Try again in a few minutes.',
+      'Google Play could not be reached. Try again in a few minutes.',
     );
+  });
+
+  it.each([
+    [
+      'TimeoutError: The operation was aborted due to timeout',
+      'Google Play took longer than 20 seconds to answer. Try again in a few minutes.',
+    ],
+    [
+      'Request failed with status 429',
+      'Google Play turned the request away for now. Try again in a few minutes.',
+    ],
+    [
+      'RequestError: fetch failed',
+      'Google Play could not be reached. Try again in a few minutes.',
+    ],
+    [
+      'ParseError: title selector not found',
+      'Google Play answered something asobeast could not read. Try again later.',
+    ],
+  ])('answers each store failure reason with 502 (%s)', (cause, sentence) => {
+    const { status, envelope, headers } = capture(
+      new StoreRequestError(Store.GOOGLE_PLAY, 'getApp', cause),
+    );
+
+    expect(status).toBe(HttpStatus.BAD_GATEWAY);
+    expect(envelope.error).toBe('Bad Gateway');
+    expect(envelope.message).toBe(sentence);
+    expect(envelope.retryAfterSeconds).toBeUndefined();
+    expect(headers['Retry-After']).toBeUndefined();
   });
 
   it('does not show the internal store name when an app is missing', () => {
@@ -469,7 +498,7 @@ describe('AllExceptionsFilter', () => {
 
     expect(status).toBe(HttpStatus.BAD_GATEWAY);
     expect(envelope.message).toBe(
-      'Google Play did not answer. Try again in a few minutes.',
+      'Google Play could not be reached. Try again in a few minutes.',
     );
     warn.mockRestore();
   });

@@ -1,4 +1,6 @@
-import { Store } from '@prisma/client';
+import { type ProxyOutcome, Store } from '@prisma/client';
+import { classifyFailure } from './egress/proxy-outcome';
+import { ON_DEMAND_STORE_DEADLINE_MS } from './store-deadline';
 
 const STORE_NAMES: Record<Store, string> = {
   APP_STORE: 'The App Store',
@@ -11,6 +13,36 @@ const IN_SENTENCE_NAMES: Record<Store, string> = {
 };
 
 const BUSY_RETRY_SECONDS = { min: 2, max: 10 } as const;
+
+export type StoreFailureReason =
+  'deadline' | 'refused' | 'unreachable' | 'unreadable';
+
+const DEADLINE_SECONDS = ON_DEMAND_STORE_DEADLINE_MS / 1000;
+const DEADLINE_ABORT = /TimeoutError|AbortError|operation was aborted/i;
+
+const FAILURE_SENTENCES: Record<StoreFailureReason, (store: string) => string> =
+  {
+    deadline: (store) =>
+      `${store} took longer than ${DEADLINE_SECONDS} seconds to answer. Try again in a few minutes.`,
+    refused: (store) =>
+      `${store} turned the request away for now. Try again in a few minutes.`,
+    unreachable: (store) =>
+      `${store} could not be reached. Try again in a few minutes.`,
+    unreadable: (store) =>
+      `${store} answered something asobeast could not read. Try again later.`,
+  };
+
+const OUTCOME_REASONS: Partial<Record<ProxyOutcome, StoreFailureReason>> = {
+  RATE_LIMITED: 'refused',
+  BLOCKED: 'refused',
+  TRANSPORT: 'unreachable',
+};
+
+function reasonOf(causeMessage: string): StoreFailureReason {
+  if (DEADLINE_ABORT.test(causeMessage)) return 'deadline';
+  const outcome = classifyFailure(causeMessage);
+  return (outcome && OUTCOME_REASONS[outcome]) ?? 'unreadable';
+}
 
 export const TRANSPORT_MESSAGES = [
   'ECONNRESET',
@@ -48,8 +80,12 @@ export class StoreRequestError extends Error {
     this.name = 'StoreRequestError';
   }
 
+  get reason(): StoreFailureReason {
+    return reasonOf(this.causeMessage);
+  }
+
   get userMessage(): string {
-    return `${STORE_NAMES[this.store]} did not answer. Try again in a few minutes.`;
+    return FAILURE_SENTENCES[this.reason](STORE_NAMES[this.store]);
   }
 
   get unreachable(): boolean {

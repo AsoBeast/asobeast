@@ -975,7 +975,7 @@ describe('AppStoreProvider on demand deadline', () => {
 
     expect(failure).toBeInstanceOf(StoreRequestError);
     expect((failure as StoreRequestError).userMessage).toBe(
-      'The App Store did not answer. Try again in a few minutes.',
+      'The App Store took longer than 20 seconds to answer. Try again in a few minutes.',
     );
     expect(app).toHaveBeenCalledTimes(1);
     expect(Date.now() - started).toBeLessThan(1_000);

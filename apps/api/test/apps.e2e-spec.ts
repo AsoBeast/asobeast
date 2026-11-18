@@ -1010,7 +1010,7 @@ describe('AppsController (e2e)', () => {
 
     expectEnvelope(body, 502, '/apps');
     expect(body.message).toBe(
-      'The App Store did not answer. Try again in a few minutes.',
+      'The App Store answered something asobeast could not read. Try again later.',
     );
     expect(body.message).not.toContain('boom');
   });
