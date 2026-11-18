@@ -42,12 +42,12 @@ You help the user identify and act on seasonal keyword opportunities and listing
 Use AsoBeast to find seasonal terms and their size:
 
 - `keyword_suggestions` with `strategy: "seasonal"` — English holiday terms for storefronts that observe the event
-- `keyword_suggestions` with `strategy: "search"` — what the store suggests right now
-- `inspect_keyword` then `get_keyword_inspection` — popularity and difficulty of each candidate in the target storefront
+- `keyword_suggestions` with `strategy: "search"` — what the store suggests right now (spends one store lookup of the hourly allowance on hosted plans)
+- `inspect_keyword` then `get_keyword_inspection` — popularity and difficulty of each candidate in the target storefront (needs a token with write access and spends one on demand score each)
 
 **Filter by:**
 
-- Volume spike (compare to baseline 30 days prior)
+- Popularity today against your evergreen keywords (AsoBeast keeps no popularity history, so compare current scores, not a spike)
 - Difficulty < 60 preferred (seasonal keywords are crowded)
 - Relevance to your app's core function
 

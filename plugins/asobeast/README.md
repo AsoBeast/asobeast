@@ -14,7 +14,7 @@ claude plugin install asobeast@asobeast
 
 3. Ask, for example, "run an ASO audit of my app" or "what did my competitors change this week". `/asobeast:aso-router` picks the right skill when you are not sure.
 
-A read only token is enough for every skill. Tracking keywords or adding competitors from a skill needs a token with write access.
+A read only token runs every skill. Inspecting a keyword, tracking keywords or adding competitors from a skill needs a token with write access.
 
 ## Credits
 

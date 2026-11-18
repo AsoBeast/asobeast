@@ -88,8 +88,8 @@ Google Play indexes descriptions per language. Each locale is a fresh keyword op
 
 Use AsoBeast to validate popularity and difficulty:
 
-- `keyword_suggestions` — candidates from the listing, the store's search suggestions, similar apps and competitors (`strategy`: `search`, `similar`, `competitors`, `competitorSearch`, `metadata`, `reviews`)
-- `inspect_keyword` then `get_keyword_inspection` — popularity, difficulty and the top 50 of one phrase in one storefront, tracked or not (spends one on demand score; inspect the shortlist, not every idea)
+- `keyword_suggestions` — candidates from the listing, the store's search suggestions, similar apps and competitors (`strategy`: `search`, `similar`, `competitors`, `competitorSearch`, `metadata`, `reviews`; `search`, `similar`, `developer` and `competitorSearch` reach the live store and spend the hourly store lookup allowance on hosted plans)
+- `inspect_keyword` then `get_keyword_inspection` — popularity, difficulty and the top 50 of one phrase in one storefront, tracked or not. It needs a token with write access and spends one on demand score, so inspect the shortlist, not every idea; with a read only token, use `list_keywords` and `keyword_suggestions`
 - `list_keywords` — scores and positions of the keywords already tracked
 - `keyword_discoveries` — phrases the app already ranks for but doesn't track
 

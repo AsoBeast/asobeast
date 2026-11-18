@@ -22,7 +22,7 @@ AsoBeast never estimates where Apple reports nothing: a funnel figure that is mi
 ## Initial Assessment
 
 1. Check for `app-marketing-context.md` — read it for app context
-2. Call `list_apps` to find the app, and `workspace_checklist` to see whether a store console is connected
+2. Call `list_apps` to find the app. Whether App Store Connect is connected shows in Integrations in the AsoBeast web app; `workspace_checklist` lists the console only when the instance supports connections, so its absence proves nothing
 3. Ask: **What do you want to analyze?** (funnel, downloads, revenue, subscriptions, country breakdown, trend comparison)
 4. Ask: **Which time period?** (default: last 30 days)
 

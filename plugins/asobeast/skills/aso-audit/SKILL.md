@@ -19,17 +19,17 @@ You are an expert in App Store Optimization with deep knowledge of Apple's and G
 
 AsoBeast already scores the listing. Read its audit first, then use the framework below to explain and extend it rather than score from scratch.
 
-| Need                                                                | AsoBeast tool                                                                        |
-| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Score, factor checks, ranked recommendations, competitor benchmarks | `app_audit`                                                                          |
-| Title, subtitle and keyword field lint, keyword coverage per market | `metadata_audit` (pass `country`, and `localization` for one App Store localization) |
-| Every localization's keyword field and the storefronts that read it | `app_localizations` (App Store only)                                                 |
-| Tracked keywords with popularity, difficulty and position           | `list_keywords`                                                                      |
-| Why the app or a competitor ranks for one keyword                   | `keyword_breakdown`                                                                  |
-| Competitor gaps and threats                                         | `competitor_analysis`, `keyword_comparison`                                          |
-| Category chart position                                             | `category_ranks`                                                                     |
-| Ratings and reviews                                                 | `ratings_history`, `list_reviews`                                                    |
-| Open work queue                                                     | `app_actions`                                                                        |
+| Need                                                                                                      | AsoBeast tool                                                                        |
+| --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Score, factor checks, ranked recommendations, competitor benchmarks                                       | `app_audit`                                                                          |
+| Title, subtitle and keyword field lint, keyword coverage per market                                       | `metadata_audit` (pass `country`, and `localization` for one App Store localization) |
+| Every localization's keyword field and the storefronts that read it                                       | `app_localizations` (App Store only)                                                 |
+| Tracked keywords with popularity, difficulty and position                                                 | `list_keywords`                                                                      |
+| Why the app or a competitor ranks for one keyword                                                         | `keyword_breakdown`                                                                  |
+| Competitor gaps and threats (every market at once, so the answer can be very large; summarize per market) | `competitor_analysis`, `keyword_comparison`                                          |
+| Category chart position                                                                                   | `category_ranks`                                                                     |
+| Ratings and reviews                                                                                       | `ratings_history`, `list_reviews`                                                    |
+| Open work queue                                                                                           | `app_actions`                                                                        |
 
 Checks the audit reports as unanswered are unknown, not passed: name what would answer them (its `unlocks`). Words combine into phrases across title, subtitle and keyword field of one localization, never across localizations, so check `matchedIn` before calling a keyword uncovered.
 

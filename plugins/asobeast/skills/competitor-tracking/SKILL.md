@@ -39,7 +39,7 @@ AsoBeast's daily run records every change below, so read the record instead of d
 
 - `alert_events` with `type: ["metadata.changed"]` — competitor and own listing edits
 - `changes_timeline` — the app's own metadata edits, ranking swings and rating shifts, per storefront
-- `get_app` with `country` — the current listing of the app and every competitor in that market
+- `get_app` with `country` — the current listing in that market of one app, called once per app (your app id or a competitor id from `list_competitors`)
 
 Watch for:
 
@@ -50,7 +50,7 @@ Watch for:
 
 ### Keyword Ranking Changes
 
-- `keyword_comparison` (with `onlyGaps: true` for the short list) — your position and each competitor's on every tracked keyword
+- `keyword_comparison` (with `onlyGaps: true` for the short list) — your position and each competitor's on every tracked keyword, every market at once, so its answer can be very large: summarize it per market
 - `competitor_analysis` — `threats` (a competitor closing in or overtaking), `winnable`, `lead`
 - `serp_movers` — keywords whose results order shifted most this week
 - `serp_snapshot` — the full top 50 of one keyword, with movement against the previous capture

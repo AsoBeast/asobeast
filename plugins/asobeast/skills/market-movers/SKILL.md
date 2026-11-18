@@ -24,7 +24,7 @@ Use these AsoBeast tools to gather chart movement data:
 1. **`chart_genres`** — the category ids a chart can be read for
 2. **`top_chart`** — one day of a chart with climbers, fallers, new entries and exits; `compare` sets the period (`1d`, `7d`, `30d`), `date` reads an older capture
 3. **`category_ranks`** — the daily chart positions of the user's own app
-4. **`get_app`** — deep dive on a tracked app showing movement
+4. **`get_app`** — the current listing of a mover you track (your app or a competitor); it carries no movement of its own
 
 Charts are captured once a day. A chart nobody follows yet answers an empty day: ask the user to follow it on the Top charts page in AsoBeast, and read it from the next day.
 
