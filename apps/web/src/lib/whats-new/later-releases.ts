@@ -140,8 +140,8 @@ export const LATER_RELEASES: readonly Release[] = [
       },
       {
         kind: "fixed",
-        title: "Imports no longer fail while the server is busy",
-        text: "Importing an app, adding a competitor or refreshing a listing on Google Play no longer fails after 20 seconds while the daily collection keeps the server busy. Some capacity always stays free for what you are waiting for, and if it is still taken you are told within a few seconds how long to wait before trying again.",
+        title: "Imports while the server is busy",
+        text: "Importing an app, adding a competitor or refreshing a listing on Google Play used to wait 20 seconds and then fail while the daily collection kept the server busy. Part of the server's capacity now stays free for what you are waiting for, so these usually go through at once, and when that part is taken too you are told within a few seconds how long to wait before trying again.",
       },
     ],
   },
