@@ -14,6 +14,32 @@ const IN_SENTENCE_NAMES: Record<Store, string> = {
 
 const BUSY_RETRY_SECONDS = { min: 2, max: 10 } as const;
 
+export const TRANSPORT_MESSAGES = [
+  'ECONNRESET',
+  'ECONNREFUSED',
+  'ETIMEDOUT',
+  'EHOSTUNREACH',
+  'ENETUNREACH',
+  'EPIPE',
+  'EAI_AGAIN',
+  'ENOTFOUND',
+  'UND_ERR',
+  'socket hang up',
+  'tunneling socket',
+  'timeout',
+  'fetch failed',
+  'rate limited',
+] as const;
+
+export const TRANSPORT_STATUSES = [429, 503] as const;
+
+const STATUSES = TRANSPORT_STATUSES.join('|');
+
+const TRANSPORT_STATUS = new RegExp(
+  `(?:status|http)\\s+(?:${STATUSES})(?!\\d)`,
+  'i',
+);
+
 export type StoreFailureReason =
   'deadline' | 'refused' | 'unreachable' | 'unreadable';
 
@@ -41,34 +67,10 @@ const OUTCOME_REASONS: Partial<Record<ProxyOutcome, StoreFailureReason>> = {
 function reasonOf(causeMessage: string): StoreFailureReason {
   if (DEADLINE_ABORT.test(causeMessage)) return 'deadline';
   const outcome = classifyFailure(causeMessage);
-  return (outcome && OUTCOME_REASONS[outcome]) ?? 'unreadable';
+  const classified = outcome && OUTCOME_REASONS[outcome];
+  if (classified) return classified;
+  return TRANSPORT_STATUS.test(causeMessage) ? 'refused' : 'unreadable';
 }
-
-export const TRANSPORT_MESSAGES = [
-  'ECONNRESET',
-  'ECONNREFUSED',
-  'ETIMEDOUT',
-  'EHOSTUNREACH',
-  'ENETUNREACH',
-  'EPIPE',
-  'EAI_AGAIN',
-  'ENOTFOUND',
-  'UND_ERR',
-  'socket hang up',
-  'tunneling socket',
-  'timeout',
-  'fetch failed',
-  'rate limited',
-] as const;
-
-export const TRANSPORT_STATUSES = [429, 503] as const;
-
-const STATUSES = TRANSPORT_STATUSES.join('|');
-
-const TRANSPORT_STATUS = new RegExp(
-  `(?:status|http)\\s+(?:${STATUSES})(?!\\d)`,
-  'i',
-);
 
 export class StoreRequestError extends Error {
   constructor(

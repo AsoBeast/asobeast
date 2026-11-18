@@ -381,6 +381,13 @@ describe('store failure reasons', () => {
       TURNED_AWAY,
     ],
     [
+      'names a store that answered 503 as turned away',
+      Store.APP_STORE,
+      'Request failed with status 503',
+      'refused',
+      'The App Store turned the request away for now. Try again in a few minutes.',
+    ],
+    [
       'names a connection failure as unreachable',
       Store.GOOGLE_PLAY,
       'RequestError: fetch failed',
