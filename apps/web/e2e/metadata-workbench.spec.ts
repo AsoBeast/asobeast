@@ -45,6 +45,7 @@ test("the uncovered count turns the uncovered filter on", async ({ page }) => {
   const link = status(page).getByRole("button", {
     name: "1 keyword not covered",
   });
+  await hydrated(coverage(page));
   await (await hydrated(link)).press("Enter");
 
   await expect(page).toHaveURL(/uncovered=true/);

@@ -124,6 +124,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "Account, billing and alert emails now use the same typeface, colours and shapes as the app, in light and dark. Links are plain underlined text, so the orange button is the one thing that stands out. Nothing an email says has changed.",
       },
       {
+        kind: "improved",
+        title: "Track several suggestions at once",
+        text: "On the keywords page, tick the suggestions you want and track them together with one button, instead of pressing Track on each. Phrases you already track have no tick, and switching the source or the market starts a fresh selection.",
+      },
+      {
         kind: "fixed",
         title: "Keyword figures that agree after a partial run",
         text: "When a daily run missed some keywords on the first day of the range you look at, the keywords in the top 10 and the visibility change used to count those keywords as not found, while the keyword movers already compared them with the day next to it. Every figure of the dashboard and the app overview now compares each keyword with the same earlier check, the one of that day or of the day next to it, so a keyword already in the top 10 is no longer counted as a new entry.",
