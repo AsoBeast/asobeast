@@ -532,6 +532,10 @@ Sign in, create account, the password recovery pair, the invitation and the link
 
 The pages under the wall header use the same column at 400 px: Confirm your email, with the sign up steps centred above its title, and the note a team member sees in place of the plans. The billing wall itself is the one screen outside this system: it keeps the hero step, its plan cards with the 12 px radius and the `--primary` ring, and is restyled only where it meets a shared rule (its links are `link-underline`).
 
+### Emails
+
+Account, billing and alert emails are the signed out pages carried into the inbox, in `apps/api/src/mail` with one theme (`email-theme.ts`). The page ground holds a 28 px mark and the wordmark at heading size, then one flat panel (8 px radius, hairline, 32 px padding, 20 px on a phone) with the title at title size, paragraphs and report rows in ink at body size on a 24 px line, notes, notices and fact labels in ink 2 and the footer in ink 3 under the panel. The one orange is the button: 6 px radius, 44 px tall so it stays a touch target, near black text at 600, because a mail client without a 500 weight would draw it regular. A link in the panel is ink with an underline and a footer link takes the footer's ink 3; none is orange. The font stack asks for Geist and falls back to the system face; nothing is downloaded, so most readers see the fallback. The dark scheme follows `prefers-color-scheme` with the dark neutrals, in the clients that honour it. Layout stays tables with inline styles.
+
 ## Where it lives
 
 - **Tokens:** `src/styles/primitives.css` (raw values, both themes), `src/styles/semantic.css` (roles: background, card, muted, border, ink steps, signals, grades, chart series, elevation), `src/app/globals.css` (Tailwind theme mapping, radius scale, focus ring, reduced motion), `components/tokens/token-groups.ts` with `src/styles/tokens.test.ts` (the contrast pairs).
