@@ -327,10 +327,9 @@ export class KeywordsService {
     });
   }
 
-  async syncFromSnapshot(appId: string): Promise<void> {
+  async trackFromSnapshot(appId: string): Promise<string[]> {
     const synced = await this.trackSnapshotCandidates(appId);
-    if (!synced) return;
-    await this.enqueueSnapshotScores(synced);
+    return synced?.tracked.map(({ keywordId }) => keywordId) ?? [];
   }
 
   async syncFromLaterSnapshot(appId: string): Promise<void> {

@@ -184,8 +184,8 @@ describe('Store identity under concurrency (e2e)', () => {
 
     const settled = await asWorkspace(app, () =>
       Promise.allSettled([
-        keywords.syncFromSnapshot(appId),
-        keywords.syncFromSnapshot(appId),
+        keywords.trackFromSnapshot(appId),
+        keywords.trackFromSnapshot(appId),
       ]),
     );
 
