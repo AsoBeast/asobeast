@@ -10,6 +10,7 @@ import {
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { QuotaService } from './quota.service';
 import { FailFastRedis } from '../redis/fail-fast-redis';
+import { StorePoolBusyError } from '../store-providers/errors';
 import { RateLimitExceededError } from './rate-limit/rate-limit.errors';
 import { secondsUntilReset, windowKey } from './rate-limit/window';
 
@@ -102,6 +103,23 @@ export class OnDemandLimiter {
       upgradeTo: nextPlan(charge.plan),
       action: charge.action,
     });
+  }
+
+  async spendUnlessUnreached<T>(
+    action: OnDemandAction,
+    work: (spend: () => Promise<void>) => Promise<T>,
+  ): Promise<T> {
+    let spent: OnDemandCharge | null = null;
+    try {
+      return await work(async () => {
+        const charge = await this.charge(action);
+        await this.spend(charge);
+        spent = charge;
+      });
+    } catch (error) {
+      if (error instanceof StorePoolBusyError) await this.refund(spent);
+      throw error;
+    }
   }
 
   async refund(charge: OnDemandCharge | null): Promise<boolean> {

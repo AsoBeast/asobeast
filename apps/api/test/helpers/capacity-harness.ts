@@ -2,7 +2,7 @@ import { execSync } from 'child_process';
 import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Store } from '@prisma/client';
 import { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
 import { OnDemandLimiter } from '../../src/auth/on-demand.limiter';
@@ -104,4 +104,16 @@ export async function allowanceSpendsDuring<T>(
   } finally {
     spend.mockRestore();
   }
+}
+
+export function failNextStoreLookup(
+  { app }: CapacityHarness,
+  error: Error,
+): void {
+  const registry = app.get(StoreProviderRegistry);
+  const provider = registry.get(Store.APP_STORE);
+  const getApp = jest
+    .fn(provider.getApp.bind(provider))
+    .mockRejectedValueOnce(error);
+  jest.spyOn(registry, 'get').mockReturnValue({ ...provider, getApp });
 }
