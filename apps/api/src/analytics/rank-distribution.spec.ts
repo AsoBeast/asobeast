@@ -1,5 +1,9 @@
 import type { Ranking, TrackedRow } from './analytics.support';
-import { bucketPositions, rankDistributionAt } from './rank-distribution';
+import {
+  bucketPositions,
+  rankDistributionAt,
+  rankDistributionOf,
+} from './rank-distribution';
 
 const REFERENCE = new Date('2026-07-13T00:00:00.000Z');
 const EARLIER = new Date('2026-07-12T00:00:00.000Z');
@@ -85,6 +89,27 @@ describe('rankDistributionAt', () => {
       top50: 0,
       beyond: 0,
       unranked: 2,
+    });
+  });
+});
+
+describe('rankDistributionOf', () => {
+  it('counts the same positions as rankDistributionAt reads on the date', () => {
+    const positions = [1, 3, 7, 40, 120, null];
+
+    expect(rankDistributionOf(positions)).toEqual(
+      rankDistributionAt(
+        positions.map((position) => rankedAt(position)),
+        REFERENCE,
+      ),
+    );
+    expect(rankDistributionOf(positions)).toEqual({
+      top1: 1,
+      top3: 2,
+      top10: 3,
+      top50: 4,
+      beyond: 1,
+      unranked: 1,
     });
   });
 });

@@ -15,11 +15,11 @@ import {
   toDateKey,
   TrackedRow,
 } from './analytics.support';
+import { hasBaseline, keywordsAtBaseline } from './baseline';
 import { mergePortfolioMovers, rankInsight } from './portfolio-insights';
 
 const TOP_TEN = 10;
 const RANGE_MOVER_LIMIT = 8;
-const BASELINE_SHIFTS = [0, 1, -1];
 
 export interface HistoryMember extends KeywordWindow {
   appId: string;
@@ -175,25 +175,17 @@ function period(
   return points;
 }
 
-function baselineOf(member: CheckedMember, days: number): number | null {
-  if (member.lag <= -days) {
-    return null;
-  }
-  return (
-    BASELINE_SHIFTS.map((shift) => member.lag + shift - days).find((day) =>
-      member.days.includes(day),
-    ) ?? null
-  );
-}
+const startOf = (member: CheckedMember, days: number): Date =>
+  addDays(member.reference, -days);
 
 function rangeChange(
   members: CheckedMember[],
   days: PortfolioHistoryDays,
 ): PortfolioRangeChange {
-  const compared = members.flatMap((member) => {
-    const baseline = baselineOf(member, days);
-    return baseline === null ? [] : [{ member, baseline }];
-  });
+  const compared = members.filter(
+    (member) =>
+      member.lag > -days && hasBaseline(member.rows, startOf(member, days)),
+  );
   if (compared.length === 0) {
     return {
       compared: false,
@@ -205,16 +197,16 @@ function rangeChange(
     };
   }
 
-  const ranked = compared.map(({ member, baseline }) => ({
+  const ranked = compared.map((member) => ({
     appId: member.appId,
-    ...rankInsight(member.rows, member.reference, member.lag - baseline),
+    ...rankInsight(member.rows, member.reference, days),
   }));
   const now = visibility(
-    compared.flatMap(({ member }) => keywordsAt(member.rows, member.reference)),
+    compared.flatMap((member) => keywordsAt(member.rows, member.reference)),
   );
   const then = visibility(
-    compared.flatMap(({ member, baseline }) =>
-      keywordsAt(member.rows, addDays(member.reference, baseline - member.lag)),
+    compared.flatMap((member) =>
+      keywordsAtBaseline(member.rows, startOf(member, days)),
     ),
   );
 
