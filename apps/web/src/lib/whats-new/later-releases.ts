@@ -167,6 +167,11 @@ export const LATER_RELEASES: readonly Release[] = [
         title: "The plan page on a weak connection",
         text: "When the plan page cannot load your plan or the prices, it now says so and lets you try again, instead of showing an offer or a checkout that may not apply to you.",
       },
+      {
+        kind: "improved",
+        title: "Track several suggestions at once",
+        text: "On the keywords page, tick the suggestions you want and track them together with one button, instead of pressing Track on each. Phrases you already track have no tick, and switching the source or the market starts a fresh selection.",
+      },
     ],
   },
   {
