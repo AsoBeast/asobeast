@@ -123,6 +123,11 @@ export const LATER_RELEASES: readonly Release[] = [
         title: "Emails that look like the app",
         text: "Account, billing and alert emails now use the same typeface, colours and shapes as the app, in light and dark. Links are plain underlined text, so the orange button is the one thing that stands out. Nothing an email says has changed.",
       },
+      {
+        kind: "new",
+        title: "Send keywords to your keyword field",
+        text: "Select keywords on the keywords page of an App Store app and choose Add to keyword field. The metadata page opens on the right language with those keywords added after the ones already in the field, ready to review and save. Keywords already in the field are not added twice, and only what fits in the 100 characters is taken along.",
+      },
     ],
   },
   {
@@ -166,11 +171,6 @@ export const LATER_RELEASES: readonly Release[] = [
         kind: "fixed",
         title: "The plan page on a weak connection",
         text: "When the plan page cannot load your plan or the prices, it now says so and lets you try again, instead of showing an offer or a checkout that may not apply to you.",
-      },
-      {
-        kind: "new",
-        title: "Send keywords to your keyword field",
-        text: "Select keywords on the keywords page of an App Store app and choose Add to keyword field. The metadata page opens on the right language with those keywords added after the ones already in the field, ready to review and save. Keywords already in the field are not added twice, and only what fits in the 100 characters is taken along.",
       },
     ],
   },
