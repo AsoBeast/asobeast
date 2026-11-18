@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
-import { ApiError, importApp } from "@/lib/api";
+import { importApp } from "@/lib/api";
 import { marketError } from "@/lib/countries";
 import { returnFocusTo } from "@/lib/focus-handoff";
 import { storeLabel } from "@/lib/format";
@@ -38,6 +38,7 @@ import {
 import { useSingleFlight } from "@/lib/single-flight";
 import { classifyInput, isStoreAddress } from "./store-search";
 import { StoreSearchField } from "./StoreSearchField";
+import { useFieldOutcome } from "./useFieldOutcome";
 import { useStoreSearch } from "./useStoreSearch";
 
 const DEFAULT_STORE: Store = "APP_STORE";
@@ -114,8 +115,7 @@ export function ImportAppDialog({
   const [value, setValue] = useState("");
   const [store, setStore] = useState<Store>(DEFAULT_STORE);
   const [country, setCountry] = useState(DEFAULT_COUNTRY);
-  const [error, setError] = useState<string | null>(null);
-  const [note, setNote] = useState<string | null>(null);
+  const outcome = useFieldOutcome("Could not reach the api to import this app");
   const search = useStoreSearch(store, country, value);
 
   const mutation = useMutation({
@@ -130,17 +130,7 @@ export function ImportAppDialog({
       toast.success(`Imported ${app.name ?? "app"}`);
       router.push(`/apps/${app.id}/setup`);
     },
-    onError: (err) => {
-      if (err instanceof ApiError) {
-        if (err.envelope.statusCode === 501) {
-          setNote(err.envelope.message);
-        } else {
-          setError(err.envelope.message);
-        }
-        return;
-      }
-      setError("Could not reach the api to import this app");
-    },
+    onError: outcome.fail,
   });
   const importOnce = useSingleFlight(mutation);
   const inert = mutation.isPending || value.trim() === "";
@@ -149,13 +139,8 @@ export function ImportAppDialog({
     setValue("");
     setStore(DEFAULT_STORE);
     setCountry(DEFAULT_COUNTRY);
-    clearOutcome();
+    outcome.clear();
     mutation.reset();
-  }
-
-  function clearOutcome() {
-    setError(null);
-    setNote(null);
   }
 
   function onOpenChange(next: boolean) {
@@ -166,7 +151,7 @@ export function ImportAppDialog({
   }
 
   function onValueChange(next: string) {
-    clearOutcome();
+    outcome.clear();
     setValue(next);
     const input = classifyInput(next);
     if (input.kind === "url" && isStoreAddress(next)) {
@@ -176,38 +161,38 @@ export function ImportAppDialog({
   }
 
   function onStoreChange(next: Store) {
-    clearOutcome();
+    outcome.clear();
     setStore(next);
   }
 
   function onCountryChange(next: string) {
-    clearOutcome();
+    outcome.clear();
     setCountry(next);
   }
 
   function importFrom(target: Store, url: string) {
     const invalidCountry = marketError(target, country);
     if (invalidCountry) {
-      setError(invalidCountry);
+      outcome.setError(invalidCountry);
       return;
     }
     importOnce({ url, country });
   }
 
   function pick(result: StoreSearchResult) {
-    clearOutcome();
+    outcome.clear();
     importFrom(store, result.storeAppId);
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (inert) return;
-    clearOutcome();
+    outcome.clear();
     const { input } = search;
     if (input.kind === "url") return importFrom(input.parsed.store, value);
-    if (input.kind === "invalid") return setError(input.message);
+    if (input.kind === "invalid") return outcome.setError(input.message);
     const message = search.enterName(pick);
-    if (message) setError(message);
+    if (message) outcome.setError(message);
   }
 
   return (
@@ -237,8 +222,10 @@ export function ImportAppDialog({
               onChange={onValueChange}
               onPick={pick}
               search={search}
-              error={error}
-              note={waitingOutBusyServer(mutation) ? BUSY_RETRY_NOTE : note}
+              error={outcome.error}
+              note={
+                waitingOutBusyServer(mutation) ? BUSY_RETRY_NOTE : outcome.note
+              }
               autoFocus
             />
 
