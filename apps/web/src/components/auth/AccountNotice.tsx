@@ -1,8 +1,13 @@
 "use client";
 
-import type { ReactNode } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import { CirclePause, Clock, OctagonX, type LucideIcon } from "lucide-react";
+import {
+  NOTICE_LINK,
+  NoticeLine,
+  type NoticeTone,
+} from "@/components/layout/notice-line";
 import {
   ASK_THE_OWNER,
   COLLECTION_PAUSED,
@@ -21,24 +26,61 @@ function daysLeft(iso: string): number {
   );
 }
 
-function UpgradeLink({ children }: { children: ReactNode }) {
+const TRIAL_ENDING_DAYS = 3;
+
+function AccountBar({
+  icon,
+  tone,
+  sentence,
+  action,
+}: {
+  icon: LucideIcon;
+  tone: NoticeTone;
+  sentence: string;
+  action?: { href: string; label: string };
+}) {
   return (
-    <Link href="/upgrade" className="font-medium underline">
-      {children}
-    </Link>
+    <NoticeLine
+      icon={icon}
+      tone={tone}
+      data-slot="account-bar"
+      className="border-b px-4 py-2.5 sm:px-6"
+    >
+      <p className="max-w-[110ch]">
+        <span>{sentence}</span>
+        {action ? (
+          <>
+            {" "}
+            <Link href={action.href} className={NOTICE_LINK}>
+              {action.label}
+            </Link>
+          </>
+        ) : null}
+      </p>
+    </NoticeLine>
   );
 }
 
+const UPGRADE = "/upgrade";
+
 function PausedBanner({ isMember }: { isMember: boolean }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b bg-muted px-4 py-2 text-body sm:px-6 print:hidden">
-      <span>
-        {COLLECTION_PAUSED}
-        {isMember ? ` ${ASK_THE_OWNER}` : null}
-      </span>
-      {isMember ? null : <UpgradeLink>Choose a plan</UpgradeLink>}
-    </div>
+    <AccountBar
+      icon={CirclePause}
+      tone="warning"
+      sentence={
+        isMember ? `${COLLECTION_PAUSED} ${ASK_THE_OWNER}` : COLLECTION_PAUSED
+      }
+      action={isMember ? undefined : { href: UPGRADE, label: "Choose a plan" }}
+    />
   );
+}
+
+function trialAction(isMember: boolean, card: boolean) {
+  if (isMember) return undefined;
+  return card
+    ? { href: "/settings", label: "Manage billing" }
+    : { href: UPGRADE, label: "Upgrade" };
 }
 
 function TrialBanner({
@@ -51,28 +93,26 @@ function TrialBanner({
   card: boolean;
 }) {
   const { data: plan } = useQuery({ ...accountPlanOptions, enabled: card });
+  const days = daysLeft(endsAt);
+  const line = trialBannerLine(days, card ? plan : undefined);
 
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-warning/30 bg-warning-subtle px-4 py-2 text-body text-warning sm:px-6 print:hidden">
-      <span>
-        {`${trialBannerLine(daysLeft(endsAt), card ? plan : undefined)}${isMember ? ` ${ASK_THE_OWNER}` : ""}`}
-      </span>
-      {isMember ? null : card ? (
-        <Link href="/settings" className="font-medium underline">
-          Manage billing
-        </Link>
-      ) : (
-        <UpgradeLink>Upgrade</UpgradeLink>
-      )}
-    </div>
+    <AccountBar
+      icon={Clock}
+      tone={days <= TRIAL_ENDING_DAYS ? "warning" : "neutral"}
+      sentence={isMember ? `${line} ${ASK_THE_OWNER}` : line}
+      action={trialAction(isMember, card)}
+    />
   );
 }
 
 function SuspendedBanner({ reason }: { reason: string | null }) {
   return (
-    <div className="border-b border-destructive/30 bg-destructive/5 px-4 py-2 text-body text-destructive sm:px-6 print:hidden">
-      {suspensionNotice(reason)}
-    </div>
+    <AccountBar
+      icon={OctagonX}
+      tone="critical"
+      sentence={suspensionNotice(reason)}
+    />
   );
 }
 
