@@ -121,7 +121,7 @@ function EntitledPill() {
               ref={trigger}
               variant="outline"
               className={cn(
-                "h-10 rounded-full bg-popover text-label text-popover-foreground shadow-overlay hover:bg-muted",
+                "h-10 rounded-full bg-popover text-label shadow-overlay",
                 collapsed ? "w-10 px-0" : "pr-4 pl-3",
               )}
             >

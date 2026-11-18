@@ -98,15 +98,25 @@ button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 }
 `;
 
-function applyStoredTheme(): void {
+function storedTheme(): "light" | "dark" | null {
   try {
     const stored = window.localStorage.getItem(THEME_KEY);
-    if (stored === "light" || stored === "dark") {
-      document.documentElement.dataset.theme = stored;
-    }
+    return stored === "light" || stored === "dark" ? stored : null;
   } catch {
-    return;
+    return null;
   }
+}
+
+function useStoredTheme(): void {
+  useEffect(() => {
+    const theme = storedTheme();
+    if (!theme) return;
+    const root = document.documentElement;
+    root.dataset.theme = theme;
+    return () => {
+      delete root.dataset.theme;
+    };
+  }, []);
 }
 
 export default function GlobalError({
@@ -122,7 +132,7 @@ export default function GlobalError({
     if (worthReporting(error)) void reportBrowserError(error);
   }, [error]);
 
-  useEffect(applyStoredTheme, []);
+  useStoredTheme();
 
   return (
     <html lang="en">

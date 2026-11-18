@@ -28,6 +28,8 @@ function daysLeft(iso: string): number {
 
 const TRIAL_ENDING_DAYS = 3;
 
+const UPGRADE = "/upgrade";
+
 function AccountBar({
   icon,
   tone,
@@ -60,8 +62,6 @@ function AccountBar({
     </NoticeLine>
   );
 }
-
-const UPGRADE = "/upgrade";
 
 function PausedBanner({ isMember }: { isMember: boolean }) {
   return (
