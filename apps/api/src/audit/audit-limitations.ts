@@ -15,6 +15,12 @@ const APP_STORE_LIMITATIONS: readonly AuditLimitation[] = [
       'Not visible to asobeast. Events can appear in search results and on the Today tab.',
   },
   {
+    id: 'accessibility-features',
+    label: 'Declared accessibility features',
+    detail:
+      'The page read cannot yet tell the features a developer declares from the sentence Apple shows when none are declared.',
+  },
+  {
     id: 'custom-product-pages',
     label: 'Custom product pages',
     detail:

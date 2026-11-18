@@ -96,7 +96,6 @@ describe('buildReadiness', () => {
           { storyId: 's1', heading: 'Today', title: 'Apps we love' },
         ],
         editorsChoice: { showsBadge: true, notes: null },
-        accessibilityStatement: 'VoiceOver labels on every screen.',
       }),
     });
 
@@ -108,7 +107,7 @@ describe('buildReadiness', () => {
     expect(readiness?.items.map((item) => item.status)).toEqual([
       'pass',
       'pass',
-      'pass',
+      'unmeasurable',
       'pass',
       'pass',
       'pass',
@@ -126,10 +125,7 @@ describe('buildReadiness', () => {
     const readiness = buildReadiness({
       store: Store.APP_STORE,
       factors: [],
-      extract: extractWith({
-        previewVideoUrls: [],
-        accessibilityStatement: null,
-      }),
+      extract: extractWith({ previewVideoUrls: [] }),
     });
 
     expect(itemOf(readiness, 'preview-video')).toMatchObject({
@@ -141,8 +137,9 @@ describe('buildReadiness', () => {
       detail: 'No in-app event is on the store page.',
     });
     expect(itemOf(readiness, 'accessibility')).toMatchObject({
-      status: 'fail',
-      detail: 'The store page shows no accessibility statement.',
+      status: 'unmeasurable',
+      detail: 'Declared accessibility features are not read yet.',
+      link: null,
     });
     expect(readiness?.editorial).toEqual({
       stories: 0,
@@ -175,13 +172,14 @@ describe('buildReadiness', () => {
 
     expect(
       readiness?.items
-        .filter((item) =>
-          ['preview-video', 'in-app-events', 'accessibility'].includes(item.id),
-        )
+        .filter((item) => ['preview-video', 'in-app-events'].includes(item.id))
         .every(
           (item) => item.status === 'unmeasurable' && item.detail === null,
         ),
     ).toBe(true);
+    expect(itemOf(readiness, 'accessibility')).toMatchObject({
+      status: 'unmeasurable',
+    });
     expect(readiness?.editorial).toBeNull();
     expect(readiness?.extractAsOf).toBeNull();
   });
@@ -222,6 +220,23 @@ describe('buildReadiness', () => {
     expect(itemOf(readiness, 'in-app-events').detail).toBe(
       'The store page lists 2 in-app events.',
     );
+  });
+
+  it('leaves accessibility not measured while the declared features are unread', () => {
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: [],
+      extract: extractWith({
+        accessibilityStatement:
+          'The developer has not yet indicated which accessibility features this app supports. Learn More',
+      }),
+    });
+
+    expect(itemOf(readiness, 'accessibility')).toMatchObject({
+      status: 'unmeasurable',
+      detail: 'Declared accessibility features are not read yet.',
+      link: null,
+    });
   });
 
   it('reuses the status and the detail of the graded checks', () => {
@@ -290,10 +305,7 @@ describe('buildReadiness', () => {
       href: 'https://developer.apple.com/app-store/in-app-events/',
       label: 'About in-app events',
     });
-    expect(itemOf(readiness, 'accessibility').link).toEqual({
-      href: 'https://developer.apple.com/accessibility/',
-      label: 'About accessibility',
-    });
+    expect(itemOf(readiness, 'accessibility').link).toBeNull();
     expect(itemOf(readiness, 'rating').link).toEqual({
       href: '#factors-conversion',
       label: 'Where the audit scores it',

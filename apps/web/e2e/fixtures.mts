@@ -6328,12 +6328,9 @@ export const APP_AUDIT: AppAuditResult = {
       {
         id: "accessibility",
         label: "Accessibility",
-        status: "fail",
-        detail: "The store page shows no accessibility statement.",
-        link: {
-          href: "https://developer.apple.com/accessibility/",
-          label: "About accessibility",
-        },
+        status: "unmeasurable",
+        detail: "Declared accessibility features are not read yet.",
+        link: null,
       },
       {
         id: "rating",

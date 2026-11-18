@@ -145,7 +145,7 @@ describe('AuditController (e2e)', () => {
             ],
             editorsChoice: { showsBadge: true, notes: 'Editors Choice' },
             accessibilityStatement:
-              'VoiceOver labels on every screen of the app.',
+              'The developer has not yet indicated which accessibility features this app supports. Learn More',
           },
         },
         capturedAt: D0,
@@ -534,7 +534,7 @@ describe('AuditController (e2e)', () => {
     expect(result.readiness?.items.map((item) => item.status)).toEqual([
       'pass',
       'pass',
-      'pass',
+      'unmeasurable',
       'pass',
       'pass',
       'unmeasurable',
@@ -601,7 +601,7 @@ describe('AuditController (e2e)', () => {
     expect(result.readiness?.items.map((item) => item.status)).toEqual([
       'fail',
       'fail',
-      'fail',
+      'unmeasurable',
       'warn',
       'pass',
       'unmeasurable',
@@ -651,7 +651,8 @@ describe('AuditController (e2e)', () => {
               ],
               featuredStories: [],
               editorsChoice: null,
-              accessibilityStatement: 'VoiceOver labels on every screen.',
+              accessibilityStatement:
+                'The developer has not yet indicated which accessibility features this app supports. Learn More',
             },
           },
           capturedAt: D0,
@@ -678,7 +679,7 @@ describe('AuditController (e2e)', () => {
     expect(result.readiness?.items.map((item) => item.status)).toEqual([
       'pass',
       'pass',
-      'pass',
+      'unmeasurable',
       'pass',
       'pass',
       'unmeasurable',

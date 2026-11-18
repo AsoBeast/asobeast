@@ -5,6 +5,7 @@ describe('limitationsFor', () => {
     expect(limitationsFor('APP_STORE').map((item) => item.id)).toEqual([
       'promotional-text',
       'in-app-events',
+      'accessibility-features',
       'custom-product-pages',
       'review-replies',
       'rating-prompts',

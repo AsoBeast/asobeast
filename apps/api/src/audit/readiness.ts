@@ -20,9 +20,12 @@ const EVENTS_LINK: ReadinessLink = {
   label: 'About in-app events',
 };
 
-const ACCESSIBILITY_LINK: ReadinessLink = {
-  href: 'https://developer.apple.com/accessibility/',
-  label: 'About accessibility',
+const ACCESSIBILITY_ROW: ReadinessItem = {
+  id: 'accessibility',
+  label: 'Accessibility',
+  status: 'unmeasurable',
+  detail: 'Declared accessibility features are not read yet.',
+  link: null,
 };
 
 const FACTOR_SECTION_LINK: ReadinessLink = {
@@ -130,21 +133,7 @@ const eventsRow = (extract: AuditExtract | null): ReadinessItem => {
   };
 };
 
-const accessibilityRow = (extract: AuditExtract | null): ReadinessItem => {
-  if (extract === null) {
-    return unmeasurable('accessibility', 'Accessibility');
-  }
-  const present = extract.facts.accessibilityStatement !== null;
-  return {
-    id: 'accessibility',
-    label: 'Accessibility',
-    status: present ? 'pass' : 'fail',
-    detail: present
-      ? 'The store page shows an accessibility statement.'
-      : 'The store page shows no accessibility statement.',
-    link: ACCESSIBILITY_LINK,
-  };
-};
+const accessibilityRow = (): ReadinessItem => ACCESSIBILITY_ROW;
 
 const editorialOf = (
   extract: AuditExtract | null,
@@ -174,7 +163,7 @@ export const buildReadiness = ({
     items: [
       previewVideoRow(extract),
       eventsRow(extract),
-      accessibilityRow(extract),
+      accessibilityRow(),
       ...REUSED_ROWS.map((row) => reusedRow(row, factors)),
     ],
     editorial: editorialOf(extract),

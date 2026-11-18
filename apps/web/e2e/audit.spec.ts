@@ -647,7 +647,7 @@ test("answers featuring readiness beside the score", async ({ page }) => {
   await page.goto("/apps/app-1/audit");
 
   const readiness = page.getByRole("region", { name: "Featuring readiness" });
-  await expect(readiness.getByText("5 of 7 pass")).toBeVisible();
+  await expect(readiness.getByText("4 of 7 pass")).toBeVisible();
   await expect(
     readiness.getByText("The store page shows 2 preview videos."),
   ).toBeVisible();
@@ -655,9 +655,9 @@ test("answers featuring readiness beside the score", async ({ page }) => {
     readiness.getByText("The store page lists 1 in-app event."),
   ).toBeVisible();
   await expect(
-    readiness.getByText("The store page shows no accessibility statement."),
+    readiness.getByText("Declared accessibility features are not read yet."),
   ).toBeVisible();
-  await expect(readiness.getByText("Not measured")).toBeVisible();
+  await expect(readiness.getByText("Not measured")).toHaveCount(2);
   await expect(
     readiness.getByRole("link", { name: "About in-app events" }),
   ).toBeVisible();
