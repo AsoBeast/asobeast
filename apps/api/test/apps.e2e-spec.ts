@@ -1299,6 +1299,26 @@ describe('AppsController (e2e)', () => {
       failing.mockRestore();
     });
 
+    it('keeps the first checks and scores when the review backfill cannot be queued', async () => {
+      const add = Reflect.get(Queue.prototype, 'add') as Queue['add'];
+      const refusing = jest
+        .spyOn(Queue.prototype, 'add')
+        .mockImplementation(function (this: Queue, name, ...rest) {
+          return name === JOBS.SYNC_REVIEWS
+            ? Promise.reject(new Error('redis is unreachable'))
+            : add.call(this, name, ...rest);
+        });
+
+      await api.post('/apps').send({ url: APP_STORE_URL }).expect(500);
+      refusing.mockRestore();
+
+      const [{ id }] = await prisma.app.findMany({ select: { id: true } });
+      const tracked = await trackedCount(id);
+      expect(tracked).toBeGreaterThan(0);
+      expect(await countOn(QUEUES.APP_STORE, JOBS.CHECK_KEYWORD)).toBe(tracked);
+      expect(await countOn(QUEUES.APP_STORE, JOBS.SCORE_KEYWORD)).toBe(tracked);
+    });
+
     it('holds an action run per import until that import has its first positions', async () => {
       const imports = [
         await importApp(APP_STORE_URL),

@@ -110,6 +110,9 @@ export class AppsService {
     await this.localizations.capture(app, market, snapshot);
     const tracked = await this.keywords.trackFromSnapshot(app.id);
 
+    await this.scheduleFirstRun(app.id);
+    await this.tracker.enqueueFirstScores(tracked, app);
+
     await this.queueFor(store).add(
       JOBS.SYNC_REVIEWS,
       {
@@ -122,8 +125,6 @@ export class AppsService {
       { jobId: reviewsBackfillJobId(app.id), ...reviewSyncJobOptions(store) },
     );
 
-    await this.scheduleFirstRun(app.id);
-    await this.tracker.enqueueFirstScores(tracked, app);
     await this.scheduleFirstDiscovery(app.id);
 
     return toAppDetail(app, snapshot, [], null);
