@@ -1,6 +1,9 @@
 import { type ProxyOutcome, Store } from '@prisma/client';
 import { classifyFailure } from './egress/proxy-outcome';
-import { ON_DEMAND_STORE_DEADLINE_MS } from './store-deadline';
+import {
+  ON_DEMAND_STORE_DEADLINE_MS,
+  storeDeadlinePassed,
+} from './store-deadline';
 
 const STORE_NAMES: Record<Store, string> = {
   APP_STORE: 'The App Store',
@@ -48,15 +51,17 @@ const TRANSPORT_STATUS = new RegExp(
 );
 
 export type StoreFailureReason =
-  'deadline' | 'refused' | 'unreachable' | 'unreadable';
+  'deadline' | 'slow' | 'refused' | 'unreachable' | 'unreadable';
 
 const DEADLINE_SECONDS = ON_DEMAND_STORE_DEADLINE_MS / 1000;
-const DEADLINE_ABORT = /TimeoutError|AbortError|operation was aborted/i;
+const ABORTED = /TimeoutError|AbortError|operation was aborted/i;
 
 const FAILURE_SENTENCES: Record<StoreFailureReason, (store: string) => string> =
   {
     deadline: (store) =>
       `${store} took longer than ${DEADLINE_SECONDS} seconds to answer. Try again in a few minutes.`,
+    slow: (store) =>
+      `${store} took too long to answer. Try again in a few minutes.`,
     refused: (store) =>
       `${store} turned the request away for now. Try again in a few minutes.`,
     unreachable: (store) =>
@@ -71,8 +76,11 @@ const OUTCOME_REASONS: Partial<Record<ProxyOutcome, StoreFailureReason>> = {
   TRANSPORT: 'unreachable',
 };
 
-function reasonOf(causeMessage: string): StoreFailureReason {
-  if (DEADLINE_ABORT.test(causeMessage)) return 'deadline';
+function reasonOf(
+  causeMessage: string,
+  deadlinePassed: boolean,
+): StoreFailureReason {
+  if (ABORTED.test(causeMessage)) return deadlinePassed ? 'deadline' : 'slow';
   const outcome = classifyFailure(causeMessage);
   const classified = outcome && OUTCOME_REASONS[outcome];
   if (classified) return classified;
@@ -81,6 +89,8 @@ function reasonOf(causeMessage: string): StoreFailureReason {
 }
 
 export class StoreRequestError extends Error {
+  private readonly deadlinePassed = storeDeadlinePassed();
+
   constructor(
     readonly store: Store,
     readonly method: string,
@@ -91,7 +101,7 @@ export class StoreRequestError extends Error {
   }
 
   get reason(): StoreFailureReason {
-    return reasonOf(this.causeMessage);
+    return reasonOf(this.causeMessage, this.deadlinePassed);
   }
 
   get userMessage(): string {

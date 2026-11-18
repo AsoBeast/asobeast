@@ -228,7 +228,7 @@ describe('AllExceptionsFilter', () => {
   it.each([
     [
       'TimeoutError: The operation was aborted due to timeout',
-      'Google Play took longer than 20 seconds to answer. Try again in a few minutes.',
+      'Google Play took too long to answer. Try again in a few minutes.',
     ],
     [
       'Request failed with status 429',

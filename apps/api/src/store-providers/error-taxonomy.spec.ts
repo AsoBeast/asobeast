@@ -344,28 +344,75 @@ describe('store failure reasons', () => {
   const TURNED_AWAY =
     'Google Play turned the request away for now. Try again in a few minutes.';
 
+  const failedPastDeadline = (store: Store, causeMessage: string) =>
+    withinStoreDeadline(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      return new StoreRequestError(store, 'getApp', causeMessage);
+    }, 1);
+
   it.each([
     [
       'names a play call the deadline cut short',
       Store.GOOGLE_PLAY,
       'TimeoutError: The operation was aborted due to timeout',
-      'deadline',
       'Google Play took longer than 20 seconds to answer. Try again in a few minutes.',
     ],
     [
       'names an app store call the deadline cut short',
       Store.APP_STORE,
       'The operation was aborted due to timeout',
-      'deadline',
       'The App Store took longer than 20 seconds to answer. Try again in a few minutes.',
     ],
     [
       'names a call the deadline aborted',
       Store.APP_STORE,
       'This operation was aborted',
-      'deadline',
       'The App Store took longer than 20 seconds to answer. Try again in a few minutes.',
     ],
+  ])('%s', async (_case, store, causeMessage, sentence) => {
+    const error = await failedPastDeadline(store, causeMessage);
+
+    expect(error.reason).toBe('deadline');
+    expect(error.userMessage).toBe(sentence);
+  });
+
+  it.each([
+    [
+      'names an app store attempt that timed out with no request deadline as slow',
+      Store.APP_STORE,
+      'The operation was aborted due to timeout',
+      'The App Store took too long to answer. Try again in a few minutes.',
+    ],
+    [
+      'names a play call that timed out with no request deadline as slow',
+      Store.GOOGLE_PLAY,
+      'TimeoutError: The operation was aborted due to timeout',
+      'Google Play took too long to answer. Try again in a few minutes.',
+    ],
+  ])('%s', (_case, store, causeMessage, sentence) => {
+    const error = new StoreRequestError(store, 'getApp', causeMessage);
+
+    expect(error.reason).toBe('slow');
+    expect(error.userMessage).toBe(sentence);
+  });
+
+  it('keeps the reason of a failure inside a deadline that has not passed', async () => {
+    const error = await withinStoreDeadline(
+      () =>
+        Promise.resolve(
+          new StoreRequestError(
+            Store.GOOGLE_PLAY,
+            'getApp',
+            'Request failed with status 429',
+          ),
+        ),
+      60_000,
+    );
+
+    expect(error.reason).toBe('refused');
+  });
+
+  it.each([
     [
       'names a rate limited request as turned away',
       Store.GOOGLE_PLAY,
@@ -422,13 +469,16 @@ describe('store failure reasons', () => {
     expect(error.userMessage).toBe(sentence);
   });
 
-  it('reads the deadline before the transport pattern', () => {
+  it('reads a timeout before the transport pattern', async () => {
     const cause = 'TimeoutError: The operation was aborted due to timeout';
 
     expect(classifyFailure(cause)).toBe(ProxyOutcome.TRANSPORT);
+    expect((await failedPastDeadline(Store.GOOGLE_PLAY, cause)).reason).toBe(
+      'deadline',
+    );
     expect(
       new StoreRequestError(Store.GOOGLE_PLAY, 'getApp', cause).reason,
-    ).toBe('deadline');
+    ).toBe('slow');
   });
 
   it('keeps the busy pool sentence', () => {
