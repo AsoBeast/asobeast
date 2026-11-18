@@ -1,5 +1,10 @@
 import type { Page, Request } from "@playwright/test";
-import { APP_FIELD_PROPOSAL_ID } from "./fixtures.mts";
+import {
+  APP_FIELD_PROPOSAL_ID,
+  APP_FIELD_PROPOSAL_RIVAL_ID,
+  APP_GP_DETAIL,
+  FIELD_PROPOSAL_NOT_STOREFRONT,
+} from "./fixtures.mts";
 import { localizationItem, seedLocalizations } from "./localizations.mts";
 import { expect, test } from "./session.mts";
 
@@ -183,5 +188,166 @@ test.describe("the metadata page takes proposed phrases", () => {
     await expect(
       panel.getByRole("button", { name: "Save keyword field" }),
     ).toBeDisabled();
+  });
+});
+
+test.describe("the keywords page sends its selection", () => {
+  test.beforeEach(async ({ page }) => {
+    await seedLocalizations(page.request, APP, {
+      markets: ["us"],
+      fields: { "en-US": ["focus", "timer"] },
+    });
+  });
+
+  const keywordsPage = (id: string, query = "") =>
+    `/apps/${id}/keywords${query}`;
+
+  const bulkBar = (page: Page) =>
+    page.getByRole("group", { name: "Bulk keyword actions" });
+
+  const addToField = (page: Page) =>
+    bulkBar(page).getByRole("link", { name: "Add to keyword field" });
+
+  const select = async (page: Page, ...phrases: string[]) => {
+    for (const phrase of phrases) {
+      await page.getByRole("checkbox", { name: `Select ${phrase}` }).click();
+    }
+    await expect(bulkBar(page)).toContainText(`${phrases.length} selected`);
+  };
+
+  const toast = (page: Page, text: string) =>
+    page.locator("[data-sonner-toast]").filter({ hasText: text });
+
+  test("shows the action only where a keyword field exists", async ({
+    page,
+  }) => {
+    await page.goto(keywordsPage(APP));
+    await select(page, "deep work");
+    await expect(addToField(page)).toBeVisible();
+
+    await page.goto(
+      keywordsPage(APP, `?country=${FIELD_PROPOSAL_NOT_STOREFRONT}`),
+    );
+    await select(page, "focus");
+    await expect(addToField(page)).toHaveCount(0);
+
+    await page.goto(keywordsPage(APP_FIELD_PROPOSAL_RIVAL_ID));
+    await select(page, "deep work");
+    await expect(addToField(page)).toHaveCount(0);
+
+    await page.goto(keywordsPage(APP_GP_DETAIL.id));
+    await page
+      .getByRole("checkbox", { name: /^Select (?!all)/ })
+      .first()
+      .click();
+    await expect(bulkBar(page)).toContainText("1 selected");
+    await expect(addToField(page)).toHaveCount(0);
+  });
+
+  test("opens the editor with the selection in table order and saves it", async ({
+    page,
+  }) => {
+    const writes = fieldWrites(page);
+    await page.goto(keywordsPage(APP, "?sort=keyword&dir=desc"));
+    await select(page, "deep work", "pomodoro");
+
+    await addToField(page).click();
+
+    await expect(page).toHaveURL(
+      /\/metadata\?fieldLocale=en-US&fieldAdd=pomodoro,deep\+work#app-localizations$/,
+    );
+    await expect(editor(page, US)).toHaveValue(
+      "focus,timer,pomodoro,deep work",
+    );
+    expect(writes).toHaveLength(0);
+
+    await page.getByRole("button", { name: "Save keyword field" }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Save and track" })
+      .click();
+    await expect(
+      page.getByText("Saved the English (U.S.) keyword field"),
+    ).toBeVisible();
+    await page.reload();
+    await expect(editor(page, US)).toHaveValue(
+      "focus,timer,pomodoro,deep work",
+    );
+  });
+
+  test("carries only what fits and says what was left out", async ({
+    page,
+  }) => {
+    await seedLocalizations(page.request, APP, {
+      markets: ["us"],
+      fields: { "en-US": ["a".repeat(45), "b".repeat(46)] },
+    });
+    await page.goto(keywordsPage(APP, "?sort=keyword&dir=asc"));
+    await select(page, "deep work", "pomodoro", "zen");
+
+    await addToField(page).click();
+
+    await expect(
+      toast(
+        page,
+        "2 keywords did not fit in the English (U.S.) keyword field and were left out.",
+      ),
+    ).toBeVisible();
+    await expect(page).toHaveURL(/fieldLocale=en-US&fieldAdd=zen#/);
+  });
+
+  test("says when every selected keyword is already in the field", async ({
+    page,
+  }) => {
+    await page.goto(keywordsPage(APP));
+    await select(page, "focus", "timer");
+
+    await addToField(page).click();
+
+    await expect(
+      toast(
+        page,
+        "Every selected keyword is already in the English (U.S.) keyword field.",
+      ),
+    ).toBeVisible();
+    await expect(page).toHaveURL(/\/metadata\?fieldLocale=en-US#/);
+    await expect(editor(page, US)).toHaveValue("focus,timer");
+    await expect(statusLine(page)).toHaveCount(0);
+  });
+
+  test("targets the localization the market reads that the app ships", async ({
+    page,
+  }) => {
+    await seedLocalizations(page.request, APP, {
+      markets: ["us", "mx"],
+      shipped: [{ localization: "en-GB", origin: "manual" }],
+      fields: { "en-US": ["focus", "timer"] },
+    });
+    await page.goto(keywordsPage(APP, "?country=mx"));
+    await select(page, "trabajo profundo");
+
+    await expect(addToField(page)).toHaveAttribute(
+      "href",
+      /fieldLocale=en-GB&fieldAdd=trabajo\+profundo#/,
+    );
+  });
+
+  test("adds nothing to a field App Store Connect manages", async ({
+    page,
+  }) => {
+    await seedLocalizations(page.request, APP, {
+      markets: ["us"],
+      fields: { "en-US": ["focus", "timer"] },
+      storeManaged: true,
+    });
+    await page.goto(keywordsPage(APP));
+    await select(page, "deep work");
+
+    await addToField(page).click();
+
+    await expect(statusLine(page)).toHaveText(
+      "The selected phrases were not added, because App Store Connect manages the English (U.S.) keyword field.",
+    );
+    await expect(editor(page, US)).toHaveValue("focus,timer");
   });
 });

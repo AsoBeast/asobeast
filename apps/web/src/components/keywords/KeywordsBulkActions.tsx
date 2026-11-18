@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type RefObject } from "react";
+import { useRef, useState, type ReactNode, type RefObject } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChartLine, Pause, Play, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -114,6 +114,7 @@ export function KeywordsBulkActions({
   onClear,
   onExport,
   onShowDynamics,
+  fieldAction,
 }: {
   appId: string;
   selectedKeywords: readonly TrackedKeywordItem[];
@@ -121,6 +122,7 @@ export function KeywordsBulkActions({
   onClear: () => void;
   onExport: () => void;
   onShowDynamics: () => void;
+  fieldAction?: ReactNode;
 }) {
   const queryClient = useQueryClient();
   const selectedIds = selectedKeywords.map((keyword) => keyword.keywordId);
@@ -239,6 +241,7 @@ export function KeywordsBulkActions({
           removed={removed}
           onConfirm={() => run("untrack")}
         />
+        {fieldAction}
         <ExportCsvButton subject="selected keywords" onClick={onExport} />
         <Button
           variant="ghost"
