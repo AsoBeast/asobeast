@@ -674,7 +674,7 @@ test("sends the readiness rows to where the audit scores them", async ({
 
   await page
     .getByRole("region", { name: "Featuring readiness" })
-    .getByRole("link", { name: "Where the audit scores it" })
+    .getByRole("link", { name: /^Where the audit scores it/ })
     .first()
     .click();
 

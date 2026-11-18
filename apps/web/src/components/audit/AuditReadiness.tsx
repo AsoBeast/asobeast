@@ -46,7 +46,13 @@ const STATUS_WORD: Record<ReadinessStatus, string> = {
   unmeasurable: "Not measured",
 };
 
-function ReadinessLinkView({ link }: { link: ReadinessLink }) {
+function ReadinessLinkView({
+  link,
+  subject,
+}: {
+  link: ReadinessLink;
+  subject: string;
+}) {
   if (link.href.startsWith("https://")) {
     return (
       <a
@@ -62,6 +68,7 @@ function ReadinessLinkView({ link }: { link: ReadinessLink }) {
   return (
     <Link href={link.href} className="w-fit text-foreground link-underline">
       <span>{link.label}</span>
+      <span className="sr-only">{`, ${subject}`}</span>
     </Link>
   );
 }
@@ -88,7 +95,9 @@ function ReadinessRow({ item }: { item: ReadinessItem }) {
             <span>{item.detail}</span>
           </p>
         )}
-        {item.link === null ? null : <ReadinessLinkView link={item.link} />}
+        {item.link === null ? null : (
+          <ReadinessLinkView link={item.link} subject={item.label} />
+        )}
       </div>
     </li>
   );

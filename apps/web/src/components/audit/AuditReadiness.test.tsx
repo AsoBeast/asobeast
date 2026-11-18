@@ -34,4 +34,33 @@ describe("AuditReadiness", () => {
   it("names a single featured story", () => {
     expect(text(1)).toContain("In 1 featured story");
   });
+
+  it("adds the row label to the name of a scoring link", () => {
+    const markup = renderToStaticMarkup(
+      <AuditReadiness
+        audit={{
+          ...audit(1),
+          readiness: {
+            items: [
+              {
+                id: "rating",
+                label: "Average rating",
+                status: "pass",
+                detail: null,
+                link: {
+                  href: "#factors-conversion",
+                  label: "Where the audit scores it",
+                },
+              },
+            ],
+            editorial: { stories: 1, editorsChoiceBadge: false },
+            extractAsOf: "2026-11-14",
+          },
+        }}
+      />,
+    );
+
+    expect(markup).toContain("Where the audit scores it");
+    expect(markup).toContain("Average rating");
+  });
 });
