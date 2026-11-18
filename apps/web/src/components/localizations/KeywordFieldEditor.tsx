@@ -16,6 +16,7 @@ import {
   type KeywordFieldDraft,
 } from "@/lib/app-localizations";
 import { formatDateTime, formatList } from "@/lib/format";
+import { proposalDraft } from "@/lib/keyword-field-addition";
 import { localizationName } from "@/lib/localizations";
 import { STORE_CONNECTIONS_PATH } from "@/lib/store-connection-copy";
 import { cn } from "@/lib/utils";
@@ -92,18 +93,24 @@ export function KeywordFieldEditor({
   managed = false,
   sync = null,
   leading,
+  proposed = null,
+  onProposalSettled,
 }: {
   id: string;
   item: AppLocalizationItem;
   managed?: boolean;
   sync?: AppLocalizationStoreSync | null;
   leading?: ReactNode;
+  proposed?: readonly string[] | null;
+  onProposalSettled?: () => void;
 }) {
   const countId = useId();
   const editor = useRef<HTMLTextAreaElement>(null);
   const saveButton = useRef<HTMLButtonElement>(null);
   const name = localizationName(item.localization);
-  const [draft, setDraft] = useState<string | null>(null);
+  const [draft, setDraft] = useState<string | null>(() =>
+    managed ? null : proposalDraft(item.phrases, proposed),
+  );
   const stored = item.phrases.join(",");
   const text = managed ? stored : (draft ?? stored);
   const field = keywordFieldDraft(text, item.phrases);
@@ -117,7 +124,10 @@ export function KeywordFieldEditor({
     request,
     confirm,
     dismiss,
-  } = useKeywordFieldSave(id, item, () => setDraft(null));
+  } = useKeywordFieldSave(id, item, () => {
+    setDraft(null);
+    onProposalSettled?.();
+  });
   const busy = checking || saving;
 
   return (

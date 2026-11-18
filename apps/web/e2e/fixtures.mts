@@ -3744,6 +3744,43 @@ DATASETS[APP_RIVAL_ID] = {
   detail: { ...rivalDataset.detail, isCompetitor: true },
 };
 
+export const APP_FIELD_PROPOSAL_ID = "app-field-proposal";
+export const APP_FIELD_PROPOSAL_RIVAL_ID = "app-field-proposal-rival";
+export const FIELD_PROPOSAL_NOT_STOREFRONT = "cu";
+
+const FIELD_PROPOSAL_KEYWORDS: ReadonlyArray<readonly [string, string]> = [
+  ["deep work", "us"],
+  ["focus", "us"],
+  ["pomodoro", "us"],
+  ["timer", "us"],
+  ["zen", "us"],
+  ["trabajo profundo", "mx"],
+  ["deep work", "mx"],
+  ["focus", FIELD_PROPOSAL_NOT_STOREFRONT],
+];
+
+function fieldProposalDataset(id: string, name: string): AppDataset {
+  return {
+    ...localesDataset(id, name),
+    keywords: FIELD_PROPOSAL_KEYWORDS.map(([text, country], index) =>
+      manualKeyword(id, text, country, index + 1),
+    ),
+  };
+}
+
+DATASETS[APP_FIELD_PROPOSAL_ID] = fieldProposalDataset(
+  APP_FIELD_PROPOSAL_ID,
+  "Proposal Lab",
+);
+const proposalRival = fieldProposalDataset(
+  APP_FIELD_PROPOSAL_RIVAL_ID,
+  "Proposal Rival",
+);
+DATASETS[APP_FIELD_PROPOSAL_RIVAL_ID] = {
+  ...proposalRival,
+  detail: { ...proposalRival.detail, isCompetitor: true },
+};
+
 DATASETS[APP_PAID_TOP_CHART_ID] = categoryDataset(
   APP_PAID_TOP_CHART_ID,
   "Heads Up",
@@ -5994,6 +6031,7 @@ METADATA_AUDITS[APP_MANAGED_LOCALES_ID] = {
 METADATA_AUDITS[APP_RIVAL_ID] = METADATA_AUDIT;
 METADATA_AUDITS[APP_UNLISTED_MANAGED_ID] = METADATA_AUDIT;
 METADATA_AUDITS[APP_IMPORT_FOCUS_ID] = METADATA_AUDIT;
+METADATA_AUDITS[APP_FIELD_PROPOSAL_ID] = METADATA_AUDIT;
 
 export const APP_READS_ID = "app-reads";
 

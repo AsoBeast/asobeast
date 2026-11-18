@@ -30,12 +30,16 @@ export function LocalizationItem({
   managed = false,
   sync = null,
   onDraft,
+  proposed = null,
+  onProposalSettled,
 }: {
   id: string;
   item: AppLocalizationItem;
   managed?: boolean;
   sync?: AppLocalizationStoreSync | null;
   onDraft: ((localization: AppStoreLocalization) => void) | null;
+  proposed?: readonly string[] | null;
+  onProposalSettled?: () => void;
 }) {
   const name = localizationName(item.localization);
   const claimFocus = useFocusClaim(localizationFocusKey(item.localization));
@@ -90,6 +94,8 @@ export function LocalizationItem({
             item={item}
             managed={managed}
             sync={sync}
+            proposed={proposed}
+            onProposalSettled={onProposalSettled}
             leading={
               managed || item.origin === "home" ? null : (
                 <RemoveLocalizationDialog id={id} item={item} />

@@ -633,6 +633,8 @@ export const draftLocaleParser = localizationParser;
 
 export const fieldLocaleParser = localizationParser;
 
+export const fieldAddParser = parseAsArrayOf(parseAsString);
+
 export const utcDateParser = createParser({
   parse(value) {
     return isUtcCalendarDate(value) ? value : null;
