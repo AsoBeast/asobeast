@@ -38,7 +38,7 @@ describe('EmailLayout', () => {
     expect(html).toMatch(
       /<img[^>]*src="https:\/\/aso\.example\.com\/brand\/email-mark\.png"/,
     );
-    expect(html).toMatch(/<img[^>]*width="48"/);
+    expect(html).toMatch(/<img[^>]*width="28"/);
     expect(html).toMatch(/<img[^>]*alt=""/);
     expect(html).toContain('Sent by AsoBeast at aso.example.com');
   });

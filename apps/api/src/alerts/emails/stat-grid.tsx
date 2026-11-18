@@ -32,7 +32,7 @@ export function StatGrid({ stats }: { stats: readonly Stat[] }) {
               className="w-1/3 pb-[12px] align-top max-sm:block max-sm:w-full"
             >
               <Text
-                className={`m-0 text-[24px] font-semibold leading-[32px] ${TONE_CLASS[stat.tone]}`}
+                className={`m-0 text-[28px] font-semibold leading-[32px] tracking-[-0.02em] ${TONE_CLASS[stat.tone]}`}
               >
                 {stat.value}
               </Text>
