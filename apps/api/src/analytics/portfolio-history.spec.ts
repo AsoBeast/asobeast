@@ -398,4 +398,61 @@ describe('portfolioHistory', () => {
     expect(history.change.movers.up).toHaveLength(8);
     expect(history.change.movement.up).toBe(10);
   });
+
+  it('reads a keyword checked the day before the range began at that check everywhere', () => {
+    const partial = portfolioHistory(
+      [
+        app([
+          row('a', 10, [
+            [0, 3],
+            [7, 4],
+          ]),
+          row('b', 10, [
+            [0, 2],
+            [8, 5],
+          ]),
+        ]),
+      ],
+      7,
+    );
+    const whole = portfolioHistory(
+      [
+        app([
+          row('a', 10, [
+            [0, 3],
+            [7, 4],
+          ]),
+          row('b', 10, [
+            [0, 2],
+            [7, 5],
+          ]),
+        ]),
+      ],
+      7,
+    );
+
+    expect(partial.change.top10Delta).toBe(0);
+    expect(partial.change.movement).toEqual(whole.change.movement);
+    expect(partial.change.visibilityDelta).toBe(whole.change.visibilityDelta);
+  });
+
+  it('never compares a keyword with a check two days from the range start', () => {
+    const history = portfolioHistory(
+      [
+        app([
+          row('a', 10, [
+            [0, 3],
+            [6, 9],
+          ]),
+          row('b', 10, [
+            [0, 2],
+            [5, 40],
+          ]),
+        ]),
+      ],
+      7,
+    );
+
+    expect(history.change.movers.up.map((mover) => mover.text)).toEqual(['a']);
+  });
 });

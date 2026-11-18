@@ -1,4 +1,4 @@
-import { RANK_DEPTH } from '@asobeast/shared';
+import { RANK_DEPTH, visibility } from '@asobeast/shared';
 import {
   GroupMember,
   groupAggregates,
@@ -11,6 +11,7 @@ import {
 
 const DAY_13 = new Date('2026-07-13T00:00:00Z');
 const DAY_06 = new Date('2026-07-06T00:00:00Z');
+const DAY_05 = new Date('2026-07-05T00:00:00Z');
 
 const row = (
   keywordId: string,
@@ -181,5 +182,95 @@ describe('groupVisibilityPoints', () => {
     const [point] = groupVisibilityPoints(group.members);
     expect(point.date).toBe('2026-07-13');
     expect(point.visibility).toBeCloseTo(83.3, 1);
+  });
+});
+
+const scored = (
+  keywordId: string,
+  metrics: Array<[traffic: number, scoredOn: Date]>,
+  captures: Ranking[],
+): TrackedRow => {
+  const base = row(keywordId, 0, captures);
+  return {
+    ...base,
+    keyword: {
+      ...base.keyword,
+      metrics: metrics.map(([traffic, date]) => ({
+        traffic,
+        difficulty: 10,
+        date,
+      })),
+    },
+  };
+};
+
+const twoKeywords = (baselineOfB: Date): TrackedRow[] => [
+  scored(
+    'a',
+    [[10, DAY_05]],
+    [
+      { position: 4, depth: RANK_DEPTH, date: DAY_06 },
+      { position: 3, depth: RANK_DEPTH, date: DAY_13 },
+    ],
+  ),
+  scored(
+    'b',
+    [[20, DAY_05]],
+    [
+      { position: 5, depth: RANK_DEPTH, date: baselineOfB },
+      { position: 2, depth: RANK_DEPTH, date: DAY_13 },
+    ],
+  ),
+];
+
+describe('the baseline of a visibility change', () => {
+  it('reads a keyword checked the day before like one checked on the day', () => {
+    expect(windowVisibility(twoKeywords(DAY_05), DAY_13).delta7d).toBe(
+      windowVisibility(twoKeywords(DAY_06), DAY_13).delta7d,
+    );
+  });
+
+  it('reads a group member the same way', () => {
+    const [partial] = groupAggregates([
+      member('ios', twoKeywords(DAY_05), DAY_13),
+    ]);
+    const [whole] = groupAggregates([
+      member('ios', twoKeywords(DAY_06), DAY_13),
+    ]);
+
+    expect(groupVisibility(partial.members).delta7d).toBe(
+      groupVisibility(whole.members).delta7d,
+    );
+  });
+
+  it('weights a keyword by the popularity scored on or before its own check', () => {
+    const rows = [
+      scored(
+        'a',
+        [[10, DAY_05]],
+        [
+          { position: 4, depth: RANK_DEPTH, date: DAY_06 },
+          { position: 3, depth: RANK_DEPTH, date: DAY_13 },
+        ],
+      ),
+      scored(
+        'b',
+        [
+          [60, DAY_06],
+          [20, DAY_05],
+        ],
+        [
+          { position: 5, depth: RANK_DEPTH, date: DAY_05 },
+          { position: 2, depth: RANK_DEPTH, date: DAY_13 },
+        ],
+      ),
+    ];
+    const { current, delta7d } = windowVisibility(rows, DAY_13);
+    const before = visibility([
+      { traffic: 10, position: 4 },
+      { traffic: 20, position: 5 },
+    ]);
+
+    expect(delta7d).toBe(Math.round((current - before) * 10) / 10);
   });
 });

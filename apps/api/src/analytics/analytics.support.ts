@@ -5,6 +5,7 @@ import {
   VisibilityPoint,
 } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import { hasBaseline, keywordsAtBaseline } from './baseline';
 import {
   addDays,
   DAY_MS,
@@ -86,10 +87,12 @@ export function delta(
   days: number,
 ): number | null {
   const past = addDays(referenceDate, -days);
-  if (!capturedOn(rows, past)) {
+  if (!hasBaseline(rows, past)) {
     return null;
   }
-  return Math.round((current - visibilityAt(rows, past)) * 10) / 10;
+  return (
+    Math.round((current - visibility(keywordsAtBaseline(rows, past))) * 10) / 10
+  );
 }
 
 export function windowVisibility(
@@ -129,17 +132,28 @@ const groupKeywordsAt = (
     return keywordsAt(member.rows, addDays(member.referenceDate, offsetDays));
   });
 
+interface ReferencedWindow extends KeywordWindow {
+  referenceDate: Date;
+}
+
+const isReferenced = (member: KeywordWindow): member is ReferencedWindow =>
+  member.referenceDate !== null;
+
 function groupDelta(members: KeywordWindow[], days: number): number | null {
-  const comparable = members.filter(
-    (member) =>
-      member.referenceDate !== null &&
-      capturedOn(member.rows, addDays(member.referenceDate, -days)),
-  );
+  const startOf = (member: ReferencedWindow) =>
+    addDays(member.referenceDate, -days);
+  const comparable = members
+    .filter(isReferenced)
+    .filter((member) => hasBaseline(member.rows, startOf(member)));
   if (comparable.length === 0) {
     return null;
   }
   const current = visibility(groupKeywordsAt(comparable, 0));
-  const past = visibility(groupKeywordsAt(comparable, -days));
+  const past = visibility(
+    comparable.flatMap((member) =>
+      keywordsAtBaseline(member.rows, startOf(member)),
+    ),
+  );
   return Math.round((current - past) * 10) / 10;
 }
 
