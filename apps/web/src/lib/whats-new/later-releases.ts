@@ -123,6 +123,11 @@ export const LATER_RELEASES: readonly Release[] = [
         title: "Emails that look like the app",
         text: "Account, billing and alert emails now use the same typeface, colours and shapes as the app, in light and dark. Links are plain underlined text, so the orange button is the one thing that stands out. Nothing an email says has changed.",
       },
+      {
+        kind: "fixed",
+        title: "Keyword figures that agree after a partial run",
+        text: "When a daily run missed some keywords on the first day of the range you look at, the keywords in the top 10 and the visibility change used to count those keywords as not found, while the keyword movers already compared them with the day next to it. Every figure of the dashboard and the app overview now compares each keyword with the same earlier check, the one of that day or of the day next to it, so a keyword already in the top 10 is no longer counted as a new entry.",
+      },
     ],
   },
   {
@@ -166,11 +171,6 @@ export const LATER_RELEASES: readonly Release[] = [
         kind: "fixed",
         title: "The plan page on a weak connection",
         text: "When the plan page cannot load your plan or the prices, it now says so and lets you try again, instead of showing an offer or a checkout that may not apply to you.",
-      },
-      {
-        kind: "fixed",
-        title: "Keyword figures that agree after a partial run",
-        text: "When a daily run missed some keywords on the first day of the range you look at, the keywords in the top 10 and the visibility change used to count those keywords as not found, while the keyword movers already compared them with the day next to it. Every figure of the dashboard and the app overview now compares each keyword with the same earlier check, so a keyword already in the top 10 is no longer counted as a new entry.",
       },
     ],
   },
