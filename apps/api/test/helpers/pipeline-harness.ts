@@ -220,6 +220,7 @@ export async function createPipelineHarness(): Promise<PipelineHarness> {
     queue(name).getJobs([
       'wait',
       'paused',
+      'prioritized',
       'waiting-children',
       'active',
       'delayed',

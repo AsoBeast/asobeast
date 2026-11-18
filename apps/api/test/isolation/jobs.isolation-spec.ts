@@ -32,7 +32,13 @@ describe('Job isolation', () => {
     fixture.app.get<Queue>(getQueueToken(name), { strict: false });
 
   const jobsOn = (name: string): Promise<Job[]> =>
-    queue(name).getJobs(['wait', 'paused', 'delayed', 'waiting-children']);
+    queue(name).getJobs([
+      'wait',
+      'paused',
+      'prioritized',
+      'delayed',
+      'waiting-children',
+    ]);
 
   const deliveriesOn = async (name: string): Promise<Job[]> =>
     (await jobsOn(name)).filter((job) => job.name !== JOBS.RELAY_ALERTS);

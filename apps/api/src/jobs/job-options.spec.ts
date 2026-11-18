@@ -3,6 +3,7 @@ import {
   DEFERRED_JOB_OPTIONS,
   JOB_OPTIONS,
   REVIEW_SYNC_JOB_OPTIONS,
+  SCHEDULED_JOB_OPTIONS,
   reviewSyncJobOptions,
 } from './job-options';
 
@@ -24,11 +25,17 @@ describe('REVIEW_SYNC_JOB_OPTIONS', () => {
 });
 
 describe('job priority', () => {
-  it('leaves the jobs of the daily run without a priority, which BullMQ serves first', () => {
+  it('leaves work a person started without a priority, which BullMQ serves first', () => {
     expect(JOB_OPTIONS).not.toHaveProperty('priority');
   });
 
-  it('gives deferred work an explicit priority, which BullMQ serves after every job without one', () => {
-    expect(DEFERRED_JOB_OPTIONS.priority).toBeGreaterThan(0);
+  it('gives scheduled work a priority behind it', () => {
+    expect(SCHEDULED_JOB_OPTIONS.priority).toBeGreaterThan(0);
+  });
+
+  it('gives deferred work a priority behind scheduled work', () => {
+    expect(DEFERRED_JOB_OPTIONS.priority).toBeGreaterThan(
+      SCHEDULED_JOB_OPTIONS.priority,
+    );
   });
 });

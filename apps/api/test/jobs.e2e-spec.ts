@@ -51,7 +51,7 @@ describe('Pipeline store routing (e2e)', () => {
     app.get<Queue>(getQueueToken(name), { strict: false });
 
   const jobsOn = (name: string): Promise<Job[]> =>
-    queue(name).getJobs(['wait', 'paused', 'delayed']);
+    queue(name).getJobs(['wait', 'paused', 'prioritized', 'delayed']);
 
   const seedApp = async (store: Store, storeAppId: string): Promise<string> => {
     const created = await prisma.app.create({

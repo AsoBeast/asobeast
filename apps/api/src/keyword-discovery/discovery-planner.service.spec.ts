@@ -1,6 +1,7 @@
 import { Store } from '@prisma/client';
 import { Queue } from 'bullmq';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
+import { DEFERRED_JOB_OPTIONS } from '../jobs/job-options';
 import { JOBS } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { CaptureReading, DiscoveryCaptures } from './discovery-captures';
@@ -442,7 +443,10 @@ describe('KeywordDiscoveryPlanner', () => {
           workspaceId: 'ws',
           correlationId: 'corr',
         },
-        opts: { priority: 1, jobId: 'discover~app1~a~2026-W46' },
+        opts: {
+          ...DEFERRED_JOB_OPTIONS,
+          jobId: 'discover~app1~a~2026-W46',
+        },
       },
     ]);
   });
