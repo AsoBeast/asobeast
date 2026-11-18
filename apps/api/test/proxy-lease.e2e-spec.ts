@@ -10,6 +10,7 @@ import {
   ProxyPool,
   ProxyPoolUnavailableError,
 } from '../src/store-providers/egress/proxy-pool.service';
+import { withinStoreDeadline } from '../src/store-providers/store-deadline';
 import { testDb } from './helpers/test-db';
 
 const MIN_INTERVAL_MS = 20;
@@ -26,6 +27,7 @@ const config = {
   minIntervalMs: MIN_INTERVAL_MS,
   acquireTimeoutMs: 200,
   pollMs: 10,
+  interactiveReserve: 1,
   credentialsFor: () => undefined,
 } as unknown as ProxyPoolConfig;
 
@@ -51,21 +53,23 @@ describe('Proxy endpoint leases (e2e)', () => {
     );
   });
 
-  beforeEach(async () => {
-    await prisma.$executeRawUnsafe('TRUNCATE TABLE "ProxyEndpoint" CASCADE');
-    await prisma.proxyEndpoint.create({
+  const createEndpoint = (id: string, port: number) =>
+    prisma.proxyEndpoint.create({
       data: {
-        id: 'only-us',
+        id,
         provider: 'test',
-        externalId: 'only-us',
+        externalId: id,
         host: '10.0.0.1',
-        port: 8080,
+        port,
         protocol: ProxyProtocol.HTTP,
         credentialRef: 'none',
         country: 'us',
         enabled: true,
       },
     });
+
+  beforeEach(async () => {
+    await prisma.$executeRawUnsafe('TRUNCATE TABLE "ProxyEndpoint" CASCADE');
   });
 
   afterAll(async () => {
@@ -73,53 +77,89 @@ describe('Proxy endpoint leases (e2e)', () => {
     await prisma.$disconnect();
   });
 
-  const leaseTheOnlyEndpoint = async () => {
+  const leaseAnEndpoint = async () => {
     const lease = await pool.acquire(Store.GOOGLE_PLAY, 'us');
     if (!lease) throw new Error('the pool handed out no endpoint');
     return lease;
   };
 
-  it('never hands a second job the endpoint a running job still holds', async () => {
-    const lease = await leaseTheOnlyEndpoint();
-    await elapse(MIN_INTERVAL_MS * 3);
+  describe('with one endpoint', () => {
+    beforeEach(() => createEndpoint('only-us', 8080));
 
-    const held = await prisma.proxyHealth.findUniqueOrThrow({
-      where: {
-        endpointId_store: { endpointId: 'only-us', store: Store.GOOGLE_PLAY },
-      },
+    it('never hands a second job the endpoint a running job still holds', async () => {
+      const lease = await leaseAnEndpoint();
+      await elapse(MIN_INTERVAL_MS * 3);
+
+      const held = await prisma.proxyHealth.findUniqueOrThrow({
+        where: {
+          endpointId_store: { endpointId: 'only-us', store: Store.GOOGLE_PLAY },
+        },
+      });
+      expect(held.pacedUntil).toEqual(
+        new Date(lease.leasedAt.getTime() + LEASE_HOLD_MS),
+      );
+
+      await expect(pool.acquire(Store.GOOGLE_PLAY, 'us')).rejects.toThrow(
+        ProxyPoolUnavailableError,
+      );
     });
-    expect(held.pacedUntil).toEqual(
-      new Date(lease.leasedAt.getTime() + LEASE_HOLD_MS),
-    );
 
-    await expect(pool.acquire(Store.GOOGLE_PLAY, 'us')).rejects.toThrow(
-      ProxyPoolUnavailableError,
-    );
+    it('leases the endpoint again once its job released it and the pacing ran out', async () => {
+      const { endpointId, leasedAt } = await leaseAnEndpoint();
+      await pool.release(endpointId, Store.GOOGLE_PLAY, {
+        leasedAt,
+        until: new Date(),
+      });
+      await elapse(MIN_INTERVAL_MS * 2);
+
+      await expect(pool.acquire(Store.GOOGLE_PLAY, 'us')).resolves.toEqual(
+        expect.objectContaining({ endpointId: 'only-us' }),
+      );
+    });
+
+    it('keeps the hold of a newer lease when an older one hands back late', async () => {
+      const newer = await leaseAnEndpoint();
+
+      await pool.release(newer.endpointId, Store.GOOGLE_PLAY, {
+        leasedAt: new Date(newer.leasedAt.getTime() - LEASE_HOLD_MS),
+        until: new Date(),
+      });
+
+      await expect(pool.acquire(Store.GOOGLE_PLAY, 'us')).rejects.toThrow(
+        ProxyPoolUnavailableError,
+      );
+    });
+
+    it('lets queued work use a pool no larger than the reserve', async () => {
+      await expect(pool.acquire(Store.GOOGLE_PLAY, 'us')).resolves.toEqual(
+        expect.objectContaining({ endpointId: 'only-us' }),
+      );
+    });
   });
 
-  it('leases the endpoint again once its job released it and the pacing ran out', async () => {
-    const { endpointId, leasedAt } = await leaseTheOnlyEndpoint();
-    await pool.release(endpointId, Store.GOOGLE_PLAY, {
-      leasedAt,
-      until: new Date(),
-    });
-    await elapse(MIN_INTERVAL_MS * 2);
-
-    await expect(pool.acquire(Store.GOOGLE_PLAY, 'us')).resolves.toEqual(
-      expect.objectContaining({ endpointId: 'only-us' }),
-    );
-  });
-
-  it('keeps the hold of a newer lease when an older one hands back late', async () => {
-    const newer = await leaseTheOnlyEndpoint();
-
-    await pool.release(newer.endpointId, Store.GOOGLE_PLAY, {
-      leasedAt: new Date(newer.leasedAt.getTime() - LEASE_HOLD_MS),
-      until: new Date(),
+  describe('with two endpoints and a reserve of one', () => {
+    beforeEach(async () => {
+      await createEndpoint('us-1', 8080);
+      await createEndpoint('us-2', 8081);
     });
 
-    await expect(pool.acquire(Store.GOOGLE_PLAY, 'us')).rejects.toThrow(
-      ProxyPoolUnavailableError,
-    );
+    it('keeps the last free endpoint from a second queued lease', async () => {
+      await leaseAnEndpoint();
+
+      await expect(pool.acquire(Store.GOOGLE_PLAY, 'us')).rejects.toThrow(
+        ProxyPoolUnavailableError,
+      );
+    });
+
+    it('hands the kept endpoint to a request someone waits for', async () => {
+      const queued = await leaseAnEndpoint();
+
+      const waited = await withinStoreDeadline(() =>
+        pool.acquire(Store.GOOGLE_PLAY, 'us'),
+      );
+
+      expect(waited?.endpointId).toBeDefined();
+      expect(waited?.endpointId).not.toBe(queued.endpointId);
+    });
   });
 });

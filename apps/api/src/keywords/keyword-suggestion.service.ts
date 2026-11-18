@@ -7,7 +7,10 @@ import {
   StoreSuggestionStrategy,
 } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
-import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
+import {
+  ANY_FREE_ENDPOINT,
+  ProxyEgress,
+} from '../store-providers/egress/proxy-egress.service';
 import { extractCandidates } from './extraction';
 import { ensureApp, trackedTexts } from './keywords.support';
 import { listingLanguages } from './listing-languages';
@@ -51,9 +54,12 @@ export class KeywordSuggestionService {
     const lookup = await this.store.plan(strategy, request);
     if (!lookup) return [];
     await spend?.();
-    return this.egress.through(market.store, market.country, lookup, {
-      waitForLocal: false,
-    });
+    return this.egress.through(
+      market.store,
+      market.country,
+      lookup,
+      ANY_FREE_ENDPOINT,
+    );
   }
 
   private dispatch(

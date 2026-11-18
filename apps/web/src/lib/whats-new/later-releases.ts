@@ -138,6 +138,11 @@ export const LATER_RELEASES: readonly Release[] = [
         title: "Send keywords to your keyword field",
         text: "Select keywords on the keywords page of an App Store app and choose Add to keyword field. The metadata page opens on the right language with those keywords added after the ones already in the field, ready to review and save. Keywords already in the field are not added twice, and only what fits in the 100 characters is taken along.",
       },
+      {
+        kind: "fixed",
+        title: "Imports while the server is busy",
+        text: "Importing an app, adding a competitor or refreshing a listing on Google Play used to wait 20 seconds and then fail while the daily collection kept the server busy. Part of the server's capacity now stays free for what you are waiting for, so these usually go through at once, and when that part is taken too you are told within a few seconds how long to wait before trying again.",
+      },
     ],
   },
   {

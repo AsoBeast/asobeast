@@ -30,7 +30,9 @@ export class PoolCapacity {
 
   async usable(store: Store): Promise<number> {
     const healthy = await this.healthy(store);
-    return Math.min(healthy, this.config.maxWorkerConcurrency);
+    const reserve = this.config.interactiveReserve;
+    const spare = healthy > reserve ? healthy - reserve : healthy;
+    return Math.min(spare, this.config.maxWorkerConcurrency);
   }
 
   async healthy(store: Store, now = new Date()): Promise<number> {

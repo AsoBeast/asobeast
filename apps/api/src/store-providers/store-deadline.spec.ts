@@ -2,6 +2,7 @@ import { DISPATCH_TIMEOUT_MS } from '../mcp/in-process.gateway';
 import {
   ON_DEMAND_STORE_DEADLINE_MS,
   storeDeadline,
+  storeDeadlineEndsAt,
   withinStoreDeadline,
 } from './store-deadline';
 
@@ -13,6 +14,23 @@ const elapse = (ms: number) =>
 describe('storeDeadline', () => {
   it('carries no signal outside an on demand request', () => {
     expect(storeDeadline()).toEqual({});
+  });
+
+  it('has no end outside a deadline', () => {
+    expect(storeDeadlineEndsAt()).toBeNull();
+  });
+
+  it('remembers when the deadline ends', () => {
+    jest.useFakeTimers();
+    try {
+      const startedAt = Date.now();
+
+      const endsAt = withinStoreDeadline(() => storeDeadlineEndsAt(), 1_000);
+
+      expect(endsAt).toBe(startedAt + 1_000);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('carries one signal across the awaits of an on demand request', async () => {

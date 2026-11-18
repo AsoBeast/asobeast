@@ -18,8 +18,10 @@ import { ErrorTracking } from '../observability/error-tracking.service';
 import {
   StoreAppNotFoundError,
   StoreNotSupportedError,
+  StorePoolBusyError,
   StoreRequestError,
 } from '../store-providers/errors';
+import { ProxyPoolStoppingError } from '../store-providers/egress/proxy-pool.service';
 import { UnknownChartGenreError } from '../charts/chart-key';
 import { AllExceptionsFilter } from './all-exceptions.filter';
 
@@ -409,6 +411,69 @@ describe('AllExceptionsFilter', () => {
     });
     expect(headers['Retry-After']).toBe('5');
   });
+  it('answers a busy pool with 503 and a retry hint', () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+
+    const { status, envelope, headers } = capture(
+      new StorePoolBusyError(Store.GOOGLE_PLAY, 4_200),
+    );
+
+    expect(status).toBe(HttpStatus.SERVICE_UNAVAILABLE);
+    expect(envelope).toMatchObject({
+      statusCode: 503,
+      error: 'Service Unavailable',
+      message:
+        'This server is busy reaching Google Play. Try again in 5 seconds.',
+      retryAfterSeconds: 5,
+    });
+    expect(headers['Retry-After']).toBe('5');
+    warn.mockRestore();
+  });
+
+  it('keeps a busy pool out of error tracking', () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+
+    const { tracked } = capture(
+      new StorePoolBusyError(Store.GOOGLE_PLAY, 4_200),
+    );
+
+    expect(tracked).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(
+      'GOOGLE_PLAY acquire failed: no proxy endpoint was free within the request budget',
+    );
+    warn.mockRestore();
+  });
+
+  it('answers a stopping pool with 503', () => {
+    const { status, envelope, headers, tracked } = capture(
+      new ProxyPoolStoppingError(Store.APP_STORE),
+    );
+
+    expect(status).toBe(HttpStatus.SERVICE_UNAVAILABLE);
+    expect(envelope).toMatchObject({
+      statusCode: 503,
+      error: 'Service Unavailable',
+      message: 'The API is restarting. Try again in a few seconds.',
+      retryAfterSeconds: 5,
+    });
+    expect(headers['Retry-After']).toBe('5');
+    expect(tracked).not.toHaveBeenCalled();
+  });
+
+  it('still answers a store failure with 502', () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+
+    const { status, envelope } = capture(
+      new StoreRequestError(Store.GOOGLE_PLAY, 'getApp', 'fetch failed'),
+    );
+
+    expect(status).toBe(HttpStatus.BAD_GATEWAY);
+    expect(envelope.message).toBe(
+      'Google Play did not answer. Try again in a few minutes.',
+    );
+    warn.mockRestore();
+  });
+
   it('answers 503 with the wait and the health signals when the database is unreachable', () => {
     const health: HealthStatus = {
       status: 'error',

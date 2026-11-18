@@ -5,7 +5,10 @@ import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScreenshotQueue } from '../screenshots/screenshot-queue';
 import { ScreenshotRecorder } from '../screenshots/screenshot-recorder';
-import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
+import {
+  ANY_FREE_ENDPOINT,
+  ProxyEgress,
+} from '../store-providers/egress/proxy-egress.service';
 import { UnsearchableAppError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { toSnapshotData } from './apps.mapper';
@@ -44,8 +47,11 @@ export class AppCaptureService {
     const identity = { workspaceId, store, storeAppId, country };
     await this.assertFreeToClaim(identity, primaryAppId);
 
-    const normalized = await this.egress.through(store, country, () =>
-      this.registry.get(store).getApp(storeAppId, country),
+    const normalized = await this.egress.through(
+      store,
+      country,
+      () => this.registry.get(store).getApp(storeAppId, country),
+      ANY_FREE_ENDPOINT,
     );
     if (!normalized.searchable) {
       throw new UnsearchableAppError(normalized.title);

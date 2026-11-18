@@ -14,6 +14,7 @@ export interface SelectionInput {
   minIntervalMs: number;
   country?: string;
   waitForLocal?: boolean;
+  reserve?: number;
 }
 
 export type Selection =
@@ -31,8 +32,12 @@ export function selectEndpoint({
   minIntervalMs,
   country,
   waitForLocal = true,
+  reserve = 0,
 }: SelectionInput): Selection {
   if (candidates.length === 0) return { kind: 'empty' };
+
+  const kept = reservedWait(candidates, now, minIntervalMs, reserve);
+  if (kept !== null) return { kind: 'wait', waitMs: kept };
 
   const isAvailable = (candidate: PoolCandidate) =>
     availableAt(candidate, minIntervalMs) <= now.getTime();
@@ -71,6 +76,22 @@ export function availableAt(
     ? candidate.lastUsedAt.getTime() + minIntervalMs
     : 0;
   return Math.max(cooldown, paced, spacing);
+}
+
+function reservedWait(
+  candidates: PoolCandidate[],
+  now: Date,
+  minIntervalMs: number,
+  reserve: number,
+): number | null {
+  const healthy = candidates.filter(
+    (candidate) => !coolingDown(candidate, now),
+  );
+  if (reserve <= 0 || healthy.length <= reserve) return null;
+  const freed = healthy
+    .map((candidate) => availableAt(candidate, minIntervalMs))
+    .sort((left, right) => left - right)[reserve];
+  return freed > now.getTime() ? freed - now.getTime() : null;
 }
 
 function coolingDown(candidate: PoolCandidate, now: Date): boolean {
