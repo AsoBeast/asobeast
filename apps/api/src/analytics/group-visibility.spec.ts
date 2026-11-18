@@ -138,6 +138,31 @@ describe('groupVisibility', () => {
 
     expect(groupVisibility(group.members).delta7d).toBeNull();
   });
+
+  it('leaves a member without a baseline check out of the group change', () => {
+    const ios = member(
+      'ios',
+      [
+        row('k_ios', 10, [
+          { position: 1, depth: RANK_DEPTH, date: DAY_13 },
+          { position: 3, depth: RANK_DEPTH, date: DAY_06 },
+        ]),
+      ],
+      DAY_13,
+    );
+    const android = member(
+      'android',
+      [
+        row('k_android', 10, [
+          { position: 1, depth: RANK_DEPTH, date: DAY_13 },
+        ]),
+      ],
+      DAY_13,
+    );
+    const [group] = groupAggregates([ios, android]);
+
+    expect(groupVisibility(group.members).delta7d).toBe(50);
+  });
 });
 
 describe('groupVisibilityPoints', () => {
