@@ -12,7 +12,7 @@ The asobeast plugin adds forty skills to Claude Code. Each one is a method for o
 
 <Steps>
   <Step title="Connect the MCP server">
-    Follow [Connect an agent](/mcp/setup) for Claude Code. A read only token is enough for every skill.
+    Follow [Connect an agent](/mcp/setup) for Claude Code. A read only token runs every skill; a few steps need write access, see below.
   </Step>
   <Step title="Add the marketplace and install">
     Run in a terminal.
@@ -28,7 +28,7 @@ The asobeast plugin adds forty skills to Claude Code. Each one is a method for o
 
 ## What the skills read
 
-Ten skills fetch data. The other thirty are methods that work on what you tell them and on what the first ten found.
+Nine skills fetch data. The other thirty one are methods that work on what you tell them and on what those nine found.
 
 | Skill | Reads |
 | --- | --- |
@@ -37,9 +37,9 @@ Ten skills fetch data. The other thirty are methods that work on what you tell t
 | `market-movers` and `market-pulse` | `top_chart`, `chart_genres`, `category_ranks`, `serp_movers`, `alert_events`, `portfolio` |
 | `android-aso`, `apple-search-ads` and `seasonal-aso` | `keyword_suggestions`, `inspect_keyword`, `list_keywords`, `keyword_discoveries` |
 | `asc-metrics` | `change_impact` for the store funnel; sales come from an App Store Connect export you provide |
-| `category-positioning` and `app-icon-optimization` | `top_chart`, `category_ranks` |
+| `category-positioning` | `top_chart`, `category_ranks` |
 
-The audit skill explains the asobeast audit rather than scoring the listing again, so its numbers match the [ASO audit](/guides/aso-audit) page. Skills that track keywords or add competitors need a token with the write scope; with a read only token they propose the change instead.
+The audit skill explains the asobeast audit rather than scoring the listing again, so its numbers match the [ASO audit](/guides/aso-audit) page. Inspecting a keyword, tracking keywords and adding a competitor need a token with the write scope; with a read only token the skills fall back to stored scores or propose the change instead. Store suggestions and keyword inspections spend the allowances described in [MCP tool reference](/mcp/tools).
 
 ## What they cannot see
 
