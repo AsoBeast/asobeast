@@ -118,7 +118,7 @@ describe('CompetitorsService.add', () => {
       withTransaction: jest.fn((cb: (t: typeof tx) => unknown) => cb(tx)),
     };
     const registry = { get: () => ({ getApp }) };
-    const keywords = { syncFromSnapshot: jest.fn() };
+    const keywords = { trackFromSnapshot: jest.fn() };
     const workspace = new WorkspaceContext();
     const capture = new AppCaptureService(
       prisma as unknown as PrismaService,
@@ -154,7 +154,7 @@ describe('CompetitorsService.add', () => {
     expect(createArg.isCompetitor).toBe(true);
     expect(createArg.primaryAppId).toBe('primary');
     expect(createArg.country).toBe('us');
-    expect(keywords.syncFromSnapshot).not.toHaveBeenCalled();
+    expect(keywords.trackFromSnapshot).not.toHaveBeenCalled();
   });
 
   it('rejects a competitor on a different store', async () => {

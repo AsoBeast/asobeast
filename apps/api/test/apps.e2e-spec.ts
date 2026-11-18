@@ -1243,6 +1243,36 @@ describe('AppsController (e2e)', () => {
       expect(await countOn(QUEUES.PIPELINE, JOBS.ACTIONS)).toBe(1);
     });
 
+    it.each([
+      [APP_STORE_URL, QUEUES.APP_STORE],
+      [GOOGLE_PLAY_URL, QUEUES.GPLAY],
+    ])(
+      'queues each first check of %s ahead of its first score',
+      async (url, name) => {
+        const imported = await importApp(url);
+        const waiting = await queue(name).getJobs(['wait'], 0, -1, true);
+        const positionOf = (job: string, keywordId: string): number =>
+          waiting.findIndex(
+            (queued) =>
+              queued.name === job &&
+              (queued.data as { keywordId: string }).keywordId === keywordId,
+          );
+
+        const tracked = await prisma.trackedKeyword.findMany({
+          where: { appId: imported.id, active: true },
+          select: { keywordId: true },
+        });
+        expect(tracked.length).toBeGreaterThan(0);
+
+        for (const { keywordId } of tracked) {
+          const check = positionOf(JOBS.CHECK_KEYWORD, keywordId);
+          const score = positionOf(JOBS.SCORE_KEYWORD, keywordId);
+          expect(check).toBeGreaterThanOrEqual(0);
+          expect(score).toBeGreaterThan(check);
+        }
+      },
+    );
+
     it('returns the app it already has rather than scheduling a second pass', async () => {
       const imported = await importApp(APP_STORE_URL);
       const tracked = await trackedCount(imported.id);
