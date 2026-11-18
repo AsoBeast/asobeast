@@ -13,6 +13,17 @@ describe('limitationsFor', () => {
     ]);
   });
 
+  it('leaves the in-app events limitation to the page and the console', () => {
+    const events = limitationsFor('APP_STORE').find(
+      (item) => item.id === 'in-app-events',
+    );
+
+    expect(events?.label).toBe('Past in-app events and their performance');
+    expect(events?.detail).toBe(
+      'The page shows the events that are live or upcoming; events that have ended and how each event performed are App Store Connect only.',
+    );
+  });
+
   it('lists what the Google Play audit cannot see, in order', () => {
     expect(limitationsFor('GOOGLE_PLAY').map((item) => item.id)).toEqual([
       'video-content',
