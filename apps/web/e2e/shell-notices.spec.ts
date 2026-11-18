@@ -181,6 +181,24 @@ test("the account menu names the plan as text under the email", async ({
   await expect(menu.locator('[data-slot="badge"]')).toHaveCount(0);
 });
 
+test("a long email is cut short inside the account menu", async ({ page }) => {
+  const email = "a.very.long.address.for.billing@subdomain.example.com";
+  await openAs(page, { ...OWNER, email });
+  await (
+    await hydrated(page.getByRole("button", { name: "Account menu" }))
+  ).click();
+
+  const menu = page.getByRole("menu");
+  const line = menu.getByText(email);
+  await expect(line).toHaveAttribute("title", email);
+  const [menuBox, clipped] = await Promise.all([
+    menu.boundingBox(),
+    line.evaluate((node) => node.scrollWidth > node.clientWidth),
+  ]);
+  expect(menuBox?.width).toBeLessThanOrEqual(224);
+  expect(clipped).toBe(true);
+});
+
 test.describe("toasts", () => {
   const pill = (page: Page) =>
     page.getByRole("button", { name: /done in the setup checklist$/ });
@@ -229,8 +247,12 @@ test.describe("toasts", () => {
       })
       .toBe(true);
 
-    await failed.getByRole("button", { name: "Dismiss" }).click();
+    const dismiss = failed.getByRole("button", { name: "Dismiss" });
+    await pill(page).focus();
+    await dismiss.focus();
+    await page.keyboard.press("Enter");
     await expect(failed).toHaveCount(0);
+    await expect(pill(page)).toBeFocused();
   });
 
   test("a success toast carries no dismiss control", async ({
