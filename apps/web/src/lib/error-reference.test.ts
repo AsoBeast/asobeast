@@ -12,6 +12,11 @@ describe("errorReference", () => {
     expect(errorReference({ digest: "" })).toBeNull();
   });
 
+  it("returns nothing for a digest that is not text", () => {
+    expect(errorReference({ digest: 836429522 })).toBeNull();
+    expect(errorReference({ digest: null })).toBeNull();
+  });
+
   it("never shows a digest that carries an api answer", () => {
     expect(errorReference({ digest: "ASOBEAST_API_ERROR;500;;;1" })).toBeNull();
   });

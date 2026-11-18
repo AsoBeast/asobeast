@@ -21,7 +21,7 @@ const toasterStyle: NonNullable<ToasterProps["style"]> &
 };
 
 const ABOVE_CHECKLIST_PILL =
-  "in-[body:has([data-slot=checklist-pill])]:[--offset-bottom:4.5rem]! in-[body:has([data-slot=checklist-pill])]:[--mobile-offset-bottom:4.5rem]!";
+  "in-[body:has([data-slot=checklist-pill])]:[--offset-bottom:calc(max(1rem,env(safe-area-inset-bottom))_+_3.5rem)]! in-[body:has([data-slot=checklist-pill])]:[--mobile-offset-bottom:calc(max(1rem,env(safe-area-inset-bottom))_+_3.5rem)]!";
 
 const TOAST =
   "items-start! gap-2.5! font-sans! text-dense! shadow-overlay! data-[type=error]:pr-10! [&:not([data-type=error])>[data-close-button]]:hidden!";

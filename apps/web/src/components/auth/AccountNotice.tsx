@@ -48,7 +48,7 @@ function AccountBar({
       data-slot="account-bar"
       className="border-b px-4 py-2.5 sm:px-6"
     >
-      <p className="max-w-[110ch]">
+      <p className="max-w-[110ch] wrap-anywhere">
         <span>{sentence}</span>
         {action ? (
           <>

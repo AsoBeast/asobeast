@@ -78,9 +78,12 @@ test.describe("account bars", () => {
           sentence.boundingBox(),
           action.boundingBox(),
         ]);
-        return text && link ? link.x - (text.x + text.width) : null;
+        if (!text || !link) return null;
+        const gap = link.x - (text.x + text.width);
+        const sameLine = Math.abs(link.y - text.y) < text.height;
+        return sameLine && gap >= 0 && gap < 16;
       })
-      .toBeLessThan(16);
+      .toBe(true);
   });
 
   test("a trial in its last three days turns to the warning tone", async ({
@@ -264,6 +267,6 @@ test.describe("toasts", () => {
 
     const hidden = toast(page, "Setup checklist hidden");
     await expect(hidden).toBeVisible();
-    await expect(hidden.getByRole("button", { name: "Dismiss" })).toBeHidden();
+    await expect(hidden.locator("[data-close-button]")).toBeHidden();
   });
 });

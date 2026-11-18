@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect } from "react";
 import Image from "next/image";
 import { RotateCw } from "lucide-react";
 import { PRODUCT_NAME } from "@/lib/brand";
@@ -108,7 +108,7 @@ function storedTheme(): "light" | "dark" | null {
 }
 
 function useStoredTheme(): void {
-  useEffect(() => {
+  useLayoutEffect(() => {
     const theme = storedTheme();
     if (!theme) return;
     const root = document.documentElement;
