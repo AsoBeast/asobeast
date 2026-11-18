@@ -23,12 +23,8 @@ export function useSuggestionTicks(
   }
   const toggle = (text: string, on: boolean) =>
     setSelection((current) => ({
-      scope,
-      texts: withTick(
-        current.scope === scope ? current.texts : NOTHING_TICKED,
-        text,
-        on,
-      ),
+      ...current,
+      texts: withTick(current.texts, text, on),
     }));
   const untick = (sent: readonly string[]) =>
     setSelection((current) => withoutTicks(current, sent));
