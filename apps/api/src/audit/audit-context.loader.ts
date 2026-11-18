@@ -198,10 +198,14 @@ export class AuditContextLoader {
   }
 
   private async extractSource(
+    store: Store,
     appId: string,
     latest: AppSnapshot | null,
   ): Promise<AppSnapshot | null> {
-    if (latest === null || pageExtractFacts(latest.raw) !== null) {
+    if (store !== Store.APP_STORE || latest === null) {
+      return null;
+    }
+    if (pageExtractFacts(latest.raw) !== null) {
       return latest;
     }
     return this.prisma.appSnapshot.findFirst({
@@ -277,7 +281,9 @@ export class AuditContextLoader {
       (item) => item.active && item.country === app.country,
     );
     const facts = extractRawFacts(app.store, latest?.raw);
-    const extract = extractOf(await this.extractSource(appId, latest));
+    const extract = extractOf(
+      await this.extractSource(app.store, appId, latest),
+    );
     const mapped = competitors.map(toAuditCompetitor);
     const creative = this.creativeState(
       {
