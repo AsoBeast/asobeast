@@ -5,6 +5,7 @@ import {
   APP_GP_DETAIL,
   FIELD_PROPOSAL_NOT_STOREFRONT,
 } from "./fixtures.mts";
+import { hydrated } from "./hydrated.mts";
 import { localizationItem, seedLocalizations } from "./localizations.mts";
 import { expect, test } from "./session.mts";
 
@@ -78,7 +79,9 @@ test.describe("the metadata page takes proposed phrases", () => {
       "focus,timer,deep work,pomodoro",
     );
 
-    await page.getByRole("button", { name: "Save keyword field" }).click();
+    await (
+      await hydrated(page.getByRole("button", { name: "Save keyword field" }))
+    ).click();
     await page
       .getByRole("dialog")
       .getByRole("button", { name: "Save and track" })
@@ -111,7 +114,7 @@ test.describe("the metadata page takes proposed phrases", () => {
       "focus,timer,deep work,pomodoro",
     );
 
-    await localizationItem(page, UK).trigger.click();
+    await (await hydrated(localizationItem(page, UK).trigger)).click();
 
     await expect(page).not.toHaveURL(/fieldAdd=/);
     await expect(statusLine(page)).toHaveCount(0);
@@ -148,7 +151,7 @@ test.describe("the metadata page takes proposed phrases", () => {
     await page.goto(proposal("en-US", "timer"));
     await expect(editor(page, US)).toHaveValue("focus,timer");
 
-    await editor(page, US).fill("focus,timer,calm");
+    await (await hydrated(editor(page, US))).fill("focus,timer,calm");
     await page.getByRole("button", { name: "Save keyword field" }).click();
     await page
       .getByRole("dialog")
@@ -176,7 +179,7 @@ test.describe("the metadata page takes proposed phrases", () => {
       "Added 1 phrase from the keywords page to the English (U.S.) keyword field. Review them and save. 2 keywords did not fit in the English (U.S.) keyword field and were left out.",
     );
 
-    await localizationItem(page, UK).trigger.click();
+    await (await hydrated(localizationItem(page, UK).trigger)).click();
     await expect(page).not.toHaveURL(/fieldAdd=|fieldLeftOut=/);
     await expect(statusLine(page)).toHaveCount(0);
   });
@@ -255,7 +258,9 @@ test.describe("the keywords page sends its selection", () => {
 
   const select = async (page: Page, ...phrases: string[]) => {
     for (const phrase of phrases) {
-      await page.getByRole("checkbox", { name: `Select ${phrase}` }).click();
+      await (
+        await hydrated(page.getByRole("checkbox", { name: `Select ${phrase}` }))
+      ).click();
     }
     await expect(bulkBar(page)).toContainText(`${phrases.length} selected`);
   };
@@ -278,10 +283,11 @@ test.describe("the keywords page sends its selection", () => {
     await expect(addToField(page)).toHaveCount(0);
 
     await page.goto(keywordsPage(APP_GP_DETAIL.id));
-    await page
-      .getByRole("checkbox", { name: /^Select (?!all)/ })
-      .first()
-      .click();
+    await (
+      await hydrated(
+        page.getByRole("checkbox", { name: /^Select (?!all)/ }).first(),
+      )
+    ).click();
     await expect(bulkBar(page)).toContainText("1 selected");
     await expect(addToField(page)).toHaveCount(0);
   });
