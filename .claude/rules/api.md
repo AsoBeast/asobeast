@@ -69,6 +69,8 @@ Localization detection and judging:
 
 1 based; `null` means checked and not found within `depth`, the number of apps the store listed (`reachedDepth`, at most `RANK_DEPTH`, and `RANK_DEPTH` for an empty list). Store the row even when `null`. Never write the constant as a depth.
 
+A comparison over a range (movers, movement, the top 10 change, the visibility changes of the app summary, the portfolio, groups and the digest, and the history range change) reads each keyword's earlier check through `baselineCheck` (`analytics/baseline.ts`): the check on the target day, else the day after, else the day before. A keyword without one is skipped by the movers and counts as not found in the top 10 and visibility changes; a change is `null` only when no keyword has one (`hasBaseline`). Never compare against an app level shifted day or an exact day of its own. Day series (chart points) read each day exactly.
+
 ## Domain rule 7: Tenancy is enforced by the database, not by remembering to filter
 
 - Every tenant-owned table has a `tenant_isolation` policy on `app.workspace_id`. Every Prisma operation runs in a transaction that calls `app_enter_workspace` and switches to the non-owner `asobeast_app` role, because a superuser or the table owner bypasses policies. A query with no workspace in scope returns nothing.
