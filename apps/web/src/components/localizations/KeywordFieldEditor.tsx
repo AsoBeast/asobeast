@@ -109,7 +109,7 @@ export function KeywordFieldEditor({
   const saveButton = useRef<HTMLButtonElement>(null);
   const name = localizationName(item.localization);
   const [draft, setDraft] = useState<string | null>(() =>
-    managed ? null : proposalDraft(item.phrases, proposed),
+    proposalDraft(item.phrases, proposed),
   );
   const stored = item.phrases.join(",");
   const text = managed ? stored : (draft ?? stored);
