@@ -1,0 +1,17 @@
+{
+  "name": "asobeast",
+  "owner": {
+    "name": "AsoBeast",
+    "url": "https://asobeast.com"
+  },
+  "metadata": {
+    "description": "AsoBeast plugins for Claude Code"
+  },
+  "plugins": [
+    {
+      "name": "asobeast",
+      "source": "./plugins/asobeast",
+      "description": "40 ASO and app marketing skills that read your AsoBeast data through its MCP server"
+    }
+  ]
+}

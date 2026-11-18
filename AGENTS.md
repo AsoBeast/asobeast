@@ -92,6 +92,8 @@ apps/mcp/src/        stdio MCP server; tools/ registers the shared catalog
 packages/shared/     contract types, Store union, URL parser, constants, setup contract
 packages/mcp-tools/  the one MCP tool catalog both transports register
 docs/                Mintlify site published at docs.asobeast.com
+plugins/asobeast/    Claude Code plugin: ASO skills adapted from appeeky/aso-skills (MIT) that read the MCP tools
+.claude-plugin/      the marketplace that lists the plugin
 docker-compose*.yml  dev services, the built stack, the published image stack, the tunnel and Portainer overlays
 ```
 

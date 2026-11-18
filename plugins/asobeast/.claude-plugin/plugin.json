@@ -1,0 +1,13 @@
+{
+  "name": "asobeast",
+  "displayName": "AsoBeast",
+  "description": "40 ASO and app marketing skills (audits, keyword research, metadata, competitors, charts, reviews, localization, ads, monetization) that read your AsoBeast data through its MCP server.",
+  "author": {
+    "name": "AsoBeast",
+    "url": "https://asobeast.com"
+  },
+  "homepage": "https://docs.asobeast.com/mcp/skills",
+  "repository": "https://github.com/AsoBeast/asobeast",
+  "license": "MIT",
+  "keywords": ["aso", "app-store", "google-play", "keywords", "metadata", "mcp"]
+}
