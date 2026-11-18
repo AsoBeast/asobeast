@@ -2623,10 +2623,9 @@ const APP_TICKS_KEYWORDS: TrackedKeywordItem[] = [
   },
 ];
 
-export const APP_TICKS_KEYWORD_COUNTRIES: KeywordCountrySummary[] = [
-  { country: "us", keywordCount: APP_TICKS_KEYWORDS.length },
-  { country: "gb", keywordCount: 0 },
-];
+export const APP_TICKS_MARKETS = ["us", "gb"];
+
+export const APP_TICKS_FOCUS_ID = "app-ticks-focus";
 
 export const APP_FLOOR_DETAIL: AppDetail = {
   ...APP_LONG_DETAIL,
@@ -3782,6 +3781,12 @@ function localesDataset(id: string, name: string): AppDataset {
 }
 
 DATASETS[APP_LOCALES_ID] = localesDataset(APP_LOCALES_ID, "Locale Lab");
+DATASETS[APP_TICKS_FOCUS_ID] = {
+  ...DATASETS[APP_TICKS_DETAIL.id],
+  detail: { ...APP_TICKS_DETAIL, id: APP_TICKS_FOCUS_ID },
+  keywords: APP_TICKS_KEYWORDS.map((keyword) => ({ ...keyword })),
+};
+SUGGESTIONS[APP_TICKS_FOCUS_ID] = SUGGESTIONS[APP_TICKS_DETAIL.id];
 DATASETS[APP_SUGGESTED_LOCALES_ID] = localesDataset(
   APP_SUGGESTED_LOCALES_ID,
   "Market Lab",

@@ -26,8 +26,8 @@ export function useSuggestionTicks(
       ...current,
       texts: withTick(current.texts, text, on),
     }));
-  const untick = (sent: readonly string[]) =>
-    setSelection((current) => withoutTicks(current, sent));
+  const untick = (sent: readonly string[], sentScope: string) =>
+    setSelection((current) => withoutTicks(current, sent, sentScope));
 
   return {
     ticked: tickedIn(selection, scope, shown, tracked),

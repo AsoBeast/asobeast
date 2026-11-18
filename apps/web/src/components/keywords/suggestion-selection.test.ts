@@ -66,9 +66,21 @@ describe("tickedIn", () => {
       scope,
       texts: new Set(["deep focus", "pomodoro timer", "study sessions"]),
     };
-    const after = withoutTicks(selection, ["deep focus", "pomodoro timer"]);
+    const after = withoutTicks(
+      selection,
+      ["deep focus", "pomodoro timer"],
+      scope,
+    );
     expect(after.scope).toBe(scope);
     expect([...after.texts]).toEqual(["study sessions"]);
+  });
+
+  it("keeps the ticks of another market when a request sent elsewhere succeeds", () => {
+    const selection = {
+      scope: selectionScope("gb", "metadata"),
+      texts: new Set(["deep focus"]),
+    };
+    expect(withoutTicks(selection, ["deep focus"], scope)).toBe(selection);
   });
 
   it("leaves out a phrase that is tracked now or no longer listed", () => {

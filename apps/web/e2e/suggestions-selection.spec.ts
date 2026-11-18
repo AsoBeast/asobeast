@@ -5,6 +5,7 @@ import {
   APP_TICKS_LONG_SUGGESTION,
   APP_TICKS_TRACKED_SUGGESTION,
 } from "./fixtures.mts";
+import { holdRequest, pressFromKeyboard } from "./held-request.mts";
 import { chooseKeywordMarket } from "./keyword-controls.mts";
 
 const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
@@ -76,7 +77,7 @@ test("tracks the ticked suggestions in one request", async ({ page }) => {
   ]);
   for (const phrase of ["deep focus", "study sessions"]) {
     await expect(
-      panel.getByRole("button", { name: `${phrase} is tracked` }),
+      panel.getByRole("button", { name: `Tracked: ${phrase}` }),
     ).toBeVisible();
     await expect(tick(panel, phrase)).toHaveCount(0);
   }
@@ -98,7 +99,11 @@ test("keeps the one click Track beside the ticks", async ({ page }) => {
   await expect(tick(panel, "deep focus")).toBeChecked();
 });
 
-test("keeps the ticks and shows the refusal", async ({ page, context }) => {
+test("keeps the ticks after a refusal and tracks them on retry", async ({
+  page,
+  context,
+}) => {
+  const bodies = trackBodies(page);
   await context.addCookies([
     { name: "e2e_keyword_quota", value: "1", domain: "localhost", path: "/" },
   ]);
@@ -113,6 +118,18 @@ test("keeps the ticks and shows the refusal", async ({ page, context }) => {
   await expect(tick(panel, "deep focus")).toBeChecked();
   await expect(tick(panel, "pomodoro timer")).toBeChecked();
   await expect(trackSelected(panel)).toHaveAccessibleName("Track 2 selected");
+
+  await context.clearCookies({ name: "e2e_keyword_quota" });
+  await trackSelected(panel).click();
+
+  await expect(
+    toast(page, "Tracking 2 keywords. Positions arrive within minutes."),
+  ).toBeVisible();
+  expect(bodies).toEqual([
+    { keywords: ["deep focus", "pomodoro timer"], country: "us" },
+    { keywords: ["deep focus", "pomodoro timer"], country: "us" },
+  ]);
+  await expect(trackSelected(panel)).toHaveAccessibleName("Track selected");
 });
 
 test("clears the ticks on a source change", async ({ page }) => {
@@ -155,7 +172,7 @@ test("a tracked suggestion has no tick", async ({ page }) => {
   await expect(tick(panel, APP_TICKS_TRACKED_SUGGESTION)).toHaveCount(0);
   await expect(
     panel.getByRole("button", {
-      name: `${APP_TICKS_TRACKED_SUGGESTION} is tracked`,
+      name: `Tracked: ${APP_TICKS_TRACKED_SUGGESTION}`,
     }),
   ).toBeVisible();
 });
@@ -219,4 +236,49 @@ test("truncates a long suggestion and keeps its controls on a narrow screen", as
   expect(trackBox!.x + trackBox!.width).toBeLessThanOrEqual(
     cardBox!.x + cardBox!.width,
   );
+});
+
+test("hands focus to the row's button when tracking removes a focused tick", async ({
+  page,
+}) => {
+  const held = await holdRequest(page, TRACK_REQUEST, "POST");
+  await page.goto(DISCOVERED);
+  const panel = await openPanel(page);
+  await tick(panel, "deep focus").check();
+
+  await pressFromKeyboard(trackSelected(panel));
+  await tick(panel, "deep focus").focus();
+  held.release();
+
+  const tracked = panel.getByRole("button", { name: "Tracked: deep focus" });
+  await expect(tracked).toBeVisible();
+  await expect(tick(panel, "deep focus")).toHaveCount(0);
+  await expect(tracked).toBeFocused();
+});
+
+test("leaves a phrase its own Track is sending out of the bulk request", async ({
+  page,
+}) => {
+  const bodies = trackBodies(page);
+  const held = await holdRequest(page, TRACK_REQUEST, "POST");
+  await page.goto(DISCOVERED);
+  const panel = await openPanel(page);
+  await tick(panel, "deep focus").check();
+  await tick(panel, "study sessions").check();
+
+  await panel.getByRole("button", { name: "Track deep focus" }).click();
+  await expect(trackSelected(panel)).toHaveAccessibleName("Track 1 selected");
+  await trackSelected(panel).click();
+  await expect(
+    panel.getByRole("button", { name: "Track study sessions" }),
+  ).toHaveAttribute("aria-busy", "true");
+  held.release();
+
+  await expect(
+    toast(page, "Tracking 1 keyword. Positions arrive within minutes."),
+  ).toBeVisible();
+  expect(bodies).toEqual([
+    { keywords: ["deep focus"], country: "us" },
+    { keywords: ["study sessions"], country: "us" },
+  ]);
 });

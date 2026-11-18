@@ -13,23 +13,23 @@ import {
   trackSelectedLabel,
 } from "./suggestion-selection";
 
-export function TrackSelectedSuggestions({
-  id,
-  country,
-  ticked,
-  onTracked,
-}: {
-  id: string;
-  country: string;
-  ticked: string[];
-  onTracked: (texts: string[]) => void;
-}) {
+export interface TrackSelectedRequest {
+  texts: string[];
+  scope: string;
+}
+
+export function useTrackSelected(
+  id: string,
+  country: string,
+  onTracked: (texts: readonly string[], scope: string) => void,
+) {
   const queryClient = useQueryClient();
   const track = useMutation({
-    mutationFn: (texts: string[]) => addKeywords(id, texts, country),
-    onSuccess: (_items, texts) => {
+    mutationFn: ({ texts }: TrackSelectedRequest) =>
+      addKeywords(id, texts, country),
+    onSuccess: (_items, { texts, scope }) => {
       invalidateKeywordMutation(queryClient, id);
-      onTracked(texts);
+      onTracked(texts, scope);
       toast.success(trackingSelectedMessage(texts.length));
     },
     onError: (error) =>
@@ -39,19 +39,33 @@ export function TrackSelectedSuggestions({
           : TRACK_SELECTED_FAILED,
       ),
   });
-  const trackOnce = useSingleFlight(track);
+  return {
+    busy: track.isPending,
+    sending: track.isPending ? (track.variables?.texts ?? []) : [],
+    trackOnce: useSingleFlight(track),
+  };
+}
 
+export function TrackSelectedButton({
+  count,
+  busy,
+  onTrack,
+}: {
+  count: number;
+  busy: boolean;
+  onTrack: () => void;
+}) {
   return (
     <Button
       variant="outline"
       size="sm"
-      aria-disabled={ticked.length === 0 || track.isPending || undefined}
+      aria-disabled={count === 0 || busy || undefined}
       onClick={() => {
-        if (ticked.length > 0) trackOnce(ticked);
+        if (count > 0 && !busy) onTrack();
       }}
     >
-      {track.isPending ? <Loader2 className="animate-spin" /> : <Plus />}
-      {trackSelectedLabel(ticked.length)}
+      {busy ? <Loader2 className="animate-spin" /> : <Plus />}
+      {trackSelectedLabel(count)}
     </Button>
   );
 }

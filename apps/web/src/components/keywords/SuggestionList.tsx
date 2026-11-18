@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useRef, type Ref } from "react";
 import { Check, Loader2, Plus, RotateCw } from "lucide-react";
 import type {
   KeywordSuggestion,
@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api";
+import { useFocusAfterCommit } from "@/lib/focus-handoff";
 import { EMPTY_COPY, USED_BY_NOUN } from "./suggestion-strategies";
 
 function SuggestionMeta({ suggestion }: { suggestion: KeywordSuggestion }) {
@@ -82,19 +83,25 @@ function SuggestionTick({
   checked,
   disabled,
   onToggle,
+  tickRef,
+  onFocus,
 }: {
   id: string;
   suggestion: KeywordSuggestion;
   checked: boolean;
   disabled?: boolean;
   onToggle: (text: string, selected: boolean) => void;
+  tickRef?: Ref<HTMLButtonElement>;
+  onFocus?: () => void;
 }) {
   return (
     <>
       <Checkbox
+        ref={tickRef}
         id={id}
         checked={checked}
         disabled={disabled}
+        onFocus={onFocus}
         onCheckedChange={(value) => onToggle(suggestion.text, value === true)}
       />
       <Label
@@ -112,18 +119,21 @@ function TrackAction({
   already,
   pending,
   onTrack,
+  ref,
 }: {
   text: string;
   already: boolean;
   pending: boolean;
   onTrack: (text: string) => void;
+  ref?: Ref<HTMLButtonElement>;
 }) {
   const inert = already || pending;
   return (
     <Button
+      ref={ref}
       variant={already ? "ghost" : "outline"}
       size="sm"
-      aria-label={already ? `${text} is tracked` : `Track ${text}`}
+      aria-label={already ? `Tracked: ${text}` : `Track ${text}`}
       aria-disabled={inert || undefined}
       aria-busy={(pending && !already) || undefined}
       onClick={() => {
@@ -142,6 +152,52 @@ function TrackAction({
         </>
       )}
     </Button>
+  );
+}
+
+function TrackOrSelectRow({
+  suggestion,
+  tickId,
+  already,
+  action,
+}: {
+  suggestion: KeywordSuggestion;
+  tickId: string;
+  already: boolean;
+  action: TrackHandlers & SelectHandlers;
+}) {
+  const tick = useRef<HTMLButtonElement>(null);
+  const track = useRef<HTMLButtonElement>(null);
+  const handOffFocus = useFocusAfterCommit();
+  const { text } = suggestion;
+
+  return (
+    <li className="flex items-center gap-3 border-b border-border-subtle py-2">
+      {already ? (
+        <>
+          <span aria-hidden className="size-4 shrink-0" />
+          <div className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
+            <SuggestionText suggestion={suggestion} />
+          </div>
+        </>
+      ) : (
+        <SuggestionTick
+          id={tickId}
+          suggestion={suggestion}
+          checked={action.selected.has(text)}
+          onToggle={action.onToggle}
+          tickRef={tick}
+          onFocus={() => handOffFocus(track.current, tick.current)}
+        />
+      )}
+      <TrackAction
+        ref={track}
+        text={text}
+        already={already}
+        pending={action.pending.has(text)}
+        onTrack={action.onTrack}
+      />
+    </li>
   );
 }
 
@@ -219,37 +275,15 @@ export function SuggestionList({
               </li>
             );
           }
-          const track = (
-            <TrackAction
-              text={text}
-              already={already}
-              pending={action.pending.has(text)}
-              onTrack={action.onTrack}
-            />
-          );
           if (action.kind === "trackOrSelect") {
             return (
-              <li
+              <TrackOrSelectRow
                 key={text}
-                className="flex items-center gap-3 border-b border-border-subtle py-2"
-              >
-                {already ? (
-                  <>
-                    <span aria-hidden className="size-4 shrink-0" />
-                    <div className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
-                      <SuggestionText suggestion={suggestion} />
-                    </div>
-                  </>
-                ) : (
-                  <SuggestionTick
-                    id={tickId}
-                    suggestion={suggestion}
-                    checked={action.selected.has(text)}
-                    onToggle={action.onToggle}
-                  />
-                )}
-                {track}
-              </li>
+                suggestion={suggestion}
+                tickId={tickId}
+                already={already}
+                action={action}
+              />
             );
           }
           return (
@@ -260,7 +294,12 @@ export function SuggestionList({
               <div className="flex min-w-0 flex-col gap-0.5">
                 <SuggestionText suggestion={suggestion} />
               </div>
-              {track}
+              <TrackAction
+                text={text}
+                already={already}
+                pending={action.pending.has(text)}
+                onTrack={action.onTrack}
+              />
             </li>
           );
         })}

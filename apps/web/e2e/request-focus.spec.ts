@@ -20,7 +20,7 @@ import {
   APP_GP_SERP_MOVERS,
   APP_CLASS_FOCUS_ID,
   APP_IMPORT_FOCUS_ID,
-  APP_TICKS_DETAIL,
+  APP_TICKS_FOCUS_ID,
   AWAITING_ALERT_COOKIE,
   CROWDED_COMPETITORS_COOKIE,
   RANKINGS_FAIL_COOKIE,
@@ -1859,13 +1859,7 @@ test.describe("keyword discovery controls keep focus", () => {
 });
 
 test.describe("suggestion ticks keep focus", () => {
-  const app = APP_TICKS_DETAIL.id;
-
-  test.beforeEach(({ request }) =>
-    request.post(`${MOCK_API_URL}/__reset/keywords/${app}`, {
-      failOnStatusCode: true,
-    }),
-  );
+  const app = APP_TICKS_FOCUS_ID;
 
   test("Track selected on the suggestions keeps focus while it tracks and after the ticks clear", async ({
     page,

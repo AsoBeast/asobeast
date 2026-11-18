@@ -49,7 +49,13 @@ export function tickedIn(
 export const withoutTicks = (
   selection: SuggestionSelection,
   sent: readonly string[],
-): SuggestionSelection => ({
-  scope: selection.scope,
-  texts: new Set([...selection.texts].filter((text) => !sent.includes(text))),
-});
+  sentScope: string,
+): SuggestionSelection =>
+  selection.scope === sentScope
+    ? {
+        scope: selection.scope,
+        texts: new Set(
+          [...selection.texts].filter((text) => !sent.includes(text)),
+        ),
+      }
+    : selection;

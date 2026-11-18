@@ -34,7 +34,10 @@ import { useKeyedSingleFlight } from "@/lib/single-flight";
 import { cn } from "@/lib/utils";
 import { SpiderDialog } from "./SpiderDialog";
 import { SuggestionList, suggestionListState } from "./SuggestionList";
-import { TrackSelectedSuggestions } from "./TrackSelectedSuggestions";
+import {
+  TrackSelectedButton,
+  useTrackSelected,
+} from "./TrackSelectedSuggestions";
 import { useSuggestionTicks } from "./use-suggestion-ticks";
 import { selectionScope } from "./suggestion-selection";
 import { STRATEGIES } from "./suggestion-strategies";
@@ -93,11 +96,16 @@ export function SuggestionsPanel({
     select: (mutation) => mutation.state.variables,
   }).filter((text): text is string => typeof text === "string");
 
+  const listState = suggestionListState(suggestions);
+  const scope = selectionScope(country, strategy);
   const { ticked, toggle, untick } = useSuggestionTicks(
-    selectionScope(country, strategy),
-    (suggestions.data ?? []).map((suggestion) => suggestion.text),
-    trackedTexts,
+    scope,
+    listState.status === "ready"
+      ? listState.suggestions.map((suggestion) => suggestion.text)
+      : [],
+    new Set([...trackedTexts, ...trackingTexts]),
   );
+  const bulk = useTrackSelected(id, country, untick);
 
   return (
     <Card>
@@ -160,22 +168,21 @@ export function SuggestionsPanel({
                   Deep search
                 </Button>
               </SpiderDialog>
-              <TrackSelectedSuggestions
-                id={id}
-                country={country}
-                ticked={ticked}
-                onTracked={untick}
+              <TrackSelectedButton
+                count={ticked.length}
+                busy={bulk.busy}
+                onTrack={() => bulk.trackOnce({ texts: ticked, scope })}
               />
             </div>
           </div>
 
           <SuggestionList
             strategy={strategy}
-            state={suggestionListState(suggestions)}
+            state={listState}
             trackedTexts={trackedTexts}
             action={{
               kind: "trackOrSelect",
-              pending: new Set(trackingTexts),
+              pending: new Set([...trackingTexts, ...bulk.sending]),
               onTrack: trackOnce,
               selected: new Set(ticked),
               onToggle: toggle,
