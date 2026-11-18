@@ -25,7 +25,12 @@ const factsWith = (
 
 const extractWith = (
   overrides: Partial<PageExtractFacts> = {},
-): AuditExtract => ({ facts: factsWith(overrides), asOf: EXTRACT_AS_OF });
+  fallback = false,
+): AuditExtract => ({
+  facts: factsWith(overrides),
+  asOf: EXTRACT_AS_OF,
+  fallback,
+});
 
 const checkWith = (
   id: AuditCheckId,
@@ -226,6 +231,92 @@ describe('buildReadiness', () => {
     expect(itemOf(readiness, 'in-app-events').detail).toBe(
       'The store page lists 2 in-app events.',
     );
+  });
+
+  it('ignores an event that has ended when the extract is the fallback', () => {
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: [],
+      extract: extractWith(
+        {
+          appEvents: [
+            {
+              appEventId: 'e1',
+              title: 'Ended sale',
+              kind: null,
+              badge: null,
+              startsAt: null,
+              endsAt: '2020-01-01T00:00:00.000Z',
+            },
+            {
+              appEventId: 'e2',
+              title: 'Live sale',
+              kind: null,
+              badge: null,
+              startsAt: null,
+              endsAt: '2999-01-01T00:00:00.000Z',
+            },
+          ],
+        },
+        true,
+      ),
+    });
+
+    expect(itemOf(readiness, 'in-app-events')).toMatchObject({
+      status: 'pass',
+      detail: 'The store page lists 1 in-app event.',
+    });
+  });
+
+  it('answers the zero events wording when every fallback event has ended', () => {
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: [],
+      extract: extractWith(
+        {
+          appEvents: [
+            {
+              appEventId: 'e1',
+              title: null,
+              kind: null,
+              badge: null,
+              startsAt: null,
+              endsAt: '2020-01-01T00:00:00.000Z',
+            },
+          ],
+        },
+        true,
+      ),
+    });
+
+    expect(itemOf(readiness, 'in-app-events')).toMatchObject({
+      status: 'fail',
+      detail: 'No in-app event is on the store page.',
+    });
+  });
+
+  it('counts an event that has ended while the extract is the latest read', () => {
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: [],
+      extract: extractWith({
+        appEvents: [
+          {
+            appEventId: 'e1',
+            title: null,
+            kind: null,
+            badge: null,
+            startsAt: null,
+            endsAt: '2020-01-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    });
+
+    expect(itemOf(readiness, 'in-app-events')).toMatchObject({
+      status: 'pass',
+      detail: 'The store page lists 1 in-app event.',
+    });
   });
 
   it('leaves accessibility not measured while the declared features are unread', () => {

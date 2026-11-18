@@ -234,6 +234,7 @@ describe('AuditContextLoader.load', () => {
     expect(findFirst).toHaveBeenCalledTimes(1);
     expect(context.extract?.facts.previewVideoUrls).toEqual(['v.mp4']);
     expect(context.extract?.asOf).toBe('2026-09-10');
+    expect(context.extract?.fallback).toBe(false);
   });
 
   it('falls back to the newest snapshot with an extract in a second query', async () => {
@@ -260,6 +261,7 @@ describe('AuditContextLoader.load', () => {
 
     expect(findFirst).toHaveBeenCalledTimes(2);
     expect(context.extract?.facts.featuredStories).toHaveLength(1);
+    expect(context.extract?.fallback).toBe(true);
   });
 
   it('scans no snapshot for an extract on google play', async () => {

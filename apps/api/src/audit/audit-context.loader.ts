@@ -56,14 +56,17 @@ const iconCompetitors = (
     )
     .slice(0, MAX_COMPETITOR_ICONS);
 
-const extractOf = (snapshot: AppSnapshot | null): AuditExtract | null => {
+const extractOf = (
+  snapshot: AppSnapshot | null,
+  fallback: boolean,
+): AuditExtract | null => {
   if (snapshot === null) {
     return null;
   }
   const facts = pageExtractFacts(snapshot.raw);
   return facts === null
     ? null
-    : { facts, asOf: snapshot.capturedAt.toISOString().slice(0, 10) };
+    : { facts, asOf: snapshot.capturedAt.toISOString().slice(0, 10), fallback };
 };
 
 @Injectable()
@@ -201,21 +204,24 @@ export class AuditContextLoader {
     store: Store,
     appId: string,
     latest: AppSnapshot | null,
-  ): Promise<AppSnapshot | null> {
+  ): Promise<{ snapshot: AppSnapshot | null; fallback: boolean }> {
     if (store !== Store.APP_STORE || latest === null) {
-      return null;
+      return { snapshot: null, fallback: false };
     }
     if (pageExtractFacts(latest.raw) !== null) {
-      return latest;
+      return { snapshot: latest, fallback: false };
     }
-    return this.prisma.appSnapshot.findFirst({
-      where: {
-        appId,
-        ...HOME_LISTING,
-        raw: { path: ['pageExtract'], not: Prisma.AnyNull },
-      },
-      orderBy: NEWEST_FIRST,
-    });
+    return {
+      snapshot: await this.prisma.appSnapshot.findFirst({
+        where: {
+          appId,
+          ...HOME_LISTING,
+          raw: { path: ['pageExtract'], not: Prisma.AnyNull },
+        },
+        orderBy: NEWEST_FIRST,
+      }),
+      fallback: true,
+    };
   }
 
   async load(appId: string): Promise<AuditContext> {
@@ -281,9 +287,12 @@ export class AuditContextLoader {
       (item) => item.active && item.country === app.country,
     );
     const facts = extractRawFacts(app.store, latest?.raw);
-    const extract = extractOf(
-      await this.extractSource(app.store, appId, latest),
+    const { snapshot: extractSource, fallback } = await this.extractSource(
+      app.store,
+      appId,
+      latest,
     );
+    const extract = extractOf(extractSource, fallback);
     const mapped = competitors.map(toAuditCompetitor);
     const creative = this.creativeState(
       {

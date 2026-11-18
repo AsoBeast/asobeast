@@ -74,6 +74,7 @@ export interface AuditCreativeState {
 export interface AuditExtract {
   facts: PageExtractFacts;
   asOf: string;
+  fallback: boolean;
 }
 
 export interface AuditContext {

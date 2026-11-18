@@ -648,6 +648,14 @@ describe('AuditController (e2e)', () => {
                   startsAt: null,
                   endsAt: null,
                 },
+                {
+                  appEventId: '6822418008',
+                  title: 'Habit Streak Weekend',
+                  kind: 'SPECIAL EVENT',
+                  badge: null,
+                  startsAt: '2026-07-03T00:00:00.000Z',
+                  endsAt: '2026-07-05T00:00:00.000Z',
+                },
               ],
               featuredStories: [],
               editorsChoice: null,
@@ -685,6 +693,10 @@ describe('AuditController (e2e)', () => {
       'unmeasurable',
       'pass',
     ]);
+    expect(
+      result.readiness?.items.find((item) => item.id === 'in-app-events')
+        ?.detail,
+    ).toBe('The store page lists 1 in-app event.');
     expect(result.readiness?.editorial).toEqual({
       stories: 0,
       editorsChoiceBadge: false,

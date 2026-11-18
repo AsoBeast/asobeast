@@ -9,6 +9,7 @@ import {
   ReadinessStatus,
 } from '@asobeast/shared';
 import { AuditCheckId, AuditExtract } from './audit-scoring';
+import { PageAppEvent } from '../store-providers/app-store-page';
 
 const EVENTS_LINK: ReadinessLink = {
   href: 'https://developer.apple.com/app-store/in-app-events/',
@@ -100,11 +101,20 @@ const unmeasurable = (
   link: null,
 });
 
+const listedEvents = (extract: AuditExtract): PageAppEvent[] =>
+  extract.fallback
+    ? extract.facts.appEvents.filter(
+        (event) =>
+          event.endsAt === null ||
+          new Date(event.endsAt).getTime() >= Date.now(),
+      )
+    : extract.facts.appEvents;
+
 const eventsRow = (extract: AuditExtract | null): ReadinessItem => {
   if (extract === null) {
     return unmeasurable('in-app-events', 'In-app events');
   }
-  const count = extract.facts.appEvents.length;
+  const count = listedEvents(extract).length;
   return {
     id: 'in-app-events',
     label: 'In-app events',
