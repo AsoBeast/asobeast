@@ -133,6 +133,11 @@ export const LATER_RELEASES: readonly Release[] = [
         title: "Keyword figures that agree after a partial run",
         text: "When a daily run missed some keywords on the first day of the range you look at, the keywords in the top 10 and the visibility change used to count those keywords as not found, while the keyword movers already compared them with the day next to it. On the dashboard and the app overview, the keyword movers, the keywords in the top 10 and the visibility change now compare each keyword with the same earlier check when it has one on that day or the day next to it, so a keyword already in the top 10 is no longer counted as a new entry.",
       },
+      {
+        kind: "fixed",
+        title: "Imports no longer fail while the server is busy",
+        text: "Importing an app, adding a competitor or refreshing a listing on Google Play no longer fails after 20 seconds while the daily collection keeps the server busy. Some capacity always stays free for what you are waiting for, and if it is still taken you are told within a few seconds how long to wait before trying again.",
+      },
     ],
   },
   {
