@@ -6311,8 +6311,8 @@ export const APP_AUDIT: AppAuditResult = {
         status: "pass",
         detail: "The store page shows 2 preview videos.",
         link: {
-          href: "https://developer.apple.com/app-store/product-page/",
-          label: "About the product page",
+          href: "#factors-conversion",
+          label: "Where the audit scores it",
         },
       },
       {

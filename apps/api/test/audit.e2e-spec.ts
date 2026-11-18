@@ -544,8 +544,8 @@ describe('AuditController (e2e)', () => {
       label: 'Preview video',
       detail: 'The store page shows 2 preview videos.',
       link: {
-        href: 'https://developer.apple.com/app-store/product-page/',
-        label: 'About the product page',
+        href: '#factors-conversion',
+        label: 'Where the audit scores it',
       },
     });
     expect(result.readiness?.items[1]).toMatchObject({
@@ -677,7 +677,7 @@ describe('AuditController (e2e)', () => {
 
     expect(result.readiness?.extractAsOf).toBe(D0.toISOString().slice(0, 10));
     expect(result.readiness?.items.map((item) => item.status)).toEqual([
-      'pass',
+      'unmeasurable',
       'pass',
       'unmeasurable',
       'pass',

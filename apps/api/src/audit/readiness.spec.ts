@@ -75,13 +75,17 @@ describe('buildReadiness', () => {
     const readiness = buildReadiness({
       store: Store.APP_STORE,
       factors: factorsWith([
+        checkWith(
+          'preview-video-present',
+          'pass',
+          'The store page shows 1 preview video.',
+        ),
         checkWith('ratings-average', 'pass'),
         checkWith('conversion-update-recency', 'pass'),
         checkWith('conversion-localizations', 'pass'),
         checkWith('screenshots-count', 'pass'),
       ]),
       extract: extractWith({
-        previewVideoUrls: ['https://video.example.com/a.mp4'],
         appEvents: [
           {
             appEventId: 'e1',
@@ -121,6 +125,31 @@ describe('buildReadiness', () => {
     );
   });
 
+  it('answers the preview video row from the graded check, not the extract', () => {
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: factorsWith([
+        checkWith(
+          'preview-video-present',
+          'fail',
+          'No preview video is on the store page.',
+        ),
+      ]),
+      extract: extractWith({
+        previewVideoUrls: ['https://video.example.com/a.mp4'],
+      }),
+    });
+
+    expect(itemOf(readiness, 'preview-video')).toMatchObject({
+      status: 'fail',
+      detail: 'No preview video is on the store page.',
+    });
+    expect(itemOf(readiness, 'preview-video').link).toEqual({
+      href: '#factors-conversion',
+      label: 'Where the audit scores it',
+    });
+  });
+
   it('fails the extract rows of a page without featuring surfaces', () => {
     const readiness = buildReadiness({
       store: Store.APP_STORE,
@@ -129,8 +158,8 @@ describe('buildReadiness', () => {
     });
 
     expect(itemOf(readiness, 'preview-video')).toMatchObject({
-      status: 'fail',
-      detail: 'No preview video is on the store page.',
+      status: 'unmeasurable',
+      detail: null,
     });
     expect(itemOf(readiness, 'in-app-events')).toMatchObject({
       status: 'fail',
@@ -145,22 +174,6 @@ describe('buildReadiness', () => {
       stories: 0,
       editorsChoiceBadge: false,
     });
-  });
-
-  it('leaves the preview video unmeasurable when the extract read no media shelf', () => {
-    const readiness = buildReadiness({
-      store: Store.APP_STORE,
-      factors: [],
-      extract: extractWith({ previewVideoUrls: null }),
-    });
-
-    expect(itemOf(readiness, 'preview-video')).toMatchObject({
-      status: 'unmeasurable',
-      detail: null,
-    });
-    expect(readiness?.items.map((item) => item.status)).toContain(
-      'unmeasurable',
-    );
   });
 
   it('leaves the extract rows unmeasurable and the editorial null without an extract', () => {
@@ -184,15 +197,11 @@ describe('buildReadiness', () => {
     expect(readiness?.extractAsOf).toBeNull();
   });
 
-  it('passes the video in the plural wording of two videos', () => {
+  it('passes the events row in the plural wording of two events', () => {
     const readiness = buildReadiness({
       store: Store.APP_STORE,
       factors: [],
       extract: extractWith({
-        previewVideoUrls: [
-          'https://video.example.com/a.mp4',
-          'https://video.example.com/b.mp4',
-        ],
         appEvents: [
           {
             appEventId: 'e1',
@@ -214,9 +223,6 @@ describe('buildReadiness', () => {
       }),
     });
 
-    expect(itemOf(readiness, 'preview-video').detail).toBe(
-      'The store page shows 2 preview videos.',
-    );
     expect(itemOf(readiness, 'in-app-events').detail).toBe(
       'The store page lists 2 in-app events.',
     );
@@ -276,6 +282,10 @@ describe('buildReadiness', () => {
       extract: extractWith(),
     });
 
+    expect(itemOf(readiness, 'preview-video')).toMatchObject({
+      status: 'unmeasurable',
+      detail: null,
+    });
     expect(itemOf(readiness, 'update-recency')).toMatchObject({
       status: 'unmeasurable',
       detail: null,
@@ -290,17 +300,13 @@ describe('buildReadiness', () => {
     });
   });
 
-  it('points the extract rows at the Apple documentation and the rest at the factors', () => {
+  it('points the events row at the Apple documentation and the rest at the factors', () => {
     const readiness = buildReadiness({
       store: Store.APP_STORE,
       factors: factorsWith([checkWith('ratings-average', 'pass')]),
       extract: extractWith(),
     });
 
-    expect(itemOf(readiness, 'preview-video').link).toEqual({
-      href: 'https://developer.apple.com/app-store/product-page/',
-      label: 'About the product page',
-    });
     expect(itemOf(readiness, 'in-app-events').link).toEqual({
       href: 'https://developer.apple.com/app-store/in-app-events/',
       label: 'About in-app events',

@@ -10,11 +10,6 @@ import {
 } from '@asobeast/shared';
 import { AuditCheckId, AuditExtract } from './audit-scoring';
 
-const PRODUCT_PAGE_LINK: ReadinessLink = {
-  href: 'https://developer.apple.com/app-store/product-page/',
-  label: 'About the product page',
-};
-
 const EVENTS_LINK: ReadinessLink = {
   href: 'https://developer.apple.com/app-store/in-app-events/',
   label: 'About in-app events',
@@ -33,6 +28,18 @@ const FACTOR_SECTION_LINK: ReadinessLink = {
   label: 'Where the audit scores it',
 };
 
+interface ReuseRow {
+  id: ReadinessItem['id'];
+  label: string;
+  checkId: AuditCheckId;
+}
+
+const PREVIEW_VIDEO_ROW: ReuseRow = {
+  id: 'preview-video',
+  label: 'Preview video',
+  checkId: 'preview-video-present',
+};
+
 const REUSED_ROWS = [
   { id: 'rating', label: 'Average rating', checkId: 'ratings-average' },
   {
@@ -46,13 +53,7 @@ const REUSED_ROWS = [
     checkId: 'conversion-localizations',
   },
   { id: 'screenshots', label: 'Screenshots', checkId: 'screenshots-count' },
-] as const satisfies readonly {
-  id: ReadinessItem['id'];
-  label: string;
-  checkId: AuditCheckId;
-}[];
-
-type ReuseRow = (typeof REUSED_ROWS)[number];
+] as const satisfies readonly ReuseRow[];
 
 const findCheck = (
   factors: AuditFactorResult[],
@@ -99,23 +100,6 @@ const unmeasurable = (
   link: null,
 });
 
-const previewVideoRow = (extract: AuditExtract | null): ReadinessItem => {
-  if (extract === null || extract.facts.previewVideoUrls === null) {
-    return unmeasurable('preview-video', 'Preview video');
-  }
-  const { previewVideoUrls: videos } = extract.facts;
-  return {
-    id: 'preview-video',
-    label: 'Preview video',
-    status: videos.length > 0 ? 'pass' : 'fail',
-    detail:
-      videos.length > 0
-        ? `The store page shows ${plural(videos.length, 'preview video')}.`
-        : 'No preview video is on the store page.',
-    link: PRODUCT_PAGE_LINK,
-  };
-};
-
 const eventsRow = (extract: AuditExtract | null): ReadinessItem => {
   if (extract === null) {
     return unmeasurable('in-app-events', 'In-app events');
@@ -161,7 +145,7 @@ export const buildReadiness = ({
   }
   return {
     items: [
-      previewVideoRow(extract),
+      reusedRow(PREVIEW_VIDEO_ROW, factors),
       eventsRow(extract),
       accessibilityRow(),
       ...REUSED_ROWS.map((row) => reusedRow(row, factors)),
