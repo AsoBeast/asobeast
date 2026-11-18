@@ -169,3 +169,25 @@ test("drops a tick when its phrase is tracked on its own", async ({ page }) => {
   await expect(trackSelected(panel)).toHaveAccessibleName("Track 1 selected");
   await expect(tick(panel, "deep focus")).toHaveCount(0);
 });
+
+test("keeps the bulk button inside the card on a narrow screen", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto(DISCOVERED);
+  const panel = await openPanel(page);
+  await tick(panel, "deep focus").check();
+
+  const cardBox = await panel.boundingBox();
+  const buttonBox = await trackSelected(panel).boundingBox();
+  expect(cardBox).not.toBeNull();
+  expect(buttonBox).not.toBeNull();
+  expect(buttonBox!.x + buttonBox!.width).toBeLessThanOrEqual(
+    cardBox!.x + cardBox!.width,
+  );
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+});

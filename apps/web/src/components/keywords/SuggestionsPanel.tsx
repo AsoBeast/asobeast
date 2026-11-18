@@ -141,7 +141,7 @@ export function SuggestionsPanel({
             </TabsList>
           </Tabs>
 
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
             <p className="text-caption text-muted-foreground">
               <span>
                 {
@@ -153,7 +153,7 @@ export function SuggestionsPanel({
                 <span>{`. Runs a live ${storeLabel(store)} lookup, so it can take a few seconds.`}</span>
               ) : null}
             </p>
-            <div className="flex shrink-0 flex-wrap justify-end gap-2">
+            <div className="flex flex-wrap gap-2">
               <SpiderDialog appId={id} country={country}>
                 <Button variant="outline" size="sm">
                   <Search />
