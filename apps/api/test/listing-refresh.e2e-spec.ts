@@ -225,15 +225,15 @@ describe('market listing refresh (e2e)', () => {
   it('spends a refresh credit only on a market it accepts', async () => {
     const appId = await importApp();
     await trackIn(appId, 'de');
-    const consume = jest.spyOn(app.get(OnDemandLimiter), 'consume');
+    const charge = jest.spyOn(app.get(OnDemandLimiter), 'charge');
 
     await api.post(`/apps/${appId}/refresh?country=fr`).expect(400);
     await api.post(`/apps/${appId}/refresh?country=zz`).expect(400);
     await api.post('/apps/missing/refresh').expect(404);
-    expect(consume).not.toHaveBeenCalled();
+    expect(charge).not.toHaveBeenCalled();
 
     await api.post(`/apps/${appId}/refresh?country=de`).expect(200);
-    expect(consume.mock.calls).toEqual([['refresh']]);
+    expect(charge.mock.calls).toEqual([['refresh']]);
   });
 
   it('records a market change without an alert or a home side effect', async () => {
