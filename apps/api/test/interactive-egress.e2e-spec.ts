@@ -62,6 +62,7 @@ const poolConfig = {
   acquireTimeoutMs: 120_000,
   pollMs: 5_000,
   maxWorkerConcurrency: 8,
+  interactiveReserve: 1,
   residentialUrl: undefined,
   residentialCredentials: undefined,
   residentialTariff: { mbPerRequest: 1.2, costPerGb: 3, monthlyCapUsd: 0 },

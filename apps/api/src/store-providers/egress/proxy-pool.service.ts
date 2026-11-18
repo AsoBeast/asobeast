@@ -92,6 +92,7 @@ export class ProxyPool {
 
     const deadline = Date.now() + this.config.acquireTimeoutMs;
     const { signal } = storeDeadline();
+    const reserve = signal ? 0 : this.config.interactiveReserve;
     for (;;) {
       if (signal?.aborted) {
         throw new StoreRequestError(store, 'acquire', String(signal.reason));
@@ -99,7 +100,7 @@ export class ProxyPool {
       const lease =
         await this.crossTenant.becauseThisWorkIsNotOwnedByOneWorkspace(
           POOL_JUSTIFICATION,
-          () => this.tryAcquire(store, country, waitForLocal),
+          () => this.tryAcquire(store, country, waitForLocal, reserve),
         );
       if (lease.kind === 'endpoint') return lease.lease;
 
@@ -164,6 +165,7 @@ export class ProxyPool {
     store: Store,
     country: string | undefined,
     waitForLocal: boolean,
+    reserve: number,
   ): Promise<
     { kind: 'endpoint'; lease: ProxyLease } | { kind: 'wait'; waitMs: number }
   > {
@@ -200,6 +202,7 @@ export class ProxyPool {
           ),
         now,
         minIntervalMs: this.config.minIntervalMs,
+        reserve,
         ...(country && isGeoSensitive(store) ? { country, waitForLocal } : {}),
       });
 

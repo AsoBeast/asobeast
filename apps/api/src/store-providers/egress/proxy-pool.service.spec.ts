@@ -371,4 +371,52 @@ describe('ProxyPool', () => {
     );
     expect(Date.now() - started).toBeLessThan(1_000);
   });
+
+  describe('with an interactive reserve', () => {
+    const twoFreeOneHeld = () =>
+      findMany.mockResolvedValue([
+        endpoint({ id: 'a', host: '10.0.0.1' }),
+        endpoint({ id: 'b', host: '10.0.0.2' }),
+        endpoint({
+          id: 'held',
+          host: '10.0.0.3',
+          health: [
+            health({ pacedUntil: new Date(Date.now() + LEASE_HOLD_MS) }),
+          ],
+        }),
+      ]);
+
+    it('lets queued work lease while the reserve stays free', async () => {
+      twoFreeOneHeld();
+
+      const lease = await poolWith({ interactiveReserve: 1 }).acquire(
+        Store.GOOGLE_PLAY,
+        'us',
+      );
+
+      expect(lease?.endpointId).toBe('a');
+    });
+
+    it('passes the reserve only to queued work', async () => {
+      findMany.mockResolvedValue([
+        endpoint({ id: 'free', host: '10.0.0.1' }),
+        endpoint({
+          id: 'held',
+          host: '10.0.0.2',
+          health: [
+            health({ pacedUntil: new Date(Date.now() + LEASE_HOLD_MS) }),
+          ],
+        }),
+      ]);
+      const pool = poolWith({ interactiveReserve: 1, acquireTimeoutMs: 50 });
+
+      await expect(pool.acquire(Store.GOOGLE_PLAY, 'us')).rejects.toThrow(
+        ProxyPoolUnavailableError,
+      );
+      const waited = await withinStoreDeadline(() =>
+        pool.acquire(Store.GOOGLE_PLAY, 'us'),
+      );
+      expect(waited?.endpointId).toBe('free');
+    });
+  });
 });

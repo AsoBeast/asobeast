@@ -85,6 +85,7 @@ export const EnvSchema = z.object({
   PROXY_ENDPOINT_RPM: z.coerce.number().int().positive().default(15),
   PROXY_ACQUIRE_TIMEOUT_MS: z.coerce.number().int().positive().default(120_000),
   PROXY_WORKER_MAX_CONCURRENCY: z.coerce.number().int().positive().default(8),
+  PROXY_INTERACTIVE_RESERVE: z.coerce.number().int().min(0).default(1),
   PROXY_RESIDENTIAL_URL: optionalText,
   PROXY_RESIDENTIAL_USERNAME: optionalText,
   PROXY_RESIDENTIAL_PASSWORD: optionalText,
