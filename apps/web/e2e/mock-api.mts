@@ -146,6 +146,8 @@ import {
   METADATA_DRAFTS,
   APP_LONG_METADATA_DRAFTS,
   APP_1_KEYWORD_COUNTRIES,
+  APP_TICKS_DETAIL,
+  APP_TICKS_MARKETS,
   INITIAL_LOCALIZATION_SEEDS,
   DETECTABLE_LOCALIZATIONS,
   DETECT_REFUSED_MESSAGE,
@@ -4411,6 +4413,18 @@ const routes: Route[] = [
         return json(res, 500, errorEnvelope(500, path));
       }
       if (id === "app-1") return json(res, 200, APP_1_KEYWORD_COUNTRIES);
+      if (id === APP_TICKS_DETAIL.id) {
+        return json(
+          res,
+          200,
+          APP_TICKS_MARKETS.map((country) => ({
+            country,
+            keywordCount: dataset.keywords.filter(
+              (keyword) => keyword.country === country,
+            ).length,
+          })),
+        );
+      }
       json(res, 200, [
         {
           country: dataset.detail.country,
