@@ -96,7 +96,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "new",
         title: "Featuring readiness on the audit page",
-        text: "The audit page for an App Store app now carries a featuring readiness checklist beside the score: whether the store page shows a preview video, lists an in-app event and shows an accessibility statement, next to what the audit already measures about ratings, updates, localizations and screenshots. Every row answers in words and carries its evidence, the footer names the featured stories and the Editors' Choice badge the store page advertises together with the day that page was read, and a refresh that picks up an event or a badge now says what it picked up instead of showing a row of dashes.",
+        text: "The audit page for an App Store app now carries a featuring readiness checklist beside the score: whether the store page shows a preview video and lists an in-app event, next to what the audit already measures about ratings, updates, localizations and screenshots. A row the data cannot answer reads Not measured, and the footer shows how many featured stories and whether the Editors' Choice badge is on the page, together with the day that page was read.",
       },
       {
         kind: "new",
