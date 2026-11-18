@@ -21,6 +21,7 @@ import { testDb } from './helpers/test-db';
 const HELD_ID = 'com.example.held';
 const PLAY_URL = `https://play.google.com/store/apps/details?id=${HELD_ID}&gl=us`;
 const PROMPT_ANSWER_MS = 5_000;
+const BUSY_ANSWER_MS = 10_000;
 const CASE_TIMEOUT_MS = 30_000;
 
 const listingOf = (appId: string): GooglePlayAppResult => ({
@@ -229,17 +230,54 @@ describe('Requests someone waits for on a busy proxy pool (e2e)', () => {
     CASE_TIMEOUT_MS,
   );
 
+  const expectBusyAnswer = (response: {
+    status: number;
+    headers: Record<string, string>;
+    body: { message?: string; retryAfterSeconds?: number };
+  }) => {
+    expect(response.status).toBe(503);
+    const retryAfter = Number(response.headers['retry-after']);
+    expect(Number.isInteger(retryAfter)).toBe(true);
+    expect(retryAfter).toBeGreaterThanOrEqual(2);
+    expect(retryAfter).toBeLessThanOrEqual(10);
+    expect(response.body.retryAfterSeconds).toBe(retryAfter);
+    expect(response.body.message).toBe(
+      `This server is busy reaching Google Play. Try again in ${retryAfter} seconds.`,
+    );
+  };
+
   it(
-    'still waits for its own country when no endpoint abroad is free',
+    'answers 503 with a retry hint when every endpoint stays busy',
     async () => {
       await endpoint('us-1', 'us');
       await holdForQueuedWork('us-1');
 
-      const response = await api.post('/apps').send({ url: PLAY_URL });
+      const { response, tookMs } = await timed(() =>
+        api.post('/apps').send({ url: PLAY_URL }),
+      );
 
-      expect(response.status).toBeGreaterThanOrEqual(500);
+      expectBusyAnswer(response);
+      expect(tookMs).toBeLessThan(BUSY_ANSWER_MS);
       expect(playApp).not.toHaveBeenCalled();
       expect(await prisma.app.count()).toBe(0);
+    },
+    CASE_TIMEOUT_MS,
+  );
+
+  it(
+    'answers a busy refresh the same way',
+    async () => {
+      await endpoint('us-1', 'us');
+      await holdForQueuedWork('us-1');
+      const seeded = await seedPlayApp();
+
+      const { response, tookMs } = await timed(() =>
+        api.post(`/apps/${seeded.id}/refresh`),
+      );
+
+      expectBusyAnswer(response);
+      expect(tookMs).toBeLessThan(BUSY_ANSWER_MS);
+      expect(playApp).not.toHaveBeenCalled();
     },
     CASE_TIMEOUT_MS,
   );

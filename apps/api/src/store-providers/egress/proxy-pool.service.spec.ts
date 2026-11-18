@@ -1,7 +1,7 @@
 import { ProxyProtocol, Store } from '@prisma/client';
 import { CrossTenantAccess } from '../../common/tenancy/cross-tenant-access';
 import { PrismaService } from '../../prisma/prisma.service';
-import { StoreRequestError } from '../errors';
+import { StorePoolBusyError, StoreRequestError } from '../errors';
 import { withinStoreDeadline } from '../store-deadline';
 import { PoolShutdown } from './pool-shutdown';
 import { ProxyPoolConfig } from './proxy-pool.config';
@@ -367,7 +367,7 @@ describe('ProxyPool', () => {
 
     expect(failure).toBeInstanceOf(StoreRequestError);
     expect((failure as StoreRequestError).userMessage).toBe(
-      'The App Store did not answer. Try again in a few minutes.',
+      'This server is busy reaching the App Store. Try again in 5 seconds.',
     );
     expect(Date.now() - started).toBeLessThan(1_000);
   });
@@ -418,5 +418,134 @@ describe('ProxyPool', () => {
       );
       expect(waited?.endpointId).toBe('free');
     });
+  });
+
+  describe('request budget', () => {
+    const heldFor = (ms: number) =>
+      findMany.mockImplementation(() =>
+        Promise.resolve([
+          endpoint({
+            health: [health({ pacedUntil: new Date(Date.now() + ms) })],
+          }),
+        ]),
+      );
+
+    const settled = <T>(promise: Promise<T>) => {
+      const state: { done: boolean; value?: unknown } = { done: false };
+      promise.then(
+        (value) => Object.assign(state, { done: true, value }),
+        (error: unknown) => Object.assign(state, { done: true, value: error }),
+      );
+      return state;
+    };
+
+    const queuedPool = () =>
+      poolWith({ acquireTimeoutMs: 120_000, pollMs: 5_000 });
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('gives up eight seconds into a twenty second deadline', async () => {
+      heldFor(LEASE_HOLD_MS);
+      const outcome = settled(
+        withinStoreDeadline(
+          () => queuedPool().acquire(Store.GOOGLE_PLAY, 'us'),
+          20_000,
+        ),
+      );
+
+      await jest.advanceTimersByTimeAsync(7_999);
+      expect(outcome.done).toBe(false);
+
+      await jest.advanceTimersByTimeAsync(2);
+      expect(outcome.value).toBeInstanceOf(StorePoolBusyError);
+    });
+
+    it('looks again every second while someone waits', async () => {
+      heldFor(LEASE_HOLD_MS);
+      settled(
+        withinStoreDeadline(
+          () => queuedPool().acquire(Store.GOOGLE_PLAY, 'us'),
+          20_000,
+        ),
+      );
+
+      await jest.advanceTimersByTimeAsync(5_000);
+
+      expect(findMany).toHaveBeenCalledTimes(6);
+    });
+
+    it('keeps the queued poll interval', async () => {
+      heldFor(LEASE_HOLD_MS);
+      settled(queuedPool().acquire(Store.GOOGLE_PLAY, 'us'));
+
+      await jest.advanceTimersByTimeAsync(10_000);
+
+      expect(findMany).toHaveBeenCalledTimes(3);
+    });
+
+    it('shares one budget across every lease of a request', async () => {
+      heldFor(LEASE_HOLD_MS);
+      const outcome = settled(
+        withinStoreDeadline(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 7_000));
+          return queuedPool().acquire(Store.GOOGLE_PLAY, 'us');
+        }, 20_000),
+      );
+
+      await jest.advanceTimersByTimeAsync(7_000);
+      expect(outcome.done).toBe(false);
+
+      await jest.advanceTimersByTimeAsync(1_001);
+      expect(outcome.value).toBeInstanceOf(StorePoolBusyError);
+    });
+
+    it('clamps a far retry hint to ten seconds', async () => {
+      heldFor(LEASE_HOLD_MS);
+      const outcome = settled(
+        withinStoreDeadline(
+          () => queuedPool().acquire(Store.GOOGLE_PLAY, 'us'),
+          20_000,
+        ),
+      );
+
+      await jest.advanceTimersByTimeAsync(8_000);
+
+      expect(outcome.value).toEqual(
+        expect.objectContaining({ retryAfterSeconds: 10 }),
+      );
+    });
+
+    it('clamps a near retry hint to two seconds', async () => {
+      heldFor(500);
+      const outcome = settled(
+        withinStoreDeadline(
+          () => queuedPool().acquire(Store.GOOGLE_PLAY, 'us'),
+          20_000,
+        ),
+      );
+
+      await jest.advanceTimersByTimeAsync(8_000);
+
+      expect(outcome.value).toEqual(
+        expect.objectContaining({ retryAfterSeconds: 2 }),
+      );
+    });
+  });
+
+  it('looks once even when the request budget is already spent', async () => {
+    findMany.mockResolvedValue([endpoint()]);
+
+    const lease = await withinStoreDeadline(
+      () => poolWith().acquire(Store.APP_STORE),
+      30,
+    );
+
+    expect(lease?.endpointId).toBe('e1');
   });
 });

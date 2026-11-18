@@ -3,8 +3,8 @@ import { Store } from '@prisma/client';
 import { Dispatcher } from 'undici';
 import { CrossTenantAccess } from '../../common/tenancy/cross-tenant-access';
 import { PrismaService } from '../../prisma/prisma.service';
-import { StoreRequestError } from '../errors';
-import { pause, storeDeadline } from '../store-deadline';
+import { StorePoolBusyError } from '../errors';
+import { pause, storeDeadline, storeDeadlineEndsAt } from '../store-deadline';
 import { proxyDispatcher } from './egress';
 import { PoolShutdown } from './pool-shutdown';
 import { ProxyPoolConfig } from './proxy-pool.config';
@@ -18,6 +18,8 @@ const POOL_JUSTIFICATION =
   'the proxy pool is operator infrastructure shared by every workspace';
 
 export const LEASE_HOLD_MS = 5 * 60_000;
+export const STORE_CALL_MS = 12_000;
+export const INTERACTIVE_POLL_MS = 1_000;
 
 export interface ProxyLease {
   endpointId: string;
@@ -50,6 +52,14 @@ export class ProxyPoolStoppingError extends Error {
     );
     this.name = 'ProxyPoolStoppingError';
   }
+}
+
+interface LeaseWait {
+  giveUpAt: number;
+  pollMs: number;
+  reserve: number;
+  signal?: AbortSignal;
+  exhausted: (waitMs: number) => Error;
 }
 
 interface CachedDispatcher {
@@ -90,35 +100,49 @@ export class ProxyPool {
   ): Promise<ProxyLease | null> {
     if (!this.config.enabled) return null;
 
-    const deadline = Date.now() + this.config.acquireTimeoutMs;
-    const { signal } = storeDeadline();
-    const reserve = signal ? 0 : this.config.interactiveReserve;
+    const wait = this.waitPolicy(store);
+    let lastWaitMs = wait.pollMs;
     for (;;) {
-      if (signal?.aborted) {
-        throw new StoreRequestError(store, 'acquire', String(signal.reason));
-      }
+      if (wait.signal?.aborted) throw wait.exhausted(lastWaitMs);
       const lease =
         await this.crossTenant.becauseThisWorkIsNotOwnedByOneWorkspace(
           POOL_JUSTIFICATION,
-          () => this.tryAcquire(store, country, waitForLocal, reserve),
+          () => this.tryAcquire(store, country, waitForLocal, wait.reserve),
         );
       if (lease.kind === 'endpoint') return lease.lease;
 
       if (this.shutdown.stopped) throw new ProxyPoolStoppingError(store);
 
-      const remaining = deadline - Date.now();
-      if (remaining <= 0) {
-        throw new ProxyPoolUnavailableError(
+      lastWaitMs = lease.waitMs;
+      const remaining = wait.giveUpAt - Date.now();
+      if (remaining <= 0) throw wait.exhausted(lastWaitMs);
+      await pause(Math.min(lease.waitMs, wait.pollMs, remaining), wait.signal);
+    }
+  }
+
+  private waitPolicy(store: Store): LeaseWait {
+    const { signal } = storeDeadline();
+    const endsAt = storeDeadlineEndsAt();
+    if (signal && endsAt !== null) {
+      return {
+        giveUpAt: endsAt - STORE_CALL_MS,
+        pollMs: INTERACTIVE_POLL_MS,
+        reserve: 0,
+        signal,
+        exhausted: (waitMs) => new StorePoolBusyError(store, waitMs),
+      };
+    }
+    return {
+      giveUpAt: Date.now() + this.config.acquireTimeoutMs,
+      pollMs: this.config.pollMs,
+      reserve: this.config.interactiveReserve,
+      exhausted: () =>
+        new ProxyPoolUnavailableError(
           store,
           this.config.acquireTimeoutMs,
           this.config.pollMs,
-        );
-      }
-      await pause(
-        Math.min(lease.waitMs, this.config.pollMs, remaining),
-        signal,
-      );
-    }
+        ),
+    };
   }
 
   release(
