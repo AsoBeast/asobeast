@@ -118,6 +118,11 @@ export const LATER_RELEASES: readonly Release[] = [
         title: "Calmer notices, errors and messages",
         text: "The bar that tells you about a trial, a paused plan or a suspended workspace is now one quiet line with its link beside the sentence, and it turns amber when three days of a trial are left. A page that is not found or fails to load says so the same way everywhere, with one button to carry on. A message about something that failed can be closed, and messages no longer cover the setup checklist button.",
       },
+      {
+        kind: "improved",
+        title: "Emails that look like the app",
+        text: "Account, billing and alert emails now use the same typeface, colours and shapes as the app, in light and dark. Links are plain underlined text, so the orange button is the one thing that stands out. Nothing an email says has changed.",
+      },
     ],
   },
   {

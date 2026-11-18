@@ -57,7 +57,7 @@ describe('report components', () => {
     const output = await html(
       <StatGrid stats={[{ label: 'Rank drops', value: 3, tone: 'down' }]} />,
     );
-    expect(output).toContain('color:rgb(193,37,53)');
+    expect(output).toContain('color:rgb(194,39,45)');
     expect(output).toContain('Rank drops');
   });
 
@@ -121,5 +121,29 @@ describe('report components', () => {
     expect(output).toContain('Competitor · App Store · US');
     expect(output).toContain('Your app · App Store · US');
     expect(output).toContain('>See all 4 competitors</a>');
+  });
+
+  it('writes a link in ink in both schemes, never in orange', async () => {
+    const output = await html(
+      <ReportCard
+        app={card({
+          omittedCompetitors: 3,
+          competitorsLink: {
+            href: 'https://aso.example.com/apps/a/competitors',
+            label: 'See all 4 competitors',
+          },
+        })}
+      />,
+    );
+    const styles = [...output.matchAll(/<a[^>]*style="([^"]*)"/g)].map(
+      ([, style]) => style,
+    );
+
+    expect(styles.length).toBeGreaterThan(0);
+    for (const style of styles) {
+      expect(style).toContain('color:rgb(28,25,23)');
+      expect(style).toContain('text-decoration-line:underline');
+    }
+    expect(output).not.toContain('dark_text-brand');
   });
 });
