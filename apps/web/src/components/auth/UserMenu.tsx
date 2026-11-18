@@ -5,7 +5,6 @@ import { LogOut, Settings, User } from "lucide-react";
 import type { AuthUser } from "@asobeast/shared";
 import { planInForceLabel } from "@/lib/plan-in-force";
 import { ADMIN_ENTRY, ADMIN_TOOLS } from "@/components/admin/admin-links";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -19,11 +18,11 @@ import { ChangePasswordDialog } from "./ChangePasswordDialog";
 import { useAuth } from "./use-auth";
 import { useSignOut } from "./use-sign-out";
 
-function PlanInForceBadge({ user }: { user: AuthUser }) {
+function PlanInForce({ user }: { user: AuthUser }) {
   return (
-    <Badge variant="secondary" className="w-fit">
-      {planInForceLabel(user, new Date())}
-    </Badge>
+    <span data-slot="account-plan" className="text-caption font-normal">
+      {`${planInForceLabel(user, new Date())} plan`}
+    </span>
   );
 }
 
@@ -41,9 +40,14 @@ export function UserMenu() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="flex flex-col gap-1">
-          <span className="truncate font-medium">{user.email}</span>
-          <PlanInForceBadge user={user} />
+        <DropdownMenuLabel className="flex flex-col gap-0.5">
+          <span
+            title={user.email}
+            className="truncate text-dense text-foreground"
+          >
+            {user.email}
+          </span>
+          <PlanInForce user={user} />
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild className="sm:hidden">
@@ -62,7 +66,7 @@ export function UserMenu() {
         {user.platformOperator && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-caption text-muted-foreground">
+            <DropdownMenuLabel className="text-tick font-normal text-faint-foreground">
               Admin
             </DropdownMenuLabel>
             <DropdownMenuItem asChild>

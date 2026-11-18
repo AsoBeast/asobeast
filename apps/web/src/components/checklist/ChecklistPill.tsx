@@ -121,8 +121,8 @@ function EntitledPill() {
               ref={trigger}
               variant="outline"
               className={cn(
-                "h-10 rounded-full bg-popover shadow-overlay",
-                collapsed ? "w-10 px-0" : "px-3",
+                "h-10 rounded-full bg-popover text-label text-popover-foreground shadow-overlay hover:bg-muted",
+                collapsed ? "w-10 px-0" : "pr-4 pl-3",
               )}
             >
               <ProgressRing done={checklist.done} total={checklist.total} />
