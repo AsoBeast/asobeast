@@ -647,7 +647,7 @@ test("answers featuring readiness beside the score", async ({ page }) => {
   await page.goto("/apps/app-1/audit");
 
   const readiness = page.getByRole("region", { name: "Featuring readiness" });
-  await expect(readiness.getByText("4 of 7 pass")).toBeVisible();
+  await expect(readiness.getByText("5 of 7 pass")).toBeVisible();
   await expect(
     readiness.getByText("The store page shows 2 preview videos."),
   ).toBeVisible();
