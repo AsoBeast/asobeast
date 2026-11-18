@@ -1131,6 +1131,14 @@ describe("setup key", () => {
   });
 });
 
+describe("market keyword fields", () => {
+  it("reads the field again when the viewer returns from another tab", () => {
+    expect(marketKeywordFieldsOptions(APP, "us").refetchOnWindowFocus).toBe(
+      "always",
+    );
+  });
+});
+
 describe("admin keys", () => {
   it("keeps every admin key under the admin root", () => {
     for (const key of [

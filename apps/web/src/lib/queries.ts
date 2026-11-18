@@ -825,6 +825,7 @@ export const marketKeywordFieldsOptions = (id: string, country: string) =>
   queryOptions({
     queryKey: appKeys.marketKeywordFields(id, country),
     queryFn: () => getMarketKeywordFields(id, country),
+    refetchOnWindowFocus: "always",
   });
 
 const STORE_LOOKUP_OPTIONS = { staleTime: ONE_DAY_MS, retry: false } as const;

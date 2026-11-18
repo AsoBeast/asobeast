@@ -1,6 +1,6 @@
 "use client";
 
-import { useQueryState } from "nuqs";
+import { useQueryState, useQueryStates } from "nuqs";
 import {
   isAppStoreLocalization,
   type AppLocalizationsResult,
@@ -9,8 +9,15 @@ import {
 import { focusDraftLocalization } from "@/components/metadata/DraftLocalizationSelect";
 import { Accordion } from "@/components/ui/accordion";
 import { openLocalization } from "@/lib/app-localizations";
+import { additionOutcome } from "@/lib/keyword-field-addition";
 import { draftableLocalizations, storefrontRows } from "@/lib/localizations";
-import { draftLocaleParser, fieldLocaleParser } from "@/lib/search-params";
+import {
+  draftLocaleParser,
+  fieldAddParser,
+  fieldLeftOutParser,
+  fieldLocaleParser,
+} from "@/lib/search-params";
+import { KeywordFieldAdditionStatus } from "./KeywordFieldAdditionStatus";
 import { LocalizationItem } from "./LocalizationItem";
 
 export function LocalizationList({
@@ -22,10 +29,22 @@ export function LocalizationList({
   result: AppLocalizationsResult;
   canDraft: boolean;
 }) {
-  const [requested, setRequested] = useQueryState(
-    "fieldLocale",
-    fieldLocaleParser,
-  );
+  const [
+    { fieldLocale: requested, fieldAdd: added, fieldLeftOut: leftOut },
+    setLocalizationQuery,
+  ] = useQueryStates({
+    fieldLocale: fieldLocaleParser,
+    fieldAdd: fieldAddParser,
+    fieldLeftOut: fieldLeftOutParser,
+  });
+  const outcome = additionOutcome(result, requested, added, leftOut);
+  const proposalTarget =
+    outcome?.state === "received" ? outcome.localization : null;
+  const settleProposal = () =>
+    void setLocalizationQuery(
+      { fieldAdd: null, fieldLeftOut: null },
+      { history: "replace" },
+    );
   const [, setDraftLocale] = useQueryState("draftLocale", draftLocaleParser);
   const draftable = new Set(
     draftableLocalizations(storefrontRows(result.home, result.markets)),
@@ -35,26 +54,41 @@ export function LocalizationList({
   };
 
   return (
-    <Accordion
-      type="single"
-      collapsible={result.localizations.length > 1}
-      value={openLocalization(result.localizations, requested)}
-      onValueChange={(next) =>
-        void setRequested(isAppStoreLocalization(next) ? next : null, {
-          history: "replace",
-        })
-      }
-    >
-      {result.localizations.map((item) => (
-        <LocalizationItem
-          key={item.localization}
-          id={id}
-          item={item}
-          managed={result.storeManaged}
-          sync={result.storeSync}
-          onDraft={canDraft && draftable.has(item.localization) ? draft : null}
-        />
-      ))}
-    </Accordion>
+    <>
+      {outcome ? <KeywordFieldAdditionStatus outcome={outcome} /> : null}
+      <Accordion
+        type="single"
+        collapsible={result.localizations.length > 1}
+        value={openLocalization(result.localizations, requested)}
+        onValueChange={(next) =>
+          void setLocalizationQuery(
+            {
+              fieldLocale: isAppStoreLocalization(next) ? next : null,
+              fieldAdd: null,
+              fieldLeftOut: null,
+            },
+            { history: "replace" },
+          )
+        }
+      >
+        {result.localizations.map((item) => {
+          const target = item.localization === proposalTarget;
+          return (
+            <LocalizationItem
+              key={item.localization}
+              id={id}
+              item={item}
+              managed={result.storeManaged}
+              sync={result.storeSync}
+              onDraft={
+                canDraft && draftable.has(item.localization) ? draft : null
+              }
+              proposed={target ? added : null}
+              onProposalSettled={target ? settleProposal : undefined}
+            />
+          );
+        })}
+      </Accordion>
+    </>
   );
 }

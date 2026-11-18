@@ -57,6 +57,7 @@ export function TrackedKeywordsTab({
           market={market}
           homeCountry={homeCountry}
           store={store}
+          keywordFields={keywordFields}
           selection={selection}
           clearFocus={clearFocus}
           onFindKeywords={onFindKeywords}
@@ -79,6 +80,7 @@ function KeywordsMarketScope({
   market,
   homeCountry,
   store,
+  keywordFields,
   selection,
   clearFocus,
   onFindKeywords,
@@ -87,6 +89,7 @@ function KeywordsMarketScope({
   market: string;
   homeCountry: string;
   store: Store;
+  keywordFields: boolean;
   selection: KeywordChartSelection;
   clearFocus: RefObject<HTMLButtonElement | null>;
   onFindKeywords?: (leaving: HTMLElement) => void;
@@ -112,6 +115,7 @@ function KeywordsMarketScope({
         store={store}
         country={market}
         homeCountry={homeCountry}
+        keywordFields={keywordFields}
         chartedIds={open ? chart.charted : []}
         onFindKeywords={onFindKeywords}
       />
