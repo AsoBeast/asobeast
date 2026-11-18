@@ -2,7 +2,7 @@ import { VisibilityKeyword } from '@asobeast/shared';
 import type { TrackedRow } from './analytics.support';
 import { addDays, metricAt, Ranking, rankingAt } from './days';
 
-export const BASELINE_SHIFTS = [0, 1, -1] as const;
+const BASELINE_SHIFTS = [0, 1, -1] as const;
 
 export function baselineCheck(
   rankings: Ranking[],
