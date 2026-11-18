@@ -40,6 +40,7 @@ describe('CallToAction', () => {
     expect(button).toContain('color:rgb(28,20,8)');
     expect(fallback).toContain('color:rgb(28,25,23)');
     expect(fallback).toContain('text-decoration-line:underline');
+    expect(html).not.toContain('dark_text-brand');
   });
 
   it('keeps the classic outlook spacing', async () => {
