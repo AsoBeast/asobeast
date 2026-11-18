@@ -7,9 +7,10 @@ import {
   PortfolioMovement,
   RankDistribution,
 } from '@asobeast/shared';
-import { addDays, capturedOn, TrackedRow } from './analytics.support';
+import { addDays, TrackedRow } from './analytics.support';
+import { baselinePositions, hasBaseline } from './baseline';
 import { RankedMover, RankedMovers, rankedMovers } from './movers';
-import { rankDistributionAt } from './rank-distribution';
+import { rankDistributionAt, rankDistributionOf } from './rank-distribution';
 
 const PORTFOLIO_MOVER_LIMIT = 5;
 const TOP10_WINDOW_DAYS = 7;
@@ -57,8 +58,8 @@ function top10Delta(
 ): number | null {
   if (!reference) return null;
   const past = addDays(reference, -days);
-  if (!capturedOn(rows, past)) return null;
-  return current - rankDistributionAt(rows, past).top10;
+  if (!hasBaseline(rows, past)) return null;
+  return current - rankDistributionOf(baselinePositions(rows, past)).top10;
 }
 
 export function mergePortfolioMovers(

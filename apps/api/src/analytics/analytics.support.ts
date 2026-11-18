@@ -5,22 +5,31 @@ import {
   VisibilityPoint,
 } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import { hasBaseline, keywordsAtBaseline } from './baseline';
+import {
+  addDays,
+  DAY_MS,
+  isSameDay,
+  Metric,
+  metricAt,
+  positionAt,
+  Ranking,
+  toDateKey,
+} from './days';
 
-export const DAY_MS = 24 * 60 * 60 * 1000;
+export {
+  addDays,
+  DAY_MS,
+  metricAt,
+  positionAt,
+  rankingAt,
+  startOfUtcDay,
+  toDateKey,
+  utcToday,
+} from './days';
+export type { Metric, Ranking } from './days';
+
 const SPARKLINE_WINDOW_DAYS = 30;
-
-export interface Metric {
-  traffic: number | null;
-  difficulty: number | null;
-  date: Date;
-  formulaVersion?: string | null;
-}
-
-export interface Ranking {
-  position: number | null;
-  date: Date;
-  depth: number;
-}
 
 export interface TrackedRow {
   keywordId: string;
@@ -54,30 +63,6 @@ export interface GroupAggregate extends AppGroupRef {
   members: KeywordWindow[];
 }
 
-export const addDays = (date: Date, days: number): Date =>
-  new Date(date.getTime() + days * DAY_MS);
-
-export const startOfUtcDay = (date: Date): Date =>
-  new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
-  );
-
-export const utcToday = (): Date => startOfUtcDay(new Date());
-
-export const toDateKey = (date: Date): string =>
-  date.toISOString().slice(0, 10);
-
-const isSameDay = (a: Date, b: Date): boolean => a.getTime() === b.getTime();
-
-export const rankingAt = (rankings: Ranking[], date: Date): Ranking | null =>
-  rankings.find((ranking) => isSameDay(ranking.date, date)) ?? null;
-
-export const positionAt = (rankings: Ranking[], date: Date): number | null =>
-  rankingAt(rankings, date)?.position ?? null;
-
-export const metricAt = (metrics: Metric[], date: Date): Metric | null =>
-  metrics.find((metric) => metric.date.getTime() <= date.getTime()) ?? null;
-
 export const keywordsAt = (
   rows: TrackedRow[],
   date: Date,
@@ -102,10 +87,12 @@ export function delta(
   days: number,
 ): number | null {
   const past = addDays(referenceDate, -days);
-  if (!capturedOn(rows, past)) {
+  if (!hasBaseline(rows, past)) {
     return null;
   }
-  return Math.round((current - visibilityAt(rows, past)) * 10) / 10;
+  return (
+    Math.round((current - visibility(keywordsAtBaseline(rows, past))) * 10) / 10
+  );
 }
 
 export function windowVisibility(
@@ -145,17 +132,28 @@ const groupKeywordsAt = (
     return keywordsAt(member.rows, addDays(member.referenceDate, offsetDays));
   });
 
+interface ReferencedWindow extends KeywordWindow {
+  referenceDate: Date;
+}
+
+const isReferenced = (member: KeywordWindow): member is ReferencedWindow =>
+  member.referenceDate !== null;
+
 function groupDelta(members: KeywordWindow[], days: number): number | null {
-  const comparable = members.filter(
-    (member) =>
-      member.referenceDate !== null &&
-      capturedOn(member.rows, addDays(member.referenceDate, -days)),
-  );
+  const startOf = (member: ReferencedWindow) =>
+    addDays(member.referenceDate, -days);
+  const comparable = members
+    .filter(isReferenced)
+    .filter((member) => hasBaseline(member.rows, startOf(member)));
   if (comparable.length === 0) {
     return null;
   }
   const current = visibility(groupKeywordsAt(comparable, 0));
-  const past = visibility(groupKeywordsAt(comparable, -days));
+  const past = visibility(
+    comparable.flatMap((member) =>
+      keywordsAtBaseline(member.rows, startOf(member)),
+    ),
+  );
   return Math.round((current - past) * 10) / 10;
 }
 

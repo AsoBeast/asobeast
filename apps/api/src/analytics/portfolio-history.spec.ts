@@ -1,4 +1,4 @@
-import { RANK_DEPTH } from '@asobeast/shared';
+import { RANK_DEPTH, visibility } from '@asobeast/shared';
 import { TrackedRow } from './analytics.support';
 import { HistoryMember, portfolioHistory } from './portfolio-history';
 
@@ -397,5 +397,104 @@ describe('portfolioHistory', () => {
 
     expect(history.change.movers.up).toHaveLength(8);
     expect(history.change.movement.up).toBe(10);
+  });
+
+  it('reads a keyword checked the day before the range began at that check everywhere', () => {
+    const partial = portfolioHistory(
+      [
+        app([
+          row('a', 10, [
+            [0, 3],
+            [7, 4],
+          ]),
+          row('b', 10, [
+            [0, 2],
+            [8, 5],
+          ]),
+        ]),
+      ],
+      7,
+    );
+    const whole = portfolioHistory(
+      [
+        app([
+          row('a', 10, [
+            [0, 3],
+            [7, 4],
+          ]),
+          row('b', 10, [
+            [0, 2],
+            [7, 5],
+          ]),
+        ]),
+      ],
+      7,
+    );
+
+    expect(partial.change.top10Delta).toBe(0);
+    expect(partial.change.movement).toEqual(whole.change.movement);
+    expect(partial.change.visibilityDelta).toBe(whole.change.visibilityDelta);
+  });
+
+  it('weights a keyword checked the day before the range began by the popularity of that check', () => {
+    const checked = row('b', 60, [
+      [0, 2],
+      [8, 5],
+    ]);
+    const b: TrackedRow = {
+      ...checked,
+      keyword: {
+        ...checked.keyword,
+        metrics: [
+          { traffic: 60, difficulty: 10, date: daysAgo(7) },
+          { traffic: 20, difficulty: 10, date: daysAgo(8) },
+        ],
+      },
+    };
+
+    const history = portfolioHistory(
+      [
+        app([
+          row('a', 10, [
+            [0, 3],
+            [7, 4],
+          ]),
+          b,
+        ]),
+      ],
+      7,
+    );
+    const now = visibility([
+      { traffic: 10, position: 3 },
+      { traffic: 60, position: 2 },
+    ]);
+    const then = visibility([
+      { traffic: 10, position: 4 },
+      { traffic: 20, position: 5 },
+    ]);
+
+    expect(history.change.visibilityDelta).toBe(
+      Math.round((now - then) * 10) / 10,
+    );
+  });
+
+  it('never compares a keyword with a check two days from the range start', () => {
+    const history = portfolioHistory(
+      [
+        app([
+          row('a', 10, [
+            [0, 3],
+            [6, 9],
+          ]),
+          row('b', 10, [
+            [0, 2],
+            [5, 40],
+          ]),
+        ]),
+      ],
+      7,
+    );
+
+    expect(history.change.movers.up.map((mover) => mover.text)).toEqual(['a']);
   });
 });

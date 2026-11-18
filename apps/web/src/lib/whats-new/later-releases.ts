@@ -129,6 +129,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "On the keywords page, tick the suggestions you want and track them together with one button, instead of pressing Track on each. Phrases you already track have no tick, and switching the source or the market starts a fresh selection.",
       },
       {
+        kind: "fixed",
+        title: "Keyword figures that agree after a partial run",
+        text: "When a daily run missed some keywords on the first day of the range you look at, the keywords in the top 10 and the visibility change used to count those keywords as not found, while the keyword movers already compared them with the day next to it. On the dashboard and the app overview, the keyword movers, the keywords in the top 10 and the visibility change now compare each keyword with the same earlier check when it has one on that day or the day next to it, so a keyword already in the top 10 is no longer counted as a new entry.",
+      },
+      {
         kind: "new",
         title: "Send keywords to your keyword field",
         text: "Select keywords on the keywords page of an App Store app and choose Add to keyword field. The metadata page opens on the right language with those keywords added after the ones already in the field, ready to review and save. Keywords already in the field are not added twice, and only what fits in the 100 characters is taken along.",
