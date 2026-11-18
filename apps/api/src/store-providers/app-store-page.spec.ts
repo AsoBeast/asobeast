@@ -1,4 +1,9 @@
 import { parseAppStorePage } from './app-store-page';
+import {
+  SIMILAR_PAGE_HTML,
+  SIMILAR_SHELF_ADAM_IDS,
+  SIMILAR_SHELF_LOCKUPS,
+} from './app-store-similar.fixture';
 
 const TRAILER_URL =
   'https://apptrailers.itunes.apple.com/itunes-assets/PurpleVideo211/v4/d4/40/6e/d4406ee8-62de-501d-9a05-9370a87b1142/P1497996222_default.m3u8';
@@ -102,6 +107,21 @@ const EDITORS_CHOICE_SHELF = shelfOf([
   },
 ]);
 
+const SIMILAR_LOCKUP = {
+  $kind: 'Lockup',
+  adamId: '284035177',
+  title: 'Pandora: Personalized Music',
+  subtitle: 'Discover New Songs & Artists',
+  developerName: 'Pandora Media, LLC',
+  rating: 4.8,
+  ratingCount: '11M',
+  icon: {
+    $kind: 'Artwork',
+    template:
+      'https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/65/db/6f/65db6f74-dce2-d273-4daf-8b897e21db40/Placeholder.mill/{w}x{h}{c}.{f}',
+  },
+};
+
 const ACCESSIBILITY_SHELF = shelfOf([
   {
     $kind: 'AccessibilityParagraph',
@@ -143,6 +163,7 @@ describe('parseAppStorePage', () => {
         featuredIn: shelfOf(POGO_STORIES),
         editorsChoiceProductReviews: EDITORS_CHOICE_SHELF,
         accessibilityHeader: ACCESSIBILITY_SHELF,
+        similarItems: shelfOf([SIMILAR_LOCKUP]),
       }),
     );
 
@@ -177,6 +198,18 @@ describe('parseAppStorePage', () => {
       },
       accessibilityStatement:
         'The developer has not yet indicated which accessibility features this app supports. Learn More',
+      similarItems: [
+        {
+          adamId: '284035177',
+          title: 'Pandora: Personalized Music',
+          subtitle: 'Discover New Songs & Artists',
+          developer: 'Pandora Media, LLC',
+          rating: 4.8,
+          ratingCount: '11M',
+          iconTemplate:
+            'https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/65/db/6f/65db6f74-dce2-d273-4daf-8b897e21db40/Placeholder.mill/{w}x{h}{c}.{f}',
+        },
+      ],
     });
   });
 
@@ -244,6 +277,7 @@ describe('parseAppStorePage', () => {
       featuredStories: [],
       editorsChoice: null,
       accessibilityStatement: null,
+      similarItems: [],
     });
   });
 
@@ -462,5 +496,143 @@ describe('parseAppStorePage', () => {
 
     expect(extract.appEvents).toEqual([]);
     expect(extract.featuredStories).toHaveLength(1);
+  });
+
+  it('reads the captured similar shelf of a product page in its stored order', () => {
+    const extract = parseAppStorePage(SIMILAR_PAGE_HTML);
+
+    expect(extract.similarItems.map((item) => item.adamId)).toEqual(
+      SIMILAR_SHELF_ADAM_IDS,
+    );
+    expect(extract.similarItems[0]).toEqual({
+      adamId: '912390687',
+      title: 'TREBEL Music - Download Songs',
+      subtitle: 'Offline Music & AI Playlists',
+      developer: 'M&M Media, Inc.',
+      rating: 4.7,
+      ratingCount: '188K',
+      iconTemplate:
+        'https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/45/8f/b0/458fb0c1-ee2e-4a36-1cc2-f6fe8b86735b/Placeholder.mill/{w}x{h}{c}.{f}',
+    });
+  });
+
+  it('reads the downloading shelf when the similar shelf is absent', () => {
+    const extract = parseAppStorePage(
+      pageOf({
+        similarItemsDownloading: shelfOf([...SIMILAR_SHELF_LOCKUPS]),
+      }),
+    );
+
+    expect(extract.similarItems.map((item) => item.adamId)).toEqual(
+      SIMILAR_SHELF_ADAM_IDS,
+    );
+  });
+
+  it('prefers the similar shelf over its downloading twin', () => {
+    const extract = parseAppStorePage(
+      pageOf({
+        similarItems: shelfOf([
+          { $kind: 'Lockup', adamId: '1', title: 'Primary' },
+        ]),
+        similarItemsDownloading: shelfOf([
+          { $kind: 'Lockup', adamId: '2', title: 'Downloading' },
+        ]),
+      }),
+    );
+
+    expect(extract.similarItems.map((item) => item.adamId)).toEqual(['1']);
+  });
+
+  it('falls back to the downloading shelf when the similar shelf holds nothing usable', () => {
+    const extract = parseAppStorePage(
+      pageOf({
+        similarItems: shelfOf([{ $kind: 'Lockup', title: 'No id' }]),
+        similarItemsDownloading: shelfOf([
+          { $kind: 'Lockup', adamId: '2', title: 'Downloading' },
+        ]),
+      }),
+    );
+
+    expect(extract.similarItems.map((item) => item.adamId)).toEqual(['2']);
+  });
+
+  it('answers no similar items when neither similar shelf is present', () => {
+    const extract = parseAppStorePage(
+      pageOf({
+        product_media_phone_: CALM_MEDIA_SHELF,
+        featuredIn: shelfOf(POGO_STORIES),
+        editorsChoiceProductReviews: EDITORS_CHOICE_SHELF,
+        accessibilityHeader: ACCESSIBILITY_SHELF,
+      }),
+    );
+
+    expect(extract.similarItems).toEqual([]);
+    expect(extract.previewVideoUrls).toEqual([]);
+    expect(extract.featuredStories).toHaveLength(2);
+    expect(extract.editorsChoice).not.toBeNull();
+  });
+
+  it('skips a similar item without an id or a title and keeps absent fields null', () => {
+    const extract = parseAppStorePage(
+      pageOf({
+        similarItems: shelfOf([
+          { $kind: 'Lockup', title: 'No id' },
+          { $kind: 'Lockup', adamId: '   ' },
+          { $kind: 'Lockup', adamId: '1' },
+          { $kind: 'Lockup', adamId: '2', title: 'Partial' },
+          { $kind: 'Lockup', adamId: '3', title: '  ' },
+          {
+            $kind: 'Lockup',
+            adamId: '4',
+            title: 'Odd fields',
+            subtitle: 42,
+            developerName: 7,
+            rating: '4.8',
+            ratingCount: 12000,
+            icon: 'not an artwork',
+          },
+          'a string',
+          null,
+        ]),
+      }),
+    );
+
+    expect(extract.similarItems).toEqual([
+      {
+        adamId: '2',
+        title: 'Partial',
+        subtitle: null,
+        developer: null,
+        rating: null,
+        ratingCount: null,
+        iconTemplate: null,
+      },
+      {
+        adamId: '4',
+        title: 'Odd fields',
+        subtitle: null,
+        developer: null,
+        rating: null,
+        ratingCount: null,
+        iconTemplate: null,
+      },
+    ]);
+  });
+
+  it('keeps the display string of a rating count unparsed', () => {
+    const extract = parseAppStorePage(SIMILAR_PAGE_HTML);
+
+    expect(extract.similarItems.map((item) => item.ratingCount)).toEqual([
+      '188K',
+      '2.1M',
+      '29K',
+      '1.5M',
+      '37K',
+      '2M',
+      '309K',
+      '11M',
+      '273',
+      '69K',
+    ]);
   });
 });

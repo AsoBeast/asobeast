@@ -38,7 +38,6 @@ const makeAppStoreLib = (
   page: jest.fn().mockResolvedValue(''),
   search: jest.fn(),
   suggest: jest.fn(),
-  similar: jest.fn(),
   list: jest.fn(),
   reviews: jest.fn(),
   developer: jest.fn(),

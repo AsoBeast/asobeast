@@ -22,12 +22,23 @@ export interface PageEditorsChoice {
   notes: string | null;
 }
 
+export interface PageSimilarItem {
+  adamId: string;
+  title: string;
+  subtitle: string | null;
+  developer: string | null;
+  rating: number | null;
+  ratingCount: string | null;
+  iconTemplate: string | null;
+}
+
 export interface AppStorePageExtract {
   previewVideoUrls: string[] | null;
   appEvents: PageAppEvent[];
   featuredStories: PageFeaturedStory[];
   editorsChoice: PageEditorsChoice | null;
   accessibilityStatement: string | null;
+  similarItems: PageSimilarItem[];
 }
 
 const SERVER_DATA_SELECTOR = 'script#serialized-server-data';
@@ -35,6 +46,10 @@ const SERVER_DATA_SELECTOR = 'script#serialized-server-data';
 const PRODUCT_MEDIA_KEY = /^product_media_/;
 
 const STORY_ID = /\/story\/id(\d+)/;
+
+const SIMILAR_SHELF_KEY = 'similarItems';
+
+const SIMILAR_DOWNLOADING_SHELF_KEY = 'similarItemsDownloading';
 
 export function parseAppStorePage(html: string): AppStorePageExtract {
   return parseAppStorePageDocument(cheerio.load(html));
@@ -85,6 +100,7 @@ function readShelves(shelves: Record<string, unknown>): AppStorePageExtract {
     featuredStories: featuredStories(shelves),
     editorsChoice: editorsChoice(shelves),
     accessibilityStatement: accessibilityStatement(shelves),
+    similarItems: similarItems(shelves),
   };
 }
 
@@ -179,6 +195,38 @@ function accessibilityStatement(
     }
   }
   return null;
+}
+
+function similarItems(shelves: Record<string, unknown>): PageSimilarItem[] {
+  const primary = similarLockupsOf(shelves[SIMILAR_SHELF_KEY]);
+  return primary.length > 0
+    ? primary
+    : similarLockupsOf(shelves[SIMILAR_DOWNLOADING_SHELF_KEY]);
+}
+
+function similarLockupsOf(shelf: unknown): PageSimilarItem[] {
+  return itemsOf(shelf).flatMap((item) => {
+    const adamId = nonEmptyString(item.adamId);
+    const title = nonEmptyString(item.title);
+    if (adamId === null || title === null) {
+      return [];
+    }
+    return [
+      {
+        adamId,
+        title,
+        subtitle: nonEmptyString(item.subtitle),
+        developer: nonEmptyString(item.developerName),
+        rating: finiteNumber(item.rating),
+        ratingCount: nonEmptyString(item.ratingCount),
+        iconTemplate: nonEmptyString(asRecord(item.icon)?.template),
+      },
+    ];
+  });
+}
+
+function finiteNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
 function itemsOf(shelf: unknown): Record<string, unknown>[] {
