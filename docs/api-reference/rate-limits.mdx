@@ -102,7 +102,7 @@ Every response carries the tightest limit the request touched.
 | `RateLimit-Limit` | The allowance for the window closest to closing |
 | `RateLimit-Remaining` | What is left in that window |
 | `RateLimit-Reset` | Seconds until that window reopens |
-| `Retry-After` | Present on `429`, and on `503` when Redis, the database or the server's store capacity is busy. Seconds until the refused request can succeed |
+| `Retry-After` | Present on `429`, and on the `503` an unreachable Redis or database, a busy server or a restarting API causes. Seconds until the refused request can succeed |
 
 A client that reads `RateLimit-Remaining` and honours `Retry-After` never needs to guess.
 
