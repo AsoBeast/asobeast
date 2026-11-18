@@ -677,6 +677,41 @@ describe('AuditController (e2e)', () => {
           },
           capturedAt: new Date(D0.getTime() + 86_400_000),
         },
+        {
+          appId: app.id,
+          country: 'de',
+          title: 'Stale Extract',
+          description: 'Build better habits every single day.',
+          ratingAvg: 4.6,
+          ratingCount: 5000,
+          storeUpdatedAt: new Date(),
+          raw: {
+            screenshots: Array.from({ length: 8 }, (_, i) => `s${i}.png`),
+            pageExtract: {
+              previewVideoUrls: [],
+              appEvents: [
+                {
+                  appEventId: 'foreign-event',
+                  title: 'German sale',
+                  kind: null,
+                  badge: null,
+                  startsAt: null,
+                  endsAt: null,
+                },
+              ],
+              featuredStories: [
+                {
+                  storyId: 'story-foreign',
+                  heading: 'TODAY',
+                  title: 'A foreign feature',
+                },
+              ],
+              editorsChoice: { showsBadge: true, notes: null },
+              accessibilityStatement: 'VoiceOver labels on every screen.',
+            },
+          },
+          capturedAt: new Date(D0.getTime() + 2 * 86_400_000),
+        },
       ],
     });
 
@@ -701,6 +736,33 @@ describe('AuditController (e2e)', () => {
       stories: 0,
       editorsChoiceBadge: false,
     });
+  });
+
+  it('leaves every readiness row unmeasurable for an app without snapshots', async () => {
+    const app = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '9234567890',
+        country: 'us',
+        name: 'Never Captured',
+      },
+    });
+
+    const result = (await api.get(`/apps/${app.id}/audit`).expect(200))
+      .body as AppAuditResult;
+
+    expect(result.readiness?.items.map((item) => item.status)).toEqual([
+      'unmeasurable',
+      'unmeasurable',
+      'unmeasurable',
+      'unmeasurable',
+      'unmeasurable',
+      'unmeasurable',
+      'unmeasurable',
+    ]);
+    expect(result.readiness?.editorial).toBeNull();
+    expect(result.readiness?.extractAsOf).toBeNull();
   });
 
   it('leaves every readiness row unmeasurable when no snapshot carries an extract', async () => {
