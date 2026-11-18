@@ -10,19 +10,30 @@ import {
 } from "@asobeast/shared";
 import { LOCALIZATIONS_SECTION_ID } from "@/lib/app-localizations";
 import { pluralize } from "@/lib/format";
-import { fieldAddParser, fieldLocaleParser } from "@/lib/search-params";
+import {
+  fieldAddParser,
+  fieldLeftOutParser,
+  fieldLocaleParser,
+} from "@/lib/search-params";
 
-export type KeywordFieldAdditionState = "added" | "managed" | "unlisted";
-
-export interface KeywordFieldAdditionOutcome {
-  state: KeywordFieldAdditionState;
-  localization: AppStoreLocalization;
-  count: number;
+export interface KeywordFieldAddition {
+  added: string[];
+  held: string[];
+  leftOut: number;
 }
+
+export type KeywordFieldAdditionOutcome =
+  | { state: "managed" | "unlisted"; localization: AppStoreLocalization }
+  | {
+      state: "received";
+      localization: AppStoreLocalization;
+      addition: KeywordFieldAddition;
+    };
 
 const serializeAddition = createSerializer({
   fieldLocale: fieldLocaleParser,
   fieldAdd: fieldAddParser,
+  fieldLeftOut: fieldLeftOutParser,
 });
 
 const newPhrases = (
@@ -33,49 +44,76 @@ const newPhrases = (
   return proposed.filter((phrase) => !held.has(phrase));
 };
 
+const heldPhrases = (
+  stored: readonly string[],
+  proposed: readonly string[],
+): string[] => {
+  const held = new Set(stored);
+  return proposed.filter((phrase) => held.has(phrase));
+};
+
 export const proposedKeywordField = (
   stored: readonly string[],
   added: readonly string[],
 ): string => [...stored, ...newPhrases(stored, added)].join(",");
 
+const receivedPhrases = (proposed: readonly string[] | null): string[] =>
+  proposed ? parseKeywordField(proposed.join(",")).phrases : [];
+
 export function proposalDraft(
   stored: readonly string[],
   proposed: readonly string[] | null,
 ): string | null {
-  if (!proposed || newPhrases(stored, proposed).length === 0) return null;
-  return proposedKeywordField(stored, proposed);
+  const phrases = receivedPhrases(proposed);
+  if (newPhrases(stored, phrases).length === 0) return null;
+  return proposedKeywordField(stored, phrases);
 }
 
 export const keywordFieldAdditionHref = (
   id: string,
   localization: AppStoreLocalization,
-  added: readonly string[],
-): string =>
-  `/apps/${id}/metadata${serializeAddition({
+  { added, held, leftOut }: KeywordFieldAddition,
+): string => {
+  const carried = [...added, ...held];
+  return `/apps/${id}/metadata${serializeAddition({
     fieldLocale: localization,
-    fieldAdd: added.length > 0 ? [...added] : null,
+    fieldAdd: carried.length > 0 ? carried : null,
+    fieldLeftOut: leftOut > 0 ? leftOut : null,
   })}#${LOCALIZATIONS_SECTION_ID}`;
+};
+
+export function receivedAddition(
+  stored: readonly string[],
+  proposed: readonly string[] | null,
+  leftOut: number,
+): KeywordFieldAddition {
+  const phrases = receivedPhrases(proposed);
+  return {
+    added: newPhrases(stored, phrases),
+    held: heldPhrases(stored, phrases),
+    leftOut,
+  };
+}
 
 export function additionOutcome(
   result: Pick<AppLocalizationsResult, "localizations" | "storeManaged">,
   requested: AppStoreLocalization | null,
-  added: readonly string[] | null,
+  proposed: readonly string[] | null,
+  leftOut: number | null,
 ): KeywordFieldAdditionOutcome | null {
-  if (requested === null || !added || added.length === 0) return null;
+  const left = leftOut ?? 0;
+  if (requested === null) return null;
+  if (receivedPhrases(proposed).length === 0 && left === 0) return null;
   const item = result.localizations.find(
     (each) => each.localization === requested,
   );
-  const refused = (state: KeywordFieldAdditionState) => ({
-    state,
+  if (!item) return { state: "unlisted", localization: requested };
+  if (result.storeManaged) return { state: "managed", localization: requested };
+  return {
+    state: "received",
     localization: requested,
-    count: added.length,
-  });
-  if (!item) return refused("unlisted");
-  if (result.storeManaged) return refused("managed");
-  const count = newPhrases(item.phrases, added).length;
-  return count === 0
-    ? null
-    : { state: "added", localization: requested, count };
+    addition: receivedAddition(item.phrases, proposed, left),
+  };
 }
 
 export interface KeywordFieldTarget {
@@ -92,12 +130,6 @@ export function keywordFieldTarget(
     : null;
 }
 
-export interface KeywordFieldAddition {
-  added: string[];
-  alreadyIn: number;
-  leftOut: number;
-}
-
 export function keywordFieldAddition(
   stored: readonly string[],
   selected: readonly string[],
@@ -110,15 +142,16 @@ export function keywordFieldAddition(
     : [];
   return {
     added,
-    alreadyIn: phrases.length - fresh.length,
+    held: heldPhrases(stored, phrases),
     leftOut: fresh.length - added.length,
   };
 }
 
 export function additionNotice(
-  { added, alreadyIn, leftOut }: KeywordFieldAddition,
+  { added, held, leftOut }: KeywordFieldAddition,
   name: string,
 ): string | null {
+  const alreadyIn = held.length;
   if (leftOut > 0) {
     return `${pluralize(leftOut, "keyword")} did not fit in the ${name} keyword field and ${leftOut === 1 ? "was" : "were"} left out.`;
   }

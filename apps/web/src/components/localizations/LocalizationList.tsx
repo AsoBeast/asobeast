@@ -14,6 +14,7 @@ import { draftableLocalizations, storefrontRows } from "@/lib/localizations";
 import {
   draftLocaleParser,
   fieldAddParser,
+  fieldLeftOutParser,
   fieldLocaleParser,
 } from "@/lib/search-params";
 import { KeywordFieldAdditionStatus } from "./KeywordFieldAdditionStatus";
@@ -28,16 +29,22 @@ export function LocalizationList({
   result: AppLocalizationsResult;
   canDraft: boolean;
 }) {
-  const [{ fieldLocale: requested, fieldAdd: added }, setLocalizationQuery] =
-    useQueryStates({
-      fieldLocale: fieldLocaleParser,
-      fieldAdd: fieldAddParser,
-    });
-  const outcome = additionOutcome(result, requested, added);
+  const [
+    { fieldLocale: requested, fieldAdd: added, fieldLeftOut: leftOut },
+    setLocalizationQuery,
+  ] = useQueryStates({
+    fieldLocale: fieldLocaleParser,
+    fieldAdd: fieldAddParser,
+    fieldLeftOut: fieldLeftOutParser,
+  });
+  const outcome = additionOutcome(result, requested, added, leftOut);
   const proposalTarget =
-    outcome?.state === "added" ? outcome.localization : null;
+    outcome?.state === "received" ? outcome.localization : null;
   const settleProposal = () =>
-    void setLocalizationQuery({ fieldAdd: null }, { history: "replace" });
+    void setLocalizationQuery(
+      { fieldAdd: null, fieldLeftOut: null },
+      { history: "replace" },
+    );
   const [, setDraftLocale] = useQueryState("draftLocale", draftLocaleParser);
   const draftable = new Set(
     draftableLocalizations(storefrontRows(result.home, result.markets)),
@@ -58,6 +65,7 @@ export function LocalizationList({
             {
               fieldLocale: isAppStoreLocalization(next) ? next : null,
               fieldAdd: null,
+              fieldLeftOut: null,
             },
             { history: "replace" },
           )

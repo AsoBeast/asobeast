@@ -6,16 +6,13 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import type { Table } from "@tanstack/react-table";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import { TextCursorInput } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { hasMarketReads } from "@/lib/app-localizations";
 import {
-  additionNotice,
   keywordFieldAddition,
   keywordFieldAdditionHref,
   keywordFieldTarget,
 } from "@/lib/keyword-field-addition";
-import { localizationName } from "@/lib/localizations";
 import { marketKeywordFieldsOptions } from "@/lib/queries";
 import type { KeywordTableFeatures } from "./keyword-table-features";
 
@@ -32,22 +29,11 @@ export function AddToKeywordField({
   const target = keywordFieldTarget(data.localizations);
   if (!target) return null;
   const addition = keywordFieldAddition(target.stored, keywords);
-  const notice = additionNotice(
-    addition,
-    localizationName(target.localization),
-  );
 
   return (
     <Button variant="outline" size="sm" asChild>
       <Link
-        href={keywordFieldAdditionHref(
-          appId,
-          target.localization,
-          addition.added,
-        )}
-        onClick={() => {
-          if (notice) toast.info(notice);
-        }}
+        href={keywordFieldAdditionHref(appId, target.localization, addition)}
       >
         <TextCursorInput aria-hidden />
         Add to keyword field

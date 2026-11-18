@@ -1,16 +1,26 @@
 import { pluralize } from "@/lib/format";
-import type { KeywordFieldAdditionOutcome } from "@/lib/keyword-field-addition";
+import {
+  additionNotice,
+  type KeywordFieldAddition,
+  type KeywordFieldAdditionOutcome,
+} from "@/lib/keyword-field-addition";
 import { localizationName } from "@/lib/localizations";
 
-function statusSentence({
-  state,
-  localization,
-  count,
-}: KeywordFieldAdditionOutcome): string {
-  const name = localizationName(localization);
-  switch (state) {
-    case "added":
-      return `Added ${pluralize(count, "phrase")} from the keywords page to the ${name} keyword field. Review them and save.`;
+function receivedSentence(
+  addition: KeywordFieldAddition,
+  name: string,
+): string | null {
+  const notice = additionNotice(addition, name);
+  if (addition.added.length === 0) return notice;
+  const added = `Added ${pluralize(addition.added.length, "phrase")} from the keywords page to the ${name} keyword field. Review them and save.`;
+  return notice ? `${added} ${notice}` : added;
+}
+
+function statusSentence(outcome: KeywordFieldAdditionOutcome): string | null {
+  const name = localizationName(outcome.localization);
+  switch (outcome.state) {
+    case "received":
+      return receivedSentence(outcome.addition, name);
     case "managed":
       return `The selected phrases were not added, because App Store Connect manages the ${name} keyword field.`;
     case "unlisted":
@@ -23,12 +33,14 @@ export function KeywordFieldAdditionStatus({
 }: {
   outcome: KeywordFieldAdditionOutcome;
 }) {
+  const sentence = statusSentence(outcome);
+  if (!sentence) return null;
   return (
     <p
       role="status"
       className="border-b border-border px-4 py-3 text-dense text-muted-foreground"
     >
-      {statusSentence(outcome)}
+      {sentence}
     </p>
   );
 }

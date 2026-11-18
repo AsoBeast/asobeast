@@ -14,6 +14,7 @@ import {
   keywordFieldTarget,
   proposalDraft,
   proposedKeywordField,
+  receivedAddition,
 } from "./keyword-field-addition";
 
 const listed = (
@@ -23,7 +24,7 @@ const listed = (
   localization,
   origin: "home",
   phrases,
-  charactersUsed: phrases.join(",").length,
+  charactersUsed: keywordFieldChars(phrases),
   charactersLimit: 100,
   readBy: [],
   updatedAt: null,
@@ -65,43 +66,105 @@ describe("proposalDraft", () => {
   it("answers the stored phrases followed by the new ones", () => {
     expect(proposalDraft(["focus"], ["deep work"])).toBe("focus,deep work");
   });
+
+  it("normalizes and deduplicates the received phrases", () => {
+    expect(proposalDraft(["focus"], ["Timer", "timer ", "a,b"])).toBe(
+      "focus,timer,a,b",
+    );
+  });
 });
 
 describe("keywordFieldAdditionHref", () => {
+  const addition = (added: string[], held: string[] = [], leftOut = 0) => ({
+    added,
+    held,
+    leftOut,
+  });
+
   it("opens the localization's editor with the phrases", () => {
     expect(
-      keywordFieldAdditionHref("app-1", "en-US", ["focus timer", "deep work"]),
+      keywordFieldAdditionHref(
+        "app-1",
+        "en-US",
+        addition(["focus timer", "deep work"]),
+      ),
     ).toBe(
       "/apps/app-1/metadata?fieldLocale=en-US&fieldAdd=focus+timer,deep+work#app-localizations",
     );
   });
 
-  it("is the plain edit address when nothing is added", () => {
-    expect(keywordFieldAdditionHref("app-1", "en-US", [])).toBe(
+  it("carries the phrases the field holds and the count left out", () => {
+    expect(
+      keywordFieldAdditionHref(
+        "app-1",
+        "en-US",
+        addition(["zen"], ["focus"], 2),
+      ),
+    ).toBe(
+      "/apps/app-1/metadata?fieldLocale=en-US&fieldAdd=zen,focus&fieldLeftOut=2#app-localizations",
+    );
+    expect(
+      keywordFieldAdditionHref("app-1", "en-US", addition([], [], 3)),
+    ).toBe(
+      "/apps/app-1/metadata?fieldLocale=en-US&fieldLeftOut=3#app-localizations",
+    );
+  });
+
+  it("is the plain edit address when nothing is selected", () => {
+    expect(keywordFieldAdditionHref("app-1", "en-US", addition([]))).toBe(
       editLocalizationHref("app-1", "en-US"),
     );
+  });
+});
+
+describe("receivedAddition", () => {
+  it("splits the received phrases into new and held against the stored field", () => {
+    expect(
+      receivedAddition(["focus", "timer"], ["timer", "deep work"], 1),
+    ).toEqual({ added: ["deep work"], held: ["timer"], leftOut: 1 });
+  });
+
+  it("counts a repeated or differently written phrase once", () => {
+    expect(
+      receivedAddition(["focus"], ["timer", "Timer", "timer "], 0),
+    ).toEqual({ added: ["timer"], held: [], leftOut: 0 });
   });
 });
 
 describe("additionOutcome", () => {
   const result = localizations([listed("en-US", ["focus", "timer"])]);
 
-  it("answers nothing without a localization or phrases", () => {
-    expect(additionOutcome(result, null, ["deep work"])).toBeNull();
-    expect(additionOutcome(result, "en-US", null)).toBeNull();
-    expect(additionOutcome(result, "en-US", [])).toBeNull();
+  it("answers nothing without a localization or anything received", () => {
+    expect(additionOutcome(result, null, ["deep work"], null)).toBeNull();
+    expect(additionOutcome(result, "en-US", null, null)).toBeNull();
+    expect(additionOutcome(result, "en-US", [], null)).toBeNull();
+    expect(additionOutcome(result, "en-US", ["🎯"], null)).toBeNull();
   });
 
-  it("counts only the phrases the field does not hold yet", () => {
-    expect(additionOutcome(result, "en-US", ["timer", "deep work"])).toEqual({
-      state: "added",
+  it("splits the phrases against the field the page reads", () => {
+    expect(
+      additionOutcome(result, "en-US", ["timer", "deep work"], null),
+    ).toEqual({
+      state: "received",
       localization: "en-US",
-      count: 1,
+      addition: { added: ["deep work"], held: ["timer"], leftOut: 0 },
     });
   });
 
-  it("answers nothing when the field holds every phrase", () => {
-    expect(additionOutcome(result, "en-US", ["focus", "timer"])).toBeNull();
+  it("answers a received outcome when the field holds every phrase", () => {
+    expect(additionOutcome(result, "en-US", ["focus", "timer"], null)).toEqual({
+      state: "received",
+      localization: "en-US",
+      addition: { added: [], held: ["focus", "timer"], leftOut: 0 },
+    });
+  });
+
+  it("answers a received outcome when only the left out count arrives", () => {
+    expect(additionOutcome(result, "en-US", null, 2)).toEqual({
+      state: "received",
+      localization: "en-US",
+      addition: { added: [], held: [], leftOut: 2 },
+    });
   });
 
   it("refuses a field App Store Connect manages", () => {
@@ -110,17 +173,23 @@ describe("additionOutcome", () => {
         localizations([listed("en-US", ["focus"])], true),
         "en-US",
         ["deep work"],
+        null,
       ),
-    ).toEqual({ state: "managed", localization: "en-US", count: 1 });
+    ).toEqual({ state: "managed", localization: "en-US" });
   });
 
   it("refuses a localization the app does not list, managed or not", () => {
-    const unlisted = { state: "unlisted", localization: "fr", count: 1 };
-    expect(additionOutcome(result, "fr", ["deep work"])).toEqual(unlisted);
+    const unlisted = { state: "unlisted", localization: "fr" };
+    expect(additionOutcome(result, "fr", ["deep work"], null)).toEqual(
+      unlisted,
+    );
     expect(
-      additionOutcome(localizations([listed("en-US")], true), "fr", [
-        "deep work",
-      ]),
+      additionOutcome(
+        localizations([listed("en-US")], true),
+        "fr",
+        ["deep work"],
+        null,
+      ),
     ).toEqual(unlisted);
   });
 });
@@ -162,14 +231,14 @@ describe("keywordFieldTarget", () => {
 describe("keywordFieldAddition", () => {
   it("adds the new phrases after the stored ones in the order given", () => {
     expect(keywordFieldAddition(["focus"], ["timer app", "deep work"])).toEqual(
-      { added: ["timer app", "deep work"], alreadyIn: 0, leftOut: 0 },
+      { added: ["timer app", "deep work"], held: [], leftOut: 0 },
     );
   });
 
   it("counts a phrase the field holds as already in, not as added", () => {
     expect(
       keywordFieldAddition(["focus", "timer"], ["timer", "deep work"]),
-    ).toEqual({ added: ["deep work"], alreadyIn: 1, leftOut: 0 });
+    ).toEqual({ added: ["deep work"], held: ["timer"], leftOut: 0 });
   });
 
   it("normalizes and deduplicates the selection", () => {
@@ -184,7 +253,7 @@ describe("keywordFieldAddition", () => {
         ["a".repeat(80)],
         ["b".repeat(30), "cc", "d".repeat(20)],
       ),
-    ).toEqual({ added: ["cc"], alreadyIn: 0, leftOut: 2 });
+    ).toEqual({ added: ["cc"], held: [], leftOut: 2 });
   });
 
   it("counts code points, not UTF-16 units", () => {
@@ -196,7 +265,7 @@ describe("keywordFieldAddition", () => {
   it("drops a phrase that normalizes to nothing", () => {
     expect(keywordFieldAddition([], ["🎯"])).toEqual({
       added: [],
-      alreadyIn: 0,
+      held: [],
       leftOut: 0,
     });
   });
@@ -204,13 +273,13 @@ describe("keywordFieldAddition", () => {
   it("adds nothing to a stored field that is already over the limit", () => {
     expect(
       keywordFieldAddition(["a".repeat(60), "b".repeat(60)], ["cc"]),
-    ).toEqual({ added: [], alreadyIn: 0, leftOut: 1 });
+    ).toEqual({ added: [], held: [], leftOut: 1 });
   });
 
   it("answers an empty addition for an empty selection", () => {
     expect(keywordFieldAddition(["focus"], [])).toEqual({
       added: [],
-      alreadyIn: 0,
+      held: [],
       leftOut: 0,
     });
   });
@@ -218,9 +287,11 @@ describe("keywordFieldAddition", () => {
 
 describe("additionNotice", () => {
   const name = "English (U.S.)";
+  const phrases = (count: number, prefix: string) =>
+    Array.from({ length: count }, (_, index) => `${prefix} ${index}`);
   const addition = (added: number, alreadyIn: number, leftOut: number) => ({
-    added: Array.from({ length: added }, (_, index) => `phrase ${index}`),
-    alreadyIn,
+    added: phrases(added, "new"),
+    held: phrases(alreadyIn, "held"),
     leftOut,
   });
 

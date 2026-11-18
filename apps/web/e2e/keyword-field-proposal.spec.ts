@@ -26,12 +26,16 @@ const editor = (page: Page, name: string) =>
 const statusLine = (page: Page) =>
   page.getByRole("status").filter({ hasText: /keyword field|does not list/ });
 
+const FIELD_WRITE = new RegExp(
+  `^/api/backend/apps/${APP}/keyword-field(?:s/.*)?$`,
+);
+
 function fieldWrites(page: Page): Request[] {
   const writes: Request[] = [];
   page.on("request", (request) => {
     if (
       request.method() === "PUT" &&
-      request.url().includes(`/api/backend/apps/${APP}/keyword-fields/`)
+      FIELD_WRITE.test(new URL(request.url()).pathname)
     ) {
       writes.push(request);
     }
@@ -128,11 +132,52 @@ test.describe("the metadata page takes proposed phrases", () => {
     await page.goto(proposal("en-US", "timer,deep+work"));
     await expect(editor(page, US)).toHaveValue("focus,timer,deep work");
     await expect(statusLine(page)).toHaveText(
-      "Added 1 phrase from the keywords page to the English (U.S.) keyword field. Review them and save.",
+      "Added 1 phrase from the keywords page to the English (U.S.) keyword field. Review them and save. 1 keyword is already in the English (U.S.) keyword field.",
     );
 
     await page.goto(proposal("en-US", "focus,timer"));
     await expect(editor(page, US)).toHaveValue("focus,timer");
+    await expect(statusLine(page)).toHaveText(
+      "Every selected keyword is already in the English (U.S.) keyword field.",
+    );
+  });
+
+  test("drops a proposal with nothing new once the field is saved", async ({
+    page,
+  }) => {
+    await page.goto(proposal("en-US", "timer"));
+    await expect(editor(page, US)).toHaveValue("focus,timer");
+
+    await editor(page, US).fill("focus,timer,calm");
+    await page.getByRole("button", { name: "Save keyword field" }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Save and track" })
+      .click();
+
+    await expect(
+      page.getByText("Saved the English (U.S.) keyword field"),
+    ).toBeVisible();
+    await expect(page).not.toHaveURL(/fieldAdd=/);
+    await expect(statusLine(page)).toHaveCount(0);
+  });
+
+  test("says what the keywords page left out", async ({ page }) => {
+    await seedLocalizations(page.request, APP, {
+      markets: ["us", "gb"],
+      fields: { "en-US": ["focus", "timer"], "en-GB": ["calm"] },
+    });
+    await page.goto(
+      `${METADATA}?fieldLocale=en-US&fieldAdd=deep+work&fieldLeftOut=2#app-localizations`,
+    );
+
+    await expect(editor(page, US)).toHaveValue("focus,timer,deep work");
+    await expect(statusLine(page)).toHaveText(
+      "Added 1 phrase from the keywords page to the English (U.S.) keyword field. Review them and save. 2 keywords did not fit in the English (U.S.) keyword field and were left out.",
+    );
+
+    await localizationItem(page, UK).trigger.click();
+    await expect(page).not.toHaveURL(/fieldAdd=|fieldLeftOut=/);
     await expect(statusLine(page)).toHaveCount(0);
   });
 
@@ -215,9 +260,6 @@ test.describe("the keywords page sends its selection", () => {
     await expect(bulkBar(page)).toContainText(`${phrases.length} selected`);
   };
 
-  const toast = (page: Page, text: string) =>
-    page.locator("[data-sonner-toast]").filter({ hasText: text });
-
   test("shows the action only where a keyword field exists", async ({
     page,
   }) => {
@@ -287,13 +329,12 @@ test.describe("the keywords page sends its selection", () => {
 
     await addToField(page).click();
 
-    await expect(
-      toast(
-        page,
-        "2 keywords did not fit in the English (U.S.) keyword field and were left out.",
-      ),
-    ).toBeVisible();
-    await expect(page).toHaveURL(/fieldLocale=en-US&fieldAdd=zen#/);
+    await expect(page).toHaveURL(
+      /fieldLocale=en-US&fieldAdd=zen&fieldLeftOut=2#/,
+    );
+    await expect(statusLine(page)).toHaveText(
+      "Added 1 phrase from the keywords page to the English (U.S.) keyword field. Review them and save. 2 keywords did not fit in the English (U.S.) keyword field and were left out.",
+    );
   });
 
   test("says when every selected keyword is already in the field", async ({
@@ -304,15 +345,13 @@ test.describe("the keywords page sends its selection", () => {
 
     await addToField(page).click();
 
-    await expect(
-      toast(
-        page,
-        "Every selected keyword is already in the English (U.S.) keyword field.",
-      ),
-    ).toBeVisible();
-    await expect(page).toHaveURL(/\/metadata\?fieldLocale=en-US#/);
+    await expect(page).toHaveURL(
+      /\/metadata\?fieldLocale=en-US&fieldAdd=focus,timer#/,
+    );
     await expect(editor(page, US)).toHaveValue("focus,timer");
-    await expect(statusLine(page)).toHaveCount(0);
+    await expect(statusLine(page)).toHaveText(
+      "Every selected keyword is already in the English (U.S.) keyword field.",
+    );
   });
 
   test("targets the localization the market reads that the app ships", async ({

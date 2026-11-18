@@ -113,6 +113,7 @@ import {
   suggestionStrategyParser,
   visibilityRangeParser,
   fieldAddParser,
+  fieldLeftOutParser,
   fieldLocaleParser,
 } from "./search-params";
 
@@ -838,5 +839,18 @@ describe("fieldAddParser", () => {
     expect(serialize({ fieldLocale: "en-US", fieldAdd: null })).toBe(
       "?fieldLocale=en-US",
     );
+  });
+});
+
+describe("fieldLeftOutParser", () => {
+  it("reads a positive whole count", () => {
+    expect(fieldLeftOutParser.parse("2")).toBe(2);
+    expect(fieldLeftOutParser.serialize(2)).toBe("2");
+  });
+
+  it("ignores a count that is not a positive whole number", () => {
+    for (const value of ["0", "-1", "1.5", "two", ""]) {
+      expect(fieldLeftOutParser.parse(value)).toBeNull();
+    }
   });
 });

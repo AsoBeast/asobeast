@@ -635,6 +635,16 @@ export const fieldLocaleParser = localizationParser;
 
 export const fieldAddParser = parseAsArrayOf(parseAsString);
 
+export const fieldLeftOutParser = createParser({
+  parse(value) {
+    const count = Number(value);
+    return Number.isSafeInteger(count) && count > 0 ? count : null;
+  },
+  serialize(value: number) {
+    return String(value);
+  },
+});
+
 export const utcDateParser = createParser({
   parse(value) {
     return isUtcCalendarDate(value) ? value : null;
