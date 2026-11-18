@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { addCompetitor, ApiError } from "@/lib/api";
-import { armFocusHandoff } from "@/lib/focus-handoff";
+import { armFocusHandoff, renewFocusHandoff } from "@/lib/focus-handoff";
 import {
   invalidateChartMutation,
   invalidateCompetitorMutation,
@@ -37,6 +37,7 @@ export function AddAsCompetitor({
     ...busyRetry,
     mutationFn: (appId: string) => addCompetitor(appId, storeAppId),
     onSuccess: (competitor, appId) => {
+      renewFocusHandoff(competitorFocusKey(storeAppId));
       invalidateCompetitorMutation(queryClient, appId);
       invalidateChartMutation(queryClient);
       toast.success(`Now tracking ${competitor.name ?? title}`);
