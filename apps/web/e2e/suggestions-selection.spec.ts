@@ -1,6 +1,10 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
-import { APP_TICKS_DETAIL, APP_TICKS_TRACKED_SUGGESTION } from "./fixtures.mts";
+import {
+  APP_TICKS_DETAIL,
+  APP_TICKS_LONG_SUGGESTION,
+  APP_TICKS_TRACKED_SUGGESTION,
+} from "./fixtures.mts";
 import { chooseKeywordMarket } from "./keyword-controls.mts";
 
 const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
@@ -190,4 +194,29 @@ test("keeps the bulk button inside the card on a narrow screen", async ({
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
+});
+
+test("truncates a long suggestion and keeps its controls on a narrow screen", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto(DISCOVERED);
+  const panel = await openPanel(page);
+  const cardBox = await panel.boundingBox();
+  const tickBox = await tick(panel, APP_TICKS_LONG_SUGGESTION).boundingBox();
+  const textBox = await panel
+    .getByText(APP_TICKS_LONG_SUGGESTION, { exact: true })
+    .boundingBox();
+  const trackBox = await panel
+    .getByRole("button", { name: `Track ${APP_TICKS_LONG_SUGGESTION}` })
+    .boundingBox();
+
+  expect(cardBox).not.toBeNull();
+  expect(tickBox).not.toBeNull();
+  expect(trackBox).not.toBeNull();
+  expect(tickBox!.x).toBeGreaterThanOrEqual(cardBox!.x);
+  expect(textBox!.x + textBox!.width).toBeLessThanOrEqual(trackBox!.x);
+  expect(trackBox!.x + trackBox!.width).toBeLessThanOrEqual(
+    cardBox!.x + cardBox!.width,
+  );
 });

@@ -68,7 +68,9 @@ export function suggestionListState(query: {
 function SuggestionText({ suggestion }: { suggestion: KeywordSuggestion }) {
   return (
     <>
-      <span className="truncate text-body font-medium">{suggestion.text}</span>
+      <span className="max-w-full truncate text-body font-medium">
+        {suggestion.text}
+      </span>
       <SuggestionMeta suggestion={suggestion} />
     </>
   );
@@ -195,7 +197,7 @@ export function SuggestionList({
 
   return (
     <div className="@container">
-      <ul className="grid gap-x-8 @2xl:grid-cols-2 @5xl:grid-cols-3">
+      <ul className="grid grid-cols-1 gap-x-8 @2xl:grid-cols-2 @5xl:grid-cols-3">
         {state.suggestions.map((suggestion, index) => {
           const { text } = suggestion;
           const already = trackedTexts.has(text);

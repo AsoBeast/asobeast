@@ -2608,6 +2608,9 @@ export const APP_TICKS_DETAIL: AppDetail = {
 
 export const APP_TICKS_TRACKED_SUGGESTION = "focus timer";
 
+export const APP_TICKS_LONG_SUGGESTION =
+  "an extremely long suggestion phrase that keeps going well past a phone";
+
 const APP_TICKS_KEYWORDS: TrackedKeywordItem[] = [
   {
     ...manualKeyword(
@@ -3452,6 +3455,7 @@ export const SUGGESTIONS: Record<
       "study sessions",
       APP_TICKS_TRACKED_SUGGESTION,
       "work sprints",
+      APP_TICKS_LONG_SUGGESTION,
     ]),
     reviews: [
       { text: "calm timer", strategy: "reviews" },
