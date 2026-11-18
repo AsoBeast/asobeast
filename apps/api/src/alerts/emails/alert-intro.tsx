@@ -1,5 +1,6 @@
 import { Link } from 'react-email';
 import { alertSettingsLink } from '../../mail/email-links';
+import { INK_LINK } from '../../mail/email-theme';
 import { EmailParagraph } from '../../mail/email-text';
 import type { AlertEmailContext } from './alert-footer';
 
@@ -21,10 +22,7 @@ export function AlertIntro({ context }: { context: AlertEmailContext }) {
     <EmailParagraph>
       {`${ESSENTIAL_ALERTS_INTRO_TEXT} ${CHANGE_THEM} `}
       {settings ? (
-        <Link
-          href={settings}
-          className="text-ink underline dark:text-night-ink"
-        >
+        <Link href={settings} className={INK_LINK}>
           Settings
         </Link>
       ) : (

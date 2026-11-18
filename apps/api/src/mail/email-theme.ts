@@ -11,6 +11,8 @@ const FONT_STACK = [
   'sans-serif',
 ];
 
+export const INK_LINK = 'text-ink underline dark:text-night-ink';
+
 export const EMAIL_TAILWIND: TailwindConfig = {
   presets: [pixelBasedPreset],
   theme: {
