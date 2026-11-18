@@ -97,9 +97,13 @@ curl --silent --header "Authorization: Bearer $ASOBEAST_API_TOKEN" http://127.0.
 
 Operators get the cross-tenant view at `GET /api/backend/admin/capacity`, which sums demand across every workspace the daily run visits and names the ones consuming most. It is reserved for the [platform operator](/security/admin-surfaces#who-the-platform-operator-is) and answers `404` to anyone else, including an anonymous caller and a customer who owns their own workspace. The admin area shows the same report at **Admin, Capacity**, with a line per store and the top consumers by name. See [The admin area](/security/admin-surfaces#the-admin-area).
 
+## What runs first
+
+The store workers take a job a person started before the jobs of the scheduled runs, and those before deferred work such as keyword discovery. The tiers and what is in each are listed in [Which job runs first?](/concepts/pipeline#which-job-runs-first). The order only decides which job a worker takes next and adds no capacity. A request someone waits for, an import or a competitor add, does not go through the queue at all: on an instance with an egress proxy pool it takes one of the endpoints `PROXY_INTERACTIVE_RESERVE` keeps free, as described under `completion` above.
+
 ## Under pressure
 
-When the previous run's backlog plus today's demand passes the daily capacity, the run sheds work in a stated order rather than overlapping itself. Category ranks and review sync go first, followed chart categories with them, app refreshes next, and rank checks are never dropped because they are the product. The decision is logged at error level with the pressure figure and what was shed.
+When the jobs still waiting in the queue, deferred work aside, plus today's demand pass the daily capacity, the run sheds work in a stated order rather than overlapping itself. Category ranks and review sync go first, followed chart categories with them, app refreshes next, and rank checks are never dropped because they are the product. The decision is logged at error level with the pressure figure and what was shed.
 
 On demand actions are limited per workspace so one frustrated customer cannot spend the pool. Manual refresh, run daily, keyword scoring, deep search, app imports, competitor adds and top chart captures are capped per day; suggestion lookups and store lookups (name search, similar apps) are capped per hour. Over the limit the API answers `429` with `retryAfterSeconds` in the error envelope. Nothing is limited while `BILLING_ENABLED` is `false`, so a self hosted instance behaves as before.
 

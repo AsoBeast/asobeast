@@ -23,6 +23,7 @@ import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { KeywordDiscoveryPlanner } from '../src/keyword-discovery/discovery-planner.service';
 import { AppsService } from '../src/apps/apps.service';
 import { FirstRunScheduler } from '../src/apps/first-run.scheduler';
+import { DEFERRED_JOB_OPTIONS } from '../src/jobs/job-options';
 import { FirstPositionChecks } from '../src/keywords/first-position-checks';
 import { ListingCaptureService } from '../src/apps/listing-capture.service';
 import { SubtitleBackfill } from '../src/apps/subtitle-backfill.service';
@@ -1339,7 +1340,11 @@ describe('AppsController (e2e)', () => {
         expect(checks.length).toBeLessThanOrEqual(
           DISCOVERY_CHECKS_PER_RUN.APP_STORE,
         );
-        expect(checks.every((job) => job.opts.priority === 1)).toBe(true);
+        expect(
+          checks.every(
+            (job) => job.opts.priority === DEFERRED_JOB_OPTIONS.priority,
+          ),
+        ).toBe(true);
         expect(rows.filter(({ queuedAt }) => queuedAt !== null)).toHaveLength(
           checks.length,
         );

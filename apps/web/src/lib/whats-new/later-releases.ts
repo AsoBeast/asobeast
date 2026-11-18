@@ -148,6 +148,16 @@ export const LATER_RELEASES: readonly Release[] = [
         title: "Imports while the server is busy",
         text: "Importing an app, adding a competitor or refreshing a listing on Google Play used to wait 20 seconds and then fail while the daily collection kept the server busy. Part of the server's capacity now stays free for what you are waiting for, so these usually go through at once, and when that part is taken too you are told within a few seconds how long to wait before trying again.",
       },
+      {
+        kind: "improved",
+        title: "Your first numbers come sooner",
+        text: "After you import an app or track new keywords, their first positions and scores are now collected ahead of the daily collection still in progress, instead of waiting behind it.",
+      },
+      {
+        kind: "improved",
+        title: "Imports wait out a busy moment",
+        text: "When the server is briefly too busy to reach a store, importing an app or adding a competitor now waits the few seconds it was asked to and tries once more by itself, with a line saying so, instead of asking you to press the button again.",
+      },
     ],
   },
   {

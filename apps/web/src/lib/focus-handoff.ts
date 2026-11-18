@@ -162,6 +162,19 @@ export function armFocusHandoff(key: string): void {
   armed = { key, at: Date.now(), from: document.activeElement };
 }
 
+export function renewHandoff(
+  handoff: ArmedHandoff | null,
+  key: string,
+  now: number,
+): ArmedHandoff | null {
+  if (handoff === null || handoff.key !== key) return handoff;
+  return { ...handoff, at: now };
+}
+
+export function renewFocusHandoff(key: string): void {
+  armed = renewHandoff(armed, key, Date.now());
+}
+
 export function useFocusClaim(key: string): RefCallback<HTMLElement> {
   return useCallback(
     (node) => {

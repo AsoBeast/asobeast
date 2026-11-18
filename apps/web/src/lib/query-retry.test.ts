@@ -1,7 +1,13 @@
 import type { ApiErrorEnvelope } from "@asobeast/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api";
-import { retryDelayFor, shouldRetry } from "./query-retry";
+import {
+  busyRetry,
+  retryDelayFor,
+  shouldRetry,
+  noteWhileBusy,
+  tryAgainIfBusy,
+} from "./query-retry";
 
 function apiError(statusCode: number, retryAfterSeconds?: number): ApiError {
   const envelope: ApiErrorEnvelope = {
@@ -52,5 +58,103 @@ describe("retryDelayFor", () => {
   it("backs off itself rather than trust a wait it cannot use", () => {
     expect(retryDelayFor(0, apiError(503, 0))).toBe(1_000);
     expect(retryDelayFor(0, apiError(503, -4))).toBe(1_000);
+  });
+});
+
+describe("busyRetry", () => {
+  it("tries a busy server once more", () => {
+    expect(busyRetry.retry(0, apiError(503, 4))).toBe(true);
+    expect(busyRetry.retry(1, apiError(503, 4))).toBe(false);
+  });
+
+  it("never retries a 503 that names no wait", () => {
+    expect(busyRetry.retry(0, apiError(503))).toBe(false);
+  });
+
+  it("never retries a refusal, a store failure or a lost connection", () => {
+    for (const error of [
+      apiError(400),
+      apiError(402),
+      apiError(409),
+      apiError(422),
+      apiError(429, 4),
+      apiError(500),
+      apiError(502),
+      new TypeError("fetch failed"),
+    ]) {
+      expect(busyRetry.retry(0, error)).toBe(false);
+    }
+  });
+
+  it("waits the seconds the busy answer asked for", () => {
+    expect(busyRetry.retryDelay(0, apiError(503, 4))).toBe(4_000);
+  });
+});
+
+describe("noteWhileBusy", () => {
+  const BUSY = "The server is busy. Trying again in a few seconds.";
+
+  it("says the server is busy only while a mutation waits between tries", () => {
+    expect(noteWhileBusy({ isPending: true, failureCount: 1 }, null)).toBe(
+      BUSY,
+    );
+    expect(noteWhileBusy({ isPending: true, failureCount: 0 }, null)).toBe(
+      null,
+    );
+    expect(noteWhileBusy({ isPending: false, failureCount: 1 }, null)).toBe(
+      null,
+    );
+  });
+
+  it("keeps the form's own note when nothing waits", () => {
+    expect(
+      noteWhileBusy({ isPending: false, failureCount: 0 }, "Not supported"),
+    ).toBe("Not supported");
+  });
+});
+
+describe("tryAgainIfBusy", () => {
+  it("sends a request a busy server refused once more after its wait", async () => {
+    vi.useFakeTimers();
+    const request = vi
+      .fn<() => Promise<string>>()
+      .mockRejectedValueOnce(apiError(503, 2))
+      .mockResolvedValueOnce("added");
+
+    const answer = tryAgainIfBusy(request);
+    await vi.advanceTimersByTimeAsync(1_999);
+    expect(request).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+
+    await expect(answer).resolves.toBe("added");
+    expect(request).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
+  });
+
+  it("gives up with the second busy answer", async () => {
+    vi.useFakeTimers();
+    const second = apiError(503, 2);
+    const request = vi
+      .fn<() => Promise<string>>()
+      .mockRejectedValueOnce(apiError(503, 2))
+      .mockRejectedValueOnce(second);
+
+    const answer = tryAgainIfBusy(request);
+    const settled = expect(answer).rejects.toBe(second);
+    await vi.advanceTimersByTimeAsync(2_000);
+
+    await settled;
+    expect(request).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
+  });
+
+  it("never sends again what was refused for another reason", async () => {
+    const refusal = apiError(429, 4);
+    const request = vi
+      .fn<() => Promise<string>>()
+      .mockRejectedValueOnce(refusal);
+
+    await expect(tryAgainIfBusy(request)).rejects.toBe(refusal);
+    expect(request).toHaveBeenCalledTimes(1);
   });
 });

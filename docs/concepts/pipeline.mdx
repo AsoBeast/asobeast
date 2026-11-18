@@ -34,7 +34,19 @@ Batched alerts do not have their own schedule. They send once the daily pipeline
 
 The difference matters. The Apple limiter spaces requests, while the Google Play limiter spaces job starts, because one Google Play job fans out into many sequential requests of its own.
 
-Work a person starts to explore rather than to collect, today the lookups of a deep search and the searches of [keyword discovery](/guides/keyword-discovery), is queued with a priority on the same two workers. A worker always takes every waiting job without a priority first, the daily run's jobs among them, so a deep search or a discovery search waits behind them. Such a lookup also checks, before it reaches the store, that its workspace still has a plan in force and is not suspended, and does nothing otherwise.
+### Which job runs first?
+
+Each worker takes its jobs in three tiers, an earlier tier always first.
+
+| Tier | What is in it |
+| --- | --- |
+| Work a person started | The first pass of an import, the first checks and scores of newly tracked keywords, **Run daily**, scoring a keyword and a refresh |
+| The scheduled runs | The daily run, the weekly scoring and the rescore after a formula change |
+| Deferred work | The lookups of a deep search, the searches of [keyword discovery](/guides/keyword-discovery) and localization detection |
+
+Inside a tier, jobs run in the order they were queued, and the daily run still takes the jobs of each workspace in turn. So an app imported while the daily run drains gets its first positions and scores without waiting behind it, and a deep search or a discovery search waits until the scheduled work is done. What the order cannot change is in [Capacity planning](/operations/capacity#what-runs-first).
+
+A deferred lookup also checks, before it reaches the store, that its workspace still has a plan in force and is not suspended, and does nothing otherwise.
 
 Reading screenshot captions runs in a third queue, `screenshots`, with its own worker at concurrency 1. While reading is on, every snapshot that records App Store screenshots queues one read, a market listing refresh included. With `SCREENSHOT_OCR=false` the screenshots are recorded as skipped and nothing is queued. It spends no store request budget and no OpenAI call. See [Read screenshot captions](/guides/screenshot-captions).
 
