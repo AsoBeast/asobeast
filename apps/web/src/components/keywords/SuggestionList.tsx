@@ -34,17 +34,20 @@ function SuggestionMeta({ suggestion }: { suggestion: KeywordSuggestion }) {
   );
 }
 
+interface TrackHandlers {
+  pending: ReadonlySet<string>;
+  onTrack: (text: string) => void;
+}
+
+interface SelectHandlers {
+  selected: ReadonlySet<string>;
+  onToggle: (text: string, selected: boolean) => void;
+}
+
 export type SuggestionAction =
-  | {
-      kind: "track";
-      pending: ReadonlySet<string>;
-      onTrack: (text: string) => void;
-    }
-  | {
-      kind: "select";
-      selected: ReadonlySet<string>;
-      onToggle: (text: string, selected: boolean) => void;
-    };
+  | ({ kind: "track" } & TrackHandlers)
+  | ({ kind: "select" } & SelectHandlers)
+  | ({ kind: "trackOrSelect" } & TrackHandlers & SelectHandlers);
 
 export type SuggestionListState =
   | { status: "pending" }
@@ -60,6 +63,46 @@ export function suggestionListState(query: {
   if (query.isError) return { status: "error", error: query.error };
   if (query.isPending || !query.data) return { status: "pending" };
   return { status: "ready", suggestions: query.data };
+}
+
+function SuggestionText({ suggestion }: { suggestion: KeywordSuggestion }) {
+  return (
+    <>
+      <span className="truncate text-body font-medium">{suggestion.text}</span>
+      <SuggestionMeta suggestion={suggestion} />
+    </>
+  );
+}
+
+function SuggestionTick({
+  id,
+  suggestion,
+  checked,
+  disabled,
+  onToggle,
+}: {
+  id: string;
+  suggestion: KeywordSuggestion;
+  checked: boolean;
+  disabled?: boolean;
+  onToggle: (text: string, selected: boolean) => void;
+}) {
+  return (
+    <>
+      <Checkbox
+        id={id}
+        checked={checked}
+        disabled={disabled}
+        onCheckedChange={(value) => onToggle(suggestion.text, value === true)}
+      />
+      <Label
+        htmlFor={id}
+        className="flex min-w-0 flex-1 flex-col items-start gap-0.5 font-normal"
+      >
+        <SuggestionText suggestion={suggestion} />
+      </Label>
+    </>
+  );
 }
 
 function TrackAction({
@@ -78,6 +121,7 @@ function TrackAction({
     <Button
       variant={already ? "ghost" : "outline"}
       size="sm"
+      aria-label={already ? `${text} is tracked` : `Track ${text}`}
       aria-disabled={inert || undefined}
       aria-busy={(pending && !already) || undefined}
       onClick={() => {
@@ -153,52 +197,68 @@ export function SuggestionList({
     <div className="@container">
       <ul className="grid gap-x-8 @2xl:grid-cols-2 @5xl:grid-cols-3">
         {state.suggestions.map((suggestion, index) => {
-          const already = trackedTexts.has(suggestion.text);
+          const { text } = suggestion;
+          const already = trackedTexts.has(text);
+          const tickId = `${idPrefix}-${index}`;
           if (action.kind === "select") {
-            const checkboxId = `${idPrefix}-${index}`;
             return (
               <li
-                key={suggestion.text}
+                key={text}
                 className="flex items-center gap-3 border-b border-border-subtle py-2"
               >
-                <Checkbox
-                  id={checkboxId}
-                  checked={already || action.selected.has(suggestion.text)}
+                <SuggestionTick
+                  id={tickId}
+                  suggestion={suggestion}
+                  checked={already || action.selected.has(text)}
                   disabled={already}
-                  onCheckedChange={(checked) =>
-                    action.onToggle(suggestion.text, checked === true)
-                  }
+                  onToggle={action.onToggle}
                 />
-                <Label
-                  htmlFor={checkboxId}
-                  className="flex min-w-0 flex-1 flex-col items-start gap-0.5 font-normal"
-                >
-                  <span className="truncate text-body font-medium">
-                    {suggestion.text}
-                  </span>
-                  <SuggestionMeta suggestion={suggestion} />
-                </Label>
                 {already ? <Badge variant="outline">Tracked</Badge> : null}
+              </li>
+            );
+          }
+          const track = (
+            <TrackAction
+              text={text}
+              already={already}
+              pending={action.pending.has(text)}
+              onTrack={action.onTrack}
+            />
+          );
+          if (action.kind === "trackOrSelect") {
+            return (
+              <li
+                key={text}
+                className="flex items-center gap-3 border-b border-border-subtle py-2"
+              >
+                {already ? (
+                  <>
+                    <span aria-hidden className="size-4 shrink-0" />
+                    <div className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
+                      <SuggestionText suggestion={suggestion} />
+                    </div>
+                  </>
+                ) : (
+                  <SuggestionTick
+                    id={tickId}
+                    suggestion={suggestion}
+                    checked={action.selected.has(text)}
+                    onToggle={action.onToggle}
+                  />
+                )}
+                {track}
               </li>
             );
           }
           return (
             <li
-              key={suggestion.text}
+              key={text}
               className="flex items-center justify-between gap-4 border-b border-border-subtle py-2"
             >
               <div className="flex min-w-0 flex-col gap-0.5">
-                <span className="truncate text-body font-medium">
-                  {suggestion.text}
-                </span>
-                <SuggestionMeta suggestion={suggestion} />
+                <SuggestionText suggestion={suggestion} />
               </div>
-              <TrackAction
-                text={suggestion.text}
-                already={already}
-                pending={action.pending.has(suggestion.text)}
-                onTrack={action.onTrack}
-              />
+              {track}
             </li>
           );
         })}

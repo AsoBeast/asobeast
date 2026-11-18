@@ -1,3 +1,4 @@
+import type { KeywordSuggestionStrategy } from "@asobeast/shared";
 import { pluralize } from "@/lib/format";
 
 export const NOTHING_TICKED: ReadonlySet<string> = new Set();
@@ -20,3 +21,35 @@ export function withTick(
   else next.delete(text);
   return next;
 }
+
+export const TRACK_SELECTED_FAILED = "Could not track the selected keywords";
+
+export interface SuggestionSelection {
+  scope: string;
+  texts: ReadonlySet<string>;
+}
+
+export const selectionScope = (
+  country: string,
+  strategy: KeywordSuggestionStrategy,
+): string => `${country}:${strategy}`;
+
+export function tickedIn(
+  selection: SuggestionSelection,
+  scope: string,
+  shown: readonly string[],
+  tracked: ReadonlySet<string>,
+): string[] {
+  if (selection.scope !== scope) return [];
+  return shown.filter(
+    (text) => selection.texts.has(text) && !tracked.has(text),
+  );
+}
+
+export const withoutTicks = (
+  selection: SuggestionSelection,
+  sent: readonly string[],
+): SuggestionSelection => ({
+  scope: selection.scope,
+  texts: new Set([...selection.texts].filter((text) => !sent.includes(text))),
+});

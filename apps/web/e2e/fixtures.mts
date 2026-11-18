@@ -2600,6 +2600,31 @@ export const APP_COMBOS_DETAIL: AppDetail = {
   group: null,
 };
 
+export const APP_TICKS_DETAIL: AppDetail = {
+  ...APP_COMBOS_DETAIL,
+  id: "app-ticks",
+  name: "Tick Timer",
+};
+
+export const APP_TICKS_TRACKED_SUGGESTION = "focus timer";
+
+const APP_TICKS_KEYWORDS: TrackedKeywordItem[] = [
+  {
+    ...manualKeyword(
+      APP_TICKS_DETAIL.id,
+      APP_TICKS_TRACKED_SUGGESTION,
+      "us",
+      0,
+    ),
+    keywordId: "kw-ticks-1",
+  },
+];
+
+export const APP_TICKS_KEYWORD_COUNTRIES: KeywordCountrySummary[] = [
+  { country: "us", keywordCount: APP_TICKS_KEYWORDS.length },
+  { country: "gb", keywordCount: 0 },
+];
+
 export const APP_FLOOR_DETAIL: AppDetail = {
   ...APP_LONG_DETAIL,
   id: "app-floor",
@@ -3420,6 +3445,19 @@ export const SUGGESTIONS: Record<
   "app-2": {
     metadata: listingSuggestions(["habit streaks", "daily habits"]),
   },
+  [APP_TICKS_DETAIL.id]: {
+    metadata: listingSuggestions([
+      "deep focus",
+      "pomodoro timer",
+      "study sessions",
+      APP_TICKS_TRACKED_SUGGESTION,
+      "work sprints",
+    ]),
+    reviews: [
+      { text: "calm timer", strategy: "reviews" },
+      { text: "break reminder", strategy: "reviews" },
+    ],
+  },
   "app-new": {
     metadata: listingSuggestions([
       "imported timer",
@@ -3527,6 +3565,24 @@ export const DATASETS: Record<string, AppDataset> = {
     ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
     changeImpact: emptyChangeImpact(APP_COMBOS_DETAIL),
+    discovery: EMPTY_DISCOVERY,
+    comparison: EMPTY_COMPARISON,
+  },
+  [APP_TICKS_DETAIL.id]: {
+    detail: APP_TICKS_DETAIL,
+    summary: APP_2_SUMMARY,
+    keywords: APP_TICKS_KEYWORDS,
+    rankings: EMPTY_RANKINGS,
+    serpMovers: EMPTY_SERP_MOVERS,
+    visibility: EMPTY_VISIBILITY,
+    rankDistributionHistory: EMPTY_RANK_DISTRIBUTION_HISTORY,
+    categoryRanks: EMPTY_CATEGORY_RANKS,
+    competitors: [],
+    reviews: EMPTY_REVIEWS,
+    ratingsHistory: EMPTY_RATINGS_HISTORY,
+    ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
+    changes: EMPTY_CHANGES,
+    changeImpact: emptyChangeImpact(APP_TICKS_DETAIL),
     discovery: EMPTY_DISCOVERY,
     comparison: EMPTY_COMPARISON,
   },

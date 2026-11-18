@@ -14,6 +14,7 @@ import {
 } from "@/components/keywords/SuggestionList";
 import {
   NOTHING_TICKED,
+  TRACK_SELECTED_FAILED,
   trackingSelectedMessage,
   trackSelectedLabel,
   withTick,
@@ -61,7 +62,7 @@ export function KeywordPicker({
       toast.error(
         error instanceof ApiError
           ? error.envelope.message
-          : "Could not track the selected keywords",
+          : TRACK_SELECTED_FAILED,
       ),
   });
   const trackOnce = useSingleFlight(track);

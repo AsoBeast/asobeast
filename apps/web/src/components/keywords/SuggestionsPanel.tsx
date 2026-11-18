@@ -34,6 +34,9 @@ import { useKeyedSingleFlight } from "@/lib/single-flight";
 import { cn } from "@/lib/utils";
 import { SpiderDialog } from "./SpiderDialog";
 import { SuggestionList, suggestionListState } from "./SuggestionList";
+import { TrackSelectedSuggestions } from "./TrackSelectedSuggestions";
+import { useSuggestionTicks } from "./use-suggestion-ticks";
+import { selectionScope } from "./suggestion-selection";
 import { STRATEGIES } from "./suggestion-strategies";
 
 export function SuggestionsPanel({
@@ -90,6 +93,12 @@ export function SuggestionsPanel({
     select: (mutation) => mutation.state.variables,
   }).filter((text): text is string => typeof text === "string");
 
+  const { ticked, toggle, untick } = useSuggestionTicks(
+    selectionScope(country, strategy),
+    (suggestions.data ?? []).map((suggestion) => suggestion.text),
+    trackedTexts,
+  );
+
   return (
     <Card>
       <CardHeader>
@@ -144,12 +153,20 @@ export function SuggestionsPanel({
                 <span>{`. Runs a live ${storeLabel(store)} lookup, so it can take a few seconds.`}</span>
               ) : null}
             </p>
-            <SpiderDialog appId={id} country={country}>
-              <Button variant="outline" size="sm">
-                <Search />
-                Deep search
-              </Button>
-            </SpiderDialog>
+            <div className="flex shrink-0 flex-wrap justify-end gap-2">
+              <SpiderDialog appId={id} country={country}>
+                <Button variant="outline" size="sm">
+                  <Search />
+                  Deep search
+                </Button>
+              </SpiderDialog>
+              <TrackSelectedSuggestions
+                id={id}
+                country={country}
+                ticked={ticked}
+                onTracked={untick}
+              />
+            </div>
           </div>
 
           <SuggestionList
@@ -157,9 +174,11 @@ export function SuggestionsPanel({
             state={suggestionListState(suggestions)}
             trackedTexts={trackedTexts}
             action={{
-              kind: "track",
+              kind: "trackOrSelect",
               pending: new Set(trackingTexts),
               onTrack: trackOnce,
+              selected: new Set(ticked),
+              onToggle: toggle,
             }}
             onRetry={() => void suggestions.refetch()}
           />
