@@ -36,7 +36,7 @@ export function StatGrid({ stats }: { stats: readonly Stat[] }) {
               >
                 {stat.value}
               </Text>
-              <Text className="m-0 text-[13px] leading-[18px] text-muted dark:text-night-muted">
+              <Text className="m-0 text-[13px] leading-[18px] text-ink-2 dark:text-night-ink-2">
                 {stat.label}
               </Text>
             </Column>

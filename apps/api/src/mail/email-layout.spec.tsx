@@ -56,6 +56,12 @@ describe('EmailLayout', () => {
     expect(html).not.toContain('<script');
   });
 
+  it('asks for the app typeface first and falls back to the system face', async () => {
+    const html = await layout(null);
+    expect(html).toContain('font-family:Geist,-apple-system,');
+    expect(html).not.toContain('@font-face');
+  });
+
   it('limits the container to 600 pixels', async () => {
     expect(await layout(null)).toContain('max-width:600px');
   });

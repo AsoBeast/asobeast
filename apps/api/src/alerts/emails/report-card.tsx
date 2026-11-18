@@ -41,7 +41,7 @@ export function CardHeader({ app }: { app: ReportApp }) {
           )}
         </Text>
         {subtitle && (
-          <Text className="m-0 text-[13px] leading-[18px] text-muted dark:text-night-muted">
+          <Text className="m-0 text-[13px] leading-[18px] text-ink-2 dark:text-night-ink-2">
             {subtitle}
           </Text>
         )}
@@ -52,7 +52,7 @@ export function CardHeader({ app }: { app: ReportApp }) {
 
 export function ReportNote({ children }: { children: ReactNode }) {
   return (
-    <Text className="m-0 mt-[8px] text-[13px] leading-[20px] text-muted dark:text-night-muted">
+    <Text className="m-0 mt-[8px] text-[13px] leading-[20px] text-ink-2 dark:text-night-ink-2">
       {children}
     </Text>
   );
@@ -67,7 +67,7 @@ function GroupNote({ group }: { group: ReportGroup }) {
       {isRankMoveGroup(group.kind) ? `${words} · ` : null}
       <Link
         href={group.link.href}
-        className="text-brand-ink underline dark:text-brand"
+        className="text-ink underline dark:text-night-ink"
       >
         {group.link.label}
       </Link>
@@ -96,7 +96,7 @@ function CompetitorsNote({ app }: { app: ReportApp }) {
       {app.competitorsLink ? (
         <Link
           href={app.competitorsLink.href}
-          className="text-brand-ink underline dark:text-brand"
+          className="text-ink underline dark:text-night-ink"
         >
           {app.competitorsLink.label}
         </Link>

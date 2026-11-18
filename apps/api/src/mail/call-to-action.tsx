@@ -10,18 +10,18 @@ export function CallToAction({ href, label }: CallToActionProps) {
     <Section className="my-[24px]">
       <Button
         href={href}
-        className="box-border rounded-[8px] bg-brand px-[24px] py-[14px] text-center text-[16px] font-semibold leading-[20px] text-ink no-underline max-sm:block max-sm:w-full"
+        className="box-border rounded-[8px] bg-brand px-[24px] py-[14px] text-center text-[16px] font-semibold leading-[20px] text-brand-ink no-underline max-sm:block max-sm:w-full"
       >
         {label}
       </Button>
       <Text
         data-skip-in-text={true}
-        className="mb-0 mt-[16px] text-[14px] leading-[22px] text-muted dark:text-night-muted"
+        className="mb-0 mt-[16px] text-[14px] leading-[22px] text-ink-2 dark:text-night-ink-2"
       >
         Button not working? Paste this address into your browser:{' '}
         <Link
           href={href}
-          className="break-all text-brand-ink underline dark:text-brand"
+          className="break-all text-ink underline dark:text-night-ink"
         >
           {href}
         </Link>

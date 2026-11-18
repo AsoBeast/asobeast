@@ -48,7 +48,7 @@ export function EmailLayout({
               <Section className="px-[8px] pt-[24px] text-center">
                 {footer}
                 {host && (
-                  <Text className="m-0 mt-[8px] text-[12px] leading-[18px] text-muted dark:text-night-muted">
+                  <Text className="m-0 mt-[8px] text-[12px] leading-[18px] text-ink-3 dark:text-night-ink-3">
                     {`Sent by ${PRODUCT_NAME} at ${host}`}
                   </Text>
                 )}

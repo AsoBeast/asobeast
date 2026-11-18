@@ -57,7 +57,7 @@ describe('report components', () => {
     const output = await html(
       <StatGrid stats={[{ label: 'Rank drops', value: 3, tone: 'down' }]} />,
     );
-    expect(output).toContain('color:rgb(193,37,53)');
+    expect(output).toContain('color:rgb(194,39,45)');
     expect(output).toContain('Rank drops');
   });
 

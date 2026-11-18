@@ -14,7 +14,7 @@ export function EmailHeading({ children }: { children: ReactNode }) {
 
 export function EmailParagraph({ children }: { children: ReactNode }) {
   return (
-    <Text className="m-0 mb-[16px] text-[16px] leading-[26px] text-body dark:text-night-body">
+    <Text className="m-0 mb-[16px] text-[16px] leading-[26px] text-ink dark:text-night-ink">
       {children}
     </Text>
   );
