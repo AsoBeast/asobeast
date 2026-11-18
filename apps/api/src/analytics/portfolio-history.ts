@@ -15,11 +15,11 @@ import {
   toDateKey,
   TrackedRow,
 } from './analytics.support';
+import { BASELINE_SHIFTS } from './baseline';
 import { mergePortfolioMovers, rankInsight } from './portfolio-insights';
 
 const TOP_TEN = 10;
 const RANGE_MOVER_LIMIT = 8;
-const BASELINE_SHIFTS = [0, 1, -1];
 
 export interface HistoryMember extends KeywordWindow {
   appId: string;

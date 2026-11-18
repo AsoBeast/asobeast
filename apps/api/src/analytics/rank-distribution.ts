@@ -32,9 +32,8 @@ export const bucketPositions = (
   return bands;
 };
 
-export const rankDistributionAt = (
-  rows: TrackedRow[],
-  date: Date | null,
+export const rankDistributionOf = (
+  positions: Array<number | null>,
 ): RankDistribution => {
   const distribution: RankDistribution = {
     top1: 0,
@@ -44,8 +43,7 @@ export const rankDistributionAt = (
     beyond: 0,
     unranked: 0,
   };
-  for (const row of rows) {
-    const position = date ? positionAt(row.keyword.rankings, date) : null;
+  for (const position of positions) {
     if (position === null) {
       distribution.unranked += 1;
       continue;
@@ -58,3 +56,11 @@ export const rankDistributionAt = (
   }
   return distribution;
 };
+
+export const rankDistributionAt = (
+  rows: TrackedRow[],
+  date: Date | null,
+): RankDistribution =>
+  rankDistributionOf(
+    rows.map((row) => (date ? positionAt(row.keyword.rankings, date) : null)),
+  );
