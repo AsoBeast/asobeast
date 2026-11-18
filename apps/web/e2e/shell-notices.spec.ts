@@ -72,11 +72,15 @@ test.describe("account bars", () => {
     const sentence = bar.getByText(/Trial ends in 5 days/);
     const action = bar.getByRole("link", { name: "Upgrade" });
     await expect(action).toHaveAttribute("href", "/upgrade");
-    const [text, link] = await Promise.all([
-      sentence.boundingBox(),
-      action.boundingBox(),
-    ]);
-    expect(link!.x - (text!.x + text!.width)).toBeLessThan(16);
+    await expect
+      .poll(async () => {
+        const [text, link] = await Promise.all([
+          sentence.boundingBox(),
+          action.boundingBox(),
+        ]);
+        return text && link ? link.x - (text.x + text.width) : null;
+      })
+      .toBeLessThan(16);
   });
 
   test("a trial in its last three days turns to the warning tone", async ({
