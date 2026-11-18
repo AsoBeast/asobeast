@@ -30,6 +30,11 @@ import {
   invalidateWorkspaceChecklist,
   portfolioKey,
 } from "@/lib/queries";
+import {
+  BUSY_RETRY_NOTE,
+  busyRetry,
+  waitingOutBusyServer,
+} from "@/lib/query-retry";
 import { useSingleFlight } from "@/lib/single-flight";
 import { classifyInput, isStoreAddress } from "./store-search";
 import { StoreSearchField } from "./StoreSearchField";
@@ -114,6 +119,7 @@ export function ImportAppDialog({
   const search = useStoreSearch(store, country, value);
 
   const mutation = useMutation({
+    ...busyRetry,
     mutationFn: ({ url, country }: { url: string; country: string }) =>
       importApp(url, country),
     onSuccess: (app) => {
@@ -137,6 +143,7 @@ export function ImportAppDialog({
     },
   });
   const importOnce = useSingleFlight(mutation);
+  const inert = mutation.isPending || value.trim() === "";
 
   function reset() {
     setValue("");
@@ -194,6 +201,7 @@ export function ImportAppDialog({
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (inert) return;
     clearOutcome();
     const { input } = search;
     if (input.kind === "url") return importFrom(input.parsed.store, value);
@@ -230,7 +238,7 @@ export function ImportAppDialog({
               onPick={pick}
               search={search}
               error={error}
-              note={note}
+              note={waitingOutBusyServer(mutation) ? BUSY_RETRY_NOTE : note}
               autoFocus
             />
 
@@ -242,10 +250,7 @@ export function ImportAppDialog({
           </DialogBody>
 
           <DialogFooter>
-            <Button
-              type="submit"
-              disabled={mutation.isPending || value.trim() === ""}
-            >
+            <Button type="submit" aria-disabled={inert || undefined}>
               {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
               {mutation.isPending ? "Importing…" : "Import"}
             </Button>

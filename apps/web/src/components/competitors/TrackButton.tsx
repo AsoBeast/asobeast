@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { addCompetitor, ApiError } from "@/lib/api";
 import { armFocusHandoff } from "@/lib/focus-handoff";
 import { invalidateCompetitorMutation } from "@/lib/queries";
+import { busyRetry } from "@/lib/query-retry";
 import { useSingleFlight } from "@/lib/single-flight";
 
 export function TrackButton({
@@ -26,6 +27,7 @@ export function TrackButton({
 }) {
   const queryClient = useQueryClient();
   const mutation = useMutation({
+    ...busyRetry,
     mutationFn: () => addCompetitor(id, storeAppId),
     onSuccess: (competitor) => {
       invalidateCompetitorMutation(queryClient, id);

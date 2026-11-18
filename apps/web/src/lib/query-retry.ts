@@ -24,3 +24,42 @@ export function retryDelayFor(failureCount: number, error: unknown): number {
   }
   return Math.min(1000 * 2 ** failureCount, MAX_DELAY_MS);
 }
+
+const BUSY_RETRIES = 1;
+const BUSY_STATUS = 503;
+
+export const BUSY_RETRY_NOTE =
+  "The server is busy. Trying again in a few seconds.";
+
+function busyServer(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    error.envelope.statusCode === BUSY_STATUS &&
+    error.envelope.retryAfterSeconds !== undefined
+  );
+}
+
+export const busyRetry = {
+  retry: (failureCount: number, error: unknown): boolean =>
+    busyServer(error) && failureCount < BUSY_RETRIES,
+  retryDelay: retryDelayFor,
+} as const;
+
+export function waitingOutBusyServer(mutation: {
+  isPending: boolean;
+  failureCount: number;
+}): boolean {
+  return mutation.isPending && mutation.failureCount > 0;
+}
+
+export async function tryAgainIfBusy<T>(request: () => Promise<T>): Promise<T> {
+  for (let failureCount = 0; ; failureCount += 1) {
+    try {
+      return await request();
+    } catch (error) {
+      if (!busyRetry.retry(failureCount, error)) throw error;
+      const delay = busyRetry.retryDelay(failureCount, error);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+}

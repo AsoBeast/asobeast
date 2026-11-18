@@ -1,4 +1,11 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
+import {
+  BUSY_LINE,
+  BUSY_SENTENCE,
+  answerBusy,
+  countPosts,
+} from "./busy-answer.mts";
 import {
   APP_1_DE_DETAIL,
   APP_1_DE_DISCOVERY,
@@ -262,4 +269,77 @@ test("a competitor name over the limit is explained and never searched", async (
   await expect(field).toHaveAttribute("aria-invalid", "true");
   await page.waitForTimeout(700);
   expect(searches).toEqual([]);
+});
+
+test.describe("a busy server", () => {
+  const RIVAL = "https://apps.apple.com/de/app/rival/id555000997";
+  const competitorsOf = (appId: string) => ({
+    url: `**/api/backend/apps/${appId}/competitors`,
+    path: `/apps/${appId}/competitors`,
+    post: new RegExp(`/api/backend/apps/${appId}/competitors$`),
+  });
+
+  const addRival = async (page: Page) => {
+    await page
+      .getByRole("textbox", { name: "Competitor name or App Store URL" })
+      .fill(RIVAL);
+    await page.getByRole("button", { name: "Add competitor" }).click();
+  };
+
+  test("adding a competitor tries a busy server again unasked", async ({
+    page,
+  }) => {
+    const competitors = competitorsOf(APP_1_DE_DETAIL.id);
+    await answerBusy(page, competitors.url, competitors.path, 1);
+    const adds = countPosts(page, competitors.post);
+    await page.goto(`/apps/${APP_1_DE_DETAIL.id}/competitors`);
+
+    await addRival(page);
+
+    await expect(page.getByText(BUSY_LINE)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Adding…" })).toBeVisible();
+    await expect(page.getByText("Added 555000997")).toBeVisible();
+    await expect(page.getByText(BUSY_LINE)).toHaveCount(0);
+    expect(adds).toHaveLength(2);
+  });
+
+  test("adding a competitor shows the busy sentence after a second busy answer", async ({
+    page,
+  }) => {
+    const competitors = competitorsOf(APP_1_DE_DETAIL.id);
+    await answerBusy(page, competitors.url, competitors.path, 2);
+    const adds = countPosts(page, competitors.post);
+    await page.goto(`/apps/${APP_1_DE_DETAIL.id}/competitors`);
+
+    await addRival(page);
+
+    await expect(page.locator("#competitor-search-error")).toHaveText(
+      BUSY_SENTENCE,
+    );
+    await expect(page.getByText(BUSY_LINE)).toHaveCount(0);
+    expect(adds).toHaveLength(2);
+  });
+
+  test("tracking a discovery row tries a busy server again unasked", async ({
+    page,
+  }) => {
+    const competitors = competitorsOf(APP_GP_DETAIL.id);
+    await answerBusy(page, competitors.url, competitors.path, 1);
+    const adds = countPosts(page, competitors.post);
+    await page.goto(`/apps/${APP_GP_DETAIL.id}/competitors`);
+    await page.waitForLoadState("networkidle");
+
+    await page
+      .getByRole("table", { name: /appearing in your keyword search results/ })
+      .getByRole("row")
+      .filter({ hasText: PLAY_DISCOVERED.title })
+      .getByRole("button", { name: "Track" })
+      .click();
+
+    await expect(
+      page.getByText(`Now tracking ${PLAY_DISCOVERED.title}`),
+    ).toBeVisible();
+    await expect(page.getByText(BUSY_SENTENCE)).toHaveCount(0);
+    expect(adds).toHaveLength(2);
+  });
 });

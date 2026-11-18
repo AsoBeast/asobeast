@@ -12,6 +12,7 @@ import type {
   WorkspaceTeam,
 } from "@asobeast/shared";
 import { ALERT_EVENTS_COOKIE } from "./alert-feed-fixtures.mts";
+import { BUSY_LINE, answerBusy } from "./busy-answer.mts";
 import { CROWDED_COOKIE } from "./actions-fixtures.mts";
 import { holdRender } from "./chart-image.mts";
 import { openEmbedded } from "./embedded-checkout.mts";
@@ -1218,6 +1219,42 @@ test.describe("import app openers get focus back", () => {
     await expect(importDialog(page)).toBeHidden();
     await expect(switcher).toBeFocused();
   });
+});
+
+test("Import keeps focus while an import waits out a busy server", async ({
+  page,
+}) => {
+  const held = await holdRequest(
+    page,
+    /\/api\/backend\/apps$/,
+    "POST",
+    (route) =>
+      route.fulfill({
+        status: 400,
+        json: {
+          statusCode: 400,
+          error: "Bad Request",
+          message: "Unrecognized store URL or id",
+          path: "/apps",
+          timestamp: "2026-11-18T12:00:00.000Z",
+        },
+      }),
+  );
+  await answerBusy(page, "**/api/backend/apps", "/apps", 1);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Import app" }).click();
+  await page
+    .getByLabel("App name or store URL")
+    .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
+  const submit = page.getByRole("button", { name: /^(Import|Importing…)$/ });
+
+  await pressFromKeyboard(submit);
+  await expect(page.getByText(BUSY_LINE)).toBeVisible();
+
+  await expectFocusKeptWhileHeld(submit, held);
+  await expect(page.locator("#import-url-error")).toHaveText(
+    "Unrecognized store URL or id",
+  );
 });
 
 test.describe("Track keeps focus", () => {

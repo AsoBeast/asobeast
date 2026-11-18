@@ -19,6 +19,7 @@ import {
   invalidateChartMutation,
   invalidateCompetitorMutation,
 } from "@/lib/queries";
+import { busyRetry } from "@/lib/query-retry";
 import { useSingleFlight } from "@/lib/single-flight";
 import { competitorFocusKey } from "./chart-actions";
 
@@ -33,6 +34,7 @@ export function AddAsCompetitor({
 }) {
   const queryClient = useQueryClient();
   const mutation = useMutation({
+    ...busyRetry,
     mutationFn: (appId: string) => addCompetitor(appId, storeAppId),
     onSuccess: (competitor, appId) => {
       invalidateCompetitorMutation(queryClient, appId);

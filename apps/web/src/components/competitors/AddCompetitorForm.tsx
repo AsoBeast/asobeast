@@ -16,6 +16,11 @@ import { Button } from "@/components/ui/button";
 import { addCompetitor, ApiError } from "@/lib/api";
 import { storeLabel } from "@/lib/format";
 import { appDetailOptions, invalidateCompetitorMutation } from "@/lib/queries";
+import {
+  BUSY_RETRY_NOTE,
+  busyRetry,
+  waitingOutBusyServer,
+} from "@/lib/query-retry";
 import { useSingleFlight } from "@/lib/single-flight";
 
 const STORE_URL_EXAMPLES: Record<Store, string> = {
@@ -39,6 +44,7 @@ export function AddCompetitorForm({
   const search = useStoreSearch(detail.store, detail.country, url);
 
   const mutation = useMutation({
+    ...busyRetry,
     mutationFn: (value: string) => addCompetitor(id, value),
     onSuccess: (competitor) => {
       invalidateCompetitorMutation(queryClient, id);
@@ -104,7 +110,7 @@ export function AddCompetitorForm({
         onPick={pick}
         search={search}
         error={error}
-        note={note}
+        note={waitingOutBusyServer(mutation) ? BUSY_RETRY_NOTE : note}
       >
         <Button
           type="submit"
