@@ -264,7 +264,7 @@ async function openAccountMenuAs(page: Page, user: AuthUser) {
 }
 
 const accountMenuPlan = (page: Page) =>
-  page.getByRole("menu").locator('[data-slot="badge"]');
+  page.getByRole("menu").locator('[data-slot="account-plan"]');
 
 const PLAN_IN_FORCE_CASES: ReadonlyArray<
   readonly [string, Partial<AuthUser>, string]
@@ -326,7 +326,7 @@ for (const [name, terms, label] of PLAN_IN_FORCE_CASES) {
   }) => {
     await openAccountMenuAs(page, { ...TRIAL_USER, ...terms });
 
-    await expect(accountMenuPlan(page)).toHaveText(label);
+    await expect(accountMenuPlan(page)).toHaveText(`${label} plan`);
   });
 }
 
@@ -341,14 +341,14 @@ test("the account menu reads the plan in force again when it opens after an expi
     trialEndsAt: new Date(start.getTime() + 60_000).toISOString(),
     planExpiresAt: null,
   });
-  await expect(accountMenuPlan(page)).toHaveText("Trial");
+  await expect(accountMenuPlan(page)).toHaveText("Trial plan");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("menu")).toHaveCount(0);
 
   await page.clock.fastForward("02:00");
   await page.getByRole("button", { name: "Account menu" }).click();
 
-  await expect(accountMenuPlan(page)).toHaveText("Free");
+  await expect(accountMenuPlan(page)).toHaveText("Free plan");
 });
 
 test("login rejects an encoded cross-origin destination", async ({ page }) => {

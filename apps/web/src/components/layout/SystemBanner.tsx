@@ -2,12 +2,12 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Clock, TriangleAlert } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   runStatusOptions,
   storeHealthOptions,
   workspaceDeletionOptions,
 } from "@/lib/queries";
+import { NOTICE_LINK, NoticeLine } from "./notice-line";
 import { systemNotice } from "./system-notice";
 
 export function SystemBanner() {
@@ -24,32 +24,29 @@ export function SystemBanner() {
   const internal = notice.href?.startsWith("/") ?? false;
 
   return (
-    <Alert
-      variant={notice.variant}
+    <NoticeLine
+      icon={breakage ? TriangleAlert : Clock}
+      tone={breakage ? "critical" : "warning"}
       role={breakage ? "alert" : "status"}
-      className="mb-4 print:hidden"
+      data-slot="system-notice"
+      className="mb-4 rounded-lg border px-3 py-2.5"
     >
-      {breakage ? (
-        <TriangleAlert aria-hidden="true" />
-      ) : (
-        <Clock aria-hidden="true" />
-      )}
-      <AlertTitle>{notice.title}</AlertTitle>
-      <AlertDescription>
-        {notice.detail}
+      <p className="font-medium">{notice.title}</p>
+      <p className="max-w-[110ch] text-muted-foreground">
+        <span>{notice.detail}</span>
         {notice.href ? (
           <>
             {" "}
             <a
               href={notice.href}
               {...(internal ? {} : { target: "_blank", rel: "noreferrer" })}
-              className="font-medium underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              className={NOTICE_LINK}
             >
               {notice.linkLabel}
             </a>
           </>
         ) : null}
-      </AlertDescription>
-    </Alert>
+      </p>
+    </NoticeLine>
   );
 }
