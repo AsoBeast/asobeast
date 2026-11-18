@@ -20,6 +20,7 @@ import {
   APP_GP_SERP_MOVERS,
   APP_CLASS_FOCUS_ID,
   APP_IMPORT_FOCUS_ID,
+  APP_TICKS_FOCUS_ID,
   AWAITING_ALERT_COOKIE,
   CROWDED_COMPETITORS_COOKIE,
   RANKINGS_FAIL_COOKIE,
@@ -1854,6 +1855,44 @@ test.describe("keyword discovery controls keep focus", () => {
     await expect(
       page.getByRole("heading", { name: "Discovered keywords" }),
     ).toBeFocused();
+  });
+});
+
+test.describe("suggestion ticks keep focus", () => {
+  const app = APP_TICKS_FOCUS_ID;
+
+  test("Track selected on the suggestions keeps focus while it tracks and after the ticks clear", async ({
+    page,
+  }) => {
+    const held = await holdRequest(
+      page,
+      new RegExp(`/api/backend/apps/${app}/keywords$`),
+      "POST",
+      (route) => route.fulfill(fulfillJson(201, [])),
+    );
+    await page.goto(`/apps/${app}/keywords?tab=discovered`);
+    await page
+      .getByRole("button", { name: "Suggestions", exact: true })
+      .click();
+    const suggestions = page.locator('[data-slot="card"]').filter({
+      has: page.getByRole("heading", { name: "Suggestions", exact: true }),
+    });
+    await suggestions.getByRole("checkbox", { name: "deep focus" }).check();
+    const track = suggestions.getByRole("button", {
+      name: /^Track (1 )?selected$/,
+    });
+
+    await pressFromKeyboard(track);
+    await expect(track).toHaveAttribute("aria-disabled", "true");
+    await expect(track).toBeFocused();
+    held.release();
+
+    await expect(
+      page.getByText("Tracking 1 keyword. Positions arrive within minutes."),
+    ).toBeVisible();
+    await expect(track).toHaveAccessibleName("Track selected");
+    await expect(track).toBeFocused();
+    expect(await focusLeftForBody(page)).toBe(false);
   });
 });
 

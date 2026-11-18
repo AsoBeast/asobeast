@@ -15,10 +15,6 @@ export const PICKER_LABELS: Record<PickerStrategy, string> = {
 export const isPickerStrategy = (value: string): value is PickerStrategy =>
   (PICKER_STRATEGIES as readonly string[]).includes(value);
 
-export function pickerButtonLabel(count: number): string {
-  return count === 0 ? "Track selected" : `Track ${count} selected`;
-}
-
 export function remainingToTarget(
   active: number | null,
   target: number,

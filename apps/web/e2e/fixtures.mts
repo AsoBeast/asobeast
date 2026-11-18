@@ -2600,6 +2600,33 @@ export const APP_COMBOS_DETAIL: AppDetail = {
   group: null,
 };
 
+export const APP_TICKS_DETAIL: AppDetail = {
+  ...APP_COMBOS_DETAIL,
+  id: "app-ticks",
+  name: "Tick Timer",
+};
+
+export const APP_TICKS_TRACKED_SUGGESTION = "focus timer";
+
+export const APP_TICKS_LONG_SUGGESTION =
+  "an extremely long suggestion phrase that keeps going well past a phone";
+
+const APP_TICKS_KEYWORDS: TrackedKeywordItem[] = [
+  {
+    ...manualKeyword(
+      APP_TICKS_DETAIL.id,
+      APP_TICKS_TRACKED_SUGGESTION,
+      "us",
+      0,
+    ),
+    keywordId: "kw-ticks-1",
+  },
+];
+
+export const APP_TICKS_MARKETS = ["us", "gb"];
+
+export const APP_TICKS_FOCUS_ID = "app-ticks-focus";
+
 export const APP_FLOOR_DETAIL: AppDetail = {
   ...APP_LONG_DETAIL,
   id: "app-floor",
@@ -3420,6 +3447,20 @@ export const SUGGESTIONS: Record<
   "app-2": {
     metadata: listingSuggestions(["habit streaks", "daily habits"]),
   },
+  [APP_TICKS_DETAIL.id]: {
+    metadata: listingSuggestions([
+      "deep focus",
+      "pomodoro timer",
+      "study sessions",
+      APP_TICKS_TRACKED_SUGGESTION,
+      "work sprints",
+      APP_TICKS_LONG_SUGGESTION,
+    ]),
+    reviews: [
+      { text: "calm timer", strategy: "reviews" },
+      { text: "break reminder", strategy: "reviews" },
+    ],
+  },
   "app-new": {
     metadata: listingSuggestions([
       "imported timer",
@@ -3527,6 +3568,24 @@ export const DATASETS: Record<string, AppDataset> = {
     ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
     changeImpact: emptyChangeImpact(APP_COMBOS_DETAIL),
+    discovery: EMPTY_DISCOVERY,
+    comparison: EMPTY_COMPARISON,
+  },
+  [APP_TICKS_DETAIL.id]: {
+    detail: APP_TICKS_DETAIL,
+    summary: APP_2_SUMMARY,
+    keywords: APP_TICKS_KEYWORDS,
+    rankings: EMPTY_RANKINGS,
+    serpMovers: EMPTY_SERP_MOVERS,
+    visibility: EMPTY_VISIBILITY,
+    rankDistributionHistory: EMPTY_RANK_DISTRIBUTION_HISTORY,
+    categoryRanks: EMPTY_CATEGORY_RANKS,
+    competitors: [],
+    reviews: EMPTY_REVIEWS,
+    ratingsHistory: EMPTY_RATINGS_HISTORY,
+    ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
+    changes: EMPTY_CHANGES,
+    changeImpact: emptyChangeImpact(APP_TICKS_DETAIL),
     discovery: EMPTY_DISCOVERY,
     comparison: EMPTY_COMPARISON,
   },
@@ -3722,6 +3781,12 @@ function localesDataset(id: string, name: string): AppDataset {
 }
 
 DATASETS[APP_LOCALES_ID] = localesDataset(APP_LOCALES_ID, "Locale Lab");
+DATASETS[APP_TICKS_FOCUS_ID] = {
+  ...DATASETS[APP_TICKS_DETAIL.id],
+  detail: { ...APP_TICKS_DETAIL, id: APP_TICKS_FOCUS_ID },
+  keywords: APP_TICKS_KEYWORDS.map((keyword) => ({ ...keyword })),
+};
+SUGGESTIONS[APP_TICKS_FOCUS_ID] = SUGGESTIONS[APP_TICKS_DETAIL.id];
 DATASETS[APP_SUGGESTED_LOCALES_ID] = localesDataset(
   APP_SUGGESTED_LOCALES_ID,
   "Market Lab",

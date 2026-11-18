@@ -124,6 +124,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "Account, billing and alert emails now use the same typeface, colours and shapes as the app, in light and dark. Links are plain underlined text, so the orange button is the one thing that stands out. Nothing an email says has changed.",
       },
       {
+        kind: "improved",
+        title: "Track several suggestions at once",
+        text: "On the keywords page, tick the suggestions you want and track them together with one button, instead of pressing Track on each. Phrases you already track have no tick, and switching the source or the market starts a fresh selection.",
+      },
+      {
         kind: "new",
         title: "Send keywords to your keyword field",
         text: "Select keywords on the keywords page of an App Store app and choose Add to keyword field. The metadata page opens on the right language with those keywords added after the ones already in the field, ready to review and save. Keywords already in the field are not added twice, and only what fits in the 100 characters is taken along.",
