@@ -1241,6 +1241,7 @@ test("Import keeps focus while an import waits out a busy server", async ({
       }),
   );
   await answerBusy(page, "**/api/backend/apps", "/apps", 1);
+  const imports = countPosts(page, /\/api\/backend\/apps$/);
   await page.goto("/");
   await page.getByRole("button", { name: "Import app" }).click();
   await page
@@ -1250,6 +1251,7 @@ test("Import keeps focus while an import waits out a busy server", async ({
 
   await pressFromKeyboard(submit);
   await expect(page.getByText(BUSY_LINE)).toBeVisible();
+  await expect.poll(() => imports.length).toBe(2);
 
   await expectFocusKeptWhileHeld(submit, held);
   await expect(page.locator("#import-url-error")).toHaveText(
