@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { assertStorefront, Store, StoreSearchResult } from '@asobeast/shared';
-import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
+import {
+  ANY_FREE_ENDPOINT,
+  ProxyEgress,
+} from '../store-providers/egress/proxy-egress.service';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem } from '../store-providers/types';
 import { storeSearchRequest } from './store-search-request';
@@ -48,7 +51,7 @@ export class StoreSearchService {
             storeSearchRequest(query.store, query.limit),
             { fromEdgeCache: true },
           ),
-      { waitForLocal: false },
+      ANY_FREE_ENDPOINT,
     );
     return items.slice(0, query.limit).map(toStoreSearchResult);
   }

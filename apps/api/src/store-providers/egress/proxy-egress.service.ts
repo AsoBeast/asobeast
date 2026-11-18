@@ -25,6 +25,8 @@ export interface EgressRoute {
   waitForLocal?: boolean;
 }
 
+export const ANY_FREE_ENDPOINT: EgressRoute = { waitForLocal: false };
+
 @Injectable()
 export class ProxyEgress implements OnModuleInit {
   private readonly logger = new Logger(ProxyEgress.name);

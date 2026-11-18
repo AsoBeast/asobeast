@@ -28,7 +28,10 @@ import { AppCaptureService } from './app-capture.service';
 import { AppSetupService } from './app-setup.service';
 import { reviewSyncJobOptions } from '../jobs/job-options';
 import { QuotaService } from '../auth/quota.service';
-import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
+import {
+  ANY_FREE_ENDPOINT,
+  ProxyEgress,
+} from '../store-providers/egress/proxy-egress.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { toAppDetail, toAppListItem } from './apps.mapper';
 import { FirstRunScheduler } from './first-run.scheduler';
@@ -228,8 +231,12 @@ export class AppsService {
       return { country, status: 'available' };
     }
 
-    const [result] = await this.egress.through(app.store, country, () =>
-      this.registry.get(app.store).availability(app.storeAppId, [country]),
+    const [result] = await this.egress.through(
+      app.store,
+      country,
+      () =>
+        this.registry.get(app.store).availability(app.storeAppId, [country]),
+      ANY_FREE_ENDPOINT,
     );
 
     return result ?? { country, status: 'unknown' };
