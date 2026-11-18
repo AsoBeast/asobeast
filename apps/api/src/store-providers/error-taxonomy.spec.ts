@@ -395,6 +395,20 @@ describe('store failure reasons', () => {
       'Google Play could not be reached. Try again in a few minutes.',
     ],
     [
+      'names a failed name lookup as unreachable',
+      Store.APP_STORE,
+      'getaddrinfo ENOTFOUND itunes.apple.com',
+      'unreachable',
+      'The App Store could not be reached. Try again in a few minutes.',
+    ],
+    [
+      'names a name lookup that failed for now as unreachable',
+      Store.GOOGLE_PLAY,
+      'RequestError: getaddrinfo EAI_AGAIN play.google.com',
+      'unreachable',
+      'Google Play could not be reached. Try again in a few minutes.',
+    ],
+    [
       'names a broken page as unreadable',
       Store.GOOGLE_PLAY,
       'ParseError: title selector not found',

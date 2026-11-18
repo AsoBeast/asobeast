@@ -35,6 +35,13 @@ export const TRANSPORT_STATUSES = [429, 503] as const;
 
 const STATUSES = TRANSPORT_STATUSES.join('|');
 
+function mentionsTransport(causeMessage: string): boolean {
+  const lowered = causeMessage.toLowerCase();
+  return TRANSPORT_MESSAGES.some((marker) =>
+    lowered.includes(marker.toLowerCase()),
+  );
+}
+
 const TRANSPORT_STATUS = new RegExp(
   `(?:status|http)\\s+(?:${STATUSES})(?!\\d)`,
   'i',
@@ -69,7 +76,8 @@ function reasonOf(causeMessage: string): StoreFailureReason {
   const outcome = classifyFailure(causeMessage);
   const classified = outcome && OUTCOME_REASONS[outcome];
   if (classified) return classified;
-  return TRANSPORT_STATUS.test(causeMessage) ? 'refused' : 'unreadable';
+  if (TRANSPORT_STATUS.test(causeMessage)) return 'refused';
+  return mentionsTransport(causeMessage) ? 'unreachable' : 'unreadable';
 }
 
 export class StoreRequestError extends Error {
@@ -91,12 +99,9 @@ export class StoreRequestError extends Error {
   }
 
   get unreachable(): boolean {
-    const lowered = this.causeMessage.toLowerCase();
     return (
       TRANSPORT_STATUS.test(this.causeMessage) ||
-      TRANSPORT_MESSAGES.some((marker) =>
-        lowered.includes(marker.toLowerCase()),
-      )
+      mentionsTransport(this.causeMessage)
     );
   }
 }
