@@ -25,7 +25,7 @@ function NameLabel({
         type="button"
         data-workspace-sheet={workspaceId}
         onClick={onOpen}
-        className="truncate text-left font-medium link-underline"
+        className="max-w-full truncate text-left font-medium link-underline"
       >
         {name}
       </button>
@@ -36,13 +36,13 @@ function NameLabel({
       <Link
         href={href}
         title={title}
-        className="truncate font-medium link-underline"
+        className="max-w-full truncate font-medium link-underline"
       >
         {name}
       </Link>
     );
   }
-  return <span className="truncate font-medium">{name}</span>;
+  return <span className="max-w-full truncate font-medium">{name}</span>;
 }
 
 export function WorkspaceName(

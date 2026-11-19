@@ -4,6 +4,7 @@ import { ANA_LONG_FAILURE, SUSPEND_REASON } from "./admin-fixtures.mts";
 import { settleAnimations } from "./dialog.mts";
 import { errorEnvelope } from "./fixtures.mts";
 import { pressFromKeyboard } from "./held-request.mts";
+import { layoutBox } from "./layout-box.mts";
 import { seedCookies } from "./routes.mts";
 import { fulfillJson } from "./plan-helpers.mts";
 import { expect, test } from "./session.mts";
@@ -175,6 +176,23 @@ test.describe("workspace details", () => {
     await expect(
       page.getByRole("button", { name: "Ana Apps", exact: true }),
     ).toBeFocused();
+  });
+
+  test("a long workspace name stays inside its cell", async ({ page }) => {
+    await page.goto("/admin/workspaces");
+    const name = page.locator('[data-workspace-sheet="ws_ana"]');
+    await name.evaluate((element) => {
+      element.textContent = `Ana Apps ${"Workshop ".repeat(12)}`.trim();
+    });
+    const cell = page.getByRole("cell").filter({ has: name });
+
+    const [nameBox, cellBox] = await Promise.all([
+      layoutBox(name),
+      layoutBox(cell),
+    ]);
+    expect(nameBox.x + nameBox.width).toBeLessThanOrEqual(
+      cellBox.x + cellBox.width,
+    );
   });
 
   test("an id the address cannot hold opens nothing", async ({ page }) => {
