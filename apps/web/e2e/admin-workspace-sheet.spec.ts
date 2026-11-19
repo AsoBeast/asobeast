@@ -251,6 +251,28 @@ test.describe("what a workspace ran and who looked", () => {
     ).toHaveCount(0);
   });
 
+  test("says when the queue did not answer instead of claiming no failed jobs", async ({
+    page,
+  }) => {
+    await page.route(ANA_DETAIL, async (route) => {
+      const response = await route.fetch();
+      const detail = (await response.json()) as SupportWorkspaceDetail;
+      await route.fulfill({
+        response,
+        json: { ...detail, failedJobs: [], failedJobsUnavailable: true },
+      });
+    });
+    await page.goto("/admin/workspaces?workspace=ws_ana");
+
+    const sheet = page.getByRole("dialog", { name: "Ana Apps" });
+    await expect(
+      sheet.getByText(
+        "The job queue did not answer, so failed jobs are not shown.",
+      ),
+    ).toBeVisible();
+    await expect(sheet.getByText("No failed store jobs.")).toHaveCount(0);
+  });
+
   test("lists failed jobs newest first with their store and reason", async ({
     page,
   }) => {

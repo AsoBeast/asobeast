@@ -107,7 +107,10 @@ function WorkspaceDetails({
         <WorkspaceFacts workspace={workspace} />
         <WorkspaceLimits workspace={workspace} />
         <WorkspaceChecks days={workspace.runHistory} />
-        <WorkspaceFailedJobs jobs={workspace.failedJobs} />
+        <WorkspaceFailedJobs
+          jobs={workspace.failedJobs}
+          unavailable={workspace.failedJobsUnavailable === true}
+        />
         <WorkspaceAccessLog entries={workspace.recentAccess} />
         <WorkspaceActions workspace={workspace} billing={billing} />
       </div>

@@ -8,11 +8,23 @@ function failedWhen(job: SupportFailedJob): string {
   return job.failedAt ? formatDateTime(job.failedAt) : "Time not recorded";
 }
 
-export function WorkspaceFailedJobs({ jobs }: { jobs: SupportFailedJob[] }) {
+function emptyNote(unavailable: boolean): string {
+  return unavailable
+    ? "The job queue did not answer, so failed jobs are not shown."
+    : "No failed store jobs.";
+}
+
+export function WorkspaceFailedJobs({
+  jobs,
+  unavailable,
+}: {
+  jobs: SupportFailedJob[];
+  unavailable: boolean;
+}) {
   return (
     <SheetSection title="Failed store jobs">
       {jobs.length === 0 ? (
-        <SectionEmpty>No failed store jobs.</SectionEmpty>
+        <SectionEmpty>{emptyNote(unavailable)}</SectionEmpty>
       ) : (
         <ul
           aria-label="Failed store jobs"
