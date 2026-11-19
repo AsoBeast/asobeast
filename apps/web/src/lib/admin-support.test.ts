@@ -11,6 +11,7 @@ import {
   dailyRunDone,
   focusAfter,
   focusAfterConflict,
+  nextSupportReason,
   onDemandRows,
   queueLabel,
   supportActionLabel,
@@ -193,6 +194,28 @@ describe("supportReasonLength", () => {
     expect(supportReasonReady("😀".repeat(SUPPORT_REASON_MAX_LENGTH + 1))).toBe(
       false,
     );
+  });
+});
+
+describe("nextSupportReason", () => {
+  const MAX = SUPPORT_REASON_MAX_LENGTH;
+
+  it("takes what was typed while it fits", () => {
+    expect(nextSupportReason("", "Chargeback opened")).toBe(
+      "Chargeback opened",
+    );
+    expect(nextSupportReason("", "😀".repeat(MAX))).toBe("😀".repeat(MAX));
+  });
+
+  it("cuts a longer paste to the longest the API keeps, counted as the API counts", () => {
+    expect(nextSupportReason("", "a".repeat(MAX + 50))).toBe("a".repeat(MAX));
+    expect(nextSupportReason("", "😀".repeat(MAX + 50))).toBe("😀".repeat(MAX));
+    expect(nextSupportReason("", "❤️".repeat(MAX + 1))).toBe("❤️".repeat(MAX));
+  });
+
+  it("keeps a full reason when more is typed into it", () => {
+    const full = "a".repeat(MAX);
+    expect(nextSupportReason(full, `${full}b`)).toBe(full);
   });
 });
 

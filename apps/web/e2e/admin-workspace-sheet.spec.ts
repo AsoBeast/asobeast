@@ -387,6 +387,24 @@ test.describe("suspend and restore", () => {
     await expect(confirm.getByText("10 of 200")).toBeVisible();
   });
 
+  test("a reason of emoji holds as many as the API counts", async ({
+    page,
+  }) => {
+    await page.goto("/admin/workspaces?workspace=ws_ana");
+    await openAction(page, "Ana Apps", "Suspend");
+
+    const confirm = page.getByRole("alertdialog", {
+      name: "Suspend Ana Apps?",
+    });
+    await confirm.getByLabel("Reason").fill("😀".repeat(250));
+
+    await expect(confirm.getByLabel("Reason")).toHaveValue("😀".repeat(200));
+    await expect(confirm.getByText("200 of 200")).toBeVisible();
+    await expect(
+      confirm.getByRole("button", { name: "Suspend workspace" }),
+    ).toBeEnabled();
+  });
+
   test("a reason stops at the longest the API keeps", async ({ page }) => {
     await page.goto("/admin/workspaces?workspace=ws_ana");
     await openAction(page, "Ana Apps", "Suspend");

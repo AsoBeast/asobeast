@@ -183,6 +183,31 @@ export function supportReasonReady(text: string): boolean {
   );
 }
 
+function clampSupportReason(text: string): string {
+  const points = Array.from(text);
+  let fits = 0;
+  let over = points.length;
+  while (fits < over) {
+    const middle = Math.ceil((fits + over) / 2);
+    if (
+      supportReasonLength(points.slice(0, middle).join("")) <=
+      SUPPORT_REASON_MAX_LENGTH
+    ) {
+      fits = middle;
+    } else {
+      over = middle - 1;
+    }
+  }
+  return points.slice(0, fits).join("");
+}
+
+export function nextSupportReason(current: string, typed: string): string {
+  if (supportReasonLength(typed) <= SUPPORT_REASON_MAX_LENGTH) return typed;
+  return supportReasonLength(current) >= SUPPORT_REASON_MAX_LENGTH
+    ? current
+    : clampSupportReason(typed);
+}
+
 export function supportActionRequest(text: string): SupportActionRequest {
   return { confirm: true, reason: text.trim() };
 }

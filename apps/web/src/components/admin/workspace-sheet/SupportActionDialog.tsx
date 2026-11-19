@@ -29,6 +29,7 @@ import {
   ACTION_COPY,
   focusAfter,
   focusAfterConflict,
+  nextSupportReason,
   supportActionRequest,
   supportReasonLength,
   supportReasonReady,
@@ -152,9 +153,10 @@ export function SupportActionDialog({
             id={fieldId}
             dir="auto"
             value={reason}
-            maxLength={SUPPORT_REASON_MAX_LENGTH}
             aria-describedby={hintId}
-            onChange={(event) => setReason(event.target.value)}
+            onChange={(event) =>
+              setReason(nextSupportReason(reason, event.target.value))
+            }
           />
           <div
             id={hintId}
