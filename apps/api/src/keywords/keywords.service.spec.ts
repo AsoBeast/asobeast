@@ -17,7 +17,7 @@ const quotaOff = (prisma: PrismaService) =>
     get: (key: string) => (key === 'BILLING_ENABLED' ? false : null),
   } as unknown as ConfigService<Env, true>);
 
-describe('KeywordsService.syncFromSnapshot', () => {
+describe('KeywordsService.trackFromSnapshot', () => {
   const buildQueue = () => ({ add: jest.fn() });
 
   const buildService = (
@@ -118,7 +118,7 @@ describe('KeywordsService.syncFromSnapshot', () => {
     );
     const service = buildService(prisma, buildQueue());
 
-    await service.syncFromSnapshot('app1');
+    await service.trackFromSnapshot('app1');
 
     const [{ data }] = prisma.keyword.createMany.mock.calls[0];
     const texts = data.map((row) => row.text);
@@ -144,7 +144,7 @@ describe('KeywordsService.syncFromSnapshot', () => {
     });
     const service = buildService(prisma, buildQueue());
 
-    await service.syncFromSnapshot('app1');
+    await service.trackFromSnapshot('app1');
 
     const [{ data }] = prisma.keyword.createMany.mock.calls[0];
     const texts = data.map((row) => row.text);
@@ -177,7 +177,7 @@ describe('KeywordsService.syncFromSnapshot', () => {
     });
     const service = buildService(prisma, buildQueue());
 
-    await service.syncFromSnapshot('app1');
+    await service.trackFromSnapshot('app1');
 
     const [{ data }] = prisma.keyword.createMany.mock.calls[0];
     expect(data.map((row) => row.text)).toContain('la fitness');
@@ -209,7 +209,7 @@ describe('KeywordsService.syncFromSnapshot', () => {
     );
     const service = buildService(prisma, buildQueue());
 
-    await service.syncFromSnapshot('app1');
+    await service.trackFromSnapshot('app1');
 
     const [{ data }] = prisma.keyword.createMany.mock.calls[0];
     const texts = data.map((row) => row.text);
@@ -239,7 +239,7 @@ describe('KeywordsService.syncFromSnapshot', () => {
     );
     const service = buildService(prisma, buildQueue());
 
-    await service.syncFromSnapshot('app1');
+    await service.trackFromSnapshot('app1');
 
     const [{ data }] = prisma.keyword.createMany.mock.calls[0];
     const texts = data.map((row) => row.text);
@@ -272,7 +272,7 @@ describe('KeywordsService.syncFromSnapshot', () => {
     );
     const service = buildService(prisma, buildQueue());
 
-    await service.syncFromSnapshot('app1');
+    await service.trackFromSnapshot('app1');
 
     const [{ data }] = prisma.keyword.createMany.mock.calls[0];
     const texts = data.map((row) => row.text);
@@ -285,7 +285,7 @@ describe('KeywordsService.syncFromSnapshot', () => {
     const prisma = buildPrisma();
     const service = buildService(prisma, buildQueue());
 
-    await service.syncFromSnapshot('app1');
+    await service.trackFromSnapshot('app1');
 
     expect(prisma.appSnapshot.findFirst).toHaveBeenCalledTimes(1);
     expect(prisma.appSnapshot.findFirst).toHaveBeenCalledWith(
@@ -299,7 +299,7 @@ describe('KeywordsService.syncFromSnapshot', () => {
     const prisma = buildPrisma();
     const service = buildService(prisma, buildQueue());
 
-    await service.syncFromSnapshot('app1');
+    await service.trackFromSnapshot('app1');
 
     const [tracked] = prisma.trackedKeyword.createMany.mock.calls[0];
     const trackedSources = tracked.data.map((row) => row.source);
@@ -320,7 +320,7 @@ describe('KeywordsService.syncFromSnapshot', () => {
     const prisma = buildPrisma();
     const service = buildService(prisma, buildQueue());
 
-    await service.syncFromSnapshot('app1');
+    await service.trackFromSnapshot('app1');
 
     const [{ data }] = prisma.keyword.createMany.mock.calls[0];
     const texts = data.map((row) => row.text);
@@ -338,7 +338,7 @@ describe('KeywordsService.syncFromSnapshot', () => {
     });
     const service = buildService(prisma, buildQueue());
 
-    await service.syncFromSnapshot('app1');
+    await service.trackFromSnapshot('app1');
 
     const [tracked] = prisma.trackedKeyword.createMany.mock.calls[0];
     const trackedSources = tracked.data.map((row) => row.source);
@@ -356,7 +356,7 @@ describe('KeywordsService.syncFromSnapshot', () => {
     });
     const service = buildService(prisma, buildQueue());
 
-    await service.syncFromSnapshot('app1');
+    await service.trackFromSnapshot('app1');
 
     expect(prisma.trackedKeyword.createMany.mock.calls[0][0].data).toHaveLength(
       15,
@@ -379,7 +379,7 @@ describe('KeywordsService.syncFromSnapshot', () => {
     });
     const service = buildService(prisma, buildQueue());
 
-    await service.syncFromSnapshot('app1');
+    await service.trackFromSnapshot('app1');
 
     const [{ data }] = prisma.keyword.createMany.mock.calls[0];
     const texts = data.map((row) => row.text);
@@ -400,7 +400,7 @@ describe('KeywordsService.syncFromSnapshot', () => {
     });
     const service = buildService(prisma, buildQueue());
 
-    await service.syncFromSnapshot('rival');
+    await service.trackFromSnapshot('rival');
 
     expect(prisma.trackedKeyword.createMany).not.toHaveBeenCalled();
     expect(prisma.keyword.createMany).not.toHaveBeenCalled();
@@ -411,18 +411,24 @@ describe('KeywordsService.syncFromSnapshot', () => {
     prisma.appSnapshot.findFirst.mockResolvedValue(null);
     const service = buildService(prisma, buildQueue());
 
-    await service.syncFromSnapshot('app1');
+    await service.trackFromSnapshot('app1');
 
     expect(prisma.trackedKeyword.createMany).not.toHaveBeenCalled();
   });
 
-  it('leaves the first position checks of an import to its first run', async () => {
+  it('tracks the phrases of an import without queueing a check or a score', async () => {
+    const prisma = buildPrisma();
+    const queue = buildQueue();
     const schedule = jest.fn();
-    const service = buildService(buildPrisma(), buildQueue(), schedule);
+    const service = buildService(prisma, queue, schedule);
 
-    await service.syncFromSnapshot('app1');
+    const tracked = await service.trackFromSnapshot('app1');
 
+    const [{ data }] = prisma.trackedKeyword.createMany.mock.calls[0];
+    expect(tracked).toEqual(data.map((row) => row.keywordId));
+    expect(tracked.length).toBeGreaterThan(0);
     expect(schedule).not.toHaveBeenCalled();
+    expect(queue.add).not.toHaveBeenCalled();
   });
 
   it('checks the phrases a later snapshot adds before scoring them', async () => {

@@ -14,6 +14,7 @@ import {
   SUPPORTED_STORES,
 } from '@asobeast/shared';
 import { KeywordDiscoveryPlanner } from '../keyword-discovery/discovery-planner.service';
+import { KeywordTracker } from '../keywords/keyword-tracker';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StoreNotSupportedError } from '../store-providers/errors';
@@ -62,6 +63,7 @@ export class AppsService {
     private readonly localizations: LocalizedListingCapture,
     private readonly setups: AppSetupService,
     private readonly discoveries: KeywordDiscoveryPlanner,
+    private readonly tracker: KeywordTracker,
   ) {}
 
   private queueFor(store: Store): Queue {
@@ -106,7 +108,10 @@ export class AppsService {
 
     await this.beginSetup(app);
     await this.localizations.capture(app, market, snapshot);
-    await this.keywords.syncFromSnapshot(app.id);
+    const tracked = await this.keywords.trackFromSnapshot(app.id);
+
+    await this.scheduleFirstRun(app.id);
+    await this.tracker.enqueueFirstScores(tracked, app);
 
     await this.queueFor(store).add(
       JOBS.SYNC_REVIEWS,
@@ -120,7 +125,6 @@ export class AppsService {
       { jobId: reviewsBackfillJobId(app.id), ...reviewSyncJobOptions(store) },
     );
 
-    await this.scheduleFirstRun(app.id);
     await this.scheduleFirstDiscovery(app.id);
 
     return toAppDetail(app, snapshot, [], null);
