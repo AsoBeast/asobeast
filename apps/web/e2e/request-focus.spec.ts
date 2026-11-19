@@ -3088,6 +3088,7 @@ for (const control of SIGNED_OUT_CONTROLS) {
 }
 
 test.describe("support action confirmations keep focus", () => {
+  const SUSPENDED_AT = "2026-11-19T10:00:00.000Z";
   const SUPPORT_ACTIONS_UNDER_TEST = [
     {
       action: "suspend",
@@ -3097,7 +3098,8 @@ test.describe("support action confirmations keep focus", () => {
       confirm: "Suspend workspace",
       pending: "Suspending…",
       survivor: "Restore",
-      suspendedAfter: true,
+      suspendedAfter: SUSPENDED_AT,
+      billing: false,
     },
     {
       action: "restore",
@@ -3107,21 +3109,48 @@ test.describe("support action confirmations keep focus", () => {
       confirm: "Restore workspace",
       pending: "Restoring…",
       survivor: "Suspend",
-      suspendedAfter: false,
+      suspendedAfter: null,
+      billing: false,
+    },
+    {
+      action: "run-daily",
+      workspaceId: "ws_ana",
+      sheet: "Ana Apps",
+      opener: "Run daily",
+      confirm: "Start daily run",
+      pending: "Starting…",
+      survivor: "Run daily",
+      suspendedAfter: null,
+      billing: false,
+    },
+    {
+      action: "reconcile",
+      workspaceId: "ws_ana",
+      sheet: "Ana Apps",
+      opener: "Reconcile billing",
+      confirm: "Reconcile billing",
+      pending: "Reconciling…",
+      survivor: "Reconcile billing",
+      suspendedAfter: null,
+      billing: true,
     },
   ] as const;
 
   for (const row of SUPPORT_ACTIONS_UNDER_TEST) {
+    const sheetOf = (page: Page) =>
+      page.getByRole("dialog", { name: row.sheet });
     const opener = (page: Page) =>
-      page
-        .getByRole("dialog", { name: row.sheet })
-        .getByRole("button", { name: row.opener, exact: true });
+      sheetOf(page).getByRole("button", { name: row.opener, exact: true });
+    const openSheet = async (page: Page) => {
+      if (row.billing) await seedCookie(page.context(), "e2e_billing");
+      await page.goto(`/admin/workspaces?workspace=${row.workspaceId}`);
+    };
 
     for (const close of ["Escape", "Cancel"] as const) {
       test(`closing the ${row.opener} confirmation with ${close} returns focus to ${row.opener}`, async ({
         page,
       }) => {
-        await page.goto(`/admin/workspaces?workspace=${row.workspaceId}`);
+        await openSheet(page);
         await pressFromKeyboard(opener(page));
         const confirm = page.getByRole("alertdialog");
         await settleAnimations(confirm);
@@ -3141,22 +3170,34 @@ test.describe("support action confirmations keep focus", () => {
       await page.route(
         new RegExp(`/api/backend/admin/support/workspaces/${row.workspaceId}$`),
         async (route) => {
-          if (!acted) return route.fallback();
+          if (
+            !acted ||
+            row.action === "run-daily" ||
+            row.action === "reconcile"
+          ) {
+            return route.fallback();
+          }
           const response = await route.fetch();
           const detail = (await response.json()) as SupportWorkspaceDetail;
           return route.fulfill({
             response,
             json: {
               ...detail,
-              suspendedAt: row.suspendedAfter
-                ? "2026-11-19T10:00:00.000Z"
-                : null,
+              suspendedAt: row.suspendedAfter,
               suspendedReason: row.suspendedAfter ? "Chargeback opened" : null,
             },
           });
         },
       );
       let posts = 0;
+      page.on("request", (request) => {
+        if (
+          request.method() === "POST" &&
+          request.url().endsWith(`/${row.workspaceId}/${row.action}`)
+        ) {
+          posts += 1;
+        }
+      });
       const held = await holdRequest(
         page,
         new RegExp(
@@ -3168,15 +3209,7 @@ test.describe("support action confirmations keep focus", () => {
           return route.fallback();
         },
       );
-      page.on("request", (request) => {
-        if (
-          request.method() === "POST" &&
-          request.url().endsWith(`/${row.action}`)
-        ) {
-          posts += 1;
-        }
-      });
-      await page.goto(`/admin/workspaces?workspace=${row.workspaceId}`);
+      await openSheet(page);
       await pressFromKeyboard(opener(page));
       const confirm = page.getByRole("alertdialog");
       await confirm.getByLabel("Reason").fill("Chargeback opened");
@@ -3193,10 +3226,9 @@ test.describe("support action confirmations keep focus", () => {
       await expect(confirm).toBeVisible();
       held.release();
 
+      await expect(confirm).toHaveCount(0);
       await expect(
-        page
-          .getByRole("dialog", { name: row.sheet })
-          .getByRole("button", { name: row.survivor, exact: true }),
+        sheetOf(page).getByRole("button", { name: row.survivor, exact: true }),
       ).toBeFocused();
       expect(posts).toBe(1);
     });

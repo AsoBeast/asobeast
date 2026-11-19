@@ -8,6 +8,8 @@ import {
 } from "@asobeast/shared";
 import {
   availableActions,
+  dailyRunDone,
+  focusAfter,
   limitRows,
   onDemandRows,
   queueLabel,
@@ -194,20 +196,100 @@ describe("availableActions", () => {
     suspendedAt: "2026-11-17T08:05:00.000Z",
   };
 
-  it("offers suspend to an active workspace and restore to a suspended one", () => {
-    expect(availableActions(ACTIVE)).toEqual(["suspend"]);
-    expect(availableActions(SUSPENDED)).toEqual(["restore"]);
+  it("offers a daily run unless suspended, and reconcile only with billing", () => {
+    expect(availableActions(ACTIVE, { billing: false })).toEqual([
+      "run-daily",
+      "suspend",
+    ]);
+    expect(availableActions(ACTIVE, { billing: true })).toEqual([
+      "run-daily",
+      "reconcile",
+      "suspend",
+    ]);
+    expect(availableActions(SUSPENDED, { billing: true })).toEqual([
+      "reconcile",
+      "restore",
+    ]);
+    expect(availableActions(SUSPENDED, { billing: false })).toEqual([
+      "restore",
+    ]);
   });
 
   it("never offers to suspend the operator workspace", () => {
-    expect(availableActions({ ...ACTIVE, operatorWorkspace: true })).toEqual(
-      [],
-    );
+    expect(
+      availableActions(
+        { ...ACTIVE, operatorWorkspace: true },
+        { billing: false },
+      ),
+    ).toEqual(["run-daily"]);
   });
 
   it("offers to restore an operator workspace an older release suspended", () => {
-    expect(availableActions({ ...SUSPENDED, operatorWorkspace: true })).toEqual(
-      ["restore"],
+    expect(
+      availableActions(
+        { ...SUSPENDED, operatorWorkspace: true },
+        { billing: false },
+      ),
+    ).toEqual(["restore"]);
+  });
+});
+
+describe("focusAfter", () => {
+  const ACTIVE = { operatorWorkspace: false, suspendedAt: null };
+  const SUSPENDED = {
+    operatorWorkspace: false,
+    suspendedAt: "2026-11-17T08:05:00.000Z",
+  };
+
+  it("hands focus to the action that replaces the one taken", () => {
+    expect(focusAfter("suspend", ACTIVE, { billing: true })).toBe("restore");
+    expect(focusAfter("restore", SUSPENDED, { billing: true })).toBe("suspend");
+  });
+
+  it("hands focus to the first action left when the replacement is never offered", () => {
+    expect(
+      focusAfter(
+        "restore",
+        { ...SUSPENDED, operatorWorkspace: true },
+        { billing: false },
+      ),
+    ).toBe("run-daily");
+  });
+
+  it("hands nothing on when the opener stays", () => {
+    expect(focusAfter("run-daily", ACTIVE, { billing: true })).toBeNull();
+    expect(focusAfter("reconcile", SUSPENDED, { billing: true })).toBeNull();
+  });
+});
+
+describe("dailyRunDone", () => {
+  it("says when nothing new was queued", () => {
+    expect(
+      dailyRunDone(
+        "Ana Apps",
+        "queued 0 apps, 0 keywords, 0 categories, 0 reviews",
+      ),
+    ).toBe("Nothing new to queue for Ana Apps today.");
+  });
+
+  it("says a run was queued when anything was", () => {
+    expect(
+      dailyRunDone(
+        "Ana Apps",
+        "queued 2 apps, 14 keywords, 1 categories, 2 reviews",
+      ),
+    ).toBe("Daily run queued for Ana Apps.");
+    expect(
+      dailyRunDone(
+        "Ana Apps",
+        "queued 0 apps, 0 keywords, 0 categories, 3 reviews",
+      ),
+    ).toBe("Daily run queued for Ana Apps.");
+  });
+
+  it("says a run was queued when the detail holds no count", () => {
+    expect(dailyRunDone("Ana Apps", "queued")).toBe(
+      "Daily run queued for Ana Apps.",
     );
   });
 });

@@ -157,7 +157,11 @@ export function AdminWorkspaces() {
         }
         reads="Each read is written to the support audit trail."
       />
-      <WorkspaceSheet shownId={sheet.shownId} onClose={sheet.close} />
+      <WorkspaceSheet
+        shownId={sheet.shownId}
+        billing={status.billing}
+        onClose={sheet.close}
+      />
     </WorkspaceSheetContext>
   );
 }

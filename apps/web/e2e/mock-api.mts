@@ -1248,9 +1248,28 @@ function supportRoute(
 const OPERATOR_WORKSPACE_NOT_SUSPENDABLE =
   "The operator workspace cannot be suspended, because the operator would lose the surfaces that restore it";
 
-const SUPPORT_ACTION_DETAILS: Record<string, string> = {
-  suspend: "every write and on-demand action is now refused",
-  restore: "the workspace may write again",
+const NOTHING_QUEUED = "queued 0 apps, 0 keywords, 0 categories, 0 reviews";
+
+const SUPPORT_ACTION_ANSWERS: Record<
+  string,
+  { detail: string; unknownWorkspace: Refusal | string }
+> = {
+  suspend: {
+    detail: "every write and on-demand action is now refused",
+    unknownWorkspace: new Refusal(404, "Resource not found"),
+  },
+  restore: {
+    detail: "the workspace may write again",
+    unknownWorkspace: new Refusal(404, "Resource not found"),
+  },
+  "run-daily": {
+    detail: "queued 2 apps, 14 keywords, 1 categories, 2 reviews",
+    unknownWorkspace: NOTHING_QUEUED,
+  },
+  reconcile: {
+    detail: "checked 1, corrected 0",
+    unknownWorkspace: new Refusal(404, "Workspace not found"),
+  },
 };
 
 function supportActionRefusal(raw: string): Refusal | null {
@@ -1289,16 +1308,19 @@ async function supportAction(
   const refused = supportActionRefusal(await readBody(req));
   if (refused) return refused;
   const workspaceId = decodeURIComponent(rawId);
-  if (!SUPPORT_WORKSPACES.some((row) => row.workspaceId === workspaceId)) {
-    return new Refusal(404, "Resource not found");
-  }
+  const answer = SUPPORT_ACTION_ANSWERS[action];
+  const known = SUPPORT_WORKSPACES.some(
+    (row) => row.workspaceId === workspaceId,
+  );
   if (action === "suspend" && workspaceId === "ws_default") {
     return new Refusal(409, OPERATOR_WORKSPACE_NOT_SUSPENDABLE);
   }
+  const detail = known ? answer.detail : answer.unknownWorkspace;
+  if (detail instanceof Refusal) return detail;
   return {
     action: action as SupportActionResult["action"],
     workspaceId,
-    detail: SUPPORT_ACTION_DETAILS[action],
+    detail,
   };
 }
 
@@ -2993,7 +3015,7 @@ const routes: Route[] = [
       new Refusal(404, "Workspace not found"),
   ),
   supportRoute(
-    /^\/admin\/support\/workspaces\/([^/]+)\/(suspend|restore)$/,
+    /^\/admin\/support\/workspaces\/([^/]+)\/(suspend|restore|run-daily|reconcile)$/,
     (req, _query, params) => supportAction(req, params),
     "POST",
   ),

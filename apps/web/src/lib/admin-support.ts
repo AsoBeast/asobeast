@@ -164,16 +164,65 @@ export function supportActionRequest(text: string): SupportActionRequest {
   return { confirm: true, reason: text.trim() };
 }
 
-export type WorkspaceAction = "suspend" | "restore";
+export type WorkspaceAction = "run-daily" | "reconcile" | "suspend" | "restore";
 
 type ActionSubject = Pick<
   SupportWorkspaceSummary,
   "operatorWorkspace" | "suspendedAt"
 >;
 
-export function availableActions(workspace: ActionSubject): WorkspaceAction[] {
-  if (workspace.suspendedAt !== null) return ["restore"];
-  return workspace.operatorWorkspace ? [] : ["suspend"];
+function actionsFor(
+  suspended: boolean,
+  operatorWorkspace: boolean,
+  billing: boolean,
+): WorkspaceAction[] {
+  const offered: [WorkspaceAction, boolean][] = [
+    ["run-daily", !suspended],
+    ["reconcile", billing],
+    ["suspend", !suspended && !operatorWorkspace],
+    ["restore", suspended],
+  ];
+  return offered.filter(([, shown]) => shown).map(([action]) => action);
+}
+
+export function availableActions(
+  workspace: ActionSubject,
+  { billing }: { billing: boolean },
+): WorkspaceAction[] {
+  return actionsFor(
+    workspace.suspendedAt !== null,
+    workspace.operatorWorkspace === true,
+    billing,
+  );
+}
+
+const REPLACED_BY: Partial<Record<WorkspaceAction, WorkspaceAction>> = {
+  suspend: "restore",
+  restore: "suspend",
+};
+
+export function focusAfter(
+  action: WorkspaceAction,
+  workspace: ActionSubject,
+  { billing }: { billing: boolean },
+): WorkspaceAction | null {
+  const replacement = REPLACED_BY[action];
+  if (!replacement) return null;
+  const next = actionsFor(
+    action === "suspend",
+    workspace.operatorWorkspace === true,
+    billing,
+  );
+  return next.includes(replacement) ? replacement : (next[0] ?? null);
+}
+
+export function dailyRunDone(name: string, detail: string): string {
+  const counts = detail.match(/\d+/g) ?? [];
+  const nothingQueued =
+    counts.length > 0 && counts.every((count) => Number(count) === 0);
+  return nothingQueued
+    ? `Nothing new to queue for ${name} today.`
+    : `Daily run queued for ${name}.`;
 }
 
 export interface ActionCopy {
@@ -184,10 +233,29 @@ export interface ActionCopy {
   pending: string;
   done: (name: string, detail: string) => string;
   variant: "destructive" | "default";
-  replacesOpener: boolean;
 }
 
 export const ACTION_COPY: Record<WorkspaceAction, ActionCopy> = {
+  "run-daily": {
+    open: "Run daily",
+    title: (name) => `Start a daily run for ${name}?`,
+    body: (name) =>
+      `Queues the app refreshes, keyword checks, reviews and category ranks of ${name} that have not run yet today, and queues again the ones that failed. A job of today the queue still holds is skipped, so work that already ran is usually not repeated.`,
+    confirm: "Start daily run",
+    pending: "Starting…",
+    done: dailyRunDone,
+    variant: "default",
+  },
+  reconcile: {
+    open: "Reconcile billing",
+    title: (name) => `Reconcile ${name} with Stripe?`,
+    body: (name) =>
+      `Reads the subscription of ${name} from Stripe and corrects the plan, trial and renewal stored here when they differ. If Stripe has no subscription for it, ${name} moves to Free, and a trial Stripe should not have started is cancelled. Nothing is charged.`,
+    confirm: "Reconcile billing",
+    pending: "Reconciling…",
+    done: (name) => `${name} is reconciled with Stripe.`,
+    variant: "default",
+  },
   suspend: {
     open: "Suspend",
     title: (name) => `Suspend ${name}?`,
@@ -197,7 +265,6 @@ export const ACTION_COPY: Record<WorkspaceAction, ActionCopy> = {
     pending: "Suspending…",
     done: (name) => `${name} is suspended.`,
     variant: "destructive",
-    replacesOpener: true,
   },
   restore: {
     open: "Restore",
@@ -208,6 +275,5 @@ export const ACTION_COPY: Record<WorkspaceAction, ActionCopy> = {
     pending: "Restoring…",
     done: (name) => `${name} may write again.`,
     variant: "default",
-    replacesOpener: true,
   },
 };

@@ -4,6 +4,7 @@ import { ANA_LONG_FAILURE, SUSPEND_REASON } from "./admin-fixtures.mts";
 import { settleAnimations } from "./dialog.mts";
 import { errorEnvelope } from "./fixtures.mts";
 import { pressFromKeyboard } from "./held-request.mts";
+import { seedCookies } from "./routes.mts";
 import { fulfillJson } from "./plan-helpers.mts";
 import { expect, test } from "./session.mts";
 
@@ -480,5 +481,157 @@ test.describe("suspend and restore", () => {
     await expect(
       page.getByText("Lapsed Studio may write again."),
     ).toBeVisible();
+  });
+});
+
+test.describe("daily run and reconcile", () => {
+  const toasts = (page: Page) =>
+    page.getByRole("region", { name: /Notifications/ });
+
+  async function sendWithReason(page: Page, title: string, confirm: string) {
+    const dialog = page.getByRole("alertdialog", { name: title });
+    await dialog.getByLabel("Reason").fill("Customer asked for fresh ranks");
+    await dialog.getByRole("button", { name: confirm }).click();
+    return dialog;
+  }
+
+  test("starts a daily run with a reason and says what was queued", async ({
+    page,
+  }) => {
+    let body: unknown;
+    await page.route(ACTION("ws_ana", "run-daily"), (route) => {
+      body = route.request().postDataJSON();
+      return route.fallback();
+    });
+    await page.goto("/admin/workspaces?workspace=ws_ana");
+    await openAction(page, "Ana Apps", "Run daily");
+
+    await expect(
+      page
+        .getByRole("alertdialog", { name: "Start a daily run for Ana Apps?" })
+        .getByText("that have not run yet today", { exact: false }),
+    ).toBeVisible();
+    await sendWithReason(
+      page,
+      "Start a daily run for Ana Apps?",
+      "Start daily run",
+    );
+
+    await expect(
+      toasts(page).getByText("Daily run queued for Ana Apps."),
+    ).toBeVisible();
+    await expect(toasts(page).getByText(/queued 2 apps/)).toBeVisible();
+    expect(body).toEqual({
+      confirm: true,
+      reason: "Customer asked for fresh ranks",
+    });
+  });
+
+  test("says when the daily run had nothing new to queue", async ({ page }) => {
+    await page.route(ACTION("ws_ana", "run-daily"), (route) =>
+      route.fulfill(
+        fulfillJson(201, {
+          action: "run-daily",
+          workspaceId: "ws_ana",
+          detail: "queued 0 apps, 0 keywords, 0 categories, 0 reviews",
+        }),
+      ),
+    );
+    await page.goto("/admin/workspaces?workspace=ws_ana");
+    await openAction(page, "Ana Apps", "Run daily");
+    await sendWithReason(
+      page,
+      "Start a daily run for Ana Apps?",
+      "Start daily run",
+    );
+
+    await expect(
+      toasts(page).getByText("Nothing new to queue for Ana Apps today."),
+    ).toBeVisible();
+  });
+
+  test("hides the daily run while a workspace is suspended", async ({
+    page,
+  }) => {
+    await page.goto("/admin/workspaces?workspace=ws_lapsed");
+
+    const sheet = page.getByRole("dialog", { name: "Lapsed Studio" });
+    await expect(
+      sheet.getByRole("button", { name: "Restore", exact: true }),
+    ).toBeVisible();
+    await expect(
+      sheet.getByRole("button", { name: "Run daily", exact: true }),
+    ).toHaveCount(0);
+  });
+
+  test("offers reconcile only with billing on", async ({ page, context }) => {
+    await page.goto("/admin/workspaces?workspace=ws_ana");
+    const sheet = page.getByRole("dialog", { name: "Ana Apps" });
+    await expect(
+      sheet.getByRole("button", { name: "Run daily", exact: true }),
+    ).toBeVisible();
+    await expect(
+      sheet.getByRole("button", { name: "Reconcile billing", exact: true }),
+    ).toHaveCount(0);
+
+    await seedCookies(context, { e2e_billing: "1" });
+    await page.reload();
+
+    await expect(
+      sheet.getByRole("button", { name: "Reconcile billing", exact: true }),
+    ).toBeVisible();
+  });
+
+  test("reconciles with a reason and says it is done", async ({
+    page,
+    context,
+  }) => {
+    await seedCookies(context, { e2e_billing: "1" });
+    await page.goto("/admin/workspaces?workspace=ws_ana");
+    await openAction(page, "Ana Apps", "Reconcile billing");
+
+    await expect(
+      page
+        .getByRole("alertdialog", { name: "Reconcile Ana Apps with Stripe?" })
+        .getByText("moves to Free", { exact: false }),
+    ).toBeVisible();
+    await sendWithReason(
+      page,
+      "Reconcile Ana Apps with Stripe?",
+      "Reconcile billing",
+    );
+
+    await expect(
+      toasts(page).getByText("Ana Apps is reconciled with Stripe."),
+    ).toBeVisible();
+    await expect(
+      toasts(page).getByText("checked 1, corrected 0"),
+    ).toBeVisible();
+  });
+
+  test("says when Stripe cannot be reached and keeps the reason", async ({
+    page,
+    context,
+  }) => {
+    await seedCookies(context, { e2e_billing: "1" });
+    await page.route(
+      ACTION("ws_ana", "reconcile"),
+      refuse(503, "Stripe could not be reached for the test"),
+    );
+    await page.goto("/admin/workspaces?workspace=ws_ana");
+    await openAction(page, "Ana Apps", "Reconcile billing");
+
+    const dialog = await sendWithReason(
+      page,
+      "Reconcile Ana Apps with Stripe?",
+      "Reconcile billing",
+    );
+
+    await expect(
+      toasts(page).getByText("Stripe could not be reached for the test"),
+    ).toBeVisible();
+    await expect(dialog.getByLabel("Reason")).toHaveValue(
+      "Customer asked for fresh ranks",
+    );
   });
 });

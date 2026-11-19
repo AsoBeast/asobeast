@@ -80,8 +80,10 @@ function PendingBody({
 
 function WorkspaceDetails({
   workspace,
+  billing,
 }: {
   workspace: SupportWorkspaceDetail;
+  billing: boolean;
 }) {
   return (
     <>
@@ -102,7 +104,7 @@ function WorkspaceDetails({
         <WorkspaceChecks days={workspace.runHistory} />
         <WorkspaceFailedJobs jobs={workspace.failedJobs} />
         <WorkspaceAccessLog entries={workspace.recentAccess} />
-        <WorkspaceActions workspace={workspace} />
+        <WorkspaceActions workspace={workspace} billing={billing} />
       </div>
     </>
   );
@@ -110,9 +112,11 @@ function WorkspaceDetails({
 
 export function WorkspaceSheet({
   shownId,
+  billing,
   onClose,
 }: {
   shownId: string;
+  billing: boolean;
   onClose: () => void;
 }) {
   const [lastId, setLastId] = useState(shownId);
@@ -141,7 +145,7 @@ export function WorkspaceSheet({
         }}
       >
         {read.data ? (
-          <WorkspaceDetails workspace={read.data} />
+          <WorkspaceDetails workspace={read.data} billing={billing} />
         ) : (
           <>
             <SheetHeader className={SHEET_GUTTER}>

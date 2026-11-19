@@ -86,6 +86,20 @@ export function restoreSupportWorkspace(
   return postSupportAction(workspaceId, "restore", request);
 }
 
+export function runSupportWorkspaceDaily(
+  workspaceId: string,
+  request: SupportActionRequest,
+): Promise<SupportActionResult> {
+  return postSupportAction(workspaceId, "run-daily", request);
+}
+
+export function reconcileSupportWorkspace(
+  workspaceId: string,
+  request: SupportActionRequest,
+): Promise<SupportActionResult> {
+  return postSupportAction(workspaceId, "reconcile", request);
+}
+
 export function getCapacityReport(): Promise<CapacityReport> {
   return apiFetch<CapacityReport>("/admin/capacity");
 }

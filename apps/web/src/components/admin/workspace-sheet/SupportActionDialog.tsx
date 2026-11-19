@@ -8,6 +8,7 @@ import {
   SUPPORT_REASON_MIN_LENGTH,
   type SupportActionRequest,
   type SupportActionResult,
+  type SupportWorkspaceSummary,
 } from "@asobeast/shared";
 import {
   closeUnlessPending,
@@ -26,20 +27,23 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   ACTION_COPY,
+  focusAfter,
   supportActionRequest,
   supportReasonReady,
   type WorkspaceAction,
 } from "@/lib/admin-support";
 import {
   apiErrorMessage,
+  reconcileSupportWorkspace,
   restoreSupportWorkspace,
+  runSupportWorkspaceDaily,
   suspendSupportWorkspace,
 } from "@/lib/api";
 import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
 import { invalidateSupportAction } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 
-const SUPPORT_ACTION_FOCUS_KEY = "support-action";
+const focusKeyOf = (action: WorkspaceAction) => `support-action:${action}`;
 
 const SEND: Record<
   WorkspaceAction,
@@ -48,6 +52,8 @@ const SEND: Record<
     request: SupportActionRequest,
   ) => Promise<SupportActionResult>
 > = {
+  "run-daily": runSupportWorkspaceDaily,
+  reconcile: reconcileSupportWorkspace,
   suspend: suspendSupportWorkspace,
   restore: restoreSupportWorkspace,
 };
@@ -55,19 +61,20 @@ const SEND: Record<
 const REASON_HINT = `At least ${SUPPORT_REASON_MIN_LENGTH} characters. Kept in the support access log.`;
 
 export function SupportActionDialog({
-  workspaceId,
-  name,
+  workspace,
+  billing,
   action,
 }: {
-  workspaceId: string;
-  name: string;
+  workspace: SupportWorkspaceSummary;
+  billing: boolean;
   action: WorkspaceAction;
 }) {
+  const { workspaceId, name } = workspace;
   const copy = ACTION_COPY[action];
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
-  const claimFocus = useFocusClaim(SUPPORT_ACTION_FOCUS_KEY);
+  const claimFocus = useFocusClaim(focusKeyOf(action));
   const fieldId = useId();
   const hintId = useId();
 
@@ -143,7 +150,8 @@ export function SupportActionDialog({
           variant={copy.variant}
           blocked={!supportReasonReady(reason)}
           onConfirm={() => {
-            if (copy.replacesOpener) armFocusHandoff(SUPPORT_ACTION_FOCUS_KEY);
+            const survivor = focusAfter(action, workspace, { billing });
+            if (survivor) armFocusHandoff(focusKeyOf(survivor));
             sendOnce();
           }}
         />

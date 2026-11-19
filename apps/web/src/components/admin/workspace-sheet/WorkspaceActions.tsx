@@ -6,10 +6,12 @@ import { SupportActionDialog } from "./SupportActionDialog";
 
 export function WorkspaceActions({
   workspace,
+  billing,
 }: {
   workspace: SupportWorkspaceSummary;
+  billing: boolean;
 }) {
-  const actions = availableActions(workspace);
+  const actions = availableActions(workspace, { billing });
   return (
     <SheetSection title="Support actions">
       {actions.length > 0 ? (
@@ -17,8 +19,8 @@ export function WorkspaceActions({
           {actions.map((action) => (
             <SupportActionDialog
               key={action}
-              workspaceId={workspace.workspaceId}
-              name={workspace.name}
+              workspace={workspace}
+              billing={billing}
               action={action}
             />
           ))}

@@ -9,7 +9,9 @@ import {
   getProxyPool,
   getSupportWorkspace,
   getSupportWorkspaces,
+  reconcileSupportWorkspace,
   restoreSupportWorkspace,
+  runSupportWorkspaceDaily,
   suspendSupportWorkspace,
 } from "./admin";
 
@@ -100,6 +102,8 @@ describe("support actions", () => {
   it.each([
     ["suspends", suspendSupportWorkspace, "suspend"],
     ["restores", restoreSupportWorkspace, "restore"],
+    ["starts a daily run for", runSupportWorkspaceDaily, "run-daily"],
+    ["reconciles", reconcileSupportWorkspace, "reconcile"],
   ] as const)("%s a workspace with the reason", async (_name, call, action) => {
     const sent = stubPost();
 
