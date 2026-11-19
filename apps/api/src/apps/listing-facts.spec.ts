@@ -1,8 +1,8 @@
-import { Store } from '@prisma/client';
+import { AppSnapshot, Store } from '@prisma/client';
 import { listingFactsOf, listingTextsOf } from './listing-facts';
 
 const row = (
-  raw: unknown,
+  raw: AppSnapshot['raw'],
   dates: { releasedAt?: Date | null; storeUpdatedAt?: Date | null } = {},
 ) => ({
   raw,
@@ -114,7 +114,7 @@ describe('listingFactsOf', () => {
 });
 
 describe('listingTextsOf', () => {
-  const texts = (raw: unknown, description = 'Plan trips.') => ({
+  const texts = (raw: AppSnapshot['raw'], description = 'Plan trips.') => ({
     raw,
     description,
   });
