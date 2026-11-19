@@ -90,3 +90,12 @@ export interface SupportActionResult {
   workspaceId: string;
   detail: string;
 }
+
+export const SUPPORT_REASON_MIN_LENGTH = 8;
+
+export const SUPPORT_REASON_MAX_LENGTH = 200;
+
+export interface SupportActionRequest {
+  confirm: true;
+  reason: string;
+}
