@@ -1,6 +1,19 @@
 import { describe, expect, it } from "vitest";
-import type { OnDemandRules, PlanLimits } from "@asobeast/shared";
-import { limitRows, onDemandRows, usageLine, usageRows } from "./admin-support";
+import {
+  SUPPORT_ACTIONS,
+  SUPPORT_OUTCOMES,
+  type OnDemandRules,
+  type PlanLimits,
+} from "@asobeast/shared";
+import {
+  limitRows,
+  onDemandRows,
+  queueLabel,
+  supportActionLabel,
+  supportOutcomeLabel,
+  usageLine,
+  usageRows,
+} from "./admin-support";
 
 const DAY = 86_400;
 const HOUR = 3_600;
@@ -116,5 +129,32 @@ describe("onDemandRows", () => {
 
   it("is empty when the plan sets no on demand rules", () => {
     expect(onDemandRows(null)).toEqual([]);
+  });
+});
+
+describe("support labels", () => {
+  it("names every support action and outcome", () => {
+    expect(SUPPORT_ACTIONS.map(supportActionLabel)).toEqual([
+      "Listed workspaces",
+      "Viewed",
+      "Reconciled billing",
+      "Suspended",
+      "Restored",
+      "Started a daily run",
+      "Replayed a billing event",
+    ]);
+    expect(SUPPORT_OUTCOMES.map(supportOutcomeLabel)).toEqual([
+      "In progress",
+      "Succeeded",
+      "Failed",
+    ]);
+  });
+});
+
+describe("queueLabel", () => {
+  it("names the store of a queue and keeps an unknown name", () => {
+    expect(queueLabel("appstore")).toBe("App Store");
+    expect(queueLabel("gplay")).toBe("Google Play");
+    expect(queueLabel("other")).toBe("other");
   });
 });

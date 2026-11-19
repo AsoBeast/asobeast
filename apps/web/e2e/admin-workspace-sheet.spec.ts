@@ -1,3 +1,4 @@
+import { ANA_LONG_FAILURE, SUSPEND_REASON } from "./admin-fixtures.mts";
 import { errorEnvelope } from "./fixtures.mts";
 import { fulfillJson } from "./plan-helpers.mts";
 import { expect, test } from "./session.mts";
@@ -178,5 +179,73 @@ test.describe("workspace details", () => {
       page.getByRole("table", { name: "Workspaces on this instance" }),
     ).toBeVisible();
     await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+});
+
+test.describe("what a workspace ran and who looked", () => {
+  test("lists every day of keyword checks the API answers and invents none", async ({
+    page,
+  }) => {
+    await page.goto("/admin/workspaces?workspace=ws_ana");
+
+    const checks = page
+      .getByRole("dialog", { name: "Ana Apps" })
+      .getByRole("table", { name: "Keyword checks" });
+    await expect(checks.getByRole("row")).toHaveCount(9);
+    await expect(checks.getByRole("row").nth(3)).toContainText("6");
+  });
+
+  test("says when a workspace has no checks and no failed jobs", async ({
+    page,
+  }) => {
+    await page.goto("/admin/workspaces?workspace=ws_card_trial");
+
+    const sheet = page.getByRole("dialog", { name: "Northwind Labs" });
+    await expect(
+      sheet.getByText("No keyword checks in the last 7 days."),
+    ).toBeVisible();
+    await expect(sheet.getByText("No failed store jobs.")).toBeVisible();
+    await expect(
+      sheet.getByRole("table", { name: "Keyword checks" }),
+    ).toHaveCount(0);
+  });
+
+  test("lists failed jobs newest first with their store and reason", async ({
+    page,
+  }) => {
+    await page.goto("/admin/workspaces?workspace=ws_ana");
+
+    const jobs = page
+      .getByRole("dialog", { name: "Ana Apps" })
+      .getByRole("list", { name: "Failed store jobs" })
+      .getByRole("listitem");
+    await expect(jobs).toHaveCount(2);
+    await expect(jobs.first()).toContainText("check-keyword");
+    await expect(jobs.first()).toContainText("App Store");
+    await expect(jobs.first()).toContainText("3 attempts");
+    await expect(jobs.first()).toContainText(ANA_LONG_FAILURE);
+    await expect(jobs.nth(1)).toContainText("Google Play");
+    await expect(jobs.nth(1)).toContainText("1 attempt");
+    await expect(jobs.nth(1)).toContainText("Time not recorded");
+  });
+
+  test("lists the access log with who, what, why and the result", async ({
+    page,
+  }) => {
+    await page.goto("/admin/workspaces?workspace=ws_ana");
+
+    const log = page
+      .getByRole("dialog", { name: "Ana Apps" })
+      .getByRole("list", { name: "Access log" });
+    const entries = log.getByRole("listitem");
+    await expect(entries).toHaveCount(5);
+    await expect(entries.first()).toContainText("Viewed");
+    await expect(entries.first()).toContainText("In progress");
+    await expect(entries.nth(1)).toContainText("Suspended");
+    await expect(entries.nth(1)).toContainText(SUSPEND_REASON);
+    await expect(entries.nth(3)).toContainText("Started a daily run");
+    await expect(entries.nth(3)).toContainText("Failed");
+    await expect(entries.nth(3)).toContainText("Redis is unreachable");
+    await expect(log).toContainText("owner@example.com");
   });
 });

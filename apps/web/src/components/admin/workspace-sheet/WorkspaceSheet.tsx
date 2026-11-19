@@ -20,7 +20,10 @@ import { isNotFound } from "@/lib/api";
 import { adminWorkspaceOptions } from "@/lib/queries";
 import { workspaceCloseTarget } from "./close-target";
 import { standingOf } from "./workspace-facts";
+import { WorkspaceAccessLog } from "./WorkspaceAccessLog";
+import { WorkspaceChecks } from "./WorkspaceChecks";
 import { WorkspaceFacts } from "./WorkspaceFacts";
+import { WorkspaceFailedJobs } from "./WorkspaceFailedJobs";
 import { WorkspaceLimits } from "./WorkspaceLimits";
 
 type WorkspaceRead = UseQueryResult<SupportWorkspaceDetail>;
@@ -95,6 +98,9 @@ function WorkspaceDetails({
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-6">
         <WorkspaceFacts workspace={workspace} />
         <WorkspaceLimits workspace={workspace} />
+        <WorkspaceChecks days={workspace.runHistory} />
+        <WorkspaceFailedJobs jobs={workspace.failedJobs} />
+        <WorkspaceAccessLog entries={workspace.recentAccess} />
       </div>
     </>
   );

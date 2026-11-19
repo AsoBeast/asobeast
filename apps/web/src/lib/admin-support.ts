@@ -3,6 +3,8 @@ import type {
   OnDemandRules,
   PlanLimit,
   PlanLimits,
+  SupportAction,
+  SupportOutcome,
   SupportWorkspaceSummary,
 } from "@asobeast/shared";
 import { formatNumber, formatPlanLimit } from "./format";
@@ -113,4 +115,37 @@ export function onDemandRows(rules: OnDemandRules | null): LabelledValue[] {
     label: ON_DEMAND_LABELS[action],
     value: `${formatNumber(rules[action].limit)} ${windowLabel(rules[action].windowSeconds)}`,
   }));
+}
+
+const SUPPORT_ACTION_LABELS: Record<SupportAction, string> = {
+  list: "Listed workspaces",
+  view: "Viewed",
+  reconcile: "Reconciled billing",
+  suspend: "Suspended",
+  restore: "Restored",
+  "run-daily": "Started a daily run",
+  replay: "Replayed a billing event",
+};
+
+const SUPPORT_OUTCOME_LABELS: Record<SupportOutcome, string> = {
+  attempted: "In progress",
+  succeeded: "Succeeded",
+  failed: "Failed",
+};
+
+const QUEUE_LABELS: Record<string, string> = {
+  appstore: "App Store",
+  gplay: "Google Play",
+};
+
+export function supportActionLabel(action: SupportAction): string {
+  return SUPPORT_ACTION_LABELS[action];
+}
+
+export function supportOutcomeLabel(outcome: SupportOutcome): string {
+  return SUPPORT_OUTCOME_LABELS[outcome];
+}
+
+export function queueLabel(queue: string): string {
+  return QUEUE_LABELS[queue] ?? queue;
 }

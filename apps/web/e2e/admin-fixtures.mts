@@ -11,6 +11,8 @@ import {
   type ProxyOutcomeCounts,
   type ProxyPoolHealth,
   type SupportAccessEntry,
+  type SupportFailedJob,
+  type SupportRunDay,
   type SupportWorkspaceDetail,
   type SupportWorkspaceSummary,
 } from "@asobeast/shared";
@@ -553,6 +555,91 @@ const CURRENT_VIEW: SupportAccessEntry = {
   at: utcTimestampDaysAgo(0),
 };
 
+export const SUSPEND_REASON = "Chargeback opened on the last invoice";
+
+const ANA_RUN_HISTORY: SupportRunDay[] = [0, 1, 2, 3, 5, 6, 7, 8].map(
+  (daysAgo) => ({
+    date: utcDaysAgo(daysAgo),
+    captured: 40,
+    unresolved: daysAgo === 2 ? 6 : 0,
+  }),
+);
+
+export const ANA_LONG_FAILURE =
+  `Store answered 503 Service Unavailable for every attempt while checking the keyword ranking of com.ana.apps in the United States storefront, ${"retrying later ".repeat(4)}`.trim();
+
+const ANA_FAILED_JOBS: SupportFailedJob[] = [
+  {
+    id: "4182",
+    name: "check-keyword",
+    queue: "appstore",
+    attempts: 3,
+    failedAt: utcTimestampDaysAgo(0),
+    reason: ANA_LONG_FAILURE,
+  },
+  {
+    id: "977",
+    name: "refresh-app",
+    queue: "gplay",
+    attempts: 1,
+    failedAt: null,
+    reason: "Listing could not be read",
+  },
+];
+
+const ANA_ACCESS: SupportAccessEntry[] = [
+  CURRENT_VIEW,
+  {
+    actorEmail: SUPPORT_OPERATOR_EMAIL,
+    action: "suspend",
+    outcome: "succeeded",
+    reason: SUSPEND_REASON,
+    detail: "every write and on-demand action is now refused",
+    at: utcTimestampDaysAgo(3),
+  },
+  {
+    actorEmail: SUPPORT_OPERATOR_EMAIL,
+    action: "restore",
+    outcome: "succeeded",
+    reason: "Customer paid the invoice",
+    detail: "the workspace may write again",
+    at: utcTimestampDaysAgo(2),
+  },
+  {
+    actorEmail: SUPPORT_OPERATOR_EMAIL,
+    action: "run-daily",
+    outcome: "failed",
+    reason: "Customer asked for fresh ranks",
+    detail: "Redis is unreachable",
+    at: utcTimestampDaysAgo(1),
+  },
+  {
+    actorEmail: SUPPORT_OPERATOR_EMAIL,
+    action: "view",
+    outcome: "succeeded",
+    reason: null,
+    detail: null,
+    at: utcTimestampDaysAgo(4),
+  },
+];
+
+const QUIET_LISTS = {
+  runHistory: [],
+  failedJobs: [],
+  recentAccess: [CURRENT_VIEW],
+};
+
+const DETAIL_LISTS: Record<
+  string,
+  Pick<SupportWorkspaceDetail, "runHistory" | "failedJobs" | "recentAccess">
+> = {
+  ws_ana: {
+    runHistory: ANA_RUN_HISTORY,
+    failedJobs: ANA_FAILED_JOBS,
+    recentAccess: ANA_ACCESS,
+  },
+};
+
 export function supportWorkspaceDetail(
   workspaceId: string,
 ): SupportWorkspaceDetail | undefined {
@@ -563,8 +650,6 @@ export function supportWorkspaceDetail(
   return {
     ...summary,
     limits: PLAN_LIMITS[summary.plan],
-    runHistory: [],
-    failedJobs: [],
-    recentAccess: [CURRENT_VIEW],
+    ...(DETAIL_LISTS[workspaceId] ?? QUIET_LISTS),
   };
 }
