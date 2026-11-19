@@ -27,7 +27,7 @@ It is not a bulk store lookup. No route takes a list of store ids and answers wi
 - **An app is readable only after you import it.** `POST /apps` takes a store URL, fetches the listing once and starts tracking it. Until then, there is no app id to read. See [Import an app](/guides/import-an-app).
 - **An import takes an app slot and one of the day's imports.** The slot stays taken for as long as the app is tracked. The import allowance resets every day.
 - **Tracking means daily collection.** asobeast reads each tracked app from the store on its own schedule and answers your request from what it stored. A read is not a request to the store, and `capturedAt` on the listing says when the store was last asked.
-- **The routes that do ask a store on the spot are limited separately.** Refreshing a listing and searching a store by name each spend a store allowance of their own, and they exist to help you find and update what you track, not to list a store. See [Three request classes](/api-reference/rate-limits#three-request-classes).
+- **The routes that do ask a store on the spot are limited separately.** Refreshing a listing and searching a store by name each spend a store allowance of their own. They help you find and update what you track, not list a store. See [Three request classes](/api-reference/rate-limits#three-request-classes).
 
 The numbers for each plan are in [What each plan allows](/api-reference/rate-limits#what-each-plan-allows) and [Pricing](/legal/pricing#plans). A self hosted instance sets none of these plan limits; see [Self hosted instances are unlimited](/api-reference/rate-limits#self-hosted-instances-are-unlimited).
 
@@ -40,7 +40,7 @@ Two different things are counted, and neither tells you the other.
 | Requests | How often you call the API, per minute and per day | [What each plan allows](/api-reference/rate-limits#what-each-plan-allows) |
 | Apps | How many apps the workspace tracks at once, and how many it may import in a day | The apps row of [Pricing](/legal/pricing#plans), and the app imports row of [What each plan allows](/api-reference/rate-limits#what-each-plan-allows) |
 
-A daily request allowance is not a number of apps. Reading a stored app again costs a request each time and never a slot, so a large request allowance buys many reads of the apps you track, not a longer list of them. To read more apps, you need more app slots.
+A daily request allowance is not a number of apps. Reading a stored app again costs a request each time and never a slot. A large request allowance buys many reads of the apps you track, not a longer list of them. To read more apps, you need more app slots.
 
 ## What an app record holds
 
@@ -127,7 +127,7 @@ If you need one of these, asobeast is not the source for it.
 
 Send imports one at a time and wait for each answer before you send the next. Importing an app the workspace already tracks answers with the stored app and spends nothing, so repeating an import after a timeout is safe. See [Importing twice costs nothing extra](/guides/import-an-app#importing-twice-costs-nothing-extra).
 
-Every import also queues store work behind it, such as the first rank checks and scores, and a server that is busy with that work can have no store capacity free for a moment. It then answers `503` with a `Retry-After` header and asks nothing of the store. Wait that many seconds and send the same import again. See [Status codes](/api-reference/errors#status-codes).
+Every import also queues store work behind it, such as the first rank checks and scores. A server busy with that work can have no store capacity free for a moment, and then answers `503` with a `Retry-After` header and asks nothing of the store. Wait that many seconds and send the same import again. See [Status codes](/api-reference/errors#status-codes).
 
 A `429` is a different answer: an allowance has closed, and the envelope names which. A `403` with a `quota` object means every app slot is taken. See [A rate limit is not a quota](/api-reference/rate-limits#a-rate-limit-is-not-a-quota).
 
