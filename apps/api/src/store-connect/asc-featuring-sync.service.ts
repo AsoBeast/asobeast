@@ -2,7 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
-import { FIELD_SYNC_NO_LIVE_VERSION } from './asc-keyword-field-sync.service';
+import {
+  FIELD_SYNC_NO_LIVE_VERSION,
+  FIELD_SYNC_UNSERVED_APP,
+} from './asc-keyword-field-sync.service';
 import type {
   AscListingApi,
   AscNomination,
@@ -87,18 +90,16 @@ const emptyCounts = (): NominationCounts => ({
   publishEndDate: null,
 });
 
-const newestSubmitted = (
-  nominations: AscNomination[],
-): AscNomination | null => {
-  const submitted = nominations
+const submittedAtOf = (nomination: AscNomination): number =>
+  nomination.submittedDate === null
+    ? 0
+    : Date.parse(nomination.submittedDate) || 0;
+
+const newestSubmitted = (nominations: AscNomination[]): AscNomination | null =>
+  nominations
     .filter((nomination) => nomination.state === 'SUBMITTED')
-    .sort(
-      (left, right) =>
-        Date.parse(right.submittedDate ?? '') -
-        Date.parse(left.submittedDate ?? ''),
-    );
-  return submitted[0] ?? null;
-};
+    .sort((left, right) => submittedAtOf(right) - submittedAtOf(left))[0] ??
+  null;
 
 const asDate = (value: string | null): Date | null => {
   const parsed = value === null ? NaN : Date.parse(value);
@@ -157,6 +158,7 @@ export class AscFeaturingSync {
   private async syncApp(api: AscListingApi, app: SyncApp): Promise<AppOutcome> {
     const version = await this.liveVersionOf(api, app.storeAppId);
     if (version.kind === 'invisible') {
+      await this.recordUnserved(app);
       return { nominations: 0, promoText: 0 };
     }
     const promo =
@@ -239,6 +241,17 @@ export class AscFeaturingSync {
       }
     }
     return { kind: 'ok', counts };
+  }
+
+  private recordUnserved(app: SyncApp): Promise<unknown> {
+    return this.prisma.featuringSync.updateMany({
+      where: { appId: app.id },
+      data: {
+        roleRefused: false,
+        nominationsError: FIELD_SYNC_UNSERVED_APP,
+        promoError: FIELD_SYNC_UNSERVED_APP,
+      },
+    });
   }
 
   private record(

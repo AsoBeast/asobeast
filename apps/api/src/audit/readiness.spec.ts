@@ -594,6 +594,33 @@ describe('buildReadiness', () => {
     });
   });
 
+  it('leaves both rows not measured with the reason when the key stopped seeing the app', () => {
+    const reason =
+      'App Store Connect does not show this app to the connected key';
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: [],
+      extract: extractWith(),
+      featuring: readsWith({
+        submittedNominations: 1,
+        promoFilled: 21,
+        promoTotal: 21,
+        nominationsError: reason,
+        promoError: reason,
+      }),
+      now: NOW,
+    });
+
+    expect(itemOf(readiness, 'nominations')).toMatchObject({
+      status: 'unmeasurable',
+      detail: reason,
+    });
+    expect(itemOf(readiness, 'promotional-text')).toMatchObject({
+      status: 'unmeasurable',
+      detail: reason,
+    });
+  });
+
   it('passes the promotional text row when every localization is filled', () => {
     const readiness = buildReadiness({
       store: Store.APP_STORE,

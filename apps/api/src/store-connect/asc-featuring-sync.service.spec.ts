@@ -7,6 +7,7 @@ import {
   AscFeaturingSync,
   FEATURING_ROLE_NEEDED,
 } from './asc-featuring-sync.service';
+import { FIELD_SYNC_UNSERVED_APP } from './asc-keyword-field-sync.service';
 import {
   ascFixture,
   failure,
@@ -90,7 +91,10 @@ function build(options: RecordOptions = {}) {
   };
   const prisma = {
     app: { findMany: jest.fn().mockResolvedValue(apps) },
-    featuringSync: { upsert: jest.fn().mockResolvedValue({}) },
+    featuringSync: {
+      upsert: jest.fn().mockResolvedValue({}),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+    },
   };
   const workspace = { require: jest.fn(() => WORKSPACE_ID) };
   const service = new AscFeaturingSync(
@@ -102,6 +106,7 @@ function build(options: RecordOptions = {}) {
     service,
     requests,
     upsert: prisma.featuringSync.upsert,
+    updateMany: prisma.featuringSync.updateMany,
     findMany: prisma.app.findMany,
   };
 }
@@ -175,6 +180,34 @@ describe('AscFeaturingSync.run', () => {
       syncedAt: expect.any(Date) as Date,
     });
     expect(call.create).toHaveProperty('readAt');
+  });
+
+  it('takes the newest submitted nomination even when one carries no date', async () => {
+    const { service, upsert } = build({
+      responses: [
+        versions(),
+        localizations(['text']),
+        nominations('DRAFT', []),
+        nominations('SUBMITTED', [
+          { state: 'SUBMITTED' },
+          {
+            state: 'SUBMITTED',
+            submittedDate: '2026-10-01T09:30:00.000Z',
+            publishStartDate: '2026-11-15T00:00:00.000Z',
+            publishEndDate: '2026-12-15T00:00:00.000Z',
+          },
+        ]),
+        nominations('ARCHIVED', []),
+      ],
+    });
+
+    await service.run();
+
+    expect(upsertCalls(upsert)[0].update).toMatchObject({
+      submittedDate: new Date('2026-10-01T09:30:00.000Z'),
+      publishStartDate: new Date('2026-11-15T00:00:00.000Z'),
+      publishEndDate: new Date('2026-12-15T00:00:00.000Z'),
+    });
   });
 
   it('counts every state and takes the dates of the newest submitted nomination', async () => {
@@ -282,8 +315,8 @@ describe('AscFeaturingSync.run', () => {
     expect(upsert).not.toHaveBeenCalled();
   });
 
-  it('stores no row for an app the key cannot see, without reading nominations', async () => {
-    const { service, requests, upsert } = build({
+  it('records the skip on the stored row of an app that turned invisible', async () => {
+    const { service, requests, upsert, updateMany } = build({
       responses: [
         failure(404, 'NOT_FOUND'),
         nominations('DRAFT', []),
@@ -299,6 +332,32 @@ describe('AscFeaturingSync.run', () => {
     expect(requests).toHaveLength(1);
     expect(requests[0].path).toContain('/appStoreVersions');
     expect(upsert).not.toHaveBeenCalled();
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { appId: APP.id },
+      data: {
+        roleRefused: false,
+        nominationsError: FIELD_SYNC_UNSERVED_APP,
+        promoError: FIELD_SYNC_UNSERVED_APP,
+      },
+    });
+  });
+
+  it('creates no row for an app the key never saw', async () => {
+    const { service, upsert, updateMany } = build({
+      responses: [
+        failure(404, 'NOT_FOUND'),
+        nominations('DRAFT', []),
+        nominations('SUBMITTED', []),
+        nominations('ARCHIVED', []),
+      ],
+    });
+
+    await expect(service.run()).resolves.toEqual({
+      nominations: 0,
+      promoText: 0,
+    });
+    expect(upsert).not.toHaveBeenCalled();
+    expect(updateMany).toHaveBeenCalled();
   });
 
   it('reads the nominations of an app with no released version and records the skip', async () => {
