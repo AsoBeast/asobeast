@@ -1,4 +1,4 @@
-import { parseAppStorePage } from './app-store-page';
+import { parseAppStorePage, parseSimilarItems } from './app-store-page';
 import {
   SIMILAR_PAGE_HTML,
   SIMILAR_SHELF_ADAM_IDS,
@@ -107,21 +107,6 @@ const EDITORS_CHOICE_SHELF = shelfOf([
   },
 ]);
 
-const SIMILAR_LOCKUP = {
-  $kind: 'Lockup',
-  adamId: '284035177',
-  title: 'Pandora: Personalized Music',
-  subtitle: 'Discover New Songs & Artists',
-  developerName: 'Pandora Media, LLC',
-  rating: 4.8,
-  ratingCount: '11M',
-  icon: {
-    $kind: 'Artwork',
-    template:
-      'https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/65/db/6f/65db6f74-dce2-d273-4daf-8b897e21db40/Placeholder.mill/{w}x{h}{c}.{f}',
-  },
-};
-
 const ACCESSIBILITY_SHELF = shelfOf([
   {
     $kind: 'AccessibilityParagraph',
@@ -163,7 +148,6 @@ describe('parseAppStorePage', () => {
         featuredIn: shelfOf(POGO_STORIES),
         editorsChoiceProductReviews: EDITORS_CHOICE_SHELF,
         accessibilityHeader: ACCESSIBILITY_SHELF,
-        similarItems: shelfOf([SIMILAR_LOCKUP]),
       }),
     );
 
@@ -198,18 +182,6 @@ describe('parseAppStorePage', () => {
       },
       accessibilityStatement:
         'The developer has not yet indicated which accessibility features this app supports. Learn More',
-      similarItems: [
-        {
-          adamId: '284035177',
-          title: 'Pandora: Personalized Music',
-          subtitle: 'Discover New Songs & Artists',
-          developer: 'Pandora Media, LLC',
-          rating: 4.8,
-          ratingCount: '11M',
-          iconTemplate:
-            'https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/65/db/6f/65db6f74-dce2-d273-4daf-8b897e21db40/Placeholder.mill/{w}x{h}{c}.{f}',
-        },
-      ],
     });
   });
 
@@ -277,7 +249,6 @@ describe('parseAppStorePage', () => {
       featuredStories: [],
       editorsChoice: null,
       accessibilityStatement: null,
-      similarItems: [],
     });
   });
 
@@ -497,14 +468,14 @@ describe('parseAppStorePage', () => {
     expect(extract.appEvents).toEqual([]);
     expect(extract.featuredStories).toHaveLength(1);
   });
+});
 
+describe('parseSimilarItems', () => {
   it('reads the captured similar shelf of a product page in its stored order', () => {
-    const extract = parseAppStorePage(SIMILAR_PAGE_HTML);
+    const items = parseSimilarItems(SIMILAR_PAGE_HTML);
 
-    expect(extract.similarItems.map((item) => item.adamId)).toEqual(
-      SIMILAR_SHELF_ADAM_IDS,
-    );
-    expect(extract.similarItems[0]).toEqual({
+    expect(items.map((item) => item.adamId)).toEqual(SIMILAR_SHELF_ADAM_IDS);
+    expect(items[0]).toEqual({
       adamId: '912390687',
       title: 'TREBEL Music - Download Songs',
       subtitle: 'Offline Music & AI Playlists',
@@ -517,19 +488,17 @@ describe('parseAppStorePage', () => {
   });
 
   it('reads the downloading shelf when the similar shelf is absent', () => {
-    const extract = parseAppStorePage(
+    const items = parseSimilarItems(
       pageOf({
         similarItemsDownloading: shelfOf([...SIMILAR_SHELF_LOCKUPS]),
       }),
     );
 
-    expect(extract.similarItems.map((item) => item.adamId)).toEqual(
-      SIMILAR_SHELF_ADAM_IDS,
-    );
+    expect(items.map((item) => item.adamId)).toEqual(SIMILAR_SHELF_ADAM_IDS);
   });
 
   it('prefers the similar shelf over its downloading twin', () => {
-    const extract = parseAppStorePage(
+    const items = parseSimilarItems(
       pageOf({
         similarItems: shelfOf([
           { $kind: 'Lockup', adamId: '1', title: 'Primary' },
@@ -540,11 +509,11 @@ describe('parseAppStorePage', () => {
       }),
     );
 
-    expect(extract.similarItems.map((item) => item.adamId)).toEqual(['1']);
+    expect(items.map((item) => item.adamId)).toEqual(['1']);
   });
 
   it('falls back to the downloading shelf when the similar shelf holds nothing usable', () => {
-    const extract = parseAppStorePage(
+    const items = parseSimilarItems(
       pageOf({
         similarItems: shelfOf([{ $kind: 'Lockup', title: 'No id' }]),
         similarItemsDownloading: shelfOf([
@@ -553,11 +522,11 @@ describe('parseAppStorePage', () => {
       }),
     );
 
-    expect(extract.similarItems.map((item) => item.adamId)).toEqual(['2']);
+    expect(items.map((item) => item.adamId)).toEqual(['2']);
   });
 
   it('answers no similar items when neither similar shelf is present', () => {
-    const extract = parseAppStorePage(
+    const items = parseSimilarItems(
       pageOf({
         product_media_phone_: CALM_MEDIA_SHELF,
         featuredIn: shelfOf(POGO_STORIES),
@@ -566,14 +535,11 @@ describe('parseAppStorePage', () => {
       }),
     );
 
-    expect(extract.similarItems).toEqual([]);
-    expect(extract.previewVideoUrls).toEqual([]);
-    expect(extract.featuredStories).toHaveLength(2);
-    expect(extract.editorsChoice).not.toBeNull();
+    expect(items).toEqual([]);
   });
 
   it('skips a similar item without an id or a title and keeps absent fields null', () => {
-    const extract = parseAppStorePage(
+    const items = parseSimilarItems(
       pageOf({
         similarItems: shelfOf([
           { $kind: 'Lockup', title: 'No id' },
@@ -597,7 +563,7 @@ describe('parseAppStorePage', () => {
       }),
     );
 
-    expect(extract.similarItems).toEqual([
+    expect(items).toEqual([
       {
         adamId: '2',
         title: 'Partial',
@@ -619,10 +585,23 @@ describe('parseAppStorePage', () => {
     ]);
   });
 
-  it('keeps the display string of a rating count unparsed', () => {
-    const extract = parseAppStorePage(SIMILAR_PAGE_HTML);
+  it('skips a similar item whose adamId is not numeric', () => {
+    const items = parseSimilarItems(
+      pageOf({
+        similarItems: shelfOf([
+          { $kind: 'Lockup', adamId: 'com.example.lockup', title: 'Bundle' },
+          { $kind: 'Lockup', adamId: '7', title: 'Numeric' },
+        ]),
+      }),
+    );
 
-    expect(extract.similarItems.map((item) => item.ratingCount)).toEqual([
+    expect(items.map((item) => item.adamId)).toEqual(['7']);
+  });
+
+  it('keeps the display string of a rating count unparsed', () => {
+    const items = parseSimilarItems(SIMILAR_PAGE_HTML);
+
+    expect(items.map((item) => item.ratingCount)).toEqual([
       '188K',
       '2.1M',
       '29K',

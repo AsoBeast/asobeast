@@ -22,8 +22,8 @@ import { lookupLanguage, pageLanguage } from './app-store-languages';
 import {
   AppStorePageExtract,
   PageSimilarItem,
-  parseAppStorePage,
   parseAppStorePageDocument,
+  parseSimilarItems,
 } from './app-store-page';
 import { MissingApp, StoreAppNotFoundError, StoreRequestError } from './errors';
 import { listedInIphoneSearch } from './iphone-search';
@@ -389,7 +389,7 @@ function listingOf(html: string): PageListing {
 }
 
 function similarOf(html: string): SearchItem[] {
-  return parseAppStorePage(html).similarItems.map(similarItemOf);
+  return parseSimilarItems(html).map(similarItemOf);
 }
 
 function similarItemOf(item: PageSimilarItem): SearchItem {

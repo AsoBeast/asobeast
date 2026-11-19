@@ -69,7 +69,6 @@ const SERVER_DATA_EXTRACT = {
   featuredStories: [],
   editorsChoice: null,
   accessibilityStatement: null,
-  similarItems: [],
 };
 
 describe('AppStoreProvider', () => {
@@ -254,7 +253,6 @@ describe('AppStoreProvider', () => {
       featuredStories: [],
       editorsChoice: null,
       accessibilityStatement: null,
-      similarItems: [],
     });
     expect(result.pageExtractUnavailable).toBe(false);
     expect(page).toHaveBeenCalledTimes(3);
@@ -296,7 +294,6 @@ describe('AppStoreProvider', () => {
       featuredStories: [],
       editorsChoice: null,
       accessibilityStatement: null,
-      similarItems: [],
     });
     expect(result.pageExtractUnavailable).toBe(false);
   });

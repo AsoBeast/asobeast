@@ -38,7 +38,6 @@ export interface AppStorePageExtract {
   featuredStories: PageFeaturedStory[];
   editorsChoice: PageEditorsChoice | null;
   accessibilityStatement: string | null;
-  similarItems: PageSimilarItem[];
 }
 
 const SERVER_DATA_SELECTOR = 'script#serialized-server-data';
@@ -46,6 +45,8 @@ const SERVER_DATA_SELECTOR = 'script#serialized-server-data';
 const PRODUCT_MEDIA_KEY = /^product_media_/;
 
 const STORY_ID = /\/story\/id(\d+)/;
+
+const NUMERIC_ADAM_ID = /^\d+$/;
 
 const SIMILAR_SHELF_KEY = 'similarItems';
 
@@ -59,6 +60,14 @@ export function parseAppStorePageDocument(
   document: cheerio.CheerioAPI,
 ): AppStorePageExtract {
   return readShelves(shelfMappingOf(document));
+}
+
+export function parseSimilarItems(html: string): PageSimilarItem[] {
+  const shelves = shelfMappingOf(cheerio.load(html));
+  const primary = similarLockupsOf(shelves[SIMILAR_SHELF_KEY]);
+  return primary.length > 0
+    ? primary
+    : similarLockupsOf(shelves[SIMILAR_DOWNLOADING_SHELF_KEY]);
 }
 
 function shelfMappingOf(document: cheerio.CheerioAPI): Record<string, unknown> {
@@ -100,7 +109,6 @@ function readShelves(shelves: Record<string, unknown>): AppStorePageExtract {
     featuredStories: featuredStories(shelves),
     editorsChoice: editorsChoice(shelves),
     accessibilityStatement: accessibilityStatement(shelves),
-    similarItems: similarItems(shelves),
   };
 }
 
@@ -197,18 +205,11 @@ function accessibilityStatement(
   return null;
 }
 
-function similarItems(shelves: Record<string, unknown>): PageSimilarItem[] {
-  const primary = similarLockupsOf(shelves[SIMILAR_SHELF_KEY]);
-  return primary.length > 0
-    ? primary
-    : similarLockupsOf(shelves[SIMILAR_DOWNLOADING_SHELF_KEY]);
-}
-
 function similarLockupsOf(shelf: unknown): PageSimilarItem[] {
   return itemsOf(shelf).flatMap((item) => {
     const adamId = nonEmptyString(item.adamId);
     const title = nonEmptyString(item.title);
-    if (adamId === null || title === null) {
+    if (adamId === null || !NUMERIC_ADAM_ID.test(adamId) || title === null) {
       return [];
     }
     return [
