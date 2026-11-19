@@ -518,6 +518,11 @@ export function invalidateWorkspaceDeletion(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: workspaceDeletionKey });
 }
 
+export function invalidateSupportAction(client: QueryClient): void {
+  void client.invalidateQueries({ queryKey: adminKeys.workspaces() });
+  void client.invalidateQueries({ queryKey: adminKeys.overview() });
+}
+
 export const storeConnectionsOptions = queryOptions({
   queryKey: storeConnectionKeys.all,
   queryFn: getStoreConnections,

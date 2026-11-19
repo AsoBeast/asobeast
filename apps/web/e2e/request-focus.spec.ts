@@ -7,6 +7,7 @@ import type {
   AppLocalizationItem,
   AppLocalizationsResult,
   CompetitorItem,
+  SupportWorkspaceDetail,
   TrackedKeywordItem,
   WebhookItem,
   WorkspaceTeam,
@@ -15,6 +16,7 @@ import { ALERT_EVENTS_COOKIE } from "./alert-feed-fixtures.mts";
 import { BUSY_LINE, answerBusy } from "./busy-answer.mts";
 import { CROWDED_COOKIE } from "./actions-fixtures.mts";
 import { holdRender } from "./chart-image.mts";
+import { settleAnimations } from "./dialog.mts";
 import { openEmbedded } from "./embedded-checkout.mts";
 import {
   APP_GP_DETAIL,
@@ -3084,3 +3086,119 @@ for (const control of SIGNED_OUT_CONTROLS) {
     },
   );
 }
+
+test.describe("support action confirmations keep focus", () => {
+  const SUPPORT_ACTIONS_UNDER_TEST = [
+    {
+      action: "suspend",
+      workspaceId: "ws_ana",
+      sheet: "Ana Apps",
+      opener: "Suspend",
+      confirm: "Suspend workspace",
+      pending: "Suspending…",
+      survivor: "Restore",
+      suspendedAfter: true,
+    },
+    {
+      action: "restore",
+      workspaceId: "ws_lapsed",
+      sheet: "Lapsed Studio",
+      opener: "Restore",
+      confirm: "Restore workspace",
+      pending: "Restoring…",
+      survivor: "Suspend",
+      suspendedAfter: false,
+    },
+  ] as const;
+
+  for (const row of SUPPORT_ACTIONS_UNDER_TEST) {
+    const opener = (page: Page) =>
+      page
+        .getByRole("dialog", { name: row.sheet })
+        .getByRole("button", { name: row.opener, exact: true });
+
+    for (const close of ["Escape", "Cancel"] as const) {
+      test(`closing the ${row.opener} confirmation with ${close} returns focus to ${row.opener}`, async ({
+        page,
+      }) => {
+        await page.goto(`/admin/workspaces?workspace=${row.workspaceId}`);
+        await pressFromKeyboard(opener(page));
+        const confirm = page.getByRole("alertdialog");
+        await settleAnimations(confirm);
+
+        if (close === "Escape") await page.keyboard.press("Escape");
+        else await confirm.getByRole("button", { name: "Cancel" }).click();
+
+        await expect(confirm).toHaveCount(0);
+        await expect(opener(page)).toBeFocused();
+      });
+    }
+
+    test(`${row.confirm} keeps focus while it runs and then hands it to ${row.survivor}`, async ({
+      page,
+    }) => {
+      let acted = false;
+      await page.route(
+        new RegExp(`/api/backend/admin/support/workspaces/${row.workspaceId}$`),
+        async (route) => {
+          if (!acted) return route.fallback();
+          const response = await route.fetch();
+          const detail = (await response.json()) as SupportWorkspaceDetail;
+          return route.fulfill({
+            response,
+            json: {
+              ...detail,
+              suspendedAt: row.suspendedAfter
+                ? "2026-11-19T10:00:00.000Z"
+                : null,
+              suspendedReason: row.suspendedAfter ? "Chargeback opened" : null,
+            },
+          });
+        },
+      );
+      let posts = 0;
+      const held = await holdRequest(
+        page,
+        new RegExp(
+          `/api/backend/admin/support/workspaces/${row.workspaceId}/${row.action}$`,
+        ),
+        "POST",
+        (route) => {
+          acted = true;
+          return route.fallback();
+        },
+      );
+      page.on("request", (request) => {
+        if (
+          request.method() === "POST" &&
+          request.url().endsWith(`/${row.action}`)
+        ) {
+          posts += 1;
+        }
+      });
+      await page.goto(`/admin/workspaces?workspace=${row.workspaceId}`);
+      await pressFromKeyboard(opener(page));
+      const confirm = page.getByRole("alertdialog");
+      await confirm.getByLabel("Reason").fill("Chargeback opened");
+      const send = confirm.getByRole("button", {
+        name: new RegExp(`^(${row.confirm}|${row.pending})$`),
+      });
+
+      await send.focus();
+      await page.keyboard.press("Enter");
+      await becameInert(send);
+      await expect(send).toBeFocused();
+      await page.keyboard.press("Enter");
+      await page.keyboard.press("Escape");
+      await expect(confirm).toBeVisible();
+      held.release();
+
+      await expect(
+        page
+          .getByRole("dialog", { name: row.sheet })
+          .getByRole("button", { name: row.survivor, exact: true }),
+      ).toBeFocused();
+      expect(posts).toBe(1);
+    });
+  }
+});

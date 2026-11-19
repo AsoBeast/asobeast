@@ -7,6 +7,8 @@ import type {
   AdminUserList,
   CapacityReport,
   ProxyPoolHealth,
+  SupportActionRequest,
+  SupportActionResult,
   SupportWorkspaceDetail,
   SupportWorkspaceSummary,
 } from "@asobeast/shared";
@@ -57,6 +59,31 @@ export function getSupportWorkspace(
   workspaceId: string,
 ): Promise<SupportWorkspaceDetail> {
   return apiFetch<SupportWorkspaceDetail>(supportWorkspacePath(workspaceId));
+}
+
+function postSupportAction(
+  workspaceId: string,
+  action: string,
+  request: SupportActionRequest,
+): Promise<SupportActionResult> {
+  return apiFetch<SupportActionResult>(
+    `${supportWorkspacePath(workspaceId)}/${action}`,
+    { method: "POST", body: JSON.stringify(request) },
+  );
+}
+
+export function suspendSupportWorkspace(
+  workspaceId: string,
+  request: SupportActionRequest,
+): Promise<SupportActionResult> {
+  return postSupportAction(workspaceId, "suspend", request);
+}
+
+export function restoreSupportWorkspace(
+  workspaceId: string,
+  request: SupportActionRequest,
+): Promise<SupportActionResult> {
+  return postSupportAction(workspaceId, "restore", request);
 }
 
 export function getCapacityReport(): Promise<CapacityReport> {

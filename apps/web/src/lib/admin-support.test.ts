@@ -2,15 +2,19 @@ import { describe, expect, it } from "vitest";
 import {
   SUPPORT_ACTIONS,
   SUPPORT_OUTCOMES,
+  SUPPORT_REASON_MAX_LENGTH,
   type OnDemandRules,
   type PlanLimits,
 } from "@asobeast/shared";
 import {
+  availableActions,
   limitRows,
   onDemandRows,
   queueLabel,
   supportActionLabel,
+  supportActionRequest,
   supportOutcomeLabel,
+  supportReasonReady,
   usageLine,
   usageRows,
 } from "./admin-support";
@@ -156,5 +160,54 @@ describe("queueLabel", () => {
     expect(queueLabel("appstore")).toBe("App Store");
     expect(queueLabel("gplay")).toBe("Google Play");
     expect(queueLabel("other")).toBe("other");
+  });
+});
+
+describe("supportReasonReady", () => {
+  it("is ready from eight characters, not counting spaces at the ends", () => {
+    expect(supportReasonReady("")).toBe(false);
+    expect(supportReasonReady("        ")).toBe(false);
+    expect(supportReasonReady("  seven!!  ")).toBe(false);
+    expect(supportReasonReady("  eight!!!  ")).toBe(true);
+    expect(supportReasonReady("a".repeat(SUPPORT_REASON_MAX_LENGTH))).toBe(
+      true,
+    );
+    expect(supportReasonReady("a".repeat(SUPPORT_REASON_MAX_LENGTH + 1))).toBe(
+      false,
+    );
+  });
+});
+
+describe("supportActionRequest", () => {
+  it("confirms and sends the reason without the spaces at its ends", () => {
+    expect(supportActionRequest(`  ${"a".repeat(200)}  `)).toEqual({
+      confirm: true,
+      reason: "a".repeat(200),
+    });
+  });
+});
+
+describe("availableActions", () => {
+  const ACTIVE = { operatorWorkspace: false, suspendedAt: null };
+  const SUSPENDED = {
+    operatorWorkspace: false,
+    suspendedAt: "2026-11-17T08:05:00.000Z",
+  };
+
+  it("offers suspend to an active workspace and restore to a suspended one", () => {
+    expect(availableActions(ACTIVE)).toEqual(["suspend"]);
+    expect(availableActions(SUSPENDED)).toEqual(["restore"]);
+  });
+
+  it("never offers to suspend the operator workspace", () => {
+    expect(availableActions({ ...ACTIVE, operatorWorkspace: true })).toEqual(
+      [],
+    );
+  });
+
+  it("offers to restore an operator workspace an older release suspended", () => {
+    expect(availableActions({ ...SUSPENDED, operatorWorkspace: true })).toEqual(
+      ["restore"],
+    );
   });
 });

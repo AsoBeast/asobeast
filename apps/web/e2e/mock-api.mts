@@ -385,6 +385,9 @@ import {
   normalizeReviewScores,
   RATING_DROP_DEFAULT_TENTHS,
   type Store,
+  SUPPORT_REASON_MAX_LENGTH,
+  SUPPORT_REASON_MIN_LENGTH,
+  type SupportActionResult,
   webhookChannelOf,
 } from "@asobeast/shared";
 import { SETUP_SESSION_COOKIE } from "./setup-session.mts";
@@ -1240,6 +1243,63 @@ function supportRoute(
   method: "GET" | "POST" = "GET",
 ): Route {
   return gatedRoute(method, pattern, reply, admitsSupport);
+}
+
+const OPERATOR_WORKSPACE_NOT_SUSPENDABLE =
+  "The operator workspace cannot be suspended, because the operator would lose the surfaces that restore it";
+
+const SUPPORT_ACTION_DETAILS: Record<string, string> = {
+  suspend: "every write and on-demand action is now refused",
+  restore: "the workspace may write again",
+};
+
+function supportActionRefusal(raw: string): Refusal | null {
+  let body: unknown;
+  try {
+    body = JSON.parse(raw || "{}");
+  } catch {
+    return new Refusal(400, "The request body is not valid JSON");
+  }
+  const { confirm, reason, ...extra } = (body ?? {}) as Record<string, unknown>;
+  if (Object.keys(extra).length > 0) {
+    return new Refusal(
+      400,
+      `property ${Object.keys(extra)[0]} should not exist`,
+    );
+  }
+  if (confirm !== true)
+    return new Refusal(400, "confirm must be equal to true");
+  if (
+    typeof reason !== "string" ||
+    reason.length < SUPPORT_REASON_MIN_LENGTH ||
+    reason.length > SUPPORT_REASON_MAX_LENGTH
+  ) {
+    return new Refusal(
+      400,
+      `reason must be longer than or equal to ${SUPPORT_REASON_MIN_LENGTH} and shorter than or equal to ${SUPPORT_REASON_MAX_LENGTH} characters`,
+    );
+  }
+  return null;
+}
+
+async function supportAction(
+  req: IncomingMessage,
+  [rawId, action]: string[],
+): Promise<SupportActionResult | Refusal> {
+  const refused = supportActionRefusal(await readBody(req));
+  if (refused) return refused;
+  const workspaceId = decodeURIComponent(rawId);
+  if (!SUPPORT_WORKSPACES.some((row) => row.workspaceId === workspaceId)) {
+    return new Refusal(404, "Resource not found");
+  }
+  if (action === "suspend" && workspaceId === "ws_default") {
+    return new Refusal(409, OPERATOR_WORKSPACE_NOT_SUSPENDABLE);
+  }
+  return {
+    action: action as SupportActionResult["action"],
+    workspaceId,
+    detail: SUPPORT_ACTION_DETAILS[action],
+  };
 }
 
 function splitValues(value: string | null): string[] {
@@ -2931,6 +2991,11 @@ const routes: Route[] = [
     (_req, _query, [workspaceId]) =>
       supportWorkspaceDetail(decodeURIComponent(workspaceId)) ??
       new Refusal(404, "Workspace not found"),
+  ),
+  supportRoute(
+    /^\/admin\/support\/workspaces\/([^/]+)\/(suspend|restore)$/,
+    (req, _query, params) => supportAction(req, params),
+    "POST",
   ),
   supportRoute(/^\/admin\/support\/users$/, (req, query) =>
     adminUserList(

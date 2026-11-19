@@ -1,11 +1,14 @@
-import type {
-  OnDemandAction,
-  OnDemandRules,
-  PlanLimit,
-  PlanLimits,
-  SupportAction,
-  SupportOutcome,
-  SupportWorkspaceSummary,
+import {
+  SUPPORT_REASON_MAX_LENGTH,
+  SUPPORT_REASON_MIN_LENGTH,
+  type OnDemandAction,
+  type OnDemandRules,
+  type PlanLimit,
+  type PlanLimits,
+  type SupportAction,
+  type SupportActionRequest,
+  type SupportOutcome,
+  type SupportWorkspaceSummary,
 } from "@asobeast/shared";
 import { formatNumber, formatPlanLimit } from "./format";
 
@@ -149,3 +152,62 @@ export function supportOutcomeLabel(outcome: SupportOutcome): string {
 export function queueLabel(queue: string): string {
   return QUEUE_LABELS[queue] ?? queue;
 }
+
+export function supportReasonReady(text: string): boolean {
+  const length = text.trim().length;
+  return (
+    length >= SUPPORT_REASON_MIN_LENGTH && length <= SUPPORT_REASON_MAX_LENGTH
+  );
+}
+
+export function supportActionRequest(text: string): SupportActionRequest {
+  return { confirm: true, reason: text.trim() };
+}
+
+export type WorkspaceAction = "suspend" | "restore";
+
+type ActionSubject = Pick<
+  SupportWorkspaceSummary,
+  "operatorWorkspace" | "suspendedAt"
+>;
+
+export function availableActions(workspace: ActionSubject): WorkspaceAction[] {
+  if (workspace.suspendedAt !== null) return ["restore"];
+  return workspace.operatorWorkspace ? [] : ["suspend"];
+}
+
+export interface ActionCopy {
+  open: string;
+  title: (name: string) => string;
+  body: (name: string) => string;
+  confirm: string;
+  pending: string;
+  done: (name: string, detail: string) => string;
+  variant: "destructive" | "default";
+  replacesOpener: boolean;
+}
+
+export const ACTION_COPY: Record<WorkspaceAction, ActionCopy> = {
+  suspend: {
+    open: "Suspend",
+    title: (name) => `Suspend ${name}?`,
+    body: (name) =>
+      `Every write and on demand action in ${name} is refused until you restore it. Every member of ${name} sees this reason on every page, so write it for them.`,
+    confirm: "Suspend workspace",
+    pending: "Suspending…",
+    done: (name) => `${name} is suspended.`,
+    variant: "destructive",
+    replacesOpener: true,
+  },
+  restore: {
+    open: "Restore",
+    title: (name) => `Restore ${name}?`,
+    body: (name) =>
+      `${name} may write again, and the suspension notice disappears for its members. The reason is kept in the access log.`,
+    confirm: "Restore workspace",
+    pending: "Restoring…",
+    done: (name) => `${name} may write again.`,
+    variant: "default",
+    replacesOpener: true,
+  },
+};

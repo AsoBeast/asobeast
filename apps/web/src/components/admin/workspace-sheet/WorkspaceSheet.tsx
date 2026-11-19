@@ -21,6 +21,7 @@ import { adminWorkspaceOptions } from "@/lib/queries";
 import { workspaceCloseTarget } from "./close-target";
 import { standingOf } from "./workspace-facts";
 import { WorkspaceAccessLog } from "./WorkspaceAccessLog";
+import { WorkspaceActions } from "./WorkspaceActions";
 import { WorkspaceChecks } from "./WorkspaceChecks";
 import { WorkspaceFacts } from "./WorkspaceFacts";
 import { WorkspaceFailedJobs } from "./WorkspaceFailedJobs";
@@ -101,6 +102,7 @@ function WorkspaceDetails({
         <WorkspaceChecks days={workspace.runHistory} />
         <WorkspaceFailedJobs jobs={workspace.failedJobs} />
         <WorkspaceAccessLog entries={workspace.recentAccess} />
+        <WorkspaceActions workspace={workspace} />
       </div>
     </>
   );
