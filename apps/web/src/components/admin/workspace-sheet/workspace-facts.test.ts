@@ -68,6 +68,22 @@ describe("workspaceFacts", () => {
     ).toContainEqual({ label: "Cancels on", value: "Dec 4, 2026" });
   });
 
+  it("never says a subscription that cancels at period end renews", () => {
+    const facts = workspaceFacts({
+      ...BASE,
+      subscriptionStatus: "active",
+      billingInterval: "month",
+      cancelAtPeriodEnd: true,
+      planExpiresAt: "2026-12-04T00:00:00.000Z",
+    });
+
+    expect(facts).toContainEqual({
+      label: "Subscription",
+      value: "active, billed monthly",
+    });
+    expect(facts).toContainEqual({ label: "Cancels on", value: "Dec 4, 2026" });
+  });
+
   it("names a stored plan that differs, a suspension and a pending deletion", () => {
     const facts = workspaceFacts({
       ...BASE,

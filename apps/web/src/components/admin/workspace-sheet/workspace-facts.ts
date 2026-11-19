@@ -17,9 +17,11 @@ function subscriptionLine(
   workspace: SupportWorkspaceSummary,
 ): string {
   const words = status.replaceAll("_", " ");
-  return workspace.billingInterval
-    ? `${words}, renews ${RENEWAL_CADENCE[workspace.billingInterval]}`
-    : words;
+  if (!workspace.billingInterval) return words;
+  const cadence = RENEWAL_CADENCE[workspace.billingInterval];
+  return workspace.cancelAtPeriodEnd
+    ? `${words}, billed ${cadence}`
+    : `${words}, renews ${cadence}`;
 }
 
 function deletionAskedBy(
