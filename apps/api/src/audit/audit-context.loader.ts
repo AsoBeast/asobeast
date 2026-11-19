@@ -115,9 +115,12 @@ export class AuditContextLoader {
     return readCaptionTexts(screenshots);
   }
 
-  private async featuring(appId: string): Promise<FeaturingReads | null> {
+  private async featuring(app: AuditApp): Promise<FeaturingReads | null> {
+    if (app.store !== Store.APP_STORE) {
+      return null;
+    }
     const row = await this.prisma.featuringSync.findFirst({
-      where: { appId },
+      where: { appId: app.id },
     });
     if (!row) {
       return null;
@@ -305,7 +308,7 @@ export class AuditContextLoader {
       this.keywordField(app),
       this.visibility(appId),
       this.screenshotCaptions(app),
-      this.featuring(appId),
+      this.featuring(app),
     ]);
 
     const active = tracked.filter(

@@ -556,7 +556,7 @@ describe('AuditController (e2e)', () => {
     ]);
     expect(result.readiness?.items[2]).toMatchObject({
       label: 'Nominations',
-      detail: 'Submitted 44 days before the publish window.',
+      detail: 'Submitted 45 days before the publish window.',
       link: null,
     });
     expect(result.readiness?.items[3]).toMatchObject({

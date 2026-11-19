@@ -144,10 +144,10 @@ const leadTimeOf = (reads: FeaturingReads): number | null => {
   if (reads.submittedDate === null || reads.publishStartDate === null) {
     return null;
   }
-  const days = Math.floor(
+  const days = Math.ceil(
     (reads.publishStartDate.getTime() - reads.submittedDate.getTime()) / DAY_MS,
   );
-  return days >= 0 ? days : null;
+  return days >= 1 ? days : null;
 };
 
 const nominationsRow = (

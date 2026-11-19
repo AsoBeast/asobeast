@@ -286,6 +286,18 @@ describe('AuditContextLoader.load', () => {
   });
 });
 
+describe('AuditContextLoader featuring reads', () => {
+  it('reads the stored featuring row only for an app store app', async () => {
+    const appStore = buildLoader();
+    await appStore.load('app-1');
+    expect(appStore.prisma.featuringSync.findFirst).toHaveBeenCalledTimes(1);
+
+    const play = buildLoader({ store: 'GOOGLE_PLAY' });
+    await play.load('app-1');
+    expect(play.prisma.featuringSync.findFirst).not.toHaveBeenCalled();
+  });
+});
+
 describe('AuditContextLoader creative staleness', () => {
   const ANALYZED_WITH = 'gpt-5.6-luna';
 

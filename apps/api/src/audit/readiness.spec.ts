@@ -473,7 +473,26 @@ describe('buildReadiness', () => {
 
     expect(itemOf(readiness, 'nominations')).toMatchObject({
       status: 'pass',
-      detail: 'Submitted 44 days before the publish window.',
+      detail: 'Submitted 45 days before the publish window.',
+    });
+  });
+
+  it('rounds a nomination filed inside the last day up to one day', () => {
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: [],
+      extract: extractWith(),
+      featuring: readsWith({
+        submittedNominations: 1,
+        submittedDate: new Date('2026-11-18T18:00:00.000Z'),
+        publishStartDate: new Date('2026-11-19T00:00:00.000Z'),
+      }),
+      now: NOW,
+    });
+
+    expect(itemOf(readiness, 'nominations')).toMatchObject({
+      status: 'pass',
+      detail: 'Submitted 1 day before the publish window.',
     });
   });
 
@@ -492,7 +511,7 @@ describe('buildReadiness', () => {
     });
   });
 
-  it('fails to nominate when no submitted nomination exists', () => {
+  it('asks for work when no submitted nomination exists', () => {
     const readiness = buildReadiness({
       store: Store.APP_STORE,
       factors: [],
@@ -564,6 +583,8 @@ describe('buildReadiness', () => {
       featuring: readsWith({
         roleRefused: true,
         nominationsError: 'The App Store Connect key needs another role.',
+        promoFilled: 21,
+        promoTotal: 21,
       }),
       now: NOW,
     });
@@ -573,7 +594,8 @@ describe('buildReadiness', () => {
       detail: 'The App Store Connect key needs another role.',
     });
     expect(itemOf(readiness, 'promotional-text')).toMatchObject({
-      status: 'unmeasurable',
+      status: 'pass',
+      detail: 'Promotional text is set for all 21 localizations.',
     });
   });
 
