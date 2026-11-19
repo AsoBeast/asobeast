@@ -15,6 +15,7 @@ import {
   supportActionLabel,
   supportActionRequest,
   supportOutcomeLabel,
+  supportReasonLength,
   supportReasonReady,
   usageLine,
   usageRows,
@@ -170,6 +171,25 @@ describe("supportReasonReady", () => {
       true,
     );
     expect(supportReasonReady("a".repeat(SUPPORT_REASON_MAX_LENGTH + 1))).toBe(
+      false,
+    );
+  });
+});
+
+describe("supportReasonLength", () => {
+  it("counts a reason the way the API validates it", () => {
+    expect(supportReasonLength("Chargeback")).toBe(10);
+    expect(supportReasonLength("😀😀😀😀")).toBe(4);
+    expect(supportReasonLength("❤️❤️")).toBe(2);
+  });
+
+  it("keeps a reason of wide characters unavailable until eight of them", () => {
+    expect(supportReasonReady("😀".repeat(7))).toBe(false);
+    expect(supportReasonReady("😀".repeat(8))).toBe(true);
+    expect(supportReasonReady("😀".repeat(SUPPORT_REASON_MAX_LENGTH))).toBe(
+      true,
+    );
+    expect(supportReasonReady("😀".repeat(SUPPORT_REASON_MAX_LENGTH + 1))).toBe(
       false,
     );
   });

@@ -29,6 +29,7 @@ import {
   ACTION_COPY,
   focusAfter,
   supportActionRequest,
+  supportReasonLength,
   supportReasonReady,
   type WorkspaceAction,
 } from "@/lib/admin-support";
@@ -147,7 +148,7 @@ export function SupportActionDialog({
           >
             <span>{REASON_HINT}</span>
             <span className="numeric shrink-0">
-              {`${reason.length} of ${SUPPORT_REASON_MAX_LENGTH}`}
+              {`${supportReasonLength(reason)} of ${SUPPORT_REASON_MAX_LENGTH}`}
             </span>
           </div>
         </div>

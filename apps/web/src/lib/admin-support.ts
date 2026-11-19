@@ -150,8 +150,18 @@ export function queueLabel(queue: string): string {
   return QUEUE_LABELS[queue] ?? queue;
 }
 
+const SURROGATE_PAIR = /[\uD800-\uDBFF][\uDC00-\uDFFF]/g;
+
+const PRESENTATION_SEQUENCE = /[^\uFE0F\uFE0E][\uFE0F\uFE0E]/g;
+
+export function supportReasonLength(text: string): number {
+  const pairs = text.match(SURROGATE_PAIR)?.length ?? 0;
+  const sequences = text.match(PRESENTATION_SEQUENCE)?.length ?? 0;
+  return text.length - pairs - sequences;
+}
+
 export function supportReasonReady(text: string): boolean {
-  const length = text.trim().length;
+  const length = supportReasonLength(text.trim());
   return (
     length >= SUPPORT_REASON_MIN_LENGTH && length <= SUPPORT_REASON_MAX_LENGTH
   );
