@@ -7,6 +7,7 @@ import {
   type SupportAction,
   type SupportOutcome,
 } from '@asobeast/shared';
+import { scrubText } from '../common/logging/log-redaction';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -43,7 +44,7 @@ export class SupportAudit {
       await this.settle(id, 'succeeded', attempt.describe?.(result) ?? null);
       return result;
     } catch (error) {
-      await this.settle(id, 'failed', messageOf(error));
+      await this.settle(id, 'failed', scrubText(messageOf(error), []));
       throw error;
     }
   }
