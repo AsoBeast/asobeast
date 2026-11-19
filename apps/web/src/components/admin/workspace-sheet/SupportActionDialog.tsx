@@ -28,6 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ACTION_COPY,
   focusAfter,
+  focusAfterConflict,
   supportActionRequest,
   supportReasonLength,
   supportReasonReady,
@@ -35,6 +36,7 @@ import {
 } from "@/lib/admin-support";
 import {
   apiErrorMessage,
+  isConflict,
   isNotFound,
   reconcileSupportWorkspace,
   restoreSupportWorkspace,
@@ -101,6 +103,12 @@ export function SupportActionDialog({
     },
     onError: (error) => {
       toast.error(apiErrorMessage(error, "Could not finish. Try again."));
+      if (isConflict(error)) {
+        const current = focusAfterConflict(action, workspace, { billing });
+        if (current) armFocusHandoff(focusKeyOf(current));
+        settle();
+        return;
+      }
       if (!isNotFound(error)) return;
       armFocusHandoff(WORKSPACE_GONE_FOCUS_KEY);
       settle();

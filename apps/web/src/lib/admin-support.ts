@@ -239,6 +239,15 @@ export function focusAfter(
   return next.includes(replacement) ? replacement : (next[0] ?? null);
 }
 
+export function focusAfterConflict(
+  action: WorkspaceAction,
+  workspace: ActionSubject,
+  options: { billing: boolean },
+): WorkspaceAction | null {
+  const stateFound = action === "run-daily" ? "suspend" : action;
+  return focusAfter(stateFound, workspace, options);
+}
+
 export function dailyRunDone(name: string, detail: string): string {
   const counts = detail.match(/\d+/g) ?? [];
   const nothingQueued =

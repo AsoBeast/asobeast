@@ -48,8 +48,12 @@ export function apiErrorMessage(error: unknown, fallback: string): string {
   return error instanceof ApiError ? error.envelope.message : fallback;
 }
 
-export const isNotFound = (error: unknown): boolean =>
-  error instanceof ApiError && error.envelope.statusCode === 404;
+const answered = (error: unknown, statusCode: number): boolean =>
+  error instanceof ApiError && error.envelope.statusCode === statusCode;
+
+export const isNotFound = (error: unknown): boolean => answered(error, 404);
+
+export const isConflict = (error: unknown): boolean => answered(error, 409);
 
 function isEnvelope(body: unknown): body is ApiErrorEnvelope {
   if (typeof body !== "object" || body === null || Array.isArray(body)) {

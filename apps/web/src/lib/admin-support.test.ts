@@ -10,6 +10,7 @@ import {
   availableActions,
   dailyRunDone,
   focusAfter,
+  focusAfterConflict,
   onDemandRows,
   queueLabel,
   supportActionLabel,
@@ -274,6 +275,35 @@ describe("focusAfter", () => {
   it("hands nothing on when the opener stays", () => {
     expect(focusAfter("run-daily", ACTIVE, { billing: true })).toBeNull();
     expect(focusAfter("reconcile", SUSPENDED, { billing: true })).toBeNull();
+  });
+});
+
+describe("focusAfterConflict", () => {
+  const ACTIVE = { operatorWorkspace: false, suspendedAt: null };
+  const SUSPENDED = {
+    operatorWorkspace: false,
+    suspendedAt: "2026-11-17T08:05:00.000Z",
+  };
+
+  it("hands focus to Restore when a suspension made elsewhere refused the action", () => {
+    expect(focusAfterConflict("suspend", ACTIVE, { billing: true })).toBe(
+      "restore",
+    );
+    expect(focusAfterConflict("run-daily", ACTIVE, { billing: true })).toBe(
+      "restore",
+    );
+  });
+
+  it("hands focus to Suspend when a restore made elsewhere refused the action", () => {
+    expect(focusAfterConflict("restore", SUSPENDED, { billing: true })).toBe(
+      "suspend",
+    );
+  });
+
+  it("hands nothing on when the conflict leaves the opener in place", () => {
+    expect(
+      focusAfterConflict("reconcile", ACTIVE, { billing: true }),
+    ).toBeNull();
   });
 });
 

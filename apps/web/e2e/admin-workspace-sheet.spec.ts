@@ -293,7 +293,12 @@ async function openAction(page: Page, sheetName: string, opener: string) {
   return sheet;
 }
 
-async function answerSuspended(page: Page, workspaceId: string) {
+async function suspendedAfter(
+  page: Page,
+  workspaceId: string,
+  action: string,
+  answer: (route: Route) => Promise<void>,
+) {
   let suspended = false;
   await page.route(
     `**/api/backend/admin/support/workspaces/${workspaceId}`,
@@ -311,11 +316,14 @@ async function answerSuspended(page: Page, workspaceId: string) {
       });
     },
   );
-  await page.route(ACTION(workspaceId, "suspend"), (route) => {
+  await page.route(ACTION(workspaceId, action), (route) => {
     suspended = true;
-    return route.fallback();
+    return answer(route);
   });
 }
+
+const answerSuspended = (page: Page, workspaceId: string) =>
+  suspendedAfter(page, workspaceId, "suspend", (route) => route.fallback());
 
 test.describe("suspend and restore", () => {
   test("suspends with a reason the customer will see", async ({ page }) => {
@@ -411,7 +419,7 @@ test.describe("suspend and restore", () => {
   }) => {
     await page.route(
       ACTION("ws_ana", "suspend"),
-      refuse(409, "Refused for the test"),
+      refuse(503, "Refused for the test"),
     );
     await page.goto("/admin/workspaces?workspace=ws_ana");
     await openAction(page, "Ana Apps", "Suspend");
@@ -425,6 +433,63 @@ test.describe("suspend and restore", () => {
     await expect(page.getByText("Refused for the test")).toBeVisible();
     await expect(confirm).toBeVisible();
     await expect(confirm.getByLabel("Reason")).toHaveValue("Chargeback opened");
+  });
+
+  test("a suspension made elsewhere meanwhile shows it and hands focus to Restore", async ({
+    page,
+  }) => {
+    await suspendedAfter(
+      page,
+      "ws_ana",
+      "suspend",
+      refuse(409, "The workspace is already suspended"),
+    );
+    await page.goto("/admin/workspaces?workspace=ws_ana");
+    const sheet = await openAction(page, "Ana Apps", "Suspend");
+
+    const confirm = page.getByRole("alertdialog", {
+      name: "Suspend Ana Apps?",
+    });
+    await confirm.getByLabel("Reason").fill("Chargeback opened");
+    await confirm.getByRole("button", { name: "Suspend workspace" }).click();
+
+    await expect(
+      page.getByText("The workspace is already suspended"),
+    ).toBeVisible();
+    await expect(confirm).toHaveCount(0);
+    await expect(
+      sheet.getByRole("button", { name: "Restore", exact: true }),
+    ).toBeFocused();
+  });
+
+  test("a daily run refused for a suspension made elsewhere hands focus to Restore", async ({
+    page,
+  }) => {
+    await suspendedAfter(
+      page,
+      "ws_ana",
+      "run-daily",
+      refuse(409, "A suspended workspace is not run. Restore it first"),
+    );
+    await page.goto("/admin/workspaces?workspace=ws_ana");
+    const sheet = await openAction(page, "Ana Apps", "Run daily");
+
+    const confirm = page.getByRole("alertdialog", {
+      name: "Start a daily run for Ana Apps?",
+    });
+    await confirm.getByLabel("Reason").fill("Customer asked for fresh ranks");
+    await confirm.getByRole("button", { name: "Start daily run" }).click();
+
+    await expect(
+      page.getByText("A suspended workspace is not run. Restore it first"),
+    ).toBeVisible();
+    await expect(confirm).toHaveCount(0);
+    await expect(
+      sheet.getByRole("button", { name: "Run daily", exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      sheet.getByRole("button", { name: "Restore", exact: true }),
+    ).toBeFocused();
   });
 
   test("a workspace deleted meanwhile says so and the details follow", async ({
