@@ -211,4 +211,4 @@ Pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first for the
 
 ## License
 
-This repository's source code is available under the [AGPL-3.0 license](LICENSE).
+This repository's source code is available under the [AGPL-3.0-only license](LICENSE). The license grants no trademark rights, and [TRADEMARKS.md](TRADEMARKS.md) says how the AsoBeast name and logo may be used.

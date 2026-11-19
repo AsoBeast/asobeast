@@ -135,6 +135,8 @@ A remote store layout change should be contained to one file under `apps/api/src
 
 asobeast is licensed under [AGPL-3.0-only](LICENSE), declared as `AGPL-3.0-only` in every package manifest so that automated scanners read the same answer the repository gives.
 
+The licence grants no rights in the AsoBeast name and logo; [TRADEMARKS.md](TRADEMARKS.md) says how they may be used.
+
 **There is no contributor licence agreement, and there will not be one.** Opening a pull request licenses your contribution under AGPL-3.0-only, and nothing more is asked of you. No copyright is assigned, and no separate signature is collected.
 
 This is a deliberate choice with a real cost, so the cost is written down rather than discovered later:
