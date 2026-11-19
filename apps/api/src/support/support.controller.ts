@@ -16,6 +16,10 @@ import { BillingReconciler } from '../billing/billing-reconciler.service';
 import { BillingWebhookService } from '../billing/billing-webhook.service';
 import { SupportAudit } from './support-audit.service';
 import { SupportActionDto } from './dto/support-action.dto';
+import {
+  BillingEventParamDto,
+  SupportWorkspaceParamDto,
+} from './dto/support-workspace-param.dto';
 import { SupportDailyRun } from './support-daily-run.service';
 import { SupportService } from './support.service';
 
@@ -49,7 +53,7 @@ export class SupportController {
   @ApiOperation({ summary: 'Operational detail for one workspace' })
   detail(
     @CurrentUser() user: User,
-    @Param('workspaceId') workspaceId: string,
+    @Param() { workspaceId }: SupportWorkspaceParamDto,
   ): Promise<SupportWorkspaceDetail> {
     requirePlatformOperator(user, SUPPORT_NOT_FOUND);
     return this.audit.attempt({
@@ -67,7 +71,7 @@ export class SupportController {
   })
   reconcile(
     @CurrentUser() user: User,
-    @Param('workspaceId') workspaceId: string,
+    @Param() { workspaceId }: SupportWorkspaceParamDto,
     @Body() dto: SupportActionDto,
   ): Promise<SupportActionResult> {
     return this.apply(user, workspaceId, 'reconcile', dto, async () => {
@@ -82,8 +86,7 @@ export class SupportController {
   })
   replayBillingEvent(
     @CurrentUser() user: User,
-    @Param('workspaceId') workspaceId: string,
-    @Param('eventId') eventId: string,
+    @Param() { workspaceId, eventId }: BillingEventParamDto,
     @Body() dto: SupportActionDto,
   ): Promise<SupportActionResult> {
     return this.apply(user, workspaceId, 'replay', dto, async () => {
@@ -96,7 +99,7 @@ export class SupportController {
   @ApiOperation({ summary: 'Suspend a workspace' })
   suspend(
     @CurrentUser() user: User,
-    @Param('workspaceId') workspaceId: string,
+    @Param() { workspaceId }: SupportWorkspaceParamDto,
     @Body() dto: SupportActionDto,
   ): Promise<SupportActionResult> {
     return this.apply(user, workspaceId, 'suspend', dto, async () => {
@@ -109,7 +112,7 @@ export class SupportController {
   @ApiOperation({ summary: 'Restore a suspended workspace' })
   restore(
     @CurrentUser() user: User,
-    @Param('workspaceId') workspaceId: string,
+    @Param() { workspaceId }: SupportWorkspaceParamDto,
     @Body() dto: SupportActionDto,
   ): Promise<SupportActionResult> {
     return this.apply(user, workspaceId, 'restore', dto, async () => {
@@ -122,7 +125,7 @@ export class SupportController {
   @ApiOperation({ summary: 'Queue the daily run for one workspace' })
   runDaily(
     @CurrentUser() user: User,
-    @Param('workspaceId') workspaceId: string,
+    @Param() { workspaceId }: SupportWorkspaceParamDto,
     @Body() dto: SupportActionDto,
   ): Promise<SupportActionResult> {
     return this.apply(user, workspaceId, 'run-daily', dto, async () => {

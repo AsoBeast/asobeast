@@ -16,6 +16,8 @@ export type SupportAction = (typeof SUPPORT_ACTIONS)[number];
 
 export const ALL_WORKSPACES = 'all';
 
+export const WORKSPACE_ID_MAX_LENGTH = 64;
+
 export const SUPPORT_OUTCOMES = ['attempted', 'succeeded', 'failed'] as const;
 
 export type SupportOutcome = (typeof SUPPORT_OUTCOMES)[number];

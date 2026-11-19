@@ -7,6 +7,7 @@ import {
   SupportActionResult,
   SupportWorkspaceDetail,
   SupportWorkspaceSummary,
+  WORKSPACE_ID_MAX_LENGTH,
 } from '@asobeast/shared';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -343,6 +344,29 @@ describe('Support tooling (e2e)', () => {
 
     it('answers 404 to a restore of a workspace that does not exist', async () => {
       await act('restore', 'state check reason', 'ws_missing').expect(404);
+    });
+  });
+
+  describe('the request it accepts', () => {
+    const tooLong = 'w'.repeat(WORKSPACE_ID_MAX_LENGTH + 1);
+
+    afterEach(() =>
+      prisma.workspace.update({
+        where: { id: OTHER_WORKSPACE },
+        data: { suspendedAt: null, suspendedReason: null },
+      }),
+    );
+
+    it('refuses a workspace id longer than any workspace id and records nothing', async () => {
+      await owner.get(`${SUPPORT}/${tooLong}`).expect(400);
+      await owner
+        .post(`${SUPPORT}/${tooLong}/suspend`)
+        .send({ confirm: true, reason: 'an id nobody holds' })
+        .expect(400);
+
+      await expect(
+        prisma.supportAccess.count({ where: { workspaceId: tooLong } }),
+      ).resolves.toBe(0);
     });
   });
 
