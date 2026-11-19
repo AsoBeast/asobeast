@@ -133,7 +133,7 @@ describe('AuditController (e2e)', () => {
                 kind: 'SPECIAL EVENT',
                 badge: 'happening',
                 startsAt: '2026-11-14T15:00:00.000Z',
-                endsAt: '2026-11-16T04:00:00.000Z',
+                endsAt: '2999-01-01T00:00:00.000Z',
               },
             ],
             featuredStories: [

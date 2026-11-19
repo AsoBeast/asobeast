@@ -322,7 +322,7 @@ describe('buildReadiness', () => {
     });
   });
 
-  it('counts an event that has ended while the extract is the latest read', () => {
+  it('drops an event that has ended whatever read answered it', () => {
     const readiness = buildReadiness({
       store: Store.APP_STORE,
       factors: [],
@@ -343,8 +343,8 @@ describe('buildReadiness', () => {
     });
 
     expect(itemOf(readiness, 'in-app-events')).toMatchObject({
-      status: 'pass',
-      detail: 'The store page lists 1 in-app event.',
+      status: 'fail',
+      detail: 'No in-app event is on the store page.',
     });
   });
 

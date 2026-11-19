@@ -111,13 +111,11 @@ const notMeasuredWith = (
 });
 
 const listedEvents = (extract: AuditExtract, now: Date): PageAppEvent[] =>
-  extract.fallback
-    ? extract.facts.appEvents.filter(
-        (event) =>
-          event.endsAt === null ||
-          new Date(event.endsAt).getTime() >= now.getTime(),
-      )
-    : extract.facts.appEvents;
+  extract.facts.appEvents.filter(
+    (event) =>
+      event.endsAt === null ||
+      new Date(event.endsAt).getTime() >= now.getTime(),
+  );
 
 const eventsRow = (extract: AuditExtract | null, now: Date): ReadinessItem => {
   if (extract === null) {
