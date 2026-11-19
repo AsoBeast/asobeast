@@ -130,7 +130,7 @@ describe('App import capacity (e2e)', () => {
   it('keeps the charge when queueing fails after the listing was stored', async () => {
     await spendImportsToLastOne();
     jest
-      .spyOn(harness.app.get(KeywordsService), 'syncFromSnapshot')
+      .spyOn(harness.app.get(KeywordsService), 'trackFromSnapshot')
       .mockRejectedValueOnce(new RedisUnavailableError(5));
 
     await importApp().expect(503);
