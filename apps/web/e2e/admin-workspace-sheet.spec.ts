@@ -1,9 +1,15 @@
 import type { Page, Route } from "@playwright/test";
 import type { SupportWorkspaceDetail } from "@asobeast/shared";
-import { ANA_LONG_FAILURE, SUSPEND_REASON } from "./admin-fixtures.mts";
+import {
+  ANA_CHECK_DAYS,
+  ANA_LONG_FAILURE,
+  ANA_UNCHECKED_DAY,
+  SUSPEND_REASON,
+} from "./admin-fixtures.mts";
 import { CLAIM_WINDOW_MS } from "../src/lib/focus-handoff";
+import { formatDayMonth } from "../src/lib/format";
 import { settleAnimations } from "./dialog.mts";
-import { errorEnvelope } from "./fixtures.mts";
+import { errorEnvelope, utcDaysAgo } from "./fixtures.mts";
 import { holdRequest, pressFromKeyboard } from "./held-request.mts";
 import { layoutBox } from "./layout-box.mts";
 import { seedCookies } from "./routes.mts";
@@ -216,6 +222,15 @@ test.describe("what a workspace ran and who looked", () => {
       .getByRole("dialog", { name: "Ana Apps" })
       .getByRole("table", { name: "Keyword checks" });
     await expect(checks.getByRole("row")).toHaveCount(7);
+    await expect(checks.locator("tbody tr td:first-child")).toHaveText(
+      ANA_CHECK_DAYS.map((daysAgo) => formatDayMonth(utcDaysAgo(daysAgo))),
+    );
+    await expect(
+      checks.getByRole("cell", {
+        name: formatDayMonth(utcDaysAgo(ANA_UNCHECKED_DAY)),
+        exact: true,
+      }),
+    ).toHaveCount(0);
     await expect(
       checks.getByRole("row").nth(3).getByRole("cell").nth(2),
     ).toHaveText("6");

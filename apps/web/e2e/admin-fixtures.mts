@@ -557,7 +557,11 @@ const CURRENT_VIEW: SupportAccessEntry = {
 
 export const SUSPEND_REASON = "Chargeback opened on the last invoice";
 
-const ANA_RUN_HISTORY: SupportRunDay[] = [0, 1, 2, 3, 5, 6].map((daysAgo) => ({
+export const ANA_CHECK_DAYS = [0, 1, 2, 3, 5, 6];
+
+export const ANA_UNCHECKED_DAY = 4;
+
+const ANA_RUN_HISTORY: SupportRunDay[] = ANA_CHECK_DAYS.map((daysAgo) => ({
   date: utcDaysAgo(daysAgo),
   captured: 40,
   unresolved: daysAgo === 2 ? 6 : 0,
