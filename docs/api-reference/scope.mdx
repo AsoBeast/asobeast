@@ -1,0 +1,63 @@
+---
+title: What the API is for
+sidebarTitle: Scope
+description: "The asobeast API tracks the apps you import and their competitors over time and reads what asobeast collected. It is not a bulk lookup of a store."
+icon: compass
+keywords: ["API scope","bulk lookup","import","app slots","requests","app record","Retry-After","Google Play","App Store"]
+---
+
+The asobeast API tracks the apps you import, and their competitors, over time, and reads back what asobeast collected about them. It is not a way to look up apps in a store in bulk. Read this page before you design a client around it.
+
+## What the API is for
+
+The API is the same one the dashboard uses, so it does what the dashboard does. You import an app, asobeast collects its data every day, and the API reads what it collected:
+
+- Keyword rankings and keyword metrics, in [Read rankings and SERPs](/guides/read-rankings) and [Track keywords](/guides/track-keywords).
+- Listings and the changes between them, in [Watch listing changes](/guides/listing-changes).
+- Reviews and ratings, in [Sync reviews, reply to them and mine keyword ideas](/guides/reviews).
+- Category ranks and top charts, in [Follow category ranks](/guides/category-ranks) and [Read top charts](/guides/top-charts).
+- Competitors and the actions asobeast recommends, in [Track competitors](/guides/competitors) and [Work the Action Center](/guides/action-center).
+
+All of it is history. A tracked app builds up days of positions, scores and listings, and that history is what the API serves.
+
+## What it is not
+
+It is not a bulk store lookup. No route takes a list of store ids and answers with their listings.
+
+- **An app is readable only after you import it.** `POST /apps` takes a store URL, fetches the listing once and starts tracking it. Until then, there is no app id to read. See [Import an app](/guides/import-an-app).
+- **An import takes an app slot and one of the day's imports.** The slot stays taken for as long as the app is tracked. The import allowance resets every day.
+- **Tracking means daily collection.** asobeast reads each tracked app from the store on its own schedule and answers your request from what it stored. A read is not a request to the store, and `capturedAt` on the listing says when the store was last asked.
+- **The routes that do ask a store on the spot are limited separately.** Refreshing a listing and searching a store by name each spend a store allowance of their own, and they exist to help you find and update what you track, not to list a store. See [Three request classes](/api-reference/rate-limits#three-request-classes).
+
+The numbers for each plan are in [What each plan allows](/api-reference/rate-limits#what-each-plan-allows) and [Pricing](/legal/pricing#plans). A self hosted instance sets none of these plan limits; see [Self hosted instances are unlimited](/api-reference/rate-limits#self-hosted-instances-are-unlimited).
+
+## Requests are not apps
+
+Two different things are counted, and neither tells you the other.
+
+| Allowance | What it counts | Where it is set |
+| --- | --- | --- |
+| Requests | How often you call the API, per minute and per day | [What each plan allows](/api-reference/rate-limits#what-each-plan-allows) |
+| Apps | How many apps the workspace tracks at once, and how many it may import in a day | The apps row of [Pricing](/legal/pricing#plans), and the app imports row of [What each plan allows](/api-reference/rate-limits#what-each-plan-allows) |
+
+A daily request allowance is not a number of apps. Reading a stored app again costs a request each time and never a slot, so a large request allowance buys many reads of the apps you track, not a longer list of them. To read more apps, you need more app slots.
+
+## Importing many apps
+
+Send imports one at a time and wait for each answer before you send the next. Importing an app the workspace already tracks answers with the stored app and spends nothing, so repeating an import after a timeout is safe. See [Importing twice costs nothing extra](/guides/import-an-app#importing-twice-costs-nothing-extra).
+
+Every import also queues store work behind it, such as the first rank checks and scores, and a server that is busy with that work can have no store capacity free for a moment. It then answers `503` with a `Retry-After` header and asks nothing of the store. Wait that many seconds and send the same import again. See [Status codes](/api-reference/errors#status-codes).
+
+A `429` is a different answer: an allowance has closed, and the envelope names which. A `403` with a `quota` object means every app slot is taken. See [A rate limit is not a quota](/api-reference/rate-limits#a-rate-limit-is-not-a-quota).
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Rate limits and quotas" icon="gauge" href="/api-reference/rate-limits">
+    What a metered instance allows and what a 429 means.
+  </Card>
+
+  <Card title="Import an app" icon="download" href="/guides/import-an-app">
+    What an import does and what it costs.
+  </Card>
+</CardGroup>
