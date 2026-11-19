@@ -94,6 +94,9 @@ function harness(
       findMany: jest.fn(() => Promise.resolve([{ appId: 'app_1' }])),
       deleteMany: jest.fn(() => Promise.resolve({ count: 1 })),
     },
+    featuringSync: {
+      deleteMany: jest.fn(() => Promise.resolve({ count: 1 })),
+    },
     storeConnection: {
       deleteMany: jest.fn(({ where }: { where: { store: string } }) => {
         const kept = rows.filter((row) => row.store !== where.store);
@@ -806,6 +809,15 @@ describe('StoreConnectionService', () => {
 
     expect(tx.keywordFieldSync.findMany).toHaveBeenCalled();
     expect(tx.keywordFieldSync.deleteMany).toHaveBeenCalled();
+    expect(tx.featuringSync.deleteMany).toHaveBeenCalled();
+  });
+
+  it('keeps the featuring reads when Google Play disconnects', async () => {
+    const { service, tx } = harness();
+
+    await service.disconnect('GOOGLE_PLAY');
+
+    expect(tx.featuringSync.deleteMany).not.toHaveBeenCalled();
   });
 
   it('keeps the imported keyword fields when Google Play disconnects', async () => {

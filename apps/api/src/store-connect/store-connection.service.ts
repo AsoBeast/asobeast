@@ -189,6 +189,7 @@ export class StoreConnectionService {
           await serializeKeywordField(tx, appId);
         }
         await tx.keywordFieldSync.deleteMany({});
+        await tx.featuringSync.deleteMany({});
       });
     }
     await this.prisma.storeConnection.deleteMany({ where: { store } });

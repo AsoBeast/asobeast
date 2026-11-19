@@ -302,6 +302,15 @@ describe('Store connections (e2e)', () => {
         processingDate: new Date('2026-10-02T00:00:00.000Z'),
       },
     });
+    await harness.prisma.featuringSync.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        appId: app.id,
+        submittedNominations: 1,
+        promoFilled: 2,
+        promoTotal: 3,
+      },
+    });
 
     await owner.delete(PATH).expect(204);
 
@@ -312,6 +321,7 @@ describe('Store connections (e2e)', () => {
     });
     await expect(harness.prisma.storeReportRequest.count()).resolves.toBe(0);
     await expect(harness.prisma.storeFunnelDay.count()).resolves.toBe(1);
+    await expect(harness.prisma.featuringSync.count()).resolves.toBe(0);
   });
 
   it('lists each primary app of the store with its request state and stored dates', async () => {
