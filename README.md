@@ -179,6 +179,7 @@ The software is, entirely. It is AGPL-3.0 with no open core and no feature held 
 | Operations: backups, restore, upgrades  | [operations](https://docs.asobeast.com/operations/backups)                                                  |
 | Troubleshooting and support             | [support](https://docs.asobeast.com/support)                                                                |
 | API reference and OpenAPI               | [api-reference](https://docs.asobeast.com/api-reference/introduction)                                       |
+| What the API is for                     | [api-reference/scope](https://docs.asobeast.com/api-reference/scope)                                        |
 | MCP tools                               | [mcp/tools](https://docs.asobeast.com/mcp/tools)                                                            |
 | The whole site for an LLM               | [llms.txt](https://docs.asobeast.com/llms.txt) and [llms-full.txt](https://docs.asobeast.com/llms-full.txt) |
 

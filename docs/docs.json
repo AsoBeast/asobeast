@@ -244,6 +244,7 @@
             "group": "Overview",
             "icon": "book-open",
             "pages": [
+              "api-reference/scope",
               "api-reference/introduction",
               "api-reference/authentication",
               "api-reference/errors",
