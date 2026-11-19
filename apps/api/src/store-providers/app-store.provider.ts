@@ -17,10 +17,13 @@ import {
   AppStoreSearchResult,
   isMissingApp,
 } from './app-store.lib';
+import { resolvedArtworkUrl } from './app-store-artwork';
 import { lookupLanguage, pageLanguage } from './app-store-languages';
 import {
   AppStorePageExtract,
+  PageSimilarItem,
   parseAppStorePageDocument,
+  parseSimilarItems,
 } from './app-store-page';
 import { MissingApp, StoreAppNotFoundError, StoreRequestError } from './errors';
 import { listedInIphoneSearch } from './iphone-search';
@@ -108,10 +111,22 @@ export class AppStoreProvider implements StoreProvider {
   }
 
   async similar(storeAppId: string, country: string): Promise<SearchItem[]> {
-    const results = await this.withRetry('similar', (deadline) =>
-      this.lib.similar({ id: Number(storeAppId), country, ...deadline }),
-    );
-    return results.map((item) => this.toSearchItem(item));
+    try {
+      return await this.withRetry('similar', async (deadline) => {
+        const html = await this.lib.page({
+          id: Number(storeAppId),
+          country,
+          ...deadline,
+        });
+        deadline.signal?.throwIfAborted();
+        return similarOf(html);
+      });
+    } catch (error) {
+      this.logger.warn(
+        `similar scrape failed for ${storeAppId}: ${messageOf(error)}`,
+      );
+      throw error;
+    }
   }
 
   async topCharts(
@@ -370,6 +385,23 @@ function listingOf(html: string): PageListing {
     document,
     ...(text.length > 0 ? { subtitle: text } : {}),
     listingUnavailable: false,
+  };
+}
+
+function similarOf(html: string): SearchItem[] {
+  return parseSimilarItems(html).map(similarItemOf);
+}
+
+function similarItemOf(item: PageSimilarItem): SearchItem {
+  return {
+    storeAppId: item.adamId,
+    title: item.title,
+    ...(item.developer !== null ? { developer: item.developer } : {}),
+    ...(item.subtitle !== null ? { summary: item.subtitle } : {}),
+    ...(item.iconTemplate !== null
+      ? { iconUrl: resolvedArtworkUrl(item.iconTemplate) }
+      : {}),
+    ...(item.rating !== null ? { ratingAvg: item.rating } : {}),
   };
 }
 

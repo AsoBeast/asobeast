@@ -2,6 +2,10 @@ import { Logger } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import { AppStoreAppResult, AppStoreLib } from './app-store.lib';
 import { AppStoreProvider } from './app-store.provider';
+import {
+  SIMILAR_PAGE_HTML,
+  SIMILAR_SHELF_ADAM_IDS,
+} from './app-store-similar.fixture';
 import { StoreRequestError } from './errors';
 import { storeDeadline, withinStoreDeadline } from './store-deadline';
 
@@ -10,7 +14,6 @@ const makeLib = (overrides: Partial<AppStoreLib> = {}): AppStoreLib => ({
   page: jest.fn().mockResolvedValue('<h1>App</h1>'),
   search: jest.fn(),
   suggest: jest.fn(),
-  similar: jest.fn(),
   list: jest.fn(),
   reviews: jest.fn(),
   developer: jest.fn(),
@@ -567,16 +570,131 @@ describe('AppStoreProvider', () => {
     ]);
   });
 
-  it('maps similar apps like search results', async () => {
-    const similar = jest
-      .fn()
-      .mockResolvedValue([{ id: 7, title: 'Similar', developer: 'Dev' }]);
-    const provider = new AppStoreProvider(makeLib({ similar }));
+  it('reads similar apps from the page shelf instead of the developer siblings', async () => {
+    const page = jest.fn().mockResolvedValue(SIMILAR_PAGE_HTML);
+    const app = jest.fn();
+    const provider = new AppStoreProvider(makeLib({ page, app }));
+
+    const items = await provider.similar('324684580', 'us');
+
+    expect(items.map((item) => item.storeAppId)).toEqual(
+      SIMILAR_SHELF_ADAM_IDS,
+    );
+    expect(page).toHaveBeenCalledTimes(1);
+    expect(page).toHaveBeenCalledWith({ id: 324684580, country: 'us' });
+    expect(app).not.toHaveBeenCalled();
+  });
+
+  it('maps the shelf fields of a similar app onto a search item', async () => {
+    const page = jest.fn().mockResolvedValue(SIMILAR_PAGE_HTML);
+    const provider = new AppStoreProvider(makeLib({ page }));
+
+    const [first] = await provider.similar('324684580', 'us');
+
+    expect(first).toEqual({
+      storeAppId: '912390687',
+      title: 'TREBEL Music - Download Songs',
+      developer: 'M&M Media, Inc.',
+      summary: 'Offline Music & AI Playlists',
+      iconUrl:
+        'https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/45/8f/b0/458fb0c1-ee2e-4a36-1cc2-f6fe8b86735b/Placeholder.mill/300x300bb.jpg',
+      ratingAvg: 4.7,
+    });
+  });
+
+  it('leaves out the shelf fields a similar app does not carry', async () => {
+    const page = jest.fn().mockResolvedValue(
+      `<h1>App</h1><script type="application/json" id="serialized-server-data">${JSON.stringify(
+        {
+          data: [
+            {
+              data: {
+                shelfMapping: {
+                  similarItems: { items: [{ adamId: '7', title: 'Similar' }] },
+                },
+              },
+            },
+          ],
+        },
+      )}</script>`,
+    );
+    const provider = new AppStoreProvider(makeLib({ page }));
 
     const items = await provider.similar('1', 'us');
 
-    expect(items[0].storeAppId).toBe('7');
-    expect(similar).toHaveBeenCalledWith({ id: 1, country: 'us' });
+    expect(items).toEqual([{ storeAppId: '7', title: 'Similar' }]);
+  });
+
+  it('answers no similar apps when the server data carries no shelf', async () => {
+    const page = jest
+      .fn()
+      .mockResolvedValue(
+        `<h1>App</h1><script type="application/json" id="serialized-server-data">${JSON.stringify(
+          { data: [{ data: { shelfMapping: {} } }] },
+        )}</script>`,
+      );
+    const provider = new AppStoreProvider(makeLib({ page }));
+
+    await expect(provider.similar('1', 'us')).resolves.toEqual([]);
+    expect(page).toHaveBeenCalledTimes(1);
+  });
+
+  it('wraps a similar page without server data in StoreRequestError', async () => {
+    jest.useFakeTimers();
+    try {
+      const page = jest.fn().mockResolvedValue('<h1>App</h1>');
+      const provider = new AppStoreProvider(makeLib({ page }));
+
+      const promise = provider.similar('1', 'us');
+      const assertion =
+        expect(promise).rejects.toBeInstanceOf(StoreRequestError);
+      await jest.runAllTimersAsync();
+      await assertion;
+
+      expect(page).toHaveBeenCalledTimes(3);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('reads the similar shelf once a page without server data answers again', async () => {
+    jest.useFakeTimers();
+    try {
+      const page = jest
+        .fn()
+        .mockResolvedValueOnce('<h1>App</h1>')
+        .mockResolvedValue(SIMILAR_PAGE_HTML);
+      const provider = new AppStoreProvider(makeLib({ page }));
+
+      const promise = provider.similar('324684580', 'us');
+      await jest.runAllTimersAsync();
+      const items = await promise;
+
+      expect(items.map((item) => item.storeAppId)).toEqual(
+        SIMILAR_SHELF_ADAM_IDS,
+      );
+      expect(page).toHaveBeenCalledTimes(2);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('wraps a failed similar page fetch in StoreRequestError', async () => {
+    jest.useFakeTimers();
+    try {
+      const page = jest.fn().mockRejectedValue(new Error('boom'));
+      const provider = new AppStoreProvider(makeLib({ page }));
+
+      const promise = provider.similar('1', 'us');
+      const assertion =
+        expect(promise).rejects.toBeInstanceOf(StoreRequestError);
+      await jest.runAllTimersAsync();
+      await assertion;
+
+      expect(page).toHaveBeenCalledTimes(3);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('keeps the icon of a search result when the store sends one', async () => {
@@ -588,20 +706,6 @@ describe('AppStoreProvider', () => {
     const provider = new AppStoreProvider(makeLib({ search }));
 
     const [withIcon, withoutIcon] = await provider.search('focus', 'us', 2);
-
-    expect(withIcon.iconUrl).toBe(icon);
-    expect(withoutIcon.iconUrl).toBeUndefined();
-  });
-
-  it('keeps the icon of a similar app', async () => {
-    const icon = 'https://is1-ssl.mzstatic.com/image/thumb/b/512x512bb.jpg';
-    const similar = jest.fn().mockResolvedValue([
-      { id: 7, title: 'Similar', icon },
-      { id: 8, title: 'Plain' },
-    ]);
-    const provider = new AppStoreProvider(makeLib({ similar }));
-
-    const [withIcon, withoutIcon] = await provider.similar('1', 'us');
 
     expect(withIcon.iconUrl).toBe(icon);
     expect(withoutIcon.iconUrl).toBeUndefined();

@@ -163,6 +163,11 @@ export const LATER_RELEASES: readonly Release[] = [
         title: "Imports wait out a busy moment",
         text: "When the server is briefly too busy to reach a store, importing an app or adding a competitor now waits the few seconds it was asked to and tries once more by itself, with a line saying so, instead of asking you to press the button again.",
       },
+      {
+        kind: "fixed",
+        title: "Similar apps in the store's own order",
+        text: "Competitor suggestions for an App Store app now come from the store's You Might Also Like section, in the order the store shows it, instead of opening with the developer's other apps. Keyword suggestions from similar apps improve the same way.",
+      },
     ],
   },
   {
