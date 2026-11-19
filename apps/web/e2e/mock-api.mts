@@ -321,6 +321,7 @@ import type {
   PortfolioHistory,
   PortfolioInsights,
   PortfolioSummary,
+  AuthStatus,
   RankingSeries,
   KeywordBulkRequest,
   KeywordBulkResult,
@@ -3080,12 +3081,14 @@ const routes: Route[] = [
     handler: (_p, req, res) => {
       const setupRequired = hasCookie(req, "e2e_setup_required", "1");
       const authenticated = signedIn(req);
+      const billing = hasCookie(req, BILLING_COOKIE, "1");
       json(res, 200, {
-        billing: hasCookie(req, BILLING_COOKIE, "1"),
+        billing,
+        confirmsEmail: billing && !hasCookie(req, "e2e_smtp_off", "1"),
         registrationOpen: setupRequired,
         setupRequired,
         authenticated,
-      });
+      } satisfies AuthStatus);
     },
   },
   {
