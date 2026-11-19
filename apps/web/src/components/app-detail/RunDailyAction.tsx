@@ -8,7 +8,7 @@ import {
 import { CalendarClock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { ApiError, runDaily } from "@/lib/api";
+import { runDaily, apiErrorMessage } from "@/lib/api";
 import { pluralize } from "@/lib/format";
 import { appKeys } from "@/lib/queries";
 import { queuedToast } from "@/lib/queued-toast";
@@ -40,9 +40,7 @@ export function RunDailyAction({ appId }: { appId: string }) {
       );
     },
     onError: (error) => {
-      toast.error(
-        error instanceof ApiError ? error.envelope.message : "Run daily failed",
-      );
+      toast.error(apiErrorMessage(error, "Run daily failed"));
     },
   });
   const runOnce = useSingleFlight(mutation);

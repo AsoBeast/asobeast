@@ -37,7 +37,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ApiError, linkApp, unlinkApp } from "@/lib/api";
+import { linkApp, unlinkApp, apiErrorMessage } from "@/lib/api";
 import { appsOptions, invalidateLinkMutation } from "@/lib/queries";
 import { storeLabel } from "@/lib/format";
 import { useSingleFlight } from "@/lib/single-flight";
@@ -74,10 +74,7 @@ function LinkedControl({
       invalidateLinkMutation(queryClient, appId, counterpart.id);
       toast.success("Unlinked store listing");
     },
-    onError: (error) =>
-      toast.error(
-        error instanceof ApiError ? error.envelope.message : "Unlink failed",
-      ),
+    onError: (error) => toast.error(apiErrorMessage(error, "Unlink failed")),
   });
   const unlinkOnce = useSingleFlight(unlink);
 
@@ -187,10 +184,7 @@ function LinkCandidates({
       toast.success("Linked store listing");
       onLinked();
     },
-    onError: (error) =>
-      toast.error(
-        error instanceof ApiError ? error.envelope.message : "Link failed",
-      ),
+    onError: (error) => toast.error(apiErrorMessage(error, "Link failed")),
   });
   const linkOnce = useSingleFlight(mutation);
 

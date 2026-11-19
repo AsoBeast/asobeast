@@ -11,6 +11,7 @@ import type {
 import {
   previewLocalizedKeywordField,
   saveLocalizedKeywordField,
+  apiErrorMessage,
 } from "@/lib/api";
 import {
   savedDescription,
@@ -22,7 +23,6 @@ import { localizationName } from "@/lib/localizations";
 import { appKeys, invalidateLocalizationMutation } from "@/lib/queries";
 import { queuedToast } from "@/lib/queued-toast";
 import { useSingleFlight } from "@/lib/single-flight";
-import { apiErrorMessage } from "./api-error-message";
 
 interface Review {
   plan: KeywordFieldSavePreview;

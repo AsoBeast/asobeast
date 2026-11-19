@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { unlistedReads } from "@/lib/app-localizations";
 import { armFocusHandoff } from "@/lib/focus-handoff";
 import { localizationName } from "@/lib/localizations";
-import { apiErrorMessage } from "./api-error-message";
+import { apiErrorMessage } from "@/lib/api";
 import { localizationFocusKey } from "./LocalizationItem";
 import { SUB_HEADER, SUB_HEADER_COUNT } from "./panel-rows";
 import { ReaderChips } from "./ReadRoleBadge";

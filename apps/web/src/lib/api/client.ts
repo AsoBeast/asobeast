@@ -44,6 +44,10 @@ export class ApiError extends Error {
   }
 }
 
+export function apiErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof ApiError ? error.envelope.message : fallback;
+}
+
 export const isNotFound = (error: unknown): boolean =>
   error instanceof ApiError && error.envelope.statusCode === 404;
 

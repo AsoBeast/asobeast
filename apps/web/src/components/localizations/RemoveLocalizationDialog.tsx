@@ -21,7 +21,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { removeAppLocalization } from "@/lib/api";
+import { removeAppLocalization, apiErrorMessage } from "@/lib/api";
 import {
   removeDescription,
   withoutLocalization,
@@ -31,7 +31,6 @@ import { localizationName } from "@/lib/localizations";
 import { appKeys, invalidateLocalizationMutation } from "@/lib/queries";
 import { fieldLocaleParser } from "@/lib/search-params";
 import { useSingleFlight } from "@/lib/single-flight";
-import { apiErrorMessage } from "./api-error-message";
 
 const LOCALIZATION_ITEM = '[data-slot="accordion-item"]';
 const LOCALIZATION_TRIGGER = '[data-slot="accordion-trigger"]';

@@ -10,7 +10,7 @@ import { Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import type { SnapshotDiffResult } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
-import { ApiError, refreshApp } from "@/lib/api";
+import { ApiError, refreshApp, apiErrorMessage } from "@/lib/api";
 import { formatCountry } from "@/lib/format";
 import { invalidateAppListing } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
@@ -41,9 +41,7 @@ export function RefreshAction({ appId }: { appId: string }) {
       if (error instanceof ApiError && error.envelope.statusCode === 404) {
         invalidateAppListing(queryClient, appId);
       }
-      toast.error(
-        error instanceof ApiError ? error.envelope.message : "Refresh failed",
-      );
+      toast.error(apiErrorMessage(error, "Refresh failed"));
     },
   });
   const refreshOnce = useSingleFlight(mutation);

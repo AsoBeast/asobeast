@@ -26,7 +26,7 @@ import {
   type AddableLocalization,
 } from "@/lib/app-localizations";
 import { localizationName } from "@/lib/localizations";
-import { apiErrorMessage } from "./api-error-message";
+import { apiErrorMessage } from "@/lib/api";
 import { useAddLocalization } from "./useAddLocalization";
 
 export function AddLocalizationDialog({

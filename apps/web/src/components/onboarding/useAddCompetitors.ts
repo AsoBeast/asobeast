@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiErrorMessage } from "@/components/localizations/api-error-message";
-import { addCompetitor } from "@/lib/api";
+import { apiErrorMessage, addCompetitor } from "@/lib/api";
 import { invalidateCompetitorMutation } from "@/lib/queries";
 import { tryAgainIfBusy } from "@/lib/query-retry";
 import { useSingleFlight } from "@/lib/single-flight";
