@@ -1,4 +1,10 @@
-import { ConflictException, Injectable, Logger } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import { CrossTenantAccess } from '../../common/tenancy/cross-tenant-access';
 import { PrismaService } from '../../prisma/prisma.service';
 import { isOperatorWorkspace } from '../platform-operator';
@@ -8,6 +14,19 @@ const OPERATOR_JUSTIFICATION =
 
 export const OPERATOR_WORKSPACE_NOT_SUSPENDABLE =
   'The operator workspace cannot be suspended, because the operator would lose the surfaces that restore it';
+
+export const WORKSPACE_ALREADY_SUSPENDED =
+  'The workspace is already suspended. Restore it first to suspend it with another reason';
+
+export const WORKSPACE_NOT_SUSPENDED = 'The workspace is not suspended';
+
+export const WORKSPACE_NOT_FOUND = 'Workspace not found';
+
+interface Transition {
+  from: Prisma.WorkspaceWhereInput;
+  data: Prisma.WorkspaceUpdateManyMutationInput;
+  refusal: string;
+}
 
 @Injectable()
 export class WorkspaceSuspension {
@@ -26,33 +45,42 @@ export class WorkspaceSuspension {
     if (isOperatorWorkspace(workspaceId)) {
       throw new ConflictException(OPERATOR_WORKSPACE_NOT_SUSPENDABLE);
     }
-    await this.write(workspaceId, {
-      suspendedAt: now,
-      suspendedReason: reason,
+    await this.transition(workspaceId, {
+      from: { suspendedAt: null },
+      data: { suspendedAt: now, suspendedReason: reason },
+      refusal: WORKSPACE_ALREADY_SUSPENDED,
     });
     this.logger.warn(`workspace ${workspaceId} suspended: ${reason}`);
   }
 
   async restore(workspaceId: string): Promise<void> {
-    await this.write(workspaceId, {
-      suspendedAt: null,
-      suspendedReason: null,
-      abuseFlaggedAt: null,
+    await this.transition(workspaceId, {
+      from: { suspendedAt: { not: null } },
+      data: { suspendedAt: null, suspendedReason: null, abuseFlaggedAt: null },
+      refusal: WORKSPACE_NOT_SUSPENDED,
     });
     this.logger.log(`workspace ${workspaceId} restored`);
   }
 
-  private write(
+  private transition(
     workspaceId: string,
-    data: {
-      suspendedAt: Date | null;
-      suspendedReason: string | null;
-      abuseFlaggedAt?: null;
-    },
-  ): Promise<unknown> {
+    { from, data, refusal }: Transition,
+  ): Promise<void> {
     return this.crossTenant.becauseThisWorkIsNotOwnedByOneWorkspace(
       OPERATOR_JUSTIFICATION,
-      () => this.prisma.workspace.update({ where: { id: workspaceId }, data }),
+      async () => {
+        const { count } = await this.prisma.workspace.updateMany({
+          where: { id: workspaceId, ...from },
+          data,
+        });
+        if (count > 0) return;
+        const exists = await this.prisma.workspace.count({
+          where: { id: workspaceId },
+        });
+        throw exists > 0
+          ? new ConflictException(refusal)
+          : new NotFoundException(WORKSPACE_NOT_FOUND);
+      },
     );
   }
 }

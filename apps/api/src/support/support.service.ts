@@ -16,6 +16,7 @@ import {
   type KeywordMarketRow,
 } from '../auth/keyword-markets';
 import { planScopeOf } from '../auth/plan-limits';
+import { WORKSPACE_NOT_FOUND } from '../auth/abuse/workspace-suspension.service';
 import { isOperatorWorkspace } from '../auth/platform-operator';
 import { workspaceStageOf } from '../billing/workspace-stage';
 import { scrubText } from '../common/logging/log-redaction';
@@ -82,7 +83,7 @@ export class SupportService {
           const row = await this.prisma.workspace.findUnique({
             where: { id: workspaceId },
           });
-          if (!row) throw new NotFoundException('Workspace not found');
+          if (!row) throw new NotFoundException(WORKSPACE_NOT_FOUND);
           return [this.summarize(row, await this.counts(), now), row] as const;
         },
       );

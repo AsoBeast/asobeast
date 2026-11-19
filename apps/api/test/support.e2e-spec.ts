@@ -227,6 +227,11 @@ describe('Support tooling (e2e)', () => {
   });
 
   it('records a succeeded outcome once the action has run', async () => {
+    await prisma.workspace.update({
+      where: { id: OTHER_WORKSPACE },
+      data: { suspendedAt: new Date(), suspendedReason: 'outcome trail' },
+    });
+
     await owner
       .post(`${SUPPORT}/${OTHER_WORKSPACE}/restore`)
       .send({ confirm: true, reason: 'outcome trail check' })
@@ -253,6 +258,67 @@ describe('Support tooling (e2e)', () => {
     });
     expect(entry).toMatchObject({ outcome: 'failed' });
     expect(entry.detail).toBeTruthy();
+  });
+
+  describe('an action against the state it finds', () => {
+    const act = (
+      action: string,
+      reason = 'state check reason',
+      workspaceId = OTHER_WORKSPACE,
+    ) =>
+      owner
+        .post(`${SUPPORT}/${workspaceId}/${action}`)
+        .send({ confirm: true, reason });
+    const target = () =>
+      prisma.workspace.findUniqueOrThrow({ where: { id: OTHER_WORKSPACE } });
+    const suspendTarget = () =>
+      prisma.workspace.update({
+        where: { id: OTHER_WORKSPACE },
+        data: {
+          suspendedAt: new Date('2026-11-01T09:00:00.000Z'),
+          suspendedReason: 'the first suspension',
+        },
+      });
+
+    afterEach(() =>
+      prisma.workspace.update({
+        where: { id: OTHER_WORKSPACE },
+        data: {
+          suspendedAt: null,
+          suspendedReason: null,
+          abuseFlaggedAt: null,
+        },
+      }),
+    );
+
+    it('keeps the first suspension when a second one arrives', async () => {
+      await suspendTarget();
+
+      await act('suspend', 'a second suspension').expect(409);
+
+      await expect(target()).resolves.toMatchObject({
+        suspendedAt: new Date('2026-11-01T09:00:00.000Z'),
+        suspendedReason: 'the first suspension',
+      });
+    });
+
+    it('refuses to restore a workspace that is not suspended', async () => {
+      const flaggedAt = new Date('2026-11-02T09:00:00.000Z');
+      await prisma.workspace.update({
+        where: { id: OTHER_WORKSPACE },
+        data: { abuseFlaggedAt: flaggedAt },
+      });
+
+      await act('restore').expect(409);
+
+      await expect(target()).resolves.toMatchObject({
+        abuseFlaggedAt: flaggedAt,
+      });
+    });
+
+    it('answers 404 to a restore of a workspace that does not exist', async () => {
+      await act('restore', 'state check reason', 'ws_missing').expect(404);
+    });
   });
 
   describe('the operator workspace', () => {
