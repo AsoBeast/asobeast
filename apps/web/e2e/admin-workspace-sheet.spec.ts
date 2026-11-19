@@ -1,9 +1,10 @@
 import type { Page, Route } from "@playwright/test";
 import type { SupportWorkspaceDetail } from "@asobeast/shared";
 import { ANA_LONG_FAILURE, SUSPEND_REASON } from "./admin-fixtures.mts";
+import { CLAIM_WINDOW_MS } from "../src/lib/focus-handoff";
 import { settleAnimations } from "./dialog.mts";
 import { errorEnvelope } from "./fixtures.mts";
-import { pressFromKeyboard } from "./held-request.mts";
+import { holdRequest, pressFromKeyboard } from "./held-request.mts";
 import { layoutBox } from "./layout-box.mts";
 import { seedCookies } from "./routes.mts";
 import { fulfillJson } from "./plan-helpers.mts";
@@ -469,6 +470,39 @@ test.describe("suspend and restore", () => {
     await confirm.getByLabel("Reason").fill("Chargeback opened");
     await confirm.getByRole("button", { name: "Suspend workspace" }).focus();
     await page.keyboard.press("Enter");
+
+    await expect(
+      sheet.getByRole("button", { name: "Restore", exact: true }),
+    ).toBeFocused();
+  });
+
+  test("a suspend that answers after the handoff window still hands focus to Restore", async ({
+    page,
+  }) => {
+    await page.clock.install();
+    await answerSuspended(page, "ws_ana");
+    const held = await holdRequest(
+      page,
+      /\/api\/backend\/admin\/support\/workspaces\/ws_ana\/suspend$/,
+      "POST",
+    );
+    await page.goto("/admin/workspaces?workspace=ws_ana");
+    const sheet = page.getByRole("dialog", { name: "Ana Apps" });
+
+    await pressFromKeyboard(
+      sheet.getByRole("button", { name: "Suspend", exact: true }),
+    );
+    const confirm = page.getByRole("alertdialog", {
+      name: "Suspend Ana Apps?",
+    });
+    await confirm.getByLabel("Reason").fill("Chargeback opened");
+    await confirm.getByRole("button", { name: "Suspend workspace" }).focus();
+    await page.keyboard.press("Enter");
+    await expect(
+      confirm.getByRole("button", { name: "Suspending…" }),
+    ).toHaveAttribute("aria-disabled", "true");
+    await page.clock.fastForward(CLAIM_WINDOW_MS + 1_000);
+    held.release();
 
     await expect(
       sheet.getByRole("button", { name: "Restore", exact: true }),

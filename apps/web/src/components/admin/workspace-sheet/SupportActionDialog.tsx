@@ -41,7 +41,11 @@ import {
   runSupportWorkspaceDaily,
   suspendSupportWorkspace,
 } from "@/lib/api";
-import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
+import {
+  armFocusHandoff,
+  renewFocusHandoff,
+  useFocusClaim,
+} from "@/lib/focus-handoff";
 import { invalidateSupportAction } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 import { focusKeyOf, WORKSPACE_GONE_FOCUS_KEY } from "./focus-keys";
@@ -72,6 +76,7 @@ export function SupportActionDialog({
 }) {
   const { workspaceId, name } = workspace;
   const copy = ACTION_COPY[action];
+  const survivor = focusAfter(action, workspace, { billing });
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
@@ -88,6 +93,7 @@ export function SupportActionDialog({
   const mutation = useMutation({
     mutationFn: () => SEND[action](workspaceId, supportActionRequest(reason)),
     onSuccess: (result) => {
+      if (survivor) renewFocusHandoff(focusKeyOf(survivor));
       toast.success(copy.done(name, result.detail), {
         description: result.detail,
       });
@@ -159,7 +165,6 @@ export function SupportActionDialog({
           variant={copy.variant}
           blocked={!supportReasonReady(reason)}
           onConfirm={() => {
-            const survivor = focusAfter(action, workspace, { billing });
             if (survivor) armFocusHandoff(focusKeyOf(survivor));
             sendOnce();
           }}
