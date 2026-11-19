@@ -39,12 +39,14 @@ export function signUpSteps(
   ];
 }
 
+function upcomingEmailStep(confirmsEmail: boolean): readonly SignUpStep[] {
+  return confirmsEmail ? [{ label: EMAIL_CONFIRMED, state: "upcoming" }] : [];
+}
+
 export function registerSteps(confirmsEmail: boolean): readonly SignUpStep[] {
   return [
     { label: CREATE_ACCOUNT, state: "current" },
-    ...(confirmsEmail
-      ? [{ label: EMAIL_CONFIRMED, state: "upcoming" as const }]
-      : []),
+    ...upcomingEmailStep(confirmsEmail),
     { label: CHOOSE_A_PLAN, state: "upcoming" },
   ];
 }
