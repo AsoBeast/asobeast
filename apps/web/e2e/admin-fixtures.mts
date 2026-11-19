@@ -1,15 +1,18 @@
-import type {
-  AdminApp,
-  AdminAppList,
-  AdminOverview,
-  AdminPayingCount,
-  AdminSignupDay,
-  AdminUser,
-  AdminUserList,
-  CapacityReport,
-  ProxyOutcomeCounts,
-  ProxyPoolHealth,
-  SupportWorkspaceSummary,
+import {
+  PLAN_LIMITS,
+  type AdminApp,
+  type AdminAppList,
+  type AdminOverview,
+  type AdminPayingCount,
+  type AdminSignupDay,
+  type AdminUser,
+  type AdminUserList,
+  type CapacityReport,
+  type ProxyOutcomeCounts,
+  type ProxyPoolHealth,
+  type SupportAccessEntry,
+  type SupportWorkspaceDetail,
+  type SupportWorkspaceSummary,
 } from "@asobeast/shared";
 import { utcDaysAgo, utcTimestampDaysAgo } from "./fixtures.mts";
 
@@ -219,6 +222,7 @@ export const PROXY_POOL_ON: ProxyPoolHealth = {
 };
 
 const WORKSPACE_DEFAULTS = {
+  operatorWorkspace: false,
   suspendedAt: null,
   suspendedReason: null,
   trialEndsAt: null,
@@ -239,6 +243,7 @@ export const SUPPORT_WORKSPACES: SupportWorkspaceSummary[] = [
     ...WORKSPACE_DEFAULTS,
     workspaceId: "ws_default",
     name: "Default",
+    operatorWorkspace: true,
     plan: "free",
     storedPlan: "free",
     stage: "no-plan",
@@ -536,3 +541,30 @@ export const adminAppList = (
   workspaceId: string | null,
   truncated: boolean,
 ): AdminAppList => adminList(ADMIN_APPS, workspaceId, truncated);
+
+export const SUPPORT_OPERATOR_EMAIL = "owner@example.com";
+
+const CURRENT_VIEW: SupportAccessEntry = {
+  actorEmail: SUPPORT_OPERATOR_EMAIL,
+  action: "view",
+  outcome: "attempted",
+  reason: null,
+  detail: null,
+  at: utcTimestampDaysAgo(0),
+};
+
+export function supportWorkspaceDetail(
+  workspaceId: string,
+): SupportWorkspaceDetail | undefined {
+  const summary = SUPPORT_WORKSPACES.find(
+    (workspace) => workspace.workspaceId === workspaceId,
+  );
+  if (!summary) return undefined;
+  return {
+    ...summary,
+    limits: PLAN_LIMITS[summary.plan],
+    runHistory: [],
+    failedJobs: [],
+    recentAccess: [CURRENT_VIEW],
+  };
+}

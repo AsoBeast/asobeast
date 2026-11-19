@@ -412,6 +412,7 @@ import {
   PROXY_POOL_OFF,
   PROXY_POOL_ON,
   SUPPORT_WORKSPACES,
+  supportWorkspaceDetail,
   adminAppList,
   adminUserList,
 } from "./admin-fixtures.mts";
@@ -1170,41 +1171,75 @@ function isPolishListingOf(
   return dataset.detail.id === "app-1" && query.get("country") === "pl";
 }
 
+class Refusal {
+  readonly status: number;
+  readonly message: string | undefined;
+
+  constructor(status: number, message?: string) {
+    this.status = status;
+    this.message = message;
+  }
+}
+
+type GatedReply = (
+  req: IncomingMessage,
+  query: URLSearchParams,
+  params: string[],
+) => unknown;
+
 function gatedRoute(
+  method: "GET" | "POST",
   pattern: RegExp,
-  pick: (req: IncomingMessage, query: URLSearchParams) => unknown,
+  reply: GatedReply,
   admits: (req: IncomingMessage) => boolean,
 ): Route {
   return {
-    method: "GET",
+    method,
     pattern,
-    handler: (_params, req, res) => {
+    handler: async (params, req, res) => {
       const path = req.url ?? "/";
       if (!admits(req)) return json(res, 404, errorEnvelope(404, path));
-      json(res, 200, pick(req, new URL(path, "http://localhost").searchParams));
+      const answer = await reply(
+        req,
+        new URL(path, "http://localhost").searchParams,
+        params,
+      );
+      if (answer instanceof Refusal) {
+        return json(
+          res,
+          answer.status,
+          errorEnvelope(answer.status, path, answer.message),
+        );
+      }
+      json(res, method === "POST" ? 201 : 200, answer);
     },
   };
 }
 
-function operatorRoute(
-  pattern: RegExp,
-  pick: (req: IncomingMessage, query: URLSearchParams) => unknown,
-): Route {
-  return gatedRoute(pattern, pick, (req) => viewerOf(req).platformOperator);
+function operatorRoute(pattern: RegExp, reply: GatedReply): Route {
+  return gatedRoute(
+    "GET",
+    pattern,
+    reply,
+    (req) => viewerOf(req).platformOperator,
+  );
+}
+
+function admitsSupport(req: IncomingMessage): boolean {
+  const viewer = viewerOf(req);
+  return (
+    viewer.platformOperator &&
+    viewer.entitled &&
+    !hasCookie(req, "e2e_admin_refused", "1")
+  );
 }
 
 function supportRoute(
   pattern: RegExp,
-  pick: (req: IncomingMessage, query: URLSearchParams) => unknown,
+  reply: GatedReply,
+  method: "GET" | "POST" = "GET",
 ): Route {
-  return gatedRoute(pattern, pick, (req) => {
-    const viewer = viewerOf(req);
-    return (
-      viewer.platformOperator &&
-      viewer.entitled &&
-      !hasCookie(req, "e2e_admin_refused", "1")
-    );
-  });
+  return gatedRoute(method, pattern, reply, admitsSupport);
 }
 
 function splitValues(value: string | null): string[] {
@@ -2891,6 +2926,12 @@ const routes: Route[] = [
     adminDepartureList(hasCookie(req, "e2e_admin_conversion_empty", "1")),
   ),
   supportRoute(/^\/admin\/support\/workspaces$/, () => SUPPORT_WORKSPACES),
+  supportRoute(
+    /^\/admin\/support\/workspaces\/([^/]+)$/,
+    (_req, _query, [workspaceId]) =>
+      supportWorkspaceDetail(decodeURIComponent(workspaceId)) ??
+      new Refusal(404, "Workspace not found"),
+  ),
   supportRoute(/^\/admin\/support\/users$/, (req, query) =>
     adminUserList(
       query.get("workspaceId"),

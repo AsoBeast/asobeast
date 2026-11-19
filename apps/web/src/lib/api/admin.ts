@@ -7,6 +7,7 @@ import type {
   AdminUserList,
   CapacityReport,
   ProxyPoolHealth,
+  SupportWorkspaceDetail,
   SupportWorkspaceSummary,
 } from "@asobeast/shared";
 import { apiFetch, withQuery } from "./client";
@@ -47,6 +48,15 @@ export function getAdminApps(workspaceId?: string): Promise<AdminAppList> {
 
 export function getSupportWorkspaces(): Promise<SupportWorkspaceSummary[]> {
   return apiFetch<SupportWorkspaceSummary[]>("/admin/support/workspaces");
+}
+
+const supportWorkspacePath = (workspaceId: string) =>
+  `/admin/support/workspaces/${encodeURIComponent(workspaceId)}`;
+
+export function getSupportWorkspace(
+  workspaceId: string,
+): Promise<SupportWorkspaceDetail> {
+  return apiFetch<SupportWorkspaceDetail>(supportWorkspacePath(workspaceId));
 }
 
 export function getCapacityReport(): Promise<CapacityReport> {

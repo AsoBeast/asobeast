@@ -7,6 +7,7 @@ import {
   getAdminUsers,
   getCapacityReport,
   getProxyPool,
+  getSupportWorkspace,
   getSupportWorkspaces,
 } from "./admin";
 
@@ -55,6 +56,16 @@ describe("admin transport", () => {
       "/admin/support/apps?workspaceId=ws_1",
     ],
     ["every workspace", getSupportWorkspaces, "/admin/support/workspaces"],
+    [
+      "one workspace's details",
+      () => getSupportWorkspace("ws_ana"),
+      "/admin/support/workspaces/ws_ana",
+    ],
+    [
+      "the details of a workspace whose id needs escaping",
+      () => getSupportWorkspace("ws a/b"),
+      "/admin/support/workspaces/ws%20a%2Fb",
+    ],
     ["the capacity report", getCapacityReport, "/admin/capacity"],
     ["the proxy pool", getProxyPool, "/admin/proxy-pool"],
   ] as const)("requests %s", async (_name, call, path) => {

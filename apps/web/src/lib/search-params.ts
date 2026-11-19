@@ -326,6 +326,10 @@ export const adminWorkspaceParser = createParser({
   serialize: (value: string) => value,
 });
 
+export const ADMIN_WORKSPACE_SHEET_KEY = "workspace";
+
+export const adminWorkspaceSheetParser = adminWorkspaceParser.withDefault("");
+
 export const adminUserListParsers = {
   q: searchParser,
   workspace: adminWorkspaceParser,

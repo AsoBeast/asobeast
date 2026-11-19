@@ -48,6 +48,7 @@ import {
   getAdminUsers,
   getCapacityReport,
   getProxyPool,
+  getSupportWorkspace,
   getSupportWorkspaces,
   getActionAiStatus,
   getActions,
@@ -371,6 +372,8 @@ export const adminKeys = {
   capacity: () => [...adminKeys.all, "capacity"] as const,
   proxyPool: () => [...adminKeys.all, "proxy-pool"] as const,
   workspaces: () => [...adminKeys.all, "workspaces"] as const,
+  workspace: (workspaceId: string) =>
+    [...adminKeys.workspaces(), workspaceId] as const,
   users: (workspaceId?: string) =>
     [...adminKeys.all, "users", workspaceId ?? null] as const,
   apps: (workspaceId?: string) =>
@@ -415,6 +418,14 @@ export const adminWorkspacesOptions = queryOptions({
   queryFn: getSupportWorkspaces,
   staleTime: ADMIN_STALE_MS,
 });
+
+export const adminWorkspaceOptions = (workspaceId: string) =>
+  queryOptions({
+    queryKey: adminKeys.workspace(workspaceId),
+    queryFn: () => getSupportWorkspace(workspaceId),
+    staleTime: ADMIN_STALE_MS,
+    retry: false,
+  });
 
 export const adminUsersOptions = (workspaceId?: string) =>
   queryOptions({
