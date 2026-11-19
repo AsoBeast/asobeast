@@ -85,13 +85,6 @@ const USAGE_LABELS: Partial<Record<LimitKey, string>> = {
   competitorsPerApp: "Competitors",
 };
 
-export function limitRows(limits: PlanLimits): LabelledValue[] {
-  return LIMIT_KEYS.map((key) => ({
-    label: LIMIT_LABELS[key],
-    value: formatPlanLimit(limits[key]),
-  }));
-}
-
 export function usageRows(
   limits: PlanLimits,
   usage: WorkspaceUsage,
@@ -229,7 +222,7 @@ export function dailyRunDone(name: string, detail: string): string {
     : `Daily run queued for ${name}.`;
 }
 
-export interface ActionCopy {
+interface ActionCopy {
   open: string;
   title: (name: string) => string;
   body: (name: string) => string;

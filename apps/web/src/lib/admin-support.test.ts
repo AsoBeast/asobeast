@@ -10,7 +10,6 @@ import {
   availableActions,
   dailyRunDone,
   focusAfter,
-  limitRows,
   onDemandRows,
   queueLabel,
   supportActionLabel,
@@ -50,25 +49,6 @@ const RULES: OnDemandRules = {
   chartCapture: { limit: 30, windowSeconds: DAY },
 };
 
-describe("limitRows", () => {
-  it("names every limit in a fixed order and writes unlimited for null", () => {
-    expect(limitRows(LIMITS).map((row) => row.label)).toEqual([
-      "Apps",
-      "Keyword markets",
-      "Competitors per app",
-      "Followed charts",
-      "AI calls per month",
-      "API requests per minute",
-      "API writes per minute",
-      "API requests per day",
-      "Concurrent API requests",
-      "MCP requests per minute",
-    ]);
-    expect(limitRows({ ...LIMITS, apps: null })[0].value).toBe("Unlimited");
-    expect(limitRows(LIMITS)[7].value).toBe("40,000");
-  });
-});
-
 describe("usageLine", () => {
   it("says how much of a limit is used", () => {
     expect(usageLine(3, 10)).toBe("3 of 10");
@@ -89,7 +69,22 @@ describe("usageRows", () => {
       { label: "Keyword markets", value: "40 of 50" },
       { label: "Competitors", value: "3 in all, up to 5 per app" },
     ]);
-    expect(rows.slice(4)).toEqual(limitRows(LIMITS).slice(3));
+    expect(rows.slice(4)).toEqual([
+      { label: "Followed charts", value: "4" },
+      { label: "AI calls per month", value: "100" },
+      { label: "API requests per minute", value: "300" },
+      { label: "API writes per minute", value: "60" },
+      { label: "API requests per day", value: "40,000" },
+      { label: "Concurrent API requests", value: "16" },
+      { label: "MCP requests per minute", value: "60" },
+    ]);
+  });
+
+  it("writes unlimited for a limit the plan does not set", () => {
+    expect(usageRows({ ...LIMITS, chartFollows: null }, usage)[4]).toEqual({
+      label: "Followed charts",
+      value: "Unlimited",
+    });
   });
 
   it("says no limit where the plan sets none", () => {
