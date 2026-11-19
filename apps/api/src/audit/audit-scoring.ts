@@ -77,6 +77,20 @@ export interface AuditExtract {
   fallback: boolean;
 }
 
+export interface FeaturingReads {
+  draftNominations: number;
+  submittedNominations: number;
+  archivedNominations: number;
+  submittedDate: Date | null;
+  publishStartDate: Date | null;
+  publishEndDate: Date | null;
+  promoFilled: number;
+  promoTotal: number;
+  roleRefused: boolean;
+  nominationsError: string | null;
+  promoError: string | null;
+}
+
 export interface AuditContext {
   appId: string;
   store: Store;
@@ -92,6 +106,7 @@ export interface AuditContext {
   now: Date;
   rawFacts: RawAppFacts;
   extract: AuditExtract | null;
+  featuring: FeaturingReads | null;
   keywords: AuditKeyword[];
   visibility: AuditVisibility;
   comparison: KeywordComparison;

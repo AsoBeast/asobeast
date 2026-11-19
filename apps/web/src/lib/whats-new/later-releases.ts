@@ -19,6 +19,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "Pick the average you want the store to show and the number of days, and the Reviews page says how many five-star ratings it takes to get there and how fast they need to come.",
       },
       {
+        kind: "new",
+        title: "The audit reads nominations and promotional text",
+        text: "When App Store Connect is connected, the featuring readiness panel answers two more rows: whether a featuring nomination is submitted ahead of its publish window, and how many of your localizations carry promotional text. Where the connection cannot read them, the rows say so instead of guessing.",
+      },
+      {
         kind: "fixed",
         title: "Play installs finds more search terms",
         text: "Google writes most search terms under explore traffic rather than search, and the column used to read only search, so months could look empty that never were. It now reads both, while the placeholders Google writes when it names no term stay out of the column.",

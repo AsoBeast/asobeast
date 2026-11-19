@@ -190,6 +190,8 @@ export interface ReadinessItem {
     | 'preview-video'
     | 'in-app-events'
     | 'accessibility'
+    | 'nominations'
+    | 'promotional-text'
     | 'rating'
     | 'update-recency'
     | 'localizations'

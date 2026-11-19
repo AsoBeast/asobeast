@@ -171,6 +171,8 @@ const withReadiness = (
     store: context.store,
     factors: result.factors,
     extract: context.extract,
+    featuring: context.featuring,
+    now: context.now,
   });
   return readiness === null ? result : { ...result, readiness };
 };

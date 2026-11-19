@@ -46,6 +46,7 @@ interface LoaderOptions {
 
 const buildLoader = (options: LoaderOptions = {}) => {
   const prisma = {
+    featuringSync: { findFirst: jest.fn().mockResolvedValue(null) },
     app: {
       findFirst: jest.fn().mockResolvedValue({
         id: 'app-1',

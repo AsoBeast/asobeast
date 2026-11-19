@@ -267,7 +267,7 @@ test("says what the audit cannot see", async ({ page }) => {
   await page.goto("/apps/app-1/audit");
 
   await page.getByText("What this audit cannot see").click();
-  await expect(page.getByText("Promotional text")).toBeVisible();
+  await expect(page.getByText("Replies to reviews")).toBeVisible();
 });
 
 test("reports an audit that failed to load instead of hiding it", async ({
@@ -647,12 +647,18 @@ test("answers featuring readiness beside the score", async ({ page }) => {
   await page.goto("/apps/app-1/audit");
 
   const readiness = page.getByRole("region", { name: "Featuring readiness" });
-  await expect(readiness.getByText("5 of 7 pass")).toBeVisible();
+  await expect(readiness.getByText("6 of 9 pass")).toBeVisible();
   await expect(
     readiness.getByText("The store page shows 2 preview videos."),
   ).toBeVisible();
   await expect(
     readiness.getByText("The store page lists 1 in-app event."),
+  ).toBeVisible();
+  await expect(
+    readiness.getByText("Submitted 45 days before the publish window."),
+  ).toBeVisible();
+  await expect(
+    readiness.getByText("Promotional text is set for 19 of 21 localizations."),
   ).toBeVisible();
   await expect(
     readiness.getByText("Declared accessibility features are not read yet."),

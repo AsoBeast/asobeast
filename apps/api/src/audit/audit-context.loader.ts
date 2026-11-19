@@ -21,6 +21,7 @@ import {
   AuditKeyword,
   AuditVisibility,
   DAY_MS,
+  FeaturingReads,
 } from './audit-scoring';
 import {
   CompetitorIcon,
@@ -112,6 +113,28 @@ export class AuditContextLoader {
     }
     const { screenshots } = await this.screenshots.forApp(app.id);
     return readCaptionTexts(screenshots);
+  }
+
+  private async featuring(appId: string): Promise<FeaturingReads | null> {
+    const row = await this.prisma.featuringSync.findFirst({
+      where: { appId },
+    });
+    if (!row) {
+      return null;
+    }
+    return {
+      draftNominations: row.draftNominations,
+      submittedNominations: row.submittedNominations,
+      archivedNominations: row.archivedNominations,
+      submittedDate: row.submittedDate,
+      publishStartDate: row.publishStartDate,
+      publishEndDate: row.publishEndDate,
+      promoFilled: row.promoFilled,
+      promoTotal: row.promoTotal,
+      roleRefused: row.roleRefused,
+      nominationsError: row.nominationsError,
+      promoError: row.promoError,
+    };
   }
 
   private async visibility(appId: string): Promise<AuditVisibility> {
@@ -238,6 +261,7 @@ export class AuditContextLoader {
       keywordField,
       visibility,
       screenshotCaptions,
+      featuring,
     ] = await Promise.all([
       this.prisma.appSnapshot.findFirst({
         where: { appId, ...HOME_LISTING },
@@ -281,6 +305,7 @@ export class AuditContextLoader {
       this.keywordField(app),
       this.visibility(appId),
       this.screenshotCaptions(app),
+      this.featuring(appId),
     ]);
 
     const active = tracked.filter(
@@ -321,6 +346,7 @@ export class AuditContextLoader {
       now: new Date(),
       rawFacts: facts,
       extract,
+      featuring,
       keywords: active.map(toAuditKeyword),
       visibility,
       comparison,

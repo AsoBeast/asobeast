@@ -516,8 +516,20 @@ describe('AuditController (e2e)', () => {
     );
   });
 
-  it('answers the featuring readiness rows from the page extract and the graded checks', async () => {
+  it('answers the featuring readiness rows from the page extract, the graded checks and the console reads', async () => {
     const id = await seed();
+    await prisma.featuringSync.create({
+      data: {
+        appId: id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        submittedNominations: 1,
+        submittedDate: new Date('2026-10-05T09:30:00.000Z'),
+        publishStartDate: new Date('2026-11-19T00:00:00.000Z'),
+        publishEndDate: new Date('2026-12-19T00:00:00.000Z'),
+        promoFilled: 2,
+        promoTotal: 3,
+      },
+    });
 
     const result = (await api.get(`/apps/${id}/audit`).expect(200))
       .body as AppAuditResult;
@@ -525,6 +537,8 @@ describe('AuditController (e2e)', () => {
     expect(result.readiness?.items.map((item) => item.id)).toEqual([
       'preview-video',
       'in-app-events',
+      'nominations',
+      'promotional-text',
       'accessibility',
       'rating',
       'update-recency',
@@ -534,12 +548,24 @@ describe('AuditController (e2e)', () => {
     expect(result.readiness?.items.map((item) => item.status)).toEqual([
       'pass',
       'pass',
+      'pass',
+      'warn',
       'unmeasurable',
       'pass',
       'pass',
       'unmeasurable',
       'pass',
     ]);
+    expect(result.readiness?.items[2]).toMatchObject({
+      label: 'Nominations',
+      detail: 'Submitted 44 days before the publish window.',
+      link: null,
+    });
+    expect(result.readiness?.items[3]).toMatchObject({
+      label: 'Promotional text',
+      detail: 'Promotional text is set for 2 of 3 localizations.',
+      link: null,
+    });
     expect(result.readiness?.items[0]).toMatchObject({
       label: 'Preview video',
       detail: 'The store page shows 2 preview videos.',
@@ -601,6 +627,8 @@ describe('AuditController (e2e)', () => {
     expect(result.readiness?.items.map((item) => item.status)).toEqual([
       'fail',
       'fail',
+      'unmeasurable',
+      'unmeasurable',
       'unmeasurable',
       'warn',
       'pass',
@@ -723,6 +751,8 @@ describe('AuditController (e2e)', () => {
       'unmeasurable',
       'pass',
       'unmeasurable',
+      'unmeasurable',
+      'unmeasurable',
       'pass',
       'pass',
       'unmeasurable',
@@ -753,6 +783,8 @@ describe('AuditController (e2e)', () => {
       .body as AppAuditResult;
 
     expect(result.readiness?.items.map((item) => item.status)).toEqual([
+      'unmeasurable',
+      'unmeasurable',
       'unmeasurable',
       'unmeasurable',
       'unmeasurable',
@@ -791,6 +823,8 @@ describe('AuditController (e2e)', () => {
       .body as AppAuditResult;
 
     expect(result.readiness?.items.map((item) => item.status)).toEqual([
+      'unmeasurable',
+      'unmeasurable',
       'unmeasurable',
       'unmeasurable',
       'unmeasurable',
