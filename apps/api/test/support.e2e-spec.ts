@@ -316,6 +316,31 @@ describe('Support tooling (e2e)', () => {
       });
     });
 
+    it('still runs an active workspace', async () => {
+      const response = await act('run-daily').expect(201);
+
+      expect((response.body as SupportActionResult).detail).toMatch(
+        /^queued \d+ apps/,
+      );
+    });
+
+    it('refuses a daily run for a suspended workspace', async () => {
+      await suspendTarget();
+
+      await act('run-daily').expect(409);
+    });
+
+    it('answers 404 to a daily run for a workspace that does not exist', async () => {
+      await act('run-daily', 'state check reason', 'ws_missing').expect(404);
+
+      const [entry] = await prisma.supportAccess.findMany({
+        where: { workspaceId: 'ws_missing', action: 'run-daily' },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+      });
+      expect(entry).toMatchObject({ outcome: 'failed' });
+    });
+
     it('answers 404 to a restore of a workspace that does not exist', async () => {
       await act('restore', 'state check reason', 'ws_missing').expect(404);
     });

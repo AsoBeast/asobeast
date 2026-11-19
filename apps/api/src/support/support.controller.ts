@@ -14,9 +14,9 @@ import { SUPPORT_NOT_FOUND } from '../auth/admin-access';
 import { requirePlatformOperator } from '../auth/platform-operator';
 import { BillingReconciler } from '../billing/billing-reconciler.service';
 import { BillingWebhookService } from '../billing/billing-webhook.service';
-import { PipelineService } from '../jobs/pipeline.service';
 import { SupportAudit } from './support-audit.service';
 import { SupportActionDto } from './dto/support-action.dto';
+import { SupportDailyRun } from './support-daily-run.service';
 import { SupportService } from './support.service';
 
 @ApiTags('admin')
@@ -28,7 +28,7 @@ export class SupportController {
     private readonly suspension: WorkspaceSuspension,
     private readonly reconciler: BillingReconciler,
     private readonly webhook: BillingWebhookService,
-    private readonly pipeline: PipelineService,
+    private readonly dailyRun: SupportDailyRun,
   ) {}
 
   @Get('workspaces')
@@ -126,7 +126,7 @@ export class SupportController {
     @Body() dto: SupportActionDto,
   ): Promise<SupportActionResult> {
     return this.apply(user, workspaceId, 'run-daily', dto, async () => {
-      const summary = await this.pipeline.fanOutWorkspaceDaily(workspaceId);
+      const summary = await this.dailyRun.run(workspaceId);
       return `queued ${summary.apps} apps, ${summary.keywords} keywords, ${summary.categories} categories, ${summary.reviews} reviews`;
     });
   }
