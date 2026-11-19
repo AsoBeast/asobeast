@@ -6,7 +6,7 @@ import {
   STORE_SEARCH_QUERY_MAX_LENGTH,
   STORES,
 } from '@asobeast/shared';
-import { Transform, Type } from 'class-transformer';
+import { Type } from 'class-transformer';
 import {
   IsIn,
   IsInt,
@@ -18,9 +18,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-
-const trim = ({ value }: { value: unknown }): unknown =>
-  typeof value === 'string' ? value.trim() : value;
+import { Trimmed } from '../../common/validation/trimmed.decorator';
 
 export class ListKeywordInspectionsQueryDto {
   @ApiPropertyOptional({
@@ -28,7 +26,7 @@ export class ListKeywordInspectionsQueryDto {
     maxLength: STORE_SEARCH_QUERY_MAX_LENGTH,
   })
   @IsOptional()
-  @Transform(trim)
+  @Trimmed()
   @IsString()
   @IsNotEmpty()
   @MaxLength(STORE_SEARCH_QUERY_MAX_LENGTH)
