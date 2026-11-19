@@ -162,7 +162,7 @@ The same reasoning covers the two places a url reaches an event by another route
 | Route | Does |
 | --- | --- |
 | `GET /admin/support/workspaces` | Lists every workspace with plan, subscription state and counts |
-| `GET /admin/support/workspaces/{id}` | Adds plan limits, seven days of run history, that workspace's failed jobs and the recent audit trail |
+| `GET /admin/support/workspaces/{id}` | Adds plan limits, seven days of run history, that workspace's failed jobs and the recent audit trail. When the job queue does not answer within a second it answers without failed jobs and with `failedJobsUnavailable: true` |
 | `POST /admin/support/workspaces/{id}/reconcile` | Reconciles one workspace against Stripe |
 | `POST /admin/support/workspaces/{id}/billing-events/{eventId}/replay` | Clears how a stored billing event settled and queues it again, once its cause is fixed. Answers 404 for an event that names neither the workspace nor its Stripe customer |
 | `POST /admin/support/workspaces/{id}/suspend` | Suspends an active workspace. Answers `409` for the operator workspace, which cannot be suspended, and for a workspace already suspended, whose first reason it keeps |

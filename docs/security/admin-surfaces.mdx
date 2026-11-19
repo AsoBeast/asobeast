@@ -65,7 +65,7 @@ The admin area never opens a workspace's own pages: an app name is not a link, a
 
 ### Workspace details {#workspace-details}
 
-The name of a workspace on the Workspaces tab opens its details in a sheet, and `?workspace=` keeps it open in the address, so a link opens it and Back closes it. The sheet shows the stage, the plan held and its dates, a suspension with its reason, a pending deletion with who asked, usage against the limits in force, every rate limit and on demand allowance, the keyword checks of the last seven days, the newest failed store jobs that name the workspace and the last 20 entries of its support access log.
+The name of a workspace on the Workspaces tab opens its details in a sheet, and `?workspace=` keeps it open in the address, so a link opens it and Back closes it. The sheet shows the stage, the plan held and its dates, a suspension with its reason, a pending deletion with who asked, usage against the limits in force, every rate limit and on demand allowance, the keyword checks of the last seven days, the newest failed store jobs that name the workspace, or a note that the job queue did not answer, and the last 20 entries of its support access log.
 
 Every opening reads `GET /admin/support/workspaces/{id}`, which writes a `view` entry to the access log before it answers, so the newest entry is always the read that showed it, marked In progress. The sheet reads once per opening, never retries a failed read by itself and reuses a read for a minute, so the log holds the reads a person caused.
 
