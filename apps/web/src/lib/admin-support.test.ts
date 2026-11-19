@@ -87,7 +87,7 @@ describe("usageRows", () => {
       { label: "Members", value: "2" },
       { label: "Apps", value: "2 of 3" },
       { label: "Keyword markets", value: "40 of 50" },
-      { label: "Competitors per app", value: "3 in all, up to 5 per app" },
+      { label: "Competitors", value: "3 in all, up to 5 per app" },
     ]);
     expect(rows.slice(4)).toEqual(limitRows(LIMITS).slice(3));
   });

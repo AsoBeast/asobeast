@@ -81,6 +81,10 @@ const USED: Partial<
   competitorsPerApp: (usage, limit) => competitorLine(usage.competitors, limit),
 };
 
+const USAGE_LABELS: Partial<Record<LimitKey, string>> = {
+  competitorsPerApp: "Competitors",
+};
+
 export function limitRows(limits: PlanLimits): LabelledValue[] {
   return LIMIT_KEYS.map((key) => ({
     label: LIMIT_LABELS[key],
@@ -95,7 +99,7 @@ export function usageRows(
   return [
     { label: "Members", value: formatNumber(usage.members) },
     ...LIMIT_KEYS.map((key) => ({
-      label: LIMIT_LABELS[key],
+      label: USAGE_LABELS[key] ?? LIMIT_LABELS[key],
       value: USED[key]?.(usage, limits[key]) ?? formatPlanLimit(limits[key]),
     })),
   ];
