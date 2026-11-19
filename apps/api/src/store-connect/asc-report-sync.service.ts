@@ -13,6 +13,7 @@ import {
 import { DiscoveryHeaderError, DiscoveryLineError } from './discovery-report';
 import { refusalOf } from './asc-http-errors';
 import { AscKeywordFieldSync } from './asc-keyword-field-sync.service';
+import { AscFeaturingSync } from './asc-featuring-sync.service';
 import {
   StoreConnectionService,
   type OpenedConnection,
@@ -85,6 +86,7 @@ export class AscReportSync {
     private readonly requester: StoreReportRequester,
     private readonly applier: StoreReportApplier,
     private readonly keywordFields: AscKeywordFieldSync,
+    private readonly featuring: AscFeaturingSync,
   ) {}
 
   async run(finalAttempt = true): Promise<SyncSummary | null> {
@@ -105,9 +107,11 @@ export class AscReportSync {
           throw error;
         }
         await this.importKeywordFields(summary);
+        await this.importFeaturingReads(summary);
         throw error;
       }
       await this.importKeywordFields(summary);
+      await this.importFeaturingReads(summary);
       await this.connections.markSynced(
         STORE,
         outcome.reportAccess,
@@ -144,6 +148,22 @@ export class AscReportSync {
       }
       this.logger.warn(
         `the keyword field import waits for the next sync: ${messageOf(error)}`,
+      );
+    }
+  }
+
+  private async importFeaturingReads(summary: SyncSummary): Promise<void> {
+    try {
+      const reads = await this.featuring.run();
+      summary.nominations = reads.nominations;
+      summary.promoText = reads.promoText;
+    } catch (error) {
+      if (error instanceof AscRateLimitedError) {
+        summary.rateLimited = true;
+        return;
+      }
+      this.logger.warn(
+        `the featuring reads wait for the next sync: ${messageOf(error)}`,
       );
     }
   }

@@ -61,6 +61,7 @@ const REQUEST_CREATION = '/v1/analyticsReportRequests';
 const FORBIDDEN_CODE_PREFIX = 'FORBIDDEN';
 const REVIEW_RESOURCE =
   /^\/v1\/(customerReviewResponses|customerReviews|apps\/[^/]+\/customerReviews)(\/|\?|$)/;
+const NOMINATIONS_RESOURCE = /^\/v1\/nominations(\/|\?|$)/;
 
 const isRoleRefusal = (
   response: AscResponse,
@@ -69,6 +70,7 @@ const isRoleRefusal = (
 ): boolean =>
   response.status === 403 &&
   ((request.method === 'POST' && request.path === REQUEST_CREATION) ||
+    NOMINATIONS_RESOURCE.test(request.path) ||
     (REVIEW_RESOURCE.test(request.path) &&
       code?.startsWith(FORBIDDEN_CODE_PREFIX) === true));
 
