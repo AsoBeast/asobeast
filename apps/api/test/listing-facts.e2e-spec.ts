@@ -2,12 +2,16 @@ import { execSync } from 'child_process';
 import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaClient, Store } from '@prisma/client';
+import { Prisma, PrismaClient, Store } from '@prisma/client';
 import { AppDetail, CompetitorItem } from '@asobeast/shared';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
-import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
+import {
+  obliterateQueues,
+  pauseQueues,
+  settleBootRegistration,
+} from './obliterate-queues';
 import { testDb } from './helpers/test-db';
 import { ownerAgent, useCookies } from './helpers/session';
 
@@ -66,7 +70,7 @@ const NO_FACTS = {
 
 interface ListingSeed {
   country?: string | null;
-  raw?: object;
+  raw?: Prisma.InputJsonObject;
   description?: string;
   dated?: boolean;
   capturedAt?: string;
@@ -89,6 +93,7 @@ describe('listing facts on the app detail (e2e)', () => {
     app = moduleFixture.createNestApplication();
     useCookies(app);
     await app.init();
+    await pauseQueues(app);
     await settleBootRegistration(app);
     prisma = testDb();
     await prisma.workspace.upsert({
@@ -140,7 +145,7 @@ describe('listing facts on the app detail (e2e)', () => {
   const seedListing = async (
     store: Store,
     storeAppId: string,
-    raw: object,
+    raw: Prisma.InputJsonObject,
     primaryAppId?: string,
   ) => {
     const created = await createApp(store, storeAppId, primaryAppId);

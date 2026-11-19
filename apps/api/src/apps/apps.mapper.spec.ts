@@ -190,6 +190,7 @@ describe('the listing facts of a snapshot', () => {
     primaryAppId: null,
     groupId: null,
     replyGuidelines: null,
+    autoTrackRanked: false,
     createdAt: new Date('2026-10-01T00:00:00.000Z'),
   });
   const snapshotOf = (
