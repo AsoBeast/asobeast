@@ -228,6 +228,14 @@ describe('Auth (billing mode)', () => {
   const me = (cookie: string) =>
     request(app.getHttpServer()).get('/auth/me').set('Cookie', cookie);
 
+  it('tells a visitor that no address is confirmed when the instance sends no mail', async () => {
+    const status = await request(app.getHttpServer())
+      .get('/auth/status')
+      .expect(200);
+
+    expect(status.body).toMatchObject({ billing: true, confirmsEmail: false });
+  });
+
   it('sends a new owner straight to the plan when no confirmation mail is sent', async () => {
     const res = await request(app.getHttpServer())
       .post('/auth/register')
