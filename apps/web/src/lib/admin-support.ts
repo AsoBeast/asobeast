@@ -1,4 +1,5 @@
 import {
+  ON_DEMAND_ACTIONS,
   SUPPORT_REASON_MAX_LENGTH,
   SUPPORT_REASON_MIN_LENGTH,
   type OnDemandAction,
@@ -32,7 +33,18 @@ const LIMIT_LABELS: Record<LimitKey, string> = {
   mcpRequestsPerMinute: "MCP requests per minute",
 };
 
-const LIMIT_KEYS = Object.keys(LIMIT_LABELS) as LimitKey[];
+const LIMIT_KEYS: readonly LimitKey[] = [
+  "apps",
+  "keywordMarkets",
+  "competitorsPerApp",
+  "chartFollows",
+  "aiCallsPerMonth",
+  "apiRequestsPerMinute",
+  "apiWritesPerMinute",
+  "apiRequestsPerDay",
+  "apiConcurrentRequests",
+  "mcpRequestsPerMinute",
+];
 
 const ON_DEMAND_LABELS: Record<OnDemandAction, string> = {
   refresh: "Refresh",
@@ -46,15 +58,20 @@ const ON_DEMAND_LABELS: Record<OnDemandAction, string> = {
   chartCapture: "Chart captures",
 };
 
-const ON_DEMAND_KEYS = Object.keys(ON_DEMAND_LABELS) as OnDemandAction[];
+interface WindowUnit {
+  seconds: number;
+  unit: string;
+  one: string;
+}
 
-const WINDOW_UNITS = [
+const SECOND: WindowUnit = { seconds: 1, unit: "second", one: "a second" };
+
+const WINDOW_UNITS: readonly WindowUnit[] = [
   { seconds: 7 * 86_400, unit: "week", one: "a week" },
   { seconds: 86_400, unit: "day", one: "a day" },
   { seconds: 3_600, unit: "hour", one: "an hour" },
   { seconds: 60, unit: "minute", one: "a minute" },
-  { seconds: 1, unit: "second", one: "a second" },
-] as const;
+];
 
 type WorkspaceUsage = Pick<
   SupportWorkspaceSummary,
@@ -103,15 +120,14 @@ function windowLabel(seconds: number): string {
     unit,
     one,
     seconds: size,
-  } = WINDOW_UNITS.find((entry) => seconds % entry.seconds === 0) ??
-  WINDOW_UNITS[WINDOW_UNITS.length - 1];
+  } = WINDOW_UNITS.find((entry) => seconds % entry.seconds === 0) ?? SECOND;
   const count = seconds / size;
   return count === 1 ? one : `every ${formatNumber(count)} ${unit}s`;
 }
 
 export function onDemandRows(rules: OnDemandRules | null): LabelledValue[] {
   if (!rules) return [];
-  return ON_DEMAND_KEYS.map((action) => ({
+  return ON_DEMAND_ACTIONS.map((action) => ({
     label: ON_DEMAND_LABELS[action],
     value: `${formatNumber(rules[action].limit)} ${windowLabel(rules[action].windowSeconds)}`,
   }));
