@@ -29,7 +29,12 @@ import { Button } from "@/components/ui/button";
 import { FactList } from "@/components/settings/FactList";
 import { PanelBody, SettingsPanel } from "@/components/settings/SettingsPanel";
 import { StateWord } from "@/components/settings/StateWord";
-import { ApiError, disconnectStore, syncStore, verifyStore } from "@/lib/api";
+import {
+  disconnectStore,
+  syncStore,
+  verifyStore,
+  apiErrorMessage,
+} from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { armFocusHandoff, useFocusGroupClaim } from "@/lib/focus-handoff";
 import {
@@ -78,9 +83,6 @@ function ConnectDialog({
 
 const connectFocusKey = (store: Store) => `store-connect:${store}`;
 
-const failureOf = (error: unknown, fallback: string): string =>
-  error instanceof ApiError ? error.envelope.message : fallback;
-
 function useConnectionAction<T>(
   action: () => Promise<T>,
   success: string,
@@ -95,7 +97,7 @@ function useConnectionAction<T>(
       invalidateStoreConnectionMutation(queryClient);
       toast.success(success);
     },
-    onError: (error) => toast.error(failureOf(error, failure)),
+    onError: (error) => toast.error(apiErrorMessage(error, failure)),
   });
   return { pending: mutation.isPending, run: useSingleFlight(mutation) };
 }

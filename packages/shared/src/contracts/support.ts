@@ -16,6 +16,8 @@ export type SupportAction = (typeof SUPPORT_ACTIONS)[number];
 
 export const ALL_WORKSPACES = 'all';
 
+export const WORKSPACE_ID_MAX_LENGTH = 64;
+
 export const SUPPORT_OUTCOMES = ['attempted', 'succeeded', 'failed'] as const;
 
 export type SupportOutcome = (typeof SUPPORT_OUTCOMES)[number];
@@ -31,6 +33,7 @@ export const SUPPORT_MUTATIONS: SupportAction[] = [
 export interface SupportWorkspaceSummary {
   workspaceId: string;
   name: string;
+  operatorWorkspace?: boolean;
   plan: PlanName;
   storedPlan: string;
   createdAt: string;
@@ -82,6 +85,7 @@ export interface SupportWorkspaceDetail extends SupportWorkspaceSummary {
   limits: PlanLimits;
   runHistory: SupportRunDay[];
   failedJobs: SupportFailedJob[];
+  failedJobsUnavailable?: boolean;
   recentAccess: SupportAccessEntry[];
 }
 
@@ -89,4 +93,13 @@ export interface SupportActionResult {
   action: SupportAction;
   workspaceId: string;
   detail: string;
+}
+
+export const SUPPORT_REASON_MIN_LENGTH = 8;
+
+export const SUPPORT_REASON_MAX_LENGTH = 200;
+
+export interface SupportActionRequest {
+  confirm: true;
+  reason: string;
 }

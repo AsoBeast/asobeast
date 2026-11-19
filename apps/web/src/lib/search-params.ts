@@ -29,6 +29,7 @@ import {
   type ActionStatus,
   type AdminConversionWindow,
   type PortfolioHistoryDays,
+  WORKSPACE_ID_MAX_LENGTH,
 } from "@asobeast/shared";
 import {
   createLoader,
@@ -314,17 +315,19 @@ export const ADMIN_USER_SORTS = [
 export const adminUserSortParser =
   parseAsStringLiteral(ADMIN_USER_SORTS).withDefault("joined");
 
-const WORKSPACE_ID_MAX = 64;
-
 export const adminWorkspaceParser = createParser({
   parse: (value) =>
     value.length > 0 &&
-    value.length <= WORKSPACE_ID_MAX &&
+    value.length <= WORKSPACE_ID_MAX_LENGTH &&
     value !== ALL_WORKSPACES
       ? value
       : null,
   serialize: (value: string) => value,
 });
+
+export const ADMIN_WORKSPACE_SHEET_KEY = "workspace";
+
+export const adminWorkspaceSheetParser = adminWorkspaceParser.withDefault("");
 
 export const adminUserListParsers = {
   q: searchParser,

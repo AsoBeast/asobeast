@@ -162,19 +162,21 @@ The same reasoning covers the two places a url reaches an event by another route
 | Route | Does |
 | --- | --- |
 | `GET /admin/support/workspaces` | Lists every workspace with plan, subscription state and counts |
-| `GET /admin/support/workspaces/{id}` | Adds plan limits, seven days of run history, that workspace's failed jobs and the recent audit trail |
+| `GET /admin/support/workspaces/{id}` | Adds plan limits, seven days of run history, that workspace's failed jobs and the recent audit trail. When the job queue does not answer within a second it answers without failed jobs and with `failedJobsUnavailable: true` |
 | `POST /admin/support/workspaces/{id}/reconcile` | Reconciles one workspace against Stripe |
 | `POST /admin/support/workspaces/{id}/billing-events/{eventId}/replay` | Clears how a stored billing event settled and queues it again, once its cause is fixed. Answers 404 for an event that names neither the workspace nor its Stripe customer |
-| `POST /admin/support/workspaces/{id}/suspend` | Suspends a workspace. Answers `409` for the operator workspace, which cannot be suspended |
-| `POST /admin/support/workspaces/{id}/restore` | Lifts a suspension |
-| `POST /admin/support/workspaces/{id}/run-daily` | Queues the daily run for one workspace |
+| `POST /admin/support/workspaces/{id}/suspend` | Suspends an active workspace. Answers `409` for the operator workspace, which cannot be suspended, and for a workspace already suspended, whose first reason it keeps |
+| `POST /admin/support/workspaces/{id}/restore` | Lifts a suspension. Answers `409` for a workspace that is not suspended |
+| `POST /admin/support/workspaces/{id}/run-daily` | Queues the daily run for one workspace. Answers `409` for a suspended workspace, which the scheduled run skips too |
 
-Three read only routes describe the instance as a whole: `GET /admin/support/overview` for the totals, and `GET /admin/support/users` and `GET /admin/support/apps` for every account and every tracked app. The web app reads all three in [the admin area](/security/admin-surfaces#the-admin-area).
+Every route under `/admin/support/workspaces/{id}` answers `404` for a workspace that does not exist and `400` for an id longer than 64 characters, which no workspace has.
+
+Three read only routes describe the instance as a whole: `GET /admin/support/overview` for the totals, and `GET /admin/support/users` and `GET /admin/support/apps` for every account and every tracked app. The web app reads all three in [the admin area](/security/admin-surfaces#the-admin-area). The admin area's [workspace details](/security/admin-surfaces#workspace-details) read the detail route and send the suspend, restore, reconcile and run daily actions; replaying a billing event stays an API call.
 
 Three rules hold the surface honest:
 
-- **Every mutation needs `confirm: true` and a written reason** of at least eight characters. Both are stored. The reason for a suspension is also shown to every member of the suspended workspace, on every page and in every refused write, so write it for the customer rather than as an internal note.
-- **Every access is recorded, reads included**, in `SupportAccess` with the operator, the workspace, the action and the reason. The instance overview is the one exception, because it returns counts only. That table carries no foreign key, so deleting a workspace or an account leaves the audit trail intact.
+- **Every mutation needs `confirm: true` and a written reason** of 8 to 200 characters, counted after the spaces at its ends are removed. Both are stored. The reason for a suspension is also shown to every member of the suspended workspace, on every page and in every refused write, so write it for the customer rather than as an internal note.
+- **Every access is recorded, reads included**, in `SupportAccess` with the operator, the workspace, the action and the reason, and a failed action with its error, keys and credentials masked. The instance overview is the one exception, because it returns counts only. That table carries no foreign key, so deleting a workspace or an account leaves the audit trail intact.
 - **The operator workspace cannot be suspended.** A suspension refuses the workspace's writes and takes the support surface and the queue dashboard away from every operator credential, so suspending the bootstrap workspace would remove the way back. The request answers `409` and the refusal is recorded in the audit trail as a failed `suspend`.
 
 The directory names the apps a workspace tracks, with counts, and nothing more: there is deliberately no way to read a customer's keywords, rankings or reviews from this surface. A question that needs their data needs their consent first.

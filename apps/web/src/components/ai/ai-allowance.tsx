@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { UPGRADE_PATH } from "@asobeast/shared";
-import { ApiError } from "@/lib/api";
+import { ApiError, apiErrorMessage } from "@/lib/api";
 import {
   aiAllowanceRefusal,
   aiAllowanceSpent,
@@ -43,6 +43,6 @@ export function useAiFailureToast(): (
       });
       return;
     }
-    toast.error(error instanceof ApiError ? error.envelope.message : fallback);
+    toast.error(apiErrorMessage(error, fallback));
   };
 }

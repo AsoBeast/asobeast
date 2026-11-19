@@ -386,6 +386,9 @@ import {
   normalizeReviewScores,
   RATING_DROP_DEFAULT_TENTHS,
   type Store,
+  SUPPORT_REASON_MAX_LENGTH,
+  SUPPORT_REASON_MIN_LENGTH,
+  type SupportActionResult,
   webhookChannelOf,
 } from "@asobeast/shared";
 import { SETUP_SESSION_COOKIE } from "./setup-session.mts";
@@ -413,6 +416,7 @@ import {
   PROXY_POOL_OFF,
   PROXY_POOL_ON,
   SUPPORT_WORKSPACES,
+  supportWorkspaceDetail,
   adminAppList,
   adminUserList,
 } from "./admin-fixtures.mts";
@@ -1171,41 +1175,154 @@ function isPolishListingOf(
   return dataset.detail.id === "app-1" && query.get("country") === "pl";
 }
 
+class Refusal {
+  readonly status: number;
+  readonly message: string | undefined;
+
+  constructor(status: number, message?: string) {
+    this.status = status;
+    this.message = message;
+  }
+}
+
+type GatedReply = (
+  req: IncomingMessage,
+  query: URLSearchParams,
+  params: string[],
+) => unknown;
+
 function gatedRoute(
+  method: "GET" | "POST",
   pattern: RegExp,
-  pick: (req: IncomingMessage, query: URLSearchParams) => unknown,
+  reply: GatedReply,
   admits: (req: IncomingMessage) => boolean,
 ): Route {
   return {
-    method: "GET",
+    method,
     pattern,
-    handler: (_params, req, res) => {
+    handler: async (params, req, res) => {
       const path = req.url ?? "/";
       if (!admits(req)) return json(res, 404, errorEnvelope(404, path));
-      json(res, 200, pick(req, new URL(path, "http://localhost").searchParams));
+      const answer = await reply(
+        req,
+        new URL(path, "http://localhost").searchParams,
+        params,
+      );
+      if (answer instanceof Refusal) {
+        return json(
+          res,
+          answer.status,
+          errorEnvelope(answer.status, path, answer.message),
+        );
+      }
+      json(res, method === "POST" ? 201 : 200, answer);
     },
   };
 }
 
-function operatorRoute(
-  pattern: RegExp,
-  pick: (req: IncomingMessage, query: URLSearchParams) => unknown,
-): Route {
-  return gatedRoute(pattern, pick, (req) => viewerOf(req).platformOperator);
+function operatorRoute(pattern: RegExp, reply: GatedReply): Route {
+  return gatedRoute(
+    "GET",
+    pattern,
+    reply,
+    (req) => viewerOf(req).platformOperator,
+  );
+}
+
+function admitsSupport(req: IncomingMessage): boolean {
+  const viewer = viewerOf(req);
+  return (
+    viewer.platformOperator &&
+    viewer.entitled &&
+    !hasCookie(req, "e2e_admin_refused", "1")
+  );
 }
 
 function supportRoute(
   pattern: RegExp,
-  pick: (req: IncomingMessage, query: URLSearchParams) => unknown,
+  reply: GatedReply,
+  method: "GET" | "POST" = "GET",
 ): Route {
-  return gatedRoute(pattern, pick, (req) => {
-    const viewer = viewerOf(req);
-    return (
-      viewer.platformOperator &&
-      viewer.entitled &&
-      !hasCookie(req, "e2e_admin_refused", "1")
+  return gatedRoute(method, pattern, reply, admitsSupport);
+}
+
+const OPERATOR_WORKSPACE_NOT_SUSPENDABLE =
+  "The operator workspace cannot be suspended, because the operator would lose the surfaces that restore it";
+
+const NOTHING_QUEUED = "queued 0 apps, 0 keywords, 0 categories, 0 reviews";
+
+const SUPPORT_ACTION_ANSWERS: Record<
+  string,
+  { detail: string; unknownWorkspace: Refusal | string }
+> = {
+  suspend: {
+    detail: "every write and on-demand action is now refused",
+    unknownWorkspace: new Refusal(404, "Resource not found"),
+  },
+  restore: {
+    detail: "the workspace may write again",
+    unknownWorkspace: new Refusal(404, "Resource not found"),
+  },
+  "run-daily": {
+    detail: "queued 2 apps, 14 keywords, 1 categories, 2 reviews",
+    unknownWorkspace: NOTHING_QUEUED,
+  },
+  reconcile: {
+    detail: "checked 1, corrected 0",
+    unknownWorkspace: new Refusal(404, "Workspace not found"),
+  },
+};
+
+function supportActionRefusal(raw: string): Refusal | null {
+  let body: unknown;
+  try {
+    body = JSON.parse(raw || "{}");
+  } catch {
+    return new Refusal(400, "The request body is not valid JSON");
+  }
+  const { confirm, reason, ...extra } = (body ?? {}) as Record<string, unknown>;
+  if (Object.keys(extra).length > 0) {
+    return new Refusal(
+      400,
+      `property ${Object.keys(extra)[0]} should not exist`,
     );
-  });
+  }
+  if (confirm !== true)
+    return new Refusal(400, "confirm must be equal to true");
+  if (
+    typeof reason !== "string" ||
+    reason.length < SUPPORT_REASON_MIN_LENGTH ||
+    reason.length > SUPPORT_REASON_MAX_LENGTH
+  ) {
+    return new Refusal(
+      400,
+      `reason must be longer than or equal to ${SUPPORT_REASON_MIN_LENGTH} and shorter than or equal to ${SUPPORT_REASON_MAX_LENGTH} characters`,
+    );
+  }
+  return null;
+}
+
+async function supportAction(
+  req: IncomingMessage,
+  [rawId, action]: string[],
+): Promise<SupportActionResult | Refusal> {
+  const refused = supportActionRefusal(await readBody(req));
+  if (refused) return refused;
+  const workspaceId = decodeURIComponent(rawId);
+  const answer = SUPPORT_ACTION_ANSWERS[action];
+  const known = SUPPORT_WORKSPACES.some(
+    (row) => row.workspaceId === workspaceId,
+  );
+  if (action === "suspend" && workspaceId === "ws_default") {
+    return new Refusal(409, OPERATOR_WORKSPACE_NOT_SUSPENDABLE);
+  }
+  const detail = known ? answer.detail : answer.unknownWorkspace;
+  if (detail instanceof Refusal) return detail;
+  return {
+    action: action as SupportActionResult["action"],
+    workspaceId,
+    detail,
+  };
 }
 
 function splitValues(value: string | null): string[] {
@@ -2892,6 +3009,17 @@ const routes: Route[] = [
     adminDepartureList(hasCookie(req, "e2e_admin_conversion_empty", "1")),
   ),
   supportRoute(/^\/admin\/support\/workspaces$/, () => SUPPORT_WORKSPACES),
+  supportRoute(
+    /^\/admin\/support\/workspaces\/([^/]+)$/,
+    (_req, _query, [workspaceId]) =>
+      supportWorkspaceDetail(decodeURIComponent(workspaceId)) ??
+      new Refusal(404, "Workspace not found"),
+  ),
+  supportRoute(
+    /^\/admin\/support\/workspaces\/([^/]+)\/(suspend|restore|run-daily|reconcile)$/,
+    (req, _query, params) => supportAction(req, params),
+    "POST",
+  ),
   supportRoute(/^\/admin\/support\/users$/, (req, query) =>
     adminUserList(
       query.get("workspaceId"),
