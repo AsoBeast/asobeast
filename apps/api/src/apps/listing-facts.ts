@@ -1,10 +1,11 @@
 import { AppSnapshot, Store } from '@prisma/client';
-import { AppSnapshotSummary } from '@asobeast/shared';
+import { AppSnapshotDetail, AppSnapshotSummary } from '@asobeast/shared';
 import {
   contentRatingOf,
   developerId,
   primaryGenreKey,
   primaryGenreName,
+  releaseNotesFor,
   storeDeveloperNameOf,
 } from '../store-providers/raw-facts';
 
@@ -19,6 +20,10 @@ export type ListingFacts = Required<
     | 'releasedAt'
     | 'storeUpdatedAt'
   >
+>;
+
+export type ListingTexts = Required<
+  Pick<AppSnapshotDetail, 'description' | 'releaseNotes'>
 >;
 
 const isoOrNull = (date: Date | null): string | null =>
@@ -38,5 +43,15 @@ export function listingFactsOf(
     contentRating: contentRatingOf(snapshot.raw),
     releasedAt: isoOrNull(snapshot.releasedAt),
     storeUpdatedAt: isoOrNull(snapshot.storeUpdatedAt),
+  };
+}
+
+export function listingTextsOf(
+  store: Store,
+  snapshot: Pick<AppSnapshot, 'raw' | 'description'>,
+): ListingTexts {
+  return {
+    description: snapshot.description,
+    releaseNotes: releaseNotesFor(store, snapshot.raw),
   };
 }

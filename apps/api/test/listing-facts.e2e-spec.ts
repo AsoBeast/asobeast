@@ -229,4 +229,81 @@ describe('listing facts on the app detail (e2e)', () => {
     }
     expect(JSON.stringify(snapshot)).not.toContain('Unknown');
   });
+
+  it('answers the description and release notes of the app on the detail', async () => {
+    const play = await createApp(Store.GOOGLE_PLAY, 'com.ihg');
+    await addListing(play.id, { raw: PLAY_RAW, description: 'Plan trips.' });
+    const ios = await createApp(Store.APP_STORE, '111');
+    await addListing(ios.id, {
+      raw: APP_STORE_RAW,
+      description: 'Build habits.',
+    });
+
+    expect((await detailOf(play.id)).latestSnapshot).toMatchObject({
+      description: 'Plan trips.',
+      releaseNotes: 'Faster booking',
+    });
+    expect((await detailOf(ios.id)).latestSnapshot).toMatchObject({
+      description: 'Build habits.',
+      releaseNotes: 'Bug fixes.',
+    });
+  });
+
+  it('answers a long description whole', async () => {
+    const mine = await createApp(Store.GOOGLE_PLAY, 'com.long');
+    await addListing(mine.id, { raw: PLAY_RAW, description: 'a'.repeat(4000) });
+
+    expect((await detailOf(mine.id)).latestSnapshot?.description).toHaveLength(
+      4000,
+    );
+  });
+
+  it('answers null release notes for a listing without any', async () => {
+    const mine = await createApp(Store.APP_STORE, '111');
+    await addListing(mine.id, {
+      raw: { primaryGenreId: 6013 },
+      description: 'Build habits.',
+    });
+
+    const snapshot = (await detailOf(mine.id)).latestSnapshot;
+
+    expect(snapshot).toHaveProperty('releaseNotes', null);
+    expect(snapshot?.description).toBe('Build habits.');
+  });
+
+  it('keeps the description off a competitor', async () => {
+    const mine = await seedListing(Store.GOOGLE_PLAY, 'com.mine', PLAY_RAW);
+    await seedListing(Store.GOOGLE_PLAY, 'com.rival', PLAY_RAW, mine.id);
+
+    const fromDetail = (await detailOf(mine.id)).competitors[0]?.latestSnapshot;
+    const fromList = (await competitorsOf(mine.id))[0]?.latestSnapshot;
+
+    for (const summary of [fromDetail, fromList]) {
+      expect(summary).toMatchObject(PLAY_FACTS);
+      expect(summary).not.toHaveProperty('description');
+      expect(summary).not.toHaveProperty('releaseNotes');
+    }
+  });
+
+  it('answers the description of a market listing', async () => {
+    const mine = await createApp(Store.APP_STORE, '111');
+    await addListing(mine.id, {
+      raw: APP_STORE_RAW,
+      description: 'Build habits.',
+    });
+    await addListing(mine.id, {
+      country: 'de',
+      raw: { ...APP_STORE_RAW, releaseNotes: 'Fehlerbehebungen.' },
+      description: 'Gewohnheiten aufbauen.',
+      capturedAt: '2026-11-02T00:00:00.000Z',
+    });
+
+    expect(
+      (await detailOf(mine.id, '?country=de')).latestSnapshot,
+    ).toMatchObject({
+      country: 'de',
+      description: 'Gewohnheiten aufbauen.',
+      releaseNotes: 'Fehlerbehebungen.',
+    });
+  });
 });

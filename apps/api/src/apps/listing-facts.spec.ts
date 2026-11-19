@@ -1,5 +1,5 @@
 import { Store } from '@prisma/client';
-import { listingFactsOf } from './listing-facts';
+import { listingFactsOf, listingTextsOf } from './listing-facts';
 
 const row = (
   raw: unknown,
@@ -110,5 +110,42 @@ describe('listingFactsOf', () => {
         row({}, { releasedAt: null, storeUpdatedAt: new Date('not a date') }),
       ),
     ).toMatchObject({ releasedAt: null, storeUpdatedAt: null });
+  });
+});
+
+describe('listingTextsOf', () => {
+  const texts = (raw: unknown, description = 'Plan trips.') => ({
+    raw,
+    description,
+  });
+
+  it.each(STORES)('answers the description column on %s', (store) => {
+    expect(listingTextsOf(store, texts({})).description).toBe('Plan trips.');
+  });
+
+  it('answers Google Play release notes as plain lines', () => {
+    expect(
+      listingTextsOf(
+        Store.GOOGLE_PLAY,
+        texts({ recentChanges: 'Fixes<br>Faster search' }),
+      ).releaseNotes,
+    ).toBe('Fixes\nFaster search');
+  });
+
+  it('answers App Store release notes trimmed', () => {
+    expect(
+      listingTextsOf(Store.APP_STORE, texts({ releaseNotes: '  Bug fixes.  ' }))
+        .releaseNotes,
+    ).toBe('Bug fixes.');
+  });
+
+  it.each([
+    [Store.APP_STORE, {}],
+    [Store.GOOGLE_PLAY, {}],
+    [Store.APP_STORE, { releaseNotes: '   ' }],
+    [Store.GOOGLE_PLAY, { recentChanges: 7 }],
+    [Store.GOOGLE_PLAY, null],
+  ])('answers null release notes when %s wrote none in %j', (store, raw) => {
+    expect(listingTextsOf(store, texts(raw)).releaseNotes).toBeNull();
   });
 });

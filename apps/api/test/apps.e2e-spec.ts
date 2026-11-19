@@ -1002,6 +1002,8 @@ describe('AppsController (e2e)', () => {
       releasedAt: '2021-06-01T00:00:00.000Z',
       storeUpdatedAt: '2022-01-01T00:00:00.000Z',
     });
+    expect(body.latestSnapshot?.description).toBe('Play fixture description');
+    expect(body.latestSnapshot?.releaseNotes).toBe('Bug fixes');
   });
 
   it('returns a 400 envelope for an invalid url', async () => {

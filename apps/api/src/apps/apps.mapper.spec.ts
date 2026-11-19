@@ -307,6 +307,41 @@ describe('the listing facts of a snapshot', () => {
     });
   });
 
+  it("answers the description and release notes on the app's own listing", () => {
+    const snapshot = {
+      ...snapshotOf('s1', { ...PLAY_RAW, recentChanges: 'New maps' }),
+      description: 'Plan trips.',
+    };
+
+    expect(toAppDetail(play, snapshot, [], null).latestSnapshot).toMatchObject({
+      description: 'Plan trips.',
+      releaseNotes: 'New maps',
+    });
+  });
+
+  it('leaves the description and release notes off every rival', () => {
+    const rival = {
+      ...appOf('rival_1', Store.GOOGLE_PLAY),
+      snapshots: [snapshotOf('s2', { ...PLAY_RAW, recentChanges: 'Rival' })],
+    };
+
+    const summary = toAppDetail(play, snapshotOf('s1', PLAY_RAW), [rival], null)
+      .competitors[0]?.latestSnapshot;
+
+    expect(summary).not.toHaveProperty('description');
+    expect(summary).not.toHaveProperty('releaseNotes');
+  });
+
+  it('leaves the description and release notes off a competitor item', () => {
+    const summary = toCompetitorItem(
+      play,
+      snapshotOf('s1', { ...PLAY_RAW, recentChanges: 'Rival' }),
+    ).latestSnapshot;
+
+    expect(summary).not.toHaveProperty('description');
+    expect(summary).not.toHaveProperty('releaseNotes');
+  });
+
   it('answers a null date for a column that is not a valid date', () => {
     const snapshot = snapshotOf('s1', {}, { storeUpdatedAt: new Date('nope') });
 
