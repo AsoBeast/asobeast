@@ -20,7 +20,7 @@ import { AuthActions, AuthAside, AuthCard } from "./AuthCard";
 import { ResendConfirmationButton } from "./ResendConfirmationButton";
 import { SessionCheck } from "./SessionCheck";
 import { SignOutButton } from "./SignOutButton";
-import { SignUpSteps } from "./SignUpSteps";
+import { SignUpStepsAbove } from "./SignUpSteps";
 import { useLeaveFor } from "./use-leave-for";
 
 export function ConfirmEmailContent({ user }: { user: AuthUser }) {
@@ -44,8 +44,7 @@ export function ConfirmEmailContent({ user }: { user: AuthUser }) {
   }
 
   return (
-    <div className="my-auto flex w-full flex-col items-center gap-6">
-      <SignUpSteps steps={signUpSteps(user)} />
+    <SignUpStepsAbove steps={signUpSteps(user)}>
       <AuthCard
         title={CONFIRM_EMAIL_TITLE}
         width="wall"
@@ -73,6 +72,6 @@ export function ConfirmEmailContent({ user }: { user: AuthUser }) {
           </div>
         </AuthAside>
       </AuthCard>
-    </div>
+    </SignUpStepsAbove>
   );
 }

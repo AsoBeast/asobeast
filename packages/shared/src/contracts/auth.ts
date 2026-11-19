@@ -9,6 +9,7 @@ import type { BillingInterval, TrialOffer } from './billing';
 
 export interface AuthStatus {
   billing: boolean;
+  confirmsEmail?: boolean;
   registrationOpen: boolean;
   setupRequired: boolean;
   authenticated: boolean;

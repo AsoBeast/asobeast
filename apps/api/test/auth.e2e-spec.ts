@@ -810,6 +810,7 @@ describe('Auth (enabled, self-hosted)', () => {
       .expect(200);
     expect(before.body).toEqual({
       billing: false,
+      confirmsEmail: false,
       registrationOpen: true,
       setupRequired: true,
       authenticated: false,
@@ -825,6 +826,7 @@ describe('Auth (enabled, self-hosted)', () => {
       .expect(200);
     expect(after.body).toEqual({
       billing: false,
+      confirmsEmail: false,
       registrationOpen: false,
       setupRequired: false,
       authenticated: false,
