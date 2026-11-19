@@ -31,6 +31,7 @@ export const SUPPORT_MUTATIONS: SupportAction[] = [
 export interface SupportWorkspaceSummary {
   workspaceId: string;
   name: string;
+  operatorWorkspace?: boolean;
   plan: PlanName;
   storedPlan: string;
   createdAt: string;

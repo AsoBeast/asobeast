@@ -149,6 +149,31 @@ describe('Support tooling (e2e)', () => {
     expect(body.limits).toHaveProperty('keywordMarkets');
   });
 
+  it('marks only the operator workspace as the operator workspace', async () => {
+    const response = await owner.get(SUPPORT).expect(200);
+    const rows = response.body as SupportWorkspaceSummary[];
+
+    expect(rows.length).toBeGreaterThan(1);
+    expect(
+      rows.filter((row) => row.operatorWorkspace).map((row) => row.workspaceId),
+    ).toEqual([DEFAULT_WORKSPACE_ID]);
+    expect(
+      rows.every((row) => typeof row.operatorWorkspace === 'boolean'),
+    ).toBe(true);
+  });
+
+  it('says in the detail whether a workspace is the operator workspace', async () => {
+    const own = await owner
+      .get(`${SUPPORT}/${DEFAULT_WORKSPACE_ID}`)
+      .expect(200);
+    const other = await owner.get(`${SUPPORT}/${OTHER_WORKSPACE}`).expect(200);
+
+    expect((own.body as SupportWorkspaceDetail).operatorWorkspace).toBe(true);
+    expect((other.body as SupportWorkspaceDetail).operatorWorkspace).toBe(
+      false,
+    );
+  });
+
   it('answers 404 for a workspace that does not exist', async () => {
     await owner.get(`${SUPPORT}/ws_missing`).expect(404);
   });

@@ -16,6 +16,7 @@ import {
   type KeywordMarketRow,
 } from '../auth/keyword-markets';
 import { planScopeOf } from '../auth/plan-limits';
+import { isOperatorWorkspace } from '../auth/platform-operator';
 import { workspaceStageOf } from '../billing/workspace-stage';
 import { scrubText } from '../common/logging/log-redaction';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
@@ -114,6 +115,7 @@ export class SupportService {
     return {
       workspaceId: workspace.id,
       name: workspace.name,
+      operatorWorkspace: isOperatorWorkspace(workspace.id),
       plan: this.scopeOf(workspace, now).plan,
       storedPlan: workspace.plan,
       createdAt: workspace.createdAt.toISOString(),
