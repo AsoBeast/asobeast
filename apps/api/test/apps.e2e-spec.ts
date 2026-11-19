@@ -986,6 +986,26 @@ describe('AppsController (e2e)', () => {
     expect(await prisma.appSnapshot.count()).toBe(1);
   });
 
+  it('answers the stored listing facts on the import answer', async () => {
+    const response = await api
+      .post('/apps')
+      .send({ url: GOOGLE_PLAY_URL })
+      .expect(201);
+    const body = response.body as AppDetail;
+
+    expect(body.latestSnapshot).toMatchObject({
+      genre: 'TOOLS',
+      genreName: null,
+      developer: null,
+      developerId: null,
+      contentRating: null,
+      releasedAt: '2021-06-01T00:00:00.000Z',
+      storeUpdatedAt: '2022-01-01T00:00:00.000Z',
+    });
+    expect(body.latestSnapshot?.description).toBe('Play fixture description');
+    expect(body.latestSnapshot?.releaseNotes).toBe('Bug fixes');
+  });
+
   it('returns a 400 envelope for an invalid url', async () => {
     const response = await api
       .post('/apps')
