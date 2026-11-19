@@ -34,6 +34,7 @@ import {
 } from "@/lib/admin-support";
 import {
   apiErrorMessage,
+  isNotFound,
   reconcileSupportWorkspace,
   restoreSupportWorkspace,
   runSupportWorkspaceDaily,
@@ -42,8 +43,7 @@ import {
 import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
 import { invalidateSupportAction } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
-
-const focusKeyOf = (action: WorkspaceAction) => `support-action:${action}`;
+import { focusKeyOf, WORKSPACE_GONE_FOCUS_KEY } from "./focus-keys";
 
 const SEND: Record<
   WorkspaceAction,
@@ -78,18 +78,26 @@ export function SupportActionDialog({
   const fieldId = useId();
   const hintId = useId();
 
+  const settle = () => {
+    invalidateSupportAction(queryClient);
+    setOpen(false);
+    setReason("");
+  };
+
   const mutation = useMutation({
     mutationFn: () => SEND[action](workspaceId, supportActionRequest(reason)),
     onSuccess: (result) => {
       toast.success(copy.done(name, result.detail), {
         description: result.detail,
       });
-      invalidateSupportAction(queryClient);
-      setOpen(false);
-      setReason("");
+      settle();
     },
-    onError: (error) =>
-      toast.error(apiErrorMessage(error, "Could not finish. Try again.")),
+    onError: (error) => {
+      toast.error(apiErrorMessage(error, "Could not finish. Try again."));
+      if (!isNotFound(error)) return;
+      armFocusHandoff(WORKSPACE_GONE_FOCUS_KEY);
+      settle();
+    },
   });
   const sendOnce = useSingleFlight(mutation);
   const pending = mutation.isPending;

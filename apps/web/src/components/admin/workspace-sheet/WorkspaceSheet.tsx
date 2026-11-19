@@ -17,8 +17,10 @@ import {
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isNotFound } from "@/lib/api";
+import { useFocusClaim } from "@/lib/focus-handoff";
 import { adminWorkspaceOptions } from "@/lib/queries";
 import { workspaceCloseTarget } from "./close-target";
+import { WORKSPACE_GONE_FOCUS_KEY } from "./focus-keys";
 import { standingOf } from "./workspace-facts";
 import { WorkspaceAccessLog } from "./WorkspaceAccessLog";
 import { WorkspaceActions } from "./WorkspaceActions";
@@ -41,6 +43,18 @@ function SheetSkeleton() {
   );
 }
 
+function WorkspaceGone({ onClose }: { onClose: () => void }) {
+  const claimFocus = useFocusClaim(WORKSPACE_GONE_FOCUS_KEY);
+  return (
+    <div className="flex flex-col items-start gap-3 px-4 py-4 text-dense">
+      <p>This workspace no longer exists.</p>
+      <Button ref={claimFocus} variant="outline" size="sm" onClick={onClose}>
+        Close
+      </Button>
+    </div>
+  );
+}
+
 function PendingBody({
   read,
   onClose,
@@ -48,16 +62,7 @@ function PendingBody({
   read: WorkspaceRead;
   onClose: () => void;
 }) {
-  if (isNotFound(read.error)) {
-    return (
-      <div className="flex flex-col items-start gap-3 px-4 py-4 text-dense">
-        <p>This workspace no longer exists.</p>
-        <Button variant="outline" size="sm" onClick={onClose}>
-          Close
-        </Button>
-      </div>
-    );
-  }
+  if (isNotFound(read.error)) return <WorkspaceGone onClose={onClose} />;
   if (failedRead(read)) {
     return (
       <div className="px-4 py-4">
@@ -144,7 +149,7 @@ export function WorkspaceSheet({
           target.focus();
         }}
       >
-        {read.data ? (
+        {read.data && !isNotFound(read.error) ? (
           <WorkspaceDetails workspace={read.data} billing={billing} />
         ) : (
           <>

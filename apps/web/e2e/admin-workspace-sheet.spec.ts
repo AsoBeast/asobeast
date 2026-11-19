@@ -445,6 +445,14 @@ test.describe("suspend and restore", () => {
     await confirm.getByRole("button", { name: "Suspend workspace" }).click();
 
     await expect(page.getByText("Resource not found")).toBeVisible();
+    await expect(confirm).toHaveCount(0);
+    const gone = page.getByRole("dialog", { name: "Workspace" });
+    await expect(
+      gone.getByText("This workspace no longer exists."),
+    ).toBeVisible();
+    await expect(
+      gone.getByRole("button", { name: "Close", exact: true }).first(),
+    ).toBeFocused();
   });
 
   test("a confirmed suspend hands focus to Restore", async ({ page }) => {
