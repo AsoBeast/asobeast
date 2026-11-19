@@ -1,3 +1,4 @@
+import { Store } from '@prisma/client';
 import { ReplyError, type Redis } from 'ioredis';
 import {
   ON_DEMAND_ACTIONS,
@@ -13,10 +14,15 @@ import { RedisUnavailableError } from '../redis/redis.errors';
 import { FailFastRedis } from '../redis/fail-fast-redis';
 import { secondsUntilReset, windowKey } from './rate-limit/window';
 import { QuotaService } from './quota.service';
+import {
+  StorePoolBusyError,
+  StoreRequestError,
+} from '../store-providers/errors';
 
 const AnsweredError = ReplyError as unknown as new (message: string) => Error;
 
 const INDIE_RUN_DAILY = PLAN_LIMITS.indie.onDemand?.runDaily.limit ?? 0;
+const INDIE_IMPORTS = PLAN_LIMITS.indie.onDemand?.importApp.limit ?? 0;
 
 const WORKSPACE = 'ws_limits';
 const NOW = new Date('2026-08-08T10:30:00Z');
@@ -292,5 +298,107 @@ describe('OnDemandLimiter while redis is unreachable', () => {
     await expect(
       workspace.run(WORKSPACE, () => limiter.consume('refresh')),
     ).rejects.toBeInstanceOf(RedisUnavailableError);
+  });
+});
+
+describe('OnDemandLimiter.spendUnlessUnreached', () => {
+  const incr = jest.fn<Promise<number>, [string]>();
+  const expire = jest.fn<Promise<number>, [string, number]>();
+  const evaluate = jest.fn<Promise<number>, [string, number, string]>();
+  const workspace = new WorkspaceContext();
+  const limiter = new OnDemandLimiter(
+    new FailFastRedis({ incr, expire, eval: evaluate } as unknown as Redis),
+    workspace,
+    {
+      planScope: () =>
+        Promise.resolve({ plan: 'indie', limits: PLAN_LIMITS.indie }),
+    } as unknown as QuotaService,
+  );
+  const busy = new StorePoolBusyError(Store.GOOGLE_PLAY, 3_000);
+
+  const run = <T>(work: (spend: () => Promise<void>) => Promise<T>) =>
+    workspace.run(WORKSPACE, () =>
+      limiter.spendUnlessUnreached('importApp', work),
+    );
+
+  beforeEach(() => {
+    incr.mockReset().mockResolvedValue(1);
+    expire.mockReset().mockResolvedValue(1);
+    evaluate.mockReset().mockResolvedValue(0);
+  });
+
+  it('refunds a spend the busy pool turned away', async () => {
+    await expect(
+      run(async (spend) => {
+        await spend();
+        throw busy;
+      }),
+    ).rejects.toBe(busy);
+
+    expect(evaluate).toHaveBeenCalledTimes(1);
+    expect(evaluate.mock.calls[0][2]).toBe(incr.mock.calls[0][0]);
+  });
+
+  it('keeps a spend a store failure used', async () => {
+    const failure = new StoreRequestError(
+      Store.GOOGLE_PLAY,
+      'getApp',
+      'fetch failed',
+    );
+
+    await expect(
+      run(async (spend) => {
+        await spend();
+        throw failure;
+      }),
+    ).rejects.toBe(failure);
+
+    expect(incr).toHaveBeenCalledTimes(1);
+    expect(evaluate).not.toHaveBeenCalled();
+  });
+
+  it('refunds nothing that was never spent', async () => {
+    await expect(run(() => Promise.reject(busy))).rejects.toBe(busy);
+
+    expect(incr).not.toHaveBeenCalled();
+    expect(evaluate).not.toHaveBeenCalled();
+  });
+
+  it('keeps a spend the work completed', async () => {
+    await expect(
+      run(async (spend) => {
+        await spend();
+        return 'imported';
+      }),
+    ).resolves.toBe('imported');
+
+    expect(incr).toHaveBeenCalledTimes(1);
+    expect(evaluate).not.toHaveBeenCalled();
+  });
+
+  it('refunds nothing over the limit', async () => {
+    incr.mockResolvedValue(INDIE_IMPORTS + 1);
+
+    await expect(
+      run(async (spend) => {
+        await spend();
+        throw busy;
+      }),
+    ).rejects.toBeInstanceOf(RateLimitExceededError);
+
+    expect(evaluate).not.toHaveBeenCalled();
+  });
+
+  it('answers the busy pool even when the refund cannot reach redis', async () => {
+    evaluate.mockRejectedValue(new Error('Command timed out'));
+
+    await expect(
+      run(async (spend) => {
+        await spend();
+        throw busy;
+      }),
+    ).rejects.toBe(busy);
+
+    expect(evaluate).toHaveBeenCalledTimes(1);
   });
 });

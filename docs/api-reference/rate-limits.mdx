@@ -102,7 +102,7 @@ Every response carries the tightest limit the request touched.
 | `RateLimit-Limit` | The allowance for the window closest to closing |
 | `RateLimit-Remaining` | What is left in that window |
 | `RateLimit-Reset` | Seconds until that window reopens |
-| `Retry-After` | Present on `429` only. Seconds until the refused request can succeed |
+| `Retry-After` | Present on `429`, and on the `503` an unreachable Redis or database, a busy server or a restarting API causes. Seconds until the refused request can succeed |
 
 A client that reads `RateLimit-Remaining` and honours `Retry-After` never needs to guess.
 
@@ -158,6 +158,8 @@ Finding localizations (`POST /apps/{id}/localizations/detect`) is not an allowan
 The allowance resets at 00:00 UTC for a daily window and at the top of the hour for an hourly one, so `Retry-After` is the exact wait.
 
 A deep search spends one allowance for the 27 lookups it queues, and only when it queues something. Starting a term whose lookups are all stored for today, or still waiting in the queue from an earlier start, costs nothing. Importing an app the workspace already tracks, adding a competitor it already has, capturing a top chart already captured today or being captured by another request at that moment, and a request the plan has no room for cost nothing either, because they make no store request.
+
+An import, a new competitor or a refresh that the server's own store capacity turned away, answered with `503` "This server is busy reaching…", gives its allowance back, because nothing was asked of the store. Every other failure keeps it: the store was asked.
 
 ## A rate limit is not a quota
 

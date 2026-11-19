@@ -53,8 +53,8 @@ export class AppsController {
       'The listing is not available on iPhone, so it cannot rank in the iPhone App Store search that asobeast reads',
   })
   import(@Body() dto: ImportAppDto): Promise<AppDetail> {
-    return this.apps.importFromUrl(dto.url, dto.country, () =>
-      this.limiter.consume('importApp'),
+    return this.limiter.spendUnlessUnreached('importApp', (spend) =>
+      this.apps.importFromUrl(dto.url, dto.country, spend),
     );
   }
 
@@ -108,8 +108,8 @@ export class AppsController {
     @Param('id') id: string,
     @Query() query: ListingMarketQueryDto,
   ): Promise<SnapshotDiffResult> {
-    return this.apps.refreshApp(id, query.country, () =>
-      this.limiter.consume('refresh'),
+    return this.limiter.spendUnlessUnreached('refresh', (spend) =>
+      this.apps.refreshApp(id, query.country, spend),
     );
   }
 

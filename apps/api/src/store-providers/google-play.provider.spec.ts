@@ -721,7 +721,7 @@ describe('GooglePlayProvider on demand deadline', () => {
 
     expect(failure).toBeInstanceOf(StoreRequestError);
     expect((failure as StoreRequestError).userMessage).toBe(
-      'Google Play did not answer. Try again in a few minutes.',
+      'Google Play took longer than 20 seconds to answer. Try again in a few minutes.',
     );
     expect((failure as StoreRequestError).causeMessage).toContain(
       'TimeoutError',
@@ -951,7 +951,7 @@ describe('GooglePlayProvider not found answers', () => {
 
     expect(failure).toBeInstanceOf(StoreRequestError);
     expect((failure as StoreRequestError).userMessage).toBe(
-      'Google Play did not answer. Try again in a few minutes.',
+      'Google Play took longer than 20 seconds to answer. Try again in a few minutes.',
     );
     expect(app).toHaveBeenCalledTimes(1);
     expect(Date.now() - started).toBeLessThan(2000);

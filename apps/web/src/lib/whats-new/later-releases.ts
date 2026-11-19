@@ -149,6 +149,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "Importing an app, adding a competitor or refreshing a listing on Google Play used to wait 20 seconds and then fail while the daily collection kept the server busy. Part of the server's capacity now stays free for what you are waiting for, so these usually go through at once, and when that part is taken too you are told within a few seconds how long to wait before trying again.",
       },
       {
+        kind: "fixed",
+        title: "A failed import says why",
+        text: "When the App Store or Google Play does not cooperate, an import, a new competitor or a refresh now says what happened: the store took too long, turned the request away, could not be reached or changed its page. If the server itself was too busy to ask the store, the attempt no longer counts toward your daily limit.",
+      },
+      {
         kind: "improved",
         title: "Your first numbers come sooner",
         text: "After you import an app or track new keywords, their first positions and scores are now collected ahead of the daily collection still in progress, instead of waiting behind it.",

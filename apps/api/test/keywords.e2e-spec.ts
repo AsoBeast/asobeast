@@ -1343,7 +1343,7 @@ describe('KeywordsController (e2e)', () => {
         .expect(502);
 
       expect((response.body as ApiErrorEnvelope).message).toBe(
-        'The App Store did not answer. Try again in a few minutes.',
+        'The App Store could not be reached. Try again in a few minutes.',
       );
     } finally {
       registry.failingTerms = () => false;

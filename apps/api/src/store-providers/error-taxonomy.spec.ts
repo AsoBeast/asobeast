@@ -1,9 +1,11 @@
-import { Store } from '@prisma/client';
+import { ProxyOutcome, Store } from '@prisma/client';
 import { AppStoreLib } from './app-store.lib';
 import { AppStoreProvider } from './app-store.provider';
+import { classifyFailure } from './egress/proxy-outcome';
 import {
   StoreAppNotFoundError,
   StoreNotSupportedError,
+  StorePoolBusyError,
   StoreRequestError,
 } from './errors';
 import { NotFoundError, ParseError } from '@mradex77/google-play-scraper';
@@ -335,5 +337,153 @@ describe('StoreAppNotFoundError', () => {
 
     expect(apple).toBeInstanceOf(StoreRequestError);
     expect(google).toBeInstanceOf(StoreRequestError);
+  });
+});
+
+describe('store failure reasons', () => {
+  const TURNED_AWAY =
+    'Google Play turned the request away for now. Try again in a few minutes.';
+
+  const failedPastDeadline = (store: Store, causeMessage: string) =>
+    withinStoreDeadline(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      return new StoreRequestError(store, 'getApp', causeMessage);
+    }, 1);
+
+  it.each([
+    [
+      'names a play call the deadline cut short',
+      Store.GOOGLE_PLAY,
+      'TimeoutError: The operation was aborted due to timeout',
+      'Google Play took longer than 20 seconds to answer. Try again in a few minutes.',
+    ],
+    [
+      'names an app store call the deadline cut short',
+      Store.APP_STORE,
+      'The operation was aborted due to timeout',
+      'The App Store took longer than 20 seconds to answer. Try again in a few minutes.',
+    ],
+    [
+      'names a call the deadline aborted',
+      Store.APP_STORE,
+      'This operation was aborted',
+      'The App Store took longer than 20 seconds to answer. Try again in a few minutes.',
+    ],
+  ])('%s', async (_case, store, causeMessage, sentence) => {
+    const error = await failedPastDeadline(store, causeMessage);
+
+    expect(error.reason).toBe('deadline');
+    expect(error.userMessage).toBe(sentence);
+  });
+
+  it.each([
+    [
+      'names an app store attempt that timed out with no request deadline as slow',
+      Store.APP_STORE,
+      'The operation was aborted due to timeout',
+      'The App Store took too long to answer. Try again in a few minutes.',
+    ],
+    [
+      'names a play call that timed out with no request deadline as slow',
+      Store.GOOGLE_PLAY,
+      'TimeoutError: The operation was aborted due to timeout',
+      'Google Play took too long to answer. Try again in a few minutes.',
+    ],
+  ])('%s', (_case, store, causeMessage, sentence) => {
+    const error = new StoreRequestError(store, 'getApp', causeMessage);
+
+    expect(error.reason).toBe('slow');
+    expect(error.userMessage).toBe(sentence);
+  });
+
+  it('keeps the reason of a failure inside a deadline that has not passed', async () => {
+    const error = await withinStoreDeadline(
+      () =>
+        Promise.resolve(
+          new StoreRequestError(
+            Store.GOOGLE_PLAY,
+            'getApp',
+            'Request failed with status 429',
+          ),
+        ),
+      60_000,
+    );
+
+    expect(error.reason).toBe('refused');
+  });
+
+  it.each([
+    [
+      'names a rate limited request as turned away',
+      Store.GOOGLE_PLAY,
+      'Request failed with status 429',
+      'refused',
+      TURNED_AWAY,
+    ],
+    [
+      'names a blocked request as turned away',
+      Store.GOOGLE_PLAY,
+      'BlockedError: Blocked by Google Play (captcha challenge)',
+      'refused',
+      TURNED_AWAY,
+    ],
+    [
+      'names a store that answered 503 as turned away',
+      Store.APP_STORE,
+      'Request failed with status 503',
+      'refused',
+      'The App Store turned the request away for now. Try again in a few minutes.',
+    ],
+    [
+      'names a connection failure as unreachable',
+      Store.GOOGLE_PLAY,
+      'RequestError: fetch failed',
+      'unreachable',
+      'Google Play could not be reached. Try again in a few minutes.',
+    ],
+    [
+      'names a failed name lookup as unreachable',
+      Store.APP_STORE,
+      'getaddrinfo ENOTFOUND itunes.apple.com',
+      'unreachable',
+      'The App Store could not be reached. Try again in a few minutes.',
+    ],
+    [
+      'names a name lookup that failed for now as unreachable',
+      Store.GOOGLE_PLAY,
+      'RequestError: getaddrinfo EAI_AGAIN play.google.com',
+      'unreachable',
+      'Google Play could not be reached. Try again in a few minutes.',
+    ],
+    [
+      'names a broken page as unreadable',
+      Store.GOOGLE_PLAY,
+      'ParseError: title selector not found',
+      'unreadable',
+      'Google Play answered something asobeast could not read. Try again later.',
+    ],
+  ])('%s', (_case, store, causeMessage, reason, sentence) => {
+    const error = new StoreRequestError(store, 'getApp', causeMessage);
+
+    expect(error.reason).toBe(reason);
+    expect(error.userMessage).toBe(sentence);
+  });
+
+  it('reads a timeout before the transport pattern', async () => {
+    const cause = 'TimeoutError: The operation was aborted due to timeout';
+
+    expect(classifyFailure(cause)).toBe(ProxyOutcome.TRANSPORT);
+    expect((await failedPastDeadline(Store.GOOGLE_PLAY, cause)).reason).toBe(
+      'deadline',
+    );
+    expect(
+      new StoreRequestError(Store.GOOGLE_PLAY, 'getApp', cause).reason,
+    ).toBe('slow');
+  });
+
+  it('keeps the busy pool sentence', () => {
+    expect(new StorePoolBusyError(Store.GOOGLE_PLAY, 3_000).userMessage).toBe(
+      'This server is busy reaching Google Play. Try again in 3 seconds.',
+    );
   });
 });
