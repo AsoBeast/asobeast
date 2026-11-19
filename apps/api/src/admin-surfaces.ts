@@ -16,7 +16,7 @@ import type { Env } from './config/env';
 const BEARER_SCHEME = 'personalApiToken';
 
 const API_DESCRIPTION = [
-  'Self hosted ASO toolkit API.',
+  'Self hosted ASO toolkit API. It tracks the apps you import and their competitors over time and reads what asobeast collected; it is not a bulk store lookup.',
   '',
   'A metered instance carries RateLimit-Limit, RateLimit-Remaining and RateLimit-Reset on every response, for the tightest limit the request touched. A self hosted instance has no request rate limits and sends no such header. Limits are per workspace, so minting more tokens does not buy more capacity, and they are sized per plan across three classes: read for stored data, write for configuration changes and store for the endpoints that reach the App Store or Google Play.',
   '',
