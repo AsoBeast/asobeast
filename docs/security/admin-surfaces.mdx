@@ -53,7 +53,7 @@ The web app has an **Admin** area at `/admin` for the platform operator. It appe
 | Overview | paying, on trial, trial to paid and sign ups; the [funnel](#conversion) over 30 or 90 days; what needs a look; workspaces by [stage](#workspace-stages); paying workspaces by plan and billing interval; who left and why; accounts per day over 30 days; the instance totals and activation | `GET /admin/support/overview`, `GET /admin/support/conversion` |
 | Conversion | eight weekly cohorts of sign ups and every departure record | `GET /admin/support/conversion`, `GET /admin/support/departures` |
 | Capacity | daily demand against capacity, per store, the top consumers by name, and the proxy pool when one is configured | `GET /admin/capacity`, `GET /admin/proxy-pool`, `GET /admin/support/workspaces` |
-| Workspaces | every workspace with its stage and plan, a trial's end, a renewal that stops, a failed payment, a suspension and a pending deletion with who asked, members, apps and keyword markets; filtered by stage and by what needs a look through `?stage=` and `?flag=` | `GET /admin/support/workspaces` |
+| Workspaces | every workspace with its stage and plan, a trial's end, a renewal that stops, a failed payment, a suspension and a pending deletion with who asked, members, apps and keyword markets; filtered by stage and by what needs a look through `?stage=` and `?flag=`; a workspace's name opens [its details and support actions](#workspace-details) | `GET /admin/support/workspaces`, `GET /admin/support/workspaces/{id}` and the four `POST` actions under it |
 | Users | every account, newest first, with its workspace, the workspace's stage and whether its email is confirmed | `GET /admin/support/users` |
 | Apps | every tracked app with its workspace, store, home market, competitors and keyword markets | `GET /admin/support/apps` |
 
@@ -61,7 +61,24 @@ Keyword markets count one phrase once per workspace, however many of its apps tr
 
 Users and Apps accept `?workspaceId=` and return the newest 1,000 rows with the total. Reading either list is written to the support audit trail, the same trail the workspace list writes, because both return personal data. The overview returns counts only and is not written to the trail. The capacity report names its top consumers by workspace id only, because a self registered workspace is named after its owner's email; the Capacity tab takes the names from the workspace list, so reading them is written to the trail too. Every response from these endpoints carries `Cache-Control: no-store`.
 
-The admin area is read only. It lists accounts and apps; it never opens a workspace, so an app name is not a link: the operator's own session cannot read another workspace's pages.
+The admin area never opens a workspace's own pages: an app name is not a link, and the operator's session cannot read another workspace's keywords, rankings or reviews. It can open a workspace's support details and act on it, as the next section describes.
+
+### Workspace details {#workspace-details}
+
+The name of a workspace on the Workspaces tab opens its details in a sheet, and `?workspace=` keeps it open in the address, so a link opens it and Back closes it. The sheet shows the stage, the plan held and its dates, a suspension with its reason, a pending deletion with who asked, usage against the limits in force, every rate limit and on demand allowance, the keyword checks of the last seven days, the newest failed store jobs that name the workspace and the last 20 entries of its support access log.
+
+Every opening reads `GET /admin/support/workspaces/{id}`, which writes a `view` entry to the access log before it answers, so the newest entry is always the read that showed it, marked In progress. The sheet reads once per opening, never retries a failed read by itself and reuses a read for a minute, so the log holds the reads a person caused.
+
+Four support actions sit at the end of the sheet, each behind a confirmation that asks for a reason of 8 to 200 characters. The reason is sent without the spaces at its ends.
+
+| Action | Shown | Does |
+| --- | --- | --- |
+| Run daily | unless the workspace is suspended | queues today's app refreshes, keyword checks, reviews and category ranks, skipping a job of today the queue still holds and queueing a failed one again |
+| Reconcile billing | with billing on | checks the workspace against Stripe and corrects what differs; a workspace Stripe has no subscription for moves to Free, and a trial Stripe should not have started is cancelled |
+| Suspend | when the workspace is active and is not the operator's own | refuses every write and on demand action; every member sees the reason |
+| Restore | while the workspace is suspended | lifts the suspension |
+
+Run daily stays hidden while a workspace is suspended, because the run it starts does not check the suspension. After an action the sheet, the workspace list and the overview read again, and each of those reads is recorded like any other. The rules every action follows, a written reason, an access log entry and the operator workspace that cannot be suspended, are in [Support tooling](/operations/hosted-observability#support-tooling).
 
 ### Activation {#activation}
 
@@ -104,11 +121,11 @@ With billing off the trial and payment steps, the rates and the trial figures ar
 
 With billing on, the support tooling, the queue dashboard, the metrics scrape and the OpenAPI surface under the default `owner` setting need an entitled operator. An operator whose own workspace has no plan in force receives `404` from every one of them, exactly as a customer does, although `GET /auth/me` still reports `platformOperator: true` next to `entitled: false`. A plan is in force while a paid plan has not expired or a trial is running. The state is a natural one on a hosted instance: the bootstrap account starts its trial at checkout like everyone else, and a trial that ends without a plan closes the area again.
 
-The admin area reads `platformOperator`, `entitled` and `trialAwaitsCheckout` from `GET /auth/me` and follows the same rule, so it says why instead of showing five tabs that cannot load.
+The admin area reads `platformOperator`, `entitled` and `trialAwaitsCheckout` from `GET /auth/me` and follows the same rule, so it says why instead of showing six tabs that cannot load.
 
 | Operator state | What the admin area shows |
 | --- | --- |
-| A plan is in force | The five tabs |
+| A plan is in force | The six tabs |
 | No plan, and the trial is offered at checkout | A notice that the admin area opens with the trial, with a link to start it and to this page |
 | No plan, any other reason: the trial ended, the plan expired or none was ever set | A notice that the workspace needs a plan, with a link to the plans and to this page |
 

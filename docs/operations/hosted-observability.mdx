@@ -169,7 +169,7 @@ The same reasoning covers the two places a url reaches an event by another route
 | `POST /admin/support/workspaces/{id}/restore` | Lifts a suspension |
 | `POST /admin/support/workspaces/{id}/run-daily` | Queues the daily run for one workspace |
 
-Three read only routes describe the instance as a whole: `GET /admin/support/overview` for the totals, and `GET /admin/support/users` and `GET /admin/support/apps` for every account and every tracked app. The web app reads all three in [the admin area](/security/admin-surfaces#the-admin-area).
+Three read only routes describe the instance as a whole: `GET /admin/support/overview` for the totals, and `GET /admin/support/users` and `GET /admin/support/apps` for every account and every tracked app. The web app reads all three in [the admin area](/security/admin-surfaces#the-admin-area). The admin area's [workspace details](/security/admin-surfaces#workspace-details) read the detail route and send the suspend, restore, reconcile and run daily actions; replaying a billing event stays an API call.
 
 Three rules hold the surface honest:
 
