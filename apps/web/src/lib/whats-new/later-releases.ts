@@ -165,8 +165,8 @@ export const LATER_RELEASES: readonly Release[] = [
       },
       {
         kind: "fixed",
-        title: "Similar apps that are not the developer's own",
-        text: "The competitor suggestions for an App Store app used to open with the developer's other apps before the ones the store actually calls similar. The list now reads the shelf the store shows under You Might Also Like, in the order the store gives it, and when the store sends no shelf the keyword result apps still answer alone.",
+        title: "Similar apps in the store's own order",
+        text: "Competitor suggestions for an App Store app now come from the store's You Might Also Like section, in the order the store shows it, instead of opening with the developer's other apps. Keyword suggestions from similar apps improve the same way.",
       },
     ],
   },
