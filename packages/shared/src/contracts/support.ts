@@ -85,6 +85,7 @@ export interface SupportWorkspaceDetail extends SupportWorkspaceSummary {
   limits: PlanLimits;
   runHistory: SupportRunDay[];
   failedJobs: SupportFailedJob[];
+  failedJobsUnavailable?: boolean;
   recentAccess: SupportAccessEntry[];
 }
 

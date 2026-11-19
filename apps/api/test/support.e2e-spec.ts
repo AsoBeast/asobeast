@@ -150,6 +150,26 @@ describe('Support tooling (e2e)', () => {
     expect(body.limits).toHaveProperty('keywordMarkets');
   });
 
+  it('opens the detail without failed jobs when the queue does not answer', async () => {
+    const appStore = app.get<Queue>(getQueueToken(QUEUES.APP_STORE));
+    const stalled = jest
+      .spyOn(appStore, 'getFailed')
+      .mockReturnValue(new Promise(() => undefined));
+
+    try {
+      const response = await owner
+        .get(`${SUPPORT}/${OTHER_WORKSPACE}`)
+        .timeout(5_000)
+        .expect(200);
+      const body = response.body as SupportWorkspaceDetail;
+
+      expect(body.failedJobs).toEqual([]);
+      expect(body.failedJobsUnavailable).toBe(true);
+    } finally {
+      stalled.mockRestore();
+    }
+  });
+
   it('marks only the operator workspace as the operator workspace', async () => {
     const response = await owner.get(SUPPORT).expect(200);
     const rows = response.body as SupportWorkspaceSummary[];
