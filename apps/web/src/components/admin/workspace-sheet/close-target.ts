@@ -1,12 +1,13 @@
-const WORKSPACE_SEARCH = 'input[aria-label="Search workspaces"]';
+import { adminSearchLabel, WORKSPACE_NOUN } from "../admin-search";
 
 export function workspaceCloseTarget(
   root: ParentNode,
   workspaceId: string,
 ): HTMLElement | null {
+  const search = CSS.escape(adminSearchLabel(WORKSPACE_NOUN));
   return (
     root.querySelector<HTMLElement>(
       `[data-workspace-sheet="${CSS.escape(workspaceId)}"]`,
-    ) ?? root.querySelector<HTMLElement>(WORKSPACE_SEARCH)
+    ) ?? root.querySelector<HTMLElement>(`input[aria-label="${search}"]`)
   );
 }

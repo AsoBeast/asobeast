@@ -26,6 +26,7 @@ import {
 } from "@/lib/search-params";
 import { countBy } from "@/lib/table/facets";
 import { useUrlSheet } from "@/lib/use-url-sheet";
+import { WORKSPACE_NOUN } from "./admin-search";
 import { AdminList } from "./AdminList";
 import { useAdminTable } from "./useAdminTable";
 import { workspaceColumns } from "./workspace-columns";
@@ -113,7 +114,7 @@ export function AdminWorkspaces() {
       <AdminList
         table={table}
         caption="Workspaces on this instance"
-        noun="workspace"
+        noun={WORKSPACE_NOUN}
         loaded={workspaces.length}
         total={workspaces.length}
         billing={status.billing}
