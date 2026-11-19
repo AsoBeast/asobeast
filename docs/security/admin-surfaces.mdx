@@ -69,7 +69,7 @@ The name of a workspace on the Workspaces tab opens its details in a sheet, and 
 
 Every opening reads `GET /admin/support/workspaces/{id}`, which writes a `view` entry to the access log before it answers, so the newest entry is always the read that showed it, marked In progress. The sheet reads once per opening, never retries a failed read by itself and reuses a read for a minute, so the log holds the reads a person caused.
 
-Four support actions sit at the end of the sheet, each behind a confirmation that asks for a reason of 8 to 200 characters. The reason is sent without the spaces at its ends.
+Four support actions sit at the end of the sheet, each behind a confirmation that asks for a reason of 8 to 200 characters, counted and sent without the spaces at its ends.
 
 | Action | Shown | Does |
 | --- | --- | --- |
@@ -78,7 +78,7 @@ Four support actions sit at the end of the sheet, each behind a confirmation tha
 | Suspend | when the workspace is active and is not the operator's own | refuses every write and on demand action; every member sees the reason |
 | Restore | while the workspace is suspended | lifts the suspension |
 
-Run daily stays hidden while a workspace is suspended, because the run it starts does not check the suspension. After an action the sheet, the workspace list and the overview read again, and each of those reads is recorded like any other. The rules every action follows, a written reason, an access log entry and the operator workspace that cannot be suspended, are in [Support tooling](/operations/hosted-observability#support-tooling).
+Run daily stays hidden while a workspace is suspended, and the API refuses it too. An action that finds the workspace changed meanwhile, suspended or restored from another tab or by another operator, answers `409`: the confirmation closes with that message and the sheet reads the workspace again, so it shows the action that now applies. After an action the sheet, the workspace list and the overview read again, and each of those reads is recorded like any other. The rules every action follows, a written reason, an access log entry and the operator workspace that cannot be suspended, are in [Support tooling](/operations/hosted-observability#support-tooling).
 
 ### Activation {#activation}
 

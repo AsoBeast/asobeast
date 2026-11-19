@@ -7017,6 +7017,8 @@
             "required": true,
             "in": "path",
             "schema": {
+              "minLength": 1,
+              "maxLength": 64,
               "type": "string"
             }
           }
@@ -7048,6 +7050,8 @@
             "required": true,
             "in": "path",
             "schema": {
+              "minLength": 1,
+              "maxLength": 64,
               "type": "string"
             }
           }
@@ -7089,6 +7093,8 @@
             "required": true,
             "in": "path",
             "schema": {
+              "minLength": 1,
+              "maxLength": 64,
               "type": "string"
             }
           },
@@ -7138,6 +7144,8 @@
             "required": true,
             "in": "path",
             "schema": {
+              "minLength": 1,
+              "maxLength": 64,
               "type": "string"
             }
           }
@@ -7179,6 +7187,8 @@
             "required": true,
             "in": "path",
             "schema": {
+              "minLength": 1,
+              "maxLength": 64,
               "type": "string"
             }
           }
@@ -7220,6 +7230,8 @@
             "required": true,
             "in": "path",
             "schema": {
+              "minLength": 1,
+              "maxLength": 64,
               "type": "string"
             }
           }
@@ -8884,7 +8896,7 @@
             "type": "string",
             "minLength": 8,
             "maxLength": 200,
-            "description": "Why the action was taken. Stored in the support audit trail. A suspension also shows it to every member of the workspace on every page and in every refused write, so write it for the customer"
+            "description": "Why the action was taken. Spaces at its ends are removed before its length is checked. Stored in the support audit trail. A suspension also shows it to every member of the workspace on every page and in every refused write, so write it for the customer"
           }
         },
         "required": [
