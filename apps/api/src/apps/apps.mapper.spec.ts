@@ -136,6 +136,7 @@ describe('toListingMarkets', () => {
 });
 
 describe('toSnapshotSummary', () => {
+  const US_APP = { store: Store.APP_STORE, country: 'us' };
   const snapshot = (country: string | null, raw: unknown = {}) =>
     ({
       id: 's1',
@@ -153,24 +154,165 @@ describe('toSnapshotSummary', () => {
     }) as AppSnapshot;
 
   it('names the home storefront for a home snapshot', () => {
-    expect(toSnapshotSummary(snapshot(null), 'us').country).toBe('us');
+    expect(toSnapshotSummary(snapshot(null), US_APP).country).toBe('us');
   });
 
   it('names the market of a market snapshot', () => {
-    expect(toSnapshotSummary(snapshot('de'), 'us').country).toBe('de');
+    expect(toSnapshotSummary(snapshot('de'), US_APP).country).toBe('de');
   });
 
   it('names the currency the store sold the price in', () => {
     expect(
-      toSnapshotSummary(snapshot(null, { currency: 'EUR' }), 'us').currency,
+      toSnapshotSummary(snapshot(null, { currency: 'EUR' }), US_APP).currency,
     ).toBe('EUR');
   });
 
   it('answers a null currency when the payload names none', () => {
-    expect(toSnapshotSummary(snapshot(null), 'us').currency).toBeNull();
+    expect(toSnapshotSummary(snapshot(null), US_APP).currency).toBeNull();
     expect(
-      toSnapshotSummary(snapshot(null, { currency: 'euro' }), 'us').currency,
+      toSnapshotSummary(snapshot(null, { currency: 'euro' }), US_APP).currency,
     ).toBeNull();
+  });
+});
+
+describe('the listing facts of a snapshot', () => {
+  const appOf = (id: string, store: Store, country = 'us'): App => ({
+    id,
+    workspaceId: 'ws_1',
+    store,
+    storeAppId: id,
+    country,
+    name: id,
+    iconUrl: null,
+    delistedAt: null,
+    unlistedMarkets: [],
+    isCompetitor: false,
+    primaryAppId: null,
+    groupId: null,
+    replyGuidelines: null,
+    createdAt: new Date('2026-10-01T00:00:00.000Z'),
+  });
+  const snapshotOf = (
+    id: string,
+    raw: unknown,
+    dates: { releasedAt?: Date | null; storeUpdatedAt?: Date | null } = {},
+  ) =>
+    ({
+      id,
+      country: null,
+      title: id,
+      subtitle: null,
+      summary: null,
+      description: `${id} description`,
+      ratingAvg: null,
+      ratingCount: null,
+      installs: null,
+      price: null,
+      version: null,
+      raw,
+      releasedAt: dates.releasedAt ?? null,
+      storeUpdatedAt: dates.storeUpdatedAt ?? null,
+      capturedAt: new Date('2026-11-01T00:00:00.000Z'),
+    }) as AppSnapshot;
+  const DATES = {
+    releasedAt: new Date('2015-03-12T00:00:00.000Z'),
+    storeUpdatedAt: new Date('2026-11-10T08:30:00.000Z'),
+  };
+  const PLAY_RAW = {
+    genreId: 'TRAVEL_AND_LOCAL',
+    genre: 'Travel & Local',
+    developerId: '5700313618786177705',
+    developer: 'IHG',
+    contentRating: 'Everyone',
+  };
+  const PLAY_FACTS = {
+    genre: 'TRAVEL_AND_LOCAL',
+    genreName: 'Travel & Local',
+    developer: 'IHG',
+    developerId: '5700313618786177705',
+    contentRating: 'Everyone',
+    releasedAt: '2015-03-12T00:00:00.000Z',
+    storeUpdatedAt: '2026-11-10T08:30:00.000Z',
+  };
+  const APP_STORE_RAW = {
+    primaryGenreId: '6013',
+    primaryGenre: 'Health & Fitness',
+    artistId: 284882218,
+    developer: '  Habit Labs ',
+    contentRating: '4+',
+  };
+  const APP_STORE_FACTS = {
+    genre: '6013',
+    genreName: 'Health & Fitness',
+    developer: 'Habit Labs',
+    developerId: '284882218',
+    contentRating: '4+',
+    releasedAt: '2015-03-12T00:00:00.000Z',
+    storeUpdatedAt: '2026-11-10T08:30:00.000Z',
+  };
+  const play = appOf('play_1', Store.GOOGLE_PLAY);
+  const appStore = appOf('ios_1', Store.APP_STORE);
+
+  it('answers the Google Play facts on a competitor', () => {
+    expect(
+      toCompetitorItem(play, snapshotOf('s1', PLAY_RAW, DATES)).latestSnapshot,
+    ).toMatchObject(PLAY_FACTS);
+  });
+
+  it('answers the App Store facts on a competitor', () => {
+    expect(
+      toCompetitorItem(appStore, snapshotOf('s1', APP_STORE_RAW, DATES))
+        .latestSnapshot,
+    ).toMatchObject(APP_STORE_FACTS);
+  });
+
+  it("answers the facts of the app's own listing on the detail", () => {
+    expect(
+      toAppDetail(play, snapshotOf('s1', PLAY_RAW, DATES), [], null)
+        .latestSnapshot,
+    ).toMatchObject(PLAY_FACTS);
+  });
+
+  it('answers the facts of a rival on the detail', () => {
+    const rival = {
+      ...appOf('rival_1', Store.APP_STORE),
+      snapshots: [snapshotOf('s2', APP_STORE_RAW, DATES)],
+    };
+
+    const detail = toAppDetail(
+      appStore,
+      snapshotOf('s1', { ...APP_STORE_RAW, contentRating: '17+' }, DATES),
+      [rival],
+      null,
+    );
+
+    expect(detail.competitors[0]?.latestSnapshot).toMatchObject(
+      APP_STORE_FACTS,
+    );
+    expect(detail.latestSnapshot?.contentRating).toBe('17+');
+  });
+
+  it('answers null for every fact the payload does not say', () => {
+    const summary = toCompetitorItem(play, snapshotOf('s1', {})).latestSnapshot;
+
+    expect(summary).toHaveProperty('genre', null);
+    expect(summary).toMatchObject({
+      genre: null,
+      genreName: null,
+      developer: null,
+      developerId: null,
+      contentRating: null,
+      releasedAt: null,
+      storeUpdatedAt: null,
+    });
+  });
+
+  it('answers a null date for a column that is not a valid date', () => {
+    const snapshot = snapshotOf('s1', {}, { storeUpdatedAt: new Date('nope') });
+
+    expect(
+      toAppDetail(appStore, snapshot, [], null).latestSnapshot,
+    ).toHaveProperty('storeUpdatedAt', null);
   });
 });
 
