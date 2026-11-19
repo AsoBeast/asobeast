@@ -425,6 +425,7 @@ export const adminWorkspaceOptions = (workspaceId: string) =>
     queryFn: () => getSupportWorkspace(workspaceId),
     staleTime: ADMIN_STALE_MS,
     retry: false,
+    refetchOnReconnect: false,
   });
 
 export const adminUsersOptions = (workspaceId?: string) =>

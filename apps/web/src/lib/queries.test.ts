@@ -1167,6 +1167,7 @@ describe("admin keys", () => {
     const options = adminWorkspaceOptions("ws_ana");
 
     expect(options.retry).toBe(false);
+    expect(options.refetchOnReconnect).toBe(false);
     expect(options.staleTime).toBe(60_000);
     expect(isPrefixOf(adminKeys.workspaces(), options.queryKey)).toBe(true);
   });
