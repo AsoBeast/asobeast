@@ -30,9 +30,15 @@ export function WorkspaceChecks({ days }: { days: SupportRunDay[] }) {
           <TableBody>
             {days.map((day) => (
               <TableRow key={day.date}>
-                <TableCell>{formatDayMonth(day.date)}</TableCell>
-                <TableCell numeric>{formatNumber(day.captured)}</TableCell>
-                <TableCell numeric>{formatNumber(day.unresolved)}</TableCell>
+                <TableCell>
+                  <span>{formatDayMonth(day.date)}</span>
+                </TableCell>
+                <TableCell numeric>
+                  <span>{formatNumber(day.captured)}</span>
+                </TableCell>
+                <TableCell numeric>
+                  <span>{formatNumber(day.unresolved)}</span>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

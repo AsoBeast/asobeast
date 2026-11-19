@@ -38,9 +38,11 @@ function LimitTable({
       <TableBody>
         {rows.map((row) => (
           <TableRow key={row.label}>
-            <TableCell className="whitespace-normal">{row.label}</TableCell>
+            <TableCell className="whitespace-normal">
+              <span>{row.label}</span>
+            </TableCell>
             <TableCell numeric className="whitespace-normal">
-              {row.value}
+              <span>{row.value}</span>
             </TableCell>
           </TableRow>
         ))}
