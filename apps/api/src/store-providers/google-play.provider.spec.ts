@@ -160,7 +160,7 @@ describe('GooglePlayProvider', () => {
     expect(result.ratingAvg).toBe(4.2);
     expect(result.ratingCount).toBe(5000);
     expect(result.installs).toBe(BigInt(1000000));
-    expect(result.releasedAt).toEqual(new Date('May 30, 2013'));
+    expect(result.releasedAt).toEqual(new Date('2013-05-30T00:00:00.000Z'));
     expect(result.storeUpdatedAt).toEqual(new Date(1719792000000));
   });
 
@@ -226,16 +226,38 @@ describe('GooglePlayProvider', () => {
     expect(result.installs).toBeUndefined();
   });
 
-  it('returns undefined releasedAt when released is unparseable', async () => {
-    const app = jest
-      .fn()
-      .mockResolvedValue({ ...appPayload, released: '30 мая 2013 г.' });
-    const provider = new GooglePlayProvider(makeLib({ app }));
+  it.each([
+    ['de', '16.07.2010', '2010-07-16'],
+    ['de', '08.08.2011', '2011-08-08'],
+    ['de', '08.07.2011', '2011-07-08'],
+    ['us', 'Jul 16, 2010', '2010-07-16'],
+    ['ru', '30 мая 2013 г.', '2013-05-30'],
+  ])(
+    'reads the %s release date %s as the UTC day %s',
+    async (country, released, day) => {
+      const app = jest.fn().mockResolvedValue({ ...appPayload, released });
+      const provider = new GooglePlayProvider(makeLib({ app }));
 
-    const result = await provider.getApp('com.example.app', 'ru');
+      const result = await provider.getApp('com.example.app', country);
 
-    expect(result.releasedAt).toBeUndefined();
-  });
+      expect(result.releasedAt).toEqual(new Date(`${day}T00:00:00.000Z`));
+    },
+  );
+
+  it.each([
+    ['de', undefined],
+    ['de', 'Varies with device'],
+  ])(
+    'leaves the %s release date %p unread when it names no day',
+    async (country, released) => {
+      const app = jest.fn().mockResolvedValue({ ...appPayload, released });
+      const provider = new GooglePlayProvider(makeLib({ app }));
+
+      const result = await provider.getApp('com.example.app', country);
+
+      expect(result.releasedAt).toBeUndefined();
+    },
+  );
 
   it('maps search results with the rating average only', async () => {
     const search = jest.fn().mockResolvedValue([
