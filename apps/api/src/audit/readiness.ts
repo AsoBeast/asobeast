@@ -21,14 +21,6 @@ const EVENTS_LINK: ReadinessLink = {
   label: 'About in-app events',
 };
 
-const ACCESSIBILITY_ROW: ReadinessItem = {
-  id: 'accessibility',
-  label: 'Accessibility',
-  status: 'unmeasurable',
-  detail: 'Declared accessibility features are not read yet.',
-  link: null,
-};
-
 const FACTOR_SECTION_LINK: ReadinessLink = {
   href: '#factors-conversion',
   label: 'Where the audit scores it',
@@ -228,8 +220,6 @@ const promotionalTextRow = (reads: FeaturingReads | null): ReadinessItem => {
   };
 };
 
-const accessibilityRow = (): ReadinessItem => ACCESSIBILITY_ROW;
-
 const editorialOf = (
   extract: AuditExtract | null,
 ): ReadinessEditorial | null =>
@@ -264,7 +254,6 @@ export const buildReadiness = ({
       eventsRow(extract, now),
       nominationsRow(featuring, factors),
       promotionalTextRow(featuring),
-      accessibilityRow(),
       ...REUSED_ROWS.map((row) => reusedRow(row, factors)),
     ],
     editorial: editorialOf(extract),

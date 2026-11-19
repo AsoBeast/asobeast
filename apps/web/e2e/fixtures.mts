@@ -6477,13 +6477,6 @@ export const APP_AUDIT: AppAuditResult = {
         link: null,
       },
       {
-        id: "accessibility",
-        label: "Accessibility",
-        status: "unmeasurable",
-        detail: "Declared accessibility features are not read yet.",
-        link: null,
-      },
-      {
         id: "rating",
         label: "Average rating",
         status: "pass",

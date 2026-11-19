@@ -140,7 +140,6 @@ describe('buildReadiness', () => {
       'pass',
       'unmeasurable',
       'unmeasurable',
-      'unmeasurable',
       'pass',
       'pass',
       'pass',
@@ -198,11 +197,6 @@ describe('buildReadiness', () => {
       status: 'fail',
       detail: 'No in-app event is on the store page.',
     });
-    expect(itemOf(readiness, 'accessibility')).toMatchObject({
-      status: 'unmeasurable',
-      detail: 'Declared accessibility features are not read yet.',
-      link: null,
-    });
     expect(readiness?.editorial).toEqual({
       stories: 0,
       editorsChoiceBadge: false,
@@ -225,9 +219,6 @@ describe('buildReadiness', () => {
           (item) => item.status === 'unmeasurable' && item.detail === null,
         ),
     ).toBe(true);
-    expect(itemOf(readiness, 'accessibility')).toMatchObject({
-      status: 'unmeasurable',
-    });
     expect(readiness?.editorial).toBeNull();
     expect(readiness?.extractAsOf).toBeNull();
   });
@@ -357,25 +348,6 @@ describe('buildReadiness', () => {
     });
   });
 
-  it('leaves accessibility not measured while the declared features are unread', () => {
-    const readiness = buildReadiness({
-      store: Store.APP_STORE,
-      factors: [],
-      extract: extractWith({
-        accessibilityStatement:
-          'The developer has not yet indicated which accessibility features this app supports. Learn More',
-      }),
-      featuring: null,
-      now: NOW,
-    });
-
-    expect(itemOf(readiness, 'accessibility')).toMatchObject({
-      status: 'unmeasurable',
-      detail: 'Declared accessibility features are not read yet.',
-      link: null,
-    });
-  });
-
   it('reuses the status and the detail of the graded checks', () => {
     const readiness = buildReadiness({
       store: Store.APP_STORE,
@@ -448,7 +420,6 @@ describe('buildReadiness', () => {
       href: 'https://developer.apple.com/app-store/in-app-events/',
       label: 'About in-app events',
     });
-    expect(itemOf(readiness, 'accessibility').link).toBeNull();
     expect(itemOf(readiness, 'rating').link).toEqual({
       href: '#factors-conversion',
       label: 'Where the audit scores it',
@@ -458,7 +429,6 @@ describe('buildReadiness', () => {
       'in-app-events',
       'nominations',
       'promotional-text',
-      'accessibility',
       'rating',
       'update-recency',
       'localizations',

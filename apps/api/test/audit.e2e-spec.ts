@@ -539,7 +539,6 @@ describe('AuditController (e2e)', () => {
       'in-app-events',
       'nominations',
       'promotional-text',
-      'accessibility',
       'rating',
       'update-recency',
       'localizations',
@@ -550,7 +549,6 @@ describe('AuditController (e2e)', () => {
       'pass',
       'pass',
       'warn',
-      'unmeasurable',
       'pass',
       'pass',
       'unmeasurable',
@@ -627,7 +625,6 @@ describe('AuditController (e2e)', () => {
     expect(result.readiness?.items.map((item) => item.status)).toEqual([
       'fail',
       'fail',
-      'unmeasurable',
       'unmeasurable',
       'unmeasurable',
       'warn',
@@ -752,7 +749,6 @@ describe('AuditController (e2e)', () => {
       'pass',
       'unmeasurable',
       'unmeasurable',
-      'unmeasurable',
       'pass',
       'pass',
       'unmeasurable',
@@ -783,7 +779,6 @@ describe('AuditController (e2e)', () => {
       .body as AppAuditResult;
 
     expect(result.readiness?.items.map((item) => item.status)).toEqual([
-      'unmeasurable',
       'unmeasurable',
       'unmeasurable',
       'unmeasurable',
@@ -823,7 +818,6 @@ describe('AuditController (e2e)', () => {
       .body as AppAuditResult;
 
     expect(result.readiness?.items.map((item) => item.status)).toEqual([
-      'unmeasurable',
       'unmeasurable',
       'unmeasurable',
       'unmeasurable',
