@@ -35,6 +35,11 @@ for (const theme of THEMES) {
         page,
         theme,
         "/admin/workspaces?workspace=ws_ana",
+        (sheetPage) =>
+          sheetPage
+            .getByRole("dialog", { name: "Ana Apps" })
+            .getByRole("table", { name: "Limits and usage" })
+            .waitFor(),
       ),
     ).toEqual([]);
   });

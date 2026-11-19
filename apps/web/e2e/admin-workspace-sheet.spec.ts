@@ -167,7 +167,7 @@ test.describe("workspace details", () => {
   });
 
   test("closing a sheet a link opened stays on the page", async ({ page }) => {
-    await page.goto("/admin/workspaces");
+    await page.goto("/admin/users");
     await page.goto("/admin/workspaces?workspace=ws_ana");
     await expect(page.getByRole("dialog", { name: "Ana Apps" })).toBeVisible();
 
@@ -215,8 +215,10 @@ test.describe("what a workspace ran and who looked", () => {
     const checks = page
       .getByRole("dialog", { name: "Ana Apps" })
       .getByRole("table", { name: "Keyword checks" });
-    await expect(checks.getByRole("row")).toHaveCount(9);
-    await expect(checks.getByRole("row").nth(3)).toContainText("6");
+    await expect(checks.getByRole("row")).toHaveCount(7);
+    await expect(
+      checks.getByRole("row").nth(3).getByRole("cell").nth(2),
+    ).toHaveText("6");
   });
 
   test("says when a workspace has no checks and no failed jobs", async ({

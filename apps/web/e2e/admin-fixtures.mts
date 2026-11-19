@@ -557,13 +557,11 @@ const CURRENT_VIEW: SupportAccessEntry = {
 
 export const SUSPEND_REASON = "Chargeback opened on the last invoice";
 
-const ANA_RUN_HISTORY: SupportRunDay[] = [0, 1, 2, 3, 5, 6, 7, 8].map(
-  (daysAgo) => ({
-    date: utcDaysAgo(daysAgo),
-    captured: 40,
-    unresolved: daysAgo === 2 ? 6 : 0,
-  }),
-);
+const ANA_RUN_HISTORY: SupportRunDay[] = [0, 1, 2, 3, 5, 6].map((daysAgo) => ({
+  date: utcDaysAgo(daysAgo),
+  captured: 40,
+  unresolved: daysAgo === 2 ? 6 : 0,
+}));
 
 export const ANA_LONG_FAILURE =
   `Store answered 503 Service Unavailable for every attempt while checking the keyword ranking of com.ana.apps in the United States storefront, ${"retrying later ".repeat(4)}`.trim();
