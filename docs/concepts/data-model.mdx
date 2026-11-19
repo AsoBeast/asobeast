@@ -16,7 +16,7 @@ An app is one row with a home storefront. Keywords are separate rows scoped by t
 | `ApiToken` | A revocable personal API token | Stored as a SHA-256 hash, never as plaintext |
 | `AppGroup` | A linked group of listings across stores | Unique on group and store, so a group holds one app per store |
 | `App` | One tracked listing, with the reply guidelines its AI drafts follow in `replyGuidelines` | Unique on workspace, store, store app id and country |
-| `AppSnapshot` | A captured copy of the listing metadata | Keeps the raw payload for reprocessing. One stream per market: a snapshot with no market is the home listing |
+| `AppSnapshot` | A captured copy of the listing metadata | Keeps the raw payload for reprocessing. One stream per market: a snapshot with no market is the home listing. The app detail answers its genre, developer, content rating, dates, description and release notes from the stored row, and competitors answer the short facts without the text, with no new store request |
 | `Keyword` | A phrase in one store and one storefront | Unique on `text`, `store`, `country` |
 | `TrackedKeyword` | The link between an app and a keyword | Keyed on app and keyword, carries `source` and `relevance` |
 | `KeywordField` | The iOS keyword field of one App Store localization | Keyed on app and localization. Holds the normalized phrases in the order they were saved, and is private to the owner |
