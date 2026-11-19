@@ -368,6 +368,28 @@ describe('Support tooling (e2e)', () => {
         prisma.supportAccess.count({ where: { workspaceId: tooLong } }),
       ).resolves.toBe(0);
     });
+
+    it('refuses a reason that is shorter than the minimum without its spaces', async () => {
+      await owner
+        .post(`${SUPPORT}/${OTHER_WORKSPACE}/run-daily`)
+        .send({ confirm: true, reason: '          ' })
+        .expect(400);
+      await owner
+        .post(`${SUPPORT}/${OTHER_WORKSPACE}/run-daily`)
+        .send({ confirm: true, reason: '   short   ' })
+        .expect(400);
+    });
+
+    it('stores a suspension reason without the spaces at its ends', async () => {
+      await owner
+        .post(`${SUPPORT}/${OTHER_WORKSPACE}/suspend`)
+        .send({ confirm: true, reason: '  padded customer reason  ' })
+        .expect(201);
+
+      await expect(
+        prisma.workspace.findUniqueOrThrow({ where: { id: OTHER_WORKSPACE } }),
+      ).resolves.toMatchObject({ suspendedReason: 'padded customer reason' });
+    });
   });
 
   describe('the operator workspace', () => {
