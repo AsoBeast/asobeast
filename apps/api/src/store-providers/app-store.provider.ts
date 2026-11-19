@@ -111,10 +111,22 @@ export class AppStoreProvider implements StoreProvider {
   }
 
   async similar(storeAppId: string, country: string): Promise<SearchItem[]> {
-    const html = await this.withRetry('similar', (deadline) =>
-      this.lib.page({ id: Number(storeAppId), country, ...deadline }),
-    );
-    return similarOf(html);
+    try {
+      return await this.withRetry('similar', async (deadline) => {
+        const html = await this.lib.page({
+          id: Number(storeAppId),
+          country,
+          ...deadline,
+        });
+        deadline.signal?.throwIfAborted();
+        return similarOf(html);
+      });
+    } catch (error) {
+      this.logger.warn(
+        `similar scrape failed for ${storeAppId}: ${messageOf(error)}`,
+      );
+      throw error;
+    }
   }
 
   async topCharts(
@@ -377,11 +389,7 @@ function listingOf(html: string): PageListing {
 }
 
 function similarOf(html: string): SearchItem[] {
-  try {
-    return parseAppStorePage(html).similarItems.map(similarItemOf);
-  } catch {
-    return [];
-  }
+  return parseAppStorePage(html).similarItems.map(similarItemOf);
 }
 
 function similarItemOf(item: PageSimilarItem): SearchItem {

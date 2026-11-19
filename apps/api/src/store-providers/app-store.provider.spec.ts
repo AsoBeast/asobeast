@@ -628,10 +628,9 @@ describe('AppStoreProvider', () => {
     expect(items).toEqual([{ storeAppId: '7', title: 'Similar' }]);
   });
 
-  it('answers no similar apps when the page carries no shelf', async () => {
+  it('answers no similar apps when the server data carries no shelf', async () => {
     const page = jest
       .fn()
-      .mockResolvedValueOnce('<h1>App</h1>')
       .mockResolvedValue(
         `<h1>App</h1><script type="application/json" id="serialized-server-data">${JSON.stringify(
           { data: [{ data: { shelfMapping: {} } }] },
@@ -640,22 +639,65 @@ describe('AppStoreProvider', () => {
     const provider = new AppStoreProvider(makeLib({ page }));
 
     await expect(provider.similar('1', 'us')).resolves.toEqual([]);
-    await expect(provider.similar('1', 'us')).resolves.toEqual([]);
-    expect(page).toHaveBeenCalledTimes(2);
+    expect(page).toHaveBeenCalledTimes(1);
+  });
+
+  it('wraps a similar page without server data in StoreRequestError', async () => {
+    jest.useFakeTimers();
+    try {
+      const page = jest.fn().mockResolvedValue('<h1>App</h1>');
+      const provider = new AppStoreProvider(makeLib({ page }));
+
+      const promise = provider.similar('1', 'us');
+      const assertion =
+        expect(promise).rejects.toBeInstanceOf(StoreRequestError);
+      await jest.runAllTimersAsync();
+      await assertion;
+
+      expect(page).toHaveBeenCalledTimes(3);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('reads the similar shelf once a page without server data answers again', async () => {
+    jest.useFakeTimers();
+    try {
+      const page = jest
+        .fn()
+        .mockResolvedValueOnce('<h1>App</h1>')
+        .mockResolvedValue(SIMILAR_PAGE_HTML);
+      const provider = new AppStoreProvider(makeLib({ page }));
+
+      const promise = provider.similar('324684580', 'us');
+      await jest.runAllTimersAsync();
+      const items = await promise;
+
+      expect(items.map((item) => item.storeAppId)).toEqual(
+        SIMILAR_SHELF_ADAM_IDS,
+      );
+      expect(page).toHaveBeenCalledTimes(2);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('wraps a failed similar page fetch in StoreRequestError', async () => {
     jest.useFakeTimers();
-    const page = jest.fn().mockRejectedValue(new Error('boom'));
-    const provider = new AppStoreProvider(makeLib({ page }));
+    try {
+      const page = jest.fn().mockRejectedValue(new Error('boom'));
+      const provider = new AppStoreProvider(makeLib({ page }));
 
-    const promise = provider.similar('1', 'us');
-    const assertion = expect(promise).rejects.toBeInstanceOf(StoreRequestError);
-    await jest.runAllTimersAsync();
-    await assertion;
+      const promise = provider.similar('1', 'us');
+      const assertion =
+        expect(promise).rejects.toBeInstanceOf(StoreRequestError);
+      await jest.runAllTimersAsync();
+      await assertion;
 
-    expect(page).toHaveBeenCalledTimes(3);
-    jest.useRealTimers();
+      expect(page).toHaveBeenCalledTimes(3);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('keeps the icon of a search result when the store sends one', async () => {
