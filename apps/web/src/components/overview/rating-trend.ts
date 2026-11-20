@@ -7,8 +7,10 @@ export const RATING_CHANGE_RANGE = "30d";
 
 const BASELINE_SLACK_DAYS = 3;
 
-const AXIS_STEP = 0.1;
-const MAX_RATING = 5;
+const TENTHS = 10;
+const MAX_TENTHS = 5 * TENTHS;
+const MAX_TICKS = 6;
+const TICK_STEPS = [1, 2, 5, TENTHS] as const;
 
 export interface RatedPoint {
   date: string;
@@ -37,11 +39,28 @@ export function ratingChange(
   return before ? latest.ratingAvg - before.ratingAvg : null;
 }
 
-export function ratingAxis(points: readonly RatedPoint[]): [number, number] {
+export interface RatingAxis {
+  domain: [number, number];
+  ticks: number[];
+}
+
+const tenthsOf = (value: number): number => Math.round(value * TENTHS);
+
+const tickCount = (low: number, high: number, step: number): number =>
+  Math.ceil(high / step) - Math.floor(low / step) + 1;
+
+export function ratingAxis(points: readonly RatedPoint[]): RatingAxis {
   const values = points.map((point) => point.ratingAvg);
-  const steps = (value: number) => Math.round(value / AXIS_STEP);
-  return [
-    Math.max(0, (steps(Math.min(...values)) - 1) * AXIS_STEP),
-    Math.min(MAX_RATING, (steps(Math.max(...values)) + 1) * AXIS_STEP),
-  ];
+  const low = Math.max(0, tenthsOf(Math.min(...values)) - 1);
+  const high = Math.min(MAX_TENTHS, tenthsOf(Math.max(...values)) + 1);
+  const step =
+    TICK_STEPS.find((each) => tickCount(low, high, each) <= MAX_TICKS) ??
+    TENTHS;
+  const from = Math.floor(low / step) * step;
+  const to = Math.ceil(high / step) * step;
+  const ticks = Array.from(
+    { length: (to - from) / step + 1 },
+    (_, index) => (from + index * step) / TENTHS,
+  );
+  return { domain: [from / TENTHS, to / TENTHS], ticks };
 }
