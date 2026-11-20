@@ -29,7 +29,7 @@ Docker Compose is the supported way to run AsoBeast. Three commands take you fro
     docker compose up --build -d --wait
     ```
 
-    `--wait` returns only once every health check passes, so a successful exit means the stack is actually serving.
+    `--wait` returns only once every health check passes, so a successful exit means the stack is serving.
   </Step>
   <Step title="Create the owner account">
     Open `http://localhost:3001`. A fresh installation redirects to registration. The first account becomes the owner, and registration closes automatically afterwards unless you set `AUTH_ALLOW_REGISTRATION=true`. Safari does not keep the session cookie over plain `http://localhost`, so use Chrome or Firefox, or put TLS in front of the stack. See [Signing in returns to the sign in form](/operations/troubleshooting#signing-in-returns-to-the-sign-in-form).
@@ -118,6 +118,6 @@ Never paste resolved Compose configuration into an issue, because it contains th
   </Card>
 
   <Card title="Upgrade and roll back" icon="circle-arrow-up" href="/install/upgrade">
-    Forward migrations, pinned tags and what a rollback really means.
+    Forward migrations, pinned tags and what a rollback can undo.
   </Card>
 </CardGroup>

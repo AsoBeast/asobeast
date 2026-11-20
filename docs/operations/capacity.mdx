@@ -1,7 +1,7 @@
 ---
 title: "How much can one instance collect?"
 sidebarTitle: Capacity
-description: "Measured orchestration cost and projected daily wall clock at three scales, the configuration where a run stops finishing inside a day, and what the per market multiplier really costs."
+description: "Measured orchestration cost and projected daily wall clock at three scales, the configuration where a run stops finishing inside a day, and what each extra market costs."
 icon: gauge
 keywords: ["capacity","rate limit","daily pipeline","benchmark","scale","budget"]
 ---
@@ -189,7 +189,7 @@ Prefer, in this order:
 2. Remove markets you do not sell in. This is the multiplier.
 3. Only then consider raising `SCRAPE_ITUNES_RPM`, in small steps, watching the failed job count on the health endpoint after each change.
 
-Both workers run at concurrency 1 behind their limiter deliberately. That is not a performance oversight, it is the thing keeping your address in good standing. See [The daily pipeline and rate limits](/concepts/pipeline).
+Both workers run at concurrency 1 behind their limiter to keep your address in good standing with the stores. See [The daily pipeline and rate limits](/concepts/pipeline).
 
 ## The read path holds up
 
