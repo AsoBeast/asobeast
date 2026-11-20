@@ -35,10 +35,8 @@ const formOf = (way: Direction, form: DeltaForm) =>
 const slotOf = (form: DeltaForm) =>
   form === "pill" ? "delta-pill" : undefined;
 
-const roundTo = (value: number, digits: number): number => {
-  const scale = 10 ** digits;
-  return Math.round(value * scale) / scale;
-};
+const roundTo = (value: number, digits: number): number =>
+  Number(value.toFixed(digits));
 
 function direction(value: number, polarity: DeltaPolarity): Direction {
   if (value === 0) return "flat";

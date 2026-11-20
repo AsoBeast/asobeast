@@ -218,6 +218,17 @@ describe("evidenceSections", () => {
     ).toEqual({ metric: "rating", value: 3.5 });
   });
 
+  it("writes both review averages with one decimal", () => {
+    const evidence = evidenceOf("act-decline");
+    if (evidence.rule !== "reviews.investigate_rating_decline") {
+      throw new Error("not a decline");
+    }
+
+    expect(
+      factValues({ ...evidence, recentAverage: 3, baselineAverage: 4 }),
+    ).toMatchObject({ "Recent average": "3.0", "Earlier average": "4.0" });
+  });
+
   it("states how many low reviews wait for a reply and the reply rate", () => {
     const evidence = evidenceOf("act-reply");
 

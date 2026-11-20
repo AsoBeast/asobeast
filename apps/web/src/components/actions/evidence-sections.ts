@@ -60,6 +60,9 @@ export interface EvidenceSections {
 const optional = (value: number | null): string =>
   value === null ? "—" : formatMeasure(value);
 
+const optionalFixed = (value: number | null): string =>
+  value === null ? "—" : formatMeasureFixed(value);
+
 const days = (observed: number, window: number): string =>
   `${observed} of ${window}`;
 
@@ -336,7 +339,7 @@ function declineSections(
 ): Sections {
   return {
     facts: [
-      graded("Recent average", evidence.recentAverage, "rating"),
+      graded("Recent average", evidence.recentAverage, "rating", optionalFixed),
       fact("Earlier average", formatMeasureFixed(evidence.baselineAverage)),
       fact("Drop", formatMeasureFixed(evidence.drop)),
       fact(
