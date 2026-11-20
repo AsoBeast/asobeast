@@ -531,6 +531,26 @@ describe('buildReadiness', () => {
     });
   });
 
+  it('keeps passing after an earlier window ends while a later one runs', () => {
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: [],
+      extract: extractWith(),
+      featuring: readsWith({
+        submittedNominations: 2,
+        submittedDate: new Date('2026-11-10T09:30:00.000Z'),
+        publishStartDate: new Date('2026-11-15T00:00:00.000Z'),
+        publishEndDate: new Date('2026-12-30T00:00:00.000Z'),
+      }),
+      now: new Date('2026-12-01T00:00:00.000Z'),
+    });
+
+    expect(itemOf(readiness, 'nominations')).toMatchObject({
+      status: 'pass',
+      detail: 'Submitted 5 days before the publish window.',
+    });
+  });
+
   it('asks for work again once the publish window has ended', () => {
     const readiness = buildReadiness({
       store: Store.APP_STORE,

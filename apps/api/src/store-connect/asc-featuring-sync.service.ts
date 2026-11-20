@@ -106,13 +106,22 @@ const windowEndOf = (nomination: AscNomination): number | null => {
   return Number.isNaN(parsed) ? null : parsed;
 };
 
-const storedSubmission = (
+interface StoredWindow {
+  submittedDate: Date | null;
+  publishStartDate: Date | null;
+  publishEndDate: Date | null;
+}
+
+const storedWindow = (
   nominations: AscNomination[],
   now: Date,
-): AscNomination | null => {
+): StoredWindow | null => {
   const submitted = nominations.filter(
     (nomination) => nomination.state === 'SUBMITTED',
   );
+  if (submitted.length === 0) {
+    return null;
+  }
   const running = submitted.filter((nomination) => {
     const end = windowEndOf(nomination);
     return end === null || end > now.getTime();
@@ -125,7 +134,14 @@ const storedSubmission = (
       : submitted.sort(
           (left, right) => submittedAtOf(right) - submittedAtOf(left),
         );
-  return pool[0] ?? null;
+  const selected = pool[0] ?? null;
+  const ends = pool.map(windowEndOf);
+  const latestEnd = ends.some((end) => end === null) ? null : Math.max(...ends);
+  return {
+    submittedDate: asDate(selected?.submittedDate ?? null),
+    publishStartDate: asDate(selected?.publishStartDate ?? null),
+    publishEndDate: latestEnd === null ? null : new Date(latestEnd),
+  };
 };
 
 const asDate = (value: string | null): Date | null => {
@@ -302,10 +318,10 @@ export class AscFeaturingSync {
         (nomination) => nomination.state === state,
       ).length;
     }
-    const newest = storedSubmission(nominations, new Date());
-    counts.submittedDate = asDate(newest?.submittedDate ?? null);
-    counts.publishStartDate = asDate(newest?.publishStartDate ?? null);
-    counts.publishEndDate = asDate(newest?.publishEndDate ?? null);
+    const stored = storedWindow(nominations, new Date());
+    counts.submittedDate = stored?.submittedDate ?? null;
+    counts.publishStartDate = stored?.publishStartDate ?? null;
+    counts.publishEndDate = stored?.publishEndDate ?? null;
     return { kind: 'ok', counts };
   }
 

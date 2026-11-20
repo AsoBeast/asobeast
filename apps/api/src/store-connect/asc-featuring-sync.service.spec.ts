@@ -267,7 +267,38 @@ describe('AscFeaturingSync.run', () => {
     expect(writesOf(updateMany)[0].data).toMatchObject({
       submittedDate: new Date('2026-10-01T09:30:00.000Z'),
       publishStartDate: new Date('2026-11-15T00:00:00.000Z'),
-      publishEndDate: new Date('2026-12-15T00:00:00.000Z'),
+      publishEndDate: null,
+    });
+  });
+
+  it('stores the latest end among the submissions that can still run', async () => {
+    const { service, updateMany } = build({
+      responses: [
+        versions(),
+        localizations(['text']),
+        nominations([
+          {
+            state: 'SUBMITTED',
+            submittedDate: '2026-11-10T09:30:00.000Z',
+            publishStartDate: '2026-11-15T00:00:00.000Z',
+            publishEndDate: '2999-01-01T00:00:00.000Z',
+          },
+          {
+            state: 'SUBMITTED',
+            submittedDate: '2026-10-10T09:30:00.000Z',
+            publishStartDate: '2026-11-10T00:00:00.000Z',
+            publishEndDate: '2999-02-01T00:00:00.000Z',
+          },
+        ]),
+      ],
+    });
+
+    await service.run();
+
+    expect(writesOf(updateMany)[0].data).toMatchObject({
+      submittedDate: new Date('2026-11-10T09:30:00.000Z'),
+      publishStartDate: new Date('2026-11-15T00:00:00.000Z'),
+      publishEndDate: new Date('2999-02-01T00:00:00.000Z'),
     });
   });
 
