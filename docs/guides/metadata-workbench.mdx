@@ -5,7 +5,11 @@ icon: pencil-ruler
 keywords: ["metadata","lint","coverage","character limit","keyword field","drafts","localization"]
 ---
 
-The workbench is where you see your listing the way search sees it: field by field, against the limits, and against the keywords you claim to be targeting.
+The workbench is where you see your listing the way search sees it: field by field, against the limits, and against the keywords you track.
+
+## Read the work left
+
+The page opens with one line that counts the work left: fields with issues, keywords the listing covers and does not cover, screenshots with a caption on the App Store, and the keyword field characters used. **keywords not covered** in that line opens the coverage table filtered to them. **Coverage by field**, beside the listing fields, shows how many tracked keywords each field carries, and its **Show uncovered** does the same.
 
 ## Lint your metadata
 
@@ -50,7 +54,7 @@ A field contains a keyword when it has the keyword as whole words. Chinese, Japa
 | App Store | Title, subtitle, keyword field |
 | Google Play | Title, short description, description |
 
-A keyword with high opportunity and no coverage is the single most actionable state in the product, which is why the Action Center has a rule for exactly that. See [Work the Action Center](/guides/action-center).
+A keyword with high opportunity and no coverage has its own Action Center rule. See [Work the Action Center](/guides/action-center).
 
 On the App Store, a Screenshot text column appears once the screenshots of the listing you look at, or of a listing that judges one of the keywords, were read. It marks the keywords a caption contains, reading the captions of the same listing that judged each keyword, and is labelled as a weak signal, because Apple has not confirmed that it reads screenshot text. It never changes whether a keyword counts as covered. See [Read screenshot captions](/guides/screenshot-captions).
 
@@ -100,16 +104,7 @@ Five limits are worth knowing. The first import replaces hand typed fields, and 
 
 ## Group keywords into buckets
 
-Buckets classify scored keywords so a long list stays readable and so you can see whether your targeting is balanced.
-
-| Bucket | Definition |
-| --- | --- |
-| `primary` | The five highest opportunity keywords that are not aspirational |
-| `aspirational` | Volume at or above 70 and difficulty at or above 70 |
-| `longtail` | Three words or more, or volume below 30 |
-| `secondary` | Every other scored keyword |
-
-A listing whose indexed fields cover only aspirational keywords will rank for none of them. A listing that covers only longtail will rank for many things nobody searches. The buckets make that visible in one glance.
+Buckets classify scored keywords so a long list stays readable and so you can see whether your targeting is balanced. Their definitions live in [Buckets](/guides/track-keywords#buckets).
 
 ## Generate a metadata draft
 

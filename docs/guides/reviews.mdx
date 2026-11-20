@@ -19,11 +19,15 @@ Review sync stays on the home market, like category ranks and the ratings histor
 
 Stored reviews are listed on the app's reviews page, filtered by star, version, period and reply state, sorted, searched, and exported to CSV. The period filter keeps the reviews written in the last 30, 90 or 180 days, the same windows as the ratings chart, so it answers what came in since a release. The version filter lists the newest version first and compares the numbers in each version, so `3.123.0` ranks above `3.95.0` and `450.0.0.24.77` above `6.12.2`. See [Export reviews to CSV](/guides/export-data#export-reviews-to-csv).
 
+## Read the page
+
+The page opens with one sentence: how many reviews arrived since yesterday, how many need a reply and how the rating moved over 7 days. Beside the list, **Ratings distribution** shows the spread of stars and **Rating by version** the average rating of each app version; selecting a version filters the list to it.
+
 ## See what people mention
 
-Above the list, **What people mention** shows the phrases that stand out in two rows. **Complaints** come up mostly in reviews at or below `ALERT_REVIEW_SCORE_MAX` stars, such as `server problem` or `credit card`. **Praise** comes up mostly in the other reviews. A phrase that reviews of every rating use is neither, so it is not shown. The strip shows up to six complaints and four praise phrases, the strongest first, and is hidden when nothing stands out.
+Beside the list, **What people mention** shows the phrases that stand out in two groups. **Complaints** come up mostly in reviews at or below `ALERT_REVIEW_SCORE_MAX` stars, such as `server problem` or `credit card`. **Praise** comes up mostly in the other reviews. A phrase that reviews of every rating use is neither, so it is not shown. The panel shows up to six complaints and four praise phrases, the strongest first, and is hidden when nothing stands out.
 
-Each phrase is compared with the newest 500 reviews in the version and period filters, so the strip still names complaints when the star filter keeps only one star reviews. When most of those reviews are high rated, a complaint has to stand out clearly against them, while a phrase counts as praise as soon as it leans as positive as they do. When most are low rated, the roles swap, so a bad release still lists its complaints. The number on a phrase counts the first 200 reviews that match every filter in the list's order, the same reviews a search reaches, and a phrase needs at least two of them. Pressing a phrase searches the list for it in quotes, so the list holds the reviews the number counted, and pressing it again clears the search.
+Each phrase is compared with the newest 500 reviews in the version and period filters, so the panel still names complaints when the star filter keeps only one star reviews. When most of those reviews are high rated, a complaint has to stand out clearly against them, while a phrase counts as praise as soon as it leans as positive as they do. When most are low rated, the roles swap, so a bad release still lists its complaints. The number on a phrase counts the first 200 reviews that match every filter in the list's order, the same reviews a search reaches, and a phrase needs at least two of them. Pressing a phrase searches the list for it in quotes, so the list holds the reviews the number counted, and pressing it again clears the search.
 
 A phrase holds up to four words and never starts or ends with the app's own name, a word such as `app`, `good`, `love`, `use` or `time`, or a function word of the review's language, so a Spanish review in a United States storefront adds no `que`. AsoBeast skips the function words of English and of the 15 languages listed under [How are auto tracked keywords chosen?](/concepts/stores#how-are-auto-tracked-keywords-chosen), so a review in another language, such as Russian, keeps its function words as phrases. When a longer phrase covers most mentions of a shorter one, only the longer is shown, so `encountered a fatal error` replaces `fatal error`. The phrases come from the same extraction as the keyword ideas described under [Mine reviews for keyword ideas](#mine-reviews-for-keyword-ideas). No AI is involved and no store request is made.
 
@@ -81,7 +85,7 @@ AsoBeast extracts repeated phrases from review text and offers them as keyword s
 
 A phrase is one to three words from a single sentence of the title or of the text, never both. It never starts or ends with a stopword, a function word of the storefront's languages, which skips [a few more words in reviews than in listings](/concepts/stores#how-are-auto-tracked-keywords-chosen), or a filler such as `just`, `please`, `now` or `also`, so `crashes on launch` is offered and `to use` or `the driver` is not. A contraction reads as the word it contracts, so `don't` and `it's` add nothing on their own, and a version number such as `0.78.8` separates words rather than becoming one. The same phrases feed the review theme of the ASO audit and the review theme actions.
 
-These ideas are worth a look because they are phrased the way users search rather than the way you describe your own product.
+They are phrased the way users search, which is often not the way you describe your own product.
 
 ## Watch for a growing theme
 

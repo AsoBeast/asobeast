@@ -114,7 +114,7 @@ The countries step of the guided setup suggests storefronts from the languages y
 
 A phrase the app already tracks in that market, active or paused, is left as it is, so seeding a market twice tracks nothing new. Seeding spends one refresh from your on demand allowance once the store is asked. See [A spent on demand allowance names its action](/api-reference/rate-limits#a-spent-on-demand-allowance-names-its-action).
 
-Later, on the keyword monitor, switch markets with the country filter, which shows the keyword count per market, then add keywords into the market you selected. A market with no keywords yet shows an empty state with an add button. The first keyword you add there asks for the market's listing, so the market appears in the listing market switcher after the next job runs.
+Later, on the keyword monitor, switch markets with the market menu, which shows the keyword count per market, then add keywords into the market you selected. A market with no keywords yet shows an empty state with an add button. The first keyword you add there asks for the market's listing, so the market appears in the listing market switcher after the next job runs.
 
 The API has the same two steps. `GET /apps/{id}/market-suggestions` lists the suggested storefronts, each with its localization, its role, whether the app already tracks keywords there and its daily cost. `POST /apps/{id}/market-seed` with a `country` seeds one market and answers `seeded`, `skipped` and a `status` that is `unavailable` when the store has no listing of the app in that storefront.
 

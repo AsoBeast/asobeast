@@ -37,7 +37,7 @@ By the end of this page you have AsoBeast running on your own machine, an owner 
     The first build takes a few minutes. `--wait` returns only after every health check passes.
   </Step>
   <Step title="Open the dashboard">
-    Go to `http://localhost:3001`. The dashboard leads with four tiles for keywords in the top 10, keyword movement, open actions and changes this week, then lists your apps. See [Read the dashboard](/guides/portfolio#read-the-dashboard). If port 3001 is already taken, add `ASOBEAST_PORT=<free port>` to the root `.env`, run the start command again and open that port.
+    Go to `http://localhost:3001`. The dashboard leads with four tiles for visibility, keywords in the top 10, keyword movement and open actions, then lists your apps. See [Read the dashboard](/guides/portfolio#read-the-dashboard). If port 3001 is already taken, add `ASOBEAST_PORT=<free port>` to the root `.env`, run the start command again and open that port.
   </Step>
 </Steps>
 
@@ -60,7 +60,7 @@ On a fresh instance with an empty queue the first positions and scores arrive wi
 
 ### The panel that says what is still running
 
-Until every stage has landed, the app overview page shows a panel naming what is still being collected and, where the schedule can be read, when the rest arrives. It stops rendering and stops polling on its own once collection is done, so there is nothing to dismiss. It is a status report rather than a notification.
+Until every stage has landed, the app overview page shows a panel naming what is still being collected and, where the schedule can be read, when the rest arrives. It stops rendering and stops polling on its own once collection is done, so there is nothing to dismiss.
 
 Two horizons are worth knowing before you read it.
 
@@ -73,7 +73,7 @@ Two horizons are worth knowing before you read it.
 
 ## Complete the guided setup
 
-The first import opens a guided setup with three steps, in this order, each one done inside its own card.
+The first import opens a guided setup. It asks what you want to get done, so the workspace checklist starts with the steps that matter to you, then offers three steps in this order, each one done inside its own card. The steps and **Complete setup** stay in view while you scroll.
 
 1. **Pick competitors.** Track at least one. The apps ranking in your keyword results and the apps the store calls similar are suggested with a checkbox each and added together, and any other app can be added by name or from its store URL. See [Suggested competitors](/guides/competitors#suggested-competitors).
 2. **Track keywords.** Track at least ten in your home storefront. Tick phrases from your listing or from the store autocomplete and track them in one click.

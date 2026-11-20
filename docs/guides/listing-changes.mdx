@@ -5,18 +5,13 @@ icon: git-compare
 keywords: ["changes","metadata changed","diff","competitor changes","change events","change impact"]
 ---
 
-The changes feed is the answer to "what did they change, and when". It records field level differences between the snapshots AsoBeast captures, for your own apps and for every competitor you track. For your own changes, the card above the feed also shows how your positions moved afterwards.
+The changes feed is the answer to "what did they change, and when". It records field level differences between the snapshots AsoBeast captures, for your own apps and for every competitor you track. For your own changes, the **Change impact** panel also shows how your positions moved afterwards.
 
 ## Read the changes feed
 
-Each event names the app, the field, the previous value, the new value and the date it was detected.
+**Visibility and listing changes** draws the market's visibility with a marker on each day you changed your listing. Under it, a lane per app shows when you and each competitor changed text, screenshots or the icon, or shipped a release or a price. Selecting a marker jumps to that day in the list.
 
-| Column | Meaning |
-| --- | --- |
-| App | Yours or a competitor's |
-| Field | The metadata field that changed |
-| From and to | The two values, so you can read the edit itself |
-| Detected | The UTC date the change was observed |
+The **Listing changes** panel lists changes under the UTC day they were detected. Each row names the app, the field, the previous value and the new value. **All**, **Yours** and **Competitors** filter the rows, and **What changed** beside the list counts the changes per field; selecting a field filters the list to it.
 
 Detection is snapshot based, so the date is when AsoBeast noticed rather than when the store published. A refresh you trigger yourself narrows that gap. See [Import an app](/guides/import-an-app).
 
@@ -50,7 +45,7 @@ No alert or webhook carries these three kinds.
 
 ## Measure the impact of a change
 
-A change to your own listing is only worth repeating if it worked. The card at the top of the changes page answers that for each change: how the positions of your tracked keywords and your visibility moved 7, 14 and 28 days later.
+A change to your own listing is only worth repeating if it worked. The **Change impact** panel answers that for each change: how the positions of your tracked keywords and your visibility moved 7, 14 and 28 days later.
 
 ### What counts as one change
 
@@ -115,9 +110,9 @@ The report shows what moved after a change, not what the change caused. Store al
 
 The same report is available from the API as `GET /apps/{id}/changes/impact` with optional `days` and `country` parameters (see [AsoBeast API](/api-reference/introduction)), and to an agent as the `change_impact` tool (see [MCP tool reference](/mcp/tools)).
 
-## Why competitor changes matter most
+## Read competitor changes against positions
 
-Your own changes you already know about. A competitor rewriting a title is the interesting row, because it usually precedes a position shift on the keywords that title covers.
+A competitor rewriting a title usually precedes a position shift on the keywords that title covers.
 
 Pair a competitor change with a position drop on the same keywords and you have the beginning of an explanation. The Action Center formalises this in `rank.investigate_drop`, which looks for an indexed field change within 14 days of a visibility fall. See [Work the Action Center](/guides/action-center).
 

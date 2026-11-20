@@ -14,11 +14,11 @@ You need an imported app. See [Import an app](/guides/import-an-app).
 ## Add a keyword
 
 <Steps>
-  <Step title="Select the market">
-    The country filter at the top of the keyword monitor sets the storefront every add applies to, and shows the keyword count per market.
+  <Step title="Open the dialog">
+    Press **Add keywords**. Its **Market** field starts on the market you were looking at in the market menu, which shows the keyword count of every market.
   </Step>
   <Step title="Add one keyword or paste several">
-    A single add takes one phrase. Bulk add accepts a list, one phrase per line, and creates them all in the selected market. To add a list that carries countries, tags or notes, [import it from a CSV file](#import-keywords-from-a-csv-file).
+    Type one phrase, or paste several separated by commas or new lines, and they are all added in the market you chose. To add a list that carries countries, tags or notes, [import it from a CSV file](#import-keywords-from-a-csv-file).
   </Step>
   <Step title="Read the first position">
     A keyword added by hand, by CSV import, by a market seed or by **Save and track** on a keyword field is checked within minutes, ahead of its popularity and difficulty, so its first position does not wait for the daily run. Until it lands the row says **Checking** and the table refreshes itself.
@@ -43,9 +43,9 @@ A seed spends one refresh from your on demand allowance. See [How do you add a m
 
 ## Track the same keyword in a second market
 
-Switch the country filter and add the phrase again. That creates a second keyword row, checked by a second search.
+Choose the other market in the market menu, or in the **Market** field of **Add keywords**, and add the phrase again. That creates a second keyword row, checked by a second search.
 
-The two rows are genuinely independent: positions, popularity and difficulty all differ per storefront. They also cost twice as much, because each market multiplies daily search volume against one fixed budget. See [Countries and markets](/concepts/countries) and [The daily pipeline and rate limits](/concepts/pipeline).
+The two rows are independent: positions, popularity and difficulty all differ per storefront. They also cost twice as much, because each market multiplies daily search volume against one fixed budget. See [Countries and markets](/concepts/countries) and [The daily pipeline and rate limits](/concepts/pipeline).
 
 ## Import keywords from a CSV file
 
@@ -136,7 +136,7 @@ The keywords page only reports. Its last card shows what the market you selected
 
 <Steps>
   <Step title="Choose the market">
-    Pick a market in the country filter. The card is named after it, for example **What US search reads**, and its header counts the unique words in the fields that market reads.
+    Pick a market in the market menu. The card is named after it, for example **What US search reads**, and its header counts the unique words in the fields that market reads.
   </Step>
   <Step title="Read the rows">
     Each row is a localization your app ships and that storefront reads, default first, with its role, **Default** or **Additional**, and the characters its field uses of 100. An empty field says **Empty**.
@@ -158,14 +158,17 @@ Press a keyword in the tracked table and a sheet opens beside it with everything
 
 ## Get keyword suggestions
 
-**Suggestions** sits on the **Discovered** tab of the keywords page, under the discovered list; for a competitor, which has no Discovered tab, it sits under the tracked table. It opens by itself while the market tracks no keyword yet. Suggestions come from four places.
+**Suggestions** sits on the **Discovered** tab of the keywords page, under the discovered list; for a competitor, which has no Discovered tab, it sits under the tracked table. It opens by itself while the market tracks no keyword yet. Suggestions come from seven tabs.
 
-| Source | Where it comes from |
+| Tab | Where it comes from |
 | --- | --- |
-| Store suggest | A live lookup against the store suggestion endpoint |
-| Competitor listings | Phrases that competitors index and you do not |
-| Competitor searches | A live lookup of what people type around phrases taken from your competitors' listings in the market |
-| Review mining | Language that appears repeatedly in your own reviews |
+| Metadata | Phrases from your app's own metadata |
+| Search | Autocomplete terms from the store search, a live lookup |
+| Similar apps | Terms from apps the store calls similar to yours, a live lookup |
+| More by developer | Terms from the rest of your developer's catalogue, a live lookup |
+| Competitors | Terms your competitors rank for |
+| Competitor searches | What people type around phrases taken from your competitors' listings in the market, a live lookup |
+| Reviews | Phrases that appear repeatedly in your own reviews |
 
 When one of several store lookups fails, the suggestions that answered are kept.
 
@@ -228,7 +231,9 @@ Select rows with the checkboxes and the bar at the bottom of the table shows wha
 
 On an App Store app, **Add to keyword field** takes the selected keywords to the keyword field of the market shown. It opens the metadata page on the first localization the market reads that your app ships, with the selected phrases added after the ones the field already holds, and saves nothing: you review the field and save it there. Phrases the field already holds are not added twice, and only the phrases that fit in its 100 characters are carried, in the order the table shows them; the metadata page says how many were left out. See [Edit the iOS keyword field](/guides/metadata-workbench#edit-the-ios-keyword-field).
 
-Buckets classify scored keywords automatically so a large list stays readable.
+### Buckets
+
+Buckets classify scored keywords automatically, so a large list stays readable and you can see whether your targeting is balanced. A listing whose indexed fields cover only aspirational keywords will rank for none of them, and one that covers only longtail keywords will rank for many phrases nobody searches.
 
 | Bucket | Meaning |
 | --- | --- |

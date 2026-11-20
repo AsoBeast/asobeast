@@ -52,7 +52,7 @@ The open action lives in the URL as `?action=<id>`, so a link to one opens the s
 
 ## The lifecycle
 
-An action is a finding with a life, not a row in a report. A stable fingerprint identifies it across runs, so re running generation refreshes the same action instead of minting a new one.
+An action keeps its identity across runs. A stable fingerprint identifies it, so re running generation refreshes the same action instead of minting a new one.
 
 | Status | Meaning | How it is reached |
 | --- | --- | --- |
@@ -62,7 +62,7 @@ An action is a finding with a life, not a row in a report. A stable fingerprint 
 | `DISMISSED` | You rejected it | You closed it. It never reopens on its own, however long it stays true |
 | `RESOLVED` | The condition went away | The system closed it, because the rule stopped firing |
 
-The difference between `RESOLVED` and `DONE` is the point. Only that distinction tells you whether your fix is what removed the problem.
+`RESOLVED` means the rule stopped firing on its own; `DONE` means you acted. Comparing the two shows whether your fix removed the problem.
 
 ### Confirmed fixed
 
@@ -74,7 +74,7 @@ While the rule keeps firing after you marked it done, the action shows **Still d
 
 An action is identified by a fingerprint over its rule, app, store, country, keyword and a rule specific discriminator. It deliberately excludes every volatile magnitude: positions, scores, counts and observation dates are all left out.
 
-That exclusion is the whole design. If a position were part of the fingerprint, tomorrow's check would produce a different fingerprint, mint a brand new action, and your snooze and dismiss decisions would evaporate every night. Excluding magnitudes is what makes the lifecycle mean anything.
+If a position were part of the fingerprint, tomorrow's check would open a new action and lose your snooze and dismiss decisions.
 
 The fingerprint is unique per workspace, so the same finding cannot open twice.
 

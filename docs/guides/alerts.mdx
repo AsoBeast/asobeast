@@ -130,7 +130,7 @@ A keyword that moves between 10 and 11 fires each time it crosses. In batched de
 
 By default every check is compared with the one before it. A keyword that slips from 9 to 11 for a day and then comes back fires `rank.milestone` twice, once for leaving the top 10 and once for returning. Near a boundary those one day wobbles bury the drops that stay.
 
-Turn on **Confirm drops before alerting** on a webhook or an email alert, in the dialog that adds it or under **Edit events**, and that channel reports a drop only when the next check confirms it. The setting belongs to one channel, so other channels keep their current behaviour. In Settings it starts ticked for a new email alert and for a new webhook whose url is a Discord, Slack, Microsoft Teams, Telegram or Google Chat channel, because a person reads those, and unticked for a JSON webhook, which usually feeds a script that wants every check. A channel created through the API without the field, and every channel that existed before the setting, report every drop.
+Turn on **Confirm drops before alerting** on a webhook or an email alert, in the dialog that adds it or under **Edit rules**, and that channel reports a drop only when the next check confirms it. The setting belongs to one channel, so other channels keep their current behaviour. In Settings it starts ticked for a new email alert and for a new webhook whose url is a Discord, Slack, Microsoft Teams, Telegram or Google Chat channel, because a person reads those, and unticked for a JSON webhook, which usually feeds a script that wants every check. A channel created through the API without the field, and every channel that existed before the setting, report every drop.
 
 | Checks, oldest first | Without the setting | With the setting |
 | --- | --- | --- |
@@ -425,7 +425,7 @@ Email stays disabled until both `SMTP_HOST` and `SMTP_FROM` are set. Neither one
 
 ### Confirm a recipient
 
-Adding an email alert sends one confirmation email to the recipient, naming the account that added the address. The alert shows **Awaiting confirmation** in **Settings**, **Email alerts** and receives nothing, not even a test email, until the recipient presses **Confirm email address** on the page the link opens. That page asks before it acts, so a mail scanner that opens the link confirms nothing.
+Adding an email alert sends one confirmation email to the recipient, naming the account that added the address. The alert shows **Awaiting confirmation** in **Settings**, **Alerts**, under **Email**, and receives nothing, not even a test email, until the recipient presses **Confirm email address** on the page the link opens. That page asks before it acts, so a mail scanner that opens the link confirms nothing.
 
 A recipient is confirmed at once only when the address is the verified account email of a member of the workspace. Account emails are verified only where billing and SMTP are both on, so on a self-hosted instance every recipient, the owner included, confirms through the mailbox.
 
@@ -471,7 +471,7 @@ The subject of a daily update is its most important sentence, for example `[asob
 
 ### Unsubscribe from an email
 
-Every alert email carries a one click unsubscribe that mail apps show as their own button, and an **Unsubscribe** link in its footer. Either one pauses that email alert only, while webhooks and other email alerts keep running. It also withdraws the recipient's confirmation, so switching the alert back on under **Settings**, **Email alerts** sends nothing to that address until the address changes and the new one confirms. A link works for the address it was sent to, so changing an alert's address retires the links in earlier emails.
+Every alert email carries a one click unsubscribe that mail apps show as their own button, and an **Unsubscribe** link in its footer. Either one pauses that email alert only, while webhooks and other email alerts keep running. It also withdraws the recipient's confirmation, so switching the alert back on in **Settings**, **Alerts**, under **Email**, sends nothing to that address until the address changes and the new one confirms. A link works for the address it was sent to, so changing an alert's address retires the links in earlier emails.
 
 The one click headers need `WEB_PUBLIC_URL` on `https`. On plain `http` only the footer link is offered. See [Email deliverability](/operations/email-deliverability) for the sender side.
 
