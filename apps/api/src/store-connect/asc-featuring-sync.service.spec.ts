@@ -62,16 +62,20 @@ interface RecordOptions {
   connected?: boolean;
   apps?: { id: string; storeAppId: string }[];
   responses?: AscResponse[];
+  storedRow?: boolean;
+  connectionAlive?: boolean;
 }
 
-interface UpsertCall {
-  create: Record<string, unknown>;
-  update: Record<string, unknown>;
+interface RecordedWrite {
+  where?: Record<string, unknown>;
+  data?: Record<string, unknown>;
 }
 
 function build(options: RecordOptions = {}) {
   const apps = options.apps ?? [APP];
   const connected = options.connected ?? true;
+  const storedRow = options.storedRow ?? true;
+  const connectionAlive = options.connectionAlive ?? true;
   const { requester, requests } = recordedRequester(
     ...(options.responses ?? []),
   );
@@ -86,12 +90,22 @@ function build(options: RecordOptions = {}) {
         : null,
     ),
   };
+  const create = jest.fn().mockResolvedValue({});
+  const storedConnection = jest
+    .fn()
+    .mockResolvedValue(connectionAlive ? { id: 'conn_1' } : null);
+  const transaction = {
+    storeConnection: { findFirst: storedConnection },
+    featuringSync: { create },
+  };
   const prisma = {
     app: { findMany: jest.fn().mockResolvedValue(apps) },
     featuringSync: {
-      upsert: jest.fn().mockResolvedValue({}),
-      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      create,
+      updateMany: jest.fn().mockResolvedValue({ count: storedRow ? 1 : 0 }),
     },
+    withTransaction: (run: (tx: typeof transaction) => Promise<unknown>) =>
+      run(transaction),
   };
   const workspace = { require: jest.fn(() => WORKSPACE_ID) };
   const service = new AscFeaturingSync(
@@ -102,25 +116,29 @@ function build(options: RecordOptions = {}) {
   return {
     service,
     requests,
-    upsert: prisma.featuringSync.upsert,
+    create,
+    storedConnection,
     updateMany: prisma.featuringSync.updateMany,
     findMany: prisma.app.findMany,
   };
 }
 
-const upsertCalls = (upsert: { mock: { calls: unknown[][] } }): UpsertCall[] =>
-  upsert.mock.calls.map(([call]) => call as UpsertCall);
+const writesOf = (mock: { mock: { calls: unknown[][] } }): RecordedWrite[] =>
+  mock.mock.calls.map(([call]) => call as RecordedWrite);
+
+const createCallsOf = (mock: { mock: { calls: unknown[][] } }): unknown[] =>
+  mock.mock.calls.map(([call]) => call);
 
 describe('AscFeaturingSync.run', () => {
   it('does nothing without a connection', async () => {
-    const { service, requests, upsert } = build({ connected: false });
+    const { service, requests, updateMany } = build({ connected: false });
 
     await expect(service.run()).resolves.toEqual({
       nominations: 0,
       promoText: 0,
     });
     expect(requests).toHaveLength(0);
-    expect(upsert).not.toHaveBeenCalled();
+    expect(updateMany).not.toHaveBeenCalled();
   });
 
   it('reads only the primary app store apps of the workspace', async () => {
@@ -137,7 +155,7 @@ describe('AscFeaturingSync.run', () => {
   });
 
   it('stores the nomination summary and the promotional text counts of one app', async () => {
-    const { service, requests, upsert } = build({
+    const { service, requests, updateMany } = build({
       responses: [
         versions(),
         localizations(['two weeks of focus', '']),
@@ -162,26 +180,78 @@ describe('AscFeaturingSync.run', () => {
       NOMINATION_PATH('DRAFT,SUBMITTED'),
     ]);
     expect(requests[2].method).toBe('GET');
-    const call = upsertCalls(upsert)[0];
-    expect(call.create).toMatchObject({
-      workspaceId: WORKSPACE_ID,
-      appId: APP.id,
-      draftNominations: 0,
-      submittedNominations: 1,
-      submittedDate: new Date('2026-10-01T09:30:00.000Z'),
-      publishStartDate: new Date('2026-11-15T00:00:00.000Z'),
-      publishEndDate: new Date('2026-12-15T00:00:00.000Z'),
-      promoFilled: 1,
-      promoTotal: 2,
-      roleRefused: false,
-      nominationsError: null,
-      promoError: null,
+    expect(writesOf(updateMany)[0]).toMatchObject({
+      where: { appId: APP.id },
+      data: {
+        draftNominations: 0,
+        submittedNominations: 1,
+        submittedDate: new Date('2026-10-01T09:30:00.000Z'),
+        publishStartDate: new Date('2026-11-15T00:00:00.000Z'),
+        publishEndDate: new Date('2026-12-15T00:00:00.000Z'),
+        promoFilled: 1,
+        promoTotal: 2,
+        roleRefused: false,
+        nominationsError: null,
+        promoError: null,
+      },
     });
-    expect(call.create).toHaveProperty('readAt');
+    expect(writesOf(updateMany)[0].data).toHaveProperty('readAt');
+  });
+
+  it('creates the first row while the connection still exists', async () => {
+    const { service, create, storedConnection } = build({
+      storedRow: false,
+      responses: [
+        versions(),
+        localizations(['two weeks of focus', '']),
+        nominations([]),
+      ],
+    });
+
+    await expect(service.run()).resolves.toEqual({
+      nominations: 1,
+      promoText: 2,
+    });
+    expect(storedConnection).toHaveBeenCalledWith({
+      where: { id: 'conn_1', status: 'active' },
+      select: { id: true },
+    });
+    expect(createCallsOf(create)[0]).toMatchObject({
+      data: {
+        workspaceId: WORKSPACE_ID,
+        appId: APP.id,
+        draftNominations: 0,
+        submittedNominations: 0,
+        promoFilled: 1,
+        promoTotal: 2,
+        roleRefused: false,
+        nominationsError: null,
+        promoError: null,
+      },
+    });
+  });
+
+  it('creates no row after the connection went away', async () => {
+    const { service, create, storedConnection } = build({
+      storedRow: false,
+      connectionAlive: false,
+      responses: [
+        versions(),
+        localizations(['two weeks of focus', '']),
+        nominations([]),
+      ],
+    });
+
+    await expect(service.run()).resolves.toEqual({
+      nominations: 1,
+      promoText: 2,
+    });
+    expect(storedConnection).toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
   });
 
   it('takes the newest submitted nomination even when one carries no date', async () => {
-    const { service, upsert } = build({
+    const { service, updateMany } = build({
       responses: [
         versions(),
         localizations(['text']),
@@ -199,7 +269,7 @@ describe('AscFeaturingSync.run', () => {
 
     await service.run();
 
-    expect(upsertCalls(upsert)[0].update).toMatchObject({
+    expect(writesOf(updateMany)[0].data).toMatchObject({
       submittedDate: new Date('2026-10-01T09:30:00.000Z'),
       publishStartDate: new Date('2026-11-15T00:00:00.000Z'),
       publishEndDate: new Date('2026-12-15T00:00:00.000Z'),
@@ -207,7 +277,7 @@ describe('AscFeaturingSync.run', () => {
   });
 
   it('counts the nominations of each state and takes the dates of the newest submitted one', async () => {
-    const { service, upsert } = build({
+    const { service, updateMany } = build({
       responses: [
         versions(),
         localizations(['text', 'text', '', '']),
@@ -234,7 +304,7 @@ describe('AscFeaturingSync.run', () => {
       nominations: 1,
       promoText: 4,
     });
-    expect(upsertCalls(upsert)[0].update).toMatchObject({
+    expect(writesOf(updateMany)[0].data).toMatchObject({
       draftNominations: 2,
       submittedNominations: 2,
       submittedDate: new Date('2026-10-01T09:30:00.000Z'),
@@ -246,7 +316,7 @@ describe('AscFeaturingSync.run', () => {
   });
 
   it('answers zero counts for an app with no nominations', async () => {
-    const { service, upsert } = build({
+    const { service, updateMany } = build({
       responses: [versions(), localizations(['']), nominations([])],
     });
 
@@ -254,7 +324,7 @@ describe('AscFeaturingSync.run', () => {
       nominations: 1,
       promoText: 1,
     });
-    expect(upsertCalls(upsert)[0].update).toMatchObject({
+    expect(writesOf(updateMany)[0].data).toMatchObject({
       draftNominations: 0,
       submittedNominations: 0,
       submittedDate: null,
@@ -266,7 +336,7 @@ describe('AscFeaturingSync.run', () => {
   });
 
   it('stores a role refusal instead of throwing and keeps the promotional text', async () => {
-    const { service, upsert } = build({
+    const { service, updateMany } = build({
       responses: [
         versions(),
         localizations(['set']),
@@ -278,7 +348,7 @@ describe('AscFeaturingSync.run', () => {
       nominations: 0,
       promoText: 1,
     });
-    expect(upsertCalls(upsert)[0].update).toMatchObject({
+    expect(writesOf(updateMany)[0].data).toMatchObject({
       roleRefused: true,
       nominationsError: FEATURING_ROLE_NEEDED,
       promoFilled: 1,
@@ -288,17 +358,17 @@ describe('AscFeaturingSync.run', () => {
   });
 
   it('rethrows a rate limit of the version read without storing', async () => {
-    const { service, upsert, updateMany } = build({
+    const { service, updateMany, create } = build({
       responses: [failure(429, 'RATE_LIMIT_EXCEEDED')],
     });
 
     await expect(service.run()).rejects.toThrow(AscRateLimitedError);
-    expect(upsert).not.toHaveBeenCalled();
     expect(updateMany).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
   });
 
   it('stores the promotional text before rethrowing a rate limit of the nominations', async () => {
-    const { service, upsert } = build({
+    const { service, updateMany } = build({
       responses: [
         versions(),
         localizations(['set']),
@@ -307,7 +377,7 @@ describe('AscFeaturingSync.run', () => {
     });
 
     await expect(service.run()).rejects.toThrow(AscRateLimitedError);
-    expect(upsertCalls(upsert)[0].update).toMatchObject({
+    expect(writesOf(updateMany)[0].data).toMatchObject({
       promoFilled: 1,
       promoTotal: 1,
       promoError: null,
@@ -316,7 +386,7 @@ describe('AscFeaturingSync.run', () => {
   });
 
   it('records the skip on the stored row of an app that turned invisible', async () => {
-    const { service, requests, upsert, updateMany } = build({
+    const { service, requests, updateMany, create } = build({
       responses: [failure(404, 'NOT_FOUND')],
     });
 
@@ -326,7 +396,7 @@ describe('AscFeaturingSync.run', () => {
     });
     expect(requests).toHaveLength(1);
     expect(requests[0].path).toContain('/appStoreVersions');
-    expect(upsert).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
     expect(updateMany).toHaveBeenCalledWith({
       where: { appId: APP.id },
       data: {
@@ -338,7 +408,8 @@ describe('AscFeaturingSync.run', () => {
   });
 
   it('creates no row for an app the key never saw', async () => {
-    const { service, upsert, updateMany } = build({
+    const { service, updateMany, create } = build({
+      storedRow: false,
       responses: [failure(404, 'NOT_FOUND')],
     });
 
@@ -346,12 +417,12 @@ describe('AscFeaturingSync.run', () => {
       nominations: 0,
       promoText: 0,
     });
-    expect(upsert).not.toHaveBeenCalled();
     expect(updateMany).toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
   });
 
   it('reads the nominations of an app with no released version and records the skip', async () => {
-    const { service, upsert } = build({
+    const { service, updateMany } = build({
       responses: [
         ok({ data: [], links: {} }),
         nominations([{ state: 'DRAFT' }]),
@@ -362,7 +433,7 @@ describe('AscFeaturingSync.run', () => {
       nominations: 1,
       promoText: 0,
     });
-    expect(upsertCalls(upsert)[0].update).toMatchObject({
+    expect(writesOf(updateMany)[0].data).toMatchObject({
       draftNominations: 1,
       promoError:
         'App Store Connect has no released iOS version for this app yet',
@@ -374,7 +445,7 @@ describe('AscFeaturingSync.run', () => {
     const second = { id: 'app_2', storeAppId: '2345678901' };
     const unreadable =
       'App Store Connect answered with something AsoBeast could not read';
-    const { service, upsert, updateMany } = build({
+    const { service, updateMany, create } = build({
       apps: [APP, second],
       responses: [
         ok(null),
@@ -396,15 +467,18 @@ describe('AscFeaturingSync.run', () => {
         promoError: unreadable,
       },
     });
-    expect(upsertCalls(upsert)).toHaveLength(1);
-    expect(upsertCalls(upsert)[0].create).toMatchObject({
-      appId: second.id,
+    expect(create).not.toHaveBeenCalled();
+    expect(writesOf(updateMany)[1].data).toMatchObject({
+      draftNominations: 0,
+      submittedNominations: 0,
+      promoFilled: 1,
+      promoTotal: 1,
       promoError: null,
     });
   });
 
   it('reads nothing else of an app whose visibility stayed unknown', async () => {
-    const { service, requests, upsert, updateMany } = build({
+    const { service, requests, updateMany, create } = build({
       responses: [
         failure(500, 'INTERNAL_ERROR'),
         failure(500, 'INTERNAL_ERROR'),
@@ -419,7 +493,7 @@ describe('AscFeaturingSync.run', () => {
       expect.stringContaining('/appStoreVersions'),
       expect.stringContaining('/appStoreVersions'),
     ]);
-    expect(upsert).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
     expect(updateMany).toHaveBeenCalledWith({
       where: { appId: APP.id },
       data: {
@@ -431,7 +505,7 @@ describe('AscFeaturingSync.run', () => {
   });
 
   it('leaves the promotional text of an app whose localizations fail and reads its nominations', async () => {
-    const { service, upsert } = build({
+    const { service, updateMany } = build({
       responses: [
         versions(),
         failure(500, 'INTERNAL_ERROR'),
@@ -444,7 +518,7 @@ describe('AscFeaturingSync.run', () => {
       nominations: 1,
       promoText: 0,
     });
-    expect(upsertCalls(upsert)[0].update).toMatchObject({
+    expect(writesOf(updateMany)[0].data).toMatchObject({
       submittedNominations: 0,
       promoError: 'INTERNAL_ERROR detail',
       nominationsError: null,

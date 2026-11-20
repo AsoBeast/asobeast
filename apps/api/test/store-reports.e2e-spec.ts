@@ -822,6 +822,47 @@ describe('Store report sync (e2e)', () => {
     await expect(funnelRows()).resolves.toHaveLength(7);
   });
 
+  it('creates no featuring row when the workspace disconnects mid sync', async () => {
+    let release: (() => void) | undefined;
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    harness.asc.on('GET', /\/appStoreVersions\?/, async () => {
+      await blocked;
+      return answer({
+        data: [
+          {
+            id: 'v1',
+            type: 'appStoreVersions',
+            attributes: {
+              appStoreState: 'READY_FOR_SALE',
+              versionString: '1.2.0',
+              createdDate: '2026-01-15T10:00:00.000Z',
+            },
+          },
+        ],
+        links: {},
+      });
+    });
+
+    const syncing = run();
+    for (let attempt = 0; attempt < WAIT_ATTEMPTS; attempt += 1) {
+      if (
+        harness.asc.requests.some((request) =>
+          /\/appStoreVersions\?/.test(request.absoluteUrl ?? request.path),
+        )
+      ) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, WAIT_INTERVAL_MS));
+    }
+    await owner.delete('/store-connections/APP_STORE').expect(204);
+    release?.();
+
+    await expect(syncing).resolves.toMatchObject({ nominations: 1 });
+    await expect(harness.prisma.featuringSync.count()).resolves.toBe(0);
+  });
+
   it('keeps the rows of one workspace out of another', async () => {
     scriptApple();
     await run();

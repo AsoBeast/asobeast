@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Store } from '@prisma/client';
+import { Prisma, Store } from '@prisma/client';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -17,7 +17,10 @@ import {
   AscRateLimitedError,
   isNotFound,
 } from './asc-errors';
-import { StoreConnectionService } from './store-connection.service';
+import {
+  StoreConnectionService,
+  type OpenedConnection,
+} from './store-connection.service';
 
 const STORE = Store.APP_STORE;
 
@@ -135,7 +138,7 @@ export class AscFeaturingSync {
     let promoText = 0;
     for (const app of apps) {
       try {
-        const outcome = await this.syncApp(connection.api, app);
+        const outcome = await this.syncApp(connection, app);
         nominations += outcome.nominations;
         promoText += outcome.promoText;
       } catch (error) {
@@ -148,8 +151,11 @@ export class AscFeaturingSync {
     return { nominations, promoText };
   }
 
-  private async syncApp(api: AscListingApi, app: SyncApp): Promise<AppOutcome> {
-    const version = await this.liveVersionOf(api, app.storeAppId);
+  private async syncApp(
+    connection: OpenedConnection<AscListingApi>,
+    app: SyncApp,
+  ): Promise<AppOutcome> {
+    const version = await this.liveVersionOf(connection.api, app.storeAppId);
     if (version.kind === 'invisible') {
       await this.recordUnread(app, FIELD_SYNC_UNSERVED_APP);
       return { nominations: 0, promoText: 0 };
@@ -160,21 +166,21 @@ export class AscFeaturingSync {
     }
     const promo: PromoRead =
       version.kind === 'live'
-        ? await this.promoOf(api, version.id)
+        ? await this.promoOf(connection.api, version.id)
         : { kind: 'skipped', message: FIELD_SYNC_NO_LIVE_VERSION };
     let nominations: NominationsRead;
     try {
-      nominations = await this.nominationsOf(api, app.storeAppId);
+      nominations = await this.nominationsOf(connection.api, app.storeAppId);
     } catch (error) {
       if (error instanceof AscRateLimitedError) {
-        await this.record(app, promo, {
+        await this.record(connection, app, promo, {
           kind: 'skipped',
           message: messageOf(error),
         });
       }
       throw error;
     }
-    await this.record(app, promo, nominations);
+    await this.record(connection, app, promo, nominations);
     return {
       nominations: nominations.kind === 'ok' ? 1 : 0,
       promoText: promo.kind === 'ok' ? promo.counts.total : 0,
@@ -260,11 +266,12 @@ export class AscFeaturingSync {
     });
   }
 
-  private record(
+  private async record(
+    connection: OpenedConnection<AscListingApi>,
     app: SyncApp,
     promo: PromoRead,
     nominations: NominationsRead,
-  ): Promise<unknown> {
+  ): Promise<void> {
     const workspaceId = this.workspace.require('a featuring read');
     const base = {
       ...(nominations.kind === 'ok' ? nominationData(nominations.counts) : {}),
@@ -275,20 +282,40 @@ export class AscFeaturingSync {
       promoError: promo.kind === 'ok' ? null : promo.message,
       readAt: new Date(),
     };
-    return this.prisma.featuringSync.upsert({
-      where: { appId_workspaceId: { appId: app.id, workspaceId } },
-      create: {
-        workspaceId,
-        appId: app.id,
-        ...base,
-        roleRefused: nominations.kind === 'refused',
-      },
-      update: {
+    const updated = await this.prisma.featuringSync.updateMany({
+      where: { appId: app.id },
+      data: {
         ...base,
         ...(nominations.kind === 'skipped'
           ? {}
           : { roleRefused: nominations.kind === 'refused' }),
       },
     });
+    if (updated.count > 0) {
+      return;
+    }
+    await this.prisma.withTransaction((tx) =>
+      this.createStored(tx, connection, {
+        workspaceId,
+        appId: app.id,
+        ...base,
+        roleRefused: nominations.kind === 'refused',
+      }),
+    );
+  }
+
+  private async createStored(
+    tx: Prisma.TransactionClient,
+    connection: OpenedConnection<AscListingApi>,
+    row: Prisma.FeaturingSyncUncheckedCreateInput,
+  ): Promise<void> {
+    const active = await tx.storeConnection.findFirst({
+      where: { id: connection.id, status: 'active' },
+      select: { id: true },
+    });
+    if (!active) {
+      return;
+    }
+    await tx.featuringSync.create({ data: row });
   }
 }
