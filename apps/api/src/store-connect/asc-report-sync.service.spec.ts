@@ -596,6 +596,20 @@ describe('AscReportSync', () => {
     });
   });
 
+  it('marks the connection rejected when the featuring read is refused', async () => {
+    const { service, featuring, connections, keywordFields } = build();
+    featuring.run.mockRejectedValue(
+      new AscRejectedKeyError('refused', 403, null),
+    );
+
+    await expect(service.run()).rejects.toThrow(UnrecoverableError);
+    expect(keywordFields.run).toHaveBeenCalled();
+    expect(connections.markRejected).toHaveBeenCalledWith(
+      'APP_STORE',
+      expect.stringContaining('refused this key'),
+    );
+  });
+
   it('reports the featuring reads beside the keyword field import', async () => {
     const { service, featuring } = build();
     featuring.run.mockResolvedValue({ nominations: 2, promoText: 21 });

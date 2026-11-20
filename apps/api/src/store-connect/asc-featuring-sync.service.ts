@@ -15,6 +15,7 @@ import {
   AscError,
   AscForbiddenError,
   AscRateLimitedError,
+  AscRejectedKeyError,
   isNotFound,
 } from './asc-errors';
 import {
@@ -171,7 +172,12 @@ export class AscFeaturingSync {
         nominations += outcome.nominations;
         promoText += outcome.promoText;
       } catch (error) {
-        if (error instanceof AscRateLimitedError) throw error;
+        if (
+          error instanceof AscRateLimitedError ||
+          error instanceof AscRejectedKeyError
+        ) {
+          throw error;
+        }
         this.logger.warn(
           `the featuring reads of app ${app.id} wait for the next sync: ${messageOf(error)}`,
         );
@@ -231,7 +237,12 @@ export class AscFeaturingSync {
       }
       return { kind: 'live', id: live.id };
     } catch (error) {
-      if (error instanceof AscRateLimitedError) throw error;
+      if (
+        error instanceof AscRateLimitedError ||
+        error instanceof AscRejectedKeyError
+      ) {
+        throw error;
+      }
       if (!(error instanceof AscError)) throw error;
       if (isNotFound(error)) return { kind: 'invisible' };
       return { kind: 'failed', message: error.message };
@@ -254,7 +265,12 @@ export class AscFeaturingSync {
         },
       };
     } catch (error) {
-      if (error instanceof AscRateLimitedError) throw error;
+      if (
+        error instanceof AscRateLimitedError ||
+        error instanceof AscRejectedKeyError
+      ) {
+        throw error;
+      }
       if (!(error instanceof AscError)) throw error;
       return { kind: 'skipped', message: error.message };
     }
@@ -271,7 +287,12 @@ export class AscFeaturingSync {
       if (error instanceof AscForbiddenError) {
         return { kind: 'refused', message: error.message };
       }
-      if (error instanceof AscRateLimitedError) throw error;
+      if (
+        error instanceof AscRateLimitedError ||
+        error instanceof AscRejectedKeyError
+      ) {
+        throw error;
+      }
       if (!(error instanceof AscError)) throw error;
       return { kind: 'skipped', message: error.message };
     }

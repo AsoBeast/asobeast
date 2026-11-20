@@ -165,6 +165,9 @@ export class AscReportSync {
         summary.rateLimited = true;
         return;
       }
+      if (error instanceof AscRejectedKeyError) {
+        throw error;
+      }
       this.logger.warn(
         `the featuring reads wait for the next sync: ${messageOf(error)}`,
       );

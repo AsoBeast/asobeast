@@ -4,6 +4,7 @@ import type { StoreConnectionService } from './store-connection.service';
 import { AscListingApi } from './asc-listing-api';
 import { AscRateLimitedError } from './asc-errors';
 import { AscFeaturingSync } from './asc-featuring-sync.service';
+import { AscRejectedKeyError } from './asc-errors';
 import { FIELD_SYNC_UNSERVED_APP } from './asc-keyword-field-sync.service';
 import { failure, ok, recordedRequester } from './asc-transport.fixture';
 import type { AscResponse } from './asc-transport';
@@ -414,6 +415,16 @@ describe('AscFeaturingSync.run', () => {
       promoTotal: 1,
       promoError: null,
     });
+  });
+
+  it('rethrows a refused key instead of a per app skip', async () => {
+    const { service, updateMany, create } = build({
+      responses: [failure(401, 'INVALID_AUTH')],
+    });
+
+    await expect(service.run()).rejects.toBeInstanceOf(AscRejectedKeyError);
+    expect(updateMany).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
   });
 
   it('rethrows a rate limit of the version read without storing', async () => {

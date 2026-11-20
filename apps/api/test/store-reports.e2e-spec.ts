@@ -22,6 +22,7 @@ import {
 } from '../src/store-connect/asc-report-sync.service';
 import { importedMonths } from '../src/store-connect/play/play-report-sync.service';
 import { StoreReportSyncService } from '../src/store-connect/store-report-sync.service';
+import { KEY_REFUSED } from '../src/store-connect/asc-http-errors';
 import { PartialSyncRetryError } from '../src/store-connect/store-sync-summary';
 import { ownerAgent } from './helpers/session';
 import {
@@ -956,6 +957,22 @@ describe('Store report sync (e2e)', () => {
       status: 'unmeasurable',
       detail: null,
     });
+  });
+
+  it('marks the connection rejected when apple refuses the key during the featuring reads', async () => {
+    scriptApple();
+    await run();
+    harness.asc.on(
+      'GET',
+      /\/appStoreVersions\?/,
+      refusal(403, 'NOT_AUTHORIZED'),
+    );
+
+    await expect(run()).rejects.toBeInstanceOf(UnrecoverableError);
+
+    const connection = await harness.prisma.storeConnection.findFirstOrThrow();
+    expect(connection.status).toBe('rejected');
+    expect(connection.lastError).toBe(KEY_REFUSED);
   });
 
   it('keeps the rows of one workspace out of another', async () => {
