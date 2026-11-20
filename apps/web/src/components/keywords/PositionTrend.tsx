@@ -4,20 +4,20 @@ import {
   TREND_HEIGHT,
   TREND_WIDTH,
 } from "./position-trend";
-
-import { TREND_WINDOW_DAYS, type TrendWindow } from "@/lib/trend-window";
+import type { TrendFrame } from "@/lib/trend-window";
 
 export function PositionTrend({
   checks,
-  trendWindow,
+  frame,
+  checked,
 }: {
   checks: readonly KeywordRecentPosition[] | undefined;
-  trendWindow: TrendWindow;
+  frame: TrendFrame;
+  checked: boolean;
 }) {
-  const days = TREND_WINDOW_DAYS[trendWindow];
-  const shape = positionTrendShape(checks, days);
+  const shape = positionTrendShape(checks, frame);
   if (!shape) {
-    return checks && checks.length > 0 ? (
+    return checked ? (
       <span
         style={{ width: TREND_WIDTH }}
         className="shrink-0 text-caption leading-tight text-muted-foreground keywords-tight:hidden"
@@ -35,7 +35,7 @@ export function PositionTrend({
   return (
     <svg
       role="img"
-      aria-label={`Position over the last ${days} days, from ${shape.first} to ${shape.last}`}
+      aria-label={`Position over the last ${frame.days} days, from ${shape.first} to ${shape.last}`}
       data-slot="position-trend"
       width={TREND_WIDTH}
       height={TREND_HEIGHT}

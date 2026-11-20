@@ -158,7 +158,7 @@ describe("PositionCell", () => {
       [
         "kw-1",
         [
-          { date: "2026-09-22", position: 30, depth: 200 },
+          { date: "2026-09-23", position: 30, depth: 200 },
           { date: "2026-10-01", position: 20, depth: 200 },
           { date: "2026-10-21", position: 12, depth: 200 },
           { date: "2026-10-22", position: 10, depth: 200 },
@@ -173,8 +173,8 @@ describe("PositionCell", () => {
       series,
     );
 
-    expect(markup).toContain("Position over the last 30 days, from 20 to 10");
-    expect(markup).toContain('aria-label="up 10 over 30 days"');
+    expect(markup).toContain("Position over the last 30 days, from 30 to 10");
+    expect(markup).toContain('aria-label="up 20 over 30 days"');
   });
 
   it("W-POS-31 says so when the window has too few ranked checks", () => {
@@ -230,6 +230,60 @@ describe("PositionCell", () => {
 
     expect(markup).toContain('data-slot="position-trend"');
     expect(markup).toContain("text-muted-foreground");
+  });
+
+  it("W-POS-35 ends a paused row's 30 day line on its last check, not on today", () => {
+    const series: TrendSeries = new Map([
+      [
+        "kw-1",
+        [
+          { date: "2026-10-01", position: 20, depth: 200 },
+          { date: "2026-10-02", position: 15, depth: 200 },
+        ],
+      ],
+    ]);
+
+    const markup = renderTrend(
+      keyword({ active: false, positionDelta7d: null }),
+      false,
+      "30d",
+      series,
+    );
+
+    expect(markup).toContain('cx="23.5"');
+    expect(markup).toContain('aria-label="up 5 over 30 days"');
+  });
+
+  it("W-POS-36 says Not enough checks for a checked row with no check in the 30 days", () => {
+    const series: TrendSeries = new Map([["kw-1", []]]);
+
+    const markup = renderTrend(
+      keyword({ active: false }),
+      false,
+      "30d",
+      series,
+    );
+
+    expect(markup).toContain("Not enough checks");
+    expect(markup).not.toContain('data-slot="position-trend"');
+  });
+
+  it("W-POS-37 leaves a never checked row empty in the 30 day window", () => {
+    const series: TrendSeries = new Map([["kw-1", []]]);
+
+    const markup = renderTrend(
+      keyword({
+        latestPosition: null,
+        latestDepth: null,
+        latestCheckedOn: null,
+        recentPositions: [],
+      }),
+      false,
+      "30d",
+      series,
+    );
+
+    expect(markup).not.toContain("Not enough checks");
   });
 
   it("W-POS-08 names the market when the app tracks several", () => {

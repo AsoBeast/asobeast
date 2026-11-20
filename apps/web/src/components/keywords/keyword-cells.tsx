@@ -32,6 +32,7 @@ import { TREND_WIDTH } from "./position-trend";
 import {
   trendChecks,
   trendDelta,
+  trendFrame,
   trendPeriod,
   type TrendSeries,
   type TrendState,
@@ -141,7 +142,8 @@ export function TrendCell({
       <>
         <PositionTrend
           checks={trendChecks(keyword, trendWindow, series)}
-          trendWindow={trendWindow}
+          frame={trendFrame(trendWindow, today)}
+          checked={label !== null}
         />
         <DeltaChip
           value={trendDelta(keyword, trendWindow, series)}

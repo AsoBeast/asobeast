@@ -1628,8 +1628,11 @@ test("the trend column switches to 30 days through the URL", async ({
     }),
   ).toBeAttached();
   expect(requests).toHaveLength(1);
-  expect(new URL(requests[0]).searchParams.get("country")).toBe("us");
-  expect(new URL(requests[0]).searchParams.get("includePaused")).toBe("true");
+  const params = new URL(requests[0]).searchParams;
+  expect(params.get("country")).toBe("us");
+  expect(params.get("includePaused")).toBe("true");
+  expect(params.get("from")).toBe(utcDaysAgo(29));
+  expect(params.get("to")).toBe(utcDaysAgo(0));
   await expect(
     page
       .getByRole("row", { name: /time blocking/ })

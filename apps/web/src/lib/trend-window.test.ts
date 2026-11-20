@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
-  checksInWindow,
   seriesByKeyword,
   trendChecks,
   trendDelta,
+  trendFrame,
   trendLabel,
   trendPeriod,
+  trendRange,
   windowDelta,
 } from "./trend-window";
 
@@ -25,15 +26,23 @@ describe("trend window", () => {
     expect(trendPeriod("30d")).toBe("over 30 days");
   });
 
-  it("keeps only the checks inside the days ending at the newest", () => {
-    const checks = [on(1, 9), on(2, 8), on(30, 7), on(31, 6)];
+  it("asks for the 30 days ending today", () => {
+    expect(trendRange("30d", "2026-11-30")).toEqual({
+      from: "2026-11-01",
+      to: "2026-11-30",
+    });
+    expect(trendRange("30d", "2026-03-01")).toEqual({
+      from: "2026-01-31",
+      to: "2026-03-01",
+    });
+  });
 
-    expect(checksInWindow(checks, 30)).toEqual([
-      on(2, 8),
-      on(30, 7),
-      on(31, 6),
-    ]);
-    expect(checksInWindow([], 30)).toEqual([]);
+  it("ends the 30 day line on today and the 7 day one on the newest check", () => {
+    expect(trendFrame("30d", "2026-11-30")).toEqual({
+      days: 30,
+      end: "2026-11-30",
+    });
+    expect(trendFrame("7d", "2026-11-30")).toEqual({ days: 7 });
   });
 
   it("measures the move from the first ranked check to the last", () => {
@@ -63,8 +72,8 @@ describe("trend window", () => {
     expect(trendChecks(keyword, "7d", series)).toBe(keyword.recentPositions);
     expect(trendDelta(keyword, "7d", series)).toBe(-2);
     expect(trendChecks(keyword, "30d", series)).toEqual([
-      on(2, 30),
-      on(31, 10),
+      point(2, 30),
+      point(31, 10),
     ]);
     expect(trendDelta(keyword, "30d", series)).toBe(-20);
   });

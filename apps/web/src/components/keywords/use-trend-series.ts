@@ -6,6 +6,7 @@ import { rankingsOptions } from "@/lib/queries";
 import { useHydrated } from "@/lib/use-hydrated";
 import {
   seriesByKeyword,
+  trendRange,
   type TrendSeries,
   type TrendState,
   type TrendWindow,
@@ -14,18 +15,24 @@ import {
 export function useTrendSeries({
   appId,
   country,
+  today,
   trendWindow,
   columnShown,
 }: {
   appId: string;
   country: string;
+  today: string;
   trendWindow: TrendWindow;
   columnShown: boolean;
 }) {
   const hydrated = useHydrated();
   const wanted = trendWindow === "30d" && columnShown;
   const read = useQuery({
-    ...rankingsOptions(appId, { country, includePaused: true }),
+    ...rankingsOptions(appId, {
+      ...trendRange(trendWindow, today),
+      country,
+      includePaused: true,
+    }),
     enabled: hydrated && wanted,
   });
   const series = useMemo<TrendSeries | undefined>(

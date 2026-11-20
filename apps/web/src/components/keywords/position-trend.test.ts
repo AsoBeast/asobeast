@@ -56,19 +56,38 @@ describe("positionTrendShape", () => {
     expect(shape?.path).toBe("M3 3h0M36 19h0M69 3h0");
   });
 
-  it("spreads thirty days over the width and ignores older checks", () => {
-    const day = (offset: number, position: number | null) => ({
-      date: new Date(Date.UTC(2026, 9, 1 + offset)).toISOString().slice(0, 10),
-      position,
+  it("spreads thirty days ending on the frame's last day over the width", () => {
+    const shape = positionTrendShape([on(1, 9), on(2, 9), on(30, 1)], {
+      days: 30,
+      end: "2026-11-30",
     });
-    const checks = [day(0, 50), day(1, 20), day(2, 20), day(30, 5), day(31, 5)];
 
-    const shape = positionTrendShape(checks.slice(0, 3), 30);
-    const recent = positionTrendShape(checks.slice(1), 30);
+    expect(shape).toEqual({
+      path: "M3 19L5.3 19M69 3h0",
+      end: { x: 69, y: 3 },
+      first: 9,
+      last: 1,
+    });
+  });
 
-    expect(shape?.end.x).toBe(69);
-    expect(recent?.first).toBe(20);
-    expect(recent?.path.startsWith("M")).toBe(true);
+  it("places a paused keyword's checks on their own days, not at the end", () => {
+    const shape = positionTrendShape([on(5, 9), on(6, 9), on(10, 4)], {
+      days: 30,
+      end: "2026-11-30",
+    });
+
+    expect(shape?.path).toBe("M12.1 19L14.4 19M23.5 3h0");
+    expect(shape?.end).toEqual({ x: 23.5, y: 3 });
+  });
+
+  it("leaves out checks older than the frame", () => {
+    const shape = positionTrendShape(
+      [{ date: "2026-10-31", position: 50 }, on(1, 9), on(2, 4)],
+      { days: 30, end: "2026-11-30" },
+    );
+
+    expect(shape?.first).toBe(9);
+    expect(shape?.path).toBe("M3 19L5.3 3");
   });
 
   it("keeps a flat week on the middle line", () => {

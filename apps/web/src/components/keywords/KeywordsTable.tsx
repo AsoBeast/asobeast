@@ -142,6 +142,7 @@ export function KeywordsTable({
   } = useTrendSeries({
     appId: id,
     country,
+    today,
     trendWindow,
     columnShown: visibility.delta7d !== false,
   });

@@ -1,4 +1,9 @@
-import type { KeywordRecentPosition, RankingPoint } from "@asobeast/shared";
+import {
+  addUtcDays,
+  KEYWORD_RECENT_POSITION_DAYS,
+  type KeywordRecentPosition,
+  type RankingPoint,
+} from "@asobeast/shared";
 
 export const TREND_WINDOWS = ["7d", "30d"] as const;
 export type TrendWindow = (typeof TREND_WINDOWS)[number];
@@ -6,17 +11,32 @@ export type TrendWindow = (typeof TREND_WINDOWS)[number];
 export const DEFAULT_TREND_WINDOW: TrendWindow = "7d";
 
 export const TREND_WINDOW_DAYS: Record<TrendWindow, number> = {
-  "7d": 7,
+  "7d": KEYWORD_RECENT_POSITION_DAYS,
   "30d": 30,
 };
 
-const DAY_MS = 86_400_000;
+export interface TrendFrame {
+  days: number;
+  end?: string;
+}
 
 export const trendLabel = (window: TrendWindow): string =>
   `Last ${TREND_WINDOW_DAYS[window]} days`;
 
 export const trendPeriod = (window: TrendWindow): string =>
   `over ${TREND_WINDOW_DAYS[window]} days`;
+
+export function trendFrame(window: TrendWindow, today: string): TrendFrame {
+  const days = TREND_WINDOW_DAYS[window];
+  return window === DEFAULT_TREND_WINDOW ? { days } : { days, end: today };
+}
+
+export function trendRange(
+  window: TrendWindow,
+  today: string,
+): { from: string; to: string } {
+  return { from: addUtcDays(today, 1 - TREND_WINDOW_DAYS[window]), to: today };
+}
 
 export type TrendState = "ready" | "pending" | "failed";
 
@@ -28,16 +48,6 @@ export function seriesByKeyword(
   return new Map(series.map((item) => [item.keywordId, item.points]));
 }
 
-export function checksInWindow(
-  checks: readonly KeywordRecentPosition[],
-  days: number,
-): KeywordRecentPosition[] {
-  if (checks.length === 0) return [];
-  const newest = Date.parse(checks[checks.length - 1].date);
-  const start = newest - (days - 1) * DAY_MS;
-  return checks.filter((check) => Date.parse(check.date) >= start);
-}
-
 export function trendChecks(
   keyword: {
     keywordId: string;
@@ -46,14 +56,9 @@ export function trendChecks(
   window: TrendWindow,
   series: TrendSeries | undefined,
 ): readonly KeywordRecentPosition[] | undefined {
-  if (window === "7d") return keyword.recentPositions;
-  const points = series?.get(keyword.keywordId);
-  return points
-    ? checksInWindow(
-        points.map(({ date, position }) => ({ date, position })),
-        TREND_WINDOW_DAYS[window],
-      )
-    : undefined;
+  return window === DEFAULT_TREND_WINDOW
+    ? keyword.recentPositions
+    : series?.get(keyword.keywordId);
 }
 
 export function windowDelta(
@@ -76,7 +81,7 @@ export function trendDelta(
   window: TrendWindow,
   series: TrendSeries | undefined,
 ): number | null {
-  return window === "7d"
+  return window === DEFAULT_TREND_WINDOW
     ? keyword.positionDelta7d
     : windowDelta(trendChecks(keyword, window, series));
 }

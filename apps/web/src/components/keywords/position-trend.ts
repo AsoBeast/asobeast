@@ -1,5 +1,9 @@
 import type { KeywordRecentPosition } from "@asobeast/shared";
-import { DEFAULT_TREND_WINDOW, TREND_WINDOW_DAYS } from "@/lib/trend-window";
+import {
+  DEFAULT_TREND_WINDOW,
+  TREND_WINDOW_DAYS,
+  type TrendFrame,
+} from "@/lib/trend-window";
 
 export const TREND_WIDTH = 72;
 export const TREND_HEIGHT = 22;
@@ -23,10 +27,9 @@ const round = (value: number): number => Math.round(value * 10) / 10;
 
 function rankedChecks(
   checks: readonly KeywordRecentPosition[],
-  days: number,
+  { days, end = checks[checks.length - 1].date }: TrendFrame,
 ): Ranked[][] {
-  const newest = Date.parse(checks[checks.length - 1].date);
-  const start = newest - (days - 1) * DAY_MS;
+  const start = Date.parse(end) - (days - 1) * DAY_MS;
   const runs: Ranked[][] = [[]];
   for (const check of checks) {
     const day = Math.round((Date.parse(check.date) - start) / DAY_MS);
@@ -45,10 +48,10 @@ function rankedChecks(
 
 export function positionTrendShape(
   checks: readonly KeywordRecentPosition[] | undefined,
-  days: number = TREND_WINDOW_DAYS[DEFAULT_TREND_WINDOW],
+  frame: TrendFrame = { days: TREND_WINDOW_DAYS[DEFAULT_TREND_WINDOW] },
 ): PositionTrendShape | null {
   if (!checks || checks.length === 0) return null;
-  const runs = rankedChecks(checks, days);
+  const runs = rankedChecks(checks, frame);
   const ranked = runs.flat();
   if (ranked.length < 2) return null;
 
@@ -56,7 +59,7 @@ export function positionTrendShape(
   const best = Math.min(...roots);
   const span = Math.max(...roots) - best;
   const x = (day: number) =>
-    round(INSET + (day / (days - 1)) * (TREND_WIDTH - 2 * INSET));
+    round(INSET + (day / (frame.days - 1)) * (TREND_WIDTH - 2 * INSET));
   const y = (position: number) =>
     round(
       span === 0
