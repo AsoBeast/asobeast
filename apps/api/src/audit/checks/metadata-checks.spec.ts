@@ -322,6 +322,24 @@ describe('titleChecks', () => {
     );
   });
 
+  it('skips a keyword coverage counts as covered', () => {
+    expect(
+      titleCheck(
+        appStoreContext({
+          title: 'Where Am I? Quiz',
+          subtitle: 'Geo trivia',
+          keywords: [
+            keyword('geo quiz', 'primary', 90, { uncovered: false }),
+            keyword('world map', 'secondary', 50),
+          ],
+        }),
+        'title-length',
+      )?.advice?.fix,
+    ).toBe(
+      'Add \u201cworld map\u201d (9 characters), your best uncovered keyword that still fits.',
+    );
+  });
+
   it('gives no length advice to a title that uses 27 characters', () => {
     expect(
       titleCheck(
@@ -447,13 +465,13 @@ describe('keywordFieldChecks', () => {
     ).toBe(score);
   });
 
-  it('never suggests a keyword the title already covers', () => {
+  it('never suggests a keyword coverage counts as covered', () => {
     const checks = keywordFieldChecks(
       appStoreContext({
         title: 'Budget Planner',
         keywordField: 'money,savings',
         keywords: [
-          keyword('budget planner', 'primary', 90),
+          keyword('budget planner', 'primary', 90, { uncovered: false }),
           keyword('expense tracker', 'secondary', 60),
         ],
       }),
@@ -626,7 +644,7 @@ describe('character counts outside the bmp', () => {
       appStoreContext({
         title: '𠮷'.repeat(10),
         keywords: [
-          keyword('𠮷'.repeat(10), 'primary', 90),
+          keyword('𠮷'.repeat(10), 'primary', 90, { uncovered: false }),
           keyword('𪚥'.repeat(10), 'secondary', 80),
         ],
       }),

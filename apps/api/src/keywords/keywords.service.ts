@@ -14,7 +14,11 @@ import {
 import { QuotaService } from '../auth/quota.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { classifyBuckets } from './buckets';
-import { trackedKeywordClasses } from './keyword-classes';
+import {
+  ListingVerdicts,
+  trackedKeywordClasses,
+  trackedListingVerdicts,
+} from './keyword-classes';
 import { FirstPositionChecks } from './first-position-checks';
 import { KeywordTracker, keywordRows } from './keyword-tracker';
 import {
@@ -54,6 +58,11 @@ export class KeywordsService {
   ): Promise<ReadonlyMap<string, KeywordClass | undefined>> {
     const app = await ensureApp(this.prisma, appId);
     return trackedKeywordClasses(this.prisma, app, country);
+  }
+
+  async listingVerdicts(appId: string): Promise<ListingVerdicts> {
+    const app = await ensureApp(this.prisma, appId);
+    return trackedListingVerdicts(this.prisma, app);
   }
 
   async listTracked(

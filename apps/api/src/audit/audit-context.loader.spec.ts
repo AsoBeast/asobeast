@@ -103,18 +103,20 @@ const buildLoader = (options: LoaderOptions = {}) => {
         _appId: string,
         _sort: undefined,
         _country: undefined,
-        options?: { brandFacts?: boolean },
+        options?: { brandFacts?: boolean; coverageFacts?: boolean },
       ) =>
         Promise.resolve(
           [
             trackedKeyword('habit tracker', 'us', true),
             trackedKeyword('streak counter', 'gb', true),
             trackedKeyword('daily goals', 'us', false),
-          ].map((item) =>
-            options?.brandFacts
-              ? { ...item, keywordClass: 'competitorBrand' as const }
-              : item,
-          ),
+          ].map((item) => ({
+            ...item,
+            ...(options?.brandFacts
+              ? { keywordClass: 'competitorBrand' as const }
+              : {}),
+            ...(options?.coverageFacts ? { uncovered: true } : {}),
+          })),
         ),
     ),
     compare: jest.fn().mockResolvedValue({ competitors: [], rows: [] }),
@@ -182,6 +184,12 @@ describe('AuditContextLoader.load', () => {
       opportunity: 60,
       keywordClass: 'competitorBrand',
     });
+  });
+
+  it('carries the coverage verdict of each keyword', async () => {
+    const context = await buildLoader().load('app-1');
+
+    expect(context.keywords[0]?.uncovered).toBe(true);
   });
 
   it('maps each competitor from its latest snapshot', async () => {

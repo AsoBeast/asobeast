@@ -783,6 +783,121 @@ describe('AnalyticsController (e2e)', () => {
     ).not.toContain('daily goals');
   });
 
+  const trackScored = async (
+    appId: string,
+    store: Store,
+    text: string,
+  ): Promise<string> => {
+    const keyword = await prisma.keyword.create({
+      data: { text, store, country: 'us' },
+    });
+    await prisma.trackedKeyword.create({
+      data: {
+        appId,
+        keywordId: keyword.id,
+        source: 'MANUAL',
+        active: true,
+        relevance: 90,
+      },
+    });
+    await prisma.keywordMetric.create({
+      data: {
+        keywordId: keyword.id,
+        date: D7,
+        traffic: 8,
+        difficulty: 2,
+        formulaVersion: CURRENT_FORMULA_VERSIONS[store],
+      },
+    });
+    return keyword.id;
+  };
+
+  it('lists no keyword the coverage judge counts as covered', async () => {
+    const id = await seed();
+    await prisma.keywordField.create({
+      data: {
+        appId: id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        localization: 'en-US',
+        phrases: ['goal planner'],
+      },
+    });
+    await trackScored(id, Store.APP_STORE, 'daily habit');
+    await trackScored(id, Store.APP_STORE, 'goal planner');
+
+    const summary = (await api.get(`/apps/${id}/summary`).expect(200))
+      .body as AppSummary;
+
+    const listed = summary.coverage.uncoveredHighOpportunity.map(
+      (item) => item.text,
+    );
+    expect(listed).toContain('daily goals');
+    expect(listed).not.toContain('daily habit');
+    expect(listed).not.toContain('goal planner');
+  });
+
+  it('lists an App Store keyword only the unindexed description holds', async () => {
+    const id = await seed();
+    await prisma.appSnapshot.updateMany({
+      where: { appId: id },
+      data: { description: 'Build habits every day with a mood journal' },
+    });
+    await trackScored(id, Store.APP_STORE, 'mood journal');
+
+    const summary = (await api.get(`/apps/${id}/summary`).expect(200))
+      .body as AppSummary;
+
+    expect(summary.coverage.inDescription).toBe(1);
+    expect(
+      summary.coverage.uncoveredHighOpportunity.map((item) => item.text),
+    ).toContain('mood journal');
+  });
+
+  it('counts a Google Play short description as covering a keyword', async () => {
+    const play = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.GOOGLE_PLAY,
+        storeAppId: 'com.habit.tracker',
+        country: 'us',
+        name: 'Habit Tracker',
+      },
+    });
+    await prisma.appSnapshot.create({
+      data: {
+        appId: play.id,
+        title: 'Habit Tracker',
+        summary: 'Your daily mood journal',
+        description: 'Build habits every day',
+        raw: {},
+        capturedAt: D0,
+      },
+    });
+    await trackScored(play.id, Store.GOOGLE_PLAY, 'mood journal');
+    const checked = await trackScored(
+      play.id,
+      Store.GOOGLE_PLAY,
+      'sleep diary',
+    );
+    await prisma.keywordRanking.create({
+      data: {
+        appId: play.id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        keywordId: checked,
+        date: D7,
+        position: null,
+        depth: 100,
+      },
+    });
+
+    const summary = (await api.get(`/apps/${play.id}/summary`).expect(200))
+      .body as AppSummary;
+
+    expect(
+      summary.coverage.uncoveredHighOpportunity.map((item) => item.text),
+    ).toEqual(['sleep diary']);
+  });
+
   it('counts the words of a japanese listing as covered by that listing', async () => {
     const created = await prisma.app.create({
       data: {

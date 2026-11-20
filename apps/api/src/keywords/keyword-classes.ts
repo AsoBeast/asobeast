@@ -1,23 +1,33 @@
 import type { KeywordClass } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { readScoreSignals } from '../scoring/score-signals';
-import { classFacts } from './keywords.mapper';
+import { AppFacts, classFacts } from './keywords.mapper';
 import { KeywordApp } from './keywords.support';
 import { listingFacts } from './listing-facts';
 
-export async function trackedKeywordClasses(
+type ClassApp = Pick<KeywordApp, 'id' | 'country' | 'store'>;
+
+export type KeywordClasses = ReadonlyMap<string, KeywordClass | undefined>;
+
+export interface ListingVerdicts {
+  classes: KeywordClasses;
+  uncovered: ReadonlySet<string>;
+}
+
+const classRows = (
   prisma: PrismaService,
-  app: Pick<KeywordApp, 'id' | 'country' | 'store'>,
+  appId: string,
   country: string | undefined,
-): Promise<ReadonlyMap<string, KeywordClass | undefined>> {
-  const rows = await prisma.trackedKeyword.findMany({
+) =>
+  prisma.trackedKeyword.findMany({
     where: {
-      appId: app.id,
+      appId,
       ...(country ? { keyword: { is: { country } } } : {}),
     },
     select: {
       keywordId: true,
       keywordClass: true,
+      active: true,
       keyword: {
         select: {
           text: true,
@@ -31,13 +41,18 @@ export async function trackedKeywordClasses(
       },
     },
   });
-  const facts = await listingFacts(
-    prisma,
-    app,
-    [...new Set(rows.map((row) => row.keyword.country))],
-    { brand: true },
-  );
-  return new Map(
+
+type ClassRow = Awaited<ReturnType<typeof classRows>>[number];
+
+const marketsOf = (rows: readonly ClassRow[]): string[] => [
+  ...new Set(rows.map((row) => row.keyword.country)),
+];
+
+const classesOf = (
+  rows: readonly ClassRow[],
+  facts: AppFacts,
+): KeywordClasses =>
+  new Map(
     rows.map((row) => [
       row.keywordId,
       classFacts(
@@ -47,4 +62,34 @@ export async function trackedKeywordClasses(
       ).keywordClass,
     ]),
   );
+
+export async function trackedKeywordClasses(
+  prisma: PrismaService,
+  app: ClassApp,
+  country: string | undefined,
+): Promise<KeywordClasses> {
+  const rows = await classRows(prisma, app.id, country);
+  const facts = await listingFacts(prisma, app, marketsOf(rows), {
+    brand: true,
+  });
+  return classesOf(rows, facts);
+}
+
+export async function trackedListingVerdicts(
+  prisma: PrismaService,
+  app: ClassApp,
+): Promise<ListingVerdicts> {
+  const rows = await classRows(prisma, app.id, undefined);
+  const facts = await listingFacts(prisma, app, marketsOf(rows), {
+    brand: true,
+    coverage: true,
+  });
+  return {
+    classes: classesOf(rows, facts),
+    uncovered: new Set(
+      rows
+        .filter((row) => row.active && facts.uncovered?.(row.keyword) === true)
+        .map((row) => row.keywordId),
+    ),
+  };
 }

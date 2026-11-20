@@ -35,6 +35,7 @@ export interface AuditKeyword {
   traffic: number | null;
   volume: number | null;
   opportunity: number | null;
+  uncovered: boolean;
 }
 
 export interface AuditCompetitor {

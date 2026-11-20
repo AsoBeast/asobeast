@@ -97,19 +97,15 @@ const KEYWORD_FIELD_FIXES: Readonly<Record<string, string>> = Object.freeze({
     'Spaces after commas spend characters Apple does not index.',
 });
 
-const coveredAnywhere = (context: AuditContext, phrase: string): boolean =>
-  [context.title, context.subtitle ?? '', context.summary ?? ''].some((field) =>
-    coversPhrase(field, phrase),
-  );
+const uncoveredTargets = (context: AuditContext): AuditKeyword[] =>
+  listingTargets(context.keywords).filter((keyword) => keyword.uncovered);
 
 const candidateKeyword = (
   context: AuditContext,
   unused: number,
 ): AuditKeyword | null =>
-  listingTargets(context.keywords).find(
-    (keyword) =>
-      !coveredAnywhere(context, keyword.text) &&
-      countChars(keyword.text) + 1 <= unused,
+  uncoveredTargets(context).find(
+    (keyword) => countChars(keyword.text) + 1 <= unused,
   ) ?? null;
 
 const lengthAdvice = (
@@ -332,11 +328,7 @@ export const keywordFieldChecks = (context: AuditContext): RubricCheck[] => {
   const hygiene = policyIssues(
     lintKeywordField(field, lintContext(context), KEYWORD_FIELD_CHAR_LIMIT),
   );
-  const candidates = listingTargets(context.keywords).filter(
-    (keyword) =>
-      !coversPhrase(field, keyword.text) &&
-      !coveredAnywhere(context, keyword.text),
-  );
+  const candidates = uncoveredTargets(context);
   const rated = context.keywords.filter(
     (keyword) =>
       keyword.source === KeywordSource.KEYWORD_FIELD && keyword.relevance > 0,
