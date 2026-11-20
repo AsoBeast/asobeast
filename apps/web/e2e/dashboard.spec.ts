@@ -480,6 +480,41 @@ test("the list beside the chart breaks the figure down by app and follows the ta
   await expect(list).toContainText("Sorted by priority");
 });
 
+for (const width of [375, 1440]) {
+  test(`a long app name truncates inside its column at ${width} px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+
+    const button = await hydrated(
+      breakdown(page).getByRole("listitem").first().getByRole("button"),
+    );
+    const fit = await button.evaluate(
+      (row, long) => {
+        const name = [...row.querySelectorAll("span")].find(
+          (span) => span.textContent === "Focus Timer",
+        );
+        const figure = row.querySelector(".numeric");
+        if (!name?.parentElement || !figure) return null;
+        name.textContent = long;
+        return {
+          name: name.getBoundingClientRect().right,
+          cell: name.parentElement.getBoundingClientRect().right,
+          figure: figure.getBoundingClientRect().left,
+          truncated: name.scrollWidth > name.clientWidth,
+        };
+      },
+      `Focus Timer ${"Pomodoro ".repeat(12)}`.trim(),
+    );
+
+    expect(fit).not.toBeNull();
+    expect(fit?.truncated).toBe(true);
+    expect(fit?.name).toBeLessThanOrEqual((fit?.cell ?? 0) + 0.5);
+    expect(fit?.name).toBeLessThanOrEqual(fit?.figure ?? 0);
+  });
+}
+
 test("pressing an app draws the chart for it alone and the chip returns to every app", async ({
   page,
 }) => {

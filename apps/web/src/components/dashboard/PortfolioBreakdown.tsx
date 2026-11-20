@@ -217,10 +217,10 @@ export function PortfolioBreakdown({ metric }: { metric: DashboardMetric }) {
                   {row.iconUrl === undefined ? null : (
                     <AppIcon src={row.iconUrl} size={16} />
                   )}
-                  <span className="max-w-full shrink-0 truncate font-medium">
+                  <span className="min-w-0 truncate font-medium">
                     {row.name}
                   </span>
-                  <span className="min-w-0 truncate text-label text-muted-foreground">
+                  <span className="min-w-0 flex-1 truncate text-label text-muted-foreground">
                     {row.mark}
                   </span>
                 </span>
