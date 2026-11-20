@@ -81,7 +81,7 @@ Every service has a health check and a restart policy, and the application conta
 With `ASOBEAST_PORT` set, use that port in each address.
 
 <Warning>
-  `/admin/queues` and `/docs` answer 404 to anyone who is not a signed in owner. That is deliberate. A 403 would confirm the surface exists, so the gate answers as though it does not.
+  `/admin/queues` and `/docs` answer 404 to anyone who is not the signed in [platform operator](/security/admin-surfaces#who-the-platform-operator-is). That is deliberate. A 403 would confirm the surface exists, so the gate answers as though it does not.
 </Warning>
 
 ## Customize the installation
