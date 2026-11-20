@@ -5,7 +5,7 @@ icon: git-compare
 keywords: ["changes","metadata changed","diff","competitor changes","change events","change impact"]
 ---
 
-The changes feed is the answer to "what did they change, and when". It records field level differences between the snapshots asobeast captures, for your own apps and for every competitor you track. For your own changes, the card above the feed also shows how your positions moved afterwards.
+The changes feed is the answer to "what did they change, and when". It records field level differences between the snapshots AsoBeast captures, for your own apps and for every competitor you track. For your own changes, the card above the feed also shows how your positions moved afterwards.
 
 ## Read the changes feed
 
@@ -18,7 +18,7 @@ Each event names the app, the field, the previous value, the new value and the d
 | From and to | The two values, so you can read the edit itself |
 | Detected | The UTC date the change was observed |
 
-Detection is snapshot based, so the date is when asobeast noticed rather than when the store published. A refresh you trigger yourself narrows that gap. See [Import an app](/guides/import-an-app).
+Detection is snapshot based, so the date is when AsoBeast noticed rather than when the store published. A refresh you trigger yourself narrows that gap. See [Import an app](/guides/import-an-app).
 
 ## Screenshot and caption changes
 
@@ -54,7 +54,7 @@ A change to your own listing is only worth repeating if it worked. The card at t
 
 ### What counts as one change
 
-Every edit asobeast detects on your listing on one UTC day is one change, whatever the fields: a new title and a new subtitle found on the same day are measured together, and the card lists both. Version, price, screenshots, screenshot images, screenshot captions, icon, What's New and in-app events count too. Featuring and the Editors' Choice badge are the store's own decisions, so the card leaves them out rather than let them take the credit; in-app events are yours, so they stay. The icon counts only when the picture itself changes: the store can reshuffle the icon's address without changing it, so asobeast downloads both versions and compares the pixels before it records one, whether or not `SCREENSHOT_OCR` is on. On the App Store a new keyword field only takes effect with a new version, so a version change is where a keyword field edit lands. The dashboard tile counts every recorded change instead, once per app per UTC day, for your competitors as well.
+Every edit AsoBeast detects on your listing on one UTC day is one change, whatever the fields: a new title and a new subtitle found on the same day are measured together, and the card lists both. Version, price, screenshots, screenshot images, screenshot captions, icon, What's New and in-app events count too. Featuring and the Editors' Choice badge are the store's own decisions, so the card leaves them out rather than let them take the credit; in-app events are yours, so they stay. The icon counts only when the picture itself changes: the store can reshuffle the icon's address without changing it, so AsoBeast downloads both versions and compares the pixels before it records one, whether or not `SCREENSHOT_OCR` is on. On the App Store a new keyword field only takes effect with a new version, so a version change is where a keyword field edit lands. The dashboard tile counts every recorded change instead, once per app per UTC day, for your competitors as well.
 
 Competitor changes are never measured here. They stay in the feed below the card.
 
@@ -113,7 +113,7 @@ The changes timeline marks the day of a change whose 7 day window is measured wi
 The report shows what moved after a change, not what the change caused. Store algorithm updates, seasonality, competitors' own edits and ordinary movement from one day to the next all shift positions too. Treat a window as evidence to weigh, and compare changes made under similar conditions.
 </Warning>
 
-The same report is available from the API as `GET /apps/{id}/changes/impact` with optional `days` and `country` parameters (see [asobeast API](/api-reference/introduction)), and to an agent as the `change_impact` tool (see [MCP tool reference](/mcp/tools)).
+The same report is available from the API as `GET /apps/{id}/changes/impact` with optional `days` and `country` parameters (see [AsoBeast API](/api-reference/introduction)), and to an agent as the `change_impact` tool (see [MCP tool reference](/mcp/tools)).
 
 ## Why competitor changes matter most
 

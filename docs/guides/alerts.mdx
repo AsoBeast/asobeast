@@ -1,6 +1,6 @@
 ---
 title: Send alerts
-description: "asobeast delivers rank, chart, SERP, metadata, review and action events by signed webhook or SMTP email. Batched delivery is resumable and deduplicated."
+description: "AsoBeast delivers rank, chart, SERP, metadata, review and action events by signed webhook or SMTP email. Batched delivery is resumable and deduplicated."
 icon: bell
 keywords: ["alerts","webhook","SMTP","email","batched delivery","signature","ALERT_DELIVERY","milestone","first ranking","overtake","unsubscribe","List-Unsubscribe","DKIM","confirm recipient","double opt in","chart.entered","chart.left","chart.milestone","top charts","new review","review stars","rating.dropped","review.spike","rating drop","review spike","app.delisted","app.unlisted_market","delisted","unlisted market","essential alerts","alert rules","rank drop threshold","subject line","alerts page","alert feed","alert_events"]
 ---
@@ -38,7 +38,7 @@ The essential events are `rank.dropped`, `rank.milestone`, `rank.first`, `metada
 | The workspace is entitled and not suspended | Nothing is created, and the next daily run tries again |
 | The owner's address is verified, where the instance requires verification | Nothing is created, and the next daily run tries again |
 
-On an instance that verifies sign ups the alert is confirmed at once. A self hosted instance never verifies an account, so there the alert is created waiting for confirmation and the owner receives the usual confirmation email, sent by AsoBeast. The Compose stacks default `WEB_PUBLIC_URL` to `http://localhost:3001`, so a stack without a public `https` address gets no essential alerts.
+On an instance that verifies sign ups the alert is confirmed at once. A self-hosted instance never verifies an account, so there the alert is created waiting for confirmation and the owner receives the usual confirmation email, sent by AsoBeast. The Compose stacks default `WEB_PUBLIC_URL` to `http://localhost:3001`, so a stack without a public `https` address gets no essential alerts.
 
 It happens once per workspace. Deleting the alert, pausing it or unsubscribing from it never brings it back, and creating any email alert or webhook by hand settles the workspace too. A workspace that existed before this release is left as it was. The same starting point is one click away: **Add email alert** opens with the essential rules on and a rank drop value of 10.
 
@@ -67,7 +67,7 @@ The list shows what was detected, not what was sent. An event on the page does n
 
 ### Read the events over the API and MCP
 
-`GET /alerts/events` answers the same list with `appId`, `type`, `since`, `cursor` and `limit`, newest first, and pages with `nextCursor`. See [asobeast API](/api-reference/introduction). An agent reads it as the `alert_events` tool; see [MCP tool reference](/mcp/tools).
+`GET /alerts/events` answers the same list with `appId`, `type`, `since`, `cursor` and `limit`, newest first, and pages with `nextCursor`. See [AsoBeast API](/api-reference/introduction). An agent reads it as the `alert_events` tool; see [MCP tool reference](/mcp/tools).
 
 ## Subscribe to events
 
@@ -221,7 +221,7 @@ A webhook url must be `http` or `https`, must not embed credentials, and must re
 
 A name that only resolves inside a network is refused the same way. That covers a bare hostname such as `hooks` or `n8n`, `localhost`, and any name ending in `.local`, `.localhost`, `.internal` or `.home.arpa`. The error names the host and says it resolves inside this network.
 
-Set `WEBHOOK_ALLOW_PRIVATE_TARGETS` to `true` to deliver to your own network from a self hosted instance. The url may then name a host instead of an address, for example `http://n8n:5678/webhook/asobeast` for another service in the same Compose project, which keeps working when the container is recreated with a new address. Inside the api container `localhost` is the container itself, so name the receiver's service instead. Credentials in the url and schemes other than `http` and `https` stay refused. See the [configuration reference](/configuration/reference) for what that changes.
+Set `WEBHOOK_ALLOW_PRIVATE_TARGETS` to `true` to deliver to your own network from a self-hosted instance. The url may then name a host instead of an address, for example `http://n8n:5678/webhook/asobeast` for another service in the same Compose project, which keeps working when the container is recreated with a new address. Inside the api container `localhost` is the container itself, so name the receiver's service instead. Credentials in the url and schemes other than `http` and `https` stay refused. See the [configuration reference](/configuration/reference) for what that changes.
 
 A granular event looks like this.
 
@@ -427,7 +427,7 @@ Email stays disabled until both `SMTP_HOST` and `SMTP_FROM` are set. Neither one
 
 Adding an email alert sends one confirmation email to the recipient, naming the account that added the address. The alert shows **Awaiting confirmation** in **Settings**, **Email alerts** and receives nothing, not even a test email, until the recipient presses **Confirm email address** on the page the link opens. That page asks before it acts, so a mail scanner that opens the link confirms nothing.
 
-A recipient is confirmed at once only when the address is the verified account email of a member of the workspace. Account emails are verified only where billing and SMTP are both on, so on a self hosted instance every recipient, the owner included, confirms through the mailbox.
+A recipient is confirmed at once only when the address is the verified account email of a member of the workspace. Account emails are verified only where billing and SMTP are both on, so on a self-hosted instance every recipient, the owner included, confirms through the mailbox.
 
 The confirmation link points at the web app, so it needs `WEB_PUBLIC_URL`. Without it no confirmation email can be sent, the recipient stays **Awaiting confirmation** and receives nothing, and the API logs a warning at startup in production. When a confirmation email cannot be sent, for that reason or because the SMTP relay refused it, **Settings** says so when you add the recipient, and **Resend confirmation** tries again.
 

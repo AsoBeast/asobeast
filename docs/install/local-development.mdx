@@ -23,7 +23,7 @@ docker compose -f docker-compose.dev.yml up -d
 
 This starts `postgres:18-alpine` on host port 5433 and `redis:8-alpine` on host port 6380, both bound to `127.0.0.1` so a locally running API can reach them without exposing either service on the network. Their container ports remain 5432 and 6379. The development database uses the password `asobeast`, which is fine because nothing is exposed beyond your machine. Never reuse it in a deployment.
 
-These services run as the `asobeast-dev` Compose project, with their own containers and their own volumes. A self hosted stack started from `docker-compose.yml` on the same machine keeps its data separately, so starting, resetting or removing the development services never touches it.
+These services run as the `asobeast-dev` Compose project, with their own containers and their own volumes. A self-hosted stack started from `docker-compose.yml` on the same machine keeps its data separately, so starting, resetting or removing the development services never touches it.
 
 ## Install and run
 

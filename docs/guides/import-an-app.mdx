@@ -1,6 +1,6 @@
 ---
 title: Import an app
-description: "Search a store by name or paste an App Store or Google Play URL, and asobeast captures the first snapshot, extracts keywords and tracks them in the home storefront."
+description: "Search a store by name or paste an App Store or Google Play URL, and AsoBeast captures the first snapshot, extracts keywords and tracks them in the home storefront."
 icon: download
 keywords: ["import","app store url","google play url","snapshot","refresh","home storefront"]
 ---
@@ -36,7 +36,7 @@ A URL, a bare App Store id or a Google Play package name never searches. It impo
     An App Store id with leading zeros names the same listing, so `0123456789` imports `123456789`.
   </Step>
   <Step title="Paste it into the import dialog">
-    asobeast parses the store and the storefront from the URL.
+    AsoBeast parses the store and the storefront from the URL.
   </Step>
   <Step title="Confirm the home storefront">
     The country segment in the URL becomes the home storefront. `apps.apple.com/de/...` imports a `de` home market. A bare id, or a URL with no country segment, falls back to `DEFAULT_COUNTRY`, which defaults to `us`. The dialog lets you override it before importing.
@@ -49,7 +49,7 @@ The home storefront is not just a label. It decides where the first snapshot, ca
 
 Five things, in order.
 
-1. **The listing is fetched and snapshotted.** asobeast stores the parsed fields and the raw payload, so a later parser fix can reprocess history rather than recollect it. The App Store subtitle is read from the public product page, and when Apple does not answer that page in time, the snapshot is stored without it and a backfill fills it in within a few minutes.
+1. **The listing is fetched and snapshotted.** AsoBeast stores the parsed fields and the raw payload, so a later parser fix can reprocess history rather than recollect it. The App Store subtitle is read from the public product page, and when Apple does not answer that page in time, the snapshot is stored without it and a backfill fills it in within a few minutes.
 2. **Keywords are extracted from the indexed fields and auto tracked.** Each one carries the source it came from, and each one is queued for its first popularity and difficulty score. Spaceless languages are split into words first. See [How are auto tracked keywords chosen?](/concepts/stores#how-are-auto-tracked-keywords-chosen)
 3. **A review backfill is queued.** The first three pages of reviews are collected so ratings history starts with something in it.
 4. **The first pass is scheduled.** Every auto tracked keyword is queued for a rank check. The action queue for your workspace is generated when those first rank checks finish, so the first recommendations read real positions instead of an empty database.
@@ -96,12 +96,12 @@ A refresh that cannot read the App Store product page keeps the subtitle from th
 
 Refresh is the only way to ask for a listing on demand, and it is rate limited per plan. Refresh while a market is selected on the metadata, overview or changes page refreshes that market's listing instead, and the API takes `?country=` for the same. Importing a url you already track returns the app you have without reaching the store: a second import would otherwise write a snapshot that quietly became the new baseline, and the change it captured would never appear in the changes feed.
 
-Field level changes also land in the changes feed, where they are kept alongside changes asobeast detected on its own schedule. See [Watch listing changes](/guides/listing-changes).
+Field level changes also land in the changes feed, where they are kept alongside changes AsoBeast detected on its own schedule. See [Watch listing changes](/guides/listing-changes).
 
 ## Troubleshooting
 
 - **The URL is rejected.** The parser accepts App Store listing URLs, Google Play `details` URLs, bare App Store ids and bare Google Play package names. A search result URL, a developer page, an album, a bundle, an editorial story or a shortened link is refused at once with the input echoed back, before any store request. Open the listing in a browser and copy the address bar.
-- **The import answers 422.** The App Store listing is not available on iPhone, so it can never rank in the search asobeast reads. That covers apps sold only on iPad, the Mac App Store, Apple Watch or Apple Vision Pro. The same applies when you add it as a competitor. See [App Store and Google Play](/concepts/stores).
+- **The import answers 422.** The App Store listing is not available on iPhone, so it can never rank in the search AsoBeast reads. That covers apps sold only on iPad, the Mac App Store, Apple Watch or Apple Vision Pro. The same applies when you add it as a competitor. See [App Store and Google Play](/concepts/stores).
 - **The import says the store took too long, turned the request away or could not be reached.** Nothing was imported, and the attempt counts toward the day's imports. Try again in a few minutes. Importing an app that is already in the workspace returns it instead of importing it twice, so a retry is always safe.
 - **The import says the server is busy reaching the store.** The server's own capacity was taken, nothing was asked of the store and the attempt does not count. The dialog says "The server is busy. Trying again in a few seconds." and tries once more by itself after the wait the server named. Only when that try meets a busy server too does it show how long to wait before you press **Import** again.
 - **The app exists in one storefront but not another.** Storefronts carry different catalogs. Import using a URL for a storefront where the app is actually published, then track keywords in the other market.

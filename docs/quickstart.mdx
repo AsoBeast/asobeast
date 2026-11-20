@@ -1,18 +1,18 @@
 ---
 title: Quickstart
-description: "Run asobeast with Docker Compose, create the owner account and import your first App Store or Google Play app in about five minutes."
+description: "Run AsoBeast with Docker Compose, create the owner account and import your first App Store or Google Play app in about five minutes."
 icon: rocket
 keywords: ["quickstart","docker compose","getting started","import app","owner account"]
 boost: 3
 ---
 
-By the end of this page you have asobeast running on your own machine, an owner account, and one app importing its metadata and tracking its first keywords.
+By the end of this page you have AsoBeast running on your own machine, an owner account, and one app importing its metadata and tracking its first keywords.
 
 <Note>
   The only prerequisite is Docker with the Compose plugin. See [System requirements](/install/requirements) for memory, disk and network detail.
 </Note>
 
-## Install and start asobeast
+## Install and start AsoBeast
 
 <Steps>
   <Step title="Clone the repository">
@@ -49,7 +49,7 @@ Set `AUTH_ALLOW_REGISTRATION=true` only when further sign ups should stay availa
 
 ## Import your first app
 
-Type your app's name into the import dialog and pick it from the results, or paste its App Store or Google Play URL. asobeast then does the following, in order.
+Type your app's name into the import dialog and pick it from the results, or paste its App Store or Google Play URL. AsoBeast then does the following, in order.
 
 1. Parses the store and the home storefront from the URL. A bare iTunes id, or a URL with no country segment, falls back to `DEFAULT_COUNTRY`, which defaults to `us`.
 2. Fetches the listing and writes the first metadata snapshot, keeping the raw payload so a later parser fix can reprocess it.

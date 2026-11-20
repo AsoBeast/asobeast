@@ -6,7 +6,7 @@ icon: unplug
 keywords: ["scraper","parser","store breakage","failed jobs","rate limit","incident"]
 ---
 
-asobeast reads two stores that never promised it a stable response. Apple and Google can change a shape whenever they like, and when they do, every installation is affected at once.
+AsoBeast reads two stores that never promised it a stable response. Apple and Google can change a shape whenever they like, and when they do, every installation is affected at once.
 
 The blast radius is contained on purpose. Only `apps/api/src/store-providers/` parses store responses, so a break is one module, not the application. **Historical data is never lost.** Collection pauses, it does not roll back.
 
@@ -82,7 +82,7 @@ Three causes look identical from the outside. This tells them apart.
 
 ## What the user sees
 
-A confirmed break raises one banner above every page, for every signed in user, from `GET /jobs/store-health`. It names the store, states that the cause is on asobeast rather than on the reader's configuration, says that stored data is untouched and that collection resumes on its own, and links this page.
+A confirmed break raises one banner above every page, for every signed in user, from `GET /jobs/store-health`. It names the store, states that the cause is on AsoBeast rather than on the reader's configuration, says that stored data is untouched and that collection resumes on its own, and links this page.
 
 Three things about its timing are worth knowing before somebody asks why it did not appear.
 

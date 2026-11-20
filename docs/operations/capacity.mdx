@@ -6,7 +6,7 @@ icon: gauge
 keywords: ["capacity","rate limit","daily pipeline","benchmark","scale","budget"]
 ---
 
-Collection is bounded by rate limits, not by hardware. asobeast asks the stores for one thing at a time on purpose, so the honest question is not how fast your server is, it is how many store requests a day you have room for.
+Collection is bounded by rate limits, not by hardware. AsoBeast asks the stores for one thing at a time on purpose, so the honest question is not how fast your server is, it is how many store requests a day you have room for.
 
 Every number here was measured on a deterministic fixture and can be reproduced with `pnpm --filter api run bench:target`.
 
@@ -105,7 +105,7 @@ The store workers take a job a person started before the jobs of the scheduled r
 
 When the jobs still waiting in the queue, deferred work aside, plus today's demand pass the daily capacity, the run sheds work in a stated order rather than overlapping itself. Category ranks and review sync go first, followed chart categories with them, app refreshes next, and rank checks are never dropped because they are the product. The decision is logged at error level with the pressure figure and what was shed.
 
-On demand actions are limited per workspace so one frustrated customer cannot spend the pool. Manual refresh, run daily, keyword scoring, deep search, app imports, competitor adds and top chart captures are capped per day; suggestion lookups and store lookups (name search, similar apps) are capped per hour. Over the limit the API answers `429` with `retryAfterSeconds` in the error envelope. Nothing is limited while `BILLING_ENABLED` is `false`, so a self hosted instance behaves as before.
+On demand actions are limited per workspace so one frustrated customer cannot spend the pool. Manual refresh, run daily, keyword scoring, deep search, app imports, competitor adds and top chart captures are capped per day; suggestion lookups and store lookups (name search, similar apps) are capped per hour. Over the limit the API answers `429` with `retryAfterSeconds` in the error envelope. Nothing is limited while `BILLING_ENABLED` is `false`, so a self-hosted instance behaves as before.
 
 ## What each container is allowed on the host
 

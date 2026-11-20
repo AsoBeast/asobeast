@@ -54,7 +54,7 @@ Downloading store console reports runs in a fourth queue, `store-connect`, with 
 
 ## Why are the limits conservative?
 
-The iTunes endpoints informally tolerate roughly 20 requests per minute per IP address. Google Play is more sensitive still. Neither store publishes a limit or an error you can negotiate with, so asobeast stays well underneath by default.
+The iTunes endpoints informally tolerate roughly 20 requests per minute per IP address. Google Play is more sensitive still. Neither store publishes a limit or an error you can negotiate with, so AsoBeast stays well underneath by default.
 
 Raising `SCRAPE_ITUNES_RPM` or `SCRAPE_GPLAY_RPM` puts the host IP address at risk of being throttled or blocked by the store, which stops collection for every app on that host. Do not point several instances at the stores from one IP address.
 

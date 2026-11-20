@@ -18,7 +18,7 @@ Popularity and difficulty describe a keyword and are stored. Opportunity is deri
 
 Opportunity is the share of the page left open by difficulty, scaled down for a keyword searched too rarely to matter, so either one can veto a keyword.
 
-Every popularity number is an estimate built from public store signals, except where the source says Apple Ads search popularity. asobeast publishes the formula below and a calibration command, so the estimate can be checked against Apple's own number rather than taken on trust.
+Every popularity number is an estimate built from public store signals, except where the source says Apple Ads search popularity. AsoBeast publishes the formula below and a calibration command, so the estimate can be checked against Apple's own number rather than taken on trust.
 
 ## How is popularity estimated?
 
@@ -118,7 +118,7 @@ On Google Play the rating counts come from one detail lookup per result. A resul
 
 ## Which scale does a response use?
 
-Popularity and difficulty are stored on a 0 to 10 scale. The API returns popularity in the `traffic` field, a name kept so existing clients keep working. asobeast shows them on a 0 to 100 scale by multiplying by 10 and clamping the result to 0 to 100, and `volume` is popularity on that scale. A field name alone does not tell you which scale a response uses, so read it from this table.
+Popularity and difficulty are stored on a 0 to 10 scale. The API returns popularity in the `traffic` field, a name kept so existing clients keep working. AsoBeast shows them on a 0 to 100 scale by multiplying by 10 and clamping the result to 0 to 100, and `volume` is popularity on that scale. A field name alone does not tell you which scale a response uses, so read it from this table.
 
 | Endpoint | Fields | Scale |
 | --- | --- | --- |
@@ -175,7 +175,7 @@ Confidence says how complete the evidence was.
 
 `scoreSignals` is `null` for a row scored by an older formula, and `scoreOutdated` is `true` for it.
 
-A score without provenance cannot be audited, so asobeast never shows one.
+A score without provenance cannot be audited, so AsoBeast never shows one.
 
 ## How is opportunity calculated?
 
@@ -234,9 +234,9 @@ Full overlap with the snapshot text adds 10 and no overlap subtracts 10. A word 
 
 The result is clamped to the range 1 to 100. You can override relevance per tracked keyword, and an override wins over every rule.
 
-## Can asobeast use Apple's own numbers? {#can-asobeast-use-apples-own-numbers}
+## Can AsoBeast use Apple's own numbers? {#can-asobeast-use-apples-own-numbers}
 
-Yes, with an Apple Ads API key. Apple publishes a weekly search popularity from 1 to 100 per storefront and genre for its most searched terms. With the key configured, asobeast syncs the newest complete week every Monday and, for App Store keywords:
+Yes, with an Apple Ads API key. Apple publishes a weekly search popularity from 1 to 100 per storefront and genre for its most searched terms. With the key configured, AsoBeast syncs the newest complete week every Monday and, for App Store keywords:
 
 - uses Apple's number for a term Apple lists, with the source `APPLE_ADS_POPULARITY` and high confidence, unless the term sits at the floor of its genre, see [What is a floor answer?](#what-is-a-floor-answer);
 - caps the estimate for a term Apple does not list below the lowest popularity Apple published that week in the term's own genre, because the list covers the 500 most searched terms of each genre and the bars differ: in one US week the lowest listed term read 41 in Sports and 56 in Games. The genre is the one most of the first ten results belong to, and when none of them maps to a genre Apple reports, the lowest value of the whole week applies. The cap never goes under 15 on the shown scale.
@@ -249,12 +249,12 @@ Google Play has no equivalent, so its popularity stays an estimate. The instance
 
 ## What is a floor answer? {#what-is-a-floor-answer}
 
-Apple's weekly list ends somewhere: it holds the most searched terms of each genre and publishes nothing below its lowest value, the floor. A number read from the list is a measurement only above that edge. Two answers say little more than "at or below the edge", and asobeast calls both a floor answer:
+Apple's weekly list ends somewhere: it holds the most searched terms of each genre and publishes nothing below its lowest value, the floor. A number read from the list is a measurement only above that edge. Two answers say little more than "at or below the edge", and AsoBeast calls both a floor answer:
 
 - **Floor.** Apple lists the term at the lowest value it publishes in every genre that lists it at that value. A term that clears the floor of any one of those genres is a measurement. The number is Apple's, and the source stays `APPLE_ADS_POPULARITY`, but it marks where the list ends, not a measurement of this term alone.
 - **Absent.** Apple's list for the week does not hold the term, so its popularity is below the floor. The number shown is the estimate held under that floor, as described above, and the source stays `APPLE_SEARCH_SIGNALS`.
 
-The popularity cell shows a small arrow before the number and says in words which week the answer is from, what the floor was, and, when Apple's kept weeks list the term higher, the last value above the floor and its week. asobeast keeps eight weeks of Apple's lists, so the last value reaches back at most about two months and is missing for a term that has been below the floor longer. That value is compared with the floor of the newest week, not with the floor of its own week, so when the floor moved by a few points between weeks the last value can be one that sat at the floor of its own week.
+The popularity cell shows a small arrow before the number and says in words which week the answer is from, what the floor was, and, when Apple's kept weeks list the term higher, the last value above the floor and its week. AsoBeast keeps eight weeks of Apple's lists, so the last value reaches back at most about two months and is missing for a term that has been below the floor longer. That value is compared with the floor of the newest week, not with the floor of its own week, so when the floor moved by a few points between weeks the last value can be one that sat at the floor of its own week.
 
 The confidence of the row is at most `MEDIUM`. Difficulty and opportunity share it, and their details say so, even though difficulty itself is read from the search results. A row keeps its earlier confidence until its next weekly score. The keyword export carries the state, the floor, the week and the last value above the floor in the `officialPopularityState`, `officialPopularityFloor`, `officialPopularityWeek`, `lastAboveFloorValue` and `lastAboveFloorWeek` columns.
 
@@ -266,7 +266,7 @@ They are rescored once, automatically. When the API starts with a new formula ve
 
 No. Apple and Google Play scores come from different public evidence and are store specific signals. See [App Store and Google Play](/concepts/stores).
 
-They are also not a substitute for first party acquisition or conversion data. asobeast has no download or revenue data and never presents one.
+They are also not a substitute for first party acquisition or conversion data. AsoBeast has no download or revenue data and never presents one.
 
 ## When are scores recalculated?
 
