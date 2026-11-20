@@ -26,6 +26,8 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup
       - uses: rharkor/caching-for-turbo@760158c05c47e7a764f78e9a22ca3b5a6ed8c52e # v2.5.2
+        with:
+          server-port: 0
       - run: pnpm turbo run lint build test:cov
       - run: pnpm check:rate-classes
       - run: pnpm check:compose-limits
@@ -182,6 +184,8 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup
       - uses: rharkor/caching-for-turbo@760158c05c47e7a764f78e9a22ca3b5a6ed8c52e # v2.5.2
+        with:
+          server-port: 0
       - run: pnpm --filter api run db:deploy
       - run: pnpm turbo run build --filter=api
       - name: Start the api
