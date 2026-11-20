@@ -80,7 +80,6 @@ export interface AuditExtract {
 export interface FeaturingReads {
   draftNominations: number;
   submittedNominations: number;
-  archivedNominations: number;
   submittedDate: Date | null;
   publishStartDate: Date | null;
   publishEndDate: Date | null;

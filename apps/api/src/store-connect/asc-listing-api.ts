@@ -12,7 +12,7 @@ export interface AscLiveVersion {
   version: string | null;
 }
 
-export type AscNominationState = 'DRAFT' | 'SUBMITTED' | 'ARCHIVED';
+export type AscNominationState = 'DRAFT' | 'SUBMITTED';
 
 export interface AscNomination {
   id: string;
@@ -77,7 +77,7 @@ export class AscListingApi {
 
   async nominations(
     appId: string,
-    state: AscNominationState,
+    states: readonly AscNominationState[],
   ): Promise<AscNomination[]> {
     const resources = await this.requester.page<{
       state?: string;
@@ -85,7 +85,7 @@ export class AscListingApi {
       publishStartDate?: string;
       publishEndDate?: string;
     }>(
-      `/v1/nominations?filter[state]=${state}&filter[relatedApps]=${encodeURIComponent(appId)}&fields[nominations]=state,submittedDate,publishStartDate,publishEndDate&limit=${ASC_PAGE_SIZE}`,
+      `/v1/nominations?filter[state]=${states.join(',')}&filter[relatedApps]=${encodeURIComponent(appId)}&fields[nominations]=state,submittedDate,publishStartDate,publishEndDate&limit=${ASC_PAGE_SIZE}`,
     );
     return resources.map(({ id, attributes }) => ({
       id,

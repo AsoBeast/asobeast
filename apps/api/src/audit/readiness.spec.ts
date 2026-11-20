@@ -38,7 +38,6 @@ const readsWith = (
 ): FeaturingReads => ({
   draftNominations: 0,
   submittedNominations: 0,
-  archivedNominations: 0,
   submittedDate: null,
   publishStartDate: null,
   publishEndDate: null,
@@ -516,7 +515,7 @@ describe('buildReadiness', () => {
       store: Store.APP_STORE,
       factors: [],
       extract: extractWith(),
-      featuring: readsWith({ archivedNominations: 2 }),
+      featuring: readsWith(),
       now: NOW,
     });
 

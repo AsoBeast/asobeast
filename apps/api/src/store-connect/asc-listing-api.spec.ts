@@ -150,7 +150,7 @@ describe('AscListingApi.versionLocalizations', () => {
 });
 
 describe('AscListingApi.nominations', () => {
-  it('reads the nominations of one state for the app', async () => {
+  it('reads the nominations of the requested states for the app', async () => {
     const { api, requests } = recorded(
       ok({
         data: [
@@ -169,7 +169,9 @@ describe('AscListingApi.nominations', () => {
       }),
     );
 
-    await expect(api.nominations('1476097583', 'SUBMITTED')).resolves.toEqual([
+    await expect(
+      api.nominations('1476097583', ['DRAFT', 'SUBMITTED']),
+    ).resolves.toEqual([
       {
         id: 'nom-1',
         state: 'SUBMITTED',
@@ -179,23 +181,17 @@ describe('AscListingApi.nominations', () => {
       },
     ]);
     expect(requests[0].path).toBe(
-      '/v1/nominations?filter[state]=SUBMITTED&filter[relatedApps]=1476097583&fields[nominations]=state,submittedDate,publishStartDate,publishEndDate&limit=200',
+      '/v1/nominations?filter[state]=DRAFT,SUBMITTED&filter[relatedApps]=1476097583&fields[nominations]=state,submittedDate,publishStartDate,publishEndDate&limit=200',
     );
   });
 
-  it('filters one state per request', async () => {
-    const { api, requests } = recorded(
-      ok({ data: [], links: {} }),
-      ok({ data: [], links: {} }),
-      ok({ data: [], links: {} }),
-    );
+  it('reads one state in one request', async () => {
+    const { api, requests } = recorded(ok({ data: [], links: {} }));
 
-    await api.nominations('1476097583', 'DRAFT');
-    await api.nominations('1476097583', 'ARCHIVED');
+    await api.nominations('1476097583', ['DRAFT']);
 
     expect(requests.map(({ path }) => path)).toEqual([
       '/v1/nominations?filter[state]=DRAFT&filter[relatedApps]=1476097583&fields[nominations]=state,submittedDate,publishStartDate,publishEndDate&limit=200',
-      '/v1/nominations?filter[state]=ARCHIVED&filter[relatedApps]=1476097583&fields[nominations]=state,submittedDate,publishStartDate,publishEndDate&limit=200',
     ]);
   });
 });

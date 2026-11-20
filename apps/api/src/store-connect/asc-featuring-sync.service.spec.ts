@@ -19,8 +19,8 @@ import type { AscResponse } from './asc-transport';
 const APP = { id: 'app_1', storeAppId: '1476097583' };
 const WORKSPACE_ID = 'ws_1';
 
-const NOMINATION_PATH = (state: string) =>
-  `/v1/nominations?filter[state]=${state}&filter[relatedApps]=${APP.storeAppId}&fields[nominations]=state,submittedDate,publishStartDate,publishEndDate&limit=200`;
+const NOMINATION_PATH = (states: string) =>
+  `/v1/nominations?filter[state]=${states}&filter[relatedApps]=${APP.storeAppId}&fields[nominations]=state,submittedDate,publishStartDate,publishEndDate&limit=200`;
 
 const versions = (): AscResponse =>
   ok({
@@ -48,15 +48,12 @@ const localizations = (promotionalText: string[]): AscResponse =>
     links: {},
   });
 
-const nominations = (
-  state: string,
-  entries: Record<string, string>[],
-): AscResponse =>
+const nominations = (entries: Record<string, string>[]): AscResponse =>
   ok({
     data: entries.map((attributes, index) => ({
       id: `nom-${index}`,
       type: 'nominations',
-      attributes: { state, ...attributes },
+      attributes,
     })),
     links: {},
   });
@@ -144,9 +141,14 @@ describe('AscFeaturingSync.run', () => {
       responses: [
         versions(),
         localizations(['two weeks of focus', '']),
-        nominations('DRAFT', []),
-        ok(ascFixture('nominations')),
-        nominations('ARCHIVED', []),
+        nominations([
+          {
+            state: 'SUBMITTED',
+            submittedDate: '2026-10-01T09:30:00.000Z',
+            publishStartDate: '2026-11-15T00:00:00.000Z',
+            publishEndDate: '2026-12-15T00:00:00.000Z',
+          },
+        ]),
       ],
     });
 
@@ -157,9 +159,7 @@ describe('AscFeaturingSync.run', () => {
     expect(requests.map(({ path }) => path)).toEqual([
       expect.stringContaining('/v1/apps/1476097583/appStoreVersions'),
       expect.stringContaining('/appStoreVersionLocalizations'),
-      NOMINATION_PATH('DRAFT'),
-      NOMINATION_PATH('SUBMITTED'),
-      NOMINATION_PATH('ARCHIVED'),
+      NOMINATION_PATH('DRAFT,SUBMITTED'),
     ]);
     expect(requests[2].method).toBe('GET');
     const call = upsertCalls(upsert)[0];
@@ -168,7 +168,6 @@ describe('AscFeaturingSync.run', () => {
       appId: APP.id,
       draftNominations: 0,
       submittedNominations: 1,
-      archivedNominations: 0,
       submittedDate: new Date('2026-10-01T09:30:00.000Z'),
       publishStartDate: new Date('2026-11-15T00:00:00.000Z'),
       publishEndDate: new Date('2026-12-15T00:00:00.000Z'),
@@ -177,7 +176,6 @@ describe('AscFeaturingSync.run', () => {
       roleRefused: false,
       nominationsError: null,
       promoError: null,
-      syncedAt: expect.any(Date) as Date,
     });
     expect(call.create).toHaveProperty('readAt');
   });
@@ -187,8 +185,7 @@ describe('AscFeaturingSync.run', () => {
       responses: [
         versions(),
         localizations(['text']),
-        nominations('DRAFT', []),
-        nominations('SUBMITTED', [
+        nominations([
           { state: 'SUBMITTED' },
           {
             state: 'SUBMITTED',
@@ -197,7 +194,6 @@ describe('AscFeaturingSync.run', () => {
             publishEndDate: '2026-12-15T00:00:00.000Z',
           },
         ]),
-        nominations('ARCHIVED', []),
       ],
     });
 
@@ -210,13 +206,14 @@ describe('AscFeaturingSync.run', () => {
     });
   });
 
-  it('counts every state and takes the dates of the newest submitted nomination', async () => {
+  it('counts the nominations of each state and takes the dates of the newest submitted one', async () => {
     const { service, upsert } = build({
       responses: [
         versions(),
         localizations(['text', 'text', '', '']),
-        nominations('DRAFT', [{ state: 'DRAFT' }, { state: 'DRAFT' }]),
-        nominations('SUBMITTED', [
+        nominations([
+          { state: 'DRAFT' },
+          { state: 'DRAFT' },
           {
             state: 'SUBMITTED',
             submittedDate: '2026-10-01T09:30:00.000Z',
@@ -230,7 +227,6 @@ describe('AscFeaturingSync.run', () => {
             publishEndDate: '2026-11-15T00:00:00.000Z',
           },
         ]),
-        nominations('ARCHIVED', [{ state: 'ARCHIVED' }]),
       ],
     });
 
@@ -241,25 +237,17 @@ describe('AscFeaturingSync.run', () => {
     expect(upsertCalls(upsert)[0].update).toMatchObject({
       draftNominations: 2,
       submittedNominations: 2,
-      archivedNominations: 1,
       submittedDate: new Date('2026-10-01T09:30:00.000Z'),
       publishStartDate: new Date('2026-11-15T00:00:00.000Z'),
       publishEndDate: new Date('2026-12-15T00:00:00.000Z'),
       promoFilled: 2,
       promoTotal: 4,
-      syncedAt: expect.any(Date) as Date,
     });
   });
 
-  it('answers zero counts and a synced row for an app with no nominations', async () => {
+  it('answers zero counts for an app with no nominations', async () => {
     const { service, upsert } = build({
-      responses: [
-        versions(),
-        localizations(['']),
-        nominations('DRAFT', []),
-        nominations('SUBMITTED', []),
-        nominations('ARCHIVED', []),
-      ],
+      responses: [versions(), localizations(['']), nominations([])],
     });
 
     await expect(service.run()).resolves.toEqual({
@@ -269,13 +257,11 @@ describe('AscFeaturingSync.run', () => {
     expect(upsertCalls(upsert)[0].update).toMatchObject({
       draftNominations: 0,
       submittedNominations: 0,
-      archivedNominations: 0,
       submittedDate: null,
       promoFilled: 0,
       promoTotal: 1,
       nominationsError: null,
       promoError: null,
-      syncedAt: expect.any(Date) as Date,
     });
   });
 
@@ -299,7 +285,6 @@ describe('AscFeaturingSync.run', () => {
       promoTotal: 1,
       promoError: null,
     });
-    expect(upsertCalls(upsert)[0].update).not.toHaveProperty('syncedAt');
   });
 
   it('rethrows a rate limit instead of storing a partial read', async () => {
@@ -317,12 +302,7 @@ describe('AscFeaturingSync.run', () => {
 
   it('records the skip on the stored row of an app that turned invisible', async () => {
     const { service, requests, upsert, updateMany } = build({
-      responses: [
-        failure(404, 'NOT_FOUND'),
-        nominations('DRAFT', []),
-        nominations('SUBMITTED', []),
-        nominations('ARCHIVED', []),
-      ],
+      responses: [failure(404, 'NOT_FOUND')],
     });
 
     await expect(service.run()).resolves.toEqual({
@@ -344,12 +324,7 @@ describe('AscFeaturingSync.run', () => {
 
   it('creates no row for an app the key never saw', async () => {
     const { service, upsert, updateMany } = build({
-      responses: [
-        failure(404, 'NOT_FOUND'),
-        nominations('DRAFT', []),
-        nominations('SUBMITTED', []),
-        nominations('ARCHIVED', []),
-      ],
+      responses: [failure(404, 'NOT_FOUND')],
     });
 
     await expect(service.run()).resolves.toEqual({
@@ -364,9 +339,7 @@ describe('AscFeaturingSync.run', () => {
     const { service, upsert } = build({
       responses: [
         ok({ data: [], links: {} }),
-        nominations('DRAFT', []),
-        nominations('SUBMITTED', []),
-        nominations('ARCHIVED', [{ state: 'ARCHIVED' }]),
+        nominations([{ state: 'DRAFT' }]),
       ],
     });
 
@@ -375,12 +348,11 @@ describe('AscFeaturingSync.run', () => {
       promoText: 0,
     });
     expect(upsertCalls(upsert)[0].update).toMatchObject({
-      archivedNominations: 1,
+      draftNominations: 1,
       promoError:
         'App Store Connect has no released iOS version for this app yet',
       nominationsError: null,
     });
-    expect(upsertCalls(upsert)[0].update).not.toHaveProperty('syncedAt');
   });
 
   it('records a skipped read of one app and keeps going with the next', async () => {
@@ -391,14 +363,10 @@ describe('AscFeaturingSync.run', () => {
       apps: [APP, second],
       responses: [
         ok(null),
-        nominations('DRAFT', []),
-        nominations('SUBMITTED', []),
-        nominations('ARCHIVED', []),
+        nominations([]),
         versions(),
         localizations(['set']),
-        nominations('DRAFT', []),
-        nominations('SUBMITTED', []),
-        nominations('ARCHIVED', [{ state: 'ARCHIVED' }]),
+        nominations([]),
       ],
     });
 
@@ -414,7 +382,6 @@ describe('AscFeaturingSync.run', () => {
     expect(upsertCalls(upsert)[1].create).toMatchObject({
       appId: second.id,
       promoError: null,
-      syncedAt: expect.any(Date) as Date,
     });
   });
 
@@ -424,9 +391,7 @@ describe('AscFeaturingSync.run', () => {
         versions(),
         failure(500, 'INTERNAL_ERROR'),
         failure(500, 'INTERNAL_ERROR'),
-        nominations('DRAFT', []),
-        nominations('SUBMITTED', []),
-        nominations('ARCHIVED', []),
+        nominations([]),
       ],
     });
 

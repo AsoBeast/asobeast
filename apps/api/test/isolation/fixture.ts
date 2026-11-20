@@ -277,7 +277,7 @@ async function seedWorkspace(
       submittedNominations: 1,
       promoFilled: 2,
       promoTotal: 3,
-      syncedAt: new Date(),
+      readAt: new Date(),
     },
   });
 

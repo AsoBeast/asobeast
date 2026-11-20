@@ -128,7 +128,6 @@ export class AuditContextLoader {
     return {
       draftNominations: row.draftNominations,
       submittedNominations: row.submittedNominations,
-      archivedNominations: row.archivedNominations,
       submittedDate: row.submittedDate,
       publishStartDate: row.publishStartDate,
       publishEndDate: row.publishEndDate,

@@ -24,17 +24,12 @@ const STORE = Store.APP_STORE;
 export const FEATURING_ROLE_NEEDED =
   'This App Store Connect key cannot read featuring nominations. Connect a key with the Admin or App Manager role.';
 
-const NOMINATION_STATES: readonly AscNominationState[] = [
-  'DRAFT',
-  'SUBMITTED',
-  'ARCHIVED',
-];
+const NOMINATION_STATES: readonly AscNominationState[] = ['DRAFT', 'SUBMITTED'];
 
-const NOMINATION_COUNT_OF = {
+const NOMINATION_COUNT_OF: Record<AscNominationState, 'draft' | 'submitted'> = {
   DRAFT: 'draft',
   SUBMITTED: 'submitted',
-  ARCHIVED: 'archived',
-} as const satisfies Record<AscNominationState, string>;
+};
 
 export interface FeaturingSyncSummary {
   nominations: number;
@@ -54,7 +49,6 @@ interface PromoCounts {
 interface NominationCounts {
   draft: number;
   submitted: number;
-  archived: number;
   submittedDate: Date | null;
   publishStartDate: Date | null;
   publishEndDate: Date | null;
@@ -84,7 +78,6 @@ const messageOf = (error: unknown): string =>
 const emptyCounts = (): NominationCounts => ({
   draft: 0,
   submitted: 0,
-  archived: 0,
   submittedDate: null,
   publishStartDate: null,
   publishEndDate: null,
@@ -109,7 +102,6 @@ const asDate = (value: string | null): Date | null => {
 const nominationData = (counts: NominationCounts) => ({
   draftNominations: counts.draft,
   submittedNominations: counts.submitted,
-  archivedNominations: counts.archived,
   submittedDate: counts.submittedDate,
   publishStartDate: counts.publishStartDate,
   publishEndDate: counts.publishEndDate,
@@ -217,29 +209,27 @@ export class AscFeaturingSync {
     api: AscListingApi,
     storeAppId: string,
   ): Promise<NominationsRead> {
+    let nominations: AscNomination[];
+    try {
+      nominations = await api.nominations(storeAppId, NOMINATION_STATES);
+    } catch (error) {
+      if (error instanceof AscForbiddenError) {
+        return { kind: 'refused', message: FEATURING_ROLE_NEEDED };
+      }
+      if (error instanceof AscRateLimitedError) throw error;
+      if (!(error instanceof AscError)) throw error;
+      return { kind: 'skipped', message: error.message };
+    }
     const counts = emptyCounts();
     for (const state of NOMINATION_STATES) {
-      let nominations: AscNomination[];
-      try {
-        nominations = await api.nominations(storeAppId, state);
-      } catch (error) {
-        if (error instanceof AscForbiddenError) {
-          return { kind: 'refused', message: FEATURING_ROLE_NEEDED };
-        }
-        if (error instanceof AscRateLimitedError) throw error;
-        if (!(error instanceof AscError)) throw error;
-        return { kind: 'skipped', message: error.message };
-      }
       counts[NOMINATION_COUNT_OF[state]] = nominations.filter(
         (nomination) => nomination.state === state,
       ).length;
-      if (state === 'SUBMITTED') {
-        const newest = newestSubmitted(nominations);
-        counts.submittedDate = asDate(newest?.submittedDate ?? null);
-        counts.publishStartDate = asDate(newest?.publishStartDate ?? null);
-        counts.publishEndDate = asDate(newest?.publishEndDate ?? null);
-      }
     }
+    const newest = newestSubmitted(nominations);
+    counts.submittedDate = asDate(newest?.submittedDate ?? null);
+    counts.publishStartDate = asDate(newest?.publishStartDate ?? null);
+    counts.publishEndDate = asDate(newest?.publishEndDate ?? null);
     return { kind: 'ok', counts };
   }
 
@@ -260,8 +250,6 @@ export class AscFeaturingSync {
     nominations: NominationsRead,
   ): Promise<unknown> {
     const workspaceId = this.workspace.require('a featuring read');
-    const now = new Date();
-    const complete = promo.kind === 'ok' && nominations.kind === 'ok';
     const base = {
       ...(nominations.kind === 'ok' ? nominationData(nominations.counts) : {}),
       ...(promo.kind === 'ok'
@@ -269,8 +257,7 @@ export class AscFeaturingSync {
         : {}),
       nominationsError: nominationsErrorOf(nominations),
       promoError: promo.kind === 'ok' ? null : promo.message,
-      readAt: now,
-      ...(complete ? { syncedAt: now } : {}),
+      readAt: new Date(),
     };
     return this.prisma.featuringSync.upsert({
       where: { appId_workspaceId: { appId: app.id, workspaceId } },

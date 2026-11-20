@@ -297,7 +297,6 @@ model FeaturingSync {
   app                  App       @relation(fields: [appId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
   draftNominations     Int       @default(0)
   submittedNominations Int       @default(0)
-  archivedNominations  Int       @default(0)
   submittedDate        DateTime?
   publishStartDate     DateTime?
   publishEndDate       DateTime?
@@ -306,7 +305,6 @@ model FeaturingSync {
   roleRefused          Boolean   @default(false)
   nominationsError     String?
   promoError           String?
-  syncedAt             DateTime?
   readAt               DateTime?
 
   @@id([appId, workspaceId])

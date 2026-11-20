@@ -177,7 +177,7 @@ describe('Workspace deletion (e2e)', () => {
         submittedNominations: 1,
         promoFilled: 2,
         promoTotal: 3,
-        syncedAt: DAY,
+        readAt: DAY,
       },
     });
     await prisma.appSetup.create({

@@ -4,7 +4,6 @@ CREATE TABLE "FeaturingSync" (
     "workspaceId" TEXT NOT NULL,
     "draftNominations" INTEGER NOT NULL DEFAULT 0,
     "submittedNominations" INTEGER NOT NULL DEFAULT 0,
-    "archivedNominations" INTEGER NOT NULL DEFAULT 0,
     "submittedDate" TIMESTAMP(3),
     "publishStartDate" TIMESTAMP(3),
     "publishEndDate" TIMESTAMP(3),
@@ -13,7 +12,6 @@ CREATE TABLE "FeaturingSync" (
     "roleRefused" BOOLEAN NOT NULL DEFAULT false,
     "nominationsError" TEXT,
     "promoError" TEXT,
-    "syncedAt" TIMESTAMP(3),
     "readAt" TIMESTAMP(3),
 
     CONSTRAINT "FeaturingSync_pkey" PRIMARY KEY ("appId","workspaceId")
