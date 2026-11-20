@@ -77,6 +77,7 @@ describe("effectLine", () => {
 describe("visibilityMove", () => {
   it("names the direction and leaves a flat change unsigned", () => {
     expect(visibilityMove(-2.3)).toBe("down 2.3");
+    expect(visibilityMove(3)).toBe("up 3.0");
     expect(visibilityMove(0)).toBe("unchanged");
   });
 });

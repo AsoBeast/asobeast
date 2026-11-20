@@ -6,6 +6,7 @@ import {
   OUTCOME_VERDICT_LABEL,
   outcomeSentence,
 } from "./action-outcome-copy";
+import { METRIC_DIGITS } from "./action-trend-chart";
 
 const PERIOD = "since you marked it done";
 
@@ -18,6 +19,7 @@ function ChangeChip({ outcome }: { outcome: Outcome }) {
     <DeltaChip
       value={outcome.change}
       period={PERIOD}
+      digits={METRIC_DIGITS[outcome.metric]}
       polarity={
         outcome.direction === "lower_is_better"
           ? "lower-is-better"

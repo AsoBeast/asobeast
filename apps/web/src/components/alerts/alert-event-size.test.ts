@@ -46,6 +46,19 @@ describe("alertEventSize", () => {
       value: -0.2,
       polarity: "higher-is-better",
       period: "stars",
+      digits: 1,
+    });
+  });
+
+  it("keeps one decimal on a drop of whole stars", () => {
+    const rating = payloadOf("evt-rating");
+    if (rating.event !== "rating.dropped") throw new Error("Not a rating");
+
+    expect(alertEventSize({ ...rating, dropTenths: 10 })).toEqual({
+      value: -1,
+      polarity: "higher-is-better",
+      period: "stars",
+      digits: 1,
     });
   });
 

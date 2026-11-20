@@ -4,7 +4,7 @@ import type {
   ChangeImpactWindow,
 } from "@asobeast/shared";
 import { formatConversion, formatCount } from "@/lib/funnel";
-import { formatDate, formatMeasure } from "@/lib/format";
+import { formatDate, formatMeasureFixed } from "@/lib/format";
 
 const dateList = new Intl.ListFormat("en-US", { type: "conjunction" });
 
@@ -50,7 +50,7 @@ export function visibilityRange(
 ): string | null {
   const { visibilityBefore: before, visibilityAfter: after } = impact;
   if (before === null || after === null) return null;
-  return `${formatMeasure(before)} → ${formatMeasure(after)}`;
+  return `${formatMeasureFixed(before)} → ${formatMeasureFixed(after)}`;
 }
 
 export function overlapNotice(dates: readonly string[]): string | null {

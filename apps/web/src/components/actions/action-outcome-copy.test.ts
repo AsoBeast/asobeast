@@ -38,7 +38,35 @@ describe("outcomeSentence", () => {
         }),
         null,
       ),
-    ).toBe("Audit score 58 → 61.5 between Jul 20, 2026 and Jul 30, 2026.");
+    ).toBe("Audit score 58 → 62 between Jul 20, 2026 and Jul 30, 2026.");
+  });
+
+  it("writes a visibility change with one decimal on both sides", () => {
+    expect(
+      outcomeSentence(
+        outcome({
+          metric: "visibility",
+          direction: "higher_is_better",
+          before: 15.2,
+          after: 20,
+        }),
+        null,
+      ),
+    ).toBe("Visibility 15.2 → 20.0 between Jul 20, 2026 and Jul 30, 2026.");
+  });
+
+  it("writes a conversion change as percentages with one decimal", () => {
+    expect(
+      outcomeSentence(
+        outcome({
+          metric: "conversion",
+          direction: "higher_is_better",
+          before: 3,
+          after: 3.4,
+        }),
+        null,
+      ),
+    ).toBe("Conversion 3.0% → 3.4% between Jul 20, 2026 and Jul 30, 2026.");
   });
 
   it("explains what a pending outcome waits for", () => {

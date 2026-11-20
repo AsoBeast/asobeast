@@ -208,7 +208,7 @@ describe("evidenceSections", () => {
     expect(factValues(evidence)).toMatchObject({
       "Recent average": "3.5",
       "Earlier average": "4.5",
-      Drop: "1",
+      Drop: "1.0",
       "Recent reviews": "8 in 14 days",
       "Negative share": "25%",
       "Latest version": "4.2.0",
@@ -258,7 +258,7 @@ describe("evidenceSections", () => {
 
     expect(factValues(evidence)).toMatchObject({
       Market: "US",
-      "Visibility before": "40",
+      "Visibility before": "40.0",
       "Visibility after": "32.5",
       "Visibility delta": "7.5",
       "Your last change": "—",

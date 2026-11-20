@@ -10,6 +10,12 @@ const numberFormatter = new Intl.NumberFormat("en-US");
 const measureFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 1,
 });
+export const MEASURE_DIGITS = 1;
+
+const fixedMeasureFormatter = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: MEASURE_DIGITS,
+  maximumFractionDigits: MEASURE_DIGITS,
+});
 const compactFormatter = new Intl.NumberFormat("en-US", {
   notation: "compact",
   maximumFractionDigits: 1,
@@ -134,6 +140,24 @@ export function formatList(values: readonly string[]): string {
 
 export function formatMeasure(value: number): string {
   return measureFormatter.format(value);
+}
+
+export function formatMeasureFixed(value: number): string {
+  return fixedMeasureFormatter.format(value);
+}
+
+const isWholeMeasure = (value: number): boolean =>
+  formatMeasureFixed(value).endsWith(".0");
+
+export function formatMeasurePair(
+  before: number,
+  after: number,
+): [string, string] {
+  const format =
+    isWholeMeasure(before) && isWholeMeasure(after)
+      ? formatMeasure
+      : formatMeasureFixed;
+  return [format(before), format(after)];
 }
 
 export function formatCompact(value: number): string {

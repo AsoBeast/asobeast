@@ -22,7 +22,13 @@ import type {
   SerpHoldVolatileEvidence,
 } from "@asobeast/shared";
 import { formatCheckedPosition, formatRankPosition } from "@asobeast/shared";
-import { formatDate, formatMeasure, formatNumber } from "@/lib/format";
+import {
+  formatDate,
+  formatMeasure,
+  formatMeasureFixed,
+  formatMeasurePair,
+  formatNumber,
+} from "@/lib/format";
 import type { GradeMetric } from "@/lib/grade";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
 import { ACTION_RULE_LABEL, percent, summarizeEvidence } from "./action-copy";
@@ -214,9 +220,9 @@ function unexplainedSections(
   return {
     facts: [
       fact("Market", evidence.country.toUpperCase()),
-      fact("Visibility before", formatMeasure(evidence.visibilityBefore)),
-      fact("Visibility after", formatMeasure(evidence.visibilityAfter)),
-      fact("Visibility delta", formatMeasure(evidence.visibilityDelta)),
+      fact("Visibility before", formatMeasureFixed(evidence.visibilityBefore)),
+      fact("Visibility after", formatMeasureFixed(evidence.visibilityAfter)),
+      fact("Visibility delta", formatMeasureFixed(evidence.visibilityDelta)),
       fact("Tracked keywords", formatNumber(evidence.trackedKeywords)),
       fact("Mean volatility", optional(evidence.meanVolatility)),
       fact(
@@ -331,8 +337,8 @@ function declineSections(
   return {
     facts: [
       graded("Recent average", evidence.recentAverage, "rating"),
-      fact("Earlier average", formatMeasure(evidence.baselineAverage)),
-      fact("Drop", formatMeasure(evidence.drop)),
+      fact("Earlier average", formatMeasureFixed(evidence.baselineAverage)),
+      fact("Drop", formatMeasureFixed(evidence.drop)),
       fact(
         "Recent reviews",
         `${formatNumber(evidence.recentReviews)} in ${evidence.recentDays} days`,
@@ -394,11 +400,14 @@ function conversionSections(
       fact("Market", evidence.country.toUpperCase()),
       fact(
         "Get taps a day",
-        `${formatMeasure(evidence.getsBefore)} → ${formatMeasure(evidence.getsAfter)}`,
+        formatMeasurePair(evidence.getsBefore, evidence.getsAfter).join(" → "),
       ),
       fact(
         "Page views a day",
-        `${formatMeasure(evidence.pageViewsBefore)} → ${formatMeasure(evidence.pageViewsAfter)}`,
+        formatMeasurePair(
+          evidence.pageViewsBefore,
+          evidence.pageViewsAfter,
+        ).join(" → "),
       ),
       fact(
         "Conversion",
@@ -441,9 +450,9 @@ function marketSections(evidence: MarketImproveCountryEvidence): Sections {
     facts: [
       fact("Market", evidence.country.toUpperCase()),
       fact("Home market", evidence.homeCountry.toUpperCase()),
-      fact("Market visibility", formatMeasure(evidence.marketVisibility)),
-      fact("Home visibility", formatMeasure(evidence.homeVisibility)),
-      fact("Gap", formatMeasure(evidence.gap)),
+      fact("Market visibility", formatMeasureFixed(evidence.marketVisibility)),
+      fact("Home visibility", formatMeasureFixed(evidence.homeVisibility)),
+      fact("Gap", formatMeasureFixed(evidence.gap)),
       fact("Tracked keywords", formatNumber(evidence.trackedKeywords)),
       fact("Ranked keywords", formatNumber(evidence.rankedKeywords)),
       fact("Observed days", days(evidence.observedDays, evidence.windowDays)),

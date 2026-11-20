@@ -1,5 +1,5 @@
 import type { ChangeImpactItem, ChangeImpactReport } from "@asobeast/shared";
-import { formatDayMonth, formatMeasure } from "@/lib/format";
+import { formatDayMonth, formatMeasureFixed } from "@/lib/format";
 
 export type ChangeEffect =
   | { kind: "measured"; days: number; change: number }
@@ -35,7 +35,7 @@ export function effectsByDay(
 
 export function visibilityMove(change: number): string {
   if (change === 0) return "unchanged";
-  return `${change > 0 ? "up" : "down"} ${formatMeasure(Math.abs(change))}`;
+  return `${change > 0 ? "up" : "down"} ${formatMeasureFixed(Math.abs(change))}`;
 }
 
 export function effectLine(effect: ChangeEffect): string {

@@ -9,6 +9,8 @@ import {
   formatDayMonth,
   formatMonth,
   formatMeasure,
+  formatMeasureFixed,
+  formatMeasurePair,
   formatNumber,
   formatPrice,
   formatUsd,
@@ -41,6 +43,30 @@ describe("formatMeasure", () => {
     [1234.56, "1,234.6"],
   ])("renders %s as %s", (value, expected) => {
     expect(formatMeasure(value)).toBe(expected);
+  });
+});
+
+describe("formatMeasureFixed", () => {
+  it.each([
+    [20, "20.0"],
+    [20.04, "20.0"],
+    [0.6, "0.6"],
+    [-3, "-3.0"],
+    [1234.56, "1,234.6"],
+  ])("renders %s as %s", (value, expected) => {
+    expect(formatMeasureFixed(value)).toBe(expected);
+  });
+});
+
+describe("formatMeasurePair", () => {
+  it.each([
+    [412, 486, ["412", "486"]],
+    [412, 486.5, ["412.0", "486.5"]],
+    [412.04, 486, ["412", "486"]],
+    [3.96, 4, ["4", "4"]],
+    [1200.25, 980, ["1,200.3", "980.0"]],
+  ] as const)("writes %s and %s with one precision", (before, after, pair) => {
+    expect(formatMeasurePair(before, after)).toEqual(pair);
   });
 });
 

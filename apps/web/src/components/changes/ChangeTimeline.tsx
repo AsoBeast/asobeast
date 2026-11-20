@@ -21,6 +21,7 @@ import {
   formatCountry,
   formatDate,
   formatDayMonth,
+  MEASURE_DIGITS,
   pluralize,
 } from "@/lib/format";
 import { CHANGE_WINDOWS, type ChangeWindow } from "@/lib/ranges";
@@ -116,6 +117,7 @@ function DayEffect({ id, days, day, homeCountry }: DayScope) {
         value={effect.change}
         polarity="higher-is-better"
         period="points"
+        digits={MEASURE_DIGITS}
       />
       <span>{`after ${effect.days} days`}</span>
     </a>
