@@ -246,7 +246,7 @@ describe('AscFeaturingSync.run', () => {
     expect(create).not.toHaveBeenCalled();
   });
 
-  it('takes the newest submitted nomination even when one carries no date', async () => {
+  it('stores the latest publish start among the submissions that can still run', async () => {
     const { service, updateMany } = build({
       responses: [
         versions(),
@@ -335,7 +335,7 @@ describe('AscFeaturingSync.run', () => {
     });
   });
 
-  it('counts the nominations of each state and takes the dates of the newest submitted one', async () => {
+  it('counts the nominations of each state and takes the dates of the stored window', async () => {
     const { service, updateMany } = build({
       responses: [
         versions(),
