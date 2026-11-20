@@ -205,7 +205,7 @@ export class AscFeaturingSync {
         await this.record(connection, app, promo, {
           kind: 'skipped',
           message: messageOf(error),
-        });
+        }).catch(() => undefined);
       }
       throw error;
     }

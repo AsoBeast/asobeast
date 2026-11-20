@@ -56,6 +56,7 @@ interface RecordOptions {
   responses?: AscResponse[];
   storedRow?: boolean;
   connectionAlive?: boolean;
+  writeFails?: boolean;
 }
 
 interface RecordedWrite {
@@ -90,11 +91,14 @@ function build(options: RecordOptions = {}) {
     storeConnection: { findFirst: storedConnection },
     featuringSync: { create },
   };
+  const updateMany = options.writeFails
+    ? jest.fn().mockRejectedValue(new Error('the write exploded'))
+    : jest.fn().mockResolvedValue({ count: storedRow ? 1 : 0 });
   const prisma = {
     app: { findMany: jest.fn().mockResolvedValue(apps) },
     featuringSync: {
       create,
-      updateMany: jest.fn().mockResolvedValue({ count: storedRow ? 1 : 0 }),
+      updateMany,
     },
     withTransaction: (run: (tx: typeof transaction) => Promise<unknown>) =>
       run(transaction),
@@ -438,6 +442,35 @@ describe('AscFeaturingSync.run', () => {
       promoError: null,
       nominationsError: 'RATE_LIMIT_EXCEEDED detail',
     });
+  });
+
+  it('rethrows the rate limit when the skipped read cannot be stored', async () => {
+    const second = { id: 'app_2', storeAppId: '2345678901' };
+    const { service, requests, updateMany } = build({
+      apps: [APP, second],
+      writeFails: true,
+      responses: [
+        versions(),
+        localizations(['set']),
+        failure(429, 'RATE_LIMIT_EXCEEDED'),
+      ],
+    });
+
+    const running = service.run();
+    await expect(running).rejects.toBeInstanceOf(AscRateLimitedError);
+    await expect(running).rejects.toThrow('RATE_LIMIT_EXCEEDED detail');
+    expect(updateMany).toHaveBeenCalled();
+    expect(requests).toHaveLength(3);
+  });
+
+  it('persists nothing when the promotional text read hits a rate limit', async () => {
+    const { service, updateMany, create } = build({
+      responses: [versions(), failure(429, 'RATE_LIMIT_EXCEEDED')],
+    });
+
+    await expect(service.run()).rejects.toThrow(AscRateLimitedError);
+    expect(updateMany).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
   });
 
   it('records the skip on the stored row of an app that turned invisible', async () => {
