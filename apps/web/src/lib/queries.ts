@@ -21,6 +21,7 @@ import type {
   VisibilityComparison,
   WebhookItem,
   PortfolioHistoryDays,
+  PortfolioHistoryScope,
 } from "@asobeast/shared";
 import { isStoreSuggestionStrategy, QUERY_BOUNDS } from "@asobeast/shared";
 import {
@@ -284,8 +285,16 @@ export const storeSearchKey = (store: Store, country: string, q: string) =>
   ["store-search", store, country, q] as const;
 export const portfolioInsightsKey = [...portfolioKey, "insights"] as const;
 
-export const portfolioHistoryKey = (days: PortfolioHistoryDays) =>
-  [...portfolioKey, "history", days] as const;
+export const portfolioHistoryKey = (
+  days: PortfolioHistoryDays,
+  scope: PortfolioHistoryScope = {},
+) =>
+  [
+    ...portfolioKey,
+    "history",
+    days,
+    { appId: scope.appId ?? null, store: scope.store ?? null },
+  ] as const;
 
 const recentChangesRoot = ["changes", "recent"] as const;
 
@@ -570,10 +579,13 @@ export function invalidateDailyRunResults(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: recentChangesRoot });
 }
 
-export const portfolioHistoryOptions = (days: PortfolioHistoryDays) =>
+export const portfolioHistoryOptions = (
+  days: PortfolioHistoryDays,
+  scope: PortfolioHistoryScope = {},
+) =>
   queryOptions({
-    queryKey: portfolioHistoryKey(days),
-    queryFn: () => getPortfolioHistory(days),
+    queryKey: portfolioHistoryKey(days, scope),
+    queryFn: () => getPortfolioHistory(days, scope),
     staleTime: 60_000,
   });
 

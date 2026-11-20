@@ -2,12 +2,20 @@
 
 import Link from "next/link";
 import { createColumnHelper } from "@tanstack/react-table";
-import type { PortfolioApp, PortfolioAppInsight } from "@asobeast/shared";
+import type {
+  PortfolioApp,
+  PortfolioAppHistory,
+  PortfolioAppInsight,
+} from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
+import { RankBandBar } from "@/components/charts/RankBandBar";
 import { TrendLine } from "@/components/charts/Sparkline";
 import { DeleteAppMenu } from "@/components/apps/DeleteAppMenu";
 import { DelistedBadge } from "@/components/apps/DelistedBadge";
-import { SortableHeader } from "@/components/data-table/SortableHeader";
+import {
+  SortableHeader,
+  type SortableColumn,
+} from "@/components/data-table/SortableHeader";
 import type { DataTableFeatures } from "@/components/data-table/table-features";
 import { Badge } from "@/components/ui/badge";
 import { TrendChip } from "@/components/ui/delta-chip";
@@ -24,21 +32,41 @@ import { grade } from "@/lib/grade";
 import { nullsLast } from "@/lib/table/sorting";
 import { MovementValue } from "./MovementValue";
 import { setupChipText } from "./setup-chip";
+import { useDashboardRange } from "./use-range-history";
 
 export interface PortfolioTableRow {
   app: PortfolioApp;
   insight: PortfolioAppInsight | undefined;
+  range: PortfolioAppHistory | undefined;
+  days: number;
 }
 
-function VisibilityTrend({ points }: { points: PortfolioApp["sparkline"] }) {
+const rangeUnit = (days: number): string => `${days}d`;
+
+function VisibilityTrend({
+  points,
+  days,
+}: {
+  points: PortfolioAppHistory["points"];
+  days: number;
+}) {
   const values = points.map((point) => point.visibility);
   return (
     <TrendLine
       values={values}
-      label="visibility, last 30 days"
+      label={`visibility, last ${days} days`}
       now={String(Math.round(values.at(-1) ?? 0))}
     />
   );
+}
+
+function RangeLabel({ prefix }: { prefix: string }) {
+  const { days } = useDashboardRange();
+  return <span>{`${prefix}${rangeUnit(days)}`}</span>;
+}
+
+function ChangeHeader({ column }: { column: SortableColumn }) {
+  return <SortableHeader column={column} label={<RangeLabel prefix="" />} />;
 }
 
 const columnHelper = createColumnHelper<DataTableFeatures, PortfolioTableRow>();
@@ -99,12 +127,15 @@ export const portfolioColumns = columnHelper.columns([
   columnHelper.display({
     id: "trend",
     meta: { label: "Trend", wideOnly: true },
-    header: () => "Trend",
+    header: () => <RangeLabel prefix="Trend " />,
     cell: ({ row }) =>
-      row.original.app.lastCapturedAt === null ? (
+      row.original.range === undefined ? (
         EMPTY
       ) : (
-        <VisibilityTrend points={row.original.app.sparkline} />
+        <VisibilityTrend
+          points={row.original.range.points}
+          days={row.original.days}
+        />
       ),
   }),
   columnHelper.accessor((row) => row.app.visibility.current, {
@@ -123,23 +154,26 @@ export const portfolioColumns = columnHelper.columns([
         </span>
       ),
   }),
-  columnHelper.accessor((row) => nullsLast(row.app.visibility.delta7d), {
-    id: "change",
-    ...NUMBER_SORT,
-    meta: { label: "7d", phone: true, numeric: true },
-    header: ({ column }) => <SortableHeader column={column} label="7d" />,
-    cell: ({ row }) =>
-      row.original.app.lastCapturedAt === null ? (
-        EMPTY
-      ) : (
-        <TrendChip
-          label="7d"
-          value={row.original.app.visibility.delta7d}
-          form="pill"
-          labelled={false}
-        />
-      ),
-  }),
+  columnHelper.accessor(
+    (row) => nullsLast(row.range?.change.visibilityDelta ?? null),
+    {
+      id: "change",
+      ...NUMBER_SORT,
+      meta: { label: "Change", phone: true, numeric: true },
+      header: ({ column }) => <ChangeHeader column={column} />,
+      cell: ({ row }) =>
+        row.original.range === undefined ? (
+          EMPTY
+        ) : (
+          <TrendChip
+            label={rangeUnit(row.original.days)}
+            value={row.original.range.change.visibilityDelta}
+            form="pill"
+            labelled={false}
+          />
+        ),
+    },
+  ),
   columnHelper.accessor(
     (row) => nullsLast(captured(row)?.rankDistribution.top10 ?? null),
     {
@@ -152,8 +186,13 @@ export const portfolioColumns = columnHelper.columns([
       cell: ({ row }) => {
         const insight = captured(row.original);
         return insight ? (
-          <span className="numeric">
-            {formatNumber(insight.rankDistribution.top10)}
+          <span className="inline-flex items-center justify-end gap-2.5">
+            <span className="numeric">
+              {formatNumber(insight.rankDistribution.top10)}
+            </span>
+            <span className="w-14 @max-5xl/dashboard:hidden">
+              <RankBandBar distribution={insight.rankDistribution} />
+            </span>
           </span>
         ) : (
           EMPTY
@@ -164,17 +203,15 @@ export const portfolioColumns = columnHelper.columns([
   columnHelper.display({
     id: "movement",
     meta: { label: "Moved", numeric: true, wideOnly: true },
-    header: () => "Moved",
-    cell: ({ row }) => {
-      const insight = captured(row.original);
-      return insight ? (
-        <span className="numeric whitespace-nowrap">
-          <MovementValue movement={insight.movement} />
-        </span>
-      ) : (
+    header: () => <RangeLabel prefix="Moved " />,
+    cell: ({ row }) =>
+      row.original.range === undefined ? (
         EMPTY
-      );
-    },
+      ) : (
+        <span className="numeric whitespace-nowrap">
+          <MovementValue movement={row.original.range.change.movement} />
+        </span>
+      ),
   }),
   columnHelper.accessor(
     (row) => nullsLast(captured(row)?.rating.average ?? null),

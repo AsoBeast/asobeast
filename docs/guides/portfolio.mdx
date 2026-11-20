@@ -17,12 +17,14 @@ Under the title, one line counts your apps, tracked keywords and competitors. A 
 
 ### The range and the four tiles
 
-The range beside **Import app** sets how far back the dashboard looks: 7, 30 or 90 days. The sentence under the title, the changes on the tiles, the charts and the keyword movers all follow it.
+The sentence under the title reads the last run first: how many keywords climbed and fell on the newest checked day against the day before it, and the app that moved most when one app moved more than every other. Only keywords checked on both days count, so a keyword whose check failed never reads as a fall. It then says how visibility changed over the range. Until an app was checked on the newest day and the day before it, the sentence reads the range alone.
+
+The range beside **Import app** sets how far back the dashboard looks: 7, 30 or 90 days. The changes on the tiles, the charts, the breakdown beside them and the app table all follow it.
 
 | Tile | What it measures | Its chart |
 | --- | --- | --- |
 | Visibility | Every tracked keyword of every app as one figure, weighted the way an app's own visibility is, with the change over the range | The figure for each day against the same days of the period before |
-| Keywords in top 10 | Tracked keywords ranking in the top 10 across every app, with the change over the range and the number tracked | The count for each day against the period before |
+| Keywords in top 10 | Tracked keywords ranking in the top 10 across every app, with the change over the range and the number tracked | Every tracked keyword of each day split into rank bands, with a line on the edge of the top 10 |
 | Moved in 30 days | The label follows the range. Keywords that climbed and fell between the day the range began and the latest check, and how many started ranking or dropped out of the results | How many keywords climbed and fell on each day, against each app's previous checked day |
 | Open actions | Open Action Center items, with the critical count and the split by priority | Actions opened and closed on each day |
 
@@ -30,23 +32,29 @@ Select a tile to draw its chart under the strip. Until the daily run has finishe
 
 The tile takes each app at its own latest checked day, so a store that was checked later does not pull the figure down. The charts date every check by its own day, and an app that was not checked on a day keeps the figures of its latest earlier check, so an app whose checks stopped stays on the line at its last figures and never reads as today's movement. The changes on the tiles, the sentence and the movers leave such an app out once its latest check is older than the range. Popularity is scored per store, so read the figure as the trend of your own portfolio, not as a number to compare with another workspace. The other tiles add counts and never average ratings or audit scores.
 
+### See which app moved
+
+One line for every app cannot say which app moved, so with two or more apps the list beside the chart breaks the selected tile down by app: the figure now and its change over the range, sorted by the size of the change with a bar for it. A falling app and a rising one are two rows there, even when together they leave the line flat. Select a row to draw the chart for that app alone, with its own period before, and select it again or use the button beside the chart title to return to every app. With checked apps on both stores, **Stores** pools each store into one row the same way. A portfolio of more than seven apps lists the six largest changes and links to the table for the rest.
+
+Point at a day of the chart to read the apps that moved most on it, against each app's own previous check, and the listing fields one of your apps changed that day. Those days also carry a dashed mark on the visibility and rank band charts. Only changes you made to an app's home listing are marked: never a competitor's, and never what the store decides itself, such as featuring or an Editors' Choice badge.
+
 ### Keyword movers and do next
 
-Keyword movers lists the largest position changes of the range across every app, with keywords that started ranking or dropped out first. Each row names its storefront and opens that keyword on the app's rankings. See [Read rankings](/guides/read-rankings).
+Keyword movers lists the largest position changes across every app, with keywords that started ranking or dropped out first. It opens on the last run, and its period control switches to the range. The switch beside it counts every climber and faller of that period, and the line under the list says when the list holds only the largest of them. Each row names its storefront and its app and opens that keyword on the app's rankings. See [Read rankings](/guides/read-rankings).
 
 Do next lists the highest impact open actions with the app each one belongs to, and each row opens that action in the Action Center. See [Work the Action Center](/guides/action-center).
 
 ### The app list
 
-The list opens as a table with one row per app: a trend line of its visibility over the last 30 days, visibility with its seven day change, the keywords in the top 10, how many keywords climbed and fell, the rating and the open actions with the critical count. Audit score, listing changes and the last collection day are under **Columns**. A value the app does not have yet is a dash, never a zero, and an app whose first positions are still being collected shows dashes throughout. What unranked means is explained in [Positions](/concepts/positions), and audit scores in [Run an ASO audit](/guides/aso-audit).
+The list opens as a table with one row per app: a trend line of its visibility, visibility with its change, the keywords in the top 10 with a bar of rank bands, how many keywords climbed and fell, the rating and the open actions with the critical count. The trend line, the change and the moved counts cover the range chosen above, and their column headers name it. With apps on both stores, a switch above the table lists one store alone. Audit score, listing changes and the last collection day are under **Columns**. A value the app does not have yet is a dash, never a zero, and an app whose first positions are still being collected shows dashes throughout. What unranked means is explained in [Positions](/concepts/positions), and audit scores in [Run an ASO audit](/guides/aso-audit).
 
-The cards view shows the same apps as cards, with a bar of rank bands, the audit score and new low ratings, the negative reviews written in the last seven days. How they are counted is explained in [Sync reviews and mine keyword ideas](/guides/reviews). A card also names the keyword discoveries of the app, such as **153 keyword discoveries, 28 where you already rank**, as a link to its Discovered tab. See [Discover keywords your app already ranks for](/guides/keyword-discovery).
+The cards view shows the same apps as cards, each figure with its own seven day change, a bar of rank bands, the audit score and new low ratings, the negative reviews written in the last seven days. How they are counted is explained in [Sync reviews and mine keyword ideas](/guides/reviews). A card also names the keyword discoveries of the app, such as **153 keyword discoveries, 28 where you already rank**, as a link to its Discovered tab. See [Discover keywords your app already ranks for](/guides/keyword-discovery).
 
 An app whose guided setup is in progress carries a chip such as **Setup 1 of 3** that opens its setup page, and a banner above the dashboard names the app you touched last with its next step, how many other apps are still in setup, and buttons to resume or dismiss. See [Complete the guided setup](/quickstart#complete-the-guided-setup).
 
 Sort the table by its column headers, or the cards by visibility, seven day change, keywords in the top 10, rating, open actions, name or last collected. With more than six apps a search box filters by name, store, country or group.
 
-The chart, its range, the sort, the search, the view, the movers filter and the changes filter are kept in the page address, so a bookmark or a shared link opens the dashboard exactly as you left it.
+The chart, its range, the app or store it is drawn for, the sort, the search, the view, the store switch, the movers period and filter and the changes filter are kept in the page address, so a bookmark or a shared link opens the dashboard exactly as you left it.
 
 | Parameter | Values |
 | --- | --- |

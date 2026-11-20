@@ -15,14 +15,19 @@ import {
   APPS_PANEL,
   APPS_SECTION,
   APP_GRID,
+  BREAKDOWN_HEADER,
+  BREAKDOWN_PANEL,
   PANEL_FOOTER,
+  PULSE_BODY,
+  PULSE_SPLIT,
 } from "./layout-classes";
 import { LEDE, PANEL_HEADER } from "@/components/layout/panel-classes";
+import { cn } from "@/lib/utils";
 
 export function MetricPanelSkeleton() {
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex min-h-5 items-center justify-between gap-4">
+      <div className="flex min-h-6 items-center justify-between gap-4">
         <Skeleton className="h-4 w-40 max-w-full" />
         <Skeleton className="h-4 w-56 max-w-full" />
       </div>
@@ -31,12 +36,32 @@ export function MetricPanelSkeleton() {
   );
 }
 
-export function PortfolioPulseSkeleton() {
+function BreakdownSkeleton({ rows }: { rows: number }) {
+  return (
+    <div className={BREAKDOWN_PANEL}>
+      <div className={BREAKDOWN_HEADER}>
+        <Skeleton className="h-4 w-16" />
+      </div>
+      <div className="px-2 pt-1 text-label">
+        <Skeleton shape="text" className="inline-block w-10 align-middle" />
+      </div>
+      <RowsSkeleton rows={rows} height="h-10 sm:h-9" />
+      <div className="mt-auto px-2 pt-2 text-caption">
+        <Skeleton shape="text" className="inline-block w-40 align-middle" />
+      </div>
+    </div>
+  );
+}
+
+export function PortfolioPulseSkeleton({ rows = 0 }: { rows?: number }) {
   return (
     <Card className="gap-0 py-0">
       <MetricStripSkeleton columns={4} framed={false} />
-      <div className="border-t border-border px-4 pt-3 pb-4">
-        <MetricPanelSkeleton />
+      <div className={cn(PULSE_BODY, rows > 0 && PULSE_SPLIT)}>
+        <div className="min-w-0 px-4 pt-3 pb-4">
+          <MetricPanelSkeleton />
+        </div>
+        {rows > 0 ? <BreakdownSkeleton rows={rows} /> : null}
       </div>
     </Card>
   );

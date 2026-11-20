@@ -296,7 +296,7 @@ test("the table is the default view and lists every app as its own row", async (
     table.getByRole("link", { name: "Tomato Clock" }),
   ).toHaveAttribute("href", "/apps/app-gp");
   await expect(
-    region.getByText("Trend is visibility over the last 30 days"),
+    region.getByText(/^Trend, 30d and Moved cover the last 30 days/),
   ).toBeVisible();
   await expect(region.locator('[data-slot="app-grid"]')).toHaveCount(0);
   await expect(page).not.toHaveURL(/[?&]view=/);
@@ -372,10 +372,10 @@ test("the toolbar offers columns for the table and a sort for the cards", async 
   await expect(columns).toHaveCount(0);
 });
 
-test("the 7d column shows the change alone and words a missing week for screen readers", async ({
+test("the change column shows the change alone and words a missing week for screen readers", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/?range=7");
 
   const change = tableRow(page, "/apps/app-1").getByRole("cell", {
     name: "+5 7d",
@@ -466,10 +466,8 @@ test("the table drops its widest columns on a tablet instead of scrolling", asyn
 
   const table = appsRegion(page).getByRole("table");
   await expect(table.getByRole("columnheader", { name: "App" })).toBeVisible();
-  for (const name of ["Trend", "Moved", "Rating"]) {
-    await expect(
-      table.getByRole("columnheader", { name, exact: true }),
-    ).toBeHidden();
+  for (const name of [/^Trend 30d$/, /^Moved 30d$/, /^Rating$/]) {
+    await expect(table.getByRole("columnheader", { name })).toBeHidden();
   }
   await expect(
     table.getByRole("columnheader", { name: "Open actions" }),
@@ -482,8 +480,110 @@ test("the table drops its widest columns on a tablet instead of scrolling", asyn
 
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect(
-    table.getByRole("columnheader", { name: "Trend", exact: true }),
+    table.getByRole("columnheader", { name: "Trend 30d", exact: true }),
   ).toBeVisible();
+  await expect(
+    tableRow(page, "/apps/app-1").getByRole("img", { name: /^Rank bands/ }),
+  ).toBeVisible();
+});
+
+test("the trend, change and moved columns follow the range and say so", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/?range=90");
+
+  const region = appsRegion(page);
+  const table = appsTable(page);
+  for (const name of ["Trend 90d", "90d", "Moved 90d"]) {
+    await expect(
+      table.getByRole("columnheader", { name, exact: true }),
+    ).toBeVisible();
+  }
+  await expect(
+    tableRow(page, "/apps/app-1").getByRole("cell", {
+      name: "+18 90d",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    tableRow(page, "/apps/app-1").getByRole("img", {
+      name: /^visibility, last 90 days/,
+    }),
+  ).toBeVisible();
+  await expect(
+    region.getByText(/^Trend, 90d and Moved cover the last 90 days/),
+  ).toBeVisible();
+
+  await page.goto("/");
+  await expect(
+    table.getByRole("columnheader", { name: "30d", exact: true }),
+  ).toBeVisible();
+  await expect(
+    tableRow(page, "/apps/app-1").getByRole("cell", {
+      name: "+10 30d",
+      exact: true,
+    }),
+  ).toBeVisible();
+});
+
+test("a moved cell draws an arrow only before a count above zero", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+
+  const falling = tableRow(page, "/apps/app-1-de").getByRole("cell", {
+    name: "0 climbing, 2 falling",
+  });
+  await expect(falling.locator("[aria-hidden] svg")).toHaveCount(1);
+  const still = tableRow(page, "/apps/app-2").getByRole("cell", {
+    name: "0 climbing, 0 falling",
+  });
+  await expect(still.locator("[aria-hidden] svg")).toHaveCount(0);
+  await expect(still.locator("span[aria-hidden]")).toHaveText("0");
+});
+
+test("the store switch lists one store in both views and survives a reload", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  const { apps } = (await page.request
+    .get("/api/backend/portfolio")
+    .then((response) => response.json())) as PortfolioSummary;
+  const onPlay = apps.filter((app) => app.store === "GOOGLE_PLAY").length;
+  const region = appsRegion(page);
+  const stores = region.getByRole("tablist", { name: "Store" });
+  await expect(stores.getByRole("tab")).toHaveText([
+    `All${apps.length}`,
+    `App Store${apps.length - onPlay}`,
+    `Google Play${onPlay}`,
+  ]);
+
+  const play = stores.getByRole("tab", { name: /^Google Play/ });
+  await (await hydrated(play)).click();
+  await expect(page).toHaveURL(/[?&]store=GOOGLE_PLAY/);
+  await expect(play).toBeFocused();
+  await expect(appsTable(page).locator("tbody tr")).toHaveCount(onPlay);
+  await expect(
+    appsTable(page).getByRole("link", { name: "Focus Timer" }),
+  ).toHaveCount(0);
+
+  await page.reload();
+  await expect(play).toHaveAttribute("aria-selected", "true");
+  await expect(appsTable(page).locator("tbody tr")).toHaveCount(onPlay);
+
+  await region.getByRole("tab", { name: "Cards" }).click();
+  await expect(
+    region.getByRole("link", { name: "Tomato Clock", exact: true }),
+  ).toBeVisible();
+  await expect(
+    region.getByRole("link", { name: "Focus Timer", exact: true }),
+  ).toHaveCount(0);
+
+  await stores.getByRole("tab", { name: /^All/ }).click();
+  await expect(page).not.toHaveURL(/store=/);
 });
 
 test("the columns menu leaves out the columns a tablet cannot show", async ({
@@ -518,7 +618,7 @@ test("the table keeps phone columns and reveals more on request", async ({
   await expect(headers).toHaveText([
     "App",
     "Visibility",
-    "7d",
+    "30d",
     "Open actions",
     "More",
   ]);

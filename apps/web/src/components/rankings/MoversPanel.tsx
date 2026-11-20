@@ -19,10 +19,10 @@ import {
   type MoverView,
 } from "@/lib/search-params";
 import { MoverList } from "./MoverList";
-import { byMagnitude } from "./mover-change";
+import { byMagnitude, type MoverPeriod } from "./mover-change";
+import { formatNumber } from "@/lib/format";
 import { EmptyState } from "@/components/ui/empty-state";
-
-const ALL_MOVERS = 8;
+import { cn } from "@/lib/utils";
 
 const MOVER_LABELS: Record<MoverView, string> = {
   all: "All",
@@ -30,16 +30,20 @@ const MOVER_LABELS: Record<MoverView, string> = {
   down: "Fallers",
 };
 
-const EMPTY: Record<MoverView, (days: number) => string> = {
-  all: (days) => `No keyword moved in the last ${days} days.`,
-  up: (days) => `No keyword climbed in the last ${days} days.`,
-  down: (days) => `No keyword fell in the last ${days} days.`,
+const EMPTY: Record<MoverView, (period: MoverPeriod) => string> = {
+  all: ({ span }) => `No keyword moved ${span}.`,
+  up: ({ span }) => `No keyword climbed ${span}.`,
+  down: ({ span }) => `No keyword fell ${span}.`,
 };
+
+export const ALL_MOVERS = 8;
 
 export function MoversPanel<Mover extends KeywordMover>({
   movers: { up, down },
-  days,
+  period,
   quiet,
+  counts,
+  control,
   changeHeading,
   hrefOf,
   lead,
@@ -47,8 +51,10 @@ export function MoversPanel<Mover extends KeywordMover>({
   children,
 }: {
   movers: { up: Mover[]; down: Mover[] };
-  days: number;
+  period: MoverPeriod;
   quiet: string | null;
+  counts?: Record<MoverView, number>;
+  control?: ReactNode;
   changeHeading?: string;
   hrefOf: (mover: Mover) => string;
   lead: (mover: Mover) => ReactNode;
@@ -68,22 +74,32 @@ export function MoversPanel<Mover extends KeywordMover>({
         <CardTitle asChild>
           <h2>Keyword movers</h2>
         </CardTitle>
-        {quiet ? null : (
-          <CardAction className={PANEL_ACTION}>
-            <Tabs
-              value={view}
-              onValueChange={(next) =>
-                void setView(moverViewParser.parse(next))
-              }
-            >
-              <TabsList aria-label="Movers shown" className="print:hidden">
-                {MOVER_VIEWS.map((value) => (
-                  <TabsOption key={value} value={value}>
-                    {MOVER_LABELS[value]}
-                  </TabsOption>
-                ))}
-              </TabsList>
-            </Tabs>
+        {quiet && !control ? null : (
+          <CardAction
+            className={cn(PANEL_ACTION, "flex flex-wrap items-center gap-2")}
+          >
+            {control}
+            {quiet ? null : (
+              <Tabs
+                value={view}
+                onValueChange={(next) =>
+                  void setView(moverViewParser.parse(next))
+                }
+              >
+                <TabsList aria-label="Movers shown" className="print:hidden">
+                  {MOVER_VIEWS.map((value) => (
+                    <TabsOption key={value} value={value}>
+                      <span>{MOVER_LABELS[value]}</span>
+                      {counts ? (
+                        <span className="numeric text-muted-foreground max-[359px]:hidden">
+                          {formatNumber(counts[value])}
+                        </span>
+                      ) : null}
+                    </TabsOption>
+                  ))}
+                </TabsList>
+              </Tabs>
+            )}
           </CardAction>
         )}
       </CardHeader>
@@ -93,8 +109,8 @@ export function MoversPanel<Mover extends KeywordMover>({
         ) : (
           <MoverList
             movers={shown}
-            days={days}
-            empty={EMPTY[view](days)}
+            period={period}
+            empty={EMPTY[view](period)}
             changeHeading={changeHeading}
             hrefOf={hrefOf}
             lead={lead}

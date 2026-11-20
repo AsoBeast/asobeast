@@ -4160,11 +4160,17 @@ const ripple = (index: number): number =>
     (0.7 * Math.sin(index * 1.3) + 0.4 * Math.sin(index * 0.55)) * 10,
   ) / 10;
 
+export interface HistoryEnding {
+  visibility: number;
+  top10: number;
+  span?: number;
+}
+
 function historyPoints(
   days: PortfolioHistoryDays,
-  ending: { visibility: number; top10: number; daysAgo: number },
+  ending: HistoryEnding & { daysAgo: number },
 ): PortfolioHistoryPoint[] {
-  const span = HISTORY_SPAN[days];
+  const span = ending.span ?? HISTORY_SPAN[days];
   return Array.from({ length: days }, (_, index) => {
     const last = index === days - 1;
     const progress = index / (days - 1);
@@ -4185,16 +4191,17 @@ function historyPoints(
 
 export function portfolioHistoryOf(
   days: PortfolioHistoryDays,
-): Omit<PortfolioHistory, "change"> {
-  const points = historyPoints(days, {
+  ending: HistoryEnding = {
     visibility: PORTFOLIO_VISIBILITY.current,
     top10: HISTORY_TOP10,
-    daysAgo: 0,
-  });
+  },
+): Pick<PortfolioHistory, "days" | "points" | "previous"> {
+  const points = historyPoints(days, { ...ending, daysAgo: 0 });
   return {
     days,
     points,
     previous: historyPoints(days, {
+      ...ending,
       visibility: points[0].visibility - 0.6,
       top10: Math.max(1, points[0].top10 - 1),
       daysAgo: days,
@@ -4202,11 +4209,15 @@ export function portfolioHistoryOf(
   };
 }
 
-export function portfolioRangeDeltasOf(days: PortfolioHistoryDays): {
+export const portfolioRangeDeltasOf = (
+  days: PortfolioHistoryDays,
+): { visibility: number; top10: number } =>
+  rangeDeltasOf(portfolioHistoryOf(days).points);
+
+export function rangeDeltasOf(points: PortfolioHistoryPoint[]): {
   visibility: number;
   top10: number;
 } {
-  const { points } = portfolioHistoryOf(days);
   const first = points[0];
   const last = points[points.length - 1];
   return {

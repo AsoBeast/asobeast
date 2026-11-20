@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useQueryStates } from "nuqs";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { LayoutGrid, Rows3 } from "lucide-react";
+import { STORES } from "@asobeast/shared";
 import { SearchInput } from "@/components/data-table/SearchInput";
 import {
   Select,
@@ -14,15 +15,19 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { VisibilityHelp } from "@/components/visibility/VisibilityHelp";
+import { formatNumber, storeLabel } from "@/lib/format";
 import { portfolioOptions } from "@/lib/queries";
 import {
   appListParsers,
   appSortParser,
+  appStoreParser,
   appViewParser,
   type AppSort,
 } from "@/lib/search-params";
 
 const SEARCH_MIN_APPS = 6;
+
+const EVERY_STORE = "all";
 
 const SORT_LABELS: Record<AppSort, string> = {
   visibility: "Visibility",
@@ -36,10 +41,39 @@ const SORT_LABELS: Record<AppSort, string> = {
 
 export function AppsToolbar({ columns }: { columns: ReactNode }) {
   const { data } = useSuspenseQuery(portfolioOptions);
-  const [{ q, sort, view }, setList] = useQueryStates(appListParsers);
+  const [{ q, sort, view, store }, setList] = useQueryStates(appListParsers);
+  const counts = STORES.map((each) => ({
+    store: each,
+    apps: data.apps.filter((app) => app.store === each).length,
+  })).filter(({ apps }) => apps > 0);
 
   return (
     <>
+      {counts.length > 1 ? (
+        <Tabs
+          value={store ?? EVERY_STORE}
+          onValueChange={(next) =>
+            void setList({ store: appStoreParser.parse(next) })
+          }
+        >
+          <TabsList aria-label="Store">
+            <TabsOption value={EVERY_STORE}>
+              <span>All</span>
+              <span className="numeric text-muted-foreground">
+                {formatNumber(data.apps.length)}
+              </span>
+            </TabsOption>
+            {counts.map(({ store: each, apps }) => (
+              <TabsOption key={each} value={each}>
+                <span>{storeLabel(each)}</span>
+                <span className="numeric text-muted-foreground">
+                  {formatNumber(apps)}
+                </span>
+              </TabsOption>
+            ))}
+          </TabsList>
+        </Tabs>
+      ) : null}
       <VisibilityHelp />
       {data.apps.length > SEARCH_MIN_APPS || q !== "" ? (
         <SearchInput

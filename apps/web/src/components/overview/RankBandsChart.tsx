@@ -1,33 +1,18 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { useKeywordScope } from "@/components/app-detail/use-market";
 import {
   ChartNotice,
   ChartStat,
   trendState,
 } from "@/components/charts/ChartStates";
+import { bandCounts, topTenOf } from "@/components/charts/rank-bands";
 import {
-  bandCounts,
-  RANK_BANDS,
-  UNRANKED_BAND,
-} from "@/components/charts/rank-bands";
-import {
-  CHART_HEIGHT,
-  CHART_MARGIN,
-  COUNT_LINE_PROPS,
-  GRID_PROPS,
-  TIME_AXIS_PROPS,
-  TIME_TOOLTIP_PROPS,
-  VALUE_AXIS_PROPS,
-} from "@/components/charts/theme";
-import {
-  type ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
+  PLOTTED_BANDS,
+  RankBandsPlot,
+} from "@/components/charts/RankBandsPlot";
+import { CHART_HEIGHT } from "@/components/charts/theme";
 import { formatNumber } from "@/lib/format";
 import {
   appSummaryOptions,
@@ -35,13 +20,7 @@ import {
 } from "@/lib/queries";
 import { presetToRange, type VisibilityRange } from "@/lib/ranges";
 
-const BANDS = [...RANK_BANDS, UNRANKED_BAND];
-
 const HEIGHT = CHART_HEIGHT.tall;
-
-const chartConfig = Object.fromEntries(
-  BANDS.map((band) => [band.key, { label: band.label, color: band.color }]),
-) satisfies ChartConfig;
 
 function BandKey({ id }: { id: string }) {
   const { country } = useKeywordScope(id);
@@ -52,7 +31,7 @@ function BandKey({ id }: { id: string }) {
       aria-label="Keywords in each rank band today"
       className="flex flex-wrap items-center gap-x-4 gap-y-1 text-label text-muted-foreground"
     >
-      {BANDS.map((band) => (
+      {PLOTTED_BANDS.map((band) => (
         <li key={band.key} className="flex items-center gap-1.5">
           <span
             aria-hidden
@@ -97,7 +76,7 @@ export function RankBandsChart({
       <ChartStat
         height={HEIGHT}
         label="Keywords in the top 10"
-        value={formatNumber(latest.rank1 + latest.rank2to3 + latest.rank4to10)}
+        value={formatNumber(topTenOf(latest))}
         note="A trend needs a few more daily checks."
       />
     );
@@ -106,34 +85,10 @@ export function RankBandsChart({
   return (
     <div className="flex flex-col gap-3">
       <BandKey id={id} />
-      <ChartContainer
-        config={chartConfig}
-        className={`${HEIGHT} w-full`}
-        role="region"
-        aria-label="Tracked keywords by rank band"
-      >
-        <AreaChart accessibilityLayer data={data.points} margin={CHART_MARGIN}>
-          <CartesianGrid {...GRID_PROPS} />
-          <XAxis {...TIME_AXIS_PROPS} />
-          <YAxis {...VALUE_AXIS_PROPS} allowDecimals={false} />
-          <ChartTooltip
-            content={<ChartTooltipContent {...TIME_TOOLTIP_PROPS} />}
-          />
-          {BANDS.map((band) => (
-            <Area
-              key={band.key}
-              dataKey={band.key}
-              type={COUNT_LINE_PROPS.type}
-              stackId="bands"
-              stroke="var(--card)"
-              strokeWidth={1}
-              fill={`var(--color-${band.key})`}
-              fillOpacity={1}
-              isAnimationActive={false}
-            />
-          ))}
-        </AreaChart>
-      </ChartContainer>
+      <RankBandsPlot
+        points={data.points}
+        label="Tracked keywords by rank band"
+      />
     </div>
   );
 }

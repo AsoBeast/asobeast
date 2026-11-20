@@ -1,9 +1,17 @@
 import {
+  CHANGE_FIELDS,
+  ChangeField,
+  PortfolioAppHistory,
   PortfolioHistory,
   PortfolioHistoryDays,
   PortfolioHistoryPoint,
+  PortfolioListingChange,
   PortfolioMovement,
+  PortfolioPartChange,
   PortfolioRangeChange,
+  PortfolioStoreHistory,
+  Store,
+  STORES,
   visibility,
   VisibilityKeyword,
 } from '@asobeast/shared';
@@ -12,17 +20,37 @@ import {
   DAY_MS,
   keywordsAt,
   KeywordWindow,
+  rankingAt,
   toDateKey,
   TrackedRow,
 } from './analytics.support';
+import { isImpactField } from '../changes/change-impact';
 import { hasBaseline, keywordsAtBaseline } from './baseline';
 import { mergePortfolioMovers, rankInsight } from './portfolio-insights';
+import {
+  bucketPositions,
+  rankDistributionAt,
+  RankDistributionBands,
+} from './rank-distribution';
 
 const TOP_TEN = 10;
 const RANGE_MOVER_LIMIT = 8;
+const LAST_RUN_DAYS = 1;
 
 export interface HistoryMember extends KeywordWindow {
   appId: string;
+  store: Store;
+}
+
+export interface ListingChangeStamp {
+  appId: string;
+  field: string;
+  capturedAt: Date;
+}
+
+interface DayFigures {
+  point: PortfolioHistoryPoint;
+  bands: RankDistributionBands;
 }
 
 interface CheckedRow {
@@ -32,6 +60,7 @@ interface CheckedRow {
 
 interface CheckedMember {
   appId: string;
+  store: Store;
   rows: TrackedRow[];
   reference: Date;
   lag: number;
@@ -85,6 +114,7 @@ function checked(
   );
   return {
     appId: member.appId,
+    store: member.store,
     rows: member.rows,
     reference,
     lag: offsetOf(reference, newest),
@@ -122,11 +152,11 @@ function latestCheck(days: number[], day: number): number | undefined {
   return undefined;
 }
 
-function dayPoint(
+function dayFigures(
   members: CheckedMember[],
   day: number,
   newest: Date,
-): PortfolioHistoryPoint | null {
+): DayFigures | null {
   if (!members.some((member) => member.days.includes(day))) {
     return null;
   }
@@ -153,9 +183,12 @@ function dayPoint(
   }
 
   return {
-    date: toDateKey(addDays(newest, day)),
-    visibility: visibility(keywords),
-    ...totals,
+    point: {
+      date: toDateKey(addDays(newest, day)),
+      visibility: visibility(keywords),
+      ...totals,
+    },
+    bands: bucketPositions(keywords.map((keyword) => keyword.position)),
   };
 }
 
@@ -164,39 +197,30 @@ function period(
   newest: Date,
   from: number,
   to: number,
-): PortfolioHistoryPoint[] {
-  const points: PortfolioHistoryPoint[] = [];
+): DayFigures[] {
+  const figures: DayFigures[] = [];
   for (let day = from; day <= to; day += 1) {
-    const point = dayPoint(members, day, newest);
-    if (point) {
-      points.push(point);
+    const figure = dayFigures(members, day, newest);
+    if (figure) {
+      figures.push(figure);
     }
   }
-  return points;
+  return figures;
 }
+
+const pointsOf = (figures: DayFigures[]): PortfolioHistoryPoint[] =>
+  figures.map(({ point }) => point);
 
 const startOf = (member: CheckedMember, days: number): Date =>
   addDays(member.reference, -days);
 
-function rangeChange(
-  members: CheckedMember[],
-  days: PortfolioHistoryDays,
-): PortfolioRangeChange {
-  const compared = members.filter(
+const comparedOver = (members: CheckedMember[], days: number) =>
+  members.filter(
     (member) =>
       member.lag > -days && hasBaseline(member.rows, startOf(member, days)),
   );
-  if (compared.length === 0) {
-    return {
-      compared: false,
-      visibilityDelta: null,
-      top10Delta: null,
-      movement: NO_MOVEMENT,
-      appsMoved: 0,
-      movers: { up: [], down: [] },
-    };
-  }
 
+function comparison(compared: CheckedMember[], days: number) {
   const ranked = compared.map((member) => ({
     appId: member.appId,
     ...rankInsight(member.rows, member.reference, days),
@@ -209,9 +233,8 @@ function rangeChange(
       keywordsAtBaseline(member.rows, startOf(member, days)),
     ),
   );
-
   return {
-    compared: true,
+    ranked,
     visibilityDelta: Math.round((now - then) * 10) / 10,
     top10Delta: ranked.reduce((total, app) => total + (app.top10Delta ?? 0), 0),
     movement: ranked.reduce(
@@ -223,20 +246,141 @@ function rangeChange(
       }),
       NO_MOVEMENT,
     ),
+  };
+}
+
+function rangeChange(
+  members: CheckedMember[],
+  days: number,
+): PortfolioRangeChange {
+  const compared = comparedOver(members, days);
+  if (compared.length === 0) {
+    return {
+      compared: false,
+      visibilityDelta: null,
+      top10Delta: null,
+      movement: NO_MOVEMENT,
+      appsMoved: 0,
+      movers: { up: [], down: [] },
+    };
+  }
+
+  const { ranked, ...deltas } = comparison(compared, days);
+  return {
+    compared: true,
+    ...deltas,
     appsMoved: ranked.filter(({ movement }) => movement.up + movement.down > 0)
       .length,
     movers: mergePortfolioMovers(ranked, RANGE_MOVER_LIMIT),
   };
 }
 
-export function portfolioHistory(
-  windows: HistoryMember[],
+function partChange(
+  members: CheckedMember[],
+  days: number,
+): PortfolioPartChange {
+  const compared = comparedOver(members, days);
+  const deltas =
+    compared.length === 0
+      ? { visibilityDelta: null, top10Delta: null, movement: NO_MOVEMENT }
+      : comparison(compared, days);
+  return {
+    visibility: visibility(
+      members.flatMap((member) => keywordsAt(member.rows, member.reference)),
+    ),
+    visibilityDelta: deltas.visibilityDelta,
+    top10: members.reduce(
+      (total, member) =>
+        total + rankDistributionAt(member.rows, member.reference).top10,
+      0,
+    ),
+    top10Delta: deltas.top10Delta,
+    movement: deltas.movement,
+  };
+}
+
+const checkedOnBothDays = (member: CheckedMember): CheckedMember => {
+  const dayBefore = startOf(member, LAST_RUN_DAYS);
+  return {
+    ...member,
+    rows: member.rows.filter(
+      ({ keyword }) =>
+        rankingAt(keyword.rankings, member.reference) !== null &&
+        rankingAt(keyword.rankings, dayBefore) !== null,
+    ),
+  };
+};
+
+const appHistory = (
+  member: CheckedMember,
+  newest: Date,
   days: PortfolioHistoryDays,
-): PortfolioHistory {
+): PortfolioAppHistory => ({
+  appId: member.appId,
+  points: pointsOf(period([member], newest, 1 - days, 0)),
+  change: partChange([member], days),
+  lastRun: partChange([checkedOnBothDays(member)], LAST_RUN_DAYS).movement,
+});
+
+const storeHistories = (
+  members: CheckedMember[],
+  days: PortfolioHistoryDays,
+): PortfolioStoreHistory[] =>
+  STORES.flatMap((store) => {
+    const listed = members.filter((member) => member.store === store);
+    return listed.length === 0
+      ? []
+      : [{ store, apps: listed.length, change: partChange(listed, days) }];
+  });
+
+function listingChanges(
+  stamps: readonly ListingChangeStamp[],
+  members: CheckedMember[],
+  newest: Date,
+  days: PortfolioHistoryDays,
+): PortfolioListingChange[] {
+  const charted = new Set(members.map((member) => member.appId));
+  const first = toDateKey(addDays(newest, 1 - days));
+  const last = toDateKey(newest);
+  const fieldsByDay = new Map<string, Set<ChangeField>>();
+  for (const { appId, field, capturedAt } of stamps) {
+    const date = toDateKey(capturedAt);
+    if (
+      !charted.has(appId) ||
+      !isImpactField(field) ||
+      date < first ||
+      date > last
+    ) {
+      continue;
+    }
+    const key = `${date} ${appId}`;
+    fieldsByDay.set(key, (fieldsByDay.get(key) ?? new Set()).add(field));
+  }
+  return [...fieldsByDay]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, fields]) => {
+      const [date, appId] = key.split(' ');
+      return {
+        date,
+        appId,
+        fields: CHANGE_FIELDS.filter((field) => fields.has(field)),
+      };
+    });
+}
+
+export function newestReference(windows: KeywordWindow[]): Date | null {
   const references = windows.flatMap(({ referenceDate }) =>
     referenceDate ? [referenceDate.getTime()] : [],
   );
-  const newest = new Date(Math.max(0, ...references));
+  return references.length === 0 ? null : new Date(Math.max(...references));
+}
+
+export function portfolioHistory(
+  windows: HistoryMember[],
+  days: PortfolioHistoryDays,
+  stamps: readonly ListingChangeStamp[] = [],
+): PortfolioHistory {
+  const newest = newestReference(windows) ?? new Date(0);
   const members = windows.flatMap((window) =>
     window.referenceDate ? [checked(window, window.referenceDate, newest)] : [],
   );
@@ -244,10 +388,16 @@ export function portfolioHistory(
   if (members.length === 0) {
     return { days, points: [], previous: [], change };
   }
+  const current = period(members, newest, 1 - days, 0);
   return {
     days,
-    points: period(members, newest, 1 - days, 0),
-    previous: period(members, newest, 1 - 2 * days, -days),
+    points: pointsOf(current),
+    previous: pointsOf(period(members, newest, 1 - 2 * days, -days)),
     change,
+    bands: current.map(({ point, bands }) => ({ date: point.date, ...bands })),
+    apps: members.map((member) => appHistory(member, newest, days)),
+    stores: storeHistories(members, days),
+    lastRun: rangeChange(members.map(checkedOnBothDays), LAST_RUN_DAYS),
+    listingChanges: listingChanges(stamps, members, newest, days),
   };
 }

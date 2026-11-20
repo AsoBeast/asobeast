@@ -114,6 +114,14 @@ export const ZERO_LINE_PROPS = {
   stroke: "var(--border)",
 } as const;
 
+export const TOP_TEN_EDGE_PROPS = {
+  stroke: "var(--foreground)",
+  strokeWidth: 2,
+  dot: false,
+  activeDot: false,
+  isAnimationActive: false,
+} as const;
+
 export const CHANGE_MARKER_PROPS = {
   stroke: "var(--faint-foreground)",
   strokeDasharray: "3 3",
