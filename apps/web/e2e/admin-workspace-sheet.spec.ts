@@ -11,6 +11,7 @@ import { formatDayMonth } from "../src/lib/format";
 import { settleAnimations } from "./dialog.mts";
 import { errorEnvelope, utcDaysAgo } from "./fixtures.mts";
 import { holdRequest, pressFromKeyboard } from "./held-request.mts";
+import { hydrated } from "./hydrated.mts";
 import { layoutBox } from "./layout-box.mts";
 import { seedCookies } from "./routes.mts";
 import { fulfillJson } from "./plan-helpers.mts";
@@ -187,7 +188,9 @@ test.describe("workspace details", () => {
 
   test("a long workspace name stays inside its cell", async ({ page }) => {
     await page.goto("/admin/workspaces");
-    const name = page.locator('[data-workspace-sheet="ws_ana"]');
+    const name = await hydrated(
+      page.locator('[data-workspace-sheet="ws_ana"]'),
+    );
     await name.evaluate((element) => {
       element.textContent = `Ana Apps ${"Workshop ".repeat(12)}`.trim();
     });
