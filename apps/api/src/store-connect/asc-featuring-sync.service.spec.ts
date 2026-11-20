@@ -5,12 +5,7 @@ import { AscListingApi } from './asc-listing-api';
 import { AscRateLimitedError } from './asc-errors';
 import { AscFeaturingSync } from './asc-featuring-sync.service';
 import { FIELD_SYNC_UNSERVED_APP } from './asc-keyword-field-sync.service';
-import {
-  ascFixture,
-  failure,
-  ok,
-  recordedRequester,
-} from './asc-transport.fixture';
+import { failure, ok, recordedRequester } from './asc-transport.fixture';
 import type { AscResponse } from './asc-transport';
 
 const APP = { id: 'app_1', storeAppId: '1476097583' };
