@@ -49,6 +49,34 @@ export function goalPace(ratings: number, days: number): GoalPace {
     : { kind: "daily", ratings: Math.ceil(ratings / days) };
 }
 
+function showsTarget(
+  average: number,
+  count: number,
+  ratings: number,
+  targetTenths: number,
+): boolean {
+  const lifted = (average * count + 5 * ratings) / (count + ratings);
+  return displayedTenths(lifted) >= targetTenths;
+}
+
+function smallestRatingsToShow(
+  average: number,
+  count: number,
+  targetTenths: number,
+): number {
+  const boundary = targetTenths / 10 - 0.05;
+  const estimate = (count * (boundary - average)) / (5 - boundary);
+  let ratings = Math.max(1, Math.ceil(estimate));
+  while (
+    ratings > 1 &&
+    showsTarget(average, count, ratings - 1, targetTenths)
+  ) {
+    ratings -= 1;
+  }
+  while (!showsTarget(average, count, ratings, targetTenths)) ratings += 1;
+  return ratings;
+}
+
 export function fiveStarRatingsToReach(
   average: number,
   count: number,
@@ -57,8 +85,6 @@ export function fiveStarRatingsToReach(
 ): RatingsGoal {
   if (count === 0) return { kind: "first" };
   if (displayedTenths(average) >= targetTenths) return { kind: "reached" };
-  const boundary = targetTenths / 10 - 0.05;
-  const raw = (count * (boundary - average)) / (5 - boundary);
-  const ratings = Math.max(1, Math.ceil(raw - ROUNDING_TOLERANCE));
+  const ratings = smallestRatingsToShow(average, count, targetTenths);
   return { kind: "needed", ratings, pace: goalPace(ratings, days) };
 }

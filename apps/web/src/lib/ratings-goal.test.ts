@@ -150,6 +150,15 @@ describe("fiveStarRatingsToReach", () => {
     });
   });
 
+  it("counts exactly at a boundary for a large number of ratings", () => {
+    expect(fiveStarRatingsToReach(4.8, 100000, 50, 30)).toMatchObject({
+      ratings: 300000,
+    });
+    expect(fiveStarRatingsToReach(4.3, 1000, 45, 30)).toMatchObject({
+      ratings: 273,
+    });
+  });
+
   it("never asks for zero ratings while the shown average is short", () => {
     expect(fiveStarRatingsToReach(4.4499999997, 1, 45, 30)).toMatchObject({
       kind: "needed",
