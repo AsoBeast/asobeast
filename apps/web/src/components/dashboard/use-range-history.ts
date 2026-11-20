@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue } from "react";
+import { useDeferredValue, useMemo } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState, useQueryStates } from "nuqs";
 import type {
@@ -39,10 +39,13 @@ export function useDashboardScope(): {
 } {
   const { data: portfolio } = useSuspenseQuery(portfolioOptions);
   const [{ by, scope }] = useQueryStates(dashboardBreakdownParsers);
-  const requested = scopeId(historyScope(by, scope, portfolio.apps));
+  const requested = useMemo(
+    () => historyScope(by, scope, portfolio.apps),
+    [by, scope, portfolio.apps],
+  );
   const shown = useDeferredValue(requested);
   return {
-    scope: historyScope(by, shown, portfolio.apps),
-    waiting: shown !== requested,
+    scope: shown,
+    waiting: scopeId(shown) !== scopeId(requested),
   };
 }
