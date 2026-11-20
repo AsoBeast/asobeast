@@ -268,6 +268,69 @@ describe('AscFeaturingSync.run', () => {
     });
   });
 
+  it('stores the window that can still run when the newer nomination has ended', async () => {
+    const { service, updateMany } = build({
+      responses: [
+        versions(),
+        localizations(['text']),
+        nominations([
+          {
+            state: 'SUBMITTED',
+            submittedDate: '2026-11-10T09:30:00.000Z',
+            publishStartDate: '2026-11-01T00:00:00.000Z',
+            publishEndDate: '2026-11-05T00:00:00.000Z',
+          },
+          {
+            state: 'SUBMITTED',
+            submittedDate: '2026-10-10T09:30:00.000Z',
+            publishStartDate: '2026-11-15T00:00:00.000Z',
+            publishEndDate: '2999-01-01T00:00:00.000Z',
+          },
+        ]),
+      ],
+    });
+
+    await service.run();
+
+    expect(writesOf(updateMany)[0].data).toMatchObject({
+      submittedNominations: 2,
+      submittedDate: new Date('2026-10-10T09:30:00.000Z'),
+      publishStartDate: new Date('2026-11-15T00:00:00.000Z'),
+      publishEndDate: new Date('2999-01-01T00:00:00.000Z'),
+    });
+  });
+
+  it('stores the same window whatever order Apple lists the nominations in', async () => {
+    const { service, updateMany } = build({
+      responses: [
+        versions(),
+        localizations(['text']),
+        nominations([
+          {
+            state: 'SUBMITTED',
+            submittedDate: '2026-10-10T09:30:00.000Z',
+            publishStartDate: '2026-11-15T00:00:00.000Z',
+            publishEndDate: '2999-01-01T00:00:00.000Z',
+          },
+          {
+            state: 'SUBMITTED',
+            submittedDate: '2026-11-10T09:30:00.000Z',
+            publishStartDate: '2026-11-01T00:00:00.000Z',
+            publishEndDate: '2026-11-05T00:00:00.000Z',
+          },
+        ]),
+      ],
+    });
+
+    await service.run();
+
+    expect(writesOf(updateMany)[0].data).toMatchObject({
+      submittedDate: new Date('2026-10-10T09:30:00.000Z'),
+      publishStartDate: new Date('2026-11-15T00:00:00.000Z'),
+      publishEndDate: new Date('2999-01-01T00:00:00.000Z'),
+    });
+  });
+
   it('counts the nominations of each state and takes the dates of the newest submitted one', async () => {
     const { service, updateMany } = build({
       responses: [

@@ -92,11 +92,40 @@ const submittedAtOf = (nomination: AscNomination): number =>
     ? 0
     : Date.parse(nomination.submittedDate) || 0;
 
-const newestSubmitted = (nominations: AscNomination[]): AscNomination | null =>
-  nominations
-    .filter((nomination) => nomination.state === 'SUBMITTED')
-    .sort((left, right) => submittedAtOf(right) - submittedAtOf(left))[0] ??
-  null;
+const publishStartOf = (nomination: AscNomination): number =>
+  nomination.publishStartDate === null
+    ? 0
+    : Date.parse(nomination.publishStartDate) || 0;
+
+const windowEndOf = (nomination: AscNomination): number | null => {
+  if (nomination.publishEndDate === null) {
+    return null;
+  }
+  const parsed = Date.parse(nomination.publishEndDate);
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
+const storedSubmission = (
+  nominations: AscNomination[],
+  now: Date,
+): AscNomination | null => {
+  const submitted = nominations.filter(
+    (nomination) => nomination.state === 'SUBMITTED',
+  );
+  const running = submitted.filter((nomination) => {
+    const end = windowEndOf(nomination);
+    return end === null || end > now.getTime();
+  });
+  const pool =
+    running.length > 0
+      ? running.sort(
+          (left, right) => publishStartOf(right) - publishStartOf(left),
+        )
+      : submitted.sort(
+          (left, right) => submittedAtOf(right) - submittedAtOf(left),
+        );
+  return pool[0] ?? null;
+};
 
 const asDate = (value: string | null): Date | null => {
   const parsed = value === null ? NaN : Date.parse(value);
@@ -248,7 +277,7 @@ export class AscFeaturingSync {
         (nomination) => nomination.state === state,
       ).length;
     }
-    const newest = newestSubmitted(nominations);
+    const newest = storedSubmission(nominations, new Date());
     counts.submittedDate = asDate(newest?.submittedDate ?? null);
     counts.publishStartDate = asDate(newest?.publishStartDate ?? null);
     counts.publishEndDate = asDate(newest?.publishEndDate ?? null);
