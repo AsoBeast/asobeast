@@ -144,7 +144,7 @@ export function KeywordsTable({
     country,
     today,
     trendWindow,
-    columnShown: visibility.delta7d !== false,
+    columnShown: keywords.length > 0 && visibility.delta7d !== false,
   });
   const columns = useMemo(
     () => buildColumns(series, state),

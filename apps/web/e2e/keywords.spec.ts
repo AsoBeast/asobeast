@@ -1691,6 +1691,18 @@ test("a row with too few ranked checks says so in text", async ({ page }) => {
   ).toBeLessThanOrEqual(0);
 });
 
+test("a market without keywords asks for no series on the 30 day window", async ({
+  page,
+}) => {
+  const requests = rankingsRequests(page);
+  await page.goto("/apps/app-1/keywords?country=gb&trend=30d");
+
+  await expect(page.getByText(/No keywords tracked/i).first()).toBeVisible();
+  await page.waitForLoadState("networkidle");
+
+  expect(requests).toEqual([]);
+});
+
 test("a hidden trend column asks for no series on the 30 day window", async ({
   page,
 }) => {
