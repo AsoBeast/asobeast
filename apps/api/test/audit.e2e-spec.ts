@@ -535,7 +535,7 @@ describe('AuditController (e2e)', () => {
         submittedNominations: 1,
         submittedDate: new Date('2026-10-05T09:30:00.000Z'),
         publishStartDate: new Date('2026-11-19T00:00:00.000Z'),
-        publishEndDate: new Date('2026-12-19T00:00:00.000Z'),
+        publishEndDate: new Date('2999-12-19T00:00:00.000Z'),
         promoFilled: 2,
         promoTotal: 3,
         readAt: new Date(),
