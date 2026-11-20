@@ -29,11 +29,13 @@ import {
 import { KeywordClassTag } from "./KeywordClassTag";
 import { PositionTrend } from "./PositionTrend";
 import {
+  DEFAULT_TREND_WINDOW,
   TREND_STATE_TEXT,
   trendChecks,
   trendDelta,
   trendFrame,
   trendPeriod,
+  trendSpan,
   type TrendSeries,
   type TrendState,
   type TrendWindow,
@@ -107,6 +109,17 @@ export function PositionCell({
         chip
       />
       {staleOn === null ? null : <StaleCheckMark day={staleOn} />}
+    </span>
+  );
+}
+
+export function TrendHeading({ trendWindow }: { trendWindow: TrendWindow }) {
+  const prefixClass =
+    trendWindow === DEFAULT_TREND_WINDOW ? undefined : "keywords-tight:hidden";
+  return (
+    <span>
+      <span className={prefixClass}>Last </span>
+      <span>{trendSpan(trendWindow)}</span>
     </span>
   );
 }

@@ -30,6 +30,7 @@ import {
   PlayAcquisitionsCell,
   PositionCell,
   TrendCell,
+  TrendHeading,
 } from "./keyword-cells";
 import {
   keywordColumnHelper as columnHelper,
@@ -270,7 +271,13 @@ function deltaColumn(
       meta: { label },
       ...SORTABLE,
       sortDescFirst: true,
-      header: ({ column }) => <SortableHeader column={column} label={label} />,
+      header: ({ column }) => (
+        <SortableHeader
+          column={column}
+          aria-label={label}
+          label={<TrendHeading trendWindow={trendWindow} />}
+        />
+      ),
       footer: ({ table }) =>
         movedFooter(
           { table },

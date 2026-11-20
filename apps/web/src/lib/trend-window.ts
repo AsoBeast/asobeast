@@ -20,11 +20,14 @@ export interface TrendFrame {
   end?: string;
 }
 
+export const trendSpan = (window: TrendWindow): string =>
+  `${TREND_WINDOW_DAYS[window]} days`;
+
 export const trendLabel = (window: TrendWindow): string =>
-  `Last ${TREND_WINDOW_DAYS[window]} days`;
+  `Last ${trendSpan(window)}`;
 
 export const trendPeriod = (window: TrendWindow): string =>
-  `over ${TREND_WINDOW_DAYS[window]} days`;
+  `over ${trendSpan(window)}`;
 
 export function trendFrame(window: TrendWindow, today: string): TrendFrame {
   const days = TREND_WINDOW_DAYS[window];

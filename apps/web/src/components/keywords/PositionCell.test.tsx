@@ -4,7 +4,7 @@ import type { TrackedKeywordItem } from "@asobeast/shared";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { formatDate } from "@/lib/format";
 import type { TrendSeries, TrendState, TrendWindow } from "@/lib/trend-window";
-import { PositionCell, TrendCell } from "./keyword-cells";
+import { PositionCell, TrendCell, TrendHeading } from "./keyword-cells";
 
 const TODAY = "2026-10-22";
 
@@ -291,6 +291,16 @@ describe("PositionCell", () => {
 
     expect(markup).toContain("Loading");
     expect(markup).not.toContain("width:72px");
+  });
+
+  it("W-POS-39 drops Last from the 30 day heading only on a narrow table", () => {
+    const thirty = renderToStaticMarkup(<TrendHeading trendWindow="30d" />);
+    const seven = renderToStaticMarkup(<TrendHeading trendWindow="7d" />);
+
+    expect(thirty).toBe(
+      '<span><span class="keywords-tight:hidden">Last </span><span>30 days</span></span>',
+    );
+    expect(seven).toBe("<span><span>Last </span><span>7 days</span></span>");
   });
 
   it("W-POS-08 names the market when the app tracks several", () => {
