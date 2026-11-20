@@ -153,6 +153,9 @@ export class AscReportSync {
   }
 
   private async importFeaturingReads(summary: SyncSummary): Promise<void> {
+    if (summary.rateLimited) {
+      return;
+    }
     try {
       const reads = await this.featuring.run();
       summary.nominations = reads.nominations;

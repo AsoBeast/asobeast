@@ -621,6 +621,16 @@ describe('AscReportSync', () => {
     await expect(service.run()).resolves.toMatchObject({ rateLimited: true });
   });
 
+  it('stops before the featuring reads when a rate limit already ended the run', async () => {
+    const { service, featuring, keywordFields } = build();
+    keywordFields.run.mockRejectedValue(
+      new AscRateLimitedError('slow down', 429),
+    );
+
+    await expect(service.run()).resolves.toMatchObject({ rateLimited: true });
+    expect(featuring.run).not.toHaveBeenCalled();
+  });
+
   it('never rejects the key over a detailed instance and keeps applying the standard ones', async () => {
     const { service, api, applier, connections } = build();
     api.discoveryReport.mockImplementation(
