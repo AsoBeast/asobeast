@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { rankingsOptions } from "@/lib/queries";
 import { useHydrated } from "@/lib/use-hydrated";
 import {
+  DEFAULT_TREND_WINDOW,
   seriesByKeyword,
   trendRange,
   type TrendSeries,
@@ -26,7 +27,7 @@ export function useTrendSeries({
   columnShown: boolean;
 }) {
   const hydrated = useHydrated();
-  const wanted = trendWindow === "30d" && columnShown;
+  const wanted = trendWindow !== DEFAULT_TREND_WINDOW && columnShown;
   const read = useQuery({
     ...rankingsOptions(appId, {
       ...trendRange(trendWindow, today),
