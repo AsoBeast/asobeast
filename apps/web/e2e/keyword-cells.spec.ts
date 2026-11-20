@@ -224,12 +224,14 @@ test.describe("the listing marks choice", () => {
     });
     await expect(choice).toBeVisible();
     await page.keyboard.press("End");
-    for (let step = 0; step < 6; step += 1) {
-      if (await choice.evaluate((node) => node === document.activeElement)) {
-        break;
-      }
-      await page.keyboard.press("ArrowUp");
-    }
+    await expect(
+      page.getByRole("menuitemradio", { name: "Last 30 days" }),
+    ).toBeFocused();
+    await page.keyboard.press("ArrowUp");
+    await expect(
+      page.getByRole("menuitemradio", { name: "Last 7 days" }),
+    ).toBeFocused();
+    await page.keyboard.press("ArrowUp");
     await expect(choice).toBeFocused();
     await page.keyboard.press("Space");
 
