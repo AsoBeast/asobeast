@@ -358,6 +358,32 @@ describe('keywordMarker', () => {
     ).toEqual(['enfoque temporizador:title']);
   });
 
+  it('never marks the words of two localizations as one keyword', () => {
+    const mark = marker(
+      Store.APP_STORE,
+      [['us', HOME]],
+      [],
+      [
+        [
+          'us',
+          [
+            {
+              localization: 'es-MX',
+              texts: texts({ title: 'Temporizador de enfoque' }),
+            },
+          ],
+        ],
+      ],
+    );
+
+    expect(
+      surfacesOf(mark({ country: 'us', text: 'focus temporizador' })),
+    ).toEqual(['focus:title']);
+    expect(
+      surfacesOf(mark({ country: 'us', text: 'temporizador enfoque focus' })),
+    ).toEqual(['temporizador enfoque:title']);
+  });
+
   it('marks a Google Play title and short description and never the description', () => {
     const mark = marker(
       Store.GOOGLE_PLAY,
