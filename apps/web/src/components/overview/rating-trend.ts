@@ -10,7 +10,7 @@ const BASELINE_SLACK_DAYS = 3;
 const TENTHS = 10;
 const MAX_TENTHS = 5 * TENTHS;
 const MAX_TICKS = 6;
-const TICK_STEPS = [1, 2, 5, TENTHS] as const;
+const TICK_STEPS = [1, 2, 5, TENTHS];
 
 export interface RatedPoint {
   date: string;
