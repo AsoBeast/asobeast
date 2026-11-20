@@ -47,6 +47,7 @@ export interface AuditApp {
 export const REVIEW_WINDOW_DAYS = 90;
 export const VISIBILITY_WINDOW_DAYS = 8;
 export const VISIBILITY_TREND_DAYS = 7;
+export const FEATURING_FRESH_DAYS = 3;
 
 const iconCompetitors = (
   competitors: { id: string; iconUrl: string | null }[],
@@ -119,10 +120,21 @@ export class AuditContextLoader {
     if (app.store !== Store.APP_STORE) {
       return null;
     }
+    const connection = await this.prisma.storeConnection.findFirst({
+      where: { store: Store.APP_STORE },
+      select: { status: true },
+    });
+    if (!connection || connection.status === 'rejected') {
+      return null;
+    }
     const row = await this.prisma.featuringSync.findFirst({
       where: { appId: app.id },
     });
-    if (!row) {
+    if (!row || row.readAt === null) {
+      return null;
+    }
+    const freshFor = FEATURING_FRESH_DAYS * DAY_MS;
+    if (Date.now() - row.readAt.getTime() >= freshFor) {
       return null;
     }
     return {

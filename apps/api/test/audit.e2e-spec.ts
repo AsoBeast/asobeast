@@ -518,6 +518,16 @@ describe('AuditController (e2e)', () => {
 
   it('answers the featuring readiness rows from the page extract, the graded checks and the console reads', async () => {
     const id = await seed();
+    await prisma.storeConnection.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        issuerId: 'audit-issuer',
+        keyId: 'ABCDEFGHIJ',
+        keyFingerprint: '0123456789abcdef',
+        credentialCiphertext: 'v1.audit.sealed',
+      },
+    });
     await prisma.featuringSync.create({
       data: {
         appId: id,
@@ -528,6 +538,7 @@ describe('AuditController (e2e)', () => {
         publishEndDate: new Date('2026-12-19T00:00:00.000Z'),
         promoFilled: 2,
         promoTotal: 3,
+        readAt: new Date(),
       },
     });
 
