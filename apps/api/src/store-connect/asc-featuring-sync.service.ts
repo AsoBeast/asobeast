@@ -136,7 +136,9 @@ const storedWindow = (
         );
   const selected = pool[0] ?? null;
   const ends = pool.map(windowEndOf);
-  const latestEnd = ends.some((end) => end === null) ? null : Math.max(...ends);
+  const latestEnd = ends.every((end): end is number => end !== null)
+    ? Math.max(...ends)
+    : null;
   return {
     submittedDate: asDate(selected?.submittedDate ?? null),
     publishStartDate: asDate(selected?.publishStartDate ?? null),
