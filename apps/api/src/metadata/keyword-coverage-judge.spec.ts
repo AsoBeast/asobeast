@@ -180,6 +180,125 @@ describe('judgeKeywordCoverage', () => {
   });
 });
 
+describe('judgeKeywordCoverage on words split across the App Store fields', () => {
+  const geoGuess = texts({
+    title: 'Where Am I? GeoGuess Map Quiz',
+    subtitle: 'World Geography Trivia Game',
+  });
+  const judge = (
+    app: { store: Store; country: string },
+    text: string,
+    listing: ListingTexts = geoGuess,
+    fields: { localization: string; phrases: string[] }[] = [],
+  ) =>
+    judgeKeywordCoverage(
+      app,
+      { text, country: 'us' },
+      sources([['us', listing]], [], fields),
+    );
+
+  it('covers a keyword whose words all sit in the title but not as one phrase', () => {
+    expect(judge(appStore, 'geoguess quiz')).toMatchObject({
+      uncovered: false,
+      wordsSplit: true,
+    });
+  });
+
+  it('covers a keyword whose words are split between the title and the subtitle', () => {
+    expect(judge(appStore, 'geoguess geography')).toMatchObject({
+      uncovered: false,
+      wordsSplit: true,
+    });
+  });
+
+  it('covers a keyword with one word only in the saved keyword field', () => {
+    expect(
+      judge(appStore, 'geoguess atlas', geoGuess, [
+        { localization: 'en-US', phrases: ['atlas'] },
+      ]),
+    ).toMatchObject({ uncovered: false, wordsSplit: true });
+  });
+
+  it('keeps a keyword uncovered when one of its words is in no field', () => {
+    expect(judge(appStore, 'geoguess atlas')).toMatchObject({
+      uncovered: true,
+      wordsSplit: false,
+    });
+  });
+
+  it('answers no split for a phrase one field holds', () => {
+    expect(judge(appStore, 'map quiz')).toMatchObject({
+      uncovered: false,
+      wordsSplit: false,
+    });
+  });
+
+  it('never combines the words of two localizations', () => {
+    const coverage = judgeKeywordCoverage(
+      appStore,
+      { text: 'geoguess temporizador', country: 'us' },
+      sources(
+        [['us', geoGuess]],
+        [
+          [
+            'us',
+            [
+              {
+                localization: 'es-MX',
+                texts: texts({ title: 'Temporizador' }),
+              },
+            ],
+          ],
+        ],
+      ),
+    );
+
+    expect(coverage).toMatchObject({ uncovered: true, wordsSplit: false });
+  });
+
+  it('counts a word split inside one captured localization', () => {
+    const coverage = judgeKeywordCoverage(
+      appStore,
+      { text: 'temporizador estudio', country: 'us' },
+      sources(
+        [['us', geoGuess]],
+        [
+          [
+            'us',
+            [
+              {
+                localization: 'es-MX',
+                texts: texts({
+                  title: 'Temporizador Pomodoro',
+                  subtitle: 'Para tu estudio',
+                }),
+              },
+            ],
+          ],
+        ],
+      ),
+    );
+
+    expect(coverage).toMatchObject({ uncovered: false, wordsSplit: true });
+  });
+
+  it('counts no word matched only with its accents ignored', () => {
+    expect(
+      judge(
+        appStore,
+        'cafe guide',
+        texts({ title: 'Café', subtitle: 'Guide' }),
+      ),
+    ).toMatchObject({ uncovered: true, wordsSplit: false });
+  });
+
+  it('keeps a Google Play keyword uncovered when its words are split', () => {
+    expect(
+      judge(play, 'geoguess quiz', texts({ title: 'GeoGuess Map Quiz' })),
+    ).toMatchObject({ uncovered: true, wordsSplit: false });
+  });
+});
+
 describe('keywordSurfaces', () => {
   const home = texts({ title: 'Focus Timer', subtitle: 'Study sessions' });
 

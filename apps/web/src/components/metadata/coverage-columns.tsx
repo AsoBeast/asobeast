@@ -102,6 +102,10 @@ export function coverageColumns(
           </span>
           {row.original.uncovered ? (
             <span className="text-label text-warning">Uncovered</span>
+          ) : row.original.wordsSplit ? (
+            <span className="text-label text-muted-foreground">
+              Words split
+            </span>
           ) : null}
         </span>
       ),

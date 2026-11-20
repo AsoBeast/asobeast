@@ -275,17 +275,15 @@ export class MetadataService {
     keywordFields: FieldPhrases,
   ): JudgedCoverageRow[] {
     return active.map((item) => {
-      const { fields, listingCountry, uncovered } = judgeKeywordCoverage(
-        app,
-        item,
-        { listings, localized, keywordFields },
-      );
+      const { fields, listingCountry, uncovered, wordsSplit } =
+        judgeKeywordCoverage(app, item, { listings, localized, keywordFields });
       return {
         keywordId: item.keywordId,
         text: item.text,
         bucket: item.bucket,
         fields,
         uncovered,
+        ...(wordsSplit ? { wordsSplit } : {}),
         country: item.country,
         listingCountry,
       };

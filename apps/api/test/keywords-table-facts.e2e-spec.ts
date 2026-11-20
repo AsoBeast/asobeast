@@ -607,6 +607,32 @@ describe('KeywordsController table facts (e2e)', () => {
       expect(JSON.stringify(field.body)).not.toContain('uncovered');
     });
 
+    it('covers an App Store keyword whose words sit in the listing but not as one phrase', async () => {
+      const primary = await seedApp();
+      await seedListing(primary.id, {
+        title: 'Where Am I? GeoGuess Map Quiz',
+        subtitle: 'World Geography Trivia Game',
+      });
+      await trackIn(primary.id, 'geoguess quiz');
+      await trackIn(primary.id, 'geoguess geography');
+      await trackIn(primary.id, 'geoguess atlas');
+
+      const byKey = await verdicts(primary.id);
+      const audit = (
+        await api.get(`/apps/${primary.id}/metadata/audit`).expect(200)
+      ).body as MetadataAuditResult;
+
+      expect(byKey.get('us:geoguess quiz')).toBe(false);
+      expect(byKey.get('us:geoguess geography')).toBe(false);
+      expect(byKey.get('us:geoguess atlas')).toBe(true);
+      expect(
+        audit.coverage.filter((row) => row.wordsSplit).map((row) => row.text),
+      ).toEqual(
+        expect.arrayContaining(['geoguess quiz', 'geoguess geography']),
+      );
+      await expectAgreement(primary.id, ['us']);
+    });
+
     it('agrees with the metadata coverage table in every market', async () => {
       const primary = await seedFocusTimer();
 

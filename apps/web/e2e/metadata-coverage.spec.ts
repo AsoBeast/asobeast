@@ -1,5 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
+import { WORDS_SPLIT_COOKIE } from "./fixtures.mts";
+import { seedCookies } from "./routes.mts";
 
 const coverageRows = (page: Page) =>
   page.getByRole("table", { name: /Keyword coverage across/ }).getByRole("row");
@@ -42,4 +44,26 @@ test("keyword coverage filters to uncovered rows, searches and sorts", async ({
   await expect(page).toHaveURL(/sort=keyword/);
   await expect(rows.nth(1)).toContainText("focus timer");
   await expect(rows.nth(3)).toContainText("productivity app");
+});
+
+test("labels a keyword whose words are split across the fields and keeps it out of uncovered", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { [WORDS_SPLIT_COOKIE]: "1" });
+  await page.goto("/apps/app-1/metadata");
+
+  const split = coverageRows(page).filter({ hasText: "study focus" });
+  await expect(split.getByText("Words split", { exact: true })).toBeVisible();
+  await expect(split.getByText("Uncovered")).toHaveCount(0);
+  await expect(
+    page.getByText(/^Words split means every word of the keyword/),
+  ).toBeVisible();
+
+  await page.getByRole("switch", { name: "Uncovered only" }).click();
+
+  await expect(page).toHaveURL(/uncovered=true/);
+  await expect(
+    coverageRows(page).filter({ hasText: "study focus" }),
+  ).toHaveCount(0);
 });

@@ -72,6 +72,26 @@ function ScreenshotTextNote({ rows }: { rows: KeywordCoverageRow[] }) {
   );
 }
 
+const WORDS_SPLIT_NOTE =
+  "Words split means every word of the keyword is in your listing, but no field holds the whole phrase. The App Store still matches it; the whole phrase in the title or subtitle may rank higher.";
+
+function CoverageNotes({
+  rows,
+  withScreenshotText,
+}: {
+  rows: KeywordCoverageRow[];
+  withScreenshotText: boolean;
+}) {
+  const split = rows.some((row) => row.wordsSplit === true);
+  if (!withScreenshotText && !split) return null;
+  return (
+    <CardFooter className="flex-col items-start gap-1">
+      {withScreenshotText ? <ScreenshotTextNote rows={rows} /> : null}
+      {split ? <span>{WORDS_SPLIT_NOTE}</span> : null}
+    </CardFooter>
+  );
+}
+
 function CoverageToolbar({
   q,
   uncovered,
@@ -260,11 +280,7 @@ export function CoverageTable({
             </TableBody>
           </Table>
         </CardContent>
-        {withScreenshotText ? (
-          <CardFooter>
-            <ScreenshotTextNote rows={rows} />
-          </CardFooter>
-        ) : null}
+        <CoverageNotes rows={rows} withScreenshotText={withScreenshotText} />
       </Card>
     </section>
   );
