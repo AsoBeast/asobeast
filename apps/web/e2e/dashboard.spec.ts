@@ -1,4 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
+import type { PortfolioHistory } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
 import {
   PORTFOLIO,
@@ -22,6 +23,23 @@ const appsTable = (page: Page) =>
 
 const chartLines = (page: Page) =>
   page.getByRole("list", { name: "Chart lines" }).getByRole("listitem");
+
+const rankBands = (page: Page) =>
+  page.getByRole("list", { name: "Rank bands" }).getByRole("listitem");
+
+const breakdown = (page: Page) =>
+  page.getByRole("region", { name: /^By (app|store)$/ });
+
+const boxOf = async (target: Locator) => {
+  const box = await target.boundingBox();
+  if (box === null) throw new Error("The element has no layout box");
+  return {
+    left: box.x,
+    right: box.x + box.width,
+    top: box.y,
+    bottom: box.y + box.height,
+  };
+};
 
 test("a fresh install invites an import instead of showing an empty dashboard", async ({
   page,
@@ -207,7 +225,7 @@ test("the summary tiles state the window they measure", async ({ page }) => {
     "Moved in 30 days",
     "Open actions",
   ]);
-  await expect(tiles.getByText(/^across \d+ apps$/)).toBeVisible();
+  await expect(tiles.getByText(/^weighted across \d+ apps$/)).toBeVisible();
   await expect(
     tiles.getByText(/^\d+ started ranking · \d+ dropped out$/),
   ).toBeVisible();
@@ -229,7 +247,9 @@ test("the visibility tile reads the portfolio figure and its change over the ran
     visibility.getByText(`+${Math.round(month)} 30d`, { exact: true }),
   ).toBeVisible();
   await expect(
-    visibility.getByText(`across ${CHECKED_APPS} apps`, { exact: true }),
+    visibility.getByText(`weighted across ${CHECKED_APPS} apps`, {
+      exact: true,
+    }),
   ).toBeVisible();
 });
 
@@ -246,6 +266,7 @@ test("one chart draws visibility across the apps against the previous period", a
   await expect(chartLines(page)).toHaveText([
     "Last 30 days",
     "Previous 30 days",
+    "Listing change",
   ]);
   await expect(
     page.getByRole("main").locator('[data-slot="chart"]'),
@@ -269,9 +290,18 @@ test("a tile draws its own chart, writes the url and keeps the keyboard", async 
   await expect(top10).toBeFocused();
   await expect(
     page.getByRole("region", {
-      name: "Keywords in the top 10 over the last 30 days",
+      name: "Keywords by rank across your apps over the last 30 days",
     }),
   ).toBeVisible();
+  await expect(rankBands(page)).toHaveText([
+    "#1",
+    "#2–3",
+    "#4–10",
+    "#11–50",
+    "#51+",
+    "Unranked",
+    "Listing change",
+  ]);
 
   await tile(page, "Moved in 30 days").click();
   await expect(page).toHaveURL(/[?&]metric=moved/);
@@ -319,6 +349,7 @@ test("the range beside import app redraws the chart for the chosen days", async 
   await expect(chartLines(page)).toHaveText([
     "Last 90 days",
     "Previous 90 days",
+    "Listing change",
   ]);
   await expect(
     page.getByRole("region", {
@@ -336,10 +367,10 @@ test("the range beside import app redraws the chart for the chosen days", async 
   expect(portfolioRangeDeltasOf(90).visibility).not.toBe(
     portfolioRangeDeltasOf(30).visibility,
   );
-  await expect(page.getByRole("main")).toContainText("In the last 90 days");
   await expect(page.getByRole("main")).toContainText(
-    "Largest position changes in the last 90 days",
+    "Over the last 90 days visibility is",
   );
+  await expect(breakdown(page)).toContainText("Sorted by change over 90 days");
 
   await page.reload();
   await expect(chartLines(page).first()).toHaveText("Last 90 days");
@@ -354,10 +385,10 @@ test("a link with a metric and a range opens that chart", async ({ page }) => {
   );
   await expect(
     page.getByRole("region", {
-      name: "Keywords in the top 10 over the last 7 days",
+      name: "Keywords by rank across your apps over the last 7 days",
     }),
   ).toBeVisible();
-  await expect(chartLines(page)).toHaveText(["Last 7 days", "Previous 7 days"]);
+  await expect(rankBands(page).first()).toHaveText("#1");
 });
 
 test("the chart marks today as still checking while the daily run is in progress", async ({
@@ -376,7 +407,288 @@ test("the chart marks today as still checking while the daily run is in progress
     "Last 30 days",
     "Still checking",
     "Previous 30 days",
+    "Listing change",
   ]);
+});
+
+test("the sentence under the title reads the last run first, then the range", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  const month = Math.round(portfolioRangeDeltasOf(30).visibility);
+  await expect(page.getByRole("main").locator("p").first()).toHaveText(
+    `In the last run 2 keywords climbed and 1 fell. Over the last 30 days visibility is up ${month}.`,
+  );
+});
+
+test("the sentence reads the range alone until a run can be compared with the day before", async ({
+  page,
+}) => {
+  await page.context().addCookies([
+    {
+      name: "portfolio_insights_fresh",
+      value: "1",
+      url: "http://localhost:3000",
+    },
+  ]);
+  await page.goto("/");
+
+  await expect(page.getByRole("main").locator("p").first()).toHaveText(
+    "Movement appears after 30 days of daily runs.",
+  );
+});
+
+test("the list beside the chart breaks the figure down by app and follows the tab", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+
+  const list = breakdown(page);
+  await expect(
+    list.getByRole("heading", { name: "By app", level: 2 }),
+  ).toBeVisible();
+  const rows = list.getByRole("listitem");
+  await expect(rows).toHaveCount(CHECKED_APPS);
+  await expect(rows.first().getByRole("button")).toHaveAccessibleName(
+    "Focus Timer App Store · US, 62 now, +10 30d",
+  );
+  await expect(rows.first().getByRole("button")).toHaveText(
+    /^Focus TimerApp Store · US62\+10 30d$/,
+  );
+  await expect(rows.last().getByRole("button")).toHaveAccessibleName(
+    "Habit Tracker App Store · US, 10 now, no 30d data",
+  );
+  await expect(list).toContainText("Sorted by change over 30 days");
+
+  const chart = await boxOf(page.locator('[data-slot="chart"]'));
+  const beside = await boxOf(list);
+  expect(beside.left).toBeGreaterThanOrEqual(chart.right);
+  expect(beside.top).toBeLessThan(chart.bottom);
+
+  await (await hydrated(tile(page, "Moved in 30 days"))).click();
+  await expect(rows.first().getByRole("button")).toHaveAccessibleName(
+    "Focus Timer App Store · US, 3 climbing, 1 falling",
+  );
+  await expect(list).toContainText("Sorted by keywords moved in 30 days");
+
+  await tile(page, "Open actions").click();
+  await expect(rows.first().getByRole("button")).toHaveAccessibleName(
+    "Focus Timer App Store · US, 5 open, 1 critical",
+  );
+  await expect(list).toContainText("Sorted by priority");
+});
+
+test("pressing an app draws the chart for it alone and the chip returns to every app", async ({
+  page,
+}) => {
+  const asked: Array<string | null> = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname.endsWith("/portfolio/history")) {
+      asked.push(url.searchParams.get("appId"));
+    }
+  });
+  await page.goto("/");
+
+  const row = breakdown(page).getByRole("button", {
+    name: /^Focus Timer App Store · DE/,
+  });
+  await (await hydrated(row)).focus();
+  await page.keyboard.press("Enter");
+
+  await expect(page).toHaveURL(/[?&]scope=app-1-de/);
+  await expect(row).toHaveAttribute("aria-pressed", "true");
+  await expect(row).toBeFocused();
+  await expect(
+    page.getByRole("region", {
+      name: "Visibility of Focus Timer (DE) over the last 30 days",
+    }),
+  ).toBeVisible();
+  expect(asked).toContain("app-1-de");
+  await expect(breakdown(page).getByRole("listitem")).toHaveCount(CHECKED_APPS);
+  await expect(tile(page, "Visibility")).toContainText(
+    String(Math.round(PORTFOLIO_VISIBILITY.current)),
+  );
+
+  await page.reload();
+  await expect(row).toHaveAttribute("aria-pressed", "true");
+
+  const chip = page.getByRole("button", {
+    name: "Focus Timer (DE), show every app",
+  });
+  await (await hydrated(chip)).click();
+  await expect(page).not.toHaveURL(/scope=/);
+  await expect(chip).toHaveCount(0);
+  await expect(row).toBeFocused();
+  await expect(row).toHaveAttribute("aria-pressed", "false");
+  await expect(
+    page.getByRole("region", {
+      name: "Visibility across your apps over the last 30 days",
+    }),
+  ).toBeVisible();
+});
+
+test("the breakdown pools each store and a store scopes the chart", async ({
+  page,
+}) => {
+  const asked: Array<string | null> = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname.endsWith("/portfolio/history")) {
+      asked.push(url.searchParams.get("store"));
+    }
+  });
+  await page.goto("/?scope=app-1-de");
+
+  const list = breakdown(page);
+  const stores = list.getByRole("tab", { name: "Stores" });
+  await (await hydrated(stores)).click();
+
+  await expect(page).toHaveURL(/[?&]by=store/);
+  await expect(page).not.toHaveURL(/scope=/);
+  await expect(stores).toBeFocused();
+  await expect(
+    list.getByRole("heading", { name: "By store", level: 2 }),
+  ).toBeVisible();
+  await expect(list.getByRole("listitem")).toHaveText([
+    /^Google Play1 app/,
+    /^App Store3 apps/,
+  ]);
+
+  await list.getByRole("button", { name: /^Google Play/ }).click();
+  await expect(page).toHaveURL(/[?&]scope=GOOGLE_PLAY/);
+  await expect(
+    page.getByRole("region", {
+      name: "Visibility of Google Play over the last 30 days",
+    }),
+  ).toBeVisible();
+  expect(asked).toContain("GOOGLE_PLAY");
+});
+
+test("releasing a scoped app beyond the cut hands focus to the link to the table", async ({
+  page,
+}) => {
+  await page
+    .context()
+    .addCookies([
+      { name: "portfolio_many", value: "1", url: "http://localhost:3000" },
+    ]);
+  await page.goto("/");
+
+  const list = breakdown(page);
+  const rows = list.getByRole("listitem");
+  const more = list.getByRole("link", { name: /more below$/ });
+  await expect(rows).toHaveCount(6);
+  await expect(more).toBeVisible();
+
+  const { apps } = (await page.request
+    .get("/api/backend/portfolio/history?days=30")
+    .then((response) => response.json())) as PortfolioHistory;
+  const shown = await rows
+    .getByRole("button")
+    .evaluateAll((buttons) => buttons.map((button) => button.id));
+  const cut = (apps ?? []).find(
+    ({ appId }) => !shown.includes(`breakdown-${appId}`),
+  );
+  expect(cut).toBeDefined();
+
+  for (const release of ["row", "chip"] as const) {
+    await page.goto(`/?scope=${cut?.appId}`);
+    await expect(rows).toHaveCount(7);
+    const control =
+      release === "row"
+        ? list.getByRole("button", { pressed: true })
+        : page.getByRole("button", { name: /, show every app$/ });
+    await (await hydrated(control)).focus();
+    await page.keyboard.press("Enter");
+
+    await expect(page).not.toHaveURL(/scope=/);
+    await expect(rows).toHaveCount(6);
+    await expect(more).toBeFocused();
+  }
+});
+
+test("one checked app draws its chart without a breakdown list", async ({
+  page,
+}) => {
+  await page.route("**/api/backend/portfolio/history**", async (route) => {
+    const response = await route.fetch();
+    const history = (await response.json()) as PortfolioHistory;
+    await route.fulfill({
+      response,
+      json: { ...history, apps: history.apps?.slice(0, 1) },
+    });
+  });
+  await page.goto("/");
+  await expect(breakdown(page)).toBeVisible();
+
+  const range = await hydrated(
+    page.getByRole("combobox", { name: "Dashboard range, Last 30 days" }),
+  );
+  await range.click();
+  await page.getByRole("option", { name: "Last 7 days" }).click();
+
+  await expect(
+    page.getByRole("region", {
+      name: "Visibility across your apps over the last 7 days",
+    }),
+  ).toBeVisible();
+  await expect(breakdown(page)).toHaveCount(0);
+});
+
+test("a scope that names no app is ignored", async ({ page }) => {
+  await page.goto("/?scope=app-elsewhere");
+
+  await expect(
+    page.getByRole("region", {
+      name: "Visibility across your apps over the last 30 days",
+    }),
+  ).toBeVisible();
+  await expect(
+    breakdown(page).getByRole("button", { pressed: true }),
+  ).toHaveCount(0);
+});
+
+test("the chart marks the days a listing changed and its tooltip names the apps that moved", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+
+  const chart = page.getByRole("region", {
+    name: "Visibility across your apps over the last 30 days",
+  });
+  await expect(chart.locator(".recharts-reference-line")).toHaveCount(2);
+
+  const plot = await boxOf(chart.locator(".recharts-cartesian-grid"));
+  const dayWidth = (plot.right - plot.left) / 29;
+  await page.mouse.move(
+    plot.right - 5 * dayWidth,
+    (plot.top + plot.bottom) / 2,
+  );
+
+  const tooltip = chart.getByRole("tooltip");
+  await expect(tooltip).toContainText("Largest moves that day");
+  await expect(tooltip).toContainText("Focus Timer (US) · Title changed");
+
+  await page.goto("/?range=7");
+  await expect(
+    page
+      .getByRole("region", {
+        name: "Visibility across your apps over the last 7 days",
+      })
+      .locator(".recharts-reference-line"),
+  ).toHaveCount(1);
+});
+
+test("the moved chart says its bars count daily moves", async ({ page }) => {
+  await page.goto("/?metric=moved");
+
+  await expect(page.getByRole("main")).toContainText(
+    "A keyword that moves on several days counts on each. The tile compares the first and the last day.",
+  );
 });
 
 test("the open actions tile says so when no action set has been generated", async ({

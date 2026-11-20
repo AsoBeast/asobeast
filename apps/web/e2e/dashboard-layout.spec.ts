@@ -69,6 +69,7 @@ test("the dashboard outline reads in visual order on a phone", async ({
   await page.goto("/");
   await expect(mainHeadings(page)).toHaveText([
     "Dashboard",
+    "By app",
     "Keyword movers",
     "Do next",
     "Apps",
@@ -199,7 +200,7 @@ test("the apps heading stays put when the insights stream in", async ({
   context,
 }) => {
   const release = await holdInsights(context);
-  await page.goto("/", { waitUntil: "commit" });
+  await page.goto("/?span=range", { waitUntil: "commit" });
 
   const actions = cardOf(page, "Do next");
   const heading = page.getByRole("heading", { name: "Apps", level: 2 });
@@ -447,10 +448,17 @@ for (const { view, path, toolbar } of [
       at(/^Keywords in top 10 /),
       at(/^Moved in 30 days /),
       at(/^Open actions /),
-      at(/^All$/),
-      at(/^focus timer .*Focus Timer US/),
+      at(/^Apps$/),
+      at(/^Focus Timer App Store · US, /),
+      at(/^Movers period, Last run$/),
+      at(/^All 3$/),
+      at(/^focus timer US · Focus Timer /),
       at(/^Critical .* Focus Timer · App Store · US$/i),
       at(/^Open the Action Center$/),
+      names.findIndex(
+        (name, index) =>
+          index > at(/^Open the Action Center$/) && /^All \d+$/.test(name),
+      ),
       ...toolbar.map(at),
       at(/^Focus Timer$/),
       names.lastIndexOf("All"),

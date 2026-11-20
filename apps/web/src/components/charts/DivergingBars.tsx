@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import {
   Bar,
   BarChart,
@@ -41,7 +42,11 @@ export interface DivergingSubject {
 
 export type DivergingDetails = (row: DivergingRow) => SeriesTooltipItem[];
 
+export type DivergingNotes = (date: string) => ReactNode;
+
 const NO_DETAILS: DivergingDetails = () => [];
+
+const NO_NOTES: DivergingNotes = () => null;
 
 function DivergingTooltip({
   active,
@@ -49,12 +54,14 @@ function DivergingTooltip({
   trend,
   subject,
   details,
+  notes,
 }: {
   active?: boolean;
   label?: string | number;
   trend: DivergingTrend;
   subject: DivergingSubject;
   details: DivergingDetails;
+  notes: DivergingNotes;
 }) {
   if (!active || label === undefined) return null;
   const row = trend.rows.find((candidate) => candidate.date === label);
@@ -86,7 +93,9 @@ function DivergingTooltip({
           : []
       }
       footer={
-        row.checked ? null : (
+        row.checked ? (
+          notes(row.date)
+        ) : (
           <span className="text-muted-foreground">Not checked</span>
         )
       }
@@ -120,10 +129,12 @@ export function DivergingBars({
   trend,
   subject,
   details = NO_DETAILS,
+  notes = NO_NOTES,
 }: {
   trend: DivergingTrend;
   subject: DivergingSubject;
   details?: DivergingDetails;
+  notes?: DivergingNotes;
 }) {
   const height = CHART_HEIGHT.tall;
   const state = trendState(trend.checked);
@@ -173,6 +184,7 @@ export function DivergingBars({
               trend={trend}
               subject={subject}
               details={details}
+              notes={notes}
             />
           }
         />

@@ -173,8 +173,6 @@ import {
   HEALTH,
   RUN_STATUS,
   EMPTY_PORTFOLIO_VISIBILITY,
-  portfolioHistoryOf,
-  portfolioRangeDeltasOf,
   RUN_STATUS_DELAYED,
   RUN_STATUS_RUNNING,
   STORE_HEALTH_BROKEN,
@@ -246,9 +244,9 @@ import {
   PRICED_REFRESHES,
   manualKeyword,
 } from "./fixtures.mts";
+import { portfolioHistoryFor } from "./portfolio-history.mts";
 import {
   EMPTY_PORTFOLIO_INSIGHTS,
-  rangeChangeOf,
   FRESH_PORTFOLIO_INSIGHTS,
   MANY_PORTFOLIO_INSIGHTS,
   PORTFOLIO_INSIGHTS,
@@ -3580,13 +3578,20 @@ const routes: Route[] = [
       if (days === undefined) {
         return json(res, 400, errorEnvelope(400, path));
       }
-      const change = rangeChangeOf(
+      const query = new URL(path, "http://localhost").searchParams;
+      const store = STORES.find((each) => each === query.get("store"));
+      if (query.has("store") && store === undefined) {
+        return json(res, 400, errorEnvelope(400, path));
+      }
+      const listed = hasCookie(req, "portfolio_many", "1")
+        ? [...portfolioApps, ...MANY_PORTFOLIO_APPS]
+        : portfolioApps;
+      const history: PortfolioHistory = portfolioHistoryFor(
+        days,
+        hasCookie(req, "portfolio_empty", "1") ? [] : listed,
         insightsFor(req),
-        portfolioRangeDeltasOf(days),
+        { appId: query.get("appId") ?? undefined, store },
       );
-      const history: PortfolioHistory = hasCookie(req, "portfolio_empty", "1")
-        ? { days, points: [], previous: [], change }
-        : { ...portfolioHistoryOf(days), change };
       const token = cookieValue(req, INSIGHTS_HOLD_COOKIE);
       if (!token) return json(res, 200, history);
       void insightsHold(token).promise.then(() => json(res, 200, history));

@@ -6,6 +6,7 @@ import type { PortfolioAppInsight, PortfolioGroup } from "@asobeast/shared";
 import { useQueryStates } from "nuqs";
 import { ColumnMenu } from "@/components/data-table/ColumnMenu";
 import { FilteredEmpty } from "@/components/data-table/FilteredEmpty";
+import { storeLabel } from "@/lib/format";
 import { portfolioInsightsOptions, portfolioOptions } from "@/lib/queries";
 import { appListParsers } from "@/lib/search-params";
 import { isWideOnlyColumn } from "@/lib/table/column-visibility";
@@ -25,6 +26,7 @@ import {
   toRows,
   type PortfolioRow,
 } from "./portfolio-rows";
+import { useRangeHistory } from "./use-range-history";
 import {
   APPS_HEADING_ID,
   APPS_PANEL,
@@ -37,11 +39,13 @@ function AppsBody({
   rows,
   groups,
   insights,
+  days,
 }: {
   table: ReturnType<typeof usePortfolioTable> | null;
   rows: PortfolioRow[];
   groups: PortfolioGroup[];
   insights: ReadonlyMap<string, PortfolioAppInsight>;
+  days: number;
 }) {
   if (table === null) {
     return <PortfolioGrid rows={rows} groups={groups} insights={insights} />;
@@ -49,7 +53,9 @@ function AppsBody({
   return (
     <>
       <PortfolioTable table={table} />
-      <p className={PANEL_FOOTER}>Trend is visibility over the last 30 days</p>
+      <p className={PANEL_FOOTER}>
+        {`Trend, ${days}d and Moved cover the last ${days} days, the range chosen above. The bar beside In top 10 splits every keyword by rank.`}
+      </p>
     </>
   );
 }
@@ -57,15 +63,28 @@ function AppsBody({
 export function AppsDashboard() {
   const { data } = useSuspenseQuery(portfolioOptions);
   const { data: insights } = useSuspenseQuery(portfolioInsightsOptions);
-  const [{ q, sort, dir, view }, setList] = useQueryStates(appListParsers);
+  const { days, history } = useRangeHistory();
+  const [{ q, sort, dir, view, store }, setList] =
+    useQueryStates(appListParsers);
   const query = useDeferredValue(q);
 
   const insightById = new Map(
     insights.apps.map((insight) => [insight.appId, insight]),
   );
-  const tableRows = data.apps
+  const rangeById = new Map(
+    (history.apps ?? []).map((range) => [range.appId, range]),
+  );
+  const listed = data.apps.filter(
+    (app) => store === null || app.store === store,
+  );
+  const tableRows = listed
     .filter((app) => matchesQuery(app, query))
-    .map((app) => ({ app, insight: insightById.get(app.id) }));
+    .map((app) => ({
+      app,
+      insight: insightById.get(app.id),
+      range: rangeById.get(app.id),
+      days,
+    }));
   const table = usePortfolioTable(tableRows);
   const [section, narrow] = useNarrowerThan(WIDE_COLUMNS_FROM_REM);
   const phone = useIsMobile();
@@ -77,7 +96,7 @@ export function AppsDashboard() {
         !(dropsWideColumns && isWideOnlyColumn(column.columnDef.meta)),
     );
   const cardRows = sortRows(
-    filterRows(toRows(data.apps), query),
+    filterRows(toRows(listed), query),
     { sort, dir },
     insightById,
   );
@@ -104,8 +123,12 @@ export function AppsDashboard() {
       </div>
       {empty ? (
         <FilteredEmpty
-          title={`No apps match "${q}"`}
-          onClear={() => void setList({ q: null })}
+          title={
+            q === "" && store !== null
+              ? `No ${storeLabel(store)} apps`
+              : `No apps match "${q}"`
+          }
+          onClear={() => void setList({ q: null, store: null })}
         />
       ) : (
         <AppsBody
@@ -113,6 +136,7 @@ export function AppsDashboard() {
           rows={cardRows}
           groups={data.groups}
           insights={insightById}
+          days={days}
         />
       )}
     </section>

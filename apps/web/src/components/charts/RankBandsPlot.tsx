@@ -42,12 +42,14 @@ const chartConfig = Object.fromEntries(
 export function RankBandsPlot({
   points,
   label,
+  ticks,
   markers = [],
   edge = false,
   tooltip = <ChartTooltipContent {...TIME_TOOLTIP_PROPS} />,
 }: {
   points: RankDistributionPoint[];
   label: string;
+  ticks?: string[];
   markers?: readonly string[];
   edge?: boolean;
   tooltip?: ReactElement;
@@ -61,7 +63,7 @@ export function RankBandsPlot({
     >
       <ComposedChart accessibilityLayer data={points} margin={CHART_MARGIN}>
         <CartesianGrid {...GRID_PROPS} />
-        <XAxis {...TIME_AXIS_PROPS} />
+        <XAxis {...TIME_AXIS_PROPS} ticks={ticks} />
         <YAxis {...VALUE_AXIS_PROPS} allowDecimals={false} />
         <ChartTooltip content={tooltip} />
         {PLOTTED_BANDS.map((band) => (
