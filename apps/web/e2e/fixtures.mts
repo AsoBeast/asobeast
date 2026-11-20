@@ -4209,11 +4209,15 @@ export function portfolioHistoryOf(
   };
 }
 
-export function portfolioRangeDeltasOf(days: PortfolioHistoryDays): {
+export const portfolioRangeDeltasOf = (
+  days: PortfolioHistoryDays,
+): { visibility: number; top10: number } =>
+  rangeDeltasOf(portfolioHistoryOf(days).points);
+
+export function rangeDeltasOf(points: PortfolioHistoryPoint[]): {
   visibility: number;
   top10: number;
 } {
-  const { points } = portfolioHistoryOf(days);
   const first = points[0];
   const last = points[points.length - 1];
   return {

@@ -16,6 +16,7 @@ import {
 import {
   portfolioHistoryOf,
   portfolioRangeDeltasOf,
+  rangeDeltasOf,
   utcDaysAgo,
 } from "./fixtures.mts";
 import { insightsWithin, rangeChangeOf } from "./portfolio-insights.mts";
@@ -192,15 +193,7 @@ export function portfolioHistoryFor(
 
   return {
     ...pooled,
-    change: rangeChangeOf(
-      selected,
-      whole
-        ? portfolioRangeDeltasOf(days)
-        : {
-            visibility: together.visibilityDelta ?? 0,
-            top10: together.top10Delta ?? 0,
-          },
-    ),
+    change: rangeChangeOf(selected, rangeDeltasOf(pooled.points)),
     bands: bandsOf(pooled.points),
     apps,
     stores: STORES.flatMap((store) => {
