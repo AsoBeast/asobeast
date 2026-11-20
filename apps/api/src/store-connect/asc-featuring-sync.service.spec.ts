@@ -287,7 +287,17 @@ describe('AscFeaturingSync.run', () => {
     });
   });
 
-  it('rethrows a rate limit instead of storing a partial read', async () => {
+  it('rethrows a rate limit of the version read without storing', async () => {
+    const { service, upsert, updateMany } = build({
+      responses: [failure(429, 'RATE_LIMIT_EXCEEDED')],
+    });
+
+    await expect(service.run()).rejects.toThrow(AscRateLimitedError);
+    expect(upsert).not.toHaveBeenCalled();
+    expect(updateMany).not.toHaveBeenCalled();
+  });
+
+  it('stores the promotional text before rethrowing a rate limit of the nominations', async () => {
     const { service, upsert } = build({
       responses: [
         versions(),
@@ -297,7 +307,12 @@ describe('AscFeaturingSync.run', () => {
     });
 
     await expect(service.run()).rejects.toThrow(AscRateLimitedError);
-    expect(upsert).not.toHaveBeenCalled();
+    expect(upsertCalls(upsert)[0].update).toMatchObject({
+      promoFilled: 1,
+      promoTotal: 1,
+      promoError: null,
+      nominationsError: 'RATE_LIMIT_EXCEEDED detail',
+    });
   });
 
   it('records the skip on the stored row of an app that turned invisible', async () => {

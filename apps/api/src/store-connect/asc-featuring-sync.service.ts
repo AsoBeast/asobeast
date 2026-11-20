@@ -162,7 +162,18 @@ export class AscFeaturingSync {
       version.kind === 'live'
         ? await this.promoOf(api, version.id)
         : { kind: 'skipped', message: FIELD_SYNC_NO_LIVE_VERSION };
-    const nominations = await this.nominationsOf(api, app.storeAppId);
+    let nominations: NominationsRead;
+    try {
+      nominations = await this.nominationsOf(api, app.storeAppId);
+    } catch (error) {
+      if (error instanceof AscRateLimitedError) {
+        await this.record(app, promo, {
+          kind: 'skipped',
+          message: messageOf(error),
+        });
+      }
+      throw error;
+    }
     await this.record(app, promo, nominations);
     return {
       nominations: nominations.kind === 'ok' ? 1 : 0,
