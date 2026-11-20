@@ -18,7 +18,7 @@ import {
   portfolioRangeDeltasOf,
   utcDaysAgo,
 } from "./fixtures.mts";
-import { rangeChangeOf } from "./portfolio-insights.mts";
+import { insightsWithin, rangeChangeOf } from "./portfolio-insights.mts";
 
 const NO_MOVEMENT: PortfolioMovement = { up: 0, down: 0, entered: 0, lost: 0 };
 
@@ -100,22 +100,35 @@ function appHistoryOf({
   };
 }
 
+type PartFigure = (part: PortfolioPartChange) => number | null;
+
+const sumOf = (parts: PortfolioPartChange[], pick: PartFigure): number =>
+  parts.reduce((total, part) => total + (pick(part) ?? 0), 0);
+
+const meanOf = (parts: PortfolioPartChange[], pick: PartFigure): number =>
+  Math.round((sumOf(parts, pick) / parts.length) * 10) / 10;
+
+function comparedSum(parts: PortfolioPartChange[], pick: PartFigure) {
+  const compared = parts.filter((part) => pick(part) !== null);
+  return compared.length === 0 ? null : sumOf(compared, pick);
+}
+
+function comparedMean(parts: PortfolioPartChange[], pick: PartFigure) {
+  const compared = parts.filter((part) => pick(part) !== null);
+  return compared.length === 0 ? null : meanOf(compared, pick);
+}
+
 function pooledPart(parts: PortfolioPartChange[]): PortfolioPartChange {
-  const sum = (pick: (part: PortfolioPartChange) => number | null) =>
-    parts.reduce((total, part) => total + (pick(part) ?? 0), 0);
   return {
-    visibility:
-      Math.round((sum((part) => part.visibility) / parts.length) * 10) / 10,
-    visibilityDelta:
-      Math.round((sum((part) => part.visibilityDelta) / parts.length) * 10) /
-      10,
-    top10: sum((part) => part.top10),
-    top10Delta: sum((part) => part.top10Delta),
+    visibility: meanOf(parts, (part) => part.visibility),
+    visibilityDelta: comparedMean(parts, (part) => part.visibilityDelta),
+    top10: sumOf(parts, (part) => part.top10),
+    top10Delta: comparedSum(parts, (part) => part.top10Delta),
     movement: {
-      up: sum((part) => part.movement.up),
-      down: sum((part) => part.movement.down),
-      entered: sum((part) => part.movement.entered),
-      lost: sum((part) => part.movement.lost),
+      up: sumOf(parts, (part) => part.movement.up),
+      down: sumOf(parts, (part) => part.movement.down),
+      entered: sumOf(parts, (part) => part.movement.entered),
+      lost: sumOf(parts, (part) => part.movement.lost),
     },
   };
 }
@@ -147,14 +160,17 @@ export function portfolioHistoryFor(
       (scope.appId === undefined || app.id === scope.appId) &&
       (scope.store === undefined || app.store === scope.store),
   );
+  const whole = scope.appId === undefined && scope.store === undefined;
+  const ids = new Set(charted.map((app) => app.id));
+  const selected = whole ? insights : insightsWithin(insights, ids);
   const insightOf = (app: PortfolioApp) =>
-    insights.apps.find((insight) => insight.appId === app.id);
-  const change = rangeChangeOf(insights, portfolioRangeDeltasOf(days));
+    selected.apps.find((insight) => insight.appId === app.id);
   if (charted.length === 0) {
+    const change = rangeChangeOf(selected, portfolioRangeDeltasOf(days));
     return { days, points: [], previous: [], change };
   }
 
-  const lastRun = lastRunOf(insights);
+  const lastRun = lastRunOf(selected);
   const apps = charted.map((app, index) =>
     appHistoryOf({
       app,
@@ -164,20 +180,27 @@ export function portfolioHistoryFor(
       busiest: index === 0,
     }),
   );
-  const whole = scope.appId === undefined && scope.store === undefined;
+  const together = pooledPart(apps.map((each) => each.change));
   const pooled = whole
     ? portfolioHistoryOf(days)
     : portfolioHistoryOf(days, {
-        visibility: pooledPart(apps.map((each) => each.change)).visibility,
-        top10: pooledPart(apps.map((each) => each.change)).top10,
+        visibility: together.visibility,
+        top10: together.top10,
         span: spanOf(charted[0], days),
       });
   const first = pooled.points[0].date;
-  const ids = new Set(charted.map((app) => app.id));
 
   return {
     ...pooled,
-    change,
+    change: rangeChangeOf(
+      selected,
+      whole
+        ? portfolioRangeDeltasOf(days)
+        : {
+            visibility: together.visibilityDelta ?? 0,
+            top10: together.top10Delta ?? 0,
+          },
+    ),
     bands: bandsOf(pooled.points),
     apps,
     stores: STORES.flatMap((store) => {
