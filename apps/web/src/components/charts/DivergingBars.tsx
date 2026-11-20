@@ -16,7 +16,11 @@ import {
 import { formatDayMonth, formatNumber } from "@/lib/format";
 import { ChartKey } from "./ChartKey";
 import { ChartNotice, trendState } from "./ChartStates";
-import type { DivergingRow, DivergingTrend } from "./diverging-trend";
+import {
+  fallen,
+  type DivergingRow,
+  type DivergingTrend,
+} from "./diverging-trend";
 import { SeriesTooltip, type SeriesTooltipItem } from "./SeriesTooltip";
 import {
   BAR_PROPS,
@@ -74,7 +78,7 @@ function DivergingTooltip({
                 index: 0,
                 color: subject.down.color,
                 label: subject.down.label,
-                value: formatNumber(-row.down),
+                value: formatNumber(fallen(row)),
                 sortBy: 1,
               },
               ...details(row),
