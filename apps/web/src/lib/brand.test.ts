@@ -9,6 +9,8 @@ const PUBLIC_ROOT = join(import.meta.dirname, "..", "..", "public");
 const PNG_SIGNATURE = "89504e470d0a1a0a";
 const LOWERCASE_NAME = /(?<![\w@/.[-])asobeast(?![\w:\]-]|\.\w)/;
 const CLI_SERVER_ARGUMENT = /\bmcp add(?:-json)?\b/;
+const OPEN_COMPOUND_MODIFIER =
+  /\bself\s+hosted\b|\bopen\s+source\b(?!\s*(?:[;:,.!?"'`)]|$))/i;
 
 function sourceFiles(): string[] {
   return readdirSync(SOURCE_ROOT, { recursive: true, withFileTypes: true })
@@ -21,23 +23,41 @@ function sourceFiles(): string[] {
     .map((entry) => join(entry.parentPath, entry.name));
 }
 
-function lowercaseMentions(file: string): string[] {
+function linesWhere(
+  file: string,
+  matches: (line: string) => boolean,
+): string[] {
   return readFileSync(file, "utf8")
     .split("\n")
     .flatMap((line, index) =>
-      LOWERCASE_NAME.test(line) && !CLI_SERVER_ARGUMENT.test(line)
-        ? [`${relative(SOURCE_ROOT, file)}:${index + 1}`]
-        : [],
+      matches(line) ? [`${relative(SOURCE_ROOT, file)}:${index + 1}`] : [],
     );
 }
 
+function lowercaseMentions(file: string): string[] {
+  return linesWhere(
+    file,
+    (line) => LOWERCASE_NAME.test(line) && !CLI_SERVER_ARGUMENT.test(line),
+  );
+}
+
+function openCompoundModifiers(file: string): string[] {
+  return linesWhere(file, (line) => OPEN_COMPOUND_MODIFIER.test(line));
+}
+
 describe("product name", () => {
+  const files = sourceFiles();
+
   it("is AsoBeast", () => {
     expect(PRODUCT_NAME).toBe("AsoBeast");
   });
 
   it("is never written in lowercase in interface text", () => {
-    expect(sourceFiles().flatMap(lowercaseMentions)).toEqual([]);
+    expect(files.flatMap(lowercaseMentions)).toEqual([]);
+  });
+
+  it("hyphenates self-hosted always and open-source unless it ends a clause", () => {
+    expect(files.flatMap(openCompoundModifiers)).toEqual([]);
   });
 });
 

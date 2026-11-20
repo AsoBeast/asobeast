@@ -152,10 +152,10 @@ test("the sidebar describes asobeast without a deployment", async ({
   await expect(
     nav.getByText(/ASO toolkit for the App Store and Google Play/),
   ).toBeVisible();
-  await expect(nav.getByText(/self hosted/i)).toHaveCount(0);
+  await expect(nav.getByText(/self[ -]hosted/i)).toHaveCount(0);
   await expect(page.locator('meta[name="description"]')).not.toHaveAttribute(
     "content",
-    /self hosted/i,
+    /self[ -]hosted/i,
   );
 });
 

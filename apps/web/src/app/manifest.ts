@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: PRODUCT_NAME,
     short_name: PRODUCT_NAME,
-    description: "Open source App Store Optimization toolkit",
+    description: "Open-source App Store Optimization toolkit",
     start_url: "/",
     display: "standalone",
     background_color: "#07171e",
