@@ -205,7 +205,11 @@ export class AscFeaturingSync {
         await this.record(connection, app, promo, {
           kind: 'skipped',
           message: messageOf(error),
-        }).catch(() => undefined);
+        }).catch((persistError: unknown) => {
+          this.logger.warn(
+            `the skipped featuring read of app ${app.id} waits for the next sync: ${messageOf(persistError)}`,
+          );
+        });
       }
       throw error;
     }
