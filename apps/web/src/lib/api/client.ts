@@ -139,6 +139,8 @@ export interface RangeParams {
 
 export interface RankingParams extends RangeParams {
   keywordIds?: string[];
+  country?: string;
+  includePaused?: boolean;
 }
 
 export function withQuery(path: string, params: URLSearchParams): string {

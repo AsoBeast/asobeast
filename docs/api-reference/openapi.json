@@ -4011,6 +4011,27 @@
             }
           },
           {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "description": "Only the tracked keywords of this storefront. Omitted means every market the app tracks.",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "us",
+              "type": "string"
+            }
+          },
+          {
+            "name": "includePaused",
+            "required": false,
+            "in": "query",
+            "description": "Also return the paused keywords. Ignored when keywordIds is given.",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          {
             "name": "from",
             "required": false,
             "in": "query",

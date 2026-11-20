@@ -30,6 +30,7 @@ import {
   PlayAcquisitionsCell,
   PositionCell,
   TrendCell,
+  TrendHeading,
 } from "./keyword-cells";
 import {
   keywordColumnHelper as columnHelper,
@@ -52,6 +53,14 @@ import {
   popularityFooter,
   positionFooter,
 } from "./KeywordTotalsFooters";
+import {
+  DEFAULT_TREND_WINDOW,
+  trendDelta,
+  trendLabel,
+  type TrendSeries,
+  type TrendState,
+  type TrendWindow,
+} from "@/lib/trend-window";
 import { DerivedScoreCell, ScoreCell } from "./score-cells";
 import { scoreValue, shownScore } from "@/lib/keyword-scores";
 import {
@@ -69,6 +78,12 @@ import {
   type PositionBand,
 } from "@/lib/table/facets";
 import { nullsLast } from "@/lib/table/sorting";
+
+export interface TrendView {
+  window: TrendWindow;
+  series: TrendSeries | undefined;
+  state?: TrendState;
+}
 
 export const SELECT_ALL_KEYWORDS = "Select all keywords";
 
@@ -96,6 +111,7 @@ export function keywordColumns({
   homeCountry,
   multiMarket,
   today,
+  trend,
   onOpenSerp,
 }: {
   appId: string;
@@ -103,13 +119,14 @@ export function keywordColumns({
   homeCountry: string;
   multiMarket: boolean;
   today: string;
+  trend: TrendView;
   onOpenSerp: (keywordId: string) => void;
 }) {
   return columnHelper.columns([
     ...identityColumns(),
     positionColumn(today),
     changeColumn(today),
-    deltaColumn(today, { appId, store, homeCountry, multiMarket }),
+    deltaColumn(today, trend, { appId, store, homeCountry, multiMarket }),
     ...scoreColumns(),
     insightsColumn(today, multiMarket),
     ...(store === "GOOGLE_PLAY" ? [acquisitionsColumn()] : []),
@@ -236,20 +253,45 @@ function changeColumn(today: string) {
   );
 }
 
-function deltaColumn(today: string, history: PositionHistoryContext) {
+function deltaColumn(
+  today: string,
+  { window: trendWindow, series, state = "ready" }: TrendView,
+  history: PositionHistoryContext,
+) {
+  const label = trendLabel(trendWindow);
+  const deltaOf = (row: TrackedKeywordItem) =>
+    trendDelta(row, trendWindow, series);
   return columnHelper.accessor(
-    (row) => (row.positionDelta7d === null ? undefined : -row.positionDelta7d),
+    (row) => {
+      const delta = deltaOf(row);
+      return delta === null ? undefined : -delta;
+    },
     {
       id: "delta7d",
-      meta: { label: "Last 7 days" },
+      meta: { label },
       ...SORTABLE,
       sortDescFirst: true,
       header: ({ column }) => (
-        <SortableHeader column={column} label="Last 7 days" />
+        <SortableHeader
+          column={column}
+          aria-label={label}
+          label={<TrendHeading trendWindow={trendWindow} />}
+        />
       ),
-      footer: movedFooter,
+      footer: ({ table }) =>
+        movedFooter(
+          { table },
+          trendWindow === DEFAULT_TREND_WINDOW ? undefined : { deltaOf, state },
+        ),
       cell: ({ row }) => (
-        <TrendCell keyword={row.original} today={today} history={history} />
+        <TrendCell
+          keyword={row.original}
+          today={today}
+          history={history}
+          trendWindow={trendWindow}
+          series={series}
+          state={state}
+        />
       ),
     },
   );

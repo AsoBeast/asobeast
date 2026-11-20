@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import {
   utcDayOf,
@@ -14,7 +14,17 @@ import {
   keywordCountriesOptions,
   keywordsOptions,
 } from "@/lib/queries";
-import { keywordFilterParsers, keywordViewParser } from "@/lib/search-params";
+import {
+  keywordFilterParsers,
+  keywordViewParser,
+  trendWindowParser,
+} from "@/lib/search-params";
+import {
+  TREND_WINDOWS,
+  trendLabel,
+  type TrendSeries,
+  type TrendState,
+} from "@/lib/trend-window";
 import { FUNNEL_SERIES_DAYS, noSearchTermsFact } from "@/lib/funnel";
 import { HIDDEN_KEYWORD_COLUMNS, keywordColumns } from "./keyword-columns";
 import { exactSearchEmptyBody, keywordSearchFilter } from "./keyword-filters";
@@ -27,6 +37,7 @@ import { useShowDynamics } from "./KeywordDynamicsPanel";
 import { KeywordsEmptyState } from "./KeywordsEmptyState";
 import { KeywordsDataTable } from "./KeywordsDataTable";
 import { KeywordsFilterBar } from "./KeywordsFilterBar";
+import { InlineQueryError } from "@/components/layout/InlineQueryError";
 import {
   ChartedKeywordsContext,
   KeywordSheetContext,
@@ -44,6 +55,7 @@ import { useClearedSelectionFocus } from "./use-keywords-table-focus";
 import { useSerpParams } from "./serp/use-serp-params";
 import { useKeywordColumnFilters } from "./use-zone-thresholds";
 import { useKeywordsTableControls } from "./use-keywords-table-controls";
+import { useTrendSeries } from "./use-trend-series";
 import { KeywordMap } from "./map/KeywordMap";
 import { filtersNarrowMap } from "./map/map-points";
 import { useKeywordsAcrossZones } from "./map/use-map-keywords";
@@ -97,22 +109,47 @@ export function KeywordsTable({
     [keywords, selection],
   );
 
-  const columns = useMemo(
-    () =>
+  const [trendWindow, setTrendWindow] = useQueryState(
+    "trend",
+    trendWindowParser,
+  );
+  const openSerp = useCallback(
+    (keywordId: string) =>
+      void setSerpState({ serp: keywordId, serpDate: null }),
+    [setSerpState],
+  );
+  const buildColumns = useCallback(
+    (series: TrendSeries | undefined, state: TrendState = "ready") =>
       keywordColumns({
         appId: id,
         store,
         homeCountry,
         multiMarket,
         today,
-        onOpenSerp: (keywordId) =>
-          void setSerpState({ serp: keywordId, serpDate: null }),
+        trend: { window: trendWindow, series, state },
+        onOpenSerp: openSerp,
       }),
-    [id, store, homeCountry, multiMarket, setSerpState, today],
+    [id, store, homeCountry, multiMarket, today, trendWindow, openSerp],
   );
+  const shellColumns = useMemo(() => buildColumns(undefined), [buildColumns]);
 
   const { sorting, onSortingChange, visibility, setVisibility, marks } =
-    useKeywordsTableControls({ store, columns });
+    useKeywordsTableControls({ store, columns: shellColumns });
+  const {
+    series,
+    state,
+    read: trendRead,
+  } = useTrendSeries({
+    appId: id,
+    country,
+    today,
+    trendWindow,
+    columnShown: keywords.length > 0 && visibility.delta7d !== false,
+  });
+  const columns = useMemo(
+    () => buildColumns(series, state),
+    [buildColumns, series, state],
+  );
   const columnFilters = useKeywordColumnFilters(filters);
 
   const table = useTable({
@@ -170,7 +207,26 @@ export function KeywordsTable({
           setFilters={setFilters}
           today={today}
           viewOptions={[marks]}
+          viewChoices={[
+            {
+              id: "trend",
+              label: "Trend window",
+              value: trendWindow,
+              onValueChange: (value) =>
+                void setTrendWindow(trendWindowParser.parse(value)),
+              options: TREND_WINDOWS.map((value) => ({
+                value,
+                label: trendLabel(value),
+              })),
+            },
+          ]}
         />
+        {state === "failed" ? (
+          <InlineQueryError
+            message="Could not load the 30 day trend."
+            read={trendRead}
+          />
+        ) : null}
         {view === "map" ? (
           <KeywordMap
             keywords={mapKeywords}

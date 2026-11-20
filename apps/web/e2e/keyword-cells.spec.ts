@@ -224,6 +224,14 @@ test.describe("the listing marks choice", () => {
     });
     await expect(choice).toBeVisible();
     await page.keyboard.press("End");
+    await expect(
+      page.getByRole("menuitemradio", { name: "Last 30 days" }),
+    ).toBeFocused();
+    await page.keyboard.press("ArrowUp");
+    await expect(
+      page.getByRole("menuitemradio", { name: "Last 7 days" }),
+    ).toBeFocused();
+    await page.keyboard.press("ArrowUp");
     await expect(choice).toBeFocused();
     await page.keyboard.press("Space");
 

@@ -3,6 +3,7 @@ import type { TrackedKeywordItem } from "@asobeast/shared";
 import { formatNumber, pluralize } from "@/lib/format";
 import { keywordMoves } from "@/lib/keyword-day-change";
 import { keywordTotals, type KeywordTotals } from "@/lib/keyword-totals";
+import { TREND_STATE_TEXT, type TrendState } from "@/lib/trend-window";
 import type { KeywordTableFeatures } from "./keyword-table-features";
 
 type KeywordTable = Table<KeywordTableFeatures, TrackedKeywordItem>;
@@ -86,12 +87,37 @@ export function dayChangeFooter({ table }: FooterContext, today: string) {
   );
 }
 
-export function movedFooter({ table }: FooterContext) {
-  const { movedUp7d, movedDown7d } = totalsOf(table);
+function movesOver(
+  table: KeywordTable,
+  deltaOf: (keyword: TrackedKeywordItem) => number | null,
+) {
+  const deltas = table
+    .getRowModel()
+    .rows.map((row) => deltaOf(row.original))
+    .filter((delta): delta is number => delta !== null);
+  return {
+    up: deltas.filter((delta) => delta < 0).length,
+    down: deltas.filter((delta) => delta > 0).length,
+  };
+}
+
+export function movedFooter(
+  { table }: FooterContext,
+  trend?: {
+    deltaOf: (keyword: TrackedKeywordItem) => number | null;
+    state: TrendState;
+  },
+) {
+  if (trend && trend.state !== "ready") {
+    return <Missing label={TREND_STATE_TEXT[trend.state]} />;
+  }
+  const { up, down } = trend
+    ? movesOver(table, trend.deltaOf)
+    : { up: totalsOf(table).movedUp7d, down: totalsOf(table).movedDown7d };
   return (
     <Figures
-      lead={`${formatNumber(movedUp7d)} up`}
-      detail={`${formatNumber(movedDown7d)} down`}
+      lead={`${formatNumber(up)} up`}
+      detail={`${formatNumber(down)} down`}
     />
   );
 }

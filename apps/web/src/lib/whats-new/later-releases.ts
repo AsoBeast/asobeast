@@ -178,6 +178,11 @@ export const LATER_RELEASES: readonly Release[] = [
         title: "Similar apps in the store's own order",
         text: "Competitor suggestions for an App Store app now come from the store's You Might Also Like section, in the order the store shows it, instead of opening with the developer's other apps. Keyword suggestions from similar apps improve the same way.",
       },
+      {
+        kind: "improved",
+        title: "Thirty days on the keywords trend",
+        text: "The trend column of the keywords table can now show the last 30 days instead of the last 7. Open Columns and pick the window; the line, the change beside it and the sort follow, and the choice stays in the page address. A day with no ranked check now leaves a gap in the line instead of a slope, and a row with too few ranked checks says so in words.",
+      },
     ],
   },
   {

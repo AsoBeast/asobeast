@@ -8,6 +8,8 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -29,12 +31,22 @@ export interface ViewOption {
   description?: ReactNode;
 }
 
+export interface ViewChoice {
+  id: string;
+  label: string;
+  value: string;
+  onValueChange: (value: string) => void;
+  options: readonly { value: string; label: string }[];
+}
+
 export function ColumnMenu({
   columns,
   options = [],
+  choices = [],
 }: {
   columns: readonly HideableColumn[];
   options?: readonly ViewOption[];
+  choices?: readonly ViewChoice[];
 }) {
   const hideable = columns.filter((column) => column.getCanHide());
 
@@ -81,6 +93,22 @@ export function ColumnMenu({
             ))}
           </>
         ) : null}
+        {choices.map((choice) => (
+          <Fragment key={choice.id}>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>{choice.label}</DropdownMenuLabel>
+            <DropdownMenuRadioGroup
+              value={choice.value}
+              onValueChange={choice.onValueChange}
+            >
+              {choice.options.map((option) => (
+                <DropdownMenuRadioItem key={option.value} value={option.value}>
+                  {option.label}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </Fragment>
+        ))}
       </DropdownMenuContent>
     </DropdownMenu>
   );

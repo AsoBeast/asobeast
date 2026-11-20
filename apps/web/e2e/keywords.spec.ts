@@ -12,6 +12,7 @@ import { seedCookies } from "./routes.mts";
 import {
   APP_GP_NO_TERMS_ID,
   PL_HISTORY_COOKIE,
+  RANKINGS_FAIL_COOKIE,
   utcDaysAgo,
 } from "./fixtures.mts";
 import { formatDayMonth } from "../src/lib/format";
@@ -1259,23 +1260,52 @@ test("the narrowest table shows a sort arrow only on the sorted column", async (
   await expect(header("Opportunity")).toBeHidden();
 });
 
-for (const width of [1280, 1366, 1440]) {
-  test(`the default columns fit the table frame at ${width} px`, async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width, height: 800 });
-    await page.goto("/apps/app-1/keywords");
-    const frame = page
-      .getByRole("table", { name: /Tracked keywords/ })
-      .locator("xpath=..");
-    await expect(frame).toBeVisible();
+const frameOverflow = async (page: Page): Promise<number> => {
+  const frame = page
+    .getByRole("table", { name: /Tracked keywords/ })
+    .locator("xpath=..");
+  await expect(frame).toBeVisible();
+  return frame.evaluate((node) => node.scrollWidth - node.clientWidth);
+};
 
-    const overflow = await frame.evaluate(
-      (node) => node.scrollWidth - node.clientWidth,
-    );
-    expect(overflow).toBeLessThanOrEqual(0);
-  });
+const TREND_FITS = [
+  { days: 7, path: "/apps/app-1/keywords" },
+  { days: 30, path: "/apps/app-1/keywords?trend=30d" },
+] as const;
+
+for (const width of [1280, 1366, 1440]) {
+  for (const { days, path } of TREND_FITS) {
+    test(`the default columns fit the table frame at ${width} px with the ${days} day trend`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto(path);
+      await expect(
+        page
+          .getByRole("row", { name: /pomodoro/ })
+          .getByLabel(`down 6 over ${days} days`),
+      ).toBeAttached();
+
+      expect(await frameOverflow(page)).toBeLessThanOrEqual(0);
+    });
+  }
 }
+
+test("a failed 30 day read keeps the narrowest table inside its frame", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { [RANKINGS_FAIL_COOKIE]: "1" });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/apps/app-1/keywords?trend=30d");
+
+  await expect(
+    page.getByRole("row", { name: /pomodoro/ }).getByText("Not loaded"),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator("tfoot").getByText("Not loaded")).toBeAttached();
+
+  expect(await frameOverflow(page)).toBeLessThanOrEqual(0);
+});
 
 test("the pinned columns leave the source column visible, keep the row menu in reach and share the row tint", async ({
   page,
@@ -1570,4 +1600,146 @@ test("keeps focus in the search field after clearing it from the keyboard", asyn
 
   await expect(search).toHaveValue("");
   await expect(search).toBeFocused();
+});
+
+const rankingsRequests = (page: Page): string[] => {
+  const urls: string[] = [];
+  page.on("request", (request) => {
+    if (
+      new URL(request.url()).pathname === "/api/backend/apps/app-1/rankings"
+    ) {
+      urls.push(request.url());
+    }
+  });
+  return urls;
+};
+
+async function chooseTrendWindow(page: Page, label: string): Promise<void> {
+  await page.getByRole("button", { name: "Columns" }).click();
+  await page.getByRole("menuitemradio", { name: label }).click();
+}
+
+test("the trend column reads 7 days without asking for a series", async ({
+  page,
+}) => {
+  const requests = rankingsRequests(page);
+  await page.goto("/apps/app-1/keywords");
+
+  const row = page.getByRole("row", { name: /pomodoro/ });
+  await expect(
+    page.getByRole("button", { name: "Last 7 days", exact: true }),
+  ).toBeVisible();
+  await expect(row.getByLabel("down 6 over 7 days")).toBeAttached();
+  await page.waitForLoadState("networkidle");
+
+  expect(requests).toEqual([]);
+});
+
+test("the trend column switches to 30 days through the URL", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1700, height: 900 });
+  const requests = rankingsRequests(page);
+  await page.goto("/apps/app-1/keywords");
+  await hydrated(page.getByRole("button", { name: "Columns" }));
+
+  await chooseTrendWindow(page, "Last 30 days");
+
+  await expect(page).toHaveURL(/trend=30d/);
+  await expect(
+    page.getByRole("button", { name: "Last 30 days", exact: true }),
+  ).toBeVisible();
+  const row = page.getByRole("row", { name: /focus timer/ });
+  await expect(row.getByLabel("up 7 over 30 days")).toBeAttached();
+  await expect(
+    row.getByRole("img", {
+      name: "Position over the last 30 days, from 10 to 3",
+    }),
+  ).toBeAttached();
+  expect(requests).toHaveLength(1);
+  const params = new URL(requests[0]).searchParams;
+  expect(params.get("country")).toBe("us");
+  expect(params.get("includePaused")).toBe("true");
+  expect(params.get("from")).toBe(utcDaysAgo(29));
+  expect(params.get("to")).toBe(utcDaysAgo(0));
+  await expect(
+    page
+      .getByRole("row", { name: /time blocking/ })
+      .getByRole("img", { name: /Position over the last 30 days/ }),
+  ).toBeAttached();
+
+  await page.getByRole("button", { name: "Last 30 days", exact: true }).click();
+  await expect(page).toHaveURL(/sort=delta7d/);
+
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Last 30 days", exact: true }),
+  ).toBeVisible();
+});
+
+test("a row with too few ranked checks says so in text", async ({ page }) => {
+  await page.setViewportSize({ width: 1700, height: 900 });
+  await page.goto("/apps/app-1/keywords?trend=30d");
+
+  const unranked = page.getByRole("row", { name: /productivity app/ });
+  const notice = unranked.getByText("Not enough checks");
+
+  await expect(notice).toBeVisible();
+  await expect(unranked.locator('[data-slot="position-trend"]')).toHaveCount(0);
+  expect(
+    await notice.evaluate((node) => node.scrollWidth - node.clientWidth),
+  ).toBeLessThanOrEqual(0);
+});
+
+test("a market without keywords asks for no series on the 30 day window", async ({
+  page,
+}) => {
+  const requests = rankingsRequests(page);
+  await page.goto("/apps/app-1/keywords?country=gb&trend=30d");
+
+  await expect(page.getByText(/No keywords tracked/i).first()).toBeVisible();
+  await page.waitForLoadState("networkidle");
+
+  expect(requests).toEqual([]);
+});
+
+test("a hidden trend column asks for no series on the 30 day window", async ({
+  page,
+}) => {
+  await page.addInitScript(() =>
+    window.localStorage.setItem(
+      "asobeast.columns.keywords",
+      JSON.stringify({ delta7d: false }),
+    ),
+  );
+  const requests = rankingsRequests(page);
+  await page.goto("/apps/app-1/keywords?trend=30d");
+
+  await expect(page.getByRole("row", { name: /pomodoro/ })).toBeVisible();
+  await page.waitForLoadState("networkidle");
+
+  expect(requests).toEqual([]);
+});
+
+test("a failed 30 day read says so and retries", async ({ page, context }) => {
+  await seedCookies(context, { [RANKINGS_FAIL_COOKIE]: "1" });
+  await page.goto("/apps/app-1/keywords?trend=30d");
+
+  await expect(
+    page
+      .getByRole("alert")
+      .filter({ hasText: "Could not load the 30 day trend." }),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(
+    page.getByRole("row", { name: /pomodoro/ }).getByText("Not loaded"),
+  ).toBeVisible();
+
+  await context.clearCookies({ name: RANKINGS_FAIL_COOKIE });
+  await page.getByRole("button", { name: "Retry" }).click();
+  await expect(page.getByText("Could not load the 30 day trend.")).toBeHidden();
+  await expect(
+    page
+      .getByRole("row", { name: /pomodoro/ })
+      .getByLabel("down 6 over 30 days"),
+  ).toBeAttached();
 });

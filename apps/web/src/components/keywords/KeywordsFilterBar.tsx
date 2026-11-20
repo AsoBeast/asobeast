@@ -6,6 +6,7 @@ import type { Table } from "@tanstack/react-table";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import {
   ColumnMenu,
+  type ViewChoice,
   type ViewOption,
 } from "@/components/data-table/ColumnMenu";
 import { FilterChips } from "@/components/data-table/FilterChips";
@@ -32,6 +33,7 @@ export function KeywordsFilterBar({
   setFilters,
   today,
   viewOptions,
+  viewChoices,
 }: {
   appId: string;
   table: Table<KeywordTableFeatures, TrackedKeywordItem>;
@@ -39,6 +41,7 @@ export function KeywordsFilterBar({
   setFilters: SetValues<typeof keywordFilterParsers>;
   today: string;
   viewOptions: readonly ViewOption[];
+  viewChoices: readonly ViewChoice[];
 }) {
   const shown = table.getRowModel().rows;
   const everyKeyword = table
@@ -92,6 +95,7 @@ export function KeywordsFilterBar({
           <ColumnMenu
             columns={table.getAllLeafColumns()}
             options={viewOptions}
+            choices={viewChoices}
           />
           <ExportCsvButton
             subject="keywords"

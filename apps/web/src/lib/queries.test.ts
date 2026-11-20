@@ -833,8 +833,19 @@ describe("invalidation sets", () => {
       appKeys.marketSuggestions(APP),
       appKeys.firstRun(APP),
       appKeys.keywordDiscoveriesRoot(APP),
+      appKeys.rankingsRoot(APP),
       workspaceChecklistKey,
     ]);
+  });
+
+  it("keys every rankings read under the app's rankings root", () => {
+    const key = rankingsOptions(APP, {
+      country: "gb",
+      includePaused: true,
+    }).queryKey;
+
+    expect(isPrefixOf(appKeys.rankingsRoot(APP), key)).toBe(true);
+    expect(isPrefixOf(appKeys.detail(APP), key)).toBe(true);
   });
 
   it("keys the keyword discoveries per market under the app and their root", () => {
@@ -874,6 +885,7 @@ describe("invalidation sets", () => {
       appKeys.marketSuggestions(APP),
       appKeys.firstRun(APP),
       appKeys.keywordDiscoveriesRoot(APP),
+      appKeys.rankingsRoot(APP),
       workspaceChecklistKey,
       appKeys.listingMarkets(APP),
       budgetKey,
@@ -896,6 +908,7 @@ describe("invalidation sets", () => {
       appKeys.marketSuggestions(APP),
       appKeys.firstRun(APP),
       appKeys.keywordDiscoveriesRoot(APP),
+      appKeys.rankingsRoot(APP),
       workspaceChecklistKey,
       appKeys.metadataAuditRoot(APP),
     ]);
@@ -917,6 +930,7 @@ describe("invalidation sets", () => {
       appKeys.marketSuggestions(APP),
       appKeys.firstRun(APP),
       appKeys.keywordDiscoveriesRoot(APP),
+      appKeys.rankingsRoot(APP),
       workspaceChecklistKey,
       appKeys.metadataAuditRoot(APP),
       accountPlanKey,
@@ -939,6 +953,7 @@ describe("invalidation sets", () => {
       appKeys.marketSuggestions(APP),
       appKeys.firstRun(APP),
       appKeys.keywordDiscoveriesRoot(APP),
+      appKeys.rankingsRoot(APP),
       workspaceChecklistKey,
       appKeys.importPreviewRoot(APP),
     ]);

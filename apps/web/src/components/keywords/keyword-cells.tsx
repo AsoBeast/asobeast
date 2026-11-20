@@ -28,6 +28,18 @@ import {
 } from "./PositionHistoryPopover";
 import { KeywordClassTag } from "./KeywordClassTag";
 import { PositionTrend } from "./PositionTrend";
+import {
+  DEFAULT_TREND_WINDOW,
+  TREND_STATE_TEXT,
+  trendChecks,
+  trendDelta,
+  trendFrame,
+  trendPeriod,
+  trendSpan,
+  type TrendSeries,
+  type TrendState,
+  type TrendWindow,
+} from "@/lib/trend-window";
 import { StaleCheckMark } from "./StaleCheckMark";
 
 function volatilityBand(value: number): { label: string; text: string } {
@@ -101,29 +113,55 @@ export function PositionCell({
   );
 }
 
+export function TrendHeading({ trendWindow }: { trendWindow: TrendWindow }) {
+  const prefixClass =
+    trendWindow === DEFAULT_TREND_WINDOW ? undefined : "keywords-tight:hidden";
+  return (
+    <span>
+      <span className={prefixClass}>Last </span>
+      <span>{trendSpan(trendWindow)}</span>
+    </span>
+  );
+}
+
 export function TrendCell({
   keyword,
   today,
   history,
+  trendWindow,
+  series,
+  state = "ready",
 }: {
   keyword: TrackedKeywordItem;
   today: string;
   history: PositionHistoryContext;
+  trendWindow: TrendWindow;
+  series: TrendSeries | undefined;
+  state?: TrendState;
 }) {
   const label = formatCheckedPosition(
     keyword.latestPosition,
     keyword.latestDepth,
   );
-  const trend = (
-    <>
-      <PositionTrend checks={keyword.recentPositions} />
-      <DeltaChip
-        value={keyword.positionDelta7d}
-        period="over 7 days"
-        className={keyword.active ? undefined : "text-muted-foreground"}
-      />
-    </>
-  );
+  const trend =
+    state !== "ready" ? (
+      <span className="shrink-0 whitespace-nowrap text-caption text-muted-foreground">
+        {TREND_STATE_TEXT[state]}
+      </span>
+    ) : (
+      <>
+        <PositionTrend
+          checks={trendChecks(keyword, trendWindow, series)}
+          frame={trendFrame(trendWindow, today)}
+          checked={label !== null}
+        />
+        <DeltaChip
+          value={trendDelta(keyword, trendWindow, series)}
+          period={trendPeriod(trendWindow)}
+          className={keyword.active ? undefined : "text-muted-foreground"}
+        />
+      </>
+    );
   if (label === null) {
     return <span className="inline-flex items-center gap-2">{trend}</span>;
   }

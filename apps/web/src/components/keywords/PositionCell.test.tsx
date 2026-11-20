@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { formatDate } from "@/lib/format";
-import { PositionCell, TrendCell } from "./keyword-cells";
+import type { TrendSeries, TrendState, TrendWindow } from "@/lib/trend-window";
+import { PositionCell, TrendCell, TrendHeading } from "./keyword-cells";
 
 const TODAY = "2026-10-22";
 
@@ -47,12 +48,21 @@ const render = (row: TrackedKeywordItem) =>
     </TooltipProvider>,
   );
 
-const renderTrend = (row: TrackedKeywordItem, multiMarket = false) =>
+const renderTrend = (
+  row: TrackedKeywordItem,
+  multiMarket = false,
+  trendWindow: TrendWindow = "7d",
+  series?: TrendSeries,
+  state?: TrendState,
+) =>
   renderToStaticMarkup(
     <TrendCell
       keyword={row}
       today={TODAY}
       history={{ ...HISTORY, multiMarket }}
+      trendWindow={trendWindow}
+      series={series}
+      state={state}
     />,
   );
 
@@ -141,6 +151,156 @@ describe("PositionCell", () => {
         `id="${described}"[^>]*>.*Position over the last 7 days, from 10 to 7.*up 3 over 7 days`,
       ),
     );
+  });
+
+  it("W-POS-30 draws the 30 day window and names its delta", () => {
+    const series: TrendSeries = new Map([
+      [
+        "kw-1",
+        [
+          { date: "2026-09-23", position: 30, depth: 200 },
+          { date: "2026-10-01", position: 20, depth: 200 },
+          { date: "2026-10-21", position: 12, depth: 200 },
+          { date: "2026-10-22", position: 10, depth: 200 },
+        ],
+      ],
+    ]);
+
+    const markup = renderTrend(
+      keyword({ positionDelta7d: -1 }),
+      false,
+      "30d",
+      series,
+    );
+
+    expect(markup).toContain("Position over the last 30 days, from 30 to 10");
+    expect(markup).toContain('aria-label="up 20 over 30 days"');
+  });
+
+  it("W-POS-31 says so when the window has too few ranked checks", () => {
+    const series: TrendSeries = new Map([
+      ["kw-1", [{ date: "2026-10-22", position: 10, depth: 200 }]],
+    ]);
+
+    const markup = renderTrend(keyword({}), false, "30d", series);
+
+    expect(markup).toContain("Not enough checks");
+    expect(markup).not.toContain('data-slot="position-trend"');
+  });
+
+  it("W-POS-32 says Loading, not no change, while the 30 day series is pending", () => {
+    const markup = renderTrend(
+      keyword({ positionDelta7d: 0 }),
+      false,
+      "30d",
+      undefined,
+      "pending",
+    );
+
+    expect(markup).toContain("Loading");
+    expect(markup).not.toContain("Not enough checks");
+    expect(markup).not.toContain('data-slot="position-trend"');
+    expect(markup).not.toContain("—");
+  });
+
+  it("W-POS-33 says Not loaded when the 30 day series failed", () => {
+    const markup = renderTrend(keyword({}), false, "30d", undefined, "failed");
+
+    expect(markup).toContain("Not loaded");
+    expect(markup).not.toContain("Not enough checks");
+  });
+
+  it("W-POS-34 draws a paused row's 30 day line from its series", () => {
+    const series: TrendSeries = new Map([
+      [
+        "kw-1",
+        [
+          { date: "2026-10-18", position: 20, depth: 200 },
+          { date: "2026-10-19", position: 18, depth: 200 },
+          { date: "2026-10-20", position: 15, depth: 200 },
+        ],
+      ],
+    ]);
+    const markup = renderTrend(
+      keyword({ active: false, keywordId: "kw-1" }),
+      false,
+      "30d",
+      series,
+    );
+
+    expect(markup).toContain('data-slot="position-trend"');
+    expect(markup).toContain("text-muted-foreground");
+  });
+
+  it("W-POS-35 ends a paused row's 30 day line on its last check, not on today", () => {
+    const series: TrendSeries = new Map([
+      [
+        "kw-1",
+        [
+          { date: "2026-10-01", position: 20, depth: 200 },
+          { date: "2026-10-02", position: 15, depth: 200 },
+        ],
+      ],
+    ]);
+
+    const markup = renderTrend(
+      keyword({ active: false, positionDelta7d: null }),
+      false,
+      "30d",
+      series,
+    );
+
+    expect(markup).toContain('cx="23.5"');
+    expect(markup).toContain('aria-label="up 5 over 30 days"');
+  });
+
+  it("W-POS-36 says Not enough checks for a checked row with no check in the 30 days", () => {
+    const series: TrendSeries = new Map([["kw-1", []]]);
+
+    const markup = renderTrend(
+      keyword({ active: false }),
+      false,
+      "30d",
+      series,
+    );
+
+    expect(markup).toContain("Not enough checks");
+    expect(markup).not.toContain('data-slot="position-trend"');
+  });
+
+  it("W-POS-37 leaves a never checked row empty in the 30 day window", () => {
+    const series: TrendSeries = new Map([["kw-1", []]]);
+
+    const markup = renderTrend(
+      keyword({
+        latestPosition: null,
+        latestDepth: null,
+        latestCheckedOn: null,
+        recentPositions: [],
+      }),
+      false,
+      "30d",
+      series,
+    );
+
+    expect(markup).not.toContain("Not enough checks");
+  });
+
+  it("W-POS-38 keeps the pending text to its own width so narrow tables do not grow", () => {
+    const markup = renderTrend(keyword({}), false, "30d", undefined, "pending");
+
+    expect(markup).toContain("Loading");
+    expect(markup).not.toContain("width:72px");
+  });
+
+  it("W-POS-39 drops Last from the 30 day heading only on a narrow table", () => {
+    const thirty = renderToStaticMarkup(<TrendHeading trendWindow="30d" />);
+    const seven = renderToStaticMarkup(<TrendHeading trendWindow="7d" />);
+
+    expect(thirty).toBe(
+      '<span><span class="keywords-tight:hidden">Last </span><span>30 days</span></span>',
+    );
+    expect(seven).toBe("<span><span>Last </span><span>7 days</span></span>");
   });
 
   it("W-POS-08 names the market when the app tracks several", () => {

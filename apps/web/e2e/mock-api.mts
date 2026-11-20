@@ -1092,9 +1092,11 @@ function rankingsIn(
   const ids = query.get("keywordIds")?.split(",").filter(Boolean) ?? [];
   const from = query.get("from");
   const to = query.get("to");
+  const country = query.get("country");
   return {
     series: rankings.series
       .filter((item) => ids.length === 0 || ids.includes(item.keywordId))
+      .filter((item) => !country || item.country === country)
       .map((item) => ({
         ...item,
         points: item.points.filter(

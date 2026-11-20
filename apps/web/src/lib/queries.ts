@@ -193,8 +193,9 @@ export const appKeys = {
     [...appKeys.detail(id), "compare", { onlyGaps }] as const,
   keywordBreakdown: (id: string, keywordId: string) =>
     [...appKeys.compareRoot(id), "breakdown", keywordId] as const,
+  rankingsRoot: (id: string) => [...appKeys.detail(id), "rankings"] as const,
   rankings: (id: string, params: RankingParams) =>
-    [...appKeys.detail(id), "rankings", params] as const,
+    [...appKeys.rankingsRoot(id), params] as const,
   serpMoversRoot: (id: string) =>
     [...appKeys.detail(id), "serp-movers"] as const,
   serpMovers: (id: string, days: number, country: string | null) =>
@@ -1268,6 +1269,7 @@ export function invalidateKeywordMutation(
   void client.invalidateQueries({
     queryKey: appKeys.keywordDiscoveriesRoot(id),
   });
+  void client.invalidateQueries({ queryKey: appKeys.rankingsRoot(id) });
   invalidateWorkspaceChecklist(client);
 }
 
