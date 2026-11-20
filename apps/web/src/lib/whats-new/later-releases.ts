@@ -21,7 +21,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "new",
         title: "The audit reads nominations and promotional text",
-        text: "When App Store Connect is connected, the featuring readiness panel answers two more rows: whether a featuring nomination is submitted ahead of its publish window, and how many of your localizations carry promotional text. Where the connection cannot read them, the rows say so instead of guessing.",
+        text: "When App Store Connect is connected, the featuring readiness panel answers two more rows: whether a featuring nomination is submitted ahead of its publish window, and how many of your localizations carry promotional text. Where the connection cannot read them, has not refreshed them in a few days, or has lost the app, the rows say so instead of guessing.",
       },
       {
         kind: "fixed",
