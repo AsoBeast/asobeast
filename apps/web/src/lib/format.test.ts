@@ -11,6 +11,7 @@ import {
   formatMeasure,
   formatMeasureFixed,
   formatMeasurePair,
+  roundAsShown,
   formatNumber,
   formatPrice,
   formatUsd,
@@ -68,6 +69,27 @@ describe("formatMeasurePair", () => {
     [1200.25, 980, ["1,200.3", "980.0"]],
   ] as const)("writes %s and %s with one precision", (before, after, pair) => {
     expect(formatMeasurePair(before, after)).toEqual(pair);
+  });
+});
+
+describe("roundAsShown", () => {
+  it.each([
+    [1.15, 1, 1.2],
+    [-1.15, 1, -1.2],
+    [2.55, 1, 2.6],
+    [-0.04, 1, -0],
+    [1234.56, 1, 1234.6],
+    [7.5, 0, 8],
+  ])("rounds %s to %s digits as %s", (value, digits, rounded) => {
+    expect(roundAsShown(value, digits)).toBe(rounded);
+  });
+
+  it("agrees with the fixed formatter", () => {
+    for (const value of [1.15, -1.15, 2.55, -2.55, 0.15, -0.05, 20.04]) {
+      expect(roundAsShown(value, 1).toFixed(1)).toBe(
+        formatMeasureFixed(value).replace(",", ""),
+      );
+    }
   });
 });
 

@@ -1,4 +1,5 @@
 import { ArrowDown, ArrowUp, Minus } from "lucide-react";
+import { roundAsShown } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export type DeltaPolarity = "higher-is-better" | "lower-is-better";
@@ -34,9 +35,6 @@ const formOf = (way: Direction, form: DeltaForm) =>
 
 const slotOf = (form: DeltaForm) =>
   form === "pill" ? "delta-pill" : undefined;
-
-const roundTo = (value: number, digits: number): number =>
-  Number(value.toFixed(digits));
 
 function direction(value: number, polarity: DeltaPolarity): Direction {
   if (value === 0) return "flat";
@@ -80,7 +78,7 @@ export function DeltaChip({
   if (value === null) {
     return <span className="text-muted-foreground">—</span>;
   }
-  const rounded = digits === undefined ? value : roundTo(value, digits);
+  const rounded = digits === undefined ? value : roundAsShown(value, digits);
   const written = (amount: number) =>
     digits === undefined ? String(amount) : amount.toFixed(digits);
   if (rounded === 0) {
@@ -174,7 +172,7 @@ export function TrendChip({
     );
   }
 
-  const rounded = roundTo(value, digits);
+  const rounded = roundAsShown(value, digits);
   const way = direction(rounded, "higher-is-better");
   const Icon = GLYPH[way];
   const shown = rounded.toFixed(digits);

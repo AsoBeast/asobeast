@@ -152,6 +152,24 @@ export function formatMeasureFixed(value: number): string {
   return fixedMeasureFormatter.format(value);
 }
 
+const roundingFormatters = new Map<number, Intl.NumberFormat>();
+
+function roundingFormatter(digits: number): Intl.NumberFormat {
+  const cached = roundingFormatters.get(digits);
+  if (cached) return cached;
+  const formatter = new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+    useGrouping: false,
+  });
+  roundingFormatters.set(digits, formatter);
+  return formatter;
+}
+
+export function roundAsShown(value: number, digits: number): number {
+  return Number(roundingFormatter(digits).format(value));
+}
+
 const isWholeMeasure = (value: number): boolean =>
   formatMeasureFixed(value).endsWith(".0");
 
