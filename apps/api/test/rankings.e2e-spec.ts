@@ -161,15 +161,60 @@ describe('RankingsController serp-movers (e2e)', () => {
       });
 
       const plain = await api.get(`/apps/${id}/rankings`).expect(200);
+      const withoutPaused = await api
+        .get(`/apps/${id}/rankings?includePaused=false`)
+        .expect(200);
       const withPaused = await api
         .get(`/apps/${id}/rankings?includePaused=true`)
         .expect(200);
       await api.get(`/apps/${id}/rankings?includePaused=yes`).expect(400);
 
       expect((plain.body as RankingSeries).series).toHaveLength(0);
+      expect((withoutPaused.body as RankingSeries).series).toHaveLength(0);
       expect(
         (withPaused.body as RankingSeries).series.map((e) => e.keywordId),
       ).toEqual([keyword.id]);
+    });
+
+    it('returns only the checks of a paused keyword inside the requested market window', async () => {
+      const id = await appId();
+      const keyword = await prisma.keyword.create({
+        data: { text: 'habit window', store: Store.APP_STORE, country: 'gb' },
+      });
+      await prisma.trackedKeyword.create({
+        data: {
+          appId: id,
+          keywordId: keyword.id,
+          source: 'MANUAL',
+          active: false,
+        },
+      });
+      for (const [daysAgo, position] of [
+        [40, 30],
+        [20, 12],
+      ]) {
+        await prisma.keywordRanking.create({
+          data: {
+            appId: id,
+            workspaceId: DEFAULT_WORKSPACE_ID,
+            keywordId: keyword.id,
+            date: utcMidnight(daysAgo),
+            position,
+          },
+        });
+      }
+      const from = utcMidnight(29).toISOString().slice(0, 10);
+      const to = utcMidnight(0).toISOString().slice(0, 10);
+
+      const response = await api
+        .get(
+          `/apps/${id}/rankings?from=${from}&to=${to}&country=gb&includePaused=true`,
+        )
+        .expect(200);
+
+      const { series } = response.body as RankingSeries;
+      expect(series.map((entry) => entry.keywordId)).toEqual([keyword.id]);
+      expect(series[0].points.map((point) => point.position)).toEqual([12]);
     });
 
     it('accepts a timestamp start with a date end', async () => {

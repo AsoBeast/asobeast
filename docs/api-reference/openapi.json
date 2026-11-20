@@ -4025,13 +4025,10 @@
             "name": "includePaused",
             "required": false,
             "in": "query",
-            "description": "Also return the paused keywords. Ignored when keywordIds is given. Defaults to false.",
+            "description": "Also return the paused keywords. Ignored when keywordIds is given.",
             "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
+              "default": false,
+              "type": "boolean"
             }
           },
           {

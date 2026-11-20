@@ -1,12 +1,13 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { COUNTRY_PATTERN } from '@asobeast/shared';
 import {
+  IsBoolean,
   IsISO8601,
-  IsIn,
   IsOptional,
   IsString,
   Matches,
 } from 'class-validator';
+import { BooleanQuery } from '../../common/validation/boolean-query.decorator';
 import { NotBefore } from '../../common/validation/not-before.decorator';
 
 export class RankingHistoryQueryDto {
@@ -34,11 +35,13 @@ export class RankingHistoryQueryDto {
   country?: string;
 
   @ApiPropertyOptional({
-    enum: ['true', 'false'],
+    type: Boolean,
+    default: false,
     description:
-      'Also return the paused keywords. Ignored when keywordIds is given. Defaults to false.',
+      'Also return the paused keywords. Ignored when keywordIds is given.',
   })
   @IsOptional()
-  @IsIn(['true', 'false'])
-  includePaused?: string;
+  @BooleanQuery()
+  @IsBoolean()
+  includePaused?: boolean;
 }

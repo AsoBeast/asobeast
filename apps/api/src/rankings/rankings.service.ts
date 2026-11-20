@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Store } from '@prisma/client';
+import { Prisma, Store } from '@prisma/client';
 import { KeywordScope, RankingSeries } from '@asobeast/shared';
 import { CollectionEligibility } from '../auth/collection-eligibility.service';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
@@ -267,11 +267,7 @@ export class RankingsService {
     const tracked = await this.prisma.trackedKeyword.findMany({
       where: {
         appId,
-        ...(requested
-          ? { keywordId: { in: requested } }
-          : query.includePaused === 'true'
-            ? {}
-            : { active: true }),
+        ...trackedScope(requested, query.includePaused),
         ...(query.country ? { keyword: { country: query.country } } : {}),
       },
       orderBy: { createdAt: 'asc' },
@@ -328,4 +324,12 @@ function groupByWorkspace(
     grouped.set(app.workspaceId, owned);
   }
   return grouped;
+}
+
+function trackedScope(
+  requested: string[] | undefined,
+  includePaused: boolean | undefined,
+): Prisma.TrackedKeywordWhereInput {
+  if (requested) return { keywordId: { in: requested } };
+  return includePaused ? {} : { active: true };
 }
