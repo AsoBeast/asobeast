@@ -14,6 +14,7 @@ import {
   DAY_MS,
   FeaturingReads,
 } from './audit-scoring';
+import { FEATURING_ROLE_NEEDED } from '../store-connect/asc-featuring-sync.service';
 import { PageAppEvent } from '../store-providers/app-store-page';
 
 const EVENTS_LINK: ReadinessLink = {
@@ -150,22 +151,27 @@ const leadTimeOf = (reads: FeaturingReads): number | null => {
   return days >= 1 ? days : null;
 };
 
+const windowEnded = (reads: FeaturingReads, now: Date): boolean =>
+  reads.publishEndDate !== null &&
+  reads.publishEndDate.getTime() <= now.getTime();
+
 const nominationsRow = (
   reads: FeaturingReads | null,
   factors: AuditFactorResult[],
+  now: Date,
 ): ReadinessItem => {
   if (reads === null) {
     return unmeasurable('nominations', NOMINATIONS_LABEL);
   }
-  if (reads.roleRefused || reads.nominationsError !== null) {
+  if (reads.nominationsError !== null) {
     return notMeasuredWith(
       'nominations',
       NOMINATIONS_LABEL,
-      reads.nominationsError,
+      reads.roleRefused ? FEATURING_ROLE_NEEDED : reads.nominationsError,
     );
   }
   const leadTime = leadTimeOf(reads);
-  if (reads.submittedNominations > 0) {
+  if (reads.submittedNominations > 0 && !windowEnded(reads, now)) {
     return {
       id: 'nominations',
       label: NOMINATIONS_LABEL,
@@ -250,7 +256,7 @@ export const buildReadiness = ({
     items: [
       reusedRow(PREVIEW_VIDEO_ROW, factors),
       eventsRow(extract, now),
-      nominationsRow(featuring, factors),
+      nominationsRow(featuring, factors, now),
       promotionalTextRow(featuring),
       ...REUSED_ROWS.map((row) => reusedRow(row, factors)),
     ],

@@ -236,7 +236,7 @@ export class AscFeaturingSync {
       nominations = await api.nominations(storeAppId, NOMINATION_STATES);
     } catch (error) {
       if (error instanceof AscForbiddenError) {
-        return { kind: 'refused', message: FEATURING_ROLE_NEEDED };
+        return { kind: 'refused', message: error.message };
       }
       if (error instanceof AscRateLimitedError) throw error;
       if (!(error instanceof AscError)) throw error;
@@ -280,16 +280,12 @@ export class AscFeaturingSync {
         : {}),
       nominationsError: nominationsErrorOf(nominations),
       promoError: promo.kind === 'ok' ? null : promo.message,
+      roleRefused: nominations.kind === 'refused',
       readAt: new Date(),
     };
     const updated = await this.prisma.featuringSync.updateMany({
       where: { appId: app.id },
-      data: {
-        ...base,
-        ...(nominations.kind === 'skipped'
-          ? {}
-          : { roleRefused: nominations.kind === 'refused' }),
-      },
+      data: base,
     });
     if (updated.count > 0) {
       return;
@@ -299,7 +295,6 @@ export class AscFeaturingSync {
         workspaceId,
         appId: app.id,
         ...base,
-        roleRefused: nominations.kind === 'refused',
       }),
     );
   }

@@ -3,10 +3,7 @@ import type { WorkspaceContext } from '../common/tenancy/workspace-context';
 import type { StoreConnectionService } from './store-connection.service';
 import { AscListingApi } from './asc-listing-api';
 import { AscRateLimitedError } from './asc-errors';
-import {
-  AscFeaturingSync,
-  FEATURING_ROLE_NEEDED,
-} from './asc-featuring-sync.service';
+import { AscFeaturingSync } from './asc-featuring-sync.service';
 import { FIELD_SYNC_UNSERVED_APP } from './asc-keyword-field-sync.service';
 import {
   ascFixture,
@@ -350,7 +347,7 @@ describe('AscFeaturingSync.run', () => {
     });
     expect(writesOf(updateMany)[0].data).toMatchObject({
       roleRefused: true,
-      nominationsError: FEATURING_ROLE_NEEDED,
+      nominationsError: 'NOT_AUTHORIZED detail',
       promoFilled: 1,
       promoTotal: 1,
       promoError: null,
