@@ -6,6 +6,7 @@ import {
   coversPhrase,
   KEYWORDS_UNLOCK,
   listingTargets,
+  priorityKeywords,
   quoteList,
   RubricCheck,
 } from '../audit-scoring';
@@ -21,7 +22,8 @@ export const captionKeywordsCheck = (
   texts: readonly string[],
   source: Extract<AuditCheckSource, 'ai' | 'keywords'>,
 ): RubricCheck => {
-  const priority = listingTargets(context.keywords);
+  const priority = priorityKeywords(context.keywords);
+  const targets = listingTargets(context.keywords);
   const hits = priority.filter((keyword) =>
     texts.some((text) => coversPhrase(text, keyword.text)),
   );
@@ -45,12 +47,15 @@ export const captionKeywordsCheck = (
         : source === 'ai'
           ? aiUnlock(context)
           : null,
-    advice: {
-      title: 'Use your keywords in screenshot captions',
-      fix: `Apple has reportedly read caption text for search since June 2025, though it has not confirmed it. No caption mentions ${quoteList(
-        priority.map((keyword) => keyword.text),
-        2,
-      )}.`,
-    },
+    advice:
+      targets.length === 0
+        ? null
+        : {
+            title: 'Use your keywords in screenshot captions',
+            fix: `Apple has reportedly read caption text for search since June 2025, though it has not confirmed it. No caption mentions ${quoteList(
+              targets.map((keyword) => keyword.text),
+              2,
+            )}.`,
+          },
   });
 };
