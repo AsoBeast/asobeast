@@ -70,6 +70,18 @@ function NotReadMark({ label }: { label: string }) {
   );
 }
 
+function CoverageVerdict({ row }: { row: KeywordCoverageRow }) {
+  if (row.uncovered) {
+    return <span className="text-label text-warning">Uncovered</span>;
+  }
+  if (row.wordsSplit) {
+    return (
+      <span className="text-label text-muted-foreground">Words split</span>
+    );
+  }
+  return null;
+}
+
 function ScreenshotTextCell({ row }: { row: KeywordCoverageRow }) {
   const mark = screenshotTextMark(row);
   return mark === "unread" ? (
@@ -100,13 +112,7 @@ export function coverageColumns(
           >
             {row.original.text}
           </span>
-          {row.original.uncovered ? (
-            <span className="text-label text-warning">Uncovered</span>
-          ) : row.original.wordsSplit ? (
-            <span className="text-label text-muted-foreground">
-              Words split
-            </span>
-          ) : null}
+          <CoverageVerdict row={row.original} />
         </span>
       ),
     }),
