@@ -181,6 +181,7 @@ export class StoreConnectionService {
   async disconnect(store: Store): Promise<void> {
     if (store === 'APP_STORE') {
       await this.prisma.withTransaction(async (tx) => {
+        await tx.storeConnection.deleteMany({ where: { store } });
         const following = await tx.keywordFieldSync.findMany({
           select: { appId: true },
           orderBy: { appId: 'asc' },
@@ -191,6 +192,7 @@ export class StoreConnectionService {
         await tx.keywordFieldSync.deleteMany({});
         await tx.featuringSync.deleteMany({});
       });
+      return;
     }
     await this.prisma.storeConnection.deleteMany({ where: { store } });
   }

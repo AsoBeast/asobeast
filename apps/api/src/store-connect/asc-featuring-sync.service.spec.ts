@@ -87,9 +87,9 @@ function build(options: RecordOptions = {}) {
   const create = jest.fn().mockResolvedValue({});
   const storedConnection = jest
     .fn()
-    .mockResolvedValue(connectionAlive ? { id: 'conn_1' } : null);
+    .mockResolvedValue(connectionAlive ? [{ id: 'conn_1' }] : []);
   const transaction = {
-    storeConnection: { findFirst: storedConnection },
+    $queryRaw: storedConnection,
     featuringSync: { create },
   };
   const updateMany = options.writeFails
@@ -209,10 +209,8 @@ describe('AscFeaturingSync.run', () => {
       nominations: 1,
       promoText: 2,
     });
-    expect(storedConnection).toHaveBeenCalledWith({
-      where: { id: 'conn_1', status: 'active' },
-      select: { id: true },
-    });
+    expect(storedConnection).toHaveBeenCalled();
+    expect(storedConnection.mock.calls[0]).toContain('conn_1');
     expect(createCallsOf(create)[0]).toMatchObject({
       data: {
         workspaceId: WORKSPACE_ID,

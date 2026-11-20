@@ -358,11 +358,12 @@ export class AscFeaturingSync {
     connection: OpenedConnection<AscListingApi>,
     row: Prisma.FeaturingSyncUncheckedCreateInput,
   ): Promise<void> {
-    const active = await tx.storeConnection.findFirst({
-      where: { id: connection.id, status: 'active' },
-      select: { id: true },
-    });
-    if (!active) {
+    const active = await tx.$queryRaw<{ id: string }[]>`
+      SELECT id FROM "StoreConnection"
+      WHERE id = ${connection.id} AND status = 'active'
+      FOR SHARE
+    `;
+    if (active.length === 0) {
       return;
     }
     await tx.featuringSync.create({ data: row });

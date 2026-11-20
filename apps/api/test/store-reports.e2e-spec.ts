@@ -865,7 +865,24 @@ describe('Store report sync (e2e)', () => {
     await expect(harness.prisma.featuringSync.count()).resolves.toBe(0);
   });
 
-  it('answers the audit not measured when a mid disconnect write recreates the row', async () => {
+  const waitForBlockedBy = async (holder: number, fragment: string) => {
+    for (let attempt = 0; attempt < WAIT_ATTEMPTS; attempt += 1) {
+      const [{ waiting }] = await harness.prisma.$queryRaw<
+        { waiting: bigint }[]
+      >`
+        SELECT COUNT(*) AS waiting
+        FROM pg_stat_activity
+        WHERE datname = current_database()
+          AND query LIKE ${`%${fragment}%`}
+          AND wait_event IS NOT NULL
+      `;
+      if (waiting > 0n) return;
+      await new Promise((resolve) => setTimeout(resolve, WAIT_INTERVAL_MS));
+    }
+    throw new Error(`the ${fragment} statement never waited on the held row`);
+  };
+
+  it('leaves no featuring row when the write races the disconnect', async () => {
     let release: (() => void) | undefined;
     const blocked = new Promise<void>((resolve) => {
       release = resolve;
@@ -937,13 +954,26 @@ describe('Store report sync (e2e)', () => {
       }
       await new Promise((resolve) => setTimeout(resolve, WAIT_INTERVAL_MS));
     }
-    await harness.prisma.featuringSync.deleteMany({});
-    release?.();
 
+    const { disconnecting } = await harness.prisma.$transaction(
+      async (tx) => {
+        await tx.$executeRaw`SELECT id FROM "StoreConnection" WHERE store = 'APP_STORE' FOR UPDATE`;
+        const [{ pid }] = await tx.$queryRaw<{ pid: number }[]>`
+          SELECT pg_backend_pid() AS pid
+        `;
+        const route = owner.delete('/store-connections/APP_STORE').expect(204);
+        route.catch(() => undefined);
+        await waitForBlockedBy(pid, 'DELETE FROM "public"."StoreConnection"');
+        release?.();
+        await waitForBlockedBy(pid, 'FOR SHARE');
+        return { disconnecting: route };
+      },
+      { timeout: 30_000 },
+    );
+
+    await disconnecting;
     await expect(syncing).resolves.toMatchObject({ nominations: 1 });
-    await expect(harness.prisma.featuringSync.count()).resolves.toBe(1);
-
-    await harness.prisma.storeConnection.deleteMany({});
+    await expect(harness.prisma.featuringSync.count()).resolves.toBe(0);
 
     const result = (await owner.get(`/apps/${appId}/audit`).expect(200))
       .body as AppAuditResult;

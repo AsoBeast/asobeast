@@ -782,24 +782,27 @@ describe('StoreConnectionService', () => {
   });
 
   it('disconnects even while store connections are off', async () => {
-    const { service, prisma } = harness(null);
+    const { service, tx } = harness(null);
 
     await service.disconnect('APP_STORE');
 
-    expect(prisma.storeConnection.deleteMany).toHaveBeenCalledWith({
+    expect(tx.storeConnection.deleteMany).toHaveBeenCalledWith({
       where: { store: 'APP_STORE' },
     });
   });
 
-  it('disconnects by deleting the connection', async () => {
-    const { service, prisma } = harness();
+  it('disconnects by deleting the connection before the featuring rows', async () => {
+    const { service, tx } = harness();
     await service.connect('APP_STORE', REQUEST, 'user_1');
 
     await service.disconnect('APP_STORE');
 
-    expect(prisma.storeConnection.deleteMany).toHaveBeenCalledWith({
+    expect(tx.storeConnection.deleteMany).toHaveBeenCalledWith({
       where: { store: 'APP_STORE' },
     });
+    expect(
+      tx.storeConnection.deleteMany.mock.invocationCallOrder[0],
+    ).toBeLessThan(tx.featuringSync.deleteMany.mock.invocationCallOrder[0]);
   });
 
   it('releases the imported keyword fields when App Store Connect disconnects', async () => {
