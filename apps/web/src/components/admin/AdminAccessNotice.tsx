@@ -11,7 +11,7 @@ const NOTICES: Record<
 > = {
   "needs-plan": {
     title: "Your workspace needs a plan to open the admin area",
-    body: "The admin pages, the queue dashboard, the API docs and the metrics endpoint open only while the operator's own workspace has a plan in force. Yours has none, so each of them answers not found. On a self hosted instance with billing on, you can also set plan on the bootstrap workspace in the database.",
+    body: "The admin pages, the queue dashboard, the API docs and the metrics endpoint open only while the operator's own workspace has a plan in force. Yours has none, so each of them answers not found. On a self-hosted instance with billing on, you can also set plan on the bootstrap workspace in the database.",
     action: { href: "/upgrade", label: "Choose a plan" },
   },
 };

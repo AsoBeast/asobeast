@@ -17,7 +17,9 @@ import {
 describe("stageLabel", () => {
   it("names every stage in plain words", () => {
     for (const stage of WORKSPACE_STAGES) {
-      expect(WORKSPACE_STAGE_LABELS[stage]).toMatch(/^[A-Z][a-z ]+$/);
+      expect(WORKSPACE_STAGE_LABELS[stage]).toMatch(
+        /^[A-Z][a-z]+(?:[ -][a-z]+)*$/,
+      );
     }
   });
 

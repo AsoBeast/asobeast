@@ -329,7 +329,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "improved",
         title: "No competitor limit when you host it yourself",
-        text: "A self hosted AsoBeast follows as many competitors as you like.",
+        text: "A self-hosted AsoBeast follows as many competitors as you like.",
       },
     ],
   },
