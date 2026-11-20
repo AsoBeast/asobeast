@@ -16,7 +16,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "new",
         title: "A ratings goal",
-        text: "Pick the average you want the store to show, and the Reviews page says how many five star ratings it takes and about how many a day over the days you choose.",
+        text: "Pick the average you want the store to show and the number of days, and the Reviews page says how many five-star ratings it takes to get there and how fast they need to come.",
       },
       {
         kind: "fixed",

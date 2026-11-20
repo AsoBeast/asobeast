@@ -1,7 +1,8 @@
 "use client";
 
-import { useId, useState } from "react";
+import { type ComponentProps, useId, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import type { AppDetail, Store } from "@asobeast/shared";
 import { PANEL_HEADER } from "@/components/layout/panel-classes";
 import {
   Card,
@@ -12,61 +13,116 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { formatNumber, formatRating, pluralize } from "@/lib/format";
 import { appDetailOptions } from "@/lib/queries";
 import {
   DEFAULT_GOAL_DAYS,
   defaultTargetTenths,
-  displayedRating,
   fiveStarRatingsToReach,
+  MAX_GOAL_DAYS,
+  MAX_TARGET_TENTHS,
+  MIN_GOAL_DAYS,
+  MIN_TARGET_TENTHS,
   parseGoalDays,
   parseTargetTenths,
-  THIN_SAMPLE_COUNT,
 } from "@/lib/ratings-goal";
+import {
+  DAYS_HINT,
+  formatTenths,
+  goalNotes,
+  goalSentence,
+  TARGET_HINT,
+} from "./ratings-goal-copy";
 
-function GoalSentence({
-  target,
-  average,
-  count,
-  days,
-}: {
-  target: number;
-  average: number;
-  count: number;
-  days: number;
-}) {
-  const goal = fiveStarRatingsToReach(average, count, target, days);
-  const shown = formatRating(target / 10);
+type GoalFieldProps = {
+  label: string;
+  value: string;
+  hintId: string | undefined;
+  onValueChange: (value: string) => void;
+} & Pick<ComponentProps<"input">, "inputMode" | "step" | "min" | "max">;
 
-  if (goal.kind === "reached") {
-    return (
-      <p className="text-body">
-        {`The store already shows ${formatRating(displayedRating(average))}, which is ${shown} or more.`}
-      </p>
-    );
-  }
+function GoalField({
+  label,
+  value,
+  hintId,
+  onValueChange,
+  ...input
+}: GoalFieldProps) {
+  const inputId = useId();
   return (
-    <p className="text-body">
-      {`To show ${shown} you need ${formatNumber(goal.ratings)} more five star ${goal.ratings === 1 ? "rating" : "ratings"}, about ${formatNumber(goal.perDay)} a day for ${pluralize(days, "day")}.`}
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={inputId}>{label}</Label>
+      <Input
+        id={inputId}
+        type="number"
+        value={value}
+        aria-invalid={hintId !== undefined || undefined}
+        aria-describedby={hintId}
+        onChange={(event) => onValueChange(event.target.value)}
+        {...input}
+      />
+    </div>
+  );
+}
+
+function Hint({ id, text }: { id: string; text: string }) {
+  return (
+    <p id={id} className="text-body text-muted-foreground">
+      {text}
     </p>
   );
 }
 
-export function RatingsGoalCard({ id }: { id: string }) {
+type StoredRating = { store: Store; average: number; count: number };
+
+function storedRating(app: AppDetail | undefined): StoredRating | null {
+  const snapshot = app?.latestSnapshot;
+  if (!app || app.isCompetitor || !snapshot) return null;
+  const { ratingAvg, ratingCount } = snapshot;
+  if (ratingAvg === null || ratingCount === null) return null;
+  return { store: app.store, average: ratingAvg, count: ratingCount };
+}
+
+function GoalResult({
+  rating,
+  target,
+  days,
+  targetHintId,
+  daysHintId,
+}: {
+  rating: StoredRating;
+  target: number | null;
+  days: number | null;
+  targetHintId: string;
+  daysHintId: string;
+}) {
+  return (
+    <div aria-live="polite" className="flex flex-col gap-1">
+      {target === null ? <Hint id={targetHintId} text={TARGET_HINT} /> : null}
+      {days === null ? <Hint id={daysHintId} text={DAYS_HINT} /> : null}
+      {target === null || days === null ? null : (
+        <p className="text-body">
+          {goalSentence(
+            fiveStarRatingsToReach(rating.average, rating.count, target, days),
+            target,
+            rating.average,
+            days,
+          )}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function GoalPanel({ rating }: { rating: StoredRating }) {
   const headingId = useId();
-  const targetId = useId();
-  const daysId = useId();
-  const { data: app } = useQuery(appDetailOptions(id));
+  const targetHintId = useId();
+  const daysHintId = useId();
   const [targetText, setTargetText] = useState<string | null>(null);
   const [daysText, setDaysText] = useState(String(DEFAULT_GOAL_DAYS));
 
-  const snapshot = app?.latestSnapshot ?? null;
-  const average = snapshot?.ratingAvg ?? null;
-  const count = snapshot?.ratingCount ?? null;
-  if (average === null || count === null) return null;
-
   const targetValue =
-    targetText ?? formatRating(defaultTargetTenths(average) / 10);
+    targetText ??
+    formatTenths(defaultTargetTenths(rating.average, rating.count));
   const target = parseTargetTenths(targetValue);
   const days = parseGoalDays(daysText);
 
@@ -80,63 +136,47 @@ export function RatingsGoalCard({ id }: { id: string }) {
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor={targetId}>Target rating</Label>
-              <Input
-                id={targetId}
-                type="number"
-                inputMode="decimal"
-                step={0.1}
-                min={0.1}
-                max={5}
-                value={targetValue}
-                aria-invalid={target === null || undefined}
-                onChange={(event) => setTargetText(event.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor={daysId}>Days</Label>
-              <Input
-                id={daysId}
-                type="number"
-                inputMode="numeric"
-                step={1}
-                min={1}
-                max={365}
-                value={daysText}
-                aria-invalid={days === null || undefined}
-                onChange={(event) => setDaysText(event.target.value)}
-              />
-            </div>
-          </div>
-          {target === null || days === null ? (
-            <p className="text-body text-muted-foreground">
-              <span>
-                Enter a target from 0.1 to 5.0 and a whole number of days from 1
-                to 365.
-              </span>
-            </p>
-          ) : (
-            <GoalSentence
-              target={target}
-              average={average}
-              count={count}
-              days={days}
+            <GoalField
+              label="Target rating"
+              value={targetValue}
+              hintId={target === null ? targetHintId : undefined}
+              onValueChange={setTargetText}
+              inputMode="decimal"
+              step={0.1}
+              min={MIN_TARGET_TENTHS / 10}
+              max={MAX_TARGET_TENTHS / 10}
             />
-          )}
+            <GoalField
+              label="Days"
+              value={daysText}
+              hintId={days === null ? daysHintId : undefined}
+              onValueChange={setDaysText}
+              inputMode="numeric"
+              step={1}
+              min={MIN_GOAL_DAYS}
+              max={MAX_GOAL_DAYS}
+            />
+          </div>
+          <GoalResult
+            rating={rating}
+            target={target}
+            days={days}
+            targetHintId={targetHintId}
+            daysHintId={daysHintId}
+          />
         </CardContent>
         <CardFooter className="flex-col items-start gap-1">
-          <span>
-            Assumes every new rating is five stars, and that the store shows one
-            decimal.
-          </span>
-          {count < THIN_SAMPLE_COUNT ? (
-            <span>
-              With fewer than 20 ratings the average moves a lot at this size.
-            </span>
-          ) : null}
+          {goalNotes(rating.store, rating.count).map((note) => (
+            <span key={note}>{note}</span>
+          ))}
         </CardFooter>
       </Card>
     </section>
   );
+}
+
+export function RatingsGoalCard({ id }: { id: string }) {
+  const { data: app } = useQuery(appDetailOptions(id));
+  const rating = storedRating(app);
+  return rating ? <GoalPanel rating={rating} /> : null;
 }
