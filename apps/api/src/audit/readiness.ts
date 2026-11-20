@@ -183,6 +183,16 @@ const nominationsRow = (
       link: null,
     };
   }
+  if (reads.submittedNominations > 0) {
+    return {
+      id: 'nominations',
+      label: NOMINATIONS_LABEL,
+      status: 'warn',
+      detail:
+        'The publish window of the submitted nomination has ended. Apple asks for nominations at least two weeks ahead.',
+      link: null,
+    };
+  }
   const missed = shippedRecently(factors)
     ? ' The window for the current version was missed until the next release.'
     : '';

@@ -548,7 +548,7 @@ describe('buildReadiness', () => {
     expect(itemOf(readiness, 'nominations')).toMatchObject({
       status: 'warn',
       detail:
-        'Not nominated. Apple asks for nominations at least two weeks ahead.',
+        'The publish window of the submitted nomination has ended. Apple asks for nominations at least two weeks ahead.',
     });
   });
 
