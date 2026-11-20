@@ -722,4 +722,25 @@ describe('a metered instance with no mail path', () => {
       ),
     ).toEqual([]);
   });
+
+  it('writes self-hosted with a hyphen in every warning that names it', () => {
+    const warnings = productionWarnings(
+      production({
+        AUTH_COOKIE_SECURE: 'true',
+        TRUST_PROXY: 'true',
+        OPENAI_API_KEY: 'sk-test',
+        AUTH_ALLOW_REGISTRATION: 'true',
+        BILLING_ENABLED: 'false',
+        ERROR_TRACKING_DSN: 'https://publickey@errors.example.com/7',
+      }),
+    );
+
+    expect(warnings).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('a self-hosted instance'),
+        expect.stringContaining('a self-hosted deployment'),
+      ]),
+    );
+    expect(warnings.filter((line) => /self hosted/i.test(line))).toEqual([]);
+  });
 });

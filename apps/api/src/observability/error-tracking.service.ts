@@ -6,7 +6,7 @@ import type { Env } from '../config/env';
 import { reportingDsn } from './error-reporting';
 
 const GATE_CLOSED =
-  'ERROR_TRACKING_DSN is set but error reporting stays off. It also needs NODE_ENV=production and BILLING_ENABLED=true, so a self hosted deployment never reports errors outside itself.';
+  'ERROR_TRACKING_DSN is set but error reporting stays off. It also needs NODE_ENV=production and BILLING_ENABLED=true, so a self-hosted deployment never reports errors outside itself.';
 
 export interface ErrorContext {
   transaction?: string;
