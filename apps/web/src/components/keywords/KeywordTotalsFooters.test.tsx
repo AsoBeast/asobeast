@@ -116,6 +116,41 @@ describe("the keyword totals footers", () => {
     ]);
   });
 
+  it("counts the moves of a longer window from its own deltas", () => {
+    const moved = tableOf([
+      keyword({ keywordId: "kw-1", positionDelta7d: 4 }),
+      keyword({ keywordId: "kw-2", positionDelta7d: 4 }),
+      keyword({ keywordId: "kw-3", positionDelta7d: null }),
+    ]);
+    const deltas = new Map([
+      ["kw-1", -3],
+      ["kw-2", -1],
+      ["kw-3", 2],
+    ]);
+    const deltaOf = (row: TrackedKeywordItem) =>
+      deltas.get(row.keywordId) ?? null;
+
+    expect(
+      textsOf(
+        renderToStaticMarkup(movedFooter(moved, { deltaOf, state: "ready" })),
+      ),
+    ).toEqual(["2 up", "1 down"]);
+  });
+
+  it.each([
+    ["pending", "Loading"],
+    ["failed", "Not loaded"],
+  ] as const)(
+    "shows a dash, not zero moves, while the window is %s",
+    (state, label) => {
+      const html = renderToStaticMarkup(
+        movedFooter(MIXED, { deltaOf: () => null, state }),
+      );
+
+      expect(textsOf(html)).toEqual(["—", label]);
+    },
+  );
+
   it("counts yesterday's moves and the keywords that dropped out", () => {
     const today = "2026-11-11";
     const checked = { latestCheckedOn: today };
