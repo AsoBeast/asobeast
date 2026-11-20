@@ -52,6 +52,7 @@ describe("formatMeasureFixed", () => {
     [20.04, "20.0"],
     [0.6, "0.6"],
     [-3, "-3.0"],
+    [-0.04, "0.0"],
     [1234.56, "1,234.6"],
   ])("renders %s as %s", (value, expected) => {
     expect(formatMeasureFixed(value)).toBe(expected);

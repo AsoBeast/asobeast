@@ -15,6 +15,7 @@ export const MEASURE_DIGITS = 1;
 const fixedMeasureFormatter = new Intl.NumberFormat("en-US", {
   minimumFractionDigits: MEASURE_DIGITS,
   maximumFractionDigits: MEASURE_DIGITS,
+  signDisplay: "negative",
 });
 const compactFormatter = new Intl.NumberFormat("en-US", {
   notation: "compact",
