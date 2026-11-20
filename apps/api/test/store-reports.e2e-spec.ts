@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { Store } from '@prisma/client';
 import type {
+  AppAuditResult,
   AppLocalizationsResult,
   StoreConnectionState,
 } from '@asobeast/shared';
@@ -861,6 +862,100 @@ describe('Store report sync (e2e)', () => {
 
     await expect(syncing).resolves.toMatchObject({ nominations: 1 });
     await expect(harness.prisma.featuringSync.count()).resolves.toBe(0);
+  });
+
+  it('answers the audit not measured when a mid disconnect write recreates the row', async () => {
+    let release: (() => void) | undefined;
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    harness.asc
+      .on('GET', /\/appStoreVersions\?/, async () => {
+        await blocked;
+        return answer({
+          data: [
+            {
+              id: 'v1',
+              type: 'appStoreVersions',
+              attributes: {
+                appStoreState: 'READY_FOR_SALE',
+                versionString: '1.2.0',
+                createdDate: '2026-01-15T10:00:00.000Z',
+              },
+            },
+          ],
+          links: {},
+        });
+      })
+      .on(
+        'GET',
+        /appStoreVersionLocalizations\?/,
+        answer({
+          data: [
+            {
+              id: 'loc-1',
+              type: 'appStoreVersionLocalizations',
+              attributes: {
+                locale: 'en-US',
+                keywords: '',
+                promotionalText: 'Two weeks of focus.',
+              },
+            },
+          ],
+          links: {},
+        }),
+      )
+      .on(
+        'GET',
+        /\/v1\/nominations\?/,
+        answer({
+          data: [
+            {
+              id: 'nom-1',
+              type: 'nominations',
+              attributes: {
+                state: 'SUBMITTED',
+                submittedDate: '2026-10-05T09:30:00.000Z',
+                publishStartDate: '2026-11-15T00:00:00.000Z',
+                publishEndDate: '2999-01-01T00:00:00.000Z',
+              },
+            },
+          ],
+          links: {},
+        }),
+      );
+
+    const syncing = run();
+    for (let attempt = 0; attempt < WAIT_ATTEMPTS; attempt += 1) {
+      if (
+        harness.asc.requests.some((request) =>
+          /\/appStoreVersions\?/.test(request.absoluteUrl ?? request.path),
+        )
+      ) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, WAIT_INTERVAL_MS));
+    }
+    await harness.prisma.featuringSync.deleteMany({});
+    release?.();
+
+    await expect(syncing).resolves.toMatchObject({ nominations: 1 });
+    await expect(harness.prisma.featuringSync.count()).resolves.toBe(1);
+
+    await harness.prisma.storeConnection.deleteMany({});
+
+    const result = (await owner.get(`/apps/${appId}/audit`).expect(200))
+      .body as AppAuditResult;
+    const rowOf = (id: string) =>
+      result.readiness?.items.find((item) => item.id === id);
+    expect(rowOf('nominations')).toMatchObject({
+      status: 'unmeasurable',
+      detail: null,
+    });
+    expect(rowOf('promotional-text')).toMatchObject({
+      status: 'unmeasurable',
+      detail: null,
+    });
   });
 
   it('keeps the rows of one workspace out of another', async () => {
