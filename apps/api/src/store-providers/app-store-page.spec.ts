@@ -1,4 +1,9 @@
-import { parseAppStorePage } from './app-store-page';
+import { parseAppStorePage, parseSimilarItems } from './app-store-page';
+import {
+  SIMILAR_PAGE_HTML,
+  SIMILAR_SHELF_ADAM_IDS,
+  SIMILAR_SHELF_LOCKUPS,
+} from './app-store-similar.fixture';
 
 const TRAILER_URL =
   'https://apptrailers.itunes.apple.com/itunes-assets/PurpleVideo211/v4/d4/40/6e/d4406ee8-62de-501d-9a05-9370a87b1142/P1497996222_default.m3u8';
@@ -462,5 +467,151 @@ describe('parseAppStorePage', () => {
 
     expect(extract.appEvents).toEqual([]);
     expect(extract.featuredStories).toHaveLength(1);
+  });
+});
+
+describe('parseSimilarItems', () => {
+  it('reads the captured similar shelf of a product page in its stored order', () => {
+    const items = parseSimilarItems(SIMILAR_PAGE_HTML);
+
+    expect(items.map((item) => item.adamId)).toEqual(SIMILAR_SHELF_ADAM_IDS);
+    expect(items[0]).toEqual({
+      adamId: '912390687',
+      title: 'TREBEL Music - Download Songs',
+      subtitle: 'Offline Music & AI Playlists',
+      developer: 'M&M Media, Inc.',
+      rating: 4.7,
+      ratingCount: '188K',
+      iconTemplate:
+        'https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/45/8f/b0/458fb0c1-ee2e-4a36-1cc2-f6fe8b86735b/Placeholder.mill/{w}x{h}{c}.{f}',
+    });
+  });
+
+  it('reads the downloading shelf when the similar shelf is absent', () => {
+    const items = parseSimilarItems(
+      pageOf({
+        similarItemsDownloading: shelfOf([...SIMILAR_SHELF_LOCKUPS]),
+      }),
+    );
+
+    expect(items.map((item) => item.adamId)).toEqual(SIMILAR_SHELF_ADAM_IDS);
+  });
+
+  it('prefers the similar shelf over its downloading twin', () => {
+    const items = parseSimilarItems(
+      pageOf({
+        similarItems: shelfOf([
+          { $kind: 'Lockup', adamId: '1', title: 'Primary' },
+        ]),
+        similarItemsDownloading: shelfOf([
+          { $kind: 'Lockup', adamId: '2', title: 'Downloading' },
+        ]),
+      }),
+    );
+
+    expect(items.map((item) => item.adamId)).toEqual(['1']);
+  });
+
+  it('falls back to the downloading shelf when the similar shelf holds nothing usable', () => {
+    const items = parseSimilarItems(
+      pageOf({
+        similarItems: shelfOf([{ $kind: 'Lockup', title: 'No id' }]),
+        similarItemsDownloading: shelfOf([
+          { $kind: 'Lockup', adamId: '2', title: 'Downloading' },
+        ]),
+      }),
+    );
+
+    expect(items.map((item) => item.adamId)).toEqual(['2']);
+  });
+
+  it('answers no similar items when neither similar shelf is present', () => {
+    const items = parseSimilarItems(
+      pageOf({
+        product_media_phone_: CALM_MEDIA_SHELF,
+        featuredIn: shelfOf(POGO_STORIES),
+        editorsChoiceProductReviews: EDITORS_CHOICE_SHELF,
+        accessibilityHeader: ACCESSIBILITY_SHELF,
+      }),
+    );
+
+    expect(items).toEqual([]);
+  });
+
+  it('skips a similar item without an id or a title and keeps absent fields null', () => {
+    const items = parseSimilarItems(
+      pageOf({
+        similarItems: shelfOf([
+          { $kind: 'Lockup', title: 'No id' },
+          { $kind: 'Lockup', adamId: '   ' },
+          { $kind: 'Lockup', adamId: '1' },
+          { $kind: 'Lockup', adamId: '2', title: 'Partial' },
+          { $kind: 'Lockup', adamId: '3', title: '  ' },
+          {
+            $kind: 'Lockup',
+            adamId: '4',
+            title: 'Odd fields',
+            subtitle: 42,
+            developerName: 7,
+            rating: '4.8',
+            ratingCount: 12000,
+            icon: 'not an artwork',
+          },
+          'a string',
+          null,
+        ]),
+      }),
+    );
+
+    expect(items).toEqual([
+      {
+        adamId: '2',
+        title: 'Partial',
+        subtitle: null,
+        developer: null,
+        rating: null,
+        ratingCount: null,
+        iconTemplate: null,
+      },
+      {
+        adamId: '4',
+        title: 'Odd fields',
+        subtitle: null,
+        developer: null,
+        rating: null,
+        ratingCount: null,
+        iconTemplate: null,
+      },
+    ]);
+  });
+
+  it('skips a similar item whose adamId is not numeric', () => {
+    const items = parseSimilarItems(
+      pageOf({
+        similarItems: shelfOf([
+          { $kind: 'Lockup', adamId: 'com.example.lockup', title: 'Bundle' },
+          { $kind: 'Lockup', adamId: '7', title: 'Numeric' },
+        ]),
+      }),
+    );
+
+    expect(items.map((item) => item.adamId)).toEqual(['7']);
+  });
+
+  it('keeps the display string of a rating count unparsed', () => {
+    const items = parseSimilarItems(SIMILAR_PAGE_HTML);
+
+    expect(items.map((item) => item.ratingCount)).toEqual([
+      '188K',
+      '2.1M',
+      '29K',
+      '1.5M',
+      '37K',
+      '2M',
+      '309K',
+      '11M',
+      '273',
+      '69K',
+    ]);
   });
 });

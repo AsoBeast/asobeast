@@ -31,9 +31,11 @@ const storyOf = (
 const factsOf = (
   overrides: Partial<PageExtractFacts> = {},
 ): PageExtractFacts => ({
+  previewVideoUrls: [],
   appEvents: [],
   featuredStories: [],
   editorsChoice: null,
+  accessibilityStatement: null,
   ...overrides,
 });
 

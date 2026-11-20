@@ -6,7 +6,7 @@ icon: unplug
 keywords: ["scraper","parser","store breakage","failed jobs","rate limit","incident"]
 ---
 
-asobeast reads two stores that never promised it a stable response. Apple and Google can change a shape whenever they like, and when they do, every installation is affected at once.
+AsoBeast reads two stores that never promised it a stable response. Apple and Google can change a shape whenever they like, and when they do, every installation is affected at once.
 
 The blast radius is contained on purpose. Only `apps/api/src/store-providers/` parses store responses, so a break is one module, not the application. **Historical data is never lost.** Collection pauses, it does not roll back.
 
@@ -20,7 +20,7 @@ In the order they appear:
 2. Rankings stop advancing. The most recent date on the keyword monitor stays fixed while the calendar moves.
 3. For the platform operator, the health badge in the header turns amber and names a failed job count.
 4. Failed jobs accumulate in the queue dashboard at `/admin/queues`.
-5. **The data derived alerts stay silent.** This is the most misleading symptom, and it is worth stating plainly: those alerts are generated from captured data, so when nothing is captured, nothing alerts. The canary is the exception precisely because it asks the store a question of its own instead of reading what was collected. Silence from the rest is not health.
+5. **The data derived alerts stay silent.** This is the most misleading symptom. Those alerts are generated from captured data, so when nothing is captured, nothing alerts. The canary is the exception precisely because it asks the store a question of its own instead of reading what was collected. Silence from the rest is not health.
 
 ## Triage
 
@@ -82,7 +82,7 @@ Three causes look identical from the outside. This tells them apart.
 
 ## What the user sees
 
-A confirmed break raises one banner above every page, for every signed in user, from `GET /jobs/store-health`. It names the store, states that the cause is on asobeast rather than on the reader's configuration, says that stored data is untouched and that collection resumes on its own, and links this page.
+A confirmed break raises one banner above every page, for every signed in user, from `GET /jobs/store-health`. It names the store, states that the cause is on AsoBeast rather than on the reader's configuration, says that stored data is untouched and that collection resumes on its own, and links this page.
 
 Three things about its timing are worth knowing before somebody asks why it did not appear.
 
@@ -96,7 +96,7 @@ An `unreachable` verdict deliberately renders nothing. It means the pool or the 
 
 What to do immediately, without waiting for a fix.
 
-- **Failed jobs do not block the queue.** The natural assumption is the opposite, so it is worth being explicit: each app, keyword and category is its own job. A job that fails is retried with backoff and then set aside, and the rest of the run continues. If Google Play is broken, the App Store still collects that night.
+- **Failed jobs do not block the queue.** Each app, keyword and category is its own job. A job that fails is retried with backoff and then set aside, and the rest of the run continues. If Google Play is broken, the App Store still collects that night.
 - **Nothing is lost.** Every position, review and snapshot already captured stays exactly as it was. A break pauses collection.
 - **Decide whether to pause the daily run.** Leaving it on against a broken parser spends rate limit budget on requests that cannot succeed and fills the failed set. If the break is confirmed and a fix is days away, set `CRON_DAILY` to a schedule that will not fire, restart the API, and put it back afterwards. If a fix is hours away, leave it alone.
 - **Clear the failed set once resolved.** Retry the failed jobs from `/admin/queues` if the day still matters, or discard them if the next daily run will cover it. Retrying a rank check for a date that has passed captures today's SERP under today's date, not the missed one.
@@ -138,7 +138,7 @@ For whoever ships the fix.
 
 ### Reprocess history from stored payloads
 
-Raw scraper responses are stored in `raw` JSON columns precisely so a corrected parser can be re-run over them. Nobody would guess this is available, so it is worth saying: `AppSnapshot.raw` holds the full store response for every snapshot ever captured.
+Raw scraper responses are stored in `raw` JSON columns precisely so a corrected parser can be re-run over them. `AppSnapshot.raw` holds the full store response for every snapshot ever captured.
 
 That means a parser bug which mapped a field wrongly, rather than one which failed outright, can be corrected retroactively. Re-read the stored payload and rewrite the derived columns. A parser that threw captured nothing, so there is nothing to reprocess for those days.
 

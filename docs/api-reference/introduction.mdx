@@ -1,12 +1,12 @@
 ---
-title: asobeast API
+title: AsoBeast API
 sidebarTitle: Introduction
-description: "The asobeast API is a REST API over HTTP. Every endpoint requires authentication with a session cookie or a personal API token, and every response is JSON."
+description: "The AsoBeast API is a REST API over HTTP. Every endpoint requires authentication with a session cookie or a personal API token, and every response is JSON."
 icon: terminal
-keywords: ["API","REST","base URL","authentication","OpenAPI","self hosted"]
+keywords: ["API","REST","base URL","authentication","OpenAPI","self-hosted"]
 ---
 
-The asobeast API is the same API the dashboard uses. Every endpoint on it requires authentication, and the endpoint pages in this tab are generated from the API's own OpenAPI document.
+The AsoBeast API is the same API the dashboard uses. Every endpoint on it requires authentication, and the endpoint pages in this tab are generated from the API's own OpenAPI document. The API tracks the apps you import and reads what AsoBeast collected, which is not the same as a bulk store lookup; see [What the API is for](/api-reference/scope).
 
 ## Base URL
 
@@ -52,7 +52,7 @@ curl --silent --fail "${auth[@]}" \
   "${ASOBEAST_URL}/apps/${app}/rankings?from=2026-07-01&to=2026-07-31" \
   > rankings.json
 
-jq -r '.series[] | [.text, (.points[-1].position // ">200")] | @csv' \
+jq -r '.series[] | [.text, (.points[-1] | .position // ">\(.depth)")] | @csv' \
   rankings.json > latest-positions.csv
 ```
 

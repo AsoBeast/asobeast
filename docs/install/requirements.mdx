@@ -1,13 +1,13 @@
 ---
 title: System requirements
-description: "asobeast needs Docker with Compose, roughly 2.5 GB of memory and an outbound internet connection. PostgreSQL 18 and Redis 8 ship with the stack."
+description: "AsoBeast needs Docker with Compose, roughly 2.5 GB of memory and an outbound internet connection. PostgreSQL 18 and Redis 8 ship with the stack."
 icon: server
-keywords: ["requirements","docker","memory","postgresql","redis","self hosted"]
+keywords: ["requirements","docker","memory","postgresql","redis","self-hosted"]
 ---
 
 Docker with the Compose plugin is the only hard requirement. PostgreSQL, Redis, the API and the web app all ship inside the stack, so there is nothing else to install.
 
-## What do you need to run asobeast?
+## What do you need to run AsoBeast?
 
 | Requirement | Value | Why |
 | --- | --- | --- |
@@ -15,7 +15,7 @@ Docker with the Compose plugin is the only hard requirement. PostgreSQL, Redis, 
 | Memory | Roughly 2.5 GB free | Four containers with memory ceilings summing to about 2.2 GB, of which the API is the largest. See [Capacity](/operations/capacity) |
 | Disk | Roughly 5 GB free | The PostgreSQL volume grows with ranking history. Retention settings bound it, and container logs are capped at 30 MB per service. The API image is about 95 MB larger than before the screenshot reader: the OCR engine, the language packs and the image library |
 | Network | Outbound HTTPS | Store collection runs from this machine |
-| Architecture | `linux/amd64` or `linux/arm64` | Published images are multi architecture |
+| Architecture | `linux/amd64` or `linux/arm64` | Published images are multi-architecture |
 
 A single instance tracking a handful of apps runs comfortably on the smallest cloud instance most providers sell.
 
@@ -56,17 +56,17 @@ Working on the source needs the toolchain as well as Docker.
 
 See [Set up a development environment](/install/local-development).
 
-## Which hosts does asobeast reach?
+## Which hosts does AsoBeast reach?
 
-Every store request runs on the machine that hosts asobeast, so that machine needs outbound HTTPS to the Apple and Google endpoints. There is no asobeast cloud service in the path and no telemetry.
+Every store request runs on the machine that hosts AsoBeast, so that machine needs outbound HTTPS to the Apple and Google endpoints. There is no AsoBeast cloud service in the path and no telemetry.
 
 A host behind a strict egress policy needs the Apple iTunes endpoints and the Google Play endpoints allowed. Without them imports, ranking checks and scoring jobs fail while the rest of the application keeps serving requests.
 
-Screenshot captions and icon comparisons download images from Apple's image CDN at `*.mzstatic.com`. The caption read runs only when `SCREENSHOT_OCR` is on, while the icon comparison runs whenever a refresh records a changed icon address, because comparing the pixels is how asobeast keeps a store-side address rotation out of the change timeline.
+Screenshot captions and icon comparisons download images from Apple's image CDN at `*.mzstatic.com`. The caption read runs only when `SCREENSHOT_OCR` is on, while the icon comparison runs whenever a refresh records a changed icon address, because comparing the pixels is how AsoBeast keeps a store-side address rotation out of the change timeline.
 
 Outbound connections to your own SMTP relay, your own webhook endpoints and the OpenAI API, or the OpenAI compatible API `OPENAI_BASE_URL` names, happen only when you configure those optional features.
 
-## Which ports does asobeast publish?
+## Which ports does AsoBeast publish?
 
 One. The web container publishes host port `3001`, or the port `ASOBEAST_PORT` names, mapped to its port `3000`, and nothing else is reachable from outside the Docker network.
 
@@ -86,7 +86,7 @@ The browser reaches the API through `/api/backend/*` on the web origin, which fo
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="Self host with Docker Compose" icon="container" href="/install/docker-compose">
+  <Card title="Self-host with Docker Compose" icon="container" href="/install/docker-compose">
     The install path for almost everyone.
   </Card>
 

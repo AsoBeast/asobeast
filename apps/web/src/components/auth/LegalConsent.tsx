@@ -5,12 +5,13 @@ import {
   TERMS_OF_SERVICE,
   TERMS_OF_SERVICE_URL,
 } from "@/lib/legal";
+import { INLINE_LINK } from "./AuthCard";
 
-const LINK_PROPS = { className: "font-medium underline", ...NEW_TAB_LINK };
+const LINK_PROPS = { className: INLINE_LINK, ...NEW_TAB_LINK };
 
 export function LegalConsent() {
   return (
-    <p className="text-caption text-muted-foreground">
+    <p className="text-center text-caption text-pretty text-muted-foreground">
       By creating an account you agree to the{" "}
       <a href={TERMS_OF_SERVICE_URL} {...LINK_PROPS}>
         {TERMS_OF_SERVICE}

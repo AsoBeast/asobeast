@@ -1,20 +1,20 @@
 ---
 title: Read screenshot captions
 sidebarTitle: Screenshot captions
-description: "asobeast reads the large caption text printed on App Store screenshots on your own machine, shows it per screenshot, reports it beside keyword coverage and records screenshot and caption edits as change events."
+description: "AsoBeast reads the large caption text printed on App Store screenshots on your own machine, shows it per screenshot, reports it beside keyword coverage and records screenshot and caption edits as change events."
 icon: image
 keywords: ["screenshot captions","OCR","screenshot text","keyword coverage","competitor screenshots","change events","SCREENSHOT_OCR"]
 ---
 
-Screenshots are the biggest part of an App Store listing and the only part asobeast could not read. This feature reads the caption text printed on them, keeps it with the snapshot it came from, and uses it in three places: the metadata page, keyword coverage and the change feed.
+Screenshots are the biggest part of an App Store listing and the only part AsoBeast could not read. This feature reads the caption text printed on them, keeps it with the snapshot it came from, and uses it in three places: the metadata page, keyword coverage and the change feed.
 
-It runs on the machine that hosts asobeast. It needs no OpenAI key, no account and no language data from the internet.
+It runs on the machine that hosts AsoBeast. It needs no OpenAI key, no account and no language data from the internet.
 
 ## Does Apple read screenshot text?
 
 Probably, a little, and Apple has not confirmed it. ASO practitioners reported in early June 2025 that apps started ranking for words that appear only in their screenshot captions, first measured by Appfigures and later repeated by Phiture and AppTweak. Apple has not documented screenshot text as an indexed field. A controlled test by ConsultMyApp of 64 caption phrases across eight apps found one phrase that ranked without an explanation in the title, subtitle or keyword field.
 
-Treat it as a weak, secondary signal. That is why asobeast shows it beside keyword coverage and never inside it: a keyword that only a screenshot caption mentions still counts as uncovered. The evidence and its limits are in [App Store and Google Play](/concepts/stores#is-screenshot-text-indexed).
+Treat it as a weak, secondary signal. That is why AsoBeast shows it beside keyword coverage and never inside it: a keyword that only a screenshot caption mentions still counts as uncovered. The evidence and its limits are in [App Store and Google Play](/concepts/stores#is-screenshot-text-indexed).
 
 ## What does it read?
 
@@ -22,7 +22,7 @@ Treat it as a weak, secondary signal. That is why asobeast shows it beside keywo
 | --- | --- |
 | The large marketing text of each iPhone screenshot on the App Store, in store order | The small interface text inside the device frame |
 | Up to the first 10 screenshots of each snapshot | iPad screenshots and app preview videos |
-| Your apps and your competitors, on the home listing and on every market listing asobeast captures | Google Play screenshots |
+| Your apps and your competitors, on the home listing and on every market listing AsoBeast captures | Google Play screenshots |
 
 Each screenshot is read twice: once in grey, and once with its colours inverted so that white lettering on a coloured band turns dark. The two reads are merged, keeping the more confident one where they found the same line. The reader then groups the large, confident lines into blocks of neighbouring lines and keeps the heaviest block, giving less weight to the middle of the image where the device frame usually sits. A lone line smaller than 3 percent of the image height is treated as an interface title, so a screenshot without a caption reads as having none.
 
@@ -30,7 +30,7 @@ Every snapshot records its screenshots, so the caption belongs to the snapshot r
 
 ## How do market listings read their screenshots?
 
-Every listing asobeast captures records its own screenshots: the home listing and each market listing, for your app and for every competitor. A market listing is captured when you track a keyword in a new market, in the daily run and when you refresh it, and while reading is on each capture queues its screenshots for reading like the home one. See [What is a market listing?](/concepts/countries#what-is-a-market-listing)
+Every listing AsoBeast captures records its own screenshots: the home listing and each market listing, for your app and for every competitor. A market listing is captured when you track a keyword in a new market, in the daily run and when you refresh it, and while reading is on each capture queues its screenshots for reading like the home one. See [What is a market listing?](/concepts/countries#what-is-a-market-listing)
 
 | What | Market listing |
 | --- | --- |
@@ -67,7 +67,7 @@ Reading is most reliable on large, high contrast type on a plain or gradient bac
 - **Changes.** Replaced, added, removed and reordered screenshots, and edited captions, appear for your apps and your competitors. See [Watch listing changes](/guides/listing-changes).
 - **ASO audit.** The check Keywords in captions answers from the read text when no AI analysis exists. See [Score your listing](/guides/aso-audit).
 
-The same data is available as `GET /apps/{id}/screenshots`, with `country` for a market listing that answers `404` until that listing was captured (see [asobeast API](/api-reference/introduction)), and the optional `screenshotText` fields of `metadata_audit` and the `detail` field of `changes_timeline` carry it to an agent (see [MCP tool reference](/mcp/tools)).
+The same data is available as `GET /apps/{id}/screenshots`, with `country` for a market listing that answers `404` until that listing was captured (see [AsoBeast API](/api-reference/introduction)), and the optional `screenshotText` fields of `metadata_audit` and the `detail` field of `changes_timeline` carry it to an agent (see [MCP tool reference](/mcp/tools)).
 
 ## What does it cost?
 

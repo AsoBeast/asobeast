@@ -146,6 +146,14 @@ describe('Email verification', () => {
     await prisma.$disconnect();
   });
 
+  it('tells a visitor that a new address will be confirmed', async () => {
+    const status = await request(app.getHttpServer())
+      .get('/auth/status')
+      .expect(200);
+
+    expect(status.body).toMatchObject({ billing: true, confirmsEmail: true });
+  });
+
   it('marks the address and withholds the trial', async () => {
     const created = await register('owner@example.com').expect(201);
     const account = created.body as AuthUser;

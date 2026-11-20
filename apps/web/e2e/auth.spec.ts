@@ -8,7 +8,11 @@ import {
 import { expect, test } from "./reporting.mts";
 import { seedViewer } from "./viewer.mts";
 import {
-  PASSWORD_RULE,
+  PASSWORD_HINT,
+  PASSWORD_MOSTLY_SPACES,
+  PASSWORD_TOO_SHORT,
+} from "../src/lib/password";
+import {
   PLAN_LIMITS,
   SESSION_COOKIE,
   UPGRADE_PATH,
@@ -115,7 +119,7 @@ test("a throttled sign in says how long to wait", async ({ page }) => {
 
   await page.goto("/login");
   await page.getByLabel("Email").fill("owner@example.com");
-  await page.getByLabel("Password").fill("supersecret1");
+  await page.getByLabel("Password", { exact: true }).fill("supersecret1");
   await page.getByRole("button", { name: "Sign in" }).click();
 
   await expect(
@@ -195,7 +199,7 @@ test("login flow signs in and reveals the account menu", async ({ page }) => {
 
   await page.goto("/login");
   await page.getByLabel("Email").fill("owner@example.com");
-  await page.getByLabel("Password").fill("supersecret1");
+  await page.getByLabel("Password", { exact: true }).fill("supersecret1");
   await page.getByRole("button", { name: "Sign in" }).click();
 
   await expect(page).toHaveURL(/\/$/);
@@ -260,7 +264,7 @@ async function openAccountMenuAs(page: Page, user: AuthUser) {
 }
 
 const accountMenuPlan = (page: Page) =>
-  page.getByRole("menu").locator('[data-slot="badge"]');
+  page.getByRole("menu").locator('[data-slot="account-plan"]');
 
 const PLAN_IN_FORCE_CASES: ReadonlyArray<
   readonly [string, Partial<AuthUser>, string]
@@ -322,7 +326,7 @@ for (const [name, terms, label] of PLAN_IN_FORCE_CASES) {
   }) => {
     await openAccountMenuAs(page, { ...TRIAL_USER, ...terms });
 
-    await expect(accountMenuPlan(page)).toHaveText(label);
+    await expect(accountMenuPlan(page)).toHaveText(`${label} plan`);
   });
 }
 
@@ -337,14 +341,14 @@ test("the account menu reads the plan in force again when it opens after an expi
     trialEndsAt: new Date(start.getTime() + 60_000).toISOString(),
     planExpiresAt: null,
   });
-  await expect(accountMenuPlan(page)).toHaveText("Trial");
+  await expect(accountMenuPlan(page)).toHaveText("Trial plan");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("menu")).toHaveCount(0);
 
   await page.clock.fastForward("02:00");
   await page.getByRole("button", { name: "Account menu" }).click();
 
-  await expect(accountMenuPlan(page)).toHaveText("Free");
+  await expect(accountMenuPlan(page)).toHaveText("Free plan");
 });
 
 test("login rejects an encoded cross-origin destination", async ({ page }) => {
@@ -370,7 +374,7 @@ test("login rejects an encoded cross-origin destination", async ({ page }) => {
 
   await page.goto("/login?next=/%5C%5Cevil.example");
   await page.getByLabel("Email").fill("owner@example.com");
-  await page.getByLabel("Password").fill("supersecret1");
+  await page.getByLabel("Password", { exact: true }).fill("supersecret1");
   await page.getByRole("button", { name: "Sign in" }).click();
 
   await expect(page).toHaveURL("http://localhost:3000/");
@@ -409,7 +413,7 @@ test("registration lands in the authenticated application", async ({
 
   await page.goto("/register");
   await page.getByLabel("Email").fill("owner@example.com");
-  await page.getByLabel("Password").fill("supersecret1");
+  await page.getByLabel("Password", { exact: true }).fill("supersecret1");
   await page.getByRole("button", { name: "Create account" }).click();
 
   await expect(page).toHaveURL("http://localhost:3000/");
@@ -887,7 +891,7 @@ test("registration lands on the request to confirm the email", async ({
 
   await page.goto("/register");
   await page.getByLabel("Email").fill("owner@example.com");
-  await page.getByLabel("Password").fill("supersecret1");
+  await page.getByLabel("Password", { exact: true }).fill("supersecret1");
   await page.getByRole("button", { name: "Create account" }).click();
 
   await expect(page).toHaveURL(/\/confirm-email$/);
@@ -1945,7 +1949,7 @@ test("an invited teammate sets a password and lands in the workspace", async ({
   });
 
   await page.goto("/invite?token=invitation-token-value");
-  await page.getByLabel("Password").fill("supersecret1");
+  await page.getByLabel("Password", { exact: true }).fill("supersecret1");
   await page.getByRole("button", { name: "Accept invitation" }).click();
 
   await expect(page).toHaveURL(/localhost:3000\/$/);
@@ -2059,7 +2063,7 @@ test("a recovered account signs in with the password it just chose", async ({
   await page.getByRole("link", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/login$/);
   await page.getByLabel("Email").fill("owner@example.com");
-  await page.getByLabel("Password").fill("brandnewsecret2");
+  await page.getByLabel("Password", { exact: true }).fill("brandnewsecret2");
   await page.getByRole("button", { name: "Sign in" }).click();
 
   await expect(page).toHaveURL(/localhost:3000\/$/);
@@ -2083,18 +2087,18 @@ test("every form that sets a password states the rule beside the field", async (
     },
   ]);
   await page.goto("/register");
-  await expect(page.getByLabel("Password")).toHaveAccessibleDescription(
-    PASSWORD_RULE,
-  );
+  await expect(
+    page.getByLabel("Password", { exact: true }),
+  ).toHaveAccessibleDescription(PASSWORD_HINT);
 
   await page.goto("/invite?token=invitation-token-value");
-  await expect(page.getByLabel("Password")).toHaveAccessibleDescription(
-    PASSWORD_RULE,
-  );
+  await expect(
+    page.getByLabel("Password", { exact: true }),
+  ).toHaveAccessibleDescription(PASSWORD_HINT);
 
   await page.goto("/reset-password?token=recovery-token-value");
   await expect(page.getByLabel("New password")).toHaveAccessibleDescription(
-    PASSWORD_RULE,
+    PASSWORD_HINT,
   );
 });
 
@@ -2109,7 +2113,7 @@ test("the change password dialog states the rule beside the new password", async
   await page.getByRole("menuitem", { name: "Change password" }).click();
 
   await expect(page.getByLabel("New password")).toHaveAccessibleDescription(
-    PASSWORD_RULE,
+    PASSWORD_HINT,
   );
 });
 
@@ -2142,11 +2146,12 @@ test("recovery refuses a password shorter than the account rules allow", async (
   await page.getByRole("button", { name: "Set new password" }).click();
 
   await expect(page.locator("#password-error")).toHaveText(
-    "Password must be between 10 and 128 characters.",
+    "Use at least 10 characters.",
   );
   await expect(page.getByLabel("New password")).toHaveAccessibleDescription(
-    `${PASSWORD_RULE} Password must be between 10 and 128 characters.`,
+    PASSWORD_TOO_SHORT,
   );
+  await expect(page.locator("#password-rule")).toHaveCount(0);
   expect(attempts).toBe(0);
 });
 
@@ -2163,7 +2168,9 @@ test("recovery refuses a password that is only whitespace before sending it", as
   await page.getByLabel("New password").fill(" ".repeat(10));
   await page.getByRole("button", { name: "Set new password" }).click();
 
-  await expect(page.locator("#password-error")).toHaveText(PASSWORD_RULE);
+  await expect(page.locator("#password-error")).toHaveText(
+    PASSWORD_MOSTLY_SPACES,
+  );
   expect(attempts).toBe(0);
 });
 
@@ -2200,10 +2207,10 @@ test.describe("an auth form error marks the field it is about", () => {
     await openRegistration(page);
     await page.goto("/register");
     await page.getByLabel("Email").fill("owner@example.com");
-    await page.getByLabel("Password").fill("short");
+    await page.getByLabel("Password", { exact: true }).fill("short");
     await page.getByRole("button", { name: "Create account" }).click();
 
-    await expect(page.getByLabel("Password")).toHaveAttribute(
+    await expect(page.getByLabel("Password", { exact: true })).toHaveAttribute(
       "aria-invalid",
       "true",
     );
@@ -2224,16 +2231,15 @@ test.describe("an auth form error marks the field it is about", () => {
     );
     await page.goto("/register");
     await page.getByLabel("Email").fill("owner@example.com");
-    await page.getByLabel("Password").fill("supersecret1");
+    await page.getByLabel("Password", { exact: true }).fill("supersecret1");
     await page.getByRole("button", { name: "Create account" }).click();
 
     const email = page.getByLabel("Email");
     await expect(email).toHaveAttribute("aria-invalid", "true");
     await expect(email).toHaveAccessibleDescription("Email already registered");
-    await expect(page.getByLabel("Password")).not.toHaveAttribute(
-      "aria-invalid",
-      "true",
-    );
+    await expect(
+      page.getByLabel("Password", { exact: true }),
+    ).not.toHaveAttribute("aria-invalid", "true");
   });
 
   test("a wrong current password marks only the current password field invalid", async ({

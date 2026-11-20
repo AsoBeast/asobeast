@@ -5,15 +5,15 @@ icon: chart-line
 keywords: ["rankings","chart","SERP","volatility","entrants","movers"]
 ---
 
-The rankings view answers two questions: where you rank over time, and who else is on the page. The first comes from position history, the second from stored SERP snapshots.
+The rankings view answers two questions: where you rank over time, and who else is on the page. The first comes from position history, the second from stored SERP snapshots. The page opens with one sentence on what climbed and what fell over the range.
 
 ## Read the ranking chart
 
-The Y axis is reversed, so position 1 is at the top and a rising line is an improvement.
+The **Keyword positions** panel draws the chart. The Y axis is reversed, so position 1 is at the top and a rising line is an improvement.
 
 The chart covers every market the app tracks, so each series is named with its storefront, as in `habit tracker (US)`. The same phrase in two markets is two keyword rows checked by two searches, and the labels are what keeps them apart on the chart, in its legend and in the CSV export. Rank alerts name the market the same way.
 
-Market pills at the top of the page scope the report to one storefront. **All markets** keeps every market the app tracks; picking one narrows the keyword picker, the chart and the SERP movers card to that storefront, and the address carries the choice as `country`. The keyword monitor charts selected rows with the same chart in its dynamics panel; see [Track keywords](/guides/track-keywords#bulk-manage-keywords).
+The market menu at the top of the page scopes the report to one storefront. **All markets** keeps every market the app tracks; choosing one narrows the keyword picker, the chart and the **New in your top 10** panel to that storefront, and the address carries the choice as `country`. The keyword monitor charts selected rows with the same chart in its dynamics panel; see [Track keywords](/guides/track-keywords#bulk-manage-keywords).
 
 | What you see | What it means |
 | --- | --- |
@@ -21,9 +21,11 @@ Market pills at the top of the page scope the report to one storefront. **All ma
 | A gap with a hollow marker on the depth line | The app was checked and not found within the captured depth |
 | A gap with no marker | No check finished that day, and the tooltip says **Not checked** |
 | A single dot | One checked day between two days without a position |
-| `>200` in the table | Checked and not found, expressed as a bound from that row's own depth |
+| `>200` or `>30` in the table | Checked and not found, expressed as a bound from that row's own depth |
 
 Neither gap is zero. See [Positions and rank depth](/concepts/positions) for why treating it as zero inverts every trend.
+
+Under the chart, each charted keyword has a row with its position, its change over the range, and its best and average position, so the chart reads without hovering. **By day** swaps the chart for a table of every keyword's position on every checked day, shaded by rank band. The **Keyword movers** panel lists what climbed and what fell.
 
 Use the range picker to change the window. Dates are UTC, so a chart point labelled with a date is the observation for that UTC day.
 
@@ -33,9 +35,9 @@ To share the chart with someone who has no account, send it as an image or print
 
 An annotation is a named event pinned to one UTC day: a release, a listing change you shipped, the start of a campaign. The rank history chart and the visibility chart draw its annotations as plain vertical dashed lines; the charts stay clean and the hover tooltip of the day carries the label, the tag and the market.
 
-Add annotations on the rankings page of an app: pick a date, write a short label and save. A tag groups the markers of one campaign, and the list keeps every marker with its date for one click removal.
+Press **Add annotation** on the rankings page of an app, pick a date, write a short label and save. A tag groups the markers of one campaign, and the list keeps every marker with its date for one click removal.
 
-The metadata change marks asobeast draws on its own sit under the rank chart, one small marker on the day the store reported a change, and show what the store did; annotations show what you did. Both on one chart is usually the whole story.
+The metadata change marks AsoBeast draws on its own sit under the rank chart, one small marker on the day the store reported a change, and show what the store did; annotations show what you did.
 
 Agents write annotations too. A token with the write scope carries `add_annotation` and `delete_annotation`, so an agent that ships a listing change can leave the marker itself. See [MCP tool reference](/mcp/tools).
 
@@ -55,7 +57,7 @@ Axis labels in the picture use your system's default font where the page uses Ge
 
 ## Search results
 
-For every tracked keyword and day, asobeast keeps the top 50 search results with the app, its position and the listing signals the store returned. That snapshot is what makes the rest of the page possible.
+For every tracked keyword and day, AsoBeast keeps the top 50 search results with the app, its position and the listing signals the store returned. That snapshot is what makes the rest of the page possible.
 
 | Derived signal | What it measures |
 | --- | --- |
@@ -63,11 +65,11 @@ For every tracked keyword and day, asobeast keeps the top 50 search results with
 | Movers | Apps whose position changed materially between snapshots |
 | Volatility | How much of the top 10 changed hands over the recent window |
 
-The **SERP movers** card on this page lists the entrants and follows the market the pills at the top of the page have selected, so **All markets** watches every storefront and one pill watches that storefront only.
+The **New in your top 10** panel on this page lists the entrants and follows the market menu, so **All markets** watches every storefront and one market watches that storefront only.
 
 ### Open the search results
 
-Select the list button at the end of a keyword row on the Keywords page. The sheet shows the keyword, its storefront and the newest captured day.
+On the Keywords page, press the icons in the **Top apps** column, or choose **View search results** in the row menu. The keyword sheet opens the same list with **All results and earlier days**. The search results sheet shows the keyword, its storefront and the newest captured day.
 
 ### What a row shows
 
@@ -103,7 +105,7 @@ The store button on a row opens the app's page in the keyword's storefront. **Tr
 
 ## Understand volatility
 
-Volatility scores how much a keyword's top 10 changes membership, on a 0 to 100 scale. asobeast averages the difference between consecutive observed days over an eight day window, so 0 means the same ten apps every day and 100 means a completely different ten each day.
+Volatility scores how much a keyword's top 10 changes membership, on a 0 to 100 scale. AsoBeast averages the difference between consecutive observed days over an eight day window, so 0 means the same ten apps every day and 100 means a completely different ten each day.
 
 It measures which apps are present rather than the order they sit in, so a top 10 that reorders without anyone entering or leaving scores 0. High volatility means the result page turns over on its own, which makes a single day's change weak evidence.
 

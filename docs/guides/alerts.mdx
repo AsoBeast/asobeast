@@ -1,6 +1,6 @@
 ---
 title: Send alerts
-description: "asobeast delivers rank, chart, SERP, metadata, review and action events by signed webhook or SMTP email. Batched delivery is resumable and deduplicated."
+description: "AsoBeast delivers rank, chart, SERP, metadata, review and action events by signed webhook or SMTP email. Batched delivery is resumable and deduplicated."
 icon: bell
 keywords: ["alerts","webhook","SMTP","email","batched delivery","signature","ALERT_DELIVERY","milestone","first ranking","overtake","unsubscribe","List-Unsubscribe","DKIM","confirm recipient","double opt in","chart.entered","chart.left","chart.milestone","top charts","new review","review stars","rating.dropped","review.spike","rating drop","review spike","app.delisted","app.unlisted_market","delisted","unlisted market","essential alerts","alert rules","rank drop threshold","subject line","alerts page","alert feed","alert_events"]
 ---
@@ -38,7 +38,7 @@ The essential events are `rank.dropped`, `rank.milestone`, `rank.first`, `metada
 | The workspace is entitled and not suspended | Nothing is created, and the next daily run tries again |
 | The owner's address is verified, where the instance requires verification | Nothing is created, and the next daily run tries again |
 
-On an instance that verifies sign ups the alert is confirmed at once. A self hosted instance never verifies an account, so there the alert is created waiting for confirmation and the owner receives the usual confirmation email, sent by AsoBeast. The Compose stacks default `WEB_PUBLIC_URL` to `http://localhost:3001`, so a stack without a public `https` address gets no essential alerts.
+On an instance that verifies sign ups the alert is confirmed at once. A self-hosted instance never verifies an account, so there the alert is created waiting for confirmation and the owner receives the usual confirmation email, sent by AsoBeast. The Compose stacks default `WEB_PUBLIC_URL` to `http://localhost:3001`, so a stack without a public `https` address gets no essential alerts.
 
 It happens once per workspace. Deleting the alert, pausing it or unsubscribing from it never brings it back, and creating any email alert or webhook by hand settles the workspace too. A workspace that existed before this release is left as it was. The same starting point is one click away: **Add email alert** opens with the essential rules on and a rank drop value of 10.
 
@@ -67,7 +67,7 @@ The list shows what was detected, not what was sent. An event on the page does n
 
 ### Read the events over the API and MCP
 
-`GET /alerts/events` answers the same list with `appId`, `type`, `since`, `cursor` and `limit`, newest first, and pages with `nextCursor`. See [asobeast API](/api-reference/introduction). An agent reads it as the `alert_events` tool; see [MCP tool reference](/mcp/tools).
+`GET /alerts/events` answers the same list with `appId`, `type`, `since`, `cursor` and `limit`, newest first, and pages with `nextCursor`. See [AsoBeast API](/api-reference/introduction). An agent reads it as the `alert_events` tool; see [MCP tool reference](/mcp/tools).
 
 ## Subscribe to events
 
@@ -130,7 +130,7 @@ A keyword that moves between 10 and 11 fires each time it crosses. In batched de
 
 By default every check is compared with the one before it. A keyword that slips from 9 to 11 for a day and then comes back fires `rank.milestone` twice, once for leaving the top 10 and once for returning. Near a boundary those one day wobbles bury the drops that stay.
 
-Turn on **Confirm drops before alerting** on a webhook or an email alert, in the dialog that adds it or under **Edit events**, and that channel reports a drop only when the next check confirms it. The setting belongs to one channel, so other channels keep their current behaviour. In Settings it starts ticked for a new email alert and for a new webhook whose url is a Discord, Slack, Microsoft Teams, Telegram or Google Chat channel, because a person reads those, and unticked for a JSON webhook, which usually feeds a script that wants every check. A channel created through the API without the field, and every channel that existed before the setting, report every drop.
+Turn on **Confirm drops before alerting** on a webhook or an email alert, in the dialog that adds it or under **Edit rules**, and that channel reports a drop only when the next check confirms it. The setting belongs to one channel, so other channels keep their current behaviour. In Settings it starts ticked for a new email alert and for a new webhook whose url is a Discord, Slack, Microsoft Teams, Telegram or Google Chat channel, because a person reads those, and unticked for a JSON webhook, which usually feeds a script that wants every check. A channel created through the API without the field, and every channel that existed before the setting, report every drop.
 
 | Checks, oldest first | Without the setting | With the setting |
 | --- | --- | --- |
@@ -221,7 +221,7 @@ A webhook url must be `http` or `https`, must not embed credentials, and must re
 
 A name that only resolves inside a network is refused the same way. That covers a bare hostname such as `hooks` or `n8n`, `localhost`, and any name ending in `.local`, `.localhost`, `.internal` or `.home.arpa`. The error names the host and says it resolves inside this network.
 
-Set `WEBHOOK_ALLOW_PRIVATE_TARGETS` to `true` to deliver to your own network from a self hosted instance. The url may then name a host instead of an address, for example `http://n8n:5678/webhook/asobeast` for another service in the same Compose project, which keeps working when the container is recreated with a new address. Inside the api container `localhost` is the container itself, so name the receiver's service instead. Credentials in the url and schemes other than `http` and `https` stay refused. See the [configuration reference](/configuration/reference) for what that changes.
+Set `WEBHOOK_ALLOW_PRIVATE_TARGETS` to `true` to deliver to your own network from a self-hosted instance. The url may then name a host instead of an address, for example `http://n8n:5678/webhook/asobeast` for another service in the same Compose project, which keeps working when the container is recreated with a new address. Inside the api container `localhost` is the container itself, so name the receiver's service instead. Credentials in the url and schemes other than `http` and `https` stay refused. See the [configuration reference](/configuration/reference) for what that changes.
 
 A granular event looks like this.
 
@@ -259,7 +259,7 @@ A granular event looks like this.
 }
 ```
 
-A milestone and an overtake look like this. `rank.first` carries `position` and `depth` instead of the move.
+A milestone and an overtake look like this. `rank.first` carries `position` and `depth` instead of the move. `fromDepth` and `toDepth` are the depths those two checks reached, usually about 30 on Google Play.
 
 ```json
 {
@@ -425,9 +425,9 @@ Email stays disabled until both `SMTP_HOST` and `SMTP_FROM` are set. Neither one
 
 ### Confirm a recipient
 
-Adding an email alert sends one confirmation email to the recipient, naming the account that added the address. The alert shows **Awaiting confirmation** in **Settings**, **Email alerts** and receives nothing, not even a test email, until the recipient presses **Confirm email address** on the page the link opens. That page asks before it acts, so a mail scanner that opens the link confirms nothing.
+Adding an email alert sends one confirmation email to the recipient, naming the account that added the address. The alert shows **Awaiting confirmation** in **Settings**, **Alerts**, under **Email**, and receives nothing, not even a test email, until the recipient presses **Confirm email address** on the page the link opens. That page asks before it acts, so a mail scanner that opens the link confirms nothing.
 
-A recipient is confirmed at once only when the address is the verified account email of a member of the workspace. Account emails are verified only where billing and SMTP are both on, so on a self hosted instance every recipient, the owner included, confirms through the mailbox.
+A recipient is confirmed at once only when the address is the verified account email of a member of the workspace. Account emails are verified only where billing and SMTP are both on, so on a self-hosted instance every recipient, the owner included, confirms through the mailbox.
 
 The confirmation link points at the web app, so it needs `WEB_PUBLIC_URL`. Without it no confirmation email can be sent, the recipient stays **Awaiting confirmation** and receives nothing, and the API logs a warning at startup in production. When a confirmation email cannot be sent, for that reason or because the SMTP relay refused it, **Settings** says so when you add the recipient, and **Resend confirmation** tries again.
 
@@ -471,7 +471,7 @@ The subject of a daily update is its most important sentence, for example `[asob
 
 ### Unsubscribe from an email
 
-Every alert email carries a one click unsubscribe that mail apps show as their own button, and an **Unsubscribe** link in its footer. Either one pauses that email alert only, while webhooks and other email alerts keep running. It also withdraws the recipient's confirmation, so switching the alert back on under **Settings**, **Email alerts** sends nothing to that address until the address changes and the new one confirms. A link works for the address it was sent to, so changing an alert's address retires the links in earlier emails.
+Every alert email carries a one click unsubscribe that mail apps show as their own button, and an **Unsubscribe** link in its footer. Either one pauses that email alert only, while webhooks and other email alerts keep running. It also withdraws the recipient's confirmation, so switching the alert back on in **Settings**, **Alerts**, under **Email**, sends nothing to that address until the address changes and the new one confirms. A link works for the address it was sent to, so changing an alert's address retires the links in earlier emails.
 
 The one click headers need `WEB_PUBLIC_URL` on `https`. On plain `http` only the footer link is offered. See [Email deliverability](/operations/email-deliverability) for the sender side.
 

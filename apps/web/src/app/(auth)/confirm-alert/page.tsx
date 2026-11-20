@@ -4,7 +4,7 @@ import { ConfirmAlertContent } from "@/components/auth/ConfirmAlertContent";
 
 export default function ConfirmAlertPage() {
   return (
-    <Suspense fallback={<AuthCardSkeleton />}>
+    <Suspense fallback={<AuthCardSkeleton description />}>
       <ConfirmAlertContent />
     </Suspense>
   );

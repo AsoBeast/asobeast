@@ -13,6 +13,11 @@ import {
   runStatusOptions,
 } from "@/lib/queries";
 import { AppsDashboard } from "@/components/dashboard/AppsDashboard";
+import {
+  breakdownSize,
+  historyScope,
+  scopeId,
+} from "@/components/dashboard/breakdown";
 import { FirstRunGate } from "@/components/dashboard/FirstRunGate";
 import { PortfolioPulse } from "@/components/dashboard/PortfolioPulse";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
@@ -43,6 +48,7 @@ import { OnboardingBanner } from "@/components/onboarding/OnboardingBanner";
 import { DASHBOARD_ACTION_LIMIT } from "@/lib/action-filters";
 import {
   appViewParser,
+  dashboardBreakdownParsers,
   dashboardMetricParser,
   dashboardRangeParser,
 } from "@/lib/search-params";
@@ -65,14 +71,23 @@ export default async function Page({
   const range = dashboardRangeParser.parseServerSide(params.range);
   const metric = dashboardMetricParser.parseServerSide(params.metric);
   void queryClient.prefetchQuery(portfolioHistoryOptions(range));
-  if (metric === "actions") {
-    void queryClient.prefetchQuery(actionActivityOptions({ days: range }));
-  }
-  const [, operator] = await Promise.all([
+  const [portfolio, operator] = await Promise.all([
     queryClient.fetchQuery(portfolioOptions),
     viewerIsOperator(),
   ]);
   if (operator) void queryClient.prefetchQuery(budgetOptions);
+  const scope = historyScope(
+    dashboardBreakdownParsers.by.parseServerSide(params.by),
+    dashboardBreakdownParsers.scope.parseServerSide(params.scope),
+    portfolio.apps,
+  );
+  if (metric === "actions") {
+    void queryClient.prefetchQuery(
+      actionActivityOptions({ days: range, ...scope }),
+    );
+  } else if (scopeId(scope) !== null) {
+    void queryClient.prefetchQuery(portfolioHistoryOptions(range, scope));
+  }
 
   const today = new Date().toISOString().slice(0, 10);
   const view = appViewParser.parseServerSide(params.view);
@@ -106,7 +121,11 @@ export default async function Page({
             </Suspense>
           </DashboardHeader>
 
-          <Suspense fallback={<PortfolioPulseSkeleton />}>
+          <Suspense
+            fallback={
+              <PortfolioPulseSkeleton rows={breakdownSize(portfolio.apps)} />
+            }
+          >
             <PortfolioPulse />
           </Suspense>
 

@@ -296,6 +296,7 @@ export class AuthService {
     const users = await this.beforeSignIn(() => this.prisma.user.count());
     return {
       billing: this.billing,
+      confirmsEmail: this.verification.required,
       registrationOpen: this.registrationAllowed() || users === 0,
       setupRequired: users === 0,
       authenticated: (await this.resolveSessionUser(token)) !== null,

@@ -8,7 +8,10 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { addDays, utcToday } from '../src/analytics/analytics.support';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
-import { StoreRequestError } from '../src/store-providers/errors';
+import {
+  StorePoolBusyError,
+  StoreRequestError,
+} from '../src/store-providers/errors';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import type {
   NormalizedApp,
@@ -404,6 +407,20 @@ describe('Competitor suggestions (e2e)', () => {
       'similar',
       'boom',
     );
+    const primary = await createPrimary();
+    await seedSerp(primary.id, [
+      { storeAppId: '222000222', position: 3, date: D1 },
+    ]);
+
+    const res = await suggest(primary.id).expect(200);
+
+    const body = res.body as CompetitorSuggestions;
+    expect(body.similar).toBe('unavailable');
+    expect(body.items.map((item) => item.storeAppId)).toEqual(['222000222']);
+  });
+
+  it('degrades when the proxy pool is busy', async () => {
+    registry.failure = new StorePoolBusyError(Store.APP_STORE, 1_000);
     const primary = await createPrimary();
     await seedSerp(primary.id, [
       { storeAppId: '222000222', position: 3, date: D1 },

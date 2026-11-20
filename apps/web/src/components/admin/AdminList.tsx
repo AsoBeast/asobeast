@@ -13,6 +13,7 @@ import { SearchInput } from "@/components/data-table/SearchInput";
 import type { DataTableFeatures } from "@/components/data-table/table-features";
 import { PANEL_BLEED } from "@/components/layout/panel-classes";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { adminSearchLabel } from "./admin-search";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatNumber } from "@/lib/format";
 import { AdminTable } from "./AdminTable";
@@ -58,7 +59,7 @@ export function AdminList<TData extends RowData>({
     <div className="flex min-w-0 flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
         <SearchInput
-          label={`Search ${noun}s`}
+          label={adminSearchLabel(noun)}
           value={search}
           onSearch={onSearch}
         />

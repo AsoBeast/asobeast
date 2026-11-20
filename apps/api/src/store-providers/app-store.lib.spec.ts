@@ -6,7 +6,6 @@ jest.mock('./egress/egress', () => ({ egressFetch: jest.fn() }));
 jest.mock('@perttu/app-store-scraper', () => ({
   app: jest.fn(),
   search: jest.fn(),
-  similar: jest.fn(),
 }));
 
 const fetchMock = jest.mocked(egressFetch);
@@ -85,6 +84,21 @@ describe('appStoreLib edge cache', () => {
     expect(first.href).toBe(SEARCH_URL);
   });
 
+  it('lets a search that may answer from the edge cache ask without a nonce', async () => {
+    await appStoreLib.search({
+      term: 'explorer',
+      country: 'us',
+      num: 200,
+      fromEdgeCache: true,
+    });
+    const [options] = jest.mocked(appStore.search).mock.lastCall ?? [];
+    await options?.requestOptions?.fetch?.(SEARCH_URL, { method: 'GET' });
+    const [requested] = fetchMock.mock.lastCall ?? [];
+
+    expect(new URL(requested as URL | string).href).toBe(SEARCH_URL);
+    expect(options).not.toHaveProperty('fromEdgeCache');
+  });
+
   it('leaves the product page and the search hints as they are', async () => {
     const page = 'https://apps.apple.com/us/app/id1475326567';
     const hints =
@@ -119,84 +133,6 @@ describe('appStoreLib.page', () => {
       'https://apps.apple.com/pl/app/id1?l=pl',
       'https://apps.apple.com/sg/app/id1?l=zh-Hans',
     ]);
-  });
-});
-
-const PRODUCT_PAGE = 'https://apps.apple.com/us/app/id570060128';
-
-const SIMILAR_APP = { id: 7, title: 'Similar' } as Awaited<
-  ReturnType<typeof appStore.similar>
->[number];
-
-function scraperReadingTheProductPage(
-  found: Awaited<ReturnType<typeof appStore.similar>> = [],
-): void {
-  jest
-    .mocked(appStore.similar)
-    .mockImplementation(async ({ requestOptions }) => {
-      try {
-        const response = await requestOptions?.fetch?.(PRODUCT_PAGE);
-        if (!response?.ok) return [];
-      } catch {
-        return [];
-      }
-      return found;
-    });
-}
-
-describe('appStoreLib.similar', () => {
-  beforeEach(() => {
-    fetchMock.mockReset();
-    jest.mocked(appStore.similar).mockReset();
-  });
-
-  it('reports a product page the store refused instead of an empty list', async () => {
-    scraperReadingTheProductPage();
-    answer(403, 'blocked');
-
-    await expect(
-      appStoreLib.similar({ id: 570060128, country: 'us' }),
-    ).rejects.toThrow('Request failed with status 403');
-  });
-
-  it('reports a product page the store did not answer', async () => {
-    scraperReadingTheProductPage();
-    fetchMock.mockRejectedValueOnce(new Error('fetch failed'));
-
-    await expect(
-      appStoreLib.similar({ id: 570060128, country: 'us' }),
-    ).rejects.toThrow('fetch failed');
-  });
-
-  it('still answers an empty list for a page that lists no similar apps', async () => {
-    scraperReadingTheProductPage();
-    answer(200, '<h1>App</h1>');
-
-    await expect(
-      appStoreLib.similar({ id: 570060128, country: 'us' }),
-    ).resolves.toEqual([]);
-  });
-
-  it('answers the similar apps of a page it read', async () => {
-    scraperReadingTheProductPage([SIMILAR_APP]);
-    answer(200, '<h1>App</h1>');
-
-    await expect(
-      appStoreLib.similar({ id: 570060128, country: 'us' }),
-    ).resolves.toEqual([SIMILAR_APP]);
-  });
-
-  it('judges each call by its own requests', async () => {
-    scraperReadingTheProductPage();
-    answer(429, 'too many requests');
-    answer(200, '<h1>App</h1>');
-
-    await expect(
-      appStoreLib.similar({ id: 570060128, country: 'us' }),
-    ).rejects.toThrow('Request failed with status 429');
-    await expect(
-      appStoreLib.similar({ id: 570060128, country: 'us' }),
-    ).resolves.toEqual([]);
   });
 });
 
@@ -298,22 +234,6 @@ describe('appStoreLib attempt timeout', () => {
 
     await expect(
       appStoreLib.app({ id: 922103212, country: 'us', ratings: true }),
-    ).rejects.toThrow('This operation was aborted');
-  });
-
-  it('never trusts similar apps the scraper finished after the deadline passed', async () => {
-    const deadline = new AbortController();
-    jest.mocked(appStore.similar).mockImplementation(() => {
-      deadline.abort();
-      return Promise.resolve([]);
-    });
-
-    await expect(
-      appStoreLib.similar({
-        id: 922103212,
-        country: 'us',
-        signal: deadline.signal,
-      }),
     ).rejects.toThrow('This operation was aborted');
   });
 });

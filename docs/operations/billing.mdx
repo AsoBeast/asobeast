@@ -6,7 +6,7 @@ icon: credit-card
 keywords: ["billing","stripe","trial","subscription","dunning","downgrade","cancellation"]
 ---
 
-Billing is off unless `BILLING_ENABLED` is `true` and `STRIPE_SECRET_KEY` is set. A self hosted instance never reaches any of this. See [Configuration reference](/configuration/reference) for the variables.
+Billing is off unless `BILLING_ENABLED` is `true` and `STRIPE_SECRET_KEY` is set. A self-hosted instance never reaches any of this. See [Configuration reference](/configuration/reference) for the variables.
 
 ## The catalog
 
@@ -86,7 +86,7 @@ Every verified delivery is stored once and processed from a queue, and each stor
 | Outcome | Meaning |
 | --- | --- |
 | `applied` | The subscription was written onto the workspace it belongs to |
-| `ignored` | Nothing to do: an event type asobeast does not act on, an event that names no subscription, or one older than the state the workspace already holds |
+| `ignored` | Nothing to do: an event type AsoBeast does not act on, an event that names no subscription, or one older than the state the workspace already holds |
 | `orphaned` | The subscription names a workspace this instance does not have, or a workspace that belongs to a different Stripe customer |
 
 An orphaned event settles on its first attempt. Waiting cannot make it placeable, so it is never retried and never pages. It keeps its payload for `RETENTION_BILLING_EVENTS_DAYS`, the API logs a warning naming the event, the subscription and the customer, and the nightly reconciliation reports the subscription. The count of events settled as orphaned in the last seven days is `asobeast_billing_events_orphaned`, and while it is above zero the `billing.orphan.events` alert fires at investigate. See [Billing incident](/operations/runbooks/billing-incident) for what usually causes one.
@@ -163,7 +163,7 @@ Trial emails go out through the same SMTP transport and delivery log the product
 
 A `past_due` subscription that has never paid an invoice above zero is not entitled: the trial's first charge was declined, the owner is emailed once and sent to the portal, and the next `invoice.paid` restores the plan. Paid means a paid invoice, read from the subscription's latest invoice; a subscription is `active` for about an hour before Stripe charges it, which proves nothing. Once a customer has paid, `past_due` stays entitled as below.
 
-A failed charge moves the subscription to `past_due`, which **stays entitled**. Revoking on the first decline turns an expired card into churn. asobeast emails the owner once, points them at the billing portal, and then follows Stripe's own retry schedule. Recovery is automatic: the next `invoice.paid` clears the warning and restores the plan with no manual step.
+A failed charge moves the subscription to `past_due`, which **stays entitled**. Revoking on the first decline turns an expired card into churn. AsoBeast emails the owner once, points them at the billing portal, and then follows Stripe's own retry schedule. Recovery is automatic: the next `invoice.paid` clears the warning and restores the plan with no manual step.
 
 ## Downgrade and cancellation
 
@@ -175,7 +175,7 @@ Checkout first asks Stripe whether the workspace's stored customer still exists.
 
 A refusal carries the recovery in the error body, not only in its message, so the web app can open the portal for the customer rather than showing them a dead end.
 
-- asobeast reads the scheduled phase from Stripe and records the plan the workspace will land on.
+- AsoBeast reads the scheduled phase from Stripe and records the plan the workspace will land on.
 - Within a week of the effective date, if the workspace would be over the smaller plan's limits, the owner is emailed with the exact numbers.
 - At the effective date the daily run covers the first items in a stable order and leaves the rest untouched. **Nothing is deleted.**
 

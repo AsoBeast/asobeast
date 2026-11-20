@@ -18,21 +18,21 @@ Keyword discovery finds phrases your app ranks for, or could rank for, that you 
 | Apple popularity | Popular terms of the app's genre in the newest week Apple lists, that share a word with your listing | App Store only, and only when the instance has [Apple Ads configured](/configuration/reference) |
 | Your other apps | Phrases the workspace tracks for its other apps in the same store and market | Every market of the app |
 
-Competitors and reviews feed the home market only, because asobeast captures both for the home storefront.
+Competitors and reviews feed the home market only, because AsoBeast captures both for the home storefront.
 
 One phrase found by several sources is listed once, under the source with the highest starting relevance. A phrase the app tracks in that market, active or paused, is left out, and so is a phrase you dismissed. Each market keeps the best 200 candidates, ordered by relevance and then popularity.
 
 ## How the rank is found
 
-When another search of the same phrase in the same storefront ran today or yesterday, for any workspace on the instance, its stored results answer for free. They hold the top 50, so a discovery read this way shows depth 50. A phrase whose stored results do not contain your app may still rank between 51 and 200, so it stays due for a search of its own. Otherwise one search reads the top 200 for the phrase.
+When another search of the same phrase in the same storefront ran today or yesterday, for any workspace on the instance, its stored results answer for free. They hold the top 50, so a discovery read this way shows the depth that capture held, at most 50. When the capture held a full 50 without your app, the phrase may still rank deeper, so it stays due for a search of its own; when the store's list ended sooner, the reading is final. Otherwise one search reads as deep as the store lists, up to 200. A search that lists no apps reads `>200`, and a discovery searched before version 1.17 keeps the `>200` it was stored with until its phrase is searched again.
 
-The rank column reads like the tracked table: a number is the position, `>50` or `>200` means checked and not found within that depth, and a dash means not checked yet.
+The rank column reads like the tracked table: a number is the position, `>50`, `>30` or `>200` means checked and not found within that depth, and a dash means not checked yet.
 
 A search of a phrase nobody tracks stores its results for everybody, exactly as a daily check does. A search of a phrase some workspace tracks stores nothing, because the daily run owns that day's results. A discovery never writes a position history for your app until you track it.
 
 ## The weekly cap
 
-Each app gets at most 40 searches a week on the App Store and 20 on Google Play, where one search costs about eight requests. The week starts on Monday at 00:00 UTC. **Refresh** shares the same cap, so a refresh after the Monday run usually finds nothing left to search, though it still rebuilds the list and reads other searches for free. The cap applies on self hosted instances too, because it protects the address of the machine that runs asobeast.
+Each app gets at most 40 searches a week on the App Store and 20 on Google Play. The week starts on Monday at 00:00 UTC. **Refresh** shares the same cap, so a refresh after the Monday run usually finds nothing left to search, though it still rebuilds the list and reads other searches for free. The cap applies on self-hosted instances too, because it protects the address of the machine that runs AsoBeast.
 
 The weekly run starts on `CRON_DISCOVERY`, Monday 07:30 UTC by default; an empty value switches it off. See the [configuration reference](/configuration/reference). Its searches queue behind the daily run and never delay it. A phrase is searched again after seven days.
 
@@ -58,7 +58,7 @@ The tracked keyword's source is Suggested for review, popularity and other app p
 
 Dismiss is permanent for the phrase. If you stop tracking a phrase that came from discovery, it returns to the list with what discovery last observed.
 
-**Auto track ranked** tracks every ranked discovery that fits at once, and every later search that finds the app tracks its phrase too. Switching it off leaves tracked keywords alone.
+**Auto-track ranked** tracks every ranked discovery that fits at once, and every later search that finds the app tracks its phrase too. Switching it off leaves tracked keywords alone.
 
 ## The Discovered tab
 
@@ -74,7 +74,7 @@ The keywords page has two tabs, **Tracked** and **Discovered**, each with its co
 | --- | --- |
 | Keyword | The phrase, with the word **Recommended** on the first 50 of the list |
 | Source | Your title, Your subtitle, Your description (Your short description on Google Play), Competitors, Reviews, Apple popularity or Your other apps |
-| Position | The position as on the tracked table, `>50` or `>200` when checked and not found within that depth, a dash when not checked yet |
+| Position | The position as on the tracked table, `>50`, `>30` or `>200` when checked and not found within that depth, a dash when not checked yet |
 | Opportunity | Popularity weighed against difficulty, a dash until both exist |
 | Popularity, Difficulty | The scores some tracker already produced, a dash when there is none |
 | Relevance | How close the phrase is to your listing |
@@ -103,7 +103,7 @@ An import builds the first list from the listing it just captured and queues its
 | `POST /apps/{id}/keyword-discoveries/refresh` | Rebuilds the list and queues the searches left this week |
 | `PATCH /apps/{id}/keyword-discoveries/settings` | Switches `autoTrackRanked` |
 
-A read scoped token can list, a write scoped token can also change. Agents read the list with the `keyword_discoveries` tool; tracking is not an MCP write tool. See [asobeast API](/api-reference/introduction) and the [MCP tool reference](/mcp/tools).
+A read scoped token can list, a write scoped token can also change. Agents read the list with the `keyword_discoveries` tool; tracking is not an MCP write tool. See [AsoBeast API](/api-reference/introduction) and the [MCP tool reference](/mcp/tools).
 
 ## Cost and storage
 
@@ -120,3 +120,15 @@ A read scoped token can list, a write scoped token can also change. Agents read 
     The weekly cap may be used, the workspace may be paused (suspended, or without a plan in force on a hosted instance), or `CRON_DISCOVERY` may be empty.
   </Accordion>
 </AccordionGroup>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Track keywords" icon="key" href="/guides/track-keywords">
+    Track a discovered phrase and watch its position every day.
+  </Card>
+
+  <Card title="Inspect any keyword" icon="text-search" href="/guides/keyword-inspections">
+    Read the search results of a phrase before you track it.
+  </Card>
+</CardGroup>

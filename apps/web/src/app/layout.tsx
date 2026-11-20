@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     default: PRODUCT_NAME,
     template: `%s · ${PRODUCT_NAME}`,
   },
-  description: "Open source App Store Optimization toolkit",
+  description: "Open-source App Store Optimization toolkit",
   appleWebApp: {
     capable: true,
     title: PRODUCT_NAME,

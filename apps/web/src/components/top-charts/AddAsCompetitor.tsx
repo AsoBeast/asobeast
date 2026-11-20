@@ -14,11 +14,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { addCompetitor, ApiError } from "@/lib/api";
-import { armFocusHandoff } from "@/lib/focus-handoff";
+import { armFocusHandoff, renewFocusHandoff } from "@/lib/focus-handoff";
 import {
   invalidateChartMutation,
   invalidateCompetitorMutation,
 } from "@/lib/queries";
+import { busyRetry } from "@/lib/query-retry";
 import { useSingleFlight } from "@/lib/single-flight";
 import { competitorFocusKey } from "./chart-actions";
 
@@ -33,8 +34,10 @@ export function AddAsCompetitor({
 }) {
   const queryClient = useQueryClient();
   const mutation = useMutation({
+    ...busyRetry,
     mutationFn: (appId: string) => addCompetitor(appId, storeAppId),
     onSuccess: (competitor, appId) => {
+      renewFocusHandoff(competitorFocusKey(storeAppId));
       invalidateCompetitorMutation(queryClient, appId);
       invalidateChartMutation(queryClient);
       toast.success(`Now tracking ${competitor.name ?? title}`);

@@ -2,8 +2,10 @@ import type {
   VisibilityPoint,
   KeywordMover,
   RankDistribution,
+  RankDistributionPoint,
 } from './analytics';
 import type { Store } from '../index';
+import type { ChangeField } from './changes';
 import type { KeywordDiscoveryCount } from './keyword-discoveries';
 import type { AppSetupSummary } from './setup';
 
@@ -122,11 +124,48 @@ export interface PortfolioRangeChange {
   movers: { up: PortfolioKeywordMover[]; down: PortfolioKeywordMover[] };
 }
 
+export interface PortfolioPartChange {
+  visibility: number;
+  visibilityDelta: number | null;
+  top10: number;
+  top10Delta: number | null;
+  movement: PortfolioMovement;
+}
+
+export interface PortfolioAppHistory {
+  appId: string;
+  points: PortfolioHistoryPoint[];
+  change: PortfolioPartChange;
+  lastRun: PortfolioMovement;
+}
+
+export interface PortfolioStoreHistory {
+  store: Store;
+  apps: number;
+  change: PortfolioPartChange;
+}
+
+export interface PortfolioListingChange {
+  date: string;
+  appId: string;
+  fields: ChangeField[];
+}
+
+export interface PortfolioHistoryScope {
+  appId?: string;
+  store?: Store;
+}
+
 export interface PortfolioHistory {
   days: PortfolioHistoryDays;
   points: PortfolioHistoryPoint[];
   previous: PortfolioHistoryPoint[];
   change: PortfolioRangeChange;
+  bands?: RankDistributionPoint[];
+  apps?: PortfolioAppHistory[];
+  stores?: PortfolioStoreHistory[];
+  lastRun?: PortfolioRangeChange;
+  listingChanges?: PortfolioListingChange[];
 }
 
 export interface PortfolioInsightTotals {

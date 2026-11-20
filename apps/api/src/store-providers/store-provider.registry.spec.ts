@@ -9,7 +9,6 @@ const stubLib: AppStoreLib = {
   app: jest.fn(),
   search: jest.fn(),
   suggest: jest.fn(),
-  similar: jest.fn(),
 };
 
 const stubGplayLib: GooglePlayLib = {

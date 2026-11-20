@@ -1,7 +1,7 @@
 ---
 title: Subprocessors
 sidebarTitle: Subprocessors
-description: "Every third party the hosted asobeast service sends data to, what reaches each one, and which of them a self hosted installation uses."
+description: "Every third party the hosted AsoBeast service sends data to, what reaches each one, and which of them a self-hosted installation uses."
 icon: share-2
 keywords: ["subprocessors","gdpr","stripe","openai","proxy","hosting"]
 ---
@@ -26,18 +26,18 @@ A subprocessor is a third party that processes data on our behalf. This page sta
 - **Your personal API tokens.** Only a hash is stored, and the plaintext is shown once at creation.
 - **Your app's users.** The service never receives them, so there is nothing to pass on. See the [privacy policy](https://asobeast.com/privacy).
 
-## A self hosted installation
+## A self-hosted installation
 
-A self hosted installation uses **none** of the above by default.
+A self-hosted installation uses **none** of the above by default.
 
-| Subprocessor | Used when self hosted |
+| Subprocessor | Used when self-hosted |
 | --- | --- |
 | Hosting provider | Your own infrastructure, not ours |
 | Stripe and Link | No, unless you deliberately enable billing. Link only when you also enable Managed Payments |
 | Webshare | No, unless you configure a proxy provider. Store requests otherwise leave from your own address |
 | SMTP provider | Only the server you configure, and email stays disabled until you do |
 | Object storage provider | Only the destination you configure, and archives stay on the host until you do |
-| Error tracking provider | **Never.** Error tracking is ignored unless billing is enabled, which a self hosted installation does not use |
+| Error tracking provider | **Never.** Error tracking is ignored unless billing is enabled, which a self-hosted installation does not use |
 | OpenAI, or the provider you name | Only when you supply your own key. `OPENAI_BASE_URL` sends the same requests to an OpenAI compatible provider of your choice instead. AI features are otherwise hidden and the endpoints refuse |
 
 The end to end suite boots an installation with no cloud configuration and asserts it opens no connection beyond its own database and queue. That test is what keeps this table honest as the hosted code grows.

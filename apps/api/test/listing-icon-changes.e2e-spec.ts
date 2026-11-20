@@ -145,8 +145,21 @@ describe('Icon change events (e2e)', () => {
         field: 'screenshotImages',
         before: '3 screenshots',
         after: '3 screenshots, 1 replaced',
+        detail: {
+          kind: 'images',
+          before: [1, 2, 3].map(positionShot),
+          after: [1, 9, 3].map(positionShot),
+          added: [2],
+          removed: [2],
+          reordered: false,
+        },
       },
     ]);
     await expect(iconEvents(appId)).resolves.toEqual([]);
   });
+});
+
+const positionShot = (shot: number, index: number) => ({
+  position: index + 1,
+  url: appleShot(shot),
 });

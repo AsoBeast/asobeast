@@ -3,7 +3,6 @@ import { Prisma } from '@prisma/client';
 import {
   isCheckFresh,
   KeywordDiscoveryTrackResult,
-  RANK_DEPTH,
   utcDayOf,
 } from '@asobeast/shared';
 import { QuotaExceededError } from '../auth/quota.errors';
@@ -15,7 +14,12 @@ import { KeywordApp } from '../keywords/keywords.support';
 import { MarketListingRequests } from '../keywords/market-listing.requests';
 import { PrismaService } from '../prisma/prisma.service';
 import { keywordSourceOf } from './discovery-pool';
-import { planDiscoveryTrack, TrackRow } from './discovery-track-plan';
+import { isCompleteReading } from './discovery-reading';
+import {
+  planDiscoveryTrack,
+  TrackCandidate,
+  TrackRow,
+} from './discovery-track-plan';
 
 type KnownPosition = TrackRow & { depth: number; checkedOn: string };
 
@@ -32,7 +36,7 @@ const hasKnownPosition =
   (today: string) =>
   (row: TrackRow): row is KnownPosition =>
     row.depth !== null &&
-    (row.position !== null || row.depth >= RANK_DEPTH) &&
+    (row.position !== null || isCompleteReading(row)) &&
     row.checkedOn !== null &&
     isCheckFresh(row.checkedOn, today);
 
@@ -56,7 +60,10 @@ export class DiscoveryTracker {
     return this.track(app, rows, today, (_, chosen) => Promise.resolve(chosen));
   }
 
-  async unfit(app: KeywordApp, ranked: readonly TrackRow[]): Promise<number> {
+  async unfit(
+    app: KeywordApp,
+    ranked: readonly TrackCandidate[],
+  ): Promise<number> {
     if (ranked.length === 0) return 0;
     const [tracking, room] = await Promise.all([
       loadTrackingStates(this.prisma, app, ranked),

@@ -170,19 +170,22 @@ describe('on demand store calls (e2e)', () => {
       {
         route: 'POST /apps',
         status: 502,
-        message: 'The App Store did not answer. Try again in a few minutes.',
+        message:
+          'The App Store took longer than 20 seconds to answer. Try again in a few minutes.',
         answeredInTime: true,
       },
       {
         route: 'POST /apps/{2048}/refresh',
         status: 502,
-        message: 'The App Store did not answer. Try again in a few minutes.',
+        message:
+          'The App Store took longer than 20 seconds to answer. Try again in a few minutes.',
         answeredInTime: true,
       },
       {
         route: 'POST /apps/{YouCam Makeup}/refresh',
         status: 502,
-        message: 'Google Play did not answer. Try again in a few minutes.',
+        message:
+          'Google Play took longer than 20 seconds to answer. Try again in a few minutes.',
         answeredInTime: true,
       },
     ]);

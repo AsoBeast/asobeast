@@ -16,6 +16,8 @@ export interface DivergingTrend {
   dayTicks: string[];
 }
 
+export const fallen = (row: DivergingRow): number => Math.abs(row.down);
+
 export interface DailyPair {
   date: string;
   up: number;

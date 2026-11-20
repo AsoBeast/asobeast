@@ -52,6 +52,10 @@ export class ProxyPoolConfig {
     return this.config.get('PROXY_WORKER_MAX_CONCURRENCY', { infer: true });
   }
 
+  get interactiveReserve(): number {
+    return this.config.get('PROXY_INTERACTIVE_RESERVE', { infer: true });
+  }
+
   get residentialUrl(): string | undefined {
     return this.config.get('PROXY_RESIDENTIAL_URL', { infer: true });
   }

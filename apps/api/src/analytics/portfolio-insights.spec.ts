@@ -11,6 +11,8 @@ import {
 const REFERENCE = new Date('2026-07-13T00:00:00.000Z');
 const WEEK_AGO = new Date('2026-07-06T00:00:00.000Z');
 const TWO_DAYS_AGO = new Date('2026-07-11T00:00:00.000Z');
+const DAY_BEFORE_WEEK_AGO = new Date('2026-07-05T00:00:00.000Z');
+const DAY_AFTER_WEEK_AGO = new Date('2026-07-07T00:00:00.000Z');
 
 const row = (keywordId: string, rankings: Ranking[]): TrackedRow => ({
   keywordId,
@@ -59,6 +61,45 @@ const insight = (
 });
 
 describe('rankInsight', () => {
+  it('reads a keyword checked only the day before the baseline at that check for the top 10 too', () => {
+    const rows = [
+      row('a', [capture(3, REFERENCE), capture(4, WEEK_AGO)]),
+      row('b', [capture(2, REFERENCE), capture(5, DAY_BEFORE_WEEK_AGO)]),
+    ];
+
+    const result = rankInsight(rows, REFERENCE);
+
+    expect(result.movers.up.map((mover) => [mover.text, mover.from])).toEqual([
+      ['b', 5],
+      ['a', 4],
+    ]);
+    expect(result.movement.entered).toBe(0);
+    expect(result.top10Delta).toBe(0);
+  });
+
+  it('compares the top 10 when the baseline day itself was not checked but the next day was', () => {
+    const rows = [
+      row('a', [capture(3, REFERENCE), capture(14, DAY_AFTER_WEEK_AGO)]),
+    ];
+
+    expect(rankInsight(rows, REFERENCE).top10Delta).toBe(1);
+  });
+
+  it('prefers the check inside the range over the day before it', () => {
+    const rows = [
+      row('a', [
+        capture(3, REFERENCE),
+        capture(8, DAY_AFTER_WEEK_AGO),
+        capture(15, DAY_BEFORE_WEEK_AGO),
+      ]),
+    ];
+
+    const result = rankInsight(rows, REFERENCE);
+
+    expect(result.top10Delta).toBe(0);
+    expect(result.movers.up[0]?.from).toBe(8);
+  });
+
   it('reports zeros and no trend without a reference date', () => {
     const result = rankInsight([row('focus', [capture(3, REFERENCE)])], null);
 

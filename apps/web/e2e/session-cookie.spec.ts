@@ -42,7 +42,7 @@ async function routeStatus(page: Page, authenticated: () => boolean) {
 
 async function signIn(page: Page) {
   await page.getByLabel("Email").fill("owner@example.com");
-  await page.getByLabel("Password").fill("supersecret1");
+  await page.getByLabel("Password", { exact: true }).fill("supersecret1");
   await page.getByRole("button", { name: "Sign in" }).click();
 }
 
@@ -213,7 +213,7 @@ test("a registration whose cookie the browser drops says the account exists", as
 
   await page.goto("/register");
   await page.getByLabel("Email").fill("owner@example.com");
-  await page.getByLabel("Password").fill("supersecret1");
+  await page.getByLabel("Password", { exact: true }).fill("supersecret1");
   await page.getByRole("button", { name: "Create account" }).click();
 
   await expect(notice(page)).toContainText("Your account was created.");
@@ -230,7 +230,7 @@ test("an accepted invitation whose cookie the browser drops says the invitation 
   );
 
   await page.goto("/invite?token=invitation-token-value");
-  await page.getByLabel("Password").fill("supersecret1");
+  await page.getByLabel("Password", { exact: true }).fill("supersecret1");
   await page.getByRole("button", { name: "Accept invitation" }).click();
 
   await expect(notice(page)).toContainText("You joined the workspace.");

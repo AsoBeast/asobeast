@@ -8,6 +8,7 @@ import { AuditChecks } from "@/components/audit/AuditChecks";
 import { AuditFactors } from "@/components/audit/AuditFactors";
 import { AuditFooter } from "@/components/audit/AuditFooter";
 import { AuditLede } from "@/components/audit/AuditLede";
+import { AuditReadiness } from "@/components/audit/AuditReadiness";
 import { AuditScorePanel } from "@/components/audit/AuditScorePanel";
 import { AuditTopFixes } from "@/components/audit/AuditTopFixes";
 import { CopyReportButton } from "@/components/audit/CopyReportButton";
@@ -40,6 +41,7 @@ export function AuditPage({ appId }: { appId: string }) {
           <AuditScorePanel audit={audit} />
         </div>
         <div className={AUDIT_RAIL}>
+          <AuditReadiness audit={audit} />
           <AuditTopFixes
             appId={appId}
             recommendations={audit.recommendations}

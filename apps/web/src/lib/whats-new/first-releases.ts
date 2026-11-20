@@ -232,7 +232,7 @@ export const FIRST_RELEASES: readonly Release[] = [
     date: "2026-08-24",
     title: "AsoBeast is here",
     summary:
-      "The first release of AsoBeast, an open source toolkit to grow your app in the App Store and on Google Play.",
+      "The first release of AsoBeast, an open-source toolkit to grow your app in the App Store and on Google Play.",
     changes: [
       {
         kind: "new",

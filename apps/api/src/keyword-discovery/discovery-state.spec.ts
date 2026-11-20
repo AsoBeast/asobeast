@@ -76,7 +76,7 @@ describe('isPending', () => {
         {
           queuedAt: new Date('2026-11-10T07:30:00Z'),
           checkedOn: null,
-          depth: null,
+          ownSearch: false,
         },
         now,
       ),
@@ -86,7 +86,7 @@ describe('isPending', () => {
         {
           queuedAt: new Date('2026-11-10T07:30:00Z'),
           checkedOn: '2026-11-03',
-          depth: 200,
+          ownSearch: true,
         },
         now,
       ),
@@ -99,7 +99,7 @@ describe('isPending', () => {
         {
           queuedAt: new Date('2026-11-10T07:30:00Z'),
           checkedOn: '2026-11-10',
-          depth: 200,
+          ownSearch: true,
         },
         now,
       ),
@@ -109,7 +109,7 @@ describe('isPending', () => {
         {
           queuedAt: new Date('2026-11-09T11:00:00Z'),
           checkedOn: null,
-          depth: null,
+          ownSearch: false,
         },
         now,
       ),
@@ -122,7 +122,33 @@ describe('isPending', () => {
         {
           queuedAt: new Date('2026-11-10T07:30:00Z'),
           checkedOn: '2026-11-10',
-          depth: 50,
+          ownSearch: false,
+        },
+        now,
+      ),
+    ).toBe(true);
+  });
+
+  it('is not pending once an own search that listed 30 apps landed after the queue day', () => {
+    expect(
+      isPending(
+        {
+          queuedAt: new Date('2026-11-09T13:00:00Z'),
+          checkedOn: '2026-11-10',
+          ownSearch: true,
+        },
+        now,
+      ),
+    ).toBe(false);
+  });
+
+  it('is pending while a row queued today holds only a capture reading', () => {
+    expect(
+      isPending(
+        {
+          queuedAt: new Date('2026-11-10T07:30:00Z'),
+          checkedOn: '2026-11-10',
+          ownSearch: false,
         },
         now,
       ),
@@ -131,7 +157,7 @@ describe('isPending', () => {
 
   it('is not pending when nothing was queued', () => {
     expect(
-      isPending({ queuedAt: null, checkedOn: null, depth: null }, now),
+      isPending({ queuedAt: null, checkedOn: null, ownSearch: false }, now),
     ).toBe(false);
   });
 });

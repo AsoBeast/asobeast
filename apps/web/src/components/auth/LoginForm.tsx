@@ -8,16 +8,12 @@ import { Loader2 } from "lucide-react";
 import { ApiError, login } from "@/lib/api";
 import { saysRegistrationClosed, signedInDestination } from "@/lib/auth-routes";
 import { useSingleFlight } from "@/lib/single-flight";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AuthCard, AuthPanel, INLINE_LINK } from "./AuthCard";
+import { PasswordField } from "./PasswordField";
 import { SessionNotKeptAlert } from "./SessionNotKeptAlert";
 import { useAuth } from "./use-auth";
 import { useSessionEntry } from "./use-session-entry";
@@ -47,11 +43,6 @@ export function LoginForm() {
   const credentialRefused =
     mutation.error instanceof ApiError &&
     mutation.error.envelope.statusCode === REFUSED_CREDENTIAL_STATUS;
-  const credentialFieldProps = {
-    "aria-invalid": credentialRefused,
-    "aria-describedby": credentialRefused ? "login-error" : undefined,
-  };
-
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (locked) return;
@@ -60,85 +51,76 @@ export function LoginForm() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-sm flex-col gap-4">
-      <Card>
-        <CardHeader>
-          <CardTitle asChild>
-            <h1>Sign in</h1>
-          </CardTitle>
-          <CardDescription>Sign in to your AsoBeast workspace.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {saysRegistrationClosed(params) ? (
-            <p className="mb-4 text-dense text-muted-foreground">
-              Registration is closed on this deployment. Ask the owner for an
-              account.
+    <AuthCard
+      title="Sign in"
+      description={
+        saysRegistrationClosed(params)
+          ? "Registration is closed on this deployment. Ask the owner for an account."
+          : undefined
+      }
+      footer={
+        status?.registrationOpen ? (
+          <>
+            Need an account?{" "}
+            <Link href="/register" className={INLINE_LINK}>
+              Create one
+            </Link>
+          </>
+        ) : undefined
+      }
+    >
+      {sessionDropped ? (
+        <SessionNotKeptAlert outcome="Your password was accepted." />
+      ) : null}
+      <AuthPanel>
+        <form onSubmit={submit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              name="email"
+              inputMode="email"
+              autoComplete="email"
+              spellCheck={false}
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              aria-invalid={credentialRefused}
+              aria-describedby={credentialRefused ? "login-error" : undefined}
+              required
+            />
+          </div>
+          <PasswordField
+            label="Password"
+            autoComplete="current-password"
+            value={password}
+            onChange={setPassword}
+            invalid={credentialRefused}
+            describedBy={credentialRefused ? "login-error" : undefined}
+            labelAction={
+              <Link
+                href="/forgot-password"
+                className={cn(INLINE_LINK, "text-label font-normal")}
+              >
+                Forgot password?
+              </Link>
+            }
+          />
+          {error ? (
+            <p
+              id="login-error"
+              role="alert"
+              className="text-dense text-destructive"
+            >
+              {error}
             </p>
           ) : null}
-          <form onSubmit={submit} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                name="email"
-                inputMode="email"
-                autoComplete="email"
-                spellCheck={false}
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                {...credentialFieldProps}
-                required
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-baseline justify-between gap-2">
-                <Label htmlFor="password">Password</Label>
-                <Link
-                  href="/forgot-password"
-                  className="text-dense text-muted-foreground underline"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-              <Input
-                id="password"
-                type="password"
-                name="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                {...credentialFieldProps}
-                required
-              />
-            </div>
-            {error ? (
-              <p
-                id="login-error"
-                role="alert"
-                className="text-dense text-destructive"
-              >
-                {error}
-              </p>
-            ) : null}
-            {sessionDropped ? (
-              <SessionNotKeptAlert outcome="Your password was accepted." />
-            ) : null}
-            <Button type="submit" aria-disabled={locked || undefined}>
-              {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
-              Sign in
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-      {status?.registrationOpen ? (
-        <p className="text-center text-dense text-muted-foreground">
-          Need an account?{" "}
-          <Link href="/register" className="font-medium underline">
-            Create one
-          </Link>
-        </p>
-      ) : null}
-    </div>
+          <Button type="submit" size="lg" aria-disabled={locked || undefined}>
+            {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
+            Sign in
+          </Button>
+        </form>
+      </AuthPanel>
+    </AuthCard>
   );
 }

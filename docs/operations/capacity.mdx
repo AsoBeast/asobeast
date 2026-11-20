@@ -1,12 +1,12 @@
 ---
 title: "How much can one instance collect?"
 sidebarTitle: Capacity
-description: "Measured orchestration cost and projected daily wall clock at three scales, the configuration where a run stops finishing inside a day, and what the per market multiplier really costs."
+description: "Measured orchestration cost and projected daily wall clock at three scales, the configuration where a run stops finishing inside a day, and what each extra market costs."
 icon: gauge
 keywords: ["capacity","rate limit","daily pipeline","benchmark","scale","budget"]
 ---
 
-Collection is bounded by rate limits, not by hardware. asobeast asks the stores for one thing at a time on purpose, so the honest question is not how fast your server is, it is how many store requests a day you have room for.
+Collection is bounded by rate limits, not by hardware. AsoBeast asks the stores for one thing at a time on purpose, so the honest question is not how fast your server is, it is how many store requests a day you have room for.
 
 Every number here was measured on a deterministic fixture and can be reproduced with `pnpm --filter api run bench:target`.
 
@@ -32,7 +32,7 @@ These are measurements, taken against the memory ceilings the stack ships rather
 | `target` | 8,000 | 4,020 | 4.5 hours | 32,020 | 53.4 hours | 222% |
 | `stress` | 75,000 | 37,550 | 41.7 hours | 300,050 | 500.1 hours | 2,084% |
 
-Both columns count **requests**, which is what the store sees and what risks throttling. A depth 200 Google Play keyword search costs about eight requests where the Apple equivalent costs one, so a workload split evenly between the stores spends roughly eight times as long on Play as on Apple for the same number of keywords.
+Both columns count **requests**, which is what the store sees and what risks throttling. The estimate counts a Google Play keyword check as eight requests where the Apple equivalent costs one, so a workload split evenly between the stores spends roughly eight times as long on Play as on Apple for the same number of keywords. A Play check usually reads one page today, because Google usually lists about 30 apps, so the estimate is cautious for Play keywords.
 
 The `target` row does not finish inside a day. Apple's share does, comfortably; Play's does not, by a factor of two. That is the measured answer to whether one host carries 20 apps at 200 keywords across two storefronts and two stores: **it does not**, and the reason is `SCRAPE_GPLAY_RPM`, not the machine.
 
@@ -91,17 +91,21 @@ curl --silent --header "Authorization: Bearer $ASOBEAST_API_TOKEN" http://127.0.
 
 `utilization` is the fraction of a day the run will occupy at your configured limits. Above 1.0 the run cannot finish before the next one starts.
 
-`completion` answers the question a customer actually asks: `startsAt` is the next scheduled run, `hours` is how long the work takes at the current capacity, and `completesAt` is when the run should finish. When an egress proxy pool is configured the capacity behind those numbers is the healthy endpoint count, capped at `PROXY_WORKER_MAX_CONCURRENCY`, times `PROXY_ENDPOINT_RPM` rather than the single host budget, because a store job holds one endpoint for its whole run and the workers run at most that many jobs at once. Endpoints beyond the ceiling add no capacity until it is raised, and the projection degrades honestly as endpoints cool down.
+`completion` answers the question a customer actually asks: `startsAt` is the next scheduled run, `hours` is how long the work takes at the current capacity, and `completesAt` is when the run should finish. When an egress proxy pool is configured the capacity behind those numbers is the healthy endpoint count less `PROXY_INTERACTIVE_RESERVE`, capped at `PROXY_WORKER_MAX_CONCURRENCY`, times `PROXY_ENDPOINT_RPM` rather than the single host budget, because a store job holds one endpoint for its whole run and the workers run at most that many jobs at once. The reserved endpoints stay free for requests someone waits for, so they add no queued capacity; a pool no larger than the reserve keeps every endpoint for queued work. Endpoints beyond the ceiling add no capacity until it is raised, and the projection degrades honestly as endpoints cool down.
 
 `quota` is present only when `BILLING_ENABLED` is true. It reports the plan, the apps and keyword markets used against their limits, and `overLimitSince` once a workspace has been over its keyword limit long enough for daily checks to cover only the first N keyword markets in a stable order.
 
 Operators get the cross-tenant view at `GET /api/backend/admin/capacity`, which sums demand across every workspace the daily run visits and names the ones consuming most. It is reserved for the [platform operator](/security/admin-surfaces#who-the-platform-operator-is) and answers `404` to anyone else, including an anonymous caller and a customer who owns their own workspace. The admin area shows the same report at **Admin, Capacity**, with a line per store and the top consumers by name. See [The admin area](/security/admin-surfaces#the-admin-area).
 
+## What runs first
+
+The store workers take a job a person started before the jobs of the scheduled runs, and those before deferred work such as keyword discovery. The tiers and what is in each are listed in [Which job runs first?](/concepts/pipeline#which-job-runs-first). The order only decides which job a worker takes next and adds no capacity. A request someone waits for, an import or a competitor add, does not go through the queue at all: on an instance with an egress proxy pool it takes one of the endpoints `PROXY_INTERACTIVE_RESERVE` keeps free, as described under `completion` above.
+
 ## Under pressure
 
-When the previous run's backlog plus today's demand passes the daily capacity, the run sheds work in a stated order rather than overlapping itself. Category ranks and review sync go first, followed chart categories with them, app refreshes next, and rank checks are never dropped because they are the product. The decision is logged at error level with the pressure figure and what was shed.
+When the jobs still waiting in the queue, deferred work aside, plus today's demand pass the daily capacity, the run sheds work in a stated order rather than overlapping itself. Category ranks and review sync go first, followed chart categories with them, app refreshes next, and rank checks are never dropped because they are the product. The decision is logged at error level with the pressure figure and what was shed.
 
-On demand actions are limited per workspace so one frustrated customer cannot spend the pool. Manual refresh, run daily, keyword scoring, deep search, app imports, competitor adds and top chart captures are capped per day; suggestion lookups and store lookups (name search, similar apps) are capped per hour. Over the limit the API answers `429` with `retryAfterSeconds` in the error envelope. Nothing is limited while `BILLING_ENABLED` is `false`, so a self hosted instance behaves as before.
+On demand actions are limited per workspace so one frustrated customer cannot spend the pool. Manual refresh, run daily, keyword scoring, deep search, app imports, competitor adds and top chart captures are capped per day; suggestion lookups and store lookups (name search, similar apps) are capped per hour. Over the limit the API answers `429` with `retryAfterSeconds` in the error envelope. Nothing is limited while `BILLING_ENABLED` is `false`, so a self-hosted instance behaves as before.
 
 ## What each container is allowed on the host
 
@@ -185,7 +189,7 @@ Prefer, in this order:
 2. Remove markets you do not sell in. This is the multiplier.
 3. Only then consider raising `SCRAPE_ITUNES_RPM`, in small steps, watching the failed job count on the health endpoint after each change.
 
-Both workers run at concurrency 1 behind their limiter deliberately. That is not a performance oversight, it is the thing keeping your address in good standing. See [The daily pipeline and rate limits](/concepts/pipeline).
+Both workers run at concurrency 1 behind their limiter to keep your address in good standing with the stores. See [The daily pipeline and rate limits](/concepts/pipeline).
 
 ## The read path holds up
 

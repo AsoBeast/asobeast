@@ -1,7 +1,7 @@
 ---
 title: Configuration reference
 sidebarTitle: Reference
-description: "Every environment variable the asobeast API reads, with its default and its effect. AUTH_SECRET is required and must be at least 32 characters."
+description: "Every environment variable the AsoBeast API reads, with its default and its effect. AUTH_SECRET is required and must be at least 32 characters."
 icon: sliders
 keywords: ["environment variables","configuration","AUTH_SECRET","DATABASE_URL","cron","retention","SMTP","defaults"]
 boost: 3
@@ -34,7 +34,7 @@ Write a comment on its own line in these files. Compose reads `KEY=   # note` as
 | `DEFAULT_COUNTRY` | `us` | No | Home storefront used when an import URL carries no country segment |
 | `LOG_LEVEL` | `debug`, and `log` in the Compose stack | No | One of `error`, `warn`, `log`, `debug`, `verbose`. Logs are JSON in production and human readable in development, and every line inside a request or job carries its workspace and correlation id. Compose lowers it to `log` because `debug` records every request, and container logs rotate at 10 MB across 3 files |
 | `ACCOUNT_DELETION_GRACE_DAYS` | `7` | No | Days a scheduled workspace deletion stays reversible. The retention job erases the workspace on the first run after the grace period ends |
-| `ERROR_TRACKING_DSN` | Empty | No | Sentry dsn for scrubbed error reports. Ignored unless `NODE_ENV` is `production` **and** `BILLING_ENABLED` is `true`, so a self hosted deployment never reports its errors to anyone else. Reports carry the error type, a secret scrubbed message and stack, the workspace and correlation id, and the request method with identifiers masked out of the path. They never carry headers, cookies, query strings, request bodies or account details. See [Hosted observability](/operations/hosted-observability#error-reporting) |
+| `ERROR_TRACKING_DSN` | Empty | No | Sentry dsn for scrubbed error reports. Ignored unless `NODE_ENV` is `production` **and** `BILLING_ENABLED` is `true`, so a self-hosted deployment never reports its errors to anyone else. Reports carry the error type, a secret scrubbed message and stack, the workspace and correlation id, and the request method with identifiers masked out of the path. They never carry headers, cookies, query strings, request bodies or account details. See [Hosted observability](/operations/hosted-observability#error-reporting) |
 
 ## Scheduling
 
@@ -63,7 +63,7 @@ Raising either value risks the host IP address being throttled by the store. See
 
 ## Egress proxy pool
 
-Optional. With `PROXY_PROVIDER` left at `none` every store request leaves from the host address, which is what a self hosted instance wants. Point it at a provider only when one address cannot carry the collection volume.
+Optional. With `PROXY_PROVIDER` left at `none` every store request leaves from the host address, which is what a self-hosted instance wants. Point it at a provider only when one address cannot carry the collection volume.
 
 | Variable | Default | Required | Effect |
 | --- | --- | --- | --- |
@@ -75,12 +75,13 @@ Optional. With `PROXY_PROVIDER` left at `none` every store request leaves from t
 | `PROXY_ENDPOINT_RPM` | `15` | No | Requests per minute allowed per pool endpoint. This is the limiter that replaces the single host budget once the pool is on |
 | `PROXY_ACQUIRE_TIMEOUT_MS` | `120000` | No | How long a job waits for a free endpoint each time it asks. A saturated pool delays work rather than dropping it: once this budget runs out the job goes back to the queue, delayed by a few seconds, without spending one of its attempts, and only a job still waiting a day after it was queued fails. A shutdown ends the wait at once, so the budget never holds up a drain |
 | `PROXY_WORKER_MAX_CONCURRENCY` | `8` | No | Ceiling for store worker concurrency once the pool is on. Actual concurrency tracks the healthy endpoint count and falls back as endpoints cool down. Ignored while `PROXY_PROVIDER` is `none` |
+| `PROXY_INTERACTIVE_RESERVE` | `1` | No | Healthy endpoints per store that queued work leaves free, so an import, a refresh, a competitor add or a lookup someone waits for finds an endpoint while the daily run keeps the rest busy. Queued work runs on the remaining endpoints, and the worker count and the run projection count them, not the reserve. A pool with no more healthy endpoints than this ignores it. `0` lets queued work take every endpoint. Ignored while `PROXY_PROVIDER` is `none` |
 
 A job holds its endpoint for its whole run, so two requests to the same store never leave through one address at once, unless a job outlives the five minute hold. When the job ends, the endpoint stays paced until the requests it made fit `PROXY_ENDPOINT_RPM`, counted from the moment the job took it, and never less than one request interval after the last request it sent. A job that failed is paced the same way.
 
-Google Play orders its search results by the country of the address a request comes from, so a queued Google Play job for a storefront waits for a healthy pool endpoint in that country instead of leaving through one abroad, and borrows another country's endpoint only while every endpoint in its own country is cooling down. A name search and the keyword and competitor suggestion lookups, which someone is waiting for and whose answers are never stored, still prefer their own country but take a free endpoint abroad rather than wait for a busy one. The App Store answers the same from any address and takes whichever endpoint is free first. Google Play collection for a storefront is therefore bounded by the endpoints in that country: place them where your Google Play keywords are, because a job that finds its country's endpoints busy for longer than `PROXY_ACQUIRE_TIMEOUT_MS` goes back to the queue and waits its turn again.
+Google Play orders its search results by the country of the address a request comes from, so a queued Google Play job for a storefront waits for a healthy pool endpoint in that country instead of leaving through one abroad, and borrows another country's endpoint only while every endpoint in its own country is cooling down. Anything someone waits for takes a free endpoint abroad rather than wait for a busy one in its own country: a name search, the keyword and competitor suggestion lookups, an import, a new competitor, a listing refresh and a market check. A Google Play listing, its price and its availability follow the storefront AsoBeast asks for, not the address the request leaves from, so these answers are the same through any endpoint. Queued work also leaves `PROXY_INTERACTIVE_RESERVE` healthy endpoints free, so a request someone waits for finds one while the daily run keeps the rest busy, and it stops looking 8 seconds into its 20 second deadline, keeping the rest for the store. If none came free by then it answers `503` with `Retry-After` instead of waiting out the deadline. The App Store answers the same from any address and takes whichever endpoint is free first. Google Play collection for a storefront is therefore bounded by the endpoints in that country: place them where your Google Play keywords are, because a job that finds its country's endpoints busy for longer than `PROXY_ACQUIRE_TIMEOUT_MS` goes back to the queue and waits its turn again.
 
-With `PROXY_PROVIDER` at `none` the store workers keep concurrency 1 behind `SCRAPE_ITUNES_RPM` and `SCRAPE_GPLAY_RPM`. Those two variables never change meaning: they describe the budget of a single egress address, which is exactly what a self hosted instance has.
+With `PROXY_PROVIDER` at `none` the store workers keep concurrency 1 behind `SCRAPE_ITUNES_RPM` and `SCRAPE_GPLAY_RPM`. Those two variables never change meaning: they describe the budget of a single egress address, which is exactly what a self-hosted instance has.
 
 Credentials stay in configuration. The database records only which credential a pool endpoint uses, never the secret itself.
 
@@ -96,7 +97,7 @@ Datacenter addresses carry the traffic. A residential gateway is an emergency pa
 | `PROXY_RESIDENTIAL_MONTHLY_CAP_USD` | `0` | No | Hard monthly ceiling. Every residential request is claimed against it before it leaves, so a job that fans out to many requests stops at the ceiling rather than crossing it. At `0` every fallback is refused, so a broad block cannot turn into an unbounded bill |
 | `PROXY_RESIDENTIAL_COST_PER_GB` | `3` | No | Provider list price, used to price the cap |
 | `PROXY_RESIDENTIAL_MB_PER_REQUEST` | `1.2` | No | Measured average response size. With the price per gigabyte this estimates month to date spend |
-| `SIGNUP_CAPACITY_MAX_UTILIZATION` | `0` | No | `0` disables the gate. Above `0`, registration is refused with `503` once tracked collection passes this share of daily capacity. Applied only when `BILLING_ENABLED` is `true`, so a self hosted instance is never gated |
+| `SIGNUP_CAPACITY_MAX_UTILIZATION` | `0` | No | `0` disables the gate. Above `0`, registration is refused with `503` once tracked collection passes this share of daily capacity. Applied only when `BILLING_ENABLED` is `true`, so a self-hosted instance is never gated |
 
 ## Alerts
 
@@ -108,14 +109,14 @@ See [Send alerts](/guides/alerts).
 | `ALERT_RANK_DROP_THRESHOLD` | `5` | No | Positions a primary app must move before `rank.dropped` or `rank.improved` fires for a channel that sets no value of its own. It is also the lowest value a channel can use: a channel's own value from 1 to 200, set in its rules, filters what that channel receives and counts as this value when it is smaller. The Action Center's rank rules always use this value |
 | `ALERT_REVIEW_SCORE_MAX` | `2` | No | Highest star rating treated as a negative review. Accepts 1 to 4 |
 | `ALERT_ACTIONS_MIN_PRIORITY` | `high` | No | Lowest priority that fires `action.opened`. One of `critical`, `high`, `medium`, `low` |
-| `WEBHOOK_ALLOW_PRIVATE_TARGETS` | `false` | No | `false` keeps alert webhooks on public addresses. Loopback, private, carrier grade NAT, link local and cloud metadata targets are refused when the webhook is registered and again when the connection is made, so a hostname that resolves to an internal address cannot reach it either. `true` opts a self hosted instance in to delivery on its own network, including a receiver named by a bare hostname such as a Compose service, or by `localhost`. Refuses to boot when `true` with `BILLING_ENABLED` set to `true`, because the url belongs to the customer, and warns in production otherwise |
+| `WEBHOOK_ALLOW_PRIVATE_TARGETS` | `false` | No | `false` keeps alert webhooks on public addresses. Loopback, private, carrier grade NAT, link local and cloud metadata targets are refused when the webhook is registered and again when the connection is made, so a hostname that resolves to an internal address cannot reach it either. `true` opts a self-hosted instance in to delivery on its own network, including a receiver named by a bare hostname such as a Compose service, or by `localhost`. Refuses to boot when `true` with `BILLING_ENABLED` set to `true`, because the url belongs to the customer, and warns in production otherwise |
 | `WEB_PUBLIC_URL` | Empty | No | Public web origin, `http` or `https` only, and any other scheme refuses to boot. Builds every link in an email (confirmation, password reset, invitation, the button back into the app, the logo and the unsubscribe link), deep links inside alert payloads and the Stripe return address, and is the single origin CORS allows. One click unsubscribe headers are added only when it is `https`. Unset leaves an alert link `null`, sends emails without buttons, logo or unsubscribe links, closes checkout, sends no CORS headers, refuses account recovery with `503` because its link would carry no host, and refuses to boot when `BILLING_ENABLED` is `true` with SMTP configured, because confirmation is mandatory there. A new email alert recipient always waits for confirmation, and without this no confirmation email can be sent, so the recipient never receives an alert. Warns in production when SMTP is configured and this is empty, or names this machine (`localhost`, `127.0.0.1` or `[::1]`), because no recipient elsewhere can open its links. The Compose stacks set it themselves, see [Compose only](#compose-only) |
 
 ## Email delivery
 
 Email stays disabled until both `SMTP_HOST` and `SMTP_FROM` are set.
 
-Email is optional on a self hosted instance and mandatory on a metered one. With `BILLING_ENABLED=true` in production and no mail path, the API warns at boot that it can confirm no address, warn nobody before a trial ends, and recover no forgotten password. See [Hosting behind TLS and a reverse proxy](/security/hosting).
+Email is optional on a self-hosted instance and mandatory on a metered one. With `BILLING_ENABLED=true` in production and no mail path, the API warns at boot that it can confirm no address, warn nobody before a trial ends, and recover no forgotten password. See [Hosting behind TLS and a reverse proxy](/security/hosting).
 
 | Variable | Default | Required | Effect |
 | --- | --- | --- | --- |
@@ -229,11 +230,11 @@ See [Enable the optional AI features](/guides/ai-features).
 | `OPENAI_BASE_URL` | Empty | No | Address of an OpenAI compatible API the AI features call instead of OpenAI, for example `https://openrouter.ai/api/v1`. Empty uses `https://api.openai.com/v1`. Refuses to boot when it is not an http or https URL, carries a user name or password, or holds a `#` fragment. See [Use an OpenAI compatible provider](/guides/ai-features#use-an-openai-compatible-provider) |
 | `AI_MODEL` | `gpt-5.6-luna` | No | The model name as the provider spells it. Must support vision and structured outputs, because the audit reads screenshots |
 | `AI_MAX_OUTPUT_TOKENS` | `16384` | No | The most tokens one AI answer may use, reasoning included, sent as `max_completion_tokens`. Lower it for a model or server whose limit is smaller, such as a vLLM `--max-model-len`. Refuses to boot below 1024 |
-| `AI_CALLS_PER_MONTH` | Empty | No | AI calls each workspace may make per calendar month (UTC) on a self hosted instance. Empty means unlimited and `0` turns AI calls off. Ignored when `BILLING_ENABLED` is true, where each plan sets its own allowance. Warns in production when empty while `OPENAI_API_KEY` is set and registration is open |
+| `AI_CALLS_PER_MONTH` | Empty | No | AI calls each workspace may make per calendar month (UTC) on a self-hosted instance. Empty means unlimited and `0` turns AI calls off. Ignored when `BILLING_ENABLED` is true, where each plan sets its own allowance. Warns in production when empty while `OPENAI_API_KEY` is set and registration is open |
 
 ## Apple search popularity
 
-Optional, off by default. With an Apple Ads API key, asobeast reads Apple's own weekly search popularity for the App Store terms it covers instead of estimating them. See [Keyword scoring](/concepts/scoring).
+Optional, off by default. With an Apple Ads API key, AsoBeast reads Apple's own weekly search popularity for the App Store terms it covers instead of estimating them. See [Keyword scoring](/concepts/scoring).
 
 | Variable | Default | Required | Effect |
 | --- | --- | --- | --- |

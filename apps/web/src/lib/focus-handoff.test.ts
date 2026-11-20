@@ -9,6 +9,7 @@ import {
   pendingFocusStep,
   recoverFocusIn,
   recoveryCandidates,
+  renewHandoff,
   returnFocusTo,
   siblingControl,
   survivingNeighbour,
@@ -193,6 +194,32 @@ describe("isClaimable", () => {
     expect(
       isClaimable(armed, "chart-follow", armed.at + CLAIM_WINDOW_MS + 1, root),
     ).toBe(false);
+  });
+});
+
+describe("renewHandoff", () => {
+  const track = { tag: "track" };
+  const armed = { key: "competitor:1", at: 1_000, from: track };
+  const succeeded = armed.at + CLAIM_WINDOW_MS + 5_000;
+
+  it("restarts the window of a request that answered late, from the same control", () => {
+    const renewed = renewHandoff(armed, "competitor:1", succeeded);
+
+    expect(renewed).toEqual({ ...armed, at: succeeded });
+    expect(
+      isClaimable(renewed, "competitor:1", succeeded + 100, {
+        activeElement: track,
+        body,
+      }),
+    ).toBe(true);
+  });
+
+  it("leaves a handoff armed for another key alone", () => {
+    expect(renewHandoff(armed, "competitor:2", succeeded)).toBe(armed);
+  });
+
+  it("arms nothing when nothing was armed", () => {
+    expect(renewHandoff(null, "competitor:1", succeeded)).toBeNull();
   });
 });
 

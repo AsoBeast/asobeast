@@ -31,6 +31,19 @@ describe('CallToAction', () => {
     expect(text).toContain('Go');
   });
 
+  it('keeps orange on the button and writes the fallback link in ink', async () => {
+    const html = await render(email);
+    const [button, fallback] = [
+      ...html.matchAll(/<a[^>]*style="([^"]*)"/g),
+    ].map(([, style]) => style);
+    expect(button).toContain('background-color:rgb(248,152,32)');
+    expect(button).toContain('color:rgb(28,20,8)');
+    expect(fallback).toContain('color:rgb(28,25,23)');
+    expect(fallback).toContain('text-decoration-line:underline');
+    expect(html).toContain(`<a href="${URL}" class="dark_text-night-ink"`);
+    expect(html).not.toContain('dark_text-brand');
+  });
+
   it('keeps the classic outlook spacing', async () => {
     expect(await render(email)).toContain('mso-padding-alt');
   });

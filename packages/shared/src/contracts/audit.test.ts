@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import type {
   AppAuditResult,
+  AppReadiness,
   AuditAiRunState,
   AuditEffort,
   AuditGrade,
   AuditTarget,
   AuditUnlockKind,
+  ReadinessStatus,
 } from './audit';
 
 const v1: AppAuditResult = {
@@ -111,6 +113,42 @@ const v2: AppAuditResult = {
 describe('AppAuditResult', () => {
   it('accepts a v1 shaped result and a v2 result', () => {
     expect(v2.factors).toEqual(v1.factors);
+  });
+
+  it('accepts a result with the optional readiness panel', () => {
+    const readiness: AppReadiness = {
+      items: [
+        {
+          id: 'preview-video',
+          label: 'Preview video',
+          status: 'pass',
+          detail: 'The store page shows 2 preview videos.',
+          link: {
+            href: 'https://developer.apple.com/app-store/product-page/',
+            label: 'About the product page',
+          },
+        },
+        {
+          id: 'rating',
+          label: 'Average rating',
+          status: 'unmeasurable',
+          detail: null,
+          link: null,
+        },
+      ],
+      editorial: { stories: 1, editorsChoiceBadge: true },
+      extractAsOf: '2026-11-14',
+    };
+    const withReadiness: AppAuditResult = { ...v1, readiness };
+
+    expect(withReadiness.readiness?.items[0].id).toBe('preview-video');
+    const statuses: ReadinessStatus[] = [
+      'pass',
+      'warn',
+      'fail',
+      'unmeasurable',
+    ];
+    expect(statuses).toHaveLength(4);
   });
 
   it('keeps the unions the web maps over', () => {

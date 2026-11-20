@@ -39,6 +39,7 @@ const FIXTURE: NormalizedApp = {
 class ListingRegistry {
   getAppCalls: Array<{ storeAppId: string; country: string }> = [];
   titles = new Map<string, string>();
+  raws = new Map<string, unknown>();
   subtitleUnavailable = false;
   failWith: Error | null = null;
 
@@ -53,6 +54,7 @@ class ListingRegistry {
           store,
           storeAppId,
           title: this.titles.get(country) ?? `Fixture ${country}`,
+          raw: this.raws.get(country) ?? FIXTURE.raw,
           ...(this.subtitleUnavailable
             ? { subtitle: undefined, subtitleUnavailable: true }
             : {}),
@@ -103,6 +105,7 @@ describe('market listing refresh (e2e)', () => {
   beforeEach(async () => {
     registry.getAppCalls = [];
     registry.titles.clear();
+    registry.raws.clear();
     registry.subtitleUnavailable = false;
     registry.failWith = null;
     jest.restoreAllMocks();
@@ -134,6 +137,24 @@ describe('market listing refresh (e2e)', () => {
       data: { appId, keywordId: keyword.id, source: 'MANUAL', active: true },
     });
   };
+
+  const extractWithEvents = (eventIds: string[]) => ({
+    source: 'fixture',
+    pageExtract: {
+      previewVideoUrls: [],
+      appEvents: eventIds.map((id) => ({
+        appEventId: id,
+        title: `Event ${id}`,
+        kind: 'APP_STORE_EVENT',
+        badge: 'AVAILABLE',
+        startsAt: null,
+        endsAt: null,
+      })),
+      featuredStories: [],
+      editorsChoice: null,
+      accessibilityStatement: null,
+    },
+  });
 
   const listings = (appId: string, country: string | null) =>
     prisma.appSnapshot.findMany({
@@ -204,15 +225,15 @@ describe('market listing refresh (e2e)', () => {
   it('spends a refresh credit only on a market it accepts', async () => {
     const appId = await importApp();
     await trackIn(appId, 'de');
-    const consume = jest.spyOn(app.get(OnDemandLimiter), 'consume');
+    const charge = jest.spyOn(app.get(OnDemandLimiter), 'charge');
 
     await api.post(`/apps/${appId}/refresh?country=fr`).expect(400);
     await api.post(`/apps/${appId}/refresh?country=zz`).expect(400);
     await api.post('/apps/missing/refresh').expect(404);
-    expect(consume).not.toHaveBeenCalled();
+    expect(charge).not.toHaveBeenCalled();
 
     await api.post(`/apps/${appId}/refresh?country=de`).expect(200);
-    expect(consume.mock.calls).toEqual([['refresh']]);
+    expect(charge.mock.calls).toEqual([['refresh']]);
   });
 
   it('records a market change without an alert or a home side effect', async () => {
@@ -244,6 +265,67 @@ describe('market listing refresh (e2e)', () => {
     });
     expect(stored.name).toBe('Fixture us');
     await expect(prisma.trackedKeyword.count()).resolves.toBe(trackedBefore);
+  });
+
+  it('detects extract changes against the newest snapshot that carries an extract', async () => {
+    const appId = await importApp();
+    registry.raws.set('us', extractWithEvents(['e1']));
+    await api.post(`/apps/${appId}/refresh`).expect(200);
+    registry.raws.set('us', extractWithEvents(['e1', 'e2']));
+    const againstPrevious = await api
+      .post(`/apps/${appId}/refresh`)
+      .expect(200);
+
+    expect((againstPrevious.body as SnapshotDiffResult).changes).toMatchObject([
+      {
+        field: 'inAppEvents',
+        before: null,
+        after: null,
+        detail: {
+          kind: 'events',
+          added: [{ appEventId: 'e2', title: 'Event e2' }],
+          removed: [],
+        },
+      },
+    ]);
+
+    registry.raws.set('us', { source: 'fixture' });
+    await api.post(`/apps/${appId}/refresh`).expect(200);
+    registry.raws.set('us', extractWithEvents(['e2']));
+    const againstBaseline = await api
+      .post(`/apps/${appId}/refresh`)
+      .expect(200);
+
+    expect((againstBaseline.body as SnapshotDiffResult).changes).toMatchObject([
+      {
+        field: 'inAppEvents',
+        before: null,
+        after: null,
+        detail: {
+          kind: 'events',
+          added: [],
+          removed: [{ appEventId: 'e1', title: 'Event e1' }],
+        },
+      },
+    ]);
+    const recorded = await prisma.changeEvent.findMany({
+      where: { appId, field: 'inAppEvents' },
+      orderBy: { capturedAt: 'asc' },
+    });
+    expect(recorded).toHaveLength(2);
+  });
+
+  it('records no extract change when the refreshed snapshot has no extract', async () => {
+    const appId = await importApp();
+    registry.raws.set('us', extractWithEvents(['e1']));
+    await api.post(`/apps/${appId}/refresh`).expect(200);
+    registry.raws.set('us', { source: 'fixture' });
+    await api.post(`/apps/${appId}/refresh`).expect(200);
+
+    const response = await api.post(`/apps/${appId}/refresh`).expect(200);
+
+    expect((response.body as SnapshotDiffResult).changes).toEqual([]);
+    await expect(prisma.changeEvent.count()).resolves.toBe(0);
   });
 
   it('refreshes a competitor in the market of its primary', async () => {

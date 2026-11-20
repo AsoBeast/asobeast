@@ -2600,6 +2600,33 @@ export const APP_COMBOS_DETAIL: AppDetail = {
   group: null,
 };
 
+export const APP_TICKS_DETAIL: AppDetail = {
+  ...APP_COMBOS_DETAIL,
+  id: "app-ticks",
+  name: "Tick Timer",
+};
+
+export const APP_TICKS_TRACKED_SUGGESTION = "focus timer";
+
+export const APP_TICKS_LONG_SUGGESTION =
+  "an extremely long suggestion phrase that keeps going well past a phone";
+
+const APP_TICKS_KEYWORDS: TrackedKeywordItem[] = [
+  {
+    ...manualKeyword(
+      APP_TICKS_DETAIL.id,
+      APP_TICKS_TRACKED_SUGGESTION,
+      "us",
+      0,
+    ),
+    keywordId: "kw-ticks-1",
+  },
+];
+
+export const APP_TICKS_MARKETS = ["us", "gb"];
+
+export const APP_TICKS_FOCUS_ID = "app-ticks-focus";
+
 export const APP_FLOOR_DETAIL: AppDetail = {
   ...APP_LONG_DETAIL,
   id: "app-floor",
@@ -3420,6 +3447,20 @@ export const SUGGESTIONS: Record<
   "app-2": {
     metadata: listingSuggestions(["habit streaks", "daily habits"]),
   },
+  [APP_TICKS_DETAIL.id]: {
+    metadata: listingSuggestions([
+      "deep focus",
+      "pomodoro timer",
+      "study sessions",
+      APP_TICKS_TRACKED_SUGGESTION,
+      "work sprints",
+      APP_TICKS_LONG_SUGGESTION,
+    ]),
+    reviews: [
+      { text: "calm timer", strategy: "reviews" },
+      { text: "break reminder", strategy: "reviews" },
+    ],
+  },
   "app-new": {
     metadata: listingSuggestions([
       "imported timer",
@@ -3527,6 +3568,24 @@ export const DATASETS: Record<string, AppDataset> = {
     ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
     changeImpact: emptyChangeImpact(APP_COMBOS_DETAIL),
+    discovery: EMPTY_DISCOVERY,
+    comparison: EMPTY_COMPARISON,
+  },
+  [APP_TICKS_DETAIL.id]: {
+    detail: APP_TICKS_DETAIL,
+    summary: APP_2_SUMMARY,
+    keywords: APP_TICKS_KEYWORDS,
+    rankings: EMPTY_RANKINGS,
+    serpMovers: EMPTY_SERP_MOVERS,
+    visibility: EMPTY_VISIBILITY,
+    rankDistributionHistory: EMPTY_RANK_DISTRIBUTION_HISTORY,
+    categoryRanks: EMPTY_CATEGORY_RANKS,
+    competitors: [],
+    reviews: EMPTY_REVIEWS,
+    ratingsHistory: EMPTY_RATINGS_HISTORY,
+    ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
+    changes: EMPTY_CHANGES,
+    changeImpact: emptyChangeImpact(APP_TICKS_DETAIL),
     discovery: EMPTY_DISCOVERY,
     comparison: EMPTY_COMPARISON,
   },
@@ -3722,6 +3781,12 @@ function localesDataset(id: string, name: string): AppDataset {
 }
 
 DATASETS[APP_LOCALES_ID] = localesDataset(APP_LOCALES_ID, "Locale Lab");
+DATASETS[APP_TICKS_FOCUS_ID] = {
+  ...DATASETS[APP_TICKS_DETAIL.id],
+  detail: { ...APP_TICKS_DETAIL, id: APP_TICKS_FOCUS_ID },
+  keywords: APP_TICKS_KEYWORDS.map((keyword) => ({ ...keyword })),
+};
+SUGGESTIONS[APP_TICKS_FOCUS_ID] = SUGGESTIONS[APP_TICKS_DETAIL.id];
 DATASETS[APP_SUGGESTED_LOCALES_ID] = localesDataset(
   APP_SUGGESTED_LOCALES_ID,
   "Market Lab",
@@ -3742,6 +3807,43 @@ const rivalDataset = localesDataset(APP_RIVAL_ID, "Rival Lab");
 DATASETS[APP_RIVAL_ID] = {
   ...rivalDataset,
   detail: { ...rivalDataset.detail, isCompetitor: true },
+};
+
+export const APP_FIELD_PROPOSAL_ID = "app-field-proposal";
+export const APP_FIELD_PROPOSAL_RIVAL_ID = "app-field-proposal-rival";
+export const FIELD_PROPOSAL_NOT_STOREFRONT = "cu";
+
+const FIELD_PROPOSAL_KEYWORDS: ReadonlyArray<readonly [string, string]> = [
+  ["deep work", "us"],
+  ["focus", "us"],
+  ["pomodoro", "us"],
+  ["timer", "us"],
+  ["zen", "us"],
+  ["trabajo profundo", "mx"],
+  ["deep work", "mx"],
+  ["focus", FIELD_PROPOSAL_NOT_STOREFRONT],
+];
+
+function fieldProposalDataset(id: string, name: string): AppDataset {
+  return {
+    ...localesDataset(id, name),
+    keywords: FIELD_PROPOSAL_KEYWORDS.map(([text, country], index) =>
+      manualKeyword(id, text, country, index + 1),
+    ),
+  };
+}
+
+DATASETS[APP_FIELD_PROPOSAL_ID] = fieldProposalDataset(
+  APP_FIELD_PROPOSAL_ID,
+  "Proposal Lab",
+);
+const proposalRival = fieldProposalDataset(
+  APP_FIELD_PROPOSAL_RIVAL_ID,
+  "Proposal Rival",
+);
+DATASETS[APP_FIELD_PROPOSAL_RIVAL_ID] = {
+  ...proposalRival,
+  detail: { ...proposalRival.detail, isCompetitor: true },
 };
 
 DATASETS[APP_PAID_TOP_CHART_ID] = categoryDataset(
@@ -4058,11 +4160,17 @@ const ripple = (index: number): number =>
     (0.7 * Math.sin(index * 1.3) + 0.4 * Math.sin(index * 0.55)) * 10,
   ) / 10;
 
+export interface HistoryEnding {
+  visibility: number;
+  top10: number;
+  span?: number;
+}
+
 function historyPoints(
   days: PortfolioHistoryDays,
-  ending: { visibility: number; top10: number; daysAgo: number },
+  ending: HistoryEnding & { daysAgo: number },
 ): PortfolioHistoryPoint[] {
-  const span = HISTORY_SPAN[days];
+  const span = ending.span ?? HISTORY_SPAN[days];
   return Array.from({ length: days }, (_, index) => {
     const last = index === days - 1;
     const progress = index / (days - 1);
@@ -4083,16 +4191,17 @@ function historyPoints(
 
 export function portfolioHistoryOf(
   days: PortfolioHistoryDays,
-): Omit<PortfolioHistory, "change"> {
-  const points = historyPoints(days, {
+  ending: HistoryEnding = {
     visibility: PORTFOLIO_VISIBILITY.current,
     top10: HISTORY_TOP10,
-    daysAgo: 0,
-  });
+  },
+): Pick<PortfolioHistory, "days" | "points" | "previous"> {
+  const points = historyPoints(days, { ...ending, daysAgo: 0 });
   return {
     days,
     points,
     previous: historyPoints(days, {
+      ...ending,
       visibility: points[0].visibility - 0.6,
       top10: Math.max(1, points[0].top10 - 1),
       daysAgo: days,
@@ -4100,11 +4209,15 @@ export function portfolioHistoryOf(
   };
 }
 
-export function portfolioRangeDeltasOf(days: PortfolioHistoryDays): {
+export const portfolioRangeDeltasOf = (
+  days: PortfolioHistoryDays,
+): { visibility: number; top10: number } =>
+  rangeDeltasOf(portfolioHistoryOf(days).points);
+
+export function rangeDeltasOf(points: PortfolioHistoryPoint[]): {
   visibility: number;
   top10: number;
 } {
-  const { points } = portfolioHistoryOf(days);
   const first = points[0];
   const last = points[points.length - 1];
   return {
@@ -5994,6 +6107,7 @@ METADATA_AUDITS[APP_MANAGED_LOCALES_ID] = {
 METADATA_AUDITS[APP_RIVAL_ID] = METADATA_AUDIT;
 METADATA_AUDITS[APP_UNLISTED_MANAGED_ID] = METADATA_AUDIT;
 METADATA_AUDITS[APP_IMPORT_FOCUS_ID] = METADATA_AUDIT;
+METADATA_AUDITS[APP_FIELD_PROPOSAL_ID] = METADATA_AUDIT;
 
 export const APP_READS_ID = "app-reads";
 
@@ -6303,6 +6417,79 @@ export const APP_AUDIT: AppAuditResult = {
     ]),
   ],
   limitations: APP_STORE_LIMITATIONS,
+  readiness: {
+    items: [
+      {
+        id: "preview-video",
+        label: "Preview video",
+        status: "pass",
+        detail: "The store page shows 2 preview videos.",
+        link: {
+          href: "#factors-conversion",
+          label: "Where the audit scores it",
+        },
+      },
+      {
+        id: "in-app-events",
+        label: "In-app events",
+        status: "pass",
+        detail: "The store page lists 1 in-app event.",
+        link: {
+          href: "https://developer.apple.com/app-store/in-app-events/",
+          label: "About in-app events",
+        },
+      },
+      {
+        id: "accessibility",
+        label: "Accessibility",
+        status: "unmeasurable",
+        detail: "Declared accessibility features are not read yet.",
+        link: null,
+      },
+      {
+        id: "rating",
+        label: "Average rating",
+        status: "pass",
+        detail: "Average rating is 4.60.",
+        link: {
+          href: "#factors-conversion",
+          label: "Where the audit scores it",
+        },
+      },
+      {
+        id: "update-recency",
+        label: "Update recency",
+        status: "pass",
+        detail: "The last update was 12 days ago.",
+        link: {
+          href: "#factors-conversion",
+          label: "Where the audit scores it",
+        },
+      },
+      {
+        id: "localizations",
+        label: "Localizations",
+        status: "unmeasurable",
+        detail: null,
+        link: {
+          href: "#factors-conversion",
+          label: "Where the audit scores it",
+        },
+      },
+      {
+        id: "screenshots",
+        label: "Screenshots",
+        status: "pass",
+        detail: "8 of 8 recommended screenshots used.",
+        link: {
+          href: "#factors-conversion",
+          label: "Where the audit scores it",
+        },
+      },
+    ],
+    editorial: { stories: 1, editorsChoiceBadge: true },
+    extractAsOf: "2026-11-14",
+  },
   unlocks: [
     {
       kind: "keyword-field",
@@ -6419,6 +6606,7 @@ export const PLAY_AUDIT: AppAuditResult = {
   appId: "app-gp",
   store: "GOOGLE_PLAY",
   totalWeight: 105,
+  readiness: undefined,
   limitations: PLAY_LIMITATIONS,
   recommendations: {
     quickWins: [

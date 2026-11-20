@@ -13,6 +13,7 @@ export interface SignUpStep {
   state: SignUpStepState;
 }
 
+const CREATE_ACCOUNT = "Create account";
 const ACCOUNT_CREATED = "Account created";
 const EMAIL_CONFIRMED = "Email confirmed";
 const CHOOSE_A_PLAN = "Choose a plan";
@@ -35,5 +36,17 @@ export function signUpSteps(
     { label: ACCOUNT_CREATED, state: "done" },
     ...emailStep(confirming, user.emailVerified),
     { label: CHOOSE_A_PLAN, state: confirming ? "upcoming" : "current" },
+  ];
+}
+
+function upcomingEmailStep(confirmsEmail: boolean): readonly SignUpStep[] {
+  return confirmsEmail ? [{ label: EMAIL_CONFIRMED, state: "upcoming" }] : [];
+}
+
+export function registerSteps(confirmsEmail: boolean): readonly SignUpStep[] {
+  return [
+    { label: CREATE_ACCOUNT, state: "current" },
+    ...upcomingEmailStep(confirmsEmail),
+    { label: CHOOSE_A_PLAN, state: "upcoming" },
   ];
 }

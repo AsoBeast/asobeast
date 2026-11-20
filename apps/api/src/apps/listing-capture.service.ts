@@ -13,7 +13,10 @@ import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScreenshotQueue } from '../screenshots/screenshot-queue';
 import { ScreenshotRecorder } from '../screenshots/screenshot-recorder';
-import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
+import {
+  ANY_FREE_ENDPOINT,
+  ProxyEgress,
+} from '../store-providers/egress/proxy-egress.service';
 import { StoreAppNotFoundError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { currencyOf } from '../store-providers/raw-facts';
@@ -189,7 +192,7 @@ export class ListingCaptureService {
       await this.requestDetection(app.id, market);
     }
     if (home) {
-      await this.keywords.syncFromSnapshot(app.id);
+      await this.keywords.syncFromLaterSnapshot(app.id);
       if (await this.releaseChangedFields(app, recorded)) {
         try {
           await this.storeReports.enqueue(app.workspaceId, app.store);
@@ -251,6 +254,9 @@ export class ListingCaptureService {
     previous: AppSnapshot | null,
     snapshot: AppSnapshot,
   ): Promise<AppSnapshot | null> {
+    if (pageExtractFacts(snapshot.raw) === null) {
+      return null;
+    }
     if (previous && pageExtractFacts(previous.raw) !== null) {
       return previous;
     }
@@ -281,8 +287,11 @@ export class ListingCaptureService {
   private async readListing(app: App, market: string): Promise<NormalizedApp> {
     const startedAt = new Date();
     try {
-      return await this.egress.through(app.store, market, () =>
-        this.registry.get(app.store).getApp(app.storeAppId, market),
+      return await this.egress.through(
+        app.store,
+        market,
+        () => this.registry.get(app.store).getApp(app.storeAppId, market),
+        ANY_FREE_ENDPOINT,
       );
     } catch (error: unknown) {
       if (error instanceof StoreAppNotFoundError) {

@@ -3,6 +3,13 @@ import { STORE_SEARCH_QUERY_MAX_LENGTH } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
 import { APP_1_DETAIL, IMPORTED_APP, STORE_SEARCH } from "./fixtures.mts";
 import { startedSetup, storedSetup } from "./setup-session.mts";
+import {
+  BUSY_LINE,
+  BUSY_SENTENCE,
+  answerBusy,
+  busyEnvelope,
+  countPosts,
+} from "./busy-answer.mts";
 
 const utcDateFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
@@ -173,6 +180,162 @@ test("the import dialog drops a storefront refusal when the storefront changes",
 
   await expect(page.locator("#import-url-error")).toHaveCount(0);
   await expect(field).toHaveAttribute("aria-invalid", "false");
+});
+
+test.describe("a busy server", () => {
+  const IMPORTS = "**/api/backend/apps";
+  const IMPORT_POST = /\/api\/backend\/apps$/;
+  const FOCUS_TIMER = "https://apps.apple.com/us/app/focus-timer/id123456789";
+
+  const startImport = async (page: Page) => {
+    await page.getByRole("button", { name: "Import app" }).click();
+    await page.getByLabel("App name or store URL").fill(FOCUS_TIMER);
+    await page.getByRole("button", { name: "Import", exact: true }).click();
+  };
+
+  const answerOnce = async (
+    page: Page,
+    answers: { status: number; json: unknown }[],
+  ) => {
+    let answered = 0;
+    await page.route(IMPORTS, async (route) => {
+      const answer = answers[answered];
+      if (route.request().method() !== "POST" || !answer) {
+        return route.fallback();
+      }
+      answered += 1;
+      await route.fulfill(answer);
+    });
+  };
+
+  test("the import dialog tries a busy server again unasked", async ({
+    page,
+  }) => {
+    await answerBusy(page, IMPORTS, "/apps", 1);
+    const imports = countPosts(page, IMPORT_POST);
+    await page.goto("/");
+
+    await startImport(page);
+
+    await expect(page.getByText(BUSY_LINE)).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Importing…" }),
+    ).toBeVisible();
+    await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
+    await expect(page).toHaveURL("/apps/app-new/setup");
+    expect(imports).toHaveLength(2);
+  });
+
+  test("the import dialog shows the busy sentence after a second busy answer", async ({
+    page,
+  }) => {
+    await answerBusy(page, IMPORTS, "/apps", 2);
+    const imports = countPosts(page, IMPORT_POST);
+    await page.goto("/");
+
+    await startImport(page);
+
+    await expect(page.locator("#import-url-error")).toHaveText(BUSY_SENTENCE);
+    await expect(page.getByText(BUSY_LINE)).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Import", exact: true }),
+    ).not.toHaveAttribute("aria-disabled", "true");
+    await page.waitForTimeout(2_500);
+    expect(imports).toHaveLength(2);
+  });
+
+  test("the import dialog keeps the busy line out of a refusal", async ({
+    page,
+  }) => {
+    await answerOnce(page, [
+      {
+        status: 400,
+        json: {
+          ...busyEnvelope("/apps"),
+          statusCode: 400,
+          error: "Bad Request",
+          message: "Unrecognized store URL or id",
+          retryAfterSeconds: undefined,
+        },
+      },
+    ]);
+    const imports = countPosts(page, IMPORT_POST);
+    await page.goto("/");
+
+    await startImport(page);
+
+    await expect(page.locator("#import-url-error")).toHaveText(
+      "Unrecognized store URL or id",
+    );
+    await expect(page.getByText(BUSY_LINE)).toHaveCount(0);
+    expect(imports).toHaveLength(1);
+  });
+
+  test("a closed import dialog finishes the try it started", async ({
+    page,
+  }) => {
+    await answerBusy(page, IMPORTS, "/apps", 1);
+    const imports = countPosts(page, IMPORT_POST);
+    await page.goto("/");
+
+    await startImport(page);
+    await expect(page.getByText(BUSY_LINE)).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
+    await expect(page).toHaveURL("/apps/app-new/setup");
+    expect(imports).toHaveLength(2);
+  });
+
+  test("a closed import dialog finishes a slow import the same way", async ({
+    page,
+  }) => {
+    let held = false;
+    await page.route(IMPORTS, async (route) => {
+      if (route.request().method() !== "POST" || held) {
+        return route.fallback();
+      }
+      held = true;
+      await new Promise((resolve) => setTimeout(resolve, 1_000));
+      await route.fallback();
+    });
+    await page.goto("/");
+
+    await startImport(page);
+    await page.keyboard.press("Escape");
+
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
+    await expect(page).toHaveURL("/apps/app-new/setup");
+  });
+
+  test("the import dialog shows what the second try answered", async ({
+    page,
+  }) => {
+    const allowance = "You have used today's imports. Try again tomorrow.";
+    await answerOnce(page, [
+      { status: 503, json: busyEnvelope("/apps") },
+      {
+        status: 429,
+        json: {
+          ...busyEnvelope("/apps"),
+          statusCode: 429,
+          error: "Too Many Requests",
+          message: allowance,
+          retryAfterSeconds: 3_600,
+        },
+      },
+    ]);
+    const imports = countPosts(page, IMPORT_POST);
+    await page.goto("/");
+
+    await startImport(page);
+
+    await expect(page.locator("#import-url-error")).toHaveText(allowance);
+    await expect(page.getByText(BUSY_SENTENCE)).toHaveCount(0);
+    expect(imports).toHaveLength(2);
+  });
 });
 
 test.describe("a fast double click", () => {

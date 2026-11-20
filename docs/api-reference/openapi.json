@@ -3775,7 +3775,7 @@
     },
     "/apps/{id}/keyword-discoveries": {
       "get": {
-        "description": "Reads stored rows only and reaches no store. A weekly job and a manual refresh build the list from the listing of each market, the home titles and subtitles of competitors, review phrases, Apple popularity weeks for the genre of the app and the phrases the workspace tracks for other apps, leaving out what the app tracks, active or paused, and what was dismissed. position is 1 based; null with a depth means checked and not found within that depth, and a null depth means never checked. depth 50 comes from another search of the phrase today or yesterday, 200 from the search of the app itself. state is ranked when the app has a position, opportunity when it has none, relevance is at least 60 and opportunity at least 35, and open otherwise. traffic and difficulty come from a score some tracker already produced, or, for an unscored App Store term, from the popularity Apple lists; a discovery is never scored, so opportunity is null until the keyword has a score. recommended marks the first 50 rows in list order and counts cover every open row of the requested market, whatever the state filter and the limit. unfit is the number of ranked rows that did not fit the plan while auto track is on. checks reports the weekly cap of searches, how many were queued this ISO week, how many are still waiting, the day of the newest check and the next run of the discovery schedule, whatever its cadence, null when the schedule is off.",
+        "description": "Reads stored rows only and reaches no store. A weekly job and a manual refresh build the list from the listing of each market, the home titles and subtitles of competitors, review phrases, Apple popularity weeks for the genre of the app and the phrases the workspace tracks for other apps, leaving out what the app tracks, active or paused, and what was dismissed. position is 1 based; null with a depth means checked and not found within that depth, and a null depth means never checked. depth is how far the reading looked: at most 50 when it came from another search of the phrase today or yesterday, and as far as the store listed, up to 200, when it came from the search of the app itself; a search that listed no apps reads 200 without having looked that deep, and a reading taken before depths were measured keeps the 200 it was stored with until the phrase is searched again. state is ranked when the app has a position, opportunity when it has none, relevance is at least 60 and opportunity at least 35, and open otherwise. traffic and difficulty come from a score some tracker already produced, or, for an unscored App Store term, from the popularity Apple lists; a discovery is never scored, so opportunity is null until the keyword has a score. recommended marks the first 50 rows in list order and counts cover every open row of the requested market, whatever the state filter and the limit. unfit is the number of ranked rows that did not fit the plan while auto track is on. checks reports the weekly cap of searches, how many were queued this ISO week, how many are still waiting, the day of the newest check and the next run of the discovery schedule, whatever its cadence, null when the schedule is off.",
         "operationId": "KeywordDiscoveryController_list",
         "parameters": [
           {
@@ -5138,7 +5138,7 @@
     },
     "/portfolio/history": {
       "get": {
-        "description": "One point per checked day for the last days days and, as previous, for the same number of days before them: the visibility of every tracked keyword of every primary app as one figure, how many of them rank in the top 10, and how many climbed or fell against the app's previous checked day. change compares each app's latest checked day with the day days before it, leaving out an app whose latest check is older than the range: the change in visibility and in the top 10 count (null when no app was checked that day), how many keywords climbed, fell, started ranking or dropped out, how many apps moved and the largest movers. A point counts every app: one that was not checked that day keeps the figures of its latest earlier check, and its moves count only on the days it was checked. days is 7, 30 or 90.",
+        "description": "One point per checked day for the last days days and, as previous, for the same number of days before them: the visibility of every tracked keyword of every primary app as one figure, how many of them rank in the top 10, and how many climbed or fell against the app's previous checked day. change compares each app's latest checked day with the day days before it, leaving out an app whose latest check is older than the range: the change in visibility and in the top 10 count (null when no app was checked that day), how many keywords climbed, fell, started ranking or dropped out, how many apps moved and the largest movers. A point counts every app: one that was not checked that day keeps the figures of its latest earlier check, and its moves count only on the days it was checked. days is 7, 30 or 90. bands splits the keywords of each point by rank. apps answers each primary app with its own points, its change over the range and how many of its keywords moved in its last run; stores pools the apps of each store the same way. lastRun compares each app checked on the newest day with the day before it, over the keywords checked on both days. listingChanges lists, per day and app, the fields a primary app changed in its home listing within the range, leaving out what the store decides (featuring, Editors' Choice). appId or store narrows the whole answer to one primary app or to the primary apps of one store.",
         "operationId": "PortfolioController_getHistory",
         "parameters": [
           {
@@ -5152,6 +5152,29 @@
                 7,
                 30,
                 90
+              ]
+            }
+          },
+          {
+            "name": "appId",
+            "required": false,
+            "in": "query",
+            "description": "Answer for this primary app alone.",
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          },
+          {
+            "name": "store",
+            "required": false,
+            "in": "query",
+            "description": "Answer for the primary apps of this store alone.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "APP_STORE",
+                "GOOGLE_PLAY"
               ]
             }
           }
@@ -7017,6 +7040,8 @@
             "required": true,
             "in": "path",
             "schema": {
+              "minLength": 1,
+              "maxLength": 64,
               "type": "string"
             }
           }
@@ -7048,6 +7073,8 @@
             "required": true,
             "in": "path",
             "schema": {
+              "minLength": 1,
+              "maxLength": 64,
               "type": "string"
             }
           }
@@ -7089,6 +7116,8 @@
             "required": true,
             "in": "path",
             "schema": {
+              "minLength": 1,
+              "maxLength": 64,
               "type": "string"
             }
           },
@@ -7138,6 +7167,8 @@
             "required": true,
             "in": "path",
             "schema": {
+              "minLength": 1,
+              "maxLength": 64,
               "type": "string"
             }
           }
@@ -7179,6 +7210,8 @@
             "required": true,
             "in": "path",
             "schema": {
+              "minLength": 1,
+              "maxLength": 64,
               "type": "string"
             }
           }
@@ -7220,6 +7253,8 @@
             "required": true,
             "in": "path",
             "schema": {
+              "minLength": 1,
+              "maxLength": 64,
               "type": "string"
             }
           }
@@ -7401,7 +7436,7 @@
   },
   "info": {
     "title": "asobeast API",
-    "description": "Self hosted ASO toolkit API.\n\nA metered instance carries RateLimit-Limit, RateLimit-Remaining and RateLimit-Reset on every response, for the tightest limit the request touched. A self hosted instance has no request rate limits and sends no such header. Limits are per workspace, so minting more tokens does not buy more capacity, and they are sized per plan across three classes: read for stored data, write for configuration changes and store for the endpoints that reach the App Store or Google Play.\n\nA 429 carries Retry-After and a rateLimit object naming the window that closed, or an aiAllowance object when the workspace has spent the AI calls its plan includes this month. A 403 with a quota object means a plan capacity limit such as apps or tracked keyword markets, which is a different problem from a rate limit. A 402 with an entitlement object means the workspace needs a plan.\n\nPositions are 1-based and null means checked but not found within the captured depth, never zero. Daily granularity uses UTC dates.",
+    "description": "Self-hosted ASO toolkit API. It tracks the apps you import and their competitors over time and reads what AsoBeast collected; it is not a bulk store lookup.\n\nA metered instance carries RateLimit-Limit, RateLimit-Remaining and RateLimit-Reset on every response, for the tightest limit the request touched. A self-hosted instance has no request rate limits and sends no such header. Limits are per workspace, so minting more tokens does not buy more capacity, and they are sized per plan across three classes: read for stored data, write for configuration changes and store for the endpoints that reach the App Store or Google Play.\n\nA 429 carries Retry-After and a rateLimit object naming the window that closed, or an aiAllowance object when the workspace has spent the AI calls its plan includes this month. A 403 with a quota object means a plan capacity limit such as apps or tracked keyword markets, which is a different problem from a rate limit. A 402 with an entitlement object means the workspace needs a plan.\n\nPositions are 1-based and null means checked but not found within the captured depth, never zero. Daily granularity uses UTC dates.",
     "version": "1.16.0",
     "contact": {}
   },
@@ -8884,7 +8919,7 @@
             "type": "string",
             "minLength": 8,
             "maxLength": 200,
-            "description": "Why the action was taken. Stored in the support audit trail. A suspension also shows it to every member of the workspace on every page and in every refused write, so write it for the customer"
+            "description": "Why the action was taken. Spaces at its ends are removed before its length is checked. Stored in the support audit trail. A suspension also shows it to every member of the workspace on every page and in every refused write, so write it for the customer"
           }
         },
         "required": [

@@ -32,11 +32,11 @@ export function StatGrid({ stats }: { stats: readonly Stat[] }) {
               className="w-1/3 pb-[12px] align-top max-sm:block max-sm:w-full"
             >
               <Text
-                className={`m-0 text-[24px] font-semibold leading-[32px] ${TONE_CLASS[stat.tone]}`}
+                className={`m-0 text-[28px] font-semibold leading-[32px] tracking-[-0.02em] ${TONE_CLASS[stat.tone]}`}
               >
                 {stat.value}
               </Text>
-              <Text className="m-0 text-[13px] leading-[18px] text-muted dark:text-night-muted">
+              <Text className="m-0 text-[13px] leading-[18px] text-ink-2 dark:text-night-ink-2">
                 {stat.label}
               </Text>
             </Column>

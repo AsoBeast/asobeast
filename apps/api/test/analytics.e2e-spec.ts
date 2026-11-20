@@ -904,6 +904,37 @@ describe('AnalyticsController (e2e)', () => {
     expect(history.change.movers).toEqual({ up: [], down: [] });
   });
 
+  it('breaks the workspace history down by app and store and narrows it to a scope', async () => {
+    const id = await seed();
+    const read = async (query: string): Promise<PortfolioHistory> =>
+      (await api.get(`/portfolio/history?days=30${query}`).expect(200))
+        .body as PortfolioHistory;
+
+    const history = await read('');
+
+    expect(history.bands?.map((band) => band.date)).toEqual(
+      history.points.map((point) => point.date),
+    );
+    expect(history.apps?.map((each) => each.appId)).toEqual([id]);
+    expect(history.apps?.[0].points).toEqual(history.points);
+    expect(history.stores?.map(({ store, apps }) => [store, apps])).toEqual([
+      ['APP_STORE', 1],
+    ]);
+    expect(history.lastRun?.compared).toBe(false);
+    expect(history.listingChanges).toEqual([]);
+
+    expect((await read(`&appId=${id}`)).points).toEqual(history.points);
+    expect((await read('&store=APP_STORE')).points).toEqual(history.points);
+    expect(await read('&store=GOOGLE_PLAY')).toEqual({
+      days: 30,
+      points: [],
+      previous: [],
+      change: history.change,
+    });
+    expect((await read('&appId=app_unknown')).points).toEqual([]);
+    await api.get('/portfolio/history?store=AMAZON').expect(400);
+  });
+
   describe('keyword discoveries', () => {
     const discover = async (
       appId: string,

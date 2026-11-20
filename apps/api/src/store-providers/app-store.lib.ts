@@ -97,6 +97,7 @@ export interface AppStoreLib {
       term: string;
       country: string;
       num: number;
+      fromEdgeCache?: boolean;
     } & Abortable,
   ): Promise<AppStoreSearchResult[]>;
   suggest(
@@ -105,12 +106,6 @@ export interface AppStoreLib {
       country: string;
     } & Abortable,
   ): Promise<AppStoreSuggestResult[]>;
-  similar(
-    options: {
-      id: number;
-      country: string;
-    } & Abortable,
-  ): Promise<AppStoreSearchResult[]>;
   list(options: AppStoreListOptions): Promise<AppStoreListResult[]>;
   reviews(
     options: {
@@ -194,42 +189,17 @@ async function scrape<O extends Abortable, T>(
   return result;
 }
 
-function watchingFailures(inner: typeof fetch): {
-  fetch: typeof fetch;
-  failure: () => Error | null;
-} {
-  let failure: Error | null = null;
-  const watched: typeof fetch = async (input, init) => {
-    try {
-      const response = await inner(input, init);
-      if (!response.ok) failure ??= requestFailed(response.status);
-      return response;
-    } catch (error) {
-      failure ??= error instanceof Error ? error : new Error(String(error));
-      throw error;
-    }
-  };
-  return { fetch: watched, failure: () => failure };
-}
-
-async function similarApps(
-  options: Parameters<AppStoreLib['similar']>[0],
-): Promise<AppStoreSearchResult[]> {
-  const watch = watchingFailures(pastEdgeCache);
-  const found = await scrape(options, appStore.similar, watch.fetch);
-  const failure = watch.failure();
-  if (failure) throw failure;
-  return found;
-}
-
 export const appStoreLib: AppStoreLib = {
   app: (options) => scrape(options, appStore.app),
   page: ({ id, country, language, signal }) =>
     fetchText(pageUrl(id, country, language), PAGE_USER_AGENT, signal),
-  search: (options) =>
-    scrape(options, appStore.search) as Promise<AppStoreSearchResult[]>,
+  search: ({ fromEdgeCache, ...options }) =>
+    scrape(
+      options,
+      appStore.search,
+      fromEdgeCache ? egressFetch : pastEdgeCache,
+    ) as Promise<AppStoreSearchResult[]>,
   suggest: (options) => scrape(options, appStore.suggest),
-  similar: similarApps,
   list: (options) =>
     scrape(options, (listOptions) =>
       appStore.list(listOptions as Parameters<typeof appStore.list>[0]),

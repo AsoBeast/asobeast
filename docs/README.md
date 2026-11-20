@@ -1,4 +1,4 @@
-# asobeast documentation
+# AsoBeast documentation
 
 Source for `https://docs.asobeast.com`, built with Mintlify.
 

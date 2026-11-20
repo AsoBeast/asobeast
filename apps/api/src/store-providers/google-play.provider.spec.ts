@@ -1,7 +1,7 @@
-import { BlockedError } from '@mradex77/google-play-scraper';
+import { BlockedError, NotFoundError } from '@mradex77/google-play-scraper';
 import { ProxyOutcome, Store } from '@prisma/client';
 import { outcomeOf } from './egress/proxy-health.service';
-import { StoreRequestError } from './errors';
+import { StoreAppNotFoundError, StoreRequestError } from './errors';
 import { storeDeadline, withinStoreDeadline } from './store-deadline';
 import {
   GooglePlayAppResult,
@@ -40,6 +40,13 @@ const appPayload = {
   screenshots: ['a', 'b'],
   recentChanges: 'Bug fixes',
 };
+
+const notFound = () =>
+  new NotFoundError(
+    'App not found (404)',
+    404,
+    'https://play.google.com/store/apps/details?id=com.example.app',
+  );
 
 describe('googlePlayLanguage', () => {
   it('maps known countries and falls back to en', () => {
@@ -153,7 +160,7 @@ describe('GooglePlayProvider', () => {
     expect(result.ratingAvg).toBe(4.2);
     expect(result.ratingCount).toBe(5000);
     expect(result.installs).toBe(BigInt(1000000));
-    expect(result.releasedAt).toEqual(new Date('May 30, 2013'));
+    expect(result.releasedAt).toEqual(new Date('2013-05-30T00:00:00.000Z'));
     expect(result.storeUpdatedAt).toEqual(new Date(1719792000000));
   });
 
@@ -219,16 +226,38 @@ describe('GooglePlayProvider', () => {
     expect(result.installs).toBeUndefined();
   });
 
-  it('returns undefined releasedAt when released is unparseable', async () => {
-    const app = jest
-      .fn()
-      .mockResolvedValue({ ...appPayload, released: '30 мая 2013 г.' });
-    const provider = new GooglePlayProvider(makeLib({ app }));
+  it.each([
+    ['de', '16.07.2010', '2010-07-16'],
+    ['de', '08.08.2011', '2011-08-08'],
+    ['de', '08.07.2011', '2011-07-08'],
+    ['us', 'Jul 16, 2010', '2010-07-16'],
+    ['ru', '30 мая 2013 г.', '2013-05-30'],
+  ])(
+    'reads the %s release date %s as the UTC day %s',
+    async (country, released, day) => {
+      const app = jest.fn().mockResolvedValue({ ...appPayload, released });
+      const provider = new GooglePlayProvider(makeLib({ app }));
 
-    const result = await provider.getApp('com.example.app', 'ru');
+      const result = await provider.getApp('com.example.app', country);
 
-    expect(result.releasedAt).toBeUndefined();
-  });
+      expect(result.releasedAt).toEqual(new Date(`${day}T00:00:00.000Z`));
+    },
+  );
+
+  it.each([
+    ['de', undefined],
+    ['de', 'Varies with device'],
+  ])(
+    'leaves the %s release date %p unread when it names no day',
+    async (country, released) => {
+      const app = jest.fn().mockResolvedValue({ ...appPayload, released });
+      const provider = new GooglePlayProvider(makeLib({ app }));
+
+      const result = await provider.getApp('com.example.app', country);
+
+      expect(result.releasedAt).toBeUndefined();
+    },
+  );
 
   it('maps search results with the rating average only', async () => {
     const search = jest.fn().mockResolvedValue([
@@ -714,7 +743,7 @@ describe('GooglePlayProvider on demand deadline', () => {
 
     expect(failure).toBeInstanceOf(StoreRequestError);
     expect((failure as StoreRequestError).userMessage).toBe(
-      'Google Play did not answer. Try again in a few minutes.',
+      'Google Play took longer than 20 seconds to answer. Try again in a few minutes.',
     );
     expect((failure as StoreRequestError).causeMessage).toContain(
       'TimeoutError',
@@ -775,5 +804,178 @@ describe('GooglePlayProvider on demand deadline', () => {
 
     expect(failure).toBeInstanceOf(StoreRequestError);
     expect(suggest).not.toHaveBeenCalled();
+  });
+});
+
+describe('GooglePlayProvider not found answers', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('retries a not found answer and keeps the listing that follows', async () => {
+    jest.useFakeTimers();
+    const app = jest
+      .fn()
+      .mockRejectedValueOnce(notFound())
+      .mockResolvedValue(appPayload);
+    const provider = new GooglePlayProvider(makeLib({ app }));
+
+    const promise = provider.getApp('com.example.app', 'us');
+    await jest.runAllTimersAsync();
+
+    await expect(promise).resolves.toMatchObject({
+      storeAppId: 'com.example.app',
+    });
+    expect(app).toHaveBeenCalledTimes(2);
+  });
+
+  it('trusts a not found answer that repeats after both delays', async () => {
+    jest.useFakeTimers();
+    const app = jest.fn().mockRejectedValue(notFound());
+    const provider = new GooglePlayProvider(makeLib({ app }));
+
+    const promise = provider.getApp('com.example.app', 'us');
+    const assertion = expect(promise).rejects.toBeInstanceOf(
+      StoreAppNotFoundError,
+    );
+    await jest.runAllTimersAsync();
+    await assertion;
+
+    expect(app).toHaveBeenCalledTimes(3);
+  });
+
+  it('waits two then five seconds between the answers', async () => {
+    jest.useFakeTimers();
+    const app = jest.fn().mockRejectedValue(notFound());
+    const provider = new GooglePlayProvider(makeLib({ app }));
+
+    const settled = provider
+      .getApp('com.example.app', 'us')
+      .catch((error: unknown) => error);
+    await jest.advanceTimersByTimeAsync(1999);
+    expect(app).toHaveBeenCalledTimes(1);
+    await jest.advanceTimersByTimeAsync(1);
+    expect(app).toHaveBeenCalledTimes(2);
+    await jest.advanceTimersByTimeAsync(4999);
+    expect(app).toHaveBeenCalledTimes(2);
+    await jest.advanceTimersByTimeAsync(1);
+    expect(app).toHaveBeenCalledTimes(3);
+
+    expect(await settled).toBeInstanceOf(StoreAppNotFoundError);
+  });
+
+  it('keeps the listing when the not found answer comes twice', async () => {
+    jest.useFakeTimers();
+    const app = jest
+      .fn()
+      .mockRejectedValueOnce(notFound())
+      .mockRejectedValueOnce(notFound())
+      .mockResolvedValue(appPayload);
+    const provider = new GooglePlayProvider(makeLib({ app }));
+
+    const promise = provider.getApp('com.example.app', 'us');
+    await jest.runAllTimersAsync();
+
+    await expect(promise).resolves.toMatchObject({
+      storeAppId: 'com.example.app',
+    });
+    expect(app).toHaveBeenCalledTimes(3);
+  });
+
+  it('stops asking when a not found answer turns into another failure', async () => {
+    jest.useFakeTimers();
+    const app = jest
+      .fn()
+      .mockRejectedValueOnce(notFound())
+      .mockRejectedValue(
+        Object.assign(new Error('socket hang up'), { name: 'RequestError' }),
+      );
+    const provider = new GooglePlayProvider(makeLib({ app }));
+
+    const promise = provider.getApp('com.example.app', 'us');
+    const assertion = expect(promise).rejects.toBeInstanceOf(StoreRequestError);
+    await jest.runAllTimersAsync();
+    await assertion;
+
+    expect(app).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not ask again after a blocked answer', async () => {
+    jest.useFakeTimers();
+    const app = jest
+      .fn()
+      .mockRejectedValue(
+        new BlockedError('Blocked by Google Play (captcha challenge)'),
+      );
+    const provider = new GooglePlayProvider(makeLib({ app }));
+
+    await expect(
+      provider.getApp('com.example.app', 'us'),
+    ).rejects.toBeInstanceOf(StoreRequestError);
+
+    expect(app).toHaveBeenCalledTimes(1);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it('does not ask again after a network failure the scraper already retried', async () => {
+    jest.useFakeTimers();
+    const app = jest
+      .fn()
+      .mockRejectedValue(
+        Object.assign(new Error('socket hang up'), { name: 'RequestError' }),
+      );
+    const provider = new GooglePlayProvider(makeLib({ app }));
+
+    await expect(
+      provider.getApp('com.example.app', 'us'),
+    ).rejects.toBeInstanceOf(StoreRequestError);
+
+    expect(app).toHaveBeenCalledTimes(1);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it('never retries a search', async () => {
+    jest.useFakeTimers();
+    const search = jest.fn().mockRejectedValue(notFound());
+    const provider = new GooglePlayProvider(makeLib({ search }));
+
+    await expect(provider.search('note', 'us', 10)).rejects.toBeInstanceOf(
+      StoreRequestError,
+    );
+
+    expect(search).toHaveBeenCalledTimes(1);
+  });
+
+  it('never retries the similar apps of a missing app', async () => {
+    jest.useFakeTimers();
+    const similar = jest.fn().mockRejectedValue(notFound());
+    const provider = new GooglePlayProvider(makeLib({ similar }));
+
+    await expect(
+      provider.similar('com.example.app', 'us'),
+    ).rejects.toBeInstanceOf(StoreRequestError);
+
+    expect(similar).toHaveBeenCalledTimes(1);
+  });
+
+  it('never trusts a not found answer the deadline cut short', async () => {
+    const app = jest.fn().mockRejectedValue(notFound());
+    const provider = new GooglePlayProvider(makeLib({ app }));
+    const started = Date.now();
+
+    const failure = await withinStoreDeadline(
+      () =>
+        provider
+          .getApp('com.example.app', 'us')
+          .catch((error: unknown) => error),
+      50,
+    );
+
+    expect(failure).toBeInstanceOf(StoreRequestError);
+    expect((failure as StoreRequestError).userMessage).toBe(
+      'Google Play took longer than 20 seconds to answer. Try again in a few minutes.',
+    );
+    expect(app).toHaveBeenCalledTimes(1);
+    expect(Date.now() - started).toBeLessThan(2000);
   });
 });

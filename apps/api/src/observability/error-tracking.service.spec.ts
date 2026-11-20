@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import * as Sentry from '@sentry/nestjs';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
@@ -97,5 +98,17 @@ describe('ErrorTracking', () => {
     tracking.capture(new Error('boom'));
 
     expect(setTags).toHaveBeenCalledWith({});
+  });
+
+  it('warns that a self-hosted deployment keeps its errors when the gate stays shut', () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+
+    trackerOf({ ERROR_TRACKING_DSN: DSN, BILLING_ENABLED: false });
+    const warned = warn.mock.calls.flat();
+    warn.mockRestore();
+
+    expect(warned).toContainEqual(
+      expect.stringContaining('a self-hosted deployment never reports'),
+    );
   });
 });

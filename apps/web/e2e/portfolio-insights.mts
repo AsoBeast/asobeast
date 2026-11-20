@@ -216,6 +216,21 @@ export const MANY_PORTFOLIO_INSIGHTS: PortfolioInsights = {
   ],
 };
 
+export function insightsWithin(
+  insights: PortfolioInsights,
+  appIds: ReadonlySet<string>,
+): PortfolioInsights {
+  const apps = insights.apps.filter((app) => appIds.has(app.appId));
+  return {
+    apps,
+    movers: {
+      up: insights.movers.up.filter((mover) => appIds.has(mover.appId)),
+      down: insights.movers.down.filter((mover) => appIds.has(mover.appId)),
+    },
+    totals: totalsOf(apps),
+  };
+}
+
 export function rangeChangeOf(
   insights: PortfolioInsights,
   deltas: { visibility: number; top10: number },

@@ -1,11 +1,11 @@
 import { PASSWORD_RULE } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "@/lib/api";
-import { PASSWORD_LENGTH_ERROR } from "@/lib/password";
 import {
   authFieldError,
   fieldErrorProps,
   fieldOfAuthError,
+  passwordFormError,
 } from "./field-error";
 
 const envelope = (statusCode: number, message: string) => ({
@@ -24,7 +24,6 @@ describe("fieldOfAuthError", () => {
     [400, "password must be longer than or equal to 10 characters", "password"],
     [400, "next must be shorter than or equal to 128 characters", "password"],
     [400, PASSWORD_RULE, "password"],
-    [400, PASSWORD_LENGTH_ERROR, "password"],
     [400, "current must be a string", "current"],
     [400, "name must be shorter than or equal to 80 characters", "form"],
     [401, "Invalid email or password", "form"],
@@ -55,6 +54,23 @@ describe("authFieldError", () => {
       field: "form",
       message: "fallback",
     });
+  });
+});
+
+describe("passwordFormError", () => {
+  it("keeps a refusal about the password on the password field", () => {
+    expect(
+      passwordFormError(new ApiError(envelope(400, PASSWORD_RULE)), "x"),
+    ).toEqual({ field: "password", message: PASSWORD_RULE });
+  });
+
+  it("puts a refusal about a field the form does not show on the form", () => {
+    expect(
+      passwordFormError(
+        new ApiError(envelope(409, "That email already has an account")),
+        "x",
+      ),
+    ).toEqual({ field: "form", message: "That email already has an account" });
   });
 });
 

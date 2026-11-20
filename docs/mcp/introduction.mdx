@@ -1,15 +1,15 @@
 ---
-title: The asobeast MCP server
+title: The AsoBeast MCP server
 sidebarTitle: Introduction
-description: "asobeast ships a Model Context Protocol surface that reads by default and changes things only for a token you allow. Connect to the hosted endpoint or run the stdio server yourself, both with the same tools."
+description: "AsoBeast ships a Model Context Protocol surface that reads by default and changes things only for a token you allow. Connect to the hosted endpoint or run the stdio server yourself, both with the same tools."
 icon: plug
 keywords: ["MCP","Model Context Protocol","Claude Code","Claude Desktop","read only","write tools","opt in","stdio","remote MCP","agent"]
 boost: 2
 ---
 
-asobeast ships a Model Context Protocol surface. It authenticates with a personal API token and it reads by default: its read tools cover apps, keywords, keyword inspections, competitors, positions, top charts, annotations, SERPs, audits, reviews, analytics and the Action Center queue. A few more tools change keywords, competitors, actions and annotations or queue a keyword inspection, and a connection sees them only when its token has the write scope. The [tool reference](/mcp/tools) lists every tool and counts them from the catalog the server serves.
+AsoBeast ships a Model Context Protocol surface. It authenticates with a personal API token and it reads by default: its read tools cover apps, keywords, keyword inspections, competitors, positions, top charts, annotations, SERPs, audits, reviews, analytics and the Action Center queue. A few more tools change keywords, competitors, actions and annotations or queue a keyword inspection, and a connection sees them only when its token has the write scope. The [tool reference](/mcp/tools) lists every tool and counts them from the catalog the server serves.
 
-That means you can point any MCP client, such as Claude Code, Claude Desktop, Codex, Cursor, VS Code, Gemini CLI or Windsurf, at your asobeast and ask it questions in plain language instead of clicking through the dashboard.
+That means you can point any MCP client, such as Claude Code, Claude Desktop, Codex, Cursor, VS Code, Gemini CLI or Windsurf, at your AsoBeast and ask it questions in plain language instead of clicking through the dashboard.
 
 ## Two transports, one tool surface
 
@@ -65,7 +65,7 @@ The MCP server holds no database, imports no scraper and contains no server fram
 
 | Requirement | Notes |
 | --- | --- |
-| A running asobeast instance | Reachable from the machine the agent runs on |
+| A running AsoBeast instance | Reachable from the machine the agent runs on |
 | A personal API token | Mandatory. A boot preflight exits non zero without a valid one. The scope you mint it with decides whether the write tools are listed |
 | An MCP capable client | Claude Code, Claude Desktop, Codex, Cursor, VS Code, Gemini CLI and Windsurf each have a snippet in [Connect an agent](/mcp/setup). Any other client that speaks streamable HTTP or stdio works |
 

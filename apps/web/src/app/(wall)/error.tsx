@@ -9,5 +9,12 @@ export default function Error({
   error: Error & { digest?: string };
   retry: () => void;
 }) {
-  return <ErrorState error={error} retry={retry} />;
+  return (
+    <ErrorState
+      error={error}
+      retry={retry}
+      layout="page"
+      className="m-auto max-w-100"
+    />
+  );
 }

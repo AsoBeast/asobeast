@@ -5,7 +5,7 @@ icon: key
 keywords: ["keywords","keyword monitor","market","keyword field","suggestions","bulk","budget","import","CSV","spreadsheet","tags","Astro","AppFollow","Sonar","switch","opportunity map","scatterplot","zones","quick wins"]
 ---
 
-The keyword monitor is where you decide what asobeast checks every day. Each keyword you add belongs to one storefront, and every keyword in every market adds one store search to the daily run.
+The keyword monitor is where you decide what AsoBeast checks every day. Each keyword you add belongs to one storefront, and every keyword in every market adds one store search to the daily run.
 
 ## Before you start
 
@@ -14,11 +14,11 @@ You need an imported app. See [Import an app](/guides/import-an-app).
 ## Add a keyword
 
 <Steps>
-  <Step title="Select the market">
-    The country filter at the top of the keyword monitor sets the storefront every add applies to, and shows the keyword count per market.
+  <Step title="Open the dialog">
+    Press **Add keywords**. Its **Market** field starts on the market you were looking at in the market menu, which shows the keyword count of every market.
   </Step>
   <Step title="Add one keyword or paste several">
-    A single add takes one phrase. Bulk add accepts a list, one phrase per line, and creates them all in the selected market. To add a list that carries countries, tags or notes, [import it from a CSV file](#import-keywords-from-a-csv-file).
+    Type one phrase, or paste several separated by commas or new lines, and they are all added in the market you chose. To add a list that carries countries, tags or notes, [import it from a CSV file](#import-keywords-from-a-csv-file).
   </Step>
   <Step title="Read the first position">
     A keyword added by hand, by CSV import, by a market seed or by **Save and track** on a keyword field is checked within minutes, ahead of its popularity and difficulty, so its first position does not wait for the daily run. Until it lands the row says **Checking** and the table refreshes itself.
@@ -29,7 +29,7 @@ Every added keyword carries a source, which sets its starting relevance. A keywo
 
 ## Seed a market from its listing
 
-The countries step of the guided setup suggests storefronts that read a language your listing ships. Tick one, leave **Seed with its listing** on and press the add button: asobeast captures that storefront's listing and tracks up to 15 phrases from its title and subtitle, with the sources `TITLE` and `SUBTITLE`, so the market starts with keywords from its own text.
+The countries step of the guided setup suggests storefronts that read a language your listing ships. Tick one, leave **Seed with its listing** on and press the add button: AsoBeast captures that storefront's listing and tracks up to 15 phrases from its title and subtitle, with the sources `TITLE` and `SUBTITLE`, so the market starts with keywords from its own text.
 
 Each storefront reports its outcome on its row. The same seed is one request, `POST /apps/{id}/market-seed` with a `country`, and it answers:
 
@@ -43,9 +43,9 @@ A seed spends one refresh from your on demand allowance. See [How do you add a m
 
 ## Track the same keyword in a second market
 
-Switch the country filter and add the phrase again. That creates a second keyword row, checked by a second search.
+Choose the other market in the market menu, or in the **Market** field of **Add keywords**, and add the phrase again. That creates a second keyword row, checked by a second search.
 
-The two rows are genuinely independent: positions, popularity and difficulty all differ per storefront. They also cost twice as much, because each market multiplies daily search volume against one fixed budget. See [Countries and markets](/concepts/countries) and [The daily pipeline and rate limits](/concepts/pipeline).
+The two rows are independent: positions, popularity and difficulty all differ per storefront. They also cost twice as much, because each market multiplies daily search volume against one fixed budget. See [Countries and markets](/concepts/countries) and [The daily pipeline and rate limits](/concepts/pipeline).
 
 ## Import keywords from a CSV file
 
@@ -93,7 +93,7 @@ The keyword export of another tool is read by its column headers, so you can usu
 
 When a file names the app or the store of each row, in columns such as `App Id`, `App Name`, `Platform` or `Store`, the dialog imports only the rows of the app and store you are on and lists what it left out. If the file holds several apps and none is yours, choose one under **App to import**, or **All apps**, before you import. A file for a single app is imported whole whatever that app is called, so you can copy the keywords of one app to another this way.
 
-Imported keywords start tracking today. Positions, popularity and difficulty in the file are never imported, because asobeast measures them for each market itself, so no rank history comes across.
+Imported keywords start tracking today. Positions, popularity and difficulty in the file are never imported, because AsoBeast measures them for each market itself, so no rank history comes across.
 
 ### What each status means
 
@@ -130,13 +130,13 @@ The keywords page of a Google Play app shows a **Play installs** column: the acq
 
 ## See what each market reads
 
-The 100 character iOS keyword field never appears on the public listing, so asobeast cannot read it. You type it on the metadata page, once for each localization your app ships. See [Edit the iOS keyword field](/guides/metadata-workbench#edit-the-ios-keyword-field).
+The 100 character iOS keyword field never appears on the public listing, so AsoBeast cannot read it. You type it on the metadata page, once for each localization your app ships. See [Edit the iOS keyword field](/guides/metadata-workbench#edit-the-ios-keyword-field).
 
 The keywords page only reports. Its last card shows what the market you selected reads.
 
 <Steps>
   <Step title="Choose the market">
-    Pick a market in the country filter. The card is named after it, for example **What US search reads**, and its header counts the unique words in the fields that market reads.
+    Pick a market in the market menu. The card is named after it, for example **What US search reads**, and its header counts the unique words in the fields that market reads.
   </Step>
   <Step title="Read the rows">
     Each row is a localization your app ships and that storefront reads, default first, with its role, **Default** or **Additional**, and the characters its field uses of 100. An empty field says **Empty**.
@@ -150,7 +150,7 @@ Below the rows, the card warns about words read twice and phrases split across l
 
 A link to the keywords page that still carries `?fieldLocale=` opens the page as usual and the parameter does nothing there. The metadata page uses it to open an editor.
 
-The keyword field is App Store only. Google Play has no keyword field, so the card does not appear for a Play app. See [How does asobeast keep a keyword field per localization?](/concepts/countries#how-does-asobeast-keep-a-keyword-field-per-localization)
+The keyword field is App Store only. Google Play has no keyword field, so the card does not appear for a Play app. See [How does AsoBeast keep a keyword field per localization?](/concepts/countries#how-does-asobeast-keep-a-keyword-field-per-localization)
 
 ## Open one keyword
 
@@ -158,20 +158,25 @@ Press a keyword in the tracked table and a sheet opens beside it with everything
 
 ## Get keyword suggestions
 
-**Suggestions** sits on the **Discovered** tab of the keywords page, under the discovered list; for a competitor, which has no Discovered tab, it sits under the tracked table. It opens by itself while the market tracks no keyword yet. Suggestions come from four places.
+**Suggestions** sits on the **Discovered** tab of the keywords page, under the discovered list; for a competitor, which has no Discovered tab, it sits under the tracked table. It opens by itself while the market tracks no keyword yet. Suggestions come from seven tabs.
 
-| Source | Where it comes from |
+| Tab | Where it comes from |
 | --- | --- |
-| Store suggest | A live lookup against the store suggestion endpoint |
-| Competitor listings | Phrases that competitors index and you do not |
-| Competitor searches | A live lookup of what people type around phrases taken from your competitors' listings in the market |
-| Review mining | Language that appears repeatedly in your own reviews |
+| Metadata | Phrases from your app's own metadata |
+| Search | Autocomplete terms from the store search, a live lookup |
+| Similar apps | Terms from apps the store calls similar to yours, a live lookup |
+| More by developer | Terms from the rest of your developer's catalogue, a live lookup |
+| Competitors | Terms your competitors rank for |
+| Competitor searches | What people type around phrases taken from your competitors' listings in the market, a live lookup |
+| Reviews | Phrases that appear repeatedly in your own reviews |
 
 When one of several store lookups fails, the suggestions that answered are kept.
 
+Each suggestion has its own **Track** button. To track several at once, tick them and choose **Track N selected**: one request adds every ticked phrase in the market shown, and a phrase you already track has no tick. Switching the source or the market clears the ticks. When your plan's keyword limit refuses the request, nothing is added and the ticks stay, so you can untick some and try again. Each phrase counts against the limit and adds one store search a day, as any tracked keyword does. See [Watch your request budget](#watch-your-request-budget).
+
 To see phrases your app already ranks for without tracking them first, read [Discover keywords your app already ranks for](/guides/keyword-discovery).
 
-**Competitor searches** read the title and subtitle of each competitor's listing in the market shown (the title and short description on Google Play) and keep the phrases of two words or more, up to five, as seeds. Phrases that several competitors use come first. A phrase that only one competitor uses seeds too, unless it is only that competitor's brand name, the first part of its title. The store's search suggestions then say what people type around each seed. A search must contain the words of its seed, and asobeast leaves out phrases you already track in that market, competitor titles and app names. Each row names its seed and how many competitors use it, so a row from one competitor is a weaker signal than a row from several. When a competitor has no listing in that market yet, its home listing is read. One lookup spends one keyword suggestion. An app with no competitors, whose competitors have no listing yet, or whose listings hold no phrase of two words or more spends none.
+**Competitor searches** read the title and subtitle of each competitor's listing in the market shown (the title and short description on Google Play) and keep the phrases of two words or more, up to five, as seeds. Phrases that several competitors use come first. A phrase that only one competitor uses seeds too, unless it is only that competitor's brand name, the first part of its title. The store's search suggestions then say what people type around each seed. A search must contain the words of its seed, and AsoBeast leaves out phrases you already track in that market, competitor titles and app names. Each row names its seed and how many competitors use it, so a row from one competitor is a weaker signal than a row from several. When a competitor has no listing in that market yet, its home listing is read. One lookup spends one keyword suggestion. An app with no competitors, whose competitors have no listing yet, or whose listings hold no phrase of two words or more spends none.
 
 A suggestion lookup is the one user initiated exception to the rule that store requests only happen in the queue. It is bounded by a person clicking, so it stays small, but a lookup that reaches the store spends one request of the hourly suggestions allowance. The Search tab with no active tracked keyword and the More by developer tab with no developer id in the newest listing have nothing to ask the store, so they answer an empty list and cost nothing. See [Rate limits and quotas](/api-reference/rate-limits).
 
@@ -224,7 +229,11 @@ Select rows with the checkboxes and the bar at the bottom of the table shows wha
 
 **Show dynamics** opens a panel above the table that charts the selected keywords with the same rank chart the [Rankings](/guides/read-rankings) page draws. The market menu scopes the chart together with the table, and the panel carries its own range tabs. The charted selection is a copy that lives in the address as `keywords` and `range`: filtering, sorting and bulk edits leave an open chart alone, and a copied link reopens the panel with the keywords it names. The panel opens only when you choose **Show dynamics**, or when the address names keywords, so an ordinary visit keeps the table where it is. Removing every chip or choosing **Clear** removes the keywords from the address and closes the panel, and a reload of that address keeps it closed. The chart draws at most eight lines: **Show dynamics** refuses a wider selection and asks for eight or fewer, while a copied link that carries more than eight ids charts the first eight in the order shown and says so, and its chips name only the charted keywords. A link whose ids the market no longer tracks charts the market's best keywords by opportunity instead. The rows the panel charts carry the same highlight as the selected rows and a small chart icon beside the keyword, so the table shows what the panel is drawing even though the checkboxes stay untouched.
 
-Buckets classify scored keywords automatically so a large list stays readable.
+On an App Store app, **Add to keyword field** takes the selected keywords to the keyword field of the market shown. It opens the metadata page on the first localization the market reads that your app ships, with the selected phrases added after the ones the field already holds, and saves nothing: you review the field and save it there. Phrases the field already holds are not added twice, and only the phrases that fit in its 100 characters are carried, in the order the table shows them; the metadata page says how many were left out. See [Edit the iOS keyword field](/guides/metadata-workbench#edit-the-ios-keyword-field).
+
+### Buckets
+
+Buckets classify scored keywords automatically, so a large list stays readable and you can see whether your targeting is balanced. A listing whose indexed fields cover only aspirational keywords will rank for none of them, and one that covers only longtail keywords will rank for many phrases nobody searches.
 
 | Bucket | Meaning |
 | --- | --- |
@@ -237,7 +246,7 @@ An unscored keyword has no bucket until the weekly scoring run reaches it.
 
 ## Tag keywords and keep notes
 
-Tags and notes record what asobeast cannot work out for itself: which keywords are your brand, which carry the business, which are an experiment, and why each one is tracked.
+Tags and notes record what AsoBeast cannot work out for itself: which keywords are your brand, which carry the business, which are an experiment, and why each one is tracked.
 
 Open the row menu of a keyword and choose **Edit tags and note**. Type a tag and press Enter or a comma, or pick one of the suggestions: `brand`, `core`, `testing`, then the tags already used in this market. Backspace in the empty field removes the last tag. Save writes both at once.
 
@@ -350,7 +359,7 @@ The map draws one dot for every keyword of the selected market that has both a p
 | Ring | The keyword was checked and your app does not rank for it, or it has not been checked yet |
 | Diamond | The popularity is a [floor answer](/concepts/scoring#what-is-a-floor-answer), a number that marks the edge of Apple's list and not a measurement of this term. A diamond is filled when your app ranks and empty when it does not |
 
-Dots have one size, so the map is not a bubble chart. A dot sits at the popularity the table shows, so a floor answer is drawn at the floor value Apple answered, or at the number held under it for a term Apple left out of its list. Google Play keywords use asobeast's own popularity on the same axes and never show a diamond. Dots in the same place overlap, and the table lists every keyword.
+Dots have one size, so the map is not a bubble chart. A dot sits at the popularity the table shows, so a floor answer is drawn at the floor value Apple answered, or at the number held under it for a term Apple left out of its list. Google Play keywords use AsoBeast's own popularity on the same axes and never show a diamond. Dots in the same place overlap, and the table lists every keyword.
 
 Point at a dot or focus it to read the keyword, its position, popularity, difficulty and opportunity. Click or tap it, or press Enter or Space on it, to open the position history of that keyword. A keyword that has not been checked yet has no history to open. The five keywords with the highest opportunity carry a label, and no more than five ever do. Keywords that share the same spot share one label, so the next keyword by opportunity takes the freed one.
 
@@ -394,7 +403,7 @@ A customer of a hosted instance watches their keyword markets on the plan card i
 ## Troubleshooting
 
 - **A new keyword says Checking for long.** Its check waits in the store queue behind the other work of the day, at the store rate limit. The row updates on its own for ten minutes and after a reload. If it stays, look for a failed `check-keyword` job on `/admin/queues`.
-- **A keyword shows `>200` every day.** It was checked and the app was not in the top 200. See [Positions and rank depth](/concepts/positions).
+- **A keyword shows `>200` or `>30` every day.** It was checked and the app was not in the apps the store listed, usually about 30 on Google Play. See [Positions and rank depth](/concepts/positions).
 - **Popularity and difficulty are empty.** Scoring runs weekly on `CRON_SCORING`, which defaults to Sunday 04:00 UTC.
 - **A popularity has an arrow before it.** Apple listed the term at the lowest value it publishes for its genre, or left it out of its list, so the number says little more than that the term sits at or below the edge of Apple's list. See [What is a floor answer?](/concepts/scoring#what-is-a-floor-answer).
 - **The budget card warns the operator the instance is over capacity.** Remove keywords or markets, or raise the per store rate limit and accept the risk of the store throttling your IP address.

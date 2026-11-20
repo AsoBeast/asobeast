@@ -17,12 +17,11 @@ import {
   ConfirmActionFooter,
 } from "@/components/ConfirmActionFooter";
 import { Button } from "@/components/ui/button";
-import { ApiError, startAppStoreImport } from "@/lib/api";
+import { ApiError, startAppStoreImport, apiErrorMessage } from "@/lib/api";
 import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
 import { formatList } from "@/lib/format";
 import { localizationName } from "@/lib/localizations";
 import { seedStoreImport } from "@/lib/queries";
-import { apiErrorMessage } from "./api-error-message";
 
 export const STORE_IMPORT_FOCUS_KEY = "keyword-field-import";
 

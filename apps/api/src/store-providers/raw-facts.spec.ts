@@ -1,5 +1,6 @@
 import { Store } from '@prisma/client';
 import {
+  contentRatingOf,
   currencyOf,
   developerId,
   extractAppStoreRawFacts,
@@ -12,6 +13,7 @@ import {
   ratingHistogram,
   releaseNotesFor,
   screenshotsCount,
+  storeDeveloperNameOf,
 } from './raw-facts';
 import { scrapedAppStoreRaw } from './app-store-scraped.fixture';
 
@@ -547,5 +549,45 @@ describe('currencyOf', () => {
     { currency: '€' },
   ])('answers null for %j', (raw) => {
     expect(currencyOf(raw)).toBeNull();
+  });
+});
+
+describe('contentRatingOf', () => {
+  it("reads the store's own wording", () => {
+    expect(contentRatingOf(realPayload)).toBe('4+');
+    expect(contentRatingOf(gplayPayload)).toBe('Everyone');
+  });
+
+  it.each([
+    null,
+    undefined,
+    'nope',
+    {},
+    { contentRating: '' },
+    { contentRating: '   ' },
+    { contentRating: 12 },
+  ])('answers null for %j', (raw) => {
+    expect(contentRatingOf(raw)).toBeNull();
+  });
+});
+
+describe('storeDeveloperNameOf', () => {
+  it('reads the developer name trimmed', () => {
+    expect(storeDeveloperNameOf({ developer: '  Habit Labs ' })).toBe(
+      'Habit Labs',
+    );
+    expect(storeDeveloperNameOf(gplayPayload)).toBe('Example Labs');
+  });
+
+  it.each([
+    null,
+    undefined,
+    'nope',
+    {},
+    { developer: '' },
+    { developer: '   ' },
+    { developer: 7 },
+  ])('answers null for %j', (raw) => {
+    expect(storeDeveloperNameOf(raw)).toBeNull();
   });
 });

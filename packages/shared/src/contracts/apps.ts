@@ -1,4 +1,5 @@
 import { Store } from '../index';
+import type { ChangeDetail } from './changes';
 
 export interface AppSnapshotSummary {
   id: string;
@@ -13,6 +14,18 @@ export interface AppSnapshotSummary {
   version: string | null;
   capturedAt: string;
   country?: string;
+  genre?: string | null;
+  genreName?: string | null;
+  developer?: string | null;
+  developerId?: string | null;
+  contentRating?: string | null;
+  releasedAt?: string | null;
+  storeUpdatedAt?: string | null;
+}
+
+export interface AppSnapshotDetail extends AppSnapshotSummary {
+  description?: string;
+  releaseNotes?: string | null;
 }
 
 export interface ListingMarket {
@@ -57,7 +70,7 @@ export interface AppDetail {
   iconUrl: string | null;
   createdAt: string;
   searchable: boolean;
-  latestSnapshot: AppSnapshotSummary | null;
+  latestSnapshot: AppSnapshotDetail | null;
   competitors: CompetitorItem[];
   group: AppGroupSummary | null;
   localization?: string;
@@ -97,6 +110,7 @@ export interface SnapshotChange {
   before: string | number | null;
   after: string | number | null;
   localization?: string;
+  detail?: ChangeDetail | null;
 }
 
 export interface SnapshotDiffResult {

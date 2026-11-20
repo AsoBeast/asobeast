@@ -4,7 +4,7 @@ import { VerifyEmailContent } from "@/components/auth/VerifyEmailContent";
 
 export default function VerifyPage() {
   return (
-    <Suspense fallback={<AuthCardSkeleton />}>
+    <Suspense fallback={<AuthCardSkeleton description />}>
       <VerifyEmailContent />
     </Suspense>
   );

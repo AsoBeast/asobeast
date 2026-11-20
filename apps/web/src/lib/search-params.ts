@@ -29,6 +29,7 @@ import {
   type ActionStatus,
   type AdminConversionWindow,
   type PortfolioHistoryDays,
+  WORKSPACE_ID_MAX_LENGTH,
 } from "@asobeast/shared";
 import {
   createLoader,
@@ -248,11 +249,14 @@ export type AppView = (typeof APP_VIEWS)[number];
 export const appViewParser =
   parseAsStringLiteral(APP_VIEWS).withDefault("table");
 
+export const appStoreParser = parseAsStringLiteral(STORES);
+
 export const appListParsers = {
   q: searchParser,
   sort: appSortParser,
   dir: sortDirectionParser,
   view: appViewParser,
+  store: appStoreParser,
 };
 
 export const ADMIN_WORKSPACE_SORTS = [
@@ -314,17 +318,19 @@ export const ADMIN_USER_SORTS = [
 export const adminUserSortParser =
   parseAsStringLiteral(ADMIN_USER_SORTS).withDefault("joined");
 
-const WORKSPACE_ID_MAX = 64;
-
 export const adminWorkspaceParser = createParser({
   parse: (value) =>
     value.length > 0 &&
-    value.length <= WORKSPACE_ID_MAX &&
+    value.length <= WORKSPACE_ID_MAX_LENGTH &&
     value !== ALL_WORKSPACES
       ? value
       : null,
   serialize: (value: string) => value,
 });
+
+export const ADMIN_WORKSPACE_SHEET_KEY = "workspace";
+
+export const adminWorkspaceSheetParser = adminWorkspaceParser.withDefault("");
 
 export const adminUserListParsers = {
   q: searchParser,
@@ -537,6 +543,22 @@ export type DashboardMetric = (typeof DASHBOARD_METRICS)[number];
 export const dashboardMetricParser =
   parseAsStringLiteral(DASHBOARD_METRICS).withDefault("visibility");
 
+export const DASHBOARD_BREAKDOWNS = ["app", "store"] as const;
+
+export type DashboardBreakdown = (typeof DASHBOARD_BREAKDOWNS)[number];
+
+export const dashboardBreakdownParsers = {
+  by: parseAsStringLiteral(DASHBOARD_BREAKDOWNS).withDefault("app"),
+  scope: parseAsString,
+};
+
+export const MOVER_SPANS = ["run", "range"] as const;
+
+export type MoverSpan = (typeof MOVER_SPANS)[number];
+
+export const moverSpanParser =
+  parseAsStringLiteral(MOVER_SPANS).withDefault("run");
+
 export const RANKINGS_VIEWS = ["chart", "days"] as const;
 
 export type RankingsView = (typeof RANKINGS_VIEWS)[number];
@@ -632,6 +654,18 @@ export const localizationParser = parseAsStringLiteral(
 export const draftLocaleParser = localizationParser;
 
 export const fieldLocaleParser = localizationParser;
+
+export const fieldAddParser = parseAsArrayOf(parseAsString);
+
+export const fieldLeftOutParser = createParser({
+  parse(value) {
+    const count = Number(value);
+    return Number.isSafeInteger(count) && count > 0 ? count : null;
+  },
+  serialize(value: number) {
+    return String(value);
+  },
+});
 
 export const utcDateParser = createParser({
   parse(value) {

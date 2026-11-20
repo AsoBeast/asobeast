@@ -8,8 +8,9 @@ import {
   storefrontLanguage,
 } from '@asobeast/shared';
 import { Prisma, Store } from '@prisma/client';
-import { StoreAppNotFoundError, StoreRequestError } from './errors';
+import { MissingApp, StoreAppNotFoundError, StoreRequestError } from './errors';
 import { Abortable, storeDeadline } from './store-deadline';
+import { retryStoreCall } from './store-retry';
 import {
   isMissingApp,
   GOOGLE_PLAY_LIB,
@@ -28,6 +29,7 @@ import {
   SuggestItem,
 } from './types';
 import { toChartItem } from './chart-item';
+import { playReleaseDate } from './google-play-release-date';
 
 const SEARCH_MAX = 250;
 const REVIEWS_PER_PAGE = 50;
@@ -73,7 +75,7 @@ export class GooglePlayProvider implements StoreProvider {
       'getApp',
       (deadline) =>
         this.lib.app({ appId: storeAppId, country, lang, ...deadline }),
-      storeAppId,
+      { storeAppId, country },
     );
     return {
       store: this.store,
@@ -89,7 +91,7 @@ export class GooglePlayProvider implements StoreProvider {
       price: raw.price,
       version:
         raw.version === VERSION_VARIES_WITH_DEVICE ? undefined : raw.version,
-      releasedAt: parseDate(raw.released),
+      releasedAt: playReleaseDate(raw.released, lang),
       storeUpdatedAt: new Date(raw.updated),
       raw: raw as unknown as Prisma.InputJsonValue,
       searchable: true,
@@ -259,29 +261,24 @@ export class GooglePlayProvider implements StoreProvider {
   private async call<T>(
     method: string,
     fn: (deadline: Abortable) => Promise<T>,
-    missingAppId?: string,
+    missing?: MissingApp,
   ): Promise<T> {
-    const deadline = storeDeadline();
     try {
-      deadline.signal?.throwIfAborted();
-      const result = await fn(deadline);
-      deadline.signal?.throwIfAborted();
-      return result;
+      return await retryStoreCall(
+        fn,
+        (error) => missing !== undefined && isMissingApp(error),
+      );
     } catch (error) {
-      if (missingAppId !== undefined && isMissingApp(error)) {
-        throw new StoreAppNotFoundError(this.store, missingAppId);
+      if (missing !== undefined && isMissingApp(error)) {
+        throw new StoreAppNotFoundError(
+          this.store,
+          missing.storeAppId,
+          missing.country,
+        );
       }
       throw new StoreRequestError(this.store, method, messageOf(error));
     }
   }
-}
-
-function parseDate(value?: string): Date | undefined {
-  if (!value) {
-    return undefined;
-  }
-  const ms = Date.parse(value);
-  return Number.isNaN(ms) ? undefined : new Date(ms);
 }
 
 function messageOf(error: unknown): string {

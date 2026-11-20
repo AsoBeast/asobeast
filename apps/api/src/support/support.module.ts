@@ -8,6 +8,7 @@ import { SupportAudit } from './support-audit.service';
 import { SupportController } from './support.controller';
 import { SupportDirectoryController } from './support-directory.controller';
 import { SupportConversionService } from './support-conversion.service';
+import { SupportDailyRun } from './support-daily-run.service';
 import { SupportDirectoryService } from './support-directory.service';
 import { SupportOverviewService } from './support-overview.service';
 import { SupportService } from './support.service';
@@ -29,6 +30,7 @@ import { SupportService } from './support.service';
     SupportOverviewService,
     SupportDirectoryService,
     SupportConversionService,
+    SupportDailyRun,
   ],
 })
 export class SupportModule {}

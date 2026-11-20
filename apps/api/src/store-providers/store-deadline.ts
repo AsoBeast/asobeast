@@ -6,22 +6,34 @@ export interface Abortable {
   signal?: AbortSignal;
 }
 
-const storage = new AsyncLocalStorage<AbortSignal>();
+interface DeadlineScope {
+  signal: AbortSignal;
+  endsAt: number;
+}
+
+const storage = new AsyncLocalStorage<DeadlineScope>();
 
 export function storeDeadline(): Abortable {
-  const signal = storage.getStore();
-  return signal ? { signal } : {};
+  const scope = storage.getStore();
+  return scope ? { signal: scope.signal } : {};
 }
 
 export function storeDeadlinePassed(): boolean {
-  return storage.getStore()?.aborted === true;
+  return storage.getStore()?.signal.aborted === true;
+}
+
+export function storeDeadlineEndsAt(): number | null {
+  return storage.getStore()?.endsAt ?? null;
 }
 
 export function withinStoreDeadline<T>(
   work: () => T,
   ms = ON_DEMAND_STORE_DEADLINE_MS,
 ): T {
-  return storage.run(AbortSignal.timeout(ms), work);
+  return storage.run(
+    { signal: AbortSignal.timeout(ms), endsAt: Date.now() + ms },
+    work,
+  );
 }
 
 export function outsideStoreDeadline<T>(work: () => T): T {

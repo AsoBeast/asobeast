@@ -178,6 +178,39 @@ export interface AuditAiStatus {
   run?: AuditAiRun | null;
 }
 
+export type ReadinessStatus = 'pass' | 'warn' | 'fail' | 'unmeasurable';
+
+export interface ReadinessLink {
+  href: string;
+  label: string;
+}
+
+export interface ReadinessItem {
+  id:
+    | 'preview-video'
+    | 'in-app-events'
+    | 'accessibility'
+    | 'rating'
+    | 'update-recency'
+    | 'localizations'
+    | 'screenshots';
+  label: string;
+  status: ReadinessStatus;
+  detail: string | null;
+  link: ReadinessLink | null;
+}
+
+export interface ReadinessEditorial {
+  stories: number;
+  editorsChoiceBadge: boolean;
+}
+
+export interface AppReadiness {
+  items: ReadinessItem[];
+  editorial: ReadinessEditorial | null;
+  extractAsOf: string | null;
+}
+
 export interface AppAuditResult {
   appId: string;
   store: Store;
@@ -197,6 +230,7 @@ export interface AppAuditResult {
   unlocks?: AuditUnlockSummary[];
   creative?: AuditCreative | null;
   benchmarks?: AuditBenchmarks | null;
+  readiness?: AppReadiness;
 }
 
 export interface AuditScorePoint {

@@ -5,19 +5,11 @@ import type { FormEvent } from "react";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { useQueryState } from "nuqs";
-import { PASSWORD_RULE } from "@asobeast/shared";
 import { register } from "@/lib/api";
 import { entryDestination } from "@/lib/auth-routes";
 import { planParam } from "@/lib/search-params";
-import { passwordError } from "@/lib/password";
+import { PASSWORD_HINT, passwordError } from "@/lib/password";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -25,8 +17,10 @@ import {
   fieldErrorProps,
   type AuthFieldError,
 } from "./field-error";
+import { AuthCard, AuthPanel, INLINE_LINK } from "./AuthCard";
 import { FieldErrorMessage } from "./FieldErrorMessage";
 import { LegalConsent } from "./LegalConsent";
+import { PasswordField } from "./PasswordField";
 import { SessionNotKeptAlert } from "./SessionNotKeptAlert";
 import { useSessionEntry } from "./use-session-entry";
 import { useSingleFlight } from "@/lib/single-flight";
@@ -65,92 +59,64 @@ export function RegisterForm({ billing }: { billing: boolean }) {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-sm flex-col gap-4">
-      <Card>
-        <CardHeader>
-          <CardTitle asChild>
-            <h1>Create account</h1>
-          </CardTitle>
-          <CardDescription>Set up your AsoBeast workspace.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={submit} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="name">Name (optional)</Label>
-              <Input
-                id="name"
-                name="name"
-                autoComplete="name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                spellCheck={false}
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                {...fieldErrorProps(error, "email", "email-error")}
-                required
-              />
-              <FieldErrorMessage error={error} field="email" id="email-error" />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                {...fieldErrorProps(
-                  error,
-                  "password",
-                  "password-error",
-                  "password-rule",
-                )}
-                required
-              />
-              <p
-                id="password-rule"
-                className="text-caption text-muted-foreground"
-              >
-                {PASSWORD_RULE}
-              </p>
-              <FieldErrorMessage
-                error={error}
-                field="password"
-                id="password-error"
-              />
-            </div>
-            <FieldErrorMessage error={error} field="form" id="form-error" />
-            {sessionDropped ? (
-              <SessionNotKeptAlert
-                outcome="Your account was created."
-                offerSignIn
-              />
-            ) : null}
-            <Button type="submit" aria-disabled={locked || undefined}>
-              {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
-              Create account
-            </Button>
-            {billing ? <LegalConsent /> : null}
-          </form>
-        </CardContent>
-      </Card>
-      <p className="text-center text-dense text-muted-foreground">
-        Already have an account?{" "}
-        <Link href="/login" className="font-medium underline">
-          Sign in
-        </Link>
-      </p>
-    </div>
+    <AuthCard
+      title="Create account"
+      footer={
+        <>
+          Already have an account?{" "}
+          <Link href="/login" className={INLINE_LINK}>
+            Sign in
+          </Link>
+        </>
+      }
+    >
+      {sessionDropped ? (
+        <SessionNotKeptAlert outcome="Your account was created." offerSignIn />
+      ) : null}
+      <AuthPanel>
+        <form onSubmit={submit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="name">Name (optional)</Label>
+            <Input
+              id="name"
+              name="name"
+              autoComplete="name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              spellCheck={false}
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              {...fieldErrorProps(error, "email", "email-error")}
+              required
+            />
+            <FieldErrorMessage error={error} field="email" id="email-error" />
+          </div>
+          <PasswordField
+            label="Password"
+            autoComplete="new-password"
+            value={password}
+            onChange={setPassword}
+            hint={PASSWORD_HINT}
+            error={error?.field === "password" ? error.message : null}
+          />
+          <FieldErrorMessage error={error} field="form" id="form-error" />
+          <Button type="submit" size="lg" aria-disabled={locked || undefined}>
+            {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
+            Create account
+          </Button>
+          {billing ? <LegalConsent /> : null}
+        </form>
+      </AuthPanel>
+    </AuthCard>
   );
 }

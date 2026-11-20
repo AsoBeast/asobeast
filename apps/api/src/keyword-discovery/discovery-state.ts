@@ -2,7 +2,6 @@ import {
   DISCOVERY_RECOMMENDED,
   DiscoveryRowState,
   KeywordDiscoveryCounts,
-  RANK_DEPTH,
   utcDayOf,
 } from '@asobeast/shared';
 import {
@@ -70,7 +69,7 @@ export function isPending(
   row: {
     queuedAt: Date | null;
     checkedOn: string | null;
-    depth: number | null;
+    ownSearch: boolean;
   },
   now: Date,
 ): boolean {
@@ -79,7 +78,6 @@ export function isPending(
   return (
     row.checkedOn === null ||
     row.checkedOn < utcDayOf(row.queuedAt) ||
-    row.depth === null ||
-    row.depth < RANK_DEPTH
+    !row.ownSearch
   );
 }

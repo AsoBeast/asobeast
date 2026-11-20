@@ -3,6 +3,7 @@ import {
   DISCOVERY_NONE_COOKIE,
   DISCOVERY_PENDING_COOKIE,
 } from "./keyword-discoveries.mts";
+import { BUSY_SENTENCE, answerBusy, countPosts } from "./busy-answer.mts";
 import { expect, test } from "./session.mts";
 import { seedSetup, storedSetup } from "./setup-session.mts";
 
@@ -461,6 +462,33 @@ test.describe("picking competitors inside the step", () => {
     await expect(
       competitors.getByRole("button", { name: "Add selected" }),
     ).toBeDisabled();
+  });
+
+  test("a suggested competitor a busy server refused is added on the second try", async ({
+    page,
+    request,
+  }) => {
+    await resetCompetitors(request, "app-1");
+    await answerBusy(
+      page,
+      "**/api/backend/apps/app-1/competitors",
+      "/apps/app-1/competitors",
+      1,
+    );
+    const adds = countPosts(page, /\/api\/backend\/apps\/app-1\/competitors$/);
+    await startSetup(page, "app-1");
+
+    const competitors = stepCard(page, "Pick competitors");
+    const deepWork = competitors
+      .getByRole("list", { name: "Suggested competitors" })
+      .getByRole("listitem")
+      .filter({ hasText: "Deep Work Sessions" });
+    await deepWork.getByRole("checkbox").check();
+    await competitors.getByRole("button", { name: "Add 1 selected" }).click();
+
+    await expect(deepWork.getByRole("status")).toHaveText("Added");
+    await expect(competitors.getByText(BUSY_SENTENCE)).toHaveCount(0);
+    expect(adds).toHaveLength(2);
   });
 
   test("a failed suggestion load offers a retry", async ({ page, request }) => {

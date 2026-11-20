@@ -1,6 +1,9 @@
 import { Logger } from '@nestjs/common';
 import { Store } from '@prisma/client';
-import { StoreRequestError } from '../store-providers/errors';
+import {
+  StorePoolBusyError,
+  StoreRequestError,
+} from '../store-providers/errors';
 import { storeDeadlinePassed } from '../store-providers/store-deadline';
 import { suggestAround } from './store-hints';
 
@@ -61,6 +64,17 @@ describe('suggestAround', () => {
     const hints = await suggestAround(provider, ['a', 'b', 'c'], 'us');
 
     expect(hints.map((hint) => hint.term)).toEqual(['a one', 'c one']);
+  });
+
+  it('degrades when the proxy pool is busy', async () => {
+    const provider = providerFor({
+      a: new StorePoolBusyError(Store.GOOGLE_PLAY, 1_000),
+      b: [{ term: 'b one' }],
+    });
+
+    const hints = await suggestAround(provider, ['a', 'b'], 'us');
+
+    expect(hints.map((hint) => hint.term)).toEqual(['b one']);
   });
 
   it('rethrows the first failure when every seed failed', async () => {

@@ -38,7 +38,7 @@ describe('EmailLayout', () => {
     expect(html).toMatch(
       /<img[^>]*src="https:\/\/aso\.example\.com\/brand\/email-mark\.png"/,
     );
-    expect(html).toMatch(/<img[^>]*width="48"/);
+    expect(html).toMatch(/<img[^>]*width="28"/);
     expect(html).toMatch(/<img[^>]*alt=""/);
     expect(html).toContain('Sent by AsoBeast at aso.example.com');
   });
@@ -54,6 +54,12 @@ describe('EmailLayout', () => {
     const html = await layout(null, '<script>alert(1)</script>');
     expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
     expect(html).not.toContain('<script');
+  });
+
+  it('asks for the app typeface first and falls back to the system face', async () => {
+    const html = await layout(null);
+    expect(html).toContain('font-family:Geist,-apple-system,');
+    expect(html).not.toContain('@font-face');
   });
 
   it('limits the container to 600 pixels', async () => {

@@ -104,4 +104,24 @@ describe('PoolCapacity', () => {
 
     expect(count).toHaveBeenCalledTimes(2);
   });
+
+  describe('with an interactive reserve', () => {
+    it.each([
+      ['leaves the reserve out of the worker count', 5, 1, 4],
+      ['caps at the ceiling after the reserve', 100, 1, 8],
+      [
+        'keeps every endpoint when the pool is no larger than the reserve',
+        1,
+        1,
+        1,
+      ],
+      ['uses every endpoint with reserve zero', 5, 0, 5],
+    ])('%s', async (_name, healthy, interactiveReserve, usable) => {
+      count.mockResolvedValue(healthy);
+
+      await expect(
+        capacityWith({ interactiveReserve }).usable(Store.GOOGLE_PLAY),
+      ).resolves.toBe(usable);
+    });
+  });
 });

@@ -1,8 +1,8 @@
 <div align="center">
   <a href="https://asobeast.com"><img src="docs/images/logo-mark.png" alt="AsoBeast" width="112" /></a>
   <h1>AsoBeast</h1>
-  <p><strong><a href="https://asobeast.com">AsoBeast</a> is an open source App Store Optimization (ASO) tool and keyword rank tracker for the Apple App Store and Google Play.</strong></p>
-  <p>Use the hosted service at <a href="https://asobeast.com">asobeast.com</a>, or self-host the open source edition on your own server.</p>
+  <p><strong><a href="https://asobeast.com">AsoBeast</a> is an open-source App Store Optimization (ASO) tool and keyword rank tracker for the Apple App Store and Google Play.</strong></p>
+  <p>Use the hosted service at <a href="https://asobeast.com">asobeast.com</a>, or self-host the open-source edition on your own server.</p>
   <p>
     <a href="LICENSE"><img alt="License: AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg" /></a>
     <a href="https://github.com/AsoBeast/asobeast/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/AsoBeast/asobeast" /></a>
@@ -26,13 +26,13 @@
 
 ## What is AsoBeast?
 
-AsoBeast is an App Store Optimization (ASO) tool and keyword rank tracker for the Apple App Store and Google Play. It imports a listing, tracks keyword rankings daily to a depth of 200, watches competitors, reviews and metadata, and turns that history into a prioritized queue of ASO work. This repository is the free, open source edition that you run on your own server, and the hosted service at [asobeast.com](https://asobeast.com) runs the same code.
+AsoBeast is an App Store Optimization (ASO) tool and keyword rank tracker for the Apple App Store and Google Play. It imports a listing, tracks keyword rankings daily as deep as the store lists results, up to 200, watches competitors, reviews and metadata, and turns that history into a prioritized queue of ASO work. This repository is the free, open-source edition that you run on your own server, and the hosted service at [asobeast.com](https://asobeast.com) runs the same code.
 
 Every store request runs on the machine hosting AsoBeast as an ordinary public search or page request, so Apple and Google see each tracked phrase the way they see any search. You sign up with no ASO vendor, buy no API key, and share your keyword list with nobody. Beyond those store requests, your data stays in your deployment unless you explicitly enable an outbound integration such as webhook alerts, email, OpenAI assistance, Apple Ads search popularity or store status updates.
 
 ## Who is AsoBeast for?
 
-AsoBeast is built for people who ship apps and want their ASO data to stay theirs: indie developers, small studios and agencies tracking a handful of apps across several storefronts. It fits if you want ASO tracking without a per keyword subscription, need the data on your own infrastructure, or want to query your ASO history from an agent or a script instead of a dashboard. It collects from the public store endpoints at a deliberately modest rate, so it suits a portfolio measured in apps rather than hundreds. See [who AsoBeast is for](https://docs.asobeast.com/#who-is-asobeast-for).
+AsoBeast is built for people who ship apps and want to keep their ASO data on their own terms: indie developers, small studios and agencies tracking a handful of apps across several storefronts. It fits if you want ASO tracking without a per keyword subscription, need the data on your own infrastructure, or want to query your ASO history from an agent or a script instead of a dashboard. It collects from the public store endpoints at a deliberately modest rate, so it suits a portfolio measured in apps rather than hundreds. See [who AsoBeast is for](https://docs.asobeast.com/#who-is-asobeast-for).
 
 ## Why AsoBeast?
 
@@ -51,7 +51,7 @@ AsoBeast is built for people who ship apps and want their ASO data to stay their
 | Keyword tracking                 | Track any validated storefront, see daily positions and history, bulk edit, and keep the private 100 character iOS keyword field by hand                                                                                                                                                                                                                    |
 | Keyword inspection               | Research any phrase in any storefront before you track it: the top 50 results, the store autocomplete, popularity, difficulty and opportunity with their source, a summary of the top 10 and the change since the last run                                                                                                                                  |
 | Market suggestions               | Reads the languages your listing ships and suggests the storefronts that read them, with the daily request cost, then seeds a chosen market with the keywords of its own listing                                                                                                                                                                            |
-| Rank checks to depth 200         | One search per keyword and market serves your app and all of its competitors, so competitor tracking costs no extra requests                                                                                                                                                                                                                                |
+| Rank checks to depth 200         | One search per keyword and market serves your app and all of its competitors, so competitor tracking costs no extra requests. Google Play usually lists about 30 results, so its checks stop there                                                                                                                                                          |
 | Transparent scoring              | Popularity and difficulty with provenance and confidence, plus opportunity derived on read                                                                                                                                                                                                                                                                  |
 | SERP and category intelligence   | Retained SERP snapshots, volatility, entrants and movers, and top charts by country and category with movement, trending apps and chart follows                                                                                                                                                                                                             |
 | Competitor discovery             | Find competitors from live search results, compare listings and find keyword gaps                                                                                                                                                                                                                                                                           |
@@ -179,6 +179,7 @@ The software is, entirely. It is AGPL-3.0 with no open core and no feature held 
 | Operations: backups, restore, upgrades  | [operations](https://docs.asobeast.com/operations/backups)                                                  |
 | Troubleshooting and support             | [support](https://docs.asobeast.com/support)                                                                |
 | API reference and OpenAPI               | [api-reference](https://docs.asobeast.com/api-reference/introduction)                                       |
+| What the API is for                     | [api-reference/scope](https://docs.asobeast.com/api-reference/scope)                                        |
 | MCP tools                               | [mcp/tools](https://docs.asobeast.com/mcp/tools)                                                            |
 | The whole site for an LLM               | [llms.txt](https://docs.asobeast.com/llms.txt) and [llms-full.txt](https://docs.asobeast.com/llms-full.txt) |
 
@@ -210,4 +211,4 @@ Pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first for the
 
 ## License
 
-This repository's source code is available under the [AGPL-3.0 license](LICENSE).
+This repository's source code is available under the [AGPL-3.0-only license](LICENSE). The license grants no trademark rights, and [TRADEMARKS.md](TRADEMARKS.md) says how the AsoBeast name and logo may be used.

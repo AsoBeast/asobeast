@@ -1,6 +1,6 @@
 ---
 title: Glossary
-description: "Definitions of the ASO and asobeast terms used across this documentation, from home storefront and keyword field to opportunity and fingerprint."
+description: "Definitions of the ASO and AsoBeast terms used across this documentation, from home storefront and keyword field to opportunity and fingerprint."
 icon: book-a
 keywords: ["glossary","definitions","ASO terms","terminology"]
 ---
@@ -9,7 +9,7 @@ One definition per term, in the wording the rest of this site uses.
 
 ## ASO
 
-App Store Optimization: the practice of improving how an app listing ranks and converts in store search and charts. asobeast measures it from public store data, and from your own console's reports when you connect one.
+App Store Optimization: the practice of improving how an app listing ranks and converts in store search and charts. AsoBeast measures it from public store data, and from your own console's reports when you connect one.
 
 ## Storefront
 
@@ -25,7 +25,7 @@ A storefront you track keywords in. An app has one home storefront but can track
 
 ## Listing market
 
-A storefront whose listing asobeast has captured for your app. Your home storefront always has one, and every market where you track a keyword gets one. See [Countries and markets](/concepts/countries).
+A storefront whose listing AsoBeast has captured for your app. Your home storefront always has one, and every market where you track a keyword gets one. See [Countries and markets](/concepts/countries).
 
 ## Tracked keyword
 
@@ -41,7 +41,7 @@ The private 100 character App Store field that never appears on the public listi
 
 ## Shipped localization
 
-An App Store localization your app has, on the list asobeast keeps because App Store Connect is private. Your home storefront's default localization is always shipped, and any other is added by you, by saving a keyword field for it or by detection. See [Which localizations does an app ship?](/concepts/countries#which-localizations-does-an-app-ship).
+An App Store localization your app has, on the list AsoBeast keeps because App Store Connect is private. Your home storefront's default localization is always shipped, and any other is added by you, by saving a keyword field for it or by detection. See [Which localizations does an app ship?](/concepts/countries#which-localizations-does-an-app-ship).
 
 ## Reader
 
@@ -53,7 +53,7 @@ The 30 character indexed App Store field below the title. App Store only. Its au
 
 ## Short description
 
-The 80 character indexed Google Play field, called `summary` in the store payload. Google Play only, and asobeast tracks its keywords automatically with the source `DESCRIPTION`.
+The 80 character indexed Google Play field, called `summary` in the store payload. Google Play only, and AsoBeast tracks its keywords automatically with the source `DESCRIPTION`.
 
 ## Position
 
@@ -61,11 +61,11 @@ An app's 1 based rank for one keyword on one UTC date. `null` means checked and 
 
 ## Depth
 
-How far a position check looked, stored on each observation. The default is 200, which is why an unranked keyword renders as `>200`.
+How far a position check looked, stored on each observation: the number of apps the store listed, at most 200. An unranked keyword renders as `>` that depth. See [Positions and rank depth](/concepts/positions).
 
 ## SERP
 
-The search results page for one keyword. asobeast stores the top 50 results per keyword and date. Volatility, entrants and movers read the top 10 of it.
+The search results page for one keyword. AsoBeast stores the top 50 results per keyword and date. Volatility, entrants and movers read the top 10 of it.
 
 ## Volatility
 
@@ -153,7 +153,7 @@ Four lists of the keywords you track on the competitors page: keyword gaps, winn
 
 ## Category rank
 
-An app's position in a store chart rather than in search. asobeast captures free, paid and grossing charts daily for the home storefront. See [Follow category ranks](/guides/category-ranks).
+An app's position in a store chart rather than in search. AsoBeast captures free, paid and grossing charts daily for the home storefront. See [Follow category ranks](/guides/category-ranks).
 
 ## Top chart
 
@@ -185,7 +185,7 @@ A captured copy of a listing's metadata at one moment, stored with the raw store
 
 ## Screenshot text
 
-The large caption text printed on an App Store screenshot, read on the machine that hosts asobeast. It is a weak signal that Apple has not confirmed, so it is shown beside keyword coverage and never counted as an indexed field. See [Read screenshot captions](/guides/screenshot-captions).
+The large caption text printed on an App Store screenshot, read on the machine that hosts AsoBeast. It is a weak signal that Apple has not confirmed, so it is shown beside keyword coverage and never counted as an indexed field. See [Read screenshot captions](/guides/screenshot-captions).
 
 ## Change event
 

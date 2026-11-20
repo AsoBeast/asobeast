@@ -20,13 +20,13 @@ A date you send must exist on the calendar, and a window must run forwards. A da
 
 ## Positions are 1 based and null is meaningful
 
-Position 1 is the top result. `null` means the keyword was checked and the app was not found within that row's `depth`, which defaults to 200.
+Position 1 is the top result. `null` means the keyword was checked and the app was not found within that row's `depth`.
 
 <Warning>
   Never coerce `null` to `0`. Zero is a better position than 1, so treating a missing app as zero makes every unranked keyword look like the best result and inverts every average, delta and trend you compute.
 </Warning>
 
-Render `null` as a bound derived from the row's own `depth`, such as `>200`. See [Positions and rank depth](/concepts/positions).
+Render `null` as a bound derived from the row's own `depth`, such as `>200` or `>30`. See [Positions and rank depth](/concepts/positions).
 
 ## Queued operations return 202
 
@@ -59,7 +59,7 @@ Country belongs to the keyword, not to the app, which is why so many endpoints t
 
 ## Rate limits depend on how the instance is run
 
-A self hosted instance applies no API rate limits beyond the authentication throttle. What is limited there is store collection, by `SCRAPE_ITUNES_RPM` and `SCRAPE_GPLAY_RPM`, so a script may read as often as it likes while queuing work has a real cost.
+A self-hosted instance applies no API rate limits beyond the authentication throttle. What is limited there is store collection, by `SCRAPE_ITUNES_RPM` and `SCRAPE_GPLAY_RPM`, so a script may read as often as it likes while queuing work has a real cost.
 
 A metered instance limits requests per workspace and per plan, in three classes, and every response carries `RateLimit` headers. See [Rate limits and quotas](/api-reference/rate-limits).
 

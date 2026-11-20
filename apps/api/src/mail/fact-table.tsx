@@ -7,7 +7,7 @@ export function FactTable({ facts }: { facts: readonly Fact[] }) {
     <Section className="my-[16px] rounded-[8px] bg-well px-[16px] py-[8px] dark:bg-night-well">
       {facts.map(([label, value], index) => (
         <Row key={`${label}-${index}`}>
-          <Column className="w-[38%] py-[6px] pr-[12px] align-top text-[14px] leading-[20px] text-muted dark:text-night-muted">
+          <Column className="w-[38%] py-[6px] pr-[12px] align-top text-[14px] leading-[20px] text-ink-2 dark:text-night-ink-2">
             {label}
           </Column>
           <Column className="wrap-anywhere py-[6px] align-top text-[14px] leading-[20px] text-ink dark:text-night-ink">

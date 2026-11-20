@@ -11,7 +11,11 @@ import { DEFAULT_WORKSPACE_ID } from '../common/tenancy/default-workspace';
 import { TrackedKeywordAccess } from '../keywords/tracked-keyword.access';
 import { PrismaService } from '../prisma/prisma.service';
 import { DailyCategoryBuckets } from './daily-category-buckets.service';
-import { JOB_OPTIONS, REVIEW_SYNC_JOB_OPTIONS } from './job-options';
+import {
+  JOB_OPTIONS,
+  REVIEW_SYNC_JOB_OPTIONS,
+  SCHEDULED_JOB_OPTIONS,
+} from './job-options';
 import { JOBS, QUEUES } from './jobs.types';
 import { QuotaService } from '../auth/quota.service';
 import { ActiveWorkspaces } from './active-workspaces';
@@ -74,7 +78,7 @@ const twoWorkspaces = {
 describe('PipelineService', () => {
   const fixedDate = new Date('2026-07-27T23:59:59.000Z');
 
-  const buildQueue = (waiting = 0, delayed = 0) => {
+  const buildQueue = (waiting = 0, delayed = 0, scheduled = 0) => {
     const stored = new Map<string, { data: unknown }>();
     return {
       add: jest
@@ -86,7 +90,9 @@ describe('PipelineService', () => {
         }),
       getJob: jest.fn((jobId: string) => Promise.resolve(stored.get(jobId))),
       remove: jest.fn().mockResolvedValue(1),
-      getWaitingCount: jest.fn().mockResolvedValue(waiting),
+      getCountsPerPriority: jest
+        .fn()
+        .mockResolvedValue({ 0: waiting, 1: scheduled }),
       getDelayedCount: jest.fn().mockResolvedValue(delayed),
     };
   };
@@ -471,6 +477,49 @@ describe('PipelineService', () => {
             stage.queue === QUEUES.GPLAY && stage.name === JOBS.REFRESH_APP,
         ),
       ).toBe(true);
+    });
+
+    it('counts the scheduled jobs waiting with a priority in the backlog', async () => {
+      const { service, flowProducer } = buildService({
+        prisma: targetsOf(['APP_STORE', 'GOOGLE_PLAY'], ['APP_STORE']),
+        appStoreQueue: buildQueue(0, 0, 60_000),
+        capacity: hostCapacity(15, 10),
+      });
+
+      await service.fanOutDaily();
+
+      const stages = stagesOf(flowProducer);
+      expect(
+        stages.some(
+          (stage) =>
+            stage.queue === QUEUES.APP_STORE && stage.name === JOBS.REFRESH_APP,
+        ),
+      ).toBe(false);
+      expect(
+        stages.some(
+          (stage) =>
+            stage.queue === QUEUES.GPLAY && stage.name === JOBS.REFRESH_APP,
+        ),
+      ).toBe(true);
+    });
+
+    it('asks for the waiting and the scheduled counts only', async () => {
+      const appStoreQueue = buildQueue();
+      const gplayQueue = buildQueue();
+      const { service } = buildService({
+        prisma: targetsOf(['APP_STORE', 'GOOGLE_PLAY'], ['APP_STORE']),
+        appStoreQueue,
+        gplayQueue,
+      });
+
+      await service.fanOutDaily();
+
+      for (const queue of [appStoreQueue, gplayQueue]) {
+        expect(queue.getCountsPerPriority).toHaveBeenCalledWith([
+          0,
+          SCHEDULED_JOB_OPTIONS.priority,
+        ]);
+      }
     });
 
     it('never sheds a rank check on either store', async () => {
@@ -1033,7 +1082,7 @@ describe('PipelineService', () => {
           keywordId: 'old',
           workspaceId: DEFAULT_WORKSPACE_ID,
         }),
-        { jobId: 'score~old~app-store-v5' },
+        { ...SCHEDULED_JOB_OPTIONS, jobId: 'score~old~app-store-v5' },
       );
       expect(gplayQueue.add).not.toHaveBeenCalled();
     });
@@ -1130,6 +1179,35 @@ describe('PipelineService', () => {
       ).toEqual(['k1', 'k2']);
     });
 
+    it('gives weekly score jobs the scheduled priority', async () => {
+      const { service, appStoreQueue } = buildService({
+        prisma: prismaWith([
+          tracked('old', 'app-store-v1'),
+          tracked('current', 'app-store-v5'),
+        ]),
+      });
+
+      await service.fanOutScoring();
+
+      expect(appStoreQueue.add).toHaveBeenCalledTimes(2);
+      for (const [, , opts] of appStoreQueue.add.mock.calls) {
+        expect(opts).toMatchObject(SCHEDULED_JOB_OPTIONS);
+      }
+    });
+
+    it('gives formula rescore jobs the scheduled priority', async () => {
+      const { service, appStoreQueue } = buildService({
+        prisma: prismaWith([tracked('old', 'app-store-v1')]),
+      });
+
+      await service.fanOutOutdatedScores();
+
+      expect(appStoreQueue.add).toHaveBeenCalledTimes(1);
+      expect(appStoreQueue.add.mock.calls[0][2]).toMatchObject(
+        SCHEDULED_JOB_OPTIONS,
+      );
+    });
+
     it('keeps the weekly scoring bucket for the weekly run', async () => {
       const { service, appStoreQueue } = buildService({
         prisma: prismaWith([tracked('old', 'app-store-v1')]),
@@ -1139,8 +1217,89 @@ describe('PipelineService', () => {
       expect(appStoreQueue.add).toHaveBeenCalledWith(
         JOBS.SCORE_KEYWORD,
         expect.objectContaining({ keywordId: 'old' }),
-        { jobId: 'score~old~2026-W31' },
+        { ...SCHEDULED_JOB_OPTIONS, jobId: 'score~old~2026-W31' },
       );
+    });
+  });
+
+  describe('work a person started carries no priority', () => {
+    const optionsOf = (queue: ReturnType<typeof buildQueue>) =>
+      queue.add.mock.calls.map(([, , opts]) => opts ?? {});
+
+    it('gives every child of the daily flow the scheduled priority', async () => {
+      const prisma = {
+        app: {
+          findMany: jest.fn().mockResolvedValue([
+            { id: 'primary', isCompetitor: false, store: 'APP_STORE' },
+            { id: 'competitor', isCompetitor: true, store: 'GOOGLE_PLAY' },
+          ]),
+        },
+        $queryRaw: jest.fn().mockResolvedValue([]),
+        trackedKeyword: {
+          findMany: jest.fn().mockResolvedValue([
+            { keywordId: 'apple-keyword', keyword: { store: 'APP_STORE' } },
+            { keywordId: 'gplay-keyword', keyword: { store: 'GOOGLE_PLAY' } },
+          ]),
+        },
+      };
+      const { service, flowProducer } = buildService({
+        prisma,
+        categoryRanks: buildCategoryRanks([
+          {
+            collection: 'free',
+            genre: '6007',
+            country: 'us',
+            store: 'APP_STORE',
+          },
+        ]),
+      });
+
+      await service.fanOutDaily();
+
+      const [flow] = flowProducer.add.mock.calls[0] as [FlowJob];
+      expect(flow.opts).not.toHaveProperty('priority');
+      expect(flow.children).toHaveLength(6);
+      for (const child of flow.children ?? []) {
+        expect(child.opts?.priority).toBe(SCHEDULED_JOB_OPTIONS.priority);
+      }
+    });
+
+    it('leaves a run a person asked for without a priority', async () => {
+      const appStoreQueue = buildQueue();
+      const gplayQueue = buildQueue();
+      const prisma = {
+        app: {
+          findFirst: jest.fn().mockResolvedValue({
+            id: 'primary',
+            store: 'APP_STORE',
+            isCompetitor: false,
+            competitors: [{ id: 'competitor', store: 'GOOGLE_PLAY' }],
+            tracked: [
+              { keywordId: 'keyword', keyword: { store: 'APP_STORE' } },
+            ],
+          }),
+        },
+      };
+      const { service } = buildService({ appStoreQueue, gplayQueue, prisma });
+
+      await service.fanOutApp('primary');
+
+      const options = [...optionsOf(appStoreQueue), ...optionsOf(gplayQueue)];
+      expect(options.length).toBeGreaterThan(0);
+      expect(options.every((opts) => !('priority' in opts))).toBe(true);
+    });
+
+    it('leaves a score a person asked for without a priority', async () => {
+      const appStoreQueue = buildQueue();
+      const { service } = buildService({ appStoreQueue });
+
+      await workspace.run(DEFAULT_WORKSPACE_ID, () =>
+        service.enqueueScore('keyword'),
+      );
+
+      expect(optionsOf(appStoreQueue)).toEqual([
+        { jobId: 'score~keyword~2026-07-27' },
+      ]);
     });
   });
 });

@@ -31,9 +31,9 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/components/auth/use-auth";
 import {
-  ApiError,
   cancelWorkspaceDeletion,
   scheduleWorkspaceDeletion,
+  apiErrorMessage,
 } from "@/lib/api";
 import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
 import { formatDateTime, pluralize } from "@/lib/format";
@@ -52,10 +52,6 @@ import { PanelSkeleton } from "./skeletons";
 
 const DELETION_FOCUS_KEY = "workspace-deletion";
 
-function messageOf(error: unknown, fallback: string): string {
-  return error instanceof ApiError ? error.envelope.message : fallback;
-}
-
 function ScheduleDeletionDialog({ graceDays }: { graceDays: number }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -71,7 +67,7 @@ function ScheduleDeletionDialog({ graceDays }: { graceDays: number }) {
       setOpen(false);
     },
     onError: (err) =>
-      toast.error(messageOf(err, "Could not schedule the deletion.")),
+      toast.error(apiErrorMessage(err, "Could not schedule the deletion.")),
   });
   const scheduleOnce = useSingleFlight(schedule);
   const pending = schedule.isPending;
@@ -153,7 +149,7 @@ function CancelDeletionButton() {
       invalidateWorkspaceDeletion(queryClient);
     },
     onError: (err) =>
-      toast.error(messageOf(err, "Could not cancel the deletion.")),
+      toast.error(apiErrorMessage(err, "Could not cancel the deletion.")),
   });
   const cancelOnce = useSingleFlight(cancel);
 

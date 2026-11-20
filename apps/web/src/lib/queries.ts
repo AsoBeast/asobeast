@@ -21,6 +21,7 @@ import type {
   VisibilityComparison,
   WebhookItem,
   PortfolioHistoryDays,
+  PortfolioHistoryScope,
 } from "@asobeast/shared";
 import { isStoreSuggestionStrategy, QUERY_BOUNDS } from "@asobeast/shared";
 import {
@@ -48,6 +49,7 @@ import {
   getAdminUsers,
   getCapacityReport,
   getProxyPool,
+  getSupportWorkspace,
   getSupportWorkspaces,
   getActionAiStatus,
   getActions,
@@ -283,8 +285,16 @@ export const storeSearchKey = (store: Store, country: string, q: string) =>
   ["store-search", store, country, q] as const;
 export const portfolioInsightsKey = [...portfolioKey, "insights"] as const;
 
-export const portfolioHistoryKey = (days: PortfolioHistoryDays) =>
-  [...portfolioKey, "history", days] as const;
+export const portfolioHistoryKey = (
+  days: PortfolioHistoryDays,
+  scope: PortfolioHistoryScope = {},
+) =>
+  [
+    ...portfolioKey,
+    "history",
+    days,
+    { appId: scope.appId ?? null, store: scope.store ?? null },
+  ] as const;
 
 const recentChangesRoot = ["changes", "recent"] as const;
 
@@ -371,6 +381,8 @@ export const adminKeys = {
   capacity: () => [...adminKeys.all, "capacity"] as const,
   proxyPool: () => [...adminKeys.all, "proxy-pool"] as const,
   workspaces: () => [...adminKeys.all, "workspaces"] as const,
+  workspace: (workspaceId: string) =>
+    [...adminKeys.workspaces(), workspaceId] as const,
   users: (workspaceId?: string) =>
     [...adminKeys.all, "users", workspaceId ?? null] as const,
   apps: (workspaceId?: string) =>
@@ -415,6 +427,15 @@ export const adminWorkspacesOptions = queryOptions({
   queryFn: getSupportWorkspaces,
   staleTime: ADMIN_STALE_MS,
 });
+
+export const adminWorkspaceOptions = (workspaceId: string) =>
+  queryOptions({
+    queryKey: adminKeys.workspace(workspaceId),
+    queryFn: () => getSupportWorkspace(workspaceId),
+    staleTime: ADMIN_STALE_MS,
+    retry: false,
+    refetchOnReconnect: false,
+  });
 
 export const adminUsersOptions = (workspaceId?: string) =>
   queryOptions({
@@ -507,6 +528,11 @@ export function invalidateWorkspaceDeletion(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: workspaceDeletionKey });
 }
 
+export function invalidateSupportAction(client: QueryClient): void {
+  void client.invalidateQueries({ queryKey: adminKeys.workspaces() });
+  void client.invalidateQueries({ queryKey: adminKeys.overview() });
+}
+
 export const storeConnectionsOptions = queryOptions({
   queryKey: storeConnectionKeys.all,
   queryFn: getStoreConnections,
@@ -553,10 +579,13 @@ export function invalidateDailyRunResults(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: recentChangesRoot });
 }
 
-export const portfolioHistoryOptions = (days: PortfolioHistoryDays) =>
+export const portfolioHistoryOptions = (
+  days: PortfolioHistoryDays,
+  scope: PortfolioHistoryScope = {},
+) =>
   queryOptions({
-    queryKey: portfolioHistoryKey(days),
-    queryFn: () => getPortfolioHistory(days),
+    queryKey: portfolioHistoryKey(days, scope),
+    queryFn: () => getPortfolioHistory(days, scope),
     staleTime: 60_000,
   });
 
@@ -825,6 +854,7 @@ export const marketKeywordFieldsOptions = (id: string, country: string) =>
   queryOptions({
     queryKey: appKeys.marketKeywordFields(id, country),
     queryFn: () => getMarketKeywordFields(id, country),
+    refetchOnWindowFocus: "always",
   });
 
 const STORE_LOOKUP_OPTIONS = { staleTime: ONE_DAY_MS, retry: false } as const;

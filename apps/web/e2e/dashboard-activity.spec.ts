@@ -76,6 +76,8 @@ test("do next names the app and opens the exact action", async ({ page }) => {
 const moverRows = (page: Page) =>
   moversCard(page).getByRole("list").getByRole("listitem");
 
+const RANGE_MOVERS = "/?span=range";
+
 const ALL_MOVERS = [
   ...PORTFOLIO_INSIGHTS.movers.up,
   ...PORTFOLIO_INSIGHTS.movers.down,
@@ -85,12 +87,13 @@ test("keyword movers list every move with its app and market", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/");
+  await page.goto(RANGE_MOVERS);
 
   const card = moversCard(page);
-  await expect(
-    card.getByRole("tab", { name: "All", exact: true }),
-  ).toHaveAttribute("aria-selected", "true");
+  await expect(card.getByRole("tab", { name: /^All \d+$/ })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
   await expect(card.getByRole("list")).toHaveCount(1);
   const rows = moverRows(page);
   await expect(rows).toHaveCount(ALL_MOVERS.length);
@@ -106,7 +109,7 @@ test("keyword movers list every move with its app and market", async ({
 test("keyword movers lead with arrivals and exits, then the largest moves", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto(RANGE_MOVERS);
 
   const rows = moverRows(page);
   await expect(rows.first()).toContainText("new");
@@ -119,7 +122,7 @@ test("keyword movers lead with arrivals and exits, then the largest moves", asyn
 
 test("keyword movers filter climbers and fallers", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto("/");
+  await page.goto(RANGE_MOVERS);
 
   const card = moversCard(page);
   const [faller] = PORTFOLIO_INSIGHTS.movers.down;
@@ -142,7 +145,7 @@ test("keyword movers filter climbers and fallers", async ({ page }) => {
 });
 
 test("the movers filter survives a reload", async ({ page }) => {
-  await page.goto("/?movers=down");
+  await page.goto(`${RANGE_MOVERS}&movers=down`);
 
   const card = moversCard(page);
   await expect(card.getByRole("tab", { name: "Fallers" })).toHaveAttribute(
@@ -179,11 +182,101 @@ test("keyword movers say so in a quiet week", async ({ page }) => {
       url: "http://localhost:3000",
     },
   ]);
-  await page.goto("/");
+  await page.goto(RANGE_MOVERS);
 
   const card = moversCard(page);
   await expect(card).toContainText("No keyword moved in the last 30 days.");
   await expect(card.getByRole("list")).toHaveCount(0);
+});
+
+test("keyword movers open on the last run and count its changes", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  const card = moversCard(page);
+  await expect(
+    card.getByRole("combobox", { name: "Movers period, Last run" }),
+  ).toBeVisible();
+  await expect(card.getByRole("tab")).toHaveText([
+    "All3",
+    "Climbers2",
+    "Fallers1",
+  ]);
+  await expect(moverRows(page)).toHaveCount(3);
+  await expect(moverRows(page).last()).toContainText("up 8 in the last run");
+  await expect(card).toContainText(
+    "Position changes in the last run, largest first",
+  );
+});
+
+test("the movers period switches to the range, writes the url and survives a reload", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  const card = moversCard(page);
+  const period = card.getByRole("combobox", { name: /^Movers period/ });
+  await period.focus();
+  await page.keyboard.press("Enter");
+  await page.getByRole("option", { name: "Last 30 days" }).click();
+
+  await expect(page).toHaveURL(/[?&]span=range/);
+  await expect(period).toBeFocused();
+  await expect(moverRows(page)).toHaveCount(ALL_MOVERS.length);
+  const { up, down } = PORTFOLIO_INSIGHTS.totals.movement;
+  await expect(card.getByRole("tab")).toHaveText([
+    `All${up + down}`,
+    `Climbers${up}`,
+    `Fallers${down}`,
+  ]);
+  await expect(card).toContainText(
+    "Position changes in the last 30 days, largest first",
+  );
+
+  await page.reload();
+  await expect(
+    card.getByRole("combobox", { name: "Movers period, Last 30 days" }),
+  ).toBeVisible();
+  await expect(moverRows(page)).toHaveCount(ALL_MOVERS.length);
+});
+
+test("a quiet run says so and keeps the period control", async ({ page }) => {
+  await page.context().addCookies([
+    {
+      name: "portfolio_insights_quiet",
+      value: "1",
+      url: "http://localhost:3000",
+    },
+  ]);
+  await page.goto("/");
+
+  const card = moversCard(page);
+  await expect(card).toContainText("No keyword moved in the last run.");
+  await expect(card).not.toContainText("largest first");
+  await expect(
+    card.getByRole("combobox", { name: /^Movers period/ }),
+  ).toBeVisible();
+  await expect(card.getByRole("tab")).toHaveCount(0);
+});
+
+test("the movers period is left out until a run can be compared with the day before", async ({
+  page,
+}) => {
+  await page.context().addCookies([
+    {
+      name: "portfolio_insights_fresh",
+      value: "1",
+      url: "http://localhost:3000",
+    },
+  ]);
+  await page.goto("/");
+
+  const card = moversCard(page);
+  await expect(card).toContainText(
+    "Movement appears after 30 days of daily runs.",
+  );
+  await expect(card.getByRole("combobox")).toHaveCount(0);
 });
 
 for (const { cookie, sentence } of [
@@ -202,7 +295,7 @@ for (const { cookie, sentence } of [
     await page
       .context()
       .addCookies([{ name: cookie, value: "1", url: "http://localhost:3000" }]);
-    await page.goto("/");
+    await page.goto(RANGE_MOVERS);
 
     await expect(moversCard(page)).toContainText(sentence);
   });

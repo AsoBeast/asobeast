@@ -24,7 +24,7 @@ import { isCaptured, type CapturedSerp } from "../serp/SerpSheet";
 import { SerpNeverChecked, SerpNoApps, SerpSkeleton } from "../serp/SerpStates";
 import { SerpSummary } from "../serp/SerpSummary";
 import { serpSummary } from "../serp/serp-summary";
-import { SheetSection } from "./SheetSection";
+import { SheetSection } from "@/components/layout/SheetSection";
 
 type Viewer = { appId: string; storeAppId: string | undefined };
 

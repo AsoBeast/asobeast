@@ -32,7 +32,7 @@ The file can be imported again: the keyword, `country`, `tags` and `note` column
 
 The `scoreComparability` column repeats, on every row, that App Store and Google Play scores use different public signals and are not directly comparable. That caveat is easy to lose once data leaves the product, so it is written into the file. See [App Store and Google Play](/concepts/stores).
 
-`position` is formatted the same way the table shows it, so an unranked keyword exports as `>200` rather than as an empty cell or a zero. See [Positions and rank depth](/concepts/positions).
+`position` is formatted the same way the table shows it, so an unranked keyword exports as `>` the check's depth, such as `>200` or `>30`, rather than as an empty cell or a zero. See [Positions and rank depth](/concepts/positions).
 
 ## Export rankings to CSV
 
@@ -148,7 +148,7 @@ Yes. Every field that begins with `=`, `+`, `-`, `@`, a tab or a carriage return
 
 ## Use the API instead
 
-For anything scripted, read the API rather than parsing an export. It returns typed JSON and it does not depend on which filters happened to be applied in a browser. See [asobeast API](/api-reference/introduction).
+For anything scripted, read the API rather than parsing an export. It returns typed JSON and it does not depend on which filters happened to be applied in a browser. See [AsoBeast API](/api-reference/introduction).
 
 ## Related
 
