@@ -1,17 +1,27 @@
 "use client";
 
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { LEDE } from "@/components/layout/panel-classes";
-import { movementLede } from "./movement-sentence";
+import { portfolioOptions } from "@/lib/queries";
+import { dashboardLede } from "./movement-sentence";
 import { useRangeHistory } from "./use-range-history";
 
 export function DashboardLede() {
-  const { days, history } = useRangeHistory();
-  const { lead, fact, tail } = movementLede(history.change, days);
+  const { history } = useRangeHistory();
+  const { data: portfolio } = useSuspenseQuery(portfolioOptions);
+  const parts = dashboardLede(history, portfolio.apps).filter(
+    (part) => part.text !== "",
+  );
   return (
     <p className={LEDE}>
-      <span>{lead}</span>
-      <span className="font-medium text-foreground">{fact}</span>
-      <span>{tail}</span>
+      {parts.map((part, index) => (
+        <span
+          key={index}
+          className={part.strong ? "font-medium text-foreground" : undefined}
+        >
+          {part.text}
+        </span>
+      ))}
     </p>
   );
 }

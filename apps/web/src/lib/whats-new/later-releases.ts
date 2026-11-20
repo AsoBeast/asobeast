@@ -40,6 +40,11 @@ export const LATER_RELEASES: readonly Release[] = [
       },
       {
         kind: "improved",
+        title: "See which app moved on the dashboard",
+        text: "The dashboard chart is one line for every app, so a dip never said which app caused it. A list beside the chart now breaks the figure down by app, largest change first, and selecting an app draws the chart for that app alone. Point at a day to read the apps that moved most on it and the listing changes you made that day, which are also marked on the chart. The sentence under the title starts with what the last run changed, keyword movers open on the same and name the app of each keyword, the top 10 chart splits your keywords into rank bands, and the app table now follows the range you pick instead of always showing seven days.",
+      },
+      {
+        kind: "improved",
         title: "An app overview that leads with what matters",
         text: "The overview of an app now opens with four figures: visibility, share of voice, keywords in the top 10 and the store rating. Select any of them to draw its chart. The visibility chart shows the range before as a second line and marks the days your listing changed, with a link to what each change did. Keyword movers sit right under it with a small line of each keyword's last 30 days, followed by the keywords closest to the top 10, the next things to do and how many tracked keywords each part of your listing covers. The store funnel shows a trend line under each number, category ranks and ratings by market follow as reference, and the app's own icon now sits beside its name on every page.",
       },

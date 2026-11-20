@@ -2,6 +2,7 @@ import type {
   AppSummary,
   PortfolioHistory,
   PortfolioHistoryDays,
+  PortfolioHistoryScope,
   PortfolioInsights,
   PortfolioSummary,
   RankDistributionHistory,
@@ -31,13 +32,12 @@ export function getPortfolioInsights(): Promise<PortfolioInsights> {
 
 export function getPortfolioHistory(
   days: PortfolioHistoryDays,
+  scope: PortfolioHistoryScope = {},
 ): Promise<PortfolioHistory> {
-  return apiFetch<PortfolioHistory>(
-    withQuery(
-      "/portfolio/history",
-      new URLSearchParams({ days: String(days) }),
-    ),
-  );
+  const params = new URLSearchParams({ days: String(days) });
+  if (scope.appId) params.set("appId", scope.appId);
+  if (scope.store) params.set("store", scope.store);
+  return apiFetch<PortfolioHistory>(withQuery("/portfolio/history", params));
 }
 
 export function getVisibilityHistory(

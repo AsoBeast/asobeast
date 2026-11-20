@@ -6,7 +6,11 @@ import { LIST_HEAD, LIST_ROW } from "@/components/layout/panel-classes";
 import { DirectionArrow } from "@/components/ui/delta-chip";
 import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { moverChange, type MoverChange } from "./mover-change";
+import {
+  moverChange,
+  type MoverChange,
+  type MoverPeriod,
+} from "./mover-change";
 import { EmptyState } from "@/components/ui/empty-state";
 
 export const MOVER_COLUMNS =
@@ -30,21 +34,21 @@ function changeText(change: MoverChange): string {
 const changeWay = (change: MoverChange): "up" | "down" =>
   change.kind === "up" || change.kind === "new" ? "up" : "down";
 
-function changeLabel(change: MoverChange, days: number): string {
+function changeLabel(change: MoverChange, period: MoverPeriod): string {
   if (change.kind === "new") return "started ranking";
   if (change.kind === "lost") return "dropped out of the results";
-  return `${change.kind === "up" ? "up" : "down"} ${formatNumber(change.size)} in ${days} days`;
+  return `${change.kind === "up" ? "up" : "down"} ${formatNumber(change.size)} ${period.within}`;
 }
 
 function MoverLine({
   mover,
   href,
-  days,
+  period,
   children,
 }: {
   mover: KeywordMover;
   href: string;
-  days: number;
+  period: MoverPeriod;
   children: ReactNode;
 }) {
   const change = moverChange(mover);
@@ -75,7 +79,7 @@ function MoverLine({
           <DirectionArrow way={changeWay(change)} />
           <span>{changeText(change)}</span>
         </span>
-        <span className="sr-only">{changeLabel(change, days)}</span>
+        <span className="sr-only">{changeLabel(change, period)}</span>
       </span>
     </Link>
   );
@@ -83,14 +87,14 @@ function MoverLine({
 
 export function MoverList<Mover extends KeywordMover>({
   movers,
-  days,
+  period,
   empty,
   changeHeading = "Change",
   hrefOf,
   lead,
 }: {
   movers: Mover[];
-  days: number;
+  period: MoverPeriod;
   empty: string;
   changeHeading?: string;
   hrefOf: (mover: Mover) => string;
@@ -111,7 +115,7 @@ export function MoverList<Mover extends KeywordMover>({
           const href = hrefOf(mover);
           return (
             <li key={href}>
-              <MoverLine mover={mover} href={href} days={days}>
+              <MoverLine mover={mover} href={href} period={period}>
                 {lead(mover)}
               </MoverLine>
             </li>

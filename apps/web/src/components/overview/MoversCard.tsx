@@ -5,6 +5,7 @@ import { formatRankPosition } from "@asobeast/shared";
 import type { KeywordMover, RankingPoint } from "@asobeast/shared";
 import { useKeywordScope } from "@/components/app-detail/use-market";
 import { TrendLine } from "@/components/charts/Sparkline";
+import { daysPeriod } from "@/components/rankings/mover-change";
 import { MoversPanel } from "@/components/rankings/MoversPanel";
 import { positionTrail } from "@/components/rankings/position-trail";
 import {
@@ -54,7 +55,7 @@ export function MoversCard({ id }: { id: string }) {
   return (
     <MoversPanel
       movers={summary.movers}
-      days={MOVER_DAYS}
+      period={daysPeriod(MOVER_DAYS)}
       quiet={
         up.length + down.length > 0
           ? null

@@ -1,11 +1,13 @@
 "use client";
 
+import type { ReactNode } from "react";
 import {
   Area,
   CartesianGrid,
   ComposedChart,
   Line,
   ReferenceDot,
+  ReferenceLine,
   XAxis,
   YAxis,
 } from "recharts";
@@ -14,6 +16,7 @@ import { ChartNotice, trendState } from "@/components/charts/ChartStates";
 import { SeriesFade, useFadeId } from "@/components/charts/SeriesFade";
 import { SeriesTooltip } from "@/components/charts/SeriesTooltip";
 import {
+  CHANGE_MARKER_PROPS,
   CHART_HEIGHT,
   CHART_MARGIN,
   COUNT_LINE_PROPS,
@@ -44,6 +47,14 @@ export interface TrendSubject {
   counted: boolean;
 }
 
+export type DayNoter = (date: string) => ReactNode;
+
+export const LISTING_CHANGE_KEY: ChartKeyItem = {
+  label: "Listing change",
+  color: CHANGE_MARKER_PROPS.stroke,
+  mark: "dash",
+};
+
 const figure = (value: number): string => formatNumber(Math.round(value));
 
 function trendNote(unfinished: boolean, unchecked: boolean): string | null {
@@ -56,11 +67,13 @@ function TrendTooltip({
   label,
   trend,
   subject,
+  notes,
 }: {
   active?: boolean;
   label?: string | number;
   trend: HistoryTrend;
   subject: TrendSubject;
+  notes: DayNoter;
 }) {
   if (!active || label === undefined) return null;
   const day = String(label);
@@ -99,15 +112,24 @@ function TrendTooltip({
             ]),
       ]}
       footer={
-        note === null ? null : (
-          <span className="text-muted-foreground">{note}</span>
-        )
+        <>
+          {note === null ? null : (
+            <span className="text-muted-foreground">{note}</span>
+          )}
+          {notes(day)}
+        </>
       }
     />
   );
 }
 
-export function TrendLegend({ trend }: { trend: HistoryTrend }) {
+export function TrendLegend({
+  trend,
+  marked,
+}: {
+  trend: HistoryTrend;
+  marked: boolean;
+}) {
   const items: ChartKeyItem[] =
     trend.checked === 0
       ? []
@@ -131,16 +153,23 @@ export function TrendLegend({ trend }: { trend: HistoryTrend }) {
                 } as const,
               ]
             : []),
+          ...(marked ? [LISTING_CHANGE_KEY] : []),
         ];
   return <ChartKey label="Chart lines" items={items} />;
 }
 
+const NO_NOTES: DayNoter = () => null;
+
 export function PortfolioTrendChart({
   trend,
   subject,
+  markers = [],
+  notes = NO_NOTES,
 }: {
   trend: HistoryTrend;
   subject: TrendSubject;
+  markers?: readonly string[];
+  notes?: DayNoter;
 }) {
   const fadeId = useFadeId();
   const height = CHART_HEIGHT.tall;
@@ -183,8 +212,13 @@ export function PortfolioTrendChart({
           ticks={trend.valueTicks}
           allowDecimals={false}
         />
+        {markers.map((day) => (
+          <ReferenceLine key={day} x={day} {...CHANGE_MARKER_PROPS} />
+        ))}
         <ChartTooltip
-          content={<TrendTooltip trend={trend} subject={subject} />}
+          content={
+            <TrendTooltip trend={trend} subject={subject} notes={notes} />
+          }
         />
         {trend.compared ? (
           <Line {...PREVIOUS_LINE_PROPS} type={line.type} dataKey="previous" />

@@ -44,6 +44,9 @@ export const UNRANKED_BAND = {
 
 const ALL_BANDS = [...RANK_BANDS, UNRANKED_BAND];
 
+export const topTenOf = (counts: BandCounts): number =>
+  counts.rank1 + counts.rank2to3 + counts.rank4to10;
+
 export interface BandSegment {
   key: keyof BandCounts;
   label: string;
