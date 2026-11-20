@@ -14,6 +14,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "Keyword inspector in the sidebar reads any keyword in any country straight from the store, without tracking it: the top 50 apps, the autocomplete, popularity, difficulty and opportunity, and how strong the top ten are. Each keyword you inspect lands on a map beside the others, its store suggestions inspect in one click, and the next inspection of the same keyword shows what changed since.",
       },
       {
+        kind: "new",
+        title: "A ratings goal",
+        text: "Pick the average you want the store to show and the number of days, and the Reviews page says how many five-star ratings it takes to get there and how fast they need to come.",
+      },
+      {
         kind: "fixed",
         title: "Play installs finds more search terms",
         text: "Google writes most search terms under explore traffic rather than search, and the column used to read only search, so months could look empty that never were. It now reads both, while the placeholders Google writes when it names no term stay out of the column.",
