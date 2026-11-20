@@ -1,4 +1,4 @@
-import { judgeFields } from './localized-coverage';
+import { judgeFields, wordsSplit } from './localized-coverage';
 
 const english = [
   { field: 'title' as const, value: 'Where Am I? GeoGuess Map Quiz' },
@@ -63,5 +63,22 @@ describe('judgeFields', () => {
       covered: true,
       localization: 'pl',
     });
+  });
+});
+
+describe('wordsSplit', () => {
+  const surfaces = [
+    { field: 'title' as const, value: 'GeoGuess Map Quiz' },
+    { field: 'subtitle' as const, value: 'World Trivia' },
+  ];
+
+  it('finds every word of a keyword across the fields of one listing', () => {
+    expect(wordsSplit('quiz world', surfaces, [])).toBe(true);
+    expect(wordsSplit('quiz atlas', surfaces, [])).toBe(false);
+  });
+
+  it('never calls a keyword without words split', () => {
+    expect(wordsSplit('', surfaces, [])).toBe(false);
+    expect(wordsSplit(' · ', surfaces, [])).toBe(false);
   });
 });
