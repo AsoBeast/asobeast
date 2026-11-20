@@ -1,8 +1,8 @@
 ---
 title: Deploy on Railway
-description: "Deploy asobeast on Railway in one click. The template runs the published images with PostgreSQL and Redis and generates every secret for you."
+description: "Deploy AsoBeast on Railway in one click. The template runs the published images with PostgreSQL and Redis and generates every secret for you."
 icon: train-front
-keywords: ["railway","one click deploy","template","hosting","self host","published images"]
+keywords: ["railway","one click deploy","template","hosting","self-host","published images"]
 ---
 
 The Railway template is the fastest way to a hosted instance. It runs the same published images as [Run a published release](/install/published-images) and generates every secret at deploy time, so there is nothing to clone, build or configure before the first sign in.
@@ -24,9 +24,9 @@ The `web` service is health checked on `/api/health` and the `api` service on `/
 
 The template also sets what depends on Railway's edge proxy. `TRUST_PROXY` is `1` on `web`, for the edge, and `1` on `api`, for the web hop. `AUTH_COOKIE_SECURE` is `true`, and `WEB_PUBLIC_URL` is `https://${{web.RAILWAY_PUBLIC_DOMAIN}}`. See [Verify the hop count](/security/hosting#verify-the-hop-count) for why the hop count matters.
 
-Redis has no password and relies on the private network. Keep public networking off for `api`, `Postgres` and `Redis`, so `web` stays the only service reachable from the internet, exactly as the Compose stack publishes only the web container. See [Which ports does asobeast publish?](/install/requirements#which-ports-does-asobeast-publish)
+Redis has no password and relies on the private network. Keep public networking off for `api`, `Postgres` and `Redis`, so `web` stays the only service reachable from the internet, exactly as the Compose stack publishes only the web container. See [Which ports does AsoBeast publish?](/install/requirements#which-ports-does-asobeast-publish)
 
-## Deploy asobeast
+## Deploy AsoBeast
 
 <Steps>
   <Step title="Start the deploy">
@@ -61,7 +61,7 @@ Add the domain to `web` only. The API is reached through the web origin at `/api
 
 ## Upgrade
 
-The `1` image tags move with every `1.x` release, and Railway shows an update button in a service's **Settings** when a newer image is published under its tag. Read the release notes and take a backup first, then update `api` and wait for it to become active before you update `web`. The API applies every pending migration on boot. Leave Railway's automatic image updates off, because they skip the backup and update the two services independently.
+A major image tag such as `1` moves with every release in that major and never to the next one, so change the tag yourself to follow a new major. Railway shows an update button in a service's **Settings** when a newer image is published under its tag. Read the release notes and take a backup first, then update `api` and wait for it to become active before you update `web`. The API applies every pending migration on boot. Leave Railway's automatic image updates off, because they skip the backup and update the two services independently.
 
 To choose exactly which release runs, pin an exact version. Open each application service, then **Settings**, and change the source image to a version tag such as `ghcr.io/asobeast/asobeast-api:<version>`, using the same version for `api` and `web`. See [Run a published release](/install/published-images) for the tag shapes, and [Upgrade and roll back](/install/upgrade) for what the compatibility promise covers and what a rollback means once a migration has run.
 

@@ -7,7 +7,7 @@ keywords: ["action center","recommendations","priority","impact","snooze","finge
 boost: 2
 ---
 
-The Action Center answers one question from data asobeast already collected: what should you do this week, and why. Every recommendation is a pure function of stored data with named constants, so any of them can be reproduced by hand from the evidence it carries.
+The Action Center answers one question from data AsoBeast already collected: what should you do this week, and why. Every recommendation is a pure function of stored data with named constants, so any of them can be reproduced by hand from the evidence it carries.
 
 It reads only the database. Generation makes zero store requests and consumes none of your request budget.
 
@@ -41,7 +41,7 @@ On the right, **Progress** charts 30 days of activity: actions opened above the 
 Selecting a row opens the action in a sheet without leaving the queue. The sheet has these sections:
 
 - **Why this** lists the evidence as graded facts and lists, with one sentence summarizing it.
-- **How to fix** gives the steps for this rule and store, ending with how asobeast confirms the fix.
+- **How to fix** gives the steps for this rule and store, ending with how AsoBeast confirms the fix.
 - **Trend** charts the rule's metric from at least 14 days before the action first appeared, with markers where it opened and where you marked it done.
 - **Outcome** appears once you marked the action done. See [Outcomes](#outcomes).
 - **History** lists every recorded transition. See [History](#history).
@@ -52,7 +52,7 @@ The open action lives in the URL as `?action=<id>`, so a link to one opens the s
 
 ## The lifecycle
 
-An action is a finding with a life, not a row in a report. A stable fingerprint identifies it across runs, so re running generation refreshes the same action instead of minting a new one.
+An action keeps its identity across runs. A stable fingerprint identifies it, so re running generation refreshes the same action instead of minting a new one.
 
 | Status | Meaning | How it is reached |
 | --- | --- | --- |
@@ -62,7 +62,7 @@ An action is a finding with a life, not a row in a report. A stable fingerprint 
 | `DISMISSED` | You rejected it | You closed it. It never reopens on its own, however long it stays true |
 | `RESOLVED` | The condition went away | The system closed it, because the rule stopped firing |
 
-The difference between `RESOLVED` and `DONE` is the point. Only that distinction tells you whether your fix is what removed the problem.
+`RESOLVED` means the rule stopped firing on its own; `DONE` means you acted. Comparing the two shows whether your fix removed the problem.
 
 ### Confirmed fixed
 
@@ -74,13 +74,13 @@ While the rule keeps firing after you marked it done, the action shows **Still d
 
 An action is identified by a fingerprint over its rule, app, store, country, keyword and a rule specific discriminator. It deliberately excludes every volatile magnitude: positions, scores, counts and observation dates are all left out.
 
-That exclusion is the whole design. If a position were part of the fingerprint, tomorrow's check would produce a different fingerprint, mint a brand new action, and your snooze and dismiss decisions would evaporate every night. Excluding magnitudes is what makes the lifecycle mean anything.
+If a position were part of the fingerprint, tomorrow's check would open a new action and lose your snooze and dismiss decisions.
 
 The fingerprint is unique per workspace, so the same finding cannot open twice.
 
 ## Outcomes
 
-Once you mark an action done, asobeast measures what happened to the rule's metric. The measurement compares the last checked value on or before the day you closed it with the latest checked value.
+Once you mark an action done, AsoBeast measures what happened to the rule's metric. The measurement compares the last checked value on or before the day you closed it with the latest checked value.
 
 | Metric | Rules | Better when |
 | --- | --- | --- |
@@ -93,7 +93,7 @@ Once you mark an action done, asobeast measures what happened to the rule's metr
 
 The verdict is **Improved**, **Worsened** or **No change**, with a small tolerance per metric so noise does not count as movement. It stays **Measuring** until there are three days of data after you marked the action done. A keyword that was not ranked before counts as one position below the checked depth, so moving from unranked into the results reads as an improvement.
 
-An outcome is a measured value, not proof that your change caused it: a store algorithm update, a competitor's release or seasonality move the same numbers. asobeast has no download or revenue data, so an outcome never claims either.
+An outcome is a measured value, not proof that your change caused it: a store algorithm update, a competitor's release or seasonality move the same numbers. AsoBeast has no download or revenue data, so an outcome never claims either.
 
 ## History
 
@@ -105,7 +105,7 @@ History is kept with its action and pruned with it after `RETENTION_ACTIONS_DAYS
 
 ## Working faster
 
-Select several rows with their checkboxes, or a whole group with its heading checkbox, and a bar offers **Done**, **Snooze** and **Dismiss** for all of them at once. Every change, one action or many, offers **Undo** in its confirmation, and asobeast accepts the undo for ten minutes.
+Select several rows with their checkboxes, or a whole group with its heading checkbox, and a bar offers **Done**, **Snooze** and **Dismiss** for all of them at once. Every change, one action or many, offers **Undo** in its confirmation, and AsoBeast accepts the undo for ten minutes.
 
 Dismissing asks for a reason: not relevant to this app, already handled elsewhere, or the data looks wrong. The reason is kept in the history.
 
@@ -176,13 +176,13 @@ Each term is a documented 0 to 1 value per rule. Reach is how much addressable t
 
 The two advisory rules, `serp.hold_volatile` and `keyword.prune`, are capped at impact 50, so hygiene can never outrank growth.
 
-Impact is stamped with `formulaVersion: actions-v1` and is never a promised outcome. asobeast has no download or revenue data, so it never presents one.
+Impact is stamped with `formulaVersion: actions-v1` and is never a promised outcome. AsoBeast has no download or revenue data, so it never presents one.
 
 ## Home market rules and market rules
 
-Several rules are worded carefully because of what asobeast can and cannot see.
+Several rules are worded carefully because of what AsoBeast can and cannot see.
 
-`keyword.add_uncovered`, `keyword.push_to_top10`, `metadata.fix_lint` and `listing.ship_update` read the home listing. asobeast captures market listings too, but these rules do not yet judge them, so they never claim a keyword is missing from a localized listing.
+`keyword.add_uncovered`, `keyword.push_to_top10`, `metadata.fix_lint` and `listing.ship_update` read the home listing. AsoBeast captures market listings too, but these rules do not yet judge them, so they never claim a keyword is missing from a localized listing.
 
 `keyword.prune` is the one rule that weighs the relevance of keywords in every market, and a keyword's relevance follows the listing of its own market. The first capture of a market listing can therefore open or resolve a prune action for that market's keywords. `keyword.add_uncovered`, `keyword.push_to_top10` and `competitor.investigate_overtake` weigh relevance for home market keywords only.
 
@@ -222,7 +222,7 @@ Existing alert subscribers are unaffected until they opt into the event. See [Se
 - **Fewer actions than you expected.** `ACTIONS_MAX_OPEN_PER_APP` caps new actions per run. The run reports how many it withheld.
 - **A rule never fires.** Most rules need a minimum number of observed days. A recently added keyword or market has not accumulated them yet.
 - **An action says still detected.** You marked it done and the rule still fires. A listing change takes time to reach the store and move rankings, so give it a few days: the action is confirmed fixed the first run the rule stops firing, and reopens if it keeps firing for 14 days.
-- **An outcome says measuring.** asobeast needs three days of data after you marked the action done, and at least one measurement on each side of that day.
+- **An outcome says measuring.** AsoBeast needs three days of data after you marked the action done, and at least one measurement on each side of that day.
 
 ## Related
 

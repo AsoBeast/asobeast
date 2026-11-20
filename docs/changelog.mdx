@@ -1,6 +1,6 @@
 ---
 title: Changelog
-description: "Release Please owns versions, tags and CHANGELOG.md for asobeast, and every release publishes multi architecture container images to GHCR."
+description: "Release Please owns versions, tags and CHANGELOG.md for AsoBeast, and every release publishes multi-architecture container images to GHCR."
 icon: history
 mode: center
 keywords: ["changelog","releases","versions","release please","what's new"]
@@ -8,15 +8,15 @@ keywords: ["changelog","releases","versions","release please","what's new"]
 
 Release Please owns versions, tags and `CHANGELOG.md`. The generated file in the repository is the complete record, and this page deliberately does not copy it, because a second copy would drift.
 
-## Current release line
+## Release lines
 
-The current release line is `1.x`. `1.0.0`, the first release, shipped multi-tenancy enforced by PostgreSQL row level security, typed plans with quotas, Stripe billing, a proxy pool with a cost capped residential fallback, per workspace rate limits, a remote MCP endpoint alongside the stdio binary, structured logging and per workspace metrics, account recovery, and complete workspace export and deletion. None of it changes a self hosted installation by default, because `BILLING_ENABLED` is `false`, `PROXY_PROVIDER` is `none`, and every variable has a working default.
+The newest tag on the [releases page](https://github.com/AsoBeast/asobeast/releases) names the current release line. `1.0.0`, the first release, shipped multi-tenancy enforced by PostgreSQL row level security, typed plans with quotas, Stripe billing, a proxy pool with a cost capped residential fallback, per workspace rate limits, a remote MCP endpoint alongside the stdio binary, structured logging and per workspace metrics, account recovery, and complete workspace export and deletion. None of it changes a self-hosted installation by default, because `BILLING_ENABLED` is `false`, `PROXY_PROVIDER` is `none`, and every variable has a working default.
 
-The `1.x` line takes normal feature work, constrained by the compatibility promise below.
+Every release line takes normal feature work, constrained by the compatibility promise below.
 
-## What does 1.0.0 promise?
+## What does a release line promise?
 
-Compatibility for three surfaces throughout the `1.x` line: the HTTP contract, the `@asobeast/shared` contract types and the MCP tool surface. Breaking any of them requires `2.0.0`.
+Compatibility for three surfaces throughout a major version: the HTTP contract, the `@asobeast/shared` contract types and the MCP tool surface. Breaking any of them requires the next major version, and its release notes name what broke.
 
 Environment variables, the database schema and internal modules are outside that promise, and every schema change ships as a forward Prisma migration. See [Upgrade and roll back](/install/upgrade).
 

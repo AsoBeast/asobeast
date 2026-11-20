@@ -8,9 +8,9 @@ keywords: ["TLS","cloudflare tunnel","reverse proxy","AUTH_COOKIE_SECURE","TRUST
 
 One setting decides whether a public deployment is safe: `AUTH_COOKIE_SECURE` must be `true` on any instance reachable over TLS, so the session cookie is never sent over plain HTTP.
 
-## Put asobeast behind TLS
+## Put AsoBeast behind TLS
 
-asobeast does not terminate TLS itself. The shipped path is a Cloudflare Tunnel, which terminates TLS at Cloudflare's edge and reaches the stack over an outbound connection.
+AsoBeast does not terminate TLS itself. The shipped path is a Cloudflare Tunnel, which terminates TLS at Cloudflare's edge and reaches the stack over an outbound connection.
 
 That choice is about the host, not about certificates. A tunnel needs **no inbound port at all**, so a machine behind CGNAT or an ISP that blocks port 80 works unchanged, there is no certificate to obtain or renew on the host, and nothing on the machine is reachable from the internet except through the tunnel.
 
@@ -65,7 +65,7 @@ nginx and Traefik work the same way. Whatever you choose, host port 3001 is then
 
 ### Refuse TRACE at the proxy
 
-The web app does not process an HTTP `TRACE` request. The framework builds a standard `Request` object for each request it renders or forwards, and Node.js refuses to build one for `TRACE`, so a dynamic page, the API proxy under `/api/backend` and the other route handlers answer `500 Internal Server Error` with the body `Internal Server Error` before any asobeast code runs. A page prerendered at build time, such as the sign in page, is served from the build as for `GET` and answers `200` with the page, and a few other static pages answer `405` or a redirect. In every case nothing from the request is echoed back, which is what makes `TRACE` dangerous elsewhere, and the server answers the next request normally. The only effect of the `500` is one error entry in the web log per request.
+The web app does not process an HTTP `TRACE` request. The framework builds a standard `Request` object for each request it renders or forwards, and Node.js refuses to build one for `TRACE`, so a dynamic page, the API proxy under `/api/backend` and the other route handlers answer `500 Internal Server Error` with the body `Internal Server Error` before any AsoBeast code runs. A page prerendered at build time, such as the sign in page, is served from the build as for `GET` and answers `200` with the page, and a few other static pages answer `405` or a redirect. In every case nothing from the request is echoed back, which is what makes `TRACE` dangerous elsewhere, and the server answers the next request normally. The only effect of the `500` is one error entry in the web log per request.
 
 A deployment without a proxy keeps these answers, which are harmless. If your scanner or policy expects a `405 Method Not Allowed` on every path, refuse the method at the proxy, where you already terminate TLS.
 
@@ -160,7 +160,7 @@ Sending nothing is the right default here. The browser only ever talks to the we
 
 The base stack publishes only host port 3001, or `ASOBEAST_PORT`, mapped to port 3000 in the web container. The API, PostgreSQL and Redis stay on Docker networks, and the backend network is marked `internal`.
 
-Composing `docker-compose.tunnel.yml` removes even that, so the machine publishes nothing at all and `cloudflared` reaches the web container over the `frontend` network. A reverse proxy on the host needs port 3001; a tunnel does not. See [Self host with Docker Compose](/install/docker-compose).
+Composing `docker-compose.tunnel.yml` removes even that, so the machine publishes nothing at all and `cloudflared` reaches the web container over the `frontend` network. A reverse proxy on the host needs port 3001; a tunnel does not. See [Self-host with Docker Compose](/install/docker-compose).
 
 ## Checklist before going public
 
@@ -195,7 +195,7 @@ Some settings are individually valid and jointly unsafe. The API checks those co
 | `BILLING_ENABLED=true` with `TRIAL_DAYS=0` | Stripe refuses a trial shorter than a day, so no new account could start the trial it is offered at checkout |
 | `BILLING_ENABLED=true` with `AUTH_REGISTRATION_WORKSPACE=shared` | Hosted registration is open to strangers, so every one of them would land in the bootstrap workspace with read and write access to the data already there |
 
-The Docker image sets `NODE_ENV=production`, so the first check is live on every self hosted deployment. The Compose stack therefore defaults `AUTH_COOKIE_SECURE` to `true`. Chrome and Firefox keep the `Secure` cookie on `http://localhost`, so evaluating locally over plain HTTP works there. Safari does not, so a Safari user needs TLS. See [Signing in returns to the sign in form](/operations/troubleshooting#signing-in-returns-to-the-sign-in-form).
+The Docker image sets `NODE_ENV=production`, so the first check is live on every self-hosted deployment. The Compose stack therefore defaults `AUTH_COOKIE_SECURE` to `true`. Chrome and Firefox keep the `Secure` cookie on `http://localhost`, so evaluating locally over plain HTTP works there. Safari does not, so a Safari user needs TLS. See [Signing in returns to the sign in form](/operations/troubleshooting#signing-in-returns-to-the-sign-in-form).
 
 The error names the variable, the required value and the reason. Fix the variable and start again.
 

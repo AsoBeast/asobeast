@@ -29,3 +29,18 @@ const weight = (mover: KeywordMover): number => {
 export function byMagnitude<T extends KeywordMover>(movers: T[]): T[] {
   return [...movers].sort((a, b) => weight(b) - weight(a));
 }
+
+export interface MoverPeriod {
+  within: string;
+  span: string;
+}
+
+export const daysPeriod = (days: number): MoverPeriod => ({
+  within: `in ${days} days`,
+  span: `in the last ${days} days`,
+});
+
+export const LAST_RUN: MoverPeriod = {
+  within: "in the last run",
+  span: "in the last run",
+};

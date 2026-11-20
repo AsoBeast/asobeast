@@ -21,6 +21,7 @@ test("an unrelated app stays a plain row", async ({ page }) => {
   await page.goto("/?view=cards");
 
   const habit = page
+    .getByRole("region", { name: "Apps", exact: true })
     .getByRole("listitem")
     .filter({ has: page.getByText("Habit Tracker", { exact: true }) });
 

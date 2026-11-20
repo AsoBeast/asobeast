@@ -1,12 +1,12 @@
 ---
-title: How asobeast works
+title: How AsoBeast works
 sidebarTitle: Architecture
 description: "A Next.js frontend talks to a NestJS API over HTTP. Store collection runs in BullMQ workers behind a provider interface, and PostgreSQL holds the state."
 icon: workflow
 keywords: ["architecture","NestJS","Next.js","BullMQ","Redis","PostgreSQL","store provider"]
 ---
 
-asobeast is a Next.js frontend, a NestJS API, PostgreSQL for durable state and Redis for queues. Every store request is made from the machine that hosts the deployment, never from your browser and never from a service asobeast operates.
+AsoBeast is a Next.js frontend, a NestJS API, PostgreSQL for durable state and Redis for queues. Every store request is made from the machine that hosts the deployment, never from your browser and never from a service AsoBeast operates.
 
 ## What is the request path?
 
@@ -30,7 +30,7 @@ Server rendered pages skip the proxy and call `API_INTERNAL_URL` directly, which
 | Local MCP server | A stdio process over the HTTP API, read only unless the token has the write scope | An agent on your machine |
 | Admin surfaces | The admin area, the queue dashboard and the OpenAPI surface | The platform operator only |
 
-Both MCP surfaces register one catalog of tool definitions and serve MCP `2026-07-28` alongside the 2025 revisions. The remote endpoint builds one server instance per request and holds nothing between requests, which is no longer a transport setting but a property of the protocol: `2026-07-28` has no sessions to hold. See [The asobeast MCP server](/mcp/introduction).
+Both MCP surfaces register one catalog of tool definitions and serve MCP `2026-07-28` alongside the 2025 revisions. The remote endpoint builds one server instance per request and holds nothing between requests, which is no longer a transport setting but a property of the protocol: `2026-07-28` has no sessions to hold. See [The AsoBeast MCP server](/mcp/introduction).
 
 ## Why is store collection isolated?
 

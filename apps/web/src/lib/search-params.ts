@@ -249,11 +249,14 @@ export type AppView = (typeof APP_VIEWS)[number];
 export const appViewParser =
   parseAsStringLiteral(APP_VIEWS).withDefault("table");
 
+export const appStoreParser = parseAsStringLiteral(STORES);
+
 export const appListParsers = {
   q: searchParser,
   sort: appSortParser,
   dir: sortDirectionParser,
   view: appViewParser,
+  store: appStoreParser,
 };
 
 export const ADMIN_WORKSPACE_SORTS = [
@@ -539,6 +542,22 @@ export type DashboardMetric = (typeof DASHBOARD_METRICS)[number];
 
 export const dashboardMetricParser =
   parseAsStringLiteral(DASHBOARD_METRICS).withDefault("visibility");
+
+export const DASHBOARD_BREAKDOWNS = ["app", "store"] as const;
+
+export type DashboardBreakdown = (typeof DASHBOARD_BREAKDOWNS)[number];
+
+export const dashboardBreakdownParsers = {
+  by: parseAsStringLiteral(DASHBOARD_BREAKDOWNS).withDefault("app"),
+  scope: parseAsString,
+};
+
+export const MOVER_SPANS = ["run", "range"] as const;
+
+export type MoverSpan = (typeof MOVER_SPANS)[number];
+
+export const moverSpanParser =
+  parseAsStringLiteral(MOVER_SPANS).withDefault("run");
 
 export const RANKINGS_VIEWS = ["chart", "days"] as const;
 

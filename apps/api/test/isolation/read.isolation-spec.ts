@@ -521,6 +521,18 @@ describe('Read isolation', () => {
     }
   });
 
+  it('answers no history for another workspace app named as the scope', async () => {
+    const response = await fixture.b.agent
+      .get('/portfolio/history')
+      .query({ appId: fixture.a.appleAppId })
+      .expect(200);
+    const history = response.body as PortfolioHistory;
+
+    expect(history.points).toEqual([]);
+    expect(history.apps).toBeUndefined();
+    expect(JSON.stringify(history)).not.toContain(fixture.a.appleAppId);
+  });
+
   it('counts nothing for another workspace app id in the action summary', async () => {
     const response = await fixture.b.agent
       .get('/actions/summary')

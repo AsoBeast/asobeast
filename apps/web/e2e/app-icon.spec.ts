@@ -14,6 +14,7 @@ test("a portfolio icon that fails before hydration falls back to the placeholder
   await page.goto("/?view=cards");
 
   const card = page
+    .getByRole("region", { name: "Apps", exact: true })
     .locator("[data-slot=card]")
     .filter({ hasText: new RegExp(NAME) });
   const placeholder = card.locator(PLACEHOLDER);

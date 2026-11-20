@@ -13,9 +13,9 @@ There are two transports and they expose the same tools.
 | Hosted endpoint | Your client connects to `POST /mcp` on your instance. Nothing to install | You want the shortest path, and your instance is reachable from the agent |
 | Local stdio server | Your client launches `apps/mcp/dist/index.js` on your own machine, which calls the HTTP API | You are running from a checkout, or your client has no remote transport |
 
-The tool catalog is one set of definitions consumed by both, so there is no hosted only tool and no self hosted only tool. See [MCP tool reference](/mcp/tools).
+The tool catalog is one set of definitions consumed by both, so there is no hosted only tool and no self-hosted only tool. See [MCP tool reference](/mcp/tools).
 
-Both transports serve MCP `2026-07-28` and the 2025 revisions, and none of the commands below carry a protocol version, so none of them change with the revision your client picks. See [The asobeast MCP server](/mcp/introduction).
+Both transports serve MCP `2026-07-28` and the 2025 revisions, and none of the commands below carry a protocol version, so none of them change with the revision your client picks. See [The AsoBeast MCP server](/mcp/introduction).
 
 Either way the MCP server card in Integrations writes the configuration for you. The manual path is the same thing typed by hand.
 
@@ -136,7 +136,7 @@ Either way the MCP server card in Integrations writes the configuration for you.
     ```
   </Tab>
   <Tab title="Gemini CLI">
-    Gemini CLI names streamable HTTP `httpUrl`. A `url` key selects the older SSE transport and never connects to asobeast.
+    Gemini CLI names streamable HTTP `httpUrl`. A `url` key selects the older SSE transport and never connects to AsoBeast.
 
     ```json ~/.gemini/settings.json
     {
@@ -193,7 +193,7 @@ A token is the only credential it takes. A browser session cookie is answered wi
     Sign in to your instance first.
   </Step>
   <Step title="Click connect an agent and name a token">
-    asobeast mints the token and shows two ready to paste snippets, the Claude Code command and the Claude Desktop configuration, pre filled with the origin you are browsing.
+    AsoBeast mints the token and shows two ready to paste snippets, the Claude Code command and the Claude Desktop configuration, pre filled with the origin you are browsing.
   </Step>
   <Step title="Replace the entrypoint with an absolute path">
     The snippet cannot know where your checkout lives. Substitute the absolute path to `apps/mcp/dist/index.js`.
@@ -290,7 +290,7 @@ The token is shown once. Copy it before you leave the page.
 | The same host as the instance | `http://localhost:4000` |
 | Anywhere else | Your public web origin plus `/api/backend` |
 
-The proxy path is not a fallback. In a Compose deployment the API is on a private network and is never published, so `https://your-host/api/backend` is the only route in from another machine. The proxy forwards the bearer header to the API unchanged. See [How asobeast works](/concepts/architecture).
+The proxy path is not a fallback. In a Compose deployment the API is on a private network and is never published, so `https://your-host/api/backend` is the only route in from another machine. The proxy forwards the bearer header to the API unchanged. See [How AsoBeast works](/concepts/architecture).
 
 It defaults to `http://localhost:4000`, and an empty value counts as unset, so a template that leaves it blank still gets the default. There is no default for the token.
 
