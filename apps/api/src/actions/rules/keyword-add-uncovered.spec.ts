@@ -318,6 +318,58 @@ describe('keyword.add_uncovered', () => {
     expect(detections[0]).not.toHaveProperty('withheld');
   });
 
+  describe('keyword class', () => {
+    it('never asks to add a competitor brand to the listing', () => {
+      expect(
+        detectKeywordAddUncovered(
+          context([
+            app({
+              trackedKeywords: [keyword({ keywordClass: 'competitorBrand' })],
+            }),
+          ]),
+        ),
+      ).toEqual([]);
+    });
+
+    it('withholds no action for a competitor brand with an outdated score', () => {
+      expect(
+        detectKeywordAddUncovered(
+          context([
+            app({
+              trackedKeywords: [
+                keyword({
+                  keywordClass: 'competitorBrand',
+                  scoreOutdated: true,
+                }),
+              ],
+            }),
+          ]),
+        ),
+      ).toEqual([]);
+    });
+
+    it.each([
+      ['generic', 'owner'],
+      ['generic', 'detected'],
+      ['ownBrand', 'detected'],
+    ] as const)(
+      'still fires for a %s class the %s set',
+      (keywordClass, keywordClassSource) => {
+        expect(
+          detectKeywordAddUncovered(
+            context([
+              app({
+                trackedKeywords: [
+                  keyword({ keywordClass, keywordClassSource }),
+                ],
+              }),
+            ]),
+          ),
+        ).toHaveLength(1);
+      },
+    );
+  });
+
   it('lowers confidence for weaker score provenance', () => {
     const confidenceOf = (
       confidence: 'HIGH' | 'MEDIUM' | 'LOW' | null,

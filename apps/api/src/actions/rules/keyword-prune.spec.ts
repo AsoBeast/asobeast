@@ -283,6 +283,29 @@ describe('keyword.prune', () => {
     expect(detections).toEqual([]);
   });
 
+  it('prunes an uncovered competitor brand keyword that add_uncovered leaves alone', () => {
+    const rival = keyword({
+      keywordId: 'kw_1',
+      relevance: 10,
+      volume: 1,
+      opportunity: 0,
+      keywordClass: 'competitorBrand',
+    });
+    const coverage: KeywordCoverageRow = {
+      keywordId: 'kw_1',
+      text: 'rival brand',
+      bucket: null,
+      fields: [{ field: 'title', covered: false }],
+      uncovered: true,
+    };
+
+    expect(
+      detectKeywordPrune(
+        context([app({ trackedKeywords: [rival], coverage: [coverage] })]),
+      ).map((detection) => detection.keywordId),
+    ).toEqual(['kw_1']);
+  });
+
   it('still prunes an uncovered keyword whose score is being recalculated', () => {
     const detections = detectKeywordPrune(
       context([

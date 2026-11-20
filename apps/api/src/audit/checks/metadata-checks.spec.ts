@@ -637,3 +637,61 @@ describe('character counts outside the bmp', () => {
     );
   });
 });
+
+describe('advice that adds a keyword to the listing', () => {
+  const BRAND = 'geoguesser';
+  const rival = (keywordClass: 'competitorBrand' | 'generic') => [
+    keyword(BRAND, 'primary', 95, { keywordClass }),
+    keyword('geo quiz', 'primary', 80),
+    keyword('map game', 'secondary', 60),
+  ];
+  const adviceOf = (keywords: ReturnType<typeof rival>) =>
+    JSON.stringify(
+      [
+        ...titleChecks(
+          appStoreContext({
+            title: 'Where Am I?',
+            subtitle: 'Trivia',
+            keywords,
+          }),
+        ),
+        ...subtitleChecks(
+          appStoreContext({
+            title: 'Where Am I?',
+            subtitle: 'Trivia',
+            keywords,
+          }),
+        ),
+        ...keywordFieldChecks(
+          appStoreContext({
+            title: 'Where Am I?',
+            keywordField: 'atlas',
+            keywords,
+          }),
+        ),
+        ...shortDescriptionChecks(
+          playContext({ title: 'Where Am I?', summary: 'Trivia', keywords }),
+        ),
+        ...descriptionChecks(
+          playContext({
+            title: 'Where Am I?',
+            description: 'Trivia',
+            keywords,
+          }),
+        ),
+      ].map((item) => item.advice),
+    );
+
+  it('never proposes a competitor brand, even as the strongest primary keyword', () => {
+    const advice = adviceOf(rival('competitorBrand'));
+
+    expect(advice).not.toContain(BRAND);
+    expect(advice).toContain('Put \u201cgeo quiz\u201d in your title');
+  });
+
+  it('proposes the keyword again once the owner calls it generic', () => {
+    expect(adviceOf(rival('generic'))).toContain(
+      `Put \u201c${BRAND}\u201d in your title`,
+    );
+  });
+});

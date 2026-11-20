@@ -5,8 +5,15 @@ const item = (
   keywordId: string,
   text: string,
   volume: number,
+  keywordClass?: TrackedKeywordItem['keywordClass'],
 ): TrackedKeywordItem =>
-  ({ keywordId, text, volume, relevance: 100 }) as TrackedKeywordItem;
+  ({
+    keywordId,
+    text,
+    volume,
+    relevance: 100,
+    keywordClass,
+  }) as TrackedKeywordItem;
 
 const row = (keywordId: string, uncovered: boolean): KeywordCoverageRow =>
   ({ keywordId, uncovered }) as KeywordCoverageRow;
@@ -26,6 +33,26 @@ describe('suggestKeywordField', () => {
       charactersLimit: 100,
       addedTerms: ['sleep timer', 'habit'],
     });
+  });
+
+  it('never suggests a competitor brand', () => {
+    expect(
+      suggestKeywordField(
+        [...tracked, item('k4', 'geoguessr', 50, 'competitorBrand')],
+        [...coverage, row('k4', true)],
+        undefined,
+      ).addedTerms,
+    ).toEqual(['sleep timer', 'habit']);
+  });
+
+  it('suggests a brand the owner marked generic', () => {
+    expect(
+      suggestKeywordField(
+        [item('k4', 'geoguessr', 50, 'generic')],
+        [row('k4', true)],
+        undefined,
+      ).addedTerms,
+    ).toEqual(['geoguessr']);
   });
 
   it('names the localization it was built for', () => {

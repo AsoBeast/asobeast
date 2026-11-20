@@ -65,7 +65,7 @@ This file holds what applies everywhere. The detailed rules live in `.claude/rul
 22. The keyword breakdown judges with coverage's own functions and reads stored rows only.
 23. A console key is sealed and owner only; the funnel comes from the store's own report and is never estimated.
 24. The alert feed reads what the run recorded, never what a channel received. A transition alert is committed with its fact and relayed from a worker.
-25. A keyword's class comes from one matcher, `classifyKeyword`; only the owner overrides it.
+25. A keyword's class comes from one matcher, `classifyKeyword`; only the owner overrides it; a competitor brand is never proposed for the own listing.
 26. Keyword discovery never scores, never writes a position history and never spends keyword room.
 27. The workspace checklist is derived on read; the workspace stores only a goal and a dismissal.
 

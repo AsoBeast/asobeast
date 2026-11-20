@@ -98,13 +98,25 @@ const buildLoader = (options: LoaderOptions = {}) => {
     },
   } as unknown as PrismaService;
   const keywords = {
-    listTracked: jest
-      .fn()
-      .mockResolvedValue([
-        trackedKeyword('habit tracker', 'us', true),
-        trackedKeyword('streak counter', 'gb', true),
-        trackedKeyword('daily goals', 'us', false),
-      ]),
+    listTracked: jest.fn(
+      (
+        _appId: string,
+        _sort: undefined,
+        _country: undefined,
+        options?: { brandFacts?: boolean },
+      ) =>
+        Promise.resolve(
+          [
+            trackedKeyword('habit tracker', 'us', true),
+            trackedKeyword('streak counter', 'gb', true),
+            trackedKeyword('daily goals', 'us', false),
+          ].map((item) =>
+            options?.brandFacts
+              ? { ...item, keywordClass: 'competitorBrand' as const }
+              : item,
+          ),
+        ),
+    ),
     compare: jest.fn().mockResolvedValue({ competitors: [], rows: [] }),
   } as unknown as KeywordsService;
   const keywordFields = {
@@ -168,6 +180,7 @@ describe('AuditContextLoader.load', () => {
       traffic: 7,
       volume: 100,
       opportunity: 60,
+      keywordClass: 'competitorBrand',
     });
   });
 

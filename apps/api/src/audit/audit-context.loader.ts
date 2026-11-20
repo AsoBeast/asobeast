@@ -243,7 +243,9 @@ export class AuditContextLoader {
         where: { appId, ...HOME_LISTING },
         orderBy: NEWEST_FIRST,
       }),
-      this.keywords.listTracked(appId),
+      this.keywords.listTracked(appId, undefined, undefined, {
+        brandFacts: true,
+      }),
       this.keywords.compare(appId, false),
       this.prisma.app.findMany({
         where: { primaryAppId: appId },
@@ -356,6 +358,7 @@ const toAuditKeyword = (item: TrackedKeywordItem): AuditKeyword => ({
   text: item.text,
   source: item.source,
   bucket: item.bucket,
+  keywordClass: item.keywordClass ?? null,
   relevance: item.relevance ?? 0,
   position: item.latestPosition,
   traffic: item.traffic,

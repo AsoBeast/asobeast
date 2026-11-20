@@ -5,7 +5,7 @@ import {
   check,
   coversPhrase,
   KEYWORDS_UNLOCK,
-  priorityKeywords,
+  listingTargets,
   quoteList,
   RubricCheck,
 } from '../audit-scoring';
@@ -21,7 +21,7 @@ export const captionKeywordsCheck = (
   texts: readonly string[],
   source: Extract<AuditCheckSource, 'ai' | 'keywords'>,
 ): RubricCheck => {
-  const priority = priorityKeywords(context.keywords);
+  const priority = listingTargets(context.keywords);
   const hits = priority.filter((keyword) =>
     texts.some((text) => coversPhrase(text, keyword.text)),
   );

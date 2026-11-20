@@ -7,6 +7,7 @@ import {
   AppSummary,
   CoverageSummary,
   CURRENT_FORMULA_VERSIONS,
+  KeywordClass,
   RankDistributionHistory,
   RatingsHistory,
   UncoveredKeyword,
@@ -50,6 +51,8 @@ import { collapseRatings } from './ratings-history';
 import { ShareOfVoiceService } from './share-of-voice.service';
 import { HOME_LISTING, NEWEST_FIRST } from '../apps/listing';
 import { countDiscoveries } from '../keyword-discovery/discovery-counts';
+import { fitsOwnListing } from '../keywords/keyword-class';
+import { KeywordsService } from '../keywords/keywords.service';
 
 const SUMMARY_WINDOW_DAYS = 31;
 const COVERAGE_LIMIT = 5;
@@ -98,6 +101,16 @@ const rowOpportunity = (
   });
 };
 
+interface CoverageListing {
+  snapshot: {
+    title: string;
+    subtitle: string | null;
+    description: string;
+  } | null;
+  inKeywordField: KeywordFieldIndex;
+  classes: ReadonlyMap<string, KeywordClass | undefined>;
+}
+
 const uncoveredWorthAdding = (
   scored: AppOpportunity | null,
 ): scored is AppOpportunity & { opportunity: number } =>
@@ -111,6 +124,7 @@ export class AnalyticsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly shares: ShareOfVoiceService,
+    private readonly keywords: KeywordsService,
   ) {}
 
   async summary(appId: string, country?: string): Promise<AppSummary> {
@@ -123,6 +137,7 @@ export class AnalyticsService {
       shareContext,
       inKeywordField,
       discoveries,
+      classes,
     ] = await Promise.all([
       keywordWindow(this.prisma, { appId, country }, SUMMARY_WINDOW_DAYS),
       country
@@ -141,6 +156,7 @@ export class AnalyticsService {
       this.shares.context({ appId, country }),
       loadKeywordFieldIndex(this.prisma, appId),
       countDiscoveries(this.prisma, [appId], country),
+      this.keywords.keywordClasses(appId),
     ]);
     const covered = everyMarket ?? market;
     const share = await this.shares.summary(shareContext, market);
@@ -149,12 +165,11 @@ export class AnalyticsService {
       visibility: this.visibilitySummary(market.rows, market.referenceDate),
       rankDistribution: rankDistributionAt(market.rows, market.referenceDate),
       movers: movers(market.rows, market.referenceDate),
-      coverage: this.coverage(
-        covered.rows,
-        covered.referenceDate,
+      coverage: this.coverage(covered.rows, covered.referenceDate, {
         snapshot,
         inKeywordField,
-      ),
+        classes,
+      }),
       lastRefreshAt: snapshot?.capturedAt.toISOString() ?? null,
       trackedKeywords: market.rows.length,
       competitors: shareContext.competitorIds.length,
@@ -294,12 +309,7 @@ export class AnalyticsService {
   private coverage(
     rows: TrackedRow[],
     referenceDate: Date | null,
-    snapshot: {
-      title: string;
-      subtitle: string | null;
-      description: string;
-    } | null,
-    inKeywordField: KeywordFieldIndex,
+    { snapshot, inKeywordField, classes }: CoverageListing,
   ): CoverageSummary {
     const fields = {
       title: snapshot?.title ?? '',
@@ -321,7 +331,13 @@ export class AnalyticsService {
     }));
 
     const uncovered = hits
-      .filter((hit) => !hit.inTitle && !hit.inSubtitle && !hit.inDescription)
+      .filter(
+        (hit) =>
+          !hit.inTitle &&
+          !hit.inSubtitle &&
+          !hit.inDescription &&
+          fitsOwnListing(classes.get(hit.row.keywordId)),
+      )
       .flatMap((hit): UncoveredKeyword[] => {
         const scored = rowOpportunity(hit.row, referenceDate, app);
         return uncoveredWorthAdding(scored)

@@ -768,6 +768,21 @@ describe('AnalyticsController (e2e)', () => {
     ).not.toContain('daily goals');
   });
 
+  it('leaves out a keyword the owner calls a competitor brand', async () => {
+    const id = await seed();
+    await prisma.trackedKeyword.updateMany({
+      where: { appId: id, keyword: { text: 'daily goals' } },
+      data: { keywordClass: 'competitorBrand' },
+    });
+
+    const summary = (await api.get(`/apps/${id}/summary`).expect(200))
+      .body as AppSummary;
+
+    expect(
+      summary.coverage.uncoveredHighOpportunity.map((item) => item.text),
+    ).not.toContain('daily goals');
+  });
+
   it('counts the words of a japanese listing as covered by that listing', async () => {
     const created = await prisma.app.create({
       data: {

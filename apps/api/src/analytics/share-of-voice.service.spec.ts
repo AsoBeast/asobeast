@@ -1,4 +1,5 @@
 import { RANK_DEPTH } from '@asobeast/shared';
+import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { addDays, TrackedRow } from './analytics.support';
 import { AnalyticsService } from './analytics.service';
@@ -144,7 +145,11 @@ describe('AnalyticsService.history', () => {
     const prisma = fakePrisma();
     return {
       prisma,
-      analytics: new AnalyticsService(asPrisma(prisma), sharesOf(prisma)),
+      analytics: new AnalyticsService(
+        asPrisma(prisma),
+        sharesOf(prisma),
+        {} as KeywordsService,
+      ),
     };
   };
 

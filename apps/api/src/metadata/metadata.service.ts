@@ -67,7 +67,9 @@ export class MetadataService {
       assertStorefront(app.store, market);
     }
     const [tracked, competitors, stored] = await Promise.all([
-      this.keywords.listTracked(appId, undefined, country),
+      this.keywords.listTracked(appId, undefined, country, {
+        brandFacts: app.store === Store.APP_STORE,
+      }),
       this.prisma.app.findMany({
         where: { primaryAppId: appId },
         select: { name: true },

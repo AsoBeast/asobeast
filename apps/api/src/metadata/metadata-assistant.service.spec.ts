@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
+import { TrackedKeywordItem } from '@asobeast/shared';
 import { buildAi } from '../ai/ai-gateway.fixture';
 import { AiGateway } from '../ai/ai-gateway.service';
 import { AiStructuredRequest } from '../ai/openai.client';
@@ -13,6 +14,7 @@ const gateway = (ai: ReturnType<typeof buildAi>) => ai as unknown as AiGateway;
 const appStoreService = (
   spend: jest.Mock,
   audit = jest.fn().mockResolvedValue({ fields: [], coverage: [] }),
+  tracked: TrackedKeywordItem[] = [],
 ) =>
   new MetadataAssistantService(
     gateway(buildAi(spend)),
@@ -36,7 +38,19 @@ const appStoreService = (
       keywordCountries: jest
         .fn()
         .mockResolvedValue([{ country: 'us', keywordCount: 1 }]),
-      listTracked: jest.fn().mockResolvedValue([]),
+      listTracked: jest.fn(
+        (
+          _appId: string,
+          _sort: undefined,
+          _country: string,
+          options?: { brandFacts?: boolean },
+        ) =>
+          Promise.resolve(
+            options?.brandFacts
+              ? tracked
+              : tracked.map((item) => ({ ...item, keywordClass: undefined })),
+          ),
+      ),
     } as unknown as KeywordsService,
     { audit } as unknown as MetadataService,
   );
@@ -133,5 +147,31 @@ describe('MetadataAssistantService', () => {
       appStoreService(spend, audit).generate('app-1', {}, 'usr_1'),
     ).rejects.toThrow('stop');
     expect(audit).toHaveBeenCalledWith('app-1', 'us');
+  });
+
+  it('leaves competitor brands out of the keywords it drafts from', async () => {
+    const spend = jest.fn().mockRejectedValue(new Error('stop'));
+    const tracked = (
+      text: string,
+      keywordClass: TrackedKeywordItem['keywordClass'],
+    ) =>
+      ({
+        keywordId: text,
+        text,
+        active: true,
+        volume: 40,
+        difficulty: 20,
+        keywordClass,
+      }) as TrackedKeywordItem;
+
+    await expect(
+      appStoreService(spend, undefined, [
+        tracked('geoguessr', 'competitorBrand'),
+        tracked('geo quiz', 'generic'),
+      ]).generate('app-1', {}, 'usr_1'),
+    ).rejects.toThrow('stop');
+    const prompt = JSON.stringify(spend.mock.calls[0]);
+    expect(prompt).toContain('geo quiz');
+    expect(prompt).not.toContain('geoguessr');
   });
 });

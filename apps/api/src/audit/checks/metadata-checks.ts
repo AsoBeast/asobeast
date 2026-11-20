@@ -27,7 +27,7 @@ import {
   KEYWORDS_UNLOCK,
   lintContext,
   lintScore,
-  priorityKeywords,
+  listingTargets,
   quoteList,
   RubricCheck,
   TITLE_FULL_CHARS,
@@ -106,7 +106,7 @@ const candidateKeyword = (
   context: AuditContext,
   unused: number,
 ): AuditKeyword | null =>
-  priorityKeywords(context.keywords).find(
+  listingTargets(context.keywords).find(
     (keyword) =>
       !coveredAnywhere(context, keyword.text) &&
       countChars(keyword.text) + 1 <= unused,
@@ -146,7 +146,7 @@ const policyAdvice = (
 };
 
 export const titleChecks = (context: AuditContext): RubricCheck[] => {
-  const primary = priorityKeywords(context.keywords).filter(
+  const primary = listingTargets(context.keywords).filter(
     (keyword) => keyword.bucket === 'primary',
   );
   const match = bestTitleMatch(context.title, primary);
@@ -224,7 +224,7 @@ export const subtitleChecks = (context: AuditContext): RubricCheck[] => {
   const subtitle = context.subtitle ?? '';
   const empty = subtitle.trim().length === 0;
   const chars = countChars(subtitle);
-  const outsideTitle = priorityKeywords(context.keywords)
+  const outsideTitle = listingTargets(context.keywords)
     .filter((keyword) => !coversPhrase(context.title, keyword.text))
     .slice(0, SUBTITLE_COVERAGE_SAMPLE);
   const covered = outsideTitle.filter((keyword) =>
@@ -332,7 +332,7 @@ export const keywordFieldChecks = (context: AuditContext): RubricCheck[] => {
   const hygiene = policyIssues(
     lintKeywordField(field, lintContext(context), KEYWORD_FIELD_CHAR_LIMIT),
   );
-  const candidates = priorityKeywords(context.keywords).filter(
+  const candidates = listingTargets(context.keywords).filter(
     (keyword) =>
       !coversPhrase(field, keyword.text) &&
       !coveredAnywhere(context, keyword.text),
@@ -498,7 +498,7 @@ const coverageShareScore = (share: number): number =>
   round1((share / 0.25) * 4);
 
 const descriptionKeywordChecks = (context: AuditContext): RubricCheck[] => {
-  const priority = priorityKeywords(context.keywords);
+  const priority = listingTargets(context.keywords);
   const sample = priority.slice(0, DESCRIPTION_COVERAGE_SAMPLE);
   const missing = sample.filter(
     (keyword) => !coversPhrase(context.description, keyword.text),
@@ -640,7 +640,7 @@ export const shortDescriptionChecks = (
   const summary = context.summary ?? '';
   const empty = summary.trim().length === 0;
   const summaryChars = countChars(summary);
-  const priority = priorityKeywords(context.keywords).slice(0, COVERAGE_SAMPLE);
+  const priority = listingTargets(context.keywords).slice(0, COVERAGE_SAMPLE);
   const missing = priority.filter(
     (keyword) => !coversPhrase(summary, keyword.text),
   );
