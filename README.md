@@ -1,8 +1,8 @@
 <div align="center">
   <a href="https://asobeast.com"><img src="docs/images/logo-mark.png" alt="AsoBeast" width="112" /></a>
   <h1>AsoBeast</h1>
-  <p><strong><a href="https://asobeast.com">AsoBeast</a> is an open source App Store Optimization (ASO) tool and keyword rank tracker for the Apple App Store and Google Play.</strong></p>
-  <p>Use the hosted service at <a href="https://asobeast.com">asobeast.com</a>, or self-host the open source edition on your own server.</p>
+  <p><strong><a href="https://asobeast.com">AsoBeast</a> is an open-source App Store Optimization (ASO) tool and keyword rank tracker for the Apple App Store and Google Play.</strong></p>
+  <p>Use the hosted service at <a href="https://asobeast.com">asobeast.com</a>, or self-host the open-source edition on your own server.</p>
   <p>
     <a href="LICENSE"><img alt="License: AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg" /></a>
     <a href="https://github.com/AsoBeast/asobeast/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/AsoBeast/asobeast" /></a>
@@ -26,7 +26,7 @@
 
 ## What is AsoBeast?
 
-AsoBeast is an App Store Optimization (ASO) tool and keyword rank tracker for the Apple App Store and Google Play. It imports a listing, tracks keyword rankings daily to a depth of 200, watches competitors, reviews and metadata, and turns that history into a prioritized queue of ASO work. This repository is the free, open source edition that you run on your own server, and the hosted service at [asobeast.com](https://asobeast.com) runs the same code.
+AsoBeast is an App Store Optimization (ASO) tool and keyword rank tracker for the Apple App Store and Google Play. It imports a listing, tracks keyword rankings daily to a depth of 200, watches competitors, reviews and metadata, and turns that history into a prioritized queue of ASO work. This repository is the free, open-source edition that you run on your own server, and the hosted service at [asobeast.com](https://asobeast.com) runs the same code.
 
 Every store request runs on the machine hosting AsoBeast as an ordinary public search or page request, so Apple and Google see each tracked phrase the way they see any search. You sign up with no ASO vendor, buy no API key, and share your keyword list with nobody. Beyond those store requests, your data stays in your deployment unless you explicitly enable an outbound integration such as webhook alerts, email, OpenAI assistance, Apple Ads search popularity or store status updates.
 
