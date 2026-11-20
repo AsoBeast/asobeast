@@ -61,7 +61,7 @@ Add the domain to `web` only. The API is reached through the web origin at `/api
 
 ## Upgrade
 
-The `1` image tags move with every `1.x` release, and Railway shows an update button in a service's **Settings** when a newer image is published under its tag. Read the release notes and take a backup first, then update `api` and wait for it to become active before you update `web`. The API applies every pending migration on boot. Leave Railway's automatic image updates off, because they skip the backup and update the two services independently.
+A major image tag such as `1` moves with every release in that major and never to the next one, so change the tag yourself to follow a new major. Railway shows an update button in a service's **Settings** when a newer image is published under its tag. Read the release notes and take a backup first, then update `api` and wait for it to become active before you update `web`. The API applies every pending migration on boot. Leave Railway's automatic image updates off, because they skip the backup and update the two services independently.
 
 To choose exactly which release runs, pin an exact version. Open each application service, then **Settings**, and change the source image to a version tag such as `ghcr.io/asobeast/asobeast-api:<version>`, using the same version for `api` and `web`. See [Run a published release](/install/published-images) for the tag shapes, and [Upgrade and roll back](/install/upgrade) for what the compatibility promise covers and what a rollback means once a migration has run.
 
