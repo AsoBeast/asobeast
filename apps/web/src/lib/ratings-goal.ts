@@ -6,7 +6,7 @@ export const MIN_GOAL_DAYS = 1;
 export const MAX_GOAL_DAYS = 365;
 
 const ROUNDING_TOLERANCE = 1e-9;
-const TARGET_PATTERN = /^(\d+|\d*\.\d)$/;
+const TARGET_PATTERN = /^(\d+|\d*\.\d0*)$/;
 const DAYS_PATTERN = /^\d+$/;
 
 export type GoalPace =

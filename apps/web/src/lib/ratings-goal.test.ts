@@ -48,6 +48,12 @@ describe("parseTargetTenths", () => {
     expect(parseTargetTenths(" 4.5 ")).toBe(45);
   });
 
+  it("reads trailing zeros as the same tenth", () => {
+    expect(parseTargetTenths("5.00")).toBe(50);
+    expect(parseTargetTenths("4.50")).toBe(45);
+    expect(parseTargetTenths("4.0")).toBe(40);
+  });
+
   it("refuses an empty, unreadable or out of range target", () => {
     expect(parseTargetTenths("")).toBeNull();
     expect(parseTargetTenths("  ")).toBeNull();
