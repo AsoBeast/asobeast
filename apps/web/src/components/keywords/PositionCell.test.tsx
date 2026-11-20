@@ -286,6 +286,13 @@ describe("PositionCell", () => {
     expect(markup).not.toContain("Not enough checks");
   });
 
+  it("W-POS-38 keeps the pending text to its own width so narrow tables do not grow", () => {
+    const markup = renderTrend(keyword({}), false, "30d", undefined, "pending");
+
+    expect(markup).toContain("Loading");
+    expect(markup).not.toContain("width:72px");
+  });
+
   it("W-POS-08 names the market when the app tracks several", () => {
     expect(renderTrend(keyword({}), true)).toContain(
       'aria-label="Position history: focus timer (US)"',

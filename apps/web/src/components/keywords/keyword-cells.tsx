@@ -28,8 +28,8 @@ import {
 } from "./PositionHistoryPopover";
 import { KeywordClassTag } from "./KeywordClassTag";
 import { PositionTrend } from "./PositionTrend";
-import { TREND_WIDTH } from "./position-trend";
 import {
+  TREND_STATE_TEXT,
   trendChecks,
   trendDelta,
   trendFrame,
@@ -132,11 +132,8 @@ export function TrendCell({
   );
   const trend =
     state !== "ready" ? (
-      <span
-        style={{ width: TREND_WIDTH }}
-        className="shrink-0 text-caption leading-tight text-muted-foreground"
-      >
-        {state === "pending" ? "Loading" : "Not loaded"}
+      <span className="shrink-0 whitespace-nowrap text-caption text-muted-foreground">
+        {TREND_STATE_TEXT[state]}
       </span>
     ) : (
       <>

@@ -3,6 +3,7 @@ import type { TrackedKeywordItem } from "@asobeast/shared";
 import { formatNumber, pluralize } from "@/lib/format";
 import { keywordMoves } from "@/lib/keyword-day-change";
 import { keywordTotals, type KeywordTotals } from "@/lib/keyword-totals";
+import { TREND_STATE_TEXT, type TrendState } from "@/lib/trend-window";
 import type { KeywordTableFeatures } from "./keyword-table-features";
 
 type KeywordTable = Table<KeywordTableFeatures, TrackedKeywordItem>;
@@ -102,10 +103,16 @@ function movesOver(
 
 export function movedFooter(
   { table }: FooterContext,
-  deltaOf?: (keyword: TrackedKeywordItem) => number | null,
+  trend?: {
+    deltaOf: (keyword: TrackedKeywordItem) => number | null;
+    state: TrendState;
+  },
 ) {
-  const { up, down } = deltaOf
-    ? movesOver(table, deltaOf)
+  if (trend && trend.state !== "ready") {
+    return <Missing label={TREND_STATE_TEXT[trend.state]} />;
+  }
+  const { up, down } = trend
+    ? movesOver(table, trend.deltaOf)
     : { up: totalsOf(table).movedUp7d, down: totalsOf(table).movedDown7d };
   return (
     <Figures

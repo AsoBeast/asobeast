@@ -53,6 +53,7 @@ import {
   positionFooter,
 } from "./KeywordTotalsFooters";
 import {
+  DEFAULT_TREND_WINDOW,
   trendDelta,
   trendLabel,
   type TrendSeries,
@@ -271,7 +272,10 @@ function deltaColumn(
       sortDescFirst: true,
       header: ({ column }) => <SortableHeader column={column} label={label} />,
       footer: ({ table }) =>
-        movedFooter({ table }, trendWindow === "7d" ? undefined : deltaOf),
+        movedFooter(
+          { table },
+          trendWindow === DEFAULT_TREND_WINDOW ? undefined : { deltaOf, state },
+        ),
       cell: ({ row }) => (
         <TrendCell
           keyword={row.original}

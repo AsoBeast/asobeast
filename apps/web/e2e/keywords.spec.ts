@@ -1260,23 +1260,52 @@ test("the narrowest table shows a sort arrow only on the sorted column", async (
   await expect(header("Opportunity")).toBeHidden();
 });
 
-for (const width of [1280, 1366, 1440]) {
-  test(`the default columns fit the table frame at ${width} px`, async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width, height: 800 });
-    await page.goto("/apps/app-1/keywords");
-    const frame = page
-      .getByRole("table", { name: /Tracked keywords/ })
-      .locator("xpath=..");
-    await expect(frame).toBeVisible();
+const frameOverflow = async (page: Page): Promise<number> => {
+  const frame = page
+    .getByRole("table", { name: /Tracked keywords/ })
+    .locator("xpath=..");
+  await expect(frame).toBeVisible();
+  return frame.evaluate((node) => node.scrollWidth - node.clientWidth);
+};
 
-    const overflow = await frame.evaluate(
-      (node) => node.scrollWidth - node.clientWidth,
-    );
-    expect(overflow).toBeLessThanOrEqual(0);
-  });
+const TREND_FITS = [
+  { days: 7, path: "/apps/app-1/keywords" },
+  { days: 30, path: "/apps/app-1/keywords?trend=30d" },
+] as const;
+
+for (const width of [1280, 1366, 1440]) {
+  for (const { days, path } of TREND_FITS) {
+    test(`the default columns fit the table frame at ${width} px with the ${days} day trend`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto(path);
+      await expect(
+        page
+          .getByRole("row", { name: /pomodoro/ })
+          .getByLabel(`down 6 over ${days} days`),
+      ).toBeAttached();
+
+      expect(await frameOverflow(page)).toBeLessThanOrEqual(0);
+    });
+  }
 }
+
+test("a failed 30 day read keeps the narrowest table inside its frame", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { [RANKINGS_FAIL_COOKIE]: "1" });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/apps/app-1/keywords?trend=30d");
+
+  await expect(
+    page.getByRole("row", { name: /pomodoro/ }).getByText("Not loaded"),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator("tfoot").getByText("Not loaded")).toBeAttached();
+
+  expect(await frameOverflow(page)).toBeLessThanOrEqual(0);
+});
 
 test("the pinned columns leave the source column visible, keep the row menu in reach and share the row tint", async ({
   page,

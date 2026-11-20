@@ -40,6 +40,11 @@ export function trendRange(
 
 export type TrendState = "ready" | "pending" | "failed";
 
+export const TREND_STATE_TEXT: Record<Exclude<TrendState, "ready">, string> = {
+  pending: "Loading",
+  failed: "Not loaded",
+};
+
 export type TrendSeries = ReadonlyMap<string, readonly RankingPoint[]>;
 
 export function seriesByKeyword(
