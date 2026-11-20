@@ -20,7 +20,7 @@ export function PositionTrend({
     return checked ? (
       <span
         style={{ width: TREND_WIDTH }}
-        className="shrink-0 text-caption leading-tight text-muted-foreground keywords-tight:hidden"
+        className="shrink-0 whitespace-normal text-caption leading-tight text-muted-foreground keywords-tight:hidden"
       >
         Not enough checks
       </span>

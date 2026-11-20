@@ -1682,9 +1682,13 @@ test("a row with too few ranked checks says so in text", async ({ page }) => {
   await page.goto("/apps/app-1/keywords?trend=30d");
 
   const unranked = page.getByRole("row", { name: /productivity app/ });
+  const notice = unranked.getByText("Not enough checks");
 
-  await expect(unranked.getByText("Not enough checks")).toBeVisible();
+  await expect(notice).toBeVisible();
   await expect(unranked.locator('[data-slot="position-trend"]')).toHaveCount(0);
+  expect(
+    await notice.evaluate((node) => node.scrollWidth - node.clientWidth),
+  ).toBeLessThanOrEqual(0);
 });
 
 test("a hidden trend column asks for no series on the 30 day window", async ({
