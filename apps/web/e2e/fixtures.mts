@@ -3809,6 +3809,34 @@ DATASETS[APP_RIVAL_ID] = {
   detail: { ...rivalDataset.detail, isCompetitor: true },
 };
 
+export const APP_FEW_RATINGS_ID = "app-few-ratings";
+export const APP_UNRATED_ID = "app-unrated";
+
+function ratedDataset(
+  id: string,
+  name: string,
+  ratingAvg: number,
+  ratingCount: number,
+): AppDataset {
+  const base = localesDataset(id, name);
+  const snapshot = base.detail.latestSnapshot;
+  return {
+    ...base,
+    detail: {
+      ...base.detail,
+      latestSnapshot: snapshot && { ...snapshot, ratingAvg, ratingCount },
+    },
+  };
+}
+
+DATASETS[APP_FEW_RATINGS_ID] = ratedDataset(
+  APP_FEW_RATINGS_ID,
+  "Few Ratings Lab",
+  4.3,
+  10,
+);
+DATASETS[APP_UNRATED_ID] = ratedDataset(APP_UNRATED_ID, "Unrated Lab", 0, 0);
+
 export const APP_FIELD_PROPOSAL_ID = "app-field-proposal";
 export const APP_FIELD_PROPOSAL_RIVAL_ID = "app-field-proposal-rival";
 export const FIELD_PROPOSAL_NOT_STOREFRONT = "cu";
