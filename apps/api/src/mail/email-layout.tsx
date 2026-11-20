@@ -42,13 +42,13 @@ export function EmailLayout({
           <Section className="bg-canvas dark:bg-night-canvas">
             <Container className="mx-auto w-full max-w-[600px] px-[16px] py-[32px]">
               <EmailHeader origin={origin} />
-              <Section className="rounded-[12px] border border-solid border-line bg-surface p-[32px] max-sm:p-[20px] dark:border-night-line dark:bg-night-surface">
+              <Section className="rounded-[8px] border border-solid border-line bg-surface p-[32px] max-sm:p-[20px] dark:border-night-line dark:bg-night-surface">
                 {children}
               </Section>
               <Section className="px-[8px] pt-[24px] text-center">
                 {footer}
                 {host && (
-                  <Text className="m-0 mt-[8px] text-[12px] leading-[18px] text-muted dark:text-night-muted">
+                  <Text className="m-0 mt-[8px] text-[12px] leading-[18px] text-ink-3 dark:text-night-ink-3">
                     {`Sent by ${PRODUCT_NAME} at ${host}`}
                   </Text>
                 )}
@@ -64,21 +64,21 @@ export function EmailLayout({
 function EmailHeader({ origin }: { origin: string | null }) {
   const logo = logoUrl(origin);
   return (
-    <Section className="pb-[24px]">
+    <Section className="pb-[20px]">
       <Row>
         {logo && (
-          <Column className="w-[60px]">
+          <Column className="w-[38px]">
             <Img
               src={logo}
               alt=""
-              width={48}
-              height={48}
-              className="rounded-[10px]"
+              width={28}
+              height={28}
+              className="rounded-[6px]"
             />
           </Column>
         )}
         <Column>
-          <Text className="m-0 text-[20px] font-semibold leading-[28px] text-ink dark:text-night-ink">
+          <Text className="m-0 text-[15px] font-semibold leading-[28px] text-ink dark:text-night-ink">
             {PRODUCT_NAME}
           </Text>
         </Column>

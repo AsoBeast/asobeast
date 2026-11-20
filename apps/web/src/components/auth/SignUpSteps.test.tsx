@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { signUpSteps } from "@/lib/sign-up-steps";
+import { registerSteps, signUpSteps } from "@/lib/sign-up-steps";
 import { SignUpSteps } from "./SignUpSteps";
 
 const TAG = /<(\/?)([a-z]+)([^>]*?)(\/?)>|([^<]+)/g;
@@ -57,5 +57,18 @@ describe("SignUpSteps", () => {
     ]);
     expect(markup).toContain('<span class="sr-only"> (completed)</span>');
     expect(markup).toContain('<span class="sr-only"> (not started)</span>');
+  });
+
+  it("reads the register steps with only the first one current", () => {
+    const markup = renderToStaticMarkup(
+      <SignUpSteps steps={registerSteps(true)} />,
+    );
+
+    expect(spokenText(markup)).toEqual([
+      "Create account",
+      "Email confirmed (not started)",
+      "Choose a plan (not started)",
+    ]);
+    expect(markup.match(/aria-current="step"/g)).toHaveLength(1);
   });
 });

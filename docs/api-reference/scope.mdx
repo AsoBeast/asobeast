@@ -1,0 +1,144 @@
+---
+title: What the API is for
+sidebarTitle: Scope
+description: "The AsoBeast API tracks the apps you import and their competitors over time and reads what AsoBeast collected. It is not a bulk lookup of a store."
+icon: compass
+keywords: ["API scope","bulk lookup","import","app slots","requests","app record","Retry-After","Google Play","App Store"]
+---
+
+You import the apps you want to follow, AsoBeast collects their data every day, and the API reads that history back. No route looks up apps in a store in bulk. Read this page before you design a client around it.
+
+## What the API is for
+
+The API is the same one the dashboard uses, so it reads everything the dashboard shows for a tracked app:
+
+- Keyword rankings and keyword metrics, in [Read rankings and SERPs](/guides/read-rankings) and [Track keywords](/guides/track-keywords).
+- Listings and the changes between them, in [Watch listing changes](/guides/listing-changes).
+- Reviews and ratings, in [Sync reviews, reply to them and mine keyword ideas](/guides/reviews).
+- Category ranks and top charts, in [Follow category ranks](/guides/category-ranks) and [Read top charts](/guides/top-charts).
+- Competitors and the actions AsoBeast recommends, in [Track competitors](/guides/competitors) and [Work the Action Center](/guides/action-center).
+
+All of it is history. A tracked app builds up days of positions, scores and listings, and that history is what the API serves.
+
+## What it is not
+
+It is not a bulk store lookup. No route takes a list of store ids and answers with their listings.
+
+- **An app is readable only after you import it.** `POST /apps` takes a store URL, fetches the listing once and starts tracking it. Until then, there is no app id to read. See [Import an app](/guides/import-an-app).
+- **An import takes an app slot and one of the day's imports.** The slot stays taken for as long as the app is tracked. The import allowance resets every day.
+- **Tracking means daily collection.** AsoBeast reads each tracked app from the store on its own schedule and answers your request from what it stored. A read is not a request to the store, and `capturedAt` on the listing says when the store was last asked.
+- **The routes that do ask a store on the spot are limited separately.** Refreshing a listing and searching a store by name each spend a store allowance of their own. They help you find and update what you track, not list a store. See [Three request classes](/api-reference/rate-limits#three-request-classes).
+
+The numbers for each plan are in [What each plan allows](/api-reference/rate-limits#what-each-plan-allows) and [Pricing](/legal/pricing#plans). A self-hosted instance sets none of these plan limits; see [Self-hosted instances are unlimited](/api-reference/rate-limits#self-hosted-instances-are-unlimited).
+
+## Requests are not apps
+
+Two different things are counted, and neither tells you the other.
+
+| Allowance | What it counts | Where it is set |
+| --- | --- | --- |
+| Requests | How often you call the API, per minute and per day | [What each plan allows](/api-reference/rate-limits#what-each-plan-allows) |
+| Apps | How many apps the workspace tracks at once, and how many it may import in a day | The apps row of [Pricing](/legal/pricing#plans), and the app imports row of [What each plan allows](/api-reference/rate-limits#what-each-plan-allows) |
+
+A daily request allowance is not a number of apps. Reading a stored app again costs a request each time and never a slot. A large request allowance buys many reads of the apps you track, not a longer list of them. To read more apps, you need more app slots.
+
+## What an app record holds
+
+`GET /apps/{id}` answers the app, its latest stored listing and its competitors. It is built from stored rows, so reading it asks no store. A field is `null` when the store did not say. AsoBeast never fills one with a guess.
+
+### The app
+
+| Field | Holds |
+| --- | --- |
+| `id` | The id of the tracked app, used in every route |
+| `store` | `APP_STORE` or `GOOGLE_PLAY` |
+| `storeAppId` | The store's own id: a numeric id on the App Store, a package name on Google Play |
+| `country` | The home storefront |
+| `name` | The app's name, or `null` |
+| `iconUrl` | The icon address, or `null` |
+| `createdAt` | When the app was imported |
+| `searchable` | Whether App Store search on an iPhone can list the app. Always `true` on Google Play |
+| `latestSnapshot` | The latest listing, described below, or `null` before the first capture |
+| `competitors` | The competitors of the app, each with the same listing fields as below except `description` and `releaseNotes` |
+| `group` | The group that links the app with the same app on the other store, or `null` |
+| `localization` | The App Store localization, present when you read one |
+| `isCompetitor` | Whether this app is tracked as a competitor of another |
+| `delistedAt` | When the home storefront stopped listing the app, or `null` |
+
+### The latest listing
+
+`latestSnapshot` is the newest stored copy of the listing.
+
+| Field | Holds |
+| --- | --- |
+| `id` | The id of the stored copy |
+| `title` | The title |
+| `subtitle` | The App Store subtitle. Google Play has no subtitle, so it is `null` there |
+| `summary` | The short description on Google Play, `null` on the App Store |
+| `ratingAvg`, `ratingCount` | The rating average and the number of ratings |
+| `installs` | The install count Google Play shows, `null` on the App Store |
+| `price`, `currency` | The price and its currency |
+| `version` | The version string |
+| `capturedAt` | When AsoBeast stored this copy |
+| `country` | The storefront this copy belongs to |
+| `genre`, `genreName` | The store's category id and its name. The id is a number in a string on the App Store and a name such as `TRAVEL_AND_LOCAL` on Google Play |
+| `developer`, `developerId` | The developer's name and the store's id for it |
+| `contentRating` | The store's own wording for the content rating |
+| `releasedAt` | When the app was first released |
+| `storeUpdatedAt` | When the store says the listing was last updated |
+
+### Only on the app's own listing
+
+| Field | Holds |
+| --- | --- |
+| `description` | The full description |
+| `releaseNotes` | The notes of the latest version, or `null` |
+
+A competitor's listing leaves these two out, so a detail with many competitors stays small. Google Play has no subtitle and indexes the short description in its place; see [App Store and Google Play](/concepts/stores).
+
+## What lives elsewhere
+
+The record is the listing. Everything AsoBeast collects over time has its own route and its own page.
+
+| What | Route | Read more |
+| --- | --- | --- |
+| Reviews and ratings history | `GET /apps/{id}/reviews`, `GET /apps/{id}/ratings-history` | [Sync reviews, reply to them and mine keyword ideas](/guides/reviews) |
+| Screenshots and their captions | `GET /apps/{id}/screenshots` | [Read screenshot captions](/guides/screenshot-captions). Captions exist for App Store screenshots only; see [Is screenshot text indexed?](/concepts/stores#is-screenshot-text-indexed) |
+| Category ranks | `GET /apps/{id}/category-ranks` | [Follow category ranks](/guides/category-ranks) |
+| Top charts | `GET /charts` | [Read top charts](/guides/top-charts) |
+| Competitors and suggestions | `GET /apps/{id}/competitors`, `GET /apps/{id}/competitors/suggestions` | [Track competitors](/guides/competitors) |
+| Listing changes | `GET /apps/{id}/changes` | [Watch listing changes](/guides/listing-changes) |
+| Keyword rankings | `GET /apps/{id}/rankings`, `GET /apps/{id}/keywords` | [Read rankings and SERPs](/guides/read-rankings) and [Track keywords](/guides/track-keywords) |
+
+### What AsoBeast does not serve
+
+Some things a store listing carries are not on the record and have no route:
+
+- Developer contact details, such as an email address, a website or a postal address.
+- Data safety declarations.
+- App permissions.
+- The descriptors behind a content rating. The record carries the rating itself, in `contentRating`.
+- Similar apps as a field. Competitor suggestions are a route of their own and are not part of the app.
+- Lists of in app purchases.
+
+If you need one of these, AsoBeast is not the source for it.
+
+## Importing many apps
+
+Send imports one at a time and wait for each answer before you send the next. Importing an app the workspace already tracks answers with the stored app and spends nothing, so repeating an import after a timeout is safe. See [Importing twice costs nothing extra](/guides/import-an-app#importing-twice-costs-nothing-extra).
+
+Every import also queues store work behind it, such as the first rank checks and scores. A server busy with that work can have no store capacity free for a moment, and then answers `503` with a `Retry-After` header and asks nothing of the store. Wait that many seconds and send the same import again. See [Status codes](/api-reference/errors#status-codes).
+
+A `429` is a different answer: an allowance has closed, and the envelope names which. A `403` with a `quota` object means every app slot is taken. See [A rate limit is not a quota](/api-reference/rate-limits#a-rate-limit-is-not-a-quota).
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Rate limits and quotas" icon="gauge" href="/api-reference/rate-limits">
+    What a metered instance allows and what a 429 means.
+  </Card>
+
+  <Card title="Import an app" icon="download" href="/guides/import-an-app">
+    What an import does and what it costs.
+  </Card>
+</CardGroup>

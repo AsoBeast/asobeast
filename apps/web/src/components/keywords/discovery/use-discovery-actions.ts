@@ -7,11 +7,11 @@ import type {
   KeywordDiscoveryTrackRequest,
 } from "@asobeast/shared";
 import {
-  ApiError,
   dismissKeywordDiscoveries,
   refreshKeywordDiscoveries,
   setKeywordDiscoverySettings,
   trackKeywordDiscoveries,
+  apiErrorMessage,
 } from "@/lib/api";
 import {
   refreshedToast,
@@ -31,7 +31,7 @@ export interface DiscoveryTrack {
 }
 
 const failed = (fallback: string) => (error: unknown) =>
-  toast.error(error instanceof ApiError ? error.envelope.message : fallback);
+  toast.error(apiErrorMessage(error, fallback));
 
 const keyOfIds = (ids: readonly string[]): string => JSON.stringify(ids);
 

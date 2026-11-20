@@ -1,4 +1,5 @@
 import { Check, ChevronRight } from "lucide-react";
+import type { ReactNode } from "react";
 import {
   SIGN_UP_STEP_STATE_TEXT,
   type SignUpStep,
@@ -60,5 +61,22 @@ export function SignUpSteps({ steps }: { steps: readonly SignUpStep[] }) {
         </li>
       ))}
     </ol>
+  );
+}
+
+export function SignUpStepsAbove({
+  steps,
+  children,
+}: {
+  steps: readonly SignUpStep[];
+  children: ReactNode;
+}) {
+  if (steps.length === 0) return children;
+
+  return (
+    <div className="my-auto flex w-full flex-col items-center gap-6">
+      <SignUpSteps steps={steps} />
+      {children}
+    </div>
   );
 }

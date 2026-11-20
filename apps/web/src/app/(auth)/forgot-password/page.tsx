@@ -9,7 +9,7 @@ export default async function ForgotPasswordPage() {
   if (status.setupRequired) redirect("/register");
 
   return (
-    <Suspense fallback={<AuthCardSkeleton />}>
+    <Suspense fallback={<AuthCardSkeleton description />}>
       <ForgotPasswordForm />
     </Suspense>
   );

@@ -16,7 +16,10 @@ import {
   type KeywordMarketRow,
 } from '../auth/keyword-markets';
 import { planScopeOf } from '../auth/plan-limits';
+import { WORKSPACE_NOT_FOUND } from '../auth/abuse/workspace-suspension.service';
+import { isOperatorWorkspace } from '../auth/platform-operator';
 import { workspaceStageOf } from '../billing/workspace-stage';
+import { withTimeout } from '../common/async/with-timeout';
 import { scrubText } from '../common/logging/log-redaction';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
@@ -30,6 +33,7 @@ const SUPPORT_JUSTIFICATION =
 const RUN_HISTORY_DAYS = 7;
 const FAILED_JOBS_SCANNED = 200;
 const FAILED_JOBS_SHOWN = 20;
+const FAILED_JOBS_TIMEOUT_MS = 1_000;
 const REASON_LENGTH = 200;
 const DAY_MS = 24 * 60 * 60_000;
 
@@ -81,14 +85,14 @@ export class SupportService {
           const row = await this.prisma.workspace.findUnique({
             where: { id: workspaceId },
           });
-          if (!row) throw new NotFoundException('Workspace not found');
+          if (!row) throw new NotFoundException(WORKSPACE_NOT_FOUND);
           return [this.summarize(row, await this.counts(), now), row] as const;
         },
       );
 
     const [runHistory, failedJobs, recentAccess] = await Promise.all([
       this.runHistory(workspaceId, now),
-      this.failedJobs(workspaceId),
+      this.failedJobsInTime(workspaceId),
       this.audit.recent(workspaceId),
     ]);
 
@@ -96,7 +100,8 @@ export class SupportService {
       ...summary,
       limits: this.scopeOf(workspace, now).limits,
       runHistory,
-      failedJobs,
+      failedJobs: failedJobs ?? [],
+      failedJobsUnavailable: failedJobs === null,
       recentAccess,
     };
   }
@@ -114,6 +119,7 @@ export class SupportService {
     return {
       workspaceId: workspace.id,
       name: workspace.name,
+      operatorWorkspace: isOperatorWorkspace(workspace.id),
       plan: this.scopeOf(workspace, now).plan,
       storedPlan: workspace.plan,
       createdAt: workspace.createdAt.toISOString(),
@@ -203,6 +209,19 @@ export class SupportService {
         }));
       },
     );
+  }
+
+  private async failedJobsInTime(
+    workspaceId: string,
+  ): Promise<SupportFailedJob[] | null> {
+    try {
+      return await withTimeout(
+        this.failedJobs(workspaceId),
+        FAILED_JOBS_TIMEOUT_MS,
+      );
+    } catch {
+      return null;
+    }
   }
 
   private async failedJobs(workspaceId: string): Promise<SupportFailedJob[]> {

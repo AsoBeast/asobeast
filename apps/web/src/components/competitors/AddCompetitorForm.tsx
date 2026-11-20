@@ -11,11 +11,13 @@ import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import type { Store, StoreSearchResult } from "@asobeast/shared";
 import { StoreSearchField } from "@/components/apps/StoreSearchField";
+import { useFieldOutcome } from "@/components/apps/useFieldOutcome";
 import { useStoreSearch } from "@/components/apps/useStoreSearch";
 import { Button } from "@/components/ui/button";
-import { addCompetitor, ApiError } from "@/lib/api";
+import { addCompetitor } from "@/lib/api";
 import { storeLabel } from "@/lib/format";
 import { appDetailOptions, invalidateCompetitorMutation } from "@/lib/queries";
+import { busyRetry, noteWhileBusy } from "@/lib/query-retry";
 import { useSingleFlight } from "@/lib/single-flight";
 
 const STORE_URL_EXAMPLES: Record<Store, string> = {
@@ -34,44 +36,31 @@ export function AddCompetitorForm({
   const queryClient = useQueryClient();
   const { data: detail } = useSuspenseQuery(appDetailOptions(id));
   const [url, setUrl] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [note, setNote] = useState<string | null>(null);
+  const outcome = useFieldOutcome(
+    "Could not reach the api to add this competitor",
+  );
   const search = useStoreSearch(detail.store, detail.country, url);
 
   const mutation = useMutation({
+    ...busyRetry,
     mutationFn: (value: string) => addCompetitor(id, value),
     onSuccess: (competitor) => {
       invalidateCompetitorMutation(queryClient, id);
       setUrl("");
       toast.success(`Added ${competitor.name ?? "competitor"}`);
     },
-    onError: (err) => {
-      if (err instanceof ApiError) {
-        if (err.envelope.statusCode === 501) {
-          setNote(err.envelope.message);
-        } else {
-          setError(err.envelope.message);
-        }
-        return;
-      }
-      setError("Could not reach the api to add this competitor");
-    },
+    onError: outcome.fail,
   });
   const addOnce = useSingleFlight(mutation);
   const inert = mutation.isPending || url.trim() === "";
 
-  function clearOutcome() {
-    setError(null);
-    setNote(null);
-  }
-
   function changeUrl(next: string) {
-    clearOutcome();
+    outcome.clear();
     setUrl(next);
   }
 
   function add(value: string) {
-    clearOutcome();
+    outcome.clear();
     addOnce(value);
   }
 
@@ -82,12 +71,12 @@ export function AddCompetitorForm({
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (inert) return;
-    clearOutcome();
+    outcome.clear();
     const { input } = search;
     if (input.kind === "url") return add(url);
-    if (input.kind === "invalid") return setError(input.message);
+    if (input.kind === "invalid") return outcome.setError(input.message);
     const message = search.enterName(pick);
-    if (message) setError(message);
+    if (message) outcome.setError(message);
   }
 
   return (
@@ -103,8 +92,8 @@ export function AddCompetitorForm({
         onChange={changeUrl}
         onPick={pick}
         search={search}
-        error={error}
-        note={note}
+        error={outcome.error}
+        note={noteWhileBusy(mutation, outcome.note)}
       >
         <Button
           type="submit"

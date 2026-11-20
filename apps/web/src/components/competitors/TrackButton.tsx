@@ -5,8 +5,9 @@ import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { addCompetitor, ApiError } from "@/lib/api";
-import { armFocusHandoff } from "@/lib/focus-handoff";
+import { armFocusHandoff, renewFocusHandoff } from "@/lib/focus-handoff";
 import { invalidateCompetitorMutation } from "@/lib/queries";
+import { busyRetry } from "@/lib/query-retry";
 import { useSingleFlight } from "@/lib/single-flight";
 
 export function TrackButton({
@@ -26,8 +27,10 @@ export function TrackButton({
 }) {
   const queryClient = useQueryClient();
   const mutation = useMutation({
+    ...busyRetry,
     mutationFn: () => addCompetitor(id, storeAppId),
     onSuccess: (competitor) => {
+      if (focusKey) renewFocusHandoff(focusKey);
       invalidateCompetitorMutation(queryClient, id);
       toast.success(`Now tracking ${competitor.name ?? title}`);
     },

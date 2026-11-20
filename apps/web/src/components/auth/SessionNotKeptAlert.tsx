@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { TriangleAlert } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const TROUBLESHOOTING_URL =
@@ -16,14 +15,14 @@ export function SessionNotKeptAlert({
 }) {
   return (
     <Alert variant="destructive">
-      <TriangleAlert />
       <AlertTitle>Your browser did not keep the session cookie</AlertTitle>
-      <AlertDescription>
+      <AlertDescription className="[&_p:not(:last-child)]:mb-1">
         <p>
-          {outcome} A secure cookie is dropped on plain http, even on localhost
-          in Safari, and a browser that blocks cookies for this site drops it
-          too. Open AsoBeast over https, allow cookies for this site, or use
-          another browser, then sign in again. The{" "}
+          {outcome} Open AsoBeast over https or allow cookies for this site,
+          then sign in again.
+        </p>
+        <p>
+          The{" "}
           <a href={TROUBLESHOOTING_URL} target="_blank" rel="noreferrer">
             troubleshooting guide
           </a>{" "}

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Column, Img, Link, Row, Section, Text } from 'react-email';
+import { INK_LINK } from '../../mail/email-theme';
 import {
   isRankMoveGroup,
   type ReportApp,
@@ -30,10 +31,7 @@ export function CardHeader({ app }: { app: ReportApp }) {
       <Column className="align-top">
         <Text className="m-0 text-[15px] font-semibold leading-[22px] text-ink dark:text-night-ink">
           {app.link ? (
-            <Link
-              href={app.link.href}
-              className="text-ink underline dark:text-night-ink"
-            >
+            <Link href={app.link.href} className={INK_LINK}>
               {name}
             </Link>
           ) : (
@@ -41,7 +39,7 @@ export function CardHeader({ app }: { app: ReportApp }) {
           )}
         </Text>
         {subtitle && (
-          <Text className="m-0 text-[13px] leading-[18px] text-muted dark:text-night-muted">
+          <Text className="m-0 text-[13px] leading-[18px] text-ink-2 dark:text-night-ink-2">
             {subtitle}
           </Text>
         )}
@@ -52,7 +50,7 @@ export function CardHeader({ app }: { app: ReportApp }) {
 
 export function ReportNote({ children }: { children: ReactNode }) {
   return (
-    <Text className="m-0 mt-[8px] text-[13px] leading-[20px] text-muted dark:text-night-muted">
+    <Text className="m-0 mt-[8px] text-[13px] leading-[20px] text-ink-2 dark:text-night-ink-2">
       {children}
     </Text>
   );
@@ -65,10 +63,7 @@ function GroupNote({ group }: { group: ReportGroup }) {
   return (
     <ReportNote>
       {isRankMoveGroup(group.kind) ? `${words} · ` : null}
-      <Link
-        href={group.link.href}
-        className="text-brand-ink underline dark:text-brand"
-      >
+      <Link href={group.link.href} className={INK_LINK}>
         {group.link.label}
       </Link>
     </ReportNote>
@@ -94,10 +89,7 @@ function CompetitorsNote({ app }: { app: ReportApp }) {
   return (
     <ReportNote>
       {app.competitorsLink ? (
-        <Link
-          href={app.competitorsLink.href}
-          className="text-brand-ink underline dark:text-brand"
-        >
+        <Link href={app.competitorsLink.href} className={INK_LINK}>
           {app.competitorsLink.label}
         </Link>
       ) : (

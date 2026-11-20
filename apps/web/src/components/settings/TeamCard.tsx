@@ -34,7 +34,12 @@ import {
   InlineQueryError,
   failedRead,
 } from "@/components/layout/InlineQueryError";
-import { ApiError, inviteMember, removeMember, revokeInvite } from "@/lib/api";
+import {
+  inviteMember,
+  removeMember,
+  revokeInvite,
+  apiErrorMessage,
+} from "@/lib/api";
 import {
   cardAction,
   siblingControl,
@@ -64,10 +69,6 @@ function TeamColumns({ isOwner }: { isOwner: boolean }) {
   );
 }
 
-function messageOf(error: unknown, fallback: string): string {
-  return error instanceof ApiError ? error.envelope.message : fallback;
-}
-
 function InviteDialog() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -83,7 +84,7 @@ function InviteDialog() {
       invalidateWorkspaceTeamMutation(queryClient);
     },
     onError: (err) =>
-      setError(messageOf(err, "Could not send the invitation.")),
+      setError(apiErrorMessage(err, "Could not send the invitation.")),
   });
   const inviteOnce = useSingleFlight(mutation);
 
@@ -252,7 +253,7 @@ export function TeamCard() {
       invalidateWorkspaceTeamMutation(queryClient);
     },
     onError: (err) =>
-      toast.error(messageOf(err, "Could not revoke the invitation.")),
+      toast.error(apiErrorMessage(err, "Could not revoke the invitation.")),
   });
   const revokeOnce = useSingleFlight(revoke);
 
@@ -263,7 +264,7 @@ export function TeamCard() {
       invalidateWorkspaceTeamMutation(queryClient);
     },
     onError: (err) =>
-      toast.error(messageOf(err, "Could not remove the member.")),
+      toast.error(apiErrorMessage(err, "Could not remove the member.")),
   });
   const removeOnce = useSingleFlight(remove);
   const busy = revoke.isPending || remove.isPending;

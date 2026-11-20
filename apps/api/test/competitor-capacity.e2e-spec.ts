@@ -6,9 +6,11 @@ import {
   PLAN_LIMITS,
 } from '@asobeast/shared';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { StorePoolBusyError } from '../src/store-providers/errors';
 import {
   allowanceSpendsDuring,
   CapacityHarness,
+  failNextStoreLookup,
   OwnerAgent,
   resetCapacity,
   startCapacityHarness,
@@ -58,6 +60,8 @@ describe('Competitor capacity (e2e)', () => {
       })
     ).id;
   });
+
+  afterEach(() => jest.restoreAllMocks());
 
   afterAll(() => stopCapacityHarness(harness));
 
@@ -112,5 +116,21 @@ describe('Competitor capacity (e2e)', () => {
     );
 
     expect(calls).toBe(0);
+  });
+
+  it('gives a competitor add back when the proxy pool was busy', async () => {
+    for (let added = 1; added < COMPETITOR_LIMIT; added += 1) {
+      await addAndRemove();
+    }
+    failNextStoreLookup(
+      harness,
+      new StorePoolBusyError(Store.APP_STORE, 3_000),
+    );
+
+    await clearRateLimitCounters(harness.app);
+    await addCompetitor().expect(503);
+
+    await clearRateLimitCounters(harness.app);
+    await addCompetitor().expect(201);
   });
 });

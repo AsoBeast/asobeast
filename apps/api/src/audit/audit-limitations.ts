@@ -10,9 +10,15 @@ const APP_STORE_LIMITATIONS: readonly AuditLimitation[] = [
   },
   {
     id: 'in-app-events',
-    label: 'In-app events',
+    label: 'Past in-app events and their performance',
     detail:
-      'Not visible to asobeast. Events can appear in search results and on the Today tab.',
+      'The page shows the events that are live or upcoming; events that have ended and how each event performed are App Store Connect only.',
+  },
+  {
+    id: 'accessibility-features',
+    label: 'Declared accessibility features',
+    detail:
+      'The page read cannot yet tell the features a developer declares from the sentence Apple shows when none are declared.',
   },
   {
     id: 'custom-product-pages',

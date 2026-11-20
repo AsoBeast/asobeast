@@ -23,8 +23,14 @@ export const STORE_REPORT_JOB_OPTIONS = {
   backoff: { type: 'exponential', delay: 60_000 },
 } satisfies DefaultJobOptions;
 
+export const JOB_PRIORITY = { scheduled: 1, deferred: 2 } as const;
+
+export const SCHEDULED_JOB_OPTIONS = {
+  priority: JOB_PRIORITY.scheduled,
+} satisfies DefaultJobOptions;
+
 export const DEFERRED_JOB_OPTIONS = {
-  priority: 1,
+  priority: JOB_PRIORITY.deferred,
 } satisfies DefaultJobOptions;
 
 export function reviewSyncJobOptions(store: Store): DefaultJobOptions {

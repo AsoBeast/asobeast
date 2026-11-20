@@ -6,7 +6,7 @@ icon: sparkles
 keywords: ["OpenAI","OPENAI_API_KEY","OPENAI_BASE_URL","AI_MODEL","OpenAI compatible","OpenRouter","Ollama","local model","metadata drafts","creative analysis","review replies","review translation","optional"]
 ---
 
-AI in asobeast is garnish, not foundation. Every score, rule and recommendation is deterministic and works with no key configured, which is the default.
+AI in AsoBeast is garnish, not foundation. Every score, rule and recommendation is deterministic and works with no key configured, which is the default.
 
 ## What does the key enable?
 
@@ -16,7 +16,7 @@ Five features, all bring your own key.
 | --- | --- | --- |
 | AI creative analysis | Audit tab | Reads the icon, up to six screenshots and up to five competitor icons, and reports captions, caption language, message type, text in the icon, element count, contrast and similarity to a competitor icon. The audit rules score what it reports |
 | Metadata drafts | Metadata workbench | Proposes field values grounded in your tracked keywords, coverage gaps and competitor titles, for the primary listing or for an additional language one of your storefronts reads |
-| Action explanations | Action card | Turns typed evidence into two to four plain sentences |
+| Action explanations | Action sheet, under **Explain** | Turns typed evidence into two to four plain sentences |
 | Review reply drafts | Reviews page | Drafts the developer reply to one review in its language, in the tone you pick and within the store's limit, following the app's reply guidelines |
 | Review translations | Reviews page | Translates the title and text of one review into your browser's language and keeps the translation on the review |
 
@@ -41,9 +41,9 @@ The settings page shows the calls used this month and the renewal date, and ever
 
 Upgrading applies the larger allowance at once and keeps what was already used. Moving to a smaller plan keeps the usage too, so a workspace already past the smaller allowance waits for the 1st.
 
-### Self hosted
+### Self-hosted
 
-A self hosted instance has no allowance unless you set `AI_CALLS_PER_MONTH`, which applies to every workspace on the instance. Set it if registration is open, because each account that registers gets a workspace of its own and spends your provider key. See [Configuration](/configuration/reference).
+A self-hosted instance has no allowance unless you set `AI_CALLS_PER_MONTH`, which applies to every workspace on the instance. Set it if registration is open, because each account that registers gets a workspace of its own and spends your provider key. See [Configuration](/configuration/reference).
 
 ## What happens without a key?
 
@@ -65,7 +65,7 @@ Every other audit check still scores. The creative checks are listed as unanswer
 | `OPENAI_API_KEY` | Empty | Empty disables all four features |
 | `OPENAI_BASE_URL` | Empty | Address of an OpenAI compatible API to call instead of OpenAI. Empty uses `https://api.openai.com/v1`. See [Use an OpenAI compatible provider](#use-an-openai-compatible-provider) |
 | `AI_MODEL` | `gpt-5.6-luna` | The model name as your provider spells it. Must accept image input and structured outputs, because the creative analysis reads images and answers in a fixed schema. `gpt-4o` also qualifies |
-| `AI_CALLS_PER_MONTH` | Empty | Calls each workspace may make per month on a self hosted instance. Empty is unlimited |
+| `AI_CALLS_PER_MONTH` | Empty | Calls each workspace may make per month on a self-hosted instance. Empty is unlimited |
 
 All four live in `apps/api/.env`. Restart the API after changing them.
 
@@ -81,7 +81,7 @@ AI_MODEL=openai/gpt-5.6-luna
 
 The address must start with `http://` or `https://` and must not contain a user name, a password or a `#` fragment. The API refuses to start otherwise and names the variable. Use `https` for any provider outside your own machine, because the key and every prompt travel in the request.
 
-The same variable reaches OpenAI's own regional hosts. `https://eu.api.openai.com/v1` keeps processing in the European Union for a key from an EU project, and asobeast still treats it as OpenAI.
+The same variable reaches OpenAI's own regional hosts. `https://eu.api.openai.com/v1` keeps processing in the European Union for a key from an EU project, and AsoBeast still treats it as OpenAI.
 
 ### What the provider has to support
 
@@ -133,7 +133,7 @@ The stored summary is labelled as an AI summary of deterministic evidence, so a 
 
 A review reply draft is a suggestion the composer holds until you copy it, and the kept reply records that it came from the model.
 
-Metadata drafts are constrained the same way. Every draft is linted again on the server and clamped to the store field limit, and asobeast has no write path to the stores, so a draft ends at a copy button rather than being published.
+Metadata drafts are constrained the same way. Every draft is linted again on the server and clamped to the store field limit, and AsoBeast has no write path to the stores, so a draft ends at a copy button rather than being published.
 
 ## What data leaves your deployment?
 
@@ -150,7 +150,7 @@ The creative analysis sends the least data that answers its checks.
 | Up to five competitor icons | Anything about other workspaces |
 |  | The provider key, in any message or log |
 
-asobeast downloads each image from the App Store or Google Play image host as the listing shows it, up to 3 MB each, and embeds it in the request, so the provider never has to reach a store CDN. An image on any other host is sent by its address and the provider downloads it. Every image is a public store asset.
+AsoBeast downloads each image from the App Store or Google Play image host as the listing shows it, up to 3 MB each, and embeds it in the request, so the provider never has to reach a store CDN. An image on any other host is sent by its address and the provider downloads it. Every image is a public store asset.
 
 The action explanation prompt receives the app's store, country and title, the rule, the priority, the impact and the evidence object, and nothing else.
 

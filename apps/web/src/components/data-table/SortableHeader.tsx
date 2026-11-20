@@ -5,7 +5,7 @@ import type { SortDirection } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface SortableColumn {
+export interface SortableColumn {
   getIsSorted: () => SortDirection | false;
   getToggleSortingHandler: () => ((event: unknown) => void) | undefined;
 }

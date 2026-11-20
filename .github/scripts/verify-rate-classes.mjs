@@ -7,7 +7,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const controllerRoot = join(root, "apps", "api", "src");
 const openApiPath = join(root, "docs", "api-reference", "openapi.json");
 
-const STORE_MARKER = "limiter.consume(";
+const STORE_MARKERS = ["limiter.consume(", "limiter.spendUnlessUnreached("];
 const STORE_CLASS = "@SpendsStoreCapacity()";
 const HTTP_DECORATOR = /^\s*@(Get|Post|Put|Patch|Delete)\(\s*('([^']*)')?/;
 const CONTROLLER_DECORATOR = /^@Controller\(\s*('([^']*)')?/;
@@ -64,7 +64,8 @@ function scan(file) {
       return;
     }
 
-    if (!current || !line.includes(STORE_MARKER)) return;
+    if (!current || !STORE_MARKERS.some((marker) => line.includes(marker)))
+      return;
     const region = lines.slice(current.line, index + 1).join("\n");
     current.store = true;
     if (

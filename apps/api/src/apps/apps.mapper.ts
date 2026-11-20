@@ -4,6 +4,7 @@ import {
   AppGroupSummary,
   AppListItem,
   AppSetupState,
+  AppSnapshotDetail,
   AppSnapshotSummary,
   CompetitorItem,
   ListingMarket,
@@ -15,6 +16,7 @@ import { rawListedInIphoneSearch } from '../store-providers/iphone-search';
 import { currencyOf, extractRawFacts } from '../store-providers/raw-facts';
 import { NormalizedApp } from '../store-providers/types';
 import { listingMarket } from './listing';
+import { listingFactsOf, listingTextsOf } from './listing-facts';
 import { capturedLocalizations } from './market-localizations';
 
 const STORE_ORDER: Record<App['store'], number> = {
@@ -24,7 +26,7 @@ const STORE_ORDER: Record<App['store'], number> = {
 
 export function toSnapshotSummary(
   snapshot: AppSnapshot,
-  home: string,
+  app: Pick<App, 'store' | 'country'>,
 ): AppSnapshotSummary {
   return {
     id: snapshot.id,
@@ -38,7 +40,18 @@ export function toSnapshotSummary(
     currency: currencyOf(snapshot.raw),
     version: snapshot.version,
     capturedAt: snapshot.capturedAt.toISOString(),
-    country: listingMarket(home, snapshot.country),
+    country: listingMarket(app.country, snapshot.country),
+    ...listingFactsOf(app.store, snapshot),
+  };
+}
+
+function toSnapshotDetail(
+  snapshot: AppSnapshot,
+  app: Pick<App, 'store' | 'country'>,
+): AppSnapshotDetail {
+  return {
+    ...toSnapshotSummary(snapshot, app),
+    ...listingTextsOf(app.store, snapshot),
   };
 }
 
@@ -122,7 +135,7 @@ export function toCompetitorItem(
     name: app.name,
     iconUrl: app.iconUrl,
     delistedAt: delistedAt(app),
-    latestSnapshot: snapshot ? toSnapshotSummary(snapshot, app.country) : null,
+    latestSnapshot: snapshot ? toSnapshotSummary(snapshot, app) : null,
   };
 }
 
@@ -187,7 +200,7 @@ export function toAppDetail(
     searchable: snapshot
       ? rawListedInIphoneSearch(app.store, snapshot.raw)
       : true,
-    latestSnapshot: snapshot ? toSnapshotSummary(snapshot, app.country) : null,
+    latestSnapshot: snapshot ? toSnapshotDetail(snapshot, app) : null,
     competitors: competitors.map((competitor) =>
       toCompetitorItem(competitor, competitor.snapshots[0] ?? null),
     ),

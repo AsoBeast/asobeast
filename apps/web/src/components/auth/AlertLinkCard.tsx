@@ -4,15 +4,9 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { SETTINGS_PATH } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { ApiError } from "@/lib/api";
 import { useFocusClaim } from "@/lib/focus-handoff";
+import { AuthActions, AuthCard } from "./AuthCard";
 import { useAnswerFocus } from "./use-answer-focus";
 import { useAuth } from "./use-auth";
 
@@ -48,19 +42,9 @@ export function AlertLinkCard({
     ) : null);
 
   return (
-    <Card className="mx-auto w-full max-w-sm">
-      <CardHeader>
-        <CardTitle asChild>
-          <h1 ref={claimFocus} tabIndex={-1} className="outline-none">
-            {title}
-          </h1>
-        </CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      {action ? (
-        <CardContent className="flex flex-col gap-3">{action}</CardContent>
-      ) : null}
-    </Card>
+    <AuthCard title={title} titleRef={claimFocus} description={description}>
+      {action ? <AuthActions>{action}</AuthActions> : null}
+    </AuthCard>
   );
 }
 

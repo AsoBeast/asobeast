@@ -85,7 +85,7 @@ describe('withRecordedChanges', () => {
     expect(withRecordedChanges([titleDiff], [])).toEqual([titleDiff]);
   });
 
-  it('appends a recorded screenshot change without its detail', () => {
+  it('appends a recorded screenshot change with its detail', () => {
     expect(
       withRecordedChanges(
         [],
@@ -110,8 +110,25 @@ describe('withRecordedChanges', () => {
         field: 'screenshotImages',
         before: '8 screenshots',
         after: '8 screenshots, reordered',
+        detail: {
+          kind: 'images',
+          before: [],
+          after: [],
+          added: [],
+          removed: [],
+          reordered: true,
+        },
       },
     ]);
+  });
+
+  it('appends a recorded change without a detail as a bare field', () => {
+    expect(
+      withRecordedChanges(
+        [],
+        [{ field: 'whatsNew', before: 'Bug fixes', after: 'New maps' }],
+      ),
+    ).toEqual([{ field: 'whatsNew', before: 'Bug fixes', after: 'New maps' }]);
   });
 
   it('appends recorded price, icon and whats new changes in recorded order', () => {

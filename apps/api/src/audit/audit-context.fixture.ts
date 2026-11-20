@@ -168,6 +168,7 @@ const contextFor = (
     storeUpdatedAt: null,
     now: FIXTURE_NOW,
     rawFacts: { ...emptyFacts, ...facts },
+    extract: null,
     keywords: [],
     visibility: { latest: null, latestDate: null, weekAgo: null },
     comparison: { competitors: [], rows: [] },

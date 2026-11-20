@@ -172,6 +172,23 @@ test("a translated settings page opens the delivery log", async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test("a translated admin page opens and closes a workspace's details", async ({
+  page,
+}) => {
+  const errors = collectDomErrors(page);
+  await page.goto("/admin/workspaces");
+  const name = await hydrated(page.locator('[data-workspace-sheet="ws_ana"]'));
+
+  await translateText(page);
+  await name.click();
+
+  const sheet = page.getByRole("dialog");
+  await expect(sheet.getByRole("list", { name: "Access log" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(sheet).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
 test("a translated alert dialog changes its rating threshold", async ({
   page,
 }) => {

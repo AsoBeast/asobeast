@@ -16,19 +16,21 @@ const toasterStyle: NonNullable<ToasterProps["style"]> &
   "--normal-bg": "var(--popover)",
   "--normal-text": "var(--popover-foreground)",
   "--normal-border": "var(--border)",
-  "--success-bg": "var(--popover)",
-  "--success-text": "var(--success)",
-  "--success-border": "var(--success)",
-  "--warning-bg": "var(--popover)",
-  "--warning-text": "var(--warning)",
-  "--warning-border": "var(--warning)",
-  "--error-bg": "var(--popover)",
-  "--error-text": "var(--destructive)",
-  "--error-border": "var(--destructive)",
-  "--border-radius": "var(--radius)",
-  boxShadow: "var(--elevation-overlay)",
+  "--border-radius": "var(--radius-2xl)",
   pointerEvents: "auto",
 };
+
+const ABOVE_CHECKLIST_PILL =
+  "in-[body:has([data-slot=checklist-pill])]:[--offset-bottom:calc(max(1rem,env(safe-area-inset-bottom))_+_3.5rem)]! in-[body:has([data-slot=checklist-pill])]:[--mobile-offset-bottom:calc(max(1rem,env(safe-area-inset-bottom))_+_3.5rem)]!";
+
+const TOAST =
+  "items-start! gap-2.5! font-sans! text-dense! shadow-overlay! data-[type=error]:pr-10! [&:not([data-type=error])>[data-close-button]]:hidden!";
+
+const CLOSE_BUTTON =
+  "top-2.5! right-2! left-auto! size-6! transform-none! rounded-md! border-0! bg-transparent! text-muted-foreground! hover:bg-muted! hover:text-foreground! focus-visible:ring-2! focus-visible:ring-ring! focus-visible:outline-none!";
+
+const ACTION_BUTTON =
+  "h-7! rounded-md! border! border-solid! border-border! bg-card! px-2.5! text-label! font-medium! text-foreground! hover:bg-muted!";
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme();
@@ -36,18 +38,28 @@ const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
       theme={resolveToasterTheme(theme)}
-      className="toaster group"
+      className={`toaster group ${ABOVE_CHECKLIST_PILL}`}
+      closeButton
       icons={{
-        success: <CircleCheckIcon className="size-4" />,
-        info: <InfoIcon className="size-4" />,
-        warning: <TriangleAlertIcon className="size-4" />,
-        error: <OctagonXIcon className="size-4" />,
-        loading: <Loader2Icon className="size-4 animate-spin" />,
+        success: <CircleCheckIcon className="size-4 text-success" />,
+        info: <InfoIcon className="size-4 text-muted-foreground" />,
+        warning: <TriangleAlertIcon className="size-4 text-warning" />,
+        error: <OctagonXIcon className="size-4 text-destructive" />,
+        loading: (
+          <Loader2Icon className="size-4 animate-spin text-muted-foreground" />
+        ),
       }}
       style={toasterStyle}
       toastOptions={{
+        closeButtonAriaLabel: "Dismiss",
         classNames: {
-          toast: "cn-toast",
+          toast: TOAST,
+          title: "font-medium! text-popover-foreground!",
+          description: "text-caption! text-muted-foreground!",
+          icon: "mt-0.5! mr-0!",
+          closeButton: CLOSE_BUTTON,
+          actionButton: ACTION_BUTTON,
+          cancelButton: ACTION_BUTTON,
         },
       }}
       {...props}

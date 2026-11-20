@@ -40,6 +40,11 @@ export const LATER_RELEASES: readonly Release[] = [
       },
       {
         kind: "improved",
+        title: "See which app moved on the dashboard",
+        text: "The dashboard chart is one line for every app, so a dip never said which app caused it. A list beside the chart now breaks the figure down by app, largest change first, and selecting an app draws the chart for that app alone. Point at a day to read the apps that moved most on it and the listing changes you made that day, which are also marked on the chart. The sentence under the title starts with what the last run changed, keyword movers open on the same and name the app of each keyword, the top 10 chart splits your keywords into rank bands, and the app table now follows the range you pick instead of always showing seven days.",
+      },
+      {
+        kind: "improved",
         title: "An app overview that leads with what matters",
         text: "The overview of an app now opens with four figures: visibility, share of voice, keywords in the top 10 and the store rating. Select any of them to draw its chart. The visibility chart shows the range before as a second line and marks the days your listing changed, with a link to what each change did. Keyword movers sit right under it with a small line of each keyword's last 30 days, followed by the keywords closest to the top 10, the next things to do and how many tracked keywords each part of your listing covers. The store funnel shows a trend line under each number, category ranks and ratings by market follow as reference, and the app's own icon now sits beside its name on every page.",
       },
@@ -57,6 +62,11 @@ export const LATER_RELEASES: readonly Release[] = [
         kind: "improved",
         title: "Settings, integrations and lookups you can scan",
         text: "Settings and Integrations put each action at the right of its panel and say their facts in plain text: how many stores are connected, how many days of store data each app has and where the daily request budget goes. The keyword inspector shows each score with a line in its grade colour and its value at the previous inspection, and says in one sentence whether a keyword is worth going after. What's New shows one line per change that opens when you press it and folds every release you have read.",
+      },
+      {
+        kind: "improved",
+        title: "Simpler sign in and sign up pages",
+        text: "Sign in, create account, password recovery and the pages your email links open now share one calm centred layout with larger buttons. Every password field on these pages has a button to show what you typed, and the password rule is one short line that turns into the error when a password is too short. On the hosted service, create account now shows the steps of signing up above the form, so you see what comes next.",
       },
       {
         kind: "improved",
@@ -95,6 +105,11 @@ export const LATER_RELEASES: readonly Release[] = [
       },
       {
         kind: "new",
+        title: "Featuring readiness on the audit page",
+        text: "The audit page for an App Store app now carries a featuring readiness checklist beside the score: whether the store page shows a preview video and lists an in-app event, next to what the audit already measures about ratings, updates, localizations and screenshots. A row the data cannot answer reads Not measured, and the footer shows how many featured stories and whether the Editors' Choice badge is on the page, together with the day that page was read.",
+      },
+      {
+        kind: "new",
         title: "Say why you leave, if you like",
         text: "Deleting a workspace now asks, without insisting, why you are leaving, from a short list. Prefer not to say is the default. Once the workspace is erased, only the answer and a few counts are kept, with nothing that names you or the workspace.",
       },
@@ -107,6 +122,56 @@ export const LATER_RELEASES: readonly Release[] = [
         kind: "fixed",
         title: "A full list when you search the App Store",
         text: "Searching the App Store by name when you import an app or add a competitor lists as many apps as you asked for, in close to the order your positions are checked in.",
+      },
+      {
+        kind: "improved",
+        title: "Calmer notices, errors and messages",
+        text: "The bar that tells you about a trial, a paused plan or a suspended workspace is now one quiet line with its link beside the sentence, and it turns amber when three days of a trial are left. A page that is not found or fails to load says so the same way everywhere, with one button to carry on. A message about something that failed can be closed, and messages no longer cover the setup checklist button.",
+      },
+      {
+        kind: "improved",
+        title: "Emails that look like the app",
+        text: "Account, billing and alert emails now use the same typeface, colours and shapes as the app, in light and dark. Links are plain underlined text, so the orange button is the one thing that stands out. Nothing an email says has changed.",
+      },
+      {
+        kind: "improved",
+        title: "Track several suggestions at once",
+        text: "On the keywords page, tick the suggestions you want and track them together with one button, instead of pressing Track on each. Phrases you already track have no tick, and switching the source or the market starts a fresh selection.",
+      },
+      {
+        kind: "fixed",
+        title: "Keyword figures that agree after a partial run",
+        text: "When a daily run missed some keywords on the first day of the range you look at, the keywords in the top 10 and the visibility change used to count those keywords as not found, while the keyword movers already compared them with the day next to it. On the dashboard and the app overview, the keyword movers, the keywords in the top 10 and the visibility change now compare each keyword with the same earlier check when it has one on that day or the day next to it, so a keyword already in the top 10 is no longer counted as a new entry.",
+      },
+      {
+        kind: "new",
+        title: "Send keywords to your keyword field",
+        text: "Select keywords on the keywords page of an App Store app and choose Add to keyword field. The metadata page opens on the right language with those keywords added after the ones already in the field, ready to review and save. Keywords already in the field are not added twice, and only what fits in the 100 characters is taken along.",
+      },
+      {
+        kind: "fixed",
+        title: "Imports while the server is busy",
+        text: "Importing an app, adding a competitor or refreshing a listing on Google Play used to wait 20 seconds and then fail while the daily collection kept the server busy. Part of the server's capacity now stays free for what you are waiting for, so these usually go through at once, and when that part is taken too you are told within a few seconds how long to wait before trying again.",
+      },
+      {
+        kind: "fixed",
+        title: "A failed import says why",
+        text: "When the App Store or Google Play does not cooperate, an import, a new competitor or a refresh now says what happened: the store took too long, turned the request away, could not be reached or changed its page. If the server itself was too busy to ask the store, the attempt no longer counts toward your daily limit.",
+      },
+      {
+        kind: "improved",
+        title: "Your first numbers come sooner",
+        text: "After you import an app or track new keywords, their first positions and scores are now collected ahead of the daily collection still in progress, instead of waiting behind it.",
+      },
+      {
+        kind: "improved",
+        title: "Imports wait out a busy moment",
+        text: "When the server is briefly too busy to reach a store, importing an app or adding a competitor now waits the few seconds it was asked to and tries once more by itself, with a line saying so, instead of asking you to press the button again.",
+      },
+      {
+        kind: "fixed",
+        title: "Similar apps in the store's own order",
+        text: "Competitor suggestions for an App Store app now come from the store's You Might Also Like section, in the order the store shows it, instead of opening with the developer's other apps. Keyword suggestions from similar apps improve the same way.",
       },
       {
         kind: "improved",
@@ -269,7 +334,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "improved",
         title: "No competitor limit when you host it yourself",
-        text: "A self hosted AsoBeast follows as many competitors as you like.",
+        text: "A self-hosted AsoBeast follows as many competitors as you like.",
       },
     ],
   },

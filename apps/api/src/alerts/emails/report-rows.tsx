@@ -1,10 +1,9 @@
 import { Column, Img, Row, Text } from 'react-email';
 import type { ReportRow } from '../report/report';
 
-const ROW_TEXT =
-  'm-0 text-[14px] leading-[22px] text-body dark:text-night-body';
+const ROW_TEXT = 'm-0 text-[14px] leading-[22px] text-ink dark:text-night-ink';
 const MUTED_TEXT =
-  'm-0 text-[13px] leading-[20px] text-muted dark:text-night-muted';
+  'm-0 text-[13px] leading-[20px] text-ink-2 dark:text-night-ink-2';
 const CHANGE_ICON_SIZE = 32;
 
 function MoveRow({ row }: { row: Extract<ReportRow, { kind: 'move' }> }) {

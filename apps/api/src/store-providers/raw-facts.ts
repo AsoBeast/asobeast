@@ -156,6 +156,14 @@ export function developerId(store: Store, raw: unknown): string | null {
   return id === null ? null : String(id);
 }
 
+export function contentRatingOf(raw: unknown): string | null {
+  return nonEmptyString(asRecord(raw)?.contentRating);
+}
+
+export function storeDeveloperNameOf(raw: unknown): string | null {
+  return trimmedString(asRecord(raw)?.developer);
+}
+
 export function ratingHistogram(
   store: Store,
   raw: unknown,
@@ -219,14 +227,14 @@ export function extractAppStoreRawFacts(raw: unknown): RawAppFacts {
     genres: stringArray(record.genres),
     releaseNotes: nonEmptyString(record.releaseNotes),
     languages: stringArray(record.languages),
-    contentRating: nonEmptyString(record.contentRating),
+    contentRating: contentRatingOf(record),
     genreKey: primaryGenreKey(Store.APP_STORE, record),
     genreName: nonEmptyString(record.primaryGenre),
     videoUrl: null,
     featureGraphicUrl: null,
     previewVideoCount: previewVideoCount(record),
     supportsIpad: supportsIpad(record),
-    developerName: trimmedString(record.developer),
+    developerName: storeDeveloperNameOf(record),
     currentVersionScore: numeric(record.currentVersionScore),
     currentVersionReviews: countOf(record.currentVersionReviewCount),
     privacyPolicyUrl: null,
@@ -246,14 +254,14 @@ export function extractGooglePlayRawFacts(raw: unknown): RawAppFacts {
     genres: categoryNames(record.categories),
     releaseNotes: playReleaseNotes(record),
     languages: [],
-    contentRating: nonEmptyString(record.contentRating),
+    contentRating: contentRatingOf(record),
     genreKey: nonEmptyString(record.genreId),
     genreName: nonEmptyString(record.genre),
     videoUrl: nonEmptyString(record.video),
     featureGraphicUrl: nonEmptyString(record.headerImage),
     previewVideoCount: null,
     supportsIpad: false,
-    developerName: trimmedString(record.developer),
+    developerName: storeDeveloperNameOf(record),
     currentVersionScore: null,
     currentVersionReviews: null,
     privacyPolicyUrl: nonEmptyString(record.privacyPolicy),

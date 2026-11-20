@@ -3,6 +3,7 @@ import { Store } from '@prisma/client';
 import type { Queue } from 'bullmq';
 import type { AppLocalizationsResult } from '@asobeast/shared';
 import type { WorkspaceContext } from '../common/tenancy/workspace-context';
+import { DEFERRED_JOB_OPTIONS } from '../jobs/job-options';
 import { JOBS } from '../jobs/jobs.types';
 import type { AppLocalizationsService } from '../keywords/app-localizations.service';
 import type { PrismaService } from '../prisma/prisma.service';
@@ -429,7 +430,7 @@ describe('LocalizationDetection.request', () => {
           enqueueClaim: expect.any(String) as string,
         },
         {
-          priority: 1,
+          ...DEFERRED_JOB_OPTIONS,
           removeOnComplete: { age: 86_400 },
           jobId: jobIdOf(localization),
         },

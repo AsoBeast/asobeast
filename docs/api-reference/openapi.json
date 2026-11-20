@@ -5162,7 +5162,7 @@
     },
     "/portfolio/history": {
       "get": {
-        "description": "One point per checked day for the last days days and, as previous, for the same number of days before them: the visibility of every tracked keyword of every primary app as one figure, how many of them rank in the top 10, and how many climbed or fell against the app's previous checked day. change compares each app's latest checked day with the day days before it, leaving out an app whose latest check is older than the range: the change in visibility and in the top 10 count (null when no app was checked that day), how many keywords climbed, fell, started ranking or dropped out, how many apps moved and the largest movers. A point counts every app: one that was not checked that day keeps the figures of its latest earlier check, and its moves count only on the days it was checked. days is 7, 30 or 90.",
+        "description": "One point per checked day for the last days days and, as previous, for the same number of days before them: the visibility of every tracked keyword of every primary app as one figure, how many of them rank in the top 10, and how many climbed or fell against the app's previous checked day. change compares each app's latest checked day with the day days before it, leaving out an app whose latest check is older than the range: the change in visibility and in the top 10 count (null when no app was checked that day), how many keywords climbed, fell, started ranking or dropped out, how many apps moved and the largest movers. A point counts every app: one that was not checked that day keeps the figures of its latest earlier check, and its moves count only on the days it was checked. days is 7, 30 or 90. bands splits the keywords of each point by rank. apps answers each primary app with its own points, its change over the range and how many of its keywords moved in its last run; stores pools the apps of each store the same way. lastRun compares each app checked on the newest day with the day before it, over the keywords checked on both days. listingChanges lists, per day and app, the fields a primary app changed in its home listing within the range, leaving out what the store decides (featuring, Editors' Choice). appId or store narrows the whole answer to one primary app or to the primary apps of one store.",
         "operationId": "PortfolioController_getHistory",
         "parameters": [
           {
@@ -5176,6 +5176,29 @@
                 7,
                 30,
                 90
+              ]
+            }
+          },
+          {
+            "name": "appId",
+            "required": false,
+            "in": "query",
+            "description": "Answer for this primary app alone.",
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          },
+          {
+            "name": "store",
+            "required": false,
+            "in": "query",
+            "description": "Answer for the primary apps of this store alone.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "APP_STORE",
+                "GOOGLE_PLAY"
               ]
             }
           }
@@ -7041,6 +7064,8 @@
             "required": true,
             "in": "path",
             "schema": {
+              "minLength": 1,
+              "maxLength": 64,
               "type": "string"
             }
           }
@@ -7072,6 +7097,8 @@
             "required": true,
             "in": "path",
             "schema": {
+              "minLength": 1,
+              "maxLength": 64,
               "type": "string"
             }
           }
@@ -7113,6 +7140,8 @@
             "required": true,
             "in": "path",
             "schema": {
+              "minLength": 1,
+              "maxLength": 64,
               "type": "string"
             }
           },
@@ -7162,6 +7191,8 @@
             "required": true,
             "in": "path",
             "schema": {
+              "minLength": 1,
+              "maxLength": 64,
               "type": "string"
             }
           }
@@ -7203,6 +7234,8 @@
             "required": true,
             "in": "path",
             "schema": {
+              "minLength": 1,
+              "maxLength": 64,
               "type": "string"
             }
           }
@@ -7244,6 +7277,8 @@
             "required": true,
             "in": "path",
             "schema": {
+              "minLength": 1,
+              "maxLength": 64,
               "type": "string"
             }
           }
@@ -7425,7 +7460,7 @@
   },
   "info": {
     "title": "asobeast API",
-    "description": "Self hosted ASO toolkit API.\n\nA metered instance carries RateLimit-Limit, RateLimit-Remaining and RateLimit-Reset on every response, for the tightest limit the request touched. A self hosted instance has no request rate limits and sends no such header. Limits are per workspace, so minting more tokens does not buy more capacity, and they are sized per plan across three classes: read for stored data, write for configuration changes and store for the endpoints that reach the App Store or Google Play.\n\nA 429 carries Retry-After and a rateLimit object naming the window that closed, or an aiAllowance object when the workspace has spent the AI calls its plan includes this month. A 403 with a quota object means a plan capacity limit such as apps or tracked keyword markets, which is a different problem from a rate limit. A 402 with an entitlement object means the workspace needs a plan.\n\nPositions are 1-based and null means checked but not found within the captured depth, never zero. Daily granularity uses UTC dates.",
+    "description": "Self-hosted ASO toolkit API. It tracks the apps you import and their competitors over time and reads what AsoBeast collected; it is not a bulk store lookup.\n\nA metered instance carries RateLimit-Limit, RateLimit-Remaining and RateLimit-Reset on every response, for the tightest limit the request touched. A self-hosted instance has no request rate limits and sends no such header. Limits are per workspace, so minting more tokens does not buy more capacity, and they are sized per plan across three classes: read for stored data, write for configuration changes and store for the endpoints that reach the App Store or Google Play.\n\nA 429 carries Retry-After and a rateLimit object naming the window that closed, or an aiAllowance object when the workspace has spent the AI calls its plan includes this month. A 403 with a quota object means a plan capacity limit such as apps or tracked keyword markets, which is a different problem from a rate limit. A 402 with an entitlement object means the workspace needs a plan.\n\nPositions are 1-based and null means checked but not found within the captured depth, never zero. Daily granularity uses UTC dates.",
     "version": "1.16.0",
     "contact": {}
   },
@@ -8908,7 +8943,7 @@
             "type": "string",
             "minLength": 8,
             "maxLength": 200,
-            "description": "Why the action was taken. Stored in the support audit trail. A suspension also shows it to every member of the workspace on every page and in every refused write, so write it for the customer"
+            "description": "Why the action was taken. Spaces at its ends are removed before its length is checked. Stored in the support audit trail. A suspension also shows it to every member of the workspace on every page and in every refused write, so write it for the customer"
           }
         },
         "required": [

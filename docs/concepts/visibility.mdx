@@ -66,7 +66,7 @@ What not found means, and why it is never position zero, is explained in [Positi
 
 ## What do the 7 and 30 day changes mean?
 
-The difference in points between visibility on the latest checked day and visibility 7 or 30 days earlier. It is missing when no keyword was checked on that earlier day.
+The difference in points between visibility on the latest checked day and visibility 7 or 30 days earlier. For that earlier day each keyword counts with its check of that day, or, when that day's check is missing, its check of the day after, or else of the day before, with the popularity it had on the day of that check. A daily run that missed a few keywords on the earlier day therefore does not count them as not found. The change is missing when no keyword was checked within a day of the earlier day. The keyword movers, the keywords in the top 10 and the moved count of the same comparison read each keyword's earlier position the same way, so they always agree.
 
 Both days are calculated over the keywords tracked today, each with the popularity it had on that day. Adding a keyword therefore changes past values too: on the days before its first check it counts as not found, and its own position moves the change from then on.
 

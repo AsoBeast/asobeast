@@ -15,6 +15,7 @@ Every hosted store request leaves through the egress pool. When the pool degrade
 - `asobeast_workspace_rankings_unresolved` climbs across many workspaces at once, which is what a silent failure looks like from the customer side.
 - Worker concurrency drops on its own, because it tracks the healthy pool size.
 - Google Play jobs for one storefront wait or time out while endpoints in other countries sit idle. That storefront's own endpoints are saturated, because a queued Google Play job never leaves through another country while one of its own is healthy. Each endpoint carries one job at a time, so a storefront with one endpoint finishes roughly one Google Play scoring job a minute and a backlog beyond that waits its turn in the queue. See [Egress proxy pool](/configuration/reference#egress-proxy-pool).
+- Imports, new competitors or refreshes answer `503` "This server is busy reaching Google Play." while queued work runs. Queued work already leaves `PROXY_INTERACTIVE_RESERVE` endpoints free, so this means the reserve itself is taken: several people wait at once, or the pool is so small that the reserve is ignored. The API log shows `acquire failed: no proxy endpoint was free within the request budget` at warn. Raise the reserve by one, or add endpoints.
 
 ## Triage
 

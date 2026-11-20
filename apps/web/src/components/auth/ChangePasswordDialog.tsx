@@ -4,10 +4,9 @@ import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
-import { PASSWORD_RULE } from "@asobeast/shared";
 import { toast } from "sonner";
 import { changePassword } from "@/lib/api";
-import { passwordError } from "@/lib/password";
+import { PASSWORD_HINT, passwordError } from "@/lib/password";
 import { invalidatePasswordChange } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import {
@@ -121,7 +120,7 @@ export function ChangePasswordDialog({ trigger }: { trigger: ReactNode }) {
                 id="next-password-rule"
                 className="text-caption text-muted-foreground"
               >
-                {PASSWORD_RULE}
+                {PASSWORD_HINT}
               </p>
               <FieldErrorMessage
                 error={error}

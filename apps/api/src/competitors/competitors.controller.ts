@@ -90,8 +90,8 @@ export class CompetitorsController {
     @Param('id') id: string,
     @Body() dto: AddCompetitorDto,
   ): Promise<CompetitorItem> {
-    return this.competitors.add(id, dto.url, () =>
-      this.limiter.consume('addCompetitor'),
+    return this.limiter.spendUnlessUnreached('addCompetitor', (spend) =>
+      this.competitors.add(id, dto.url, spend),
     );
   }
 

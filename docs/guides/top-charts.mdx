@@ -7,7 +7,7 @@ keywords: ["top charts","trending","free","paid","grossing","follow","chart capt
 
 The top charts page shows the whole chart an app is ranked in, not just your own position. Open **Top charts** in the sidebar, pick a category and a day, and read every app in it with how far it moved.
 
-The page opens on the free, paid and grossing charts of one category side by side, the top 25 of each. **Open table** reads the whole chart of one kind with search, sort, columns and the row actions, and the **Layout** switch moves between the two. The layout, the kind and every filter live in the page address.
+The page opens with one sentence on where your app sits and what moved. A panel above the charts lists your apps and competitors with their place in the free, paid and grossing chart, also when they sit below the rows a column shows. The page then shows the free, paid and grossing charts of one category side by side, the top 25 of each, and a bar on each chart says how much of it moved and how much held since the comparison. **Open table** reads the whole chart of one kind with search, sort, columns and the row actions, and the **Layout** switch moves between the two. The layout, the kind and every filter live in the page address.
 
 ## What is a chart?
 
@@ -29,7 +29,7 @@ Every filter lives in the page address, so a link to a chart on a day opens that
 
 ## Why does the App Store overall chart differ by kind?
 
-On the App Store the free overall chart holds no games, while the paid and grossing overall charts do. In a US capture of the top 100, the free chart holds none, the grossing chart about a third and the paid chart over half. asobeast stores exactly what Apple's chart feed answers for each kind, and that feed leaves games out of the free overall list only. Apple's own web charts can differ from the feed, so a position here may not match the one Apple shows.
+On the App Store the free overall chart holds no games, while the paid and grossing overall charts do. In a US capture of the top 100, the free chart holds none, the grossing chart about a third and the paid chart over half. AsoBeast stores exactly what Apple's chart feed answers for each kind, and that feed leaves games out of the free overall list only. Apple's own web charts can differ from the feed, so a position here may not match the one Apple shows.
 
 Read games in a games chart. Pick the **Games** category, or one of the game genres, and all three kinds list games. Google Play answers the same apps list for all three kinds, so this applies to the App Store only.
 
@@ -66,6 +66,8 @@ Each row compares its position with an earlier capture. Pick the window with **C
 
 The trending panel lists the climbers, the new entries, the fallers and the apps that dropped out of the chart since the comparison, up to ten each. Beside the three columns it switches between the free, paid and grossing charts. In the table it sits beside the chart on a laptop and stays in view while you scroll. Sort the table by **Change** to read the new entries first, then the biggest climbs.
 
+In the table, **History** shows the top ten of the shown day across the last captured days, with your app picked out. It needs four captured days.
+
 ## How do you act on a row?
 
 - A row that is one of your apps is badged **Yours** and links to its overview.
@@ -82,8 +84,8 @@ To hear when one of your apps enters or leaves a chart, or reaches the top 10 of
 | Action | Cost |
 | --- | --- |
 | A chart in the daily run | One store request a day, on either store, shared by every app and workspace in that chart. A category of a tracked app is three charts, and so is the overall chart |
-| Capture today | One store request, and one chart capture of the daily allowance: 30 a day on Indie, 150 on Ultimate, unmetered on a self hosted instance. It is spent once per chart kind. A chart already captured today, or being captured by another request at that moment, costs nothing |
-| Follow a category | One unit of the plan's follow limit and three more charts in the daily run. Indie follows up to 10 categories, Ultimate 50, and a self hosted instance has no limit. After a move to a smaller plan, the daily run keeps capturing only the oldest categories the plan has room for, each with every kind it holds |
+| Capture today | One store request, and one chart capture of the daily allowance: 30 a day on Indie, 150 on Ultimate, unmetered on a self-hosted instance. It is spent once per chart kind. A chart already captured today, or being captured by another request at that moment, costs nothing |
+| Follow a category | One unit of the plan's follow limit and three more charts in the daily run. Indie follows up to 10 categories, Ultimate 50, and a self-hosted instance has no limit. After a move to a smaller plan, the daily run keeps capturing only the oldest categories the plan has room for, each with every kind it holds |
 
 A refused capture or follow costs nothing. See [Rate limits](/api-reference/rate-limits) for how the allowance is counted and [The daily pipeline and rate limits](/concepts/pipeline) for the budget.
 

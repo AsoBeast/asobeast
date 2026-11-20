@@ -38,14 +38,17 @@ import { pathWithoutQuery, withoutQueryEcho } from './request-path';
 import {
   StoreAppNotFoundError,
   StoreNotSupportedError,
+  StorePoolBusyError,
   StoreRequestError,
   UnsearchableAppError,
 } from '../store-providers/errors';
+import { ProxyPoolStoppingError } from '../store-providers/egress/proxy-pool.service';
 
 const CLIENT_ERROR_STATUS: number = HttpStatus.BAD_REQUEST;
 const SERVER_ERROR_STATUS: number = HttpStatus.INTERNAL_SERVER_ERROR;
 const UNAUTHORIZED_STATUS: number = HttpStatus.UNAUTHORIZED;
 const BEARER_CHALLENGE = 'Bearer realm="asobeast"';
+const STOPPING_RETRY_SECONDS = 5;
 
 type ResolvedError = Pick<
   ApiErrorEnvelope,
@@ -82,7 +85,8 @@ function exposedClientError(exception: unknown): ResolvedError | undefined {
 
 const isReportable = (exception: unknown, statusCode: number): boolean =>
   statusCode >= SERVER_ERROR_STATUS &&
-  !(exception instanceof StoreRequestError && exception.unreachable);
+  !(exception instanceof StoreRequestError && exception.unreachable) &&
+  !(exception instanceof ProxyPoolStoppingError);
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -148,6 +152,23 @@ export class AllExceptionsFilter implements ExceptionFilter {
         statusCode: HttpStatus.NOT_FOUND,
         error: 'Not Found',
         message: exception.userMessage,
+      };
+    }
+    if (exception instanceof StorePoolBusyError) {
+      this.logger.warn(exception.message);
+      return {
+        statusCode: HttpStatus.SERVICE_UNAVAILABLE,
+        error: 'Service Unavailable',
+        message: exception.userMessage,
+        retryAfterSeconds: exception.retryAfterSeconds,
+      };
+    }
+    if (exception instanceof ProxyPoolStoppingError) {
+      return {
+        statusCode: HttpStatus.SERVICE_UNAVAILABLE,
+        error: 'Service Unavailable',
+        message: 'The API is restarting. Try again in a few seconds.',
+        retryAfterSeconds: STOPPING_RETRY_SECONDS,
       };
     }
     if (exception instanceof StoreRequestError) {

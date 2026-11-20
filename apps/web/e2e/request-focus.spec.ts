@@ -7,19 +7,23 @@ import type {
   AppLocalizationItem,
   AppLocalizationsResult,
   CompetitorItem,
+  SupportWorkspaceDetail,
   TrackedKeywordItem,
   WebhookItem,
   WorkspaceTeam,
 } from "@asobeast/shared";
 import { ALERT_EVENTS_COOKIE } from "./alert-feed-fixtures.mts";
+import { BUSY_LINE, answerBusy } from "./busy-answer.mts";
 import { CROWDED_COOKIE } from "./actions-fixtures.mts";
 import { holdRender } from "./chart-image.mts";
+import { settleAnimations } from "./dialog.mts";
 import { openEmbedded } from "./embedded-checkout.mts";
 import {
   APP_GP_DETAIL,
   APP_GP_SERP_MOVERS,
   APP_CLASS_FOCUS_ID,
   APP_IMPORT_FOCUS_ID,
+  APP_TICKS_FOCUS_ID,
   AWAITING_ALERT_COOKIE,
   CROWDED_COMPETITORS_COOKIE,
   RANKINGS_FAIL_COOKIE,
@@ -1219,6 +1223,44 @@ test.describe("import app openers get focus back", () => {
   });
 });
 
+test("Import keeps focus while an import waits out a busy server", async ({
+  page,
+}) => {
+  const held = await holdRequest(
+    page,
+    /\/api\/backend\/apps$/,
+    "POST",
+    (route) =>
+      route.fulfill({
+        status: 400,
+        json: {
+          statusCode: 400,
+          error: "Bad Request",
+          message: "Unrecognized store URL or id",
+          path: "/apps",
+          timestamp: "2026-11-18T12:00:00.000Z",
+        },
+      }),
+  );
+  await answerBusy(page, "**/api/backend/apps", "/apps", 1);
+  const imports = countPosts(page, /\/api\/backend\/apps$/);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Import app" }).click();
+  await page
+    .getByLabel("App name or store URL")
+    .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
+  const submit = page.getByRole("button", { name: /^(Import|Importing…)$/ });
+
+  await pressFromKeyboard(submit);
+  await expect(page.getByText(BUSY_LINE)).toBeVisible();
+  await expect.poll(() => imports.length).toBe(2);
+
+  await expectFocusKeptWhileHeld(submit, held);
+  await expect(page.locator("#import-url-error")).toHaveText(
+    "Unrecognized store URL or id",
+  );
+});
+
 test.describe("Track keeps focus", () => {
   const [, PLAY_MOVER] = APP_GP_SERP_MOVERS.items;
   const competitorsPath = `/api/backend/apps/${APP_GP_DETAIL.id}/competitors`;
@@ -1854,6 +1896,44 @@ test.describe("keyword discovery controls keep focus", () => {
     await expect(
       page.getByRole("heading", { name: "Discovered keywords" }),
     ).toBeFocused();
+  });
+});
+
+test.describe("suggestion ticks keep focus", () => {
+  const app = APP_TICKS_FOCUS_ID;
+
+  test("Track selected on the suggestions keeps focus while it tracks and after the ticks clear", async ({
+    page,
+  }) => {
+    const held = await holdRequest(
+      page,
+      new RegExp(`/api/backend/apps/${app}/keywords$`),
+      "POST",
+      (route) => route.fulfill(fulfillJson(201, [])),
+    );
+    await page.goto(`/apps/${app}/keywords?tab=discovered`);
+    await page
+      .getByRole("button", { name: "Suggestions", exact: true })
+      .click();
+    const suggestions = page.locator('[data-slot="card"]').filter({
+      has: page.getByRole("heading", { name: "Suggestions", exact: true }),
+    });
+    await suggestions.getByRole("checkbox", { name: "deep focus" }).check();
+    const track = suggestions.getByRole("button", {
+      name: /^Track (1 )?selected$/,
+    });
+
+    await pressFromKeyboard(track);
+    await expect(track).toHaveAttribute("aria-disabled", "true");
+    await expect(track).toBeFocused();
+    held.release();
+
+    await expect(
+      page.getByText("Tracking 1 keyword. Positions arrive within minutes."),
+    ).toBeVisible();
+    await expect(track).toHaveAccessibleName("Track selected");
+    await expect(track).toBeFocused();
+    expect(await focusLeftForBody(page)).toBe(false);
   });
 });
 
@@ -3006,3 +3086,151 @@ for (const control of SIGNED_OUT_CONTROLS) {
     },
   );
 }
+
+test.describe("support action confirmations keep focus", () => {
+  const SUSPENDED_AT = "2026-11-19T10:00:00.000Z";
+  const SUPPORT_ACTIONS_UNDER_TEST = [
+    {
+      action: "suspend",
+      workspaceId: "ws_ana",
+      sheet: "Ana Apps",
+      opener: "Suspend",
+      confirm: "Suspend workspace",
+      pending: "Suspending…",
+      survivor: "Restore",
+      suspendedAfter: SUSPENDED_AT,
+      billing: false,
+    },
+    {
+      action: "restore",
+      workspaceId: "ws_lapsed",
+      sheet: "Lapsed Studio",
+      opener: "Restore",
+      confirm: "Restore workspace",
+      pending: "Restoring…",
+      survivor: "Suspend",
+      suspendedAfter: null,
+      billing: false,
+    },
+    {
+      action: "run-daily",
+      workspaceId: "ws_ana",
+      sheet: "Ana Apps",
+      opener: "Run daily",
+      confirm: "Start daily run",
+      pending: "Starting…",
+      survivor: "Run daily",
+      suspendedAfter: null,
+      billing: false,
+    },
+    {
+      action: "reconcile",
+      workspaceId: "ws_ana",
+      sheet: "Ana Apps",
+      opener: "Reconcile billing",
+      confirm: "Reconcile billing",
+      pending: "Reconciling…",
+      survivor: "Reconcile billing",
+      suspendedAfter: null,
+      billing: true,
+    },
+  ] as const;
+
+  for (const row of SUPPORT_ACTIONS_UNDER_TEST) {
+    const sheetOf = (page: Page) =>
+      page.getByRole("dialog", { name: row.sheet });
+    const opener = (page: Page) =>
+      sheetOf(page).getByRole("button", { name: row.opener, exact: true });
+    const openSheet = async (page: Page) => {
+      if (row.billing) await seedCookie(page.context(), "e2e_billing");
+      await page.goto(`/admin/workspaces?workspace=${row.workspaceId}`);
+    };
+
+    for (const close of ["Escape", "Cancel"] as const) {
+      test(`closing the ${row.opener} confirmation with ${close} returns focus to ${row.opener}`, async ({
+        page,
+      }) => {
+        await openSheet(page);
+        await pressFromKeyboard(opener(page));
+        const confirm = page.getByRole("alertdialog");
+        await settleAnimations(confirm);
+
+        if (close === "Escape") await page.keyboard.press("Escape");
+        else await confirm.getByRole("button", { name: "Cancel" }).click();
+
+        await expect(confirm).toHaveCount(0);
+        await expect(opener(page)).toBeFocused();
+      });
+    }
+
+    test(`${row.confirm} keeps focus while it runs and then hands it to ${row.survivor}`, async ({
+      page,
+    }) => {
+      let acted = false;
+      await page.route(
+        new RegExp(`/api/backend/admin/support/workspaces/${row.workspaceId}$`),
+        async (route) => {
+          if (
+            !acted ||
+            row.action === "run-daily" ||
+            row.action === "reconcile"
+          ) {
+            return route.fallback();
+          }
+          const response = await route.fetch();
+          const detail = (await response.json()) as SupportWorkspaceDetail;
+          return route.fulfill({
+            response,
+            json: {
+              ...detail,
+              suspendedAt: row.suspendedAfter,
+              suspendedReason: row.suspendedAfter ? "Chargeback opened" : null,
+            },
+          });
+        },
+      );
+      let posts = 0;
+      page.on("request", (request) => {
+        if (
+          request.method() === "POST" &&
+          request.url().endsWith(`/${row.workspaceId}/${row.action}`)
+        ) {
+          posts += 1;
+        }
+      });
+      const held = await holdRequest(
+        page,
+        new RegExp(
+          `/api/backend/admin/support/workspaces/${row.workspaceId}/${row.action}$`,
+        ),
+        "POST",
+        (route) => {
+          acted = true;
+          return route.fallback();
+        },
+      );
+      await openSheet(page);
+      await pressFromKeyboard(opener(page));
+      const confirm = page.getByRole("alertdialog");
+      await confirm.getByLabel("Reason").fill("Chargeback opened");
+      const send = confirm.getByRole("button", {
+        name: new RegExp(`^(${row.confirm}|${row.pending})$`),
+      });
+
+      await send.focus();
+      await page.keyboard.press("Enter");
+      await becameInert(send);
+      await expect(send).toBeFocused();
+      await page.keyboard.press("Enter");
+      await page.keyboard.press("Escape");
+      await expect(confirm).toBeVisible();
+      held.release();
+
+      await expect(confirm).toHaveCount(0);
+      await expect(
+        sheetOf(page).getByRole("button", { name: row.survivor, exact: true }),
+      ).toBeFocused();
+      expect(posts).toBe(1);
+    });
+  }
+});

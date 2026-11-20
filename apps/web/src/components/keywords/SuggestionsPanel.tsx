@@ -34,6 +34,12 @@ import { useKeyedSingleFlight } from "@/lib/single-flight";
 import { cn } from "@/lib/utils";
 import { SpiderDialog } from "./SpiderDialog";
 import { SuggestionList, suggestionListState } from "./SuggestionList";
+import {
+  TrackSelectedButton,
+  useTrackSelected,
+} from "./TrackSelectedSuggestions";
+import { useSuggestionTicks } from "./use-suggestion-ticks";
+import { selectionScope } from "./suggestion-selection";
 import { STRATEGIES } from "./suggestion-strategies";
 
 export function SuggestionsPanel({
@@ -90,6 +96,17 @@ export function SuggestionsPanel({
     select: (mutation) => mutation.state.variables,
   }).filter((text): text is string => typeof text === "string");
 
+  const listState = suggestionListState(suggestions);
+  const scope = selectionScope(country, strategy);
+  const { ticked, toggle, untick } = useSuggestionTicks(
+    scope,
+    listState.status === "ready"
+      ? listState.suggestions.map((suggestion) => suggestion.text)
+      : [],
+    new Set([...trackedTexts, ...trackingTexts]),
+  );
+  const bulk = useTrackSelected(id, country, untick);
+
   return (
     <Card>
       <CardHeader>
@@ -132,7 +149,7 @@ export function SuggestionsPanel({
             </TabsList>
           </Tabs>
 
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
             <p className="text-caption text-muted-foreground">
               <span>
                 {
@@ -144,22 +161,31 @@ export function SuggestionsPanel({
                 <span>{`. Runs a live ${storeLabel(store)} lookup, so it can take a few seconds.`}</span>
               ) : null}
             </p>
-            <SpiderDialog appId={id} country={country}>
-              <Button variant="outline" size="sm">
-                <Search />
-                Deep search
-              </Button>
-            </SpiderDialog>
+            <div className="flex flex-wrap gap-2">
+              <SpiderDialog appId={id} country={country}>
+                <Button variant="outline" size="sm">
+                  <Search />
+                  Deep search
+                </Button>
+              </SpiderDialog>
+              <TrackSelectedButton
+                count={ticked.length}
+                busy={bulk.busy}
+                onTrack={() => bulk.trackOnce({ texts: ticked, scope })}
+              />
+            </div>
           </div>
 
           <SuggestionList
             strategy={strategy}
-            state={suggestionListState(suggestions)}
+            state={listState}
             trackedTexts={trackedTexts}
             action={{
-              kind: "track",
-              pending: new Set(trackingTexts),
+              kind: "trackOrSelect",
+              pending: new Set([...trackingTexts, ...bulk.sending]),
               onTrack: trackOnce,
+              selected: new Set(ticked),
+              onToggle: toggle,
             }}
             onRetry={() => void suggestions.refetch()}
           />

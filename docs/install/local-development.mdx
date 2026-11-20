@@ -23,7 +23,7 @@ docker compose -f docker-compose.dev.yml up -d
 
 This starts `postgres:18-alpine` on host port 5433 and `redis:8-alpine` on host port 6380, both bound to `127.0.0.1` so a locally running API can reach them without exposing either service on the network. Their container ports remain 5432 and 6379. The development database uses the password `asobeast`, which is fine because nothing is exposed beyond your machine. Never reuse it in a deployment.
 
-These services run as the `asobeast-dev` Compose project, with their own containers and their own volumes. A self hosted stack started from `docker-compose.yml` on the same machine keeps its data separately, so starting, resetting or removing the development services never touches it.
+These services run as the `asobeast-dev` Compose project, with their own containers and their own volumes. A self-hosted stack started from `docker-compose.yml` on the same machine keeps its data separately, so starting, resetting or removing the development services never touches it.
 
 ## Install and run
 
@@ -128,6 +128,6 @@ All store traffic crosses the `StoreProvider` boundary in `apps/api/src/store-pr
 
 ## Contributing
 
-Commits follow Conventional Commits in the form `type(scope): subject`, enforced by a `commit-msg` hook. Feature work is open on the `1.x` line, and what constrains it is the compatibility promise rather than a freeze: the HTTP contract, the `@asobeast/shared` contract types and the MCP tool surface stay compatible throughout `1.x`. See [Upgrade and roll back](/install/upgrade) for what that covers.
+Commits follow Conventional Commits in the form `type(scope): subject`, enforced by a `commit-msg` hook. Feature work is open on the current release line, and the compatibility promise constrains it: the HTTP contract, the `@asobeast/shared` contract types and the MCP tool surface stay compatible throughout a major version. See [Upgrade and roll back](/install/upgrade) for what that covers.
 
 Read [CONTRIBUTING.md](https://github.com/AsoBeast/asobeast/blob/main/CONTRIBUTING.md) before opening a pull request.

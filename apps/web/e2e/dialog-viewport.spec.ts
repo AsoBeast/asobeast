@@ -112,4 +112,26 @@ for (const viewport of SHORT_VIEWPORTS) {
     ).toBeInViewport();
     await expectFitsViewport(page, dialog);
   });
+
+  test(`the suspend confirmation keeps its actions reachable at ${viewport.width}x${viewport.height}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    await page.goto("/admin/workspaces?workspace=ws_ana");
+    await page
+      .getByRole("dialog", { name: "Ana Apps" })
+      .getByRole("button", { name: "Suspend", exact: true })
+      .click();
+
+    const confirm = page.getByRole("alertdialog", {
+      name: "Suspend Ana Apps?",
+    });
+    await confirm
+      .getByLabel("Reason")
+      .fill("Chargeback opened on the last invoice, see the support ticket");
+    await expect(
+      confirm.getByRole("button", { name: "Suspend workspace" }),
+    ).toBeInViewport();
+    await expectFitsViewport(page, confirm);
+  });
 }

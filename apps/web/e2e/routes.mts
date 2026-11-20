@@ -62,6 +62,11 @@ export const appRoutesFor = (
 export const SIGNED_OUT_ROUTES = [
   ["login", "/login", {}],
   ["register", "/register", { e2e_setup_required: "1" }],
+  [
+    "hosted-register",
+    "/register",
+    { e2e_setup_required: "1", e2e_billing: "1" },
+  ],
   ["forgot-password", "/forgot-password", {}],
   ["reset-password", "/reset-password", {}],
   ["invite", "/invite", {}],

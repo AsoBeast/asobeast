@@ -19,13 +19,19 @@ import {
 import { adminWorkspacesOptions, authStatusOptions } from "@/lib/queries";
 import {
   ADMIN_WORKSPACE_FLAGS,
+  ADMIN_WORKSPACE_SHEET_KEY,
   adminWorkspaceListParsers,
+  adminWorkspaceSheetParser,
   adminWorkspaceSortParser,
 } from "@/lib/search-params";
 import { countBy } from "@/lib/table/facets";
+import { useUrlSheet } from "@/lib/use-url-sheet";
+import { WORKSPACE_NOUN } from "./admin-search";
 import { AdminList } from "./AdminList";
 import { useAdminTable } from "./useAdminTable";
 import { workspaceColumns } from "./workspace-columns";
+import { WorkspaceSheet } from "./workspace-sheet/WorkspaceSheet";
+import { WorkspaceSheetContext } from "./workspace-sheet/workspace-sheet-context";
 
 const STAGE_OPTIONS = WORKSPACE_STAGES.filter(
   (stage) => stage !== "self-hosted",
@@ -46,6 +52,10 @@ export function AdminWorkspaces() {
   const { data: status } = useSuspenseQuery(authStatusOptions);
   const [{ q, stage, flag, sort, dir }, setList] = useQueryStates(
     adminWorkspaceListParsers,
+  );
+  const sheet = useUrlSheet(
+    ADMIN_WORKSPACE_SHEET_KEY,
+    adminWorkspaceSheetParser,
   );
   const query = useDeferredValue(q);
   const narrowerFilters = useRef<HTMLDivElement>(null);
@@ -100,50 +110,59 @@ export function AdminWorkspaces() {
   const active = stage.length + flag.length;
 
   return (
-    <AdminList
-      table={table}
-      caption="Workspaces on this instance"
-      noun="workspace"
-      loaded={workspaces.length}
-      total={workspaces.length}
-      billing={status.billing}
-      billingColumns={[]}
-      search={q}
-      onSearch={(next, options) => void setList({ q: next }, options)}
-      filters={
-        <>
-          <div ref={narrowerFilters} className="contents md:hidden">
-            <FiltersSheet
-              active={active}
-              otherWidth={widerFilters}
-              description={FILTERS_DESCRIPTION}
-            >
-              {facets}
-            </FiltersSheet>
-          </div>
-          <div ref={widerFilters} className="hidden md:contents">
-            <FiltersPopover active={active} otherWidth={narrowerFilters}>
-              {facets}
-            </FiltersPopover>
-          </div>
-        </>
-      }
-      chips={[
-        ...stage.map((value) => ({
-          key: `stage-${value}`,
-          label: `Stage: ${WORKSPACE_STAGE_LABELS[value]}`,
-          onRemove: () =>
-            void setList({ stage: stage.filter((entry) => entry !== value) }),
-        })),
-        ...flag.map((value) => ({
-          key: `flag-${value}`,
-          label: ADMIN_FLAG_LABELS[value],
-          onRemove: () =>
-            void setList({ flag: flag.filter((entry) => entry !== value) }),
-        })),
-      ]}
-      onClearFilters={() => void setList({ q: null, stage: null, flag: null })}
-      reads="Each read is written to the support audit trail."
-    />
+    <WorkspaceSheetContext value={sheet.open}>
+      <AdminList
+        table={table}
+        caption="Workspaces on this instance"
+        noun={WORKSPACE_NOUN}
+        loaded={workspaces.length}
+        total={workspaces.length}
+        billing={status.billing}
+        billingColumns={[]}
+        search={q}
+        onSearch={(next, options) => void setList({ q: next }, options)}
+        filters={
+          <>
+            <div ref={narrowerFilters} className="contents md:hidden">
+              <FiltersSheet
+                active={active}
+                otherWidth={widerFilters}
+                description={FILTERS_DESCRIPTION}
+              >
+                {facets}
+              </FiltersSheet>
+            </div>
+            <div ref={widerFilters} className="hidden md:contents">
+              <FiltersPopover active={active} otherWidth={narrowerFilters}>
+                {facets}
+              </FiltersPopover>
+            </div>
+          </>
+        }
+        chips={[
+          ...stage.map((value) => ({
+            key: `stage-${value}`,
+            label: `Stage: ${WORKSPACE_STAGE_LABELS[value]}`,
+            onRemove: () =>
+              void setList({ stage: stage.filter((entry) => entry !== value) }),
+          })),
+          ...flag.map((value) => ({
+            key: `flag-${value}`,
+            label: ADMIN_FLAG_LABELS[value],
+            onRemove: () =>
+              void setList({ flag: flag.filter((entry) => entry !== value) }),
+          })),
+        ]}
+        onClearFilters={() =>
+          void setList({ q: null, stage: null, flag: null })
+        }
+        reads="Each read is written to the support audit trail."
+      />
+      <WorkspaceSheet
+        shownId={sheet.shownId}
+        billing={status.billing}
+        onClose={sheet.close}
+      />
+    </WorkspaceSheetContext>
   );
 }

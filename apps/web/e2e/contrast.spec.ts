@@ -27,6 +27,23 @@ for (const theme of THEMES) {
     });
   }
 
+  test(`the workspace details sheet has no contrast violation in the ${theme} theme`, async ({
+    page,
+  }) => {
+    expect(
+      await contrastViolations(
+        page,
+        theme,
+        "/admin/workspaces?workspace=ws_ana",
+        (sheetPage) =>
+          sheetPage
+            .getByRole("dialog", { name: "Ana Apps" })
+            .getByRole("table", { name: "Limits and usage" })
+            .waitFor(),
+      ),
+    ).toEqual([]);
+  });
+
   for (const [name, path, cookies] of SIGNED_OUT_ROUTES) {
     signedOut(
       `${name} has no contrast violation in the ${theme} theme`,

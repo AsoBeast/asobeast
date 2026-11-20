@@ -4,7 +4,7 @@ import { ResetPasswordForm } from "@/components/auth/ResetPasswordForm";
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<AuthCardSkeleton />}>
+    <Suspense fallback={<AuthCardSkeleton description />}>
       <ResetPasswordForm />
     </Suspense>
   );

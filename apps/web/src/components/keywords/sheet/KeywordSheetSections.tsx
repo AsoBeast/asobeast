@@ -29,7 +29,7 @@ import {
   opportunityEvidence,
   popularityEvidence,
 } from "../score-evidence";
-import { SheetSection } from "./SheetSection";
+import { SheetSection } from "@/components/layout/SheetSection";
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (

@@ -1,6 +1,12 @@
 import type { ApiErrorEnvelope } from "@asobeast/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ApiError, apiFetch, loginUrl, withQuery } from "./client";
+import {
+  ApiError,
+  apiErrorMessage,
+  apiFetch,
+  loginUrl,
+  withQuery,
+} from "./client";
 
 function stubFetch(implementation: typeof fetch): void {
   vi.stubGlobal("fetch", vi.fn(implementation));
@@ -215,5 +221,22 @@ describe("ApiError", () => {
     const error = new ApiError(ENVELOPE);
     expect(error).toBeInstanceOf(Error);
     expect(error.envelope.path).toBe("/apps/missing");
+  });
+});
+
+describe("apiErrorMessage", () => {
+  it("gives the API's own message for an API error", () => {
+    expect(apiErrorMessage(new ApiError(ENVELOPE), "Could not finish.")).toBe(
+      "App not found",
+    );
+  });
+
+  it("gives the fallback for anything else", () => {
+    expect(
+      apiErrorMessage(new Error("socket hang up"), "Could not finish."),
+    ).toBe("Could not finish.");
+    expect(apiErrorMessage(undefined, "Could not finish.")).toBe(
+      "Could not finish.",
+    );
   });
 });

@@ -31,6 +31,7 @@ import { exactSearchEmptyBody, keywordSearchFilter } from "./keyword-filters";
 import { keywordTableFeatures } from "./keyword-table-features";
 import { exportKeywords } from "./keyword-csv";
 import { tagsIn } from "@/lib/keyword-tags";
+import { keywordFieldAction } from "./AddToKeywordField";
 import { KeywordsBulkActions } from "./KeywordsBulkActions";
 import { useShowDynamics } from "./KeywordDynamicsPanel";
 import { KeywordsEmptyState } from "./KeywordsEmptyState";
@@ -64,6 +65,7 @@ export function KeywordsTable({
   store,
   country,
   homeCountry,
+  keywordFields,
   chartedIds,
   onFindKeywords,
 }: {
@@ -71,6 +73,7 @@ export function KeywordsTable({
   store: Store;
   country: string;
   homeCountry: string;
+  keywordFields: boolean;
   chartedIds: readonly string[];
   onFindKeywords?: (leaving: HTMLElement) => void;
 }) {
@@ -257,6 +260,13 @@ export function KeywordsTable({
               onClear={clearSelection}
               onExport={() => exportKeywords(id, selectedKeywords, today)}
               onShowDynamics={() => showDynamics(selectedIds)}
+              fieldAction={keywordFieldAction({
+                appId: id,
+                market: country,
+                homeCountry,
+                keywordFields,
+                table,
+              })}
             />
           </div>
         ) : null}

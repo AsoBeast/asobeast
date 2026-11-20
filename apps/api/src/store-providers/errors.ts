@@ -1,9 +1,21 @@
-import { Store } from '@prisma/client';
+import { type ProxyOutcome, Store } from '@prisma/client';
+import { classifyFailure } from './egress/proxy-outcome';
+import {
+  ON_DEMAND_STORE_DEADLINE_MS,
+  storeDeadlinePassed,
+} from './store-deadline';
 
 const STORE_NAMES: Record<Store, string> = {
   APP_STORE: 'The App Store',
   GOOGLE_PLAY: 'Google Play',
 };
+
+const IN_SENTENCE_NAMES: Record<Store, string> = {
+  APP_STORE: 'the App Store',
+  GOOGLE_PLAY: 'Google Play',
+};
+
+const BUSY_RETRY_SECONDS = { min: 2, max: 10 } as const;
 
 export const TRANSPORT_MESSAGES = [
   'ECONNRESET',
@@ -26,12 +38,59 @@ export const TRANSPORT_STATUSES = [429, 503] as const;
 
 const STATUSES = TRANSPORT_STATUSES.join('|');
 
+function mentionsTransport(causeMessage: string): boolean {
+  const lowered = causeMessage.toLowerCase();
+  return TRANSPORT_MESSAGES.some((marker) =>
+    lowered.includes(marker.toLowerCase()),
+  );
+}
+
 const TRANSPORT_STATUS = new RegExp(
   `(?:status|http)\\s+(?:${STATUSES})(?!\\d)`,
   'i',
 );
 
+export type StoreFailureReason =
+  'deadline' | 'slow' | 'refused' | 'unreachable' | 'unreadable';
+
+const DEADLINE_SECONDS = ON_DEMAND_STORE_DEADLINE_MS / 1000;
+const ABORTED = /TimeoutError|AbortError|operation was aborted/i;
+
+const FAILURE_SENTENCES: Record<StoreFailureReason, (store: string) => string> =
+  {
+    deadline: (store) =>
+      `${store} took longer than ${DEADLINE_SECONDS} seconds to answer. Try again in a few minutes.`,
+    slow: (store) =>
+      `${store} took too long to answer. Try again in a few minutes.`,
+    refused: (store) =>
+      `${store} turned the request away for now. Try again in a few minutes.`,
+    unreachable: (store) =>
+      `${store} could not be reached. Try again in a few minutes.`,
+    unreadable: (store) =>
+      `${store} answered something asobeast could not read. Try again later.`,
+  };
+
+const OUTCOME_REASONS: Partial<Record<ProxyOutcome, StoreFailureReason>> = {
+  RATE_LIMITED: 'refused',
+  BLOCKED: 'refused',
+  TRANSPORT: 'unreachable',
+};
+
+function reasonOf(
+  causeMessage: string,
+  deadlinePassed: boolean,
+): StoreFailureReason {
+  if (ABORTED.test(causeMessage)) return deadlinePassed ? 'deadline' : 'slow';
+  const outcome = classifyFailure(causeMessage);
+  const classified = outcome && OUTCOME_REASONS[outcome];
+  if (classified) return classified;
+  if (TRANSPORT_STATUS.test(causeMessage)) return 'refused';
+  return mentionsTransport(causeMessage) ? 'unreachable' : 'unreadable';
+}
+
 export class StoreRequestError extends Error {
+  private readonly deadlinePassed = storeDeadlinePassed();
+
   constructor(
     readonly store: Store,
     readonly method: string,
@@ -41,18 +100,44 @@ export class StoreRequestError extends Error {
     this.name = 'StoreRequestError';
   }
 
+  get reason(): StoreFailureReason {
+    return reasonOf(this.causeMessage, this.deadlinePassed);
+  }
+
   get userMessage(): string {
-    return `${STORE_NAMES[this.store]} did not answer. Try again in a few minutes.`;
+    return FAILURE_SENTENCES[this.reason](STORE_NAMES[this.store]);
   }
 
   get unreachable(): boolean {
-    const lowered = this.causeMessage.toLowerCase();
     return (
       TRANSPORT_STATUS.test(this.causeMessage) ||
-      TRANSPORT_MESSAGES.some((marker) =>
-        lowered.includes(marker.toLowerCase()),
-      )
+      mentionsTransport(this.causeMessage)
     );
+  }
+}
+
+export class StorePoolBusyError extends StoreRequestError {
+  readonly retryAfterSeconds: number;
+
+  constructor(store: Store, waitMs: number) {
+    super(
+      store,
+      'acquire',
+      'no proxy endpoint was free within the request budget',
+    );
+    this.name = 'StorePoolBusyError';
+    this.retryAfterSeconds = Math.min(
+      Math.max(Math.ceil(waitMs / 1000), BUSY_RETRY_SECONDS.min),
+      BUSY_RETRY_SECONDS.max,
+    );
+  }
+
+  override get userMessage(): string {
+    return `This server is busy reaching ${IN_SENTENCE_NAMES[this.store]}. Try again in ${this.retryAfterSeconds} seconds.`;
+  }
+
+  override get unreachable(): boolean {
+    return true;
   }
 }
 

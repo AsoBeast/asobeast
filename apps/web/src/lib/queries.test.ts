@@ -21,6 +21,7 @@ import {
   invalidateChartMutation,
   seedChartCapture,
   adminKeys,
+  adminWorkspaceOptions,
   actionActivityOptions,
   actionDetailOptions,
   actionKeys,
@@ -1131,6 +1132,14 @@ describe("setup key", () => {
   });
 });
 
+describe("market keyword fields", () => {
+  it("reads the field again when the viewer returns from another tab", () => {
+    expect(marketKeywordFieldsOptions(APP, "us").refetchOnWindowFocus).toBe(
+      "always",
+    );
+  });
+});
+
 describe("admin keys", () => {
   it("keeps every admin key under the admin root", () => {
     for (const key of [
@@ -1138,6 +1147,7 @@ describe("admin keys", () => {
       adminKeys.capacity(),
       adminKeys.proxyPool(),
       adminKeys.workspaces(),
+      adminKeys.workspace("ws_ana"),
       adminKeys.users(),
       adminKeys.users("ws_1"),
       adminKeys.apps(),
@@ -1151,6 +1161,15 @@ describe("admin keys", () => {
   it("caches one workspace's list apart from the whole list", () => {
     expect(adminKeys.users("ws_1")).not.toEqual(adminKeys.users());
     expect(adminKeys.apps("ws_1")).not.toEqual(adminKeys.apps());
+  });
+
+  it("reads a workspace's details once per opening, because every read is audited", () => {
+    const options = adminWorkspaceOptions("ws_ana");
+
+    expect(options.retry).toBe(false);
+    expect(options.refetchOnReconnect).toBe(false);
+    expect(options.staleTime).toBe(60_000);
+    expect(isPrefixOf(adminKeys.workspaces(), options.queryKey)).toBe(true);
   });
 });
 

@@ -29,6 +29,7 @@ import {
   SuggestItem,
 } from './types';
 import { toChartItem } from './chart-item';
+import { playReleaseDate } from './google-play-release-date';
 
 const SEARCH_MAX = 250;
 const REVIEWS_PER_PAGE = 50;
@@ -90,7 +91,7 @@ export class GooglePlayProvider implements StoreProvider {
       price: raw.price,
       version:
         raw.version === VERSION_VARIES_WITH_DEVICE ? undefined : raw.version,
-      releasedAt: parseDate(raw.released),
+      releasedAt: playReleaseDate(raw.released, lang),
       storeUpdatedAt: new Date(raw.updated),
       raw: raw as unknown as Prisma.InputJsonValue,
       searchable: true,
@@ -278,14 +279,6 @@ export class GooglePlayProvider implements StoreProvider {
       throw new StoreRequestError(this.store, method, messageOf(error));
     }
   }
-}
-
-function parseDate(value?: string): Date | undefined {
-  if (!value) {
-    return undefined;
-  }
-  const ms = Date.parse(value);
-  return Number.isNaN(ms) ? undefined : new Date(ms);
 }
 
 function messageOf(error: unknown): string {

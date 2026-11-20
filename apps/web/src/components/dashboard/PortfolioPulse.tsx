@@ -17,7 +17,11 @@ import {
   portfolioInsightsOptions,
   portfolioOptions,
 } from "@/lib/queries";
+import { cn } from "@/lib/utils";
+import { isBrokenDown } from "./breakdown";
+import { PULSE_BODY, PULSE_SPLIT } from "./layout-classes";
 import { MetricPanel } from "./MetricPanel";
+import { PortfolioBreakdown } from "./PortfolioBreakdown";
 import { useRangeHistory } from "./use-range-history";
 import { useRefreshAfterRun } from "./use-refresh-after-run";
 import {
@@ -80,7 +84,7 @@ function actionsNote(summary: ActionSummary): string {
 
 function visibilityNote(apps: PortfolioApp[]): string {
   const checked = apps.filter((app) => app.lastCapturedAt !== null).length;
-  return `across ${pluralize(checked, "app")}`;
+  return `weighted across ${pluralize(checked, "app")}`;
 }
 
 export function PortfolioPulse() {
@@ -95,6 +99,7 @@ export function PortfolioPulse() {
   const { top10 } = insights.totals;
   const { visibilityDelta, top10Delta } = history.change;
   const unit = rangeUnit(days);
+  const broken = isBrokenDown(history);
   const { visibility } = portfolio;
   const shown: DashboardMetric =
     metric === "visibility" && !visibility ? "top10" : metric;
@@ -139,7 +144,10 @@ export function PortfolioPulse() {
           note={actionsNote(actions)}
         />
       </MetricStrip>
-      <MetricPanel metric={shown} />
+      <div className={cn(PULSE_BODY, broken && PULSE_SPLIT)}>
+        <MetricPanel metric={shown} />
+        <PortfolioBreakdown metric={shown} />
+      </div>
     </Card>
   );
 }

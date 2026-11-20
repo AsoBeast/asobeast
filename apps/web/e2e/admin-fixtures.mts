@@ -1,15 +1,20 @@
-import type {
-  AdminApp,
-  AdminAppList,
-  AdminOverview,
-  AdminPayingCount,
-  AdminSignupDay,
-  AdminUser,
-  AdminUserList,
-  CapacityReport,
-  ProxyOutcomeCounts,
-  ProxyPoolHealth,
-  SupportWorkspaceSummary,
+import {
+  PLAN_LIMITS,
+  type AdminApp,
+  type AdminAppList,
+  type AdminOverview,
+  type AdminPayingCount,
+  type AdminSignupDay,
+  type AdminUser,
+  type AdminUserList,
+  type CapacityReport,
+  type ProxyOutcomeCounts,
+  type ProxyPoolHealth,
+  type SupportAccessEntry,
+  type SupportFailedJob,
+  type SupportRunDay,
+  type SupportWorkspaceDetail,
+  type SupportWorkspaceSummary,
 } from "@asobeast/shared";
 import { utcDaysAgo, utcTimestampDaysAgo } from "./fixtures.mts";
 
@@ -219,6 +224,7 @@ export const PROXY_POOL_ON: ProxyPoolHealth = {
 };
 
 const WORKSPACE_DEFAULTS = {
+  operatorWorkspace: false,
   suspendedAt: null,
   suspendedReason: null,
   trialEndsAt: null,
@@ -239,6 +245,7 @@ export const SUPPORT_WORKSPACES: SupportWorkspaceSummary[] = [
     ...WORKSPACE_DEFAULTS,
     workspaceId: "ws_default",
     name: "Default",
+    operatorWorkspace: true,
     plan: "free",
     storedPlan: "free",
     stage: "no-plan",
@@ -536,3 +543,115 @@ export const adminAppList = (
   workspaceId: string | null,
   truncated: boolean,
 ): AdminAppList => adminList(ADMIN_APPS, workspaceId, truncated);
+
+export const SUPPORT_OPERATOR_EMAIL = "owner@example.com";
+
+const CURRENT_VIEW: SupportAccessEntry = {
+  actorEmail: SUPPORT_OPERATOR_EMAIL,
+  action: "view",
+  outcome: "attempted",
+  reason: null,
+  detail: null,
+  at: utcTimestampDaysAgo(0),
+};
+
+export const SUSPEND_REASON = "Chargeback opened on the last invoice";
+
+export const ANA_CHECK_DAYS = [0, 1, 2, 3, 5, 6];
+
+export const ANA_UNCHECKED_DAY = 4;
+
+const ANA_RUN_HISTORY: SupportRunDay[] = ANA_CHECK_DAYS.map((daysAgo) => ({
+  date: utcDaysAgo(daysAgo),
+  captured: 40,
+  unresolved: daysAgo === 2 ? 6 : 0,
+}));
+
+export const ANA_LONG_FAILURE =
+  `Store answered 503 Service Unavailable for every attempt while checking the keyword ranking of com.ana.apps in the United States storefront, ${"retrying later ".repeat(4)}`.trim();
+
+const ANA_FAILED_JOBS: SupportFailedJob[] = [
+  {
+    id: "4182",
+    name: "check-keyword",
+    queue: "appstore",
+    attempts: 3,
+    failedAt: utcTimestampDaysAgo(0),
+    reason: ANA_LONG_FAILURE,
+  },
+  {
+    id: "977",
+    name: "refresh-app",
+    queue: "gplay",
+    attempts: 1,
+    failedAt: null,
+    reason: "Listing could not be read",
+  },
+];
+
+const ANA_ACCESS: SupportAccessEntry[] = [
+  CURRENT_VIEW,
+  {
+    actorEmail: SUPPORT_OPERATOR_EMAIL,
+    action: "suspend",
+    outcome: "succeeded",
+    reason: SUSPEND_REASON,
+    detail: "every write and on-demand action is now refused",
+    at: utcTimestampDaysAgo(3),
+  },
+  {
+    actorEmail: SUPPORT_OPERATOR_EMAIL,
+    action: "restore",
+    outcome: "succeeded",
+    reason: "Customer paid the invoice",
+    detail: "the workspace may write again",
+    at: utcTimestampDaysAgo(2),
+  },
+  {
+    actorEmail: SUPPORT_OPERATOR_EMAIL,
+    action: "run-daily",
+    outcome: "failed",
+    reason: "Customer asked for fresh ranks",
+    detail: "Redis is unreachable",
+    at: utcTimestampDaysAgo(1),
+  },
+  {
+    actorEmail: SUPPORT_OPERATOR_EMAIL,
+    action: "view",
+    outcome: "succeeded",
+    reason: null,
+    detail: null,
+    at: utcTimestampDaysAgo(4),
+  },
+];
+
+const QUIET_LISTS = {
+  runHistory: [],
+  failedJobs: [],
+  recentAccess: [CURRENT_VIEW],
+};
+
+const DETAIL_LISTS: Record<
+  string,
+  Pick<SupportWorkspaceDetail, "runHistory" | "failedJobs" | "recentAccess">
+> = {
+  ws_ana: {
+    runHistory: ANA_RUN_HISTORY,
+    failedJobs: ANA_FAILED_JOBS,
+    recentAccess: ANA_ACCESS,
+  },
+};
+
+export function supportWorkspaceDetail(
+  workspaceId: string,
+): SupportWorkspaceDetail | undefined {
+  const summary = SUPPORT_WORKSPACES.find(
+    (workspace) => workspace.workspaceId === workspaceId,
+  );
+  if (!summary) return undefined;
+  return {
+    ...summary,
+    limits: PLAN_LIMITS[summary.plan],
+    ...(DETAIL_LISTS[workspaceId] ?? QUIET_LISTS),
+  };
+}

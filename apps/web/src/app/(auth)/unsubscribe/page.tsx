@@ -4,7 +4,7 @@ import { UnsubscribeContent } from "@/components/auth/UnsubscribeContent";
 
 export default function UnsubscribePage() {
   return (
-    <Suspense fallback={<AuthCardSkeleton />}>
+    <Suspense fallback={<AuthCardSkeleton description />}>
       <UnsubscribeContent />
     </Suspense>
   );

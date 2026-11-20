@@ -1,8 +1,8 @@
 import { isRanked, KeywordMover, KeywordMovers } from '@asobeast/shared';
-import { addDays, DAY_MS, Ranking, TrackedRow } from './analytics.support';
+import { addDays, Ranking, rankingAt, TrackedRow } from './analytics.support';
+import { baselineCheck } from './baseline';
 
 const MOVER_WINDOW_DAYS = 7;
-const MOVER_TOLERANCE_MS = DAY_MS;
 const MOVER_LIMIT = 5;
 export const UNRANKED_RANK = Number.MAX_SAFE_INTEGER;
 
@@ -29,8 +29,8 @@ export function rankedMovers(
   const down: RankedMover[] = [];
 
   for (const row of rows) {
-    const toCapture = captureAt(row.keyword.rankings, referenceDate);
-    const fromCapture = nearestCapture(row.keyword.rankings, target);
+    const toCapture = rankingAt(row.keyword.rankings, referenceDate);
+    const fromCapture = baselineCheck(row.keyword.rankings, target);
     if (!toCapture || !fromCapture) {
       continue;
     }
@@ -75,26 +75,6 @@ export function movers(
 
 const rankedPosition = (capture: Ranking): number | null =>
   isRanked(capture.position) ? capture.position : null;
-
-const captureAt = (rankings: Ranking[], date: Date): Ranking | null =>
-  rankings.find((ranking) => ranking.date.getTime() === date.getTime()) ?? null;
-
-const nearestCapture = (rankings: Ranking[], target: Date): Ranking | null => {
-  let closest: Ranking | null = null;
-  for (const ranking of rankings) {
-    const distance = Math.abs(ranking.date.getTime() - target.getTime());
-    if (distance > MOVER_TOLERANCE_MS) {
-      continue;
-    }
-    if (
-      closest === null ||
-      distance < Math.abs(closest.date.getTime() - target.getTime())
-    ) {
-      closest = ranking;
-    }
-  }
-  return closest;
-};
 
 const strip = (mover: RankedMover): KeywordMover => ({
   keywordId: mover.keywordId,

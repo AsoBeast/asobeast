@@ -5,11 +5,23 @@ describe('limitationsFor', () => {
     expect(limitationsFor('APP_STORE').map((item) => item.id)).toEqual([
       'promotional-text',
       'in-app-events',
+      'accessibility-features',
       'custom-product-pages',
       'review-replies',
       'rating-prompts',
       'conversion-rate',
     ]);
+  });
+
+  it('leaves the in-app events limitation to the page and the console', () => {
+    const events = limitationsFor('APP_STORE').find(
+      (item) => item.id === 'in-app-events',
+    );
+
+    expect(events?.label).toBe('Past in-app events and their performance');
+    expect(events?.detail).toBe(
+      'The page shows the events that are live or upcoming; events that have ended and how each event performed are App Store Connect only.',
+    );
   });
 
   it('lists what the Google Play audit cannot see, in order', () => {

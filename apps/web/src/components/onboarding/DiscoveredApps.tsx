@@ -9,7 +9,7 @@ import {
   failedRead,
   InlineQueryError,
 } from "@/components/layout/InlineQueryError";
-import { apiErrorMessage } from "@/components/localizations/api-error-message";
+import { apiErrorMessage } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";

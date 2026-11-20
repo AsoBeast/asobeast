@@ -1,6 +1,6 @@
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { AuthPanel } from "./AuthCard";
 
 const FIELDS = ["first", "second"];
 
@@ -15,22 +15,28 @@ function TextLine({ step, width }: { step: string; width: string }) {
   );
 }
 
-export function AuthCardSkeleton() {
+export function AuthCardSkeleton({
+  description = false,
+}: {
+  description?: boolean;
+}) {
   return (
-    <Card className="mx-auto w-full max-w-sm">
-      <CardHeader>
-        <TextLine step="text-heading" width="w-28" />
-        <TextLine step="text-caption" width="w-56" />
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        {FIELDS.map((field) => (
-          <div key={field} className="flex flex-col gap-2">
-            <TextLine step="text-label" width="w-16" />
-            <Skeleton className="h-9 w-full" />
-          </div>
-        ))}
-        <Skeleton className="h-9 w-full" />
-      </CardContent>
-    </Card>
+    <div className="mx-auto flex w-full max-w-90 flex-col gap-6">
+      <div className="flex flex-col gap-2 text-center">
+        <TextLine step="text-title" width="w-40" />
+        {description ? <TextLine step="text-body" width="w-64" /> : null}
+      </div>
+      <AuthPanel>
+        <div className="flex flex-col gap-4">
+          {FIELDS.map((field) => (
+            <div key={field} className="flex flex-col gap-2">
+              <TextLine step="text-dense leading-none" width="w-16" />
+              <Skeleton className="h-9 w-full" />
+            </div>
+          ))}
+          <Skeleton className="h-10 w-full" />
+        </div>
+      </AuthPanel>
+    </div>
   );
 }

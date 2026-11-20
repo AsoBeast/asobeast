@@ -37,7 +37,12 @@ import {
   scoreJobId,
   utcDateKey,
 } from './jobs.types';
-import { JOB_OPTIONS, reviewSyncJobOptions } from './job-options';
+import {
+  JOB_OPTIONS,
+  JOB_PRIORITY,
+  SCHEDULED_JOB_OPTIONS,
+  reviewSyncJobOptions,
+} from './job-options';
 import { ActiveWorkspaces } from './active-workspaces';
 import { enqueueReplacingFailed } from './enqueue-replacing-failed';
 import { DailyCapacity } from './daily-capacity.service';
@@ -142,6 +147,7 @@ export class PipelineService {
     );
     const childOptions = (jobId: string) => ({
       ...JOB_OPTIONS,
+      ...SCHEDULED_JOB_OPTIONS,
       jobId,
       removeDependencyOnFailure: true,
     });
@@ -266,11 +272,12 @@ export class PipelineService {
 
   private async backlogOf(store: Store): Promise<number> {
     const queue = this.queueFor(store);
-    const [waiting, delayed] = await Promise.all([
-      queue.getWaitingCount(),
+    const [counts, delayed] = await Promise.all([
+      queue.getCountsPerPriority([0, JOB_PRIORITY.scheduled]),
       queue.getDelayedCount(),
     ]);
-    return (waiting + delayed) * requestsPerJob(store, BACKLOG_STAGE);
+    const queued = counts[0] + counts[JOB_PRIORITY.scheduled];
+    return (queued + delayed) * requestsPerJob(store, BACKLOG_STAGE);
   }
 
   private async withinKeywordLimit(
@@ -467,7 +474,10 @@ export class PipelineService {
       await this.queueFor(target.keyword.store).add(
         JOBS.SCORE_KEYWORD,
         { keywordId: target.keywordId, ...scope },
-        { jobId: scoreJobId(target.keywordId, bucketFor(target)) },
+        {
+          ...SCHEDULED_JOB_OPTIONS,
+          jobId: scoreJobId(target.keywordId, bucketFor(target)),
+        },
       );
     }
     return keywords.length;

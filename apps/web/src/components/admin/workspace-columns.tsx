@@ -1,5 +1,6 @@
 "use client";
 
+import { useContext } from "react";
 import Link from "next/link";
 import { createColumnHelper } from "@tanstack/react-table";
 import type { SupportWorkspaceSummary } from "@asobeast/shared";
@@ -10,6 +11,7 @@ import { workspaceListHref } from "@/lib/admin-sections";
 import { heldPlanLabel, stageLabel } from "@/lib/admin-stages";
 import { formatDate, formatNumber, pluralize } from "@/lib/format";
 import { NUMBER_SORT, WorkspaceName } from "./cells";
+import { WorkspaceSheetContext } from "./workspace-sheet/workspace-sheet-context";
 
 const columnHelper = createColumnHelper<
   DataTableFeatures,
@@ -88,6 +90,23 @@ function WorkspaceStanding({
   );
 }
 
+function WorkspaceNameCell({
+  workspace,
+}: {
+  workspace: SupportWorkspaceSummary;
+}) {
+  const openSheet = useContext(WorkspaceSheetContext);
+  return openSheet ? (
+    <WorkspaceName
+      name={workspace.name}
+      workspaceId={workspace.workspaceId}
+      onOpen={() => openSheet(workspace.workspaceId)}
+    />
+  ) : (
+    <WorkspaceName name={workspace.name} workspaceId={workspace.workspaceId} />
+  );
+}
+
 export const workspaceColumns = columnHelper.columns([
   columnHelper.accessor("name", {
     id: "name",
@@ -97,12 +116,7 @@ export const workspaceColumns = columnHelper.columns([
     header: ({ column }) => (
       <SortableHeader column={column} label="Workspace" />
     ),
-    cell: ({ row }) => (
-      <WorkspaceName
-        name={row.original.name}
-        workspaceId={row.original.workspaceId}
-      />
-    ),
+    cell: ({ row }) => <WorkspaceNameCell workspace={row.original} />,
   }),
   columnHelper.accessor(
     (workspace) => stageLabel(workspace.stage, workspace.plan),

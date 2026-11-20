@@ -128,7 +128,7 @@ export function productionWarnings(env: Env): string[] {
     env.AI_CALLS_PER_MONTH === null
   ) {
     warnings.push(
-      'OPENAI_API_KEY is set on a self hosted instance with open registration and no AI_CALLS_PER_MONTH. Every account that registers can make unlimited AI calls on your OpenAI key. Set AI_CALLS_PER_MONTH to the calls each workspace may make per month, or close registration with AUTH_ALLOW_REGISTRATION=false.',
+      'OPENAI_API_KEY is set on a self-hosted instance with open registration and no AI_CALLS_PER_MONTH. Every account that registers can make unlimited AI calls on your OpenAI key. Set AI_CALLS_PER_MONTH to the calls each workspace may make per month, or close registration with AUTH_ALLOW_REGISTRATION=false.',
     );
   }
 
@@ -142,7 +142,7 @@ export function productionWarnings(env: Env): string[] {
 
   if (env.ERROR_TRACKING_DSN && !env.BILLING_ENABLED) {
     warnings.push(
-      'ERROR_TRACKING_DSN is set with BILLING_ENABLED false. Error tracking stays off, because a self hosted deployment never reports its errors to anyone else. Remove the dsn, or set BILLING_ENABLED=true if this is the hosted service.',
+      'ERROR_TRACKING_DSN is set with BILLING_ENABLED false. Error tracking stays off, because a self-hosted deployment never reports its errors to anyone else. Remove the dsn, or set BILLING_ENABLED=true if this is the hosted service.',
     );
   }
 

@@ -4,7 +4,10 @@ import { Store } from '@prisma/client';
 import { RateLimitExceededError } from '../auth/rate-limit/rate-limit.errors';
 import { listingTexts } from '../keywords/listing-texts';
 import { PrismaService } from '../prisma/prisma.service';
-import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
+import {
+  ANY_FREE_ENDPOINT,
+  ProxyEgress,
+} from '../store-providers/egress/proxy-egress.service';
 import { StoreRequestError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem } from '../store-providers/types';
@@ -101,7 +104,7 @@ export class CompetitorSuggestionsService {
         app.store,
         app.country,
         () => this.registry.get(app.store).similar(app.storeAppId, app.country),
-        { waitForLocal: false },
+        ANY_FREE_ENDPOINT,
       );
     } catch (error) {
       if (

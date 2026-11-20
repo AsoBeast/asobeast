@@ -1,7 +1,7 @@
 import { pixelBasedPreset, type TailwindConfig } from 'react-email';
 
 const FONT_STACK = [
-  'IBM Plex Sans',
+  'Geist',
   '-apple-system',
   'BlinkMacSystemFont',
   'Segoe UI',
@@ -11,32 +11,34 @@ const FONT_STACK = [
   'sans-serif',
 ];
 
+export const INK_LINK = 'text-ink underline dark:text-night-ink';
+
 export const EMAIL_TAILWIND: TailwindConfig = {
   presets: [pixelBasedPreset],
   theme: {
     extend: {
       colors: {
-        canvas: '#f4f2ef',
+        canvas: '#faf9f7',
         surface: '#ffffff',
-        well: '#fbfaf8',
-        ink: '#110f0c',
-        body: '#4b4742',
-        muted: '#69655f',
-        line: '#e6e4e1',
+        well: '#f4f2ee',
+        ink: '#1c1917',
+        'ink-2': '#6b665f',
+        'ink-3': '#716b64',
+        line: '#e7e4df',
         brand: '#f89820',
-        'brand-ink': '#a24e10',
-        up: '#0d7a3e',
-        down: '#c12535',
+        'brand-ink': '#1c1408',
+        up: '#137a3a',
+        down: '#c2272d',
         night: {
-          canvas: '#110f0c',
-          surface: '#1b1815',
-          well: '#26231f',
-          ink: '#fbfaf8',
-          body: '#d3d0cc',
-          muted: '#aeaba6',
-          line: '#322e2a',
-          up: '#4eca7a',
-          down: '#f66c6d',
+          canvas: '#0c0b0a',
+          surface: '#141311',
+          well: '#1c1a17',
+          ink: '#efece7',
+          'ink-2': '#a39d94',
+          'ink-3': '#8a847b',
+          line: '#2a2724',
+          up: '#4ade80',
+          down: '#f87171',
         },
       },
       fontFamily: { sans: FONT_STACK },

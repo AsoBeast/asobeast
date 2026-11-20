@@ -30,7 +30,7 @@ import {
   KeywordSheetScores,
 } from "./KeywordSheetSections";
 import { KeywordSheetListing, KeywordSheetResults } from "./KeywordSheetReads";
-import { SheetSection } from "./SheetSection";
+import { SheetSection } from "@/components/layout/SheetSection";
 
 const openerOf = (keywordId: string | null): HTMLElement | null =>
   keywordId === null

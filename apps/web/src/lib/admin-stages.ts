@@ -25,7 +25,7 @@ export const WORKSPACE_STAGE_LABELS: Record<WorkspaceStage, string> = {
   "trial-ended": "Trial ended",
   churned: "Churned",
   "no-plan": "No plan",
-  "self-hosted": "Self hosted",
+  "self-hosted": "Self-hosted",
 };
 
 export function stageLabel(

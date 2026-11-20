@@ -23,6 +23,7 @@ import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { KeywordDiscoveryPlanner } from '../src/keyword-discovery/discovery-planner.service';
 import { AppsService } from '../src/apps/apps.service';
 import { FirstRunScheduler } from '../src/apps/first-run.scheduler';
+import { DEFERRED_JOB_OPTIONS } from '../src/jobs/job-options';
 import { FirstPositionChecks } from '../src/keywords/first-position-checks';
 import { ListingCaptureService } from '../src/apps/listing-capture.service';
 import { SubtitleBackfill } from '../src/apps/subtitle-backfill.service';
@@ -985,6 +986,26 @@ describe('AppsController (e2e)', () => {
     expect(await prisma.appSnapshot.count()).toBe(1);
   });
 
+  it('answers the stored listing facts on the import answer', async () => {
+    const response = await api
+      .post('/apps')
+      .send({ url: GOOGLE_PLAY_URL })
+      .expect(201);
+    const body = response.body as AppDetail;
+
+    expect(body.latestSnapshot).toMatchObject({
+      genre: 'TOOLS',
+      genreName: null,
+      developer: null,
+      developerId: null,
+      contentRating: null,
+      releasedAt: '2021-06-01T00:00:00.000Z',
+      storeUpdatedAt: '2022-01-01T00:00:00.000Z',
+    });
+    expect(body.latestSnapshot?.description).toBe('Play fixture description');
+    expect(body.latestSnapshot?.releaseNotes).toBe('Bug fixes');
+  });
+
   it('returns a 400 envelope for an invalid url', async () => {
     const response = await api
       .post('/apps')
@@ -1009,7 +1030,7 @@ describe('AppsController (e2e)', () => {
 
     expectEnvelope(body, 502, '/apps');
     expect(body.message).toBe(
-      'The App Store did not answer. Try again in a few minutes.',
+      'The App Store answered something asobeast could not read. Try again later.',
     );
     expect(body.message).not.toContain('boom');
   });
@@ -1242,6 +1263,36 @@ describe('AppsController (e2e)', () => {
       expect(await countOn(QUEUES.PIPELINE, JOBS.ACTIONS)).toBe(1);
     });
 
+    it.each([
+      [APP_STORE_URL, QUEUES.APP_STORE],
+      [GOOGLE_PLAY_URL, QUEUES.GPLAY],
+    ])(
+      'queues each first check of %s ahead of its first score',
+      async (url, name) => {
+        const imported = await importApp(url);
+        const waiting = await queue(name).getJobs(['wait'], 0, -1, true);
+        const positionOf = (job: string, keywordId: string): number =>
+          waiting.findIndex(
+            (queued) =>
+              queued.name === job &&
+              (queued.data as { keywordId: string }).keywordId === keywordId,
+          );
+
+        const tracked = await prisma.trackedKeyword.findMany({
+          where: { appId: imported.id, active: true },
+          select: { keywordId: true },
+        });
+        expect(tracked.length).toBeGreaterThan(0);
+
+        for (const { keywordId } of tracked) {
+          const check = positionOf(JOBS.CHECK_KEYWORD, keywordId);
+          const score = positionOf(JOBS.SCORE_KEYWORD, keywordId);
+          expect(check).toBeGreaterThanOrEqual(0);
+          expect(score).toBeGreaterThan(check);
+        }
+      },
+    );
+
     it('returns the app it already has rather than scheduling a second pass', async () => {
       const imported = await importApp(APP_STORE_URL);
       const tracked = await trackedCount(imported.id);
@@ -1266,6 +1317,26 @@ describe('AppsController (e2e)', () => {
       expect(await prisma.app.count()).toBe(1);
       expect(await trackedCount(imported.id)).toBeGreaterThan(0);
       failing.mockRestore();
+    });
+
+    it('keeps the first checks and scores when the review backfill cannot be queued', async () => {
+      const add = Reflect.get(Queue.prototype, 'add') as Queue['add'];
+      const refusing = jest
+        .spyOn(Queue.prototype, 'add')
+        .mockImplementation(function (this: Queue, name, ...rest) {
+          return name === JOBS.SYNC_REVIEWS
+            ? Promise.reject(new Error('redis is unreachable'))
+            : add.call(this, name, ...rest);
+        });
+
+      await api.post('/apps').send({ url: APP_STORE_URL }).expect(500);
+      refusing.mockRestore();
+
+      const [{ id }] = await prisma.app.findMany({ select: { id: true } });
+      const tracked = await trackedCount(id);
+      expect(tracked).toBeGreaterThan(0);
+      expect(await countOn(QUEUES.APP_STORE, JOBS.CHECK_KEYWORD)).toBe(tracked);
+      expect(await countOn(QUEUES.APP_STORE, JOBS.SCORE_KEYWORD)).toBe(tracked);
     });
 
     it('holds an action run per import until that import has its first positions', async () => {
@@ -1339,7 +1410,11 @@ describe('AppsController (e2e)', () => {
         expect(checks.length).toBeLessThanOrEqual(
           DISCOVERY_CHECKS_PER_RUN.APP_STORE,
         );
-        expect(checks.every((job) => job.opts.priority === 1)).toBe(true);
+        expect(
+          checks.every(
+            (job) => job.opts.priority === DEFERRED_JOB_OPTIONS.priority,
+          ),
+        ).toBe(true);
         expect(rows.filter(({ queuedAt }) => queuedAt !== null)).toHaveLength(
           checks.length,
         );

@@ -427,13 +427,7 @@ describe('ListingCaptureService refresh answer', () => {
 
     await expect(service.refresh(APP.id)).resolves.toEqual({
       snapshotId: SNAPSHOT.id,
-      changes: [
-        {
-          field: 'screenshotImages',
-          before: '3 screenshots',
-          after: '3 screenshots, reordered',
-        },
-      ],
+      changes: [REORDERED],
       country: 'us',
       currency: null,
     });

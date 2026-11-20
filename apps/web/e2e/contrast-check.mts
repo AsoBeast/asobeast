@@ -9,6 +9,7 @@ export async function contrastViolations(
   page: Page,
   theme: Theme,
   path: string,
+  ready: (page: Page) => Promise<void> = async () => undefined,
 ) {
   await page.addInitScript(
     (value) => window.localStorage.setItem("theme", value),
@@ -17,6 +18,7 @@ export async function contrastViolations(
   await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
   await page.goto(path);
   await page.waitForLoadState("networkidle");
+  await ready(page);
 
   const { violations } = await new AxeBuilder({ page })
     .withRules(["color-contrast"])

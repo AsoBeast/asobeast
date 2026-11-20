@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { ALL_WORKSPACES } from '@asobeast/shared';
+import { ALL_WORKSPACES, WORKSPACE_ID_MAX_LENGTH } from '@asobeast/shared';
 import {
   IsNotEmpty,
   IsOptional,
@@ -8,14 +8,12 @@ import {
   NotEquals,
 } from 'class-validator';
 
-const WORKSPACE_ID_MAX = 64;
-
 export class AdminDirectoryQueryDto {
-  @ApiPropertyOptional({ minLength: 1, maxLength: WORKSPACE_ID_MAX })
+  @ApiPropertyOptional({ minLength: 1, maxLength: WORKSPACE_ID_MAX_LENGTH })
   @IsOptional()
   @IsString()
   @IsNotEmpty()
-  @MaxLength(WORKSPACE_ID_MAX)
+  @MaxLength(WORKSPACE_ID_MAX_LENGTH)
   @NotEquals(ALL_WORKSPACES)
   workspaceId?: string;
 }

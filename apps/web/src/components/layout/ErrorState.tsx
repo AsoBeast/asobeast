@@ -13,18 +13,40 @@ import { recoveryFor, type RecoveryScope } from "@/lib/error-recovery";
 import { reportBrowserError, worthReporting } from "@/lib/error-reporting";
 import { oncePerError } from "@/lib/once-per-error";
 import { refetchFailedQueries, webHealthOptions } from "@/lib/queries";
+import { cn } from "@/lib/utils";
+
+const LAYOUT = {
+  panel: {
+    root: "items-start gap-4 rounded-lg border border-border bg-card p-6 text-left",
+    text: "gap-1",
+    title: "font-medium",
+    body: "max-w-prose",
+  },
+  page: {
+    root: "w-full items-center gap-6 text-center text-balance",
+    text: "gap-2",
+    title: "text-title",
+    body: "",
+  },
+} as const;
 
 export function ErrorState({
   error,
   retry,
   title,
   scope,
+  layout = "panel",
+  className,
 }: {
   error: Error & { digest?: string };
   retry: () => void;
   title?: string;
   scope?: RecoveryScope;
+  layout?: keyof typeof LAYOUT;
+  className?: string;
 }) {
+  const classes = LAYOUT[layout];
+  const Title = layout === "page" ? "h1" : "p";
   const recovery = recoveryFor(error, scope);
   const statusPage = useQuery(webHealthOptions).data?.statusPageUrl ?? null;
   const queryClient = useQueryClient();
@@ -42,13 +64,10 @@ export function ErrorState({
   }, [error]);
 
   return (
-    <div
-      role="alert"
-      className="flex flex-col items-start gap-4 rounded-lg border border-border bg-card p-6 text-left"
-    >
-      <div className="flex flex-col gap-1">
-        <p className="font-medium">{title ?? recovery.title}</p>
-        <p className="max-w-prose text-body text-muted-foreground">
+    <div role="alert" className={cn("flex flex-col", classes.root, className)}>
+      <div className={cn("flex flex-col", classes.text)}>
+        <Title className={classes.title}>{title ?? recovery.title}</Title>
+        <p className={cn("text-body text-muted-foreground", classes.body)}>
           {recovery.body}
         </p>
       </div>
@@ -69,7 +88,7 @@ export function ErrorState({
             href={statusPage}
             target="_blank"
             rel="noreferrer"
-            className="font-medium underline"
+            className="font-medium text-foreground link-underline"
           >
             check the status page
           </a>

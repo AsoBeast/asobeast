@@ -41,6 +41,7 @@ interface LoaderOptions {
   store?: 'APP_STORE' | 'GOOGLE_PLAY';
   screenshots?: Array<{ status: string; caption: string | null }>;
   forApp?: jest.Mock;
+  snapshotFindFirst?: jest.Mock;
 }
 
 const buildLoader = (options: LoaderOptions = {}) => {
@@ -71,17 +72,19 @@ const buildLoader = (options: LoaderOptions = {}) => {
       ]),
     },
     appSnapshot: {
-      findFirst: jest.fn().mockResolvedValue({
-        capturedAt: D0,
-        title: 'Habit Tracker',
-        subtitle: 'Daily Streaks',
-        summary: null,
-        description: 'Build habits.',
-        ratingAvg: 4.6,
-        ratingCount: 5000,
-        storeUpdatedAt: D0,
-        raw: {},
-      }),
+      findFirst:
+        options.snapshotFindFirst ??
+        jest.fn().mockResolvedValue({
+          capturedAt: D0,
+          title: 'Habit Tracker',
+          subtitle: 'Daily Streaks',
+          summary: null,
+          description: 'Build habits.',
+          ratingAvg: 4.6,
+          ratingCount: 5000,
+          storeUpdatedAt: D0,
+          raw: {},
+        }),
     },
     review: {
       findMany: jest
@@ -210,6 +213,75 @@ describe('AuditContextLoader.load', () => {
       latestDate: '2026-09-10',
       weekAgo: 30,
     });
+  });
+
+  it('answers the extract from the latest snapshot when it carries one', async () => {
+    const findFirst = jest.fn().mockResolvedValue({
+      capturedAt: D0,
+      title: 'Habit Tracker',
+      subtitle: 'Daily Streaks',
+      summary: null,
+      description: 'Build habits.',
+      ratingAvg: 4.6,
+      ratingCount: 5000,
+      storeUpdatedAt: D0,
+      raw: { pageExtract: { previewVideoUrls: ['v.mp4'] } },
+    });
+    const context = await buildLoader({ snapshotFindFirst: findFirst }).load(
+      'app-1',
+    );
+
+    expect(findFirst).toHaveBeenCalledTimes(1);
+    expect(context.extract?.facts.previewVideoUrls).toEqual(['v.mp4']);
+    expect(context.extract?.asOf).toBe('2026-09-10');
+    expect(context.extract?.fallback).toBe(false);
+  });
+
+  it('falls back to the newest snapshot with an extract in a second query', async () => {
+    const findFirst = jest
+      .fn()
+      .mockResolvedValueOnce({
+        capturedAt: D0,
+        title: 'Habit Tracker',
+        subtitle: 'Daily Streaks',
+        summary: null,
+        description: 'Build habits.',
+        ratingAvg: 4.6,
+        ratingCount: 5000,
+        storeUpdatedAt: D0,
+        raw: {},
+      })
+      .mockResolvedValueOnce({
+        capturedAt: D0,
+        raw: { pageExtract: { featuredStories: [{ storyId: 's1' }] } },
+      });
+    const context = await buildLoader({ snapshotFindFirst: findFirst }).load(
+      'app-1',
+    );
+
+    expect(findFirst).toHaveBeenCalledTimes(2);
+    expect(context.extract?.facts.featuredStories).toHaveLength(1);
+    expect(context.extract?.fallback).toBe(true);
+  });
+
+  it('scans no snapshot for an extract on google play', async () => {
+    const findFirst = jest.fn().mockResolvedValue({
+      capturedAt: D0,
+      title: 'Habit Tracker',
+      summary: null,
+      description: 'Build habits.',
+      ratingAvg: 4.6,
+      ratingCount: 5000,
+      storeUpdatedAt: D0,
+      raw: {},
+    });
+    const context = await buildLoader({
+      store: 'GOOGLE_PLAY',
+      snapshotFindFirst: findFirst,
+    }).load('app-1');
+
+    expect(findFirst).toHaveBeenCalledTimes(1);
+    expect(context.extract).toBeNull();
   });
 });
 

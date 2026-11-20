@@ -39,9 +39,9 @@ What AsoBeast stores and how is on [Store console credentials](/security/store-c
 
 ## How the numbers are read
 
-asobeast asks Apple for the **App Store Discovery and Engagement** report of each app twice: once as a one time snapshot of the history Apple keeps, back to 1 January 2024, and once as an ongoing request for every new day. Apple produces the first files a day or two after the request, so the card waits for them before it shows numbers.
+AsoBeast asks Apple for the **App Store Discovery and Engagement** report of each app twice: once as a one time snapshot of the history Apple keeps, back to 1 January 2024, and once as an ongoing request for every new day. Apple produces the first files a day or two after the request, so the card waits for them before it shows numbers.
 
-Every day at 05:30 UTC, after the daily run has started, asobeast downloads the files Apple published since the last sync and adds their rows to the funnel. Apple finishes a day within three days and sometimes sends a corrected file for an earlier day; the newest file always wins, and the card counts a day as complete once it is three days old and Apple has delivered it, so a sync that falls behind never shows missing days as zeros.
+Every day at 05:30 UTC, after the daily run has started, AsoBeast downloads the files Apple published since the last sync and adds their rows to the funnel. Apple finishes a day within three days and sometimes sends a corrected file for an earlier day; the newest file always wins, and the card counts a day as complete once it is three days old and Apple has delivered it, so a sync that falls behind never shows missing days as zeros.
 
 Apple drops rows under five users and adds a small amount of noise, so a number is close rather than exact. The card adds unique counts across markets and sources, which reads slightly high for the same person seen in two places.
 
@@ -51,11 +51,11 @@ When the key may read it, the sync also downloads the detailed version of the re
 
 ## Markets
 
-Apple names a market by its territory. asobeast matches each territory to an App Store storefront, so a market on the switcher reads the rows of that storefront. A territory it cannot match still counts in **All markets** and is named in the API log of the sync, so the list can grow.
+Apple names a market by its territory. AsoBeast matches each territory to an App Store storefront, so a market on the switcher reads the rows of that storefront. A territory it cannot match still counts in **All markets** and is named in the API log of the sync, so the list can grow.
 
 ## Google Play
 
-Google publishes no daily analytics API for store listings. Play Console writes monthly report files to a Cloud Storage bucket instead, and asobeast reads them either with your own Google account or with a service account you invite, as [Connect Google Play](/integrations/google-play) describes.
+Google publishes no daily analytics API for store listings. Play Console writes monthly report files to a Cloud Storage bucket instead, and AsoBeast reads them either with your own Google account or with a service account you invite, as [Connect Google Play](/integrations/google-play) describes.
 
 | Number | What it counts |
 | --- | --- |
@@ -75,13 +75,13 @@ Google posts a day three to seven days after it ends, later than Apple, so the n
 
 ### Installs per search term
 
-The traffic source file also names the Google Play search terms that brought visitors. Rows of Google Play search and Google Play explore count, and the placeholder Google writes when it names no term is left out. The keywords page of a Google Play app gains a **Play installs** column that shows, for each tracked keyword, the acquisitions and visitors of the newest complete month in which Google reported that term (the month in progress only when it is the only one), with the month in its tooltip. A term matches a keyword when both read the same after asobeast normalizes them, so case, spacing and punctuation do not matter. Google reports the terms for all markets together, so the column is the same in every market, and a dash means Google reported no visitors for that term. When the newest month Google has delivered names no term on any source, the column says so and names that month instead. See [Track keywords](/guides/track-keywords#see-play-installs-per-search-term).
+The traffic source file also names the Google Play search terms that brought visitors. Rows of Google Play search and Google Play explore count, and the placeholder Google writes when it names no term is left out. The keywords page of a Google Play app gains a **Play installs** column that shows, for each tracked keyword, the acquisitions and visitors of the newest complete month in which Google reported that term (the month in progress only when it is the only one), with the month in its tooltip. A term matches a keyword when both read the same after AsoBeast normalizes them, so case, spacing and punctuation do not matter. Google reports the terms for all markets together, so the column is the same in every market, and a dash means Google reported no visitors for that term. When the newest month Google has delivered names no term on any source, the column says so and names that month instead. See [Track keywords](/guides/track-keywords#see-play-installs-per-search-term).
 
 ## Limits
 
 - One App Store Connect key and one Google Play connection, a service account key or a Google sign in, per workspace.
 - Apple allows each key 3,500 requests an hour. A sync downloads at most 200 daily files on each try and leaves the rest for the next day, so a long history arrives over a few days.
-- When Apple answers an error for one app, or sends a report asobeast cannot read, the other apps and reports still sync and the sync tries the ones that failed again a few minutes later. The section says that some were left for the next sync only when they still fail on the last try, so a passing error at Apple shows no warning. A request Apple stopped for inactivity, or one Apple no longer has, for example because another analytics tool on the team deleted it, is asked for again on the next sync.
+- When Apple answers an error for one app, or sends a report AsoBeast cannot read, the other apps and reports still sync and the sync tries the ones that failed again a few minutes later. The section says that some were left for the next sync only when they still fail on the last try, so a passing error at Apple shows no warning. A request Apple stopped for inactivity, or one Apple no longer has, for example because another analytics tool on the team deleted it, is asked for again on the next sync.
 - When Apple refuses the key during a sync, the connection is marked rejected and nothing is downloaded until you verify it or connect a new one. The numbers already stored are kept and the card shows them again once the key is accepted. A refused service account, a revoked Google sign in or a bucket that disappeared is handled the same way.
 - The downloaded files are kept for `RETENTION_STORE_REPORTS_DAYS` so a parser change can read them again. The funnel rows built from them are kept.
 

@@ -4,6 +4,15 @@ export const SPLIT_WIDE = "@5xl/dashboard:col-span-7";
 
 export const SPLIT_NARROW = "@5xl/dashboard:col-span-5";
 
+export const PULSE_BODY = "isolate grid border-t border-border";
+
+export const PULSE_SPLIT = "@5xl/dashboard:grid-cols-[minmax(0,1fr)_24rem]";
+
+export const BREAKDOWN_PANEL =
+  "flex min-w-0 flex-col gap-1 border-t border-border px-2 pt-3 pb-3 @5xl/dashboard:border-t-0 @5xl/dashboard:border-l";
+
+export const BREAKDOWN_HEADER = "flex min-h-9 items-center gap-2 px-2";
+
 export const APPS_HEADING_ID = "apps-heading";
 
 export const PANEL_FOOTER =

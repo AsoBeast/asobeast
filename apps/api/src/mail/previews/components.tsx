@@ -24,8 +24,8 @@ export default function ComponentsPreview() {
     >
       <EmailHeading>Every component in one place</EmailHeading>
       <EmailParagraph>
-        Body text sits at sixteen pixels on a twenty six pixel line, in the body
-        colour, so long paragraphs stay comfortable to read on a phone.
+        Body text sits at fifteen pixels on a twenty four pixel line, in ink, so
+        long paragraphs stay comfortable to read on a phone.
       </EmailParagraph>
       <EmailParagraph>
         A second paragraph shows the spacing between two blocks of copy.

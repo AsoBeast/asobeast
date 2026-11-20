@@ -114,6 +114,9 @@ import {
   spiderTermParser,
   suggestionStrategyParser,
   visibilityRangeParser,
+  fieldAddParser,
+  fieldLeftOutParser,
+  fieldLocaleParser,
 } from "./search-params";
 
 interface LiteralParser {
@@ -805,5 +808,52 @@ describe("inspection id parser", () => {
 
   it.each(["", "  "])("treats %j as no selection", (value) => {
     expect(inspectParsers.id.parseServerSide(value)).toBeNull();
+  });
+});
+
+describe("fieldAddParser", () => {
+  const serialize = createSerializer({
+    fieldLocale: fieldLocaleParser,
+    fieldAdd: fieldAddParser,
+  });
+
+  it("round trips the phrases in order", () => {
+    const query = serialize({
+      fieldLocale: "en-US",
+      fieldAdd: ["focus timer", "deep work"],
+    });
+    const params = new URLSearchParams(query);
+    expect(fieldAddParser.parse(params.get("fieldAdd") ?? "")).toEqual([
+      "focus timer",
+      "deep work",
+    ]);
+  });
+
+  it("keeps a phrase holding the separator whole", () => {
+    const query = serialize({ fieldAdd: ["focus timer", "a,b"] });
+    const params = new URLSearchParams(query);
+    expect(fieldAddParser.parse(params.get("fieldAdd") ?? "")).toEqual([
+      "focus timer",
+      "a,b",
+    ]);
+  });
+
+  it("leaves the parameter out when nothing is added", () => {
+    expect(serialize({ fieldLocale: "en-US", fieldAdd: null })).toBe(
+      "?fieldLocale=en-US",
+    );
+  });
+});
+
+describe("fieldLeftOutParser", () => {
+  it("reads a positive whole count", () => {
+    expect(fieldLeftOutParser.parse("2")).toBe(2);
+    expect(fieldLeftOutParser.serialize(2)).toBe("2");
+  });
+
+  it("ignores a count that is not a positive whole number", () => {
+    for (const value of ["0", "-1", "1.5", "two", ""]) {
+      expect(fieldLeftOutParser.parse(value)).toBeNull();
+    }
   });
 });

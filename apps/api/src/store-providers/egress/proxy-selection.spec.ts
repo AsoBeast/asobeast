@@ -18,6 +18,8 @@ const candidate = (over: Partial<PoolCandidate>): PoolCandidate => ({
 
 const at = (offsetMs: number) => new Date(NOW.getTime() + offsetMs);
 
+const LEASE_HOLD = 5 * 60_000;
+
 const select = (
   candidates: PoolCandidate[],
   country?: string,
@@ -267,5 +269,113 @@ describe('proxy selection', () => {
   it('marks only the store that geolocates by egress address', () => {
     expect(isGeoSensitive(Store.GOOGLE_PLAY)).toBe(true);
     expect(isGeoSensitive(Store.APP_STORE)).toBe(false);
+  });
+
+  describe('reserve', () => {
+    const held = at(LEASE_HOLD);
+    const keep = (
+      candidates: PoolCandidate[],
+      reserve: number,
+      country?: string,
+    ) =>
+      selectEndpoint({
+        candidates,
+        now: NOW,
+        minIntervalMs: 4000,
+        country,
+        waitForLocal: true,
+        reserve,
+      });
+
+    it('keeps the reserve free of a caller that must leave it', () => {
+      expect(
+        keep(
+          [candidate({ endpointId: 'a' }), candidate({ endpointId: 'b' })],
+          1,
+        ),
+      ).toEqual({ kind: 'endpoint', endpointId: 'a' });
+    });
+
+    it('waits when taking one would leave less than the reserve', () => {
+      expect(
+        keep(
+          [
+            candidate({ endpointId: 'free' }),
+            candidate({ endpointId: 'held', pacedUntil: held }),
+          ],
+          1,
+        ),
+      ).toEqual({ kind: 'wait', waitMs: LEASE_HOLD });
+    });
+
+    it('lets reserve zero take the last free endpoint', () => {
+      expect(
+        keep(
+          [
+            candidate({ endpointId: 'free' }),
+            candidate({ endpointId: 'held', pacedUntil: held }),
+          ],
+          0,
+        ),
+      ).toEqual({ kind: 'endpoint', endpointId: 'free' });
+    });
+
+    it('ignores the reserve when the healthy pool is no larger', () => {
+      expect(keep([candidate({ endpointId: 'only' })], 1)).toEqual({
+        kind: 'endpoint',
+        endpointId: 'only',
+      });
+    });
+
+    it('counts only healthy endpoints toward the pool size', () => {
+      expect(
+        keep(
+          [
+            candidate({ endpointId: 'free' }),
+            candidate({ endpointId: 'burnt', cooldownUntil: at(30_000) }),
+          ],
+          1,
+        ),
+      ).toEqual({ kind: 'endpoint', endpointId: 'free' });
+    });
+
+    it('counts the whole store, not the storefront', () => {
+      expect(
+        keep(
+          [
+            candidate({ endpointId: 'de', country: 'de' }),
+            candidate({ endpointId: 'us', country: 'us' }),
+          ],
+          1,
+          'us',
+        ),
+      ).toEqual({ kind: 'endpoint', endpointId: 'us' });
+    });
+
+    it('keeps the last free endpoint even when it is abroad', () => {
+      expect(
+        keep(
+          [
+            candidate({ endpointId: 'de', country: 'de' }),
+            candidate({ endpointId: 'us', country: 'us', pacedUntil: held }),
+          ],
+          1,
+          'us',
+        ),
+      ).toEqual({ kind: 'wait', waitMs: LEASE_HOLD });
+    });
+
+    it('waits for the endpoint that opens beyond the reserve', () => {
+      expect(
+        keep(
+          [
+            candidate({ endpointId: 'free' }),
+            candidate({ endpointId: 'soon', pacedUntil: at(10_000) }),
+            candidate({ endpointId: 'later', pacedUntil: at(30_000) }),
+          ],
+          1,
+        ),
+      ).toEqual({ kind: 'wait', waitMs: 10_000 });
+    });
   });
 });
