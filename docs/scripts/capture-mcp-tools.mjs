@@ -85,7 +85,7 @@ Apple and Google Play scores come from different public evidence and are not com
 
 ## Every tool maps to an endpoint
 
-Each tool wraps one route on the HTTP API, so the data an agent can reach and the changes it can make are exactly what that route allows and nothing more. Both transports read the same catalog, so the hosted endpoint and the local stdio server expose an identical surface for a given token. See [asobeast API](/api-reference/introduction).
+Each tool wraps one route on the HTTP API, so the data an agent can reach and the changes it can make are exactly what that route allows and nothing more. Both transports read the same catalog, so the hosted endpoint and the local stdio server expose an identical surface for a given token. See [AsoBeast API](/api-reference/introduction).
 
 ## What is deliberately missing
 

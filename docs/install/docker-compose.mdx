@@ -1,13 +1,13 @@
 ---
-title: Self host with Docker Compose
+title: Self-host with Docker Compose
 description: "Clone the repository, generate the two required secrets and run docker compose up. The API applies migrations and seeds the default workspace on first boot."
 icon: container
-keywords: ["docker compose","self host","install","POSTGRES_PASSWORD","AUTH_SECRET"]
+keywords: ["docker compose","self-host","install","POSTGRES_PASSWORD","AUTH_SECRET"]
 ---
 
-Docker Compose is the supported way to run asobeast. Three commands take you from a clone to a running instance, because the API applies its own database migrations and seeds the default workspace when it boots.
+Docker Compose is the supported way to run AsoBeast. Three commands take you from a clone to a running instance, because the API applies its own database migrations and seeds the default workspace when it boots.
 
-## Install asobeast
+## Install AsoBeast
 
 <Steps>
   <Step title="Clone the repository">
@@ -29,7 +29,7 @@ Docker Compose is the supported way to run asobeast. Three commands take you fro
     docker compose up --build -d --wait
     ```
 
-    `--wait` returns only once every health check passes, so a successful exit means the stack is actually serving.
+    `--wait` returns only once every health check passes, so a successful exit means the stack is serving.
   </Step>
   <Step title="Create the owner account">
     Open `http://localhost:3001`. A fresh installation redirects to registration. The first account becomes the owner, and registration closes automatically afterwards unless you set `AUTH_ALLOW_REGISTRATION=true`. Safari does not keep the session cookie over plain `http://localhost`, so use Chrome or Firefox, or put TLS in front of the stack. See [Signing in returns to the sign in form](/operations/troubleshooting#signing-in-returns-to-the-sign-in-form).
@@ -81,7 +81,7 @@ Every service has a health check and a restart policy, and the application conta
 With `ASOBEAST_PORT` set, use that port in each address.
 
 <Warning>
-  `/admin/queues` and `/docs` answer 404 to anyone who is not a signed in owner. That is deliberate. A 403 would confirm the surface exists, so the gate answers as though it does not.
+  `/admin/queues` and `/docs` answer 404 to anyone who is not the signed in [platform operator](/security/admin-surfaces#who-the-platform-operator-is). That is deliberate. A 403 would confirm the surface exists, so the gate answers as though it does not.
 </Warning>
 
 ## Customize the installation
@@ -118,6 +118,6 @@ Never paste resolved Compose configuration into an issue, because it contains th
   </Card>
 
   <Card title="Upgrade and roll back" icon="circle-arrow-up" href="/install/upgrade">
-    Forward migrations, pinned tags and what a rollback really means.
+    Forward migrations, pinned tags and what a rollback can undo.
   </Card>
 </CardGroup>

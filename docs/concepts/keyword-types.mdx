@@ -1,7 +1,7 @@
 ---
 title: Keyword types
 sidebarTitle: Keyword types
-description: "Every tracked keyword is an own brand, a competitor brand or a generic search. asobeast decides the type from stored listings and search pages, and you can set it yourself."
+description: "Every tracked keyword is an own brand, a competitor brand or a generic search. AsoBeast decides the type from stored listings and search pages, and you can set it yourself."
 icon: tag
 keywords: ["keyword type","brand","branded","competitor brand","generic","non branded","keywordClass"]
 ---
@@ -18,7 +18,7 @@ Every tracked keyword has a type. A search for the name of your app behaves noth
 
 ## How is the type decided?
 
-asobeast reads the type from data it already stores, every time the keyword list is read, so it follows your listings and scores without a separate job.
+AsoBeast reads the type from data it already stores, every time the keyword list is read, so it follows your listings and scores without a separate job.
 
 1. **Names.** The name of an app is the leading words of its title: the part before the first separator such as `:`, `|` or a spaced dash, or the whole title when it is a single word. A lead of more than three words reads as a description, not a name, and a title of two or more words with no separator gives no name. The developer name, without legal words such as `Inc`, `LLC` or `Labs`, is a second name of your own app, and the leading words of your title in the keyword's own market, such as a localized name, are a third.
 2. **Whole names only.** A keyword holds a name when it contains every word of it, whatever else it holds. Plurals and accents do not matter, so `forests` holds `forest` and `café` holds `cafe`. A keyword made only of filler words such as `the` or `app` is generic.
@@ -34,7 +34,7 @@ A brand that is also a common word, such as **Notion** or **Things**, is where t
 
 ## Set the type yourself
 
-Open the row menu of a keyword on the keywords page and choose **Keyword type**, then **Own brand**, **Competitor brand** or **Generic**. Your choice wins over the detected type until you choose **Detected automatically**, which goes back to what asobeast reads. The badge of a brand type you set adds "set by you" to the words a screen reader announces and a pointer shows.
+Open the row menu of a keyword on the keywords page and choose **Keyword type**, then **Own brand**, **Competitor brand** or **Generic**. Your choice wins over the detected type until you choose **Detected automatically**, which goes back to what AsoBeast reads. The badge of a brand type you set adds "set by you" to the words a screen reader announces and a pointer shows.
 
 Through the API, `PATCH /apps/{id}/keywords/{keywordId}` takes `keywordClass` with `ownBrand`, `competitorBrand` or `generic`, or `null` to go back to the detected type. See the [API reference](/api-reference/introduction).
 

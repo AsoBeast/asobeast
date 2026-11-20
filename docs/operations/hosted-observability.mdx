@@ -6,7 +6,7 @@ icon: radar
 keywords: ["observability","metrics","alerts","logs","support","multi tenant"]
 ---
 
-A self hosted instance has one tenant and one blast radius. A hosted instance has many, and the questions that need answering at 03:00 are per tenant: is the daily run completing for everyone, who is consuming the pool, is anyone losing data quality, is anyone costing more than they pay, and did anything cross a workspace boundary.
+A self-hosted instance has one tenant and one blast radius. A hosted instance has many, and the questions that need answering at 03:00 are per tenant: is the daily run completing for everyone, who is consuming the pool, is anyone losing data quality, is anyone costing more than they pay, and did anything cross a workspace boundary.
 
 Everything below is built into the API. There is no separate metrics pipeline, log stack or dashboard to run.
 
@@ -83,7 +83,7 @@ Every scrape evaluates the rules below and exposes each firing alert as `asobeas
 | `mail.failures.clustered` | Half or more of the account emails attempted in the last day were refused | [Troubleshooting](/operations/troubleshooting) |
 | `store.parser.broken` | A store canary run failed a shape assertion, on the first failing run rather than the confirmed second | [Scraper breakage](/operations/scraper-breakage) |
 
-The database being unreachable does not need an alert rule. The scrape itself fails, and so does `/health`, which is what an uptime check watches. That check is not part of asobeast and cannot be, because every rule below is evaluated by the API during a scrape of the API. See [Uptime probes and the status page](/operations/uptime) for what watches the machine from outside it.
+The database being unreachable does not need an alert rule. The scrape itself fails, and so does `/health`, which is what an uptime check watches. That check is not part of AsoBeast and cannot be, because every rule below is evaluated by the API during a scrape of the API. See [Uptime probes and the status page](/operations/uptime) for what watches the machine from outside it.
 
 `backup.stale` is the one rule that watches something outside the API. The backup script writes its completion time to a Redis key when a run finishes, including the offsite upload, and the scrape reads it back. That makes a timer somebody disabled, a disk too full for `pg_dump`, and a remote that stopped accepting uploads all look the same from here: the age stops moving. It says nothing until `BACKUP_MAX_AGE_HOURS` declares a window, because an instance that backs up some other way should not be told it is broken, and it stays quiet while `dependency.redis.unavailable` is firing, because the key it reads lives in the Redis that is down. Set the window to comfortably more than one backup interval, for example `36` for a daily schedule, so a single skipped run is not a page.
 
@@ -105,7 +105,7 @@ The database being unreachable does not need an alert rule. The scrape itself fa
 | `queue.memory.high` | Redis passed 80 percent of its memory ceiling |
 | `mail.failures.clustered` | A fifth or more of at least five account emails attempted in the last day were refused |
 
-The two `workspace.cost` rules compare a workspace's share of pool demand with what it pays, so they are evaluated only when `BILLING_ENABLED` is `true`. A self hosted instance has no prices to compare against, and without that gate its only workspace would read as unpaid on every scrape.
+The two `workspace.cost` rules compare a workspace's share of pool demand with what it pays, so they are evaluated only when `BILLING_ENABLED` is `true`. A self-hosted instance has no prices to compare against, and without that gate its only workspace would read as unpaid on every scrape.
 
 ### Review weekly
 
@@ -125,11 +125,11 @@ Both apps report through the official Sentry SDK, each behind its own gate.
 
 When a gate is closed the SDK is never initialized, so nothing is instrumented and nothing is sent.
 
-**The API never reports from a self hosted deployment.** `BILLING_ENABLED` is `false` there, so `ERROR_TRACKING_DSN` is ignored even if somebody sets it, and the end to end suite asserts that a deployment with no cloud configuration opens no connection beyond its own database and queue.
+**The API never reports from a self-hosted deployment.** `BILLING_ENABLED` is `false` there, so `ERROR_TRACKING_DSN` is ignored even if somebody sets it, and the end to end suite asserts that a deployment with no cloud configuration opens no connection beyond its own database and queue.
 
-**The web app has no equivalent third condition, and one thing follows from that.** No Compose file sets `SENTRY_DSN`, so a self hosted deployment reports nothing by default. An operator who sets it anyway is opting their own browsers in, and the reports go to whichever project that dsn names. Nothing reaches the hosted service, because the dsn is never baked into the published image.
+**The web app has no equivalent third condition, and one thing follows from that.** No Compose file sets `SENTRY_DSN`, so a self-hosted deployment reports nothing by default. An operator who sets it anyway is opting their own browsers in, and the reports go to whichever project that dsn names. Nothing reaches the hosted service, because the dsn is never baked into the published image.
 
-The web dsn is read at runtime and handed to the browser by `/api/health`, the same way `STATUS_PAGE_URL` reaches it. It is never baked into the image, because this repository publishes one set of images that the hosted service and every self hoster run.
+The web dsn is read at runtime and handed to the browser by `/api/health`, the same way `STATUS_PAGE_URL` reaches it. It is never baked into the image, because this repository publishes one set of images that the hosted service and every self-hoster run.
 
 ### What is reported
 
@@ -139,7 +139,7 @@ The web dsn is read at runtime and handed to the browser by `/api/health`, the s
 | API queue work | A job whose retry chain is exhausted, once, tagged with the job, the queue and the store. A store console sync that Apple or Google refused is not reported, because the owner sees the refusal on the integrations page |
 | API process | An uncaught exception or an unhandled rejection outside any request or job |
 | Web server | Server Component, route handler and proxy failures, through `onRequestError` |
-| Web browser | A render failure that reaches a route error boundary and that asobeast cannot already explain. An expired session, a spent budget or a missing record is not reported, and neither is a server rendered failure, which the server already reported with a real stack |
+| Web browser | A render failure that reaches a route error boundary and that AsoBeast cannot already explain. An expired session, a spent budget or a missing record is not reported, and neither is a server rendered failure, which the server already reported with a real stack |
 
 Tracing is deliberately off. `GET /metrics` already answers the performance questions this instance asks, and spans from a scraping pipeline are high volume for a question nobody is asking.
 

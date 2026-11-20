@@ -1,12 +1,12 @@
 ---
 title: What the API is for
 sidebarTitle: Scope
-description: "The asobeast API tracks the apps you import and their competitors over time and reads what asobeast collected. It is not a bulk lookup of a store."
+description: "The AsoBeast API tracks the apps you import and their competitors over time and reads what AsoBeast collected. It is not a bulk lookup of a store."
 icon: compass
 keywords: ["API scope","bulk lookup","import","app slots","requests","app record","Retry-After","Google Play","App Store"]
 ---
 
-You import the apps you want to follow, asobeast collects their data every day, and the API reads that history back. No route looks up apps in a store in bulk. Read this page before you design a client around it.
+You import the apps you want to follow, AsoBeast collects their data every day, and the API reads that history back. No route looks up apps in a store in bulk. Read this page before you design a client around it.
 
 ## What the API is for
 
@@ -16,7 +16,7 @@ The API is the same one the dashboard uses, so it reads everything the dashboard
 - Listings and the changes between them, in [Watch listing changes](/guides/listing-changes).
 - Reviews and ratings, in [Sync reviews, reply to them and mine keyword ideas](/guides/reviews).
 - Category ranks and top charts, in [Follow category ranks](/guides/category-ranks) and [Read top charts](/guides/top-charts).
-- Competitors and the actions asobeast recommends, in [Track competitors](/guides/competitors) and [Work the Action Center](/guides/action-center).
+- Competitors and the actions AsoBeast recommends, in [Track competitors](/guides/competitors) and [Work the Action Center](/guides/action-center).
 
 All of it is history. A tracked app builds up days of positions, scores and listings, and that history is what the API serves.
 
@@ -26,10 +26,10 @@ It is not a bulk store lookup. No route takes a list of store ids and answers wi
 
 - **An app is readable only after you import it.** `POST /apps` takes a store URL, fetches the listing once and starts tracking it. Until then, there is no app id to read. See [Import an app](/guides/import-an-app).
 - **An import takes an app slot and one of the day's imports.** The slot stays taken for as long as the app is tracked. The import allowance resets every day.
-- **Tracking means daily collection.** asobeast reads each tracked app from the store on its own schedule and answers your request from what it stored. A read is not a request to the store, and `capturedAt` on the listing says when the store was last asked.
+- **Tracking means daily collection.** AsoBeast reads each tracked app from the store on its own schedule and answers your request from what it stored. A read is not a request to the store, and `capturedAt` on the listing says when the store was last asked.
 - **The routes that do ask a store on the spot are limited separately.** Refreshing a listing and searching a store by name each spend a store allowance of their own. They help you find and update what you track, not list a store. See [Three request classes](/api-reference/rate-limits#three-request-classes).
 
-The numbers for each plan are in [What each plan allows](/api-reference/rate-limits#what-each-plan-allows) and [Pricing](/legal/pricing#plans). A self hosted instance sets none of these plan limits; see [Self hosted instances are unlimited](/api-reference/rate-limits#self-hosted-instances-are-unlimited).
+The numbers for each plan are in [What each plan allows](/api-reference/rate-limits#what-each-plan-allows) and [Pricing](/legal/pricing#plans). A self-hosted instance sets none of these plan limits; see [Self-hosted instances are unlimited](/api-reference/rate-limits#self-hosted-instances-are-unlimited).
 
 ## Requests are not apps
 
@@ -44,7 +44,7 @@ A daily request allowance is not a number of apps. Reading a stored app again co
 
 ## What an app record holds
 
-`GET /apps/{id}` answers the app, its latest stored listing and its competitors. It is built from stored rows, so reading it asks no store. A field is `null` when the store did not say. asobeast never fills one with a guess.
+`GET /apps/{id}` answers the app, its latest stored listing and its competitors. It is built from stored rows, so reading it asks no store. A field is `null` when the store did not say. AsoBeast never fills one with a guess.
 
 ### The app
 
@@ -79,7 +79,7 @@ A daily request allowance is not a number of apps. Reading a stored app again co
 | `installs` | The install count Google Play shows, `null` on the App Store |
 | `price`, `currency` | The price and its currency |
 | `version` | The version string |
-| `capturedAt` | When asobeast stored this copy |
+| `capturedAt` | When AsoBeast stored this copy |
 | `country` | The storefront this copy belongs to |
 | `genre`, `genreName` | The store's category id and its name. The id is a number in a string on the App Store and a name such as `TRAVEL_AND_LOCAL` on Google Play |
 | `developer`, `developerId` | The developer's name and the store's id for it |
@@ -98,7 +98,7 @@ A competitor's listing leaves these two out, so a detail with many competitors s
 
 ## What lives elsewhere
 
-The record is the listing. Everything asobeast collects over time has its own route and its own page.
+The record is the listing. Everything AsoBeast collects over time has its own route and its own page.
 
 | What | Route | Read more |
 | --- | --- | --- |
@@ -110,7 +110,7 @@ The record is the listing. Everything asobeast collects over time has its own ro
 | Listing changes | `GET /apps/{id}/changes` | [Watch listing changes](/guides/listing-changes) |
 | Keyword rankings | `GET /apps/{id}/rankings`, `GET /apps/{id}/keywords` | [Read rankings and SERPs](/guides/read-rankings) and [Track keywords](/guides/track-keywords) |
 
-### What asobeast does not serve
+### What AsoBeast does not serve
 
 Some things a store listing carries are not on the record and have no route:
 
@@ -121,7 +121,7 @@ Some things a store listing carries are not on the record and have no route:
 - Similar apps as a field. Competitor suggestions are a route of their own and are not part of the app.
 - Lists of in app purchases.
 
-If you need one of these, asobeast is not the source for it.
+If you need one of these, AsoBeast is not the source for it.
 
 ## Importing many apps
 

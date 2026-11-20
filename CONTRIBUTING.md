@@ -1,6 +1,6 @@
-# Contributing to asobeast
+# Contributing to AsoBeast
 
-Thank you for helping improve asobeast. The project is a self-hosted App Store Optimization toolkit built as a TypeScript monorepo.
+Thank you for helping improve AsoBeast. The project is a self-hosted App Store Optimization toolkit built as a TypeScript monorepo.
 
 ## Prerequisites
 
@@ -133,7 +133,7 @@ A remote store layout change should be contained to one file under `apps/api/src
 
 ## Licensing of contributions
 
-asobeast is licensed under [AGPL-3.0-only](LICENSE), declared as `AGPL-3.0-only` in every package manifest so that automated scanners read the same answer the repository gives.
+AsoBeast is licensed under [AGPL-3.0-only](LICENSE), declared as `AGPL-3.0-only` in every package manifest so that automated scanners read the same answer the repository gives.
 
 The licence grants no rights in the AsoBeast name and logo; [TRADEMARKS.md](TRADEMARKS.md) says how they may be used.
 

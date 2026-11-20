@@ -1,12 +1,12 @@
 ---
-title: How asobeast collects data
+title: How AsoBeast collects data
 sidebarTitle: Data collection posture
-description: "What the service reads from Apple and Google, what it refuses to do, why the self hosted and hosted cases differ, and what happens if a store objects."
+description: "What the service reads from Apple and Google, what it refuses to do, why the self-hosted and hosted cases differ, and what happens if a store objects."
 icon: telescope
 keywords: ["scraping","posture","rate limits","captcha","apple","google play"]
 ---
 
-asobeast is built on public store data. A product built that way and unwilling to discuss how looks evasive, so this page states the position plainly and in advance. The code is open, so anyone can check that the position matches the behaviour.
+AsoBeast is built on public store data. A product built that way and unwilling to discuss how looks evasive, so this page states the position plainly and in advance. The code is open, so anyone can check that the position matches the behaviour.
 
 ## What the service does
 
@@ -27,7 +27,7 @@ When it is set, what leaves the deployment is a bare `GET` of that url. No reque
 These are commitments, not aspirations, and each is visible in the code.
 
 - **No authenticated access.** Nothing signs in to a store, uses a developer account, or reads anything behind a login.
-- **No private data.** The one private field asobeast handles, the iOS keyword field, is typed in by the app's owner because it cannot be read from anywhere. That is the exception that proves the rule.
+- **No private data.** The one private field AsoBeast handles, the iOS keyword field, is typed in by the app's owner because it cannot be read from anywhere. That is the exception that proves the rule.
 - **No circumvention of access controls.** No paywall bypass, no token forging, no undocumented internal endpoint that a store protects.
 - **No CAPTCHA solving.** If a store challenges a request, the request fails and the job retries later. There is no solver, no third party solving service and no plan to add either.
 - **No republishing.** Collected data is shown to the customer who asked for it. It is not sold, syndicated or offered as a dataset, and the terms forbid customers doing so.
@@ -40,11 +40,11 @@ Those limits exist because a store serving a request for free should not have to
 
 The daily run sheds load rather than pushing harder. When demand passes capacity it drops the least valuable work first and lets the run finish late, and registration on the hosted service is gated before capacity is exceeded rather than after.
 
-## Self hosted and hosted are not the same thing
+## Self-hosted and hosted are not the same thing
 
 Pretending they are would not be credible.
 
-|  | Self hosted | Hosted |
+|  | Self-hosted | Hosted |
 | --- | --- | --- |
 | Who is asking | One developer, about their own apps and their competitors | A service, on behalf of many customers |
 | Where requests leave from | The operator's own address | A pool of datacenter addresses |
@@ -69,4 +69,4 @@ That is also why the [terms of service](https://asobeast.com/terms#accuracy-of-s
 
 The code is [AGPL-3.0-only](https://github.com/AsoBeast/asobeast/blob/main/LICENSE). Every claim on this page is checkable against the source, including the ones that would be convenient to break quietly.
 
-It also means the collection is available without paying anyone: a developer who wants only their own data can run the whole thing themselves, from their own address, at their own volume. Charging for hosting rather than for features keeps that path real, and a real self hosted path is what makes this posture something other than a marketing statement.
+It also means the collection is available without paying anyone: a developer who wants only their own data can run the whole thing themselves, from their own address, at their own volume. Charging for hosting rather than for features keeps that path real, and a real self-hosted path is what makes this posture something other than a marketing statement.
