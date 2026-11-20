@@ -65,7 +65,8 @@ type NominationsRead =
 type LiveVersionRead =
   | { kind: 'live'; id: string }
   | { kind: 'invisible' }
-  | { kind: 'skipped'; message: string };
+  | { kind: 'noRelease' }
+  | { kind: 'failed'; message: string };
 
 interface AppOutcome {
   nominations: number;
@@ -150,13 +151,17 @@ export class AscFeaturingSync {
   private async syncApp(api: AscListingApi, app: SyncApp): Promise<AppOutcome> {
     const version = await this.liveVersionOf(api, app.storeAppId);
     if (version.kind === 'invisible') {
-      await this.recordUnserved(app);
+      await this.recordUnread(app, FIELD_SYNC_UNSERVED_APP);
       return { nominations: 0, promoText: 0 };
     }
-    const promo =
+    if (version.kind === 'failed') {
+      await this.recordUnread(app, version.message);
+      return { nominations: 0, promoText: 0 };
+    }
+    const promo: PromoRead =
       version.kind === 'live'
         ? await this.promoOf(api, version.id)
-        : { kind: 'skipped' as const, message: version.message };
+        : { kind: 'skipped', message: FIELD_SYNC_NO_LIVE_VERSION };
     const nominations = await this.nominationsOf(api, app.storeAppId);
     await this.record(app, promo, nominations);
     return {
@@ -172,14 +177,14 @@ export class AscFeaturingSync {
     try {
       const live = await api.liveVersion(storeAppId);
       if (live === null) {
-        return { kind: 'skipped', message: FIELD_SYNC_NO_LIVE_VERSION };
+        return { kind: 'noRelease' };
       }
       return { kind: 'live', id: live.id };
     } catch (error) {
       if (error instanceof AscRateLimitedError) throw error;
       if (!(error instanceof AscError)) throw error;
       if (isNotFound(error)) return { kind: 'invisible' };
-      return { kind: 'skipped', message: error.message };
+      return { kind: 'failed', message: error.message };
     }
   }
 
@@ -233,13 +238,13 @@ export class AscFeaturingSync {
     return { kind: 'ok', counts };
   }
 
-  private recordUnserved(app: SyncApp): Promise<unknown> {
+  private recordUnread(app: SyncApp, message: string): Promise<unknown> {
     return this.prisma.featuringSync.updateMany({
       where: { appId: app.id },
       data: {
         roleRefused: false,
-        nominationsError: FIELD_SYNC_UNSERVED_APP,
-        promoError: FIELD_SYNC_UNSERVED_APP,
+        nominationsError: message,
+        promoError: message,
       },
     });
   }

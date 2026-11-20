@@ -355,15 +355,14 @@ describe('AscFeaturingSync.run', () => {
     });
   });
 
-  it('records a skipped read of one app and keeps going with the next', async () => {
+  it('records a failed version read on both rows and keeps going with the next', async () => {
     const second = { id: 'app_2', storeAppId: '2345678901' };
     const unreadable =
       'App Store Connect answered with something AsoBeast could not read';
-    const { service, upsert } = build({
+    const { service, upsert, updateMany } = build({
       apps: [APP, second],
       responses: [
         ok(null),
-        nominations([]),
         versions(),
         localizations(['set']),
         nominations([]),
@@ -371,17 +370,48 @@ describe('AscFeaturingSync.run', () => {
     });
 
     await expect(service.run()).resolves.toEqual({
-      nominations: 2,
+      nominations: 1,
       promoText: 1,
     });
-    expect(upsertCalls(upsert)[0].create).toMatchObject({
-      appId: APP.id,
-      promoError: unreadable,
-      nominationsError: null,
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { appId: APP.id },
+      data: {
+        roleRefused: false,
+        nominationsError: unreadable,
+        promoError: unreadable,
+      },
     });
-    expect(upsertCalls(upsert)[1].create).toMatchObject({
+    expect(upsertCalls(upsert)).toHaveLength(1);
+    expect(upsertCalls(upsert)[0].create).toMatchObject({
       appId: second.id,
       promoError: null,
+    });
+  });
+
+  it('reads nothing else of an app whose visibility stayed unknown', async () => {
+    const { service, requests, upsert, updateMany } = build({
+      responses: [
+        failure(500, 'INTERNAL_ERROR'),
+        failure(500, 'INTERNAL_ERROR'),
+      ],
+    });
+
+    await expect(service.run()).resolves.toEqual({
+      nominations: 0,
+      promoText: 0,
+    });
+    expect(requests.map(({ path }) => path)).toEqual([
+      expect.stringContaining('/appStoreVersions'),
+      expect.stringContaining('/appStoreVersions'),
+    ]);
+    expect(upsert).not.toHaveBeenCalled();
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { appId: APP.id },
+      data: {
+        roleRefused: false,
+        nominationsError: 'INTERNAL_ERROR detail',
+        promoError: 'INTERNAL_ERROR detail',
+      },
     });
   });
 
