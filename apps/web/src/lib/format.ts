@@ -114,6 +114,11 @@ const STORE_LABELS: Record<Store, string> = {
   GOOGLE_PLAY: "Google Play",
 };
 
+const STORE_SHORT_LABELS: Record<Store, string> = {
+  APP_STORE: "iOS",
+  GOOGLE_PLAY: "Play",
+};
+
 const countryNames: ReadonlyMap<string, string> = new Map(
   Object.entries(COUNTRY_NAMES),
 );
@@ -247,6 +252,10 @@ export function formatCategoryPosition(value: number | null): string {
 
 export function storeLabel(store: Store): string {
   return STORE_LABELS[store];
+}
+
+export function storeShortLabel(store: Store): string {
+  return STORE_SHORT_LABELS[store];
 }
 
 export function formatCountry(code: string): string {

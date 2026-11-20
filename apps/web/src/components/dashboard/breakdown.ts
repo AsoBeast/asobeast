@@ -7,7 +7,7 @@ import {
   type PortfolioPartChange,
   type Store,
 } from "@asobeast/shared";
-import { pluralize, storeLabel } from "@/lib/format";
+import { pluralize, storeLabel, storeShortLabel } from "@/lib/format";
 import type { DashboardBreakdown, DashboardMetric } from "@/lib/search-params";
 
 export const BREAKDOWN_LIMIT = 6;
@@ -20,6 +20,7 @@ export interface BreakdownRow {
   id: string;
   name: string;
   mark: string;
+  shortMark: string;
   iconUrl?: string | null;
   change: PortfolioPartChange;
   open: number;
@@ -91,6 +92,7 @@ export function breakdownRows(
       id: part.store,
       name: storeLabel(part.store),
       mark: pluralize(part.apps, "app"),
+      shortMark: pluralize(part.apps, "app"),
       change: part.change,
       ...actionsOf(
         apps.filter((app) => app.store === part.store),
@@ -106,6 +108,7 @@ export function breakdownRows(
         id: app.id,
         name: app.name ?? "Untitled app",
         mark: `${storeLabel(app.store)} · ${app.country.toUpperCase()}`,
+        shortMark: `${storeShortLabel(app.store)} · ${app.country.toUpperCase()}`,
         iconUrl: app.iconUrl,
         change: part.change,
         ...actionsOf([app], insights),

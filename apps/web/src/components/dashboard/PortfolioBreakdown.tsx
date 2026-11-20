@@ -217,11 +217,17 @@ export function PortfolioBreakdown({ metric }: { metric: DashboardMetric }) {
                   {row.iconUrl === undefined ? null : (
                     <AppIcon src={row.iconUrl} size={16} />
                   )}
-                  <span className="min-w-0 truncate font-medium">
+                  <span
+                    title={row.name}
+                    className="min-w-0 truncate font-medium"
+                  >
                     {row.name}
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-label text-muted-foreground">
-                    {row.mark}
+                  <span
+                    title={row.mark}
+                    className="shrink-0 text-label whitespace-nowrap text-muted-foreground"
+                  >
+                    {row.shortMark}
                   </span>
                 </span>
                 <Figures row={row} metric={metric} unit={unit} />

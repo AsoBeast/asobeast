@@ -455,7 +455,7 @@ test("the list beside the chart breaks the figure down by app and follows the ta
     "Focus Timer App Store · US, 62 now, +10 30d",
   );
   await expect(rows.first().getByRole("button")).toHaveText(
-    /^Focus TimerApp Store · US62\+10 30d$/,
+    /^Focus TimeriOS · US62\+10 30d$/,
   );
   await expect(rows.last().getByRole("button")).toHaveAccessibleName(
     "Habit Tracker App Store · US, 10 now, no 30d data",
@@ -512,6 +512,49 @@ for (const width of [375, 1440]) {
     expect(fit?.truncated).toBe(true);
     expect(fit?.name).toBeLessThanOrEqual((fit?.cell ?? 0) + 0.5);
     expect(fit?.name).toBeLessThanOrEqual(fit?.figure ?? 0);
+  });
+}
+
+const TWIN_NAME = "Meme Maker - AI Meme Generator";
+
+for (const width of [1280, 1440, 1600]) {
+  test(`two listings of one long named app show their store at ${width} px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto("/");
+
+    const list = breakdown(page);
+    const marks = [];
+    for (const original of ["Focus Timer App Store · US", "Tomato Clock"]) {
+      const row = await hydrated(
+        list.getByRole("button", { name: new RegExp(`^${original}`) }),
+      );
+      marks.push(
+        await row.evaluate((button, twin) => {
+          const name = [...button.querySelectorAll("span")].find(
+            (span) =>
+              span.textContent === "Focus Timer" ||
+              span.textContent === "Tomato Clock",
+          );
+          const mark = name?.nextElementSibling;
+          const figure = button.querySelector(".numeric");
+          if (!name || !(mark instanceof HTMLElement) || !figure) return null;
+          name.textContent = twin;
+          const box = mark.getBoundingClientRect();
+          return {
+            text: mark.textContent,
+            whole: mark.scrollWidth <= mark.clientWidth && box.width > 0,
+            beforeFigure: box.right <= figure.getBoundingClientRect().left,
+          };
+        }, TWIN_NAME),
+      );
+    }
+
+    expect(marks).toEqual([
+      { text: "iOS · US", whole: true, beforeFigure: true },
+      { text: "Play · DE", whole: true, beforeFigure: true },
+    ]);
   });
 }
 
