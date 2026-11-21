@@ -138,7 +138,7 @@ Yes. The keyword import reads CSV exports from Astro, AppFollow and Sonar by the
 
 ### Does AsoBeast send my data anywhere?
 
-Only store searches leave your server by default, sent from your own address or through a proxy you configure. Alerts, email, OpenAI assistance, Apple Ads popularity and the store status check are the only other outbound calls, and each is off until you set it up. There is no telemetry. See [what leaves your deployment](https://docs.asobeast.com/legal/data-collection).
+By default, only store requests leave your server: public searches and listing pages, sent from your own address or through a proxy you configure. Everything else is off until you set it up: alerts, email, OpenAI assistance, Apple Ads popularity, the store status check and a connected App Store Connect or Google Play Console account. There is no telemetry. See [what leaves your deployment](https://docs.asobeast.com/legal/data-collection).
 
 ## Limitations
 
