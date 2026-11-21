@@ -2,11 +2,13 @@
   <a href="https://asobeast.com/?utm_source=github&utm_medium=readme&utm_campaign=asobeast-readme"><img src="docs/images/logo-mark.png" alt="AsoBeast logo" width="112" /></a>
   <h1>AsoBeast</h1>
   <p><strong>AsoBeast is an open-source App Store Optimization (ASO) tool and keyword rank tracker for the Apple App Store and Google Play.</strong></p>
-  <p>Try every feature free for 7 days on the hosted service at <a href="https://asobeast.com/?utm_source=github&utm_medium=readme&utm_campaign=asobeast-readme">asobeast.com</a> (card required, nothing charged if you cancel before day 7), or self-host it free with Docker under AGPL-3.0. Both run the same code.</p>
+  <p>See where your app ranks for every tracked keyword each day, and what to change next.</p>
+  <p>Use the hosted service at <a href="https://asobeast.com/?utm_source=github&utm_medium=readme&utm_campaign=asobeast-readme">asobeast.com</a>, or self-host it free with Docker under AGPL-3.0. Both run the same code.</p>
   <p>
-    <a href="https://app.asobeast.com/register?utm_source=github&utm_medium=readme&utm_campaign=hero"><img alt="Start a free 7-day trial at asobeast.com" src="https://img.shields.io/badge/Start_free_trial-a8520a?style=for-the-badge" /></a>
+    <a href="https://app.asobeast.com/register?utm_source=github&utm_medium=readme&utm_campaign=hero"><img alt="Start a free 7-day AsoBeast trial" src="https://img.shields.io/badge/Start_free_7--day_trial-a8520a?style=for-the-badge" /></a>
     <a href="#quick-start"><img alt="Self-host with Docker" src="https://img.shields.io/badge/Self--host_with_Docker-57606a?style=for-the-badge" /></a>
   </p>
+  <p><sub>7 days free on a card. Cancel before day 7 and nothing is charged.</sub></p>
   <p>
     <a href="LICENSE"><img alt="License: AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg" /></a>
     <a href="https://github.com/AsoBeast/asobeast/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/AsoBeast/asobeast" /></a>
@@ -16,7 +18,8 @@
     <a href="https://docs.asobeast.com">Docs</a> ·
     <a href="https://docs.asobeast.com/mcp/introduction">MCP server</a> ·
     <a href="https://docs.asobeast.com/api-reference/introduction">API</a> ·
-    <a href="https://github.com/AsoBeast/asobeast/releases">Releases</a>
+    <a href="https://github.com/AsoBeast/asobeast/releases">Releases</a> ·
+    <a href="https://docs.asobeast.com/support">Support</a>
   </p>
 </div>
 
@@ -26,11 +29,11 @@
 
 **AsoBeast** is a self-hostable ASO tool for App Store and Google Play keyword research and daily rank tracking. It imports a listing, tracks its keyword rankings every day, watches competitors, reviews and listing changes, and turns that history into a prioritized list of ASO work. It is an open-source alternative to AppTweak and AppFollow for keyword research and rank tracking, built for indie developers, small studios and agencies with a portfolio measured in apps rather than hundreds.
 
-Every store request is an ordinary public search or page request sent from the machine that runs AsoBeast. You need no ASO vendor account or API key, your keyword list stays in your own database, and there is no telemetry.
+A self-hosted AsoBeast sends every store request as an ordinary public search or page request from your own server. You need no ASO vendor account or API key, your keyword list stays in your own database, and there is no telemetry.
 
 ## Quick start
 
-Start a [free 7-day trial at asobeast.com](https://app.asobeast.com/register?utm_source=github&utm_medium=readme&utm_campaign=quick-start) if you would rather not run a server. It asks for a card and charges nothing if you cancel before day 7. To self-host, deploy on Railway in one click, or run Docker Compose on any machine with about 2.5 GB of memory and 5 GB of disk.
+Start a [free 7-day trial at asobeast.com](https://app.asobeast.com/register?utm_source=github&utm_medium=readme&utm_campaign=quick-start) if you would rather not run a server. To self-host, deploy on Railway in one click, or run Docker Compose on any machine with about 2.5 GB of memory and 5 GB of disk.
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/asobeast?referralCode=GAJ6fQ&utm_medium=integration&utm_source=template&utm_campaign=asobeast-readme)
 
@@ -84,38 +87,48 @@ Ask the agent which keywords dropped this week or which action the Action Center
 - Import any App Store or Google Play URL once and [track its keywords](https://docs.asobeast.com/guides/track-keywords) daily in as many countries as you need. Setup suggests markets from the languages your listing ships.
 - [Rank checks](https://docs.asobeast.com/concepts/positions) read as deep as each store lists, up to 200: the App Store usually returns 140 to 200 results and Google Play about 30. One search per keyword covers your app and every competitor.
 - Research any keyword before you track it: the [keyword inspector](https://docs.asobeast.com/guides/keyword-inspections) shows popularity, difficulty, the store's autocomplete and the top 50 apps in any country, and [keyword discovery](https://docs.asobeast.com/guides/keyword-discovery) finds the searches your app already ranks for.
-- AsoBeast scores every keyword for popularity, difficulty and opportunity, and each score shows its source, calculation version, capture date and confidence. The [scoring method](https://docs.asobeast.com/concepts/scoring) is published and versioned.
-- [Competitors](https://docs.asobeast.com/guides/competitors) come from live search results, with the keywords each one leads you on, and you can follow [top charts](https://docs.asobeast.com/guides/top-charts) by country and category.
+- AsoBeast scores every keyword for popularity, difficulty and opportunity, and each score shows its source, calculation version, capture date and confidence. Popularity estimates a keyword's search demand, and difficulty estimates how hard its current top results are to displace. The [scoring method](https://docs.asobeast.com/concepts/scoring) is published and versioned.
+- [Competitors](https://docs.asobeast.com/guides/competitors) come from live search results, with the keyword gaps where each one outranks you, and you can follow [top charts](https://docs.asobeast.com/guides/top-charts) by country and category.
+- The [metadata workbench](https://docs.asobeast.com/guides/metadata-workbench) lints each indexed field against its store limit and holds one private iOS keyword field per localization.
+- Link the App Store and Google Play listings of one product into a [portfolio](https://docs.asobeast.com/guides/portfolio) group, and send its weekly digest to an alert channel.
 - Every metadata change, yours or a competitor's, lands in the [changes feed](https://docs.asobeast.com/guides/listing-changes). Your own changes show what they did to positions and visibility after 7, 14 and 28 days.
-- [Reviews](https://docs.asobeast.com/guides/reviews) sync with their ratings, and you can draft a reply with AI and, with the store console connected, post it once you approve it.
+- [Reviews](https://docs.asobeast.com/guides/reviews) sync with their ratings, and repeated language in negative reviews becomes keyword ideas. You can draft a reply with AI and, with the store console connected, post it once you approve it.
 - The [Action Center](https://docs.asobeast.com/guides/action-center) runs seventeen deterministic rules over your history and ranks what to do next, each action with the numbers behind it. AI can summarize an action but never adds or reorders one. The [audit](https://docs.asobeast.com/guides/aso-audit) scores the listing itself.
-- Connect an App Store Connect key or a Google Play service account to read impressions, page views and conversion from the [store's own reports](https://docs.asobeast.com/guides/store-funnel).
-- [Alerts](https://docs.asobeast.com/guides/alerts) go out by email, webhook, Slack, Discord, Microsoft Teams, Telegram or Google Chat.
+- Connect an App Store Connect key or a Google Play service account to read the [store's own reports](https://docs.asobeast.com/guides/store-funnel): impressions, page views, Get taps and conversion on the App Store, and installs per search term on Google Play.
+- [Alerts](https://docs.asobeast.com/guides/alerts) for rank drops, first rankings, metadata changes, chart moves, rating drops and review spikes go out by email, webhook, Slack, Discord, Microsoft Teams, Telegram or Google Chat.
 - The [MCP server](https://docs.asobeast.com/mcp/introduction) gives Claude, Cursor, VS Code and other clients 42 read tools and 8 opt-in write tools, and the [HTTP API](https://docs.asobeast.com/api-reference/introduction) is documented with OpenAPI.
 
 ## What's new in AsoBeast 2
 
-AsoBeast 2 redesigns every screen. The dashboard and each app's overview open with what moved and what to do next, and the keywords page shows a trend line and the top apps for every keyword. It also adds the keyword inspector, featuring readiness in the audit and a ratings goal, and its changes feed records in-app events and featuring.
+AsoBeast 2 redesigns every screen. The dashboard and each app's overview open with what moved and what to do next, and the keywords page shows a trend line and the top apps for every keyword. AsoBeast 2 also adds the keyword inspector, featuring readiness in the audit and a ratings goal, and the changes feed now records in-app events and featuring.
 
 Upgrading from AsoBeast 1.x needs no script or agent changes, because nothing in the HTTP API or the MCP tools was removed, renamed or narrowed, and the API migrates the database on boot. If you pin the image tag `1`, change it to `2`, because a major tag never moves to the next major. See [upgrade and roll back](https://docs.asobeast.com/install/upgrade).
 
-## Why self-host AsoBeast?
+## How AsoBeast compares
 
-|                            | Self-hosted AsoBeast        | Subscription ASO platforms       |
-| -------------------------- | --------------------------- | -------------------------------- |
-| Where store requests run   | Your server                 | The vendor's infrastructure      |
-| Who sees your keyword list | You                         | The vendor                       |
-| Cost                       | Your hosting bill           | Per seat, per app or per keyword |
-| Keyword history            | Kept as long as you keep it | Held by the vendor               |
-| Score methodology          | Published and versioned     | Set by the vendor                |
+|                          | AsoBeast hosted                    | Self-hosted AsoBeast    | Subscription ASO platforms       |
+| ------------------------ | ---------------------------------- | ----------------------- | -------------------------------- |
+| Setup                    | Sign up                            | Docker or Railway       | Sign up                          |
+| Where store requests run | AsoBeast's servers                 | Your server             | The vendor's infrastructure      |
+| Where your data lives    | AsoBeast, with CSV and JSON export | Your own database       | The vendor                       |
+| Cost                     | The plan you pick                  | Your hosting bill       | Per seat, per app or per keyword |
+| Score methodology        | Published and versioned            | Published and versioned | Set by the vendor                |
 
 AsoBeast has no open core: the self-hosted edition and the hosted service run the same code.
 
 ## Frequently asked questions
 
+### What is App Store Optimization (ASO)?
+
+App Store Optimization (ASO) is the practice of improving how an app listing ranks and converts in App Store and Google Play search and charts.
+
+### How do I track App Store and Google Play keyword rankings?
+
+Import the app's store URL into AsoBeast. It picks keywords from the listing, runs their first rank checks right away, then checks every tracked keyword once a day in each country you add. See [track keywords](https://docs.asobeast.com/guides/track-keywords).
+
 ### Is AsoBeast free and open source?
 
-AsoBeast is free and open source under AGPL-3.0. The hosted service at asobeast.com starts with a free 7-day trial on a card, charges nothing if you cancel before day 7, and is paid after that. See [pricing](https://docs.asobeast.com/legal/pricing). If you offer a modified version as a network service, the AGPL asks you to share that modified source with its users.
+AsoBeast is free and open source under AGPL-3.0. The hosted service at asobeast.com is paid, from \$10 a month, after a 7-day free trial on a card. Cancel before day 7 and nothing is charged. See [pricing](https://docs.asobeast.com/legal/pricing). If you offer a modified version as a network service, the AGPL asks you to share that modified source with its users.
 
 ### Is AsoBeast an alternative to AppTweak or AppFollow?
 
@@ -123,7 +136,7 @@ For keyword research and daily rank tracking, yes. AsoBeast tracks App Store and
 
 ### Does AsoBeast need an App Store Connect or Google Play Console account?
 
-No. AsoBeast reads public store data, so you can track any app, including your competitors. Connecting a console is optional and adds the store's own impressions, page views and conversion for your apps. See [the store funnel](https://docs.asobeast.com/guides/store-funnel).
+No. AsoBeast reads public store data, so you can track any app, including your competitors. Connecting a console is optional and adds the store's own impressions, page views and conversion for your apps. The key is sealed at rest. See [the store funnel](https://docs.asobeast.com/guides/store-funnel).
 
 ### How often does AsoBeast check keyword rankings?
 
@@ -147,7 +160,7 @@ Yes. The keyword import reads CSV exports from Astro, AppFollow and Sonar by the
 
 ### Does AsoBeast send my data anywhere?
 
-By default, AsoBeast sends only store requests from your server: public searches and listing pages, from your own address or through a proxy you configure. Everything else is off until you set it up: alerts, email, OpenAI assistance, Apple Ads popularity, the store status check and a connected App Store Connect or Google Play Console account. There is no telemetry. See [what leaves your deployment](https://docs.asobeast.com/legal/data-collection).
+By default, a self-hosted AsoBeast sends only store requests from your server: public searches and listing pages, from your own address or through a proxy you configure. Everything else is off until you set it up: alerts, email, OpenAI assistance, Apple Ads popularity, the store status check and a connected App Store Connect or Google Play Console account. There is no telemetry. See [what leaves your deployment](https://docs.asobeast.com/legal/data-collection).
 
 ## Limitations
 
