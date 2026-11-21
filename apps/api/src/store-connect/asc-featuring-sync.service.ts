@@ -26,7 +26,7 @@ import {
 const STORE = Store.APP_STORE;
 
 export const FEATURING_ROLE_NEEDED =
-  'This App Store Connect key cannot read featuring nominations. Connect a key with the Admin or App Manager role.';
+  'This App Store Connect key cannot read featuring nominations. Connect a key with the Admin, App Manager or Marketing role.';
 
 const NOMINATION_STATES: readonly AscNominationState[] = ['DRAFT', 'SUBMITTED'];
 
@@ -277,7 +277,7 @@ export class AscFeaturingSync {
         kind: 'ok',
         counts: {
           filled: served.filter(
-            ({ promotionalText }) => (promotionalText ?? '').length > 0,
+            ({ promotionalText }) => (promotionalText ?? '').trim().length > 0,
           ).length,
           total: served.length,
         },
