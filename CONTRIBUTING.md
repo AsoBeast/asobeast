@@ -151,7 +151,7 @@ The hosted service is therefore charged for hosting, never for features. Self-ho
 
 ## Roadmap and compatibility
 
-The compatibility promise for the `1.x` line is the thing to check before you start: the HTTP contract, the `@asobeast/shared` contract types and the MCP tool surface stay compatible throughout `1.x`. Adding an endpoint, an optional field or a tool is fine. Removing or renaming anything on those three surfaces, or narrowing what a request accepts or a response guarantees, needs `2.0.0` and will not be merged into `1.x`. Environment variables, the database schema and internal modules sit outside the promise, and schema changes always ship as forward Prisma migrations.
+The compatibility promise of the current major version is the thing to check before you start: the HTTP contract, the `@asobeast/shared` contract types and the MCP tool surface stay compatible throughout a major version. Adding an endpoint, an optional field or a tool is fine. Removing or renaming anything on those three surfaces, or narrowing what a request accepts or a response guarantees, needs the next major version and will not be merged into the current one. Environment variables, the database schema and internal modules sit outside the promise, and schema changes always ship as forward Prisma migrations.
 
 Open a feature request issue before a large `feat` so the design is agreed before you write it. An idea that still needs shaping starts in [Ideas](https://github.com/AsoBeast/asobeast/discussions/categories/ideas), and a question about how the code works goes to [Q&A](https://github.com/AsoBeast/asobeast/discussions/categories/q-a).
 
