@@ -1,10 +1,12 @@
 import type { AlertEventItem } from "@asobeast/shared";
 import type { DeltaPolarity } from "@/components/ui/delta-chip";
+import { MEASURE_DIGITS } from "@/lib/format";
 
 export interface AlertEventSize {
   value: number;
   polarity: DeltaPolarity;
   period: string;
+  digits?: number;
 }
 
 const TENTHS_PER_STAR = 10;
@@ -38,6 +40,7 @@ export function alertEventSize(
             value: -payload.dropTenths / TENTHS_PER_STAR,
             polarity: "higher-is-better",
             period: "stars",
+            digits: MEASURE_DIGITS,
           }
         : null;
     default:

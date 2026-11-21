@@ -7,11 +7,13 @@ import {
   AuditCheckStatus,
   AuditUnlock,
   KeywordBucket,
+  KeywordClass,
   KeywordComparison,
   LintIssue,
   normalizeText,
   tokenize,
 } from '@asobeast/shared';
+import { fitsOwnListing } from '../keywords/keyword-class';
 import { clamp } from '../scoring/formulas';
 import { round1 } from './audit-engine';
 import { PageExtractFacts } from '../store-providers/page-extract-facts';
@@ -27,6 +29,7 @@ export interface AuditKeyword {
   text: string;
   source: KeywordSource;
   bucket: KeywordBucket | null;
+  keywordClass: KeywordClass | null;
   relevance: number;
   position: number | null;
   traffic: number | null;
@@ -421,6 +424,11 @@ export const priorityKeywords = (keywords: AuditKeyword[]): AuditKeyword[] =>
           (b.opportunity ?? 0) - (a.opportunity ?? 0) ||
           a.text.localeCompare(b.text),
       ),
+  );
+
+export const listingTargets = (keywords: AuditKeyword[]): AuditKeyword[] =>
+  priorityKeywords(keywords).filter((keyword) =>
+    fitsOwnListing(keyword.keywordClass),
   );
 
 export const similarCompetitor = (

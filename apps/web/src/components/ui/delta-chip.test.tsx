@@ -87,4 +87,72 @@ describe("delta chips", () => {
       renderToString(<DeltaChip value={-4} unit="%" period="over 7 days" />),
     ).toContain('aria-label="up 4% over 7 days"');
   });
+
+  it("writes a change with the decimals it asks for, seen and heard alike", () => {
+    const markup = renderToString(
+      <DeltaChip
+        value={3}
+        digits={1}
+        polarity="higher-is-better"
+        period="in visibility"
+      />,
+    );
+
+    expect(
+      textOf(
+        <DeltaChip
+          value={3}
+          digits={1}
+          polarity="higher-is-better"
+          period="in visibility"
+        />,
+      ),
+    ).toBe("<span>3.0</span>");
+    expect(markup).toContain('aria-label="up 3.0 in visibility"');
+  });
+
+  it("rounds a change before it picks the direction", () => {
+    expect(
+      renderToString(
+        <DeltaChip
+          value={-6.64}
+          digits={1}
+          polarity="higher-is-better"
+          period="in visibility"
+        />,
+      ),
+    ).toContain('aria-label="down 6.6 in visibility"');
+    expect(
+      renderToString(<DeltaChip value={0.04} digits={1} period="points" />),
+    ).toContain(">0.0</span>");
+  });
+
+  it.each([
+    [1.25, "up 1.3"],
+    [-1.25, "down 1.3"],
+    [1.15, "up 1.2"],
+    [-1.15, "down 1.2"],
+    [2.55, "up 2.6"],
+    [-0.05, "down 0.1"],
+    [0.04, null],
+  ])(
+    "rounds %s half away from zero like the fixed formatter",
+    (value, label) => {
+      const markup = renderToString(
+        <DeltaChip
+          value={value}
+          digits={1}
+          polarity="higher-is-better"
+          period="in visibility"
+        />,
+      );
+
+      if (label === null) {
+        expect(markup).toContain(">0.0</span>");
+        expect(markup).not.toContain("aria-label");
+      } else {
+        expect(markup).toContain(`aria-label="${label} in visibility"`);
+      }
+    },
+  );
 });

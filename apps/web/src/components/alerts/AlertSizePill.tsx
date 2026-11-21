@@ -17,6 +17,7 @@ export function AlertSizePill({
       value={size.value}
       polarity={size.polarity}
       period={size.period}
+      digits={size.digits}
       form="pill"
       className={cn("min-w-13 justify-center", className)}
     />

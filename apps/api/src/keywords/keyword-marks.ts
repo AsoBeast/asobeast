@@ -167,23 +167,46 @@ function rememberedFinder(surfaces: readonly MarkSurface[]): WordFinder {
   };
 }
 
+const foundWords = (finder: WordFinder, words: readonly string[]) => {
+  const finds = words.map(finder);
+  return {
+    exact: finds.filter((find) => find?.match === 'exact').length,
+    any: finds.filter(Boolean).length,
+  };
+};
+
+function bestFinder(
+  finders: readonly WordFinder[],
+  words: readonly string[],
+): WordFinder {
+  const ranked = finders.map((finder) => ({
+    finder,
+    found: foundWords(finder, words),
+  }));
+  return ranked.reduce((best, next) =>
+    next.found.exact > best.found.exact ||
+    (next.found.exact === best.found.exact && next.found.any > best.found.any)
+      ? next
+      : best,
+  ).finder;
+}
+
 export function keywordMarker(
   app: { store: Store; country: string },
   sources: CoverageSources,
 ): KeywordMarker {
-  const finders = new Map<string, WordFinder>();
-  const finderOf = (country: string): WordFinder => {
+  const finders = new Map<string, WordFinder[]>();
+  const findersOf = (country: string): WordFinder[] => {
     const known = finders.get(country);
     if (known) return known;
     const { surfaces, localized } = keywordSurfaces(app, country, sources);
-    const finder = rememberedFinder(
-      markSurfaces([
-        ...surfaces,
-        ...localized.flatMap((entry) => entry.surfaces),
-      ]),
+    const listings = [surfaces, ...localized.map((entry) => entry.surfaces)];
+    const built = listings.map((group) =>
+      rememberedFinder(markSurfaces(group)),
     );
-    finders.set(country, finder);
-    return finder;
+    finders.set(country, built);
+    return built;
   };
-  return ({ country, text }) => marksOn(text, finderOf(country));
+  return ({ country, text }) =>
+    marksOn(text, bestFinder(findersOf(country), keywordWords(text)));
 }

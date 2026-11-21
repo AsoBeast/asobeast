@@ -32,7 +32,7 @@ describe("actionBrief", () => {
       "Visibility fell from 42.1 to 31.4 · your title changed on Jul 24, 2026 · 1 keyword fell",
     );
     expect(brief("act-slide")).toBe(
-      "Visibility fell from 40 to 32.5 · 14 days with no change of yours · 1 keyword fell",
+      "Visibility fell from 40.0 to 32.5 · 14 days with no change of yours · 1 keyword fell",
     );
   });
 

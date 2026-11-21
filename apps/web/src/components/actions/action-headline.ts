@@ -10,6 +10,7 @@ import {
   formatCountry,
   formatList,
   formatMeasure,
+  formatMeasureFixed,
   pluralize,
 } from "@/lib/format";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
@@ -105,7 +106,7 @@ export function actionHeadline(item: ActionItem): string {
     case "competitor.investigate_overtake":
       return `${evidence.competitorName ?? "A competitor"} changed its ${changedFields(evidence.fields)} and passed you on ${pluralize(evidence.keywords.length, "keyword")}`;
     case "reviews.investigate_rating_decline":
-      return `Review scores fell from ${measure(evidence.baselineAverage)} to ${measure(evidence.recentAverage)} in the last ${evidence.recentDays} days`;
+      return `Review scores fell from ${formatMeasureFixed(evidence.baselineAverage)} to ${formatMeasureFixed(evidence.recentAverage)} in the last ${evidence.recentDays} days`;
     case "reviews.reply_negative":
       return `Reply to ${pluralize(evidence.unanswered, "unanswered low review")}`;
     case "listing.ship_update":

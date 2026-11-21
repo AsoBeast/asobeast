@@ -194,6 +194,18 @@ describe('keyword.push_to_top10', () => {
     ).toEqual([]);
   });
 
+  it('stays silent for a keyword whose words are split across the fields', () => {
+    expect(
+      detect([
+        app({
+          coverage: [
+            { ...coverage('kw_1', []), uncovered: false, wordsSplit: true },
+          ],
+        }),
+      ]),
+    ).toEqual([]);
+  });
+
   it('asks a Play app to use its title or short description', () => {
     const [detection] = detect([
       app({

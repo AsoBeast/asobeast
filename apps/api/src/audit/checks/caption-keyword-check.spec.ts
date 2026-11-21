@@ -70,4 +70,39 @@ describe('captionKeywordsCheck', () => {
         .kind,
     ).toBe('auto');
   });
+
+  it('counts a competitor brand in the captions but never advises one', () => {
+    const rival = [
+      keyword('geoguessr', 'primary', 95, { keywordClass: 'competitorBrand' }),
+      keyword('geo quiz', 'primary', 90),
+    ];
+
+    const result = captionKeywordsCheck(
+      appStoreContext({ keywords: rival }),
+      ['Better than geoguessr'],
+      'keywords',
+    );
+
+    expect(result.score).toBe(4);
+    expect(result.detail).toBe('1 priority keywords appear in your captions.');
+    expect(result.advice?.fix).toContain('geo quiz');
+    expect(result.advice?.fix).not.toContain('geoguessr');
+  });
+
+  it('gives no caption advice when only competitor brands are left', () => {
+    const result = captionKeywordsCheck(
+      appStoreContext({
+        keywords: [
+          keyword('geoguessr', 'primary', 95, {
+            keywordClass: 'competitorBrand',
+          }),
+        ],
+      }),
+      ['Nothing here'],
+      'keywords',
+    );
+
+    expect(result.score).toBe(0);
+    expect(result.advice).toBeNull();
+  });
 });

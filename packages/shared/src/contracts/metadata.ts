@@ -29,6 +29,7 @@ export interface KeywordCoverageRow {
   bucket: KeywordBucket | null;
   fields: CoverageFieldStatus[];
   uncovered: boolean;
+  wordsSplit?: boolean;
   screenshotText?: ScreenshotTextCoverage | null;
   country?: string;
   listingCountry?: string;

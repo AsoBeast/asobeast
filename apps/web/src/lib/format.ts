@@ -10,6 +10,13 @@ const numberFormatter = new Intl.NumberFormat("en-US");
 const measureFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 1,
 });
+export const MEASURE_DIGITS = 1;
+
+const fixedMeasureFormatter = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: MEASURE_DIGITS,
+  maximumFractionDigits: MEASURE_DIGITS,
+  signDisplay: "negative",
+});
 const compactFormatter = new Intl.NumberFormat("en-US", {
   notation: "compact",
   maximumFractionDigits: 1,
@@ -108,6 +115,11 @@ const STORE_LABELS: Record<Store, string> = {
   GOOGLE_PLAY: "Google Play",
 };
 
+const STORE_SHORT_LABELS: Record<Store, string> = {
+  APP_STORE: "iOS",
+  GOOGLE_PLAY: "Play",
+};
+
 const countryNames: ReadonlyMap<string, string> = new Map(
   Object.entries(COUNTRY_NAMES),
 );
@@ -134,6 +146,42 @@ export function formatList(values: readonly string[]): string {
 
 export function formatMeasure(value: number): string {
   return measureFormatter.format(value);
+}
+
+export function formatMeasureFixed(value: number): string {
+  return fixedMeasureFormatter.format(value);
+}
+
+const roundingFormatters = new Map<number, Intl.NumberFormat>();
+
+function roundingFormatter(digits: number): Intl.NumberFormat {
+  const cached = roundingFormatters.get(digits);
+  if (cached) return cached;
+  const formatter = new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+    useGrouping: false,
+  });
+  roundingFormatters.set(digits, formatter);
+  return formatter;
+}
+
+export function roundAsShown(value: number, digits: number): number {
+  return Number(roundingFormatter(digits).format(value));
+}
+
+const isWholeMeasure = (value: number): boolean =>
+  formatMeasureFixed(value).endsWith(".0");
+
+export function formatMeasurePair(
+  before: number,
+  after: number,
+): [string, string] {
+  const format =
+    isWholeMeasure(before) && isWholeMeasure(after)
+      ? formatMeasure
+      : formatMeasureFixed;
+  return [format(before), format(after)];
 }
 
 export function formatCompact(value: number): string {
@@ -223,6 +271,10 @@ export function formatCategoryPosition(value: number | null): string {
 
 export function storeLabel(store: Store): string {
   return STORE_LABELS[store];
+}
+
+export function storeShortLabel(store: Store): string {
+  return STORE_SHORT_LABELS[store];
 }
 
 export function formatCountry(code: string): string {

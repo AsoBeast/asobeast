@@ -3,8 +3,8 @@ import {
   type ActionOutcome,
   type ActionOutcomeVerdict,
 } from "@asobeast/shared";
-import { formatDate, formatMeasure } from "@/lib/format";
-import { TREND_METRIC_LABEL } from "./action-trend-chart";
+import { formatDate } from "@/lib/format";
+import { metricValue, TREND_METRIC_LABEL } from "./action-trend-chart";
 
 export const OUTCOME_VERDICT_LABEL: Record<ActionOutcomeVerdict, string> = {
   improved: "Improved",
@@ -22,7 +22,7 @@ function valueOf(
   depth: number,
 ): string {
   if (outcome.metric !== "position") {
-    return value === null ? "—" : formatMeasure(value);
+    return value === null ? "—" : metricValue(outcome.metric, value);
   }
   return value === null ? `not in the top ${depth}` : `#${value}`;
 }

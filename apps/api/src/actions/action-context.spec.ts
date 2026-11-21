@@ -155,7 +155,19 @@ const loaderFor = (
       ),
     } as unknown as ConfigService<Env, true>,
     {
-      listTracked: jest.fn(() => Promise.resolve(tracked)),
+      listTracked: jest.fn(
+        (
+          _appId: string,
+          _sort: undefined,
+          _country: undefined,
+          options?: { brandFacts?: boolean },
+        ) =>
+          Promise.resolve(
+            options?.brandFacts
+              ? tracked
+              : tracked.map((item) => ({ ...item, keywordClass: undefined })),
+          ),
+      ),
     } as unknown as KeywordsService,
     {
       audit: jest.fn(() =>
@@ -179,6 +191,16 @@ describe('ActionContextLoader', () => {
       rankDropThreshold: 5,
     });
     expect(prisma.keywordRanking.findMany).not.toHaveBeenCalled();
+  });
+
+  it('carries the class of every tracked keyword into the context', async () => {
+    const context = await loaderFor(buildPrisma(), [
+      keyword('kw_1', 'us', { keywordClass: 'competitorBrand' }),
+    ]).load(budget, NOW);
+
+    expect(context.apps[0].trackedKeywords[0].keywordClass).toBe(
+      'competitorBrand',
+    );
   });
 
   it('loads only primary apps and keeps competitors as evidence', async () => {

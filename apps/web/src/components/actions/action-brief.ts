@@ -8,6 +8,8 @@ import {
   formatDate,
   formatList,
   formatMeasure,
+  formatMeasureFixed,
+  formatMeasurePair,
   formatNumber,
   pluralize,
 } from "@/lib/format";
@@ -60,9 +62,9 @@ function fellPart(
   if (before === null || after === null) return null;
   return [
     "Visibility fell from ",
-    strong(formatMeasure(before)),
+    strong(formatMeasureFixed(before)),
     " to ",
-    strong(formatMeasure(after)),
+    strong(formatMeasureFixed(after)),
   ];
 }
 
@@ -170,8 +172,8 @@ const BRIEFS: {
   "market.improve_country": (evidence) => [
     [
       "Visibility ",
-      strong(formatMeasure(evidence.marketVisibility)),
-      ` against ${formatMeasure(evidence.homeVisibility)} at home`,
+      strong(formatMeasureFixed(evidence.marketVisibility)),
+      ` against ${formatMeasureFixed(evidence.homeVisibility)} at home`,
     ],
     [
       `${formatNumber(evidence.rankedKeywords)} of ${pluralize(evidence.trackedKeywords, "keyword")} rank`,
@@ -258,24 +260,29 @@ const BRIEFS: {
             `competitors update every ${formatMeasure(evidence.competitorMedianDays)} days (median of ${evidence.competitorsCompared})`,
           ],
     ]),
-  "conversion.investigate_drop": (evidence) =>
-    present([
+  "conversion.investigate_drop": (evidence) => {
+    const [getsBefore, getsAfter] = formatMeasurePair(
+      evidence.getsBefore,
+      evidence.getsAfter,
+    );
+    return present([
       [
         "Get taps fell from ",
-        strong(formatMeasure(evidence.getsBefore)),
+        strong(getsBefore),
         " to ",
-        strong(formatMeasure(evidence.getsAfter)),
+        strong(getsAfter),
         " a day",
       ],
       [
-        `page views ${formatMeasure(evidence.pageViewsBefore)} to ${formatMeasure(evidence.pageViewsAfter)}`,
+        `page views ${formatMeasurePair(evidence.pageViewsBefore, evidence.pageViewsAfter).join(" to ")}`,
       ],
       evidence.conversionBefore === null || evidence.conversionAfter === null
         ? null
         : [
             `conversion ${percent(evidence.conversionBefore)} to ${percent(evidence.conversionAfter)}`,
           ],
-    ]),
+    ]);
+  },
   "listing.cpp_underperforms": (evidence) => [
     [
       strong(percent(evidence.pageConversion)),

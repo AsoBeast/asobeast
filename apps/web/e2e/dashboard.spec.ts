@@ -452,13 +452,13 @@ test("the list beside the chart breaks the figure down by app and follows the ta
   const rows = list.getByRole("listitem");
   await expect(rows).toHaveCount(CHECKED_APPS);
   await expect(rows.first().getByRole("button")).toHaveAccessibleName(
-    "Focus Timer App Store · US, 62 now, +10 30d",
+    "Focus Timer iOS · US, App Store · US, 62 now, +10 30d",
   );
   await expect(rows.first().getByRole("button")).toHaveText(
-    /^Focus TimerApp Store · US62\+10 30d$/,
+    /^Focus TimeriOS · US62\+10 30d$/,
   );
   await expect(rows.last().getByRole("button")).toHaveAccessibleName(
-    "Habit Tracker App Store · US, 10 now, no 30d data",
+    "Habit Tracker iOS · US, App Store · US, 10 now, no 30d data",
   );
   await expect(list).toContainText("Sorted by change over 30 days");
 
@@ -469,13 +469,13 @@ test("the list beside the chart breaks the figure down by app and follows the ta
 
   await (await hydrated(tile(page, "Moved in 30 days"))).click();
   await expect(rows.first().getByRole("button")).toHaveAccessibleName(
-    "Focus Timer App Store · US, 3 climbing, 1 falling",
+    "Focus Timer iOS · US, App Store · US, 3 climbing, 1 falling",
   );
   await expect(list).toContainText("Sorted by keywords moved in 30 days");
 
   await tile(page, "Open actions").click();
   await expect(rows.first().getByRole("button")).toHaveAccessibleName(
-    "Focus Timer App Store · US, 5 open, 1 critical",
+    "Focus Timer iOS · US, App Store · US, 5 open, 1 critical",
   );
   await expect(list).toContainText("Sorted by priority");
 });
@@ -515,6 +515,49 @@ for (const width of [375, 1440]) {
   });
 }
 
+const TWIN_NAME = "Meme Maker - AI Meme Generator";
+
+for (const width of [1280, 1440, 1600]) {
+  test(`two listings of one long named app show their store at ${width} px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto("/");
+
+    const list = breakdown(page);
+    const marks = [];
+    for (const original of ["Focus Timer iOS · US", "Tomato Clock"]) {
+      const row = await hydrated(
+        list.getByRole("button", { name: new RegExp(`^${original}`) }),
+      );
+      marks.push(
+        await row.evaluate((button, twin) => {
+          const name = [...button.querySelectorAll("span")].find(
+            (span) =>
+              span.textContent === "Focus Timer" ||
+              span.textContent === "Tomato Clock",
+          );
+          const mark = name?.nextElementSibling;
+          const figure = button.querySelector(".numeric");
+          if (!name || !(mark instanceof HTMLElement) || !figure) return null;
+          name.textContent = twin;
+          const box = mark.getBoundingClientRect();
+          return {
+            text: mark.textContent,
+            whole: mark.scrollWidth <= mark.clientWidth && box.width > 0,
+            beforeFigure: box.right <= figure.getBoundingClientRect().left,
+          };
+        }, TWIN_NAME),
+      );
+    }
+
+    expect(marks).toEqual([
+      { text: "iOS · US", whole: true, beforeFigure: true },
+      { text: "Play · DE", whole: true, beforeFigure: true },
+    ]);
+  });
+}
+
 test("pressing an app draws the chart for it alone and the chip returns to every app", async ({
   page,
 }) => {
@@ -528,7 +571,7 @@ test("pressing an app draws the chart for it alone and the chip returns to every
   await page.goto("/");
 
   const row = breakdown(page).getByRole("button", {
-    name: /^Focus Timer App Store · DE/,
+    name: /^Focus Timer iOS · DE, App Store · DE/,
   });
   await (await hydrated(row)).focus();
   await page.keyboard.press("Enter");

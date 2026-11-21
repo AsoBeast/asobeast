@@ -1,5 +1,6 @@
 import type { ChangeImpactWindow, Store } from "@asobeast/shared";
 import { DeltaChip } from "@/components/ui/delta-chip";
+import { MEASURE_DIGITS } from "@/lib/format";
 import { FUNNEL_GETS_LABEL } from "@/lib/funnel";
 import { cn } from "@/lib/utils";
 import {
@@ -42,6 +43,7 @@ function MeasuredFacts({ impact }: { impact: ChangeImpactWindow }) {
           value={impact.visibilityChange}
           polarity="higher-is-better"
           period="in visibility"
+          digits={MEASURE_DIGITS}
           form="pill"
         />
       </dd>

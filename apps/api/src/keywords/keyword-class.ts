@@ -11,6 +11,10 @@ import {
 export const GENERIC_SERP_RELEVANCE = 0.5;
 export const CATEGORY_NAME_COMPETITORS = 2;
 
+export const fitsOwnListing = (
+  keywordClass: KeywordClass | null | undefined,
+): boolean => keywordClass !== 'competitorBrand';
+
 export interface BrandProfile {
   own: readonly BrandName[];
   competitors: readonly BrandName[];

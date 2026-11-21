@@ -188,6 +188,31 @@ export const LATER_RELEASES: readonly Release[] = [
         title: "Thirty days on the keywords trend",
         text: "The trend column of the keywords table can now show the last 30 days instead of the last 7. Open Columns and pick the window; the line, the change beside it and the sort follow, and the choice stays in the page address. A day with no ranked check now leaves a gap in the line instead of a slope, and a row with too few ranked checks says so in words.",
       },
+      {
+        kind: "fixed",
+        title: "Rating chart labels you can read",
+        text: "When an app's rating barely moved, the average rating chart could print the same label twice and place its lines between the values they named. Each line now sits on a tenth of a star and says which one, never twice.",
+      },
+      {
+        kind: "fixed",
+        title: "No competitor names in your listing advice",
+        text: "The stores do not allow other apps' names in your title, subtitle or keyword field, yet a keyword marked as a competitor's brand could still be suggested for them. The Action Center, the audit, the keyword field suggestion, the drafts and the overview now leave such keywords out, while you keep tracking where you rank for them. Mark a keyword generic if it is not really a brand.",
+      },
+      {
+        kind: "fixed",
+        title: "Words in different fields count on the App Store",
+        text: "The App Store finds a search when all of its words are in the title, subtitle and keyword field of one language of your listing, in any order; words from two languages do not add up. A keyword like that no longer reads Not in listing or counts as not covered; the metadata page marks it Words split, since the whole phrase in one field may still rank higher. Google Play keeps looking for the whole phrase.",
+      },
+      {
+        kind: "fixed",
+        title: "Every dashboard app shows its store",
+        text: "In the By app list on the dashboard, a long app name could push the store and country out of sight, so the same app on both stores looked like two identical rows. The store and country now always stay visible, and the full name shows when you point at it.",
+      },
+      {
+        kind: "fixed",
+        title: "Visibility with one decimal",
+        text: "Visibility and its changes now always show one decimal, so a change reads 15.2 to 20.0 rather than 15.2 to 20, and the rating, conversion and audit figures in the Action Center keep one precision on both sides of a change.",
+      },
     ],
   },
   {

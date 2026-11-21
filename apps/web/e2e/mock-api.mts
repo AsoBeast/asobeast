@@ -138,6 +138,8 @@ import {
   METADATA_AUDITS,
   UNREAD_MARKET_COOKIE,
   UNREAD_MARKET_COVERAGE_ROW,
+  WORDS_SPLIT_COOKIE,
+  WORDS_SPLIT_COVERAGE_ROW,
   APP_1_LISTING_MARKETS,
   APP_1_UNCAPTURED_LISTING_MARKETS,
   APP_1_WIDE_LISTING_MARKETS,
@@ -4453,6 +4455,9 @@ const routes: Route[] = [
                   ...audit.coverage,
                   ...(hasCookie(req, UNREAD_MARKET_COOKIE, "1")
                     ? [UNREAD_MARKET_COVERAGE_ROW]
+                    : []),
+                  ...(hasCookie(req, WORDS_SPLIT_COOKIE, "1")
+                    ? [WORDS_SPLIT_COVERAGE_ROW]
                     : []),
                 ]
               : audit.coverage.filter((row) => (row.country ?? home) === home),

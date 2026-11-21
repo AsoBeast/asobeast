@@ -433,7 +433,9 @@ export class ActionContextLoader {
   } | null> {
     try {
       const [tracked, metadata] = await Promise.all([
-        this.keywords.listTracked(app.id),
+        this.keywords.listTracked(app.id, undefined, undefined, {
+          brandFacts: true,
+        }),
         this.metadata.audit(app.id, app.country),
       ]);
       return { tracked, metadata };

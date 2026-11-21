@@ -1,4 +1,5 @@
 import { ArrowDown, ArrowUp, Minus } from "lucide-react";
+import { roundAsShown } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export type DeltaPolarity = "higher-is-better" | "lower-is-better";
@@ -62,6 +63,7 @@ export function DeltaChip({
   polarity = "lower-is-better",
   period,
   unit = "",
+  digits,
   form = "text",
   className,
 }: {
@@ -69,13 +71,17 @@ export function DeltaChip({
   polarity?: DeltaPolarity;
   period: string;
   unit?: string;
+  digits?: number;
   form?: DeltaForm;
   className?: string;
 }) {
   if (value === null) {
     return <span className="text-muted-foreground">—</span>;
   }
-  if (value === 0) {
+  const rounded = digits === undefined ? value : roundAsShown(value, digits);
+  const written = (amount: number) =>
+    digits === undefined ? String(amount) : amount.toFixed(digits);
+  if (rounded === 0) {
     return (
       <span
         data-slot={slotOf(form)}
@@ -85,14 +91,14 @@ export function DeltaChip({
           className,
         )}
       >
-        0
+        {written(0)}
       </span>
     );
   }
 
-  const way = direction(value, polarity);
+  const way = direction(rounded, polarity);
   const Icon = GLYPH[way];
-  const magnitude = Math.abs(value);
+  const magnitude = written(Math.abs(rounded));
 
   return (
     <span
@@ -166,8 +172,7 @@ export function TrendChip({
     );
   }
 
-  const scale = 10 ** digits;
-  const rounded = Math.round(value * scale) / scale;
+  const rounded = roundAsShown(value, digits);
   const way = direction(rounded, "higher-is-better");
   const Icon = GLYPH[way];
   const shown = rounded.toFixed(digits);

@@ -64,7 +64,13 @@ describe("visibilityRange", () => {
   it("joins the visibility before and after", () => {
     expect(
       visibilityRange({ visibilityBefore: 38.4, visibilityAfter: 42 }),
-    ).toBe("38.4 → 42");
+    ).toBe("38.4 → 42.0");
+  });
+
+  it("writes both sides with one decimal", () => {
+    expect(
+      visibilityRange({ visibilityBefore: 15.2, visibilityAfter: 20 }),
+    ).toBe("15.2 → 20.0");
   });
 
   it("has no range when a side is missing", () => {

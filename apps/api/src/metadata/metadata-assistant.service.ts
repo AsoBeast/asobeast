@@ -30,6 +30,7 @@ import {
 import { fieldPhrases, keywordFieldOf } from './listing-surfaces';
 import { MetadataService } from './metadata.service';
 import { LATEST_HOME_LISTING } from '../apps/listing';
+import { fitsOwnListing } from '../keywords/keyword-class';
 
 const DEFAULT_FIELDS: Record<Store, MetadataField[]> = {
   APP_STORE: ['title', 'subtitle', 'keywordField'],
@@ -60,7 +61,9 @@ export class MetadataAssistantService {
     const fields = this.resolveFields(app.store, dto.fields);
     const [audit, tracked, competitors] = await Promise.all([
       this.metadata.audit(appId, app.country),
-      this.keywords.listTracked(appId, undefined, app.country),
+      this.keywords.listTracked(appId, undefined, app.country, {
+        brandFacts: true,
+      }),
       this.prisma.app.findMany({
         where: { primaryAppId: appId },
         select: {
@@ -73,7 +76,9 @@ export class MetadataAssistantService {
       }),
     ]);
 
-    const active = tracked.filter((item) => item.active);
+    const targets = tracked.filter(
+      (item) => item.active && fitsOwnListing(item.keywordClass),
+    );
     const competitorTitles = competitors
       .map((competitor) => competitor.snapshots[0]?.title)
       .filter((title): title is string => Boolean(title));
@@ -92,7 +97,7 @@ export class MetadataAssistantService {
               app.store,
               fields,
               audit,
-              active,
+              targets,
               competitorTitles,
               dto.instructions,
               target,
@@ -108,7 +113,7 @@ export class MetadataAssistantService {
       subtitleWords: tokenize(currentValue(audit, 'subtitle')),
       brandTokens: tokenize(app.name ?? ''),
       competitorNames,
-      trackedKeywords: active.map((item) => item.text),
+      trackedKeywords: targets.map((item) => item.text),
     };
 
     const drafts = validateDrafts(output, app.store, fields, base);

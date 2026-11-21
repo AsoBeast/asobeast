@@ -122,6 +122,24 @@ describe("evidenceSections", () => {
     ).toBe(true);
   });
 
+  it("writes the visibility of a drop with one decimal on both sides", () => {
+    const evidence = evidenceOf("act-drop");
+    if (evidence.rule !== "rank.investigate_drop") throw new Error("fixture");
+
+    expect(
+      factValues({
+        ...evidence,
+        visibilityBefore: 40,
+        visibilityAfter: 32.5,
+        visibilityDelta: 7.5,
+      }),
+    ).toMatchObject({
+      "Visibility before": "40.0",
+      "Visibility after": "32.5",
+      "Visibility delta": "7.5",
+    });
+  });
+
   it("lists the rules a volatile result holds back", () => {
     const evidence = evidenceOf("act-volatile");
     if (evidence.rule !== "serp.hold_volatile") throw new Error("fixture");
@@ -208,7 +226,7 @@ describe("evidenceSections", () => {
     expect(factValues(evidence)).toMatchObject({
       "Recent average": "3.5",
       "Earlier average": "4.5",
-      Drop: "1",
+      Drop: "1.0",
       "Recent reviews": "8 in 14 days",
       "Negative share": "25%",
       "Latest version": "4.2.0",
@@ -216,6 +234,17 @@ describe("evidenceSections", () => {
     expect(
       facts.find((fact) => fact.label === "Recent average")?.grade,
     ).toEqual({ metric: "rating", value: 3.5 });
+  });
+
+  it("writes both review averages with one decimal", () => {
+    const evidence = evidenceOf("act-decline");
+    if (evidence.rule !== "reviews.investigate_rating_decline") {
+      throw new Error("not a decline");
+    }
+
+    expect(
+      factValues({ ...evidence, recentAverage: 3, baselineAverage: 4 }),
+    ).toMatchObject({ "Recent average": "3.0", "Earlier average": "4.0" });
   });
 
   it("states how many low reviews wait for a reply and the reply rate", () => {
@@ -258,7 +287,7 @@ describe("evidenceSections", () => {
 
     expect(factValues(evidence)).toMatchObject({
       Market: "US",
-      "Visibility before": "40",
+      "Visibility before": "40.0",
       "Visibility after": "32.5",
       "Visibility delta": "7.5",
       "Your last change": "—",

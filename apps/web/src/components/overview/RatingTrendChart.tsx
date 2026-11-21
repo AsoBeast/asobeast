@@ -104,6 +104,8 @@ export function RatingTrendChart({
     );
   }
 
+  const axis = ratingAxis(points);
+
   return (
     <ChartContainer
       config={chartConfig}
@@ -116,7 +118,9 @@ export function RatingTrendChart({
         <XAxis {...TIME_AXIS_PROPS} />
         <YAxis
           {...VALUE_AXIS_PROPS}
-          domain={ratingAxis(points)}
+          domain={axis.domain}
+          ticks={axis.ticks}
+          interval={0}
           tickFormatter={(value: number) => formatRating(value)}
         />
         <ChartTooltip content={<RatingTooltip points={points} />} />

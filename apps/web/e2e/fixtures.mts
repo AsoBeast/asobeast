@@ -5518,6 +5518,21 @@ export const UNREAD_MARKET_COVERAGE_ROW: KeywordCoverageRow = {
   listingCountry: "fr",
 };
 
+export const WORDS_SPLIT_COOKIE = "e2e_words_split_coverage";
+
+export const WORDS_SPLIT_COVERAGE_ROW: KeywordCoverageRow = {
+  keywordId: "kw-split",
+  text: "study focus",
+  bucket: null,
+  fields: [
+    { field: "title", covered: false },
+    { field: "subtitle", covered: false },
+    { field: "keywordField", covered: false },
+  ],
+  uncovered: false,
+  wordsSplit: true,
+};
+
 export const APP_1_SCREENSHOTS: AppScreenshots = {
   appId: "app-1",
   store: "APP_STORE",

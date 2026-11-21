@@ -8,6 +8,7 @@ import {
   tokenize,
   TrackedKeywordItem,
 } from '@asobeast/shared';
+import { fitsOwnListing } from '../keywords/keyword-class';
 
 const singular = (word: string): string =>
   word.length > 3 && word.endsWith('s') && !word.endsWith('ss')
@@ -35,7 +36,10 @@ export function suggestKeywordField(
     coverage.filter((row) => row.uncovered).map((row) => row.keywordId),
   );
   const candidates = tracked
-    .filter((item) => uncovered.has(item.keywordId))
+    .filter(
+      (item) =>
+        uncovered.has(item.keywordId) && fitsOwnListing(item.keywordClass),
+    )
     .map((item) => ({
       text: candidateText(item.text, localization),
       score: (item.volume ?? 0) * (item.relevance ?? 0),

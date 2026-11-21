@@ -79,7 +79,7 @@ function weaklyCovered(
   row: KeywordCoverageRow | undefined,
   store: Store,
 ): MetadataField[] | null {
-  if (!row || row.uncovered) return null;
+  if (!row || row.uncovered || row.wordsSplit) return null;
   const covered = row.fields
     .filter((field) => field.covered)
     .map((field) => field.field);

@@ -6,7 +6,7 @@ import {
   type ActionTrend,
   type ActionTrendMetric,
 } from "@asobeast/shared";
-import { formatMeasure } from "@/lib/format";
+import { formatMeasureFixed, formatNumber, MEASURE_DIGITS } from "@/lib/format";
 
 export interface TrendMarker {
   date: string;
@@ -62,16 +62,30 @@ function domainFor(
   }
 }
 
+export const METRIC_DIGITS: Record<ActionTrendMetric, number> = {
+  position: 0,
+  visibility: MEASURE_DIGITS,
+  audit: 0,
+  rating: MEASURE_DIGITS,
+  updateAge: 0,
+  conversion: MEASURE_DIGITS,
+};
+
+export function metricValue(metric: ActionTrendMetric, value: number): string {
+  const shown =
+    METRIC_DIGITS[metric] === 0
+      ? formatNumber(Math.round(value))
+      : formatMeasureFixed(value);
+  return metric === "conversion" ? `${shown}%` : shown;
+}
+
 export function trendValue(trend: ActionTrend, value: number | null): string {
   if (trend.metric === "position") {
     return value === null
       ? formatRankPosition(value, trend.depth ?? RANK_DEPTH)
       : `#${value}`;
   }
-  if (value === null) return "—";
-  return trend.metric === "conversion"
-    ? `${formatMeasure(value)}%`
-    : formatMeasure(value);
+  return value === null ? "—" : metricValue(trend.metric, value);
 }
 
 function summaryOf(trend: ActionTrend, days: number): string {

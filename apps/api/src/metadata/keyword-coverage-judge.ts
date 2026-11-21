@@ -6,7 +6,7 @@ import {
   JudgingSurfaces,
   judgingSurfaces,
 } from './listing-surfaces';
-import { judgeFields } from './localized-coverage';
+import { judgeFields, wordsSplit } from './localized-coverage';
 
 export interface CoverageSources {
   listings: ReadonlyMap<string, ListingTexts>;
@@ -18,6 +18,7 @@ export interface KeywordCoverage {
   fields: CoverageFieldStatus[];
   listingCountry: string;
   uncovered: boolean;
+  wordsSplit: boolean;
 }
 
 export interface KeywordSurfaces extends JudgingSurfaces {
@@ -56,9 +57,15 @@ export function judgeKeywordCoverage(
     sources,
   );
   const fields = judgeFields(keyword.text, surfaces, localized);
+  const missing = fields.every((field) => !field.covered);
+  const split =
+    missing &&
+    app.store === Store.APP_STORE &&
+    wordsSplit(keyword.text, surfaces, localized);
   return {
     fields,
     listingCountry,
-    uncovered: fields.every((field) => !field.covered),
+    uncovered: missing && !split,
+    wordsSplit: split,
   };
 }

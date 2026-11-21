@@ -302,7 +302,7 @@ When an active keyword's newest check is older than yesterday UTC, a clock appea
 
 ### See which words your listing holds
 
-Each keyword in the table marks the words that the listing of the keyword's own market already holds. On the App Store a word is marked when it appears in the title, the subtitle or the keyword field you saved, in any localization the storefront reads. On Google Play it is marked when it appears in the title or the short description. A word that none of those places holds stays plain, so a keyword with no mark is not in your listing at all.
+Each keyword in the table marks the words that the listing of the keyword's own market already holds. On the App Store a word is marked when it appears in the title, the subtitle or the keyword field you saved, in the localization the storefront reads that holds the most words of the keyword, because App Store search never combines the words of two localizations. On Google Play it is marked when it appears in the title or the short description. A word that none of those places holds stays plain, so a keyword with no mark is not in your listing at all.
 
 | Mark | The word is in |
 | --- | --- |
@@ -312,7 +312,7 @@ Each keyword in the table marks the words that the listing of the keyword's own 
 
 A word found in more than one place takes the first of those, in that order, except that an exact match always beats a match that ignores accents: with `cafe` saved in the keyword field and `Café` in the subtitle, the word `cafe` takes the solid amber mark of the keyword field, not a dotted blue one. Every mark also has a hidden label such as "in title" for screen readers, so colour is never the only signal, and the **Columns** menu shows the colours next to the **Listing marks** choice. A dotted mark is a word that matches only when accents are ignored, the same dotted mark as in the [keyword breakdown](/guides/competitors#why-does-a-competitor-rank-above-you).
 
-The marks use the word rules of the [coverage table](/guides/metadata-workbench#check-keyword-coverage): a keyword that the coverage table calls covered has every word marked. They also show what coverage cannot, because words found in different places are marked even when no single field holds the whole phrase. The description is never marked, and a market where you saved no keyword field that it reads shows no amber marks. Markets are judged on their own listing, or on your home listing when the market has none captured.
+The marks use the word rules of the [coverage table](/guides/metadata-workbench#check-keyword-coverage): a keyword that the coverage table calls covered has every word marked, and on the App Store a keyword with every word marked exactly is covered, even when no single field holds the whole phrase. A dotted mark never counts toward coverage, so a keyword with one dotted word still reads **Not in listing**. The description is never marked, and a market where you saved no keyword field that it reads shows no amber marks. Markets are judged on their own listing, or on your home listing when the market has none captured.
 
 The **Listing marks** choice in the **Columns** menu hides the marks. It is remembered in this browser, is not part of the link and is on by default. The CSV export does not change. The same data is in the `matchedIn` field of `list_keywords` and of `GET /apps/{id}/keywords`: the keyword text in consecutive runs, each with the place that holds it (`title`, `subtitle`, `shortDescription` or `keywordField`, or `null`) and whether it matched `exact` or only with accents ignored (`folded`).
 
@@ -337,7 +337,7 @@ The **Insights** column gives each keyword up to two verdicts worked out from th
 | **Dropping** | The position got worse on each of the last three checks. See [When does a keyword count as dropping?](/concepts/positions#when-does-a-keyword-count-as-dropping) |
 | **Page 1 close** | The position is 11 to 13 on a check from today or yesterday UTC. That is narrower than the 11 to 20 band the push to top 10 action watches, so it marks the keywords one small step away from the first results screen |
 | **Beatable** | Difficulty is below popularity and popularity is at least 20. A popularity that is an Apple floor answer gets no verdict, see [What is a floor answer?](/concepts/scoring#what-is-a-floor-answer) |
-| **Not in listing** | Relevance is at least 60 and no field of the listing of the keyword's market holds it, the same verdict as the coverage table on the metadata page |
+| **Not in listing** | Relevance is at least 60 and the listing of the keyword's market does not cover it, the same verdict as the coverage table on the metadata page. On the App Store a keyword whose words are all in the listing, though not as one phrase, is covered. See [Check keyword coverage](/guides/metadata-workbench#check-keyword-coverage) |
 
 When more than two apply, the table shows the first two in the order of the table above, and the CSV export lists every one in its `insights` column. A paused keyword shows no badge. On a phone the column starts hidden, and **Columns** brings it back.
 

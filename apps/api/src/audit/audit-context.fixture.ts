@@ -77,6 +77,7 @@ export const keyword = (
   text,
   source: 'MANUAL',
   bucket,
+  keywordClass: null,
   relevance: 100,
   position: null,
   traffic: null,

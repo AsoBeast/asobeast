@@ -1,4 +1,5 @@
 import type { CoverageFieldStatus, MetadataField } from '@asobeast/shared';
+import { keywordWords, wordMatch } from '../keywords/keyword-breakdown-fields';
 import { coversKeyword } from '../keywords/keyword-coverage';
 
 export interface Surface {
@@ -28,4 +29,26 @@ export function judgeFields(
       ? { field, covered: true, localization: found.localization }
       : { field, covered: false };
   });
+}
+
+const holdsEveryWord = (
+  surfaces: readonly Surface[],
+  words: readonly string[],
+): boolean =>
+  words.every((word) =>
+    surfaces.some(({ value }) => wordMatch(value, word) === 'exact'),
+  );
+
+export function wordsSplit(
+  text: string,
+  surfaces: readonly Surface[],
+  localized: readonly LocalizedSurfaces[],
+): boolean {
+  const words = keywordWords(text);
+  return (
+    words.length > 0 &&
+    [surfaces, ...localized.map((listing) => listing.surfaces)].some((group) =>
+      holdsEveryWord(group, words),
+    )
+  );
 }

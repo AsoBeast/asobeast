@@ -11,6 +11,7 @@ import {
   OPPORTUNITY_HIGH,
   OPPORTUNITY_MIN_RELEVANCE,
 } from '../../scoring/opportunity';
+import { fitsOwnListing } from '../../keywords/keyword-class';
 import type { ActionContext, ActionContextApp } from '../action-context';
 import type { ActionDetector, DetectedAction } from '../action-rule';
 
@@ -61,6 +62,7 @@ function detectForApp(app: ActionContextApp): DetectedAction[] {
   const detections: DetectedAction[] = [];
   for (const keyword of app.trackedKeywords) {
     if (!keyword.active || keyword.country !== app.country) continue;
+    if (!fitsOwnListing(keyword.keywordClass)) continue;
     const withheld = keyword.scoreOutdated === true;
     const opportunity = withheld
       ? (keyword.opportunity ?? 0)

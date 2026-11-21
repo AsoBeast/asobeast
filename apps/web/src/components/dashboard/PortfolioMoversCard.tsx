@@ -39,6 +39,7 @@ function MoverLead({
   mover: PortfolioKeywordMover;
   app: PortfolioApp | undefined;
 }) {
+  const mark = `${mover.country.toUpperCase()} · ${app?.name ?? "Unknown app"}`;
   return (
     <>
       <AppIcon src={app?.iconUrl ?? null} size={16} />
@@ -48,8 +49,11 @@ function MoverLead({
       >
         {mover.text}
       </span>
-      <span className="min-w-0 truncate text-label text-muted-foreground">
-        {`${mover.country.toUpperCase()} · ${app?.name ?? "Unknown app"}`}
+      <span
+        title={mark}
+        className="min-w-0 truncate text-label text-muted-foreground"
+      >
+        {mark}
       </span>
     </>
   );
