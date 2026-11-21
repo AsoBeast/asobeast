@@ -8,7 +8,6 @@
     <a href="https://app.asobeast.com/register?utm_source=github&utm_medium=readme&utm_campaign=hero"><img alt="Start a free 7-day AsoBeast trial" src="https://img.shields.io/badge/Start_free_7--day_trial-a8520a?style=for-the-badge" /></a>
     <a href="#quick-start"><img alt="Self-host with Docker" src="https://img.shields.io/badge/Self--host_with_Docker-57606a?style=for-the-badge" /></a>
   </p>
-  <p><sub>7 days free on a card. Cancel before day 7 and nothing is charged.</sub></p>
   <p>
     <a href="LICENSE"><img alt="License: AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg" /></a>
     <a href="https://github.com/AsoBeast/asobeast/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/AsoBeast/asobeast" /></a>
@@ -78,7 +77,7 @@ Create a personal API token on the Integrations page, then add your instance to 
 claude mcp add --transport http asobeast https://your-host/api/backend/mcp --header "Authorization: Bearer asob_…"
 ```
 
-Ask the agent which keywords dropped this week or which action the Action Center ranks first. [Set up the MCP server](https://docs.asobeast.com/mcp/setup) covers Claude Desktop, Cursor, VS Code, Gemini CLI, Windsurf and the local stdio server, and [MCP recipes](https://docs.asobeast.com/mcp/recipes) has prompts to start from.
+Ask the agent which keywords dropped this week, which competitor entered the top 10 or which action the Action Center ranks first. [Set up the MCP server](https://docs.asobeast.com/mcp/setup) covers Claude Desktop, Cursor, VS Code, Gemini CLI, Windsurf and the local stdio server, and [MCP recipes](https://docs.asobeast.com/mcp/recipes) has prompts to start from.
 
 ## Features
 
@@ -106,17 +105,22 @@ Upgrading from AsoBeast 1.x needs no script or agent changes, because nothing in
 
 ## How AsoBeast compares
 
-|                          | AsoBeast hosted                    | Self-hosted AsoBeast    | Subscription ASO platforms       |
-| ------------------------ | ---------------------------------- | ----------------------- | -------------------------------- |
-| Setup                    | Sign up                            | Docker or Railway       | Sign up                          |
-| Where store requests run | AsoBeast's servers                 | Your server             | The vendor's infrastructure      |
-| Where your data lives    | AsoBeast, with CSV and JSON export | Your own database       | The vendor                       |
-| Cost                     | The plan you pick                  | Your hosting bill       | Per seat, per app or per keyword |
-| Score methodology        | Published and versioned            | Published and versioned | Set by the vendor                |
+|                            | AsoBeast (self-hosted)            | Subscription ASO platforms         |
+| -------------------------- | --------------------------------- | ---------------------------------- |
+| Where store requests run   | Your machine                      | Their infrastructure               |
+| Who sees your keyword list | You                               | The vendor                         |
+| Cost model                 | Your hosting bill                 | Per seat, per app or per keyword   |
+| Keyword history            | Yours, retained on your terms     | Usually ends with the subscription |
+| Score methodology          | Published, versioned, inspectable | Usually proprietary                |
+| Extending it               | Fork it, it is AGPL-3.0           | File a feature request             |
 
-AsoBeast has no open core: the self-hosted edition and the hosted service run the same code.
+AsoBeast has no open core: the hosted service at asobeast.com runs the same code with every feature, so you can start on the [7-day free trial](https://app.asobeast.com/register?utm_source=github&utm_medium=readme&utm_campaign=compare) without running a server.
 
 ## Frequently asked questions
+
+### Is AsoBeast free and open source?
+
+AsoBeast is free and open source under AGPL-3.0. The hosted service at asobeast.com is paid, from \$10 a month, after a 7-day free trial on a card. Cancel before day 7 and nothing is charged. See [pricing](https://docs.asobeast.com/legal/pricing). If you offer a modified version as a network service, the AGPL asks you to share that modified source with its users.
 
 ### What is App Store Optimization (ASO)?
 
@@ -126,17 +130,13 @@ App Store Optimization (ASO) is the practice of improving how an app listing ran
 
 Import the app's store URL into AsoBeast. It picks keywords from the listing, runs their first rank checks right away, then checks every tracked keyword once a day in each country you add. See [track keywords](https://docs.asobeast.com/guides/track-keywords).
 
-### Is AsoBeast free and open source?
-
-AsoBeast is free and open source under AGPL-3.0. The hosted service at asobeast.com is paid, from \$10 a month, after a 7-day free trial on a card. Cancel before day 7 and nothing is charged. See [pricing](https://docs.asobeast.com/legal/pricing). If you offer a modified version as a network service, the AGPL asks you to share that modified source with its users.
-
 ### Is AsoBeast an alternative to AppTweak or AppFollow?
 
 For keyword research and daily rank tracking, yes. AsoBeast tracks App Store and Google Play rankings per country, scores keywords with a published method and imports keyword lists exported from AppFollow, Astro and Sonar. AsoBeast does not replace a large commercial ASO suite: it has no download or revenue estimates, and it checks the stores at a modest rate.
 
 ### Does AsoBeast need an App Store Connect or Google Play Console account?
 
-No. AsoBeast reads public store data, so you can track any app, including your competitors. Connecting a console is optional and adds the store's own impressions, page views and conversion for your apps. The key is sealed at rest. See [the store funnel](https://docs.asobeast.com/guides/store-funnel).
+No. AsoBeast reads public store data, so you can track any app, including your competitors. Connecting a console is optional and adds the store's own impressions, page views and conversion for your apps, and installs per search term on Google Play. The key is sealed at rest. See [the store funnel](https://docs.asobeast.com/guides/store-funnel).
 
 ### How often does AsoBeast check keyword rankings?
 
