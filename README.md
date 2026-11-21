@@ -4,7 +4,7 @@
   <p><strong>AsoBeast is an open-source App Store Optimization (ASO) tool and keyword rank tracker for the Apple App Store and Google Play.</strong></p>
   <p>Try every feature free for 7 days on the hosted service at <a href="https://asobeast.com/?utm_source=github&utm_medium=readme&utm_campaign=asobeast-readme">asobeast.com</a> (card required, nothing charged if you cancel before day 7), or self-host it free with Docker under AGPL-3.0. Both run the same code.</p>
   <p>
-    <a href="https://asobeast.com/?utm_source=github&utm_medium=readme&utm_campaign=asobeast-readme"><img alt="Start a free 7-day trial at asobeast.com" src="https://img.shields.io/badge/Start_free_trial-a8520a?style=for-the-badge" /></a>
+    <a href="https://app.asobeast.com/register?utm_source=github&utm_medium=readme&utm_campaign=hero"><img alt="Start a free 7-day trial at asobeast.com" src="https://img.shields.io/badge/Start_free_trial-a8520a?style=for-the-badge" /></a>
     <a href="#quick-start"><img alt="Self-host with Docker" src="https://img.shields.io/badge/Self--host_with_Docker-57606a?style=for-the-badge" /></a>
   </p>
   <p>
@@ -30,7 +30,7 @@ Every store request is an ordinary public search or page request sent from the m
 
 ## Quick start
 
-Start a [free 7-day trial at asobeast.com](https://asobeast.com/?utm_source=github&utm_medium=readme&utm_campaign=asobeast-readme) if you would rather not run a server. It asks for a card and charges nothing if you cancel before day 7. To self-host, deploy on Railway in one click, or run Docker Compose on any machine with about 2.5 GB of memory and 5 GB of disk.
+Start a [free 7-day trial at asobeast.com](https://app.asobeast.com/register?utm_source=github&utm_medium=readme&utm_campaign=quick-start) if you would rather not run a server. It asks for a card and charges nothing if you cancel before day 7. To self-host, deploy on Railway in one click, or run Docker Compose on any machine with about 2.5 GB of memory and 5 GB of disk.
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/asobeast?referralCode=GAJ6fQ&utm_medium=integration&utm_source=template&utm_campaign=asobeast-readme)
 
