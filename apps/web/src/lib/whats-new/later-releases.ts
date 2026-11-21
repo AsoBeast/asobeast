@@ -2,11 +2,11 @@ import type { Release } from "./release-notes";
 
 export const LATER_RELEASES: readonly Release[] = [
   {
-    version: "1.17.0",
+    version: "2.0.0",
     date: "2026-11-10",
-    title: "Keyword inspector",
+    title: "AsoBeast 2",
     summary:
-      "Look up any keyword in any country without tracking it, and see it beside every keyword you looked up before.",
+      "Every screen now opens with what moved and what to do next, and the keyword inspector looks up any keyword in any country without tracking it.",
     changes: [
       {
         kind: "new",
