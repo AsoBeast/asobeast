@@ -228,7 +228,8 @@ describe('AuditContextLoader.load', () => {
   });
 
   it('carries the coverage verdict of each keyword', async () => {
-    const context = await buildLoader().load('app-1');
+    const { loader } = buildLoader();
+    const context = await loader.load('app-1');
 
     expect(context.keywords[0]?.uncovered).toBe(true);
   });
