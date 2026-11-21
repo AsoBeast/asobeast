@@ -20,6 +20,11 @@ describe('errorOf', () => {
     ['POST', '/v1/customerReviewResponses'],
     ['DELETE', '/v1/customerReviewResponses/resp-1'],
     ['GET', '/v1/customerReviews/r-1/response'],
+    [
+      'GET',
+      '/v1/nominations?filter[state]=SUBMITTED&filter[relatedApps]=1476097583&limit=200',
+    ],
+    ['GET', '/v1/nominations'],
   ] as const)(
     'maps a 403 whose code starts with FORBIDDEN on %s %s to a missing role',
     (method, path) => {
@@ -28,6 +33,16 @@ describe('errorOf', () => {
       ).toBeInstanceOf(AscForbiddenError);
     },
   );
+
+  it('maps a 403 on the nominations read to a missing role whatever its code', () => {
+    const error = errorOf(answered(403, 'NOT_AUTHORIZED'), {
+      method: 'GET',
+      path: '/v1/nominations?filter[state]=DRAFT&limit=200',
+    });
+
+    expect(error).toBeInstanceOf(AscForbiddenError);
+    expect(error).not.toBeInstanceOf(AscRejectedKeyError);
+  });
 
   it('keeps a 403 with another code on a review resource as a rejected key', () => {
     const error = errorOf(answered(403, 'NOT_AUTHORIZED'), read);

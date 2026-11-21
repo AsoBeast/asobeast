@@ -4,6 +4,7 @@ import { ActionRunModule } from '../actions/action-run.module';
 import { KeywordsModule } from '../keywords/keywords.module';
 import { QUEUES } from '../jobs/jobs.types';
 import { AscApiFactory } from './asc-api.factory';
+import { AscFeaturingSync } from './asc-featuring-sync.service';
 import { AscKeywordFieldSync } from './asc-keyword-field-sync.service';
 import { AscReportSync } from './asc-report-sync.service';
 import { ASC_TRANSPORT, undiciTransport } from './asc-transport';
@@ -54,6 +55,7 @@ import { StoreReportsWorker } from './store-reports.worker';
     StoreReportApplier,
     AscReportSync,
     AscKeywordFieldSync,
+    AscFeaturingSync,
     PlayReportSync,
     StoreReportSyncService,
     StoreReportsWorker,

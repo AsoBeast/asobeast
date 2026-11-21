@@ -11,6 +11,8 @@ export interface SyncSummary {
   unresolved: string[];
   fields: number;
   fieldsChanged: number;
+  nominations: number;
+  promoText: number;
 }
 
 export const emptySummary = (): SyncSummary => ({
@@ -24,6 +26,8 @@ export const emptySummary = (): SyncSummary => ({
   unresolved: [],
   fields: 0,
   fieldsChanged: 0,
+  nominations: 0,
+  promoText: 0,
 });
 
 export const retriesFailures = (

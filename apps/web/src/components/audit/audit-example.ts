@@ -66,11 +66,6 @@ const recommendation = (
 
 const LIMITATIONS = [
   {
-    id: "promotional-text",
-    label: "Promotional text",
-    detail: "Not in the data AsoBeast reads.",
-  },
-  {
     id: "review-replies",
     label: "Replies to reviews",
     detail: "The App Store review feed carries no developer replies.",

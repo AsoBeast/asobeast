@@ -7,7 +7,10 @@ import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScreenshotsService } from '../screenshots/screenshots.service';
 import { AuditAiService } from './audit-ai.service';
-import { AuditContextLoader } from './audit-context.loader';
+import {
+  AuditContextLoader,
+  FEATURING_FRESH_DAYS,
+} from './audit-context.loader';
 import { creativeFingerprint } from './creative/creative-observations';
 
 const D0 = new Date('2026-09-10T00:00:00.000Z');
@@ -42,10 +45,44 @@ interface LoaderOptions {
   screenshots?: Array<{ status: string; caption: string | null }>;
   forApp?: jest.Mock;
   snapshotFindFirst?: jest.Mock;
+  featuringRow?: Record<string, unknown> | null;
+  connectionStatus?: 'active' | 'rejected' | null;
 }
+
+const featuringRowOf = (
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> => ({
+  appId: 'app-1',
+  draftNominations: 1,
+  submittedNominations: 1,
+  submittedDate: new Date('2026-10-05T09:30:00.000Z'),
+  publishStartDate: new Date('2026-11-19T00:00:00.000Z'),
+  publishEndDate: new Date('2026-12-19T00:00:00.000Z'),
+  promoFilled: 2,
+  promoTotal: 3,
+  roleRefused: false,
+  nominationsError: null,
+  promoError: null,
+  readAt: new Date(Date.now() - 60 * 60 * 1000),
+  ...overrides,
+});
 
 const buildLoader = (options: LoaderOptions = {}) => {
   const prisma = {
+    featuringSync: {
+      findFirst: jest.fn().mockResolvedValue(options.featuringRow ?? null),
+    },
+    storeConnection: {
+      findFirst: jest
+        .fn()
+        .mockResolvedValue(
+          options.connectionStatus === undefined
+            ? { status: 'active' }
+            : options.connectionStatus === null
+              ? null
+              : { status: options.connectionStatus },
+        ),
+    },
     app: {
       findFirst: jest.fn().mockResolvedValue({
         id: 'app-1',
@@ -148,7 +185,7 @@ const buildLoader = (options: LoaderOptions = {}) => {
   const forApp =
     options.forApp ??
     jest.fn().mockResolvedValue({ screenshots: options.screenshots ?? [] });
-  return new AuditContextLoader(
+  const loader = new AuditContextLoader(
     prisma,
     keywords,
     keywordFields,
@@ -157,23 +194,27 @@ const buildLoader = (options: LoaderOptions = {}) => {
     config,
     { forApp } as unknown as ScreenshotsService,
   );
+  return { loader, prisma };
 };
 
 describe('AuditContextLoader.load', () => {
   it('reports the provider the next analysis would send image links to', async () => {
-    const context = await buildLoader({ provider: 'compatible' }).load('app-1');
+    const { loader } = buildLoader({ provider: 'compatible' });
+    const context = await loader.load('app-1');
 
     expect(context.aiStatus.provider).toBe('compatible');
   });
 
   it('reports no provider when AI is not configured', async () => {
-    const context = await buildLoader({ model: null }).load('app-1');
+    const { loader } = buildLoader({ model: null });
+    const context = await loader.load('app-1');
 
     expect(context.aiStatus.provider).toBeNull();
   });
 
   it('keeps only the active keywords of the home storefront', async () => {
-    const context = await buildLoader().load('app-1');
+    const { loader } = buildLoader();
+    const context = await loader.load('app-1');
 
     expect(context.keywords.map((item) => item.text)).toEqual([
       'habit tracker',
@@ -193,7 +234,8 @@ describe('AuditContextLoader.load', () => {
   });
 
   it('maps each competitor from its latest snapshot', async () => {
-    const context = await buildLoader().load('app-1');
+    const { loader } = buildLoader();
+    const context = await loader.load('app-1');
 
     expect(context.competitors).toEqual([
       {
@@ -212,7 +254,8 @@ describe('AuditContextLoader.load', () => {
   });
 
   it('carries the review window and the negative review threshold', async () => {
-    const context = await buildLoader().load('app-1');
+    const { loader } = buildLoader();
+    const context = await loader.load('app-1');
 
     expect(context.reviews).toEqual([
       { score: 1, title: null, text: 'Too many ads', reviewedAt: D0 },
@@ -221,13 +264,15 @@ describe('AuditContextLoader.load', () => {
   });
 
   it('judges the saved keyword field, untracked phrases included', async () => {
-    const context = await buildLoader().load('app-1');
+    const { loader } = buildLoader();
+    const context = await loader.load('app-1');
 
     expect(context.keywordField).toBe('habit,streak');
   });
 
   it('reads the latest visibility point and the one a week before it', async () => {
-    const context = await buildLoader().load('app-1');
+    const { loader } = buildLoader();
+    const context = await loader.load('app-1');
 
     expect(context.visibility).toEqual({
       latest: 42,
@@ -248,9 +293,8 @@ describe('AuditContextLoader.load', () => {
       storeUpdatedAt: D0,
       raw: { pageExtract: { previewVideoUrls: ['v.mp4'] } },
     });
-    const context = await buildLoader({ snapshotFindFirst: findFirst }).load(
-      'app-1',
-    );
+    const { loader } = buildLoader({ snapshotFindFirst: findFirst });
+    const context = await loader.load('app-1');
 
     expect(findFirst).toHaveBeenCalledTimes(1);
     expect(context.extract?.facts.previewVideoUrls).toEqual(['v.mp4']);
@@ -276,9 +320,8 @@ describe('AuditContextLoader.load', () => {
         capturedAt: D0,
         raw: { pageExtract: { featuredStories: [{ storyId: 's1' }] } },
       });
-    const context = await buildLoader({ snapshotFindFirst: findFirst }).load(
-      'app-1',
-    );
+    const { loader } = buildLoader({ snapshotFindFirst: findFirst });
+    const context = await loader.load('app-1');
 
     expect(findFirst).toHaveBeenCalledTimes(2);
     expect(context.extract?.facts.featuredStories).toHaveLength(1);
@@ -296,13 +339,89 @@ describe('AuditContextLoader.load', () => {
       storeUpdatedAt: D0,
       raw: {},
     });
-    const context = await buildLoader({
+    const { loader } = buildLoader({
       store: 'GOOGLE_PLAY',
       snapshotFindFirst: findFirst,
-    }).load('app-1');
+    });
+    const context = await loader.load('app-1');
 
     expect(findFirst).toHaveBeenCalledTimes(1);
     expect(context.extract).toBeNull();
+  });
+});
+
+describe('AuditContextLoader featuring reads', () => {
+  it('reads the stored featuring row only for an app store app', async () => {
+    const appStore = buildLoader();
+    await appStore.loader.load('app-1');
+    expect(appStore.prisma.featuringSync.findFirst).toHaveBeenCalledTimes(1);
+    expect(appStore.prisma.storeConnection.findFirst).toHaveBeenCalledTimes(1);
+
+    const play = buildLoader({ store: 'GOOGLE_PLAY' });
+    await play.loader.load('app-1');
+    expect(play.prisma.featuringSync.findFirst).not.toHaveBeenCalled();
+    expect(play.prisma.storeConnection.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('answers the stored featuring row while the read is fresh', async () => {
+    const { loader } = buildLoader({ featuringRow: featuringRowOf() });
+    const context = await loader.load('app-1');
+
+    expect(context.featuring).toMatchObject({
+      draftNominations: 1,
+      submittedNominations: 1,
+      submittedDate: new Date('2026-10-05T09:30:00.000Z'),
+      publishStartDate: new Date('2026-11-19T00:00:00.000Z'),
+      publishEndDate: new Date('2026-12-19T00:00:00.000Z'),
+      promoFilled: 2,
+      promoTotal: 3,
+      roleRefused: false,
+      nominationsError: null,
+      promoError: null,
+    });
+  });
+
+  it('answers no featuring reads when the connection was rejected', async () => {
+    const { loader, prisma } = buildLoader({
+      featuringRow: featuringRowOf(),
+      connectionStatus: 'rejected',
+    });
+    const context = await loader.load('app-1');
+
+    expect(context.featuring).toBeNull();
+    expect(prisma.featuringSync.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('answers no featuring reads while no connection exists', async () => {
+    const { loader, prisma } = buildLoader({
+      featuringRow: featuringRowOf(),
+      connectionStatus: null,
+    });
+    const context = await loader.load('app-1');
+
+    expect(context.featuring).toBeNull();
+    expect(prisma.featuringSync.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('answers no featuring reads once the read grew older than three days', async () => {
+    const stale = featuringRowOf({
+      readAt: new Date(
+        Date.now() - (FEATURING_FRESH_DAYS * 24 * 60 * 60 * 1000 + 60_000),
+      ),
+    });
+    const { loader } = buildLoader({ featuringRow: stale });
+    const context = await loader.load('app-1');
+
+    expect(context.featuring).toBeNull();
+  });
+
+  it('answers no featuring reads while the read never settled', async () => {
+    const { loader } = buildLoader({
+      featuringRow: featuringRowOf({ readAt: null }),
+    });
+    const context = await loader.load('app-1');
+
+    expect(context.featuring).toBeNull();
   });
 });
 
@@ -325,7 +444,7 @@ describe('AuditContextLoader creative staleness', () => {
   });
 
   it('flags changed creative as stale when no model is configured', async () => {
-    const loader = buildLoader({
+    const { loader } = buildLoader({
       model: null,
       insight: analyzedInsight('fingerprint-of-older-creative'),
     });
@@ -336,8 +455,9 @@ describe('AuditContextLoader creative staleness', () => {
   });
 
   it('keeps unchanged creative current when no model is configured', async () => {
-    const inputs = await buildLoader().creativeInputs('app-1');
-    const loader = buildLoader({
+    const built = buildLoader();
+    const inputs = await built.loader.creativeInputs('app-1');
+    const { loader } = buildLoader({
       model: null,
       insight: analyzedInsight(creativeFingerprint(inputs, ANALYZED_WITH)),
     });
@@ -350,7 +470,7 @@ describe('AuditContextLoader creative staleness', () => {
 
 describe('AuditContextLoader screenshot captions', () => {
   it('loads the captions read from the latest snapshot of an app store app', async () => {
-    const loader = buildLoader({
+    const { loader } = buildLoader({
       screenshots: [
         { status: 'read', caption: 'Track habits' },
         { status: 'blank', caption: null },
@@ -367,7 +487,7 @@ describe('AuditContextLoader screenshot captions', () => {
   });
 
   it('loads null while nothing has settled', async () => {
-    const loader = buildLoader({
+    const { loader } = buildLoader({
       screenshots: [
         { status: 'pending', caption: null },
         { status: 'failed', caption: null },
@@ -381,7 +501,7 @@ describe('AuditContextLoader screenshot captions', () => {
 
   it('does not ask for captions on google play', async () => {
     const forApp = jest.fn();
-    const loader = buildLoader({ store: 'GOOGLE_PLAY', forApp });
+    const { loader } = buildLoader({ store: 'GOOGLE_PLAY', forApp });
 
     const context = await loader.load('app-1');
 

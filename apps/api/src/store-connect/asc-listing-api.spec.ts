@@ -104,15 +104,39 @@ describe('AscListingApi on an answer it cannot read', () => {
 });
 
 describe('AscListingApi.versionLocalizations', () => {
-  it('reads locale and keywords per localization', async () => {
-    const { api, requests } = recorded(localizations(['en-US', 'de-DE']));
+  it('reads locale, keywords and promotional text per localization', async () => {
+    const { api, requests } = recorded(
+      ok({
+        data: [
+          {
+            id: 'loc-1',
+            type: 'appStoreVersionLocalizations',
+            attributes: {
+              locale: 'en-US',
+              keywords: 'focus,timer',
+              promotionalText: 'Two weeks of focus.',
+            },
+          },
+          {
+            id: 'loc-2',
+            type: 'appStoreVersionLocalizations',
+            attributes: { locale: 'de-DE', keywords: 'fokus' },
+          },
+        ],
+        links: {},
+      }),
+    );
 
     await expect(api.versionLocalizations('900')).resolves.toEqual([
-      { locale: 'en-US', keywords: 'focus,timer' },
-      { locale: 'de-DE', keywords: 'focus,timer' },
+      {
+        locale: 'en-US',
+        keywords: 'focus,timer',
+        promotionalText: 'Two weeks of focus.',
+      },
+      { locale: 'de-DE', keywords: 'fokus', promotionalText: null },
     ]);
     expect(requests[0].path).toBe(
-      '/v1/appStoreVersions/900/appStoreVersionLocalizations?fields[appStoreVersionLocalizations]=locale,keywords&limit=200',
+      '/v1/appStoreVersions/900/appStoreVersionLocalizations?fields[appStoreVersionLocalizations]=locale,keywords,promotionalText&limit=200',
     );
   });
 
@@ -120,7 +144,54 @@ describe('AscListingApi.versionLocalizations', () => {
     const { api } = recorded(localizations(['empty']));
 
     await expect(api.versionLocalizations('900')).resolves.toEqual([
-      { locale: 'empty', keywords: '' },
+      { locale: 'empty', keywords: '', promotionalText: null },
+    ]);
+  });
+});
+
+describe('AscListingApi.nominations', () => {
+  it('reads the nominations of the requested states for the app', async () => {
+    const { api, requests } = recorded(
+      ok({
+        data: [
+          {
+            id: 'nom-1',
+            type: 'nominations',
+            attributes: {
+              state: 'SUBMITTED',
+              submittedDate: '2026-10-01T09:30:00.000Z',
+              publishStartDate: '2026-11-15T00:00:00.000Z',
+              publishEndDate: '2026-12-15T00:00:00.000Z',
+            },
+          },
+        ],
+        links: {},
+      }),
+    );
+
+    await expect(
+      api.nominations('1476097583', ['DRAFT', 'SUBMITTED']),
+    ).resolves.toEqual([
+      {
+        id: 'nom-1',
+        state: 'SUBMITTED',
+        submittedDate: '2026-10-01T09:30:00.000Z',
+        publishStartDate: '2026-11-15T00:00:00.000Z',
+        publishEndDate: '2026-12-15T00:00:00.000Z',
+      },
+    ]);
+    expect(requests[0].path).toBe(
+      '/v1/nominations?filter[state]=DRAFT,SUBMITTED&filter[relatedApps]=1476097583&fields[nominations]=state,submittedDate,publishStartDate,publishEndDate&limit=200',
+    );
+  });
+
+  it('reads one state in one request', async () => {
+    const { api, requests } = recorded(ok({ data: [], links: {} }));
+
+    await api.nominations('1476097583', ['DRAFT']);
+
+    expect(requests.map(({ path }) => path)).toEqual([
+      '/v1/nominations?filter[state]=DRAFT&filter[relatedApps]=1476097583&fields[nominations]=state,submittedDate,publishStartDate,publishEndDate&limit=200',
     ]);
   });
 });

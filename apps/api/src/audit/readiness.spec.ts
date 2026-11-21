@@ -6,11 +6,13 @@ import {
   AuditFactorResult,
   ReadinessItem,
 } from '@asobeast/shared';
-import { AuditCheckId, AuditExtract } from './audit-scoring';
+import { AuditCheckId, AuditExtract, FeaturingReads } from './audit-scoring';
 import { buildReadiness } from './readiness';
+import { FEATURING_ROLE_NEEDED } from '../store-connect/asc-featuring-sync.service';
 import { PageExtractFacts } from '../store-providers/page-extract-facts';
 
 const EXTRACT_AS_OF = '2026-11-14';
+const NOW = new Date('2026-11-19T00:00:00.000Z');
 
 const factsWith = (
   overrides: Partial<PageExtractFacts> = {},
@@ -30,6 +32,22 @@ const extractWith = (
   facts: factsWith(overrides),
   asOf: EXTRACT_AS_OF,
   fallback,
+});
+
+const readsWith = (
+  overrides: Partial<FeaturingReads> = {},
+): FeaturingReads => ({
+  draftNominations: 0,
+  submittedNominations: 0,
+  submittedDate: null,
+  publishStartDate: null,
+  publishEndDate: null,
+  promoFilled: 0,
+  promoTotal: 0,
+  roleRefused: false,
+  nominationsError: null,
+  promoError: null,
+  ...overrides,
 });
 
 const checkWith = (
@@ -72,6 +90,8 @@ describe('buildReadiness', () => {
         store: Store.GOOGLE_PLAY,
         factors: [],
         extract: extractWith(),
+        featuring: readsWith(),
+        now: NOW,
       }),
     ).toBeNull();
   });
@@ -106,6 +126,8 @@ describe('buildReadiness', () => {
         ],
         editorsChoice: { showsBadge: true, notes: null },
       }),
+      featuring: null,
+      now: NOW,
     });
 
     expect(readiness?.extractAsOf).toBe(EXTRACT_AS_OF);
@@ -116,6 +138,7 @@ describe('buildReadiness', () => {
     expect(readiness?.items.map((item) => item.status)).toEqual([
       'pass',
       'pass',
+      'unmeasurable',
       'unmeasurable',
       'pass',
       'pass',
@@ -143,6 +166,8 @@ describe('buildReadiness', () => {
       extract: extractWith({
         previewVideoUrls: ['https://video.example.com/a.mp4'],
       }),
+      featuring: null,
+      now: NOW,
     });
 
     expect(itemOf(readiness, 'preview-video')).toMatchObject({
@@ -160,6 +185,8 @@ describe('buildReadiness', () => {
       store: Store.APP_STORE,
       factors: [],
       extract: extractWith({ previewVideoUrls: [] }),
+      featuring: null,
+      now: NOW,
     });
 
     expect(itemOf(readiness, 'preview-video')).toMatchObject({
@@ -169,11 +196,6 @@ describe('buildReadiness', () => {
     expect(itemOf(readiness, 'in-app-events')).toMatchObject({
       status: 'fail',
       detail: 'No in-app event is on the store page.',
-    });
-    expect(itemOf(readiness, 'accessibility')).toMatchObject({
-      status: 'unmeasurable',
-      detail: 'Declared accessibility features are not read yet.',
-      link: null,
     });
     expect(readiness?.editorial).toEqual({
       stories: 0,
@@ -186,6 +208,8 @@ describe('buildReadiness', () => {
       store: Store.APP_STORE,
       factors: [],
       extract: null,
+      featuring: null,
+      now: NOW,
     });
 
     expect(
@@ -195,9 +219,6 @@ describe('buildReadiness', () => {
           (item) => item.status === 'unmeasurable' && item.detail === null,
         ),
     ).toBe(true);
-    expect(itemOf(readiness, 'accessibility')).toMatchObject({
-      status: 'unmeasurable',
-    });
     expect(readiness?.editorial).toBeNull();
     expect(readiness?.extractAsOf).toBeNull();
   });
@@ -226,6 +247,8 @@ describe('buildReadiness', () => {
           },
         ],
       }),
+      featuring: null,
+      now: NOW,
     });
 
     expect(itemOf(readiness, 'in-app-events').detail).toBe(
@@ -233,7 +256,7 @@ describe('buildReadiness', () => {
     );
   });
 
-  it('ignores an event that has ended when the extract is the fallback', () => {
+  it('ignores an event that has ended before the audits now when the extract is the fallback', () => {
     const readiness = buildReadiness({
       store: Store.APP_STORE,
       factors: [],
@@ -260,6 +283,8 @@ describe('buildReadiness', () => {
         },
         true,
       ),
+      featuring: null,
+      now: NOW,
     });
 
     expect(itemOf(readiness, 'in-app-events')).toMatchObject({
@@ -287,6 +312,8 @@ describe('buildReadiness', () => {
         },
         true,
       ),
+      featuring: null,
+      now: NOW,
     });
 
     expect(itemOf(readiness, 'in-app-events')).toMatchObject({
@@ -295,7 +322,7 @@ describe('buildReadiness', () => {
     });
   });
 
-  it('counts an event that has ended while the extract is the latest read', () => {
+  it('drops an event that has ended whatever read answered it', () => {
     const readiness = buildReadiness({
       store: Store.APP_STORE,
       factors: [],
@@ -311,28 +338,13 @@ describe('buildReadiness', () => {
           },
         ],
       }),
+      featuring: null,
+      now: NOW,
     });
 
     expect(itemOf(readiness, 'in-app-events')).toMatchObject({
-      status: 'pass',
-      detail: 'The store page lists 1 in-app event.',
-    });
-  });
-
-  it('leaves accessibility not measured while the declared features are unread', () => {
-    const readiness = buildReadiness({
-      store: Store.APP_STORE,
-      factors: [],
-      extract: extractWith({
-        accessibilityStatement:
-          'The developer has not yet indicated which accessibility features this app supports. Learn More',
-      }),
-    });
-
-    expect(itemOf(readiness, 'accessibility')).toMatchObject({
-      status: 'unmeasurable',
-      detail: 'Declared accessibility features are not read yet.',
-      link: null,
+      status: 'fail',
+      detail: 'No in-app event is on the store page.',
     });
   });
 
@@ -346,6 +358,8 @@ describe('buildReadiness', () => {
         checkWith('screenshots-count', 'unanswered', 'No screenshots yet.'),
       ]),
       extract: extractWith(),
+      featuring: null,
+      now: NOW,
     });
 
     expect(itemOf(readiness, 'rating')).toMatchObject({
@@ -371,6 +385,8 @@ describe('buildReadiness', () => {
       store: Store.APP_STORE,
       factors: factorsWith([checkWith('ratings-average', 'pass')]),
       extract: extractWith(),
+      featuring: null,
+      now: NOW,
     });
 
     expect(itemOf(readiness, 'preview-video')).toMatchObject({
@@ -396,13 +412,14 @@ describe('buildReadiness', () => {
       store: Store.APP_STORE,
       factors: factorsWith([checkWith('ratings-average', 'pass')]),
       extract: extractWith(),
+      featuring: null,
+      now: NOW,
     });
 
     expect(itemOf(readiness, 'in-app-events').link).toEqual({
       href: 'https://developer.apple.com/app-store/in-app-events/',
       label: 'About in-app events',
     });
-    expect(itemOf(readiness, 'accessibility').link).toBeNull();
     expect(itemOf(readiness, 'rating').link).toEqual({
       href: '#factors-conversion',
       label: 'Where the audit scores it',
@@ -410,11 +427,381 @@ describe('buildReadiness', () => {
     expect(readiness?.items.map((item) => item.id)).toEqual([
       'preview-video',
       'in-app-events',
-      'accessibility',
+      'nominations',
+      'promotional-text',
       'rating',
       'update-recency',
       'localizations',
       'screenshots',
     ]);
+  });
+
+  it('leaves the console rows not measured without a stored read', () => {
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: [],
+      extract: extractWith(),
+      featuring: null,
+      now: NOW,
+    });
+
+    expect(itemOf(readiness, 'nominations')).toMatchObject({
+      status: 'unmeasurable',
+      detail: null,
+      link: null,
+    });
+    expect(itemOf(readiness, 'promotional-text')).toMatchObject({
+      status: 'unmeasurable',
+      detail: null,
+      link: null,
+    });
+  });
+
+  it('passes the nominations row with the lead time to the publish window', () => {
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: [],
+      extract: extractWith(),
+      featuring: readsWith({
+        submittedNominations: 1,
+        submittedDate: new Date('2026-10-05T09:30:00.000Z'),
+        publishStartDate: new Date('2026-11-19T00:00:00.000Z'),
+        publishEndDate: new Date('2026-12-19T00:00:00.000Z'),
+      }),
+      now: NOW,
+    });
+
+    expect(itemOf(readiness, 'nominations')).toMatchObject({
+      status: 'pass',
+      detail: 'Submitted 45 days before the publish window.',
+    });
+  });
+
+  it('rounds a nomination filed inside the last day up to one day', () => {
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: [],
+      extract: extractWith(),
+      featuring: readsWith({
+        submittedNominations: 1,
+        submittedDate: new Date('2026-11-18T18:00:00.000Z'),
+        publishStartDate: new Date('2026-11-19T00:00:00.000Z'),
+      }),
+      now: NOW,
+    });
+
+    expect(itemOf(readiness, 'nominations')).toMatchObject({
+      status: 'pass',
+      detail: 'Submitted 1 day before the publish window.',
+    });
+  });
+
+  it('passes the nominations row without a lead time when the dates are missing', () => {
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: [],
+      extract: extractWith(),
+      featuring: readsWith({ submittedNominations: 1 }),
+      now: NOW,
+    });
+
+    expect(itemOf(readiness, 'nominations')).toMatchObject({
+      status: 'pass',
+      detail: 'A nomination is submitted for featuring.',
+    });
+  });
+
+  it('passes the nominations row of an upcoming publish window', () => {
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: [],
+      extract: extractWith(),
+      featuring: readsWith({
+        submittedNominations: 1,
+        submittedDate: new Date('2026-11-10T09:30:00.000Z'),
+        publishStartDate: new Date('2026-12-01T00:00:00.000Z'),
+        publishEndDate: new Date('2026-12-29T00:00:00.000Z'),
+      }),
+      now: NOW,
+    });
+
+    expect(itemOf(readiness, 'nominations')).toMatchObject({
+      status: 'pass',
+      detail: 'Submitted 21 days before the publish window.',
+    });
+  });
+
+  it('keeps passing after an earlier window ends while a later one runs', () => {
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: [],
+      extract: extractWith(),
+      featuring: readsWith({
+        submittedNominations: 2,
+        submittedDate: new Date('2026-11-10T09:30:00.000Z'),
+        publishStartDate: new Date('2026-11-15T00:00:00.000Z'),
+        publishEndDate: new Date('2026-12-30T00:00:00.000Z'),
+      }),
+      now: new Date('2026-12-01T00:00:00.000Z'),
+    });
+
+    expect(itemOf(readiness, 'nominations')).toMatchObject({
+      status: 'pass',
+      detail: 'Submitted 5 days before the publish window.',
+    });
+  });
+
+  it('asks for work again once the publish window has ended', () => {
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: [],
+      extract: extractWith(),
+      featuring: readsWith({
+        submittedNominations: 1,
+        submittedDate: new Date('2026-09-20T09:30:00.000Z'),
+        publishStartDate: new Date('2026-10-01T00:00:00.000Z'),
+        publishEndDate: new Date('2026-11-01T00:00:00.000Z'),
+      }),
+      now: NOW,
+    });
+
+    expect(itemOf(readiness, 'nominations')).toMatchObject({
+      status: 'warn',
+      detail:
+        'The publish window of the submitted nomination has ended. Apple asks for nominations at least two weeks ahead.',
+    });
+  });
+
+  it('keeps the plain wording when a nomination was filed after the window started', () => {
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: [],
+      extract: extractWith(),
+      featuring: readsWith({
+        submittedNominations: 1,
+        submittedDate: new Date('2026-11-18T12:00:00.000Z'),
+        publishStartDate: new Date('2026-11-15T00:00:00.000Z'),
+        publishEndDate: new Date('2026-12-15T00:00:00.000Z'),
+      }),
+      now: NOW,
+    });
+
+    expect(itemOf(readiness, 'nominations')).toMatchObject({
+      status: 'pass',
+      detail: 'A nomination is submitted for featuring.',
+    });
+  });
+
+  it('asks for work when no submitted nomination exists', () => {
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: [],
+      extract: extractWith(),
+      featuring: readsWith(),
+      now: NOW,
+    });
+
+    expect(itemOf(readiness, 'nominations')).toMatchObject({
+      status: 'warn',
+      detail:
+        'Not nominated. Apple asks for nominations at least two weeks ahead.',
+    });
+  });
+
+  it('mentions the unsubmitted draft when only a draft exists', () => {
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: [],
+      extract: extractWith(),
+      featuring: readsWith({ draftNominations: 1 }),
+      now: NOW,
+    });
+
+    expect(itemOf(readiness, 'nominations')).toMatchObject({
+      status: 'warn',
+      detail:
+        'A nomination is still a draft. Apple asks for nominations at least two weeks ahead.',
+    });
+  });
+
+  it('says the window was missed when the current version shipped recently', () => {
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: factorsWith([checkWith('conversion-update-recency', 'pass')]),
+      extract: extractWith(),
+      featuring: readsWith(),
+      now: NOW,
+    });
+
+    expect(itemOf(readiness, 'nominations')).toMatchObject({
+      status: 'warn',
+      detail:
+        'Not nominated. Apple asks for nominations at least two weeks ahead. The window for the current version was missed until the next release.',
+    });
+  });
+
+  it('keeps the plain wording when the current version is not recent', () => {
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: factorsWith([checkWith('conversion-update-recency', 'fail')]),
+      extract: extractWith(),
+      featuring: readsWith({ draftNominations: 1 }),
+      now: NOW,
+    });
+
+    expect(itemOf(readiness, 'nominations')).toMatchObject({
+      status: 'warn',
+      detail:
+        'A nomination is still a draft. Apple asks for nominations at least two weeks ahead.',
+    });
+  });
+
+  it('words a role refused read as the reason the key cannot answer', () => {
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: [],
+      extract: extractWith(),
+      featuring: readsWith({
+        roleRefused: true,
+        nominationsError: 'NOT_AUTHORIZED detail',
+        promoFilled: 21,
+        promoTotal: 21,
+      }),
+      now: NOW,
+    });
+
+    expect(itemOf(readiness, 'nominations')).toMatchObject({
+      status: 'unmeasurable',
+      detail: FEATURING_ROLE_NEEDED,
+    });
+    expect(itemOf(readiness, 'promotional-text')).toMatchObject({
+      status: 'pass',
+      detail: 'Promotional text is set for all 21 localizations.',
+    });
+  });
+
+  it('words a generic failure with the error it recorded', () => {
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: [],
+      extract: extractWith(),
+      featuring: readsWith({
+        roleRefused: false,
+        nominationsError: 'App Store Connect answered 500',
+      }),
+      now: NOW,
+    });
+
+    expect(itemOf(readiness, 'nominations')).toMatchObject({
+      status: 'unmeasurable',
+      detail: 'App Store Connect answered 500',
+    });
+  });
+
+  it('leaves the nominations row not measured when the read was skipped', () => {
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: [],
+      extract: extractWith(),
+      featuring: readsWith({
+        nominationsError: 'App Store Connect answered 500',
+      }),
+      now: NOW,
+    });
+
+    expect(itemOf(readiness, 'nominations')).toMatchObject({
+      status: 'unmeasurable',
+      detail: 'App Store Connect answered 500',
+    });
+  });
+
+  it('leaves both rows not measured with the reason when the key stopped seeing the app', () => {
+    const reason =
+      'App Store Connect does not show this app to the connected key';
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: [],
+      extract: extractWith(),
+      featuring: readsWith({
+        submittedNominations: 1,
+        promoFilled: 21,
+        promoTotal: 21,
+        nominationsError: reason,
+        promoError: reason,
+      }),
+      now: NOW,
+    });
+
+    expect(itemOf(readiness, 'nominations')).toMatchObject({
+      status: 'unmeasurable',
+      detail: reason,
+    });
+    expect(itemOf(readiness, 'promotional-text')).toMatchObject({
+      status: 'unmeasurable',
+      detail: reason,
+    });
+  });
+
+  it('passes the promotional text row when every localization is filled', () => {
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: [],
+      extract: extractWith(),
+      featuring: readsWith({ promoFilled: 21, promoTotal: 21 }),
+      now: NOW,
+    });
+
+    expect(itemOf(readiness, 'promotional-text')).toMatchObject({
+      status: 'pass',
+      detail: 'Promotional text is set for all 21 localizations.',
+    });
+  });
+
+  it('asks for work when localizations carry no promotional text', () => {
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: [],
+      extract: extractWith(),
+      featuring: readsWith({ promoFilled: 19, promoTotal: 21 }),
+      now: NOW,
+    });
+
+    expect(itemOf(readiness, 'promotional-text')).toMatchObject({
+      status: 'warn',
+      detail: 'Promotional text is set for 19 of 21 localizations.',
+    });
+  });
+
+  it('leaves the promotional text row not measured when the read was skipped', () => {
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: [],
+      extract: extractWith(),
+      featuring: readsWith({
+        promoError:
+          'App Store Connect has no released iOS version for this app yet',
+      }),
+      now: NOW,
+    });
+
+    expect(itemOf(readiness, 'promotional-text')).toMatchObject({
+      status: 'unmeasurable',
+      detail: 'App Store Connect has no released iOS version for this app yet',
+    });
+  });
+
+  it('leaves the promotional text row not measured when nothing is served', () => {
+    const readiness = buildReadiness({
+      store: Store.APP_STORE,
+      factors: [],
+      extract: extractWith(),
+      featuring: readsWith(),
+      now: NOW,
+    });
+
+    expect(itemOf(readiness, 'promotional-text')).toMatchObject({
+      status: 'unmeasurable',
+      detail: null,
+    });
   });
 });

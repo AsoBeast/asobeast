@@ -1,0 +1,15 @@
+{
+  "data": [
+    {
+      "id": "nom-1",
+      "type": "nominations",
+      "attributes": {
+        "state": "SUBMITTED",
+        "submittedDate": "2026-10-01T09:30:00.000Z",
+        "publishStartDate": "2026-11-15T00:00:00.000Z",
+        "publishEndDate": "2026-12-15T00:00:00.000Z"
+      }
+    }
+  ],
+  "links": {}
+}

@@ -21,6 +21,7 @@ import {
   AuditKeyword,
   AuditVisibility,
   DAY_MS,
+  FeaturingReads,
 } from './audit-scoring';
 import {
   CompetitorIcon,
@@ -46,6 +47,7 @@ export interface AuditApp {
 export const REVIEW_WINDOW_DAYS = 90;
 export const VISIBILITY_WINDOW_DAYS = 8;
 export const VISIBILITY_TREND_DAYS = 7;
+export const FEATURING_FRESH_DAYS = 3;
 
 const iconCompetitors = (
   competitors: { id: string; iconUrl: string | null }[],
@@ -112,6 +114,41 @@ export class AuditContextLoader {
     }
     const { screenshots } = await this.screenshots.forApp(app.id);
     return readCaptionTexts(screenshots);
+  }
+
+  private async featuring(app: AuditApp): Promise<FeaturingReads | null> {
+    if (app.store !== Store.APP_STORE) {
+      return null;
+    }
+    const connection = await this.prisma.storeConnection.findFirst({
+      where: { store: Store.APP_STORE },
+      select: { status: true },
+    });
+    if (!connection || connection.status === 'rejected') {
+      return null;
+    }
+    const row = await this.prisma.featuringSync.findFirst({
+      where: { appId: app.id },
+    });
+    if (!row || row.readAt === null) {
+      return null;
+    }
+    const freshFor = FEATURING_FRESH_DAYS * DAY_MS;
+    if (Date.now() - row.readAt.getTime() >= freshFor) {
+      return null;
+    }
+    return {
+      draftNominations: row.draftNominations,
+      submittedNominations: row.submittedNominations,
+      submittedDate: row.submittedDate,
+      publishStartDate: row.publishStartDate,
+      publishEndDate: row.publishEndDate,
+      promoFilled: row.promoFilled,
+      promoTotal: row.promoTotal,
+      roleRefused: row.roleRefused,
+      nominationsError: row.nominationsError,
+      promoError: row.promoError,
+    };
   }
 
   private async visibility(appId: string): Promise<AuditVisibility> {
@@ -238,6 +275,7 @@ export class AuditContextLoader {
       keywordField,
       visibility,
       screenshotCaptions,
+      featuring,
     ] = await Promise.all([
       this.prisma.appSnapshot.findFirst({
         where: { appId, ...HOME_LISTING },
@@ -284,6 +322,7 @@ export class AuditContextLoader {
       this.keywordField(app),
       this.visibility(appId),
       this.screenshotCaptions(app),
+      this.featuring(app),
     ]);
 
     const active = tracked.filter(
@@ -324,6 +363,7 @@ export class AuditContextLoader {
       now: new Date(),
       rawFacts: facts,
       extract,
+      featuring,
       keywords: active.map(toAuditKeyword),
       visibility,
       comparison,
