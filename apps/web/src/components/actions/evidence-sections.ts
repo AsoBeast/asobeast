@@ -196,9 +196,9 @@ function dropSections(evidence: RankInvestigateDropEvidence): Sections {
   return {
     facts: [
       fact("Changed on", formatDate(evidence.changedAt)),
-      fact("Visibility before", optional(evidence.visibilityBefore)),
-      fact("Visibility after", optional(evidence.visibilityAfter)),
-      fact("Visibility delta", optional(evidence.visibilityDelta)),
+      fact("Visibility before", optionalFixed(evidence.visibilityBefore)),
+      fact("Visibility after", optionalFixed(evidence.visibilityAfter)),
+      fact("Visibility delta", optionalFixed(evidence.visibilityDelta)),
       fact("Tracked keywords", formatNumber(evidence.trackedKeywords)),
       fact("Mean volatility", optional(evidence.meanVolatility)),
     ],
@@ -327,7 +327,7 @@ function themeSections(evidence: ReviewsInvestigateThemeEvidence): Sections {
       fact("Previously", formatNumber(evidence.previousMentions)),
       fact("Negative reviews", formatNumber(evidence.negativeReviews)),
       fact("Reviews for this version", formatNumber(evidence.totalReviews)),
-      fact("Rating change", optional(evidence.ratingAvgDelta)),
+      fact("Rating change", optionalFixed(evidence.ratingAvgDelta)),
       fact("Sample reviews", formatNumber(evidence.sampleReviewIds.length)),
     ],
     lists: [],

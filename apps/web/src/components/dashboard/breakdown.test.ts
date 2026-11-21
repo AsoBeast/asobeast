@@ -295,6 +295,7 @@ describe("rowLabel", () => {
   const named = row("a", {
     name: "Focus Timer",
     mark: "App Store · US",
+    shortMark: "iOS · US",
     open: 5,
     critical: 1,
     change: part({
@@ -308,31 +309,44 @@ describe("rowLabel", () => {
 
   it("reads the row with spaces between its parts and the figures of the tab", () => {
     expect(rowLabel(named, "visibility", "30d")).toBe(
-      "Focus Timer App Store · US, 62 now, +10 30d",
+      "Focus Timer iOS · US, App Store · US, 62 now, +10 30d",
     );
     expect(rowLabel(named, "top10", "7d")).toBe(
-      "Focus Timer App Store · US, 4 now, -1 7d",
+      "Focus Timer iOS · US, App Store · US, 4 now, -1 7d",
     );
     expect(rowLabel(named, "moved", "30d")).toBe(
-      "Focus Timer App Store · US, 3 climbing, 1 falling",
+      "Focus Timer iOS · US, App Store · US, 3 climbing, 1 falling",
     );
     expect(rowLabel(named, "actions", "30d")).toBe(
-      "Focus Timer App Store · US, 5 open, 1 critical",
+      "Focus Timer iOS · US, App Store · US, 5 open, 1 critical",
     );
+  });
+
+  it("starts with the words the row shows and names a store row once", () => {
+    const store = row("APP_STORE", {
+      name: "App Store",
+      mark: "2 apps",
+      shortMark: "2 apps",
+      open: 3,
+    });
+
+    expect(rowLabel(named, "actions", "30d")).toMatch(/^Focus Timer iOS · US,/);
+    expect(rowLabel(store, "actions", "30d")).toBe("App Store 2 apps, 3 open");
   });
 
   it("words a change that cannot be compared and a queue without a critical action", () => {
     const fresh = row("b", {
       name: "Habit Tracker",
       mark: "App Store · US",
+      shortMark: "iOS · US",
       open: 2,
       change: part({ visibility: 10, visibilityDelta: null }),
     });
     expect(rowLabel(fresh, "visibility", "30d")).toBe(
-      "Habit Tracker App Store · US, 10 now, no 30d data",
+      "Habit Tracker iOS · US, App Store · US, 10 now, no 30d data",
     );
     expect(rowLabel(fresh, "actions", "30d")).toBe(
-      "Habit Tracker App Store · US, 2 open",
+      "Habit Tracker iOS · US, App Store · US, 2 open",
     );
   });
 });
