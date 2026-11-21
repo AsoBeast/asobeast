@@ -3,7 +3,7 @@
   <h1>AsoBeast</h1>
   <p><strong>AsoBeast is an open-source App Store Optimization (ASO) tool and keyword rank tracker for the Apple App Store and Google Play.</strong></p>
   <p>See where your app ranks for every tracked keyword each day, and what to change next.</p>
-  <p>Use the hosted service at <a href="https://asobeast.com/?utm_source=github&utm_medium=readme&utm_campaign=asobeast-readme">asobeast.com</a>, or self-host it free with Docker under AGPL-3.0. Both run the same code.</p>
+  <p>Use the hosted service at <a href="https://asobeast.com/?utm_source=github&utm_medium=readme&utm_campaign=asobeast-readme">asobeast.com</a>, 7 days free on a card, or self-host it free with Docker under AGPL-3.0. Both run the same code.</p>
   <p>
     <a href="https://app.asobeast.com/register?utm_source=github&utm_medium=readme&utm_campaign=hero"><img alt="Start a free 7-day AsoBeast trial" src="https://img.shields.io/badge/Start_free_7--day_trial-a8520a?style=for-the-badge" /></a>
     <a href="#quick-start"><img alt="Self-host with Docker" src="https://img.shields.io/badge/Self--host_with_Docker-57606a?style=for-the-badge" /></a>
