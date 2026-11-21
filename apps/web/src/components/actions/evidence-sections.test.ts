@@ -122,6 +122,24 @@ describe("evidenceSections", () => {
     ).toBe(true);
   });
 
+  it("writes the visibility of a drop with one decimal on both sides", () => {
+    const evidence = evidenceOf("act-drop");
+    if (evidence.rule !== "rank.investigate_drop") throw new Error("fixture");
+
+    expect(
+      factValues({
+        ...evidence,
+        visibilityBefore: 40,
+        visibilityAfter: 32.5,
+        visibilityDelta: 7.5,
+      }),
+    ).toMatchObject({
+      "Visibility before": "40.0",
+      "Visibility after": "32.5",
+      "Visibility delta": "7.5",
+    });
+  });
+
   it("lists the rules a volatile result holds back", () => {
     const evidence = evidenceOf("act-volatile");
     if (evidence.rule !== "serp.hold_volatile") throw new Error("fixture");
