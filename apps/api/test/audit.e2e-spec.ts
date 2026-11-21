@@ -292,6 +292,40 @@ describe('AuditController (e2e)', () => {
     expect(result.benchmarks).toBeNull();
   });
 
+  it('proposes no title keyword whose words the listing already holds', async () => {
+    const id = await seed();
+    await prisma.trackedKeyword.updateMany({
+      where: { appId: id, keyword: { text: 'daily goals' } },
+      data: { active: false },
+    });
+    const split = await prisma.keyword.create({
+      data: { text: 'daily habit', store: Store.APP_STORE, country: 'us' },
+    });
+    await prisma.trackedKeyword.create({
+      data: {
+        appId: id,
+        keywordId: split.id,
+        source: 'MANUAL',
+        active: true,
+      },
+    });
+    await prisma.keywordMetric.create({
+      data: { keywordId: split.id, date: D0, traffic: 7, difficulty: 2 },
+    });
+
+    const result = (await api.get(`/apps/${id}/audit`).expect(200))
+      .body as AppAuditResult;
+    const titleLength = [
+      ...result.recommendations.quickWins,
+      ...result.recommendations.highImpact,
+      ...result.recommendations.strategic,
+    ].find((item) => item.checkId === 'title-length');
+
+    expect(titleLength?.fix).toBe(
+      'Titles under 27 characters leave indexed space unused.',
+    );
+  });
+
   it('carries a fix, an effort, an impact, a lift and a target on every recommendation', async () => {
     const id = await seed();
 

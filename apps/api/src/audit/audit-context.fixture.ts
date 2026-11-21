@@ -83,6 +83,7 @@ export const keyword = (
   traffic: null,
   volume: null,
   opportunity,
+  uncovered: true,
   ...overrides,
 });
 

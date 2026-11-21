@@ -283,6 +283,7 @@ export class AuditContextLoader {
       }),
       this.keywords.listTracked(appId, undefined, undefined, {
         brandFacts: true,
+        coverageFacts: true,
       }),
       this.keywords.compare(appId, false),
       this.prisma.app.findMany({
@@ -404,6 +405,7 @@ const toAuditKeyword = (item: TrackedKeywordItem): AuditKeyword => ({
   traffic: item.traffic,
   volume: item.volume,
   opportunity: item.opportunity,
+  uncovered: item.uncovered === true,
 });
 
 const toAuditCompetitor = (row: {

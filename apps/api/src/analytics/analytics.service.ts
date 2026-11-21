@@ -7,7 +7,6 @@ import {
   AppSummary,
   CoverageSummary,
   CURRENT_FORMULA_VERSIONS,
-  KeywordClass,
   RankDistributionHistory,
   RatingsHistory,
   UncoveredKeyword,
@@ -52,6 +51,7 @@ import { ShareOfVoiceService } from './share-of-voice.service';
 import { HOME_LISTING, NEWEST_FIRST } from '../apps/listing';
 import { countDiscoveries } from '../keyword-discovery/discovery-counts';
 import { fitsOwnListing } from '../keywords/keyword-class';
+import { ListingVerdicts } from '../keywords/keyword-classes';
 import { KeywordsService } from '../keywords/keywords.service';
 
 const SUMMARY_WINDOW_DAYS = 31;
@@ -101,14 +101,13 @@ const rowOpportunity = (
   });
 };
 
-interface CoverageListing {
+interface CoverageListing extends ListingVerdicts {
   snapshot: {
     title: string;
     subtitle: string | null;
     description: string;
   } | null;
   inKeywordField: KeywordFieldIndex;
-  classes: ReadonlyMap<string, KeywordClass | undefined>;
 }
 
 const uncoveredWorthAdding = (
@@ -137,7 +136,7 @@ export class AnalyticsService {
       shareContext,
       inKeywordField,
       discoveries,
-      classes,
+      verdicts,
     ] = await Promise.all([
       keywordWindow(this.prisma, { appId, country }, SUMMARY_WINDOW_DAYS),
       country
@@ -156,7 +155,7 @@ export class AnalyticsService {
       this.shares.context({ appId, country }),
       loadKeywordFieldIndex(this.prisma, appId),
       countDiscoveries(this.prisma, [appId], country),
-      this.keywords.keywordClasses(appId),
+      this.keywords.listingVerdicts(appId),
     ]);
     const covered = everyMarket ?? market;
     const share = await this.shares.summary(shareContext, market);
@@ -168,7 +167,7 @@ export class AnalyticsService {
       coverage: this.coverage(covered.rows, covered.referenceDate, {
         snapshot,
         inKeywordField,
-        classes,
+        ...verdicts,
       }),
       lastRefreshAt: snapshot?.capturedAt.toISOString() ?? null,
       trackedKeywords: market.rows.length,
@@ -309,7 +308,7 @@ export class AnalyticsService {
   private coverage(
     rows: TrackedRow[],
     referenceDate: Date | null,
-    { snapshot, inKeywordField, classes }: CoverageListing,
+    { snapshot, inKeywordField, classes, uncovered }: CoverageListing,
   ): CoverageSummary {
     const fields = {
       title: snapshot?.title ?? '',
@@ -323,28 +322,22 @@ export class AnalyticsService {
       inKeywordField,
     };
 
-    const hits = rows.map((row) => ({
-      row,
-      inTitle: coversKeyword(fields.title, row.keyword.text),
-      inSubtitle: coversKeyword(fields.subtitle, row.keyword.text),
-      inDescription: coversKeyword(fields.description, row.keyword.text),
-    }));
+    const phraseCount = (field: string): number =>
+      rows.filter((row) => coversKeyword(field, row.keyword.text)).length;
 
-    const uncovered = hits
+    const worthAdding = rows
       .filter(
-        (hit) =>
-          !hit.inTitle &&
-          !hit.inSubtitle &&
-          !hit.inDescription &&
-          fitsOwnListing(classes.get(hit.row.keywordId)),
+        (row) =>
+          uncovered.has(row.keywordId) &&
+          fitsOwnListing(classes.get(row.keywordId)),
       )
-      .flatMap((hit): UncoveredKeyword[] => {
-        const scored = rowOpportunity(hit.row, referenceDate, app);
+      .flatMap((row): UncoveredKeyword[] => {
+        const scored = rowOpportunity(row, referenceDate, app);
         return uncoveredWorthAdding(scored)
           ? [
               {
-                keywordId: hit.row.keywordId,
-                text: hit.row.keyword.text,
+                keywordId: row.keywordId,
+                text: row.keyword.text,
                 opportunity: scored.opportunity,
               },
             ]
@@ -352,10 +345,10 @@ export class AnalyticsService {
       });
 
     return {
-      inTitle: hits.filter((hit) => hit.inTitle).length,
-      inSubtitle: hits.filter((hit) => hit.inSubtitle).length,
-      inDescription: hits.filter((hit) => hit.inDescription).length,
-      uncoveredHighOpportunity: uncovered
+      inTitle: phraseCount(fields.title),
+      inSubtitle: phraseCount(fields.subtitle),
+      inDescription: phraseCount(fields.description),
+      uncoveredHighOpportunity: worthAdding
         .sort((a, b) => b.opportunity - a.opportunity)
         .slice(0, COVERAGE_LIMIT),
     };
