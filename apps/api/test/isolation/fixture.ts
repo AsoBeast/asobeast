@@ -270,6 +270,16 @@ async function seedWorkspace(
   await db.appSetup.create({
     data: { appId: apple.id, workspaceId: id, status: 'in_progress' },
   });
+  await db.featuringSync.create({
+    data: {
+      appId: apple.id,
+      workspaceId: id,
+      submittedNominations: 1,
+      promoFilled: 2,
+      promoTotal: 3,
+      readAt: new Date(),
+    },
+  });
 
   const keyword = await db.keyword.upsert({
     where: {

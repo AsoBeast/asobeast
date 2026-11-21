@@ -27,16 +27,17 @@ Connecting App Store Connect gives every App Store app the key can see a **Store
 
 A team key carries its own role, separate from the role of the person who creates it.
 
-| Role | Reports | Review replies |
-| --- | --- | --- |
-| Admin | Asks for and reads them | Posts and withdraws them |
-| Sales and Reports | Reads them once an Admin key asked for them | No |
-| Customer Support | No | Posts and withdraws them |
+| Role | Reports | Review replies | Featuring nominations |
+| --- | --- | --- | --- |
+| Admin | Asks for and reads them | Posts and withdraws them | Reads them |
+| App Manager | Reads them once an Admin key asked for them | No | Reads them |
+| Sales and Reports | Reads them once an Admin key asked for them | No | No |
+| Customer Support | No | Posts and withdraws them | No |
 
 Choose **Admin**. Apple lets only an Admin key ask for the reports, so this one key does everything AsoBeast offers.
 
 <Note>
-  For least privilege, connect the Admin key first, let the first sync ask Apple for the reports, then replace it with a **Sales and Reports** key. An App Store app imported after the switch needs the Admin key again, because its reports have not been asked for yet, and a Sales and Reports key cannot post replies.
+  For least privilege, connect the Admin key first, let the first sync ask Apple for the reports, then replace it with a **Sales and Reports** key. An App Store app imported after the switch needs the Admin key again, because its reports have not been asked for yet, and a Sales and Reports key cannot post replies. The featuring nominations and the promotional text of the audit readiness panel need the Admin or App Manager role too, so a Sales and Reports key answers those rows Not measured.
 </Note>
 
 ## Create the key

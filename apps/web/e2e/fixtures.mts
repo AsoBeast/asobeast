@@ -6255,11 +6255,6 @@ const recommendation = (
 
 const APP_STORE_LIMITATIONS = [
   {
-    id: "promotional-text",
-    label: "Promotional text",
-    detail: "Not in the data asobeast reads.",
-  },
-  {
     id: "review-replies",
     label: "Replies to reviews",
     detail: "The App Store review feed carries no developer replies.",
@@ -6468,10 +6463,17 @@ export const APP_AUDIT: AppAuditResult = {
         },
       },
       {
-        id: "accessibility",
-        label: "Accessibility",
-        status: "unmeasurable",
-        detail: "Declared accessibility features are not read yet.",
+        id: "nominations",
+        label: "Nominations",
+        status: "pass",
+        detail: "Submitted 45 days before the publish window.",
+        link: null,
+      },
+      {
+        id: "promotional-text",
+        label: "Promotional text",
+        status: "warn",
+        detail: "Promotional text is set for 19 of 21 localizations.",
         link: null,
       },
       {

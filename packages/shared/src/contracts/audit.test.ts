@@ -129,6 +129,20 @@ describe('AppAuditResult', () => {
           },
         },
         {
+          id: 'nominations',
+          label: 'Nominations',
+          status: 'pass',
+          detail: 'Submitted 45 days before the publish window.',
+          link: null,
+        },
+        {
+          id: 'promotional-text',
+          label: 'Promotional text',
+          status: 'warn',
+          detail: 'Promotional text is set for 19 of 21 localizations.',
+          link: null,
+        },
+        {
           id: 'rating',
           label: 'Average rating',
           status: 'unmeasurable',
@@ -142,6 +156,8 @@ describe('AppAuditResult', () => {
     const withReadiness: AppAuditResult = { ...v1, readiness };
 
     expect(withReadiness.readiness?.items[0].id).toBe('preview-video');
+    expect(withReadiness.readiness?.items[1].id).toBe('nominations');
+    expect(withReadiness.readiness?.items[2].id).toBe('promotional-text');
     const statuses: ReadinessStatus[] = [
       'pass',
       'warn',

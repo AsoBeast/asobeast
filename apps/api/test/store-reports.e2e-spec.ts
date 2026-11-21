@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { Store } from '@prisma/client';
 import type {
+  AppAuditResult,
   AppLocalizationsResult,
   StoreConnectionState,
 } from '@asobeast/shared';
@@ -21,6 +22,7 @@ import {
 } from '../src/store-connect/asc-report-sync.service';
 import { importedMonths } from '../src/store-connect/play/play-report-sync.service';
 import { StoreReportSyncService } from '../src/store-connect/store-report-sync.service';
+import { KEY_REFUSED } from '../src/store-connect/asc-http-errors';
 import { PartialSyncRetryError } from '../src/store-connect/store-sync-summary';
 import { ownerAgent } from './helpers/session';
 import {
@@ -820,6 +822,187 @@ describe('Store report sync (e2e)', () => {
     const connection = await harness.prisma.storeConnection.findFirstOrThrow();
     expect(connection.status).toBe('rejected');
     await expect(funnelRows()).resolves.toHaveLength(7);
+  });
+
+  it('creates no featuring row when the workspace disconnects mid sync', async () => {
+    let release: (() => void) | undefined;
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    harness.asc.on('GET', /\/appStoreVersions\?/, async () => {
+      await blocked;
+      return answer({
+        data: [
+          {
+            id: 'v1',
+            type: 'appStoreVersions',
+            attributes: {
+              appStoreState: 'READY_FOR_SALE',
+              versionString: '1.2.0',
+              createdDate: '2026-01-15T10:00:00.000Z',
+            },
+          },
+        ],
+        links: {},
+      });
+    });
+
+    const syncing = run();
+    for (let attempt = 0; attempt < WAIT_ATTEMPTS; attempt += 1) {
+      if (
+        harness.asc.requests.some((request) =>
+          /\/appStoreVersions\?/.test(request.absoluteUrl ?? request.path),
+        )
+      ) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, WAIT_INTERVAL_MS));
+    }
+    await owner.delete('/store-connections/APP_STORE').expect(204);
+    release?.();
+
+    await expect(syncing).resolves.toMatchObject({ nominations: 1 });
+    await expect(harness.prisma.featuringSync.count()).resolves.toBe(0);
+  });
+
+  const waitForBlockedBy = async (holder: number, fragment: string) => {
+    for (let attempt = 0; attempt < WAIT_ATTEMPTS; attempt += 1) {
+      const [{ waiting }] = await harness.prisma.$queryRaw<
+        { waiting: bigint }[]
+      >`
+        SELECT COUNT(*) AS waiting
+        FROM pg_stat_activity
+        WHERE datname = current_database()
+          AND query LIKE ${`%${fragment}%`}
+          AND wait_event IS NOT NULL
+      `;
+      if (waiting > 0n) return;
+      await new Promise((resolve) => setTimeout(resolve, WAIT_INTERVAL_MS));
+    }
+    throw new Error(`the ${fragment} statement never waited on the held row`);
+  };
+
+  it('leaves no featuring row when the write races the disconnect', async () => {
+    let release: (() => void) | undefined;
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    harness.asc
+      .on('GET', /\/appStoreVersions\?/, async () => {
+        await blocked;
+        return answer({
+          data: [
+            {
+              id: 'v1',
+              type: 'appStoreVersions',
+              attributes: {
+                appStoreState: 'READY_FOR_SALE',
+                versionString: '1.2.0',
+                createdDate: '2026-01-15T10:00:00.000Z',
+              },
+            },
+          ],
+          links: {},
+        });
+      })
+      .on(
+        'GET',
+        /appStoreVersionLocalizations\?/,
+        answer({
+          data: [
+            {
+              id: 'loc-1',
+              type: 'appStoreVersionLocalizations',
+              attributes: {
+                locale: 'en-US',
+                keywords: '',
+                promotionalText: 'Two weeks of focus.',
+              },
+            },
+          ],
+          links: {},
+        }),
+      )
+      .on(
+        'GET',
+        /\/v1\/nominations\?/,
+        answer({
+          data: [
+            {
+              id: 'nom-1',
+              type: 'nominations',
+              attributes: {
+                state: 'SUBMITTED',
+                submittedDate: '2026-10-05T09:30:00.000Z',
+                publishStartDate: '2026-11-15T00:00:00.000Z',
+                publishEndDate: '2999-01-01T00:00:00.000Z',
+              },
+            },
+          ],
+          links: {},
+        }),
+      );
+
+    const syncing = run();
+    for (let attempt = 0; attempt < WAIT_ATTEMPTS; attempt += 1) {
+      if (
+        harness.asc.requests.some((request) =>
+          /\/appStoreVersions\?/.test(request.absoluteUrl ?? request.path),
+        )
+      ) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, WAIT_INTERVAL_MS));
+    }
+
+    const { disconnecting } = await harness.prisma.$transaction(
+      async (tx) => {
+        await tx.$executeRaw`SELECT id FROM "StoreConnection" WHERE store = 'APP_STORE' FOR UPDATE`;
+        const [{ pid }] = await tx.$queryRaw<{ pid: number }[]>`
+          SELECT pg_backend_pid() AS pid
+        `;
+        const route = owner.delete('/store-connections/APP_STORE').expect(204);
+        route.catch(() => undefined);
+        await waitForBlockedBy(pid, 'DELETE FROM "public"."StoreConnection"');
+        release?.();
+        await waitForBlockedBy(pid, 'FOR SHARE');
+        return { disconnecting: route };
+      },
+      { timeout: 30_000 },
+    );
+
+    await disconnecting;
+    await expect(syncing).resolves.toMatchObject({ nominations: 1 });
+    await expect(harness.prisma.featuringSync.count()).resolves.toBe(0);
+
+    const result = (await owner.get(`/apps/${appId}/audit`).expect(200))
+      .body as AppAuditResult;
+    const rowOf = (id: string) =>
+      result.readiness?.items.find((item) => item.id === id);
+    expect(rowOf('nominations')).toMatchObject({
+      status: 'unmeasurable',
+      detail: null,
+    });
+    expect(rowOf('promotional-text')).toMatchObject({
+      status: 'unmeasurable',
+      detail: null,
+    });
+  });
+
+  it('marks the connection rejected when apple refuses the key during the featuring reads', async () => {
+    scriptApple();
+    await run();
+    harness.asc.on(
+      'GET',
+      /\/appStoreVersions\?/,
+      refusal(403, 'NOT_AUTHORIZED'),
+    );
+
+    await expect(run()).rejects.toBeInstanceOf(UnrecoverableError);
+
+    const connection = await harness.prisma.storeConnection.findFirstOrThrow();
+    expect(connection.status).toBe('rejected');
+    expect(connection.lastError).toBe(KEY_REFUSED);
   });
 
   it('keeps the rows of one workspace out of another', async () => {

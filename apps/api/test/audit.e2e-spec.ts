@@ -133,7 +133,7 @@ describe('AuditController (e2e)', () => {
                 kind: 'SPECIAL EVENT',
                 badge: 'happening',
                 startsAt: '2026-11-14T15:00:00.000Z',
-                endsAt: '2026-11-16T04:00:00.000Z',
+                endsAt: '2999-01-01T00:00:00.000Z',
               },
             ],
             featuredStories: [
@@ -516,8 +516,31 @@ describe('AuditController (e2e)', () => {
     );
   });
 
-  it('answers the featuring readiness rows from the page extract and the graded checks', async () => {
+  it('answers the featuring readiness rows from the page extract, the graded checks and the console reads', async () => {
     const id = await seed();
+    await prisma.storeConnection.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        issuerId: 'audit-issuer',
+        keyId: 'ABCDEFGHIJ',
+        keyFingerprint: '0123456789abcdef',
+        credentialCiphertext: 'v1.audit.sealed',
+      },
+    });
+    await prisma.featuringSync.create({
+      data: {
+        appId: id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        submittedNominations: 1,
+        submittedDate: new Date('2026-10-05T09:30:00.000Z'),
+        publishStartDate: new Date('2026-11-19T00:00:00.000Z'),
+        publishEndDate: new Date('2999-12-19T00:00:00.000Z'),
+        promoFilled: 2,
+        promoTotal: 3,
+        readAt: new Date(),
+      },
+    });
 
     const result = (await api.get(`/apps/${id}/audit`).expect(200))
       .body as AppAuditResult;
@@ -525,7 +548,8 @@ describe('AuditController (e2e)', () => {
     expect(result.readiness?.items.map((item) => item.id)).toEqual([
       'preview-video',
       'in-app-events',
-      'accessibility',
+      'nominations',
+      'promotional-text',
       'rating',
       'update-recency',
       'localizations',
@@ -534,12 +558,23 @@ describe('AuditController (e2e)', () => {
     expect(result.readiness?.items.map((item) => item.status)).toEqual([
       'pass',
       'pass',
-      'unmeasurable',
+      'pass',
+      'warn',
       'pass',
       'pass',
       'unmeasurable',
       'pass',
     ]);
+    expect(result.readiness?.items[2]).toMatchObject({
+      label: 'Nominations',
+      detail: 'Submitted 45 days before the publish window.',
+      link: null,
+    });
+    expect(result.readiness?.items[3]).toMatchObject({
+      label: 'Promotional text',
+      detail: 'Promotional text is set for 2 of 3 localizations.',
+      link: null,
+    });
     expect(result.readiness?.items[0]).toMatchObject({
       label: 'Preview video',
       detail: 'The store page shows 2 preview videos.',
@@ -601,6 +636,7 @@ describe('AuditController (e2e)', () => {
     expect(result.readiness?.items.map((item) => item.status)).toEqual([
       'fail',
       'fail',
+      'unmeasurable',
       'unmeasurable',
       'warn',
       'pass',
@@ -723,6 +759,7 @@ describe('AuditController (e2e)', () => {
       'unmeasurable',
       'pass',
       'unmeasurable',
+      'unmeasurable',
       'pass',
       'pass',
       'unmeasurable',
@@ -753,6 +790,7 @@ describe('AuditController (e2e)', () => {
       .body as AppAuditResult;
 
     expect(result.readiness?.items.map((item) => item.status)).toEqual([
+      'unmeasurable',
       'unmeasurable',
       'unmeasurable',
       'unmeasurable',
@@ -791,6 +829,7 @@ describe('AuditController (e2e)', () => {
       .body as AppAuditResult;
 
     expect(result.readiness?.items.map((item) => item.status)).toEqual([
+      'unmeasurable',
       'unmeasurable',
       'unmeasurable',
       'unmeasurable',

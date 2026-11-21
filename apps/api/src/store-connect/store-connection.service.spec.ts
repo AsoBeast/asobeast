@@ -94,6 +94,9 @@ function harness(
       findMany: jest.fn(() => Promise.resolve([{ appId: 'app_1' }])),
       deleteMany: jest.fn(() => Promise.resolve({ count: 1 })),
     },
+    featuringSync: {
+      deleteMany: jest.fn(() => Promise.resolve({ count: 1 })),
+    },
     storeConnection: {
       deleteMany: jest.fn(({ where }: { where: { store: string } }) => {
         const kept = rows.filter((row) => row.store !== where.store);
@@ -779,24 +782,27 @@ describe('StoreConnectionService', () => {
   });
 
   it('disconnects even while store connections are off', async () => {
-    const { service, prisma } = harness(null);
+    const { service, tx } = harness(null);
 
     await service.disconnect('APP_STORE');
 
-    expect(prisma.storeConnection.deleteMany).toHaveBeenCalledWith({
+    expect(tx.storeConnection.deleteMany).toHaveBeenCalledWith({
       where: { store: 'APP_STORE' },
     });
   });
 
-  it('disconnects by deleting the connection', async () => {
-    const { service, prisma } = harness();
+  it('disconnects by deleting the connection before the featuring rows', async () => {
+    const { service, tx } = harness();
     await service.connect('APP_STORE', REQUEST, 'user_1');
 
     await service.disconnect('APP_STORE');
 
-    expect(prisma.storeConnection.deleteMany).toHaveBeenCalledWith({
+    expect(tx.storeConnection.deleteMany).toHaveBeenCalledWith({
       where: { store: 'APP_STORE' },
     });
+    expect(
+      tx.storeConnection.deleteMany.mock.invocationCallOrder[0],
+    ).toBeLessThan(tx.featuringSync.deleteMany.mock.invocationCallOrder[0]);
   });
 
   it('releases the imported keyword fields when App Store Connect disconnects', async () => {
@@ -806,6 +812,15 @@ describe('StoreConnectionService', () => {
 
     expect(tx.keywordFieldSync.findMany).toHaveBeenCalled();
     expect(tx.keywordFieldSync.deleteMany).toHaveBeenCalled();
+    expect(tx.featuringSync.deleteMany).toHaveBeenCalled();
+  });
+
+  it('keeps the featuring reads when Google Play disconnects', async () => {
+    const { service, tx } = harness();
+
+    await service.disconnect('GOOGLE_PLAY');
+
+    expect(tx.featuringSync.deleteMany).not.toHaveBeenCalled();
   });
 
   it('keeps the imported keyword fields when Google Play disconnects', async () => {

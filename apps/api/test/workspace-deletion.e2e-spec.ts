@@ -170,6 +170,16 @@ describe('Workspace deletion (e2e)', () => {
     await prisma.keywordFieldSync.create({
       data: { appId: owned.id, workspaceId, version: '2.0', syncedAt: DAY },
     });
+    await prisma.featuringSync.create({
+      data: {
+        appId: owned.id,
+        workspaceId,
+        submittedNominations: 1,
+        promoFilled: 2,
+        promoTotal: 3,
+        readAt: DAY,
+      },
+    });
     await prisma.appSetup.create({
       data: { appId: owned.id, workspaceId, status: 'in_progress' },
     });
@@ -451,6 +461,7 @@ describe('Workspace deletion (e2e)', () => {
       trackedKeyword,
       keywordField,
       keywordFieldSync,
+      featuringSync,
       appLocalization,
       appSetup,
       keywordRanking,
@@ -495,6 +506,7 @@ describe('Workspace deletion (e2e)', () => {
       prisma.trackedKeyword.count({ where: { appId: target.appId } }),
       prisma.keywordField.count({ where: { appId: target.appId } }),
       prisma.keywordFieldSync.count({ where: { appId: target.appId } }),
+      prisma.featuringSync.count({ where: { appId: target.appId } }),
       prisma.appLocalization.count({ where: { appId: target.appId } }),
       prisma.appSetup.count({ where: { appId: target.appId } }),
       prisma.keywordRanking.count({ where: { workspaceId: WORKSPACE } }),
@@ -539,6 +551,7 @@ describe('Workspace deletion (e2e)', () => {
       TrackedKeyword: trackedKeyword,
       KeywordField: keywordField,
       KeywordFieldSync: keywordFieldSync,
+      FeaturingSync: featuringSync,
       AppLocalization: appLocalization,
       AppSetup: appSetup,
       KeywordRanking: keywordRanking,

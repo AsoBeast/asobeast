@@ -3,12 +3,6 @@ import { AuditLimitation } from '@asobeast/shared';
 
 const APP_STORE_LIMITATIONS: readonly AuditLimitation[] = [
   {
-    id: 'promotional-text',
-    label: 'Promotional text',
-    detail:
-      'Not in the data asobeast reads. 170 characters above the description, editable without a release, not indexed.',
-  },
-  {
     id: 'in-app-events',
     label: 'Past in-app events and their performance',
     detail:

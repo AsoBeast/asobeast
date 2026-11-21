@@ -11,6 +11,7 @@ import {
 } from './asc-errors';
 import { AGREEMENT_MISSING } from './asc-http-errors';
 import type { AscKeywordFieldSync } from './asc-keyword-field-sync.service';
+import type { AscFeaturingSync } from './asc-featuring-sync.service';
 import type {
   OpenedConnection,
   StoreConnectionService,
@@ -72,6 +73,9 @@ function build(status: OpenedConnection['status'] = 'active') {
   const keywordFields = {
     run: jest.fn().mockResolvedValue({ fields: 0, changed: 0 }),
   };
+  const featuring = {
+    run: jest.fn().mockResolvedValue({ nominations: 0, promoText: 0 }),
+  };
   const prisma = {
     storeReportRequest: {
       findMany: jest.fn().mockResolvedValue([
@@ -105,6 +109,7 @@ function build(status: OpenedConnection['status'] = 'active') {
     requester as unknown as StoreReportRequester,
     applier as unknown as StoreReportApplier,
     keywordFields as unknown as AscKeywordFieldSync,
+    featuring as unknown as AscFeaturingSync,
   );
   return {
     service,
@@ -114,6 +119,7 @@ function build(status: OpenedConnection['status'] = 'active') {
     applier,
     prisma,
     keywordFields,
+    featuring,
   };
 }
 
@@ -588,6 +594,55 @@ describe('AscReportSync', () => {
       fields: 3,
       fieldsChanged: 2,
     });
+  });
+
+  it('marks the connection rejected when the featuring read is refused', async () => {
+    const { service, featuring, connections, keywordFields } = build();
+    featuring.run.mockRejectedValue(
+      new AscRejectedKeyError('refused', 403, null),
+    );
+
+    await expect(service.run()).rejects.toThrow(UnrecoverableError);
+    expect(keywordFields.run).toHaveBeenCalled();
+    expect(connections.markRejected).toHaveBeenCalledWith(
+      'APP_STORE',
+      expect.stringContaining('refused this key'),
+    );
+  });
+
+  it('reports the featuring reads beside the keyword field import', async () => {
+    const { service, featuring } = build();
+    featuring.run.mockResolvedValue({ nominations: 2, promoText: 21 });
+
+    await expect(service.run()).resolves.toMatchObject({
+      nominations: 2,
+      promoText: 21,
+    });
+  });
+
+  it('keeps syncing when the featuring reads fail and waits for the next run', async () => {
+    const { service, featuring, connections } = build();
+    featuring.run.mockRejectedValue(new Error('the featuring reads exploded'));
+
+    await expect(service.run()).resolves.toBeTruthy();
+    expect(connections.markSynced).toHaveBeenCalled();
+  });
+
+  it('flags a rate limit of the featuring reads instead of failing the run', async () => {
+    const { service, featuring } = build();
+    featuring.run.mockRejectedValue(new AscRateLimitedError('slow down', 429));
+
+    await expect(service.run()).resolves.toMatchObject({ rateLimited: true });
+  });
+
+  it('stops before the featuring reads when a rate limit already ended the run', async () => {
+    const { service, featuring, keywordFields } = build();
+    keywordFields.run.mockRejectedValue(
+      new AscRateLimitedError('slow down', 429),
+    );
+
+    await expect(service.run()).resolves.toMatchObject({ rateLimited: true });
+    expect(featuring.run).not.toHaveBeenCalled();
   });
 
   it('never rejects the key over a detailed instance and keeps applying the standard ones', async () => {

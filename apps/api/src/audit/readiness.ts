@@ -8,20 +8,18 @@ import {
   ReadinessLink,
   ReadinessStatus,
 } from '@asobeast/shared';
-import { AuditCheckId, AuditExtract } from './audit-scoring';
+import {
+  AuditCheckId,
+  AuditExtract,
+  DAY_MS,
+  FeaturingReads,
+} from './audit-scoring';
+import { FEATURING_ROLE_NEEDED } from '../store-connect/asc-featuring-sync.service';
 import { PageAppEvent } from '../store-providers/app-store-page';
 
 const EVENTS_LINK: ReadinessLink = {
   href: 'https://developer.apple.com/app-store/in-app-events/',
   label: 'About in-app events',
-};
-
-const ACCESSIBILITY_ROW: ReadinessItem = {
-  id: 'accessibility',
-  label: 'Accessibility',
-  status: 'unmeasurable',
-  detail: 'Declared accessibility features are not read yet.',
-  link: null,
 };
 
 const FACTOR_SECTION_LINK: ReadinessLink = {
@@ -101,20 +99,30 @@ const unmeasurable = (
   link: null,
 });
 
-const listedEvents = (extract: AuditExtract): PageAppEvent[] =>
-  extract.fallback
-    ? extract.facts.appEvents.filter(
-        (event) =>
-          event.endsAt === null ||
-          new Date(event.endsAt).getTime() >= Date.now(),
-      )
-    : extract.facts.appEvents;
+const notMeasuredWith = (
+  id: ReadinessItem['id'],
+  label: string,
+  detail: string | null,
+): ReadinessItem => ({
+  id,
+  label,
+  status: 'unmeasurable',
+  detail,
+  link: null,
+});
 
-const eventsRow = (extract: AuditExtract | null): ReadinessItem => {
+const listedEvents = (extract: AuditExtract, now: Date): PageAppEvent[] =>
+  extract.facts.appEvents.filter(
+    (event) =>
+      event.endsAt === null ||
+      new Date(event.endsAt).getTime() >= now.getTime(),
+  );
+
+const eventsRow = (extract: AuditExtract | null, now: Date): ReadinessItem => {
   if (extract === null) {
     return unmeasurable('in-app-events', 'In-app events');
   }
-  const count = listedEvents(extract).length;
+  const count = listedEvents(extract, now).length;
   return {
     id: 'in-app-events',
     label: 'In-app events',
@@ -127,7 +135,104 @@ const eventsRow = (extract: AuditExtract | null): ReadinessItem => {
   };
 };
 
-const accessibilityRow = (): ReadinessItem => ACCESSIBILITY_ROW;
+const NOMINATIONS_LABEL = 'Nominations';
+const PROMO_TEXT_LABEL = 'Promotional text';
+
+const shippedRecently = (factors: AuditFactorResult[]): boolean =>
+  findCheck(factors, 'conversion-update-recency')?.status === 'pass';
+
+const leadTimeOf = (reads: FeaturingReads): number | null => {
+  if (reads.submittedDate === null || reads.publishStartDate === null) {
+    return null;
+  }
+  const days = Math.ceil(
+    (reads.publishStartDate.getTime() - reads.submittedDate.getTime()) / DAY_MS,
+  );
+  return days >= 1 ? days : null;
+};
+
+const windowEnded = (reads: FeaturingReads, now: Date): boolean =>
+  reads.publishEndDate !== null &&
+  reads.publishEndDate.getTime() <= now.getTime();
+
+const nominationsRow = (
+  reads: FeaturingReads | null,
+  factors: AuditFactorResult[],
+  now: Date,
+): ReadinessItem => {
+  if (reads === null) {
+    return unmeasurable('nominations', NOMINATIONS_LABEL);
+  }
+  if (reads.nominationsError !== null) {
+    return notMeasuredWith(
+      'nominations',
+      NOMINATIONS_LABEL,
+      reads.roleRefused ? FEATURING_ROLE_NEEDED : reads.nominationsError,
+    );
+  }
+  const leadTime = leadTimeOf(reads);
+  if (reads.submittedNominations > 0 && !windowEnded(reads, now)) {
+    return {
+      id: 'nominations',
+      label: NOMINATIONS_LABEL,
+      status: 'pass',
+      detail:
+        leadTime === null
+          ? 'A nomination is submitted for featuring.'
+          : `Submitted ${plural(leadTime, 'day')} before the publish window.`,
+      link: null,
+    };
+  }
+  if (reads.submittedNominations > 0) {
+    return {
+      id: 'nominations',
+      label: NOMINATIONS_LABEL,
+      status: 'warn',
+      detail:
+        'The publish window of the submitted nomination has ended. Apple asks for nominations at least two weeks ahead.',
+      link: null,
+    };
+  }
+  const missed = shippedRecently(factors)
+    ? ' The window for the current version was missed until the next release.'
+    : '';
+  const detail =
+    reads.draftNominations > 0
+      ? `A nomination is still a draft. Apple asks for nominations at least two weeks ahead.${missed}`
+      : `Not nominated. Apple asks for nominations at least two weeks ahead.${missed}`;
+  return {
+    id: 'nominations',
+    label: NOMINATIONS_LABEL,
+    status: 'warn',
+    detail,
+    link: null,
+  };
+};
+
+const promotionalTextRow = (reads: FeaturingReads | null): ReadinessItem => {
+  if (reads === null) {
+    return unmeasurable('promotional-text', PROMO_TEXT_LABEL);
+  }
+  if (reads.promoError !== null || reads.promoTotal === 0) {
+    return notMeasuredWith(
+      'promotional-text',
+      PROMO_TEXT_LABEL,
+      reads.promoError,
+    );
+  }
+  const filled = reads.promoFilled;
+  const total = reads.promoTotal;
+  return {
+    id: 'promotional-text',
+    label: PROMO_TEXT_LABEL,
+    status: filled === total ? 'pass' : 'warn',
+    detail:
+      filled === total
+        ? `Promotional text is set for all ${total} localizations.`
+        : `Promotional text is set for ${filled} of ${total} localizations.`,
+    link: null,
+  };
+};
 
 const editorialOf = (
   extract: AuditExtract | null,
@@ -143,12 +248,16 @@ export interface ReadinessInputs {
   store: Store;
   factors: AuditFactorResult[];
   extract: AuditExtract | null;
+  featuring: FeaturingReads | null;
+  now: Date;
 }
 
 export const buildReadiness = ({
   store,
   factors,
   extract,
+  featuring,
+  now,
 }: ReadinessInputs): AppReadiness | null => {
   if (store !== Store.APP_STORE) {
     return null;
@@ -156,8 +265,9 @@ export const buildReadiness = ({
   return {
     items: [
       reusedRow(PREVIEW_VIDEO_ROW, factors),
-      eventsRow(extract),
-      accessibilityRow(),
+      eventsRow(extract, now),
+      nominationsRow(featuring, factors, now),
+      promotionalTextRow(featuring),
       ...REUSED_ROWS.map((row) => reusedRow(row, factors)),
     ],
     editorial: editorialOf(extract),
