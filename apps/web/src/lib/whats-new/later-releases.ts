@@ -196,7 +196,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "fixed",
         title: "Words in different fields count on the App Store",
-        text: "The App Store finds a search when all of its words are in your title, subtitle and keyword field, in any order. A keyword like that no longer reads Not in listing or counts as not covered; the metadata page marks it Words split, since the whole phrase in one field may still rank higher. Google Play keeps looking for the whole phrase.",
+        text: "The App Store finds a search when all of its words are in the title, subtitle and keyword field of one language of your listing, in any order; words from two languages do not add up. A keyword like that no longer reads Not in listing or counts as not covered; the metadata page marks it Words split, since the whole phrase in one field may still rank higher. Google Play keeps looking for the whole phrase.",
       },
       {
         kind: "fixed",
