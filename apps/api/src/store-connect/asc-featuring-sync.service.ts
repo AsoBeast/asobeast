@@ -277,7 +277,7 @@ export class AscFeaturingSync {
         kind: 'ok',
         counts: {
           filled: served.filter(
-            ({ promotionalText }) => (promotionalText ?? '').length > 0,
+            ({ promotionalText }) => (promotionalText ?? '').trim().length > 0,
           ).length,
           total: served.length,
         },
