@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { TrackedKeywordItem } from '@asobeast/shared';
+import { aiCompletion } from '../ai/ai-completion.fixture';
 import { buildAi } from '../ai/ai-gateway.fixture';
 import { AiGateway } from '../ai/ai-gateway.service';
 import { AiStructuredRequest } from '../ai/openai.client';
@@ -15,6 +16,7 @@ const appStoreService = (
   spend: jest.Mock,
   audit = jest.fn().mockResolvedValue({ fields: [], coverage: [] }),
   tracked: TrackedKeywordItem[] = [],
+  competitors: { name: string; snapshots: { title: string }[] }[] = [],
 ) =>
   new MetadataAssistantService(
     gateway(buildAi(spend)),
@@ -26,7 +28,7 @@ const appStoreService = (
           country: 'us',
           name: 'Where Am I',
         }),
-        findMany: jest.fn().mockResolvedValue([]),
+        findMany: jest.fn().mockResolvedValue(competitors),
       },
       keywordField: {
         findMany: jest
@@ -173,5 +175,41 @@ describe('MetadataAssistantService', () => {
     const prompt = JSON.stringify(spend.mock.calls[0]);
     expect(prompt).toContain('geo quiz');
     expect(prompt).not.toContain('geoguessr');
+  });
+
+  it('flags a tracked competitor brand that a draft puts in the listing', async () => {
+    const spend = jest.fn().mockResolvedValue(
+      aiCompletion({
+        drafts: [
+          { field: 'title', value: 'Geo Quiz World', rationale: '' },
+          { field: 'subtitle', value: 'Map trivia', rationale: '' },
+          { field: 'keywordField', value: 'geoguessr,atlas', rationale: '' },
+        ],
+      }),
+    );
+    const tracked = [
+      {
+        keywordId: 'geoguessr',
+        text: 'geoguessr',
+        active: true,
+        keywordClass: 'competitorBrand',
+      },
+      {
+        keywordId: 'geo quiz',
+        text: 'geo quiz',
+        active: true,
+        keywordClass: 'generic',
+      },
+    ] as TrackedKeywordItem[];
+
+    const result = await appStoreService(spend, undefined, tracked, [
+      { name: 'GeoGuessr', snapshots: [{ title: 'GeoGuessr' }] },
+    ]).generate('app-1', {}, 'usr_1');
+
+    expect(
+      result.drafts
+        .find((draft) => draft.field === 'keywordField')
+        ?.issues.map((issue) => issue.rule),
+    ).toContain('contains-competitor-brand');
   });
 });
