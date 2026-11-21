@@ -143,11 +143,14 @@ function figuresOf(
     : `${now} now, ${signed(Math.round(delta))} ${unit}`;
 }
 
+const spokenMark = (row: BreakdownRow): string =>
+  row.shortMark === row.mark ? row.mark : `${row.shortMark}, ${row.mark}`;
+
 export const rowLabel = (
   row: BreakdownRow,
   metric: DashboardMetric,
   unit: string,
-): string => `${row.name} ${row.mark}, ${figuresOf(row, metric, unit)}`;
+): string => `${row.name} ${spokenMark(row)}, ${figuresOf(row, metric, unit)}`;
 
 export const BREAKDOWN_MIN_APPS = 2;
 

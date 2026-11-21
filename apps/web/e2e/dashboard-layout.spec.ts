@@ -449,7 +449,7 @@ for (const { view, path, toolbar } of [
       at(/^Moved in 30 days /),
       at(/^Open actions /),
       at(/^Apps$/),
-      at(/^Focus Timer App Store · US, /),
+      at(/^Focus Timer iOS · US, App Store · US, /),
       at(/^Movers period, Last run$/),
       at(/^All 3$/),
       at(/^focus timer US · Focus Timer /),
