@@ -31,10 +31,12 @@ function pressDone(id: string): void {
     ?.click();
 }
 
-function menuAvailable(id: string): boolean {
-  const trigger = rowElement(id)?.querySelector('[data-command="more"]');
-  return trigger != null && trigger.getAttribute("aria-disabled") !== "true";
-}
+const menuAvailable = (id: string): boolean =>
+  Boolean(
+    rowElement(id)?.querySelector(
+      '[data-command="more"]:not([aria-disabled="true"])',
+    ),
+  );
 
 export function useQueueKeys({
   ids,
