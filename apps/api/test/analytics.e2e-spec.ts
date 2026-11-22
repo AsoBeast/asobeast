@@ -556,6 +556,22 @@ describe('AnalyticsController (e2e)', () => {
       .expect(400);
   });
 
+  it('caps a compared range just past 180 days', async () => {
+    const id = await seed();
+
+    const response = await api
+      .get(`/apps/${id}/visibility-history`)
+      .query({ from: '2026-01-01', to: '2026-07-01', compare: 'competitors' })
+      .expect(400);
+    expect((response.body as ApiErrorEnvelope).message).toBe(
+      'Range must not exceed 180 days',
+    );
+    await api
+      .get(`/apps/${id}/visibility-history`)
+      .query({ from: '2026-01-02', to: '2026-07-01', compare: 'competitors' })
+      .expect(200);
+  });
+
   const classify = async (
     appId: string,
     classes: Record<string, 'ownBrand' | 'competitorBrand' | 'generic'>,
@@ -1660,13 +1676,77 @@ describe('AnalyticsController (e2e)', () => {
     expect(last.visibility).toBeCloseTo(current, 1);
   });
 
-  it('rejects ranges beyond the 180 day cap', async () => {
+  it('rejects ranges beyond the year cap', async () => {
     const id = await seed();
 
-    await api
+    const response = await api
       .get(`/apps/${id}/visibility-history`)
       .query({ from: '2025-01-01', to: '2026-07-01' })
       .expect(400);
+    expect((response.body as ApiErrorEnvelope).message).toBe(
+      'Range must not exceed 365 days',
+    );
+  });
+
+  const YEAR = { from: '2025-11-22', to: '2026-11-21' };
+
+  const seedYear = async (): Promise<string> => {
+    const id = await seed();
+    const keyword = await prisma.keyword.findFirstOrThrow({
+      where: { text: 'habit' },
+    });
+    await prisma.keywordRanking.createMany({
+      data: ['2025-11-23', '2026-11-21'].map((date) => ({
+        appId: id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        keywordId: keyword.id,
+        date: new Date(`${date}T00:00:00.000Z`),
+        position: 3,
+        depth: 100,
+      })),
+    });
+    return id;
+  };
+
+  it('answers a year of visibility history, as the changes page asks', async () => {
+    const id = await seedYear();
+
+    const history = (
+      await api.get(`/apps/${id}/visibility-history`).query(YEAR).expect(200)
+    ).body as VisibilityHistory;
+
+    expect(history.points.map((point) => point.date)).toEqual([
+      '2025-11-23',
+      '2026-06-23',
+      '2026-06-30',
+      '2026-11-21',
+    ]);
+  });
+
+  it('answers a year of rank band history', async () => {
+    const id = await seedYear();
+
+    const history = (
+      await api
+        .get(`/apps/${id}/rank-distribution-history`)
+        .query(YEAR)
+        .expect(200)
+    ).body as RankDistributionHistory;
+
+    expect(history.points.at(0)?.date).toBe('2025-11-23');
+    expect(history.points.at(-1)?.date).toBe('2026-11-21');
+  });
+
+  it('keeps the ratings history to the snapshot retention', async () => {
+    const id = await seed();
+
+    const response = await api
+      .get(`/apps/${id}/ratings-history`)
+      .query({ from: '2026-01-01', to: '2026-07-01' })
+      .expect(400);
+    expect((response.body as ApiErrorEnvelope).message).toBe(
+      'Range must not exceed 180 days',
+    );
   });
 
   describe.each([

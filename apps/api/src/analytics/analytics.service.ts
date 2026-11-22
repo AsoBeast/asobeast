@@ -7,6 +7,7 @@ import {
   AppSummary,
   CoverageSummary,
   CURRENT_FORMULA_VERSIONS,
+  QUERY_BOUNDS,
   RankDistributionHistory,
   RatingsHistory,
   UncoveredKeyword,
@@ -57,7 +58,8 @@ import { KeywordsService } from '../keywords/keywords.service';
 const SUMMARY_WINDOW_DAYS = 31;
 const COVERAGE_LIMIT = 5;
 const HISTORY_DEFAULT_DAYS = 30;
-const HISTORY_MAX_DAYS = 180;
+const HISTORY_MAX_DAYS = QUERY_BOUNDS.historyDays.max;
+const SNAPSHOT_HISTORY_MAX_DAYS = QUERY_BOUNDS.snapshotHistoryDays.max;
 
 interface CoverageApp {
   snapshotText: string;
@@ -99,6 +101,12 @@ const rowOpportunity = (
       ? { ranking: { position: ranking.position, checked: true } }
       : {}),
   });
+};
+
+const assertRange = (from: Date, to: Date, maxDays: number): void => {
+  if (to.getTime() - from.getTime() > maxDays * DAY_MS) {
+    throw new BadRequestException(`Range must not exceed ${maxDays} days`);
+  }
 };
 
 const positionsCheckedNow = (
@@ -197,11 +205,13 @@ export class AnalyticsService {
       ? startOfUtcDay(new Date(query.from))
       : addDays(to, -HISTORY_DEFAULT_DAYS);
 
-    if (to.getTime() - from.getTime() > HISTORY_MAX_DAYS * DAY_MS) {
-      throw new BadRequestException(
-        `Range must not exceed ${HISTORY_MAX_DAYS} days`,
-      );
-    }
+    assertRange(
+      from,
+      to,
+      query.compare === 'competitors'
+        ? SNAPSHOT_HISTORY_MAX_DAYS
+        : HISTORY_MAX_DAYS,
+    );
 
     const rows = await trackedRows(
       this.prisma,
@@ -238,11 +248,7 @@ export class AnalyticsService {
       ? startOfUtcDay(new Date(query.from))
       : addDays(to, -HISTORY_DEFAULT_DAYS);
 
-    if (to.getTime() - from.getTime() > HISTORY_MAX_DAYS * DAY_MS) {
-      throw new BadRequestException(
-        `Range must not exceed ${HISTORY_MAX_DAYS} days`,
-      );
-    }
+    assertRange(from, to, HISTORY_MAX_DAYS);
 
     const rows = await trackedRows(
       this.prisma,
@@ -284,11 +290,7 @@ export class AnalyticsService {
       ? startOfUtcDay(new Date(query.from))
       : addDays(to, -HISTORY_DEFAULT_DAYS);
 
-    if (to.getTime() - from.getTime() > HISTORY_MAX_DAYS * DAY_MS) {
-      throw new BadRequestException(
-        `Range must not exceed ${HISTORY_MAX_DAYS} days`,
-      );
-    }
+    assertRange(from, to, SNAPSHOT_HISTORY_MAX_DAYS);
 
     const rows = await this.prisma.appSnapshot.findMany({
       where: {
