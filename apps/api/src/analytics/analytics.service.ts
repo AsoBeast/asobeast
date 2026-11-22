@@ -45,7 +45,7 @@ import { MarketHistoryQueryDto } from './dto/market-history-query.dto';
 import { VisibilityCompareQueryDto } from './dto/visibility-compare-query.dto';
 import { VisibilityHistoryQueryDto } from './dto/visibility-history-query.dto';
 import { movers } from './movers';
-import { currentCheck, keywordsNow } from './baseline';
+import { checkedPositionsNow, currentCheck, keywordsNow } from './baseline';
 import { bucketPositions, rankDistributionNow } from './rank-distribution';
 import { collapseRatings } from './ratings-history';
 import { ShareOfVoiceService } from './share-of-voice.service';
@@ -108,15 +108,6 @@ const assertRange = (from: Date, to: Date, maxDays: number): void => {
     throw new BadRequestException(`Range must not exceed ${maxDays} days`);
   }
 };
-
-const positionsCheckedNow = (
-  rows: TrackedRow[],
-  reference: Date,
-): Array<number | null> =>
-  rows.flatMap((row) => {
-    const check = currentCheck(row.keyword.rankings, reference);
-    return check ? [check.position] : [];
-  });
 
 interface CoverageListing extends ListingVerdicts {
   snapshot: {
@@ -269,7 +260,7 @@ export class AnalyticsService {
         date: toDateKey(new Date(time)),
         ...bucketPositions(
           time === reference?.getTime()
-            ? positionsCheckedNow(rows, new Date(time))
+            ? checkedPositionsNow(rows, new Date(time))
             : (byDate.get(time) ?? []),
         ),
       }));

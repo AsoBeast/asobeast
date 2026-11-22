@@ -151,17 +151,14 @@ function latestCheck(days: number[], day: number): number | undefined {
   return undefined;
 }
 
-function checkDayOf(
-  check: CheckedRow,
+const checkDayOf = (
+  { positions }: CheckedRow,
   member: CheckedMember,
   day: number,
-): number {
-  if (check.positions.has(day) || day !== member.days.at(-1)) {
-    return day;
-  }
-  const before = member.before.get(day);
-  return before === day - 1 ? before : day;
-}
+): number =>
+  day === member.days.at(-1) && !positions.has(day) && positions.has(day - 1)
+    ? day - 1
+    : day;
 
 function dayFigures(
   members: CheckedMember[],

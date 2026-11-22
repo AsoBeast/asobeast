@@ -75,3 +75,12 @@ export const positionsNow = (rows: TrackedRow[], reference: Date) =>
 
 export const keywordsNow = (rows: TrackedRow[], reference: Date) =>
   keywordsWith(rows, reference, currentCheck);
+
+export const checkedPositionsNow = (
+  rows: TrackedRow[],
+  reference: Date,
+): Array<number | null> =>
+  rows.flatMap((row) => {
+    const check = currentCheck(row.keyword.rankings, reference);
+    return check ? [check.position] : [];
+  });
