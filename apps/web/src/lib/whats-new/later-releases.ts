@@ -151,7 +151,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "fixed",
         title: "Keyword figures that agree after a partial run",
-        text: "When a daily run missed some keywords on the first day of the range you look at, the keywords in the top 10 and the visibility change used to count those keywords as not found, while the keyword movers already compared them with the day next to it. On the dashboard and the app overview, the keyword movers, the keywords in the top 10 and the visibility change now compare each keyword with the same earlier check when it has one on that day or the day next to it, so a keyword already in the top 10 is no longer counted as a new entry.",
+        text: "When a daily run missed some keywords on the first day of the range you look at, the keywords in the top 10 and the visibility change used to count those keywords as not found, while the keyword movers already compared them with the day next to it. On the dashboard and the app overview, the keyword movers, the keywords in the top 10 and the visibility change now compare each keyword with the same earlier check when it has one on that day or the day next to it, so a keyword already in the top 10 is no longer counted as a new entry. While today's run is still checking your keywords, a keyword it has not reached yet now counts with its position of the day before, so the keywords in the top 10 and visibility no longer dip every morning and match the keywords page.",
       },
       {
         kind: "new",
