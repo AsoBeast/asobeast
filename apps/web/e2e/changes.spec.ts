@@ -598,27 +598,32 @@ test("draws a year of changes on the activity chart", async ({ page }) => {
   const segmentError = page
     .getByRole("alert")
     .filter({ hasText: "Changes could not be loaded" });
+  const expectYearDrawn = async () => {
+    await expect(
+      activity(page).getByRole("region", {
+        name: "Search visibility and the days your listing changed",
+      }),
+    ).toBeVisible();
+    await expect(
+      activity(page).getByText("Could not load the visibility line."),
+    ).toHaveCount(0);
+    await expect(
+      timeline(page).locator("[data-change-field]").first(),
+    ).toBeVisible();
+    await expect(segmentError).toHaveCount(0);
+  };
 
   await page.goto("/apps/app-1/changes?days=365");
-  await expect(activity(page)).toBeVisible();
-  await expect(
-    timeline(page).locator("[data-change-field]").first(),
-  ).toBeVisible();
-  await expect(segmentError).toHaveCount(0);
+  await expectYearDrawn();
 
   await page.reload();
-  await expect(activity(page)).toBeVisible();
-  await expect(segmentError).toHaveCount(0);
+  await expectYearDrawn();
 
   await page.goto("/apps/app-1/changes");
   await expect(activity(page)).toBeVisible();
   await page.getByRole("tab", { name: "365d" }).click();
   await expect(page).toHaveURL(/days=365/);
-  await expect(activity(page)).toBeVisible();
-  await expect(
-    timeline(page).locator("[data-change-field]").first(),
-  ).toBeVisible();
-  await expect(segmentError).toHaveCount(0);
+  await expectYearDrawn();
 });
 
 test("keeps the changes when the visibility line cannot load", async ({
