@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { holdRequest } from "./held-request.mts";
 import { hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
 
@@ -560,6 +561,30 @@ test.describe("working the queue from the keyboard", () => {
     await expect(
       page.getByRole("menuitem", { name: "Wake now" }),
     ).toBeFocused();
+  });
+
+  test("s leaves the menu of a row with a change running closed", async ({
+    page,
+  }) => {
+    await openQueue(page);
+    const row = page.locator(card("act-snoozed"));
+    const more = row.locator('[data-command="more"]');
+    const held = await holdRequest(page, /\/actions\/act-snoozed$/, "PATCH");
+    await row.focus();
+    await page.keyboard.press("s");
+    await page.getByRole("menuitem", { name: "Wake now" }).press("Enter");
+    await expect(more).toHaveAttribute("aria-disabled", "true");
+    await expect(more).toBeFocused();
+    await row.focus();
+
+    await page.keyboard.press("s");
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    await expect(row).toBeFocused();
+
+    held.release();
+    await expect(more).not.toHaveAttribute("aria-disabled", "true");
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    await expect(more).toHaveAttribute("aria-expanded", "false");
   });
 
   test("typing in the search box never moves the focus", async ({ page }) => {
