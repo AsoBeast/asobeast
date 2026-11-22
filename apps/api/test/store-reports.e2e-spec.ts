@@ -71,6 +71,37 @@ const HELD_PAST_DEFAULT_TIMEOUT_MS = 5_500;
 const WAIT_ATTEMPTS = 250;
 const WAIT_INTERVAL_MS = 20;
 
+const LIVE_VERSION_PAGE = {
+  data: [
+    {
+      id: 'v1',
+      type: 'appStoreVersions',
+      attributes: {
+        appStoreState: 'READY_FOR_SALE',
+        versionString: '1.2.0',
+        createdDate: '2026-01-15T10:00:00.000Z',
+      },
+    },
+  ],
+  links: {},
+};
+
+const SUBMITTED_NOMINATION_PAGE = {
+  data: [
+    {
+      id: 'nom-1',
+      type: 'nominations',
+      attributes: {
+        state: 'SUBMITTED',
+        submittedDate: '2026-10-05T09:30:00.000Z',
+        publishStartDate: '2026-11-15T00:00:00.000Z',
+        publishEndDate: '2999-01-01T00:00:00.000Z',
+      },
+    },
+  ],
+  links: {},
+};
+
 const report = (requestId: string) => ({
   data: [
     {
@@ -836,20 +867,7 @@ describe('Store report sync (e2e)', () => {
     });
     harness.asc.on('GET', /\/appStoreVersions\?/, async () => {
       await blocked;
-      return answer({
-        data: [
-          {
-            id: 'v1',
-            type: 'appStoreVersions',
-            attributes: {
-              appStoreState: 'READY_FOR_SALE',
-              versionString: '1.2.0',
-              createdDate: '2026-01-15T10:00:00.000Z',
-            },
-          },
-        ],
-        links: {},
-      });
+      return answer(LIVE_VERSION_PAGE);
     });
 
     const syncing = run();
@@ -895,20 +913,7 @@ describe('Store report sync (e2e)', () => {
     harness.asc
       .on('GET', /\/appStoreVersions\?/, async () => {
         await blocked;
-        return answer({
-          data: [
-            {
-              id: 'v1',
-              type: 'appStoreVersions',
-              attributes: {
-                appStoreState: 'READY_FOR_SALE',
-                versionString: '1.2.0',
-                createdDate: '2026-01-15T10:00:00.000Z',
-              },
-            },
-          ],
-          links: {},
-        });
+        return answer(LIVE_VERSION_PAGE);
       })
       .on(
         'GET',
@@ -928,25 +933,7 @@ describe('Store report sync (e2e)', () => {
           links: {},
         }),
       )
-      .on(
-        'GET',
-        /\/v1\/nominations\?/,
-        answer({
-          data: [
-            {
-              id: 'nom-1',
-              type: 'nominations',
-              attributes: {
-                state: 'SUBMITTED',
-                submittedDate: '2026-10-05T09:30:00.000Z',
-                publishStartDate: '2026-11-15T00:00:00.000Z',
-                publishEndDate: '2999-01-01T00:00:00.000Z',
-              },
-            },
-          ],
-          links: {},
-        }),
-      );
+      .on('GET', /\/v1\/nominations\?/, answer(SUBMITTED_NOMINATION_PAGE));
 
     const syncing = run();
     for (let attempt = 0; attempt < WAIT_ATTEMPTS; attempt += 1) {
@@ -1011,25 +998,6 @@ describe('Store report sync (e2e)', () => {
   });
 
   describe('a key whose role apple refuses for a featuring read', () => {
-    const answerLiveVersion = () =>
-      harness.asc.on(
-        'GET',
-        /\/appStoreVersions\?/,
-        answer({
-          data: [
-            {
-              id: 'v1',
-              type: 'appStoreVersions',
-              attributes: {
-                versionString: '1.2.0',
-                createdDate: '2026-01-15T10:00:00.000Z',
-              },
-            },
-          ],
-          links: {},
-        }),
-      );
-
     const readinessRow = async (id: string) => {
       const result = (await owner.get(`/apps/${appId}/audit`).expect(200))
         .body as AppAuditResult;
@@ -1048,8 +1016,8 @@ describe('Store report sync (e2e)', () => {
 
     it('keeps the connection and the funnel when apple refuses the localizations, as for a sales key', async () => {
       scriptApple();
-      answerLiveVersion();
       harness.asc
+        .on('GET', /\/appStoreVersions\?/, answer(LIVE_VERSION_PAGE))
         .on(
           'GET',
           /appStoreVersionLocalizations\?/,
@@ -1077,25 +1045,7 @@ describe('Store report sync (e2e)', () => {
       scriptApple();
       harness.asc
         .on('GET', /\/appStoreVersions\?/, refusal(403, 'FORBIDDEN_ERROR'))
-        .on(
-          'GET',
-          /\/v1\/nominations\?/,
-          answer({
-            data: [
-              {
-                id: 'nom-1',
-                type: 'nominations',
-                attributes: {
-                  state: 'SUBMITTED',
-                  submittedDate: '2026-10-05T09:30:00.000Z',
-                  publishStartDate: '2026-11-15T00:00:00.000Z',
-                  publishEndDate: '2999-01-01T00:00:00.000Z',
-                },
-              },
-            ],
-            links: {},
-          }),
-        );
+        .on('GET', /\/v1\/nominations\?/, answer(SUBMITTED_NOMINATION_PAGE));
 
       await expect(run()).resolves.toMatchObject({
         nominations: 1,
