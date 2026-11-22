@@ -2,7 +2,12 @@
 
 import { Fragment, Suspense, useId } from "react";
 import Link from "next/link";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useQuery,
+  type UseQueryResult,
+} from "@tanstack/react-query";
+import type { VisibilityHistory } from "@asobeast/shared";
 import {
   Area,
   CartesianGrid,
@@ -12,7 +17,12 @@ import {
   YAxis,
 } from "recharts";
 import { AppIcon } from "@/components/AppIcon";
-import { ChartNotice, trendState } from "@/components/charts/ChartStates";
+import {
+  CHART_NOTICE,
+  ChartNotice,
+  ChartSkeleton,
+  trendState,
+} from "@/components/charts/ChartStates";
 import { SeriesFade, useFadeId } from "@/components/charts/SeriesFade";
 import { SeriesTooltip } from "@/components/charts/SeriesTooltip";
 import {
@@ -25,6 +35,10 @@ import {
   TIME_AXIS_PROPS,
   VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
+import {
+  failedRead,
+  InlineQueryError,
+} from "@/components/layout/InlineQueryError";
 import { FOOTER_LINK, PANEL_HEADER } from "@/components/layout/panel-classes";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -229,6 +243,44 @@ function VisibilityPlot({
   );
 }
 
+function VisibilityLine({
+  read,
+  span,
+  lanes,
+  markers,
+  effects,
+}: {
+  read: UseQueryResult<VisibilityHistory>;
+  span: string[];
+  lanes: Lane[];
+  markers: string[];
+  effects: ReadonlyMap<string, ChangeEffect>;
+}) {
+  if (read.data) {
+    return (
+      <VisibilityPlot
+        rows={visibilityRows(read.data.points, span)}
+        lanes={lanes}
+        markers={markers}
+        effects={effects}
+      />
+    );
+  }
+  if (failedRead(read)) {
+    return (
+      <div className={cn(PLOT_COLUMN, CHART_HEIGHT.compact, CHART_NOTICE)}>
+        <InlineQueryError
+          message="Could not load the visibility line."
+          read={read}
+        />
+      </div>
+    );
+  }
+  return (
+    <ChartSkeleton height={CHART_HEIGHT.compact} className={PLOT_COLUMN} />
+  );
+}
+
 function LaneRow({
   lane,
   onShowChange,
@@ -283,14 +335,15 @@ function Activity({
   const { events, days, homeListing, today } = useChangeEvents(id);
   const country = useImpactCountry(homeCountry);
   const span = windowDays(today, days);
-  const { data: visibility } = useSuspenseQuery(
-    visibilityOptions(id, changeWindowRange(today, days), country),
-  );
+  const lanes = activityLanes(events, span);
+  const visibility = useQuery({
+    ...visibilityOptions(id, changeWindowRange(today, days), country),
+    enabled: lanes.length > 0,
+    placeholderData: keepPreviousData,
+  });
   const impact = useChangeImpact(id, days, homeCountry);
 
-  const lanes = activityLanes(events, span);
   if (lanes.length === 0) return null;
-  const rows = visibilityRows(visibility.points, span);
   const effects =
     homeListing && impact
       ? effectsByDay(impact)
@@ -310,8 +363,9 @@ function Activity({
         <CardContent className="@container/activity flex flex-col gap-3">
           <ActivityKey />
           <div className={LANES}>
-            <VisibilityPlot
-              rows={rows}
+            <VisibilityLine
+              read={visibility}
+              span={span}
               lanes={lanes}
               markers={ownChangeDays(events, span)}
               effects={effects}
