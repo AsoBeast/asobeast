@@ -1155,9 +1155,9 @@ function withinHistoryRange(
       const path = req.url ?? "/";
       const query = new URL(path, "http://localhost").searchParams;
       const from = query.get("from");
-      const to = query.get("to");
+      const to = query.get("to") ?? new Date().toISOString().slice(0, 10);
       const maxDays = maxDaysOf(query);
-      if (from && to && Date.parse(to) - Date.parse(from) > maxDays * DAY_MS) {
+      if (from && Date.parse(to) - Date.parse(from) > maxDays * DAY_MS) {
         const message = `Range must not exceed ${maxDays} days`;
         return json(res, 400, errorEnvelope(400, path, message));
       }
