@@ -73,6 +73,24 @@ function pushSteps(keyword: string, store: Store): string[] {
       ];
 }
 
+function defendSteps(
+  keyword: string,
+  store: Store,
+  competitorBrand: boolean,
+): string[] {
+  const watch = `See who entered the top 10 for ${keyword}`;
+  return competitorBrand
+    ? [
+        watch,
+        `${keyword} is a competitor's brand, so it stays out of your listing`,
+      ]
+    : [
+        watch,
+        `Compare their ${STRONG_FIELDS[store]} with yours`,
+        `Strengthen ${keyword} in your strongest field if the position matters`,
+      ];
+}
+
 function ruleSteps(
   evidence: ActionEvidence,
   item: ActionItem,
@@ -83,11 +101,7 @@ function ruleSteps(
     case "keyword.add_uncovered":
       return addKeywordSteps(keyword, store, evidence.keywordFieldCharsFree);
     case "keyword.defend":
-      return [
-        `See who entered the top 10 for ${keyword}`,
-        `Compare their ${STRONG_FIELDS[store]} with yours`,
-        `Strengthen ${keyword} in your strongest field if the position matters`,
-      ];
+      return defendSteps(keyword, store, evidence.competitorBrand === true);
     case "keyword.prune":
       return [
         `Check ${keyword} on the keyword monitor`,
