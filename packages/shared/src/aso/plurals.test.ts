@@ -21,6 +21,7 @@ describe('isPluralOf', () => {
     ['cities', 'city'],
     ['buses', 'bus'],
     ['glasses', 'glass'],
+    ['canvases', 'canvas'],
   ])('reads %s as a plural of %s', (word, singular) => {
     expect(isPluralOf(word, singular)).toBe(true);
   });
@@ -34,6 +35,7 @@ describe('isPluralOf', () => {
     ['ios', 'io'],
     ['its', 'it'],
     ['boss', 'bos'],
+    ['canvas', 'canva'],
   ])('never reads %s as a plural of %s', (word, singular) => {
     expect(isPluralOf(word, singular)).toBe(false);
   });
@@ -44,6 +46,7 @@ describe('isPluralOf', () => {
       'series',
       'species',
       'means',
+      'canvas',
       'analytics',
       'physics',
       'politics',

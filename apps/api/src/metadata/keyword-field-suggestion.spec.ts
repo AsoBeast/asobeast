@@ -103,6 +103,16 @@ describe('suggestKeywordField', () => {
     ).toEqual(['ios widgets']);
   });
 
+  it('keeps canvas whole when canva is tracked', () => {
+    expect(
+      suggestKeywordField(
+        [item('k1', 'canvas drawing', 9), item('k2', 'canva', 4)],
+        [row('k1', true), row('k2', false)],
+        'en-US',
+      ).addedTerms,
+    ).toEqual(['canvas drawing']);
+  });
+
   it('never turns a word into a competitor brand', () => {
     expect(
       suggestKeywordField(

@@ -21,6 +21,7 @@ export const NOT_PLURALS: ReadonlySet<string> = new Set([
   'series',
   'species',
   'means',
+  'canvas',
   'analytics',
   'physics',
   'politics',
