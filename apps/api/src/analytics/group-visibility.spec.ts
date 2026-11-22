@@ -334,10 +334,17 @@ describe('the current day of a visibility figure', () => {
   });
 
   it('draws the newest point of a group the same way and older points exactly', () => {
-    const [group] = groupAggregates([member('ios', midRun, DAY_13)]);
+    const missedDay = [
+      midRun[0],
+      row('b', 10, [check(6, DAY_05), check(6, DAY_12)]),
+      ...midRun.slice(2),
+    ];
+    const [group] = groupAggregates([member('ios', missedDay, DAY_13)]);
+    const exact = (positions: Array<number | null>) =>
+      visibility(positions.map((position) => ({ traffic: 10, position })));
 
-    expect(groupVisibilityPoints(group.members)).toEqual([
-      { date: '2026-07-06', visibility: carried },
+    expect(groupVisibilityPoints(group.members).slice(1)).toEqual([
+      { date: '2026-07-06', visibility: exact([2, null, 8, 30]) },
       { date: '2026-07-12', visibility: carried },
       { date: '2026-07-13', visibility: carried },
     ]);

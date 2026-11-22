@@ -12,6 +12,7 @@ import { keywordsNow } from './baseline';
 const DAY_13 = new Date('2026-07-13T00:00:00Z');
 const DAY_12 = new Date('2026-07-12T00:00:00Z');
 const DAY_09 = new Date('2026-07-09T00:00:00Z');
+const DAY_08 = new Date('2026-07-08T00:00:00Z');
 
 const check = (position: number | null, date: Date): Ranking => ({
   position,
@@ -59,7 +60,13 @@ describe('visibilityPoints', () => {
   });
 
   it('keeps every older point on its own day', () => {
-    expect(visibilityPoints(midRun, DAY_13).slice(0, -1)).toEqual([
+    const missedDay = [
+      ...midRun.slice(0, 2),
+      row('c', 5, [check(8, DAY_08), check(8, DAY_12)]),
+      midRun[3],
+    ];
+
+    expect(visibilityPoints(missedDay, DAY_13).slice(1, -1)).toEqual([
       { date: '2026-07-09', visibility: visibilityOf([2, 6, null, 30]) },
       { date: '2026-07-12', visibility: visibilityOf([2, 6, 8, 30]) },
     ]);

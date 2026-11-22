@@ -585,6 +585,47 @@ describe('portfolioHistory', () => {
     });
   });
 
+  describe('apps whose latest checks fall on different days', () => {
+    it('carries only the day before each app own latest check and reads older days exactly', () => {
+      const current = app([
+        row('k1', 10, [
+          [0, 2],
+          [1, 2],
+        ]),
+        row('k2', 10, [[1, 6]]),
+        row('k3', 10, [[2, 9]]),
+      ]);
+      const lagging = app(
+        [
+          row(
+            'kb1',
+            10,
+            [
+              [0, 3],
+              [1, 3],
+            ],
+            daysAgo(1),
+          ),
+          row('kb2', 10, [[2, 4]], daysAgo(1)),
+          row('kb3', 10, [[1, 7]], daysAgo(1)),
+        ],
+        daysAgo(1),
+      );
+
+      const history = portfolioHistory([current, lagging], 7);
+
+      expect(
+        history.points.map(({ date, top10 }) => ({ date, top10 })),
+      ).toEqual([
+        { date: '2026-07-10', top10: 1 },
+        { date: '2026-07-11', top10: 3 },
+        { date: '2026-07-12', top10: 4 },
+        { date: '2026-07-13', top10: 4 },
+      ]);
+      expect(history.apps?.map((each) => each.change.top10)).toEqual([2, 2]);
+    });
+  });
+
   describe('the figures behind the pooled line', () => {
     const rising = () =>
       app([
