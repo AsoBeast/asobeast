@@ -33,6 +33,7 @@ import {
   delta,
   keywordWindow,
   metricAt,
+  rankingsSince,
   referenceDate,
   startOfUtcDay,
   toDateKey,
@@ -204,11 +205,19 @@ export class AnalyticsService {
         : HISTORY_MAX_DAYS,
     );
 
-    const [rows, reference] = await Promise.all([
-      trackedRows(this.prisma, { appId, country: query.country }, from, to),
+    const [withDayBefore, reference] = await Promise.all([
+      trackedRows(
+        this.prisma,
+        { appId, country: query.country },
+        addDays(from, -1),
+        to,
+      ),
       referenceDate(this.prisma, { appId, country: query.country }),
     ]);
-    const points = visibilityPoints(rows, reference);
+    const rows = rankingsSince(withDayBefore, from);
+    const points = visibilityPoints(withDayBefore, reference).filter(
+      (point) => point.date >= toDateKey(from),
+    );
     if (query.compare !== 'competitors') {
       return { points };
     }
@@ -239,14 +248,14 @@ export class AnalyticsService {
 
     assertRange(from, to, HISTORY_MAX_DAYS);
 
-    const rows = await trackedRows(
+    const withDayBefore = await trackedRows(
       this.prisma,
       { appId, country: query.country },
-      from,
+      addDays(from, -1),
       to,
     );
     const byDate = new Map<number, Array<number | null>>();
-    for (const row of rows) {
+    for (const row of rankingsSince(withDayBefore, from)) {
       for (const ranking of row.keyword.rankings) {
         const list = byDate.get(ranking.date.getTime()) ?? [];
         list.push(ranking.position);
@@ -260,7 +269,7 @@ export class AnalyticsService {
         date: toDateKey(new Date(time)),
         ...bucketPositions(
           time === reference?.getTime()
-            ? checkedPositionsNow(rows, new Date(time))
+            ? checkedPositionsNow(withDayBefore, new Date(time))
             : (byDate.get(time) ?? []),
         ),
       }));

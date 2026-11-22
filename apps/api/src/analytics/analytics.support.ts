@@ -333,6 +333,17 @@ export async function trackedRows(
   });
 }
 
+export const rankingsSince = (rows: TrackedRow[], from: Date): TrackedRow[] =>
+  rows.map((row) => ({
+    ...row,
+    keyword: {
+      ...row.keyword,
+      rankings: row.keyword.rankings.filter(
+        (ranking) => ranking.date.getTime() >= from.getTime(),
+      ),
+    },
+  }));
+
 export async function keywordWindow(
   prisma: PrismaService,
   scope: TrackedScope,

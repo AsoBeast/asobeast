@@ -1108,6 +1108,38 @@ describe('AnalyticsController (e2e)', () => {
     );
   });
 
+  it('draws a window that starts on the reference day with the check of the day before', async () => {
+    const id = await seedMidRun();
+    const summary = (await api.get(`/apps/${id}/summary`).expect(200))
+      .body as AppSummary;
+    const today = { from: '2026-06-30', to: '2026-06-30' };
+
+    const history = (
+      await api.get(`/apps/${id}/visibility-history`).query(today).expect(200)
+    ).body as VisibilityHistory;
+    expect(history.points).toEqual([
+      { date: '2026-06-30', visibility: summary.visibility.current },
+    ]);
+
+    const bands = (
+      await api
+        .get(`/apps/${id}/rank-distribution-history`)
+        .query(today)
+        .expect(200)
+    ).body as RankDistributionHistory;
+    expect(bands.points).toEqual([
+      {
+        date: '2026-06-30',
+        rank1: 0,
+        rank2to3: 1,
+        rank4to10: 2,
+        rank11to50: 1,
+        rank51plus: 0,
+        unranked: 0,
+      },
+    ]);
+  });
+
   it('reads the last day of a past window exactly, as a wider window does', async () => {
     const id = await seedMidRun();
     const missed = await prisma.keyword.findFirstOrThrow({
