@@ -14,6 +14,12 @@ const answered = (status: number, code: string): AscResponse => ({
 
 const read: AscRequest = { method: 'GET', path: '/v1/apps/1/customerReviews' };
 
+const VERSION_READ =
+  '/v1/apps/1476097583/appStoreVersions?filter[appStoreState]=READY_FOR_SALE&filter[platform]=IOS&fields[appStoreVersions]=versionString,createdDate&limit=200';
+
+const LOCALIZATIONS_READ =
+  '/v1/appStoreVersions/v1/appStoreVersionLocalizations?fields[appStoreVersionLocalizations]=locale,keywords,promotionalText&limit=200';
+
 describe('errorOf', () => {
   it.each([
     ['GET', '/v1/apps/1/customerReviews?sort=-createdDate&limit=200'],
@@ -25,6 +31,8 @@ describe('errorOf', () => {
       '/v1/nominations?filter[state]=SUBMITTED&filter[relatedApps]=1476097583&limit=200',
     ],
     ['GET', '/v1/nominations'],
+    ['GET', VERSION_READ],
+    ['GET', LOCALIZATIONS_READ],
   ] as const)(
     'maps a 403 whose code starts with FORBIDDEN on %s %s to a missing role',
     (method, path) => {
@@ -49,6 +57,28 @@ describe('errorOf', () => {
 
     expect(error).toBeInstanceOf(AscRejectedKeyError);
     expect(error).not.toBeInstanceOf(AscForbiddenError);
+  });
+
+  it.each([VERSION_READ, LOCALIZATIONS_READ])(
+    'keeps a 403 with another code on the version read %s as a rejected key',
+    (path) => {
+      const error = errorOf(answered(403, 'NOT_AUTHORIZED'), {
+        method: 'GET',
+        path,
+      });
+
+      expect(error).toBeInstanceOf(AscRejectedKeyError);
+      expect(error).not.toBeInstanceOf(AscForbiddenError);
+    },
+  );
+
+  it('names a missing agreement on a version read before a missing role', () => {
+    expect(
+      errorOf(
+        answered(403, 'FORBIDDEN.REQUIRED_AGREEMENTS_MISSING_OR_EXPIRED'),
+        { method: 'GET', path: LOCALIZATIONS_READ },
+      ),
+    ).toBeInstanceOf(AscAgreementError);
   });
 
   it('keeps a FORBIDDEN 403 on an analytics read as a rejected key', () => {
