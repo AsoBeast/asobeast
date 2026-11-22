@@ -5,7 +5,14 @@ import {
   VisibilityPoint,
 } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
-import { hasBaseline, keywordsAtBaseline, keywordsNow } from './baseline';
+import {
+  CheckLookup,
+  currentCheckIn,
+  hasBaseline,
+  keywordOf,
+  keywordsAtBaseline,
+  keywordsNow,
+} from './baseline';
 import {
   addDays,
   DAY_MS,
@@ -106,7 +113,15 @@ export function windowVisibility(
   return { current, delta7d: delta(rows, referenceDate, current, 7) };
 }
 
+const lookupOf = (row: TrackedRow): CheckLookup => {
+  const byDay = new Map(
+    row.keyword.rankings.map((ranking) => [ranking.date.getTime(), ranking]),
+  );
+  return (date) => byDay.get(date.getTime()) ?? null;
+};
+
 export function visibilityPoints(rows: TrackedRow[]): VisibilityPoint[] {
+  const lookups = rows.map(lookupOf);
   const dates = new Set<number>();
   for (const row of rows) {
     for (const ranking of row.keyword.rankings) {
@@ -117,8 +132,12 @@ export function visibilityPoints(rows: TrackedRow[]): VisibilityPoint[] {
   const newest = times.at(-1);
   return times.map((time) => {
     const date = new Date(time);
-    const keywords =
-      time === newest ? keywordsNow(rows, date) : keywordsAt(rows, date);
+    const keywords = rows.map((row, index) => {
+      const lookup = lookups[index];
+      const check =
+        time === newest ? currentCheckIn(lookup, date) : lookup(date);
+      return keywordOf(row, check, date);
+    });
     return { date: toDateKey(date), visibility: visibility(keywords) };
   });
 }

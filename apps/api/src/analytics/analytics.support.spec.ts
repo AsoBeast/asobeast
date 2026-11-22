@@ -1,5 +1,13 @@
 import { RANK_DEPTH, visibility } from '@asobeast/shared';
-import { Ranking, TrackedRow, visibilityPoints } from './analytics.support';
+import {
+  addDays,
+  keywordsAt,
+  Ranking,
+  toDateKey,
+  TrackedRow,
+  visibilityPoints,
+} from './analytics.support';
+import { keywordsNow } from './baseline';
 
 const DAY_13 = new Date('2026-07-13T00:00:00Z');
 const DAY_12 = new Date('2026-07-12T00:00:00Z');
@@ -69,5 +77,63 @@ describe('visibilityPoints', () => {
         { traffic: 8, position: null },
       ]),
     );
+  });
+});
+
+describe('visibilityPoints over a long history', () => {
+  const FIRST = new Date('2026-05-15T00:00:00Z');
+  const DAYS = 60;
+  const longHistory = Array.from({ length: 20 }, (_, index): TrackedRow => {
+    const checks = Array.from({ length: DAYS }, (_, day) => day)
+      .filter((day) => (day + index) % 7 !== 0)
+      .filter((day) => !(index % 4 === 0 && day === DAYS - 1))
+      .map((day) =>
+        check(
+          day % 11 === index % 11 ? null : 1 + ((index * 17 + day) % 120),
+          addDays(FIRST, day),
+        ),
+      );
+    return {
+      keywordId: `kw_${index}`,
+      source: 'MANUAL',
+      relevance: null,
+      keyword: {
+        text: `kw ${index}`,
+        country: 'us',
+        metrics: Array.from({ length: 6 }, (_, step) => ({
+          traffic: 5 + ((index + step * 3) % 40),
+          difficulty: 20,
+          date: addDays(FIRST, 50 - step * 10),
+        })),
+        rankings: [...checks].sort(
+          (a, b) => b.date.getTime() - a.date.getTime(),
+        ),
+      },
+    };
+  });
+
+  const expectedPoints = (rows: TrackedRow[]) => {
+    const times = [
+      ...new Set(
+        rows.flatMap((row) =>
+          row.keyword.rankings.map((ranking) => ranking.date.getTime()),
+        ),
+      ),
+    ].sort((a, b) => a - b);
+    return times.map((time, index) => {
+      const date = new Date(time);
+      const keywords =
+        index === times.length - 1
+          ? keywordsNow(rows, date)
+          : keywordsAt(rows, date);
+      return { date: toDateKey(date), visibility: visibility(keywords) };
+    });
+  };
+
+  it('draws the same points from the index as from the lists', () => {
+    const points = visibilityPoints(longHistory);
+
+    expect(points).toHaveLength(DAYS);
+    expect(points).toEqual(expectedPoints(longHistory));
   });
 });

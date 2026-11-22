@@ -5,13 +5,15 @@ import { addDays, metricAt, Ranking, rankingAt } from './days';
 const BASELINE_SHIFTS = [0, 1, -1] as const;
 const CURRENT_SHIFTS = [0, -1] as const;
 
+export type CheckLookup = (date: Date) => Ranking | null;
+
 const checkWithin = (
-  rankings: Ranking[],
+  lookup: CheckLookup,
   target: Date,
   shifts: readonly number[],
 ): Ranking | null => {
   for (const shift of shifts) {
-    const check = rankingAt(rankings, addDays(target, shift));
+    const check = lookup(addDays(target, shift));
     if (check) {
       return check;
     }
@@ -19,11 +21,29 @@ const checkWithin = (
   return null;
 };
 
+const listLookup =
+  (rankings: Ranking[]): CheckLookup =>
+  (date) =>
+    rankingAt(rankings, date);
+
 export const baselineCheck = (rankings: Ranking[], target: Date) =>
-  checkWithin(rankings, target, BASELINE_SHIFTS);
+  checkWithin(listLookup(rankings), target, BASELINE_SHIFTS);
+
+export const currentCheckIn = (lookup: CheckLookup, reference: Date) =>
+  checkWithin(lookup, reference, CURRENT_SHIFTS);
 
 export const currentCheck = (rankings: Ranking[], reference: Date) =>
-  checkWithin(rankings, reference, CURRENT_SHIFTS);
+  currentCheckIn(listLookup(rankings), reference);
+
+export const keywordOf = (
+  row: TrackedRow,
+  check: Ranking | null,
+  target: Date,
+): VisibilityKeyword => ({
+  traffic:
+    metricAt(row.keyword.metrics, check?.date ?? target)?.traffic ?? null,
+  position: check?.position ?? null,
+});
 
 type CheckPick = (rankings: Ranking[], target: Date) => Ranking | null;
 
@@ -32,14 +52,7 @@ const keywordsWith = (
   target: Date,
   pick: CheckPick,
 ): VisibilityKeyword[] =>
-  rows.map((row) => {
-    const check = pick(row.keyword.rankings, target);
-    return {
-      traffic:
-        metricAt(row.keyword.metrics, check?.date ?? target)?.traffic ?? null,
-      position: check?.position ?? null,
-    };
-  });
+  rows.map((row) => keywordOf(row, pick(row.keyword.rankings, target), target));
 
 const positionsWith = (
   rows: TrackedRow[],
