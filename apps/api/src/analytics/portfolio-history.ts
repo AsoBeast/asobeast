@@ -156,7 +156,7 @@ const checkDayOf = (
   member: CheckedMember,
   day: number,
 ): number =>
-  day === member.days.at(-1) && !positions.has(day) && positions.has(day - 1)
+  day === member.lag && !positions.has(day) && positions.has(day - 1)
     ? day - 1
     : day;
 

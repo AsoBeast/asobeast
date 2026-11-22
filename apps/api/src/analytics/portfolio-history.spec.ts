@@ -626,6 +626,23 @@ describe('portfolioHistory', () => {
     });
   });
 
+  describe('an app whose latest check belongs to a keyword paused since', () => {
+    it('reads its newest active day exactly', () => {
+      const history = portfolioHistory(
+        [app([row('a', 10, [[1, 2]]), row('b', 10, [[2, 6]])])],
+        7,
+      );
+
+      expect(
+        history.points.map(({ date, top10 }) => ({ date, top10 })),
+      ).toEqual([
+        { date: '2026-07-11', top10: 1 },
+        { date: '2026-07-12', top10: 1 },
+      ]);
+      expect(history.apps?.[0].change.top10).toBe(1);
+    });
+  });
+
   describe('the figures behind the pooled line', () => {
     const rising = () =>
       app([
