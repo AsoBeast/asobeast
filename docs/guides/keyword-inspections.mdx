@@ -39,7 +39,7 @@ The provenance names the source of the popularity and its confidence. `APPLE_ADS
 
 ### Search results and autocomplete
 
-The results list the top 50 apps the store returned, in order, with title, developer, rating, rating count and the date of the last update where the store reports it. Each title is graded against the phrase the same way as the search results of a tracked keyword: `phrase` holds the phrase, `words` holds every word in any order, `partial` holds some of the words and `none` holds none of them. The words of the phrase are marked in each title. Positions are 1 based. See [Positions and rank depth](/concepts/positions).
+The results list the top 50 apps the store returned, in order, with title, developer, rating, rating count and the date of the last update where the store reports it. On Google Play the rating count and the dates are filled for the top 10, which get a detail lookup, and stay empty below them, because the search itself does not report them. Each title is graded against the phrase the same way as the search results of a tracked keyword: `phrase` holds the phrase, `words` holds every word in any order, `partial` holds some of the words and `none` holds none of them. The words of the phrase are marked in each title. Positions are 1 based. See [Positions and rank depth](/concepts/positions).
 
 The suggestions are what the store autocomplete offers for the phrase, up to ten, in the store's order. A phrase the autocomplete offers is one users type, and its longer suggestions are candidates for an inspection of their own.
 
