@@ -149,6 +149,7 @@ Specific components:
   - A dot is one module level `shape` function that reads its state from context (one created in the component remounts every dot and drops focus to `body`), with a transparent 24 px target.
   - The `svg` is `role="group"` with `tabIndex={-1}`, `accessibilityLayer` on, and draws loading, empty, insufficient (`trendState`) and filtered out states at `CHART_HEIGHT.hero`.
   - Its rows are the zone column's faceted rows (`useKeywordsAcrossZones`, memoized on the faceted row model so selection or sorting does not redraw), every filter but the zone, so a chosen zone dims dots instead of removing them.
+- The keyword inspector's map (`components/keyword-inspections/InspectionMap.tsx`) draws the same dots and passes each `Scatter` a memoized `data` array (`inspectionPoints`, `drawOrder` and the selected point under `useMemo`), because a new array rebuilds the scatter layer when a dot takes focus on mousedown, so the mouseup lands on a new node and the click never fires.
 
 ## Frontend rule 9: Tables go through the table kit, and judged numbers go through the grade scale
 
