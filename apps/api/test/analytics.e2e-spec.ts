@@ -22,6 +22,7 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { testDb } from './helpers/test-db';
 import { ownerAgent, useCookies } from './helpers/session';
+import { addDays } from '../src/analytics/days';
 import { DigestService } from '../src/analytics/digest.service';
 import { KeywordsService } from '../src/keywords/keywords.service';
 import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
@@ -555,6 +556,22 @@ describe('AnalyticsController (e2e)', () => {
       .expect(400);
   });
 
+  it('caps a compared range just past 180 days', async () => {
+    const id = await seed();
+
+    const response = await api
+      .get(`/apps/${id}/visibility-history`)
+      .query({ from: '2026-01-01', to: '2026-07-01', compare: 'competitors' })
+      .expect(400);
+    expect((response.body as ApiErrorEnvelope).message).toBe(
+      'Range must not exceed 180 days',
+    );
+    await api
+      .get(`/apps/${id}/visibility-history`)
+      .query({ from: '2026-01-02', to: '2026-07-01', compare: 'competitors' })
+      .expect(200);
+  });
+
   const classify = async (
     appId: string,
     classes: Record<string, 'ownBrand' | 'competitorBrand' | 'generic'>,
@@ -952,6 +969,219 @@ describe('AnalyticsController (e2e)', () => {
     expect(summary.coverage.inTitle).toBe(2);
     expect(summary.coverage.inSubtitle).toBe(3);
     expect(summary.coverage.uncoveredHighOpportunity).toEqual([]);
+  });
+
+  const seedMidRun = async (): Promise<string> => {
+    const created = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '1234567893',
+        country: 'us',
+        name: 'Mid Run',
+      },
+    });
+    const keywords = [
+      { text: 'habit', traffic: 9, position: 2, checkedToday: true },
+      { text: 'habit tracker', traffic: 8, position: 6, checkedToday: false },
+      { text: 'streak app', traffic: 5, position: 8, checkedToday: false },
+      { text: 'daily goals', traffic: 7, position: 30, checkedToday: true },
+    ];
+    for (const kw of keywords) {
+      const keyword = await prisma.keyword.create({
+        data: { text: kw.text, store: Store.APP_STORE, country: 'us' },
+      });
+      await prisma.trackedKeyword.create({
+        data: {
+          appId: created.id,
+          keywordId: keyword.id,
+          source: 'MANUAL',
+          active: true,
+        },
+      });
+      await prisma.keywordMetric.create({
+        data: {
+          keywordId: keyword.id,
+          date: D7,
+          traffic: kw.traffic,
+          difficulty: 3,
+          formulaVersion: CURRENT_FORMULA_VERSIONS.APP_STORE,
+        },
+      });
+      const days = Array.from({ length: kw.checkedToday ? 8 : 7 }, (_, ago) =>
+        addDays(D7, ago),
+      );
+      await prisma.keywordRanking.createMany({
+        data: days.map((date) => ({
+          appId: created.id,
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          keywordId: keyword.id,
+          date,
+          position: kw.position,
+          depth: 100,
+        })),
+      });
+    }
+    return created.id;
+  };
+
+  const carriedVisibility = visibility([
+    { traffic: 9, position: 2 },
+    { traffic: 8, position: 6 },
+    { traffic: 5, position: 8 },
+    { traffic: 7, position: 30 },
+  ]);
+
+  it("counts keywords still waiting for today's check at yesterday's position", async () => {
+    const id = await seedMidRun();
+
+    const summary = (await api.get(`/apps/${id}/summary`).expect(200))
+      .body as AppSummary;
+    expect(summary.rankDistribution.top10).toBe(3);
+    expect(summary.visibility.current).toBeCloseTo(carriedVisibility, 5);
+    expect(summary.visibility.delta7d).toBe(0);
+
+    const portfolio = (await api.get('/portfolio').expect(200))
+      .body as PortfolioSummary;
+    expect(portfolio.apps[0].visibility.current).toBeCloseTo(
+      summary.visibility.current,
+      5,
+    );
+
+    const insights = (await api.get('/portfolio/insights').expect(200))
+      .body as PortfolioInsights;
+    const insight = insights.apps.find((each) => each.appId === id);
+    expect(insight?.rankDistribution.top10).toBe(3);
+    expect(insight?.top10Delta7d).toBe(0);
+
+    const listed = (await api.get(`/apps/${id}/keywords`).expect(200))
+      .body as TrackedKeywordItem[];
+    expect(
+      listed.filter(
+        (item) => item.latestPosition !== null && item.latestPosition <= 10,
+      ),
+    ).toHaveLength(3);
+  });
+
+  it('draws the newest point with the same check as the figures above it', async () => {
+    const id = await seedMidRun();
+
+    const summary = (await api.get(`/apps/${id}/summary`).expect(200))
+      .body as AppSummary;
+    const range = { from: '2026-06-23', to: '2026-06-30' };
+
+    const history = (
+      await api.get(`/apps/${id}/visibility-history`).query(range).expect(200)
+    ).body as VisibilityHistory;
+    expect(history.points.at(-1)?.date).toBe('2026-06-30');
+    expect(history.points.at(-1)?.visibility).toBeCloseTo(
+      summary.visibility.current,
+      5,
+    );
+
+    const bands = (
+      await api
+        .get(`/apps/${id}/rank-distribution-history`)
+        .query(range)
+        .expect(200)
+    ).body as RankDistributionHistory;
+    const newest = bands.points.at(-1);
+    expect(newest?.date).toBe('2026-06-30');
+    expect(
+      (newest?.rank1 ?? 0) + (newest?.rank2to3 ?? 0) + (newest?.rank4to10 ?? 0),
+    ).toBe(3);
+    expect(
+      (newest?.rank1 ?? 0) +
+        (newest?.rank2to3 ?? 0) +
+        (newest?.rank4to10 ?? 0) +
+        (newest?.rank11to50 ?? 0) +
+        (newest?.rank51plus ?? 0) +
+        (newest?.unranked ?? 0),
+    ).toBe(4);
+
+    const portfolio = (await api.get('/portfolio/history?days=7').expect(200))
+      .body as PortfolioHistory;
+    expect(portfolio.points.at(-1)?.top10).toBe(3);
+    expect(portfolio.points.at(-1)?.visibility).toBeCloseTo(
+      summary.visibility.current,
+      5,
+    );
+  });
+
+  it('draws a window that starts on the reference day with the check of the day before', async () => {
+    const id = await seedMidRun();
+    const summary = (await api.get(`/apps/${id}/summary`).expect(200))
+      .body as AppSummary;
+    const today = { from: '2026-06-30', to: '2026-06-30' };
+
+    const history = (
+      await api.get(`/apps/${id}/visibility-history`).query(today).expect(200)
+    ).body as VisibilityHistory;
+    expect(history.points).toEqual([
+      { date: '2026-06-30', visibility: summary.visibility.current },
+    ]);
+
+    const bands = (
+      await api
+        .get(`/apps/${id}/rank-distribution-history`)
+        .query(today)
+        .expect(200)
+    ).body as RankDistributionHistory;
+    expect(bands.points).toEqual([
+      {
+        date: '2026-06-30',
+        rank1: 0,
+        rank2to3: 1,
+        rank4to10: 2,
+        rank11to50: 1,
+        rank51plus: 0,
+        unranked: 0,
+      },
+    ]);
+  });
+
+  it('reads the last day of a past window exactly, as a wider window does', async () => {
+    const id = await seedMidRun();
+    const missed = await prisma.keyword.findFirstOrThrow({
+      where: { text: 'streak app' },
+    });
+    await prisma.keywordRanking.deleteMany({
+      where: {
+        keywordId: missed.id,
+        date: new Date('2026-06-27T00:00:00.000Z'),
+      },
+    });
+    const dayOf = <T extends { date: string }>(points: T[]) =>
+      points.find((point) => point.date === '2026-06-27');
+    const read = async <T>(path: string, to: string): Promise<T> =>
+      (
+        await api
+          .get(`/apps/${id}/${path}`)
+          .query({ from: '2026-06-23', to })
+          .expect(200)
+      ).body as T;
+
+    const past = await read<VisibilityHistory>(
+      'visibility-history',
+      '2026-06-27',
+    );
+    const wide = await read<VisibilityHistory>(
+      'visibility-history',
+      '2026-06-30',
+    );
+    expect(past.points.at(-1)?.date).toBe('2026-06-27');
+    expect(past.points.at(-1)).toEqual(dayOf(wide.points));
+
+    const pastBands = await read<RankDistributionHistory>(
+      'rank-distribution-history',
+      '2026-06-27',
+    );
+    const wideBands = await read<RankDistributionHistory>(
+      'rank-distribution-history',
+      '2026-06-30',
+    );
+    expect(pastBands.points.at(-1)).toEqual(dayOf(wideBands.points));
+    expect(pastBands.points.at(-1)?.rank4to10).toBe(1);
   });
 
   it('composes a portfolio whose numbers match the app summary', async () => {
@@ -1522,13 +1752,77 @@ describe('AnalyticsController (e2e)', () => {
     expect(last.visibility).toBeCloseTo(current, 1);
   });
 
-  it('rejects ranges beyond the 180 day cap', async () => {
+  it('rejects ranges beyond the year cap', async () => {
     const id = await seed();
 
-    await api
+    const response = await api
       .get(`/apps/${id}/visibility-history`)
       .query({ from: '2025-01-01', to: '2026-07-01' })
       .expect(400);
+    expect((response.body as ApiErrorEnvelope).message).toBe(
+      'Range must not exceed 365 days',
+    );
+  });
+
+  const YEAR = { from: '2025-11-22', to: '2026-11-21' };
+
+  const seedYear = async (): Promise<string> => {
+    const id = await seed();
+    const keyword = await prisma.keyword.findFirstOrThrow({
+      where: { text: 'habit' },
+    });
+    await prisma.keywordRanking.createMany({
+      data: ['2025-11-23', '2026-11-21'].map((date) => ({
+        appId: id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        keywordId: keyword.id,
+        date: new Date(`${date}T00:00:00.000Z`),
+        position: 3,
+        depth: 100,
+      })),
+    });
+    return id;
+  };
+
+  it('answers a year of visibility history, as the changes page asks', async () => {
+    const id = await seedYear();
+
+    const history = (
+      await api.get(`/apps/${id}/visibility-history`).query(YEAR).expect(200)
+    ).body as VisibilityHistory;
+
+    expect(history.points.map((point) => point.date)).toEqual([
+      '2025-11-23',
+      '2026-06-23',
+      '2026-06-30',
+      '2026-11-21',
+    ]);
+  });
+
+  it('answers a year of rank band history', async () => {
+    const id = await seedYear();
+
+    const history = (
+      await api
+        .get(`/apps/${id}/rank-distribution-history`)
+        .query(YEAR)
+        .expect(200)
+    ).body as RankDistributionHistory;
+
+    expect(history.points.at(0)?.date).toBe('2025-11-23');
+    expect(history.points.at(-1)?.date).toBe('2026-11-21');
+  });
+
+  it('keeps the ratings history to the snapshot retention', async () => {
+    const id = await seed();
+
+    const response = await api
+      .get(`/apps/${id}/ratings-history`)
+      .query({ from: '2026-01-01', to: '2026-07-01' })
+      .expect(400);
+    expect((response.body as ApiErrorEnvelope).message).toBe(
+      'Range must not exceed 180 days',
+    );
   });
 
   describe.each([

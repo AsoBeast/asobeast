@@ -1,12 +1,13 @@
 import type { Ranking, TrackedRow } from './analytics.support';
 import {
   bucketPositions,
-  rankDistributionAt,
+  rankDistributionNow,
   rankDistributionOf,
 } from './rank-distribution';
 
 const REFERENCE = new Date('2026-07-13T00:00:00.000Z');
 const EARLIER = new Date('2026-07-12T00:00:00.000Z');
+const TWO_DAYS_EARLIER = new Date('2026-07-11T00:00:00.000Z');
 
 const row = (rankings: Ranking[]): TrackedRow => ({
   keywordId: 'kw_1',
@@ -56,11 +57,11 @@ describe('bucketPositions', () => {
   });
 });
 
-describe('rankDistributionAt', () => {
+describe('rankDistributionNow', () => {
   it('counts positions into cumulative buckets', () => {
     const rows = [1, 3, 7, 40, 120, null].map((position) => rankedAt(position));
 
-    expect(rankDistributionAt(rows, REFERENCE)).toEqual({
+    expect(rankDistributionNow(rows, REFERENCE)).toEqual({
       top1: 1,
       top3: 2,
       top10: 3,
@@ -70,8 +71,21 @@ describe('rankDistributionAt', () => {
     });
   });
 
-  it('counts a row not captured on the date as unranked', () => {
-    expect(rankDistributionAt([rankedAt(4, EARLIER)], REFERENCE)).toEqual({
+  it('counts a row checked the day before at that position while the run is pending', () => {
+    expect(rankDistributionNow([rankedAt(4, EARLIER)], REFERENCE)).toEqual({
+      top1: 0,
+      top3: 0,
+      top10: 1,
+      top50: 1,
+      beyond: 0,
+      unranked: 0,
+    });
+  });
+
+  it('counts a row last checked two days before as unranked', () => {
+    expect(
+      rankDistributionNow([rankedAt(4, TWO_DAYS_EARLIER)], REFERENCE),
+    ).toEqual({
       top1: 0,
       top3: 0,
       top10: 0,
@@ -82,7 +96,7 @@ describe('rankDistributionAt', () => {
   });
 
   it('counts every row as unranked without a date', () => {
-    expect(rankDistributionAt([rankedAt(1), rankedAt(12)], null)).toEqual({
+    expect(rankDistributionNow([rankedAt(1), rankedAt(12)], null)).toEqual({
       top1: 0,
       top3: 0,
       top10: 0,
@@ -94,11 +108,11 @@ describe('rankDistributionAt', () => {
 });
 
 describe('rankDistributionOf', () => {
-  it('counts the same positions as rankDistributionAt reads on the date', () => {
+  it('counts the same positions as rankDistributionNow reads on the date', () => {
     const positions = [1, 3, 7, 40, 120, null];
 
     expect(rankDistributionOf(positions)).toEqual(
-      rankDistributionAt(
+      rankDistributionNow(
         positions.map((position) => rankedAt(position)),
         REFERENCE,
       ),

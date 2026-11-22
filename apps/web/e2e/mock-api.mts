@@ -342,6 +342,7 @@ import type {
   StoreImportState,
 } from "@asobeast/shared";
 import {
+  QUERY_BOUNDS,
   WORKSPACE_GOALS,
   COUNTRY_PATTERN,
   DELETION_CONFIRMATION,
@@ -1143,6 +1144,32 @@ function appRoute(
     },
   };
 }
+
+function withinHistoryRange(
+  route: Route,
+  maxDaysOf: (query: URLSearchParams) => number,
+): Route {
+  return {
+    ...route,
+    handler: (params, req, res) => {
+      const path = req.url ?? "/";
+      const query = new URL(path, "http://localhost").searchParams;
+      const from = query.get("from");
+      const to = query.get("to") ?? new Date().toISOString().slice(0, 10);
+      const maxDays = maxDaysOf(query);
+      if (from && Date.parse(to) - Date.parse(from) > maxDays * DAY_MS) {
+        const message = `Range must not exceed ${maxDays} days`;
+        return json(res, 400, errorEnvelope(400, path, message));
+      }
+      return route.handler(params, req, res);
+    },
+  };
+}
+
+const visibilityHistoryDays = (query: URLSearchParams) =>
+  query.get("compare") === "competitors"
+    ? QUERY_BOUNDS.snapshotHistoryDays.max
+    : QUERY_BOUNDS.historyDays.max;
 
 function discoveryWrite<T>(
   method: "POST" | "PATCH",
@@ -4820,10 +4847,13 @@ const routes: Route[] = [
       json(res, 200, { reset: true });
     },
   },
-  appRoute(/^\/apps\/([^/]+)\/visibility-history$/, (dataset, query) =>
-    query.get("compare") === "competitors"
-      ? visibilityComparedFor(dataset, query)
-      : visibilityThrough(dataset.visibility, query.get("to")),
+  withinHistoryRange(
+    appRoute(/^\/apps\/([^/]+)\/visibility-history$/, (dataset, query) =>
+      query.get("compare") === "competitors"
+        ? visibilityComparedFor(dataset, query)
+        : visibilityThrough(dataset.visibility, query.get("to")),
+    ),
+    visibilityHistoryDays,
   ),
   appRoute(
     /^\/apps\/([^/]+)\/competitors\/analysis$/,
@@ -4837,9 +4867,12 @@ const routes: Route[] = [
     },
     (req) => hasCookie(req, FAIL_ANALYSIS_COOKIE, "1"),
   ),
-  appRoute(
-    /^\/apps\/([^/]+)\/rank-distribution-history$/,
-    (dataset) => dataset.rankDistributionHistory,
+  withinHistoryRange(
+    appRoute(
+      /^\/apps\/([^/]+)\/rank-distribution-history$/,
+      (dataset) => dataset.rankDistributionHistory,
+    ),
+    () => QUERY_BOUNDS.historyDays.max,
   ),
   appRoute(
     /^\/apps\/([^/]+)\/category-ranks$/,
@@ -5290,11 +5323,14 @@ const routes: Route[] = [
     pattern: /^\/__log\/field-requests\/([^/]+)$/,
     handler: ([id], _req, res) => json(res, 200, fieldRequests.get(id) ?? []),
   },
-  appRoute(
-    /^\/apps\/([^/]+)\/ratings-history$/,
-    (dataset, _query, req) =>
-      RATINGS_HISTORY_SETS[cookieValue(req, RATINGS_HISTORY_COOKIE) ?? ""] ??
-      dataset.ratingsHistory,
+  withinHistoryRange(
+    appRoute(
+      /^\/apps\/([^/]+)\/ratings-history$/,
+      (dataset, _query, req) =>
+        RATINGS_HISTORY_SETS[cookieValue(req, RATINGS_HISTORY_COOKIE) ?? ""] ??
+        dataset.ratingsHistory,
+    ),
+    () => QUERY_BOUNDS.snapshotHistoryDays.max,
   ),
   appRoute(
     /^\/apps\/([^/]+)\/reviews\/histogram$/,

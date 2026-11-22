@@ -10,6 +10,7 @@ import {
 } from './analytics.support';
 
 const DAY_13 = new Date('2026-07-13T00:00:00Z');
+const DAY_12 = new Date('2026-07-12T00:00:00Z');
 const DAY_06 = new Date('2026-07-06T00:00:00Z');
 const DAY_05 = new Date('2026-07-05T00:00:00Z');
 
@@ -297,5 +298,55 @@ describe('the baseline of a visibility change', () => {
     ]);
 
     expect(delta7d).toBe(Math.round((current - before) * 10) / 10);
+  });
+});
+
+describe('the current day of a visibility figure', () => {
+  const check = (position: number, date: Date): Ranking => ({
+    position,
+    depth: RANK_DEPTH,
+    date,
+  });
+  const midRun = [
+    row('a', 10, [check(2, DAY_06), check(2, DAY_12), check(2, DAY_13)]),
+    row('b', 10, [check(6, DAY_06), check(6, DAY_12)]),
+    row('c', 10, [check(8, DAY_06), check(8, DAY_12)]),
+    row('d', 10, [check(30, DAY_06), check(30, DAY_12), check(30, DAY_13)]),
+  ];
+  const carried = visibility(
+    [2, 6, 8, 30].map((position) => ({ traffic: 10, position })),
+  );
+
+  it('counts a keyword still waiting for the reference day check at its position of the day before', () => {
+    expect(windowVisibility(midRun, DAY_13)).toEqual({
+      current: carried,
+      delta7d: 0,
+    });
+  });
+
+  it('reads a group member the same way', () => {
+    const [group] = groupAggregates([member('ios', midRun, DAY_13)]);
+
+    expect(groupVisibility(group.members)).toEqual({
+      current: carried,
+      delta7d: 0,
+    });
+  });
+
+  it('draws the newest point of a group the same way and older points exactly', () => {
+    const missedDay = [
+      midRun[0],
+      row('b', 10, [check(6, DAY_05), check(6, DAY_12)]),
+      ...midRun.slice(2),
+    ];
+    const [group] = groupAggregates([member('ios', missedDay, DAY_13)]);
+    const exact = (positions: Array<number | null>) =>
+      visibility(positions.map((position) => ({ traffic: 10, position })));
+
+    expect(groupVisibilityPoints(group.members).slice(1)).toEqual([
+      { date: '2026-07-06', visibility: exact([2, null, 8, 30]) },
+      { date: '2026-07-12', visibility: carried },
+      { date: '2026-07-13', visibility: carried },
+    ]);
   });
 });

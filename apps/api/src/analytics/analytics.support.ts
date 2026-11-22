@@ -5,7 +5,14 @@ import {
   VisibilityPoint,
 } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
-import { hasBaseline, keywordsAtBaseline } from './baseline';
+import {
+  CheckLookup,
+  currentCheckIn,
+  hasBaseline,
+  keywordOf,
+  keywordsAtBaseline,
+  keywordsNow,
+} from './baseline';
 import {
   addDays,
   DAY_MS,
@@ -102,35 +109,42 @@ export function windowVisibility(
   if (!referenceDate) {
     return { current: 0, delta7d: null };
   }
-  const current = visibilityAt(rows, referenceDate);
+  const current = visibility(keywordsNow(rows, referenceDate));
   return { current, delta7d: delta(rows, referenceDate, current, 7) };
 }
 
-export function visibilityPoints(rows: TrackedRow[]): VisibilityPoint[] {
+const lookupOf = (row: TrackedRow): CheckLookup => {
+  const byDay = new Map(
+    row.keyword.rankings.map((ranking) => [ranking.date.getTime(), ranking]),
+  );
+  return (date) => byDay.get(date.getTime()) ?? null;
+};
+
+export function visibilityPoints(
+  rows: TrackedRow[],
+  reference: Date | null,
+): VisibilityPoint[] {
+  const lookups = rows.map(lookupOf);
   const dates = new Set<number>();
   for (const row of rows) {
     for (const ranking of row.keyword.rankings) {
       dates.add(ranking.date.getTime());
     }
   }
+  const current = reference?.getTime();
   return [...dates]
     .sort((a, b) => a - b)
     .map((time) => {
       const date = new Date(time);
-      return { date: toDateKey(date), visibility: visibilityAt(rows, date) };
+      const keywords = rows.map((row, index) => {
+        const lookup = lookups[index];
+        const check =
+          time === current ? currentCheckIn(lookup, date) : lookup(date);
+        return keywordOf(row, check, date);
+      });
+      return { date: toDateKey(date), visibility: visibility(keywords) };
     });
 }
-
-const groupKeywordsAt = (
-  members: KeywordWindow[],
-  offsetDays: number,
-): VisibilityKeyword[] =>
-  members.flatMap((member) => {
-    if (!member.referenceDate) {
-      return [];
-    }
-    return keywordsAt(member.rows, addDays(member.referenceDate, offsetDays));
-  });
 
 interface ReferencedWindow extends KeywordWindow {
   referenceDate: Date;
@@ -138,6 +152,21 @@ interface ReferencedWindow extends KeywordWindow {
 
 const isReferenced = (member: KeywordWindow): member is ReferencedWindow =>
   member.referenceDate !== null;
+
+const groupKeywordsAt = (
+  members: KeywordWindow[],
+  offsetDays: number,
+): VisibilityKeyword[] =>
+  members
+    .filter(isReferenced)
+    .flatMap((member) =>
+      keywordsAt(member.rows, addDays(member.referenceDate, offsetDays)),
+    );
+
+const groupKeywordsNow = (members: KeywordWindow[]): VisibilityKeyword[] =>
+  members
+    .filter(isReferenced)
+    .flatMap((member) => keywordsNow(member.rows, member.referenceDate));
 
 function groupDelta(members: KeywordWindow[], days: number): number | null {
   const startOf = (member: ReferencedWindow) =>
@@ -148,7 +177,7 @@ function groupDelta(members: KeywordWindow[], days: number): number | null {
   if (comparable.length === 0) {
     return null;
   }
-  const current = visibility(groupKeywordsAt(comparable, 0));
+  const current = visibility(groupKeywordsNow(comparable));
   const past = visibility(
     comparable.flatMap((member) =>
       keywordsAtBaseline(member.rows, startOf(member)),
@@ -162,7 +191,7 @@ export function groupVisibility(members: KeywordWindow[]): {
   delta7d: number | null;
 } {
   return {
-    current: visibility(groupKeywordsAt(members, 0)),
+    current: visibility(groupKeywordsNow(members)),
     delta7d: groupDelta(members, 7),
   };
 }
@@ -202,7 +231,11 @@ export function groupVisibilityPoints(
       );
       return {
         date: toDateKey(addDays(latestReference, offsetDays)),
-        visibility: visibility(groupKeywordsAt(captured, offsetDays)),
+        visibility: visibility(
+          offsetDays === 0
+            ? groupKeywordsNow(captured)
+            : groupKeywordsAt(captured, offsetDays),
+        ),
       };
     });
 }
@@ -299,6 +332,17 @@ export async function trackedRows(
     },
   });
 }
+
+export const rankingsSince = (rows: TrackedRow[], from: Date): TrackedRow[] =>
+  rows.map((row) => ({
+    ...row,
+    keyword: {
+      ...row.keyword,
+      rankings: row.keyword.rankings.filter(
+        (ranking) => ranking.date.getTime() >= from.getTime(),
+      ),
+    },
+  }));
 
 export async function keywordWindow(
   prisma: PrismaService,

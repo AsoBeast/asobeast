@@ -1,5 +1,12 @@
 import type { TrackedRow } from './analytics.support';
-import { baselineCheck, hasBaseline, keywordsAtBaseline } from './baseline';
+import {
+  baselineCheck,
+  currentCheck,
+  hasBaseline,
+  keywordsAtBaseline,
+  keywordsNow,
+  positionsNow,
+} from './baseline';
 import { DAY_MS, Ranking } from './days';
 
 const T = new Date('2026-07-06T00:00:00.000Z');
@@ -100,5 +107,60 @@ describe('keywordsAtBaseline', () => {
     expect(keywordsAtBaseline([row([], [[30, -3]])], T)).toEqual([
       { traffic: 30, position: null },
     ]);
+  });
+});
+
+describe('currentCheck', () => {
+  it('reads the check of the reference day', () => {
+    expect(currentCheck([check(0, 3), check(-1, 6)], T)?.position).toBe(3);
+  });
+
+  it('falls back to the day before when the run has not reached the keyword', () => {
+    expect(currentCheck([check(-1, 6)], T)?.position).toBe(6);
+  });
+
+  it('never reaches two days back', () => {
+    expect(currentCheck([check(-2, 6)], T)).toBeNull();
+  });
+
+  it('never reads the day after', () => {
+    expect(currentCheck([check(1, 2)], T)).toBeNull();
+  });
+
+  it('keeps a check of the reference day that found nothing', () => {
+    expect(currentCheck([check(0, null), check(-1, 6)], T)).toEqual(
+      check(0, null),
+    );
+  });
+});
+
+describe('keywordsNow', () => {
+  it('reads a keyword checked the day before with the popularity of that day', () => {
+    const pending = row(
+      [check(-1, 6)],
+      [
+        [70, 0],
+        [40, -1],
+      ],
+    );
+
+    expect(keywordsNow([pending], T)).toEqual([{ traffic: 40, position: 6 }]);
+  });
+
+  it('reads a keyword checked on neither day as not found', () => {
+    expect(keywordsNow([row([check(-2, 6)], [[30, -3]])], T)).toEqual([
+      { traffic: 30, position: null },
+    ]);
+  });
+});
+
+describe('positionsNow', () => {
+  it('reads each keyword at its current check', () => {
+    expect(
+      positionsNow(
+        [row([check(0, 2)]), row([check(-1, 6)]), row([check(-2, 8)])],
+        T,
+      ),
+    ).toEqual([2, 6, null]);
   });
 });
