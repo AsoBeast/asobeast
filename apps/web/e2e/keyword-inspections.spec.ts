@@ -204,6 +204,24 @@ test("reads an inspection at a glance: grades, verdict and evidence", async ({
   await expect(results.getByRole("row")).toHaveCount(13);
 });
 
+test("opens the inspection of a point pressed on the map", async ({
+  page,
+  request,
+}) => {
+  await request.get(`${MOCK_API}/__seed-keyword-inspections`);
+  await page.goto("/inspect?store=APP_STORE&country=us");
+
+  const map = page.getByRole("region", { name: "Keyword map" });
+  const dot = map.getByRole("button", { name: /^mood journal, popularity/ });
+  await dot.click();
+
+  await expect(page).toHaveURL(/[?&]id=seeded-mood-journal/);
+  await expect(dot).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByLabel("Keyword", { exact: true })).toHaveValue(
+    "mood journal",
+  );
+});
+
 test("lists every inspection with its state and storefront", async ({
   page,
   request,

@@ -1,6 +1,13 @@
 "use client";
 
-import { useId, useRef, useState, type ReactNode, type RefObject } from "react";
+import {
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { normalizeText } from "@asobeast/shared";
 import { CartesianGrid, Scatter, ScatterChart, XAxis, YAxis } from "recharts";
 import {
@@ -180,9 +187,10 @@ export function InspectionMap({
   const helpId = useId();
   const narrow = useIsMobile();
   const roving = useRovingDot(points, selectedKeywordId, onSelect, surfaceRef);
-  const ordered = drawOrder(points);
-  const chosen = points.filter(
-    (point) => point.keywordId === selectedKeywordId,
+  const ordered = useMemo(() => drawOrder(points), [points]);
+  const chosen = useMemo(
+    () => points.filter((point) => point.keywordId === selectedKeywordId),
+    [points, selectedKeywordId],
   );
   const state: DotState = {
     ...roving,
