@@ -2,11 +2,7 @@
 
 import { Fragment, Suspense, useId } from "react";
 import Link from "next/link";
-import {
-  keepPreviousData,
-  useQuery,
-  type UseQueryResult,
-} from "@tanstack/react-query";
+import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import type { VisibilityHistory } from "@asobeast/shared";
 import {
   Area,
@@ -339,7 +335,8 @@ function Activity({
   const visibility = useQuery({
     ...visibilityOptions(id, changeWindowRange(today, days), country),
     enabled: lanes.length > 0,
-    placeholderData: keepPreviousData,
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey.at(-1) === country ? previous : undefined,
   });
   const impact = useChangeImpact(id, days, homeCountry);
 

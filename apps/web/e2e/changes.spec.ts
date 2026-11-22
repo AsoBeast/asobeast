@@ -198,6 +198,38 @@ test("a second market can be picked and is kept in the url", async ({
   );
 });
 
+test("a new market never shows the previous market's visibility line", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/changes");
+  const plot = activity(page).getByRole("region", {
+    name: "Search visibility and the days your listing changed",
+  });
+  await expect(plot).toBeVisible();
+
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route(
+    "**/api/backend/apps/*/visibility-history*",
+    async (route) => {
+      await held;
+      await route.continue();
+    },
+  );
+  const market = page.getByRole("combobox", { name: "Market", exact: true });
+  await market.click();
+  await page.getByRole("option", { name: "PL · Poland" }).click();
+
+  await expect(page).toHaveURL(/country=pl/);
+  await expect(activity(page)).toContainText("tracked in Poland");
+  await expect(plot).toHaveCount(0);
+
+  release();
+  await expect(plot).toBeVisible();
+});
+
 test("a market deep link opens on it and the home market clears the key", async ({
   page,
 }) => {
