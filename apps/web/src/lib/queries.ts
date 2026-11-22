@@ -927,6 +927,13 @@ export const visibilityOptions = (
     queryFn: () => getVisibilityHistory(id, params, country, compare),
   });
 
+const VISIBILITY_MARKET_AT = appKeys.visibility("", {}).length;
+
+export const isVisibilityOfMarket = (
+  key: QueryKey | undefined,
+  country: string,
+): boolean => key?.[VISIBILITY_MARKET_AT] === country;
+
 export const competitorAnalysisOptions = (id: string) =>
   queryOptions({
     queryKey: appKeys.competitorAnalysis(id),

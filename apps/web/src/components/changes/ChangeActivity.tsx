@@ -52,7 +52,7 @@ import {
 } from "@/components/ui/chart";
 import { VisibilityHelp } from "@/components/visibility/VisibilityHelp";
 import { formatCountry, formatDayMonth, formatNumber } from "@/lib/format";
-import { visibilityOptions } from "@/lib/queries";
+import { isVisibilityOfMarket, visibilityOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import {
   activityLanes,
@@ -336,7 +336,9 @@ function Activity({
     ...visibilityOptions(id, changeWindowRange(today, days), country),
     enabled: lanes.length > 0,
     placeholderData: (previous, previousQuery) =>
-      previousQuery?.queryKey.at(-1) === country ? previous : undefined,
+      isVisibilityOfMarket(previousQuery?.queryKey, country)
+        ? previous
+        : undefined,
   });
   const impact = useChangeImpact(id, days, homeCountry);
 
