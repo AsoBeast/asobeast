@@ -151,6 +151,18 @@ function latestCheck(days: number[], day: number): number | undefined {
   return undefined;
 }
 
+function checkDayOf(
+  check: CheckedRow,
+  member: CheckedMember,
+  day: number,
+): number {
+  if (check.positions.has(day) || day !== member.days.at(-1)) {
+    return day;
+  }
+  const before = member.before.get(day);
+  return before === day - 1 ? before : day;
+}
+
 function dayFigures(
   members: CheckedMember[],
   day: number,
@@ -169,8 +181,9 @@ function dayFigures(
     }
     const before = latest === day ? member.before.get(day) : undefined;
     for (const check of member.checks) {
-      const position = check.positions.get(latest) ?? null;
-      keywords.push({ traffic: check.traffic.get(latest) ?? null, position });
+      const checkDay = checkDayOf(check, member, latest);
+      const position = check.positions.get(checkDay) ?? null;
+      keywords.push({ traffic: check.traffic.get(checkDay) ?? null, position });
       if (position !== null && position <= TOP_TEN) {
         totals.top10 += 1;
       }

@@ -332,4 +332,14 @@ describe('the current day of a visibility figure', () => {
       delta7d: 0,
     });
   });
+
+  it('draws the newest point of a group the same way and older points exactly', () => {
+    const [group] = groupAggregates([member('ios', midRun, DAY_13)]);
+
+    expect(groupVisibilityPoints(group.members)).toEqual([
+      { date: '2026-07-06', visibility: carried },
+      { date: '2026-07-12', visibility: carried },
+      { date: '2026-07-13', visibility: carried },
+    ]);
+  });
 });

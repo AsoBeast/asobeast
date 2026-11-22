@@ -1047,6 +1047,51 @@ describe('AnalyticsController (e2e)', () => {
     ).toHaveLength(3);
   });
 
+  it('draws the newest point with the same check as the figures above it', async () => {
+    const id = await seedMidRun();
+
+    const summary = (await api.get(`/apps/${id}/summary`).expect(200))
+      .body as AppSummary;
+    const range = { from: '2026-06-23', to: '2026-06-30' };
+
+    const history = (
+      await api.get(`/apps/${id}/visibility-history`).query(range).expect(200)
+    ).body as VisibilityHistory;
+    expect(history.points.at(-1)?.date).toBe('2026-06-30');
+    expect(history.points.at(-1)?.visibility).toBeCloseTo(
+      summary.visibility.current,
+      5,
+    );
+
+    const bands = (
+      await api
+        .get(`/apps/${id}/rank-distribution-history`)
+        .query(range)
+        .expect(200)
+    ).body as RankDistributionHistory;
+    const newest = bands.points.at(-1);
+    expect(newest?.date).toBe('2026-06-30');
+    expect(
+      (newest?.rank1 ?? 0) + (newest?.rank2to3 ?? 0) + (newest?.rank4to10 ?? 0),
+    ).toBe(3);
+    expect(
+      (newest?.rank1 ?? 0) +
+        (newest?.rank2to3 ?? 0) +
+        (newest?.rank4to10 ?? 0) +
+        (newest?.rank11to50 ?? 0) +
+        (newest?.rank51plus ?? 0) +
+        (newest?.unranked ?? 0),
+    ).toBe(4);
+
+    const portfolio = (await api.get('/portfolio/history?days=7').expect(200))
+      .body as PortfolioHistory;
+    expect(portfolio.points.at(-1)?.top10).toBe(3);
+    expect(portfolio.points.at(-1)?.visibility).toBeCloseTo(
+      summary.visibility.current,
+      5,
+    );
+  });
+
   it('composes a portfolio whose numbers match the app summary', async () => {
     const id = await seed();
 

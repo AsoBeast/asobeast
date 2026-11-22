@@ -101,6 +101,15 @@ const rowOpportunity = (
   });
 };
 
+const positionsCheckedNow = (
+  rows: TrackedRow[],
+  reference: Date,
+): Array<number | null> =>
+  rows.flatMap((row) => {
+    const check = currentCheck(row.keyword.rankings, reference);
+    return check ? [check.position] : [];
+  });
+
 interface CoverageListing extends ListingVerdicts {
   snapshot: {
     title: string;
@@ -250,12 +259,16 @@ export class AnalyticsService {
       }
     }
 
-    const points = [...byDate.entries()]
-      .sort(([a], [b]) => a - b)
-      .map(([time, positions]) => ({
-        date: toDateKey(new Date(time)),
-        ...bucketPositions(positions),
-      }));
+    const times = [...byDate.keys()].sort((a, b) => a - b);
+    const newest = times.at(-1);
+    const points = times.map((time) => ({
+      date: toDateKey(new Date(time)),
+      ...bucketPositions(
+        time === newest
+          ? positionsCheckedNow(rows, new Date(time))
+          : (byDate.get(time) ?? []),
+      ),
+    }));
 
     return { points };
   }

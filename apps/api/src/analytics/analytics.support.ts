@@ -113,12 +113,14 @@ export function visibilityPoints(rows: TrackedRow[]): VisibilityPoint[] {
       dates.add(ranking.date.getTime());
     }
   }
-  return [...dates]
-    .sort((a, b) => a - b)
-    .map((time) => {
-      const date = new Date(time);
-      return { date: toDateKey(date), visibility: visibilityAt(rows, date) };
-    });
+  const times = [...dates].sort((a, b) => a - b);
+  const newest = times.at(-1);
+  return times.map((time) => {
+    const date = new Date(time);
+    const keywords =
+      time === newest ? keywordsNow(rows, date) : keywordsAt(rows, date);
+    return { date: toDateKey(date), visibility: visibility(keywords) };
+  });
 }
 
 interface ReferencedWindow extends KeywordWindow {
@@ -206,7 +208,11 @@ export function groupVisibilityPoints(
       );
       return {
         date: toDateKey(addDays(latestReference, offsetDays)),
-        visibility: visibility(groupKeywordsAt(captured, offsetDays)),
+        visibility: visibility(
+          offsetDays === 0
+            ? groupKeywordsNow(captured)
+            : groupKeywordsAt(captured, offsetDays),
+        ),
       };
     });
 }

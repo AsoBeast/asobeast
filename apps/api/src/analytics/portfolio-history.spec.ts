@@ -519,10 +519,12 @@ describe('portfolioHistory', () => {
         row('a', 10, [
           [0, 2],
           [1, 2],
+          [2, 2],
           [7, 2],
         ]),
         row('b', 10, [
           [1, 6],
+          [2, 6],
           [7, 6],
         ]),
         row('c', 10, [
@@ -532,6 +534,7 @@ describe('portfolioHistory', () => {
         row('d', 10, [
           [0, 30],
           [1, 30],
+          [2, 30],
           [7, 30],
         ]),
       ]);
@@ -556,6 +559,29 @@ describe('portfolioHistory', () => {
         visibilityDelta: 0,
         top10Delta: 0,
       });
+    });
+
+    it('draws the newest day with the same positions and every older day exactly', () => {
+      const history = portfolioHistory([midRun()], 7);
+
+      expect(
+        history.points.map(({ date, top10 }) => ({ date, top10 })),
+      ).toEqual([
+        { date: '2026-07-11', top10: 2 },
+        { date: '2026-07-12', top10: 3 },
+        { date: '2026-07-13', top10: 3 },
+      ]);
+      expect(history.points.at(-1)?.visibility).toBe(carried);
+      expect(history.bands?.at(-1)).toEqual({
+        date: '2026-07-13',
+        rank1: 0,
+        rank2to3: 1,
+        rank4to10: 2,
+        rank11to50: 1,
+        rank51plus: 0,
+        unranked: 0,
+      });
+      expect(history.apps?.[0].points.at(-1)?.top10).toBe(3);
     });
   });
 
