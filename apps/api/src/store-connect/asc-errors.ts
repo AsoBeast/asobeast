@@ -61,7 +61,12 @@ const REQUEST_CREATION = '/v1/analyticsReportRequests';
 const FORBIDDEN_CODE_PREFIX = 'FORBIDDEN';
 const REVIEW_RESOURCE =
   /^\/v1\/(customerReviewResponses|customerReviews|apps\/[^/]+\/customerReviews)(\/|\?|$)/;
+const LISTING_READ_RESOURCE =
+  /^\/v1\/(apps\/[^/]+\/appStoreVersions|appStoreVersions\/[^/]+\/appStoreVersionLocalizations)(\/|\?|$)/;
 const NOMINATIONS_RESOURCE = /^\/v1\/nominations(\/|\?|$)/;
+
+const isForbiddenCodedResource = (path: string): boolean =>
+  REVIEW_RESOURCE.test(path) || LISTING_READ_RESOURCE.test(path);
 
 const isRoleRefusal = (
   response: AscResponse,
@@ -71,7 +76,7 @@ const isRoleRefusal = (
   response.status === 403 &&
   ((request.method === 'POST' && request.path === REQUEST_CREATION) ||
     NOMINATIONS_RESOURCE.test(request.path) ||
-    (REVIEW_RESOURCE.test(request.path) &&
+    (isForbiddenCodedResource(request.path) &&
       code?.startsWith(FORBIDDEN_CODE_PREFIX) === true));
 
 interface AppleErrorBody {
