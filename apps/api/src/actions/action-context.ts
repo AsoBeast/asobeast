@@ -85,11 +85,6 @@ export interface ActionReview {
   replyCheckedAt: Date | null;
 }
 
-/**
- * The metadata audit of one non home market: its coverage and its listing
- * fields as that storefront serves them. Only markets with an active tracked
- * keyword and a captured listing have one, ordered by country.
- */
 export interface ActionMarketMetadata {
   country: string;
   coverage: KeywordCoverageRow[];
@@ -102,7 +97,6 @@ interface DerivedMetadata {
   markets: ActionMarketMetadata[];
 }
 
-/** The non home markets whose listing the metadata rules judge. */
 export function metadataMarkets(
   home: string,
   tracked: readonly TrackedKeywordItem[],
@@ -493,10 +487,6 @@ export class ActionContextLoader {
     }
   }
 
-  /**
-   * A market whose listing was never captured, or whose storefront the store
-   * does not serve, has no audit; the home market's rules still run.
-   */
   private async marketMetadata(
     appId: string,
     country: string,

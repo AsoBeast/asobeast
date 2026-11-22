@@ -20,6 +20,11 @@ export const LATER_RELEASES: readonly Release[] = [
       },
       {
         kind: "new",
+        title: "The Action Center reads every market's listing",
+        text: "Store rule problems and keywords no field covers are now found in the listing of every market you track keywords in, not only your home market. Markets that read the same localization share one action, and each action opens the metadata page of its market.",
+      },
+      {
+        kind: "new",
         title: "The audit reads nominations and promotional text",
         text: "When App Store Connect is connected, the featuring readiness panel answers two more rows: whether a featuring nomination is submitted ahead of its publish window, and how many of your localizations carry promotional text. Where the connection cannot read them, has not refreshed them in a few days, or has lost the app, the rows say so instead of guessing.",
       },

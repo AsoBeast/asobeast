@@ -66,11 +66,6 @@ function detectField(
   };
 }
 
-/**
- * Two markets that read the same localization serve the same field text and
- * the same problems; the one fix belongs to the first market that shows it,
- * home first.
- */
 function problemKey(audit: MetadataFieldAudit): string {
   const issues = actionIssues(audit).map(
     (issue) => `${issue.rule}~${issue.offendingText ?? ''}`,
