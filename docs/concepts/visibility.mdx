@@ -57,8 +57,8 @@ Every active keyword the app tracks. A paused keyword is left out of today's num
 | Input | What is used |
 | --- | --- |
 | Day | The latest day on which any keyword of the app was checked |
-| Position | The position recorded for that keyword on that day. A keyword not checked that day counts as not found |
-| Popularity | The latest score on or before that day, on the scale described in [Popularity, difficulty and opportunity](/concepts/scoring#which-scale-does-a-response-use) |
+| Position | The position recorded for that keyword on that day, or, while the daily run has not reached it yet, its position of the day before. A keyword checked on neither day counts as not found |
+| Popularity | The latest score on or before the day of the check used, on the scale described in [Popularity, difficulty and opportunity](/concepts/scoring#which-scale-does-a-response-use) |
 | No popularity yet | Counts as a popularity of 10 out of 100, so a new keyword still counts a little before its first score |
 | Popularity of 0 | Adds nothing to either sum, so the keyword cannot move the number |
 
@@ -66,7 +66,7 @@ What not found means, and why it is never position zero, is explained in [Positi
 
 ## What do the 7 and 30 day changes mean?
 
-The difference in points between visibility on the latest checked day and visibility 7 or 30 days earlier. For that earlier day each keyword counts with its check of that day, or, when that day's check is missing, its check of the day after, or else of the day before, with the popularity it had on the day of that check. A daily run that missed a few keywords on the earlier day therefore does not count them as not found. The change is missing when no keyword was checked within a day of the earlier day. The keyword movers, the keywords in the top 10 and the moved count of the same comparison read each keyword's earlier position the same way, so they always agree.
+The difference in points between visibility on the latest checked day and visibility 7 or 30 days earlier. For that earlier day each keyword counts with its check of that day, or, when that day's check is missing, its check of the day after, or else of the day before, with the popularity it had on the day of that check. A daily run that missed a few keywords on the earlier day therefore does not count them as not found. The latest day reads each keyword the same way from the other side, with its check of that day or else of the day before, so a run still in progress does not count the keywords it has not reached yet as not found, and the change settles when the run finishes. The change is missing when no keyword was checked within a day of the earlier day. The keyword movers, the keywords in the top 10 and the moved count of the same comparison read each keyword's earlier position the same way, so they always agree.
 
 Both days are calculated over the keywords tracked today, each with the popularity it had on that day. Adding a keyword therefore changes past values too: on the days before its first check it counts as not found, and its own position moves the change from then on.
 
