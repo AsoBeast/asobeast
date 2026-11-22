@@ -52,16 +52,25 @@ function qualifyingOpportunity(keyword: TrackedKeywordItem): number | null {
   return keyword.opportunity;
 }
 
-function detectForApp(app: ActionContextApp): DetectedAction[] {
+interface MarketListing {
+  country: string;
+  coverage: KeywordCoverageRow[];
+  fields: MetadataFieldAudit[];
+}
+
+function detectInMarket(
+  app: ActionContextApp,
+  market: MarketListing,
+): DetectedAction[] {
   const coverage = new Map<string, KeywordCoverageRow>(
-    app.coverage.map((row) => [row.keywordId, row]),
+    market.coverage.map((row) => [row.keywordId, row]),
   );
-  const indexed = indexedFields(app.metadataFields);
-  const charsFree = keywordFieldCharsFree(app.metadataFields);
+  const indexed = indexedFields(market.fields);
+  const charsFree = keywordFieldCharsFree(market.fields);
 
   const detections: DetectedAction[] = [];
   for (const keyword of app.trackedKeywords) {
-    if (!keyword.active || keyword.country !== app.country) continue;
+    if (!keyword.active || keyword.country !== market.country) continue;
     if (!fitsOwnListing(keyword.keywordClass)) continue;
     const withheld = keyword.scoreOutdated === true;
     const opportunity = withheld
@@ -92,7 +101,7 @@ function detectForApp(app: ActionContextApp): DetectedAction[] {
       rule: 'keyword.add_uncovered',
       appId: app.id,
       store: app.store,
-      country: app.country,
+      country: market.country,
       keywordId: keyword.keywordId,
       discriminator: null,
       terms: {
@@ -107,6 +116,17 @@ function detectForApp(app: ActionContextApp): DetectedAction[] {
     });
   }
   return detections;
+}
+
+function detectForApp(app: ActionContextApp): DetectedAction[] {
+  return [
+    {
+      country: app.country,
+      coverage: app.coverage,
+      fields: app.metadataFields,
+    },
+    ...app.marketMetadata,
+  ].flatMap((market) => detectInMarket(app, market));
 }
 
 export function detectKeywordAddUncovered(

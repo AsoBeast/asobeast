@@ -85,6 +85,37 @@ export interface ActionReview {
   replyCheckedAt: Date | null;
 }
 
+/**
+ * The metadata audit of one non home market: its coverage and its listing
+ * fields as that storefront serves them. Only markets with an active tracked
+ * keyword and a captured listing have one, ordered by country.
+ */
+export interface ActionMarketMetadata {
+  country: string;
+  coverage: KeywordCoverageRow[];
+  fields: MetadataFieldAudit[];
+}
+
+interface DerivedMetadata {
+  coverage: KeywordCoverageRow[];
+  fields: MetadataFieldAudit[];
+  markets: ActionMarketMetadata[];
+}
+
+/** The non home markets whose listing the metadata rules judge. */
+export function metadataMarkets(
+  home: string,
+  tracked: readonly TrackedKeywordItem[],
+): string[] {
+  return [
+    ...new Set(
+      tracked
+        .filter((item) => item.active && item.country !== home)
+        .map((item) => item.country),
+    ),
+  ].sort();
+}
+
 export interface ActionContextApp {
   id: string;
   name: string | null;
@@ -95,6 +126,7 @@ export interface ActionContextApp {
   keywordsByCountry: Map<string, TrackedKeywordItem[]>;
   coverage: KeywordCoverageRow[];
   metadataFields: MetadataFieldAudit[];
+  marketMetadata: ActionMarketMetadata[];
   audit: ActionAuditSnapshot | null;
   changeEvents: ActionChangeEvent[];
   visibilityByCountry: Map<string, ActionVisibilityPoint[]>;
@@ -429,19 +461,52 @@ export class ActionContextLoader {
 
   private async derive(app: { id: string; country: string }): Promise<{
     tracked: TrackedKeywordItem[];
-    metadata: { coverage: KeywordCoverageRow[]; fields: MetadataFieldAudit[] };
+    metadata: DerivedMetadata;
   } | null> {
     try {
-      const [tracked, metadata] = await Promise.all([
+      const [tracked, home] = await Promise.all([
         this.keywords.listTracked(app.id, undefined, undefined, {
           brandFacts: true,
         }),
         this.metadata.audit(app.id, app.country),
       ]);
-      return { tracked, metadata };
+      const markets = await Promise.all(
+        metadataMarkets(app.country, tracked).map((country) =>
+          this.marketMetadata(app.id, country),
+        ),
+      );
+      return {
+        tracked,
+        metadata: {
+          coverage: home.coverage,
+          fields: home.fields,
+          markets: markets.filter(
+            (market): market is ActionMarketMetadata => market !== null,
+          ),
+        },
+      };
     } catch (error) {
       this.logger.warn(
         `skipping app ${app.id} in this action run: ${messageOf(error)}`,
+      );
+      return null;
+    }
+  }
+
+  /**
+   * A market whose listing was never captured, or whose storefront the store
+   * does not serve, has no audit; the home market's rules still run.
+   */
+  private async marketMetadata(
+    appId: string,
+    country: string,
+  ): Promise<ActionMarketMetadata | null> {
+    try {
+      const audit = await this.metadata.audit(appId, country);
+      return { country, coverage: audit.coverage, fields: audit.fields };
+    } catch (error) {
+      this.logger.debug(
+        `no ${country} metadata for app ${appId} in this action run: ${messageOf(error)}`,
       );
       return null;
     }
@@ -461,7 +526,7 @@ export class ActionContextLoader {
       }>;
     },
     trackedKeywords: TrackedKeywordItem[],
-    metadata: { coverage: KeywordCoverageRow[]; fields: MetadataFieldAudit[] },
+    metadata: DerivedMetadata,
     rows: {
       rankings: RankingRow[];
       changes: Array<{ field: string; capturedAt: Date }>;
@@ -555,6 +620,7 @@ export class ActionContextLoader {
       keywordsByCountry,
       coverage: metadata.coverage,
       metadataFields: metadata.fields,
+      marketMetadata: metadata.markets,
       audit: toAuditSnapshot(rows.audit),
       changeEvents: rows.changes
         .filter((row) => isChangeField(row.field))

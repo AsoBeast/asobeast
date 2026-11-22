@@ -472,6 +472,68 @@ describe('ActionContextLoader', () => {
     expect(context.apps[0].keywordsByCountry.get('de')).toHaveLength(2);
   });
 
+  it('audits the listing of every market with an active keyword', async () => {
+    const audit = jest.fn((_appId: string, country: string) =>
+      country === 'fr'
+        ? Promise.reject(new Error('No fr listing captured yet'))
+        : Promise.resolve({
+            appId: 'app_1',
+            coverage: [],
+            fields: [
+              {
+                field: 'title' as const,
+                value: country,
+                chars: 2,
+                limit: 30,
+                indexed: true,
+                issues: [],
+              },
+            ],
+          }),
+    );
+    const loader = new ActionContextLoader(
+      buildPrisma() as unknown as PrismaService,
+      {
+        get: jest.fn((key: keyof Env) =>
+          key === 'ALERT_REVIEW_SCORE_MAX' ? 2 : 5,
+        ),
+      } as unknown as ConfigService<Env, true>,
+      {
+        listTracked: jest.fn(() =>
+          Promise.resolve([
+            keyword('kw_1', 'us'),
+            keyword('kw_2', 'tr'),
+            keyword('kw_3', 'de'),
+            keyword('kw_4', 'fr'),
+            keyword('kw_5', 'jp', { active: false }),
+          ]),
+        ),
+      } as unknown as KeywordsService,
+      { audit } as unknown as MetadataService,
+      workspaceScope,
+      noFunnels,
+    );
+
+    const context = await loader.load(budget, NOW);
+
+    expect(audit.mock.calls.map(([, country]) => country).sort()).toEqual([
+      'de',
+      'fr',
+      'tr',
+      'us',
+    ]);
+    expect(context.apps[0].metadataFields[0].value).toBe('us');
+    expect(
+      context.apps[0].marketMetadata.map((market) => [
+        market.country,
+        market.fields[0].value,
+      ]),
+    ).toEqual([
+      ['de', 'de'],
+      ['tr', 'tr'],
+    ]);
+  });
+
   it('builds a per-market visibility series from the stored rankings', async () => {
     const prisma = buildPrisma({
       rankings: [

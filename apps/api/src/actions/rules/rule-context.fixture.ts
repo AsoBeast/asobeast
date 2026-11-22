@@ -54,6 +54,7 @@ export const contextApp = (
   keywordsByCountry: new Map(),
   coverage: [],
   metadataFields: [],
+  marketMetadata: [],
   audit: null,
   changeEvents: [],
   visibilityByCountry: new Map(),

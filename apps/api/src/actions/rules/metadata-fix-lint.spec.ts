@@ -202,3 +202,107 @@ describe('metadata.fix_lint on a google play short description', () => {
     });
   });
 });
+
+describe('metadata.fix_lint in market listings', () => {
+  const REPEAT: LintIssue = {
+    rule: 'repeats-title-word',
+    severity: 'error',
+    message: '"friends" already appears in the title.',
+    offendingText: 'friends',
+  };
+  const subtitle = (value: string) =>
+    field({
+      field: 'subtitle',
+      value,
+      chars: value.length,
+      issues: [REPEAT],
+    });
+  const withMarkets = (
+    home: MetadataFieldAudit[],
+    markets: Array<[string, MetadataFieldAudit[]]>,
+  ) =>
+    app(home, {
+      marketMetadata: markets.map(([country, fields]) => ({
+        country,
+        coverage: [],
+        fields,
+      })),
+    });
+
+  it('opens an action in a market whose own listing breaks a rule', () => {
+    const detections = detect([
+      withMarkets([], [['tr', [subtitle('Arkadaşlar ana ekranında')]]]),
+    ]);
+
+    expect(detections).toHaveLength(1);
+    expect(detections[0]).toMatchObject({
+      country: 'tr',
+      discriminator: 'subtitle',
+    });
+  });
+
+  it('reports a problem shared with the home listing once, in the home market', () => {
+    const shared = subtitle('Friends on your home screen');
+    const detections = detect([
+      withMarkets(
+        [shared],
+        [
+          ['gb', [shared]],
+          ['ca', [shared]],
+        ],
+      ),
+    ]);
+
+    expect(detections.map((detection) => detection.country)).toEqual(['us']);
+  });
+
+  it('reports a shared market problem in the first market by country', () => {
+    const shared = subtitle('Amis sur ton écran');
+    const detections = detect([
+      withMarkets(
+        [],
+        [
+          ['be', [shared]],
+          ['fr', [shared]],
+        ],
+      ),
+    ]);
+
+    expect(detections.map((detection) => detection.country)).toEqual(['be']);
+  });
+
+  it('keeps one action per market when the field text differs', () => {
+    const detections = detect([
+      withMarkets(
+        [subtitle('Friends on your home screen')],
+        [['tr', [subtitle('Arkadaşlar ana ekranında')]]],
+      ),
+    ]);
+
+    expect(detections.map((detection) => detection.country)).toEqual([
+      'us',
+      'tr',
+    ]);
+  });
+
+  it('mints distinct fingerprints per market', () => {
+    const detections = detect([
+      withMarkets(
+        [subtitle('Friends on your home screen')],
+        [['tr', [subtitle('Arkadaşlar ana ekranında')]]],
+      ),
+    ]);
+
+    const fingerprints = detections.map((detection) =>
+      actionFingerprint({
+        rule: detection.rule,
+        appId: detection.appId,
+        store: detection.store,
+        country: detection.country,
+        keywordId: detection.keywordId,
+        discriminator: detection.discriminator,
+      }),
+    );
+    expect(new Set(fingerprints).size).toBe(2);
+  });
+});
