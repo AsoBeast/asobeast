@@ -26,7 +26,10 @@ const fakePrisma = () => ({
     findMany: jest.fn().mockResolvedValue([{ id: 'rival' }]),
   },
   trackedKeyword: { findMany: jest.fn().mockResolvedValue([ROW]) },
-  keywordRanking: { findMany: jest.fn().mockResolvedValue([]) },
+  keywordRanking: {
+    findMany: jest.fn().mockResolvedValue([]),
+    findFirst: jest.fn().mockResolvedValue(null),
+  },
 });
 
 const asPrisma = (prisma: ReturnType<typeof fakePrisma>) =>

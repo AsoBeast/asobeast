@@ -213,13 +213,11 @@ export class AnalyticsService {
         : HISTORY_MAX_DAYS,
     );
 
-    const rows = await trackedRows(
-      this.prisma,
-      { appId, country: query.country },
-      from,
-      to,
-    );
-    const points = visibilityPoints(rows);
+    const [rows, reference] = await Promise.all([
+      trackedRows(this.prisma, { appId, country: query.country }, from, to),
+      referenceDate(this.prisma, { appId, country: query.country }),
+    ]);
+    const points = visibilityPoints(rows, reference);
     if (query.compare !== 'competitors') {
       return { points };
     }
@@ -265,16 +263,16 @@ export class AnalyticsService {
       }
     }
 
-    const times = [...byDate.keys()].sort((a, b) => a - b);
-    const newest = times.at(-1);
-    const points = times.map((time) => ({
-      date: toDateKey(new Date(time)),
-      ...bucketPositions(
-        time === newest
-          ? positionsCheckedNow(rows, new Date(time))
-          : (byDate.get(time) ?? []),
-      ),
-    }));
+    const points = [...byDate.keys()]
+      .sort((a, b) => a - b)
+      .map((time) => ({
+        date: toDateKey(new Date(time)),
+        ...bucketPositions(
+          time === reference?.getTime()
+            ? positionsCheckedNow(rows, new Date(time))
+            : (byDate.get(time) ?? []),
+        ),
+      }));
 
     return { points };
   }

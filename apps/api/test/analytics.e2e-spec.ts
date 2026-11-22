@@ -1108,6 +1108,50 @@ describe('AnalyticsController (e2e)', () => {
     );
   });
 
+  it('reads the last day of a past window exactly, as a wider window does', async () => {
+    const id = await seedMidRun();
+    const missed = await prisma.keyword.findFirstOrThrow({
+      where: { text: 'streak app' },
+    });
+    await prisma.keywordRanking.deleteMany({
+      where: {
+        keywordId: missed.id,
+        date: new Date('2026-06-27T00:00:00.000Z'),
+      },
+    });
+    const dayOf = <T extends { date: string }>(points: T[]) =>
+      points.find((point) => point.date === '2026-06-27');
+    const read = async <T>(path: string, to: string): Promise<T> =>
+      (
+        await api
+          .get(`/apps/${id}/${path}`)
+          .query({ from: '2026-06-23', to })
+          .expect(200)
+      ).body as T;
+
+    const past = await read<VisibilityHistory>(
+      'visibility-history',
+      '2026-06-27',
+    );
+    const wide = await read<VisibilityHistory>(
+      'visibility-history',
+      '2026-06-30',
+    );
+    expect(past.points.at(-1)?.date).toBe('2026-06-27');
+    expect(past.points.at(-1)).toEqual(dayOf(wide.points));
+
+    const pastBands = await read<RankDistributionHistory>(
+      'rank-distribution-history',
+      '2026-06-27',
+    );
+    const wideBands = await read<RankDistributionHistory>(
+      'rank-distribution-history',
+      '2026-06-30',
+    );
+    expect(pastBands.points.at(-1)).toEqual(dayOf(wideBands.points));
+    expect(pastBands.points.at(-1)?.rank4to10).toBe(1);
+  });
+
   it('composes a portfolio whose numbers match the app summary', async () => {
     const id = await seed();
 

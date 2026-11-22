@@ -52,17 +52,24 @@ const visibilityOf = (positions: Array<number | null>) =>
 
 describe('visibilityPoints', () => {
   it('draws the newest point with the keywords still waiting for their check at the day before', () => {
-    expect(visibilityPoints(midRun).at(-1)).toEqual({
+    expect(visibilityPoints(midRun, DAY_13).at(-1)).toEqual({
       date: '2026-07-13',
       visibility: visibilityOf([2, 6, 8, 30]),
     });
   });
 
   it('keeps every older point on its own day', () => {
-    expect(visibilityPoints(midRun).slice(0, -1)).toEqual([
+    expect(visibilityPoints(midRun, DAY_13).slice(0, -1)).toEqual([
       { date: '2026-07-09', visibility: visibilityOf([2, 6, null, 30]) },
       { date: '2026-07-12', visibility: visibilityOf([2, 6, 8, 30]) },
     ]);
+  });
+
+  it('reads the last day of a window that ends before the reference day exactly', () => {
+    expect(visibilityPoints(midRun, addDays(DAY_13, 1)).at(-1)).toEqual({
+      date: '2026-07-13',
+      visibility: visibilityOf([2, null, null, 30]),
+    });
   });
 
   it('never carries a check two days old into the newest point', () => {
@@ -71,7 +78,7 @@ describe('visibilityPoints', () => {
       row('b', 8, [check(6, DAY_09)]),
     ];
 
-    expect(visibilityPoints(stale).at(-1)?.visibility).toBe(
+    expect(visibilityPoints(stale, DAY_13).at(-1)?.visibility).toBe(
       visibility([
         { traffic: 9, position: 2 },
         { traffic: 8, position: null },
@@ -131,7 +138,7 @@ describe('visibilityPoints over a long history', () => {
   };
 
   it('draws the same points from the index as from the lists', () => {
-    const points = visibilityPoints(longHistory);
+    const points = visibilityPoints(longHistory, addDays(FIRST, DAYS - 1));
 
     expect(points).toHaveLength(DAYS);
     expect(points).toEqual(expectedPoints(longHistory));

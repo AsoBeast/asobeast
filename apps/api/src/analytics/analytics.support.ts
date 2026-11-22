@@ -120,7 +120,10 @@ const lookupOf = (row: TrackedRow): CheckLookup => {
   return (date) => byDay.get(date.getTime()) ?? null;
 };
 
-export function visibilityPoints(rows: TrackedRow[]): VisibilityPoint[] {
+export function visibilityPoints(
+  rows: TrackedRow[],
+  reference: Date | null,
+): VisibilityPoint[] {
   const lookups = rows.map(lookupOf);
   const dates = new Set<number>();
   for (const row of rows) {
@@ -128,18 +131,19 @@ export function visibilityPoints(rows: TrackedRow[]): VisibilityPoint[] {
       dates.add(ranking.date.getTime());
     }
   }
-  const times = [...dates].sort((a, b) => a - b);
-  const newest = times.at(-1);
-  return times.map((time) => {
-    const date = new Date(time);
-    const keywords = rows.map((row, index) => {
-      const lookup = lookups[index];
-      const check =
-        time === newest ? currentCheckIn(lookup, date) : lookup(date);
-      return keywordOf(row, check, date);
+  const current = reference?.getTime();
+  return [...dates]
+    .sort((a, b) => a - b)
+    .map((time) => {
+      const date = new Date(time);
+      const keywords = rows.map((row, index) => {
+        const lookup = lookups[index];
+        const check =
+          time === current ? currentCheckIn(lookup, date) : lookup(date);
+        return keywordOf(row, check, date);
+      });
+      return { date: toDateKey(date), visibility: visibility(keywords) };
     });
-    return { date: toDateKey(date), visibility: visibility(keywords) };
-  });
 }
 
 interface ReferencedWindow extends KeywordWindow {

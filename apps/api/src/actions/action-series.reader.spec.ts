@@ -39,7 +39,10 @@ const item = (
 const buildPrisma = () => {
   const empty = jest.fn(() => Promise.resolve([]));
   return {
-    keywordRanking: { findMany: jest.fn(empty) },
+    keywordRanking: {
+      findMany: jest.fn(empty),
+      findFirst: jest.fn().mockResolvedValue(null),
+    },
     trackedKeyword: { findMany: jest.fn(empty) },
     auditScore: { findMany: jest.fn(empty) },
     review: { findMany: jest.fn(empty) },

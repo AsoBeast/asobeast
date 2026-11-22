@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ActionItem, ActionTrend, ActionTrendMetric } from '@asobeast/shared';
 import {
   addDays,
+  referenceDate,
   trackedRows,
   visibilityPoints,
 } from '../analytics/analytics.support';
@@ -93,16 +94,15 @@ export class ActionSeriesReader {
     item: ActionItem,
     { from, to }: TrendWindow,
   ): Promise<SeriesBody> {
-    const rows = await trackedRows(
-      this.prisma,
-      { appId: item.scope.appId, country: item.scope.country },
-      from,
-      to,
-    );
+    const scope = { appId: item.scope.appId, country: item.scope.country };
+    const [rows, reference] = await Promise.all([
+      trackedRows(this.prisma, scope, from, to),
+      referenceDate(this.prisma, scope),
+    ]);
     return {
       depth: null,
       points: dailyPoints(
-        visibilityPoints(rows).map((point) => ({
+        visibilityPoints(rows, reference).map((point) => ({
           date: new Date(point.date),
           value: point.visibility,
         })),
