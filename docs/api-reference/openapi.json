@@ -8868,7 +8868,7 @@
           "ids": {
             "uniqueItems": true,
             "minItems": 1,
-            "maxItems": 100,
+            "maxItems": 200,
             "type": "array",
             "items": {
               "type": "string"
