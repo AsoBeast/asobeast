@@ -1,5 +1,6 @@
 "use client";
 
+import type { Ref } from "react";
 import { X } from "lucide-react";
 import {
   ACTION_DISMISS_REASONS,
@@ -37,10 +38,16 @@ function DismissItems({ onDismiss }: { onDismiss: OnDismiss }) {
   );
 }
 
-export function ActionDismissSubMenu({ onDismiss }: { onDismiss: OnDismiss }) {
+export function ActionDismissSubMenu({
+  onDismiss,
+  triggerRef,
+}: {
+  onDismiss: OnDismiss;
+  triggerRef?: Ref<HTMLDivElement>;
+}) {
   return (
     <DropdownMenuSub>
-      <DropdownMenuSubTrigger>Dismiss</DropdownMenuSubTrigger>
+      <DropdownMenuSubTrigger ref={triggerRef}>Dismiss</DropdownMenuSubTrigger>
       <DropdownMenuSubContent>
         <DismissItems onDismiss={onDismiss} />
       </DropdownMenuSubContent>

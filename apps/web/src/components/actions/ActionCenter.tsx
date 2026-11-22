@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useDeferredValue } from "react";
+import { Suspense, useDeferredValue, useState } from "react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { PANEL_ACTION, PANEL_BLEED } from "@/components/layout/panel-classes";
 import {
@@ -31,6 +31,7 @@ import {
 } from "./queue-filters";
 import { groupQueue, sortQueue } from "./queue-groups";
 import { bulkFocusTarget } from "./row-focus";
+import { type RowMenuRequest, RowMenuRequestContext } from "./row-menu-request";
 import { QueueFooter } from "./QueueFooter";
 import {
   ACTIONS_GRID,
@@ -80,6 +81,7 @@ export function ActionCenter({ appId }: { appId?: string }) {
     visible,
     appId && view.group === "app" ? "priority" : view.group,
   );
+  const [menuRequest, setMenuRequest] = useState<RowMenuRequest | null>(null);
   const keys = useQueueKeys({
     ids: groups.flatMap((group) => group.items.map((item) => item.id)),
     onOpen: sheet.open,
@@ -87,6 +89,7 @@ export function ActionCenter({ appId }: { appId?: string }) {
       if (selection.selectable.includes(id)) selection.toggle(id);
     },
     onClear: clearSelection,
+    onMenu: (id, focus) => setMenuRequest({ id, focus }),
   });
 
   const { data: portfolio } = useQuery({
@@ -155,16 +158,23 @@ export function ActionCenter({ appId }: { appId?: string }) {
                 ) : (
                   <>
                     <QueueColumnHead />
-                    <ActionQueue
-                      groups={groups}
-                      focusedId={sheet.id}
-                      iconOf={iconOf}
-                      hrefFor={sheet.hrefFor}
-                      onOpen={(item) => sheet.open(item.id)}
-                      selection={selection}
-                      keyboardId={keys.focusedId}
-                      onRowFocus={keys.setFocusedId}
-                    />
+                    <RowMenuRequestContext
+                      value={{
+                        request: menuRequest,
+                        settle: () => setMenuRequest(null),
+                      }}
+                    >
+                      <ActionQueue
+                        groups={groups}
+                        focusedId={sheet.id}
+                        iconOf={iconOf}
+                        hrefFor={sheet.hrefFor}
+                        onOpen={(item) => sheet.open(item.id)}
+                        selection={selection}
+                        keyboardId={keys.focusedId}
+                        onRowFocus={keys.setFocusedId}
+                      />
+                    </RowMenuRequestContext>
                   </>
                 )}
               </CardContent>

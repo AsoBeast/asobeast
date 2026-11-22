@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import type { ActionItem, ActionUpdateRequest } from "@asobeast/shared";
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ActionDismissSubMenu } from "./ActionDismissMenu";
 import { SNOOZE_PRESET_DAYS, snoozeUntil } from "./ActionSnoozeMenu";
+import { useRowMenuRequest } from "./row-menu-request";
 import { useBusyMenu } from "./use-busy-menu";
 
 export function ActionRowMenu({
@@ -29,13 +31,22 @@ export function ActionRowMenu({
   onUpdate: (body: ActionUpdateRequest) => void;
 }) {
   const menu = useBusyMenu(busy);
+  const requested = useRowMenuRequest(item.id);
+  const dismissTrigger = useRef<HTMLDivElement>(null);
+  const onOpenChange = (next: boolean) => {
+    if (!next) requested.settle();
+    menu.onOpenChange(next);
+  };
   const copyLink = async () => {
     await navigator.clipboard.writeText(`${window.location.origin}${href}`);
     toast.success("Link copied");
   };
 
   return (
-    <DropdownMenu {...menu}>
+    <DropdownMenu
+      open={menu.open || requested.focus !== null}
+      onOpenChange={onOpenChange}
+    >
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
@@ -48,7 +59,23 @@ export function ActionRowMenu({
           <MoreHorizontal aria-hidden />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent
+        align="end"
+        onFocus={(event) => {
+          if (
+            requested.focus === null ||
+            event.target !== event.currentTarget
+          ) {
+            return;
+          }
+          if (requested.focus === "dismiss") {
+            event.preventDefault();
+            dismissTrigger.current?.focus();
+          }
+          menu.onOpenChange(true);
+          requested.settle();
+        }}
+      >
         {item.status === "SNOOZED" ? (
           <DropdownMenuItem onSelect={() => onUpdate({ status: "OPEN" })}>
             Wake now
@@ -66,6 +93,7 @@ export function ActionRowMenu({
           ))
         )}
         <ActionDismissSubMenu
+          triggerRef={dismissTrigger}
           onDismiss={(reason) => onUpdate({ status: "DISMISSED", reason })}
         />
         <DropdownMenuSeparator />

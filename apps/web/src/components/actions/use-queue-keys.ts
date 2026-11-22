@@ -9,20 +9,31 @@ import {
   overlayOpen,
   type QueueCommand,
 } from "./queue-keys";
+import type { RowMenuFocus } from "./row-menu-request";
 
 const QUEUE = "#queue";
 const ROW = "li[id^='action-']";
 
+const MENU_FOCUS: Partial<Record<QueueCommand["kind"], RowMenuFocus>> = {
+  snooze: "first",
+  dismiss: "dismiss",
+};
+
 const rowElement = (id: string) => document.getElementById(`action-${id}`);
 
-function press(id: string, command: string): void {
-  const row = rowElement(id);
-  const visible = [
-    ...(row?.querySelectorAll<HTMLElement>(`[data-command="${command}"]`) ??
-      []),
-  ].find((element) => element.offsetParent !== null);
-  const fallback = row?.querySelector<HTMLElement>('[data-command="more"]');
-  (visible ?? fallback)?.click();
+function pressDone(id: string): void {
+  [
+    ...(rowElement(id)?.querySelectorAll<HTMLElement>(
+      '[data-command="done"]',
+    ) ?? []),
+  ]
+    .find((element) => element.offsetParent !== null)
+    ?.click();
+}
+
+function menuAvailable(id: string): boolean {
+  const trigger = rowElement(id)?.querySelector('[data-command="more"]');
+  return trigger != null && trigger.getAttribute("aria-disabled") !== "true";
 }
 
 export function useQueueKeys({
@@ -30,11 +41,13 @@ export function useQueueKeys({
   onOpen,
   onSelect,
   onClear,
+  onMenu,
 }: {
   ids: readonly string[];
   onOpen: (id: string) => void;
   onSelect: (id: string) => void;
   onClear: () => void;
+  onMenu: (id: string, focus: RowMenuFocus) => void;
 }) {
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -61,9 +74,9 @@ export function useQueueKeys({
     if (id === null) return;
     if (command.kind === "open") onOpen(id);
     if (command.kind === "select") onSelect(id);
-    if (command.kind === "done") press(id, "done");
-    if (command.kind === "snooze") press(id, "snooze");
-    if (command.kind === "dismiss") press(id, "dismiss");
+    if (command.kind === "done") pressDone(id);
+    const focus = MENU_FOCUS[command.kind];
+    if (focus && menuAvailable(id)) onMenu(id, focus);
   };
 
   const onKeyDown = useEffectEvent((event: KeyboardEvent) => {

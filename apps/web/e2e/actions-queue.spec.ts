@@ -509,6 +509,59 @@ test.describe("working the queue from the keyboard", () => {
     await expect(page.locator(`[id='${thirdId}']`)).toBeFocused();
   });
 
+  test("s opens the focused row's menu on its snooze options", async ({
+    page,
+  }) => {
+    await openQueue(page);
+    const rows = page.locator(ROWS);
+    await rows.first().focus();
+    const more = rows.first().locator('[data-command="more"]');
+
+    await page.keyboard.press("s");
+
+    await expect(page.getByRole("menu")).toBeVisible();
+    await expect(more).toHaveAttribute("aria-expanded", "true");
+    await expect(
+      page.getByRole("menuitem", { name: "Snooze 7 days" }),
+    ).toBeFocused();
+
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    await expect(more).toBeFocused();
+    await page.keyboard.press("j");
+    await expect(rows.nth(1)).toBeFocused();
+  });
+
+  test("Shift D opens the focused row's menu on Dismiss", async ({ page }) => {
+    await openQueue(page);
+    const rows = page.locator(ROWS);
+    await rows.first().focus();
+    const firstId = await rows.first().getAttribute("id");
+
+    await page.keyboard.press("Shift+D");
+
+    await expect(page.getByRole("menu")).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Dismiss" })).toBeFocused();
+    await page.keyboard.press("ArrowRight");
+    const reasons = page.getByRole("menu").last();
+    await expect(reasons.getByRole("menuitem").first()).toBeFocused();
+    await page.keyboard.press("Enter");
+
+    await expect(page.locator(`[id='${firstId}']`)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Undo" })).toBeVisible();
+  });
+
+  test("s on a snoozed row offers Wake now", async ({ page }) => {
+    await openQueue(page);
+    await page.locator(card("act-snoozed")).focus();
+
+    await page.keyboard.press("s");
+
+    await expect(
+      page.getByRole("menuitem", { name: "Wake now" }),
+    ).toBeFocused();
+  });
+
   test("typing in the search box never moves the focus", async ({ page }) => {
     await openQueue(page);
     const search = page.getByRole("textbox", { name: "Search actions" });
