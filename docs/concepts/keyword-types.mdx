@@ -49,6 +49,6 @@ Through the API, `PATCH /apps/{id}/keywords/{keywordId}` takes `keywordClass` wi
 
 ## Competitor brands stay out of advice
 
-Apple's App Review Guidelines and Google Play's metadata policy forbid the names of other apps in your title, subtitle, keyword field and screenshots. So AsoBeast never tells you to put a competitor brand into your listing: the Action Center opens no `keyword.add_uncovered` action for it, the audit leaves it out of every fix that adds a keyword to a field or a caption, the keyword field suggestion and the AI drafts skip it, and the overview's list of keywords missing from your metadata leaves it out.
+Apple's App Review Guidelines and Google Play's metadata policy forbid the names of other apps in your title, subtitle, keyword field and screenshots. So AsoBeast never tells you to put a competitor brand into your listing: the Action Center opens no `keyword.add_uncovered` or `keyword.push_to_top10` action for it, the audit leaves it out of every fix that adds a keyword to a field or a caption, the keyword field suggestion and the AI drafts skip it, and the overview's list of keywords missing from your metadata leaves it out. A `keyword.defend` action for it still reports who entered its top 10, without asking you to use the phrase in a field.
 
 You still track a competitor brand like any other keyword: its position, its search results and who ranks for it stay where they are. When AsoBeast took a generic phrase for a brand, set its type to generic and the advice includes it again from the next run.
