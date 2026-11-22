@@ -111,6 +111,53 @@ describe('ActionsAiService.explain', () => {
     expect(request.content[0].text).toContain('Estimated impact: 71 of 100');
     expect(request.content[0].text).toContain('opportunity');
     expect(request.content[0].text).not.toContain('workspaceId');
+    expect(request.content[0].text).not.toContain('competitor brand');
+  });
+
+  describe('on a defend action', () => {
+    const DEFEND_EVIDENCE = {
+      rule: 'keyword.defend',
+      yourPosition: 4,
+      previousPosition: 3,
+      windowDays: 7,
+      observedDays: 5,
+      volatility: 12,
+      entrants: [],
+      entrantsAtOrAbove: 2,
+      volume: 40,
+    };
+    const BRAND_NOTE =
+      "Keyword class: a competitor brand. Never suggest putting it in the app's title, subtitle, keyword field or description; the owner tracks it only to watch who ranks.";
+
+    const sentText = async (evidence: Record<string, unknown>) => {
+      const spend = jest.fn(() =>
+        Promise.resolve(aiCompletion({ explanation: 'Fine.' })),
+      );
+      await serviceFor(
+        buildPrisma({ ...ACTION_ROW, rule: 'keyword.defend', evidence }),
+        buildAi(spend),
+      ).explain('act_1', 'usr_1');
+      const request = spend.mock.calls[0][1] as unknown as {
+        content: Array<{ text: string }>;
+      };
+      return request.content[0].text.split('\n');
+    };
+
+    it('tells the model a competitor brand stays out of the listing', async () => {
+      const lines = await sentText({
+        ...DEFEND_EVIDENCE,
+        competitorBrand: true,
+      });
+
+      expect(lines.at(-2)).toBe(BRAND_NOTE);
+      expect(lines.at(-1)).toMatch(/^Evidence: /);
+    });
+
+    it('adds no note for any other keyword', async () => {
+      const lines = await sentText(DEFEND_EVIDENCE);
+
+      expect(lines).not.toContain(BRAND_NOTE);
+    });
   });
 
   it('de-duplicates two concurrent explain calls for one action', async () => {
