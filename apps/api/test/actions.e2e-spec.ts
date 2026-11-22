@@ -15,6 +15,7 @@ import {
   ActionSummary,
   AuditFixFactorEvidence,
   KeywordAddUncoveredEvidence,
+  QUERY_BOUNDS,
 } from '@asobeast/shared';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
@@ -376,6 +377,33 @@ describe('ActionsController (e2e)', () => {
     expect(body).toMatchObject({ missing: [], conflicts: [] });
   });
 
+  it('changes as many actions in one request as the queue lists', async () => {
+    const unknown = ['act_missing_1', 'act_missing_2'];
+    const seeded = await Promise.all(
+      Array.from(
+        { length: QUERY_BOUNDS.actionsLimit.max - unknown.length },
+        () => seedAction(),
+      ),
+    );
+
+    const res = await api
+      .patch('/actions')
+      .send({
+        ids: [...seeded, ...unknown],
+        status: 'SNOOZED',
+        snoozedUntil: future(7),
+      })
+      .expect(200);
+    const body = res.body as ActionBulkUpdateResult;
+
+    expect(body.items.map((item) => item.id).sort()).toEqual(
+      [...seeded].sort(),
+    );
+    expect(body.items.every((item) => item.status === 'SNOOZED')).toBe(true);
+    expect(body.missing).toEqual(unknown);
+    expect(body.conflicts).toEqual([]);
+  });
+
   it('refuses an invalid bulk request as a whole', async () => {
     const id = await seedAction();
 
@@ -386,7 +414,10 @@ describe('ActionsController (e2e)', () => {
     await api
       .patch('/actions')
       .send({
-        ids: Array.from({ length: 101 }, (_, index) => `act_${index}`),
+        ids: Array.from(
+          { length: QUERY_BOUNDS.actionBulkIds.max + 1 },
+          (_, index) => `act_${index}`,
+        ),
         status: 'DONE',
       })
       .expect(400);

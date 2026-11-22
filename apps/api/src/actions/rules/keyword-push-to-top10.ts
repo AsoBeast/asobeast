@@ -5,6 +5,7 @@ import {
   Store,
   TrackedKeywordItem,
 } from '@asobeast/shared';
+import { fitsOwnListing } from '../../keywords/keyword-class';
 import { median } from '../../scoring/curves';
 import { OPPORTUNITY_MIN_RELEVANCE } from '../../scoring/opportunity';
 import type {
@@ -66,6 +67,7 @@ function qualifies(
 ): keyword is TrackedKeywordItem & { latestPosition: number } {
   return (
     keyword.active &&
+    fitsOwnListing(keyword.keywordClass) &&
     keyword.country === homeCountry &&
     !keyword.scoreOutdated &&
     keyword.relevance !== null &&

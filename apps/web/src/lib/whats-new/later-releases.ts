@@ -213,6 +213,11 @@ export const LATER_RELEASES: readonly Release[] = [
         title: "Visibility with one decimal",
         text: "Visibility and its changes now always show one decimal, so a change reads 15.2 to 20.0 rather than 15.2 to 20, and the rating, conversion and audit figures in the Action Center keep one precision on both sides of a change.",
       },
+      {
+        kind: "fixed",
+        title: "Action Center keys and bulk changes",
+        text: "Pressing s or Shift D on an action now opens its menu on the snooze options or on Dismiss, as the shortcuts list says. Selecting every action shown and pressing Done, Snooze or Dismiss now changes all of them, however many the queue shows, where more than one hundred used to change nothing.",
+      },
     ],
   },
   {

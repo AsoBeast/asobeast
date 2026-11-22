@@ -169,6 +169,7 @@ export interface KeywordDefendEvidence {
   entrants: ActionSerpEntrant[];
   entrantsAtOrAbove: number;
   volume: number | null;
+  competitorBrand?: true;
 }
 
 export interface KeywordPruneEvidence {

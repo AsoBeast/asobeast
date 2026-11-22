@@ -25,6 +25,9 @@ const SYSTEM_PROMPT = [
   'first. No headings, no lists, no marketing language.',
 ].join('\n');
 
+const COMPETITOR_BRAND_NOTE =
+  "Keyword class: a competitor brand. Never suggest putting it in the app's title, subtitle, keyword field or description; the owner tracks it only to watch who ranks.";
+
 const RULE_DESCRIPTION: Record<ActionRule, string> = {
   'keyword.add_uncovered':
     'A high-opportunity, relevant tracked keyword appears in no indexed metadata field of the home market listing.',
@@ -156,6 +159,9 @@ export class ActionsAiService {
               `Rule description: ${RULE_DESCRIPTION[evidence.rule]}`,
               `Priority: ${row.priority}`,
               `Estimated impact: ${row.impact} of 100`,
+              ...(evidence.rule === 'keyword.defend' && evidence.competitorBrand
+                ? [COMPETITOR_BRAND_NOTE]
+                : []),
               `Evidence: ${JSON.stringify(evidence)}`,
             ].join('\n'),
           },
