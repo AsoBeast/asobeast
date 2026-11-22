@@ -224,6 +224,13 @@ describe('lintKeywordField', () => {
     );
   });
 
+  it('never flags a word ending in ss', () => {
+    expect(rules(lintKeywordField('glas,glass'))).not.toContain('plural-form');
+    expect(
+      rules(lintKeywordField('boss,water', { titleWords: ['bos'] })),
+    ).not.toContain('plural-form');
+  });
+
   it('still flags a plural whose singular is in the title', () => {
     expect(
       rules(lintKeywordField('goals,water', { titleWords: ['goal'] })),

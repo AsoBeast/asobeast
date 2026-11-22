@@ -34,9 +34,10 @@ export const NOT_PLURALS: ReadonlySet<string> = new Set([
 
 export const MIN_PLURAL_CHARS = 4;
 
-export const isPluralOf = (word: string, singular: string): boolean =>
+export const canBePlural = (word: string): boolean =>
   word.length >= MIN_PLURAL_CHARS &&
   !word.endsWith('ss') &&
-  word !== singular &&
-  !NOT_PLURALS.has(word) &&
-  pluralsOf(singular).includes(word);
+  !NOT_PLURALS.has(word);
+
+export const isPluralOf = (word: string, singular: string): boolean =>
+  canBePlural(word) && word !== singular && pluralsOf(singular).includes(word);
