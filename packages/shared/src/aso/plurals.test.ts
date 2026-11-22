@@ -31,6 +31,9 @@ describe('isPluralOf', () => {
     ['analytics', 'analytic'],
     ['species', 'specie'],
     ['habit', 'habit'],
+    ['ios', 'io'],
+    ['its', 'it'],
+    ['boss', 'bos'],
   ])('never reads %s as a plural of %s', (word, singular) => {
     expect(isPluralOf(word, singular)).toBe(false);
   });

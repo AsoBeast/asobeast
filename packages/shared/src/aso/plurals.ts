@@ -32,7 +32,11 @@ export const NOT_PLURALS: ReadonlySet<string> = new Set([
   'logistics',
 ]);
 
+export const MIN_PLURAL_CHARS = 4;
+
 export const isPluralOf = (word: string, singular: string): boolean =>
+  word.length >= MIN_PLURAL_CHARS &&
+  !word.endsWith('ss') &&
   word !== singular &&
   !NOT_PLURALS.has(word) &&
   pluralsOf(singular).includes(word);

@@ -93,6 +93,16 @@ describe('suggestKeywordField', () => {
     ).toEqual(['news app']);
   });
 
+  it('keeps a short word whole when its stem is tracked', () => {
+    expect(
+      suggestKeywordField(
+        [item('k1', 'ios widgets', 9), item('k2', 'io games', 4)],
+        [row('k1', true), row('k2', false)],
+        'en-US',
+      ).addedTerms,
+    ).toEqual(['ios widgets']);
+  });
+
   it('never suggests a competitor brand', () => {
     expect(
       suggestKeywordField(

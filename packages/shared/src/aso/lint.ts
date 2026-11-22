@@ -1,7 +1,7 @@
 import { Store } from '../index';
 import { isStopword, normalizeText, tokenize } from '../text';
 import { countChars, KEYWORD_MIN_CHARS } from './limits';
-import { NOT_PLURALS } from './plurals';
+import { MIN_PLURAL_CHARS, NOT_PLURALS } from './plurals';
 
 export type LintSeverity = 'error' | 'warn' | 'info';
 
@@ -282,7 +282,11 @@ const pluralForms = (
   const issues: LintIssue[] = [];
   const pluralSeen = new Set<string>();
   for (const token of tokens) {
-    if (token.length > 3 && token.endsWith('s') && !NOT_PLURALS.has(token)) {
+    if (
+      token.length >= MIN_PLURAL_CHARS &&
+      token.endsWith('s') &&
+      !NOT_PLURALS.has(token)
+    ) {
       const stem = token.slice(0, -1);
       if (stems.has(stem) && !pluralSeen.has(token)) {
         pluralSeen.add(token);
