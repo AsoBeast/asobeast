@@ -15,3 +15,24 @@ export function pluralsOf(word: string): string[] {
   }
   return forms;
 }
+
+export const NOT_PLURALS: ReadonlySet<string> = new Set([
+  'news',
+  'series',
+  'species',
+  'means',
+  'analytics',
+  'physics',
+  'politics',
+  'ethics',
+  'economics',
+  'mathematics',
+  'athletics',
+  'gymnastics',
+  'logistics',
+]);
+
+export const isPluralOf = (word: string, singular: string): boolean =>
+  word !== singular &&
+  !NOT_PLURALS.has(word) &&
+  pluralsOf(singular).includes(word);
