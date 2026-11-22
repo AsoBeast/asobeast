@@ -32,17 +32,15 @@ export function suggestKeywordField(
   coverage: KeywordCoverageRow[],
   localization: AppStoreLocalization | undefined,
 ): KeywordFieldSuggestion {
+  const eligible = tracked.filter((item) => fitsOwnListing(item.keywordClass));
   const trackedWords = [
-    ...new Set(tracked.flatMap((item) => tokenize(item.text))),
+    ...new Set(eligible.flatMap((item) => tokenize(item.text))),
   ];
   const uncovered = new Set(
     coverage.filter((row) => row.uncovered).map((row) => row.keywordId),
   );
-  const candidates = tracked
-    .filter(
-      (item) =>
-        uncovered.has(item.keywordId) && fitsOwnListing(item.keywordClass),
-    )
+  const candidates = eligible
+    .filter((item) => uncovered.has(item.keywordId))
     .map((item) => ({
       text: candidateText(item.text, localization, trackedWords),
       score: (item.volume ?? 0) * (item.relevance ?? 0),

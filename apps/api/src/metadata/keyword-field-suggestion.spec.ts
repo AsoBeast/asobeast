@@ -103,6 +103,16 @@ describe('suggestKeywordField', () => {
     ).toEqual(['ios widgets']);
   });
 
+  it('never turns a word into a competitor brand', () => {
+    expect(
+      suggestKeywordField(
+        [item('k1', 'habits', 9), item('k2', 'habit', 4, 'competitorBrand')],
+        [row('k1', true), row('k2', true)],
+        'en-US',
+      ).addedTerms,
+    ).toEqual(['habits']);
+  });
+
   it('never suggests a competitor brand', () => {
     expect(
       suggestKeywordField(
