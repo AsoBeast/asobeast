@@ -1,5 +1,6 @@
 import { RankDistribution, RankDistributionPoint } from '@asobeast/shared';
-import { positionAt, TrackedRow } from './analytics.support';
+import type { TrackedRow } from './analytics.support';
+import { positionsNow } from './baseline';
 
 export type RankDistributionBands = Omit<RankDistributionPoint, 'date'>;
 
@@ -57,10 +58,10 @@ export const rankDistributionOf = (
   return distribution;
 };
 
-export const rankDistributionAt = (
+export const rankDistributionNow = (
   rows: TrackedRow[],
-  date: Date | null,
+  reference: Date | null,
 ): RankDistribution =>
   rankDistributionOf(
-    rows.map((row) => (date ? positionAt(row.keyword.rankings, date) : null)),
+    reference ? positionsNow(rows, reference) : rows.map(() => null),
   );

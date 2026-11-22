@@ -513,6 +513,52 @@ describe('portfolioHistory', () => {
     expect(history.change.movers.up.map((mover) => mover.text)).toEqual(['a']);
   });
 
+  describe('a daily run still in progress', () => {
+    const midRun = () =>
+      app([
+        row('a', 10, [
+          [0, 2],
+          [1, 2],
+          [7, 2],
+        ]),
+        row('b', 10, [
+          [1, 6],
+          [7, 6],
+        ]),
+        row('c', 10, [
+          [1, 8],
+          [7, 8],
+        ]),
+        row('d', 10, [
+          [0, 30],
+          [1, 30],
+          [7, 30],
+        ]),
+      ]);
+    const carried = visibility(
+      [2, 6, 8, 30].map((position) => ({ traffic: 10, position })),
+    );
+
+    it('counts a keyword still waiting for the newest check at its position of the day before in the tiles', () => {
+      const history = portfolioHistory([midRun()], 7);
+
+      expect(history.apps?.[0].change).toMatchObject({
+        visibility: carried,
+        visibilityDelta: 0,
+        top10: 3,
+        top10Delta: 0,
+      });
+      expect(history.stores?.[0].change).toMatchObject({
+        top10: 3,
+        top10Delta: 0,
+      });
+      expect(history.change).toMatchObject({
+        visibilityDelta: 0,
+        top10Delta: 0,
+      });
+    });
+  });
+
   describe('the figures behind the pooled line', () => {
     const rising = () =>
       app([

@@ -18,18 +18,17 @@ import {
 import {
   addDays,
   DAY_MS,
-  keywordsAt,
   KeywordWindow,
   rankingAt,
   toDateKey,
   TrackedRow,
 } from './analytics.support';
 import { isImpactField } from '../changes/change-impact';
-import { hasBaseline, keywordsAtBaseline } from './baseline';
+import { hasBaseline, keywordsAtBaseline, keywordsNow } from './baseline';
 import { mergePortfolioMovers, rankInsight } from './portfolio-insights';
 import {
   bucketPositions,
-  rankDistributionAt,
+  rankDistributionNow,
   RankDistributionBands,
 } from './rank-distribution';
 
@@ -226,7 +225,7 @@ function comparison(compared: CheckedMember[], days: number) {
     ...rankInsight(member.rows, member.reference, days),
   }));
   const now = visibility(
-    compared.flatMap((member) => keywordsAt(member.rows, member.reference)),
+    compared.flatMap((member) => keywordsNow(member.rows, member.reference)),
   );
   const then = visibility(
     compared.flatMap((member) =>
@@ -286,12 +285,12 @@ function partChange(
       : comparison(compared, days);
   return {
     visibility: visibility(
-      members.flatMap((member) => keywordsAt(member.rows, member.reference)),
+      members.flatMap((member) => keywordsNow(member.rows, member.reference)),
     ),
     visibilityDelta: deltas.visibilityDelta,
     top10: members.reduce(
       (total, member) =>
-        total + rankDistributionAt(member.rows, member.reference).top10,
+        total + rankDistributionNow(member.rows, member.reference).top10,
       0,
     ),
     top10Delta: deltas.top10Delta,

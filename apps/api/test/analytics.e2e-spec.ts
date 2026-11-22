@@ -22,6 +22,7 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { testDb } from './helpers/test-db';
 import { ownerAgent, useCookies } from './helpers/session';
+import { addDays } from '../src/analytics/days';
 import { DigestService } from '../src/analytics/digest.service';
 import { KeywordsService } from '../src/keywords/keywords.service';
 import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
@@ -952,6 +953,98 @@ describe('AnalyticsController (e2e)', () => {
     expect(summary.coverage.inTitle).toBe(2);
     expect(summary.coverage.inSubtitle).toBe(3);
     expect(summary.coverage.uncoveredHighOpportunity).toEqual([]);
+  });
+
+  const seedMidRun = async (): Promise<string> => {
+    const created = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '1234567893',
+        country: 'us',
+        name: 'Mid Run',
+      },
+    });
+    const keywords = [
+      { text: 'habit', traffic: 9, position: 2, checkedToday: true },
+      { text: 'habit tracker', traffic: 8, position: 6, checkedToday: false },
+      { text: 'streak app', traffic: 5, position: 8, checkedToday: false },
+      { text: 'daily goals', traffic: 7, position: 30, checkedToday: true },
+    ];
+    for (const kw of keywords) {
+      const keyword = await prisma.keyword.create({
+        data: { text: kw.text, store: Store.APP_STORE, country: 'us' },
+      });
+      await prisma.trackedKeyword.create({
+        data: {
+          appId: created.id,
+          keywordId: keyword.id,
+          source: 'MANUAL',
+          active: true,
+        },
+      });
+      await prisma.keywordMetric.create({
+        data: {
+          keywordId: keyword.id,
+          date: D7,
+          traffic: kw.traffic,
+          difficulty: 3,
+          formulaVersion: CURRENT_FORMULA_VERSIONS.APP_STORE,
+        },
+      });
+      const days = Array.from({ length: kw.checkedToday ? 8 : 7 }, (_, ago) =>
+        addDays(D7, ago),
+      );
+      await prisma.keywordRanking.createMany({
+        data: days.map((date) => ({
+          appId: created.id,
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          keywordId: keyword.id,
+          date,
+          position: kw.position,
+          depth: 100,
+        })),
+      });
+    }
+    return created.id;
+  };
+
+  const carriedVisibility = visibility([
+    { traffic: 9, position: 2 },
+    { traffic: 8, position: 6 },
+    { traffic: 5, position: 8 },
+    { traffic: 7, position: 30 },
+  ]);
+
+  it("counts keywords still waiting for today's check at yesterday's position", async () => {
+    const id = await seedMidRun();
+
+    const summary = (await api.get(`/apps/${id}/summary`).expect(200))
+      .body as AppSummary;
+    expect(summary.rankDistribution.top10).toBe(3);
+    expect(summary.visibility.current).toBeCloseTo(carriedVisibility, 5);
+    expect(summary.visibility.delta7d).toBe(0);
+
+    const portfolio = (await api.get('/portfolio').expect(200))
+      .body as PortfolioSummary;
+    expect(portfolio.apps[0].visibility.current).toBeCloseTo(
+      summary.visibility.current,
+      5,
+    );
+
+    const insights = (await api.get('/portfolio/insights').expect(200))
+      .body as PortfolioInsights;
+    const insight = insights.apps.find((each) => each.appId === id);
+    expect(insight?.rankDistribution.top10).toBe(3);
+    expect(insight?.top10Delta7d).toBe(0);
+
+    const listed = (await api.get(`/apps/${id}/keywords`).expect(200))
+      .body as TrackedKeywordItem[];
+    expect(
+      listed.filter(
+        (item) => item.latestPosition !== null && item.latestPosition <= 10,
+      ),
+    ).toHaveLength(3);
   });
 
   it('composes a portfolio whose numbers match the app summary', async () => {

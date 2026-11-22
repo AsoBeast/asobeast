@@ -10,6 +10,7 @@ import {
   RankDistributionHistory,
   RatingsHistory,
   UncoveredKeyword,
+  visibility,
   VisibilityHistory,
   VisibilitySummary,
 } from '@asobeast/shared';
@@ -31,21 +32,20 @@ import {
   delta,
   keywordWindow,
   metricAt,
-  rankingAt,
   referenceDate,
   startOfUtcDay,
   toDateKey,
   TrackedRow,
   trackedRows,
   utcToday,
-  visibilityAt,
   visibilityPoints,
 } from './analytics.support';
 import { MarketHistoryQueryDto } from './dto/market-history-query.dto';
 import { VisibilityCompareQueryDto } from './dto/visibility-compare-query.dto';
 import { VisibilityHistoryQueryDto } from './dto/visibility-history-query.dto';
 import { movers } from './movers';
-import { bucketPositions, rankDistributionAt } from './rank-distribution';
+import { currentCheck, keywordsNow } from './baseline';
+import { bucketPositions, rankDistributionNow } from './rank-distribution';
 import { collapseRatings } from './ratings-history';
 import { ShareOfVoiceService } from './share-of-voice.service';
 import { HOME_LISTING, NEWEST_FIRST } from '../apps/listing';
@@ -83,7 +83,7 @@ const rowOpportunity = (
     return null;
   }
   const ranking = referenceDate
-    ? rankingAt(row.keyword.rankings, referenceDate)
+    ? currentCheck(row.keyword.rankings, referenceDate)
     : null;
   return appOpportunity({
     source: reportedSource(
@@ -162,7 +162,7 @@ export class AnalyticsService {
 
     return {
       visibility: this.visibilitySummary(market.rows, market.referenceDate),
-      rankDistribution: rankDistributionAt(market.rows, market.referenceDate),
+      rankDistribution: rankDistributionNow(market.rows, market.referenceDate),
       movers: movers(market.rows, market.referenceDate),
       coverage: this.coverage(covered.rows, covered.referenceDate, {
         snapshot,
@@ -297,7 +297,7 @@ export class AnalyticsService {
     if (!referenceDate) {
       return { current: 0, delta7d: null, delta30d: null };
     }
-    const current = visibilityAt(rows, referenceDate);
+    const current = visibility(keywordsNow(rows, referenceDate));
     return {
       current,
       delta7d: delta(rows, referenceDate, current, 7),
