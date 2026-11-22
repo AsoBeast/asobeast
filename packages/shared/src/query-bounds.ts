@@ -18,10 +18,12 @@ export interface QueryBound {
   default?: number;
 }
 
+const ACTIONS_LIST_MAX = 200;
+
 export const QUERY_BOUNDS = {
-  actionsLimit: { min: 1, max: 200, default: 100 },
+  actionsLimit: { min: 1, max: ACTIONS_LIST_MAX, default: 100 },
   actionActivityDays: { min: 7, max: 90, default: 30 },
-  actionBulkIds: { min: 1, max: 100, default: 100 },
+  actionBulkIds: { min: 1, max: ACTIONS_LIST_MAX, default: ACTIONS_LIST_MAX },
   reviewsLimit: { min: 1, max: 200, default: 50 },
   reviewScore: { min: 1, max: 5 },
   suggestionsLimit: { min: 1, max: 100, default: 30 },
@@ -31,6 +33,8 @@ export const QUERY_BOUNDS = {
   serpMoverDays: { min: 1, max: 30, default: 7 },
   changeTimelineDays: { min: 1, max: 365, default: 90 },
   chartDates: { min: 1, max: 365, default: 90 },
+  historyDays: { min: 1, max: 365 },
+  snapshotHistoryDays: { min: 1, max: 180 },
 } as const satisfies Record<string, QueryBound>;
 
 export type QueryBoundName = keyof typeof QUERY_BOUNDS;

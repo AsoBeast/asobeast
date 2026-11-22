@@ -3,7 +3,10 @@ import type { WorkspaceContext } from '../common/tenancy/workspace-context';
 import type { StoreConnectionService } from './store-connection.service';
 import { AscListingApi } from './asc-listing-api';
 import { AscRateLimitedError } from './asc-errors';
-import { AscFeaturingSync } from './asc-featuring-sync.service';
+import {
+  AscFeaturingSync,
+  PROMO_TEXT_ROLE_NEEDED,
+} from './asc-featuring-sync.service';
 import { AscRejectedKeyError } from './asc-errors';
 import { FIELD_SYNC_UNSERVED_APP } from './asc-keyword-field-sync.service';
 import { failure, ok, recordedRequester } from './asc-transport.fixture';
@@ -462,6 +465,96 @@ describe('AscFeaturingSync.run', () => {
       promoFilled: 1,
       promoTotal: 1,
       promoError: null,
+    });
+  });
+
+  it('stores the role sentence on the promotional text when apple refuses the localizations', async () => {
+    const { service, updateMany } = build({
+      responses: [versions(), failure(403, 'FORBIDDEN_ERROR'), nominations([])],
+    });
+
+    await expect(service.run()).resolves.toEqual({
+      nominations: 1,
+      promoText: 0,
+    });
+    expect(writesOf(updateMany)[0].data).toMatchObject({
+      promoError: PROMO_TEXT_ROLE_NEEDED,
+      nominationsError: null,
+      roleRefused: false,
+      submittedNominations: 0,
+    });
+  });
+
+  it('stores both refusals of a sales key without throwing', async () => {
+    const { service, updateMany } = build({
+      responses: [
+        versions(),
+        failure(403, 'FORBIDDEN_ERROR'),
+        failure(403, 'FORBIDDEN_ERROR'),
+      ],
+    });
+
+    await expect(service.run()).resolves.toEqual({
+      nominations: 0,
+      promoText: 0,
+    });
+    expect(writesOf(updateMany)[0].data).toMatchObject({
+      promoError: PROMO_TEXT_ROLE_NEEDED,
+      nominationsError: 'FORBIDDEN_ERROR detail',
+      roleRefused: true,
+    });
+  });
+
+  it('reads the nominations when apple refuses the version read', async () => {
+    const { service, requests, updateMany } = build({
+      responses: [
+        failure(403, 'FORBIDDEN_ERROR'),
+        nominations([{ state: 'SUBMITTED' }]),
+      ],
+    });
+
+    await expect(service.run()).resolves.toEqual({
+      nominations: 1,
+      promoText: 0,
+    });
+    expect(requests.map(({ path }) => path)).toEqual([
+      expect.stringContaining('/appStoreVersions?'),
+      NOMINATION_PATH('DRAFT,SUBMITTED'),
+    ]);
+    expect(writesOf(updateMany)[0].data).toMatchObject({
+      submittedNominations: 1,
+      promoError: PROMO_TEXT_ROLE_NEEDED,
+      nominationsError: null,
+      roleRefused: false,
+    });
+  });
+
+  it('keeps reading the next app after a refused read', async () => {
+    const second = { id: 'app_2', storeAppId: '2345678901' };
+    const { service, updateMany } = build({
+      apps: [APP, second],
+      responses: [
+        versions(),
+        failure(403, 'FORBIDDEN_ERROR'),
+        nominations([]),
+        versions(),
+        localizations(['set', '']),
+        nominations([]),
+      ],
+    });
+
+    await expect(service.run()).resolves.toEqual({
+      nominations: 2,
+      promoText: 2,
+    });
+    const [first, next] = writesOf(updateMany);
+    expect(first).toMatchObject({
+      where: { appId: APP.id },
+      data: { promoError: PROMO_TEXT_ROLE_NEEDED },
+    });
+    expect(next).toMatchObject({
+      where: { appId: second.id },
+      data: { promoError: null, promoFilled: 1, promoTotal: 2 },
     });
   });
 

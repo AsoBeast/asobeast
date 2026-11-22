@@ -28,6 +28,9 @@ const STORE = Store.APP_STORE;
 export const FEATURING_ROLE_NEEDED =
   'This App Store Connect key cannot read featuring nominations. Connect a key with the Admin, App Manager or Marketing role.';
 
+export const PROMO_TEXT_ROLE_NEEDED =
+  'This App Store Connect key cannot read promotional text. Connect a key with the Admin or App Manager role.';
+
 const NOMINATION_STATES: readonly AscNominationState[] = ['DRAFT', 'SUBMITTED'];
 
 const NOMINATION_COUNT_OF: Record<AscNominationState, 'draft' | 'submitted'> = {
@@ -70,7 +73,21 @@ type LiveVersionRead =
   | { kind: 'live'; id: string }
   | { kind: 'invisible' }
   | { kind: 'noRelease' }
+  | { kind: 'refused' }
   | { kind: 'failed'; message: string };
+
+type UnreadVersion = Extract<
+  LiveVersionRead,
+  { kind: 'noRelease' | 'refused' }
+>;
+
+const unreadPromoOf = (version: UnreadVersion): PromoRead => ({
+  kind: 'skipped',
+  message:
+    version.kind === 'refused'
+      ? PROMO_TEXT_ROLE_NEEDED
+      : FIELD_SYNC_NO_LIVE_VERSION,
+});
 
 interface AppOutcome {
   nominations: number;
@@ -217,10 +234,10 @@ export class AscFeaturingSync {
       await this.recordUnread(app, version.message);
       return { nominations: 0, promoText: 0 };
     }
-    const promo: PromoRead =
+    const promo =
       version.kind === 'live'
         ? await this.promoOf(connection.api, version.id)
-        : { kind: 'skipped', message: FIELD_SYNC_NO_LIVE_VERSION };
+        : unreadPromoOf(version);
     let nominations: NominationsRead;
     try {
       nominations = await this.nominationsOf(connection.api, app.storeAppId);
@@ -262,6 +279,7 @@ export class AscFeaturingSync {
         throw error;
       }
       if (!(error instanceof AscError)) throw error;
+      if (error instanceof AscForbiddenError) return { kind: 'refused' };
       if (isNotFound(error)) return { kind: 'invisible' };
       return { kind: 'failed', message: error.message };
     }
@@ -290,6 +308,9 @@ export class AscFeaturingSync {
         throw error;
       }
       if (!(error instanceof AscError)) throw error;
+      if (error instanceof AscForbiddenError) {
+        return { kind: 'skipped', message: PROMO_TEXT_ROLE_NEEDED };
+      }
       return { kind: 'skipped', message: error.message };
     }
   }

@@ -25,6 +25,9 @@ test.use({ timezoneId: "UTC" });
 
 const utcClock = (now = new Date()) => ({ now, timeZone: "UTC" });
 
+const boxShadowOf = (locator: Locator) =>
+  locator.evaluate((element) => getComputedStyle(element).boxShadow);
+
 async function register(page: Page, path = "/register") {
   await page.goto(path);
   await page.getByLabel("Email").fill("owner@example.com");
@@ -197,6 +200,51 @@ test.describe("the billing wall", () => {
       layoutBox(questions.nth(1)),
     ]);
     expect(Math.round(first.y)).toBe(Math.round(second.y));
+  });
+
+  test("rings the plan card that has keyboard focus", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+    await page.goto("/upgrade");
+
+    const ultimate = page.getByRole("button", {
+      name: "Ultimate, $99 per month",
+    });
+    await page.getByRole("tab", { name: "Monthly" }).focus();
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Tab");
+
+    await expect(ultimate).toBeFocused();
+    expect(
+      await ultimate.evaluate((element) => element.matches(":focus-visible")),
+    ).toBe(true);
+    await expect.poll(() => boxShadowOf(ultimate)).toMatch(/0px 0px 0px 2px/);
+  });
+
+  test("keeps the primary ring on the selected plan card", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+    await page.goto("/upgrade");
+
+    const indie = page.getByRole("button", { name: "Indie, $10 per month" });
+    await expect(indie).toHaveAttribute("aria-pressed", "true");
+    await page.getByRole("tab", { name: "Monthly" }).focus();
+
+    await expect.poll(() => boxShadowOf(indie)).toMatch(/0px 0px 0px 1px/);
+    expect(await boxShadowOf(indie)).not.toBe("none");
+
+    await page.keyboard.press("Tab");
+
+    await expect(indie).toBeFocused();
+    await expect.poll(() => boxShadowOf(indie)).toMatch(/0px 0px 0px 2px/);
   });
 
   test("puts the plans above the payment on a phone without scrolling sideways", async ({

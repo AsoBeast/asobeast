@@ -6,6 +6,7 @@ import {
   tokenize,
   TrackedKeywordItem,
 } from '@asobeast/shared';
+import { fitsOwnListing } from '../../keywords/keyword-class';
 import type { SerpSnapshotDay } from '../../rankings/serp-movers';
 import type {
   ActionContext,
@@ -183,6 +184,9 @@ function detectForKeyword(
     entrants,
     entrantsAtOrAbove,
     volume: keyword.volume,
+    ...(fitsOwnListing(keyword.keywordClass)
+      ? {}
+      : { competitorBrand: true as const }),
   };
 
   return {

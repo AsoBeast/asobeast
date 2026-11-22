@@ -212,6 +212,31 @@ describe('lintKeywordField', () => {
     );
   });
 
+  it('never flags news beside new', () => {
+    expect(rules(lintKeywordField('new,news,games'))).not.toContain(
+      'plural-form',
+    );
+  });
+
+  it('never flags analytics beside analytic', () => {
+    expect(rules(lintKeywordField('analytic,analytics'))).not.toContain(
+      'plural-form',
+    );
+  });
+
+  it('never flags a word ending in ss', () => {
+    expect(rules(lintKeywordField('glas,glass'))).not.toContain('plural-form');
+    expect(
+      rules(lintKeywordField('boss,water', { titleWords: ['bos'] })),
+    ).not.toContain('plural-form');
+  });
+
+  it('still flags a plural whose singular is in the title', () => {
+    expect(
+      rules(lintKeywordField('goals,water', { titleWords: ['goal'] })),
+    ).toContain('plural-form');
+  });
+
   it('flags contains-generic-word', () => {
     expect(rules(lintKeywordField('app,tracker'))).toContain(
       'contains-generic-word',

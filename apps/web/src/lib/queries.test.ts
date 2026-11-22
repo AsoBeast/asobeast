@@ -117,6 +117,7 @@ import {
   spiderOptions,
   pickerSuggestionsOptions,
   suggestionsOptions,
+  isVisibilityOfMarket,
   visibilityOptions,
   webhookKeys,
   refetchFailedQueries,
@@ -1506,5 +1507,29 @@ describe("the newest alert event", () => {
   it("is read again whenever the alerts page opens", () => {
     expect(alertNewestOnVisitOptions.queryKey).toEqual(alertEventKeys.newest);
     expect(alertNewestOnVisitOptions.refetchOnMount).toBe("always");
+  });
+});
+
+describe("isVisibilityOfMarket", () => {
+  it("reads the market of a visibility key, compared or not", () => {
+    expect(
+      isVisibilityOfMarket(appKeys.visibility(APP, RANGE, "de"), "de"),
+    ).toBe(true);
+    expect(
+      isVisibilityOfMarket(
+        appKeys.visibility(APP, RANGE, "de", "competitors"),
+        "de",
+      ),
+    ).toBe(true);
+  });
+
+  it("refuses another market, a key without one and no key", () => {
+    expect(
+      isVisibilityOfMarket(appKeys.visibility(APP, RANGE, "us"), "de"),
+    ).toBe(false);
+    expect(isVisibilityOfMarket(appKeys.visibility(APP, RANGE), "de")).toBe(
+      false,
+    );
+    expect(isVisibilityOfMarket(undefined, "de")).toBe(false);
   });
 });

@@ -126,6 +126,42 @@ describe('keyword.defend', () => {
     expect(evidence.observedDays).toBe(4);
   });
 
+  it('marks a competitor brand on its evidence and keeps reporting who entered', () => {
+    const plain = evidenceOf(detectKeywordDefend(context([app()]), NOW));
+    const detections = detectKeywordDefend(
+      context([
+        app({
+          trackedKeywords: [keyword({ keywordClass: 'competitorBrand' })],
+        }),
+      ]),
+      NOW,
+    );
+
+    expect(detections).toHaveLength(1);
+    expect(evidenceOf(detections)).toEqual({
+      ...plain,
+      competitorBrand: true,
+    });
+  });
+
+  it.each(['generic', 'ownBrand'] as const)(
+    'leaves the flag out for a %s keyword',
+    (keywordClass) => {
+      const detections = detectKeywordDefend(
+        context([app({ trackedKeywords: [keyword({ keywordClass })] })]),
+        NOW,
+      );
+
+      expect(evidenceOf(detections)).not.toHaveProperty('competitorBrand');
+    },
+  );
+
+  it('leaves the flag out for a keyword with no class', () => {
+    expect(
+      evidenceOf(detectKeywordDefend(context([app()]), NOW)),
+    ).not.toHaveProperty('competitorBrand');
+  });
+
   it('never lists your own app as an entrant', () => {
     const arrival: SerpSnapshotDay[] = [
       snapshot(4, [['x1', 1]]),

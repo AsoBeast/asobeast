@@ -75,6 +75,42 @@ describe("actionSteps", () => {
     expect(actionSteps(push)).not.toContain(CONFIRMATION_STEP);
   });
 
+  describe("on a defend action", () => {
+    const defend = ACTIONS.find((item) => item.id === "act-defend")!;
+    const evidence = defend.evidence!;
+    if (evidence.rule !== "keyword.defend") throw new Error("fixture");
+    const brand = {
+      ...defend,
+      evidence: { ...evidence, competitorBrand: true as const },
+    };
+
+    it.each(["APP_STORE", "GOOGLE_PLAY"] as const)(
+      "never tells the owner to strengthen a competitor brand on %s",
+      (store) => {
+        const steps = actionSteps(onStore(brand, store));
+
+        expect(steps).toEqual([
+          'See who entered the top 10 for "streak counter"',
+          `"streak counter" is a competitor's brand, so it stays out of your listing`,
+          CONFIRMATION_STEP,
+        ]);
+        expect(steps.join(" ")).not.toMatch(/Strengthen|Compare their/);
+      },
+    );
+
+    it("keeps the three defend steps for any other keyword", () => {
+      expect(actionSteps(defend)).toEqual([
+        'See who entered the top 10 for "streak counter"',
+        "Compare their title and subtitle with yours",
+        'Strengthen "streak counter" in your strongest field if the position matters',
+        CONFIRMATION_STEP,
+      ]);
+      expect(actionSteps(onStore(defend, "GOOGLE_PLAY"))[1]).toBe(
+        "Compare their title and short description with yours",
+      );
+    });
+  });
+
   it("turns each store rule problem into a step before shipping the fix", () => {
     const lint = ACTIONS.find((item) => item.id === "act-lint")!;
     const evidence = lint.evidence!;

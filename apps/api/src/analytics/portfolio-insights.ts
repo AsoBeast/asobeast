@@ -10,7 +10,7 @@ import {
 import { addDays, TrackedRow } from './analytics.support';
 import { baselinePositions, hasBaseline } from './baseline';
 import { RankedMover, RankedMovers, rankedMovers } from './movers';
-import { rankDistributionAt, rankDistributionOf } from './rank-distribution';
+import { rankDistributionNow, rankDistributionOf } from './rank-distribution';
 
 const PORTFOLIO_MOVER_LIMIT = 5;
 const TOP10_WINDOW_DAYS = 7;
@@ -35,7 +35,7 @@ export function rankInsight(
   reference: Date | null,
   days = TOP10_WINDOW_DAYS,
 ): RankInsight {
-  const rankDistribution = rankDistributionAt(rows, reference);
+  const rankDistribution = rankDistributionNow(rows, reference);
   const movers = rankedMovers(rows, reference, days);
   return {
     rankDistribution,

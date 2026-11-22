@@ -10,6 +10,7 @@ import {
 
 const REFERENCE = new Date('2026-07-13T00:00:00.000Z');
 const WEEK_AGO = new Date('2026-07-06T00:00:00.000Z');
+const YESTERDAY = new Date('2026-07-12T00:00:00.000Z');
 const TWO_DAYS_AGO = new Date('2026-07-11T00:00:00.000Z');
 const DAY_BEFORE_WEEK_AGO = new Date('2026-07-05T00:00:00.000Z');
 const DAY_AFTER_WEEK_AGO = new Date('2026-07-07T00:00:00.000Z');
@@ -61,6 +62,28 @@ const insight = (
 });
 
 describe('rankInsight', () => {
+  it('counts keywords still waiting for the reference day check at their position of the day before', () => {
+    const rows = [
+      row('a', [
+        capture(2, REFERENCE),
+        capture(2, YESTERDAY),
+        capture(2, WEEK_AGO),
+      ]),
+      row('b', [capture(6, YESTERDAY), capture(6, WEEK_AGO)]),
+      row('c', [capture(8, YESTERDAY), capture(8, WEEK_AGO)]),
+      row('d', [
+        capture(30, REFERENCE),
+        capture(30, YESTERDAY),
+        capture(30, WEEK_AGO),
+      ]),
+    ];
+
+    const result = rankInsight(rows, REFERENCE);
+
+    expect(result.rankDistribution.top10).toBe(3);
+    expect(result.top10Delta).toBe(0);
+  });
+
   it('reads a keyword checked only the day before the baseline at that check for the top 10 too', () => {
     const rows = [
       row('a', [capture(3, REFERENCE), capture(4, WEEK_AGO)]),

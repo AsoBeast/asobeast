@@ -1,6 +1,7 @@
 export * from './limits';
 export * from './annotations';
 export * from './lint';
+export * from './plurals';
 export * from './scores';
 export * from './seasonal';
 export * from './keyword-field';

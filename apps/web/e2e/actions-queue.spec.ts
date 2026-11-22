@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { holdRequest } from "./held-request.mts";
 import { hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
 
@@ -507,6 +508,83 @@ test.describe("working the queue from the keyboard", () => {
 
     await expect(page.locator(`[id='${secondId}']`)).toHaveCount(0);
     await expect(page.locator(`[id='${thirdId}']`)).toBeFocused();
+  });
+
+  test("s opens the focused row's menu on its snooze options", async ({
+    page,
+  }) => {
+    await openQueue(page);
+    const rows = page.locator(ROWS);
+    await rows.first().focus();
+    const more = rows.first().locator('[data-command="more"]');
+
+    await page.keyboard.press("s");
+
+    await expect(page.getByRole("menu")).toBeVisible();
+    await expect(more).toHaveAttribute("aria-expanded", "true");
+    await expect(
+      page.getByRole("menuitem", { name: "Snooze 7 days" }),
+    ).toBeFocused();
+
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    await expect(more).toBeFocused();
+    await page.keyboard.press("j");
+    await expect(rows.nth(1)).toBeFocused();
+  });
+
+  test("Shift D opens the focused row's menu on Dismiss", async ({ page }) => {
+    await openQueue(page);
+    const rows = page.locator(ROWS);
+    await rows.first().focus();
+    const firstId = await rows.first().getAttribute("id");
+
+    await page.keyboard.press("Shift+D");
+
+    await expect(page.getByRole("menu")).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Dismiss" })).toBeFocused();
+    await page.keyboard.press("ArrowRight");
+    const reasons = page.getByRole("menu").last();
+    await expect(reasons.getByRole("menuitem").first()).toBeFocused();
+    await page.keyboard.press("Enter");
+
+    await expect(page.locator(`[id='${firstId}']`)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Undo" })).toBeVisible();
+  });
+
+  test("s on a snoozed row offers Wake now", async ({ page }) => {
+    await openQueue(page);
+    await page.locator(card("act-snoozed")).focus();
+
+    await page.keyboard.press("s");
+
+    await expect(
+      page.getByRole("menuitem", { name: "Wake now" }),
+    ).toBeFocused();
+  });
+
+  test("s leaves the menu of a row with a change running closed", async ({
+    page,
+  }) => {
+    await openQueue(page);
+    const row = page.locator(card("act-snoozed"));
+    const more = row.locator('[data-command="more"]');
+    const held = await holdRequest(page, /\/actions\/act-snoozed$/, "PATCH");
+    await row.focus();
+    await page.keyboard.press("s");
+    await page.getByRole("menuitem", { name: "Wake now" }).press("Enter");
+    await expect(more).toHaveAttribute("aria-disabled", "true");
+    await expect(more).toBeFocused();
+    await row.focus();
+
+    await page.keyboard.press("s");
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    await expect(row).toBeFocused();
+
+    held.release();
+    await expect(more).not.toHaveAttribute("aria-disabled", "true");
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    await expect(more).toHaveAttribute("aria-expanded", "false");
   });
 
   test("typing in the search box never moves the focus", async ({ page }) => {

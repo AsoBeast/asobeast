@@ -262,6 +262,131 @@ describe('StatsCollectorService', () => {
     expect(collected?.evidence.detailSuccessCount).toBe(9);
   });
 
+  const PLAY_KEYWORD = {
+    text: 'puzzle game',
+    store: Store.GOOGLE_PLAY,
+    country: 'us',
+  };
+
+  const playSearch = (): SearchItem[] =>
+    Array.from({ length: 40 }, (_, index) => ({
+      storeAppId: `app${index}`,
+      title: index < 12 ? `Puzzle Game ${index}` : `Other App ${index}`,
+      developer: `Studio ${index}`,
+      ratingAvg: 4.1,
+    }));
+
+  const DETAIL_RELEASED = daysAgo(400);
+  const DETAIL_UPDATED = daysAgo(5);
+
+  const playDetail = (storeAppId: string) =>
+    buildApp({
+      storeAppId,
+      title: `Detail Title ${storeAppId}`,
+      ratingCount: 7000,
+      ratingAvg: 4.6,
+      releasedAt: DETAIL_RELEASED,
+      storeUpdatedAt: DETAIL_UPDATED,
+    });
+
+  const collectPlay = (getApp: jest.Mock) => {
+    const search = jest.fn().mockResolvedValue(playSearch());
+    const { registry } = buildGplayProvider({ getApp, search });
+    return new StatsCollectorService(
+      buildGplayPrisma(),
+      registry,
+      noOfficial,
+    ).collectFor(PLAY_KEYWORD);
+  };
+
+  it('keeps the detail of each of the top 10 on the inspected Play results', async () => {
+    const getApp = jest.fn((storeAppId: string) =>
+      Promise.resolve(playDetail(storeAppId)),
+    );
+
+    const collected = await collectPlay(getApp);
+
+    const search = playSearch();
+    collected.results.slice(0, 10).forEach((result, index) => {
+      expect(result).toEqual({
+        ...search[index],
+        ratingCount: 7000,
+        ratingAvg: 4.6,
+        releasedAt: DETAIL_RELEASED,
+        updatedAt: DETAIL_UPDATED,
+      });
+    });
+    expect(collected.results.slice(10)).toEqual(search.slice(10));
+  });
+
+  it('keeps the search result of a Play app whose detail lookup failed', async () => {
+    const getApp = jest.fn((storeAppId: string) =>
+      storeAppId === 'app3'
+        ? Promise.reject(new Error('detail failed'))
+        : Promise.resolve(playDetail(storeAppId)),
+    );
+
+    const collected = await collectPlay(getApp);
+
+    expect(collected.results[3]).toEqual(playSearch()[3]);
+    expect(collected.results[2]).toMatchObject({ ratingCount: 7000 });
+    expect(collected.results[4]).toMatchObject({ ratingCount: 7000 });
+  });
+
+  it('scores a Play keyword the same as before', async () => {
+    const getApp = jest.fn((storeAppId: string) =>
+      Promise.resolve(playDetail(storeAppId)),
+    );
+
+    const collected = await collectPlay(getApp);
+
+    expect(collected.stats).toEqual({
+      store: Store.GOOGLE_PLAY,
+      keywordText: 'puzzle game',
+      resultCount: 40,
+      top10: playSearch()
+        .slice(0, 10)
+        .map(({ storeAppId, developer }) => ({
+          storeAppId,
+          developer,
+          title: `Detail Title ${storeAppId}`,
+          ratingCount: 7000,
+          ratingAvg: 4.6,
+          daysSinceUpdate: 5,
+          daysSinceRelease: 400,
+          installs: 1_000_000,
+        })),
+      top30TitleMatchCount: 12,
+      suggest: { status: 'absent' },
+    });
+    expect(collected.evidence).toEqual({
+      searchResultCount: 40,
+      suggestCompleted: true,
+      suggestRequests: 1,
+      detailTargetCount: 10,
+      detailSuccessCount: 10,
+      officialPopularityUsed: false,
+    });
+  });
+
+  it('leaves App Store results as the search gave them', async () => {
+    const { registry, search } = buildProvider([]);
+    const service = new StatsCollectorService(
+      buildPrisma(),
+      registry,
+      noOfficial,
+    );
+
+    const collected = await service.collectFor({
+      text: 'puzzle game',
+      store: Store.APP_STORE,
+      country: 'us',
+    });
+
+    const searched = (await search.mock.results[0].value) as SearchItem[];
+    expect(collected.results).toEqual(searched);
+  });
+
   it('refuses to score when most google play detail lookups fail', async () => {
     const getApp = jest.fn().mockRejectedValue(new Error('rate limited'));
     const { registry } = buildGplayProvider({ getApp });

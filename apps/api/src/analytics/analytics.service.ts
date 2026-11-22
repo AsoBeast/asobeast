@@ -7,9 +7,11 @@ import {
   AppSummary,
   CoverageSummary,
   CURRENT_FORMULA_VERSIONS,
+  QUERY_BOUNDS,
   RankDistributionHistory,
   RatingsHistory,
   UncoveredKeyword,
+  visibility,
   VisibilityHistory,
   VisibilitySummary,
 } from '@asobeast/shared';
@@ -31,21 +33,21 @@ import {
   delta,
   keywordWindow,
   metricAt,
-  rankingAt,
+  rankingsSince,
   referenceDate,
   startOfUtcDay,
   toDateKey,
   TrackedRow,
   trackedRows,
   utcToday,
-  visibilityAt,
   visibilityPoints,
 } from './analytics.support';
 import { MarketHistoryQueryDto } from './dto/market-history-query.dto';
 import { VisibilityCompareQueryDto } from './dto/visibility-compare-query.dto';
 import { VisibilityHistoryQueryDto } from './dto/visibility-history-query.dto';
 import { movers } from './movers';
-import { bucketPositions, rankDistributionAt } from './rank-distribution';
+import { checkedPositionsNow, currentCheck, keywordsNow } from './baseline';
+import { bucketPositions, rankDistributionNow } from './rank-distribution';
 import { collapseRatings } from './ratings-history';
 import { ShareOfVoiceService } from './share-of-voice.service';
 import { HOME_LISTING, NEWEST_FIRST } from '../apps/listing';
@@ -57,7 +59,8 @@ import { KeywordsService } from '../keywords/keywords.service';
 const SUMMARY_WINDOW_DAYS = 31;
 const COVERAGE_LIMIT = 5;
 const HISTORY_DEFAULT_DAYS = 30;
-const HISTORY_MAX_DAYS = 180;
+const HISTORY_MAX_DAYS = QUERY_BOUNDS.historyDays.max;
+const SNAPSHOT_HISTORY_MAX_DAYS = QUERY_BOUNDS.snapshotHistoryDays.max;
 
 interface CoverageApp {
   snapshotText: string;
@@ -83,7 +86,7 @@ const rowOpportunity = (
     return null;
   }
   const ranking = referenceDate
-    ? rankingAt(row.keyword.rankings, referenceDate)
+    ? currentCheck(row.keyword.rankings, referenceDate)
     : null;
   return appOpportunity({
     source: reportedSource(
@@ -99,6 +102,12 @@ const rowOpportunity = (
       ? { ranking: { position: ranking.position, checked: true } }
       : {}),
   });
+};
+
+const assertRange = (from: Date, to: Date, maxDays: number): void => {
+  if (to.getTime() - from.getTime() > maxDays * DAY_MS) {
+    throw new BadRequestException(`Range must not exceed ${maxDays} days`);
+  }
 };
 
 interface CoverageListing extends ListingVerdicts {
@@ -162,7 +171,7 @@ export class AnalyticsService {
 
     return {
       visibility: this.visibilitySummary(market.rows, market.referenceDate),
-      rankDistribution: rankDistributionAt(market.rows, market.referenceDate),
+      rankDistribution: rankDistributionNow(market.rows, market.referenceDate),
       movers: movers(market.rows, market.referenceDate),
       coverage: this.coverage(covered.rows, covered.referenceDate, {
         snapshot,
@@ -188,19 +197,27 @@ export class AnalyticsService {
       ? startOfUtcDay(new Date(query.from))
       : addDays(to, -HISTORY_DEFAULT_DAYS);
 
-    if (to.getTime() - from.getTime() > HISTORY_MAX_DAYS * DAY_MS) {
-      throw new BadRequestException(
-        `Range must not exceed ${HISTORY_MAX_DAYS} days`,
-      );
-    }
-
-    const rows = await trackedRows(
-      this.prisma,
-      { appId, country: query.country },
+    assertRange(
       from,
       to,
+      query.compare === 'competitors'
+        ? SNAPSHOT_HISTORY_MAX_DAYS
+        : HISTORY_MAX_DAYS,
     );
-    const points = visibilityPoints(rows);
+
+    const [withDayBefore, reference] = await Promise.all([
+      trackedRows(
+        this.prisma,
+        { appId, country: query.country },
+        addDays(from, -1),
+        to,
+      ),
+      referenceDate(this.prisma, { appId, country: query.country }),
+    ]);
+    const rows = rankingsSince(withDayBefore, from);
+    const points = visibilityPoints(withDayBefore, reference).filter(
+      (point) => point.date >= toDateKey(from),
+    );
     if (query.compare !== 'competitors') {
       return { points };
     }
@@ -229,20 +246,16 @@ export class AnalyticsService {
       ? startOfUtcDay(new Date(query.from))
       : addDays(to, -HISTORY_DEFAULT_DAYS);
 
-    if (to.getTime() - from.getTime() > HISTORY_MAX_DAYS * DAY_MS) {
-      throw new BadRequestException(
-        `Range must not exceed ${HISTORY_MAX_DAYS} days`,
-      );
-    }
+    assertRange(from, to, HISTORY_MAX_DAYS);
 
-    const rows = await trackedRows(
+    const withDayBefore = await trackedRows(
       this.prisma,
       { appId, country: query.country },
-      from,
+      addDays(from, -1),
       to,
     );
     const byDate = new Map<number, Array<number | null>>();
-    for (const row of rows) {
+    for (const row of rankingsSince(withDayBefore, from)) {
       for (const ranking of row.keyword.rankings) {
         const list = byDate.get(ranking.date.getTime()) ?? [];
         list.push(ranking.position);
@@ -250,11 +263,15 @@ export class AnalyticsService {
       }
     }
 
-    const points = [...byDate.entries()]
-      .sort(([a], [b]) => a - b)
-      .map(([time, positions]) => ({
+    const points = [...byDate.keys()]
+      .sort((a, b) => a - b)
+      .map((time) => ({
         date: toDateKey(new Date(time)),
-        ...bucketPositions(positions),
+        ...bucketPositions(
+          time === reference?.getTime()
+            ? checkedPositionsNow(withDayBefore, new Date(time))
+            : (byDate.get(time) ?? []),
+        ),
       }));
 
     return { points };
@@ -271,11 +288,7 @@ export class AnalyticsService {
       ? startOfUtcDay(new Date(query.from))
       : addDays(to, -HISTORY_DEFAULT_DAYS);
 
-    if (to.getTime() - from.getTime() > HISTORY_MAX_DAYS * DAY_MS) {
-      throw new BadRequestException(
-        `Range must not exceed ${HISTORY_MAX_DAYS} days`,
-      );
-    }
+    assertRange(from, to, SNAPSHOT_HISTORY_MAX_DAYS);
 
     const rows = await this.prisma.appSnapshot.findMany({
       where: {
@@ -297,7 +310,7 @@ export class AnalyticsService {
     if (!referenceDate) {
       return { current: 0, delta7d: null, delta30d: null };
     }
-    const current = visibilityAt(rows, referenceDate);
+    const current = visibility(keywordsNow(rows, referenceDate));
     return {
       current,
       delta7d: delta(rows, referenceDate, current, 7),

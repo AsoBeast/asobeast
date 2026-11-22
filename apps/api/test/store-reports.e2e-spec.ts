@@ -7,6 +7,7 @@ import type {
   AppAuditResult,
   AppLocalizationsResult,
   StoreConnectionState,
+  StoreFunnelReport,
 } from '@asobeast/shared';
 import { UnrecoverableError } from 'bullmq';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
@@ -23,6 +24,10 @@ import {
 import { importedMonths } from '../src/store-connect/play/play-report-sync.service';
 import { StoreReportSyncService } from '../src/store-connect/store-report-sync.service';
 import { KEY_REFUSED } from '../src/store-connect/asc-http-errors';
+import {
+  FEATURING_ROLE_NEEDED,
+  PROMO_TEXT_ROLE_NEEDED,
+} from '../src/store-connect/asc-featuring-sync.service';
 import { PartialSyncRetryError } from '../src/store-connect/store-sync-summary';
 import { ownerAgent } from './helpers/session';
 import {
@@ -65,6 +70,37 @@ const FIXTURE = readFileSync(
 const HELD_PAST_DEFAULT_TIMEOUT_MS = 5_500;
 const WAIT_ATTEMPTS = 250;
 const WAIT_INTERVAL_MS = 20;
+
+const LIVE_VERSION_PAGE = {
+  data: [
+    {
+      id: 'v1',
+      type: 'appStoreVersions',
+      attributes: {
+        appStoreState: 'READY_FOR_SALE',
+        versionString: '1.2.0',
+        createdDate: '2026-01-15T10:00:00.000Z',
+      },
+    },
+  ],
+  links: {},
+};
+
+const SUBMITTED_NOMINATION_PAGE = {
+  data: [
+    {
+      id: 'nom-1',
+      type: 'nominations',
+      attributes: {
+        state: 'SUBMITTED',
+        submittedDate: '2026-10-05T09:30:00.000Z',
+        publishStartDate: '2026-11-15T00:00:00.000Z',
+        publishEndDate: '2999-01-01T00:00:00.000Z',
+      },
+    },
+  ],
+  links: {},
+};
 
 const report = (requestId: string) => ({
   data: [
@@ -831,20 +867,7 @@ describe('Store report sync (e2e)', () => {
     });
     harness.asc.on('GET', /\/appStoreVersions\?/, async () => {
       await blocked;
-      return answer({
-        data: [
-          {
-            id: 'v1',
-            type: 'appStoreVersions',
-            attributes: {
-              appStoreState: 'READY_FOR_SALE',
-              versionString: '1.2.0',
-              createdDate: '2026-01-15T10:00:00.000Z',
-            },
-          },
-        ],
-        links: {},
-      });
+      return answer(LIVE_VERSION_PAGE);
     });
 
     const syncing = run();
@@ -890,20 +913,7 @@ describe('Store report sync (e2e)', () => {
     harness.asc
       .on('GET', /\/appStoreVersions\?/, async () => {
         await blocked;
-        return answer({
-          data: [
-            {
-              id: 'v1',
-              type: 'appStoreVersions',
-              attributes: {
-                appStoreState: 'READY_FOR_SALE',
-                versionString: '1.2.0',
-                createdDate: '2026-01-15T10:00:00.000Z',
-              },
-            },
-          ],
-          links: {},
-        });
+        return answer(LIVE_VERSION_PAGE);
       })
       .on(
         'GET',
@@ -923,25 +933,7 @@ describe('Store report sync (e2e)', () => {
           links: {},
         }),
       )
-      .on(
-        'GET',
-        /\/v1\/nominations\?/,
-        answer({
-          data: [
-            {
-              id: 'nom-1',
-              type: 'nominations',
-              attributes: {
-                state: 'SUBMITTED',
-                submittedDate: '2026-10-05T09:30:00.000Z',
-                publishStartDate: '2026-11-15T00:00:00.000Z',
-                publishEndDate: '2999-01-01T00:00:00.000Z',
-              },
-            },
-          ],
-          links: {},
-        }),
-      );
+      .on('GET', /\/v1\/nominations\?/, answer(SUBMITTED_NOMINATION_PAGE));
 
     const syncing = run();
     for (let attempt = 0; attempt < WAIT_ATTEMPTS; attempt += 1) {
@@ -1003,6 +995,77 @@ describe('Store report sync (e2e)', () => {
     const connection = await harness.prisma.storeConnection.findFirstOrThrow();
     expect(connection.status).toBe('rejected');
     expect(connection.lastError).toBe(KEY_REFUSED);
+  });
+
+  describe('a key whose role apple refuses for a featuring read', () => {
+    const readinessRow = async (id: string) => {
+      const result = (await owner.get(`/apps/${appId}/audit`).expect(200))
+        .body as AppAuditResult;
+      return result.readiness?.items.find((item) => item.id === id);
+    };
+
+    const expectConnectionKept = async () => {
+      const connection =
+        await harness.prisma.storeConnection.findFirstOrThrow();
+      expect(connection).toMatchObject({ status: 'active', lastError: null });
+      const funnel = (await owner.get(`/apps/${appId}/funnel`).expect(200))
+        .body as StoreFunnelReport;
+      expect(funnel.connected).toBe(true);
+      await expect(funnelRows()).resolves.toHaveLength(7);
+    };
+
+    it('keeps the connection and the funnel when apple refuses the localizations, as for a sales key', async () => {
+      scriptApple();
+      harness.asc
+        .on('GET', /\/appStoreVersions\?/, answer(LIVE_VERSION_PAGE))
+        .on(
+          'GET',
+          /appStoreVersionLocalizations\?/,
+          refusal(403, 'FORBIDDEN_ERROR'),
+        )
+        .on('GET', /\/v1\/nominations\?/, refusal(403, 'FORBIDDEN_ERROR'));
+
+      await expect(run()).resolves.toMatchObject({
+        nominations: 0,
+        promoText: 0,
+      });
+
+      await expectConnectionKept();
+      await expect(readinessRow('promotional-text')).resolves.toMatchObject({
+        status: 'unmeasurable',
+        detail: PROMO_TEXT_ROLE_NEEDED,
+      });
+      await expect(readinessRow('nominations')).resolves.toMatchObject({
+        status: 'unmeasurable',
+        detail: FEATURING_ROLE_NEEDED,
+      });
+    });
+
+    it('reads the nominations when apple refuses the version read', async () => {
+      scriptApple();
+      harness.asc
+        .on('GET', /\/appStoreVersions\?/, refusal(403, 'FORBIDDEN_ERROR'))
+        .on('GET', /\/v1\/nominations\?/, answer(SUBMITTED_NOMINATION_PAGE));
+
+      await expect(run()).resolves.toMatchObject({
+        nominations: 1,
+        promoText: 0,
+      });
+
+      await expectConnectionKept();
+      expect(
+        harness.asc.requests.some((request) =>
+          /appStoreVersionLocalizations/.test(request.path),
+        ),
+      ).toBe(false);
+      await expect(readinessRow('promotional-text')).resolves.toMatchObject({
+        status: 'unmeasurable',
+        detail: PROMO_TEXT_ROLE_NEEDED,
+      });
+      await expect(readinessRow('nominations')).resolves.toMatchObject({
+        status: 'pass',
+      });
+    });
   });
 
   it('keeps the rows of one workspace out of another', async () => {

@@ -18,18 +18,17 @@ import {
 import {
   addDays,
   DAY_MS,
-  keywordsAt,
   KeywordWindow,
   rankingAt,
   toDateKey,
   TrackedRow,
 } from './analytics.support';
 import { isImpactField } from '../changes/change-impact';
-import { hasBaseline, keywordsAtBaseline } from './baseline';
+import { hasBaseline, keywordsAtBaseline, keywordsNow } from './baseline';
 import { mergePortfolioMovers, rankInsight } from './portfolio-insights';
 import {
   bucketPositions,
-  rankDistributionAt,
+  rankDistributionNow,
   RankDistributionBands,
 } from './rank-distribution';
 
@@ -152,6 +151,15 @@ function latestCheck(days: number[], day: number): number | undefined {
   return undefined;
 }
 
+const checkDayOf = (
+  { positions }: CheckedRow,
+  member: CheckedMember,
+  day: number,
+): number =>
+  day === member.lag && !positions.has(day) && positions.has(day - 1)
+    ? day - 1
+    : day;
+
 function dayFigures(
   members: CheckedMember[],
   day: number,
@@ -170,8 +178,9 @@ function dayFigures(
     }
     const before = latest === day ? member.before.get(day) : undefined;
     for (const check of member.checks) {
-      const position = check.positions.get(latest) ?? null;
-      keywords.push({ traffic: check.traffic.get(latest) ?? null, position });
+      const checkDay = checkDayOf(check, member, latest);
+      const position = check.positions.get(checkDay) ?? null;
+      keywords.push({ traffic: check.traffic.get(checkDay) ?? null, position });
       if (position !== null && position <= TOP_TEN) {
         totals.top10 += 1;
       }
@@ -226,7 +235,7 @@ function comparison(compared: CheckedMember[], days: number) {
     ...rankInsight(member.rows, member.reference, days),
   }));
   const now = visibility(
-    compared.flatMap((member) => keywordsAt(member.rows, member.reference)),
+    compared.flatMap((member) => keywordsNow(member.rows, member.reference)),
   );
   const then = visibility(
     compared.flatMap((member) =>
@@ -286,12 +295,12 @@ function partChange(
       : comparison(compared, days);
   return {
     visibility: visibility(
-      members.flatMap((member) => keywordsAt(member.rows, member.reference)),
+      members.flatMap((member) => keywordsNow(member.rows, member.reference)),
     ),
     visibilityDelta: deltas.visibilityDelta,
     top10: members.reduce(
       (total, member) =>
-        total + rankDistributionAt(member.rows, member.reference).top10,
+        total + rankDistributionNow(member.rows, member.reference).top10,
       0,
     ),
     top10Delta: deltas.top10Delta,

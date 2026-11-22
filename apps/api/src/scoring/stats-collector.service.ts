@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { outcomeOf } from '../store-providers/egress/proxy-health.service';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import {
+  NormalizedApp,
   SearchItem,
   StoreProvider,
   SuggestItem,
@@ -58,6 +59,7 @@ interface DetailCollection {
   items: KeywordStats['top10'];
   targetCount: number;
   successCount: number;
+  details: ReadonlyMap<string, NormalizedApp>;
 }
 
 @Injectable()
@@ -102,7 +104,9 @@ export class StatsCollectorService {
     );
 
     return {
-      results,
+      results: results.map((item) =>
+        withDetail(item, topTen.details.get(item.storeAppId)),
+      ),
       suggestions,
       stats: {
         store: keyword.store,
@@ -165,6 +169,7 @@ export class StatsCollectorService {
       items,
       targetCount: items.length,
       successCount: items.length,
+      details: new Map(),
     };
   }
 
@@ -175,11 +180,13 @@ export class StatsCollectorService {
   ): Promise<DetailCollection> {
     const targets = results.slice(0, TOP_STRENGTH);
     const enriched: KeywordStats['top10'] = [];
+    const details = new Map<string, NormalizedApp>();
     let failed = 0;
     let unanswered = 0;
     for (const item of targets) {
       try {
         const app = await provider.getApp(item.storeAppId, country);
+        details.set(item.storeAppId, app);
         enriched.push({
           ...identityOf(item),
           title: app.title,
@@ -215,7 +222,12 @@ export class StatsCollectorService {
         `only ${successCount} of ${targets.length} detail lookups succeeded`,
       );
     }
-    return { items: enriched, targetCount: targets.length, successCount };
+    return {
+      items: enriched,
+      targetCount: targets.length,
+      successCount,
+      details,
+    };
   }
 
   private toStrength(item: SearchItem): KeywordStats['top10'][number] {
@@ -249,6 +261,22 @@ function identityOf(
   return {
     storeAppId: item.storeAppId,
     ...(item.developer === undefined ? {} : { developer: item.developer }),
+  };
+}
+
+function withDetail(
+  item: SearchItem,
+  app: NormalizedApp | undefined,
+): SearchItem {
+  if (!app) return item;
+  return {
+    ...item,
+    ...(app.ratingAvg === undefined ? {} : { ratingAvg: app.ratingAvg }),
+    ...(app.ratingCount === undefined ? {} : { ratingCount: app.ratingCount }),
+    ...(app.releasedAt === undefined ? {} : { releasedAt: app.releasedAt }),
+    ...(app.storeUpdatedAt === undefined
+      ? {}
+      : { updatedAt: app.storeUpdatedAt }),
   };
 }
 

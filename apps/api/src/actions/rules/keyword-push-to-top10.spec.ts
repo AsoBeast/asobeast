@@ -293,6 +293,68 @@ describe('keyword.push_to_top10', () => {
     ).toEqual(ids.slice(PUSH_MAX_PER_APP));
   });
 
+  it('never pushes a competitor brand into a stronger field', () => {
+    expect(
+      detect([
+        app({
+          trackedKeywords: [keyword({ keywordClass: 'competitorBrand' })],
+        }),
+      ]),
+    ).toEqual([]);
+  });
+
+  it('never pushes a competitor brand on Google Play', () => {
+    expect(
+      detect([
+        app({
+          store: 'GOOGLE_PLAY',
+          trackedKeywords: [keyword({ keywordClass: 'competitorBrand' })],
+          coverage: [
+            coverage(
+              'kw_1',
+              ['description'],
+              ['title', 'shortDescription', 'description'],
+            ),
+          ],
+        }),
+      ]),
+    ).toEqual([]);
+  });
+
+  it('still pushes the app own brand', () => {
+    expect(
+      live([app({ trackedKeywords: [keyword({ keywordClass: 'ownBrand' })] })]),
+    ).toHaveLength(1);
+  });
+
+  it('gives a brand no slot of the five', () => {
+    const ids = Array.from(
+      { length: PUSH_MAX_PER_APP + 1 },
+      (_, index) => `kw_${index}`,
+    );
+    const [brand] = ids;
+    const detections = detect([
+      app({
+        trackedKeywords: ids.map((keywordId, index) =>
+          keyword({
+            keywordId,
+            volume: 90 - index * 5,
+            keywordClass: keywordId === brand ? 'competitorBrand' : 'generic',
+          }),
+        ),
+        coverage: ids.map((keywordId) => coverage(keywordId, ['keywordField'])),
+        rankingDaysByKeyword: new Map(ids.map((id) => [id, lastWeek(IN_BAND)])),
+      }),
+    ]);
+
+    expect(
+      detections
+        .filter((detection) => !detection.withheld)
+        .map((d) => d.keywordId),
+    ).toEqual(ids.slice(1));
+    expect(detections.map((d) => d.keywordId)).not.toContain(brand);
+  });
+
   it('never considers another market or an outdated score', () => {
     expect(
       live([app({ trackedKeywords: [keyword({ country: 'de' })] })]),

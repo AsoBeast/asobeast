@@ -151,7 +151,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "fixed",
         title: "Keyword figures that agree after a partial run",
-        text: "When a daily run missed some keywords on the first day of the range you look at, the keywords in the top 10 and the visibility change used to count those keywords as not found, while the keyword movers already compared them with the day next to it. On the dashboard and the app overview, the keyword movers, the keywords in the top 10 and the visibility change now compare each keyword with the same earlier check when it has one on that day or the day next to it, so a keyword already in the top 10 is no longer counted as a new entry.",
+        text: "When a daily run missed some keywords on the first day of the range you look at, the keywords in the top 10 and the visibility change used to count those keywords as not found, while the keyword movers already compared them with the day next to it. On the dashboard and the app overview, the keyword movers, the keywords in the top 10 and the visibility change now compare each keyword with the same earlier check when it has one on that day or the day next to it, so a keyword already in the top 10 is no longer counted as a new entry. While today's run is still checking your keywords, a keyword it has not reached yet now counts with its position of the day before, so the keywords in the top 10 and visibility no longer dip every morning and match the keywords page.",
       },
       {
         kind: "new",
@@ -212,6 +212,16 @@ export const LATER_RELEASES: readonly Release[] = [
         kind: "fixed",
         title: "Visibility with one decimal",
         text: "Visibility and its changes now always show one decimal, so a change reads 15.2 to 20.0 rather than 15.2 to 20, and the rating, conversion and audit figures in the Action Center keep one precision on both sides of a change.",
+      },
+      {
+        kind: "fixed",
+        title: "Action Center keys and bulk changes",
+        text: "Pressing s or Shift D on an action now opens its menu on the snooze options or on Dismiss, as the shortcuts list says. Selecting every action shown and pressing Done, Snooze or Dismiss now changes all of them, however many the queue shows, where more than one hundred used to change nothing.",
+      },
+      {
+        kind: "fixed",
+        title: "Whole words in the suggested keyword field",
+        text: "The suggested keyword field used to drop the last letter of English words ending in s, so focus became focu and news became new. It now keeps every word as you track it and writes the singular only when you track that singular too, and the keyword field check no longer calls news a plural of new.",
       },
     ],
   },

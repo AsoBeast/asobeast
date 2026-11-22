@@ -513,6 +513,136 @@ describe('portfolioHistory', () => {
     expect(history.change.movers.up.map((mover) => mover.text)).toEqual(['a']);
   });
 
+  describe('a daily run still in progress', () => {
+    const midRun = () =>
+      app([
+        row('a', 10, [
+          [0, 2],
+          [1, 2],
+          [2, 2],
+          [7, 2],
+        ]),
+        row('b', 10, [
+          [1, 6],
+          [2, 6],
+          [7, 6],
+        ]),
+        row('c', 10, [
+          [1, 8],
+          [7, 8],
+        ]),
+        row('d', 10, [
+          [0, 30],
+          [1, 30],
+          [2, 30],
+          [7, 30],
+        ]),
+      ]);
+    const carried = visibility(
+      [2, 6, 8, 30].map((position) => ({ traffic: 10, position })),
+    );
+
+    it('counts a keyword still waiting for the newest check at its position of the day before in the tiles', () => {
+      const history = portfolioHistory([midRun()], 7);
+
+      expect(history.apps?.[0].change).toMatchObject({
+        visibility: carried,
+        visibilityDelta: 0,
+        top10: 3,
+        top10Delta: 0,
+      });
+      expect(history.stores?.[0].change).toMatchObject({
+        top10: 3,
+        top10Delta: 0,
+      });
+      expect(history.change).toMatchObject({
+        visibilityDelta: 0,
+        top10Delta: 0,
+      });
+    });
+
+    it('draws the newest day with the same positions and every older day exactly', () => {
+      const history = portfolioHistory([midRun()], 7);
+
+      expect(
+        history.points.map(({ date, top10 }) => ({ date, top10 })),
+      ).toEqual([
+        { date: '2026-07-11', top10: 2 },
+        { date: '2026-07-12', top10: 3 },
+        { date: '2026-07-13', top10: 3 },
+      ]);
+      expect(history.points.at(-1)?.visibility).toBe(carried);
+      expect(history.bands?.at(-1)).toEqual({
+        date: '2026-07-13',
+        rank1: 0,
+        rank2to3: 1,
+        rank4to10: 2,
+        rank11to50: 1,
+        rank51plus: 0,
+        unranked: 0,
+      });
+      expect(history.apps?.[0].points.at(-1)?.top10).toBe(3);
+    });
+  });
+
+  describe('apps whose latest checks fall on different days', () => {
+    it('carries only the day before each app own latest check and reads older days exactly', () => {
+      const current = app([
+        row('k1', 10, [
+          [0, 2],
+          [1, 2],
+        ]),
+        row('k2', 10, [[1, 6]]),
+        row('k3', 10, [[2, 9]]),
+      ]);
+      const lagging = app(
+        [
+          row(
+            'kb1',
+            10,
+            [
+              [0, 3],
+              [1, 3],
+            ],
+            daysAgo(1),
+          ),
+          row('kb2', 10, [[2, 4]], daysAgo(1)),
+          row('kb3', 10, [[1, 7]], daysAgo(1)),
+        ],
+        daysAgo(1),
+      );
+
+      const history = portfolioHistory([current, lagging], 7);
+
+      expect(
+        history.points.map(({ date, top10 }) => ({ date, top10 })),
+      ).toEqual([
+        { date: '2026-07-10', top10: 1 },
+        { date: '2026-07-11', top10: 3 },
+        { date: '2026-07-12', top10: 4 },
+        { date: '2026-07-13', top10: 4 },
+      ]);
+      expect(history.apps?.map((each) => each.change.top10)).toEqual([2, 2]);
+    });
+  });
+
+  describe('an app whose latest check belongs to a keyword paused since', () => {
+    it('reads its newest active day exactly', () => {
+      const history = portfolioHistory(
+        [app([row('a', 10, [[1, 2]]), row('b', 10, [[2, 6]])])],
+        7,
+      );
+
+      expect(
+        history.points.map(({ date, top10 }) => ({ date, top10 })),
+      ).toEqual([
+        { date: '2026-07-11', top10: 1 },
+        { date: '2026-07-12', top10: 1 },
+      ]);
+      expect(history.apps?.[0].change.top10).toBe(1);
+    });
+  });
+
   describe('the figures behind the pooled line', () => {
     const rising = () =>
       app([

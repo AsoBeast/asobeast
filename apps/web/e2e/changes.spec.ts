@@ -198,6 +198,38 @@ test("a second market can be picked and is kept in the url", async ({
   );
 });
 
+test("a new market never shows the previous market's visibility line", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/changes");
+  const plot = activity(page).getByRole("region", {
+    name: "Search visibility and the days your listing changed",
+  });
+  await expect(plot).toBeVisible();
+
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route(
+    "**/api/backend/apps/*/visibility-history*",
+    async (route) => {
+      await held;
+      await route.continue();
+    },
+  );
+  const market = page.getByRole("combobox", { name: "Market", exact: true });
+  await market.click();
+  await page.getByRole("option", { name: "PL · Poland" }).click();
+
+  await expect(page).toHaveURL(/country=pl/);
+  await expect(activity(page)).toContainText("tracked in Poland");
+  await expect(plot).toHaveCount(0);
+
+  release();
+  await expect(plot).toBeVisible();
+});
+
 test("a market deep link opens on it and the home market clears the key", async ({
   page,
 }) => {
@@ -592,6 +624,90 @@ test("an app without changes offers the widest window", async ({ page }) => {
   expect(
     await page.evaluate(() => document.activeElement === document.body),
   ).toBe(false);
+});
+
+test("draws a year of changes on the activity chart", async ({ page }) => {
+  const segmentError = page
+    .getByRole("alert")
+    .filter({ hasText: "Changes could not be loaded" });
+  const expectYearDrawn = async () => {
+    await expect(
+      activity(page).getByRole("region", {
+        name: "Search visibility and the days your listing changed",
+      }),
+    ).toBeVisible();
+    await expect(
+      activity(page).getByText("Could not load the visibility line."),
+    ).toHaveCount(0);
+    await expect(
+      timeline(page).locator("[data-change-field]").first(),
+    ).toBeVisible();
+    await expect(segmentError).toHaveCount(0);
+  };
+
+  await page.goto("/apps/app-1/changes?days=365");
+  await expectYearDrawn();
+
+  await page.reload();
+  await expectYearDrawn();
+
+  await page.goto("/apps/app-1/changes");
+  await expect(activity(page)).toBeVisible();
+  await page.getByRole("tab", { name: "365d" }).click();
+  await expect(page).toHaveURL(/days=365/);
+  await expectYearDrawn();
+});
+
+test("keeps the changes when the visibility line cannot load", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/changes");
+  await expect(activity(page)).toBeVisible();
+
+  const history = "**/api/backend/apps/*/visibility-history*";
+  await page.route(history, (route) =>
+    route.fulfill({
+      status: 400,
+      contentType: "application/json",
+      body: JSON.stringify({
+        statusCode: 400,
+        error: "Bad Request",
+        message: "Range must not exceed 180 days",
+        path: new URL(route.request().url()).pathname,
+        timestamp: new Date().toISOString(),
+      }),
+    }),
+  );
+  await page.getByRole("tab", { name: "30d" }).click();
+
+  const unavailable = activity(page).getByText(
+    "Could not load the visibility line.",
+  );
+  await expect(unavailable).toBeVisible();
+  await expect(
+    timeline(page).locator("[data-change-field]").first(),
+  ).toBeVisible();
+  await expect(impactCard(page)).toBeVisible();
+  await expect(breakdown(page)).toBeVisible();
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Changes could not be loaded" }),
+  ).toHaveCount(0);
+
+  await page.unroute(history);
+  await activity(page).getByRole("button", { name: "Retry" }).focus();
+  await page.keyboard.press("Enter");
+
+  await expect(unavailable).toHaveCount(0);
+  await expect(
+    activity(page).getByRole("region", {
+      name: "Search visibility and the days your listing changed",
+    }),
+  ).toBeVisible();
+  expect(
+    await activity(page).evaluate((card) =>
+      card.contains(document.activeElement),
+    ),
+  ).toBe(true);
 });
 
 test("a market without keywords reads no effect in the opening sentence", async ({

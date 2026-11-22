@@ -135,7 +135,7 @@ export class PortfolioService {
         groupId: app.groupId,
         groupName: app.group?.name ?? null,
         visibility: windowVisibility(rows, reference),
-        sparkline: visibilityPoints(rows),
+        sparkline: visibilityPoints(rows, reference),
         trackedKeywords: rows.length,
         competitors: app._count.competitors,
         lastCapturedAt: app.snapshots[0]?.capturedAt.toISOString() ?? null,
