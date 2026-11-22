@@ -218,6 +218,11 @@ export const LATER_RELEASES: readonly Release[] = [
         title: "Action Center keys and bulk changes",
         text: "Pressing s or Shift D on an action now opens its menu on the snooze options or on Dismiss, as the shortcuts list says. Selecting every action shown and pressing Done, Snooze or Dismiss now changes all of them, however many the queue shows, where more than one hundred used to change nothing.",
       },
+      {
+        kind: "fixed",
+        title: "Whole words in the suggested keyword field",
+        text: "The suggested keyword field used to drop the last letter of English words ending in s, so focus became focu and news became new. It now keeps every word as you track it and writes the singular only when you track that singular too, and the keyword field check no longer calls news a plural of new.",
+      },
     ],
   },
   {

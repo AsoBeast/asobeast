@@ -37,6 +37,8 @@ import { obliterateQueues, pauseQueues } from './obliterate-queues';
 import { ownerAgent, useCookies } from './helpers/session';
 import { testDb } from './helpers/test-db';
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 const SEARCH: SearchItem[] = [
   {
     storeAppId: '100',
@@ -61,9 +63,25 @@ const DETAIL: NormalizedApp = {
   title: 'Habit Tracker',
   description: '',
   ratingCount: 10_000,
+  releasedAt: new Date(Date.now() - 400 * DAY_MS),
+  storeUpdatedAt: new Date(Date.now() - 5 * DAY_MS),
   raw: {},
   searchable: true,
 };
+
+const PLAY_SEARCH: SearchItem[] = [
+  {
+    storeAppId: 'com.example.habit',
+    title: 'Habit Tracker',
+    developer: 'Streaks Inc',
+    ratingAvg: 4.8,
+  },
+  {
+    storeAppId: 'com.example.planner',
+    title: 'Daily Planner',
+    developer: 'Plans Ltd',
+  },
+];
 
 class FakeRegistry {
   results: SearchItem[] = SEARCH;
@@ -407,6 +425,27 @@ describe('KeywordInspectionsController (e2e)', () => {
     });
     expect(done.previous).toBeNull();
     expect(done.failure).toBeNull();
+  });
+
+  it('fills the competition of a Google Play inspection from its detail lookups', async () => {
+    registry.results = PLAY_SEARCH;
+    const pending = await inspect({
+      keyword: 'habit tracker',
+      store: 'GOOGLE_PLAY',
+      country: 'de',
+    });
+
+    await runJob(pending.id, { store: Store.GOOGLE_PLAY });
+
+    const done = (
+      await api.get(`/keyword-inspections/${pending.id}`).expect(200)
+    ).body as KeywordInspection;
+    expect(done.status).toBe('DONE');
+    expect(done.results[0].ratingCount).toBe(10_000);
+    expect(done.results[0].updatedAt).not.toBeNull();
+    expect(done.competition?.medianRatingCount).not.toBeNull();
+    expect(done.competition?.medianDaysSinceUpdate).toBe(5);
+    expect(done.competition?.freshlyUpdated).toBeGreaterThan(0);
   });
 
   it('compares a run with the previous completed run of the keyword', async () => {

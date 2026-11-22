@@ -1,6 +1,7 @@
 import { Store } from '../index';
 import { isStopword, normalizeText, tokenize } from '../text';
 import { countChars, KEYWORD_MIN_CHARS } from './limits';
+import { canBePlural } from './plurals';
 
 export type LintSeverity = 'error' | 'warn' | 'info';
 
@@ -274,6 +275,29 @@ export function lintShortDescription(
   return issues;
 }
 
+const pluralForms = (
+  tokens: readonly string[],
+  stems: ReadonlySet<string>,
+): LintIssue[] => {
+  const issues: LintIssue[] = [];
+  const pluralSeen = new Set<string>();
+  for (const token of tokens) {
+    if (token.endsWith('s') && canBePlural(token)) {
+      const stem = token.slice(0, -1);
+      if (stems.has(stem) && !pluralSeen.has(token)) {
+        pluralSeen.add(token);
+        issues.push({
+          rule: 'plural-form',
+          severity: 'warn',
+          message: `Apple indexes both forms; "${token}" duplicates "${stem}".`,
+          offendingText: token,
+        });
+      }
+    }
+  }
+  return issues;
+};
+
 export function lintKeywordField(
   field: string,
   context: LintContext = {},
@@ -308,21 +332,7 @@ export function lintKeywordField(
     ...toSet(context.titleWords),
     ...toSet(context.subtitleWords),
   ]);
-  const pluralSeen = new Set<string>();
-  for (const token of tokens) {
-    if (token.length > 3 && token.endsWith('s')) {
-      const stem = token.slice(0, -1);
-      if (stems.has(stem) && !pluralSeen.has(token)) {
-        pluralSeen.add(token);
-        issues.push({
-          rule: 'plural-form',
-          severity: 'warn',
-          message: `Apple indexes both forms; "${token}" duplicates "${stem}".`,
-          offendingText: token,
-        });
-      }
-    }
-  }
+  issues.push(...pluralForms(tokens, stems));
 
   const genericSeen = new Set<string>();
   for (const token of tokens) {

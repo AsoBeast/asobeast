@@ -258,7 +258,30 @@ describe('MetadataController (e2e)', () => {
     expect(suggestion).not.toBeNull();
     expect(suggestion?.charactersUsed).toBeLessThanOrEqual(100);
     expect(suggestion?.value).not.toContain(', ');
-    expect(suggestion?.addedTerms).toContain('daily goal');
+    expect(suggestion?.addedTerms).toContain('daily goals');
+  });
+
+  it('suggests focus as focus, not focu', async () => {
+    const id = await seed(false);
+    const keyword = await prisma.keyword.create({
+      data: { text: 'focus music', store: Store.APP_STORE, country: 'us' },
+    });
+    await prisma.trackedKeyword.create({
+      data: {
+        appId: id,
+        keywordId: keyword.id,
+        source: 'MANUAL',
+        active: true,
+      },
+    });
+
+    const response = await api.get(`/apps/${id}/metadata/audit`).expect(200);
+    const suggestion = (response.body as MetadataAuditResult)
+      .keywordFieldSuggestion;
+
+    expect(suggestion?.addedTerms).toContain('focus music');
+    expect(suggestion?.value.split(',')).not.toContain('focu music');
+    expect(suggestion?.value).not.toMatch(/focu(,|$| )/);
   });
 
   it('packs every polish keyword that fits the 100 character suggestion', async () => {

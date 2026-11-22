@@ -1,22 +1,9 @@
 import {
   INFLECTION_ENDING_CHARS,
   INFLECTION_STEM_CHARS,
-  pluralsOf,
   sameStem,
   sameWord,
 } from './plurals';
-
-describe('pluralsOf', () => {
-  it.each([
-    ['map', ['map', 'maps']],
-    ['box', ['box', 'boxs', 'boxes']],
-    ['quiz', ['quiz', 'quizs', 'quizes', 'quizzes']],
-    ['category', ['category', 'categorys', 'categories']],
-    ['day', ['day', 'days']],
-  ])('%s', (word, forms) => {
-    expect(pluralsOf(word)).toEqual(forms);
-  });
-});
 
 describe('sameStem', () => {
   it.each([
