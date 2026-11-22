@@ -96,7 +96,7 @@ export class ActionSeriesReader {
   ): Promise<SeriesBody> {
     const scope = { appId: item.scope.appId, country: item.scope.country };
     const [rows, reference] = await Promise.all([
-      trackedRows(this.prisma, scope, from, to),
+      trackedRows(this.prisma, scope, addDays(from, -1), to),
       referenceDate(this.prisma, scope),
     ]);
     return {

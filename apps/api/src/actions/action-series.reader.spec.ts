@@ -166,6 +166,30 @@ describe('ActionSeriesReader', () => {
     expect(calls(prisma)).toBe(1);
   });
 
+  it('reads the visibility rankings from the day before the window', async () => {
+    const { prisma, trend } = await read(item('market.improve_country'));
+
+    expect(prisma.trackedKeyword.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({
+          keyword: expect.objectContaining({
+            select: expect.objectContaining({
+              rankings: expect.objectContaining({
+                where: expect.objectContaining({
+                  date: {
+                    gte: new Date('2026-06-24T00:00:00.000Z'),
+                    lte: TODAY,
+                  },
+                }) as unknown,
+              }) as unknown,
+            }) as unknown,
+          }) as unknown,
+        }) as unknown,
+      }),
+    );
+    expect(trend?.points[0]?.date).toBe('2026-06-25');
+  });
+
   it('reads the stored audit overall for an audit rule', async () => {
     const { prisma, trend } = await read(item('audit.fix_factor', null));
 
