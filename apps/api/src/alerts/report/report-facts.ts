@@ -71,13 +71,13 @@ function digestAppValue(app: DigestWeeklyPayload['apps'][number]): string {
   const [up] = app.moversUp;
   if (up) {
     parts.push(
-      `↑ ${up.text} ${rankCell(up.from, up.fromDepth)} → ${rankCell(up.to, up.toDepth)}`,
+      `↑ ${up.text} ${rankCell(up.from, up.fromDepth, up.fromResultCount)} → ${rankCell(up.to, up.toDepth, up.toResultCount)}`,
     );
   }
   const [down] = app.moversDown;
   if (down) {
     parts.push(
-      `↓ ${down.text} ${rankCell(down.from, down.fromDepth)} → ${rankCell(down.to, down.toDepth)}`,
+      `↓ ${down.text} ${rankCell(down.from, down.fromDepth, down.fromResultCount)} → ${rankCell(down.to, down.toDepth, down.toResultCount)}`,
     );
   }
   parts.push(plural(app.changes, 'change'));
