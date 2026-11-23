@@ -547,6 +547,7 @@ model KeywordRanking {
   date        DateTime  @db.Date
   position    Int?
   depth       Int       @default(200)
+  resultCount Int?
   createdAt   DateTime  @default(now())
 
   @@id([appId, keywordId, date])

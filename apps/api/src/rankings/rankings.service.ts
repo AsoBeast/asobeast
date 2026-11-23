@@ -41,6 +41,7 @@ interface RecordInput {
   date: Date;
   positionByStoreAppId: Map<string, number>;
   depth: number;
+  resultCount: number;
   primaryNames: Map<string, string | null>;
   competitorsOf: Map<string, CompetitorRef[]>;
 }
@@ -83,6 +84,7 @@ export class RankingsService {
 
     const positionByStoreAppId = positionsByStoreAppId(results);
     const depth = reachedDepth(results);
+    const resultCount = results.length;
     const date = utcToday();
     const baseline = await this.rankingAlerts.entrantBaseline(keywordId, date);
     const entries = await this.capture.store(keywordId, date, results);
@@ -104,6 +106,7 @@ export class RankingsService {
           date,
           positionByStoreAppId,
           depth,
+          resultCount,
           primaryNames,
           competitorsOf,
         });
@@ -140,8 +143,15 @@ export class RankingsService {
   }
 
   private async recordPositions(input: RecordInput): Promise<void> {
-    const { owned, keyword, date, positionByStoreAppId, depth, primaryNames } =
-      input;
+    const {
+      owned,
+      keyword,
+      date,
+      positionByStoreAppId,
+      depth,
+      resultCount,
+      primaryNames,
+    } = input;
     const captures = new Map<string, RankCapture>();
     for (const [appId, { storeAppId, workspaceId }] of owned) {
       const position = positionByStoreAppId.get(storeAppId) ?? null;
@@ -158,8 +168,9 @@ export class RankingsService {
           date,
           position,
           depth,
+          resultCount,
         },
-        update: { position, depth },
+        update: { position, depth, resultCount },
       });
 
       const changed = existing === null || existing.position !== position;
@@ -281,7 +292,12 @@ export class RankingsService {
             rankings: {
               where: { appId, date: { gte: from, lte: to } },
               orderBy: { date: 'asc' },
-              select: { date: true, position: true, depth: true },
+              select: {
+                date: true,
+                position: true,
+                depth: true,
+                resultCount: true,
+              },
             },
           },
         },
@@ -298,6 +314,7 @@ export class RankingsService {
           date: toDateKey(ranking.date),
           position: ranking.position,
           depth: ranking.depth,
+          resultCount: ranking.resultCount,
         })),
       })),
     };

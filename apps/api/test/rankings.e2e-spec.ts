@@ -844,3 +844,156 @@ describe('RankingsService milestone alerts (e2e)', () => {
     ]);
   });
 });
+
+describe('RankingsService result counts (e2e)', () => {
+  let app: INestApplication<App>;
+  let prisma: PrismaClient;
+  let rankings: RankingsService;
+  let api: Awaited<ReturnType<typeof ownerAgent>>;
+  let results: SearchItem[] = [];
+
+  const registry = {
+    get: (): StoreProvider =>
+      ({ search: () => Promise.resolve(results) }) as unknown as StoreProvider,
+  };
+
+  const seed = async (): Promise<{ you: string; keywordId: string }> => {
+    const you = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: 'self-store',
+        country: 'us',
+        name: 'You',
+      },
+    });
+    const keyword = await prisma.keyword.create({
+      data: { text: 'habit tracker', store: Store.APP_STORE, country: 'us' },
+    });
+    await prisma.trackedKeyword.create({
+      data: {
+        appId: you.id,
+        keywordId: keyword.id,
+        source: 'MANUAL',
+        active: true,
+      },
+    });
+    return { you: you.id, keywordId: keyword.id };
+  };
+
+  const rankedOn = (
+    appId: string,
+    workspaceId: string,
+    keywordId: string,
+    position: number | null,
+  ) =>
+    prisma.keywordRanking.create({
+      data: {
+        appId,
+        workspaceId,
+        keywordId,
+        date: utcMidnight(0),
+        position,
+      },
+    });
+
+  const today = (): string => utcMidnight(0).toISOString().slice(0, 10);
+
+  beforeAll(async () => {
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    })
+      .overrideProvider(StoreProviderRegistry)
+      .useValue(registry)
+      .compile();
+
+    app = moduleFixture.createNestApplication();
+    useCookies(app);
+    await app.init();
+
+    prisma = testDb();
+    rankings = app.get(RankingsService);
+    await prisma.workspace.upsert({
+      where: { id: DEFAULT_WORKSPACE_ID },
+      update: {},
+      create: { id: DEFAULT_WORKSPACE_ID, name: 'Default' },
+    });
+    api = await ownerAgent(app);
+  });
+
+  beforeEach(async () => {
+    results = [];
+    await prisma.$executeRawUnsafe(
+      'TRUNCATE TABLE "App", "Keyword", "Webhook", "AlertEvent" RESTART IDENTITY CASCADE',
+    );
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+    await obliterateQueues(app);
+    await app.close();
+  });
+
+  it('returns the listed count of an empty search beside the depth', async () => {
+    const { you, keywordId } = await seed();
+
+    await asWorkspace(app, () => rankings.checkKeyword(keywordId));
+
+    const response = await api.get(`/apps/${you}/rankings`).expect(200);
+    const { series } = response.body as RankingSeries;
+    expect(series).toHaveLength(1);
+    expect(series[0].points).toEqual([
+      { date: today(), position: null, depth: 200, resultCount: 0 },
+    ]);
+  });
+
+  it('serves one search to a second workspace with the same count', async () => {
+    const { you, keywordId } = await seed();
+    const theirs = await prisma.workspace.create({ data: { name: 'Theirs' } });
+    const other = await prisma.app.create({
+      data: {
+        workspaceId: theirs.id,
+        store: Store.APP_STORE,
+        storeAppId: 'other-store',
+        country: 'us',
+        name: 'Other',
+      },
+    });
+    await prisma.trackedKeyword.create({
+      data: {
+        appId: other.id,
+        keywordId,
+        source: 'MANUAL',
+        active: true,
+      },
+    });
+
+    await asWorkspace(app, () => rankings.checkKeyword(keywordId));
+
+    const response = await api.get(`/apps/${you}/rankings`).expect(200);
+    const own = (response.body as RankingSeries).series[0].points[0];
+    const shared = await asWorkspace(
+      app,
+      () => rankings.history(other.id, {}),
+      theirs.id,
+    );
+    expect(shared.series[0].points[0]).toEqual({
+      date: today(),
+      position: null,
+      depth: 200,
+      resultCount: 0,
+    });
+    expect(own).toEqual(shared.series[0].points[0]);
+  });
+
+  it('returns no count for a row that predates the field', async () => {
+    const { you, keywordId } = await seed();
+    await rankedOn(you, DEFAULT_WORKSPACE_ID, keywordId, null);
+
+    const response = await api.get(`/apps/${you}/rankings`).expect(200);
+    const { series } = response.body as RankingSeries;
+    expect(series[0].points).toEqual([
+      { date: today(), position: null, depth: 200, resultCount: null },
+    ]);
+  });
+});

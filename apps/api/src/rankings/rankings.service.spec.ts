@@ -134,8 +134,13 @@ describe('RankingsService.checkKeyword', () => {
               appId: string;
               position: number | null;
               depth: number;
+              resultCount: number;
             };
-            update: { position: number | null; depth: number };
+            update: {
+              position: number | null;
+              depth: number;
+              resultCount: number;
+            };
           },
         ]
       >()
@@ -541,8 +546,34 @@ describe('RankingsService.checkKeyword', () => {
 
     expect(upsert).toHaveBeenCalled();
     for (const [args] of upsert.mock.calls) {
-      expect(args.create).toMatchObject({ position: null, depth: RANK_DEPTH });
-      expect(args.update).toEqual({ position: null, depth: RANK_DEPTH });
+      expect(args.create).toMatchObject({
+        position: null,
+        depth: RANK_DEPTH,
+        resultCount: 0,
+      });
+      expect(args.update).toEqual({
+        position: null,
+        depth: RANK_DEPTH,
+        resultCount: 0,
+      });
+    }
+  });
+
+  it('records how many apps the search listed', async () => {
+    const { service, upsert } = setup({
+      searchResults: [
+        { storeAppId: 'first-store', title: 'First' },
+        { storeAppId: 'second-store', title: 'Second' },
+      ],
+      rankedEarlier: null,
+    });
+
+    await service.checkKeyword('kw1');
+
+    expect(upsert).toHaveBeenCalled();
+    for (const [args] of upsert.mock.calls) {
+      expect(args.create.resultCount).toBe(2);
+      expect(args.update.resultCount).toBe(2);
     }
   });
 
