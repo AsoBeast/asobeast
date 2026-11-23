@@ -150,8 +150,11 @@ function rankEventFacts(
     return [
       keyword,
       fact('Milestone', milestonePhrase(alert.tier, alert.direction)),
-      fact('From', rankCell(alert.from, alert.fromDepth)),
-      fact('To', rankCell(alert.to, alert.toDepth)),
+      fact(
+        'From',
+        rankCell(alert.from, alert.fromDepth, alert.fromResultCount),
+      ),
+      fact('To', rankCell(alert.to, alert.toDepth, alert.toResultCount)),
     ];
   }
   return [
@@ -163,7 +166,7 @@ function rankEventFacts(
     ),
     fact(
       'Your position',
-      `${rankCell(alert.from, alert.fromDepth)} → ${rankCell(alert.to, alert.toDepth)}`,
+      `${rankCell(alert.from, alert.fromDepth, alert.fromResultCount)} → ${rankCell(alert.to, alert.toDepth, alert.toResultCount)}`,
     ),
   ];
 }
@@ -176,13 +179,18 @@ export function factsOf(
     case 'metadata.changed':
       return changeFacts(payload);
     case 'rank.dropped':
-    case 'rank.improved':
+    case 'rank.improved': {
+      const fromCount =
+        'fromResultCount' in payload ? payload.fromResultCount : undefined;
+      const toCount =
+        'toResultCount' in payload ? payload.toResultCount : undefined;
       return [
         fact('Keyword', keywordLabel(payload.keyword)),
-        fact('From', rankCell(payload.from, payload.fromDepth)),
-        fact('To', rankCell(payload.to, payload.toDepth)),
+        fact('From', rankCell(payload.from, payload.fromDepth, fromCount)),
+        fact('To', rankCell(payload.to, payload.toDepth, toCount)),
         fact('Alert threshold', `${payload.threshold}`),
       ];
+    }
     case 'review.negative':
     case 'review.new':
       return reviewFacts(payload);

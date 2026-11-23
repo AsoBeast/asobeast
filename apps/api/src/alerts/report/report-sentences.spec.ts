@@ -83,6 +83,15 @@ describe('sentenceOf', () => {
     );
   });
 
+  it('says when the store lists no apps for a drop', () => {
+    expect(withFlags({ ...droppedOut, toResultCount: 0 }).text).toBe(
+      'My App dropped from #3 for "fitness app" in 🇺🇸 US: the store lists no apps for this search',
+    );
+    expect(withFlags({ ...droppedOut, toResultCount: 40 }).text).toBe(
+      'My App fell out of the top 100 for "fitness app" in 🇺🇸 US, from #3',
+    );
+  });
+
   it('prints the storefront without a flag where the channel draws none', () => {
     expect(sentenceOf(dropped, false).text).toBe(
       'My App dropped from #4 to #12 for "fitness app" in US',
@@ -99,6 +108,14 @@ describe('sentenceOf', () => {
     );
   });
 
+  it('says nothing listed for an improvement from a search without apps', () => {
+    expect(
+      withFlags({ ...improved, from: null, fromResultCount: 0 }).text,
+    ).toBe(
+      'My App climbed from nothing listed to #7 for "habit tracker" in 🇩🇪 DE',
+    );
+  });
+
   it('says a milestone with the glyph of its direction', () => {
     expect(withFlags(milestone())).toEqual({
       emoji: '🏅',
@@ -106,6 +123,21 @@ describe('sentenceOf', () => {
     });
     expect(withFlags(milestone({ tier: 1, from: 2, to: 1 })).emoji).toBe('🏆');
     expect(withFlags(milestone({ direction: 'left' })).emoji).toBe('🔻');
+  });
+
+  it('says nothing listed when the store lists no apps on one side of a milestone', () => {
+    expect(
+      withFlags(milestone({ direction: 'left', to: null, toResultCount: 0 }))
+        .text,
+    ).toBe(
+      'My App left the top 10 for "habit tracker" in 🇺🇸 US: #14 → nothing listed',
+    );
+    expect(withFlags(milestone({ direction: 'left', to: null })).text).toBe(
+      'My App left the top 10 for "habit tracker" in 🇺🇸 US: #14 → outside the top 200',
+    );
+    expect(withFlags(milestone({ from: null, fromResultCount: 0 })).text).toBe(
+      'My App entered the top 10 for "habit tracker" in 🇺🇸 US: nothing listed → #8',
+    );
   });
 
   it('says a first ranking and an overtake', () => {

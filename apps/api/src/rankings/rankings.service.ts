@@ -180,7 +180,7 @@ export class RankingsService {
           { id: appId, name: primaryNames.get(appId) ?? null },
           keyword,
           date,
-          { position, depth },
+          { position, depth, resultCount },
         );
       }
     }
@@ -204,6 +204,7 @@ export class RankingsService {
         keyword: input.keyword,
         date: input.date,
         depth: input.depth,
+        resultCount: input.resultCount,
         capture,
         competitors,
       });

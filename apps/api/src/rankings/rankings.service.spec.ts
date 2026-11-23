@@ -108,7 +108,11 @@ describe('RankingsService.checkKeyword', () => {
 
   const setup = (options?: {
     tracked?: unknown[];
-    previous?: { position: number | null; depth?: number } | null;
+    previous?: {
+      position: number | null;
+      depth?: number;
+      resultCount?: number | null;
+    } | null;
     earlier?: { position: number | null; depth?: number }[];
     existingToday?: { position: number | null } | null;
     threshold?: number;
@@ -695,6 +699,48 @@ describe('RankingsService.checkKeyword', () => {
       to: null,
       fromDepth: 100,
       toDepth: buildSearchResults().length,
+    });
+  });
+
+  it('hands the stored result counts of both checks to the rank alerts', async () => {
+    const { service, dispatch } = setup({
+      tracked: primaryOnly,
+      searchResults: [],
+      previous: { position: 3, resultCount: 12 },
+    });
+
+    await service.checkKeyword('kw1');
+
+    const payloads = dispatched(dispatch);
+    expect(payloads[0]).toMatchObject({
+      event: 'rank.dropped',
+      from: 3,
+      to: null,
+      fromResultCount: 12,
+      toResultCount: 0,
+    });
+    expect(payloads[1]).toMatchObject({
+      event: 'rank.milestone',
+      direction: 'left',
+      fromResultCount: 12,
+      toResultCount: 0,
+    });
+  });
+
+  it('leaves a count out of the payload when its row predates the field', async () => {
+    const { service, dispatch } = setup({
+      tracked: primaryOnly,
+      searchResults: [],
+      previous: { position: 3 },
+    });
+
+    await service.checkKeyword('kw1');
+
+    const payloads = dispatched(dispatch);
+    expect(payloads[0]).not.toHaveProperty('fromResultCount');
+    expect(payloads[0]).toMatchObject({
+      event: 'rank.dropped',
+      toResultCount: 0,
     });
   });
 

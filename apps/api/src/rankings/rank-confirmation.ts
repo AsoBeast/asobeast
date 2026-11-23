@@ -6,6 +6,7 @@ export type Position = number | null;
 export interface RankCheck {
   position: Position;
   depth: number;
+  resultCount?: number | null;
 }
 
 export interface ConfirmationWindow {
@@ -17,6 +18,7 @@ export interface ConfirmationWindow {
 export interface ConfirmedMove {
   from: number;
   fromDepth: number;
+  fromResultCount?: number;
 }
 
 export interface ConfirmedExit extends ConfirmedMove {
@@ -66,8 +68,15 @@ const confirms = (slide: Slide, window: ConfirmationWindow): boolean =>
   isPending(slide, window) && holds(slide, window);
 
 function baselineOf(window: ConfirmationWindow): ConfirmedMove | null {
-  const { position, depth } = window.checks[1];
-  return position === null ? null : { from: position, fromDepth: depth };
+  const { position, depth, resultCount } = window.checks[1];
+  if (position === null) return null;
+  return {
+    from: position,
+    fromDepth: depth,
+    ...(typeof resultCount === 'number'
+      ? { fromResultCount: resultCount }
+      : {}),
+  };
 }
 
 export function confirmedDrop(

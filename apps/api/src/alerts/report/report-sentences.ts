@@ -4,6 +4,7 @@ import {
   SERP_DEPTH,
   formatUtcDateRange,
   isRanked,
+  listsNoApps,
   type ActionOpenedPayload,
   type AlertBatchPayload,
   type AlertPayload,
@@ -46,8 +47,14 @@ export function listPhrase(items: readonly string[]): string {
 export const appName = (name: string | null | undefined): string =>
   name ?? 'An app';
 
-function rankWord(position: number | null, depth: number): string {
-  return isRanked(position) ? `#${position}` : `outside the top ${depth}`;
+function rankWord(
+  position: number | null,
+  depth: number,
+  resultCount?: number | null,
+): string {
+  if (isRanked(position)) return `#${position}`;
+  if (listsNoApps(resultCount)) return 'nothing listed';
+  return `outside the top ${depth}`;
 }
 
 function keywordIn(
@@ -61,9 +68,13 @@ function keywordIn(
 function dropSentence(alert: RankDroppedPayload, withFlag: boolean): string {
   const keyword = keywordIn(alert.keyword, withFlag);
   const app = appName(alert.app.name);
-  return isRanked(alert.to)
-    ? `${app} dropped from ${rankWord(alert.from, alert.fromDepth)} to #${alert.to} for ${keyword}`
-    : `${app} fell out of the top ${alert.toDepth} for ${keyword}, from ${rankWord(alert.from, alert.fromDepth)}`;
+  if (isRanked(alert.to)) {
+    return `${app} dropped from ${rankWord(alert.from, alert.fromDepth)} to #${alert.to} for ${keyword}`;
+  }
+  if (listsNoApps(alert.toResultCount)) {
+    return `${app} dropped from ${rankWord(alert.from, alert.fromDepth)} for ${keyword}: the store lists no apps for this search`;
+  }
+  return `${app} fell out of the top ${alert.toDepth} for ${keyword}, from ${rankWord(alert.from, alert.fromDepth)}`;
 }
 
 function milestoneEmoji(
@@ -79,7 +90,7 @@ function overtakeSentence(
 ): string {
   const app = appName(alert.app.name);
   const rival = appName(alert.competitor.name);
-  return `${rival} overtook ${app} for ${keywordIn(alert.keyword, withFlag)}: ${rival} ${rankWord(alert.competitor.from, alert.fromDepth)} → ${rankWord(alert.competitor.to, alert.toDepth)}, ${app} ${rankWord(alert.from, alert.fromDepth)} → ${rankWord(alert.to, alert.toDepth)}`;
+  return `${rival} overtook ${app} for ${keywordIn(alert.keyword, withFlag)}: ${rival} ${rankWord(alert.competitor.from, alert.fromDepth)} → ${rankWord(alert.competitor.to, alert.toDepth)}, ${app} ${rankWord(alert.from, alert.fromDepth, alert.fromResultCount)} → ${rankWord(alert.to, alert.toDepth, alert.toResultCount)}`;
 }
 
 function chartMoveSentence(
@@ -167,12 +178,12 @@ export function sentenceOf(
     case 'rank.improved':
       return {
         emoji: '📈',
-        text: `${appName(payload.app.name)} climbed from ${rankWord(payload.from, payload.fromDepth)} to ${rankWord(payload.to, payload.toDepth)} for ${keywordIn(payload.keyword, withFlag)}`,
+        text: `${appName(payload.app.name)} climbed from ${rankWord(payload.from, payload.fromDepth, payload.fromResultCount)} to ${rankWord(payload.to, payload.toDepth)} for ${keywordIn(payload.keyword, withFlag)}`,
       };
     case 'rank.milestone':
       return {
         emoji: milestoneEmoji(payload),
-        text: `${appName(payload.app.name)} ${milestonePhrase(payload.tier, payload.direction)} for ${keywordIn(payload.keyword, withFlag)}: ${rankWord(payload.from, payload.fromDepth)} → ${rankWord(payload.to, payload.toDepth)}`,
+        text: `${appName(payload.app.name)} ${milestonePhrase(payload.tier, payload.direction)} for ${keywordIn(payload.keyword, withFlag)}: ${rankWord(payload.from, payload.fromDepth, payload.fromResultCount)} → ${rankWord(payload.to, payload.toDepth, payload.toResultCount)}`,
       };
     case 'rank.first':
       return {

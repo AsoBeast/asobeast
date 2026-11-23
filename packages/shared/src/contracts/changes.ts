@@ -328,6 +328,7 @@ export interface RankDroppedPayload {
   to: number | null;
   fromDepth: number;
   toDepth: number;
+  toResultCount?: number | null;
   threshold: number;
   confirmed?: boolean;
 }
@@ -341,6 +342,7 @@ export interface RankImprovedPayload {
   to: number;
   fromDepth: number;
   toDepth: number;
+  fromResultCount?: number | null;
   threshold: number;
   undoesDrop?: boolean;
 }
@@ -356,6 +358,8 @@ export interface RankMilestonePayload {
   to: number | null;
   fromDepth: number;
   toDepth: number;
+  fromResultCount?: number | null;
+  toResultCount?: number | null;
   confirmed?: boolean;
   undoesDrop?: boolean;
 }
@@ -384,6 +388,8 @@ export interface RankOvertakenPayload {
   to: number | null;
   fromDepth: number;
   toDepth: number;
+  fromResultCount?: number | null;
+  toResultCount?: number | null;
 }
 
 export interface AlertAppIdentity {
