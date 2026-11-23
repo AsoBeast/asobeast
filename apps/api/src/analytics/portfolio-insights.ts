@@ -101,8 +101,10 @@ const toPortfolioMover = (mover: TaggedMover): PortfolioKeywordMover => ({
   text: mover.text,
   from: mover.from,
   fromDepth: mover.fromDepth,
+  fromResultCount: mover.fromResultCount ?? null,
   to: mover.to,
   toDepth: mover.toDepth,
+  toResultCount: mover.toResultCount ?? null,
 });
 
 export function ratingTrend(

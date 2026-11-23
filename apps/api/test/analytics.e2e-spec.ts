@@ -1558,8 +1558,63 @@ describe('AnalyticsController (e2e)', () => {
       country: 'us',
       text: 'habit tracker',
       from: 24,
+      fromResultCount: null,
       to: 11,
+      toResultCount: null,
     });
+  });
+
+  it('carries the result counts of both compared rankings on the portfolio movers', async () => {
+    const id = await seed();
+    const counted = await prisma.keyword.create({
+      data: { text: 'counted habit', store: Store.APP_STORE, country: 'us' },
+    });
+    await prisma.trackedKeyword.create({
+      data: {
+        appId: id,
+        keywordId: counted.id,
+        source: 'MANUAL',
+        active: true,
+      },
+    });
+    await prisma.keywordRanking.createMany({
+      data: [
+        {
+          appId: id,
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          keywordId: counted.id,
+          date: D7,
+          position: 40,
+          depth: 100,
+          resultCount: 30,
+        },
+        {
+          appId: id,
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          keywordId: counted.id,
+          date: D0,
+          position: 3,
+          depth: 100,
+          resultCount: 45,
+        },
+      ],
+    });
+
+    const insights = (await api.get('/portfolio/insights').expect(200))
+      .body as PortfolioInsights;
+
+    expect(insights.movers.up).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          appId: id,
+          text: 'counted habit',
+          from: 40,
+          fromResultCount: 30,
+          to: 3,
+          toResultCount: 45,
+        }),
+      ]),
+    );
   });
 
   it('counts a competitor change under its primary app', async () => {
