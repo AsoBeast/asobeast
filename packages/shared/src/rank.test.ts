@@ -6,6 +6,9 @@ import {
   formatRankPosition,
   isCheckFresh,
   isRanked,
+  listsNoApps,
+  NO_APPS_LABEL,
+  NO_APPS_SENTENCE,
   RANK_DEPTH,
   RANK_MILESTONE_DIRECTIONS,
   RANK_MILESTONE_TIERS,
@@ -25,34 +28,84 @@ describe('isRanked', () => {
   });
 });
 
+describe('listsNoApps', () => {
+  it.each([
+    [0, true],
+    [1, false],
+    [183, false],
+    [null, false],
+    [undefined, false],
+  ])(
+    'reports a result count of %s as listing no apps: %s',
+    (count, expected) => {
+      expect(listsNoApps(count)).toBe(expected);
+    },
+  );
+
+  it('carries the label and the sentence', () => {
+    expect(NO_APPS_LABEL).toBe('No apps');
+    expect(NO_APPS_SENTENCE).toBe('The store lists no apps for this search');
+  });
+});
+
 describe('formatRankPosition', () => {
   it.each([
-    [1, undefined, '1'],
-    [200, undefined, '200'],
-    [0, undefined, '>200'],
-    [-1, 100, '>100'],
-    [null, undefined, '>200'],
-    [undefined, undefined, '>200'],
-    [null, 100, '>100'],
-  ])('formats position %s at depth %s as %s', (position, depth, expected) => {
-    expect(formatRankPosition(position, depth)).toBe(expected);
-  });
+    [1, undefined, undefined, '1'],
+    [200, undefined, undefined, '200'],
+    [0, undefined, undefined, '>200'],
+    [-1, 100, undefined, '>100'],
+    [null, undefined, undefined, '>200'],
+    [undefined, undefined, undefined, '>200'],
+    [null, 100, undefined, '>100'],
+  ])(
+    'formats position %s at depth %s and count %s as %s',
+    (position, depth, resultCount, expected) => {
+      expect(formatRankPosition(position, depth, resultCount)).toBe(expected);
+    },
+  );
+
+  it.each([
+    [null, undefined, 0, NO_APPS_LABEL],
+    [null, 100, 0, NO_APPS_LABEL],
+    [undefined, undefined, 0, NO_APPS_LABEL],
+    [null, undefined, 1, '>200'],
+    [null, undefined, 183, '>200'],
+    [null, undefined, null, '>200'],
+    [null, undefined, undefined, '>200'],
+    [undefined, 100, null, '>100'],
+    [1, undefined, 0, '1'],
+    [14, 100, 0, '14'],
+  ])(
+    'reads position %s at depth %s with a result count of %s as %s',
+    (position, depth, resultCount, expected) => {
+      expect(formatRankPosition(position, depth, resultCount)).toBe(expected);
+    },
+  );
 });
 
 describe('formatCheckedPosition', () => {
   it.each([
-    [1, 200, '1'],
-    [null, 200, '>200'],
-    [null, 100, '>100'],
+    [1, 200, undefined, '1'],
+    [null, 200, undefined, '>200'],
+    [null, 100, undefined, '>100'],
   ])(
-    'formats the checked position %s at depth %s as %s',
-    (position, depth, expected) => {
-      expect(formatCheckedPosition(position, depth)).toBe(expected);
+    'formats the checked position %s at depth %s and count %s as %s',
+    (position, depth, resultCount, expected) => {
+      expect(formatCheckedPosition(position, depth, resultCount)).toBe(
+        expected,
+      );
     },
   );
 
   it('reports a keyword that was never checked as unformattable', () => {
     expect(formatCheckedPosition(null, null)).toBeNull();
+  });
+
+  it('passes the result count through to the bound', () => {
+    expect(formatCheckedPosition(null, 200, 0)).toBe(NO_APPS_LABEL);
+    expect(formatCheckedPosition(null, 200, null)).toBe('>200');
+    expect(formatCheckedPosition(null, 200, 45)).toBe('>200');
+    expect(formatCheckedPosition(14, 200, 0)).toBe('14');
   });
 });
 
