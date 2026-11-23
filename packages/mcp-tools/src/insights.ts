@@ -29,7 +29,7 @@ export const INSIGHT_TOOLS: ReadTool[] = [
     name: "ranking_history",
     title: "Ranking history",
     description:
-      "Daily position history for one app's tracked keywords over a date window. Positions are 1-based; null means checked but not found within the depth carried by each point (render as >depth, for example >30). Charts read best with a reversed Y axis (position 1 on top). Omit keywordIds for every tracked keyword.",
+      "Daily position history for one app's tracked keywords over a date window. Positions are 1-based; null means checked but not found within the depth carried by each point (render as >depth, for example >30). A point whose resultCount is 0 means the store lists no apps for that search that day. Charts read best with a reversed Y axis (position 1 on top). Omit keywordIds for every tracked keyword.",
     inputSchema: z.object({
       appId,
       keywordIds: z

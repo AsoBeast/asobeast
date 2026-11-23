@@ -129,6 +129,51 @@ describe("the tool catalog", () => {
     expect(description).not.toMatch(/>\d+/);
   });
 
+  it("tells an agent how to read the latest result count of list_keywords", () => {
+    const description = toolByName("list_keywords")?.description ?? "";
+
+    expect(description).toContain("latestResultCount");
+    expect(description).toContain(
+      "0 means the store lists no apps for the search",
+    );
+    expect(description).toContain(
+      "null for checks stored before the count was recorded",
+    );
+    expect(description).not.toMatch(/>\d+/);
+  });
+
+  it("tells an agent how to read the result count of a ranking history point", () => {
+    const description = toolByName("ranking_history")?.description ?? "";
+
+    expect(description).toContain("resultCount is 0");
+    expect(description).toContain(
+      "the store lists no apps for that search that day",
+    );
+  });
+
+  it("tells an agent how to read the result count of a keyword breakdown ranking", () => {
+    const description = toolByName("keyword_breakdown")?.description ?? "";
+
+    expect(description).toContain("resultCount 0");
+    expect(description).toContain("the store lists no apps for that search");
+  });
+
+  it("tells an agent how to read the result count of a keyword discovery", () => {
+    const description = toolByName("keyword_discoveries")?.description ?? "";
+
+    expect(description).toContain("resultCount 0");
+    expect(description).toContain("a search that listed no apps");
+  });
+
+  it("tells an agent how to read the mover result counts of app_summary", () => {
+    const description = toolByName("app_summary")?.description ?? "";
+
+    expect(description).toContain("fromResultCount and toResultCount");
+    expect(description).toContain(
+      "0 means the store lists no apps for the search",
+    );
+  });
+
   it.each([
     "officialPopularityState",
     "officialPopularityFloor",
