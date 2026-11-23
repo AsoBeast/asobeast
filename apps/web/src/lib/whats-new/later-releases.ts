@@ -2,6 +2,20 @@ import type { Release } from "./release-notes";
 
 export const LATER_RELEASES: readonly Release[] = [
   {
+    version: "2.1.0",
+    date: "2026-11-23",
+    title: "The store says when it lists no apps",
+    summary:
+      "A keyword whose search lists nothing now says so on every screen, instead of looking like a rank past the last place.",
+    changes: [
+      {
+        kind: "fixed",
+        title: "A search that lists no apps says so",
+        text: "When a store lists no apps at all for a keyword you track, its position now reads No apps instead of more than 200, in the keywords table, the rankings page, the position history, the discovery list, the keyword breakdown, the movers and the exports. Pointing at it explains that the store lists no apps for this search. A rank alert and the weekly digest say the same when this happens to a keyword that used to rank. Checks from before this update keep the number they were stored with.",
+      },
+    ],
+  },
+  {
     version: "2.0.0",
     date: "2026-11-10",
     title: "AsoBeast 2",
