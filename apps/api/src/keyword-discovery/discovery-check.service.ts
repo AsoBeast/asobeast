@@ -56,6 +56,7 @@ export class DiscoveryCheck {
     if (!results) return;
     const position = positionsByStoreAppId(results).get(app.storeAppId) ?? null;
     const depth = reachedDepth(results);
+    const resultCount = results.length;
     const date = utcToday();
     if (await this.nobodyTracks(keywordId)) {
       await this.capture.store(keywordId, date, results);
@@ -68,7 +69,14 @@ export class DiscoveryCheck {
     );
     await this.prisma.keywordDiscovery.update({
       where: { appId_keywordId: { appId, keywordId } },
-      data: { position, depth, ownSearch: true, checkedOn: date, relevance },
+      data: {
+        position,
+        depth,
+        resultCount,
+        ownSearch: true,
+        checkedOn: date,
+        relevance,
+      },
     });
     if (!app.autoTrackRanked || position === null) return;
     await this.tracker.autoTrack(app, [
@@ -79,6 +87,7 @@ export class DiscoveryCheck {
         source,
         position,
         depth,
+        resultCount,
         ownSearch: true,
         checkedOn: toDateKey(date),
       },

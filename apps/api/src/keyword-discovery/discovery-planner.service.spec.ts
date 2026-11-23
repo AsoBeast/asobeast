@@ -29,6 +29,7 @@ interface DiscoveryRow {
   relevance: number;
   position: number | null;
   depth: number | null;
+  resultCount: number | null;
   ownSearch: boolean;
   checkedOn: Date | null;
   keyword: { text: string; country: string };
@@ -43,6 +44,7 @@ const open = (
   relevance: 90,
   position: null,
   depth: null,
+  resultCount: null,
   ownSearch: false,
   checkedOn: null,
   keyword: { text: keywordId, country: 'us' },
@@ -192,6 +194,7 @@ describe('KeywordDiscoveryPlanner', () => {
         keywordId: 'found',
         position: null,
         depth: null,
+        resultCount: null,
         ownSearch: false,
         checkedOn: null,
       },
@@ -203,6 +206,70 @@ describe('KeywordDiscoveryPlanner', () => {
       }) as object,
     });
     expect(queuedIds(appStoreQueue)).toEqual(['absent']);
+  });
+
+  it('stores the result count of an own-search reading', async () => {
+    const { planner, prisma } = build({
+      rows: [open('counted')],
+      readings: new Map([
+        [
+          'counted',
+          {
+            position: 4,
+            depth: 200,
+            resultCount: 30,
+            ownSearch: true,
+            checkedOn: '2026-11-11',
+          },
+        ],
+      ]),
+    });
+    await planner.plan('app1', undefined, NOW);
+    expect(prisma.keywordDiscovery.updateMany).toHaveBeenCalledWith({
+      where: expect.objectContaining({ keywordId: 'counted' }) as object,
+      data: expect.objectContaining({
+        position: 4,
+        depth: 200,
+        resultCount: 30,
+        ownSearch: true,
+      }) as object,
+    });
+  });
+
+  it('resets the result count to null when a free reading replaces it', async () => {
+    const { planner, prisma } = build({
+      rows: [
+        open('stale', {
+          position: null,
+          depth: 50,
+          resultCount: 0,
+          ownSearch: false,
+          checkedOn: new Date('2026-11-11T00:00:00Z'),
+        }),
+      ],
+      readings: new Map([
+        [
+          'stale',
+          {
+            position: null,
+            depth: 50,
+            resultCount: null,
+            ownSearch: false,
+            checkedOn: '2026-11-11',
+          },
+        ],
+      ]),
+    });
+    await planner.plan('app1', undefined, NOW);
+    expect(prisma.keywordDiscovery.updateMany).toHaveBeenCalledWith({
+      where: expect.objectContaining({ keywordId: 'stale' }) as object,
+      data: expect.objectContaining({
+        position: null,
+        depth: 50,
+        resultCount: null,
+        ownSearch: false,
+      }) as object,
+    });
   });
 
   it('replaces an own search reading with the capture reading it now holds', async () => {
@@ -234,6 +301,7 @@ describe('KeywordDiscoveryPlanner', () => {
         keywordId: 'rechecked',
         position: 3,
         depth: 200,
+        resultCount: null,
         ownSearch: true,
         checkedOn: new Date('2026-11-01T00:00:00Z'),
       },

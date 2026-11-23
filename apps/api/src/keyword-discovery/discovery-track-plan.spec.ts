@@ -9,6 +9,7 @@ const row = (text: string, country = 'us'): TrackRow => ({
   source: 'title',
   position: null,
   depth: null,
+  resultCount: null,
   ownSearch: false,
   checkedOn: null,
 });

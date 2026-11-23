@@ -419,6 +419,7 @@ model KeywordDiscovery {
   relevance   Int
   position    Int?
   depth       Int?
+  resultCount Int?
   checkedOn   DateTime? @db.Date
   ownSearch   Boolean   @default(false)
   queuedAt    DateTime?

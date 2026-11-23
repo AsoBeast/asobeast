@@ -131,9 +131,35 @@ describe('DiscoveryCheck', () => {
     expect(updateOf(prisma)).toEqual({
       position: 12,
       depth: 200,
+      resultCount: 200,
       ownSearch: true,
       checkedOn: utcToday(),
       relevance: 70,
+    });
+  });
+
+  it('records a result count of zero when the store listed nothing', async () => {
+    const { check, prisma, capture } = build();
+    capture.search.mockResolvedValueOnce([]);
+    await check.run(payload, false);
+    expect(updateOf(prisma)).toMatchObject({
+      position: null,
+      depth: 200,
+      resultCount: 0,
+      ownSearch: true,
+      checkedOn: utcToday(),
+    });
+  });
+
+  it('records how many apps the own search listed', async () => {
+    const { check, prisma, capture } = build();
+    capture.search.mockResolvedValueOnce(results(2));
+    await check.run(payload, false);
+    expect(updateOf(prisma)).toMatchObject({
+      position: null,
+      depth: 2,
+      resultCount: 2,
+      ownSearch: true,
     });
   });
 
@@ -224,6 +250,7 @@ describe('DiscoveryCheck', () => {
         source: 'reviews',
         position: 12,
         depth: 200,
+        resultCount: 200,
         ownSearch: true,
         checkedOn: utcToday().toISOString().slice(0, 10),
       },

@@ -147,6 +147,20 @@ describe('keyword discovery check (e2e)', () => {
     expect(await capturedToday()).toBe(30);
   });
 
+  it('records an empty search as a result count of zero at full depth', async () => {
+    answer = [];
+
+    await runCheck();
+
+    expect(await discovery()).toMatchObject({
+      position: null,
+      depth: 200,
+      resultCount: 0,
+      ownSearch: true,
+      checkedOn: today(),
+    });
+  });
+
   it('stores no capture of a phrase another workspace tracks', async () => {
     const other = await harness.prisma.app.create({
       data: {

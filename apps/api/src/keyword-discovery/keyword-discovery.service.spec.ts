@@ -20,6 +20,7 @@ interface Row {
   relevance: number;
   position: number | null;
   depth: number | null;
+  resultCount: number | null;
   ownSearch: boolean;
   checkedOn: Date | null;
   keyword: { text: string; country: string; metrics: Metric[] };
@@ -31,6 +32,7 @@ const row = (keywordId: string, overrides: Partial<Row> = {}): Row => ({
   relevance: 70,
   position: null,
   depth: null,
+  resultCount: null,
   ownSearch: false,
   checkedOn: null,
   keyword: { text: keywordId, country: 'us', metrics: [] },
@@ -133,6 +135,25 @@ describe('KeywordDiscoveryService.list', () => {
       opportunity: 80,
       state: 'opportunity',
     });
+  });
+
+  it('carries the result count of the latest reading on the item', async () => {
+    const { service } = build({
+      rows: [
+        row('empty serp', {
+          position: null,
+          depth: 200,
+          resultCount: 0,
+          ownSearch: true,
+          checkedOn: NOW,
+        }),
+        row('uncounted'),
+      ],
+    });
+    const { items } = await service.list('app1', ALL, NOW);
+    const byText = new Map(items.map((item) => [item.text, item]));
+    expect(byText.get('empty serp')).toMatchObject({ resultCount: 0 });
+    expect(byText.get('uncounted')).toMatchObject({ resultCount: null });
   });
 
   it('shows the popularity Apple lists for an unscored App Store term', async () => {
