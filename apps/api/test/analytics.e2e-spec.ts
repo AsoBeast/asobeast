@@ -302,6 +302,96 @@ describe('AnalyticsController (e2e)', () => {
     expect(summary.lastRefreshAt).toBe(D0.toISOString());
   });
 
+  it('carries the result counts of both compared rankings on the movers', async () => {
+    const id = await seed();
+    const counted = await prisma.keyword.create({
+      data: { text: 'counted habit', store: Store.APP_STORE, country: 'us' },
+    });
+    await prisma.trackedKeyword.create({
+      data: {
+        appId: id,
+        keywordId: counted.id,
+        source: 'MANUAL',
+        active: true,
+      },
+    });
+    await prisma.keywordRanking.create({
+      data: {
+        appId: id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        keywordId: counted.id,
+        date: D7,
+        position: 40,
+        depth: 100,
+        resultCount: 30,
+      },
+    });
+    await prisma.keywordRanking.create({
+      data: {
+        appId: id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        keywordId: counted.id,
+        date: D0,
+        position: 3,
+        depth: 100,
+        resultCount: 45,
+      },
+    });
+    const uncounted = await prisma.keyword.create({
+      data: { text: 'uncounted habit', store: Store.APP_STORE, country: 'us' },
+    });
+    await prisma.trackedKeyword.create({
+      data: {
+        appId: id,
+        keywordId: uncounted.id,
+        source: 'MANUAL',
+        active: true,
+      },
+    });
+    await prisma.keywordRanking.create({
+      data: {
+        appId: id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        keywordId: uncounted.id,
+        date: D7,
+        position: 30,
+        depth: 100,
+      },
+    });
+    await prisma.keywordRanking.create({
+      data: {
+        appId: id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        keywordId: uncounted.id,
+        date: D0,
+        position: 20,
+        depth: 100,
+      },
+    });
+
+    const response = await api.get(`/apps/${id}/summary`).expect(200);
+    const summary = response.body as AppSummary;
+
+    expect(summary.movers.up).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          text: 'counted habit',
+          from: 40,
+          fromResultCount: 30,
+          to: 3,
+          toResultCount: 45,
+        }),
+        expect.objectContaining({
+          text: 'uncounted habit',
+          from: 30,
+          fromResultCount: null,
+          to: 20,
+          toResultCount: null,
+        }),
+      ]),
+    );
+  });
+
   interface RivalCheck {
     text: string;
     date: Date;

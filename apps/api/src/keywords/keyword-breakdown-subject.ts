@@ -37,7 +37,12 @@ export interface BreakdownSubject {
   localized: readonly LocalizedTexts[];
   fields: FieldPhrases;
   shipped: readonly string[];
-  ranking: { position: number | null; depth: number; date: Date } | null;
+  ranking: {
+    position: number | null;
+    depth: number;
+    resultCount: number | null;
+    date: Date;
+  } | null;
 }
 
 export interface BreakdownContext {

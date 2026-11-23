@@ -83,6 +83,7 @@ export interface TrackedKeywordItem {
   active: boolean;
   latestPosition: number | null;
   latestDepth: number | null;
+  latestResultCount?: number | null;
   latestCheckedOn?: string | null;
   previousPosition: number | null;
   positionDelta1d: number | null;
