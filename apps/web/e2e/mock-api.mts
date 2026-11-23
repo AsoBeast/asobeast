@@ -128,6 +128,9 @@ import {
   PL_HISTORY_COOKIE,
   PL_HISTORY_KEYWORD,
   PL_HISTORY_SERIES,
+  NO_APPS_COOKIE,
+  NO_APPS_KEYWORD_ID,
+  NO_APPS_SERIES,
   PROVISIONAL_AUDIT,
   METADATA_AUDIT,
   APP_1_PL_SCREENSHOTS,
@@ -1087,6 +1090,8 @@ const REVIEW_SETS: Record<string, typeof UPDATE_THEME_REVIEWS> = {
 
 const hasPolishHistory = (req: IncomingMessage) =>
   hasCookie(req, PL_HISTORY_COOKIE, "1");
+
+const hasNoApps = (req: IncomingMessage) => hasCookie(req, NO_APPS_COOKIE, "1");
 
 function rankingsIn(
   rankings: RankingSeries,
@@ -4354,6 +4359,14 @@ const routes: Route[] = [
       const scoped = country
         ? dataset.keywords.filter((keyword) => keyword.country === country)
         : dataset.keywords;
+      const noAppsScoped =
+        id === "app-1" && hasNoApps(req)
+          ? scoped.map((keyword) =>
+              keyword.keywordId === NO_APPS_KEYWORD_ID
+                ? { ...keyword, latestResultCount: 0 }
+                : keyword,
+            )
+          : scoped;
       const polishHistory =
         id === "app-1" && country === "pl" && hasPolishHistory(req)
           ? [PL_HISTORY_KEYWORD]
@@ -4363,7 +4376,7 @@ const routes: Route[] = [
         200,
         sortKeywords(
           [
-            ...[...scoped, ...polishHistory].map((keyword) =>
+            ...[...noAppsScoped, ...polishHistory].map((keyword) =>
               annotated(id, keyword),
             ),
             ...(id === "app-1" ? firstCheckRows(req) : []),
@@ -4750,13 +4763,22 @@ const routes: Route[] = [
 
   appRoute(
     /^\/apps\/([^/]+)\/rankings$/,
-    (dataset, query, req) =>
-      rankingsIn(
+    (dataset, query, req) => {
+      const base =
         dataset.detail.id === "app-1" && hasPolishHistory(req)
           ? { series: [...dataset.rankings.series, PL_HISTORY_SERIES] }
-          : dataset.rankings,
+          : dataset.rankings;
+      return rankingsIn(
+        dataset.detail.id === "app-1" && hasNoApps(req)
+          ? {
+              series: base.series.map((item) =>
+                item.keywordId === NO_APPS_KEYWORD_ID ? NO_APPS_SERIES : item,
+              ),
+            }
+          : base,
         query,
-      ),
+      );
+    },
     (req) => hasCookie(req, RANKINGS_FAIL_COOKIE, "1"),
   ),
   {

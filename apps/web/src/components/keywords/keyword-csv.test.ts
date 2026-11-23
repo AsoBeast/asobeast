@@ -48,6 +48,12 @@ describe("keywordCsv", () => {
     );
   });
 
+  it("reads a search that listed no apps as no apps", () => {
+    expect(
+      keywordCsv([{ ...keyword("focus timer"), latestResultCount: 0 }], TODAY),
+    ).toContain("focus timer,MANUAL,true,No apps,");
+  });
+
   it("leaves the position empty for a keyword that was never checked", () => {
     expect(keywordCsv([keyword("focus timer", null)], TODAY)).toContain(
       "focus timer,MANUAL,true,,",

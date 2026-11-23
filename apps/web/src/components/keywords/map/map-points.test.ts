@@ -149,6 +149,27 @@ describe("mapPoints", () => {
     });
   });
 
+  it("carries a zero result count and reads the keyword as no apps", () => {
+    const point = onlyPoint(
+      keyword({ volume: 35, difficulty: 1.2, latestResultCount: 0 }),
+    );
+
+    expect(point).toMatchObject({
+      ranked: false,
+      positionLabel: "No apps",
+      resultCount: 0,
+    });
+    expect(dotName(point, false)).toContain(
+      ", the store lists no apps for this search, ",
+    );
+  });
+
+  it("keeps the depth words for a keyword without a result count", () => {
+    const point = onlyPoint(keyword({ volume: 35, difficulty: 1.2 }));
+
+    expect(dotName(point, false)).toContain(", not in the top 200, ");
+  });
+
   it("plots a never checked keyword without a position", () => {
     expect(
       onlyPoint(keyword({ volume: 4, difficulty: 0.5, latestDepth: null })),
@@ -337,6 +358,7 @@ describe("dotName", () => {
     opportunity: 82,
     position: 3,
     depth: 200,
+    resultCount: null,
     positionLabel: "3",
     ranked: true,
     floor: false,

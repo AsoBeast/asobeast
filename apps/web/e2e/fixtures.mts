@@ -140,9 +140,11 @@ function pointsFrom(
   positions: Array<number | null>,
   depths?: number[],
   unchecked: readonly number[] = [],
+  counts?: Array<number | null>,
 ): RankingPoint[] {
   return positions.flatMap((position, index) => {
     const daysAgo = positions.length - 1 - index;
+    const count = counts?.[index];
     return unchecked.includes(daysAgo)
       ? []
       : [
@@ -150,6 +152,7 @@ function pointsFrom(
             date: utcDaysAgo(daysAgo),
             position,
             depth: depths?.[index] ?? RANK_DEPTH,
+            ...(count === undefined ? {} : { resultCount: count }),
           },
         ];
   });
@@ -658,6 +661,23 @@ export const APP_1_RANKINGS: RankingSeries = {
 };
 
 export const PL_HISTORY_COOKIE = "e2e-pl-history";
+
+export const NO_APPS_COOKIE = "e2e-no-apps";
+
+export const NO_APPS_KEYWORD_ID = "kw-4";
+
+export const NO_APPS_SERIES: RankingSeriesItem = {
+  keywordId: "kw-4",
+  text: "productivity app",
+  store: "APP_STORE" as const,
+  country: "us",
+  points: pointsFrom(
+    [null, null, null, null, null, null, null, null],
+    [100, 100, 100, 100, 200, 200, 200, 200],
+    [5],
+    [null, null, null, null, null, null, 0, 0],
+  ),
+};
 
 export const PL_HISTORY_KEYWORD: TrackedKeywordItem = {
   keywordId: "kw-pl-history",

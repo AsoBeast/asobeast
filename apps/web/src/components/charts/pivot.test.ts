@@ -68,6 +68,49 @@ describe("rankingCsv", () => {
     expect(csv.split("\r\n")).toHaveLength(3);
     expect(csv).not.toContain("2026-08-19");
   });
+
+  it("reads a day whose search listed no apps as no apps", () => {
+    const csv = rankingCsv(
+      buildRankingChart(
+        [
+          series({
+            points: [
+              {
+                date: "2026-08-19",
+                position: null,
+                depth: 200,
+                resultCount: 0,
+              },
+              { date: "2026-08-20", position: null, depth: 200 },
+            ],
+          }),
+        ],
+        "2026-08-20",
+      ),
+    );
+
+    expect(csv).toContain("2026-08-19,No apps");
+    expect(csv).toContain("2026-08-20,>200");
+  });
+});
+
+describe("buildRankingChart result counts", () => {
+  it("carries the result count of every point beside its depth", () => {
+    const chart = buildRankingChart(
+      [
+        series({
+          points: [
+            { date: "2026-08-19", position: null, depth: 200, resultCount: 0 },
+            point("2026-08-20", 4),
+          ],
+        }),
+      ],
+      THROUGH,
+    );
+
+    expect(chart.resultCounts[0]).toEqual({ "kw-1": 0 });
+    expect(chart.resultCounts[1]).toEqual({ "kw-1": null });
+  });
 });
 
 describe("a keyword that did not exist on an earlier date", () => {

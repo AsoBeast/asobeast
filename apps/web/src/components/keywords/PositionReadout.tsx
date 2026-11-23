@@ -1,4 +1,9 @@
-import type { TrackedKeywordItem } from "@asobeast/shared";
+import {
+  listsNoApps,
+  NO_APPS_LABEL,
+  NO_APPS_SENTENCE,
+  type TrackedKeywordItem,
+} from "@asobeast/shared";
 import { PositionDeltaChip } from "@/components/ui/delta-chip";
 import { GradedNumber } from "@/components/ui/graded";
 import { formatDate } from "@/lib/format";
@@ -35,6 +40,16 @@ export function PositionReadout({
   className?: string;
 }) {
   const tier = grade("position", keyword.latestPosition);
+  const noApps =
+    keyword.latestPosition === null && listsNoApps(keyword.latestResultCount);
+  const lostTitle = lost?.on
+    ? lastRankedLine(lost.position, lost.on)
+    : undefined;
+  const title = noApps
+    ? lostTitle
+      ? `${NO_APPS_SENTENCE}. ${lostTitle}`
+      : NO_APPS_SENTENCE
+    : lostTitle;
   return (
     <span
       className={cn(
@@ -44,7 +59,10 @@ export function PositionReadout({
     >
       {keyword.latestPosition === null ? (
         <span
-          title={lost?.on ? lastRankedLine(lost.position, lost.on) : undefined}
+          title={title}
+          aria-label={
+            noApps ? `${NO_APPS_LABEL}: ${NO_APPS_SENTENCE}` : undefined
+          }
           className={cn(
             "flex flex-col leading-tight text-muted-foreground",
             className,

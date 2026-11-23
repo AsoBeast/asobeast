@@ -11,6 +11,7 @@ import {
 import { seedCookies } from "./routes.mts";
 import {
   APP_GP_NO_TERMS_ID,
+  NO_APPS_COOKIE,
   PL_HISTORY_COOKIE,
   RANKINGS_FAIL_COOKIE,
   utcDaysAgo,
@@ -1742,4 +1743,49 @@ test("a failed 30 day read says so and retries", async ({ page, context }) => {
       .getByRole("row", { name: /pomodoro/ })
       .getByLabel("down 6 over 30 days"),
   ).toBeAttached();
+});
+
+test.describe("a keyword whose search lists no apps", () => {
+  test.beforeEach(async ({ context }) => {
+    await seedCookies(context, { [NO_APPS_COOKIE]: "1" });
+  });
+
+  test("the position cell reads No apps with the sentence in its name", async ({
+    page,
+  }) => {
+    await page.goto("/apps/app-1/keywords");
+
+    const row = page.getByRole("row", { name: /productivity app/ });
+    await expect(
+      row.getByLabel("No apps: The store lists no apps for this search"),
+    ).toBeVisible();
+    await expect(row.getByText("No apps", { exact: true })).toBeVisible();
+    await expect(row.getByText(">200")).toHaveCount(0);
+  });
+
+  test("the csv export writes No apps in that row", async ({ page }) => {
+    await page.goto("/apps/app-1/keywords");
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page.getByRole("button", { name: "Export CSV of keywords" }).click(),
+    ]);
+    const content = readFileSync(await download.path(), "utf8");
+
+    expect(content).toContain("productivity app,MANUAL,true,No apps,");
+  });
+});
+
+test("the keyword csv keeps the bound without a result count", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Export CSV of keywords" }).click(),
+  ]);
+  const content = readFileSync(await download.path(), "utf8");
+
+  expect(content).toContain("productivity app,MANUAL,true,>200,");
 });

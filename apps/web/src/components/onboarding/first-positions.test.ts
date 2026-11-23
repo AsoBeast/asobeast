@@ -17,6 +17,7 @@ const keyword = (
   position: number | null,
   depth: number | null,
   active = true,
+  resultCount?: number | null,
 ): TrackedKeywordItem =>
   ({
     keywordId: `kw-${text}`,
@@ -24,6 +25,7 @@ const keyword = (
     active,
     latestPosition: position,
     latestDepth: depth,
+    ...(resultCount === undefined ? {} : { latestResultCount: resultCount }),
   }) as TrackedKeywordItem;
 
 describe("firstPositionRows", () => {
@@ -99,6 +101,26 @@ describe("firstPositionsHeadline", () => {
       ]),
     ).toBe("Checked 2 of 3 keywords, none in the top 200 yet.");
   });
+
+  it("says the store lists no apps when every checked keyword lists none", () => {
+    expect(
+      firstPositionsHeadline([
+        keyword("a", null, 200, true, 0),
+        keyword("b", null, 200, true, 0),
+      ]),
+    ).toBe(
+      "Checked 2 of 2 keywords, and the store lists no apps for this search.",
+    );
+  });
+
+  it("keeps the depth note when a checked keyword had results", () => {
+    expect(
+      firstPositionsHeadline([
+        keyword("a", null, 200, true, 0),
+        keyword("b", null, 200, true, 45),
+      ]),
+    ).toBe("Checked 2 of 2 keywords, none in the top 200 yet.");
+  });
 });
 
 describe("positionLabel", () => {
@@ -110,5 +132,13 @@ describe("positionLabel", () => {
 
     expect(positionLabel(found)).toBe("#7");
     expect(positionLabel(missing)).toBe("not in the top 100");
+  });
+
+  it("reads a keyword whose search lists no apps as the sentence", () => {
+    const [noApps] = firstPositionRows([keyword("empty", null, 200, true, 0)]);
+
+    expect(positionLabel(noApps)).toBe(
+      "the store lists no apps for this search",
+    );
   });
 });
