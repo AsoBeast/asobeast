@@ -41,7 +41,10 @@ function snapshot(
 }
 
 const keyword = (
-  over: Pick<TrackedKeywordItem, "latestPosition" | "latestDepth">,
+  over: Pick<
+    TrackedKeywordItem,
+    "latestPosition" | "latestDepth" | "latestResultCount"
+  >,
 ) => over as TrackedKeywordItem;
 
 const listOf = (count: number) =>
@@ -90,6 +93,34 @@ describe("serpSummary position", () => {
         snapshot(listOf(50)),
         VIEWER,
         keyword({ latestPosition: null, latestDepth: 200 }),
+      ).position,
+    ).toEqual({ kind: "notFound", depth: 200 });
+  });
+
+  it("says the store lists no apps when the newest check listed none", () => {
+    expect(
+      serpSummary(
+        snapshot(listOf(50)),
+        VIEWER,
+        keyword({
+          latestPosition: null,
+          latestDepth: 200,
+          latestResultCount: 0,
+        }),
+      ).position,
+    ).toEqual({ kind: "noApps" });
+  });
+
+  it("keeps the depth bound for a row written before the count existed", () => {
+    expect(
+      serpSummary(
+        snapshot(listOf(50)),
+        VIEWER,
+        keyword({
+          latestPosition: null,
+          latestDepth: 200,
+          latestResultCount: null,
+        }),
       ).position,
     ).toEqual({ kind: "notFound", depth: 200 });
   });

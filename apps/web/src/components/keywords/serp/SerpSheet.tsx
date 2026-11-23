@@ -7,6 +7,7 @@ import {
   type UseQueryResult,
 } from "@tanstack/react-query";
 import {
+  listsNoApps,
   SERP_DEPTH,
   type SerpEntryItem,
   type SerpSnapshot,
@@ -204,7 +205,13 @@ function SerpContent({
       </div>
     );
   }
-  if (!isCaptured(snapshot)) return <SerpNeverChecked />;
+  if (!isCaptured(snapshot)) {
+    return listsNoApps(keyword?.latestResultCount) ? (
+      <SerpNoApps />
+    ) : (
+      <SerpNeverChecked />
+    );
+  }
   return (
     <div aria-busy={busy || undefined}>
       <SerpResults

@@ -1,4 +1,5 @@
 import {
+  listsNoApps,
   SERP_DEPTH,
   type SerpEntryItem,
   type SerpSnapshot,
@@ -11,6 +12,7 @@ export type PositionSummary =
   | { kind: "listed"; position: number; moved: Moved }
   | { kind: "deeper"; position: number; listed: number }
   | { kind: "notFound"; depth: number }
+  | { kind: "noApps" }
   | { kind: "absent" };
 
 export interface TitleSummary {
@@ -31,7 +33,7 @@ export interface SerpSummaryFacts {
 
 type CheckedKeyword = Pick<
   TrackedKeywordItem,
-  "latestPosition" | "latestDepth"
+  "latestPosition" | "latestDepth" | "latestResultCount"
 >;
 
 export const movedOf = (entry: SerpEntryItem): Moved => ({
@@ -55,7 +57,7 @@ function positionOf(
     return { kind: "listed", position: yours.position, moved: movedOf(yours) };
   }
   if (!keyword || !isNewestDay(snapshot)) return { kind: "absent" };
-  const { latestPosition, latestDepth } = keyword;
+  const { latestPosition, latestDepth, latestResultCount } = keyword;
   if (latestPosition !== null && latestPosition > snapshot.entries.length) {
     return {
       kind: "deeper",
@@ -64,7 +66,9 @@ function positionOf(
     };
   }
   if (latestPosition === null && latestDepth !== null) {
-    return { kind: "notFound", depth: latestDepth };
+    return listsNoApps(latestResultCount)
+      ? { kind: "noApps" }
+      : { kind: "notFound", depth: latestDepth };
   }
   return { kind: "absent" };
 }

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { NO_APPS_SENTENCE } from "@asobeast/shared";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate } from "@/lib/format";
 import { SERP_ROW_GRID } from "./SerpRow";
@@ -28,10 +29,12 @@ export function SerpNothingCaptured({ date }: { date: string }) {
   );
 }
 
-export function SerpNoApps({ date }: { date: string }) {
+export function SerpNoApps({ date }: { date?: string }) {
   return (
     <Panel>
-      {`The store showed no apps for this keyword on ${formatDate(date)}.`}
+      {date === undefined
+        ? `${NO_APPS_SENTENCE}.`
+        : `${NO_APPS_SENTENCE} on ${formatDate(date)}.`}
     </Panel>
   );
 }

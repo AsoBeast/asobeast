@@ -1,4 +1,8 @@
-import type { KeywordDiscoveryList } from "@asobeast/shared";
+import {
+  listsNoApps,
+  NO_APPS_SENTENCE,
+  type KeywordDiscoveryList,
+} from "@asobeast/shared";
 import { pluralize } from "@/lib/format";
 import { rankText } from "@/components/keywords/discovery/discovery-rows";
 
@@ -14,10 +18,13 @@ export type FirstDiscoveries =
   | { status: "collecting" }
   | { status: "ready"; headline: string; rows: FirstDiscoveryRow[] };
 
-const rankOf = (item: KeywordDiscoveryList["items"][number]): string =>
-  item.position === null
-    ? (rankText(item) ?? "not checked yet")
-    : `#${item.position}`;
+const noAppsWords = `${NO_APPS_SENTENCE.charAt(0).toLowerCase()}${NO_APPS_SENTENCE.slice(1)}`;
+
+const rankOf = (item: KeywordDiscoveryList["items"][number]): string => {
+  if (item.position !== null) return `#${item.position}`;
+  if (listsNoApps(item.resultCount)) return noAppsWords;
+  return rankText(item) ?? "not checked yet";
+};
 
 function uncheckedSentence({ items, counts }: KeywordDiscoveryList): string {
   if (items.some(({ checkedOn }) => checkedOn !== null)) {

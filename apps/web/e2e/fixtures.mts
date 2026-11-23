@@ -666,6 +666,8 @@ export const NO_APPS_COOKIE = "e2e-no-apps";
 
 export const NO_APPS_KEYWORD_ID = "kw-4";
 
+export const NO_APPS_DISCOVERY_KEYWORD_ID = "disc-app-1-us-focus-music";
+
 export const NO_APPS_SERIES: RankingSeriesItem = {
   keywordId: "kw-4",
   text: "productivity app",

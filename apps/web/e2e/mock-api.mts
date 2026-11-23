@@ -130,6 +130,7 @@ import {
   PL_HISTORY_SERIES,
   NO_APPS_COOKIE,
   NO_APPS_KEYWORD_ID,
+  NO_APPS_DISCOVERY_KEYWORD_ID,
   NO_APPS_SERIES,
   PROVISIONAL_AUDIT,
   METADATA_AUDIT,
@@ -340,6 +341,7 @@ import type {
   AppSetupUpdateRequest,
   WorkspaceChecklistUpdateRequest,
   KeywordComparison,
+  KeywordDiscoveryList,
   SerpEntryItem,
   SerpSnapshot,
   StoreImportState,
@@ -1092,6 +1094,17 @@ const hasPolishHistory = (req: IncomingMessage) =>
   hasCookie(req, PL_HISTORY_COOKIE, "1");
 
 const hasNoApps = (req: IncomingMessage) => hasCookie(req, NO_APPS_COOKIE, "1");
+
+function withNoAppsDiscovery(list: KeywordDiscoveryList): KeywordDiscoveryList {
+  return {
+    ...list,
+    items: list.items.map((item) =>
+      item.keywordId === NO_APPS_DISCOVERY_KEYWORD_ID
+        ? { ...item, resultCount: 0 }
+        : item,
+    ),
+  };
+}
 
 function rankingsIn(
   rankings: RankingSeries,
@@ -4099,19 +4112,22 @@ const routes: Route[] = [
           errorEnvelope(400, path, DISCOVERY_COMPETITOR_REFUSAL),
         );
       }
+      const discoveries = discoveriesFor(
+        id,
+        dataset.detail.store,
+        new URL(path, "http://localhost").searchParams.get("country"),
+        {
+          pending: hasCookie(req, DISCOVERY_PENDING_COOKIE, "1"),
+          none: hasCookie(req, DISCOVERY_NONE_COOKIE, "1"),
+          unfit: hasCookie(req, DISCOVERY_UNFIT_COOKIE, "1"),
+        },
+      );
       json(
         res,
         200,
-        discoveriesFor(
-          id,
-          dataset.detail.store,
-          new URL(path, "http://localhost").searchParams.get("country"),
-          {
-            pending: hasCookie(req, DISCOVERY_PENDING_COOKIE, "1"),
-            none: hasCookie(req, DISCOVERY_NONE_COOKIE, "1"),
-            unfit: hasCookie(req, DISCOVERY_UNFIT_COOKIE, "1"),
-          },
-        ),
+        id === "app-1" && hasNoApps(req)
+          ? withNoAppsDiscovery(discoveries)
+          : discoveries,
       );
     },
   },
@@ -4744,7 +4760,23 @@ const routes: Route[] = [
           errorEnvelope(404, path, `Keyword ${keywordId} is not tracked`),
         );
       }
-      json(res, 200, breakdown);
+      json(
+        res,
+        200,
+        id === "app-1" && keywordId === NO_APPS_KEYWORD_ID && hasNoApps(req)
+          ? {
+              ...breakdown,
+              apps: breakdown.apps.map((entry) =>
+                entry.ranking && entry.ranking.position === null
+                  ? {
+                      ...entry,
+                      ranking: { ...entry.ranking, resultCount: 0 },
+                    }
+                  : entry,
+              ),
+            }
+          : breakdown,
+      );
     },
   },
   appRoute(/^\/apps\/([^/]+)\/keywords\/compare$/, (dataset, query, req) => {
