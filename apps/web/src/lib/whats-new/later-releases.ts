@@ -11,7 +11,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "new",
         title: "Draft your next listing",
-        text: "The metadata page has a Draft mode: write the next title, subtitle, keyword field and description beside the live ones and see, while you type, which tracked keywords the draft would newly cover, which ones it would lose, and which words are wasted. The draft stays in your browser until you copy it out for App Store Connect or Play Console, and the keyword field is saved through its usual editor.",
+        text: "The metadata page has a Draft mode: write the next title, subtitle, keyword field and description beside the live ones and see, while you type, which tracked keywords the draft would newly cover, which ones it would lose, and which words are wasted. The draft is kept in your browser, and while you type its text goes to your AsoBeast server to work out that coverage, never to the stores. Copy it out for App Store Connect or Play Console, and save the keyword field through its usual editor.",
       },
     ],
   },
