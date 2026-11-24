@@ -217,3 +217,25 @@ export const changeCounts = (
   for (const { change } of keywords) counts[change] += 1;
   return counts;
 };
+
+export function draftedListing(
+  app: DraftApp,
+  drafted: CoverageSources,
+  target: DraftTarget,
+  market: string | undefined,
+): ListingTexts | undefined {
+  if (market === undefined) return undefined;
+  const country = resolvedCountry(app, drafted, market);
+  if (
+    target.store === Store.GOOGLE_PLAY ||
+    keywordFieldLocalizations(country)[0] === target.localization
+  ) {
+    return drafted.listings.get(country);
+  }
+  return drafted.localized
+    .get(country)
+    ?.find((entry) => entry.localization === target.localization)?.texts;
+}
+
+export const draftOverEmptyListing = (draft: ListingDraftTexts): ListingTexts =>
+  mergeTexts(EMPTY_TEXTS, draft);
