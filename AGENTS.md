@@ -46,7 +46,7 @@ This file holds what applies everywhere. The detailed rules live in `.claude/rul
 3. Without a proxy pool, store workers run at concurrency 1 behind `SCRAPE_ITUNES_RPM` and `SCRAPE_GPLAY_RPM`; with one, concurrency rises to `PROXY_WORKER_MAX_CONCURRENCY`; never call a store in bulk outside the queue.
 4. `Keyword`, `KeywordMetric` and `SerpEntry` are global, so one search serves every tenant; the tracking relation is tenant owned; every listing read is scoped through `apps/api/src/apps/listing.ts`.
 5. Opportunity is derived in the read layer, never stored.
-6. A position is 1 based; `null` means checked and not found, and the row is stored anyway with the count of apps the search listed.
+6. A position is 1 based; `null` means checked and not found, and the row is stored anyway; a stored `resultCount` of 0 alone says the store listed no apps, and only a confirming second search writes it.
 7. Tenancy is enforced by row level security: service code never puts `workspaceId` in a `where`, and cross tenant work goes through `CrossTenantAccess`.
 8. Scrapers break: a parse failure fails the job, never request handling; a route that waits on a store uses `StoreDeadlineInterceptor`.
 9. Authentication is mandatory, self registration never joins a workspace that holds data, credential and team routes are `@SessionOnly()`, and a mailbox gets one Stripe trial ever.
