@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { getLocale, getMessages } from "next-intl/server";
 import { Toaster } from "@/components/ui/sonner";
 import { Providers } from "./providers";
 import "@fontsource-variable/geist/wght.css";
@@ -6,6 +7,7 @@ import "./globals.css";
 import { CheckoutReturn } from "@/components/billing/CheckoutReturn";
 import { STREAMING_SEGMENT_GUARD } from "@/lib/streaming-segment-guard";
 import { PRODUCT_NAME } from "@/lib/brand";
+import { DEFAULT_LOCALE, isLocale } from "@/lib/locale";
 
 export const metadata: Metadata = {
   metadataBase: new URL(
@@ -31,13 +33,17 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const currentLocale = await getLocale();
+  const locale = isLocale(currentLocale) ? currentLocale : DEFAULT_LOCALE;
+  const messages = await getMessages();
+
   return (
-    <html lang="en" suppressHydrationWarning className="h-full antialiased">
+    <html lang={locale} suppressHydrationWarning className="h-full antialiased">
       <head>
         <script dangerouslySetInnerHTML={{ __html: STREAMING_SEGMENT_GUARD }} />
       </head>
@@ -48,7 +54,7 @@ export default function RootLayout({
         >
           Skip to content
         </a>
-        <Providers>
+        <Providers locale={locale} messages={messages}>
           <CheckoutReturn />
           {children}
           <Toaster />
