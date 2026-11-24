@@ -31,6 +31,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { generateMetadataDrafts } from "@/lib/api";
 import { PRODUCT_NAME } from "@/lib/brand";
+import { copyText } from "@/lib/copy-text";
 import { invalidateAiUsage } from "@/lib/queries";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
 import { draftLocaleParser } from "@/lib/search-params";
@@ -48,10 +49,9 @@ function DraftRow({ draft }: { draft: MetadataDraft }) {
   const label = METADATA_FIELD_LABELS[draft.field];
 
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(draft.value);
+    if (await copyText(draft.value)) {
       toast.success(`${label} copied`);
-    } catch {
+    } else {
       toast.error("Couldn't copy. Select and copy it manually.");
     }
   }
