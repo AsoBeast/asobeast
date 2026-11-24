@@ -144,7 +144,6 @@ export class RankingAlertsService {
         to: position,
         fromDepth: previous.depth,
         toDepth: depth,
-        ...fromCountOf(previous.resultCount),
         toResultCount: resultCount,
         threshold,
       });
@@ -282,7 +281,6 @@ export class RankingAlertsService {
       to: context.window.today,
       fromDepth: confirmed.fromDepth,
       toDepth: context.depth,
-      ...fromCountOf(confirmed.fromResultCount),
       toResultCount: context.resultCount,
       threshold: context.window.threshold,
       confirmed: true,
@@ -305,7 +303,6 @@ export class RankingAlertsService {
       to: context.window.today,
       fromDepth: confirmed.fromDepth,
       toDepth: context.depth,
-      ...fromCountOf(confirmed.fromResultCount),
       toResultCount: context.resultCount,
       confirmed: true,
     });
@@ -358,8 +355,6 @@ export class RankingAlertsService {
         to: check.capture.position,
         fromDepth: previous.depth,
         toDepth: check.depth,
-        ...fromCountOf(previous.resultCount),
-        toResultCount: check.resultCount,
       });
     }
   }

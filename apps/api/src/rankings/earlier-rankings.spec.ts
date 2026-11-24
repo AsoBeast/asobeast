@@ -23,7 +23,7 @@ describe('EarlierRankings', () => {
       where: { appId: 'app1', keywordId: 'kw1', date: { lt: PREVIOUS_DAY } },
       orderBy: { date: 'desc' },
       take: 2,
-      select: { position: true, depth: true, resultCount: true },
+      select: { position: true, depth: true },
     });
   });
 

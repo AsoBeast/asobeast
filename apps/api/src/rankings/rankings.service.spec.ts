@@ -722,9 +722,9 @@ describe('RankingsService.checkKeyword', () => {
       event: 'rank.dropped',
       from: 3,
       to: null,
-      fromResultCount: 12,
       toResultCount: 0,
     });
+    expect(payloads[0]).not.toHaveProperty('fromResultCount');
     expect(payloads[1]).toMatchObject({
       event: 'rank.milestone',
       direction: 'left',
@@ -1264,6 +1264,8 @@ describe('RankingsService.checkKeyword', () => {
           to: 6,
         }),
       ]);
+      expect(dispatched(dispatch)[0]).not.toHaveProperty('fromResultCount');
+      expect(dispatched(dispatch)[0]).not.toHaveProperty('toResultCount');
       expect(rankingFindMany).toHaveBeenCalledTimes(1);
       expect(rankingFindMany).toHaveBeenCalledWith({
         where: {

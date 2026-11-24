@@ -155,7 +155,7 @@ export function overtakeRow(
   const rival = alert.competitor;
   const moves = [
     `${rival.name ?? 'A competitor'} ${rankCell(rival.from, alert.fromDepth)} → ${rankCell(rival.to, alert.toDepth)}`,
-    `you ${rankCell(alert.from, alert.fromDepth, alert.fromResultCount)} → ${rankCell(alert.to, alert.toDepth, alert.toResultCount)}`,
+    `you ${rankCell(alert.from, alert.fromDepth)} → ${rankCell(alert.to, alert.toDepth)}`,
   ];
   return textRow(
     `${keywordCell(alert.keyword, appCountry)} · ${moves.join(', ')}`,

@@ -166,7 +166,7 @@ function rankEventFacts(
     ),
     fact(
       'Your position',
-      `${rankCell(alert.from, alert.fromDepth, alert.fromResultCount)} → ${rankCell(alert.to, alert.toDepth, alert.toResultCount)}`,
+      `${rankCell(alert.from, alert.fromDepth)} → ${rankCell(alert.to, alert.toDepth)}`,
     ),
   ];
 }

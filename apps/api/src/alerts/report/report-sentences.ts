@@ -90,7 +90,7 @@ function overtakeSentence(
 ): string {
   const app = appName(alert.app.name);
   const rival = appName(alert.competitor.name);
-  return `${rival} overtook ${app} for ${keywordIn(alert.keyword, withFlag)}: ${rival} ${rankWord(alert.competitor.from, alert.fromDepth)} → ${rankWord(alert.competitor.to, alert.toDepth)}, ${app} ${rankWord(alert.from, alert.fromDepth, alert.fromResultCount)} → ${rankWord(alert.to, alert.toDepth, alert.toResultCount)}`;
+  return `${rival} overtook ${app} for ${keywordIn(alert.keyword, withFlag)}: ${rival} ${rankWord(alert.competitor.from, alert.fromDepth)} → ${rankWord(alert.competitor.to, alert.toDepth)}, ${app} ${rankWord(alert.from, alert.fromDepth)} → ${rankWord(alert.to, alert.toDepth)}`;
 }
 
 function chartMoveSentence(

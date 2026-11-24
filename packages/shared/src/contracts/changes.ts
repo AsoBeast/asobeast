@@ -388,8 +388,6 @@ export interface RankOvertakenPayload {
   to: number | null;
   fromDepth: number;
   toDepth: number;
-  fromResultCount?: number | null;
-  toResultCount?: number | null;
 }
 
 export interface AlertAppIdentity {

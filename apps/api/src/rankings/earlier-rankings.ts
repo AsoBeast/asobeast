@@ -13,7 +13,7 @@ export class EarlierRankings {
       where: { appId, keywordId, date: { lt: date } },
       orderBy: { date: 'desc' },
       take: EARLIER_CHECKS,
-      select: { position: true, depth: true, resultCount: true },
+      select: { position: true, depth: true },
     });
   }
 }
