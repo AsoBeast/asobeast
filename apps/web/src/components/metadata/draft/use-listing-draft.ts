@@ -6,7 +6,7 @@ import {
   draftValues,
   listingDraftKey,
   parseListingDraft,
-  serializeListingDraft,
+  writeListingDraftField,
   type ListingDraftField,
   type ListingDraftValues,
 } from "@/lib/listing-draft";
@@ -21,7 +21,7 @@ export function useListingDraft(
   const stored = useMemo(() => parseListingDraft(raw), [raw]);
   const values = useMemo(() => draftValues(stored, live), [stored, live]);
   const setField = (field: ListingDraftField, value: string) =>
-    save(serializeListingDraft({ ...stored, [field]: value }));
+    writeListingDraftField(appId, scope, field, value);
   const reset = () => save("");
   return {
     values,

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CoveragePreviewKeyword } from "@asobeast/shared";
 import {
   changedFields,
@@ -6,8 +6,10 @@ import {
   draftFieldsOf,
   draftRequest,
   draftScopeOf,
+  draftView,
   draftValues,
   fieldCount,
+  isListingDraftField,
   listingDraftKey,
   liveDraftValues,
   marketNote,
@@ -15,6 +17,7 @@ import {
   previewGroups,
   serializeListingDraft,
   wasteReason,
+  writeListingDraftField,
 } from "./listing-draft";
 
 const live = { title: "Focus Timer", subtitle: "Pomodoro", keywordField: "" };
@@ -333,5 +336,94 @@ describe("consoleCopy", () => {
         description: "",
       }),
     ).toBe("Name\nHabit Tracker");
+  });
+});
+
+describe("writeListingDraftField", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function stubStorage(initial: Record<string, string>) {
+    const store = new Map(Object.entries(initial));
+    vi.stubGlobal("window", {
+      localStorage: {
+        getItem: (key: string) => store.get(key) ?? null,
+        setItem: (key: string, value: string) => store.set(key, value),
+      },
+    });
+    return store;
+  }
+
+  it("writes one assistant field into the stored draft", () => {
+    const store = stubStorage({
+      "asobeast.listingDraft.app-1.en-US": '{"v":1,"title":"Habit"}',
+    });
+
+    writeListingDraftField("app-1", "en-US", "subtitle", "Daily goals");
+
+    expect(
+      parseListingDraft(store.get("asobeast.listingDraft.app-1.en-US") ?? null),
+    ).toEqual({ title: "Habit", subtitle: "Daily goals" });
+  });
+
+  it("writes the draft of a localization that is not on screen", () => {
+    const store = stubStorage({});
+
+    writeListingDraftField("app-1", "pl", "title", "Nawyki");
+
+    expect(
+      parseListingDraft(store.get("asobeast.listingDraft.app-1.pl") ?? null),
+    ).toEqual({ title: "Nawyki" });
+  });
+
+  it("maps the assistant field names to draft fields", () => {
+    expect(
+      (
+        [
+          "title",
+          "subtitle",
+          "keywordField",
+          "shortDescription",
+          "description",
+        ] as const
+      ).every(isListingDraftField),
+    ).toBe(true);
+    expect(isListingDraftField("promotionalText")).toBe(false);
+  });
+});
+
+describe("draftView", () => {
+  const markets = [
+    { country: "us", home: true, capturedAt: "", tracked: true },
+    {
+      country: "pl",
+      home: false,
+      capturedAt: "",
+      tracked: true,
+      localizations: ["pl"],
+    },
+  ];
+
+  it("opens the home listing for a draft of its default localization", () => {
+    expect(draftView("us", null, markets)).toEqual({
+      market: "us",
+      localization: null,
+    });
+    expect(draftView("us", "en-US", markets)).toEqual({
+      market: "us",
+      localization: null,
+    });
+  });
+
+  it("opens the market that captures the drafted localization", () => {
+    expect(draftView("us", "pl", markets)).toEqual({
+      market: "pl",
+      localization: "pl",
+    });
+  });
+
+  it("opens nothing for a localization no market captures", () => {
+    expect(draftView("us", "es-MX", markets)).toBeNull();
   });
 });

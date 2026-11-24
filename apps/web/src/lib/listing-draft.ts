@@ -9,11 +9,16 @@ import {
   type CoveragePreviewRequest,
   type CoveragePreviewResult,
   type DraftWastedWord,
+  type ListingMarket,
   type MetadataAuditResult,
   type Store,
 } from "@asobeast/shared";
 import { formatCountry, formatList } from "./format";
 import { METADATA_FIELD_LABELS } from "./metadata-display";
+import {
+  readStoredPreference,
+  writeStoredPreference,
+} from "./use-stored-preference";
 
 export const LISTING_DRAFT_FIELDS = [
   "title",
@@ -24,6 +29,11 @@ export const LISTING_DRAFT_FIELDS = [
 ] as const;
 
 export type ListingDraftField = (typeof LISTING_DRAFT_FIELDS)[number];
+
+export const isListingDraftField = (
+  field: string,
+): field is ListingDraftField =>
+  LISTING_DRAFT_FIELDS.some((candidate) => candidate === field);
 
 export type ListingDraftValues = Partial<Record<ListingDraftField, string>>;
 
@@ -50,6 +60,25 @@ export const draftScopeOf = (
             ? localization
             : keywordFieldLocalizations(market)[0],
       };
+
+export interface DraftView {
+  market: string;
+  localization: AppStoreLocalization | null;
+}
+
+export function draftView(
+  home: string,
+  drafted: AppStoreLocalization | null,
+  markets: readonly Pick<ListingMarket, "country" | "localizations">[],
+): DraftView | null {
+  if (drafted === null || drafted === keywordFieldLocalizations(home)[0]) {
+    return { market: home, localization: null };
+  }
+  const reader = markets.find((entry) =>
+    entry.localizations?.includes(drafted),
+  );
+  return reader ? { market: reader.country, localization: drafted } : null;
+}
 
 export const listingDraftKey = (appId: string, scope: string): string =>
   `asobeast.listingDraft.${appId}.${scope}`;
@@ -99,6 +128,20 @@ export const serializeListingDraft = (values: ListingDraftValues): string =>
   Object.keys(values).length === 0
     ? ""
     : JSON.stringify({ v: DRAFT_VERSION, ...values });
+
+export function writeListingDraftField(
+  appId: string,
+  scope: string,
+  field: ListingDraftField,
+  value: string,
+): void {
+  const key = listingDraftKey(appId, scope);
+  const stored = parseListingDraft(readStoredPreference(key));
+  writeStoredPreference(
+    key,
+    serializeListingDraft({ ...stored, [field]: value }),
+  );
+}
 
 export const draftValues = (
   stored: ListingDraftValues | null,

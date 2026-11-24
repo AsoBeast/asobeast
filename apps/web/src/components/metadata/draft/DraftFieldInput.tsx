@@ -10,6 +10,7 @@ import { LintIssueRow } from "@/components/metadata/LintIssueRow";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useFocusClaim } from "@/lib/focus-handoff";
 import { fieldCount, type ListingDraftField } from "@/lib/listing-draft";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,12 @@ const MULTILINE: ReadonlySet<ListingDraftField> = new Set([
   "keywordField",
   "description",
 ]);
+
+export const draftFieldFocusKey = (field: ListingDraftField): string =>
+  `draft-field:${field}`;
+
+export const draftFieldSelector = (field: ListingDraftField): string =>
+  `[data-draft-field="${field}"]`;
 
 export function DraftFieldInput({
   store,
@@ -40,9 +47,12 @@ export function DraftFieldInput({
 }) {
   const inputId = useId();
   const countId = useId();
+  const claimFocus = useFocusClaim(draftFieldFocusKey(field));
   const count = fieldCount(store, field, value);
   const searched = STORE_FIELD_LIMITS[store][field]?.indexed === true;
   const control = {
+    ref: claimFocus,
+    "data-draft-field": field,
     id: inputId,
     value,
     readOnly,

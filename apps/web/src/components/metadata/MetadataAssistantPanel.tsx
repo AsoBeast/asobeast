@@ -2,7 +2,7 @@
 
 import { Suspense, useId, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Copy, Loader2, Sparkles } from "lucide-react";
+import { Copy, Loader2, PencilLine, Sparkles } from "lucide-react";
 import { useQueryState } from "nuqs";
 import { toast } from "sonner";
 import {
@@ -32,11 +32,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { generateMetadataDrafts } from "@/lib/api";
 import { PRODUCT_NAME } from "@/lib/brand";
 import { copyText } from "@/lib/copy-text";
+import { isListingDraftField } from "@/lib/listing-draft";
 import { invalidateAiUsage } from "@/lib/queries";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
 import { draftLocaleParser } from "@/lib/search-params";
 import { useSingleFlight } from "@/lib/single-flight";
 import { DraftLocalizationSelect } from "./DraftLocalizationSelect";
+import { useDraftFill } from "./draft/use-draft-fill";
 import { DraftLocalizationSkeleton } from "./skeletons";
 import { LintIssueRow } from "./LintIssueRow";
 
@@ -45,7 +47,13 @@ const STORE_FIELDS: Record<Store, MetadataField[]> = {
   GOOGLE_PLAY: ["title", "shortDescription", "description"],
 };
 
-function DraftRow({ draft }: { draft: MetadataDraft }) {
+function DraftRow({
+  draft,
+  onUse,
+}: {
+  draft: MetadataDraft;
+  onUse: ((draft: MetadataDraft) => void) | null;
+}) {
   const label = METADATA_FIELD_LABELS[draft.field];
 
   async function copy() {
@@ -65,15 +73,28 @@ function DraftRow({ draft }: { draft: MetadataDraft }) {
             {`${draft.chars}/${draft.limit}`}
           </span>
         </h3>
-        <Button
-          variant="outline"
-          size="sm"
-          aria-label={`Copy ${label} draft`}
-          onClick={copy}
-        >
-          <Copy aria-hidden />
-          <span>Copy</span>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {onUse && isListingDraftField(draft.field) ? (
+            <Button
+              variant="outline"
+              size="sm"
+              aria-label={`Use in draft: ${label}`}
+              onClick={() => onUse(draft)}
+            >
+              <PencilLine aria-hidden />
+              <span>Use in draft</span>
+            </Button>
+          ) : null}
+          <Button
+            variant="outline"
+            size="sm"
+            aria-label={`Copy ${label} draft`}
+            onClick={copy}
+          >
+            <Copy aria-hidden />
+            <span>Copy</span>
+          </Button>
+        </div>
       </div>
       <p className="text-body whitespace-pre-wrap wrap-anywhere">
         {draft.value}
@@ -128,6 +149,7 @@ export function MetadataAssistantPanel({
 
   const drafts = mutation.data?.drafts ?? [];
   const drafted = mutation.data?.localization ?? null;
+  const useInDraft = useDraftFill(appId, store, drafted);
 
   function toggle(field: MetadataField, checked: boolean) {
     setSelected((current) =>
@@ -197,7 +219,7 @@ export function MetadataAssistantPanel({
             ) : null}
             <ul className="flex list-none flex-col divide-y divide-border-subtle p-0">
               {drafts.map((draft) => (
-                <DraftRow key={draft.field} draft={draft} />
+                <DraftRow key={draft.field} draft={draft} onUse={useInDraft} />
               ))}
             </ul>
           </div>
