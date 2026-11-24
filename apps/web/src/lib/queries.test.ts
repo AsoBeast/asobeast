@@ -36,6 +36,7 @@ import {
   alertNewestOptions,
   apiTokenKeys,
   appKeys,
+  coveragePreviewOptions,
   importPreviewRequest,
   appDetailOptions,
   appSummaryOptions,
@@ -493,6 +494,29 @@ describe("appKeys", () => {
 
     expect(options.queryKey).toEqual(appKeys.metadataAudit(APP));
     expect(requested[0]).toMatch(/\/apps\/app-1\/metadata\/audit$/);
+  });
+
+  it("keys the coverage preview under the app", () => {
+    const key = appKeys.coveragePreview(APP, {
+      localization: "en-US",
+      title: "Habit Tracker",
+    });
+
+    expect(key.slice(0, appKeys.detail(APP).length)).toEqual(
+      appKeys.detail(APP),
+    );
+  });
+
+  it("keys two drafts apart", () => {
+    expect(
+      hashKey(appKeys.coveragePreview(APP, { title: "Habit Tracker" })),
+    ).not.toEqual(
+      hashKey(appKeys.coveragePreview(APP, { title: "Habit Tracker Pro" })),
+    );
+  });
+
+  it("never retries a coverage preview", () => {
+    expect(coveragePreviewOptions(APP, { title: "Habit" }).retry).toBe(false);
   });
 
   it("keys the metadata audit and the listing of each market apart", () => {
