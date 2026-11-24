@@ -6,7 +6,6 @@ import {
   CoveragePreviewRequest,
   CoveragePreviewResult,
   KEYWORD_FIELD_INPUT_LIMIT,
-  STORE_FIELD_LIMITS,
   tokenize,
   TrackedKeywordItem,
 } from '@asobeast/shared';
@@ -16,6 +15,7 @@ import { ensurePrimaryApp, KeywordApp } from '../keywords/keywords.support';
 import { homeLocalization } from '../keywords/localization-markets';
 import { PrismaService } from '../prisma/prisma.service';
 import { competitorNames } from './competitor-names';
+import { DESCRIPTION_INPUT_LIMIT } from './dto/coverage-preview.dto';
 import { loadCoverageSources } from './coverage-sources';
 import {
   changeCounts,
@@ -34,17 +34,22 @@ import { keywordFieldOf, listingSurfaces } from './listing-surfaces';
 export const COMPETITOR_DRAFT_REFUSAL =
   'A competitor app has no draft; draft its primary app instead';
 
-const TEXT_LIMITS = {
-  title: KEYWORD_FIELD_INPUT_LIMIT,
-  subtitle: KEYWORD_FIELD_INPUT_LIMIT,
-  shortDescription: KEYWORD_FIELD_INPUT_LIMIT,
-  keywordField: KEYWORD_FIELD_INPUT_LIMIT,
-  description: STORE_FIELD_LIMITS.GOOGLE_PLAY.description!.limit,
-} as const;
+type DraftTextField = Exclude<
+  keyof CoveragePreviewRequest,
+  'localization' | 'country'
+>;
+
+const TEXT_LIMITS: readonly { field: DraftTextField; limit: number }[] = [
+  { field: 'title', limit: KEYWORD_FIELD_INPUT_LIMIT },
+  { field: 'subtitle', limit: KEYWORD_FIELD_INPUT_LIMIT },
+  { field: 'shortDescription', limit: KEYWORD_FIELD_INPUT_LIMIT },
+  { field: 'keywordField', limit: KEYWORD_FIELD_INPUT_LIMIT },
+  { field: 'description', limit: DESCRIPTION_INPUT_LIMIT },
+];
 
 function refuseOverlongText(request: CoveragePreviewRequest): void {
-  for (const [field, limit] of Object.entries(TEXT_LIMITS)) {
-    const text = request[field as keyof typeof TEXT_LIMITS];
+  for (const { field, limit } of TEXT_LIMITS) {
+    const text = request[field];
     if (text !== undefined && countChars(text) > limit) {
       throw new BadRequestException(
         `${field} must be at most ${limit} characters`,

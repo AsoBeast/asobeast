@@ -213,9 +213,12 @@ export function previewKeywords(
 export const changeCounts = (
   keywords: readonly Pick<CoveragePreviewKeyword, 'change'>[],
 ): Record<CoveragePreviewChange, number> => {
-  const counts = Object.fromEntries(
-    COVERAGE_PREVIEW_CHANGES.map((change) => [change, 0]),
-  ) as Record<CoveragePreviewChange, number>;
+  const counts: Record<CoveragePreviewChange, number> = {
+    lost: 0,
+    gained: 0,
+    missing: 0,
+    kept: 0,
+  };
   for (const { change } of keywords) counts[change] += 1;
   return counts;
 };
