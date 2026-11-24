@@ -23,14 +23,18 @@ export function KeywordFieldHandoff({
       size="sm"
       className="w-fit"
       onClick={() =>
-        void setQuery(
-          { fieldLocale: localization, fieldFromDraft: true },
-          { history: "push", scroll: false },
-        ).then(() =>
-          document
-            .getElementById(LOCALIZATIONS_SECTION_ID)
-            ?.scrollIntoView({ block: "start" }),
-        )
+        void setQuery({ fieldFromDraft: null }, { history: "replace" })
+          .then(() =>
+            setQuery(
+              { fieldLocale: localization, fieldFromDraft: true },
+              { history: "push", scroll: false },
+            ),
+          )
+          .then(() =>
+            document
+              .getElementById(LOCALIZATIONS_SECTION_ID)
+              ?.scrollIntoView({ block: "start" }),
+          )
       }
     >
       <ArrowDown aria-hidden />

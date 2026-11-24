@@ -92,7 +92,7 @@ export function LocalizationItem({
             </div>
           ) : null}
           <KeywordFieldEditor
-            key={drafted === undefined ? "stored" : `drafted:${drafted}`}
+            key={drafted === undefined ? "stored" : "drafted"}
             id={id}
             item={item}
             managed={managed}

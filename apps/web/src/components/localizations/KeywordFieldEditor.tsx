@@ -121,11 +121,12 @@ export function KeywordFieldEditor({
       managed,
     ),
   );
+  const [handedIn] = useState(drafted !== undefined && !managed);
   useEffect(() => {
-    if (drafted === undefined || managed) return;
+    if (!handedIn) return;
     editor.current?.scrollIntoView({ block: "center" });
     editor.current?.focus({ preventScroll: true });
-  }, [drafted, managed]);
+  }, [handedIn]);
   const stored = item.phrases.join(",");
   const text = managed ? stored : (draft ?? stored);
   const field = keywordFieldDraft(text, item.phrases);

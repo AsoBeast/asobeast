@@ -349,6 +349,35 @@ test.describe("the keyword field hand off", () => {
     await expect(fieldEditor(page)).toHaveValue("timer,focus");
   });
 
+  test("keeps typing in the draft after the hand off", async ({ page }) => {
+    await page.goto(DRAFT_PAGE);
+    const drafted = await hydrated(field(page, "Keyword field"));
+    await drafted.fill("timer,focus,habit");
+    await handOff(page).click();
+    await expect(fieldEditor(page)).toBeFocused();
+
+    await drafted.click();
+    await drafted.pressSequentially(",goals");
+
+    await expect(drafted).toBeFocused();
+    await expect(drafted).toHaveValue("timer,focus,habit,goals");
+    await expect(fieldEditor(page)).toHaveValue("timer,focus,habit");
+  });
+
+  test("hands the newer draft over on a second press", async ({ page }) => {
+    await page.goto(DRAFT_PAGE);
+    const drafted = await hydrated(field(page, "Keyword field"));
+    await drafted.fill("timer,focus,habit");
+    await handOff(page).click();
+    await expect(fieldEditor(page)).toHaveValue("timer,focus,habit");
+
+    await drafted.fill("timer,focus,goals");
+    await handOff(page).click();
+
+    await expect(fieldEditor(page)).toHaveValue("timer,focus,goals");
+    await expect(fieldEditor(page)).toBeFocused();
+  });
+
   test("drops a phrase the draft removed", async ({ page }) => {
     await page.goto(DRAFT_PAGE);
     await (await hydrated(field(page, "Keyword field"))).fill("timer");
