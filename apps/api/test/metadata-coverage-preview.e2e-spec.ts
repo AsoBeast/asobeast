@@ -15,6 +15,7 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { QUEUES } from '../src/jobs/jobs.types';
+import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { seedApiToken } from './helpers/api-tokens';
 import { ownerAgent, useCookies } from './helpers/session';
 import { testDb } from './helpers/test-db';
@@ -45,7 +46,14 @@ describe('Metadata coverage preview (e2e)', () => {
     });
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(StoreProviderRegistry)
+      .useValue({
+        get: () => {
+          throw new Error('the coverage preview never calls a store');
+        },
+      })
+      .compile();
     app = moduleFixture.createNestApplication();
     useCookies(app);
     await app.init();
