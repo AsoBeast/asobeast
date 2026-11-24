@@ -668,6 +668,8 @@ export const fieldLocaleParser = localizationParser;
 
 export const fieldAddParser = parseAsArrayOf(parseAsString);
 
+export const fieldFromDraftParser = parseAsBoolean;
+
 export const fieldLeftOutParser = createParser({
   parse(value) {
     const count = Number(value);

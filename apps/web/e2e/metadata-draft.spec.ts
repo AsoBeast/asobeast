@@ -3,8 +3,10 @@ import {
   COVERAGE_PREVIEW_FAIL_COOKIE,
   COVERAGE_PREVIEW_MARKETS_COOKIE,
 } from "./coverage-preview.mts";
+import { APP_DRAFT_LOCALES_ID } from "./fixtures.mts";
 import { holdRequest } from "./held-request.mts";
 import { hydrated } from "./hydrated.mts";
+import { fieldRequests, seedLocalizations } from "./localizations.mts";
 import { expect, test } from "./session.mts";
 
 const PREVIEW_ROUTE = /\/metadata\/coverage-preview$/;
@@ -270,4 +272,89 @@ test("sends nothing for an untouched draft", async ({ page }) => {
   ).toBeVisible();
   await page.waitForTimeout(600);
   expect(sent).toHaveLength(0);
+});
+
+test.describe("the keyword field hand off", () => {
+  test.describe.configure({ mode: "serial" });
+
+  const DRAFT_PAGE = `/apps/${APP_DRAFT_LOCALES_ID}/metadata?mode=draft`;
+  const fieldEditor = (page: Page) =>
+    page.getByRole("textbox", { name: "English (U.S.) keyword field" });
+  const handOff = (page: Page) =>
+    editor(page).getByRole("button", {
+      name: "Review in the keyword field editor",
+    });
+
+  test.beforeEach(async ({ page }) => {
+    await seedLocalizations(page.request, APP_DRAFT_LOCALES_ID, {
+      fields: { "en-US": ["timer", "focus"] },
+    });
+  });
+
+  test("hands the drafted keyword field to its editor", async ({ page }) => {
+    await page.goto(DRAFT_PAGE);
+    await (
+      await hydrated(field(page, "Keyword field"))
+    ).fill("timer,focus,habit");
+
+    await handOff(page).click();
+
+    await expect(page).toHaveURL(/fieldLocale=en-US/);
+    await expect(page).toHaveURL(/fieldFromDraft=true/);
+    expect(page.url()).not.toContain("habit");
+    await expect(fieldEditor(page)).toHaveValue("timer,focus,habit");
+    await expect(fieldEditor(page)).toBeFocused();
+    await expect(
+      page.getByText("Your drafted keyword field is ready to review and save."),
+    ).toBeVisible();
+  });
+
+  test("saves the drafted field through the editor", async ({ page }) => {
+    await page.goto(DRAFT_PAGE);
+    await (
+      await hydrated(field(page, "Keyword field"))
+    ).fill("timer,focus,habit");
+    await handOff(page).click();
+    await expect(fieldEditor(page)).toHaveValue("timer,focus,habit");
+
+    await page.getByRole("button", { name: "Save keyword field" }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Save and track" })
+      .click();
+
+    await expect(page).not.toHaveURL(/fieldFromDraft/);
+    await expect(fieldEditor(page)).toHaveValue("timer,focus,habit");
+    expect(await fieldRequests(page.request, APP_DRAFT_LOCALES_ID)).toContain(
+      "PUT /apps/app-draft-locales/keyword-fields/en-US",
+    );
+  });
+
+  test("keeps the drafted field read only while App Store Connect manages it", async ({
+    page,
+  }) => {
+    await seedLocalizations(page.request, APP_DRAFT_LOCALES_ID, {
+      fields: { "en-US": ["timer", "focus"] },
+      storeImport: "following",
+    });
+    await page.goto(DRAFT_PAGE);
+
+    await expect(field(page, "Keyword field")).toHaveAttribute("readonly", "");
+    await expect(
+      editor(page).getByText(/^Imported from App Store Connect/),
+    ).toBeVisible();
+    await expect(handOff(page)).toHaveCount(0);
+
+    await page.goto(`${DRAFT_PAGE}&fieldLocale=en-US&fieldFromDraft=true`);
+    await expect(fieldEditor(page)).toHaveValue("timer,focus");
+  });
+
+  test("drops a phrase the draft removed", async ({ page }) => {
+    await page.goto(DRAFT_PAGE);
+    await (await hydrated(field(page, "Keyword field"))).fill("timer");
+
+    await handOff(page).click();
+
+    await expect(fieldEditor(page)).toHaveValue("timer");
+  });
 });

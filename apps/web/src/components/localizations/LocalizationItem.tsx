@@ -31,6 +31,7 @@ export function LocalizationItem({
   sync = null,
   onDraft,
   proposed = null,
+  drafted,
   onProposalSettled,
 }: {
   id: string;
@@ -39,6 +40,7 @@ export function LocalizationItem({
   sync?: AppLocalizationStoreSync | null;
   onDraft: ((localization: AppStoreLocalization) => void) | null;
   proposed?: readonly string[] | null;
+  drafted?: string;
   onProposalSettled?: () => void;
 }) {
   const name = localizationName(item.localization);
@@ -90,11 +92,13 @@ export function LocalizationItem({
             </div>
           ) : null}
           <KeywordFieldEditor
+            key={drafted === undefined ? "stored" : `drafted:${drafted}`}
             id={id}
             item={item}
             managed={managed}
             sync={sync}
             proposed={proposed}
+            drafted={drafted}
             onProposalSettled={onProposalSettled}
             leading={
               managed || item.origin === "home" ? null : (

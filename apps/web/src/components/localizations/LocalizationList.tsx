@@ -14,9 +14,11 @@ import { draftableLocalizations, storefrontRows } from "@/lib/localizations";
 import {
   draftLocaleParser,
   fieldAddParser,
+  fieldFromDraftParser,
   fieldLeftOutParser,
   fieldLocaleParser,
 } from "@/lib/search-params";
+import { DraftedFieldStatus, useDraftedField } from "./DraftedFieldStatus";
 import { KeywordFieldAdditionStatus } from "./KeywordFieldAdditionStatus";
 import { LocalizationItem } from "./LocalizationItem";
 
@@ -30,19 +32,30 @@ export function LocalizationList({
   canDraft: boolean;
 }) {
   const [
-    { fieldLocale: requested, fieldAdd: added, fieldLeftOut: leftOut },
+    {
+      fieldLocale: requested,
+      fieldAdd: added,
+      fieldLeftOut: leftOut,
+      fieldFromDraft: fromDraft,
+    },
     setLocalizationQuery,
   ] = useQueryStates({
     fieldLocale: fieldLocaleParser,
     fieldAdd: fieldAddParser,
     fieldLeftOut: fieldLeftOutParser,
+    fieldFromDraft: fieldFromDraftParser,
   });
   const outcome = additionOutcome(result, requested, added, leftOut);
   const proposalTarget =
     outcome?.state === "received" ? outcome.localization : null;
+  const handoff = useDraftedField(
+    id,
+    fromDraft === true ? requested : null,
+    result.storeManaged,
+  );
   const settleProposal = () =>
     void setLocalizationQuery(
-      { fieldAdd: null, fieldLeftOut: null },
+      { fieldAdd: null, fieldLeftOut: null, fieldFromDraft: null },
       { history: "replace" },
     );
   const [, setDraftLocale] = useQueryState("draftLocale", draftLocaleParser);
@@ -56,6 +69,7 @@ export function LocalizationList({
   return (
     <>
       {outcome ? <KeywordFieldAdditionStatus outcome={outcome} /> : null}
+      {handoff ? <DraftedFieldStatus handoff={handoff} /> : null}
       <Accordion
         type="single"
         collapsible={result.localizations.length > 1}
@@ -66,6 +80,7 @@ export function LocalizationList({
               fieldLocale: isAppStoreLocalization(next) ? next : null,
               fieldAdd: null,
               fieldLeftOut: null,
+              fieldFromDraft: null,
             },
             { history: "replace" },
           )
@@ -73,6 +88,7 @@ export function LocalizationList({
       >
         {result.localizations.map((item) => {
           const target = item.localization === proposalTarget;
+          const handed = handoff?.localization === item.localization;
           return (
             <LocalizationItem
               key={item.localization}
@@ -84,7 +100,8 @@ export function LocalizationList({
                 canDraft && draftable.has(item.localization) ? draft : null
               }
               proposed={target ? added : null}
-              onProposalSettled={target ? settleProposal : undefined}
+              drafted={handed ? handoff.text : undefined}
+              onProposalSettled={target || handed ? settleProposal : undefined}
             />
           );
         })}

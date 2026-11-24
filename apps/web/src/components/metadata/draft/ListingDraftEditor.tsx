@@ -18,7 +18,10 @@ import {
   type ListingDraftField,
 } from "@/lib/listing-draft";
 import { DraftCoveragePanel } from "./DraftCoveragePanel";
+import { StoreFieldNotice } from "@/components/localizations/KeywordFieldEditor";
 import { DraftFieldInput } from "./DraftFieldInput";
+import { KeywordFieldHandoff } from "./KeywordFieldHandoff";
+import { useDraftKeywordField } from "./use-draft-keyword-field";
 import { useCoveragePreview } from "./use-coverage-preview";
 import { useListingDraft } from "./use-listing-draft";
 
@@ -40,25 +43,45 @@ export function ListingDraftEditor({
   );
   const live = useMemo(() => liveDraftValues(audit), [audit]);
   const draft = useListingDraft(id, scopeKey(scope), live);
+  const field = useDraftKeywordField(id, scope);
+  const values = useMemo(
+    () =>
+      field.managed
+        ? { ...draft.values, keywordField: live.keywordField }
+        : draft.values,
+    [field.managed, draft.values, live],
+  );
   const request = useMemo(
-    () => draftRequest(scope, draft.values, live),
-    [scope, draft.values, live],
+    () => draftRequest(scope, values, live),
+    [scope, values, live],
   );
   const preview = useCoveragePreview(id, request);
   const lint = preview.requested ? preview.query.data?.fields : undefined;
   const [descriptionOpen, setDescriptionOpen] = useState(false);
   const unchanged = draft.changed.length === 0;
+  const handsOff =
+    field.handoff !== null &&
+    !field.managed &&
+    draft.changed.includes("keywordField");
   const fields = draftFieldsOf(store);
 
-  const input = (field: ListingDraftField) => (
+  const input = (name: ListingDraftField) => (
     <DraftFieldInput
-      key={field}
+      key={name}
       store={store}
-      field={field}
-      value={draft.values[field] ?? ""}
-      onChange={(value) => draft.setField(field, value)}
-      issues={lint?.find((entry) => entry.field === field)?.issues ?? []}
-    />
+      field={name}
+      value={values[name] ?? ""}
+      onChange={(value) => draft.setField(name, value)}
+      readOnly={name === "keywordField" && field.managed}
+      issues={lint?.find((entry) => entry.field === name)?.issues ?? []}
+    >
+      {name === "keywordField" && field.managed ? (
+        <StoreFieldNotice sync={field.sync} />
+      ) : null}
+      {name === "keywordField" && handsOff && field.handoff ? (
+        <KeywordFieldHandoff localization={field.handoff} />
+      ) : null}
+    </DraftFieldInput>
   );
 
   return (
@@ -67,7 +90,7 @@ export function ListingDraftEditor({
         aria-label="Draft listing"
         className="col-span-12 flex min-w-0 flex-col gap-4 rounded-lg border border-border bg-card px-4 pt-3 pb-4 @5xl/metadata:col-span-7"
       >
-        {fields.filter((field) => field !== "description").map(input)}
+        {fields.filter((name) => name !== "description").map(input)}
         <Collapsible open={descriptionOpen} onOpenChange={setDescriptionOpen}>
           <CollapsibleTrigger asChild>
             <Button variant="ghost" size="sm" className="-ml-2 w-fit">
