@@ -20,8 +20,8 @@ export function KeywordIdeas({
   onClose: () => void;
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
-  const status = useIdeasStatus(id, seed, country);
   const start = useIdeasStart(id, seed, country);
+  const status = useIdeasStatus(id, seed, country, start.succeeded);
   const handOffFocus = useFocusAfterCommit();
   const started =
     start.succeeded ||
@@ -42,7 +42,7 @@ export function KeywordIdeas({
         country={country}
         onClose={onClose}
       />
-      {started ? (
+      {started || status.failed ? (
         <IdeasResults id={id} country={country} seed={seed} status={status} />
       ) : (
         <IdeasStartPrompt

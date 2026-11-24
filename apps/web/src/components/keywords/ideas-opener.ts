@@ -1,3 +1,5 @@
+export const KEYWORD_MENU_ATTRIBUTE = "data-keyword-menu";
+
 let opener: HTMLElement | null = null;
 let openerKey: string | null = null;
 let heading: HTMLElement | null = null;
@@ -5,7 +7,7 @@ let focusPending = false;
 
 export function rememberIdeasOpener(element: HTMLElement | null): void {
   opener = element;
-  openerKey = element?.getAttribute("data-serp-keyword") ?? null;
+  openerKey = element?.getAttribute(KEYWORD_MENU_ATTRIBUTE) ?? null;
   focusPending = false;
 }
 
@@ -25,12 +27,18 @@ export function registerIdeasHeading(element: HTMLElement | null): void {
   }
 }
 
+export function firstKeywordMenu(): HTMLElement | null {
+  return document.querySelector<HTMLElement>(
+    `button[${KEYWORD_MENU_ATTRIBUTE}]`,
+  );
+}
+
 export function releaseIdeasOpener(): HTMLElement | null {
   const rebuilt =
     openerKey === null
       ? null
       : document.querySelector<HTMLElement>(
-          `button[data-serp-keyword="${CSS.escape(openerKey)}"]`,
+          `button[${KEYWORD_MENU_ATTRIBUTE}="${CSS.escape(openerKey)}"]`,
         );
   const released = opener?.isConnected ? opener : rebuilt;
   opener = null;

@@ -2,10 +2,12 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { KeywordSuggestion } from "@asobeast/shared";
+import { isSpiderTerm } from "@asobeast/shared";
 import { keywordsOptions, spiderOptions } from "@/lib/queries";
 import { ideaSuggestions } from "./ideas-selection";
 
 const PROBES_TOTAL = 27;
+const SPIDER_POLL_MS = 3000;
 
 export interface IdeasStatus {
   found: KeywordSuggestion[];
@@ -22,11 +24,17 @@ export function useIdeasStatus(
   id: string,
   seed: string,
   country: string,
+  requested = false,
 ): IdeasStatus {
   const tracked = useQuery(keywordsOptions(id, country));
   const status = useQuery({
     ...spiderOptions(id, seed, country),
-    enabled: seed.length >= 2,
+    enabled: isSpiderTerm(seed),
+    refetchInterval: (query) =>
+      (requested || (query.state.data?.probesDone ?? 0) > 0) &&
+      !query.state.data?.complete
+        ? SPIDER_POLL_MS
+        : false,
   });
   return {
     found: ideaSuggestions(status.data?.suggestions ?? []),

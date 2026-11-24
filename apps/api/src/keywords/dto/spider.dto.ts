@@ -1,5 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { COUNTRY_PATTERN, SpiderStartRequest } from '@asobeast/shared';
+import {
+  COUNTRY_PATTERN,
+  SPIDER_TERM_MAX_LENGTH,
+  SPIDER_TERM_MIN_LENGTH,
+  SpiderStartRequest,
+} from '@asobeast/shared';
 import { Transform } from 'class-transformer';
 import {
   IsOptional,
@@ -16,8 +21,8 @@ export class SpiderStartDto implements SpiderStartRequest {
   @ApiProperty({ example: 'habit tracker' })
   @Transform(lower)
   @IsString()
-  @MinLength(2)
-  @MaxLength(40)
+  @MinLength(SPIDER_TERM_MIN_LENGTH)
+  @MaxLength(SPIDER_TERM_MAX_LENGTH)
   term!: string;
 
   @ApiPropertyOptional({ example: 'pl', pattern: COUNTRY_PATTERN.source })
@@ -30,8 +35,8 @@ export class SpiderQueryDto implements SpiderStartRequest {
   @ApiProperty({ example: 'habit tracker' })
   @Transform(lower)
   @IsString()
-  @MinLength(2)
-  @MaxLength(40)
+  @MinLength(SPIDER_TERM_MIN_LENGTH)
+  @MaxLength(SPIDER_TERM_MAX_LENGTH)
   term!: string;
 
   @ApiPropertyOptional({ example: 'pl', pattern: COUNTRY_PATTERN.source })

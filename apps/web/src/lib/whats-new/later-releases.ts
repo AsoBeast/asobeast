@@ -2,6 +2,19 @@ import type { Release } from "./release-notes";
 
 export const LATER_RELEASES: readonly Release[] = [
   {
+    version: "2.1.0",
+    date: "2026-11-24",
+    title: "Ideas from a keyword row",
+    summary: "A tracked keyword now opens straight into suggestions around it.",
+    changes: [
+      {
+        kind: "new",
+        title: "Ideas from a keyword row",
+        text: "The menu of a tracked keyword has an Ideas item that opens suggestions for that keyword in its market. Find ideas runs a deep search on it, you tick results to track several at once, and Select top 5 ticks the first five you do not track yet.",
+      },
+    ],
+  },
+  {
     version: "2.0.0",
     date: "2026-11-10",
     title: "AsoBeast 2",
@@ -12,11 +25,6 @@ export const LATER_RELEASES: readonly Release[] = [
         kind: "new",
         title: "Inspect any keyword",
         text: "Keyword inspector in the sidebar reads any keyword in any country straight from the store, without tracking it: the top 50 apps, the autocomplete, popularity, difficulty and opportunity, and how strong the top ten are. Each keyword you inspect lands on a map beside the others, its store suggestions inspect in one click, and the next inspection of the same keyword shows what changed since.",
-      },
-      {
-        kind: "new",
-        title: "Ideas from a keyword row",
-        text: "The menu of a tracked keyword has an Ideas item that opens suggestions for that keyword in its market. Find ideas runs a deep search on it, you tick results to track several at once, and Add top 5 ticks the first five you do not track yet.",
       },
       {
         kind: "new",

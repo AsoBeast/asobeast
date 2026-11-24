@@ -1,6 +1,7 @@
 "use client";
 
 import type { FilterFn } from "@tanstack/react-table";
+import { isSpiderTerm } from "@asobeast/shared";
 import type {
   KeywordBucket,
   KeywordClass,
@@ -391,7 +392,11 @@ function actionsColumn({
           tagsIn(table.getCoreRowModel().rows.map((entry) => entry.original))
         }
         onOpenSerp={() => onOpenSerp(row.original.keywordId)}
-        onOpenIdeas={() => onOpenIdeas(row.original)}
+        onOpenIdeas={
+          isSpiderTerm(row.original.text)
+            ? () => onOpenIdeas(row.original)
+            : undefined
+        }
       />
     ),
   });

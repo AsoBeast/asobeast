@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { useQueryState } from "nuqs";
 import { pendingFocusStep } from "@/lib/focus-handoff";
 import { ideasSeedParser } from "@/lib/search-params";
-import { releaseIdeasOpener } from "./ideas-opener";
+import { firstKeywordMenu, releaseIdeasOpener } from "./ideas-opener";
 
 interface Return {
   target: HTMLElement;
@@ -15,7 +15,20 @@ let pending: Return | null = null;
 
 export function useIdeasReturn(): string {
   const [seed] = useQueryState("ideas", ideasSeedParser);
+  const previous = useRef(seed);
   useEffect(() => {
+    const cleared = previous.current !== "" && seed === "";
+    previous.current = seed;
+    if (cleared && pending === null) {
+      const target = releaseIdeasOpener() ?? firstKeywordMenu();
+      const active = document.activeElement;
+      if (target) {
+        pending = {
+          target,
+          leaving: active instanceof HTMLElement ? active : null,
+        };
+      }
+    }
     if (pending === null || seed !== "") return;
     const step = pendingFocusStep(pending.target, pending.leaving);
     if (step === "wait") return;
@@ -31,7 +44,8 @@ export function useIdeasSeed() {
   const sectionToggle = useRef<HTMLButtonElement>(null);
   const close = () => {
     const active = document.activeElement;
-    const target = releaseIdeasOpener() ?? sectionToggle.current;
+    const target =
+      releaseIdeasOpener() ?? firstKeywordMenu() ?? sectionToggle.current;
     pending = target
       ? { target, leaving: active instanceof HTMLElement ? active : null }
       : null;

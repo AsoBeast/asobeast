@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addTopLabel, ideaSuggestions, topIdeas } from "./ideas-selection";
+import { selectTopLabel, ideaSuggestions, topIdeas } from "./ideas-selection";
 
 const spider = (text: string, priority: number | null = null) => ({
   text,
@@ -34,8 +34,8 @@ describe("topIdeas", () => {
   });
 });
 
-describe("addTopLabel", () => {
+describe("selectTopLabel", () => {
   it("names the count", () => {
-    expect(addTopLabel(3)).toBe("Add top 3");
+    expect(selectTopLabel(3)).toBe("Select top 3");
   });
 });

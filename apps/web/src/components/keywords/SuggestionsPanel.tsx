@@ -105,6 +105,7 @@ export function SuggestionsPanel({
       {seeded ? (
         <CardContent className="flex flex-col gap-4">
           <KeywordIdeas
+            key={`${country}:${seed}`}
             id={id}
             country={country}
             seed={seed}

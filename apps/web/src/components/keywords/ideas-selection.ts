@@ -23,6 +23,6 @@ export function topIdeas(
     .slice(0, count);
 }
 
-export function addTopLabel(count: number): string {
-  return `Add top ${count}`;
+export function selectTopLabel(count: number): string {
+  return `Select top ${count}`;
 }

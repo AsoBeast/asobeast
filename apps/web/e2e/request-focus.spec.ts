@@ -1954,7 +1954,7 @@ test.describe("suggestion ticks keep focus", () => {
         : route.fallback(),
     );
     const held = await holdRequest(page, spider, "POST", (route) =>
-      route.fulfill(fulfillJson(202, { queued: 27, skipped: 0 })),
+      route.fulfill(fulfillJson(202, { enqueued: 27 })),
     );
     await page.goto(`/apps/${app}/keywords`);
     const menu = page.getByRole("button", {

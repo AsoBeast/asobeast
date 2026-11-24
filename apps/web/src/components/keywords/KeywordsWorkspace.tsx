@@ -46,9 +46,12 @@ export function KeywordsWorkspace({
     handOffFocus(document.getElementById(DISCOVERED_TAB_ID), leaving);
     setTab("discovered");
   };
+  const suggestions = (
+    <SuggestionsPanel id={id} country={market} store={store} />
+  );
   const research = (
     <>
-      <SuggestionsPanel id={id} country={market} store={store} />
+      {suggestions}
       <KeywordCombinations
         id={id}
         store={store}
@@ -96,7 +99,7 @@ export function KeywordsWorkspace({
           clearFocus={addKeywords}
           onFindKeywords={discoveries ? findKeywords : undefined}
         >
-          {discoveries && ideas.length === 0 ? null : research}
+          {discoveries ? (ideas.length === 0 ? null : suggestions) : research}
         </TrackedKeywordsTab>
       )}
     </div>

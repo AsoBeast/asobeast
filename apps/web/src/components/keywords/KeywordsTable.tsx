@@ -126,10 +126,13 @@ export function KeywordsTable({
   });
   const openIdeas = useCallback(
     (keyword: TrackedKeywordItem) =>
-      void setIdeas({
-        ideas: keyword.text,
-        ...(keyword.country === country ? {} : { country: keyword.country }),
-      }),
+      void setIdeas(
+        {
+          ideas: keyword.text,
+          ...(keyword.country === country ? {} : { country: keyword.country }),
+        },
+        { history: "push" },
+      ),
     [setIdeas, country],
   );
   const buildColumns = useCallback(

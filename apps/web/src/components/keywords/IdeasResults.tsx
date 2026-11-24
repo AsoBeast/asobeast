@@ -2,7 +2,7 @@
 
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { addTopLabel, topIdeas } from "./ideas-selection";
+import { selectTopLabel, topIdeas } from "./ideas-selection";
 import { SuggestionList, type SuggestionListState } from "./SuggestionList";
 import {
   TrackSelectedButton,
@@ -47,18 +47,18 @@ export function IdeasResults({
         <span>{`${status.probesDone}/${status.probesTotal}`}</span>
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          aria-disabled={top.length === 0 || undefined}
-          onClick={() => {
-            if (top.length === 0) return;
-            for (const text of top) toggle(text, true);
-          }}
-        >
-          <Plus />
-          {addTopLabel(top.length)}
-        </Button>
+        {top.length > 0 ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              for (const text of top) toggle(text, true);
+            }}
+          >
+            <Plus />
+            {selectTopLabel(top.length)}
+          </Button>
+        ) : null}
         <TrackSelectedButton
           count={ticked.length}
           busy={bulk.busy}
