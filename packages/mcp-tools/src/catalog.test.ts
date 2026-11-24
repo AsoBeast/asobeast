@@ -137,7 +137,7 @@ describe("the tool catalog", () => {
       "0 means the store lists no apps for the search",
     );
     expect(description).toContain(
-      "null for checks stored before the count was recorded",
+      "null marks checks stored before the count was recorded",
     );
     expect(description).not.toMatch(/>\d+/);
   });
@@ -170,7 +170,7 @@ describe("the tool catalog", () => {
 
     expect(description).toContain("fromResultCount and toResultCount");
     expect(description).toContain(
-      "0 means the store lists no apps for the search",
+      "carry meaning only at 0, which says the store lists no apps for the search",
     );
   });
 
