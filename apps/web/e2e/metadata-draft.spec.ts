@@ -358,3 +358,51 @@ test.describe("the keyword field hand off", () => {
     await expect(fieldEditor(page)).toHaveValue("timer");
   });
 });
+
+test("copies one field", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto("/apps/app-1/metadata?mode=draft");
+  await (await hydrated(field(page, "Title"))).fill("Habit Tracker");
+
+  await editor(page).getByRole("button", { name: "Copy title" }).click();
+
+  await expect(page.getByText("Title copied")).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+    "Habit Tracker",
+  );
+});
+
+test("copies the whole draft for App Store Connect", async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto("/apps/app-1/metadata?mode=draft");
+  await (await hydrated(field(page, "Title"))).fill("Habit Tracker");
+
+  await editor(page)
+    .getByRole("button", { name: "Copy for App Store Connect" })
+    .click();
+
+  await expect(
+    page.getByText("Draft copied for App Store Connect"),
+  ).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+    "Name\nHabit Tracker\n\nSubtitle\nPomodoro sessions that stick\n\nKeywords\nstudy timer,deep work",
+  );
+});
+
+test("names Play Console on Google Play", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto("/apps/app-gp/metadata?mode=draft");
+  await hydrated(field(page, "Title"));
+
+  await editor(page)
+    .getByRole("button", { name: "Copy for Play Console" })
+    .click();
+
+  await expect(page.getByText("Draft copied for Play Console")).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(
+    /^App name\n/,
+  );
+});

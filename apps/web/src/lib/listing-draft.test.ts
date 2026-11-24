@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { CoveragePreviewKeyword } from "@asobeast/shared";
 import {
   changedFields,
+  consoleCopy,
   draftFieldsOf,
   draftRequest,
   draftScopeOf,
@@ -294,5 +295,43 @@ describe("marketNote", () => {
 
   it("says nothing when every reader is judged", () => {
     expect(marketNote({ markets: ["us"], waitingMarkets: [] })).toBeNull();
+  });
+});
+
+describe("consoleCopy", () => {
+  it("lists every drafted field under the name the App Store Connect form uses", () => {
+    expect(
+      consoleCopy("APP_STORE", {
+        title: "Habit Tracker",
+        subtitle: "Daily goals",
+        keywordField: "habit,streak",
+        description: "Build habits.",
+      }),
+    ).toBe(
+      "Name\nHabit Tracker\n\nSubtitle\nDaily goals\n\nKeywords\nhabit,streak\n\nDescription\nBuild habits.",
+    );
+  });
+
+  it("uses the Play Console names on Google Play", () => {
+    expect(
+      consoleCopy("GOOGLE_PLAY", {
+        title: "Habit Tracker",
+        shortDescription: "Build habits",
+        description: "Every day.",
+      }),
+    ).toBe(
+      "App name\nHabit Tracker\n\nShort description\nBuild habits\n\nFull description\nEvery day.",
+    );
+  });
+
+  it("leaves out a field that is empty in the draft and on the store", () => {
+    expect(
+      consoleCopy("APP_STORE", {
+        title: "Habit Tracker",
+        subtitle: "",
+        keywordField: "",
+        description: "",
+      }),
+    ).toBe("Name\nHabit Tracker");
   });
 });

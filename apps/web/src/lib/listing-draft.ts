@@ -200,3 +200,34 @@ export function marketNote({
     ? `${waiting}, so no keyword is judged here yet.`
     : `${waiting}.`;
 }
+
+export const CONSOLE_NAMES: Record<Store, string> = {
+  APP_STORE: "App Store Connect",
+  GOOGLE_PLAY: "Play Console",
+};
+
+const CONSOLE_LABELS: Record<
+  Store,
+  Partial<Record<ListingDraftField, string>>
+> = {
+  APP_STORE: {
+    title: "Name",
+    subtitle: "Subtitle",
+    keywordField: "Keywords",
+    description: "Description",
+  },
+  GOOGLE_PLAY: {
+    title: "App name",
+    shortDescription: "Short description",
+    description: "Full description",
+  },
+};
+
+export function consoleCopy(store: Store, values: ListingDraftValues): string {
+  return draftFieldsOf(store)
+    .flatMap((field) => {
+      const value = values[field] ?? "";
+      return value === "" ? [] : [`${CONSOLE_LABELS[store][field]}\n${value}`];
+    })
+    .join("\n\n");
+}

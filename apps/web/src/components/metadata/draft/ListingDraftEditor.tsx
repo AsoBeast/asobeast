@@ -17,6 +17,7 @@ import {
   scopeKey,
   type ListingDraftField,
 } from "@/lib/listing-draft";
+import { CopyDraftButton, CopyFieldButton } from "./CopyDraftButtons";
 import { DraftCoveragePanel } from "./DraftCoveragePanel";
 import { StoreFieldNotice } from "@/components/localizations/KeywordFieldEditor";
 import { DraftFieldInput } from "./DraftFieldInput";
@@ -73,6 +74,7 @@ export function ListingDraftEditor({
       value={values[name] ?? ""}
       onChange={(value) => draft.setField(name, value)}
       readOnly={name === "keywordField" && field.managed}
+      action={<CopyFieldButton field={name} value={values[name] ?? ""} />}
       issues={lint?.find((entry) => entry.field === name)?.issues ?? []}
     >
       {name === "keywordField" && field.managed ? (
@@ -107,6 +109,7 @@ export function ListingDraftEditor({
           </CollapsibleContent>
         </Collapsible>
         <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4">
+          <CopyDraftButton store={store} values={values} />
           <Button
             variant="outline"
             aria-disabled={unchanged || undefined}

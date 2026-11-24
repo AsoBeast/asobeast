@@ -26,6 +26,7 @@ export function DraftFieldInput({
   onChange,
   readOnly = false,
   issues = [],
+  action,
   children,
 }: {
   store: Store;
@@ -34,6 +35,7 @@ export function DraftFieldInput({
   onChange: (value: string) => void;
   readOnly?: boolean;
   issues?: LintIssue[];
+  action?: ReactNode;
   children?: ReactNode;
 }) {
   const inputId = useId();
@@ -60,16 +62,19 @@ export function DraftFieldInput({
             </span>
           )}
         </div>
-        <span
-          id={countId}
-          aria-live="polite"
-          className={cn(
-            "numeric text-label",
-            count.over > 0 ? "text-signal-down" : "text-faint-foreground",
-          )}
-        >
-          {count.text}
-        </span>
+        <div className="flex items-center gap-1">
+          <span
+            id={countId}
+            aria-live="polite"
+            className={cn(
+              "numeric text-label",
+              count.over > 0 ? "text-signal-down" : "text-faint-foreground",
+            )}
+          >
+            {count.text}
+          </span>
+          {action}
+        </div>
       </div>
       {MULTILINE.has(field) ? (
         <Textarea
