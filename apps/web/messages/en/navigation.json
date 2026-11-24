@@ -1,0 +1,16 @@
+{
+  "main": "Main",
+  "workspace": "Workspace",
+  "app": "App",
+  "dashboard": "Dashboard",
+  "actionCenter": "Action Center",
+  "alerts": "Alerts",
+  "topCharts": "Top charts",
+  "keywordInspector": "Keyword inspector",
+  "integrations": "Integrations",
+  "settings": "Settings",
+  "admin": "Admin",
+  "documentation": "Documentation",
+  "releaseNotes": "Release notes",
+  "openActions": "{count, plural, one {# open action} other {# open actions}}"
+}

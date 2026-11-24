@@ -1,0 +1,16 @@
+{
+  "free": "免费",
+  "loading": "加载中…",
+  "retry": "重试",
+  "cancel": "取消",
+  "save": "保存",
+  "delete": "删除",
+  "edit": "编辑",
+  "close": "关闭",
+  "back": "返回",
+  "search": "搜索",
+  "filters": "筛选",
+  "export": "导出 CSV",
+  "notAvailable": "暂无",
+  "technicalDetails": "技术详情"
+}

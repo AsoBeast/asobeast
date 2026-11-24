@@ -1,0 +1,18 @@
+{
+  "genericTitle": "Something went wrong",
+  "genericBody": "The request could not be completed. Trying again usually clears a transient failure.",
+  "networkTitle": "AsoBeast could not be reached",
+  "networkBody": "The connection dropped before the request finished. Check your connection, then try again.",
+  "unauthorizedTitle": "Your session expired",
+  "unauthorizedBody": "Sign in again to keep working. Nothing was lost.",
+  "forbiddenTitle": "You cannot see this",
+  "forbiddenBody": "This account does not have access to the requested resource.",
+  "notFoundTitle": "Not found",
+  "notFoundBody": "This app or record no longer exists. It may have been deleted.",
+  "timeoutTitle": "The API did not answer in time",
+  "timeoutBody": "Check that the API, database and Redis are reachable, then try again.",
+  "tooManyTitle": "Too many requests",
+  "tooManyBody": "The API refused this request because too many arrived in a short time. Try again in a moment.",
+  "serverTitle": "The API failed to answer",
+  "serverBody": "The request could not be completed. Try again in a moment."
+}

@@ -1,0 +1,16 @@
+{
+  "free": "Free",
+  "loading": "Loading…",
+  "retry": "Try again",
+  "cancel": "Cancel",
+  "save": "Save",
+  "delete": "Delete",
+  "edit": "Edit",
+  "close": "Close",
+  "back": "Back",
+  "search": "Search",
+  "filters": "Filters",
+  "export": "Export CSV",
+  "notAvailable": "Not available",
+  "technicalDetails": "Technical details"
+}

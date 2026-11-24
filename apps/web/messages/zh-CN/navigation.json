@@ -1,0 +1,16 @@
+{
+  "main": "主导航",
+  "workspace": "工作区",
+  "app": "应用",
+  "dashboard": "仪表盘",
+  "actionCenter": "行动中心",
+  "alerts": "提醒",
+  "topCharts": "榜单",
+  "keywordInspector": "关键词检查器",
+  "integrations": "集成",
+  "settings": "设置",
+  "admin": "管理",
+  "documentation": "帮助文档",
+  "releaseNotes": "版本记录",
+  "openActions": "{count} 个待处理行动"
+}

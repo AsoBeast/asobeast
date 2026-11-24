@@ -1,0 +1,18 @@
+{
+  "genericTitle": "出了点问题",
+  "genericBody": "请求未能完成。重试通常可以解决临时故障。",
+  "networkTitle": "无法连接 AsoBeast",
+  "networkBody": "请求完成前连接中断。请检查网络后重试。",
+  "unauthorizedTitle": "登录已过期",
+  "unauthorizedBody": "请重新登录后继续操作，数据不会丢失。",
+  "forbiddenTitle": "你无权查看此内容",
+  "forbiddenBody": "当前账号没有访问此资源的权限。",
+  "notFoundTitle": "未找到",
+  "notFoundBody": "此应用或记录已不存在，可能已被删除。",
+  "timeoutTitle": "API 响应超时",
+  "timeoutBody": "请检查 API、数据库和 Redis 是否可访问，然后重试。",
+  "tooManyTitle": "请求过于频繁",
+  "tooManyBody": "短时间内请求过多，请稍后重试。",
+  "serverTitle": "API 未能响应",
+  "serverBody": "请求未能完成，请稍后重试。"
+}
