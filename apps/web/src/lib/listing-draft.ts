@@ -46,20 +46,17 @@ const DRAFT_VERSION = 1;
 export const scopeKey = (scope: DraftScope): string =>
   scope.store === "APP_STORE" ? scope.localization : scope.country;
 
-export const draftScopeOf = (
+export function draftScopeOf(
   store: Store,
   market: string,
   localization: string | undefined,
-): DraftScope =>
-  store === "GOOGLE_PLAY"
-    ? { store, country: market }
-    : {
-        store,
-        localization:
-          localization !== undefined && isAppStoreLocalization(localization)
-            ? localization
-            : keywordFieldLocalizations(market)[0],
-      };
+): DraftScope {
+  if (store === "GOOGLE_PLAY") return { store, country: market };
+  if (localization !== undefined && isAppStoreLocalization(localization)) {
+    return { store, localization };
+  }
+  return { store, localization: keywordFieldLocalizations(market)[0] };
+}
 
 export interface DraftView {
   market: string;

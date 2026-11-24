@@ -113,6 +113,34 @@ function PreviewBody({ result }: { result: CoveragePreviewResult }) {
   );
 }
 
+function Note({ children }: { children: string }) {
+  return <p className="px-2 text-dense text-muted-foreground">{children}</p>;
+}
+
+function PanelState({
+  preview,
+  result,
+}: {
+  preview: CoveragePreview;
+  result: CoveragePreviewResult | undefined;
+}) {
+  if (!preview.requested) {
+    return <Note>Change a field to see what it would cover.</Note>;
+  }
+  if (result) return <PreviewBody result={result} />;
+  if (preview.query.isError) {
+    return (
+      <div className="px-2">
+        <InlineQueryError
+          message="Could not load what this draft covers."
+          read={preview.query}
+        />
+      </div>
+    );
+  }
+  return <Note>Reading what this draft covers…</Note>;
+}
+
 function judgedIn(result: CoveragePreviewResult | undefined): string | null {
   if (!result || result.markets.length === 0) return null;
   return `Judged against the keywords you track in ${formatList(result.markets.map(formatCountry))}. Screenshot captions are not counted.`;
@@ -152,24 +180,7 @@ export function DraftCoveragePanel({
           aria-busy={busy || undefined}
           className="flex flex-col gap-3 px-2"
         >
-          {!requested ? (
-            <p className="px-2 text-dense text-muted-foreground">
-              Change a field to see what it would cover.
-            </p>
-          ) : result ? (
-            <PreviewBody result={result} />
-          ) : query.isError ? (
-            <div className="px-2">
-              <InlineQueryError
-                message="Could not load what this draft covers."
-                read={query}
-              />
-            </div>
-          ) : (
-            <p className="px-2 text-dense text-muted-foreground">
-              Reading what this draft covers…
-            </p>
-          )}
+          <PanelState preview={preview} result={result} />
         </CardContent>
         {footer ? (
           <CardFooter>
