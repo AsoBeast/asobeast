@@ -22,6 +22,7 @@ Chinese users currently meet an English only interface before they can sign in a
 - Translate the public marketing site, Mintlify documentation, alert and transactional emails.
 - Translate the proxied Swagger UI or Bull Board. They are third-party operator surfaces.
 - Translate App Store or Google Play content, user reviews or user written replies.
+- Translate server-authored normal content such as stored alert sentences, dynamic audit explanations, AI summaries and generated recommendations. Those require an API and content-model project; their surrounding interface is translated.
 - Add Traditional Chinese, right-to-left layouts or locale-specific URLs in this change.
 - Change Stripe Checkout's language. Its session remains `locale: 'en'` as required by the billing rules.
 - Change API error envelopes, shared contract types, MCP tools or persisted models.
@@ -131,7 +132,7 @@ The initial provider may send the complete catalog to Client Components. Measure
 
 Known HTTP statuses and network failures use the existing recovery model, with localized titles, bodies and actions in `errors.json`. This covers 401, 402, 403, 404, 429, 504, lost requests and scoped admin refusals.
 
-For validation errors that contain useful field specific text, show a localized summary and retain the original server message in an expandable technical details region. For unexpected 5xx responses, show a localized generic message plus the existing error digest. Do not change the API envelope or expose a digest as user-facing prose.
+For validation errors that contain useful field specific text, show a localized summary and retain the original server message in an expandable technical details region. Common authentication refusals use precise tested Chinese mappings, including invalid credentials, duplicate registration and expired or invalid links. For unexpected 5xx responses, show a localized generic message plus the existing error digest. Do not change the API envelope or expose a digest as user-facing prose.
 
 ### Copy ownership and rich text
 
