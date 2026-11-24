@@ -432,6 +432,21 @@ test.describe("the keyword field hand off", () => {
     ).toHaveAttribute("aria-disabled", "true");
   });
 
+  test("keeps the drafted field read only until it is known who manages it", async ({
+    page,
+  }) => {
+    await withCookie(page, "e2e-localizations-error", "1");
+    await page.goto(DRAFT_PAGE);
+
+    await expect(field(page, "Keyword field")).toHaveAttribute("readonly", "");
+    await expect(
+      editor(page).getByText(
+        "Could not read whether App Store Connect manages this keyword field.",
+      ),
+    ).toBeVisible();
+    await expect(handOff(page)).toHaveCount(0);
+  });
+
   test("keeps typing in the draft after the hand off", async ({ page }) => {
     await page.goto(DRAFT_PAGE);
     const drafted = await hydrated(field(page, "Keyword field"));

@@ -7,11 +7,12 @@ import { appLocalizationsOptions } from "@/lib/queries";
 
 export function useDraftKeywordField(appId: string, scope: DraftScope) {
   const appStore = scope.store === "APP_STORE";
-  const { data } = useQuery({
+  const read = useQuery({
     ...appLocalizationsOptions(appId),
     retry: false,
     enabled: appStore,
   });
+  const { data } = read;
   const localization: AppStoreLocalization | null = appStore
     ? scope.localization
     : null;
@@ -21,7 +22,11 @@ export function useDraftKeywordField(appId: string, scope: DraftScope) {
       false);
   return {
     managed: data?.storeManaged === true,
+    settled: !appStore || data !== undefined,
+    read,
     sync: data?.storeSync ?? null,
     handoff: listed ? localization : null,
   };
 }
+
+export type DraftKeywordField = ReturnType<typeof useDraftKeywordField>;

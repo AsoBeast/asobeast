@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ChevronRight, RotateCcw } from "lucide-react";
 import type { MetadataAuditResult } from "@asobeast/shared";
+import { InlineQueryError } from "@/components/layout/InlineQueryError";
 import { StoreFieldNotice } from "@/components/localizations/KeywordFieldEditor";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,9 +24,23 @@ import { DraftCoveragePanel } from "./DraftCoveragePanel";
 import { useDraftFieldReveal } from "./draft-field-reveal";
 import { DraftFieldInput } from "./DraftFieldInput";
 import { KeywordFieldHandoff } from "./KeywordFieldHandoff";
-import { useDraftKeywordField } from "./use-draft-keyword-field";
+import {
+  useDraftKeywordField,
+  type DraftKeywordField,
+} from "./use-draft-keyword-field";
 import { useCoveragePreview } from "./use-coverage-preview";
 import { useListingDraft } from "./use-listing-draft";
+
+function KeywordFieldNotice({ field }: { field: DraftKeywordField }) {
+  if (field.managed) return <StoreFieldNotice sync={field.sync} />;
+  if (field.settled || !field.read.isError) return null;
+  return (
+    <InlineQueryError
+      message="Could not read whether App Store Connect manages this keyword field."
+      read={field.read}
+    />
+  );
+}
 
 export function ListingDraftEditor({
   id,
@@ -68,6 +83,7 @@ export function ListingDraftEditor({
     !field.managed &&
     draft.changed.includes("keywordField");
   const fields = draftFieldsOf(store);
+  const locked = field.managed || !field.settled;
 
   const input = (name: ListingDraftField) => (
     <DraftFieldInput
@@ -76,13 +92,11 @@ export function ListingDraftEditor({
       field={name}
       value={values[name] ?? ""}
       onChange={(value) => draft.setField(name, value)}
-      readOnly={name === "keywordField" && field.managed}
+      readOnly={name === "keywordField" && locked}
       action={<CopyFieldButton field={name} value={values[name] ?? ""} />}
       issues={lint?.find((entry) => entry.field === name)?.issues ?? []}
     >
-      {name === "keywordField" && field.managed ? (
-        <StoreFieldNotice sync={field.sync} />
-      ) : null}
+      {name === "keywordField" ? <KeywordFieldNotice field={field} /> : null}
       {name === "keywordField" && handsOff && field.handoff ? (
         <KeywordFieldHandoff localization={field.handoff} />
       ) : null}
