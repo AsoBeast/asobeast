@@ -1,7 +1,11 @@
 import {
+  countChars,
+  isAppStoreLocalization,
+  keywordFieldLocalizations,
   STORE_FIELD_LIMITS,
   type AppStoreLocalization,
   type CoveragePreviewRequest,
+  type MetadataAuditResult,
   type Store,
 } from "@asobeast/shared";
 
@@ -26,6 +30,21 @@ const DRAFT_VERSION = 1;
 export const scopeKey = (scope: DraftScope): string =>
   scope.store === "APP_STORE" ? scope.localization : scope.country;
 
+export const draftScopeOf = (
+  store: Store,
+  market: string,
+  localization: string | undefined,
+): DraftScope =>
+  store === "GOOGLE_PLAY"
+    ? { store, country: market }
+    : {
+        store,
+        localization:
+          localization !== undefined && isAppStoreLocalization(localization)
+            ? localization
+            : keywordFieldLocalizations(market)[0],
+      };
+
 export const listingDraftKey = (appId: string, scope: string): string =>
   `asobeast.listingDraft.${appId}.${scope}`;
 
@@ -33,6 +52,16 @@ export const draftFieldsOf = (store: Store): ListingDraftField[] =>
   LISTING_DRAFT_FIELDS.filter(
     (field) =>
       field === "description" || STORE_FIELD_LIMITS[store][field]?.indexed,
+  );
+
+export const liveDraftValues = (
+  audit: Pick<MetadataAuditResult, "store" | "fields">,
+): ListingDraftValues =>
+  Object.fromEntries(
+    draftFieldsOf(audit.store).map((field) => [
+      field,
+      audit.fields.find((entry) => entry.field === field)?.value ?? "",
+    ]),
   );
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -91,5 +120,28 @@ export function draftRequest(
       ? { localization: scope.localization }
       : { country: scope.country }),
     ...Object.fromEntries(changed.map((field) => [field, values[field]])),
+  };
+}
+
+export interface FieldCount {
+  used: number;
+  limit: number;
+  over: number;
+  text: string;
+}
+
+export function fieldCount(
+  store: Store,
+  field: ListingDraftField,
+  value: string,
+): FieldCount {
+  const limit = STORE_FIELD_LIMITS[store][field]?.limit ?? 0;
+  const used = countChars(value);
+  const over = Math.max(0, used - limit);
+  return {
+    used,
+    limit,
+    over,
+    text: `${used}/${limit}${over > 0 ? ` · ${over} over` : ""}`,
   };
 }
