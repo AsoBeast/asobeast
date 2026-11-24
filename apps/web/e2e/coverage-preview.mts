@@ -48,8 +48,17 @@ const LINTED: Record<Store, DraftField[]> = {
   GOOGLE_PLAY: ["title", "shortDescription", "description"],
 };
 
-const flat = (value: string): string =>
-  value.toLowerCase().replaceAll(",", " ");
+const phrasesOf = (value: string): string[][] => value.split(",").map(tokenize);
+
+const holdsRun = (words: string[], run: string[]): boolean =>
+  run.length > 0 &&
+  words.some((_, start) => run.every((word, at) => words[start + at] === word));
+
+const splitAcross = (texts: Texts, run: string[]): boolean =>
+  run.length > 0 &&
+  run.every((word) =>
+    JUDGED.APP_STORE.some((field) => tokenize(texts[field]).includes(word)),
+  );
 
 function liveTexts(audit: MetadataAuditResult): Texts {
   const valueOf = (field: MetadataField) =>
@@ -64,15 +73,14 @@ function liveTexts(audit: MetadataAuditResult): Texts {
 }
 
 function verdict(store: Store, texts: Texts, keyword: string): CoverageVerdict {
+  const run = tokenize(keyword);
   const fields = JUDGED[store].map((field) => ({
     field,
-    covered: flat(texts[field]).includes(keyword),
+    covered: phrasesOf(texts[field]).some((words) => holdsRun(words, run)),
   }));
-  return {
-    fields,
-    covered: fields.some((field) => field.covered),
-    wordsSplit: false,
-  };
+  const held = fields.some((field) => field.covered);
+  const wordsSplit = store === "APP_STORE" && !held && splitAcross(texts, run);
+  return { fields, covered: held || wordsSplit, wordsSplit };
 }
 
 function changeOf(
