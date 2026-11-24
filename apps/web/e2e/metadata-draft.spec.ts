@@ -160,6 +160,9 @@ test("lists the keywords a new title covers and loses", async ({ page }) => {
   expect((await request).postDataJSON()).toEqual({
     localization: "en-US",
     title: "Productivity App",
+    subtitle: "Pomodoro sessions that stick",
+    keywordField: "study timer,deep work",
+    description: expect.any(String),
   });
   await expect(section(page, "Newly covered")).toContainText(
     "productivity app",
