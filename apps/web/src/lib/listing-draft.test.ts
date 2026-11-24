@@ -102,14 +102,20 @@ describe("draftFieldsOf", () => {
 });
 
 describe("draftRequest", () => {
-  it("sends only the changed fields with the localization on the App Store", () => {
+  it("sends every field the draft shows with the localization on the App Store", () => {
     expect(
       draftRequest(
         { store: "APP_STORE", localization: "en-US" },
         { ...live, title: "Habit Tracker" },
         live,
       ),
-    ).toEqual({ localization: "en-US", title: "Habit Tracker" });
+    ).toEqual({
+      localization: "en-US",
+      title: "Habit Tracker",
+      subtitle: "Pomodoro",
+      keywordField: "",
+      description: "",
+    });
   });
 
   it("names the country on Google Play", () => {
@@ -119,7 +125,12 @@ describe("draftRequest", () => {
         { title: "Habit", shortDescription: "Track it", description: "" },
         { title: "Focus", shortDescription: "Track it", description: "" },
       ),
-    ).toEqual({ country: "us", title: "Habit" });
+    ).toEqual({
+      country: "us",
+      title: "Habit",
+      shortDescription: "Track it",
+      description: "",
+    });
   });
 
   it("answers null when nothing changed", () => {

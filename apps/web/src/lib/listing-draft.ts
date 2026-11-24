@@ -159,13 +159,14 @@ export function draftRequest(
   values: ListingDraftValues,
   live: ListingDraftValues,
 ): CoveragePreviewRequest | null {
-  const changed = changedFields(values, live);
-  if (changed.length === 0) return null;
+  if (changedFields(values, live).length === 0) return null;
   return {
     ...(scope.store === "APP_STORE"
       ? { localization: scope.localization }
       : { country: scope.country }),
-    ...Object.fromEntries(changed.map((field) => [field, values[field]])),
+    ...Object.fromEntries(
+      draftFieldsOf(scope.store).map((field) => [field, values[field] ?? ""]),
+    ),
   };
 }
 
