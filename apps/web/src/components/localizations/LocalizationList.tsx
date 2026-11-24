@@ -20,10 +20,10 @@ import {
 } from "@/lib/search-params";
 import {
   DraftedFieldStatus,
-  editorKeyOf,
   useDraftedField,
-  useHandoffGeneration,
+  useHandoffGenerations,
 } from "./DraftedFieldStatus";
+import { editorKeyOf } from "./handoff-generations";
 import { KeywordFieldAdditionStatus } from "./KeywordFieldAdditionStatus";
 import { LocalizationItem } from "./LocalizationItem";
 
@@ -58,7 +58,7 @@ export function LocalizationList({
     fromDraft === true ? requested : null,
     result.storeManaged,
   );
-  const handoffs = useHandoffGeneration(handoff);
+  const handoffs = useHandoffGenerations(handoff);
   const settleProposal = () =>
     void setLocalizationQuery(
       { fieldAdd: null, fieldLeftOut: null, fieldFromDraft: null },

@@ -5,6 +5,11 @@ import type { AppStoreLocalization } from "@asobeast/shared";
 import { listingDraftKey, parseListingDraft } from "@/lib/listing-draft";
 import { localizationName } from "@/lib/localizations";
 import { useStoredPreference } from "@/lib/use-stored-preference";
+import {
+  handoffGenerationsOf,
+  nextHandoffGenerations,
+  type HandoffGenerations,
+} from "./handoff-generations";
 
 export interface DraftedField {
   localization: AppStoreLocalization;
@@ -28,35 +33,16 @@ export function useDraftedField(
   };
 }
 
-export interface HandoffGeneration {
-  target: AppStoreLocalization | null;
-  localization: AppStoreLocalization | null;
-  generation: number;
-}
-
-export function useHandoffGeneration(
+export function useHandoffGenerations(
   handoff: DraftedField | null,
-): HandoffGeneration {
+): HandoffGenerations {
   const target = handoff?.state === "ready" ? handoff.localization : null;
-  const [seen, setSeen] = useState<HandoffGeneration>({
-    target,
-    localization: target,
-    generation: target === null ? 0 : 1,
-  });
+  const [seen, setSeen] = useState(() => handoffGenerationsOf(target));
   if (seen.target !== target) {
-    setSeen({
-      target,
-      localization: target ?? seen.localization,
-      generation: target === null ? seen.generation : seen.generation + 1,
-    });
+    setSeen(nextHandoffGenerations(seen, target));
   }
   return seen;
 }
-
-export const editorKeyOf = (
-  { localization, generation }: HandoffGeneration,
-  item: AppStoreLocalization,
-): string => (item === localization ? `handoff-${generation}` : "stored");
 
 function sentence({ localization, state }: DraftedField): string {
   switch (state) {
