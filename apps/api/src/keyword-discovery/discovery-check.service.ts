@@ -52,11 +52,11 @@ export class DiscoveryCheck {
     if (app.delistedAt || app.unlistedMarkets.includes(keyword.country)) {
       return;
     }
-    const results = await this.capture.search(keyword, finalAttempt);
-    if (!results) return;
+    const answer = await this.capture.search(keyword, finalAttempt);
+    if (!answer) return;
+    const { results, resultCount } = answer;
     const position = positionsByStoreAppId(results).get(app.storeAppId) ?? null;
     const depth = reachedDepth(results);
-    const resultCount = results.length;
     const date = utcToday();
     if (await this.nobodyTracks(keywordId)) {
       await this.capture.store(keywordId, date, results);

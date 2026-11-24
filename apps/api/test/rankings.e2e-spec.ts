@@ -846,15 +846,26 @@ describe('RankingsService milestone alerts (e2e)', () => {
 });
 
 describe('RankingsService result counts (e2e)', () => {
+  jest.setTimeout(60_000);
+
   let app: INestApplication<App>;
   let prisma: PrismaClient;
   let rankings: RankingsService;
   let api: Awaited<ReturnType<typeof ownerAgent>>;
   let results: SearchItem[] = [];
+  let answers: (SearchItem[] | Error)[] = [];
 
   const registry = {
     get: (): StoreProvider =>
-      ({ search: () => Promise.resolve(results) }) as unknown as StoreProvider,
+      ({
+        search: () => {
+          const next = answers.shift();
+          if (next === undefined) return Promise.resolve(results);
+          return next instanceof Error
+            ? Promise.reject(next)
+            : Promise.resolve(next);
+        },
+      }) as unknown as StoreProvider,
   };
 
   const seed = async (): Promise<{ you: string; keywordId: string }> => {
@@ -923,6 +934,7 @@ describe('RankingsService result counts (e2e)', () => {
 
   beforeEach(async () => {
     results = [];
+    answers = [];
     await prisma.$executeRawUnsafe(
       'TRUNCATE TABLE "App", "Keyword", "Webhook", "AlertEvent" RESTART IDENTITY CASCADE',
     );
@@ -944,6 +956,41 @@ describe('RankingsService result counts (e2e)', () => {
     expect(series).toHaveLength(1);
     expect(series[0].points).toEqual([
       { date: today(), position: null, depth: 200, resultCount: 0 },
+    ]);
+  });
+
+  it('stores the retried results of a phrase never captured before', async () => {
+    const { you, keywordId } = await seed();
+    const retried = Array.from({ length: 30 }, (_, index) => ({
+      storeAppId: index === 2 ? 'self-store' : `other-${index}`,
+      title: `App ${index}`,
+    }));
+    answers = [[], retried];
+
+    await asWorkspace(app, () => rankings.checkKeyword(keywordId));
+
+    const response = await api.get(`/apps/${you}/rankings`).expect(200);
+    const { series } = response.body as RankingSeries;
+    expect(series[0].points).toEqual([
+      { date: today(), position: 3, depth: 30, resultCount: 30 },
+    ]);
+  });
+
+  it('leaves the count unknown when the retries of a first empty answer fail', async () => {
+    const { you, keywordId } = await seed();
+    answers = [
+      [],
+      new Error('store refused'),
+      new Error('store refused'),
+      new Error('store refused'),
+    ];
+
+    await asWorkspace(app, () => rankings.checkKeyword(keywordId));
+
+    const response = await api.get(`/apps/${you}/rankings`).expect(200);
+    const { series } = response.body as RankingSeries;
+    expect(series[0].points).toEqual([
+      { date: today(), position: null, depth: 200, resultCount: null },
     ]);
   });
 

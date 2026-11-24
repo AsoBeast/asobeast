@@ -138,12 +138,12 @@ describe('RankingsService.checkKeyword', () => {
               appId: string;
               position: number | null;
               depth: number;
-              resultCount: number;
+              resultCount: number | null;
             };
             update: {
               position: number | null;
               depth: number;
-              resultCount: number;
+              resultCount: number | null;
             };
           },
         ]
@@ -327,6 +327,12 @@ describe('RankingsService.checkKeyword', () => {
 
   const dispatched = (dispatch: jest.Mock<Promise<void>, [AlertPayload]>) =>
     dispatch.mock.calls.map(([payload]) => payload);
+
+  const checked = async (service: RankingsService): Promise<void> => {
+    const work = service.checkKeyword('kw1');
+    await jest.runAllTimersAsync();
+    await work;
+  };
 
   const placed = (placements: Record<string, number>): SearchItem[] =>
     Array.from({ length: 40 }, (_, index) => {
@@ -546,7 +552,7 @@ describe('RankingsService.checkKeyword', () => {
       rankedEarlier: null,
     });
 
-    await service.checkKeyword('kw1');
+    await checked(service);
 
     expect(upsert).toHaveBeenCalled();
     for (const [args] of upsert.mock.calls) {
@@ -709,7 +715,7 @@ describe('RankingsService.checkKeyword', () => {
       previous: { position: 3, resultCount: 12 },
     });
 
-    await service.checkKeyword('kw1');
+    await checked(service);
 
     const payloads = dispatched(dispatch);
     expect(payloads[0]).toMatchObject({
@@ -734,7 +740,7 @@ describe('RankingsService.checkKeyword', () => {
       previous: { position: 3 },
     });
 
-    await service.checkKeyword('kw1');
+    await checked(service);
 
     const payloads = dispatched(dispatch);
     expect(payloads[0]).not.toHaveProperty('fromResultCount');
@@ -1129,15 +1135,15 @@ describe('RankingsService.checkKeyword', () => {
       expect(upsert).toHaveBeenCalled();
     });
 
-    it('accepts it at once for a phrase that has never ranked anything', async () => {
+    it('confirms it with a retry for a phrase that has never ranked anything', async () => {
       const { service, search, upsert } = setup({
         searchResults: [],
         previousSerp: null,
       });
 
-      await service.checkKeyword('kw1');
+      await checked(service);
 
-      expect(search).toHaveBeenCalledTimes(1);
+      expect(search).toHaveBeenCalledTimes(1 + EMPTY_ANSWER_RETRIES.APP_STORE);
       expect(upsert).toHaveBeenCalled();
     });
   });

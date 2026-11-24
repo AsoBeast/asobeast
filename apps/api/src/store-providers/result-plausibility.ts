@@ -38,6 +38,27 @@ export async function askAgainWhileEmpty<T>(
   return results;
 }
 
+export async function confirmEmptyAnswer<T>(
+  ask: () => Promise<T[]>,
+  retries: number,
+): Promise<{ confirmed: boolean; results: T[] }> {
+  let confirmed = false;
+  for (let retry = 0; retry < retries; retry++) {
+    await new Promise((resolve) =>
+      setTimeout(resolve, EMPTY_ANSWER_RETRY_DELAY_MS),
+    );
+    let results: T[];
+    try {
+      results = await ask();
+    } catch {
+      continue;
+    }
+    if (results.length > 0) return { confirmed: true, results };
+    confirmed = true;
+  }
+  return { confirmed, results: [] };
+}
+
 interface LastAttempt<T> {
   finalAttempt: boolean;
   logger: Logger;

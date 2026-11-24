@@ -41,7 +41,7 @@ interface RecordInput {
   date: Date;
   positionByStoreAppId: Map<string, number>;
   depth: number;
-  resultCount: number;
+  resultCount: number | null;
   primaryNames: Map<string, string | null>;
   competitorsOf: Map<string, CompetitorRef[]>;
 }
@@ -79,12 +79,12 @@ export class RankingsService {
       return;
     }
 
-    const results = await this.capture.search(keyword, finalAttempt);
-    if (!results) return;
+    const answer = await this.capture.search(keyword, finalAttempt);
+    if (!answer) return;
+    const { results, resultCount } = answer;
 
     const positionByStoreAppId = positionsByStoreAppId(results);
     const depth = reachedDepth(results);
-    const resultCount = results.length;
     const date = utcToday();
     const baseline = await this.rankingAlerts.entrantBaseline(keywordId, date);
     const entries = await this.capture.store(keywordId, date, results);

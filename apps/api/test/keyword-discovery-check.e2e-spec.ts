@@ -31,6 +31,7 @@ describe('keyword discovery check (e2e)', () => {
   let appId: string;
   let keywordId: string;
   let answer = searchResults;
+  let answers: (typeof searchResults | Error)[] = [];
 
   const today = () => new Date(`${utcDayOf(new Date())}T00:00:00.000Z`);
 
@@ -78,7 +79,13 @@ describe('keyword discovery check (e2e)', () => {
     const get = registry.get.bind(registry);
     jest.spyOn(registry, 'get').mockImplementation((store: Store) => ({
       ...get(store),
-      search: () => Promise.resolve(answer),
+      search: () => {
+        const next = answers.shift();
+        if (next === undefined) return Promise.resolve(answer);
+        return next instanceof Error
+          ? Promise.reject(next)
+          : Promise.resolve(next);
+      },
     }));
     await harness.prisma.workspace.upsert({
       where: { id: OTHER_WORKSPACE_ID },
@@ -89,6 +96,7 @@ describe('keyword discovery check (e2e)', () => {
 
   beforeEach(async () => {
     answer = searchResults;
+    answers = [];
     await resetCapacity(harness);
     appId = (
       await harness.prisma.app.create({
@@ -159,6 +167,45 @@ describe('keyword discovery check (e2e)', () => {
       ownSearch: true,
       checkedOn: today(),
     });
+  });
+
+  it('stores the retried results of a phrase nobody tracks', async () => {
+    const retried = Array.from({ length: 30 }, (_, index) => ({
+      storeAppId: `rival-${index}`,
+      title: `Rival ${index}`,
+    }));
+    answers = [[], retried];
+
+    await runCheck();
+
+    expect(await discovery()).toMatchObject({
+      position: null,
+      depth: 30,
+      resultCount: 30,
+      ownSearch: true,
+      checkedOn: today(),
+    });
+    expect(await capturedToday()).toBe(30);
+  });
+
+  it('leaves the count unknown when every retry fails for a phrase nobody tracks', async () => {
+    answers = [
+      [],
+      new Error('store refused'),
+      new Error('store refused'),
+      new Error('store refused'),
+    ];
+
+    await runCheck();
+
+    expect(await discovery()).toMatchObject({
+      position: null,
+      depth: 200,
+      resultCount: null,
+      ownSearch: true,
+      checkedOn: today(),
+    });
+    expect(await capturedToday()).toBe(0);
   });
 
   it('stores no capture of a phrase another workspace tracks', async () => {

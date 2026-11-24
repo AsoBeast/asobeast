@@ -34,7 +34,7 @@ export interface MilestoneCheck {
   keyword: KeywordScope;
   date: Date;
   depth: number;
-  resultCount: number;
+  resultCount: number | null;
   capture: RankCapture;
   competitors: CompetitorCapture[];
 }
@@ -44,7 +44,7 @@ interface ConfirmedContext {
   app: { id: string; name: string | null };
   keyword: KeywordScope;
   depth: number;
-  resultCount: number;
+  resultCount: number | null;
   window: ConfirmationWindow;
 }
 
@@ -117,7 +117,11 @@ export class RankingAlertsService {
     app: { id: string; name: string | null },
     keyword: KeywordScope,
     date: Date,
-    capture: { position: number | null; depth: number; resultCount: number },
+    capture: {
+      position: number | null;
+      depth: number;
+      resultCount: number | null;
+    },
   ): Promise<void> {
     const { position, depth, resultCount } = capture;
     const previous = await this.previousRanking(app.id, keyword.id, date);
