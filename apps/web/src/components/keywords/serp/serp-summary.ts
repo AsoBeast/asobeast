@@ -33,7 +33,7 @@ export interface SerpSummaryFacts {
 
 type CheckedKeyword = Pick<
   TrackedKeywordItem,
-  "latestPosition" | "latestDepth" | "latestResultCount"
+  "latestPosition" | "latestDepth" | "latestResultCount" | "latestCheckedOn"
 >;
 
 export const movedOf = (entry: SerpEntryItem): Moved => ({
@@ -44,6 +44,12 @@ export const movedOf = (entry: SerpEntryItem): Moved => ({
 
 export const isNewestDay = (snapshot: SerpSnapshot): boolean =>
   snapshot.dates === undefined || snapshot.date === snapshot.dates[0];
+
+const describesLatestCheck = (
+  snapshot: SerpSnapshot,
+  keyword: CheckedKeyword,
+): boolean =>
+  snapshot.date === null || (keyword.latestCheckedOn ?? "") <= snapshot.date;
 
 function positionOf(
   snapshot: SerpSnapshot,
@@ -57,6 +63,7 @@ function positionOf(
     return { kind: "listed", position: yours.position, moved: movedOf(yours) };
   }
   if (!keyword || !isNewestDay(snapshot)) return { kind: "absent" };
+  if (!describesLatestCheck(snapshot, keyword)) return { kind: "absent" };
   const { latestPosition, latestDepth, latestResultCount } = keyword;
   if (latestPosition !== null && latestPosition > snapshot.entries.length) {
     return {

@@ -664,6 +664,8 @@ export const PL_HISTORY_COOKIE = "e2e-pl-history";
 
 export const NO_APPS_COOKIE = "e2e-no-apps";
 
+export const STALE_CAPTURE_COOKIE = "e2e-stale-capture";
+
 export const NO_APPS_KEYWORD_ID = "kw-4";
 
 export const NO_APPS_DISCOVERY_KEYWORD_ID = "disc-app-1-us-focus-music";

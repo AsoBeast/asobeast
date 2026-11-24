@@ -36,7 +36,11 @@ import {
   withDiscoveryIcons,
 } from "./competitors-fixtures.mts";
 import { analysisOf, visibilityComparedFor } from "./gap-mock.mts";
-import { SERP_HISTORY, serpOnDay } from "./serp-history.mts";
+import {
+  SERP_HISTORY,
+  SERP_STALE_HISTORY,
+  serpOnDay,
+} from "./serp-history.mts";
 import "./keyword-map.mts";
 import "./keyword-insights.mts";
 import { planMockImport } from "./keyword-import.mts";
@@ -129,6 +133,7 @@ import {
   PL_HISTORY_KEYWORD,
   PL_HISTORY_SERIES,
   NO_APPS_COOKIE,
+  STALE_CAPTURE_COOKIE,
   NO_APPS_KEYWORD_ID,
   NO_APPS_DISCOVERY_KEYWORD_ID,
   NO_APPS_SERIES,
@@ -3936,15 +3941,20 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/keywords\/([^/]+)\/serp$/,
     handler: ([keywordId], req, res) => {
-      const history = SERP_HISTORY[keywordId];
-      if (history) {
+      const history =
+        keywordId === NO_APPS_KEYWORD_ID &&
+        hasCookie(req, STALE_CAPTURE_COOKIE, "1")
+          ? SERP_STALE_HISTORY
+          : SERP_HISTORY;
+      const days = history[keywordId];
+      if (days) {
         const date = new URL(req.url ?? "/", "http://mock").searchParams.get(
           "date",
         );
         return json(
           res,
           200,
-          withTrackedCompetitors(keywordId, serpOnDay(history, date)),
+          withTrackedCompetitors(keywordId, serpOnDay(days, date)),
         );
       }
       const snapshot = SERP_SNAPSHOTS[keywordId];

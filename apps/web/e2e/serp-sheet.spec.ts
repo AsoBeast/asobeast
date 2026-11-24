@@ -4,7 +4,7 @@ import { contrastViolations, THEMES } from "./contrast-check.mts";
 import { missingDescriptionIds } from "./described-by.mts";
 import { holdRequest, pressFromKeyboard } from "./held-request.mts";
 import { hydrated } from "./hydrated.mts";
-import { NO_APPS_COOKIE } from "./fixtures.mts";
+import { NO_APPS_COOKIE, STALE_CAPTURE_COOKIE } from "./fixtures.mts";
 import { seedCookies } from "./routes.mts";
 import {
   SERP_HISTORY_DAYS,
@@ -395,6 +395,24 @@ test("says the store lists no apps when the newest check listed none", async ({
   await expect(
     sheet.getByText("The store lists no apps for this search"),
   ).toBeVisible();
+  await expect(sheet.getByText("Not in the top 200")).toHaveCount(0);
+});
+
+test("an older captured day beside a newer check claims no position", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, {
+    [NO_APPS_COOKIE]: "1",
+    [STALE_CAPTURE_COOKIE]: "1",
+  });
+  await page.goto("/apps/app-1/keywords?serp=kw-4");
+
+  const sheet = serpSheet(page);
+  await expect(sheet.getByText("Productivity App").first()).toBeVisible();
+  await expect(
+    sheet.getByText("The store lists no apps for this search"),
+  ).toHaveCount(0);
   await expect(sheet.getByText("Not in the top 200")).toHaveCount(0);
 });
 

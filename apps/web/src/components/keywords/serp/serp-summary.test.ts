@@ -43,7 +43,7 @@ function snapshot(
 const keyword = (
   over: Pick<
     TrackedKeywordItem,
-    "latestPosition" | "latestDepth" | "latestResultCount"
+    "latestPosition" | "latestDepth" | "latestResultCount" | "latestCheckedOn"
   >,
 ) => over as TrackedKeywordItem;
 
@@ -106,9 +106,26 @@ describe("serpSummary position", () => {
           latestPosition: null,
           latestDepth: 200,
           latestResultCount: 0,
+          latestCheckedOn: NEWEST,
         }),
       ).position,
     ).toEqual({ kind: "noApps" });
+  });
+
+  it("claims no position when a newer check captured nothing", () => {
+    const newerCheck = keyword({
+      latestPosition: null,
+      latestDepth: 200,
+      latestResultCount: 0,
+      latestCheckedOn: "2026-11-02",
+    });
+
+    expect(
+      serpSummary(snapshot(listOf(50)), VIEWER, newerCheck).position,
+    ).toEqual({ kind: "absent" });
+    expect(
+      serpSummary(snapshot(listOf(10), OLDER), VIEWER, newerCheck).position,
+    ).toEqual({ kind: "absent" });
   });
 
   it("keeps the depth bound for a row written before the count existed", () => {
