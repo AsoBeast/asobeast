@@ -3,22 +3,10 @@ import { Store } from '@prisma/client';
 import {
   AppStoreLocalization,
   assertStorefront,
-  countChars,
-  KEYWORD_FIELD_CHAR_LIMIT,
   KeywordCoverageRow,
-  lintDescription,
-  lintKeywordField,
-  lintShortDescription,
-  lintSubtitle,
-  lintTitle,
-  LintContext,
   MetadataAuditResult,
-  MetadataField,
-  MetadataFieldAudit,
   keywordFieldLocalizations,
   ScreenshotItem,
-  STORE_FIELD_LIMITS,
-  tokenize,
   TrackedKeywordItem,
 } from '@asobeast/shared';
 import { storedKeywordFields } from '../keywords/keyword-field-index';
@@ -26,6 +14,11 @@ import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { suggestKeywordField } from './keyword-field-suggestion';
 import { judgeKeywordCoverage } from './keyword-coverage-judge';
+import {
+  lintContextOf,
+  listingFieldAudits,
+  listingFieldTexts,
+} from './listing-field-audits';
 import { FieldPhrases, fieldPhrases, keywordFieldOf } from './listing-surfaces';
 import {
   latestListingTexts,
@@ -87,19 +80,18 @@ export class MetadataService {
       app.store === Store.APP_STORE
         ? keywordFieldOf(keywordFields, viewLocalization)
         : '';
-    const context: LintContext = {
-      titleWords: tokenize(view?.title ?? ''),
-      subtitleWords: tokenize(view?.subtitle ?? ''),
-      brandTokens: tokenize(app.name ?? ''),
-      competitorNames: competitors
-        .map((competitor) => competitor.name)
-        .filter((name): name is string => Boolean(name)),
-      trackedKeywords: active.map((item) => item.text),
-    };
-    const fields =
-      app.store === Store.GOOGLE_PLAY
-        ? this.playFields(view, context)
-        : this.appStoreFields(view, context, keywordFieldValue);
+    const texts = listingFieldTexts(view, keywordFieldValue);
+    const fields = listingFieldAudits(
+      app.store,
+      texts,
+      lintContextOf(texts, {
+        appName: app.name,
+        competitorNames: competitors
+          .map((competitor) => competitor.name)
+          .filter((name): name is string => Boolean(name)),
+        trackedKeywords: active.map((item) => item.text),
+      }),
+    );
 
     const coverage = this.judgeCoverage(app, active, read, keywordFields);
     const shots = await this.screenshotsOf(app.store, listings, [
@@ -195,79 +187,6 @@ export class MetadataService {
     };
   }
 
-  private playFields(
-    view: ListingTexts | undefined,
-    context: LintContext,
-  ): MetadataFieldAudit[] {
-    const store = Store.GOOGLE_PLAY;
-    const title = view?.title ?? '';
-    const summary = view?.summary ?? '';
-    const description = view?.description ?? '';
-    return [
-      this.field(store, 'title', title, lintTitle(title, 30, store)),
-      this.field(
-        store,
-        'shortDescription',
-        summary,
-        lintShortDescription(summary, context, 80),
-      ),
-      this.field(
-        store,
-        'description',
-        description,
-        lintDescription(
-          description,
-          STORE_FIELD_LIMITS.GOOGLE_PLAY.description!.limit,
-        ),
-      ),
-    ];
-  }
-
-  private appStoreFields(
-    view: ListingTexts | undefined,
-    context: LintContext,
-    keywordFieldValue: string,
-  ): MetadataFieldAudit[] {
-    const store = Store.APP_STORE;
-    const title = view?.title ?? '';
-    const subtitle = view?.subtitle ?? '';
-    const description = view?.description ?? '';
-    const keywordField =
-      keywordFieldValue.length > 0
-        ? [
-            this.field(
-              store,
-              'keywordField',
-              keywordFieldValue,
-              lintKeywordField(
-                keywordFieldValue,
-                context,
-                KEYWORD_FIELD_CHAR_LIMIT,
-              ),
-            ),
-          ]
-        : [];
-    return [
-      this.field(store, 'title', title, lintTitle(title, 30, store)),
-      this.field(
-        store,
-        'subtitle',
-        subtitle,
-        lintSubtitle(subtitle, context, 30),
-      ),
-      ...keywordField,
-      this.field(
-        store,
-        'description',
-        description,
-        lintDescription(
-          description,
-          STORE_FIELD_LIMITS.APP_STORE.description!.limit,
-        ),
-      ),
-    ];
-  }
-
   private judgeCoverage(
     app: { store: Store; country: string },
     active: TrackedKeywordItem[],
@@ -288,23 +207,6 @@ export class MetadataService {
         listingCountry,
       };
     });
-  }
-
-  private field(
-    store: Store,
-    field: MetadataField,
-    value: string,
-    issues: MetadataFieldAudit['issues'],
-  ): MetadataFieldAudit {
-    const limit = STORE_FIELD_LIMITS[store][field]!;
-    return {
-      field,
-      value,
-      chars: countChars(value),
-      limit: limit.limit,
-      indexed: limit.indexed,
-      issues,
-    };
   }
 
   private async ensureApp(appId: string): Promise<{
