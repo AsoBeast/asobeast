@@ -1,15 +1,9 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import {
-  useMutation,
-  useMutationState,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, Search } from "lucide-react";
 import { useQueryState } from "nuqs";
-import { toast } from "sonner";
 import {
   isStoreSuggestionStrategy,
   type KeywordSuggestionStrategy,
@@ -22,22 +16,19 @@ import {
   SECTION_TOGGLE,
 } from "@/components/layout/panel-classes";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
-import { addKeywords, ApiError } from "@/lib/api";
 import { storeLabel } from "@/lib/format";
-import {
-  invalidateKeywordMutation,
-  keywordsOptions,
-  suggestionsOptions,
-} from "@/lib/queries";
+import { keywordsOptions, suggestionsOptions } from "@/lib/queries";
 import { suggestionStrategyParser } from "@/lib/search-params";
-import { useKeyedSingleFlight } from "@/lib/single-flight";
 import { cn } from "@/lib/utils";
+import { KeywordIdeas } from "./KeywordIdeas";
 import { SpiderDialog } from "./SpiderDialog";
 import { SuggestionList, suggestionListState } from "./SuggestionList";
 import {
   TrackSelectedButton,
   useTrackSelected,
 } from "./TrackSelectedSuggestions";
+import { useIdeasSeed } from "./use-ideas-seed";
+import { useTrackSuggestion } from "./use-track-suggestion";
 import { useSuggestionTicks } from "./use-suggestion-ticks";
 import { selectionScope } from "./suggestion-selection";
 import { STRATEGIES } from "./suggestion-strategies";
@@ -51,11 +42,11 @@ export function SuggestionsPanel({
   country: string;
   store: Store;
 }) {
-  const queryClient = useQueryClient();
   const [strategy, setStrategy] = useQueryState(
     "strategy",
     suggestionStrategyParser,
   );
+  const { seed, seeded, sectionToggle, close: closeIdeas } = useIdeasSeed();
   const liveLookup = isStoreSuggestionStrategy(strategy);
 
   const tracked = useQuery(keywordsOptions(id, country));
@@ -68,33 +59,10 @@ export function SuggestionsPanel({
 
   const suggestions = useQuery({
     ...suggestionsOptions(id, strategy, country),
-    enabled: open,
+    enabled: open && !seeded,
   });
 
-  const trackKey = ["track-suggestion", id, country] as const;
-  const track = useMutation({
-    mutationKey: trackKey,
-    mutationFn: (text: string) => addKeywords(id, [text], country),
-    onSuccess: (_data, text) => {
-      invalidateKeywordMutation(queryClient, id);
-      toast.success(`Tracking ${text}`);
-    },
-    onError: (error, text) =>
-      toast.error(
-        error instanceof ApiError
-          ? error.envelope.message
-          : `Could not track ${text}`,
-      ),
-  });
-  const trackKeyOf = useCallback(
-    (text: string) => JSON.stringify([id, country, text]),
-    [id, country],
-  );
-  const trackOnce = useKeyedSingleFlight(track, trackKeyOf);
-  const trackingTexts = useMutationState({
-    filters: { mutationKey: trackKey, status: "pending" },
-    select: (mutation) => mutation.state.variables,
-  }).filter((text): text is string => typeof text === "string");
+  const { trackOnce, trackingTexts } = useTrackSuggestion(id, country);
 
   const listState = suggestionListState(suggestions);
   const scope = selectionScope(country, strategy);
@@ -114,21 +82,36 @@ export function SuggestionsPanel({
           <h2>
             <button
               type="button"
-              onClick={() => setOpen((value) => !value)}
-              aria-expanded={open}
+              ref={sectionToggle}
+              onClick={() =>
+                seeded ? closeIdeas() : setOpen((value) => !value)
+              }
+              aria-expanded={open || seeded}
               className={SECTION_TOGGLE}
             >
               Suggestions
               <ChevronDown
                 aria-hidden
-                className={cn(SECTION_CHEVRON, !open && "-rotate-90")}
+                className={cn(
+                  SECTION_CHEVRON,
+                  !(open || seeded) && "-rotate-90",
+                )}
               />
             </button>
           </h2>
         </CardTitle>
       </CardHeader>
 
-      {open ? (
+      {seeded ? (
+        <CardContent className="flex flex-col gap-4">
+          <KeywordIdeas
+            id={id}
+            country={country}
+            seed={seed}
+            onClose={closeIdeas}
+          />
+        </CardContent>
+      ) : open ? (
         <CardContent className="flex flex-col gap-4">
           <p className="text-body text-muted-foreground">
             Phrases from your listing, your competitors, your reviews and store

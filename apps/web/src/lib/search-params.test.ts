@@ -112,6 +112,7 @@ import {
   SORT_DIRECTIONS,
   sortDirectionParser,
   spiderTermParser,
+  ideasSeedParser,
   suggestionStrategyParser,
   visibilityRangeParser,
   fieldAddParser,
@@ -182,6 +183,7 @@ const STRING_PARSERS = [
   ["serp", serpParser],
   ["breakdown", breakdownParser],
   ["spiderTerm", spiderTermParser],
+  ["ideasSeed", ideasSeedParser],
   ["search", searchParser],
 ] as const;
 

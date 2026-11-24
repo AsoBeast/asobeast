@@ -456,6 +456,8 @@ export const keywordSheetParser = parseAsString.withDefault("");
 
 export const spiderTermParser = parseAsString.withDefault("");
 
+export const ideasSeedParser = parseAsString.withDefault("");
+
 export const ratingsRangeParser =
   parseAsStringLiteral(RATINGS_RANGES).withDefault("30d");
 

@@ -18,6 +18,7 @@ import { ImportKeywordsDialog } from "./ImportKeywordsDialog";
 import { KeywordMarketSelect } from "./KeywordMarketSelect";
 import { KeywordCombinations } from "./KeywordCombinations";
 import { KeywordViewSwitch } from "./KeywordViewSwitch";
+import { useIdeasReturn } from "./use-ideas-seed";
 import { SuggestionsPanel } from "./SuggestionsPanel";
 import { TrackedKeywordsTab } from "./TrackedKeywordsTab";
 
@@ -35,6 +36,7 @@ export function KeywordsWorkspace({
   discoveries: boolean;
 }) {
   const [country] = useQueryState("country", countryParser);
+  const ideas = useIdeasReturn();
   const [tab, setTab] = useKeywordsTab();
   const handOffFocus = useFocusAfterCommit();
   const market = country || homeCountry;
@@ -94,7 +96,7 @@ export function KeywordsWorkspace({
           clearFocus={addKeywords}
           onFindKeywords={discoveries ? findKeywords : undefined}
         >
-          {discoveries ? null : research}
+          {discoveries && ideas.length === 0 ? null : research}
         </TrackedKeywordsTab>
       )}
     </div>

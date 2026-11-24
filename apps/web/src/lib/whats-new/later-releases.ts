@@ -15,6 +15,11 @@ export const LATER_RELEASES: readonly Release[] = [
       },
       {
         kind: "new",
+        title: "Ideas from a keyword row",
+        text: "The menu of a tracked keyword has an Ideas item that opens suggestions for that keyword in its market. Find ideas runs a deep search on it, you tick results to track several at once, and Add top 5 ticks the first five you do not track yet.",
+      },
+      {
+        kind: "new",
         title: "A ratings goal",
         text: "Pick the average you want the store to show and the number of days, and the Reviews page says how many five-star ratings it takes to get there and how fast they need to come.",
       },

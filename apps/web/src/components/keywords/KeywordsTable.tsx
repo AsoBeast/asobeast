@@ -15,6 +15,8 @@ import {
   keywordsOptions,
 } from "@/lib/queries";
 import {
+  countryParser,
+  ideasSeedParser,
   keywordFilterParsers,
   keywordViewParser,
   trendWindowParser,
@@ -118,6 +120,18 @@ export function KeywordsTable({
       void setSerpState({ serp: keywordId, serpDate: null }),
     [setSerpState],
   );
+  const [, setIdeas] = useQueryStates({
+    ideas: ideasSeedParser,
+    country: countryParser,
+  });
+  const openIdeas = useCallback(
+    (keyword: TrackedKeywordItem) =>
+      void setIdeas({
+        ideas: keyword.text,
+        ...(keyword.country === country ? {} : { country: keyword.country }),
+      }),
+    [setIdeas, country],
+  );
   const buildColumns = useCallback(
     (series: TrendSeries | undefined, state: TrendState = "ready") =>
       keywordColumns({
@@ -128,8 +142,18 @@ export function KeywordsTable({
         today,
         trend: { window: trendWindow, series, state },
         onOpenSerp: openSerp,
+        onOpenIdeas: openIdeas,
       }),
-    [id, store, homeCountry, multiMarket, today, trendWindow, openSerp],
+    [
+      id,
+      store,
+      homeCountry,
+      multiMarket,
+      today,
+      trendWindow,
+      openSerp,
+      openIdeas,
+    ],
   );
   const shellColumns = useMemo(() => buildColumns(undefined), [buildColumns]);
 
