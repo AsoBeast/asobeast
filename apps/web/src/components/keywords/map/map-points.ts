@@ -3,7 +3,7 @@ import {
   formatCheckedPosition,
   keywordLabel,
   listsNoApps,
-  NO_APPS_SENTENCE,
+  noAppsWords,
   truncateChars,
   type TrackedKeywordItem,
 } from "@asobeast/shared";
@@ -19,8 +19,6 @@ import { opportunityOrder } from "./dot-navigation";
 export const MAP_LABEL_LIMIT = 5;
 export const MAP_LABEL_CHARS = 22;
 export const OVERLAY_GAP = 8;
-
-const noAppsWords = `${NO_APPS_SENTENCE.charAt(0).toLowerCase()}${NO_APPS_SENTENCE.slice(1)}`;
 
 export interface MapPoint {
   keywordId: string;

@@ -1,14 +1,12 @@
 import {
   listsNoApps,
-  NO_APPS_SENTENCE,
+  noAppsWords,
   type TrackedKeywordItem,
 } from "@asobeast/shared";
 import { pluralize } from "@/lib/format";
 import { activeKeywordCount } from "./setup-progress";
 
 export const FIRST_POSITIONS_LIMIT = 8;
-
-const noAppsWords = `${NO_APPS_SENTENCE.charAt(0).toLowerCase()}${NO_APPS_SENTENCE.slice(1)}`;
 
 export interface FirstPositionRow {
   keywordId: string;

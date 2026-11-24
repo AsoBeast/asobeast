@@ -1,6 +1,6 @@
 import {
   listsNoApps,
-  NO_APPS_SENTENCE,
+  noAppsWords,
   type KeywordDiscoveryList,
 } from "@asobeast/shared";
 import { pluralize } from "@/lib/format";
@@ -17,8 +17,6 @@ export interface FirstDiscoveryRow {
 export type FirstDiscoveries =
   | { status: "collecting" }
   | { status: "ready"; headline: string; rows: FirstDiscoveryRow[] };
-
-const noAppsWords = `${NO_APPS_SENTENCE.charAt(0).toLowerCase()}${NO_APPS_SENTENCE.slice(1)}`;
 
 const rankOf = (item: KeywordDiscoveryList["items"][number]): string => {
   if (item.position !== null) return `#${item.position}`;

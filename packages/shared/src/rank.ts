@@ -6,6 +6,8 @@ export const NO_APPS_LABEL = 'No apps';
 
 export const NO_APPS_SENTENCE = 'The store lists no apps for this search';
 
+export const noAppsWords = `${NO_APPS_SENTENCE.charAt(0).toLowerCase()}${NO_APPS_SENTENCE.slice(1)}`;
+
 export const listsNoApps = (resultCount: number | null | undefined): boolean =>
   resultCount === 0;
 

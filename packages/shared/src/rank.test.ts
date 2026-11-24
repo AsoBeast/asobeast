@@ -9,6 +9,7 @@ import {
   listsNoApps,
   NO_APPS_LABEL,
   NO_APPS_SENTENCE,
+  noAppsWords,
   RANK_DEPTH,
   RANK_MILESTONE_DIRECTIONS,
   RANK_MILESTONE_TIERS,
@@ -45,6 +46,7 @@ describe('listsNoApps', () => {
   it('carries the label and the sentence', () => {
     expect(NO_APPS_LABEL).toBe('No apps');
     expect(NO_APPS_SENTENCE).toBe('The store lists no apps for this search');
+    expect(noAppsWords).toBe('the store lists no apps for this search');
   });
 });
 
