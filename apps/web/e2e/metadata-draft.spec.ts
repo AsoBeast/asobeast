@@ -176,6 +176,21 @@ test("lists the keywords a new title covers and loses", async ({ page }) => {
   ).toBeVisible();
 });
 
+test("judges a comma in the title as a space", async ({ page }) => {
+  await page.goto("/apps/app-1/metadata?mode=draft");
+  await (await hydrated(field(page, "Title"))).fill("Focus,Timer");
+
+  await panel(page)
+    .getByRole("button", { name: /^Show all \d+ still covered$/ })
+    .click();
+
+  await expect(
+    section(page, "Still covered")
+      .getByRole("listitem")
+      .filter({ hasText: "focus timer" }),
+  ).toContainText("Title");
+});
+
 test("waits for typing to settle before asking", async ({ page }) => {
   const sent = previewRequests(page);
   await page.goto("/apps/app-1/metadata?mode=draft");

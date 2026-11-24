@@ -48,7 +48,8 @@ const LINTED: Record<Store, DraftField[]> = {
   GOOGLE_PLAY: ["title", "shortDescription", "description"],
 };
 
-const phrasesOf = (value: string): string[][] => value.split(",").map(tokenize);
+const phrasesOf = (field: DraftField, value: string): string[][] =>
+  field === "keywordField" ? value.split(",").map(tokenize) : [tokenize(value)];
 
 const holdsRun = (words: string[], run: string[]): boolean =>
   run.length > 0 &&
@@ -76,7 +77,9 @@ function verdict(store: Store, texts: Texts, keyword: string): CoverageVerdict {
   const run = tokenize(keyword);
   const fields = JUDGED[store].map((field) => ({
     field,
-    covered: phrasesOf(texts[field]).some((words) => holdsRun(words, run)),
+    covered: phrasesOf(field, texts[field]).some((words) =>
+      holdsRun(words, run),
+    ),
   }));
   const held = fields.some((field) => field.covered);
   const wordsSplit = store === "APP_STORE" && !held && splitAcross(texts, run);
