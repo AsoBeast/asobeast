@@ -86,10 +86,7 @@ export function MetadataAuditView({
     <CoverageByField
       rows={result.coverage}
       withScreenshotText={withScreenshotText}
-      className={cn(
-        "col-span-12",
-        draftMode ? "@5xl/metadata:col-span-5" : "@5xl/metadata:col-span-4",
-      )}
+      className="col-span-12 @5xl/metadata:col-span-4"
     />
   ) : null;
 
@@ -101,7 +98,6 @@ export function MetadataAuditView({
           audit={result}
           market={market}
           localization={localization}
-          aside={coverageByField}
         />
       ) : (
         <div className="grid grid-cols-12 items-start gap-6">

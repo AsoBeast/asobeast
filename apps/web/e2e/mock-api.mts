@@ -71,7 +71,9 @@ import { seededInspections } from "./keyword-inspection-fixtures.mts";
 import { funnelFor } from "./store-funnel.mts";
 import {
   COVERAGE_PREVIEW_FAIL_COOKIE,
+  COVERAGE_PREVIEW_MARKETS_COOKIE,
   mockCoveragePreview,
+  previewMarketsOf,
 } from "./coverage-preview.mts";
 import {
   STORE_CONNECT_OFF_COOKIE,
@@ -4580,6 +4582,7 @@ const routes: Route[] = [
             { ...audit, appId: id, store },
             dataset.detail.country,
             body,
+            previewMarketsOf(cookieValue(req, COVERAGE_PREVIEW_MARKETS_COOKIE)),
           ),
         );
       });

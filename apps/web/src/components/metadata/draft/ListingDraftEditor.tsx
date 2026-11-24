@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { ChevronRight, RotateCcw } from "lucide-react";
 import type { MetadataAuditResult } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
@@ -11,12 +11,15 @@ import {
 } from "@/components/ui/collapsible";
 import {
   draftFieldsOf,
+  draftRequest,
   draftScopeOf,
   liveDraftValues,
   scopeKey,
   type ListingDraftField,
 } from "@/lib/listing-draft";
+import { DraftCoveragePanel } from "./DraftCoveragePanel";
 import { DraftFieldInput } from "./DraftFieldInput";
+import { useCoveragePreview } from "./use-coverage-preview";
 import { useListingDraft } from "./use-listing-draft";
 
 export function ListingDraftEditor({
@@ -24,18 +27,25 @@ export function ListingDraftEditor({
   audit,
   market,
   localization,
-  aside,
 }: {
   id: string;
   audit: MetadataAuditResult;
   market: string;
   localization: string | undefined;
-  aside: ReactNode;
 }) {
   const store = audit.store;
-  const scope = draftScopeOf(store, market, localization);
+  const scope = useMemo(
+    () => draftScopeOf(store, market, localization),
+    [store, market, localization],
+  );
   const live = useMemo(() => liveDraftValues(audit), [audit]);
   const draft = useListingDraft(id, scopeKey(scope), live);
+  const request = useMemo(
+    () => draftRequest(scope, draft.values, live),
+    [scope, draft.values, live],
+  );
+  const preview = useCoveragePreview(id, request);
+  const lint = preview.requested ? preview.query.data?.fields : undefined;
   const [descriptionOpen, setDescriptionOpen] = useState(false);
   const unchanged = draft.changed.length === 0;
   const fields = draftFieldsOf(store);
@@ -47,6 +57,7 @@ export function ListingDraftEditor({
       field={field}
       value={draft.values[field] ?? ""}
       onChange={(value) => draft.setField(field, value)}
+      issues={lint?.find((entry) => entry.field === field)?.issues ?? []}
     />
   );
 
@@ -85,7 +96,10 @@ export function ListingDraftEditor({
           </Button>
         </div>
       </section>
-      {aside}
+      <DraftCoveragePanel
+        preview={preview}
+        className="col-span-12 @5xl/metadata:col-span-5"
+      />
     </div>
   );
 }

@@ -1,6 +1,34 @@
-import type { Page } from "@playwright/test";
+import type { Page, Request } from "@playwright/test";
+import {
+  COVERAGE_PREVIEW_FAIL_COOKIE,
+  COVERAGE_PREVIEW_MARKETS_COOKIE,
+} from "./coverage-preview.mts";
+import { holdRequest } from "./held-request.mts";
 import { hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
+
+const PREVIEW_ROUTE = /\/metadata\/coverage-preview$/;
+
+const panel = (page: Page) =>
+  page.getByRole("region", { name: "Draft coverage" });
+const section = (page: Page, name: string) =>
+  panel(page).getByRole("list", { name });
+
+async function withCookie(page: Page, name: string, value: string) {
+  await page
+    .context()
+    .addCookies([{ name, value, domain: "localhost", path: "/" }]);
+}
+
+function previewRequests(page: Page): Request[] {
+  const sent: Request[] = [];
+  page.on("request", (request) => {
+    if (PREVIEW_ROUTE.test(request.url()) && request.method() === "POST") {
+      sent.push(request);
+    }
+  });
+  return sent;
+}
 
 const editor = (page: Page) =>
   page.getByRole("region", { name: "Draft listing" });
@@ -117,4 +145,129 @@ test("opens on the live listing for a competitor", async ({ page }) => {
   ).toBeVisible();
   await expect(modes(page)).toHaveCount(0);
   await expect(editor(page)).toHaveCount(0);
+});
+
+test("lists the keywords a new title covers and loses", async ({ page }) => {
+  await page.goto("/apps/app-1/metadata?mode=draft");
+  const request = page.waitForRequest(
+    (sent) => PREVIEW_ROUTE.test(sent.url()) && sent.method() === "POST",
+  );
+
+  await (await hydrated(field(page, "Title"))).fill("Productivity App");
+
+  expect((await request).postDataJSON()).toEqual({
+    localization: "en-US",
+    title: "Productivity App",
+  });
+  await expect(section(page, "Newly covered")).toContainText(
+    "productivity app",
+  );
+  await expect(section(page, "Newly covered")).toContainText("Germany");
+  await expect(section(page, "No longer covered")).toContainText("focus timer");
+  await expect(
+    panel(page).getByText("1 newly covered · 1 no longer covered", {
+      exact: true,
+    }),
+  ).toBeVisible();
+});
+
+test("waits for typing to settle before asking", async ({ page }) => {
+  const sent = previewRequests(page);
+  await page.goto("/apps/app-1/metadata?mode=draft");
+  const title = await hydrated(field(page, "Title"));
+
+  await title.fill("");
+  await title.pressSequentially("Habits", { delay: 40 });
+  await expect(section(page, "No longer covered")).toBeVisible();
+  await page.waitForTimeout(600);
+
+  expect(sent).toHaveLength(1);
+  expect(sent[0].postDataJSON()).toMatchObject({ title: "Habits" });
+});
+
+test("keeps the last answer while the next loads", async ({ page }) => {
+  await page.goto("/apps/app-1/metadata?mode=draft");
+  const title = await hydrated(field(page, "Title"));
+  await title.fill("Productivity App");
+  await expect(section(page, "Newly covered")).toBeVisible();
+
+  const held = await holdRequest(page, PREVIEW_ROUTE, "POST");
+  await title.fill("Productivity App Pro");
+
+  await expect(panel(page).locator("[aria-busy=true]")).toHaveCount(1);
+  await expect(section(page, "Newly covered")).toContainText(
+    "productivity app",
+  );
+  held.release();
+  await expect(panel(page).locator("[aria-busy=true]")).toHaveCount(0);
+});
+
+test("shows wasted words and the lint of each field", async ({ page }) => {
+  await page.goto("/apps/app-1/metadata?mode=draft");
+
+  await (await hydrated(field(page, "Subtitle"))).fill("Focus sessions");
+
+  await expect(section(page, "Wasted words")).toContainText("focus");
+  await expect(section(page, "Wasted words")).toContainText(
+    "Repeated in title and subtitle",
+  );
+  await expect(
+    editor(page).getByText('"focus" already appears in the title.'),
+  ).toBeVisible();
+});
+
+test("says which markets wait for their own listing", async ({ page }) => {
+  await withCookie(page, COVERAGE_PREVIEW_MARKETS_COOKIE, "waiting");
+  await page.goto("/apps/app-1/metadata?mode=draft");
+
+  await (await hydrated(field(page, "Title"))).fill("Habit Tracker");
+
+  await expect(
+    panel(page).getByText(
+      "United Kingdom is judged on your home listing until its own listing is captured, so no keyword is judged here yet.",
+    ),
+  ).toBeVisible();
+});
+
+test("says when no market reads the localization", async ({ page }) => {
+  await withCookie(page, COVERAGE_PREVIEW_MARKETS_COOKIE, "none");
+  await page.goto("/apps/app-1/metadata?mode=draft");
+
+  await (await hydrated(field(page, "Title"))).fill("Habit Tracker");
+
+  await expect(
+    panel(page).getByText("No market you track reads this localization yet."),
+  ).toBeVisible();
+});
+
+test("fails alone", async ({ page }) => {
+  await withCookie(page, COVERAGE_PREVIEW_FAIL_COOKIE, "1");
+  await page.goto("/apps/app-1/metadata?mode=draft");
+  const title = await hydrated(field(page, "Title"));
+
+  await title.fill("Productivity App");
+
+  await expect(
+    panel(page).getByText("Could not load what this draft covers."),
+  ).toBeVisible();
+  await title.fill("Productivity App!");
+  await expect(title).toHaveValue("Productivity App!");
+
+  await page.context().clearCookies({ name: COVERAGE_PREVIEW_FAIL_COOKIE });
+  await panel(page).getByRole("button", { name: "Retry" }).click();
+
+  await expect(section(page, "Newly covered")).toBeVisible();
+  await expect(panel(page).locator(":focus")).toHaveCount(1);
+});
+
+test("sends nothing for an untouched draft", async ({ page }) => {
+  const sent = previewRequests(page);
+  await page.goto("/apps/app-1/metadata?mode=draft");
+  await hydrated(field(page, "Title"));
+
+  await expect(
+    panel(page).getByText("Change a field to see what it would cover."),
+  ).toBeVisible();
+  await page.waitForTimeout(600);
+  expect(sent).toHaveLength(0);
 });

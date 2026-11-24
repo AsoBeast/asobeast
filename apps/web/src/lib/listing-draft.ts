@@ -4,10 +4,16 @@ import {
   keywordFieldLocalizations,
   STORE_FIELD_LIMITS,
   type AppStoreLocalization,
+  type CoveragePreviewChange,
+  type CoveragePreviewKeyword,
   type CoveragePreviewRequest,
+  type CoveragePreviewResult,
+  type DraftWastedWord,
   type MetadataAuditResult,
   type Store,
 } from "@asobeast/shared";
+import { formatCountry, formatList } from "./format";
+import { METADATA_FIELD_LABELS } from "./metadata-display";
 
 export const LISTING_DRAFT_FIELDS = [
   "title",
@@ -144,4 +150,53 @@ export function fieldCount(
     over,
     text: `${used}/${limit}${over > 0 ? ` · ${over} over` : ""}`,
   };
+}
+
+export interface PreviewGroups {
+  groups: Record<CoveragePreviewChange, CoveragePreviewKeyword[]>;
+  showCountry: boolean;
+}
+
+export function previewGroups(
+  result: Pick<CoveragePreviewResult, "keywords" | "markets">,
+): PreviewGroups {
+  const of = (change: CoveragePreviewChange) =>
+    result.keywords.filter((keyword) => keyword.change === change);
+  return {
+    groups: {
+      lost: of("lost"),
+      gained: of("gained"),
+      missing: of("missing"),
+      kept: of("kept"),
+    },
+    showCountry: result.markets.length > 1,
+  };
+}
+
+export const wasteReason = (wasted: DraftWastedWord): string =>
+  wasted.reason === "unused"
+    ? "No tracked keyword uses it"
+    : `Repeated in ${formatList(
+        wasted.fields.map((field) =>
+          METADATA_FIELD_LABELS[field].toLowerCase(),
+        ),
+      )}`;
+
+export function marketNote({
+  markets,
+  waitingMarkets,
+}: Pick<CoveragePreviewResult, "markets" | "waitingMarkets">): string | null {
+  if (waitingMarkets.length === 0) {
+    return markets.length === 0
+      ? "No market you track reads this localization yet."
+      : null;
+  }
+  const names = formatList(waitingMarkets.map(formatCountry));
+  const waiting =
+    waitingMarkets.length === 1
+      ? `${names} is judged on your home listing until its own listing is captured`
+      : `${names} are judged on your home listing until their own listings are captured`;
+  return markets.length === 0
+    ? `${waiting}, so no keyword is judged here yet.`
+    : `${waiting}.`;
 }

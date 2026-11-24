@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { CoveragePreviewKeyword } from "@asobeast/shared";
 import {
   changedFields,
   draftFieldsOf,
@@ -8,8 +9,11 @@ import {
   fieldCount,
   listingDraftKey,
   liveDraftValues,
+  marketNote,
   parseListingDraft,
+  previewGroups,
   serializeListingDraft,
+  wasteReason,
 } from "./listing-draft";
 
 const live = { title: "Focus Timer", subtitle: "Pomodoro", keywordField: "" };
@@ -193,5 +197,102 @@ describe("liveDraftValues", () => {
       keywordField: "",
       description: "",
     });
+  });
+});
+
+const row = (
+  text: string,
+  change: CoveragePreviewKeyword["change"],
+  country = "us",
+): CoveragePreviewKeyword => {
+  const verdict = { fields: [], covered: false, wordsSplit: false };
+  return {
+    keywordId: `kw-${text}-${country}`,
+    text,
+    country,
+    bucket: null,
+    live: verdict,
+    draft: verdict,
+    change,
+  };
+};
+
+describe("previewGroups", () => {
+  it("groups rows by change in reading order", () => {
+    const { groups } = previewGroups({
+      markets: ["us"],
+      keywords: [
+        row("a", "kept"),
+        row("b", "gained"),
+        row("c", "lost"),
+        row("d", "missing"),
+      ],
+    });
+
+    expect(Object.keys(groups)).toEqual(["lost", "gained", "missing", "kept"]);
+    expect(groups.lost.map((entry) => entry.text)).toEqual(["c"]);
+    expect(groups.kept.map((entry) => entry.text)).toEqual(["a"]);
+  });
+
+  it("counts a keyword once per market", () => {
+    const { groups, showCountry } = previewGroups({
+      markets: ["us", "gb"],
+      keywords: [row("habit", "gained"), row("habit", "gained", "gb")],
+    });
+
+    expect(groups.gained).toHaveLength(2);
+    expect(showCountry).toBe(true);
+    expect(previewGroups({ markets: ["us"], keywords: [] }).showCountry).toBe(
+      false,
+    );
+  });
+
+  it("reports no change when the draft equals the live listing", () => {
+    const { groups } = previewGroups({
+      markets: ["us"],
+      keywords: [row("a", "kept"), row("b", "missing")],
+    });
+
+    expect(groups.lost).toEqual([]);
+    expect(groups.gained).toEqual([]);
+  });
+});
+
+describe("wasteReason", () => {
+  it("names the fields that repeat a word", () => {
+    expect(
+      wasteReason({
+        word: "habit",
+        reason: "repeated",
+        fields: ["title", "keywordField"],
+      }),
+    ).toBe("Repeated in title and keyword field");
+  });
+
+  it("says no tracked keyword uses an unused word", () => {
+    expect(
+      wasteReason({ word: "zen", reason: "unused", fields: ["subtitle"] }),
+    ).toBe("No tracked keyword uses it");
+  });
+});
+
+describe("marketNote", () => {
+  it("says no market reads the localization", () => {
+    expect(marketNote({ markets: [], waitingMarkets: [] })).toBe(
+      "No market you track reads this localization yet.",
+    );
+  });
+
+  it("names a market still judged on the home listing", () => {
+    expect(marketNote({ markets: [], waitingMarkets: ["gb"] })).toBe(
+      "United Kingdom is judged on your home listing until its own listing is captured, so no keyword is judged here yet.",
+    );
+    expect(marketNote({ markets: ["us"], waitingMarkets: ["gb", "de"] })).toBe(
+      "United Kingdom and Germany are judged on your home listing until their own listings are captured.",
+    );
+  });
+
+  it("says nothing when every reader is judged", () => {
+    expect(marketNote({ markets: ["us"], waitingMarkets: [] })).toBeNull();
   });
 });

@@ -23,7 +23,13 @@ import {
 
 export const COVERAGE_PREVIEW_FAIL_COOKIE = "e2e_coverage_preview_fail";
 
-export const WAITING_LOCALIZATION = "en-GB";
+export const COVERAGE_PREVIEW_MARKETS_COOKIE = "e2e_coverage_preview_markets";
+
+export type PreviewMarkets = "waiting" | "none" | null;
+
+export const previewMarketsOf = (
+  value: string | null | undefined,
+): PreviewMarkets => (value === "waiting" || value === "none" ? value : null);
 
 type DraftField = Exclude<
   keyof CoveragePreviewRequest,
@@ -122,10 +128,22 @@ function repeatedWords(store: Store, texts: Texts): DraftWastedWord[] {
     .map(([word, fields]) => ({ word, reason: "repeated", fields }));
 }
 
+function judgedMarkets(
+  audit: MetadataAuditResult,
+  home: string,
+  markets: PreviewMarkets,
+): string[] {
+  if (markets !== null) return [];
+  return [
+    ...new Set([home, ...audit.coverage.map((row) => row.country ?? home)]),
+  ];
+}
+
 export function mockCoveragePreview(
   audit: MetadataAuditResult,
   home: string,
   request: CoveragePreviewRequest,
+  previewMarkets: PreviewMarkets = null,
 ): CoveragePreviewResult {
   const store = audit.store;
   const live = liveTexts(audit);
@@ -133,8 +151,7 @@ export function mockCoveragePreview(
   for (const field of LINTED[store]) {
     draft[field] = request[field] ?? live[field];
   }
-  const waiting = request.localization === WAITING_LOCALIZATION;
-  const markets = waiting ? [] : [home];
+  const markets = judgedMarkets(audit, home, previewMarkets);
   const keywords = audit.coverage
     .filter((row) => markets.includes(row.country ?? home))
     .map((row) => {
@@ -171,7 +188,7 @@ export function mockCoveragePreview(
       ? { localization: request.localization ?? "en-US" }
       : { country: request.country ?? home }),
     markets,
-    waitingMarkets: waiting ? ["gb"] : [],
+    waitingMarkets: previewMarkets === "waiting" ? ["gb"] : [],
     fields: fieldAudits(store, draft),
     keywords,
     wastedWords: repeatedWords(store, draft),

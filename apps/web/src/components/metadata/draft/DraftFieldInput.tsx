@@ -1,7 +1,12 @@
 "use client";
 
 import { useId, type ReactNode } from "react";
-import { STORE_FIELD_LIMITS, type Store } from "@asobeast/shared";
+import {
+  STORE_FIELD_LIMITS,
+  type LintIssue,
+  type Store,
+} from "@asobeast/shared";
+import { LintIssueRow } from "@/components/metadata/LintIssueRow";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,6 +25,7 @@ export function DraftFieldInput({
   value,
   onChange,
   readOnly = false,
+  issues = [],
   children,
 }: {
   store: Store;
@@ -27,6 +33,7 @@ export function DraftFieldInput({
   value: string;
   onChange: (value: string) => void;
   readOnly?: boolean;
+  issues?: LintIssue[];
   children?: ReactNode;
 }) {
   const inputId = useId();
@@ -77,6 +84,13 @@ export function DraftFieldInput({
           onChange={(event) => onChange(event.target.value)}
         />
       )}
+      {issues.length > 0 ? (
+        <ul className="flex list-none flex-col gap-1 p-0">
+          {issues.map((issue, index) => (
+            <LintIssueRow key={`${issue.rule}-${index}`} issue={issue} />
+          ))}
+        </ul>
+      ) : null}
       {children}
     </div>
   );
