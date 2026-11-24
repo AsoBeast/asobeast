@@ -349,6 +349,29 @@ test.describe("the keyword field hand off", () => {
     await expect(fieldEditor(page)).toHaveValue("timer,focus");
   });
 
+  test("ignores a drafted keyword field while App Store Connect manages it", async ({
+    page,
+  }) => {
+    await seedLocalizations(page.request, APP_DRAFT_LOCALES_ID, {
+      fields: { "en-US": ["timer", "focus"] },
+      storeImport: "following",
+    });
+    await page.goto(DRAFT_PAGE);
+    await page.evaluate(
+      (key) =>
+        window.localStorage.setItem(key, '{"v":1,"keywordField":"habit"}'),
+      `asobeast.listingDraft.${APP_DRAFT_LOCALES_ID}.en-US`,
+    );
+    await page.reload();
+
+    await expect(field(page, "Keyword field")).toHaveValue(
+      "study timer,deep work",
+    );
+    await expect(
+      editor(page).getByRole("button", { name: "Reset to live listing" }),
+    ).toHaveAttribute("aria-disabled", "true");
+  });
+
   test("keeps typing in the draft after the hand off", async ({ page }) => {
     await page.goto(DRAFT_PAGE);
     const drafted = await hydrated(field(page, "Keyword field"));

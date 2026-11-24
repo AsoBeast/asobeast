@@ -9,6 +9,7 @@ export function useDraftKeywordField(appId: string, scope: DraftScope) {
   const appStore = scope.store === "APP_STORE";
   const { data } = useQuery({
     ...appLocalizationsOptions(appId),
+    retry: false,
     enabled: appStore,
   });
   const localization: AppStoreLocalization | null = appStore
