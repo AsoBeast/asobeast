@@ -376,6 +376,21 @@ describe('Metadata coverage preview (e2e)', () => {
     await refusal(appId, { title: 'a'.repeat(3000) });
   });
 
+  it('refuses a null text field with a 400', async () => {
+    const appId = await focusTimer();
+
+    for (const field of [
+      'title',
+      'subtitle',
+      'keywordField',
+      'description',
+      'localization',
+      'country',
+    ]) {
+      await refusal(appId, { [field]: null });
+    }
+  });
+
   it('answers an over limit title with its lint', async () => {
     const appId = await focusTimer();
 

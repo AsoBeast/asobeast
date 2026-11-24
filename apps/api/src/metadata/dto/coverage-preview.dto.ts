@@ -9,13 +9,16 @@ import {
 } from '@asobeast/shared';
 import {
   IsIn,
-  IsOptional,
   IsString,
   Matches,
   MaxLength,
+  ValidateIf,
 } from 'class-validator';
 
-const DESCRIPTION_LIMIT = STORE_FIELD_LIMITS.GOOGLE_PLAY.description!.limit;
+export const DESCRIPTION_INPUT_LIMIT =
+  STORE_FIELD_LIMITS.GOOGLE_PLAY.description!.limit;
+
+const isPresent = (_: object, value: unknown): boolean => value !== undefined;
 
 export class CoveragePreviewDto implements CoveragePreviewRequest {
   @ApiPropertyOptional({
@@ -24,7 +27,7 @@ export class CoveragePreviewDto implements CoveragePreviewRequest {
     description:
       'The App Store localization the draft rewrites. Defaults to the default localization of the home storefront. App Store only.',
   })
-  @IsOptional()
+  @ValidateIf(isPresent)
   @IsIn(APP_STORE_LOCALIZATION_IDS)
   localization?: AppStoreLocalization;
 
@@ -34,7 +37,7 @@ export class CoveragePreviewDto implements CoveragePreviewRequest {
     description:
       'The market whose listing the draft rewrites. Defaults to the home storefront. Google Play only.',
   })
-  @IsOptional()
+  @ValidateIf(isPresent)
   @Matches(COUNTRY_PATTERN)
   country?: string;
 
@@ -43,7 +46,7 @@ export class CoveragePreviewDto implements CoveragePreviewRequest {
     maxLength: KEYWORD_FIELD_INPUT_LIMIT,
     description: 'The drafted title. Left out, the live title is kept.',
   })
-  @IsOptional()
+  @ValidateIf(isPresent)
   @IsString()
   @MaxLength(KEYWORD_FIELD_INPUT_LIMIT)
   title?: string;
@@ -54,7 +57,7 @@ export class CoveragePreviewDto implements CoveragePreviewRequest {
     description:
       'The drafted subtitle. Left out, the live subtitle is kept. App Store only.',
   })
-  @IsOptional()
+  @ValidateIf(isPresent)
   @IsString()
   @MaxLength(KEYWORD_FIELD_INPUT_LIMIT)
   subtitle?: string;
@@ -65,7 +68,7 @@ export class CoveragePreviewDto implements CoveragePreviewRequest {
     description:
       'The drafted short description. Left out, the live one is kept. Google Play only.',
   })
-  @IsOptional()
+  @ValidateIf(isPresent)
   @IsString()
   @MaxLength(KEYWORD_FIELD_INPUT_LIMIT)
   shortDescription?: string;
@@ -76,18 +79,18 @@ export class CoveragePreviewDto implements CoveragePreviewRequest {
     description:
       'The drafted keyword field of the localization. Left out, the saved field is kept; an empty string drafts an empty field. App Store only.',
   })
-  @IsOptional()
+  @ValidateIf(isPresent)
   @IsString()
   @MaxLength(KEYWORD_FIELD_INPUT_LIMIT)
   keywordField?: string;
 
   @ApiPropertyOptional({
     example: 'Track every habit.',
-    maxLength: DESCRIPTION_LIMIT,
+    maxLength: DESCRIPTION_INPUT_LIMIT,
     description: 'The drafted description. Left out, the live one is kept.',
   })
-  @IsOptional()
+  @ValidateIf(isPresent)
   @IsString()
-  @MaxLength(DESCRIPTION_LIMIT)
+  @MaxLength(DESCRIPTION_INPUT_LIMIT)
   description?: string;
 }
