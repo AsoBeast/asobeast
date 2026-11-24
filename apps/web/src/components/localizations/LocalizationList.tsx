@@ -18,7 +18,12 @@ import {
   fieldLeftOutParser,
   fieldLocaleParser,
 } from "@/lib/search-params";
-import { DraftedFieldStatus, useDraftedField } from "./DraftedFieldStatus";
+import {
+  DraftedFieldStatus,
+  editorKeyOf,
+  useDraftedField,
+  useHandoffGeneration,
+} from "./DraftedFieldStatus";
 import { KeywordFieldAdditionStatus } from "./KeywordFieldAdditionStatus";
 import { LocalizationItem } from "./LocalizationItem";
 
@@ -53,6 +58,7 @@ export function LocalizationList({
     fromDraft === true ? requested : null,
     result.storeManaged,
   );
+  const handoffs = useHandoffGeneration(handoff);
   const settleProposal = () =>
     void setLocalizationQuery(
       { fieldAdd: null, fieldLeftOut: null, fieldFromDraft: null },
@@ -101,6 +107,7 @@ export function LocalizationList({
               }
               proposed={target ? added : null}
               drafted={handed ? handoff.text : undefined}
+              editorKey={editorKeyOf(handoffs, item.localization)}
               onProposalSettled={target || handed ? settleProposal : undefined}
             />
           );

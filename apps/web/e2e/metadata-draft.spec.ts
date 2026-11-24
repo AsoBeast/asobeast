@@ -330,6 +330,35 @@ test.describe("the keyword field hand off", () => {
     );
   });
 
+  test("keeps focus off the page after saving the handed field from the keyboard", async ({
+    page,
+  }) => {
+    await page.goto(DRAFT_PAGE);
+    await (
+      await hydrated(field(page, "Keyword field"))
+    ).fill("timer,focus,habit");
+    await handOff(page).press("Enter");
+    await expect(fieldEditor(page)).toBeFocused();
+
+    await page
+      .getByRole("button", { name: "Save keyword field" })
+      .press("Enter");
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Save and track" })
+      .press("Enter");
+
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page).not.toHaveURL(/fieldFromDraft/);
+    await expect
+      .poll(() => page.evaluate(() => document.activeElement === document.body))
+      .toBe(false);
+    await page.waitForTimeout(500);
+    expect(
+      await page.evaluate(() => document.activeElement === document.body),
+    ).toBe(false);
+  });
+
   test("keeps the drafted field read only while App Store Connect manages it", async ({
     page,
   }) => {

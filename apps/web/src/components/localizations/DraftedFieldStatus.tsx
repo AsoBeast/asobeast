@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { AppStoreLocalization } from "@asobeast/shared";
 import { listingDraftKey, parseListingDraft } from "@/lib/listing-draft";
 import { localizationName } from "@/lib/localizations";
@@ -26,6 +27,36 @@ export function useDraftedField(
     text,
   };
 }
+
+export interface HandoffGeneration {
+  target: AppStoreLocalization | null;
+  localization: AppStoreLocalization | null;
+  generation: number;
+}
+
+export function useHandoffGeneration(
+  handoff: DraftedField | null,
+): HandoffGeneration {
+  const target = handoff?.state === "ready" ? handoff.localization : null;
+  const [seen, setSeen] = useState<HandoffGeneration>({
+    target,
+    localization: target,
+    generation: target === null ? 0 : 1,
+  });
+  if (seen.target !== target) {
+    setSeen({
+      target,
+      localization: target ?? seen.localization,
+      generation: target === null ? seen.generation : seen.generation + 1,
+    });
+  }
+  return seen;
+}
+
+export const editorKeyOf = (
+  { localization, generation }: HandoffGeneration,
+  item: AppStoreLocalization,
+): string => (item === localization ? `handoff-${generation}` : "stored");
 
 function sentence({ localization, state }: DraftedField): string {
   switch (state) {
