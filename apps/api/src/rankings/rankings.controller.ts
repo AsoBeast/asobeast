@@ -18,7 +18,7 @@ export class RankingsController {
   @ApiOperation({
     summary: 'Ranking history series for an app',
     description:
-      "Each point carries resultCount, how many apps the store listed for that day's search, at most 200; 0 means the store lists no apps for this search, and null means the count was not recorded.",
+      "Each point carries resultCount, a field whose only message is that the day's search listed no apps: 0 means the store lists no apps for this search, every other value repeats the depth of the same point, and null means the count was not recorded.",
   })
   history(
     @Param('id') id: string,
