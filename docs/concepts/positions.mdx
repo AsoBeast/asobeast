@@ -10,13 +10,13 @@ Positions are 1 based, so position 1 is the top result. A `null` position means 
 
 ## How is a position recorded?
 
-Each check writes one row per app, keyword and UTC date, and stores the depth that check covered alongside the position: the number of apps the store listed, at most 200. Each check also stores `resultCount`, how many apps the search listed, so a search that lists no apps is recorded as 0.
+Each check writes one row per app, keyword and UTC date, and stores the depth that check covered alongside the position: the number of apps the store listed, at most 200. Each check also stores `resultCount`, a field whose only message is that the search listed no apps: the store's answer is asked again before a 0 is recorded, and 0 is written only when the answer stays empty.
 
 | Field | Meaning |
 | --- | --- |
 | `position` | 1 based rank, or `null` when the app was not found |
 | `depth` | How deep the search looked for that observation: the number of apps the store listed, at most 200 |
-| `resultCount` | How many apps the search listed; `null` when the check was stored before the count was recorded |
+| `resultCount` | 0 when the search listed no apps, otherwise the same as `depth`; `null` when the check could not confirm an empty answer or was stored before the count was recorded |
 | `date` | The UTC date of the observation |
 
 The row is written even when the app was not found. That is deliberate: an absent row and a `null` position mean different things, and only storing both lets you tell "we did not look" apart from "we looked and it was not there".

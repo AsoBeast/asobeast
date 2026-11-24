@@ -259,7 +259,7 @@ A granular event looks like this.
 }
 ```
 
-A milestone and an overtake look like this. `rank.first` carries `position` and `depth` instead of the move. `fromDepth` and `toDepth` are the depths those two checks reached, usually about 30 on Google Play. When the count was recorded the payload also carries `fromResultCount` and `toResultCount`, and 0 means the store lists no apps for the search.
+A milestone and an overtake look like this. `rank.first` carries `position` and `depth` instead of the move. `fromDepth` and `toDepth` are the depths those two checks reached, usually about 30 on Google Play. `resultCount` fields carry meaning only at 0, which says the store lists no apps for the search on that side: a drop carries `toResultCount`, an improvement carries `fromResultCount`, a milestone can carry both, and an overtake carries none because both apps sat in the same search.
 
 ```json
 {
