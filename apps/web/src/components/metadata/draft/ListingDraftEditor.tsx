@@ -20,6 +20,7 @@ import {
 } from "@/lib/listing-draft";
 import { CopyDraftButton, CopyFieldButton } from "./CopyDraftButtons";
 import { DraftCoveragePanel } from "./DraftCoveragePanel";
+import { useDraftFieldReveal } from "./draft-field-reveal";
 import { DraftFieldInput } from "./DraftFieldInput";
 import { KeywordFieldHandoff } from "./KeywordFieldHandoff";
 import { useDraftKeywordField } from "./use-draft-keyword-field";
@@ -58,7 +59,9 @@ export function ListingDraftEditor({
   );
   const preview = useCoveragePreview(id, request);
   const lint = preview.requested ? preview.query.data?.fields : undefined;
-  const [descriptionOpen, setDescriptionOpen] = useState(false);
+  const revealDescription = useDraftFieldReveal("description");
+  const [descriptionOpen, setDescriptionOpen] = useState(revealDescription);
+  if (revealDescription && !descriptionOpen) setDescriptionOpen(true);
   const unchanged = request === null;
   const handsOff =
     field.handoff !== null &&

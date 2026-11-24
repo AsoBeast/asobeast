@@ -5901,6 +5901,9 @@ DATASETS[APP_HE_ID] = {
   changeImpact: emptyChangeImpact(APP_HE_DETAIL),
 };
 
+export const PLAY_DESCRIPTION_DRAFT =
+  "Focus Timer keeps every study session and deep work block on track.";
+
 export const METADATA_DRAFTS: MetadataDraft[] = [
   {
     field: "title",
@@ -5925,6 +5928,14 @@ export const METADATA_DRAFTS: MetadataDraft[] = [
     limit: 100,
     issues: [],
     rationale: "Covers uncovered terms.",
+  },
+  {
+    field: "description",
+    value: PLAY_DESCRIPTION_DRAFT,
+    chars: PLAY_DESCRIPTION_DRAFT.length,
+    limit: 4000,
+    issues: [],
+    rationale: "Repeats the primary keywords in the first lines.",
   },
 ];
 

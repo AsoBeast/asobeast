@@ -20,6 +20,7 @@ import {
   marketParser,
   metadataModeParser,
 } from "@/lib/search-params";
+import { revealDraftField } from "./draft-field-reveal";
 import { draftFieldFocusKey, draftFieldSelector } from "./DraftFieldInput";
 
 export function useDraftFill(
@@ -46,6 +47,7 @@ export function useDraftFill(
     );
     writeListingDraftField(appId, scopeKey(scope), field, draft.value);
     armFocusHandoff(draftFieldFocusKey(field));
+    revealDraftField(field);
     void setQuery(
       {
         mode: "draft",

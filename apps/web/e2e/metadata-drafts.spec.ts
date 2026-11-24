@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { PLAY_DESCRIPTION_DRAFT } from "./fixtures.mts";
 import { hydrated } from "./hydrated.mts";
 import { collectPageErrors } from "./page-errors.mts";
 import { seedCookies } from "./routes.mts";
@@ -169,6 +170,34 @@ test("fills the draft from an assistant suggestion", async ({ page }) => {
   expect((await preview).postDataJSON()).toMatchObject({
     subtitle: "Deep work sessions",
   });
+});
+
+test("opens the folded description for a drafted description", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-gp/metadata");
+  await generateDrafts(page);
+
+  await page.getByRole("button", { name: "Use in draft: Description" }).click();
+
+  await expect(page).toHaveURL(/mode=draft/);
+  await expect(draftField(page, "Description")).toHaveValue(
+    PLAY_DESCRIPTION_DRAFT,
+  );
+  await expect(draftField(page, "Description")).toBeFocused();
+});
+
+test("opens the folded description of an open draft", async ({ page }) => {
+  await page.goto("/apps/app-gp/metadata?mode=draft");
+  await expect(draftField(page, "Description")).toHaveCount(0);
+  await generateDrafts(page);
+
+  await page.getByRole("button", { name: "Use in draft: Description" }).click();
+
+  await expect(draftField(page, "Description")).toHaveValue(
+    PLAY_DESCRIPTION_DRAFT,
+  );
+  await expect(draftField(page, "Description")).toBeFocused();
 });
 
 test("fills the draft of the localization the assistant wrote for", async ({
