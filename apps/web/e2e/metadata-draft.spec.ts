@@ -265,6 +265,34 @@ test("fails alone", async ({ page }) => {
   await expect(panel(page).locator(":focus")).toHaveCount(1);
 });
 
+test("keeps focus in the panel when the list it was on leaves", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/metadata?mode=draft");
+  await (await hydrated(field(page, "Title"))).fill("Focus Timer Pro");
+  const showKept = panel(page).getByRole("button", {
+    name: /^Show all \d+ still covered$/,
+  });
+  await showKept.focus();
+
+  await page.evaluate(() => {
+    const key = Object.keys(window.localStorage).find((each) =>
+      each.startsWith("asobeast.listingDraft.app-1."),
+    );
+    if (!key) throw new Error("no stored draft");
+    window.localStorage.setItem(
+      key,
+      '{"v":1,"title":"Zzz","subtitle":"Zzz","keywordField":"zzz"}',
+    );
+    window.dispatchEvent(new StorageEvent("storage", { key }));
+  });
+
+  await expect(showKept).toHaveCount(0);
+  await expect(
+    panel(page).getByRole("button", { name: "About draft coverage" }),
+  ).toBeFocused();
+});
+
 test("sends nothing for an untouched draft", async ({ page }) => {
   const sent = previewRequests(page);
   await page.goto("/apps/app-1/metadata?mode=draft");

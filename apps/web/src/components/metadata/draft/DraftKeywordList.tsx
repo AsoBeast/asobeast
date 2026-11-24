@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import type { CoveragePreviewKeyword } from "@asobeast/shared";
 import { LIST_HEAD } from "@/components/layout/panel-classes";
 import { DirectionArrow } from "@/components/ui/delta-chip";
+import { useRemovalFocusRecovery } from "@/lib/focus-handoff";
 import { formatCountry, formatList, formatNumber } from "@/lib/format";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,33 @@ function coveringFields(keyword: CoveragePreviewKeyword): string {
     .map((field) => METADATA_FIELD_LABELS[field.field]);
   if (fields.length > 0) return formatList(fields);
   return verdict.wordsSplit ? "Words split" : "";
+}
+
+function ShowAllToggle({
+  expanded,
+  onToggle,
+  count,
+  title,
+}: {
+  expanded: boolean;
+  onToggle: () => void;
+  count: number;
+  title: string;
+}) {
+  const recover = useRemovalFocusRecovery<HTMLButtonElement>();
+  const label = expanded ? "Show fewer" : `Show all ${formatNumber(count)}`;
+  return (
+    <button
+      ref={recover}
+      type="button"
+      aria-expanded={expanded}
+      aria-label={`${label} ${title.toLowerCase()}`}
+      onClick={onToggle}
+      className="w-fit rounded-sm text-label text-muted-foreground link-underline outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <span>{label}</span>
+    </button>
+  );
 }
 
 export function DraftKeywordList({
@@ -82,17 +110,12 @@ export function DraftKeywordList({
         </ul>
       ) : null}
       {rows.length > shown ? (
-        <button
-          type="button"
-          aria-expanded={expanded}
-          aria-label={`${expanded ? "Show fewer" : `Show all ${formatNumber(rows.length)}`} ${title.toLowerCase()}`}
-          onClick={() => setExpanded((open) => !open)}
-          className="w-fit rounded-sm text-label text-muted-foreground link-underline outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <span>
-            {expanded ? "Show fewer" : `Show all ${formatNumber(rows.length)}`}
-          </span>
-        </button>
+        <ShowAllToggle
+          expanded={expanded}
+          onToggle={() => setExpanded((open) => !open)}
+          count={rows.length}
+          title={title}
+        />
       ) : null}
     </div>
   );
