@@ -138,6 +138,9 @@ export class CoveragePreviewService {
           : '',
     };
     const trackedTexts = active.map((item) => item.text);
+    const readerTexts = tracked
+      .filter((item) => item.active && waiting.includes(item.country))
+      .map((item) => item.text);
     const keywords = previewKeywords(app, active, sources, drafted);
     return {
       appId,
@@ -160,7 +163,7 @@ export class CoveragePreviewService {
       wastedWords: draftWastedWords(
         app.store,
         listingSurfaces(app.store, listing, texts.keywordField),
-        trackedTexts,
+        [...trackedTexts, ...readerTexts],
         tokenize(appName ?? ''),
       ),
       counts: changeCounts(keywords),

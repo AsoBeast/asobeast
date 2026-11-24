@@ -239,6 +239,20 @@ describe('CoveragePreviewService.preview', () => {
     expect(result.counts).toEqual({ lost: 1, gained: 1, missing: 1, kept: 1 });
   });
 
+  it('counts a word a waiting market tracks as used', async () => {
+    const result = await build({
+      tracked: [tracked('focus timer'), tracked('habit tracker', 'gb')],
+    }).preview('app_1', {
+      localization: 'en-GB',
+      subtitle: 'habit planner',
+    });
+
+    expect(result).toMatchObject({ markets: [], waitingMarkets: ['gb'] });
+    expect(result.wastedWords).toEqual([
+      { word: 'planner', reason: 'unused', fields: ['subtitle'] },
+    ]);
+  });
+
   it('reports the wasted words of the draft and never the brand', async () => {
     const result = await build().preview('app_1', {
       title: 'Zenly Habit Tracker',
