@@ -507,8 +507,11 @@ test.describe("the position of a keyword whose search lists no apps", () => {
 
     await expect(row.getByText("No apps", { exact: true })).toBeVisible();
     await expect(
-      row.getByLabel("No apps: The store lists no apps for this search"),
-    ).toHaveAttribute("title", "The store lists no apps for this search");
+      row.locator('[title="The store lists no apps for this search"]'),
+    ).toHaveCount(1);
+    await expect(row).toHaveAccessibleName(
+      /No apps: The store lists no apps for this search/,
+    );
   });
 
   test("a keyword without a result count keeps the bound and no sentence", async ({

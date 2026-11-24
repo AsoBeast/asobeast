@@ -45,11 +45,20 @@ export function PositionReadout({
   const lostTitle = lost?.on
     ? lastRankedLine(lost.position, lost.on)
     : undefined;
-  const title = noApps
-    ? lostTitle
-      ? `${NO_APPS_SENTENCE}. ${lostTitle}`
-      : NO_APPS_SENTENCE
-    : lostTitle;
+  const title =
+    [noApps ? NO_APPS_SENTENCE : null, lostTitle]
+      .filter((part): part is string => Boolean(part))
+      .join(". ") || undefined;
+  const worded =
+    keyword.latestDepth !== null && keyword.latestDepth !== undefined;
+  const name = [
+    noApps
+      ? `${NO_APPS_LABEL}: ${NO_APPS_SENTENCE}`
+      : `Not found in the top ${keyword.latestDepth}`,
+    lostTitle ?? (lost ? `was #${lost.position}` : null),
+  ]
+    .filter((part): part is string => part !== null)
+    .join(", ");
   return (
     <span
       className={cn(
@@ -60,18 +69,19 @@ export function PositionReadout({
       {keyword.latestPosition === null ? (
         <span
           title={title}
-          aria-label={
-            noApps ? `${NO_APPS_LABEL}: ${NO_APPS_SENTENCE}` : undefined
-          }
           className={cn(
             "flex flex-col leading-tight text-muted-foreground",
             className,
           )}
         >
-          <span>{label}</span>
+          <span aria-hidden={worded || undefined}>{label}</span>
           {lost ? (
-            <span className="text-tick text-faint-foreground">{`was #${lost.position}`}</span>
+            <span
+              aria-hidden
+              className="text-tick text-faint-foreground"
+            >{`was #${lost.position}`}</span>
           ) : null}
+          {worded ? <span className="sr-only">{name}</span> : null}
         </span>
       ) : (
         <GradedNumber

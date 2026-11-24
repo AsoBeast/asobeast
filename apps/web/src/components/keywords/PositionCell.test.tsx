@@ -342,10 +342,13 @@ describe("PositionCell", () => {
       }),
     );
 
-    expect(markup).toContain("<span>&gt;200</span>");
+    expect(markup).toContain('<span aria-hidden="true">&gt;200</span>');
     expect(markup).toContain(">was #14<");
     expect(markup).toContain(
       `title="Last ranked #14 on ${formatDate("2026-10-21")}"`,
+    );
+    expect(markup).toContain(
+      `>Not found in the top 200, Last ranked #14 on ${formatDate("2026-10-21")}<`,
     );
     expect(markup).not.toContain("since yesterday");
   });
@@ -423,8 +426,9 @@ describe("PositionCell", () => {
 
     expect(markup).toContain(">No apps</span>");
     expect(markup).toContain(">was #14<");
+    expect(markup).toContain("sr-only");
     expect(markup).toContain(
-      'aria-label="No apps: The store lists no apps for this search"',
+      `>No apps: The store lists no apps for this search, Last ranked #14 on ${formatDate("2026-10-21")}<`,
     );
     expect(markup).toContain(
       `title="The store lists no apps for this search. Last ranked #14 on ${formatDate("2026-10-21")}"`,

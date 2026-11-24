@@ -1757,8 +1757,11 @@ test.describe("a keyword whose search lists no apps", () => {
 
     const row = page.getByRole("row", { name: /productivity app/ });
     await expect(
-      row.getByLabel("No apps: The store lists no apps for this search"),
+      row.locator('[title="The store lists no apps for this search"]'),
     ).toBeVisible();
+    await expect(row).toHaveAccessibleName(
+      /No apps: The store lists no apps for this search/,
+    );
     await expect(row.getByText("No apps", { exact: true })).toBeVisible();
     await expect(row.getByText(">200")).toHaveCount(0);
   });
