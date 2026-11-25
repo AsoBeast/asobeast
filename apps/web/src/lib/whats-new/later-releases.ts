@@ -28,6 +28,21 @@ export const LATER_RELEASES: readonly Release[] = [
         title: "A declined card says so at the top",
         text: "When the card on a free trial is declined at the end of the trial, the bar at the top of every page now says the card was declined and links to billing in Settings, where you update the card in the billing portal, instead of asking you to choose a plan again.",
       },
+      {
+        kind: "fixed",
+        title: "No false parsing alarm when the store was never reached",
+        text: "When every proxy was resting or the network failed before the store answered, the store check called it broken parsing and could show the breakage banner. It now records that the store could not be reached, which raises no banner.",
+      },
+      {
+        kind: "fixed",
+        title: "Collection resumes soon after a proxy account is fixed",
+        text: "A proxy provider that refuses requests because of the account, such as a plan that ran out or credentials it no longer accepts, used to bench its addresses for up to a day. They are now tried again every few minutes, so collection resumes shortly after the account is put right.",
+      },
+      {
+        kind: "new",
+        title: "Why the proxy provider refuses",
+        text: "The capacity page in the admin area now says when the proxy provider is turning requests away and why, from the answer it gave: a plan or quota that ran out, credentials it does not accept, or the status it refused with.",
+      },
     ],
   },
   {

@@ -276,7 +276,9 @@ export class GooglePlayProvider implements StoreProvider {
           missing.country,
         );
       }
-      throw new StoreRequestError(this.store, method, messageOf(error));
+      throw new StoreRequestError(this.store, method, messageOf(error), {
+        cause: error,
+      });
     }
   }
 }

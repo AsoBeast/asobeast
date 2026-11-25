@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { Dispatcher, ProxyAgent, fetch as undiciFetch } from 'undici';
+import { tunnelPoolFor } from './proxy-tunnel';
 
 export interface ProxyCredentials {
   username: string;
@@ -111,9 +112,10 @@ export function proxyDispatcher(
   origin: string,
   credentials?: ProxyCredentials,
 ): Dispatcher {
-  if (!credentials) return new ProxyAgent({ uri: origin });
+  const tunnel = { uri: origin, clientFactory: tunnelPoolFor };
+  if (!credentials) return new ProxyAgent(tunnel);
   const basic = Buffer.from(
     `${credentials.username}:${credentials.password}`,
   ).toString('base64');
-  return new ProxyAgent({ uri: origin, token: `Basic ${basic}` });
+  return new ProxyAgent({ ...tunnel, token: `Basic ${basic}` });
 }

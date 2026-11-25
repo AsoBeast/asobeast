@@ -3,6 +3,10 @@ import {
   StoreAppNotFoundError,
   StoreRequestError,
 } from '../errors';
+import {
+  ProxyPoolStoppingError,
+  ProxyPoolUnavailableError,
+} from '../egress/proxy-pool.service';
 import { CanaryShapeError } from './canary-checks';
 
 export const CANARY_OUTCOMES = [
@@ -18,6 +22,8 @@ export function outcomeOfError(error: unknown): CanaryOutcome {
   if (error instanceof StoreAppNotFoundError) return 'target-missing';
   if (error instanceof CanaryShapeError) return 'broken';
   if (error instanceof ImplausibleResultError) return 'broken';
+  if (error instanceof ProxyPoolUnavailableError) return 'unreachable';
+  if (error instanceof ProxyPoolStoppingError) return 'unreachable';
   if (error instanceof StoreRequestError && error.unreachable) {
     return 'unreachable';
   }

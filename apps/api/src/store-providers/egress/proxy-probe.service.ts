@@ -8,6 +8,7 @@ import {
   observed,
   outcomeOf,
   ProxyHealthTracker,
+  refusedStatusOf,
 } from './proxy-health.service';
 import { ProxyLedger } from './proxy-ledger.service';
 import { ProxyPool } from './proxy-pool.service';
@@ -77,7 +78,10 @@ export class ProxyProbe {
         ProxyTier.DATACENTER,
         Math.max(meter.requests, 1),
       );
-      await this.health.record(endpointId, PROBE_STORE, observed(outcome));
+      await this.health.record(endpointId, PROBE_STORE, {
+        ...observed(outcome),
+        refusedStatus: refusedStatusOf(error),
+      });
       return false;
     }
 
