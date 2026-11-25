@@ -14,7 +14,7 @@ type TunnelOptions = Parameters<Pool['connect']>[0];
 
 type TunnelCallback = (err: Error | null, data: Dispatcher.ConnectData) => void;
 
-function refusalOf(
+function refusalAfterClosing(
   data: Dispatcher.ConnectData,
 ): ProxyTunnelRefusedError | null {
   if (data.statusCode === OPEN_TUNNEL) return null;
@@ -23,7 +23,7 @@ function refusalOf(
 }
 
 function openedOrRefused(data: Dispatcher.ConnectData): Dispatcher.ConnectData {
-  const refusal = refusalOf(data);
+  const refusal = refusalAfterClosing(data);
   if (refusal) throw refusal;
   return data;
 }
@@ -37,7 +37,7 @@ export class TunnelPool extends Pool {
   ): Promise<Dispatcher.ConnectData> | void {
     if (callback) {
       super.connect(options, (error, data) =>
-        callback(error ?? refusalOf(data), data),
+        callback(error ?? refusalAfterClosing(data), data),
       );
       return;
     }
