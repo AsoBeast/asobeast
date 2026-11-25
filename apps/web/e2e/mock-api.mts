@@ -771,6 +771,7 @@ const ACCOUNT_PLAN: AccountPlan = {
   cancelAtPeriodEnd: false,
   trialEndsAt: null,
   renewsAt: null,
+  scheduledPlan: null,
   upgradeTo: null,
   upgradePath: UPGRADE_PATH,
   limits: SELF_HOSTED_LIMITS,

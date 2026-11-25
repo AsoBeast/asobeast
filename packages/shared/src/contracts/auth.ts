@@ -108,6 +108,7 @@ export interface AccountPlan {
   cancelAtPeriodEnd: boolean;
   trialEndsAt: string | null;
   renewsAt: string | null;
+  scheduledPlan?: PaidPlanName | null;
   upgradeTo: PaidPlanName | null;
   upgradePath: string;
   limits: PlanLimits;

@@ -5,7 +5,10 @@ import {
   UPGRADE_PATH,
   billingIntervalOf,
   nextPlan,
+  paidPlanOf,
   type AccountPlan,
+  type PaidPlanName,
+  type PlanName,
   type TrialOffer,
 } from '@asobeast/shared';
 import {
@@ -28,6 +31,7 @@ type WorkspacePlan = WorkspaceEntitlement &
     billingInterval: string | null;
     firstPaidAt: Date | null;
     trialRefusedSubscriptionId: string | null;
+    pendingPlan: string | null;
   };
 
 @Injectable()
@@ -73,6 +77,7 @@ export class AccountPlanService {
       cancelAtPeriodEnd: workspace.cancelAtPeriodEnd,
       trialEndsAt: workspace.trialEndsAt?.toISOString() ?? null,
       renewsAt: workspace.planExpiresAt?.toISOString() ?? null,
+      scheduledPlan: scheduledPlanOf(workspace, plan),
       upgradeTo: billing ? nextPlan(plan) : null,
       upgradePath: UPGRADE_PATH,
       limits,
@@ -86,6 +91,15 @@ export class AccountPlanService {
       },
     };
   }
+}
+
+function scheduledPlanOf(
+  workspace: WorkspacePlan,
+  plan: PlanName,
+): PaidPlanName | null {
+  if (!holdsSubscription(workspace) || workspace.cancelAtPeriodEnd) return null;
+  const next = paidPlanOf(workspace.pendingPlan);
+  return next === plan ? null : next;
 }
 
 function refusedTrialStands(workspace: WorkspacePlan): boolean {
