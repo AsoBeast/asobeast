@@ -81,13 +81,14 @@ A refused delivery is logged. Look for `rejected a webhook delivery` in the API 
 
 ### When the pinned API version moves
 
-The API pins one Stripe API version, `2026-11-18.endive`, and the endpoint should send events in that version. Stripe renders each event in the version of the endpoint that delivers it and never changes the version of an existing endpoint, so a release that moves the pin needs a new endpoint:
+The API pins one Stripe API version, `STRIPE_API_VERSION` in `apps/api/src/billing/stripe.client.ts`, and the endpoint should send events in that version. Stripe renders each event in the version of the endpoint that delivers it and never changes the version of an existing endpoint, so a release that moves the pin needs a new endpoint:
 
-1. Deploy the release. The fields the API reads did not change from `2026-08-26.dahlia`, the version it replaced, so the old endpoint keeps working until you switch.
-2. In Workbench, under Webhooks, create a destination on the same URL with the API version the release pins and the same ten events. The dashboard offers the newest version; when the pin is older than that, create the endpoint through the API with `api_version` set.
-3. Put the new endpoint's signing secret in `STRIPE_WEBHOOK_SECRET`, restart the API, then disable the old endpoint, and delete it once its delivery history is quiet.
+1. Read the upgrade notes of the release. They say whether the API still reads events in the version it replaces. When it does, deploy and keep the old endpoint until you switch; when it does not, switch right after the deploy.
+2. In Workbench, under Webhooks, create a destination on the same URL with the pinned API version and the same ten events, then disable it. The dashboard offers the newest version; when the pin is older than that, create the endpoint through the API with `api_version` set.
+3. Put the new endpoint's signing secret in `STRIPE_WEBHOOK_SECRET`, restart the API, enable the new endpoint and disable the old one. Delete the old one once its delivery history is quiet.
+4. Run the catalog script against the account again, because a new version can bring portal settings the script holds, such as the pause feature it keeps off.
 
-Between the restart and disabling the old endpoint, its deliveries fail signature verification and are logged as `rejected a webhook delivery`. The new endpoint delivers the same events, and the nightly reconciliation corrects any workspace an event missed in between.
+Between the restart and the switch of the endpoints, the old endpoint's deliveries fail signature verification and are logged as `rejected a webhook delivery`. The nightly reconciliation corrects any workspace an event missed in that window.
 
 ### What happens to an event this instance cannot place
 
