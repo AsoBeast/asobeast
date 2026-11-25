@@ -4,6 +4,7 @@ import {
   STORE_TEXT_LAYOUTS,
 } from "@/lib/store-preview/store-layouts";
 import { CutText } from "./CutText";
+import { DeveloperLine } from "./DeveloperLine";
 import { RatingLine } from "./RatingLine";
 import { ScreenshotRow } from "./ScreenshotRow";
 import { StoreButton } from "./StoreButton";
@@ -23,14 +24,7 @@ export function PlayProductPage({ listing, device, measure }: SurfaceProps) {
             device={device}
             measure={measure}
           />
-          {listing.developer ? (
-            <span
-              dir="auto"
-              className="truncate text-caption text-muted-foreground"
-            >
-              {listing.developer}
-            </span>
-          ) : null}
+          <DeveloperLine developer={listing.developer} />
         </div>
       </div>
       <div className="flex items-center justify-between gap-3">
