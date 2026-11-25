@@ -137,7 +137,7 @@ export function fitLines(
   const wrapped = wrapSpans(words, box.width, measure);
   const shownCount = Math.max(box.lines, 1);
   const lastShown = wrapped[shownCount - 1];
-  if (wrapped.length <= box.lines || !lastShown) {
+  if (wrapped.length <= shownCount || !lastShown) {
     const cutAt = codePoints(normalized);
     return {
       lines: wrapped.map((line) => line.text),
