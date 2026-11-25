@@ -87,6 +87,7 @@ describe('provider error taxonomy', () => {
       expect((error as StoreRequestError).store).toBe(Store.APP_STORE);
       expect((error as StoreRequestError).method).toBe('getApp');
       expect((error as StoreRequestError).causeMessage).toBe(cause.message);
+      expect((error as StoreRequestError).cause).toBe(cause);
     });
 
     it('separates a missing app from an upstream failure', async () => {
@@ -209,6 +210,7 @@ describe('provider error taxonomy', () => {
       expect((error as StoreRequestError).causeMessage).toBe(
         `${cause.name}: ${cause.message}`,
       );
+      expect((error as StoreRequestError).cause).toBe(cause);
     });
 
     it('separates a missing app from an upstream failure', async () => {
@@ -478,6 +480,27 @@ describe('store failure reasons', () => {
     expect(
       new StoreRequestError(Store.GOOGLE_PLAY, 'getApp', cause).reason,
     ).toBe('slow');
+  });
+
+  it('keeps the failure it wraps as its cause', () => {
+    const cause = new TypeError('fetch failed');
+
+    expect(
+      new StoreRequestError(Store.APP_STORE, 'search', 'fetch failed', {
+        cause,
+      }).cause,
+    ).toBe(cause);
+  });
+
+  it('agrees on unreachable for a play network failure', () => {
+    const error = new StoreRequestError(
+      Store.GOOGLE_PLAY,
+      'getApp',
+      'HttpError: Network request to https://play.google.com/store/apps/details?id=com.example failed',
+    );
+
+    expect(error.reason).toBe('unreachable');
+    expect(error.unreachable).toBe(true);
   });
 
   it('keeps the busy pool sentence', () => {
