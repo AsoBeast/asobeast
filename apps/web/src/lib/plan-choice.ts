@@ -85,8 +85,21 @@ function cardTrialEnd(plan: AccountPlan): string | null {
   return plan.trialing === true ? plan.trialEndsAt : null;
 }
 
-function declined(plan: AccountPlan): boolean {
-  return plan.trialChargeFailed === true;
+export function trialChargeDeclined(plan: AccountPlan | undefined): boolean {
+  return plan?.trialChargeFailed === true;
+}
+
+export function pausedNotice(
+  plan: AccountPlan | undefined,
+  isMember: boolean,
+): string {
+  if (isMember) return `${COLLECTION_PAUSED} ${ASK_THE_OWNER}`;
+  return trialChargeDeclined(plan) ? TRIAL_CHARGE_DECLINED : COLLECTION_PAUSED;
+}
+
+function scheduledSwitch(plan: AccountPlan): string | null {
+  if (!plan.scheduledPlan || !plan.renewsAt) return null;
+  return `${PLANS[plan.scheduledPlan].displayName} on ${formatDate(plan.renewsAt)}`;
 }
 
 export function trialPriceLabel(plan: AccountPlan): string | null {
@@ -320,7 +333,7 @@ function paywallTrialLine(plan: AccountPlan): string | null {
       ? nothingCharged(trialEnd)
       : `Your trial runs until ${formatDate(trialEnd)}${thenCharged(plan)}. Change or cancel it in the billing portal.`;
   }
-  if (declined(plan)) return TRIAL_CHARGE_DECLINED;
+  if (trialChargeDeclined(plan)) return TRIAL_CHARGE_DECLINED;
   if (plan.plan === "trial" && plan.trialEndsAt) {
     return `Your trial is active until ${formatDate(plan.trialEndsAt)}.`;
   }
@@ -354,6 +367,10 @@ export function paywallStatusLine(
   if (plan.trialEndsAt && !plan.entitled) {
     return `Your trial ended on ${formatDate(plan.trialEndsAt)}. Your data is still here.`;
   }
+  const switchTo = scheduledSwitch(plan);
+  if (switchTo) {
+    return `Your ${PLANS[plan.plan].displayName} plan switches to ${switchTo}.`;
+  }
   if (plan.renewsAt) {
     return `Your ${PLANS[plan.plan].displayName} plan renews on ${formatDate(plan.renewsAt)}.`;
   }
@@ -362,7 +379,7 @@ export function paywallStatusLine(
 
 export function planStatusLine(plan: AccountPlan): string {
   if (pending(plan)) return PAYMENT_CONFIRMING;
-  if (declined(plan)) return TRIAL_CHARGE_DECLINED;
+  if (trialChargeDeclined(plan)) return TRIAL_CHARGE_DECLINED;
   if (stalled(plan)) return STALLED_IN_SETTINGS;
   if (plan.trialOffer && !plan.subscribed) return START_ON_THE_PLAN_PAGE;
   if (!plan.entitled) {
@@ -373,6 +390,8 @@ export function planStatusLine(plan: AccountPlan): string {
   if (plan.cancelAtPeriodEnd && plan.renewsAt) {
     return `Cancelled. Access continues until ${formatDate(plan.renewsAt)}.`;
   }
+  const switchTo = scheduledSwitch(plan);
+  if (switchTo) return `Switches to ${switchTo}.`;
   if (plan.renewsAt) return `Renews on ${formatDate(plan.renewsAt)}.`;
   return "Billed monthly until you cancel.";
 }

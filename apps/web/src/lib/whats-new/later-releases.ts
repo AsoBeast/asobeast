@@ -18,6 +18,16 @@ export const LATER_RELEASES: readonly Release[] = [
         title: "A search that lists no apps says so",
         text: "When a store lists no apps at all for a keyword you track, its position now reads No apps instead of more than 200: in the keywords table, on the rankings page with its chart and movers, in the position history, the search results sheet, the discovery list and the keyword breakdown. Pointing at it explains that the store lists no apps for this search. A rank alert and the weekly digest say the same when this happens to a keyword that used to rank. Checks from before this update keep the number they were stored with.",
       },
+      {
+        kind: "fixed",
+        title: "A scheduled plan change shows in Settings",
+        text: "When you move to a smaller plan in the billing portal and the change waits for the end of the period, the Plan section in Settings now names the plan you switch to and the day it starts, instead of saying the current plan renews.",
+      },
+      {
+        kind: "fixed",
+        title: "A declined card says so at the top",
+        text: "When the card on a free trial is declined at the end of the trial, the bar at the top of every page now says the card was declined and links to billing in Settings, where you update the card in the billing portal, instead of asking you to choose a plan again.",
+      },
     ],
   },
   {

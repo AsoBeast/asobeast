@@ -120,6 +120,25 @@ export const DECLINED_PLAN: AccountPlan = {
   trialEndsAt: endsIn(-1),
 };
 
+export const SCHEDULED_DOWNGRADE_PLAN: AccountPlan = {
+  ...OFFERED_PLAN,
+  plan: "ultimate",
+  displayName: "Ultimate",
+  entitled: true,
+  subscribed: true,
+  hasBillingAccount: true,
+  trialOffer: null,
+  billingInterval: "month",
+  renewsAt: endsIn(12),
+  scheduledPlan: "indie",
+  upgradeTo: null,
+  limits: PLAN_LIMITS.ultimate,
+  usage: {
+    apps: { used: 4, limit: PLAN_LIMITS.ultimate.apps },
+    keywordMarkets: { used: 40, limit: PLAN_LIMITS.ultimate.keywordMarkets },
+  },
+};
+
 export function planCookie(plan: AccountPlan): string {
   return Buffer.from(JSON.stringify(plan)).toString("base64url");
 }

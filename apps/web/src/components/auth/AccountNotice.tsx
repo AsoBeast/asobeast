@@ -10,9 +10,10 @@ import {
 } from "@/components/layout/notice-line";
 import {
   ASK_THE_OWNER,
-  COLLECTION_PAUSED,
+  pausedNotice,
   suspensionNotice,
   trialBannerLine,
+  trialChargeDeclined,
 } from "@/lib/plan-choice";
 import { accountPlanOptions } from "@/lib/queries";
 import { useAuth } from "./use-auth";
@@ -29,6 +30,10 @@ function daysLeft(iso: string): number {
 const TRIAL_ENDING_DAYS = 3;
 
 const UPGRADE = "/upgrade";
+
+const MANAGE_BILLING = { href: "/settings#plan", label: "Manage billing" };
+
+const CHOOSE_A_PLAN = { href: UPGRADE, label: "Choose a plan" };
 
 function AccountBar({
   icon,
@@ -63,24 +68,30 @@ function AccountBar({
   );
 }
 
+function pausedAction(isMember: boolean, declined: boolean) {
+  if (isMember) return undefined;
+  return declined ? MANAGE_BILLING : CHOOSE_A_PLAN;
+}
+
 function PausedBanner({ isMember }: { isMember: boolean }) {
+  const { data: plan } = useQuery({
+    ...accountPlanOptions,
+    enabled: !isMember,
+  });
+
   return (
     <AccountBar
       icon={CirclePause}
       tone="warning"
-      sentence={
-        isMember ? `${COLLECTION_PAUSED} ${ASK_THE_OWNER}` : COLLECTION_PAUSED
-      }
-      action={isMember ? undefined : { href: UPGRADE, label: "Choose a plan" }}
+      sentence={pausedNotice(plan, isMember)}
+      action={pausedAction(isMember, trialChargeDeclined(plan))}
     />
   );
 }
 
 function trialAction(isMember: boolean, card: boolean) {
   if (isMember) return undefined;
-  return card
-    ? { href: "/settings", label: "Manage billing" }
-    : { href: UPGRADE, label: "Upgrade" };
+  return card ? MANAGE_BILLING : { href: UPGRADE, label: "Upgrade" };
 }
 
 function TrialBanner({

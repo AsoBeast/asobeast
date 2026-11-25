@@ -10,6 +10,7 @@ import {
   DAY_MS,
   DECLINED_PLAN,
   OFFERED_PLAN,
+  SCHEDULED_DOWNGRADE_PLAN,
   TRIALING_PLAN,
   openBilling,
   openRegistration,
@@ -1146,7 +1147,7 @@ test.describe("a card backed trial", () => {
     ).toBeVisible();
     await expect(
       page.getByRole("link", { name: "Manage billing" }),
-    ).toHaveAttribute("href", "/settings");
+    ).toHaveAttribute("href", "/settings#plan");
   });
 
   test("says a cancelled trial charges nothing", async ({ page }) => {
@@ -1197,5 +1198,47 @@ test.describe("a card backed trial", () => {
     await expect(
       page.getByRole("button", { name: "Manage billing" }),
     ).toBeVisible();
+  });
+
+  test("names a declined card in the account bar and links to billing", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "lapsed-operator");
+    await openBilling(page, DECLINED_PLAN);
+
+    await page.goto("/");
+
+    const bar = page.locator('[data-slot="account-bar"]');
+    await expect(bar).toContainText(
+      "Your trial ended, but the card was declined. Update it in the billing portal to start your plan.",
+    );
+    await expect(bar).not.toContainText("Collection is paused");
+    await expect(
+      bar.getByRole("link", { name: "Manage billing" }),
+    ).toHaveAttribute("href", "/settings#plan");
+    await expect(bar.getByRole("link", { name: "Choose a plan" })).toHaveCount(
+      0,
+    );
+  });
+});
+
+test.describe("a plan switch scheduled in the billing portal", () => {
+  test("names the next plan and its day in settings", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "customer");
+    await seedSession(page);
+    await openBilling(page, SCHEDULED_DOWNGRADE_PLAN);
+
+    await page.goto("/settings");
+
+    await expect(
+      page.getByText(
+        `Switches to Indie on ${formatDate(SCHEDULED_DOWNGRADE_PLAN.renewsAt)}.`,
+      ),
+    ).toBeVisible();
+    await expect(page.getByText(/^Renews on/)).toHaveCount(0);
   });
 });
