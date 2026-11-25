@@ -374,7 +374,7 @@ describe('ProxyEgress', () => {
     const refusedJob = (status: number, thrown = refusedRequest(status)) =>
       failingWith(thrown, status);
 
-    it.each([402, 407])(
+    it.each([402, 407, 403, 503])(
       'never reaches for residential over a %s',
       async (status) => {
         claim.mockResolvedValue({} as Dispatcher);
@@ -606,13 +606,16 @@ describe('ProxyEgress', () => {
       ).rejects.toBe(thrown);
     });
 
-    it('keeps the store failure of queued work the proxy refused for another reason', async () => {
-      const thrown = refusedRequest(503);
+    it.each([403, 503])(
+      'keeps the store failure of queued work the proxy refused with %s',
+      async (status) => {
+        const thrown = refusedRequest(status);
 
-      await expect(
-        egress.through(Store.APP_STORE, 'us', refusedJob(503, thrown)),
-      ).rejects.toBe(thrown);
-    });
+        await expect(
+          egress.through(Store.APP_STORE, 'us', refusedJob(status, thrown)),
+        ).rejects.toBe(thrown);
+      },
+    );
   });
 
   it('rethrows the failure of the job when its outcome cannot be recorded', async () => {
