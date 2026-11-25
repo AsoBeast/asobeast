@@ -1,14 +1,15 @@
 "use client";
 
 import { useDeferredValue, useId } from "react";
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { useMarket } from "@/components/app-detail/use-market";
 import { PANEL_HEADER } from "@/components/layout/panel-classes";
 import { ListingStorePreview } from "@/components/store-preview/ListingStorePreview";
+import { usePreviewScreenshots } from "@/components/store-preview/use-preview-screenshots";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ListingDraftValues } from "@/lib/listing-draft";
 import { queryMarket } from "@/lib/market";
-import { appDetailOptions, screenshotsOptions } from "@/lib/queries";
+import { appDetailOptions } from "@/lib/queries";
 
 export function DraftStorePreview({
   id,
@@ -24,8 +25,10 @@ export function DraftStorePreview({
   const headingId = useId();
   const { market, home } = useMarket(id);
   const { data: detail } = useSuspenseQuery(appDetailOptions(id));
-  const screenshots = useQuery(
-    screenshotsOptions(id, queryMarket(market, home), localization),
+  const screenshots = usePreviewScreenshots(
+    id,
+    queryMarket(market, home),
+    localization,
   );
   const drafted = useDeferredValue(values);
 
