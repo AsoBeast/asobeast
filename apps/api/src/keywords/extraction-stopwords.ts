@@ -47,12 +47,7 @@ const CHINESE_PARTICLES: ReadonlySet<string> = new Set([
 ]);
 const THAI_NOISE = ['แอป', 'แอพ', 'แอปพลิเคชัน', 'ฟรี', 'วันนี้'];
 
-const THAI_PREFIXES: ReadonlySet<string> = new Set([
-  'การ',
-  'ความ',
-  'นัก',
-  'ผู้',
-]);
+const THAI_PREFIXES: ReadonlySet<string> = new Set(['การ', 'ความ', 'นัก', 'ผู้']);
 
 const THAI = [
   'และ',
