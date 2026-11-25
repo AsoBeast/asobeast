@@ -9,11 +9,13 @@ import {
 let ready: Promise<FontMeasure | null> | null = null;
 
 const loadFontMeasure = (): Promise<FontMeasure | null> =>
-  (ready ??= document.fonts.ready.then(() =>
-    createCanvasMeasure(() =>
-      document.createElement("canvas").getContext("2d"),
-    ),
-  ));
+  (ready ??= document.fonts.ready
+    .then(() =>
+      createCanvasMeasure(() =>
+        document.createElement("canvas").getContext("2d"),
+      ),
+    )
+    .catch(() => null));
 
 export function useTextMeasure(): FontMeasure | null {
   const [measure, setMeasure] = useState<FontMeasure | null>(null);
