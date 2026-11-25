@@ -101,6 +101,12 @@ describe("StorePreview", () => {
     );
   });
 
+  it("names a frame whose title is blank", () => {
+    expect(markupOf({ ...appStoreListing, title: "   " })).toContain(
+      'aria-label="App Store search result without a title"',
+    );
+  });
+
   it("draws store text in the direction of its own script", () => {
     const markup = markupOf({ ...appStoreListing, title: "مؤقت التركيز" });
     expect(markup).toMatch(/<span dir="auto"[^>]*>مؤقت التركيز<\/span>/);
