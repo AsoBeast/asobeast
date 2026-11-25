@@ -969,6 +969,17 @@
         "operationId": "AlertsController_listDeliveries",
         "parameters": [
           {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "type": "number"
+            }
+          },
+          {
             "name": "webhookId",
             "required": false,
             "in": "query",
@@ -982,17 +993,6 @@
             "in": "query",
             "schema": {
               "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 200,
-              "default": 50,
-              "type": "number"
             }
           }
         ],
@@ -4071,6 +4071,17 @@
             }
           },
           {
+            "name": "days",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 30,
+              "default": 7,
+              "type": "number"
+            }
+          },
+          {
             "name": "country",
             "required": false,
             "in": "query",
@@ -4079,17 +4090,6 @@
               "pattern": "^[a-z]{2}$",
               "example": "us",
               "type": "string"
-            }
-          },
-          {
-            "name": "days",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 30,
-              "default": 7,
-              "type": "number"
             }
           }
         ],
@@ -4166,6 +4166,17 @@
             }
           },
           {
+            "name": "days",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 365,
+              "default": 90,
+              "type": "number"
+            }
+          },
+          {
             "name": "country",
             "required": false,
             "in": "query",
@@ -4174,17 +4185,6 @@
               "pattern": "^[a-z]{2}$",
               "example": "de",
               "type": "string"
-            }
-          },
-          {
-            "name": "days",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 365,
-              "default": 90,
-              "type": "number"
             }
           }
         ],
@@ -4264,7 +4264,7 @@
         "parameters": [
           {
             "name": "limit",
-            "required": true,
+            "required": false,
             "in": "query",
             "schema": {
               "minimum": 1,
@@ -5214,6 +5214,17 @@
             }
           },
           {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "type": "number"
+            }
+          },
+          {
             "name": "replyState",
             "required": false,
             "in": "query",
@@ -5256,17 +5267,6 @@
             "in": "query",
             "schema": {
               "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 200,
-              "default": 50,
-              "type": "number"
             }
           }
         ],
@@ -6853,7 +6853,7 @@
           },
           {
             "name": "days",
-            "required": true,
+            "required": false,
             "in": "query",
             "schema": {
               "minimum": 7,

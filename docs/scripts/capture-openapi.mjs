@@ -31,12 +31,23 @@ function documentedAsObject(schema = {}) {
   );
 }
 
-function untypedParameters(document) {
+function parameterProblem({ required, schema = {} }) {
+  if (documentedAsObject(schema)) return "is documented as an object";
+  if (required && schema.default !== undefined) {
+    return "is required although it has a default";
+  }
+  return null;
+}
+
+function misdocumentedParameters(document) {
   return Object.entries(document.paths ?? {}).flatMap(([path, operations]) =>
     Object.entries(operations).flatMap(([method, operation]) =>
-      (operation.parameters ?? [])
-        .filter((parameter) => documentedAsObject(parameter.schema))
-        .map((parameter) => `  ${method} ${path} ${parameter.name}`),
+      (operation.parameters ?? []).flatMap((parameter) => {
+        const problem = parameterProblem(parameter);
+        return problem
+          ? [`  ${method} ${path} ${parameter.name} ${problem}`]
+          : [];
+      }),
     ),
   );
 }
@@ -119,12 +130,12 @@ async function fetchDocument() {
     );
   }
 
-  const untyped = untypedParameters(document);
-  if (untyped.length > 0) {
+  const misdocumented = misdocumentedParameters(document);
+  if (misdocumented.length > 0) {
     throw new Error(
       [
-        `GET ${url} documents parameters as objects, so their DTO properties need an explicit type:`,
-        ...untyped,
+        `GET ${url} misdocuments parameters; give each DTO property an explicit type, and use @ApiPropertyOptional for one with a default:`,
+        ...misdocumented,
       ].join("\n"),
     );
   }
