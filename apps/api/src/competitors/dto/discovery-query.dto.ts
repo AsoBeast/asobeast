@@ -7,5 +7,5 @@ export class DiscoveryQueryDto {
   @IsInt()
   @Min(7)
   @Max(90)
-  days = 30;
+  days: number = 30;
 }

@@ -44,7 +44,7 @@ export class ReviewsQueryDto {
   @IsInt()
   @Min(QUERY_BOUNDS.reviewsLimit.min)
   @Max(QUERY_BOUNDS.reviewsLimit.max)
-  limit = QUERY_BOUNDS.reviewsLimit.default;
+  limit: number = QUERY_BOUNDS.reviewsLimit.default;
 
   @ApiPropertyOptional({ enum: REVIEW_REPLY_STATES })
   @IsOptional()

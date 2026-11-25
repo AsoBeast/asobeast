@@ -9,7 +9,7 @@ export class SerpMoversQueryDto {
   @IsInt()
   @Min(QUERY_BOUNDS.serpMoverDays.min)
   @Max(QUERY_BOUNDS.serpMoverDays.max)
-  days = QUERY_BOUNDS.serpMoverDays.default;
+  days: number = QUERY_BOUNDS.serpMoverDays.default;
 
   @ApiPropertyOptional({
     example: 'us',

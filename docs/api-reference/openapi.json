@@ -992,11 +992,7 @@
               "minimum": 1,
               "maximum": 200,
               "default": 50,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           }
         ],
@@ -2135,11 +2131,7 @@
               "minimum": 1,
               "maximum": 25,
               "default": 10,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           }
         ],
@@ -2675,11 +2667,7 @@
             "in": "query",
             "schema": {
               "default": false,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "boolean"
             }
           }
         ],
@@ -2790,11 +2778,7 @@
               "minimum": 1,
               "maximum": 100,
               "default": 30,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           }
         ],
@@ -4105,11 +4089,7 @@
               "minimum": 1,
               "maximum": 30,
               "default": 7,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           }
         ],
@@ -4204,11 +4184,7 @@
               "minimum": 1,
               "maximum": 365,
               "default": 90,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           }
         ],
@@ -4294,11 +4270,7 @@
               "minimum": 1,
               "maximum": 50,
               "default": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           }
         ],
@@ -5294,11 +5266,7 @@
               "minimum": 1,
               "maximum": 200,
               "default": 50,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           }
         ],
@@ -6432,11 +6400,7 @@
               "minimum": 1,
               "maximum": 200,
               "default": 100,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           }
         ],
@@ -6577,11 +6541,7 @@
               "minimum": 7,
               "maximum": 90,
               "default": 30,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           }
         ],
@@ -6829,11 +6789,7 @@
               "minimum": 1,
               "maximum": 200,
               "default": 100,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           }
         ],
@@ -6903,11 +6859,7 @@
               "minimum": 7,
               "maximum": 90,
               "default": 30,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           }
         ],
@@ -7999,10 +7951,6 @@
             "type": "boolean"
           }
         }
-      },
-      "Object": {
-        "type": "object",
-        "properties": {}
       },
       "RequestDeletionDto": {
         "type": "object",

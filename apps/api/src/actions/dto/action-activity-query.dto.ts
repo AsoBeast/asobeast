@@ -17,5 +17,5 @@ export class ActionActivityQueryDto extends ActionScopeQueryDto {
   @IsInt()
   @Min(DAYS.min)
   @Max(DAYS.max)
-  days = DAYS.default;
+  days: number = DAYS.default;
 }

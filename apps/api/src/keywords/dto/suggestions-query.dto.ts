@@ -25,5 +25,5 @@ export class SuggestionsQueryDto {
   @IsInt()
   @Min(QUERY_BOUNDS.suggestionsLimit.min)
   @Max(QUERY_BOUNDS.suggestionsLimit.max)
-  limit = QUERY_BOUNDS.suggestionsLimit.default;
+  limit: number = QUERY_BOUNDS.suggestionsLimit.default;
 }

@@ -81,5 +81,5 @@ export class ListActionsQueryDto {
   @IsInt()
   @Min(QUERY_BOUNDS.actionsLimit.min)
   @Max(ACTIONS_MAX_LIMIT)
-  limit = ACTIONS_DEFAULT_LIMIT;
+  limit: number = ACTIONS_DEFAULT_LIMIT;
 }

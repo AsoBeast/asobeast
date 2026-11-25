@@ -22,6 +22,25 @@ function explain(status) {
   return "the API answered unexpectedly";
 }
 
+const OBJECT_SCHEMA_REF = "#/components/schemas/Object";
+
+function documentedAsObject(schema = {}) {
+  return (
+    schema.type === "object" ||
+    (schema.allOf ?? []).some(({ $ref }) => $ref === OBJECT_SCHEMA_REF)
+  );
+}
+
+function untypedParameters(document) {
+  return Object.entries(document.paths ?? {}).flatMap(([path, operations]) =>
+    Object.entries(operations).flatMap(([method, operation]) =>
+      (operation.parameters ?? [])
+        .filter((parameter) => documentedAsObject(parameter.schema))
+        .map((parameter) => `  ${method} ${path} ${parameter.name}`),
+    ),
+  );
+}
+
 function serialize(document) {
   return `${JSON.stringify(document, null, 2)}\n`;
 }
@@ -97,6 +116,16 @@ async function fetchDocument() {
   if (paths === 0) {
     throw new Error(
       `GET ${url} returned a document with no paths, so the API did not boot fully`,
+    );
+  }
+
+  const untyped = untypedParameters(document);
+  if (untyped.length > 0) {
+    throw new Error(
+      [
+        `GET ${url} documents parameters as objects, so their DTO properties need an explicit type:`,
+        ...untyped,
+      ].join("\n"),
     );
   }
 

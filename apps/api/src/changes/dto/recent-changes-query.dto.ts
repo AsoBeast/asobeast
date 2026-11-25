@@ -8,5 +8,5 @@ export class RecentChangesQueryDto {
   @IsInt()
   @Min(QUERY_BOUNDS.recentChangesLimit.min)
   @Max(QUERY_BOUNDS.recentChangesLimit.max)
-  limit = QUERY_BOUNDS.recentChangesLimit.default;
+  limit: number = QUERY_BOUNDS.recentChangesLimit.default;
 }

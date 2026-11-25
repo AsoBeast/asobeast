@@ -45,5 +45,5 @@ export class StoreSearchQueryDto {
   @IsInt()
   @Min(QUERY_BOUNDS.storeSearchLimit.min)
   @Max(QUERY_BOUNDS.storeSearchLimit.max)
-  limit = QUERY_BOUNDS.storeSearchLimit.default;
+  limit: number = QUERY_BOUNDS.storeSearchLimit.default;
 }

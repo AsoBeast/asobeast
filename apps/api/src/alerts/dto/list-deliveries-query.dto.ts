@@ -15,5 +15,5 @@ export class ListDeliveriesQueryDto {
   @IsInt()
   @Min(1)
   @Max(200)
-  limit = 50;
+  limit: number = 50;
 }
