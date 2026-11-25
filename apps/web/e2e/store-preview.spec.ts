@@ -279,3 +279,31 @@ test("says so when the screenshots cannot be read", async ({ page }) => {
   await expect(frame(page)).toBeVisible();
   await expect(frame(page)).not.toContainText("No screenshots captured yet");
 });
+
+test("keeps another folded overview section folded", async ({ page }) => {
+  await page.goto("/apps/app-1");
+  const ratings = page.getByRole("region", { name: "Ratings by market" });
+  const toggle = (region: typeof ratings, name: string) =>
+    region.getByRole("button", { name, exact: true });
+
+  await (await hydrated(toggle(ratings, "Ratings by market"))).click();
+  await expect(toggle(ratings, "Ratings by market")).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+  await toggle(previewCard(page), "In the store").click();
+  await expect(toggle(previewCard(page), "In the store")).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+
+  await page.reload();
+  await expect(toggle(ratings, "Ratings by market")).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+  await expect(toggle(previewCard(page), "In the store")).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+});
