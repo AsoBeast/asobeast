@@ -302,13 +302,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
   private fromHttp(exception: HttpException): ResolvedError {
     const statusCode = exception.getStatus();
+    const statusText = STATUS_CODES[statusCode] ?? exception.name;
     const body = exception.getResponse();
     if (typeof body === 'string') {
-      return {
-        statusCode,
-        error: STATUS_CODES[statusCode] ?? exception.name,
-        message: body,
-      };
+      return { statusCode, error: statusText, message: body };
     }
     const record = body as Record<string, unknown>;
     const message = Array.isArray(record.message)
@@ -316,8 +313,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       : typeof record.message === 'string'
         ? record.message
         : exception.message;
-    const error =
-      typeof record.error === 'string' ? record.error : exception.name;
+    const error = typeof record.error === 'string' ? record.error : statusText;
     return { statusCode, error, message };
   }
 }

@@ -391,6 +391,19 @@ describe('AllExceptionsFilter', () => {
     },
   );
 
+  it('names an exception whose body carries no error by its status', () => {
+    const { status, envelope } = capture(
+      new HttpException({ message: 'already linked' }, HttpStatus.CONFLICT),
+    );
+
+    expect(status).toBe(HttpStatus.CONFLICT);
+    expect(envelope).toMatchObject({
+      statusCode: HttpStatus.CONFLICT,
+      error: 'Conflict',
+      message: 'already linked',
+    });
+  });
+
   it('keeps a server error from the parser a 500 with a generic message', () => {
     const logged = jest.spyOn(Logger.prototype, 'error').mockImplementation();
 
