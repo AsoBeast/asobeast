@@ -4,6 +4,7 @@ import { Copy } from "lucide-react";
 import { toast } from "sonner";
 import type { AppAuditResult } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
+import { copyText } from "@/lib/copy-text";
 import { auditMarkdown } from "./audit-report";
 
 export function CopyReportButton({
@@ -14,10 +15,9 @@ export function CopyReportButton({
   app: { name: string | null; country: string };
 }) {
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(auditMarkdown(audit, app));
+    if (await copyText(auditMarkdown(audit, app))) {
       toast.success("Report copied");
-    } catch {
+    } else {
       toast.error("Your browser blocked the clipboard");
     }
   };

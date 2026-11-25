@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import {
   KEYWORD_FIELD_CHAR_LIMIT,
@@ -16,7 +16,7 @@ import {
   type KeywordFieldDraft,
 } from "@/lib/app-localizations";
 import { formatDateTime, formatList } from "@/lib/format";
-import { proposalDraft } from "@/lib/keyword-field-addition";
+import { seededFieldDraft } from "@/lib/keyword-field-addition";
 import { localizationName } from "@/lib/localizations";
 import { STORE_CONNECTIONS_PATH } from "@/lib/store-connection-copy";
 import { cn } from "@/lib/utils";
@@ -58,7 +58,11 @@ function KeywordFieldUsage({
   );
 }
 
-function StoreFieldNotice({ sync }: { sync: AppLocalizationStoreSync | null }) {
+export function StoreFieldNotice({
+  sync,
+}: {
+  sync: AppLocalizationStoreSync | null;
+}) {
   return (
     <>
       <p className="text-caption text-muted-foreground">
@@ -94,6 +98,7 @@ export function KeywordFieldEditor({
   sync = null,
   leading,
   proposed = null,
+  drafted,
   onProposalSettled,
 }: {
   id: string;
@@ -102,6 +107,7 @@ export function KeywordFieldEditor({
   sync?: AppLocalizationStoreSync | null;
   leading?: ReactNode;
   proposed?: readonly string[] | null;
+  drafted?: string;
   onProposalSettled?: () => void;
 }) {
   const countId = useId();
@@ -109,8 +115,18 @@ export function KeywordFieldEditor({
   const saveButton = useRef<HTMLButtonElement>(null);
   const name = localizationName(item.localization);
   const [draft, setDraft] = useState<string | null>(() =>
-    proposalDraft(item.phrases, proposed),
+    seededFieldDraft(
+      item.phrases,
+      { fromDraft: drafted, fieldAdd: proposed },
+      managed,
+    ),
   );
+  const [handedIn] = useState(drafted !== undefined && !managed);
+  useEffect(() => {
+    if (!handedIn) return;
+    editor.current?.scrollIntoView({ block: "center" });
+    editor.current?.focus({ preventScroll: true });
+  }, [handedIn]);
   const stored = item.phrases.join(",");
   const text = managed ? stored : (draft ?? stored);
   const field = keywordFieldDraft(text, item.phrases);

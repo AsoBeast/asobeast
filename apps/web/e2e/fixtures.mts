@@ -3837,6 +3837,13 @@ DATASETS[APP_FEW_RATINGS_ID] = ratedDataset(
 );
 DATASETS[APP_UNRATED_ID] = ratedDataset(APP_UNRATED_ID, "Unrated Lab", 0, 0);
 
+export const APP_DRAFT_LOCALES_ID = "app-draft-locales";
+
+DATASETS[APP_DRAFT_LOCALES_ID] = localesDataset(
+  APP_DRAFT_LOCALES_ID,
+  "Draft Lab",
+);
+
 export const APP_FIELD_PROPOSAL_ID = "app-field-proposal";
 export const APP_FIELD_PROPOSAL_RIVAL_ID = "app-field-proposal-rival";
 export const FIELD_PROPOSAL_NOT_STOREFRONT = "cu";
@@ -5894,6 +5901,9 @@ DATASETS[APP_HE_ID] = {
   changeImpact: emptyChangeImpact(APP_HE_DETAIL),
 };
 
+export const PLAY_DESCRIPTION_DRAFT =
+  "Focus Timer keeps every study session and deep work block on track.";
+
 export const METADATA_DRAFTS: MetadataDraft[] = [
   {
     field: "title",
@@ -5918,6 +5928,14 @@ export const METADATA_DRAFTS: MetadataDraft[] = [
     limit: 100,
     issues: [],
     rationale: "Covers uncovered terms.",
+  },
+  {
+    field: "description",
+    value: PLAY_DESCRIPTION_DRAFT,
+    chars: PLAY_DESCRIPTION_DRAFT.length,
+    limit: 4000,
+    issues: [],
+    rationale: "Repeats the primary keywords in the first lines.",
   },
 ];
 
@@ -6151,6 +6169,7 @@ METADATA_AUDITS[APP_RIVAL_ID] = METADATA_AUDIT;
 METADATA_AUDITS[APP_UNLISTED_MANAGED_ID] = METADATA_AUDIT;
 METADATA_AUDITS[APP_IMPORT_FOCUS_ID] = METADATA_AUDIT;
 METADATA_AUDITS[APP_FIELD_PROPOSAL_ID] = METADATA_AUDIT;
+METADATA_AUDITS[APP_DRAFT_LOCALES_ID] = METADATA_AUDIT;
 
 export const APP_READS_ID = "app-reads";
 
