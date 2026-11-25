@@ -94,7 +94,7 @@ export function StorePreview({
   const cuts = measure ? cutSentences(listing, surface, device, measure) : [];
   return (
     <div data-slot="store-preview" className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 print:hidden">
         <OptionStrip
           label="Store view"
           options={STORE_SURFACES}
