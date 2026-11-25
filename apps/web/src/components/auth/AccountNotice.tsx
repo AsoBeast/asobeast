@@ -74,10 +74,14 @@ function pausedAction(isMember: boolean, declined: boolean) {
 }
 
 function PausedBanner({ isMember }: { isMember: boolean }) {
-  const { data: plan } = useQuery({
+  const { data: plan, isLoading } = useQuery({
     ...accountPlanOptions,
     enabled: !isMember,
   });
+
+  if (isLoading) {
+    return <AccountBar icon={CirclePause} tone="warning" sentence="" />;
+  }
 
   return (
     <AccountBar

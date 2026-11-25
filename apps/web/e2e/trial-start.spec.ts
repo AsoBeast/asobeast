@@ -1221,6 +1221,24 @@ test.describe("a card backed trial", () => {
       0,
     );
   });
+
+  test("never shows the paused sentence while the plan is loading", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "lapsed-operator");
+    await openBilling(page, DECLINED_PLAN);
+    const plan = await holdRequest(page, /\/api\/backend\/auth\/plan$/, "GET");
+
+    await page.goto("/");
+
+    const bar = page.locator('[data-slot="account-bar"]');
+    await expect(bar).toBeVisible();
+    await expect(bar).not.toContainText("Collection is paused");
+    await expect(bar.getByRole("link")).toHaveCount(0);
+    plan.release();
+    await expect(bar).toContainText("the card was declined");
+  });
 });
 
 test.describe("a plan switch scheduled in the billing portal", () => {
