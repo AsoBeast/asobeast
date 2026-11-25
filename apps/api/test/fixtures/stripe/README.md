@@ -68,7 +68,10 @@ stripe listen --project-name asobeast-local --latest --all-snapshot --forward-to
 
 `--latest` renders the events on the newest API version instead of the
 account's default, so check that the line `stripe listen` prints when it is
-ready names the pinned version. Run M-QA-01, M-QA-03, M-QA-04, M-QA-06 and
+ready names the pinned version. Pass `--project-name asobeast-local` to every
+`stripe trigger` and `stripe post` below as well; without it the CLI uses its
+default account, where the ids do not exist and triggered events never reach the
+listener. Run M-QA-01, M-QA-03, M-QA-04, M-QA-06 and
 M-QA-07 from the manual pass, then `stripe trigger`
 `customer.subscription.trial_will_end` and `customer.subscription.paused` for
 two events no asobeast flow produces. The CLI cannot trigger
