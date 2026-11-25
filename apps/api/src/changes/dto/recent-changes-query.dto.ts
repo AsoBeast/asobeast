@@ -4,7 +4,7 @@ import { IsInt, IsOptional, Max, Min } from 'class-validator';
 import { QUERY_BOUNDS } from '@asobeast/shared';
 
 export class RecentChangesQueryDto {
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ type: 'integer' })
   @IsOptional()
   @Type(() => Number)
   @IsInt()

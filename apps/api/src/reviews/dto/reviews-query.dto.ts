@@ -39,7 +39,7 @@ export class ReviewsQueryDto {
   @IsISO8601({ strict: true })
   from?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ type: 'integer' })
   @IsOptional()
   @Type(() => Number)
   @IsInt()

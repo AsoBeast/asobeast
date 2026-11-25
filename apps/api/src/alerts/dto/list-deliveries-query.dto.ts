@@ -11,7 +11,7 @@ export class ListDeliveriesQueryDto {
   @IsString()
   emailAlertId?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ type: 'integer' })
   @IsOptional()
   @Type(() => Number)
   @IsInt()

@@ -4,7 +4,7 @@ import { IsInt, IsOptional, Matches, Max, Min } from 'class-validator';
 import { COUNTRY_PATTERN, QUERY_BOUNDS } from '@asobeast/shared';
 
 export class ChangeTimelineQueryDto {
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ type: 'integer' })
   @IsOptional()
   @Type(() => Number)
   @IsInt()

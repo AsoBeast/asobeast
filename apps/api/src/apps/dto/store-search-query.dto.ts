@@ -39,7 +39,10 @@ export class StoreSearchQueryDto {
   @MaxLength(STORE_SEARCH_QUERY_MAX_LENGTH)
   q!: string;
 
-  @ApiPropertyOptional({ default: QUERY_BOUNDS.storeSearchLimit.default })
+  @ApiPropertyOptional({
+    type: 'integer',
+    default: QUERY_BOUNDS.storeSearchLimit.default,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()

@@ -75,7 +75,7 @@ export class ListActionsQueryDto {
   @IsIn(STORES)
   store?: Store;
 
-  @ApiPropertyOptional({ default: ACTIONS_DEFAULT_LIMIT })
+  @ApiPropertyOptional({ type: 'integer', default: ACTIONS_DEFAULT_LIMIT })
   @IsOptional()
   @Type(() => Number)
   @IsInt()

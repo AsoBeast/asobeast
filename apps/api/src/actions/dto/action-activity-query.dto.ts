@@ -8,6 +8,7 @@ const DAYS = QUERY_BOUNDS.actionActivityDays;
 
 export class ActionActivityQueryDto extends ActionScopeQueryDto {
   @ApiPropertyOptional({
+    type: 'integer',
     default: DAYS.default,
     minimum: DAYS.min,
     maximum: DAYS.max,

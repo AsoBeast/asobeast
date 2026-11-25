@@ -19,7 +19,7 @@ export class SuggestionsQueryDto {
   @Matches(COUNTRY_PATTERN)
   country?: string;
 
-  @ApiPropertyOptional({ default: 30 })
+  @ApiPropertyOptional({ type: 'integer', default: 30 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
