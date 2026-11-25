@@ -25,6 +25,7 @@ import {
   paywallHeading,
   paywallStatusLine,
   pausedNotice,
+  pausedPlanOf,
   TRIAL_REFUSED,
   suspensionNotice,
   trialBannerLine,
@@ -419,6 +420,15 @@ describe("a card backed trial", () => {
     const declined = planOf({ trialChargeFailed: true });
 
     expect(pausedNotice(declined, false)).toBe(DECLINED);
+  });
+
+  it("reads the paused bar only from a plan that is no longer entitled", () => {
+    const declined = planOf({ entitled: false, trialChargeFailed: true });
+    const cachedWhileTrialing = planOf({ entitled: true, trialing: true });
+
+    expect(pausedPlanOf(declined)).toBe(declined);
+    expect(pausedPlanOf(cachedWhileTrialing)).toBeUndefined();
+    expect(pausedPlanOf(undefined)).toBeUndefined();
   });
 
   it("keeps the paused bar for every other unentitled workspace", () => {

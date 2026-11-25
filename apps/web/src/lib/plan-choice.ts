@@ -89,6 +89,12 @@ export function trialChargeDeclined(plan: AccountPlan | undefined): boolean {
   return plan?.trialChargeFailed === true;
 }
 
+export function pausedPlanOf(
+  plan: AccountPlan | undefined,
+): AccountPlan | undefined {
+  return plan?.entitled === false ? plan : undefined;
+}
+
 export function pausedNotice(
   plan: AccountPlan | undefined,
   isMember: boolean,

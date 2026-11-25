@@ -2,7 +2,7 @@ import { formatDate } from "../src/lib/format";
 import { type Locator, type Page } from "@playwright/test";
 import { openEmbedded, STRIPE_STUB } from "./embedded-checkout.mts";
 import { holdRequest } from "./held-request.mts";
-import { fulfillJson, seedSession } from "./plan-helpers.mts";
+import { fulfillJson, seedPlan, seedSession } from "./plan-helpers.mts";
 import { layoutBox } from "./layout-box.mts";
 import { expect, test } from "./reporting.mts";
 import {
@@ -1238,6 +1238,37 @@ test.describe("a card backed trial", () => {
     await expect(bar.getByRole("link")).toHaveCount(0);
     plan.release();
     await expect(bar).toContainText("the card was declined");
+  });
+
+  test("never reads the paused bar from a plan cached during the trial", async ({
+    page,
+    context,
+  }) => {
+    await page.clock.install();
+    await openBilling(page, TRIALING_PLAN);
+    await page.goto("/");
+    await expect(
+      page.getByRole("link", { name: "Manage billing" }),
+    ).toBeVisible();
+
+    await seedViewer(context, "lapsed-operator");
+    await seedPlan(page, DECLINED_PLAN);
+    const plan = await holdRequest(page, /\/api\/backend\/auth\/plan$/, "GET");
+    await page.clock.fastForward("00:31");
+    await page.evaluate(() =>
+      window.dispatchEvent(new Event("visibilitychange")),
+    );
+
+    const bar = page.locator('[data-slot="account-bar"]');
+    await expect(bar.locator("svg")).toBeVisible();
+    await expect(bar).not.toContainText("Trial ends");
+    await expect(bar).not.toContainText("Collection is paused");
+    await expect(bar.getByRole("link")).toHaveCount(0);
+    plan.release();
+    await expect(bar).toContainText("the card was declined");
+    await expect(
+      bar.getByRole("link", { name: "Manage billing" }),
+    ).toHaveAttribute("href", "/settings#plan");
   });
 });
 

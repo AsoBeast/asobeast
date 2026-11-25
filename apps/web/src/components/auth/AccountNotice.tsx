@@ -11,6 +11,7 @@ import {
 import {
   ASK_THE_OWNER,
   pausedNotice,
+  pausedPlanOf,
   suspensionNotice,
   trialBannerLine,
   trialChargeDeclined,
@@ -74,12 +75,14 @@ function pausedAction(isMember: boolean, declined: boolean) {
 }
 
 function PausedBanner({ isMember }: { isMember: boolean }) {
-  const { data: plan, isLoading } = useQuery({
+  const { data, isFetching } = useQuery({
     ...accountPlanOptions,
     enabled: !isMember,
+    refetchOnMount: "always",
   });
+  const plan = pausedPlanOf(data);
 
-  if (isLoading) {
+  if (!plan && isFetching) {
     return <AccountBar icon={CirclePause} tone="warning" sentence="" />;
   }
 
