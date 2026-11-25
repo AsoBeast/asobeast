@@ -16,6 +16,7 @@ interface HealthRow {
   cooldownUntil: Date | null;
   lastOutcome: ProxyOutcome | null;
   lastUsedAt: Date | null;
+  lastRefusalStatus: number | null;
 }
 
 const health = (over: Partial<HealthRow> = {}): HealthRow => ({
@@ -26,6 +27,7 @@ const health = (over: Partial<HealthRow> = {}): HealthRow => ({
   cooldownUntil: null,
   lastOutcome: ProxyOutcome.SUCCESS,
   lastUsedAt: NOW,
+  lastRefusalStatus: null,
   ...over,
 });
 
@@ -117,6 +119,33 @@ describe('ProxyPoolHealthReport', () => {
       healthy: 1,
       coolingDown: 0,
     });
+  });
+
+  it('names the status each endpoint was last refused with', async () => {
+    findMany.mockResolvedValue([
+      endpoint({
+        id: 'refused',
+        health: [
+          health({
+            lastOutcome: ProxyOutcome.TRANSPORT,
+            lastRefusalStatus: 402,
+          }),
+        ],
+      }),
+      endpoint({ id: 'serving' }),
+    ]);
+
+    const built = await report.build(NOW);
+
+    expect(
+      built.endpoints.map(({ endpointId, lastRefusalStatus }) => ({
+        endpointId,
+        lastRefusalStatus,
+      })),
+    ).toEqual([
+      { endpointId: 'refused', lastRefusalStatus: 402 },
+      { endpointId: 'serving', lastRefusalStatus: null },
+    ]);
   });
 
   it('reports the success rate over the rolling window', async () => {

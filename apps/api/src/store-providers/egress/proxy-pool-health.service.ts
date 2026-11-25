@@ -34,6 +34,7 @@ interface EndpointRow {
     cooldownUntil: Date | null;
     lastOutcome: ProxyOutcome | null;
     lastUsedAt: Date | null;
+    lastRefusalStatus: number | null;
   }[];
 }
 
@@ -93,6 +94,7 @@ export class ProxyPoolHealthReport {
             cooldownUntil: true,
             lastOutcome: true,
             lastUsedAt: true,
+            lastRefusalStatus: true,
           },
         },
       },
@@ -143,6 +145,7 @@ export class ProxyPoolHealthReport {
         cooldownUntil: entry.cooldownUntil?.toISOString() ?? null,
         lastOutcome: entry.lastOutcome,
         lastUsedAt: entry.lastUsedAt?.toISOString() ?? null,
+        lastRefusalStatus: entry.lastRefusalStatus,
       })),
     );
   }

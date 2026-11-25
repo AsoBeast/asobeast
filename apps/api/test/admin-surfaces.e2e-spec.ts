@@ -463,6 +463,41 @@ describe('Admin surfaces (e2e)', () => {
       expect(body.alerts).toEqual([]);
     });
 
+    it('names the status a proxy last refused an endpoint with', async () => {
+      const endpoint = await prisma.proxyEndpoint.create({
+        data: {
+          provider: 'test',
+          externalId: 'refused-endpoint',
+          host: '198.51.100.7',
+          port: 8402,
+          credentialRef: 'none',
+          enabled: true,
+          health: {
+            create: {
+              store: 'APP_STORE',
+              failures: 1,
+              lastOutcome: 'TRANSPORT',
+              lastRefusalStatus: 402,
+            },
+          },
+        },
+      });
+
+      try {
+        const response = await owner.get('/admin/proxy-pool').expect(200);
+
+        expect((response.body as ProxyPoolHealth).endpoints).toContainEqual(
+          expect.objectContaining({
+            endpointId: endpoint.id,
+            store: 'APP_STORE',
+            lastRefusalStatus: 402,
+          }),
+        );
+      } finally {
+        await prisma.proxyEndpoint.delete({ where: { id: endpoint.id } });
+      }
+    });
+
     it('is not found for a member', async () => {
       await request(app.getHttpServer())
         .get('/admin/proxy-pool')
