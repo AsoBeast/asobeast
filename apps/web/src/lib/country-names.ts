@@ -226,3 +226,5 @@ export const COUNTRY_NAMES: Readonly<Record<string, string>> = {
   zm: "Zambia",
   zw: "Zimbabwe",
 };
+
+export { COUNTRY_NAMES_ZH } from "./country-names-zh";

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { formatCountry, formatDateTime } from "./format";
+import { formatCountry, formatCountryInLocale, formatDateTime } from "./format";
 
 const REGION_NAMES_OF_OTHER_ENGINES: Record<string, string> = {
   CN: "China mainland",
@@ -79,5 +79,18 @@ describe("formatCountry on an engine that words regions differently", () => {
     useRegionNamesOfOtherEngines();
 
     expect(formatCountry(code)).toBe(expected);
+  });
+});
+
+describe("Chinese country names on another engine", () => {
+  it.each([
+    ["cn", "中国"],
+    ["hk", "香港"],
+    ["mo", "澳门"],
+    ["ps", "巴勒斯坦领土"],
+  ])("keeps %s static as %s", (code, expected) => {
+    useRegionNamesOfOtherEngines();
+
+    expect(formatCountryInLocale(code, "zh-CN")).toBe(expected);
   });
 });
