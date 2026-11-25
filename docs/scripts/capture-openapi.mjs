@@ -23,6 +23,7 @@ function explain(status) {
 }
 
 const OBJECT_SCHEMA_REF = "#/components/schemas/Object";
+const SCHEMA_TYPE_KEYS = ["type", "$ref", "oneOf", "anyOf", "allOf"];
 const HTTP_METHODS = new Set([
   "get",
   "put",
@@ -43,6 +44,7 @@ function documentedAsObject(schema = {}) {
 
 function parameterProblem({ required, schema = {} }) {
   if (documentedAsObject(schema)) return "is documented as an object";
+  if (!SCHEMA_TYPE_KEYS.some((key) => key in schema)) return "has no type";
   if (required && schema.default !== undefined) {
     return "is required although it has a default";
   }
