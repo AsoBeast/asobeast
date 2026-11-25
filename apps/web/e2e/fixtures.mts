@@ -5620,8 +5620,26 @@ export const APP_1_PL_LOCALIZED_SCREENSHOTS: AppScreenshots = {
   ],
 };
 
+const playScreenshotUrl = (position: number): string =>
+  `https://play-lh.googleusercontent.com/e2e-tomato-${position}=w526-h296`;
+
+export const APP_GP_SCREENSHOTS: AppScreenshots = {
+  appId: "app-gp",
+  store: "GOOGLE_PLAY",
+  snapshotId: "snap-gp",
+  capturedAt: utcTimestampDaysAgo(0),
+  reading: "unsupported",
+  screenshots: [1, 2, 3].map((position) => ({
+    position,
+    url: playScreenshotUrl(position),
+    caption: null,
+    status: "skipped",
+  })),
+};
+
 export const SCREENSHOTS: Record<string, AppScreenshots> = {
   "app-1": APP_1_SCREENSHOTS,
+  "app-gp": APP_GP_SCREENSHOTS,
 };
 
 export const emptyScreenshots = (
