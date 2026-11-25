@@ -70,6 +70,12 @@ describe("StorePreview", () => {
     expect(markup).not.toContain("store-preview-screenshots");
   });
 
+  it("draws no screenshot row while the screenshots are unread", () => {
+    const markup = markupOf({ ...appStoreListing, screenshots: null });
+    expect(markup).not.toContain("No screenshots captured yet");
+    expect(markup).not.toContain("store-preview-screenshots");
+  });
+
   it("draws No ratings yet without a rating", () => {
     expect(markupOf({ ...appStoreListing, rating: null })).toContain(
       "No ratings yet",

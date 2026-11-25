@@ -40,10 +40,9 @@ const SOURCE_CAPTIONS = {
   draft: "Your draft",
 } as const;
 
-export const frameLabel = (
-  listing: PreviewListing,
-  surface: StoreSurface,
-): string =>
+export type PreviewSource = keyof typeof SOURCE_CAPTIONS;
+
+const frameLabel = (listing: PreviewListing, surface: StoreSurface): string =>
   `${storeLabel(listing.store)} ${SURFACE_LABELS[surface].toLowerCase()}: ${listing.title || listing.name}`;
 
 function OptionStrip<T extends string>({
@@ -83,7 +82,7 @@ export function StorePreview({
   source,
 }: {
   listing: PreviewListing;
-  source: keyof typeof SOURCE_CAPTIONS;
+  source: PreviewSource;
 }) {
   const [surface, setSurface] = useState<StoreSurface>("search");
   const [device, setDevice] = useState<StorePreviewDevice>("small");

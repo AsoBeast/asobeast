@@ -4,13 +4,11 @@ import { useDeferredValue, useId } from "react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useMarket } from "@/components/app-detail/use-market";
 import { PANEL_HEADER } from "@/components/layout/panel-classes";
-import { StorePreviewSkeleton } from "@/components/overview/skeletons";
-import { StorePreview } from "@/components/store-preview/StorePreview";
+import { ListingStorePreview } from "@/components/store-preview/ListingStorePreview";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ListingDraftValues } from "@/lib/listing-draft";
 import { queryMarket } from "@/lib/market";
 import { appDetailOptions, screenshotsOptions } from "@/lib/queries";
-import { previewListingOf } from "@/lib/store-preview/preview-listing";
 
 export function DraftStorePreview({
   id,
@@ -40,18 +38,12 @@ export function DraftStorePreview({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {screenshots.isPending ? (
-            <StorePreviewSkeleton />
-          ) : (
-            <StorePreview
-              listing={previewListingOf({
-                detail,
-                screenshots: screenshots.data ?? null,
-                draft: drafted,
-              })}
-              source="draft"
-            />
-          )}
+          <ListingStorePreview
+            detail={detail}
+            screenshots={screenshots}
+            draft={drafted}
+            source="draft"
+          />
         </CardContent>
       </Card>
     </section>

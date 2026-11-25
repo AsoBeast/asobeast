@@ -66,7 +66,7 @@ describe("previewListingOf", () => {
       description: "Plan your day in focused blocks.",
       developer: "Calm Labs",
       rating: { average: 4.62, count: 12840 },
-      screenshots: [],
+      screenshots: null,
     });
   });
 
@@ -84,7 +84,9 @@ describe("previewListingOf", () => {
       detail: detail(),
       screenshots: screenshots([4, 2, 1, 5, 3]),
     });
-    expect(listing.screenshots.map((item) => item.position)).toEqual([1, 2, 3]);
+    expect(listing.screenshots?.map((item) => item.position)).toEqual([
+      1, 2, 3,
+    ]);
   });
 
   it("puts the draft over the live values field by field", () => {

@@ -25,7 +25,7 @@ export interface PreviewListing {
   description: string;
   developer: string | null;
   rating: PreviewRating | null;
-  screenshots: readonly ScreenshotItem[];
+  screenshots: readonly ScreenshotItem[] | null;
 }
 
 const shownText = (
@@ -38,8 +38,9 @@ const shownText = (
 
 const firstScreenshots = (
   screenshots: AppScreenshots | null,
-): ScreenshotItem[] =>
-  [...(screenshots?.screenshots ?? [])]
+): ScreenshotItem[] | null =>
+  screenshots &&
+  [...screenshots.screenshots]
     .sort((left, right) => left.position - right.position)
     .slice(0, PREVIEW_SCREENSHOTS);
 

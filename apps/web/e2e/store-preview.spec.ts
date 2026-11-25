@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import {
+  errorEnvelope,
   APP_1_PL_DETAIL,
   APP_1_PL_LOCALIZED_SCREENSHOTS,
   APP_1_PL_SCREENSHOTS,
@@ -9,6 +10,7 @@ import {
 } from "./fixtures.mts";
 import { THEMES } from "./contrast-check.mts";
 import { hydrated } from "./hydrated.mts";
+import { fulfillJson } from "./plan-helpers.mts";
 
 const previewCard = (page: Page) =>
   page.getByRole("region", { name: "In the store" });
@@ -256,4 +258,21 @@ test("previews the screenshots of the drafted localization", async ({
   await expect(screenshotsIn(page)).toHaveCount(
     APP_1_PL_LOCALIZED_SCREENSHOTS.screenshots.length,
   );
+});
+
+test("says so when the screenshots cannot be read", async ({ page }) => {
+  await page.route(/\/apps\/app-gp\/screenshots/, (route) =>
+    route.fulfill(
+      fulfillJson(404, errorEnvelope(404, "/apps/app-gp/screenshots")),
+    ),
+  );
+  await page.goto("/apps/app-gp/metadata?mode=draft");
+
+  await expect(
+    previewCard(page).getByText(
+      "Could not read the screenshots of this listing.",
+    ),
+  ).toBeVisible();
+  await expect(frame(page)).toBeVisible();
+  await expect(frame(page)).not.toContainText("No screenshots captured yet");
 });

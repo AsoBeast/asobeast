@@ -17,9 +17,10 @@ export function ScreenshotRow({
   screenshots,
   screenWidth,
 }: {
-  screenshots: readonly ScreenshotItem[];
+  screenshots: readonly ScreenshotItem[] | null;
   screenWidth: number;
 }) {
+  if (screenshots === null) return null;
   if (screenshots.length === 0) {
     return (
       <p className="text-caption text-muted-foreground">

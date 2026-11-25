@@ -6,25 +6,21 @@ import { useMarket } from "@/components/app-detail/use-market";
 import { CollapsedSectionsProvider } from "@/components/layout/CollapsedSections";
 import { CollapsibleCard } from "@/components/layout/CollapsibleCard";
 import { KNOWN_SECTIONS } from "@/components/layout/known-sections";
-import { StorePreview } from "@/components/store-preview/StorePreview";
+import { ListingStorePreview } from "@/components/store-preview/ListingStorePreview";
+import { StorePreviewSkeleton } from "@/components/store-preview/StorePreviewSkeleton";
 import { queryMarket } from "@/lib/market";
 import { appListingOptions, screenshotsOptions } from "@/lib/queries";
-import { previewListingOf } from "@/lib/store-preview/preview-listing";
 import { OVERVIEW_SECTION } from "./overview-sections";
-import { StorePreviewSkeleton } from "./skeletons";
 
 function LiveStorePreview({ id }: { id: string }) {
   const { market, home } = useMarket(id);
   const country = queryMarket(market, home);
   const { data: detail } = useSuspenseQuery(appListingOptions(id, country));
   const screenshots = useQuery(screenshotsOptions(id, country));
-  if (screenshots.isPending) return <StorePreviewSkeleton />;
   return (
-    <StorePreview
-      listing={previewListingOf({
-        detail,
-        screenshots: screenshots.data ?? null,
-      })}
+    <ListingStorePreview
+      detail={detail}
+      screenshots={screenshots}
       source="live"
     />
   );
