@@ -16,6 +16,7 @@ const BRAND_GAP = 16;
 export const LEGEND_SAMPLE_WIDTH = 22;
 export const LEGEND_SAMPLE_GAP = 6;
 const LEGEND_ITEM_GAP = 16;
+
 export function dashPattern(dash: string | undefined): number[] {
   return dash === undefined ? [] : dash.split(" ").map(Number);
 }
