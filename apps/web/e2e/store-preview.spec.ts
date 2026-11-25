@@ -245,6 +245,9 @@ test("shows the drafted promotional text on the product page", async ({
   ).toBeVisible();
 
   await promotional.fill("New: focus streaks with friends");
+  await expect(
+    draftEditor(page).getByRole("button", { name: "Reset to live listing" }),
+  ).not.toHaveAttribute("aria-disabled", "true");
   await chooseSurface(page, "Product page");
 
   await expect(frame(page)).toContainText("New: focus streaks with friends");

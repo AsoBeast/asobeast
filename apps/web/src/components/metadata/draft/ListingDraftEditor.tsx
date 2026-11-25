@@ -12,6 +12,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
+  changedFields,
   draftFieldsOf,
   draftRequest,
   draftScopeOf,
@@ -81,7 +82,7 @@ export function ListingDraftEditor({
   const revealDescription = useDraftFieldReveal("description");
   const [descriptionOpen, setDescriptionOpen] = useState(revealDescription);
   if (revealDescription && !descriptionOpen) setDescriptionOpen(true);
-  const unchanged = request === null;
+  const unchanged = changedFields(values, live).length === 0;
   const handsOff =
     field.handoff !== null &&
     !field.managed &&
