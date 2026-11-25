@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from "vitest";
 import { QUERY_BOUNDS, STORE_SUGGESTION_STRATEGIES } from "@asobeast/shared";
 import type {
   AppAuditResult,
+  AuthUser,
   ChartPage,
   AuditAiRunState,
   EmailAlertItem,
@@ -45,7 +46,9 @@ import {
   auditOptions,
   accountPlanKey,
   authMeKey,
+  authMeOptions,
   authStatusKey,
+  refetchAuth,
   budgetKey,
   categoryRanksOptions,
   changeImpactOptions,
@@ -128,15 +131,29 @@ const APP = "app-1";
 const OTHER_APP = "app-2";
 const RANGE = { from: "2026-01-01", to: "2026-01-31" };
 
-function invalidatedKeys(
+function recordInvalidations(
   invalidate: (client: QueryClient) => void,
-): QueryKey[] {
+): () => QueryKey[] {
   const client = new QueryClient();
   const spy = vi
     .spyOn(client, "invalidateQueries")
     .mockResolvedValue(undefined);
   invalidate(client);
-  return spy.mock.calls.map(([filters]) => filters!.queryKey as QueryKey);
+  return () => spy.mock.calls.map(([filters]) => filters!.queryKey as QueryKey);
+}
+
+function invalidatedKeys(
+  invalidate: (client: QueryClient) => void,
+): QueryKey[] {
+  return recordInvalidations(invalidate)();
+}
+
+async function settledInvalidatedKeys(
+  invalidate: (client: QueryClient) => void,
+): Promise<QueryKey[]> {
+  const keys = recordInvalidations(invalidate);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  return keys();
 }
 
 function isPrefixOf(prefix: QueryKey, key: QueryKey): boolean {
@@ -1043,21 +1060,21 @@ describe("invalidation sets", () => {
     ).toEqual([actionKeys.all, portfolioInsightsKey, actionKeys.appRoot(APP)]);
   });
 
-  it("invalidates every account query when the session changes", () => {
-    expect(invalidatedKeys(invalidateAuth)).toEqual([
+  it("invalidates every account query when the session changes", async () => {
+    expect(await settledInvalidatedKeys(invalidateAuth)).toEqual([
       authStatusKey,
       authMeKey,
       accountPlanKey,
     ]);
   });
 
-  it("also invalidates the api token list when the password changes", () => {
-    expect(invalidatedKeys(invalidatePasswordChange)).toEqual([
+  it("also invalidates the api token list when the password changes", async () => {
+    expect(await settledInvalidatedKeys(invalidatePasswordChange)).toEqual([
+      apiTokenKeys.all,
+      workspaceChecklistKey,
       authStatusKey,
       authMeKey,
       accountPlanKey,
-      apiTokenKeys.all,
-      workspaceChecklistKey,
     ]);
   });
 
@@ -1555,5 +1572,46 @@ describe("isVisibilityOfMarket", () => {
       false,
     );
     expect(isVisibilityOfMarket(undefined, "de")).toBe(false);
+  });
+});
+
+describe("refetching the account after a change", () => {
+  const userOf = (over: Partial<AuthUser>): AuthUser => ({
+    id: "u1",
+    email: "owner@example.com",
+    emailVerified: true,
+    name: null,
+    role: "owner",
+    plan: "free",
+    trialEndsAt: null,
+    planExpiresAt: null,
+    entitled: false,
+    platformOperator: false,
+    ...over,
+  });
+
+  it("answers with a request sent after the change, not one still in flight", async () => {
+    const client = new QueryClient();
+    const before = userOf({ entryStep: "choose-plan" });
+    const after = userOf({ entitled: true });
+    let answerFirst: (user: AuthUser) => void = () => undefined;
+    const queryFn = vi
+      .fn<() => Promise<AuthUser>>()
+      .mockImplementationOnce(
+        () => new Promise((resolve) => (answerFirst = resolve)),
+      )
+      .mockResolvedValueOnce(after);
+    const unsubscribe = new QueryObserver(client, {
+      ...authMeOptions,
+      queryFn,
+    }).subscribe(() => undefined);
+
+    const refetched = refetchAuth(client);
+    answerFirst(before);
+    await refetched;
+
+    expect(queryFn).toHaveBeenCalledTimes(2);
+    expect(client.getQueryData(authMeKey)).toEqual(after);
+    unsubscribe();
   });
 });

@@ -969,6 +969,17 @@
         "operationId": "AlertsController_listDeliveries",
         "parameters": [
           {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "type": "integer"
+            }
+          },
+          {
             "name": "webhookId",
             "required": false,
             "in": "query",
@@ -982,21 +993,6 @@
             "in": "query",
             "schema": {
               "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 200,
-              "default": 50,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
             }
           }
         ],
@@ -2135,11 +2131,7 @@
               "minimum": 1,
               "maximum": 25,
               "default": 10,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "integer"
             }
           }
         ],
@@ -2675,11 +2667,7 @@
             "in": "query",
             "schema": {
               "default": false,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "boolean"
             }
           }
         ],
@@ -2790,11 +2778,7 @@
               "minimum": 1,
               "maximum": 100,
               "default": 30,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "integer"
             }
           }
         ],
@@ -4088,6 +4072,17 @@
             }
           },
           {
+            "name": "days",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 30,
+              "default": 7,
+              "type": "integer"
+            }
+          },
+          {
             "name": "country",
             "required": false,
             "in": "query",
@@ -4096,21 +4091,6 @@
               "pattern": "^[a-z]{2}$",
               "example": "us",
               "type": "string"
-            }
-          },
-          {
-            "name": "days",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 30,
-              "default": 7,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
             }
           }
         ],
@@ -4187,6 +4167,17 @@
             }
           },
           {
+            "name": "days",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 365,
+              "default": 90,
+              "type": "integer"
+            }
+          },
+          {
             "name": "country",
             "required": false,
             "in": "query",
@@ -4195,21 +4186,6 @@
               "pattern": "^[a-z]{2}$",
               "example": "de",
               "type": "string"
-            }
-          },
-          {
-            "name": "days",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 365,
-              "default": 90,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
             }
           }
         ],
@@ -4289,17 +4265,13 @@
         "parameters": [
           {
             "name": "limit",
-            "required": true,
+            "required": false,
             "in": "query",
             "schema": {
               "minimum": 1,
               "maximum": 50,
               "default": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "integer"
             }
           }
         ],
@@ -5243,6 +5215,17 @@
             }
           },
           {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "type": "integer"
+            }
+          },
+          {
             "name": "replyState",
             "required": false,
             "in": "query",
@@ -5285,21 +5268,6 @@
             "in": "query",
             "schema": {
               "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 200,
-              "default": 50,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
             }
           }
         ],
@@ -6433,11 +6401,7 @@
               "minimum": 1,
               "maximum": 200,
               "default": 100,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "integer"
             }
           }
         ],
@@ -6578,11 +6542,7 @@
               "minimum": 7,
               "maximum": 90,
               "default": 30,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "integer"
             }
           }
         ],
@@ -6830,11 +6790,7 @@
               "minimum": 1,
               "maximum": 200,
               "default": 100,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "integer"
             }
           }
         ],
@@ -6898,17 +6854,13 @@
           },
           {
             "name": "days",
-            "required": true,
+            "required": false,
             "in": "query",
             "schema": {
               "minimum": 7,
               "maximum": 90,
               "default": 30,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "integer"
             }
           }
         ],
@@ -8000,10 +7952,6 @@
             "type": "boolean"
           }
         }
-      },
-      "Object": {
-        "type": "object",
-        "properties": {}
       },
       "RequestDeletionDto": {
         "type": "object",

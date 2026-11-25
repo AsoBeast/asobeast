@@ -61,10 +61,7 @@ describe('thaiSpans', () => {
   });
 
   it('prefers fewer words when two splits are both known', () => {
-    expect(thaiSpans('ชีวิตรับ').map((span) => span.text)).toEqual([
-      'ชีวิต',
-      'รับ',
-    ]);
+    expect(thaiSpans('ชีวิตรับ').map((span) => span.text)).toEqual(['ชีวิต', 'รับ']);
   });
 
   it('keeps the repeat mark with the word before it', () => {

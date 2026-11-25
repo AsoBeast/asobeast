@@ -15,7 +15,10 @@ export const TYPE_STEPS = [
 ] as const;
 
 const twMerge = extendTailwindMerge({
-  extend: { theme: { text: [...TYPE_STEPS] } },
+  extend: {
+    theme: { text: [...TYPE_STEPS] },
+    conflictingClassGroups: { "font-size": ["leading"] },
+  },
 });
 
 export function cn(...inputs: ClassValue[]) {
