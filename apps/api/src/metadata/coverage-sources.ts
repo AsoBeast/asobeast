@@ -7,6 +7,7 @@ import {
   LocalizedTexts,
 } from '../apps/listing-texts';
 import { storedKeywordFields } from '../keywords/keyword-field-index';
+import { readerRole } from '../keywords/localization-markets';
 import { PrismaService } from '../prisma/prisma.service';
 import { CoverageSources } from './keyword-coverage-judge';
 import { fieldPhrases } from './listing-surfaces';
@@ -26,6 +27,13 @@ export interface LoadedCoverage {
   sources: CoverageSources;
   view: ListingTexts | undefined;
 }
+
+const readsDefaultListing = (
+  store: Store,
+  { market, localization }: ListingView,
+): boolean =>
+  localization === null ||
+  (store === Store.APP_STORE && readerRole(market, localization) === 'default');
 
 export async function loadCoverageSources(
   prisma: PrismaService,
@@ -49,11 +57,10 @@ export async function loadCoverageSources(
       : new Map<string, LocalizedTexts[]>();
   return {
     sources: { listings, localized, keywordFields: fieldPhrases(stored) },
-    view:
-      view.localization === null
-        ? listings.get(view.market)
-        : localized
-            .get(view.market)
-            ?.find((entry) => entry.localization === view.localization)?.texts,
+    view: readsDefaultListing(app.store, view)
+      ? listings.get(view.market)
+      : localized
+          .get(view.market)
+          ?.find((entry) => entry.localization === view.localization)?.texts,
   };
 }

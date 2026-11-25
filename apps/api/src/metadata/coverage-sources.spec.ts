@@ -1,4 +1,5 @@
 import { Store } from '@prisma/client';
+import { AppStoreLocalization } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { loadCoverageSources } from './coverage-sources';
 
@@ -102,6 +103,44 @@ describe('loadCoverageSources', () => {
         ?.map((entry) => [entry.localization, entry.texts.id]),
     ).toEqual([['pl', 'snap_pl_pl']]);
     expect(view?.title).toBe('Where Am I? Quiz Geograficzny');
+  });
+
+  it.each<[string, AppStoreLocalization, string]>([
+    ['us', 'en-US', 'snap_us'],
+    ['pl', 'en-GB', 'snap_pl'],
+  ])(
+    'reads the %s default listing for its default localization %s',
+    async (market, localization, id) => {
+      const { prisma } = prismaWith(
+        {
+          home: listing('snap_us', 'Focus Timer'),
+          pl: listing('snap_pl', 'Focus Timer PL'),
+          'pl:pl': listing('snap_pl_pl', 'Minutnik Skupienia'),
+        },
+        [],
+        ['pl'],
+      );
+
+      const { view } = await loadCoverageSources(prisma, app, [], {
+        market,
+        localization,
+      });
+
+      expect(view?.id).toBe(id);
+    },
+  );
+
+  it('reads no default listing for a localization on Google Play', async () => {
+    const { prisma } = prismaWith({ home: listing('snap_us', 'Focus Timer') });
+
+    const { view } = await loadCoverageSources(
+      prisma,
+      { ...app, store: Store.GOOGLE_PLAY },
+      [],
+      { market: 'us', localization: 'en-US' },
+    );
+
+    expect(view).toBeUndefined();
   });
 
   it('reads saved keyword fields into phrases by localization', async () => {
