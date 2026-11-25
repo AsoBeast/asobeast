@@ -407,15 +407,47 @@ describe('Native localizations of a listing (e2e)', () => {
       expect(market.coverage).toEqual((await auditOf('?country=de')).coverage);
     });
 
+    it('reads the default listing and its screenshots when the request names the default localization of its storefront', async () => {
+      registry.listings.set('pl:pl', POLISH);
+      registry.listings.set('de:default', GERMAN);
+      const appId = await importFrom(PL_APP_URL);
+      await api
+        .post(`/apps/${appId}/keywords`)
+        .send({ keywords: ['karte'], country: 'de' })
+        .expect(201);
+      await api.post(`/apps/${appId}/refresh?country=de`).expect(200);
+      const detailOf = async (query: string) =>
+        (await api.get(`/apps/${appId}${query}`).expect(200)).body as AppDetail;
+      const screenshotsOf = async (query: string) =>
+        (await api.get(`/apps/${appId}/screenshots${query}`).expect(200))
+          .body as AppScreenshots;
+      const urlsOf = (shots: AppScreenshots) =>
+        shots.screenshots.map((item) => item.url);
+
+      const home = await detailOf('?localization=en-GB');
+      const market = await detailOf('?country=de&localization=de');
+      const homeShots = await screenshotsOf('?localization=en-GB');
+      const marketShots = await screenshotsOf('?country=de&localization=de');
+
+      expect(home.latestSnapshot?.title).toBe(ENGLISH.title);
+      expect(home.localization).toBe('en-GB');
+      expect(market.latestSnapshot?.title).toBe(GERMAN.title);
+      expect(market.localization).toBe('de');
+      expect(urlsOf(homeShots)).toEqual(ENGLISH.screenshots);
+      expect(homeShots.localization).toBe('en-GB');
+      expect(urlsOf(marketShots)).toEqual(GERMAN.screenshots);
+      expect(marketShots.localization).toBe('de');
+    });
+
     it('still refuses a localization for a google play app', async () => {
       const appId = await importFrom(
         'https://play.google.com/store/apps/details?id=com.example.app&gl=us',
       );
 
-      await api.get(`/apps/${appId}/metadata/audit`).expect(200);
-      await api
-        .get(`/apps/${appId}/metadata/audit?localization=en-US`)
-        .expect(404);
+      for (const path of ['', '/screenshots', '/metadata/audit']) {
+        await api.get(`/apps/${appId}${path}`).expect(200);
+        await api.get(`/apps/${appId}${path}?localization=en-US`).expect(404);
+      }
     });
 
     it('shows localized events on the market timeline only', async () => {
