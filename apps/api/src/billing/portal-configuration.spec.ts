@@ -59,8 +59,8 @@ describe('portalConfiguration', () => {
     expect(params.features.invoice_history).toEqual({ enabled: true });
   });
 
-  it('offers no pause, which no trial needs because every trial holds a card', () => {
-    expect(params.features).not.toHaveProperty('subscription_pause');
+  it('turns pause off, which no trial needs because every trial holds a card', () => {
+    expect(params.features.subscription_pause).toEqual({ enabled: false });
   });
 
   it('prints the legal links, returns to settings and has no public login page', () => {
@@ -141,6 +141,21 @@ describe('configurationCovers', () => {
     };
 
     expect(configurationCovers(differing, desired)).toBe(false);
+  });
+
+  it('refuses a portal whose pause was turned on in the dashboard', () => {
+    const pausable = {
+      ...desired,
+      features: {
+        ...desired.features,
+        subscription_pause: {
+          enabled: true,
+          duration: { type: 'interval_options' },
+        },
+      },
+    };
+
+    expect(configurationCovers(pausable, desired)).toBe(false);
   });
 
   it('refuses a list with a setting missing or added', () => {
