@@ -3,15 +3,19 @@ import { ScreenshotThumb } from "@/components/screenshots/ScreenshotThumb";
 import { PREVIEW_SCREENSHOTS } from "@/lib/store-preview/preview-listing";
 
 const WIDEST_PORTRAIT = 9 / 16;
+const FRAME_BORDER = 1;
 const SCREEN_INSET = 16;
 const GAP = 8;
+const ROUNDING_ROOM = 1;
 
-const rowHeight = (screenWidth: number): number =>
-  Math.floor(
-    (screenWidth - 2 * SCREEN_INSET - (PREVIEW_SCREENSHOTS - 1) * GAP) /
-      PREVIEW_SCREENSHOTS /
-      WIDEST_PORTRAIT,
-  );
+const rowHeight = (screenWidth: number): number => {
+  const room =
+    screenWidth -
+    2 * (FRAME_BORDER + SCREEN_INSET) -
+    (PREVIEW_SCREENSHOTS - 1) * GAP;
+  const thumbWidth = room / PREVIEW_SCREENSHOTS - ROUNDING_ROOM;
+  return Math.floor(thumbWidth / WIDEST_PORTRAIT);
+};
 
 export function ScreenshotRow({
   screenshots,

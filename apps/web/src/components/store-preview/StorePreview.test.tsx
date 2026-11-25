@@ -70,6 +70,17 @@ describe("StorePreview", () => {
     expect(markup).not.toContain("store-preview-screenshots");
   });
 
+  it("fits three of the widest portrait screenshots inside the frame border", () => {
+    const height = Number(
+      /data-slot="store-preview-screenshots"[^>]*height:(\d+)px/.exec(
+        markupOf(appStoreListing),
+      )?.[1],
+    );
+    const frameBorder = 1;
+    const room = 390 - 2 * frameBorder - 2 * 16;
+    expect(3 * Math.round((height * 9) / 16) + 2 * 8).toBeLessThanOrEqual(room);
+  });
+
   it("draws no screenshot row while the screenshots are unread", () => {
     const markup = markupOf({ ...appStoreListing, screenshots: null });
     expect(markup).not.toContain("No screenshots captured yet");
