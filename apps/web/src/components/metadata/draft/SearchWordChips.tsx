@@ -24,10 +24,14 @@ export function SearchWordChips({
               ? `Search reads “${word}” once, so this use adds nothing`
               : undefined
           }
-          className="inline-flex items-center gap-1 rounded-sm border border-border bg-muted px-1.5 text-caption"
+          className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-sm border border-border bg-muted px-1.5 text-caption"
         >
-          <span dir="auto">{word}</span>
-          {repeat ? <span className="text-warning">repeat</span> : null}
+          <span dir="auto" className="min-w-0 wrap-anywhere">
+            {word}
+          </span>
+          {repeat ? (
+            <span className="shrink-0 text-warning">repeat</span>
+          ) : null}
         </li>
       ))}
       {hidden > 0 ? (
