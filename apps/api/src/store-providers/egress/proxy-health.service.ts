@@ -19,6 +19,8 @@ export const HEALTH_WINDOW_MS = 60 * 60_000;
 
 export const TUNNEL_REFUSAL_COOLDOWN_MS = 5 * 60_000;
 
+export const TUNNEL_REFUSAL_MAX_COOLDOWN_MS = 60 * 60_000;
+
 const ACCOUNT_REFUSALS: readonly number[] = [402, 407];
 
 export interface HealthObservation {
@@ -109,16 +111,19 @@ function streakAfter(
   observation: HealthObservation,
   previousFailures: number,
 ): FailureStreak {
-  if (isTunnelRefusal(observation)) {
+  if (isAccountRefusal(observation)) {
     return {
       consecutiveFailures: previousFailures,
       cooldownMs: TUNNEL_REFUSAL_COOLDOWN_MS,
     };
   }
   const consecutiveFailures = previousFailures + 1;
+  const backoff = cooldownMs(observation.outcome, consecutiveFailures);
   return {
     consecutiveFailures,
-    cooldownMs: cooldownMs(observation.outcome, consecutiveFailures),
+    cooldownMs: isTunnelRefusal(observation)
+      ? Math.min(backoff, TUNNEL_REFUSAL_MAX_COOLDOWN_MS)
+      : backoff,
   };
 }
 

@@ -6,6 +6,7 @@ import {
   observed,
   ProxyHealthTracker,
   TUNNEL_REFUSAL_COOLDOWN_MS,
+  TUNNEL_REFUSAL_MAX_COOLDOWN_MS,
 } from './proxy-health.service';
 
 interface UpsertCall {
@@ -195,7 +196,7 @@ describe('ProxyHealthTracker', () => {
     expect(lastUpdate()).not.toHaveProperty('pacedUntil');
   });
 
-  it.each([402, 407, 403, 503])(
+  it.each([402, 407])(
     'retries an endpoint the proxy refuses with %s after a short fixed time whatever its streak',
     async (status) => {
       findUnique.mockResolvedValue(stored({ consecutiveFailures: 12 }));
@@ -214,6 +215,58 @@ describe('ProxyHealthTracker', () => {
       expect(cooldown).toBeLessThan(TUNNEL_REFUSAL_COOLDOWN_MS + 5_000);
     },
   );
+
+  it.each([403, 429, 502, 503])(
+    'benches an endpoint the proxy refuses once with %s for the short transport cooldown',
+    async (status) => {
+      const before = Date.now();
+
+      await tracker.record('e1', Store.APP_STORE, {
+        ...observed(ProxyOutcome.TRANSPORT),
+        refusedStatus: status,
+      });
+
+      const update = lastUpdate();
+      expect(update.consecutiveFailures).toBe(1);
+      expect(update.lastRefusalStatus).toBe(status);
+      const cooldown = (update.cooldownUntil as Date).getTime() - before;
+      expect(cooldown).toBeGreaterThanOrEqual(30_000);
+      expect(cooldown).toBeLessThan(35_000);
+    },
+  );
+
+  it.each([403, 503])(
+    'backs off an endpoint the proxy keeps refusing with %s for at most an hour',
+    async (status) => {
+      findUnique.mockResolvedValue(stored({ consecutiveFailures: 12 }));
+      const before = Date.now();
+
+      await tracker.record('e1', Store.APP_STORE, {
+        ...observed(ProxyOutcome.TRANSPORT),
+        refusedStatus: status,
+      });
+
+      const update = lastUpdate();
+      expect(update.consecutiveFailures).toBe(13);
+      const cooldown = (update.cooldownUntil as Date).getTime() - before;
+      expect(cooldown).toBeGreaterThanOrEqual(TUNNEL_REFUSAL_MAX_COOLDOWN_MS);
+      expect(cooldown).toBeLessThan(TUNNEL_REFUSAL_MAX_COOLDOWN_MS + 5_000);
+    },
+  );
+
+  it('grows the backoff of a repeated refusal before it reaches the cap', async () => {
+    findUnique.mockResolvedValue(stored({ consecutiveFailures: 2 }));
+    const before = Date.now();
+
+    await tracker.record('e1', Store.APP_STORE, {
+      ...observed(ProxyOutcome.TRANSPORT),
+      refusedStatus: 503,
+    });
+
+    const cooldown = (lastUpdate().cooldownUntil as Date).getTime() - before;
+    expect(cooldown).toBeGreaterThanOrEqual(120_000);
+    expect(cooldown).toBeLessThan(125_000);
+  });
 
   it('still doubles the cooldown of a plain transport failure at the same streak', async () => {
     findUnique.mockResolvedValue(stored({ consecutiveFailures: 12 }));
