@@ -30,6 +30,7 @@ type DayDepths = Record<string, number | null>;
 export interface RankingChartData {
   rows: ChartRow[];
   depths: DayDepths[];
+  resultCounts: DayDepths[];
   config: ChartConfig;
   seriesLabels: Record<string, string>;
   keywordIds: string[];
@@ -119,10 +120,19 @@ export function buildRankingChart(
       ]),
     ),
   );
+  const resultCounts = days.map((date): DayDepths =>
+    Object.fromEntries(
+      byDate.map(({ keywordId, points }) => [
+        keywordId,
+        points.get(date)?.resultCount ?? null,
+      ]),
+    ),
+  );
 
   return {
     rows: withLonePoints(rows, keywordIds),
     depths,
+    resultCounts,
     config,
     seriesLabels,
     keywordIds,

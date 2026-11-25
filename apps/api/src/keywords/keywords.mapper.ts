@@ -39,7 +39,10 @@ export interface TrackedKeywordRow {
     text: string;
     country: string;
     store: Keyword['store'];
-    rankings: Pick<KeywordRanking, 'position' | 'date' | 'depth'>[];
+    rankings: Pick<
+      KeywordRanking,
+      'position' | 'date' | 'depth' | 'resultCount'
+    >[];
     metrics: Pick<
       KeywordMetric,
       | 'traffic'
@@ -194,6 +197,7 @@ type PositionFacts = Pick<
   TrackedKeywordItem,
   | 'latestPosition'
   | 'latestDepth'
+  | 'latestResultCount'
   | 'latestCheckedOn'
   | 'previousPosition'
   | 'positionDelta1d'
@@ -256,6 +260,7 @@ function positionFacts(
   return {
     latestPosition,
     latestDepth: latest?.depth ?? null,
+    latestResultCount: latest?.resultCount ?? null,
     latestCheckedOn: latest ? utcDayOf(latest.date) : null,
     previousPosition,
     positionDelta1d:

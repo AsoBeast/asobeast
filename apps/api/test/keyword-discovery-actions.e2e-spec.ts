@@ -132,6 +132,27 @@ describe('keyword discovery actions (e2e)', () => {
 
   afterAll(() => stopCapacityHarness(harness));
 
+  it('carries the result count on the listed discoveries', async () => {
+    await seedDiscovery('empty serp', {
+      source: 'reviews',
+      position: null,
+      depth: 200,
+      checkedOn: yesterday(),
+      relevance: 70,
+      ownSearch: true,
+      resultCount: 0,
+    });
+
+    const { items } = await listed();
+    const byText = new Map(items.map((item) => [item.text, item]));
+    expect(byText.get('empty serp')).toMatchObject({
+      position: null,
+      depth: 200,
+      resultCount: 0,
+    });
+    expect(byText.get('focus timer')).toMatchObject({ resultCount: null });
+  });
+
   it('tracks by ids with the mapped source, the known position and the queued follow ups', async () => {
     const answer = await owner
       .post(route('track'))

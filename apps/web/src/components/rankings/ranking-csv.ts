@@ -10,15 +10,20 @@ export function rankingCsv(data: RankingChartData): string {
     ),
   ];
   const rows = data.rows
-    .map((row, index) => ({ row, depths: data.depths[index] }))
+    .map((row, index) => ({
+      row,
+      depths: data.depths[index],
+      counts: data.resultCounts[index],
+    }))
     .filter(({ depths }) => hasCheck(depths))
-    .map(({ row, depths }) => [
+    .map(({ row, depths, counts }) => [
       row.date,
       ...data.keywordIds.map((keywordId) => {
         const value = row[keywordId];
         return formatCheckedPosition(
           typeof value === "number" ? value : null,
           depths?.[keywordId] ?? null,
+          counts?.[keywordId] ?? null,
         );
       }),
     ]);

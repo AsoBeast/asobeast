@@ -67,7 +67,8 @@ const confirms = (slide: Slide, window: ConfirmationWindow): boolean =>
 
 function baselineOf(window: ConfirmationWindow): ConfirmedMove | null {
   const { position, depth } = window.checks[1];
-  return position === null ? null : { from: position, fromDepth: depth };
+  if (position === null) return null;
+  return { from: position, fromDepth: depth };
 }
 
 export function confirmedDrop(

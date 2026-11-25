@@ -13,6 +13,7 @@ const point = (overrides: Partial<MapPoint>): MapPoint => ({
   opportunity: 82,
   position: 3,
   depth: 200,
+  resultCount: null,
   positionLabel: "3",
   ranked: true,
   floor: false,

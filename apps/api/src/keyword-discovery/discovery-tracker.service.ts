@@ -160,14 +160,17 @@ export class DiscoveryTracker {
   ): Promise<void> {
     if (rows.length === 0) return;
     await tx.keywordRanking.createMany({
-      data: rows.map(({ keywordId, checkedOn, position, depth }) => ({
-        appId: app.id,
-        workspaceId: app.workspaceId,
-        keywordId,
-        date: utcDate(checkedOn),
-        position,
-        depth,
-      })),
+      data: rows.map(
+        ({ keywordId, checkedOn, position, depth, resultCount }) => ({
+          appId: app.id,
+          workspaceId: app.workspaceId,
+          keywordId,
+          date: utcDate(checkedOn),
+          position,
+          depth,
+          resultCount,
+        }),
+      ),
       skipDuplicates: true,
     });
   }

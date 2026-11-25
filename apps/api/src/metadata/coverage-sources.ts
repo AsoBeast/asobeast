@@ -6,6 +6,7 @@ import {
   ListingTexts,
   LocalizedTexts,
 } from '../apps/listing-texts';
+import { storedLocalization } from '../apps/listing';
 import { storedKeywordFields } from '../keywords/keyword-field-index';
 import { PrismaService } from '../prisma/prisma.service';
 import { CoverageSources } from './keyword-coverage-judge';
@@ -47,13 +48,18 @@ export async function loadCoverageSources(
           ...listings.keys(),
         ])
       : new Map<string, LocalizedTexts[]>();
+  const localization = storedLocalization(
+    app.store,
+    view.market,
+    view.localization,
+  );
   return {
     sources: { listings, localized, keywordFields: fieldPhrases(stored) },
     view:
-      view.localization === null
+      localization === null
         ? listings.get(view.market)
         : localized
             .get(view.market)
-            ?.find((entry) => entry.localization === view.localization)?.texts,
+            ?.find((entry) => entry.localization === localization)?.texts,
   };
 }

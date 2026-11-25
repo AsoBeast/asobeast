@@ -350,6 +350,15 @@ export const SERP_HISTORY: Record<string, SerpSnapshot[]> = {
   ],
 };
 
+export const SERP_STALE_HISTORY: Record<string, SerpSnapshot[]> = {
+  "kw-4": singleDay(
+    "kw-4",
+    "productivity app",
+    utcDaysAgo(3),
+    filler(101, 150, "Productivity App"),
+  ),
+};
+
 export function serpOnDay(
   history: readonly SerpSnapshot[],
   date: string | null,

@@ -44,6 +44,7 @@ const TRACK_ROW_SELECT = {
   source: true,
   position: true,
   depth: true,
+  resultCount: true,
   ownSearch: true,
   checkedOn: true,
   keyword: { select: { text: true, country: true } },

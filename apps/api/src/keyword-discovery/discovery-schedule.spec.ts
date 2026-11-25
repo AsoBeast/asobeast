@@ -17,6 +17,7 @@ const row = (overrides: Partial<ScheduledRow> = {}): ScheduledRow => ({
   relevance: 60,
   position: null,
   depth: null,
+  resultCount: null,
   ownSearch: false,
   checkedOn: null,
   dismissed: false,

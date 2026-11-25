@@ -23,6 +23,7 @@ const stored = {
   source: 'reviews',
   position: 4,
   depth: 50,
+  resultCount: null,
   checkedOn: new Date('2026-11-11T00:00:00Z'),
   keyword: { text: 'focus timer', country: 'us' },
 };
@@ -104,6 +105,7 @@ describe('KeywordDiscoveryActions', () => {
           source: 'reviews',
           position: 4,
           depth: 50,
+          resultCount: null,
           checkedOn: '2026-11-11',
         },
       ],

@@ -1,5 +1,7 @@
 import {
   CHANGE_FIELD_LABELS,
+  listsNoApps,
+  NO_APPS_SENTENCE,
   type ChangeEventItem,
   type ChangeField,
   type TrackedKeywordItem,
@@ -44,10 +46,18 @@ export function historyView(
     );
   }
   if (checked.every((index) => positionOn(chart, index) === null)) {
-    const deepest = Math.max(
-      ...checked.map((index) => chart.depths[index]?.[seriesOf(chart)] ?? 0),
-    );
-    notes.push(`Not in the top ${deepest} in this range`);
+    if (
+      checked.every((index) =>
+        listsNoApps(chart.resultCounts[index]?.[seriesOf(chart)]),
+      )
+    ) {
+      notes.push(`${NO_APPS_SENTENCE} on every checked day`);
+    } else {
+      const deepest = Math.max(
+        ...checked.map((index) => chart.depths[index]?.[seriesOf(chart)] ?? 0),
+      );
+      notes.push(`Not in the top ${deepest} in this range`);
+    }
   }
   if (!keyword.active) notes.push(pausedNote(keyword));
   return { kind: "chart", line, notes };

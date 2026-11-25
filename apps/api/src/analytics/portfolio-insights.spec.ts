@@ -225,8 +225,39 @@ describe('mergePortfolioMovers', () => {
         text: 'focus',
         from: 20,
         fromDepth: 200,
+        fromResultCount: null,
         to: 14,
         toDepth: 200,
+        toResultCount: null,
+      },
+    ]);
+  });
+
+  it('carries the result counts of both compared rankings', () => {
+    const merged = mergePortfolioMovers([
+      {
+        appId: 'app_1',
+        movers: {
+          up: [
+            { ...mover('focus', 6), fromResultCount: 0, toResultCount: 183 },
+          ],
+          down: [],
+        },
+      },
+    ]);
+
+    expect(merged.up).toEqual([
+      {
+        appId: 'app_1',
+        country: 'us',
+        keywordId: 'kw_focus',
+        text: 'focus',
+        from: 20,
+        fromDepth: 200,
+        fromResultCount: 0,
+        to: 14,
+        toDepth: 200,
+        toResultCount: 183,
       },
     ]);
   });

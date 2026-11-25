@@ -325,7 +325,12 @@ export async function trackedRows(
                 : {}),
             },
             orderBy: { date: 'desc' },
-            select: { position: true, date: true, depth: true },
+            select: {
+              position: true,
+              date: true,
+              depth: true,
+              resultCount: true,
+            },
           },
         },
       },

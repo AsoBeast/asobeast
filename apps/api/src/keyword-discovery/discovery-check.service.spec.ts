@@ -1,7 +1,7 @@
 import { Store } from '@prisma/client';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { utcToday } from '../rankings/rankings.support';
-import { SerpCapture } from '../rankings/serp-capture';
+import { SerpAnswer, SerpCapture } from '../rankings/serp-capture';
 import { PrismaService } from '../prisma/prisma.service';
 import { ImplausibleResultError } from '../store-providers/errors';
 import { SearchItem } from '../store-providers/types';
@@ -65,8 +65,8 @@ const build = (fixture: Fixture = {}) => {
   };
   const capture = {
     search: jest
-      .fn<Promise<SearchItem[] | null>, [unknown, boolean]>()
-      .mockResolvedValue(results(200, 12)),
+      .fn<Promise<SerpAnswer | null>, [unknown, boolean]>()
+      .mockResolvedValue({ results: results(200, 12), resultCount: 200 }),
     store: jest.fn().mockResolvedValue([]),
   };
   const tracker = {
@@ -131,15 +131,47 @@ describe('DiscoveryCheck', () => {
     expect(updateOf(prisma)).toEqual({
       position: 12,
       depth: 200,
+      resultCount: 200,
       ownSearch: true,
       checkedOn: utcToday(),
       relevance: 70,
     });
   });
 
+  it('records a result count of zero when the store listed nothing', async () => {
+    const { check, prisma, capture } = build();
+    capture.search.mockResolvedValueOnce({ results: [], resultCount: 0 });
+    await check.run(payload, false);
+    expect(updateOf(prisma)).toMatchObject({
+      position: null,
+      depth: 200,
+      resultCount: 0,
+      ownSearch: true,
+      checkedOn: utcToday(),
+    });
+  });
+
+  it('records how many apps the own search listed', async () => {
+    const { check, prisma, capture } = build();
+    capture.search.mockResolvedValueOnce({
+      results: results(2),
+      resultCount: 2,
+    });
+    await check.run(payload, false);
+    expect(updateOf(prisma)).toMatchObject({
+      position: null,
+      depth: 2,
+      resultCount: 2,
+      ownSearch: true,
+    });
+  });
+
   it('records a search without the app as checked and not found', async () => {
     const { check, prisma, capture } = build();
-    capture.search.mockResolvedValueOnce(results(60));
+    capture.search.mockResolvedValueOnce({
+      results: results(60),
+      resultCount: 60,
+    });
     await check.run(payload, false);
     expect(updateOf(prisma)).toMatchObject({
       position: null,
@@ -151,7 +183,10 @@ describe('DiscoveryCheck', () => {
 
   it('records the depth of a store that listed only a short list', async () => {
     const { check, prisma, capture } = build();
-    capture.search.mockResolvedValueOnce(results(18, 5));
+    capture.search.mockResolvedValueOnce({
+      results: results(18, 5),
+      resultCount: 18,
+    });
     await check.run(payload, false);
     expect(updateOf(prisma)).toMatchObject({
       position: 5,
@@ -162,7 +197,10 @@ describe('DiscoveryCheck', () => {
 
   it('hands the reached depth to auto track', async () => {
     const { check, tracker, capture } = build({ autoTrackRanked: true });
-    capture.search.mockResolvedValueOnce(results(60, 12));
+    capture.search.mockResolvedValueOnce({
+      results: results(60, 12),
+      resultCount: 60,
+    });
     await check.run(payload, false);
     expect(tracker.autoTrack).toHaveBeenCalledWith(expect.anything(), [
       expect.objectContaining({ position: 12, depth: 60, ownSearch: true }),
@@ -224,6 +262,7 @@ describe('DiscoveryCheck', () => {
         source: 'reviews',
         position: 12,
         depth: 200,
+        resultCount: 200,
         ownSearch: true,
         checkedOn: utcToday().toISOString().slice(0, 10),
       },
@@ -236,7 +275,10 @@ describe('DiscoveryCheck', () => {
     expect(off.tracker.autoTrack).not.toHaveBeenCalled();
 
     const unranked = build({ autoTrackRanked: true });
-    unranked.capture.search.mockResolvedValueOnce(results(60));
+    unranked.capture.search.mockResolvedValueOnce({
+      results: results(60),
+      resultCount: 60,
+    });
     await unranked.check.run(payload, false);
     expect(unranked.tracker.autoTrack).not.toHaveBeenCalled();
   });

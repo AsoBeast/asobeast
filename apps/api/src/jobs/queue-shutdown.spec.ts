@@ -103,7 +103,7 @@ describe('QueueShutdown', () => {
   });
 
   it('leaves queues and workers to drain while redis answers', async () => {
-    await shutdownWith(answers()).beforeApplicationShutdown();
+    await shutdownWith(answers()).onModuleDestroy();
 
     expect(closeWorker).not.toHaveBeenCalled();
     expect(closeQueue).not.toHaveBeenCalled();
@@ -116,7 +116,7 @@ describe('QueueShutdown', () => {
     jest.useFakeTimers();
     blocking.status = 'reconnecting';
 
-    const shutdown = shutdownWith(answers()).beforeApplicationShutdown();
+    const shutdown = shutdownWith(answers()).onModuleDestroy();
     await jest.advanceTimersByTimeAsync(RECONNECT_GRACE_MS / 2);
     blocking.status = 'ready';
     blocking.emit('ready');
@@ -131,7 +131,7 @@ describe('QueueShutdown', () => {
     jest.useFakeTimers();
     blocking.status = 'reconnecting';
 
-    const shutdown = shutdownWith(answers()).beforeApplicationShutdown();
+    const shutdown = shutdownWith(answers()).onModuleDestroy();
     await jest.advanceTimersByTimeAsync(RECONNECT_GRACE_MS - 1);
     expect(closeWorker).not.toHaveBeenCalled();
     await jest.advanceTimersByTimeAsync(1);
@@ -161,7 +161,7 @@ describe('QueueShutdown', () => {
       discovery,
       new FailFastRedis({ ping: answers() } as unknown as Redis),
       drain,
-    ).beforeApplicationShutdown();
+    ).onModuleDestroy();
   };
 
   it('force closes only the worker still reconnecting when another has reconnected', async () => {
@@ -198,7 +198,7 @@ describe('QueueShutdown', () => {
     openBlocking = () => Promise.reject(new Error('Connection is closed.'));
 
     await expect(
-      shutdownWith(answers()).beforeApplicationShutdown(),
+      shutdownWith(answers()).onModuleDestroy(),
     ).resolves.toBeUndefined();
 
     expect(closeWorker.mock.calls).toEqual([[true]]);
@@ -211,7 +211,7 @@ describe('QueueShutdown', () => {
       .mockImplementationOnce(refused)
       .mockResolvedValue('PONG');
 
-    await shutdownWith(ping).beforeApplicationShutdown();
+    await shutdownWith(ping).onModuleDestroy();
 
     expect(ping).toHaveBeenCalledTimes(2);
     expect(closeWorker).not.toHaveBeenCalled();
@@ -221,7 +221,7 @@ describe('QueueShutdown', () => {
   it('closes every worker, queue and flow producer at once when redis is down', async () => {
     const ping = jest.fn<Promise<string>, []>().mockImplementation(refused);
 
-    await shutdownWith(ping).beforeApplicationShutdown();
+    await shutdownWith(ping).onModuleDestroy();
 
     expect(ping).toHaveBeenCalledTimes(3);
     expect(closeWorker.mock.calls).toEqual([[true]]);
@@ -234,9 +234,7 @@ describe('QueueShutdown', () => {
     const ping = jest.fn<Promise<string>, []>().mockImplementation(refused);
     closeQueue.mockRejectedValue(new Error('ERR unknown command'));
 
-    await expect(
-      shutdownWith(ping).beforeApplicationShutdown(),
-    ).resolves.toBeUndefined();
+    await expect(shutdownWith(ping).onModuleDestroy()).resolves.toBeUndefined();
 
     expect(closeWorker.mock.calls).toEqual([[true]]);
     expect(closeFlow.mock.calls).toEqual([[true]]);
@@ -254,7 +252,7 @@ describe('QueueShutdown', () => {
     } as unknown as DiscoveryService;
 
     await expect(
-      new QueueShutdown(discovery, answered, drain).beforeApplicationShutdown(),
+      new QueueShutdown(discovery, answered, drain).onModuleDestroy(),
     ).resolves.toBeUndefined();
 
     expect(closeQueue).not.toHaveBeenCalled();
@@ -264,7 +262,7 @@ describe('QueueShutdown', () => {
   it('arms the http cut before it closes anything', async () => {
     const ping = jest.fn<Promise<string>, []>().mockImplementation(refused);
 
-    await shutdownWith(ping).beforeApplicationShutdown();
+    await shutdownWith(ping).onModuleDestroy();
 
     expect(cutAfter.mock.invocationCallOrder[0]).toBeLessThan(
       closeWorker.mock.invocationCallOrder[0],
@@ -274,7 +272,7 @@ describe('QueueShutdown', () => {
   it('names what it closed and when the open requests are cut', async () => {
     const ping = jest.fn<Promise<string>, []>().mockImplementation(refused);
 
-    await shutdownWith(ping).beforeApplicationShutdown();
+    await shutdownWith(ping).onModuleDestroy();
 
     expect(warn).toHaveBeenCalledWith(
       `shutdown: redis is unreachable, force closed 1 workers and 2 queue connections, open http requests are cut in ${UNREACHABLE_DRAIN_MS} ms`,

@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type {
-  ChangeEventItem,
-  RankingPoint,
-  TrackedKeywordItem,
+import {
+  NO_APPS_SENTENCE,
+  type ChangeEventItem,
+  type RankingPoint,
+  type TrackedKeywordItem,
 } from "@asobeast/shared";
 import { buildRankingChart } from "@/components/charts/pivot";
 import {
@@ -48,7 +49,11 @@ const point = (
   date: string,
   position: number | null,
   depth = 200,
-): RankingPoint => ({ date, position, depth });
+  resultCount?: number | null,
+): RankingPoint =>
+  resultCount === undefined
+    ? { date, position, depth }
+    : { date, position, depth, resultCount };
 
 const chartOf = (points: RankingPoint[]) =>
   buildRankingChart(
@@ -149,6 +154,42 @@ describe("historyView", () => {
       kind: "chart",
       line: true,
       notes: ["Not in the top 100 in this range"],
+    });
+  });
+
+  it("W-PH-15 a range whose every check listed no apps says so", () => {
+    expect(
+      historyView(
+        chartOf([
+          point("2026-10-16", null, 200, 0),
+          point("2026-10-17", null, 200, 0),
+          point("2026-10-18", null, 200, 0),
+          point("2026-10-19", null, 200, 0),
+        ]),
+        keyword(),
+      ),
+    ).toEqual({
+      kind: "chart",
+      line: true,
+      notes: [`${NO_APPS_SENTENCE} on every checked day`],
+    });
+  });
+
+  it("W-PH-16 a mixed range keeps the depth note", () => {
+    expect(
+      historyView(
+        chartOf([
+          point("2026-10-16", null, 200, 0),
+          point("2026-10-17", null, 200),
+          point("2026-10-18", null, 200, 45),
+          point("2026-10-19", null, 200),
+        ]),
+        keyword(),
+      ),
+    ).toEqual({
+      kind: "chart",
+      line: true,
+      notes: ["Not in the top 200 in this range"],
     });
   });
 

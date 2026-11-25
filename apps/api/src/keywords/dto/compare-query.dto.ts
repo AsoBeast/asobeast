@@ -7,5 +7,5 @@ export class CompareQueryDto {
   @IsOptional()
   @Transform(({ value }) => value === true || value === 'true')
   @IsBoolean()
-  onlyGaps = false;
+  onlyGaps: boolean = false;
 }

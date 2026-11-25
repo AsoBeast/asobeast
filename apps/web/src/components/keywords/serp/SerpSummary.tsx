@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { NO_APPS_SENTENCE } from "@asobeast/shared";
 import { MovementCell } from "@/components/movement/MovementCell";
 import { Button } from "@/components/ui/button";
 import { InfoTip } from "@/components/ui/info-tip";
@@ -109,6 +110,8 @@ function PositionValue({
       );
     case "notFound":
       return <Note>{`Not in the top ${position.depth}`}</Note>;
+    case "noApps":
+      return <Note>{NO_APPS_SENTENCE}</Note>;
     default:
       return <Note>Not in this list</Note>;
   }

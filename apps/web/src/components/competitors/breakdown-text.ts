@@ -8,6 +8,7 @@ import type {
   MetadataField,
   Store,
 } from "@asobeast/shared";
+import { listsNoApps, NO_APPS_LABEL } from "@asobeast/shared";
 import { PRODUCT_NAME } from "@/lib/brand";
 import {
   formatCountry,
@@ -63,9 +64,12 @@ export function fieldVerdict(field: KeywordBreakdownField): string {
 
 export function rankingLabel(ranking: KeywordBreakdownRanking | null): string {
   if (ranking === null) return "Not checked yet";
-  return ranking.position === null
-    ? `>${ranking.depth}`
-    : `#${ranking.position}`;
+  if (ranking.position === null) {
+    return listsNoApps(ranking.resultCount)
+      ? NO_APPS_LABEL
+      : `>${ranking.depth}`;
+  }
+  return `#${ranking.position}`;
 }
 
 export function placementPhrase(

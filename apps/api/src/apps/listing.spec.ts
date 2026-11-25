@@ -1,3 +1,4 @@
+import { Store } from '@prisma/client';
 import {
   eventsIn,
   eventsOfMarket,
@@ -8,6 +9,7 @@ import {
   latestListingIn,
   listingIn,
   listingMarket,
+  storedLocalization,
   storedMarket,
 } from './listing';
 
@@ -81,5 +83,37 @@ describe('listing market', () => {
       country: 'pl',
       localization: 'pl',
     });
+  });
+});
+
+describe('storedLocalization', () => {
+  it.each([
+    ['us', 'en-US'],
+    ['pl', 'en-GB'],
+    ['de', 'de'],
+  ])(
+    'stores the %s default localization %s as the default listing',
+    (market, localization) => {
+      expect(
+        storedLocalization(Store.APP_STORE, market, localization),
+      ).toBeNull();
+    },
+  );
+
+  it('keeps an additional localization of the storefront', () => {
+    expect(storedLocalization(Store.APP_STORE, 'pl', 'pl')).toBe('pl');
+  });
+
+  it('keeps a localization the storefront does not read', () => {
+    expect(storedLocalization(Store.APP_STORE, 'us', 'pl')).toBe('pl');
+  });
+
+  it('keeps the default listing when no localization is asked for', () => {
+    expect(storedLocalization(Store.APP_STORE, 'us', null)).toBeNull();
+    expect(storedLocalization(Store.GOOGLE_PLAY, 'us', null)).toBeNull();
+  });
+
+  it('keeps every localization on google play', () => {
+    expect(storedLocalization(Store.GOOGLE_PLAY, 'us', 'en-US')).toBe('en-US');
   });
 });

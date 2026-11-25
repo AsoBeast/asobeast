@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ImplausibleResultError } from '../store-providers/errors';
 import {
   askAgainWhileEmpty,
+  confirmEmptyAnswer,
   EMPTY_ANSWER_RETRIES,
   isImplausiblyEmpty,
   settleOnLastAttempt,
@@ -11,6 +12,11 @@ import {
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem } from '../store-providers/types';
 import { toDateKey, utcToday } from './rankings.support';
+
+export interface SerpAnswer {
+  results: SearchItem[];
+  resultCount: number | null;
+}
 
 export interface SerpEntryRow {
   keywordId: string;
@@ -38,6 +44,11 @@ export function positionsByStoreAppId(
 
 export const reachedDepth = (results: readonly SearchItem[]): number =>
   results.length === 0 ? RANK_DEPTH : Math.min(results.length, RANK_DEPTH);
+
+const answerOf = (results: SearchItem[]): SerpAnswer => ({
+  results,
+  resultCount: results.length,
+});
 
 export function serpEntryRows(
   keywordId: string,
@@ -69,12 +80,12 @@ export class SerpCapture {
   async search(
     keyword: KeywordScope,
     finalAttempt: boolean,
-  ): Promise<SearchItem[] | null> {
+  ): Promise<SerpAnswer | null> {
     const provider = this.registry.get(keyword.store);
     const ask = () =>
       provider.search(keyword.text, keyword.country, RANK_DEPTH);
     const results = await ask();
-    if (results.length > 0) return results;
+    if (results.length > 0) return answerOf(results);
 
     const today = utcToday();
     const lastRanked = await this.prisma.serpEntry.findFirst({
@@ -82,19 +93,21 @@ export class SerpCapture {
       orderBy: { date: 'desc' },
       select: { date: true },
     });
+    if (!lastRanked) {
+      return this.confirmEmpty(keyword, ask);
+    }
     if (
-      !lastRanked ||
       !isImplausiblyEmpty({
         resultCount: 0,
         lastSeenOn: lastRanked.date,
         today,
       })
     ) {
-      return results;
+      return this.confirmEmpty(keyword, ask);
     }
     const retries = EMPTY_ANSWER_RETRIES[keyword.store];
     const again = await askAgainWhileEmpty(ask, retries, results);
-    if (again.length > 0) return again;
+    if (again.length > 0) return answerOf(again);
     return settleOnLastAttempt(
       new ImplausibleResultError(
         keyword.store,
@@ -103,6 +116,20 @@ export class SerpCapture {
       ),
       { finalAttempt, logger: this.logger, next: 'check', settled: null },
     );
+  }
+
+  private async confirmEmpty(
+    keyword: KeywordScope,
+    ask: () => Promise<SearchItem[]>,
+  ): Promise<SerpAnswer> {
+    const retries = EMPTY_ANSWER_RETRIES[keyword.store];
+    const { confirmed, results } = await confirmEmptyAnswer(ask, retries);
+    if (results.length > 0) return answerOf(results);
+    if (confirmed) return { results: [], resultCount: 0 };
+    this.logger.warn(
+      `the first empty answer for "${keyword.text}" in ${keyword.country} stayed unconfirmed, so the count stays unknown until the next check`,
+    );
+    return { results: [], resultCount: null };
   }
 
   async store(

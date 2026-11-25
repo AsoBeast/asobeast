@@ -38,6 +38,8 @@ export function rankedMovers(
     const from = rankedPosition(fromCapture);
     const { depth: toDepth } = toCapture;
     const { depth: fromDepth } = fromCapture;
+    const toResultCount = toCapture.resultCount ?? null;
+    const fromResultCount = fromCapture.resultCount ?? null;
     const change = (from ?? UNRANKED_RANK) - (to ?? UNRANKED_RANK);
     const mover: RankedMover = {
       keywordId: row.keywordId,
@@ -45,8 +47,10 @@ export function rankedMovers(
       country: row.keyword.country,
       from,
       fromDepth,
+      fromResultCount,
       to,
       toDepth,
+      toResultCount,
       change,
     };
     if (to !== null && change > 0) {
@@ -81,6 +85,8 @@ const strip = (mover: RankedMover): KeywordMover => ({
   text: mover.text,
   from: mover.from,
   fromDepth: mover.fromDepth,
+  fromResultCount: mover.fromResultCount,
   to: mover.to,
   toDepth: mover.toDepth,
+  toResultCount: mover.toResultCount,
 });

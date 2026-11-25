@@ -509,6 +509,7 @@ export const apiTokensOptions = queryOptions({
 });
 
 export async function refetchAuth(client: QueryClient): Promise<void> {
+  await client.cancelQueries({ queryKey: authMeKey });
   await Promise.all([
     client.invalidateQueries({ queryKey: authStatusKey }),
     client.invalidateQueries({ queryKey: authMeKey }),

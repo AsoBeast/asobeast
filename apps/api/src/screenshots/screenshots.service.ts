@@ -8,7 +8,7 @@ import type {
   ScreenshotItem,
   ScreenshotReadingState,
 } from '@asobeast/shared';
-import { listingIn, NEWEST_FIRST } from '../apps/listing';
+import { listingIn, NEWEST_FIRST, storedLocalization } from '../apps/listing';
 import { missingListing } from '../apps/missing-listing';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScreenshotPolicy } from './screenshot-policy';
@@ -40,8 +40,9 @@ export class ScreenshotsService {
     const market = country ?? app.country;
     const home = market === app.country;
     if (!home) assertStorefront(app.store, market);
+    const stored = storedLocalization(app.store, market, localization);
     const latest = await this.prisma.appSnapshot.findFirst({
-      where: { appId, ...listingIn(app.country, market, localization) },
+      where: { appId, ...listingIn(app.country, market, stored) },
       orderBy: NEWEST_FIRST,
       select: {
         id: true,
@@ -49,8 +50,8 @@ export class ScreenshotsService {
         screenshots: { orderBy: { position: 'asc' } },
       },
     });
-    if (!latest && (localization !== null || !home)) {
-      throw missingListing(market, localization);
+    if (!latest && (stored !== null || !home)) {
+      throw missingListing(market, stored);
     }
     return {
       appId,
