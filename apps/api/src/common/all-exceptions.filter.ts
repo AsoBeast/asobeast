@@ -304,7 +304,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const statusCode = exception.getStatus();
     const body = exception.getResponse();
     if (typeof body === 'string') {
-      return { statusCode, error: exception.name, message: body };
+      return {
+        statusCode,
+        error: STATUS_CODES[statusCode] ?? exception.name,
+        message: body,
+      };
     }
     const record = body as Record<string, unknown>;
     const message = Array.isArray(record.message)
