@@ -6022,6 +6022,48 @@
         ]
       }
     },
+    "/apps/{id}/metadata/coverage-preview": {
+      "post": {
+        "description": "Takes a draft of one listing: an App Store localization (title, subtitle, keyword field, description) or a Google Play market (title, short description, description). A field left out keeps its live value. Answers, for every active tracked keyword of the markets that read that listing, the live and the drafted coverage verdict judged as the coverage table judges them, the change between them, the lint of the drafted fields and the words the draft wastes. Markets that read the localization but are still judged on the home listing are named in waitingMarkets. Writes nothing, queues nothing and calls no store. Answers 400 for a competitor app, for a field the store does not have and for a localization on Google Play, and 404 for a missing app.",
+        "operationId": "MetadataController_coveragePreview",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoveragePreviewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Preview the keywords a draft listing would cover",
+        "tags": [
+          "metadata"
+        ]
+      }
+    },
     "/metadata/assistant": {
       "get": {
         "operationId": "MetadataAssistantController_status",
@@ -7459,7 +7501,7 @@
   "info": {
     "title": "asobeast API",
     "description": "Self-hosted ASO toolkit API. It tracks the apps you import and their competitors over time and reads what AsoBeast collected; it is not a bulk store lookup.\n\nA metered instance carries RateLimit-Limit, RateLimit-Remaining and RateLimit-Reset on every response, for the tightest limit the request touched. A self-hosted instance has no request rate limits and sends no such header. Limits are per workspace, so minting more tokens does not buy more capacity, and they are sized per plan across three classes: read for stored data, write for configuration changes and store for the endpoints that reach the App Store or Google Play.\n\nA 429 carries Retry-After and a rateLimit object naming the window that closed, or an aiAllowance object when the workspace has spent the AI calls its plan includes this month. A 403 with a quota object means a plan capacity limit such as apps or tracked keyword markets, which is a different problem from a rate limit. A 402 with an entitlement object means the workspace needs a plan.\n\nPositions are 1-based and null means checked but not found within the captured depth, never zero. Daily granularity uses UTC dates.",
-    "version": "1.16.0",
+    "version": "2.0.0",
     "contact": {}
   },
   "tags": [],
@@ -8711,6 +8753,104 @@
         "required": [
           "language"
         ]
+      },
+      "CoveragePreviewDto": {
+        "type": "object",
+        "properties": {
+          "localization": {
+            "enum": [
+              "ar",
+              "bn",
+              "ca",
+              "zh-Hans",
+              "zh-Hant",
+              "hr",
+              "cs",
+              "da",
+              "nl",
+              "en-AU",
+              "en-CA",
+              "en-GB",
+              "en-US",
+              "fi",
+              "fr",
+              "fr-CA",
+              "de",
+              "el",
+              "gu",
+              "he",
+              "hi",
+              "hu",
+              "id",
+              "it",
+              "ja",
+              "kn",
+              "ko",
+              "ms",
+              "ml",
+              "mr",
+              "no",
+              "or",
+              "pl",
+              "pt-BR",
+              "pt-PT",
+              "pa",
+              "ro",
+              "ru",
+              "sk",
+              "sl",
+              "es-MX",
+              "es-ES",
+              "sv",
+              "ta",
+              "te",
+              "th",
+              "tr",
+              "uk",
+              "ur",
+              "vi"
+            ],
+            "type": "string",
+            "example": "en-US",
+            "description": "The App Store localization the draft rewrites. Defaults to the default localization of the home storefront. App Store only."
+          },
+          "country": {
+            "type": "string",
+            "example": "us",
+            "pattern": "^[a-z]{2}$",
+            "description": "The market whose listing the draft rewrites. Defaults to the home storefront. Google Play only."
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 1000,
+            "example": "Habit Tracker",
+            "description": "The drafted title. Left out, the live title is kept."
+          },
+          "subtitle": {
+            "type": "string",
+            "maxLength": 1000,
+            "example": "Daily goals and streaks",
+            "description": "The drafted subtitle. Left out, the live subtitle is kept. App Store only."
+          },
+          "shortDescription": {
+            "type": "string",
+            "maxLength": 1000,
+            "example": "Build habits that stick",
+            "description": "The drafted short description. Left out, the live one is kept. Google Play only."
+          },
+          "keywordField": {
+            "type": "string",
+            "maxLength": 1000,
+            "example": "habit,tracker,streak",
+            "description": "The drafted keyword field of the localization. Left out, the saved field is kept; an empty string drafts an empty field. App Store only."
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4000,
+            "example": "Track every habit.",
+            "description": "The drafted description. Left out, the live one is kept."
+          }
+        }
       },
       "MetadataAssistantDto": {
         "type": "object",

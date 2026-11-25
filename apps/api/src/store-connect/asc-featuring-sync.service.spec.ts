@@ -427,6 +427,25 @@ describe('AscFeaturingSync.run', () => {
     });
   });
 
+  it('counts a whitespace-only promotional text as not filled', async () => {
+    const { service, updateMany } = build({
+      responses: [
+        versions(),
+        localizations(['real text', '   ', '']),
+        nominations([]),
+      ],
+    });
+
+    await expect(service.run()).resolves.toEqual({
+      nominations: 1,
+      promoText: 3,
+    });
+    expect(writesOf(updateMany)[0].data).toMatchObject({
+      promoFilled: 1,
+      promoTotal: 3,
+    });
+  });
+
   it('stores a role refusal instead of throwing and keeps the promotional text', async () => {
     const { service, updateMany } = build({
       responses: [

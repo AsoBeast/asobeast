@@ -3,11 +3,16 @@ import type { Release } from "./release-notes";
 export const LATER_RELEASES: readonly Release[] = [
   {
     version: "2.1.0",
-    date: "2026-11-23",
-    title: "The store says when it lists no apps",
+    date: "2026-11-24",
+    title: "Help me write it",
     summary:
-      "A keyword whose search lists nothing now says so in the keyword tables, the rankings charts and the search results, instead of looking like a rank past the last place.",
+      "The metadata page helps you write the next version of your listing before it ships.",
     changes: [
+      {
+        kind: "new",
+        title: "Draft your next listing",
+        text: "The metadata page has a Draft mode: write the next title, subtitle, keyword field and description beside the live ones and see, while you type, which tracked keywords the draft would newly cover, which ones it would lose, and which words are wasted. The draft is kept in your browser, and while you type its text goes to your AsoBeast server to work out that coverage, never to the stores. Copy it out for App Store Connect or Play Console, and save the keyword field through its usual editor.",
+      },
       {
         kind: "fixed",
         title: "A search that lists no apps says so",

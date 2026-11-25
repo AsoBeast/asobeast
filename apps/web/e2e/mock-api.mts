@@ -74,6 +74,12 @@ import {
 import { seededInspections } from "./keyword-inspection-fixtures.mts";
 import { funnelFor } from "./store-funnel.mts";
 import {
+  COVERAGE_PREVIEW_FAIL_COOKIE,
+  COVERAGE_PREVIEW_MARKETS_COOKIE,
+  mockCoveragePreview,
+  previewMarketsOf,
+} from "./coverage-preview.mts";
+import {
   STORE_CONNECT_OFF_COOKIE,
   STORE_CONNECTION_ACTIVE,
   STORE_CONNECTION_COOKIE,
@@ -320,6 +326,7 @@ import type {
   KeywordAddRequest,
   KeywordFieldResult,
   KeywordImportRequest,
+  CoveragePreviewRequest,
   MetadataAssistantRequest,
   MetadataAssistantResult,
   MetadataAuditResult,
@@ -4564,6 +4571,59 @@ const routes: Route[] = [
           ).filter((draft) => fields.includes(draft.field)),
         };
         json(res, 201, result);
+      });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/apps\/([^/]+)\/metadata\/coverage-preview$/,
+    handler: ([id], req, res) => {
+      withBody<CoveragePreviewRequest>(req, res, (body) => {
+        const path = req.url ?? "/";
+        const dataset = DATASETS[id];
+        if (!dataset) {
+          return json(res, 404, errorEnvelope(404, path, "App not found"));
+        }
+        if (dataset.detail.isCompetitor) {
+          return json(
+            res,
+            400,
+            errorEnvelope(
+              400,
+              path,
+              "A competitor app has no draft; draft its primary app instead",
+            ),
+          );
+        }
+        const store = dataset.detail.store;
+        if (
+          store === "GOOGLE_PLAY" &&
+          (body.subtitle !== undefined || body.keywordField !== undefined)
+        ) {
+          return json(
+            res,
+            400,
+            errorEnvelope(
+              400,
+              path,
+              "Google Play has no subtitle or keyword field; draft the short description instead",
+            ),
+          );
+        }
+        if (hasCookie(req, COVERAGE_PREVIEW_FAIL_COOKIE, "1")) {
+          return json(res, 500, errorEnvelope(500, path));
+        }
+        const audit = METADATA_AUDITS[id] ?? METADATA_AUDIT;
+        json(
+          res,
+          200,
+          mockCoveragePreview(
+            { ...audit, appId: id, store },
+            dataset.detail.country,
+            body,
+            previewMarketsOf(cookieValue(req, COVERAGE_PREVIEW_MARKETS_COOKIE)),
+          ),
+        );
       });
     },
   },

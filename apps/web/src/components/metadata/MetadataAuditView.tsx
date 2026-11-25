@@ -19,7 +19,9 @@ import { CoverageByField } from "./CoverageByField";
 import { COVERAGE_SECTION_ID } from "./coverage-summary";
 import { CoverageTable } from "./CoverageTable";
 import { FieldsNote } from "./FieldsNote";
+import { ListingDraftEditor } from "./draft/ListingDraftEditor";
 import { MetadataAssistantPanel } from "./MetadataAssistantPanel";
+import { useMetadataMode } from "./MetadataModeSwitch";
 import { ScreenshotCaptionsCard } from "./ScreenshotCaptionsCard";
 import { showsScreenshotText } from "./screenshot-text-marks";
 import { ScreenshotCaptionsSkeleton } from "./skeletons";
@@ -54,14 +56,17 @@ function NoKeywords({ id }: { id: string }) {
 export function MetadataAuditView({
   id,
   canDraft,
+  draftable,
   hasLocalizations,
   keywordFields,
 }: {
   id: string;
   canDraft: boolean;
+  draftable: boolean;
   hasLocalizations: boolean;
   keywordFields: boolean;
 }) {
+  const [mode] = useMetadataMode();
   const { market, home } = useMarket(id);
   const localization = useLocalization(id).localization ?? undefined;
   const { data: result } = useSuspenseQuery(
@@ -75,41 +80,53 @@ export function MetadataAuditView({
   );
   const suggestion = isAppStore ? result.keywordFieldSuggestion : null;
   const drafting = canDraft && market === home;
+  const draftMode = draftable && mode === "draft";
+
+  const coverageByField = tracked ? (
+    <CoverageByField
+      rows={result.coverage}
+      withScreenshotText={withScreenshotText}
+      className="col-span-12 @5xl/metadata:col-span-4"
+    />
+  ) : null;
 
   return (
     <>
-      <div className="grid grid-cols-12 items-start gap-6">
-        <div
-          className={cn(
-            "col-span-12 flex min-w-0 flex-col gap-3",
-            tracked && "@5xl/metadata:col-span-8",
-          )}
-        >
-          <section
-            aria-label="Listing fields"
-            className="grid grid-cols-1 gap-4 @2xl/metadata:grid-cols-2"
+      {draftMode ? (
+        <ListingDraftEditor
+          id={id}
+          audit={result}
+          market={market}
+          localization={localization}
+        />
+      ) : (
+        <div className="grid grid-cols-12 items-start gap-6">
+          <div
+            className={cn(
+              "col-span-12 flex min-w-0 flex-col gap-3",
+              tracked && "@5xl/metadata:col-span-8",
+            )}
           >
-            {result.fields.map((field) => (
-              <MetadataFieldCard
-                key={`${market}:${localization ?? ""}:${field.field}`}
-                field={field.field}
-                value={field.value ?? ""}
-                limit={field.limit}
-                indexed={field.indexed}
-                issues={field.issues}
-              />
-            ))}
-          </section>
-          <FieldsNote id={id} keywordFields={keywordFields} />
+            <section
+              aria-label="Listing fields"
+              className="grid grid-cols-1 gap-4 @2xl/metadata:grid-cols-2"
+            >
+              {result.fields.map((field) => (
+                <MetadataFieldCard
+                  key={`${market}:${localization ?? ""}:${field.field}`}
+                  field={field.field}
+                  value={field.value ?? ""}
+                  limit={field.limit}
+                  indexed={field.indexed}
+                  issues={field.issues}
+                />
+              ))}
+            </section>
+            <FieldsNote id={id} keywordFields={keywordFields} />
+          </div>
+          {coverageByField}
         </div>
-        {tracked ? (
-          <CoverageByField
-            rows={result.coverage}
-            withScreenshotText={withScreenshotText}
-            className="col-span-12 @5xl/metadata:col-span-4"
-          />
-        ) : null}
-      </div>
+      )}
 
       {tracked ? (
         <CoverageTable

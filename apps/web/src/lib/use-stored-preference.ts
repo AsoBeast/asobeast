@@ -36,18 +36,23 @@ function write(key: string, raw: string): boolean {
   }
 }
 
+export const readStoredPreference = (key: string): string | null =>
+  unsaved.get(key) ?? read(key);
+
+export function writeStoredPreference(key: string, raw: string): void {
+  if (write(key, raw)) unsaved.delete(key);
+  else unsaved.set(key, raw);
+  listeners.forEach((listener) => listener());
+}
+
 export function useStoredPreference(key: string) {
   const raw = useSyncExternalStore(
     subscribe,
-    () => unsaved.get(key) ?? read(key),
+    () => readStoredPreference(key),
     () => null,
   );
   const save = useCallback(
-    (next: string) => {
-      if (write(key, next)) unsaved.delete(key);
-      else unsaved.set(key, next);
-      listeners.forEach((listener) => listener());
-    },
+    (next: string) => writeStoredPreference(key, next),
     [key],
   );
   return [raw, save] as const;

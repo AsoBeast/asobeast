@@ -382,6 +382,42 @@ describe('Native localizations of a listing (e2e)', () => {
       expect(localized.coverage).toEqual(plain.coverage);
     });
 
+    it('audits the default listing when the request names the default localization of its storefront', async () => {
+      registry.listings.set('pl:pl', POLISH);
+      registry.listings.set('de:default', GERMAN);
+      const appId = await importFrom(PL_APP_URL);
+      await api
+        .post(`/apps/${appId}/keywords`)
+        .send({ keywords: ['karte'], country: 'de' })
+        .expect(201);
+      await api.post(`/apps/${appId}/refresh?country=de`).expect(200);
+      const auditOf = async (query: string) =>
+        (await api.get(`/apps/${appId}/metadata/audit${query}`).expect(200))
+          .body as MetadataAuditResult;
+      const titleOf = (audit: MetadataAuditResult) =>
+        audit.fields.find((field) => field.field === 'title')?.value;
+
+      const home = await auditOf('?localization=en-GB');
+      const market = await auditOf('?country=de&localization=de');
+
+      expect(titleOf(home)).toBe(ENGLISH.title);
+      expect(home.localization).toBe('en-GB');
+      expect(home.coverage).toEqual((await auditOf('')).coverage);
+      expect(titleOf(market)).toBe(GERMAN.title);
+      expect(market.coverage).toEqual((await auditOf('?country=de')).coverage);
+    });
+
+    it('still refuses a localization for a google play app', async () => {
+      const appId = await importFrom(
+        'https://play.google.com/store/apps/details?id=com.example.app&gl=us',
+      );
+
+      await api.get(`/apps/${appId}/metadata/audit`).expect(200);
+      await api
+        .get(`/apps/${appId}/metadata/audit?localization=en-US`)
+        .expect(404);
+    });
+
     it('shows localized events on the market timeline only', async () => {
       registry.listings.set('pl:pl', POLISH);
       const appId = await importFrom(PL_APP_URL);

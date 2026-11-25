@@ -7,6 +7,7 @@ import type {
   ChartFollowItem,
   ChartPage,
   AppAuditResult,
+  CoveragePreviewRequest,
   AppLocalizationsResult,
   EmailAlertItem,
   FirstRunStatus,
@@ -27,6 +28,7 @@ import { isStoreSuggestionStrategy, QUERY_BOUNDS } from "@asobeast/shared";
 import {
   hashKey,
   infiniteQueryOptions,
+  keepPreviousData,
   queryOptions,
   skipToken,
   type QueryClient,
@@ -97,6 +99,7 @@ import {
   getMarketSuggestions,
   searchStore,
   getMetadataAudit,
+  previewListingCoverage,
   getPortfolio,
   getPortfolioHistory,
   getPortfolioInsights,
@@ -273,6 +276,8 @@ export const appKeys = {
       ...appKeys.metadataAuditRoot(id),
       { market, ...(localization === undefined ? {} : { localization }) },
     ] as const,
+  coveragePreview: (id: string, request: CoveragePreviewRequest) =>
+    [...appKeys.detail(id), "coverage-preview", request] as const,
   serpRoot: () => ["serp"] as const,
   serp: (keywordId: string, date: string | null = null) =>
     [...appKeys.serpRoot(), keywordId, date] as const,
@@ -779,6 +784,18 @@ export const metadataAuditOptions = (
   queryOptions({
     queryKey: appKeys.metadataAudit(id, market, localization),
     queryFn: () => getMetadataAudit(id, market, localization),
+  });
+
+export const coveragePreviewOptions = (
+  id: string,
+  request: CoveragePreviewRequest,
+) =>
+  queryOptions({
+    queryKey: appKeys.coveragePreview(id, request),
+    queryFn: () => previewListingCoverage(id, request),
+    staleTime: 30_000,
+    retry: false,
+    placeholderData: keepPreviousData,
   });
 
 export const appSummaryOptions = (id: string, country?: string) =>

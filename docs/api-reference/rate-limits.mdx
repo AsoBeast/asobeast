@@ -51,7 +51,7 @@ The keyword field text may run to 1,000 characters, so spacing and duplicates in
 
 | Class | What it covers | Drawn from |
 | --- | --- | --- |
-| Read | Anything that returns stored data, including exports and the previews of keyword imports and keyword field saves, which validate and write nothing | The generous per minute budget |
+| Read | Anything that returns stored data, including exports and the previews of keyword imports, keyword field saves and draft listings (`POST /apps/{id}/metadata/coverage-preview`), which validate and write nothing | The generous per minute budget |
 | Write | Configuration changes such as adding a keyword or a competitor | The tighter write budget |
 | Store | Refresh, finding localizations, run daily, score, keyword suggestions, deep search, importing an app, adding a competitor, name search and similar apps lookups, and capturing a top chart | The write budget, plus its own on demand allowance |
 

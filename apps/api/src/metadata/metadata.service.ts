@@ -3,36 +3,28 @@ import { Store } from '@prisma/client';
 import {
   AppStoreLocalization,
   assertStorefront,
-  countChars,
-  KEYWORD_FIELD_CHAR_LIMIT,
   KeywordCoverageRow,
-  lintDescription,
-  lintKeywordField,
-  lintShortDescription,
-  lintSubtitle,
-  lintTitle,
-  LintContext,
   MetadataAuditResult,
-  MetadataField,
-  MetadataFieldAudit,
   keywordFieldLocalizations,
   ScreenshotItem,
-  STORE_FIELD_LIMITS,
-  tokenize,
   TrackedKeywordItem,
 } from '@asobeast/shared';
-import { storedKeywordFields } from '../keywords/keyword-field-index';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { suggestKeywordField } from './keyword-field-suggestion';
-import { judgeKeywordCoverage } from './keyword-coverage-judge';
-import { FieldPhrases, fieldPhrases, keywordFieldOf } from './listing-surfaces';
+import { competitorNames } from './competitor-names';
+import { loadCoverageSources } from './coverage-sources';
 import {
-  latestListingTexts,
-  latestLocalizedTexts,
-  ListingTexts,
-  LocalizedTexts,
-} from '../apps/listing-texts';
+  CoverageSources,
+  judgeKeywordCoverage,
+} from './keyword-coverage-judge';
+import {
+  lintContextOf,
+  listingFieldAudits,
+  listingFieldTexts,
+} from './listing-field-audits';
+import { keywordFieldOf } from './listing-surfaces';
+import { ListingTexts } from '../apps/listing-texts';
 import { missingListing } from '../apps/missing-listing';
 import { ScreenshotsService } from '../screenshots/screenshots.service';
 import {
@@ -42,10 +34,18 @@ import {
 
 type JudgedCoverageRow = KeywordCoverageRow & { listingCountry: string };
 
-interface AuditListings {
-  listings: Map<string, ListingTexts>;
-  localized: Map<string, LocalizedTexts[]>;
-  view: ListingTexts | undefined;
+function refuseMissingView(
+  view: ListingTexts | undefined,
+  home: string,
+  market: string,
+  localization: AppStoreLocalization | null,
+): void {
+  if (localization !== null && !view) {
+    throw missingListing(market, localization);
+  }
+  if (market !== home && !view) {
+    throw missingListing(market);
+  }
 }
 
 @Injectable()
@@ -66,20 +66,21 @@ export class MetadataService {
     if (market !== app.country) {
       assertStorefront(app.store, market);
     }
-    const [tracked, competitors, stored] = await Promise.all([
+    const [tracked, competitors] = await Promise.all([
       this.keywords.listTracked(appId, undefined, country, {
         brandFacts: app.store === Store.APP_STORE,
       }),
-      this.prisma.app.findMany({
-        where: { primaryAppId: appId },
-        select: { name: true },
-      }),
-      storedKeywordFields(this.prisma, appId),
+      competitorNames(this.prisma, appId),
     ]);
     const active = tracked.filter((item) => item.active);
-    const read = await this.readListings(app, market, localization, active);
-    const { listings, view } = read;
-    const keywordFields = fieldPhrases(stored);
+    const { sources, view } = await loadCoverageSources(
+      this.prisma,
+      app,
+      active.map((item) => item.country),
+      { market, localization },
+    );
+    refuseMissingView(view, app.country, market, localization);
+    const { listings, keywordFields } = sources;
     const viewLocalization =
       localization ?? keywordFieldLocalizations(market)[0];
 
@@ -87,21 +88,18 @@ export class MetadataService {
       app.store === Store.APP_STORE
         ? keywordFieldOf(keywordFields, viewLocalization)
         : '';
-    const context: LintContext = {
-      titleWords: tokenize(view?.title ?? ''),
-      subtitleWords: tokenize(view?.subtitle ?? ''),
-      brandTokens: tokenize(app.name ?? ''),
-      competitorNames: competitors
-        .map((competitor) => competitor.name)
-        .filter((name): name is string => Boolean(name)),
-      trackedKeywords: active.map((item) => item.text),
-    };
-    const fields =
-      app.store === Store.GOOGLE_PLAY
-        ? this.playFields(view, context)
-        : this.appStoreFields(view, context, keywordFieldValue);
+    const texts = listingFieldTexts(view, keywordFieldValue);
+    const fields = listingFieldAudits(
+      app.store,
+      texts,
+      lintContextOf(texts, {
+        appName: app.name,
+        competitorNames: competitors,
+        trackedKeywords: active.map((item) => item.text),
+      }),
+    );
 
-    const coverage = this.judgeCoverage(app, active, read, keywordFields);
+    const coverage = this.judgeCoverage(app, active, sources);
     const shots = await this.screenshotsOf(app.store, listings, [
       market,
       ...coverage.map((row) => row.listingCountry),
@@ -140,42 +138,9 @@ export class MetadataService {
     };
   }
 
-  private async readListings(
-    app: { id: string; store: Store; country: string },
-    market: string,
-    localization: AppStoreLocalization | null,
-    active: TrackedKeywordItem[],
-  ): Promise<AuditListings> {
-    const listings = await latestListingTexts(
-      this.prisma,
-      app.id,
-      app.country,
-      [app.country, market, ...active.map((item) => item.country)],
-    );
-    const localized =
-      app.store === Store.APP_STORE
-        ? await latestLocalizedTexts(this.prisma, app.id, app.country, [
-            ...listings.keys(),
-          ])
-        : new Map<string, LocalizedTexts[]>();
-    const view =
-      localization === null
-        ? listings.get(market)
-        : localized
-            .get(market)
-            ?.find((entry) => entry.localization === localization)?.texts;
-    if (localization !== null && !view) {
-      throw missingListing(market, localization);
-    }
-    if (market !== app.country && !view) {
-      throw missingListing(market);
-    }
-    return { listings, localized, view };
-  }
-
   private async screenshotsOf(
     store: Store,
-    listings: Map<string, ListingTexts>,
+    listings: ReadonlyMap<string, ListingTexts>,
     markets: readonly string[],
   ): Promise<(market: string) => ScreenshotItem[]> {
     const snapshotIds = new Map(
@@ -195,88 +160,14 @@ export class MetadataService {
     };
   }
 
-  private playFields(
-    view: ListingTexts | undefined,
-    context: LintContext,
-  ): MetadataFieldAudit[] {
-    const store = Store.GOOGLE_PLAY;
-    const title = view?.title ?? '';
-    const summary = view?.summary ?? '';
-    const description = view?.description ?? '';
-    return [
-      this.field(store, 'title', title, lintTitle(title, 30, store)),
-      this.field(
-        store,
-        'shortDescription',
-        summary,
-        lintShortDescription(summary, context, 80),
-      ),
-      this.field(
-        store,
-        'description',
-        description,
-        lintDescription(
-          description,
-          STORE_FIELD_LIMITS.GOOGLE_PLAY.description!.limit,
-        ),
-      ),
-    ];
-  }
-
-  private appStoreFields(
-    view: ListingTexts | undefined,
-    context: LintContext,
-    keywordFieldValue: string,
-  ): MetadataFieldAudit[] {
-    const store = Store.APP_STORE;
-    const title = view?.title ?? '';
-    const subtitle = view?.subtitle ?? '';
-    const description = view?.description ?? '';
-    const keywordField =
-      keywordFieldValue.length > 0
-        ? [
-            this.field(
-              store,
-              'keywordField',
-              keywordFieldValue,
-              lintKeywordField(
-                keywordFieldValue,
-                context,
-                KEYWORD_FIELD_CHAR_LIMIT,
-              ),
-            ),
-          ]
-        : [];
-    return [
-      this.field(store, 'title', title, lintTitle(title, 30, store)),
-      this.field(
-        store,
-        'subtitle',
-        subtitle,
-        lintSubtitle(subtitle, context, 30),
-      ),
-      ...keywordField,
-      this.field(
-        store,
-        'description',
-        description,
-        lintDescription(
-          description,
-          STORE_FIELD_LIMITS.APP_STORE.description!.limit,
-        ),
-      ),
-    ];
-  }
-
   private judgeCoverage(
     app: { store: Store; country: string },
     active: TrackedKeywordItem[],
-    { listings, localized }: AuditListings,
-    keywordFields: FieldPhrases,
+    sources: CoverageSources,
   ): JudgedCoverageRow[] {
     return active.map((item) => {
       const { fields, listingCountry, uncovered, wordsSplit } =
-        judgeKeywordCoverage(app, item, { listings, localized, keywordFields });
+        judgeKeywordCoverage(app, item, sources);
       return {
         keywordId: item.keywordId,
         text: item.text,
@@ -288,23 +179,6 @@ export class MetadataService {
         listingCountry,
       };
     });
-  }
-
-  private field(
-    store: Store,
-    field: MetadataField,
-    value: string,
-    issues: MetadataFieldAudit['issues'],
-  ): MetadataFieldAudit {
-    const limit = STORE_FIELD_LIMITS[store][field]!;
-    return {
-      field,
-      value,
-      chars: countChars(value),
-      limit: limit.limit,
-      indexed: limit.indexed,
-      issues,
-    };
   }
 
   private async ensureApp(appId: string): Promise<{

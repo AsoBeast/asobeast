@@ -104,6 +104,15 @@ describe('Write isolation', () => {
     await expect(fixture.db.reviewReply.count()).resolves.toBe(0);
   });
 
+  it('answers 404 when previewing a draft listing of another workspace app', async () => {
+    const response = await fixture.b.agent
+      .post(`/apps/${fixture.a.appleAppId}/metadata/coverage-preview`)
+      .send({ title: 'Hijacked title' });
+
+    expect(response.status).toBe(404);
+    expect(JSON.stringify(response.body)).not.toContain('Hijacked');
+  });
+
   it('answers 404 when translating another workspace review', async () => {
     await fixture.b.agent
       .post(

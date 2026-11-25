@@ -655,11 +655,20 @@ export const localizationParser = parseAsStringLiteral(
   APP_STORE_LOCALIZATION_IDS,
 );
 
+export const METADATA_MODES = ["live", "draft"] as const;
+
+export type MetadataMode = (typeof METADATA_MODES)[number];
+
+export const metadataModeParser =
+  parseAsStringLiteral(METADATA_MODES).withDefault("live");
+
 export const draftLocaleParser = localizationParser;
 
 export const fieldLocaleParser = localizationParser;
 
 export const fieldAddParser = parseAsArrayOf(parseAsString);
+
+export const fieldFromDraftParser = parseAsBoolean;
 
 export const fieldLeftOutParser = createParser({
   parse(value) {
