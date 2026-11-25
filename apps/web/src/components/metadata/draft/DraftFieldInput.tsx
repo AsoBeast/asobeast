@@ -16,6 +16,7 @@ import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
 import { cn } from "@/lib/utils";
 
 const MULTILINE: ReadonlySet<ListingDraftField> = new Set([
+  "promotionalText",
   "keywordField",
   "description",
 ]);

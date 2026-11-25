@@ -23,6 +23,7 @@ import { CopyDraftButton, CopyFieldButton } from "./CopyDraftButtons";
 import { DraftCoveragePanel } from "./DraftCoveragePanel";
 import { useDraftFieldReveal } from "./draft-field-reveal";
 import { DraftFieldInput } from "./DraftFieldInput";
+import { DraftStorePreview } from "./DraftStorePreview";
 import { KeywordFieldHandoff } from "./KeywordFieldHandoff";
 import {
   useDraftKeywordField,
@@ -107,7 +108,7 @@ export function ListingDraftEditor({
     <div className="grid grid-cols-12 items-start gap-6">
       <section
         aria-label="Draft listing"
-        className="col-span-12 flex min-w-0 flex-col gap-4 rounded-lg border border-border bg-card px-4 pt-3 pb-4 @5xl/metadata:col-span-7"
+        className="col-span-12 flex min-w-0 flex-col gap-4 rounded-lg border border-border bg-card px-4 pt-3 pb-4 @5xl/metadata:col-span-7 @5xl/metadata:row-span-2"
       >
         {fields.filter((name) => name !== "description").map(input)}
         <Collapsible open={descriptionOpen} onOpenChange={setDescriptionOpen}>
@@ -139,6 +140,12 @@ export function ListingDraftEditor({
           </Button>
         </div>
       </section>
+      <DraftStorePreview
+        id={id}
+        values={values}
+        localization={localization}
+        className="col-span-12 min-w-0 @5xl/metadata:col-span-5"
+      />
       <DraftCoveragePanel
         preview={preview}
         className="col-span-12 @5xl/metadata:col-span-5"

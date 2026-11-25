@@ -9,8 +9,6 @@ import type { ListingDraftValues } from "../listing-draft";
 
 export const PREVIEW_SCREENSHOTS = 3;
 
-export type PreviewDraft = ListingDraftValues & { promotionalText?: string };
-
 export interface PreviewRating {
   average: number;
   count: number;
@@ -53,7 +51,7 @@ const ratingOf = (snapshot: AppSnapshotDetail | null): PreviewRating | null =>
 function storeFields(
   store: Store,
   snapshot: AppSnapshotDetail | null,
-  draft: PreviewDraft,
+  draft: ListingDraftValues,
 ): Pick<PreviewListing, "subtitle" | "shortDescription" | "promotionalText"> {
   if (store === "GOOGLE_PLAY") {
     return {
@@ -76,7 +74,7 @@ export function previewListingOf({
 }: {
   detail: AppDetail;
   screenshots: AppScreenshots | null;
-  draft?: PreviewDraft;
+  draft?: ListingDraftValues;
 }): PreviewListing {
   const snapshot = detail.latestSnapshot;
   const name = detail.name ?? snapshot?.title ?? "";

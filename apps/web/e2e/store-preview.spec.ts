@@ -2,11 +2,13 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import {
   APP_1_PL_DETAIL,
+  APP_1_PL_LOCALIZED_SCREENSHOTS,
   APP_1_PL_SCREENSHOTS,
   APP_GP_SCREENSHOTS,
   APP_RIVAL_ID,
 } from "./fixtures.mts";
 import { THEMES } from "./contrast-check.mts";
+import { hydrated } from "./hydrated.mts";
 
 const previewCard = (page: Page) =>
   page.getByRole("region", { name: "In the store" });
@@ -202,4 +204,56 @@ test("names the phone sizes on Google Play", async ({ page }) => {
   ).toHaveAttribute("aria-selected", "true");
   await previewCard(page).getByRole("tab", { name: "Larger phone" }).click();
   await expect(frame(page)).toHaveAttribute("style", /width: 412px/);
+});
+
+const draftEditor = (page: Page) =>
+  page.getByRole("region", { name: "Draft listing" });
+const draftField = (page: Page, name: string) =>
+  draftEditor(page).getByRole("textbox", { name, exact: true });
+
+test("follows the draft while typing", async ({ page }) => {
+  await page.goto("/apps/app-1/metadata?mode=draft");
+  const title = await hydrated(draftField(page, "Title"));
+
+  await title.fill("Focus Timer: Pomodoro Study Planner");
+  await expect(
+    frame(page).locator('[data-slot="store-text"]').first(),
+  ).toContainText("…");
+  await expect(cutNotes(page).locator("p").first()).toContainText(
+    /^Cut after “/,
+  );
+  await expect(previewCard(page)).toContainText("Your draft");
+
+  await title.fill("Focus");
+  await expect(
+    previewCard(page).getByRole("img", {
+      name: "App Store search result: Focus",
+    }),
+  ).toBeVisible();
+  await expect(cutNotes(page)).toHaveCount(0);
+});
+
+test("shows the drafted promotional text on the product page", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/metadata?mode=draft");
+  const promotional = await hydrated(draftField(page, "Promotional text"));
+  await expect(
+    draftEditor(page).getByText("Not searched by the store").first(),
+  ).toBeVisible();
+
+  await promotional.fill("New: focus streaks with friends");
+  await chooseSurface(page, "Product page");
+
+  await expect(frame(page)).toContainText("New: focus streaks with friends");
+});
+
+test("previews the screenshots of the drafted localization", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/metadata?market=pl&localization=pl&mode=draft");
+
+  await expect(screenshotsIn(page)).toHaveCount(
+    APP_1_PL_LOCALIZED_SCREENSHOTS.screenshots.length,
+  );
 });
