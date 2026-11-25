@@ -55,6 +55,21 @@ describe("rankText", () => {
     expect(rankText({ position: null, depth: 50 })).toBe(">50");
     expect(rankText({ position: null, depth: null })).toBeNull();
   });
+
+  it("says No apps when the search listed none", () => {
+    expect(rankText({ position: null, depth: 200, resultCount: 0 })).toBe(
+      "No apps",
+    );
+  });
+
+  it("keeps the old reading for a row without a count", () => {
+    expect(rankText({ position: null, depth: 200, resultCount: null })).toBe(
+      ">200",
+    );
+    expect(
+      rankText({ position: null, depth: 200, resultCount: undefined }),
+    ).toBe(">200");
+  });
 });
 
 describe("rankLabel", () => {
@@ -67,6 +82,15 @@ describe("rankLabel", () => {
       "Not found in the top 50",
     );
     expect(rankLabel({ position: null, depth: null })).toBe("Not checked yet");
+  });
+
+  it("names the no apps state like the tracked table does", () => {
+    expect(rankLabel({ position: null, depth: 200, resultCount: 0 })).toBe(
+      "No apps: The store lists no apps for this search",
+    );
+    expect(rankLabel({ position: null, depth: 200, resultCount: null })).toBe(
+      "Not found in the top 200",
+    );
   });
 });
 

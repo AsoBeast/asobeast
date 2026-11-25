@@ -59,6 +59,7 @@ function RankingTooltip({
   const rowIndex = data.rows.findIndex((candidate) => candidate.date === label);
   const row = data.rows[rowIndex];
   const depths = data.depths[rowIndex];
+  const counts = data.resultCounts[rowIndex];
   if (!row || !depths) return null;
 
   const items = data.keywordIds.map((keywordId, index) => {
@@ -70,8 +71,11 @@ function RankingTooltip({
       color: data.config[keywordId]?.color,
       label: data.config[keywordId]?.label ?? keywordId,
       value:
-        formatCheckedPosition(position, depths[keywordId] ?? null) ??
-        NOT_CHECKED,
+        formatCheckedPosition(
+          position,
+          depths[keywordId] ?? null,
+          counts?.[keywordId] ?? null,
+        ) ?? NOT_CHECKED,
       sortBy: position ?? Infinity,
     };
   });

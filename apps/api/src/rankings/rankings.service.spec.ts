@@ -108,7 +108,11 @@ describe('RankingsService.checkKeyword', () => {
 
   const setup = (options?: {
     tracked?: unknown[];
-    previous?: { position: number | null; depth?: number } | null;
+    previous?: {
+      position: number | null;
+      depth?: number;
+      resultCount?: number | null;
+    } | null;
     earlier?: { position: number | null; depth?: number }[];
     existingToday?: { position: number | null } | null;
     threshold?: number;
@@ -134,8 +138,13 @@ describe('RankingsService.checkKeyword', () => {
               appId: string;
               position: number | null;
               depth: number;
+              resultCount: number | null;
             };
-            update: { position: number | null; depth: number };
+            update: {
+              position: number | null;
+              depth: number;
+              resultCount: number | null;
+            };
           },
         ]
       >()
@@ -318,6 +327,12 @@ describe('RankingsService.checkKeyword', () => {
 
   const dispatched = (dispatch: jest.Mock<Promise<void>, [AlertPayload]>) =>
     dispatch.mock.calls.map(([payload]) => payload);
+
+  const checked = async (service: RankingsService): Promise<void> => {
+    const work = service.checkKeyword('kw1');
+    await jest.runAllTimersAsync();
+    await work;
+  };
 
   const placed = (placements: Record<string, number>): SearchItem[] =>
     Array.from({ length: 40 }, (_, index) => {
@@ -537,12 +552,38 @@ describe('RankingsService.checkKeyword', () => {
       rankedEarlier: null,
     });
 
+    await checked(service);
+
+    expect(upsert).toHaveBeenCalled();
+    for (const [args] of upsert.mock.calls) {
+      expect(args.create).toMatchObject({
+        position: null,
+        depth: RANK_DEPTH,
+        resultCount: 0,
+      });
+      expect(args.update).toEqual({
+        position: null,
+        depth: RANK_DEPTH,
+        resultCount: 0,
+      });
+    }
+  });
+
+  it('records how many apps the search listed', async () => {
+    const { service, upsert } = setup({
+      searchResults: [
+        { storeAppId: 'first-store', title: 'First' },
+        { storeAppId: 'second-store', title: 'Second' },
+      ],
+      rankedEarlier: null,
+    });
+
     await service.checkKeyword('kw1');
 
     expect(upsert).toHaveBeenCalled();
     for (const [args] of upsert.mock.calls) {
-      expect(args.create).toMatchObject({ position: null, depth: RANK_DEPTH });
-      expect(args.update).toEqual({ position: null, depth: RANK_DEPTH });
+      expect(args.create.resultCount).toBe(2);
+      expect(args.update.resultCount).toBe(2);
     }
   });
 
@@ -664,6 +705,48 @@ describe('RankingsService.checkKeyword', () => {
       to: null,
       fromDepth: 100,
       toDepth: buildSearchResults().length,
+    });
+  });
+
+  it('hands the stored result counts of both checks to the rank alerts', async () => {
+    const { service, dispatch } = setup({
+      tracked: primaryOnly,
+      searchResults: [],
+      previous: { position: 3, resultCount: 12 },
+    });
+
+    await checked(service);
+
+    const payloads = dispatched(dispatch);
+    expect(payloads[0]).toMatchObject({
+      event: 'rank.dropped',
+      from: 3,
+      to: null,
+      toResultCount: 0,
+    });
+    expect(payloads[0]).not.toHaveProperty('fromResultCount');
+    expect(payloads[1]).toMatchObject({
+      event: 'rank.milestone',
+      direction: 'left',
+      fromResultCount: 12,
+      toResultCount: 0,
+    });
+  });
+
+  it('leaves a count out of the payload when its row predates the field', async () => {
+    const { service, dispatch } = setup({
+      tracked: primaryOnly,
+      searchResults: [],
+      previous: { position: 3 },
+    });
+
+    await checked(service);
+
+    const payloads = dispatched(dispatch);
+    expect(payloads[0]).not.toHaveProperty('fromResultCount');
+    expect(payloads[0]).toMatchObject({
+      event: 'rank.dropped',
+      toResultCount: 0,
     });
   });
 
@@ -1038,7 +1121,7 @@ describe('RankingsService.checkKeyword', () => {
       expect(upsert).not.toHaveBeenCalled();
     });
 
-    it('accepts it at once for a phrase that stopped ranking anything over a week ago', async () => {
+    it('confirms it with one retry for a phrase that stopped ranking anything over a week ago', async () => {
       const { service, search, upsert, serpFindFirst } = setup({
         searchResults: [],
       });
@@ -1046,21 +1129,21 @@ describe('RankingsService.checkKeyword', () => {
         date: utcDayStart(FROZEN_NOW, -(IMPLAUSIBLE_LOOKBACK_DAYS + 1)),
       });
 
-      await service.checkKeyword('kw1');
+      await checked(service);
 
-      expect(search).toHaveBeenCalledTimes(1);
+      expect(search).toHaveBeenCalledTimes(2);
       expect(upsert).toHaveBeenCalled();
     });
 
-    it('accepts it at once for a phrase that has never ranked anything', async () => {
+    it('confirms it with a retry for a phrase that has never ranked anything', async () => {
       const { service, search, upsert } = setup({
         searchResults: [],
         previousSerp: null,
       });
 
-      await service.checkKeyword('kw1');
+      await checked(service);
 
-      expect(search).toHaveBeenCalledTimes(1);
+      expect(search).toHaveBeenCalledTimes(2);
       expect(upsert).toHaveBeenCalled();
     });
   });
@@ -1181,6 +1264,8 @@ describe('RankingsService.checkKeyword', () => {
           to: 6,
         }),
       ]);
+      expect(dispatched(dispatch)[0]).not.toHaveProperty('fromResultCount');
+      expect(dispatched(dispatch)[0]).not.toHaveProperty('toResultCount');
       expect(rankingFindMany).toHaveBeenCalledTimes(1);
       expect(rankingFindMany).toHaveBeenCalledWith({
         where: {

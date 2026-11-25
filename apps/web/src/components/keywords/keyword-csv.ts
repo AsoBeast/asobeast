@@ -79,7 +79,11 @@ export function keywordCsv(rows: TrackedKeywordItem[], today: string): string {
     keyword.text,
     keyword.source,
     keyword.active ? "true" : "false",
-    formatCheckedPosition(keyword.latestPosition, keyword.latestDepth),
+    formatCheckedPosition(
+      keyword.latestPosition,
+      keyword.latestDepth,
+      keyword.latestResultCount,
+    ),
     keyword.positionDelta1d,
     keyword.positionDelta7d,
     keyword.serpVolatility7d,

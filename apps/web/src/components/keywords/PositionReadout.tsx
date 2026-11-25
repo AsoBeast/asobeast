@@ -1,4 +1,9 @@
-import type { TrackedKeywordItem } from "@asobeast/shared";
+import {
+  listsNoApps,
+  NO_APPS_LABEL,
+  NO_APPS_SENTENCE,
+  type TrackedKeywordItem,
+} from "@asobeast/shared";
 import { PositionDeltaChip } from "@/components/ui/delta-chip";
 import { GradedNumber } from "@/components/ui/graded";
 import { formatDate } from "@/lib/format";
@@ -35,6 +40,25 @@ export function PositionReadout({
   className?: string;
 }) {
   const tier = grade("position", keyword.latestPosition);
+  const noApps =
+    keyword.latestPosition === null && listsNoApps(keyword.latestResultCount);
+  const lostTitle = lost?.on
+    ? lastRankedLine(lost.position, lost.on)
+    : undefined;
+  const title =
+    [noApps ? NO_APPS_SENTENCE : null, lostTitle]
+      .filter((part): part is string => Boolean(part))
+      .join(". ") || undefined;
+  const worded =
+    keyword.latestDepth !== null && keyword.latestDepth !== undefined;
+  const name = [
+    noApps
+      ? `${NO_APPS_LABEL}: ${NO_APPS_SENTENCE}`
+      : `Not found in the top ${keyword.latestDepth}`,
+    lostTitle ?? (lost ? `was #${lost.position}` : null),
+  ]
+    .filter((part): part is string => part !== null)
+    .join(", ");
   return (
     <span
       className={cn(
@@ -44,16 +68,20 @@ export function PositionReadout({
     >
       {keyword.latestPosition === null ? (
         <span
-          title={lost?.on ? lastRankedLine(lost.position, lost.on) : undefined}
+          title={title}
           className={cn(
             "flex flex-col leading-tight text-muted-foreground",
             className,
           )}
         >
-          <span>{label}</span>
+          <span aria-hidden={worded || undefined}>{label}</span>
           {lost ? (
-            <span className="text-tick text-faint-foreground">{`was #${lost.position}`}</span>
+            <span
+              aria-hidden
+              className="text-tick text-faint-foreground"
+            >{`was #${lost.position}`}</span>
           ) : null}
+          {worded ? <span className="sr-only">{name}</span> : null}
         </span>
       ) : (
         <GradedNumber

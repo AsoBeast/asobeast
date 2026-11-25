@@ -22,6 +22,8 @@ export interface KeywordMover {
   to: number | null;
   fromDepth: number;
   toDepth: number;
+  fromResultCount?: number | null;
+  toResultCount?: number | null;
 }
 
 export interface KeywordMovers {

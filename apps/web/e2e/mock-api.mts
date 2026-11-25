@@ -36,7 +36,11 @@ import {
   withDiscoveryIcons,
 } from "./competitors-fixtures.mts";
 import { analysisOf, visibilityComparedFor } from "./gap-mock.mts";
-import { SERP_HISTORY, serpOnDay } from "./serp-history.mts";
+import {
+  SERP_HISTORY,
+  SERP_STALE_HISTORY,
+  serpOnDay,
+} from "./serp-history.mts";
 import "./keyword-map.mts";
 import "./keyword-insights.mts";
 import { planMockImport } from "./keyword-import.mts";
@@ -134,6 +138,11 @@ import {
   PL_HISTORY_COOKIE,
   PL_HISTORY_KEYWORD,
   PL_HISTORY_SERIES,
+  NO_APPS_COOKIE,
+  STALE_CAPTURE_COOKIE,
+  NO_APPS_KEYWORD_ID,
+  NO_APPS_DISCOVERY_KEYWORD_ID,
+  NO_APPS_SERIES,
   PROVISIONAL_AUDIT,
   METADATA_AUDIT,
   APP_1_PL_SCREENSHOTS,
@@ -344,6 +353,7 @@ import type {
   AppSetupUpdateRequest,
   WorkspaceChecklistUpdateRequest,
   KeywordComparison,
+  KeywordDiscoveryList,
   SerpEntryItem,
   SerpSnapshot,
   StoreImportState,
@@ -1094,6 +1104,19 @@ const REVIEW_SETS: Record<string, typeof UPDATE_THEME_REVIEWS> = {
 
 const hasPolishHistory = (req: IncomingMessage) =>
   hasCookie(req, PL_HISTORY_COOKIE, "1");
+
+const hasNoApps = (req: IncomingMessage) => hasCookie(req, NO_APPS_COOKIE, "1");
+
+function withNoAppsDiscovery(list: KeywordDiscoveryList): KeywordDiscoveryList {
+  return {
+    ...list,
+    items: list.items.map((item) =>
+      item.keywordId === NO_APPS_DISCOVERY_KEYWORD_ID
+        ? { ...item, resultCount: 0 }
+        : item,
+    ),
+  };
+}
 
 function rankingsIn(
   rankings: RankingSeries,
@@ -3925,15 +3948,20 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/keywords\/([^/]+)\/serp$/,
     handler: ([keywordId], req, res) => {
-      const history = SERP_HISTORY[keywordId];
-      if (history) {
+      const history =
+        keywordId === NO_APPS_KEYWORD_ID &&
+        hasCookie(req, STALE_CAPTURE_COOKIE, "1")
+          ? SERP_STALE_HISTORY
+          : SERP_HISTORY;
+      const days = history[keywordId];
+      if (days) {
         const date = new URL(req.url ?? "/", "http://mock").searchParams.get(
           "date",
         );
         return json(
           res,
           200,
-          withTrackedCompetitors(keywordId, serpOnDay(history, date)),
+          withTrackedCompetitors(keywordId, serpOnDay(days, date)),
         );
       }
       const snapshot = SERP_SNAPSHOTS[keywordId];
@@ -4101,19 +4129,22 @@ const routes: Route[] = [
           errorEnvelope(400, path, DISCOVERY_COMPETITOR_REFUSAL),
         );
       }
+      const discoveries = discoveriesFor(
+        id,
+        dataset.detail.store,
+        new URL(path, "http://localhost").searchParams.get("country"),
+        {
+          pending: hasCookie(req, DISCOVERY_PENDING_COOKIE, "1"),
+          none: hasCookie(req, DISCOVERY_NONE_COOKIE, "1"),
+          unfit: hasCookie(req, DISCOVERY_UNFIT_COOKIE, "1"),
+        },
+      );
       json(
         res,
         200,
-        discoveriesFor(
-          id,
-          dataset.detail.store,
-          new URL(path, "http://localhost").searchParams.get("country"),
-          {
-            pending: hasCookie(req, DISCOVERY_PENDING_COOKIE, "1"),
-            none: hasCookie(req, DISCOVERY_NONE_COOKIE, "1"),
-            unfit: hasCookie(req, DISCOVERY_UNFIT_COOKIE, "1"),
-          },
-        ),
+        id === "app-1" && hasNoApps(req)
+          ? withNoAppsDiscovery(discoveries)
+          : discoveries,
       );
     },
   },
@@ -4361,6 +4392,14 @@ const routes: Route[] = [
       const scoped = country
         ? dataset.keywords.filter((keyword) => keyword.country === country)
         : dataset.keywords;
+      const noAppsScoped =
+        id === "app-1" && hasNoApps(req)
+          ? scoped.map((keyword) =>
+              keyword.keywordId === NO_APPS_KEYWORD_ID
+                ? { ...keyword, latestResultCount: 0 }
+                : keyword,
+            )
+          : scoped;
       const polishHistory =
         id === "app-1" && country === "pl" && hasPolishHistory(req)
           ? [PL_HISTORY_KEYWORD]
@@ -4370,7 +4409,7 @@ const routes: Route[] = [
         200,
         sortKeywords(
           [
-            ...[...scoped, ...polishHistory].map((keyword) =>
+            ...[...noAppsScoped, ...polishHistory].map((keyword) =>
               annotated(id, keyword),
             ),
             ...(id === "app-1" ? firstCheckRows(req) : []),
@@ -4791,7 +4830,23 @@ const routes: Route[] = [
           errorEnvelope(404, path, `Keyword ${keywordId} is not tracked`),
         );
       }
-      json(res, 200, breakdown);
+      json(
+        res,
+        200,
+        id === "app-1" && keywordId === NO_APPS_KEYWORD_ID && hasNoApps(req)
+          ? {
+              ...breakdown,
+              apps: breakdown.apps.map((entry) =>
+                entry.ranking && entry.ranking.position === null
+                  ? {
+                      ...entry,
+                      ranking: { ...entry.ranking, resultCount: 0 },
+                    }
+                  : entry,
+              ),
+            }
+          : breakdown,
+      );
     },
   },
   appRoute(/^\/apps\/([^/]+)\/keywords\/compare$/, (dataset, query, req) => {
@@ -4810,13 +4865,22 @@ const routes: Route[] = [
 
   appRoute(
     /^\/apps\/([^/]+)\/rankings$/,
-    (dataset, query, req) =>
-      rankingsIn(
+    (dataset, query, req) => {
+      const base =
         dataset.detail.id === "app-1" && hasPolishHistory(req)
           ? { series: [...dataset.rankings.series, PL_HISTORY_SERIES] }
-          : dataset.rankings,
+          : dataset.rankings;
+      return rankingsIn(
+        dataset.detail.id === "app-1" && hasNoApps(req)
+          ? {
+              series: base.series.map((item) =>
+                item.keywordId === NO_APPS_KEYWORD_ID ? NO_APPS_SERIES : item,
+              ),
+            }
+          : base,
         query,
-      ),
+      );
+    },
     (req) => hasCookie(req, RANKINGS_FAIL_COOKIE, "1"),
   ),
   {

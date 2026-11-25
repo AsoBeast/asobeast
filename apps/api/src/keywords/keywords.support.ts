@@ -174,7 +174,12 @@ export function trackedArgs(appId: string) {
             where: { appId },
             orderBy: { date: 'desc' as const },
             take: RANKING_HISTORY_LIMIT,
-            select: { position: true, date: true, depth: true },
+            select: {
+              position: true,
+              date: true,
+              depth: true,
+              resultCount: true,
+            },
           },
           metrics: {
             orderBy: { date: 'desc' as const },

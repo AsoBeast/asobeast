@@ -57,11 +57,11 @@ The 80 character indexed Google Play field, called `summary` in the store payloa
 
 ## Position
 
-An app's 1 based rank for one keyword on one UTC date. `null` means checked and not found within that row's depth. See [Positions and rank depth](/concepts/positions).
+An app's 1 based rank for one keyword on one UTC date. `null` means checked and not found within that row's depth, or `No apps` when the store lists no apps for this search. See [Positions and rank depth](/concepts/positions).
 
 ## Depth
 
-How far a position check looked, stored on each observation: the number of apps the store listed, at most 200. An unranked keyword renders as `>` that depth. See [Positions and rank depth](/concepts/positions).
+How far a position check looked, stored on each observation: the number of apps the store listed, at most 200. An unranked keyword renders as `>` that depth, or as `No apps` when the search listed no apps. See [Positions and rank depth](/concepts/positions).
 
 ## SERP
 

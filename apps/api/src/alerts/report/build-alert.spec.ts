@@ -1,4 +1,4 @@
-import { ACTION_RULE_TITLES } from '@asobeast/shared';
+import { ACTION_RULE_TITLES, type DigestWeeklyPayload } from '@asobeast/shared';
 import {
   actionOpened,
   digest,
@@ -32,6 +32,15 @@ const ICON = 'https://play-lh.googleusercontent.com/icon';
 
 const factMap = (facts: ReportFact[]) =>
   Object.fromEntries(facts.map((fact) => [fact.label, fact.value]));
+
+const digestWithMovers = (
+  movers: Partial<DigestWeeklyPayload['apps'][number]>,
+): DigestWeeklyPayload => ({
+  ...digest,
+  apps: digest.apps.map((app, index) =>
+    index === 1 ? { ...app, ...movers } : app,
+  ),
+});
 
 describe('buildAlert', () => {
   it('heads a rank drop with its sentence, instant and app', () => {
@@ -268,6 +277,46 @@ describe('buildAlert', () => {
       'Competitor position': '#9 → #4',
       'Your position': '#5 → #6',
     });
+  });
+
+  it('says No apps on a digest mover side whose search listed no apps', () => {
+    const withMovers = digestWithMovers({
+      moversDown: [
+        {
+          keywordId: 'kw_1',
+          text: 'falling kw',
+          from: 4,
+          to: null,
+          fromDepth: 100,
+          toDepth: 200,
+          fromResultCount: 120,
+          toResultCount: 0,
+        },
+      ],
+    });
+
+    expect(factMap(buildAlert(withMovers, null).facts)['App 1']).toBe(
+      'vis 41 (—) · ↓ falling kw #4 → No apps · 1 change',
+    );
+  });
+
+  it('keeps the depth bound on a digest mover side without a result count', () => {
+    const withMovers = digestWithMovers({
+      moversUp: [
+        {
+          keywordId: 'kw_2',
+          text: 'climbing kw',
+          from: null,
+          to: 30,
+          fromDepth: 200,
+          toDepth: 200,
+        },
+      ],
+    });
+
+    expect(factMap(buildAlert(withMovers, null).facts)['App 1']).toBe(
+      'vis 41 (—) · ↑ climbing kw >200 → #30 · 1 change',
+    );
   });
 
   it('dates the digest window, lists linked apps and caps the apps at ten', () => {

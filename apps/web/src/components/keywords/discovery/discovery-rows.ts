@@ -1,5 +1,8 @@
 import {
   formatCheckedPosition,
+  listsNoApps,
+  NO_APPS_LABEL,
+  NO_APPS_SENTENCE,
   toDifficulty100,
   type DiscoveryState,
   type KeywordDiscoveryItem,
@@ -9,13 +12,17 @@ import {
 export const DISCOVERY_PAGE_SIZE = 50;
 
 export const rankText = (
-  item: Pick<KeywordDiscoveryItem, "position" | "depth">,
-): string | null => formatCheckedPosition(item.position, item.depth);
+  item: Pick<KeywordDiscoveryItem, "position" | "depth" | "resultCount">,
+): string | null =>
+  formatCheckedPosition(item.position, item.depth, item.resultCount);
 
 export function rankLabel(
-  item: Pick<KeywordDiscoveryItem, "position" | "depth">,
+  item: Pick<KeywordDiscoveryItem, "position" | "depth" | "resultCount">,
 ): string {
   if (item.depth === null) return "Not checked yet";
+  if (item.position === null && listsNoApps(item.resultCount)) {
+    return `${NO_APPS_LABEL}: ${NO_APPS_SENTENCE}`;
+  }
   return item.position === null
     ? `Not found in the top ${item.depth}`
     : `Rank ${item.position}`;

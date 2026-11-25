@@ -342,10 +342,13 @@ describe("PositionCell", () => {
       }),
     );
 
-    expect(markup).toContain("<span>&gt;200</span>");
+    expect(markup).toContain('<span aria-hidden="true">&gt;200</span>');
     expect(markup).toContain(">was #14<");
     expect(markup).toContain(
       `title="Last ranked #14 on ${formatDate("2026-10-21")}"`,
+    );
+    expect(markup).toContain(
+      `>Not found in the top 200, Last ranked #14 on ${formatDate("2026-10-21")}<`,
     );
     expect(markup).not.toContain("since yesterday");
   });
@@ -409,5 +412,51 @@ describe("PositionCell", () => {
     expect(checking).not.toContain("(was");
     expect(neverRanked).toContain(">&gt;200<");
     expect(neverRanked).not.toContain("(was");
+  });
+
+  it("W-POS-40 a search that lists no apps reads No apps with the sentence", () => {
+    const markup = render(
+      keyword({
+        latestPosition: null,
+        latestResultCount: 0,
+        lastRankedPosition: 14,
+        lastRankedOn: "2026-10-21",
+      }),
+    );
+
+    expect(markup).toContain(">No apps</span>");
+    expect(markup).toContain(">was #14<");
+    expect(markup).toContain("sr-only");
+    expect(markup).toContain(
+      `>No apps: The store lists no apps for this search, Last ranked #14 on ${formatDate("2026-10-21")}<`,
+    );
+    expect(markup).toContain(
+      `title="The store lists no apps for this search. Last ranked #14 on ${formatDate("2026-10-21")}"`,
+    );
+  });
+
+  it("W-POS-41 a no-apps row without a last rank keeps only the sentence", () => {
+    const markup = render(
+      keyword({
+        latestPosition: null,
+        previousPosition: null,
+        positionDelta1d: null,
+        lastRankedPosition: null,
+        lastRankedOn: null,
+        latestResultCount: 0,
+      }),
+    );
+
+    expect(markup).toContain(">No apps</span>");
+    expect(markup).not.toContain("was #");
+    expect(markup).toContain('title="The store lists no apps for this search"');
+  });
+
+  it("W-POS-42 a bound without a count keeps its text and no sentence", () => {
+    const markup = render(keyword({ latestPosition: null }));
+
+    expect(markup).toContain("&gt;200");
+    expect(markup).not.toContain("No apps");
+    expect(markup).not.toContain("The store lists no apps");
   });
 });

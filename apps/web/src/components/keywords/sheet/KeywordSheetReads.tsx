@@ -2,6 +2,7 @@
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import {
+  listsNoApps,
   SERP_DEPTH,
   type SerpSnapshot,
   type TrackedKeywordItem,
@@ -142,7 +143,11 @@ function ResultsBody({
   if (!captured) {
     return (
       <div className="-mx-4">
-        <SerpNeverChecked />
+        {listsNoApps(keyword.latestResultCount) ? (
+          <SerpNoApps />
+        ) : (
+          <SerpNeverChecked />
+        )}
       </div>
     );
   }

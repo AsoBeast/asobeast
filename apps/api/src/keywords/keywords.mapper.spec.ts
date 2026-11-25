@@ -122,7 +122,14 @@ describe('toTrackedKeywordItem', () => {
         keyword: {
           ...row().keyword,
           text: 'geo quiz',
-          rankings: [{ position, date: new Date('2026-07-01'), depth: 200 }],
+          rankings: [
+            {
+              position,
+              date: new Date('2026-07-01'),
+              depth: 200,
+              resultCount: null,
+            },
+          ],
         },
       });
 
@@ -295,7 +302,12 @@ describe('toTrackedKeywordItem', () => {
   });
 
   const withRankings = (
-    rankings: { position: number | null; date: string; depth?: number }[],
+    rankings: {
+      position: number | null;
+      date: string;
+      depth?: number;
+      resultCount?: number | null;
+    }[],
   ): TrackedKeywordRow =>
     row({
       keyword: {
@@ -306,6 +318,7 @@ describe('toTrackedKeywordItem', () => {
           position: ranking.position,
           date: new Date(ranking.date),
           depth: ranking.depth ?? 100,
+          resultCount: ranking.resultCount ?? null,
         })),
         metrics: [],
       },
@@ -331,6 +344,28 @@ describe('toTrackedKeywordItem', () => {
     );
     expect(item.latestPosition).toBeNull();
     expect(item.latestDepth).toBe(200);
+  });
+
+  it('carries the result count of the latest check through the response', () => {
+    const item = toTrackedKeywordItem(
+      withRankings([
+        { position: 4, date: '2026-07-02', resultCount: 30 },
+        { position: 3, date: '2026-07-01', resultCount: 45 },
+      ]),
+    );
+    expect(item.latestPosition).toBe(4);
+    expect(item.latestResultCount).toBe(30);
+  });
+
+  it('reports a null result count when no check is stored', () => {
+    expect(toTrackedKeywordItem(withRankings([])).latestResultCount).toBeNull();
+  });
+
+  it('reports a null result count for a check stored without one', () => {
+    const item = toTrackedKeywordItem(
+      withRankings([{ position: null, date: '2026-07-02' }]),
+    );
+    expect(item.latestResultCount).toBeNull();
   });
 
   it('reports an improvement as a negative daily delta', () => {
@@ -731,6 +766,7 @@ describe('dropStreak', () => {
           position,
           date: new Date(day(newestOffset + index)),
           depth: 200,
+          resultCount: null,
         })),
       },
     };

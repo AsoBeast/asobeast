@@ -81,7 +81,24 @@ describe("keyword tools", () => {
 
     expect(description).toEqual(expect.any(String));
     expect(description).toContain("latestDepth");
+    expect(description).toContain("latestResultCount");
+    expect(description).toContain(
+      "0 means the store lists no apps for the search",
+    );
     expect(description).not.toMatch(/>\d+/);
+  });
+
+  it("describes a keyword that found no results through the count", () => {
+    const { server, tools } = createHarness();
+    const { client } = stubFetch(() => ({ status: 200, body: [] }));
+    registerCatalogTools(server, client, KEYWORD_TOOLS);
+
+    expect(tools.get("keyword_breakdown")?.config.description).toContain(
+      "resultCount 0",
+    );
+    expect(tools.get("keyword_discoveries")?.config.description).toContain(
+      "resultCount 0",
+    );
   });
 
   it("reads app_localizations from the localizations route", async () => {

@@ -52,8 +52,9 @@ export class DiscoveryCheck {
     if (app.delistedAt || app.unlistedMarkets.includes(keyword.country)) {
       return;
     }
-    const results = await this.capture.search(keyword, finalAttempt);
-    if (!results) return;
+    const answer = await this.capture.search(keyword, finalAttempt);
+    if (!answer) return;
+    const { results, resultCount } = answer;
     const position = positionsByStoreAppId(results).get(app.storeAppId) ?? null;
     const depth = reachedDepth(results);
     const date = utcToday();
@@ -68,7 +69,14 @@ export class DiscoveryCheck {
     );
     await this.prisma.keywordDiscovery.update({
       where: { appId_keywordId: { appId, keywordId } },
-      data: { position, depth, ownSearch: true, checkedOn: date, relevance },
+      data: {
+        position,
+        depth,
+        resultCount,
+        ownSearch: true,
+        checkedOn: date,
+        relevance,
+      },
     });
     if (!app.autoTrackRanked || position === null) return;
     await this.tracker.autoTrack(app, [
@@ -79,6 +87,7 @@ export class DiscoveryCheck {
         source,
         position,
         depth,
+        resultCount,
         ownSearch: true,
         checkedOn: toDateKey(date),
       },

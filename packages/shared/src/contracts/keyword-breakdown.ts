@@ -47,6 +47,7 @@ export interface KeywordBreakdownListing {
 export interface KeywordBreakdownRanking {
   position: number | null;
   depth: number;
+  resultCount?: number | null;
   date: string;
 }
 

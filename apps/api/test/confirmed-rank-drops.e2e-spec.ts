@@ -2,7 +2,7 @@ import { getQueueToken } from '@nestjs/bullmq';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
-import { AlertBatchPayload } from '@asobeast/shared';
+import { AlertBatchPayload, RankDroppedPayload } from '@asobeast/shared';
 import { Queue } from 'bullmq';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
@@ -14,6 +14,8 @@ import {
   DeliverEmailPayload,
   QUEUES,
 } from '../src/jobs/jobs.types';
+import { rankRow } from '../src/alerts/report/report-rows';
+import { sentenceOf } from '../src/alerts/report/report-sentences';
 import { RankingsService } from '../src/rankings/rankings.service';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { SearchItem, StoreProvider } from '../src/store-providers/types';
@@ -347,5 +349,31 @@ describe('confirmed rank drops (e2e)', () => {
     expect(batches.get(confirming.id)?.events).toEqual([
       expect.objectContaining({ event: 'rank.milestone', confirmed: true }),
     ]);
+  });
+
+  it('says the store lists nothing when the search stops listing any apps', async () => {
+    const { you, keywordId } = await seed();
+    await rankedOn(you, keywordId, 1, 11);
+
+    results = [];
+    await asWorkspace(app, () => rankings.checkKeyword(keywordId));
+
+    const rows = await outbox();
+    expect(rows).toEqual([
+      expect.objectContaining({
+        event: 'rank.dropped',
+        dedupeKey: `rank:${you}:${keywordId}:${today()}`,
+      }),
+    ]);
+    const payload = rows[0].payload as unknown as RankDroppedPayload;
+    expect(payload).toMatchObject({ from: 11, to: null, toResultCount: 0 });
+    expect(payload).not.toHaveProperty('fromResultCount');
+    expect(sentenceOf(payload, false).text).toBe(
+      'You dropped from #11 for "habit tracker" in US: the store lists no apps for this search',
+    );
+    expect(rankRow(payload, 'us')).toMatchObject({
+      from: '#11',
+      to: 'No apps',
+    });
   });
 });

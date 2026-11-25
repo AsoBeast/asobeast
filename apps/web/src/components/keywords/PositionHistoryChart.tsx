@@ -66,6 +66,7 @@ function HistoryTooltip({
 
   const value = data.rows[index]?.[keywordId];
   const depth = data.depths[index]?.[keywordId] ?? null;
+  const resultCount = data.resultCounts[index]?.[keywordId] ?? null;
   const movement = changeSincePrevious(data, index);
   const changed = changes.get(day);
 
@@ -82,6 +83,7 @@ function HistoryTooltip({
             formatCheckedPosition(
               typeof value === "number" ? value : null,
               depth,
+              resultCount,
             ) ?? NOT_CHECKED,
           sortBy: 0,
         },

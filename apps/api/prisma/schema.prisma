@@ -419,6 +419,7 @@ model KeywordDiscovery {
   relevance   Int
   position    Int?
   depth       Int?
+  resultCount Int?
   checkedOn   DateTime? @db.Date
   ownSearch   Boolean   @default(false)
   queuedAt    DateTime?
@@ -547,6 +548,7 @@ model KeywordRanking {
   date        DateTime  @db.Date
   position    Int?
   depth       Int       @default(200)
+  resultCount Int?
   createdAt   DateTime  @default(now())
 
   @@id([appId, keywordId, date])

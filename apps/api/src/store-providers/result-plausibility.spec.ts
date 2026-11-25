@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import { ImplausibleResultError } from './errors';
 import {
   askAgainWhileEmpty,
+  confirmEmptyAnswer,
   DAY_MS,
   EMPTY_ANSWER_RETRY_DELAY_MS,
   IMPLAUSIBLE_LOOKBACK_DAYS,
@@ -121,6 +122,64 @@ describe('askAgainWhileEmpty', () => {
 
     await expect(askAgainWhileEmpty(ask, 0)).resolves.toEqual([]);
     expect(ask).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('confirmEmptyAnswer', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  it('settles for zero on the first retry that answers empty', async () => {
+    const ask = jest.fn().mockResolvedValue([]);
+
+    const answer = confirmEmptyAnswer(ask, 3);
+    await jest.runAllTimersAsync();
+
+    await expect(answer).resolves.toEqual({ confirmed: true, results: [] });
+    expect(ask).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps asking past a failed retry until one answers empty', async () => {
+    const ask = jest
+      .fn()
+      .mockRejectedValueOnce(new Error('store refused'))
+      .mockResolvedValue([]);
+
+    const answer = confirmEmptyAnswer(ask, 3);
+    await jest.runAllTimersAsync();
+
+    await expect(answer).resolves.toEqual({ confirmed: true, results: [] });
+    expect(ask).toHaveBeenCalledTimes(2);
+  });
+
+  it('answers with the results of the retry that found any', async () => {
+    const ask = jest.fn().mockResolvedValue(['a']);
+
+    const answer = confirmEmptyAnswer(ask, 3);
+    await jest.runAllTimersAsync();
+
+    await expect(answer).resolves.toEqual({ confirmed: true, results: ['a'] });
+    expect(ask).toHaveBeenCalledTimes(1);
+  });
+
+  it('stays unconfirmed when every retry fails', async () => {
+    const ask = jest.fn().mockRejectedValue(new Error('store refused'));
+
+    const answer = confirmEmptyAnswer(ask, 2);
+    await jest.runAllTimersAsync();
+
+    await expect(answer).resolves.toEqual({ confirmed: false, results: [] });
+    expect(ask).toHaveBeenCalledTimes(2);
+  });
+
+  it('never asks without retries', async () => {
+    const ask = jest.fn().mockResolvedValue([]);
+
+    await expect(confirmEmptyAnswer(ask, 0)).resolves.toEqual({
+      confirmed: false,
+      results: [],
+    });
+    expect(ask).not.toHaveBeenCalled();
   });
 });
 

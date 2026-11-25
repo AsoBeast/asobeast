@@ -15,7 +15,11 @@ export class RankingsController {
   ) {}
 
   @Get(':id/rankings')
-  @ApiOperation({ summary: 'Ranking history series for an app' })
+  @ApiOperation({
+    summary: 'Ranking history series for an app',
+    description:
+      "Each point carries resultCount, a field whose only message is that the day's search listed no apps: 0 means the store lists no apps for this search, every other value repeats the depth of the same point, and null means the count was not recorded.",
+  })
   history(
     @Param('id') id: string,
     @Query() query: RankingHistoryQueryDto,

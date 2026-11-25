@@ -28,7 +28,11 @@ function PositionTrend({ points }: { points: readonly RankingPoint[] }) {
     <TrendLine
       values={positionTrail(points)}
       label={`position, last ${presetDays(TRAIL_RANGE)} days`}
-      now={formatRankPosition(latest.position, latest.depth)}
+      now={formatRankPosition(
+        latest.position,
+        latest.depth,
+        latest.resultCount,
+      )}
       className="ml-auto hidden sm:block print:hidden"
     />
   );

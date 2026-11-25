@@ -38,6 +38,11 @@ describe('rankCell', () => {
     expect(rankCell(24, RANK_DEPTH)).toBe('#24');
     expect(rankCell(null, 100)).toBe('>100');
   });
+
+  it('prints the no apps label for a zero count and the depth otherwise', () => {
+    expect(rankCell(null, 100, 0)).toBe('No apps');
+    expect(rankCell(null, 100, 12)).toBe('>100');
+  });
 });
 
 describe('keywordCell', () => {
@@ -95,6 +100,22 @@ describe('rank rows', () => {
 
   it('prints a drop out against its depth', () => {
     expect(rankRow(droppedOut, 'us')).toMatchObject({ from: '#3', to: '>100' });
+  });
+
+  it('prints the no apps label on the side whose search listed nothing', () => {
+    expect(rankRow({ ...droppedOut, toResultCount: 0 }, 'us')).toMatchObject({
+      from: '#3',
+      to: 'No apps',
+    });
+    expect(
+      milestoneRow(
+        milestone({ direction: 'left', to: null, toResultCount: 0 }),
+        'us',
+      ),
+    ).toMatchObject({ from: '#14', to: 'No apps' });
+    expect(
+      milestoneRow(milestone({ direction: 'left', to: null }), 'us'),
+    ).toMatchObject({ from: '#14', to: '>200' });
   });
 
   it('keeps the market of an improvement in another storefront', () => {

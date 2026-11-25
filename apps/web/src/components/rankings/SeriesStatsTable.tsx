@@ -50,12 +50,12 @@ function ChangeCell({
 
 function PositionCell({ stats }: { stats: SeriesStats }) {
   if (stats.latest === null) return DASH;
-  const { position, depth } = stats.latest;
+  const { position, depth, resultCount } = stats.latest;
   return (
     <span className="inline-flex items-center justify-end gap-1.5">
       {position === null ? (
         <span className="text-muted-foreground">
-          {formatRankPosition(position, depth)}
+          {formatRankPosition(position, depth, resultCount)}
         </span>
       ) : (
         <GradedNumber

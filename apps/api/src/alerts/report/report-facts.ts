@@ -71,13 +71,13 @@ function digestAppValue(app: DigestWeeklyPayload['apps'][number]): string {
   const [up] = app.moversUp;
   if (up) {
     parts.push(
-      `↑ ${up.text} ${rankCell(up.from, up.fromDepth)} → ${rankCell(up.to, up.toDepth)}`,
+      `↑ ${up.text} ${rankCell(up.from, up.fromDepth, up.fromResultCount)} → ${rankCell(up.to, up.toDepth, up.toResultCount)}`,
     );
   }
   const [down] = app.moversDown;
   if (down) {
     parts.push(
-      `↓ ${down.text} ${rankCell(down.from, down.fromDepth)} → ${rankCell(down.to, down.toDepth)}`,
+      `↓ ${down.text} ${rankCell(down.from, down.fromDepth, down.fromResultCount)} → ${rankCell(down.to, down.toDepth, down.toResultCount)}`,
     );
   }
   parts.push(plural(app.changes, 'change'));
@@ -150,8 +150,11 @@ function rankEventFacts(
     return [
       keyword,
       fact('Milestone', milestonePhrase(alert.tier, alert.direction)),
-      fact('From', rankCell(alert.from, alert.fromDepth)),
-      fact('To', rankCell(alert.to, alert.toDepth)),
+      fact(
+        'From',
+        rankCell(alert.from, alert.fromDepth, alert.fromResultCount),
+      ),
+      fact('To', rankCell(alert.to, alert.toDepth, alert.toResultCount)),
     ];
   }
   return [
@@ -176,13 +179,18 @@ export function factsOf(
     case 'metadata.changed':
       return changeFacts(payload);
     case 'rank.dropped':
-    case 'rank.improved':
+    case 'rank.improved': {
+      const fromCount =
+        'fromResultCount' in payload ? payload.fromResultCount : undefined;
+      const toCount =
+        'toResultCount' in payload ? payload.toResultCount : undefined;
       return [
         fact('Keyword', keywordLabel(payload.keyword)),
-        fact('From', rankCell(payload.from, payload.fromDepth)),
-        fact('To', rankCell(payload.to, payload.toDepth)),
+        fact('From', rankCell(payload.from, payload.fromDepth, fromCount)),
+        fact('To', rankCell(payload.to, payload.toDepth, toCount)),
         fact('Alert threshold', `${payload.threshold}`),
       ];
+    }
     case 'review.negative':
     case 'review.new':
       return reviewFacts(payload);

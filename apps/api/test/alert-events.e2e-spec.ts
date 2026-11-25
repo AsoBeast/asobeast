@@ -219,6 +219,21 @@ describe('GET /alerts/events (e2e)', () => {
     expect(byId.get(action)?.country).toBe('us');
   });
 
+  it('says when the store lists no apps for a rank drop', async () => {
+    await seed(onApp(drop({ to: null, toResultCount: 0 }), apps.primary), {
+      ago: 10,
+    });
+    await seed(onApp(drop({ to: null }), apps.primary), { ago: 20 });
+
+    const body = await list();
+    expect(body.events[0].sentence).toBe(
+      'My App dropped from #9 for "habit tracker" in US: the store lists no apps for this search',
+    );
+    expect(body.events[1].sentence).toBe(
+      'My App fell out of the top 200 for "habit tracker" in US, from #9',
+    );
+  });
+
   it('pages by cursor without losing or repeating a row', async () => {
     const tie = new Date(Date.now() - 30 * MINUTE_MS);
     const seeded = [
