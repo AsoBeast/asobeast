@@ -28,6 +28,7 @@ import {
   adminWorkspacesOptions,
 } from "@/lib/queries";
 import { utilizationPercent, utilizationStatus } from "@/lib/utilization";
+import { proxyRefusals } from "./proxy-refusals";
 
 const ALERT_COPY: Record<ProxyPoolAlert, string> = {
   "pool.healthy.low":
@@ -162,6 +163,7 @@ function TopConsumers({
 }
 
 function ProxyPool({ pool }: { pool: ProxyPoolHealth }) {
+  const refusals = proxyRefusals(pool.endpoints);
   return (
     <SectionCard
       title="Proxy pool"
@@ -215,6 +217,14 @@ function ProxyPool({ pool }: { pool: ProxyPoolHealth }) {
         <Alert key={alert}>
           <TriangleAlert />
           <AlertDescription>{ALERT_COPY[alert]}</AlertDescription>
+        </Alert>
+      ))}
+      {refusals.map((refusal) => (
+        <Alert key={refusal.status}>
+          <TriangleAlert />
+          <AlertDescription>
+            <span>{refusal.sentence}</span>
+          </AlertDescription>
         </Alert>
       ))}
       <a
