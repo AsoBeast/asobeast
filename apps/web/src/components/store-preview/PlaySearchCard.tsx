@@ -10,7 +10,7 @@ export function PlaySearchCard({ listing, device, measure }: SurfaceProps) {
   return (
     <div className="flex items-start gap-3 px-4 py-4">
       <AppIcon src={listing.iconUrl} size={56} />
-      <div className="flex flex-col gap-1">
+      <div className="flex min-w-0 flex-col gap-1">
         <CutText
           text={listing.title}
           layout={LAYOUT.title}
@@ -18,7 +18,10 @@ export function PlaySearchCard({ listing, device, measure }: SurfaceProps) {
           measure={measure}
         />
         {listing.developer ? (
-          <span dir="auto" className="text-caption text-muted-foreground">
+          <span
+            dir="auto"
+            className="truncate text-caption text-muted-foreground"
+          >
             {listing.developer}
           </span>
         ) : null}

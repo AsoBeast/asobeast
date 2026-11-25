@@ -13,8 +13,8 @@ export function useFitScale(
     (element: HTMLElement | null) => {
       if (element === null) return undefined;
       const observer = new ResizeObserver(([entry]) => {
-        const room = entry?.contentBoxSize[0]?.inlineSize ?? width;
-        setScale(Math.min(1, room / width));
+        const room = entry?.contentBoxSize[0]?.inlineSize ?? 0;
+        if (room > 0) setScale(Math.min(1, room / width));
       });
       observer.observe(element);
       return () => observer.disconnect();

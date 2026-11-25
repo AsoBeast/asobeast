@@ -41,7 +41,7 @@ export function ScreenshotRow({
     >
       {screenshots.map((screenshot, index) => (
         <ScreenshotThumb
-          key={screenshot.url}
+          key={screenshot.position}
           src={screenshot.url}
           alt={`Screenshot ${index + 1}`}
           height={height}
