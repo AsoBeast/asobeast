@@ -191,6 +191,38 @@ test("judges a comma in the title as a space", async ({ page }) => {
   ).toContainText("Title");
 });
 
+test("keeps a market row inside the panel on a narrow screen", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.goto("/apps/app-1/metadata?mode=draft");
+  await (await hydrated(field(page, "Title"))).fill("Productivity App");
+  await field(page, "Subtitle").fill("Productivity app sessions");
+  await field(page, "Keyword field").fill("productivity app,deep work");
+  const row = section(page, "Newly covered")
+    .getByRole("listitem")
+    .filter({ hasText: "Germany" });
+  await expect(row).toBeVisible();
+
+  const layout = await row.evaluate((item) => {
+    const keyword = [...item.querySelectorAll("span")].find(
+      (span) => span.textContent === "productivity app",
+    );
+    const panelBox = item.closest("section")?.getBoundingClientRect();
+    const fields = item.lastElementChild?.getBoundingClientRect();
+    return {
+      readable:
+        !!keyword && keyword.clientWidth >= Math.min(keyword.scrollWidth, 80),
+      escapes:
+        !panelBox ||
+        !fields ||
+        fields.right > panelBox.right + 0.5 ||
+        item.scrollWidth > item.clientWidth,
+    };
+  });
+  expect(layout).toEqual({ readable: true, escapes: false });
+});
+
 test("waits for typing to settle before asking", async ({ page }) => {
   const sent = previewRequests(page);
   await page.goto("/apps/app-1/metadata?mode=draft");

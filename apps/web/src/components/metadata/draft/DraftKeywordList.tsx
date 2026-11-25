@@ -85,9 +85,9 @@ export function DraftKeywordList({
           {visible.map((row) => (
             <li
               key={`${row.keywordId}:${row.country}`}
-              className="flex min-h-9 items-center justify-between gap-3 text-dense"
+              className="flex min-h-9 flex-wrap items-center justify-between gap-x-3 py-1 text-dense"
             >
-              <span className="flex min-w-0 items-baseline gap-2">
+              <span className="flex min-w-0 basis-40 grow items-baseline gap-2">
                 <span
                   translate="no"
                   dir="auto"
@@ -102,7 +102,7 @@ export function DraftKeywordList({
                   </span>
                 ) : null}
               </span>
-              <span className="shrink-0 text-caption text-faint-foreground">
+              <span className="ml-auto text-right text-caption text-faint-foreground">
                 {coveringFields(row)}
               </span>
             </li>
