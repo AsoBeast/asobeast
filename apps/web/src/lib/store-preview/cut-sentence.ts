@@ -87,7 +87,7 @@ export const fitStoreText = (
 const measuredText = (
   listing: PreviewListing,
   field: MeasuredField,
-): string | null => (field === "title" ? listing.title : listing[field]);
+): string | null => listing[field];
 
 export function cutSentences(
   listing: PreviewListing,
