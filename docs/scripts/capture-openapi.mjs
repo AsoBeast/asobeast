@@ -23,6 +23,16 @@ function explain(status) {
 }
 
 const OBJECT_SCHEMA_REF = "#/components/schemas/Object";
+const HTTP_METHODS = new Set([
+  "get",
+  "put",
+  "post",
+  "delete",
+  "options",
+  "head",
+  "patch",
+  "trace",
+]);
 
 function documentedAsObject(schema = {}) {
   return (
@@ -41,14 +51,16 @@ function parameterProblem({ required, schema = {} }) {
 
 function misdocumentedParameters(document) {
   return Object.entries(document.paths ?? {}).flatMap(([path, operations]) =>
-    Object.entries(operations).flatMap(([method, operation]) =>
-      (operation.parameters ?? []).flatMap((parameter) => {
-        const problem = parameterProblem(parameter);
-        return problem
-          ? [`  ${method} ${path} ${parameter.name} ${problem}`]
-          : [];
-      }),
-    ),
+    Object.entries(operations)
+      .filter(([method]) => HTTP_METHODS.has(method))
+      .flatMap(([method, operation]) =>
+        (operation.parameters ?? []).flatMap((parameter) => {
+          const problem = parameterProblem(parameter);
+          return problem
+            ? [`  ${method} ${path} ${parameter.name} ${problem}`]
+            : [];
+        }),
+      ),
   );
 }
 
