@@ -2,6 +2,7 @@ import type { Redis } from 'ioredis';
 import { Store } from '@prisma/client';
 import { StoreAppNotFoundError, StoreRequestError } from '../errors';
 import { ProxyEgress } from '../egress/proxy-egress.service';
+import { ProxyPoolUnavailableError } from '../egress/proxy-pool.service';
 import { StoreProviderRegistry } from '../store-provider.registry';
 import { NormalizedApp, SearchItem, StoreProvider } from '../types';
 import { storeCanaryKey } from '../../jobs/jobs.types';
@@ -266,6 +267,26 @@ describe('StoreCanaryService', () => {
       outcome: 'unreachable',
       consecutiveFailures: 0,
       failingSince: null,
+    });
+  });
+
+  it('keeps an exhausted pool from reading as a broken parser run after run', async () => {
+    const { service, egress } = build();
+    egress.through.mockRejectedValue(
+      new ProxyPoolUnavailableError(Store.APP_STORE, 120_000, 30_000),
+    );
+
+    await service.run();
+    const records = await service.run();
+
+    expect(records.APP_STORE).toMatchObject({
+      outcome: 'unreachable',
+      consecutiveFailures: 0,
+      failingSince: null,
+    });
+    expect(records.GOOGLE_PLAY).toMatchObject({
+      outcome: 'unreachable',
+      consecutiveFailures: 0,
     });
   });
 
