@@ -38,7 +38,10 @@ const HTTP_METHODS = new Set([
 function documentedAsObject(schema = {}) {
   return (
     schema.type === "object" ||
-    (schema.allOf ?? []).some(({ $ref }) => $ref === OBJECT_SCHEMA_REF)
+    schema.$ref === OBJECT_SCHEMA_REF ||
+    [schema.allOf, schema.oneOf, schema.anyOf].some((members = []) =>
+      members.some((member) => documentedAsObject(member)),
+    )
   );
 }
 
