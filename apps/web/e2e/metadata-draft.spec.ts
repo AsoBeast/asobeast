@@ -586,9 +586,11 @@ test("shows the words search reads and marks a repeat", async ({ page }) => {
   await (await hydrated(field(page, "Title"))).fill("Habit Tracker");
   await field(page, "Subtitle").fill("habit goals daily");
 
-  const subtitleWords = editor(page)
-    .getByRole("list", { name: "Words search reads" })
-    .nth(1);
+  const words = (name: string) =>
+    editor(page).getByRole("list", {
+      name: `Words search reads in the ${name}`,
+    });
+  const subtitleWords = words("subtitle");
   await expect(subtitleWords.getByRole("listitem")).toHaveText([
     /^habit/,
     "goals",
@@ -597,14 +599,12 @@ test("shows the words search reads and marks a repeat", async ({ page }) => {
   await expect(subtitleWords.getByRole("listitem").first()).toHaveText(
     "habitrepeat",
   );
+  await expect(words("title").getByRole("listitem").first()).toHaveText(
+    "habitrepeat",
+  );
+  await expect(words("keyword field")).toBeVisible();
+  await expect(words("promotional text")).toHaveCount(0);
   await expect(
-    editor(page)
-      .getByRole("list", { name: "Words search reads" })
-      .first()
-      .getByRole("listitem")
-      .first(),
-  ).toHaveText("habitrepeat");
-  await expect(
-    editor(page).getByRole("list", { name: "Words search reads" }),
+    editor(page).getByRole("list", { name: /^Words search reads/ }),
   ).toHaveCount(3);
 });

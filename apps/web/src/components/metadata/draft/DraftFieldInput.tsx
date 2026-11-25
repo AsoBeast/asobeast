@@ -104,7 +104,12 @@ export function DraftFieldInput({
           onChange={(event) => onChange(event.target.value)}
         />
       )}
-      {words ? <SearchWordChips words={words} /> : null}
+      {words ? (
+        <SearchWordChips
+          label={`Words search reads in the ${METADATA_FIELD_LABELS[field].toLowerCase()}`}
+          words={words}
+        />
+      ) : null}
       {issues.length > 0 ? (
         <ul className="flex list-none flex-col gap-1 p-0">
           {issues.map((issue, index) => (

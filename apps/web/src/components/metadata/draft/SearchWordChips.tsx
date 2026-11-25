@@ -2,12 +2,18 @@ import type { SearchWord } from "@/lib/store-preview/search-words";
 
 const SHOWN_WORDS = 60;
 
-export function SearchWordChips({ words }: { words: readonly SearchWord[] }) {
+export function SearchWordChips({
+  label,
+  words,
+}: {
+  label: string;
+  words: readonly SearchWord[];
+}) {
   if (words.length === 0) return null;
   const hidden = words.length - SHOWN_WORDS;
   return (
     <ul
-      aria-label="Words search reads"
+      aria-label={label}
       className="flex list-none flex-wrap items-center gap-1 p-0"
     >
       {words.slice(0, SHOWN_WORDS).map(({ word, repeat }) => (
