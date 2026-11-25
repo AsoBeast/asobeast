@@ -19,6 +19,7 @@ import {
   scopeKey,
   type ListingDraftField,
 } from "@/lib/listing-draft";
+import { searchWords } from "@/lib/store-preview/search-words";
 import { CopyDraftButton, CopyFieldButton } from "./CopyDraftButtons";
 import { DraftCoveragePanel } from "./DraftCoveragePanel";
 import { useDraftFieldReveal } from "./draft-field-reveal";
@@ -74,7 +75,9 @@ export function ListingDraftEditor({
     [scope, values, live],
   );
   const preview = useCoveragePreview(id, request);
-  const lint = preview.requested ? preview.query.data?.fields : undefined;
+  const answer = preview.requested ? preview.query.data : undefined;
+  const lint = answer?.fields;
+  const wasted = answer?.wastedWords ?? [];
   const revealDescription = useDraftFieldReveal("description");
   const [descriptionOpen, setDescriptionOpen] = useState(revealDescription);
   if (revealDescription && !descriptionOpen) setDescriptionOpen(true);
@@ -96,6 +99,7 @@ export function ListingDraftEditor({
       readOnly={name === "keywordField" && locked}
       action={<CopyFieldButton field={name} value={values[name] ?? ""} />}
       issues={lint?.find((entry) => entry.field === name)?.issues ?? []}
+      words={searchWords(store, name, values[name] ?? "", wasted)}
     >
       {name === "keywordField" ? <KeywordFieldNotice field={field} /> : null}
       {name === "keywordField" && handsOff && field.handoff ? (

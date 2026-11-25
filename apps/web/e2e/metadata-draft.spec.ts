@@ -580,3 +580,31 @@ test("names Play Console on Google Play", async ({ page, context }) => {
     /^App name\n/,
   );
 });
+
+test("shows the words search reads and marks a repeat", async ({ page }) => {
+  await page.goto("/apps/app-1/metadata?mode=draft");
+  await (await hydrated(field(page, "Title"))).fill("Habit Tracker");
+  await field(page, "Subtitle").fill("habit goals daily");
+
+  const subtitleWords = editor(page)
+    .getByRole("list", { name: "Words search reads" })
+    .nth(1);
+  await expect(subtitleWords.getByRole("listitem")).toHaveText([
+    /^habit/,
+    "goals",
+    "daily",
+  ]);
+  await expect(subtitleWords.getByRole("listitem").first()).toHaveText(
+    "habitrepeat",
+  );
+  await expect(
+    editor(page)
+      .getByRole("list", { name: "Words search reads" })
+      .first()
+      .getByRole("listitem")
+      .first(),
+  ).toHaveText("habitrepeat");
+  await expect(
+    editor(page).getByRole("list", { name: "Words search reads" }),
+  ).toHaveCount(3);
+});
