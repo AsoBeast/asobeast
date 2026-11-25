@@ -16,7 +16,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "new",
         title: "See your listing the way the store shows it",
-        text: "The overview and the draft show your listing as a search result and as a product page, light or dark, on a smaller and a larger iPhone. When a title or subtitle is too long, the preview cuts it where the store would and says after which words, and under each draft field you see the words search reads.",
+        text: "The overview and the draft show your listing as a search result and as a product page, light or dark, on a smaller and a larger iPhone. When a title or subtitle is too long, the preview estimates where the store cuts it and says after which words, and under each draft field you see the words search reads.",
       },
       {
         kind: "fixed",
