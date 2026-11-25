@@ -9,7 +9,8 @@ import {
 let ready: Promise<FontMeasure | null> | null = null;
 
 const loadFontMeasure = (): Promise<FontMeasure | null> =>
-  (ready ??= document.fonts.ready
+  (ready ??= Promise.resolve()
+    .then(() => document.fonts.ready)
     .then(() =>
       createCanvasMeasure(() =>
         document.createElement("canvas").getContext("2d"),

@@ -37,10 +37,13 @@ describe("createCanvasMeasure", () => {
     expect(stub.measureText).toHaveBeenCalledTimes(2);
   });
 
-  it("starts again once the cache is full", () => {
+  it("forgets only the oldest width once the cache is full", () => {
     const stub = stubContext();
     const measure = createCanvasMeasure(stub.read)?.("400 13px Arial");
     for (let index = 0; index <= 500; index += 1) measure?.(`word ${index}`);
+    measure?.("word 500");
+    measure?.("word 1");
+    expect(stub.measureText).toHaveBeenCalledTimes(501);
     measure?.("word 0");
     expect(stub.measureText).toHaveBeenCalledTimes(502);
   });

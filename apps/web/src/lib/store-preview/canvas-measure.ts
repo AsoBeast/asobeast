@@ -14,7 +14,10 @@ export function createCanvasMeasure(
     const key = `${font}\n${text}`;
     const known = widths.get(key);
     if (known !== undefined) return known;
-    if (widths.size >= CACHE_LIMIT) widths.clear();
+    if (widths.size >= CACHE_LIMIT) {
+      const [oldest] = widths.keys();
+      if (oldest !== undefined) widths.delete(oldest);
+    }
     canvas.font = font;
     const width = canvas.measureText(text).width;
     widths.set(key, width);
