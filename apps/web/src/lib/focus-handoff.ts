@@ -238,7 +238,7 @@ export function useFocusGroupClaim(
   return group;
 }
 
-const RETRY_CONTAINER = `${CARD}, [role="dialog"], section`;
+const RECOVERY_CONTAINER = `${CARD}, [role="dialog"], section`;
 
 export function recoveryCandidates(container: Element | null): HTMLElement[] {
   if (!container?.isConnected) return [];
@@ -278,17 +278,19 @@ export function recoverFocusIn(
   return focusFirstAvailable(recoveryCandidates(container), root);
 }
 
-export function useRetryRecoveryFocus(): RefObject<HTMLButtonElement | null> {
-  const retry = useRef<HTMLButtonElement>(null);
+export function useRemovalFocusRecovery<
+  T extends HTMLElement,
+>(): RefObject<T | null> {
+  const control = useRef<T>(null);
 
   useLayoutEffect(() => {
-    const button = retry.current;
-    const container = button?.closest(RETRY_CONTAINER) ?? null;
+    const element = control.current;
+    const container = element?.closest(RECOVERY_CONTAINER) ?? null;
     return () => {
-      if (!button || document.activeElement !== button) return;
+      if (!element || document.activeElement !== element) return;
       queueMicrotask(() => recoverFocusIn(container));
     };
   }, []);
 
-  return retry;
+  return control;
 }

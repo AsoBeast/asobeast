@@ -62,6 +62,16 @@ On the App Store, a Screenshot text column appears once the screenshots of the l
 
 Search the coverage table by keyword, sort it by keyword or bucket, and switch on **Uncovered only** to keep the keywords no indexed field contains.
 
+To see what a new title or subtitle would cover before you ship it, [draft a listing](#draft-a-listing).
+
+## Draft a listing
+
+Press **Draft** beside the **Localization** control to write the next version of the listing on screen beside the live one. The draft starts from the live title, subtitle and keyword field on the App Store, or the title and short description on Google Play, with the description folded under its own button. There is one draft per localization on the App Store and one per market on Google Play. It stays in this browser until you reset it with **Reset to live listing**. While you type, AsoBeast sends the draft text to its own server to judge coverage, and never sends it to the store. The URL keeps the mode as `?mode=draft`; the draft text never enters a link.
+
+While you type, **Draft coverage** beside the fields judges every keyword you track in the markets that read the listing, with the same rules as [Keyword coverage](#check-keyword-coverage), so a draft that ships reads the same in the coverage table after the next capture. It lists the keywords the draft would no longer cover first, then the ones it would newly cover, the ones still not covered and the ones still covered, and words split count as covered on the App Store. Under them it lists the wasted words of the draft: a word that the title, subtitle or keyword field already holds, or a word in the subtitle, keyword field or short description that no keyword you track uses. Each field shows its lint, and screenshot captions are never counted. A market whose storefront reads the localization but that is still judged on your home listing, because its own listing has not been captured, is named instead of judged. When no market you track reads the localization, the panel says so.
+
+The draft never saves the keyword field. **Review in the keyword field editor** opens the editor of that localization with the drafted field as unsaved text, and you save it there with the usual preview and choice of markets. While App Store Connect imports the field, the drafted field is read only and shows what the store serves. To move the rest of the draft to the store, **Copy for App Store Connect** or **Copy for Play Console** copies every field under the name the console form uses, and each field has its own **Copy** button.
+
 ## Switch markets
 
 When you track keywords in more than one market, a **Listing market** control sits above the fields. It lists your home storefront and every market whose listing AsoBeast has captured. Choose one to see the title, subtitle, description and screenshot captions that storefront serves, with the coverage of the keywords tracked there. The URL keeps the choice as `?market=`, so a link opens on the same market.
@@ -112,7 +122,7 @@ Buckets classify scored keywords so a long list stays readable and so you can se
 
 With `OPENAI_API_KEY` set, a drafts card proposes title, subtitle and keyword field values on the App Store, or title, short description and description values on Google Play, grounded in your tracked keywords, your coverage gaps and competitor titles.
 
-Every draft is linted again on the server and clamped to the field limit, so a draft can never exceed a store limit. AsoBeast has no write path to the stores: a draft ends at a copy button.
+Every draft is linted again on the server and clamped to the field limit, so a draft can never exceed a store limit. AsoBeast has no write path to the stores: a draft ends at a copy button, or at **Use in draft**, which writes it into your [listing draft](#draft-a-listing) of the same localization and opens it.
 
 With no key the card is hidden entirely. See [Enable the optional AI features](/guides/ai-features).
 

@@ -2,6 +2,20 @@ import type { Release } from "./release-notes";
 
 export const LATER_RELEASES: readonly Release[] = [
   {
+    version: "2.1.0",
+    date: "2026-11-24",
+    title: "Help me write it",
+    summary:
+      "The metadata page helps you write the next version of your listing before it ships.",
+    changes: [
+      {
+        kind: "new",
+        title: "Draft your next listing",
+        text: "The metadata page has a Draft mode: write the next title, subtitle, keyword field and description beside the live ones and see, while you type, which tracked keywords the draft would newly cover, which ones it would lose, and which words are wasted. The draft is kept in your browser, and while you type its text goes to your AsoBeast server to work out that coverage, never to the stores. Copy it out for App Store Connect or Play Console, and save the keyword field through its usual editor.",
+      },
+    ],
+  },
+  {
     version: "2.0.0",
     date: "2026-11-10",
     title: "AsoBeast 2",

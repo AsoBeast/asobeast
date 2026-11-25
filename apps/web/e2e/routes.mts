@@ -31,6 +31,7 @@ export const SIGNED_IN_ROUTES = [
   ["app-competitors", `/apps/${APP}/competitors`],
   ["app-audit", `/apps/${APP}/audit`],
   ["app-metadata", `/apps/${APP}/metadata`],
+  ["app-metadata-draft", `/apps/${APP}/metadata?mode=draft`],
   ["app-changes", `/apps/${APP}/changes`],
   ["app-reviews", `/apps/${APP}/reviews`],
   ["app-actions", `/apps/${APP}/actions`],
