@@ -18,7 +18,8 @@ export function ListingStorePreview({
   source: PreviewSource;
 }) {
   if (screenshots.isPending) return <StorePreviewSkeleton />;
-  const unread = screenshots.data === undefined;
+  const current = screenshots.isPlaceholderData ? undefined : screenshots.data;
+  const unread = screenshots.isError && current === undefined;
   return (
     <div className="flex flex-col gap-3">
       {unread ? (
@@ -30,7 +31,7 @@ export function ListingStorePreview({
       <StorePreview
         listing={previewListingOf({
           detail,
-          screenshots: screenshots.data ?? null,
+          screenshots: current ?? null,
           draft,
         })}
         source={source}
