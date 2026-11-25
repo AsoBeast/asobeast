@@ -153,3 +153,53 @@ test("is left out for a competitor", async ({ page }) => {
   ).toBeVisible();
   await expect(previewCard(page)).toHaveCount(0);
 });
+
+const cutNotes = (page: Page) =>
+  previewCard(page).locator('[data-slot="store-preview-cuts"]');
+
+test("marks a long title as cut and says where", async ({ page }) => {
+  await page.goto("/apps/app-long");
+
+  const title = frame(page).locator('[data-slot="store-text"]').first();
+  await expect(title).toHaveAttribute("data-cut", "true");
+  await expect(title).toContainText("…");
+  await expect(cutNotes(page).locator("p").first()).toContainText(
+    /^Cut after “.+” on (smaller|every) iPhones?\. Words after the cut still count for search\.$/,
+  );
+  await expect(
+    previewCard(page).getByRole("button", { name: "About the estimate" }),
+  ).toBeVisible();
+});
+
+test("shows no sentence for a short title", async ({ page }) => {
+  await page.goto("/apps/app-1");
+
+  await expect(
+    frame(page).locator('[data-slot="store-text"]').first(),
+  ).not.toHaveAttribute("data-cut", "true");
+  await expect(frame(page)).toBeVisible();
+  await expect(cutNotes(page)).toHaveCount(0);
+});
+
+test("switches to the 6.7 inch frame", async ({ page }) => {
+  await page.goto("/apps/app-long");
+  await expect(cutNotes(page)).toBeVisible();
+
+  await previewCard(page).getByRole("tab", { name: "6.7 inch" }).click();
+
+  await expect(frame(page)).toHaveAttribute("data-device", "large");
+  await expect(frame(page)).toHaveAttribute("style", /width: 430px/);
+  await expect(cutNotes(page).locator("p").first()).toContainText(
+    /on (larger|every) iPhones?\./,
+  );
+});
+
+test("names the phone sizes on Google Play", async ({ page }) => {
+  await page.goto("/apps/app-gp");
+
+  await expect(
+    previewCard(page).getByRole("tab", { name: "Smaller phone" }),
+  ).toHaveAttribute("aria-selected", "true");
+  await previewCard(page).getByRole("tab", { name: "Larger phone" }).click();
+  await expect(frame(page)).toHaveAttribute("style", /width: 412px/);
+});

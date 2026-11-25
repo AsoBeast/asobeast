@@ -11,18 +11,28 @@ import type { SurfaceProps } from "./surface-props";
 
 const LAYOUT = STORE_TEXT_LAYOUTS.APP_STORE.search;
 
-export function AppStoreSearchResult({ listing, device }: SurfaceProps) {
+export function AppStoreSearchResult({
+  listing,
+  device,
+  measure,
+}: SurfaceProps) {
   return (
     <div className="flex flex-col gap-3 px-4 py-4">
       <div className="flex items-center gap-3">
         <AppIcon src={listing.iconUrl} size={64} />
         <div className="flex flex-col gap-1">
-          <CutText text={listing.title} layout={LAYOUT.title} device={device} />
+          <CutText
+            text={listing.title}
+            layout={LAYOUT.title}
+            device={device}
+            measure={measure}
+          />
           {listing.subtitle ? (
             <CutText
               text={listing.subtitle}
               layout={LAYOUT.subtitle}
               device={device}
+              measure={measure}
               className="text-muted-foreground"
             />
           ) : null}

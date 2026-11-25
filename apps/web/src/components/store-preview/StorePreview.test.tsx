@@ -1,7 +1,11 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { ScreenshotItem } from "@asobeast/shared";
+import type { FontMeasure } from "@/lib/store-preview/canvas-measure";
 import type { PreviewListing } from "@/lib/store-preview/preview-listing";
+import { STORE_TEXT_LAYOUTS } from "@/lib/store-preview/store-layouts";
+import { CutNotes } from "./CutNotes";
+import { CutText } from "./CutText";
 import { StorePreview } from "./StorePreview";
 
 const shot = (position: number): ScreenshotItem => ({
@@ -91,5 +95,69 @@ describe("StorePreview", () => {
         <StorePreview listing={appStoreListing} source="draft" />,
       ),
     ).toContain("Your draft");
+  });
+});
+
+const eightPerCharacter: FontMeasure = () => (text) =>
+  Array.from(text).length * 8;
+
+describe("CutText", () => {
+  const layout = STORE_TEXT_LAYOUTS.APP_STORE.product.title;
+
+  it("draws each fitted line in its own element and ends a cut with an ellipsis", () => {
+    const markup = renderToStaticMarkup(
+      <CutText
+        text="GeoGuess Map Explorer: World Quiz and Travel Trivia"
+        layout={layout}
+        device="small"
+        measure={eightPerCharacter}
+      />,
+    );
+    expect(markup).toContain('data-cut="true"');
+    expect(markup).toContain(
+      '<span class="block overflow-hidden whitespace-pre">GeoGuess Map Explorer:</span>',
+    );
+    expect(markup).toMatch(
+      /<span class="block[^"]*">World Quiz and[^<]*…<\/span>/,
+    );
+  });
+
+  it("clamps the whole text with CSS until the measure is ready", () => {
+    const markup = renderToStaticMarkup(
+      <CutText
+        text="GeoGuess Map Explorer"
+        layout={layout}
+        device="small"
+        measure={null}
+      />,
+    );
+    expect(markup).toContain("-webkit-line-clamp:2");
+    expect(markup).not.toContain("data-cut");
+  });
+});
+
+describe("CutNotes", () => {
+  it("writes each sentence with its words isolated and marks the estimate", () => {
+    const markup = renderToStaticMarkup(
+      <CutNotes
+        cuts={[
+          {
+            field: "title",
+            lead: "Cut after “",
+            words: "GeoGuess Map",
+            rest: "” on smaller iPhones. Words after the cut still count for search.",
+          },
+        ]}
+      />,
+    );
+    expect(markup).toContain(
+      "<p><span>Cut after “</span><bdi>GeoGuess Map</bdi><span>” on smaller iPhones. Words after the cut still count for search.</span></p>",
+    );
+    expect(markup).toContain("<span>Estimate</span>");
+    expect(markup).toContain('aria-label="About the estimate"');
+  });
+
+  it("draws nothing without a cut", () => {
+    expect(renderToStaticMarkup(<CutNotes cuts={[]} />)).toBe("");
   });
 });

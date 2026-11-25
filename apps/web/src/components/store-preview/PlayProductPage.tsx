@@ -11,13 +11,18 @@ import type { SurfaceProps } from "./surface-props";
 
 const LAYOUT = STORE_TEXT_LAYOUTS.GOOGLE_PLAY.product;
 
-export function PlayProductPage({ listing, device }: SurfaceProps) {
+export function PlayProductPage({ listing, device, measure }: SurfaceProps) {
   return (
     <div className="flex flex-col gap-4 px-4 py-4">
       <div className="flex items-start gap-4">
         <AppIcon src={listing.iconUrl} size={72} />
         <div className="flex flex-col gap-1">
-          <CutText text={listing.title} layout={LAYOUT.title} device={device} />
+          <CutText
+            text={listing.title}
+            layout={LAYOUT.title}
+            device={device}
+            measure={measure}
+          />
           {listing.developer ? (
             <span dir="auto" className="text-caption text-muted-foreground">
               {listing.developer}
@@ -34,6 +39,7 @@ export function PlayProductPage({ listing, device }: SurfaceProps) {
           text={listing.shortDescription}
           layout={LAYOUT.shortDescription}
           device={device}
+          measure={measure}
         />
       ) : null}
       <ScreenshotRow

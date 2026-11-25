@@ -2,19 +2,13 @@ import { describe, expect, it } from "vitest";
 import { STORES, type Store } from "@asobeast/shared";
 import {
   canvasFont,
+  MEASURED_FIELDS,
   STORE_PREVIEW_DEVICES,
   STORE_SCREEN_WIDTHS,
   STORE_SURFACES,
   storeTextLayout,
-  type MeasuredField,
   type StoreTextLayout,
 } from "./store-layouts";
-
-const MEASURED_FIELDS: readonly MeasuredField[] = [
-  "title",
-  "subtitle",
-  "shortDescription",
-];
 
 interface Row {
   name: string;

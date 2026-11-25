@@ -6,7 +6,12 @@ export type StorePreviewDevice = (typeof STORE_PREVIEW_DEVICES)[number];
 export const STORE_SURFACES = ["search", "product"] as const;
 export type StoreSurface = (typeof STORE_SURFACES)[number];
 
-export type MeasuredField = "title" | "subtitle" | "shortDescription";
+export const MEASURED_FIELDS = [
+  "title",
+  "subtitle",
+  "shortDescription",
+] as const;
+export type MeasuredField = (typeof MEASURED_FIELDS)[number];
 
 export interface StoreTextLayout {
   fontFamily: string;

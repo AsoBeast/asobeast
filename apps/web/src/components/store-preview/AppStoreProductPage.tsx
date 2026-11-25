@@ -12,19 +12,29 @@ import type { SurfaceProps } from "./surface-props";
 
 const LAYOUT = STORE_TEXT_LAYOUTS.APP_STORE.product;
 
-export function AppStoreProductPage({ listing, device }: SurfaceProps) {
+export function AppStoreProductPage({
+  listing,
+  device,
+  measure,
+}: SurfaceProps) {
   const text = productPageText(listing);
   return (
     <div className="flex flex-col gap-4 px-4 py-4">
       <div className="flex gap-4">
         <AppIcon src={listing.iconUrl} size={118} />
         <div className="flex flex-col items-start gap-1">
-          <CutText text={listing.title} layout={LAYOUT.title} device={device} />
+          <CutText
+            text={listing.title}
+            layout={LAYOUT.title}
+            device={device}
+            measure={measure}
+          />
           {listing.subtitle ? (
             <CutText
               text={listing.subtitle}
               layout={LAYOUT.subtitle}
               device={device}
+              measure={measure}
               className="text-muted-foreground"
             />
           ) : null}
