@@ -12,7 +12,6 @@
     <a href="LICENSE"><img alt="License: AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg" /></a>
     <a href="https://github.com/AsoBeast/asobeast/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/AsoBeast/asobeast" /></a>
     <a href="https://github.com/AsoBeast/asobeast/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/AsoBeast/asobeast?style=flat" /></a>
-    <a href="https://glama.ai/mcp/servers/AsoBeast/asobeast"><img alt="AsoBeast MCP server on Glama" src="https://glama.ai/mcp/servers/AsoBeast/asobeast/badges/score.svg" /></a>
   </p>
   <p>
     <a href="https://docs.asobeast.com">Docs</a> ·
