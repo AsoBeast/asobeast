@@ -42,7 +42,6 @@ export async function confirmEmptyAnswer<T>(
   ask: () => Promise<T[]>,
   retries: number,
 ): Promise<{ confirmed: boolean; results: T[] }> {
-  let confirmed = false;
   for (let retry = 0; retry < retries; retry++) {
     await new Promise((resolve) =>
       setTimeout(resolve, EMPTY_ANSWER_RETRY_DELAY_MS),
@@ -53,10 +52,9 @@ export async function confirmEmptyAnswer<T>(
     } catch {
       continue;
     }
-    if (results.length > 0) return { confirmed: true, results };
-    confirmed = true;
+    return { confirmed: true, results };
   }
-  return { confirmed, results: [] };
+  return { confirmed: false, results: [] };
 }
 
 interface LastAttempt<T> {

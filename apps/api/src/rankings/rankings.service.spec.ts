@@ -1121,7 +1121,7 @@ describe('RankingsService.checkKeyword', () => {
       expect(upsert).not.toHaveBeenCalled();
     });
 
-    it('accepts it at once for a phrase that stopped ranking anything over a week ago', async () => {
+    it('confirms it with one retry for a phrase that stopped ranking anything over a week ago', async () => {
       const { service, search, upsert, serpFindFirst } = setup({
         searchResults: [],
       });
@@ -1129,9 +1129,9 @@ describe('RankingsService.checkKeyword', () => {
         date: utcDayStart(FROZEN_NOW, -(IMPLAUSIBLE_LOOKBACK_DAYS + 1)),
       });
 
-      await service.checkKeyword('kw1');
+      await checked(service);
 
-      expect(search).toHaveBeenCalledTimes(1);
+      expect(search).toHaveBeenCalledTimes(2);
       expect(upsert).toHaveBeenCalled();
     });
 
@@ -1143,7 +1143,7 @@ describe('RankingsService.checkKeyword', () => {
 
       await checked(service);
 
-      expect(search).toHaveBeenCalledTimes(1 + EMPTY_ANSWER_RETRIES.APP_STORE);
+      expect(search).toHaveBeenCalledTimes(2);
       expect(upsert).toHaveBeenCalled();
     });
   });

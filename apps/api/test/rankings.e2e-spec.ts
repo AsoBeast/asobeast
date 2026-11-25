@@ -22,6 +22,7 @@ import { obliterateQueues, pauseQueues } from './obliterate-queues';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { DeliverAlertPayload, QUEUES } from '../src/jobs/jobs.types';
 import { RankingsService } from '../src/rankings/rankings.service';
+import { IMPLAUSIBLE_LOOKBACK_DAYS } from '../src/store-providers/result-plausibility';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { SearchItem, StoreProvider } from '../src/store-providers/types';
 
@@ -854,11 +855,13 @@ describe('RankingsService result counts (e2e)', () => {
   let api: Awaited<ReturnType<typeof ownerAgent>>;
   let results: SearchItem[] = [];
   let answers: (SearchItem[] | Error)[] = [];
+  let calls = 0;
 
   const registry = {
     get: (): StoreProvider =>
       ({
         search: () => {
+          calls += 1;
           const next = answers.shift();
           if (next === undefined) return Promise.resolve(results);
           return next instanceof Error
@@ -891,6 +894,17 @@ describe('RankingsService result counts (e2e)', () => {
     });
     return { you: you.id, keywordId: keyword.id };
   };
+
+  const staleRank = (keywordId: string) =>
+    prisma.serpEntry.create({
+      data: {
+        keywordId,
+        date: utcMidnight(IMPLAUSIBLE_LOOKBACK_DAYS + 1),
+        position: 1,
+        storeAppId: 'self-store',
+        title: 'You',
+      },
+    });
 
   const rankedOn = (
     appId: string,
@@ -935,6 +949,7 @@ describe('RankingsService result counts (e2e)', () => {
   beforeEach(async () => {
     results = [];
     answers = [];
+    calls = 0;
     await prisma.$executeRawUnsafe(
       'TRUNCATE TABLE "App", "Keyword", "Webhook", "AlertEvent" RESTART IDENTITY CASCADE',
     );
@@ -978,6 +993,57 @@ describe('RankingsService result counts (e2e)', () => {
 
   it('leaves the count unknown when the retries of a first empty answer fail', async () => {
     const { you, keywordId } = await seed();
+    answers = [
+      [],
+      new Error('store refused'),
+      new Error('store refused'),
+      new Error('store refused'),
+    ];
+
+    await asWorkspace(app, () => rankings.checkKeyword(keywordId));
+
+    const response = await api.get(`/apps/${you}/rankings`).expect(200);
+    const { series } = response.body as RankingSeries;
+    expect(series[0].points).toEqual([
+      { date: today(), position: null, depth: 200, resultCount: null },
+    ]);
+  });
+
+  it('confirms a stale empty answer once before it records zero', async () => {
+    const { you, keywordId } = await seed();
+    await staleRank(keywordId);
+
+    await asWorkspace(app, () => rankings.checkKeyword(keywordId));
+
+    expect(calls).toBe(2);
+    const response = await api.get(`/apps/${you}/rankings`).expect(200);
+    const { series } = response.body as RankingSeries;
+    expect(series[0].points).toEqual([
+      { date: today(), position: null, depth: 200, resultCount: 0 },
+    ]);
+  });
+
+  it('stores the retried results of a stale empty answer', async () => {
+    const { you, keywordId } = await seed();
+    await staleRank(keywordId);
+    const retried = Array.from({ length: 30 }, (_, index) => ({
+      storeAppId: index === 2 ? 'self-store' : `other-${index}`,
+      title: `App ${index}`,
+    }));
+    answers = [[], retried];
+
+    await asWorkspace(app, () => rankings.checkKeyword(keywordId));
+
+    const response = await api.get(`/apps/${you}/rankings`).expect(200);
+    const { series } = response.body as RankingSeries;
+    expect(series[0].points).toEqual([
+      { date: today(), position: 3, depth: 30, resultCount: 30 },
+    ]);
+  });
+
+  it('leaves the count unknown when the retries of a stale empty answer fail', async () => {
+    const { you, keywordId } = await seed();
+    await staleRank(keywordId);
     answers = [
       [],
       new Error('store refused'),

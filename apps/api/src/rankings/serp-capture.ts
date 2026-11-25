@@ -103,7 +103,7 @@ export class SerpCapture {
         today,
       })
     ) {
-      return answerOf(results);
+      return this.confirmEmpty(keyword, ask);
     }
     const retries = EMPTY_ANSWER_RETRIES[keyword.store];
     const again = await askAgainWhileEmpty(ask, retries, results);

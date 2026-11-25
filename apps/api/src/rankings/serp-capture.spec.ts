@@ -16,6 +16,7 @@ import {
 const FROZEN_NOW = new Date('2026-07-18T09:30:00.000Z');
 const TODAY = new Date('2026-07-18T00:00:00.000Z');
 const THREE_DAYS_AGO = new Date('2026-07-15T00:00:00.000Z');
+const EIGHT_DAYS_AGO = new Date('2026-07-10T00:00:00.000Z');
 
 const keyword = (store: Store = Store.APP_STORE): KeywordScope => ({
   id: 'kw1',
@@ -185,7 +186,7 @@ describe('SerpCapture', () => {
       expect(await settled(capture.search(keyword(), false))).toEqual({
         value: { results: [], resultCount: 0 },
       });
-      expect(search).toHaveBeenCalledTimes(1 + EMPTY_ANSWER_RETRIES.APP_STORE);
+      expect(search).toHaveBeenCalledTimes(2);
     });
 
     it('answers a phrase never captured before with the retried results', async () => {
@@ -209,7 +210,7 @@ describe('SerpCapture', () => {
       expect(await settled(capture.search(keyword(), false))).toEqual({
         value: { results: [], resultCount: 0 },
       });
-      expect(search).toHaveBeenCalledTimes(1 + EMPTY_ANSWER_RETRIES.APP_STORE);
+      expect(search).toHaveBeenCalledTimes(3);
     });
 
     it('keeps the count unknown when every retry of a first empty answer fails', async () => {
@@ -285,6 +286,42 @@ describe('SerpCapture', () => {
         }) as unknown,
       });
       expect(search).toHaveBeenCalledTimes(1);
+    });
+
+    it('confirms a stale empty answer with one more ask before it records zero', async () => {
+      const { capture, search } = setup(EIGHT_DAYS_AGO);
+      search.mockResolvedValue([]);
+
+      expect(await settled(capture.search(keyword(), false))).toEqual({
+        value: { results: [], resultCount: 0 },
+      });
+      expect(search).toHaveBeenCalledTimes(2);
+    });
+
+    it('answers a stale empty answer with the results of its retry', async () => {
+      const { capture, search } = setup(EIGHT_DAYS_AGO);
+      const results = items(4);
+      search.mockResolvedValueOnce([]).mockResolvedValueOnce(results);
+
+      expect(await settled(capture.search(keyword(), false))).toEqual({
+        value: { results, resultCount: 4 },
+      });
+    });
+
+    it('keeps the count unknown when every retry of a stale empty answer fails', async () => {
+      const { capture, search } = setup(EIGHT_DAYS_AGO);
+      search.mockResolvedValueOnce([]);
+      for (
+        let attempt = 0;
+        attempt < EMPTY_ANSWER_RETRIES.APP_STORE;
+        attempt += 1
+      ) {
+        search.mockRejectedValueOnce(new Error('store refused'));
+      }
+
+      expect(await settled(capture.search(keyword(), false))).toEqual({
+        value: { results: [], resultCount: null },
+      });
     });
   });
 
