@@ -97,19 +97,25 @@ describe("StorePreview", () => {
     const markup = markupOf(appStoreListing);
     expect(count(markup, /role="img"/g)).toBe(1);
     expect(markup).toContain(
-      'aria-label="App Store search result: Focus Timer"',
+      'aria-label="App Store search result: Focus Timer, Pomodoro and deep work"',
     );
   });
 
   it("names a frame whose title is blank", () => {
     expect(markupOf({ ...appStoreListing, title: "   " })).toContain(
-      'aria-label="App Store search result without a title"',
+      'aria-label="App Store search result without a title, Pomodoro and deep work"',
     );
   });
 
   it("draws store text in the direction of its own script", () => {
     const markup = markupOf({ ...appStoreListing, title: "مؤقت التركيز" });
     expect(markup).toMatch(/<span dir="auto"[^>]*>مؤقت التركيز<\/span>/);
+  });
+
+  it("names the developer of a Google Play listing with its title", () => {
+    expect(markupOf(playListing)).toContain(
+      'aria-label="Google Play search result: Focus Timer, Calm Labs"',
+    );
   });
 
   it("says when it shows the draft", () => {

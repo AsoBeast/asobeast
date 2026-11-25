@@ -45,7 +45,11 @@ export type PreviewSource = keyof typeof SOURCE_CAPTIONS;
 function frameLabel(listing: PreviewListing, surface: StoreSurface): string {
   const shown = `${storeLabel(listing.store)} ${SURFACE_LABELS[surface].toLowerCase()}`;
   const title = listing.title.trim();
-  return title === "" ? `${shown} without a title` : `${shown}: ${title}`;
+  const second =
+    listing.store === "APP_STORE" ? listing.subtitle : listing.developer;
+  const named =
+    title === "" ? `${shown} without a title` : `${shown}: ${title}`;
+  return second ? `${named}, ${second.trim()}` : named;
 }
 
 function OptionStrip<T extends string>({
