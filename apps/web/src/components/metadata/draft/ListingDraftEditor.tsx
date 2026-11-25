@@ -78,7 +78,8 @@ export function ListingDraftEditor({
   const preview = useCoveragePreview(id, request);
   const answer = preview.requested ? preview.query.data : undefined;
   const lint = answer?.fields;
-  const wasted = answer?.wastedWords ?? [];
+  const current = !preview.settling && !preview.query.isPlaceholderData;
+  const wasted = current ? (answer?.wastedWords ?? []) : [];
   const revealDescription = useDraftFieldReveal("description");
   const [descriptionOpen, setDescriptionOpen] = useState(revealDescription);
   if (revealDescription && !descriptionOpen) setDescriptionOpen(true);
