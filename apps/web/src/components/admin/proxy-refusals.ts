@@ -14,7 +14,7 @@ const KNOWN_REASONS: Record<number, string> = {
 
 export function refusalReason(status: number): string {
   const known = KNOWN_REASONS[status];
-  return known ? `${known} (HTTP ${status})` : `refused with HTTP ${status}`;
+  return `${known ?? "no reason beyond the status"} (HTTP ${status})`;
 }
 
 export function proxyRefusals(

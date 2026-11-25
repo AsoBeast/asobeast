@@ -25,7 +25,7 @@ describe("refusalReason", () => {
   it.each([
     [402, "the plan or its quota is used up (HTTP 402)"],
     [407, "the provider does not accept the proxy credentials (HTTP 407)"],
-    [503, "refused with HTTP 503"],
+    [503, "no reason beyond the status (HTTP 503)"],
   ])("explains a %s from its status alone", (status, reason) => {
     expect(refusalReason(status)).toBe(reason);
   });
@@ -54,6 +54,17 @@ describe("proxyRefusals", () => {
         endpoints: 1,
         sentence:
           "1 endpoint refused by the proxy provider: the provider does not accept the proxy credentials (HTTP 407).",
+      },
+    ]);
+  });
+
+  it("says refused once for a status it cannot explain", () => {
+    expect(proxyRefusals([endpoint("a", 503)])).toEqual([
+      {
+        status: 503,
+        endpoints: 1,
+        sentence:
+          "1 endpoint refused by the proxy provider: no reason beyond the status (HTTP 503).",
       },
     ]);
   });
