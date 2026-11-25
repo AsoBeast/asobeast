@@ -5,6 +5,7 @@ import {
   HEALTH_WINDOW_MS,
   observed,
   ProxyHealthTracker,
+  TUNNEL_REFUSAL_COOLDOWN_MS,
 } from './proxy-health.service';
 
 interface UpsertCall {
@@ -192,6 +193,76 @@ describe('ProxyHealthTracker', () => {
     await tracker.record('e1', Store.APP_STORE, observed(ProxyOutcome.SUCCESS));
 
     expect(lastUpdate()).not.toHaveProperty('pacedUntil');
+  });
+
+  it.each([402, 407, 403, 503])(
+    'retries an endpoint the proxy refuses with %s after a short fixed time whatever its streak',
+    async (status) => {
+      findUnique.mockResolvedValue(stored({ consecutiveFailures: 12 }));
+      const before = Date.now();
+
+      await tracker.record('e1', Store.APP_STORE, {
+        ...observed(ProxyOutcome.TRANSPORT),
+        refusedStatus: status,
+      });
+
+      const update = lastUpdate();
+      expect(update.consecutiveFailures).toBe(12);
+      expect(update.lastRefusalStatus).toBe(status);
+      const cooldown = (update.cooldownUntil as Date).getTime() - before;
+      expect(cooldown).toBeGreaterThanOrEqual(TUNNEL_REFUSAL_COOLDOWN_MS);
+      expect(cooldown).toBeLessThan(TUNNEL_REFUSAL_COOLDOWN_MS + 5_000);
+    },
+  );
+
+  it('still doubles the cooldown of a plain transport failure at the same streak', async () => {
+    findUnique.mockResolvedValue(stored({ consecutiveFailures: 12 }));
+
+    await tracker.record(
+      'e1',
+      Store.APP_STORE,
+      observed(ProxyOutcome.TRANSPORT),
+    );
+
+    const update = lastUpdate();
+    expect(update.consecutiveFailures).toBe(13);
+    expect((update.cooldownUntil as Date).getTime()).toBeGreaterThan(
+      Date.now() + 60 * 60_000,
+    );
+  });
+
+  it('keeps the longer cooldown of a block beside a refusal and never blames the proxy for it', async () => {
+    findUnique.mockResolvedValue(stored({ consecutiveFailures: 12 }));
+
+    await tracker.record('e1', Store.APP_STORE, {
+      ...observed(ProxyOutcome.BLOCKED),
+      refusedStatus: 402,
+    });
+
+    const update = lastUpdate();
+    expect(update.consecutiveFailures).toBe(13);
+    expect(update.lastRefusalStatus).toBeNull();
+    expect((update.cooldownUntil as Date).getTime()).toBeGreaterThan(
+      Date.now() + 60 * 60_000,
+    );
+  });
+
+  it('forgets an earlier refusal once a failure arrives that the proxy did not refuse', async () => {
+    findUnique.mockResolvedValue(stored({ consecutiveFailures: 1 }));
+
+    await tracker.record(
+      'e1',
+      Store.APP_STORE,
+      observed(ProxyOutcome.TRANSPORT),
+    );
+
+    expect(lastUpdate()).toMatchObject({ lastRefusalStatus: null });
+  });
+
+  it('forgets the refusal once the endpoint succeeds again', async () => {
+    await tracker.record('e1', Store.APP_STORE, observed(ProxyOutcome.SUCCESS));
+
+    expect(lastUpdate()).toMatchObject({ lastRefusalStatus: null });
   });
 
   it('keeps health per store so a play block leaves apple alone', async () => {

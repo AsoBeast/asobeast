@@ -37,11 +37,26 @@ export class ProxyPoolUnavailableError extends Error {
     store: Store,
     waitedMs: number,
     readonly retryInMs: number,
+    options?: ErrorOptions,
   ) {
     super(
       `No proxy endpoint became available for ${store} within ${waitedMs}ms`,
+      options,
     );
     this.name = 'ProxyPoolUnavailableError';
+  }
+}
+
+export class ProxyAccountRefusedError extends ProxyPoolUnavailableError {
+  constructor(
+    store: Store,
+    status: number,
+    retryInMs: number,
+    options?: ErrorOptions,
+  ) {
+    super(store, 0, retryInMs, options);
+    this.message = `The proxy refused the ${store} tunnel (HTTP ${status}), so the work waits ${retryInMs}ms for the account`;
+    this.name = 'ProxyAccountRefusedError';
   }
 }
 

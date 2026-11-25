@@ -6,7 +6,11 @@ import {
 } from '../errors';
 import { outcomeOf } from './proxy-health.service';
 import { classifyFailure, cooldownMs } from './proxy-outcome';
-import { ProxyPoolUnavailableError } from './proxy-pool.service';
+import {
+  ProxyAccountRefusedError,
+  ProxyPoolUnavailableError,
+} from './proxy-pool.service';
+import { ProxyTunnelRefusedError } from './proxy-tunnel';
 
 describe('proxy failure classification', () => {
   it('separates a throttle from a block', () => {
@@ -94,6 +98,27 @@ describe('outcomeOf', () => {
   it('blames no endpoint when the pool never handed one out', () => {
     expect(
       outcomeOf(new ProxyPoolUnavailableError(Store.APP_STORE, 1, 1)),
+    ).toBeNull();
+  });
+
+  it('blames no endpoint for queued work put back over a refused account', () => {
+    const refused = new StoreRequestError(
+      Store.APP_STORE,
+      'search',
+      'fetch failed',
+      {
+        cause: new TypeError('fetch failed', {
+          cause: new ProxyTunnelRefusedError(402),
+        }),
+      },
+    );
+
+    expect(
+      outcomeOf(
+        new ProxyAccountRefusedError(Store.APP_STORE, 402, 300_000, {
+          cause: refused,
+        }),
+      ),
     ).toBeNull();
   });
 

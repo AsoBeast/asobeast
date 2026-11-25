@@ -8,6 +8,7 @@ import { HealthObservation, ProxyHealthTracker } from './proxy-health.service';
 import { ProxyLedger } from './proxy-ledger.service';
 import { ProxyLease, ProxyPool } from './proxy-pool.service';
 import { ProxyProbe } from './proxy-probe.service';
+import { ProxyTunnelRefusedError } from './proxy-tunnel';
 
 describe('ProxyProbe', () => {
   const findMany = jest.fn<Promise<{ id: string }[]>, []>();
@@ -115,5 +116,27 @@ describe('ProxyProbe', () => {
     expect(findMany).toHaveBeenCalledWith(
       expect.objectContaining({ take: 5 }) as Record<string, unknown>,
     );
+  });
+
+  it('records a probe the proxy refused as a transport failure whatever the store message says', async () => {
+    suggest.mockRejectedValue(
+      new StoreRequestError(
+        Store.APP_STORE,
+        'suggest',
+        'Request failed with status 429',
+        {
+          cause: new TypeError('fetch failed', {
+            cause: new ProxyTunnelRefusedError(407),
+          }),
+        },
+      ),
+    );
+
+    await probe.admitPending();
+
+    expect(record.mock.calls[0]?.[2]).toMatchObject({
+      outcome: ProxyOutcome.TRANSPORT,
+      refusedStatus: 407,
+    });
   });
 });

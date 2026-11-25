@@ -4,11 +4,21 @@ import { ImplausibleResultError, StoreRequestError } from '../errors';
 import { storeDeadline, withinStoreDeadline } from '../store-deadline';
 import { currentMeter } from './egress';
 import { ProxyEgress } from './proxy-egress.service';
-import { HealthObservation, ProxyHealthTracker } from './proxy-health.service';
+import {
+  HealthObservation,
+  ProxyHealthTracker,
+  TUNNEL_REFUSAL_COOLDOWN_MS,
+} from './proxy-health.service';
 import { ProxyLedger } from './proxy-ledger.service';
 import { ProxyPoolMaintenance } from './proxy-pool.maintenance';
 import { ProxyPoolConfig } from './proxy-pool.config';
-import { LeasePacing, ProxyLease, ProxyPool } from './proxy-pool.service';
+import {
+  LeasePacing,
+  ProxyLease,
+  ProxyPool,
+  ProxyPoolUnavailableError,
+} from './proxy-pool.service';
+import { ProxyTunnelRefusedError } from './proxy-tunnel';
 import { ResidentialFallback } from './residential-fallback.service';
 
 const MIN_INTERVAL_MS = 4_000;
@@ -331,6 +341,278 @@ describe('ProxyEgress', () => {
     ).rejects.toBe(transport);
 
     expect(claim).not.toHaveBeenCalled();
+  });
+
+  describe('a tunnel the proxy refuses', () => {
+    const refusedFetch = (status: number) =>
+      new TypeError('fetch failed', {
+        cause: new ProxyTunnelRefusedError(status),
+      });
+
+    const refusedRequest = (
+      status: number,
+      store: Store = Store.APP_STORE,
+      message = 'fetch failed',
+    ) =>
+      new StoreRequestError(store, 'search', message, {
+        cause: refusedFetch(status),
+      });
+
+    const failingWith =
+      (thrown: Error, ...refused: number[]) =>
+      () => {
+        const meter = currentMeter();
+        for (const status of refused) {
+          meter?.observe();
+          meter?.refuse(refusedFetch(status));
+        }
+        meter?.observe();
+        meter?.settle();
+        return Promise.reject(thrown);
+      };
+
+    const refusedJob = (status: number, thrown = refusedRequest(status)) =>
+      failingWith(thrown, status);
+
+    it.each([402, 407])(
+      'never reaches for residential over a %s',
+      async (status) => {
+        claim.mockResolvedValue({} as Dispatcher);
+
+        await expect(
+          egress.through(Store.APP_STORE, 'us', refusedJob(status)),
+        ).rejects.toThrow();
+
+        expect(claim).not.toHaveBeenCalled();
+      },
+    );
+
+    it('records the status the proxy refused with as a transport failure', async () => {
+      await expect(
+        egress.through(Store.APP_STORE, 'us', refusedJob(402)),
+      ).rejects.toThrow();
+
+      expect(observationOf()).toMatchObject({
+        outcome: ProxyOutcome.TRANSPORT,
+        refusedStatus: 402,
+      });
+    });
+
+    it.each([402, 407])(
+      'puts queued work back for the cooldown instead of failing it on a %s',
+      async (status) => {
+        const thrown = refusedRequest(status);
+        const failure: unknown = await egress
+          .through(Store.APP_STORE, 'us', refusedJob(status, thrown))
+          .catch((error: unknown) => error);
+
+        expect(failure).toBeInstanceOf(ProxyPoolUnavailableError);
+        expect(failure).toMatchObject({
+          retryInMs: TUNNEL_REFUSAL_COOLDOWN_MS,
+          message: expect.stringContaining(`HTTP ${status}`) as unknown,
+          cause: thrown,
+        });
+      },
+    );
+
+    it('never reads a block into a refused play request whose address names one', async () => {
+      claim.mockResolvedValue({} as Dispatcher);
+      const thrown = refusedRequest(
+        407,
+        Store.GOOGLE_PLAY,
+        'HttpError: Network request to https://play.google.com/store/search?q=consent+manager&c=apps failed',
+      );
+
+      await expect(
+        withinStoreDeadline(
+          () =>
+            egress.through(Store.GOOGLE_PLAY, 'us', refusedJob(407, thrown)),
+          60_000,
+        ),
+      ).rejects.toBe(thrown);
+
+      expect(claim).not.toHaveBeenCalled();
+      expect(observationOf()).toMatchObject({
+        outcome: ProxyOutcome.TRANSPORT,
+        refusedStatus: 407,
+      });
+    });
+
+    it('keeps the outcome of a failure that came after a refusal the work got past', async () => {
+      claim.mockResolvedValue({} as Dispatcher);
+      const implausible = new ImplausibleResultError(
+        Store.APP_STORE,
+        'no rows',
+      );
+      const work = jest
+        .fn<Promise<string>, []>()
+        .mockImplementationOnce(failingWith(implausible, 402))
+        .mockResolvedValue('via residential');
+
+      await expect(egress.through(Store.APP_STORE, 'us', work)).resolves.toBe(
+        'via residential',
+      );
+
+      expect(observationOf()).toMatchObject({ outcome: ProxyOutcome.SILENT });
+      expect(claim).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps a parse failure that came after a refusal the work got past', async () => {
+      const parse = new Error('Cannot read properties of undefined');
+
+      await expect(
+        egress.through(Store.APP_STORE, 'us', failingWith(parse, 407)),
+      ).rejects.toBe(parse);
+    });
+
+    it('keeps a connection failure that came after a refusal the work got past', async () => {
+      const reset = new StoreRequestError(
+        Store.APP_STORE,
+        'search',
+        'read ECONNRESET',
+      );
+
+      await expect(
+        egress.through(Store.APP_STORE, 'us', failingWith(reset, 402)),
+      ).rejects.toBe(reset);
+
+      expect(observationOf()).toMatchObject({
+        outcome: ProxyOutcome.TRANSPORT,
+      });
+      expect(observationOf().refusedStatus).toBeUndefined();
+    });
+
+    const swallowing =
+      (end: () => Promise<string>, ...failures: Error[]) =>
+      () => {
+        const meter = currentMeter();
+        for (const failure of failures) {
+          meter?.observe();
+          meter?.refuse(failure);
+        }
+        meter?.settle();
+        return end();
+      };
+
+    it.each([
+      ['resolves', () => Promise.resolve('answered')],
+      [
+        'rejects with a parse failure',
+        () => Promise.reject(new Error('Cannot read properties of undefined')),
+      ],
+    ])(
+      'carries a refusal the work swallowed when it %s',
+      async (_label, end) => {
+        await egress
+          .through(
+            Store.APP_STORE,
+            'us',
+            swallowing(end, refusedFetch(503), refusedFetch(407)),
+          )
+          .catch(() => undefined);
+
+        expect(observationOf()).toMatchObject({
+          outcome: ProxyOutcome.TRANSPORT,
+          refusedStatus: 407,
+        });
+      },
+    );
+
+    it('lets a block beside a swallowed refusal escalate as a block', async () => {
+      await egress.through(
+        Store.APP_STORE,
+        'us',
+        swallowing(
+          () => Promise.resolve('answered'),
+          refusedFetch(402),
+          new Error('HTTP 403'),
+        ),
+      );
+
+      expect(observationOf()).toMatchObject({
+        outcome: ProxyOutcome.BLOCKED,
+      });
+      expect(observationOf().refusedStatus).toBeUndefined();
+    });
+
+    it('never calls a lease with other transport failures a pure refusal', async () => {
+      await egress.through(
+        Store.APP_STORE,
+        'us',
+        swallowing(
+          () => Promise.resolve('answered'),
+          refusedFetch(402),
+          new Error('socket hang up'),
+        ),
+      );
+
+      expect(observationOf()).toMatchObject({
+        outcome: ProxyOutcome.TRANSPORT,
+      });
+      expect(observationOf().refusedStatus).toBeUndefined();
+    });
+
+    it('never calls a refusal that ended the work pure after another transport failure', async () => {
+      await egress
+        .through(
+          Store.APP_STORE,
+          'us',
+          swallowing(
+            () => Promise.reject(refusedRequest(407)),
+            new Error('socket hang up'),
+            refusedFetch(407),
+          ),
+        )
+        .catch(() => undefined);
+
+      expect(observationOf()).toMatchObject({
+        outcome: ProxyOutcome.TRANSPORT,
+      });
+      expect(observationOf().refusedStatus).toBeUndefined();
+    });
+
+    it('never puts queued work back for a refusal it swallowed before a parse failure', async () => {
+      const parse = new Error('Cannot read properties of undefined');
+
+      await expect(
+        egress.through(
+          Store.APP_STORE,
+          'us',
+          swallowing(() => Promise.reject(parse), refusedFetch(402)),
+        ),
+      ).rejects.toBe(parse);
+    });
+
+    it('takes the status of the refusal that ended the work', async () => {
+      await expect(
+        egress.through(
+          Store.APP_STORE,
+          'us',
+          failingWith(refusedRequest(402), 503, 402),
+        ),
+      ).rejects.toThrow();
+
+      expect(observationOf()).toMatchObject({ refusedStatus: 402 });
+    });
+
+    it('keeps the store failure of a refused request someone waits for', async () => {
+      const thrown = refusedRequest(402);
+
+      await expect(
+        withinStoreDeadline(
+          () => egress.through(Store.APP_STORE, 'us', refusedJob(402, thrown)),
+          60_000,
+        ),
+      ).rejects.toBe(thrown);
+    });
+
+    it('keeps the store failure of queued work the proxy refused for another reason', async () => {
+      const thrown = refusedRequest(503);
+
+      await expect(
+        egress.through(Store.APP_STORE, 'us', refusedJob(503, thrown)),
+      ).rejects.toBe(thrown);
+    });
   });
 
   it('rethrows the failure of the job when its outcome cannot be recorded', async () => {

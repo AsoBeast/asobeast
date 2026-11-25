@@ -10,17 +10,23 @@ import {
 } from '../errors';
 import { classifyFailure, cooldownMs } from './proxy-outcome';
 import { LeasePacing, ProxyPoolUnavailableError } from './proxy-pool.service';
+import { tunnelRefusalOf } from './proxy-tunnel';
 
 const HEALTH_JUSTIFICATION =
   'endpoint health belongs to the shared pool, not to the workspace whose job observed it';
 
 export const HEALTH_WINDOW_MS = 60 * 60_000;
 
+export const TUNNEL_REFUSAL_COOLDOWN_MS = 5 * 60_000;
+
+const ACCOUNT_REFUSALS: readonly number[] = [402, 407];
+
 export interface HealthObservation {
   successes: number;
   failures: number;
   outcome: ProxyOutcome;
   pacing?: LeasePacing;
+  refusedStatus?: number;
 }
 
 export function observed(outcome: ProxyOutcome): HealthObservation {
@@ -54,11 +60,72 @@ export function outcomeOf(error: unknown): ProxyOutcome | null {
     return error.retryable ? null : ProxyOutcome.SILENT;
   }
   if (error instanceof ProxyPoolUnavailableError) return null;
+  if (tunnelRefusalOf(error)) return ProxyOutcome.TRANSPORT;
   if (error instanceof StoreAppNotFoundError) return null;
   if (error instanceof StoreRequestError) {
     return classifyFailure(error.causeMessage);
   }
   return error instanceof Error ? classifyFailure(error.message) : null;
+}
+
+export function refusedStatusOf(error: unknown): number | undefined {
+  return tunnelRefusalOf(error)?.status;
+}
+
+interface FailureStreak {
+  consecutiveFailures: number;
+  cooldownMs: number;
+}
+
+interface RefusalJudgement {
+  outcome: ProxyOutcome | null;
+  refusedStatus?: number;
+}
+
+interface TunnelRefusal {
+  outcome: ProxyOutcome;
+  refusedStatus: number;
+}
+
+function isTunnelRefusal(
+  judgement: RefusalJudgement,
+): judgement is TunnelRefusal {
+  return (
+    judgement.outcome === ProxyOutcome.TRANSPORT &&
+    judgement.refusedStatus !== undefined
+  );
+}
+
+export function isAccountRefusal(
+  judgement: RefusalJudgement,
+): judgement is TunnelRefusal {
+  return (
+    isTunnelRefusal(judgement) &&
+    ACCOUNT_REFUSALS.includes(judgement.refusedStatus)
+  );
+}
+
+function streakAfter(
+  observation: HealthObservation,
+  previousFailures: number,
+): FailureStreak {
+  if (isTunnelRefusal(observation)) {
+    return {
+      consecutiveFailures: previousFailures,
+      cooldownMs: TUNNEL_REFUSAL_COOLDOWN_MS,
+    };
+  }
+  const consecutiveFailures = previousFailures + 1;
+  return {
+    consecutiveFailures,
+    cooldownMs: cooldownMs(observation.outcome, consecutiveFailures),
+  };
+}
+
+function refusalNote(refusedStatus: number | undefined): string {
+  return refusedStatus === undefined
+    ? ''
+    : `, refused by the proxy (HTTP ${refusedStatus})`;
 }
 
 @Injectable()
@@ -117,23 +184,26 @@ export class ProxyHealthTracker {
         ...counted,
         consecutiveFailures: 0,
         cooldownUntil: null,
+        lastRefusalStatus: null,
       });
       return;
     }
 
-    const consecutiveFailures = (current?.consecutiveFailures ?? 0) + 1;
-    const cooldownUntil = new Date(
-      now.getTime() + cooldownMs(observation.outcome, consecutiveFailures),
-    );
+    const refusedStatus = isTunnelRefusal(observation)
+      ? observation.refusedStatus
+      : undefined;
+    const streak = streakAfter(observation, current?.consecutiveFailures ?? 0);
+    const cooldownUntil = new Date(now.getTime() + streak.cooldownMs);
     await this.upsert(endpointId, store, {
       ...counted,
-      consecutiveFailures,
+      consecutiveFailures: streak.consecutiveFailures,
       cooldownUntil,
       lastFailureAt: now,
+      lastRefusalStatus: refusedStatus ?? null,
     });
 
     this.logger.warn(
-      `endpoint ${endpointId} ${store} ${observation.outcome} #${consecutiveFailures} after ${observation.successes} ok and ${observation.failures} refused, cooling down until ${cooldownUntil.toISOString()}`,
+      `endpoint ${endpointId} ${store} ${observation.outcome} #${streak.consecutiveFailures}${refusalNote(refusedStatus)} after ${observation.successes} ok and ${observation.failures} refused, cooling down until ${cooldownUntil.toISOString()}`,
     );
   }
 

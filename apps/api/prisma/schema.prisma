@@ -873,6 +873,7 @@ model ProxyHealth {
   lastSuccessAt       DateTime?
   lastFailureAt       DateTime?
   lastOutcome         ProxyOutcome?
+  lastRefusalStatus   Int?
   updatedAt           DateTime      @updatedAt
 
   @@id([endpointId, store])
