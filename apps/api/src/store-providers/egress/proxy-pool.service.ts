@@ -32,15 +32,20 @@ export interface LeasePacing {
   until: Date;
 }
 
+interface PoolUnavailableOptions extends ErrorOptions {
+  message?: string;
+}
+
 export class ProxyPoolUnavailableError extends Error {
   constructor(
     store: Store,
     waitedMs: number,
     readonly retryInMs: number,
-    options?: ErrorOptions,
+    { message, ...options }: PoolUnavailableOptions = {},
   ) {
     super(
-      `No proxy endpoint became available for ${store} within ${waitedMs}ms`,
+      message ??
+        `No proxy endpoint became available for ${store} within ${waitedMs}ms`,
       options,
     );
     this.name = 'ProxyPoolUnavailableError';
@@ -54,8 +59,10 @@ export class ProxyAccountRefusedError extends ProxyPoolUnavailableError {
     retryInMs: number,
     options?: ErrorOptions,
   ) {
-    super(store, 0, retryInMs, options);
-    this.message = `The proxy refused the ${store} tunnel (HTTP ${status}), so the work waits ${retryInMs}ms for the account`;
+    super(store, 0, retryInMs, {
+      ...options,
+      message: `The proxy refused the ${store} tunnel (HTTP ${status}), so the work waits ${retryInMs}ms for the account`,
+    });
     this.name = 'ProxyAccountRefusedError';
   }
 }

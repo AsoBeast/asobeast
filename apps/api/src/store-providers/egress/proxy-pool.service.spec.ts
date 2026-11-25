@@ -7,6 +7,7 @@ import { PoolShutdown } from './pool-shutdown';
 import { ProxyPoolConfig } from './proxy-pool.config';
 import {
   LEASE_HOLD_MS,
+  ProxyAccountRefusedError,
   ProxyPool,
   ProxyPoolStoppingError,
   ProxyPoolUnavailableError,
@@ -547,5 +548,20 @@ describe('ProxyPool', () => {
     );
 
     expect(lease?.endpointId).toBe('e1');
+  });
+});
+
+describe('ProxyAccountRefusedError', () => {
+  it('starts its stack with the refusal instead of a wait it never made', () => {
+    const error = new ProxyAccountRefusedError(Store.APP_STORE, 402, 300_000);
+
+    expect(error.stack).toContain(
+      'The proxy refused the APP_STORE tunnel (HTTP 402)',
+    );
+    expect(error.stack).not.toContain('within 0ms');
+    expect(error).toMatchObject({
+      name: 'ProxyAccountRefusedError',
+      retryInMs: 300_000,
+    });
   });
 });
