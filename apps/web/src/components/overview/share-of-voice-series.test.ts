@@ -69,6 +69,13 @@ describe("shareAxis", () => {
     });
   });
 
+  it("leaves a quarter of headroom above the highest share", () => {
+    expect(shareAxis(rows(17))).toEqual({
+      domain: [0, 30],
+      valueTicks: [0, 10, 20, 30],
+    });
+  });
+
   it("counts the non branded share when it is the larger one", () => {
     expect(
       shareAxis([
