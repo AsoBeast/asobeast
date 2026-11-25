@@ -15,6 +15,7 @@ Every hosted store request leaves through the egress pool. When the pool degrade
 - `asobeast_workspace_rankings_unresolved` climbs across many workspaces at once, which is what a silent failure looks like from the customer side.
 - Worker concurrency drops on its own, because it tracks the healthy pool size.
 - Google Play jobs for one storefront wait or time out while endpoints in other countries sit idle. That storefront's own endpoints are saturated, because a queued Google Play job never leaves through another country while one of its own is healthy. Each endpoint carries one job at a time, so a storefront with one endpoint finishes roughly one Google Play scoring job a minute and a backlog beyond that waits its turn in the queue. See [Egress proxy pool](/configuration/reference#egress-proxy-pool).
+- The API log names a refused tunnel, `refused by the proxy (HTTP 402)`, and **Admin, Capacity** says how many endpoints the proxy provider refused and why. The provider answered the tunnel itself, so no request reached a store.
 - Imports, new competitors or refreshes answer `503` "This server is busy reaching Google Play." while queued work runs. Queued work already leaves `PROXY_INTERACTIVE_RESERVE` endpoints free, so this means the reserve itself is taken: several people wait at once, or the pool is so small that the reserve is ignored. The API log shows `acquire failed: no proxy endpoint was free within the request budget` at warn. Raise the reserve by one, or add endpoints.
 
 ## Triage
@@ -30,6 +31,17 @@ Every hosted store request leaves through the egress pool. When the pool degrade
     | `RATE_LIMITED` | The pool is being paced too hard | Lower `SCRAPE_ITUNES_RPM` or `SCRAPE_GPLAY_RPM` |
     | `BLOCKED` | A store is refusing the address range | Continue below |
     | `SILENT` | Requests succeed and return results that are not real | Treat as the most serious. Continue below |
+  </Step>
+  <Step title="Read why the provider refuses">
+    A proxy can refuse the tunnel before any request reaches a store. A lease is judged by the refusal when every failure it saw was a refused tunnel, whether a refusal ended the work or the work answered anyway or ended in a failure that says nothing about the network, such as a parse failure. The endpoint then records `TRANSPORT` and keeps the refused status in `lastRefusalStatus` on `GET /admin/proxy-pool` until its next success or its next failure that no refusal judged, and **Admin, Capacity** explains it from the status alone, whatever the provider:
+
+    | Status | What it means | First move | Queued work |
+    | --- | --- | --- | --- |
+    | `402` | The plan or its quota is used up, often the monthly bandwidth | Top up or upgrade the plan with the provider | Waits five minutes without spending a retry |
+    | `407` | The provider does not accept the proxy credentials | Check the proxy username and password the provider issued | Waits five minutes without spending a retry |
+    | Any other | The provider refused for its own reason | Open a provider ticket with the status and the endpoint addresses | Retries as usual, so it can reach another endpoint |
+
+    A lease the refusal judged is retried after a fixed five minutes without growing the endpoint's failure streak, so collection resumes within minutes of the provider letting requests through again. A block, a rate limit, an answer that is not real or another network failure in the same lease is judged as before: its own cooldown applies, the streak grows and no refused status is kept. A `402` or a `407` refuses every endpoint of the account at once, so queued work whose last failure is one goes back to the queue for those five minutes, unless a worse outcome (a block, a rate limit or an answer that is not real) was seen in the same lease, as it does when no endpoint is free, and spends none of its retries while the account is down. A refusal the work got past before failing another way, a parse failure included, keeps that failure and its usual retries, and so does any other refused status, which can be one bad address. A request someone waits for still answers that the store could not be reached. A refusal on its own never starts the residential fallback, because the fallback answers a store block, not a provider account; only a block the store itself gave in the same lease does.
   </Step>
   <Step title="Separate one store from both">
     Blocking on one store with the other healthy is a store decision about the range. Both stores failing at once is almost always the provider.
