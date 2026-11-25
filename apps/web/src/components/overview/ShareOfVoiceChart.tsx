@@ -49,6 +49,7 @@ import {
 import { presetToRange, todayUtc, type VisibilityRange } from "@/lib/ranges";
 import {
   hasNonBranded,
+  shareAxis,
   shareSeries,
   type ShareRow,
 } from "./share-of-voice-series";
@@ -73,16 +74,21 @@ function ShareTooltip({
   label,
   rows,
   annotations,
+  twoLines,
 }: {
   active?: boolean;
   label?: string | number;
   rows: ShareRow[];
   annotations: AppAnnotationItem[];
+  twoLines: boolean;
 }) {
   if (!active || label === undefined) return null;
   const row = rows.find((candidate) => candidate.date === label);
   if (!row) return null;
-  const items = (["share", "nonBranded"] as const).flatMap((key, index) => {
+  const keys = twoLines
+    ? (["share", "nonBranded"] as const)
+    : (["share"] as const);
+  const items = keys.flatMap((key, index) => {
     const value = row[key];
     return value === undefined
       ? []
@@ -156,6 +162,7 @@ export function ShareOfVoiceChart({
     todayUtc(),
   );
   const twoLines = hasNonBranded(data);
+  const axis = shareAxis(rows);
 
   const state = trendState(rows.length);
   if (state === "empty") return <NoShare id={id} country={country} />;
@@ -181,7 +188,7 @@ export function ShareOfVoiceChart({
       <LineChart accessibilityLayer data={rows} margin={CHART_MARGIN}>
         <CartesianGrid {...GRID_PROPS} />
         <XAxis {...TIME_AXIS_PROPS} />
-        <YAxis {...VALUE_AXIS_PROPS} domain={[0, 100]} />
+        <YAxis {...VALUE_AXIS_PROPS} domain={axis.domain} ticks={axis.ticks} />
         {marked.map((annotation) => (
           <ReferenceLine
             key={annotation.id}
@@ -191,7 +198,13 @@ export function ShareOfVoiceChart({
           />
         ))}
         <ChartTooltip
-          content={<ShareTooltip rows={rows} annotations={inScope} />}
+          content={
+            <ShareTooltip
+              rows={rows}
+              annotations={inScope}
+              twoLines={twoLines}
+            />
+          }
         />
         <ChartLegend
           content={
