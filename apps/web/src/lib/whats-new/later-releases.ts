@@ -14,6 +14,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "The metadata page has a Draft mode: write the next title, subtitle, keyword field and description beside the live ones and see, while you type, which tracked keywords the draft would newly cover, which ones it would lose, and which words are wasted. The draft is kept in your browser, and while you type its text goes to your AsoBeast server to work out that coverage, never to the stores. Copy it out for App Store Connect or Play Console, and save the keyword field through its usual editor.",
       },
       {
+        kind: "new",
+        title: "See your listing the way the store shows it",
+        text: "The overview and the draft show your listing as a search result and as a product page, light or dark, on a smaller and a larger iPhone. When a title or subtitle is too long, the preview cuts it where the store would and says after which words, and under each draft field you see the words search reads.",
+      },
+      {
         kind: "fixed",
         title: "A search that lists no apps says so",
         text: "When a store lists no apps at all for a keyword you track, its position now reads No apps instead of more than 200: in the keywords table, on the rankings page with its chart and movers, in the position history, the search results sheet, the discovery list and the keyword breakdown. Pointing at it explains that the store lists no apps for this search. A rank alert and the weekly digest say the same when this happens to a keyword that used to rank. Checks from before this update keep the number they were stored with.",
