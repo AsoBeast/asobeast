@@ -2,9 +2,10 @@
 
 Full event envelopes for API version `2026-11-18.endive`, the version
 `apps/api/src/billing/stripe.client.ts` pins. Each file is one complete
-`Stripe.Event` exactly as the endpoint receives it, so the e2e suite exercises
-the same shape the live integration does, including the `data.object` nesting
-and `data.previous_attributes`. There is one file per event type in
+`Stripe.Event` envelope in the shape the endpoint receives, so the e2e suite
+exercises the same nesting the live integration does, including `data.object`
+and `data.previous_attributes`. The objects carry the fields asobeast reads and
+their neighbours, not every field Stripe sends. There is one file per event type in
 `HANDLED_EVENTS`, plus `customer.subscription.cancel_pending` and
 `customer.subscription.past_due` as named variants of `updated`, and
 `customer.discount.created` as the unhandled type.
@@ -52,7 +53,9 @@ each envelope here carries was compared with them. Endive only added fields; the
 paths that did not show were values of the data, not of the version: the
 asobeast metadata on subscriptions asobeast did not create, a triggered invoice
 with no subscription parent, and `payment_method_options` set where the envelope
-has `null`. The envelopes moved to the new version without other edits.
+has `null`. The envelopes moved to the new version without other edits, so
+fields endive added, such as `status_details` on subscriptions and invoices, are
+not in them; recapture before a handler reads one.
 
 ## Capturing
 
