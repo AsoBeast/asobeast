@@ -2,6 +2,7 @@ import { test as base } from "@playwright/test";
 import {
   APP_1_CHANGE_ICON_URL,
   APP_2_ICON_URL,
+  APP_GP_SCREENSHOTS,
   APP_LONG_ICON_URL,
   SIMILAR_ICON_URL,
   STORE_SEARCH_ICON_URL,
@@ -42,6 +43,7 @@ export const test = base.extend<{ storeIcons: void }>({
         ...SERP_ICON_URLS,
         SERP_PLAY_ICON_URL,
         ALERT_FEED_ICON_URL,
+        ...APP_GP_SCREENSHOTS.screenshots.map(({ url }) => url),
       ]) {
         await context.route(optimizedIcon(iconUrl), (route) =>
           route.fulfill({ contentType: "image/png", body: ICON_PIXEL }),
