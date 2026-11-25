@@ -79,6 +79,16 @@ The endpoint is the one billing route that is public, because Stripe has no sess
 
 A refused delivery is logged. Look for `rejected a webhook delivery` in the API log, which names the reason, and check the endpoint's own delivery history in the Stripe dashboard. Stripe retries a failed delivery, so a secret you fix within the retry window costs nothing.
 
+### When the pinned API version moves
+
+The API pins one Stripe API version, `2026-11-18.endive`, and the endpoint should send events in that version. Stripe renders each event in the version of the endpoint that delivers it and never changes the version of an existing endpoint, so a release that moves the pin needs a new endpoint:
+
+1. Deploy the release. The fields the API reads did not change from `2026-08-26.dahlia`, the version it replaced, so the old endpoint keeps working until you switch.
+2. In Workbench, under Webhooks, create a destination on the same URL with the API version the release pins and the same ten events. The dashboard offers the newest version; when the pin is older than that, create the endpoint through the API with `api_version` set.
+3. Put the new endpoint's signing secret in `STRIPE_WEBHOOK_SECRET`, restart the API, then disable the old endpoint, and delete it once its delivery history is quiet.
+
+Between the restart and disabling the old endpoint, its deliveries fail signature verification and are logged as `rejected a webhook delivery`. The new endpoint delivers the same events, and the nightly reconciliation corrects any workspace an event missed in between.
+
 ### What happens to an event this instance cannot place
 
 Every verified delivery is stored once and processed from a queue, and each stored event records how it settled:
@@ -179,7 +189,7 @@ A refusal carries the recovery in the error body, not only in its message, so th
 - Within a week of the effective date, if the workspace would be over the smaller plan's limits, the owner is emailed with the exact numbers.
 - At the effective date the daily run covers the first items in a stable order and leaves the rest untouched. **Nothing is deleted.**
 
-The catalog script provisions the portal rather than leaving it to the dashboard. It finds the default portal configuration and updates it, or creates one and says so. It allows cancellation at period end with a reason prompt, price changes across both products and all four prices with downgrades and switches to a shorter interval scheduled at period end, payment method updates, invoice history, and updates to the name, email, address, phone and tax id. It sets the terms and privacy links, `WEB_PUBLIC_URL` plus `/settings` as the default return, and turns the public portal login page off, because every portal visit starts from the API. Pausing is not offered: the portal of the pinned API version has no pause feature to configure, and a paused status cannot arise from a trial any more, because every trial holds a card; it stays recoverable for completeness.
+The catalog script provisions the portal rather than leaving it to the dashboard. It finds the default portal configuration and updates it, or creates one and says so. It allows cancellation at period end with a reason prompt, price changes across both products and all four prices with downgrades and switches to a shorter interval scheduled at period end, payment method updates, invoice history, and updates to the name, email, address, phone and tax id. It sets the terms and privacy links, `WEB_PUBLIC_URL` plus `/settings` as the default return, and turns the public portal login page off, because every portal visit starts from the API. Pausing is turned off, and the script turns it off again when it was switched on in the dashboard: a paused status cannot arise from a trial any more, because every trial holds a card; it stays recoverable for completeness.
 
 ## Reconciliation
 
