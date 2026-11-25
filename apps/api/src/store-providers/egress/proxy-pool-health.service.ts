@@ -69,7 +69,7 @@ export class ProxyPoolHealthReport {
       pending: live.filter((row) => !row.enabled).length,
       retired: rows.length - live.length,
       stores,
-      endpoints: this.endpointHealth(live),
+      endpoints: this.endpointHealth(live, now),
       residential,
       alerts: poolAlerts({ stores, residential }),
     };
@@ -110,8 +110,8 @@ export class ProxyPoolHealthReport {
     const health = serving.map((row) =>
       row.health.find((entry) => entry.store === store),
     );
-    const coolingDown = health.filter(
-      (entry) => (entry?.cooldownUntil?.getTime() ?? 0) > now.getTime(),
+    const coolingDown = health.filter((entry) =>
+      isCoolingDown(entry, now),
     ).length;
     const successes = sum(health.map((entry) => entry?.successes ?? 0));
     const failures = sum(health.map((entry) => entry?.failures ?? 0));
@@ -131,7 +131,10 @@ export class ProxyPoolHealthReport {
     };
   }
 
-  private endpointHealth(rows: EndpointRow[]): ProxyEndpointHealth[] {
+  private endpointHealth(
+    rows: EndpointRow[],
+    now: Date,
+  ): ProxyEndpointHealth[] {
     return rows.flatMap((row) =>
       row.health.map((entry) => ({
         endpointId: row.id,
@@ -145,7 +148,9 @@ export class ProxyPoolHealthReport {
         cooldownUntil: entry.cooldownUntil?.toISOString() ?? null,
         lastOutcome: entry.lastOutcome,
         lastUsedAt: entry.lastUsedAt?.toISOString() ?? null,
-        lastRefusalStatus: entry.lastRefusalStatus,
+        lastRefusalStatus: isCoolingDown(entry, now)
+          ? entry.lastRefusalStatus
+          : null,
       })),
     );
   }
@@ -164,6 +169,13 @@ export class ProxyPoolHealthReport {
         rate(spend.requests, spend.requests + datacenterRequests) ?? 0,
     };
   }
+}
+
+function isCoolingDown(
+  entry: { cooldownUntil: Date | null } | undefined,
+  now: Date,
+): boolean {
+  return (entry?.cooldownUntil?.getTime() ?? 0) > now.getTime();
 }
 
 function sum(values: number[]): number {

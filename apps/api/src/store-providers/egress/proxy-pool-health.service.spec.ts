@@ -121,32 +121,52 @@ describe('ProxyPoolHealthReport', () => {
     });
   });
 
-  it('names the status each endpoint was last refused with', async () => {
+  const refusedUntil = (cooldownUntil: Date | null) =>
+    health({
+      lastOutcome: ProxyOutcome.TRANSPORT,
+      lastRefusalStatus: 402,
+      cooldownUntil,
+    });
+
+  const refusalsOf = async () => {
+    const built = await report.build(NOW);
+    return built.endpoints.map(({ endpointId, lastRefusalStatus }) => ({
+      endpointId,
+      lastRefusalStatus,
+    }));
+  };
+
+  it('names the status an endpoint still cooling down was refused with', async () => {
     findMany.mockResolvedValue([
       endpoint({
         id: 'refused',
-        health: [
-          health({
-            lastOutcome: ProxyOutcome.TRANSPORT,
-            lastRefusalStatus: 402,
-          }),
-        ],
+        health: [refusedUntil(new Date(NOW.getTime() + 60_000))],
       }),
       endpoint({ id: 'serving' }),
     ]);
 
-    const built = await report.build(NOW);
-
-    expect(
-      built.endpoints.map(({ endpointId, lastRefusalStatus }) => ({
-        endpointId,
-        lastRefusalStatus,
-      })),
-    ).toEqual([
+    expect(await refusalsOf()).toEqual([
       { endpointId: 'refused', lastRefusalStatus: 402 },
       { endpointId: 'serving', lastRefusalStatus: null },
     ]);
   });
+
+  it.each([
+    ['once its cooldown has passed', new Date(NOW.getTime() - 60_000)],
+    ['the moment its cooldown ends', NOW],
+    ['without a cooldown', null],
+  ])(
+    'stops naming the refusal of an endpoint %s',
+    async (_label, cooldownUntil) => {
+      findMany.mockResolvedValue([
+        endpoint({ id: 'rested', health: [refusedUntil(cooldownUntil)] }),
+      ]);
+
+      expect(await refusalsOf()).toEqual([
+        { endpointId: 'rested', lastRefusalStatus: null },
+      ]);
+    },
+  );
 
   it('reports the success rate over the rolling window', async () => {
     expect(await appStore()).toMatchObject({

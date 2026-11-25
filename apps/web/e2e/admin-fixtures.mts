@@ -230,7 +230,7 @@ export const PROXY_POOL_ON: ProxyPoolHealth = {
       failures: 3,
       successRate: 0,
       consecutiveFailures: 0,
-      cooldownUntil: null,
+      cooldownUntil: "2099-01-01T00:00:00.000Z",
       lastOutcome: "TRANSPORT",
       lastUsedAt: null,
       lastRefusalStatus: 402,
