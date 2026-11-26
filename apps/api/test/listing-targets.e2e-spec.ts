@@ -548,4 +548,91 @@ describe('Listing targets (e2e)', () => {
       expect(await trackedIn(appId, 'habit tracker')).toEqual([]);
     });
   });
+
+  describe('untrack', () => {
+    const keywordIdOf = async (appId: string, text: string, country: string) =>
+      (
+        await harness.prisma.trackedKeyword.findFirstOrThrow({
+          where: { appId, keyword: { is: { text, country } } },
+          select: { keywordId: true },
+        })
+      ).keywordId;
+
+    const untrack = (appId: string, keywordId: string) =>
+      harness.owner.delete(`/apps/${appId}/keywords/${keywordId}`).expect(204);
+
+    it('empties the slot of an untracked keyword without moving the next one', async () => {
+      const appId = await seedApp();
+      await save(appId, {
+        slots: ['habit tracker', 'focus timer', 'sleep sounds'],
+      }).expect(200);
+
+      await untrack(appId, await keywordIdOf(appId, 'focus timer', 'us'));
+
+      expect(await storedSlots(appId)).toEqual([
+        'habit tracker',
+        '',
+        'sleep sounds',
+      ]);
+    });
+
+    it('keeps the slot while another reader market still tracks the phrase', async () => {
+      const appId = await seedApp();
+      await track(appId, 'gb', [{ text: 'seed gb' }]);
+      await track(appId, 'au', [{ text: 'seed au' }]);
+      await save(appId, { slots: ['habit tracker'] }, 'en-GB').expect(200);
+
+      await untrack(appId, await keywordIdOf(appId, 'habit tracker', 'au'));
+      expect(await storedSlots(appId, 'en-GB')).toEqual(['habit tracker']);
+
+      await untrack(appId, await keywordIdOf(appId, 'habit tracker', 'gb'));
+      expect(await storedSlots(appId, 'en-GB')).toBeNull();
+    });
+
+    it('empties every slot a bulk untrack removes in one request', async () => {
+      const appId = await seedApp();
+      await save(appId, {
+        slots: ['habit tracker', 'focus timer', 'sleep sounds'],
+      }).expect(200);
+
+      await harness.owner
+        .post(`/apps/${appId}/keywords/bulk`)
+        .send({
+          action: 'untrack',
+          keywordIds: [
+            await keywordIdOf(appId, 'habit tracker', 'us'),
+            await keywordIdOf(appId, 'sleep sounds', 'us'),
+          ],
+        })
+        .expect(200);
+
+      expect(await storedSlots(appId)).toEqual(['', 'focus timer']);
+    });
+
+    it('keeps the slot of a paused keyword', async () => {
+      const appId = await seedApp();
+      await save(appId, { slots: ['habit tracker'] }).expect(200);
+
+      await harness.owner
+        .post(`/apps/${appId}/keywords/bulk`)
+        .send({
+          action: 'pause',
+          keywordIds: [await keywordIdOf(appId, 'habit tracker', 'us')],
+        })
+        .expect(200);
+
+      expect(await storedSlots(appId)).toEqual(['habit tracker']);
+    });
+
+    it('leaves the targets of a localization the removed market does not read', async () => {
+      const appId = await seedApp();
+      await save(appId, { slots: ['kaizen'] }, 'ja').expect(200);
+      await save(appId, { slots: ['kaizen'] }).expect(200);
+
+      await untrack(appId, await keywordIdOf(appId, 'kaizen', 'us'));
+
+      expect(await storedSlots(appId, 'ja')).toEqual(['kaizen']);
+      expect(await storedSlots(appId)).toBeNull();
+    });
+  });
 });

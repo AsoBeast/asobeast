@@ -38,6 +38,7 @@ import { toTrackedKeywordItem } from './keywords.mapper';
 import { listingFacts } from './listing-facts';
 import { seedCandidates } from './listing-seed';
 import { listingTexts } from './listing-texts';
+import { untrackKeywords } from './listing-targets/listing-target-cleanup';
 import { MarketListingRequests } from './market-listing.requests';
 import { playAcquisitions } from './play-acquisitions';
 import { ensureApp, normalizeKeyword, trackedArgs } from './keywords.support';
@@ -330,10 +331,8 @@ export class KeywordsService {
 
   async remove(appId: string, keywordId: string): Promise<void> {
     await ensureApp(this.prisma, appId);
-    await this.ensureTracked(appId, keywordId);
-    await this.prisma.trackedKeyword.delete({
-      where: { appId_keywordId: { appId, keywordId } },
-    });
+    const { text, country } = await this.ensureTracked(appId, keywordId);
+    await untrackKeywords(this.prisma, appId, [{ keywordId, text, country }]);
   }
 
   async trackFromSnapshot(appId: string): Promise<string[]> {
@@ -469,12 +468,12 @@ export class KeywordsService {
   private async ensureTracked(
     appId: string,
     keywordId: string,
-  ): Promise<{ store: Store; country: string; active: boolean }> {
+  ): Promise<{ store: Store; country: string; text: string; active: boolean }> {
     const tracked = await this.prisma.trackedKeyword.findUnique({
       where: { appId_keywordId: { appId, keywordId } },
       select: {
         active: true,
-        keyword: { select: { store: true, country: true } },
+        keyword: { select: { store: true, country: true, text: true } },
       },
     });
     if (!tracked) {
