@@ -27,6 +27,9 @@ import {
 import { ShareCardControls } from "./ShareCardControls";
 import { type ShareCardSource, useShareCard } from "./use-share-card";
 
+const SHARE_CARD_GUIDE =
+  "https://docs.asobeast.com/guides/read-rankings#share-a-card";
+
 function ShareCardPreview({
   spec,
   label,
@@ -106,6 +109,16 @@ export function ShareCardDialog({
             options={card.options}
             onChange={card.setOptions}
           />
+          <p className="text-caption text-muted-foreground">
+            <a
+              href={SHARE_CARD_GUIDE}
+              target="_blank"
+              rel="noreferrer"
+              className="link-underline"
+            >
+              Read about share cards
+            </a>
+          </p>
         </DialogBody>
         <DialogFooter>
           <Button

@@ -106,6 +106,18 @@ test.describe("rankings", () => {
     await expect(preview(page)).not.toHaveAccessibleName(/focus timer/);
   });
 
+  test("links the guide to share cards", async ({ page }) => {
+    await page.goto(RANKINGS_PAGE);
+    await openShare(page);
+
+    await expect(
+      dialog(page).getByRole("link", { name: "Read about share cards" }),
+    ).toHaveAttribute(
+      "href",
+      "https://docs.asobeast.com/guides/read-rankings#share-a-card",
+    );
+  });
+
   test("switches size", async ({ page }) => {
     await page.goto(RANKINGS_PAGE);
     await openShare(page);
