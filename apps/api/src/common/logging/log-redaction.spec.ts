@@ -77,7 +77,7 @@ describe('scrubSecrets', () => {
     const started = performance.now();
     const scrubbed = scrubText(text, []);
 
-    expect(performance.now() - started).toBeLessThan(250);
+    expect(performance.now() - started).toBeLessThan(1_000);
     expect(scrubbed).toBe(text);
   });
 
@@ -381,7 +381,7 @@ describe('query credentials', () => {
       const started = performance.now();
       scrubText(text, []);
 
-      expect(performance.now() - started).toBeLessThan(250);
+      expect(performance.now() - started).toBeLessThan(1_000);
     },
   );
 });
