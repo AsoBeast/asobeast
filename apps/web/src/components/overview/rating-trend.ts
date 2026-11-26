@@ -87,13 +87,16 @@ export function withNewRatings(
   }));
 }
 
+const hasNewAverage = (row: RatingRow | undefined): boolean =>
+  row !== undefined && row.newAverage !== null;
+
 export function isLoneNewAverage(
   rows: readonly RatingRow[],
   index: number,
 ): boolean {
   return (
-    rows[index]?.newAverage != null &&
-    rows[index - 1]?.newAverage == null &&
-    rows[index + 1]?.newAverage == null
+    hasNewAverage(rows[index]) &&
+    !hasNewAverage(rows[index - 1]) &&
+    !hasNewAverage(rows[index + 1])
   );
 }
