@@ -1,7 +1,11 @@
 import type { Page, Request } from "@playwright/test";
 import { APP_TARGETS_ID } from "./fixtures.mts";
 import { hydrated } from "./hydrated.mts";
-import { TARGETS_MOCK_URL, TARGETS_PATH } from "./listing-targets.mts";
+import {
+  TARGETS_FULL_COOKIE,
+  TARGETS_MOCK_URL,
+  TARGETS_PATH,
+} from "./listing-targets.mts";
 import { expect, test } from "./session.mts";
 
 test.describe.configure({ mode: "serial" });
@@ -269,4 +273,70 @@ test("announces the move", async ({ page }) => {
   await expect(block(page).getByRole("status")).toHaveText(
     "focus timer moved to Subtitle",
   );
+});
+
+test("says which keyword the limit left out", async ({ page }) => {
+  await page
+    .context()
+    .addCookies([
+      { name: TARGETS_FULL_COOKIE, value: "1", domain: "localhost", path: "/" },
+    ]);
+  await page.goto(DRAFT);
+
+  await openPicker(page, "Title");
+  await page.keyboard.type("sleep sounds");
+  await picker(page)
+    .getByRole("option", { name: "Track “sleep sounds”" })
+    .click();
+  await saveButton(page).click();
+
+  const notice = block(page).getByRole("note");
+  await expect(notice).toContainText(
+    "sleep sounds was not tracked in United States: your plan's keyword limit is reached.",
+  );
+  await expect(notice.getByRole("link", { name: "See plans" })).toBeVisible();
+  await expect(slot(page, "Title")).toContainText(
+    "Not tracked in United States",
+  );
+  await expect(
+    slot(page, "Title").getByRole("button", {
+      name: "sleep sounds for Title",
+    }),
+  ).toBeVisible();
+});
+
+test("offers to track a target in a market that reads it now", async ({
+  page,
+}) => {
+  const bodies = savedBodies(page);
+  await seed(page, ["sleep sounds"]);
+  await page.goto(DRAFT);
+  await expect(slot(page, "Title")).toContainText(
+    "Not tracked in United States",
+  );
+
+  const track = block(page).getByRole("button", { name: "Track in 1 market" });
+  await (await hydrated(track)).focus();
+  await page.keyboard.press("Enter");
+
+  await expect(slot(page, "Title")).not.toContainText("Not tracked in");
+  await expect(track).toHaveCount(0);
+  await expect(saveButton(page)).toBeFocused();
+  expect(bodies).toEqual([
+    {
+      slots: [
+        "sleep sounds",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+      ],
+      trackMissing: true,
+    },
+  ]);
 });

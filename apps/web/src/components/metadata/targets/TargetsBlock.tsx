@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
-import { ChevronRight, RotateCcw } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import type { AppStoreLocalization } from "@asobeast/shared";
 import { InlineQueryError } from "@/components/layout/InlineQueryError";
 import { PANEL_HEADER } from "@/components/layout/panel-classes";
@@ -10,19 +10,19 @@ import {
   Card,
   CardAction,
   CardContent,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { InfoTip } from "@/components/ui/info-tip";
 import {
   openCandidates,
-  readersLine,
   roleSlotsFilled,
   withTopThree,
 } from "@/lib/listing-targets";
 import { localizationName } from "@/lib/localizations";
 import { TargetSlotList } from "./TargetSlotList";
+import { TargetsFooter } from "./TargetsFooter";
+import { TargetsLimitNotice } from "./TargetsLimitNotice";
 import { useTargetEdits } from "./use-target-edits";
 
 const ROLE_SLOTS = [0, 1, 2] as const;
@@ -65,7 +65,6 @@ export function TargetsBlock({
   const result = targets.read.data;
   const showMore =
     more ?? MORE_SLOTS.some((index) => targets.slots[index] !== null);
-  const idle = !targets.edited || targets.saving;
   const saveRef = useRef<HTMLButtonElement>(null);
   const topThreeRefusal = roleSlotsFilled(targets.slots)
     ? "Title and subtitle slots are already filled"
@@ -151,36 +150,14 @@ export function TargetsBlock({
           <p role="status" className="sr-only">
             {moved}
           </p>
+          <TargetsLimitNotice outcome={targets.outcome} />
           {targets.error ? (
             <p role="alert" className="text-dense text-destructive">
               {targets.error}
             </p>
           ) : null}
         </CardContent>
-        <CardFooter className="flex-wrap justify-between">
-          <span>{result ? readersLine(result.readers) : ""}</span>
-          <span className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              aria-disabled={idle || undefined}
-              onClick={() => {
-                if (!idle) targets.discard();
-              }}
-            >
-              <RotateCcw aria-hidden />
-              <span>Discard changes</span>
-            </Button>
-            <Button
-              ref={saveRef}
-              aria-disabled={idle || undefined}
-              onClick={() => {
-                if (!idle) targets.save();
-              }}
-            >
-              Save targets
-            </Button>
-          </span>
-        </CardFooter>
+        <TargetsFooter targets={targets} result={result} saveRef={saveRef} />
       </Card>
     </section>
   );

@@ -6,6 +6,7 @@ import {
   type ListingTargetCandidate,
   type ListingTargetsRequest,
   type ListingTargetsResult,
+  type TargetNotTracked,
   type TargetScores,
 } from "@asobeast/shared";
 import { formatCountry, formatList } from "./format";
@@ -100,6 +101,15 @@ export function scoresByPhrase(
   return scores;
 }
 
+export const untrackedByPhrase = (
+  result: ListingTargetsResult,
+): ReadonlyMap<string, readonly string[]> =>
+  new Map(
+    result.slots.flatMap((slot) =>
+      slot ? [[slot.text, slot.untrackedIn] as const] : [],
+    ),
+  );
+
 export function readersLine(readers: readonly string[]): string {
   return readers.length === 0
     ? "No market you track reads this localization yet"
@@ -133,4 +143,47 @@ export function savedSentence(
   }
   const [{ text, added }] = started;
   return `Targets saved. ${text} is now tracked in ${formatList(added.map(formatCountry))}.`;
+}
+
+function countriesByPhrase(
+  notTracked: readonly TargetNotTracked[],
+): Map<string, string[]> {
+  const grouped = new Map<string, string[]>();
+  for (const { text, country } of notTracked) {
+    grouped.set(text, [...(grouped.get(text) ?? []), country]);
+  }
+  return grouped;
+}
+
+const LIMIT_REASON = "your plan's keyword limit is reached.";
+
+export function notTrackedSentence(
+  notTracked: readonly TargetNotTracked[],
+): string | null {
+  const grouped = countriesByPhrase(notTracked);
+  if (grouped.size === 0) return null;
+  if (grouped.size > 1) {
+    return `${grouped.size} keywords were not tracked: ${LIMIT_REASON}`;
+  }
+  const [[text, countries]] = grouped;
+  return `${text} was not tracked in ${formatList(countries.map(formatCountry))}: ${LIMIT_REASON}`;
+}
+
+export const notTrackedLines = (
+  notTracked: readonly TargetNotTracked[],
+): string[] =>
+  [...countriesByPhrase(notTracked)].map(
+    ([text, countries]) =>
+      `${text} in ${formatList(countries.map(formatCountry))}`,
+  );
+
+export const missingMarkets = (result: ListingTargetsResult): string[] =>
+  result.readers.filter((country) =>
+    result.slots.some((slot) => slot?.untrackedIn.includes(country)),
+  );
+
+export function untrackedLine(countries: readonly string[]): string | null {
+  return countries.length === 0
+    ? null
+    : `Not tracked in ${formatList(countries.map(formatCountry))}`;
 }

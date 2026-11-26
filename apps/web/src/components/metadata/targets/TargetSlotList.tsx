@@ -5,6 +5,7 @@ import {
   moveSlot,
   scoresByPhrase,
   slotLabel,
+  untrackedByPhrase,
   withSlot,
   type TargetSlots,
 } from "@/lib/listing-targets";
@@ -29,6 +30,7 @@ export function TargetSlotList({
   className?: string;
 }) {
   const scores = scoresByPhrase(result);
+  const untracked = untrackedByPhrase(result);
   return (
     <ul
       aria-label={label}
@@ -46,6 +48,7 @@ export function TargetSlotList({
             slots={slots}
             candidates={result.candidates}
             scores={value === null ? undefined : scores.get(value)}
+            untrackedIn={value === null ? [] : (untracked.get(value) ?? [])}
             onChange={(text) => onEdit(withSlot(slots, index, text))}
             onMove={(to) => {
               onEdit(moveSlot(slots, index, to));

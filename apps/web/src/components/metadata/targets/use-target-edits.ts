@@ -8,6 +8,7 @@ import {
   type AppStoreLocalization,
   type ListingTargetsRequest,
   type ListingTargetsResult,
+  type ListingTargetsSaveResult,
 } from "@asobeast/shared";
 import { apiErrorMessage, saveListingTargets } from "@/lib/api";
 import {
@@ -31,6 +32,7 @@ export function useTargetEdits(id: string, localization: AppStoreLocalization) {
   const read = useQuery(listingTargetsOptions(id, localization));
   const [edits, setEdits] = useState<TargetSlots | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [outcome, setOutcome] = useState<ListingTargetsSaveResult | null>(null);
   const saved = useMemo(
     () => (read.data ? savedSlots(read.data) : NO_SLOTS),
     [read.data],
@@ -46,6 +48,7 @@ export function useTargetEdits(id: string, localization: AppStoreLocalization) {
       const before = queryClient.getQueryData<ListingTargetsResult>(key);
       queryClient.setQueryData<ListingTargetsResult>(key, result);
       setEdits(null);
+      setOutcome(result);
       invalidateListingTargetsMutation(queryClient, id);
       toast.success(savedSentence(before, result));
     },
@@ -60,12 +63,15 @@ export function useTargetEdits(id: string, localization: AppStoreLocalization) {
     edited: isEdited(slots, saved),
     saving: mutation.isPending,
     error,
+    outcome,
     edit: (next: TargetSlots) => {
       setError(null);
+      setOutcome(null);
       setEdits(next);
     },
     discard: () => {
       setError(null);
+      setOutcome(null);
       setEdits(null);
     },
     save: (trackMissing = false) => send(saveRequestOf(slots, trackMissing)),

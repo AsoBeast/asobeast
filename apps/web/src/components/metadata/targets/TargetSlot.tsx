@@ -9,7 +9,11 @@ import {
   useFocusAfterCommit,
   useFocusClaim,
 } from "@/lib/focus-handoff";
-import { slotLabel, type TargetSlots } from "@/lib/listing-targets";
+import {
+  slotLabel,
+  untrackedLine,
+  type TargetSlots,
+} from "@/lib/listing-targets";
 import { TargetFigures } from "./TargetFigures";
 import { TargetSlotPicker } from "./TargetSlotPicker";
 
@@ -58,6 +62,7 @@ export function TargetSlot({
   slots,
   candidates,
   scores,
+  untrackedIn,
   onChange,
   onMove,
 }: {
@@ -65,6 +70,7 @@ export function TargetSlot({
   slots: TargetSlots;
   candidates: readonly ListingTargetCandidate[];
   scores: TargetScores | undefined;
+  untrackedIn: readonly string[];
   onChange: (text: string | null) => void;
   onMove: (to: number) => void;
 }) {
@@ -72,6 +78,7 @@ export function TargetSlot({
   const focusAfter = useFocusAfterCommit();
   const value = slots[index];
   const label = slotLabel(index);
+  const untracked = untrackedLine(untrackedIn);
   const claimUp = useFocusClaim(moveKey("up", value));
   const claimDown = useFocusClaim(moveKey("down", value));
 
@@ -124,8 +131,13 @@ export function TargetSlot({
           </Button>
         )}
       </div>
-      <div className="min-h-5">
+      <div className="flex min-h-5 flex-wrap items-center gap-x-3">
         {value !== null && scores ? <TargetFigures scores={scores} /> : null}
+        {untracked ? (
+          <span className="text-caption text-muted-foreground">
+            {untracked}
+          </span>
+        ) : null}
       </div>
     </li>
   );

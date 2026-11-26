@@ -2,6 +2,9 @@ import type { ListingTargetItem, ListingTargetsResult } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
 import {
   isEdited,
+  missingMarkets,
+  notTrackedLines,
+  notTrackedSentence,
   moveSlot,
   openCandidates,
   readersLine,
@@ -15,6 +18,7 @@ import {
   withSlot,
   withoutSlot,
   withTopThree,
+  untrackedLine,
   type TargetSlots,
 } from "./listing-targets";
 
@@ -241,5 +245,55 @@ describe("moveSlot", () => {
 
     expect(moveSlot(slots, 0, -1)).toBe(slots);
     expect(moveSlot(slots, 9, 10)).toBe(slots);
+  });
+});
+
+describe("notTrackedSentence", () => {
+  it("names the phrases the keyword limit left out and where", () => {
+    expect(
+      notTrackedSentence([
+        { text: "sleep sounds", country: "gb", reason: "keywordLimit" },
+      ]),
+    ).toBe(
+      "sleep sounds was not tracked in United Kingdom: your plan's keyword limit is reached.",
+    );
+  });
+
+  it("groups several", () => {
+    const notTracked = [
+      { text: "a", country: "gb", reason: "keywordLimit" as const },
+      { text: "a", country: "au", reason: "keywordLimit" as const },
+      { text: "b", country: "gb", reason: "keywordLimit" as const },
+    ];
+
+    expect(notTrackedSentence(notTracked)).toBe(
+      "2 keywords were not tracked: your plan's keyword limit is reached.",
+    );
+    expect(notTrackedLines(notTracked)).toEqual([
+      "a in United Kingdom and Australia",
+      "b in United Kingdom",
+    ]);
+  });
+
+  it("says nothing when everything was tracked", () => {
+    expect(notTrackedSentence([])).toBeNull();
+  });
+});
+
+describe("missingMarkets", () => {
+  it("lists each reader some slot is not tracked in once, in reader order", () => {
+    const missing = (text: string, untrackedIn: string[]) => ({
+      ...item(text, 0),
+      untrackedIn,
+    });
+
+    expect(
+      missingMarkets({
+        ...result([missing("a", ["gb"]), missing("b", ["au", "gb"])]),
+        readers: ["us", "au", "gb"],
+      }),
+    ).toEqual(["au", "gb"]);
+    expect(untrackedLine(["gb"])).toBe("Not tracked in United Kingdom");
+    expect(untrackedLine([])).toBeNull();
   });
 });
