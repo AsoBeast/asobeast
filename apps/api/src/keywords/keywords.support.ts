@@ -116,16 +116,15 @@ export async function ensureKeywordFieldApp(
   return requireAppStore(await ensureApp(prisma, appId));
 }
 
+export const COMPETITOR_HAS_NO_LOCALIZATIONS =
+  'A competitor app has no localizations or keyword fields; use its primary app';
+
 export async function ensureLocalizedFieldApp(
   prisma: PrismaService,
   appId: string,
 ): Promise<KeywordApp> {
   return requireAppStore(
-    await ensurePrimaryApp(
-      prisma,
-      appId,
-      'A competitor app has no localizations or keyword fields; use its primary app',
-    ),
+    await ensurePrimaryApp(prisma, appId, COMPETITOR_HAS_NO_LOCALIZATIONS),
   );
 }
 

@@ -15,6 +15,7 @@ import type {
   AppLocalizationsResult,
   AppStoreLocalization,
   KeywordFieldSavePreview,
+  ListingTargetsResult,
   LocalizedKeywordFieldResult,
   MarketKeywordFields,
 } from '@asobeast/shared';
@@ -27,6 +28,7 @@ import {
   LocalizedKeywordFieldDto,
 } from './dto/localized-keyword-field.dto';
 import { MarketQueryDto } from './dto/market-query.dto';
+import { ListingTargetsService } from './listing-targets/listing-targets.service';
 import { LocalizationPipe } from './localization.pipe';
 import { LocalizedKeywordFieldService } from './localized-keyword-field.service';
 import { MarketKeywordFieldsService } from './market-keyword-fields.service';
@@ -39,6 +41,7 @@ export class LocalizationsController {
     private readonly localizations: AppLocalizationsService,
     private readonly fieldSaves: LocalizedKeywordFieldService,
     private readonly marketFields: MarketKeywordFieldsService,
+    private readonly targets: ListingTargetsService,
   ) {}
 
   @Get('localizations')
@@ -121,5 +124,18 @@ export class LocalizationsController {
     @Body() dto: KeywordFieldPreviewDto,
   ): Promise<KeywordFieldSavePreview> {
     return this.fieldSaves.preview(id, localization, dto);
+  }
+
+  @Get('localizations/:localization/targets')
+  @ApiOperation({
+    summary: 'Read the target keywords of one localization',
+    description:
+      'Answers the ten target slots of one App Store localization in order, null for an empty slot. Slot 1 is meant for the title, slots 2 and 3 for the subtitle and slots 4 to 10 are extra, as role says. Each filled slot carries its phrase, the reader markets that track it (with their keyword id and whether it is paused), the reader markets that do not, and the scores of its lead market, the first reader that tracks it. readers lists the markets of the app whose storefront reads the localization, home first, and is empty for a localization no market reads yet. candidates lists up to 50 active tracked keywords of the reader markets, one per phrase, never a competitor brand and never a phrase already in a slot, by opportunity. Answers 400 for an unknown tag and for a Google Play or competitor app, and 404 for a missing app.',
+  })
+  readTargets(
+    @Param('id') id: string,
+    @Param('localization', LocalizationPipe) localization: AppStoreLocalization,
+  ): Promise<ListingTargetsResult> {
+    return this.targets.read(id, localization);
   }
 }
