@@ -879,6 +879,7 @@ describe("invalidation sets", () => {
       appKeys.keywordDiscoveriesRoot(APP),
       appKeys.rankingsRoot(APP),
       appKeys.listingTargetsRoot(APP),
+      appKeys.coveragePreviewRoot(APP),
       workspaceChecklistKey,
     ]);
   });
@@ -955,6 +956,7 @@ describe("invalidation sets", () => {
       appKeys.keywordDiscoveriesRoot(APP),
       appKeys.rankingsRoot(APP),
       appKeys.listingTargetsRoot(APP),
+      appKeys.coveragePreviewRoot(APP),
       workspaceChecklistKey,
       appKeys.listingMarkets(APP),
       budgetKey,
@@ -979,6 +981,7 @@ describe("invalidation sets", () => {
       appKeys.keywordDiscoveriesRoot(APP),
       appKeys.rankingsRoot(APP),
       appKeys.listingTargetsRoot(APP),
+      appKeys.coveragePreviewRoot(APP),
       workspaceChecklistKey,
       appKeys.metadataAuditRoot(APP),
     ]);
@@ -1002,6 +1005,7 @@ describe("invalidation sets", () => {
       appKeys.keywordDiscoveriesRoot(APP),
       appKeys.rankingsRoot(APP),
       appKeys.listingTargetsRoot(APP),
+      appKeys.coveragePreviewRoot(APP),
       workspaceChecklistKey,
       appKeys.metadataAuditRoot(APP),
       accountPlanKey,
@@ -1026,6 +1030,7 @@ describe("invalidation sets", () => {
       appKeys.keywordDiscoveriesRoot(APP),
       appKeys.rankingsRoot(APP),
       appKeys.listingTargetsRoot(APP),
+      appKeys.coveragePreviewRoot(APP),
       workspaceChecklistKey,
       appKeys.importPreviewRoot(APP),
     ]);

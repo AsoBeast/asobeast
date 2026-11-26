@@ -1317,6 +1317,7 @@ export function invalidateKeywordMutation(
   });
   void client.invalidateQueries({ queryKey: appKeys.rankingsRoot(id) });
   void client.invalidateQueries({ queryKey: appKeys.listingTargetsRoot(id) });
+  void client.invalidateQueries({ queryKey: appKeys.coveragePreviewRoot(id) });
   invalidateWorkspaceChecklist(client);
 }
 
@@ -1360,7 +1361,6 @@ export function invalidateListingTargetsMutation(
 ): void {
   invalidateKeywordMutation(client, id);
   invalidateMetadataAudit(client, id);
-  void client.invalidateQueries({ queryKey: appKeys.coveragePreviewRoot(id) });
 }
 
 export function invalidateLocalizationMutation(
