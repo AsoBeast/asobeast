@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import {
   APP_FEW_RATINGS_ID,
+  APP_NEW_RATINGS_ID,
   APP_RIVAL_ID,
   APP_UNRATED_ID,
 } from "./fixtures.mts";
@@ -92,9 +93,10 @@ test("an invalid field names its range in the live region and is linked to it", 
 
   await days.fill("30");
   await expect(days).not.toHaveAttribute("aria-invalid");
-  await expect(live).toHaveText(
+  await expect(live.getByRole("paragraph")).toHaveText([
     "To show 4.9 you need 8,000 more five-star ratings, about 267 a day for 30 days.",
-  );
+    "At your current pace the store shows 4.7 in 30 days.",
+  ]);
 });
 
 test("a small app hears a thin sample note and a pace spread over the days", async ({
@@ -159,4 +161,35 @@ test("the goal card fits a 375 px screen", async ({ page }) => {
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
+});
+
+test("answers the goal at the current mix of new ratings", async ({ page }) => {
+  const { card, target } = await openGoal(page, APP_NEW_RATINGS_ID);
+
+  await target.fill("4.6");
+
+  await expect(
+    card.getByText("At your current pace the store shows 4.5 in 30 days."),
+  ).toBeVisible();
+});
+
+test("says the current mix of new ratings falls short of the target", async ({
+  page,
+}) => {
+  const { card, target } = await openGoal(page, APP_NEW_RATINGS_ID);
+
+  await target.fill("4.8");
+
+  await expect(
+    card.getByText(
+      "Not at the current mix: new ratings average 4.7, below 4.8.",
+    ),
+  ).toBeVisible();
+});
+
+test("shows no pace at the current mix on Google Play", async ({ page }) => {
+  const { card } = await openGoal(page, "app-gp");
+
+  await expect(card.getByText(/^To show /)).toBeVisible();
+  await expect(card.getByText(/current (pace|mix)/)).toHaveCount(0);
 });

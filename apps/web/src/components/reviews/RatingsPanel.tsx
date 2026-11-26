@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useDeferredValue } from "react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import { ChartSkeleton } from "@/components/charts/ChartStates";
 import { CHART_HEIGHT } from "@/components/charts/theme";
@@ -25,7 +25,7 @@ import {
   formatRating,
   pluralize,
 } from "@/lib/format";
-import { ratingsHistoryOptions } from "@/lib/queries";
+import { appDetailOptions, ratingsHistoryOptions } from "@/lib/queries";
 import { presetToRange, RATINGS_RANGES, type RatingsRange } from "@/lib/ranges";
 import {
   ratingsRangeParser,
@@ -33,6 +33,7 @@ import {
   type RatingsView,
 } from "@/lib/search-params";
 import { NewRatingsChart } from "./NewRatingsChart";
+import { NewRatingsSentence } from "./NewRatingsSentence";
 import {
   latestRatingCount,
   ratingsAdded,
@@ -118,6 +119,8 @@ export function RatingsPanel({ id }: { id: string }) {
   const [view, setView] = useQueryState("ratingsView", ratingsViewParser);
   const [range, setRange] = useQueryState("range", ratingsRangeParser);
   const shownRange = useDeferredValue(range);
+  const { data: app } = useQuery(appDetailOptions(id));
+  const newRatings = app?.store === "APP_STORE";
 
   return (
     <Card className="gap-0 py-0">
@@ -147,8 +150,15 @@ export function RatingsPanel({ id }: { id: string }) {
           {view === "volume" ? (
             <NewRatingsChart id={id} range={shownRange} />
           ) : (
-            <RatingTrendChart id={id} range={shownRange} />
+            <RatingTrendChart
+              id={id}
+              range={shownRange}
+              newRatings={newRatings}
+            />
           )}
+          {newRatings ? (
+            <NewRatingsSentence id={id} range={shownRange} />
+          ) : null}
         </Suspense>
       </CardContent>
     </Card>
