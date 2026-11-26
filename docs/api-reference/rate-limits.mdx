@@ -40,6 +40,7 @@ These ceilings are resource safety rather than plan capacity, so they hold on a 
 | Characters of keyword field text | 1,000 | `PUT /apps/{id}/keyword-field`, `PUT /apps/{id}/keyword-fields/{localization}` and its preview |
 | Characters of the normalized keyword field | 100 | the same saves |
 | Markets in `trackIn` | 200 | `PUT /apps/{id}/keyword-fields/{localization}` |
+| Target keywords per localization | 10 | `PUT /apps/{id}/localizations/{localization}/targets` |
 
 A keyword is also capped at five words. Each tracked keyword market costs one real store search every day, so a pasted spreadsheet column or a scripting mistake would otherwise multiply a workspace's daily store volume without anyone choosing to. Exceeding any of these returns `400` and writes nothing, so a refused batch never lands half applied. Split a larger list across several requests.
 

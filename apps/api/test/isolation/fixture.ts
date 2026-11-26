@@ -267,6 +267,14 @@ async function seedWorkspace(
       origin: 'manual',
     },
   });
+  await db.listingTarget.create({
+    data: {
+      appId: apple.id,
+      workspaceId: id,
+      localization: 'en-US',
+      slots: [`${id} target`],
+    },
+  });
   await db.appSetup.create({
     data: { appId: apple.id, workspaceId: id, status: 'in_progress' },
   });

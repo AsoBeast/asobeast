@@ -15,6 +15,8 @@ import type {
   AppLocalizationsResult,
   AppStoreLocalization,
   KeywordFieldSavePreview,
+  ListingTargetsResult,
+  ListingTargetsSaveResult,
   LocalizedKeywordFieldResult,
   MarketKeywordFields,
 } from '@asobeast/shared';
@@ -22,11 +24,13 @@ import { RateLimitClass } from '../auth/rate-limit/rate-class';
 import { ReadOnlyEndpoint } from '../auth/read-access';
 import { AppLocalizationsService } from './app-localizations.service';
 import { AddAppLocalizationDto } from './dto/app-localization.dto';
+import { ListingTargetsDto } from './dto/listing-targets.dto';
 import {
   KeywordFieldPreviewDto,
   LocalizedKeywordFieldDto,
 } from './dto/localized-keyword-field.dto';
 import { MarketQueryDto } from './dto/market-query.dto';
+import { ListingTargetsService } from './listing-targets/listing-targets.service';
 import { LocalizationPipe } from './localization.pipe';
 import { LocalizedKeywordFieldService } from './localized-keyword-field.service';
 import { MarketKeywordFieldsService } from './market-keyword-fields.service';
@@ -39,6 +43,7 @@ export class LocalizationsController {
     private readonly localizations: AppLocalizationsService,
     private readonly fieldSaves: LocalizedKeywordFieldService,
     private readonly marketFields: MarketKeywordFieldsService,
+    private readonly targets: ListingTargetsService,
   ) {}
 
   @Get('localizations')
@@ -121,5 +126,33 @@ export class LocalizationsController {
     @Body() dto: KeywordFieldPreviewDto,
   ): Promise<KeywordFieldSavePreview> {
     return this.fieldSaves.preview(id, localization, dto);
+  }
+
+  @Get('localizations/:localization/targets')
+  @ApiOperation({
+    summary: 'Read the target keywords of one localization',
+    description:
+      'Answers the ten target slots of one App Store localization in order, null for an empty slot. Slot 1 is meant for the title, slots 2 and 3 for the subtitle and slots 4 to 10 are extra, as role says. Each filled slot carries its phrase, the reader markets that track it (with their keyword id and whether it is paused), the reader markets that do not, and the scores of its lead market, the first reader that tracks it. readers lists the markets of the app whose storefront reads the localization, home first, and is empty for a localization no market reads yet. candidates lists up to 50 active tracked keywords of the reader markets, one per phrase, never a competitor brand and never a phrase already in a slot, by opportunity. Answers 400 for an unknown tag and for a Google Play or competitor app, and 404 for a missing app.',
+  })
+  readTargets(
+    @Param('id') id: string,
+    @Param('localization', LocalizationPipe) localization: AppStoreLocalization,
+  ): Promise<ListingTargetsResult> {
+    return this.targets.read(id, localization);
+  }
+
+  @Put('localizations/:localization/targets')
+  @QueuesWork()
+  @ApiOperation({
+    summary: 'Save the target keywords of one localization',
+    description:
+      'Stores up to ten target keywords of one App Store localization in slot order, null for an empty slot, each normalized like a tracked keyword. Empty slots in the middle keep their place and every slot null removes the targets. Every phrase new to the stored list, or every slot with trackMissing, that a market of the app reading the localization does not track yet is tracked there as a manual keyword, a paused one resumed, within the keyword limit of the plan, with its first position check and score queued. A reorder or a removal tracks nothing. A phrase that did not fit is answered in notTracked with its market and keywordLimit, and its slot is stored anyway. A localization no market reads stores its targets and tracks nothing. Answers the targets as the read does, plus tracked, notTracked and quota. Answers 400 for more than ten slots, a duplicate or an invalid phrase (naming its position), an unknown tag and a Google Play or competitor app, 403 with quota and writes nothing when the keyword markets would pass the plan limit meanwhile, and 404 for a missing app.',
+  })
+  saveTargets(
+    @Param('id') id: string,
+    @Param('localization', LocalizationPipe) localization: AppStoreLocalization,
+    @Body() dto: ListingTargetsDto,
+  ): Promise<ListingTargetsSaveResult> {
+    return this.targets.save(id, localization, dto);
   }
 }

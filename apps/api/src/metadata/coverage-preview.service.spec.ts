@@ -54,6 +54,7 @@ interface Options {
   tracked?: TrackedKeywordItem[];
   competitors?: string[];
   fields?: { localization: string; phrases: string[] }[];
+  targets?: string[];
 }
 
 const build = (options: Options = {}) => {
@@ -112,6 +113,11 @@ const build = (options: Options = {}) => {
       findMany: jest.fn().mockResolvedValue(options.fields ?? []),
     },
     appLocalization: { findMany: jest.fn().mockResolvedValue([]) },
+    listingTarget: {
+      findUnique: jest
+        .fn()
+        .mockResolvedValue(options.targets ? { slots: options.targets } : null),
+    },
   } as unknown as PrismaService;
   const keywordsService = {
     listTracked: jest.fn().mockResolvedValue(keywords),
@@ -161,6 +167,35 @@ describe('CoveragePreviewService.preview', () => {
     await expect(build().preview('app_1', { country: 'us' })).rejects.toThrow(
       'An App Store draft names a localization, never a country',
     );
+  });
+
+  it('judges the target keywords of the drafted localization', async () => {
+    const result = await build({
+      targets: ['habit tracker', '', 'focus timer'],
+    }).preview('app_1', { title: 'Habit Tracker' });
+
+    expect(result.targets).toEqual([
+      expect.objectContaining({
+        position: 1,
+        role: 'title',
+        text: 'habit tracker',
+        live: expect.objectContaining({ covered: false }) as unknown,
+        draft: expect.objectContaining({ covered: true }) as unknown,
+      }),
+      expect.objectContaining({
+        position: 3,
+        role: 'subtitle',
+        text: 'focus timer',
+        live: expect.objectContaining({ covered: true }) as unknown,
+        draft: expect.objectContaining({ covered: false }) as unknown,
+      }),
+    ]);
+  });
+
+  it('answers no targets field for a localization without targets', async () => {
+    const result = await build().preview('app_1', { title: 'Habit Tracker' });
+
+    expect(result).not.toHaveProperty('targets');
   });
 
   it('refuses a country that is not a market of the app', async () => {

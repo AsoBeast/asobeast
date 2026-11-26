@@ -4,12 +4,14 @@ import {
   COVERAGE_PREVIEW_CHANGES,
   CoveragePreviewChange,
   CoveragePreviewKeyword,
+  CoveragePreviewTarget,
   CoverageVerdict,
   KEYWORD_BUCKETS,
   KeywordBucket,
   KeywordClass,
   keywordFieldLocalizations,
   parseKeywordField,
+  targetSlotRole,
 } from '@asobeast/shared';
 import { ListingTexts, LocalizedTexts } from '../apps/listing-texts';
 import { readsKeywordField } from '../keywords/localization-markets';
@@ -208,6 +210,29 @@ export function previewKeywords(
       };
     })
     .sort(readingOrder);
+}
+
+export function previewTargets(
+  app: DraftApp,
+  slots: readonly string[],
+  judged: readonly string[],
+  { live, draft }: { live: CoverageSources; draft: CoverageSources },
+): CoveragePreviewTarget[] | undefined {
+  const [market] = judged;
+  if (market === undefined) return undefined;
+  return slots.flatMap((text, index) => {
+    if (text === '') return [];
+    const keyword = { text, country: market };
+    return [
+      {
+        position: index + 1,
+        role: targetSlotRole(index),
+        text,
+        live: verdictOf(judgeKeywordCoverage(app, keyword, live)),
+        draft: verdictOf(judgeKeywordCoverage(app, keyword, draft)),
+      },
+    ];
+  });
 }
 
 export const changeCounts = (

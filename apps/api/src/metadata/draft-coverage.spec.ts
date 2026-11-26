@@ -5,6 +5,7 @@ import {
   draftMarkets,
   PreviewableKeyword,
   previewKeywords,
+  previewTargets,
   withDraft,
 } from './draft-coverage';
 import { CoverageSources } from './keyword-coverage-judge';
@@ -415,6 +416,55 @@ describe('previewKeywords', () => {
     );
 
     expect(row.keywordClass).toBe('ownBrand');
+  });
+});
+
+describe('previewTargets', () => {
+  const live = sources([['us', texts({ title: 'Focus Timer' })]]);
+  const target = { store: Store.APP_STORE, localization: 'en-US' } as const;
+  const drafted = withDraft(live, appStore, target, { title: 'Habit Tracker' });
+
+  it('judges each filled slot against the first reader market', () => {
+    const targets = previewTargets(
+      appStore,
+      ['habit tracker', 'focus timer'],
+      ['us'],
+      { live, draft: drafted },
+    );
+
+    expect(targets?.[0]).toMatchObject({
+      text: 'habit tracker',
+      live: { covered: false },
+      draft: { covered: true },
+    });
+    expect(targets?.[1]).toMatchObject({
+      text: 'focus timer',
+      live: { covered: true },
+      draft: { covered: false },
+    });
+  });
+
+  it('answers no targets when no market is judged', () => {
+    expect(
+      previewTargets(appStore, ['habit tracker'], [], { live, draft: drafted }),
+    ).toBeUndefined();
+  });
+
+  it('answers the position and role of each slot', () => {
+    const targets = previewTargets(
+      appStore,
+      ['habit tracker', '', 'focus timer', 'sleep'],
+      ['us'],
+      { live, draft: drafted },
+    );
+
+    expect(
+      targets?.map(({ position, role, text }) => ({ position, role, text })),
+    ).toEqual([
+      { position: 1, role: 'title', text: 'habit tracker' },
+      { position: 3, role: 'subtitle', text: 'focus timer' },
+      { position: 4, role: 'extra', text: 'sleep' },
+    ]);
   });
 });
 
