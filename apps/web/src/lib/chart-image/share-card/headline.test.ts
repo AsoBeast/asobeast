@@ -73,7 +73,7 @@ describe("rankingsHeadline", () => {
       lead: "Average rank across 3 keywords",
       figure: "#8.7",
       trail: null,
-      change: "up 6.0 places in 29 days",
+      change: "up 6 places in 29 days",
       from: dayBefore(END, 29),
       to: END,
       span: 29,
@@ -103,7 +103,7 @@ describe("rankingsHeadline", () => {
 
   it("reads a fall as down", () => {
     expect(rankingsHeadline([keyword("kw-1", steady(4, 10))])?.change).toBe(
-      "down 6.0 places in 29 days",
+      "down 6 places in 29 days",
     );
   });
 
@@ -117,8 +117,24 @@ describe("rankingsHeadline", () => {
       ),
     ]);
 
-    expect(headline?.figure).toBe("#10.0");
+    expect(headline?.figure).toBe("#10");
     expect(headline?.change).toBe("no change in 29 days");
+  });
+
+  it("keeps one decimal only where the average has one", () => {
+    const headline = rankingsHeadline([
+      keyword("kw-1", steady(9, 7)),
+      keyword("kw-2", steady(4, 5)),
+    ]);
+
+    expect(headline?.figure).toBe("#6");
+    expect(headline?.change).toBe("up 0.5 places in 29 days");
+  });
+
+  it("names one place in the singular", () => {
+    expect(rankingsHeadline([keyword("kw-1", steady(4, 3))])?.change).toBe(
+      "up 1 place in 29 days",
+    );
   });
 
   it("counts the span between the first and last checked day", () => {
@@ -130,7 +146,7 @@ describe("rankingsHeadline", () => {
     const headline = rankingsHeadline([keyword("kw-1", early)]);
 
     expect(headline?.span).toBe(26);
-    expect(headline?.change).toBe("up 2.0 places in 26 days");
+    expect(headline?.change).toBe("up 2 places in 26 days");
     expect(headline?.to).toBe(dayBefore(END, 3));
   });
 

@@ -5,7 +5,7 @@ import {
   type RankingSeriesItem,
   type VisibilityPoint,
 } from "@asobeast/shared";
-import { formatMeasureFixed, formatNumber, pluralize } from "@/lib/format";
+import { formatMeasure, formatNumber, pluralize } from "@/lib/format";
 import { MIN_TREND_POINTS } from "@/lib/trend-points";
 import { utcDayNumber } from "@/lib/utc-day";
 
@@ -49,7 +49,8 @@ function placesChange(first: number, last: number, span: number): string {
   const moved = first - last;
   if (Math.abs(moved) < UNCHANGED_PLACES) return unchanged(span);
   const direction = moved > 0 ? "up" : "down";
-  return `${direction} ${formatMeasureFixed(Math.abs(moved))} places ${inDays(span)}`;
+  const places = formatMeasure(Math.abs(moved));
+  return `${direction} ${places} ${places === "1" ? "place" : "places"} ${inDays(span)}`;
 }
 
 function rankedOnEvery(
@@ -85,7 +86,7 @@ export function rankingsHeadline(
   const last = line[line.length - 1].value;
   return {
     lead: `Average rank across ${pluralize(set.length, "keyword")}`,
-    figure: `#${formatMeasureFixed(last)}`,
+    figure: `#${formatMeasure(last)}`,
     trail: null,
     change: placesChange(first, last, frame.span),
     ...frame,
