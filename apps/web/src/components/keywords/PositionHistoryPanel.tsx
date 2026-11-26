@@ -267,6 +267,7 @@ export function PositionHistoryPanel({
                 series={read.data?.series.find(
                   (item) => item.keywordId === keyword.keywordId,
                 )}
+                loading={read.isPlaceholderData}
                 onOpenChange={onShareOpenChange}
               />
             </>

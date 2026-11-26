@@ -75,7 +75,7 @@ export function OverviewChart({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {shownView === "visibility" ? (
-            <VisibilityShare id={id} range={shownRange} />
+            <VisibilityShare id={id} range={range} />
           ) : null}
           <RangePicker
             presets={VISIBILITY_RANGES}

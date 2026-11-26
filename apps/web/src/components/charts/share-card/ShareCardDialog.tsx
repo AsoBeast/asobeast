@@ -72,25 +72,28 @@ export function ShareCardDialog({
   subject,
   source,
   trigger,
+  loading = false,
   onOpenChange,
 }: {
   subject: string;
   source: ShareCardSource;
   trigger?: ReactNode;
+  loading?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
   const card = useShareCard(source, open);
-  const busy = card.busy || undefined;
+  const busy = card.busy || loading || undefined;
   return (
     <Dialog
       open={open}
       onOpenChange={(next) => {
+        if (next && loading) return;
         setOpen(next);
         onOpenChange?.(next);
       }}
     >
-      <DialogTrigger asChild>
+      <DialogTrigger asChild aria-disabled={loading || undefined}>
         {trigger ?? <ShareTrigger subject={subject} />}
       </DialogTrigger>
       <DialogContent size="lg">

@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { RANK_DEPTH } from "@asobeast/shared";
-import { useKeywordScope } from "@/components/app-detail/use-market";
+import { useMarket } from "@/components/app-detail/use-market";
 import { ShareCardDialog } from "@/components/charts/share-card/ShareCardDialog";
 import { visibilityHeadline } from "@/lib/chart-image/share-card/headline";
 import { appDetailOptions, visibilityOptions } from "@/lib/queries";
@@ -17,10 +17,10 @@ export function VisibilityShare({
   id: string;
   range: VisibilityRange;
 }) {
-  const { country } = useKeywordScope(id);
+  const { scope } = useMarket(id);
   const app = useCachedQueryData(appDetailOptions(id).queryKey);
-  const { data } = useQuery({
-    ...visibilityOptions(id, presetToRange(range), country),
+  const { data, isPlaceholderData } = useQuery({
+    ...visibilityOptions(id, presetToRange(range), scope),
     placeholderData: keepPreviousData,
   });
   const headline = useMemo(
@@ -38,6 +38,7 @@ export function VisibilityShare({
         depth: RANK_DEPTH,
         app,
       }}
+      loading={isPlaceholderData}
     />
   );
 }

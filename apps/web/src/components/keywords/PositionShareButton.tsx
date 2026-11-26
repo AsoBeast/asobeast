@@ -13,11 +13,13 @@ export function PositionShareButton({
   appId,
   keyword,
   series,
+  loading,
   onOpenChange,
 }: {
   appId: string;
   keyword: TrackedKeywordItem;
   series: RankingSeriesItem | undefined;
+  loading: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
   const app = useCachedQueryData(appDetailOptions(appId).queryKey);
@@ -38,6 +40,7 @@ export function PositionShareButton({
         app,
         keyword: keyword.text,
       }}
+      loading={loading}
       onOpenChange={onOpenChange}
       trigger={
         <Button

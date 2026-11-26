@@ -10,6 +10,7 @@ import {
   withoutImageClipboard,
 } from "./chart-image.mts";
 import { utcDaysAgo } from "./fixtures.mts";
+import { holdRequest } from "./held-request.mts";
 import { hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
 import { cardLayout } from "../src/lib/chart-image/share-card/card-layout";
@@ -400,6 +401,24 @@ test.describe("visibility", () => {
     });
   }
 
+  test("holds the card while the chosen range loads", async ({ page }) => {
+    await page.goto(OVERVIEW);
+    await expect(await hydrated(share(page))).toBeVisible();
+    const held = await holdRequest(page, HISTORY, "GET");
+
+    await page
+      .locator('[data-slot="card"]')
+      .filter({ has: visibilityChart(page) })
+      .getByRole("tab", { name: "90d" })
+      .click();
+
+    await expect(share(page)).toHaveAttribute("aria-disabled", "true");
+    await share(page).click({ force: true });
+    await expect(visibilityDialog(page)).toBeHidden();
+    held.release();
+    await expect(share(page)).not.toHaveAttribute("aria-disabled", "true");
+  });
+
   test("offers no card under four captured days", async ({ page }) => {
     await page.goto(OVERVIEW);
     await expect(share(page)).toBeVisible();
@@ -487,6 +506,20 @@ test.describe("position history", () => {
 
     await expect(popover(page)).toBeHidden();
     await expect(historyTrigger(page)).toBeFocused();
+  });
+
+  test("holds the card while the chosen range loads", async ({ page }) => {
+    await openHistory(page);
+    await expect(shareIcon(page)).toBeVisible();
+    const held = await holdRequest(page, RANKINGS, "GET");
+
+    await popover(page).getByRole("tab", { name: "90d" }).click();
+
+    await expect(shareIcon(page)).toHaveAttribute("aria-disabled", "true");
+    await shareIcon(page).click({ force: true });
+    await expect(keywordDialog(page)).toBeHidden();
+    held.release();
+    await expect(shareIcon(page)).not.toHaveAttribute("aria-disabled", "true");
   });
 
   test("shares from the keyword sheet", async ({ page }) => {
