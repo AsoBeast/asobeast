@@ -246,7 +246,7 @@ describe("newRatingsAverageSeries", () => {
     expect(byDate.get(lastListing(resumed).date)).toBeCloseTo(4.7, 6);
   });
 
-  it("breaks at a reset", () => {
+  it("breaks the line for a week where the count drops", () => {
     const before = grown(
       { date: "2026-10-01", count: 4400, average: 4.4 },
       15,
@@ -264,13 +264,28 @@ describe("newRatingsAverageSeries", () => {
       4.6,
     );
     const series = newRatingsAverageSeries([...before, ...after]);
-    const values = series.flatMap((each) =>
-      each.average === null ? [] : [each.average],
+    const byDate = new Map(series.map((each) => [each.date, each.average]));
+    const gap = Array.from({ length: 7 }, (_, day) =>
+      byDate.get(dayBefore("2026-10-17", -day)),
     );
 
-    expect(values).toHaveLength(series.length - 7);
-    for (const value of values) {
-      expect(value).toBeCloseTo(4.6, 6);
+    expect(byDate.get("2026-10-16")).toBeCloseTo(4.6, 6);
+    expect(gap).toEqual(Array(7).fill(null));
+    expect(byDate.get("2026-10-24")).toBeCloseTo(4.6, 6);
+    for (const each of series) {
+      if (each.average !== null) expect(each.average).toBeCloseTo(4.6, 6);
     }
+  });
+
+  it("bridges days the store reported no count", () => {
+    const points = grown(START, 20, 40, 4.7).map((each, index) =>
+      index >= 9 && index <= 11 ? { ...each, ratingCount: null } : each,
+    );
+    const byDate = new Map(
+      newRatingsAverageSeries(points).map((each) => [each.date, each.average]),
+    );
+
+    expect(byDate.get("2026-10-14")).toBeCloseTo(4.7, 6);
+    expect(byDate.get("2026-10-16")).toBeCloseTo(4.7, 6);
   });
 });

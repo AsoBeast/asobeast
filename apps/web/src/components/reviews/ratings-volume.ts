@@ -107,10 +107,7 @@ function segmentsOf(points: readonly RatedCount[]): RatedCount[][] {
   return segments;
 }
 
-export function newRatingsAverage(
-  points: readonly RatingsPoint[],
-): NewRatingsAverage | null {
-  const rated = ratedCounts(points);
+function pooledAverage(rated: readonly RatedCount[]): NewRatingsAverage | null {
   let sum = 0;
   let added = 0;
   let error = 0;
@@ -131,6 +128,17 @@ export function newRatingsAverage(
   return { average, added, span };
 }
 
+export function newRatingsAverage(
+  points: readonly RatingsPoint[],
+): NewRatingsAverage | null {
+  return pooledAverage(ratedCounts(points));
+}
+
+function windowAverage(window: readonly RatedCount[]): number | null {
+  if (segmentsOf(window).length > 1) return null;
+  return pooledAverage(window)?.average ?? null;
+}
+
 export function newRatingsAverageSeries(
   points: readonly RatingsPoint[],
 ): NewRatingsAveragePoint[] {
@@ -141,9 +149,9 @@ export function newRatingsAverageSeries(
   return rated.map(({ date }) => {
     if (date < firstFull) return { date, average: null };
     const since = dayBefore(date, NEW_RATINGS_WINDOW_DAYS);
-    const window = points.filter(
+    const window = rated.filter(
       (point) => point.date >= since && point.date <= date,
     );
-    return { date, average: newRatingsAverage(window)?.average ?? null };
+    return { date, average: windowAverage(window) };
   });
 }

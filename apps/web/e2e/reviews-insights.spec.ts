@@ -348,11 +348,12 @@ test("reads the new ratings average across a reset", async ({
       hasText: "New ratings average 4.6, strong",
     }),
   ).toBeVisible();
-  await expect(
-    page
-      .getByRole("region", { name: "Average rating over time" })
-      .locator(".recharts-line"),
-  ).toHaveCount(2);
+  const lines = page
+    .getByRole("region", { name: "Average rating over time" })
+    .locator(".recharts-line-curve");
+  await expect(lines).toHaveCount(2);
+  const newLine = await lines.nth(1).getAttribute("d");
+  expect(newLine?.match(/M/g)).toHaveLength(2);
 });
 
 test("leaves the new ratings average out on Google Play", async ({
