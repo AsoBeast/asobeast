@@ -59,16 +59,14 @@ const segmentWords = (run: string, language: string | null): string[] =>
     .filter((segment) => segment.isWordLike)
     .map((segment) => lowerCase(segment.segment));
 
+const wordsInRun = (run: string): number =>
+  SPACELESS_CHARACTER.test(run)
+    ? segmentWords(run, null).length
+    : Number(WORD_CHARACTER.test(run));
+
 const wordsInChunk = (chunk: string): number =>
   SPACELESS_CHARACTER.test(chunk)
-    ? runsOf(chunk).reduce(
-        (sum, run) =>
-          sum +
-          (SPACELESS_CHARACTER.test(run)
-            ? segmentWords(run, null).length
-            : Number(WORD_CHARACTER.test(run))),
-        0,
-      )
+    ? runsOf(chunk).reduce((sum, run) => sum + wordsInRun(run), 0)
     : 1;
 
 export function countWords(text: string): number {
