@@ -111,6 +111,21 @@ describe("keyword tools", () => {
     expect(new URL(calls[0]!.url).pathname).toBe("/apps/app-1/localizations");
   });
 
+  it("reads the target keywords of a localization", async () => {
+    const { server, tools } = createHarness();
+    const { calls, client } = stubFetch(() => ({ status: 200, body: {} }));
+    registerCatalogTools(server, client, KEYWORD_TOOLS);
+
+    await tools.get("listing_targets")!.handler({
+      appId: "a1",
+      localization: "en-US",
+    });
+
+    expect(new URL(calls[0]!.url).pathname).toBe(
+      "/apps/a1/localizations/en-US/targets",
+    );
+  });
+
   it("passes country to market_keyword_fields", async () => {
     const { server, tools } = createHarness();
     const { calls, client } = stubFetch(() => ({ status: 200, body: {} }));
