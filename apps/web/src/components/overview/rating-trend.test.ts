@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { formatRating } from "@/lib/format";
-import { ratedPoints, ratingAxis, ratingChange } from "./rating-trend";
+import {
+  isLoneNewAverage,
+  ratedPoints,
+  ratingAxis,
+  ratingChange,
+  withNewRatings,
+} from "./rating-trend";
 
 const point = (date: string, ratingAvg: number | null) => ({
   date,
@@ -130,6 +136,16 @@ describe("ratingAxis", () => {
     expect(domain[1]).toBeGreaterThanOrEqual(Math.max(...ratings));
   });
 
+  it("fits the axis to both lines", () => {
+    const points = ratedPoints([
+      point("2026-11-10", 4.3),
+      point("2026-11-11", 4.35),
+    ]);
+
+    expect(ratingAxis(points).domain).toEqual([4.2, 4.5]);
+    expect(ratingAxis(points, [4.72, null]).domain).toEqual([4.2, 4.8]);
+  });
+
   it("spaces the ticks evenly on a whole step", () => {
     const { ticks } = axisOf(3.0, 4.5);
     const gaps = ticks
@@ -138,5 +154,48 @@ describe("ratingAxis", () => {
 
     expect(new Set(gaps).size).toBe(1);
     expect([1, 2, 5, 10]).toContain(gaps[0]);
+  });
+});
+
+describe("withNewRatings", () => {
+  it("adds the new ratings average to the day it belongs to", () => {
+    const points = ratedPoints([
+      point("2026-11-10", 4.3),
+      point("2026-11-11", 4.35),
+      point("2026-11-12", 4.4),
+    ]);
+
+    expect(
+      withNewRatings(points, [
+        { date: "2026-11-11", average: 4.7 },
+        { date: "2026-11-12", average: null },
+        { date: "2026-11-13", average: 4.8 },
+      ]).map((row) => row.newAverage),
+    ).toEqual([null, 4.7, null]);
+  });
+});
+
+describe("isLoneNewAverage", () => {
+  it("marks a new ratings average with no value on either side", () => {
+    const rows = withNewRatings(
+      ratedPoints([
+        point("2026-11-10", 4.3),
+        point("2026-11-11", 4.3),
+        point("2026-11-12", 4.3),
+        point("2026-11-13", 4.3),
+      ]),
+      [
+        { date: "2026-11-10", average: 4.7 },
+        { date: "2026-11-12", average: 4.6 },
+        { date: "2026-11-13", average: 4.6 },
+      ],
+    );
+
+    expect(rows.map((_, index) => isLoneNewAverage(rows, index))).toEqual([
+      true,
+      false,
+      false,
+      false,
+    ]);
   });
 });

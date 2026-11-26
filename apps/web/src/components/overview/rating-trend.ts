@@ -1,4 +1,5 @@
 import type { RatingsPoint } from "@asobeast/shared";
+import type { NewRatingsAveragePoint } from "@/components/reviews/ratings-volume";
 import { dayBefore } from "@/lib/utc-day";
 
 export const RATING_CHANGE_DAYS = 7;
@@ -16,6 +17,10 @@ export interface RatedPoint {
   date: string;
   ratingAvg: number;
   ratingCount: number | null;
+}
+
+export interface RatingRow extends RatedPoint {
+  newAverage: number | null;
 }
 
 export function ratedPoints(points: readonly RatingsPoint[]): RatedPoint[] {
@@ -49,8 +54,14 @@ const tenthsOf = (value: number): number => Math.round(value * TENTHS);
 const tickCount = (low: number, high: number, step: number): number =>
   Math.ceil(high / step) - Math.floor(low / step) + 1;
 
-export function ratingAxis(points: readonly RatedPoint[]): RatingAxis {
-  const values = points.map((point) => point.ratingAvg);
+export function ratingAxis(
+  points: readonly RatedPoint[],
+  extra: readonly (number | null)[] = [],
+): RatingAxis {
+  const values = [
+    ...points.map((point) => point.ratingAvg),
+    ...extra.flatMap((value) => (value === null ? [] : [value])),
+  ];
   const low = Math.max(0, tenthsOf(Math.min(...values)) - 1);
   const high = Math.min(MAX_TENTHS, tenthsOf(Math.max(...values)) + 1);
   const step =
@@ -63,4 +74,26 @@ export function ratingAxis(points: readonly RatedPoint[]): RatingAxis {
     (_, index) => (from + index * step) / TENTHS,
   );
   return { domain: [from / TENTHS, to / TENTHS], ticks };
+}
+
+export function withNewRatings(
+  points: readonly RatedPoint[],
+  series: readonly NewRatingsAveragePoint[],
+): RatingRow[] {
+  const byDate = new Map(series.map((each) => [each.date, each.average]));
+  return points.map((point) => ({
+    ...point,
+    newAverage: byDate.get(point.date) ?? null,
+  }));
+}
+
+export function isLoneNewAverage(
+  rows: readonly RatingRow[],
+  index: number,
+): boolean {
+  return (
+    rows[index]?.newAverage != null &&
+    rows[index - 1]?.newAverage == null &&
+    rows[index + 1]?.newAverage == null
+  );
 }

@@ -55,6 +55,7 @@ import type {
   RatingsHistogram,
   ReviewThemes,
   RatingsHistory,
+  RatingsPoint,
   ReviewItem,
   ReviewList,
   SerpMovers,
@@ -1332,6 +1333,41 @@ export const APP_1_RATINGS_HISTORY: RatingsHistory = {
     ratingAvg: 4.6 + (index % 4) * 0.05,
     ratingCount: 20000 + index * 130,
   })),
+};
+
+const STORE_AVERAGE_DECIMALS = 5;
+
+export interface RatingsStart {
+  daysAgo: number;
+  count: number;
+  average: number;
+}
+
+export function grownRatingsPoints(
+  start: RatingsStart,
+  additions: readonly number[],
+  mean: number,
+): RatingsPoint[] {
+  let count = start.count;
+  let sum = start.average * start.count;
+  const steps = [0, ...additions];
+  return steps.map((added, day) => {
+    count += added;
+    sum += mean * added;
+    return {
+      date: utcDaysAgo(start.daysAgo - day),
+      ratingAvg: Number((sum / count).toFixed(STORE_AVERAGE_DECIMALS)),
+      ratingCount: count,
+    };
+  });
+}
+
+export const GROWING_RATINGS_HISTORY: RatingsHistory = {
+  points: grownRatingsPoints(
+    { daysAgo: 30, count: 2000, average: 4.2 },
+    Array<number>(30).fill(40),
+    4.7,
+  ),
 };
 
 export const APP_1_RATINGS_HISTOGRAM: RatingsHistogram = {
