@@ -2,14 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   formatCategoryPosition,
   formatCompact,
-  formatCompactInLocale,
   formatCountry,
   formatDate,
   formatDateInLocale,
   formatDateInZoneAndLocale,
   formatDateTime,
   formatDateTimeInLocale,
-  formatFixedNumberInLocale,
   formatUtcClock,
   formatDayMonth,
   formatDayMonthInLocale,
@@ -17,17 +15,13 @@ import {
   formatMonthInLocale,
   formatMeasure,
   formatMeasureFixed,
-  formatMeasureFixedInLocale,
-  formatMeasureInLocale,
   formatMeasurePair,
-  formatMeasurePairInLocale,
   roundAsShown,
   formatNumber,
   formatNumberInLocale,
   formatPrice,
   formatUsd,
   formatRating,
-  formatRatingInLocale,
   formatRelativeTime,
   formatRelativeTimeInLocale,
   formatList,
@@ -373,18 +367,6 @@ describe("Simplified Chinese formatting", () => {
 
   it("keeps grouped numbers readable", () => {
     expect(formatNumberInLocale(1234567, "zh-CN")).toBe("1,234,567");
-    expect(formatFixedNumberInLocale(3.5, 1, "zh-CN")).toBe("3.5");
-  });
-
-  it("localizes measures, compact numbers, ratings, and pairs", () => {
-    expect(formatMeasureInLocale(1234.56, "zh-CN")).toBe("1,234.6");
-    expect(formatMeasureFixedInLocale(20, "zh-CN")).toBe("20.0");
-    expect(formatCompactInLocale(1_000_000, "zh-CN")).toBe("100万");
-    expect(formatRatingInLocale(4.5, "zh-CN")).toBe("4.5");
-    expect(formatMeasurePairInLocale(1200.25, 980, "zh-CN")).toEqual([
-      "1,200.3",
-      "980.0",
-    ]);
   });
 
   it("names storefronts in Chinese", () => {

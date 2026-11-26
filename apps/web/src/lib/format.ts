@@ -17,46 +17,20 @@ function numberFormatter(locale: Locale = "en"): Intl.NumberFormat {
   return formatter;
 }
 
-const measureFormatters = new Map<Locale, Intl.NumberFormat>();
-
-function measureFormatterIn(locale: Locale): Intl.NumberFormat {
-  const cached = measureFormatters.get(locale);
-  if (cached) return cached;
-  const formatter = new Intl.NumberFormat(locale, {
-    maximumFractionDigits: 1,
-  });
-  measureFormatters.set(locale, formatter);
-  return formatter;
-}
-
+const measureFormatter = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 1,
+});
 export const MEASURE_DIGITS = 1;
 
-const fixedMeasureFormatters = new Map<Locale, Intl.NumberFormat>();
-
-function fixedMeasureFormatterIn(locale: Locale): Intl.NumberFormat {
-  const cached = fixedMeasureFormatters.get(locale);
-  if (cached) return cached;
-  const formatter = new Intl.NumberFormat(locale, {
-    minimumFractionDigits: MEASURE_DIGITS,
-    maximumFractionDigits: MEASURE_DIGITS,
-    signDisplay: "negative",
-  });
-  fixedMeasureFormatters.set(locale, formatter);
-  return formatter;
-}
-
-const compactFormatters = new Map<Locale, Intl.NumberFormat>();
-
-function compactFormatterIn(locale: Locale): Intl.NumberFormat {
-  const cached = compactFormatters.get(locale);
-  if (cached) return cached;
-  const formatter = new Intl.NumberFormat(locale, {
-    notation: "compact",
-    maximumFractionDigits: 1,
-  });
-  compactFormatters.set(locale, formatter);
-  return formatter;
-}
+const fixedMeasureFormatter = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: MEASURE_DIGITS,
+  maximumFractionDigits: MEASURE_DIGITS,
+  signDisplay: "negative",
+});
+const compactFormatter = new Intl.NumberFormat("en-US", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
 const zonedDateFormatters = new Map<string, Intl.DateTimeFormat>();
 
 function dateFormatterIn(
@@ -230,22 +204,11 @@ export function formatListInLocale(
 }
 
 export function formatMeasure(value: number): string {
-  return measureFormatterIn("en").format(value);
-}
-
-export function formatMeasureInLocale(value: number, locale: Locale): string {
-  return measureFormatterIn(locale).format(value);
+  return measureFormatter.format(value);
 }
 
 export function formatMeasureFixed(value: number): string {
-  return fixedMeasureFormatterIn("en").format(value);
-}
-
-export function formatMeasureFixedInLocale(
-  value: number,
-  locale: Locale,
-): string {
-  return fixedMeasureFormatterIn(locale).format(value);
+  return fixedMeasureFormatter.format(value);
 }
 
 const roundingFormatters = new Map<number, Intl.NumberFormat>();
@@ -266,8 +229,6 @@ export function roundAsShown(value: number, digits: number): number {
   return Number(roundingFormatter(digits).format(value));
 }
 
-export { formatFixedNumberInLocale } from "./format-number";
-
 const isWholeMeasure = (value: number): boolean =>
   formatMeasureFixed(value).endsWith(".0");
 
@@ -275,39 +236,19 @@ export function formatMeasurePair(
   before: number,
   after: number,
 ): [string, string] {
-  return formatMeasurePairInLocale(before, after, "en");
-}
-
-export function formatMeasurePairInLocale(
-  before: number,
-  after: number,
-  locale: Locale,
-): [string, string] {
   const format =
     isWholeMeasure(before) && isWholeMeasure(after)
-      ? (value: number) => formatMeasureInLocale(value, locale)
-      : (value: number) => formatMeasureFixedInLocale(value, locale);
+      ? formatMeasure
+      : formatMeasureFixed;
   return [format(before), format(after)];
 }
 
 export function formatCompact(value: number): string {
-  return compactFormatterIn("en").format(value);
-}
-
-export function formatCompactInLocale(value: number, locale: Locale): string {
-  return compactFormatterIn(locale).format(value);
+  return compactFormatter.format(value);
 }
 
 export function formatRating(value: number): string {
-  return formatRatingInLocale(value, "en");
-}
-
-export function formatRatingInLocale(value: number, locale: Locale): string {
-  return new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-    useGrouping: false,
-  }).format(value);
+  return value.toFixed(1);
 }
 
 function fractionDigits(currency: string): number {
