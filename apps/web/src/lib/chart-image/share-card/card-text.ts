@@ -1,4 +1,5 @@
 import { clipText, type Measure } from "@/lib/text-fit";
+import { quotedTerm } from "./headline";
 
 export interface FittedText {
   text: string;
@@ -26,6 +27,27 @@ export function fitCardText(
     current *= SHRINK_STEP;
   }
   return { text: clipText(text, maxWidth, measureAt(current)), size: current };
+}
+
+const isolated = (text: string) => `\u2068${text}\u2069`;
+
+export function fitLead(
+  { prefix, term }: { prefix: string; term: string },
+  maxWidth: number,
+  size: number,
+  measureAt: (size: number) => Measure,
+): FittedText {
+  const whole = quotedTerm(isolated(term));
+  const fitted = fitCardText(`${prefix}${whole}`, maxWidth, size, measureAt);
+  const measure = measureAt(fitted.size);
+  if (measure(`${prefix}${whole}`) <= maxWidth) {
+    return { text: whole, size: fitted.size };
+  }
+  const room = maxWidth - measure(prefix) - measure(quotedTerm(""));
+  return {
+    text: quotedTerm(isolated(clipText(term, room, measure))),
+    size: fitted.size,
+  };
 }
 
 export function textDirection(text: string): "ltr" | "rtl" {

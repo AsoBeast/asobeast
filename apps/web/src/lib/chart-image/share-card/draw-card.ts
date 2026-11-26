@@ -4,11 +4,17 @@ import { storeLabel } from "@/lib/format";
 import type { CardChartKind } from "./card-chart";
 import type { CardBox } from "./card-layout";
 import type { ShareCardOptions } from "./card-options";
-import { type CardPainter, drawText, traceRoundedBox } from "./card-paint";
+import {
+  type CardPainter,
+  drawText,
+  measurerOf,
+  traceRoundedBox,
+} from "./card-paint";
+import { fitLead } from "./card-text";
 import { drawChange } from "./draw-change";
 import { drawCardChart } from "./draw-chart";
 import { drawBackdrop, drawCredit } from "./draw-frame";
-import { quotedTerm, type ShareHeadline } from "./headline";
+import type { ShareHeadline } from "./headline";
 
 export interface ShareCardSpec {
   headline: ShareHeadline;
@@ -72,18 +78,25 @@ function drawHeader(painter: CardPainter, spec: ShareCardSpec) {
 function drawLead(painter: CardPainter, headline: ShareHeadline) {
   const { layout, theme } = painter;
   const { lead } = layout;
-  const width = drawText(
-    painter,
-    headline.term === null ? headline.lead : `${headline.lead} `,
-    lead,
-    { role: "lead", weight: 500, color: theme.muted },
+  const muted = { role: "lead", weight: 500, color: theme.muted } as const;
+  if (headline.term === null) {
+    drawText(painter, headline.lead, lead, muted);
+    return;
+  }
+  const prefix = `${headline.lead} `;
+  const term = fitLead(
+    { prefix, term: headline.term },
+    lead.width,
+    layout.fonts.lead,
+    measurerOf(painter, 600),
   );
-  if (headline.term === null || width >= lead.width) return;
+  const shared = { size: term.size, direction: "ltr" } as const;
+  const width = drawText(painter, prefix, lead, { ...muted, ...shared });
   drawText(
     painter,
-    quotedTerm(headline.term),
+    term.text,
     { ...lead, x: lead.x + width, width: lead.width - width },
-    { role: "lead", weight: 600, color: theme.ink },
+    { role: "lead", weight: 600, color: theme.ink, ...shared },
   );
 }
 

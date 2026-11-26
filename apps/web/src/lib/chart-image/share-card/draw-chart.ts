@@ -171,7 +171,12 @@ function drawStart(painter: CardPainter, shape: CardChartShape, plot: CardBox) {
   context.stroke();
   if (!shape.startLabelled) return;
   const size = layout.fonts.tick * START_LABEL_SIZE;
-  const above = start.y - size * 2 > plot.y;
+  const next = shape.traces[0]?.[0]?.[1];
+  const below = next !== undefined && next[1] < start.y;
+  const fits = below
+    ? start.y + size * 2 < plot.y + plot.height
+    : start.y - size * 2 > plot.y;
+  if (!fits) return;
   context.font = fontOf(painter, 600, size);
   context.fillStyle = theme.muted;
   context.textAlign = "left";
@@ -179,9 +184,9 @@ function drawStart(painter: CardPainter, shape: CardChartShape, plot: CardBox) {
   context.fillText(
     start.label,
     start.x - layout.dot * START_LABEL_SHIFT,
-    above
-      ? start.y - size * START_LABEL_ABOVE
-      : start.y + size * START_LABEL_BELOW,
+    below
+      ? start.y + size * START_LABEL_BELOW
+      : start.y - size * START_LABEL_ABOVE,
   );
 }
 
