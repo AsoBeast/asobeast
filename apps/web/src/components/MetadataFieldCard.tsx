@@ -7,6 +7,7 @@ import {
   type MetadataField,
 } from "@asobeast/shared";
 import { LintIssueRow } from "@/components/metadata/LintIssueRow";
+import { NotSearchedLabel } from "@/components/metadata/NotSearchedLabel";
 import { Textarea } from "@/components/ui/textarea";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
 import { cn } from "@/lib/utils";
@@ -35,11 +36,7 @@ export function MetadataFieldCard({
       <div className="flex flex-wrap items-baseline justify-between gap-x-3">
         <h3 className="flex min-w-0 flex-wrap items-baseline gap-x-2 text-heading font-semibold text-foreground">
           <span>{label}</span>
-          {indexed ? null : (
-            <span className="text-caption font-normal text-faint-foreground">
-              Not searched by the store
-            </span>
-          )}
+          {indexed ? null : <NotSearchedLabel field={field} />}
         </h3>
         <span
           id={countId}
