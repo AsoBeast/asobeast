@@ -22,6 +22,7 @@ import {
 } from "@/lib/listing-draft";
 import { searchWords } from "@/lib/store-preview/search-words";
 import { CopyDraftButton, CopyFieldButton } from "./CopyDraftButtons";
+import { TargetsBlock } from "../targets/TargetsBlock";
 import { DraftCoveragePanel } from "./DraftCoveragePanel";
 import { useDraftFieldReveal } from "./draft-field-reveal";
 import { DraftFieldInput } from "./DraftFieldInput";
@@ -31,7 +32,7 @@ import {
   useDraftKeywordField,
   type DraftKeywordField,
 } from "./use-draft-keyword-field";
-import { useCoveragePreview } from "./use-coverage-preview";
+import { useCoveragePreview, useTargetedRequest } from "./use-coverage-preview";
 import { useListingDraft } from "./use-listing-draft";
 
 function KeywordFieldNotice({ field }: { field: DraftKeywordField }) {
@@ -75,7 +76,10 @@ export function ListingDraftEditor({
     () => draftRequest(scope, values, live),
     [scope, values, live],
   );
-  const preview = useCoveragePreview(id, request);
+  const preview = useCoveragePreview(
+    id,
+    useTargetedRequest(id, scope, request),
+  );
   const answer = preview.requested ? preview.query.data : undefined;
   const lint = answer?.fields;
   const current = !preview.settling && !preview.query.isPlaceholderData;
@@ -112,6 +116,13 @@ export function ListingDraftEditor({
 
   return (
     <div className="grid grid-cols-12 items-start gap-6">
+      {scope.store === "APP_STORE" ? (
+        <TargetsBlock
+          key={scope.localization}
+          id={id}
+          localization={scope.localization}
+        />
+      ) : null}
       <section
         aria-label="Draft listing"
         className="col-span-12 flex min-w-0 flex-col gap-4 rounded-lg border border-border bg-card px-4 pt-3 pb-4 @5xl/metadata:col-span-7 @5xl/metadata:row-span-2"

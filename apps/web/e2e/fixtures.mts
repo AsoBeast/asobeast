@@ -3868,6 +3868,17 @@ DATASETS[APP_DRAFT_LOCALES_ID] = localesDataset(
   "Draft Lab",
 );
 
+export const APP_TARGETS_ID = "app-targets";
+export const APP_TARGETS_FOCUS_ID = "app-targets-focus";
+
+for (const id of [APP_TARGETS_ID, APP_TARGETS_FOCUS_ID]) {
+  DATASETS[id] = {
+    ...DATASETS["app-1"],
+    detail: { ...APP_1_DETAIL, id, name: "Target Lab" },
+    keywords: APP_1_KEYWORDS.map((keyword) => ({ ...keyword })),
+  };
+}
+
 export const APP_FIELD_PROPOSAL_ID = "app-field-proposal";
 export const APP_FIELD_PROPOSAL_RIVAL_ID = "app-field-proposal-rival";
 export const FIELD_PROPOSAL_NOT_STOREFRONT = "cu";
@@ -6212,6 +6223,8 @@ METADATA_AUDITS[APP_UNLISTED_MANAGED_ID] = METADATA_AUDIT;
 METADATA_AUDITS[APP_IMPORT_FOCUS_ID] = METADATA_AUDIT;
 METADATA_AUDITS[APP_FIELD_PROPOSAL_ID] = METADATA_AUDIT;
 METADATA_AUDITS[APP_DRAFT_LOCALES_ID] = METADATA_AUDIT;
+METADATA_AUDITS[APP_TARGETS_ID] = METADATA_AUDIT;
+METADATA_AUDITS[APP_TARGETS_FOCUS_ID] = METADATA_AUDIT;
 
 export const APP_READS_ID = "app-reads";
 

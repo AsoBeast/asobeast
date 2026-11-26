@@ -96,7 +96,7 @@ Ask the agent which keywords dropped this week, which competitor entered the top
 - The [Action Center](https://docs.asobeast.com/guides/action-center) runs seventeen deterministic rules over your history and ranks what to do next, each action with the numbers behind it. AI can summarize an action but never adds or reorders one. The [audit](https://docs.asobeast.com/guides/aso-audit) scores the listing itself.
 - Connect an App Store Connect key or a Google Play service account to read the [store's own reports](https://docs.asobeast.com/guides/store-funnel): impressions, page views, Get taps and conversion on the App Store, and installs per search term on Google Play.
 - [Alerts](https://docs.asobeast.com/guides/alerts) for rank drops, first rankings, metadata changes, chart moves, rating drops and review spikes go out by email, webhook, Slack, Discord, Microsoft Teams, Telegram or Google Chat.
-- The [MCP server](https://docs.asobeast.com/mcp/introduction) gives Claude, Cursor, VS Code and other clients 42 read tools and 8 opt-in write tools, and the [HTTP API](https://docs.asobeast.com/api-reference/introduction) is documented with OpenAPI.
+- The [MCP server](https://docs.asobeast.com/mcp/introduction) gives Claude, Cursor, VS Code and other clients 43 read tools and 8 opt-in write tools, and the [HTTP API](https://docs.asobeast.com/api-reference/introduction) is documented with OpenAPI.
 
 ## What's new in AsoBeast 2
 

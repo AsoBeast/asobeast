@@ -93,6 +93,20 @@ describe("requestOf", () => {
     ).toEqual({ method: "GET", path: "/apps/app_1/localizations" });
   });
 
+  it("reads the target keywords of a localization", () => {
+    const tool = toolByName("listing_targets")!;
+
+    expect(requestOf(tool, { appId: "app_1", localization: "en-US" })).toEqual({
+      method: "GET",
+      path: "/apps/app_1/localizations/en-US/targets",
+    });
+    expect(annotationsOf(tool)).toMatchObject({ readOnlyHint: true });
+    expect(
+      tool.inputSchema.safeParse({ appId: "app_1", localization: "xx-YY" })
+        .success,
+    ).toBe(false);
+  });
+
   it("suggests markets as a read only call", () => {
     const tool = toolByName("market_suggestions")!;
 

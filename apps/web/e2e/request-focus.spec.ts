@@ -23,6 +23,7 @@ import {
   APP_GP_SERP_MOVERS,
   APP_CLASS_FOCUS_ID,
   APP_IMPORT_FOCUS_ID,
+  APP_TARGETS_FOCUS_ID,
   APP_TICKS_FOCUS_ID,
   AWAITING_ALERT_COOKIE,
   CROWDED_COMPETITORS_COOKIE,
@@ -3233,4 +3234,42 @@ test.describe("support action confirmations keep focus", () => {
       expect(posts).toBe(1);
     });
   }
+});
+
+test("keeps focus on Save targets while the targets save and after", async ({
+  page,
+}) => {
+  await page.request.post(
+    `${MOCK_API_URL}/__reset/listing-targets/${APP_TARGETS_FOCUS_ID}`,
+    { failOnStatusCode: true },
+  );
+  await page.goto(`/apps/${APP_TARGETS_FOCUS_ID}/metadata?mode=draft`);
+  const block = page.getByRole("region", {
+    name: "Targets for English (U.S.)",
+  });
+  await (
+    await hydrated(
+      block.getByRole("button", { name: "Choose a keyword for Title" }),
+    )
+  ).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("option", { name: /study timer/ })
+    .click();
+  const save = block.getByRole("button", { name: "Save targets" });
+  const held = await holdRequest(
+    page,
+    new RegExp(
+      `/api/backend/apps/${APP_TARGETS_FOCUS_ID}/localizations/en-US/targets$`,
+    ),
+    "PUT",
+  );
+
+  await pressFromKeyboard(save);
+
+  await expect(save).toHaveAttribute("aria-disabled", "true");
+  await expect(save).toBeFocused();
+  held.release();
+  await expect(page.getByText(/^Targets saved/)).toBeVisible();
+  await expect(save).toBeFocused();
 });

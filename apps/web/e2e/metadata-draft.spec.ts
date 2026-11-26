@@ -340,7 +340,9 @@ test("keeps focus in the panel when the list it was on leaves", async ({
   ).toBeFocused();
 });
 
-test("sends nothing for an untouched draft", async ({ page }) => {
+test("sends nothing for an untouched draft of a localization without targets", async ({
+  page,
+}) => {
   const sent = previewRequests(page);
   await page.goto("/apps/app-1/metadata?mode=draft");
   await hydrated(field(page, "Title"));

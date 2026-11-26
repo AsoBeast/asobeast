@@ -17,6 +17,7 @@ import { formatCountry, formatList } from "@/lib/format";
 import { marketNote, previewGroups, wasteReason } from "@/lib/listing-draft";
 import { cn } from "@/lib/utils";
 import { DraftKeywordList } from "./DraftKeywordList";
+import { DraftTargetList } from "./DraftTargetList";
 import type { CoveragePreview } from "./use-coverage-preview";
 
 const MISSING_SHOWN = 8;
@@ -72,6 +73,7 @@ function PreviewBody({ result }: { result: CoveragePreviewResult }) {
   const note = marketNote(result);
   return (
     <>
+      {result.targets ? <DraftTargetList targets={result.targets} /> : null}
       {result.markets.length > 0 ? (
         <p className="px-2 text-dense text-muted-foreground">
           {`${result.counts.gained} newly covered · ${result.counts.lost} no longer covered`}

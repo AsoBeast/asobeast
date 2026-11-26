@@ -6,9 +6,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   addAppLocalization,
   getAppLocalizations,
+  getListingTargets,
   getMarketKeywordFields,
   previewLocalizedKeywordField,
   removeAppLocalization,
+  saveListingTargets,
   saveLocalizedKeywordField,
   startAppStoreImport,
   stopAppStoreImport,
@@ -88,6 +90,37 @@ describe("localization calls", () => {
     expect(sent[0]).toMatchObject({
       method: "PUT",
       body: { text: "temporizador", trackIn: ["us", "mx"] },
+    });
+  });
+
+  it("reads the targets of a localization", async () => {
+    const sent = stubFetch({ slots: [] });
+
+    await getListingTargets("app-1", "en-US");
+
+    expect(sent[0].url).toMatch(
+      /\/apps\/app-1\/localizations\/en-US\/targets$/,
+    );
+    expect(sent[0].method).toBeUndefined();
+  });
+
+  it("saves the targets of a localization", async () => {
+    const sent = stubFetch({ slots: [] });
+
+    await saveListingTargets("app-1", "en-US", {
+      slots: ["habit tracker", null, "focus timer"],
+      trackMissing: true,
+    });
+
+    expect(sent[0].url).toMatch(
+      /\/apps\/app-1\/localizations\/en-US\/targets$/,
+    );
+    expect(sent[0]).toMatchObject({
+      method: "PUT",
+      body: {
+        slots: ["habit tracker", null, "focus timer"],
+        trackMissing: true,
+      },
     });
   });
 

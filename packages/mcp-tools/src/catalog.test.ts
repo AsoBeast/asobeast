@@ -189,6 +189,7 @@ describe("the tool catalog", () => {
     expect(names.slice(names.indexOf("keyword_fields"))).toEqual([
       "keyword_fields",
       "app_localizations",
+      "listing_targets",
       "market_keyword_fields",
     ]);
   });
@@ -245,6 +246,7 @@ describe("the tool catalog", () => {
   it.each([
     "keyword_fields",
     "app_localizations",
+    "listing_targets",
     "market_keyword_fields",
     "market_suggestions",
   ])(
@@ -256,12 +258,14 @@ describe("the tool catalog", () => {
     },
   );
 
-  it.each(["app_localizations", "market_keyword_fields", "market_suggestions"])(
-    "says %s answers an error on Google Play",
-    (name) => {
-      expect(toolByName(name)?.description).toContain("Google Play");
-    },
-  );
+  it.each([
+    "app_localizations",
+    "listing_targets",
+    "market_keyword_fields",
+    "market_suggestions",
+  ])("says %s answers an error on Google Play", (name) => {
+    expect(toolByName(name)?.description).toContain("Google Play");
+  });
 });
 
 const MARKET_TOOLS = [

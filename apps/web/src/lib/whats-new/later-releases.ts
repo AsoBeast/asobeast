@@ -19,6 +19,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "The overview and the draft show your listing as a search result and as a product page, light or dark, on a smaller and a larger iPhone. When a title or subtitle is too long, the preview estimates where the store cuts it and says after which words, and under each draft field you see the words search reads.",
       },
       {
+        kind: "new",
+        title: "Target keywords for each language",
+        text: "At the top of a draft, pick what each App Store language should rank for: one keyword for the title, two for the subtitle and up to seven more, or press Use top 3. Picking a keyword you do not track yet starts tracking it in every country that reads that language, and the draft shows which targets it covers.",
+      },
+      {
         kind: "fixed",
         title: "A search that lists no apps says so",
         text: "When a store lists no apps at all for a keyword you track, its position now reads No apps instead of more than 200: in the keywords table, on the rankings page with its chart and movers, in the position history, the search results sheet, the discovery list and the keyword breakdown. Pointing at it explains that the store lists no apps for this search. A rank alert and the weekly digest say the same when this happens to a keyword that used to rank. Checks from before this update keep the number they were stored with.",
