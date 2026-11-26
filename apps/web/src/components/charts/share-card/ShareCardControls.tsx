@@ -17,7 +17,6 @@ import {
   CARD_THEMES,
   type CardThemeName,
 } from "@/lib/chart-image/share-card/card-themes";
-import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ThemeSwatch } from "./ThemeSwatch";
 
@@ -101,7 +100,7 @@ function SizeChoices({
   return (
     <Choices
       label="Size"
-      hint={`${formatNumber(width)} × ${formatNumber(height)} px`}
+      hint={`${width} × ${height} px`}
       className="grid grid-cols-3 gap-2"
     >
       {CARD_SIZE_NAMES.map((size) => (

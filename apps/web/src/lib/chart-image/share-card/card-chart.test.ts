@@ -32,7 +32,7 @@ describe("fittedDomain", () => {
   it("keeps a small move from filling the chart", () => {
     const [low, high] = fittedDomain([20, 20.5], "rank");
 
-    expect(high - low).toBeCloseTo(5.2);
+    expect(high - low).toBeCloseTo(3.9);
     expect((low + high) / 2).toBeCloseTo(20.25);
   });
 
@@ -40,7 +40,7 @@ describe("fittedDomain", () => {
     const [low, high] = fittedDomain([1, 2], "rank");
 
     expect(low).toBe(0.4);
-    expect(high).toBeCloseTo(5.6);
+    expect(high).toBeCloseTo(4.3);
   });
 
   it("keeps visibility between 0 and 100", () => {
@@ -129,6 +129,7 @@ describe("cardChartShape", () => {
   it("labels the ticks as ranks", () => {
     expect(shape([18, 20]).ticks.map(({ label }) => label)).toEqual([
       "#18",
+      "#19",
       "#20",
     ]);
   });

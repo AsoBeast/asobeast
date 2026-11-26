@@ -32,7 +32,7 @@ export interface CardChartShape {
   end: CardMark | null;
 }
 
-const MIN_SPAN: Record<CardChartKind, number> = { rank: 4, visibility: 8 };
+const MIN_SPAN: Record<CardChartKind, number> = { rank: 3, visibility: 8 };
 const BOUNDS: Record<CardChartKind, CardDomain> = {
   rank: [0.4, Infinity],
   visibility: [0, 100],

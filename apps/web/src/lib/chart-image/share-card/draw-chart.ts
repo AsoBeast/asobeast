@@ -29,7 +29,6 @@ const RIGHT_INSET = 2.6;
 const START_CLEARANCE = 2.2;
 const START_LABEL_SIZE = 1.1;
 const START_LABEL_ABOVE = 1.05;
-const START_LABEL_BELOW = 1.75;
 const START_LABEL_SHIFT = 0.4;
 const START_DOT = 0.62;
 const START_RING = 0.6;
@@ -60,17 +59,27 @@ function traceRun(
   }
 }
 
+function chipLift(painter: CardPainter, base: CardBox, endY: number): number {
+  const { fonts, dot, chart: box } = painter.layout;
+  const shortfall =
+    fonts.chip * CHIP_HEIGHT + dot * CHIP_OFFSET - (endY - box.y);
+  if (shortfall <= 0) return 0;
+  const share = (endY - base.y) / base.height;
+  return Math.ceil(shortfall / (1 - share));
+}
+
 function plotOf(painter: CardPainter, chart: CardChartSpec): CardBox {
   const { context, layout } = painter;
   const { chart: box, fonts, dot } = layout;
-  const headroom = Math.round(fonts.chip * CHIP_HEIGHT + dot * CHIP_OFFSET);
-  const area = {
+  const base = {
     x: box.x,
-    y: box.y + headroom,
+    y: box.y + fonts.tick / 2,
     width: box.width - dot * RIGHT_INSET,
-    height: box.height - headroom - Math.round(fonts.axis * AXIS_BAND),
+    height: box.height - fonts.tick / 2 - Math.round(fonts.axis * AXIS_BAND),
   };
-  const { ticks } = cardChartShape(chart.line, chart.kind, area, 0);
+  const { ticks, end } = cardChartShape(chart.line, chart.kind, base, 0);
+  const lift = end === null ? 0 : chipLift(painter, base, end.y);
+  const area = { ...base, y: base.y + lift, height: base.height - lift };
   context.font = fontOf(painter, 500, fonts.tick);
   const widths = ticks.map(({ label }) => context.measureText(label).width);
   const gutter = Math.ceil(Math.max(0, ...widths) + fonts.tick * GUTTER_GAP);
@@ -158,25 +167,39 @@ function drawLine(painter: CardPainter, shape: CardChartShape) {
   context.restore();
 }
 
-function drawStart(painter: CardPainter, shape: CardChartShape, plot: CardBox) {
-  const { start } = shape;
-  if (start === null) return;
+function drawHollow(painter: CardPainter, [x, y]: Point) {
   const { context, layout, theme } = painter;
   context.beginPath();
-  context.arc(start.x, start.y, layout.dot * START_DOT, 0, Math.PI * 2);
+  context.arc(x, y, layout.dot * START_DOT, 0, Math.PI * 2);
   context.fillStyle = theme.panel;
   context.fill();
   context.lineWidth = layout.stroke * START_RING;
   context.strokeStyle = theme.series;
   context.stroke();
-  if (!shape.startLabelled) return;
+}
+
+function breakEnds(shape: CardChartShape): Point[] {
+  const { traces, start, end } = shape;
+  return traces.flatMap((trace, index) => {
+    const first = trace[0][0];
+    const last = trace[trace.length - 1].at(-1) ?? first;
+    return [
+      ...(index > 0 || start === null ? [first] : []),
+      ...(index < traces.length - 1 || end === null ? [last] : []),
+    ];
+  });
+}
+
+function drawStart(painter: CardPainter, shape: CardChartShape, plot: CardBox) {
+  const { start } = shape;
+  for (const point of breakEnds(shape)) drawHollow(painter, point);
+  if (start === null) return;
+  drawHollow(painter, [start.x, start.y]);
+  const { context, layout, theme } = painter;
   const size = layout.fonts.tick * START_LABEL_SIZE;
   const next = shape.traces[0]?.[0]?.[1];
-  const below = next !== undefined && next[1] < start.y;
-  const fits = below
-    ? start.y + size * 2 < plot.y + plot.height
-    : start.y - size * 2 > plot.y;
-  if (!fits) return;
+  const rises = next !== undefined && next[1] < start.y;
+  if (!shape.startLabelled || rises || start.y - size * 2 <= plot.y) return;
   context.font = fontOf(painter, 600, size);
   context.fillStyle = theme.muted;
   context.textAlign = "left";
@@ -184,9 +207,7 @@ function drawStart(painter: CardPainter, shape: CardChartShape, plot: CardBox) {
   context.fillText(
     start.label,
     start.x - layout.dot * START_LABEL_SHIFT,
-    below
-      ? start.y + size * START_LABEL_BELOW
-      : start.y - size * START_LABEL_ABOVE,
+    start.y - size * START_LABEL_ABOVE,
   );
 }
 

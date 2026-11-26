@@ -227,11 +227,11 @@ test.describe("rankings", () => {
     await openShare(page);
 
     await expect(
-      dialog(page).getByRole("radiogroup", { name: "Size · 1,200 × 675 px" }),
+      dialog(page).getByRole("radiogroup", { name: "Size · 1200 × 675 px" }),
     ).toBeVisible();
     await pick(page, "Size", "Portrait");
     await expect(
-      dialog(page).getByRole("radiogroup", { name: "Size · 1,080 × 1,350 px" }),
+      dialog(page).getByRole("radiogroup", { name: "Size · 1080 × 1350 px" }),
     ).toBeVisible();
   });
 

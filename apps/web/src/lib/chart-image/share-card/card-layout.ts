@@ -252,9 +252,7 @@ function splitContent(
     ? headerBoxes(metrics, content.x, content.y, column)
     : NO_HEADER;
   const height = headlineHeight(metrics, parts);
-  const top = header.header
-    ? bottomOf(content) - height
-    : content.y + Math.round((content.height - height) / 2);
+  const top = bottomOf(content) - height;
   const chartX = content.x + column + metrics.padding;
   return {
     ...header,

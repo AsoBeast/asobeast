@@ -45,7 +45,7 @@ function ShareCardPreview({
     if (canvas && spec) void paintShareCard(canvas, spec);
   }, [spec]);
   return (
-    <div className="flex h-64 items-center justify-center rounded-lg bg-muted p-3 sm:h-80">
+    <div className="flex h-64 items-center justify-center rounded-lg bg-muted p-2 sm:h-80 sm:p-3">
       <canvas
         ref={canvasRef}
         role="img"

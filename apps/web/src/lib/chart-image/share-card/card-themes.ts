@@ -105,7 +105,7 @@ export const CARD_THEMES: Record<CardThemeName, CardTheme> = {
     base: "#081c20",
     glows: [
       { x: 0.5, y: -0.2, reach: 0.7, color: "rgba(46, 125, 138, 0.55)" },
-      { x: 1.04, y: 1.04, reach: 0.46, color: "rgba(248, 152, 32, 0.2)" },
+      { x: 1.04, y: 1.04, reach: 0.38, color: "rgba(248, 152, 32, 0.12)" },
     ],
     dots: "rgba(190, 235, 240, 0.065)",
     shadow: "rgba(0, 0, 0, 0.6)",
@@ -116,7 +116,7 @@ export const CARD_THEMES: Record<CardThemeName, CardTheme> = {
     muted: "#9fb9bc",
     grid: "#1a3d44",
     series: "#f89820",
-    seriesFill: "rgba(248, 152, 32, 0.3)",
+    seriesFill: "rgba(248, 152, 32, 0.18)",
     glow: ORANGE_GLOW,
     chip: { text: "#0e2a30", fill: "#f4f1ea" },
     change: {
@@ -137,7 +137,7 @@ export const CARD_THEMES: Record<CardThemeName, CardTheme> = {
     dots: "rgba(28, 20, 8, 0.07)",
     shadow: "rgba(90, 40, 0, 0.4)",
     panel: "#fffdfa",
-    panelLine: "#ecdcc6",
+    panelLine: "#e1d2c3",
     tile: "#f6efe5",
     ...LIGHT_PANEL,
     frameInk: "#1c1408",
