@@ -207,6 +207,22 @@ describe("newRatingsAverageSeries", () => {
     }
   });
 
+  it("breaks the line at a drop read on a day without an average", () => {
+    const points = [
+      point("2026-10-01", 2000, 4.3),
+      point("2026-10-08", 2280, 4.3),
+      point("2026-10-09", 2200, null),
+      point("2026-10-10", 2320, 4.3),
+    ];
+    const byDate = new Map(
+      newRatingsAverageSeries(points).map((each) => [each.date, each.average]),
+    );
+
+    expect(byDate.get("2026-10-08")).toBeCloseTo(4.3, 6);
+    expect(byDate.get("2026-10-10")).toBeNull();
+    expect(newRatingsAverage(points)?.added).toBe(280);
+  });
+
   it("bridges days the store reported no count", () => {
     const points = grown(START, 20, 40, 4.7).map((each, index) =>
       index >= 9 && index <= 11 ? { ...each, ratingCount: null } : each,
