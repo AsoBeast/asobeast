@@ -215,23 +215,16 @@ describe("message catalogs", () => {
             [...known].some((path) =>
               path.startsWith(`${namespace}.${prefix}`),
             ),
-          ) ||
-          [...known].some(
-            (path) => path.includes(prefix) || path.includes(`.${prefix}`),
-          );
+          ) || [...known].some((path) => path.includes(`.${prefix}`));
         if (!found) missing.push(`${path}: ${prefix}…`);
       }
 
       for (const key of keys) {
-        const found =
-          [...known].some((path) => path === key || path.endsWith(`.${key}`)) ||
-          namespaces.some((namespace) =>
-            [...known].some(
-              (path) =>
-                path === `${namespace}.${key}` ||
-                path.endsWith(`.${namespace}.${key}`),
-            ),
-          );
+        const found = key.includes(".")
+          ? [...known].some((path) => path === key || path.endsWith(`.${key}`))
+          : namespaces.length > 0
+            ? namespaces.some((namespace) => known.has(`${namespace}.${key}`))
+            : [...known].some((path) => path.endsWith(`.${key}`));
         if (!found) missing.push(`${path}: ${key}`);
       }
     }

@@ -68,6 +68,7 @@
     "tokenNoticeRead": "The token is read-only and is shown once. Copy what you need before closing.",
     "tokenNoticeWrite": "The token can make changes and is shown once. Copy what you need before closing, and keep it private.",
     "mintToken": "Mint token",
+    "done": "Done",
     "createFailed": "Could not create the token.",
     "nameRequired": "Give the token a name.",
     "agent": "Agent",

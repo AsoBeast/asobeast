@@ -162,7 +162,7 @@ export function TrackedSummary({ id }: { id: string }) {
         })}
       </span>
       <ExportCsvButton
-        subject="competitors"
+        subject={t("list.exportSubject")}
         onClick={() => exportCompetitors(id, competitors, t)}
       />
     </>

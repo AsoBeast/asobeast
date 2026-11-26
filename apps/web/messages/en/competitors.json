@@ -1,5 +1,8 @@
 {
   "title": "Competitors",
+  "track": "Track",
+  "tracking": "Tracking {name}",
+  "trackFailed": "Could not track {title}",
   "trackedTitle": "Track the apps you rank against",
   "trackedFooter": "A new competitor gets positions on the next keyword check",
   "untitled": "Untitled app",
@@ -21,7 +24,8 @@
     "removeBody": "This removes {name} from the comparison. Its keyword positions are recaptured only if you add it back.",
     "removing": "Removing…",
     "removed": "Removed {name}",
-    "removeFailed": "Could not remove {name}"
+    "removeFailed": "Could not remove {name}",
+    "exportSubject": "competitors"
   },
   "lede": {
     "none": "No competitors",
@@ -245,7 +249,16 @@
     "shortDescription": "Short description",
     "description": "Long description",
     "promotionalText": "Promotional text",
-    "whatsNew": "What's new"
+    "whatsNew": "What's new",
+    "version": "version",
+    "price": "price",
+    "screenshots": "screenshots",
+    "screenshotImages": "screenshot images",
+    "screenshotCaptions": "screenshot captions",
+    "icon": "icon",
+    "inAppEvents": "in-app events",
+    "featuring": "featuring",
+    "editorsChoice": "editors' choice"
   },
   "verdicts": {
     "wholePhrase": "Whole phrase",

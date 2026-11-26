@@ -68,6 +68,7 @@
     "tokenNoticeRead": "此令牌为只读，且只会显示一次。请在关闭前复制需要的内容。",
     "tokenNoticeWrite": "此令牌可修改数据，且只会显示一次。请在关闭前复制需要的内容，并妥善保管。",
     "mintToken": "生成令牌",
+    "done": "完成",
     "createFailed": "无法创建令牌。",
     "nameRequired": "请为令牌填写名称。",
     "agent": "代理",

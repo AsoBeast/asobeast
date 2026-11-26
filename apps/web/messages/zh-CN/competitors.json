@@ -1,5 +1,8 @@
 {
   "title": "竞品",
+  "track": "跟踪",
+  "tracking": "正在跟踪 {name}",
+  "trackFailed": "无法跟踪 {title}",
   "trackedTitle": "跟踪与你竞争的应用",
   "trackedFooter": "新竞品会在下次关键词检查时获得排名",
   "untitled": "未命名应用",
@@ -21,7 +24,8 @@
     "removeBody": "这会把 {name} 从对比中移除。只有重新添加后，才会再次抓取它的关键词排名。",
     "removing": "移除中…",
     "removed": "已移除 {name}",
-    "removeFailed": "无法移除 {name}"
+    "removeFailed": "无法移除 {name}",
+    "exportSubject": "竞品"
   },
   "lede": {
     "none": "没有竞品",
@@ -245,7 +249,16 @@
     "shortDescription": "简短描述",
     "description": "详细描述",
     "promotionalText": "推广文案",
-    "whatsNew": "更新内容"
+    "whatsNew": "更新内容",
+    "version": "版本",
+    "price": "价格",
+    "screenshots": "截图",
+    "screenshotImages": "截图图片",
+    "screenshotCaptions": "截图说明",
+    "icon": "图标",
+    "inAppEvents": "应用内活动",
+    "featuring": "精选",
+    "editorsChoice": "编辑精选"
   },
   "verdicts": {
     "wholePhrase": "完整短语",
