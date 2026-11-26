@@ -1,18 +1,24 @@
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import type { PositionSummary } from "./serp-summary";
+import type { PlacementSummary, PositionSummary } from "./serp-summary";
 import { SerpSummary } from "./SerpSummary";
 
 const TEXT_SEPARATOR = "<!-- -->";
 
-const summaryOf = (position: PositionSummary) =>
+const PLACEMENTS: PlacementSummary = {
+  inTitle: 3,
+  of: 10,
+  inSubtitle: null,
+  subtitlesKnown: null,
+};
+
+const summaryOf = (
+  position: PositionSummary,
+  placements: PlacementSummary | null = PLACEMENTS,
+) =>
   renderToString(
     <SerpSummary
-      facts={{
-        position,
-        titles: { withKeyword: 3, of: 10 },
-        ratings: { kind: "none" },
-      }}
+      facts={{ position, placements, ratings: { kind: "none" } }}
       comparedTo="2026-10-30"
     />,
   );
@@ -42,5 +48,44 @@ describe("SerpSummary", () => {
 
     expect(listed).toContain("<span>2</span>");
     expect(listed).not.toContain(TEXT_SEPARATOR);
+  });
+
+  it("names the tile Keyword in and reads the title count", () => {
+    const html = summaryOf(
+      { kind: "absent" },
+      {
+        inTitle: 8,
+        of: 10,
+        inSubtitle: 2,
+        subtitlesKnown: 1,
+      },
+    );
+
+    expect(html).toContain(">Keyword in<");
+    expect(html).toContain(">8 of 10<");
+    expect(html).toContain(">in the title<");
+    expect(html).not.toContain("in the subtitle");
+    expect(html).not.toContain("Titles with it");
+  });
+
+  it("adds the subtitle count once two subtitles are known", () => {
+    const html = summaryOf(
+      { kind: "absent" },
+      {
+        inTitle: 8,
+        of: 10,
+        inSubtitle: 2,
+        subtitlesKnown: 3,
+      },
+    );
+
+    expect(html).toContain(">2 of 3 in the subtitle<");
+    expect(html).not.toContain(TEXT_SEPARATOR);
+  });
+
+  it("says Google Play has no subtitle", () => {
+    const html = summaryOf({ kind: "absent" });
+
+    expect(html).toContain(">Google Play has no subtitle<");
   });
 });

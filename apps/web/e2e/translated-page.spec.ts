@@ -387,7 +387,7 @@ test("a translated search results sheet steps through its captured days", async 
   const sheet = page.getByRole("dialog", { name: "Search results" });
   const summary = sheet.locator('[data-slot="serp-summary"]');
   await expect(sheet.locator("li#serp-row-1")).toBeVisible();
-  await expect(summary).toContainText("7 of 10");
+  await expect(summary).toContainText("8 of 10");
   const previous = await hydrated(
     sheet.getByRole("button", { name: "Previous captured day" }),
   );
@@ -396,7 +396,7 @@ test("a translated search results sheet steps through its captured days", async 
   await previous.click();
   await expect(page).toHaveURL(new RegExp(`serpDate=${YESTERDAY}`));
   await expect(sheet.locator("li#serp-row-1")).toBeVisible();
-  await expect(summary).toContainText("0 of 10");
+  await expect(summary).toContainText("Up 1 from #8");
   await previous.click();
   await expect(page).toHaveURL(new RegExp(`serpDate=${DAY_BEFORE}`));
   await expect(sheet.locator("[aria-busy]")).toHaveCount(0);

@@ -5,6 +5,7 @@ import {
   listsNoApps,
   SERP_DEPTH,
   type SerpSnapshot,
+  type Store,
   type TrackedKeywordItem,
 } from "@asobeast/shared";
 import { BreakdownAppCard } from "@/components/competitors/BreakdownAppCard";
@@ -21,13 +22,12 @@ import {
   serpOptions,
 } from "@/lib/queries";
 import { SerpList } from "../serp/SerpList";
+import type { SerpViewer } from "../serp/serp-csv";
 import { isCaptured, type CapturedSerp } from "../serp/SerpSheet";
 import { SerpNeverChecked, SerpNoApps, SerpSkeleton } from "../serp/SerpStates";
 import { SerpSummary } from "../serp/SerpSummary";
 import { serpSummary } from "../serp/serp-summary";
 import { SheetSection } from "@/components/layout/SheetSection";
-
-type Viewer = { appId: string; storeAppId: string | undefined };
 
 function CapturedResults({
   snapshot,
@@ -36,7 +36,7 @@ function CapturedResults({
   onOpenAll,
 }: {
   snapshot: CapturedSerp;
-  viewer: Viewer;
+  viewer: SerpViewer;
   keyword: TrackedKeywordItem;
   onOpenAll: () => void;
 }) {
@@ -82,16 +82,18 @@ function CapturedResults({
 
 export function KeywordSheetResults({
   appId,
+  store,
   keyword,
   onOpenAll,
 }: {
   appId: string;
+  store: Store;
   keyword: TrackedKeywordItem;
   onOpenAll: () => void;
 }) {
   const serp = useQuery(serpOptions(keyword.keywordId, null));
   const { data: app } = useQuery(appDetailOptions(appId));
-  const viewer = { appId, storeAppId: app?.storeAppId };
+  const viewer: SerpViewer = { appId, storeAppId: app?.storeAppId, store };
   const snapshot = serp.data;
   const captured = isCaptured(snapshot) ? snapshot : null;
 
@@ -120,7 +122,7 @@ function ResultsBody({
 }: {
   read: UseQueryResult<SerpSnapshot>;
   captured: CapturedSerp | null;
-  viewer: Viewer;
+  viewer: SerpViewer;
   keyword: TrackedKeywordItem;
   onOpenAll: () => void;
 }) {

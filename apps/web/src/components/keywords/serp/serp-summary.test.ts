@@ -6,7 +6,11 @@ import type {
 } from "@asobeast/shared";
 import { serpSummary } from "./serp-summary";
 
-const VIEWER = { appId: "app-1", storeAppId: "123456789" };
+const VIEWER = {
+  appId: "app-1",
+  storeAppId: "123456789",
+  store: "APP_STORE",
+} as const;
 const NEWEST = "2026-10-31";
 const OLDER = "2026-10-30";
 
@@ -161,36 +165,52 @@ describe("serpSummary position", () => {
   });
 });
 
-describe("serpSummary titles", () => {
-  it("counts the top 10 titles that hold the whole keyword", () => {
-    const entries = listOf(12).map((row) => ({
-      ...row,
-      titleMatch:
-        row.position <= 7 || row.position > 10
-          ? ("phrase" as const)
-          : ("words" as const),
-    }));
+describe("serpSummary placements", () => {
+  it("counts where the top 10 put the keyword", () => {
+    const placements = [
+      "title",
+      "both",
+      "subtitle",
+      "split",
+      "none",
+      undefined,
+      "title",
+      undefined,
+      "title",
+      "none",
+      "title",
+    ] as const;
+    const entries = placements.map((placement, index) =>
+      entry(index + 1, {
+        titleMatch: "none",
+        ...(placement ? { placement } : {}),
+        ...(index < 5 ? { subtitle: index === 4 ? null : "Subtitle" } : {}),
+      }),
+    );
 
-    expect(serpSummary(snapshot(entries), VIEWER).titles).toEqual({
-      withKeyword: 7,
+    expect(serpSummary(snapshot(entries), VIEWER).placements).toEqual({
+      inTitle: 4,
       of: 10,
+      inSubtitle: 2,
+      subtitlesKnown: 5,
     });
   });
 
-  it("counts over the entries a short list holds", () => {
-    const entries = listOf(6).map((row) => ({
+  it("counts titles only on Google Play", () => {
+    const entries = listOf(6).map((row, index) => ({
       ...row,
-      titleMatch: "partial" as const,
+      titleMatch: "none" as const,
+      ...(index < 2 ? { placement: "title" as const } : {}),
     }));
 
-    expect(serpSummary(snapshot(entries), VIEWER).titles).toEqual({
-      withKeyword: 0,
-      of: 6,
-    });
+    expect(
+      serpSummary(snapshot(entries), { ...VIEWER, store: "GOOGLE_PLAY" })
+        .placements,
+    ).toEqual({ inTitle: 2, of: 6, inSubtitle: null, subtitlesKnown: null });
   });
 
-  it("reports nothing when no title was judged", () => {
-    expect(serpSummary(snapshot(listOf(10)), VIEWER).titles).toBeNull();
+  it("reports nothing when no entry was judged", () => {
+    expect(serpSummary(snapshot(listOf(10)), VIEWER).placements).toBeNull();
   });
 });
 
