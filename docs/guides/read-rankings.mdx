@@ -78,6 +78,14 @@ Each row shows the position and, under it, how the app moved since the earlier c
 
 Your own app carries a **You** badge and a tinted row, and an app you track as a competitor carries a **Competitor** badge.
 
+Under the title, a **Keyword in** line says where the app puts the keyword: **Title**, **Subtitle**, **Title and subtitle**, **Split across title and subtitle** when some of its words sit in each, or **Neither**. A field holds the keyword when it holds every word of it, in any order, exactly as written; a word that matches only when accents are ignored does not count.
+
+The store's search results carry no subtitles, so AsoBeast shows and judges a subtitle only for your own apps and your competitors, from the newest listing it captured for that app in that country by the end of the shown day. Their subtitle sits under the title with the keyword's words underlined. Any other app is judged on its title alone, and when its title lacks the keyword the line reads **Not in the title**, subtitle not known. Google Play has no subtitle, so only titles are read there.
+
+### Outliers
+
+An **Outlier** badge marks a competitor in the top 10 whose title and subtitle both lack the keyword. It may still hold the keyword in its keyword field, which the store keeps private, or in another language the store reads in that country. Your own app never gets the badge, because its keyword field is yours to check on the metadata page.
+
 ### The summary
 
 Three figures sit above the list.
@@ -85,7 +93,7 @@ Three figures sit above the list.
 | Figure | What it says |
 | --- | --- |
 | Your position | Your place in the list, as a link that jumps to your row. When you rank below the stored list it shows your checked position, and when the check did not find you it says so with the check's depth |
-| Titles with it | How many of the top 10 titles hold the whole keyword, its words in order |
+| Keyword in | How many of the top 10 hold every word of the keyword in their title, in any order, and, when AsoBeast knows at least two of their subtitles, how many of those hold it in the subtitle. On Google Play it counts titles only |
 | Top 10 ratings | The median rating count of the top 10, or the average rating on Google Play |
 
 ### Depth and retention
