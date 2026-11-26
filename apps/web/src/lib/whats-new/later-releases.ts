@@ -29,6 +29,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "Every target keyword now says where it fits best: the title, the subtitle, the keyword field, or nowhere, with the reason in one sentence, such as strong popularity and a rank you can improve. Apply suggestions puts your targets in that order, ready to save.",
       },
       {
+        kind: "new",
+        title: "The average of your new ratings",
+        text: "The ratings history on the reviews page now shows what your new ratings average beside your overall average, as a weekly line and in a sentence for the chosen range, so you see whether the last release pulls the average up or down long before the overall figure moves. The ratings goal also says where the current mix of new ratings takes you. This works on the App Store; Google Play weights recent ratings in its average, so it cannot be worked out there.",
+      },
+      {
         kind: "fixed",
         title: "A search that lists no apps says so",
         text: "When a store lists no apps at all for a keyword you track, its position now reads No apps instead of more than 200: in the keywords table, on the rankings page with its chart and movers, in the position history, the search results sheet, the discovery list and the keyword breakdown. Pointing at it explains that the store lists no apps for this search. A rank alert and the weekly digest say the same when this happens to a keyword that used to rank. Checks from before this update keep the number they were stored with.",
