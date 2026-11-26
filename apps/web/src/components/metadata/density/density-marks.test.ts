@@ -42,6 +42,15 @@ describe("occurrences", () => {
     ).toEqual(["Mode d'occasion", "mode d’occasion"]);
   });
 
+  it("never marks a phrase across a sentence or a comma", () => {
+    const text = "Plan daily. Planner daily planner, planner! Daily planner";
+
+    expect(textAt(text, "daily planner")).toEqual([
+      "daily planner",
+      "Daily planner",
+    ]);
+  });
+
   it("finds a spaceless row by its characters", () => {
     expect(textAt("集中タイマーと集中タイマー", "集中タイマー")).toEqual([
       "集中タイマー",
@@ -55,6 +64,6 @@ describe("occurrences", () => {
   });
 
   it("treats the row as text, never as a pattern", () => {
-    expect(occurrences("axb a.b", "a.b")).toEqual([{ start: 4, end: 7 }]);
+    expect(occurrences("axb a+b", "a+b")).toEqual([{ start: 4, end: 7 }]);
   });
 });

@@ -10,7 +10,7 @@ export interface TextRange {
   end: number;
 }
 
-const BETWEEN_WORDS = String.raw`[^\p{L}\p{N}]+`;
+const BETWEEN_WORDS = String.raw`[^\p{L}\p{N}:.,|&!?;\n\r]+`;
 const BEFORE_WORD = String.raw`(?<![\p{L}\p{N}])`;
 const AFTER_WORD = String.raw`(?![\p{L}\p{N}])`;
 
