@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { InfoTip } from "@/components/ui/info-tip";
 import { localizationName } from "@/lib/localizations";
+import { cn } from "@/lib/utils";
 import { TargetsActions } from "./TargetsActions";
 import { MORE_SLOTS, ROLE_SLOTS, TargetsBody } from "./TargetsBody";
 import { TargetsFooter } from "./TargetsFooter";
@@ -79,13 +80,15 @@ export function TargetsBlock({
   return (
     <section aria-labelledby={headingId} className="col-span-12 min-w-0">
       <Card>
-        <CardHeader className={PANEL_HEADER}>
+        <CardHeader
+          className={cn(PANEL_HEADER, "@max-lg/card-header:grid-cols-1")}
+        >
           <CardTitle asChild>
             <h2 id={headingId}>
               {`Targets for ${localizationName(localization)}`}
             </h2>
           </CardTitle>
-          <CardAction className="flex items-center gap-2">
+          <CardAction className="flex flex-wrap items-center justify-end gap-2 @max-lg/card-header:col-start-1 @max-lg/card-header:row-start-2 @max-lg/card-header:justify-self-start @max-lg/card-header:justify-start">
             {result ? (
               <TargetsActions
                 slots={targets.slots}

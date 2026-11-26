@@ -547,3 +547,28 @@ test("is unavailable when the order already matches", async ({ page }) => {
     "Your targets already follow the suggestions",
   );
 });
+
+test("keeps the header actions inside the card on a phone", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await seed(page, ["study timer", "productivity app"]);
+  await page.goto(DRAFT);
+
+  const tip = block(page).getByRole("button", {
+    name: "About suggested fields",
+  });
+  await expect(tip).toBeVisible();
+  const card = block(page).locator('[data-slot="card"]');
+  const { scrollWidth, clientWidth, right, tipRight } = await card.evaluate(
+    (node, tipNode) => ({
+      scrollWidth: node.scrollWidth,
+      clientWidth: node.clientWidth,
+      right: node.getBoundingClientRect().right,
+      tipRight: tipNode.getBoundingClientRect().right,
+    }),
+    await tip.elementHandle(),
+  );
+  expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+  expect(tipRight).toBeLessThanOrEqual(right);
+});
