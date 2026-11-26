@@ -35,7 +35,10 @@ const screenshots: AppScreenshots = {
 };
 
 interface ReadState {
-  data: AppScreenshots;
+  data?: AppScreenshots;
+  isPending?: boolean;
+  isFetching?: boolean;
+  errorUpdatedAt?: number;
   isPlaceholderData?: boolean;
   isError?: boolean;
 }
@@ -81,5 +84,15 @@ describe("ListingStorePreview", () => {
     });
     expect(markup).toContain("Could not read the screenshots of this listing.");
     expect(markup).not.toContain('data-slot="store-preview-screenshots"');
+  });
+
+  it("keeps the read error and its retry while a retry runs", () => {
+    const markup = markupOf({
+      isPending: true,
+      isFetching: true,
+      errorUpdatedAt: 1,
+    });
+    expect(markup).toContain("Could not read the screenshots of this listing.");
+    expect(markup).toContain('data-slot="store-preview-frame"');
   });
 });

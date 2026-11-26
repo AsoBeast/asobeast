@@ -37,9 +37,12 @@ export function wrapWords(
   return line === "" ? lines : [...lines, line];
 }
 
+export type LineWrap = "words" | "none";
+
 export interface LineBox {
   width: number;
   lines: number;
+  wrap?: LineWrap;
 }
 
 export interface LineFit {
@@ -134,10 +137,16 @@ export function fitLines(
     return { lines: [], cut: false, cutAt: 0, shownWords: [], cutWord: "" };
   }
   const words = wordSpans(normalized);
-  const wrapped = wrapSpans(words, box.width, measure);
-  const shownCount = Math.max(box.lines, 1);
+  const never = box.wrap === "none";
+  const wrapped = never
+    ? [{ text: normalized, start: 0, end: codePoints(normalized) }]
+    : wrapSpans(words, box.width, measure);
+  const shownCount = never ? 1 : Math.max(box.lines, 1);
   const lastShown = wrapped[shownCount - 1];
-  if (wrapped.length <= shownCount || !lastShown) {
+  const overflows = never
+    ? measure(normalized) > box.width
+    : wrapped.length > shownCount;
+  if (!overflows || !lastShown) {
     const cutAt = codePoints(normalized);
     return {
       lines: wrapped.map((line) => line.text),

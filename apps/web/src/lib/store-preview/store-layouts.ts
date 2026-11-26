@@ -1,4 +1,5 @@
 import type { Store } from "@asobeast/shared";
+import type { LineWrap } from "../text-fit";
 
 export const STORE_PREVIEW_DEVICES = ["small", "large"] as const;
 export type StorePreviewDevice = (typeof STORE_PREVIEW_DEVICES)[number];
@@ -20,6 +21,7 @@ export interface StoreTextLayout {
   letterSpacingPx: number;
   lineHeightPx: number;
   lines: number;
+  wrap: LineWrap;
   widths: Record<StorePreviewDevice, number>;
 }
 
@@ -56,6 +58,7 @@ export const STORE_TEXT_LAYOUTS = {
         letterSpacingPx: 0,
         lineHeightPx: 19,
         lines: 1,
+        wrap: "words",
         widths: appStoreColumn("search"),
       },
       subtitle: {
@@ -65,6 +68,7 @@ export const STORE_TEXT_LAYOUTS = {
         letterSpacingPx: 0,
         lineHeightPx: 16,
         lines: 1,
+        wrap: "none",
         widths: appStoreColumn("search"),
       },
     },
@@ -76,6 +80,7 @@ export const STORE_TEXT_LAYOUTS = {
         letterSpacingPx: -0.5,
         lineHeightPx: 28,
         lines: 2,
+        wrap: "words",
         widths: appStoreColumn("product"),
       },
       subtitle: {
@@ -85,6 +90,7 @@ export const STORE_TEXT_LAYOUTS = {
         letterSpacingPx: -0.05,
         lineHeightPx: 20,
         lines: 1,
+        wrap: "none",
         widths: appStoreColumn("product"),
       },
     },
@@ -98,6 +104,7 @@ export const STORE_TEXT_LAYOUTS = {
         letterSpacingPx: 0,
         lineHeightPx: 22,
         lines: 2,
+        wrap: "words",
         widths: { small: 260, large: 300 },
       },
     },
@@ -109,6 +116,7 @@ export const STORE_TEXT_LAYOUTS = {
         letterSpacingPx: 0,
         lineHeightPx: 28,
         lines: 2,
+        wrap: "words",
         widths: { small: 230, large: 270 },
       },
       shortDescription: {
@@ -118,6 +126,7 @@ export const STORE_TEXT_LAYOUTS = {
         letterSpacingPx: 0,
         lineHeightPx: 20,
         lines: 3,
+        wrap: "words",
         widths: { small: 328, large: 368 },
       },
     },

@@ -201,3 +201,31 @@ describe("fitLines", () => {
     ).toMatchObject({ lines: ["Focus Timer"], cut: false, cutAt: 11 });
   });
 });
+
+describe("fitLines without wrapping", () => {
+  it("clips a line that never wraps across the whole text", () => {
+    expect(
+      fitLines(
+        "abc defghijk",
+        { width: 10, lines: 1, wrap: "none" },
+        (text) => Array.from(text).length,
+      ),
+    ).toEqual({
+      lines: ["abc defgh…"],
+      cut: true,
+      cutAt: 9,
+      shownWords: ["abc"],
+      cutWord: "defgh",
+    });
+  });
+
+  it("keeps a line that never wraps when the whole text fits", () => {
+    expect(
+      fitLines(
+        "abc defghijk",
+        { width: 12, lines: 1, wrap: "none" },
+        (text) => Array.from(text).length,
+      ).cut,
+    ).toBe(false);
+  });
+});

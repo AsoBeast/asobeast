@@ -72,10 +72,15 @@ export function cutSentence({
   };
 }
 
-const tracked =
-  (measure: Measure, letterSpacingPx: number): Measure =>
-  (text) =>
-    measure(text) + letterSpacingPx * Array.from(text).length;
+const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+
+const characterCount = (text: string): number =>
+  Array.from(graphemes.segment(text)).length;
+
+const tracked = (measure: Measure, letterSpacingPx: number): Measure =>
+  letterSpacingPx === 0
+    ? measure
+    : (text) => measure(text) + letterSpacingPx * characterCount(text);
 
 export const fitStoreText = (
   text: string,
@@ -85,7 +90,7 @@ export const fitStoreText = (
 ): LineFit =>
   fitLines(
     text,
-    { width: layout.widths[device], lines: layout.lines },
+    { width: layout.widths[device], lines: layout.lines, wrap: layout.wrap },
     tracked(measure(canvasFont(layout)), layout.letterSpacingPx),
   );
 

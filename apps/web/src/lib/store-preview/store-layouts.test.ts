@@ -102,14 +102,20 @@ describe("App Store layout from the App Store Connect device preview", () => {
         app("product", "subtitle"),
       ].map((layout) =>
         layout
-          ? [layout.fontPx, layout.weight, layout.letterSpacingPx, layout.lines]
+          ? [
+              layout.fontPx,
+              layout.weight,
+              layout.letterSpacingPx,
+              layout.lines,
+              layout.wrap,
+            ]
           : null,
       ),
     ).toEqual([
-      [15, 600, 0, 1],
-      [12, 400, 0, 1],
-      [22, 500, -0.5, 2],
-      [15, 400, -0.05, 1],
+      [15, 600, 0, 1, "words"],
+      [12, 400, 0, 1, "none"],
+      [22, 500, -0.5, 2, "words"],
+      [15, 400, -0.05, 1, "none"],
     ]);
   });
 });

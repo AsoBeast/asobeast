@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { LineFit } from "../text-fit";
 import type { FontMeasure } from "./canvas-measure";
-import { cutSentence, cutSentences, type CutSentence } from "./cut-sentence";
+import {
+  cutSentence,
+  cutSentences,
+  fitStoreText,
+  type CutSentence,
+} from "./cut-sentence";
+import { STORE_TEXT_LAYOUTS, type StoreTextLayout } from "./store-layouts";
 import type { PreviewListing } from "./preview-listing";
 
 const fits = (cutAt: number, shownWords: string[], cutWord = ""): LineFit => ({
@@ -204,5 +210,35 @@ describe("cutSentences", () => {
       );
     expect(fields("search")).toEqual([]);
     expect(fields("product")).toEqual(["shortDescription"]);
+  });
+});
+
+describe("fitStoreText", () => {
+  const tracked = (width: number): StoreTextLayout => ({
+    ...STORE_TEXT_LAYOUTS.APP_STORE.product.subtitle,
+    letterSpacingPx: -1,
+    widths: { small: width, large: width },
+  });
+  const eightPerCodePoint: FontMeasure = () => (text) =>
+    Array.from(text).length * 8;
+
+  it("tracks a decomposed accent as one character", () => {
+    expect(
+      fitStoreText("Cafe\u0301", tracked(35.5), "small", eightPerCodePoint).cut,
+    ).toBe(true);
+    expect(
+      fitStoreText("Cafe\u0301", tracked(36), "small", eightPerCodePoint).cut,
+    ).toBe(false);
+  });
+
+  it("tracks a joined emoji as one character", () => {
+    expect(
+      fitStoreText(
+        "Hi \u{1F469}\u200D\u{1F4BB}",
+        tracked(43),
+        "small",
+        eightPerCodePoint,
+      ).cut,
+    ).toBe(true);
   });
 });

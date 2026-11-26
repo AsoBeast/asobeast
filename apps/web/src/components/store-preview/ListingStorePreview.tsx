@@ -1,6 +1,9 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { AppDetail, AppScreenshots } from "@asobeast/shared";
-import { InlineQueryError } from "@/components/layout/InlineQueryError";
+import {
+  failedRead,
+  InlineQueryError,
+} from "@/components/layout/InlineQueryError";
 import type { ListingDraftValues } from "@/lib/listing-draft";
 import { previewListingOf } from "@/lib/store-preview/preview-listing";
 import { StorePreview, type PreviewSource } from "./StorePreview";
@@ -17,9 +20,10 @@ export function ListingStorePreview({
   draft?: ListingDraftValues;
   source: PreviewSource;
 }) {
-  if (screenshots.isPending) return <StorePreviewSkeleton />;
+  const failed = failedRead(screenshots);
+  if (screenshots.isPending && !failed) return <StorePreviewSkeleton />;
   const current = screenshots.isPlaceholderData ? undefined : screenshots.data;
-  const unread = screenshots.isError && current === undefined;
+  const unread = (screenshots.isError || failed) && current === undefined;
   return (
     <div className="flex flex-col gap-3">
       {unread ? (
