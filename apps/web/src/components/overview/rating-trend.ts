@@ -1,5 +1,5 @@
 import type { RatingsPoint } from "@asobeast/shared";
-import type { NewRatingsAveragePoint } from "@/components/reviews/ratings-volume";
+import type { NewRatingsAveragePoint } from "@/components/reviews/new-ratings-average";
 import { dayBefore } from "@/lib/utc-day";
 
 export const RATING_CHANGE_DAYS = 7;

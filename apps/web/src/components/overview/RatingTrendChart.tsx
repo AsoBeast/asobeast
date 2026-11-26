@@ -24,7 +24,7 @@ import {
   TIME_AXIS_PROPS,
   VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
-import { newRatingsAverageSeries } from "@/components/reviews/ratings-volume";
+import { newRatingsAverageSeries } from "@/components/reviews/new-ratings-average";
 import {
   ChartContainer,
   ChartLegend,

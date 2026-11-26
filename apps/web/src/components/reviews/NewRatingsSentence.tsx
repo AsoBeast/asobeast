@@ -9,7 +9,8 @@ import { grade } from "@/lib/grade";
 import { ratingsHistoryOptions } from "@/lib/queries";
 import { presetDays, presetToRange, type RatingsRange } from "@/lib/ranges";
 import { newRatingsParts, tooFewNewRatings } from "./new-ratings-copy";
-import { newRatingsAverage, ratingsGrowth } from "./ratings-volume";
+import { newRatingsAverage } from "./new-ratings-average";
+import { ratingsGrowth } from "./ratings-volume";
 
 const NEW_RATINGS_GUIDE =
   "https://docs.asobeast.com/guides/reviews#new-ratings-average";

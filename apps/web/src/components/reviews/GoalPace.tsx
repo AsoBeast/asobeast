@@ -6,7 +6,7 @@ import { ratingsHistoryOptions } from "@/lib/queries";
 import { presetToRange, type RatingsRange } from "@/lib/ranges";
 import { goalAtCurrentMix } from "@/lib/ratings-goal";
 import { paceSentence } from "./ratings-goal-copy";
-import { newRatingsAverage } from "./ratings-volume";
+import { newRatingsAverage } from "./new-ratings-average";
 
 const PACE_RANGE: RatingsRange = "30d";
 
