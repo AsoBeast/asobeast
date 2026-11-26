@@ -12,8 +12,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { InfoTip } from "@/components/ui/info-tip";
-import { topThreeRefusal, withTopThree } from "@/lib/listing-targets";
+import {
+  placementsByPhrase,
+  topThreeRefusal,
+  withTopThree,
+} from "@/lib/listing-targets";
 import { localizationName } from "@/lib/localizations";
+import { applyPlacements, applyRefusal } from "@/lib/target-placements";
 import { MORE_SLOTS, ROLE_SLOTS, TargetsBody } from "./TargetsBody";
 import { TargetsFooter } from "./TargetsFooter";
 import { TargetsLimitNotice } from "./TargetsLimitNotice";
@@ -79,6 +84,8 @@ export function TargetsBlock({
   const refusal = result
     ? topThreeRefusal(targets.slots, result.candidates)
     : null;
+  const placements = result ? placementsByPhrase(result) : new Map();
+  const applyRefused = applyRefusal(targets.slots, placements);
 
   return (
     <section aria-labelledby={headingId} className="col-span-12 min-w-0">
@@ -103,6 +110,22 @@ export function TargetsBlock({
                 }}
               >
                 <span>Use top 3</span>
+              </Button>
+            ) : null}
+            {result ? (
+              <Button
+                variant="outline"
+                size="sm"
+                aria-disabled={applyRefused !== null || undefined}
+                title={applyRefused ?? undefined}
+                onClick={() => {
+                  if (applyRefused !== null) return;
+                  targets.edit(applyPlacements(targets.slots, placements));
+                  setMoved("Targets reordered to match the suggestions");
+                  saveRef.current?.focus();
+                }}
+              >
+                <span>Apply suggestions</span>
               </Button>
             ) : null}
             <TargetsTip />

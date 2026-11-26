@@ -482,3 +482,68 @@ test("closes the popover with Escape and returns focus to the chip", async ({
   await expect(popover).toBeHidden();
   await expect(trigger).toBeFocused();
 });
+
+test("applies the suggestions as an unsaved edit", async ({ page }) => {
+  const bodies = savedBodies(page);
+  await seed(page, ["study timer", "productivity app"]);
+  await page.goto(DRAFT);
+  const apply = block(page).getByRole("button", { name: "Apply suggestions" });
+
+  await (await hydrated(apply)).focus();
+  await page.keyboard.press("Enter");
+
+  await expect(
+    slot(page, "Title").getByRole("button", {
+      name: "productivity app for Title",
+    }),
+  ).toBeVisible();
+  await expect(
+    slot(page, "Subtitle", 0).getByRole("button", {
+      name: "Choose a keyword for Subtitle",
+    }),
+  ).toBeVisible();
+  await expect(
+    slot(page, "Keyword 4").getByRole("button", {
+      name: "study timer for Keyword 4",
+    }),
+  ).toBeVisible();
+  await expect(block(page).getByRole("status")).toHaveText(
+    "Targets reordered to match the suggestions",
+  );
+  await expect(saveButton(page)).toBeFocused();
+  await expect(saveButton(page)).not.toHaveAttribute("aria-disabled");
+  expect(bodies).toEqual([]);
+
+  await page.keyboard.press("Enter");
+
+  await expect
+    .poll(() => bodies)
+    .toEqual([
+      {
+        slots: [
+          "productivity app",
+          null,
+          null,
+          "study timer",
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+        ],
+      },
+    ]);
+});
+
+test("is unavailable when the order already matches", async ({ page }) => {
+  await seed(page, ["productivity app"]);
+  await page.goto(DRAFT);
+
+  const apply = block(page).getByRole("button", { name: "Apply suggestions" });
+  await expect(apply).toHaveAttribute("aria-disabled", "true");
+  await expect(apply).toHaveAttribute(
+    "title",
+    "Your targets already follow the suggestions",
+  );
+});
