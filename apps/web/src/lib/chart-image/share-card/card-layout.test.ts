@@ -8,9 +8,7 @@ import {
 } from "./card-layout";
 
 const PART_SETS: CardParts[] = [false, true].flatMap((change) =>
-  [false, true].flatMap((app) =>
-    [false, true].map((footer) => ({ change, app, footer })),
-  ),
+  [false, true].map((app) => ({ change, app })),
 );
 
 const CASES = CARD_SIZE_NAMES.flatMap((size) =>
@@ -89,48 +87,31 @@ describe("cardLayout", () => {
   );
 
   it("leaves out the boxes of the parts turned off", () => {
-    const layout = cardLayout("square", {
-      change: false,
-      app: false,
-      footer: false,
-    });
+    const layout = cardLayout("square", { change: false, app: false });
 
-    expect([layout.header, layout.icon, layout.footer]).toEqual([
+    expect([layout.header, layout.icon, layout.change]).toEqual([
       null,
       null,
       null,
     ]);
+    expect(layout.footer).not.toBeNull();
   });
 
   it.each(CARD_SIZE_NAMES)(
-    "gives the chart the room the header and footer leave on %s",
+    "gives the chart the room the header and change leave on %s",
     (size) => {
-      const all = cardLayout(size, { change: true, app: true, footer: true });
-      const noFooter = cardLayout(size, {
-        change: true,
-        app: true,
-        footer: false,
-      });
-      const noApp = cardLayout(size, {
-        change: true,
-        app: false,
-        footer: true,
-      });
-      const noChange = cardLayout(size, {
-        change: false,
-        app: true,
-        footer: true,
-      });
+      const all = cardLayout(size, { change: true, app: true });
+      const noApp = cardLayout(size, { change: true, app: false });
+      const noChange = cardLayout(size, { change: false, app: true });
 
-      expect(noFooter.chart.height).toBeGreaterThan(all.chart.height);
       expect(noApp.chart.height).toBeGreaterThan(all.chart.height);
       expect(noChange.chart.height).toBeGreaterThan(all.chart.height);
     },
   );
 
   it("shares one rhythm across the sizes", () => {
-    const landscape = cardLayout("landscape", PART_SETS[7]);
-    const square = cardLayout("square", PART_SETS[7]);
+    const landscape = cardLayout("landscape", PART_SETS[3]);
+    const square = cardLayout("square", PART_SETS[3]);
 
     expect(landscape.unit).toBe(30);
     expect(square.unit).toBe(27);
@@ -140,7 +121,7 @@ describe("cardLayout", () => {
   });
 
   it("sets the figure larger than every other text", () => {
-    const { fonts } = cardLayout("landscape", PART_SETS[7]);
+    const { fonts } = cardLayout("landscape", PART_SETS[3]);
     const others = Object.entries(fonts)
       .filter(([role]) => role !== "figure")
       .map(([, size]) => size);

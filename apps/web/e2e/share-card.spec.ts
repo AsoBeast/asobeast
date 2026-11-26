@@ -24,7 +24,7 @@ import {
 
 const RANKINGS_PAGE = "/apps/app-1/rankings";
 const RANKINGS = /\/api\/backend\/apps\/app-1\/rankings\?/;
-const ALL_PARTS = { change: true, app: true, footer: true };
+const ALL_PARTS = { change: true, app: true };
 
 const rankingsChart = (page: Page) =>
   page.getByRole("region", { name: "Keyword rank positions" });
@@ -159,24 +159,18 @@ test.describe("rankings", () => {
     await expect.poll(corner).toEqual(hexPixel(CARD_THEMES.orange.background));
   });
 
-  test("turns the footer off", async ({ page }) => {
+  test("always draws the credit", async ({ page }) => {
     await page.goto(RANKINGS_PAGE);
     await openShare(page);
     const { mark } = cardLayout("landscape", ALL_PARTS);
-    if (!mark) throw new Error("The layout has no mark");
-    const markTop = () =>
-      canvasPixel(preview(page), mark.x + mark.width / 2, mark.y + 6);
     const background = hexPixel(CARD_THEMES.light.background);
-    await expect.poll(markTop).not.toEqual(background);
 
-    await dialog(page)
-      .getByRole("switch", { name: "Show Made with AsoBeast" })
-      .click();
-
-    await expect.poll(markTop).toEqual(background);
-    expect(
-      cardLayout("landscape", { ...ALL_PARTS, footer: false }).chart.height,
-    ).toBeGreaterThan(cardLayout("landscape", ALL_PARTS).chart.height);
+    await expect
+      .poll(() =>
+        canvasPixel(preview(page), mark.x + mark.width / 2, mark.y + 6),
+      )
+      .not.toEqual(background);
+    await expect(dialog(page).getByRole("switch")).toHaveCount(2);
   });
 
   test("downloads the card at its size", async ({ page }) => {

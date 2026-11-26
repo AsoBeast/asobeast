@@ -6,10 +6,9 @@ export interface ShareCardOptions {
   theme: CardThemeName;
   change: boolean;
   app: boolean;
-  footer: boolean;
 }
 
-export type CardSwitch = "change" | "app" | "footer";
+export type CardSwitch = "change" | "app";
 
 export const SHARE_CARD_PREFERENCE = "asobeast.shareCard";
 
@@ -18,7 +17,6 @@ export const DEFAULT_CARD_OPTIONS: ShareCardOptions = {
   theme: "light",
   change: true,
   app: true,
-  footer: true,
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -45,6 +43,5 @@ export function parseCardOptions(raw: string | null): ShareCardOptions {
     theme: isCardThemeName(stored.theme) ? stored.theme : defaults.theme,
     change: flag(stored.change, defaults.change),
     app: flag(stored.app, defaults.app),
-    footer: flag(stored.footer, defaults.footer),
   };
 }

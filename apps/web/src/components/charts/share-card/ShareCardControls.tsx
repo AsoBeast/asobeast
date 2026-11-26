@@ -22,7 +22,6 @@ import {
 const SWITCHES: { name: CardSwitch; label: string }[] = [
   { name: "change", label: "Show the change" },
   { name: "app", label: "Show the app" },
-  { name: "footer", label: "Show Made with AsoBeast" },
 ];
 
 function Choice({

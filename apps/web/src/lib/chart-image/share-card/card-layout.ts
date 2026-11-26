@@ -24,7 +24,6 @@ export interface CardBox {
 export interface CardParts {
   change: boolean;
   app: boolean;
-  footer: boolean;
 }
 
 export type CardFontRole =
@@ -54,9 +53,9 @@ export interface CardLayout {
   change: CardBox | null;
   chart: CardBox;
   range: CardBox;
-  footer: CardBox | null;
-  mark: CardBox | null;
-  credit: CardBox | null;
+  footer: CardBox;
+  mark: CardBox;
+  credit: CardBox;
 }
 
 const UNITS_ACROSS = 40;
@@ -128,7 +127,6 @@ function footerBoxes(
 }
 
 const NO_HEADER = { header: null, icon: null, name: null, store: null };
-const NO_FOOTER = { footer: null, mark: null, credit: null };
 
 export function cardLayout(size: CardSizeName, parts: CardParts): CardLayout {
   const { width, height } = CARD_SIZES[size];
@@ -155,10 +153,8 @@ export function cardLayout(size: CardSizeName, parts: CardParts): CardLayout {
     ? change.y + change.height
     : figure.y + figure.height;
 
-  const footer = parts.footer
-    ? footerBoxes(margin, inner, unit, height - margin)
-    : NO_FOOTER;
-  const rangeBottom = footer.footer ? footer.footer.y - gap : height - margin;
+  const footer = footerBoxes(margin, inner, unit, height - margin);
+  const rangeBottom = footer.footer.y - gap;
   const range = box(
     margin,
     rangeBottom - lineOf("range"),

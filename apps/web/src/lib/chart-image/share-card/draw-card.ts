@@ -110,7 +110,6 @@ function drawHeadline(painter: CardPainter, headline: ShareHeadline) {
 
 function drawFooter(painter: CardPainter, mark: HTMLImageElement | null) {
   const { layout, theme } = painter;
-  if (!layout.mark || !layout.credit) return;
   if (mark) drawImageTile(painter, mark, layout.mark);
   drawText(painter, `Made with ${PRODUCT_NAME}`, layout.credit, {
     role: "credit",

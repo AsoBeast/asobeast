@@ -12,7 +12,6 @@ describe("parseCardOptions", () => {
       theme: "dark",
       change: false,
       app: true,
-      footer: false,
     };
 
     expect(parseCardOptions(JSON.stringify(stored))).toEqual(stored);
@@ -24,7 +23,6 @@ describe("parseCardOptions", () => {
       theme: "light",
       change: true,
       app: true,
-      footer: true,
     });
   });
 
@@ -38,6 +36,14 @@ describe("parseCardOptions", () => {
     expect(parseCardOptions(raw)).toEqual(DEFAULT_CARD_OPTIONS);
   });
 
+  it("never stores a choice to hide the credit", () => {
+    expect(
+      parseCardOptions(
+        JSON.stringify({ ...DEFAULT_CARD_OPTIONS, footer: false }),
+      ),
+    ).toEqual(DEFAULT_CARD_OPTIONS);
+  });
+
   it("falls back to the defaults for anything it does not know", () => {
     expect(
       parseCardOptions(
@@ -46,7 +52,6 @@ describe("parseCardOptions", () => {
           theme: "orange",
           change: "no",
           app: false,
-          footer: 0,
         }),
       ),
     ).toEqual({ ...DEFAULT_CARD_OPTIONS, theme: "orange", app: false });
