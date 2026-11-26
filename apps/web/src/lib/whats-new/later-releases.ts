@@ -30,6 +30,11 @@ export const LATER_RELEASES: readonly Release[] = [
       },
       {
         kind: "new",
+        title: "The average of your new ratings",
+        text: "The ratings history on the reviews page now shows what your new ratings average beside your overall average, as a weekly line and in a sentence for the chosen range, so you see whether the last release pulls the average up or down long before the overall figure moves. The ratings goal also says where the current mix of new ratings takes you. This works on the App Store; Google Play weights recent ratings in its average, so it cannot be worked out there.",
+      },
+      {
+        kind: "new",
         title: "Where ranking apps put the keyword",
         text: "The search results of a keyword now say where each app puts it: in the title, the subtitle, both, split between them, or neither. On the App Store, subtitles come from the listings AsoBeast captures for your apps and competitors, so any other app is judged on its title alone, and a competitor in the top 10 without the keyword in either is marked as an outlier. Google Play has no subtitle, so only titles are read there. The summary counts how many of the top 10 hold it in the title, and in the subtitles AsoBeast knows.",
       },

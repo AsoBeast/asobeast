@@ -3,6 +3,7 @@ import {
   DAYS_HINT,
   goalNotes,
   goalSentence,
+  paceSentence,
   TARGET_HINT,
 } from "./ratings-goal-copy";
 
@@ -103,5 +104,31 @@ describe("hints", () => {
       "Enter a target from 0.1 to 5.0 with at most one decimal.",
     );
     expect(DAYS_HINT).toBe("Enter a whole number of days from 1 to 365.");
+  });
+});
+
+describe("paceSentence", () => {
+  it("names the average the store shows after the days entered", () => {
+    expect(paceSentence({ kind: "reaches", projected: 4.47 }, 45, 30)).toBe(
+      "At your current pace the store shows 4.5 in 30 days, your target.",
+    );
+    expect(paceSentence({ kind: "fallsShort", projected: 4.43 }, 45, 30)).toBe(
+      "At your current pace the store shows 4.4 in 30 days.",
+    );
+    expect(paceSentence({ kind: "fallsShort", projected: 4.43 }, 45, 1)).toBe(
+      "At your current pace the store shows 4.4 in 1 day.",
+    );
+  });
+
+  it("says when the projection passes the target", () => {
+    expect(paceSentence({ kind: "reaches", projected: 4.9 }, 45, 30)).toBe(
+      "At your current pace the store shows 4.9 in 30 days, above your target.",
+    );
+  });
+
+  it("says when the current mix cannot reach the target", () => {
+    expect(paceSentence({ kind: "belowTarget", newAverage: 4.2 }, 45, 30)).toBe(
+      "Not at the current mix: new ratings average 4.2, below 4.5.",
+    );
   });
 });

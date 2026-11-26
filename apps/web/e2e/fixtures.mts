@@ -55,6 +55,7 @@ import type {
   RatingsHistogram,
   ReviewThemes,
   RatingsHistory,
+  RatingsPoint,
   ReviewItem,
   ReviewList,
   SerpMovers,
@@ -1366,6 +1367,41 @@ export const APP_1_RATINGS_HISTORY: RatingsHistory = {
     ratingAvg: 4.6 + (index % 4) * 0.05,
     ratingCount: 20000 + index * 130,
   })),
+};
+
+const STORE_AVERAGE_DECIMALS = 5;
+
+export interface RatingsStart {
+  daysAgo: number;
+  count: number;
+  average: number;
+}
+
+export function grownRatingsPoints(
+  start: RatingsStart,
+  additions: readonly number[],
+  mean: number,
+): RatingsPoint[] {
+  let count = start.count;
+  let sum = start.average * start.count;
+  const steps = [0, ...additions];
+  return steps.map((added, day) => {
+    count += added;
+    sum += mean * added;
+    return {
+      date: utcDaysAgo(start.daysAgo - day),
+      ratingAvg: Number((sum / count).toFixed(STORE_AVERAGE_DECIMALS)),
+      ratingCount: count,
+    };
+  });
+}
+
+export const GROWING_RATINGS_HISTORY: RatingsHistory = {
+  points: grownRatingsPoints(
+    { daysAgo: 30, count: 2000, average: 4.2 },
+    Array<number>(30).fill(40),
+    4.7,
+  ),
 };
 
 export const APP_1_RATINGS_HISTOGRAM: RatingsHistogram = {
@@ -3894,6 +3930,20 @@ DATASETS[APP_FEW_RATINGS_ID] = ratedDataset(
   10,
 );
 DATASETS[APP_UNRATED_ID] = ratedDataset(APP_UNRATED_ID, "Unrated Lab", 0, 0);
+
+export const APP_NEW_RATINGS_ID = "app-new-ratings";
+
+const NEW_RATINGS_LATEST = GROWING_RATINGS_HISTORY.points.at(-1);
+
+DATASETS[APP_NEW_RATINGS_ID] = {
+  ...ratedDataset(
+    APP_NEW_RATINGS_ID,
+    "New Ratings Lab",
+    NEW_RATINGS_LATEST?.ratingAvg ?? 0,
+    NEW_RATINGS_LATEST?.ratingCount ?? 0,
+  ),
+  ratingsHistory: GROWING_RATINGS_HISTORY,
+};
 
 export const APP_DRAFT_LOCALES_ID = "app-draft-locales";
 
