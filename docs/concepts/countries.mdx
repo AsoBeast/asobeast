@@ -221,3 +221,15 @@ Two hints on the card are diagnostics. They never change coverage, the audit or 
 AsoBeast reads the default listing of every storefront, the native localizations of the storefronts that default to English and every localization on your list that a storefront reads besides its default. A localization that is not on the list, such as Spanish (Mexico) in the United States before it is detected or added, is not read, so AsoBeast cannot tell what your listing fills there until **Find localizations**, the weekly lookups or you add it. See [Edit the iOS keyword field](/guides/metadata-workbench#edit-the-ios-keyword-field).
 
 Google Play has no such list. It shows the listing that matches the device language, so storefront localizations are App Store only. AsoBeast asks each Google Play storefront for one language; see [Where else do the stores differ?](/concepts/stores#where-else-do-the-stores-differ) for Taiwan and Hong Kong.
+
+### Target keywords of a localization
+
+A target is a phrase a localization should rank for. Each App Store localization holds up to 10 targets in numbered slots. Slot 1 is meant for the title, slots 2 and 3 for the subtitle, and slots 4 to 10 are extra phrases you also want to cover. Removing a target empties its slot; the targets after it keep their places, so a subtitle target never moves into the title slot.
+
+Picking a phrase tracks it as a keyword in every market of your app whose storefront reads the localization, within the keyword limit of your plan, and queues its first check and score. A paused keyword picked as a new target resumes. A phrase that does not fit the limit keeps its slot and is named as not tracked in that market. Saving the same targets in another order tracks nothing, so a keyword you paused stays paused. When a market that reads the localization is added later, the targets show as not tracked there until you track them in it.
+
+A localization that none of your markets reads keeps its targets and tracks nothing until a market reads it.
+
+Stopping tracking a keyword removes it from the targets of every localization its market reads, once no other market reading that localization still tracks the phrase. Pausing a keyword leaves its targets alone.
+
+The suggested phrases come from the active keywords your reader markets track, ordered by opportunity. A competitor's brand name is never suggested, because the stores do not allow it in your own listing. Targets are App Store only, because Google Play has no localizations here, and a competitor has none.
