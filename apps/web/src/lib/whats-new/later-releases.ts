@@ -29,6 +29,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "Every target keyword now says where it fits best: the title, the subtitle, the keyword field, or nowhere, with the reason in one sentence, such as strong popularity and a rank you can improve. Apply suggestions puts your targets in that order, ready to save.",
       },
       {
+        kind: "new",
+        title: "See which words your description repeats",
+        text: "The description on the metadata page now counts its words and lists the words and phrases it repeats most, with the keywords you track marked and a button that shows each one in the text. On the App Store a short note explains why the description does not help you rank, and on Google Play the card says how many of your tracked keywords it holds. The same list appears under the description of a draft.",
+      },
+      {
         kind: "fixed",
         title: "A search that lists no apps says so",
         text: "When a store lists no apps at all for a keyword you track, its position now reads No apps instead of more than 200: in the keywords table, on the rankings page with its chart and movers, in the position history, the search results sheet, the discovery list and the keyword breakdown. Pointing at it explains that the store lists no apps for this search. A rank alert and the weekly digest say the same when this happens to a keyword that used to rank. Checks from before this update keep the number they were stored with.",
