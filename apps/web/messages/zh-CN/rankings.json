@@ -1,5 +1,7 @@
 {
   "title": "排名",
+  "exportSubject": "排名",
+  "chartSubject": "排名图表",
   "reportMarkets": "报告市场",
   "allMarkets": "全部市场",
   "allMarketsLower": "全部市场",

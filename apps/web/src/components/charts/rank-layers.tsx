@@ -1,5 +1,6 @@
 import { ReferenceArea } from "recharts";
 import { RANK_DEPTH } from "@asobeast/shared";
+import type { MessageTranslator } from "@/i18n/translator";
 import { RankBandLabel } from "./RankBandLabel";
 import { seriesColor } from "./theme";
 
@@ -34,7 +35,7 @@ export function rankTierTint(position: number): string | undefined {
   return tier ? cellTint(tier.opacity) : undefined;
 }
 
-export function rankTierAreas() {
+export function rankTierAreas(t?: MessageTranslator) {
   return [
     <ReferenceArea
       key="unranked"
@@ -54,7 +55,10 @@ export function rankTierAreas() {
         ifOverflow="hidden"
         label={
           tier.to <= LABELLED_THROUGH
-            ? { value: tierName(tier.to), content: RankBandLabel }
+            ? {
+                value: t ? t("topN", { count: tier.to }) : tierName(tier.to),
+                content: RankBandLabel,
+              }
             : undefined
         }
       />

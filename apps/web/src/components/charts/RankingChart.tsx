@@ -32,7 +32,7 @@ import {
   LINE_PROPS,
   RANK_AXIS_PROPS,
   seriesDash,
-  TIME_AXIS_PROPS,
+  timeAxisPropsInLocale,
 } from "./theme";
 import { markerLineProps, RANK_TICKS, rankTierAreas } from "./rank-layers";
 import { formatDayMonthInLocale } from "@/lib/format";
@@ -144,6 +144,8 @@ export function RankingChart({
   ownKey?: boolean;
 }) {
   const t = useTranslations("charts");
+  const rankT = useTranslations("rankings");
+  const locale = useAppLocale();
   const {
     today,
     plotted,
@@ -161,9 +163,9 @@ export function RankingChart({
         aria-label={t("keywordRankPositions")}
       >
         <LineChart accessibilityLayer data={data.rows} margin={CHART_MARGIN}>
-          {rankTierAreas()}
+          {rankTierAreas(rankT)}
           <CartesianGrid {...GRID_PROPS} />
-          <XAxis {...TIME_AXIS_PROPS} />
+          <XAxis {...timeAxisPropsInLocale(locale)} />
           <YAxis
             {...RANK_AXIS_PROPS}
             domain={[1, RANK_DEPTH]}

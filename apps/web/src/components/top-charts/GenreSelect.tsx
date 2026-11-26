@@ -9,6 +9,8 @@ import {
   type Store,
 } from "@asobeast/shared";
 import { useTranslations } from "next-intl";
+import { useAppLocale } from "@/lib/use-app-locale";
+import { genreNameInLocale } from "./genre-name";
 import {
   Select,
   SelectContent,
@@ -38,10 +40,13 @@ export function GenreSelect({
   onChange: (genre: string) => void;
 }) {
   const t = useTranslations("topCharts");
+  const locale = useAppLocale();
   return (
     <Select value={value} onValueChange={onChange}>
       <SelectTrigger aria-label={t("category")} className="w-[220px]">
-        <SelectValue>{chartGenreName(store, value) ?? value}</SelectValue>
+        <SelectValue>
+          {genreNameInLocale(chartGenreName(store, value) ?? value, locale)}
+        </SelectValue>
       </SelectTrigger>
       <SelectContent>
         <SelectItem value={OVERALL_GENRE}>{t("genres.overall")}</SelectItem>

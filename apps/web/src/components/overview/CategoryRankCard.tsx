@@ -38,6 +38,7 @@ import {
   headlineSeries,
   notInChartLabel,
 } from "./category-headline";
+import { genreNameInLocale } from "@/components/top-charts/genre-name";
 import { ChartNotice, ChartSkeleton } from "@/components/charts/ChartStates";
 import {
   CHART_HEIGHT,
@@ -47,7 +48,7 @@ import {
   seriesColor,
   seriesDash,
   RANK_AXIS_PROPS,
-  TIME_AXIS_PROPS,
+  timeAxisPropsInLocale,
 } from "@/components/charts/theme";
 
 const Y_TICKS = [1, 25, 50, 100, 150, 200];
@@ -69,8 +70,9 @@ function seriesKey(item: CategoryRankSeriesItem): string {
 
 function CategorySeriesLabel({ item }: { item: CategoryRankSeriesItem }) {
   const t = useTranslations("overview");
+  const locale = useAppLocale();
   return t.rich("charts.seriesLabel", {
-    genre: item.genreName,
+    genre: genreNameInLocale(item.genreName, locale),
     collection: t(`charts.collections.${item.collection}`),
     name: (chunks) => <span translate="no">{chunks}</span>,
   });
@@ -202,6 +204,7 @@ function HeaderStat({
   detail: AppDetail;
 }) {
   const t = useTranslations("overview");
+  const locale = useAppLocale();
   const headline = headlineSeries(series, detail.latestSnapshot?.price ?? null);
   if (!headline) return null;
   const href = headlineChartHref(headline, detail);
@@ -217,7 +220,7 @@ function HeaderStat({
             </span>{" "}
             <span className="text-muted-foreground">
               {t.rich("charts.inGenre", {
-                genre: headline.genreName,
+                genre: genreNameInLocale(headline.genreName, locale),
                 name: (chunks) => <span translate="no">{chunks}</span>,
               })}
             </span>
@@ -226,6 +229,7 @@ function HeaderStat({
           <span className="text-muted-foreground">
             {t.rich(absent.key, {
               ...absent.values,
+              genre: genreNameInLocale(absent.values.genre, locale),
               name: (chunks) => <span translate="no">{chunks}</span>,
             })}
           </span>
@@ -279,7 +283,7 @@ function CategoryRankBody({
       >
         <LineChart accessibilityLayer data={chart.rows} margin={CHART_MARGIN}>
           <CartesianGrid {...GRID_PROPS} />
-          <XAxis {...TIME_AXIS_PROPS} />
+          <XAxis {...timeAxisPropsInLocale(locale)} />
           <YAxis
             {...RANK_AXIS_PROPS}
             domain={[1, chart.depth]}

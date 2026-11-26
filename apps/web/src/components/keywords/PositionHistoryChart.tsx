@@ -32,7 +32,7 @@ import {
   GRID_PROPS,
   LINE_PROPS,
   RANK_AXIS_PROPS,
-  TIME_AXIS_PROPS,
+  timeAxisPropsInLocale,
 } from "@/components/charts/theme";
 import {
   lastCheckedIndex,
@@ -129,6 +129,8 @@ export function PositionHistoryChart({
   chartRef?: Ref<HTMLDivElement>;
 }) {
   const t = useTranslations("keywords");
+  const rankT = useTranslations("rankings");
+  const locale = useAppLocale();
   const fadeId = useFadeId();
   const keywordId = data.keywordIds[0] ?? "";
   const color = `var(--color-${keywordId})`;
@@ -147,9 +149,9 @@ export function PositionHistoryChart({
     >
       <ComposedChart accessibilityLayer data={data.rows} margin={CHART_MARGIN}>
         <SeriesFade id={fadeId} color={color} />
-        {rankTierAreas()}
+        {rankTierAreas(rankT)}
         <CartesianGrid {...GRID_PROPS} />
-        <XAxis {...TIME_AXIS_PROPS} />
+        <XAxis {...timeAxisPropsInLocale(locale)} />
         <YAxis
           {...RANK_AXIS_PROPS}
           domain={[1, RANK_DEPTH]}

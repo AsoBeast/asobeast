@@ -83,6 +83,38 @@ test.describe("locale preference", () => {
     await expect(page.locator("body")).not.toContainText("AM UTC");
   });
 
+  test("translates generated copy across the remaining routes", async ({
+    page,
+  }) => {
+    await seedSession(page);
+    await seedViewer(page.context(), "customer");
+
+    await page.goto("/");
+    await expect(page.locator("body")).toContainText(
+      "Focus Timer在美国的关键词“focus timer”上从第 4 名降至第 12 名",
+    );
+
+    await page.goto("/actions");
+    await expect(page.locator("body")).toContainText("在审计中占");
+    await expect(page.locator("body")).toContainText("未通过：截图数量");
+    await expect(page.locator("body")).toContainText(
+      "当这条建议不再触发时，AsoBeast 会确认问题已修复",
+    );
+
+    await page.goto("/apps/app-1/rankings");
+    await expect(page.locator("body")).toContainText("排名图表");
+
+    await page.goto("/apps/app-1/metadata");
+    await expect(page.locator("body")).toContainText("手动添加");
+    await expect(page.locator("body")).not.toContainText(
+      "localizations.origin.manual",
+    );
+
+    await page.goto("/charts");
+    await expect(page.locator("body")).toContainText("总榜");
+    await expect(page.locator("body")).not.toContainText("Overall");
+  });
+
   test("translates sign-in and registration before authentication", async ({
     page,
   }) => {

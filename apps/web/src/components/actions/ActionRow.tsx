@@ -48,7 +48,7 @@ function RowReason({
   const t = useTranslations("actions");
   const locale = useAppLocale();
   const tag = actionStatusTag(item, t, locale);
-  const parts = item.evidence ? actionBrief(item.evidence) : [];
+  const parts = item.evidence ? actionBrief(item.evidence, locale) : [];
 
   return (
     <div className="col-span-3 col-start-2 row-start-3 flex min-w-0 flex-wrap items-start gap-x-2 gap-y-1 pr-2 text-caption text-muted-foreground @2xl/queue:pr-0">

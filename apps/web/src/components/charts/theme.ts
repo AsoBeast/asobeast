@@ -145,6 +145,13 @@ export const TIME_TOOLTIP_PROPS = {
   labelFormatter: (value: unknown) => formatDayMonth(String(value)),
 } as const;
 
+export function timeTooltipPropsInLocale(locale: Locale) {
+  return {
+    labelFormatter: (value: unknown) =>
+      formatDayMonthInLocale(String(value), locale),
+  };
+}
+
 export const SCORE_AXIS_TICKS = [0, 25, 50, 75, 100];
 
 export const SCORE_AXIS_PROPS = {

@@ -192,8 +192,8 @@ export function ChartTable({
   const withGenre = page.entries.some((entry) => entry.genreName !== null);
   const withPrice = page.chart.collection !== "free";
   const columns = useMemo(
-    () => chartColumns(period, context, { withGenre, withPrice }, t),
-    [period, context, withGenre, withPrice, t],
+    () => chartColumns(period, context, { withGenre, withPrice }, t, locale),
+    [period, context, withGenre, withPrice, t, locale],
   );
   const [visibility, setVisibility] = useStoredColumnVisibility(
     "top-chart",

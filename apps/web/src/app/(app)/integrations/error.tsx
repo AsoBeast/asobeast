@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { ErrorState } from "@/components/layout/ErrorState";
 
 export default function IntegrationsError({
@@ -9,11 +10,12 @@ export default function IntegrationsError({
   error: Error & { digest?: string };
   retry: () => void;
 }) {
+  const t = useTranslations("errors");
   return (
     <ErrorState
       error={error}
       retry={retry}
-      title="Integrations could not be loaded"
+      title={t("boundary.integrations")}
     />
   );
 }

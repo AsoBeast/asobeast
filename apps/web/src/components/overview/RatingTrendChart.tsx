@@ -15,7 +15,7 @@ import {
   GRID_PROPS,
   LINE_PROPS,
   seriesColor,
-  TIME_AXIS_PROPS,
+  timeAxisPropsInLocale,
   VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
 import {
@@ -131,7 +131,7 @@ export function RatingTrendChart({
     >
       <LineChart accessibilityLayer data={points} margin={CHART_MARGIN}>
         <CartesianGrid {...GRID_PROPS} />
-        <XAxis {...TIME_AXIS_PROPS} />
+        <XAxis {...timeAxisPropsInLocale(locale)} />
         <YAxis
           {...VALUE_AXIS_PROPS}
           domain={axis.domain}

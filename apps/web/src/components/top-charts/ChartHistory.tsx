@@ -20,7 +20,7 @@ import {
   RANK_AXIS_PROPS,
   seriesColor,
   seriesDash,
-  TIME_AXIS_PROPS,
+  timeAxisPropsInLocale,
 } from "@/components/charts/theme";
 import {
   failedRead,
@@ -158,6 +158,7 @@ function HistoryTooltip({
 
 function HistoryPlot({ history }: { history: History }) {
   const t = useTranslations("topCharts");
+  const locale = useAppLocale();
   const last = history.rows.length - 1;
   const ordered = [...history.series].sort(
     (a, b) => Number(a.own) - Number(b.own),
@@ -178,7 +179,7 @@ function HistoryPlot({ history }: { history: History }) {
     >
       <LineChart accessibilityLayer data={history.rows} margin={HISTORY_MARGIN}>
         <CartesianGrid {...GRID_PROPS} />
-        <XAxis {...TIME_AXIS_PROPS} padding={DAY_PADDING} />
+        <XAxis {...timeAxisPropsInLocale(locale)} padding={DAY_PADDING} />
         <YAxis {...RANK_AXIS_PROPS} domain={RANK_DOMAIN} ticks={RANK_TICKS} />
         <ChartTooltip
           filterNull={false}

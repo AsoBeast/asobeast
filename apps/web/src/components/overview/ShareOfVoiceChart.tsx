@@ -38,7 +38,7 @@ import {
   LINE_PROPS,
   seriesColor,
   seriesDash,
-  TIME_AXIS_PROPS,
+  timeAxisPropsInLocale,
   VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
 import { formatDayMonthInLocale } from "@/lib/format";
@@ -188,7 +188,7 @@ export function ShareOfVoiceChart({
     >
       <LineChart accessibilityLayer data={rows} margin={CHART_MARGIN}>
         <CartesianGrid {...GRID_PROPS} />
-        <XAxis {...TIME_AXIS_PROPS} />
+        <XAxis {...timeAxisPropsInLocale(locale)} />
         <YAxis {...VALUE_AXIS_PROPS} domain={[0, 100]} />
         {marked.map((annotation) => (
           <ReferenceLine

@@ -29,7 +29,7 @@ import {
   GRID_PROPS,
   LINE_PROPS,
   seriesColor,
-  TIME_AXIS_PROPS,
+  timeAxisPropsInLocale,
   VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
 import {
@@ -202,7 +202,7 @@ function VisibilityPlot({
       <ComposedChart accessibilityLayer data={rows} margin={CHART_MARGIN}>
         <SeriesFade id={fadeId} color="var(--color-visibility)" />
         <CartesianGrid {...GRID_PROPS} />
-        <XAxis {...TIME_AXIS_PROPS} />
+        <XAxis {...timeAxisPropsInLocale(locale)} />
         <YAxis {...VALUE_AXIS_PROPS} domain={["auto", "auto"]} />
         {markers.map((day) => (
           <ReferenceLine key={day} x={day} {...CHANGE_MARKER_PROPS} />

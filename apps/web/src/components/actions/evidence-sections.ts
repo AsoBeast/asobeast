@@ -32,6 +32,7 @@ import {
 } from "@/lib/format";
 import type { GradeMetric } from "@/lib/grade";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
+import type { Locale } from "@/lib/locale";
 import { ACTION_RULE_LABEL, percent, summarizeEvidence } from "./action-copy";
 import {
   evidenceEnglish,
@@ -40,6 +41,10 @@ import {
   localizedLabel,
 } from "./evidence-labels";
 import { CHANGE_FIELD_WORD } from "./action-headline";
+import {
+  auditCheckLabel,
+  auditFactorLabel,
+} from "@/components/audit/audit-content-zh";
 
 export interface EvidenceFact {
   label: string;
@@ -298,10 +303,16 @@ function volatileSections(evidence: SerpHoldVolatileEvidence): Sections {
   };
 }
 
-function auditSections(evidence: AuditFixFactorEvidence): Sections {
+function auditSections(
+  evidence: AuditFixFactorEvidence,
+  locale: Locale,
+): Sections {
   return {
     facts: [
-      fact("Factor", evidence.factorLabel),
+      fact(
+        "Factor",
+        auditFactorLabel(evidence.factorId, evidence.factorLabel, locale),
+      ),
       fact("Score", `${formatMeasure(evidence.score)} of 10`),
       fact("Weight", formatMeasure(evidence.weight)),
       graded("Overall audit", evidence.overall, "audit"),
@@ -315,7 +326,7 @@ function auditSections(evidence: AuditFixFactorEvidence): Sections {
       {
         label: "Checks to fix",
         items: evidence.failingChecks.map((check) => ({
-          text: check.label,
+          text: auditCheckLabel(check.id, check.label, locale),
           detail: check.status,
           tone: "down",
         })),
@@ -526,7 +537,7 @@ function lintSections(evidence: MetadataFixLintEvidence): Sections {
   };
 }
 
-function sections(evidence: ActionEvidence): Sections {
+function sections(evidence: ActionEvidence, locale: Locale): Sections {
   switch (evidence.rule) {
     case "keyword.add_uncovered":
       return uncoveredSections(evidence);
@@ -539,7 +550,7 @@ function sections(evidence: ActionEvidence): Sections {
     case "serp.hold_volatile":
       return volatileSections(evidence);
     case "audit.fix_factor":
-      return auditSections(evidence);
+      return auditSections(evidence, locale);
     case "reviews.investigate_theme":
       return themeSections(evidence);
     case "market.improve_country":
@@ -572,8 +583,9 @@ function sections(evidence: ActionEvidence): Sections {
 export function evidenceSections(
   evidence: ActionEvidence,
   t: MessageTranslator = evidenceEnglish,
+  locale: Locale = "en",
 ): EvidenceSections {
-  const { facts, lists } = sections(evidence);
+  const { facts, lists } = sections(evidence, locale);
   return {
     facts: facts.map((fact) => ({
       ...fact,
@@ -590,6 +602,6 @@ export function evidenceSections(
           text: localizedItemText(item.text, t),
         })),
       })),
-    summary: summarizeEvidence(evidence),
+    summary: summarizeEvidence(evidence, locale),
   };
 }

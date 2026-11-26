@@ -22,6 +22,7 @@ import type { MessageTranslator } from "@/i18n/translator";
 import { formatCountryInLocale } from "@/lib/format";
 import type { Locale } from "@/lib/locale";
 import type { ChartView } from "@/lib/search-params";
+import { genreNameInLocale } from "./genre-name";
 import type { ChartCategory } from "./chart-follows";
 
 export interface ChartSearch {
@@ -97,7 +98,10 @@ export function categoryTitle(
   locale: Locale = "en",
 ): string {
   return [
-    chartGenreName(category.store, category.genre) ?? category.genre,
+    genreNameInLocale(
+      chartGenreName(category.store, category.genre) ?? category.genre,
+      locale,
+    ),
     formatCountryInLocale(category.country, locale),
   ].join(" · ");
 }

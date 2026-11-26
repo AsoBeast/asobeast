@@ -7,6 +7,8 @@ import { AppIcon } from "@/components/AppIcon";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import type { DataTableFeatures } from "@/components/data-table/table-features";
 import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
+import { genreNameInLocale } from "./genre-name";
 import { movementSortValue } from "./movement";
 import { MovementCell } from "@/components/movement/MovementCell";
 import type { ChartRowContext } from "./chart-actions";
@@ -24,7 +26,7 @@ function PriceCell({ free }: { free: boolean | null }) {
   );
 }
 
-function genreColumn(t: MessageTranslator) {
+function genreColumn(t: MessageTranslator, locale: Locale) {
   return columnHelper.accessor((row) => row.genreName ?? "", {
     id: "genre",
     sortFn: "text",
@@ -33,7 +35,9 @@ function genreColumn(t: MessageTranslator) {
       <SortableHeader column={column} label={t("category")} />
     ),
     cell: ({ row }) =>
-      row.original.genreName ?? (
+      row.original.genreName ? (
+        genreNameInLocale(row.original.genreName, locale)
+      ) : (
         <span className="text-muted-foreground">—</span>
       ),
   });
@@ -53,6 +57,7 @@ export function chartColumns(
   context: ChartRowContext,
   { withGenre, withPrice }: { withGenre: boolean; withPrice: boolean },
   t: MessageTranslator,
+  locale: Locale,
 ) {
   return columnHelper.columns([
     columnHelper.accessor("position", {
@@ -102,7 +107,7 @@ export function chartColumns(
         </div>
       ),
     }),
-    ...(withGenre ? [genreColumn(t)] : []),
+    ...(withGenre ? [genreColumn(t, locale)] : []),
     ...(withPrice ? [priceColumn(t)] : []),
     columnHelper.display({
       id: "actions",

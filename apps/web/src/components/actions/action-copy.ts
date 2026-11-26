@@ -9,7 +9,9 @@ import { createTranslator } from "next-intl";
 import enActions from "../../../messages/en/actions.json";
 import type { MessageTranslator } from "@/i18n/translator";
 import { formatDate, formatMeasure, pluralize } from "@/lib/format";
+import type { Locale } from "@/lib/locale";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
+import { summarizeEvidenceZh } from "./action-copy-zh";
 
 const english = createTranslator({
   locale: "en",
@@ -132,7 +134,7 @@ export const impactCaption = (t: MessageTranslator = english): string =>
 export const aiDisclaimer = (t: MessageTranslator = english): string =>
   t("aiDisclaimer");
 
-export function summarizeEvidence(evidence: ActionEvidence): string {
+function englishSummary(evidence: ActionEvidence): string {
   switch (evidence.rule) {
     case "keyword.add_uncovered":
       return `Opportunity ${measure(evidence.opportunity)} with volume ${measure(evidence.volume)}, and no indexed field contains it.`;
@@ -173,6 +175,15 @@ export function summarizeEvidence(evidence: ActionEvidence): string {
       return never;
     }
   }
+}
+
+export function summarizeEvidence(
+  evidence: ActionEvidence,
+  locale: Locale = "en",
+): string {
+  return locale === "zh-CN"
+    ? summarizeEvidenceZh(evidence)
+    : englishSummary(evidence);
 }
 
 export const ACTION_EVIDENCE_UNAVAILABLE =

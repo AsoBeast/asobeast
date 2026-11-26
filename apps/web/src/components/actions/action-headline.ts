@@ -36,7 +36,7 @@ export const CHANGE_FIELD_WORD: Record<ChangeField, string> = {
   editorsChoice: "editors' choice",
 };
 
-const FIELD_KEY = {
+export const FIELD_KEY = {
   title: "title",
   subtitle: "subtitle",
   summary: "summary",

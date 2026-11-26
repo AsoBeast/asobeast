@@ -90,6 +90,7 @@
   },
   "origin": {
     "home": "Home",
+    "manual": "Manual",
     "detected": "Detected"
   },
   "item": {

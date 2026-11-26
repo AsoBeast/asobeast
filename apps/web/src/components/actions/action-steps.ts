@@ -6,6 +6,8 @@ import type {
   Store,
 } from "@asobeast/shared";
 import { formatCountry, formatDate } from "@/lib/format";
+import type { Locale } from "@/lib/locale";
+import { actionStepsZh } from "./action-steps-zh";
 import { changedFields } from "./action-headline";
 
 export const CONFIRMATION_STEP =
@@ -192,7 +194,7 @@ function ruleSteps(
   }
 }
 
-export function actionSteps(item: ActionItem): string[] {
+function englishSteps(item: ActionItem): string[] {
   if (item.evidence === null) {
     return [ACTION_RULE_TITLES[item.rule], confirmationStep(item.rule)];
   }
@@ -203,4 +205,8 @@ export function actionSteps(item: ActionItem): string[] {
     ...ruleSteps(item.evidence, item, keyword),
     confirmationStep(item.rule),
   ];
+}
+
+export function actionSteps(item: ActionItem, locale: Locale = "en"): string[] {
+  return locale === "zh-CN" ? actionStepsZh(item) : englishSteps(item);
 }

@@ -88,6 +88,7 @@
     "description": "让任意 MCP 客户端连接此实例，用自然语言询问你的应用、关键词、排名和审计数据。除非你允许代理修改，否则工具均为只读。"
   },
   "guideFor": "（{subject}）",
+  "storeConnectionsSubject": "商店连接",
   "storeConnections": {
     "ownerOnly": "只有工作区所有者可以连接商店。",
     "off": "此实例未启用商店连接。设置 STORE_CONNECT_ENCRYPTION_KEY 可启用。",

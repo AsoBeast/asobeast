@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import type { AlertEventItem } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
+import { alertSentence } from "@/components/alerts/alert-sentence";
 import { alertEventHref } from "@/components/alerts/alert-event-href";
 import { AlertSizePill } from "@/components/alerts/AlertSizePill";
 import {
@@ -30,6 +31,7 @@ import {
 import { FeedRowsSkeleton } from "./skeletons";
 import { PANEL_COUNT, PANEL_HEADER } from "@/components/layout/panel-classes";
 import { dayBefore } from "@/lib/utc-day";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { EmptyState } from "@/components/ui/empty-state";
 
 const WINDOW_DAYS = 7;
@@ -38,10 +40,13 @@ const DAYS_BEFORE_TODAY = WINDOW_DAYS - 1;
 function AlertLine({ item, today }: { item: AlertEventItem; today: string }) {
   const t = useTranslations("dashboard");
   const eventT = useTranslations("notifications");
+  const locale = useAppLocale();
   const href = alertEventHref(item);
   const body = (
     <>
-      <FeedDay>{feedDayLabel(item.occurredAt.slice(0, 10), today)}</FeedDay>
+      <FeedDay>
+        {feedDayLabel(item.occurredAt.slice(0, 10), today, locale)}
+      </FeedDay>
       <span className="flex min-w-0 items-center gap-2">
         <AppIcon src={item.iconUrl} size={16} />
         <span className="line-clamp-2 min-w-0">
@@ -49,7 +54,7 @@ function AlertLine({ item, today }: { item: AlertEventItem; today: string }) {
             {t("alerts.eventPrefix", { event: eventLabel(item.event, eventT) })}
           </span>
           <span dir="auto" className="wrap-anywhere">
-            {item.sentence}
+            {alertSentence(item, locale)}
           </span>
         </span>
       </span>

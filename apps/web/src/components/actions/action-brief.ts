@@ -13,7 +13,9 @@ import {
   formatNumber,
   pluralize,
 } from "@/lib/format";
+import type { Locale } from "@/lib/locale";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
+import { actionBriefZh } from "./action-brief-zh";
 import { ACTION_RULE_LABEL, percent } from "./action-copy";
 import { changedFields } from "./action-headline";
 
@@ -292,7 +294,7 @@ const BRIEFS: {
   ],
 };
 
-export function actionBrief(evidence: ActionEvidence): BriefPart[] {
+function englishBrief(evidence: ActionEvidence): BriefPart[] {
   switch (evidence.rule) {
     case "keyword.add_uncovered":
       return BRIEFS[evidence.rule](evidence);
@@ -333,6 +335,13 @@ export function actionBrief(evidence: ActionEvidence): BriefPart[] {
       return never;
     }
   }
+}
+
+export function actionBrief(
+  evidence: ActionEvidence,
+  locale: Locale = "en",
+): BriefPart[] {
+  return locale === "zh-CN" ? actionBriefZh(evidence) : englishBrief(evidence);
 }
 
 export function briefText(parts: readonly BriefPart[]): string {

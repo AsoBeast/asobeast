@@ -41,7 +41,7 @@ import {
   LINE_PROPS,
   PREVIOUS_LINE_PROPS,
   seriesColor,
-  TIME_AXIS_PROPS,
+  timeAxisPropsInLocale,
   VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
 import { listingChangeDays } from "@/components/keywords/position-history";
@@ -255,7 +255,7 @@ export function VisibilityAreaChart({
         <ComposedChart accessibilityLayer data={rows} margin={CHART_MARGIN}>
           <SeriesFade id={fadeId} color="var(--color-visibility)" />
           <CartesianGrid {...GRID_PROPS} />
-          <XAxis {...TIME_AXIS_PROPS} />
+          <XAxis {...timeAxisPropsInLocale(locale)} />
           <YAxis {...VALUE_AXIS_PROPS} />
           {changeDays.map((day) => (
             <ReferenceLine key={day} x={day} {...CHANGE_MARKER_PROPS} />

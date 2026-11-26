@@ -88,6 +88,7 @@
     "description": "Point any MCP client at this instance to ask about your apps, keywords, rankings and audits in plain language. Tools are read-only unless you allow an agent to make changes when you connect it."
   },
   "guideFor": " for {subject}",
+  "storeConnectionsSubject": "store connections",
   "storeConnections": {
     "ownerOnly": "Only the workspace owner can connect a store.",
     "off": "Store connections are off on this instance. Set STORE_CONNECT_ENCRYPTION_KEY to turn them on.",

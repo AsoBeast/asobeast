@@ -383,7 +383,7 @@ export function StoreConnectionsCard() {
           <span className="ml-auto">
             <GuideLink
               href={STORE_CONNECT_SETTING_GUIDE}
-              subject="store connections"
+              subject={t("storeConnectionsSubject")}
             >
               {t("storeConnections.turnOn")}
             </GuideLink>

@@ -30,7 +30,7 @@ import {
   CHART_HEIGHT,
   CHART_MARGIN,
   GRID_PROPS,
-  TIME_AXIS_PROPS,
+  timeAxisPropsInLocale,
   VALUE_AXIS_PROPS,
   ZERO_LINE_PROPS,
 } from "./theme";
@@ -179,7 +179,7 @@ export function DivergingBars({
         stackOffset="sign"
       >
         <CartesianGrid {...GRID_PROPS} />
-        <XAxis {...TIME_AXIS_PROPS} ticks={trend.dayTicks} />
+        <XAxis {...timeAxisPropsInLocale(locale)} ticks={trend.dayTicks} />
         <YAxis
           {...VALUE_AXIS_PROPS}
           domain={trend.domain}

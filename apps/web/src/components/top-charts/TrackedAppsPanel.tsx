@@ -36,6 +36,7 @@ import { presetToRange } from "@/lib/ranges";
 import { cn } from "@/lib/utils";
 import { rowLink } from "./chart-actions";
 import { collectionLabel } from "./chart-params";
+import { genreNameInLocale } from "./genre-name";
 import {
   trackedRows,
   type TrackedPlace,
@@ -155,7 +156,9 @@ export function TrackedAppsPanel({
   const home = new Set(
     apps.filter((app) => app.country === chart.country).map((app) => app.id),
   );
-  const title = t("tracked.title", { genre: chart.genreName });
+  const title = t("tracked.title", {
+    genre: genreNameInLocale(chart.genreName, locale),
+  });
 
   return (
     <Card>

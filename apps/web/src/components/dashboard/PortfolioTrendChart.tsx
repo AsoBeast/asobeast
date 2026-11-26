@@ -27,7 +27,7 @@ import {
   PENDING_LINE_PROPS,
   PREVIOUS_LINE_PROPS,
   seriesColor,
-  TIME_AXIS_PROPS,
+  timeAxisPropsInLocale,
   VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
 import {
@@ -199,6 +199,7 @@ export function PortfolioTrendChart({
   notes?: DayNoter;
 }) {
   const t = useTranslations("dashboard");
+  const locale = useAppLocale();
   const fadeId = useFadeId();
   const height = CHART_HEIGHT.tall;
 
@@ -238,7 +239,7 @@ export function PortfolioTrendChart({
       <ComposedChart accessibilityLayer data={trend.rows} margin={CHART_MARGIN}>
         <SeriesFade id={fadeId} color={SERIES} />
         <CartesianGrid {...GRID_PROPS} />
-        <XAxis {...TIME_AXIS_PROPS} ticks={trend.dayTicks} />
+        <XAxis {...timeAxisPropsInLocale(locale)} ticks={trend.dayTicks} />
         <YAxis
           {...VALUE_AXIS_PROPS}
           domain={trend.domain}

@@ -268,13 +268,13 @@ function RankingsPanel({
         {facts === null ? <span /> : <span>{facts}</span>}
         <div className="flex flex-wrap items-center gap-2 print:hidden">
           <ExportCsvButton
-            subject="rankings"
+            subject={t("exportSubject")}
             disabled={scoped.length === 0 || chart.checkedDays === 0}
             onClick={() => exportRankings(id, bounds, chart)}
           />
           {imageReady ? (
             <ChartImageButtons
-              subject="the rankings chart"
+              subject={t("chartSubject")}
               makeJob={makeImageJob}
             />
           ) : null}

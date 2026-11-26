@@ -147,7 +147,7 @@ export function StartHere({
                   </span>
                   <span>
                     {top.evidence
-                      ? summarizeEvidence(top.evidence)
+                      ? summarizeEvidence(top.evidence, locale)
                       : evidenceUnavailable(t)}
                   </span>
                 </div>
@@ -155,7 +155,7 @@ export function StartHere({
               <ImpactFigure impact={top.impact} labelled />
             </div>
             <NumberedSteps
-              steps={actionSteps(top)}
+              steps={actionSteps(top, locale)}
               muteLast
               className="gap-2"
             />

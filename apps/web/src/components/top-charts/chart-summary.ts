@@ -14,6 +14,7 @@ import {
 } from "@/lib/format";
 import type { Locale } from "@/lib/locale";
 import { collectionLabel } from "./chart-params";
+import { genreNameInLocale } from "./genre-name";
 
 const english = createTranslator({
   locale: "en",
@@ -194,7 +195,7 @@ function uncapturedLede(
 ) {
   const { t, locale } = copy;
   const [{ chart, dates }] = pages;
-  const category = `${chart.genreName} in ${formatCountryInLocale(chart.country, locale)}`;
+  const category = `${genreNameInLocale(chart.genreName, locale)} in ${formatCountryInLocale(chart.country, locale)}`;
   return [
     {
       text:

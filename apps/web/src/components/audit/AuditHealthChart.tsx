@@ -27,7 +27,7 @@ import {
   SCORE_AXIS_PROPS,
   seriesColor,
   timeAxisPropsInLocale,
-  TIME_TOOLTIP_PROPS,
+  timeTooltipPropsInLocale,
   VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
 import {
@@ -145,7 +145,9 @@ export function AuditHealthChart({
           <XAxis {...timeAxisPropsInLocale(locale)} />
           <YAxis {...VALUE_AXIS_PROPS} {...SCORE_AXIS_PROPS} />
           <ChartTooltip
-            content={<ChartTooltipContent {...TIME_TOOLTIP_PROPS} />}
+            content={
+              <ChartTooltipContent {...timeTooltipPropsInLocale(locale)} />
+            }
           />
           {changes.map((change, index) => (
             <ReferenceLine

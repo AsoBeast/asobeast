@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { ErrorState } from "@/components/layout/ErrorState";
 
 export default function AuditError({
@@ -9,7 +10,6 @@ export default function AuditError({
   error: Error & { digest?: string };
   retry: () => void;
 }) {
-  return (
-    <ErrorState error={error} retry={retry} title="Audit could not be loaded" />
-  );
+  const t = useTranslations("errors");
+  return <ErrorState error={error} retry={retry} title={t("boundary.audit")} />;
 }

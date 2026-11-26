@@ -18,8 +18,8 @@ import {
   LINE_PROPS,
   seriesColor,
   seriesDash,
-  TIME_AXIS_PROPS,
-  TIME_TOOLTIP_PROPS,
+  timeAxisPropsInLocale,
+  timeTooltipPropsInLocale,
   VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
 import {
@@ -28,6 +28,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { trendChartData } from "./action-trend-chart";
 
 export function ActionTrendChart({
@@ -38,6 +39,7 @@ export function ActionTrendChart({
   item: ActionItem;
 }) {
   const t = useTranslations("actions");
+  const locale = useAppLocale();
   const data = trendChartData(trend, item, t);
   const state = trendState(data.plotted);
   if (state !== "ready") {
@@ -66,7 +68,7 @@ export function ActionTrendChart({
       >
         <LineChart accessibilityLayer data={data.rows} margin={CHART_MARGIN}>
           <CartesianGrid {...GRID_PROPS} />
-          <XAxis {...TIME_AXIS_PROPS} />
+          <XAxis {...timeAxisPropsInLocale(locale)} />
           <YAxis
             {...VALUE_AXIS_PROPS}
             reversed={data.reversed}
@@ -89,7 +91,9 @@ export function ActionTrendChart({
             />
           ))}
           <ChartTooltip
-            content={<ChartTooltipContent {...TIME_TOOLTIP_PROPS} />}
+            content={
+              <ChartTooltipContent {...timeTooltipPropsInLocale(locale)} />
+            }
           />
           <Line
             {...LINE_PROPS}

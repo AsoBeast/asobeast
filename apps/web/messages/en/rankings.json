@@ -1,5 +1,7 @@
 {
   "title": "Rankings",
+  "exportSubject": "rankings",
+  "chartSubject": "the rankings chart",
   "reportMarkets": "Report markets",
   "allMarkets": "All markets",
   "allMarketsLower": "all markets",

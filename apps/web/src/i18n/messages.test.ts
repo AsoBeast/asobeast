@@ -1,5 +1,14 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import {
+  ACTION_CATEGORIES,
+  ACTION_PRIORITIES,
+  ACTION_RULES,
+  ACTION_STATUSES,
+  APP_LOCALIZATION_ORIGINS,
+  CHANGE_FIELDS,
+  CATEGORY_COLLECTIONS,
+} from "@asobeast/shared";
 import { IntlMessageFormat } from "intl-messageformat";
 import { describe, expect, it } from "vitest";
 import { LOCALES } from "@/lib/locale";
@@ -230,5 +239,55 @@ describe("message catalogs", () => {
     }
 
     expect(missing).toEqual([]);
+  });
+
+  it("translates every localization origin", async () => {
+    const [english, chinese] = await Promise.all(
+      LOCALES.map((locale) => loadMessages(locale)),
+    );
+    const englishOrigins = valueAt(english, "localizations.origin");
+    const chineseOrigins = valueAt(chinese, "localizations.origin");
+    for (const origin of APP_LOCALIZATION_ORIGINS) {
+      expect(
+        englishOrigins,
+        `en.localizations.origin.${origin}`,
+      ).toHaveProperty(origin);
+      expect(
+        chineseOrigins,
+        `zh-CN.localizations.origin.${origin}`,
+      ).toHaveProperty(origin);
+    }
+  });
+
+  it("catches missing dynamic enum keys in both catalogs", async () => {
+    const [english, chinese] = await Promise.all(
+      LOCALES.map((locale) => loadMessages(locale)),
+    );
+    const dynamic = [
+      ...ACTION_RULES.map(
+        (value) => ["actions.rules", value.replace(/[._]/g, "-")] as const,
+      ),
+      ...ACTION_STATUSES.map(
+        (value) => ["actions.statuses", value.toLowerCase()] as const,
+      ),
+      ...ACTION_PRIORITIES.map(
+        (value) => ["actions.priorities", value] as const,
+      ),
+      ...ACTION_CATEGORIES.map(
+        (value) => ["actions.categories", value] as const,
+      ),
+      ...CHANGE_FIELDS.map(
+        (value) => ["actions.evidenceFields", value] as const,
+      ),
+      ...CATEGORY_COLLECTIONS.map(
+        (value) => ["topCharts.collections", value] as const,
+      ),
+    ];
+    for (const [path, key] of dynamic) {
+      expect(valueAt(english, path), `en.${path}.${key}`).toHaveProperty(key);
+      expect(valueAt(chinese, path), `zh-CN.${path}.${key}`).toHaveProperty(
+        key,
+      );
+    }
   });
 });

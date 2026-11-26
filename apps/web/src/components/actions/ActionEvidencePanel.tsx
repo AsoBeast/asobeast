@@ -1,5 +1,6 @@
 import type { ActionEvidence } from "@asobeast/shared";
 import { useTranslations } from "next-intl";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { Badge } from "@/components/ui/badge";
 import { GradedNumber } from "@/components/ui/graded";
 import { grade } from "@/lib/grade";
@@ -49,6 +50,7 @@ export function ActionEvidencePanel({
   evidence: ActionEvidence | null;
 }) {
   const t = useTranslations("actions");
+  const locale = useAppLocale();
   if (!evidence) {
     return (
       <p className="text-dense text-muted-foreground">
@@ -57,7 +59,7 @@ export function ActionEvidencePanel({
     );
   }
 
-  const { facts, lists, summary } = evidenceSections(evidence, t);
+  const { facts, lists, summary } = evidenceSections(evidence, t, locale);
 
   return (
     <div className="flex flex-col gap-3">
