@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isTrackedRow, occurrences } from "./density-marks";
+import { isTrackedRow, markedParts, occurrences } from "./density-marks";
 
 const textAt = (text: string, row: string): string[] =>
   occurrences(text, row).map(({ start, end }) => text.slice(start, end));
@@ -59,6 +59,21 @@ describe("occurrences", () => {
     expect(textAt(text, "help")).toEqual(["help"]);
   });
 
+  it("finds a phrase as often as it overlaps itself", () => {
+    expect(textAt("tab tab tab", "tab tab")).toEqual(["tab tab", "tab tab"]);
+    expect(textAt("habit #habit habit", "habit habit")).toEqual([
+      "habit #habit",
+      "habit habit",
+    ]);
+    expect(textAt("fire 🔥 fire fire", "fire fire")).toEqual([
+      "fire 🔥 fire",
+      "fire fire",
+    ]);
+    expect(textAt("タイマータイマータイマー", "タイマータイマー")).toHaveLength(
+      2,
+    );
+  });
+
   it("finds a spaceless row by its characters", () => {
     expect(textAt("集中タイマーと集中タイマー", "集中タイマー")).toEqual([
       "集中タイマー",
@@ -73,5 +88,24 @@ describe("occurrences", () => {
 
   it("treats the row as text, never as a pattern", () => {
     expect(occurrences("axb a+b", "a+b")).toEqual([{ start: 4, end: 7 }]);
+  });
+});
+
+describe("markedParts", () => {
+  it("draws an overlapping run as one mark", () => {
+    expect(markedParts("Go tab tab tab now", "tab tab")).toEqual([
+      { text: "Go ", marked: false, start: 0 },
+      { text: "tab tab tab", marked: true, start: 3 },
+      { text: " now", marked: false, start: 14 },
+    ]);
+  });
+
+  it("keeps separate occurrences apart", () => {
+    expect(
+      markedParts("plan a, plan", "plan").filter((part) => part.marked),
+    ).toEqual([
+      { text: "plan", marked: true, start: 0 },
+      { text: "plan", marked: true, start: 8 },
+    ]);
   });
 });

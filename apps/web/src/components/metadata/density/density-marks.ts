@@ -39,7 +39,7 @@ const spacelessRanges = (text: string, row: string): TextRange[] => {
   for (
     let start = haystack.indexOf(needle);
     start !== -1;
-    start = haystack.indexOf(needle, start + needle.length)
+    start = haystack.indexOf(needle, start + 1)
   ) {
     ranges.push({ start, end: start + needle.length });
   }
@@ -51,10 +51,12 @@ const wordRanges = (text: string, words: readonly string[]): TextRange[] => {
     `${BEFORE_WORD}${words.join(BETWEEN_WORDS)}${AFTER_WORD}`,
     "giu",
   );
-  return [...text.matchAll(pattern)].map((match) => ({
-    start: match.index,
-    end: match.index + match[0].length,
-  }));
+  const ranges: TextRange[] = [];
+  for (let match = pattern.exec(text); match; match = pattern.exec(text)) {
+    ranges.push({ start: match.index, end: match.index + match[0].length });
+    pattern.lastIndex = match.index + 1;
+  }
+  return ranges;
 };
 
 export function occurrences(text: string, row: string): TextRange[] {
@@ -64,4 +66,43 @@ export function occurrences(text: string, row: string): TextRange[] {
   return SPACELESS_CHARACTER.test(row)
     ? spacelessRanges(searched, row.trim())
     : wordRanges(searched, words);
+}
+
+export interface MarkedPart {
+  text: string;
+  marked: boolean;
+  start: number;
+}
+
+const merged = (ranges: readonly TextRange[]): TextRange[] =>
+  ranges.reduce<TextRange[]>((runs, range) => {
+    const last = runs.at(-1);
+    if (last && range.start < last.end) {
+      return [...runs.slice(0, -1), { start: last.start, end: range.end }];
+    }
+    return [...runs, range];
+  }, []);
+
+export function markedParts(text: string, row: string): MarkedPart[] {
+  const parts: MarkedPart[] = [];
+  let cursor = 0;
+  for (const range of merged(occurrences(text, row))) {
+    if (range.start > cursor) {
+      parts.push({
+        text: text.slice(cursor, range.start),
+        marked: false,
+        start: cursor,
+      });
+    }
+    parts.push({
+      text: text.slice(range.start, range.end),
+      marked: true,
+      start: range.start,
+    });
+    cursor = range.end;
+  }
+  if (cursor < text.length) {
+    parts.push({ text: text.slice(cursor), marked: false, start: cursor });
+  }
+  return parts;
 }
