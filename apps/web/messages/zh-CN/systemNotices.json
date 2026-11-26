@@ -1,0 +1,12 @@
+{
+  "deletionTitle": "此工作区已计划删除",
+  "deletionDetail": "其中的所有应用、关键词和历史记录将在 {date} 或之后被清除。所有者可在此时间前取消删除。",
+  "cancelDeletion": "取消删除",
+  "breakageTitle": "{stores} 的解析似乎已损坏",
+  "breakageDetail": "这是我们的问题，不是你的配置问题。已存储的数据不会受到影响，我们发布修复后采集会自动恢复。在此之前，{stores} 的采集已暂停。",
+  "whatHappensNext": "接下来会发生什么",
+  "delayAllTitle": "今日排名更新延迟",
+  "delayStoresTitle": "你的 {stores} 应用排名更新延迟",
+  "delayEmptyDetail": "今日任务尚未采集任何数据。已存储的历史记录不会改变，采集会自动恢复。",
+  "delayProgressDetail": "今日任务已采集 {tracked} 个被跟踪关键词中的 {captured} 个。在任务完成前，你看到的排名可能仍是昨天的数据。"
+}

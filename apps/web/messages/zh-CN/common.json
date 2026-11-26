@@ -1,5 +1,8 @@
 {
   "language": "语言",
+  "showPassword": "显示密码",
+  "hidePassword": "隐藏密码",
+  "importApp": "导入应用",
   "free": "免费",
   "loading": "加载中…",
   "retry": "重试",

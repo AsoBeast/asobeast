@@ -1,0 +1,204 @@
+{
+  "plans": {
+    "free": "免费版",
+    "trial": "试用版",
+    "indie": "独立版",
+    "ultimate": "旗舰版"
+  },
+  "intervals": {
+    "month": "按月",
+    "year": "按年",
+    "monthName": "月",
+    "yearName": "年",
+    "perMonth": "/月",
+    "perYear": "/年",
+    "monthly": "按月",
+    "yearly": "按年"
+  },
+  "plan": {
+    "title": "套餐",
+    "choose": "选择套餐",
+    "heading": "不受限制地持续优化",
+    "trialHeading": "开启 {days, plural, one {# 天} other {# 天}}免费试用",
+    "chooseTitle": "选择套餐",
+    "billingInterval": "账单周期",
+    "plans": "套餐",
+    "current": "当前套餐",
+    "featuresTitle": "{plan}包含的功能",
+    "includes": "所有套餐均包含",
+    "saving": "节省 {percent, number}%",
+    "features": {
+      "rankTracking": "每日跟踪所有应用商店地区的关键词排名",
+      "scoring": "热度、难度和机会评分",
+      "competitors": "竞品发现与元数据审计",
+      "aiDrafts": "AI 审计与元数据草稿",
+      "alerts": "通过邮件和 Webhook 发送提醒",
+      "api": "个人 API 令牌与 MCP 服务器"
+    },
+    "resources": {
+      "apps": "应用",
+      "keywordMarkets": "关键词市场",
+      "competitorsPerApp": "每个应用的竞品数",
+      "aiCallsPerMonth": "每月 AI 调用次数",
+      "aiCallsThisMonth": "本月 AI 调用次数"
+    },
+    "limits": {
+      "unlimited": "无限制",
+      "apps": {
+        "unlimited": "无限制应用",
+        "count": "{count, plural, one {# 个应用} other {# 个应用}}"
+      },
+      "keywordMarkets": {
+        "unlimited": "无限制关键词市场",
+        "count": "{count, plural, one {# 个关键词市场} other {# 个关键词市场}}"
+      }
+    },
+    "pricePerInterval": "每{interval} {price}",
+    "renewalTerms": "{price}，外加适用的增值税或销售税，{cadence}续费，直到您取消为止",
+    "cardLabel": "{plan}，{price}{current, select, true {，当前套餐} other {}}",
+    "accessPaused": "访问已暂停",
+    "manageBilling": "管理账单",
+    "upgrade": "升级套餐",
+    "resume": "恢复套餐"
+  },
+  "actions": {
+    "current": "当前套餐",
+    "checkout": "选择{plan}",
+    "trial": "今天支付 {price}，开启免费试用",
+    "change": "在账单门户中更改套餐",
+    "resume": "在账单门户中恢复订阅",
+    "pending": "正在确认您的付款"
+  },
+  "status": {
+    "choose": "选择套餐，解锁 AsoBeast 的全部功能。",
+    "paymentConfirming": "正在确认您的付款。通常需要一分钟；如果一天内仍未完成，本次尝试将过期，您可以重新选择套餐。",
+    "trialRefused": "此银行卡或邮箱已经使用过免费试用。请选择套餐，今天即可开始。",
+    "collectionPaused": "数据采集已暂停。AsoBeast 已收集的所有数据仍可查看和导出。",
+    "suspended": "此工作区已被暂停。您的数据仍可查看和导出，账单功能保持开放，但更改和每日运行已暂停。请联系此实例的运营方解除暂停。",
+    "suspendedWithReason": "此工作区已被暂停：{reason}。您的数据仍可查看和导出，账单功能保持开放，但更改和每日运行已暂停。请联系此实例的运营方解除暂停。",
+    "stalledPaywall": "您的订阅已停止扣费。请在账单门户中添加付款方式，订阅将从暂停处继续。",
+    "trialChargeDeclined": "您的试用已结束，但银行卡扣费失败。请在账单门户中更新付款方式以开始使用套餐。",
+    "stalledSettings": "您的订阅已停止扣费。请在账单门户中添加付款方式，跟踪将恢复。",
+    "startTrial": "请从套餐页面开始免费试用。",
+    "dataReadable": "您的数据仍可查看和导出；选择套餐后将恢复跟踪。",
+    "trialActiveUntil": "您的试用有效期至 {date}。",
+    "trialSettingsUntil": "试用有效期至 {date}。",
+    "cancelledTrial": "已取消。您的试用将于 {date} 结束，不会产生扣费。",
+    "trialRunning": "您的试用将持续至 {date}。请在账单门户中更改或取消。",
+    "trialRunningThen": "您的试用将持续至 {date}，之后{price}。请在账单门户中更改或取消。",
+    "trialSettings": "试用至 {date}。",
+    "trialSettingsThen": "试用至 {date}，之后{price}。",
+    "trialOffer": "今天支付 {price}。您的试用将于 {date} 结束，之后将按您选择的套餐收费，并加上适用的增值税或销售税，持续续费直到您取消。可随时在设置中取消。",
+    "trialEnded": "您的试用已于 {date} 结束。您的数据仍会保留。",
+    "renews": "您的{plan}套餐将于 {date} 续费。",
+    "cancelledAccessUntil": "已取消。您仍可使用至 {date}。",
+    "renewsShort": "将于 {date} 续费。",
+    "billedMonthly": "按月计费，直到您取消。"
+  },
+  "trial": {
+    "bannerEnds": "试用将于 {date} 结束。不会产生扣费。",
+    "bannerRemaining": "试用还剩 {days, plural, one {# 天} other {# 天}}",
+    "bannerRemainingOnly": "试用还剩 {days, plural, one {# 天} other {# 天}}。",
+    "bannerThen": "{remaining}，之后为{plan}，{price}。",
+    "bar": "您的 {days, plural, one {# 天} other {# 天}}试用期为<free>完全免费</free>，将于<date>{endsOn}</date>结束。可随时在设置中取消。",
+    "trustSafe": "无风险：请在 {date} 前取消，这样不会扣费",
+    "trustFree": "前 {days, plural, one {# 天} other {# 天}}无需付费",
+    "trustCancel": "可随时在设置中取消",
+    "trustLabel": "试用为何安全可靠",
+    "label": "您的试用",
+    "paymentNote": "今天将验证您的银行卡，并于 {date} 扣费。"
+  },
+  "payment": {
+    "title": "付款",
+    "secure": "安全支付由 Stripe 处理。",
+    "unconfigured": "此实例尚未配置结账功能。",
+    "handledByLink": "付款由 Stripe 的关联公司 Link 处理，其为记录商户。价格以美元计价；结账时会按适用情况添加销售税或增值税，并可能以您的当地货币扣费。可随时在设置中取消。",
+    "handledByStripe": "付款由 Stripe 处理。可随时在设置中取消。",
+    "planUnreachable": "无法加载您的套餐。请检查网络连接后重试。",
+    "pricesUnreachable": "无法加载价格。请检查网络连接后重试。",
+    "support": "需要帮助？<link>联系支持</link>。"
+  },
+  "checkout": {
+    "label": "结账",
+    "regionMonth": "Stripe 结账：{plan}，按月",
+    "regionYear": "Stripe 结账：{plan}，按年",
+    "unreachable": "无法打开结账页面。请重试。",
+    "reopening": "正在重新打开结账页面…",
+    "priceMissing": "结账功能尚未配置",
+    "startFailed": "无法开始结账。请重试。",
+    "portalFailed": "无法打开账单门户。请重试。",
+    "trialStarted": "您的免费试用已开始。首次扣费日期为 {date}。"
+  },
+  "orderSummary": {
+    "title": "订单摘要",
+    "dueToday": "今日应付",
+    "cancelAnyTime": "可随时在设置中取消。",
+    "nothingBeforeDate": "在上述日期之前不会扣费。",
+    "trialCancel": "{cancel}{nothing}",
+    "thenTrial": "{date}起：{terms}。",
+    "then": "之后{terms}。"
+  },
+  "faq": {
+    "title": "常见问题",
+    "readMore": "阅读更多",
+    "readMoreContext": "：{question}（在新标签页中打开）",
+    "chargeToday": {
+      "question": "今天会扣费吗？",
+      "answer": "不会。今天仅验证您的银行卡，不会扣费。{date}起：{terms}。请在之前从设置中取消，这样不会扣费。"
+    },
+    "chargeLater": {
+      "question": "什么时候扣费？",
+      "answer": "今天收取首个周期的费用。之后{terms}。"
+    },
+    "cancel": {
+      "question": "如何取消？",
+      "answer": "打开设置，然后进入账单，在账单门户中取消。试用在结束前取消不会扣费；付费套餐会运行到您已支付的周期结束。"
+    },
+    "cardSafety": {
+      "question": "我的银行卡在 AsoBeast 上安全吗？",
+      "answer": "银行卡信息由 Stripe 的字段收集，卡号不会传送到 AsoBeast。AsoBeast 是开源项目；此页面背后的代码发布在 GitHub 上。"
+    },
+    "keywordMarket": {
+      "question": "什么是关键词市场？",
+      "answer": "在一个应用商店地区跟踪的一个短语。同一短语在两个国家/地区跟踪，计为两个关键词市场。"
+    },
+    "app": {
+      "question": "什么算作一个应用？",
+      "answer": "您导入并跟踪的应用。其竞品不计入应用上限；每个套餐规定每个应用可跟踪多少竞品。"
+    },
+    "changePlan": {
+      "question": "之后可以更改套餐吗？",
+      "answer": "可以，在设置中更改。升级立即生效；降级在当前周期结束后生效。"
+    },
+    "deleteAccount": {
+      "question": "如何删除我的账号？",
+      "answer": "在设置的工作区中操作。删除会等待几天，在此期间可以取消。"
+    }
+  },
+  "member": {
+    "title": "由工作区所有者管理账单",
+    "note": "账单由工作区所有者管理。",
+    "paused": "数据采集已暂停。AsoBeast 已收集的所有数据仍可查看和导出。请联系工作区所有者选择套餐。",
+    "trial": "{sentence}请联系工作区所有者选择套餐。",
+    "onlyOwner": "只有工作区所有者可以更改套餐或付款方式。"
+  },
+  "quota": {
+    "of": "{used, number} / {limit, number}",
+    "unlimited": "{used, number} / 无限制",
+    "noneIncluded": "{used, number} {counted, select, tracked {个已跟踪} followed {个已关注} used {个已使用} other {个已使用}}，套餐未包含"
+  },
+  "ai": {
+    "noCalls": "此工作区不包含 AI 调用",
+    "renewal": "{date} 续期",
+    "callsLeft": "本月还剩 {left, number} / {limit, number} 次 AI 调用",
+    "spent": "AI 调用次数已用完。{renewal}",
+    "refusal": "此工作区本月已用完套餐包含的 {limit, plural, one {# 次 AI 调用} other {# 次 AI 调用}}。{renewal}。",
+    "trialAllowance": "试用额度有效期至首次扣费。",
+    "usageNoteTrial": "{renewal}。{trial}",
+    "seePlans": "查看套餐"
+  },
+  "keywordLimit": {
+    "notice": "自 {date} 起已超出关键词上限。每日检查会按稳定顺序覆盖前 {limit, plural, one {# 个关键词市场} other {# 个关键词市场}}；请移除关键词或升级套餐以覆盖其余部分。",
+    "noticeUnlimited": "自 {date} 起已超出关键词上限。每日检查会按稳定顺序覆盖关键词市场；请移除关键词或升级套餐以覆盖其余部分。"
+  }
+}

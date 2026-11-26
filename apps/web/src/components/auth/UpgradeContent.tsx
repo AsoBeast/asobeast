@@ -1,13 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { BillingWall } from "@/components/billing/BillingWall";
 import {
   InlineQueryError,
   failedRead,
   type RetryableRead,
 } from "@/components/layout/InlineQueryError";
-import { PLAN_UNREACHABLE } from "@/lib/plan-choice";
 import { accountPlanOptions, billingCatalogOptions } from "@/lib/queries";
 import { MemberBilling } from "./MemberBilling";
 import { SessionCheck } from "./SessionCheck";
@@ -27,6 +27,7 @@ function CheckingSession() {
 }
 
 export function UpgradeContent() {
+  const t = useTranslations("billing");
   const { user, status, isLoading, isMember, authenticated } = useAuth();
   const signedOut = useSignedOutRedirect(true);
   const planRead = useQuery({
@@ -43,7 +44,10 @@ export function UpgradeContent() {
   if (failedRead(planRead)) {
     return (
       <div className="flex justify-center py-12">
-        <InlineQueryError message={PLAN_UNREACHABLE} read={planRead} />
+        <InlineQueryError
+          message={t("payment.planUnreachable")}
+          read={planRead}
+        />
       </div>
     );
   }

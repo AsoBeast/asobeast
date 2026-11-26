@@ -9,7 +9,7 @@ export function isLocale(value: string): value is Locale {
   return LOCALES.some((locale) => locale === value);
 }
 
-function localeForTag(tag: string): Locale | null {
+export function localeForTag(tag: string): Locale | null {
   const normalized = tag.trim().toLowerCase();
   if (
     normalized === "zh" ||

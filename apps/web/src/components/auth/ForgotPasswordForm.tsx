@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import Link from "next/link";
 import { useMutation } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { ApiError, requestPasswordReset } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ const REFUSED_ADDRESS_STATUS = 400;
 const LINK_SENT_FOCUS_KEY = "recovery-link-sent";
 
 export function ForgotPasswordForm() {
+  const t = useTranslations("auth");
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -33,7 +35,7 @@ export function ForgotPasswordForm() {
       setError(
         err instanceof ApiError
           ? err.envelope.message
-          : "Could not send the recovery email. Try again shortly.",
+          : t("passwordReset.failed"),
       );
     },
   });
@@ -54,14 +56,16 @@ export function ForgotPasswordForm() {
   if (mutation.isSuccess) {
     return (
       <AuthCard
-        title="Reset your password"
-        description={`If ${mutation.variables} has an account, a recovery link is on its way. The link expires in an hour.`}
+        title={t("passwordReset.title")}
+        description={t("passwordReset.sent", {
+          email: mutation.variables,
+        })}
         announce
       >
         <AuthActions>
           <Button asChild variant="outline">
             <Link ref={claimFocus} href="/login">
-              Back to sign in
+              {t("backToSignIn")}
             </Link>
           </Button>
         </AuthActions>
@@ -71,18 +75,18 @@ export function ForgotPasswordForm() {
 
   return (
     <AuthCard
-      title="Reset your password"
-      description="Enter your email and we will send you a recovery link."
+      title={t("passwordReset.title")}
+      description={t("passwordReset.description")}
       footer={
         <Link href="/login" className={INLINE_LINK}>
-          Back to sign in
+          {t("backToSignIn")}
         </Link>
       }
     >
       <AuthPanel>
         <form ref={watchForm} onSubmit={submit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t("email")}</Label>
             <Input
               id="email"
               name="email"
@@ -112,7 +116,7 @@ export function ForgotPasswordForm() {
             aria-disabled={mutation.isPending || undefined}
           >
             {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
-            Email me a link
+            {t("passwordReset.submit")}
           </Button>
         </form>
       </AuthPanel>

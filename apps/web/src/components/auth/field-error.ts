@@ -1,5 +1,6 @@
 import type { ApiErrorEnvelope } from "@asobeast/shared";
 import { ApiError } from "@/lib/api";
+import type { MessageTranslator } from "@/i18n/translator";
 
 export type AuthField = "email" | "password" | "current" | "form";
 
@@ -9,6 +10,16 @@ export interface AuthFieldError {
 }
 
 const INVALID_CURRENT_PASSWORD = "Invalid current password";
+
+const FAILURE_KEYS: Readonly<Record<string, string>> = {
+  "Invalid email or password": "invalidCredentials",
+  "Email already registered": "emailRegistered",
+  "That email already has an account": "emailRegistered",
+  "Invalid current password": "invalidCurrentPassword",
+  "That verification link has expired": "linkExpired",
+  "That confirmation link has expired": "linkExpired",
+  "That confirmation link is no longer valid": "linkInvalid",
+};
 
 const FIELD_PREFIXES: ReadonlyArray<readonly [string, AuthField]> = [
   ["email", "email"],
@@ -34,14 +45,26 @@ export function fieldOfAuthError(
   );
 }
 
+export function authApiErrorMessage(
+  error: unknown,
+  fallback: string,
+  translator?: MessageTranslator,
+): string {
+  if (!(error instanceof ApiError)) return fallback;
+  const key = FAILURE_KEYS[error.envelope.message];
+  if (key === undefined) return translator ? fallback : error.envelope.message;
+  return translator ? translator(key) : error.envelope.message;
+}
+
 export function authFieldError(
   error: unknown,
   fallback: string,
+  translator?: MessageTranslator,
 ): AuthFieldError {
   return error instanceof ApiError
     ? {
         field: fieldOfAuthError(error.envelope),
-        message: error.envelope.message,
+        message: authApiErrorMessage(error, fallback, translator),
       }
     : { field: "form", message: fallback };
 }
@@ -49,8 +72,9 @@ export function authFieldError(
 export function passwordFormError(
   error: unknown,
   fallback: string,
+  translator?: MessageTranslator,
 ): AuthFieldError {
-  const found = authFieldError(error, fallback);
+  const found = authFieldError(error, fallback, translator);
   return found.field === "password" ? found : { ...found, field: "form" };
 }
 

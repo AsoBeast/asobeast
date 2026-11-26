@@ -1,0 +1,6 @@
+{
+  "description": "Open-source App Store Optimization toolkit",
+  "errorTitle": "Something went wrong",
+  "errorBody": "{product} could not render this page. Trying again usually clears a transient failure.",
+  "errorReference": "Reference {reference}"
+}

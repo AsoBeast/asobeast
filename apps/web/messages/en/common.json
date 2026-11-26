@@ -1,5 +1,8 @@
 {
   "language": "Language",
+  "showPassword": "Show password",
+  "hidePassword": "Hide password",
+  "importApp": "Import app",
   "free": "Free",
   "loading": "Loading…",
   "retry": "Try again",

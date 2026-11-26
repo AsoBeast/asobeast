@@ -33,6 +33,28 @@ test.describe("locale preference", () => {
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
   });
 
+  test("translates sign-in and registration before authentication", async ({
+    page,
+  }) => {
+    await page.goto("/login");
+
+    await expect(page.getByRole("heading", { name: "登录" })).toBeVisible();
+    await expect(page.getByLabel("邮箱")).toBeVisible();
+    await expect(page.getByLabel("密码", { exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "忘记密码？" })).toBeVisible();
+
+    await page.context().addCookies([
+      {
+        name: "e2e_setup_required",
+        value: "1",
+        domain: "localhost",
+        path: "/",
+      },
+    ]);
+    await page.goto("/register");
+    await expect(page.getByRole("heading", { name: "创建账号" })).toBeVisible();
+  });
+
   test("translates the signed-in shell and can switch back to English", async ({
     context,
     page,

@@ -3,10 +3,11 @@
 import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { changePassword } from "@/lib/api";
-import { PASSWORD_HINT, passwordError } from "@/lib/password";
+import { passwordError, passwordHint } from "@/lib/password";
 import { invalidatePasswordChange } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +31,7 @@ import { FieldErrorMessage } from "./FieldErrorMessage";
 import { useSingleFlight } from "@/lib/single-flight";
 
 export function ChangePasswordDialog({ trigger }: { trigger: ReactNode }) {
+  const t = useTranslations("auth");
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState("");
@@ -49,20 +51,18 @@ export function ChangePasswordDialog({ trigger }: { trigger: ReactNode }) {
     mutationFn: () => changePassword(current, next),
     onSuccess: () => {
       invalidatePasswordChange(queryClient);
-      toast.success(
-        "Password changed. Other sessions were signed out and API tokens revoked.",
-      );
+      toast.success(t("password.changed"));
       reset(false);
     },
     onError: (err) =>
-      setError(authFieldError(err, "Could not change the password.")),
+      setError(authFieldError(err, t("password.changeFailed"), t)),
   });
   const submitOnce = useSingleFlight(mutation);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    const problem = passwordError(next);
+    const problem = passwordError(next, t);
     if (problem) {
       setError({ field: "password", message: problem });
       return;
@@ -76,15 +76,14 @@ export function ChangePasswordDialog({ trigger }: { trigger: ReactNode }) {
       <DialogContent>
         <form onSubmit={submit} className="flex min-h-0 flex-col gap-4">
           <DialogHeader>
-            <DialogTitle>Change password</DialogTitle>
+            <DialogTitle>{t("password.changeTitle")}</DialogTitle>
             <DialogDescription>
-              Changing your password signs out every other session and revokes
-              every API token.
+              {t("password.changeDescription")}
             </DialogDescription>
           </DialogHeader>
           <DialogBody>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="current-password">Current password</Label>
+              <Label htmlFor="current-password">{t("password.current")}</Label>
               <Input
                 id="current-password"
                 type="password"
@@ -101,7 +100,7 @@ export function ChangePasswordDialog({ trigger }: { trigger: ReactNode }) {
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="next-password">New password</Label>
+              <Label htmlFor="next-password">{t("password.new")}</Label>
               <Input
                 id="next-password"
                 type="password"
@@ -120,7 +119,7 @@ export function ChangePasswordDialog({ trigger }: { trigger: ReactNode }) {
                 id="next-password-rule"
                 className="text-caption text-muted-foreground"
               >
-                {PASSWORD_HINT}
+                {passwordHint(t)}
               </p>
               <FieldErrorMessage
                 error={error}
@@ -137,7 +136,7 @@ export function ChangePasswordDialog({ trigger }: { trigger: ReactNode }) {
           <DialogFooter>
             <Button type="submit" disabled={mutation.isPending}>
               {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
-              Change password
+              {t("password.changeSubmit")}
             </Button>
           </DialogFooter>
         </form>

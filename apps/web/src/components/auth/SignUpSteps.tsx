@@ -1,10 +1,7 @@
 import { Check, ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
-import {
-  SIGN_UP_STEP_STATE_TEXT,
-  type SignUpStep,
-  type SignUpStepState,
-} from "@/lib/sign-up-steps";
+import type { SignUpStep, SignUpStepState } from "@/lib/sign-up-steps";
 import { cn } from "@/lib/utils";
 
 const MARK: Record<SignUpStepState, string> = {
@@ -20,16 +17,17 @@ const LABEL: Record<SignUpStepState, string> = {
 };
 
 export function SignUpSteps({ steps }: { steps: readonly SignUpStep[] }) {
+  const t = useTranslations("auth");
   if (steps.length === 0) return null;
 
   return (
     <ol
-      aria-label="Sign up steps"
+      aria-label={t("signUpSteps.label")}
       className="flex flex-col gap-2 text-body sm:flex-row sm:flex-wrap sm:items-center sm:gap-3"
     >
       {steps.map((step, index) => (
         <li
-          key={step.label}
+          key={step.labelKey}
           aria-current={step.state === "current" ? "step" : undefined}
           className="flex items-center gap-2"
         >
@@ -52,11 +50,11 @@ export function SignUpSteps({ steps }: { steps: readonly SignUpStep[] }) {
               <span>{`${index + 1}`}</span>
             )}
           </span>
-          <span className={LABEL[step.state]}>{step.label}</span>
-          {SIGN_UP_STEP_STATE_TEXT[step.state] ? (
-            <span className="sr-only">
-              {SIGN_UP_STEP_STATE_TEXT[step.state]}
-            </span>
+          <span className={LABEL[step.state]}>
+            {t(`signUpSteps.${step.labelKey}`)}
+          </span>
+          {step.state !== "current" ? (
+            <span className="sr-only">{t(`signUpSteps.${step.state}`)}</span>
           ) : null}
         </li>
       ))}

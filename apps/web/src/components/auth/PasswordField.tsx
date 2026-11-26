@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +34,7 @@ export function PasswordField({
   invalid = error !== null,
   describedBy,
 }: PasswordFieldProps) {
+  const t = useTranslations("common");
   const [shown, setShown] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
@@ -73,7 +75,7 @@ export function PasswordField({
           type="button"
           variant="ghost"
           size="icon-sm"
-          aria-label={shown ? "Hide password" : "Show password"}
+          aria-label={shown ? t("hidePassword") : t("showPassword")}
           aria-controls="password"
           className="absolute top-1 right-1"
           onClick={() => setShown((current) => !current)}
