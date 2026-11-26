@@ -1,4 +1,5 @@
 export * from './limits';
+export * from './function-words';
 export * from './annotations';
 export * from './lint';
 export * from './plurals';

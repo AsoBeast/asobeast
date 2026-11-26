@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  ENGLISH_FUNCTION_WORDS,
   foldAccents,
   isStopword,
   normalizeText,
@@ -112,6 +113,29 @@ describe('stopwords', () => {
 
   it('has a substantial list', () => {
     expect(STOPWORDS.size).toBeGreaterThanOrEqual(120);
+  });
+
+  it('keeps the stop words the same set', () => {
+    const storeWords = [
+      'app',
+      'apps',
+      'free',
+      'best',
+      'new',
+      'official',
+      'get',
+      'download',
+    ];
+
+    expect(STOPWORDS.size).toBe(133);
+    expect(ENGLISH_FUNCTION_WORDS.size).toBe(125);
+    for (const word of storeWords) {
+      expect(STOPWORDS.has(word)).toBe(true);
+      expect(ENGLISH_FUNCTION_WORDS.has(word)).toBe(false);
+    }
+    for (const word of ENGLISH_FUNCTION_WORDS) {
+      expect(STOPWORDS.has(word)).toBe(true);
+    }
   });
 });
 

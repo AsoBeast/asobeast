@@ -1,6 +1,5 @@
-import { tokenize } from '@asobeast/shared';
+import { functionWordTest, tokenize } from '@asobeast/shared';
 import { usableIn } from '../keywords/extraction';
-import { functionWordTest } from '../keywords/function-words';
 
 export interface PopularityTerm {
   term: string;
