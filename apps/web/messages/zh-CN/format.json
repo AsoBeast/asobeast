@@ -4,6 +4,15 @@
     "down": "下降",
     "flat": "持平"
   },
+  "movement": {
+    "up": "从第 {previous} 名上升 {count} 名",
+    "down": "从第 {previous} 名下降 {count} 名",
+    "same": "没有变化",
+    "new": "新进入",
+    "newShort": "新增",
+    "from": "原为第 {previous} 名",
+    "noEarlier": "没有更早的捕获记录"
+  },
   "noData": "暂无{label}数据",
   "deltaLabel": "{period}{direction} {magnitude}{unit}",
   "positionDeltaLabel": "{period}{direction} {magnitude}",

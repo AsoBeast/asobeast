@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   countChars,
   type LintIssue,
@@ -8,7 +9,7 @@ import {
 } from "@asobeast/shared";
 import { LintIssueRow } from "@/components/metadata/LintIssueRow";
 import { Textarea } from "@/components/ui/textarea";
-import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
+import { metadataFieldLabel } from "@/lib/metadata-display";
 import { cn } from "@/lib/utils";
 
 export function MetadataFieldCard({
@@ -24,11 +25,12 @@ export function MetadataFieldCard({
   indexed: boolean;
   issues: LintIssue[];
 }) {
+  const t = useTranslations("metadata");
   const countId = useId();
   const [draft, setDraft] = useState(value);
   const used = countChars(draft);
   const over = used > limit;
-  const label = METADATA_FIELD_LABELS[field];
+  const label = metadataFieldLabel(field, t);
 
   return (
     <div className="flex min-w-0 flex-col gap-3 rounded-lg border border-border bg-card px-4 pt-3 pb-4">
@@ -37,7 +39,7 @@ export function MetadataFieldCard({
           <span>{label}</span>
           {indexed ? null : (
             <span className="text-caption font-normal text-faint-foreground">
-              Not searched by the store
+              {t("notIndexed")}
             </span>
           )}
         </h3>
@@ -49,7 +51,9 @@ export function MetadataFieldCard({
             over ? "text-signal-down" : "text-faint-foreground",
           )}
         >
-          {`${used}/${limit}${over ? ` · ${used - limit} over` : ""}`}
+          {`${t("characterCount", { used, limit })}${
+            over ? ` · ${t("overLimit", { count: used - limit })}` : ""
+          }`}
         </span>
       </div>
 

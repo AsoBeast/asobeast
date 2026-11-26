@@ -1,18 +1,22 @@
 import type {
-  AuditCheckSource,
   AuditCheckStatus,
-  AuditEffort,
   AuditFactorAvailability,
   AuditGrade,
   AuditGroupId,
-  AuditImpact,
   AuditRecommendations,
-  AuditScreenshotMessage,
-  AuditTarget,
   Store,
 } from "@asobeast/shared";
 import { healthTone, type HealthTone } from "@/components/ui/meter";
-import { pluralize, storeLabel } from "@/lib/format";
+import { createTranslator } from "next-intl";
+import enAudit from "../../../messages/en/audit.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import { storeLabel } from "@/lib/format";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "audit",
+  messages: { audit: enAudit },
+});
 
 export const PROVISIONAL_CONFIDENCE = 0.6;
 
@@ -37,140 +41,94 @@ export function provisional(
   return confidence !== undefined && confidence < PROVISIONAL_CONFIDENCE;
 }
 
-export const GRADE_LABEL: Record<AuditGrade, string> = {
-  A: "Excellent",
-  B: "Good",
-  C: "Fair",
-  D: "Weak",
-  F: "Poor",
-};
-
-export const NO_GRADE_LABEL = "Not scored yet";
-
-export const GROUP_LABEL: Record<AuditGroupId, string> = {
-  discoverability: "Search visibility",
-  conversion: "Conversion",
-};
-
-export const STATUS_LABEL: Record<AuditCheckStatus, string> = {
-  pass: "Pass",
-  warn: "Needs work",
-  fail: "Fail",
-  unanswered: "Not scored yet",
-};
-
-export const SOURCE_LABEL: Record<AuditCheckSource, string> = {
-  store: "Store listing",
-  keywords: "Your keywords",
-  competitors: "Competitors",
-  reviews: "Reviews",
-  rankings: "Rankings",
-  ai: "AI observation",
-};
-
-export const EFFORT_LABEL: Record<AuditEffort, string> = {
-  minutes: "Minutes",
-  hours: "Hours",
-  weeks: "Weeks",
-};
-
-export const IMPACT_LABEL: Record<AuditImpact, string> = {
-  high: "High impact",
-  medium: "Medium impact",
-  low: "Low impact",
-};
-
-export const BUCKET_LABEL: Record<keyof AuditRecommendations, string> = {
-  quickWins: "Quick wins · Today",
-  highImpact: "High impact · This week",
-  strategic: "Strategic · This month",
-};
-
-export const BUCKET_TAB_LABEL: Record<keyof AuditRecommendations, string> = {
-  quickWins: "Quick wins",
-  highImpact: "High impact",
-  strategic: "Strategic",
-};
-
-export const TARGET_LABEL: Record<AuditTarget, string> = {
-  metadata: "Open the metadata workbench",
-  keywords: "Open keywords",
-  competitors: "Open competitors",
-  reviews: "Open reviews",
-  rankings: "Open rankings",
-  "store-console": "Change it in your store console",
-  "ai-analysis": "Analyze creative",
-};
-
-export const MESSAGE_LABEL: Record<AuditScreenshotMessage, string> = {
-  benefit: "Benefit",
-  feature: "Feature",
-  "social-proof": "Social proof",
-  "ui-only": "Interface only",
-  onboarding: "Onboarding screen",
-  other: "Other",
-};
-
 export const percent = (share: number): number => Math.round(share * 100);
 
-export const gradeLabel = (grade: AuditGrade | null | undefined): string =>
-  grade ? GRADE_LABEL[grade] : NO_GRADE_LABEL;
+export const gradeLabel = (
+  grade: AuditGrade | null | undefined,
+  t: MessageTranslator = english,
+): string => (grade ? t(`grades.${grade}`) : t("grades.none"));
 
-export const measuredLine = (confidence: number | undefined): string | null =>
+export const groupLabel = (
+  group: AuditGroupId,
+  t: MessageTranslator = english,
+): string => t(`groups.${group}`);
+
+export const measuredLine = (
+  confidence: number | undefined,
+  t: MessageTranslator = english,
+): string | null =>
   confidence === undefined
     ? null
-    : `${percent(confidence)}% of the rubric measured`;
+    : t("measured", { percent: percent(confidence) });
 
-export const potentialLine = (potential: number): string =>
-  `Reach ${Math.round(potential)} by finishing the plan`;
+export const potentialLine = (
+  potential: number,
+  t: MessageTranslator = english,
+): string => t("potential", { score: Math.round(potential) });
 
 export const availabilityLabel = (
   availability: AuditFactorAvailability | undefined,
   store: Store,
+  t: MessageTranslator = english,
 ): string | null => {
   if (availability === "not-measurable") {
-    return `Not measured on the ${storeLabel(store)}`;
+    return t("availability.notMeasurable", { store: storeLabel(store) });
   }
-  return availability === "awaiting-input" ? "Waiting for input" : null;
+  return availability === "awaiting-input" ? t("availability.awaiting") : null;
 };
 
-export const liftLabel = (lift: number | undefined): string =>
-  lift === undefined ? "Lift not estimated" : `+${lift} points`;
+export const liftLabel = (
+  lift: number | undefined,
+  t: MessageTranslator = english,
+): string =>
+  lift === undefined ? t("lift.unknown") : t("lift.points", { points: lift });
 
 const LIFT_DIGITS = 1;
 
 export const liftFigure = (lift: number | undefined): string =>
   lift === undefined ? "—" : `+${lift}`;
 
-export function fixesWorth(fixes: readonly { lift?: number }[]): string | null {
+export function fixesWorth(
+  fixes: readonly { lift?: number }[],
+  t: MessageTranslator = english,
+): string | null {
   const lifts = fixes.flatMap((fix) => fix.lift ?? []);
   if (lifts.length === 0) return null;
   const total = lifts.reduce((sum, lift) => sum + lift, 0);
-  return `+${total.toFixed(LIFT_DIGITS)} points`;
+  return t("fixesWorth", { points: total.toFixed(LIFT_DIGITS) });
 }
 
-export const scoredFactorsLine = (scored: number, total: number): string =>
+export const scoredFactorsLine = (
+  scored: number,
+  total: number,
+  t: MessageTranslator = english,
+): string =>
   scored === total
-    ? `${pluralize(total, "factor")} scored`
-    : `${scored} of ${pluralize(total, "factor")} scored`;
+    ? t("allFactorsScored", { total })
+    : t("scoredFactors", { scored, total });
 
-export const emptyBucketLine = (unanswered: number): string =>
+export const emptyBucketLine = (
+  unanswered: number,
+  t: MessageTranslator = english,
+): string =>
   unanswered === 0
-    ? "Nothing to change here."
-    : `Nothing yet. ${pluralize(unanswered, "check")} ${unanswered === 1 ? "is" : "are"} not scored, so this list may grow.`;
+    ? t("emptyBucket")
+    : t("emptyBucketPending", { count: unanswered });
 
 export const scoreRingLabel = (
   overall: number | null,
   grade: AuditGrade | null | undefined,
   confidence: number | undefined,
+  t: MessageTranslator = english,
 ): string =>
   overall === null
-    ? "ASO score not available yet"
-    : [
-        `ASO score ${Math.round(overall)} out of 100`,
-        `grade ${grade ?? "none"}`,
-        gradeLabel(grade),
-        ...(confidence === undefined
-          ? []
-          : [`${percent(confidence)}% measured`]),
-      ].join(", ");
+    ? t("scoreUnavailable")
+    : t("scoreRing", {
+        score: Math.round(overall),
+        grade: grade ?? "none",
+        label: gradeLabel(grade, t),
+        measured:
+          confidence === undefined
+            ? ""
+            : `, ${t("measuredShort", { percent: percent(confidence) })}`,
+      });

@@ -1,11 +1,21 @@
-import { CHANGE_FIELD_LABELS } from "@asobeast/shared";
-import { formatList } from "@/lib/format";
+import { createTranslator } from "next-intl";
+import enChanges from "../../../messages/en/changes.json";
+import { changeFieldLabel } from "@/lib/change-field-label";
+import type { MessageTranslator } from "@/i18n/translator";
+import { formatListInLocale } from "@/lib/format";
+import type { Locale } from "@/lib/locale";
 import type { ChangeEventItem, ChangeField } from "@asobeast/shared";
 import {
   CHANGE_FIELD_GROUPS,
   type ChangeFieldGroup,
   type ChangeOwner,
 } from "@/lib/search-params";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "changes",
+  messages: { changes: enChanges },
+});
 
 const FIELD_GROUP: Record<ChangeField, ChangeFieldGroup> = {
   title: "title",
@@ -39,6 +49,13 @@ export const CHANGE_KIND_LABELS: Record<ChangeKind, string> = {
   release: "Release and price",
   store: "Events, featuring and badges",
 };
+
+export function changeKindLabel(
+  kind: ChangeKind,
+  t: MessageTranslator = english,
+): string {
+  return t(`kinds.${kind}`);
+}
 
 const GROUP_KIND: Record<ChangeFieldGroup, ChangeKind> = {
   title: "text",
@@ -75,8 +92,10 @@ export const attributeFields = (
   storeDecided: fields.filter((field) => STORE_DECIDED_FIELDS.has(field)),
 });
 
-export const fieldGroupLabel = (group: ChangeFieldGroup): string =>
-  CHANGE_FIELD_LABELS[group];
+export const fieldGroupLabel = (
+  group: ChangeFieldGroup,
+  t: MessageTranslator = english,
+): string => changeFieldLabel(group, t);
 
 const NAMED_FIELDS = 3;
 
@@ -87,23 +106,38 @@ const groupsOf = (fields: readonly ChangeField[]): ChangeFieldGroup[] => [
 export const namesFields = (fields: readonly ChangeField[]): boolean =>
   groupsOf(fields).length <= NAMED_FIELDS;
 
-export function changedFieldWords(fields: readonly ChangeField[]): string {
+export function changedFieldWords(
+  fields: readonly ChangeField[],
+  t: MessageTranslator = english,
+  locale: Locale = "en",
+): string {
   const groups = groupsOf(fields);
-  return groups.length > NAMED_FIELDS
-    ? `${groups.length} fields`
-    : formatList(groups.map((group) => fieldGroupLabel(group).toLowerCase()));
+  if (groups.length > NAMED_FIELDS) {
+    return t("lede.fieldCount", { count: groups.length });
+  }
+  return formatListInLocale(
+    groups.map((group) => {
+      const label = fieldGroupLabel(group, t);
+      return locale === "en" ? label.toLowerCase() : label;
+    }),
+    locale,
+  );
 }
 
 export function fieldPhrase(
   fields: readonly ChangeField[],
   article: string,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
 ): string {
-  const words = changedFieldWords(fields);
-  return namesFields(fields) ? `${article} ${words}` : words;
+  const words = changedFieldWords(fields, t, locale);
+  return namesFields(fields) && locale === "en" ? `${article} ${words}` : words;
 }
 
-export const changedFieldsText = (fields: readonly ChangeField[]): string[] =>
-  fields.map((field) => CHANGE_FIELD_LABELS[field]);
+export const changedFieldsText = (
+  fields: readonly ChangeField[],
+  t: MessageTranslator = english,
+): string[] => fields.map((field) => changeFieldLabel(field, t));
 
 export const dayOf = (event: ChangeEventItem): string =>
   event.capturedAt.slice(0, 10);

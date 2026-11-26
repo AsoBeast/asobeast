@@ -9,6 +9,7 @@ import {
   YAxis,
 } from "recharts";
 import type { ActionItem, ActionTrend } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { ChartNotice, trendState } from "@/components/charts/ChartStates";
 import {
   CHART_HEIGHT,
@@ -36,17 +37,14 @@ export function ActionTrendChart({
   trend: ActionTrend;
   item: ActionItem;
 }) {
-  const data = trendChartData(trend, item);
+  const t = useTranslations("actions");
+  const data = trendChartData(trend, item, t);
   const state = trendState(data.plotted);
   if (state !== "ready") {
     return (
       <ChartNotice
         height={CHART_HEIGHT.compact}
-        title={
-          state === "empty"
-            ? "No history for this action"
-            : "Not enough history yet"
-        }
+        title={state === "empty" ? t("trend.empty") : t("trend.insufficient")}
         body={data.summary}
       />
     );
@@ -54,7 +52,7 @@ export function ActionTrendChart({
 
   const config = {
     value: { label: data.metricLabel, color: seriesColor(0) },
-    notFound: { label: "Not found within", color: seriesColor(0) },
+    notFound: { label: t("trend.notFoundWithin"), color: seriesColor(0) },
   } satisfies ChartConfig;
   const lastDate = data.rows.at(-1)?.date;
 
@@ -64,7 +62,7 @@ export function ActionTrendChart({
         config={config}
         className={`${CHART_HEIGHT.compact} w-full`}
         role="region"
-        aria-label={`${data.metricLabel} over time`}
+        aria-label={t("trend.overTime", { metric: data.metricLabel })}
       >
         <LineChart accessibilityLayer data={data.rows} margin={CHART_MARGIN}>
           <CartesianGrid {...GRID_PROPS} />

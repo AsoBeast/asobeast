@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Gauge, Loader2, TriangleAlert } from "lucide-react";
 import { UPGRADE_PATH, type KeywordFieldSavePreview } from "@asobeast/shared";
@@ -24,8 +25,9 @@ import {
   saveQuotaNotice,
   selectedCost,
 } from "@/lib/app-localizations";
-import { formatCountry } from "@/lib/format";
-import { localizationName } from "@/lib/localizations";
+import { formatCountryInLocale } from "@/lib/format";
+import { localizationNameInLocale } from "@/lib/localizations";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { ReadRoleBadge } from "./ReadRoleBadge";
 
 export function SaveKeywordFieldDialog({
@@ -43,15 +45,18 @@ export function SaveKeywordFieldDialog({
   onClose: () => void;
   returnFocus: () => void;
 }) {
+  const t = useTranslations("localizations");
+  const common = useTranslations("common");
+  const locale = useAppLocale();
   const groupId = useId();
-  const name = localizationName(preview.localization);
+  const name = localizationNameInLocale(preview.localization, locale);
   const [trackIn, setTrackIn] = useState<string[]>(() =>
     preview.markets.map((market) => market.country),
   );
   const cost = selectedCost(preview, trackIn);
-  const quota = saveQuotaNotice(preview.quota, cost);
-  const added = addedSentence(preview);
-  const dropped = droppedSentence(preview);
+  const quota = saveQuotaNotice(preview.quota, cost, t);
+  const added = addedSentence(preview, t);
+  const dropped = droppedSentence(preview, t, locale);
 
   function toggle(country: string, checked: boolean) {
     setTrackIn((current) =>
@@ -76,11 +81,8 @@ export function SaveKeywordFieldDialog({
         }}
       >
         <DialogHeader>
-          <DialogTitle>Save the {name} keyword field</DialogTitle>
-          <DialogDescription>
-            Choose the markets that should track its phrases. Every market on
-            its list reads the field either way.
-          </DialogDescription>
+          <DialogTitle>{t("saveDialog.title", { name })}</DialogTitle>
+          <DialogDescription>{t("saveDialog.description")}</DialogDescription>
         </DialogHeader>
 
         <DialogBody className="gap-4">
@@ -89,7 +91,7 @@ export function SaveKeywordFieldDialog({
             <p className="text-body text-muted-foreground">{dropped}</p>
           ) : null}
           <fieldset className="flex flex-col gap-2">
-            <legend className="sr-only">Markets that track the phrases</legend>
+            <legend className="sr-only">{t("saveDialog.legend")}</legend>
             {preview.markets.map((market) => {
               const checkboxId = `${groupId}-${market.country}`;
               return (
@@ -106,12 +108,14 @@ export function SaveKeywordFieldDialog({
                     }
                   />
                   <Label htmlFor={checkboxId}>
-                    {formatCountry(market.country)}
+                    {formatCountryInLocale(market.country, locale)}
                   </Label>
                   <ReadRoleBadge role={market.role} />
                   {market.newPhrases.length > 0 ? (
                     <span className="text-caption text-muted-foreground">
-                      {`${market.newPhrases.length} new`}
+                      {t("saveDialog.newCount", {
+                        count: market.newPhrases.length,
+                      })}
                     </span>
                   ) : null}
                 </div>
@@ -120,7 +124,7 @@ export function SaveKeywordFieldDialog({
           </fieldset>
           <Alert role="note">
             <Gauge aria-hidden />
-            <AlertDescription>{saveCostText(cost)}</AlertDescription>
+            <AlertDescription>{saveCostText(cost, t)}</AlertDescription>
           </Alert>
           {quota ? (
             <Alert role="note" variant={quota.over ? "warning" : "default"}>
@@ -131,7 +135,9 @@ export function SaveKeywordFieldDialog({
                   <>
                     {" "}
                     <Button asChild variant="link" className="h-auto p-0">
-                      <Link href={UPGRADE_PATH}>See plans</Link>
+                      <Link href={UPGRADE_PATH}>
+                        {t("saveDialog.seePlans")}
+                      </Link>
                     </Button>
                   </>
                 ) : null}
@@ -153,7 +159,7 @@ export function SaveKeywordFieldDialog({
               if (!pending) onClose();
             }}
           >
-            Cancel
+            {common("cancel")}
           </Button>
           <Button
             disabled={quota?.over === true}
@@ -164,10 +170,10 @@ export function SaveKeywordFieldDialog({
           >
             {pending ? <Loader2 className="animate-spin" /> : null}
             {pending
-              ? "Saving…"
+              ? t("saveDialog.saving")
               : trackIn.length === 0
-                ? "Save"
-                : "Save and track"}
+                ? t("saveDialog.save")
+                : t("saveDialog.saveAndTrack")}
           </Button>
         </DialogFooter>
       </DialogContent>

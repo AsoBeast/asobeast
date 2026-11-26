@@ -2,6 +2,7 @@
 
 import { useState, useSyncExternalStore } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import type { ReviewItem } from "@asobeast/shared";
 import {
   useAiAllowanceSpent,
@@ -38,6 +39,7 @@ export function useReviewTranslation(
   review: ReviewItem,
   fallback: string | null,
 ) {
+  const t = useTranslations("reviews");
   const viewer = useViewerLanguage();
   const queryClient = useQueryClient();
   const failAi = useAiFailureToast();
@@ -51,7 +53,7 @@ export function useReviewTranslation(
       seedReviewTranslation(queryClient, appId, review.id, translation);
       setShown(true);
     },
-    onError: (error) => failAi(error, "Could not translate the review"),
+    onError: (error) => failAi(error, t("translation.failed")),
     onSettled: () => invalidateAiUsage(queryClient),
   });
   const translate = useSingleFlight(translating);

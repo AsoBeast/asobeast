@@ -5,8 +5,45 @@ import type {
   ActionRule,
   ActionStatus,
 } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
+import enActions from "../../../messages/en/actions.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import { formatDate, formatMeasure, pluralize } from "@/lib/format";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "actions",
+  messages: { actions: enActions },
+});
+
+const RULE_KEY = {
+  "keyword.add_uncovered": "keyword-add-uncovered",
+  "keyword.defend": "keyword-defend",
+  "keyword.prune": "keyword-prune",
+  "rank.investigate_drop": "rank-investigate-drop",
+  "serp.hold_volatile": "serp-hold-volatile",
+  "audit.fix_factor": "audit-fix-factor",
+  "reviews.investigate_theme": "reviews-investigate-theme",
+  "market.improve_country": "market-improve-country",
+  "keyword.push_to_top10": "keyword-push-to-top10",
+  "metadata.fix_lint": "metadata-fix-lint",
+  "rank.investigate_unexplained_drop": "rank-investigate-unexplained-drop",
+  "competitor.investigate_overtake": "competitor-investigate-overtake",
+  "reviews.investigate_rating_decline": "reviews-investigate-rating-decline",
+  "reviews.reply_negative": "reviews-reply-negative",
+  "listing.ship_update": "listing-ship-update",
+  "conversion.investigate_drop": "conversion-investigate-drop",
+  "listing.cpp_underperforms": "listing-cpp-underperforms",
+} as const satisfies Record<ActionRule, keyof typeof enActions.rules>;
+
+const STATUS_KEY = {
+  OPEN: "open",
+  SNOOZED: "snoozed",
+  DONE: "done",
+  DISMISSED: "dismissed",
+  RESOLVED: "resolved",
+} as const satisfies Record<ActionStatus, keyof typeof enActions.statuses>;
 
 const measure = (value: number | null): string =>
   value === null ? "—" : formatMeasure(value);
@@ -65,6 +102,35 @@ export const ACTION_STATUS_LABEL: Record<ActionStatus, string> = {
   DISMISSED: "Dismissed",
   RESOLVED: "Resolved",
 };
+
+export const actionRuleLabel = (
+  rule: ActionRule,
+  t: MessageTranslator = english,
+): string => t(`rules.${RULE_KEY[rule]}`);
+
+export const actionPriorityLabel = (
+  priority: ActionPriority,
+  t: MessageTranslator = english,
+): string => t(`priorities.${priority}`);
+
+export const actionCategoryLabel = (
+  category: ActionCategory,
+  t: MessageTranslator = english,
+): string => t(`categories.${category}`);
+
+export const actionStatusLabel = (
+  status: ActionStatus,
+  t: MessageTranslator = english,
+): string => t(`statuses.${STATUS_KEY[status]}`);
+
+export const evidenceUnavailable = (t: MessageTranslator = english): string =>
+  t("evidenceUnavailable");
+
+export const impactCaption = (t: MessageTranslator = english): string =>
+  t("impactMeter.caption");
+
+export const aiDisclaimer = (t: MessageTranslator = english): string =>
+  t("aiDisclaimer");
 
 export function summarizeEvidence(evidence: ActionEvidence): string {
   switch (evidence.rule) {

@@ -1,38 +1,26 @@
 "use client";
 
 import { createColumnHelper } from "@tanstack/react-table";
-import { formatRankPosition } from "@asobeast/shared";
 import type { KeywordComparisonRow } from "@asobeast/shared";
-import { AppIcon } from "@/components/AppIcon";
-import { Badge } from "@/components/ui/badge";
-import { positionChipClass } from "@/components/keywords/PositionReadout";
-import { GradedNumber } from "@/components/ui/graded";
-import { formatCountry } from "@/lib/format";
-import { grade } from "@/lib/grade";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
+import type { DataTableFeatures } from "@/components/data-table/table-features";
+import type { MessageTranslator } from "@/i18n/translator";
 import { versusOf, type Versus } from "@/lib/table/facets";
 import { nullsLast } from "@/lib/table/sorting";
-import { cn } from "@/lib/utils";
-import type { DataTableFeatures } from "@/components/data-table/table-features";
 import { isChecked } from "./comparison-checks";
 import {
-  headToHead,
-  headToHeadText,
-  keywordCountText,
-  topTenCount,
-  type HeadToHead,
-} from "./comparison-totals";
-import {
-  comparisonScore,
-  UNNAMED_COMPETITOR,
-  type ComparisonScore,
-} from "./comparison-scores";
-
-interface MatrixCompetitor {
-  id: string;
-  name: string | null;
-  iconUrl: string | null;
-}
+  COMPARISON_SCORES,
+  CompetitorHeading,
+  HeadToHeadTotal,
+  INLINE_HEADING_LIMIT,
+  KeywordCell,
+  MarketCell,
+  PositionCell,
+  ScoreCell,
+  TopTenTotal,
+  type MatrixCompetitor,
+} from "./comparison-cells";
+import { headToHead, keywordCountText, topTenCount } from "./comparison-totals";
 
 export const HIDDEN_COMPARISON_COLUMNS = { versus: false };
 
@@ -70,214 +58,17 @@ export function bestPosition(
   return found.length > 0 ? Math.min(...found) : null;
 }
 
-const POSITION_SLOT = "inline-flex h-6 min-w-9 items-center justify-center";
-const BEST_POSITION = "underline decoration-2 underline-offset-4";
-
-export function PositionCell({
-  value,
-  best,
-  checked = true,
-}: {
-  value: number | null;
-  best: boolean;
-  checked?: boolean;
-}) {
-  const graded = grade("position", value);
-  if (!checked) {
-    return (
-      <span
-        title="Not checked yet"
-        className={cn(POSITION_SLOT, "text-muted-foreground")}
-      >
-        <span aria-hidden>—</span>
-        <span className="sr-only">Not checked yet</span>
-      </span>
-    );
-  }
-  if (graded === null) {
-    return (
-      <span
-        title="Not ranking"
-        className={cn(POSITION_SLOT, "numeric text-muted-foreground")}
-      >
-        <span aria-hidden>{formatRankPosition(value)}</span>
-        <span className="sr-only">Not ranking</span>
-      </span>
-    );
-  }
-  return (
-    <GradedNumber
-      value={formatRankPosition(value)}
-      grade={graded}
-      label="Position"
-      marker={false}
-      className={cn(positionChipClass(graded), best && BEST_POSITION)}
-    />
-  );
-}
-
-const SCORE_LABEL: Record<ComparisonScore, string> = {
-  traffic: "Popularity",
-  difficulty: "Difficulty",
-};
-
-function ScoreCell({
-  row,
-  score,
-}: {
-  row: KeywordComparisonRow;
-  score: ComparisonScore;
-}) {
-  const { label, grade: graded } = comparisonScore(row, score);
-  return (
-    <GradedNumber
-      value={label}
-      grade={graded}
-      label={SCORE_LABEL[score]}
-      aligned
-    />
-  );
-}
-
-const SCORES: readonly ComparisonScore[] = ["traffic", "difficulty"];
-
-const SCORE_ABBR: Record<ComparisonScore, string> = {
-  traffic: "P",
-  difficulty: "D",
-};
-
-function KeywordCell({
-  row,
-  scores,
-  market,
-  onOpenBreakdown,
-}: {
-  row: KeywordComparisonRow;
-  scores: readonly ComparisonScore[];
-  market: string | null;
-  onOpenBreakdown: (keywordId: string, opener: HTMLElement) => void;
-}) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <span className="inline-flex items-center gap-2 font-medium">
-        <button
-          type="button"
-          title={row.text}
-          aria-label={`${row.text}, why apps rank`}
-          data-breakdown-keyword={row.keywordId}
-          onClick={(event) =>
-            onOpenBreakdown(row.keywordId, event.currentTarget)
-          }
-          className="max-w-32 truncate rounded-sm text-left font-medium underline decoration-muted-foreground decoration-dotted underline-offset-4 hover:decoration-foreground md:max-w-64"
-        >
-          {row.text}
-        </button>
-        {row.gap ? <Badge variant="flat">Gap</Badge> : null}
-      </span>
-      {market !== null || scores.length > 0 ? (
-        <span className="flex items-center gap-2 text-caption text-muted-foreground">
-          {market === null ? null : <MarketCell country={market} />}
-          {scores.map((score) => (
-            <span key={score}>
-              <abbr aria-hidden title={SCORE_LABEL[score]}>
-                {SCORE_ABBR[score]}
-              </abbr>{" "}
-              <ScoreCell row={row} score={score} />
-            </span>
-          ))}
-        </span>
-      ) : null}
-    </div>
-  );
-}
-
-function MarketCell({ country }: { country: string }) {
-  const name = formatCountry(country);
-  return (
-    <span title={name} className="text-label text-faint-foreground">
-      <span aria-hidden>{country.toUpperCase()}</span>
-      <span className="sr-only">{name}</span>
-    </span>
-  );
-}
-
-const INLINE_HEADING_LIMIT = 3;
-
-function CompetitorHeading({
-  competitor,
-  stacked,
-}: {
-  competitor: MatrixCompetitor;
-  stacked: boolean;
-}) {
-  return (
-    <span
-      className={cn(
-        "flex justify-end gap-x-2 gap-y-1",
-        stacked ? "flex-col items-end md:w-20" : "items-center",
-      )}
-    >
-      <span aria-hidden className="size-6 shrink-0">
-        <AppIcon src={competitor.iconUrl} size={24} />
-      </span>
-      <span className="sr-only md:not-sr-only">
-        <bdi
-          className={cn(
-            "block text-right",
-            stacked
-              ? "line-clamp-2 break-words whitespace-normal"
-              : "max-w-40 truncate",
-          )}
-        >
-          {competitor.name ?? UNNAMED_COMPETITOR}
-        </bdi>
-      </span>
-    </span>
-  );
-}
-
-const TOTAL_FIGURE = "font-medium text-foreground";
-
 const shownRows = (
   rows: readonly { original: KeywordComparisonRow }[],
 ): KeywordComparisonRow[] => rows.map((row) => row.original);
-
-function TopTenTotal({ count }: { count: number }) {
-  return (
-    <span className="whitespace-nowrap">
-      <span className={TOTAL_FIGURE}>{String(count)}</span>{" "}
-      <span>in top 10</span>
-    </span>
-  );
-}
-
-function HeadToHeadTotal({ totals }: { totals: HeadToHead }) {
-  return (
-    <span>
-      <span
-        aria-hidden
-        className="flex flex-wrap justify-end gap-x-1 whitespace-nowrap"
-      >
-        <span>
-          <span>You lead </span>
-          <span className={TOTAL_FIGURE}>{String(totals.lead)}</span>
-          <span>,</span>
-        </span>
-        <span>
-          <span>trail </span>
-          <span className={TOTAL_FIGURE}>{String(totals.trail)}</span>
-        </span>
-      </span>
-      <span className="sr-only">{headToHeadText(totals)}</span>
-    </span>
-  );
-}
 
 export function comparisonColumns(
   competitors: readonly MatrixCompetitor[],
   onOpenBreakdown: (keywordId: string, opener: HTMLElement) => void,
   scope: MatrixScope,
+  copy: { t: MessageTranslator },
 ) {
+  const { t } = copy;
   const competitorIds = competitors.map((competitor) => competitor.id);
   const isBest = (row: KeywordComparisonRow, value: number | null) =>
     value !== null && value === bestPosition(row, competitorIds);
@@ -287,8 +78,10 @@ export function comparisonColumns(
       id: "market",
       sortFn: "text",
       sortDescFirst: false,
-      meta: { label: "Market" },
-      header: ({ column }) => <SortableHeader column={column} label="Market" />,
+      meta: { label: t("comparison.market") },
+      header: ({ column }) => (
+        <SortableHeader column={column} label={t("comparison.market")} />
+      ),
       cell: ({ row }) => <MarketCell country={row.original.country} />,
       filterFn: (row, id, country: string) =>
         row.getValue<string>(id) === country,
@@ -299,10 +92,10 @@ export function comparisonColumns(
       sortDescFirst: false,
       enableHiding: false,
       header: ({ column }) => (
-        <SortableHeader column={column} label="Keyword" />
+        <SortableHeader column={column} label={t("comparison.keyword")} />
       ),
       footer: ({ table }) => (
-        <span>{keywordCountText(table.getRowModel().rows.length)}</span>
+        <span>{keywordCountText(table.getRowModel().rows.length, t)}</span>
       ),
       cell: ({ row, table }) => (
         <KeywordCell
@@ -313,7 +106,7 @@ export function comparisonColumns(
               ? row.original.country
               : null
           }
-          scores={SCORES.filter(
+          scores={COMPARISON_SCORES.filter(
             (score) => !table.getColumn(score)?.getIsVisible(),
           )}
         />
@@ -322,18 +115,18 @@ export function comparisonColumns(
     columnHelper.accessor((row) => nullsLast(row.traffic), {
       id: "traffic",
       ...SCORE_SORT,
-      meta: { label: "Popularity", numeric: true },
+      meta: { label: t("comparison.popularity"), numeric: true },
       header: ({ column }) => (
-        <SortableHeader column={column} label="Popularity" />
+        <SortableHeader column={column} label={t("comparison.popularity")} />
       ),
       cell: ({ row }) => <ScoreCell row={row.original} score="traffic" />,
     }),
     columnHelper.accessor((row) => nullsLast(row.difficulty), {
       id: "difficulty",
       ...SCORE_SORT,
-      meta: { label: "Difficulty", numeric: true },
+      meta: { label: t("comparison.difficulty"), numeric: true },
       header: ({ column }) => (
-        <SortableHeader column={column} label="Difficulty" />
+        <SortableHeader column={column} label={t("comparison.difficulty")} />
       ),
       cell: ({ row }) => <ScoreCell row={row.original} score="difficulty" />,
     }),
@@ -342,7 +135,9 @@ export function comparisonColumns(
       ...POSITION_SORT,
       enableHiding: false,
       meta: { numeric: true },
-      header: ({ column }) => <SortableHeader column={column} label="You" />,
+      header: ({ column }) => (
+        <SortableHeader column={column} label={t("comparison.you")} />
+      ),
       footer: ({ table }) => (
         <TopTenTotal
           count={topTenCount(shownRows(table.getRowModel().rows), scope.appId)}
@@ -376,7 +171,7 @@ export function comparisonColumns(
           header: ({ column }) => (
             <SortableHeader
               column={column}
-              title={competitor.name ?? UNNAMED_COMPETITOR}
+              title={competitor.name ?? t("unnamed")}
               label={
                 <CompetitorHeading
                   competitor={competitor}

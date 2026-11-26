@@ -1,5 +1,6 @@
 import type { AuditFactorResult, AuditGroupId } from "@asobeast/shared";
-import { GROUP_LABEL } from "./audit-copy";
+import { groupLabel } from "./audit-copy";
+import type { MessageTranslator } from "@/i18n/translator";
 
 export interface FactorSection {
   id: AuditGroupId | "factors";
@@ -12,7 +13,10 @@ const GROUPS = [
   "conversion",
 ] as const satisfies readonly AuditGroupId[];
 
-export function factorSections(factors: AuditFactorResult[]): FactorSection[] {
+export function factorSections(
+  factors: AuditFactorResult[],
+  t?: MessageTranslator,
+): FactorSection[] {
   const measurable = factors.filter(
     (factor) => factor.availability !== "not-measurable",
   );
@@ -20,9 +24,13 @@ export function factorSections(factors: AuditFactorResult[]): FactorSection[] {
   return [
     ...GROUPS.map((id) => ({
       id,
-      label: GROUP_LABEL[id],
+      label: groupLabel(id, t),
       factors: measurable.filter((factor) => factor.group === id),
     })),
-    { id: "factors" as const, label: "Factors", factors: ungrouped },
+    {
+      id: "factors" as const,
+      label: t ? t("factors") : "Factors",
+      factors: ungrouped,
+    },
   ].filter((section) => section.factors.length > 0);
 }

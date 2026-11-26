@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ function ReturnCard({
   description: string;
   pending?: boolean;
 }) {
+  const t = useTranslations("integrations");
   return (
     <Card>
       <CardHeader className={PANEL_HEADER}>
@@ -43,7 +45,7 @@ function ReturnCard({
           />
         ) : (
           <Button asChild variant="outline">
-            <Link href={STORE_CONNECTIONS_PATH}>Back to store connections</Link>
+            <Link href={STORE_CONNECTIONS_PATH}>{t("playSignIn.back")}</Link>
           </Button>
         )}
       </CardContent>
@@ -52,6 +54,7 @@ function ReturnCard({
 }
 
 export function PlaySignInReturn() {
+  const t = useTranslations("integrations");
   const params = useSearchParams();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -64,7 +67,7 @@ export function PlaySignInReturn() {
     mutationFn: () => completePlaySignIn({ code, state }),
     onSuccess: () => {
       invalidateStoreConnectionMutation(queryClient);
-      toast.success("Google Play Console connected");
+      toast.success(t("playSignIn.connected"));
       router.replace(STORE_CONNECTIONS_PATH);
     },
   });
@@ -78,35 +81,35 @@ export function PlaySignInReturn() {
   if (denied) {
     return (
       <ReturnCard
-        title="Google sign in was cancelled"
-        description="Nothing was connected. Start again from store connections when you are ready."
+        title={t("playSignIn.cancelledTitle")}
+        description={t("playSignIn.cancelledBody")}
       />
     );
   }
   if (!ready) {
     return (
       <ReturnCard
-        title="This sign in is incomplete"
-        description="Google did not return the code AsoBeast needs. Start the sign in again from store connections."
+        title={t("playSignIn.incompleteTitle")}
+        description={t("playSignIn.incompleteBody")}
       />
     );
   }
   if (isError) {
     return (
       <ReturnCard
-        title="Google Play was not connected"
+        title={t("playSignIn.failedTitle")}
         description={
           error instanceof ApiError
             ? error.envelope.message
-            : "Could not finish the Google sign in. Try again from store connections."
+            : t("playSignIn.failedBody")
         }
       />
     );
   }
   return (
     <ReturnCard
-      title="Connecting Google Play"
-      description="Checking the bucket with your Google account."
+      title={t("playSignIn.connectingTitle")}
+      description={t("playSignIn.connectingBody")}
       pending
     />
   );

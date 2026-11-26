@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import type { AppListItem, ChartPage } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { TrendLine } from "@/components/charts/Sparkline";
@@ -30,10 +31,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { categoryRanksOptions } from "@/lib/queries";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { presetToRange } from "@/lib/ranges";
 import { cn } from "@/lib/utils";
 import { rowLink } from "./chart-actions";
-import { COLLECTION_LABELS } from "./chart-params";
+import { collectionLabel } from "./chart-params";
 import {
   trackedRows,
   type TrackedPlace,
@@ -72,6 +74,7 @@ function RankTrend({
   row: TrackedRow;
   genre: string;
 }) {
+  const t = useTranslations("topCharts");
   const listed = row.places.find((place) => place.entry);
   const { data, isError } = useQuery(
     categoryRanksOptions(appId, presetToRange(TREND_RANGE)),
@@ -86,7 +89,9 @@ function RankTrend({
   );
   const latest = points[points.length - 1]?.position ?? null;
   if (isError && !data) {
-    return <span className="text-muted-foreground">Unavailable</span>;
+    return (
+      <span className="text-muted-foreground">{t("tracked.unavailable")}</span>
+    );
   }
   if (!listed || ranks.length < 2) {
     return <span className="text-muted-foreground">—</span>;
@@ -95,14 +100,18 @@ function RankTrend({
     <TrendLine
       className="ml-auto"
       values={ranks.map((rank) => -rank)}
-      label={`${row.title} in ${COLLECTION_LABELS[listed.collection]}, last 30 days`}
-      now={latest === null ? "not listed" : `#${latest}`}
+      label={t("tracked.trendLabel", {
+        app: row.title,
+        collection: collectionLabel(listed.collection, t),
+      })}
+      now={latest === null ? t("tracked.notListed") : `#${latest}`}
     />
   );
 }
 
 function AppCell({ row }: { row: TrackedRow }) {
-  const link = rowLink(row.link);
+  const t = useTranslations("topCharts");
+  const link = rowLink(row.link, t);
   if (!link) return null;
   return (
     <div className="flex min-w-0 items-center gap-3">
@@ -116,17 +125,14 @@ function AppCell({ row }: { row: TrackedRow }) {
       </Link>
       {row.link.role === "own" ? (
         <Badge variant="brand" className="shrink-0">
-          Yours
+          {t("tracked.yours")}
         </Badge>
       ) : (
         <span
           className="shrink-0 truncate text-caption text-faint-foreground @2xl/charts:shrink"
           title={link.label}
         >
-          <span>Competitor</span>
-          <span className="sr-only @2xl/charts:not-sr-only">
-            {link.label.slice("Competitor".length)}
-          </span>
+          <span>{link.label}</span>
         </span>
       )}
     </div>
@@ -140,6 +146,8 @@ export function TrackedAppsPanel({
   pages: readonly ChartPage[];
   apps: readonly AppListItem[];
 }) {
+  const t = useTranslations("topCharts");
+  const locale = useAppLocale();
   const rows = trackedRows(pages);
   if (rows.length === 0) return null;
   const [{ chart }] = pages;
@@ -147,7 +155,7 @@ export function TrackedAppsPanel({
   const home = new Set(
     apps.filter((app) => app.country === chart.country).map((app) => app.id),
   );
-  const title = `Your apps and competitors in ${chart.genreName}`;
+  const title = t("tracked.title", { genre: chart.genreName });
 
   return (
     <Card>
@@ -156,7 +164,9 @@ export function TrackedAppsPanel({
           <h2>{title}</h2>
         </CardTitle>
         <CardAction className={PANEL_COUNT}>
-          <span className="numeric">{`${rows.length} listed`}</span>
+          <span className="numeric">
+            {t("tracked.listed", { count: rows.length })}
+          </span>
         </CardAction>
       </CardHeader>
       <CardContent className={PANEL_BLEED}>
@@ -164,14 +174,14 @@ export function TrackedAppsPanel({
           <TableCaption className="sr-only">{title}</TableCaption>
           <TableHeader>
             <TableRow>
-              <TableHead>App</TableHead>
+              <TableHead>{t("app")}</TableHead>
               {pages.map(({ chart: { collection } }) => (
                 <TableHead key={collection} numeric>
-                  {COLLECTION_LABELS[collection]}
+                  {collectionLabel(collection, t)}
                 </TableHead>
               ))}
               <TableHead numeric className={WIDE_ONLY}>
-                Last 30 days
+                {t("tracked.last30Days")}
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -193,6 +203,8 @@ export function TrackedAppsPanel({
                       period={compareLabel(
                         pages[index].compare,
                         pages[index].comparison,
+                        t,
+                        locale,
                       )}
                     />
                   </TableCell>
@@ -215,10 +227,7 @@ export function TrackedAppsPanel({
       </CardContent>
       {captured ? (
         <CardFooter>
-          <span>
-            Read from every listed place of each capture, not only the rows
-            shown below.
-          </span>
+          <span>{t("tracked.footer")}</span>
         </CardFooter>
       ) : null}
     </Card>

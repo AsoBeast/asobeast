@@ -40,6 +40,7 @@ export function SearchInput({
       <InputGroupInput
         ref={input}
         aria-label={label}
+        data-search-input=""
         placeholder={label}
         value={value}
         onChange={(event) => search(event.target.value)}

@@ -1,6 +1,7 @@
 "use client";
 
 import { type ComponentProps, useId, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import type { AppDetail, Store } from "@asobeast/shared";
 import { PANEL_HEADER } from "@/components/layout/panel-classes";
@@ -25,13 +26,8 @@ import {
   parseGoalDays,
   parseTargetTenths,
 } from "@/lib/ratings-goal";
-import {
-  DAYS_HINT,
-  formatTenths,
-  goalNotes,
-  goalSentence,
-  TARGET_HINT,
-} from "./ratings-goal-copy";
+import { formatTenths, goalNotes, goalSentence } from "./ratings-goal-copy";
+import { useAppLocale } from "@/lib/use-app-locale";
 
 type GoalFieldProps = {
   label: string;
@@ -95,10 +91,28 @@ function GoalResult({
   targetHintId: string;
   daysHintId: string;
 }) {
+  const t = useTranslations("reviews");
+  const locale = useAppLocale();
   return (
     <div aria-live="polite" className="flex flex-col gap-1">
-      {target === null ? <Hint id={targetHintId} text={TARGET_HINT} /> : null}
-      {days === null ? <Hint id={daysHintId} text={DAYS_HINT} /> : null}
+      {target === null ? (
+        <Hint
+          id={targetHintId}
+          text={t("goal.targetHint", {
+            min: formatTenths(MIN_TARGET_TENTHS),
+            max: formatTenths(MAX_TARGET_TENTHS),
+          })}
+        />
+      ) : null}
+      {days === null ? (
+        <Hint
+          id={daysHintId}
+          text={t("goal.daysHint", {
+            min: MIN_GOAL_DAYS,
+            max: MAX_GOAL_DAYS,
+          })}
+        />
+      ) : null}
       {target === null || days === null ? null : (
         <p className="text-body">
           {goalSentence(
@@ -106,6 +120,8 @@ function GoalResult({
             target,
             rating.average,
             days,
+            t,
+            locale,
           )}
         </p>
       )}
@@ -114,6 +130,7 @@ function GoalResult({
 }
 
 function GoalPanel({ rating }: { rating: StoredRating }) {
+  const t = useTranslations("reviews");
   const headingId = useId();
   const targetHintId = useId();
   const daysHintId = useId();
@@ -131,13 +148,13 @@ function GoalPanel({ rating }: { rating: StoredRating }) {
       <Card>
         <CardHeader className={PANEL_HEADER}>
           <CardTitle asChild>
-            <h2 id={headingId}>Ratings goal</h2>
+            <h2 id={headingId}>{t("goal.title")}</h2>
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-3">
             <GoalField
-              label="Target rating"
+              label={t("goal.target")}
               value={targetValue}
               hintId={target === null ? targetHintId : undefined}
               onValueChange={setTargetText}
@@ -147,7 +164,7 @@ function GoalPanel({ rating }: { rating: StoredRating }) {
               max={MAX_TARGET_TENTHS / 10}
             />
             <GoalField
-              label="Days"
+              label={t("goal.days")}
               value={daysText}
               hintId={days === null ? daysHintId : undefined}
               onValueChange={setDaysText}
@@ -166,7 +183,7 @@ function GoalPanel({ rating }: { rating: StoredRating }) {
           />
         </CardContent>
         <CardFooter className="flex-col items-start gap-1">
-          {goalNotes(rating.store, rating.count).map((note) => (
+          {goalNotes(rating.store, rating.count, t).map((note) => (
             <span key={note}>{note}</span>
           ))}
         </CardFooter>

@@ -1,6 +1,7 @@
 "use client";
 
 import { createColumnHelper } from "@tanstack/react-table";
+import { useTranslations } from "next-intl";
 import { Check, CircleDashed, Minus } from "lucide-react";
 import {
   type CoverageFieldStatus,
@@ -12,7 +13,8 @@ import { BucketLabel } from "@/components/BucketBadge";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import type { DataTableFeatures } from "@/components/data-table/table-features";
 import { localizationName } from "@/lib/localizations";
-import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
+import { metadataFieldLabel } from "@/lib/metadata-display";
+import type { MessageTranslator } from "@/i18n/translator";
 import { cn } from "@/lib/utils";
 import { screenshotTextMark } from "./screenshot-text-marks";
 
@@ -26,7 +28,8 @@ const columnHelper = createColumnHelper<
 const MARK = "inline-flex size-6 items-center justify-center";
 
 function CoverageMark({ covered, label }: { covered: boolean; label: string }) {
-  const name = `${covered ? "in" : "missing from"} ${label}`;
+  const t = useTranslations("metadata");
+  const name = t(`coverage.${covered ? "markIn" : "markMissing"}`, { label });
   return (
     <span
       title={name}
@@ -52,7 +55,8 @@ function FieldMark({
   field: MetadataField;
   status: CoverageFieldStatus | undefined;
 }) {
-  const name = METADATA_FIELD_LABELS[field];
+  const t = useTranslations("metadata");
+  const name = metadataFieldLabel(field, t);
   const covered = status?.covered ?? false;
   const label =
     covered && status?.localization !== undefined
@@ -62,38 +66,47 @@ function FieldMark({
 }
 
 function NotReadMark({ label }: { label: string }) {
+  const t = useTranslations("metadata");
   return (
     <span className={cn(MARK, "text-faint-foreground")}>
       <CircleDashed className="size-4" aria-hidden />
-      <span className="sr-only">{`${label} not read`}</span>
+      <span className="sr-only">{t("coverage.notRead", { label })}</span>
     </span>
   );
 }
 
 function CoverageVerdict({ row }: { row: KeywordCoverageRow }) {
+  const t = useTranslations("metadata");
   if (row.uncovered) {
-    return <span className="text-label text-warning">Uncovered</span>;
+    return (
+      <span className="text-label text-warning">{t("coverage.uncovered")}</span>
+    );
   }
   if (row.wordsSplit) {
     return (
-      <span className="text-label text-muted-foreground">Words split</span>
+      <span className="text-label text-muted-foreground">
+        {t("coverage.wordsSplit")}
+      </span>
     );
   }
   return null;
 }
 
 function ScreenshotTextCell({ row }: { row: KeywordCoverageRow }) {
+  const t = useTranslations("metadata");
   const mark = screenshotTextMark(row);
+  const label = t("coverage.screenshotTextLabel");
   return mark === "unread" ? (
-    <NotReadMark label="screenshot text" />
+    <NotReadMark label={label} />
   ) : (
-    <CoverageMark covered={mark === "covered"} label="screenshot text" />
+    <CoverageMark covered={mark === "covered"} label={label} />
   );
 }
 
 export function coverageColumns(
   fields: readonly MetadataField[],
   withScreenshotText: boolean,
+  t: MessageTranslator,
 ) {
   return columnHelper.columns([
     columnHelper.accessor("text", {
@@ -101,7 +114,7 @@ export function coverageColumns(
       sortFn: "text",
       sortDescFirst: false,
       header: ({ column }) => (
-        <SortableHeader column={column} label="Keyword" />
+        <SortableHeader column={column} label={t("coverage.keyword")} />
       ),
       cell: ({ row }) => (
         <span className="flex flex-wrap items-baseline gap-x-3">
@@ -125,7 +138,7 @@ export function coverageColumns(
         sortUndefined: "last",
         sortDescFirst: false,
         header: ({ column }) => (
-          <SortableHeader column={column} label="Bucket" />
+          <SortableHeader column={column} label={t("coverage.bucket")} />
         ),
         cell: ({ row }) => <BucketLabel bucket={row.original.bucket} />,
       },
@@ -133,7 +146,7 @@ export function coverageColumns(
     ...fields.map((field) =>
       columnHelper.display({
         id: field,
-        header: METADATA_FIELD_LABELS[field],
+        header: metadataFieldLabel(field, t),
         cell: ({ row }) => (
           <FieldMark
             field={field}
@@ -146,7 +159,7 @@ export function coverageColumns(
       ? [
           columnHelper.display({
             id: "screenshotText",
-            header: "Screenshot text",
+            header: t("coverage.screenshotTextLabel"),
             cell: ({ row }) => <ScreenshotTextCell row={row.original} />,
           }),
         ]

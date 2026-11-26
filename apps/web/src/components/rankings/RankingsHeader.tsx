@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useQueryState } from "nuqs";
 import { utcDayOf } from "@asobeast/shared";
 import { PrintReportButton } from "@/components/app-detail/PrintReportButton";
@@ -14,7 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatCountry, formatNumber, pluralize } from "@/lib/format";
+import { formatCountryInLocale, formatNumberInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { keywordMoves, movesSentence } from "@/lib/keyword-day-change";
 import {
   keywordCountriesOptions,
@@ -30,6 +32,8 @@ const COUNT = "numeric text-faint-foreground";
 const FIGURE = "numeric font-medium text-foreground";
 
 function MarketSelect({ id }: { id: string }) {
+  const t = useTranslations("rankings");
+  const locale = useAppLocale();
   const [country, setCountry] = useQueryState("country", countryParser);
   const { data: markets } = useQuery(keywordCountriesOptions(id));
   const choices = country
@@ -51,29 +55,34 @@ function MarketSelect({ id }: { id: string }) {
         void setCountry(next === ALL_MARKETS ? null : next)
       }
     >
-      <SelectTrigger aria-label="Report markets" className="print:hidden">
+      <SelectTrigger aria-label={t("reportMarkets")} className="print:hidden">
         <SelectValue>
           <span className="font-medium">
-            {country ? formatCountry(country) : "All markets"}
+            {country ? formatCountryInLocale(country, locale) : t("allMarkets")}
           </span>
           {markets ? (
             <span className={COUNT}>
-              {formatNumber(country ? (current?.count ?? 0) : total)}
+              {formatNumberInLocale(
+                country ? (current?.count ?? 0) : total,
+                locale,
+              )}
             </span>
           ) : null}
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
         <SelectItem value={ALL_MARKETS}>
-          <span>All markets</span>
+          <span>{t("allMarkets")}</span>
           {markets ? (
-            <span className={COUNT}>{formatNumber(total)}</span>
+            <span className={COUNT}>{formatNumberInLocale(total, locale)}</span>
           ) : null}
         </SelectItem>
         {choices.map((choice) => (
           <SelectItem key={choice.country} value={choice.country}>
-            <span>{formatCountry(choice.country)}</span>
-            <span className={COUNT}>{formatNumber(choice.count)}</span>
+            <span>{formatCountryInLocale(choice.country, locale)}</span>
+            <span className={COUNT}>
+              {formatNumberInLocale(choice.count, locale)}
+            </span>
           </SelectItem>
         ))}
       </SelectContent>
@@ -82,6 +91,8 @@ function MarketSelect({ id }: { id: string }) {
 }
 
 function EntrantsSentence({ id }: { id: string }) {
+  const t = useTranslations("rankings");
+  const locale = useAppLocale();
   const [days] = useQueryState("movers", moverDaysParser);
   const [country] = useQueryState("country", countryParser);
   const { data } = useSuspenseQuery(serpMoversOptions(id, days, country));
@@ -94,13 +105,18 @@ function EntrantsSentence({ id }: { id: string }) {
   return (
     <span>
       {" "}
-      <span className={FIGURE}>{pluralize(apps, "app")}</span>
-      <span>{` entered your top 10 in the last ${days} days.`}</span>
+      <span className={FIGURE}>
+        {t("appCount", { count: formatNumberInLocale(apps, locale) })}
+      </span>
+      <span>{t("enteredTop10Rest", { days })}</span>
     </span>
   );
 }
 
 function RankingsLede({ id }: { id: string }) {
+  const t = useTranslations("rankings");
+  const keywords = useTranslations("keywords");
+  const locale = useAppLocale();
   const [country] = useQueryState("country", countryParser);
   const { data: tracked, dataUpdatedAt } = useSuspenseQuery(
     keywordsOptions(id),
@@ -109,12 +125,26 @@ function RankingsLede({ id }: { id: string }) {
     ? tracked.filter((item) => item.country === country)
     : tracked;
   if (scoped.length === 0) return null;
-  const moved = movesSentence(keywordMoves(scoped, utcDayOf(dataUpdatedAt)));
+  const moved = movesSentence(
+    keywordMoves(scoped, utcDayOf(dataUpdatedAt)),
+    keywords,
+    locale,
+  );
 
   return (
     <>
-      <span className={FIGURE}>{pluralize(scoped.length, "keyword")}</span>
-      <span>{` in ${country ? formatCountry(country) : "all markets"}.`}</span>
+      <span className={FIGURE}>
+        {t("keywordCount", {
+          count: formatNumberInLocale(scoped.length, locale),
+        })}
+      </span>
+      <span>
+        {t("inMarket", {
+          country: country
+            ? formatCountryInLocale(country, locale)
+            : t("allMarketsLower"),
+        })}
+      </span>
       {moved === null ? null : <span>{` ${moved}`}</span>}
       <Suspense fallback={null}>
         <EntrantsSentence id={id} />
@@ -124,9 +154,10 @@ function RankingsLede({ id }: { id: string }) {
 }
 
 export function RankingsHeader({ id }: { id: string }) {
+  const t = useTranslations("rankings");
   return (
     <PageHeader
-      title="Rankings"
+      title={t("title")}
       titleHidden
       controls={
         <>

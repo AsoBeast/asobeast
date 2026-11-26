@@ -1,4 +1,7 @@
-import { ACTION_IMPACT_CAPTION } from "./action-copy";
+"use client";
+
+import { useTranslations } from "next-intl";
+import { impactCaption } from "./action-copy";
 
 export function ImpactFigure({
   impact,
@@ -9,19 +12,20 @@ export function ImpactFigure({
   labelled?: boolean;
   className?: string;
 }) {
+  const t = useTranslations("actions");
   return (
-    <span title={ACTION_IMPACT_CAPTION} className={className}>
+    <span title={impactCaption(t)} className={className}>
       {labelled ? (
         <span
           aria-hidden
           className="block text-right text-label text-faint-foreground"
         >
-          Impact
+          {t("impact")}
         </span>
       ) : null}
       <span className="numeric block text-right text-dense font-medium">
         <span>{impact}</span>
-        <span className="sr-only"> of 100 estimated impact</span>
+        <span className="sr-only">{t("impactMeter.of100")}</span>
       </span>
     </span>
   );

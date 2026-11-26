@@ -1,6 +1,7 @@
 "use client";
 
 import type { AppListItem, ChartPage } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { ChartColumn } from "./ChartColumn";
 import type { ChartSearch } from "./chart-params";
 import { COLUMNS_GRID } from "./skeletons";
@@ -18,6 +19,7 @@ export function ChartColumns({
   busy: boolean;
   search: Pick<ChartSearch, "compare" | "date">;
 }) {
+  const t = useTranslations("topCharts");
   return (
     <>
       <TrackedAppsPanel pages={pages} apps={apps} />
@@ -31,7 +33,7 @@ export function ChartColumns({
           />
         ))}
       </div>
-      <aside aria-label="Trending">
+      <aside aria-label={t("trending.title")}>
         <TrendingPanel pages={pages} />
       </aside>
     </>

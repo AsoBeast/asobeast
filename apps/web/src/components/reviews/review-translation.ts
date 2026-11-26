@@ -3,12 +3,28 @@ import {
   UNKNOWN_LANGUAGE,
   type ReviewItem,
 } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
+import enReviews from "../../../messages/en/reviews.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
 import { replyLanguageName } from "./reply-language";
 
-export function translationCaption(sourceLanguage: string): string {
+const english = createTranslator({
+  locale: "en",
+  namespace: "reviews",
+  messages: { reviews: enReviews },
+});
+
+export function translationCaption(
+  sourceLanguage: string,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
+): string {
   return sourceLanguage === UNKNOWN_LANGUAGE
-    ? "Translated by AI"
-    : `Translated from ${replyLanguageName(sourceLanguage)} by AI`;
+    ? t("translation.unknown")
+    : t("translation.caption", {
+        language: replyLanguageName(sourceLanguage, locale),
+      });
 }
 
 export function primaryLanguage(tag: string | null | undefined): string | null {

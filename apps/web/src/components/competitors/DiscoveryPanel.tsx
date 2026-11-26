@@ -2,6 +2,7 @@
 
 import { Suspense, useMemo } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { flexRender, useTable } from "@tanstack/react-table";
 import { useQueryState, useQueryStates } from "nuqs";
 import { ColumnMenu } from "@/components/data-table/ColumnMenu";
@@ -25,7 +26,7 @@ import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { appDetailOptions, discoveryOptions } from "@/lib/queries";
 import { storeLabel } from "@/lib/format";
-import { DISCOVERY_WINDOWS } from "@/lib/ranges";
+import { DISCOVERY_WINDOWS, rangeLabel } from "@/lib/ranges";
 import {
   discoveryDaysParser,
   searchParser,
@@ -35,6 +36,7 @@ import {
 import { numericProps } from "@/lib/table/column-visibility";
 import { ariaSort } from "@/lib/table/sorting";
 import { cn } from "@/lib/utils";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { COMPETITOR_SECTION } from "./competitor-sections";
 import { discoveryColumns } from "./discovery-columns";
 import {
@@ -64,11 +66,16 @@ function DiscoveryTable({
   days: number;
   storeName: string;
 }) {
+  const t = useTranslations("competitors");
+  const locale = useAppLocale();
   const { data } = useSuspenseQuery(discoveryOptions(id, days));
   const [params, setParams] = useQueryStates(DISCOVERY_PARAMS, {
     urlKeys: DISCOVERY_URL_KEYS,
   });
-  const columns = useMemo(() => discoveryColumns(id), [id]);
+  const columns = useMemo(
+    () => discoveryColumns(id, { t, locale }),
+    [id, t, locale],
+  );
   const [visibility, setVisibility] = useStoredColumnVisibility(
     "discovery",
     columns,
@@ -106,8 +113,8 @@ function DiscoveryTable({
     return (
       <EmptyState
         className={SECTION_EMPTY}
-        title={`Nothing discovered in the last ${days} days`}
-        body="As daily checks accumulate, apps that keep appearing in your keyword results but you do not track surface here. Widen the window to look further back."
+        title={t("discovery.emptyTitle", { days })}
+        body={t("discovery.emptyBody")}
       />
     );
   }
@@ -116,7 +123,7 @@ function DiscoveryTable({
     <div className={SECTION_BODY}>
       <div className={SECTION_TOOLBAR}>
         <SearchInput
-          label="Search apps"
+          label={t("discovery.search")}
           value={params.q}
           onSearch={(q, options) => void setParams({ q }, options)}
         />
@@ -128,7 +135,7 @@ function DiscoveryTable({
       <div className={cn(SECTION_SHEET, PHONE_HIDES_IDLE_SORT)}>
         <Table>
           <TableCaption className="sr-only">
-            {`Untracked ${storeName} apps appearing in your keyword search results over the last ${days} days.`}
+            {t("discovery.caption", { store: storeName, days })}
           </TableCaption>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -154,7 +161,7 @@ function DiscoveryTable({
               <TableRow>
                 <TableCell colSpan={table.getVisibleLeafColumns().length}>
                   <FilteredEmpty
-                    title="No apps match this search"
+                    title={t("discovery.noMatches")}
                     onClear={() => void setParams({ q: null })}
                   />
                 </TableCell>
@@ -173,7 +180,7 @@ function DiscoveryTable({
         </Table>
         <p className={SECTION_FOOTER}>
           <span>
-            <span>{storeName}</span> <span>{`results over ${days} days`}</span>
+            <span>{t("discovery.results", { store: storeName, days })}</span>
           </span>
         </p>
       </div>
@@ -182,6 +189,8 @@ function DiscoveryTable({
 }
 
 export function DiscoveryPanel({ id }: { id: string }) {
+  const t = useTranslations("competitors");
+  const format = useTranslations("format");
   const [days, setDays] = useQueryState("days", discoveryDaysParser);
   const { data: detail } = useSuspenseQuery(appDetailOptions(id));
   const storeName = storeLabel(detail.store);
@@ -189,17 +198,17 @@ export function DiscoveryPanel({ id }: { id: string }) {
   return (
     <CollapsibleCard
       section={COMPETITOR_SECTION.discovery}
-      title="Apps you don’t track yet"
+      title={t("discovery.title")}
       actions={
         <>
           <Tabs
             value={String(days)}
             onValueChange={(next) => void setDays(Number(next) as typeof days)}
           >
-            <TabsList aria-label="Discovery window">
+            <TabsList aria-label={t("discovery.window")}>
               {DISCOVERY_WINDOWS.map((window) => (
                 <TabsOption key={window} value={String(window)}>
-                  {window}d
+                  {rangeLabel(`${window}d`, format)}
                 </TabsOption>
               ))}
             </TabsList>

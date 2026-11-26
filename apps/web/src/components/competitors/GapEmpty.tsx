@@ -1,24 +1,20 @@
 import { GAP_TOP } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { EmptyState } from "@/components/ui/empty-state";
-import { formatCountry } from "@/lib/format";
+import { formatCountryInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import type { GapEmpty as GapEmptyKind, GapTab } from "@/lib/gap-lists";
 import { SECTION_EMPTY } from "./section-layout";
 
-const TAB_EMPTY: Record<GapTab, { title: string; body?: string }> = {
-  gaps: {
-    title: "No keyword gaps right now.",
-    body: `A competitor ranks in the top ${GAP_TOP} for none of the keywords you are missing.`,
-  },
-  winnable: { title: "No winnable gaps right now." },
-  threats: { title: "No threats right now." },
-  lead: { title: "You do not lead on any keyword yet." },
+const TAB_EMPTY: Record<
+  GapTab,
+  "gapsTitle" | "winnableTitle" | "threatsTitle" | "leadTitle"
+> = {
+  gaps: "gapsTitle",
+  winnable: "winnableTitle",
+  threats: "threatsTitle",
+  lead: "leadTitle",
 };
-
-function notCompared(country: string): string {
-  return country === ""
-    ? "Your competitors have not been checked yet."
-    : `Your competitors have not been checked in ${formatCountry(country)} yet.`;
-}
 
 export function GapEmpty({
   kind,
@@ -29,18 +25,20 @@ export function GapEmpty({
   tab: GapTab;
   country: string;
 }) {
+  const t = useTranslations("competitors");
+  const locale = useAppLocale();
   if (kind === "noCompetitors") {
     return (
       <EmptyState
         className={SECTION_EMPTY}
-        title="Add a competitor to see gaps"
-        body="One search serves every app, so this costs no extra store requests."
+        title={t("gaps.empty.noCompetitorsTitle")}
+        body={t("gaps.empty.noCompetitorsBody")}
         action={
           <a
             href="#competitor-search"
             className="text-dense font-medium link-underline"
           >
-            Add a competitor
+            {t("comparison.addCta")}
           </a>
         }
       />
@@ -50,8 +48,8 @@ export function GapEmpty({
     return (
       <EmptyState
         className={SECTION_EMPTY}
-        title="Every competitor you track is delisted"
-        body="There is nothing to compare against until you track one the store still lists."
+        title={t("gaps.empty.allDelistedTitle")}
+        body={t("gaps.empty.allDelistedBody")}
       />
     );
   }
@@ -59,10 +57,25 @@ export function GapEmpty({
     return (
       <EmptyState
         className={SECTION_EMPTY}
-        title={notCompared(country)}
-        body="They are compared from the next daily check."
+        title={
+          country === ""
+            ? t("gaps.empty.notCompared")
+            : t("gaps.empty.notComparedMarket", {
+                market: formatCountryInLocale(country, locale),
+              })
+        }
+        body={t("gaps.empty.nextCheck")}
       />
     );
   }
-  return <EmptyState className={SECTION_EMPTY} {...TAB_EMPTY[tab]} />;
+  const titleKey = TAB_EMPTY[tab];
+  return (
+    <EmptyState
+      className={SECTION_EMPTY}
+      title={t(`gaps.empty.${titleKey}`)}
+      body={
+        tab === "gaps" ? t("gaps.empty.gapsBody", { top: GAP_TOP }) : undefined
+      }
+    />
+  );
 }

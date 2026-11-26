@@ -2,6 +2,7 @@
 
 import { useCallback, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import type {
   ReviewItem,
@@ -35,6 +36,7 @@ const removedBy = (body: ReviewReplyPatchRequest, reply: ReviewReplyItem) =>
   body.replied === false && !reply.text;
 
 export function useReviewReply(appId: string, review: ReviewItem) {
+  const t = useTranslations("reviews");
   const queryClient = useQueryClient();
   const lastSave = useRef<Promise<unknown>>(Promise.resolve());
   const lastQueued = useRef<QueuedSave | null>(null);
@@ -46,7 +48,7 @@ export function useReviewReply(appId: string, review: ReviewItem) {
     mutationFn: (text: string) => patchReviewReply(appId, review.id, { text }),
     onSuccess: seed,
     onSettled,
-    onError: failWith("Could not save the reply"),
+    onError: failWith(t("composer.saveFailed")),
   });
   const patching = useMutation({
     mutationFn: async (body: ReviewReplyPatchRequest) => {
@@ -55,7 +57,7 @@ export function useReviewReply(appId: string, review: ReviewItem) {
     },
     onSuccess: (reply, body) => seed(removedBy(body, reply) ? null : reply),
     onSettled,
-    onError: failWith("Could not save the reply"),
+    onError: failWith(t("composer.saveFailed")),
   });
   const replace = ({ review: next }: ReviewReplyPostResult) =>
     replaceReview(queryClient, appId, next, review);
@@ -67,13 +69,13 @@ export function useReviewReply(appId: string, review: ReviewItem) {
     },
     onSuccess: replace,
     onSettled: onStoreSettled,
-    onError: failWith("Could not post the reply"),
+    onError: failWith(t("composer.postFailed")),
   });
   const withdrawing = useMutation({
     mutationFn: () => withdrawReviewReply(appId, review.id),
     onSuccess: replace,
     onSettled: onStoreSettled,
-    onError: failWith("Could not withdraw the reply"),
+    onError: failWith(t("composer.withdrawFailed")),
   });
   const discarding = useMutation({
     mutationFn: async () => {
@@ -82,7 +84,7 @@ export function useReviewReply(appId: string, review: ReviewItem) {
     },
     onSuccess: () => seed(null),
     onSettled,
-    onError: failWith("Could not discard the reply"),
+    onError: failWith(t("composer.discardFailed")),
   });
   const save = useCallback(
     (text: string) => {

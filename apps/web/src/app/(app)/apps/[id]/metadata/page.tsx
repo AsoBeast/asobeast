@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { LocalizationSwitcher } from "@/components/app-detail/LocalizationSwitcher";
 import { MarketSwitcher } from "@/components/app-detail/MarketSwitcher";
 import { MarketSwitcherSkeleton } from "@/components/app-detail/skeletons";
@@ -37,6 +38,7 @@ export default async function MetadataPage({
     localization?: string | string[];
   }>;
 }) {
+  const t = await getTranslations("metadata");
   const { id } = await params;
   const query = await searchParams;
   const requested = marketParser.parseServerSide(query.market);
@@ -65,8 +67,8 @@ export default async function MetadataPage({
   if (!result) {
     return (
       <EmptyState
-        title="No metadata audit yet"
-        body="The audit appears once a snapshot of this listing is stored."
+        title={t("noAuditTitle")}
+        body={t("noAuditBody")}
         className="page-wide"
       />
     );
@@ -94,7 +96,7 @@ export default async function MetadataPage({
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <div className="page-wide @container/metadata flex flex-col gap-6">
-        <PageHeader title="Metadata" titleHidden>
+        <PageHeader title={t("title")} titleHidden>
           <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
             <Suspense fallback={<MetadataStatusSkeleton />}>
               <MetadataStatusLine id={id} keywordFields={keywordFields} />

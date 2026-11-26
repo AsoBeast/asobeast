@@ -1,5 +1,18 @@
 import type { ChangeImpactItem, ChangeImpactReport } from "@asobeast/shared";
-import { formatDayMonth, formatMeasureFixed } from "@/lib/format";
+import { createTranslator } from "next-intl";
+import enChanges from "../../../messages/en/changes.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import {
+  formatDayMonthInLocale,
+  formatMeasureFixedInLocale,
+} from "@/lib/format";
+import type { Locale } from "@/lib/locale";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "changes",
+  messages: { changes: enChanges },
+});
 
 export type ChangeEffect =
   | { kind: "measured"; days: number; change: number }
@@ -33,15 +46,30 @@ export function effectsByDay(
   return byDay;
 }
 
-export function visibilityMove(change: number): string {
-  if (change === 0) return "unchanged";
-  return `${change > 0 ? "up" : "down"} ${formatMeasureFixed(Math.abs(change))}`;
+export function visibilityMove(
+  change: number,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
+): string {
+  if (change === 0) return t("effect.unchanged");
+  return t(change > 0 ? "effect.up" : "effect.down", {
+    value: formatMeasureFixedInLocale(Math.abs(change), locale),
+  });
 }
 
-export function effectLine(effect: ChangeEffect): string {
+export function effectLine(
+  effect: ChangeEffect,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
+): string {
   return effect.kind === "pending"
-    ? `Measurable on ${formatDayMonth(effect.measurableOn)}`
-    : `Visibility ${visibilityMove(effect.change)} after ${effect.days} days`;
+    ? t("timeline.measurableOn", {
+        date: formatDayMonthInLocale(effect.measurableOn, locale),
+      })
+    : t("effect.line", {
+        move: visibilityMove(effect.change, t, locale),
+        days: effect.days,
+      });
 }
 
 export const impactAnchor = (day: string): string => `change-impact-${day}`;

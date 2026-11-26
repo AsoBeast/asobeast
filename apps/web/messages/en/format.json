@@ -4,6 +4,15 @@
     "down": "down",
     "flat": "unchanged"
   },
+  "movement": {
+    "up": "Up {count} from #{previous}",
+    "down": "Down {count} from #{previous}",
+    "same": "No change",
+    "new": "New entry",
+    "newShort": "New",
+    "from": "from #{previous}",
+    "noEarlier": "No earlier capture"
+  },
   "noData": "no {label} data",
   "deltaLabel": "{direction} {magnitude}{unit} {period}",
   "positionDeltaLabel": "{direction} {magnitude} {period}",

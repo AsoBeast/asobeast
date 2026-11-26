@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { runActions } from "@/lib/api";
 import { actionSummaryOptions, invalidateActionMutation } from "@/lib/queries";
-import { queuedToast } from "@/lib/queued-toast";
 import { useSingleFlight } from "@/lib/single-flight";
 
 const FOLLOW_INTERVAL_MS = 2_000;
@@ -24,19 +24,19 @@ export function GenerateNowButton({
   generatedAt: string | null;
   variant?: "default" | "outline";
 }) {
+  const t = useTranslations("actions");
   const queryClient = useQueryClient();
   const [followed, setFollowed] = useState<FollowedRun | null>(null);
 
   const run = useMutation({
     mutationFn: runActions,
     onSuccess: () => {
-      queuedToast(
-        "action generation",
-        "It reads stored data only, so it costs no store requests.",
-      );
+      toast.info(t("queuedGeneration"), {
+        description: t("generationNote"),
+      });
       setFollowed({ since: generatedAt, startedAt: Date.now() });
     },
-    onError: () => toast.error("Could not queue generation"),
+    onError: () => toast.error(t("generationFailed")),
   });
   const runOnce = useSingleFlight(run);
 
@@ -79,7 +79,7 @@ export function GenerateNowButton({
         if (!busy) runOnce();
       }}
     >
-      {busy ? "Generating…" : "Generate now"}
+      {busy ? t("generating") : t("generate")}
     </Button>
   );
 }

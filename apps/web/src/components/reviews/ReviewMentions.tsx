@@ -1,6 +1,7 @@
 "use client";
 
 import { useId } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import {
   REVIEW_THEME_KINDS,
@@ -25,7 +26,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { InfoTip } from "@/components/ui/info-tip";
-import { formatNumber, pluralize } from "@/lib/format";
+import { formatNumberInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
+import type { MessageTranslator } from "@/i18n/translator";
 import { reviewThemesOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { BREAKDOWN_BUTTON_ROW, BreakdownBar } from "./breakdown";
@@ -34,18 +37,21 @@ import { phraseQuery, quotedPhrase } from "./review-search";
 import { themesSummary } from "./review-themes-summary";
 import { useReviewView } from "./use-review-view";
 
-const KIND_LABELS: Record<ReviewThemeKind, string> = {
-  complaint: "Complaints",
-  praise: "Praise",
-};
-
 const THEMES_GUIDE =
   "https://docs.asobeast.com/guides/reviews#see-what-people-mention";
 
 const COLUMNS = "grid grid-cols-[minmax(0,1fr)_4.5rem] gap-3 px-2";
 
-function themeDetail(theme: ReviewTheme, negativeScoreMax: number): string {
-  return `in ${pluralize(theme.mentions, "review")}, ${formatNumber(theme.negative)} at ${pluralize(negativeScoreMax, "star")} or less`;
+function themeDetail(
+  theme: ReviewTheme,
+  negativeScoreMax: number,
+  t: MessageTranslator,
+): string {
+  return t("mentions.detail", {
+    count: theme.mentions,
+    negative: theme.negative,
+    stars: negativeScoreMax,
+  });
 }
 
 function ThemeRow({
@@ -61,6 +67,8 @@ function ThemeRow({
   selected: boolean;
   onSelect: (phrase: string) => void;
 }) {
+  const t = useTranslations("reviews");
+  const locale = useAppLocale();
   return (
     <button
       type="button"
@@ -71,14 +79,16 @@ function ThemeRow({
       <BreakdownBar share={share} />
       <span className="relative truncate font-medium">{theme.phrase}</span>
       <span aria-hidden className="numeric relative text-right">
-        {formatNumber(theme.mentions)}
+        {formatNumberInLocale(theme.mentions, locale)}
       </span>
-      <span className="sr-only">{themeDetail(theme, negativeScoreMax)}</span>
+      <span className="sr-only">{themeDetail(theme, negativeScoreMax, t)}</span>
     </button>
   );
 }
 
 export function ReviewMentions({ id }: { id: string }) {
+  const t = useTranslations("reviews");
+  const locale = useAppLocale();
   const headingId = useId();
   const { view, query, setQuery } = useReviewView();
   const themes = useQuery(reviewThemesOptions(id, reviewFilters(view)));
@@ -96,18 +106,22 @@ export function ReviewMentions({ id }: { id: string }) {
       <Card>
         <CardHeader className={PANEL_HEADER}>
           <CardTitle asChild>
-            <h2 id={headingId}>What people mention</h2>
+            <h2 id={headingId}>{t("mentions.title")}</h2>
           </CardTitle>
           {data ? (
             <CardAction className={PANEL_ACTION}>
               <InfoTip
-                label="About what people mention"
-                title="What people mention"
-                summary={themesSummary({
-                  negativeScoreMax: data.negativeScoreMax,
-                  reviews: data.reviews,
-                  sort: view.sort,
-                })}
+                label={t("mentions.about")}
+                title={t("mentions.title")}
+                summary={themesSummary(
+                  {
+                    negativeScoreMax: data.negativeScoreMax,
+                    reviews: data.reviews,
+                    sort: view.sort,
+                  },
+                  t,
+                  locale,
+                )}
               >
                 <a
                   href={THEMES_GUIDE}
@@ -115,7 +129,7 @@ export function ReviewMentions({ id }: { id: string }) {
                   rel="noreferrer"
                   className="font-medium text-foreground link-underline"
                 >
-                  Read how themes are found
+                  {t("mentions.readThemes")}
                 </a>
               </InfoTip>
             </CardAction>
@@ -125,8 +139,8 @@ export function ReviewMentions({ id }: { id: string }) {
           <>
             <CardContent className="flex flex-col gap-1 px-2">
               <div aria-hidden className={cn(COLUMNS, LIST_HEAD)}>
-                <span>Phrase</span>
-                <span className="text-right">Reviews</span>
+                <span>{t("mentions.phrase")}</span>
+                <span className="text-right">{t("mentions.reviews")}</span>
               </div>
               {REVIEW_THEME_KINDS.map((kind) => {
                 const rows = data.themes.filter((theme) => theme.kind === kind);
@@ -138,7 +152,7 @@ export function ReviewMentions({ id }: { id: string }) {
                       id={kindId}
                       className="flex h-8 items-center px-2 text-label"
                     >
-                      {KIND_LABELS[kind]}
+                      {t(`mentions.kinds.${kind}`)}
                     </h3>
                     <ul
                       aria-labelledby={kindId}
@@ -161,17 +175,12 @@ export function ReviewMentions({ id }: { id: string }) {
               })}
             </CardContent>
             <CardFooter>
-              <span>
-                {`From ${pluralize(data.reviews, "review")} matching the filters`}
-              </span>
+              <span>{t("mentions.footer", { count: data.reviews })}</span>
             </CardFooter>
           </>
         ) : (
           <CardContent>
-            <InlineQueryError
-              message="Could not load what people mention."
-              read={themes}
-            />
+            <InlineQueryError message={t("mentions.failed")} read={themes} />
           </CardContent>
         )}
       </Card>

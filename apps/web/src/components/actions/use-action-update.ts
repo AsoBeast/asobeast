@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import type {
   ActionItem,
@@ -28,6 +29,7 @@ export function useActionUpdate(
   item: ActionItem,
   { moveFocus = false }: { moveFocus?: boolean } = {},
 ) {
+  const t = useTranslations("actions");
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
@@ -57,24 +59,25 @@ export function useActionUpdate(
         queryClient.setQueryData(key, data);
       }
       toast.error(
-        error instanceof ApiError
-          ? error.message
-          : "Could not update the action",
+        error instanceof ApiError ? error.message : t("toast.updateFailed"),
       );
     },
     onSuccess: (_updated, body, context) => {
       if (body.revert) return;
       if (body.status === "OPEN") {
-        toast.success("Action reopened");
+        toast.success(t("toast.actionReopened"));
         return;
       }
       if (body.status === "SNOOZED") return;
-      toast.success(body.status === "DONE" ? "Marked done" : "Dismissed", {
-        action: {
-          label: "Undo",
-          onClick: () => update(undoRequest(context.before)),
+      toast.success(
+        body.status === "DONE" ? t("toast.markedDone") : t("toast.dismissed"),
+        {
+          action: {
+            label: t("undo"),
+            onClick: () => update(undoRequest(context.before)),
+          },
         },
-      });
+      );
     },
     onSettled: () => invalidateActionMutation(queryClient, item.scope.appId),
   });

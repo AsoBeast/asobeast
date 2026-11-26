@@ -3,6 +3,15 @@ import type {
   CompetitorGapKeyword,
   CompetitorGaps,
 } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
+import enCompetitors from "../../messages/en/competitors.json";
+import type { MessageTranslator } from "@/i18n/translator";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "competitors",
+  messages: { competitors: enCompetitors },
+});
 
 export const GAP_TABS = ["gaps", "winnable", "threats", "lead"] as const;
 
@@ -22,12 +31,19 @@ export const GAP_TAB_LABELS: Record<GapTab, string> = {
   lead: "You lead",
 };
 
-export const GAP_TAB_SUBJECTS: Record<GapTab, string> = {
-  gaps: "keyword gaps",
-  winnable: "winnable keywords",
-  threats: "threats",
-  lead: "keywords you lead",
-};
+export function gapTabLabel(
+  tab: GapTab,
+  t: MessageTranslator = english,
+): string {
+  return t(`gaps.tabs.${tab}`);
+}
+
+export function gapTabSubject(
+  tab: GapTab,
+  t: MessageTranslator = english,
+): string {
+  return t(`gaps.subjects.${tab}`);
+}
 
 export type GapEmpty = "none" | "noCompetitors" | "allDelisted" | "notCompared";
 

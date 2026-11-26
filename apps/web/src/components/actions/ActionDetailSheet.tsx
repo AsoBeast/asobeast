@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ActionItem, ActionListResult } from "@asobeast/shared";
 import {
@@ -12,7 +13,7 @@ import {
 } from "@/components/ui/sheet";
 import { isNotFound } from "@/lib/api";
 import { actionDetailOptions, actionKeys } from "@/lib/queries";
-import { ACTION_NOT_FOUND, ActionDetailBody } from "./ActionDetailBody";
+import { ActionDetailBody } from "./ActionDetailBody";
 import { ActionDetailHeader } from "./ActionDetailHeader";
 
 function useListedItem(id: string): ActionItem | undefined {
@@ -25,11 +26,14 @@ function useListedItem(id: string): ActionItem | undefined {
 }
 
 function PendingHeader({ missing }: { missing: boolean }) {
+  const t = useTranslations("actions");
   return (
     <SheetHeader className="border-b p-4 pr-12">
-      <SheetTitle>{missing ? "Action not found" : "Loading action"}</SheetTitle>
+      <SheetTitle>
+        {missing ? t("detail.notFoundTitle") : t("detail.loadingTitle")}
+      </SheetTitle>
       <SheetDescription>
-        {missing ? ACTION_NOT_FOUND : "Reading the action and its history."}
+        {missing ? t("detail.notFoundBody") : t("detail.loadingBody")}
       </SheetDescription>
     </SheetHeader>
   );
@@ -62,9 +66,7 @@ export function ActionDetailSheet({
           event.preventDefault();
           const target =
             document.getElementById(`action-${shownId}`) ??
-            document.querySelector<HTMLElement>(
-              'input[aria-label="Search actions"]',
-            );
+            document.querySelector<HTMLElement>("input[data-search-input]");
           target?.focus();
         }}
       >

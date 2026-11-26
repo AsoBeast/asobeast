@@ -1,4 +1,7 @@
+"use client";
+
 import { useId } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import type {
   AuditRecommendation,
@@ -20,7 +23,7 @@ import {
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
-import { EFFORT_LABEL, fixesWorth, liftFigure, liftLabel } from "./audit-copy";
+import { fixesWorth, liftFigure, liftLabel } from "./audit-copy";
 import { targetHref } from "./audit-links";
 import { topFixes } from "./top-fixes";
 
@@ -47,6 +50,7 @@ function FixRow({
   item: AuditRecommendation;
   largest: number;
 }) {
+  const t = useTranslations("audit");
   const href = item.target ? targetHref(appId, item.target) : null;
   const cells = (
     <>
@@ -62,11 +66,11 @@ function FixRow({
         {item.label}
       </span>
       <span className="relative hidden pt-px text-caption whitespace-nowrap text-faint-foreground sm:inline">
-        {item.effort ? EFFORT_LABEL[item.effort] : ""}
+        {item.effort ? t(`efforts.${item.effort}`) : ""}
       </span>
       <span className="numeric relative font-medium whitespace-nowrap">
         <span aria-hidden>{liftFigure(item.lift)}</span>
-        <span className="sr-only">{liftLabel(item.lift)}</span>
+        <span className="sr-only">{liftLabel(item.lift, t)}</span>
       </span>
     </>
   );
@@ -91,9 +95,10 @@ export function AuditTopFixes({
   appId: string;
   recommendations: AuditRecommendations;
 }) {
+  const t = useTranslations("audit");
   const headingId = useId();
   const fixes = topFixes(recommendations);
-  const worth = fixesWorth(fixes);
+  const worth = fixesWorth(fixes, t);
   const largest = Math.max(0, ...fixes.map((fix) => fix.lift ?? 0));
 
   return (
@@ -101,7 +106,7 @@ export function AuditTopFixes({
       <Card>
         <CardHeader className={PANEL_HEADER}>
           <CardTitle asChild>
-            <h2 id={headingId}>Top fixes</h2>
+            <h2 id={headingId}>{t("topFixes.title")}</h2>
           </CardTitle>
           {worth === null ? null : (
             <CardAction className={cn(PANEL_COUNT, "numeric")}>
@@ -111,7 +116,7 @@ export function AuditTopFixes({
         </CardHeader>
         {fixes.length === 0 ? (
           <CardContent>
-            <EmptyState title="No change is waiting on you right now." />
+            <EmptyState title={t("topFixes.empty")} />
           </CardContent>
         ) : (
           <>
@@ -128,9 +133,9 @@ export function AuditTopFixes({
               </ol>
             </CardContent>
             <CardFooter className="justify-between">
-              <span>By estimated lift</span>
+              <span>{t("topFixes.byLift")}</span>
               <Link href="#action-plan" className={FOOTER_LINK}>
-                View the full plan
+                {t("topFixes.viewPlan")}
               </Link>
             </CardFooter>
           </>

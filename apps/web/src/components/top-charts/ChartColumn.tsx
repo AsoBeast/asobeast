@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useMemo, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import type { AppListItem, ChartEntryItem, ChartPage } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
@@ -19,6 +20,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useFocusGroupClaim } from "@/lib/focus-handoff";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
 import { CaptureTodayButton } from "./CaptureTodayButton";
 import {
@@ -36,7 +38,7 @@ import {
 import { ChartEmpty } from "./ChartEmpty";
 import { ChartNoApps } from "./ChartNoApps";
 import {
-  COLLECTION_LABELS,
+  collectionLabel,
   shownChartKey,
   tableHref,
   type ChartSearch,
@@ -84,14 +86,16 @@ export function ChartColumn({
   apps: readonly AppListItem[];
   search: Pick<ChartSearch, "compare" | "date">;
 }) {
+  const t = useTranslations("topCharts");
+  const locale = useAppLocale();
   const headingId = useId();
   const context = useMemo(
     () => rowContextOf({ chart: page.chart, apps: page.apps }, apps),
     [page.chart, page.apps, apps],
   );
   const chart = shownChartKey(page);
-  const label = COLLECTION_LABELS[chart.collection];
-  const period = compareLabel(page.compare, page.comparison);
+  const label = collectionLabel(chart.collection, t);
+  const period = compareLabel(page.compare, page.comparison, t, locale);
   const capturable = capturableToday(page);
   const actions = useFocusGroupClaim(captureFocusKey(chart), capturable);
   const capture = capturable ? (
@@ -118,7 +122,9 @@ export function ChartColumn({
           <h2 id={headingId}>{label}</h2>
         </CardTitle>
         <CardAction className={PANEL_COUNT}>
-          <span className="numeric">{columnCount(page, search.date)}</span>
+          <span className="numeric">
+            {columnCount(page, search.date, t, locale)}
+          </span>
         </CardAction>
       </CardHeader>
       {page.comparison && !empty ? (
@@ -139,15 +145,19 @@ export function ChartColumn({
         )}
       </CardContent>
       <CardFooter className="flex-wrap justify-between gap-x-4 gap-y-2">
-        {page.capture ? <span>{capturedLine(page.capture)}</span> : null}
+        {page.capture ? (
+          <span>{capturedLine(page.capture, t, locale)}</span>
+        ) : null}
         <div
           ref={actions}
           className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-2"
         >
           {page.capture ? capture : null}
           <Link href={tableHref(chart, search)} className={FOOTER_LINK}>
-            <span>Open table</span>
-            <span className="sr-only">{` of ${label}`}</span>
+            <span>{t("openTable")}</span>
+            <span className="sr-only">
+              {t("openTableOf", { collection: label })}
+            </span>
           </Link>
         </div>
       </CardFooter>

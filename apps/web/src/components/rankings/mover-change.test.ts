@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { byMagnitude, moverChange } from "./mover-change";
+import {
+  byMagnitude,
+  daysPeriod,
+  lastRunPeriod,
+  moverChange,
+} from "./mover-change";
 
 const mover = (text: string, from: number | null, to: number | null) => ({
   keywordId: text,
@@ -40,6 +45,24 @@ describe("moverChange", () => {
       kind: "lost",
       share: 1,
     });
+  });
+});
+
+describe("mover periods", () => {
+  it("writes English and Chinese periods for the selected range", () => {
+    expect(daysPeriod(7)).toEqual({
+      within: "in 7 days",
+      span: "in the last 7 days",
+    });
+    expect(daysPeriod(7, "zh-CN")).toEqual({
+      within: "在 7 天内",
+      span: "在过去 7 天内",
+    });
+  });
+
+  it("writes the last-run period in both locales", () => {
+    expect(lastRunPeriod().within).toBe("in the last run");
+    expect(lastRunPeriod("zh-CN").within).toBe("在上次运行中");
   });
 });
 

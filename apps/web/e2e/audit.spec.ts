@@ -89,10 +89,10 @@ test("keeps the range in the address and focus on its control", async ({
   await page.goto("/apps/app-1/audit");
   const range = page.getByRole("tablist", { name: "Date range" });
 
-  await range.getByRole("tab", { name: "90d" }).click();
+  await range.getByRole("tab", { name: "Last 90 days" }).click();
 
   await expect(page).toHaveURL(/[?&]range=90d/);
-  await expect(range.getByRole("tab", { name: "90d" })).toBeFocused();
+  await expect(range.getByRole("tab", { name: "Last 90 days" })).toBeFocused();
   await expect(
     page.getByRole("region", { name: "Score history" }),
   ).toBeVisible();
@@ -523,10 +523,15 @@ test("labels observations of previous screenshots as outdated", async ({
 });
 
 test("shows a placeholder when a screenshot cannot load", async ({ page }) => {
-  await page.route("**/_next/image**", (route) => route.abort());
+  await page.route("**/*", (route) =>
+    route.request().resourceType() === "image"
+      ? route.abort()
+      : route.continue(),
+  );
   await page.goto("/apps/app-1/audit");
 
   const strip = page.getByRole("list", { name: "Screenshots" });
+  await strip.scrollIntoViewIfNeeded();
   await expect(strip.getByText("Image unavailable").first()).toBeVisible();
   await expect(
     strip.getByRole("img", {

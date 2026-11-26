@@ -1,6 +1,7 @@
 "use client";
 
 import type { RefObject } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { ReplyConfirmDialog } from "./ReplyConfirmDialog";
 
@@ -13,6 +14,7 @@ export function WithdrawReplyButton({
   textRef: RefObject<HTMLTextAreaElement | null>;
   onWithdraw: () => void;
 }) {
+  const t = useTranslations("reviews");
   return (
     <ReplyConfirmDialog
       trigger={
@@ -24,13 +26,13 @@ export function WithdrawReplyButton({
             if (busy) event.preventDefault();
           }}
         >
-          Withdraw from App Store
+          {t("withdraw.button")}
         </Button>
       }
-      title="Withdraw this response?"
-      description="Apple removes it within a day. The text stays here."
-      cancelLabel="Keep it"
-      actionLabel="Withdraw"
+      title={t("withdraw.title")}
+      description={t("withdraw.description")}
+      cancelLabel={t("withdraw.keepIt")}
+      actionLabel={t("withdraw.action")}
       destructive
       textRef={textRef}
       onConfirm={onWithdraw}

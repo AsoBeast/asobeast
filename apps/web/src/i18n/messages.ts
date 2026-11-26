@@ -13,7 +13,6 @@ import enChanges from "../../messages/en/changes.json";
 import enCharts from "../../messages/en/charts.json";
 import enCommon from "../../messages/en/common.json";
 import enCompetitors from "../../messages/en/competitors.json";
-import enCountries from "../../messages/en/countries.json";
 import enDashboard from "../../messages/en/dashboard.json";
 import enDatePicker from "../../messages/en/datePicker.json";
 import enErrors from "../../messages/en/errors.json";
@@ -24,6 +23,7 @@ import enKeywordInspector from "../../messages/en/keywordInspector.json";
 import enKeywords from "../../messages/en/keywords.json";
 import enLanguages from "../../messages/en/languages.json";
 import enLegal from "../../messages/en/legal.json";
+import enLocalizations from "../../messages/en/localizations.json";
 import enMetadata from "../../messages/en/metadata.json";
 import enMetrics from "../../messages/en/metrics.json";
 import enNavigation from "../../messages/en/navigation.json";
@@ -56,7 +56,6 @@ import zhChanges from "../../messages/zh-CN/changes.json";
 import zhCharts from "../../messages/zh-CN/charts.json";
 import zhCommon from "../../messages/zh-CN/common.json";
 import zhCompetitors from "../../messages/zh-CN/competitors.json";
-import zhCountries from "../../messages/zh-CN/countries.json";
 import zhDashboard from "../../messages/zh-CN/dashboard.json";
 import zhDatePicker from "../../messages/zh-CN/datePicker.json";
 import zhErrors from "../../messages/zh-CN/errors.json";
@@ -67,6 +66,7 @@ import zhKeywordInspector from "../../messages/zh-CN/keywordInspector.json";
 import zhKeywords from "../../messages/zh-CN/keywords.json";
 import zhLanguages from "../../messages/zh-CN/languages.json";
 import zhLegal from "../../messages/zh-CN/legal.json";
+import zhLocalizations from "../../messages/zh-CN/localizations.json";
 import zhMetadata from "../../messages/zh-CN/metadata.json";
 import zhMetrics from "../../messages/zh-CN/metrics.json";
 import zhNavigation from "../../messages/zh-CN/navigation.json";
@@ -92,7 +92,6 @@ export const messageNamespaces = [
   "navigation",
   "auth",
   "errors",
-  "countries",
   "ui",
   "format",
   "shell",
@@ -101,6 +100,7 @@ export const messageNamespaces = [
   "validation",
   "languages",
   "legal",
+  "localizations",
   "systemNotices",
   "billing",
   "account",
@@ -141,7 +141,6 @@ export const catalogs: Record<Locale, Record<MessageNamespace, unknown>> = {
     navigation: enNavigation,
     auth: enAuth,
     errors: enErrors,
-    countries: enCountries,
     ui: enUi,
     format: enFormat,
     shell: enShell,
@@ -150,6 +149,7 @@ export const catalogs: Record<Locale, Record<MessageNamespace, unknown>> = {
     validation: enValidation,
     languages: enLanguages,
     legal: enLegal,
+    localizations: enLocalizations,
     systemNotices: enSystemNotices,
     billing: enBilling,
     account: enAccount,
@@ -186,7 +186,6 @@ export const catalogs: Record<Locale, Record<MessageNamespace, unknown>> = {
     navigation: zhNavigation,
     auth: zhAuth,
     errors: zhErrors,
-    countries: zhCountries,
     ui: zhUi,
     format: zhFormat,
     shell: zhShell,
@@ -195,6 +194,7 @@ export const catalogs: Record<Locale, Record<MessageNamespace, unknown>> = {
     validation: zhValidation,
     languages: zhLanguages,
     legal: zhLegal,
+    localizations: zhLocalizations,
     systemNotices: zhSystemNotices,
     billing: zhBilling,
     account: zhAccount,

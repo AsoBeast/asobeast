@@ -1,5 +1,15 @@
 import type { ReviewItem } from "@asobeast/shared";
-import { formatDate } from "@/lib/format";
+import { createTranslator } from "next-intl";
+import enReviews from "../../../messages/en/reviews.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import { formatDateInLocale } from "@/lib/format";
+import type { Locale } from "@/lib/locale";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "reviews",
+  messages: { reviews: enReviews },
+});
 
 type ReviewSubjectFields = Pick<
   ReviewItem,
@@ -14,19 +24,35 @@ export interface ReviewTwin {
 export function reviewSubject(
   review: ReviewSubjectFields,
   twin?: ReviewTwin,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
 ): string {
-  const author = review.userName ?? "Anonymous";
-  const day = review.reviewedAt ? ` on ${formatDate(review.reviewedAt)}` : "";
-  const place = twin ? ` (${twin.rank} of ${twin.of})` : "";
-  return `${review.score} star review by ${author}${day}${place}`;
+  const author = review.userName ?? t("subject.anonymous");
+  const day = review.reviewedAt
+    ? t("subject.on", { date: formatDateInLocale(review.reviewedAt, locale) })
+    : "";
+  const place = twin
+    ? t("subject.place", { rank: twin.rank, of: twin.of })
+    : "";
+  return t("subject.review", {
+    score: review.score,
+    author,
+    day,
+    place,
+  });
 }
 
 export function reviewActionLabel(
   action: string,
   review: ReviewSubjectFields,
   twin?: ReviewTwin,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
 ): string {
-  return `${action} the ${reviewSubject(review, twin)}`;
+  return t("subject.action", {
+    action,
+    subject: reviewSubject(review, twin, t, locale),
+  });
 }
 
 export function reviewTwins(

@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useId, useRef } from "react";
 import { useQueryState } from "nuqs";
+import { useTranslations } from "next-intl";
 import type { ChangeEventItem } from "@asobeast/shared";
 import { useMarket } from "@/components/app-detail/use-market";
 import { PANEL_BLEED, PANEL_HEADER } from "@/components/layout/panel-classes";
@@ -18,12 +19,15 @@ import { DeltaChip } from "@/components/ui/delta-chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import {
-  formatCountry,
-  formatDate,
-  formatDayMonth,
+  formatCountryInLocale,
+  formatDateInLocale,
+  formatDayMonthInLocale,
+  formatNumberInLocale,
   MEASURE_DIGITS,
-  pluralize,
 } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
 import { CHANGE_WINDOWS, type ChangeWindow } from "@/lib/ranges";
 import {
   changeDaysParser,
@@ -56,12 +60,6 @@ const isOwn = (event: ChangeEventItem): boolean => !event.isCompetitor;
 
 const WIDEST_WINDOW: ChangeWindow = CHANGE_WINDOWS[CHANGE_WINDOWS.length - 1];
 
-const OWNER_TABS: ReadonlyArray<{ value: ChangeOwner; label: string }> = [
-  { value: "all", label: "All" },
-  { value: "yours", label: "Yours" },
-  { value: "competitors", label: "Competitors" },
-];
-
 const DAY_BAR =
   "flex min-h-9 flex-wrap items-center gap-x-3 gap-y-0.5 border-b border-border-subtle px-3 py-1.5 text-label @2xl/timeline:px-4";
 
@@ -69,6 +67,8 @@ const DAY_HEADING =
   "flex min-w-0 flex-1 scroll-mt-16 flex-wrap items-center justify-between gap-x-3 gap-y-0.5 rounded-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 function ConversionChip({ value }: { value: number }) {
+  const t = useTranslations("changes");
+  const locale = useAppLocale();
   const tone =
     value > 0
       ? "text-signal-up"
@@ -77,7 +77,9 @@ function ConversionChip({ value }: { value: number }) {
         : "text-muted-foreground";
   return (
     <span className={cn("numeric", tone)}>
-      {`Conversion ${value > 0 ? "+" : ""}${value}%`}
+      {t("timeline.conversion", {
+        value: `${value > 0 ? "+" : ""}${formatNumberInLocale(value, locale)}%`,
+      })}
     </span>
   );
 }
@@ -98,13 +100,19 @@ function DayConversion({ id, days, day, homeCountry }: DayScope) {
 }
 
 function DayEffect({ id, days, day, homeCountry }: DayScope) {
+  const t = useTranslations("changes");
+  const locale = useAppLocale();
   const impact = useChangeImpact(id, days, homeCountry);
   const item = impact?.items.find((entry) => entry.changedOn === day);
   const effect = item ? changeEffect(item) : null;
   if (effect === null) return null;
   if (effect.kind === "pending") {
     return (
-      <span className="text-muted-foreground">{`Measurable on ${formatDayMonth(effect.measurableOn)}`}</span>
+      <span className="text-muted-foreground">
+        {t("timeline.measurableOn", {
+          date: formatDayMonthInLocale(effect.measurableOn, locale),
+        })}
+      </span>
     );
   }
   return (
@@ -112,14 +120,14 @@ function DayEffect({ id, days, day, homeCountry }: DayScope) {
       href={`#${impactAnchor(day)}`}
       className="inline-flex items-center gap-1 rounded-sm text-foreground link-underline outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <span>Visibility</span>
+      <span>{t("timeline.visibility")}</span>
       <DeltaChip
         value={effect.change}
         polarity="higher-is-better"
-        period="points"
+        period={t("impact.inVisibility")}
         digits={MEASURE_DIGITS}
       />
-      <span>{`after ${effect.days} days`}</span>
+      <span>{t("timeline.afterDays", { days: effect.days })}</span>
     </a>
   );
 }
@@ -131,6 +139,8 @@ function footerLine({
   field,
   shown,
   total,
+  t,
+  locale,
 }: {
   readOn: string | null | undefined;
   listing: string;
@@ -138,15 +148,23 @@ function footerLine({
   field: ChangeFieldGroup | null;
   shown: number | null;
   total: number;
+  t: MessageTranslator;
+  locale: Locale;
 }): string {
   return [
-    readOn ? `Listing read ${formatDayMonth(readOn.slice(0, 10))}` : null,
+    readOn
+      ? t("timeline.listingRead", {
+          date: formatDayMonthInLocale(readOn.slice(0, 10), locale),
+        })
+      : null,
     listing.toUpperCase(),
-    `${days} days`,
-    field ? `${fieldGroupLabel(field)} only` : null,
+    t("timeline.days", { days }),
+    field
+      ? t("timeline.fieldOnly", { field: fieldGroupLabel(field, t) })
+      : null,
     shown === null
-      ? pluralize(total, "change")
-      : `${pluralize(shown, "change")} of ${total}`,
+      ? t("timeline.changeCount", { count: total })
+      : t("timeline.shownOfTotal", { shown, total }),
   ]
     .filter((part) => part !== null)
     .join(" · ");
@@ -161,14 +179,15 @@ function TimelineEmpty({
   onWiden: () => void;
   onClear: () => void;
 }) {
+  const t = useTranslations("changes");
   if (days === null) {
     return (
       <EmptyState
         className="px-4 py-12"
-        title="No changes match this filter"
+        title={t("timeline.noMatches")}
         action={
           <Button variant="outline" onClick={onClear}>
-            Clear filter
+            {t("timeline.clearFilter")}
           </Button>
         }
       />
@@ -177,12 +196,12 @@ function TimelineEmpty({
   return (
     <EmptyState
       className="px-4 py-12"
-      title={`No changes in the last ${days} days`}
-      body="Listing changes appear after a daily refresh finds one."
+      title={t("timeline.noChanges", { days })}
+      body={t("timeline.noChangesBody")}
       action={
         days === WIDEST_WINDOW ? null : (
           <Button variant="outline" onClick={onWiden}>
-            {`Show ${WIDEST_WINDOW} days`}
+            {t("timeline.showDays", { days: WIDEST_WINDOW })}
           </Button>
         )
       }
@@ -201,6 +220,8 @@ function TimelineDays({
   homeCountry: string | null;
   groups: TimelineDay[];
 }) {
+  const t = useTranslations("changes");
+  const locale = useAppLocale();
   return groups.map((group) => {
     const scope =
       homeCountry === null ? null : { id, days, day: group.day, homeCountry };
@@ -216,8 +237,8 @@ function TimelineDays({
             className={DAY_HEADING}
           >
             <span>
-              <span>{formatDate(group.day)}</span>
-              <span className="font-normal text-faint-foreground">{` · ${pluralize(changesShownOn(group), "change")}`}</span>
+              <span>{formatDateInLocale(group.day, locale)}</span>
+              <span className="font-normal text-faint-foreground">{` · ${t("timeline.dayChangeCount", { count: changesShownOn(group) })}`}</span>
             </span>
             {scope ? (
               <Suspense fallback={null}>
@@ -250,6 +271,8 @@ function Timeline({
   shown: ShownChange | null;
   onShown: () => void;
 }) {
+  const t = useTranslations("changes");
+  const locale = useAppLocale();
   const headingId = useId();
   const panel = useRef<HTMLDivElement>(null);
   const { events, days, listing, homeListing } = useChangeEvents(id);
@@ -257,6 +280,11 @@ function Timeline({
   const [, setDays] = useQueryState("days", changeDaysParser);
   const { filter, setFilter, clearFilter } = useChangeFilter();
 
+  const ownerTabs: ReadonlyArray<{ value: ChangeOwner; label: string }> = [
+    { value: "all", label: t("owners.all") },
+    { value: "yours", label: t("owners.yours") },
+    { value: "competitors", label: t("owners.competitors") },
+  ];
   const counted = events.filter((event) =>
     matchesFilter(event, { owner: "all", field: filter.field }),
   );
@@ -300,8 +328,10 @@ function Timeline({
           <CardTitle asChild>
             <h2 id={headingId}>
               {homeListing
-                ? "Listing changes"
-                : `Listing changes · ${formatCountry(listing)}`}
+                ? t("listingChanges")
+                : t("listingChangesMarket", {
+                    market: formatCountryInLocale(listing, locale),
+                  })}
             </h2>
           </CardTitle>
           {mixed ? (
@@ -312,12 +342,12 @@ function Timeline({
                   setFilter({ owner: changeOwnerParser.parse(value) ?? "all" })
                 }
               >
-                <TabsList aria-label="Changes shown">
-                  {OWNER_TABS.map((tab) => (
+                <TabsList aria-label={t("changesShown")}>
+                  {ownerTabs.map((tab) => (
                     <TabsOption key={tab.value} value={tab.value}>
                       <span>{tab.label}</span>
                       <span className="numeric font-normal text-muted-foreground">
-                        {counts[tab.value]}
+                        {formatNumberInLocale(counts[tab.value], locale)}
                       </span>
                     </TabsOption>
                   ))}
@@ -351,11 +381,13 @@ function Timeline({
                 field: filter.field,
                 shown: filtered ? shown.length : null,
                 total: events.length,
+                t,
+                locale,
               })}
             </span>
             {filtered && shown.length > 0 ? (
               <Button variant="outline" size="sm" onClick={act(clearFilter)}>
-                Clear filter
+                {t("timeline.clearFilter")}
               </Button>
             ) : null}
           </CardFooter>

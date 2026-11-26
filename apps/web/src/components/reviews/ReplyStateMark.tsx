@@ -1,4 +1,7 @@
+"use client";
+
 import type { ReviewItem, Store } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { replyBadgeLabel, replyBadgeVariant } from "./reply-state";
 
@@ -35,6 +38,7 @@ export function ReplyStateMark({
   store: Store;
   className?: string;
 }) {
+  const t = useTranslations("reviews");
   const tone = TONES[replyBadgeVariant(review)];
   return (
     <span
@@ -46,7 +50,7 @@ export function ReplyStateMark({
       )}
     >
       <span aria-hidden className={cn("size-2 rounded-full", tone.mark)} />
-      <span>{replyBadgeLabel(review, store)}</span>
+      <span>{replyBadgeLabel(review, store, t)}</span>
     </span>
   );
 }

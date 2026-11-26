@@ -1,6 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { AuditCheckResult } from "@asobeast/shared";
-import { SOURCE_LABEL, STATUS_LABEL } from "./audit-copy";
 import { unlockHref } from "./audit-links";
 import { TEXT_LINK } from "./layout-classes";
 import { STATUS_ICON, STATUS_TONE } from "./status-icons";
@@ -12,6 +14,7 @@ export function FactorChecks({
   appId: string;
   checks: AuditCheckResult[];
 }) {
+  const t = useTranslations("audit");
   return (
     <ul className="flex list-none flex-col gap-2.5 p-0">
       {checks.map((check) => {
@@ -29,8 +32,8 @@ export function FactorChecks({
               <span className="font-medium">{check.label}</span>
               <span className="text-caption text-faint-foreground">
                 {check.source
-                  ? `${STATUS_LABEL[check.status]} · ${SOURCE_LABEL[check.source]}`
-                  : STATUS_LABEL[check.status]}
+                  ? `${t(`statuses.${check.status}`)} · ${t(`sources.${check.source}`)}`
+                  : t(`statuses.${check.status}`)}
               </span>
             </span>
             <span className="col-start-2 text-caption wrap-anywhere text-muted-foreground">

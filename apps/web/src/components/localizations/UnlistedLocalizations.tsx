@@ -1,10 +1,12 @@
 "use client";
 
 import type { AppLocalizationsResult } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { unlistedReads } from "@/lib/app-localizations";
 import { armFocusHandoff } from "@/lib/focus-handoff";
-import { localizationName } from "@/lib/localizations";
+import { localizationNameInLocale } from "@/lib/localizations";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { apiErrorMessage } from "@/lib/api";
 import { localizationFocusKey } from "./LocalizationItem";
 import { SUB_HEADER, SUB_HEADER_COUNT } from "./panel-rows";
@@ -20,6 +22,8 @@ export function UnlistedLocalizations({
   id: string;
   result: AppLocalizationsResult;
 }) {
+  const t = useTranslations("localizations");
+  const locale = useAppLocale();
   const { add, pending, error } = useAddLocalization(id);
   const managed = result.storeManaged;
   const reads = unlistedReads(result);
@@ -28,15 +32,15 @@ export function UnlistedLocalizations({
   return (
     <section aria-labelledby={HEADING_ID} className="flex flex-col">
       <h3 id={HEADING_ID} className={SUB_HEADER}>
-        <span>Not listed yet</span>
+        <span>{t("unlisted.title")}</span>
         <span className={SUB_HEADER_COUNT}>{reads.length}</span>
       </h3>
       <ul
-        aria-label="Localizations your markets read that are not listed"
+        aria-label={t("unlisted.aria")}
         className="grid list-none grid-cols-1 gap-x-8 px-4 py-1 @3xl/metadata:grid-cols-2"
       >
         {reads.map(({ localization, readIn }) => {
-          const name = localizationName(localization);
+          const name = localizationNameInLocale(localization, locale);
           return (
             <li
               key={localization}
@@ -49,7 +53,7 @@ export function UnlistedLocalizations({
                   <Button
                     variant="outline"
                     size="xs"
-                    aria-label={`Add ${name}`}
+                    aria-label={t("unlisted.addAria", { name })}
                     aria-disabled={pending || undefined}
                     onClick={() => {
                       if (pending) return;
@@ -57,7 +61,7 @@ export function UnlistedLocalizations({
                       add(localization);
                     }}
                   >
-                    Add
+                    {t("unlisted.add")}
                   </Button>
                 )}
               </span>
@@ -66,13 +70,11 @@ export function UnlistedLocalizations({
         })}
       </ul>
       <p className="max-w-[90ch] px-4 pt-1 pb-3 text-caption text-faint-foreground">
-        {managed
-          ? "Your markets read these localizations. Add one your app ships in App Store Connect and the import brings its keyword field; a localization the store serves is added on its own after the next capture of that market."
-          : "Your markets read these localizations. Add one your app ships in App Store Connect to type its keyword field; a localization the store serves is added on its own after the next capture of that market."}
+        {managed ? t("unlisted.managed") : t("unlisted.manual")}
       </p>
       {error ? (
         <p role="alert" className="px-4 pb-3 text-dense text-destructive">
-          {apiErrorMessage(error, "Could not add the localization")}
+          {apiErrorMessage(error, t("add.failed"))}
         </p>
       ) : null}
     </section>

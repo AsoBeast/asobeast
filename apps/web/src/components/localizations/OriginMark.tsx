@@ -1,16 +1,9 @@
-import type { AppLocalizationOrigin } from "@asobeast/shared";
+"use client";
 
-const ORIGIN_WORDS: Partial<Record<AppLocalizationOrigin, string>> = {
-  home: "Home",
-  detected: "Detected",
-};
+import type { AppLocalizationOrigin } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 
 export function OriginMark({ origin }: { origin: AppLocalizationOrigin }) {
-  const word = ORIGIN_WORDS[origin];
-  if (word === undefined) return null;
-  return (
-    <span className="text-caption font-normal text-faint-foreground">
-      {word}
-    </span>
-  );
+  const t = useTranslations("localizations");
+  return <span>{t(`origin.${origin}`)}</span>;
 }

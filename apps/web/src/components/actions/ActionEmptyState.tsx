@@ -1,16 +1,18 @@
 "use client";
 
 import { ACTION_RULES } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTimeInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { GenerateNowButton } from "./GenerateNowButton";
 import { NumberedSteps } from "./NumberedSteps";
 
-const HOW_THE_QUEUE_IS_MADE = [
-  `After each daily run, ${ACTION_RULES.length} fixed rules read your rankings, listing, reviews and store funnel.`,
-  "Each finding becomes an action with its evidence, an impact figure and the steps to take.",
-  "Mark it done and AsoBeast confirms the fix when the rule stops firing.",
+const howQueueIsMade = (t: ReturnType<typeof useTranslations>): string[] => [
+  t("howQueue.rules", { count: ACTION_RULES.length }),
+  t("howQueue.finding"),
+  t("howQueue.confirm"),
 ];
 
 export function ActionEmptyState({
@@ -22,15 +24,17 @@ export function ActionEmptyState({
   filtered: boolean;
   onClearFilters: () => void;
 }) {
+  const t = useTranslations("actions");
+  const locale = useAppLocale();
   if (generatedAt === null) {
     return (
       <EmptyState
         className="py-8"
-        title="No actions generated yet"
+        title={t("emptyNever")}
         action={
           <>
             <NumberedSteps
-              steps={HOW_THE_QUEUE_IS_MADE}
+              steps={howQueueIsMade(t)}
               className="mx-auto max-w-[46ch] gap-3 text-left text-muted-foreground"
             />
             <GenerateNowButton generatedAt={generatedAt} />
@@ -43,10 +47,10 @@ export function ActionEmptyState({
     return (
       <EmptyState
         className="py-8"
-        title="No actions match these filters"
+        title={t("emptyFiltered")}
         action={
           <Button variant="outline" onClick={onClearFilters}>
-            Clear filters
+            {t("clearFilters")}
           </Button>
         }
       />
@@ -56,8 +60,10 @@ export function ActionEmptyState({
   return (
     <EmptyState
       className="py-8"
-      title="Nothing to do right now"
-      body={`Last generated ${formatDateTime(generatedAt)}.`}
+      title={t("emptyQuiet")}
+      body={t("lastGenerated", {
+        date: formatDateTimeInLocale(generatedAt, locale),
+      })}
       action={<GenerateNowButton generatedAt={generatedAt} />}
     />
   );

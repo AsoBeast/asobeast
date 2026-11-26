@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useQueryState } from "nuqs";
 import { toast } from "sonner";
 import type {
@@ -27,7 +28,8 @@ import {
   withoutLocalization,
 } from "@/lib/app-localizations";
 import { siblingControl, useCloseFocusHandoff } from "@/lib/focus-handoff";
-import { localizationName } from "@/lib/localizations";
+import { localizationNameInLocale } from "@/lib/localizations";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { appKeys, invalidateLocalizationMutation } from "@/lib/queries";
 import { fieldLocaleParser } from "@/lib/search-params";
 import { useSingleFlight } from "@/lib/single-flight";
@@ -42,13 +44,15 @@ export function RemoveLocalizationDialog({
   id: string;
   item: AppLocalizationItem;
 }) {
+  const t = useTranslations("localizations");
+  const locale = useAppLocale();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [fieldLocale, setFieldLocale] = useQueryState(
     "fieldLocale",
     fieldLocaleParser,
   );
-  const name = localizationName(item.localization);
+  const name = localizationNameInLocale(item.localization, locale);
   const opener = useRef<HTMLButtonElement>(null);
   const { handOff, onCloseAutoFocus } = useCloseFocusHandoff();
 
@@ -70,10 +74,10 @@ export function RemoveLocalizationDialog({
       if (fieldLocale === item.localization) {
         void setFieldLocale(null, { history: "replace" });
       }
-      toast.success(`Removed ${name}`);
+      toast.success(t("remove.removed", { name }));
     },
     onError: (err) =>
-      toast.error(apiErrorMessage(err, `Could not remove ${name}`)),
+      toast.error(apiErrorMessage(err, t("remove.failed", { name }))),
   });
   const removeOnce = useSingleFlight(remove);
 
@@ -89,20 +93,20 @@ export function RemoveLocalizationDialog({
           size="sm"
           className="text-destructive hover:text-destructive"
         >
-          Remove localization
+          {t("remove.button")}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent onCloseAutoFocus={onCloseAutoFocus}>
         <AlertDialogHeader>
-          <AlertDialogTitle>Remove {name}?</AlertDialogTitle>
+          <AlertDialogTitle>{t("remove.title", { name })}</AlertDialogTitle>
           <AlertDialogDescription>
-            {removeDescription(item)}
+            {removeDescription(item, t, locale)}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <ConfirmActionFooter
           pending={remove.isPending}
-          label="Remove"
-          pendingLabel="Removing…"
+          label={t("remove.confirm")}
+          pendingLabel={t("remove.pending")}
           onConfirm={removeOnce}
         />
       </AlertDialogContent>

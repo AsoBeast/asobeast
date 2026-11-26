@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ export function TrackButton({
   focusKey?: string;
   className?: string;
 }) {
+  const t = useTranslations("competitors");
   const queryClient = useQueryClient();
   const mutation = useMutation({
     ...busyRetry,
@@ -32,13 +34,13 @@ export function TrackButton({
     onSuccess: (competitor) => {
       if (focusKey) renewFocusHandoff(focusKey);
       invalidateCompetitorMutation(queryClient, id);
-      toast.success(`Now tracking ${competitor.name ?? title}`);
+      toast.success(t("tracking", { name: competitor.name ?? title }));
     },
     onError: (error) => {
       toast.error(
         error instanceof ApiError
           ? error.envelope.message
-          : `Could not track ${title}`,
+          : t("trackFailed", { title }),
       );
     },
   });
@@ -57,7 +59,7 @@ export function TrackButton({
       }}
     >
       {mutation.isPending ? <Loader2 className="animate-spin" /> : <Plus />}
-      Track
+      {t("track")}
     </Button>
   );
 }

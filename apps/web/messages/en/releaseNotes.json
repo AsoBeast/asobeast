@@ -14,7 +14,7 @@
   },
   "showFirst": "Show the first {count}",
   "showAll": "Show all {count} {kind}",
-  "2.1.0": {
+  "2-1-0": {
     "title": "Choose English or Simplified Chinese",
     "summary": "The interface can now switch between English and Simplified Chinese, follows your browser language on first visit and remembers your choice.",
     "changes": [

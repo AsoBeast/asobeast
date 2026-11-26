@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQueries } from "@tanstack/react-query";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import type { ChartCaptureSummary, ChartPage } from "@asobeast/shared";
@@ -27,7 +28,9 @@ import {
 } from "@/components/layout/InlineQueryError";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
-import { formatDayMonth } from "@/lib/format";
+import { formatDayMonthInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
+import type { MessageTranslator } from "@/i18n/translator";
 import { chartPageOptions } from "@/lib/queries";
 import { shownChartKey } from "./chart-params";
 import {
@@ -39,7 +42,6 @@ import {
   type HistorySeries,
 } from "./chart-summary";
 
-const OWN_SUFFIX = " · yours";
 const END_LABEL_ROOM = 168;
 const HISTORY_MARGIN = { ...CHART_MARGIN, right: END_LABEL_ROOM } as const;
 const OWN_LINE = { ...LINE_PROPS, stroke: seriesColor(0) } as const;
@@ -76,15 +78,15 @@ const inTopOf =
 
 const LABEL_LENGTH = 20;
 
-const labelOf = (series: HistorySeries) =>
-  series.own ? `${series.title}${OWN_SUFFIX}` : series.title;
+const labelOf = (series: HistorySeries, t: MessageTranslator) =>
+  series.own ? `${series.title}${t("historyNotice.yours")}` : series.title;
 
-function endLabelOf(series: HistorySeries): string {
+function endLabelOf(series: HistorySeries, t: MessageTranslator): string {
   const title =
     series.title.length > LABEL_LENGTH
       ? `${series.title.slice(0, LABEL_LENGTH - 1).trimEnd()}…`
       : series.title;
-  return labelOf({ ...series, title });
+  return labelOf({ ...series, title }, t);
 }
 
 function EndLabel({
@@ -100,6 +102,7 @@ function EndLabel({
   last: number;
   series: HistorySeries;
 }) {
+  const t = useTranslations("topCharts");
   if (index !== last || x === undefined || y === undefined) return null;
   return (
     <text
@@ -112,7 +115,7 @@ function EndLabel({
           : "fill-muted-foreground text-caption"
       }
     >
-      {endLabelOf(series)}
+      {endLabelOf(series, t)}
     </text>
   );
 }
@@ -126,6 +129,8 @@ function HistoryTooltip({
   label?: string | number;
   history: History;
 }) {
+  const t = useTranslations("topCharts");
+  const locale = useAppLocale();
   const row = history.rows.find((candidate) => candidate.date === label);
   if (!active || !row) return null;
   const patterns = patternsOf(history.series);
@@ -135,15 +140,24 @@ function HistoryTooltip({
       key: series.id,
       index: patterns.get(series.id) ?? 0,
       color: lineOf(series).stroke,
-      label: labelOf(series),
-      value: typeof position === "number" ? `#${position}` : "Not listed",
+      label: labelOf(series, t),
+      value:
+        typeof position === "number"
+          ? `#${position}`
+          : t("historyNotice.notListed"),
       sortBy: typeof position === "number" ? position : Infinity,
     };
   });
-  return <SeriesTooltip title={formatDayMonth(row.date)} items={items} />;
+  return (
+    <SeriesTooltip
+      title={formatDayMonthInLocale(row.date, locale)}
+      items={items}
+    />
+  );
 }
 
 function HistoryPlot({ history }: { history: History }) {
+  const t = useTranslations("topCharts");
   const last = history.rows.length - 1;
   const ordered = [...history.series].sort(
     (a, b) => Number(a.own) - Number(b.own),
@@ -157,7 +171,10 @@ function HistoryPlot({ history }: { history: History }) {
       config={{}}
       className={`${CHART_HEIGHT.hero} w-full`}
       role="region"
-      aria-label={`Positions of the top ${history.series.length} apps over ${history.rows.length} captured days`}
+      aria-label={t("historyNotice.aria", {
+        apps: history.series.length,
+        days: history.rows.length,
+      })}
     >
       <LineChart accessibilityLayer data={history.rows} margin={HISTORY_MARGIN}>
         <CartesianGrid {...GRID_PROPS} />
@@ -190,6 +207,7 @@ export function ChartHistory({
 }: {
   page: ChartPage & { capture: ChartCaptureSummary };
 }) {
+  const t = useTranslations("topCharts");
   const dates = useMemo(
     () => historyDates(page.dates, page.capture.date),
     [page.dates, page.capture.date],
@@ -230,8 +248,8 @@ export function ChartHistory({
     return (
       <ChartNotice
         height={CHART_HEIGHT.hero}
-        title="History needs four captured days"
-        body={`${dates.length} captured so far. Follow the category so the daily run captures it.`}
+        title={t("historyNotice.title")}
+        body={t("historyNotice.body", { count: dates.length })}
       />
     );
   }
@@ -239,7 +257,7 @@ export function ChartHistory({
     return (
       <div className={`${CHART_HEIGHT.hero} flex items-center justify-center`}>
         <InlineQueryError
-          message="Could not load the earlier captures."
+          message={t("historyNotice.failed")}
           read={{
             data: undefined,
             isError: true,

@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useQueryState } from "nuqs";
 import type { SerpMoverItem } from "@asobeast/shared";
 import { PANEL_ACTION, PANEL_HEADER } from "@/components/layout/panel-classes";
@@ -18,9 +19,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TrackButton } from "@/components/competitors/TrackButton";
-import { formatCountry, formatDate, formatNumber } from "@/lib/format";
+import {
+  formatCountryInLocale,
+  formatDateInLocale,
+  formatNumberInLocale,
+} from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { serpMoversOptions } from "@/lib/queries";
-import { MOVER_WINDOWS, type MoverWindow } from "@/lib/ranges";
+import { MOVER_WINDOWS, rangeLabel, type MoverWindow } from "@/lib/ranges";
 import { countryParser, moverDaysParser } from "@/lib/search-params";
 import { PrintRangeLabel } from "./RangePicker";
 
@@ -42,13 +48,10 @@ function groupByDay(items: SerpMoverItem[]): [string, SerpMoverItem[]][] {
   return [...groups.entries()];
 }
 
-function ownership(item: SerpMoverItem, id: string): string | null {
-  if (item.appId === id) return "You";
-  return item.isCompetitor ? "Competitor" : null;
-}
-
 function EntrantRow({ item, id }: { item: SerpMoverItem; id: string }) {
-  const owner = ownership(item, id);
+  const t = useTranslations("rankings");
+  const owner =
+    item.appId === id ? t("you") : item.isCompetitor ? t("competitor") : null;
   return (
     <li className="flex min-h-10 items-center gap-3 rounded-md px-2 py-1 text-dense transition-colors duration-150 ease-out hover:bg-muted sm:min-h-9">
       <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2">
@@ -68,7 +71,7 @@ function EntrantRow({ item, id }: { item: SerpMoverItem; id: string }) {
           id={id}
           storeAppId={item.storeAppId}
           title={item.title}
-          label={`Track ${item.title}`}
+          label={t("trackApp", { title: item.title })}
           className="print:hidden"
         />
       ) : null}
@@ -87,18 +90,16 @@ function SerpMoversList({
   country: string | null;
   onWiden: () => void;
 }) {
+  const t = useTranslations("rankings");
+  const locale = useAppLocale();
   const { data } = useSuspenseQuery(serpMoversOptions(id, days, country));
-  const market = country ? formatCountry(country) : null;
+  const market = country ? formatCountryInLocale(country, locale) : null;
 
   if (data.items.length === 0) {
     return (
       <EmptyState
-        title={`No new entrants in the last ${days} days`}
-        body={
-          market
-            ? `Nobody broke into the top 10 for your tracked keywords in ${market} in this window.`
-            : "Nobody broke into the top 10 for your tracked keywords in this window."
-        }
+        title={t("noEntrants", { days })}
+        body={market ? t("nobodyTop10Market", { market }) : t("nobodyTop10")}
         action={
           days === WIDEST_WINDOW ? null : (
             <Button
@@ -107,7 +108,7 @@ function SerpMoversList({
               className="print:hidden"
               onClick={onWiden}
             >
-              {`Look back ${WIDEST_WINDOW} days`}
+              {t("lookBack", { days: WIDEST_WINDOW })}
             </Button>
           )
         }
@@ -118,11 +119,11 @@ function SerpMoversList({
   return (
     <div className="flex flex-col gap-1">
       {groupByDay(data.items).map(([date, items]) => (
-        <section key={date} aria-label={formatDate(date)}>
+        <section key={date} aria-label={formatDateInLocale(date, locale)}>
           <h3 className="flex h-9 items-center gap-2 px-2 text-label">
-            <span>{formatDate(date)}</span>
+            <span>{formatDateInLocale(date, locale)}</span>
             <span className="numeric font-normal text-faint-foreground">
-              {formatNumber(items.length)}
+              {formatNumberInLocale(items.length, locale)}
             </span>
           </h3>
           <ul className="flex flex-col">
@@ -155,6 +156,9 @@ export function SerpMoversSkeleton() {
 }
 
 export function SerpMoversCard({ id }: { id: string }) {
+  const t = useTranslations("rankings");
+  const format = useTranslations("format");
+  const locale = useAppLocale();
   const [days, setDays] = useQueryState("movers", moverDaysParser);
   const [country] = useQueryState("country", countryParser);
 
@@ -162,7 +166,7 @@ export function SerpMoversCard({ id }: { id: string }) {
     <Card>
       <CardHeader className={PANEL_HEADER}>
         <CardTitle asChild>
-          <h2>New in your top 10</h2>
+          <h2>{t("newInTop10")}</h2>
         </CardTitle>
         <CardAction className={PANEL_ACTION}>
           <Tabs
@@ -172,14 +176,17 @@ export function SerpMoversCard({ id }: { id: string }) {
               if (window !== null) void setDays(window);
             }}
           >
-            <TabsList aria-label="SERP movers window" className="print:hidden">
+            <TabsList
+              aria-label={t("serpMoversWindow")}
+              className="print:hidden"
+            >
               {MOVER_WINDOWS.map((window) => (
                 <TabsOption
                   key={window}
                   id={moverWindowId(window)}
                   value={String(window)}
                 >
-                  {`${window}d`}
+                  {rangeLabel(`${window}d`, format)}
                 </TabsOption>
               ))}
             </TabsList>
@@ -202,7 +209,12 @@ export function SerpMoversCard({ id }: { id: string }) {
       </CardContent>
       <CardFooter>
         <span>
-          {`${country ? formatCountry(country) : "All markets"} · last ${days} days`}
+          {t("marketLastDays", {
+            market: country
+              ? formatCountryInLocale(country, locale)
+              : t("allMarkets"),
+            days,
+          })}
         </span>
       </CardFooter>
     </Card>

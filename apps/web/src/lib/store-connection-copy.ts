@@ -1,12 +1,19 @@
+import { createTranslator } from "next-intl";
+import enIntegrations from "../../messages/en/integrations.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
 import {
   INTEGRATIONS_PATH,
-  PLAY_REPLIES_NEED_CONSENT,
   type Store,
   type StoreConnectionApp,
   type StoreConnectionItem,
   type StoreReportState,
 } from "@asobeast/shared";
-import { formatDate, formatDateTime } from "./format";
+import {
+  formatDate,
+  formatDateInLocale,
+  formatDateTimeInLocale,
+} from "./format";
 
 export const STORE_CONNECTIONS_SECTION_ID = "store-connections";
 export const STORE_CONNECTIONS_PATH = `${INTEGRATIONS_PATH}#${STORE_CONNECTIONS_SECTION_ID}`;
@@ -43,6 +50,12 @@ export interface StoreConsoleCopy {
   states: Record<StoreReportState, string>;
   facts: (item: StoreConnectionItem) => [string, string][];
 }
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "integrations",
+  messages: { integrations: enIntegrations },
+});
 
 const connectedOn = (item: StoreConnectionItem): [string, string] => [
   "Connected",
@@ -129,8 +142,79 @@ export const STORE_CONSOLES: Record<Store, StoreConsoleCopy> = {
   },
 };
 
-export function connectionStatusLine(item: StoreConnectionItem): StatusLine {
-  const copy = STORE_CONSOLES[item.store];
+export function storeConsoleCopy(
+  store: Store,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
+): StoreConsoleCopy {
+  const base = STORE_CONSOLES[store];
+  const namespace =
+    store === "APP_STORE"
+      ? "storeConnections.appStore"
+      : "storeConnections.googlePlay";
+  const connected = (item: StoreConnectionItem): [string, string] => [
+    t("storeConnections.connected"),
+    formatDateInLocale(item.createdAt, locale),
+  ];
+  return {
+    ...base,
+    before:
+      store === "APP_STORE"
+        ? [
+            t("storeConnections.appStore.beforeRole"),
+            t("storeConnections.appStore.beforeTime"),
+            t("storeConnections.appStore.beforeNumbers"),
+          ]
+        : [
+            t("storeConnections.googlePlay.beforeOwner"),
+            t("storeConnections.googlePlay.beforeBucket"),
+            t("storeConnections.googlePlay.beforeTime"),
+          ],
+    connectLabel: t(`${namespace}.connect`),
+    replaceLabel: t(`${namespace}.replace`),
+    empty: t(`${namespace}.empty`),
+    noApps: t(`${namespace}.noApps`),
+    appsLabel: t(`${namespace}.appsLabel`),
+    verified: t(`${namespace}.verified`),
+    refused: t(`${namespace}.refused`),
+    waiting: t(`${namespace}.waiting`),
+    disconnect: t(`${namespace}.disconnect`),
+    states: {
+      requested: t(`${namespace}.states.requested`),
+      unmatched: t(`${namespace}.states.unmatched`),
+      forbidden: t(`${namespace}.states.forbidden`),
+      stopped: t(`${namespace}.states.stopped`),
+    },
+    facts: (item) =>
+      store === "APP_STORE"
+        ? [
+            [t("storeConnections.facts.issuerId"), item.issuerId],
+            [t("storeConnections.facts.keyId"), item.keyId],
+            [t("storeConnections.facts.fingerprint"), item.keyFingerprint],
+            connected(item),
+          ]
+        : item.credential === "googleAccount"
+          ? [
+              [t("storeConnections.facts.googleAccount"), item.issuerId],
+              [t("storeConnections.facts.bucket"), item.bucket ?? "—"],
+              connected(item),
+            ]
+          : [
+              [t("storeConnections.facts.serviceAccount"), item.issuerId],
+              [t("storeConnections.facts.keyId"), item.keyId],
+              [t("storeConnections.facts.bucket"), item.bucket ?? "—"],
+              [t("storeConnections.facts.fingerprint"), item.keyFingerprint],
+              connected(item),
+            ],
+  };
+}
+
+export function connectionStatusLine(
+  item: StoreConnectionItem,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
+): StatusLine {
+  const copy = storeConsoleCopy(item.store, t, locale);
   if (item.status === "rejected") {
     return { tone: "warning", text: item.lastError ?? copy.refused };
   }
@@ -140,32 +224,33 @@ export function connectionStatusLine(item: StoreConnectionItem): StatusLine {
   }
   return {
     tone: "muted",
-    text: `Last synced ${formatDateTime(item.lastSyncedAt)}`,
+    text: t("storeConnections.lastSynced", {
+      date: formatDateTimeInLocale(item.lastSyncedAt, locale),
+    }),
   };
 }
 
-const REPLY_ROLE_NEEDED: Record<Store, string> = {
-  APP_STORE:
-    "This App Store Connect key cannot respond to reviews. Connect a key with the Admin or Customer Support role.",
-  GOOGLE_PLAY:
-    "This service account cannot reply to reviews. Give it the Reply to reviews permission in Play Console.",
-};
-
-const GOOGLE_SIGN_IN_CANNOT_REPLY = `${PLAY_REPLIES_NEED_CONSENT} If you already allowed it, give your Google account the Reply to reviews permission in Play Console.`;
-
-export function replyAccessLine(item: StoreConnectionItem): StatusLine {
+export function replyAccessLine(
+  item: StoreConnectionItem,
+  t: MessageTranslator = english,
+): StatusLine {
   if (item.replyAccess === "forbidden") {
     return {
       tone: "warning",
       text:
         item.credential === "googleAccount"
-          ? GOOGLE_SIGN_IN_CANNOT_REPLY
-          : REPLY_ROLE_NEEDED[item.store],
+          ? t("storeConnections.googleSignInCannotReply")
+          : item.store === "APP_STORE"
+            ? t("storeConnections.replyRoleAppStore")
+            : t("storeConnections.replyRoleGoogle"),
     };
   }
   return {
     tone: "muted",
-    text: item.replyAccess === "allowed" ? "Allowed" : "Not tried yet",
+    text:
+      item.replyAccess === "allowed"
+        ? t("storeConnections.allowed")
+        : t("storeConnections.notTried"),
   };
 }
 
@@ -177,11 +262,21 @@ export const needsAdminKey = (item: StoreConnectionItem): boolean =>
 export function appStateLabel(
   state: StoreReportState | null,
   store: Store = "APP_STORE",
+  t: MessageTranslator = english,
 ): string {
-  return state ? STORE_CONSOLES[store].states[state] : "Waiting";
+  return state
+    ? storeConsoleCopy(store, t).states[state]
+    : t("storeConnections.waiting");
 }
 
-export function historyLine(app: StoreConnectionApp): string {
-  if (!app.firstDate || !app.lastDate) return "No data yet";
-  return `Data from ${formatDate(app.firstDate)} to ${formatDate(app.lastDate)}`;
+export function historyLine(
+  app: StoreConnectionApp,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
+): string {
+  if (!app.firstDate || !app.lastDate) return t("storeConnections.noData");
+  return t("storeConnections.dataFrom", {
+    from: formatDateInLocale(app.firstDate, locale),
+    to: formatDateInLocale(app.lastDate, locale),
+  });
 }

@@ -1,5 +1,6 @@
 import { formatRankPosition, keywordLabel } from "@asobeast/shared";
 import { Clock, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { DeltaChip } from "@/components/ui/delta-chip";
 import { GradedNumber } from "@/components/ui/graded";
@@ -12,7 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatDate, formatDayMonth } from "@/lib/format";
+import { formatDateInLocale, formatDayMonthInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { grade } from "@/lib/grade";
 import { rangeLabel, type RangePreset } from "@/lib/ranges";
 import { cn } from "@/lib/utils";
@@ -35,20 +37,23 @@ function ChangeCell({
   change: RangeChange | null;
   period: string;
 }) {
+  const t = useTranslations("rankings");
   if (change === null) return DASH;
   if (change.kind === "moved") {
     return <DeltaChip value={change.places} period={period} />;
   }
   if (change.kind === "entered") {
-    return <span className="font-medium text-signal-up">New</span>;
+    return <span className="font-medium text-signal-up">{t("new")}</span>;
   }
   if (change.kind === "lost") {
-    return <span className="font-medium text-signal-down">Lost</span>;
+    return <span className="font-medium text-signal-down">{t("lost")}</span>;
   }
-  return <span className="text-muted-foreground">Not ranked</span>;
+  return <span className="text-muted-foreground">{t("notRanked")}</span>;
 }
 
 function PositionCell({ stats }: { stats: SeriesStats }) {
+  const t = useTranslations("rankings");
+  const locale = useAppLocale();
   if (stats.latest === null) return DASH;
   const { position, depth } = stats.latest;
   return (
@@ -61,19 +66,21 @@ function PositionCell({ stats }: { stats: SeriesStats }) {
         <GradedNumber
           value={`#${position}`}
           grade={grade("position", position)}
-          label="Position"
+          label={t("position")}
           className="font-medium"
         />
       )}
       {stats.staleSince === null ? null : (
         <span
           className="inline-flex items-center gap-1 text-tick text-faint-foreground"
-          title={`Last checked ${formatDate(stats.staleSince)}`}
+          title={t("lastCheckedTitle", {
+            date: formatDateInLocale(stats.staleSince, locale),
+          })}
         >
           <Clock className="size-3" aria-hidden />
-          <span className="sr-only">last checked </span>
+          <span className="sr-only">{t("lastChecked")}</span>
           <span className="max-sm:sr-only">
-            {formatDayMonth(stats.staleSince)}
+            {formatDayMonthInLocale(stats.staleSince, locale)}
           </span>
         </span>
       )}
@@ -101,25 +108,28 @@ export function SeriesStatsTable({
   range: RangePreset;
   onRemove: (keywordId: string, trigger: HTMLElement) => void;
 }) {
-  const period = `in the ${rangeLabel(range).toLowerCase()}`;
+  const t = useTranslations("rankings");
+  const format = useTranslations("format");
+  const rangeText = rangeLabel(range, format);
+  const period = t("periodInRange", { range: rangeText.toLowerCase() });
   return (
     <Table density="compact" containerClassName="print:overflow-visible">
-      <TableCaption className="sr-only">
-        Charted keywords with their position, change, best and average
-      </TableCaption>
+      <TableCaption className="sr-only">{t("seriesCaption")}</TableCaption>
       <TableHeader>
         <TableRow className="hover:bg-card">
-          <TableHead className={LEAD}>Keyword</TableHead>
-          <TableHead numeric>Position</TableHead>
-          <TableHead numeric>{`${range} change`}</TableHead>
-          <TableHead numeric className={WIDE_ONLY}>
-            Best
+          <TableHead className={LEAD}>{t("keyword")}</TableHead>
+          <TableHead numeric>{t("position")}</TableHead>
+          <TableHead numeric>
+            {t("rangeChange", { range: rangeText })}
           </TableHead>
           <TableHead numeric className={WIDE_ONLY}>
-            Average
+            {t("best")}
+          </TableHead>
+          <TableHead numeric className={WIDE_ONLY}>
+            {t("average")}
           </TableHead>
           <TableHead className="w-10 print:hidden">
-            <span className="sr-only">Remove</span>
+            <span className="sr-only">{t("remove")}</span>
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -144,17 +154,19 @@ export function SeriesStatsTable({
               <ChangeCell change={stats.change} period={period} />
             </TableCell>
             <TableCell numeric className={WIDE_ONLY}>
-              <RankCell value={stats.best} label="Best position" />
+              <RankCell value={stats.best} label={t("bestPosition")} />
             </TableCell>
             <TableCell numeric className={WIDE_ONLY}>
-              <RankCell value={stats.average} label="Average position" />
+              <RankCell value={stats.average} label={t("averagePosition")} />
             </TableCell>
             <TableCell className="pl-0 print:hidden">
               <Button
                 variant="ghost"
                 size="icon-sm"
                 id={seriesRemoveId(stats.keywordId)}
-                aria-label={`Remove ${keywordLabel(stats)} from the chart`}
+                aria-label={t("removeFromChart", {
+                  keyword: keywordLabel(stats),
+                })}
                 onClick={(event) =>
                   onRemove(stats.keywordId, event.currentTarget)
                 }

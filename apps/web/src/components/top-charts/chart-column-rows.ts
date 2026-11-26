@@ -3,7 +3,17 @@ import type {
   ChartEntryItem,
   ChartPage,
 } from "@asobeast/shared";
-import { formatDateTime, formatDayMonth } from "@/lib/format";
+import { createTranslator } from "next-intl";
+import enTopCharts from "../../../messages/en/topCharts.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import { formatDateTimeInLocale, formatDayMonthInLocale } from "@/lib/format";
+import type { Locale } from "@/lib/locale";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "topCharts",
+  messages: { topCharts: enTopCharts },
+});
 
 export const CHART_COLUMN_ROWS = 25;
 
@@ -16,20 +26,34 @@ export function columnRows(page: Pick<ChartPage, "entries">): ChartEntryItem[] {
 export function columnCount(
   page: Pick<ChartPage, "capture" | "dates" | "entries" | "today">,
   date: string | null,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
 ): string {
-  if (page.dates.length === 0) return "Not captured yet";
+  if (page.dates.length === 0) return t("column.notCaptured");
   if (!page.capture) {
-    return `Not captured on ${formatDayMonth(date ?? page.today)}`;
+    return t("column.notCapturedOn", {
+      date: formatDayMonthInLocale(date ?? page.today, locale),
+    });
   }
   const total = page.entries.length;
-  if (total === 0) return `No apps · ${formatDayMonth(page.capture.date)}`;
+  if (total === 0) {
+    return t("column.noApps", {
+      date: formatDayMonthInLocale(page.capture.date, locale),
+    });
+  }
   return total > CHART_COLUMN_ROWS
-    ? `Top ${CHART_COLUMN_ROWS} of ${total}`
-    : `${total} ${total === 1 ? "app" : "apps"}`;
+    ? t("column.top", { shown: CHART_COLUMN_ROWS, total })
+    : t("appCount", { count: total });
 }
 
-export function capturedLine(capture: ChartCaptureSummary): string {
-  return `Captured ${formatDateTime(capture.capturedAt)}`;
+export function capturedLine(
+  capture: ChartCaptureSummary,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
+): string {
+  return t("column.captured", {
+    date: formatDateTimeInLocale(capture.capturedAt, locale),
+  });
 }
 
 export function listsNoApps<P extends Pick<ChartPage, "capture" | "entries">>(

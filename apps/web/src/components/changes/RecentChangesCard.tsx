@@ -3,8 +3,8 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useQueryState } from "nuqs";
-import { CHANGE_FIELD_LABELS } from "@asobeast/shared";
 import type { ChangeEventItem } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { Badge } from "@/components/ui/badge";
@@ -27,8 +27,12 @@ import { FeedCardSkeleton } from "@/components/dashboard/skeletons";
 import { PANEL_ACTION, PANEL_HEADER } from "@/components/layout/panel-classes";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { focusIsLost } from "@/lib/focus-handoff";
-import { formatDayMonth } from "@/lib/format";
+import { formatDayMonthInLocale } from "@/lib/format";
+import { changeFieldLabel } from "@/lib/change-field-label";
 import { localizedLabel } from "@/lib/localizations";
+import { useAppLocale } from "@/lib/use-app-locale";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
 import { portfolioOptions, recentChangesOptions } from "@/lib/queries";
 import { changeOwnerParser, type ChangeOwner } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
@@ -38,18 +42,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 
 const VISIBLE_CHANGES = 8;
 
-const OWNER_TABS: Array<{ value: ChangeOwner; label: string }> = [
-  { value: "all", label: "All" },
-  { value: "yours", label: "Yours" },
-  { value: "competitors", label: "Competitors" },
-];
-
-const EMPTY_FILTER: Record<ChangeOwner, string> = {
-  all: "No changes in this window.",
-  yours: "No changes to your apps in this window.",
-  competitors: "No changes from competitors in this window.",
-};
-
 const ownedBy =
   (owner: ChangeOwner) =>
   (event: ChangeEventItem): boolean =>
@@ -57,35 +49,50 @@ const ownedBy =
 
 const dayOf = (event: ChangeEventItem): string => event.capturedAt.slice(0, 10);
 
-function entryDay(entry: ChangeEntry, today: string): string {
-  if (entry.kind === "event") return feedDayLabel(dayOf(entry.event), today);
-  const first = formatDayMonth(dayOf(entry.events[entry.events.length - 1]));
-  const last = formatDayMonth(dayOf(entry.events[0]));
-  return first === last ? last : `${first} to ${last}`;
+function entryDay(
+  entry: ChangeEntry,
+  today: string,
+  t: MessageTranslator,
+  locale: Locale,
+): string {
+  if (entry.kind === "event")
+    return feedDayLabel(dayOf(entry.event), today, locale);
+  const first = formatDayMonthInLocale(
+    dayOf(entry.events[entry.events.length - 1]),
+    locale,
+  );
+  const last = formatDayMonthInLocale(dayOf(entry.events[0]), locale);
+  return first === last ? last : t("recent.range", { from: first, to: last });
 }
 
 function VersionRun({ events }: { events: ChangeEventItem[] }) {
+  const t = useTranslations("changes");
   const newest = events[0];
   return (
     <>
-      <bdi>{newest.appName ?? "Unknown app"}</bdi>
-      <span className="text-muted-foreground">{" shipped "}</span>
-      <span className="font-medium">{`${events.length} versions`}</span>
-      <span className="text-muted-foreground">{" · latest "}</span>
+      <bdi>{newest.appName ?? t("unknownApp")}</bdi>
+      <span className="text-muted-foreground">{t("recent.shipped")}</span>
+      <span className="font-medium">
+        {t("recent.versionCount", { count: events.length })}
+      </span>
+      <span className="text-muted-foreground">{t("recent.latest")}</span>
       <span className="font-medium">{newest.after ?? "—"}</span>
     </>
   );
 }
 
 function EventLine({ event }: { event: ChangeEventItem }) {
+  const t = useTranslations("changes");
+  const locale = useAppLocale();
   const label = localizedLabel(
-    CHANGE_FIELD_LABELS[event.field],
+    changeFieldLabel(event.field, t),
     event.localization,
+    locale,
   );
   const field = event.country
     ? `${label} · ${event.country.toUpperCase()}`
     : label;
-  const name = event.appName ?? "Unknown app";
+  const name = event.appName ?? t("unknownApp");
   return (
     <>
       <span className="text-muted-foreground">{`${field} · `}</span>
@@ -111,6 +118,8 @@ function EntryRow({
   iconUrl: string | null;
   today: string;
 }) {
+  const t = useTranslations("changes");
+  const locale = useAppLocale();
   const event = entryEvent(entry);
   return (
     <Link
@@ -118,7 +127,7 @@ function EntryRow({
       data-change-field={event.field}
       className={cn(FEED_ROW, FEED_LINK)}
     >
-      <FeedDay>{entryDay(entry, today)}</FeedDay>
+      <FeedDay>{entryDay(entry, today, t, locale)}</FeedDay>
       <span className="flex min-w-0 items-center gap-2">
         <AppIcon src={iconUrl} size={16} />
         <span className={cn(FEED_TEXT, "wrap-anywhere")}>
@@ -130,13 +139,14 @@ function EntryRow({
         </span>
       </span>
       <Badge variant="flat">
-        {event.isCompetitor ? "competitor" : "yours"}
+        {t(event.isCompetitor ? "competitor" : "yours")}
       </Badge>
     </Link>
   );
 }
 
 function RecentChanges({ today }: { today: string }) {
+  const t = useTranslations("changes");
   const { data } = useSuspenseQuery(recentChangesOptions());
   const { data: portfolio } = useSuspenseQuery(portfolioOptions);
   const [owner, setOwner] = useQueryState("changes", changeOwnerParser);
@@ -154,6 +164,16 @@ function RecentChanges({ today }: { today: string }) {
       ?.focus();
   }, [expanded]);
 
+  const ownerTabs: Array<{ value: ChangeOwner; label: string }> = [
+    { value: "all", label: t("owners.all") },
+    { value: "yours", label: t("owners.yours") },
+    { value: "competitors", label: t("owners.competitors") },
+  ];
+  const emptyFilter: Record<ChangeOwner, string> = {
+    all: t("recent.emptyAll"),
+    yours: t("recent.emptyYours"),
+    competitors: t("recent.emptyCompetitors"),
+  };
   const mixed =
     data.events.some((event) => event.isCompetitor) &&
     data.events.some((event) => !event.isCompetitor);
@@ -167,7 +187,7 @@ function RecentChanges({ today }: { today: string }) {
     <Card className="h-full">
       <CardHeader className={PANEL_HEADER}>
         <CardTitle asChild>
-          <h2>Listing changes</h2>
+          <h2>{t("listingChanges")}</h2>
         </CardTitle>
         {mixed ? (
           <CardAction className={PANEL_ACTION}>
@@ -177,8 +197,8 @@ function RecentChanges({ today }: { today: string }) {
                 void setOwner(changeOwnerParser.parse(value))
               }
             >
-              <TabsList aria-label="Changes shown">
-                {OWNER_TABS.map((tab) => (
+              <TabsList aria-label={t("changesShown")}>
+                {ownerTabs.map((tab) => (
                   <TabsOption key={tab.value} value={tab.value}>
                     {tab.label}
                   </TabsOption>
@@ -194,8 +214,8 @@ function RecentChanges({ today }: { today: string }) {
             <EmptyState
               title={
                 data.events.length === 0
-                  ? "Listing changes appear here after the daily refreshes."
-                  : EMPTY_FILTER[active]
+                  ? t("recent.emptyBody")
+                  : emptyFilter[active]
               }
             />
           ) : (
@@ -224,7 +244,7 @@ function RecentChanges({ today }: { today: string }) {
                 setExpanded(true);
               }}
             >
-              {`Show ${hidden} more`}
+              {t("recent.showMore", { count: hidden })}
             </Button>
           ) : null}
         </div>

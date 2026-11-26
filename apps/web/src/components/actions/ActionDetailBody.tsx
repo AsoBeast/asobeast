@@ -1,11 +1,13 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { ActionDetail, ActionItem } from "@asobeast/shared";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isNotFound } from "@/lib/api";
-import { formatDate } from "@/lib/format";
+import { formatDateInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { ActionEvidencePanel } from "./ActionEvidencePanel";
 import { ActionExplain } from "./ActionExplain";
 import { ActionImpactMeter } from "./ActionImpactMeter";
@@ -14,9 +16,6 @@ import { ActionNote } from "./ActionNote";
 import { ActionOutcome } from "./ActionOutcome";
 import { ActionSteps } from "./ActionSteps";
 import { ActionTrendChart } from "./ActionTrendChart";
-
-export const ACTION_NOT_FOUND =
-  "This action no longer exists. It may have been pruned after 180 days.";
 
 function Section({
   title,
@@ -34,13 +33,14 @@ function Section({
 }
 
 function SampleReviews({ item }: { item: ActionItem }) {
+  const t = useTranslations("actions");
   if (item.evidence?.rule !== "reviews.investigate_theme") return null;
   return (
     <Link
       href={`/apps/${item.scope.appId}/reviews`}
       className="self-start text-dense font-medium underline-offset-4 hover:underline"
     >
-      Read the sample reviews
+      {t("detail.sampleReviews")}
     </Link>
   );
 }
@@ -62,12 +62,14 @@ export function ActionDetailBody({
   detail: UseQueryResult<ActionDetail>;
   item: ActionItem | undefined;
 }) {
+  const t = useTranslations("actions");
+  const locale = useAppLocale();
   if (isNotFound(detail.error)) return null;
   if (detail.error) {
     return (
       <div className="p-4">
         <Alert variant="destructive">
-          <AlertTitle>The action could not be loaded</AlertTitle>
+          <AlertTitle>{t("detail.loadFailed")}</AlertTitle>
           <AlertDescription className="flex flex-col items-start gap-2">
             {detail.error.message}
             <Button
@@ -75,7 +77,7 @@ export function ActionDetailBody({
               size="sm"
               onClick={() => void detail.refetch()}
             >
-              Try again
+              {t("tryAgain")}
             </Button>
           </AlertDescription>
         </Alert>
@@ -88,20 +90,20 @@ export function ActionDetailBody({
   return (
     <div className="@container/sheet flex flex-col gap-6 p-4">
       <ActionImpactMeter impact={shown.impact} />
-      <Section title="Why this">
+      <Section title={t("detail.why")}>
         <ActionEvidencePanel evidence={shown.evidence} />
         <SampleReviews item={shown} />
       </Section>
-      <Section title="How to fix">
+      <Section title={t("detail.how")}>
         <ActionSteps item={shown} />
       </Section>
       {detail.data?.trend ? (
-        <Section title="Trend">
+        <Section title={t("detail.trend")}>
           <ActionTrendChart trend={detail.data.trend} item={shown} />
         </Section>
       ) : null}
       {detail.data?.outcome ? (
-        <Section title="Outcome">
+        <Section title={t("detail.outcome")}>
           <ActionOutcome
             outcome={detail.data.outcome}
             depth={detail.data.trend?.depth ?? null}
@@ -109,17 +111,19 @@ export function ActionDetailBody({
         </Section>
       ) : null}
       {detail.data ? (
-        <Section title="History">
+        <Section title={t("detail.history")}>
           <ActionHistory events={detail.data.events} />
         </Section>
       ) : null}
-      <Section title="Note">
+      <Section title={t("detail.note")}>
         <ActionNote key={shown.id} item={shown} />
       </Section>
       <ActionExplain item={shown} />
       <p className="text-caption text-muted-foreground">
-        Evidence last confirmed {formatDate(shown.lastSeenAt)} · formula{" "}
-        {shown.formulaVersion}
+        {t("detail.confirmed", {
+          date: formatDateInLocale(shown.lastSeenAt, locale),
+          version: shown.formulaVersion,
+        })}
       </p>
     </div>
   );

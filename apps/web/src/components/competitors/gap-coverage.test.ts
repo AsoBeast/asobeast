@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { createTranslator } from "next-intl";
+import zhCompetitors from "../../../messages/zh-CN/competitors.json";
 import { coverageLine } from "./gap-coverage";
 
 const coverage = {
@@ -11,7 +13,19 @@ const coverage = {
   ],
 };
 
+const zh = createTranslator({
+  locale: "zh-CN",
+  namespace: "competitors",
+  messages: { competitors: zhCompetitors },
+});
+
 describe("coverageLine", () => {
+  it("writes the compared coverage in Simplified Chinese", () => {
+    expect(coverageLine(coverage, "", zh)).toBe(
+      "已对比 11 个关键词中的 9 个，覆盖 3 个市场",
+    );
+  });
+
   it("sums every market when none is chosen", () => {
     expect(coverageLine(coverage, "")).toBe(
       "Compared on 9 of 11 keywords in 3 markets",

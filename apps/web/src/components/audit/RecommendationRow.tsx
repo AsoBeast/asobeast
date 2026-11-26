@@ -1,8 +1,11 @@
+"use client";
+
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { AuditRecommendation, AuditTarget } from "@asobeast/shared";
 import { PriorityWord } from "@/components/actions/PriorityWord";
 import { cn } from "@/lib/utils";
-import { EFFORT_LABEL, liftLabel, TARGET_LABEL } from "./audit-copy";
+import { liftLabel } from "./audit-copy";
 import { targetHref } from "./audit-links";
 import { TEXT_LINK } from "./layout-classes";
 
@@ -18,16 +21,17 @@ function Where({
   appId: string;
   target: AuditTarget | undefined;
 }) {
+  const t = useTranslations("audit");
   if (!target) return null;
   const href = targetHref(appId, target);
   if (href === null) {
     return (
-      <span className="text-muted-foreground">{TARGET_LABEL[target]}</span>
+      <span className="text-muted-foreground">{t(`targets.${target}`)}</span>
     );
   }
   return (
     <Link href={href} className={TEXT_LINK}>
-      {TARGET_LABEL[target]}
+      {t(`targets.${target}`)}
     </Link>
   );
 }
@@ -39,6 +43,7 @@ export function RecommendationRow({
   appId: string;
   item: AuditRecommendation;
 }) {
+  const t = useTranslations("audit");
   return (
     <li
       className={cn(
@@ -61,7 +66,7 @@ export function RecommendationRow({
         ) : null}
       </div>
       <span className="numeric col-start-3 row-start-1 text-right font-medium whitespace-nowrap @3xl/plan:col-start-5">
-        {liftLabel(item.lift)}
+        {liftLabel(item.lift, t)}
       </span>
       {item.effort ? (
         <span
@@ -70,7 +75,7 @@ export function RecommendationRow({
             WIDE_ROW,
           )}
         >
-          {EFFORT_LABEL[item.effort]}
+          {t(`efforts.${item.effort}`)}
         </span>
       ) : null}
       <span

@@ -37,6 +37,34 @@ test.describe("locale preference", () => {
     await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
   });
 
+  test("renders Simplified Chinese across the main signed-in routes", async ({
+    page,
+  }) => {
+    await seedSession(page);
+    await seedViewer(page.context(), "customer");
+    const failures: string[] = [];
+    page.on("pageerror", (error) => failures.push(error.message));
+
+    for (const path of [
+      "/",
+      "/actions",
+      "/alerts",
+      "/charts",
+      "/integrations",
+      "/settings",
+      "/whats-new",
+      "/apps/app-1/audit",
+      "/apps/app-1/keywords",
+      "/apps/app-1/reviews",
+    ]) {
+      await page.goto(path);
+      await expect(page.locator("html"), path).toHaveAttribute("lang", "zh-CN");
+      await expect(page.locator("body"), path).toContainText(/[\u4e00-\u9fff]/);
+    }
+
+    expect(failures).toEqual([]);
+  });
+
   test("translates sign-in and registration before authentication", async ({
     page,
   }) => {

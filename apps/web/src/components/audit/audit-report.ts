@@ -3,25 +3,26 @@ import type {
   AuditFactorResult,
   AuditRecommendation,
 } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
+import enAudit from "../../../messages/en/audit.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import { storeLabel } from "@/lib/format";
 import {
   availabilityLabel,
-  BUCKET_LABEL,
   BUCKETS,
-  EFFORT_LABEL,
   gradeLabel,
-  GROUP_LABEL,
-  IMPACT_LABEL,
+  groupLabel,
   liftLabel,
   percent,
   scoreStatus,
-  STATUS_LABEL,
 } from "./audit-copy";
-import { pluralize, storeLabel } from "@/lib/format";
-import {
-  comparison,
-  COMPARISON_LABEL,
-  formatBenchmarkValue,
-} from "./benchmark-comparison";
+import { comparison, formatBenchmarkValue } from "./benchmark-comparison";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "audit",
+  messages: { audit: enAudit },
+});
 
 const DASH = "—";
 
@@ -34,11 +35,14 @@ export const escapeMarkdown = (text: string): string =>
     .replaceAll("|", "\\|")
     .replace(/\s*\r?\n\s*/g, " ");
 
-const recommendationLines = (item: AuditRecommendation): string[] => [
-  `### ${escapeMarkdown(item.label)} · ${liftLabel(item.lift)}`,
+const recommendationLines = (
+  item: AuditRecommendation,
+  t: MessageTranslator,
+): string[] => [
+  `### ${escapeMarkdown(item.label)} · ${liftLabel(item.lift, t)}`,
   "",
-  `${item.impact ? IMPACT_LABEL[item.impact] : "Impact unknown"} · ${
-    item.effort ? EFFORT_LABEL[item.effort] : "Effort unknown"
+  `${item.impact ? t(`impacts.${item.impact}`) : t("report.impactUnknown")} · ${
+    item.effort ? t(`efforts.${item.effort}`) : t("report.effortUnknown")
   }`,
   "",
   escapeMarkdown(item.detail),
@@ -46,23 +50,26 @@ const recommendationLines = (item: AuditRecommendation): string[] => [
   "",
 ];
 
-const headline = (audit: AppAuditResult): string =>
+const headline = (audit: AppAuditResult, t: MessageTranslator): string =>
   `**${[
     `${rounded(audit.overall)}/100`,
-    `Grade ${audit.grade ?? DASH}, ${gradeLabel(audit.grade)}`,
+    t("report.grade", {
+      grade: audit.grade ?? DASH,
+      label: gradeLabel(audit.grade, t),
+    }),
     ...(audit.confidence === undefined
       ? []
-      : [`${percent(audit.confidence)}% measured`]),
-    `Potential ${rounded(audit.potential)}`,
+      : [t("measuredShort", { percent: percent(audit.confidence) })]),
+    t("report.potential", { score: rounded(audit.potential) }),
   ].join(" · ")}**`;
 
-const groupLines = (audit: AppAuditResult): string[] => {
+const groupLines = (audit: AppAuditResult, t: MessageTranslator): string[] => {
   const groups = audit.groups ?? [];
   if (groups.length === 0) return [];
   return [
     ...groups.map(
       (group) =>
-        `- ${GROUP_LABEL[group.id]}: ${rounded(
+        `- ${groupLabel(group.id, t)}: ${rounded(
           group.score === null ? null : group.score * 10,
         )}/100`,
     ),
@@ -73,56 +80,61 @@ const groupLines = (audit: AppAuditResult): string[] => {
 const factorNotes = (
   factor: AuditFactorResult,
   audit: AppAuditResult,
+  t: MessageTranslator,
 ): string => {
   const firstIssue = factor.checks.find(
     (check) => check.status === "warn" || check.status === "fail",
   );
   const scored = factor.checks.filter((check) => check.score !== null).length;
   return (
-    availabilityLabel(factor.availability, audit.store) ??
+    availabilityLabel(factor.availability, audit.store, t) ??
     (firstIssue
       ? `${firstIssue.label}: ${firstIssue.detail}`
-      : `${scored} of ${factor.checks.length} checks scored`)
+      : t("checksScored", { scored, total: factor.checks.length }))
   );
 };
 
-const factorLines = (audit: AppAuditResult): string[] => [
-  "## Factors",
+const factorLines = (audit: AppAuditResult, t: MessageTranslator): string[] => [
+  `## ${t("factors")}`,
   "",
-  "| Factor | Score | Status | Notes |",
-  "| --- | --- | --- | --- |",
+  t("report.factorTable"),
+  t("report.factorDivider"),
   ...audit.factors.map(
     (factor) =>
       `| ${escapeMarkdown(factor.label)} | ${
         factor.score === null ? DASH : `${factor.score}/10`
-      } | ${STATUS_LABEL[scoreStatus(factor.score)]} | ${escapeMarkdown(
-        factorNotes(factor, audit),
+      } | ${t(`statuses.${scoreStatus(factor.score)}`)} | ${escapeMarkdown(
+        factorNotes(factor, audit, t),
       )} |`,
   ),
   "",
 ];
 
-const planLines = (audit: AppAuditResult): string[] =>
+const planLines = (audit: AppAuditResult, t: MessageTranslator): string[] =>
   BUCKETS.flatMap((bucket) => {
     const items = audit.recommendations[bucket];
+    const label = t(`buckets.${bucket}`);
     return [
-      `## ${BUCKET_LABEL[bucket]}`,
+      `## ${label}`,
       "",
       ...(items.length === 0
-        ? [`No change is waiting in ${BUCKET_LABEL[bucket]}.`, ""]
-        : items.flatMap(recommendationLines)),
+        ? [t("report.emptyBucket", { bucket: label }), ""]
+        : items.flatMap((item) => recommendationLines(item, t))),
     ];
   });
 
-const benchmarkLines = (audit: AppAuditResult): string[] =>
+const benchmarkLines = (
+  audit: AppAuditResult,
+  t: MessageTranslator,
+): string[] =>
   audit.benchmarks
     ? [
-        "## Competitor comparison",
+        `## ${t("benchmarks.title")}`,
         "",
-        `Compared with ${pluralize(audit.benchmarks.competitors, "competitor")}.`,
+        t("report.benchmarkCompared", { count: audit.benchmarks.competitors }),
         "",
-        "| Metric | You | Competitor median | Best | Comparison |",
-        "| --- | --- | --- | --- | --- |",
+        t("report.benchmarkTable"),
+        t("report.benchmarkDivider"),
         ...audit.benchmarks.rows.map(
           (row) =>
             `| ${escapeMarkdown(row.label)} | ${formatBenchmarkValue(
@@ -131,19 +143,22 @@ const benchmarkLines = (audit: AppAuditResult): string[] =>
             )} | ${formatBenchmarkValue(
               row.metric,
               row.median,
-            )} | ${formatBenchmarkValue(row.metric, row.best)} | ${
-              COMPARISON_LABEL[comparison(row)]
-            } |`,
+            )} | ${formatBenchmarkValue(row.metric, row.best)} | ${t(
+              `benchmarks.${comparison(row)}`,
+            )} |`,
         ),
         "",
       ]
     : [];
 
-const limitationLines = (audit: AppAuditResult): string[] => {
+const limitationLines = (
+  audit: AppAuditResult,
+  t: MessageTranslator,
+): string[] => {
   const limitations = audit.limitations ?? [];
   if (limitations.length === 0) return [];
   return [
-    "## What this audit cannot see",
+    `## ${t("footer.title")}`,
     "",
     ...limitations.map(
       (limitation) =>
@@ -158,18 +173,21 @@ const limitationLines = (audit: AppAuditResult): string[] => {
 export function auditMarkdown(
   audit: AppAuditResult,
   app: { name: string | null; country: string },
+  t: MessageTranslator = english,
 ): string {
   return [
-    `# ASO audit: ${escapeMarkdown(app.name ?? "this app")}`,
+    `# ${t("report.title", {
+      name: escapeMarkdown(app.name ?? t("report.thisApp")),
+    })}`,
     "",
     `${storeLabel(audit.store)} · ${app.country.toUpperCase()} · ${audit.generatedAt.slice(0, 10)}`,
     "",
-    headline(audit),
+    headline(audit, t),
     "",
-    ...groupLines(audit),
-    ...factorLines(audit),
-    ...planLines(audit),
-    ...benchmarkLines(audit),
-    ...limitationLines(audit),
+    ...groupLines(audit, t),
+    ...factorLines(audit, t),
+    ...planLines(audit, t),
+    ...benchmarkLines(audit, t),
+    ...limitationLines(audit, t),
   ].join("\n");
 }

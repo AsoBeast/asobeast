@@ -1,4 +1,5 @@
 import type { KeywordMover } from "@asobeast/shared";
+import type { Locale } from "@/lib/locale";
 
 const BAR_CAP = 20;
 
@@ -35,12 +36,24 @@ export interface MoverPeriod {
   span: string;
 }
 
-export const daysPeriod = (days: number): MoverPeriod => ({
-  within: `in ${days} days`,
-  span: `in the last ${days} days`,
-});
+export const daysPeriod = (days: number, locale: Locale = "en"): MoverPeriod =>
+  locale === "zh-CN"
+    ? {
+        within: `在 ${days} 天内`,
+        span: `在过去 ${days} 天内`,
+      }
+    : {
+        within: `in ${days} days`,
+        span: `in the last ${days} days`,
+      };
 
-export const LAST_RUN: MoverPeriod = {
-  within: "in the last run",
-  span: "in the last run",
-};
+export const lastRunPeriod = (locale: Locale = "en"): MoverPeriod =>
+  locale === "zh-CN"
+    ? {
+        within: "在上次运行中",
+        span: "在上次运行中",
+      }
+    : {
+        within: "in the last run",
+        span: "in the last run",
+      };

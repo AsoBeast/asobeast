@@ -4,8 +4,29 @@ import type {
   ChartEntryItem,
   ChartPage,
 } from "@asobeast/shared";
-import { formatCountry, formatDate, formatDayMonth } from "@/lib/format";
-import { COLLECTION_LABELS } from "./chart-params";
+import { createTranslator } from "next-intl";
+import enTopCharts from "../../../messages/en/topCharts.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import {
+  formatCountryInLocale,
+  formatDateInLocale,
+  formatDayMonthInLocale,
+} from "@/lib/format";
+import type { Locale } from "@/lib/locale";
+import { collectionLabel } from "./chart-params";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "topCharts",
+  messages: { topCharts: enTopCharts },
+});
+
+interface Copy {
+  t: MessageTranslator;
+  locale: Locale;
+}
+
+const DEFAULT_COPY: Copy = { t: english, locale: "en" };
 
 export interface MovementCounts {
   climbed: number;
@@ -40,13 +61,16 @@ export function movementTotal(counts: MovementCounts): number {
   return counts.climbed + counts.entered + counts.held + counts.fell;
 }
 
-export function movementText(counts: MovementCounts): string {
-  return [
-    `${counts.climbed} climbed`,
-    `${counts.entered} new`,
-    `${counts.held} held`,
-    `${counts.fell} fell`,
-  ].join(", ");
+export function movementText(
+  counts: MovementCounts,
+  t: MessageTranslator = english,
+): string {
+  return t("lede.movement", {
+    climbed: counts.climbed,
+    entered: counts.entered,
+    held: counts.held,
+    fell: counts.fell,
+  });
 }
 
 type SummaryPage = Pick<
@@ -95,25 +119,38 @@ export function ownStanding(pages: readonly SummaryPage[]): Standing | null {
   return null;
 }
 
-function standingText({ entry, collection }: Standing): [string, string] {
-  const kind = COLLECTION_LABELS[collection];
+function standingText(
+  { entry, collection }: Standing,
+  t: MessageTranslator,
+): [string, string] {
+  const kind = collectionLabel(collection, t);
   const place = `#${entry.position}`;
   const moved = Math.abs(entry.delta ?? 0);
   if (entry.movement === "up") {
-    return [` climbed ${moved} to ${place}`, ` in ${kind}`];
+    return [
+      t("lede.up", { count: moved, place }),
+      t("lede.where", { collection: kind }),
+    ];
   }
   if (entry.movement === "down") {
-    return [` fell ${moved} to ${place}`, ` in ${kind}`];
+    return [
+      t("lede.down", { count: moved, place }),
+      t("lede.where", { collection: kind }),
+    ];
   }
-  if (entry.movement === "new") return [` entered ${kind} at ${place}`, ""];
+  if (entry.movement === "new")
+    return [t("lede.new", { collection: kind, place }), ""];
   if (entry.movement === "same") {
-    return [` holds ${place}`, ` in ${kind}, unchanged`];
+    return [
+      t("lede.same", { place }),
+      t("lede.sameWhere", { collection: kind }),
+    ];
   }
-  return [` is ${place}`, ` in ${kind}`];
+  return [t("lede.none", { place }), t("lede.where", { collection: kind })];
 }
 
-function standingParts(standing: Standing): LedePart[] {
-  const [stand, where] = standingText(standing);
+function standingParts(standing: Standing, t: MessageTranslator): LedePart[] {
+  const [stand, where] = standingText(standing, t);
   return [
     { text: standing.entry.title, strong: true, app: true },
     { text: stand, strong: true },
@@ -121,11 +158,11 @@ function standingParts(standing: Standing): LedePart[] {
   ];
 }
 
-const SCOPES = ["", "", "Across two charts ", "Across the three charts "];
+const sinceText = (date: string, t: MessageTranslator, locale: Locale) =>
+  t("lede.since", { date: formatDayMonthInLocale(date, locale) });
 
-const sinceText = (date: string) => ` since ${formatDayMonth(date)}`;
-
-function countParts(counts: MovementCounts): LedePart[] {
+function countParts(counts: MovementCounts, copy: Copy): LedePart[] {
+  const { t } = copy;
   const moves = [
     [counts.climbed, "climbed"],
     [counts.fell, "fell"],
@@ -135,25 +172,38 @@ function countParts(counts: MovementCounts): LedePart[] {
     .filter(([count]) => count > 0)
     .map(([count, verb], index) =>
       index === 0
-        ? `${count} ${count === 1 ? "app" : "apps"} ${verb}`
-        : `${count} ${verb}`,
+        ? t("lede.firstCount", { count, verb: t(`lede.verbs.${verb}`) })
+        : t("lede.restCount", { count, verb: t(`lede.verbs.${verb}`) }),
     );
   return phrases.flatMap((text, index) => {
     const part = { text, strong: true };
     if (index === 0) return [part];
-    return [{ text: index === phrases.length - 1 ? " and " : ", " }, part];
+    return [
+      {
+        text: index === phrases.length - 1 ? t("lede.and") : t("lede.comma"),
+      },
+      part,
+    ];
   });
 }
 
-function uncapturedLede(pages: readonly SummaryPage[], day: string | null) {
+function uncapturedLede(
+  pages: readonly SummaryPage[],
+  day: string | null,
+  copy: Copy,
+) {
+  const { t, locale } = copy;
   const [{ chart, dates }] = pages;
-  const category = `${chart.genreName} in ${formatCountry(chart.country)}`;
+  const category = `${chart.genreName} in ${formatCountryInLocale(chart.country, locale)}`;
   return [
     {
       text:
         dates.length === 0 || !day
-          ? `${category} has not been captured yet.`
-          : `${category} has no capture on ${formatDate(day)}.`,
+          ? t("lede.notCaptured", { category })
+          : t("lede.noCaptureOn", {
+              category,
+              date: formatDateInLocale(day, locale),
+            }),
     },
   ];
 }
@@ -163,37 +213,57 @@ const isDated = (standing: Standing | null): standing is Standing =>
   standing.since !== null &&
   standing.entry.movement !== "none";
 
-function leadParts(standing: Standing | null, several: boolean): LedePart[] {
+function leadParts(
+  standing: Standing | null,
+  several: boolean,
+  copy: Copy,
+): LedePart[] {
+  const { t, locale } = copy;
   if (!standing) {
     return [
       {
-        text: `None of your apps is in ${several ? "these charts" : "this chart"}.`,
+        text: t("lede.noneOwn", {
+          charts: t(several ? "lede.theseCharts" : "lede.thisChart"),
+        }),
       },
     ];
   }
   const since =
-    isDated(standing) && standing.since ? sinceText(standing.since) : "";
-  return [...standingParts(standing), { text: `${since}.` }];
+    isDated(standing) && standing.since
+      ? sinceText(standing.since, t, locale)
+      : "";
+  return [...standingParts(standing, t), { text: `${since}.` }];
 }
 
 function movedParts(
   compared: readonly SummaryPage[],
   standing: Standing | null,
+  copy: Copy,
 ): LedePart[] {
+  const { t, locale } = copy;
   const days = new Set(compared.map((page) => page.comparison?.date));
   const [only] = days;
   const since =
     days.size === 1 && only
-      ? sinceText(only)
-      : " since each chart's earlier day";
+      ? sinceText(only, t, locale)
+      : t("lede.sinceEarlier");
   const moved = countParts(
     movementCounts(compared.flatMap((page) => page.entries)),
+    copy,
   );
-  if (moved.length === 0) return [{ text: ` Nothing moved${since}.` }];
+  if (moved.length === 0) return [{ text: t("lede.noneMoved", { since }) }];
   const sameDay =
     isDated(standing) && days.size === 1 && only === standing.since;
   return [
-    { text: ` ${SCOPES[compared.length] ?? ""}` },
+    {
+      text: t(
+        compared.length === 2
+          ? "lede.scopeTwo"
+          : compared.length === 3
+            ? "lede.scopeThree"
+            : "lede.scopeOne",
+      ),
+    },
     ...moved,
     { text: sameDay ? "." : `${since}.` },
   ];
@@ -202,15 +272,16 @@ function movedParts(
 export function chartLede(
   pages: readonly SummaryPage[],
   shown: string | null,
+  copy: Copy = DEFAULT_COPY,
 ): LedePart[] {
   const captured = pages.filter((page) => page.capture);
-  if (captured.length === 0) return uncapturedLede(pages, shown);
+  if (captured.length === 0) return uncapturedLede(pages, shown, copy);
   const standing = ownStanding(captured);
   const compared = captured.filter((page) => page.comparison);
-  const lead = leadParts(standing, pages.length > 1);
+  const lead = leadParts(standing, pages.length > 1, copy);
   return compared.length === 0
     ? lead
-    : [...lead, ...movedParts(compared, standing)];
+    : [...lead, ...movedParts(compared, standing, copy)];
 }
 
 export interface TrackedPlace {

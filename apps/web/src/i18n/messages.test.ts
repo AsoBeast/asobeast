@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { IntlMessageFormat } from "intl-messageformat";
 import { describe, expect, it } from "vitest";
 import { LOCALES } from "@/lib/locale";
@@ -11,6 +13,17 @@ function leafPaths(value: unknown, prefix = ""): string[] {
   return Object.entries(value).flatMap(([key, child]) =>
     leafPaths(child, prefix ? `${prefix}.${key}` : key),
   );
+}
+
+function invalidKeys(value: unknown, prefix = ""): string[] {
+  if (value === null || typeof value !== "object") return [];
+  const entries = Array.isArray(value)
+    ? value.map((child, index) => [String(index), child] as const)
+    : Object.entries(value);
+  return entries.flatMap(([key, child]) => [
+    ...(key.includes(".") ? [`${prefix ? `${prefix}.` : ""}${key}`] : []),
+    ...invalidKeys(child, `${prefix ? `${prefix}.` : ""}${key}`),
+  ]);
 }
 
 function valueAt(messages: Record<string, unknown>, path: string): unknown {
@@ -41,6 +54,16 @@ function placeholders(
   return [...names].sort();
 }
 
+function sourceFiles(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) return sourceFiles(path);
+    return /\.(ts|tsx)$/.test(entry.name) && !entry.name.includes(".test.")
+      ? [path]
+      : [];
+  });
+}
+
 describe("message catalogs", () => {
   it("registers the complete namespace contract", () => {
     expect(messageNamespaces).toEqual([
@@ -48,7 +71,6 @@ describe("message catalogs", () => {
       "navigation",
       "auth",
       "errors",
-      "countries",
       "ui",
       "format",
       "shell",
@@ -57,6 +79,7 @@ describe("message catalogs", () => {
       "validation",
       "languages",
       "legal",
+      "localizations",
       "systemNotices",
       "billing",
       "account",
@@ -123,6 +146,25 @@ describe("message catalogs", () => {
     }
   });
 
+  it("uses namespace keys without dots", async () => {
+    for (const locale of LOCALES) {
+      const messages = await loadMessages(locale);
+      expect(invalidKeys(messages), locale).toEqual([]);
+    }
+  });
+
+  it("gives every namespace at least one translation", async () => {
+    for (const locale of LOCALES) {
+      const messages = await loadMessages(locale);
+      for (const namespace of messageNamespaces) {
+        expect(
+          leafPaths(messages[namespace]),
+          `${locale}.${namespace}`,
+        ).not.toEqual([]);
+      }
+    }
+  });
+
   it("has no empty translations", async () => {
     for (const locale of LOCALES) {
       const messages = await loadMessages(locale);
@@ -143,5 +185,57 @@ describe("message catalogs", () => {
         ).not.toThrow();
       }
     }
+  });
+
+  it("references only catalog keys from source", async () => {
+    const messages = await loadMessages("en");
+    const known = new Set(leafPaths(messages));
+    const missing: string[] = [];
+
+    for (const path of sourceFiles(join(process.cwd(), "src"))) {
+      const source = readFileSync(path, "utf8");
+      const namespaces = [
+        ...source.matchAll(
+          /useTranslations\(\s*"([^"]+)"|namespace:\s*"([^"]+)"/g,
+        ),
+      ].flatMap((match) =>
+        [match[1], match[2]].filter((value): value is string => Boolean(value)),
+      );
+      const keys = [
+        ...source.matchAll(/\b(?:t|translator)\(\s*"([^"]+)"/g),
+      ].map((match) => match[1]);
+
+      const prefixes = [
+        ...source.matchAll(/\b(?:t|translator)\(\s*`([^`]*)\$\{/g),
+      ].map((match) => match[1]);
+      for (const prefix of prefixes) {
+        if (!prefix.endsWith(".")) continue;
+        const found =
+          namespaces.some((namespace) =>
+            [...known].some((path) =>
+              path.startsWith(`${namespace}.${prefix}`),
+            ),
+          ) ||
+          [...known].some(
+            (path) => path.includes(prefix) || path.includes(`.${prefix}`),
+          );
+        if (!found) missing.push(`${path}: ${prefix}…`);
+      }
+
+      for (const key of keys) {
+        const found =
+          [...known].some((path) => path === key || path.endsWith(`.${key}`)) ||
+          namespaces.some((namespace) =>
+            [...known].some(
+              (path) =>
+                path === `${namespace}.${key}` ||
+                path.endsWith(`.${namespace}.${key}`),
+            ),
+          );
+        if (!found) missing.push(`${path}: ${key}`);
+      }
+    }
+
+    expect(missing).toEqual([]);
   });
 });

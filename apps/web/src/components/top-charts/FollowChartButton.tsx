@@ -2,6 +2,7 @@
 
 import { useRef, useState, type RefCallback } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { BellPlus, Check, Loader2 } from "lucide-react";
 import type { CategoryCollection, ChartFollowItem } from "@asobeast/shared";
 import {
@@ -39,6 +40,8 @@ function Following({
   claimRef: RefCallback<HTMLElement>;
   onActivate: () => void;
 }) {
+  const t = useTranslations("topCharts");
+  const common = useTranslations("common");
   const [confirming, setConfirming] = useState(false);
   const stopped = useRef(false);
   const mutation = useUnfollowChart(() => {
@@ -52,7 +55,7 @@ function Following({
       <AlertDialogTrigger asChild>
         <Button ref={claimRef} variant="outline">
           <Check aria-hidden />
-          Following
+          {t("capture.following")}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent
@@ -61,15 +64,14 @@ function Following({
         }}
       >
         <AlertDialogHeader>
-          <AlertDialogTitle>Stop following this category?</AlertDialogTitle>
+          <AlertDialogTitle>{t("capture.stopTitle")}</AlertDialogTitle>
           <AlertDialogDescription>
-            The daily run stops capturing its free, paid and grossing charts;
-            stored days stay.
+            {t("capture.stopDescription")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={mutation.isPending}>
-            Cancel
+            {common("cancel")}
           </AlertDialogCancel>
           <AlertDialogAction
             disabled={mutation.isPending}
@@ -79,7 +81,7 @@ function Following({
               unfollowOnce(follows.map((follow) => follow.id));
             }}
           >
-            Stop following
+            {t("capture.stopFollowing")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -100,6 +102,7 @@ function Follow({
   buttonRef: RefCallback<HTMLButtonElement>;
   onActivate: () => void;
 }) {
+  const t = useTranslations("topCharts");
   const mutation = useFollowCategory(category);
   const followOnce = useSingleFlight(mutation);
 
@@ -118,7 +121,7 @@ function Follow({
       ) : (
         <BellPlus aria-hidden />
       )}
-      Follow category
+      {t("capture.followCategory")}
     </Button>
   );
 }

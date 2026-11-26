@@ -81,7 +81,7 @@ export function ErrorState({
         </p>
         {recovery.detail ? (
           <details className="max-w-prose text-caption text-muted-foreground">
-            <summary className="cursor-pointer font-medium text-foreground">
+            <summary className="font-medium text-foreground">
               {common("technicalDetails")}
             </summary>
             <p className="mt-2 wrap-anywhere">{recovery.detail}</p>

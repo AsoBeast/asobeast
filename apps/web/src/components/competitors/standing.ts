@@ -4,6 +4,15 @@ import type {
   Store,
 } from "@asobeast/shared";
 import { STORE_FIELD_LIMITS } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
+import enCompetitors from "../../../messages/en/competitors.json";
+import type { MessageTranslator } from "@/i18n/translator";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "competitors",
+  messages: { competitors: enCompetitors },
+});
 
 export const STANDING_VIEWS = ["visibility", "text"] as const;
 export type StandingView = (typeof STANDING_VIEWS)[number];
@@ -39,6 +48,7 @@ export interface ListingLine {
 export function listingLines(
   row: CompetitorMetadataRow,
   store: Store,
+  t: MessageTranslator = english,
 ): ListingLine[] {
   const limits = STORE_FIELD_LIMITS[store];
   const line = (
@@ -54,12 +64,12 @@ export function listingLines(
   });
   return [
     ...(limits.title
-      ? [line("Title", row.title, row.titleChars, limits.title.limit)]
+      ? [line(t("fields.title"), row.title, row.titleChars, limits.title.limit)]
       : []),
     ...(limits.subtitle
       ? [
           line(
-            "Subtitle",
+            t("fields.subtitle"),
             row.subtitle,
             row.subtitleChars,
             limits.subtitle.limit,

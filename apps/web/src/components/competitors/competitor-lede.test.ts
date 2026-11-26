@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { createTranslator } from "next-intl";
+import zhCompetitors from "../../../messages/zh-CN/competitors.json";
 import type { ChangeEventItem } from "@asobeast/shared";
 import { competitorLede } from "./competitor-lede";
 
@@ -14,7 +16,20 @@ const event = (overrides: Partial<ChangeEventItem>): ChangeEventItem => ({
   ...overrides,
 });
 
+const zh = createTranslator({
+  locale: "zh-CN",
+  namespace: "competitors",
+  messages: { competitors: zhCompetitors },
+});
+
 describe("competitorLede", () => {
+  it("writes the count and latest change in Simplified Chinese", () => {
+    const lede = competitorLede(1, [event({})], zh, "zh-CN");
+    expect(lede.count).toBe("1 个竞品");
+    expect(lede.changed?.rest).toContain("副标题");
+    expect(lede.changed?.rest).toContain("11月10日");
+  });
+
   it("asks for a first competitor when none is tracked", () => {
     expect(competitorLede(0, [event({})])).toEqual({
       count: "No competitors",

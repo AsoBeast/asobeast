@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import type {
   ActionBulkUpdateRequest,
@@ -8,33 +9,40 @@ import type {
   ActionListResult,
 } from "@asobeast/shared";
 import { ApiError, bulkUpdateActions } from "@/lib/api";
-import { pluralize } from "@/lib/format";
 import { actionKeys, invalidateActionMutation } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 import { applyToList, listedStatuses } from "./optimistic-lists";
 
-function successMessage(body: ActionBulkUpdateRequest, count: number): string {
+function successMessage(
+  body: ActionBulkUpdateRequest,
+  count: number,
+  t: ReturnType<typeof useTranslations>,
+): string {
   switch (body.status) {
     case "DONE":
-      return `Marked ${count} done`;
+      return t("toast.bulkDone", { count });
     case "SNOOZED":
-      return `Snoozed ${count}`;
+      return t("toast.bulkSnoozed", { count });
     case "DISMISSED":
-      return `Dismissed ${count}`;
+      return t("toast.bulkDismissed", { count });
     case "OPEN":
-      return `Reopened ${count}`;
+      return t("toast.bulkReopened", { count });
   }
 }
 
-function skippedNote(result: ActionBulkUpdateResult): string | undefined {
+function skippedNote(
+  result: ActionBulkUpdateResult,
+  t: ReturnType<typeof useTranslations>,
+): string | undefined {
   const skipped = result.missing.length + result.conflicts.length;
   if (skipped === 0) return undefined;
   return skipped === 1
-    ? "1 was already closed"
-    : `${pluralize(skipped, "action")} were already closed`;
+    ? t("toast.alreadyClosedOne")
+    : t("toast.alreadyClosedMany", { count: skipped });
 }
 
 export function useBulkUpdate(appId?: string) {
+  const t = useTranslations("actions");
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
@@ -59,18 +67,16 @@ export function useBulkUpdate(appId?: string) {
         queryClient.setQueryData(key, data);
       }
       toast.error(
-        error instanceof ApiError
-          ? error.message
-          : "Could not update the actions",
+        error instanceof ApiError ? error.message : t("toast.bulkUpdateFailed"),
       );
     },
     onSuccess: (result, body) => {
       if (body.revert) return;
       const changed = result.items.map((item) => item.id);
-      toast.success(successMessage(body, changed.length), {
-        description: skippedNote(result),
+      toast.success(successMessage(body, changed.length, t), {
+        description: skippedNote(result, t),
         action: {
-          label: "Undo",
+          label: t("undo"),
           onClick: () => update({ ids: changed, status: "OPEN", revert: true }),
         },
       });

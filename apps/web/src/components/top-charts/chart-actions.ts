@@ -8,9 +8,17 @@ import type {
   Store,
 } from "@asobeast/shared";
 import { ApiError } from "@/lib/api";
-import { formatDate, storeLabel } from "@/lib/format";
+import { createTranslator } from "next-intl";
+import enTopCharts from "../../../messages/en/topCharts.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import { formatDateInLocale, storeLabel } from "@/lib/format";
+import type { Locale } from "@/lib/locale";
 
-const STORE_DID_NOT_ANSWER = "The store did not answer. Try again in a moment.";
+const english = createTranslator({
+  locale: "en",
+  namespace: "topCharts",
+  messages: { topCharts: enTopCharts },
+});
 
 export interface RowLink {
   href: string;
@@ -18,14 +26,19 @@ export interface RowLink {
   role: ChartAppRole;
 }
 
-export function rowLink(link: ChartAppLink | undefined): RowLink | null {
+export function rowLink(
+  link: ChartAppLink | undefined,
+  t: MessageTranslator = english,
+): RowLink | null {
   if (!link) return null;
   if (link.role === "own") {
-    return { href: `/apps/${link.appId}`, label: "Yours", role: "own" };
+    return { href: `/apps/${link.appId}`, label: t("row.yours"), role: "own" };
   }
   return {
     href: `/apps/${link.primaryAppId ?? link.appId}/competitors`,
-    label: `Competitor of ${link.name ?? "your app"}`,
+    label: t("row.competitorOf", {
+      name: link.name ?? t("row.yourApp"),
+    }),
     role: "competitor",
   };
 }
@@ -54,60 +67,77 @@ export function candidateApps(
   return apps.filter((app) => app.store === store);
 }
 
-export function captureErrorText(error: unknown): string {
-  if (!(error instanceof ApiError)) return "Could not capture the chart.";
+export function captureErrorText(
+  error: unknown,
+  t: MessageTranslator = english,
+): string {
+  if (!(error instanceof ApiError)) return t("capture.failed");
   const { statusCode, message } = error.envelope;
   if (statusCode === 429) return message;
-  if (statusCode === 502) return STORE_DID_NOT_ANSWER;
-  return "Could not capture the chart.";
+  if (statusCode === 502) return t("capture.storeFailed");
+  return t("capture.failed");
 }
 
-export function followErrorText(error: unknown): string {
+export function followErrorText(
+  error: unknown,
+  t: MessageTranslator = english,
+): string {
   return error instanceof ApiError && error.envelope.statusCode === 403
     ? error.envelope.message
-    : "Could not follow the category.";
+    : t("capture.followFailed");
 }
 
 export function captureCostText(
   limits: Pick<PlanLimits, "onDemand"> | undefined,
+  t: MessageTranslator = english,
 ): string {
-  if (!limits) return "Capture today reaches the store once.";
+  if (!limits) return t("capture.once");
   const limit = limits.onDemand?.chartCapture.limit;
   if (limit === undefined) {
-    return "Capture today reaches the store once and stores the chart for every workspace.";
+    return t("capture.everyWorkspace");
   }
-  if (limit === 0) return "Your plan includes no chart captures.";
-  return `Capture today spends one of the ${limit} chart captures your plan allows a day.`;
+  if (limit === 0) return t("capture.noCaptures");
+  return t("capture.dailyLimit", { limit });
 }
 
-function emptyHint(captured: boolean, capturable: boolean): string {
+function emptyHint(
+  captured: boolean,
+  capturable: boolean,
+  t: MessageTranslator,
+): string {
   if (captured) {
-    return capturable
-      ? "Pick a captured day, or capture today."
-      : "Pick a captured day.";
+    return capturable ? t("capture.pickCaptured") : t("capture.pickOnly");
   }
-  return capturable
-    ? "Capture it now, or follow the category so the daily run keeps it."
-    : "Follow the category so the daily run keeps it.";
+  return capturable ? t("capture.captureOrFollow") : t("capture.followOnly");
 }
 
 export function emptyChartBody(
   captured: boolean,
   limits: Pick<PlanLimits, "onDemand"> | undefined,
+  t: MessageTranslator = english,
 ): string {
   const capturable = limits?.onDemand?.chartCapture.limit !== 0;
-  return `${emptyHint(captured, capturable)} ${captureCostText(limits)}`;
+  return `${emptyHint(captured, capturable, t)} ${captureCostText(limits, t)}`;
 }
 
 export function noAppsBody(
   chart: Pick<ChartPage["chart"], "store" | "genreName">,
   day: string,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
 ): string {
-  return `${storeLabel(chart.store)} listed no apps in ${chart.genreName} on ${formatDate(day)}. A category can have no apps of one kind, such as paid apps.`;
+  return t("noAppsBody", {
+    store: storeLabel(chart.store),
+    genre: chart.genreName,
+    date: formatDateInLocale(day, locale),
+  });
 }
 
-export function noAppsToast(store: Store): string {
-  return `${storeLabel(store)} lists no apps in this chart today`;
+export function noAppsToast(
+  store: Store,
+  t: MessageTranslator = english,
+): string {
+  return t("noAppsToast", { store: storeLabel(store) });
 }
 
 export const competitorFocusKey = (storeAppId: string) =>

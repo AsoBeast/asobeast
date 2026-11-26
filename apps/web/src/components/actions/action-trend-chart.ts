@@ -1,3 +1,6 @@
+import { createTranslator } from "next-intl";
+import enActions from "../../../messages/en/actions.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import {
   formatRankPosition,
   RANK_DEPTH,
@@ -10,7 +13,7 @@ import { formatMeasureFixed, formatNumber, MEASURE_DIGITS } from "@/lib/format";
 
 export interface TrendMarker {
   date: string;
-  label: "Opened" | "Done";
+  label: string;
 }
 
 export interface TrendChartRow {
@@ -37,6 +40,17 @@ export const TREND_METRIC_LABEL: Record<ActionTrendMetric, string> = {
   updateAge: "Days since update",
   conversion: "Conversion",
 };
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "actions",
+  messages: { actions: enActions },
+});
+
+export const trendMetricLabel = (
+  metric: ActionTrendMetric,
+  t: MessageTranslator = english,
+): string => t(`trend.metrics.${metric}`);
 
 function domainFor(
   trend: ActionTrend,
@@ -88,10 +102,14 @@ export function trendValue(trend: ActionTrend, value: number | null): string {
   return value === null ? "—" : metricValue(trend.metric, value);
 }
 
-function summaryOf(trend: ActionTrend, days: number): string {
+function summaryOf(
+  trend: ActionTrend,
+  days: number,
+  t: MessageTranslator,
+): string {
   const checked = trend.points.filter((point) => point.checked);
-  const label = TREND_METRIC_LABEL[trend.metric];
-  if (checked.length === 0) return `${label} has no measurements yet.`;
+  const label = trendMetricLabel(trend.metric, t);
+  if (checked.length === 0) return t("trend.noMeasurements", { metric: label });
   const comparable = (value: number | null) =>
     value ?? (trend.depth ?? RANK_DEPTH) + 1;
   const ordered = [...checked].sort(
@@ -102,18 +120,26 @@ function summaryOf(trend: ActionTrend, days: number): string {
   const worst = lowerIsBetter ? ordered[ordered.length - 1] : ordered[0];
   const first = checked[0];
   const last = checked[checked.length - 1];
-  return `${label} went from ${trendValue(trend, first.value)} to ${trendValue(trend, last.value)} over ${days} days; best ${trendValue(trend, best.value)}, worst ${trendValue(trend, worst.value)}.`;
+  return t("trend.summary", {
+    metric: label,
+    before: trendValue(trend, first.value),
+    after: trendValue(trend, last.value),
+    days,
+    best: trendValue(trend, best.value),
+    worst: trendValue(trend, worst.value),
+  });
 }
 
 function markersFor(
   item: ActionItem,
   dates: readonly string[],
   firstDay: string | undefined,
+  t: MessageTranslator,
 ): TrendMarker[] {
   const candidates: TrendMarker[] = [
-    { date: item.firstSeenAt.slice(0, 10), label: "Opened" },
+    { date: item.firstSeenAt.slice(0, 10), label: t("trend.markers.opened") },
     ...(item.closedAt && item.status === "DONE"
-      ? [{ date: item.closedAt.slice(0, 10), label: "Done" as const }]
+      ? [{ date: item.closedAt.slice(0, 10), label: t("trend.markers.done") }]
       : []),
   ];
   return candidates.flatMap((marker) => {
@@ -126,6 +152,7 @@ function markersFor(
 export function trendChartData(
   trend: ActionTrend,
   item: ActionItem,
+  t: MessageTranslator = english,
 ): TrendChartData {
   const rows = trend.points
     .filter((point) => point.checked)
@@ -139,15 +166,16 @@ export function trendChartData(
     }));
   return {
     rows,
-    metricLabel: TREND_METRIC_LABEL[trend.metric],
+    metricLabel: trendMetricLabel(trend.metric, t),
     reversed: trend.metric === "position",
     domain: domainFor(trend, rows),
     markers: markersFor(
       item,
       rows.map((row) => row.date),
       trend.points[0]?.date,
+      t,
     ),
-    summary: summaryOf(trend, trend.points.length),
+    summary: summaryOf(trend, trend.points.length, t),
     plotted: rows.filter((row) => row.value !== null || row.notFound !== null)
       .length,
   };

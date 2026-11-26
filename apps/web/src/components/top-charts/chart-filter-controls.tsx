@@ -5,31 +5,17 @@ import {
   chartDevicesOf,
   type CategoryCollection,
   type ChartCompareWindow,
-  type ChartDevice,
   type ChartKey,
 } from "@asobeast/shared";
 import { SelectFilter } from "@/components/data-table/SelectFilter";
+import { useTranslations } from "next-intl";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import type { ChartView } from "@/lib/search-params";
 import { ChartCountry } from "./ChartCountry";
 import { showsDevice } from "./chart-filters";
-import { COLLECTION_LABELS, type ChartSearchUpdate } from "./chart-params";
+import { collectionLabel, type ChartSearchUpdate } from "./chart-params";
 import { ChartViewSwitch } from "./ChartViewSwitch";
 import { GenreSelect } from "./GenreSelect";
-
-const COMPARE_OPTIONS: ReadonlyArray<{
-  value: ChartCompareWindow;
-  label: string;
-}> = [
-  { value: "1d", label: "vs previous day" },
-  { value: "7d", label: "vs 7 days ago" },
-  { value: "30d", label: "vs 30 days ago" },
-];
-
-const DEVICE_LABELS: Record<ChartDevice, string> = {
-  iphone: "iPhone",
-  android: "Android",
-};
 
 export interface ChartFilterProps {
   chart: ChartKey;
@@ -59,6 +45,7 @@ export function ChartGenreFilter({ chart, onChange }: ChartFilterProps) {
 }
 
 export function ChartKindFilter({ chart, view, onChange }: ChartFilterProps) {
+  const t = useTranslations("topCharts");
   if (view !== "table") return null;
   return (
     <Tabs
@@ -67,10 +54,10 @@ export function ChartKindFilter({ chart, view, onChange }: ChartFilterProps) {
         onChange({ collection: next as CategoryCollection })
       }
     >
-      <TabsList aria-label="Chart">
+      <TabsList aria-label={t("chart")}>
         {CATEGORY_COLLECTIONS.map((collection) => (
           <TabsOption key={collection} value={collection}>
-            {COLLECTION_LABELS[collection]}
+            {collectionLabel(collection, t)}
           </TabsOption>
         ))}
       </TabsList>
@@ -79,11 +66,17 @@ export function ChartKindFilter({ chart, view, onChange }: ChartFilterProps) {
 }
 
 export function ChartCompareFilter({ compare, onChange }: ChartFilterProps) {
+  const t = useTranslations("topCharts");
+  const options: ReadonlyArray<{ value: ChartCompareWindow; label: string }> = [
+    { value: "1d", label: t("compareOptions.1d") },
+    { value: "7d", label: t("compareOptions.7d") },
+    { value: "30d", label: t("compareOptions.30d") },
+  ];
   return (
     <SelectFilter
-      title="Compare"
+      title={t("compare")}
       value={compare}
-      options={COMPARE_OPTIONS}
+      options={options}
       onChange={(next) => onChange({ compare: next })}
     />
   );
@@ -99,14 +92,15 @@ export function ChartLayoutFilter({ view, onChange }: ChartFilterProps) {
 }
 
 export function ChartDeviceFilter({ chart, onChange }: ChartFilterProps) {
+  const t = useTranslations("topCharts");
   if (!showsDevice(chart.store)) return null;
   return (
     <SelectFilter
-      title="Device"
+      title={t("device")}
       value={chart.device}
       options={chartDevicesOf(chart.store).map((device) => ({
         value: device,
-        label: DEVICE_LABELS[device],
+        label: t(`devices.${device}`),
       }))}
       onChange={(device) => onChange({ device })}
     />

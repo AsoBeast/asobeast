@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import type {
   AppLocalizationItem,
@@ -19,7 +20,8 @@ import {
   tracksNewPhrases,
   upsertLocalization,
 } from "@/lib/app-localizations";
-import { localizationName } from "@/lib/localizations";
+import { localizationNameInLocale } from "@/lib/localizations";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { appKeys, invalidateLocalizationMutation } from "@/lib/queries";
 import { queuedToast } from "@/lib/queued-toast";
 import { useSingleFlight } from "@/lib/single-flight";
@@ -38,10 +40,12 @@ export function useKeywordFieldSave(
   item: AppLocalizationItem,
   onSaved: () => void,
 ) {
+  const t = useTranslations("localizations");
+  const locale = useAppLocale();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [review, setReview] = useState<Review | null>(null);
-  const name = localizationName(item.localization);
+  const name = localizationNameInLocale(item.localization, locale);
 
   const save = useMutation({
     mutationFn: ({ text, trackIn }: SaveVariables) =>
@@ -56,13 +60,12 @@ export function useKeywordFieldSave(
       );
       invalidateLocalizationMutation(queryClient, id);
       onSaved();
-      toast.success(`Saved the ${name} keyword field`, {
-        description: savedDescription(result),
+      toast.success(t("editor.saved", { name }), {
+        description: savedDescription(result, t, locale),
       });
       if (tracksNewPhrases(plan, trackIn)) queuedToast("scoring");
     },
-    onError: (err) =>
-      setError(apiErrorMessage(err, "Could not save the keyword field")),
+    onError: (err) => setError(apiErrorMessage(err, t("editor.saveFailed"))),
   });
   const saveOnce = useSingleFlight(save);
 
@@ -81,8 +84,7 @@ export function useKeywordFieldSave(
         trackIn: plan.markets.map((market) => market.country),
       });
     },
-    onError: (err) =>
-      setError(apiErrorMessage(err, "Could not check the keyword field")),
+    onError: (err) => setError(apiErrorMessage(err, t("editor.checkFailed"))),
   });
   const checkOnce = useSingleFlight(check);
 

@@ -1,7 +1,7 @@
 import { survivingNeighbour } from "@/lib/focus-handoff";
 
 const ROW_SELECTOR = "#queue li[id^='action-']";
-const SEARCH_SELECTOR = 'input[aria-label="Search actions"]';
+const SEARCH_SELECTOR = "input[data-search-input]";
 
 const queueRows = () => [
   ...document.querySelectorAll<HTMLElement>(ROW_SELECTOR),

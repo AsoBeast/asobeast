@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import type {
   CategoryCollection,
   ChartMover,
@@ -26,8 +27,9 @@ import {
   TabsOption,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { formatDayMonth } from "@/lib/format";
-import { COLLECTION_LABELS } from "./chart-params";
+import { formatDayMonthInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
+import { collectionLabel } from "./chart-params";
 import { compareLabel } from "./movement";
 import { EmptyState } from "@/components/ui/empty-state";
 
@@ -35,19 +37,14 @@ type TrendingList = keyof ChartTrending;
 
 const LISTS: ReadonlyArray<{
   id: TrendingList;
-  label: string;
-  short?: string;
-  empty: string;
+  key: "climbers" | "entries" | "fallers" | "exits";
+  shortKey?: "out";
+  emptyKey: "noClimbers" | "noEntries" | "noFallers" | "noExits";
 }> = [
-  { id: "climbers", label: "Climbers", empty: "No climbers" },
-  { id: "entries", label: "New", empty: "No new entries" },
-  { id: "fallers", label: "Fallers", empty: "No fallers" },
-  {
-    id: "exits",
-    label: "Dropped out",
-    short: "Out",
-    empty: "Nothing dropped out",
-  },
+  { id: "climbers", key: "climbers", emptyKey: "noClimbers" },
+  { id: "entries", key: "entries", emptyKey: "noEntries" },
+  { id: "fallers", key: "fallers", emptyKey: "noFallers" },
+  { id: "exits", key: "exits", shortKey: "out", emptyKey: "noExits" },
 ];
 
 const BAR_REACH_PERCENT = 60;
@@ -70,14 +67,19 @@ function Place({
   mover: ChartMover;
   period: string;
 }) {
+  const t = useTranslations("topCharts");
   if (list === "entries") {
     return (
-      <span className="text-muted-foreground">{`New at #${mover.position}`}</span>
+      <span className="text-muted-foreground">
+        {t("trending.newAt", { position: mover.position ?? "—" })}
+      </span>
     );
   }
   if (list === "exits") {
     return (
-      <span className="text-muted-foreground">{`Was #${mover.previous}`}</span>
+      <span className="text-muted-foreground">
+        {t("trending.was", { position: mover.previous ?? "—" })}
+      </span>
     );
   }
   return (
@@ -86,7 +88,12 @@ function Place({
         <span>{`${mover.previous} → `}</span>
         <span className="font-medium text-foreground">{mover.position}</span>
       </span>
-      <span className="sr-only">{`from #${mover.previous} to #${mover.position}`}</span>
+      <span className="sr-only">
+        {t("trending.fromTo", {
+          from: mover.previous ?? "—",
+          to: mover.position ?? "—",
+        })}
+      </span>
       <DeltaChip
         value={mover.delta}
         period={period}
@@ -135,25 +142,29 @@ function MoverList({
 }
 
 function TrendingLists({ page }: { page: ChartPage }) {
-  const period = compareLabel(page.compare, page.comparison);
+  const t = useTranslations("topCharts");
+  const locale = useAppLocale();
+  const period = compareLabel(page.compare, page.comparison, t, locale);
 
   return page.comparison ? (
     <Tabs defaultValue="climbers" className="@container/trending gap-2">
       <TabsList
-        aria-label="Trending list"
+        aria-label={t("trending.aria")}
         className="mx-2 w-auto self-stretch @xl/trending:self-start"
       >
-        {LISTS.map(({ id, label, short }) => (
+        {LISTS.map(({ id, key, shortKey }) => (
           <TabsTrigger key={id} value={id} className="px-1.5">
-            {short ? (
+            {shortKey ? (
               <>
-                <span className="@max-sm/trending:sr-only">{label}</span>
+                <span className="@max-sm/trending:sr-only">
+                  {t(`trending.${key}`)}
+                </span>
                 <span aria-hidden className="@sm/trending:hidden">
-                  {short}
+                  {t(`trending.${shortKey}`)}
                 </span>
               </>
             ) : (
-              <span>{label}</span>
+              <span>{t(`trending.${key}`)}</span>
             )}
             <span className="numeric font-normal text-muted-foreground">
               {page.trending[id].length}
@@ -161,19 +172,19 @@ function TrendingLists({ page }: { page: ChartPage }) {
           </TabsTrigger>
         ))}
       </TabsList>
-      {LISTS.map(({ id, empty }) => (
+      {LISTS.map(({ id, emptyKey }) => (
         <TabsContent key={id} value={id}>
           <MoverList
             list={id}
             movers={page.trending[id]}
             period={period}
-            empty={empty}
+            empty={t(`trending.${emptyKey}`)}
           />
         </TabsContent>
       ))}
     </Tabs>
   ) : (
-    <EmptyState title="Capture more days to see movement." />
+    <EmptyState title={t("trending.captureMore")} />
   );
 }
 
@@ -182,12 +193,16 @@ function firstCompared(pages: readonly ChartPage[]): CategoryCollection {
 }
 
 export function TrendingPanel({ pages }: { pages: readonly ChartPage[] }) {
+  const t = useTranslations("topCharts");
+  const locale = useAppLocale();
   const [kind, setKind] = useState(() => firstCompared(pages));
   const page =
     pages.find((candidate) => candidate.chart.collection === kind) ?? pages[0];
   const title = page.comparison
-    ? `Trending since ${formatDayMonth(page.comparison.date)}`
-    : "Trending";
+    ? t("trending.since", {
+        date: formatDayMonthInLocale(page.comparison.date, locale),
+      })
+    : t("trending.title");
 
   return (
     <Card className="gap-3">
@@ -206,10 +221,10 @@ export function TrendingPanel({ pages }: { pages: readonly ChartPage[] }) {
                 if (chosen) setKind(chosen.chart.collection);
               }}
             >
-              <TabsList aria-label="Chart kind">
+              <TabsList aria-label={t("trending.kind")}>
                 {pages.map(({ chart }) => (
                   <TabsOption key={chart.collection} value={chart.collection}>
-                    {COLLECTION_LABELS[chart.collection]}
+                    {collectionLabel(chart.collection, t)}
                   </TabsOption>
                 ))}
               </TabsList>
@@ -222,7 +237,7 @@ export function TrendingPanel({ pages }: { pages: readonly ChartPage[] }) {
       </CardContent>
       {page.comparison ? (
         <CardFooter>
-          <span>{`Up to ${CHART_TRENDING_LIMIT} per list, from every captured place.`}</span>
+          <span>{t("trending.footer", { limit: CHART_TRENDING_LIMIT })}</span>
         </CardFooter>
       ) : null}
     </Card>

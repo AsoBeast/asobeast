@@ -1,5 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import { NextIntlClientProvider } from "next-intl";
 import { describe, expect, it } from "vitest";
+import enAudit from "../../../messages/en/audit.json";
+import zhAudit from "../../../messages/zh-CN/audit.json";
 import type { AppAuditResult } from "@asobeast/shared";
 import { AuditReadiness } from "./AuditReadiness";
 
@@ -20,8 +23,16 @@ const audit = (stories: number): AppAuditResult => ({
   },
 });
 
-const text = (stories: number) =>
-  renderToStaticMarkup(<AuditReadiness audit={audit(stories)} />);
+const text = (stories: number, locale: "en" | "zh-CN" = "en") =>
+  renderToStaticMarkup(
+    <NextIntlClientProvider
+      locale={locale}
+      timeZone="UTC"
+      messages={{ audit: locale === "en" ? enAudit : zhAudit }}
+    >
+      <AuditReadiness audit={audit(stories)} />
+    </NextIntlClientProvider>,
+  );
 
 describe("AuditReadiness", () => {
   it("pluralizes the featured stories of the editorial line", () => {
@@ -33,5 +44,9 @@ describe("AuditReadiness", () => {
 
   it("names a single featured story", () => {
     expect(text(1)).toContain("In 1 featured story");
+  });
+
+  it("writes the editorial line in Simplified Chinese", () => {
+    expect(text(2, "zh-CN")).toContain("出现在 2 个精选故事中");
   });
 });

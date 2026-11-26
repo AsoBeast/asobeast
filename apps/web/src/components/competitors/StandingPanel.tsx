@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import type {
@@ -20,7 +21,8 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { GradedNumber } from "@/components/ui/graded";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
-import { formatRating } from "@/lib/format";
+import { formatFixedNumberInLocale, formatRating } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { grade } from "@/lib/grade";
 import {
   appDetailOptions,
@@ -28,7 +30,6 @@ import {
   competitorsOptions,
 } from "@/lib/queries";
 import { cn } from "@/lib/utils";
-import { UNNAMED_COMPETITOR } from "./comparison-scores";
 import { COMPETITOR_SECTION } from "./competitor-sections";
 import { SECTION_EMPTY, SECTION_FOOTER, SECTION_SHEET } from "./section-layout";
 import { StandingSkeleton } from "./skeletons";
@@ -36,7 +37,6 @@ import {
   barShare,
   hasRival,
   listingLines,
-  STANDING_VIEW_LABELS,
   STANDING_VIEWS,
   standingRows,
   type StandingView,
@@ -60,15 +60,16 @@ function AppName({
   icons: Icons;
   size: number;
 }) {
+  const t = useTranslations("competitors");
   return (
     <span className="relative flex min-w-0 items-center gap-2">
       <span aria-hidden className="shrink-0">
         <AppIcon src={icons.get(appId) ?? null} size={size} />
       </span>
       <bdi className="line-clamp-2 font-medium wrap-anywhere">
-        {name ?? UNNAMED_COMPETITOR}
+        {name ?? t("unnamed")}
       </bdi>
-      {isYou ? <Badge variant="brand">You</Badge> : null}
+      {isYou ? <Badge variant="brand">{t("standing.you")}</Badge> : null}
     </span>
   );
 }
@@ -80,14 +81,16 @@ function VisibilityList({
   points: readonly PositionMapPoint[];
   icons: Icons;
 }) {
+  const t = useTranslations("competitors");
+  const locale = useAppLocale();
   return (
     <div className="px-2 pb-3">
       <div aria-hidden className={cn(VISIBILITY_COLUMNS, LIST_HEAD, "pb-2")}>
-        <span>App</span>
-        <span className="text-right">Rating</span>
-        <span className="text-right">Visibility</span>
+        <span>{t("standing.app")}</span>
+        <span className="text-right">{t("standing.rating")}</span>
+        <span className="text-right">{t("standing.visibility")}</span>
       </div>
-      <ul aria-label="Visibility by app">
+      <ul aria-label={t("standing.visibilityByApp")}>
         {standingRows(points).map((point) => (
           <li
             key={point.appId}
@@ -108,20 +111,26 @@ function VisibilityList({
               {point.ratingAvg === null ? (
                 <span>
                   <span aria-hidden>—</span>
-                  <span className="sr-only">No rating</span>
+                  <span className="sr-only">{t("standing.noRating")}</span>
                 </span>
               ) : (
                 <GradedNumber
                   value={formatRating(point.ratingAvg)}
                   grade={grade("rating", point.ratingAvg)}
-                  label="Rating"
+                  label={t("standing.rating")}
                   aligned
                 />
               )}
             </span>
             <span className="numeric relative text-right font-medium">
-              <span aria-hidden>{point.visibility.toFixed(1)}</span>
-              <span className="sr-only">{`Visibility ${point.visibility.toFixed(1)}`}</span>
+              <span aria-hidden>
+                {formatFixedNumberInLocale(point.visibility, 1, locale)}
+              </span>
+              <span className="sr-only">
+                {t("standing.visibilityAria", {
+                  value: formatFixedNumberInLocale(point.visibility, 1, locale),
+                })}
+              </span>
             </span>
           </li>
         ))}
@@ -139,8 +148,10 @@ function ListingText({
   store: Store;
   icons: Icons;
 }) {
+  const t = useTranslations("competitors");
+  const locale = useAppLocale();
   return (
-    <ul aria-label="Listing text by app">
+    <ul aria-label={t("standing.listingByApp")}>
       {rows.map((row) => (
         <li
           key={row.appId}
@@ -148,7 +159,7 @@ function ListingText({
         >
           <AppName {...row} icons={icons} size={24} />
           <dl className="grid grid-cols-[4rem_minmax(0,1fr)_auto] gap-x-3 gap-y-0.5 pl-8">
-            {listingLines(row, store).map((line) => (
+            {listingLines(row, store, t).map((line) => (
               <div key={line.label} className="contents">
                 <dt className="text-caption text-faint-foreground">
                   {line.label}
@@ -160,7 +171,11 @@ function ListingText({
                     line.text === null && "text-muted-foreground",
                   )}
                 >
-                  {line.text ?? `No ${line.label.toLowerCase()}`}
+                  {line.text ??
+                    t("standing.noField", {
+                      field:
+                        locale === "en" ? line.label.toLowerCase() : line.label,
+                    })}
                 </dd>
                 <dd
                   className={cn(
@@ -169,7 +184,12 @@ function ListingText({
                   )}
                 >
                   <span aria-hidden>{line.count}</span>
-                  <span className="sr-only">{`${line.count.replace("/", " of ")} characters`}</span>
+                  <span className="sr-only">
+                    {t("standing.characterCount", {
+                      count: Number(line.count.split("/")[0]),
+                      limit: Number(line.count.split("/")[1]),
+                    })}
+                  </span>
                 </dd>
               </div>
             ))}
@@ -193,6 +213,7 @@ function StandingContent({
   store: Store;
   icons: Icons;
 }) {
+  const t = useTranslations("competitors");
   const listings = [...analysis.metadataComparison].sort(
     (a, b) => Number(b.isYou) - Number(a.isYou),
   );
@@ -201,8 +222,8 @@ function StandingContent({
     return (
       <EmptyState
         className={SECTION_EMPTY}
-        title="Nothing to compare yet"
-        body="Add a competitor to see its visibility and listing text beside yours."
+        title={t("standing.emptyTitle")}
+        body={t("standing.emptyBody")}
       />
     );
   }
@@ -210,9 +231,7 @@ function StandingContent({
     return (
       <div className={cn(SECTION_SHEET, "border-t-0")}>
         <ListingText rows={listings} store={store} icons={icons} />
-        <p className={SECTION_FOOTER}>
-          Home storefront listing, from each app’s latest snapshot
-        </p>
+        <p className={SECTION_FOOTER}>{t("standing.homeFooter")}</p>
       </div>
     );
   }
@@ -220,11 +239,9 @@ function StandingContent({
     <div className={cn(SECTION_SHEET, "border-t-0")}>
       <VisibilityList points={analysis.positionMap} icons={icons} />
       <p className={SECTION_FOOTER}>
-        <span>
-          Visibility over the keywords you track, from the latest checks
-        </span>
+        <span>{t("standing.visibilityFooter")}</span>
         <Link href={`/apps/${id}?visView=share`} className={FOOTER_LINK}>
-          Share of voice trend
+          {t("standing.shareTrend")}
         </Link>
       </p>
     </div>
@@ -232,16 +249,14 @@ function StandingContent({
 }
 
 function StandingBody({ id, view }: { id: string; view: StandingView }) {
+  const t = useTranslations("competitors");
   const read = useQuery(competitorAnalysisOptions(id));
   const appRead = useQuery(appDetailOptions(id));
   const { data: competitors } = useQuery(competitorsOptions(id));
   const failed = [read, appRead].find(failedRead);
   if (failed) {
     return (
-      <InlineQueryError
-        message="The comparison could not be loaded."
-        read={failed}
-      />
+      <InlineQueryError message={t("standing.loadFailed")} read={failed} />
     );
   }
   if (read.data === undefined || appRead.data === undefined) {
@@ -267,11 +282,12 @@ function StandingBody({ id, view }: { id: string; view: StandingView }) {
 }
 
 export function StandingPanel({ id }: { id: string }) {
+  const t = useTranslations("competitors");
   const [view, setView] = useState<StandingView>("visibility");
   return (
     <CollapsibleCard
       section={COMPETITOR_SECTION.standing}
-      title="How you compare"
+      title={t("standing.title")}
       actions={
         <Tabs
           value={view}
@@ -279,10 +295,10 @@ export function StandingPanel({ id }: { id: string }) {
             setView(STANDING_VIEWS.find((value) => value === next) ?? view)
           }
         >
-          <TabsList aria-label="Comparison">
+          <TabsList aria-label={t("standing.comparison")}>
             {STANDING_VIEWS.map((value) => (
               <TabsOption key={value} value={value}>
-                {STANDING_VIEW_LABELS[value]}
+                {t(`standing.${value}`)}
               </TabsOption>
             ))}
           </TabsList>

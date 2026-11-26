@@ -1,5 +1,14 @@
 import type { AppScreenshots, ScreenshotCaptionStatus } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
+import enScreenshots from "../../messages/en/screenshots.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import { PRODUCT_NAME } from "./brand";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "screenshots",
+  messages: { screenshots: enScreenshots },
+});
 
 export const CAPTION_STATUS_LABELS: Record<ScreenshotCaptionStatus, string> = {
   pending: "Reading",
@@ -9,6 +18,13 @@ export const CAPTION_STATUS_LABELS: Record<ScreenshotCaptionStatus, string> = {
   skipped: "Not read",
 };
 
+export function captionStatusLabel(
+  status: ScreenshotCaptionStatus,
+  t: MessageTranslator = english,
+): string {
+  return t(`status.${status}`);
+}
+
 export const SCREENSHOT_POLL_MS = 5_000;
 
 export function hasPendingScreenshots(
@@ -17,23 +33,26 @@ export function hasPendingScreenshots(
   return data?.screenshots.some((item) => item.status === "pending") ?? false;
 }
 
-export function screenshotSummary(data: AppScreenshots): string {
+export function screenshotSummary(
+  data: AppScreenshots,
+  t: MessageTranslator = english,
+): string {
   if (data.reading === "unsupported") {
-    return `Google Play does not index screenshot text, so ${PRODUCT_NAME} does not read it.`;
+    return t("summary.unsupported", { product: PRODUCT_NAME });
   }
   if (data.reading === "off") {
-    return "Reading screenshot text is switched off on this instance.";
+    return t("summary.off");
   }
   const total = data.screenshots.length;
   if (total === 0) {
-    return "No screenshots recorded yet. Refresh the app to capture them.";
+    return t("summary.empty");
   }
   const settled = data.screenshots.filter(
     (item) => item.status !== "pending",
   ).length;
   if (settled < total) {
-    return `Reading ${settled} of ${total} screenshots. This page updates when they are done.`;
+    return t("summary.pending", { settled, total });
   }
   const read = data.screenshots.filter((item) => item.caption !== null).length;
-  return `${read} of ${total} screenshots carry a caption.`;
+  return t("summary.settled", { read, total });
 }

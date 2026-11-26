@@ -1,4 +1,5 @@
 import { formatCheckedPosition } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { hasCheck, type RankingChartData } from "@/components/charts/pivot";
 import { RANK_TIER_KEY, rankTierTint } from "@/components/charts/rank-layers";
 import {
@@ -10,7 +11,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatDayMonth } from "@/lib/format";
+import { formatDayMonthInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
 import type { SeriesStats } from "./series-stats";
 
@@ -21,6 +23,8 @@ const STICKY = "sticky left-0 z-10 bg-card pl-4 md:pl-4";
 
 const DAY = "px-0.5 text-center last:pr-3 md:px-0.5 md:last:pr-4";
 
+const TIER_LIMITS = [3, 10, 25, 50, 100] as const;
+
 function DayCell({
   position,
   depth,
@@ -28,12 +32,13 @@ function DayCell({
   position: number | null;
   depth: number | null;
 }) {
+  const t = useTranslations("rankings");
   const text = formatCheckedPosition(position, depth);
   if (text === null) {
     return (
       <span className={cn(CELL, "text-faint-foreground")}>
         <span aria-hidden>–</span>
-        <span className="sr-only">Not checked</span>
+        <span className="sr-only">{t("notChecked")}</span>
       </span>
     );
   }
@@ -59,6 +64,8 @@ export function PositionsByDay({
   chart: RankingChartData;
   rows: readonly SeriesStats[];
 }) {
+  const t = useTranslations("rankings");
+  const locale = useAppLocale();
   const days = chart.rows
     .map((row, index) => ({ row, depths: chart.depths[index] }))
     .filter(({ depths }) => hasCheck(depths))
@@ -68,18 +75,16 @@ export function PositionsByDay({
     <Table
       density="compact"
       containerClassName="print:overflow-visible"
-      scrollLabel="Positions by day"
+      scrollLabel={t("positionsByDay")}
       scrollFocus="overflow"
     >
-      <TableCaption className="sr-only">
-        The position of each charted keyword on every checked day, newest first
-      </TableCaption>
+      <TableCaption className="sr-only">{t("positionsCaption")}</TableCaption>
       <TableHeader>
         <TableRow className="hover:bg-card">
-          <TableHead className={STICKY}>Keyword</TableHead>
+          <TableHead className={STICKY}>{t("keyword")}</TableHead>
           {days.map(({ row }) => (
             <TableHead key={String(row.date)} className={DAY}>
-              {formatDayMonth(String(row.date))}
+              {formatDayMonthInLocale(String(row.date), locale)}
             </TableHead>
           ))}
         </TableRow>
@@ -117,24 +122,25 @@ export function PositionsByDay({
 }
 
 export function RankTierKey() {
+  const t = useTranslations("rankings");
   return (
     <ul
-      aria-label="Rank bands"
+      aria-label={t("rankBands")}
       className="flex flex-wrap items-center gap-x-3 gap-y-1"
     >
-      {RANK_TIER_KEY.map((tier) => (
+      {RANK_TIER_KEY.map((tier, index) => (
         <li key={tier.label} className="flex items-center gap-1.5">
           <span
             aria-hidden
             className="size-2.5 rounded-[2px] [print-color-adjust:exact]"
             style={{ backgroundColor: tier.tint }}
           />
-          <span>{tier.label}</span>
+          <span>{t("topN", { count: TIER_LIMITS[index] })}</span>
         </li>
       ))}
       <li className="flex items-center gap-1.5">
         <span aria-hidden className="size-2.5 rounded-[2px] bg-muted" />
-        <span>Not ranked</span>
+        <span>{t("notRanked")}</span>
       </li>
     </ul>
   );

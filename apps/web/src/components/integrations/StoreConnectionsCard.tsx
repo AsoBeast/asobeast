@@ -7,6 +7,7 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import {
   SUPPORTED_STORES,
   type Store,
@@ -35,7 +36,8 @@ import {
   verifyStore,
   apiErrorMessage,
 } from "@/lib/api";
-import { formatDate } from "@/lib/format";
+import { formatDateInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { armFocusHandoff, useFocusGroupClaim } from "@/lib/focus-handoff";
 import {
   invalidateStoreConnectionMutation,
@@ -46,20 +48,16 @@ import {
   connectionStatusLine,
   STORE_CONNECT_SETTING_GUIDE,
   STORE_CONNECTIONS_SECTION_ID,
-  STORE_CONSOLES,
   type StoreConsoleCopy,
   needsAdminKey,
   replyAccessLine,
+  storeConsoleCopy,
 } from "@/lib/store-connection-copy";
 import { ConnectAppStoreDialog } from "./ConnectAppStoreDialog";
 import { connectionMark } from "./connection-summary";
 import { ConnectPlayDialog } from "./ConnectPlayDialog";
 import { GuideLink } from "./GuideLink";
 import { StoreConnectionApps } from "./StoreConnectionApps";
-
-const OWNER_ONLY = "Only the workspace owner can connect a store.";
-const STORE_CONNECT_OFF =
-  "Store connections are off on this instance. Set STORE_CONNECT_ENCRYPTION_KEY to turn them on.";
 
 function ConnectDialog({
   store,
@@ -103,12 +101,14 @@ function useConnectionAction<T>(
 }
 
 function DisconnectButton({ store }: { store: Store }) {
+  const t = useTranslations("integrations");
+  const locale = useAppLocale();
   const [open, setOpen] = useState(false);
-  const copy = STORE_CONSOLES[store];
+  const copy = storeConsoleCopy(store, t, locale);
   const disconnect = useConnectionAction(
     () => disconnectStore(store),
-    `${copy.name} disconnected`,
-    `Could not disconnect ${copy.name}`,
+    t("storeConnections.disconnected", { name: copy.name }),
+    t("storeConnections.disconnectFailed", { name: copy.name }),
     () => armFocusHandoff(connectFocusKey(store)),
   );
 
@@ -119,18 +119,20 @@ function DisconnectButton({ store }: { store: Store }) {
     >
       <AlertDialogTrigger asChild>
         <Button variant="outline" size="sm">
-          Disconnect
+          {t("storeConnections.disconnect")}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Disconnect {copy.name}?</AlertDialogTitle>
+          <AlertDialogTitle>
+            {t("storeConnections.disconnectTitle", { name: copy.name })}
+          </AlertDialogTitle>
           <AlertDialogDescription>{copy.disconnect}</AlertDialogDescription>
         </AlertDialogHeader>
         <ConfirmActionFooter
           pending={disconnect.pending}
-          label="Disconnect"
-          pendingLabel="Disconnecting…"
+          label={t("storeConnections.disconnect")}
+          pendingLabel={t("storeConnections.disconnecting")}
           onConfirm={disconnect.run}
         />
       </AlertDialogContent>
@@ -139,16 +141,18 @@ function DisconnectButton({ store }: { store: Store }) {
 }
 
 function ConnectionActions({ item }: { item: StoreConnectionItem }) {
-  const copy = STORE_CONSOLES[item.store];
+  const t = useTranslations("integrations");
+  const locale = useAppLocale();
+  const copy = storeConsoleCopy(item.store, t, locale);
   const verify = useConnectionAction(
     () => verifyStore(item.store),
     copy.verified,
-    "Could not verify the key",
+    t("storeConnections.verifyFailed"),
   );
   const sync = useConnectionAction(
     () => syncStore(item.store),
-    "Sync queued",
-    "Could not queue a sync",
+    t("storeConnections.syncQueued"),
+    t("storeConnections.syncFailed"),
   );
   const rejected = item.status === "rejected";
 
@@ -160,7 +164,7 @@ function ConnectionActions({ item }: { item: StoreConnectionItem }) {
         aria-disabled={verify.pending || undefined}
         onClick={() => verify.run()}
       >
-        Verify
+        {t("storeConnections.verify")}
       </Button>
       {rejected ? null : (
         <Button
@@ -169,7 +173,7 @@ function ConnectionActions({ item }: { item: StoreConnectionItem }) {
           aria-disabled={sync.pending || undefined}
           onClick={() => sync.run()}
         >
-          Sync now
+          {t("storeConnections.syncNow")}
         </Button>
       )}
       <ConnectDialog
@@ -182,8 +186,6 @@ function ConnectionActions({ item }: { item: StoreConnectionItem }) {
   );
 }
 
-const CONNECTED_TERM = "Connected";
-
 function ConnectionDetails({
   item,
   actions,
@@ -191,8 +193,11 @@ function ConnectionDetails({
   item: StoreConnectionItem;
   actions: ReactNode;
 }) {
-  const status = connectionStatusLine(item);
-  const replies = replyAccessLine(item);
+  const t = useTranslations("integrations");
+  const locale = useAppLocale();
+  const copy = storeConsoleCopy(item.store, t, locale);
+  const status = connectionStatusLine(item, t, locale);
+  const replies = replyAccessLine(item, t);
   const warned = status.tone === "warning";
 
   return (
@@ -200,13 +205,13 @@ function ConnectionDetails({
       <PanelBody className="gap-4">
         <FactList
           facts={[
-            ...STORE_CONSOLES[item.store].facts(item).map(([term, value]) => ({
+            ...copy.facts(item).map(([term, value]) => ({
               term,
               value,
-              identifier: term !== CONNECTED_TERM,
+              identifier: term !== t("storeConnections.connected"),
             })),
             {
-              term: "Review replies",
+              term: t("storeConnections.reviewReplies"),
               value: (
                 <span
                   className={
@@ -249,11 +254,15 @@ function ConnectionFooter({
   item: StoreConnectionItem;
   guide: ReactNode;
 }) {
+  const t = useTranslations("integrations");
+  const locale = useAppLocale();
   return (
     <>
       {item.verifiedAt ? (
         <p className="min-w-0 flex-1 basis-64">
-          {`Verified ${formatDate(item.verifiedAt)}`}
+          {t("storeConnections.verifiedOn", {
+            date: formatDateInLocale(item.verifiedAt, locale),
+          })}
         </p>
       ) : null}
       <span className="ml-auto">{guide}</span>
@@ -268,13 +277,16 @@ function BeforeYouStart({
   store: Store;
   copy: StoreConsoleCopy;
 }) {
+  const t = useTranslations("integrations");
   const labelId = `before-you-start-${store}`;
 
   return (
     <div className="flex flex-col gap-2">
       <p id={labelId} className="text-label text-foreground">
-        <span>Before you start</span>
-        <span className="sr-only">{` with ${copy.name}`}</span>
+        <span>{t("storeConnections.beforeStart")}</span>
+        <span className="sr-only">
+          {t("storeConnections.beforeWith", { name: copy.name })}
+        </span>
       </p>
       <ul
         aria-labelledby={labelId}
@@ -295,18 +307,20 @@ function StoreConsoleCard({
   store: Store;
   connection: StoreConnectionItem | undefined;
 }) {
+  const t = useTranslations("integrations");
+  const locale = useAppLocale();
   const { user, isOwner } = useAuth();
-  const copy = STORE_CONSOLES[store];
+  const copy = storeConsoleCopy(store, t, locale);
   const owner = Boolean(user) && isOwner;
   const header = useFocusGroupClaim(
     connectFocusKey(store),
     Boolean(connection),
   );
 
-  const mark = connection ? connectionMark(connection) : null;
+  const mark = connection ? connectionMark(connection, t) : null;
   const guide = (
     <GuideLink href={copy.guide} subject={copy.name}>
-      Setup guide
+      {t("storeConnections.setupGuide")}
     </GuideLink>
   );
 
@@ -356,6 +370,7 @@ function useScrollIntoViewOnHash() {
 }
 
 export function StoreConnectionsCard() {
+  const t = useTranslations("integrations");
   const { user, isOwner } = useAuth();
   const { data } = useSuspenseQuery(storeConnectionsOptions);
   useScrollIntoViewOnHash();
@@ -363,21 +378,21 @@ export function StoreConnectionsCard() {
   if (!data.available) {
     return (
       <SettingsPanel
-        title="Store connections are off"
+        title={t("storeConnections.offTitle")}
         footer={
           <span className="ml-auto">
             <GuideLink
               href={STORE_CONNECT_SETTING_GUIDE}
               subject="store connections"
             >
-              How to turn them on
+              {t("storeConnections.turnOn")}
             </GuideLink>
           </span>
         }
       >
         <PanelBody>
           <p className="max-w-[70ch] text-body text-muted-foreground">
-            {STORE_CONNECT_OFF}
+            {t("storeConnections.off")}
           </p>
         </PanelBody>
       </SettingsPanel>
@@ -394,7 +409,9 @@ export function StoreConnectionsCard() {
         />
       ))}
       {user && !isOwner ? (
-        <p className="text-body text-muted-foreground">{OWNER_ONLY}</p>
+        <p className="text-body text-muted-foreground">
+          {t("storeConnections.ownerOnly")}
+        </p>
       ) : null}
     </div>
   );

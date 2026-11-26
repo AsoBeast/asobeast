@@ -2,6 +2,7 @@
 
 import { Suspense, useDeferredValue } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useQueryState } from "nuqs";
 import { ChartSkeleton } from "@/components/charts/ChartStates";
 import { CHART_HEIGHT } from "@/components/charts/theme";
@@ -20,11 +21,13 @@ import {
   StatTile,
 } from "@/components/ui/stat-tile";
 import {
-  formatDayMonth,
-  formatNumber,
+  formatDayMonthInLocale,
+  formatNumberInLocale,
   formatRating,
-  pluralize,
 } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
 import { ratingsHistoryOptions } from "@/lib/queries";
 import { presetToRange, RATINGS_RANGES, type RatingsRange } from "@/lib/ranges";
 import {
@@ -43,16 +46,21 @@ import {
 const RATING_CHANGE_DIGITS = 2;
 const CHANGE_LABEL = `${RATING_CHANGE_DAYS}d`;
 
-const CHART_TITLES: Record<RatingsView, string> = {
-  average: "Average rating",
-  volume: "New ratings",
-};
-
-function growthNote({ added, since }: RatingsGrowth): string {
-  const day = formatDayMonth(since);
+function growthNote(
+  { added, since }: RatingsGrowth,
+  t: MessageTranslator,
+  locale: Locale,
+): string {
+  const day = formatDayMonthInLocale(since, locale);
   return added < 0
-    ? `${formatNumber(-added)} fewer since ${day}`
-    : `${formatNumber(added)} new since ${day}`;
+    ? t("ratings.fewerSince", {
+        count: formatNumberInLocale(-added, locale),
+        date: day,
+      })
+    : t("ratings.newSince", {
+        count: formatNumberInLocale(added, locale),
+        date: day,
+      });
 }
 
 function RatingsStrip({
@@ -66,6 +74,8 @@ function RatingsStrip({
   view: RatingsView;
   onSelect: (next: RatingsView) => void;
 }) {
+  const t = useTranslations("reviews");
+  const locale = useAppLocale();
   const { data } = useSuspenseQuery(
     ratingsHistoryOptions(id, presetToRange(range)),
   );
@@ -76,9 +86,9 @@ function RatingsStrip({
   const growth = ratingsGrowth(data.points);
 
   return (
-    <MetricStrip columns={2} framed={false} label="Ratings figures">
+    <MetricStrip columns={2} framed={false} label={t("ratings.figures")}>
       <StatTile
-        label="Rating"
+        label={t("ratings.rating")}
         value={average === null ? "—" : formatRating(average)}
         delta={
           change === null ? null : (
@@ -92,21 +102,21 @@ function RatingsStrip({
         }
         note={
           count === null
-            ? "No ratings read yet"
-            : `Average of ${pluralize(count, "rating")}`
+            ? t("ratings.noRatings")
+            : t("ratings.averageOf", { count })
         }
         selected={view === "average"}
         onSelect={() => onSelect("average")}
       />
       <StatTile
-        label="Ratings"
-        value={count === null ? "—" : formatNumber(count)}
+        label={t("ratings.ratings")}
+        value={count === null ? "—" : formatNumberInLocale(count, locale)}
         delta={
           added === null ? null : (
             <TrendChip label={CHANGE_LABEL} value={added} form="pill" />
           )
         }
-        note={growth === null ? "" : growthNote(growth)}
+        note={growth === null ? "" : growthNote(growth, t, locale)}
         selected={view === "volume"}
         onSelect={() => onSelect("volume")}
       />
@@ -115,6 +125,7 @@ function RatingsStrip({
 }
 
 export function RatingsPanel({ id }: { id: string }) {
+  const t = useTranslations("reviews");
   const [view, setView] = useQueryState("ratingsView", ratingsViewParser);
   const [range, setRange] = useQueryState("range", ratingsRangeParser);
   const shownRange = useDeferredValue(range);
@@ -135,7 +146,9 @@ export function RatingsPanel({ id }: { id: string }) {
       >
         <div className="flex min-h-8 flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <h2 className="text-label font-medium text-muted-foreground">
-            {CHART_TITLES[view]}
+            {t(
+              view === "average" ? "ratings.averageTitle" : "ratings.newTitle",
+            )}
           </h2>
           <RangePicker
             presets={RATINGS_RANGES}

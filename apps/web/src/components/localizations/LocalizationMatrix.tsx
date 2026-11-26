@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   Table,
   TableBody,
@@ -13,18 +16,20 @@ import {
   type LocalizationGrid,
   type SuggestedMarketHint,
 } from "@/lib/app-localizations";
-import { formatCountry, formatNumber } from "@/lib/format";
-import { localizationName } from "@/lib/localizations";
+import { formatCountryInLocale } from "@/lib/format";
+import { localizationNameInLocale } from "@/lib/localizations";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { OriginMark } from "./OriginMark";
 import { ReadRoleBadge } from "./ReadRoleBadge";
 
 function NotRead() {
+  const t = useTranslations("localizations");
   return (
     <>
       <span aria-hidden className="text-muted-foreground">
         ·
       </span>
-      <span className="sr-only">Not read</span>
+      <span className="sr-only">{t("matrix.notRead")}</span>
     </>
   );
 }
@@ -38,38 +43,48 @@ export function LocalizationMatrix({
   grid: LocalizationGrid;
   hint: SuggestedMarketHint | null;
 }) {
+  const t = useTranslations("localizations");
+  const locale = useAppLocale();
   const columns = [...grid.markets, ...grid.suggested];
   return (
     <div className="flex min-w-0 flex-col">
-      <Table scrollLabel="Localization matrix" scrollFocus="overflow">
+      <Table scrollLabel={t("matrix.scroll")} scrollFocus="overflow">
         <TableCaption className="sr-only">
           {grid.suggested.length > 0
-            ? `Which of your markets read each localization, and up to ${formatNumber(SUGGESTED_COLUMNS)} suggested markets`
-            : "Which of your markets read each localization"}
+            ? t("matrix.captionSuggested", { count: SUGGESTED_COLUMNS })
+            : t("matrix.caption")}
         </TableCaption>
         <TableHeader>
           <TableRow>
-            <TableHead scope="col">Read in your markets</TableHead>
+            <TableHead scope="col">{t("matrix.readMarkets")}</TableHead>
             {grid.markets.map((country) => (
               <TableHead
                 key={country}
                 scope="col"
-                title={formatCountry(country)}
+                title={formatCountryInLocale(country, locale)}
               >
                 {country.toUpperCase()}
-                <span className="sr-only"> {formatCountry(country)}</span>
+                <span className="sr-only">
+                  {" "}
+                  {formatCountryInLocale(country, locale)}
+                </span>
               </TableHead>
             ))}
             {grid.suggested.map((country) => (
               <TableHead
                 key={country}
                 scope="col"
-                title={`${formatCountry(country)}, suggested`}
+                title={t("matrix.suggestedTitle", {
+                  market: formatCountryInLocale(country, locale),
+                })}
                 className={SUGGESTED_COLUMN}
               >
                 {country.toUpperCase()}{" "}
-                <span className="font-normal">suggested</span>
-                <span className="sr-only"> {formatCountry(country)}</span>
+                <span className="font-normal">{t("matrix.suggested")}</span>
+                <span className="sr-only">
+                  {" "}
+                  {formatCountryInLocale(country, locale)}
+                </span>
               </TableHead>
             ))}
           </TableRow>
@@ -79,7 +94,7 @@ export function LocalizationMatrix({
             <TableRow key={row.localization}>
               <TableHead scope="row" className="text-dense text-foreground">
                 <span className="mr-2 font-medium">
-                  {localizationName(row.localization)}
+                  {localizationNameInLocale(row.localization, locale)}
                 </span>
                 <OriginMark origin={row.origin} />
               </TableHead>

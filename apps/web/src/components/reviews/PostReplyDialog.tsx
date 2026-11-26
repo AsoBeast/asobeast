@@ -1,6 +1,7 @@
 "use client";
 
 import type { RefObject } from "react";
+import { useTranslations } from "next-intl";
 import { Send } from "lucide-react";
 import type { Store } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ export function PostReplyDialog({
   textRef: RefObject<HTMLTextAreaElement | null>;
   onPost: () => void;
 }) {
+  const t = useTranslations("reviews");
   return (
     <ReplyConfirmDialog
       trigger={
@@ -40,15 +42,15 @@ export function PostReplyDialog({
           {label}
         </Button>
       }
-      title="Post this reply publicly?"
-      description={`AsoBeast sends this text to ${consoleLabel(store)} as the reply to this review.`}
-      cancelLabel="Keep editing"
-      actionLabel="Post"
+      title={t("post.title")}
+      description={t("post.description", { console: consoleLabel(store) })}
+      cancelLabel={t("post.keepEditing")}
+      actionLabel={t("post.action")}
       textRef={textRef}
       onConfirm={onPost}
     >
       <ul className="w-full list-disc space-y-1 pl-4 text-start text-body text-muted-foreground">
-        {postRules(store).map((rule) => (
+        {postRules(store, t).map((rule) => (
           <li key={rule}>{rule}</li>
         ))}
       </ul>

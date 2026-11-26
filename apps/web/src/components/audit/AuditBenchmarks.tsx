@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type {
   AuditBenchmarkRow,
   AuditBenchmarks as Benchmarks,
@@ -29,12 +32,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { pluralize } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
   type Comparison,
   comparison,
-  COMPARISON_LABEL,
   formatBenchmarkValue,
   medianGap,
 } from "./benchmark-comparison";
@@ -52,6 +53,7 @@ const STANDING_ARROW: Partial<Record<Comparison, "up" | "down">> = {
 };
 
 function Standing({ row }: { row: AuditBenchmarkRow }) {
+  const t = useTranslations("audit");
   const standing = comparison(row);
   const way = STANDING_ARROW[standing];
   return (
@@ -62,7 +64,7 @@ function Standing({ row }: { row: AuditBenchmarkRow }) {
       )}
     >
       {way ? <DirectionArrow way={way} className="size-3" /> : null}
-      <span>{COMPARISON_LABEL[standing]}</span>
+      <span>{t(`benchmarks.${standing}`)}</span>
     </span>
   );
 }
@@ -103,6 +105,7 @@ export function AuditBenchmarks({
   appId: string;
   benchmarks: Benchmarks | null | undefined;
 }) {
+  const t = useTranslations("audit");
   const competitorsHref = `/apps/${appId}/competitors`;
   const compared = benchmarks && benchmarks.rows.length > 0 ? benchmarks : null;
 
@@ -110,54 +113,54 @@ export function AuditBenchmarks({
     <Card>
       <CardHeader className={PANEL_HEADER}>
         <CardTitle asChild>
-          <h2>Competitor comparison</h2>
+          <h2>{t("benchmarks.title")}</h2>
         </CardTitle>
         {compared ? (
           <CardAction className={cn(PANEL_COUNT, "numeric")}>
-            {pluralize(compared.competitors, "competitor")}
+            {t("competitorCount", { count: compared.competitors })}
           </CardAction>
         ) : null}
       </CardHeader>
       {compared ? (
         <>
           <CardContent className={PANEL_BLEED}>
-            <Table scrollLabel="Competitor comparison" scrollFocus="overflow">
+            <Table scrollLabel={t("benchmarks.aria")} scrollFocus="overflow">
               <TableCaption className="sr-only">
-                {`How your listing compares with ${pluralize(compared.competitors, "competitor")}`}
+                {t("benchmarkCaption", { count: compared.competitors })}
               </TableCaption>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Metric</TableHead>
-                  <TableHead numeric>You</TableHead>
-                  <TableHead numeric>Competitor median</TableHead>
-                  <TableHead numeric>Best</TableHead>
-                  <TableHead numeric>Against the median</TableHead>
-                  <TableHead className="text-right">Standing</TableHead>
+                  <TableHead>{t("benchmarks.metric")}</TableHead>
+                  <TableHead numeric>{t("benchmarks.you")}</TableHead>
+                  <TableHead numeric>{t("benchmarks.median")}</TableHead>
+                  <TableHead numeric>{t("benchmarks.best")}</TableHead>
+                  <TableHead numeric>{t("benchmarks.againstMedian")}</TableHead>
+                  <TableHead className="text-right">
+                    {t("benchmarks.standing")}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <BenchmarkRows rows={compared.rows} />
             </Table>
           </CardContent>
           <CardFooter className="justify-between">
-            <span>
-              {`Read from the stored listings of ${pluralize(compared.competitors, "competitor")}`}
-            </span>
+            <span>{t("benchmarkFooter", { count: compared.competitors })}</span>
             <Link
               href={competitorsHref}
               className={cn(FOOTER_LINK, "shrink-0 whitespace-nowrap")}
             >
-              Open competitors
+              {t("openCompetitors")}
             </Link>
           </CardFooter>
         </>
       ) : (
         <CardContent>
           <EmptyState
-            title="No competitors to compare with"
-            body="Track a few rivals and the audit compares your listing with theirs."
+            title={t("benchmarks.emptyTitle")}
+            body={t("benchmarks.emptyBody")}
             action={
               <Button asChild variant="outline">
-                <Link href={competitorsHref}>Add competitors</Link>
+                <Link href={competitorsHref}>{t("benchmarks.add")}</Link>
               </Button>
             }
           />

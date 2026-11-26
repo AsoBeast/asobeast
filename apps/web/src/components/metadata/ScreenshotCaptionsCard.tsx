@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { ScreenshotThumb } from "@/components/screenshots/ScreenshotThumb";
 import { PANEL_COUNT, PANEL_HEADER } from "@/components/layout/panel-classes";
 import {
@@ -13,10 +14,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { formatDate } from "@/lib/format";
+import { formatDateInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { invalidateMetadataAudit, screenshotsOptions } from "@/lib/queries";
 import {
-  CAPTION_STATUS_LABELS,
+  captionStatusLabel,
   hasPendingScreenshots,
   screenshotSummary,
 } from "@/lib/screenshot-captions";
@@ -33,6 +35,8 @@ export function ScreenshotCaptionsCard({
   market?: string;
   localization?: string;
 }) {
+  const t = useTranslations("screenshots");
+  const locale = useAppLocale();
   const { data } = useSuspenseQuery(
     screenshotsOptions(id, market, localization),
   );
@@ -56,25 +60,25 @@ export function ScreenshotCaptionsCard({
       <Card className="min-w-0">
         <CardHeader className={PANEL_HEADER}>
           <CardTitle asChild>
-            <h2 id={HEADING_ID}>Screenshot captions</h2>
+            <h2 id={HEADING_ID}>{t("title")}</h2>
           </CardTitle>
           {!empty && settled && data.reading === "on" ? (
             <CardAction className={PANEL_COUNT}>
               <span className="numeric">
-                {`${captioned} of ${data.screenshots.length} with a caption`}
+                {t("count", {
+                  captioned,
+                  total: data.screenshots.length,
+                })}
               </span>
             </CardAction>
           ) : null}
         </CardHeader>
         <CardContent>
           {empty ? (
-            <EmptyState
-              title="No screenshots recorded"
-              body="Screenshots are recorded with every snapshot. Refresh the app to capture them."
-            />
+            <EmptyState title={t("emptyTitle")} body={t("emptyBody")} />
           ) : (
             <ol
-              aria-label="Screenshots in store order"
+              aria-label={t("aria")}
               tabIndex={0}
               className="flex list-none gap-4 overflow-x-auto p-0 pb-2"
             >
@@ -85,7 +89,7 @@ export function ScreenshotCaptionsCard({
                 >
                   <ScreenshotThumb
                     src={item.url}
-                    alt={`Screenshot ${item.position}`}
+                    alt={t("alt", { position: item.position })}
                     height={THUMB_HEIGHT}
                     className="mb-1 self-start"
                   />
@@ -95,7 +99,7 @@ export function ScreenshotCaptionsCard({
                     </p>
                   ) : null}
                   <p className="min-w-28 text-caption text-faint-foreground">
-                    {CAPTION_STATUS_LABELS[item.status]}
+                    {captionStatusLabel(item.status, t)}
                   </p>
                 </li>
               ))}
@@ -104,9 +108,13 @@ export function ScreenshotCaptionsCard({
         </CardContent>
         {empty && data.reading === "on" ? null : (
           <CardFooter className="flex-wrap gap-x-2 gap-y-1">
-            <span aria-live="polite">{screenshotSummary(data)}</span>
+            <span aria-live="polite">{screenshotSummary(data, t)}</span>
             {data.capturedAt && !empty ? (
-              <span>{`Captured ${formatDate(data.capturedAt)}.`}</span>
+              <span>
+                {t("captured", {
+                  date: formatDateInLocale(data.capturedAt, locale),
+                })}
+              </span>
             ) : null}
           </CardFooter>
         )}

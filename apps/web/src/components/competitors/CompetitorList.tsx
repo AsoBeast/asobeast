@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { CompetitorItem } from "@asobeast/shared";
@@ -24,6 +25,8 @@ import { PANEL_COUNT } from "@/components/layout/panel-classes";
 import { Button } from "@/components/ui/button";
 import { Separated } from "@/components/ui/separated";
 import { removeCompetitor } from "@/lib/api";
+import { formatNumberInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { siblingControl, useCloseFocusHandoff } from "@/lib/focus-handoff";
 import {
   competitorsOptions,
@@ -33,7 +36,7 @@ import { useSingleFlight } from "@/lib/single-flight";
 import { exportCompetitors } from "./competitor-csv";
 import { snapshotParts } from "./competitor-snapshot";
 
-const REMOVE_CONTROL = 'button[aria-label^="Remove "]';
+const REMOVE_CONTROL = "button[data-competitor-remove]";
 const COMPETITOR_FIELD = "competitor-search";
 
 const removalSuccessor = (row: HTMLElement | null): HTMLElement | null =>
@@ -47,11 +50,14 @@ function CompetitorRow({
   id: string;
   competitor: CompetitorItem;
 }) {
+  const t = useTranslations("competitors");
+  const common = useTranslations("common");
+  const locale = useAppLocale();
   const queryClient = useQueryClient();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const row = useRef<HTMLLIElement>(null);
   const { handOff, onCloseAutoFocus } = useCloseFocusHandoff();
-  const name = competitor.name ?? "Untitled app";
+  const name = competitor.name ?? t("untitled");
 
   const mutation = useMutation({
     mutationFn: () => removeCompetitor(id, competitor.id),
@@ -59,10 +65,10 @@ function CompetitorRow({
       invalidateCompetitorMutation(queryClient, id);
       handOff(removalSuccessor(row.current));
       setConfirmOpen(false);
-      toast.success(`Removed ${name}`);
+      toast.success(t("list.removed", { name }));
     },
     onError: () => {
-      toast.error(`Could not remove ${name}`);
+      toast.error(t("list.removeFailed", { name }));
     },
   });
   const removeOnce = useSingleFlight(mutation);
@@ -81,7 +87,14 @@ function CompetitorRow({
           ) : null}
         </span>
         <span className="numeric truncate text-caption text-faint-foreground">
-          <Separated parts={snapshotParts(competitor.latestSnapshot)} />
+          <Separated
+            parts={snapshotParts(
+              competitor.latestSnapshot,
+              locale,
+              t,
+              common("free"),
+            )}
+          />
         </span>
       </div>
       <AlertDialog
@@ -89,22 +102,28 @@ function CompetitorRow({
         onOpenChange={closeUnlessPending(mutation.isPending, setConfirmOpen)}
       >
         <AlertDialogTrigger asChild>
-          <Button variant="ghost" size="icon" aria-label={`Remove ${name}`}>
+          <Button
+            variant="ghost"
+            size="icon"
+            data-competitor-remove
+            aria-label={t("list.remove", { name })}
+          >
             <Trash2 />
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent onCloseAutoFocus={onCloseAutoFocus}>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove {name}?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("list.removeTitle", { name })}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              This removes {name} from the comparison. Its keyword positions are
-              recaptured only if you add it back.
+              {t("list.removeBody", { name })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <ConfirmActionFooter
             pending={mutation.isPending}
-            label="Remove"
-            pendingLabel="Removing…"
+            label={t("list.removeAction")}
+            pendingLabel={t("list.removing")}
             onConfirm={removeOnce}
           />
         </AlertDialogContent>
@@ -120,8 +139,9 @@ export function CompetitorList({
   id: string;
   competitors: CompetitorItem[];
 }) {
+  const t = useTranslations("competitors");
   return (
-    <ul aria-label="Tracked competitors">
+    <ul aria-label={t("list.aria")}>
       {competitors.map((competitor) => (
         <CompetitorRow key={competitor.id} id={id} competitor={competitor} />
       ))}
@@ -130,14 +150,20 @@ export function CompetitorList({
 }
 
 export function TrackedSummary({ id }: { id: string }) {
+  const t = useTranslations("competitors");
+  const locale = useAppLocale();
   const { data: competitors } = useQuery(competitorsOptions(id));
   if (competitors === undefined || competitors.length === 0) return null;
   return (
     <>
-      <span className={PANEL_COUNT}>{`${competitors.length} tracked`}</span>
+      <span className={PANEL_COUNT}>
+        {t("list.trackedCount", {
+          count: formatNumberInLocale(competitors.length, locale),
+        })}
+      </span>
       <ExportCsvButton
         subject="competitors"
-        onClick={() => exportCompetitors(id, competitors)}
+        onClick={() => exportCompetitors(id, competitors, t)}
       />
     </>
   );

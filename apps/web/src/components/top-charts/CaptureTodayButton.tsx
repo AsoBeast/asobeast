@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Download, Loader2 } from "lucide-react";
 import { useQueryStates } from "nuqs";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import type { ComponentProps } from "react";
 import type { ChartKey } from "@asobeast/shared";
@@ -26,24 +27,25 @@ export function CaptureTodayButton({
 }: {
   chart: ChartKey;
 } & Pick<ComponentProps<typeof Button>, "variant" | "size">) {
+  const t = useTranslations("topCharts");
   const queryClient = useQueryClient();
   const [, setSearch] = useQueryStates(chartParsers);
   const mutation = useMutation({
     mutationFn: () => captureChart(chart),
     onSuccess: (page) => {
       if (page.answeredNoApps) {
-        toast.info(noAppsToast(page.chart.store));
+        toast.info(noAppsToast(page.chart.store, t));
         return;
       }
       seedChartCapture(queryClient, page);
       toast.success(
         listsNoApps(page)
-          ? noAppsToast(page.chart.store)
-          : "Captured today's chart",
+          ? noAppsToast(page.chart.store, t)
+          : t("capture.capturedToday"),
       );
       void setSearch({ date: null });
     },
-    onError: (error) => toast.error(captureErrorText(error)),
+    onError: (error) => toast.error(captureErrorText(error, t)),
   });
   const captureOnce = useSingleFlight(mutation);
 
@@ -62,7 +64,7 @@ export function CaptureTodayButton({
       ) : (
         <Download aria-hidden />
       )}
-      Capture today
+      {t("capture.captureToday")}
     </Button>
   );
 }

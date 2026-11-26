@@ -1,4 +1,6 @@
+import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
+import zhActions from "../../../messages/zh-CN/actions.json";
 import { ACTION_SUMMARY, ACTIONS } from "../../../e2e/fixtures.mts";
 import { ACTION_ACTIVITY } from "../../../e2e/action-details.mts";
 import { overviewTiles } from "./overview-tiles";
@@ -10,6 +12,12 @@ const tiles = (summary = ACTION_SUMMARY) =>
       tile,
     ]),
   );
+
+const zh = createTranslator({
+  locale: "zh-CN",
+  namespace: "actions",
+  messages: { actions: zhActions },
+});
 
 describe("overviewTiles", () => {
   it("counts the open actions by their open priorities and claims no change", () => {
@@ -63,5 +71,20 @@ describe("overviewTiles", () => {
 
     expect(empty.every((tile) => tile.value === "—")).toBe(true);
     expect(empty.every((tile) => tile.note === "not generated yet")).toBe(true);
+  });
+
+  it("writes the queue figures in Simplified Chinese", () => {
+    const localized = overviewTiles(ACTION_SUMMARY, ACTION_ACTIVITY, ACTIONS, {
+      t: zh,
+      locale: "zh-CN",
+    });
+
+    expect(localized.map((tile) => tile.label)).toEqual([
+      "待处理",
+      "本周新增",
+      "确认已修复",
+      "稍后处理",
+    ]);
+    expect(localized[3].note).toBe("下次于 2026年8月15日 唤醒");
   });
 });

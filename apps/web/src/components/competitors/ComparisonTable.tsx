@@ -7,6 +7,7 @@ import {
   type Table as TableInstance,
 } from "@tanstack/react-table";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useQueryStates } from "nuqs";
 import type {
   CompetitorItem,
@@ -35,6 +36,7 @@ import {
   matrixSortParser,
   sortDirectionParser,
 } from "@/lib/search-params";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { appDetailOptions } from "@/lib/queries";
 import { numericProps } from "@/lib/table/column-visibility";
 import { ariaSort } from "@/lib/table/sorting";
@@ -84,16 +86,14 @@ function MatrixSheet({
   multiMarket: boolean;
   onClear: () => void;
 }) {
+  const t = useTranslations("competitors");
   const rows = table.getRowModel().rows;
   return (
     <div className={SECTION_SHEET}>
       <Table aria-rowcount={rows.length + (rows.length > 0 ? 2 : 1)}>
         <TableCaption className="sr-only">
-          Your keyword positions compared with each tracked competitor. Gap rows
-          are keywords a competitor ranks for and you do not.
-          {multiMarket
-            ? " The market column names the storefront of each row."
-            : null}
+          {t("comparison.caption")}
+          {multiMarket ? t("comparison.marketCaption") : null}
         </TableCaption>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -119,7 +119,7 @@ function MatrixSheet({
             <TableRow>
               <TableCell colSpan={table.getVisibleLeafColumns().length}>
                 <FilteredEmpty
-                  title="No keywords match these filters"
+                  title={t("comparison.noMatches")}
                   onClear={onClear}
                 />
               </TableCell>
@@ -167,6 +167,8 @@ export function ComparisonTable({
   appId: string;
   onlyGaps: boolean;
 }) {
+  const t = useTranslations("competitors");
+  const locale = useAppLocale();
   const [sortParams, setSortParams] = useQueryStates({
     sort: matrixSortParser,
     dir: sortDirectionParser,
@@ -175,8 +177,8 @@ export function ComparisonTable({
   const openBreakdown = useOpenBreakdown();
   const { data: app } = useSuspenseQuery(appDetailOptions(appId));
   const markets = useMemo(
-    () => comparisonMarkets(data.rows, app.country, filters.country),
-    [data.rows, app.country, filters.country],
+    () => comparisonMarkets(data.rows, app.country, filters.country, locale),
+    [data.rows, app.country, filters.country, locale],
   );
   const multiMarket = markets.length > 1;
 
@@ -189,8 +191,9 @@ export function ComparisonTable({
       })),
       openBreakdown,
       { appId, multiMarket },
+      { t },
     );
-  }, [appId, competitors, data.competitors, openBreakdown, multiMarket]);
+  }, [appId, competitors, data.competitors, openBreakdown, multiMarket, t]);
 
   const [visibility, setVisibility] = useStoredColumnVisibility(
     "comparison",
@@ -247,8 +250,11 @@ export function ComparisonTable({
           exportComparison(
             appId,
             onlyGaps,
-            data.competitors,
-            rows.map((row) => row.original),
+            {
+              competitors: data.competitors,
+              rows: rows.map((row) => row.original),
+            },
+            t,
           )
         }
       />

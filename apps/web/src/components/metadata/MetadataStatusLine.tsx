@@ -2,9 +2,10 @@
 
 import type { ReactNode } from "react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useLocalization } from "@/components/app-detail/use-localization";
 import { useMarket } from "@/components/app-detail/use-market";
-import { formatNumber, pluralize } from "@/lib/format";
+import type { MessageTranslator } from "@/i18n/translator";
 import { queryMarket } from "@/lib/market";
 import { appLocalizationsOptions, metadataAuditOptions } from "@/lib/queries";
 import { metadataStatus, type MetadataStatus } from "./metadata-status";
@@ -22,13 +23,17 @@ function Part({ figure, rest }: { figure: string; rest: string }) {
 }
 
 function CoveragePart({ status }: { status: MetadataStatus }) {
+  const t = useTranslations("metadata");
   const showUncovered = useShowUncovered();
-  if (status.keywords === 0) return <span>No keywords tracked yet</span>;
+  if (status.keywords === 0) return <span>{t("status.noKeywords")}</span>;
   if (status.uncovered === 0) {
     return (
       <>
-        {status.keywords > 1 ? <span>All </span> : null}
-        <Part figure={pluralize(status.keywords, "keyword")} rest=" covered" />
+        {status.keywords > 1 ? <span>{t("status.all")}</span> : null}
+        <Part
+          figure={t("status.keywordCount", { count: status.keywords })}
+          rest={t("status.covered")}
+        />
       </>
     );
   }
@@ -39,8 +44,8 @@ function CoveragePart({ status }: { status: MetadataStatus }) {
       className="rounded-sm text-left link-underline outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <Part
-        figure={pluralize(status.uncovered, "keyword")}
-        rest=" not covered"
+        figure={t("status.keywordCount", { count: status.uncovered })}
+        rest={t("status.notCovered")}
       />
     </button>
   );
@@ -51,7 +56,10 @@ interface StatusPart {
   node: ReactNode;
 }
 
-function statusParts(status: MetadataStatus): StatusPart[] {
+function statusParts(
+  status: MetadataStatus,
+  t: MessageTranslator,
+): StatusPart[] {
   const { fieldsWithIssues, captions, keywordFieldSpace } = status;
   const parts: (StatusPart | null)[] = [
     fieldsWithIssues > 0
@@ -59,8 +67,8 @@ function statusParts(status: MetadataStatus): StatusPart[] {
           key: "issues",
           node: (
             <Part
-              figure={pluralize(fieldsWithIssues, "field")}
-              rest=" with issues"
+              figure={t("status.fieldCount", { count: fieldsWithIssues })}
+              rest={t("status.withIssues")}
             />
           ),
         }
@@ -71,8 +79,11 @@ function statusParts(status: MetadataStatus): StatusPart[] {
           key: "captions",
           node: (
             <Part
-              figure={`${formatNumber(captions.captioned)} of ${formatNumber(captions.total)}`}
-              rest=" screenshots with a caption"
+              figure={t("status.captionCount", {
+                captioned: captions.captioned,
+                total: captions.total,
+              })}
+              rest={t("status.screenshotsCaption")}
             />
           ),
         }
@@ -82,8 +93,11 @@ function statusParts(status: MetadataStatus): StatusPart[] {
           key: "space",
           node: (
             <Part
-              figure={`${formatNumber(keywordFieldSpace.used)} of ${formatNumber(keywordFieldSpace.limit)}`}
-              rest=" keyword field characters used"
+              figure={t("status.spaceCount", {
+                used: keywordFieldSpace.used,
+                limit: keywordFieldSpace.limit,
+              })}
+              rest={t("status.keywordFieldUsed")}
             />
           ),
         }
@@ -99,6 +113,7 @@ export function MetadataStatusLine({
   id: string;
   keywordFields: boolean;
 }) {
+  const t = useTranslations("metadata");
   const { market, home } = useMarket(id);
   const localization = useLocalization(id).localization ?? undefined;
   const { data: result } = useSuspenseQuery(
@@ -111,11 +126,12 @@ export function MetadataStatusLine({
   });
   const parts = statusParts(
     metadataStatus(result, localizations.data?.localizations ?? null),
+    t,
   );
 
   return (
     <ul
-      aria-label="Work left on this listing"
+      aria-label={t("status.aria")}
       className="flex min-w-0 list-none flex-wrap items-center gap-x-2 p-0 text-body text-muted-foreground"
     >
       {parts.map((part, index) => (

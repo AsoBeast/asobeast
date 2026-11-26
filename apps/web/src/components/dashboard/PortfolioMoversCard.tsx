@@ -9,7 +9,7 @@ import type {
   PortfolioRangeChange,
 } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
-import { daysPeriod, LAST_RUN } from "@/components/rankings/mover-change";
+import { daysPeriod, lastRunPeriod } from "@/components/rankings/mover-change";
 import { ALL_MOVERS, MoversPanel } from "@/components/rankings/MoversPanel";
 import {
   Select,
@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { MessageTranslator } from "@/i18n/translator";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { portfolioOptions } from "@/lib/queries";
 import { moverSpanParser, type MoverSpan } from "@/lib/search-params";
 import { quietSentence } from "./movement-sentence";
@@ -110,6 +111,7 @@ function footerOf(
 
 export function PortfolioMoversCard() {
   const t = useTranslations("dashboard");
+  const locale = useAppLocale();
   const { days, history } = useRangeHistory();
   const { data: portfolio } = useSuspenseQuery(portfolioOptions);
   const [span, setSpan] = useQueryState("span", moverSpanParser);
@@ -118,7 +120,7 @@ export function PortfolioMoversCard() {
   const { lastRun } = history;
   const daily = span === "run" && lastRun?.compared === true;
   const change = daily ? lastRun : history.change;
-  const period = daily ? LAST_RUN : daysPeriod(days);
+  const period = daily ? lastRunPeriod(locale) : daysPeriod(days, locale);
   const periodText = daily
     ? t("movers.periodRun")
     : t("movers.periodRange", { days });

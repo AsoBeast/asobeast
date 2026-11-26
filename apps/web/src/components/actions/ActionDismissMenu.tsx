@@ -1,6 +1,7 @@
 "use client";
 
 import type { Ref } from "react";
+import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
 import {
   ACTION_DISMISS_REASONS,
@@ -17,22 +18,23 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ACTION_DISMISS_REASON_LABEL } from "./action-history";
+import { actionDismissReasonLabel } from "./action-history";
 import { useBusyMenu } from "./use-busy-menu";
 
 type OnDismiss = (reason?: ActionDismissReason) => void;
 
 function DismissItems({ onDismiss }: { onDismiss: OnDismiss }) {
+  const t = useTranslations("actions");
   return (
     <>
       {ACTION_DISMISS_REASONS.map((reason) => (
         <DropdownMenuItem key={reason} onSelect={() => onDismiss(reason)}>
-          {ACTION_DISMISS_REASON_LABEL[reason]}
+          {actionDismissReasonLabel(reason, t)}
         </DropdownMenuItem>
       ))}
       <DropdownMenuSeparator />
       <DropdownMenuItem onSelect={() => onDismiss()}>
-        Dismiss without a reason
+        {t("dismissWithoutReason")}
       </DropdownMenuItem>
     </>
   );
@@ -45,9 +47,12 @@ export function ActionDismissSubMenu({
   onDismiss: OnDismiss;
   triggerRef?: Ref<HTMLDivElement>;
 }) {
+  const t = useTranslations("actions");
   return (
     <DropdownMenuSub>
-      <DropdownMenuSubTrigger ref={triggerRef}>Dismiss</DropdownMenuSubTrigger>
+      <DropdownMenuSubTrigger ref={triggerRef}>
+        {t("dismiss")}
+      </DropdownMenuSubTrigger>
       <DropdownMenuSubContent>
         <DismissItems onDismiss={onDismiss} />
       </DropdownMenuSubContent>
@@ -64,6 +69,7 @@ export function ActionDismissMenu({
   busy: boolean;
   className?: string;
 }) {
+  const t = useTranslations("actions");
   const menu = useBusyMenu(busy);
 
   return (
@@ -77,7 +83,7 @@ export function ActionDismissMenu({
           className={className}
         >
           <X aria-hidden />
-          Dismiss
+          {t("dismiss")}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

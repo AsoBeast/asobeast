@@ -1,38 +1,60 @@
 import type { ActionItem } from "@asobeast/shared";
-import { formatDate } from "@/lib/format";
+import { createTranslator } from "next-intl";
+import enActions from "../../../messages/en/actions.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
+import { formatDateInLocale } from "@/lib/format";
 
 export interface ActionStatusTag {
   label: string;
   tone: "warning" | "success" | "neutral";
 }
 
-function doneTag(item: ActionItem): ActionStatusTag {
-  if (item.verifiedAt) return { label: "Confirmed fixed", tone: "success" };
+const english = createTranslator({
+  locale: "en",
+  namespace: "actions",
+  messages: { actions: enActions },
+});
+
+function doneTag(item: ActionItem, t: MessageTranslator): ActionStatusTag {
+  if (item.verifiedAt)
+    return { label: t("stateTags.confirmed"), tone: "success" };
   const stillDetected =
     item.closedAt !== null && item.lastSeenAt > item.closedAt;
   return stillDetected
-    ? { label: "Still detected", tone: "warning" }
-    : { label: "Verifying", tone: "neutral" };
+    ? { label: t("stateTags.stillDetected"), tone: "warning" }
+    : { label: t("stateTags.verifying"), tone: "neutral" };
 }
 
-export function actionStatusTag(item: ActionItem): ActionStatusTag | null {
-  if (item.degraded) return { label: "Evidence unavailable", tone: "warning" };
+export function actionStatusTag(
+  item: ActionItem,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
+): ActionStatusTag | null {
+  if (item.degraded) {
+    return { label: t("stateTags.evidenceUnavailable"), tone: "warning" };
+  }
   switch (item.status) {
     case "SNOOZED":
       return item.snoozedUntil
         ? {
-            label: `Snoozed until ${formatDate(item.snoozedUntil)}`,
+            label: t("stateTags.snoozedUntil", {
+              date: formatDateInLocale(item.snoozedUntil, locale),
+            }),
             tone: "neutral",
           }
-        : { label: "Snoozed", tone: "neutral" };
+        : { label: t("stateTags.snoozed"), tone: "neutral" };
     case "DONE":
-      return doneTag(item);
+      return doneTag(item, t);
     case "RESOLVED":
-      return { label: "Resolved on its own", tone: "neutral" };
+      return { label: t("stateTags.resolvedOwn"), tone: "neutral" };
     case "DISMISSED":
     case "OPEN":
       return item.reopenCount > 0
-        ? { label: `Reopened ${item.reopenCount}×`, tone: "neutral" }
+        ? {
+            label: t("stateTags.reopened", { count: item.reopenCount }),
+            tone: "neutral",
+          }
         : null;
   }
 }

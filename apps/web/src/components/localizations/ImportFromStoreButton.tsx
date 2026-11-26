@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { Download } from "lucide-react";
 import type { AppLocalizationsResult } from "@asobeast/shared";
 import {
@@ -19,30 +20,35 @@ import {
 import { Button } from "@/components/ui/button";
 import { ApiError, startAppStoreImport, apiErrorMessage } from "@/lib/api";
 import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
-import { formatList } from "@/lib/format";
-import { localizationName } from "@/lib/localizations";
+import { formatListInLocale } from "@/lib/format";
+import { localizationNameInLocale } from "@/lib/localizations";
+import { useAppLocale } from "@/lib/use-app-locale";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
 import { seedStoreImport } from "@/lib/queries";
 
 export const STORE_IMPORT_FOCUS_KEY = "keyword-field-import";
 
-function importWarning(names: string[]): string {
-  const removals =
-    "App Store Connect does not serve every localization, and the ones it does not serve lose their field here. Stopping does not bring them back.";
+function importWarning(
+  names: string[],
+  t: MessageTranslator,
+  locale: Locale,
+): string {
+  const removals = t("import.removals");
   if (names.length === 0) {
-    return `App Store Connect replaces the keyword fields of every localization it serves. ${removals} The fields become read only here and follow App Store Connect with every release. Stop importing any time to edit them here again.`;
+    return t("import.all", { removals });
   }
-  const list = formatList(names);
-  const replaced =
-    names.length === 1
-      ? `Your ${list} field will be replaced by what App Store Connect serves.`
-      : `Your ${list} fields will be replaced by what App Store Connect serves.`;
-  return `${replaced} ${removals} The fields become read only here and follow App Store Connect with every release. Stop importing any time to edit them here again.`;
+  const list = formatListInLocale(names, locale);
+  return t(names.length === 1 ? "import.one" : "import.many", {
+    names: list,
+    removals,
+  });
 }
 
-function startErrorMessage(error: unknown): string {
+function startErrorMessage(error: unknown, t: MessageTranslator): string {
   return error instanceof ApiError
-    ? apiErrorMessage(error, "Could not start the import")
-    : "Could not start the import";
+    ? apiErrorMessage(error, t("import.failed"))
+    : t("import.failed");
 }
 
 export function ImportFromStoreButton({
@@ -52,12 +58,16 @@ export function ImportFromStoreButton({
   id: string;
   result: AppLocalizationsResult;
 }) {
+  const t = useTranslations("localizations");
+  const locale = useAppLocale();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const claimFocus = useFocusClaim(STORE_IMPORT_FOCUS_KEY);
   const typed = result.localizations.filter((item) => item.phrases.length > 0);
   const replaces = importWarning(
-    typed.map((item) => localizationName(item.localization)),
+    typed.map((item) => localizationNameInLocale(item.localization, locale)),
+    t,
+    locale,
   );
   const start = useMutation({
     mutationFn: () => startAppStoreImport(id),
@@ -66,7 +76,7 @@ export function ImportFromStoreButton({
       setOpen(false);
     },
   });
-  const error = start.error ? startErrorMessage(start.error) : null;
+  const error = start.error ? startErrorMessage(start.error, t) : null;
 
   return (
     <AlertDialog
@@ -79,12 +89,12 @@ export function ImportFromStoreButton({
       <AlertDialogTrigger asChild>
         <Button ref={claimFocus} variant="outline" size="sm">
           <Download aria-hidden />
-          Import from App Store Connect
+          {t("import.button")}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Import from App Store Connect?</AlertDialogTitle>
+          <AlertDialogTitle>{t("import.title")}</AlertDialogTitle>
           <AlertDialogDescription>{replaces}</AlertDialogDescription>
         </AlertDialogHeader>
         {error ? (
@@ -94,8 +104,8 @@ export function ImportFromStoreButton({
         ) : null}
         <ConfirmActionFooter
           pending={start.isPending}
-          label="Import"
-          pendingLabel="Importing…"
+          label={t("import.confirm")}
+          pendingLabel={t("import.pending")}
           variant="default"
           onConfirm={() => {
             armFocusHandoff(STORE_IMPORT_FOCUS_KEY);

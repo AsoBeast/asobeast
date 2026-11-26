@@ -3,9 +3,13 @@ import type {
   ActionEventItem,
   ActionEventType,
 } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
+import enActions from "../../../messages/en/actions.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
 import { PRODUCT_NAME } from "@/lib/brand";
-import { formatDate } from "@/lib/format";
-import { ACTION_PRIORITY_LABEL } from "./action-copy";
+import { formatDateInLocale } from "@/lib/format";
+import { actionPriorityLabel } from "./action-copy";
 
 export const ACTION_EVENT_LABEL: Record<ActionEventType, string> = {
   opened: "Opened",
@@ -33,17 +37,42 @@ export interface HistoryEntry {
   actor: string;
 }
 
-function detailOf(event: ActionEventItem): string | null {
+const english = createTranslator({
+  locale: "en",
+  namespace: "actions",
+  messages: { actions: enActions },
+});
+
+export const actionEventLabel = (
+  type: ActionEventType,
+  t: MessageTranslator = english,
+): string => t(`events.${type}`);
+
+export const actionDismissReasonLabel = (
+  reason: ActionDismissReason,
+  t: MessageTranslator = english,
+): string => t(`dismissReasons.${reason}`);
+
+function detailOf(
+  event: ActionEventItem,
+  t: MessageTranslator,
+  locale: Locale,
+): string | null {
   switch (event.type) {
     case "snoozed":
       return event.snoozedUntil
-        ? `until ${formatDate(event.snoozedUntil)}`
+        ? t("historyUntil", {
+            date: formatDateInLocale(event.snoozedUntil, locale),
+          })
         : null;
     case "dismissed":
-      return event.reason ? ACTION_DISMISS_REASON_LABEL[event.reason] : null;
+      return event.reason ? actionDismissReasonLabel(event.reason, t) : null;
     case "opened":
     case "reopened":
-      return `${ACTION_PRIORITY_LABEL[event.priority]} · impact ${event.impact}`;
+      return t("historyPriorityImpact", {
+        priority: actionPriorityLabel(event.priority, t),
+        impact: event.impact,
+      });
     default:
       return null;
   }
@@ -51,15 +80,17 @@ function detailOf(event: ActionEventItem): string | null {
 
 export function historyEntries(
   events: readonly ActionEventItem[],
+  t: MessageTranslator = english,
+  locale: Locale = "en",
 ): HistoryEntry[] {
   return [...events].reverse().map((event) => ({
     id: event.id,
     date: event.occurredAt,
-    label: ACTION_EVENT_LABEL[event.type],
-    detail: detailOf(event),
+    label: actionEventLabel(event.type, t),
+    detail: detailOf(event, t, locale),
     actor:
       event.actor === "system"
         ? PRODUCT_NAME
-        : (event.actorName ?? "A teammate"),
+        : (event.actorName ?? t("teammate")),
   }));
 }

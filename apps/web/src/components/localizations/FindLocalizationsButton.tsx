@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { Loader2, ScanSearch } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { ApiError, detectAppLocalizations } from "@/lib/api";
-import { pluralize } from "@/lib/format";
+import { detectAppLocalizations, apiErrorMessage } from "@/lib/api";
 import { appKeys, invalidateLocalizationMutation } from "@/lib/queries";
 import { queuedToast } from "@/lib/queued-toast";
 import { useSingleFlight } from "@/lib/single-flight";
@@ -15,6 +15,7 @@ const FOLLOW_INTERVAL_MS = 5_000;
 const FOLLOW_LIMIT_MS = 90_000;
 
 export function FindLocalizationsButton({ appId }: { appId: string }) {
+  const t = useTranslations("localizations");
   const queryClient = useQueryClient();
   const [following, setFollowing] = useState(false);
 
@@ -22,26 +23,16 @@ export function FindLocalizationsButton({ appId }: { appId: string }) {
     mutationFn: () => detectAppLocalizations(appId),
     onSuccess: ({ queued }) => {
       if (queued === 0) {
-        toast.info(
-          "Every language your markets read is already listed or was checked today.",
-        );
+        toast.info(t("find.none"));
         return;
       }
-      queuedToast(
-        "localizations",
-        `Checking ${pluralize(queued, "language")} in the App Store. Detected ones appear here.`,
-      );
+      queuedToast("localizations", t("find.checking", { count: queued }));
       void queryClient.invalidateQueries({
         queryKey: appKeys.localizations(appId),
       });
       setFollowing(true);
     },
-    onError: (error) =>
-      toast.error(
-        error instanceof ApiError
-          ? error.envelope.message
-          : "Could not look for localizations",
-      ),
+    onError: (error) => toast.error(apiErrorMessage(error, t("find.failed"))),
   });
   const detectOnce = useSingleFlight(detect);
 
@@ -70,7 +61,7 @@ export function FindLocalizationsButton({ appId }: { appId: string }) {
       onClick={() => detectOnce()}
     >
       {detect.isPending ? <Loader2 className="animate-spin" /> : <ScanSearch />}
-      Find localizations
+      {t("find.button")}
     </Button>
   );
 }

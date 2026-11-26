@@ -1,5 +1,7 @@
 import type { ActionEvidence, ActionRule } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
+import zhActions from "../../../messages/zh-CN/actions.json";
 import { ACTIONS } from "../../../e2e/fixtures.mts";
 import { evidenceSections } from "./evidence-sections";
 
@@ -24,7 +26,36 @@ const lists = (evidence: ActionEvidence) =>
     ]),
   );
 
+const zh = createTranslator({
+  locale: "zh-CN",
+  namespace: "actions",
+  messages: { actions: zhActions },
+});
+
 describe("evidenceSections", () => {
+  it("localizes evidence labels and field names", () => {
+    const evidence = evidenceOf("act-uncovered");
+    const sections = evidenceSections(evidence, zh);
+
+    expect(sections.facts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "机会", value: "66.5" }),
+        expect.objectContaining({ label: "搜索量", value: "62" }),
+      ]),
+    );
+    expect(sections.lists).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: "未覆盖于",
+          items: expect.arrayContaining([
+            expect.objectContaining({ text: "标题" }),
+            expect.objectContaining({ text: "副标题" }),
+          ]),
+        }),
+      ]),
+    );
+  });
+
   it("shows the product page views a page action was judged on", () => {
     const evidence: ActionEvidence = {
       rule: "listing.cpp_underperforms",

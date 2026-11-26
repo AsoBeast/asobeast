@@ -1,4 +1,7 @@
+"use client";
+
 import { useId } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import type {
   AppAuditResult,
@@ -22,7 +25,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { formatDayMonth, pluralize } from "@/lib/format";
+import { formatDayMonthInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 
 const STATUS_ICON: Record<ReadinessStatus, typeof CircleCheck> = {
@@ -37,13 +43,6 @@ const STATUS_TONE: Record<ReadinessStatus, string> = {
   warn: "text-warning",
   fail: "text-destructive",
   unmeasurable: "text-muted-foreground",
-};
-
-const STATUS_WORD: Record<ReadinessStatus, string> = {
-  pass: "Pass",
-  warn: "Needs work",
-  fail: "Fail",
-  unmeasurable: "Not measured",
 };
 
 function ReadinessLinkView({
@@ -74,6 +73,7 @@ function ReadinessLinkView({
 }
 
 function ReadinessRow({ item }: { item: ReadinessItem }) {
+  const t = useTranslations("audit");
   const Icon = STATUS_ICON[item.status];
   return (
     <li className="flex items-start gap-2 px-2 py-2 text-dense">
@@ -87,7 +87,7 @@ function ReadinessRow({ item }: { item: ReadinessItem }) {
             <span>{item.label}</span>
           </span>
           <span className="shrink-0 text-caption text-muted-foreground">
-            <span>{STATUS_WORD[item.status]}</span>
+            <span>{t(`readiness.${item.status}`)}</span>
           </span>
         </p>
         {item.detail === null ? null : (
@@ -103,27 +103,35 @@ function ReadinessRow({ item }: { item: ReadinessItem }) {
   );
 }
 
-function editorialLine(readiness: NonNullable<AppAuditResult["readiness"]>) {
+function editorialLine(
+  readiness: NonNullable<AppAuditResult["readiness"]>,
+  t: MessageTranslator,
+  locale: Locale,
+) {
   const editorial = readiness.editorial;
   if (editorial === null) {
-    return "The store page has not been read yet.";
+    return t("readiness.notRead");
   }
   const stories =
     editorial.stories === 0
-      ? "In no featured stories"
-      : `In ${pluralize(editorial.stories, "featured story", "featured stories")}`;
+      ? t("readiness.noStories")
+      : t("featuredStories", { count: editorial.stories });
   const day = isoDateOrNull(readiness.extractAsOf);
   return [
     editorial.editorsChoiceBadge
-      ? `${stories} · Editors' Choice badge`
+      ? `${stories} · ${t("editorsBadge")}`
       : stories,
-    day === null ? null : `Page read ${formatDayMonth(day)}`,
+    day === null
+      ? null
+      : t("pageRead", { date: formatDayMonthInLocale(day, locale) }),
   ]
     .filter((part) => part !== null)
     .join(" · ");
 }
 
 export function AuditReadiness({ audit }: { audit: AppAuditResult }) {
+  const t = useTranslations("audit");
+  const locale = useAppLocale();
   const headingId = useId();
   const readiness = audit.readiness;
   if (audit.store !== "APP_STORE" || readiness === undefined) {
@@ -138,10 +146,13 @@ export function AuditReadiness({ audit }: { audit: AppAuditResult }) {
       <Card>
         <CardHeader className={PANEL_HEADER}>
           <CardTitle asChild>
-            <h2 id={headingId}>Featuring readiness</h2>
+            <h2 id={headingId}>{t("readiness.title")}</h2>
           </CardTitle>
           <CardAction className={cn(PANEL_COUNT, "numeric")}>
-            {`${passes} of ${readiness.items.length} pass`}
+            {t("readinessPass", {
+              pass: passes,
+              total: readiness.items.length,
+            })}
           </CardAction>
         </CardHeader>
         <CardContent className="flex flex-col px-2">
@@ -152,7 +163,7 @@ export function AuditReadiness({ audit }: { audit: AppAuditResult }) {
           </ul>
         </CardContent>
         <CardFooter>
-          <span>{editorialLine(readiness)}</span>
+          <span>{editorialLine(readiness, t, locale)}</span>
         </CardFooter>
       </Card>
     </section>

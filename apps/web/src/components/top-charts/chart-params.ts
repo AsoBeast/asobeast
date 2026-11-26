@@ -1,5 +1,4 @@
 import {
-  CHART_COLLECTION_TITLES,
   chartColumnsPath,
   chartDevicesOf,
   chartGenreName,
@@ -17,7 +16,11 @@ import {
   type Store,
 } from "@asobeast/shared";
 import type { ChartPageQuery } from "@/lib/api";
-import { formatCountry } from "@/lib/format";
+import { createTranslator } from "next-intl";
+import enTopCharts from "../../../messages/en/topCharts.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import { formatCountryInLocale } from "@/lib/format";
+import type { Locale } from "@/lib/locale";
 import type { ChartView } from "@/lib/search-params";
 import type { ChartCategory } from "./chart-follows";
 
@@ -36,11 +39,24 @@ export type ChartSearchUpdate = {
   [Key in keyof ChartSearch]?: ChartSearch[Key] | null;
 };
 
+const english = createTranslator({
+  locale: "en",
+  namespace: "topCharts",
+  messages: { topCharts: enTopCharts },
+});
+
 export const COLLECTION_LABELS: Record<CategoryCollection, string> = {
   free: "Free",
   paid: "Paid",
   grossing: "Grossing",
 };
+
+export function collectionLabel(
+  collection: CategoryCollection,
+  t: MessageTranslator = english,
+): string {
+  return t(`collections.${collection}`);
+}
 
 export const chartHref = chartColumnsPath;
 export const tableHref = chartTablePath;
@@ -76,17 +92,25 @@ export function chartQueryFrom(
   };
 }
 
-export function categoryTitle(category: ChartCategory): string {
+export function categoryTitle(
+  category: ChartCategory,
+  locale: Locale = "en",
+): string {
   return [
     chartGenreName(category.store, category.genre) ?? category.genre,
-    formatCountry(category.country),
+    formatCountryInLocale(category.country, locale),
   ].join(" · ");
 }
 
-export function chartTitle(key: ChartKey): string {
-  return [CHART_COLLECTION_TITLES[key.collection], categoryTitle(key)].join(
-    " · ",
-  );
+export function chartTitle(
+  key: ChartKey,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
+): string {
+  return [
+    t(`collectionTitles.${key.collection}`),
+    categoryTitle(key, locale),
+  ].join(" · ");
 }
 
 export function storeChanged(

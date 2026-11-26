@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
+import type { ActionItem } from "@asobeast/shared";
 import { useQuery } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
 import { AppIcon } from "@/components/AppIcon";
@@ -24,7 +26,8 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { queueFilters } from "@/lib/action-filters";
-import { formatNumber, pluralize } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { actionsOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { opensInPlace } from "./opens-in-place";
@@ -53,14 +56,30 @@ const OPEN_WORK_VIEW = {
 
 type Split = "scope" | "type";
 
-function scopeName(row: WorkScopeRow): string {
+function rowsFor(
+  facet: "app" | "market" | "category",
+  items: readonly ActionItem[],
+  t: ReturnType<typeof useTranslations>,
+  locale: "en" | "zh-CN",
+): WorkScopeRow[] {
+  if (facet === "app") return workByApp(items, t);
+  if (facet === "market") return workByMarket(items, locale);
+  return workByCategory(items, t);
+}
+
+function scopeName(
+  row: WorkScopeRow,
+  t: ReturnType<typeof useTranslations>,
+): string {
   return [
     row.label,
     row.counts.critical > 0
-      ? `${formatNumber(row.counts.critical)} critical`
+      ? t("criticalCount", { count: formatNumber(row.counts.critical) })
       : null,
-    row.counts.high > 0 ? `${formatNumber(row.counts.high)} high` : null,
-    `${formatNumber(row.total)} open`,
+    row.counts.high > 0
+      ? t("highCount", { count: formatNumber(row.counts.high) })
+      : null,
+    t("openCount", { count: formatNumber(row.total) }),
   ]
     .filter((part) => part !== null)
     .join(", ");
@@ -79,10 +98,11 @@ function ScopeLine({
   iconUrl: string | null | undefined;
   onFilter: () => void;
 }) {
+  const t = useTranslations("actions");
   return (
     <a
       href={href}
-      aria-label={scopeName(row)}
+      aria-label={scopeName(row, t)}
       onClick={(event) => {
         if (!opensInPlace(event)) return;
         event.preventDefault();
@@ -107,12 +127,12 @@ function ScopeLine({
       <span className="numeric relative flex items-center gap-2 whitespace-nowrap">
         {row.counts.critical > 0 ? (
           <span className={cn(PRIORITY_COUNT, "text-priority-critical")}>
-            {`${formatNumber(row.counts.critical)} critical`}
+            {t("criticalCount", { count: formatNumber(row.counts.critical) })}
           </span>
         ) : null}
         {row.counts.high > 0 ? (
           <span className={cn(PRIORITY_COUNT, "text-priority-high")}>
-            {`${formatNumber(row.counts.high)} high`}
+            {t("highCount", { count: formatNumber(row.counts.high) })}
           </span>
         ) : null}
       </span>
@@ -134,17 +154,18 @@ function ScopeRows({
   head: string;
   line: (row: WorkScopeRow) => ReactNode;
 }) {
+  const t = useTranslations("actions");
   if (read.data === undefined) {
     return (
       <div className="px-2 py-2">
-        <InlineQueryError message="Could not load the open work." read={read} />
+        <InlineQueryError message={t("loadOpenFailed")} read={read} />
       </div>
     );
   }
   if (rows.length === 0) {
     return (
       <p className="py-4 text-center text-body text-muted-foreground">
-        Nothing open.
+        {t("nothingOpen")}
       </p>
     );
   }
@@ -153,7 +174,7 @@ function ScopeRows({
       <div aria-hidden className={cn(SCOPE_COLUMNS, LIST_HEAD)}>
         <span>{head}</span>
         <span />
-        <span className="text-right">Open</span>
+        <span className="text-right">{t("open")}</span>
       </div>
       <ul className="flex list-none flex-col p-0">
         {rows.map((row) => (
@@ -173,6 +194,8 @@ export function ActionWorkByScope({
   iconOf?: (appId: string) => string | null;
   setView: SetQueueView;
 }) {
+  const t = useTranslations("actions");
+  const locale = useAppLocale();
   const pathname = usePathname();
   const [split, setSplit] = useState<Split>("scope");
   const read = useQuery(actionsOptions(queueFilters(), appId));
@@ -181,22 +204,17 @@ export function ActionWorkByScope({
 
   const scope = appId ? "market" : "app";
   const facet = split === "type" ? "category" : scope;
-  const tally = {
-    app: workByApp,
-    market: workByMarket,
-    category: workByCategory,
-  };
-  const rows = tally[facet](data?.items ?? []);
+  const rows = rowsFor(facet, data?.items ?? [], t, locale);
   const open = rows.reduce((sum, row) => sum + row.total, 0);
   const hidden = rows.length - SHOWN_SCOPES;
-  const scopeLabel = appId ? "Market" : "App";
+  const scopeLabel = appId ? t("market") : t("app");
 
   return (
     <section aria-labelledby="where-heading">
       <Card>
         <CardHeader className={PANEL_HEADER}>
           <CardTitle asChild>
-            <h2 id="where-heading">Where the work is</h2>
+            <h2 id="where-heading">{t("whereWork")}</h2>
           </CardTitle>
           <CardAction className={PANEL_ACTION}>
             <Tabs
@@ -205,9 +223,9 @@ export function ActionWorkByScope({
                 setSplit(next === "type" ? "type" : "scope")
               }
             >
-              <TabsList aria-label="Split the open work by">
+              <TabsList aria-label={t("splitBy")}>
                 <TabsOption value="scope">{scopeLabel}</TabsOption>
-                <TabsOption value="type">Type</TabsOption>
+                <TabsOption value="type">{t("type")}</TabsOption>
               </TabsList>
             </Tabs>
           </CardAction>
@@ -216,7 +234,7 @@ export function ActionWorkByScope({
           <ScopeRows
             read={read}
             rows={rows.slice(0, SHOWN_SCOPES)}
-            head={split === "type" ? "Type" : scopeLabel}
+            head={split === "type" ? t("type") : scopeLabel}
             line={(row) => (
               <ScopeLine
                 row={row}
@@ -234,12 +252,12 @@ export function ActionWorkByScope({
           />
           {hidden > 0 ? (
             <p className="px-2 text-caption text-muted-foreground">
-              {`and ${formatNumber(hidden)} more`}
+              {t("andMore", { count: formatNumber(hidden) })}
             </p>
           ) : null}
           {data && data.total > data.items.length ? (
             <p className="px-2 text-caption text-muted-foreground">
-              {`Counts cover the ${pluralize(data.items.length, "highest impact action")}.`}
+              {t("countsCover", { count: data.items.length })}
             </p>
           ) : null}
         </CardContent>

@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { useTranslations } from "next-intl";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { LEDE, META_LINE } from "@/components/layout/panel-classes";
 import { GenerateNowButton } from "./GenerateNowButton";
@@ -14,6 +15,7 @@ export function ActionCenterHeader({
   generatedAt: string | null;
   showGenerate: boolean;
 }) {
+  const t = useTranslations("actions");
   const generate = showGenerate ? (
     <GenerateNowButton generatedAt={generatedAt} variant="outline" />
   ) : null;
@@ -32,7 +34,7 @@ export function ActionCenterHeader({
     return (
       <header>
         <PageHeader
-          title="Action Center"
+          title={t("title")}
           controls={generate}
           lede={lede}
           meta={facts}
@@ -41,7 +43,7 @@ export function ActionCenterHeader({
     );
   }
   return (
-    <PageHeader title="Actions" titleHidden>
+    <PageHeader title={t("appTitle")} titleHidden>
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
         <div className="flex min-w-0 flex-col gap-2">
           <p className={LEDE}>{lede}</p>

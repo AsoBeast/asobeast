@@ -1,43 +1,35 @@
+"use client";
+
 import type { AuditCreative, AuditIconObservation } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { AppIconImage } from "@/components/AppIconImage";
+import type { MessageTranslator } from "@/i18n/translator";
 import { screenshotSummary } from "./creative-summary";
 import { ScreenshotCard } from "./ScreenshotCard";
 
 const ICON_SIZES = [120, 60, 40];
 
-const ELEMENT_COUNT_LABEL: Record<
-  AuditIconObservation["elementCount"],
-  string
-> = {
-  one: "One element",
-  two: "Two elements",
-  "three-or-more": "Three or more elements",
-};
-
-const CONTRAST_LABEL: Record<AuditIconObservation["contrast"], string> = {
-  high: "High contrast",
-  medium: "Medium contrast",
-  low: "Low contrast",
-};
-
 const SUB_HEADER =
   "flex min-h-9 flex-wrap items-center gap-x-2 gap-y-0.5 border-t border-border px-4 py-1.5 text-label";
 
-function iconLines(icon: AuditIconObservation): string[] {
+function iconLines(icon: AuditIconObservation, t: MessageTranslator): string[] {
   return [
-    icon.hasText ? "The icon contains text" : "No text in the icon",
-    ELEMENT_COUNT_LABEL[icon.elementCount],
-    CONTRAST_LABEL[icon.contrast],
+    icon.hasText ? t("creative.hasText") : t("creative.noText"),
+    t(`creative.elements.${icon.elementCount}`),
+    t(`creative.contrast.${icon.contrast}`),
     icon.similarCompetitor
-      ? `Looks like ${icon.similarCompetitor.name ?? "a competitor"}`
-      : "Distinct from the competitor icons we sent",
+      ? t("creative.similar", {
+          name: icon.similarCompetitor.name ?? t("creative.aCompetitor"),
+        })
+      : t("creative.distinct"),
   ];
 }
 
 function IconObservations({ icon }: { icon: AuditIconObservation }) {
+  const t = useTranslations("audit");
   return (
     <>
-      <h3 className={SUB_HEADER}>Icon</h3>
+      <h3 className={SUB_HEADER}>{t("creative.icon")}</h3>
       <div className="flex flex-wrap items-end gap-x-6 gap-y-4 border-t border-border-subtle p-4">
         {ICON_SIZES.map((size) => (
           <figure
@@ -61,7 +53,7 @@ function IconObservations({ icon }: { icon: AuditIconObservation }) {
           </figure>
         ))}
         <ul className="flex list-disc flex-col gap-1 self-center pl-4 text-dense text-muted-foreground">
-          {iconLines(icon).map((line) => (
+          {iconLines(icon, t).map((line) => (
             <li key={line}>{line}</li>
           ))}
         </ul>
@@ -75,20 +67,21 @@ export function CreativeObservations({
 }: {
   creative: AuditCreative;
 }) {
+  const t = useTranslations("audit");
   const { icon, screenshots } = creative;
 
   return (
     <>
       {creative.stale ? (
         <p className="border-t border-border px-4 py-2.5 text-caption text-muted-foreground">
-          These observations describe your previous screenshots.
+          {t("creative.stale")}
         </p>
       ) : null}
       {icon ? <IconObservations icon={icon} /> : null}
       {screenshots.length > 0 ? (
         <>
           <div className={SUB_HEADER}>
-            <h3>Screenshots</h3>
+            <h3>{t("creative.screenshots")}</h3>
             <span className="numeric font-normal text-faint-foreground">
               {screenshots.length}
             </span>
@@ -97,7 +90,7 @@ export function CreativeObservations({
             </span>
           </div>
           <ul
-            aria-label="Screenshots"
+            aria-label={t("screenshot.aria")}
             tabIndex={0}
             className="flex w-full min-w-0 list-none snap-x gap-4 overflow-x-auto border-t border-border-subtle p-4 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
           >

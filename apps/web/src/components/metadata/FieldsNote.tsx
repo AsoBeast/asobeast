@@ -1,9 +1,11 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useMarket } from "@/components/app-detail/use-market";
 import { LOCALIZATIONS_SECTION_ID } from "@/lib/app-localizations";
-import { formatDate } from "@/lib/format";
+import { formatDateInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { queryMarket } from "@/lib/market";
 import { appListingOptions } from "@/lib/queries";
 
@@ -14,6 +16,8 @@ export function FieldsNote({
   id: string;
   keywordFields: boolean;
 }) {
+  const t = useTranslations("metadata");
+  const locale = useAppLocale();
   const { market, home } = useMarket(id);
   const { data } = useQuery({
     ...appListingOptions(id, queryMarket(market, home)),
@@ -24,17 +28,19 @@ export function FieldsNote({
   return (
     <p className="text-caption text-faint-foreground">
       {capturedAt ? (
-        <span>{`Snapshot of ${formatDate(capturedAt)} · `}</span>
+        <span>
+          {t("snapshot", { date: formatDateInLocale(capturedAt, locale) })}
+        </span>
       ) : null}
-      <span>A scratch pad: nothing typed here is saved.</span>
+      <span>{t("scratchPad")}</span>
       {keywordFields ? (
         <>
-          <span> The keyword field is saved under </span>
+          <span>{t("keywordFieldSavedUnder")}</span>
           <a
             href={`#${LOCALIZATIONS_SECTION_ID}`}
             className="text-foreground link-underline"
           >
-            App Store localizations
+            {t("appStoreLocalizations")}
           </a>
           <span>.</span>
         </>

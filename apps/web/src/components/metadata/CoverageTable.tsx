@@ -2,6 +2,7 @@
 
 import { useId, useMemo, type ComponentProps } from "react";
 import { flexRender, useTable } from "@tanstack/react-table";
+import { useTranslations } from "next-intl";
 import { useQueryStates } from "nuqs";
 import type { KeywordCoverageRow } from "@asobeast/shared";
 import { FilterChips } from "@/components/data-table/FilterChips";
@@ -34,8 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatNumber } from "@/lib/format";
-import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
+import { metadataFieldLabel } from "@/lib/metadata-display";
 import {
   coverageFilterParsers,
   coverageSortParser,
@@ -58,22 +58,17 @@ const COVERAGE_PARAMS = {
 };
 
 function ScreenshotTextNote({ rows }: { rows: KeywordCoverageRow[] }) {
+  const t = useTranslations("metadata");
   const withUnreadListing = rows.some(
     (row) => screenshotTextMark(row) === "unread",
   );
   return (
     <span>
-      {`Screenshot text is a weak signal that Apple has not confirmed. It never changes whether a keyword counts as covered.${
-        withUnreadListing
-          ? " A dashed circle means the screenshots of that keyword's listing have not been read yet."
-          : ""
-      }`}
+      {t("coverage.screenshotTextNote")}
+      {withUnreadListing ? t("coverage.unreadScreenshotNote") : ""}
     </span>
   );
 }
-
-const WORDS_SPLIT_NOTE =
-  "Words split means every word of the keyword is in your listing, but no field holds the whole phrase. The App Store still matches it; the whole phrase in the title or subtitle may rank higher.";
 
 function CoverageNotes({
   rows,
@@ -82,12 +77,13 @@ function CoverageNotes({
   rows: KeywordCoverageRow[];
   withScreenshotText: boolean;
 }) {
+  const t = useTranslations("metadata");
   const split = rows.some((row) => row.wordsSplit === true);
   if (!withScreenshotText && !split) return null;
   return (
     <CardFooter className="flex-col items-start gap-1">
       {withScreenshotText ? <ScreenshotTextNote rows={rows} /> : null}
-      {split ? <span>{WORDS_SPLIT_NOTE}</span> : null}
+      {split ? <span>{t("coverage.wordsSplitNote")}</span> : null}
     </CardFooter>
   );
 }
@@ -109,18 +105,19 @@ function CoverageToolbar({
   onUncovered: (next: boolean) => void;
   onClear: () => void;
 }) {
+  const t = useTranslations("metadata");
   const chips = [
     q
       ? {
           key: "q",
-          label: `Search: ${q}`,
+          label: t("coverage.searchChip", { value: q }),
           onRemove: () => onSearch("", {}),
         }
       : null,
     uncovered
       ? {
           key: "uncovered",
-          label: "Uncovered only",
+          label: t("coverage.uncoveredOnly"),
           onRemove: () => onUncovered(false),
         }
       : null,
@@ -129,14 +126,18 @@ function CoverageToolbar({
   return (
     <div className="flex flex-col gap-3 border-b border-border px-4 py-3">
       <div className="flex flex-wrap items-center gap-3">
-        <SearchInput label="Search keywords" value={q} onSearch={onSearch} />
+        <SearchInput
+          label={t("coverage.search")}
+          value={q}
+          onSearch={onSearch}
+        />
         <div className="flex items-center gap-2">
           <Switch
             id="uncovered-only"
             checked={uncovered}
             onCheckedChange={onUncovered}
           />
-          <Label htmlFor="uncovered-only">Uncovered only</Label>
+          <Label htmlFor="uncovered-only">{t("coverage.uncoveredOnly")}</Label>
         </div>
         <RowCount shown={shown} total={total} noun="keyword" />
       </div>
@@ -157,12 +158,13 @@ export function CoverageTable({
   rows: KeywordCoverageRow[];
   withScreenshotText: boolean;
 }) {
+  const t = useTranslations("metadata");
   const headingId = useId();
   const [params, setParams] = useQueryStates(COVERAGE_PARAMS);
   const fields = useMemo(() => presentFields(rows), [rows]);
   const columns = useMemo(
-    () => coverageColumns(fields, withScreenshotText),
-    [fields, withScreenshotText],
+    () => coverageColumns(fields, withScreenshotText, t),
+    [fields, withScreenshotText, t],
   );
   const { sorting, onSortingChange } = useUrlSorting(
     params,
@@ -203,11 +205,14 @@ export function CoverageTable({
       <Card>
         <CardHeader className={PANEL_HEADER}>
           <CardTitle asChild>
-            <h2 id={headingId}>Keyword coverage</h2>
+            <h2 id={headingId}>{t("keywordCoverage")}</h2>
           </CardTitle>
           <CardAction className={PANEL_COUNT}>
             <span className="numeric">
-              {`${formatNumber(rows.length - uncoveredRows(rows).length)} of ${formatNumber(rows.length)} covered`}
+              {t("coverage.coveredCount", {
+                covered: rows.length - uncoveredRows(rows).length,
+                total: rows.length,
+              })}
             </span>
           </CardAction>
         </CardHeader>
@@ -225,7 +230,14 @@ export function CoverageTable({
           />
           <Table>
             <TableCaption className="sr-only">
-              {`Keyword coverage across ${fields.map((field) => METADATA_FIELD_LABELS[field]).join(", ")}${withScreenshotText ? ", screenshot text" : ""}, with uncovered keywords marked.`}
+              {t("coverage.caption", {
+                fields: fields
+                  .map((field) => metadataFieldLabel(field, t))
+                  .join(", "),
+                screenshotText: withScreenshotText
+                  ? t("coverage.screenshotText")
+                  : "",
+              })}
             </TableCaption>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
@@ -253,7 +265,7 @@ export function CoverageTable({
                 <TableRow>
                   <TableCell colSpan={table.getVisibleLeafColumns().length}>
                     <FilteredEmpty
-                      title="No keywords match these filters"
+                      title={t("coverage.noMatches")}
                       onClear={clearFilters}
                     />
                   </TableCell>

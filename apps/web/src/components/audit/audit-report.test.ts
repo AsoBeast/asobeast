@@ -1,9 +1,17 @@
+import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
+import zhAudit from "../../../messages/zh-CN/audit.json";
 import type { AppAuditResult } from "@asobeast/shared";
 import { APP_AUDIT_EXAMPLE } from "./audit-example";
 import { auditMarkdown } from "./audit-report";
 
 const APP = { name: "Where Am I? GeoGuess Map Quiz", country: "us" };
+
+const zh = createTranslator({
+  locale: "zh-CN",
+  namespace: "audit",
+  messages: { audit: zhAudit },
+});
 
 const withCheckDetail = (
   audit: AppAuditResult,
@@ -151,5 +159,15 @@ describe("auditMarkdown", () => {
     );
 
     expect(report).toContain("Compared with 1 competitor.");
+  });
+
+  it("writes the report chrome in Simplified Chinese", () => {
+    const report = auditMarkdown(APP_AUDIT_EXAMPLE, APP, zh);
+
+    expect(report).toContain("# ASO 审计：Where Am I? GeoGuess Map Quiz");
+    expect(report).toContain("等级 B，良好");
+    expect(report).toContain("| 因素 | 评分 | 状态 | 备注 |");
+    expect(report).toContain("## 快速改进 · 今天");
+    expect(report).toContain("## 竞品对比");
   });
 });

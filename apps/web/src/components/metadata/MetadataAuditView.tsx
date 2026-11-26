@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { AppLocalizationsSection } from "@/components/localizations/AppLocalizationsSection";
 import { useLocalization } from "@/components/app-detail/use-localization";
@@ -27,21 +28,22 @@ import { ScreenshotCaptionsSkeleton } from "./skeletons";
 const COVERAGE_HEADING_ID = "keyword-coverage-heading";
 
 function NoKeywords({ id }: { id: string }) {
+  const t = useTranslations("metadata");
   return (
     <section id={COVERAGE_SECTION_ID} aria-labelledby={COVERAGE_HEADING_ID}>
       <Card>
         <CardHeader className={PANEL_HEADER}>
           <CardTitle asChild>
-            <h2 id={COVERAGE_HEADING_ID}>Keyword coverage</h2>
+            <h2 id={COVERAGE_HEADING_ID}>{t("keywordCoverage")}</h2>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
-            title="No keywords tracked yet"
-            body="Track keywords to see how your metadata covers them."
+            title={t("noKeywordsTitle")}
+            body={t("noKeywordsBody")}
             action={
               <Button asChild variant="outline">
-                <Link href={`/apps/${id}/keywords`}>Open Keywords</Link>
+                <Link href={`/apps/${id}/keywords`}>{t("openKeywords")}</Link>
               </Button>
             }
           />
@@ -62,6 +64,7 @@ export function MetadataAuditView({
   hasLocalizations: boolean;
   keywordFields: boolean;
 }) {
+  const t = useTranslations("metadata");
   const { market, home } = useMarket(id);
   const localization = useLocalization(id).localization ?? undefined;
   const { data: result } = useSuspenseQuery(
@@ -86,7 +89,7 @@ export function MetadataAuditView({
           )}
         >
           <section
-            aria-label="Listing fields"
+            aria-label={t("listingFields")}
             className="grid grid-cols-1 gap-4 @2xl/metadata:grid-cols-2"
           >
             {result.fields.map((field) => (

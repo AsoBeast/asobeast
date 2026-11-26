@@ -1,12 +1,16 @@
 import type { ChartCaptureSummary, ChartCompareWindow } from "@asobeast/shared";
 import type { Moved } from "@/components/movement/movement-text";
-import { formatDayMonth } from "@/lib/format";
+import { createTranslator } from "next-intl";
+import enTopCharts from "../../../messages/en/topCharts.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import { formatDayMonthInLocale } from "@/lib/format";
+import type { Locale } from "@/lib/locale";
 
-const WINDOW_WORDS: Record<ChartCompareWindow, string> = {
-  "1d": "previous day",
-  "7d": "7 days ago",
-  "30d": "30 days ago",
-};
+const english = createTranslator({
+  locale: "en",
+  namespace: "topCharts",
+  messages: { topCharts: enTopCharts },
+});
 
 export function movementSortValue({ movement, delta }: Moved): number {
   if (movement === "new") return Number.NEGATIVE_INFINITY;
@@ -17,8 +21,12 @@ export function movementSortValue({ movement, delta }: Moved): number {
 export function compareLabel(
   window: ChartCompareWindow,
   comparison: ChartCaptureSummary | null,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
 ): string {
   return comparison
-    ? `vs ${formatDayMonth(comparison.date)}`
-    : `vs ${WINDOW_WORDS[window]}, none captured`;
+    ? t("compareWords.vsDate", {
+        date: formatDayMonthInLocale(comparison.date, locale),
+      })
+    : `${t("compareWords.vs")}${t(`compareWords.${window}`)}, ${t("compareWords.noneCaptured")}`;
 }

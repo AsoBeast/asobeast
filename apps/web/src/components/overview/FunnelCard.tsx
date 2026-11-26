@@ -106,6 +106,7 @@ function NotConnected({
   store: Store;
   translator: MessageTranslator;
 }) {
+  const connectionT = useTranslations("integrations");
   const { isOwner } = useAuth();
   const copy = funnelCopy(store, translator);
   const { data: connections } = useSuspenseQuery(storeConnectionsOptions);
@@ -125,7 +126,7 @@ function NotConnected({
     return (
       <NotReporting
         store={store}
-        reason={appStateLabel(app?.state ?? null, store)}
+        reason={appStateLabel(app?.state ?? null, store, connectionT)}
         translator={translator}
       />
     );

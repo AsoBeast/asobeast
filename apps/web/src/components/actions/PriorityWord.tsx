@@ -1,6 +1,9 @@
+"use client";
+
 import type { ActionItem } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
-import { ACTION_PRIORITY_LABEL, ACTION_PRIORITY_TONE } from "./action-copy";
+import { ACTION_PRIORITY_TONE, actionPriorityLabel } from "./action-copy";
 
 export const PRIORITY_COLUMNS = "grid-cols-[4rem_minmax(0,1fr)]";
 
@@ -9,6 +12,7 @@ export function PriorityWord({
 }: {
   priority: ActionItem["priority"];
 }) {
+  const t = useTranslations("actions");
   return (
     <span
       className={cn(
@@ -16,7 +20,7 @@ export function PriorityWord({
         ACTION_PRIORITY_TONE[priority],
       )}
     >
-      {ACTION_PRIORITY_LABEL[priority]}
+      {actionPriorityLabel(priority, t)}
     </span>
   );
 }

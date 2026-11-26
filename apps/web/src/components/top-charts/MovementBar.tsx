@@ -1,4 +1,7 @@
+"use client";
+
 import type { ChartEntryItem } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { DirectionArrow } from "@/components/ui/delta-chip";
 import { cn } from "@/lib/utils";
 import {
@@ -33,6 +36,7 @@ export function MovementBar({
   entries: readonly ChartEntryItem[];
   period: string;
 }) {
+  const t = useTranslations("topCharts");
   const counts = movementCounts(entries);
   if (movementTotal(counts) === 0) return null;
   const shown = SEGMENTS.filter(({ id }) => counts[id] > 0);
@@ -40,7 +44,7 @@ export function MovementBar({
   return (
     <div
       role="img"
-      aria-label={`${movementText(counts)} ${period}`}
+      aria-label={`${movementText(counts, t)} ${period}`}
       className="flex flex-col gap-2 px-4"
     >
       <div className="flex h-1.5 gap-0.5">
@@ -53,7 +57,7 @@ export function MovementBar({
         ))}
       </div>
       <p className="flex flex-wrap gap-x-3 gap-y-0.5 text-caption text-muted-foreground">
-        {shown.map(({ id, word, way }) => (
+        {shown.map(({ id, way }) => (
           <span key={id} className="inline-flex items-center gap-1">
             {way ? (
               <DirectionArrow way={way} className={cn("size-3", TONE[way])} />
@@ -61,7 +65,9 @@ export function MovementBar({
             <span className="numeric font-medium text-foreground">
               {counts[id]}
             </span>
-            <span>{word}</span>
+            <span>
+              {t(id === "entered" ? "trending.entries" : `lede.verbs.${id}`)}
+            </span>
           </span>
         ))}
       </p>

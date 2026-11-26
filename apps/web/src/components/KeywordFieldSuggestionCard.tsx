@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Copy } from "lucide-react";
 import {
@@ -14,8 +15,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { editLocalizationHref } from "@/lib/app-localizations";
-import { formatList } from "@/lib/format";
-import { localizationName } from "@/lib/localizations";
+import { formatListInLocale } from "@/lib/format";
+import { localizationNameInLocale } from "@/lib/localizations";
+import { useAppLocale } from "@/lib/use-app-locale";
 
 const COPIED_MS = 1500;
 
@@ -32,6 +34,8 @@ export function KeywordFieldSuggestionRow({
   heading: Heading = "h3",
   editable = true,
 }: SuggestionProps & { heading?: "h2" | "h3"; editable?: boolean }) {
+  const t = useTranslations("metadata");
+  const locale = useAppLocale();
   const headingId = useId();
   const [copied, setCopied] = useState(false);
   const editHref = editLocalizationHref(
@@ -53,19 +57,21 @@ export function KeywordFieldSuggestionRow({
     <section aria-labelledby={headingId}>
       <Heading id={headingId} className={SUB_HEADER}>
         <span>
-          {`Suggested keyword field${
-            suggestion.localization
-              ? ` · ${localizationName(suggestion.localization)}`
-              : ""
-          }`}
+          {t("suggestion.title")}
+          {suggestion.localization
+            ? ` · ${localizationNameInLocale(suggestion.localization, locale)}`
+            : ""}
         </span>
         <span className={SUB_HEADER_COUNT}>
-          {`${suggestion.charactersUsed}/${suggestion.charactersLimit}`}
+          {t("characterCount", {
+            used: suggestion.charactersUsed,
+            limit: suggestion.charactersLimit,
+          })}
         </span>
       </Heading>
       {suggestion.value.length === 0 ? (
         <p className="px-4 py-3 text-dense text-muted-foreground">
-          Every tracked keyword is already covered.
+          {t("suggestion.covered")}
         </p>
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3">
@@ -75,9 +81,9 @@ export function KeywordFieldSuggestionRow({
             </p>
             {suggestion.addedTerms.length > 0 ? (
               <p className="text-caption text-faint-foreground">
-                <span>Adds </span>
+                <span>{t("suggestion.adds")}</span>
                 <span translate="no" className="font-medium text-foreground">
-                  {formatList(suggestion.addedTerms)}
+                  {formatListInLocale(suggestion.addedTerms, locale)}
                 </span>
               </p>
             ) : null}
@@ -85,14 +91,16 @@ export function KeywordFieldSuggestionRow({
           <div className="flex items-center gap-3">
             <Button variant="outline" size="sm" onClick={copy}>
               <Copy aria-hidden />
-              <span>{copied ? "Copied" : "Copy"}</span>
+              <span>
+                {copied ? t("suggestion.copied") : t("suggestion.copy")}
+              </span>
             </Button>
             {editable ? (
               <Link
                 href={editHref}
                 className="text-dense text-foreground link-underline"
               >
-                Edit this keyword field
+                {t("suggestion.edit")}
               </Link>
             ) : null}
           </div>

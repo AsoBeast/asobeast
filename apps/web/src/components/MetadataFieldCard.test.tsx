@@ -1,16 +1,25 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import { NextIntlClientProvider } from "next-intl";
 import { describe, expect, it } from "vitest";
+import enMetadata from "../../messages/en/metadata.json";
+import zhMetadata from "../../messages/zh-CN/metadata.json";
 import { MetadataFieldCard } from "./MetadataFieldCard";
 
-const render = (indexed: boolean) =>
+const render = (indexed: boolean, locale: "en" | "zh-CN" = "en") =>
   renderToStaticMarkup(
-    <MetadataFieldCard
-      field="title"
-      value="Focus Timer"
-      limit={30}
-      indexed={indexed}
-      issues={[]}
-    />,
+    <NextIntlClientProvider
+      locale={locale}
+      timeZone="UTC"
+      messages={{ metadata: locale === "en" ? enMetadata : zhMetadata }}
+    >
+      <MetadataFieldCard
+        field="title"
+        value="Focus Timer"
+        limit={30}
+        indexed={indexed}
+        issues={[]}
+      />
+    </NextIntlClientProvider>,
   );
 
 describe("MetadataFieldCard", () => {
@@ -26,6 +35,14 @@ describe("MetadataFieldCard", () => {
 
     expect(markup).toContain(">Title<");
     expect(markup).toContain("Not searched by the store");
+  });
+
+  it("labels a field and its limit in Simplified Chinese", () => {
+    const markup = render(false, "zh-CN");
+
+    expect(markup).toContain(">标题<");
+    expect(markup).toContain("商店不会搜索此字段");
+    expect(markup).toContain("11/30");
   });
 
   it("keeps the character count in either case", () => {

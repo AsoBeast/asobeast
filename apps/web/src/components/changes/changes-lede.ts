@@ -3,7 +3,11 @@ import type {
   ChangeField,
   ChangeImpactReport,
 } from "@asobeast/shared";
-import { formatDayMonth, pluralize } from "@/lib/format";
+import { createTranslator } from "next-intl";
+import enChanges from "../../../messages/en/changes.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import { formatDayMonthInLocale } from "@/lib/format";
+import type { Locale } from "@/lib/locale";
 import { changeEffect, visibilityMove } from "./change-effects";
 import {
   attributeFields,
@@ -13,12 +17,29 @@ import {
   namesFields,
 } from "./change-fields";
 
+const english = createTranslator({
+  locale: "en",
+  namespace: "changes",
+  messages: { changes: enChanges },
+});
+
+interface Copy {
+  t: MessageTranslator;
+  locale: Locale;
+}
+
+const DEFAULT_COPY: Copy = { t: english, locale: "en" };
+
 export interface LedePart {
   text: string;
   strong?: boolean;
 }
 
-function newestDayParts(events: readonly ChangeEventItem[]): LedePart[] {
+function newestDayParts(
+  events: readonly ChangeEventItem[],
+  copy: Copy,
+): LedePart[] {
+  const { t, locale } = copy;
   const day = events.map(dayOf).reduce((a, b) => (a > b ? a : b));
   const onDay = events.filter((event) => dayOf(event) === day);
   const own = onDay.filter((event) => !event.isCompetitor);
@@ -29,51 +50,61 @@ function newestDayParts(events: readonly ChangeEventItem[]): LedePart[] {
   );
 
   const parts: LedePart[] = [
-    { text: "On " },
-    { text: formatDayMonth(day), strong: true },
-    { text: ", " },
+    { text: t("lede.on") },
+    { text: formatDayMonthInLocale(day, locale), strong: true },
+    { text: t("lede.separator") },
   ];
   const segments = [
-    editedParts(yours),
-    storeDecidedParts(storeDecided),
-    rivalParts(rivals, rivalIds),
+    editedParts(yours, copy),
+    storeDecidedParts(storeDecided, copy),
+    rivalParts(rivals, rivalIds, copy),
   ].filter((segment) => segment.length > 0);
   segments.forEach((segment, index) => {
-    if (index > 0) parts.push({ text: "; " });
+    if (index > 0) parts.push({ text: t("lede.segmentSeparator") });
     parts.push(...segment);
   });
-  parts.push({ text: "." });
+  parts.push({ text: t("lede.end") });
   return parts;
 }
 
-function editedParts(yours: readonly ChangeField[]): LedePart[] {
+function editedParts(yours: readonly ChangeField[], copy: Copy): LedePart[] {
   if (yours.length === 0) return [];
   return [
-    { text: "you changed " },
-    { text: fieldPhrase(yours, "the"), strong: true },
+    { text: copy.t("lede.youChanged") },
+    { text: fieldPhrase(yours, "the", copy.t, copy.locale), strong: true },
   ];
 }
 
-function storeDecidedParts(storeDecided: readonly ChangeField[]): LedePart[] {
+function storeDecidedParts(
+  storeDecided: readonly ChangeField[],
+  copy: Copy,
+): LedePart[] {
   if (storeDecided.length === 0) return [];
   return [
-    { text: "the store changed " },
-    { text: fieldPhrase(storeDecided, "the"), strong: true },
+    { text: copy.t("lede.storeChanged") },
+    {
+      text: fieldPhrase(storeDecided, "the", copy.t, copy.locale),
+      strong: true,
+    },
   ];
 }
 
 function rivalParts(
   rivals: readonly ChangeEventItem[],
   rivalIds: readonly string[],
+  copy: Copy,
 ): LedePart[] {
+  const { t, locale } = copy;
   if (rivalIds.length === 1) {
     return [
-      { text: rivals[0].appName ?? "A competitor", strong: true },
-      { text: " changed " },
+      { text: rivals[0].appName ?? t("lede.aCompetitor"), strong: true },
+      { text: t("lede.rivalChanged") },
       {
         text: fieldPhrase(
           rivals.map((event) => event.field),
           "its",
+          t,
+          locale,
         ),
         strong: true,
       },
@@ -81,57 +112,67 @@ function rivalParts(
   }
   if (rivalIds.length > 1) {
     return [
-      { text: pluralize(rivalIds.length, "competitor"), strong: true },
-      { text: " changed their listings" },
+      {
+        text: t("lede.competitorCount", { count: rivalIds.length }),
+        strong: true,
+      },
+      { text: t("lede.rivalsChanged") },
     ];
   }
   return [];
 }
 
-function impactParts(impact: ChangeImpactReport): LedePart[] {
+function impactParts(impact: ChangeImpactReport, copy: Copy): LedePart[] {
+  const { t, locale } = copy;
   const parts: LedePart[] = [];
   const [newest] = impact.items;
   const newestEffect = newest ? changeEffect(newest) : null;
   if (newestEffect?.kind === "pending") {
     parts.push({
-      text: ` Your change of ${formatDayMonth(newest.changedOn)} is measurable on ${formatDayMonth(newestEffect.measurableOn)}.`,
+      text: t("lede.pending", {
+        changed: formatDayMonthInLocale(newest.changedOn, locale),
+        measurable: formatDayMonthInLocale(newestEffect.measurableOn, locale),
+      }),
     });
   }
   for (const item of impact.items) {
     const effect = changeEffect(item);
     if (effect?.kind !== "measured") continue;
     const subject = namesFields(item.fields)
-      ? `Your ${changedFieldWords(item.fields)} change`
-      : "Your change";
+      ? t("lede.measuredSubject", {
+          fields: changedFieldWords(item.fields, t, locale),
+        })
+      : t("lede.measuredGeneric");
     parts.push(
       {
-        text: ` ${subject} of ${formatDayMonth(item.changedOn)} was followed by visibility `,
+        text: t("lede.measured", {
+          subject,
+          changed: formatDayMonthInLocale(item.changedOn, locale),
+        }),
       },
-      { text: visibilityMove(effect.change), strong: true },
-      { text: ` after ${effect.days} days.` },
+      { text: visibilityMove(effect.change, t, locale), strong: true },
+      { text: t("lede.afterDays", { days: effect.days }) },
     );
     break;
   }
   return parts;
 }
 
-export function changesLede({
-  events,
-  impact,
-  days,
-}: {
-  events: readonly ChangeEventItem[];
-  impact: ChangeImpactReport | null;
-  days: number;
-}): LedePart[] {
-  const measured = impact ? impactParts(impact) : [];
+export function changesLede(
+  {
+    events,
+    impact,
+    days,
+  }: {
+    events: readonly ChangeEventItem[];
+    impact: ChangeImpactReport | null;
+    days: number;
+  },
+  copy: Copy = DEFAULT_COPY,
+): LedePart[] {
+  const measured = impact ? impactParts(impact, copy) : [];
   if (events.length === 0) {
-    return [
-      {
-        text: `No listing changes in the last ${days} days, yours or a competitor's.`,
-      },
-      ...measured,
-    ];
+    return [{ text: copy.t("lede.none", { days }) }, ...measured];
   }
-  return [...newestDayParts(events), ...measured];
+  return [...newestDayParts(events, copy), ...measured];
 }

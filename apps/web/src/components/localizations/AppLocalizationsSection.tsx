@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import type {
   AppLocalizationsResult,
@@ -27,7 +28,7 @@ import {
 } from "@/components/ui/card";
 import { InfoTip } from "@/components/ui/info-tip";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatNumber } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
 import {
   LOCALIZATIONS_SECTION_ID,
@@ -36,7 +37,7 @@ import {
 } from "@/lib/app-localizations";
 import {
   APPLE_LOCALIZATIONS_URL,
-  LOCALIZED_FIELDS_NOTE,
+  localizedFieldsNote,
 } from "@/lib/localizations";
 import { useFocusGroupClaim } from "@/lib/focus-handoff";
 import {
@@ -69,14 +70,18 @@ function useScrollIntoViewOnHash(ready: boolean) {
 }
 
 function KeywordFieldsHeader({ result }: { result: AppLocalizationsResult }) {
+  const t = useTranslations("localizations");
   const space = keywordFieldSpace(result.localizations);
   return (
     <h3 className={SUB_HEADER}>
-      <span>Keyword fields</span>
+      <span>{t("keywordFields")}</span>
       <span className={SUB_HEADER_COUNT}>{result.localizations.length}</span>
       {space ? (
         <span className={SUB_HEADER_NOTE}>
-          {`${formatNumber(space.used)} of ${formatNumber(space.limit)} characters used`}
+          {t("charactersUsed", {
+            used: space.used,
+            limit: space.limit,
+          })}
         </span>
       ) : null}
     </h3>
@@ -94,6 +99,8 @@ function LocalizationsBody({
   canDraft: boolean;
   suggestion: KeywordFieldSuggestion | null;
 }) {
+  const t = useTranslations("localizations");
+  const locale = useAppLocale();
   const suggestions = useQuery({
     ...marketSuggestionsOptions(id),
     retry: false,
@@ -105,22 +112,20 @@ function LocalizationsBody({
       <CardContent className={cn(PANEL_BLEED, "flex flex-col")}>
         {result.storeImport === "paused" ? (
           <p className="border-b border-border px-4 py-3 text-dense text-muted-foreground">
-            Importing from App Store Connect is paused because the connection
-            needs attention in{" "}
+            {t("pausedImport")}
             <Link
               href={STORE_CONNECTIONS_PATH}
               className="font-medium text-foreground link-underline"
             >
-              Integrations
+              {t("integrations")}
             </Link>
-            . The fields are editable here again and follow the store once the
-            key works.
+            {t("pausedImportAfter")}
           </p>
         ) : null}
         {grid ? (
           <LocalizationMatrix
             grid={grid}
-            hint={suggestedHint(id, grid.suggested)}
+            hint={suggestedHint(id, grid.suggested, t, locale)}
           />
         ) : null}
         <KeywordFieldsHeader result={result} />
@@ -135,14 +140,14 @@ function LocalizationsBody({
         <UnlistedLocalizations id={id} result={result} />
       </CardContent>
       <CardFooter className="flex-wrap justify-between gap-y-1">
-        <span>{LOCALIZED_FIELDS_NOTE}</span>
+        <span>{localizedFieldsNote(locale)}</span>
         <a
           href={APPLE_LOCALIZATIONS_URL}
           target="_blank"
           rel="noreferrer"
           className={FOOTER_LINK}
         >
-          Apple&rsquo;s localization table
+          {t("appleTable")}
         </a>
       </CardFooter>
     </>
@@ -150,11 +155,12 @@ function LocalizationsBody({
 }
 
 function LocalizationsHelp() {
+  const t = useTranslations("localizations");
   return (
     <InfoTip
-      label="About App Store localizations"
-      title="A keyword field belongs to a language"
-      summary="Search in every storefront on its list reads it, and words combine only within one localization."
+      label={t("help.label")}
+      title={t("help.title")}
+      summary={t("help.summary")}
     />
   );
 }
@@ -168,6 +174,7 @@ export function AppLocalizationsSection({
   canDraft: boolean;
   suggestion: KeywordFieldSuggestion | null;
 }) {
+  const t = useTranslations("localizations");
   const { isOwner } = useAuth();
   const { data, error, isError, refetch } = useQuery({
     ...appLocalizationsOptions(id),
@@ -190,7 +197,7 @@ export function AppLocalizationsSection({
       <Card>
         <CardHeader className={PANEL_HEADER}>
           <CardTitle asChild>
-            <h2 id={HEADING_ID}>App Store localizations</h2>
+            <h2 id={HEADING_ID}>{t("title")}</h2>
           </CardTitle>
           <CardAction
             className={cn(
@@ -230,7 +237,7 @@ export function AppLocalizationsSection({
               <ErrorState
                 error={error}
                 retry={() => void refetch()}
-                title="Localizations could not be loaded."
+                title={t("loadFailed")}
               />
             ) : (
               <Skeleton className="h-64 w-full" />

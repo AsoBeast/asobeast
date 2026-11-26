@@ -1,8 +1,16 @@
+import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
+import zhActions from "../../../messages/zh-CN/actions.json";
 import { actionStatusTag } from "./action-status-tag";
 import { actionItem } from "./action-test-item";
 
 const healthy = { degraded: false } as const;
+
+const zh = createTranslator({
+  locale: "zh-CN",
+  namespace: "actions",
+  messages: { actions: zhActions },
+});
 
 describe("actionStatusTag", () => {
   it("names a snooze with its wake date", () => {
@@ -53,5 +61,23 @@ describe("actionStatusTag", () => {
 
   it("flags evidence that can no longer be read", () => {
     expect(actionStatusTag(actionItem())?.label).toBe("Evidence unavailable");
+  });
+
+  it("writes status tags and their dates in Simplified Chinese", () => {
+    expect(
+      actionStatusTag(
+        actionItem({
+          ...healthy,
+          status: "SNOOZED",
+          snoozedUntil: "2026-08-15T00:00:00.000Z",
+        }),
+        zh,
+        "zh-CN",
+      )?.label,
+    ).toBe("稍后处理至 2026年8月15日");
+    expect(
+      actionStatusTag(actionItem({ ...healthy, reopenCount: 2 }), zh, "zh-CN")
+        ?.label,
+    ).toBe("已重新打开 2 次");
   });
 });

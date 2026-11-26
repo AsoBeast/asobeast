@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef } from "react";
+import { useTranslations } from "next-intl";
 import {
   ACTION_CATEGORIES,
   ACTION_RULES,
@@ -22,25 +23,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatCountry, storeLabel } from "@/lib/format";
-import type { ActionGroup, ActionSort } from "@/lib/search-params";
-import { ACTION_CATEGORY_LABEL, ACTION_RULE_LABEL } from "./action-copy";
+import { formatCountryInLocale, storeLabel } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
+import { actionCategoryLabel, actionRuleLabel } from "./action-copy";
 import { PriorityToggles } from "./PriorityToggles";
 import { queueChips } from "./queue-chips";
 import { appLabel, facetCounts, type QueueFacetCounts } from "./queue-filters";
 import type { QueueViewState, SetQueueView } from "./use-queue-view";
-
-const GROUP_LABEL: Record<ActionGroup, string> = {
-  priority: "Priority",
-  app: "App",
-  category: "Category",
-};
-
-const SORT_LABEL: Record<ActionSort, string> = {
-  impact: "Impact",
-  newest: "Newest",
-  oldest: "Oldest",
-};
 
 function QueueSelect<T extends string>({
   label,
@@ -88,10 +77,15 @@ function present<T extends string>(
 
 type FacetOptions = ReturnType<typeof useFacetOptions>;
 
-function useFacetOptions(items: readonly ActionItem[], view: QueueViewState) {
+function useFacetOptions(
+  items: readonly ActionItem[],
+  view: QueueViewState,
+  t: ReturnType<typeof useTranslations>,
+) {
   return useMemo(() => {
     const apps = new Map<string, string>();
-    for (const item of items) apps.set(item.scope.appId, appLabel(item.scope));
+    for (const item of items)
+      apps.set(item.scope.appId, appLabel(item.scope, t));
     const markets = [
       ...new Set([...items.map((item) => item.scope.country), ...view.market]),
     ].sort();
@@ -111,7 +105,7 @@ function useFacetOptions(items: readonly ActionItem[], view: QueueViewState) {
         STORES,
       ),
     };
-  }, [items, view.market, view.rule, view.category]);
+  }, [items, view.market, view.rule, view.category, t]);
 }
 
 const CLEARED_FACETS = {
@@ -137,23 +131,25 @@ function QueueFacets({
   counts: QueueFacetCounts;
   options: FacetOptions;
 }) {
+  const t = useTranslations("actions");
+  const locale = useAppLocale();
   return (
     <>
       <FacetFilter
-        title="Rule"
+        title={t("facets.rule")}
         options={options.rules.map((rule) => ({
           value: rule,
-          label: ACTION_RULE_LABEL[rule],
+          label: actionRuleLabel(rule, t),
         }))}
         selected={view.rule}
         counts={counts.rule}
         onChange={(rule) => void setView({ rule })}
       />
       <FacetFilter
-        title="Category"
+        title={t("facets.category")}
         options={options.categories.map((category) => ({
           value: category,
-          label: ACTION_CATEGORY_LABEL[category],
+          label: actionCategoryLabel(category, t),
         }))}
         selected={view.category}
         counts={counts.category}
@@ -161,7 +157,7 @@ function QueueFacets({
       />
       {appId ? null : (
         <FacetFilter
-          title="App"
+          title={t("facets.app")}
           options={[...options.apps].map(([value, label]) => ({
             value,
             label,
@@ -172,10 +168,10 @@ function QueueFacets({
         />
       )}
       <FacetFilter
-        title="Market"
+        title={t("facets.market")}
         options={options.markets.map((market) => ({
           value: market,
-          label: formatCountry(market),
+          label: formatCountryInLocale(market, locale),
         }))}
         selected={view.market}
         counts={counts.market}
@@ -183,7 +179,7 @@ function QueueFacets({
       />
       {options.stores.length > 1 ? (
         <FacetFilter
-          title="Store"
+          title={t("facets.store")}
           options={options.stores.map((store) => ({
             value: store,
             label: storeLabel(store),
@@ -196,9 +192,6 @@ function QueueFacets({
     </>
   );
 }
-
-const FILTERS_DESCRIPTION =
-  "Narrow the queue by rule, category, app, market and store.";
 
 const facetsChosen = (view: QueueViewState): number =>
   view.rule.length +
@@ -220,11 +213,22 @@ export function ActionToolbar({
   setView: SetQueueView;
   shown: number;
 }) {
-  const counts = facetCounts(items, view);
-  const options = useFacetOptions(items, view);
+  const t = useTranslations("actions");
+  const locale = useAppLocale();
+  const counts = facetCounts(items, view, t, locale);
+  const options = useFacetOptions(items, view, t);
   const groups = appId
-    ? { priority: GROUP_LABEL.priority, category: GROUP_LABEL.category }
-    : GROUP_LABEL;
+    ? { priority: t("groups.priority"), category: t("groups.category") }
+    : {
+        priority: t("groups.priority"),
+        app: t("groups.app"),
+        category: t("groups.category"),
+      };
+  const sorts = {
+    impact: t("sorts.impact"),
+    newest: t("sorts.newest"),
+    oldest: t("sorts.oldest"),
+  };
   const widerFilters = useRef<HTMLDivElement>(null);
   const narrowerFilters = useRef<HTMLDivElement>(null);
   const facets = (
@@ -242,7 +246,7 @@ export function ActionToolbar({
     <div data-slot="action-toolbar" className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
         <SearchInput
-          label="Search actions"
+          label={t("searchActions")}
           value={view.q}
           className="sm:w-auto sm:min-w-48 sm:flex-1"
           onSearch={(q, searchOptions) =>
@@ -253,7 +257,7 @@ export function ActionToolbar({
           <FiltersSheet
             active={active}
             otherWidth={widerFilters}
-            description={FILTERS_DESCRIPTION}
+            description={t("filtersDescription")}
           >
             {facets}
           </FiltersSheet>
@@ -264,17 +268,17 @@ export function ActionToolbar({
           </FiltersPopover>
         </div>
         <QueueSelect
-          label="Group by"
-          prefix="Group"
+          label={t("groupBy")}
+          prefix={t("group")}
           value={view.group}
           labels={groups}
           onChange={(group) => void setView({ group })}
         />
         <QueueSelect
-          label="Sort by"
-          prefix="Sort"
+          label={t("sortBy")}
+          prefix={t("sort")}
           value={view.sort}
-          labels={SORT_LABEL}
+          labels={sorts}
           onChange={(sort) => void setView({ sort })}
         />
       </div>
@@ -287,7 +291,7 @@ export function ActionToolbar({
         <RowCount shown={shown} total={items.length} noun="action" />
       </div>
       <FilterChips
-        chips={queueChips(view, options.apps).map((chip) => ({
+        chips={queueChips(view, options.apps, t, locale).map((chip) => ({
           key: chip.key,
           label: chip.label,
           onRemove: () => void setView(chip.clear),

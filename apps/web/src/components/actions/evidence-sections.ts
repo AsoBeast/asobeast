@@ -1,3 +1,4 @@
+import type { MessageTranslator } from "@/i18n/translator";
 import type {
   ActionDroppedKeyword,
   ActionEvidence,
@@ -32,6 +33,12 @@ import {
 import type { GradeMetric } from "@/lib/grade";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
 import { ACTION_RULE_LABEL, percent, summarizeEvidence } from "./action-copy";
+import {
+  evidenceEnglish,
+  localizedField,
+  localizedItemText,
+  localizedLabel,
+} from "./evidence-labels";
 import { CHANGE_FIELD_WORD } from "./action-headline";
 
 export interface EvidenceFact {
@@ -562,11 +569,27 @@ function sections(evidence: ActionEvidence): Sections {
   }
 }
 
-export function evidenceSections(evidence: ActionEvidence): EvidenceSections {
+export function evidenceSections(
+  evidence: ActionEvidence,
+  t: MessageTranslator = evidenceEnglish,
+): EvidenceSections {
   const { facts, lists } = sections(evidence);
   return {
-    facts,
-    lists: lists.filter((list) => list.items.length > 0),
+    facts: facts.map((fact) => ({
+      ...fact,
+      label: localizedLabel(fact.label, t),
+      value: localizedField(fact.value, t),
+    })),
+    lists: lists
+      .filter((list) => list.items.length > 0)
+      .map((list) => ({
+        ...list,
+        label: localizedLabel(list.label, t),
+        items: list.items.map((item) => ({
+          ...item,
+          text: localizedItemText(item.text, t),
+        })),
+      })),
     summary: summarizeEvidence(evidence),
   };
 }

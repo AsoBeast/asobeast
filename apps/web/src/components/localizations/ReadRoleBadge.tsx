@@ -1,9 +1,12 @@
+"use client";
+
 import type {
   LocalizationReader,
   LocalizationReadRole,
 } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
-import { READ_ROLE_LABELS } from "@/lib/app-localizations";
+import { readRoleLabel } from "@/lib/app-localizations";
 
 const ROLE_VARIANT = {
   default: "brand",
@@ -17,7 +20,8 @@ export function ReadRoleBadge({
   role: LocalizationReadRole;
   prefix?: string;
 }) {
-  const label = READ_ROLE_LABELS[role];
+  const t = useTranslations("localizations");
+  const label = readRoleLabel(role, t);
   return (
     <Badge variant={ROLE_VARIANT[role]}>
       {prefix === undefined ? label : `${prefix} · ${label}`}
@@ -30,8 +34,9 @@ export function ReaderChips({
 }: {
   readers: readonly LocalizationReader[];
 }) {
+  const t = useTranslations("localizations");
   if (readers.length === 0) {
-    return <Badge variant="outline">Not read in your markets</Badge>;
+    return <Badge variant="outline">{t("role.notRead")}</Badge>;
   }
   return (
     <>

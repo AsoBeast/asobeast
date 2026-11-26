@@ -1,6 +1,7 @@
 "use client";
 
 import type { ComponentProps } from "react";
+import { useTranslations } from "next-intl";
 import type { inferParserType, SetValues } from "nuqs";
 import { ColumnMenu } from "@/components/data-table/ColumnMenu";
 import { FilterChips } from "@/components/data-table/FilterChips";
@@ -8,23 +9,12 @@ import { RowCount } from "@/components/data-table/RowCount";
 import { SearchInput } from "@/components/data-table/SearchInput";
 import { SelectFilter } from "@/components/data-table/SelectFilter";
 import { ExportCsvButton } from "@/components/ExportCsvButton";
-import { formatCountry } from "@/lib/format";
+import { formatCountryInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { VERSUS_FILTERS, type matrixFilterParsers } from "@/lib/search-params";
 import { ALL_MARKETS, marketOptions } from "./comparison-markets";
 
 type MatrixFilters = inferParserType<typeof matrixFilterParsers>;
-
-const RESULT_LABELS: Record<MatrixFilters["vs"], string> = {
-  all: "All results",
-  winning: "Winning",
-  losing: "Losing",
-  tied: "Tied",
-};
-
-const RESULT_OPTIONS = VERSUS_FILTERS.map((value) => ({
-  value,
-  label: RESULT_LABELS[value],
-}));
 
 export function ComparisonFilterBar({
   filters,
@@ -43,26 +33,42 @@ export function ComparisonFilterBar({
   columns: ComponentProps<typeof ColumnMenu>["columns"];
   onExport: () => void;
 }) {
+  const t = useTranslations("competitors");
+  const locale = useAppLocale();
+  const resultLabels: Record<MatrixFilters["vs"], string> = {
+    all: t("comparison.results.all"),
+    winning: t("comparison.results.winning"),
+    losing: t("comparison.results.losing"),
+    tied: t("comparison.results.tied"),
+  };
+  const resultOptions = VERSUS_FILTERS.map((value) => ({
+    value,
+    label: resultLabels[value],
+  }));
   const multiMarket = markets.length > 1;
   const chips = [
     filters.q
       ? {
           key: "q",
-          label: `Search: ${filters.q}`,
+          label: t("comparison.searchChip", { value: filters.q }),
           onRemove: () => void setFilters({ q: null }),
         }
       : null,
     filters.vs !== "all"
       ? {
           key: "vs",
-          label: `Result: ${RESULT_LABELS[filters.vs]}`,
+          label: t("comparison.resultChip", {
+            value: resultLabels[filters.vs],
+          }),
           onRemove: () => void setFilters({ vs: null }),
         }
       : null,
     multiMarket && filters.country
       ? {
           key: "country",
-          label: `Market: ${formatCountry(filters.country)}`,
+          label: t("comparison.marketChip", {
+            value: formatCountryInLocale(filters.country, locale),
+          }),
           onRemove: () => void setFilters({ country: null }),
         }
       : null,
@@ -72,21 +78,21 @@ export function ComparisonFilterBar({
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
         <SearchInput
-          label="Search keywords"
+          label={t("comparison.search")}
           value={filters.q}
           onSearch={(q, options) => void setFilters({ q }, options)}
         />
         <SelectFilter
-          title="Result"
+          title={t("comparison.result")}
           value={filters.vs}
-          options={RESULT_OPTIONS}
+          options={resultOptions}
           onChange={(vs) => void setFilters({ vs })}
         />
         {multiMarket ? (
           <SelectFilter
-            title="Market"
+            title={t("comparison.market")}
             value={filters.country || ALL_MARKETS}
-            options={marketOptions(markets)}
+            options={marketOptions(markets, t, locale)}
             onChange={(country) =>
               void setFilters({
                 country: country === ALL_MARKETS ? null : country,
@@ -98,7 +104,7 @@ export function ComparisonFilterBar({
         <div className="ml-auto flex items-center gap-2">
           <ColumnMenu columns={columns} />
           <ExportCsvButton
-            subject="the comparison"
+            subject={t("comparison.exportSubject")}
             disabled={shown === 0}
             onClick={onExport}
           />

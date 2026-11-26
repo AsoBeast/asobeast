@@ -3,7 +3,11 @@ import type {
   ChangeField,
   VisibilityPoint,
 } from "@asobeast/shared";
-import { formatDayMonth } from "@/lib/format";
+import { createTranslator } from "next-intl";
+import enChanges from "../../../messages/en/changes.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import { formatDayMonthInLocale } from "@/lib/format";
+import type { Locale } from "@/lib/locale";
 import { dayBefore } from "@/lib/utc-day";
 import {
   attributeFields,
@@ -14,6 +18,12 @@ import {
   dayOf,
   type ChangeKind,
 } from "./change-fields";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "changes",
+  messages: { changes: enChanges },
+});
 
 const DAILY_MARKS_UP_TO_DAYS = 90;
 const WEEK = 7;
@@ -100,6 +110,7 @@ function laneMarks(
 export function activityLanes(
   events: readonly ChangeEventItem[],
   days: readonly string[],
+  t: MessageTranslator = english,
 ): Lane[] {
   const inWindow = new Set(days);
   const byApp = new Map<string, ChangeEventItem[]>();
@@ -110,7 +121,7 @@ export function activityLanes(
   return [...byApp.entries()]
     .map(([appId, appEvents]) => ({
       appId,
-      appName: appEvents[0].appName ?? "Unknown app",
+      appName: appEvents[0].appName ?? t("unknownApp"),
       iconUrl: appEvents.find((event) => event.iconUrl)?.iconUrl ?? null,
       own: !appEvents[0].isCompetitor,
       count: appEvents.length,
@@ -124,27 +135,51 @@ export function activityLanes(
     );
 }
 
-export function markLabel(lane: Lane, mark: LaneMark): string {
-  const when =
-    mark.from === mark.day
-      ? formatDayMonth(mark.day)
-      : `${formatDayMonth(mark.from)} to ${formatDayMonth(mark.day)}`;
-  return `${when}: ${changeSubject(lane, mark.fields)}`;
+export function markLabel(
+  lane: Lane,
+  mark: LaneMark,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
+): string {
+  const from = formatDayMonthInLocale(mark.from, locale);
+  const to = formatDayMonthInLocale(mark.day, locale);
+  return t(mark.from === mark.day ? "activity.markDay" : "activity.markRange", {
+    day: from,
+    from,
+    to,
+    subject: changeSubject(lane, mark.fields, t, locale),
+  });
 }
 
-function changeSubject(lane: Lane, fields: readonly ChangeField[]): string {
+function changeSubject(
+  lane: Lane,
+  fields: readonly ChangeField[],
+  t: MessageTranslator,
+  locale: Locale,
+): string {
   if (!lane.own) {
-    return `${lane.appName} changed ${fieldPhrase(fields, "the")}`;
+    return t("activity.rivalSubject", {
+      name: lane.appName,
+      fields: fieldPhrase(fields, "the", t, locale),
+    });
   }
   const { yours, storeDecided } = attributeFields(fields);
   const parts: string[] = [];
   if (yours.length > 0) {
-    parts.push(`you changed ${fieldPhrase(yours, "the")}`);
+    parts.push(
+      t("activity.youSubject", {
+        fields: fieldPhrase(yours, "the", t, locale),
+      }),
+    );
   }
   if (storeDecided.length > 0) {
-    parts.push(`the store changed ${fieldPhrase(storeDecided, "the")}`);
+    parts.push(
+      t("activity.storeSubject", {
+        fields: fieldPhrase(storeDecided, "the", t, locale),
+      }),
+    );
   }
-  return parts.join("; ");
+  return parts.join(t("activity.subjectSeparator"));
 }
 
 export function ownChangeDays(
@@ -162,26 +197,51 @@ export function ownChangeDays(
   ];
 }
 
-export function changeLinesOn(lanes: readonly Lane[], day: string): string[] {
+export function changeLinesOn(
+  lanes: readonly Lane[],
+  day: string,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
+): string[] {
   return lanes.flatMap((lane) => {
     const fields = lane.marks.flatMap((mark) =>
       mark.changes
         .filter((change) => change.day === day)
         .map((change) => change.field),
     );
-    return fields.length === 0 ? [] : dayLines(lane, fields);
+    return fields.length === 0 ? [] : dayLines(lane, fields, t, locale);
   });
 }
 
-function dayLines(lane: Lane, fields: ChangeField[]): string[] {
+function dayLines(
+  lane: Lane,
+  fields: ChangeField[],
+  t: MessageTranslator,
+  locale: Locale,
+): string[] {
   if (!lane.own) {
-    return [`${lane.appName}: ${changedFieldWords(fields)}`];
+    return [
+      t("activity.rivalDay", {
+        name: lane.appName,
+        fields: changedFieldWords(fields, t, locale),
+      }),
+    ];
   }
   const { yours, storeDecided } = attributeFields(fields);
   const lines: string[] = [];
-  if (yours.length > 0) lines.push(`You: ${changedFieldWords(yours)}`);
+  if (yours.length > 0) {
+    lines.push(
+      t("activity.youDay", {
+        fields: changedFieldWords(yours, t, locale),
+      }),
+    );
+  }
   if (storeDecided.length > 0) {
-    lines.push(`The store: ${changedFieldWords(storeDecided)}`);
+    lines.push(
+      t("activity.storeDay", {
+        fields: changedFieldWords(storeDecided, t, locale),
+      }),
+    );
   }
   return lines;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useRef, type RefObject } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import type { AppAnnotationItem, TrackedKeywordItem } from "@asobeast/shared";
@@ -23,7 +24,8 @@ import {
   rankingsOptions,
 } from "@/lib/queries";
 import { survivingNeighbour, useFocusAfterCommit } from "@/lib/focus-handoff";
-import { formatDate } from "@/lib/format";
+import { formatDateInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import {
   presetDays,
   presetToRange,
@@ -66,28 +68,38 @@ import { selectionForMarket } from "./selection";
 import { lastCheckedDay, seriesStats, type SeriesStats } from "./series-stats";
 import { seriesRemoveId, SeriesStatsTable } from "./SeriesStatsTable";
 
-const VIEW_LABELS: Record<RankingsViewName, string> = {
-  chart: "Chart",
-  days: "By day",
-};
-
 function checkFacts(
   stats: readonly SeriesStats[],
   through: string | null,
   totalSeries: number,
+  context: {
+    t: ReturnType<typeof useTranslations>;
+    locale: ReturnType<typeof useAppLocale>;
+  },
 ): string | null {
+  const { t, locale } = context;
   const depths = stats.flatMap((row) => (row.latest ? [row.latest.depth] : []));
   const facts = [
-    ...(depths.length > 0 ? [`Checked to depth ${Math.max(...depths)}`] : []),
-    ...(through === null ? [] : [`last check ${formatDate(through)}`]),
+    ...(depths.length > 0
+      ? [t("checkedDepth", { depth: Math.max(...depths) })]
+      : []),
+    ...(through === null
+      ? []
+      : [t("lastCheck", { date: formatDateInLocale(through, locale) })]),
     ...(totalSeries > MAX_SERIES
-      ? [`showing ${MAX_SERIES} of ${totalSeries} keywords`]
+      ? [
+          t("showingKeywords", {
+            shown: MAX_SERIES,
+            total: totalSeries,
+          }),
+        ]
       : []),
   ];
   return facts.length === 0 ? null : facts.join(" · ");
 }
 
 export function RankingsView({ id }: { id: string }) {
+  const t = useTranslations("rankings");
   const [country] = useQueryState("country", countryParser);
   const [range, setRange] = useQueryState("range", rangeParser);
   const [view, setView] = useQueryState("view", rankingsViewParser);
@@ -105,7 +117,7 @@ export function RankingsView({ id }: { id: string }) {
         className={`${PANEL_HEADER} flex flex-wrap items-center justify-between gap-x-4 gap-y-2`}
       >
         <CardTitle asChild>
-          <h2>Keyword positions</h2>
+          <h2>{t("keywordPositions")}</h2>
         </CardTitle>
         <CardAction
           className={`${PANEL_ACTION} flex flex-wrap items-center gap-2`}
@@ -121,10 +133,10 @@ export function RankingsView({ id }: { id: string }) {
               void setView(rankingsViewParser.parse(next))
             }
           >
-            <TabsList aria-label="Positions view" className="print:hidden">
+            <TabsList aria-label={t("positionsView")} className="print:hidden">
               {RANKINGS_VIEWS.map((value) => (
                 <TabsOption key={value} value={value}>
-                  {VIEW_LABELS[value]}
+                  {t(value === "chart" ? "chart" : "byDay")}
                 </TabsOption>
               ))}
             </TabsList>
@@ -133,7 +145,7 @@ export function RankingsView({ id }: { id: string }) {
             presets={RANGE_PRESETS}
             value={range}
             onChange={setRange}
-            label="Date range"
+            label={t("dateRange")}
           />
         </CardAction>
       </CardHeader>
@@ -175,6 +187,8 @@ function RankingsPanel({
   onWiden: () => void;
   onSelect: (keywordIds: string[]) => void;
 }) {
+  const t = useTranslations("rankings");
+  const locale = useAppLocale();
   const chartRef = useRef<HTMLDivElement>(null);
   const focusAfterCommit = useFocusAfterCommit();
   const bounds = presetToRange(range);
@@ -197,7 +211,7 @@ function RankingsPanel({
   const chart = buildRankingChart(data.series, bounds.to);
   const through = lastCheckedDay(shownSeries);
   const stats = shownSeries.map((item) => seriesStats(item, through));
-  const facts = checkFacts(stats, through, chart.totalSeries);
+  const facts = checkFacts(stats, through, chart.totalSeries, { t, locale });
 
   const imageReady =
     view === "chart" &&
@@ -208,7 +222,7 @@ function RankingsPanel({
     const spec = rankingImageSpec({
       chart,
       kind: "rankings",
-      title: "Keyword rank positions",
+      title: t("keywordPositions"),
       app: detail,
       countries: shownSeries.map((item) => item.country),
     });

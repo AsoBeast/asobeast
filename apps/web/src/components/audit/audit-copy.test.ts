@@ -1,4 +1,6 @@
+import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
+import zhAudit from "../../../messages/zh-CN/audit.json";
 import type {
   AuditCheckSource,
   AuditCheckStatus,
@@ -10,21 +12,21 @@ import type {
 } from "@asobeast/shared";
 import {
   availabilityLabel,
-  EFFORT_LABEL,
   emptyBucketLine,
   fixesWorth,
-  IMPACT_LABEL,
   liftFigure,
   liftLabel,
-  MESSAGE_LABEL,
   provisional,
   measuredLine,
   scoredFactorsLine,
   scoreRingLabel,
-  SOURCE_LABEL,
-  STATUS_LABEL,
-  TARGET_LABEL,
 } from "./audit-copy";
+
+const zh = createTranslator({
+  locale: "zh-CN",
+  namespace: "audit",
+  messages: { audit: zhAudit },
+});
 
 const SOURCES = [
   "store",
@@ -82,14 +84,17 @@ const AVAILABILITIES = [
 
 describe("label maps", () => {
   it.each([
-    ["source", SOURCE_LABEL, SOURCES],
-    ["status", STATUS_LABEL, STATUSES],
-    ["effort", EFFORT_LABEL, EFFORTS],
-    ["impact", IMPACT_LABEL, IMPACTS],
-    ["target", TARGET_LABEL, TARGETS],
-    ["message", MESSAGE_LABEL, MESSAGES],
-  ])("names every %s", (_kind, map, members) => {
-    expect(Object.keys(map).sort()).toEqual([...members].sort());
+    ["sources", SOURCES],
+    ["statuses", STATUSES],
+    ["efforts", EFFORTS],
+    ["impacts", IMPACTS],
+    ["targets", TARGETS],
+    ["messages", MESSAGES],
+  ] as const)("names every %s in Chinese", (namespace, members) => {
+    for (const member of members) {
+      const key = `${namespace}.${member}` as Parameters<typeof zh>[0];
+      expect(zh(key)).not.toBe("");
+    }
   });
 
   it("names every availability that needs a line", () => {
@@ -190,5 +195,14 @@ describe("scoredFactorsLine", () => {
     expect(scoredFactorsLine(1, 1)).toBe("1 factor scored");
     expect(scoredFactorsLine(3, 4)).toBe("3 of 4 factors scored");
     expect(scoredFactorsLine(0, 1)).toBe("0 of 1 factor scored");
+  });
+
+  it("writes generated labels in Simplified Chinese", () => {
+    expect(liftLabel(4.5, zh)).toBe("+4.5 分");
+    expect(emptyBucketLine(1, zh)).toContain("1 项检查尚未评分");
+    expect(measuredLine(0.82, zh)).toBe("已衡量评分规则的 82%");
+    expect(scoreRingLabel(72, "B", 0.82, zh)).toContain("等级 B，良好");
+    expect(fixesWorth([{ lift: 4.2 }, { lift: 3.4 }], zh)).toBe("+7.6 分");
+    expect(scoredFactorsLine(3, 4, zh)).toBe("已评分 4 个因素中的 3 个");
   });
 });

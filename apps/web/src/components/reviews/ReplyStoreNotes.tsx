@@ -1,10 +1,13 @@
+"use client";
+
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { ReviewItem, Store } from "@asobeast/shared";
 import { storeLabel } from "@/lib/format";
 import { STORE_CONNECTIONS_PATH } from "@/lib/store-connection-copy";
 import { cn } from "@/lib/utils";
 import { consoleLabel } from "./store-console";
-import { PLAY_NO_WITHDRAW, type StoreReplyAccess } from "./store-reply-access";
+import type { StoreReplyAccess } from "./store-reply-access";
 
 export function ReplyFooter({
   access,
@@ -15,11 +18,11 @@ export function ReplyFooter({
   store: Store;
   posted: boolean;
 }) {
+  const t = useTranslations("reviews");
   if (access.kind === "off") {
     return (
       <p className="text-caption text-muted-foreground">
-        AsoBeast never writes to the store. Paste the reply in{" "}
-        {consoleLabel(store)}.
+        {t("storeAccess.off", { console: consoleLabel(store) })}
       </p>
     );
   }
@@ -40,13 +43,15 @@ export function ReplyFooter({
               href={STORE_CONNECTIONS_PATH}
               className="font-medium text-foreground link-underline"
             >
-              Open store connections
+              {t("storeAccess.openConnections")}
             </Link>
           </>
         )}
       </p>
       {access.kind === "ready" && posted && store === "GOOGLE_PLAY" ? (
-        <p className="text-muted-foreground">{PLAY_NO_WITHDRAW}</p>
+        <p className="text-muted-foreground">
+          {t("storeAccess.playCannotRemove")}
+        </p>
       ) : null}
     </div>
   );
@@ -59,11 +64,11 @@ export function StoreReplyNotice({
   review: ReviewItem;
   store: Store;
 }) {
+  const t = useTranslations("reviews");
   if (!review.replyText || review.reply?.post) return null;
   return (
     <p className="text-caption text-muted-foreground">
-      {storeLabel(store)} already shows a reply. A new text here replaces it
-      once posted.
+      {t("storeAccess.alreadyShows", { store: storeLabel(store) })}
     </p>
   );
 }

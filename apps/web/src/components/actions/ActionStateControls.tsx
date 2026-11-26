@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, RotateCcw } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { ActionItem } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { ActionDismissMenu } from "./ActionDismissMenu";
@@ -13,6 +14,7 @@ export const isClosed = (item: ActionItem): boolean =>
   item.status === "RESOLVED";
 
 export function ActionStateControls({ item }: { item: ActionItem }) {
+  const t = useTranslations("actions");
   const { update, isPending } = useActionUpdate(item);
 
   if (isClosed(item)) {
@@ -24,7 +26,7 @@ export function ActionStateControls({ item }: { item: ActionItem }) {
         onClick={() => update({ status: "OPEN" })}
       >
         <RotateCcw aria-hidden className="size-4" />
-        Reopen
+        {t("reopen")}
       </Button>
     );
   }
@@ -37,7 +39,7 @@ export function ActionStateControls({ item }: { item: ActionItem }) {
         onClick={() => update({ status: "DONE" })}
       >
         <Check aria-hidden className="size-4" />
-        Done
+        {t("done")}
       </Button>
       <ActionSnoozeMenu
         status={item.status}

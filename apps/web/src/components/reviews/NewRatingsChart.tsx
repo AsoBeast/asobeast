@@ -1,6 +1,7 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
   ChartNotice,
@@ -23,16 +24,13 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { formatCompact, formatNumber } from "@/lib/format";
+import { formatCompactInLocale, formatNumberInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { ratingsHistoryOptions } from "@/lib/queries";
 import { presetToRange, type RatingsRange } from "@/lib/ranges";
 import { latestRatingCount, newRatings } from "./ratings-volume";
 
 const HEIGHT = CHART_HEIGHT.tall;
-
-const chartConfig = {
-  added: { label: "New ratings", color: seriesColor(0) },
-} satisfies ChartConfig;
 
 export function NewRatingsChart({
   id,
@@ -41,6 +39,11 @@ export function NewRatingsChart({
   id: string;
   range: RatingsRange;
 }) {
+  const t = useTranslations("reviews");
+  const locale = useAppLocale();
+  const chartConfig = {
+    added: { label: t("ratings.newTitle"), color: seriesColor(0) },
+  } satisfies ChartConfig;
   const { data } = useSuspenseQuery(
     ratingsHistoryOptions(id, presetToRange(range)),
   );
@@ -51,8 +54,8 @@ export function NewRatingsChart({
     return (
       <ChartNotice
         height={HEIGHT}
-        title="No ratings history yet"
-        body="The daily pipeline stores the number of ratings with each snapshot."
+        title={t("ratings.noHistory")}
+        body={t("ratings.noHistoryBody")}
       />
     );
   }
@@ -60,9 +63,9 @@ export function NewRatingsChart({
     return (
       <ChartStat
         height={HEIGHT}
-        label="Ratings so far"
-        value={formatNumber(latest)}
-        note="Daily bars need a few more daily snapshots."
+        label={t("ratings.soFar")}
+        value={formatNumberInLocale(latest, locale)}
+        note={t("ratings.shortHistory")}
       />
     );
   }
@@ -72,7 +75,7 @@ export function NewRatingsChart({
       config={chartConfig}
       className={`${HEIGHT} w-full`}
       role="region"
-      aria-label="New ratings between daily reads"
+      aria-label={t("ratings.aria")}
     >
       <BarChart accessibilityLayer data={bars} margin={CHART_MARGIN}>
         <CartesianGrid {...GRID_PROPS} />
@@ -80,7 +83,9 @@ export function NewRatingsChart({
         <YAxis
           {...VALUE_AXIS_PROPS}
           allowDecimals={false}
-          tickFormatter={(value: number) => formatCompact(value)}
+          tickFormatter={(value: number) =>
+            formatCompactInLocale(value, locale)
+          }
         />
         <ChartTooltip
           cursor={false}

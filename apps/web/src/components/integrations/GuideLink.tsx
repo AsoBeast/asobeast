@@ -1,3 +1,7 @@
+"use client";
+
+import { useTranslations } from "next-intl";
+
 export function GuideLink({
   href,
   subject,
@@ -7,6 +11,7 @@ export function GuideLink({
   subject: string;
   children: string;
 }) {
+  const t = useTranslations("integrations");
   return (
     <a
       href={href}
@@ -15,7 +20,7 @@ export function GuideLink({
       className="inline-flex w-fit items-center rounded-sm text-foreground link-underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
     >
       <span>{children}</span>
-      <span className="sr-only">{` for ${subject}`}</span>
+      <span className="sr-only">{t("guideFor", { subject })}</span>
     </a>
   );
 }

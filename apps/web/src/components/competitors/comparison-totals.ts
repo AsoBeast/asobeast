@@ -1,5 +1,14 @@
 import type { KeywordComparisonRow } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
+import enCompetitors from "../../../messages/en/competitors.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import { isChecked } from "./comparison-checks";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "competitors",
+  messages: { competitors: enCompetitors },
+});
 
 const TOP_TEN = 10;
 
@@ -36,10 +45,16 @@ export function topTenCount(
   ).length;
 }
 
-export function headToHeadText({ lead, trail }: HeadToHead): string {
-  return `You lead ${lead}, trail ${trail}`;
+export function headToHeadText(
+  { lead, trail }: HeadToHead,
+  t: MessageTranslator = english,
+): string {
+  return t("comparison.headToHeadAria", { lead, trail });
 }
 
-export function keywordCountText(count: number): string {
-  return `${count} ${count === 1 ? "keyword" : "keywords"}`;
+export function keywordCountText(
+  count: number,
+  t: MessageTranslator = english,
+): string {
+  return t("comparison.keywordCount", { count });
 }

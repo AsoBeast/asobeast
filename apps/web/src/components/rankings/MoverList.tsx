@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { formatRankPosition } from "@asobeast/shared";
 import type { KeywordMover } from "@asobeast/shared";
 import { LIST_HEAD, LIST_ROW } from "@/components/layout/panel-classes";
 import { DirectionArrow } from "@/components/ui/delta-chip";
-import { formatNumber } from "@/lib/format";
+import { formatNumberInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
 import {
   moverChange,
@@ -25,20 +27,8 @@ const CHANGE_TONE: Record<MoverChange["kind"], string> = {
   lost: "text-signal-down",
 };
 
-function changeText(change: MoverChange): string {
-  if (change.kind === "new") return "new";
-  if (change.kind === "lost") return "lost";
-  return formatNumber(change.size);
-}
-
 const changeWay = (change: MoverChange): "up" | "down" =>
   change.kind === "up" || change.kind === "new" ? "up" : "down";
-
-function changeLabel(change: MoverChange, period: MoverPeriod): string {
-  if (change.kind === "new") return "started ranking";
-  if (change.kind === "lost") return "dropped out of the results";
-  return `${change.kind === "up" ? "up" : "down"} ${formatNumber(change.size)} ${period.within}`;
-}
 
 function MoverLine({
   mover,
@@ -51,7 +41,25 @@ function MoverLine({
   period: MoverPeriod;
   children: ReactNode;
 }) {
+  const t = useTranslations("rankings");
+  const locale = useAppLocale();
   const change = moverChange(mover);
+  const changeText =
+    change.kind === "new"
+      ? t("new")
+      : change.kind === "lost"
+        ? t("lost")
+        : formatNumberInLocale(change.size, locale);
+  const changeLabel =
+    change.kind === "new"
+      ? t("startedRanking")
+      : change.kind === "lost"
+        ? t("droppedOut")
+        : t("changeAria", {
+            direction: t(change.kind),
+            count: formatNumberInLocale(change.size, locale),
+            period: period.within,
+          });
   return (
     <Link href={href} className={cn(MOVER_COLUMNS, LIST_ROW)}>
       <span
@@ -77,9 +85,9 @@ function MoverLine({
       >
         <span aria-hidden className="inline-flex items-center gap-0.5">
           <DirectionArrow way={changeWay(change)} />
-          <span>{changeText(change)}</span>
+          <span>{changeText}</span>
         </span>
-        <span className="sr-only">{changeLabel(change, period)}</span>
+        <span className="sr-only">{changeLabel}</span>
       </span>
     </Link>
   );
@@ -89,7 +97,7 @@ export function MoverList<Mover extends KeywordMover>({
   movers,
   period,
   empty,
-  changeHeading = "Change",
+  changeHeading,
   hrefOf,
   lead,
 }: {
@@ -100,15 +108,16 @@ export function MoverList<Mover extends KeywordMover>({
   hrefOf: (mover: Mover) => string;
   lead: (mover: Mover) => ReactNode;
 }) {
+  const t = useTranslations("rankings");
   if (movers.length === 0) {
     return <EmptyState title={empty} />;
   }
   return (
     <div className="flex flex-col gap-1">
       <div aria-hidden className={cn(MOVER_COLUMNS, LIST_HEAD)}>
-        <span>Keyword</span>
-        <span className="text-right">Position</span>
-        <span className="text-right">{changeHeading}</span>
+        <span>{t("keyword")}</span>
+        <span className="text-right">{t("position")}</span>
+        <span className="text-right">{changeHeading ?? t("change")}</span>
       </div>
       <ul className="flex flex-col">
         {movers.map((mover) => {

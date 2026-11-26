@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import type { ReviewItem, Store } from "@asobeast/shared";
-import { formatDate } from "@/lib/format";
+import { formatDateInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
 import { ReplyStateMark } from "./ReplyStateMark";
 import {
@@ -13,17 +15,20 @@ import {
 
 type ActionLabel = (action: string) => string;
 import { translationCaption } from "./review-translation";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
 import { useReviewTranslation } from "./use-review-translation";
 
 const LINK_BUTTON =
   "rounded-sm text-caption font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:pointer-events-none";
 
 function Stars({ score }: { score: number }) {
+  const t = useTranslations("reviews");
   return (
     <span
       className="shrink-0 text-label leading-6 tracking-wide text-foreground"
       role="img"
-      aria-label={`${score} out of 5 stars`}
+      aria-label={t("card.stars", { score })}
     >
       <span aria-hidden>
         {"★".repeat(score)}
@@ -51,6 +56,7 @@ function useOverflowing<T extends HTMLElement>() {
 }
 
 function ReviewText({ text, label }: { text: string; label: ActionLabel }) {
+  const t = useTranslations("reviews");
   const [expanded, setExpanded] = useState(false);
   const [ref, overflowing] = useOverflowing<HTMLParagraphElement>();
 
@@ -71,10 +77,12 @@ function ReviewText({ text, label }: { text: string; label: ActionLabel }) {
           type="button"
           onClick={() => setExpanded((value) => !value)}
           aria-expanded={expanded}
-          aria-label={label(expanded ? "Show less of" : "Show more of")}
+          aria-label={label(
+            t(expanded ? "card.showLessOf" : "card.showMoreOf"),
+          )}
           className={LINK_BUTTON}
         >
-          {expanded ? "Show less" : "Show more"}
+          {t(expanded ? "card.showLess" : "card.showMore")}
         </button>
       ) : null}
     </div>
@@ -82,12 +90,16 @@ function ReviewText({ text, label }: { text: string; label: ActionLabel }) {
 }
 
 function DeveloperReply({ review }: { review: ReviewItem }) {
+  const t = useTranslations("reviews");
+  const locale = useAppLocale();
   if (!review.replyText) return null;
   return (
     <div className="flex flex-col gap-1 border-l-2 border-border pl-3">
       <p className="text-caption text-muted-foreground">
-        Developer reply
-        {review.repliedAt ? ` · ${formatDate(review.repliedAt)}` : null}
+        {t("card.developerReply")}
+        {review.repliedAt
+          ? ` · ${formatDateInLocale(review.repliedAt, locale)}`
+          : null}
       </p>
       <p dir="auto" className="text-body wrap-anywhere whitespace-pre-line">
         {review.replyText}
@@ -96,25 +108,39 @@ function DeveloperReply({ review }: { review: ReviewItem }) {
   );
 }
 
-function reviewFacts(review: ReviewItem): string {
-  const version = review.version ? ` · v${review.version}` : "";
-  return ` · ${formatDate(review.reviewedAt)}${version}`;
+function reviewFacts(
+  review: ReviewItem,
+  t: MessageTranslator,
+  locale: Locale,
+): string {
+  return t("card.facts", {
+    date: formatDateInLocale(review.reviewedAt, locale),
+    version: review.version
+      ? t("card.version", { version: review.version })
+      : "",
+  });
 }
 
 type ReviewTranslationState = ReturnType<typeof useReviewTranslation>;
 
-function translateAction(translation: ReviewTranslationState): {
+function translateAction(
+  translation: ReviewTranslationState,
+  t: MessageTranslator,
+): {
   text: string;
   lead: string | null;
 } {
-  if (translation.pending) return { text: "Translating…", lead: null };
+  if (translation.pending) return { text: t("card.translating"), lead: null };
   if (translation.translation) {
-    return { text: "Show original", lead: "Show original of" };
+    return { text: t("card.showOriginal"), lead: t("card.showOriginalOf") };
   }
   if (translation.kept) {
-    return { text: "Show translation", lead: "Show translation of" };
+    return {
+      text: t("card.showTranslation"),
+      lead: t("card.showTranslationOf"),
+    };
   }
-  return { text: "Translate", lead: "Translate" };
+  return { text: t("card.translate"), lead: t("card.translate") };
 }
 
 function TranslateButton({
@@ -124,8 +150,9 @@ function TranslateButton({
   translation: ReviewTranslationState;
   label: ActionLabel;
 }) {
+  const t = useTranslations("reviews");
   if (!translation.offered) return null;
-  const { text, lead } = translateAction(translation);
+  const { text, lead } = translateAction(translation, t);
   return (
     <button
       type="button"
@@ -158,15 +185,17 @@ export function ReviewCard({
   actions?: ReactNode;
   children?: ReactNode;
 }) {
+  const t = useTranslations("reviews");
+  const locale = useAppLocale();
   const translation = useReviewTranslation(appId, review, fallbackLanguage);
   const shown = translation.translation;
   const title = shown ? shown.title : review.title;
   const text = shown ? shown.text : review.text;
   const label: ActionLabel = (action) =>
-    reviewActionLabel(action, review, twin);
+    reviewActionLabel(action, review, twin, t, locale);
   return (
     <article
-      aria-label={reviewSubject(review, twin)}
+      aria-label={reviewSubject(review, twin, t, locale)}
       data-open={open || undefined}
       style={{ contentVisibility: "auto", containIntrinsicSize: "auto 8rem" }}
       className="flex flex-col gap-2 p-4 data-[open]:bg-muted data-[open]:shadow-[inset_2px_0_0_var(--foreground)] max-sm:px-3"
@@ -194,18 +223,18 @@ export function ReviewCard({
           label={label}
         />
       ) : (
-        <p className="text-body text-faint-foreground">No written review</p>
+        <p className="text-body text-faint-foreground">{t("card.noWritten")}</p>
       )}
       {shown ? (
         <p className="text-caption text-muted-foreground">
-          {translationCaption(shown.sourceLanguage)}
+          {translationCaption(shown.sourceLanguage, t, locale)}
         </p>
       ) : null}
       <DeveloperReply review={review} />
       <div className="flex min-h-7 flex-wrap items-center gap-x-3 gap-y-1">
         <p className="text-caption text-faint-foreground wrap-anywhere">
-          <bdi>{review.userName ?? "Anonymous"}</bdi>
-          <span>{reviewFacts(review)}</span>
+          <bdi>{review.userName ?? t("anonymous")}</bdi>
+          <span>{reviewFacts(review, t, locale)}</span>
         </p>
         <TranslateButton translation={translation} label={label} />
         {actions}

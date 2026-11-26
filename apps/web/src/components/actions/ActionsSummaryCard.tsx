@@ -1,6 +1,7 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { TOP_ACTION_LIMIT } from "@/lib/action-filters";
 import { formatNumber } from "@/lib/format";
 import { actionsOptions, actionSummaryFor } from "@/lib/queries";
@@ -8,6 +9,7 @@ import { ActionLine } from "./ActionLine";
 import { DoNextPanel, NoOpenActions } from "./DoNextPanel";
 
 function ActionList({ appId }: { appId: string }) {
+  const t = useTranslations("actions");
   const { data: summary } = useSuspenseQuery(actionSummaryFor(appId));
   const { data: list } = useSuspenseQuery(
     actionsOptions({ status: ["OPEN"], limit: TOP_ACTION_LIMIT }, appId),
@@ -26,7 +28,7 @@ function ActionList({ appId }: { appId: string }) {
             href={`/apps/${appId}/actions?action=${item.id}`}
           >
             {item.reopenCount > 0 ? (
-              <span>{`Reopened ${item.reopenCount}×`}</span>
+              <span>{t("reopened", { count: item.reopenCount })}</span>
             ) : null}
           </ActionLine>
         </li>
@@ -36,12 +38,13 @@ function ActionList({ appId }: { appId: string }) {
 }
 
 export function ActionsSummaryCard({ appId }: { appId: string }) {
+  const t = useTranslations("actions");
   const { data: summary } = useSuspenseQuery(actionSummaryFor(appId));
   const { critical, high } = summary.openByPriority;
   const counts = [
-    `${formatNumber(summary.open)} open`,
-    critical > 0 ? `${formatNumber(critical)} critical` : null,
-    high > 0 ? `${formatNumber(high)} high` : null,
+    t("openCount", { count: formatNumber(summary.open) }),
+    critical > 0 ? t("criticalCount", { count: formatNumber(critical) }) : null,
+    high > 0 ? t("highCount", { count: formatNumber(high) }) : null,
   ].filter((part) => part !== null);
 
   return (

@@ -1,4 +1,6 @@
+import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
+import zhAudit from "../../../messages/zh-CN/audit.json";
 import type {
   AppAuditResult,
   AuditAiRunState,
@@ -6,14 +8,20 @@ import type {
 } from "@asobeast/shared";
 import { APP_AUDIT_EXAMPLE } from "./audit-example";
 import {
-  ANALYSIS_ACTION,
-  ANALYSIS_COPY,
+  analysisAction,
+  analysisCopy,
   analysisState,
   creativeSentLine,
   progressLine,
   sendsCreative,
   type AnalysisState,
 } from "./analysis-state";
+
+const zh = createTranslator({
+  locale: "zh-CN",
+  namespace: "audit",
+  messages: { audit: zhAudit },
+});
 
 const withRun = (
   state: AuditAiRunState | null,
@@ -86,13 +94,18 @@ describe("analysisState", () => {
       "failed",
     ] as const satisfies readonly AnalysisState[];
 
-    expect(Object.keys(ANALYSIS_COPY).sort()).toEqual([...states].sort());
-    expect(Object.keys(ANALYSIS_ACTION).sort()).toEqual([...states].sort());
+    for (const state of states) {
+      expect(analysisCopy(state)).not.toBe("");
+    }
+    expect(analysisAction("unconfigured")).toBeNull();
+    expect(analysisAction("active")).toBeNull();
+    expect(analysisAction("current")).toBeNull();
+    expect(analysisAction("never")).toBe("Analyze creative");
   });
 
   it("offers no action while the analysis is current", () => {
-    expect(ANALYSIS_ACTION.current).toBeNull();
-    expect(ANALYSIS_ACTION.stale).toBe("Analyze again");
+    expect(analysisAction("current")).toBeNull();
+    expect(analysisAction("stale")).toBe("Analyze again");
   });
 });
 
@@ -134,6 +147,17 @@ describe("creativeSentLine", () => {
     ],
   ])("leaves out a model it cannot vouch for (%s)", (provider, line) => {
     expect(creativeSentLine(provider, null)).toBe(line);
+  });
+});
+
+describe("Chinese analysis copy", () => {
+  it("translates generated progress and provider disclosure", () => {
+    expect(analysisCopy("stale", zh)).toContain("发生了变化");
+    expect(analysisAction("stale", zh)).toBe("重新分析");
+    expect(progressLine(4, zh)).toBe("正在分析你的图标和 4 张截图");
+    expect(creativeSentLine("compatible", "llava", zh)).toBe(
+      "将图标和截图发送到此实例配置的 AI 服务商上的 llava。",
+    );
   });
 });
 

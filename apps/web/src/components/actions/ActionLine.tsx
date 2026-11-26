@@ -1,7 +1,11 @@
+"use client";
+
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { ActionItem } from "@asobeast/shared";
 import { cn } from "@/lib/utils";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { actionHeadline } from "./action-headline";
 import { PRIORITY_COLUMNS, PriorityWord } from "./PriorityWord";
 
@@ -14,6 +18,8 @@ export function ActionLine({
   href: string;
   children?: ReactNode;
 }) {
+  const t = useTranslations("actions");
+  const locale = useAppLocale();
   return (
     <Link
       href={href}
@@ -23,7 +29,7 @@ export function ActionLine({
       )}
     >
       <PriorityWord priority={item.priority} />
-      <span className="text-body">{actionHeadline(item)}</span>
+      <span className="text-body">{actionHeadline(item, t, locale)}</span>
       {children ? (
         <span className="col-start-2 flex min-w-0 items-center gap-2 text-caption text-muted-foreground">
           {children}

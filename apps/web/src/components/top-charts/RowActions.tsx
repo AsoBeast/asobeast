@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import type { ChartEntryItem } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
@@ -22,15 +23,11 @@ export const OWN_ROW_BAR = "shadow-[inset_3px_0_0_var(--brand-mark)]";
 const REVEALED =
   "md:opacity-0 md:transition-opacity md:duration-150 md:group-hover/chart-row:opacity-100 md:group-focus-within/chart-row:opacity-100 md:has-[[aria-expanded=true]]:opacity-100 md:has-[[aria-busy=true]]:opacity-100 md:pointer-coarse:opacity-100 motion-reduce:transition-none";
 
-const COMPETITOR_LEAD = "Competitor";
-
 function OwnerLink({
   link,
-  compact,
   focusRef,
 }: {
   link: RowLink;
-  compact: boolean;
   focusRef: (node: HTMLElement | null) => void;
 }) {
   if (link.role === "own") {
@@ -42,7 +39,6 @@ function OwnerLink({
       </Badge>
     );
   }
-  const rest = link.label.slice(COMPETITOR_LEAD.length);
   return (
     <Link
       ref={focusRef}
@@ -50,8 +46,7 @@ function OwnerLink({
       title={link.label}
       className="min-w-0 shrink truncate rounded-sm text-caption text-faint-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <span>{COMPETITOR_LEAD}</span>
-      <span className={cn(compact && "sr-only")}>{rest}</span>
+      <span>{link.label}</span>
     </Link>
   );
 }
@@ -73,13 +68,14 @@ export function RowActions({
   context: ChartRowContext;
   compact?: boolean;
 }) {
-  const link = rowLink(context.links.get(entry.storeAppId));
+  const t = useTranslations("topCharts");
+  const link = rowLink(context.links.get(entry.storeAppId), t);
   const claimFocus = useFocusClaim(competitorFocusKey(entry.storeAppId));
 
   return (
     <div className="flex min-w-0 items-center justify-end gap-1">
       {link ? (
-        <OwnerLink link={link} compact={compact} focusRef={claimFocus} />
+        <OwnerLink link={link} focusRef={claimFocus} />
       ) : (
         <Revealed on={compact}>
           <AddAsCompetitor

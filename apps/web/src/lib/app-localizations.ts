@@ -22,12 +22,12 @@ import {
   type MarketLocalizationRead,
   type MarketSuggestionsResult,
 } from "@asobeast/shared";
-import {
-  formatCountry,
-  formatList,
-  formatNumber,
-  pluralize,
-} from "@/lib/format";
+import { createTranslator } from "next-intl";
+import enLocalizations from "../../messages/en/localizations.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import { formatCountryInLocale, formatListInLocale } from "@/lib/format";
+import type { Locale } from "@/lib/locale";
+import { localizationNameInLocale } from "@/lib/localizations";
 import { hasNoCapacity } from "@/lib/quota-usage";
 
 export const LOCALIZATIONS_SECTION_ID = "app-localizations";
@@ -48,10 +48,23 @@ export function firstImportPollInterval(
     : false;
 }
 
+const english = createTranslator({
+  locale: "en",
+  namespace: "localizations",
+  messages: { localizations: enLocalizations },
+});
+
 export const READ_ROLE_LABELS: Record<LocalizationReadRole, string> = {
   default: "Default",
   additional: "Also",
 };
+
+export function readRoleLabel(
+  role: LocalizationReadRole,
+  t: MessageTranslator = english,
+): string {
+  return t(`role.${role}`);
+}
 
 const STOREFRONT_SUGGESTIONS = 5;
 
@@ -132,15 +145,20 @@ export function localizationMatrix(
 export function suggestedHint(
   id: string,
   suggested: readonly string[],
+  t: MessageTranslator = english,
+  locale: Locale = "en",
 ): SuggestedMarketHint | null {
   const [country] = suggested;
   if (country === undefined) return null;
   const languages = keywordFieldLocalizations(country)
     .filter((localization) => !localization.startsWith("en"))
-    .map((localization) => APP_STORE_LOCALIZATIONS[localization]);
+    .map((localization) => localizationNameInLocale(localization, locale));
   return {
-    text: `${formatCountry(country)} reads ${formatList(languages)}.`,
-    link: `Add ${country.toUpperCase()} as a market`,
+    text: t("matrix.hint", {
+      market: formatCountryInLocale(country, locale),
+      languages: formatListInLocale(languages, locale),
+    }),
+    link: t("matrix.hintLink", { market: country.toUpperCase() }),
     href: `/apps/${id}/keywords?country=${country}`,
   };
 }
@@ -210,15 +228,29 @@ export function keywordFieldDraft(
   };
 }
 
-export function savedDescription(result: LocalizedKeywordFieldResult): string {
+export function savedDescription(
+  result: LocalizedKeywordFieldResult,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
+): string {
   const { phrases } = result.localization;
-  if (phrases.length === 0) return "The field is empty.";
+  if (phrases.length === 0) return t("saved.empty");
   const tracked =
     result.trackedIn.length === 0
-      ? "Its phrases are not tracked in any market"
-      : `${pluralize(phrases.length, "phrase")} tracked in ${formatList(result.trackedIn.map(formatCountry))}`;
+      ? t("saved.untracked")
+      : t("saved.tracked", {
+          count: phrases.length,
+          markets: formatListInLocale(
+            result.trackedIn.map((country) =>
+              formatCountryInLocale(country, locale),
+            ),
+            locale,
+          ),
+        });
   return result.duplicatesRemoved > 0
-    ? `${tracked} · ${pluralize(result.duplicatesRemoved, "duplicate")} removed`
+    ? `${tracked} · ${t("saved.duplicates", {
+        count: result.duplicatesRemoved,
+      })}`
     : tracked;
 }
 
@@ -244,13 +276,14 @@ export function upsertLocalization(
 
 export function readingStorefrontNames(
   localization: AppStoreLocalization,
+  locale: Locale = "en",
 ): string[] {
   return storefrontsReading(
     localization,
     Object.keys(APP_STORE_STOREFRONT_LOCALIZATIONS),
   )
     .slice(0, STOREFRONT_SUGGESTIONS)
-    .map(formatCountry);
+    .map((country) => formatCountryInLocale(country, locale));
 }
 
 export interface SaveCost {
@@ -297,14 +330,21 @@ export function tracksNewPhrases(
   );
 }
 
-export function saveCostText(cost: SaveCost): string {
-  if (cost.keywordMarkets === 0) return "Tracks nothing new.";
-  return `Adds ${pluralize(cost.keywordMarkets, "keyword market")} and about ${pluralize(cost.dailyRequests, "store request")} a day.`;
+export function saveCostText(
+  cost: SaveCost,
+  t: MessageTranslator = english,
+): string {
+  if (cost.keywordMarkets === 0) return t("cost.none");
+  return t("cost.summary", {
+    markets: cost.keywordMarkets,
+    requests: cost.dailyRequests,
+  });
 }
 
 export function saveQuotaNotice(
   quota: KeywordImportQuota | null,
   cost: SaveCost,
+  t: MessageTranslator = english,
 ): SaveQuotaNotice | null {
   if (quota === null || quota.limit === null) return null;
   const after = quota.used + cost.keywordMarkets;
@@ -312,34 +352,49 @@ export function saveQuotaNotice(
   const over = cost.keywordMarkets > 0 && (empty || after > quota.limit);
   return {
     text: empty
-      ? "Your plan includes no keyword markets."
-      : `${formatNumber(after)} of ${formatNumber(quota.limit)} keyword markets after saving.`,
+      ? t("quota.empty")
+      : t("quota.after", { after, limit: quota.limit }),
     over,
     upgrade: over && quota.upgradeTo !== null,
   };
 }
 
-export function addedSentence(preview: KeywordFieldSavePreview): string | null {
+export function addedSentence(
+  preview: KeywordFieldSavePreview,
+  t: MessageTranslator = english,
+): string | null {
   if (preview.added.length === 0) return null;
-  return `${pluralize(preview.added.length, "new phrase")}: ${preview.added.join(", ")}`;
+  return t("phrases.added", {
+    count: preview.added.length,
+    phrases: preview.added.join(", "),
+  });
 }
 
 export function droppedSentence(
   preview: KeywordFieldSavePreview,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
 ): string | null {
   const count = preview.dropped.length;
   if (count === 0) return null;
   if (preview.markets.length === 0) {
-    return count === 1
-      ? "1 phrase leaves the field"
-      : `${formatNumber(count)} phrases leave the field`;
+    return t(
+      count === 1
+        ? "phrases.droppedOneNoMarkets"
+        : "phrases.droppedManyNoMarkets",
+      { count },
+    );
   }
-  const where = formatList(
-    preview.markets.map((market) => formatCountry(market.country)),
+  const where = formatListInLocale(
+    preview.markets.map((market) =>
+      formatCountryInLocale(market.country, locale),
+    ),
+    locale,
   );
-  return count === 1
-    ? `1 phrase leaves the field and stops being tracked as a keyword field phrase in ${where}`
-    : `${formatNumber(count)} phrases leave the field and stop being tracked as keyword field phrases in ${where}`;
+  return t(count === 1 ? "phrases.droppedOne" : "phrases.droppedMany", {
+    count,
+    markets: where,
+  });
 }
 
 export interface AddableLocalization {
@@ -407,12 +462,17 @@ export function withoutLocalization(
   };
 }
 
-export function removeDescription(item: AppLocalizationItem): string {
+export function removeDescription(
+  item: AppLocalizationItem,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
+): string {
   if (item.readBy.length === 0) {
-    return "Its keyword field is deleted. Phrases you track for another reason stay.";
+    return t("remove.noReads");
   }
-  const where = formatList(
-    item.readBy.map((reader) => formatCountry(reader.country)),
+  const where = formatListInLocale(
+    item.readBy.map((reader) => formatCountryInLocale(reader.country, locale)),
+    locale,
   );
-  return `Its keyword field is deleted. Its phrases stop being tracked as keyword field phrases in ${where}; phrases you track for another reason stay.`;
+  return t("remove.reads", { markets: where });
 }

@@ -1,6 +1,6 @@
 import { survivingNeighbour } from "@/lib/focus-handoff";
 
-const STOP_BUTTONS = 'button[aria-label^="Stop following"]';
+const STOP_BUTTONS = "button[data-stop-following]";
 const POPOVER = '[data-slot="popover-content"]';
 
 export function stopFollowingSuccessor(

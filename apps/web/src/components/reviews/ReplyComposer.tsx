@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useRef, useState, type RefObject } from "react";
+import { useTranslations } from "next-intl";
 import { Copy, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import type {
@@ -57,6 +58,7 @@ function ReplyCounter({
   measure: ReplyMeasure;
   store: Store;
 }) {
+  const t = useTranslations("reviews");
   const { length, limit, over } = measure;
   return (
     <p
@@ -69,7 +71,7 @@ function ReplyCounter({
       <span>{`${length} / ${limit}`}</span>
       <span aria-live="polite">
         {over
-          ? ` · ${storeLabel(store)} allows at most ${limit} characters`
+          ? t("composer.overLimit", { store: storeLabel(store), limit })
           : null}
       </span>
     </p>
@@ -85,15 +87,14 @@ function ClearedReplyHint({
   saved: string;
   drafting: boolean;
 }) {
+  const t = useTranslations("reviews");
   const kept = text === "" && saved !== "" && !drafting;
   return (
     <p
       aria-live="polite"
       className="text-caption text-muted-foreground empty:hidden"
     >
-      {kept
-        ? "Emptying the field keeps the saved reply. Press Discard to remove it."
-        : null}
+      {kept ? t("composer.cleared") : null}
     </p>
   );
 }
@@ -109,17 +110,18 @@ function DiscardReplyButton({
   textRef: RefObject<HTMLTextAreaElement | null>;
   onDiscard: () => void;
 }) {
+  const t = useTranslations("reviews");
   return (
     <ReplyConfirmDialog
       trigger={
         <Button variant="outline" size="sm" disabled={disabled}>
-          Discard
+          {t("composer.discard")}
         </Button>
       }
-      title="Discard this reply?"
-      description={`The text and the replied mark kept for this review are removed. ${notice}`}
-      cancelLabel="Keep it"
-      actionLabel="Discard"
+      title={t("composer.discardTitle")}
+      description={t("composer.discardDescription", { notice })}
+      cancelLabel={t("composer.keepIt")}
+      actionLabel={t("composer.discard")}
       destructive
       textRef={textRef}
       onConfirm={onDiscard}
@@ -146,13 +148,14 @@ function ReplyTextField({
   onChange: (text: string) => void;
   onBlur: () => void;
 }) {
+  const t = useTranslations("reviews");
   const counterId = useId();
   return (
     <div className="flex flex-col gap-1">
       <Textarea
         ref={textRef}
         autoFocus
-        aria-label="Reply text"
+        aria-label={t("composer.replyText")}
         dir="auto"
         aria-describedby={counterId}
         aria-invalid={measure.over || undefined}
@@ -162,9 +165,7 @@ function ReplyTextField({
         onChange={(event) => onChange(event.target.value)}
         onBlur={onBlur}
         placeholder={
-          drafting
-            ? "Drafting a reply…"
-            : "Write the reply the store will show under this review"
+          drafting ? t("composer.drafting") : t("composer.placeholder")
         }
         className="min-h-24 bg-card"
       />
@@ -194,6 +195,8 @@ export function ReplyComposer({
   storeAppId,
   onClose,
 }: ReplyComposerProps) {
+  const t = useTranslations("reviews");
+  const common = useTranslations("common");
   const saved = review.reply?.text ?? "";
   const [text, setText] = useReplyText(saved);
   const { save, mark, discard, post, withdraw, pending } = useReviewReply(
@@ -212,7 +215,7 @@ export function ReplyComposer({
   const consoleName = consoleLabel(store);
   const posted = Boolean(review.reply?.post);
   const ready = access.kind === "ready";
-  const actions = composerActions(access, store, review.reply, trimmed);
+  const actions = composerActions(access, store, review.reply, trimmed, t);
   const unusable = over || trimmed === "" || draft.drafting;
 
   const saveIfChanged = () =>
@@ -225,9 +228,9 @@ export function ReplyComposer({
     void saveIfChanged().catch(() => null);
     try {
       await copied;
-      toast.success(`Reply copied. Paste it in ${consoleName}.`);
+      toast.success(t("composer.copied", { console: consoleName }));
     } catch {
-      toast.error("Couldn't copy — select and copy it manually");
+      toast.error(t("composer.copyFailed"));
     }
   };
 
@@ -239,7 +242,10 @@ export function ReplyComposer({
   });
 
   return (
-    <section aria-label="Reply to review" className="flex flex-col gap-3 pt-1">
+    <section
+      aria-label={t("composer.aria")}
+      className="flex flex-col gap-3 pt-1"
+    >
       <StoreReplyNotice review={review} store={store} />
       <ReplyDraftControls
         review={review}
@@ -277,7 +283,7 @@ export function ReplyComposer({
           onClick={() => void copy()}
         >
           <Copy />
-          Copy
+          {t("composer.copy")}
         </Button>
         <Button variant="outline" size="sm" asChild>
           <a
@@ -286,7 +292,7 @@ export function ReplyComposer({
             rel="noreferrer"
           >
             <ExternalLink />
-            Open {consoleName}
+            {t("composer.openConsole", { console: consoleName })}
           </a>
         </Button>
         {actions.mark ? (
@@ -302,7 +308,7 @@ export function ReplyComposer({
               );
             }}
           >
-            {markLabel(marked, ready)}
+            {markLabel(marked, ready, t)}
           </Button>
         ) : null}
         {actions.withdraw ? (
@@ -314,7 +320,7 @@ export function ReplyComposer({
         ) : null}
         {actions.discard ? (
           <DiscardReplyButton
-            notice={discardNotice(store, review.reply)}
+            notice={discardNotice(store, review.reply, t)}
             disabled={busy || (!review.reply && text === "")}
             textRef={textRef}
             onDiscard={() =>
@@ -325,7 +331,7 @@ export function ReplyComposer({
           />
         ) : null}
         <Button variant="ghost" size="sm" className="ml-auto" onClick={onClose}>
-          Close
+          {common("close")}
         </Button>
       </div>
       <ReplyFooter access={access} store={store} posted={posted} />

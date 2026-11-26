@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Sparkles } from "lucide-react";
 import {
@@ -26,13 +27,8 @@ import { storeLabel } from "@/lib/format";
 import { literalOf } from "@/lib/literal";
 import { aiStatusOptions } from "@/lib/queries";
 import { replyLanguageName } from "./reply-language";
+import { useAppLocale } from "@/lib/use-app-locale";
 import type { ReplyDraft } from "./use-reply-draft";
-
-const TONE_LABELS: Record<ReviewReplyTone, string> = {
-  friendly: "Friendly",
-  neutral: "Neutral",
-  formal: "Formal",
-};
 
 function DraftNotice({
   result,
@@ -41,16 +37,23 @@ function DraftNotice({
   result: ReviewReplyDraftResult | undefined;
   store: Store;
 }) {
+  const t = useTranslations("reviews");
+  const locale = useAppLocale();
   return (
     <div aria-live="polite" className="flex flex-col gap-1">
       {result ? (
         <p className="text-caption text-muted-foreground">
-          {`Drafted in ${replyLanguageName(result.language)}`}
+          {t("draftControls.draftedIn", {
+            language: replyLanguageName(result.language, locale),
+          })}
         </p>
       ) : null}
       {result?.truncated ? (
         <p className="text-caption text-warning">
-          {`Shortened to fit ${storeLabel(store)}'s ${REVIEW_REPLY_LIMITS[store]} characters; read it before you copy.`}
+          {t("draftControls.shortened", {
+            store: storeLabel(store),
+            limit: REVIEW_REPLY_LIMITS[store],
+          })}
         </p>
       ) : null}
     </div>
@@ -70,6 +73,7 @@ export function ReplyDraftControls({
   draft: ReplyDraft;
   text: string;
 }) {
+  const t = useTranslations("reviews");
   const { data: status } = useQuery(aiStatusOptions);
   const spent = useAiAllowanceSpent();
   const [tone, setTone] = useState<ReviewReplyTone>(
@@ -90,20 +94,23 @@ export function ReplyDraftControls({
             if (picked) setTone(picked);
           }}
         >
-          <SelectTrigger className="w-[130px] bg-card" aria-label="Tone">
+          <SelectTrigger
+            className="w-[130px] bg-card"
+            aria-label={t("draftControls.tone")}
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {REVIEW_REPLY_TONES.map((option) => (
               <SelectItem key={option} value={option}>
-                {TONE_LABELS[option]}
+                {t(`draftControls.tones.${option}`)}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
         <Input
-          aria-label="Instructions (optional)"
-          placeholder="Instructions (optional), e.g. mention the new widgets"
+          aria-label={t("draftControls.instructions")}
+          placeholder={t("draftControls.instructionsPlaceholder")}
           value={instructions}
           maxLength={REVIEW_REPLY_INSTRUCTIONS_MAX}
           onChange={(event) => setInstructions(event.target.value)}
@@ -119,7 +126,9 @@ export function ReplyDraftControls({
           disabled={drafting || spent || busy}
         >
           {drafting ? <Loader2 className="animate-spin" /> : <Sparkles />}
-          {review.reply?.text ? "Draft again" : "Draft with AI"}
+          {review.reply?.text
+            ? t("draftControls.draftAgain")
+            : t("draftControls.draftWithAi")}
         </Button>
       </div>
       <AiCallsLeft />

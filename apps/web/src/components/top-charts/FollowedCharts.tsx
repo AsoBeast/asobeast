@@ -22,7 +22,7 @@ import { formatQuotaUsage } from "@/lib/quota-usage";
 import { useSingleFlight } from "@/lib/single-flight";
 import { useAppLocale } from "@/lib/use-app-locale";
 import { followedCategories, type FollowedCategory } from "./chart-follows";
-import { categoryTitle, chartHref, COLLECTION_LABELS } from "./chart-params";
+import { categoryTitle, chartHref, collectionLabel } from "./chart-params";
 import { stopFollowingSuccessor } from "./stop-following-focus";
 import { useUnfollowChart } from "./use-unfollow-chart";
 
@@ -35,13 +35,15 @@ function FollowRow({
   onNavigate: () => void;
   onSettled: (stop: HTMLElement | null) => void;
 }) {
+  const t = useTranslations("topCharts");
+  const locale = useAppLocale();
   const stop = useRef<HTMLButtonElement>(null);
   const handOff = () => onSettled(stop.current);
   const mutation = useUnfollowChart(handOff, handOff);
   const unfollowOnce = useSingleFlight(mutation);
-  const title = categoryTitle(category);
+  const title = categoryTitle(category, locale);
   const kinds = category.follows
-    .map((follow) => COLLECTION_LABELS[follow.collection])
+    .map((follow) => collectionLabel(follow.collection, t))
     .join(", ");
 
   return (
@@ -60,7 +62,8 @@ function FollowRow({
         ref={stop}
         variant="ghost"
         size="icon-sm"
-        aria-label={`Stop following ${title}`}
+        data-stop-following
+        aria-label={t("followed.stop", { title })}
         aria-disabled={mutation.isPending || undefined}
         onClick={() =>
           unfollowOnce(category.follows.map((follow) => follow.id))
@@ -78,6 +81,7 @@ function FollowRow({
 
 function FollowList({ onNavigate }: { onNavigate: () => void }) {
   const t = useTranslations("billing");
+  const charts = useTranslations("topCharts");
   const locale = useAppLocale();
   const { data: follows } = useSuspenseQuery(chartFollowsOptions);
   const handOffFocus = useFocusAfterCommit();
@@ -96,8 +100,7 @@ function FollowList({ onNavigate }: { onNavigate: () => void }) {
       )}
       {categories.length === 0 ? (
         <p className="text-dense text-muted-foreground">
-          No categories followed yet. Follow a category to have the daily run
-          capture its charts.
+          {charts("followed.empty")}
         </p>
       ) : (
         <ul className="-mx-2 flex max-h-80 flex-col gap-0.5 overflow-y-auto">
@@ -118,6 +121,7 @@ function FollowList({ onNavigate }: { onNavigate: () => void }) {
 }
 
 export function FollowedCharts() {
+  const t = useTranslations("topCharts");
   const [open, setOpen] = useState(false);
   const titleId = useId();
   const descriptionId = useId();
@@ -127,7 +131,7 @@ export function FollowedCharts() {
       <PopoverTrigger asChild>
         <Button variant="outline">
           <ListChecks aria-hidden />
-          Followed charts
+          {t("followed.title")}
         </Button>
       </PopoverTrigger>
       <PopoverContent
@@ -137,9 +141,9 @@ export function FollowedCharts() {
         aria-describedby={descriptionId}
       >
         <PopoverHeader>
-          <PopoverTitle id={titleId}>Followed charts</PopoverTitle>
+          <PopoverTitle id={titleId}>{t("followed.title")}</PopoverTitle>
           <PopoverDescription id={descriptionId}>
-            The daily run captures these every day.
+            {t("followed.description")}
           </PopoverDescription>
         </PopoverHeader>
         <Suspense fallback={<Skeleton className="h-16 w-full" />}>

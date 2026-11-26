@@ -1,6 +1,7 @@
 "use client";
 
 import type { AppListItem, ChartPage } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { useFocusGroupClaim } from "@/lib/focus-handoff";
 import { CaptureTodayButton } from "./CaptureTodayButton";
 import { captureFocusKey } from "./chart-actions";
@@ -40,12 +41,13 @@ export function ChartTableView({
   busy: boolean;
   date: string | null;
 }) {
+  const t = useTranslations("topCharts");
   if (listsNoApps(page)) return <ChartNoApps page={page} />;
   const { capture } = page;
   return capture ? (
     <div aria-busy={busy} className={CHART_GRID}>
       <ChartTable page={{ ...page, capture }} apps={apps} />
-      <aside aria-label="Trending" className={TRENDING_COLUMN}>
+      <aside aria-label={t("trending.title")} className={TRENDING_COLUMN}>
         <TrendingPanel pages={[page]} />
       </aside>
     </div>
