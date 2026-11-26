@@ -2,7 +2,7 @@ import type { CardTheme } from "@/lib/chart-image/share-card/card-themes";
 
 const percent = (share: number) => `${Math.round(share * 100)}%`;
 
-export const swatchBackground = ({ base, glows }: CardTheme): string =>
+const swatchBackground = ({ base, glows }: CardTheme): string =>
   [
     ...glows.map(
       ({ x, y, reach, color }) =>
@@ -15,7 +15,7 @@ export function ThemeSwatch({ theme }: { theme: CardTheme }) {
   return (
     <span
       aria-hidden="true"
-      className="flex h-11 w-full items-center sm:w-16 justify-center rounded-lg ring-1 ring-border ring-inset group-has-checked:outline-2 group-has-checked:outline-offset-2 group-has-checked:outline-brand-mark"
+      className="flex h-11 w-full items-center justify-center rounded-lg sm:w-16 ring-1 ring-border ring-inset group-has-checked:outline-2 group-has-checked:outline-offset-2 group-has-checked:outline-brand-mark"
       style={{ background: swatchBackground(theme) }}
     >
       <span

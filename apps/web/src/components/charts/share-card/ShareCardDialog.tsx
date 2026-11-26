@@ -88,6 +88,7 @@ export function ShareCardDialog({
   const busy = card.busy || undefined;
   const description = headlineSentence(source.headline, card.options.change);
   const copyDescription = async () => {
+    if (loading) return;
     if (await copyText(description)) toast.success("Alt text copied");
     else toast.error("The browser refused to copy the alt text");
   };
@@ -128,7 +129,11 @@ export function ShareCardDialog({
           </p>
         </DialogBody>
         <DialogFooter className="sm:justify-between">
-          <Button variant="ghost" onClick={copyDescription}>
+          <Button
+            variant="ghost"
+            aria-disabled={loading || undefined}
+            onClick={copyDescription}
+          >
             <Type aria-hidden />
             Copy alt text
           </Button>

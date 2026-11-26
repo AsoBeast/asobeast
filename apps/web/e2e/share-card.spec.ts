@@ -487,8 +487,22 @@ test.describe("visibility", () => {
     expect(await copied).toBe(false);
     await expect(copy).toBeFocused();
 
+    const alt = dialog.getByRole("button", { name: "Copy alt text" });
+    await expect(alt).toHaveAttribute("aria-disabled", "true");
+    const described = page
+      .getByText("Alt text copied")
+      .waitFor({ timeout: 2_000 })
+      .then(
+        () => true,
+        () => false,
+      );
+    await alt.focus();
+    await page.keyboard.press("Enter");
+    expect(await described).toBe(false);
+
     held.release();
     await expect(download).not.toHaveAttribute("aria-disabled", "true");
+    await expect(alt).not.toHaveAttribute("aria-disabled", "true");
   });
 
   test("offers no card under four captured days", async ({ page }) => {

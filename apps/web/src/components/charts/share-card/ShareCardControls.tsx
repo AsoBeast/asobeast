@@ -15,6 +15,7 @@ import type {
 import {
   CARD_THEME_NAMES,
   CARD_THEMES,
+  type CardThemeName,
 } from "@/lib/chart-image/share-card/card-themes";
 import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -138,8 +139,8 @@ function ThemeChoices({
   value,
   onChange,
 }: {
-  value: ShareCardOptions["theme"];
-  onChange: (theme: ShareCardOptions["theme"]) => void;
+  value: CardThemeName;
+  onChange: (theme: CardThemeName) => void;
 }) {
   const name = useId();
   return (
