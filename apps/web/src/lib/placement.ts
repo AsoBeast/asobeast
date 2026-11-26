@@ -26,11 +26,6 @@ export type PlacementPart = string | PlacementFigure;
 const POOR_POPULARITY = GRADE_SCALES.popularity.cuts[2];
 const REACHABLE_POSITION = GRADE_SCALES.position.cuts[2];
 
-const FIELD_WORDS: Partial<Record<PlacementSuggestionField, string>> = {
-  title: "the title",
-  subtitle: "the subtitle",
-};
-
 const figure = (
   metric: GradeMetric,
   label: string,
@@ -42,12 +37,12 @@ const capitalized = (text: string) =>
   `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
 
 function strongField({
-  field,
+  reason,
   popularity,
   difficulty,
   position,
 }: PlacementSuggestion): PlacementPart[] {
-  const where = `belongs in ${FIELD_WORDS[field] ?? "the title"}.`;
+  const where = `belongs in ${reason === "strongestReachable" ? "the title" : "the subtitle"}.`;
   const popularityGrade = grade("popularity", popularity);
   if (popularity === null || popularityGrade === null) {
     return [capitalized(where)];
