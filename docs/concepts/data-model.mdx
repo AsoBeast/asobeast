@@ -21,6 +21,7 @@ An app is one row with a home storefront. Keywords are separate rows scoped by t
 | `TrackedKeyword` | The link between an app and a keyword | Keyed on app and keyword, carries `source` and `relevance` |
 | `KeywordField` | The iOS keyword field of one App Store localization | Keyed on app and localization. Holds the normalized phrases in the order they were saved, and is private to the owner |
 | `AppLocalization` | One App Store localization the app ships beyond the default one of its home storefront | Keyed on app and localization. Origin is `manual` or `detected`. Deleted with its app |
+| `ListingTarget` | The target keywords of one App Store localization | Tenant owned. Keyed on app and localization. Holds up to 10 normalized phrases in slot order, where an empty string is an empty slot. Deleted with its app |
 | `AppSetup` | The guided setup of one tracked app: status, skipped steps, countries reviewed, selected markets | Keyed on app. Started by the import and kept on the account, so every member and every device sees the same progress. Deleted with its app |
 | `KeywordDiscovery` | One phrase discovery proposed for an app, with the position its last check found, the depth that check covered, its `resultCount` and when it was dismissed | Tenant owned. Keyed on app and keyword. Its keyword and the search results it reads are shared like every `Keyword` and `SerpEntry`. Removed after 60 days without being proposed |
 | `KeywordMetric` | Persisted popularity and difficulty for a day | Keyed on keyword and date |
@@ -58,6 +59,7 @@ erDiagram
   App ||--o{ TrackedKeyword : tracks
   App ||--o{ KeywordField : "stores one per localization"
   App ||--o{ AppLocalization : ships
+  App ||--o{ ListingTarget : "targets per localization"
   App ||--o| AppSetup : "is set up through"
   App ||--o{ Review : collects
   Review ||--o| ReviewReply : "is answered by"

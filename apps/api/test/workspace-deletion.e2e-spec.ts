@@ -167,6 +167,14 @@ describe('Workspace deletion (e2e)', () => {
         origin: 'manual',
       },
     });
+    await prisma.listingTarget.create({
+      data: {
+        appId: owned.id,
+        workspaceId,
+        localization: 'en-US',
+        slots: ['habit'],
+      },
+    });
     await prisma.keywordFieldSync.create({
       data: { appId: owned.id, workspaceId, version: '2.0', syncedAt: DAY },
     });
@@ -463,6 +471,7 @@ describe('Workspace deletion (e2e)', () => {
       keywordFieldSync,
       featuringSync,
       appLocalization,
+      listingTarget,
       appSetup,
       keywordRanking,
       categoryRank,
@@ -508,6 +517,7 @@ describe('Workspace deletion (e2e)', () => {
       prisma.keywordFieldSync.count({ where: { appId: target.appId } }),
       prisma.featuringSync.count({ where: { appId: target.appId } }),
       prisma.appLocalization.count({ where: { appId: target.appId } }),
+      prisma.listingTarget.count({ where: { appId: target.appId } }),
       prisma.appSetup.count({ where: { appId: target.appId } }),
       prisma.keywordRanking.count({ where: { workspaceId: WORKSPACE } }),
       prisma.categoryRank.count({ where: { appId: target.appId } }),
@@ -553,6 +563,7 @@ describe('Workspace deletion (e2e)', () => {
       KeywordFieldSync: keywordFieldSync,
       FeaturingSync: featuringSync,
       AppLocalization: appLocalization,
+      ListingTarget: listingTarget,
       AppSetup: appSetup,
       KeywordRanking: keywordRanking,
       CategoryRank: categoryRank,
