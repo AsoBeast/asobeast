@@ -117,6 +117,9 @@ const tally = (texts: readonly string[]): Map<string, number> => {
   return counts;
 };
 
+const repeated = (texts: readonly string[]): Map<string, number> =>
+  new Map([...tally(texts)].filter(([, count]) => count >= DENSITY_MIN_REPEAT));
+
 const ranked = (
   counts: ReadonlyMap<string, number>,
   words: number,
@@ -148,9 +151,7 @@ const phrases = (
       .filter((gram) => keep(gram[0].text) && keep(gram[size - 1].text))
       .map(joined),
   );
-  return new Map(
-    [...tally(found)].filter(([, count]) => count >= DENSITY_MIN_REPEAT),
-  );
+  return repeated(found);
 };
 
 export function wordDensity(
@@ -162,7 +163,7 @@ export function wordDensity(
   const keep = keptTest(options);
   const tokens = segments.flat();
   const single = ranked(
-    tally(tokens.map((token) => token.text).filter(keep)),
+    repeated(tokens.map((token) => token.text).filter(keep)),
     words,
     1,
   );

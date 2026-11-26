@@ -87,6 +87,16 @@ describe('wordDensity', () => {
     ]);
   });
 
+  it('lists only words the description repeats', () => {
+    const density = wordDensity(
+      'A calm planner keeps every study session quiet, focused and simple for busy students who want less noise today.',
+      english,
+    );
+
+    expect(density.words).toBe(19);
+    expect(density.single).toEqual([]);
+  });
+
   it('cuts each list at twenty rows', () => {
     const words = Array.from(
       { length: 25 },
@@ -125,7 +135,7 @@ describe('wordDensity', () => {
 
   it('leaves out the app name and the title', () => {
     const density = wordDensity(
-      'Focus Flow helps you study. The study timer keeps focus. Calm calm.',
+      'Focus Flow helps you study. The study timer keeps focus. Calm calm, it helps and keeps.',
       { language: 'en', ignored: ['Focus Flow', 'Focus Flow: Study Timer'] },
     );
 
@@ -144,11 +154,11 @@ describe('wordDensity', () => {
 
   it('leaves out links', () => {
     const density = wordDensity(
-      'Help at https://example.com/help and www.example.com or help@example.com',
+      'Help at https://example.com/help and www.example.com or help@example.com and help',
       { language: null },
     );
 
-    expect(texts(density.single)).toEqual(['and', 'at', 'help', 'or']);
+    expect(texts(density.single)).toEqual(['and', 'help']);
   });
 
   it('keeps a German compound whole', () => {
