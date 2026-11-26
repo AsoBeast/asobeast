@@ -1,9 +1,10 @@
-import { TrackedKeywordItem } from '@asobeast/shared';
+import { PlacementSuggestion, TrackedKeywordItem } from '@asobeast/shared';
 import {
   listingTargetsOf,
   TARGET_CANDIDATE_LIMIT,
   targetCandidates,
   targetSlots,
+  withPlacements,
 } from './listing-targets';
 
 const tracked = (
@@ -94,8 +95,33 @@ describe('targetItem', () => {
         checkedOn: '2026-11-25',
         keywordClass: 'generic',
         scoreOutdated: undefined,
+        floorAnswer: false,
       },
     });
+  });
+
+  it('marks a popularity under the official floor', () => {
+    const { slots } = result(
+      ['habit tracker'],
+      ['us'],
+      [
+        tracked('habit tracker', 'us', {
+          scoreSignals: {
+            suggestReach: 'absent',
+            suggestPrefixLength: null,
+            suggestPosition: null,
+            serpRelevance: 0.5,
+            medianRatingCount: null,
+            flags: [],
+            officialPopularity: null,
+            estimatedTraffic: null,
+            officialPopularityState: 'floor',
+          },
+        }),
+      ],
+    );
+
+    expect(slots[0]?.lead?.floorAnswer).toBe(true);
   });
 
   it('counts a paused keyword as tracked', () => {
@@ -233,5 +259,40 @@ describe('targetCandidates', () => {
     expect(targetCandidates(['us'], rows, new Set())).toHaveLength(
       TARGET_CANDIDATE_LIMIT,
     );
+  });
+});
+
+describe('withPlacements', () => {
+  it('puts each verdict on its slot and candidate', () => {
+    const verdict = (
+      field: PlacementSuggestion['field'],
+    ): PlacementSuggestion => ({
+      field,
+      reason: 'strongestReachable',
+      popularity: 40,
+      difficulty: 40,
+      position: 12,
+    });
+    const placed = withPlacements(
+      result(
+        ['habit tracker', '', 'focus timer'],
+        ['us'],
+        [tracked('habit tracker', 'us'), tracked('daily goals', 'us')],
+      ),
+      new Map([
+        ['habit tracker', verdict('title')],
+        ['daily goals', verdict('subtitle')],
+      ]),
+    );
+
+    expect(placed.slots[0]?.placement).toEqual(verdict('title'));
+    expect(placed.slots[1]).toBeNull();
+    expect(placed.slots[2]).not.toHaveProperty('placement');
+    expect(placed.candidates).toEqual([
+      expect.objectContaining({
+        text: 'daily goals',
+        placement: verdict('subtitle'),
+      }),
+    ]);
   });
 });

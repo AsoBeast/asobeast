@@ -1,8 +1,10 @@
 import {
+  isFloorAnswer,
   LISTING_TARGET_LIMIT,
   ListingTargetCandidate,
   ListingTargetItem,
   ListingTargetsResult,
+  PlacementSuggestion,
   TargetScores,
   targetSlotRole,
   toDifficulty100,
@@ -10,6 +12,7 @@ import {
 } from '@asobeast/shared';
 import { fitsOwnListing } from '../keyword-class';
 import { pairKey } from '../keyword-import';
+import { byStrength } from './placement';
 
 export const TARGET_CANDIDATE_LIMIT = 50;
 
@@ -50,6 +53,7 @@ export function targetScores(item: TrackedKeywordItem): TargetScores {
     checkedOn: item.latestCheckedOn ?? null,
     keywordClass: item.keywordClass,
     scoreOutdated: item.scoreOutdated,
+    floorAnswer: isFloorAnswer(item.scoreSignals?.officialPopularityState),
   };
 }
 
@@ -94,17 +98,6 @@ export function targetItem(
   };
 }
 
-const descending = (left: number | null, right: number | null): number =>
-  (right ?? -1) - (left ?? -1);
-
-const byPromise = (
-  left: ListingTargetCandidate,
-  right: ListingTargetCandidate,
-): number =>
-  descending(left.lead.opportunity, right.lead.opportunity) ||
-  descending(left.lead.popularity, right.lead.popularity) ||
-  left.text.localeCompare(right.text);
-
 export function targetCandidates(
   readers: readonly string[],
   tracked: readonly TrackedKeywordItem[],
@@ -132,7 +125,7 @@ export function targetCandidates(
         lead: targetScores(sorted[0]),
       };
     })
-    .sort(byPromise)
+    .sort(byStrength)
     .slice(0, TARGET_CANDIDATE_LIMIT);
 }
 
@@ -160,3 +153,22 @@ export function listingTargetsOf({
     updatedAt: stored?.updatedAt.toISOString() ?? null,
   };
 }
+
+const withPlacement = <T extends { text: string }>(
+  item: T,
+  verdicts: ReadonlyMap<string, PlacementSuggestion>,
+): T => {
+  const placement = verdicts.get(item.text);
+  return placement ? { ...item, placement } : item;
+};
+
+export const withPlacements = (
+  result: ListingTargetsResult,
+  verdicts: ReadonlyMap<string, PlacementSuggestion>,
+): ListingTargetsResult => ({
+  ...result,
+  slots: result.slots.map((slot) => slot && withPlacement(slot, verdicts)),
+  candidates: result.candidates.map((candidate) =>
+    withPlacement(candidate, verdicts),
+  ),
+});
