@@ -68,7 +68,7 @@ test("shows three highlighted slots and seven more", async ({ page }) => {
   const more = block(page).getByRole("list", { name: "More keywords" });
   await expect(more.getByRole("listitem")).toHaveCount(7);
   await expect(slot(page, "Keyword 10")).toBeVisible();
-  await expect(block(page)).toContainText("Tracked in United States");
+  await expect(block(page)).toContainText("Read in United States");
 });
 
 test("picks a tracked keyword for a slot", async ({ page }) => {

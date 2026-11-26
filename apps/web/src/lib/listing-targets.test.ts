@@ -137,7 +137,7 @@ describe("targetPhrase", () => {
 describe("readersLine", () => {
   it("names the markets that read the localization", () => {
     expect(readersLine(["us", "gb"])).toBe(
-      "Tracked in United States and United Kingdom",
+      "Read in United States and United Kingdom",
     );
     expect(readersLine([])).toBe(
       "No market you track reads this localization yet",

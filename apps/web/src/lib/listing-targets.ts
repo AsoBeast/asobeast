@@ -126,7 +126,7 @@ export const untrackedByPhrase = (
 export function readersLine(readers: readonly string[]): string {
   return readers.length === 0
     ? "No market you track reads this localization yet"
-    : `Tracked in ${formatList(readers.map(formatCountry))}`;
+    : `Read in ${formatList(readers.map(formatCountry))}`;
 }
 
 function trackedAt(result: ListingTargetsResult): Map<string, Set<string>> {
