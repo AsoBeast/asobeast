@@ -32,7 +32,7 @@ import {
   useDraftKeywordField,
   type DraftKeywordField,
 } from "./use-draft-keyword-field";
-import { useCoveragePreview } from "./use-coverage-preview";
+import { useCoveragePreview, useTargetedRequest } from "./use-coverage-preview";
 import { useListingDraft } from "./use-listing-draft";
 
 function KeywordFieldNotice({ field }: { field: DraftKeywordField }) {
@@ -76,7 +76,10 @@ export function ListingDraftEditor({
     () => draftRequest(scope, values, live),
     [scope, values, live],
   );
-  const preview = useCoveragePreview(id, request);
+  const preview = useCoveragePreview(
+    id,
+    useTargetedRequest(id, scope, request),
+  );
   const answer = preview.requested ? preview.query.data : undefined;
   const lint = answer?.fields;
   const current = !preview.settling && !preview.query.isPlaceholderData;

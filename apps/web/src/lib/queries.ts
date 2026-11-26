@@ -284,7 +284,7 @@ export const appKeys = {
     [...appKeys.coveragePreviewRoot(id), request] as const,
   listingTargetsRoot: (id: string) =>
     [...appKeys.detail(id), "listing-targets"] as const,
-  listingTargets: (id: string, localization: AppStoreLocalization) =>
+  listingTargets: (id: string, localization: AppStoreLocalization | null) =>
     [...appKeys.listingTargetsRoot(id), localization] as const,
   serpRoot: () => ["serp"] as const,
   serp: (keywordId: string, date: string | null = null) =>
@@ -809,11 +809,14 @@ export const coveragePreviewOptions = (
 
 export const listingTargetsOptions = (
   id: string,
-  localization: AppStoreLocalization,
+  localization: AppStoreLocalization | null,
 ) =>
   queryOptions({
     queryKey: appKeys.listingTargets(id, localization),
-    queryFn: () => getListingTargets(id, localization),
+    queryFn:
+      localization === null
+        ? skipToken
+        : () => getListingTargets(id, localization),
     staleTime: 30_000,
   });
 

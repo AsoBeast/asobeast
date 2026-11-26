@@ -1,8 +1,10 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { CoveragePreviewRequest } from "@asobeast/shared";
-import { coveragePreviewOptions } from "@/lib/queries";
+import type { DraftScope } from "@/lib/listing-draft";
+import { coveragePreviewOptions, listingTargetsOptions } from "@/lib/queries";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 
 export const COVERAGE_PREVIEW_DEBOUNCE_MS = 400;
@@ -27,3 +29,18 @@ export function useCoveragePreview(
 }
 
 export type CoveragePreview = ReturnType<typeof useCoveragePreview>;
+
+export function useTargetedRequest(
+  appId: string,
+  scope: DraftScope,
+  request: CoveragePreviewRequest | null,
+): CoveragePreviewRequest | null {
+  const localization = scope.store === "APP_STORE" ? scope.localization : null;
+  const targets = useQuery(listingTargetsOptions(appId, localization));
+  const targeted = targets.data?.slots.some((slot) => slot !== null) ?? false;
+  return useMemo(
+    () =>
+      request ?? (localization !== null && targeted ? { localization } : null),
+    [request, localization, targeted],
+  );
+}

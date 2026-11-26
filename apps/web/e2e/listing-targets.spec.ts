@@ -340,3 +340,61 @@ test("offers to track a target in a market that reads it now", async ({
     },
   ]);
 });
+
+const coverage = (page: Page) =>
+  page.getByRole("region", { name: "Draft coverage" });
+const targetRows = (page: Page) =>
+  coverage(page).getByRole("list", { name: "Targets" }).getByRole("listitem");
+
+test("says the draft covers the title target", async ({ page }) => {
+  await seed(page, ["habit tracker", "focus timer"]);
+  await page.goto(DRAFT);
+
+  const title = page
+    .getByRole("region", { name: "Draft listing" })
+    .getByRole("textbox", { name: "Title", exact: true });
+  await (await hydrated(title)).fill("Habit Tracker");
+
+  await expect(targetRows(page).nth(0)).toContainText("habit tracker");
+  await expect(targetRows(page).nth(0)).toContainText("Title");
+  await expect(targetRows(page).nth(0)).toContainText("Covered");
+  await expect(targetRows(page).nth(0)).toContainText("Newly covered");
+  await expect(targetRows(page).nth(1)).toContainText("focus timer");
+  await expect(targetRows(page).nth(1)).toContainText("Subtitle");
+  await expect(targetRows(page).nth(1)).toContainText("Not covered");
+  await expect(targetRows(page).nth(1)).toContainText("Was covered");
+});
+
+test("updates after saving targets", async ({ page }) => {
+  await seed(page, ["habit tracker"]);
+  await page.goto(DRAFT);
+  await expect(targetRows(page)).toHaveCount(1);
+
+  await openPicker(page, "Subtitle");
+  await page.keyboard.type("study timer");
+  await picker(page)
+    .getByRole("option", { name: /study timer/ })
+    .click();
+  await saveButton(page).click();
+
+  await expect(targetRows(page)).toHaveCount(2);
+  await expect(targetRows(page).nth(1)).toContainText("study timer");
+});
+
+test("shows the targets before any field is edited", async ({ page }) => {
+  const sent: unknown[] = [];
+  page.on("request", (request) => {
+    if (
+      /\/metadata\/coverage-preview$/.test(request.url()) &&
+      request.method() === "POST"
+    ) {
+      sent.push(request.postDataJSON());
+    }
+  });
+  await seed(page, ["focus timer"]);
+  await page.goto(DRAFT);
+
+  await expect(targetRows(page)).toHaveCount(1);
+  await expect(targetRows(page).nth(0)).toContainText("Covered");
+  expect(sent[0]).toEqual({ localization: "en-US" });
+});
