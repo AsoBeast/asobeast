@@ -197,6 +197,18 @@ describe("newRatingsAverage", () => {
     expect(answer?.span).toBe(10);
   });
 
+  it("leaves out a stretch where only the average moves", () => {
+    const growing = grown(START, 10, 40, 4.7);
+    const after = lastListing(growing).date;
+    const edited = [4.0, 4.1, 4.2].map((average, index) =>
+      point(dayBefore(after, -(index + 1)), 1000, average),
+    );
+    const answer = newRatingsAverage([...growing, ...edited]);
+
+    expect(answer?.average).toBeCloseTo(4.7, 6);
+    expect(answer?.added).toBe(400);
+  });
+
   it("answers nothing outside one to five stars", () => {
     expect(newRatingsAverage(grown(START, 2, 40, 5.6))).toBeNull();
     expect(newRatingsAverage(grown(START, 2, 40, 0.6))).toBeNull();
