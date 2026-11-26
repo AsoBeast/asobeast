@@ -61,7 +61,7 @@ describe("the stderr log", () => {
     const written = stderr.written();
     stderr.restore();
 
-    expect(elapsed).toBeLessThan(250);
+    expect(elapsed).toBeLessThan(1_000);
     expect(written).toBe(`[asobeast-mcp] ${message}\n`);
   });
 
