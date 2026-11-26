@@ -1,4 +1,6 @@
 import { expect, test } from "./reporting.mts";
+import { seedSession } from "./plan-helpers.mts";
+import { seedViewer } from "./viewer.mts";
 
 test.describe("locale preference", () => {
   test.use({
@@ -29,5 +31,42 @@ test.describe("locale preference", () => {
 
     await page.reload();
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  });
+
+  test("translates the signed-in shell and can switch back to English", async ({
+    context,
+    page,
+  }) => {
+    await seedSession(page);
+    await seedViewer(context, "customer");
+    await page.goto("/");
+
+    const navigation = page.getByRole("navigation", { name: "主导航" });
+    await expect(navigation).toBeVisible();
+    await expect(navigation.getByText("工作区", { exact: true })).toBeVisible();
+    await expect(
+      navigation.getByRole("link", { name: "仪表盘" }),
+    ).toBeVisible();
+    await expect(
+      navigation.getByRole("link", { name: "行动中心" }),
+    ).toBeVisible();
+    await expect(navigation.getByRole("link", { name: "提醒" })).toBeVisible();
+    await expect(navigation.getByRole("link", { name: "榜单" })).toBeVisible();
+    await expect(navigation.getByRole("link", { name: "设置" })).toBeVisible();
+
+    await page.getByRole("button", { name: "打开命令面板" }).click();
+    await expect(page.getByPlaceholder("搜索应用和板块…")).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    await page.getByRole("button", { name: "账号菜单" }).click();
+    await page.getByRole("combobox", { name: "语言" }).click();
+    await page.getByRole("option", { name: "English" }).click();
+
+    await expect(page.locator("html")).toHaveAttribute("lang", "en");
+    const englishNavigation = page.getByRole("navigation", { name: "Main" });
+    await expect(englishNavigation).toBeVisible();
+    await expect(
+      englishNavigation.getByRole("link", { name: "Dashboard" }),
+    ).toBeVisible();
   });
 });

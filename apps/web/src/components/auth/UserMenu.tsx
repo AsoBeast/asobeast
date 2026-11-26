@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { LogOut, Settings, User } from "lucide-react";
 import type { AuthUser } from "@asobeast/shared";
 import { planInForceLabel } from "@/lib/plan-in-force";
@@ -14,19 +15,26 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { ChangePasswordDialog } from "./ChangePasswordDialog";
 import { useAuth } from "./use-auth";
 import { useSignOut } from "./use-sign-out";
 
 function PlanInForce({ user }: { user: AuthUser }) {
+  const t = useTranslations("navigation");
   return (
     <span data-slot="account-plan" className="text-caption font-normal">
-      {`${planInForceLabel(user, new Date())} plan`}
+      {`${planInForceLabel(user, new Date())}${t("planSuffix")}`}
     </span>
   );
 }
 
+function adminToolLabel(href: string, t: ReturnType<typeof useTranslations>) {
+  return href === "/admin/queues" ? t("queueDashboard") : t("apiDocs");
+}
+
 export function UserMenu() {
+  const t = useTranslations("navigation");
   const { user } = useAuth();
   const signOut = useSignOut();
 
@@ -35,7 +43,7 @@ export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label="Account menu">
+        <Button variant="ghost" size="icon-sm" aria-label={t("accountMenu")}>
           <User />
         </Button>
       </DropdownMenuTrigger>
@@ -50,16 +58,20 @@ export function UserMenu() {
           <PlanInForce user={user} />
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <div className="px-2 py-1.5">
+          <LanguageSwitcher className="w-full justify-between border-0 bg-transparent" />
+        </div>
+        <DropdownMenuSeparator />
         <DropdownMenuItem asChild className="sm:hidden">
           <Link href="/settings">
             <Settings />
-            Settings
+            <span>{t("settings")}</span>
           </Link>
         </DropdownMenuItem>
         <ChangePasswordDialog
           trigger={
             <DropdownMenuItem onSelect={(event) => event.preventDefault()}>
-              Change password
+              <span>{t("changePassword")}</span>
             </DropdownMenuItem>
           }
         />
@@ -67,19 +79,19 @@ export function UserMenu() {
           <>
             <DropdownMenuSeparator />
             <DropdownMenuLabel className="text-tick font-normal text-faint-foreground">
-              Admin
+              {t("admin")}
             </DropdownMenuLabel>
             <DropdownMenuItem asChild>
               <Link href={ADMIN_ENTRY.href}>
                 <ADMIN_ENTRY.icon />
-                Admin area
+                <span>{t("adminArea")}</span>
               </Link>
             </DropdownMenuItem>
-            {ADMIN_TOOLS.map(({ href, label, Icon }) => (
+            {ADMIN_TOOLS.map(({ href, Icon }) => (
               <DropdownMenuItem key={href} asChild>
                 <a href={href} target="_blank" rel="noreferrer">
                   <Icon />
-                  {label}
+                  <span>{adminToolLabel(href, t)}</span>
                 </a>
               </DropdownMenuItem>
             ))}
@@ -94,7 +106,7 @@ export function UserMenu() {
           }}
         >
           <LogOut />
-          Sign out
+          <span>{t("signOut")}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

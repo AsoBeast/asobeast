@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   Bell,
   ClipboardCheck,
@@ -60,18 +61,19 @@ const SECTION_ICONS: Record<AppSectionSegment, LucideIcon> = {
 };
 
 const WORKSPACE = [
-  { href: "/", label: "Dashboard", icon: LayoutGrid },
-  { href: "/actions", label: "Action Center", icon: ListChecks },
-  { href: "/alerts", label: "Alerts", icon: Bell },
-  { href: "/charts", label: "Top charts", icon: Trophy },
-  { href: "/inspect", label: "Keyword inspector", icon: ScanSearch },
-  { href: INTEGRATIONS_PATH, label: "Integrations", icon: Plug },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/", label: "dashboard", icon: LayoutGrid },
+  { href: "/actions", label: "actionCenter", icon: ListChecks },
+  { href: "/alerts", label: "alerts", icon: Bell },
+  { href: "/charts", label: "topCharts", icon: Trophy },
+  { href: "/inspect", label: "keywordInspector", icon: ScanSearch },
+  { href: INTEGRATIONS_PATH, label: "integrations", icon: Plug },
+  { href: "/settings", label: "settings", icon: Settings },
 ] as const;
 
 const DISPLAY_MAX = 99;
 
 function OpenActionBadge() {
+  const t = useTranslations("navigation");
   const { status } = useAuth();
   const { data } = useQuery({
     ...actionSummaryOptions,
@@ -82,9 +84,7 @@ function OpenActionBadge() {
 
   return (
     <>
-      <span className="sr-only">
-        {`, ${open} open action${open === 1 ? "" : "s"}`}
-      </span>
+      <span className="sr-only">{t("openActions", { count: open })}</span>
       <SidebarMenuBadge aria-hidden className="numeric">
         {open > DISPLAY_MAX ? `${DISPLAY_MAX}+` : open}
       </SidebarMenuBadge>
@@ -125,6 +125,7 @@ function NavLink({
 }
 
 export function SidebarNav() {
+  const t = useTranslations("navigation");
   const pathname = usePathname();
   const { setOpenMobile, isMobile } = useSidebar();
   const { isOperator } = useAuth();
@@ -137,14 +138,14 @@ export function SidebarNav() {
   return (
     <>
       <SidebarGroup>
-        <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+        <SidebarGroupLabel>{t("workspace")}</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
             {WORKSPACE.map(({ href, label, icon }) => (
               <NavLink
                 key={href}
                 href={href}
-                label={label}
+                label={t(label)}
                 icon={icon}
                 active={pathname === href}
                 onNavigate={close}
@@ -156,6 +157,7 @@ export function SidebarNav() {
             {isOperator ? (
               <NavLink
                 {...ADMIN_ENTRY}
+                label={t("admin")}
                 active={adminSectionFrom(pathname) !== null}
                 onNavigate={close}
               />
@@ -165,14 +167,15 @@ export function SidebarNav() {
       </SidebarGroup>
 
       {app ? (
-        <nav aria-label="App sections">
+        <nav aria-label={t("appSectionsLabel")}>
           <SidebarGroup>
-            <SidebarGroupLabel>App</SidebarGroupLabel>
+            <SidebarGroupLabel>{t("app")}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {APP_SECTIONS.map(({ segment, label }) => {
+                {APP_SECTIONS.map(({ segment }) => {
                   const Icon = SECTION_ICONS[segment];
                   const active = isSectionActive(pathname, app.id, segment);
+                  const label = t(`appSections.${segment || "overview"}`);
                   return (
                     <SidebarMenuItem key={segment || "overview"}>
                       <SidebarMenuButton

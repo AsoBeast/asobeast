@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Megaphone } from "lucide-react";
 import {
   SidebarMenuButton,
@@ -13,15 +14,14 @@ import { hasUnseenRelease } from "@/lib/whats-new/release-notes";
 import { useSeenRelease } from "@/lib/whats-new/seen-release";
 
 export const WHATS_NEW_PATH = "/whats-new";
-export const WHATS_NEW_LABEL = "What's New";
-const UNREAD_SUFFIX = ", new updates";
 
 export function WhatsNewMenuItem({ latest }: { latest: string | null }) {
+  const t = useTranslations("navigation");
   const pathname = usePathname();
   const [seen] = useSeenRelease();
   const { isMobile, setOpenMobile } = useSidebar();
   const unread = hasUnseenRelease(latest, seen);
-  const name = unread ? `${WHATS_NEW_LABEL}${UNREAD_SUFFIX}` : WHATS_NEW_LABEL;
+  const name = t(unread ? "whatsNewUnread" : "whatsNew");
 
   return (
     <SidebarMenuItem>
@@ -48,7 +48,7 @@ export function WhatsNewMenuItem({ latest }: { latest: string | null }) {
             )}
           />
           <Megaphone />
-          <span>{WHATS_NEW_LABEL}</span>
+          <span>{t("whatsNew")}</span>
         </Link>
       </SidebarMenuButton>
     </SidebarMenuItem>

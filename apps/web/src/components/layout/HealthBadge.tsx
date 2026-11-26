@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { CircleX, TriangleAlert, type LucideIcon } from "lucide-react";
 import type { HealthStatus } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/components/auth/use-auth";
 import { healthOptions } from "@/lib/queries";
 import {
@@ -14,6 +15,8 @@ import {
 import { cn } from "@/lib/utils";
 import { answeredDatabaseDown } from "./health-answer";
 
+type Translator = ReturnType<typeof useTranslations>;
+
 function hoursAgo(iso: string): number {
   return Math.max(
     1,
@@ -21,25 +24,21 @@ function hoursAgo(iso: string): number {
   );
 }
 
-function degradedDetail(data: HealthStatus): string | null {
+function degradedDetail(data: HealthStatus, t: Translator): string | null {
   const causes: string[] = [];
   if (data.redis === "down") {
-    causes.push("Redis unavailable");
+    causes.push(t("redisUnavailable"));
   }
   const pipeline = data.pipeline;
   if (pipeline?.stale) {
     causes.push(
       pipeline.lastDailyRunAt
-        ? `Last daily run ${hoursAgo(pipeline.lastDailyRunAt)}h ago`
-        : "Daily pipeline stalled",
+        ? t("lastDailyRun", { hours: hoursAgo(pipeline.lastDailyRunAt) })
+        : t("pipelineStalled"),
     );
   }
   if (pipeline && pipeline.failedJobs > 0) {
-    causes.push(
-      `${pipeline.failedJobs} failed job${
-        pipeline.failedJobs === 1 ? "" : "s"
-      } — check /admin/queues`,
-    );
+    causes.push(t("failedJobs", { count: pipeline.failedJobs }));
   }
   return causes.length > 0 ? causes.join(" · ") : null;
 }
@@ -62,40 +61,41 @@ function resolveState(
   data: HealthStatus | undefined,
   error: unknown,
   isPending: boolean,
+  t: Translator,
 ): BadgeState {
   if (isPending) {
     return {
       mark: dotMark("bg-muted-foreground animate-pulse"),
-      label: "api",
-      detail: "Checking API status…",
+      label: t("api"),
+      detail: t("checking"),
     };
   }
   if (answeredDatabaseDown(error)) {
     return {
       mark: glyphMark(TriangleAlert, "text-warning"),
-      label: "degraded",
-      detail: "API up · database unavailable",
+      label: t("degraded"),
+      detail: t("databaseUnavailable"),
     };
   }
   if (error || data?.status !== "ok") {
     return {
       mark: glyphMark(CircleX, "text-destructive"),
-      label: "unreachable",
-      detail: "API unreachable",
+      label: t("unreachable"),
+      detail: t("apiUnreachable"),
     };
   }
-  const detail = degradedDetail(data);
+  const detail = degradedDetail(data, t);
   if (detail) {
     return {
       mark: glyphMark(TriangleAlert, "text-warning"),
-      label: "degraded",
+      label: t("degraded"),
       detail,
     };
   }
   return {
     mark: dotMark("bg-success"),
-    label: "api",
-    detail: "API healthy · database up",
+    label: t("api"),
+    detail: t("healthy"),
   };
 }
 
@@ -105,8 +105,9 @@ export function HealthBadge() {
 }
 
 function ApiStatus() {
+  const t = useTranslations("navigation.health");
   const { data, error, isPending } = useQuery(healthOptions);
-  const state = resolveState(data, error, isPending);
+  const state = resolveState(data, error, isPending, t);
 
   return (
     <Tooltip>
