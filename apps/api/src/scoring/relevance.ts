@@ -1,6 +1,10 @@
-import { KeywordSource, normalizeText, tokenize } from '@asobeast/shared';
+import {
+  containsTerm,
+  KeywordSource,
+  normalizeText,
+  tokenize,
+} from '@asobeast/shared';
 import { clamp } from './curves';
-import { containsTerm } from '../common/text/scripts';
 
 export interface RankingEvidence {
   position: number | null;

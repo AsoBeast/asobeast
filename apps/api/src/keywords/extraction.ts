@@ -3,8 +3,8 @@ import {
   functionWordTest,
   listingSegments,
   type TokenTest,
+  WIDE_CHARACTER,
 } from '@asobeast/shared';
-import { WIDE_CHARACTER } from '../common/text/scripts';
 import { isExtractionStopword } from './extraction-stopwords';
 import { isBoundWord, wordGroups } from './word-groups';
 import type { WordGroup } from './word-groups';

@@ -2,12 +2,12 @@ import {
   type AppStoreLocalization,
   isAppStoreLocalization,
   isStopword,
+  isUnsegmented,
   type MarketLocalizationRead,
   type SplitPhrase,
   tokenize,
   type WastedWord,
 } from '@asobeast/shared';
-import { isUnsegmented } from '../common/text/scripts';
 import type { JudgingSurfaces } from '../metadata/listing-surfaces';
 import type { Surface } from '../metadata/localized-coverage';
 import { coversKeyword } from './keyword-coverage';

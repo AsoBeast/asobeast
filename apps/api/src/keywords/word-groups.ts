@@ -1,10 +1,11 @@
-import { countChars, tokenize } from '@asobeast/shared';
 import {
+  countChars,
   KANA_CHARACTER,
   SPACELESS_CHARACTER,
   SPACELESS_OR_NOT,
   THAI_CHARACTER,
-} from '../common/text/scripts';
+  tokenize,
+} from '@asobeast/shared';
 import {
   isChineseParticle,
   isExtractionStopword,
