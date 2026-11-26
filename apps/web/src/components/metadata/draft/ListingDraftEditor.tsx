@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { ChevronRight, RotateCcw } from "lucide-react";
 import type { MetadataAuditResult } from "@asobeast/shared";
 import { InlineQueryError } from "@/components/layout/InlineQueryError";
@@ -61,6 +61,7 @@ export function ListingDraftEditor({
   localization: string | undefined;
   density: DensityContext;
 }) {
+  const headingId = useId();
   const store = audit.store;
   const scope = useMemo(
     () => draftScopeOf(store, market, localization),
@@ -136,9 +137,12 @@ export function ListingDraftEditor({
         />
       ) : null}
       <section
-        aria-label="Draft listing"
+        aria-labelledby={headingId}
         className="col-span-12 flex min-w-0 flex-col gap-4 rounded-lg border border-border bg-card px-4 pt-3 pb-4 @5xl/metadata:col-span-7 @5xl/metadata:row-span-2"
       >
+        <h2 id={headingId} className="sr-only">
+          Draft listing
+        </h2>
         {fields.filter((name) => name !== "description").map(input)}
         <Collapsible open={descriptionOpen} onOpenChange={setDescriptionOpen}>
           <CollapsibleTrigger asChild>

@@ -632,4 +632,10 @@ test("lists the words the draft description repeats", async ({ page }) => {
   await expect(page.getByRole("region", { name: "Word density" })).toHaveCount(
     1,
   );
+  await expect(
+    editor(page).getByRole("heading", { level: 2, name: "Draft listing" }),
+  ).toHaveCount(1);
+  await expect(
+    density.getByRole("heading", { level: 3, name: "Word density" }),
+  ).toBeVisible();
 });
