@@ -355,6 +355,7 @@ const flipped = (
     delta,
     movement: delta < 0 ? "up" : "down",
     titleMatch: "none",
+    placement: undefined,
   };
 };
 
@@ -396,6 +397,7 @@ test("a translated search results sheet steps through its captured days", async 
   await previous.click();
   await expect(page).toHaveURL(new RegExp(`serpDate=${YESTERDAY}`));
   await expect(sheet.locator("li#serp-row-1")).toBeVisible();
+  await expect(summary).toContainText("0 of 10");
   await expect(summary).toContainText("Up 1 from #8");
   await previous.click();
   await expect(page).toHaveURL(new RegExp(`serpDate=${DAY_BEFORE}`));
