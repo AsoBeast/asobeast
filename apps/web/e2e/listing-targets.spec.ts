@@ -186,3 +186,41 @@ test("is absent for a Google Play app and a competitor", async ({ page }) => {
     ).toHaveCount(0);
   }
 });
+
+test("fills the role slots with the top three by opportunity", async ({
+  page,
+}) => {
+  await page.goto(DRAFT);
+  const useTopThree = block(page).getByRole("button", { name: "Use top 3" });
+
+  await (await hydrated(useTopThree)).focus();
+  await page.keyboard.press("Enter");
+
+  await expect(
+    slot(page, "Title").getByRole("button", { name: "focus timer for Title" }),
+  ).toBeVisible();
+  await expect(
+    slot(page, "Subtitle", 0).getByRole("button", {
+      name: "productivity app for Subtitle",
+    }),
+  ).toBeVisible();
+  await expect(
+    slot(page, "Subtitle", 1).getByRole("button", {
+      name: "study timer for Subtitle",
+    }),
+  ).toBeVisible();
+  await expect(block(page)).not.toContainText("pomodoro");
+  await expect(saveButton(page)).toBeFocused();
+});
+
+test("says when there is nothing to fill", async ({ page }) => {
+  await seed(page, ["focus timer", "study timer", "productivity app"]);
+  await page.goto(DRAFT);
+
+  const useTopThree = block(page).getByRole("button", { name: "Use top 3" });
+  await expect(useTopThree).toHaveAttribute("aria-disabled", "true");
+  await expect(useTopThree).toHaveAttribute(
+    "title",
+    "Title and subtitle slots are already filled",
+  );
+});

@@ -42,6 +42,21 @@ export const saveRequestOf = (
 export const isEdited = (slots: TargetSlots, saved: TargetSlots): boolean =>
   slots.some((slot, index) => slot !== saved[index]);
 
+export const ROLE_SLOT_COUNT = 3;
+
+export function withTopThree(
+  slots: TargetSlots,
+  candidates: readonly ListingTargetCandidate[],
+): TargetSlots {
+  const queue = openCandidates(candidates, slots).map(({ text }) => text);
+  return slots.map((slot, index) =>
+    index < ROLE_SLOT_COUNT && slot === null ? (queue.shift() ?? null) : slot,
+  );
+}
+
+export const roleSlotsFilled = (slots: TargetSlots): boolean =>
+  slots.slice(0, ROLE_SLOT_COUNT).every((slot) => slot !== null);
+
 export function targetPhrase(typed: string): string | null {
   const text = normalizeText(typed);
   if (text === "" || countChars(text) > TRACKED_KEYWORD_CHAR_LIMIT) {

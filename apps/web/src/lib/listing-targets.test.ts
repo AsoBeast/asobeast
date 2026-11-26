@@ -4,6 +4,7 @@ import {
   isEdited,
   openCandidates,
   readersLine,
+  roleSlotsFilled,
   saveRequestOf,
   savedSentence,
   savedSlots,
@@ -12,6 +13,7 @@ import {
   targetPhrase,
   withSlot,
   withoutSlot,
+  withTopThree,
   type TargetSlots,
 } from "./listing-targets";
 
@@ -160,5 +162,61 @@ describe("savedSentence", () => {
         result([item("a", 1, ["us"])]),
       ),
     ).toBe("Targets saved.");
+  });
+});
+
+const candidate = (text: string) => ({
+  text,
+  markets: ["us"],
+  lead: {
+    country: "us",
+    keywordId: text,
+    popularity: 40,
+    difficulty: 30,
+    opportunity: 50,
+    relevance: 80,
+    position: null,
+    depth: null,
+    checkedOn: null,
+  },
+});
+
+describe("withTopThree", () => {
+  it("fills the three role slots with the first three candidates", () => {
+    expect(
+      withTopThree(EMPTY, ["a", "b", "c", "d"].map(candidate)).slice(0, 4),
+    ).toEqual(["a", "b", "c", null]);
+  });
+
+  it("keeps a role slot the viewer already filled and fills the others in order", () => {
+    expect(
+      withTopThree(withSlot(EMPTY, 1, "mine"), ["a", "b"].map(candidate)).slice(
+        0,
+        3,
+      ),
+    ).toEqual(["a", "mine", "b"]);
+  });
+
+  it("fills what it can when fewer than three candidates exist", () => {
+    expect(withTopThree(EMPTY, [candidate("a")]).slice(0, 3)).toEqual([
+      "a",
+      null,
+      null,
+    ]);
+  });
+
+  it("never puts a phrase twice", () => {
+    const slots = withSlot(EMPTY, 5, "a");
+
+    expect(withTopThree(slots, ["a", "b"].map(candidate)).slice(0, 3)).toEqual([
+      "b",
+      null,
+      null,
+    ]);
+  });
+
+  it("knows when the role slots are full", () => {
+    expect(roleSlotsFilled(EMPTY)).toBe(false);
+    expect(roleSlotsFilled(["a", "b", "c", ...EMPTY.slice(3)])).toBe(true);
   });
 });

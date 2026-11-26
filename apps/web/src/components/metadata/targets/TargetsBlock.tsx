@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { ChevronRight, RotateCcw } from "lucide-react";
 import type { AppStoreLocalization } from "@asobeast/shared";
 import { InlineQueryError } from "@/components/layout/InlineQueryError";
@@ -15,7 +15,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { InfoTip } from "@/components/ui/info-tip";
-import { readersLine } from "@/lib/listing-targets";
+import {
+  openCandidates,
+  readersLine,
+  roleSlotsFilled,
+  withTopThree,
+} from "@/lib/listing-targets";
 import { localizationName } from "@/lib/localizations";
 import { TargetSlotList } from "./TargetSlotList";
 import { useTargetEdits } from "./use-target-edits";
@@ -56,6 +61,12 @@ export function TargetsBlock({
   const showMore =
     more ?? MORE_SLOTS.some((index) => targets.slots[index] !== null);
   const idle = !targets.edited || targets.saving;
+  const saveRef = useRef<HTMLButtonElement>(null);
+  const topThreeRefusal = roleSlotsFilled(targets.slots)
+    ? "Title and subtitle slots are already filled"
+    : result && openCandidates(result.candidates, targets.slots).length === 0
+      ? "No tracked keyword is left to pick"
+      : null;
 
   return (
     <section aria-labelledby={headingId} className="col-span-12 min-w-0">
@@ -66,7 +77,22 @@ export function TargetsBlock({
               {`Targets for ${localizationName(localization)}`}
             </h2>
           </CardTitle>
-          <CardAction>
+          <CardAction className="flex items-center gap-2">
+            {result ? (
+              <Button
+                variant="outline"
+                size="sm"
+                aria-disabled={topThreeRefusal !== null || undefined}
+                title={topThreeRefusal ?? undefined}
+                onClick={() => {
+                  if (topThreeRefusal !== null) return;
+                  targets.edit(withTopThree(targets.slots, result.candidates));
+                  saveRef.current?.focus();
+                }}
+              >
+                <span>Use top 3</span>
+              </Button>
+            ) : null}
             <TargetsTip />
           </CardAction>
         </CardHeader>
@@ -135,6 +161,7 @@ export function TargetsBlock({
               <span>Discard changes</span>
             </Button>
             <Button
+              ref={saveRef}
               aria-disabled={idle || undefined}
               onClick={() => {
                 if (!idle) targets.save();
