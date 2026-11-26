@@ -2,7 +2,7 @@
 title: Sync reviews, reply to them and mine keyword ideas
 description: Reviews sync in the daily pipeline for the home storefront. See what people mention, translate a review, draft and track a reply to each one, and turn repeated language in negative reviews into keyword ideas and action items.
 icon: message-square
-keywords: ["reviews","ratings history","review mining","negative reviews","themes","reply to reviews","AI reply","translate reviews","updated after reply"]
+keywords: ["reviews","ratings history","new ratings average","review mining","negative reviews","themes","reply to reviews","AI reply","translate reviews","updated after reply"]
 ---
 
 Reviews give AsoBeast two things a listing cannot: the words your users actually use, and an early signal that something in the latest release is going wrong.
@@ -69,6 +69,18 @@ The ratings chart tracks the average rating and the rating count over time, take
 
 The **Rating** figure on the app overview draws the same average for the home storefront when you select it. While the home market is shown, the figure also carries its change over the last 7 days.
 
+### New ratings average
+
+An app with thousands of ratings barely moves its overall average, even when recent users love or hate the latest release. The new ratings average is the average of only the ratings added over the chosen range, worked out from the average and the number of ratings the store reported on each day. It shows whether recent ratings pull the average up or down long before the overall figure moves.
+
+The average chart draws it as a second line, averaged over the 7 days up to each day, so the line starts a week into the range. The sentence under the chart covers the whole range, so the line and the sentence can differ.
+
+The figure is missing when fewer than five ratings were added, when the app has so many ratings that the store's rounding of its average could move the answer by more than a twentieth of a star, or when the answer falls outside one to five stars. A day on which the number of ratings drops, because the store reset it or switched which ratings it counts, starts the count over, and the ratings before and after the drop are added up separately.
+
+The store reports only its average and its total, so a rating that someone edited or removed counts in the figure too.
+
+The new ratings average is for the App Store only. Google Play gives recent ratings more weight in the average it shows, so the average of the new ones cannot be worked out from it. Reading the per-star counts Google Play reports could make it possible later.
+
 ## Set a ratings goal
 
 Beside the list, **Ratings goal** says how many five-star ratings it takes for the store to show a higher average. Enter the average you want the store to show, from 0.1 to 5.0, and the number of days, from 1 to 365. The target starts at the next tenth above the average the store shows now, and the days at 30.
@@ -76,6 +88,8 @@ Beside the list, **Ratings goal** says how many five-star ratings it takes for t
 The store shows the average with one decimal, so showing 4.5 means reaching 4.45. The card counts the five-star ratings that lift the current average to that point and says how fast they need to come: a number a day, or one every few days when fewer ratings are needed than there are days. It reads the newest listing of the home storefront and makes no store request.
 
 The answer assumes every new rating is five stars. Google Play gives recent ratings more weight in the average it shows, so for a Google Play app read the answer as a rough guide. With fewer than 20 ratings each new one moves the average a lot, and an app with no ratings yet needs only its first five-star rating. Competitors have no ratings goal.
+
+For an App Store app the card also says where your current mix of ratings leads: at the number of ratings a day and the [new ratings average](#new-ratings-average) of the last 30 days, the average the store would show after the days you entered, or that the current mix cannot reach the target because new ratings average no more than it.
 
 ## Compare ratings across markets
 
