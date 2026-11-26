@@ -74,12 +74,12 @@ describe("SerpSummary", () => {
       {
         inTitle: 8,
         of: 10,
-        inSubtitle: 2,
-        subtitlesKnown: 3,
+        inSubtitle: 1,
+        subtitlesKnown: 2,
       },
     );
 
-    expect(html).toContain(">2 of 3 in the subtitle<");
+    expect(html).toContain(">1 of 2 in the subtitle<");
     expect(html).not.toContain(TEXT_SEPARATOR);
   });
 
