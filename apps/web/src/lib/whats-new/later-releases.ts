@@ -29,6 +29,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "Every target keyword now says where it fits best: the title, the subtitle, the keyword field, or nowhere, with the reason in one sentence, such as strong popularity and a rank you can improve. Apply suggestions puts your targets in that order, ready to save.",
       },
       {
+        kind: "new",
+        title: "Where ranking apps put the keyword",
+        text: "The search results of a keyword now say where each app puts it: in the title, the subtitle, both, split between them, or neither. Subtitles come from the listings AsoBeast captures for your apps and competitors, and a competitor in the top 10 without the keyword in either is marked as an outlier. The summary counts how many of the top 10 hold it in the title and the subtitle.",
+      },
+      {
         kind: "fixed",
         title: "A search that lists no apps says so",
         text: "When a store lists no apps at all for a keyword you track, its position now reads No apps instead of more than 200: in the keywords table, on the rankings page with its chart and movers, in the position history, the search results sheet, the discovery list and the keyword breakdown. Pointing at it explains that the store lists no apps for this search. A rank alert and the weekly digest say the same when this happens to a keyword that used to rank. Checks from before this update keep the number they were stored with.",
