@@ -1,8 +1,7 @@
 import type { ReactNode } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-
-export const MIN_TREND_POINTS = 4;
+import { MIN_TREND_POINTS } from "@/lib/trend-points";
 
 export type ChartState = "empty" | "insufficient" | "ready";
 

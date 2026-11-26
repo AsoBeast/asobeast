@@ -41,7 +41,7 @@ import {
   type RankingsView as RankingsViewName,
 } from "@/lib/search-params";
 import { annotationsInMarkets } from "@/components/annotations/annotation-lines";
-import { MIN_TREND_POINTS } from "@/components/charts/ChartStates";
+import { MIN_TREND_POINTS } from "@/lib/trend-points";
 import { exportRankings } from "./ranking-csv";
 import { rankingImageSpec } from "./ranking-image";
 import {
