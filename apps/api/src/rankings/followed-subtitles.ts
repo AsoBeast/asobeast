@@ -5,7 +5,7 @@ import { utcDay } from './rankings.support';
 
 export async function followedSubtitles(
   prisma: PrismaService,
-  apps: readonly { id: string; country: string }[],
+  apps: readonly { id: string; storeAppId: string; country: string }[],
   market: string,
   shownDay: string,
 ): Promise<Map<string, string | null>> {
@@ -23,7 +23,13 @@ export async function followedSubtitles(
     distinct: ['appId'],
     select: { appId: true, subtitle: true },
   });
-  return new Map(
-    snapshots.map((snapshot) => [snapshot.appId, snapshot.subtitle || null]),
-  );
+  const storeAppIdOf = new Map(apps.map((app) => [app.id, app.storeAppId]));
+  const subtitles = new Map<string, string | null>();
+  for (const { appId, subtitle } of snapshots) {
+    const storeAppId = storeAppIdOf.get(appId);
+    if (storeAppId !== undefined && !subtitles.has(storeAppId)) {
+      subtitles.set(storeAppId, subtitle || null);
+    }
+  }
+  return subtitles;
 }

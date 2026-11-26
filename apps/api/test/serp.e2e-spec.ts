@@ -371,10 +371,12 @@ describe('SerpController (e2e)', () => {
       title: string,
       subtitle: string | null,
       capturedAt: Date,
+      country: string | null = null,
     ) {
       await prisma.appSnapshot.create({
         data: {
           appId,
+          country,
           title,
           subtitle,
           description: '',
@@ -389,9 +391,10 @@ describe('SerpController (e2e)', () => {
       trackerId: string,
       rows: [string, string][],
       date: string,
+      country = 'us',
     ) {
       const keyword = await prisma.keyword.create({
-        data: { text: 'habit tracker', store, country: 'us' },
+        data: { text: 'habit tracker', store, country },
       });
       await prisma.trackedKeyword.create({
         data: { appId: trackerId, keywordId: keyword.id, source: 'MANUAL' },
@@ -521,6 +524,38 @@ describe('SerpController (e2e)', () => {
       expect(entries[3].appId).not.toBeNull();
       expect(entries[3]).not.toHaveProperty('subtitle');
       expect(entries[3]).not.toHaveProperty('placement');
+    });
+
+    it('reads the market listing another record of the same app captured', async () => {
+      const american = await appRow('self-store', 'us');
+      const german = await appRow('self-store', 'de');
+      await snapshotOf(
+        american.id,
+        'Streaks',
+        'Habit tracker und Planer',
+        at('2026-06-30T08:00:00.000Z'),
+        'de',
+      );
+      await snapshotOf(
+        german.id,
+        'Streaks',
+        'Gewohnheiten planen',
+        at('2026-07-02T08:00:00.000Z'),
+      );
+
+      const entries = await serpOf(
+        Store.APP_STORE,
+        german.id,
+        [['self-store', 'Streaks']],
+        SHOWN,
+        'de',
+      );
+
+      expect(entries[0]).toMatchObject({
+        appId: german.id,
+        subtitle: 'Habit tracker und Planer',
+        placement: 'subtitle',
+      });
     });
 
     it('answers no subtitle on Google Play', async () => {

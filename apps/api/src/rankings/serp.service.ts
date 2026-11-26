@@ -18,6 +18,9 @@ import {
   appsByStoreAppId,
   DAY_MS,
   FollowedApp,
+  FollowedRecord,
+  followedRecords,
+  preferredRecords,
   toDateKey,
   utcDay,
   utcToday,
@@ -80,9 +83,11 @@ export class SerpService {
     );
     const entries = serpMovement(rows, earlier);
     const exits = serpExits(rows, earlier);
-    const known = await this.followedApps(keyword, [...rows, ...exits]);
-    const roleOf = roleIn(known);
-    const subtitles = await this.subtitlesOf(keyword, rows, known, shown);
+    const records = await followedRecords(this.prisma, keyword.store, [
+      ...new Set([...rows, ...exits].map((row) => row.storeAppId)),
+    ]);
+    const roleOf = roleIn(preferredRecords(records, keyword.country));
+    const subtitles = await this.subtitlesOf(keyword, rows, records, shown);
     const judgeTitle = titleJudge(keyword.text);
     const judgePlacement = placementJudge(keyword.text);
     const judge = (storeAppId: string, title: string) => {
@@ -137,40 +142,20 @@ export class SerpService {
     return { rows, comparedTo, earlier };
   }
 
-  private followedApps(
-    keyword: AuthorizedKeyword,
-    rows: { storeAppId: string }[],
-  ): Promise<Map<string, FollowedApp>> {
-    return appsByStoreAppId(this.prisma, keyword.store, keyword.country, [
-      ...new Set(rows.map((row) => row.storeAppId)),
-    ]);
-  }
-
   private async subtitlesOf(
     keyword: AuthorizedKeyword,
     rows: { storeAppId: string }[],
-    known: Map<string, FollowedApp>,
+    records: readonly FollowedRecord[],
     shown: string,
   ): Promise<Map<string, string | null>> {
-    if (keyword.store !== Store.APP_STORE) return new Map();
-    const shownApps = new Map(
-      rows.flatMap((row) => {
-        const app = known.get(row.storeAppId);
-        return app ? [[row.storeAppId, app] as const] : [];
-      }),
-    );
-    const byAppId = await followedSubtitles(
+    if (keyword.store !== Store.APP_STORE)
+      return new Map<string, string | null>();
+    const shownIds = new Set(rows.map((row) => row.storeAppId));
+    return followedSubtitles(
       this.prisma,
-      [...shownApps.values()],
+      records.filter((record) => shownIds.has(record.storeAppId)),
       keyword.country,
       shown,
-    );
-    return new Map(
-      [...shownApps].flatMap(([storeAppId, app]) =>
-        byAppId.has(app.id)
-          ? [[storeAppId, byAppId.get(app.id) ?? null] as const]
-          : [],
-      ),
     );
   }
 

@@ -17,8 +17,8 @@ describe('followedSubtitles', () => {
     const subtitles = await followedSubtitles(
       prisma,
       [
-        { id: 'home-app', country: 'us' },
-        { id: 'away-app', country: 'gb' },
+        { id: 'home-app', storeAppId: 'home-store', country: 'us' },
+        { id: 'away-app', storeAppId: 'away-store', country: 'gb' },
       ],
       'us',
       '2026-07-01',
@@ -48,8 +48,8 @@ describe('followedSubtitles', () => {
       select: { appId: true, subtitle: true },
     });
     expect([...subtitles]).toEqual([
-      ['home-app', 'Habit tracker and planner'],
-      ['away-app', 'Tracker for streaks'],
+      ['home-store', 'Habit tracker and planner'],
+      ['away-store', 'Tracker for streaks'],
     ]);
   });
 
@@ -71,15 +71,36 @@ describe('followedSubtitles', () => {
     const subtitles = await followedSubtitles(
       prisma,
       [
-        { id: 'quiet-app', country: 'us' },
-        { id: 'blank-app', country: 'us' },
+        { id: 'quiet-app', storeAppId: 'quiet-store', country: 'us' },
+        { id: 'blank-app', storeAppId: 'blank-store', country: 'us' },
       ],
       'us',
       '2026-07-01',
     );
 
-    expect(subtitles.get('quiet-app')).toBeNull();
-    expect(subtitles.get('blank-app')).toBeNull();
-    expect(subtitles.has('missing-app')).toBe(false);
+    expect(subtitles.get('quiet-store')).toBeNull();
+    expect(subtitles.get('blank-store')).toBeNull();
+    expect(subtitles.has('missing-store')).toBe(false);
+  });
+
+  it('answers the newest listing among the records of one store app', async () => {
+    const { prisma } = setup([
+      { appId: 'american-record', subtitle: 'Habit tracker und Planer' },
+      { appId: 'german-record', subtitle: 'Gewohnheiten planen' },
+    ]);
+
+    const subtitles = await followedSubtitles(
+      prisma,
+      [
+        { id: 'german-record', storeAppId: 'self-store', country: 'de' },
+        { id: 'american-record', storeAppId: 'self-store', country: 'us' },
+      ],
+      'de',
+      '2026-07-01',
+    );
+
+    expect([...subtitles]).toEqual([
+      ['self-store', 'Habit tracker und Planer'],
+    ]);
   });
 });
