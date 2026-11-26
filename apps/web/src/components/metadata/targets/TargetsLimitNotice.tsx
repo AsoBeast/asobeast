@@ -30,9 +30,12 @@ export function TargetsLimitNotice({
           </ul>
         ) : null}
         {outcome.quota?.upgradeTo ? (
-          <Button asChild variant="link" className="h-auto w-fit p-0">
-            <Link href={UPGRADE_PATH}>See plans</Link>
-          </Button>
+          <>
+            {" "}
+            <Button asChild variant="link" className="h-auto w-fit p-0">
+              <Link href={UPGRADE_PATH}>See plans</Link>
+            </Button>
+          </>
         ) : null}
       </AlertDescription>
     </Alert>

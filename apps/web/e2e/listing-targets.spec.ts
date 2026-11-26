@@ -295,6 +295,7 @@ test("says which keyword the limit left out", async ({ page }) => {
     "sleep sounds was not tracked in United States: your plan's keyword limit is reached.",
   );
   await expect(notice.getByRole("link", { name: "See plans" })).toBeVisible();
+  await expect(notice).toContainText("is reached. See plans");
   await expect(slot(page, "Title")).toContainText(
     "Not tracked in United States",
   );
