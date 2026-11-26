@@ -23,6 +23,7 @@ interface TargetState {
 
 const stored = new Map<string, TargetState>();
 const trackedByTargets = new Map<string, Set<string>>();
+const resumedByTargets = new Map<string, Set<string>>();
 
 const slotKey = (id: string, localization: string) => `${id}:${localization}`;
 const pairKey = (country: string, text: string) =>
@@ -39,6 +40,7 @@ export function resetListingTargets(id: string): void {
     if (key.startsWith(`${id}:`)) stored.delete(key);
   }
   trackedByTargets.delete(id);
+  resumedByTargets.delete(id);
 }
 
 export function seedListingTargets(
@@ -114,7 +116,13 @@ function rowsOf(
       serpVolatility7d: null,
     } satisfies TrackedKeywordItem;
   });
-  return [...keywords, ...added];
+  const resumed = resumedByTargets.get(id) ?? new Set<string>();
+  const listed = keywords.map((row) =>
+    resumed.has(pairKey(row.country, row.text))
+      ? { ...row, active: true }
+      : row,
+  );
+  return [...listed, ...added];
 }
 
 function itemOf(
@@ -243,6 +251,7 @@ export function saveListingTargetsOf(
   const rows = rowsOf(id, keywords);
   const readers = readersOf(localization, home, rows);
   const added = trackedByTargets.get(id) ?? new Set<string>();
+  const resumed = resumedByTargets.get(id) ?? new Set<string>();
   const notTracked: TargetNotTracked[] = [];
   let tracked = 0;
   for (const text of slots) {
@@ -250,18 +259,20 @@ export function saveListingTargetsOf(
       continue;
     }
     for (const country of readers) {
-      if (rows.some((row) => row.country === country && row.text === text)) {
-        continue;
-      }
+      const row = rows.find(
+        (candidate) => candidate.country === country && candidate.text === text,
+      );
+      if (row?.active) continue;
       if (full) {
         notTracked.push({ text, country, reason: "keywordLimit" });
         continue;
       }
-      added.add(pairKey(country, text));
+      (row ? resumed : added).add(pairKey(country, text));
       tracked += 1;
     }
   }
   trackedByTargets.set(id, added);
+  resumedByTargets.set(id, resumed);
   if (slots.length === 0) stored.delete(slotKey(id, localization));
   else seedListingTargets(id, localization, slots);
   return {
