@@ -1,12 +1,12 @@
-import { displayedTenths } from "@/lib/ratings-goal";
+import { formatRating } from "@/lib/format";
 
 export type NewRatingsParts = [string, number, string, number];
 
+const shown = (value: number): number => Number(formatRating(value));
+
 function comparedWith(value: number, overall: number): string {
-  const shown = displayedTenths(value);
-  const overallShown = displayedTenths(overall);
-  if (shown > overallShown) return "above";
-  return shown < overallShown ? "below" : "level with";
+  if (shown(value) > shown(overall)) return "above";
+  return shown(value) < shown(overall) ? "below" : "level with";
 }
 
 export function newRatingsParts(

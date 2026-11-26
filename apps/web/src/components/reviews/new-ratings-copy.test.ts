@@ -18,6 +18,14 @@ describe("newRatingsParts", () => {
   });
 });
 
+describe("the comparison word", () => {
+  it("compares the figures as the sentence shows them", () => {
+    expect(newRatingsParts(4.35, 4.34, 30)[2]).toBe(
+      "over 30 days, level with your overall",
+    );
+  });
+});
+
 describe("tooFewNewRatings", () => {
   it("says when there are too few new ratings", () => {
     expect(tooFewNewRatings(90)).toBe(
