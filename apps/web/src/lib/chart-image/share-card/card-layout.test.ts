@@ -19,13 +19,9 @@ function boxesOf(size: (typeof CARD_SIZE_NAMES)[number], parts: CardParts) {
   const layout = cardLayout(size, parts);
   return {
     layout,
-    boxes: [
-      layout.header,
-      layout.headline,
-      layout.chart,
-      layout.range,
-      layout.footer,
-    ].filter((box): box is CardBox => box !== null),
+    boxes: [layout.header, layout.headline, layout.chart, layout.footer].filter(
+      (box): box is CardBox => box !== null,
+    ),
   };
 }
 

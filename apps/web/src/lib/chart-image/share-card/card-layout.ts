@@ -33,7 +33,8 @@ export type CardFontRole =
   | "figure"
   | "trail"
   | "change"
-  | "range"
+  | "axis"
+  | "chip"
   | "credit"
   | "tick";
 
@@ -42,6 +43,8 @@ export interface CardLayout {
   height: number;
   unit: number;
   margin: number;
+  stroke: number;
+  dot: number;
   fonts: Record<CardFontRole, number>;
   header: CardBox | null;
   icon: CardBox | null;
@@ -52,7 +55,6 @@ export interface CardLayout {
   figure: CardBox;
   change: CardBox | null;
   chart: CardBox;
-  range: CardBox;
   footer: CardBox;
   mark: CardBox;
   credit: CardBox;
@@ -63,6 +65,8 @@ const MARGIN_UNITS = 2;
 const ICON_UNITS = 2;
 const MARK_UNITS = 1.2;
 const LINE_HEIGHT = 1.3;
+const STROKE_UNITS = 0.17;
+const DOT_UNITS = 0.3;
 const FIGURE_LINE_HEIGHT = 1.15;
 
 const FONT_UNITS: Record<CardFontRole, number> = {
@@ -72,7 +76,8 @@ const FONT_UNITS: Record<CardFontRole, number> = {
   figure: 2.4,
   trail: 1,
   change: 0.8,
-  range: 0.6,
+  axis: 0.6,
+  chip: 0.7,
   credit: 0.6,
   tick: 0.5,
 };
@@ -92,7 +97,8 @@ function fontsFor(unit: number): Record<CardFontRole, number> {
     figure: FONT_UNITS.figure * unit,
     trail: FONT_UNITS.trail * unit,
     change: FONT_UNITS.change * unit,
-    range: FONT_UNITS.range * unit,
+    axis: FONT_UNITS.axis * unit,
+    chip: FONT_UNITS.chip * unit,
     credit: FONT_UNITS.credit * unit,
     tick: FONT_UNITS.tick * unit,
   };
@@ -154,13 +160,6 @@ export function cardLayout(size: CardSizeName, parts: CardParts): CardLayout {
     : figure.y + figure.height;
 
   const footer = footerBoxes(margin, inner, unit, height - margin);
-  const rangeBottom = footer.footer.y - gap;
-  const range = box(
-    margin,
-    rangeBottom - lineOf("range"),
-    inner,
-    lineOf("range"),
-  );
   const chartTop = headlineBottom + unit;
 
   return {
@@ -168,14 +167,15 @@ export function cardLayout(size: CardSizeName, parts: CardParts): CardLayout {
     height,
     unit,
     margin,
+    stroke: Math.round(unit * STROKE_UNITS),
+    dot: Math.round(unit * DOT_UNITS),
     fonts,
     ...header,
     headline: box(margin, top, inner, headlineBottom - top),
     lead,
     figure,
     change,
-    chart: box(margin, chartTop, inner, range.y - gap - chartTop),
-    range,
+    chart: box(margin, chartTop, inner, footer.footer.y - gap - chartTop),
     ...footer,
   };
 }

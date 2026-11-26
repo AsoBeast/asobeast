@@ -150,20 +150,20 @@ test.describe("rankings", () => {
     await page.goto(RANKINGS_PAGE);
     await openShare(page);
     const corner = () => canvasPixel(preview(page), 4, 4);
-    await expect.poll(corner).toEqual(hexPixel(CARD_THEMES.light.background));
+    await expect.poll(corner).toEqual(hexPixel(CARD_THEMES.light.panel));
 
     await pick(page, "Theme", "Dark");
-    await expect.poll(corner).toEqual(hexPixel(CARD_THEMES.dark.background));
+    await expect.poll(corner).toEqual(hexPixel(CARD_THEMES.dark.panel));
 
     await pick(page, "Theme", "Orange");
-    await expect.poll(corner).toEqual(hexPixel(CARD_THEMES.orange.background));
+    await expect.poll(corner).toEqual(hexPixel(CARD_THEMES.orange.panel));
   });
 
   test("always draws the credit", async ({ page }) => {
     await page.goto(RANKINGS_PAGE);
     await openShare(page);
     const { mark } = cardLayout("landscape", ALL_PARTS);
-    const background = hexPixel(CARD_THEMES.light.background);
+    const background = hexPixel(CARD_THEMES.light.panel);
 
     await expect
       .poll(() =>

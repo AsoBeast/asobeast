@@ -2,7 +2,6 @@ import type { Store } from "@asobeast/shared";
 import { iconRadius } from "@/lib/app-icon-radius";
 import { PRODUCT_NAME } from "@/lib/brand";
 import { storeLabel } from "@/lib/format";
-import { dayRangeLabel } from "../caption";
 import type { CardChartKind } from "./card-chart";
 import type { CardBox } from "./card-layout";
 import type { ShareCardOptions } from "./card-options";
@@ -13,7 +12,6 @@ import type { ShareHeadline } from "./headline";
 export interface ShareCardSpec {
   headline: ShareHeadline;
   kind: CardChartKind;
-  depth: number;
   appName: string;
   store: Store;
   options: ShareCardOptions;
@@ -121,19 +119,15 @@ function drawFooter(painter: CardPainter, mark: HTMLImageElement | null) {
 export function drawCard(painter: CardPainter, spec: ShareCardSpec) {
   const { context, layout, theme } = painter;
   const { headline } = spec;
-  context.fillStyle = theme.background;
+  context.fillStyle = theme.panel;
   context.fillRect(0, 0, layout.width, layout.height);
   drawHeader(painter, spec);
   drawHeadline(painter, headline);
   drawCardChart(painter, {
     line: headline.line,
     kind: spec.kind,
-    depth: spec.depth,
-  });
-  drawText(painter, dayRangeLabel(headline.from, headline.to), layout.range, {
-    role: "range",
-    weight: 400,
-    color: theme.muted,
+    from: headline.from,
+    to: headline.to,
   });
   drawFooter(painter, spec.mark);
 }

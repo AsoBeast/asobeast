@@ -1,114 +1,172 @@
-import { formatNumber } from "@/lib/format";
+import {
+  formatDate,
+  formatDayMonth,
+  formatMeasure,
+  formatNumber,
+} from "@/lib/format";
+import type { Point } from "@/lib/monotone-curve";
 import { utcDayNumber } from "@/lib/utc-day";
 import type { CardBox } from "./card-layout";
 import type { ShareLinePoint } from "./headline";
 
 export type CardChartKind = "rank" | "visibility";
 
-export interface CardPoint {
-  x: number;
-  y: number;
-}
+export type CardDomain = readonly [number, number];
 
 export interface CardTick {
   label: string;
   y: number;
 }
 
+export interface CardMark {
+  x: number;
+  y: number;
+  label: string;
+}
+
 export interface CardChartShape {
-  runs: CardPoint[][];
-  dots: CardPoint[];
+  traces: Point[][][];
   ticks: CardTick[];
-  end: CardPoint | null;
+  start: CardMark | null;
+  startLabelled: boolean;
+  end: CardMark | null;
 }
 
-const RANK_TICKS = [1, 10, 25, 50, 100];
-const NICE_STEPS = [1, 2, 5, 10];
+const MIN_SPAN: Record<CardChartKind, number> = { rank: 4, visibility: 8 };
+const BOUNDS: Record<CardChartKind, CardDomain> = {
+  rank: [0.4, Infinity],
+  visibility: [0, 100],
+};
+const PADDING_SHARE = 0.15;
+const MAX_TICKS = 3;
+const NICE_STEPS = [1, 2, 5];
 
-function niceCeiling(value: number): number {
-  if (value <= 0) return 1;
-  const power = 10 ** Math.floor(Math.log10(value));
-  const step = NICE_STEPS.find((candidate) => candidate * power >= value);
-  return (step ?? 10) * power;
-}
-
-type Scale = (value: number | null) => number;
-
-function rankBottom(line: readonly ShareLinePoint[], depth: number): number {
-  const worst = Math.max(...line.map(({ value }) => value ?? depth));
-  const bound = RANK_TICKS.find((tick) => tick > 1 && tick >= worst);
-  return bound === undefined ? depth : Math.min(bound, depth);
-}
-
-function rankScale(box: CardBox, bottom: number): Scale {
-  const span = Math.max(bottom - 1, 1);
-  return (value) => {
-    const position = Math.min(Math.max(value ?? bottom, 1), bottom);
-    return Math.round(box.y + Math.sqrt((position - 1) / span) * box.height);
-  };
-}
-
-function linearScale(box: CardBox, top: number): Scale {
-  return (value) =>
-    Math.round(box.y + box.height - ((value ?? 0) / top) * box.height);
-}
-
-function scaleFor(
-  line: readonly ShareLinePoint[],
+export function fittedDomain(
+  values: readonly number[],
   kind: CardChartKind,
-  box: CardBox,
-  depth: number,
-): { scale: Scale; ticks: number[]; label: (tick: number) => string } {
-  if (kind === "rank") {
-    const bottom = rankBottom(line, depth);
-    return {
-      scale: rankScale(box, bottom),
-      ticks: [...RANK_TICKS.filter((tick) => tick < bottom), bottom],
-      label: String,
-    };
-  }
-  const top = niceCeiling(Math.max(...line.map(({ value }) => value ?? 0)));
-  return {
-    scale: linearScale(box, top),
-    ticks: [0, top / 2, top],
-    label: formatNumber,
-  };
+): CardDomain {
+  const low = Math.min(...values);
+  const high = Math.max(...values);
+  const span = Math.max(high - low, MIN_SPAN[kind]);
+  const reach = span / 2 + span * PADDING_SHARE;
+  const [floor, ceiling] = BOUNDS[kind];
+  const start = Math.max(
+    floor,
+    Math.min((low + high) / 2 - reach, ceiling - 2 * reach),
+  );
+  return [start, Math.min(ceiling, start + 2 * reach)];
 }
 
-function splitRuns(points: readonly (CardPoint & { day: number })[]) {
-  const runs: CardPoint[][] = [];
+function multiplesWithin([low, high]: CardDomain, step: number): number[] {
+  const first = Math.ceil(low / step);
+  const last = Math.floor(high / step);
+  return Array.from(
+    { length: Math.max(last - first + 1, 0) },
+    (_, index) => (first + index) * step,
+  );
+}
+
+export function roundTicks(domain: CardDomain): number[] {
+  for (let power = 1; ; power *= 10) {
+    for (const step of NICE_STEPS) {
+      const ticks = multiplesWithin(domain, step * power);
+      if (ticks.length <= MAX_TICKS) return ticks;
+    }
+  }
+}
+
+export function valueLabel(value: number, kind: CardChartKind): string {
+  return kind === "rank"
+    ? `#${formatMeasure(value)}`
+    : formatNumber(Math.round(value));
+}
+
+export function axisLabels(from: string, to: string): [string, string] {
+  const sameYear = from.slice(0, 4) === to.slice(0, 4);
+  return [sameYear ? formatDayMonth(from) : formatDate(from), formatDate(to)];
+}
+
+function scaleOf(
+  [low, high]: CardDomain,
+  kind: CardChartKind,
+  plot: CardBox,
+): (value: number) => number {
+  const share = (value: number) => (value - low) / (high - low);
+  return kind === "rank"
+    ? (value) => plot.y + share(value) * plot.height
+    : (value) => plot.y + plot.height - share(value) * plot.height;
+}
+
+function tracesOf(
+  line: readonly ShareLinePoint[],
+  place: (day: number, value: number) => Point,
+): Point[][][] {
+  const traces: Point[][][] = [];
   let previous: number | null = null;
-  for (const { day, x, y } of points) {
-    if (previous === null || day - previous > 1) runs.push([]);
-    runs[runs.length - 1].push({ x, y });
+  for (const { date, value } of line) {
+    const day = utcDayNumber(date);
+    const trace = traces.at(-1);
+    if (value === null) {
+      previous = null;
+      continue;
+    }
+    if (previous === null || trace === undefined) {
+      traces.push([[place(day, value)]]);
+    } else if (day - previous > 1) {
+      trace.push([place(day, value)]);
+    } else {
+      trace[trace.length - 1].push(place(day, value));
+    }
     previous = day;
   }
-  return runs;
+  return traces;
 }
+
+const EMPTY_SHAPE: CardChartShape = {
+  traces: [],
+  ticks: [],
+  start: null,
+  startLabelled: false,
+  end: null,
+};
 
 export function cardChartShape(
   line: readonly ShareLinePoint[],
   kind: CardChartKind,
-  box: CardBox,
-  depth: number,
+  plot: CardBox,
+  clearance: number,
 ): CardChartShape {
-  const { scale, ticks, label } = scaleFor(line, kind, box, depth);
-  const first = utcDayNumber(line[0]?.date ?? "");
-  const span = Math.max(utcDayNumber(line.at(-1)?.date ?? "") - first, 1);
-  const runs = splitRuns(
-    line.map(({ date, value }) => {
-      const day = utcDayNumber(date);
-      return {
-        day,
-        x: Math.round(box.x + ((day - first) / span) * box.width),
-        y: scale(value),
-      };
-    }),
-  );
+  const values = line.flatMap(({ value }) => (value === null ? [] : [value]));
+  const first = line[0];
+  const last = line.at(-1);
+  if (values.length === 0 || first === undefined || last === undefined) {
+    return EMPTY_SHAPE;
+  }
+  const domain = fittedDomain(values, kind);
+  const y = scaleOf(domain, kind, plot);
+  const firstDay = utcDayNumber(first.date);
+  const days = Math.max(utcDayNumber(last.date) - firstDay, 1);
+  const x = (day: number) => plot.x + ((day - firstDay) / days) * plot.width;
+  const markOf = ({ date, value }: ShareLinePoint): CardMark | null =>
+    value === null
+      ? null
+      : {
+          x: x(utcDayNumber(date)),
+          y: y(value),
+          label: valueLabel(value, kind),
+        };
+  const ticks = roundTicks(domain).map((tick) => ({
+    label: valueLabel(tick, kind),
+    y: y(tick),
+  }));
+  const start = markOf(first);
   return {
-    runs: runs.filter((run) => run.length > 1),
-    dots: runs.filter((run) => run.length === 1).map(([dot]) => dot),
-    ticks: ticks.map((tick) => ({ label: label(tick), y: scale(tick) })),
-    end: runs.at(-1)?.at(-1) ?? null,
+    traces: tracesOf(line, (day, value) => [x(day), y(value)]),
+    ticks,
+    start,
+    startLabelled:
+      start !== null &&
+      ticks.every((tick) => Math.abs(tick.y - start.y) >= clearance),
+    end: markOf(last),
   };
 }

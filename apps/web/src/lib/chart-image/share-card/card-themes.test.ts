@@ -18,11 +18,14 @@ const primitives = declarations(
   ":root",
 );
 
-type Swatch = Exclude<keyof CardTheme, "label" | "seriesFill">;
+type Swatch = Exclude<
+  keyof CardTheme,
+  "label" | "seriesFill" | "glow" | "chip"
+>;
 
 const MIRRORED: Record<CardThemeName, Record<Swatch, string>> = {
   light: {
-    background: "--neutral-white",
+    panel: "--neutral-white",
     ink: "--neutral-ink",
     muted: "--neutral-ink-2",
     line: "--neutral-line",
@@ -31,7 +34,7 @@ const MIRRORED: Record<CardThemeName, Record<Swatch, string>> = {
     series: "--brand-series",
   },
   dark: {
-    background: "--neutral-dark-surface",
+    panel: "--neutral-dark-surface",
     ink: "--neutral-dark-ink",
     muted: "--neutral-dark-ink-2",
     line: "--neutral-dark-line",
@@ -40,7 +43,7 @@ const MIRRORED: Record<CardThemeName, Record<Swatch, string>> = {
     series: "--brand-500",
   },
   orange: {
-    background: "--brand-500",
+    panel: "--brand-500",
     ink: "--brand-ink",
     muted: "--brand-ink",
     line: "--brand-700",
@@ -79,9 +82,10 @@ describe("card themes", () => {
 
   it("keeps text readable on every theme", () => {
     for (const name of CARD_THEME_NAMES) {
-      const { background, ink, muted } = CARD_THEMES[name];
-      expect(contrastRatio(ink, background)).toBeGreaterThanOrEqual(4.5);
-      expect(contrastRatio(muted, background)).toBeGreaterThanOrEqual(4.5);
+      const { panel, ink, muted, chip } = CARD_THEMES[name];
+      expect(contrastRatio(ink, panel)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(muted, panel)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(chip.text, chip.fill)).toBeGreaterThanOrEqual(4.5);
     }
   });
 

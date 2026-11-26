@@ -51,6 +51,9 @@ export function drawText(
   return context.measureText(fitted.text).width;
 }
 
+export const clearOf = (color: string): string =>
+  color.replace(/[\d.]+\)$/, "0)");
+
 export function traceRoundedBox(
   context: CanvasRenderingContext2D,
   box: CardBox,
