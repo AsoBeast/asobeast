@@ -86,9 +86,17 @@ const box = (x: number, y: number, width: number, height: number) => ({
 });
 
 function fontsFor(unit: number): Record<CardFontRole, number> {
-  return Object.fromEntries(
-    Object.entries(FONT_UNITS).map(([role, units]) => [role, units * unit]),
-  ) as Record<CardFontRole, number>;
+  return {
+    name: FONT_UNITS.name * unit,
+    store: FONT_UNITS.store * unit,
+    lead: FONT_UNITS.lead * unit,
+    figure: FONT_UNITS.figure * unit,
+    trail: FONT_UNITS.trail * unit,
+    change: FONT_UNITS.change * unit,
+    range: FONT_UNITS.range * unit,
+    credit: FONT_UNITS.credit * unit,
+    tick: FONT_UNITS.tick * unit,
+  };
 }
 
 function headerBoxes(margin: number, inner: number, unit: number) {

@@ -21,13 +21,14 @@ export const DEFAULT_CARD_OPTIONS: ShareCardOptions = {
   footer: true,
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
 function storedObject(raw: string | null): Record<string, unknown> {
   if (raw === null) return {};
   try {
     const value: unknown = JSON.parse(raw);
-    return typeof value === "object" && value !== null && !Array.isArray(value)
-      ? (value as Record<string, unknown>)
-      : {};
+    return isRecord(value) ? value : {};
   } catch {
     return {};
   }
