@@ -399,3 +399,176 @@ test("shows the targets before any field is edited", async ({ page }) => {
   await expect(targetRows(page).nth(0)).toContainText("Covered");
   expect(sent[0]).toEqual({ localization: "en-US" });
 });
+
+const chip = (page: Page, name: string, phrase: string) =>
+  slot(page, name).getByRole("button", {
+    name: new RegExp(`^Suggested: .+\\. Why ${phrase} belongs there$`),
+  });
+
+test("shows a suggestion beside each target", async ({ page }) => {
+  await seed(page, ["productivity app", "study timer"]);
+  await page.goto(DRAFT);
+
+  await expect(
+    slot(page, "Title").getByRole("button", {
+      name: "Suggested: Title. Why productivity app belongs there",
+    }),
+  ).toHaveText("Title");
+  await expect(
+    slot(page, "Subtitle", 0).getByRole("button", {
+      name: "Suggested: Skip. Why study timer belongs there",
+    }),
+  ).toHaveText("Skip");
+});
+
+test("explains the suggestion in one sentence with graded figures", async ({
+  page,
+}) => {
+  await seed(page, ["productivity app"]);
+  await page.goto(DRAFT);
+
+  await (await hydrated(chip(page, "Title", "productivity app"))).click();
+
+  const popover = page.getByRole("dialog", {
+    name: "Where productivity app belongs",
+  });
+  await expect(popover).toBeVisible();
+  await expect(popover).toContainText("Strong popularity");
+  await expect(popover).toContainText(": belongs in the title.");
+  await expect(popover.getByTitle("Popularity 65, strong")).toBeVisible();
+  await expect(popover.getByTitle("Difficulty 60, weak")).toBeVisible();
+});
+
+test("shows suggestions in the picker", async ({ page }) => {
+  await page.goto(DRAFT);
+
+  await openPicker(page, "Title");
+
+  await expect(
+    picker(page).getByRole("option", { name: /productivity app/ }),
+  ).toContainText("Title");
+  await expect(
+    picker(page).getByRole("option", { name: /study timer/ }),
+  ).toContainText("Skip");
+});
+
+test("shows no chip without a verdict", async ({ page }) => {
+  await seed(page, ["deep focus"]);
+  await page.goto(DRAFT);
+
+  await expect(
+    slot(page, "Title").getByRole("button", { name: "deep focus for Title" }),
+  ).toBeVisible();
+  await expect(
+    slot(page, "Title").getByRole("button", { name: /^Suggested:/ }),
+  ).toHaveCount(0);
+});
+
+test("closes the popover with Escape and returns focus to the chip", async ({
+  page,
+}) => {
+  await seed(page, ["productivity app"]);
+  await page.goto(DRAFT);
+  const trigger = chip(page, "Title", "productivity app");
+
+  await (await hydrated(trigger)).focus();
+  await page.keyboard.press("Enter");
+  const popover = page.getByRole("dialog", {
+    name: "Where productivity app belongs",
+  });
+  await expect(popover).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await expect(popover).toBeHidden();
+  await expect(trigger).toBeFocused();
+});
+
+test("applies the suggestions as an unsaved edit", async ({ page }) => {
+  const bodies = savedBodies(page);
+  await seed(page, ["study timer", "productivity app"]);
+  await page.goto(DRAFT);
+  const apply = block(page).getByRole("button", { name: "Apply suggestions" });
+
+  await (await hydrated(apply)).focus();
+  await page.keyboard.press("Enter");
+
+  await expect(
+    slot(page, "Title").getByRole("button", {
+      name: "productivity app for Title",
+    }),
+  ).toBeVisible();
+  await expect(
+    slot(page, "Subtitle", 0).getByRole("button", {
+      name: "Choose a keyword for Subtitle",
+    }),
+  ).toBeVisible();
+  await expect(
+    slot(page, "Keyword 4").getByRole("button", {
+      name: "study timer for Keyword 4",
+    }),
+  ).toBeVisible();
+  await expect(block(page).getByRole("status")).toHaveText(
+    "Targets reordered to match the suggestions",
+  );
+  await expect(saveButton(page)).toBeFocused();
+  await expect(saveButton(page)).not.toHaveAttribute("aria-disabled");
+  expect(bodies).toEqual([]);
+
+  await page.keyboard.press("Enter");
+
+  await expect
+    .poll(() => bodies)
+    .toEqual([
+      {
+        slots: [
+          "productivity app",
+          null,
+          null,
+          "study timer",
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+        ],
+      },
+    ]);
+});
+
+test("is unavailable when the order already matches", async ({ page }) => {
+  await seed(page, ["productivity app"]);
+  await page.goto(DRAFT);
+
+  const apply = block(page).getByRole("button", { name: "Apply suggestions" });
+  await expect(apply).toHaveAttribute("aria-disabled", "true");
+  await expect(apply).toHaveAttribute(
+    "title",
+    "Your targets already follow the suggestions",
+  );
+});
+
+test("keeps the header actions inside the card on a phone", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await seed(page, ["study timer", "productivity app"]);
+  await page.goto(DRAFT);
+
+  const tip = block(page).getByRole("button", {
+    name: "About suggested fields",
+  });
+  await expect(tip).toBeVisible();
+  const card = block(page).locator('[data-slot="card"]');
+  const { scrollWidth, clientWidth, right, tipRight } = await card.evaluate(
+    (node, tipNode) => ({
+      scrollWidth: node.scrollWidth,
+      clientWidth: node.clientWidth,
+      right: node.getBoundingClientRect().right,
+      tipRight: tipNode.getBoundingClientRect().right,
+    }),
+    await tip.elementHandle(),
+  );
+  expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+  expect(tipRight).toBeLessThanOrEqual(right);
+});

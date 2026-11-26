@@ -33,6 +33,7 @@ interface Seeded {
   difficulty?: number;
   active?: boolean;
   keywordClass?: string;
+  relevance?: number;
 }
 
 describe('Listing targets (e2e)', () => {
@@ -88,6 +89,7 @@ describe('Listing targets (e2e)', () => {
           source: 'MANUAL',
           active: row.active ?? true,
           keywordClass: row.keywordClass ?? 'generic',
+          relevance: row.relevance ?? null,
         },
       });
       if (row.traffic !== undefined) {
@@ -278,6 +280,61 @@ describe('Listing targets (e2e)', () => {
       });
     });
 
+    it('answers a placement for each target and candidate', async () => {
+      const appId = await seedApp();
+      await track(appId, 'us', [
+        { text: 'habit tracker', traffic: 5.5, difficulty: 3, relevance: 80 },
+        { text: 'focus', traffic: 3, difficulty: 4.5, relevance: 80 },
+        { text: 'daily goals', traffic: 4, difficulty: 1, relevance: 80 },
+      ]);
+      await seedTargets(appId, 'en-US', ['habit tracker', 'focus']);
+
+      const body = (await read(appId).expect(200)).body as ListingTargetsResult;
+
+      expect(body.slots[0]?.placement).toEqual({
+        field: 'title',
+        reason: 'strongestReachable',
+        popularity: 55,
+        difficulty: 30,
+        position: null,
+      });
+      expect(body.slots[1]?.placement).toMatchObject({
+        field: 'keywordField',
+        reason: 'singleWord',
+      });
+      expect(
+        body.candidates.map(({ text, placement }) => [
+          text,
+          placement?.field,
+          placement?.reason,
+        ]),
+      ).toEqual([['daily goals', 'subtitle', 'nextReachable']]);
+    });
+
+    it('answers no placement for an untracked or unscored target', async () => {
+      const appId = await seedApp();
+      await track(appId, 'us', [{ text: 'habit tracker' }]);
+      await seedTargets(appId, 'en-US', ['habit tracker', 'focus timer']);
+
+      const body = (await read(appId).expect(200)).body as ListingTargetsResult;
+
+      expect(body.slots[0]?.lead).not.toBeNull();
+      expect(body.slots[0]).not.toHaveProperty('placement');
+      expect(body.slots[1]?.lead).toBeNull();
+      expect(body.slots[1]).not.toHaveProperty('placement');
+    });
+
+    it('answers no placement for a target of a localization no market reads', async () => {
+      const appId = await seedApp();
+      await track(appId, 'us', [{ text: 'kaizen', traffic: 6, relevance: 80 }]);
+      await seedTargets(appId, 'ja', ['kaizen']);
+
+      const body = (await read(appId, 'ja').expect(200))
+        .body as ListingTargetsResult;
+
+      expect(body.slots[0]).not.toHaveProperty('placement');
+    });
+
     it('refuses a competitor', async () => {
       const competitorId = await seedCompetitor(await seedApp());
 
@@ -331,6 +388,27 @@ describe('Listing targets (e2e)', () => {
       expect(await queuedIds()).toContain(
         firstRunCheckJobId(appId, keywordId, utcDateKey()),
       );
+    });
+
+    it('answers the placements of the saved targets', async () => {
+      const appId = await seedApp();
+      await track(appId, 'us', [
+        { text: 'habit tracker', traffic: 5.5, difficulty: 3, relevance: 80 },
+        { text: 'focus', traffic: 3, difficulty: 4.5, relevance: 80 },
+      ]);
+
+      const body = (
+        await save(appId, { slots: ['focus', 'habit tracker'] }).expect(200)
+      ).body as ListingTargetsSaveResult;
+
+      expect(body.slots[0]?.placement).toMatchObject({
+        field: 'keywordField',
+        reason: 'singleWord',
+      });
+      expect(body.slots[1]?.placement).toMatchObject({
+        field: 'title',
+        reason: 'strongestReachable',
+      });
     });
 
     it('tracks a phrase in every market reading the localization', async () => {

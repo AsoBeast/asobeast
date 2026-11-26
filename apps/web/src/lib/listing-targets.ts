@@ -6,6 +6,7 @@ import {
   type ListingTargetCandidate,
   type ListingTargetsRequest,
   type ListingTargetsResult,
+  type PlacementSuggestion,
   type TargetNotTracked,
   type TargetScores,
 } from "@asobeast/shared";
@@ -118,6 +119,19 @@ export function scoresByPhrase(
     if (slot?.lead) scores.set(slot.text, slot.lead);
   }
   return scores;
+}
+
+export function placementsByPhrase(
+  result: ListingTargetsResult,
+): ReadonlyMap<string, PlacementSuggestion> {
+  const placements = new Map<string, PlacementSuggestion>();
+  for (const { text, placement } of result.candidates) {
+    if (placement) placements.set(text, placement);
+  }
+  for (const slot of result.slots) {
+    if (slot?.placement) placements.set(slot.text, slot.placement);
+  }
+  return placements;
 }
 
 export const untrackedByPhrase = (

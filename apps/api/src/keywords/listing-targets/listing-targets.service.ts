@@ -7,6 +7,7 @@ import {
   ListingTargetsResult,
   ListingTargetsSaveResult,
   TargetNotTracked,
+  utcDayOf,
 } from '@asobeast/shared';
 import { WorkspaceContext } from '../../common/tenancy/workspace-context';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -20,7 +21,8 @@ import {
   KeywordApp,
 } from '../keywords.support';
 import { readersOf } from '../localization-markets';
-import { listingTargetsOf } from './listing-targets';
+import { listingTargetsOf, withPlacements } from './listing-targets';
+import { placementVerdicts } from './placement';
 import {
   normalizeTargetSlots,
   phrasesToTrack,
@@ -144,13 +146,22 @@ export class ListingTargetsService {
         brandFacts: true,
       }),
     ]);
-    return listingTargetsOf({
+    const result = listingTargetsOf({
       appId: app.id,
       localization,
       readers,
       stored,
       tracked,
     });
+    return withPlacements(
+      result,
+      placementVerdicts({
+        store: app.store,
+        targets: result.slots.filter((slot) => slot !== null),
+        candidates: result.candidates,
+        today: utcDayOf(Date.now()),
+      }),
+    );
   }
 
   private async targetApp(appId: string): Promise<KeywordApp> {

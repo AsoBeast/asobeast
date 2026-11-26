@@ -1,5 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Store } from '@prisma/client';
+import { TrackedKeywordItem, utcDayOf } from '@asobeast/shared';
 import { WorkspaceContext } from '../../common/tenancy/workspace-context';
 import { PrismaService } from '../../prisma/prisma.service';
 import { KeywordPairTracker } from '../keyword-pair-tracker';
@@ -76,6 +77,51 @@ describe('ListingTargetsService.read', () => {
       undefined,
       { brandFacts: true },
     );
+  });
+
+  it('answers a placement for each scored target and candidate', async () => {
+    const { service, keywords } = build();
+    const row = (text: string, volume: number): TrackedKeywordItem => ({
+      keywordId: `us:${text}`,
+      text,
+      country: 'us',
+      source: 'MANUAL',
+      active: true,
+      latestPosition: 14,
+      latestDepth: 200,
+      latestCheckedOn: utcDayOf(Date.now()),
+      previousPosition: null,
+      positionDelta1d: null,
+      positionDelta7d: null,
+      traffic: volume / 10,
+      difficulty: 3,
+      volume,
+      relevance: 80,
+      opportunity: 70,
+      bucket: null,
+      scoredAt: null,
+      scoreProvenance: null,
+      serpVolatility7d: null,
+      keywordClass: 'generic',
+    });
+    keywords.listTracked.mockResolvedValue([
+      row('habit tracker', 62),
+      row('daily goals', 35),
+    ]);
+
+    const result = await service.read('app1', 'en-US');
+
+    expect(result.slots[0]?.placement).toEqual({
+      field: 'title',
+      reason: 'strongestReachable',
+      popularity: 62,
+      difficulty: 30,
+      position: 14,
+    });
+    expect(result.candidates[0]).toMatchObject({
+      text: 'daily goals',
+      placement: { field: 'subtitle', reason: 'nextReachable' },
+    });
   });
 
   it('refuses a competitor', async () => {

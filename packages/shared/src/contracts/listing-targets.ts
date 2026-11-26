@@ -1,3 +1,4 @@
+import type { Store } from '../index';
 import type { KeywordClass, KeywordImportQuota } from './keywords';
 
 export const LISTING_TARGET_LIMIT = 10;
@@ -28,7 +29,50 @@ export interface TargetScores {
   checkedOn: string | null;
   keywordClass?: KeywordClass;
   scoreOutdated?: boolean;
+  floorAnswer?: boolean;
 }
+
+export const PLACEMENT_SUGGESTIONS = [
+  'title',
+  'subtitle',
+  'keywordField',
+  'shortDescription',
+  'description',
+  'skip',
+] as const;
+export type PlacementSuggestionField = (typeof PLACEMENT_SUGGESTIONS)[number];
+
+export const PLACEMENT_REASONS = [
+  'strongestReachable',
+  'nextReachable',
+  'hardToRank',
+  'singleWord',
+  'longTail',
+  'noStrongRoom',
+  'noRoom',
+  'lowPopularity',
+  'lowRelevance',
+  'competitorBrand',
+  'ownBrand',
+] as const;
+export type PlacementReason = (typeof PLACEMENT_REASONS)[number];
+
+export interface PlacementSuggestion {
+  field: PlacementSuggestionField;
+  reason: PlacementReason;
+  popularity: number | null;
+  difficulty: number | null;
+  position: number | null;
+}
+
+const PLACEMENT_FIELDS: Record<Store, readonly PlacementSuggestionField[]> = {
+  APP_STORE: ['title', 'subtitle', 'keywordField'],
+  GOOGLE_PLAY: ['title', 'shortDescription', 'description'],
+};
+
+export const placementFieldsOf = (
+  store: Store,
+): readonly PlacementSuggestionField[] => PLACEMENT_FIELDS[store];
 
 export interface ListingTargetItem {
   position: number;
@@ -37,12 +81,14 @@ export interface ListingTargetItem {
   trackedIn: TargetMarket[];
   untrackedIn: string[];
   lead: TargetScores | null;
+  placement?: PlacementSuggestion;
 }
 
 export interface ListingTargetCandidate {
   text: string;
   markets: string[];
   lead: TargetScores;
+  placement?: PlacementSuggestion;
 }
 
 export interface ListingTargetsResult {
