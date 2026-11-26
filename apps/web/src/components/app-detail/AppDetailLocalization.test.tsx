@@ -140,14 +140,14 @@ describe("Simplified Chinese refresh and snapshot diff", () => {
 
   it("localizes refresh actions and the stale-market explanation", () => {
     const active = chineseMarkup(<RefreshAction appId="app-1" />);
-    expect(active).toContain('aria-label="刷新德国的应用页面"');
+    expect(active).toContain('aria-label="刷新德国详情页"');
     expect(active).toContain(">刷新<");
     expect(active).not.toContain("Refresh Germany listing");
 
     marketState.refreshable = false;
     const stale = chineseMarkup(<RefreshAction appId="app-1" />);
     expect(stale).toContain(
-      "德国已不再跟踪任何关键词，因此不再刷新该市场的应用页面。",
+      "德国已不再跟踪任何关键词，因此不再刷新该市场的详情页。",
     );
   });
 
@@ -192,7 +192,7 @@ describe("Simplified Chinese refresh and snapshot diff", () => {
         onOpenChange={() => undefined}
       />,
     );
-    expect(unchanged).toContain("自上次快照以来，应用商店页面未发生变化。");
+    expect(unchanged).toContain("自上次快照以来，商店详情页未发生变化。");
     expect(unchanged).toContain("未检测到变化。");
   });
 });

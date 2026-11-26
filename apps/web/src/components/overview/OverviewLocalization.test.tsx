@@ -116,7 +116,7 @@ describe("Simplified Chinese overview metrics", () => {
   it("localizes metric labels and plural notes while preserving values", () => {
     const markup = chineseMarkup();
 
-    expect(markup).toContain(">曝光度<");
+    expect(markup).toContain(">可见度<");
     expect(markup).toContain(">声量份额<");
     expect(markup).toContain(">进入前十的关键词<");
     expect(markup).toContain(">评分<");
@@ -138,7 +138,7 @@ describe("Simplified Chinese overview metrics", () => {
     expect(markup).toContain("标题");
     expect(markup).toContain("副标题");
     expect(markup).toContain("描述");
-    expect(markup).toContain("您的元数据已覆盖最佳机会。");
+    expect(markup).toContain("您的元数据已覆盖机会分最高的关键词。");
     expect(markup).not.toContain("Metadata coverage");
   });
 

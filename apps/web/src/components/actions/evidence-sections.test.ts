@@ -39,7 +39,7 @@ describe("evidenceSections", () => {
 
     expect(sections.facts).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ label: "机会", value: "66.5" }),
+        expect.objectContaining({ label: "机会分", value: "66.5" }),
         expect.objectContaining({ label: "搜索量", value: "62" }),
       ]),
     );

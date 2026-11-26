@@ -152,10 +152,8 @@ describe("Simplified Chinese market seeding", () => {
   it("localizes seed actions and outcomes with ICU counts", () => {
     expect(seedButtonLabel(3, 2, t)).toBe("添加 3 个国家并填充 2 个");
     expect(outcomeText({ kind: "seeded", seeded: 1, skipped: 3 }, t)).toBe(
-      "已从其应用商店页面填充 1 个关键词，3 个因关键词上限未加入",
+      "已从详情页填充 1 个关键词，3 个因关键词上限未加入",
     );
-    expect(seedStatusText(true, undefined, t)).toBe(
-      "正在从其应用商店页面填充…",
-    );
+    expect(seedStatusText(true, undefined, t)).toBe("正在从详情页填充…");
   });
 });

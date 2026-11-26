@@ -9,13 +9,13 @@
   "help": {
     "label": "关于 App Store 本地化版本",
     "title": "关键词字段属于一种语言",
-    "summary": "其列表中的每个商店市场都会读取它，词语只在同一个本地化版本内组合。"
+    "summary": "该市场包含的本地化版本都会读取它，词语只在同一个本地化版本内组合。"
   },
   "loadFailed": "无法加载本地化版本。",
   "add": {
     "button": "添加本地化版本",
     "title": "添加本地化版本",
-    "description": "选择你在 App Store Connect 中发布的语言。其列表中的每个商店市场都会读取它的关键词字段。",
+    "description": "选择你在 App Store Connect 中发布的语言。该语言发布的每个商店市场都会读取它的关键词字段。",
     "search": "搜索语言",
     "empty": "没有找到语言。",
     "readMarkets": "在你的市场中读取",
@@ -63,7 +63,7 @@
   },
   "saveDialog": {
     "title": "保存{name}关键词字段",
-    "description": "选择应跟踪其短语的市场。无论是否选择，其列表中的每个市场都会读取此字段。",
+    "description": "选择应跟踪其短语的市场。无论是否选择，该字段都会被所有发布此语言的市场读取。",
     "legend": "跟踪这些短语的市场",
     "newCount": "{count} 个新短语",
     "seePlans": "查看套餐",
@@ -89,7 +89,7 @@
     "notRead": "不在你的市场中读取"
   },
   "origin": {
-    "home": "主页",
+    "home": "主版本",
     "manual": "手动添加",
     "detected": "检测到"
   },

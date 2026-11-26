@@ -158,7 +158,7 @@ describe("Simplified Chinese dashboard and apps table", () => {
 
     expect(markup).toContain("应用");
     expect(markup).toContain("此工作区中的应用");
-    expect(markup).toContain("曝光度");
+    expect(markup).toContain("可见度");
     expect(markup).toContain("进入前十");
     expect(markup).toContain("Focus Timer");
     expect(markup).toContain("US");
@@ -199,7 +199,7 @@ describe("Simplified Chinese dashboard and apps table", () => {
 
     expect(markup).toContain("搜索应用");
     expect(markup).toContain("排序方式");
-    expect(markup).toContain("曝光度");
+    expect(markup).toContain("可见度");
     expect(markup).toContain("表格");
     expect(markup).toContain("卡片");
     expect(markup).not.toContain("Search apps");

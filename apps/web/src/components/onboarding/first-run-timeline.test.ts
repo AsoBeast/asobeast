@@ -294,8 +294,8 @@ describe("Simplified Chinese first-run timeline", () => {
     expect(firstRunHeadline(waiting, t)).toBe("还有 2 个步骤正在完成。");
     expect(firstRunHeadline(completeStatus, t)).toBe("此应用已全部采集。");
     expect(firstRunRows(completeStatus, NOW, t)[0]).toMatchObject({
-      label: "应用商店页面已采集",
-      detail: "首个应用商店页面快照已存储。",
+      label: "详情页已采集",
+      detail: "首个详情页快照已存储。",
     });
     expect(
       firstRunRows(

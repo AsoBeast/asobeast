@@ -3,8 +3,8 @@
     "title": "标题",
     "subtitle": "副标题",
     "keywordField": "关键词字段",
-    "description": "详细描述",
-    "promotionalText": "推广文案",
+    "description": "描述",
+    "promotionalText": "推广文本",
     "whatsNew": "更新内容",
     "shortDescription": "简短描述"
   },

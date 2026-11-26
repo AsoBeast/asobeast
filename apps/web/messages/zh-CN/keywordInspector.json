@@ -89,7 +89,7 @@
       "storefront": "应用商店地区",
       "popularity": "热度",
       "difficulty": "难度",
-      "opportunity": "机会",
+      "opportunity": "机会分",
       "inspected": "检查时间",
       "noScore": "无评分",
       "running": "运行中",
@@ -191,7 +191,7 @@
       "nothing": {
         "all": {
           "title": "暂无待查看内容",
-          "body": "您列表附近发现的每个关键词都已被跟踪或忽略。新的关键词会在下次每周运行后出现。"
+          "body": "您详情页附近发现的每个关键词都已被跟踪或忽略。新的关键词会在下次每周运行后出现。"
         },
         "ranked": {
           "title": "尚未有已排名关键词",
@@ -203,14 +203,14 @@
         }
       },
       "neverRun": {
-        "queued": "AsoBeast 已排队检查您列表附近的关键词。在此市场找到的结果会显示在这里。",
-        "never": "AsoBeast 尚未查找您列表附近的关键词。请点击“刷新”立即查找。",
-        "weekly": "AsoBeast 每周查找一次您列表附近的关键词。请点击“刷新”立即查找。"
+        "queued": "AsoBeast 已排队检查您详情页附近的关键词。在此市场找到的结果会显示在这里。",
+        "never": "AsoBeast 尚未查找您详情页附近的关键词。请点击“刷新”立即查找。",
+        "weekly": "AsoBeast 每周查找一次您详情页附近的关键词。请点击“刷新”立即查找。"
       }
     },
     "table": {
       "scrollLabel": "关键词发现",
-      "caption": "关键词发现：您尚未跟踪、且与您列表相近的关键词，以及您的应用在每个关键词上的排名。",
+      "caption": "关键词发现：您尚未跟踪、且与您详情页相近的关键词，以及您的应用在每个关键词上的排名。",
       "filteredTitle": "没有发现的关键词匹配此搜索",
       "filteredBody": "请更改或清除搜索条件以重新查看结果。",
       "showing": "显示 {shown, number} 个，共 {total, number} 个",
@@ -223,7 +223,7 @@
       "recommended": "推荐",
       "source": "来源",
       "position": "排名",
-      "opportunity": "机会",
+      "opportunity": "机会分",
       "popularity": "热度",
       "difficulty": "难度",
       "relevance": "相关性",
@@ -236,7 +236,7 @@
       "read": "阅读关键词发现说明",
       "positionSummary": "您的应用在此短语的应用商店搜索中的位置。最高 50 名的位置可能来自今天或昨天进行的另一次搜索；短横线表示尚未检查。",
       "opportunitySummary": "综合热度与难度得出的机会。它需要两项评分，关键词被跟踪后即可获得。",
-      "relevanceSummary": "此短语与您列表的相关程度，取决于它的发现来源以及您的列表包含其中多少个词。"
+      "relevanceSummary": "此短语与您详情页的相关程度，取决于它的发现来源以及您的详情页包含其中多少个词。"
     },
     "actions": {
       "track": "跟踪",
@@ -386,8 +386,8 @@
       "loading": "正在加载搜索结果"
     },
     "listing": {
-      "title": "在您的列表中",
-      "loadFailed": "无法加载您的列表字段。"
+      "title": "在您的详情页中",
+      "loadFailed": "无法加载您的详情页字段。"
     }
   },
   "map": {
@@ -416,7 +416,7 @@
       "position": "排名",
       "popularity": "热度",
       "difficulty": "难度",
-      "opportunity": "机会",
+      "opportunity": "机会分",
       "floor": "最低热度答案",
       "paused": "已暂停",
       "notChecked": "尚未检查",

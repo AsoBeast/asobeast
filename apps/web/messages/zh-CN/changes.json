@@ -3,7 +3,7 @@
     "title": "标题",
     "subtitle": "副标题",
     "summary": "简短描述",
-    "description": "详细描述",
+    "description": "描述",
     "version": "版本",
     "price": "价格",
     "screenshots": "截图",
@@ -12,7 +12,7 @@
     "icon": "图标",
     "whatsNew": "更新内容",
     "inAppEvents": "应用内活动",
-    "featuring": "商店推荐",
+    "featuring": "精选",
     "editorsChoice": "编辑精选"
   },
   "title": "变更记录",

@@ -31,7 +31,7 @@ const RULE_CONFIRMATION: Partial<Record<ActionRule, string>> = {
     "当关键词进入前 10 名或不再符合条件时，AsoBeast 会确认问题已修复",
   "listing.ship_update": "当商店显示新版本时，AsoBeast 会确认问题已修复",
   "conversion.investigate_drop":
-    "当获取次数相对于详情页浏览量恢复时，AsoBeast 会确认问题已修复",
+    "当获取点击量相对于详情页浏览量恢复时，AsoBeast 会确认问题已修复",
   "listing.cpp_underperforms":
     "当该页面转化率达到默认页面的五分之四时，AsoBeast 会确认问题已修复",
 };

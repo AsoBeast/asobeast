@@ -9,7 +9,7 @@
   "notEnoughHistory": "历史数据不足",
   "notEnoughHistoryYet": "历史数据不足",
   "trendAria": "{label}：{direction}，当前 {now}",
-  "visibilityAria": "曝光度，最近 30 天：{direction}，当前 {value}",
+  "visibilityAria": "可见度，最近 30 天：{direction}，当前 {value}",
   "directions": {
     "up": "上升",
     "down": "下降",

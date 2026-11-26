@@ -18,7 +18,7 @@
     "cardsView": "卡片"
   },
   "sort": {
-    "visibility": "曝光度",
+    "visibility": "可见度",
     "change": "7 天变化",
     "top10": "进入前十的关键词",
     "rating": "评分",
@@ -29,7 +29,7 @@
   "table": {
     "app": "应用",
     "trend": "趋势",
-    "visibility": "曝光度",
+    "visibility": "可见度",
     "change": "变化",
     "top10": "进入前十",
     "moved": "排名变化",
@@ -46,7 +46,7 @@
     "setupChip": "设置 {done}/{total}",
     "untitled": "未命名应用",
     "critical": "{count, plural, other {# 个紧急}}",
-    "visibilityTrend": "曝光度，最近 {days, number} 天"
+    "visibilityTrend": "可见度，最近 {days, number} 天"
   },
   "counts": {
     "apps": "{count, plural, other {# 个应用}}",
@@ -67,11 +67,11 @@
     "updated": "更新于 {date}",
     "homeStorefront": "主应用商店地区 · {country}",
     "top10": "进入前十 {count, number} 个",
-    "collecting": "正在采集首批排名。曝光度将在一小时内出现。",
+    "collecting": "正在采集首批排名。可见度将在一小时内出现。",
     "collectingShort": "正在采集首批排名。",
-    "visibility": "曝光度",
-    "blendedVisibility": "混合曝光度",
-    "blendedNote": "跨应用商店混合，各商店的分数不能直接比较。",
+    "visibility": "可见度",
+    "blendedVisibility": "综合可见度",
+    "blendedNote": "综合各应用商店；各商店的分数不能直接比较。",
     "storefronts": "应用商店地区",
     "linked": "已关联",
     "rating": "评分",
@@ -111,7 +111,7 @@
     "lastRun": "最近一次运行",
     "periodRun": "在最近一次运行中",
     "periodRange": "在最近 {days, number} 天内",
-    "largest": "显示 {count, number} 个排名变化中最大的部分{period}",
+    "largest": "{period}的 {count, number} 个排名变化中较大的部分",
     "all": "{period}的排名变化，按幅度从大到小排列"
   },
   "movement": {
@@ -135,9 +135,9 @@
     "lastRunUpBusiest": "最近一次运行中，<strong>{up, plural, other {# 个关键词上升}}</strong>，变化最多的是 <strong>{app}</strong>。",
     "lastRunDownBusiest": "最近一次运行中，<strong>{down, plural, other {# 个关键词下降}}</strong>，变化最多的是 <strong>{app}</strong>。",
     "lastRunBothBusiest": "最近一次运行中，<strong>{up, plural, other {# 个关键词上升}}，{down, plural, other {# 个下降}}</strong>，变化最多的是 <strong>{app}</strong>。",
-    "rangeTrendUnchanged": " 最近 {days, number} 天内，曝光度<strong>保持不变</strong>。",
-    "rangeTrendUp": " 最近 {days, number} 天内，曝光度<strong>上升 {count, number}</strong>。",
-    "rangeTrendDown": " 最近 {days, number} 天内，曝光度<strong>下降 {count, number}</strong>。"
+    "rangeTrendUnchanged": " 最近 {days, number} 天内，可见度<strong>保持不变</strong>。",
+    "rangeTrendUp": " 最近 {days, number} 天内，可见度<strong>上升 {count, number}</strong>。",
+    "rangeTrendDown": " 最近 {days, number} 天内，可见度<strong>下降 {count, number}</strong>。"
   },
   "breakdown": {
     "byApp": "按应用",
@@ -165,8 +165,8 @@
     "nowNoDelta": "当前 {now, number}，没有 {unit} 数据"
   },
   "charts": {
-    "visibilityLabel": "曝光度",
-    "visibilityRegion": "曝光度",
+    "visibilityLabel": "可见度",
+    "visibilityRegion": "可见度",
     "top10Label": "进入前十",
     "top10Region": "进入前十的关键词",
     "rankLabel": "关键词排名",
@@ -184,7 +184,7 @@
     "closed": "关闭",
     "movementNote": "一个关键词在多天排名变化时，每一天都会计入。指标卡会比较第一天和最后一天。",
     "showEveryApp": "{name}，显示所有应用",
-    "listingChange": "应用商店页面变化",
+    "listingChange": "详情页变化",
     "chartLines": "图表线条",
     "rankBands": "排名区间",
     "unranked": "未排名",

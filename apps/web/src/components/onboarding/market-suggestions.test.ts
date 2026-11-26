@@ -127,10 +127,10 @@ describe("Simplified Chinese market costs", () => {
       "XX",
     ]);
     expect(marketCostText(suggestion("de", "de"), t)).toBe(
-      "每天 2 次应用商店页面读取，每个关键词 1 次",
+      "每天 2 次详情页读取，每个关键词 1 次",
     );
     expect(marketCostSummary("GOOGLE_PLAY", t)).toBe(
-      "一个市场会增加：应用和每个竞品每天各 1 次应用商店页面读取，以及在该市场跟踪的每个关键词每天 1 次搜索。",
+      "一个市场会增加：应用和每个竞品每天各 1 次详情页读取，以及在该市场跟踪的每个关键词每天 1 次搜索。",
     );
   });
 });

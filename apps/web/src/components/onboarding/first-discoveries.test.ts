@@ -176,7 +176,7 @@ describe("Simplified Chinese first discoveries", () => {
 
     expect(result).toMatchObject({
       headline:
-        "在您的应用商店页面附近找到 3 个关键词。您的应用已有 1 个进入排名。",
+        "在与您详情页相近的关键词中找到 3 个关键词。您的应用已有 1 个进入排名。",
       rows: [
         { text: "focus timer app", rank: "#3" },
         { text: "study planner", rank: ">200" },
@@ -186,7 +186,7 @@ describe("Simplified Chinese first discoveries", () => {
     expect(firstDiscoveries(list([item("timer", null, 200)]), t)).toMatchObject(
       {
         headline:
-          "在您的应用商店页面附近找到 1 个关键词。它们目前都未进入排名。请跟踪适合您应用的关键词。",
+          "在与您详情页相近的关键词中找到 1 个关键词。它们目前都未进入排名。请跟踪适合您应用的关键词。",
       },
     );
   });

@@ -163,9 +163,9 @@ describe("the run progress pill", () => {
       ).map(({ label, progress, detail }) => ({ label, progress, detail })),
     ).toEqual([
       {
-        label: "已抓取应用页面",
+        label: "已抓取详情页",
         progress: null,
-        detail: "应用及其竞品的主市场和分市场应用页面。",
+        detail: "应用及其竞品的主市场详情页和分市场详情页。",
       },
       {
         label: "已检查排名",

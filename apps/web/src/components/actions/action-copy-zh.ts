@@ -63,9 +63,9 @@ export function summarizeEvidenceZh(evidence: ActionEvidence): string {
     case "listing.ship_update":
       return `商店上次显示更新是在 ${number(evidence.daysSinceUpdate)} 天前${evidence.competitorMedianDays === null ? "" : `，竞品中位数为 ${number(evidence.competitorMedianDays)} 天`}。`;
     case "conversion.investigate_drop":
-      return `最近 ${number(evidence.windowDays)} 个完整天里，获取次数平均每天 ${measure(evidence.getsAfter)} 次，之前为 ${measure(evidence.getsBefore)} 次，而详情页浏览量保持在 ${measure(evidence.pageViewsAfter)} 对 ${measure(evidence.pageViewsBefore)}。`;
+      return `最近 ${number(evidence.windowDays)} 个完整天里，获取点击量平均每天 ${measure(evidence.getsAfter)} 次，之前为 ${measure(evidence.getsBefore)} 次，而详情页浏览量保持在 ${measure(evidence.pageViewsAfter)} 对 ${measure(evidence.pageViewsBefore)}。`;
     case "listing.cpp_underperforms":
-      return `“${evidence.pageTitle}”在 ${number(evidence.windowDays)} 个完整天里将 ${percent(evidence.pageConversion)} 的详情页浏览量转化为获取次数，默认页为 ${percent(evidence.defaultConversion)}。`;
+      return `“${evidence.pageTitle}”在 ${number(evidence.windowDays)} 个完整天里将 ${percent(evidence.pageConversion)} 的详情页浏览量转化为获取点击量，默认页为 ${percent(evidence.defaultConversion)}。`;
     case "metadata.fix_lint":
       return `${fieldsOf([evidence.field])}有 ${number(evidence.issues.length)} 个商店规则问题，字符数 ${number(evidence.chars)}/${number(evidence.limit)}。`;
     default: {

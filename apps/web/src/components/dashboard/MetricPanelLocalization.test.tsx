@@ -124,8 +124,8 @@ describe("MetricPanel complete ICU scope messages", () => {
   it("lets the catalog place the scoped app before the metric and days", () => {
     const rendered = markup({ appId: "app-1" });
 
-    expect(rendered).toContain("Focus Timer :: 曝光度");
-    expect(rendered).toContain("7 天 :: Focus Timer :: 曝光度");
+    expect(rendered).toContain("Focus Timer :: 可见度");
+    expect(rendered).toContain("7 天 :: Focus Timer :: 可见度");
   });
 
   it("uses the same complete scope messages for the rank-bands chart", () => {
@@ -141,7 +141,7 @@ describe("MetricPanel complete ICU scope messages", () => {
   it("lets the catalog place the all-apps scope before the metric and days", () => {
     const rendered = markup({});
 
-    expect(rendered).toContain("全部 :: 曝光度");
-    expect(rendered).toContain("7 天 :: 全部 :: 曝光度");
+    expect(rendered).toContain("全部 :: 可见度");
+    expect(rendered).toContain("7 天 :: 全部 :: 可见度");
   });
 });

@@ -135,7 +135,7 @@
       "beforeNumbers": "连接后一两天内会出现首批数据。",
       "connect": "连接 App Store Connect",
       "replace": "替换密钥",
-      "empty": "尚未连接商店。连接 App Store Connect 后，可按市场查看展示次数、产品详情页浏览量、获取次数和转化率，并在评论页发布回复。",
+      "empty": "尚未连接商店。连接 App Store Connect 后，可按市场查看曝光量、应用详情页浏览量、获取点击量和转化率，并在评论页发布回复。",
       "noApps": "导入一个 App Store 应用，通过此密钥读取它的数据。",
       "appsLabel": "此密钥报告的应用",
       "verified": "已与 Apple 验证密钥",

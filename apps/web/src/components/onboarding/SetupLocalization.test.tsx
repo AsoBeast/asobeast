@@ -129,7 +129,7 @@ describe("Simplified Chinese setup surfaces", () => {
       </>,
     );
 
-    expect(markup).toContain("您的应用商店页面提供英语和德语");
+    expect(markup).toContain("您的详情页提供英语和德语");
     expect(markup).toContain("添加国家");
     expect(markup).toContain("关于市场成本");
     expect(markup).not.toContain("Your listing ships");

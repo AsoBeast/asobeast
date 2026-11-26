@@ -150,7 +150,7 @@ describe("emptyStateOf", () => {
   it("localizes every discovery empty state in Chinese", () => {
     expect(emptyStateOf(list([], null), 0, "all", zh)).toEqual({
       kind: "never_run",
-      body: "AsoBeast 尚未查找您列表附近的关键词。请点击“刷新”立即查找。",
+      body: "AsoBeast 尚未查找您详情页附近的关键词。请点击“刷新”立即查找。",
     });
     expect(emptyStateOf(list([item()]), 0, "ranked", zh)).toMatchObject({
       kind: "nothing_here",

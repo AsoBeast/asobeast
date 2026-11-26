@@ -23,12 +23,12 @@
     "localization": "本地化版本",
     "defaultLocalization": "{name} · 默认",
     "market": "市场",
-    "listingMarket": "页面市场",
+    "listingMarket": "详情页市场",
     "allMarkets": "所有市场"
   },
   "notices": {
     "notInSearchTitle": "未在 iPhone 搜索中上架",
-    "notInSearchBody": "此应用不适用于 iPhone，而 AsoBeast 读取的是 iPhone 搜索结果，因此其关键词永远不会在检查深度内被找到，曝光度也始终为 0。"
+    "notInSearchBody": "此应用不适用于 iPhone，而 AsoBeast 读取的是 iPhone 搜索结果，因此其关键词永远不会在检查深度内被找到，可见度也始终为 0。"
   },
   "print": {
     "report": "打印报告"
@@ -41,10 +41,10 @@
   },
   "refresh": {
     "action": "刷新",
-    "listing": "刷新{country}的应用页面",
+    "listing": "刷新{country}详情页",
     "failed": "刷新失败",
     "staleMarket": "此市场",
-    "staleReason": "{market}已不再跟踪任何关键词，因此不再刷新该市场的应用页面。"
+    "staleReason": "{market}已不再跟踪任何关键词，因此不再刷新该市场的详情页。"
   },
   "delisted": {
     "title": "{store} 上已下架",
@@ -58,8 +58,8 @@
     "refreshed": "已刷新快照",
     "refreshedMarket": "已在{country}刷新快照",
     "changed": "自上次快照以来有 {count} 个字段发生变化。",
-    "unchanged": "自上次快照以来，应用商店页面未发生变化。",
-    "caption": "自上次快照以来发生变化的应用商店页面字段及其前后值。",
+    "unchanged": "自上次快照以来，商店详情页未发生变化。",
+    "caption": "自上次快照以来发生变化的商店详情页字段及其前后值。",
     "field": "字段",
     "before": "变更前",
     "after": "变更后",
@@ -80,7 +80,7 @@
       "icon": "图标",
       "whatsNew": "更新内容",
       "inAppEvents": "应用内活动",
-      "featuring": "推荐",
+      "featuring": "精选",
       "editorsChoice": "编辑精选",
       "ratingAvg": "评分",
       "ratingCount": "评分数",

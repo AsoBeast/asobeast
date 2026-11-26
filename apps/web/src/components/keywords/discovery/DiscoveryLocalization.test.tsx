@@ -115,7 +115,7 @@ describe("Simplified Chinese keyword discoveries", () => {
 
     expect(output).toContain("暂无发现");
     expect(output).toContain(
-      "AsoBeast 已排队检查您列表附近的关键词。在此市场找到的结果会显示在这里。",
+      "AsoBeast 已排队检查您详情页附近的关键词。在此市场找到的结果会显示在这里。",
     );
   });
 });

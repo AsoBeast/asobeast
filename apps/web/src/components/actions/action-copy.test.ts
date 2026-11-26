@@ -74,7 +74,7 @@ describe("ACTION_RULE_LABEL", () => {
 
   it("localizes labels and shared explanations", () => {
     expect(actionRuleLabel("keyword.add_uncovered", zh)).toBe("未覆盖的关键词");
-    expect(actionPriorityLabel("critical", zh)).toBe("严重");
+    expect(actionPriorityLabel("critical", zh)).toBe("紧急");
     expect(actionStatusLabel("SNOOZED", zh)).toBe("稍后处理");
     expect(evidenceUnavailable(zh)).toContain("将在下次运行时重建");
     expect(impactCaption(zh)).toContain("不是下载量");

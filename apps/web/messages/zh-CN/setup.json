@@ -10,7 +10,7 @@
       "title": "跟踪关键词",
       "next": "跟踪关键词",
       "description": "在主应用商店地区至少跟踪 {target, number} 个关键词。导入时已经跟踪了您的{surface}中的短语。",
-      "skipReason": "仅跟踪应用商店页面中的短语。",
+      "skipReason": "仅跟踪详情页中的短语。",
       "surfaceAppStore": "标题和副标题",
       "surfaceGooglePlay": "标题和简短描述"
     },
@@ -98,25 +98,25 @@
     "remove": "移除 {country}"
   },
   "markets": {
-    "listingLanguages": "您的应用商店页面提供{languages}。",
-    "seedLabel": "使用其应用商店页面填充关键词",
+    "listingLanguages": "您的详情页提供{languages}。",
+    "seedLabel": "使用其详情页填充关键词",
     "seedFor": "（{country}）",
     "tracked": "已跟踪",
     "costTipLabel": "关于市场成本",
     "costTipTitle": "一个市场的成本",
     "costGuide": "了解市场成本",
-    "costAppStore": "一个市场会增加：应用和每个竞品每天各 1 次应用商店页面读取，在该地区采集的每个本地化版本额外增加 1 次，以及在该市场跟踪的每个关键词每天 1 次搜索。填充会从该市场自己的标题和副标题中跟踪最多 {limit, number} 个关键词；每个关键词还会增加一次每日搜索。",
-    "costGooglePlay": "一个市场会增加：应用和每个竞品每天各 1 次应用商店页面读取，以及在该市场跟踪的每个关键词每天 1 次搜索。",
-    "costText": "每天 {count, plural, other {# 次应用商店页面读取}}，每个关键词 {perKeyword, number} 次",
+    "costAppStore": "一个市场会增加：应用和每个竞品每天各 1 次详情页读取，在该地区采集的每个本地化版本额外增加 1 次，以及在该市场跟踪的每个关键词每天 1 次搜索。填充会从该市场自己的标题和副标题中跟踪最多 {limit, number} 个关键词；每个关键词还会增加一次每日搜索。",
+    "costGooglePlay": "一个市场会增加：应用和每个竞品每天各 1 次详情页读取，以及在该市场跟踪的每个关键词每天 1 次搜索。",
+    "costText": "每天 {count, plural, other {# 次详情页读取}}，每个关键词 {perKeyword, number} 次",
     "addCountries": "添加国家",
     "addCountriesCount": "添加 {count, plural, other {# 个国家}}",
     "addAndSeed": "{add}并填充 {count, number} 个",
     "seedUnavailable": "未在此应用商店地区发布，因此未添加",
     "seedSkipped": "，{count, number} 个因关键词上限未加入",
-    "seeded": "已从其应用商店页面填充 {count, plural, other {# 个关键词}}{skipped}",
+    "seeded": "已从详情页填充 {count, plural, other {# 个关键词}}{skipped}",
     "seededNone": "未填充关键词{skipped}",
-    "noNewKeywords": "其应用商店页面没有新关键词",
-    "seeding": "正在从其应用商店页面填充…",
+    "noNewKeywords": "详情页没有新关键词",
+    "seeding": "正在从详情页填充…",
     "seedFailed": "无法填充此市场"
   },
   "discovered": {
@@ -137,11 +137,11 @@
   "firstDiscoveries": {
     "loadError": "无法加载首批结果。",
     "readyTitle": "首批结果已就绪",
-    "collectingTitle": "正在查找应用商店页面附近的关键词",
-    "collectingBody": "AsoBeast 正在检查您的应用在页面短语中的排名。首批结果会在几分钟内显示在这里。",
+    "collectingTitle": "正在查找与您详情页相近的关键词",
+    "collectingBody": "AsoBeast 正在检查你的应用在详情页短语上的排名。首批结果会在几分钟内显示在这里。",
     "seeAll": "查看所有发现",
     "notChecked": "尚未检查",
-    "found": "在您的应用商店页面附近找到 {count, plural, other {# 个关键词}}。",
+    "found": "在与您详情页相近的关键词中找到 {count, plural, other {# 个关键词}}。",
     "ranked": "{found}您的应用已有 {count, number} 个进入排名。",
     "unrankedHeadline": "{found}{sentence}{track}",
     "noneRank": "它们目前都未进入排名。",
@@ -159,13 +159,13 @@
     "missing": "未进入前 {depth, number} 名"
   },
   "timeline": {
-    "metadataLabel": "应用商店页面已采集",
+    "metadataLabel": "详情页已采集",
     "keywordsLabel": "关键词已跟踪",
     "rankingsLabel": "排名已采集",
     "scoresLabel": "热度和难度已评分",
     "reviewsLabel": "评论已回填",
     "historyLabel": "每日历史",
-    "metadataReady": "首个应用商店页面快照已存储。",
+    "metadataReady": "首个详情页快照已存储。",
     "keywordsReady": "已从索引字段自动跟踪。",
     "rankingsReady": "每个跟踪关键词都已有排名。",
     "scoresReady": "每个跟踪关键词的热度和难度均已计算。",
@@ -205,7 +205,7 @@
     "dismiss": "忽略"
   },
   "keywordPicker": {
-    "metadata": "来自您的应用商店页面",
+    "metadata": "来自您的详情页",
     "search": "应用商店自动补全",
     "remaining": "还需 {count, number} 个才能达到 {target, number} 个"
   },

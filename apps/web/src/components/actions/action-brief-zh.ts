@@ -279,7 +279,7 @@ const BRIEFS: {
     );
     return present([
       [
-        "获取次数从 ",
+        "获取点击量从 ",
         strong(getsBefore),
         " 降至 ",
         strong(getsAfter),
@@ -298,7 +298,7 @@ const BRIEFS: {
   "listing.cpp_underperforms": (evidence) => [
     [
       strong(percent(evidence.pageConversion)),
-      ` 的详情页浏览量转化为获取次数，默认页为 ${percent(evidence.defaultConversion)}`,
+      ` 的详情页浏览量转化为获取点击量，默认页为 ${percent(evidence.defaultConversion)}`,
     ],
     [`${number(evidence.windowDays)} 天`],
   ],

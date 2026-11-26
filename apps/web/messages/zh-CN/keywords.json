@@ -19,7 +19,7 @@
   "combinations": {
     "title": "关键词组合",
     "about": "关于关键词组合",
-    "summary": "您的列表词语可以按任意顺序组成的所有一至三个词的短语，以及您是否在主市场跟踪它们。元数据页面的覆盖率检查则相反：每个跟踪的关键词是否逐词出现在一个字段中。",
+    "summary": "您的详情页词语可以按任意顺序组成的所有一至三个词的短语，以及您是否在主市场跟踪它们。元数据页面的覆盖率检查则相反：每个跟踪的关键词是否逐词出现在一个字段中。",
     "untrackedSentence": "{count, plural, other {# 个未跟踪短语}}。",
     "atLeastUntracked": "至少 {count, plural, other {# 个未跟踪短语}}。",
     "description": "您的 {fields} 中的词语可以组成的短语。",
@@ -27,7 +27,7 @@
       "appStore": "标题、副标题和关键词字段",
       "googlePlay": "标题和简短描述"
     },
-    "homeMarket": "组合来自您主市场 {country} 的列表。",
+    "homeMarket": "组合来自您主市场 {country} 的详情页。",
     "switchTo": "切换到 {country}",
     "status": {
       "tracked": "已跟踪",
@@ -52,13 +52,13 @@
     "searchChip": "搜索：{query}",
     "wordsChip": "词数：{words}",
     "statusChip": "状态：{statuses}",
-    "caption": "由您列表中的词语组成的关键词组合、这些词语出现的位置，以及每个短语是否已被跟踪。",
+    "caption": "由您详情页中的词语组成的关键词组合、这些词语出现的位置，以及每个短语是否已被跟踪。",
     "empty": "没有组合匹配这些筛选条件",
     "showing": "显示 {shown, number}/{total, number}",
     "showMore": "再显示 {count, number} 个",
-    "noWords": "暂无可组合的列表词语",
-    "noWordsBody": "AsoBeast 捕获包含此应用商店所索引字段词语的列表后，会显示组合。",
-    "truncated": "您的列表可组成 {total, number} 个组合。此处按最短优先列出前 {limit, number} 个。",
+    "noWords": "暂无可组合的详情页词语",
+    "noWordsBody": "AsoBeast 捕获包含此应用商店所索引字段词语的详情页后，会显示组合。",
+    "truncated": "您的详情页可组成 {total, number} 个组合。此处按最短优先列出前 {limit, number} 个。",
     "operatorDescription": "在 {country}，每个跟踪的关键词每天会增加一次应用商店搜索。<budgetLink>查看每日请求预算</budgetLink>",
     "trackDescription": "在 {country}，每个跟踪的关键词每天会增加一次应用商店搜索。",
     "trackTitle": "在 {country} 跟踪 {count}？",
@@ -80,7 +80,7 @@
     "importCsv": "导入 CSV",
     "tracked": "跟踪的关键词",
     "map": "地图",
-    "listingMarks": "列表覆盖标记"
+    "listingMarks": "详情页标记"
   },
   "market": {
     "select": "关键词市场",
@@ -112,7 +112,7 @@
     "localizations": "{count, plural, other {# 个本地化}}",
     "about": "关于市场关键词字段",
     "aboutTitle": "市场读取哪些内容",
-    "aboutSummary": "应用商店地区的搜索会读取其列表中的每个本地化的关键词字段。词语只能在同一本地化内组合。",
+    "aboutSummary": "在某个商店市场搜索会读取该市场所包含本地化版本的关键词字段。词语只能在同一本地化版本内组合。",
     "none": "{market} 不读取此应用发布的任何本地化。",
     "notStorefront": "{market} 不是 App Store 应用商店地区，因此没有关键词字段。"
   },
@@ -177,7 +177,7 @@
     "positionChange": "排名及其每日变化",
     "popularity": "热度",
     "difficulty": "难度",
-    "opportunity": "机会",
+    "opportunity": "机会分",
     "insights": "洞察标记",
     "playInstalls": "每个搜索词的 Play 安装量",
     "weekChange": "7 天变化",
@@ -291,19 +291,19 @@
       "dropping": "排名下降",
       "pageOneClose": "接近前十",
       "beatable": "有望超越",
-      "notInListing": "未覆盖列表"
+      "notInListing": "不在详情页中"
     },
     "detail": {
       "dropping": "连续 {count, plural, other {# 次检查}}排名下降",
       "pageOneClose": "距离前十还差 {count, plural, other {# 位}}",
       "beatable": "难度 {difficulty, number} 低于热度 {popularity, number}",
-      "notInListing": "具有相关性，但您列表的任何字段都没有涵盖它"
+      "notInListing": "具有相关性，但你的详情页没有任何字段包含它"
     },
     "rules": {
       "dropping": "在最近 {count, number} 次检查中，排名每次都在下降。",
       "pageOneClose": "当前检查中的排名为第 {from, number} 至 {to, number}。",
       "beatable": "难度低于热度，且热度至少为 {count, number}，并且不是 Apple 的最低热度答案。",
-      "notInListing": "相关性至少为 {count, number}，并且您列表的任何字段都没有涵盖该关键词。"
+      "notInListing": "相关性至少为 {count, number}，并且你的详情页没有任何字段包含该关键词。"
     }
   },
   "classTag": {
@@ -318,7 +318,7 @@
     "keyword": "关键词",
     "position": "排名",
     "change": "变化",
-    "opportunity": "机会",
+    "opportunity": "机会分",
     "popularity": "热度",
     "difficulty": "难度",
     "playInstalls": "Play 安装量",
@@ -356,8 +356,8 @@
     "notCheckedHint": "此关键词尚未检查",
     "notEnoughSnapshots": "快照数量不足",
     "noPlayData": "没有 Play Console 数据",
-    "playAcquisitionsLabel": "{month}有 {acquisitions} 次获取，来自 {visitors} 位应用商店页面访客",
-    "playAcquisitionsHint": "{month}此搜索词带来的应用商店页面获取量和访客数",
+    "playAcquisitionsLabel": "{month}有 {acquisitions} 次获取，来自 {visitors} 位商店详情页访客",
+    "playAcquisitionsHint": "{month}此搜索词带来的商店详情页获取量和访客数",
     "noteLabel": "备注：{note}",
     "noteTitle": "关键词备注",
     "onChart": "，已在图表中",
@@ -384,12 +384,12 @@
     "noChange": "{since}没有变化",
     "up": "{since}上升 {count, number} 位",
     "down": "{since}下降 {count, number} 位",
-    "listingChanges": "列表变化：{days}",
+    "listingChanges": "详情页变化：{days}",
     "dateRange": "日期范围",
     "openRankings": "在排名中打开",
     "noChecks": "最近 {days, number} 天没有检查",
     "showDays": "显示 {days, number} 天",
-    "changesFailed": "无法加载列表变化。",
+    "changesFailed": "无法加载详情页变化。",
     "positionsFailed": "无法加载排名历史。",
     "notChecked": "未检查",
     "fieldsChanged": "{fields}有变化"
@@ -407,7 +407,7 @@
     "icon": "图标",
     "whatsNew": "新功能",
     "inAppEvents": "应用内活动",
-    "featuring": "推荐",
+    "featuring": "精选",
     "editorsChoice": "编辑精选"
   },
   "position": {
@@ -454,7 +454,7 @@
     "keywordsSubject": "关键词",
     "description": "按来源、分组、状态、类型、评分等级和排名筛选关键词。",
     "position": "排名",
-    "opportunity": "机会",
+    "opportunity": "机会分",
     "popularity": "热度",
     "difficulty": "难度",
     "type": "类型",
@@ -570,7 +570,7 @@
   },
   "suggestions": {
     "title": "建议",
-    "description": "来自您的列表、竞品、评论和应用商店搜索、且您尚未跟踪的短语。",
+    "description": "来自你的详情页、竞品、评论和应用商店搜索、且你尚未跟踪的短语。",
     "metadata": "元数据",
     "metadataDescription": "来自您应用自身元数据的短语",
     "search": "搜索",
@@ -599,7 +599,7 @@
     "retry": "重试",
     "loadFailed": "无法加载建议。",
     "empty": "此来源目前没有新建议。",
-    "emptyCompetitorSearch": "在此市场中没有发现围绕竞品短语的新搜索。竞品需在此市场或没有本地列表时的主市场列表中包含至少两个词的短语。",
+    "emptyCompetitorSearch": "在此市场中没有发现围绕竞品短语的新搜索。竞品需在此市场或没有本地详情页时的主市场详情页中包含至少两个词的短语。",
     "emptyDeveloper": "未找到此开发者的其他应用，或最新快照中没有开发者 ID。",
     "trackSelected": "跟踪已选",
     "trackSelectedCount": "跟踪已选的 {count, number} 个",

@@ -29,7 +29,7 @@
     "replyTo": "回复：",
     "replyStatusLabel": "关于回复状态",
     "replyStatusTitle": "回复状态",
-    "replyStatusSummary": "需要回复：任何地方都没有回复。草稿：回复保存在这里，但未标记。已回复：商店显示回复，可能来自这里、控制台，或你手动标记。已更新：评论者在 Google Play 回复后编辑了评论，请重新阅读。",
+    "replyStatusSummary": "需要回复：任何地方都没有回复。草稿：回复保存在这里，但未标记。已回复：商店显示回复，可能来自这里、控制台，或你手动标记。已更新：开发者在 Google Play 回复后，评论者又编辑了评论，请重新阅读。",
     "readReplies": "阅读回复工作原理"
   },
   "toolbar": {
