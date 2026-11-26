@@ -3,7 +3,6 @@
 import { useId, useRef, useState } from "react";
 import type { AppStoreLocalization } from "@asobeast/shared";
 import { PANEL_HEADER } from "@/components/layout/panel-classes";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardAction,
@@ -12,13 +11,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { InfoTip } from "@/components/ui/info-tip";
-import {
-  placementsByPhrase,
-  topThreeRefusal,
-  withTopThree,
-} from "@/lib/listing-targets";
 import { localizationName } from "@/lib/localizations";
-import { applyPlacements, applyRefusal } from "@/lib/target-placements";
+import { TargetsActions } from "./TargetsActions";
 import { MORE_SLOTS, ROLE_SLOTS, TargetsBody } from "./TargetsBody";
 import { TargetsFooter } from "./TargetsFooter";
 import { TargetsLimitNotice } from "./TargetsLimitNotice";
@@ -81,11 +75,6 @@ export function TargetsBlock({
   const showMore =
     more ?? MORE_SLOTS.some((index) => targets.slots[index] !== null);
   const saveRef = useRef<HTMLButtonElement>(null);
-  const refusal = result
-    ? topThreeRefusal(targets.slots, result.candidates)
-    : null;
-  const placements = result ? placementsByPhrase(result) : new Map();
-  const applyRefused = applyRefusal(targets.slots, placements);
 
   return (
     <section aria-labelledby={headingId} className="col-span-12 min-w-0">
@@ -98,35 +87,13 @@ export function TargetsBlock({
           </CardTitle>
           <CardAction className="flex items-center gap-2">
             {result ? (
-              <Button
-                variant="outline"
-                size="sm"
-                aria-disabled={refusal !== null || undefined}
-                title={refusal ?? undefined}
-                onClick={() => {
-                  if (refusal !== null) return;
-                  targets.edit(withTopThree(targets.slots, result.candidates));
-                  saveRef.current?.focus();
-                }}
-              >
-                <span>Use top 3</span>
-              </Button>
-            ) : null}
-            {result ? (
-              <Button
-                variant="outline"
-                size="sm"
-                aria-disabled={applyRefused !== null || undefined}
-                title={applyRefused ?? undefined}
-                onClick={() => {
-                  if (applyRefused !== null) return;
-                  targets.edit(applyPlacements(targets.slots, placements));
-                  setMoved("Targets reordered to match the suggestions");
-                  saveRef.current?.focus();
-                }}
-              >
-                <span>Apply suggestions</span>
-              </Button>
+              <TargetsActions
+                slots={targets.slots}
+                result={result}
+                onEdit={targets.edit}
+                onApplied={setMoved}
+                saveRef={saveRef}
+              />
             ) : null}
             <TargetsTip />
             <SuggestionsTip />
