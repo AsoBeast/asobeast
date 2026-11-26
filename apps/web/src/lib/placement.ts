@@ -74,18 +74,14 @@ function hardToRank({
   popularity,
   difficulty,
 }: PlacementSuggestion): PlacementPart[] {
-  const tail = ` and you have no recent rank in the top ${REACHABLE_POSITION}: index it in the keyword field.`;
-  if (popularity === null || difficulty === null) {
-    return [
-      `You have no recent rank in the top ${REACHABLE_POSITION}: index it in the keyword field.`,
-    ];
-  }
+  const advice = `have no recent rank in the top ${REACHABLE_POSITION}: index it in the keyword field.`;
+  if (popularity === null || difficulty === null) return [`You ${advice}`];
   return [
     "Difficulty ",
     figure("difficulty", "Difficulty", difficulty),
     " is at or above popularity ",
     figure("popularity", "Popularity", popularity),
-    tail,
+    ` and you ${advice}`,
   ];
 }
 
