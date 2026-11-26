@@ -201,7 +201,7 @@ function SerpContent({
     return (
       <div role="status">
         <span className="sr-only">Loading search results</span>
-        <SerpSkeleton />
+        <SerpSkeleton store={viewer.store} />
       </div>
     );
   }

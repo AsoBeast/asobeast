@@ -64,7 +64,10 @@ describe("SerpSummary", () => {
     expect(html).toContain(">Keyword in<");
     expect(html).toContain(">8 of 10<");
     expect(html).toContain(">in the title<");
-    expect(html).not.toContain("in the subtitle");
+    expect(html).not.toContain(">2 of 1 in the subtitle<");
+    expect(html).toContain(
+      '<span aria-hidden="true" class="invisible basis-full text-caption">',
+    );
     expect(html).not.toContain("Titles with it");
   });
 

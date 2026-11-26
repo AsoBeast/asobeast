@@ -83,43 +83,61 @@ async function openStudyTimer(page: Page): Promise<Locator> {
   return sheet;
 }
 
-test("draws the loading state at the geometry of the loaded sheet", async ({
-  page,
-}) => {
-  const held = await holdRequest(
+const SHEET_GEOMETRY_CASES = [
+  { name: "", appId: "app-1", keywordId: "kw-3", sameRows: true },
+  {
+    name: " with known subtitles",
+    appId: "app-1",
+    keywordId: "kw-1",
+    sameRows: false,
+  },
+  {
+    name: " on Google Play",
+    appId: "app-gp",
+    keywordId: "kw-gp-1",
+    sameRows: true,
+  },
+] as const;
+
+for (const { name, appId, keywordId, sameRows } of SHEET_GEOMETRY_CASES) {
+  test(`draws the loading state at the geometry of the loaded sheet${name}`, async ({
     page,
-    /\/api\/backend\/keywords\/kw-3\/serp/,
-    "GET",
-  );
-  await page.goto("/apps/app-1/keywords?serp=kw-3");
-  const sheet = serpSheet(page);
-  const summary = sheet.locator('[data-slot="serp-summary"]');
-  const firstRow = sheet.locator('[data-slot="serp-row"]').first();
-  const geometry = async () => {
-    const [dialog, strip, row] = await Promise.all([
-      sheet.boundingBox(),
-      summary.boundingBox(),
-      firstRow.boundingBox(),
-    ]);
-    return {
-      summaryTop: (strip?.y ?? 0) - (dialog?.y ?? 0),
-      summaryHeight: strip?.height,
-      rowTop: (row?.y ?? 0) - (dialog?.y ?? 0),
-      rowHeight: row?.height,
+  }) => {
+    const held = await holdRequest(
+      page,
+      new RegExp(`/api/backend/keywords/${keywordId}/serp`),
+      "GET",
+    );
+    await page.goto(`/apps/${appId}/keywords?serp=${keywordId}`);
+    const sheet = serpSheet(page);
+    const summary = sheet.locator('[data-slot="serp-summary"]');
+    const firstRow = sheet.locator('[data-slot="serp-row"]').first();
+    const geometry = async () => {
+      const [dialog, strip, row] = await Promise.all([
+        sheet.boundingBox(),
+        summary.boundingBox(),
+        firstRow.boundingBox(),
+      ]);
+      return {
+        summaryTop: (strip?.y ?? 0) - (dialog?.y ?? 0),
+        summaryHeight: strip?.height,
+        rowTop: (row?.y ?? 0) - (dialog?.y ?? 0),
+        ...(sameRows ? { rowHeight: row?.height } : {}),
+      };
     };
-  };
-  await expect(summary).toBeVisible();
-  await expect(summary.getByText("median").first()).toHaveCSS(
-    "color",
-    "rgba(0, 0, 0, 0)",
-  );
-  const loading = await geometry();
+    await expect(summary).toBeVisible();
+    await expect(summary.getByText("median").first()).toHaveCSS(
+      "color",
+      "rgba(0, 0, 0, 0)",
+    );
+    const loading = await geometry();
 
-  held.release();
-  await expect(rowAt(sheet, 1)).toBeVisible();
+    held.release();
+    await expect(rowAt(sheet, 1)).toBeVisible();
 
-  expect(await geometry()).toEqual(loading);
-});
+    expect(await geometry()).toEqual(loading);
+  });
+}
 
 test("opens from the row with the keyword large in the sheet", async ({
   page,

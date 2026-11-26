@@ -839,6 +839,9 @@ export const SERP_SNAPSHOTS: Record<string, SerpSnapshot> = {
         placement: "none",
       },
     ],
+    comparedTo: null,
+    exits: [],
+    dates: [utcDaysAgo(0)],
   },
 };
 

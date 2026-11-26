@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { NO_APPS_SENTENCE } from "@asobeast/shared";
+import { NO_APPS_SENTENCE, type Store } from "@asobeast/shared";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate } from "@/lib/format";
 import { SERP_ROW_GRID } from "./SerpRow";
@@ -47,10 +47,10 @@ export function SerpKeptShort() {
   );
 }
 
-export function SerpSkeleton() {
+export function SerpSkeleton({ store }: { store: Store }) {
   return (
     <div aria-hidden className="flex flex-col">
-      <SerpSummarySkeleton />
+      <SerpSummarySkeleton store={store} />
       <div className="px-4 pt-4 pb-1 text-label">
         <Skeleton className="h-lh w-12" />
       </div>

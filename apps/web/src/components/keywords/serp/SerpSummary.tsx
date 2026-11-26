@@ -1,11 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { NO_APPS_SENTENCE } from "@asobeast/shared";
+import { NO_APPS_SENTENCE, type Store } from "@asobeast/shared";
 import { MovementCell } from "@/components/movement/MovementCell";
 import { Button } from "@/components/ui/button";
 import { InfoTip } from "@/components/ui/info-tip";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { formatCompact, formatDayMonth, formatRating } from "@/lib/format";
 import type {
   PlacementSummary,
@@ -122,8 +123,18 @@ function PositionValue({
   }
 }
 
+const NO_PLAY_SUBTITLE = "Google Play has no subtitle";
+
+const SUBTITLE_LINE_SPACE = "0 of 0 in the subtitle";
+
 const Line = ({ children }: { children: ReactNode }) => (
   <span className="basis-full text-caption text-muted-foreground">
+    {children}
+  </span>
+);
+
+const LineSpace = ({ children }: { children: string }) => (
+  <span aria-hidden className="invisible basis-full text-caption">
     {children}
   </span>
 );
@@ -131,11 +142,13 @@ const Line = ({ children }: { children: ReactNode }) => (
 function SubtitleLine({ placements }: { placements: PlacementSummary }) {
   const { inSubtitle, subtitlesKnown } = placements;
   if (inSubtitle === null || subtitlesKnown === null) {
-    return <Line>Google Play has no subtitle</Line>;
+    return <Line>{NO_PLAY_SUBTITLE}</Line>;
   }
   return subtitlesKnown >= 2 ? (
     <Line>{`${inSubtitle} of ${subtitlesKnown} in the subtitle`}</Line>
-  ) : null;
+  ) : (
+    <LineSpace>{SUBTITLE_LINE_SPACE}</LineSpace>
+  );
 }
 
 function PlacementsValue({
@@ -247,17 +260,28 @@ export function SerpSummary({
   );
 }
 
-export function SerpSummarySkeleton() {
-  const value = (
-    <Skeleton className="w-16 border border-transparent text-transparent *:text-transparent">
-      <Value>0</Value> <Note>median</Note>
-    </Skeleton>
-  );
+const ValueSkeleton = ({ className }: { className?: string }) => (
+  <Skeleton
+    className={cn("w-16 text-transparent *:text-transparent", className)}
+  >
+    <Value>0</Value> <Note>median</Note>
+  </Skeleton>
+);
+
+export function SerpSummarySkeleton({ store }: { store: Store }) {
+  const value = <ValueSkeleton className="border border-transparent" />;
   return (
     <SummaryGrid
       tips={false}
       position={value}
-      placements={value}
+      placements={
+        <>
+          <ValueSkeleton />
+          <LineSpace>
+            {store === "GOOGLE_PLAY" ? NO_PLAY_SUBTITLE : SUBTITLE_LINE_SPACE}
+          </LineSpace>
+        </>
+      }
       ratings={value}
     />
   );

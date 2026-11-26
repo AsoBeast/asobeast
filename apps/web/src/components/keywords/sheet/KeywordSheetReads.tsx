@@ -138,7 +138,7 @@ function ResultsBody({
     return (
       <div role="status" className="-mx-4">
         <span className="sr-only">Loading search results</span>
-        <SerpSkeleton />
+        <SerpSkeleton store={viewer.store} />
       </div>
     );
   }
