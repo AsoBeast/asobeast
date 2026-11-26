@@ -3,7 +3,7 @@ import {
   COVERAGE_PREVIEW_FAIL_COOKIE,
   COVERAGE_PREVIEW_MARKETS_COOKIE,
 } from "./coverage-preview.mts";
-import { APP_DRAFT_LOCALES_ID } from "./fixtures.mts";
+import { APP_DRAFT_LOCALES_ID, LONG_DESCRIPTION } from "./fixtures.mts";
 import { holdRequest } from "./held-request.mts";
 import { hydrated } from "./hydrated.mts";
 import { fieldRequests, seedLocalizations } from "./localizations.mts";
@@ -609,4 +609,27 @@ test("shows the words search reads and marks a repeat", async ({ page }) => {
   await expect(
     editor(page).getByRole("list", { name: /^Words search reads/ }),
   ).toHaveCount(3);
+});
+
+test("lists the words the draft description repeats", async ({ page }) => {
+  await page.goto("/apps/app-long/metadata?mode=draft");
+
+  const fold = editor(page).getByRole("button", { name: "Description" });
+  await (await hydrated(fold)).click();
+  const description = field(page, "Description");
+  await description.click();
+  await page.keyboard.press("ControlOrMeta+End");
+  await page.keyboard.type(" A planner, a planner and one more planner.");
+
+  const density = editor(page).getByRole("region", { name: "Word density" });
+  const planner = density
+    .getByRole("table", { name: "Most repeated words in the description" })
+    .getByRole("row")
+    .filter({ hasText: "planner" });
+  const repeats =
+    LONG_DESCRIPTION.toLowerCase().split("planner").length - 1 + 3;
+  await expect(planner.getByRole("cell").nth(1)).toHaveText(String(repeats));
+  await expect(page.getByRole("region", { name: "Word density" })).toHaveCount(
+    1,
+  );
 });

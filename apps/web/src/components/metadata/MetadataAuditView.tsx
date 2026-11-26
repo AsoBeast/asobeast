@@ -103,6 +103,7 @@ export function MetadataAuditView({
           audit={result}
           market={market}
           localization={localization}
+          density={density}
         />
       ) : (
         <div className="grid grid-cols-12 items-start gap-6">

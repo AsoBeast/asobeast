@@ -22,6 +22,8 @@ import {
 } from "@/lib/listing-draft";
 import { searchWords } from "@/lib/store-preview/search-words";
 import { CopyDraftButton, CopyFieldButton } from "./CopyDraftButtons";
+import type { DensityContext } from "../density/density-inputs";
+import { DescriptionDensity } from "../density/DescriptionDensity";
 import { TargetsBlock } from "../targets/TargetsBlock";
 import { DraftCoveragePanel } from "./DraftCoveragePanel";
 import { useDraftFieldReveal } from "./draft-field-reveal";
@@ -51,11 +53,13 @@ export function ListingDraftEditor({
   audit,
   market,
   localization,
+  density,
 }: {
   id: string;
   audit: MetadataAuditResult;
   market: string;
   localization: string | undefined;
+  density: DensityContext;
 }) {
   const store = audit.store;
   const scope = useMemo(
@@ -110,6 +114,14 @@ export function ListingDraftEditor({
       {name === "keywordField" ? <KeywordFieldNotice field={field} /> : null}
       {name === "keywordField" && handsOff && field.handoff ? (
         <KeywordFieldHandoff localization={field.handoff} />
+      ) : null}
+      {name === "description" ? (
+        <DescriptionDensity
+          text={values.description ?? ""}
+          title={values.title ?? null}
+          context={density}
+          level="h3"
+        />
       ) : null}
     </DraftFieldInput>
   );
