@@ -18,6 +18,7 @@ import {
   headlineSentence,
   rankingsHeadline,
   type ShareHeadline,
+  visibilityHeadline,
 } from "../src/lib/chart-image/share-card/headline";
 
 const RANKINGS_PAGE = "/apps/app-1/rankings";
@@ -309,5 +310,91 @@ test.describe("rankings", () => {
       )
       .toEqual(hexPixel(CARD_THEMES.light.line));
     expect(errors.filter((text) => text.includes("SecurityError"))).toEqual([]);
+  });
+});
+
+test.describe("visibility", () => {
+  const OVERVIEW = "/apps/app-1";
+  const HISTORY = /\/api\/backend\/apps\/app-1\/visibility-history\?/;
+  const share = (page: Page) =>
+    page.getByRole("button", {
+      name: "Share the visibility chart",
+      exact: true,
+    });
+  const visibilityDialog = (page: Page) =>
+    page.getByRole("dialog", { name: "Share the visibility chart" });
+  const visibilityChart = (page: Page) =>
+    page.getByRole("region", { name: "Search visibility over time" });
+  const points = (values: readonly number[]) =>
+    values.map((visibility, index) => ({
+      date: utcDaysAgo(values.length - 1 - index),
+      visibility,
+    }));
+
+  async function answerOver90Days(page: Page, values: readonly number[]) {
+    await page.route(HISTORY, (route) =>
+      route.fulfill({ json: { points: points(values) } }),
+    );
+    await page
+      .locator('[data-slot="card"]')
+      .filter({ has: visibilityChart(page) })
+      .getByRole("tab", { name: "90d" })
+      .click();
+  }
+
+  test("offers a card on the visibility chart", async ({ page }) => {
+    const values = [48, 50, 47, 55, 58, 61, 64];
+    await page.goto(OVERVIEW);
+    await expect(visibilityChart(page)).toBeVisible();
+    await answerOver90Days(page, values);
+    const headline = visibilityHeadline(points(values));
+    if (!headline) throw new Error("The fixture draws no visibility card");
+
+    await (await hydrated(share(page))).click();
+
+    await expect(visibilityDialog(page).getByRole("img")).toHaveAccessibleName(
+      headlineSentence(headline, true),
+    );
+  });
+
+  test("downloads the visibility card", async ({ page }) => {
+    await page.goto(OVERVIEW);
+    await (await hydrated(share(page))).click();
+    await expect(visibilityDialog(page).getByRole("img")).not.toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
+
+    const [file] = await Promise.all([
+      page.waitForEvent("download"),
+      visibilityDialog(page)
+        .getByRole("button", { name: "Download PNG" })
+        .click(),
+    ]);
+
+    expect(file.suggestedFilename()).toMatch(
+      /^asobeast-visibility-card-focus-timer-.*-landscape\.png$/,
+    );
+  });
+
+  for (const view of ["share", "top10", "rating"]) {
+    test(`offers no card for the ${view} figure`, async ({ page }) => {
+      await page.goto(`${OVERVIEW}?visView=${view}`);
+      await expect(
+        page.getByRole("tab", { name: "90d" }).first(),
+      ).toBeVisible();
+
+      await expect(share(page)).toHaveCount(0);
+    });
+  }
+
+  test("offers no card under four captured days", async ({ page }) => {
+    await page.goto(OVERVIEW);
+    await expect(share(page)).toBeVisible();
+
+    await answerOver90Days(page, [10, 12, 14]);
+
+    await expect(page.getByText("Latest visibility")).toBeVisible();
+    await expect(share(page)).toHaveCount(0);
   });
 });
