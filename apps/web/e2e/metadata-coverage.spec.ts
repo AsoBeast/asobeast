@@ -29,7 +29,7 @@ test("keyword coverage filters to uncovered rows, searches and sorts", async ({
   await expect(page).toHaveURL(/q=pomo/);
   await expect(rows).toHaveCount(2);
   await expect(rows.nth(1)).toContainText("pomodoro");
-  await page.getByRole("button", { name: "Clear search" }).click();
+  await page.locator('[data-action="clear-search"]').click();
   await expect(rows).toHaveCount(4);
 
   const bucket = page.getByRole("button", { name: "Bucket", exact: true });

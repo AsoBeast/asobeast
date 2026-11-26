@@ -27,6 +27,12 @@ describe("dayRangeLabel", () => {
   it("names a single day once", () => {
     expect(dayRangeLabel("2026-10-28", "2026-10-28")).toBe("Oct 28, 2026 UTC");
   });
+
+  it("translates the UTC window for Simplified Chinese", () => {
+    expect(dayRangeLabel("2026-09-28", "2026-10-28", "zh-CN")).toBe(
+      "2026年9月28日 至 2026年10月28日 UTC",
+    );
+  });
 });
 
 describe("buildChartCaption", () => {
@@ -57,5 +63,15 @@ describe("buildChartCaption", () => {
       buildChartCaption({ ...SOURCE, store: "GOOGLE_PLAY", countries: ["us"] })
         .subtitle,
     ).toContain("Google Play · United States");
+  });
+
+  it("translates storefronts and dates while keeping content and brands", () => {
+    expect(buildChartCaption(SOURCE, "zh-CN")).toEqual({
+      title: "Keyword rank positions",
+      subtitle:
+        "Focus Timer · App Store · 美国和德国 · 2026年9月28日 至 2026年10月28日 UTC",
+      brand: "AsoBeast",
+      series: SERIES,
+    });
   });
 });

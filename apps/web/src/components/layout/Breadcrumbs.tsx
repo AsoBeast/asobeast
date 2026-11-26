@@ -34,8 +34,10 @@ const WORKSPACE_LABELS: Record<string, string> = {
 
 function AppCrumbs({ id, segment }: { id: string; segment: string }) {
   const t = useTranslations("navigation");
+  const shell = useTranslations("shell");
   const data = useCachedQueryData(appDetailOptions(id).queryKey);
-  const name = data?.name ?? t("untitledApp");
+
+  const name = data?.name ?? shell("untitledApp");
 
   return (
     <>
@@ -89,8 +91,8 @@ function AdminCrumbs({ segment }: { segment: string }) {
 }
 
 export function Breadcrumbs() {
-  const t = useTranslations("navigation");
   const pathname = usePathname();
+  const t = useTranslations("navigation");
   const app = appRouteFrom(pathname);
   const { isOperator } = useAuth();
   const admin = adminSectionFrom(pathname);

@@ -4,10 +4,12 @@ import type {
   StoreFunnelWindow,
 } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
+import { translationContext } from "@/test/translation-context";
 import {
   formatConversion,
   formatCount,
-  FUNNEL_COPY,
+  funnelCopy,
+  funnelGetsLabel,
   funnelState,
   funnelTrend,
   funnelTiles,
@@ -17,6 +19,9 @@ import {
   trendValue,
   windowOf,
 } from "./funnel";
+
+const en = translationContext("en", "overview");
+const zh = translationContext("zh-CN", "overview");
 
 const counts = (impressions: number | null, gets: number) => ({
   impressions,
@@ -142,8 +147,11 @@ describe("funnelTrend", () => {
 
 describe("noSearchTermsFact", () => {
   it("states the report fact with the console and the month it names", () => {
-    expect(noSearchTermsFact("2026-09-01")).toBe(
+    expect(noSearchTermsFact("2026-09-01", en)).toBe(
       "Google Play Console's September 2026 report named no search terms for this app.",
+    );
+    expect(noSearchTermsFact("2026-09-01", zh)).toBe(
+      "Google Play Console 的 2026年9月报告未列出此应用的搜索词。",
     );
   });
 
@@ -156,13 +164,16 @@ describe("noSearchTermsFact", () => {
 
 describe("refused connection copy", () => {
   it("names the key of an app store connection", () => {
-    expect(FUNNEL_COPY.APP_STORE.refusedTitle).toBe(
+    expect(funnelCopy("APP_STORE", en.translator).refusedTitle).toBe(
       "App Store Connect refused the connected key.",
+    );
+    expect(funnelCopy("APP_STORE", zh.translator).refusedTitle).toBe(
+      "App Store Connect 拒绝了已连接的密钥。",
     );
   });
 
   it("never assumes a google play connection holds a key", () => {
-    const copy = FUNNEL_COPY.GOOGLE_PLAY;
+    const copy = funnelCopy("GOOGLE_PLAY", en.translator);
     const lines = [
       copy.refusedTitle,
       copy.refusedBody,
@@ -184,21 +195,29 @@ describe("refusalBody", () => {
     "Apple asks the account holder to accept the latest agreement in App Store Connect, under Business. Accept it, then verify the key again.";
 
   it("tells the owner the reason the store gave", () => {
-    expect(refusalBody("APP_STORE", AGREEMENT, true)).toBe(AGREEMENT);
+    expect(refusalBody("APP_STORE", AGREEMENT, true, en.translator)).toBe(
+      AGREEMENT,
+    );
   });
 
   it("tells a member the reason and who can act on it", () => {
-    expect(refusalBody("APP_STORE", AGREEMENT, false)).toBe(
+    expect(refusalBody("APP_STORE", AGREEMENT, false, en.translator)).toBe(
       `${AGREEMENT} Ask the workspace owner to verify the key in Integrations.`,
+    );
+    expect(refusalBody("APP_STORE", AGREEMENT, false, zh.translator)).toBe(
+      `${AGREEMENT} 请工作区所有者在“集成”中验证该密钥。`,
     );
   });
 
   it("falls back to the general copy when no reason was kept", () => {
-    expect(refusalBody("GOOGLE_PLAY", null, true)).toBe(
-      FUNNEL_COPY.GOOGLE_PLAY.refusedBody,
+    expect(refusalBody("GOOGLE_PLAY", null, true, en.translator)).toBe(
+      funnelCopy("GOOGLE_PLAY", en.translator).refusedBody,
     );
-    expect(refusalBody("GOOGLE_PLAY", null, false)).toBe(
-      FUNNEL_COPY.GOOGLE_PLAY.refusedAskOwner,
+    expect(refusalBody("GOOGLE_PLAY", null, false, en.translator)).toBe(
+      funnelCopy("GOOGLE_PLAY", en.translator).refusedAskOwner,
+    );
+    expect(refusalBody("GOOGLE_PLAY", null, false, zh.translator)).toBe(
+      "请工作区所有者在“集成”中验证 Google Play 连接。",
     );
   });
 });
@@ -230,11 +249,17 @@ describe("google play funnel", () => {
   };
 
   it("shows visitors, acquisitions and conversion, and no impressions", () => {
-    expect(funnelTiles(PLAY).map((tile) => tile.label)).toEqual([
+    expect(funnelTiles(PLAY, en.translator).map((tile) => tile.label)).toEqual([
       "Store listing visitors",
       "Acquisitions",
       "Conversion",
     ]);
+    expect(funnelTiles(PLAY, zh.translator).map((tile) => tile.label)).toEqual([
+      "应用详情页访客",
+      "获取量",
+      "转化率",
+    ]);
+    expect(funnelGetsLabel("APP_STORE", zh.translator)).toBe("获取点击量");
     expect(funnelTiles(REPORT)).toHaveLength(4);
   });
 
@@ -246,8 +271,11 @@ describe("google play funnel", () => {
   });
 
   it("names google's lag and the counting change", () => {
-    expect(FUNNEL_COPY.GOOGLE_PLAY.freshness).toBe(
+    expect(funnelCopy("GOOGLE_PLAY", en.translator).freshness).toBe(
       "Google posts a day three to seven days later; counting changed on July 10, 2026.",
+    );
+    expect(funnelCopy("GOOGLE_PLAY", zh.translator).freshness).toBe(
+      "Google 会在三到七天后公布前一天的数据；统计方式于 2026年7月10日发生变化。",
     );
   });
 });

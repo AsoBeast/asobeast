@@ -1,5 +1,9 @@
 import { addUtcDays, type TrackedKeywordItem } from "@asobeast/shared";
-import { formatList, formatNumber } from "./format";
+import { createTranslator } from "next-intl";
+import enKeywords from "../../messages/en/keywords.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import { formatListInLocale } from "./format";
+import type { Locale } from "./locale";
 import { staleCheckDay } from "./keyword-checks";
 
 export type DayChange =
@@ -65,11 +69,24 @@ export function dayChangeRank(change: DayChange | null): number | null {
 export const KEYWORD_MOVE_FILTERS = ["moved", "fell", "lost"] as const;
 export type KeywordMoveFilter = (typeof KEYWORD_MOVE_FILTERS)[number];
 
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywords",
+  messages: { keywords: enKeywords },
+});
+
 export const MOVE_FILTER_LABELS: Record<KeywordMoveFilter, string> = {
-  moved: "Moved",
-  fell: "Fell",
-  lost: "Lost",
+  moved: enKeywords.filters.moved,
+  fell: enKeywords.filters.fell,
+  lost: enKeywords.filters.lost,
 };
+
+export function moveFilterLabel(
+  filter: KeywordMoveFilter,
+  t: MessageTranslator = english,
+): string {
+  return t(`filters.${filter}`);
+}
 
 const MOVE_FILTER_TESTS: Record<
   KeywordMoveFilter,
@@ -120,21 +137,21 @@ export function keywordMoves(
   return moves;
 }
 
-export function movesSentence({
-  compared,
-  up,
-  down,
-  lost,
-  entered,
-}: KeywordMoves): string | null {
+export function movesSentence(
+  { compared, up, down, lost, entered }: KeywordMoves,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
+): string | null {
   if (compared === 0) return null;
   const parts = [
-    ...(up > 0 ? [`${formatNumber(up)} climbed`] : []),
-    ...(down > 0 ? [`${formatNumber(down)} fell`] : []),
-    ...(lost > 0 ? [`${formatNumber(lost)} dropped out`] : []),
-    ...(entered > 0 ? [`${formatNumber(entered)} started ranking`] : []),
+    ...(up > 0 ? [t("moves.up", { count: up })] : []),
+    ...(down > 0 ? [t("moves.down", { count: down })] : []),
+    ...(lost > 0 ? [t("moves.lost", { count: lost })] : []),
+    ...(entered > 0 ? [t("moves.entered", { count: entered })] : []),
   ];
   return parts.length === 0
-    ? "No keyword moved since yesterday."
-    : `${formatList(parts)} since yesterday.`;
+    ? t("moves.none")
+    : locale === "en"
+      ? `${formatListInLocale(parts, locale)} ${t("moves.period")}`
+      : `${formatListInLocale(parts, locale)}${t("moves.period")}`;
 }

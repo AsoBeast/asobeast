@@ -1,6 +1,7 @@
 "use client";
 
 import type { RankDistributionPoint } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { ChartKey } from "@/components/charts/ChartKey";
 import { ChartNotice, trendState } from "@/components/charts/ChartStates";
 import { topTenOf } from "@/components/charts/rank-bands";
@@ -11,10 +12,9 @@ import {
 import { SeriesTooltip } from "@/components/charts/SeriesTooltip";
 import { dayTicks } from "@/components/charts/trend-axis";
 import { CHART_HEIGHT, TOP_TEN_EDGE_PROPS } from "@/components/charts/theme";
-import { formatDayMonth, formatNumber } from "@/lib/format";
-import { LISTING_CHANGE_KEY, type DayNoter } from "./PortfolioTrendChart";
-
-const TOP_TEN_LABEL = "In the top 10";
+import { formatDayMonthInLocale, formatNumberInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
+import { listingChangeKey, type DayNoter } from "./PortfolioTrendChart";
 
 function BandsTooltip({
   active,
@@ -27,28 +27,30 @@ function BandsTooltip({
   points: RankDistributionPoint[];
   notes: DayNoter;
 }) {
+  const t = useTranslations("dashboard");
+  const locale = useAppLocale();
   if (!active || label === undefined) return null;
   const day = String(label);
   const point = points.find((candidate) => candidate.date === day);
   if (!point) return null;
   return (
     <SeriesTooltip
-      title={formatDayMonth(day)}
+      title={formatDayMonthInLocale(day, locale)}
       items={[
         {
           key: "top10",
           index: 0,
           color: TOP_TEN_EDGE_PROPS.stroke,
-          label: TOP_TEN_LABEL,
-          value: formatNumber(topTenOf(point)),
+          label: t("charts.top10Label"),
+          value: formatNumberInLocale(topTenOf(point), locale),
           sortBy: 0,
         },
         ...PLOTTED_BANDS.map((band, index) => ({
           key: band.key,
           index: 0,
           color: band.color,
-          label: band.label,
-          value: formatNumber(point[band.key]),
+          label: band.key === "unranked" ? t("charts.unranked") : band.label,
+          value: formatNumberInLocale(point[band.key], locale),
           sortBy: index + 1,
         })),
       ]}
@@ -64,19 +66,21 @@ export function BandsLegend({
   points: RankDistributionPoint[];
   marked: boolean;
 }) {
+  const t = useTranslations("dashboard");
   return (
     <ChartKey
-      label="Rank bands"
+      label={t("charts.rankBands")}
       items={
         points.length === 0
           ? []
           : [
               ...PLOTTED_BANDS.map((band) => ({
-                label: band.label,
+                label:
+                  band.key === "unranked" ? t("charts.unranked") : band.label,
                 color: band.color,
                 mark: "square" as const,
               })),
-              ...(marked ? [LISTING_CHANGE_KEY] : []),
+              ...(marked ? [listingChangeKey(t)] : []),
             ]
       }
     />
@@ -94,15 +98,18 @@ export function PortfolioBandsChart({
   markers: readonly string[];
   notes: DayNoter;
 }) {
+  const t = useTranslations("dashboard");
   const state = trendState(points.length);
   if (state !== "ready") {
     return (
       <ChartNotice
         height={CHART_HEIGHT.tall}
         title={
-          state === "empty" ? "Nothing recorded yet" : "Not enough history yet"
+          state === "empty"
+            ? t("charts.nothingRecorded")
+            : t("charts.notEnoughHistory")
         }
-        body="The rank bands appear after a few daily runs."
+        body={t("charts.rankBandsAppear")}
       />
     );
   }

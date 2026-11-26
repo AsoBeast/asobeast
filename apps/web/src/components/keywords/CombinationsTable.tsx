@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useTable, type RowSelectionState } from "@tanstack/react-table";
 import type { Store } from "@asobeast/shared";
 import { EmptyState } from "@/components/ui/empty-state";
-import { formatNumber } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import {
   buildCombinations,
   COMBINATION_LIMIT,
@@ -16,7 +17,7 @@ import {
   keywordsOptions,
 } from "@/lib/queries";
 import {
-  COMBINATION_COLUMNS,
+  combinationColumns,
   HIDDEN_COMBINATION_COLUMNS,
 } from "./combination-columns";
 import {
@@ -63,6 +64,8 @@ function ListingCombinations({
   setParams,
   keywordField,
 }: CombinationsProps & { keywordField: readonly string[] }) {
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
   const { data: app } = useSuspenseQuery(appDetailOptions(id));
   const { data: tracked } = useSuspenseQuery(keywordsOptions(id, homeCountry));
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
@@ -84,10 +87,11 @@ function ListingCombinations({
       ].filter((filter) => filter.value.length > 0),
     [params.words, params.status],
   );
+  const columns = useMemo(() => combinationColumns(t, locale), [t, locale]);
   const table = useTable({
     features: keywordTableFeatures,
     data: result.combinations,
-    columns: COMBINATION_COLUMNS,
+    columns,
     getRowId: (row) => row.key,
     state: {
       globalFilter: params.q,
@@ -106,8 +110,8 @@ function ListingCombinations({
   if (result.words.length === 0) {
     return (
       <EmptyState
-        title="No listing words to combine yet"
-        body="Combinations appear once AsoBeast has captured a listing with words in the fields this store indexes."
+        title={t("combinations.noWords")}
+        body={t("combinations.noWordsBody")}
       />
     );
   }
@@ -116,7 +120,10 @@ function ListingCombinations({
     <div className="flex flex-col gap-3">
       {result.truncated ? (
         <p role="note" className="text-caption text-muted-foreground">
-          {`Your listing forms ${formatNumber(result.total)} combinations. The first ${formatNumber(COMBINATION_LIMIT)}, shortest first, are listed.`}
+          {t("combinations.truncated", {
+            total: result.total,
+            limit: COMBINATION_LIMIT,
+          })}
         </p>
       ) : null}
       <CombinationFilters

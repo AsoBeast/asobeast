@@ -1,27 +1,24 @@
+import { useTranslations } from "next-intl";
 import type { EssentialAlertsNeed } from "@asobeast/shared";
-import { essentialNeedCopy, HTTPS_VARIABLE } from "./essential-alerts-copy";
+import { essentialNeed } from "./essential-alerts-copy";
 
 export function EssentialAlertsNotice({
   need,
 }: {
   need: EssentialAlertsNeed | null | undefined;
 }) {
-  const copy = essentialNeedCopy(need);
+  const t = useTranslations("notifications");
+  const copy = essentialNeed(need);
   if (!copy) return null;
-  const [before, after] = copy.split(HTTPS_VARIABLE);
   return (
     <p className="text-body text-muted-foreground">
-      {after === undefined ? (
-        copy
-      ) : (
-        <>
-          <span>{before}</span>
+      {t.rich(need === "https" ? "essential.needHttpsRich" : copy.key, {
+        variable: (chunks) => (
           <code className="font-mono text-caption text-foreground">
-            {HTTPS_VARIABLE}
+            {chunks}
           </code>
-          <span>{after}</span>
-        </>
-      )}
+        ),
+      })}
     </p>
   );
 }

@@ -1,21 +1,32 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, ChevronRight, Loader2, XCircle } from "lucide-react";
 import type { AlertDeliveryItem } from "@asobeast/shared";
+import type { MessageTranslator } from "@/i18n/translator";
 import { Button } from "@/components/ui/button";
 import { Separated } from "@/components/ui/separated";
 import { getDeliveries } from "@/lib/api";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTimeInLocale } from "@/lib/format";
 import { deliveryKeys } from "@/lib/queries";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
-import { EVENT_LABELS } from "./alert-event-copy";
+import { eventLabel } from "./alert-event-copy";
 
 const delivered = (delivery: AlertDeliveryItem) =>
   delivery.status === "success";
 
+export function deliveryStatusLabel(
+  success: boolean,
+  translator: MessageTranslator,
+): string {
+  return translator(success ? "deliveries.success" : "deliveries.failed");
+}
+
 function DeliveryStatus({ delivery }: { delivery: AlertDeliveryItem }) {
+  const t = useTranslations("notifications");
   const Icon = delivered(delivery) ? CheckCircle2 : XCircle;
   return (
     <span className="flex items-center gap-2 font-medium">
@@ -26,20 +37,22 @@ function DeliveryStatus({ delivery }: { delivery: AlertDeliveryItem }) {
           delivered(delivery) ? "text-success" : "text-destructive",
         )}
       />
-      <span>{delivered(delivery) ? "Success" : "Failed"}</span>
+      <span>{deliveryStatusLabel(delivered(delivery), t)}</span>
     </span>
   );
 }
 
 function DeliveryRow({ delivery }: { delivery: AlertDeliveryItem }) {
+  const t = useTranslations("notifications");
+  const locale = useAppLocale();
   return (
     <li className="grid grid-cols-[max-content_minmax(0,1fr)] items-center gap-x-3 gap-y-1 border-t border-border-subtle py-2 text-dense sm:grid-cols-[max-content_minmax(0,1fr)_max-content]">
       <DeliveryStatus delivery={delivery} />
       <span className="min-w-0 text-muted-foreground wrap-anywhere">
         <Separated
           parts={[
-            EVENT_LABELS[delivery.event],
-            `attempt ${delivery.attempt}`,
+            eventLabel(delivery.event, t),
+            t("deliveries.attempt", { count: delivery.attempt }),
             ...(delivery.detail ? [delivery.detail] : []),
           ]}
         />
@@ -48,18 +61,21 @@ function DeliveryRow({ delivery }: { delivery: AlertDeliveryItem }) {
         dateTime={delivery.createdAt}
         className="col-span-full text-caption text-faint-foreground sm:col-span-1"
       >
-        {formatDateTime(delivery.createdAt)}
+        {formatDateTimeInLocale(delivery.createdAt, locale)}
       </time>
     </li>
   );
 }
 
 function DeliverySummary({ deliveries }: { deliveries: AlertDeliveryItem[] }) {
+  const t = useTranslations("notifications");
   const sent = deliveries.filter(delivered).length;
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pb-2">
       <div className="flex items-center gap-3">
-        <span className="text-label">{`Last ${deliveries.length}`}</span>
+        <span className="text-label">
+          {t("deliveries.last", { count: deliveries.length })}
+        </span>
         <span aria-hidden className="flex h-4 items-center gap-px">
           {deliveries.toReversed().map((delivery) => (
             <span
@@ -73,7 +89,7 @@ function DeliverySummary({ deliveries }: { deliveries: AlertDeliveryItem[] }) {
         </span>
       </div>
       <span className="numeric text-caption text-faint-foreground">
-        {`${sent} of ${deliveries.length} delivered`}
+        {t("deliveries.summary", { sent, total: deliveries.length })}
       </span>
     </div>
   );
@@ -86,6 +102,7 @@ export function DeliveriesSection({
   channel: "webhook" | "email";
   id: string;
 }) {
+  const t = useTranslations("notifications");
   const [open, setOpen] = useState(false);
   const { data, isLoading } = useQuery({
     queryKey: deliveryKeys.list(channel, id),
@@ -110,7 +127,7 @@ export function DeliveriesSection({
             open && "rotate-90",
           )}
         />
-        Recent deliveries
+        {t("deliveries.recent")}
       </Button>
 
       {open ? (
@@ -118,7 +135,7 @@ export function DeliveriesSection({
           {isLoading ? (
             <p className="flex items-center gap-2 py-2 text-caption text-muted-foreground">
               <Loader2 className="size-4 animate-spin" />
-              <span>Loading…</span>
+              <span>{t("deliveries.loading")}</span>
             </p>
           ) : data && data.length > 0 ? (
             <>
@@ -131,7 +148,7 @@ export function DeliveriesSection({
             </>
           ) : (
             <p className="py-2 text-caption text-muted-foreground">
-              No deliveries yet.
+              {t("deliveries.none")}
             </p>
           )}
         </div>

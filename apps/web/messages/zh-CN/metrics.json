@@ -1,0 +1,9 @@
+{
+  "percent": "{value}%",
+  "status": {
+    "healthy": "健康",
+    "high": "偏高",
+    "nearCapacity": "接近容量上限",
+    "overCapacity": "超出容量上限"
+  }
+}

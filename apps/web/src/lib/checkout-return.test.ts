@@ -9,6 +9,9 @@ import {
 } from "./checkout-return";
 import type { AccountPlan } from "@asobeast/shared";
 import { formatDate } from "./format";
+import { translationContext } from "@/test/translation-context";
+
+const EN = translationContext("en", "billing");
 
 describe("searchOf", () => {
   it("reads the query of a requested path", () => {
@@ -109,13 +112,13 @@ describe("trialStartedToast", () => {
     ({ trialing: true, renewsAt: RENEWS, ...over }) as AccountPlan;
 
   it("names the first charge of a trial that started", () => {
-    expect(trialStartedToast(planOf({}))).toBe(
+    expect(trialStartedToast(planOf({}), EN)).toBe(
       `Your free trial has started. The first charge is on ${formatDate(RENEWS)}.`,
     );
   });
 
   it("says nothing for a purchase or a plan without a renewal", () => {
-    expect(trialStartedToast(planOf({ trialing: false }))).toBeNull();
-    expect(trialStartedToast(planOf({ renewsAt: null }))).toBeNull();
+    expect(trialStartedToast(planOf({ trialing: false }), EN)).toBeNull();
+    expect(trialStartedToast(planOf({ renewsAt: null }), EN)).toBeNull();
   });
 });

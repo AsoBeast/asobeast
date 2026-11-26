@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type RefObject } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import type { Store, StoreSearchResult } from "@asobeast/shared";
 import { marketError } from "@/lib/countries";
@@ -28,17 +29,19 @@ export interface StoreSearch {
   enterName: (pick: (result: StoreSearchResult) => void) => string | null;
 }
 
-const SHORT_NAME = `Type at least ${STORE_SEARCH_MIN_CHARS} characters to search.`;
-
 export function useStoreSearch(
   store: Store,
   country: string,
   value: string,
 ): StoreSearch {
-  const input = classifyInput(value);
-  const problem = nameTooLongText(input);
+  const t = useTranslations("apps");
+  const validationT = useTranslations("validation");
+  const input = classifyInput(value, t);
+  const problem = nameTooLongText(input, t);
   const q =
-    isSearchable(input) && marketError(store, country) === null ? input.q : "";
+    isSearchable(input) && marketError(store, country, validationT) === null
+      ? input.q
+      : "";
   const [term, setTerm] = useState(q);
   const firstResultRef = useRef<HTMLButtonElement>(null);
 
@@ -64,7 +67,9 @@ export function useStoreSearch(
   function enterName(pick: (result: StoreSearchResult) => void) {
     if (input.kind !== "name") return null;
     if (problem) return problem;
-    if (!isSearchable(input)) return SHORT_NAME;
+    if (!isSearchable(input)) {
+      return t("import.shortName", { count: STORE_SEARCH_MIN_CHARS });
+    }
     const enter = enterAction(results, settled);
     if (enter.kind === "pick") pick(enter.result);
     if (enter.kind === "focus") firstResultRef.current?.focus();

@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { Gauge } from "lucide-react";
 import type { KeywordImportCost } from "@asobeast/shared";
 import { useAuth } from "@/components/auth/use-auth";
@@ -15,12 +16,14 @@ const TONE_VARIANT = {
 } as const;
 
 export function ImportBudgetNotice({ cost }: { cost: KeywordImportCost }) {
+  const t = useTranslations("apps");
   const { isOperator } = useAuth();
   const { data } = useQuery({ ...budgetOptions, enabled: isOperator });
   const notice = importBudgetNotice(
     cost,
     data ? storeBudgetOf(data.stores, cost.store) : null,
     isOperator,
+    t,
   );
   if (notice === null) return null;
   return (

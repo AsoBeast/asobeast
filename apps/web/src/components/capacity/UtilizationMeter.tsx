@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import {
   meterValue,
   utilizationLevel,
@@ -17,7 +20,8 @@ export function UtilizationMeter({
   label: string;
   utilization: number;
 }) {
-  const { now, text } = meterValue(utilization);
+  const t = useTranslations("metrics");
+  const { now, text } = meterValue(utilization, t);
 
   return (
     <div

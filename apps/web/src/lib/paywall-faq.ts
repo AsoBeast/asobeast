@@ -1,16 +1,28 @@
 import type { TrialOffer } from "@asobeast/shared";
+import type { TranslationContext } from "@/i18n/translator";
 import { trialEndLabel, type ViewerClock } from "@/lib/plan-choice";
 
+export type FaqId =
+  | "charge"
+  | "cancel"
+  | "cardSafety"
+  | "keywordMarket"
+  | "app"
+  | "changePlan"
+  | "deleteAccount";
+
 export interface FaqItem {
+  id: FaqId;
   question: string;
   answer: string;
   href?: string;
 }
 
-export const READ_MORE = "Read more";
-
-export function readMoreContext(question: string): string {
-  return ` about ${question} (opens in a new tab)`;
+export function readMoreContext(
+  question: string,
+  context: TranslationContext,
+): string {
+  return context.translator("faq.readMoreContext", { question });
 }
 
 const CANCELLATION_GUIDE =
@@ -18,41 +30,39 @@ const CANCELLATION_GUIDE =
 
 const PRICING_GUIDE = "https://docs.asobeast.com/legal/pricing";
 
-const STANDING_ITEMS: readonly FaqItem[] = [
+const STANDING_ITEMS: readonly {
+  id: Exclude<FaqId, "charge">;
+  key: string;
+  href: string;
+}[] = [
   {
-    question: "How do I cancel?",
-    answer:
-      "Open Settings, then Billing, and cancel in the billing portal. A trial cancelled before its end is never charged; a paid plan runs to the end of the period you paid for.",
+    id: "cancel",
+    key: "cancel",
     href: CANCELLATION_GUIDE,
   },
   {
-    question: "Is my card safe with AsoBeast?",
-    answer:
-      "The card fields are Stripe's and the number never reaches AsoBeast. AsoBeast is open source; the code behind this page is on GitHub.",
+    id: "cardSafety",
+    key: "cardSafety",
     href: "https://github.com/AsoBeast/asobeast",
   },
   {
-    question: "What is a keyword market?",
-    answer:
-      "One phrase tracked in one storefront. The same phrase in two countries is two keyword markets.",
+    id: "keywordMarket",
+    key: "keywordMarket",
     href: PRICING_GUIDE,
   },
   {
-    question: "What counts as an app?",
-    answer:
-      "An app you import and track. Its competitors do not count against the limit; each plan sets how many competitors an app may have.",
+    id: "app",
+    key: "app",
     href: PRICING_GUIDE,
   },
   {
-    question: "Can I change the plan later?",
-    answer:
-      "Yes, from Settings. An upgrade applies at once; a downgrade applies at the end of the period.",
+    id: "changePlan",
+    key: "changePlan",
     href: CANCELLATION_GUIDE,
   },
   {
-    question: "How do I delete my account?",
-    answer:
-      "From Settings, Workspace. The deletion waits a few days and can be cancelled until then.",
+    id: "deleteAccount",
+    key: "deleteAccount",
     href: "https://docs.asobeast.com/legal/data-retention",
   },
 ];
@@ -61,17 +71,24 @@ function chargeItem(
   offer: TrialOffer | null | undefined,
   renewalTerms: string,
   clock: ViewerClock,
+  context: TranslationContext,
 ): FaqItem {
   if (!offer) {
     return {
-      question: "When am I charged?",
-      answer: `Today, for the first period. Then ${renewalTerms}.`,
+      id: "charge",
+      question: context.translator("faq.chargeLater.question"),
+      answer: context.translator("faq.chargeLater.answer", {
+        terms: renewalTerms,
+      }),
     };
   }
-  const endsOn = trialEndLabel(offer, clock);
   return {
-    question: "Will I be charged today?",
-    answer: `No. Your card is verified today and nothing is charged. From ${endsOn}: ${renewalTerms}. Cancel from settings before then and nothing is charged.`,
+    id: "charge",
+    question: context.translator("faq.chargeToday.question"),
+    answer: context.translator("faq.chargeToday.answer", {
+      date: trialEndLabel(offer, clock, context),
+      terms: renewalTerms,
+    }),
   };
 }
 
@@ -79,6 +96,15 @@ export function paywallFaq(
   offer: TrialOffer | null | undefined,
   renewalTerms: string,
   clock: ViewerClock,
+  context: TranslationContext,
 ): readonly FaqItem[] {
-  return [chargeItem(offer, renewalTerms, clock), ...STANDING_ITEMS];
+  return [
+    chargeItem(offer, renewalTerms, clock, context),
+    ...STANDING_ITEMS.map(({ id, key, href }) => ({
+      id,
+      question: context.translator(`faq.${key}.question`),
+      answer: context.translator(`faq.${key}.answer`),
+      href,
+    })),
+  ];
 }

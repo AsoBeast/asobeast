@@ -9,6 +9,7 @@ import {
   type RefObject,
 } from "react";
 import { normalizeText } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { CartesianGrid, Scatter, ScatterChart, XAxis, YAxis } from "recharts";
 import {
   CHART_HEIGHT,
@@ -40,12 +41,14 @@ import {
 import { ChartContainer } from "@/components/ui/chart";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
-  formatCountry,
-  formatDateTime,
-  formatNumber,
+  formatCountryInLocale,
+  formatDateTimeInLocale,
   storeLabel,
 } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { useIsMobile } from "@/lib/use-is-mobile";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
 import {
   DotContext,
   InspectionDot,
@@ -69,9 +72,6 @@ const EDGE_KEYS: Readonly<Record<string, "first" | "last">> = {
   End: "last",
 };
 
-const KEYBOARD_HELP =
-  "Arrow keys move to the nearest keyword, Home and End jump to the highest and lowest opportunity, Enter shows its inspection.";
-
 const dotIn = (surface: HTMLElement | null, keywordId: string) =>
   surface?.querySelector<SVGGElement>(
     `[data-inspection-id="${CSS.escape(keywordId)}"]`,
@@ -83,10 +83,15 @@ const keepUnless =
     current === keywordId ? null : current;
 
 function EmptyMap({ storefront }: { storefront: Storefront }) {
+  const t = useTranslations("keywordInspector");
+  const locale = useAppLocale();
   return (
     <EmptyState
-      title="Nothing on the map yet"
-      body={`Inspect a keyword in ${storeLabel(storefront.store)}, ${formatCountry(storefront.country)} and it lands here by its popularity and difficulty.`}
+      title={t("inspector.map.emptyTitle")}
+      body={t("inspector.map.emptyBody", {
+        store: storeLabel(storefront.store),
+        country: formatCountryInLocale(storefront.country, locale),
+      })}
       className={`${CHART_HEIGHT.hero} justify-center px-6`}
     />
   );
@@ -95,8 +100,10 @@ function EmptyMap({ storefront }: { storefront: Storefront }) {
 function mapFooter(
   points: readonly InspectionPoint[],
   storefront: Storefront,
+  t: MessageTranslator,
+  locale: Locale,
 ): string {
-  const place = storefrontName(storefront.store, storefront.country);
+  const place = storefrontName(storefront.store, storefront.country, locale);
   const latest = points.reduce<string | null>(
     (newest, point) =>
       point.completedAt !== null &&
@@ -106,8 +113,16 @@ function mapFooter(
     null,
   );
   return latest === null
-    ? `${place} · nothing inspected yet`
-    : `${place} · latest ${formatDateTime(latest)}`;
+    ? t("inspector.map.footer", {
+        storefront: place,
+        status: t("inspector.map.nothingInspected"),
+      })
+    : t("inspector.map.footer", {
+        storefront: place,
+        status: t("inspector.map.latest", {
+          date: formatDateTimeInLocale(latest, locale),
+        }),
+      });
 }
 
 const isNavigationKey = (key: string): boolean =>
@@ -182,6 +197,8 @@ export function InspectionMap({
   hops?: ReactNode;
 }) {
   const { thresholds } = useZoneThresholds();
+  const t = useTranslations("keywordInspector");
+  const locale = useAppLocale();
   const [freshSince] = useState(() => Date.now());
   const surfaceRef = useRef<HTMLDivElement>(null);
   const helpId = useId();
@@ -214,12 +231,12 @@ export function InspectionMap({
     >
       <CardHeader className={PANEL_HEADER}>
         <CardTitle asChild>
-          <h2 id="inspection-map-title">Keyword map</h2>
+          <h2 id="inspection-map-title">{t("inspector.map.title")}</h2>
         </CardTitle>
         <CardAction className="flex items-center gap-3 self-center">
           {points.length > 0 ? (
             <span className="hidden text-label text-faint-foreground sm:inline">
-              {`${formatNumber(points.length)} in this storefront`}
+              {t("inspector.map.inStorefront", { count: points.length })}
             </span>
           ) : null}
           <ThresholdsPopover />
@@ -231,32 +248,32 @@ export function InspectionMap({
         ) : (
           <DotContext.Provider value={state}>
             <p id={helpId} className="sr-only">
-              {KEYBOARD_HELP}
+              {t("inspector.map.keyboardHelp")}
             </p>
             <ChartContainer
               ref={surfaceRef}
               config={{}}
               role="region"
-              aria-label="Inspected keywords by difficulty and popularity"
+              aria-label={t("inspector.map.aria")}
               className={`aspect-auto ${CHART_HEIGHT.hero} w-full`}
             >
               <ScatterChart
                 accessibilityLayer
                 role="group"
                 tabIndex={-1}
-                aria-label="Inspected keywords"
+                aria-label={t("inspector.map.group")}
                 aria-describedby={helpId}
                 margin={{ ...CHART_MARGIN, right: 16, top: 12 }}
               >
-                {zoneAreas({ thresholds, selected: null })}
+                {zoneAreas({ thresholds, selected: null, t })}
                 <CartesianGrid {...GRID_PROPS} />
                 <XAxis
                   {...SCORE_AXIS_PROPS}
                   dataKey="difficulty"
-                  name="Difficulty"
+                  name={t("inspector.map.difficulty")}
                   height={44}
                   label={{
-                    value: "Difficulty",
+                    value: t("inspector.map.difficulty"),
                     position: "insideBottom",
                     fill: "var(--muted-foreground)",
                     fontSize: 11,
@@ -265,17 +282,17 @@ export function InspectionMap({
                 <YAxis
                   {...SCORE_AXIS_PROPS}
                   dataKey="popularity"
-                  name="Popularity"
+                  name={t("inspector.map.popularity")}
                   width={48}
                   label={{
-                    value: "Popularity",
+                    value: t("inspector.map.popularity"),
                     angle: -90,
                     position: "insideLeft",
                     fill: "var(--muted-foreground)",
                     fontSize: 11,
                   }}
                 />
-                {thresholdLines(thresholds)}
+                {thresholdLines(thresholds, t)}
                 <Scatter
                   data={ordered}
                   shape={InspectionDot}
@@ -293,8 +310,8 @@ export function InspectionMap({
       </CardContent>
       {hops}
       <CardFooter className="flex-wrap justify-between gap-x-4 gap-y-1">
-        <span>{mapFooter(points, storefront)}</span>
-        {hops ? <span>A suggestion inspects in one click</span> : null}
+        <span>{mapFooter(points, storefront, t, locale)}</span>
+        {hops ? <span>{t("inspector.map.suggestionHint")}</span> : null}
       </CardFooter>
     </Card>
   );

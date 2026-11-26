@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import type { PortfolioApp, PortfolioHistory } from "@asobeast/shared";
 import { changedFieldsLabel } from "@/components/keywords/position-history";
+import type { MessageTranslator } from "@/i18n/translator";
 import { TrendChip } from "@/components/ui/delta-chip";
 import { appLabel } from "./breakdown";
 import { dayChanges, dayMovements } from "./day-moves";
@@ -19,6 +21,7 @@ function movesOn(
   history: PortfolioHistory,
   date: string,
   metric: NotedMetric,
+  t: MessageTranslator,
 ): AppMove[] {
   const apps = history.apps ?? [];
   if (apps.length < 2) return [];
@@ -30,7 +33,13 @@ function movesOn(
   }
   return dayChanges(apps, date, metric).map(({ appId, change }) => ({
     appId,
-    value: <TrendChip label="that day" value={change} labelled={false} />,
+    value: (
+      <TrendChip
+        label={t("dayNotes.thatDay")}
+        value={change}
+        labelled={false}
+      />
+    ),
   }));
 }
 
@@ -45,7 +54,8 @@ export function DayNotes({
   metric: NotedMetric;
   date: string;
 }) {
-  const moves = movesOn(history, date, metric);
+  const t = useTranslations("dashboard");
+  const moves = movesOn(history, date, metric, t);
   const changes = (history.listingChanges ?? []).filter(
     (change) => change.date === date,
   );
@@ -53,7 +63,7 @@ export function DayNotes({
 
   const nameOf = (appId: string): string => {
     const app = apps.find((each) => each.id === appId);
-    return app ? appLabel(app, apps) : "Unknown app";
+    return app ? appLabel(app, apps, t) : t("dayNotes.unknownApp");
   };
   const hidden = moves.length - MOVES_SHOWN;
 
@@ -63,7 +73,7 @@ export function DayNotes({
       className="grid gap-1.5 border-t border-border-subtle pt-1.5"
     >
       {moves.length > 0 ? (
-        <p className="text-faint-foreground">Largest moves that day</p>
+        <p className="text-faint-foreground">{t("dayNotes.largest")}</p>
       ) : null}
       {moves.slice(0, MOVES_SHOWN).map((move) => (
         <div
@@ -79,11 +89,16 @@ export function DayNotes({
         </div>
       ))}
       {hidden > 0 ? (
-        <p className="text-faint-foreground">{`and ${hidden} more`}</p>
+        <p className="text-faint-foreground">
+          {t("dayNotes.andMore", { count: hidden })}
+        </p>
       ) : null}
       {changes.map((change) => (
         <p key={change.appId} className="text-muted-foreground">
-          {`${nameOf(change.appId)} · ${changedFieldsLabel(change.fields)} changed`}
+          {t("dayNotes.fieldsChanged", {
+            name: nameOf(change.appId),
+            fields: changedFieldsLabel(change.fields),
+          })}
         </p>
       ))}
     </div>

@@ -1,17 +1,18 @@
 "use client";
 
 import { useId } from "react";
+import { useTranslations } from "next-intl";
 import { CheckIcon } from "lucide-react";
 import {
   RATING_DROP_TENTHS_CHOICES,
   REVIEW_SCORES,
-  ratingDropLabel,
+  type ReviewScore,
 } from "@asobeast/shared";
-import type { ReviewScore } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { parseRankDropThreshold } from "./alert-thresholds";
+import type { MessageTranslator } from "@/i18n/translator";
+import { parseRankDropThreshold, ratingDropOption } from "./alert-thresholds";
 import {
   Select,
   SelectContent,
@@ -20,8 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const STARS_HELP =
-  "Reviews with these stars arrive as new reviews. When Negative review is ticked too, a low review outside these stars still arrives as a negative review.";
+export { ratingDropOption } from "./alert-thresholds";
 
 function ToggleChip({
   checked,
@@ -47,6 +47,13 @@ function ToggleChip({
   );
 }
 
+export function reviewStarOption(
+  score: number,
+  translator: MessageTranslator,
+): string {
+  return translator("reviewStars.option", { score });
+}
+
 export function ReviewStarSelection({
   value,
   onChange,
@@ -54,6 +61,7 @@ export function ReviewStarSelection({
   value: readonly number[];
   onChange: (next: number[]) => void;
 }) {
+  const t = useTranslations("notifications");
   const labelId = useId();
   const helpId = useId();
 
@@ -67,7 +75,7 @@ export function ReviewStarSelection({
 
   return (
     <div className="flex flex-col gap-2">
-      <Label id={labelId}>New review stars</Label>
+      <Label id={labelId}>{t("reviewStars.label")}</Label>
       <div
         role="group"
         aria-labelledby={labelId}
@@ -80,19 +88,16 @@ export function ReviewStarSelection({
             checked={value.includes(score)}
             onClick={() => toggle(score)}
           >
-            {score === 1 ? "1 star" : `${score} stars`}
+            {reviewStarOption(score, t)}
           </ToggleChip>
         ))}
       </div>
       <p id={helpId} className="text-caption text-muted-foreground">
-        {value.length === 0 ? "Pick at least one star." : STARS_HELP}
+        {value.length === 0 ? t("reviewStars.required") : t("reviewStars.help")}
       </p>
     </div>
   );
 }
-
-const RATING_DROP_HELP =
-  "Alert when the average rating falls by at least this much against seven to ten days earlier. Needs 20 ratings. Reviews are not counted, the number shown in the store is.";
 
 const ratingDropChoices = (value: number): number[] =>
   [...new Set<number>([...RATING_DROP_TENTHS_CHOICES, value])].sort(
@@ -106,12 +111,13 @@ export function RatingDropSelection({
   value: number;
   onChange: (next: number) => void;
 }) {
+  const t = useTranslations("notifications");
   const triggerId = useId();
   const helpId = useId();
 
   return (
     <div className="flex flex-col gap-2">
-      <Label htmlFor={triggerId}>Rating drop threshold</Label>
+      <Label htmlFor={triggerId}>{t("ratingDrop.label")}</Label>
       <Select
         value={String(value)}
         onValueChange={(next) => onChange(Number(next))}
@@ -121,27 +127,30 @@ export function RatingDropSelection({
           aria-describedby={helpId}
           className="w-[160px]"
         >
-          <SelectValue>{ratingDropLabel(value)}</SelectValue>
+          <SelectValue>{ratingDropOption(value, t)}</SelectValue>
         </SelectTrigger>
         <SelectContent>
           {ratingDropChoices(value).map((tenths) => (
             <SelectItem key={tenths} value={String(tenths)}>
-              {ratingDropLabel(tenths)}
+              {ratingDropOption(tenths, t)}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
       <p id={helpId} className="text-caption text-muted-foreground">
-        {RATING_DROP_HELP}
+        {t("ratingDrop.help")}
       </p>
     </div>
   );
 }
 
-const rankHelp = (instance: number | null): string =>
+const rankHelp = (
+  instance: number | null,
+  translator: MessageTranslator,
+): string =>
   instance === null
-    ? "Leave empty to use the instance value. A smaller value counts as the lowest value this instance detects."
-    : `Leave empty to use the instance value, ${instance}. A smaller value counts as ${instance}, the lowest value this instance detects.`;
+    ? translator("rankDrop.helpDefault")
+    : translator("rankDrop.helpInstance", { instance });
 
 export function RankDropField({
   value,
@@ -152,14 +161,16 @@ export function RankDropField({
   onChange: (next: string) => void;
   instance: number | null;
 }) {
+  const t = useTranslations("notifications");
+  const validation = useTranslations("validation");
   const inputId = useId();
   const helpId = useId();
   const errorId = useId();
-  const { error } = parseRankDropThreshold(value);
+  const { error } = parseRankDropThreshold(value, validation);
 
   return (
     <div className="flex flex-col gap-2">
-      <Label htmlFor={inputId}>Rank drop positions</Label>
+      <Label htmlFor={inputId}>{t("rankDrop.label")}</Label>
       <div className="flex items-center gap-2">
         <Input
           id={inputId}
@@ -173,7 +184,9 @@ export function RankDropField({
           className="w-24"
           onChange={(event) => onChange(event.target.value)}
         />
-        <span className="text-dense text-muted-foreground">positions</span>
+        <span className="text-dense text-muted-foreground">
+          {t("rankDrop.positions")}
+        </span>
       </div>
       {error ? (
         <p id={errorId} className="text-dense text-destructive">
@@ -181,7 +194,7 @@ export function RankDropField({
         </p>
       ) : null}
       <p id={helpId} className="text-caption text-muted-foreground">
-        {rankHelp(instance)}
+        {rankHelp(instance, t)}
       </p>
     </div>
   );

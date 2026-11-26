@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import type { SetupStep, SetupStepState } from "@asobeast/shared";
 import { PANEL_ACTION, PANEL_HEADER } from "@/components/layout/panel-classes";
 import { Badge } from "@/components/ui/badge";
@@ -12,19 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { STEP_TITLES } from "./setup-progress";
-
-const SKIP_REASON: Record<SetupStep, string> = {
-  competitors:
-    "Positions are compared against nobody until a competitor is added.",
-  keywords: "Only the phrases from your listing are tracked.",
-  countries: "Keywords are tracked in your home storefront only.",
-};
-
-const STATE_PILLS: Partial<Record<SetupStepState, string>> = {
-  done: "Done",
-  skipped: "Skipped",
-};
+import { stepTitle } from "./setup-progress";
 
 export interface StepProps {
   state: SetupStepState;
@@ -32,11 +21,12 @@ export interface StepProps {
 }
 
 function SkipAction({ state, onSkip }: StepProps) {
+  const t = useTranslations("setup");
   if (state !== "open" && state !== "skipped") return null;
   const skipped = state === "skipped";
   return (
     <Button variant="ghost" size="sm" onClick={() => onSkip(!skipped)}>
-      {skipped ? "Undo skip" : "Skip this step"}
+      {t(skipped ? "panel.undoSkip" : "panel.skip")}
     </Button>
   );
 }
@@ -54,7 +44,13 @@ export function StepPanel({
   footer: ReactNode;
   children: ReactNode;
 }) {
-  const pill = STATE_PILLS[state];
+  const t = useTranslations("setup");
+  const pill =
+    state === "done"
+      ? t("state.done")
+      : state === "skipped"
+        ? t("state.skipped")
+        : null;
   return (
     <Card
       id={`setup-${step}`}
@@ -63,7 +59,7 @@ export function StepPanel({
     >
       <CardHeader className={PANEL_HEADER}>
         <CardTitle asChild>
-          <h3>{STEP_TITLES[step]}</h3>
+          <h3>{stepTitle(step, t)}</h3>
         </CardTitle>
         <CardAction className={cn(PANEL_ACTION, "flex items-center gap-2")}>
           {pill ? <Badge variant="flat">{pill}</Badge> : null}
@@ -72,7 +68,7 @@ export function StepPanel({
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <p className="max-w-[70ch] text-dense text-muted-foreground">
-          {state === "skipped" ? SKIP_REASON[step] : description}
+          {state === "skipped" ? t(`steps.${step}.skipReason`) : description}
         </p>
         {children}
       </CardContent>

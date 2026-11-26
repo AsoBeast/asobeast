@@ -8,12 +8,14 @@ import {
   useQueryErrorResetBoundary,
 } from "@tanstack/react-query";
 import { RotateCw } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { recoveryFor, type RecoveryScope } from "@/lib/error-recovery";
 import { reportBrowserError, worthReporting } from "@/lib/error-reporting";
 import { oncePerError } from "@/lib/once-per-error";
 import { refetchFailedQueries, webHealthOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
+import { useAppLocale } from "@/lib/use-app-locale";
 
 const LAYOUT = {
   panel: {
@@ -46,8 +48,11 @@ export function ErrorState({
   className?: string;
 }) {
   const classes = LAYOUT[layout];
+  const locale = useAppLocale();
+  const t = useTranslations("errors");
+  const common = useTranslations("common");
   const Title = layout === "page" ? "h1" : "p";
-  const recovery = recoveryFor(error, scope);
+  const recovery = recoveryFor(error, scope, { translator: t, locale });
   const statusPage = useQuery(webHealthOptions).data?.statusPageUrl ?? null;
   const queryClient = useQueryClient();
   const queryErrors = useQueryErrorResetBoundary();
@@ -64,7 +69,11 @@ export function ErrorState({
   }, [error]);
 
   return (
-    <div role="alert" className={cn("flex flex-col", classes.root, className)}>
+    <div
+      role="alert"
+      data-slot="error-state"
+      className={cn("flex flex-col", classes.root, className)}
+    >
       <div className={cn("flex flex-col", classes.text)}>
         <Title className={classes.title}>{title ?? recovery.title}</Title>
         <p className={cn("text-body text-muted-foreground", classes.body)}>
@@ -72,9 +81,9 @@ export function ErrorState({
         </p>
       </div>
       {recovery.action.kind === "retry" ? (
-        <Button variant="outline" onClick={tryAgain}>
+        <Button data-action="retry" variant="outline" onClick={tryAgain}>
           <RotateCw />
-          Try again
+          {common("retry")}
         </Button>
       ) : (
         <Button asChild variant="outline">
@@ -83,16 +92,18 @@ export function ErrorState({
       )}
       {statusPage ? (
         <p className="text-caption text-muted-foreground">
-          If this keeps happening,{" "}
-          <a
-            href={statusPage}
-            target="_blank"
-            rel="noreferrer"
-            className="font-medium text-foreground link-underline"
-          >
-            check the status page
-          </a>
-          .
+          {t.rich("statusPage", {
+            link: (chunks) => (
+              <a
+                href={statusPage}
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-foreground link-underline"
+              >
+                {chunks}
+              </a>
+            ),
+          })}
         </p>
       ) : null}
     </div>

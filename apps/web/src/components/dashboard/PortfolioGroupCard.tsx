@@ -3,13 +3,18 @@ import type {
   PortfolioAppInsight,
   PortfolioGroup,
 } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { TrendChip } from "@/components/ui/delta-chip";
 import { PortfolioGroupMember } from "./PortfolioAppCard";
 import { orderMembers, type GroupVariant } from "./portfolio-rows";
 import { Sparkline } from "@/components/charts/Sparkline";
+import { formatNumberInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 
 function GroupVisibility({ group }: { group: PortfolioGroup | undefined }) {
+  const t = useTranslations("dashboard");
+  const locale = useAppLocale();
   if (!group) {
     return <span className="numeric text-metric text-muted-foreground">—</span>;
   }
@@ -18,15 +23,18 @@ function GroupVisibility({ group }: { group: PortfolioGroup | undefined }) {
     <div className="flex flex-col gap-1">
       <div className="flex items-baseline gap-2">
         <span className="numeric text-metric">
-          {Math.round(group.visibility.current)}
+          {formatNumberInLocale(Math.round(group.visibility.current), locale)}
         </span>
         <span className="text-caption text-muted-foreground">
-          blended visibility
+          {t("cards.blendedVisibility")}
         </span>
       </div>
-      <TrendChip label="7d" value={group.visibility.delta7d} />
+      <TrendChip
+        label={t("table.rangeUnit", { days: 7 })}
+        value={group.visibility.delta7d}
+      />
       <p className="text-caption text-muted-foreground">
-        Blended across stores, whose scores are not directly comparable.
+        {t("cards.blendedNote")}
       </p>
       <Sparkline points={group.sparkline} />
     </div>
@@ -46,6 +54,7 @@ export function PortfolioGroupCard({
   group: PortfolioGroup | undefined;
   insightFor: (appId: string) => PortfolioAppInsight | undefined;
 }) {
+  const t = useTranslations("dashboard");
   const storefront = variant === "storefront";
 
   return (
@@ -56,7 +65,7 @@ export function PortfolioGroupCard({
             {name}
           </span>
           <span className="ml-auto shrink-0 text-label text-faint-foreground">
-            {storefront ? "Storefronts" : "Linked"}
+            {storefront ? t("cards.storefronts") : t("cards.linked")}
           </span>
         </div>
         {storefront ? null : <GroupVisibility group={group} />}

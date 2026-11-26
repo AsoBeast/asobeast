@@ -1,0 +1,37 @@
+{
+  "title": "团队",
+  "inviteMember": "邀请成员",
+  "inviteTitle": "邀请成员",
+  "inviteDescription": "他们会加入此工作区，并能查看除账单外的所有内容。",
+  "email": "邮箱",
+  "sendInvitation": "发送邀请",
+  "invitations": "邀请",
+  "waiting": "等待接受",
+  "invitationsCaption": "等待接受的邀请",
+  "role": "角色",
+  "expires": "到期时间",
+  "expiresOn": "{date} 到期",
+  "revokeInvitation": "撤销给 {email} 的邀请",
+  "loadError": "无法加载团队成员。",
+  "membersCaption": "此工作区的成员",
+  "joined": "加入时间",
+  "actions": "操作",
+  "you": "您",
+  "roles": {
+    "owner": "所有者",
+    "member": "成员"
+  },
+  "memberCount": "{count, plural, one {# 位成员} other {# 位成员}}",
+  "invitationCount": "{count, plural, one {# 个邀请} other {# 个邀请}}",
+  "removeMember": "移除 {email}",
+  "revoked": "邀请已撤销",
+  "revokeError": "无法撤销邀请。",
+  "removed": "成员已移除",
+  "removeError": "无法移除成员。",
+  "inviteError": "无法发送邀请。",
+  "outcome": {
+    "sent": "邀请已发送至 {email}。",
+    "link": "邀请邮件未能发送，请手动将此链接发给 {email}。",
+    "failed": "未能通过邮件发送给 {email} 的邀请。请检查邮件设置，然后重新邀请。"
+  }
+}

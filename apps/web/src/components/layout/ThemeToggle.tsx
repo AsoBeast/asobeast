@@ -16,7 +16,7 @@ const FALLBACK = ORDER.length - 1;
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
-  const t = useTranslations("navigation.theme");
+  const t = useTranslations("shell.theme");
   const hydrated = useHydrated();
   const found = ORDER.findIndex((choice) => choice.value === theme);
   const index = hydrated && found !== -1 ? found : FALLBACK;
@@ -27,6 +27,7 @@ export function ThemeToggle() {
       variant="ghost"
       size="icon"
       onClick={() => setTheme(ORDER[(index + 1) % ORDER.length].value)}
+      data-slot="theme-toggle"
       aria-label={t("switch", { theme: t(value) })}
     >
       <Icon className="size-4" />

@@ -1,5 +1,8 @@
+import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
 import type { KeywordInspectionSummary } from "@asobeast/shared";
+import enKeywordInspector from "../../../messages/en/keywordInspector.json";
+import { translationContext } from "@/test/translation-context";
 import {
   drawOrder,
   inspectionPoints,
@@ -11,6 +14,24 @@ import {
 
 const US = { store: "APP_STORE", country: "us" } as const;
 const THRESHOLDS = { popularity: 20, difficulty: 25 };
+
+const reorderedPointTranslator = createTranslator({
+  locale: "en",
+  namespace: "keywordInspector",
+  messages: {
+    keywordInspector: {
+      ...enKeywordInspector,
+      inspector: {
+        ...enKeywordInspector.inspector,
+        map: {
+          ...enKeywordInspector.inspector.map,
+          point:
+            "{zone}|{paused, select, none {} other {PAUSED}}|{floor, select, none {} other {FLOOR}}|{opportunity, select, none {} other {OP={opportunity}}}|D={difficulty}|P={popularity}|K={keyword}",
+        },
+      },
+    },
+  } as Parameters<typeof createTranslator>[0]["messages"],
+});
 
 function summary(
   overrides: Partial<KeywordInspectionSummary>,
@@ -208,6 +229,34 @@ describe("pointName", () => {
     expect(pointName(point)).toBe(
       "habit tracker, popularity 65, difficulty 18, opportunity 70, Quick wins",
     );
+  });
+
+  it("localizes the spoken point name in Chinese", () => {
+    const [point] = inspectionPoints([summary({})], US, THRESHOLDS);
+    const zh = translationContext("zh-CN", "keywordInspector").translator;
+    expect(pointName(point, zh)).toBe(
+      "habit tracker，热度 65，难度 18，机会 70，快速取胜",
+    );
+  });
+
+  it("uses the complete ICU message and its optional floor and paused clauses", () => {
+    const [point] = inspectionPoints([summary({})], US, THRESHOLDS);
+
+    expect(pointName(point, reorderedPointTranslator)).toBe(
+      "Quick wins|||OP=70|D=18|P=65|K=habit tracker",
+    );
+    expect(
+      pointName(
+        { ...point, floor: true, active: false },
+        reorderedPointTranslator,
+      ),
+    ).toBe("Quick wins|PAUSED|FLOOR|OP=70|D=18|P=65|K=habit tracker");
+    expect(
+      pointName(
+        { ...point, opportunity: null, floor: true },
+        reorderedPointTranslator,
+      ),
+    ).toBe("Quick wins||FLOOR||D=18|P=65|K=habit tracker");
   });
 });
 

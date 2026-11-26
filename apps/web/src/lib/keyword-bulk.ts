@@ -3,8 +3,16 @@ import {
   type KeywordBulkAction,
   type KeywordBulkResult,
 } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
+import enKeywords from "../../messages/en/keywords.json";
 import { ApiError } from "@/lib/api/client";
-import { pluralize } from "@/lib/format";
+import type { MessageTranslator } from "@/i18n/translator";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywords",
+  messages: { keywords: enKeywords },
+});
 
 export interface BulkOutcome {
   changed: number;
@@ -20,13 +28,22 @@ export interface BulkReport {
   description?: string;
 }
 
-const WORDS: Record<
-  KeywordBulkAction,
-  { done: string; start: string; state: string | null }
-> = {
-  pause: { done: "Paused", start: "pause", state: "paused" },
-  resume: { done: "Activated", start: "activate", state: "active" },
-  untrack: { done: "Stopped tracking", start: "stop tracking", state: null },
+const ACTION_KEYS: Record<KeywordBulkAction, string> = {
+  pause: "pauseAction",
+  resume: "resumeAction",
+  untrack: "untrackAction",
+};
+
+const DONE_KEYS: Record<KeywordBulkAction, string> = {
+  pause: "paused",
+  resume: "activated",
+  untrack: "stoppedTracking",
+};
+
+const STATE_KEYS: Record<KeywordBulkAction, string | null> = {
+  pause: "alreadyPaused",
+  resume: "alreadyActive",
+  untrack: null,
 };
 
 export async function bulkInChunks(
@@ -57,8 +74,8 @@ function failureReport(
   action: KeywordBulkAction,
   outcome: BulkOutcome,
   selected: number,
+  t: MessageTranslator,
 ): BulkReport {
-  const words = WORDS[action];
   const description =
     outcome.error instanceof ApiError
       ? outcome.error.envelope.message
@@ -66,12 +83,19 @@ function failureReport(
   return outcome.notSent === selected
     ? {
         level: "error",
-        message: `Could not ${words.start} ${pluralize(selected, "keyword")}`,
+        message: t("bulk.failure", {
+          action: t(`bulk.${ACTION_KEYS[action]}`),
+          count: selected,
+        }),
         description,
       }
     : {
         level: "warning",
-        message: `${words.done} ${outcome.changed}, ${outcome.notSent} not changed`,
+        message: t("bulk.partial", {
+          done: t(`bulk.${DONE_KEYS[action]}`),
+          changed: outcome.changed,
+          notSent: outcome.notSent,
+        }),
         description,
       };
 }
@@ -80,22 +104,28 @@ export function bulkReport(
   action: KeywordBulkAction,
   outcome: BulkOutcome,
   selected: number,
+  t: MessageTranslator = english,
 ): BulkReport {
   if (outcome.error !== undefined) {
-    return failureReport(action, outcome, selected);
+    return failureReport(action, outcome, selected, t);
   }
-  const words = WORDS[action];
+  const stateKey = STATE_KEYS[action];
   const notes = [
-    outcome.unchanged > 0 && words.state
-      ? `${outcome.unchanged} already ${words.state}`
+    outcome.unchanged > 0 && stateKey
+      ? t(`bulk.${stateKey}`, { count: outcome.unchanged })
       : null,
-    outcome.missing > 0 ? `${outcome.missing} no longer tracked` : null,
-  ].filter((note) => note !== null);
+    outcome.missing > 0
+      ? t("bulk.noLongerTracked", { count: outcome.missing })
+      : null,
+  ].filter((note): note is string => note !== null);
   return {
     level: outcome.changed > 0 ? "success" : "info",
     message: [
-      `${words.done} ${pluralize(outcome.changed, "keyword")}`,
+      t("bulk.changed", {
+        done: t(`bulk.${DONE_KEYS[action]}`),
+        count: outcome.changed,
+      }),
       ...notes,
-    ].join(", "),
+    ].join(t("bulk.separator")),
   };
 }

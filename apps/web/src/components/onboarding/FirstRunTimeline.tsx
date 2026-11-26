@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { StageRow } from "@/components/app-detail/StageRow";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +12,7 @@ import {
   invalidateAppListing,
   invalidateKeywords,
 } from "@/lib/queries";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { FirstPositions } from "./FirstPositions";
 import {
   firstRunHeadline,
@@ -21,6 +23,8 @@ import {
 } from "./first-run-timeline";
 
 export function FirstRunTimeline({ id }: { id: string }) {
+  const t = useTranslations("setup");
+  const locale = useAppLocale();
   const headingId = useId();
   const queryClient = useQueryClient();
   const { data, dataUpdatedAt } = useQuery(firstRunOptions(id));
@@ -45,7 +49,7 @@ export function FirstRunTimeline({ id }: { id: string }) {
     <Card className="print:hidden">
       <CardHeader aria-live="polite">
         <CardTitle asChild>
-          <h2 id={headingId}>{firstRunHeadline(data)}</h2>
+          <h2 id={headingId}>{firstRunHeadline(data, t)}</h2>
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -54,7 +58,7 @@ export function FirstRunTimeline({ id }: { id: string }) {
           aria-live="polite"
           className="flex flex-col gap-3"
         >
-          {firstRunRows(data, dataUpdatedAt).map((row) => (
+          {firstRunRows(data, dataUpdatedAt, t, locale).map((row) => (
             <StageRow
               key={row.stage}
               label={row.label}

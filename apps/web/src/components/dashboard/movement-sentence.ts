@@ -4,27 +4,27 @@ import type {
   PortfolioMovement,
   PortfolioRangeChange,
 } from "@asobeast/shared";
-import { pluralize } from "@/lib/format";
+import type { MessageTranslator } from "@/i18n/translator";
 import { appLabel } from "./breakdown";
 
-export const quietSentence = (compared: boolean, days: number): string =>
-  compared
-    ? `No keyword moved in the last ${days} days.`
-    : `Movement appears after ${days} days of daily runs.`;
+export const quietSentence = (
+  compared: boolean,
+  days: number,
+  t: MessageTranslator,
+): string => t(compared ? "lede.noMovement" : "lede.movementPending", { days });
 
-export interface MovementLede {
-  lead: string;
-  fact: string;
-  tail: string;
+export interface LedePart {
+  key: string;
+  values?: Record<string, string | number>;
 }
 
-const movedFact = ({ up, down }: PortfolioMovement): string =>
-  [
-    up > 0 ? `${pluralize(up, "keyword")} climbed` : null,
-    down > 0 ? `${up > 0 ? down : pluralize(down, "keyword")} fell` : null,
-  ]
-    .filter((part) => part !== null)
-    .join(" and ");
+export type MovementLede = LedePart[];
+
+const movementKind = ({
+  up,
+  down,
+}: PortfolioMovement): "Up" | "Down" | "Both" =>
+  up > 0 && down > 0 ? "Both" : up > 0 ? "Up" : "Down";
 
 export function movementLede(
   change: PortfolioRangeChange,
@@ -32,35 +32,26 @@ export function movementLede(
 ): MovementLede {
   const { up, down } = change.movement;
   if (up + down === 0) {
-    return {
-      lead: "",
-      fact: quietSentence(change.compared, days),
-      tail: "",
-    };
+    return [
+      {
+        key: change.compared ? "lede.rangeQuiet" : "lede.rangePending",
+        values: { days },
+      },
+    ];
   }
-
-  return {
-    lead: `In the last ${days} days `,
-    fact: movedFact(change.movement),
-    tail:
-      change.appsMoved > 1
-        ? ` across ${pluralize(change.appsMoved, "app")}.`
-        : ".",
-  };
+  const many = change.appsMoved > 1;
+  return [
+    {
+      key: `lede.range${movementKind(change.movement)}${many ? "Many" : "Single"}`,
+      values: { days, up, down, count: change.appsMoved },
+    },
+  ];
 }
-
-export interface LedePart {
-  text: string;
-  strong: boolean;
-}
-
-const plain = (text: string): LedePart => ({ text, strong: false });
-
-const strong = (text: string): LedePart => ({ text, strong: true });
 
 function busiestApp(
   history: PortfolioHistory,
   apps: readonly PortfolioApp[],
+  t: MessageTranslator,
 ): string | null {
   const moved = (history.apps ?? [])
     .map(({ appId, lastRun }) => ({ appId, size: lastRun.up + lastRun.down }))
@@ -68,45 +59,41 @@ function busiestApp(
     .sort((a, b) => b.size - a.size);
   if (moved.length < 2 || moved[0].size === moved[1].size) return null;
   const app = apps.find((each) => each.id === moved[0].appId);
-  return app ? appLabel(app, apps) : null;
+  return app ? appLabel(app, apps, t) : null;
 }
 
 function rangeTrend(change: PortfolioRangeChange, days: number): LedePart[] {
   if (!change.compared || change.visibilityDelta === null) return [];
   const delta = Math.round(change.visibilityDelta);
-  const lead = plain(` Over the last ${days} days visibility is `);
-  if (delta === 0) return [lead, strong("unchanged"), plain(".")];
   return [
-    lead,
-    strong(`${delta > 0 ? "up" : "down"} ${Math.abs(delta)}`),
-    plain("."),
+    {
+      key:
+        delta === 0
+          ? "lede.rangeTrendUnchanged"
+          : delta > 0
+            ? "lede.rangeTrendUp"
+            : "lede.rangeTrendDown",
+      values: { days, count: Math.abs(delta) },
+    },
   ];
 }
 
 export function dashboardLede(
   history: PortfolioHistory,
   apps: readonly PortfolioApp[],
+  t: MessageTranslator,
 ): LedePart[] {
   const { lastRun, change, days } = history;
-  if (!lastRun?.compared) {
-    const { lead, fact, tail } = movementLede(change, days);
-    return [plain(lead), strong(fact), plain(tail)];
-  }
+  if (!lastRun?.compared) return movementLede(change, days);
   const { up, down } = lastRun.movement;
-  if (up + down === 0) {
-    return [
-      plain("In the last run "),
-      strong("no keyword moved"),
-      plain("."),
-      ...rangeTrend(change, days),
-    ];
-  }
-  const busiest = busiestApp(history, apps);
+  if (up + down === 0)
+    return [{ key: "lede.lastRunQuiet" }, ...rangeTrend(change, days)];
+  const busiest = busiestApp(history, apps, t);
   return [
-    plain("In the last run "),
-    strong(movedFact(lastRun.movement)),
-    ...(busiest ? [plain(", most in "), strong(busiest)] : []),
-    plain("."),
+    {
+      key: `lede.lastRun${movementKind(lastRun.movement)}${busiest ? "Busiest" : ""}`,
+      values: { up, down, ...(busiest ? { app: busiest } : {}) },
+    },
     ...rangeTrend(change, days),
   ];
 }

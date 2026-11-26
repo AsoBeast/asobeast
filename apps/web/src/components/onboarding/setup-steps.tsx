@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState, type FormEvent } from "react";
+import { useTranslations } from "next-intl";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import {
@@ -14,7 +15,10 @@ import { CountrySelect } from "@/components/CountrySelect";
 import { AddCompetitorForm } from "@/components/competitors/AddCompetitorForm";
 import { FOOTER_LINK } from "@/components/layout/panel-classes";
 import { COUNTRY_OPTIONS, marketError } from "@/lib/countries";
-import { formatCountry, formatList } from "@/lib/format";
+import { formatCountryInLocale, formatListInLocale } from "@/lib/format";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -31,17 +35,30 @@ import { MarketCostTip, SuggestedMarkets } from "./SuggestedMarkets";
 
 const COUNT_LINE = "numeric text-caption text-muted-foreground";
 
-const competitorName = (competitor: CompetitorItem): string =>
-  competitor.name ?? competitor.latestSnapshot?.title ?? "Unnamed app";
+const competitorName = (
+  competitor: CompetitorItem,
+  t: MessageTranslator,
+): string =>
+  competitor.name ??
+  competitor.latestSnapshot?.title ??
+  t("competitors.unnamed");
 
 function competitorsLine(
   competitors: CompetitorItem[] | null,
   error: boolean,
+  t: MessageTranslator,
+  locale: Locale,
 ): string {
-  if (error) return "Competitor count is temporarily unavailable.";
-  if (competitors === null) return "Loading competitors…";
-  if (competitors.length === 0) return "No competitor yet";
-  return `${competitors.length} tracked: ${formatList(competitors.map(competitorName))}`;
+  if (error) return t("competitors.countError");
+  if (competitors === null) return t("competitors.countLoading");
+  if (competitors.length === 0) return t("competitors.countNone");
+  return t("competitors.countTracked", {
+    count: competitors.length,
+    names: formatListInLocale(
+      competitors.map((competitor) => competitorName(competitor, t)),
+      locale,
+    ),
+  });
 }
 
 export function CompetitorsStep({
@@ -56,15 +73,17 @@ export function CompetitorsStep({
   error: boolean;
   collecting: boolean;
 }) {
+  const t = useTranslations("setup");
+  const locale = useAppLocale();
   return (
     <StepPanel
       step="competitors"
-      description="Track at least one app you compete with, so every keyword search compares you against it. Two or three is typical."
+      description={t("steps.competitors.description")}
       footer={
         <>
-          <span>A new competitor gets positions on the next keyword check</span>
+          <span>{t("competitors.nextCheck")}</span>
           <Link href={`/apps/${appId}/competitors`} className={FOOTER_LINK}>
-            Manage competitors
+            {t("competitors.manage")}
           </Link>
         </>
       }
@@ -73,7 +92,9 @@ export function CompetitorsStep({
       <Suspense fallback={<Skeleton className="h-9 w-full" />}>
         <AddCompetitorForm id={appId} submitVariant="outline" />
       </Suspense>
-      <p className={COUNT_LINE}>{competitorsLine(competitors, error)}</p>
+      <p className={COUNT_LINE}>
+        {competitorsLine(competitors, error, t, locale)}
+      </p>
       <DiscoveredApps appId={appId} collecting={collecting} />
     </StepPanel>
   );
@@ -83,14 +104,19 @@ function homeKeywordsLine(
   tracked: TrackedKeywordItem[] | null,
   error: boolean,
   homeMarket: string,
+  { t, locale }: { t: MessageTranslator; locale: Locale },
 ): string {
-  if (error) return "Keywords are temporarily unavailable.";
-  if (tracked === null) return "Loading keywords…";
+  if (error) return t("keywords.countError");
+  if (tracked === null) return t("keywords.countLoading");
   const active = activeKeywordCount(tracked);
-  const market = formatCountry(homeMarket);
+  const market = formatCountryInLocale(homeMarket, locale);
   return active > SETUP_KEYWORD_TARGET
-    ? `${active} tracked in ${market}`
-    : `${active} of ${SETUP_KEYWORD_TARGET} tracked in ${market}`;
+    ? t("keywords.countTracked", { count: active, country: market })
+    : t("keywords.countTarget", {
+        active,
+        target: SETUP_KEYWORD_TARGET,
+        country: market,
+      });
 }
 
 export function KeywordsStep({
@@ -107,25 +133,27 @@ export function KeywordsStep({
   tracked: TrackedKeywordItem[] | null;
   error: boolean;
 }) {
+  const t = useTranslations("setup");
+  const locale = useAppLocale();
   return (
     <StepPanel
       step="keywords"
-      description={keywordsStepDescription(store)}
+      description={keywordsStepDescription(store, t)}
       footer={
         <>
-          <span>A tracked keyword is checked on every daily run</span>
+          <span>{t("keywords.checkedDaily")}</span>
           <Link
             href={`/apps/${appId}/keywords?country=${homeMarket}`}
             className={FOOTER_LINK}
           >
-            Review keywords
+            {t("keywords.review")}
           </Link>
         </>
       }
       {...step}
     >
       <p className={COUNT_LINE}>
-        {homeKeywordsLine(tracked, error, homeMarket)}
+        {homeKeywordsLine(tracked, error, homeMarket, { t, locale })}
       </p>
       <FirstDiscoveries id={appId} country={homeMarket} />
       {tracked ? (
@@ -156,6 +184,7 @@ export function CountriesStep({
   onSelect: (market: string, selected: boolean) => void;
   onReviewed: () => void;
 }) {
+  const t = useTranslations("setup");
   const markets = counts.map((count) => count.market);
   const suggested =
     suggestions !== null && suggestions.suggestions.length > 0
@@ -174,10 +203,10 @@ export function CountriesStep({
   return (
     <StepPanel
       step="countries"
-      description="Your home country is selected. Add the countries you sell in."
+      description={t("steps.countries.description")}
       footer={
         <span className="flex items-center gap-1">
-          <span>Each country adds requests a day to the daily run</span>
+          <span>{t("countries.dailyCost")}</span>
           <MarketCostTip store={store} />
         </span>
       }
@@ -199,7 +228,7 @@ export function CountriesStep({
       />
       <form onSubmit={submit} className="flex flex-col gap-1">
         <Label htmlFor="setup-country">
-          {suggested ? "Add another country" : "Add a country"}
+          {suggested ? t("countries.addAnother") : t("countries.add")}
         </Label>
         <div className="flex flex-wrap items-start gap-2">
           <CountrySelect
@@ -207,17 +236,17 @@ export function CountriesStep({
             store={store}
             value={value}
             onChange={setPicked}
-            ariaLabel="Country to add"
+            ariaLabel={t("countries.countryToAdd")}
           />
           <Button type="submit" variant="outline" disabled={!addable}>
             <Plus />
-            Add
+            {t("countries.addAction")}
           </Button>
         </div>
       </form>
       {step.state === "open" ? (
         <Button variant="outline" className="w-fit" onClick={onReviewed}>
-          Countries reviewed
+          {t("countries.reviewed")}
         </Button>
       ) : null}
     </StepPanel>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueries, useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -23,6 +24,7 @@ import { Separated } from "@/components/ui/separated";
 import { Skeleton } from "@/components/ui/skeleton";
 import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
 import { cn } from "@/lib/utils";
+import { useAppLocale } from "@/lib/use-app-locale";
 import {
   appDetailOptions,
   keywordsOptions,
@@ -99,6 +101,7 @@ function StatusPanel({
   setup: AppSetupState;
   onStart: () => void;
 }) {
+  const t = useTranslations("setup");
   if (setup.status === "not_started") {
     return <StartStatus app={app} onStart={onStart} />;
   }
@@ -107,8 +110,8 @@ function StatusPanel({
   }
   return (
     <SetupStatusPanel
-      title="Setup dismissed"
-      sentence="The checklist will not resume automatically. You can restart it whenever you need it."
+      title={t("status.dismissedTitle")}
+      sentence={t("status.dismissedSentence")}
       actions={
         <>
           <RestartButton onRestart={onStart} />
@@ -130,18 +133,20 @@ function retryAll(reads: RetryableRead[]): RetryableRead {
 }
 
 function RestartButton({ onRestart }: { onRestart: () => void }) {
+  const t = useTranslations("setup");
   const claimFocus = useFocusClaim(SETUP_VIEW_FOCUS_KEY);
   return (
     <Button ref={claimFocus} onClick={onRestart}>
-      Restart setup
+      {t("status.restart")}
     </Button>
   );
 }
 
 function BackToApps() {
+  const t = useTranslations("setup");
   return (
     <Button asChild variant="outline">
-      <Link href="/">Back to apps</Link>
+      <Link href="/">{t("status.backToApps")}</Link>
     </Button>
   );
 }
@@ -155,6 +160,8 @@ function ActiveSetup({
   setup: AppSetupState;
   apply: Apply;
 }) {
+  const t = useTranslations("setup");
+  const locale = useAppLocale();
   const router = useRouter();
   const claimFocus = useFocusClaim(SETUP_VIEW_FOCUS_KEY);
   const { competitors, homeKeywords, counts } = useSetupCounts(app);
@@ -188,7 +195,7 @@ function ActiveSetup({
     ready,
     failed: countQueries.some((query) => query.isError),
     completable: ready && canCompleteSetup(setup, counts),
-    hint: completionHint(states),
+    hint: completionHint(states, t, locale),
     onRetry: () => {
       for (const query of countQueries.concat(keywordQueries)) {
         if (query.isError) void query.refetch();
@@ -270,14 +277,15 @@ function StartStatus({
   app: AppDetail;
   onStart: () => void;
 }) {
+  const t = useTranslations("setup");
   const { counts } = useSetupCounts(app);
   return (
     <SetupStatusPanel
-      title="Start setup for this app"
-      sentence="Three short steps to a first set of positions. Each one is done once its number is reached, or skipped when it does not apply. Nothing is changed until you add something."
+      title={t("status.startTitle")}
+      sentence={t("status.startSentence")}
       actions={
         <>
-          <Button onClick={onStart}>Start this setup</Button>
+          <Button onClick={onStart}>{t("status.startAction")}</Button>
           <BackToApps />
         </>
       }
@@ -301,6 +309,8 @@ function CompletedStatus({
   setup: AppSetupState;
   onRestart: () => void;
 }) {
+  const t = useTranslations("setup");
+  const locale = useAppLocale();
   const claimFocus = useFocusClaim(SETUP_VIEW_FOCUS_KEY);
   const { competitors, homeKeywords, counts } = useSetupCounts(app);
   const countReads = [competitors, homeKeywords];
@@ -310,15 +320,15 @@ function CompletedStatus({
   );
   return (
     <SetupStatusPanel
-      title="Setup complete"
-      sentence="Positions, competitors and countries are collected on every daily run."
+      title={t("status.completeTitle")}
+      sentence={t("status.completeSentence")}
       actions={
         <>
           <Button ref={claimFocus} asChild>
-            <Link href={`/apps/${app.id}`}>Open the overview</Link>
+            <Link href={`/apps/${app.id}`}>{t("status.openOverview")}</Link>
           </Button>
           <Button variant="outline" onClick={onRestart}>
-            Restart setup
+            {t("status.restart")}
           </Button>
         </>
       }
@@ -328,18 +338,22 @@ function CompletedStatus({
       ) : (
         <p className={META_LINE}>
           <Separated
-            parts={completedFacts({
-              ...counts,
-              home: app.country,
-              markets: setup.selectedMarkets.length,
-              completedAt: setup.completedAt,
-            })}
+            parts={completedFacts(
+              {
+                ...counts,
+                home: app.country,
+                markets: setup.selectedMarkets.length,
+                completedAt: setup.completedAt,
+              },
+              t,
+              locale,
+            )}
           />
         </p>
       )}
       {failed.length > 0 ? (
         <InlineQueryError
-          message="Some setup counts could not be loaded."
+          message={t("status.countsError")}
           read={retryAll(failed)}
         />
       ) : null}

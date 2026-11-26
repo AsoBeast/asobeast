@@ -1,13 +1,23 @@
 import { describe, expect, it } from "vitest";
 import { formatDate } from "./format";
 import { summaryFromCatalog } from "./order-summary";
+import { translationContext } from "@/test/translation-context";
+
+const EN = translationContext("en", "billing");
 
 const CLOCK = { now: new Date("2026-10-22T12:00:00.000Z"), timeZone: "UTC" };
 const ENDS_ON = formatDate("2026-10-29T12:00:00.000Z");
 
 describe("summaryFromCatalog", () => {
   it("charges nothing today and names the first charge of a trial", () => {
-    expect(summaryFromCatalog("indie", "month", { days: 7 }, CLOCK)).toEqual({
+    expect(
+      summaryFromCatalog(
+        "indie",
+        "month",
+        { days: 7 },
+        { ...EN, clock: CLOCK },
+      ),
+    ).toEqual({
       planName: "Indie",
       intervalLabel: "Monthly",
       unitAmount: "$10.00",
@@ -19,7 +29,9 @@ describe("summaryFromCatalog", () => {
   });
 
   it("charges the price today without a trial", () => {
-    expect(summaryFromCatalog("indie", "month", null, CLOCK)).toMatchObject({
+    expect(
+      summaryFromCatalog("indie", "month", null, { ...EN, clock: CLOCK }),
+    ).toMatchObject({
       dueToday: "$10.00",
       thenLine:
         "Then $10 per month plus any VAT or sales tax, renewing monthly until you cancel.",
@@ -29,7 +41,12 @@ describe("summaryFromCatalog", () => {
 
   it("reads the annual price of a plan", () => {
     expect(
-      summaryFromCatalog("ultimate", "year", { days: 7 }, CLOCK),
+      summaryFromCatalog(
+        "ultimate",
+        "year",
+        { days: 7 },
+        { ...EN, clock: CLOCK },
+      ),
     ).toMatchObject({
       planName: "Ultimate",
       intervalLabel: "Annual",

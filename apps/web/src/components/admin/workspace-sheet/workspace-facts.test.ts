@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 import type { SupportWorkspaceSummary } from "@asobeast/shared";
-import { standingOf, workspaceFacts } from "./workspace-facts";
+import {
+  standingOf as localizedStandingOf,
+  workspaceFacts as localizedWorkspaceFacts,
+} from "./workspace-facts";
+import { translationContext } from "@/test/translation-context";
+
+const en = translationContext("en", "admin");
+const standingOf = (workspace: SupportWorkspaceSummary) =>
+  localizedStandingOf(workspace, en);
+const workspaceFacts = (workspace: SupportWorkspaceSummary) =>
+  localizedWorkspaceFacts(workspace, en);
 
 const BASE: SupportWorkspaceSummary = {
   workspaceId: "ws_ana",
@@ -53,7 +63,7 @@ describe("workspaceFacts", () => {
 
     expect(facts).toContainEqual({
       label: "Subscription",
-      value: "past due, renews monthly",
+      value: "past_due, renews monthly",
     });
     expect(facts).toContainEqual({
       label: "Period ends",

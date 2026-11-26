@@ -4,7 +4,8 @@ import {
   CHECKOUT_SESSION_PARAM,
   type AccountPlan,
 } from "@asobeast/shared";
-import { formatDate } from "./format";
+import type { TranslationContext } from "@/i18n/translator";
+import { formatDateInLocale } from "./format";
 
 export function searchOf(requested: string | null): string {
   if (requested === null) return "";
@@ -38,7 +39,12 @@ export function urlWithoutCheckout(pathname: string, search: string): string {
   return rest ? `${pathname}?${rest}` : pathname;
 }
 
-export function trialStartedToast(plan: AccountPlan): string | null {
+export function trialStartedToast(
+  plan: AccountPlan,
+  context: TranslationContext,
+): string | null {
   if (!plan.trialing || !plan.renewsAt) return null;
-  return `Your free trial has started. The first charge is on ${formatDate(plan.renewsAt)}.`;
+  return context.translator("checkout.trialStarted", {
+    date: formatDateInLocale(plan.renewsAt, context.locale),
+  });
 }

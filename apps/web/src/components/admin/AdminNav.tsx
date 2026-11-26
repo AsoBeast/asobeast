@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { ExternalLink } from "lucide-react";
 import {
   ADMIN_SECTIONS,
@@ -27,29 +28,30 @@ export function AdminNav() {
   const current = adminSectionFrom(usePathname());
   const row = useRef<HTMLElement>(null);
   const edges = useScrollEdges(row);
+  const t = useTranslations("admin");
 
   return (
     <nav
       ref={row}
-      aria-label="Admin"
+      aria-label={t("nav.label")}
       data-edges={edges}
       className={cn(
         "flex min-w-0 items-end gap-1 overflow-x-auto shadow-[inset_0_-1px_0_var(--color-border)]",
         EDGE_FADE[edges],
       )}
     >
-      {ADMIN_SECTIONS.map(({ segment, label }) => (
+      {ADMIN_SECTIONS.map(({ segment, labelKey }) => (
         <Link
           key={segment || "overview"}
           href={adminHref(segment)}
           aria-current={current?.segment === segment ? "page" : undefined}
           className={TAB_CLASS}
         >
-          {label}
+          {t(labelKey)}
         </Link>
       ))}
       <span aria-hidden className="mx-2 mb-2 h-4 w-px shrink-0 bg-border" />
-      {ADMIN_TOOLS.map(({ href, label }) => (
+      {ADMIN_TOOLS.map(({ href, labelKey }) => (
         <a
           key={href}
           href={href}
@@ -57,9 +59,9 @@ export function AdminNav() {
           rel="noreferrer"
           className={`${TAB_CLASS} inline-flex items-center gap-1`}
         >
-          {label}
+          {t(labelKey)}
           <ExternalLink aria-hidden className="size-3.5" />
-          <span className="sr-only">(opens in a new tab)</span>
+          <span className="sr-only"> {t("common.opensInNewTab")}</span>
         </a>
       ))}
     </nav>

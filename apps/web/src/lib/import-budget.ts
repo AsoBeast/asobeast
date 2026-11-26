@@ -3,10 +3,19 @@ import type {
   Store,
   StoreDailyBudget,
 } from "@asobeast/shared";
-import { formatNumber, storeLabel } from "@/lib/format";
+import { createTranslator } from "next-intl";
+import enApps from "../../messages/en/apps.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import { storeLabel } from "@/lib/format";
 
 const WARN_AT = 0.85;
 const FULL = 1;
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "apps",
+  messages: { apps: enApps },
+});
 
 export type BudgetTone = "info" | "warning" | "critical";
 
@@ -15,31 +24,38 @@ export interface BudgetNotice {
   text: string;
 }
 
-const SCORING =
-  "Each new keyword is also scored once, which takes more requests over the next hours.";
-
 export function importBudgetNotice(
   cost: KeywordImportCost,
   budget: StoreDailyBudget | null,
   showCapacity: boolean,
+  t: MessageTranslator = english,
 ): BudgetNotice | null {
   if (cost.keywordMarkets === 0) return null;
-  const added = `Adds about ${formatNumber(cost.dailyRequests)} store request${cost.dailyRequests === 1 ? "" : "s"} a day`;
+  const added = t("budget.added", { count: cost.dailyRequests });
+  const scoring = t("budget.scoring");
   if (!showCapacity || budget === null || budget.capacityPerDay === 0) {
-    return { tone: "info", text: `${added}. ${SCORING}` };
+    return { tone: "info", text: t("budget.notice", { added, scoring }) };
   }
   const after = (budget.total + cost.dailyRequests) / budget.capacityPerDay;
   const percent = Math.round(after * 100);
-  const share = `${added}, taking ${storeLabel(cost.store)} to ${percent}% of its daily capacity`;
+  const share = t("budget.share", {
+    added,
+    store: storeLabel(cost.store),
+    percent,
+  });
   if (after > FULL) {
     return {
       tone: "critical",
-      text: `${share}, so the daily run will not finish within a day. Import fewer keywords or raise the store rate limit. ${SCORING}`,
+      text: t("budget.overNotice", {
+        share,
+        over: t("budget.overCapacity"),
+        scoring,
+      }),
     };
   }
   return {
     tone: after >= WARN_AT ? "warning" : "info",
-    text: `${share}. ${SCORING}`,
+    text: t("budget.shareNotice", { share, scoring }),
   };
 }
 

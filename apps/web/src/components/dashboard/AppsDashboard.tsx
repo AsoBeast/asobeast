@@ -1,6 +1,7 @@
 "use client";
 
 import { useDeferredValue } from "react";
+import { useTranslations } from "next-intl";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import type { PortfolioAppInsight, PortfolioGroup } from "@asobeast/shared";
 import { useQueryStates } from "nuqs";
@@ -47,6 +48,7 @@ function AppsBody({
   insights: ReadonlyMap<string, PortfolioAppInsight>;
   days: number;
 }) {
+  const t = useTranslations("dashboard");
   if (table === null) {
     return <PortfolioGrid rows={rows} groups={groups} insights={insights} />;
   }
@@ -54,13 +56,17 @@ function AppsBody({
     <>
       <PortfolioTable table={table} />
       <p className={PANEL_FOOTER}>
-        {`Trend, ${days}d and Moved cover the last ${days} days, the range chosen above. The bar beside In top 10 splits every keyword by rank.`}
+        {t("apps.footer", {
+          unit: t("table.rangeUnit", { days }),
+          days,
+        })}
       </p>
     </>
   );
 }
 
 export function AppsDashboard() {
+  const t = useTranslations("dashboard");
   const { data } = useSuspenseQuery(portfolioOptions);
   const { data: insights } = useSuspenseQuery(portfolioInsightsOptions);
   const { days, history } = useRangeHistory();
@@ -96,7 +102,7 @@ export function AppsDashboard() {
         !(dropsWideColumns && isWideOnlyColumn(column.columnDef.meta)),
     );
   const cardRows = sortRows(
-    filterRows(toRows(listed), query),
+    filterRows(toRows(listed, t), query),
     { sort, dir },
     insightById,
   );
@@ -113,7 +119,7 @@ export function AppsDashboard() {
     >
       <div className={frame.header}>
         <h2 id={APPS_HEADING_ID} className="text-heading">
-          Apps
+          {t("apps.heading")}
         </h2>
         <div className="flex flex-wrap items-center gap-2">
           <AppsToolbar
@@ -125,8 +131,8 @@ export function AppsDashboard() {
         <FilteredEmpty
           title={
             q === "" && store !== null
-              ? `No ${storeLabel(store)} apps`
-              : `No apps match "${q}"`
+              ? t("apps.noStoreApps", { store: storeLabel(store) })
+              : t("apps.noMatch", { query: q })
           }
           onClear={() => void setList({ q: null, store: null })}
         />

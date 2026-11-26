@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useRef, type Ref } from "react";
+import { useTranslations } from "next-intl";
 import { Check, Loader2, Plus, RotateCw } from "lucide-react";
 import type {
   KeywordSuggestion,
@@ -13,19 +14,24 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api";
 import { useFocusAfterCommit } from "@/lib/focus-handoff";
-import { EMPTY_COPY, USED_BY_NOUN } from "./suggestion-strategies";
+import { suggestionEmpty, suggestionNoun } from "./suggestion-strategies";
 
 function SuggestionMeta({ suggestion }: { suggestion: KeywordSuggestion }) {
-  const noun = USED_BY_NOUN[suggestion.strategy] ?? "app";
+  const t = useTranslations("keywords");
+  const noun = suggestionNoun(suggestion.strategy, t);
   return (
     <span className="flex flex-wrap items-center gap-2 text-caption text-muted-foreground">
       {suggestion.seed ? (
-        <span className="wrap-anywhere">from “{suggestion.seed}”</span>
+        <span className="wrap-anywhere">
+          {t("suggestions.fromSeed", { seed: suggestion.seed })}
+        </span>
       ) : null}
       {suggestion.usedByCount !== undefined ? (
         <span className="numeric">
-          {suggestion.usedByCount} {noun}
-          {suggestion.usedByCount === 1 ? "" : "s"}
+          {t("suggestions.usedBy", {
+            count: suggestion.usedByCount,
+            noun,
+          })}
         </span>
       ) : null}
       {suggestion.event ? (
@@ -127,13 +133,18 @@ function TrackAction({
   onTrack: (text: string) => void;
   ref?: Ref<HTMLButtonElement>;
 }) {
+  const t = useTranslations("keywords");
   const inert = already || pending;
   return (
     <Button
       ref={ref}
       variant={already ? "ghost" : "outline"}
       size="sm"
-      aria-label={already ? `Tracked: ${text}` : `Track ${text}`}
+      aria-label={
+        already
+          ? t("suggestions.trackedLabel", { keyword: text })
+          : t("suggestions.trackLabel", { keyword: text })
+      }
       aria-disabled={inert || undefined}
       aria-busy={(pending && !already) || undefined}
       onClick={() => {
@@ -143,12 +154,12 @@ function TrackAction({
       {already ? (
         <>
           <Check />
-          Tracked
+          {t("suggestions.tracked")}
         </>
       ) : (
         <>
           {pending ? <Loader2 className="animate-spin" /> : <Plus />}
-          Track
+          {t("suggestions.track")}
         </>
       )}
     </Button>
@@ -215,6 +226,7 @@ export function SuggestionList({
   onRetry: () => void;
 }) {
   const idPrefix = useId();
+  const t = useTranslations("keywords");
 
   if (state.status === "pending") {
     return (
@@ -232,11 +244,11 @@ export function SuggestionList({
         <span>
           {state.error instanceof ApiError
             ? state.error.envelope.message
-            : "Could not load suggestions."}
+            : t("suggestions.loadFailed")}
         </span>
         <Button variant="outline" size="sm" onClick={onRetry}>
           <RotateCw />
-          Retry
+          {t("suggestions.retry")}
         </Button>
       </div>
     );
@@ -245,8 +257,7 @@ export function SuggestionList({
   if (state.suggestions.length === 0) {
     return (
       <p className="max-w-prose text-body text-muted-foreground">
-        {EMPTY_COPY[strategy] ??
-          "No new suggestions from this source right now."}
+        {suggestionEmpty(strategy, t)}
       </p>
     );
   }
@@ -271,7 +282,9 @@ export function SuggestionList({
                   disabled={already}
                   onToggle={action.onToggle}
                 />
-                {already ? <Badge variant="outline">Tracked</Badge> : null}
+                {already ? (
+                  <Badge variant="outline">{t("suggestions.tracked")}</Badge>
+                ) : null}
               </li>
             );
           }

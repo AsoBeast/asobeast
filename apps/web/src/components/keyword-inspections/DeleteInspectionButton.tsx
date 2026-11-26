@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -17,12 +18,12 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { deleteKeywordInspection } from "@/lib/api";
+import { apiErrorMessage, deleteKeywordInspection } from "@/lib/api";
 import { siblingControl, useCloseFocusHandoff } from "@/lib/focus-handoff";
 import { forgetKeywordInspection } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 
-const DELETE_CONTROL = 'button[aria-label^="Delete the inspection of "]';
+const DELETE_CONTROL = "button[data-delete-inspection]";
 
 const deleteSuccessor = (trigger: HTMLElement | null): HTMLElement | null =>
   siblingControl(trigger?.closest("li") ?? null, DELETE_CONTROL) ??
@@ -40,6 +41,8 @@ export function DeleteInspectionButton({
   onDeleted: (id: string) => void;
 }) {
   const queryClient = useQueryClient();
+  const t = useTranslations("keywordInspector");
+  const common = useTranslations("common");
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   const { handOff, onCloseAutoFocus } = useCloseFocusHandoff();
@@ -50,9 +53,10 @@ export function DeleteInspectionButton({
       forgetKeywordInspection(queryClient, id);
       setOpen(false);
       onDeleted(id);
-      toast.success("Inspection deleted");
+      toast.success(t("inspector.delete.success"));
     },
-    onError: () => toast.error("Could not delete the inspection"),
+    onError: (error) =>
+      toast.error(apiErrorMessage(error, t("inspector.delete.failed"))),
   });
   const removeOnce = useSingleFlight(remove);
 
@@ -66,22 +70,23 @@ export function DeleteInspectionButton({
           ref={trigger}
           variant="ghost"
           size="icon-sm"
-          aria-label={`Delete the inspection of ${subject}`}
+          data-delete-inspection
+          aria-label={t("inspector.delete.trigger", { subject })}
         >
           <Trash2 />
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent onCloseAutoFocus={onCloseAutoFocus}>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete this inspection?</AlertDialogTitle>
+          <AlertDialogTitle>{t("inspector.delete.title")}</AlertDialogTitle>
           <AlertDialogDescription>
-            {`The saved results for “${keyword}” are removed, and later inspections of the keyword compare with the run before this one.`}
+            {t("inspector.delete.description", { keyword })}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <ConfirmActionFooter
           pending={remove.isPending}
-          label="Delete"
-          pendingLabel="Deleting…"
+          label={common("delete")}
+          pendingLabel={t("inspector.delete.deleting")}
           onConfirm={() => removeOnce(undefined)}
         />
       </AlertDialogContent>

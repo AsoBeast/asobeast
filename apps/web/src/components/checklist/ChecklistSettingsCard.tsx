@@ -1,6 +1,7 @@
 "use client";
 
 import { useId } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import type { WorkspaceChecklist } from "@asobeast/shared";
 import { useAuth } from "@/components/auth/use-auth";
@@ -18,6 +19,7 @@ import { GoalPicker } from "./GoalPicker";
 import { useChecklistSave } from "./use-checklist-save";
 
 function ChecklistVisibility({ checklist }: { checklist: WorkspaceChecklist }) {
+  const t = useTranslations("settings");
   const { save, pending } = useChecklistSave();
   const switchId = useId();
   const hidden = checklist.dismissedAt !== null;
@@ -25,10 +27,10 @@ function ChecklistVisibility({ checklist }: { checklist: WorkspaceChecklist }) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Label htmlFor={switchId}>Show the setup checklist</Label>
+        <Label htmlFor={switchId}>{t("checklist.show")}</Label>
         <div className="flex items-center gap-3">
           <span className="numeric text-caption text-muted-foreground">
-            {pillLabel(checklist.done, checklist.total)}
+            {pillLabel(checklist.done, checklist.total, t)}
           </span>
           <Switch
             id={switchId}
@@ -38,7 +40,7 @@ function ChecklistVisibility({ checklist }: { checklist: WorkspaceChecklist }) {
               if (pending) return;
               save(
                 { dismissed: !shown },
-                { failure: "Could not save the checklist setting" },
+                { failure: t("checklist.saveError") },
               );
             }}
           />
@@ -52,7 +54,7 @@ function ChecklistVisibility({ checklist }: { checklist: WorkspaceChecklist }) {
       />
       {hidden ? (
         <p className="text-caption text-muted-foreground">
-          The checklist is hidden for everyone in this workspace.
+          {t("checklist.hidden")}
         </p>
       ) : null}
     </div>
@@ -60,6 +62,7 @@ function ChecklistVisibility({ checklist }: { checklist: WorkspaceChecklist }) {
 }
 
 export function ChecklistSettingsCard() {
+  const t = useTranslations("settings");
   const { authenticated } = useAuth();
   const read = useQuery({
     ...workspaceChecklistOptions,
@@ -69,13 +72,8 @@ export function ChecklistSettingsCard() {
   return (
     <SettingsPanel
       as="h2"
-      title="Getting started"
-      footer={
-        <p>
-          The checklist floats at the bottom right of every page until every
-          item is done.
-        </p>
-      }
+      title={t("checklist.title")}
+      footer={<p>{t("checklist.footer")}</p>}
     >
       <PanelBody className="gap-4">
         {read.data ? (
@@ -85,10 +83,7 @@ export function ChecklistSettingsCard() {
           </>
         ) : null}
         {failedRead(read) ? (
-          <InlineQueryError
-            message="Could not load the setup checklist."
-            read={read}
-          />
+          <InlineQueryError message={t("checklist.loadError")} read={read} />
         ) : null}
       </PanelBody>
     </SettingsPanel>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { Clock, TriangleAlert } from "lucide-react";
 import {
   runStatusOptions,
@@ -9,12 +10,21 @@ import {
 } from "@/lib/queries";
 import { NOTICE_LINK, NoticeLine } from "./notice-line";
 import { systemNotice } from "./system-notice";
+import { useAppLocale } from "@/lib/use-app-locale";
 
 export function SystemBanner() {
+  const locale = useAppLocale();
+  const t = useTranslations("systemNotices");
   const { data: stores } = useQuery(storeHealthOptions);
   const { data: run } = useQuery(runStatusOptions);
   const { data: deletion } = useQuery(workspaceDeletionOptions);
-  const notice = systemNotice({ stores, run, deletion });
+  const notice = systemNotice(
+    { stores, run, deletion },
+    {
+      translator: t,
+      locale,
+    },
+  );
 
   if (!notice) {
     return null;

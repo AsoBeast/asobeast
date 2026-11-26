@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TrackedKeywordItem } from "@asobeast/shared";
+import { translationContext } from "@/test/translation-context";
 import {
   FIRST_POSITIONS_LIMIT,
   firstPositions,
@@ -110,5 +111,26 @@ describe("positionLabel", () => {
 
     expect(positionLabel(found)).toBe("#7");
     expect(positionLabel(missing)).toBe("not in the top 100");
+  });
+});
+
+describe("Simplified Chinese first positions", () => {
+  const t = translationContext("zh-CN", "setup").translator;
+
+  it("renders collection and ranking headlines in Chinese", () => {
+    expect(
+      firstPositions([keyword("a", null, null), keyword("b", null, null)], t)
+        .headline,
+    ).toBe("正在为 2 个关键词采集排名。");
+    expect(
+      firstPositions(
+        [keyword("pomodoro", 15, 200), keyword("focus timer", 3, 200)],
+        t,
+      ).headline,
+    ).toBe("您的应用凭借“focus timer”排名第 3。");
+    expect(
+      firstPositions([keyword("a", null, 200), keyword("b", null, 100)], t)
+        .headline,
+    ).toBe("已检查 2 个关键词（共 2 个），目前都没有进入前 100 名。");
   });
 });

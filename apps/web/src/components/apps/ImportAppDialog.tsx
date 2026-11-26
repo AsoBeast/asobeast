@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import type { FormEvent, RefObject } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
@@ -40,11 +41,6 @@ import { useStoreSearch } from "./useStoreSearch";
 const DEFAULT_STORE: Store = "APP_STORE";
 const DEFAULT_COUNTRY = "us";
 
-const PLACEHOLDERS: Record<Store, string> = {
-  APP_STORE: "Focus Timer or apps.apple.com/us/app/…/id123",
-  GOOGLE_PLAY: "Focus Timer or com.example.app",
-};
-
 function StoreTabs({
   store,
   onChange,
@@ -52,9 +48,10 @@ function StoreTabs({
   store: Store;
   onChange: (store: Store) => void;
 }) {
+  const t = useTranslations("apps");
   return (
     <Tabs value={store} onValueChange={(next) => onChange(next as Store)}>
-      <TabsList aria-label="Store">
+      <TabsList aria-label={t("import.store")}>
         {STORES.map((option) => (
           <TabsOption key={option} value={option}>
             {storeLabel(option)}
@@ -74,19 +71,19 @@ function StorefrontField({
   country: string;
   onChange: (country: string) => void;
 }) {
+  const t = useTranslations("apps");
   return (
     <div className="flex flex-col gap-2">
-      <Label htmlFor="import-country">Home storefront</Label>
+      <Label htmlFor="import-country">{t("import.homeStorefront")}</Label>
       <p className="text-caption text-muted-foreground">
-        Where this app’s metadata and category ranks are read. Add other markets
-        later from the keyword monitor.
+        {t("import.homeStorefrontHint")}
       </p>
       <CountrySelect
         id="import-country"
         store={store}
         value={country}
         onChange={onChange}
-        ariaLabel="Home storefront"
+        ariaLabel={t("import.homeStorefront")}
       />
     </div>
   );
@@ -103,6 +100,8 @@ export function ImportAppDialog({
   onOpenChange?: (open: boolean) => void;
   returnFocus?: RefObject<HTMLElement | null>;
 }) {
+  const t = useTranslations("apps");
+  const validationT = useTranslations("validation");
   const router = useRouter();
   const queryClient = useQueryClient();
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
@@ -111,7 +110,7 @@ export function ImportAppDialog({
   const [value, setValue] = useState("");
   const [store, setStore] = useState<Store>(DEFAULT_STORE);
   const [country, setCountry] = useState(DEFAULT_COUNTRY);
-  const outcome = useFieldOutcome("Could not reach the api to import this app");
+  const outcome = useFieldOutcome(t("import.unreachable"));
   const search = useStoreSearch(store, country, value);
 
   const mutation = useMutation({
@@ -123,7 +122,9 @@ export function ImportAppDialog({
       void queryClient.invalidateQueries({ queryKey: portfolioKey });
       invalidateWorkspaceChecklist(queryClient);
       setOpen(false);
-      toast.success(`Imported ${app.name ?? "app"}`);
+      toast.success(
+        t("import.success", { name: app.name ?? t("import.unknownApp") }),
+      );
       router.push(`/apps/${app.id}/setup`);
     },
     onError: outcome.fail,
@@ -149,7 +150,7 @@ export function ImportAppDialog({
   function onValueChange(next: string) {
     outcome.clear();
     setValue(next);
-    const input = classifyInput(next);
+    const input = classifyInput(next, t);
     if (input.kind === "url" && isStoreAddress(next)) {
       setStore(input.parsed.store);
       setCountry(input.parsed.country);
@@ -167,7 +168,7 @@ export function ImportAppDialog({
   }
 
   function importFrom(target: Store, url: string) {
-    const invalidCountry = marketError(target, country);
+    const invalidCountry = marketError(target, country, validationT);
     if (invalidCountry) {
       outcome.setError(invalidCountry);
       return;
@@ -196,11 +197,8 @@ export function ImportAppDialog({
       {children ? <DialogTrigger asChild>{children}</DialogTrigger> : null}
       <DialogContent onCloseAutoFocus={returnFocusTo(returnFocus)}>
         <DialogHeader>
-          <DialogTitle>Import an app</DialogTitle>
-          <DialogDescription>
-            Search the App Store or Google Play by name, or paste a store URL,
-            to import the app and start tracking its keywords.
-          </DialogDescription>
+          <DialogTitle>{t("import.title")}</DialogTitle>
+          <DialogDescription>{t("import.description")}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={submit} className="flex min-h-0 flex-col gap-4">
@@ -209,9 +207,13 @@ export function ImportAppDialog({
 
             <StoreSearchField
               id="import-url"
-              label="App name or store URL"
-              hint="Type a name to search, or paste a store URL."
-              placeholder={PLACEHOLDERS[store]}
+              label={t("import.nameOrUrl")}
+              hint={t("import.hint")}
+              placeholder={t(
+                store === "APP_STORE"
+                  ? "import.placeholderAppStore"
+                  : "import.placeholderGooglePlay",
+              )}
               store={store}
               country={country}
               value={value}
@@ -233,7 +235,7 @@ export function ImportAppDialog({
           <DialogFooter>
             <Button type="submit" aria-disabled={inert || undefined}>
               {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
-              {mutation.isPending ? "Importing…" : "Import"}
+              {mutation.isPending ? t("import.pending") : t("import.action")}
             </Button>
           </DialogFooter>
         </form>

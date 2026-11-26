@@ -1,5 +1,9 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import type { SplitPhrase, WastedWord } from "@asobeast/shared";
-import { formatCountry } from "@/lib/format";
+import { formatCountryInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import {
   limitedLines,
   moreLine,
@@ -16,6 +20,7 @@ function WasteNote({
   intro: string;
   lines: readonly string[];
 }) {
+  const t = useTranslations("keywords");
   const { shown, hidden } = limitedLines(lines);
   return (
     <div
@@ -30,7 +35,9 @@ function WasteNote({
         ))}
       </ul>
       {hidden > 0 ? (
-        <p className="text-dense text-muted-foreground">{moreLine(hidden)}</p>
+        <p className="text-dense text-muted-foreground">
+          {moreLine(hidden, t)}
+        </p>
       ) : null}
     </div>
   );
@@ -45,21 +52,27 @@ export function MarketWastedWords({
   wastedWords: readonly WastedWord[];
   splitPhrases: readonly SplitPhrase[];
 }) {
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
   if (wastedWords.length === 0 && splitPhrases.length === 0) return null;
   return (
     <div className="flex flex-col gap-3">
       {wastedWords.length > 0 ? (
         <WasteNote
-          title="Words read twice"
-          intro={`${formatCountry(country)} search reads these localizations together, so each repeat spends characters without adding a word.`}
-          lines={wastedWords.map(wastedWordLine)}
+          title={t("wasted.wordsTitle")}
+          intro={t("wasted.wordsIntro", {
+            country: formatCountryInLocale(country, locale),
+          })}
+          lines={wastedWords.map((word) => wastedWordLine(word, t, locale))}
         />
       ) : null}
       {splitPhrases.length > 0 ? (
         <WasteNote
-          title="Phrases split across localizations"
-          intro="Words combine only within one localization, so search cannot match these phrases as typed."
-          lines={splitPhrases.map(splitPhraseLine)}
+          title={t("wasted.splitTitle")}
+          intro={t("wasted.splitIntro")}
+          lines={splitPhrases.map((phrase) =>
+            splitPhraseLine(phrase, t, locale),
+          )}
         />
       ) : null}
     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, type ReactNode, type Ref } from "react";
+import { useTranslations } from "next-intl";
 import { Info } from "lucide-react";
 import type { Store, StoreSearchResult } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
@@ -10,23 +11,32 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  formatCountry,
-  formatNumber,
-  formatRating,
+  formatCountryInLocale,
+  formatRatingInLocale,
   storeLabel,
 } from "@/lib/format";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { searchErrorText, searchRetryable } from "./store-search";
 import type { StoreSearch } from "./useStoreSearch";
 
 const SKELETON_ROWS = 4;
 const ICON_SIZE = 32;
 
-function ratingText(result: StoreSearchResult): string | null {
+function ratingText(
+  result: StoreSearchResult,
+  t: MessageTranslator,
+  locale: Locale,
+): string | null {
   if (result.ratingAvg === null) return null;
-  const average = formatRating(result.ratingAvg);
-  return result.ratingCount === null
-    ? average
-    : `${average} · ${formatNumber(result.ratingCount)} ratings`;
+  if (result.ratingCount === null) {
+    return formatRatingInLocale(result.ratingAvg, locale);
+  }
+  return t("import.ratingCount", {
+    average: formatRatingInLocale(result.ratingAvg, locale),
+    count: result.ratingCount,
+  });
 }
 
 function ResultRow({
@@ -38,7 +48,9 @@ function ResultRow({
   onPick: (result: StoreSearchResult) => void;
   buttonRef?: Ref<HTMLButtonElement>;
 }) {
-  const rating = ratingText(result);
+  const t = useTranslations("apps");
+  const locale = useAppLocale();
+  const rating = ratingText(result, t, locale);
   return (
     <li>
       <button
@@ -79,11 +91,14 @@ function StoreSearchResults({
   search: StoreSearch;
   onPick: (result: StoreSearchResult) => void;
 }) {
+  const t = useTranslations("apps");
+  const commonT = useTranslations("common");
+  const locale = useAppLocale();
   if (search.error) {
     return (
       <div className="flex items-center justify-between gap-3">
         <p role="alert" className="text-body text-destructive">
-          {searchErrorText(search.error)}
+          {searchErrorText(search.error, t)}
         </p>
         {searchRetryable(search.error) ? (
           <Button
@@ -92,7 +107,7 @@ function StoreSearchResults({
             size="sm"
             onClick={search.retry}
           >
-            Retry
+            {commonT("retry")}
           </Button>
         ) : null}
       </div>
@@ -110,7 +125,10 @@ function StoreSearchResults({
   if (search.settled && search.results.length === 0) {
     return (
       <p role="status" className="text-body text-muted-foreground">
-        {`No listing named “${search.q}” in ${formatCountry(country)}.`}
+        {t("import.noListing", {
+          query: search.q,
+          country: formatCountryInLocale(country, locale),
+        })}
       </p>
     );
   }
@@ -118,7 +136,10 @@ function StoreSearchResults({
     <ul
       id={listId}
       role="list"
-      aria-label={`Results from ${storeLabel(store)} in ${formatCountry(country)}`}
+      aria-label={t("import.resultsLabel", {
+        store: storeLabel(store),
+        country: formatCountryInLocale(country, locale),
+      })}
       aria-busy={search.pending}
       className="flex max-h-64 flex-col gap-1 overflow-y-auto"
     >

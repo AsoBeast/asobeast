@@ -1,15 +1,29 @@
-import type { KeywordSource } from "@asobeast/shared";
+"use client";
 
-export const SOURCE_LABELS: Record<KeywordSource, string> = {
-  TITLE: "Title",
-  SUBTITLE: "Subtitle",
-  DESCRIPTION: "Description",
-  KEYWORD_FIELD: "Keyword field",
-  SUGGESTED: "Suggested",
-  MANUAL: "Manual",
-  COMPETITOR: "Competitor",
+import { useTranslations } from "next-intl";
+import type { KeywordSource } from "@asobeast/shared";
+import type { MessageTranslator } from "@/i18n/translator";
+
+const SOURCE_KEYS: Record<KeywordSource, string> = {
+  TITLE: "title",
+  SUBTITLE: "subtitle",
+  DESCRIPTION: "description",
+  KEYWORD_FIELD: "keywordField",
+  SUGGESTED: "suggested",
+  MANUAL: "manual",
+  COMPETITOR: "competitor",
 };
 
+export function sourceLabel(
+  source: KeywordSource,
+  t: MessageTranslator,
+): string {
+  return t(`sources.${SOURCE_KEYS[source]}`);
+}
+
 export function SourceLabel({ source }: { source: KeywordSource }) {
-  return <span className="text-muted-foreground">{SOURCE_LABELS[source]}</span>;
+  const t = useTranslations("keywords");
+  return (
+    <span className="text-muted-foreground">{sourceLabel(source, t)}</span>
+  );
 }

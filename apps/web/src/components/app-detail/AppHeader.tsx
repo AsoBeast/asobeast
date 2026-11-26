@@ -2,10 +2,12 @@
 
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { ExternalLink } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { AppDetail } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { appDetailOptions } from "@/lib/queries";
-import { formatCountry, storeLabel } from "@/lib/format";
+import { formatCountryInLocale, storeLabel } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { AppLink } from "./AppLink";
 import { DelistedNotice } from "./DelistedNotice";
 import { NotInSearchNotice } from "./NotInSearchNotice";
@@ -19,7 +21,9 @@ function storeUrl(detail: AppDetail): string {
 
 export function AppHeader({ id }: { id: string }) {
   const { data: detail } = useSuspenseQuery(appDetailOptions(id));
-  const name = detail.name ?? "Untitled app";
+  const t = useTranslations("appDetail");
+  const locale = useAppLocale();
+  const name = detail.name ?? t("untitled");
 
   return (
     <>
@@ -28,6 +32,7 @@ export function AppHeader({ id }: { id: string }) {
           <AppIcon src={detail.iconUrl} size={32} />
           <div className="flex min-w-0 flex-col gap-1">
             <h1
+              translate="no"
               title={name}
               className="line-clamp-2 text-title text-balance print:line-clamp-none"
             >
@@ -36,7 +41,9 @@ export function AppHeader({ id }: { id: string }) {
             <p className="flex flex-wrap items-center gap-x-2 text-label text-muted-foreground">
               <span>{storeLabel(detail.store)}</span>
               <span aria-hidden>·</span>
-              <span>{`Home storefront ${formatCountry(detail.country)}`}</span>
+              <span>{`${t("header.homeStorefront", {
+                country: formatCountryInLocale(detail.country, locale),
+              })}`}</span>
               <span aria-hidden className="print:hidden">
                 ·
               </span>
@@ -46,7 +53,7 @@ export function AppHeader({ id }: { id: string }) {
                 rel="noreferrer"
                 className="inline-flex min-h-6 items-center gap-1 rounded-sm hover:text-foreground print:hidden"
               >
-                <span>Store page</span>
+                <span>{t("header.storePage")}</span>
                 <ExternalLink aria-hidden className="size-3.5" />
               </a>
             </p>

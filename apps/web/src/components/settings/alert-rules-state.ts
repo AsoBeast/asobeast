@@ -1,4 +1,5 @@
 import type { WebhookEvent } from "@asobeast/shared";
+import type { MessageTranslator } from "@/i18n/translator";
 import {
   ALERT_RULE_GROUPS,
   ALERT_RULE_ORDER,
@@ -43,7 +44,10 @@ export function groupedRules(
   }));
 }
 
-export function ruleSummary(events: readonly WebhookEvent[]): string {
+export function ruleSummary(
+  events: readonly WebhookEvent[],
+  translator: MessageTranslator,
+): string {
   const on = ALERT_RULE_ORDER.filter((event) => events.includes(event)).length;
-  return `${on} ${on === 1 ? "rule" : "rules"} on`;
+  return translator("rules.summary", { count: on });
 }

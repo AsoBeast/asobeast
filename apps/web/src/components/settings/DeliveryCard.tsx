@@ -5,13 +5,17 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
+import type { AlertFlushResult } from "@asobeast/shared";
+import type { MessageTranslator } from "@/i18n/translator";
 import { Button } from "@/components/ui/button";
 import { flushAlerts } from "@/lib/api";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTimeInLocale } from "@/lib/format";
 import { alertDeliveryKey, alertDeliveryOptions } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { PanelBody, SettingsPanel } from "./SettingsPanel";
 
 function Field({
@@ -42,20 +46,21 @@ function Field({
   );
 }
 
-function countLabel(count: number, singular: string): string {
-  return `${count} ${singular}${count === 1 ? "" : "s"}`;
-}
-
-function flushMessage(result: {
-  flushed: number;
-  channels: number;
-  notifications: number;
-}): string {
-  if (result.flushed === 0) return "Nothing to flush";
-  return `Sent ${countLabel(result.notifications, "notification")} to ${countLabel(result.channels, "channel")} from ${countLabel(result.flushed, "event")}`;
+export function flushMessage(
+  result: AlertFlushResult,
+  translator: MessageTranslator,
+): string {
+  if (result.flushed === 0) return translator("delivery.nothingToFlush");
+  return translator("delivery.flushed", {
+    notifications: result.notifications,
+    channels: result.channels,
+    flushed: result.flushed,
+  });
 }
 
 export function DeliveryCard() {
+  const t = useTranslations("notifications");
+  const locale = useAppLocale();
   const queryClient = useQueryClient();
   const { data } = useSuspenseQuery(alertDeliveryOptions);
 
@@ -63,15 +68,15 @@ export function DeliveryCard() {
     mutationFn: flushAlerts,
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: alertDeliveryKey });
-      toast.success(flushMessage(result));
+      toast.success(flushMessage(result, t));
     },
-    onError: () => toast.error("Could not flush alerts"),
+    onError: () => toast.error(t("delivery.flushError")),
   });
   const flushOnce = useSingleFlight(flush);
 
   return (
     <SettingsPanel
-      title="Delivery"
+      title={t("delivery.title")}
       action={
         <Button
           variant="outline"
@@ -81,18 +86,20 @@ export function DeliveryCard() {
           onClick={() => flushOnce()}
         >
           {flush.isPending ? <Loader2 className="animate-spin" /> : <Send />}
-          Flush now
+          {t("delivery.flushNow")}
         </Button>
       }
       footer={
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-          <Field inline label="Last flush">
-            {data.lastFlushAt ? formatDateTime(data.lastFlushAt) : "Never"}
+          <Field inline label={t("delivery.lastFlush")}>
+            {data.lastFlushAt
+              ? formatDateTimeInLocale(data.lastFlushAt, locale)
+              : t("delivery.never")}
           </Field>
-          <Field inline label="Pending">
+          <Field inline label={t("delivery.pending")}>
             {data.pending}
           </Field>
-          <Field inline label="Claimed">
+          <Field inline label={t("delivery.claimed")}>
             {data.claimed}
           </Field>
         </div>
@@ -100,16 +107,22 @@ export function DeliveryCard() {
     >
       <PanelBody>
         <p className="max-w-[70ch] text-body text-muted-foreground">
-          {data.mode === "batched"
-            ? "Daily events are sent after processing as an app update, followed by a competitor watch when each has activity."
-            : "Each event is delivered instantly, one notification per event."}
+          {t(
+            data.mode === "batched"
+              ? "delivery.batchedDescription"
+              : "delivery.instantDescription",
+          )}
         </p>
         <div className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-2 text-dense">
-          <Field label="Mode">
-            {data.mode === "batched" ? "Batched" : "Instant"}
+          <Field label={t("delivery.mode")}>
+            {t(
+              data.mode === "batched" ? "delivery.batched" : "delivery.instant",
+            )}
           </Field>
-          <Field label="Trigger">After completion</Field>
-          <Field label="Pipeline starts">
+          <Field label={t("delivery.trigger")}>
+            {t("delivery.afterCompletion")}
+          </Field>
+          <Field label={t("delivery.pipelineStarts")}>
             <code translate="no" className="font-mono text-caption">
               {data.pipelineCron}
             </code>

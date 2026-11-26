@@ -52,7 +52,7 @@ test("removing the last chip skips a disabled Export CSV", async ({ page }) => {
   await pressFromKeyboard(page, "Remove Search: zzzz");
 
   await expect(chips(page)).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Columns" })).toBeFocused();
+  await expect(page.locator('[data-action="columns"]')).toBeFocused();
 });
 
 test("Clear all hands focus to a control above the chips", async ({ page }) => {

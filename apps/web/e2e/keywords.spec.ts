@@ -173,7 +173,7 @@ test("the reveal column sorts the earliest suggestion first", async ({
 }) => {
   await page.goto("/apps/app-1/keywords");
 
-  await page.getByRole("button", { name: "Columns" }).click();
+  await page.locator('[data-action="columns"]').click();
   await page
     .getByRole("menu")
     .getByRole("menuitemcheckbox", { name: "Reveal" })
@@ -550,7 +550,7 @@ test("score details open from the keyboard, stay open and are store specific", a
 
   const appleScore = page
     .getByRole("row", { name: /focus timer/ })
-    .getByRole("button", { name: /Popularity 5000.*High confidence/ });
+    .getByRole("button", { name: /Popularity 5,000.*High confidence/ });
   await appleScore.focus();
   await page.keyboard.press("Enter");
   await expect(scoreDetails(page)).toContainText("App Store search signals");
@@ -568,7 +568,7 @@ test("score details open from the keyboard, stay open and are store specific", a
 
   const playScore = page
     .getByRole("row", { name: /pomodoro/ })
-    .getByRole("button", { name: /Popularity 9000.*Medium confidence/ });
+    .getByRole("button", { name: /Popularity 9,000.*Medium confidence/ });
   await playScore.focus();
   await page.keyboard.press("Enter");
   await expect(scoreDetails(page)).toContainText("Google Play suggest reach");
@@ -588,7 +588,7 @@ test("score details open from the keyboard, stay open and are store specific", a
 
   const invalidTimeScore = page
     .getByRole("row", { name: /study timer/ })
-    .getByRole("button", { name: /Popularity 3000.*Older formula/ });
+    .getByRole("button", { name: /Popularity 3,000.*Older formula/ });
   await invalidTimeScore.focus();
   await page.keyboard.press("Enter");
   const invalidTimeDetails = scoreDetails(page).filter({
@@ -616,7 +616,7 @@ test("score details open from the keyboard, stay open and are store specific", a
 
   const legacyScore = page
     .getByRole("row", { name: /productivity app/ })
-    .getByRole("button", { name: /Popularity 8000.*Older formula/ });
+    .getByRole("button", { name: /Popularity 8,000.*Older formula/ });
   await legacyScore.focus();
   await page.keyboard.press("Enter");
   await expect(
@@ -640,10 +640,10 @@ test("scores and positions carry their grade in colour and in words", async ({
   const popularity = row.getByRole("button", { name: /^Popularity/ });
   await expect(popularity).toHaveAttribute("data-grade", "strong");
   await expect(popularity).toHaveAccessibleName(
-    /Popularity \d+, (strong|fair|weak|poor)\./,
+    /Popularity [\d,]+, (strong|fair|weak|poor)\./,
   );
   await expect(popularity).toHaveAccessibleName(
-    /Popularity 9000.*Medium confidence/,
+    /Popularity 9,000.*Medium confidence/,
   );
   await expect(
     row.getByRole("button", { name: /^Difficulty/ }),
@@ -708,7 +708,7 @@ test("a search that matches nothing offers to clear the filters", async ({
     page.getByRole("columnheader", { name: "Popularity" }),
   ).toBeVisible();
 
-  await page.getByRole("button", { name: "Clear filters" }).click();
+  await page.locator('[data-action="clear-filters"]').click();
 
   await expect(page).not.toHaveURL(/q=/);
   await expect(page.getByText("5 of 5 keywords")).toBeVisible();
@@ -863,7 +863,7 @@ test("the status filter keeps paused rows and clear all empties the url", async 
   await expect(rows.nth(1)).toContainText("time blocking");
   await expect(page.getByText("Status: Paused")).toBeVisible();
 
-  await page.getByRole("button", { name: "Clear all" }).click();
+  await page.locator('[data-action="clear-all"]').click();
 
   await expect(page).not.toHaveURL(/status=|q=/);
   await expect(rows).toHaveCount(7);
@@ -963,7 +963,7 @@ test("the columns menu hides a column and remembers it", async ({ page }) => {
   });
   await expect(difficultyHeader).toBeVisible();
 
-  await page.getByRole("button", { name: "Columns" }).click();
+  await page.locator('[data-action="columns"]').click();
   const menu = page.getByRole("menu");
   await expect(
     menu.getByRole("menuitemcheckbox", { name: "Keyword" }),
@@ -1005,7 +1005,7 @@ test("a phone starts with the columns that fit and offers the rest", async ({
     await expect(page.getByRole("columnheader", { name })).toHaveCount(0);
   }
 
-  await page.getByRole("button", { name: "Columns" }).click();
+  await page.locator('[data-action="columns"]').click();
   await page.getByRole("menuitemcheckbox", { name: "Source" }).click();
   await page.keyboard.press("Escape");
   await expect(
@@ -1072,7 +1072,7 @@ test("a column shown on a phone does not hide the rest on a wider screen", async
   await page.setViewportSize({ width: 375, height: 800 });
   await page.goto("/apps/app-1/keywords");
   await page.waitForLoadState("networkidle");
-  await page.getByRole("button", { name: "Columns" }).click();
+  await page.locator('[data-action="columns"]').click();
   await page.getByRole("menuitemcheckbox", { name: "Source" }).click();
   await page.keyboard.press("Escape");
 
@@ -1090,7 +1090,7 @@ test("a column hidden on a wide screen stays hidden after a phone change", async
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/apps/app-1/keywords");
   await page.waitForLoadState("networkidle");
-  await page.getByRole("button", { name: "Columns" }).click();
+  await page.locator('[data-action="columns"]').click();
   await page.getByRole("menuitemcheckbox", { name: "Popularity" }).click();
   await page.keyboard.press("Escape");
   const popularity = page.getByRole("columnheader", { name: "Popularity" });
@@ -1099,7 +1099,7 @@ test("a column hidden on a wide screen stays hidden after a phone change", async
   await page.setViewportSize({ width: 375, height: 800 });
   await page.reload();
   await page.waitForLoadState("networkidle");
-  await page.getByRole("button", { name: "Columns" }).click();
+  await page.locator('[data-action="columns"]').click();
   await page.getByRole("menuitemcheckbox", { name: "Source" }).click();
   await page.keyboard.press("Escape");
   await expect(
@@ -1364,10 +1364,8 @@ test.describe("a market typed into the add keywords dialog", () => {
     const add = page.getByRole("button", { name: "Add keywords" }).first();
     await (await hydrated(add)).click();
     await page.getByRole("combobox", { name: "Keyword market" }).click();
-    await page.getByRole("option", { name: "Other…" }).click();
-    await page
-      .getByRole("textbox", { name: "Storefront country code" })
-      .fill(code);
+    await page.locator('[data-action="other-country"]').click();
+    await page.locator('[data-action="country-code"]').fill(code);
     await page
       .getByRole("textbox", { name: "Keywords", exact: true })
       .fill("focus");
@@ -1385,13 +1383,13 @@ test.describe("a market typed into the add keywords dialog", () => {
 
     await typeMarket(page, "zz");
 
-    const code = page.getByRole("textbox", { name: "Storefront country code" });
+    const code = page.locator('[data-action="country-code"]');
     await expect(
-      page.getByText("zz is not an App Store storefront"),
+      page.getByText("App Store has no storefront with the code ZZ."),
     ).toBeVisible();
     await expect(code).toHaveAttribute("aria-invalid", "true");
     await expect(code).toHaveAccessibleDescription(
-      "zz is not an App Store storefront",
+      "App Store has no storefront with the code ZZ.",
     );
     await expect(
       page.getByRole("dialog").getByRole("button", { name: "Add keywords" }),
@@ -1404,11 +1402,9 @@ test.describe("a market typed into the add keywords dialog", () => {
   }) => {
     await typeMarket(page, "xk");
 
-    await expect(page.getByText(/is not an App Store storefront/)).toHaveCount(
-      0,
-    );
+    await expect(page.getByText(/has no storefront/)).toHaveCount(0);
     await expect(
-      page.getByRole("textbox", { name: "Storefront country code" }),
+      page.locator('[data-action="country-code"]'),
     ).not.toHaveAttribute("aria-invalid", "true");
     await expect(
       page.getByRole("dialog").getByRole("button", { name: "Add keywords" }),
@@ -1485,7 +1481,7 @@ test("a phone hides the tags column and the column menu offers it", async ({
 
   const header = page.getByRole("columnheader", { name: "Tags", exact: true });
   await expect(header).toHaveCount(0);
-  await page.getByRole("button", { name: "Columns" }).click();
+  await page.locator('[data-action="columns"]').click();
   await page.getByRole("menuitemcheckbox", { name: "Tags" }).click();
   await page.keyboard.press("Escape");
   await expect(header).toBeVisible();
@@ -1542,7 +1538,7 @@ test.describe("the tags facet", () => {
     await expect(rowsOf(page)).toHaveCount(7);
 
     await page.goto("/apps/app-1/keywords?tag=core&status=active");
-    await page.getByRole("button", { name: "Clear all" }).click();
+    await page.locator('[data-action="clear-all"]').click();
     await expect(page).not.toHaveURL(/tag=|status=/);
   });
 
@@ -1594,7 +1590,7 @@ test("keeps focus in the search field after clearing it from the keyboard", asyn
   await page.goto("/apps/app-1/keywords");
   const search = page.getByRole("textbox", { name: /Search keywords/ });
   await (await hydrated(search)).fill("todo");
-  await page.getByRole("button", { name: "Clear search" }).focus();
+  await page.locator('[data-action="clear-search"]').focus();
 
   await page.keyboard.press("Enter");
 
@@ -1615,7 +1611,7 @@ const rankingsRequests = (page: Page): string[] => {
 };
 
 async function chooseTrendWindow(page: Page, label: string): Promise<void> {
-  await page.getByRole("button", { name: "Columns" }).click();
+  await page.locator('[data-action="columns"]').click();
   await page.getByRole("menuitemradio", { name: label }).click();
 }
 
@@ -1641,7 +1637,7 @@ test("the trend column switches to 30 days through the URL", async ({
   await page.setViewportSize({ width: 1700, height: 900 });
   const requests = rankingsRequests(page);
   await page.goto("/apps/app-1/keywords");
-  await hydrated(page.getByRole("button", { name: "Columns" }));
+  await hydrated(page.locator('[data-action="columns"]'));
 
   await chooseTrendWindow(page, "Last 30 days");
 
@@ -1735,7 +1731,7 @@ test("a failed 30 day read says so and retries", async ({ page, context }) => {
   ).toBeVisible();
 
   await context.clearCookies({ name: RANKINGS_FAIL_COOKIE });
-  await page.getByRole("button", { name: "Retry" }).click();
+  await page.locator('[data-action="retry"]').click();
   await expect(page.getByText("Could not load the 30 day trend.")).toBeHidden();
   await expect(
     page

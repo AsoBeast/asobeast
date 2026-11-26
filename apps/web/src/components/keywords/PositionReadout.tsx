@@ -1,13 +1,34 @@
+"use client";
+
+import { createTranslator, useTranslations } from "next-intl";
 import type { TrackedKeywordItem } from "@asobeast/shared";
+import enKeywords from "../../../messages/en/keywords.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import { PositionDeltaChip } from "@/components/ui/delta-chip";
 import { GradedNumber } from "@/components/ui/graded";
-import { formatDate } from "@/lib/format";
+import { formatDateInLocale } from "@/lib/format";
 import { grade, type Grade } from "@/lib/grade";
 import type { LostPosition } from "@/lib/keyword-checks";
+import type { Locale } from "@/lib/locale";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
 
-export const lastRankedLine = (position: number, on: string) =>
-  `Last ranked #${position} on ${formatDate(on)}`;
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywords",
+  messages: { keywords: enKeywords },
+});
+
+export const lastRankedLine = (
+  position: number,
+  on: string,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
+) =>
+  t("position.lastRanked", {
+    position,
+    date: formatDateInLocale(on, locale),
+  });
 
 const CHIP = "h-6 min-w-9 justify-center rounded-md px-1.5 font-semibold";
 
@@ -34,6 +55,8 @@ export function PositionReadout({
   chip?: boolean;
   className?: string;
 }) {
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
   const tier = grade("position", keyword.latestPosition);
   return (
     <span
@@ -44,7 +67,11 @@ export function PositionReadout({
     >
       {keyword.latestPosition === null ? (
         <span
-          title={lost?.on ? lastRankedLine(lost.position, lost.on) : undefined}
+          title={
+            lost?.on
+              ? lastRankedLine(lost.position, lost.on, t, locale)
+              : undefined
+          }
           className={cn(
             "flex flex-col leading-tight text-muted-foreground",
             className,
@@ -52,14 +79,16 @@ export function PositionReadout({
         >
           <span>{label}</span>
           {lost ? (
-            <span className="text-tick text-faint-foreground">{`was #${lost.position}`}</span>
+            <span className="text-tick text-faint-foreground">
+              {t("position.was", { position: lost.position })}
+            </span>
           ) : null}
         </span>
       ) : (
         <GradedNumber
           value={label}
           grade={tier}
-          label="Position"
+          label={t("position.label")}
           marker={!chip}
           className={cn(chip && positionChipClass(tier), className)}
         />

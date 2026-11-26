@@ -1,6 +1,7 @@
 "use client";
 
 import { Label } from "@/components/ui/label";
+import { useTranslations } from "next-intl";
 import {
   Select,
   SelectContent,
@@ -9,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { marketLabel, offersMarkets } from "@/lib/market";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { useMarket } from "./use-market";
 
 const ALL_MARKETS = "all";
@@ -21,6 +23,8 @@ export function MarketSwitcher({
   allowAll?: boolean;
 }) {
   const { market, scope, home, markets, select } = useMarket(id);
+  const t = useTranslations("appDetail");
+  const locale = useAppLocale();
   const selected = markets.find((entry) => entry.country === market);
   if (!offersMarkets(markets) || selected === undefined) return null;
 
@@ -31,21 +35,25 @@ export function MarketSwitcher({
   return (
     <div className="flex flex-wrap items-center gap-2 print:hidden">
       <Label htmlFor={`market-${id}`}>
-        {allowAll ? "Market" : "Listing market"}
+        {allowAll ? t("switchers.market") : t("switchers.listingMarket")}
       </Label>
       <Select value={value} onValueChange={choose}>
         <SelectTrigger id={`market-${id}`} className="w-[240px]">
           <SelectValue>
-            {value === ALL_MARKETS ? "All markets" : marketLabel(selected)}
+            {value === ALL_MARKETS
+              ? t("switchers.allMarkets")
+              : marketLabel(selected, locale)}
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
           {allowAll ? (
-            <SelectItem value={ALL_MARKETS}>All markets</SelectItem>
+            <SelectItem value={ALL_MARKETS}>
+              {t("switchers.allMarkets")}
+            </SelectItem>
           ) : null}
           {markets.map((entry) => (
             <SelectItem key={entry.country} value={entry.country}>
-              {marketLabel(entry)}
+              {marketLabel(entry, locale)}
             </SelectItem>
           ))}
         </SelectContent>

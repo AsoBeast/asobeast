@@ -4,8 +4,11 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { LogOut, Settings, User } from "lucide-react";
 import type { AuthUser } from "@asobeast/shared";
+import type { MessageTranslator } from "@/i18n/translator";
 import { planInForceLabel } from "@/lib/plan-in-force";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { ADMIN_ENTRY, ADMIN_TOOLS } from "@/components/admin/admin-links";
+import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,26 +18,37 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { ChangePasswordDialog } from "./ChangePasswordDialog";
 import { useAuth } from "./use-auth";
 import { useSignOut } from "./use-sign-out";
 
 function PlanInForce({ user }: { user: AuthUser }) {
-  const t = useTranslations("navigation");
+  const billing = useTranslations("billing");
+  const account = useTranslations("account");
+  const locale = useAppLocale();
+
   return (
     <span data-slot="account-plan" className="text-caption font-normal">
-      {`${planInForceLabel(user, new Date())}${t("planSuffix")}`}
+      {account("menu.plan", {
+        plan: planInForceLabel(user, new Date(), {
+          translator: billing,
+          locale,
+        }),
+      })}
     </span>
   );
 }
 
-function adminToolLabel(href: string, t: ReturnType<typeof useTranslations>) {
-  return href === "/admin/queues" ? t("queueDashboard") : t("apiDocs");
+function adminToolLabel(href: string, t: MessageTranslator) {
+  return href === "/admin/queues"
+    ? t("menu.queueDashboard")
+    : t("menu.apiDocs");
 }
 
 export function UserMenu() {
-  const t = useTranslations("navigation");
+  const account = useTranslations("account");
+  const auth = useTranslations("auth");
+  const navigation = useTranslations("navigation");
   const { user } = useAuth();
   const signOut = useSignOut();
 
@@ -43,7 +57,11 @@ export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label={t("accountMenu")}>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={account("menu.account")}
+        >
           <User />
         </Button>
       </DropdownMenuTrigger>
@@ -65,13 +83,13 @@ export function UserMenu() {
         <DropdownMenuItem asChild className="sm:hidden">
           <Link href="/settings">
             <Settings />
-            <span>{t("settings")}</span>
+            <span>{navigation("settings")}</span>
           </Link>
         </DropdownMenuItem>
         <ChangePasswordDialog
           trigger={
             <DropdownMenuItem onSelect={(event) => event.preventDefault()}>
-              <span>{t("changePassword")}</span>
+              <span>{auth("password.changeTitle")}</span>
             </DropdownMenuItem>
           }
         />
@@ -79,19 +97,19 @@ export function UserMenu() {
           <>
             <DropdownMenuSeparator />
             <DropdownMenuLabel className="text-tick font-normal text-faint-foreground">
-              {t("admin")}
+              {navigation("admin")}
             </DropdownMenuLabel>
             <DropdownMenuItem asChild>
               <Link href={ADMIN_ENTRY.href}>
                 <ADMIN_ENTRY.icon />
-                <span>{t("adminArea")}</span>
+                <span>{account("menu.adminArea")}</span>
               </Link>
             </DropdownMenuItem>
             {ADMIN_TOOLS.map(({ href, Icon }) => (
               <DropdownMenuItem key={href} asChild>
                 <a href={href} target="_blank" rel="noreferrer">
                   <Icon />
-                  <span>{adminToolLabel(href, t)}</span>
+                  <span>{adminToolLabel(href, account)}</span>
                 </a>
               </DropdownMenuItem>
             ))}
@@ -106,7 +124,7 @@ export function UserMenu() {
           }}
         >
           <LogOut />
-          <span>{t("signOut")}</span>
+          <span>{auth("signOut")}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -4,20 +4,36 @@ import {
   type SupportWorkspaceSummary,
 } from "@asobeast/shared";
 import {
-  WORKSPACE_STAGE_LABELS,
   flagHref,
-  heldPlanLabel,
+  heldPlanLabel as localizedHeldPlanLabel,
   matchesStanding,
-  payingPlanLabel,
+  payingPlanLabel as localizedPayingPlanLabel,
   stageHref,
-  stageLabel,
+  stageLabel as localizedStageLabel,
   workspaceFlags,
+  workspaceStageLabel as localizedWorkspaceStageLabel,
 } from "./admin-stages";
+import { translationContext } from "@/test/translation-context";
+
+const en = translationContext("en", "admin");
+const workspaceStageLabel = (
+  stage: Parameters<typeof localizedWorkspaceStageLabel>[0],
+) => localizedWorkspaceStageLabel(stage, en.translator);
+const stageLabel = (
+  stage: Parameters<typeof localizedStageLabel>[0],
+  plan: Parameters<typeof localizedStageLabel>[1],
+) => localizedStageLabel(stage, plan, en.translator);
+const heldPlanLabel = (plan: Parameters<typeof localizedHeldPlanLabel>[0]) =>
+  localizedHeldPlanLabel(plan, en.translator);
+const payingPlanLabel = (
+  plan: Parameters<typeof localizedPayingPlanLabel>[0],
+  interval: Parameters<typeof localizedPayingPlanLabel>[1],
+) => localizedPayingPlanLabel(plan, interval, en.translator);
 
 describe("stageLabel", () => {
   it("names every stage in plain words", () => {
     for (const stage of WORKSPACE_STAGES) {
-      expect(WORKSPACE_STAGE_LABELS[stage]).toMatch(
+      expect(workspaceStageLabel(stage)).toMatch(
         /^[A-Z][a-z]+(?:[ -][a-z]+)*$/,
       );
     }

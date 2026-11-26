@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { createTranslator, useTranslations } from "next-intl";
 import { useAuth } from "@/components/auth/use-auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,10 +12,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { formatCountry, formatNumber } from "@/lib/format";
+import enKeywords from "../../../messages/en/keywords.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import { formatCountryInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 
-export const keywordCount = (count: number) =>
-  `${formatNumber(count)} keyword${count === 1 ? "" : "s"}`;
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywords",
+  messages: { keywords: enKeywords },
+});
+
+export const keywordCount = (
+  count: number,
+  t: MessageTranslator = english,
+): string => t("bulk.keywordCount", { count });
 
 export function TrackCombinationsDialog({
   count,
@@ -33,29 +45,35 @@ export function TrackCombinationsDialog({
   onConfirm: () => void;
   onCloseAutoFocus: (event: Event) => void;
 }) {
-  const storefront = formatCountry(market);
+  const t = useTranslations("keywords");
+  const tCommon = useTranslations("common");
+  const locale = useAppLocale();
+  const storefront = formatCountryInLocale(market, locale);
   const { isOperator } = useAuth();
+  const description = isOperator
+    ? t.rich("combinations.operatorDescription", {
+        country: storefront,
+        budgetLink: (chunks) => (
+          <Link
+            href="/settings#daily-capacity"
+            className="font-medium text-foreground underline underline-offset-4"
+          >
+            {chunks}
+          </Link>
+        ),
+      })
+    : t("combinations.trackDescription", { country: storefront });
   return (
     <Dialog open={open} onOpenChange={(next) => !pending && onOpenChange(next)}>
       <DialogContent onCloseAutoFocus={onCloseAutoFocus}>
         <DialogHeader>
           <DialogTitle>
-            Track {keywordCount(count)} in {storefront}?
+            {t("combinations.trackTitle", {
+              count: keywordCount(count, t),
+              country: storefront,
+            })}
           </DialogTitle>
-          <DialogDescription>
-            Each tracked keyword adds one store search a day in {storefront}.
-            {isOperator ? (
-              <>
-                {" "}
-                <Link
-                  href="/settings#daily-capacity"
-                  className="font-medium text-foreground underline underline-offset-4"
-                >
-                  Review the daily request budget
-                </Link>
-              </>
-            ) : null}
-          </DialogDescription>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button
@@ -63,10 +81,10 @@ export function TrackCombinationsDialog({
             disabled={pending}
             onClick={() => onOpenChange(false)}
           >
-            Cancel
+            {tCommon("cancel")}
           </Button>
           <Button disabled={pending} onClick={onConfirm}>
-            Track
+            {t("suggestions.track")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useQueryStates } from "nuqs";
 import { AppIcon } from "@/components/AppIcon";
 import {
@@ -11,11 +12,12 @@ import {
 } from "@/components/layout/panel-classes";
 import { TrendChip } from "@/components/ui/delta-chip";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
-import { formatNumber } from "@/lib/format";
+import { formatNumberInLocale } from "@/lib/format";
+import type { MessageTranslator } from "@/i18n/translator";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { portfolioInsightsOptions, portfolioOptions } from "@/lib/queries";
 import {
   dashboardBreakdownParsers,
-  type DashboardBreakdown,
   type DashboardMetric,
 } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
@@ -48,33 +50,37 @@ const COLUMNS = "grid grid-cols-[minmax(0,1fr)_2.5rem_4rem] gap-2 px-2";
 
 const WIDE = "relative col-span-2 justify-self-end";
 
-const HEADING: Record<DashboardBreakdown, string> = {
-  app: "By app",
-  store: "By store",
-};
-
-const SUBJECT: Record<DashboardBreakdown, string> = {
-  app: "App",
-  store: "Store",
-};
-
-const ORDER: Record<DashboardMetric, (days: number) => string> = {
-  visibility: (days) => `Sorted by change over ${days} days`,
-  top10: (days) => `Sorted by change over ${days} days`,
-  moved: (days) => `Sorted by keywords moved in ${days} days`,
-  actions: () => "Sorted by priority",
+const orderText = (
+  metric: DashboardMetric,
+  days: number,
+  t: MessageTranslator,
+): string => {
+  if (metric === "actions") return t("breakdown.sortedPriority");
+  return t(
+    metric === "moved" ? "breakdown.sortedMoved" : "breakdown.sortedChange",
+    { days },
+  );
 };
 
 function Heads({ metric, unit }: { metric: DashboardMetric; unit: string }) {
+  const t = useTranslations("dashboard");
   if (metric === "moved") {
-    return <span className="col-span-2 text-right">{`Moved ${unit}`}</span>;
+    return (
+      <span className="col-span-2 text-right">
+        {t("breakdown.movedUnit", { unit })}
+      </span>
+    );
   }
   if (metric === "actions") {
-    return <span className="col-span-2 text-right">Open actions</span>;
+    return (
+      <span className="col-span-2 text-right">
+        {t("breakdown.openActions")}
+      </span>
+    );
   }
   return (
     <>
-      <span className="text-right">Now</span>
+      <span className="text-right">{t("breakdown.now")}</span>
       <span className="text-right">{unit}</span>
     </>
   );
@@ -89,6 +95,8 @@ function Figures({
   metric: DashboardMetric;
   unit: string;
 }) {
+  const t = useTranslations("dashboard");
+  const locale = useAppLocale();
   if (metric === "moved") {
     return (
       <span className={cn(WIDE, "numeric")}>
@@ -99,9 +107,11 @@ function Figures({
   if (metric === "actions") {
     return (
       <span className={cn(WIDE, "numeric inline-flex gap-1")}>
-        <span>{formatNumber(row.open)}</span>
+        <span>{formatNumberInLocale(row.open, locale)}</span>
         {row.critical > 0 ? (
-          <span className="text-signal-down">{`· ${formatNumber(row.critical)} critical`}</span>
+          <span className="text-signal-down">
+            {t("breakdown.critical", { count: row.critical })}
+          </span>
         ) : null}
       </span>
     );
@@ -110,8 +120,9 @@ function Figures({
   return (
     <>
       <span className="numeric relative text-right">
-        {formatNumber(
+        {formatNumberInLocale(
           visible ? Math.round(row.change.visibility) : row.change.top10,
+          locale,
         )}
       </span>
       <span className="relative justify-self-end">
@@ -126,6 +137,7 @@ function Figures({
 }
 
 export function PortfolioBreakdown({ metric }: { metric: DashboardMetric }) {
+  const t = useTranslations("dashboard");
   const { data: portfolio } = useSuspenseQuery(portfolioOptions);
   const { data: insights } = useSuspenseQuery(portfolioInsightsOptions);
   const { days, history } = useRangeHistory();
@@ -139,7 +151,7 @@ export function PortfolioBreakdown({ metric }: { metric: DashboardMetric }) {
       history,
       portfolio.apps,
       new Map(insights.apps.map((insight) => [insight.appId, insight])),
-      shownBy,
+      { by: shownBy, t },
     ),
     metric,
   );
@@ -147,7 +159,7 @@ export function PortfolioBreakdown({ metric }: { metric: DashboardMetric }) {
 
   const rows = shownRows(sorted, scope);
   const largest = Math.max(1, ...sorted.map((row) => rowSize(row, metric)));
-  const unit = `${days}d`;
+  const unit = t("table.rangeUnit", { days });
   const headingId = "breakdown-heading";
 
   return (
@@ -157,7 +169,7 @@ export function PortfolioBreakdown({ metric }: { metric: DashboardMetric }) {
           id={headingId}
           className="text-label font-medium text-muted-foreground"
         >
-          {HEADING[shownBy]}
+          {t(shownBy === "app" ? "breakdown.byApp" : "breakdown.byStore")}
         </h2>
         {switchable ? (
           <Tabs
@@ -169,19 +181,21 @@ export function PortfolioBreakdown({ metric }: { metric: DashboardMetric }) {
               })
             }
           >
-            <TabsList aria-label="Break the figure down by">
+            <TabsList aria-label={t("breakdown.switchLabel")}>
               <TabsOption value="app">
-                <span>Apps</span>
+                <span>{t("breakdown.apps")}</span>
               </TabsOption>
               <TabsOption value="store">
-                <span>Stores</span>
+                <span>{t("breakdown.stores")}</span>
               </TabsOption>
             </TabsList>
           </Tabs>
         ) : null}
       </div>
       <div aria-hidden className={cn(COLUMNS, LIST_HEAD, "pt-1")}>
-        <span>{SUBJECT[shownBy]}</span>
+        <span>
+          {t(shownBy === "app" ? "breakdown.app" : "breakdown.store")}
+        </span>
         <Heads metric={metric} unit={unit} />
       </div>
       <ul className="flex flex-col">
@@ -193,7 +207,7 @@ export function PortfolioBreakdown({ metric }: { metric: DashboardMetric }) {
                 type="button"
                 id={breakdownRowId(row.id)}
                 {...leavingProps(leavesWithScope(sorted, row.id))}
-                aria-label={rowLabel(row, metric, unit)}
+                aria-label={rowLabel(row, metric, unit, t)}
                 aria-pressed={selected}
                 onClick={() => {
                   if (selected) focusScopeSurvivor(row.id);
@@ -237,14 +251,16 @@ export function PortfolioBreakdown({ metric }: { metric: DashboardMetric }) {
         })}
       </ul>
       <div className="mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-2 pt-2 text-caption text-faint-foreground">
-        <span>{ORDER[metric](days)}</span>
+        <span>{orderText(metric, days, t)}</span>
         {sorted.length > rows.length ? (
           <Link
             id={BREAKDOWN_MORE_ID}
             href={`#${APPS_HEADING_ID}`}
             className={FOOTER_LINK}
           >
-            {`${formatNumber(sorted.length - rows.length)} more below`}
+            {t("breakdown.more", {
+              count: sorted.length - rows.length,
+            })}
           </Link>
         ) : null}
       </div>

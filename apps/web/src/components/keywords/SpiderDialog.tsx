@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Loader2, Plus, Search } from "lucide-react";
 import { useQueryState } from "nuqs";
@@ -19,7 +20,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { addKeywords, ApiError, startSpider } from "@/lib/api";
-import { queuedToast } from "@/lib/queued-toast";
 import {
   invalidateKeywordMutation,
   keywordsOptions,
@@ -39,6 +39,7 @@ export function SpiderDialog({
   country: string;
   children: ReactNode;
 }) {
+  const t = useTranslations("keywords");
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [term, setTerm] = useQueryState("spider", spiderTermParser);
@@ -58,16 +59,18 @@ export function SpiderDialog({
     mutationFn: (value: string) => startSpider(appId, value, country),
     onSuccess: (_result, value) => {
       void setTerm(value);
-      queuedToast(
-        "27 lookups, usually about two minutes",
-        "Results fill in as each lookup completes. It takes longer while the daily run is collecting.",
+      toast.info(
+        t("spider.queued", {
+          lookups: t("spider.lookups", { count: PROBES_TOTAL }),
+        }),
+        { description: t("spider.resultsHint") },
       );
     },
     onError: (error) =>
       toast.error(
         error instanceof ApiError
           ? error.envelope.message
-          : "Could not start deep search",
+          : t("spider.startFailed"),
       ),
   });
 
@@ -77,13 +80,13 @@ export function SpiderDialog({
     mutationFn: (text: string) => addKeywords(appId, [text], country),
     onSuccess: (_data, text) => {
       invalidateKeywordMutation(queryClient, appId);
-      toast.success(`Tracking ${text}`);
+      toast.success(t("suggestions.trackingOne", { keyword: text }));
     },
     onError: (error, text) =>
       toast.error(
         error instanceof ApiError
           ? error.envelope.message
-          : `Could not track ${text}`,
+          : t("suggestions.trackOneFailed", { keyword: text }),
       ),
   });
 
@@ -105,18 +108,14 @@ export function SpiderDialog({
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent size="md">
         <DialogHeader>
-          <DialogTitle>Deep search</DialogTitle>
-          <DialogDescription>
-            Asks the store&apos;s search suggestions for your term on its own
-            and followed by each letter from a to z. That is 27 lookups, usually
-            about two minutes, and longer while the daily run is collecting.
-          </DialogDescription>
+          <DialogTitle>{t("spider.title")}</DialogTitle>
+          <DialogDescription>{t("spider.description")}</DialogDescription>
         </DialogHeader>
 
         <DialogBody>
           <div className="flex items-end gap-2">
             <div className="flex flex-1 flex-col gap-2">
-              <Label htmlFor="spider-term">Seed term</Label>
+              <Label htmlFor="spider-term">{t("spider.seed")}</Label>
               <Input
                 id="spider-term"
                 value={draft}
@@ -141,7 +140,7 @@ export function SpiderDialog({
               ) : (
                 <Search />
               )}
-              Start
+              {t("spider.start")}
             </Button>
           </div>
 
@@ -149,7 +148,9 @@ export function SpiderDialog({
             <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-1.5">
                 <div className="numeric flex items-center justify-between text-caption text-muted-foreground">
-                  <span>{complete ? "Complete" : "Searching…"}</span>
+                  <span>
+                    {complete ? t("spider.complete") : t("spider.searching")}
+                  </span>
                   <span>{`${probesDone}/${PROBES_TOTAL}`}</span>
                 </div>
                 <div
@@ -157,7 +158,7 @@ export function SpiderDialog({
                   aria-valuemin={0}
                   aria-valuemax={PROBES_TOTAL}
                   aria-valuenow={probesDone}
-                  aria-label="Deep search progress"
+                  aria-label={t("spider.progress")}
                   className="h-2 overflow-hidden rounded-full bg-muted"
                 >
                   <div
@@ -169,9 +170,7 @@ export function SpiderDialog({
 
               {suggestions.length === 0 ? (
                 <p className="p-4 text-center text-body text-muted-foreground">
-                  {complete
-                    ? "No new terms found for this seed."
-                    : "Waiting for the first results…"}
+                  {complete ? t("spider.noTerms") : t("spider.waiting")}
                 </p>
               ) : (
                 <ul className="flex flex-col divide-y">
@@ -191,11 +190,15 @@ export function SpiderDialog({
                           <span className="numeric flex items-center gap-2 text-caption text-muted-foreground">
                             {suggestion.priority !== null ? (
                               <span>
-                                {`priority ${Math.round(suggestion.priority)}`}
+                                {t("spider.priority", {
+                                  value: Math.round(suggestion.priority),
+                                })}
                               </span>
                             ) : null}
                             <span>
-                              {`${suggestion.probes} probe${suggestion.probes === 1 ? "" : "s"}`}
+                              {t("spider.probes", {
+                                count: suggestion.probes,
+                              })}
                             </span>
                           </span>
                         </div>
@@ -208,14 +211,14 @@ export function SpiderDialog({
                           {already ? (
                             <>
                               <Check />
-                              Tracked
+                              {t("suggestions.tracked")}
                             </>
                           ) : pending ? (
                             <Loader2 className="animate-spin" />
                           ) : (
                             <>
                               <Plus />
-                              Track
+                              {t("suggestions.track")}
                             </>
                           )}
                         </Button>

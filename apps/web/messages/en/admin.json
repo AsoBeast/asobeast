@@ -1,0 +1,464 @@
+{
+  "title": "Admin",
+  "access": {
+    "needsPlanTitle": "Your workspace needs a plan to open the admin area",
+    "needsPlanBody": "The admin pages, the queue dashboard, the API docs and the metrics endpoint open only while the operator's own workspace has a plan in force. Yours has none, so each of them answers not found. On a self-hosted instance with billing on, you can also set plan on the bootstrap workspace in the database.",
+    "choosePlan": "Choose a plan",
+    "readGuide": "Read the guide"
+  },
+  "nav": {
+    "label": "Admin",
+    "overview": "Overview",
+    "conversion": "Conversion",
+    "capacity": "Capacity",
+    "workspaces": "Workspaces",
+    "users": "Users",
+    "apps": "Apps",
+    "queueDashboard": "Queue dashboard",
+    "apiDocs": "API docs"
+  },
+  "common": {
+    "workspaceCount": "{count, plural, one {# workspace} other {# workspaces}}",
+    "accountCount": "{count, plural, one {# account} other {# accounts}}",
+    "memberCount": "{count, plural, one {# member} other {# members}}",
+    "appCount": "{count, plural, one {# app} other {# apps}}",
+    "competitorCount": "{count, plural, one {# competitor} other {# competitors}}",
+    "storefrontCount": "{count, plural, one {# storefront} other {# storefronts}}",
+    "trialCount": "{count, plural, one {# trial} other {# trials}}",
+    "dayCount": "{count, plural, one {# day} other {# days}}",
+    "signUpCount": "{count, plural, one {# sign up} other {# sign ups}}",
+    "erasedWorkspaceCount": "{count, plural, one {# erased workspace} other {# erased workspaces}}",
+    "endpointCount": "{count, plural, one {# endpoint} other {# endpoints}}",
+    "attemptCount": "{count, plural, one {# attempt} other {# attempts}}",
+    "noun": "{count, plural, one {{noun, select, workspace {workspace} account {account} app {app} other {}}} other {{noun, select, workspace {workspaces} account {accounts} app {apps} other {}}}}",
+    "search": {
+      "workspace": "Search workspaces",
+      "account": "Search accounts",
+      "app": "Search apps"
+    },
+    "empty": {
+      "filtered": "No {noun} match these filters",
+      "instance": "No {noun} on this instance yet"
+    },
+    "listCount": "{shown, number} of {loaded, number} {loaded, plural, one {{noun, select, workspace {workspace} account {account} app {app} other {}}} other {{noun, select, workspace {workspaces} account {accounts} app {apps} other {}}}}",
+    "limitNote": "Showing the newest {shown, number} of {total, number} {noun}. <link>Open a workspace</link> to list all of its {noun}.",
+    "auditRead": "Each read is written to the support audit trail.",
+    "appsAuditRead": "Competitors aside. Each read is written to the support audit trail.",
+    "opensInNewTab": "(opens in a new tab)",
+    "untitledApp": "Untitled app",
+    "operator": "Operator",
+    "confirmed": "Confirmed",
+    "notConfirmed": "Not confirmed",
+    "roles": {
+      "owner": "Owner",
+      "member": "Member"
+    }
+  },
+  "header": {
+    "read": "read {time}",
+    "billingMeta": "{workspaces} · {trialing} on trial · {paying} paying · {read}",
+    "selfHostedMeta": "{workspaces} · {accounts} · {read}"
+  },
+  "overview": {
+    "group": "The instance at a glance",
+    "signups": "Sign ups",
+    "activation": "Activation",
+    "paying": "Paying",
+    "onTrial": "On trial",
+    "trialToPaid": "Trial to paid",
+    "workspaces": "Workspaces",
+    "accounts": "Accounts",
+    "points": "pts",
+    "signupsNote": "workspaces in the last {days, plural, one {# day} other {# days}}",
+    "activationValue": "{ranked} of {imported}",
+    "activationNote": "ranked within a day of import · {completed} completed setup",
+    "activationInfoLabel": "What activation means",
+    "activationSummary": "Of the apps imported in the last {days} days, how many had a position for one of their keywords within 24 hours of the import, which is the time to value the guided setup is built for.",
+    "activationGuide": "Read how activation is counted",
+    "payingCanceling": "{count} canceling at period end",
+    "payingOf": "of {total, plural, one {# workspace} other {# workspaces}}",
+    "trialsEnding": "{count, plural, one {# trial ends} other {# trials end}} within {days, plural, one {# day} other {# days}}",
+    "trialRateNote": "{paid} of {ended, plural, one {# trial} other {# trials}} ended in {days, plural, one {# day} other {# days}}",
+    "pendingDeletion": "{count} pending deletion",
+    "accountsNote": "{confirmed} confirmed · {joined} joined this week",
+    "signupsTitle": "Sign ups, last 30 days",
+    "signupsFooter": "{count, plural, one {# account} other {# accounts}} joined in the last 30 days.",
+    "of": "of {count}",
+    "chart": {
+      "tooFew": "Too few sign ups in the last 30 days to chart.",
+      "series": "Accounts",
+      "region": "Accounts created per day"
+    }
+  },
+  "conversion": {
+    "window": "Sign up window",
+    "days": "{count}d",
+    "title": "Funnel",
+    "list": "Sign up to paid",
+    "fallback": "Workspaces signed up in the last {days, plural, one {# day} other {# days}}.",
+    "columns": {
+      "step": "Step",
+      "previous": "Of the step before",
+      "workspaces": "Workspaces"
+    },
+    "median": "Median {parts}",
+    "medianToFirstApp": "{days} to a first app",
+    "medianToTrial": "{days} to a trial",
+    "medianTrialToPaid": "{days} from trial to paid",
+    "unrecorded": "Workspaces erased before {date} are not counted.",
+    "needsLook": "Needs a look",
+    "needsLookList": "Workspaces that need a look",
+    "billingFooter": "Saves still possible: trials ending within {days} days, renewals stopping and failed charges.",
+    "selfHostedFooter": "Workspaces that will leave or have lost access.",
+    "stagesTitle": "Workspaces by stage",
+    "stagesFooter": "Where each workspace stands with billing right now.",
+    "payingTitle": "Paying by plan and interval",
+    "payingFooter": "Paying workspaces by the plan they hold and how often it renews.",
+    "payingEmpty": "No workspace is paying right now.",
+    "payingPlan": "{plan} · {interval}",
+    "instanceTitle": "Instance",
+    "instanceFooter": "Tracked apps leave competitors aside; activation counts the last 30 days.",
+    "instanceList": "Instance totals",
+    "trackedApps": "Tracked apps",
+    "keywordMarkets": "Keyword markets",
+    "searchedKeywords": "Searched keywords",
+    "aiCalls": "AI calls this month",
+    "rankedWithinDay": "Ranked within a day of import",
+    "departuresTitle": "Left in the last {days, plural, one {# day} other {# days}}",
+    "departureStages": "By stage when they asked to leave: {stages}.",
+    "departureStage": "{count, plural, one {# {stage}} other {# {stage}}}",
+    "departureStageSeparator": " · ",
+    "departuresEmptyFooter": "Erased workspaces, by the reason they chose.",
+    "seeAllDepartures": "See every departure",
+    "reasonsList": "Why workspaces left",
+    "reason": "Reason",
+    "departureEmpty": "No workspace was erased in the last {days, plural, one {# day} other {# days}}.",
+    "stages": {
+      "trialing": "On trial",
+      "paying": "Paying",
+      "paymentFailed": "Payment failed",
+      "comped": "Comped",
+      "trialEnded": "Trial ended",
+      "churned": "Churned",
+      "noPlan": "No plan",
+      "selfHosted": "Self-hosted"
+    },
+    "flags": {
+      "endingSoon": "Trial ends within {days} days",
+      "canceling": "Canceling at period end",
+      "deleting": "Pending deletion",
+      "suspended": "Suspended"
+    },
+    "funnelSteps": {
+      "signedUp": "Signed up",
+      "confirmedEmail": "Confirmed email",
+      "firstApp": "Imported a first app",
+      "rankedWithinADay": "Ranked within a day",
+      "trialStarted": "Started a trial",
+      "paid": "Paid"
+    },
+    "reasons": {
+      "tooExpensive": "Too expensive",
+      "missingFeature": "Missing a needed feature",
+      "notUsing": "Not using it",
+      "switchedTool": "Switched tools",
+      "other": "Other",
+      "unanswered": "No answer"
+    },
+    "cohorts": {
+      "title": "Weekly cohorts",
+      "footer": "{count, plural, one {# sign up} other {# sign ups}} over {weeks} weeks, Monday to Sunday in UTC, each followed to today.",
+      "caption": "Sign ups by week and how far each week got",
+      "empty": "No workspace signed up in the last {weeks} weeks.",
+      "columns": {
+        "week": "Week of",
+        "signedUp": "Signed up",
+        "confirmed": "Confirmed",
+        "trial": "Trial",
+        "firstApp": "First app",
+        "paid": "Paid",
+        "stillPaying": "Still paying"
+      }
+    },
+    "departures": {
+      "title": "Departures",
+      "truncated": "The newest {shown} of {total} erased workspaces.",
+      "all": "{count, plural, one {# erased workspace} other {# erased workspaces}}, newest first, with nothing that names them.",
+      "before": "Workspaces erased before {date} are not in this list.",
+      "caption": "Erased workspaces, newest first",
+      "emptySince": "No workspace has been erased since {date}.",
+      "empty": "No workspace has been erased yet.",
+      "paidBefore": "paid before",
+      "paidPlan": "{plan} · {paidBefore}",
+      "columns": {
+        "erased": "Erased",
+        "requested": "Asked to leave",
+        "created": "Created",
+        "stage": "Stage",
+        "apps": "Apps",
+        "keywordMarkets": "Keyword markets",
+        "members": "Members",
+        "reason": "Reason"
+      }
+    }
+  },
+  "capacity": {
+    "demandTitle": "Instance demand",
+    "demandDescription": "Store requests the daily run enqueues for every workspace it visits, against the capacity of this instance. Suspended and unentitled workspaces are skipped.",
+    "allStores": "All stores",
+    "instanceMeter": "Instance daily request utilization",
+    "storeMeter": "{store} daily request utilization",
+    "usage": "{used} of {capacity} requests/day · {percent}% · {status}",
+    "requestsPerDay": "{count, plural, one {# request/day} other {# requests/day}}",
+    "consumersTitle": "Top consumers",
+    "consumersDescription": "The workspaces whose tracking costs the most requests per day.",
+    "consumersEmpty": "No workspace is tracking anything yet.",
+    "proxyTitle": "Proxy pool",
+    "proxyDescription": "Store requests leave through {provider} endpoints instead of the host address.",
+    "provider": "Provider",
+    "pool": "Pool",
+    "pending": "Pending",
+    "retired": "Retired",
+    "healthy": "{healthy} of {total} healthy",
+    "residential": "Residential fallback this month",
+    "residentialUsage": "{spend} of {cap}",
+    "rawPool": "Raw pool health",
+    "operatorOnly": "Each workspace sees only its own plan usage. Capacity is shown to the platform operator only.",
+    "alerts": {
+      "poolHealthyLow": "Few healthy endpoints remain, so store work may slow until the pool recovers.",
+      "poolBlockedRising": "Blocked responses are rising, so the stores may be refusing pool addresses.",
+      "poolSilentRising": "Silent failures are rising: responses arrive empty, which points at a block or a parser change.",
+      "residentialSpendNearCap": "Residential fallback spend is close to its monthly cap."
+    }
+  },
+  "workspaces": {
+    "caption": "Workspaces on this instance",
+    "filtersDescription": "Narrow the workspaces by billing stage and by what needs a look.",
+    "stage": "Stage",
+    "needsLook": "Needs a look",
+    "stageChip": "Stage: {stage}",
+    "workspaceChip": "Workspace: {name}",
+    "columns": {
+      "workspace": "Workspace",
+      "stage": "Stage",
+      "members": "Members",
+      "apps": "Apps",
+      "keywordMarkets": "Keyword markets",
+      "created": "Created"
+    },
+    "pills": {
+      "paymentFailed": "Payment failed",
+      "trialUntil": "Trial until {date}",
+      "canceling": "Canceling {date}",
+      "suspended": "Suspended",
+      "deletes": "Deletes {date}",
+      "requestedByOn": "Requested by {by} on {date}",
+      "askedBy": "Asked by {by}"
+    },
+    "memberLink": "{count, plural, one {# member} other {# members}} in {name}",
+    "appLink": "{count, plural, one {# app} other {# apps}} in {name}"
+  },
+  "users": {
+    "caption": "Accounts on this instance",
+    "columns": {
+      "account": "Account",
+      "role": "Role",
+      "email": "Email",
+      "workspace": "Workspace",
+      "stage": "Stage",
+      "joined": "Joined"
+    },
+    "appsTitle": "Apps in {name}"
+  },
+  "apps": {
+    "caption": "Tracked apps on this instance",
+    "store": "Store",
+    "storeChip": "Store: {store}",
+    "columns": {
+      "app": "App",
+      "store": "Store",
+      "market": "Home market",
+      "workspace": "Workspace",
+      "competitors": "Competitors",
+      "keywordMarkets": "Keyword markets",
+      "added": "Added"
+    },
+    "accountsTitle": "Accounts in {name}"
+  },
+  "plans": {
+    "free": "Free",
+    "trial": "Trial",
+    "indie": "Indie",
+    "ultimate": "Ultimate"
+  },
+  "intervals": {
+    "monthly": "monthly",
+    "yearly": "yearly",
+    "notRecorded": "interval not recorded"
+  },
+  "support": {
+    "title": "Workspace",
+    "description": "The support details of one workspace.",
+    "gone": "This workspace no longer exists.",
+    "readFailed": "Could not read this workspace.",
+    "offline": "You are offline. The details load when the connection is back.",
+    "factsTitle": "Plan and dates",
+    "stageWithPlan": "{stage} · {plan}",
+    "suspendedReason": "Suspension reason every member sees",
+    "facts": {
+      "stage": "Stage",
+      "storedPlan": "Plan stored",
+      "created": "Created",
+      "trialStarted": "Trial started",
+      "trialEnd": "Trial end",
+      "firstPaid": "First paid",
+      "subscription": "Subscription",
+      "cancelsOn": "Cancels on",
+      "periodEnds": "Period ends",
+      "suspendedSince": "Suspended since",
+      "deletesOn": "Deletes on",
+      "deletionAskedBy": "Deletion asked by"
+    },
+    "subscriptionRenews": "{status}, renews {cadence}",
+    "subscriptionBilled": "{status}, billed {cadence}",
+    "deletionAskedBy": "{by} on {date}",
+    "cadence": {
+      "month": "monthly",
+      "year": "yearly"
+    },
+    "limitsTitle": "Limits and usage",
+    "limit": "Limit",
+    "usedAllowed": "Used and allowed",
+    "allowed": "Allowed",
+    "onDemand": "On demand allowances",
+    "unlimited": "Unlimited",
+    "usage": "{used} of {limit}",
+    "usageUnlimited": "{used}, no limit",
+    "competitorUsage": "{used} in all, up to {limit} per app",
+    "competitorUsageUnlimited": "{used} in all, no limit",
+    "allowance": "{count} {window}",
+    "windows": {
+      "second": "a second",
+      "minute": "a minute",
+      "hour": "an hour",
+      "day": "a day",
+      "week": "a week",
+      "everySecond": "every {count} seconds",
+      "everyMinute": "every {count} minutes",
+      "everyHour": "every {count} hours",
+      "everyDay": "every {count} days",
+      "everyWeek": "every {count} weeks"
+    },
+    "limitLabels": {
+      "apps": "Apps",
+      "keywordMarkets": "Keyword markets",
+      "competitorsPerApp": "Competitors per app",
+      "chartFollows": "Followed charts",
+      "aiCallsPerMonth": "AI calls per month",
+      "apiRequestsPerMinute": "API requests per minute",
+      "apiWritesPerMinute": "API writes per minute",
+      "apiRequestsPerDay": "API requests per day",
+      "apiConcurrentRequests": "Concurrent API requests",
+      "mcpRequestsPerMinute": "MCP requests per minute",
+      "members": "Members",
+      "competitors": "Competitors"
+    },
+    "onDemandLabels": {
+      "refresh": "Refresh",
+      "runDaily": "Daily runs",
+      "score": "Rescores",
+      "suggestions": "Keyword suggestions",
+      "spider": "Deep searches",
+      "importApp": "App imports",
+      "addCompetitor": "Competitor adds",
+      "storeLookup": "Store lookups",
+      "chartCapture": "Chart captures"
+    },
+    "queues": {
+      "appstore": "App Store",
+      "gplay": "Google Play"
+    },
+    "actions": {
+      "list": "Listed workspaces",
+      "view": "Viewed",
+      "reconcile": "Reconciled billing",
+      "suspend": "Suspended",
+      "restore": "Restored",
+      "runDaily": "Started a daily run",
+      "replay": "Replayed a billing event"
+    },
+    "outcomes": {
+      "attempted": "In progress",
+      "succeeded": "Succeeded",
+      "failed": "Failed"
+    },
+    "access": {
+      "title": "Access log",
+      "note": "The last 20 reads and actions on this workspace, opening these details included."
+    },
+    "checks": {
+      "title": "Keyword checks, last week",
+      "empty": "No keyword checks in the last 7 days.",
+      "caption": "Keyword checks",
+      "day": "Day",
+      "checked": "Checked",
+      "notFound": "Not found",
+      "note": "Positions checked per day, and how many found the app nowhere in the results. A day without checks has no row."
+    },
+    "failedJobs": {
+      "title": "Failed store jobs",
+      "empty": "No failed store jobs.",
+      "unavailable": "The job queue did not answer, so failed jobs are not shown.",
+      "note": "The newest 20 failed App Store and Google Play jobs that name this workspace.",
+      "timeUnknown": "Time not recorded",
+      "item": "{queue} · {attempts} · {time}"
+    },
+    "actionsTitle": "Support actions",
+    "operatorWorkspace": "Your own workspace cannot be suspended.",
+    "reason": "Reason",
+    "reasonHint": "At least {min} characters. Kept in the support access log.",
+    "reasonCount": "{used} of {max}",
+    "failed": "Could not finish. Try again.",
+    "runDaily": {
+      "open": "Run daily",
+      "title": "Start a daily run for {name}?",
+      "body": "Queues the app refreshes, keyword checks, reviews and category ranks of {name} that have not run yet today, and queues again the ones that failed. A job of today the queue still holds is skipped, so work that already ran is usually not repeated.",
+      "confirm": "Start daily run",
+      "pending": "Starting…",
+      "queued": "Daily run queued for {name}.",
+      "nothingQueued": "Nothing new to queue for {name} today."
+    },
+    "reconcile": {
+      "open": "Reconcile billing",
+      "title": "Reconcile {name} with Stripe?",
+      "body": "Reads the subscription of {name} from Stripe and corrects the plan, trial and renewal stored here when they differ. If Stripe has no subscription for it, {name} moves to Free, and a trial Stripe should not have started is cancelled. Nothing is charged.",
+      "confirm": "Reconcile billing",
+      "pending": "Reconciling…",
+      "done": "{name} is reconciled with Stripe."
+    },
+    "suspend": {
+      "open": "Suspend",
+      "title": "Suspend {name}?",
+      "body": "Every write and on demand action in {name} is refused until you restore it. Every member of {name} sees this reason on every page, so write it for them.",
+      "confirm": "Suspend workspace",
+      "pending": "Suspending…",
+      "done": "{name} is suspended."
+    },
+    "restore": {
+      "open": "Restore",
+      "title": "Restore {name}?",
+      "body": "{name} may write again, and the suspension notice disappears for its members. The reason is kept in the access log.",
+      "confirm": "Restore workspace",
+      "pending": "Restoring…",
+      "done": "{name} may write again."
+    }
+  },
+  "errors": {
+    "overview": "Admin overview could not be loaded",
+    "apps": "Tracked apps could not be loaded",
+    "capacity": "Instance capacity could not be loaded",
+    "conversion": "Conversion could not be loaded",
+    "users": "Accounts could not be loaded",
+    "workspaces": "Workspaces could not be loaded"
+  }
+}

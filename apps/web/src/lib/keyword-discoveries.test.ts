@@ -4,6 +4,7 @@ import type {
   KeywordDiscoveryList,
 } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
+import { translationContext } from "@/test/translation-context";
 import {
   discoveriesHref,
   discoveriesLine,
@@ -64,6 +65,7 @@ const list = (
 });
 
 const NOW = new Date("2026-11-06T15:00:00.000Z");
+const zh = translationContext("zh-CN", "keywordInspector").translator;
 
 describe("keywordDiscoveriesPollInterval", () => {
   it("polls every fifteen seconds while checks are pending", () => {
@@ -154,6 +156,13 @@ describe("discoveryTabLabel", () => {
     );
     expect(discoveryTabLabel(undefined)).toBe("Discovered");
   });
+
+  it("localizes the tab and its count in Simplified Chinese", () => {
+    expect(
+      discoveryTabLabel({ all: 153, ranked: 28, opportunity: 4 }, zh),
+    ).toBe("已发现 153");
+    expect(discoveryTabLabel(undefined, zh)).toBe("已发现");
+  });
 });
 
 describe("discoverySourceLabel", () => {
@@ -168,6 +177,15 @@ describe("discoverySourceLabel", () => {
     ["portfolio", "APP_STORE", "Your other apps"],
   ] as const)("labels %s on %s as %s", (source, store, label) => {
     expect(discoverySourceLabel(source, store)).toBe(label);
+  });
+
+  it("localizes discovery sources without changing the store or source id", () => {
+    expect(discoverySourceLabel("description", "GOOGLE_PLAY", zh)).toBe(
+      "您的简短描述",
+    );
+    expect(discoverySourceLabel("popularity", "APP_STORE", zh)).toBe(
+      "Apple 热度",
+    );
   });
 });
 
@@ -212,6 +230,15 @@ describe("discoveryFooter", () => {
       "Checked 3 days ago. 1 check a week, 1 used; the next run is on Monday.",
     );
   });
+
+  it("localizes the check age, weekly budget and weekday in Chinese", () => {
+    expect(discoveryFooter(CHECKS, NOW, zh)).toBe(
+      "3 天前检查。每周 40 次检查，已使用 12 次；下次运行在星期一。",
+    );
+    expect(
+      discoveryFooter({ ...CHECKS, checkedAt: null, nextRunAt: null }, NOW, zh),
+    ).toBe("尚未检查。每周 40 次检查，已使用 12 次。每周运行已关闭。");
+  });
 });
 
 describe("pendingChecksText", () => {
@@ -220,6 +247,11 @@ describe("pendingChecksText", () => {
     expect(pendingChecksText(1)).toBe("1 check pending");
     expect(pendingChecksText(3)).toBe("3 checks pending");
   });
+
+  it("counts pending checks in Chinese", () => {
+    expect(pendingChecksText(1, zh)).toBe("1 次检查待处理");
+    expect(pendingChecksText(3, zh)).toBe("3 次检查待处理");
+  });
 });
 
 describe("unfitNotice", () => {
@@ -227,6 +259,11 @@ describe("unfitNotice", () => {
     expect(unfitNotice(0)).toBe("");
     expect(unfitNotice(1)).toBe("1 did not fit your plan");
     expect(unfitNotice(12)).toBe("12 did not fit your plan");
+  });
+
+  it("counts what did not fit in Chinese", () => {
+    expect(unfitNotice(1, zh)).toBe("1 个不符合您的套餐");
+    expect(unfitNotice(12, zh)).toBe("12 个不符合您的套餐");
   });
 });
 
@@ -246,6 +283,18 @@ describe("trackedToast", () => {
       "Nothing new to track",
     );
   });
+
+  it("localizes tracked and skipped counts in Chinese", () => {
+    expect(trackedToast({ tracked: 1, skipped: 0 }, zh)).toBe(
+      "正在跟踪 1 个关键词",
+    );
+    expect(trackedToast({ tracked: 16, skipped: 12 }, zh)).toBe(
+      "正在跟踪 16 个关键词。12 个不符合您的套餐。",
+    );
+    expect(trackedToast({ tracked: 0, skipped: 12 }, zh)).toBe(
+      "没有关键词符合您的套餐",
+    );
+  });
 });
 
 describe("refreshedToast", () => {
@@ -259,6 +308,15 @@ describe("refreshedToast", () => {
     );
     expect(refreshedToast({ queued: 0, resolved: 0 })).toBe(
       "Nothing new to check this week",
+    );
+  });
+
+  it("localizes refresh outcomes in Chinese", () => {
+    expect(refreshedToast({ queued: 1, resolved: 3 }, zh)).toBe(
+      "已排队 1 次检查",
+    );
+    expect(refreshedToast({ queued: 0, resolved: 2 }, zh)).toBe(
+      "本周没有可排队的检查。列表已根据其他搜索结果刷新。",
     );
   });
 });
@@ -282,6 +340,16 @@ describe("discoveriesLine", () => {
   it("says nothing without a discovery", () => {
     expect(discoveriesLine({ open: 0, ranked: 0 })).toBeNull();
     expect(discoveriesLine(undefined)).toBeNull();
+  });
+
+  it("localizes the dashboard and overview discovery line in Chinese", () => {
+    expect(discoveriesLine({ open: 153, ranked: 28 }, zh)).toBe(
+      "发现 153 个关键词，其中 28 个已有排名",
+    );
+    expect(discoveriesLine({ open: 1, ranked: 1 }, zh)).toBe(
+      "发现 1 个关键词，其中 1 个已有排名",
+    );
+    expect(discoveriesLine({ open: 5, ranked: 0 }, zh)).toBe("发现 5 个关键词");
   });
 });
 

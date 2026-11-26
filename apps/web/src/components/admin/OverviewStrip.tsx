@@ -7,12 +7,14 @@ import {
   type AdminConversion,
   type AdminOverview,
 } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { TrendChip } from "@/components/ui/delta-chip";
 import { InfoTip } from "@/components/ui/info-tip";
 import { MetricStrip, StatTile } from "@/components/ui/stat-tile";
 import { formatShare, rateChange, trialRate } from "@/lib/admin-conversion";
 import { countOf } from "@/lib/admin-stages";
-import { formatNumber, pluralize } from "@/lib/format";
+import { formatNumberInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 
 const ACTIVATION_GUIDE =
   "https://docs.asobeast.com/security/admin-surfaces#activation";
@@ -21,34 +23,44 @@ const signedUp = (conversion: AdminConversion) =>
   countOf(conversion.funnel, "signed-up");
 
 function SignupsTile({ conversion }: { conversion: AdminConversion }) {
+  const t = useTranslations("admin");
+  const locale = useAppLocale();
   return (
     <StatTile
-      label="Sign ups"
-      value={formatNumber(signedUp(conversion))}
-      note={`workspaces in the last ${pluralize(conversion.days, "day")}`}
+      label={t("overview.signups")}
+      value={formatNumberInLocale(signedUp(conversion), locale)}
+      note={t("overview.signupsNote", { days: conversion.days })}
     />
   );
 }
 
 function ActivationTile({ activation }: { activation?: AdminActivation }) {
+  const t = useTranslations("admin");
   return (
     <StatTile
-      label="Activation"
+      label={t("overview.activation")}
       value={
         activation
-          ? `${formatNumber(activation.rankedWithinADay)} of ${formatNumber(activation.importedLast30Days)}`
+          ? t("overview.activationValue", {
+              ranked: activation.rankedWithinADay,
+              imported: activation.importedLast30Days,
+            })
           : "—"
       }
       note={
         activation
-          ? `ranked within a day of import · ${formatNumber(activation.completedSetup)} completed setup`
+          ? t("overview.activationNote", {
+              completed: activation.completedSetup,
+            })
           : undefined
       }
       info={
         <InfoTip
-          label="What activation means"
-          title="Activation"
-          summary={`Of the apps imported in the last ${ACTIVATION_WINDOW_DAYS} days, how many had a position for one of their keywords within 24 hours of the import, which is the time to value the guided setup is built for.`}
+          label={t("overview.activationInfoLabel")}
+          title={t("overview.activation")}
+          summary={t("overview.activationSummary", {
+            days: ACTIVATION_WINDOW_DAYS,
+          })}
         >
           <a
             href={ACTIVATION_GUIDE}
@@ -56,7 +68,7 @@ function ActivationTile({ activation }: { activation?: AdminActivation }) {
             rel="noreferrer"
             className="font-medium text-foreground link-underline"
           >
-            Read how activation is counted
+            {t("overview.activationGuide")}
           </a>
         </InfoTip>
       }
@@ -71,6 +83,8 @@ function BillingTiles({
   overview: AdminOverview;
   conversion: AdminConversion;
 }) {
+  const t = useTranslations("admin");
+  const locale = useAppLocale();
   const canceling = overview.workspaces.canceling ?? 0;
   const trials = conversion.trials ?? { inProgress: 0, endingSoon: 0 };
   const rates = conversion.trialToPaid;
@@ -80,30 +94,44 @@ function BillingTiles({
   return (
     <>
       <StatTile
-        label="Paying"
-        value={formatNumber(countOf(overview.workspaces.byStage, "paying"))}
+        label={t("overview.paying")}
+        value={formatNumberInLocale(
+          countOf(overview.workspaces.byStage, "paying"),
+          locale,
+        )}
         note={
           canceling > 0
-            ? `${formatNumber(canceling)} canceling at period end`
-            : `of ${pluralize(overview.workspaces.total, "workspace")}`
+            ? t("overview.payingCanceling", { count: canceling })
+            : t("overview.payingOf", { total: overview.workspaces.total })
         }
       />
       <StatTile
-        label="On trial"
-        value={formatNumber(trials.inProgress)}
-        note={`${formatNumber(trials.endingSoon)} end within ${TRIAL_ENDING_SOON_DAYS} days`}
+        label={t("overview.onTrial")}
+        value={formatNumberInLocale(trials.inProgress, locale)}
+        note={t("overview.trialsEnding", {
+          count: trials.endingSoon,
+          days: TRIAL_ENDING_SOON_DAYS,
+        })}
       />
       <StatTile
-        label="Trial to paid"
-        value={rate === null ? "—" : formatShare(rate)}
+        label={t("overview.trialToPaid")}
+        value={rate === null ? "—" : formatShare(rate, locale)}
         delta={
           change === null ? undefined : (
-            <TrendChip label="pts" value={change} form="pill" />
+            <TrendChip
+              label={t("overview.points")}
+              value={change}
+              form="pill"
+            />
           )
         }
         note={
           rates
-            ? `${formatNumber(rates.current.paid)} of ${pluralize(rates.current.ended, "trial")} ended in ${pluralize(conversion.days, "day")}`
+            ? t("overview.trialRateNote", {
+                paid: rates.current.paid,
+                ended: rates.current.ended,
+                days: conversion.days,
+              })
             : undefined
         }
       />
@@ -119,18 +147,25 @@ function SelfHostedTiles({
   overview: AdminOverview;
   conversion: AdminConversion;
 }) {
+  const t = useTranslations("admin");
+  const locale = useAppLocale();
   const { workspaces, users } = overview;
   return (
     <>
       <StatTile
-        label="Workspaces"
-        value={formatNumber(workspaces.total)}
-        note={`${formatNumber(workspaces.pendingDeletion)} pending deletion`}
+        label={t("overview.workspaces")}
+        value={formatNumberInLocale(workspaces.total, locale)}
+        note={t("overview.pendingDeletion", {
+          count: workspaces.pendingDeletion,
+        })}
       />
       <StatTile
-        label="Accounts"
-        value={formatNumber(users.total)}
-        note={`${formatNumber(users.emailVerified)} confirmed · ${formatNumber(users.joinedLast7Days)} joined this week`}
+        label={t("overview.accounts")}
+        value={formatNumberInLocale(users.total, locale)}
+        note={t("overview.accountsNote", {
+          confirmed: users.emailVerified,
+          joined: users.joinedLast7Days,
+        })}
       />
       <SignupsTile conversion={conversion} />
       <ActivationTile activation={overview.activation} />
@@ -145,8 +180,9 @@ export function OverviewStrip({
   overview: AdminOverview;
   conversion: AdminConversion;
 }) {
+  const t = useTranslations("admin");
   return (
-    <MetricStrip columns={4} label="The instance at a glance">
+    <MetricStrip columns={4} label={t("overview.group")}>
       {overview.billing ? (
         <BillingTiles overview={overview} conversion={conversion} />
       ) : (

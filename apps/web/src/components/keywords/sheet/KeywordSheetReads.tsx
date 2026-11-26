@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import {
   SERP_DEPTH,
   type SerpSnapshot,
@@ -13,7 +14,8 @@ import {
 } from "@/components/layout/InlineQueryError";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatDate } from "@/lib/format";
+import { formatDateInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import {
   appDetailOptions,
   keywordBreakdownOptions,
@@ -39,6 +41,7 @@ function CapturedResults({
   keyword: TrackedKeywordItem;
   onOpenAll: () => void;
 }) {
+  const t = useTranslations("keywordInspector");
   const comparedTo = snapshot.comparedTo ?? null;
   const topTen = snapshot.entries.filter(
     (entry) => entry.position <= SERP_DEPTH,
@@ -56,7 +59,7 @@ function CapturedResults({
             />
             {topTen.length > 0 ? (
               <SerpList
-                heading="Top 10"
+                heading={t("serp.top10")}
                 entries={topTen}
                 viewer={viewer}
                 comparedTo={comparedTo}
@@ -72,7 +75,7 @@ function CapturedResults({
           data-serp-keyword={keyword.keywordId}
           onClick={onOpenAll}
         >
-          All results and earlier days
+          {t("keywordSheet.results.all")}
         </Button>
       </div>
     </>
@@ -90,14 +93,22 @@ export function KeywordSheetResults({
 }) {
   const serp = useQuery(serpOptions(keyword.keywordId, null));
   const { data: app } = useQuery(appDetailOptions(appId));
+  const t = useTranslations("keywordInspector");
+  const locale = useAppLocale();
   const viewer = { appId, storeAppId: app?.storeAppId };
   const snapshot = serp.data;
   const captured = isCaptured(snapshot) ? snapshot : null;
 
   return (
     <SheetSection
-      title="Search results"
-      aside={captured ? `Captured ${formatDate(captured.date)}` : undefined}
+      title={t("keywordSheet.results.title")}
+      aside={
+        captured
+          ? t("keywordSheet.results.captured", {
+              date: formatDateInLocale(captured.date, locale),
+            })
+          : undefined
+      }
     >
       <ResultsBody
         read={serp}
@@ -123,10 +134,11 @@ function ResultsBody({
   keyword: TrackedKeywordItem;
   onOpenAll: () => void;
 }) {
+  const t = useTranslations("keywordInspector");
   if (failedRead(read)) {
     return (
       <InlineQueryError
-        message="The search results could not be loaded."
+        message={t("keywordSheet.results.loadFailed")}
         read={read}
       />
     );
@@ -134,7 +146,7 @@ function ResultsBody({
   if (!read.data) {
     return (
       <div role="status" className="-mx-4">
-        <span className="sr-only">Loading search results</span>
+        <span className="sr-only">{t("keywordSheet.results.loading")}</span>
         <SerpSkeleton />
       </div>
     );
@@ -164,14 +176,15 @@ export function KeywordSheetListing({
   keywordId: string;
 }) {
   const read = useQuery(keywordBreakdownOptions(appId, keywordId));
+  const t = useTranslations("keywordInspector");
   const own = read.data?.apps.find((app) => app.isYou);
   if (read.data && !own) return null;
 
   return (
-    <SheetSection title="In your listing">
+    <SheetSection title={t("keywordSheet.listing.title")}>
       {failedRead(read) ? (
         <InlineQueryError
-          message="Your listing fields could not be loaded."
+          message={t("keywordSheet.listing.loadFailed")}
           read={read}
         />
       ) : null}

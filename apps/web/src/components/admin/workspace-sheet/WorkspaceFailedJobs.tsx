@@ -1,17 +1,22 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import type { SupportFailedJob } from "@asobeast/shared";
 import { SheetSection } from "@/components/layout/SheetSection";
 import { queueLabel } from "@/lib/admin-support";
-import { formatDateTime, pluralize } from "@/lib/format";
+import { formatDateTimeInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
+import type { Locale } from "@/lib/locale";
 import { SectionEmpty, SectionNote } from "./SectionNote";
 
-function failedWhen(job: SupportFailedJob): string {
-  return job.failedAt ? formatDateTime(job.failedAt) : "Time not recorded";
-}
-
-function emptyNote(unavailable: boolean): string {
-  return unavailable
-    ? "The job queue did not answer, so failed jobs are not shown."
-    : "No failed store jobs.";
+function failedWhen(
+  job: SupportFailedJob,
+  t: ReturnType<typeof useTranslations>,
+  locale: Locale,
+): string {
+  return job.failedAt
+    ? formatDateTimeInLocale(job.failedAt, locale)
+    : t("support.failedJobs.timeUnknown");
 }
 
 export function WorkspaceFailedJobs({
@@ -21,13 +26,21 @@ export function WorkspaceFailedJobs({
   jobs: SupportFailedJob[];
   unavailable: boolean;
 }) {
+  const t = useTranslations("admin");
+  const locale = useAppLocale();
   return (
-    <SheetSection title="Failed store jobs">
+    <SheetSection title={t("support.failedJobs.title")}>
       {jobs.length === 0 ? (
-        <SectionEmpty>{emptyNote(unavailable)}</SectionEmpty>
+        <SectionEmpty>
+          {t(
+            unavailable
+              ? "support.failedJobs.unavailable"
+              : "support.failedJobs.empty",
+          )}
+        </SectionEmpty>
       ) : (
         <ul
-          aria-label="Failed store jobs"
+          aria-label={t("support.failedJobs.title")}
           className="flex flex-col divide-y divide-border-subtle"
         >
           {jobs.map((job) => (
@@ -40,7 +53,13 @@ export function WorkspaceFailedJobs({
                   {job.name}
                 </span>
                 <span className="text-muted-foreground">
-                  {`${queueLabel(job.queue)} · ${pluralize(job.attempts, "attempt")} · ${failedWhen(job)}`}
+                  {t("support.failedJobs.item", {
+                    queue: queueLabel(job.queue, t),
+                    attempts: t("common.attemptCount", {
+                      count: job.attempts,
+                    }),
+                    time: failedWhen(job, t, locale),
+                  })}
                 </span>
               </div>
               <p className="text-caption wrap-anywhere text-muted-foreground">
@@ -50,10 +69,7 @@ export function WorkspaceFailedJobs({
           ))}
         </ul>
       )}
-      <SectionNote>
-        The newest 20 failed App Store and Google Play jobs that name this
-        workspace.
-      </SectionNote>
+      <SectionNote>{t("support.failedJobs.note")}</SectionNote>
     </SheetSection>
   );
 }

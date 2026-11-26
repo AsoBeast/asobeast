@@ -1,6 +1,7 @@
 "use client";
 
 import type { Ref } from "react";
+import { useTranslations } from "next-intl";
 import { CartesianGrid, Scatter, ScatterChart, XAxis, YAxis } from "recharts";
 import {
   CHART_HEIGHT,
@@ -29,31 +30,32 @@ export function KeywordMapChart({
   onZone: (zone: KeywordZone) => void;
   chartRef?: Ref<HTMLDivElement>;
 }) {
+  const t = useTranslations("keywordInspector");
   return (
     <ChartContainer
       ref={chartRef}
       config={{}}
       role="region"
-      aria-label="Keyword opportunity map"
+      aria-label={t("map.chart.aria")}
       className={`${CHART_HEIGHT.hero} w-full`}
     >
       <ScatterChart
         accessibilityLayer
         role="group"
         tabIndex={-1}
-        aria-label="Keywords by difficulty and popularity"
+        aria-label={t("map.chart.group")}
         aria-describedby={describedBy}
         margin={CHART_MARGIN}
       >
-        {zoneAreas({ thresholds, selected: zone, onZone })}
+        {zoneAreas({ thresholds, selected: zone, onZone, t })}
         <CartesianGrid {...GRID_PROPS} />
         <XAxis
           {...SCORE_AXIS_PROPS}
           dataKey="difficulty"
-          name="Difficulty"
+          name={t("map.chart.difficulty")}
           height={44}
           label={{
-            value: "Difficulty",
+            value: t("map.chart.difficulty"),
             position: "insideBottom",
             fill: "var(--muted-foreground)",
             fontSize: 11,
@@ -62,17 +64,17 @@ export function KeywordMapChart({
         <YAxis
           {...SCORE_AXIS_PROPS}
           dataKey="popularity"
-          name="Popularity"
+          name={t("map.chart.popularity")}
           width={48}
           label={{
-            value: "Popularity",
+            value: t("map.chart.popularity"),
             angle: -90,
             position: "insideLeft",
             fill: "var(--muted-foreground)",
             fontSize: 11,
           }}
         />
-        {thresholdLines(thresholds)}
+        {thresholdLines(thresholds, t)}
         <Scatter data={points} shape={MapDotShape} isAnimationActive={false} />
       </ScatterChart>
     </ChartContainer>

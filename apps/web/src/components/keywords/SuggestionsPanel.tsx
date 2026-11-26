@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   useMutation,
   useMutationState,
@@ -40,7 +41,7 @@ import {
 } from "./TrackSelectedSuggestions";
 import { useSuggestionTicks } from "./use-suggestion-ticks";
 import { selectionScope } from "./suggestion-selection";
-import { STRATEGIES } from "./suggestion-strategies";
+import { strategyOptions } from "./suggestion-strategies";
 
 export function SuggestionsPanel({
   id,
@@ -51,6 +52,7 @@ export function SuggestionsPanel({
   country: string;
   store: Store;
 }) {
+  const t = useTranslations("keywords");
   const queryClient = useQueryClient();
   const [strategy, setStrategy] = useQueryState(
     "strategy",
@@ -77,13 +79,13 @@ export function SuggestionsPanel({
     mutationFn: (text: string) => addKeywords(id, [text], country),
     onSuccess: (_data, text) => {
       invalidateKeywordMutation(queryClient, id);
-      toast.success(`Tracking ${text}`);
+      toast.success(t("suggestions.trackingOne", { keyword: text }));
     },
     onError: (error, text) =>
       toast.error(
         error instanceof ApiError
           ? error.envelope.message
-          : `Could not track ${text}`,
+          : t("suggestions.trackOneFailed", { keyword: text }),
       ),
   });
   const trackKeyOf = useCallback(
@@ -97,6 +99,7 @@ export function SuggestionsPanel({
   }).filter((text): text is string => typeof text === "string");
 
   const listState = suggestionListState(suggestions);
+  const strategies = strategyOptions(t);
   const scope = selectionScope(country, strategy);
   const { ticked, toggle, untick } = useSuggestionTicks(
     scope,
@@ -118,7 +121,7 @@ export function SuggestionsPanel({
               aria-expanded={open}
               className={SECTION_TOGGLE}
             >
-              Suggestions
+              {t("suggestions.title")}
               <ChevronDown
                 aria-hidden
                 className={cn(SECTION_CHEVRON, !open && "-rotate-90")}
@@ -131,8 +134,7 @@ export function SuggestionsPanel({
       {open ? (
         <CardContent className="flex flex-col gap-4">
           <p className="text-body text-muted-foreground">
-            Phrases from your listing, your competitors, your reviews and store
-            search that you do not track yet.
+            {t("suggestions.description")}
           </p>
           <Tabs
             value={strategy}
@@ -141,7 +143,7 @@ export function SuggestionsPanel({
             }
           >
             <TabsList scrollable>
-              {STRATEGIES.map((item) => (
+              {strategies.map((item) => (
                 <TabsOption key={item.value} value={item.value}>
                   {item.label}
                 </TabsOption>
@@ -153,19 +155,23 @@ export function SuggestionsPanel({
             <p className="text-caption text-muted-foreground">
               <span>
                 {
-                  STRATEGIES.find((item) => item.value === strategy)
+                  strategies.find((item) => item.value === strategy)
                     ?.description
                 }
               </span>
               {liveLookup ? (
-                <span>{`. Runs a live ${storeLabel(store)} lookup, so it can take a few seconds.`}</span>
+                <span>
+                  {t("suggestions.liveLookup", {
+                    store: storeLabel(store),
+                  })}
+                </span>
               ) : null}
             </p>
             <div className="flex flex-wrap gap-2">
               <SpiderDialog appId={id} country={country}>
                 <Button variant="outline" size="sm">
                   <Search />
-                  Deep search
+                  {t("suggestions.deepSearch")}
                 </Button>
               </SpiderDialog>
               <TrackSelectedButton

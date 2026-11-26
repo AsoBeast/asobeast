@@ -1,6 +1,7 @@
 "use client";
 
 import { useTheme } from "next-themes";
+import { useTranslations } from "next-intl";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 import {
   CircleCheckIcon,
@@ -34,12 +35,14 @@ const ACTION_BUTTON =
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme();
+  const t = useTranslations("ui");
 
   return (
     <Sonner
       theme={resolveToasterTheme(theme)}
       className={`toaster group ${ABOVE_CHECKLIST_PILL}`}
       closeButton
+      containerAriaLabel={t("notifications")}
       icons={{
         success: <CircleCheckIcon className="size-4 text-success" />,
         info: <InfoIcon className="size-4 text-muted-foreground" />,
@@ -51,7 +54,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }}
       style={toasterStyle}
       toastOptions={{
-        closeButtonAriaLabel: "Dismiss",
+        closeButtonAriaLabel: t("dismiss"),
         classNames: {
           toast: TOAST,
           title: "font-medium! text-popover-foreground!",

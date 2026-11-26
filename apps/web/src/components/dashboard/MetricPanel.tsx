@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useDeferredValue, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryStates } from "nuqs";
 import { X } from "lucide-react";
@@ -13,6 +14,7 @@ import { activeDays, activityRows } from "@/components/actions/activity-chart";
 import { ACTION_COLORS, MOVEMENT_COLORS } from "@/components/charts/theme";
 import { Button } from "@/components/ui/button";
 import { storeLabel } from "@/lib/format";
+import type { MessageTranslator } from "@/i18n/translator";
 import {
   actionActivityOptions,
   portfolioHistoryOptions,
@@ -50,22 +52,31 @@ import { useDashboardRange, useDashboardScope } from "./use-range-history";
 
 type HistoryMetric = Exclude<DashboardMetric, "actions">;
 
-const VISIBILITY: TrendSubject = {
-  label: "Visibility",
-  region: "Visibility",
+const visibilitySubject = (t: MessageTranslator): TrendSubject => ({
+  label: t("charts.visibilityLabel"),
+  region: t("charts.visibilityRegion"),
   counted: false,
-};
+});
 
-const TOP_TEN: TrendSubject = {
-  label: "In the top 10",
-  region: "Keywords in the top 10",
+const topTenSubject = (t: MessageTranslator): TrendSubject => ({
+  label: t("charts.top10Label"),
+  region: t("charts.top10Region"),
   counted: true,
-};
+});
 
-const EVERY_APP = " across your apps";
+const movementSubject = (t: MessageTranslator): DivergingSubject => ({
+  region: t("charts.movementRegion"),
+  waiting: t("charts.movementWaiting"),
+  up: { label: t("charts.climbed"), color: MOVEMENT_COLORS.climbed },
+  down: { label: t("charts.fell"), color: MOVEMENT_COLORS.fell },
+});
 
-const MOVEMENT_NOTE =
-  "A keyword that moves on several days counts on each. The tile compares the first and the last day.";
+const actionsSubject = (t: MessageTranslator): DivergingSubject => ({
+  region: t("charts.actionsRegion"),
+  waiting: t("charts.actionsWaiting"),
+  up: { label: t("charts.opened"), color: ACTION_COLORS.opened },
+  down: { label: t("charts.closed"), color: ACTION_COLORS.closed },
+});
 
 function Frame({
   title,
@@ -99,20 +110,6 @@ function Frame({
   );
 }
 
-const MOVEMENT: DivergingSubject = {
-  region: "Keywords that climbed and fell each day",
-  waiting: "Daily movement appears after a few daily runs.",
-  up: { label: "Climbed", color: MOVEMENT_COLORS.climbed },
-  down: { label: "Fell", color: MOVEMENT_COLORS.fell },
-};
-
-const ACTIONS: DivergingSubject = {
-  region: "Actions opened and closed each day",
-  waiting: "The chart fills in as actions open and close.",
-  up: { label: "Opened", color: ACTION_COLORS.opened },
-  down: { label: "Closed", color: ACTION_COLORS.closed },
-};
-
 const actionPairs = (activity: ActionActivity): DailyPair[] =>
   activityRows(activity).map((row) => ({
     date: row.date,
@@ -120,14 +117,35 @@ const actionPairs = (activity: ActionActivity): DailyPair[] =>
     down: row.closedByYou + row.resolved,
   }));
 
+const scopedTitle = (
+  t: MessageTranslator,
+  region: string,
+  name: string | null,
+): string =>
+  name === null
+    ? t("charts.seriesTitleAll", { region })
+    : t("charts.seriesTitleScope", { region, name });
+
+const scopedRegion = (
+  t: MessageTranslator,
+  region: string,
+  name: string | null,
+  days: number,
+): string =>
+  name === null
+    ? t("charts.seriesRegionAll", { region, days })
+    : t("charts.seriesRegionScope", { region, name, days });
+
 function useScopeName(scope: PortfolioHistoryScope): string | null {
+  const t = useTranslations("dashboard");
   const { data: portfolio } = useSuspenseQuery(portfolioOptions);
   if (scope.store) return storeLabel(scope.store);
   const app = portfolio.apps.find((each) => each.id === scope.appId);
-  return app ? appLabel(app, portfolio.apps) : null;
+  return app ? appLabel(app, portfolio.apps, t) : null;
 }
 
 function ScopeChip({ scope }: { scope: PortfolioHistoryScope }) {
+  const t = useTranslations("dashboard");
   const [, setBreakdown] = useQueryStates(dashboardBreakdownParsers);
   const name = useScopeName(scope);
   const id = scopeId(scope);
@@ -136,7 +154,7 @@ function ScopeChip({ scope }: { scope: PortfolioHistoryScope }) {
     <Button
       variant="outline"
       size="xs"
-      aria-label={`${name}, show every app`}
+      aria-label={t("charts.showEveryApp", { name })}
       onClick={() => {
         focusScopeSurvivor(id);
         void setBreakdown({ scope: null });
@@ -182,6 +200,7 @@ function HistoryPanel({
   days: PortfolioHistoryDays;
   scope: PortfolioHistoryScope;
 }) {
+  const t = useTranslations("dashboard");
   const { data: history } = useSuspenseQuery(
     portfolioHistoryOptions(days, scope),
   );
@@ -199,17 +218,15 @@ function HistoryPanel({
       );
     };
   const named = useScopeName(scope);
-  const everywhere = named === null ? EVERY_APP : "";
-  const reach = named === null ? EVERY_APP : ` of ${named}`;
   const chip = <ScopeChip scope={scope} />;
 
   if (metric === "moved") {
     return (
       <DivergingPanel
         trend={divergingTrend(movementPairs(history), days)}
-        subject={MOVEMENT}
+        subject={movementSubject(t)}
         scope={scope}
-        note={MOVEMENT_NOTE}
+        note={t("charts.movementNote")}
         notes={noted("moved")}
       />
     );
@@ -217,9 +234,10 @@ function HistoryPanel({
 
   if (metric === "top10" && history.bands) {
     const markers = markedDays(history, history.bands);
+    const rankLabel = t("charts.rankLabel");
     return (
       <Frame
-        title={`Keywords by rank${everywhere}`}
+        title={scopedTitle(t, rankLabel, named)}
         scoped={chip}
         legend={
           <BandsLegend points={history.bands} marked={markers.length > 0} />
@@ -227,7 +245,7 @@ function HistoryPanel({
       >
         <PortfolioBandsChart
           points={history.bands}
-          label={`Keywords by rank${reach} over the last ${days} days`}
+          label={scopedRegion(t, rankLabel, named, days)}
           markers={markers}
           notes={noted("top10")}
         />
@@ -235,18 +253,21 @@ function HistoryPanel({
     );
   }
 
-  const subject = metric === "top10" ? TOP_TEN : VISIBILITY;
+  const subject = metric === "top10" ? topTenSubject(t) : visibilitySubject(t);
   const trend = historyTrend(history, metric, unfinishedSince(run));
   const shown = markedDays(history, trend.rows);
   return (
     <Frame
-      title={`${subject.region}${everywhere}`}
+      title={scopedTitle(t, subject.region, named)}
       scoped={chip}
       legend={<TrendLegend trend={trend} marked={shown.length > 0} />}
     >
       <PortfolioTrendChart
         trend={trend}
-        subject={{ ...subject, region: `${subject.region}${reach}` }}
+        subject={{
+          ...subject,
+          region: scopedRegion(t, subject.region, named, days),
+        }}
         markers={shown}
         notes={noted(metric)}
       />
@@ -261,13 +282,14 @@ function ActionsPanel({
   days: PortfolioHistoryDays;
   scope: PortfolioHistoryScope;
 }) {
+  const t = useTranslations("dashboard");
   const { data: activity } = useSuspenseQuery(
     actionActivityOptions({ days, ...scope }),
   );
   return (
     <DivergingPanel
       trend={divergingTrend(actionPairs(activity), days, activeDays(activity))}
-      subject={ACTIONS}
+      subject={actionsSubject(t)}
       scope={scope}
     />
   );

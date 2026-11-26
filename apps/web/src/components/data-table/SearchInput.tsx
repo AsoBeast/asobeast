@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { useTranslations } from "next-intl";
 import { Search, X } from "lucide-react";
 import { debounce, type Options } from "nuqs";
 import {
@@ -25,6 +26,7 @@ export function SearchInput({
   className?: string;
 }) {
   const input = useRef<HTMLInputElement>(null);
+  const t = useTranslations("ui");
   const search = (next: string) =>
     onSearch(next, {
       limitUrlUpdates: next === "" ? undefined : debounce(SEARCH_DEBOUNCE_MS),
@@ -46,7 +48,8 @@ export function SearchInput({
         <InputGroupAddon align="inline-end">
           <InputGroupButton
             size="icon-xs"
-            aria-label="Clear search"
+            data-action="clear-search"
+            aria-label={t("clearSearch")}
             onClick={() => {
               search("");
               input.current?.focus();

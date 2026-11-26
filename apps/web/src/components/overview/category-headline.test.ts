@@ -198,13 +198,17 @@ describe("notInChartLabel", () => {
         genreName: "Productivity",
         depth: 100,
       }),
-    ).toBe("Not in top 100 in Productivity");
+    ).toEqual({
+      key: "charts.notInChart",
+      values: { depth: 100, genre: "Productivity" },
+    });
   });
 
   it("keeps the old depth for a series captured before depth was recorded", () => {
-    expect(notInChartLabel(series("free", "6014", [null]))).toBe(
-      "Not in top 200 in Games",
-    );
+    expect(notInChartLabel(series("free", "6014", [null]))).toEqual({
+      key: "charts.notInChart",
+      values: { depth: 200, genre: "Games" },
+    });
   });
 });
 

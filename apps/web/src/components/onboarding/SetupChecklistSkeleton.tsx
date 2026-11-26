@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { PANEL_HEADER } from "@/components/layout/panel-classes";
 import {
   Card,
@@ -44,9 +45,14 @@ function StepSkeleton() {
   );
 }
 
-export function SetupChecklistSkeleton() {
+export async function SetupChecklistSkeleton() {
+  const t = await getTranslations("setup");
   return (
-    <div role="status" aria-label="Loading setup" className="@container/setup">
+    <div
+      role="status"
+      aria-label={t("skeleton.loading")}
+      className="@container/setup"
+    >
       <div className="grid items-start gap-6 @4xl/setup:grid-cols-[minmax(0,45rem)_15rem] @4xl/setup:gap-x-8">
         <div className="flex min-w-0 max-w-[45rem] flex-col gap-6">
           <GoalSkeleton />

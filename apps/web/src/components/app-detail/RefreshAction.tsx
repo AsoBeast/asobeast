@@ -7,13 +7,17 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { Loader2, RefreshCw } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import type { SnapshotDiffResult } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { ApiError, refreshApp, apiErrorMessage } from "@/lib/api";
-import { formatCountry } from "@/lib/format";
+import { formatCountryInLocale } from "@/lib/format";
 import { invalidateAppListing } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
+import { useAppLocale } from "@/lib/use-app-locale";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
 import { SnapshotDiffDialog } from "./SnapshotDiffDialog";
 import { useCachedMarket } from "./use-market";
 
@@ -24,6 +28,8 @@ interface RefreshedListing {
 
 export function RefreshAction({ appId }: { appId: string }) {
   const queryClient = useQueryClient();
+  const t = useTranslations("appDetail");
+  const locale = useAppLocale();
   const { market: country, refreshable } = useCachedMarket(appId);
   const reasonId = useId();
   const [refreshed, setRefreshed] = useState<RefreshedListing | null>(null);
@@ -41,7 +47,7 @@ export function RefreshAction({ appId }: { appId: string }) {
       if (error instanceof ApiError && error.envelope.statusCode === 404) {
         invalidateAppListing(queryClient, appId);
       }
-      toast.error(apiErrorMessage(error, "Refresh failed"));
+      toast.error(apiErrorMessage(error, t("refresh.failed")));
     },
   });
   const refreshOnce = useSingleFlight(mutation);
@@ -53,14 +59,16 @@ export function RefreshAction({ appId }: { appId: string }) {
         variant="outline"
         aria-disabled={busy || !refreshable || undefined}
         aria-describedby={refreshable ? undefined : reasonId}
-        title={refreshable ? undefined : staleReason(country)}
+        title={refreshable ? undefined : staleReason(country, t, locale)}
         onClick={() => {
           if (refreshable && !busy) refreshOnce(country);
         }}
         aria-label={
           country === undefined
-            ? "Refresh"
-            : `Refresh ${formatCountry(country)} listing`
+            ? t("refresh.action")
+            : t("refresh.listing", {
+                country: formatCountryInLocale(country, locale),
+              })
         }
       >
         {mutation.isPending ? (
@@ -68,11 +76,11 @@ export function RefreshAction({ appId }: { appId: string }) {
         ) : (
           <RefreshCw />
         )}
-        <span className="hidden lg:inline">Refresh</span>
+        <span className="hidden lg:inline">{t("refresh.action")}</span>
       </Button>
       {refreshable ? null : (
         <span id={reasonId} className="sr-only">
-          {staleReason(country)}
+          {staleReason(country, t, locale)}
         </span>
       )}
       <SnapshotDiffDialog
@@ -88,7 +96,14 @@ export function RefreshAction({ appId }: { appId: string }) {
   );
 }
 
-function staleReason(country: string | undefined): string {
-  const name = country === undefined ? "this market" : formatCountry(country);
-  return `No keywords are tracked in ${name} any more, so its listing is no longer refreshed.`;
+function staleReason(
+  country: string | undefined,
+  translator: MessageTranslator,
+  locale: Locale,
+): string {
+  const name =
+    country === undefined
+      ? translator("refresh.staleMarket")
+      : formatCountryInLocale(country, locale);
+  return translator("refresh.staleReason", { market: name });
 }

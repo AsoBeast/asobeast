@@ -1,6 +1,7 @@
 "use client";
 
 import type { RefObject } from "react";
+import { useTranslations } from "next-intl";
 import { Copy } from "lucide-react";
 import type { Store, TrackedKeywordItem } from "@asobeast/shared";
 import { useChartImage } from "@/components/charts/use-chart-image";
@@ -23,6 +24,7 @@ export function PositionImageButton({
   chart: RankingChartData;
   chartRef: RefObject<HTMLDivElement | null>;
 }) {
+  const t = useTranslations("keywords");
   const image = useChartImage();
   const detail = useCachedQueryData(appDetailOptions(appId).queryKey);
 
@@ -31,7 +33,7 @@ export function PositionImageButton({
     const spec = rankingImageSpec({
       chart,
       kind: "position-history",
-      title: `Position history: ${keyword.text}`,
+      title: t("position.historyName", { keyword: keyword.text }),
       app: {
         id: appId,
         name: detail?.name ?? null,
@@ -48,7 +50,7 @@ export function PositionImageButton({
     <Button
       variant="ghost"
       size="icon-xs"
-      aria-label={`Copy image of the position history of ${keyword.text}`}
+      aria-label={t("position.copyImage", { keyword: keyword.text })}
       aria-disabled={image.pending || undefined}
       className="text-muted-foreground hover:text-foreground print:hidden"
       onClick={copy}

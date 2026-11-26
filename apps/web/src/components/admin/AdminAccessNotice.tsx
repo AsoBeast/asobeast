@@ -1,23 +1,23 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 import type { ClosedAdminAccess } from "@/lib/admin-access";
 
 const GUIDE_URL =
   "https://docs.asobeast.com/security/admin-surfaces#when-the-operators-workspace-has-no-plan";
 
-const NOTICES: Record<
-  ClosedAdminAccess,
-  { title: string; body: string; action: { href: string; label: string } }
-> = {
-  "needs-plan": {
-    title: "Your workspace needs a plan to open the admin area",
-    body: "The admin pages, the queue dashboard, the API docs and the metrics endpoint open only while the operator's own workspace has a plan in force. Yours has none, so each of them answers not found. On a self-hosted instance with billing on, you can also set plan on the bootstrap workspace in the database.",
-    action: { href: "/upgrade", label: "Choose a plan" },
-  },
-};
-
-export function AdminAccessNotice({ access }: { access: ClosedAdminAccess }) {
-  const { title, body, action } = NOTICES[access];
+export async function AdminAccessNotice({
+  access,
+}: {
+  access: ClosedAdminAccess;
+}) {
+  const t = await getTranslations("admin");
+  const copy = {
+    "needs-plan": {
+      title: t("access.needsPlanTitle"),
+      body: t("access.needsPlanBody"),
+    },
+  }[access];
 
   return (
     <section
@@ -26,18 +26,18 @@ export function AdminAccessNotice({ access }: { access: ClosedAdminAccess }) {
     >
       <div className="flex flex-col gap-1">
         <h2 id="admin-access-title" className="text-heading">
-          {title}
+          {copy.title}
         </h2>
-        <p className="max-w-lg text-body text-muted-foreground">{body}</p>
+        <p className="max-w-lg text-body text-muted-foreground">{copy.body}</p>
       </div>
       <div className="flex flex-wrap justify-center gap-2">
         <Button asChild>
-          <Link href={action.href}>{action.label}</Link>
+          <Link href="/upgrade">{t("access.choosePlan")}</Link>
         </Button>
         <Button asChild variant="outline">
           <a href={GUIDE_URL} target="_blank" rel="noreferrer">
-            Read the guide
-            <span className="sr-only"> (opens in a new tab)</span>
+            {t("access.readGuide")}
+            <span className="sr-only"> {t("common.opensInNewTab")}</span>
           </a>
         </Button>
       </div>

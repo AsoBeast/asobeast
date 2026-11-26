@@ -35,11 +35,12 @@ import {
   sectionHref,
 } from "@/lib/app-sections";
 import { storeLabel } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
+import type { MessageTranslator } from "@/i18n/translator";
 import { appsOptions } from "@/lib/queries";
+import { switcherSubtitle } from "./app-switcher-label";
 
-type Translator = ReturnType<typeof useTranslations>;
-
-function appLabel(app: AppListItem, t: Translator): string {
+function appLabel(app: AppListItem, t: MessageTranslator): string {
   return app.name ?? t("untitledApp");
 }
 
@@ -54,7 +55,7 @@ function TriggerLabel({
 }: {
   current: AppListItem | undefined;
   subtitle: string;
-  t: Translator;
+  t: MessageTranslator;
 }) {
   return (
     <>
@@ -81,13 +82,16 @@ function TriggerLabel({
   );
 }
 
-function ImportEntry() {
-  const t = useTranslations("navigation");
+function ImportEntry({ t }: { t: MessageTranslator }) {
   return (
     <SidebarMenu>
       <SidebarMenuItem>
         <ImportAppDialog>
-          <SidebarMenuButton size="lg" tooltip={t("importApp")}>
+          <SidebarMenuButton
+            size="lg"
+            tooltip={t("importApp")}
+            data-action="import-app"
+          >
             <Plus />
             <span className="font-medium">{t("importApp")}</span>
           </SidebarMenuButton>
@@ -98,22 +102,18 @@ function ImportEntry() {
 }
 
 export function AppSwitcher() {
-  const t = useTranslations("navigation");
   const [open, setOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   const pathname = usePathname();
   const router = useRouter();
+  const locale = useAppLocale();
+  const t = useTranslations("shell");
   const { isMobile, setOpenMobile } = useSidebar();
   const { data: apps, isPending, isError } = useQuery(appsOptions);
 
   const route = appRouteFrom(pathname);
   const current = route ? apps?.find((app) => app.id === route.id) : undefined;
-  const subtitle = apps
-    ? t("trackedCount", { count: apps.length })
-    : isError
-      ? t("couldNotLoadApps")
-      : t("loadingApps");
 
   function select(appId: string) {
     setOpen(false);
@@ -121,7 +121,7 @@ export function AppSwitcher() {
     router.push(sectionHref(appId, equivalentSection(route?.segment ?? "")));
   }
 
-  if (!isPending && apps?.length === 0) return <ImportEntry />;
+  if (!isPending && apps?.length === 0) return <ImportEntry t={t} />;
 
   return (
     <SidebarMenu>
@@ -130,6 +130,7 @@ export function AppSwitcher() {
           <PopoverTrigger asChild>
             <SidebarMenuButton
               ref={trigger}
+              data-action="switch-app"
               size="lg"
               aria-label={
                 current
@@ -139,7 +140,14 @@ export function AppSwitcher() {
               tooltip={current ? appLabel(current, t) : t("allApps")}
               className="data-[state=open]:bg-sidebar-accent"
             >
-              <TriggerLabel current={current} subtitle={subtitle} t={t} />
+              <TriggerLabel
+                current={current}
+                subtitle={switcherSubtitle(apps, isError, {
+                  translator: t,
+                  locale,
+                })}
+                t={t}
+              />
             </SidebarMenuButton>
           </PopoverTrigger>
           <PopoverContent

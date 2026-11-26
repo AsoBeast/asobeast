@@ -1,7 +1,26 @@
-import { formatDate, formatDayMonth } from "@/lib/format";
+import { createTranslator } from "next-intl";
+import enKeywords from "../../../messages/en/keywords.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import { formatDateInLocale, formatDayMonthInLocale } from "@/lib/format";
+import type { Locale } from "@/lib/locale";
 
-export const staleCheckLine = (day: string) =>
-  `Last checked ${formatDate(day)}; the checks since then did not finish, so this is the position of that day`;
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywords",
+  messages: { keywords: enKeywords },
+});
 
-export const staleCheckLabel = (day: string) =>
-  `last checked ${formatDayMonth(day)}`;
+export const staleCheckLine = (
+  day: string,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
+) =>
+  t("position.staleLine", {
+    date: formatDateInLocale(day, locale),
+  });
+
+export const staleCheckLabel = (
+  day: string,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
+) => t("position.staleLabel", { day: formatDayMonthInLocale(day, locale) });

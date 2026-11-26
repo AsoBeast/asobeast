@@ -1,4 +1,7 @@
 import { createSerializer } from "nuqs";
+import { createTranslator } from "next-intl";
+import enKeywords from "../../messages/en/keywords.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import {
   KEYWORD_FIELD_CHAR_LIMIT,
   keywordFieldChars,
@@ -9,12 +12,17 @@ import {
   type MarketLocalizationRead,
 } from "@asobeast/shared";
 import { LOCALIZATIONS_SECTION_ID } from "@/lib/app-localizations";
-import { pluralize } from "@/lib/format";
 import {
   fieldAddParser,
   fieldLeftOutParser,
   fieldLocaleParser,
 } from "@/lib/search-params";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywords",
+  messages: { keywords: enKeywords },
+});
 
 export interface KeywordFieldAddition {
   added: string[];
@@ -150,14 +158,15 @@ export function keywordFieldAddition(
 export function additionNotice(
   { added, held, leftOut }: KeywordFieldAddition,
   name: string,
+  t: MessageTranslator = english,
 ): string | null {
   const alreadyIn = held.length;
   if (leftOut > 0) {
-    return `${pluralize(leftOut, "keyword")} did not fit in the ${name} keyword field and ${leftOut === 1 ? "was" : "were"} left out.`;
+    return t("field.leftOut", { count: leftOut, name });
   }
   if (alreadyIn === 0) return null;
   if (added.length === 0) {
-    return `Every selected keyword is already in the ${name} keyword field.`;
+    return t("field.everySelected", { name });
   }
-  return `${pluralize(alreadyIn, "keyword")} ${alreadyIn === 1 ? "is" : "are"} already in the ${name} keyword field.`;
+  return t("field.alreadyIn", { count: alreadyIn, name });
 }

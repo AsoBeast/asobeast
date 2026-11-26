@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import type { AppAnnotationItem, ChangeField } from "@asobeast/shared";
 import {
   Area,
@@ -43,16 +44,20 @@ import {
   TIME_AXIS_PROPS,
   VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
-import {
-  changedFieldsLabel,
-  listingChangeDays,
-} from "@/components/keywords/position-history";
+import { listingChangeDays } from "@/components/keywords/position-history";
 import {
   failedRead,
   InlineQueryError,
 } from "@/components/layout/InlineQueryError";
+import type { MessageTranslator } from "@/i18n/translator";
 import { FOOTER_LINK } from "@/components/layout/panel-classes";
-import { formatDayMonth, formatNumber } from "@/lib/format";
+import {
+  formatDayMonthInLocale,
+  formatListInLocale,
+  formatNumberInLocale,
+} from "@/lib/format";
+import type { Locale } from "@/lib/locale";
+import { useAppLocale } from "@/lib/use-app-locale";
 import {
   annotationsOptions,
   appDetailOptions,
@@ -72,10 +77,6 @@ import {
   type VisibilityRow,
 } from "./visibility-rows";
 
-const chartConfig = {
-  visibility: { label: "Visibility", color: seriesColor(0) },
-} satisfies ChartConfig;
-
 function VisibilityTooltip({
   active,
   label,
@@ -83,6 +84,9 @@ function VisibilityTooltip({
   days,
   changes,
   annotations,
+  translator,
+  fieldTranslator,
+  locale,
 }: {
   active?: boolean;
   label?: string | number;
@@ -90,6 +94,9 @@ function VisibilityTooltip({
   days: number;
   changes: ReadonlyMap<string, ChangeField[]>;
   annotations: AppAnnotationItem[];
+  translator: MessageTranslator;
+  fieldTranslator: MessageTranslator;
+  locale: Locale;
 }) {
   if (!active || label === undefined) return null;
 
@@ -100,14 +107,14 @@ function VisibilityTooltip({
 
   return (
     <SeriesTooltip
-      title={formatDayMonth(day)}
+      title={formatDayMonthInLocale(day, locale)}
       items={[
         {
           key: "visibility",
           index: 0,
           color: "var(--color-visibility)",
-          label: "Visibility",
-          value: formatNumber(row.visibility),
+          label: translator("charts.visibility"),
+          value: formatNumberInLocale(row.visibility, locale),
           sortBy: 0,
         },
         ...(row.previous === null
@@ -117,8 +124,8 @@ function VisibilityTooltip({
                 key: "previous",
                 index: 0,
                 color: PREVIOUS_LINE_PROPS.stroke,
-                label: formatDayMonth(dayBefore(day, days)),
-                value: formatNumber(row.previous),
+                label: formatDayMonthInLocale(dayBefore(day, days), locale),
+                value: formatNumberInLocale(row.previous, locale),
                 sortBy: 1,
               },
             ]),
@@ -127,7 +134,14 @@ function VisibilityTooltip({
         <>
           {changed ? (
             <p className="text-muted-foreground">
-              {`${changedFieldsLabel(changed)} changed`}
+              {translator("charts.changedFields", {
+                fields: formatListInLocale(
+                  changed.map((field) =>
+                    fieldTranslator(`snapshot.fields.${field}`),
+                  ),
+                  locale,
+                ),
+              })}
             </p>
           ) : null}
           <AnnotationTooltipNotes
@@ -143,17 +157,18 @@ function chartKey(
   days: number,
   compared: boolean,
   changed: boolean,
+  translator: MessageTranslator,
 ): ChartKeyItem[] {
   return [
     ...(compared
       ? [
           {
-            label: `Last ${days} days`,
+            label: translator("charts.lastDays", { count: days }),
             color: seriesColor(0),
             mark: "line",
           } as const,
           {
-            label: `Previous ${days} days`,
+            label: translator("charts.previousDays", { count: days }),
             color: PREVIOUS_LINE_PROPS.stroke,
             mark: "line",
           } as const,
@@ -162,7 +177,7 @@ function chartKey(
     ...(changed
       ? [
           {
-            label: "Listing change",
+            label: translator("charts.listingChange"),
             color: CHANGE_MARKER_PROPS.stroke,
             mark: "dash",
           } as const,
@@ -179,6 +194,12 @@ export function VisibilityAreaChart({
   range: VisibilityRange;
 }) {
   const fadeId = useFadeId();
+  const t = useTranslations("overview");
+  const tf = useTranslations("appDetail");
+  const locale = useAppLocale();
+  const chartConfig = {
+    visibility: { label: t("charts.visibility"), color: seriesColor(0) },
+  } satisfies ChartConfig;
   const { country } = useKeywordScope(id);
   const { data: app } = useSuspenseQuery(appDetailOptions(id));
   const bounds = presetToRange(range);
@@ -206,8 +227,8 @@ export function VisibilityAreaChart({
     return (
       <ChartNotice
         height={CHART_HEIGHT.tall}
-        title="No visibility recorded yet"
-        body="The daily pipeline captures your first point within 24 hours."
+        title={t("charts.noVisibilityTitle")}
+        body={t("charts.noVisibilityBody")}
       />
     );
   }
@@ -216,9 +237,9 @@ export function VisibilityAreaChart({
     return (
       <ChartStat
         height={CHART_HEIGHT.tall}
-        label="Latest visibility"
-        value={String(latest.visibility)}
-        note="A trend line needs a few more daily checks."
+        label={t("charts.latestVisibility")}
+        value={formatNumberInLocale(latest.visibility, locale)}
+        note={t("charts.trendNeedsChecks")}
       />
     );
   }
@@ -229,7 +250,7 @@ export function VisibilityAreaChart({
         config={chartConfig}
         className={`${CHART_HEIGHT.tall} w-full`}
         role="region"
-        aria-label="Search visibility over time"
+        aria-label={t("charts.searchVisibilityOverTime")}
       >
         <ComposedChart accessibilityLayer data={rows} margin={CHART_MARGIN}>
           <SeriesFade id={fadeId} color="var(--color-visibility)" />
@@ -254,6 +275,9 @@ export function VisibilityAreaChart({
                 days={days}
                 changes={changes}
                 annotations={inScope}
+                translator={t}
+                fieldTranslator={tf}
+                locale={locale}
               />
             }
           />
@@ -270,27 +294,27 @@ export function VisibilityAreaChart({
       </ChartContainer>
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-label text-muted-foreground empty:hidden">
         <ChartKey
-          label="Chart lines"
-          items={chartKey(days, compared, changeDays.length > 0)}
+          label={t("charts.chartLines")}
+          items={chartKey(days, compared, changeDays.length > 0, t)}
         />
         {changeDays.length > 0 ? (
           <Link
             href={`/apps/${id}/changes${country ? `?market=${country}` : ""}`}
             className={FOOTER_LINK}
           >
-            See what each change did
+            {t("charts.seeChanges")}
           </Link>
         ) : null}
       </div>
       {failedRead(earlierRead) ? (
         <InlineQueryError
-          message="The range before could not be loaded."
+          message={t("charts.previousRangeError")}
           read={earlierRead}
         />
       ) : null}
       {failedRead(changesRead) ? (
         <InlineQueryError
-          message="The listing changes could not be loaded."
+          message={t("charts.listingChangesError")}
           read={changesRead}
         />
       ) : null}

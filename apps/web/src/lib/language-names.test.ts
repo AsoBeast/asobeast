@@ -1,23 +1,19 @@
 import { describe, expect, it } from "vitest";
-import {
-  APP_STORE_LOCALIZATION_IDS,
-  localizationLanguage,
-} from "@asobeast/shared";
-import { LANGUAGE_NAMES } from "./language-names";
+import { languageName } from "./language-names";
 
-describe("LANGUAGE_NAMES", () => {
-  it("holds no language the app store names", () => {
-    const named = new Set(APP_STORE_LOCALIZATION_IDS.map(localizationLanguage));
-
-    expect(
-      Object.keys(LANGUAGE_NAMES).filter((code) => named.has(code)),
-    ).toEqual([]);
+describe("languageName", () => {
+  it("keeps English names by default", () => {
+    expect(languageName("en-US")).toBe("English");
+    expect(languageName("pl")).toBe("Polish");
   });
 
-  it("keys are lower case two or three letter codes with a name", () => {
-    for (const [code, name] of Object.entries(LANGUAGE_NAMES)) {
-      expect(code).toMatch(/^[a-z]{2,3}$/);
-      expect(name.trim()).not.toBe("");
-    }
+  it("translates language names for Simplified Chinese", () => {
+    expect(languageName("zh-Hans", "zh-CN")).toBe("中文");
+    expect(languageName("en-US", "zh-CN")).toBe("英语");
+    expect(languageName("pl", "zh-CN")).toBe("波兰语");
+  });
+
+  it("passes unknown tags through", () => {
+    expect(languageName("xx", "zh-CN")).toBe("xx");
   });
 });

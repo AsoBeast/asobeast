@@ -1,22 +1,37 @@
 import type { ColumnFiltersState, FilterFn } from "@tanstack/react-table";
 import type { inferParserType } from "nuqs";
-import type { TrackedKeywordItem } from "@asobeast/shared";
-import { BUCKET_LABELS } from "@/components/BucketBadge";
-import { gradeLabel } from "@/lib/grade";
-import { MOVE_FILTER_LABELS } from "@/lib/keyword-day-change";
+import { createTranslator } from "next-intl";
+import type {
+  KeywordBucket,
+  KeywordClass,
+  KeywordSource,
+  TrackedKeywordItem,
+} from "@asobeast/shared";
+import enKeywords from "../../../messages/en/keywords.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import { formatListInLocale } from "@/lib/format";
+import { gradeLabelInLocale, type Grade } from "@/lib/grade";
+import { moveFilterLabel } from "@/lib/keyword-day-change";
 import {
-  ZONE_LABELS,
+  zoneLabel,
   zoneOf,
   type ZoneFilterValue,
   type ZoneThresholds,
 } from "@/lib/keyword-zones";
+import type { Locale } from "@/lib/locale";
+import type { PositionBand } from "@/lib/table/facets";
 import type { keywordFilterParsers } from "@/lib/search-params";
-import { POSITION_BAND_LABELS } from "@/lib/table/facets";
-import { KEYWORD_CLASS_LABELS } from "./keyword-class";
+import { keywordClassLabel } from "./keyword-class";
 import { matchesKeywordSearch, parseKeywordSearch } from "./keyword-search";
 import { scorePair } from "@/lib/keyword-scores";
 import type { KeywordTableFeatures } from "./keyword-table-features";
-import { SOURCE_LABELS } from "./SourceLabel";
+import { sourceLabel } from "./SourceLabel";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywords",
+  messages: { keywords: enKeywords },
+});
 
 export type KeywordFilters = inferParserType<typeof keywordFilterParsers>;
 
@@ -28,10 +43,31 @@ export interface KeywordFilterChip {
 }
 
 export const STATUS_LABELS: Record<KeywordFilters["status"], string> = {
-  all: "All statuses",
-  active: "Active",
-  paused: "Paused",
+  all: enKeywords.filters.all,
+  active: enKeywords.filters.active,
+  paused: enKeywords.filters.paused,
 };
+
+export function statusLabel(
+  status: KeywordFilters["status"],
+  t: MessageTranslator = english,
+): string {
+  return t(`filters.${status}`);
+}
+
+export function bucketLabel(
+  bucket: KeywordBucket,
+  t: MessageTranslator = english,
+): string {
+  return t(`buckets.${bucket}`);
+}
+
+export function positionBandLabel(
+  band: PositionBand,
+  t: MessageTranslator = english,
+): string {
+  return t(`positionBands.${band}`);
+}
 
 export function keywordColumnFilters(
   filters: KeywordFilters,
@@ -59,67 +95,93 @@ export function keywordColumnFilters(
   ];
 }
 
-function listChip<T>(
-  key: KeywordFilterKey,
-  title: string,
-  values: readonly T[],
-  label: (value: T) => string,
-): KeywordFilterChip | null {
-  return values.length > 0
-    ? { key, label: `${title}: ${values.map(label).join(", ")}` }
-    : null;
+function joinedValues(values: readonly string[], locale: Locale): string {
+  return locale === "en"
+    ? values.join(", ")
+    : formatListInLocale(values, locale);
 }
 
 export function keywordFilterChips(
   filters: KeywordFilters,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
 ): KeywordFilterChip[] {
+  function listChip<T>(
+    key: KeywordFilterKey,
+    title: string,
+    values: readonly T[],
+    label: (value: T) => string,
+  ): KeywordFilterChip | null {
+    return values.length > 0
+      ? {
+          key,
+          label: t("filters.listChip", {
+            title,
+            values: joinedValues(values.map(label), locale),
+          }),
+        }
+      : null;
+  }
+
   const chips = [
-    filters.q ? { key: "q" as const, label: searchChipLabel(filters.q) } : null,
+    filters.q
+      ? { key: "q" as const, label: searchChipLabel(filters.q, t) }
+      : null,
     listChip(
       "source",
-      "Source",
+      t("filters.source"),
       filters.source,
-      (value) => SOURCE_LABELS[value],
+      (value: KeywordSource) => sourceLabel(value, t),
     ),
     listChip(
       "bucket",
-      "Bucket",
+      t("filters.bucket"),
       filters.bucket,
-      (value) => BUCKET_LABELS[value],
+      (value: KeywordBucket) => bucketLabel(value, t),
     ),
     filters.status !== "all"
       ? {
           key: "status" as const,
-          label: `Status: ${STATUS_LABELS[filters.status]}`,
+          label: t("filters.listChip", {
+            title: t("filters.status"),
+            values: statusLabel(filters.status, t),
+          }),
         }
       : null,
-    listChip(
-      "type",
-      "Type",
-      filters.type,
-      (value) => KEYWORD_CLASS_LABELS[value],
+    listChip("type", t("filters.type"), filters.type, (value: KeywordClass) =>
+      keywordClassLabel(value, t),
     ),
-    listChip("pop", "Popularity", filters.pop, gradeLabel),
-    listChip("diff", "Difficulty", filters.diff, gradeLabel),
-    listChip("opp", "Opportunity", filters.opp, gradeLabel),
-    listChip(
-      "pos",
-      "Position",
-      filters.pos,
-      (value) => POSITION_BAND_LABELS[value],
+    listChip("pop", t("filters.popularity"), filters.pop, (value: Grade) =>
+      gradeLabelInLocale(value, locale),
     ),
-    listChip("tag", "Tag", filters.tag, (value) => value),
+    listChip("diff", t("filters.difficulty"), filters.diff, (value: Grade) =>
+      gradeLabelInLocale(value, locale),
+    ),
+    listChip("opp", t("filters.opportunity"), filters.opp, (value: Grade) =>
+      gradeLabelInLocale(value, locale),
+    ),
+    listChip("pos", t("filters.position"), filters.pos, (value: PositionBand) =>
+      positionBandLabel(value, t),
+    ),
+    listChip("tag", t("filters.tag"), filters.tag, (value) => value),
     filters.zone === null
       ? null
-      : { key: "zone" as const, label: `Zone: ${ZONE_LABELS[filters.zone]}` },
+      : {
+          key: "zone" as const,
+          label: t("filters.zoneChip", {
+            zone: zoneLabel(filters.zone, t),
+          }),
+        },
     filters.change === null
       ? null
       : {
           key: "change" as const,
-          label: `Since yesterday: ${MOVE_FILTER_LABELS[filters.change]}`,
+          label: t("filters.sinceYesterdayChip", {
+            change: moveFilterLabel(filters.change, t),
+          }),
         },
   ];
-  return chips.filter((chip) => chip !== null);
+  return chips.filter((chip): chip is KeywordFilterChip => chip !== null);
 }
 
 export function tagOptions(
@@ -146,16 +208,22 @@ export const keywordZoneFilter: FilterFn<
 > = (row, _columnId, { zone, thresholds }: ZoneFilterValue) =>
   zoneOf(scorePair(row.original), thresholds) === zone;
 
-export function searchChipLabel(q: string): string {
+export function searchChipLabel(
+  q: string,
+  t: MessageTranslator = english,
+): string {
   const search = parseKeywordSearch(q);
   return search.kind === "exact"
-    ? `Exact phrase: ${search.phrase}`
-    : `Search: ${q}`;
+    ? t("filters.exactChip", { phrase: search.phrase })
+    : t("filters.searchChip", { query: q });
 }
 
-export function exactSearchEmptyBody(q: string): string | undefined {
+export function exactSearchEmptyBody(
+  q: string,
+  t: MessageTranslator = english,
+): string | undefined {
   const search = parseKeywordSearch(q);
   return search.kind === "exact"
-    ? `No keyword is exactly "${search.phrase}" with these filters. Remove the quotes to match keywords that contain it.`
+    ? t("filters.exactEmpty", { phrase: search.phrase })
     : undefined;
 }

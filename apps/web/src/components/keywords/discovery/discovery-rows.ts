@@ -1,3 +1,4 @@
+import { createTranslator } from "next-intl";
 import {
   formatCheckedPosition,
   toDifficulty100,
@@ -5,6 +6,14 @@ import {
   type KeywordDiscoveryItem,
   type KeywordDiscoveryList,
 } from "@asobeast/shared";
+import enKeywordInspector from "../../../../messages/en/keywordInspector.json";
+import type { MessageTranslator } from "@/i18n/translator";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywordInspector",
+  messages: { keywordInspector: enKeywordInspector },
+});
 
 export const DISCOVERY_PAGE_SIZE = 50;
 
@@ -14,11 +23,12 @@ export const rankText = (
 
 export function rankLabel(
   item: Pick<KeywordDiscoveryItem, "position" | "depth">,
+  t: MessageTranslator = english,
 ): string {
-  if (item.depth === null) return "Not checked yet";
+  if (item.depth === null) return t("discovery.columns.notChecked");
   return item.position === null
-    ? `Not found in the top ${item.depth}`
-    : `Rank ${item.position}`;
+    ? t("discovery.columns.notFound", { depth: item.depth })
+    : t("discovery.columns.rank", { position: item.position });
 }
 
 export const shownScore = (value: number | null): number | null =>
@@ -36,41 +46,35 @@ export type DiscoveryEmptyState =
   | { kind: "never_run"; body: string }
   | { kind: "nothing_here"; title: string; body: string };
 
-const NOTHING_HERE: Record<DiscoveryState, { title: string; body: string }> = {
-  all: {
-    title: "Nothing to review",
-    body: "Every keyword found near your listing is tracked or dismissed. New ones appear after the next weekly run.",
-  },
-  ranked: {
-    title: "Nothing ranked yet",
-    body: "None of these keywords show your app in the store search yet. Checked keywords move here when your app appears.",
-  },
-  opportunity: {
-    title: "No opportunities yet",
-    body: "Opportunities need a popularity and a difficulty score. Track a keyword to score it, or wait for the next scoring run.",
-  },
-};
+function nothingHere(
+  state: DiscoveryState,
+  t: MessageTranslator,
+): { title: string; body: string } {
+  return {
+    title: t(`discovery.empty.nothing.${state}.title`),
+    body: t(`discovery.empty.nothing.${state}.body`),
+  };
+}
 
-function neverRunBody({
-  pending,
-  nextRunAt,
-}: KeywordDiscoveryList["checks"]): string {
-  if (pending > 0) {
-    return "AsoBeast has queued checks of the keywords near your listing. Any it finds in this market appear here.";
-  }
+function neverRunBody(
+  { pending, nextRunAt }: KeywordDiscoveryList["checks"],
+  t: MessageTranslator,
+): string {
+  if (pending > 0) return t("discovery.empty.neverRun.queued");
   return nextRunAt === null
-    ? "AsoBeast has not looked for keywords near your listing yet. Press Refresh to look now."
-    : "AsoBeast looks for keywords near your listing once a week. Press Refresh to look now.";
+    ? t("discovery.empty.neverRun.never")
+    : t("discovery.empty.neverRun.weekly");
 }
 
 export function emptyStateOf(
   list: KeywordDiscoveryList,
   rows: number,
   state: DiscoveryState,
+  t: MessageTranslator = english,
 ): DiscoveryEmptyState {
   if (rows > 0) return { kind: "none" };
   if (list.items.length === 0 && list.checks.checkedAt === null) {
-    return { kind: "never_run", body: neverRunBody(list.checks) };
+    return { kind: "never_run", body: neverRunBody(list.checks, t) };
   }
-  return { kind: "nothing_here", ...NOTHING_HERE[state] };
+  return { kind: "nothing_here", ...nothingHere(state, t) };
 }

@@ -1,5 +1,6 @@
 import type { WorkspaceRunStatus } from "@asobeast/shared";
-import { storeLabel } from "@/lib/format";
+import { formatListInLocale, storeLabel } from "@/lib/format";
+import type { TranslationContext } from "@/i18n/translator";
 
 export interface RunDelayNotice {
   title: string;
@@ -8,6 +9,7 @@ export interface RunDelayNotice {
 
 export function runDelayNotice(
   status: WorkspaceRunStatus,
+  context?: TranslationContext,
 ): RunDelayNotice | null {
   if (status.state !== "delayed") {
     return null;
@@ -17,10 +19,27 @@ export function runDelayNotice(
     (store) => store.captured < store.tracked,
   );
   const names = behind.map((store) => storeLabel(store.store));
-  const scope =
-    names.length === 0 || names.length === status.stores.length
-      ? "Today's rankings"
-      : `Rankings for your ${names.join(" and ")} apps`;
+  const all = names.length === 0 || names.length === status.stores.length;
+  const scope = all
+    ? "Today's rankings"
+    : `Rankings for your ${names.join(" and ")} apps`;
+
+  if (context) {
+    return {
+      title: all
+        ? context.translator("delayAllTitle")
+        : context.translator("delayStoresTitle", {
+            stores: formatListInLocale(names, context.locale),
+          }),
+      detail:
+        status.captured === 0
+          ? context.translator("delayEmptyDetail")
+          : context.translator("delayProgressDetail", {
+              captured: status.captured,
+              tracked: status.tracked,
+            }),
+    };
+  }
 
   return {
     title: `${scope} are delayed`,

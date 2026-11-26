@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import type { Table } from "@tanstack/react-table";
 import type { TrackedKeywordItem } from "@asobeast/shared";
@@ -25,6 +26,7 @@ export function AddToKeywordField({
   market: string;
   keywords: readonly string[];
 }) {
+  const t = useTranslations("keywords");
   const { data } = useSuspenseQuery(marketKeywordFieldsOptions(appId, market));
   const target = keywordFieldTarget(data.localizations);
   if (!target) return null;
@@ -36,7 +38,7 @@ export function AddToKeywordField({
         href={keywordFieldAdditionHref(appId, target.localization, addition)}
       >
         <TextCursorInput aria-hidden />
-        Add to keyword field
+        {t("field.add")}
       </Link>
     </Button>
   );

@@ -8,6 +8,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { addUtcDays } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +16,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { formatDate } from "@/lib/format";
+import { formatDateInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
 import {
   monthLabel,
@@ -26,15 +28,7 @@ import {
 } from "./calendar-grid";
 import { stepDate } from "./step-date";
 
-const WEEKDAYS = [
-  ["Mon", "Monday"],
-  ["Tue", "Tuesday"],
-  ["Wed", "Wednesday"],
-  ["Thu", "Thursday"],
-  ["Fri", "Friday"],
-  ["Sat", "Saturday"],
-  ["Sun", "Sunday"],
-] as const;
+const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 
 const KEY_STEPS: Record<string, number> = {
   ArrowLeft: -1,
@@ -76,6 +70,8 @@ function DayGrid({
   value: string;
   onSelect: (date: string) => void;
 }) {
+  const locale = useAppLocale();
+  const t = useTranslations("datePicker");
   const start = nearestCaptured(dates, value);
   const [month, setMonth] = useState(() => monthOf(start));
   const [focused, setFocused] = useState(start);
@@ -114,18 +110,20 @@ function DayGrid({
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label="Previous month"
+          data-action="previous-month"
+          aria-label={t("previousMonth")}
           onClick={() => showMonth(shiftMonth(month, -1))}
         >
           <ChevronLeft aria-hidden />
         </Button>
         <p className="text-body font-medium" aria-live="polite">
-          {monthLabel(month)}
+          {monthLabel(month, locale)}
         </p>
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label="Next month"
+          data-action="next-month"
+          aria-label={t("nextMonth")}
           onClick={() => showMonth(shiftMonth(month, 1))}
         >
           <ChevronRight aria-hidden />
@@ -134,19 +132,19 @@ function DayGrid({
       <div
         ref={grid}
         role="grid"
-        aria-label={monthLabel(month)}
+        aria-label={monthLabel(month, locale)}
         onKeyDown={onKeyDown}
         className="flex flex-col gap-1"
       >
         <div role="row" className="grid grid-cols-7 gap-1">
-          {WEEKDAYS.map(([short, full]) => (
+          {WEEKDAYS.map((weekday) => (
             <span
-              key={short}
+              key={weekday}
               role="columnheader"
-              aria-label={full}
+              aria-label={t(`weekdays.long.${weekday}`)}
               className="text-center text-caption text-muted-foreground"
             >
-              {short}
+              {t(`weekdays.short.${weekday}`)}
             </span>
           ))}
         </div>
@@ -159,7 +157,7 @@ function DayGrid({
                     type="button"
                     data-date={date}
                     data-captured={captured.has(date) || undefined}
-                    aria-label={formatDate(date)}
+                    aria-label={formatDateInLocale(date, locale)}
                     aria-pressed={date === value}
                     disabled={!captured.has(date)}
                     tabIndex={date === focused ? 0 : -1}
@@ -194,6 +192,8 @@ export function CapturedDayPicker({
   onSelect: (date: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const locale = useAppLocale();
+  const t = useTranslations("datePicker");
   const anchor = value ?? dates[0] ?? null;
   const previous = value ? stepDate(dates, value, -1) : null;
   const next = value ? stepDate(dates, value, 1) : null;
@@ -203,24 +203,28 @@ export function CapturedDayPicker({
   };
 
   return (
-    <div className="flex items-center gap-1">
+    <div data-slot="captured-day-picker" className="flex items-center gap-1">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
             aria-label={
-              value ? `Captured day, ${formatDate(value)}` : "Captured day"
+              value
+                ? t("capturedDayValue", {
+                    date: formatDateInLocale(value, locale),
+                  })
+                : t("capturedDay")
             }
             disabled={anchor === null}
             className="min-w-36 justify-start"
           >
             <CalendarDays aria-hidden />
-            {value ? formatDate(value) : "No capture yet"}
+            {value ? formatDateInLocale(value, locale) : t("noCaptureYet")}
           </Button>
         </PopoverTrigger>
         <PopoverContent
           align="start"
-          aria-label="Choose captured day"
+          aria-label={t("chooseCapturedDay")}
           className="w-auto"
         >
           {anchor ? (
@@ -231,7 +235,7 @@ export function CapturedDayPicker({
       <Button
         variant="outline"
         size="icon"
-        aria-label="Previous captured day"
+        aria-label={t("previousCapturedDay")}
         aria-disabled={previous === null || undefined}
         onClick={() => {
           if (previous) onSelect(previous);
@@ -242,7 +246,7 @@ export function CapturedDayPicker({
       <Button
         variant="outline"
         size="icon"
-        aria-label="Next captured day"
+        aria-label={t("nextCapturedDay")}
         aria-disabled={next === null || undefined}
         onClick={() => {
           if (next) onSelect(next);

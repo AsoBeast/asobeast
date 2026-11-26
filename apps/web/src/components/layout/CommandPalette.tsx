@@ -57,11 +57,13 @@ const GENERAL = [
 ] as const;
 
 export function CommandPalette() {
-  const t = useTranslations("navigation");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const router = useRouter();
   const pathname = usePathname();
+  const t = useTranslations("navigation");
+  const shell = useTranslations("shell");
+  const ui = useTranslations("ui");
   const route = appRouteFrom(pathname);
   const appId = route?.id;
   const { data: apps } = useQuery({ ...appsOptions, enabled: open });
@@ -78,7 +80,9 @@ export function CommandPalette() {
   const handleOpenChange = useCallback((next: boolean) => {
     openRef.current = next;
     setOpen(next);
-    if (!next) setQuery("");
+    if (!next) {
+      setQuery("");
+    }
   }, []);
 
   useEffect(() => {
@@ -108,34 +112,34 @@ export function CommandPalette() {
             variant="ghost"
             size="icon-sm"
             data-action="open-command-palette"
-            aria-label={t("openCommandPalette")}
+            aria-label={shell("openCommandPalette")}
             onClick={() => handleOpenChange(true)}
           >
             <Search />
           </Button>
         </TooltipTrigger>
-        <TooltipContent>{t("searchShortcut")}</TooltipContent>
+        <TooltipContent>{shell("searchShortcut")}</TooltipContent>
       </Tooltip>
 
       <CommandDialog
         open={open}
         onOpenChange={handleOpenChange}
-        title={t("commandPaletteTitle")}
-        description={t("commandPaletteDescription")}
+        title={shell("commandPaletteTitle")}
+        description={shell("commandPaletteDescription")}
       >
         <Command>
           <CommandInput
             value={query}
             onValueChange={setQuery}
-            placeholder={t("commandPaletteSearch")}
+            placeholder={shell("commandPaletteSearch")}
           />
           <CommandList>
-            <CommandEmpty>{t("noMatches")}</CommandEmpty>
+            <CommandEmpty>{ui("noMatches")}</CommandEmpty>
 
             {apps && apps.length > 0 ? (
-              <CommandGroup heading={t("apps")}>
+              <CommandGroup heading={shell("apps")}>
                 {apps.map((item) => {
-                  const name = item.name ?? t("untitledApp");
+                  const name = item.name ?? shell("untitledApp");
                   return (
                     <CommandItem
                       key={item.id}
@@ -161,7 +165,7 @@ export function CommandPalette() {
             ) : null}
 
             {appId ? (
-              <CommandGroup heading={t("sections")}>
+              <CommandGroup heading={shell("sections")}>
                 {APP_SECTIONS.map((section) => {
                   const label = t(
                     `appSections.${section.segment || "overview"}`,
@@ -179,7 +183,7 @@ export function CommandPalette() {
               </CommandGroup>
             ) : null}
 
-            <CommandGroup heading={t("general")}>
+            <CommandGroup heading={shell("general")}>
               {general.map((entry) => {
                 const label = t(entry.label);
                 return (

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { planInForce, planInForceLabel } from "./plan-in-force";
+import { translationContext } from "@/test/translation-context";
+
+const EN = translationContext("en", "billing");
 
 const NOW = new Date("2026-10-19T12:00:00.000Z");
 const PAST = "2026-10-18T12:00:00.000Z";
@@ -54,10 +57,12 @@ describe("planInForce", () => {
 
 describe("planInForceLabel", () => {
   it("names the plan the way the plan card does", () => {
-    expect(planInForceLabel(terms("trial", PAST, null), NOW)).toBe("Free");
-    expect(planInForceLabel(terms("indie", FUTURE, PAST), NOW)).toBe("Trial");
-    expect(planInForceLabel(terms("indie", null, null), NOW)).toBe("Indie");
-    expect(planInForceLabel(terms("ultimate", null, FUTURE), NOW)).toBe(
+    expect(planInForceLabel(terms("trial", PAST, null), NOW, EN)).toBe("Free");
+    expect(planInForceLabel(terms("indie", FUTURE, PAST), NOW, EN)).toBe(
+      "Trial",
+    );
+    expect(planInForceLabel(terms("indie", null, null), NOW, EN)).toBe("Indie");
+    expect(planInForceLabel(terms("ultimate", null, FUTURE), NOW, EN)).toBe(
       "Ultimate",
     );
   });

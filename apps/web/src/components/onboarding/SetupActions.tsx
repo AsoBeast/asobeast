@@ -1,6 +1,8 @@
 import { CheckCircle2, RefreshCw } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { MessageTranslator } from "@/i18n/translator";
 
 export interface SetupActionsProps {
   ready: boolean;
@@ -12,13 +14,12 @@ export interface SetupActionsProps {
   onComplete: () => void;
 }
 
-function statusText({
-  ready,
-  failed,
-  hint,
-}: Pick<SetupActionsProps, "ready" | "failed" | "hint">): string | null {
-  if (failed) return "Some live counts could not be loaded.";
-  if (!ready) return "Finish loading every live count before completing setup.";
+function statusText(
+  { ready, failed, hint }: Pick<SetupActionsProps, "ready" | "failed" | "hint">,
+  t: MessageTranslator,
+): string | null {
+  if (failed) return t("actions.failed");
+  if (!ready) return t("actions.loading");
   return hint;
 }
 
@@ -30,7 +31,9 @@ export function SetupActions({
   completable,
   ...status
 }: SetupActionsProps & { className?: string }) {
-  const text = statusText(status);
+  const t = useTranslations("setup");
+  const commonT = useTranslations("common");
+  const text = statusText(status, t);
   return (
     <div
       className={cn(
@@ -43,11 +46,11 @@ export function SetupActions({
         className="@4xl/setup:order-last"
         onClick={onDismiss}
       >
-        Dismiss setup
+        {t("actions.dismiss")}
       </Button>
       <Button disabled={!completable} onClick={onComplete}>
         <CheckCircle2 />
-        Complete setup
+        {t("actions.complete")}
       </Button>
       {text ? (
         <div
@@ -58,7 +61,7 @@ export function SetupActions({
           {status.failed ? (
             <Button size="sm" variant="outline" onClick={onRetry}>
               <RefreshCw />
-              Retry
+              {commonT("retry")}
             </Button>
           ) : null}
         </div>

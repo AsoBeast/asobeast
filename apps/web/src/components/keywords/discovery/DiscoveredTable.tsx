@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import {
   useTable,
   type OnChangeFn,
@@ -35,7 +36,8 @@ export function DiscoveredTable({
   footer: ReactNode;
   onClearSearch: () => void;
 }) {
-  const columns = useMemo(() => discoveryColumns(store), [store]);
+  const t = useTranslations("keywordInspector");
+  const columns = useMemo(() => discoveryColumns(store, t), [store, t]);
   const [{ sort, dir, q }, setParams] = useDiscoveryTableParams();
   const { sorting, onSortingChange } = useUrlSorting(
     { sort, dir },

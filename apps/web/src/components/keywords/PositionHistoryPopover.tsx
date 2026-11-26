@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState, type ComponentProps, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { History } from "lucide-react";
 import {
   keywordLabel,
@@ -15,7 +16,8 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { formatCountry, storeLabel } from "@/lib/format";
+import { formatCountryInLocale, storeLabel } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { lostPosition } from "@/lib/keyword-checks";
 import type { RangePreset } from "@/lib/ranges";
 import { cn } from "@/lib/utils";
@@ -39,17 +41,20 @@ export interface PositionHistoryProps extends PositionHistoryContext {
 }
 
 function LostDay({ keyword }: { keyword: TrackedKeywordItem }) {
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
   const lost = lostPosition(keyword);
   if (!lost?.on) return null;
   return (
     <p className="text-caption text-muted-foreground">
-      {lastRankedLine(lost.position, lost.on)}
+      {lastRankedLine(lost.position, lost.on, t, locale)}
     </p>
   );
 }
 
 function HoldFacts({ keyword }: { keyword: TrackedKeywordItem }) {
-  const facts = positionHoldFacts(keyword);
+  const t = useTranslations("keywords");
+  const facts = positionHoldFacts(keyword, t);
   if (facts.length === 0) return null;
   return (
     <dl className="grid grid-cols-[repeat(auto-fit,minmax(6rem,1fr))] gap-2">
@@ -70,12 +75,14 @@ export function PositionHistoryNotes({
   keyword: TrackedKeywordItem;
   staleOn: string | null;
 }) {
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
   return (
     <>
       {staleOn === null ? null : (
         <p className="flex gap-1.5 text-caption text-muted-foreground">
           <History aria-hidden className="mt-0.5 size-3.5 shrink-0" />
-          <span>{staleCheckLine(staleOn)}</span>
+          <span>{staleCheckLine(staleOn, t, locale)}</span>
         </p>
       )}
       <LostDay keyword={keyword} />
@@ -95,6 +102,8 @@ function PositionHistoryContent({
 }: PositionHistoryProps & {
   ids: { eyebrow: string; title: string; market: string };
 }) {
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
   const [range, setRange] = useState<RangePreset>("30d");
   return (
     <>
@@ -104,9 +113,10 @@ function PositionHistoryContent({
             {keyword.text}
           </PopoverTitle>
           <PopoverDescription>
-            <span id={ids.eyebrow}>Position history</span> ·{" "}
+            <span id={ids.eyebrow}>{t("position.historyTitle")}</span> ·{" "}
             <span id={ids.market}>
-              {storeLabel(store)} · {formatCountry(keyword.country)}
+              {storeLabel(store)} ·{" "}
+              {formatCountryInLocale(keyword.country, locale)}
             </span>
           </PopoverDescription>
         </PopoverHeader>
@@ -156,15 +166,24 @@ export function PositionHistoryPopover({
   ...props
 }: PositionHistoryProps & { children: ReactNode }) {
   const { keyword, staleOn, multiMarket } = props;
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
   const summaryId = useId();
-  const name = `Position history: ${multiMarket ? keywordLabel(keyword) : keyword.text}`;
+  const name = t("position.historyName", {
+    keyword: multiMarket ? keywordLabel(keyword) : keyword.text,
+  });
   return (
     <Popover>
       <PopoverTrigger asChild>
         <button
           type="button"
           aria-label={
-            staleOn === null ? name : `${name}, ${staleCheckLabel(staleOn)}`
+            staleOn === null
+              ? name
+              : t("position.historyStaleName", {
+                  name,
+                  stale: staleCheckLabel(staleOn, t, locale),
+                })
           }
           aria-describedby={summaryId}
           className={cn("inline-flex items-center", ROW_PEEK)}

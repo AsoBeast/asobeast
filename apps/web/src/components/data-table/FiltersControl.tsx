@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   useState,
   type ComponentProps,
@@ -36,12 +37,24 @@ export interface FiltersControlProps {
 
 function FiltersButton({
   active,
+  trigger,
   ...props
-}: ComponentProps<typeof Button> & { active: number }) {
+}: ComponentProps<typeof Button> & {
+  active: number;
+  trigger: "sheet" | "popover";
+}) {
+  const t = useTranslations("common");
   return (
-    <Button variant="outline" size="sm" {...props}>
+    <Button
+      data-action="filters"
+      data-filter-trigger={trigger}
+      data-slot="filters-button"
+      variant="outline"
+      size="sm"
+      {...props}
+    >
       <ListFilter aria-hidden />
-      Filters
+      {t("filters")}
       {active > 0 ? (
         <Badge variant="secondary" className="numeric">
           {active}
@@ -73,6 +86,7 @@ export function FiltersPopover({
   otherWidth,
   children,
 }: FiltersControlProps) {
+  const t = useTranslations("common");
   const { open, setOpen, onCloseAutoFocus } = useWidthBoundOpen(
     !useIsMobile(),
     otherWidth,
@@ -81,11 +95,11 @@ export function FiltersPopover({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <FiltersButton active={active} />
+        <FiltersButton active={active} trigger="popover" />
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        aria-label="Filters"
+        aria-label={t("filters")}
         className="w-60"
         onCloseAutoFocus={onCloseAutoFocus}
       >
@@ -101,6 +115,7 @@ export function FiltersSheet({
   description,
   children,
 }: FiltersControlProps & { description: string }) {
+  const t = useTranslations("common");
   const { open, setOpen, onCloseAutoFocus } = useWidthBoundOpen(
     useIsMobile(),
     otherWidth,
@@ -109,7 +124,7 @@ export function FiltersSheet({
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <FiltersButton active={active} />
+        <FiltersButton active={active} trigger="sheet" />
       </SheetTrigger>
       <SheetContent
         side="bottom"
@@ -117,7 +132,7 @@ export function FiltersSheet({
         onCloseAutoFocus={onCloseAutoFocus}
       >
         <SheetHeader>
-          <SheetTitle>Filters</SheetTitle>
+          <SheetTitle>{t("filters")}</SheetTitle>
           <SheetDescription>{description}</SheetDescription>
         </SheetHeader>
         <div className="flex flex-col items-start gap-2">{children}</div>

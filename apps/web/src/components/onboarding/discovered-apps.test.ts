@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { translationContext } from "@/test/translation-context";
 import type {
   CompetitorSuggestion,
   CompetitorSuggestions,
@@ -91,5 +92,22 @@ describe("discoveredEmptyText", () => {
 
   it("says nothing is suggested yet otherwise", () => {
     expect(discoveredEmptyText(false, "ok")).toBe("No suggestions yet.");
+  });
+});
+
+describe("Simplified Chinese competitor suggestions", () => {
+  const t = translationContext("zh-CN", "setup").translator;
+
+  it("localizes source, count, action, and empty copy", () => {
+    expect(suggestionMeta(serp(2), "APP_STORE", t)).toBe(
+      "出现 2 次 · 最佳第 4 名",
+    );
+    expect(suggestionMeta(similar, "GOOGLE_PLAY", t)).toBe(
+      "Google Play 上的相似应用",
+    );
+    expect(addButtonLabel(2, t)).toBe("添加选中的 2 个");
+    expect(discoveredEmptyText(false, "unavailable", t)).toBe(
+      "应用商店目前没有列出相似应用。",
+    );
   });
 });

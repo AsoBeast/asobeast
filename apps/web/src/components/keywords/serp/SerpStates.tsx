@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatDate } from "@/lib/format";
+import { formatDateInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { SERP_ROW_GRID } from "./SerpRow";
 import { SerpSummarySkeleton } from "./SerpSummary";
 
@@ -13,33 +15,39 @@ function Panel({ children }: { children: ReactNode }) {
 }
 
 export function SerpNeverChecked() {
-  return (
-    <Panel>
-      Not checked yet. The search results appear after the next daily check.
-    </Panel>
-  );
+  const t = useTranslations("keywordInspector");
+  return <Panel>{t("serp.states.neverChecked")}</Panel>;
 }
 
 export function SerpNothingCaptured({ date }: { date: string }) {
+  const t = useTranslations("keywordInspector");
+  const locale = useAppLocale();
   return (
     <Panel>
-      {`Nothing was captured on ${formatDate(date)}. Pick a captured day.`}
+      {t("serp.states.nothingCaptured", {
+        date: formatDateInLocale(date, locale),
+      })}
     </Panel>
   );
 }
 
 export function SerpNoApps({ date }: { date: string }) {
+  const t = useTranslations("keywordInspector");
+  const locale = useAppLocale();
   return (
     <Panel>
-      {`The store showed no apps for this keyword on ${formatDate(date)}.`}
+      {t("serp.states.noApps", {
+        date: formatDateInLocale(date, locale),
+      })}
     </Panel>
   );
 }
 
 export function SerpKeptShort() {
+  const t = useTranslations("keywordInspector");
   return (
     <p className="px-4 pt-3 text-caption text-muted-foreground">
-      Positions below the top 10 are not kept for this day.
+      {t("serp.keptShort")}
     </p>
   );
 }

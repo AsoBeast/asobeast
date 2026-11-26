@@ -1,13 +1,27 @@
 import { describe, expect, it } from "vitest";
 import {
-  departuresTitle,
+  departuresTitle as localizedDeparturesTitle,
   formatShare,
-  funnelRows,
-  medianLine,
+  funnelRows as localizedFunnelRows,
+  medianLine as localizedMedianLine,
   rateChange,
   trialRate,
-  unrecordedNote,
+  unrecordedNote as localizedUnrecordedNote,
 } from "./admin-conversion";
+import { translationContext } from "@/test/translation-context";
+
+const en = translationContext("en", "admin");
+const funnelRows = (funnel: Parameters<typeof localizedFunnelRows>[0]) =>
+  localizedFunnelRows(funnel, en.translator);
+const medianLine = (medians: Parameters<typeof localizedMedianLine>[0]) =>
+  localizedMedianLine(medians, en.translator);
+const unrecordedNote = (
+  recordedSince: string | null,
+  windowDays: number,
+  generatedAt: string,
+) => localizedUnrecordedNote(recordedSince, windowDays, generatedAt, en);
+const departuresTitle = (windowDays: number) =>
+  localizedDeparturesTitle(windowDays, en.translator);
 
 describe("funnelRows", () => {
   it("measures each step against the step before and the first", () => {

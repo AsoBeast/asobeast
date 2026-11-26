@@ -1,7 +1,15 @@
+"use client";
+
 import { TriangleAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { AppDetail } from "@asobeast/shared";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { formatCountry, formatDate, storeLabel } from "@/lib/format";
+import {
+  formatCountryInLocale,
+  formatDateInLocale,
+  storeLabel,
+} from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 
 export function DelistedNotice({
   detail,
@@ -10,25 +18,26 @@ export function DelistedNotice({
   detail: AppDetail;
   since: string;
 }) {
+  const t = useTranslations("appDetail");
+  const locale = useAppLocale();
   const store = storeLabel(detail.store);
-  const removal = detail.isCompetitor
-    ? "remove it from the competitors of the app that tracks it."
-    : "delete it from the dashboard.";
+  const removal = t(
+    detail.isCompetitor ? "delisted.goneCompetitor" : "delisted.goneApp",
+  );
   return (
     <Alert variant="warning" role="note">
       <TriangleAlert aria-hidden="true" />
-      <AlertTitle>{`No longer listed on ${store}`}</AlertTitle>
+      <AlertTitle>{t("delisted.title", { store })}</AlertTitle>
       <AlertDescription>
         <p>
-          {`Since ${formatDate(since)}, ${store} answers that it has no app ${detail.storeAppId} in ${formatCountry(detail.country)}.`}{" "}
-          The stored history stays, and every daily run checks again, so this
-          notice clears on the first capture that finds the app.
+          {`${t("delisted.since", {
+            date: formatDateInLocale(since, locale),
+            store,
+            id: detail.storeAppId,
+            country: formatCountryInLocale(detail.country, locale),
+          })} ${t("delisted.history")}`}
         </p>
-        <p>
-          Open the store page to check. If the app moved to a new store id,
-          import it again from its new link.{" "}
-          {`If it is gone for good, ${removal}`}
-        </p>
+        <p>{`${t("delisted.checkStore")} ${removal}`}</p>
       </AlertDescription>
     </Alert>
   );

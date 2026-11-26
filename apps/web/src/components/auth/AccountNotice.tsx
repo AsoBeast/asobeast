@@ -2,19 +2,18 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { CirclePause, Clock, OctagonX, type LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
+import type { MessageTranslator } from "@/i18n/translator";
 import {
   NOTICE_LINK,
   NoticeLine,
   type NoticeTone,
 } from "@/components/layout/notice-line";
-import {
-  ASK_THE_OWNER,
-  COLLECTION_PAUSED,
-  suspensionNotice,
-  trialBannerLine,
-} from "@/lib/plan-choice";
+import { suspensionNotice, trialBannerLine } from "@/lib/plan-choice";
 import { accountPlanOptions } from "@/lib/queries";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { useAuth } from "./use-auth";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -34,12 +33,10 @@ function AccountBar({
   icon,
   tone,
   sentence,
-  action,
 }: {
   icon: LucideIcon;
   tone: NoticeTone;
-  sentence: string;
-  action?: { href: string; label: string };
+  sentence: ReactNode;
 }) {
   return (
     <NoticeLine
@@ -50,37 +47,38 @@ function AccountBar({
     >
       <p className="max-w-[110ch] wrap-anywhere">
         <span>{sentence}</span>
-        {action ? (
-          <>
-            {" "}
-            <Link href={action.href} className={NOTICE_LINK}>
-              {action.label}
-            </Link>
-          </>
-        ) : null}
       </p>
     </NoticeLine>
   );
 }
 
 function PausedBanner({ isMember }: { isMember: boolean }) {
-  return (
-    <AccountBar
-      icon={CirclePause}
-      tone="warning"
-      sentence={
-        isMember ? `${COLLECTION_PAUSED} ${ASK_THE_OWNER}` : COLLECTION_PAUSED
-      }
-      action={isMember ? undefined : { href: UPGRADE, label: "Choose a plan" }}
-    />
-  );
+  const t = useTranslations("billing");
+  const account = useTranslations("account");
+  const sentence = isMember
+    ? t("member.paused")
+    : account.rich("notices.pausedAction", {
+        sentence: t("status.collectionPaused"),
+        action: account("notices.choosePlan"),
+        link: (chunks) => (
+          <Link href={UPGRADE} className={NOTICE_LINK}>
+            <span>{chunks}</span>
+          </Link>
+        ),
+      });
+
+  return <AccountBar icon={CirclePause} tone="warning" sentence={sentence} />;
 }
 
-function trialAction(isMember: boolean, card: boolean) {
+function trialAction(
+  isMember: boolean,
+  card: boolean,
+  t: MessageTranslator,
+): { href: string; label: string } | undefined {
   if (isMember) return undefined;
   return card
-    ? { href: "/settings", label: "Manage billing" }
-    : { href: UPGRADE, label: "Upgrade" };
+    ? { href: "/settings", label: t("notices.manageBilling") }
+    : { href: UPGRADE, label: t("notices.upgrade") };
 }
 
 function TrialBanner({
@@ -92,26 +90,44 @@ function TrialBanner({
   isMember: boolean;
   card: boolean;
 }) {
+  const t = useTranslations("billing");
+  const account = useTranslations("account");
+  const locale = useAppLocale();
+  const context = { translator: t, locale };
   const { data: plan } = useQuery({ ...accountPlanOptions, enabled: card });
   const days = daysLeft(endsAt);
-  const line = trialBannerLine(days, card ? plan : undefined);
+  const line = trialBannerLine(days, card ? plan : undefined, context);
+  const action = trialAction(isMember, card, account);
+  const sentence = isMember
+    ? t("member.trial", { sentence: line })
+    : account.rich("notices.trialAction", {
+        sentence: line,
+        action: action?.label ?? "",
+        link: (chunks) => (
+          <Link href={action?.href ?? UPGRADE} className={NOTICE_LINK}>
+            <span>{chunks}</span>
+          </Link>
+        ),
+      });
 
   return (
     <AccountBar
       icon={Clock}
       tone={days <= TRIAL_ENDING_DAYS ? "warning" : "neutral"}
-      sentence={isMember ? `${line} ${ASK_THE_OWNER}` : line}
-      action={trialAction(isMember, card)}
+      sentence={sentence}
     />
   );
 }
 
 function SuspendedBanner({ reason }: { reason: string | null }) {
+  const t = useTranslations("billing");
+  const locale = useAppLocale();
+
   return (
     <AccountBar
       icon={OctagonX}
       tone="critical"
-      sentence={suspensionNotice(reason)}
+      sentence={suspensionNotice(reason, { translator: t, locale })}
     />
   );
 }

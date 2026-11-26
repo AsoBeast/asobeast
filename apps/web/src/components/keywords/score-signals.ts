@@ -1,87 +1,101 @@
+import { createTranslator } from "next-intl";
 import { formatUtcDate, isFloorAnswer, SERP_FLAGS } from "@asobeast/shared";
 import type { ScoreSignals, ScoringSource, SerpFlag } from "@asobeast/shared";
-import { pluralize } from "@/lib/format";
+import enKeywords from "../../../messages/en/keywords.json";
+import type { MessageTranslator } from "@/i18n/translator";
 
-const FLAG_LINES: Record<SerpFlag, string> = {
-  brand: "A brand search: one app dominates this page.",
-  weak_leader: "The top result has fewer than 100 ratings.",
-  small_serp: "The store returns three results or fewer.",
-  padded: "Few results target this phrase; the page is padded with other apps.",
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywords",
+  messages: { keywords: enKeywords },
+});
+
+const FLAG_KEYS: Record<SerpFlag, string> = {
+  brand: "brand",
+  weak_leader: "weakLeader",
+  small_serp: "smallSerp",
+  padded: "padded",
 };
 
-function reachLine(signals: ScoreSignals): string {
+function flagLine(flag: SerpFlag, t: MessageTranslator): string {
+  return t(`scores.signals.${FLAG_KEYS[flag]}`);
+}
+
+function reachLine(signals: ScoreSignals, t: MessageTranslator): string {
   switch (signals.suggestReach) {
     case "hit": {
       const typed = signals.suggestPrefixLength;
       const position = signals.suggestPosition;
       if (typed === null || position === null) {
-        return "The store suggests it while it is being typed.";
+        return t("scores.signals.reachWhileTyping");
       }
-      const unit = typed === 1 ? "character" : "characters";
-      return `The store suggests it after ${typed} typed ${unit}, in position ${position}.`;
+      return t("scores.signals.reachAfter", {
+        count: typed,
+        position,
+      });
     }
     case "listed":
-      return "The store suggests it only once the whole phrase is typed.";
+      return t("scores.signals.reachListed");
     case "absent":
-      return "The store never suggests this phrase, so volume is capped.";
+      return t("scores.signals.reachAbsent");
     case "unavailable":
-      return "Suggestions were unavailable, so volume assumes a typical reach.";
+      return t("scores.signals.reachUnavailable");
   }
 }
-
-const SEARCH_MODEL_LINE =
-  "Estimated from the first 25 App Store results and search suggestions, on Apple's search popularity scale.";
-const UNLISTED_CAP_LINE =
-  "Apple does not list this term among its most searched, so it is held below the lowest popularity Apple published for its genre.";
 
 function searchModelLines(
   signals: ScoreSignals,
   shown: number | null,
+  t: MessageTranslator,
 ): string[] {
   const estimate =
     signals.estimatedTraffic === null ? null : signals.estimatedTraffic * 10;
   const capped = shown !== null && estimate !== null && shown < estimate - 0.5;
-  return capped ? [SEARCH_MODEL_LINE, UNLISTED_CAP_LINE] : [SEARCH_MODEL_LINE];
+  return capped
+    ? [t("scores.signals.searchModel"), t("scores.signals.unlistedCap")]
+    : [t("scores.signals.searchModel")];
 }
 
-function weekPhrase(signals: ScoreSignals): string {
-  const week = signals.officialPopularityWeek;
-  return week ? ` for the week of ${formatUtcDate(week)}` : "";
-}
-
-function floorPhrase(
+function lastAboveFloorLines(
   signals: ScoreSignals,
-  phrase: (floor: number) => string,
-): string {
-  const floor = signals.officialPopularityFloor;
-  return typeof floor === "number" ? phrase(floor) : "";
-}
-
-function lastAboveFloorLines(signals: ScoreSignals): string[] {
+  t: MessageTranslator,
+): string[] {
   const last = signals.officialPopularityLastAboveFloor;
   return last
     ? [
-        `The last value above the floor was ${last.value} in the week of ${formatUtcDate(last.week)}.`,
+        t("scores.signals.lastAboveFloor", {
+          value: last.value,
+          week: formatUtcDate(last.week),
+        }),
       ]
     : [];
 }
 
-function floorAnswerLines(signals: ScoreSignals): string[] | null {
+function floorAnswerLines(
+  signals: ScoreSignals,
+  t: MessageTranslator,
+): string[] | null {
   const state = signals.officialPopularityState;
   if (!isFloorAnswer(state)) {
     return null;
   }
-  const week = weekPhrase(signals);
+  const floor =
+    typeof signals.officialPopularityFloor === "number"
+      ? signals.officialPopularityFloor
+      : "none";
+  const week = signals.officialPopularityWeek
+    ? formatUtcDate(signals.officialPopularityWeek)
+    : "none";
   if (state === "floor") {
     return [
-      `Apple answered its floor value${floorPhrase(signals, (floor) => ` (${floor})`)}${week}.`,
-      ...lastAboveFloorLines(signals),
+      t("scores.signals.floorAnswerLine", { floor, week }),
+      ...lastAboveFloorLines(signals, t),
     ];
   }
   return [
-    SEARCH_MODEL_LINE,
-    `Apple left this term out of its list${week}, so its popularity is below the floor${floorPhrase(signals, (floor) => ` of ${floor}`)} and the number shown is held under it.`,
-    ...lastAboveFloorLines(signals),
+    t("scores.signals.searchModel"),
+    t("scores.signals.leftOutLine", { floor, week }),
+    ...lastAboveFloorLines(signals, t),
   ];
 }
 
@@ -89,85 +103,107 @@ export function popularitySignalLines(
   signals: ScoreSignals | null,
   source?: ScoringSource,
   shown: number | null = null,
+  t: MessageTranslator = english,
 ): string[] {
   if (!signals) {
     return [];
   }
-  const floorLines = floorAnswerLines(signals);
+  const floorLines = floorAnswerLines(signals, t);
   if (floorLines) {
     return floorLines;
   }
   if (signals.officialPopularity !== null) {
     return [
-      `Apple reports a search popularity of ${signals.officialPopularity} for this term.`,
+      t("scores.signals.officialPopularity", {
+        value: signals.officialPopularity,
+      }),
     ];
   }
   return source === "APPLE_SEARCH_SIGNALS"
-    ? searchModelLines(signals, shown)
-    : [reachLine(signals)];
+    ? searchModelLines(signals, shown, t)
+    : [reachLine(signals, t)];
 }
 
-const LOWER_CONFIDENCE_LINES = {
-  difficulty:
-    "Popularity for this term is an Apple floor answer, so the confidence of this row is capped at Medium. Difficulty itself is read from the search results.",
-  opportunity:
-    "Opportunity is built from popularity, and popularity for this term is an Apple floor answer, so read it with lower confidence.",
+const LOWER_CONFIDENCE_KEYS = {
+  difficulty: "difficulty",
+  opportunity: "opportunity",
 } as const;
 
 export function lowerConfidenceLines(
-  score: keyof typeof LOWER_CONFIDENCE_LINES,
+  score: keyof typeof LOWER_CONFIDENCE_KEYS,
   signals: ScoreSignals | null,
+  t: MessageTranslator = english,
 ): string[] {
   return isFloorAnswer(signals?.officialPopularityState)
-    ? [LOWER_CONFIDENCE_LINES[score]]
+    ? [t(`scores.signals.lowerConfidence.${LOWER_CONFIDENCE_KEYS[score]}`)]
     : [];
 }
 
-function serpLines(signals: ScoreSignals): string[] {
+function serpLines(signals: ScoreSignals, t: MessageTranslator): string[] {
   if (signals.flags.length > 0) {
     return SERP_FLAGS.filter((flag) => signals.flags.includes(flag)).map(
-      (flag) => FLAG_LINES[flag],
+      (flag) => flagLine(flag, t),
     );
   }
   return signals.medianRatingCount === null
     ? []
     : [
-        `Typical top ten app: ${pluralize(Math.round(signals.medianRatingCount), "rating")}.`,
+        t("scores.signals.typicalTopTen", {
+          count: Math.round(signals.medianRatingCount),
+        }),
       ];
 }
 
-export function difficultySignalLines(signals: ScoreSignals | null): string[] {
+export function difficultySignalLines(
+  signals: ScoreSignals | null,
+  t: MessageTranslator = english,
+): string[] {
   if (!signals) {
     return [];
   }
   return [
-    ...serpLines(signals),
-    ...lowerConfidenceLines("difficulty", signals),
+    ...serpLines(signals, t),
+    ...lowerConfidenceLines("difficulty", signals, t),
   ];
 }
 
 export const REVEAL_WORDS = {
-  suggested: "Suggested",
-  full: "Full phrase",
-  absent: "Not suggested",
-  dash: "A dash",
+  suggested: enKeywords.scores.reveal.suggested,
+  full: enKeywords.scores.reveal.full,
+  absent: enKeywords.scores.reveal.absent,
+  dash: enKeywords.scores.reveal.dash,
 } as const;
 
-export function revealLabel(signals: ScoreSignals | null): string | null {
+export function revealWords(t: MessageTranslator = english) {
+  return {
+    suggested: t("scores.reveal.suggested"),
+    full: t("scores.reveal.full"),
+    absent: t("scores.reveal.absent"),
+    dash: t("scores.reveal.dash"),
+  };
+}
+
+export function revealLabel(
+  signals: ScoreSignals | null,
+  t: MessageTranslator = english,
+): string | null {
+  const words = revealWords(t);
   switch (signals?.suggestReach) {
     case "hit": {
       const typed = signals.suggestPrefixLength;
       const position = signals.suggestPosition;
       if (typed === null || position === null) {
-        return REVEAL_WORDS.suggested;
+        return words.suggested;
       }
-      const unit = typed === 1 ? "letter" : "letters";
-      return `${typed} ${unit} · #${position}`;
+      return t("scores.reveal.letters", {
+        count: typed,
+        position,
+      });
     }
     case "listed":
-      return REVEAL_WORDS.full;
+      return words.full;
     case "absent":
-      return REVEAL_WORDS.absent;
+      return words.absent;
     default:
       return null;
   }

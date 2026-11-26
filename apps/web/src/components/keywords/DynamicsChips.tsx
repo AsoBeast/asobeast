@@ -1,6 +1,7 @@
 "use client";
 
 import { keywordLabel, type TrackedKeywordItem } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
 import type { RankingChartData } from "@/components/charts/pivot";
 
@@ -18,13 +19,14 @@ export function DynamicsChips({
   chart: RankingChartData;
   onRemove: (keywordId: string, trigger: HTMLElement) => void;
 }) {
+  const t = useTranslations("keywords");
   const labels = new Map(
     tracked.map((item) => [item.keywordId, keywordLabel(item)]),
   );
   return (
     <div
       role="group"
-      aria-label="Selected keywords"
+      aria-label={t("dynamics.selected")}
       className="flex flex-wrap items-center gap-2"
     >
       {selected.map((keywordId) => (
@@ -32,7 +34,9 @@ export function DynamicsChips({
           key={keywordId}
           type="button"
           id={dynamicsChipId(keywordId)}
-          aria-label={`Remove ${labels.get(keywordId) ?? keywordId} from the chart`}
+          aria-label={t("dynamics.remove", {
+            keyword: labels.get(keywordId) ?? keywordId,
+          })}
           onClick={(event) => onRemove(keywordId, event.currentTarget)}
           className="inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-label hover:bg-muted"
         >

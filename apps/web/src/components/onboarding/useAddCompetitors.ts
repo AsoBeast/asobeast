@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiErrorMessage, addCompetitor } from "@/lib/api";
 import { invalidateCompetitorMutation } from "@/lib/queries";
@@ -14,6 +15,7 @@ export function useAddCompetitors(
   appId: string,
   onAdded: (storeAppIds: string[]) => void,
 ) {
+  const t = useTranslations("setup");
   const queryClient = useQueryClient();
   const [outcomes, setOutcomes] = useState<Record<string, AddOutcome>>({});
   const record = (storeAppId: string, outcome: AddOutcome) =>
@@ -29,7 +31,7 @@ export function useAddCompetitors(
         } catch (error) {
           record(storeAppId, {
             kind: "failed",
-            message: apiErrorMessage(error, "Could not add this competitor"),
+            message: apiErrorMessage(error, t("discovered.addFailed")),
           });
         }
       }

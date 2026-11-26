@@ -1,12 +1,28 @@
 import type { SerpSnapshot, Store } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { CapturedDayPicker } from "@/components/day-picker/CapturedDayPicker";
 import { ExportCsvButton } from "@/components/ExportCsvButton";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCountry, formatDayMonth, storeLabel } from "@/lib/format";
+import {
+  formatCountryInLocale,
+  formatDayMonthInLocale,
+  storeLabel,
+} from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
 import { exportSerp, type SerpViewer } from "./serp-csv";
 
-function comparisonCaption(comparedTo: string | null | undefined) {
-  return comparedTo ? `vs ${formatDayMonth(comparedTo)}` : "No earlier capture";
+function comparisonCaption(
+  comparedTo: string | null | undefined,
+  t: MessageTranslator,
+  locale: Locale,
+) {
+  return comparedTo
+    ? t("serp.header.comparison", {
+        date: formatDayMonthInLocale(comparedTo, locale),
+      })
+    : t("serp.header.noEarlier");
 }
 
 function SerpToolbar({
@@ -23,6 +39,8 @@ function SerpToolbar({
   onSelectDay: (date: string) => void;
 }) {
   const dates = snapshot?.dates ?? [];
+  const t = useTranslations("keywordInspector");
+  const locale = useAppLocale();
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
       {loading ? <Skeleton aria-hidden className="h-9 w-60" /> : null}
@@ -34,12 +52,12 @@ function SerpToolbar({
             onSelect={onSelectDay}
           />
           <span className="text-caption text-muted-foreground">
-            {comparisonCaption(snapshot.comparedTo)}
+            {comparisonCaption(snapshot.comparedTo, t, locale)}
           </span>
         </>
       ) : null}
       <ExportCsvButton
-        subject="the search results"
+        subject={t("serp.header.exportSubject")}
         className="ml-auto"
         disabled={
           !exportable ||
@@ -74,6 +92,7 @@ export function SerpHeader({
   exportable: boolean;
   onSelectDay: (date: string) => void;
 }) {
+  const locale = useAppLocale();
   return (
     <div className="flex flex-col gap-3 px-4 pt-4">
       <div className="flex min-w-0 flex-col gap-0.5">
@@ -84,7 +103,7 @@ export function SerpHeader({
         ) : null}
         {country ? (
           <p className="text-caption text-muted-foreground">
-            {`${formatCountry(country)}, ${storeLabel(store)}`}
+            {`${formatCountryInLocale(country, locale)}, ${storeLabel(store)}`}
           </p>
         ) : null}
       </div>

@@ -1,4 +1,8 @@
 import type * as React from "react";
+import { NextIntlClientProvider } from "next-intl";
+import enFormat from "../../../messages/en/format.json";
+import zhFormat from "../../../messages/zh-CN/format.json";
+import type { Locale } from "@/lib/locale";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import {
@@ -8,11 +12,24 @@ import {
   TrendChip,
 } from "./delta-chip";
 
+const messages = { en: enFormat, "zh-CN": zhFormat };
+
+const renderChip = (chip: React.ReactElement, locale: Locale = "en") =>
+  renderToString(
+    <NextIntlClientProvider
+      locale={locale}
+      timeZone="UTC"
+      messages={{ format: messages[locale] }}
+    >
+      {chip}
+    </NextIntlClientProvider>,
+  );
+
 const textOf = (chip: React.ReactElement) =>
-  renderToString(chip).replace(/^<span[^>]*><svg.*?<\/svg>|<\/span>$/g, "");
+  renderChip(chip).replace(/^<span[^>]*><svg.*?<\/svg>|<\/span>$/g, "");
 
 const arrowClasses = (chip: React.ReactElement) =>
-  [...renderToString(chip).matchAll(/<svg[^>]*class="([^"]*)"/g)].map(
+  [...renderChip(chip).matchAll(/<svg[^>]*class="([^"]*)"/g)].map(
     ([, classes]) => classes,
   );
 
@@ -70,26 +87,26 @@ describe("delta chips", () => {
   });
 
   it("writes a trend without data as one text", () => {
-    const markup = renderToString(<TrendChip label="30d" value={null} />);
+    const markup = renderChip(<TrendChip label="30d" value={null} />);
 
     expect(markup).toContain(">no 30d data</span>");
     expect(markup).not.toContain("<!-- -->");
   });
 
   it("names the change for assistive technology as before", () => {
-    expect(
-      renderToString(<DeltaChip value={-3} period="over 7 days" />),
-    ).toContain('aria-label="up 3 over 7 days"');
+    expect(renderChip(<DeltaChip value={-3} period="over 7 days" />)).toContain(
+      'aria-label="up 3 over 7 days"',
+    );
   });
 
   it("names the unit of the change for assistive technology", () => {
     expect(
-      renderToString(<DeltaChip value={-4} unit="%" period="over 7 days" />),
+      renderChip(<DeltaChip value={-4} unit="%" period="over 7 days" />),
     ).toContain('aria-label="up 4% over 7 days"');
   });
 
   it("writes a change with the decimals it asks for, seen and heard alike", () => {
-    const markup = renderToString(
+    const markup = renderChip(
       <DeltaChip
         value={3}
         digits={1}
@@ -113,7 +130,7 @@ describe("delta chips", () => {
 
   it("rounds a change before it picks the direction", () => {
     expect(
-      renderToString(
+      renderChip(
         <DeltaChip
           value={-6.64}
           digits={1}
@@ -123,7 +140,7 @@ describe("delta chips", () => {
       ),
     ).toContain('aria-label="down 6.6 in visibility"');
     expect(
-      renderToString(<DeltaChip value={0.04} digits={1} period="points" />),
+      renderChip(<DeltaChip value={0.04} digits={1} period="points" />),
     ).toContain(">0.0</span>");
   });
 
@@ -138,7 +155,7 @@ describe("delta chips", () => {
   ])(
     "rounds %s half away from zero like the fixed formatter",
     (value, label) => {
-      const markup = renderToString(
+      const markup = renderChip(
         <DeltaChip
           value={value}
           digits={1}
@@ -155,4 +172,13 @@ describe("delta chips", () => {
       }
     },
   );
+
+  it("names changes and missing data in Chinese", () => {
+    expect(
+      renderChip(<DeltaChip value={-3} period="过去 7 天" />, "zh-CN"),
+    ).toContain('aria-label="过去 7 天上升 3"');
+    expect(
+      renderChip(<TrendChip label="30d" value={null} />, "zh-CN"),
+    ).toContain("暂无30d数据");
+  });
 });

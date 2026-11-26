@@ -1,4 +1,13 @@
 import type { KeywordSuggestionStrategy } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
+import enKeywords from "../../../messages/en/keywords.json";
+import type { MessageTranslator } from "@/i18n/translator";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywords",
+  messages: { keywords: enKeywords },
+});
 
 export const STRATEGIES: {
   value: KeywordSuggestionStrategy;
@@ -7,40 +16,76 @@ export const STRATEGIES: {
 }[] = [
   {
     value: "metadata",
-    label: "Metadata",
-    description: "Phrases from your app's own metadata",
+    label: enKeywords.suggestions.metadata,
+    description: enKeywords.suggestions.metadataDescription,
   },
   {
     value: "search",
-    label: "Search",
-    description: "Autocomplete terms from the store search",
+    label: enKeywords.suggestions.search,
+    description: enKeywords.suggestions.searchDescription,
   },
   {
     value: "similar",
-    label: "Similar apps",
-    description: "Terms from apps like yours",
+    label: enKeywords.suggestions.similar,
+    description: enKeywords.suggestions.similarDescription,
   },
   {
     value: "developer",
-    label: "More by developer",
-    description: "Terms from the rest of your developer's catalogue",
+    label: enKeywords.suggestions.developer,
+    description: enKeywords.suggestions.developerDescription,
   },
   {
     value: "competitors",
-    label: "Competitors",
-    description: "Terms your competitors rank for",
+    label: enKeywords.suggestions.competitors,
+    description: enKeywords.suggestions.competitorsDescription,
   },
   {
     value: "competitorSearch",
-    label: "Competitor searches",
-    description: "What people search around your competitors' phrases",
+    label: enKeywords.suggestions.competitorSearch,
+    description: enKeywords.suggestions.competitorSearchDescription,
   },
   {
     value: "reviews",
-    label: "Reviews",
-    description: "Phrases from your users' reviews",
+    label: enKeywords.suggestions.reviews,
+    description: enKeywords.suggestions.reviewsDescription,
   },
 ];
+
+export function strategyLabel(
+  strategy: KeywordSuggestionStrategy,
+  t: MessageTranslator = english,
+): string {
+  return t(`suggestions.${strategy}`);
+}
+
+export function strategyDescription(
+  strategy: KeywordSuggestionStrategy,
+  t: MessageTranslator = english,
+): string {
+  return t(`suggestions.${strategy}Description`);
+}
+
+export function strategyOptions(t: MessageTranslator = english) {
+  return STRATEGIES.map(({ value }) => ({
+    value,
+    label: strategyLabel(value, t),
+    description: strategyDescription(value, t),
+  }));
+}
+
+const NOUN_KEYS: Partial<Record<KeywordSuggestionStrategy, string>> = {
+  competitors: "competitorNoun",
+  competitorSearch: "competitorNoun",
+  reviews: "reviewNoun",
+};
+
+export function suggestionNoun(
+  strategy: KeywordSuggestionStrategy,
+  t: MessageTranslator = english,
+): string {
+  const key = NOUN_KEYS[strategy] ?? "appNoun";
+  return t(`suggestions.${key}`);
+}
 
 export const USED_BY_NOUN: Partial<Record<KeywordSuggestionStrategy, string>> =
   {
@@ -50,8 +95,17 @@ export const USED_BY_NOUN: Partial<Record<KeywordSuggestionStrategy, string>> =
   };
 
 export const EMPTY_COPY: Partial<Record<KeywordSuggestionStrategy, string>> = {
-  competitorSearch:
-    "No new searches found around your competitors' phrases in this market. Competitors need a phrase of two or more words in their listing here, or in their home listing when they have none here.",
-  developer:
-    "No other apps found for this developer, or the latest snapshot carries no developer id.",
+  competitorSearch: enKeywords.suggestions.emptyCompetitorSearch,
+  developer: enKeywords.suggestions.emptyDeveloper,
 };
+
+export function suggestionEmpty(
+  strategy: KeywordSuggestionStrategy,
+  t: MessageTranslator = english,
+): string {
+  if (strategy === "competitorSearch") {
+    return t("suggestions.emptyCompetitorSearch");
+  }
+  if (strategy === "developer") return t("suggestions.emptyDeveloper");
+  return t("suggestions.empty");
+}

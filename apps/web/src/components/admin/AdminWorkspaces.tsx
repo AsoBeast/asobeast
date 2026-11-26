@@ -1,8 +1,9 @@
 "use client";
 
-import { useDeferredValue, useRef } from "react";
+import { useDeferredValue, useMemo, useRef } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryStates } from "nuqs";
+import { useTranslations } from "next-intl";
 import { WORKSPACE_STAGES } from "@asobeast/shared";
 import { FacetFilter } from "@/components/data-table/FacetFilter";
 import {
@@ -11,10 +12,10 @@ import {
 } from "@/components/data-table/FiltersControl";
 import { workspaceMatches } from "@/lib/admin-search";
 import {
-  ADMIN_FLAG_LABELS,
-  WORKSPACE_STAGE_LABELS,
   matchesStanding,
+  workspaceFlagLabel,
   workspaceFlags,
+  workspaceStageLabel,
 } from "@/lib/admin-stages";
 import { adminWorkspacesOptions, authStatusOptions } from "@/lib/queries";
 import {
@@ -25,27 +26,17 @@ import {
   adminWorkspaceSortParser,
 } from "@/lib/search-params";
 import { countBy } from "@/lib/table/facets";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { useUrlSheet } from "@/lib/use-url-sheet";
-import { WORKSPACE_NOUN } from "./admin-search";
 import { AdminList } from "./AdminList";
 import { useAdminTable } from "./useAdminTable";
 import { workspaceColumns } from "./workspace-columns";
 import { WorkspaceSheet } from "./workspace-sheet/WorkspaceSheet";
 import { WorkspaceSheetContext } from "./workspace-sheet/workspace-sheet-context";
 
-const STAGE_OPTIONS = WORKSPACE_STAGES.filter(
-  (stage) => stage !== "self-hosted",
-).map((stage) => ({ value: stage, label: WORKSPACE_STAGE_LABELS[stage] }));
-
-const FLAG_OPTIONS = ADMIN_WORKSPACE_FLAGS.map((flag) => ({
-  value: flag,
-  label: ADMIN_FLAG_LABELS[flag],
-}));
-
-const FILTERS_DESCRIPTION =
-  "Narrow the workspaces by billing stage and by what needs a look.";
-
 export function AdminWorkspaces() {
+  const t = useTranslations("admin");
+  const locale = useAppLocale();
   const { data: workspaces, dataUpdatedAt } = useSuspenseQuery(
     adminWorkspacesOptions,
   );
@@ -63,13 +54,17 @@ export function AdminWorkspaces() {
   const searched = workspaces.filter((workspace) =>
     workspaceMatches(workspace, query),
   );
+  const columns = useMemo(
+    () => workspaceColumns({ translator: t, locale }),
+    [t, locale],
+  );
 
   const table = useAdminTable({
     name: "admin-workspaces",
     data: searched.filter((workspace) =>
       matchesStanding(workspace, { stage, flag }, dataUpdatedAt),
     ),
-    columns: workspaceColumns,
+    columns,
     getRowId: (workspace) => workspace.workspaceId,
     sort: { sort, dir },
     onSort: (next) =>
@@ -82,20 +77,30 @@ export function AdminWorkspaces() {
     billingColumns: [],
   });
 
+  const stageOptions = WORKSPACE_STAGES.filter(
+    (stage) => stage !== "self-hosted",
+  ).map((stage) => ({
+    value: stage,
+    label: workspaceStageLabel(stage, t),
+  }));
+  const flagOptions = ADMIN_WORKSPACE_FLAGS.map((flag) => ({
+    value: flag,
+    label: workspaceFlagLabel(flag, t),
+  }));
   const facets = (
     <>
       {status.billing ? (
         <FacetFilter
-          title="Stage"
-          options={STAGE_OPTIONS}
+          title={t("workspaces.stage")}
+          options={stageOptions}
           selected={stage}
           counts={countBy(searched, (workspace) => workspace.stage ?? null)}
           onChange={(next) => void setList({ stage: next })}
         />
       ) : null}
       <FacetFilter
-        title="Needs a look"
-        options={FLAG_OPTIONS}
+        title={t("workspaces.needsLook")}
+        options={flagOptions}
         selected={flag}
         counts={countBy(
           searched.flatMap((workspace) =>
@@ -113,8 +118,8 @@ export function AdminWorkspaces() {
     <WorkspaceSheetContext value={sheet.open}>
       <AdminList
         table={table}
-        caption="Workspaces on this instance"
-        noun={WORKSPACE_NOUN}
+        caption={t("workspaces.caption")}
+        noun="workspace"
         loaded={workspaces.length}
         total={workspaces.length}
         billing={status.billing}
@@ -127,7 +132,7 @@ export function AdminWorkspaces() {
               <FiltersSheet
                 active={active}
                 otherWidth={widerFilters}
-                description={FILTERS_DESCRIPTION}
+                description={t("workspaces.filtersDescription")}
               >
                 {facets}
               </FiltersSheet>
@@ -142,13 +147,15 @@ export function AdminWorkspaces() {
         chips={[
           ...stage.map((value) => ({
             key: `stage-${value}`,
-            label: `Stage: ${WORKSPACE_STAGE_LABELS[value]}`,
+            label: t("workspaces.stageChip", {
+              stage: workspaceStageLabel(value, t),
+            }),
             onRemove: () =>
               void setList({ stage: stage.filter((entry) => entry !== value) }),
           })),
           ...flag.map((value) => ({
             key: `flag-${value}`,
-            label: ADMIN_FLAG_LABELS[value],
+            label: workspaceFlagLabel(value, t),
             onRemove: () =>
               void setList({ flag: flag.filter((entry) => entry !== value) }),
           })),
@@ -156,7 +163,7 @@ export function AdminWorkspaces() {
         onClearFilters={() =>
           void setList({ q: null, stage: null, flag: null })
         }
-        reads="Each read is written to the support audit trail."
+        reads={t("common.auditRead")}
       />
       <WorkspaceSheet
         shownId={sheet.shownId}

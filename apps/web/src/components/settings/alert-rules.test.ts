@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { ESSENTIAL_ALERT_EVENTS, WEBHOOK_EVENTS } from "@asobeast/shared";
+import { translationContext } from "@/test/translation-context";
 import {
   ALERT_RULE_GROUPS,
   ALERT_RULE_ORDER,
   ALERT_RULES,
+  alertRuleCopy,
 } from "./alert-rules";
+
+const en = translationContext("en", "notifications").translator;
+const zh = translationContext("zh-CN", "notifications").translator;
 
 const DASH = /[–—]| - /;
 
@@ -20,12 +25,24 @@ describe("ALERT_RULES", () => {
 
   it("titles and details every rule without dash punctuation", () => {
     for (const rule of Object.values(ALERT_RULES)) {
-      expect(rule.title.length).toBeGreaterThan(0);
-      expect(rule.detail.length).toBeGreaterThan(0);
+      const copy = alertRuleCopy(rule, en);
+      expect(copy.title.length).toBeGreaterThan(0);
+      expect(copy.detail.length).toBeGreaterThan(0);
       expect(ALERT_RULE_GROUPS).toContain(rule.group);
-      expect(rule.title).not.toMatch(DASH);
-      expect(rule.detail).not.toMatch(DASH);
+      expect(copy.title).not.toMatch(DASH);
+      expect(copy.detail).not.toMatch(DASH);
     }
+  });
+
+  it("localizes rule titles and details by stable event descriptor", () => {
+    expect(alertRuleCopy(ALERT_RULES["rank.dropped"], zh)).toEqual({
+      title: "排名下降",
+      detail: "您的应用关键词排名至少下降指定名次。",
+    });
+    expect(alertRuleCopy(ALERT_RULES["app.delisted"], zh)).toEqual({
+      title: "应用已下架",
+      detail: "一个应用从其主应用商店消失。",
+    });
   });
 
   it("gives an inline control only to the rules that take one", () => {

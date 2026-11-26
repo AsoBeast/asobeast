@@ -3,6 +3,9 @@ import type {
   PortfolioAppInsight,
   Store,
 } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
+import enDashboard from "../../../messages/en/dashboard.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import { storeLabel } from "@/lib/format";
 import { matchesSearch } from "@/lib/search-text";
 import type { AppSort } from "@/lib/search-params";
@@ -12,6 +15,12 @@ const STORE_ORDER: Record<Store, number> = {
   APP_STORE: 0,
   GOOGLE_PLAY: 1,
 };
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "dashboard",
+  messages: { dashboard: enDashboard },
+});
 
 export type GroupVariant = "linked" | "storefront";
 
@@ -37,7 +46,10 @@ export function orderMembers(members: PortfolioApp[]): PortfolioApp[] {
   );
 }
 
-export function toRows(apps: PortfolioApp[]): PortfolioRow[] {
+export function toRows(
+  apps: PortfolioApp[],
+  t: MessageTranslator = english,
+): PortfolioRow[] {
   const storefrontCounts = new Map<string, number>();
   for (const app of apps) {
     if (app.groupId === null) {
@@ -70,7 +82,7 @@ export function toRows(apps: PortfolioApp[]): PortfolioRow[] {
         {
           kind: "group",
           id: app.groupId,
-          name: app.groupName ?? app.name ?? "App group",
+          name: app.groupName ?? app.name ?? t("apps.groupFallback"),
           variant: "linked",
         },
         app,
@@ -89,7 +101,7 @@ export function toRows(apps: PortfolioApp[]): PortfolioRow[] {
       {
         kind: "group",
         id: key,
-        name: app.name ?? "Untitled app",
+        name: app.name ?? t("table.untitled"),
         variant: "storefront",
       },
       app,

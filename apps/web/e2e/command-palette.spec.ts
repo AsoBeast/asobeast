@@ -8,7 +8,7 @@ test("keyboard round trip navigates to an app and then a section", async ({
 
   await page.keyboard.press("ControlOrMeta+k");
 
-  const palette = page.getByRole("dialog", { name: "Command palette" });
+  const palette = page.locator('[data-slot="command-dialog"]');
   await expect(palette).toBeVisible();
 
   await page.keyboard.type(APP_1.name ?? "");
@@ -33,9 +33,9 @@ test("the header button opens the palette and offers general destinations", asyn
 }) => {
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Open command palette" }).click();
+  await page.locator('[data-action="open-command-palette"]').click();
 
-  const palette = page.getByRole("dialog", { name: "Command palette" });
+  const palette = page.locator('[data-slot="command-dialog"]');
   await expect(palette).toBeVisible();
   await expect(palette.getByRole("option", { name: "Settings" })).toBeVisible();
   await expect(

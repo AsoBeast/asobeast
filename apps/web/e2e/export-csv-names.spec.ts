@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 
 const exportButtons = (page: Page) =>
-  page.locator("button", { hasText: "Export CSV" });
+  page.locator('[data-action="export-csv"]');
 
 const expectNamed = async (page: Page, names: readonly string[]) => {
   await expect(exportButtons(page)).toHaveCount(names.length);
@@ -73,7 +73,8 @@ test("the search results sheet names its export from the visible words", async (
       exact: true,
     }),
   ).toHaveCount(1);
-  await expect(
-    sheet.locator("button", { hasText: "Export CSV" }),
-  ).not.toHaveAttribute("aria-label", /.+/);
+  await expect(sheet.locator('[data-action="export-csv"]')).not.toHaveAttribute(
+    "aria-label",
+    /.+/,
+  );
 });

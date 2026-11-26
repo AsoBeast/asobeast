@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { flexRender, type Table as TanstackTable } from "@tanstack/react-table";
 import type { KeywordDiscoveryItem } from "@asobeast/shared";
 import { FilteredEmpty } from "@/components/data-table/FilteredEmpty";
@@ -15,7 +16,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { focusIsLost } from "@/lib/focus-handoff";
-import { formatNumber } from "@/lib/format";
 import {
   isNumericColumn,
   isWideOnlyColumn,
@@ -42,6 +42,7 @@ export function DiscoveryRows({
   onClearSearch: () => void;
 }) {
   const [pages, setPages] = useState(1);
+  const t = useTranslations("keywordInspector");
   const rows = table.getRowModel().rows;
   const shown = rows.slice(0, pages * DISCOVERY_PAGE_SIZE);
   const next = Math.min(DISCOVERY_PAGE_SIZE, rows.length - shown.length);
@@ -63,12 +64,11 @@ export function DiscoveryRows({
       <div className="overflow-hidden rounded-lg border bg-card">
         <Table
           className="[&_td]:md:px-3 [&_th]:md:px-3"
-          scrollLabel="Keyword discoveries"
+          scrollLabel={t("discovery.table.scrollLabel")}
           scrollFocus="overflow"
         >
           <TableCaption className="sr-only">
-            Keyword discoveries: keywords near your listing that you do not
-            track yet, with where your app ranks for each.
+            {t("discovery.table.caption")}
           </TableCaption>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -94,8 +94,8 @@ export function DiscoveryRows({
               <TableRow>
                 <TableCell colSpan={table.getVisibleLeafColumns().length}>
                   <FilteredEmpty
-                    title="No discovered keywords match this search"
-                    body="Change or clear the search to see the rows again."
+                    title={t("discovery.table.filteredTitle")}
+                    body={t("discovery.table.filteredBody")}
                     onClear={onClearSearch}
                   />
                 </TableCell>
@@ -140,7 +140,10 @@ export function DiscoveryRows({
       {rows.length > DISCOVERY_PAGE_SIZE ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-caption text-muted-foreground" aria-live="polite">
-            {`Showing ${formatNumber(shown.length)} of ${formatNumber(rows.length)}`}
+            {t("discovery.table.showing", {
+              shown: shown.length,
+              total: rows.length,
+            })}
           </p>
           {next > 0 ? (
             <Button
@@ -151,7 +154,7 @@ export function DiscoveryRows({
                 setPages((count) => count + 1);
               }}
             >
-              {`Show ${next} more`}
+              {t("discovery.table.showMore", { count: next })}
             </Button>
           ) : null}
         </div>

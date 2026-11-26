@@ -1,4 +1,12 @@
 import { formatRating } from "./format";
+import type { Locale } from "./locale";
+import enFormat from "../../messages/en/format.json";
+import zhFormat from "../../messages/zh-CN/format.json";
+
+const GRADE_LABELS = {
+  en: enFormat.grade,
+  "zh-CN": zhFormat.grade,
+} as const;
 
 export const GRADES = ["strong", "fair", "weak", "poor"] as const;
 export type Grade = (typeof GRADES)[number];
@@ -35,5 +43,12 @@ export function grade(metric: GradeMetric, value: number | null): Grade | null {
 }
 
 export function gradeLabel(value: Grade): string {
-  return value;
+  return gradeLabelInLocale(value);
+}
+
+export function gradeLabelInLocale(
+  value: Grade,
+  locale: Locale = "en",
+): string {
+  return GRADE_LABELS[locale][value];
 }

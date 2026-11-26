@@ -125,8 +125,8 @@ function NavLink({
 }
 
 export function SidebarNav() {
-  const t = useTranslations("navigation");
   const pathname = usePathname();
+  const t = useTranslations("navigation");
   const { setOpenMobile, isMobile } = useSidebar();
   const { isOperator } = useAuth();
   const app = appRouteFrom(pathname);
@@ -167,7 +167,7 @@ export function SidebarNav() {
       </SidebarGroup>
 
       {app ? (
-        <nav aria-label={t("appSectionsLabel")}>
+        <nav aria-label={t("appSections.label")}>
           <SidebarGroup>
             <SidebarGroupLabel>{t("app")}</SidebarGroupLabel>
             <SidebarGroupContent>

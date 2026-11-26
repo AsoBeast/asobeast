@@ -24,6 +24,10 @@ import {
   skipButtonLabel,
   summarySentence,
 } from "./keyword-import";
+import { translationContext } from "@/test/translation-context";
+
+const EN = translationContext("en", "billing");
+const ZH = translationContext("zh-CN", "keywords").translator;
 
 const rowsOf = (count: number, note = "") =>
   Array.from({ length: count }, (_, index) => ({
@@ -306,15 +310,15 @@ describe("quotaNotice", () => {
   const quota = { used: 998, limit: 1000, upgradeTo: "ultimate" as const };
 
   it("says nothing while every row fits the plan", () => {
-    expect(quotaNotice({ summary: summary({ new: 2 }), quota })).toBeNull();
+    expect(quotaNotice({ summary: summary({ new: 2 }), quota }, EN)).toBeNull();
     expect(
-      quotaNotice({ summary: summary({ overQuota: 2 }), quota: null }),
+      quotaNotice({ summary: summary({ overQuota: 2 }), quota: null }, EN),
     ).toBeNull();
   });
 
   it("states the keyword markets used and the rows over the limit, with an upgrade", () => {
     expect(
-      quotaNotice({ summary: summary({ new: 2, overQuota: 3 }), quota }),
+      quotaNotice({ summary: summary({ new: 2, overQuota: 3 }), quota }, EN),
     ).toEqual({
       text: "998 of 1,000 keyword markets used. 3 rows are over your plan's keyword limit and are skipped.",
       upgrade: true,
@@ -323,10 +327,13 @@ describe("quotaNotice", () => {
 
   it("offers no upgrade when there is no larger plan, and words one row and an empty plan", () => {
     expect(
-      quotaNotice({
-        summary: summary({ overQuota: 1 }),
-        quota: { used: 0, limit: 0, upgradeTo: null },
-      }),
+      quotaNotice(
+        {
+          summary: summary({ overQuota: 1 }),
+          quota: { used: 0, limit: 0, upgradeTo: null },
+        },
+        EN,
+      ),
     ).toEqual({
       text: "Your plan includes no keyword markets. 1 row is over your plan's keyword limit and is skipped.",
       upgrade: false,
@@ -342,6 +349,15 @@ describe("marketRefusal", () => {
   it("asks for a market when the default market is not a storefront", () => {
     expect(marketRefusal("APP_STORE", "zz")).toBe(
       "zz is not an App Store storefront. Choose the market for rows without a country.",
+    );
+  });
+
+  it("localizes the invalid market structurally in Simplified Chinese", () => {
+    expect(marketRefusal("APP_STORE", "zz", ZH)).toBe(
+      "zz 不是 App Store 应用商店地区。请为没有国家列的行选择市场。",
+    );
+    expect(marketRefusal("GOOGLE_PLAY", "zz", ZH)).toBe(
+      "zz 不是 Google Play 应用商店地区。请为没有国家列的行选择市场。",
     );
   });
 });

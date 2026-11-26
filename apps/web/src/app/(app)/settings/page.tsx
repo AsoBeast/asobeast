@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { getTranslations } from "next-intl/server";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { PlanSection } from "@/components/settings/PlanSection";
 import { TeamCard } from "@/components/settings/TeamCard";
@@ -35,6 +36,7 @@ export default async function SettingsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const returnedFromCheckout = pageReturnedFromCheckout(await searchParams);
+  const t = await getTranslations("settings");
   const queryClient = getQueryClient();
   const [operator] = await Promise.all([
     viewerIsOperator(),
@@ -57,14 +59,14 @@ export default async function SettingsPage({
             className="hidden @[59rem]/settings:block"
           />
           <div className="page-reading flex flex-col gap-8">
-            <PageHeader title="Settings" />
+            <PageHeader title={t("title")} />
 
             <PlanSection />
 
             {operator ? (
               <SettingsSection
                 id="daily-capacity"
-                title="Capacity"
+                title={t("index.sections.dailyCapacity")}
                 headed={false}
               >
                 <Suspense fallback={<BudgetCardSkeleton />}>
@@ -75,13 +77,13 @@ export default async function SettingsPage({
 
             <SettingsSection
               id="getting-started"
-              title="Getting started"
+              title={t("index.sections.gettingStarted")}
               headed={false}
             >
               <ChecklistSettingsCard />
             </SettingsSection>
 
-            <SettingsSection id="alerts" title="Alerts">
+            <SettingsSection id="alerts" title={t("index.sections.alerts")}>
               <Suspense fallback={<DeliveryCardSkeleton />}>
                 <DeliveryCard />
               </Suspense>
@@ -97,11 +99,19 @@ export default async function SettingsPage({
               </div>
             </SettingsSection>
 
-            <SettingsSection id="team" title="Team" headed={false}>
+            <SettingsSection
+              id="team"
+              title={t("index.sections.team")}
+              headed={false}
+            >
               <TeamCard />
             </SettingsSection>
 
-            <SettingsSection id="workspace" title="Workspace" headed={false}>
+            <SettingsSection
+              id="workspace"
+              title={t("index.sections.workspace")}
+              headed={false}
+            >
               <WorkspaceDeletionCard />
             </SettingsSection>
           </div>

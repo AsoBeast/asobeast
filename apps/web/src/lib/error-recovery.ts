@@ -4,7 +4,8 @@ import {
   readApiErrorDigest,
   type ApiErrorDigest,
 } from "@/lib/api";
-import { formatRelativeTime } from "@/lib/format";
+import { formatRelativeTime, formatRelativeTimeInLocale } from "@/lib/format";
+import type { TranslationContext } from "@/i18n/translator";
 
 export type RecoveryAction =
   { kind: "retry" } | { kind: "link"; href: string; label: string };
@@ -79,24 +80,63 @@ const BY_SCOPED_STATUS: Record<RecoveryScope, Record<number, Explanation>> = {
   },
 };
 
-function reopens(retryAfterSeconds: number | null): string {
-  if (retryAfterSeconds === null) return "Try again in a moment.";
+const STATUS_KEYS: Record<number, string> = {
+  401: "unauthorized",
+  402: "paymentRequired",
+  403: "forbidden",
+  404: "notFound",
+  504: "timeout",
+};
+
+const ACTION_KEYS: Record<string, string> = {
+  "Sign in": "signIn",
+  "See plans": "seePlans",
+  "Back to apps": "backToApps",
+  "Open settings": "openSettings",
+};
+
+function reopens(
+  retryAfterSeconds: number | null,
+  context?: TranslationContext,
+): string {
+  if (retryAfterSeconds === null) {
+    return context
+      ? context.translator("retryMoment")
+      : "Try again in a moment.";
+  }
   const now = Date.now();
   const at = new Date(now + retryAfterSeconds * 1000);
-  return `Try again ${formatRelativeTime(at.toISOString(), now)}.`;
+  const relative = context
+    ? formatRelativeTimeInLocale(at.toISOString(), now, context.locale)
+    : formatRelativeTime(at.toISOString(), now);
+  return context
+    ? context.translator("retryIn", { time: relative })
+    : `Try again ${relative}.`;
 }
 
-function refused({
-  planRefusal,
-  retryAfterSeconds,
-}: ApiErrorDigest): Explanation {
+function refused(
+  { planRefusal, retryAfterSeconds }: ApiErrorDigest,
+  context?: TranslationContext,
+): Explanation {
+  const retry = reopens(retryAfterSeconds, context);
+  if (context) {
+    return {
+      title: context.translator(
+        planRefusal ? "planBudgetTitle" : "tooManyTitle",
+      ),
+      body: context.translator(planRefusal ? "planBudgetBody" : "tooManyBody", {
+        retry,
+      }),
+      action: { kind: "retry" },
+    };
+  }
   return {
     title: planRefusal
       ? "Your plan's request budget is spent"
       : "Too many requests",
     body: planRefusal
-      ? `This workspace has used the API requests its plan allows. ${reopens(retryAfterSeconds)}`
-      : `The API refused this request because too many arrived in a short time. ${reopens(retryAfterSeconds)}`,
+      ? `This workspace has used the API requests its plan allows. ${retry}`
+      : `The API refused this request because too many arrived in a short time. ${retry}`,
     action: { kind: "retry" },
   };
 }
@@ -110,12 +150,47 @@ function explanationFor(
   return scoped || BY_STATUS[digest.statusCode];
 }
 
+function translateExplanation(
+  known: Explanation,
+  digest: ApiErrorDigest,
+  scope: RecoveryScope | undefined,
+  context: TranslationContext,
+): Explanation {
+  const key =
+    scope === "admin" && digest.statusCode === 404
+      ? "adminNotFound"
+      : STATUS_KEYS[digest.statusCode];
+  if (!key) return known;
+  return {
+    title: context.translator(`${key}Title`),
+    body: context.translator(`${key}Body`),
+    action:
+      known.action.kind === "link"
+        ? {
+            kind: "link",
+            href: known.action.href,
+            label: context.translator(
+              ACTION_KEYS[known.action.label] ?? known.action.label,
+            ),
+          }
+        : known.action,
+  };
+}
+
 function byStatus(
   digest: ApiErrorDigest,
   scope: RecoveryScope | undefined,
+  context?: TranslationContext,
 ): Recovery | null {
+  if (digest.statusCode === 429) {
+    return { ...refused(digest, context), expected: true };
+  }
   const known = explanationFor(digest, scope);
-  return known ? { ...known, expected: true } : null;
+  if (!known) return null;
+  return {
+    ...(context ? translateExplanation(known, digest, scope, context) : known),
+    expected: true,
+  };
 }
 
 function digestOf(error: unknown): string | undefined {
@@ -132,24 +207,51 @@ export function isExplainedRefusal(error: unknown): boolean {
   );
 }
 
-export function recoveryFor(error: unknown, scope?: RecoveryScope): Recovery {
+export function recoveryFor(
+  error: unknown,
+  scope?: RecoveryScope,
+  context?: TranslationContext,
+): Recovery {
   if (error instanceof ApiError) {
     const { statusCode, message } = error.envelope;
-    const known = byStatus(apiErrorDigestOf(error.envelope), scope);
+    const known = byStatus(apiErrorDigestOf(error.envelope), scope, context);
     if (known) return known;
     if (statusCode >= 500) {
       return {
-        title: "The API failed to answer",
+        title: context
+          ? context.translator("serverTitle")
+          : "The API failed to answer",
         body: message,
         action: { kind: "retry" },
         expected: true,
       };
     }
-    return { ...GENERIC, body: message, expected: true };
+    return {
+      ...GENERIC,
+      body: message,
+      expected: true,
+    };
   }
 
-  if (isLostRequest(error)) return LOST_REQUEST;
+  if (isLostRequest(error)) {
+    return context
+      ? {
+          ...LOST_REQUEST,
+          title: context.translator("networkTitle"),
+          body: context.translator("networkBody"),
+        }
+      : LOST_REQUEST;
+  }
 
   const digest = readApiErrorDigest(digestOf(error));
-  return (digest && byStatus(digest, scope)) ?? GENERIC;
+  return (
+    (digest && byStatus(digest, scope, context)) ??
+    (context
+      ? {
+          ...GENERIC,
+          title: context.translator("genericTitle"),
+          body: context.translator("genericBody"),
+        }
+      : GENERIC)
+  );
 }

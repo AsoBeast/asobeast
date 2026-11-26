@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, type RefObject } from "react";
-import { SELECT_ALL_KEYWORDS } from "./keyword-columns";
 
 export function useClearedSelectionFocus(
   selectedCount: number,
@@ -18,7 +17,7 @@ export function useClearedSelectionFocus(
     if (!refocusTable.current || selectedCount > 0) return;
     refocusTable.current = false;
     tableArea.current
-      ?.querySelector<HTMLElement>(`[aria-label="${SELECT_ALL_KEYWORDS}"]`)
+      ?.querySelector<HTMLElement>("[data-select-all-keywords]")
       ?.focus();
   }, [selectedCount]);
 

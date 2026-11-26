@@ -1,5 +1,6 @@
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { TestIntlProvider } from "@/test/intl-provider";
 import type { PositionSummary } from "./serp-summary";
 import { SerpSummary } from "./SerpSummary";
 
@@ -7,14 +8,16 @@ const TEXT_SEPARATOR = "<!-- -->";
 
 const summaryOf = (position: PositionSummary) =>
   renderToString(
-    <SerpSummary
-      facts={{
-        position,
-        titles: { withKeyword: 3, of: 10 },
-        ratings: { kind: "none" },
-      }}
-      comparedTo="2026-10-30"
-    />,
+    <TestIntlProvider>
+      <SerpSummary
+        facts={{
+          position,
+          titles: { withKeyword: 3, of: 10 },
+          ratings: { kind: "none" },
+        }}
+        comparedTo="2026-10-30"
+      />
+    </TestIntlProvider>,
   );
 
 describe("SerpSummary", () => {

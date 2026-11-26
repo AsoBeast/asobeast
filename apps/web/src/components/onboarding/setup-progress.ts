@@ -8,79 +8,122 @@ import {
   type SetupStepState,
   type Store,
 } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
+import enSetup from "../../../messages/en/setup.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import {
-  formatCountry,
-  formatDayMonth,
-  formatList,
-  pluralize,
+  formatCountryInLocale,
+  formatDayMonthInLocale,
+  formatListInLocale,
 } from "@/lib/format";
+import type { Locale } from "@/lib/locale";
 
-export const STEP_TITLES: Record<SetupStep, string> = {
-  competitors: "Pick competitors",
-  keywords: "Track keywords",
-  countries: "Add countries",
-};
+const english = createTranslator({
+  locale: "en",
+  namespace: "setup",
+  messages: { setup: enSetup },
+});
 
-const INDEXED_SURFACES: Record<Store, string> = {
-  APP_STORE: "title and subtitle",
-  GOOGLE_PLAY: "title and short description",
-};
+export const stepTitle = (
+  step: SetupStep,
+  t: MessageTranslator = english,
+): string => t(`steps.${step}.title`);
 
-export const keywordsStepDescription = (store: Store): string =>
-  `Track at least ${SETUP_KEYWORD_TARGET} keywords in your home storefront. The import already tracked the phrases of your ${INDEXED_SURFACES[store]}.`;
+export const keywordsStepDescription = (
+  store: Store,
+  t: MessageTranslator = english,
+): string =>
+  t("steps.keywords.description", {
+    target: SETUP_KEYWORD_TARGET,
+    surface: t(
+      store === "APP_STORE"
+        ? "steps.keywords.surfaceAppStore"
+        : "steps.keywords.surfaceGooglePlay",
+    ),
+  });
 
-export const nextLabel = (step: SetupStep): string =>
-  STEP_TITLES[step].toLowerCase();
+export const nextLabel = (
+  step: SetupStep,
+  t: MessageTranslator = english,
+): string => t(`steps.${step}.next`);
 
 export function progressSentence(
   name: string | null,
   progress: SetupStepProgress,
+  t: MessageTranslator = english,
 ): string {
   const next =
     progress.next === null
-      ? "ready to complete"
-      : `next: ${nextLabel(progress.next)}`;
-  return `Set up ${name ?? "this app"} · ${progress.done} of ${progress.total} · ${next}`;
+      ? t("progress.ready")
+      : t("progress.next", { step: nextLabel(progress.next, t) });
+  return t("progress.sentence", {
+    name: name ?? t("status.thisApp"),
+    done: progress.done,
+    total: progress.total,
+    next,
+  });
 }
 
 export const progressPercent = ({ done, total }: SetupStepProgress): number =>
   total === 0 ? 0 : (done / total) * 100;
 
-export const progressValueLabel = ({ done, total }: SetupStepProgress) =>
-  `${done} of ${total} steps`;
+export const progressValueLabel = (
+  progress: SetupStepProgress,
+  t: MessageTranslator = english,
+) => t("progress.value", { done: progress.done, total: progress.total });
 
 const isUnsettled = (state: SetupStepState): boolean =>
   state === "open" || state === "loading";
 
 export function completionHint(
   states: Record<SetupStep, SetupStepState>,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
 ): string | null {
   const left = SETUP_STEPS.filter((step) => isUnsettled(states[step]));
   return left.length === 0
     ? null
-    : `Finish or skip ${formatList(left.map(nextLabel))} first.`;
+    : t("progress.completionHint", {
+        steps: formatListInLocale(
+          left.map((step) => nextLabel(step, t)),
+          locale,
+        ),
+      });
 }
 
-export function completedFacts({
-  competitors,
-  keywords,
-  home,
-  markets,
-  completedAt,
-}: {
-  competitors: number | null;
-  keywords: number | null;
-  home: string;
-  markets: number;
-  completedAt: string | null;
-}): string[] {
+export function completedFacts(
+  {
+    competitors,
+    keywords,
+    home,
+    markets,
+    completedAt,
+  }: {
+    competitors: number | null;
+    keywords: number | null;
+    home: string;
+    markets: number;
+    completedAt: string | null;
+  },
+  t: MessageTranslator = english,
+  locale: Locale = "en",
+): string[] {
   return [
-    competitors === null ? null : pluralize(competitors, "competitor"),
+    competitors === null
+      ? null
+      : t("facts.competitors", { count: competitors }),
     keywords === null
       ? null
-      : `${pluralize(keywords, "keyword")} in ${formatCountry(home)}`,
-    pluralize(markets, "country", "countries"),
-    completedAt === null ? null : `completed ${formatDayMonth(completedAt)}`,
+      : t("facts.keywordsInMarket", {
+          count: keywords,
+          country: formatCountryInLocale(home, locale),
+        }),
+    t("facts.countries", { count: markets }),
+    completedAt === null
+      ? null
+      : t("facts.completedAt", {
+          date: formatDayMonthInLocale(completedAt, locale),
+        }),
   ].filter((fact) => fact !== null);
 }
 

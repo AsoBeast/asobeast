@@ -1,7 +1,7 @@
 import {
   PLANS,
   paidPlanOf,
-  planPriceLabel,
+  planOf,
   type AccountPlan,
   type BillingCatalog,
   type BillingInterval,
@@ -10,68 +10,24 @@ import {
   type PlanLimits,
   type TrialOffer,
 } from "@asobeast/shared";
-import { formatDate, formatDateIn, pluralize } from "@/lib/format";
+import type { TranslationContext } from "@/i18n/translator";
+import { formatDateInLocale, formatDateInZoneAndLocale } from "@/lib/format";
+import {
+  formatUsdInLocale,
+  planLabel,
+  planPriceLabel,
+} from "@/lib/plan-labels";
+
+export {
+  formatUsdInLocale,
+  planLabel,
+  planPriceLabel,
+} from "@/lib/plan-labels";
 
 export type PlanAction =
   "current" | "checkout" | "trial" | "change" | "resume" | "pending";
 
-export const PAYMENT_CONFIRMING =
-  "Your payment is being confirmed. This usually takes a minute; if it has not completed within a day the attempt expires and you can choose a plan again.";
-
-export const HANDLED_BY_LINK =
-  "Payments are handled by Link, a Stripe affiliate and the merchant of record. Prices are in US dollars; checkout adds sales tax or VAT where it applies and can charge in your local currency. Cancel any time from settings.";
-
-export const HANDLED_BY_STRIPE =
-  "Payments are handled by Stripe. Cancel any time from settings.";
-
-export const CHECKOUT_UNCONFIGURED =
-  "Checkout is not configured on this instance.";
-
-export const TRIAL_REFUSED =
-  "This card or email has already had a free trial. Choose a plan to start today.";
-
-export const COLLECTION_PAUSED =
-  "Collection is paused. Everything AsoBeast has already gathered stays readable and exportable.";
-
-const SUSPENDED_SCOPE =
-  "Your data stays readable and exportable and billing stays open, but changes and the daily run are paused. Contact the operator of this instance to lift it.";
-
-export function suspensionNotice(reason: string | null | undefined): string {
-  const cause = reason?.trim().replace(/[.!?]+$/, "");
-  const subject = cause
-    ? `This workspace is suspended: ${cause}.`
-    : "This workspace is suspended.";
-  return `${subject} ${SUSPENDED_SCOPE}`;
-}
-
-export const MEMBER_BILLING_TITLE = "Your workspace owner manages billing";
-
-export const MEMBER_BILLING_NOTE = `${MEMBER_BILLING_TITLE}.`;
-
-export const ASK_THE_OWNER = "Ask your workspace owner to choose a plan.";
-
-const CHOOSE_A_PLAN = "Choose a plan to unlock AsoBeast.";
-
-const START_ON_THE_PLAN_PAGE = "Start your free trial from the plan page.";
-
 const DAY_MS = 24 * 60 * 60 * 1000;
-
-const STALLED_ON_THE_PAYWALL =
-  "Your subscription stopped collecting. Add a payment method in the billing portal and it picks up where it left off.";
-
-const TRIAL_CHARGE_DECLINED =
-  "Your trial ended, but the card was declined. Update it in the billing portal to start your plan.";
-
-const STALLED_IN_SETTINGS =
-  "Your subscription stopped collecting. Add a payment method in the billing portal and tracking resumes.";
-
-const ACTION_LABEL: Record<Exclude<PlanAction, "checkout">, string> = {
-  current: "Current plan",
-  trial: "Pay $0 today and start your free trial",
-  change: "Change in the billing portal",
-  resume: "Resume in the billing portal",
-  pending: "Confirming your payment",
-};
 
 function stalled(plan: AccountPlan): boolean {
   return plan.subscriptionStalled === true;
@@ -89,34 +45,37 @@ function declined(plan: AccountPlan): boolean {
   return plan.trialChargeFailed === true;
 }
 
-export function trialPriceLabel(plan: AccountPlan): string | null {
+export function trialPriceLabel(
+  plan: AccountPlan,
+  context: TranslationContext,
+): string | null {
   const paid = paidPlanOf(plan.plan);
   return paid && plan.billingInterval
-    ? planPriceLabel(paid, plan.billingInterval)
+    ? planPriceLabel(paid, plan.billingInterval, context)
     : null;
-}
-
-function nothingCharged(endsAt: string): string {
-  return `Cancelled. Your trial ends on ${formatDate(endsAt)} and nothing is charged.`;
-}
-
-function thenCharged(plan: AccountPlan): string {
-  const price = trialPriceLabel(plan);
-  return price ? `, then ${price}` : "";
 }
 
 export function trialBannerLine(
   daysLeft: number,
   plan: AccountPlan | undefined,
+  context: TranslationContext,
 ): string {
   if (plan?.cancelAtPeriodEnd && plan.trialEndsAt) {
-    return `Trial ends on ${formatDate(plan.trialEndsAt)}. Nothing will be charged.`;
+    return context.translator("trial.bannerEnds", {
+      date: formatDateInLocale(plan.trialEndsAt, context.locale),
+    });
   }
-  const remaining = `Trial ends in ${daysLeft} day${daysLeft === 1 ? "" : "s"}`;
-  const price = plan ? trialPriceLabel(plan) : null;
-  return price
-    ? `${remaining}, then ${PLANS[plan?.plan ?? "free"].displayName} at ${price}.`
-    : `${remaining}.`;
+  const remaining = context.translator("trial.bannerRemaining", {
+    days: daysLeft,
+  });
+  const price = plan ? trialPriceLabel(plan, context) : null;
+  return price && plan
+    ? context.translator("trial.bannerThen", {
+        remaining,
+        plan: planLabel(planOf(plan.plan), context),
+        price,
+      })
+    : context.translator("trial.bannerRemainingOnly", { days: daysLeft });
 }
 
 export function sellingTrial(catalog: BillingCatalog | undefined): boolean {
@@ -141,10 +100,13 @@ export function planAction(
   return stalled(plan) ? "resume" : "change";
 }
 
-export function paywallHeading(plan: AccountPlan | undefined): string {
+export function paywallHeading(
+  plan: AccountPlan | undefined,
+  context: TranslationContext,
+): string {
   return plan?.trialOffer
-    ? `Start your ${plan.trialOffer.days} day free trial`
-    : "Keep optimizing without limits";
+    ? context.translator("plan.trialHeading", { days: plan.trialOffer.days })
+    : context.translator("plan.heading");
 }
 
 export interface ViewerClock {
@@ -159,112 +121,66 @@ export function trialEndsOn(offer: TrialOffer, now: Date): Date {
 export function trialEndLabel(
   offer: TrialOffer,
   { now, timeZone }: ViewerClock,
+  context: TranslationContext,
 ): string {
-  return formatDateIn(trialEndsOn(offer, now), timeZone);
+  return formatDateInZoneAndLocale(
+    trialEndsOn(offer, now),
+    timeZone,
+    context.locale,
+  );
 }
 
-function trialLine(offer: TrialOffer, clock: ViewerClock): string {
-  return `Pay $0 today. Your trial ends on ${trialEndLabel(offer, clock)}, then the plan you choose is charged, plus any VAT or sales tax, and renews until you cancel. Cancel any time from settings.`;
+export function featuresTitle(
+  name: PaidPlanName,
+  context: TranslationContext,
+): string {
+  return context.translator("plan.featuresTitle", {
+    plan: planLabel(name, context),
+  });
 }
 
-export const CONFIRM_EMAIL_TITLE = "Confirm your email";
-
-export const CONFIRM_EMAIL_CAPTION =
-  "Check your spam folder if it has not arrived. The link works for a day.";
-
-export const WRONG_ADDRESS = "Wrong address?";
-
-export const REGISTER_AGAIN = "and register again.";
-
-export interface ConfirmEmailParts {
-  before: string;
-  address: string;
-  after: string;
+function limitLine(
+  limit: PlanLimit,
+  resource: "apps" | "keywordMarkets",
+  context: TranslationContext,
+): string {
+  return limit === null
+    ? context.translator(`plan.limits.${resource}.unlimited`)
+    : context.translator(`plan.limits.${resource}.count`, { count: limit });
 }
 
-export function confirmEmailParts(
-  email: string,
-  offered: boolean,
-): ConfirmEmailParts {
-  return {
-    before: "Thank you for registering. We sent a link to ",
-    address: email,
-    after: `. Open it to continue${offered ? " to your free trial" : ""}.`,
-  };
+export function limitHighlights(
+  { apps, keywordMarkets }: Pick<PlanLimits, "apps" | "keywordMarkets">,
+  context: TranslationContext,
+): readonly string[] {
+  return [
+    limitLine(apps, "apps", context),
+    limitLine(keywordMarkets, "keywordMarkets", context),
+  ];
 }
 
-export const PAYMENT_TITLE = "Payment";
-
-export const CHOOSE_A_PLAN_TITLE = "Choose a plan";
-
-export function featuresTitle(name: PaidPlanName): string {
-  return `What ${PLANS[name].displayName} includes`;
+export function planHighlights(
+  name: PaidPlanName,
+  context: TranslationContext,
+): readonly string[] {
+  return limitHighlights(PLANS[name].limits, context);
 }
-
-function limitLine(limit: PlanLimit, singular: string): string {
-  return limit === null ? `Unlimited ${singular}s` : pluralize(limit, singular);
-}
-
-export function limitHighlights({
-  apps,
-  keywordMarkets,
-}: Pick<PlanLimits, "apps" | "keywordMarkets">): readonly string[] {
-  return [limitLine(apps, "app"), limitLine(keywordMarkets, "keyword market")];
-}
-
-export function planHighlights(name: PaidPlanName): readonly string[] {
-  return limitHighlights(PLANS[name].limits);
-}
-
-export const FAQ_TITLE = "Questions";
-
-export const EVERY_PLAN_INCLUDES = "Every plan includes";
-
-export const SECURE_BY_STRIPE = "Secure payments processed by Stripe.";
-
-export const NEED_HELP = "Need help?";
-
-export const CONTACT_SUPPORT = "Contact support";
-
-export const CHECKOUT_UNREACHABLE = "Checkout could not be opened. Try again.";
-
-export const PLAN_UNREACHABLE =
-  "Your plan could not be loaded. Check your connection, then try again.";
-
-export const PRICES_UNREACHABLE =
-  "The prices could not be loaded. Check your connection, then try again.";
-
-export const CHECKOUT_REOPENING = "Opening checkout…";
-
-export const CHECKOUT_PRICE_MISSING = "Checkout is not configured yet";
-
-export const CHECKOUT_START_FAILED = "Could not start checkout. Try again.";
-
-export const PORTAL_OPEN_FAILED =
-  "Could not open the billing portal. Try again.";
-
-export const EVERY_PLAN_FEATURES: readonly string[] = [
-  "Daily keyword rank tracking across every storefront",
-  "Popularity, difficulty and opportunity scoring",
-  "Competitor discovery and metadata audits",
-  "AI audit and metadata drafts",
-  "Alerts by email and webhook",
-  "Personal API tokens and the MCP server",
-];
-
-const BUYS: readonly PlanAction[] = ["checkout", "trial"];
 
 export function buysPlan(action: PlanAction): boolean {
-  return BUYS.includes(action);
+  return action === "checkout" || action === "trial";
 }
 
 export function planCardLabel(
   name: PaidPlanName,
   interval: BillingInterval,
   action: PlanAction,
+  context: TranslationContext,
 ): string {
-  const label = `${PLANS[name].displayName}, ${planPriceLabel(name, interval)}`;
-  return action === "current" ? `${label}, current plan` : label;
+  return context.translator("plan.cardLabel", {
+    plan: planLabel(name, context),
+    price: planPriceLabel(name, interval, context),
+    current: action === "current" ? "true" : "false",
+  });
 }
 
 export function savingPercent(name: PaidPlanName): number {
@@ -276,128 +192,217 @@ export function savingPercent(name: PaidPlanName): number {
 export function trustLines(
   offer: TrialOffer,
   clock: ViewerClock,
+  context: TranslationContext,
 ): readonly string[] {
-  const endsOn = trialEndLabel(offer, clock);
   return [
-    `No risk: cancel before ${endsOn} and nothing is charged`,
-    `Pay nothing for the first ${offer.days} days`,
-    "Cancel any time from settings",
+    context.translator("trial.trustSafe", {
+      date: trialEndLabel(offer, clock, context),
+    }),
+    context.translator("trial.trustFree", { days: offer.days }),
+    context.translator("trial.trustCancel"),
   ];
 }
 
-export interface TrialBarParts {
-  before: string;
-  free: string;
-  middle: string;
-  endsOn: string;
-  after: string;
+export interface TrialBarDescriptor {
+  messageKey: "trial.bar";
+  values: {
+    days: number;
+    endsOn: string;
+  };
 }
 
 export function trialBarParts(
   offer: TrialOffer,
   clock: ViewerClock,
-): TrialBarParts {
+  context: TranslationContext,
+): TrialBarDescriptor {
   return {
-    before: `Your ${offer.days} day trial is `,
-    free: "100% free",
-    middle: ", ending ",
-    endsOn: trialEndLabel(offer, clock),
-    after: ". Cancel any time from settings.",
+    messageKey: "trial.bar",
+    values: {
+      days: offer.days,
+      endsOn: trialEndLabel(offer, clock, context),
+    },
   };
 }
 
 export function planActionLabel(
   action: PlanAction,
-  displayName: string,
+  name: PaidPlanName,
+  context: TranslationContext,
 ): string {
-  return action === "checkout" ? `Choose ${displayName}` : ACTION_LABEL[action];
+  if (action === "checkout") {
+    return context.translator("actions.checkout", {
+      plan: planLabel(name, context),
+    });
+  }
+  if (action === "trial") {
+    return context.translator("actions.trial", {
+      price: formatUsdInLocale(0, context.locale, 0),
+    });
+  }
+  return context.translator(`actions.${action}`);
 }
 
-function paywallTrialLine(plan: AccountPlan): string | null {
+function paywallTrialLine(
+  plan: AccountPlan,
+  context: TranslationContext,
+): string | null {
   const trialEnd = cardTrialEnd(plan);
   if (trialEnd) {
-    return plan.cancelAtPeriodEnd
-      ? nothingCharged(trialEnd)
-      : `Your trial runs until ${formatDate(trialEnd)}${thenCharged(plan)}. Change or cancel it in the billing portal.`;
+    const date = formatDateInLocale(trialEnd, context.locale);
+    if (plan.cancelAtPeriodEnd) {
+      return context.translator("status.cancelledTrial", { date });
+    }
+    const price = trialPriceLabel(plan, context);
+    return context.translator(
+      price ? "status.trialRunningThen" : "status.trialRunning",
+      {
+        date,
+        ...(price ? { price } : {}),
+      },
+    );
   }
-  if (declined(plan)) return TRIAL_CHARGE_DECLINED;
+  if (declined(plan)) return context.translator("status.trialChargeDeclined");
   if (plan.plan === "trial" && plan.trialEndsAt) {
-    return `Your trial is active until ${formatDate(plan.trialEndsAt)}.`;
+    return context.translator("status.trialActiveUntil", {
+      date: formatDateInLocale(plan.trialEndsAt, context.locale),
+    });
   }
   return null;
 }
 
-function settingsTrialLine(plan: AccountPlan): string | null {
+function settingsTrialLine(
+  plan: AccountPlan,
+  context: TranslationContext,
+): string | null {
   if (plan.plan === "trial" && plan.trialEndsAt) {
-    return `Trial active until ${formatDate(plan.trialEndsAt)}.`;
+    return context.translator("status.trialSettingsUntil", {
+      date: formatDateInLocale(plan.trialEndsAt, context.locale),
+    });
   }
   const trialEnd = cardTrialEnd(plan);
   if (!trialEnd) return null;
-  return plan.cancelAtPeriodEnd
-    ? nothingCharged(trialEnd)
-    : `Trial until ${formatDate(trialEnd)}${thenCharged(plan)}.`;
+  const date = formatDateInLocale(trialEnd, context.locale);
+  if (plan.cancelAtPeriodEnd) {
+    return context.translator("status.cancelledTrial", { date });
+  }
+  const price = trialPriceLabel(plan, context);
+  return context.translator(
+    price ? "status.trialSettingsThen" : "status.trialSettings",
+    {
+      date,
+      ...(price ? { price } : {}),
+    },
+  );
 }
 
 export function paywallStatusLine(
   plan: AccountPlan | undefined,
   clock: ViewerClock,
+  context: TranslationContext,
 ): string {
-  if (!plan) return CHOOSE_A_PLAN;
-  if (pending(plan)) return PAYMENT_CONFIRMING;
-  if (plan.trialRefused) return TRIAL_REFUSED;
+  if (!plan) return context.translator("status.choose");
+  if (pending(plan)) return context.translator("status.paymentConfirming");
+  if (plan.trialRefused) return context.translator("status.trialRefused");
   if (plan.trialOffer && !plan.subscribed) {
-    return trialLine(plan.trialOffer, clock);
+    return context.translator("status.trialOffer", {
+      price: formatUsdInLocale(0, context.locale, 0),
+      date: trialEndLabel(plan.trialOffer, clock, context),
+    });
   }
-  const trial = paywallTrialLine(plan);
+  const trial = paywallTrialLine(plan, context);
   if (trial) return trial;
-  if (stalled(plan)) return STALLED_ON_THE_PAYWALL;
+  if (stalled(plan)) return context.translator("status.stalledPaywall");
   if (plan.trialEndsAt && !plan.entitled) {
-    return `Your trial ended on ${formatDate(plan.trialEndsAt)}. Your data is still here.`;
+    return context.translator("status.trialEnded", {
+      date: formatDateInLocale(plan.trialEndsAt, context.locale),
+    });
   }
   if (plan.renewsAt) {
-    return `Your ${PLANS[plan.plan].displayName} plan renews on ${formatDate(plan.renewsAt)}.`;
+    return context.translator("status.renews", {
+      plan: planLabel(planOf(plan.plan), context),
+      date: formatDateInLocale(plan.renewsAt, context.locale),
+    });
   }
-  return CHOOSE_A_PLAN;
+  return context.translator("status.choose");
 }
 
-export function planStatusLine(plan: AccountPlan): string {
-  if (pending(plan)) return PAYMENT_CONFIRMING;
-  if (declined(plan)) return TRIAL_CHARGE_DECLINED;
-  if (stalled(plan)) return STALLED_IN_SETTINGS;
-  if (plan.trialOffer && !plan.subscribed) return START_ON_THE_PLAN_PAGE;
-  if (!plan.entitled) {
-    return "Your data stays readable and exportable; tracking resumes when you choose a plan.";
+export function planStatusLine(
+  plan: AccountPlan,
+  context: TranslationContext,
+): string {
+  if (pending(plan)) return context.translator("status.paymentConfirming");
+  if (declined(plan)) return context.translator("status.trialChargeDeclined");
+  if (stalled(plan)) return context.translator("status.stalledSettings");
+  if (plan.trialOffer && !plan.subscribed) {
+    return context.translator("status.startTrial");
   }
-  const trial = settingsTrialLine(plan);
+  if (!plan.entitled) return context.translator("status.dataReadable");
+  const trial = settingsTrialLine(plan, context);
   if (trial) return trial;
   if (plan.cancelAtPeriodEnd && plan.renewsAt) {
-    return `Cancelled. Access continues until ${formatDate(plan.renewsAt)}.`;
+    return context.translator("status.cancelledAccessUntil", {
+      date: formatDateInLocale(plan.renewsAt, context.locale),
+    });
   }
-  if (plan.renewsAt) return `Renews on ${formatDate(plan.renewsAt)}.`;
-  return "Billed monthly until you cancel.";
+  if (plan.renewsAt) {
+    return context.translator("status.renewsShort", {
+      date: formatDateInLocale(plan.renewsAt, context.locale),
+    });
+  }
+  return context.translator("status.billedMonthly");
 }
 
-export function planCallToAction(plan: AccountPlan): string {
-  if (plan.entitled) return "Upgrade plan";
-  return stalled(plan) ? "Resume plan" : "Choose a plan";
+export function planCallToAction(
+  plan: AccountPlan,
+  context: TranslationContext,
+): string {
+  if (plan.entitled) return context.translator("plan.upgrade");
+  return stalled(plan)
+    ? context.translator("plan.resume")
+    : context.translator("plan.choose");
 }
 
-export function paymentNote(catalog: BillingCatalog | undefined): string {
-  if (!catalog?.enabled) return CHECKOUT_UNCONFIGURED;
-  return catalog.managedPayments ? HANDLED_BY_LINK : HANDLED_BY_STRIPE;
+export function paymentNote(
+  catalog: BillingCatalog | undefined,
+  context: TranslationContext,
+): string {
+  if (!catalog?.enabled) return context.translator("payment.unconfigured");
+  return context.translator(
+    catalog.managedPayments
+      ? "payment.handledByLink"
+      : "payment.handledByStripe",
+  );
 }
 
 export function trialPaymentNote(
   catalog: BillingCatalog | undefined,
   offer: TrialOffer | null | undefined,
   clock: ViewerClock,
+  context: TranslationContext,
 ): string {
-  const note = paymentNote(catalog);
+  const note = paymentNote(catalog, context);
   if (!offer || !catalog?.enabled) return note;
-  return `${note} Your card is verified now and charged on ${trialEndLabel(offer, clock)}.`;
+  return `${note} ${context.translator("trial.paymentNote", {
+    date: trialEndLabel(offer, clock, context),
+  })}`;
 }
 
-export function memberPlanLine(plan: AccountPlan | undefined): string {
-  if (plan && !plan.entitled) return `${COLLECTION_PAUSED} ${ASK_THE_OWNER}`;
-  return "Only the workspace owner can change the plan or the payment method.";
+export function memberPlanLine(
+  plan: AccountPlan | undefined,
+  context: TranslationContext,
+): string {
+  if (plan && !plan.entitled) return context.translator("member.paused");
+  return context.translator("member.onlyOwner");
+}
+
+export function suspensionNotice(
+  reason: string | null | undefined,
+  context: TranslationContext,
+): string {
+  const cause = reason?.trim().replace(/[.!?。！？]+$/, "");
+  return context.translator(
+    cause ? "status.suspendedWithReason" : "status.suspended",
+    cause ? { reason: cause } : {},
+  );
 }

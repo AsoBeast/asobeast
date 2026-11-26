@@ -1,0 +1,33 @@
+{
+  "title": "Delete workspace",
+  "deleteWorkspace": "Delete workspace",
+  "confirmTitle": "Delete this workspace?",
+  "confirmDescription": "Every app, keyword and history in it is erased after {days, plural, one {# day} other {# days}}. You can cancel until then.",
+  "reasonLabel": "Why are you leaving? Optional",
+  "confirmLabel": "Type {confirmation} to confirm",
+  "scheduling": "Scheduling…",
+  "keepWorkspace": "Keep workspace",
+  "scheduledToast": "Workspace scheduled for deletion",
+  "scheduleError": "Could not schedule the deletion.",
+  "cancelDeletion": "Cancel deletion",
+  "cancelling": "Cancelling…",
+  "cancelledToast": "Deletion cancelled",
+  "cancelError": "Could not cancel the deletion.",
+  "body": "Deleting erases every app, keyword and history in this workspace after a grace period of {days, plural, one {# day} other {# days}}, during which the owner can cancel it.",
+  "ownerFallback": "The owner",
+  "scheduled": "{requester} scheduled this workspace for deletion.",
+  "scheduledOn": "{requester} scheduled this workspace for deletion on {date}.",
+  "erasedOnOrAfter": "It is erased on or after {date}.",
+  "dueDateFallback": "the due date",
+  "memberScheduled": "Only the workspace owner can cancel this.",
+  "memberUnscheduled": "Only the workspace owner can delete this workspace.",
+  "operatorNote": "This workspace holds the platform operator. It cannot be deleted while other accounts exist, because the admin area, the queue dashboard and the support tools would go with it and no account could take them over. AsoBeast has no hand over yet. To clear your own data, delete its apps and keywords instead. Deleting this workspace is allowed only while yours is the only account, and it resets the instance.",
+  "reasons": {
+    "preferNotToSay": "Prefer not to say",
+    "tooExpensive": "Too expensive",
+    "missingFeature": "Missing a feature",
+    "notUsing": "Not using it",
+    "switchedTool": "Switched to another tool",
+    "other": "Other"
+  }
+}

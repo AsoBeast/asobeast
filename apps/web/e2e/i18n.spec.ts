@@ -15,6 +15,9 @@ test.describe("locale preference", () => {
 
     await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
     await expect(page.getByRole("combobox", { name: "语言" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "登录" })).toBeVisible();
+    await expect(page.getByLabel("邮箱")).toBeVisible();
+    await expect(page.getByLabel("密码", { exact: true })).toBeVisible();
 
     await page.getByRole("combobox", { name: "语言" }).click();
     await page.getByRole("option", { name: "English" }).click();
@@ -31,6 +34,7 @@ test.describe("locale preference", () => {
 
     await page.reload();
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
+    await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
   });
 
   test("translates sign-in and registration before authentication", async ({
@@ -77,7 +81,7 @@ test.describe("locale preference", () => {
     await expect(navigation.getByRole("link", { name: "设置" })).toBeVisible();
 
     await page.getByRole("button", { name: "打开命令面板" }).click();
-    await expect(page.getByPlaceholder("搜索应用和板块…")).toBeVisible();
+    await expect(page.getByPlaceholder("搜索应用和分区…")).toBeVisible();
     await page.keyboard.press("Escape");
 
     await page.getByRole("button", { name: "账号菜单" }).click();

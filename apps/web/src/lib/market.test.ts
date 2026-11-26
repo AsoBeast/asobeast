@@ -50,6 +50,11 @@ describe("marketLabel", () => {
   it("names another storefront", () => {
     expect(marketLabel(MARKETS[1])).toBe("DE · Germany");
   });
+
+  it("translates storefront names and the home marker", () => {
+    expect(marketLabel(MARKETS[0], "zh-CN")).toBe("US · 美国（默认）");
+    expect(marketLabel(MARKETS[1], "zh-CN")).toBe("DE · 德国");
+  });
 });
 
 describe("isRefreshable", () => {

@@ -1,5 +1,7 @@
 import { ArrowDown, ArrowUp, Minus } from "lucide-react";
-import { roundAsShown } from "@/lib/format";
+import { useTranslations } from "next-intl";
+import { formatFixedNumberInLocale, roundAsShown } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
 
 export type DeltaPolarity = "higher-is-better" | "lower-is-better";
@@ -75,12 +77,16 @@ export function DeltaChip({
   form?: DeltaForm;
   className?: string;
 }) {
+  const locale = useAppLocale();
+  const t = useTranslations("format");
   if (value === null) {
     return <span className="text-muted-foreground">—</span>;
   }
   const rounded = digits === undefined ? value : roundAsShown(value, digits);
   const written = (amount: number) =>
-    digits === undefined ? String(amount) : amount.toFixed(digits);
+    digits === undefined
+      ? String(amount)
+      : formatFixedNumberInLocale(amount, digits, locale);
   if (rounded === 0) {
     return (
       <span
@@ -104,7 +110,12 @@ export function DeltaChip({
     <span
       data-slot={slotOf(form)}
       role="img"
-      aria-label={`${way} ${magnitude}${unit} ${period}`}
+      aria-label={t("deltaLabel", {
+        direction: t(`direction.${way}`),
+        magnitude,
+        unit,
+        period,
+      })}
       className={cn(
         "numeric inline-flex items-center gap-0.5 font-medium",
         TONE[way],
@@ -120,11 +131,13 @@ export function DeltaChip({
 
 export function PositionDeltaChip({
   value,
-  period = "since yesterday",
+  period,
 }: {
   value: number | null;
   period?: string;
 }) {
+  const t = useTranslations("format");
+  const label = period ?? t("positionSinceYesterday");
   if (value === null || value === 0) return null;
 
   const way = direction(value, "lower-is-better");
@@ -134,7 +147,11 @@ export function PositionDeltaChip({
   return (
     <span
       role="img"
-      aria-label={`${way} ${magnitude} ${period}`}
+      aria-label={t("positionDeltaLabel", {
+        direction: t(`direction.${way}`),
+        magnitude,
+        period: label,
+      })}
       className={cn(
         "numeric inline-flex items-center gap-0.5 text-label font-medium",
         TONE[way],
@@ -161,13 +178,16 @@ export function TrendChip({
   form?: DeltaForm;
   labelled?: boolean;
 }) {
+  const locale = useAppLocale();
+  const t = useTranslations("format");
   if (value === null) {
+    const missing = t("noData", { label });
     return labelled ? (
-      <span className="text-label text-muted-foreground">{`no ${label} data`}</span>
+      <span className="text-label text-muted-foreground">{missing}</span>
     ) : (
       <span className="text-muted-foreground">
         <span aria-hidden>—</span>
-        <span className="sr-only">{`no ${label} data`}</span>
+        <span className="sr-only">{missing}</span>
       </span>
     );
   }
@@ -175,8 +195,7 @@ export function TrendChip({
   const rounded = roundAsShown(value, digits);
   const way = direction(rounded, "higher-is-better");
   const Icon = GLYPH[way];
-  const shown = rounded.toFixed(digits);
-  const signed = rounded > 0 ? `+${shown}` : shown;
+  const shown = formatFixedNumberInLocale(rounded, digits, locale);
 
   return (
     <span
@@ -189,11 +208,16 @@ export function TrendChip({
     >
       <Icon className={cn("size-3.5", ARROW_LIFT)} aria-hidden />
       {labelled ? (
-        <span>{`${signed}${unit} ${label}`}</span>
+        <span>
+          {t("trendValue", {
+            value: `${rounded > 0 ? "+" : ""}${shown}${unit}`,
+            label,
+          })}
+        </span>
       ) : (
         <>
-          <span>{`${signed}${unit}`}</span>
-          <span className="sr-only">{` ${label}`}</span>
+          <span>{`${rounded > 0 ? "+" : ""}${shown}${unit}`}</span>
+          <span className="sr-only">{t("trendPeriod", { label })}</span>
         </>
       )}
     </span>

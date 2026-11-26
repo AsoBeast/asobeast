@@ -2,6 +2,7 @@
 
 import type { RefObject } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import {
@@ -23,9 +24,9 @@ import {
 } from "@/lib/focus-handoff";
 import { invalidateKeywordMutation } from "@/lib/queries";
 
-const ROW_MENU = 'button[aria-label^="Keyword actions for "]';
+const ROW_MENU = "button[data-keyword-actions]";
 
-const KEYWORD_SEARCH = 'input[aria-label="Search keywords"]';
+const KEYWORD_SEARCH = "[data-keyword-search] input";
 
 const focusSuccessor = (menu: HTMLElement | null): HTMLElement | null =>
   siblingControl(menu?.closest("tr") ?? null, ROW_MENU) ??
@@ -44,15 +45,16 @@ export function StopTrackingDialog({
   keyword: Pick<TrackedKeywordItem, "keywordId" | "text">;
   returnFocus: RefObject<HTMLElement | null>;
 }) {
+  const t = useTranslations("keywords");
   const queryClient = useQueryClient();
   const { handOff, onCloseAutoFocus } = useCloseFocusHandoff();
   const remove = useMutation({
     mutationFn: () => removeKeyword(appId, keyword.keywordId),
     onSuccess: () => {
       invalidateKeywordMutation(queryClient, appId);
-      toast.success(`Stopped tracking ${keyword.text}`);
+      toast.success(t("stop.success", { keyword: keyword.text }));
     },
-    onError: () => toast.error(`Could not stop tracking ${keyword.text}`),
+    onError: () => toast.error(t("stop.failed", { keyword: keyword.text })),
   });
 
   return (
@@ -67,16 +69,17 @@ export function StopTrackingDialog({
         }}
       >
         <AlertDialogHeader>
-          <AlertDialogTitle>Stop tracking {keyword.text}?</AlertDialogTitle>
+          <AlertDialogTitle>
+            {t("stop.title", { keyword: keyword.text })}
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            Ranking history for this keyword stops accruing. You can add it
-            again later, but the gap in history will remain.
+            {t("stop.description")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <ConfirmActionFooter
           pending={remove.isPending}
-          label="Stop tracking"
-          pendingLabel="Removing…"
+          label={t("bulk.stop")}
+          pendingLabel={t("bulk.removing")}
           onConfirm={() => {
             const successor = focusSuccessor(returnFocus.current);
             void remove.mutateAsync().then(

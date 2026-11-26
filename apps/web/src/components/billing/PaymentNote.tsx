@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import {
   SUPPORT_EMAIL,
   type BillingCatalog,
@@ -7,13 +8,8 @@ import {
   InlineQueryError,
   type RetryableRead,
 } from "@/components/layout/InlineQueryError";
-import {
-  CONTACT_SUPPORT,
-  NEED_HELP,
-  PRICES_UNREACHABLE,
-  trialPaymentNote,
-  type ViewerClock,
-} from "@/lib/plan-choice";
+import { trialPaymentNote, type ViewerClock } from "@/lib/plan-choice";
+import { useAppLocale } from "@/lib/use-app-locale";
 
 export function PaymentNote({
   catalog,
@@ -26,23 +22,32 @@ export function PaymentNote({
   offer: TrialOffer | null | undefined;
   clock: ViewerClock;
 }) {
+  const t = useTranslations("billing");
+  const locale = useAppLocale();
+  const context = { translator: t, locale };
+
   return (
     <>
       {catalogRead ? (
-        <InlineQueryError message={PRICES_UNREACHABLE} read={catalogRead} />
+        <InlineQueryError
+          message={t("payment.pricesUnreachable")}
+          read={catalogRead}
+        />
       ) : null}
       <p className="text-caption text-muted-foreground">
         {catalogRead ? null : (
-          <span>{`${trialPaymentNote(catalog, offer, clock)} `}</span>
+          <span>{`${trialPaymentNote(catalog, offer, clock, context)} `}</span>
         )}
-        <span>{NEED_HELP}</span>{" "}
-        <a
-          href={`mailto:${SUPPORT_EMAIL}`}
-          className="text-foreground link-underline"
-        >
-          {CONTACT_SUPPORT}
-        </a>
-        .
+        {t.rich("payment.support", {
+          link: (chunks) => (
+            <a
+              href={`mailto:${SUPPORT_EMAIL}`}
+              className="text-foreground link-underline"
+            >
+              <span>{chunks}</span>
+            </a>
+          ),
+        })}
       </p>
     </>
   );

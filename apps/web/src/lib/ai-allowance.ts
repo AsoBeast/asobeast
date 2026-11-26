@@ -1,12 +1,14 @@
-import {
-  NO_AI_CALLS_MESSAGE,
-  type AiAllowanceDetail,
-  type AiCallUsage,
-} from "@asobeast/shared";
-import { formatDate, formatNumber } from "@/lib/format";
+import type { AiAllowanceDetail, AiCallUsage } from "@asobeast/shared";
+import type { TranslationContext } from "@/i18n/translator";
+import { formatDateInLocale } from "@/lib/format";
 
-export function aiRenewalText(resetsAt: string): string {
-  return `Renews ${formatDate(resetsAt)}`;
+export function aiRenewalText(
+  resetsAt: string,
+  context: TranslationContext,
+): string {
+  return context.translator("ai.renewal", {
+    date: formatDateInLocale(resetsAt, context.locale),
+  });
 }
 
 export function aiAllowanceSpent(usage: AiCallUsage | undefined): boolean {
@@ -15,27 +17,46 @@ export function aiAllowanceSpent(usage: AiCallUsage | undefined): boolean {
   );
 }
 
-const TRIAL_ALLOWANCE = "The trial allowance applies until the first charge.";
-
 export function aiUsageNote(
   usage: AiCallUsage,
-  trialing = false,
+  trialing: boolean,
+  context: TranslationContext,
 ): string | undefined {
   if (usage.limit === 0) return undefined;
-  const renewal = aiRenewalText(usage.resetsAt);
-  return trialing ? `${renewal}. ${TRIAL_ALLOWANCE}` : renewal;
+  const renewal = aiRenewalText(usage.resetsAt, context);
+  return trialing
+    ? context.translator("ai.usageNoteTrial", {
+        renewal,
+        trial: context.translator("ai.trialAllowance"),
+      })
+    : renewal;
 }
 
-export function aiCallsLeftText(usage: AiCallUsage): string | null {
+export function aiCallsLeftText(
+  usage: AiCallUsage,
+  context: TranslationContext,
+): string | null {
   if (usage.limit === null) return null;
-  if (usage.limit === 0) return NO_AI_CALLS_MESSAGE;
+  if (usage.limit === 0) return context.translator("ai.noCalls");
+  const renewal = aiRenewalText(usage.resetsAt, context);
   if (aiAllowanceSpent(usage)) {
-    return `AI calls used up. ${aiRenewalText(usage.resetsAt)}`;
+    return context.translator("ai.spent", { renewal });
   }
-  return `${formatNumber(usage.limit - usage.used)} of ${formatNumber(usage.limit)} AI calls left this month`;
+  return context.translator("ai.callsLeft", {
+    left: usage.limit - usage.used,
+    limit: usage.limit,
+  });
 }
 
-export function aiAllowanceRefusal(detail: AiAllowanceDetail): string {
-  if (detail.limit === 0) return `${NO_AI_CALLS_MESSAGE}.`;
-  return `This workspace has used the ${formatNumber(detail.limit)} AI calls its plan includes this month. ${aiRenewalText(detail.resetsAt)}.`;
+export function aiAllowanceRefusal(
+  detail: AiAllowanceDetail,
+  context: TranslationContext,
+): string {
+  if (detail.limit === 0) {
+    return `${context.translator("ai.noCalls")}.`;
+  }
+  return context.translator("ai.refusal", {
+    limit: detail.limit,
+    renewal: aiRenewalText(detail.resetsAt, context),
+  });
 }

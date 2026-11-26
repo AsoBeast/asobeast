@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   ADMIN_CONVERSION_WINDOWS,
   ADMIN_DEPARTURE_REASONS,
@@ -24,16 +25,17 @@ import {
 } from "@/lib/admin-conversion";
 import { adminHref } from "@/lib/admin-sections";
 import {
-  ADMIN_FLAG_LABELS,
-  DEPARTURE_REASON_LABELS,
-  WORKSPACE_STAGE_LABELS,
   countOf,
+  departureReasonLabel,
   flagHref,
   payingPlanLabel,
   stageHref,
+  workspaceFlagLabel,
+  workspaceStageLabel,
 } from "@/lib/admin-stages";
 import { adminConversionWindowParser } from "@/lib/search-params";
-import { formatNumber, pluralize, storeLabel } from "@/lib/format";
+import { storeLabel } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { AdminPanel } from "./AdminPanel";
 import { BreakdownList, type BreakdownRow } from "./BreakdownList";
 
@@ -44,6 +46,7 @@ export function WindowSegment({
   days: AdminConversionWindow;
   onChange: (days: AdminConversionWindow) => void;
 }) {
+  const t = useTranslations("admin");
   return (
     <Tabs
       value={String(days)}
@@ -54,10 +57,10 @@ export function WindowSegment({
         )
       }
     >
-      <TabsList aria-label="Sign up window">
+      <TabsList aria-label={t("conversion.window")}>
         {ADMIN_CONVERSION_WINDOWS.map((window) => (
           <TabsOption key={window} value={String(window)}>
-            {`${window}d`}
+            {t("conversion.days", { count: window })}
           </TabsOption>
         ))}
       </TabsList>
@@ -72,7 +75,9 @@ export function FunnelPanel({
   conversion: AdminConversion;
   segment: ReactNode;
 }) {
-  const rows: BreakdownRow[] = funnelRows(conversion.funnel).map(
+  const t = useTranslations("admin");
+  const locale = useAppLocale();
+  const rows: BreakdownRow[] = funnelRows(conversion.funnel, t).map(
     (row, index) => ({
       key: row.key,
       label: row.label,
@@ -83,37 +88,37 @@ export function FunnelPanel({
           ? undefined
           : row.ofPrevious === null
             ? "—"
-            : formatShare(row.ofPrevious),
+            : formatShare(row.ofPrevious, locale),
     }),
   );
-  const medians = medianLine(conversion.medianDays);
+  const medians = medianLine(conversion.medianDays, t);
   const note = unrecordedNote(
     conversion.departuresRecordedSince,
     conversion.days,
     conversion.generatedAt,
+    { translator: t, locale },
   );
 
   return (
     <AdminPanel
-      title="Funnel"
+      title={t("conversion.title")}
       action={segment}
       footer={
         <span className="flex flex-col gap-1">
           <span>
-            {medians ??
-              `Workspaces signed up in the last ${pluralize(conversion.days, "day")}.`}
+            {medians ?? t("conversion.fallback", { days: conversion.days })}
           </span>
           {note ? <span>{note}</span> : null}
         </span>
       }
     >
       <BreakdownList
-        label="Sign up to paid"
+        label={t("conversion.list")}
         rows={rows}
         heads={{
-          label: "Step",
-          detail: "Of the step before",
-          count: "Workspaces",
+          label: t("conversion.columns.step"),
+          detail: t("conversion.columns.previous"),
+          count: t("conversion.columns.workspaces"),
         }}
       />
     </AdminPanel>
@@ -127,23 +132,24 @@ export function NeedsALookPanel({
   overview: AdminOverview;
   conversion: AdminConversion;
 }) {
+  const t = useTranslations("admin");
   const { workspaces } = overview;
   const billingRows: BreakdownRow[] = [
     {
       key: "ending-soon",
-      label: ADMIN_FLAG_LABELS["ending-soon"],
+      label: workspaceFlagLabel("ending-soon", t),
       count: conversion.trials?.endingSoon ?? 0,
       href: flagHref("ending-soon"),
     },
     {
       key: "canceling",
-      label: ADMIN_FLAG_LABELS.canceling,
+      label: workspaceFlagLabel("canceling", t),
       count: workspaces.canceling ?? 0,
       href: flagHref("canceling"),
     },
     {
       key: "payment-failed",
-      label: WORKSPACE_STAGE_LABELS["payment-failed"],
+      label: workspaceStageLabel("payment-failed", t),
       count: countOf(workspaces.byStage, "payment-failed"),
       href: stageHref("payment-failed"),
     },
@@ -152,13 +158,13 @@ export function NeedsALookPanel({
     ...(overview.billing ? billingRows : []),
     {
       key: "deleting",
-      label: ADMIN_FLAG_LABELS.deleting,
+      label: workspaceFlagLabel("deleting", t),
       count: workspaces.pendingDeletion,
       href: flagHref("deleting"),
     },
     {
       key: "suspended",
-      label: ADMIN_FLAG_LABELS.suspended,
+      label: workspaceFlagLabel("suspended", t),
       count: workspaces.suspended,
       href: flagHref("suspended"),
     },
@@ -166,19 +172,20 @@ export function NeedsALookPanel({
 
   return (
     <AdminPanel
-      title="Needs a look"
+      title={t("conversion.needsLook")}
       footer={
         overview.billing
-          ? `Saves still possible: trials ending within ${TRIAL_ENDING_SOON_DAYS} days, renewals stopping and failed charges.`
-          : "Workspaces that will leave or have lost access."
+          ? t("conversion.billingFooter", { days: TRIAL_ENDING_SOON_DAYS })
+          : t("conversion.selfHostedFooter")
       }
     >
-      <BreakdownList label="Workspaces that need a look" rows={rows} />
+      <BreakdownList label={t("conversion.needsLookList")} rows={rows} />
     </AdminPanel>
   );
 }
 
 export function StagesPanel({ overview }: { overview: AdminOverview }) {
+  const t = useTranslations("admin");
   const total = overview.workspaces.total;
   const rows: BreakdownRow[] = WORKSPACE_STAGES.filter(
     (stage) => stage !== "self-hosted",
@@ -186,7 +193,7 @@ export function StagesPanel({ overview }: { overview: AdminOverview }) {
     const count = countOf(overview.workspaces.byStage, stage);
     return {
       key: stage,
-      label: WORKSPACE_STAGE_LABELS[stage],
+      label: workspaceStageLabel(stage, t),
       count,
       share: total === 0 ? 0 : count / total,
       href: stageHref(stage),
@@ -195,10 +202,10 @@ export function StagesPanel({ overview }: { overview: AdminOverview }) {
 
   return (
     <AdminPanel
-      title="Workspaces by stage"
-      footer="Where each workspace stands with billing right now."
+      title={t("conversion.stagesTitle")}
+      footer={t("conversion.stagesFooter")}
     >
-      <BreakdownList label="Workspaces by stage" rows={rows} />
+      <BreakdownList label={t("conversion.stagesTitle")} rows={rows} />
     </AdminPanel>
   );
 }
@@ -208,36 +215,38 @@ export function PayingPanel({
 }: {
   payingByPlan: NonNullable<AdminOverview["workspaces"]["payingByPlan"]>;
 }) {
+  const t = useTranslations("admin");
   const paying = payingByPlan.reduce((total, row) => total + row.count, 0);
   const rows: BreakdownRow[] = payingByPlan.map((row) => ({
     key: `${row.plan}-${row.interval ?? "unrecorded"}`,
-    label: payingPlanLabel(row.plan, row.interval),
+    label: payingPlanLabel(row.plan, row.interval, t),
     count: row.count,
     share: paying === 0 ? 0 : row.count / paying,
   }));
 
   return (
     <AdminPanel
-      title="Paying by plan and interval"
-      footer="Paying workspaces by the plan they hold and how often it renews."
+      title={t("conversion.payingTitle")}
+      footer={t("conversion.payingFooter")}
     >
       {paying > 0 ? (
-        <BreakdownList label="Paying by plan and interval" rows={rows} />
+        <BreakdownList label={t("conversion.payingTitle")} rows={rows} />
       ) : (
-        <EmptyState title="No workspace is paying right now." />
+        <EmptyState title={t("conversion.payingEmpty")} />
       )}
     </AdminPanel>
   );
 }
 
 export function InstancePanel({ overview }: { overview: AdminOverview }) {
+  const t = useTranslations("admin");
   const { apps, keywords, activation } = overview;
   const rows: BreakdownRow[] = [
     {
       key: "apps",
-      label: "Tracked apps",
+      label: t("conversion.trackedApps"),
       count: apps.tracked,
-      detail: pluralize(apps.competitors, "competitor"),
+      detail: t("common.competitorCount", { count: apps.competitors }),
     },
     ...STORES.map((store) => ({
       key: store,
@@ -246,27 +255,27 @@ export function InstancePanel({ overview }: { overview: AdminOverview }) {
     })),
     {
       key: "markets",
-      label: "Keyword markets",
+      label: t("conversion.keywordMarkets"),
       count: keywords.trackedMarkets,
-      detail: pluralize(keywords.storefronts, "storefront"),
+      detail: t("common.storefrontCount", { count: keywords.storefronts }),
     },
     {
       key: "searched",
-      label: "Searched keywords",
+      label: t("conversion.searchedKeywords"),
       count: keywords.searched,
     },
     {
       key: "ai",
-      label: "AI calls this month",
+      label: t("conversion.aiCalls"),
       count: overview.aiCallsThisMonth,
     },
     ...(overview.billing && activation
       ? [
           {
             key: "activation",
-            label: "Ranked within a day of import",
+            label: t("conversion.rankedWithinDay"),
             count: activation.rankedWithinADay,
-            detail: `of ${formatNumber(activation.importedLast30Days)}`,
+            detail: t("overview.of", { count: activation.importedLast30Days }),
           },
         ]
       : []),
@@ -274,10 +283,10 @@ export function InstancePanel({ overview }: { overview: AdminOverview }) {
 
   return (
     <AdminPanel
-      title="Instance"
-      footer="Tracked apps leave competitors aside; activation counts the last 30 days."
+      title={t("conversion.instanceTitle")}
+      footer={t("conversion.instanceFooter")}
     >
-      <BreakdownList label="Instance totals" rows={rows} />
+      <BreakdownList label={t("conversion.instanceList")} rows={rows} />
     </AdminPanel>
   );
 }
@@ -287,12 +296,14 @@ export function DeparturesPanel({
 }: {
   conversion: AdminConversion;
 }) {
+  const t = useTranslations("admin");
+  const locale = useAppLocale();
   const { departures } = conversion;
   const reasons: BreakdownRow[] = ADMIN_DEPARTURE_REASONS.map((reason) => {
     const count = countOf(departures.byReason, reason);
     return {
       key: reason,
-      label: DEPARTURE_REASON_LABELS[reason],
+      label: departureReasonLabel(reason, t),
       count,
       share: departures.total === 0 ? 0 : count / departures.total,
     };
@@ -301,36 +312,43 @@ export function DeparturesPanel({
     const count = countOf(departures.byStage, stage);
     return count > 0
       ? [
-          `${formatNumber(count)} ${WORKSPACE_STAGE_LABELS[stage].toLowerCase()}`,
+          t("conversion.departureStage", {
+            count,
+            stage: workspaceStageLabel(stage, t).toLocaleLowerCase(locale),
+          }),
         ]
       : [];
   });
+  const stageList = stages.join(t("conversion.departureStageSeparator"));
 
   return (
     <AdminPanel
-      title={departuresTitle(conversion.days)}
+      title={departuresTitle(conversion.days, t)}
       footer={
         <span className="flex w-full flex-wrap items-center justify-between gap-2">
           <span>
             {departures.total > 0
-              ? `By stage when they asked to leave: ${stages.join(" · ")}.`
-              : "Erased workspaces, by the reason they chose."}
+              ? t("conversion.departureStages", { stages: stageList })
+              : t("conversion.departuresEmptyFooter")}
           </span>
           <Link href={adminHref("conversion")} className={FOOTER_LINK}>
-            See every departure
+            {t("conversion.seeAllDepartures")}
           </Link>
         </span>
       }
     >
       {reasons.length > 0 ? (
         <BreakdownList
-          label="Why workspaces left"
+          label={t("conversion.reasonsList")}
           rows={reasons}
-          heads={{ label: "Reason", count: "Workspaces" }}
+          heads={{
+            label: t("conversion.reason"),
+            count: t("conversion.columns.workspaces"),
+          }}
         />
       ) : (
         <EmptyState
-          title={`No workspace was erased in the last ${pluralize(conversion.days, "day")}.`}
+          title={t("conversion.departureEmpty", { days: conversion.days })}
         />
       )}
     </AdminPanel>

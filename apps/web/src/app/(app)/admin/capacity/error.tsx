@@ -1,6 +1,7 @@
 "use client";
 
 import { ErrorState } from "@/components/layout/ErrorState";
+import { useTranslations } from "next-intl";
 
 export default function AdminCapacityError({
   error,
@@ -9,12 +10,13 @@ export default function AdminCapacityError({
   error: Error & { digest?: string };
   retry: () => void;
 }) {
+  const t = useTranslations("admin");
   return (
     <ErrorState
       error={error}
       retry={retry}
       scope="admin"
-      title="Instance capacity could not be loaded"
+      title={t("errors.capacity")}
     />
   );
 }

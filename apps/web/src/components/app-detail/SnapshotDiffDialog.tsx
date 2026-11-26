@@ -1,6 +1,7 @@
 "use client";
 
 import type { RefObject } from "react";
+import { useTranslations } from "next-intl";
 import type { SnapshotDiffResult } from "@asobeast/shared";
 import {
   Dialog,
@@ -11,7 +12,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { returnFocusTo } from "@/lib/focus-handoff";
-import { formatCountry } from "@/lib/format";
+import { formatCountryInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import {
   Table,
   TableBody,
@@ -36,6 +38,8 @@ export function SnapshotDiffDialog({
   onOpenChange: (open: boolean) => void;
   returnFocus?: RefObject<HTMLElement | null>;
 }) {
+  const t = useTranslations("appDetail");
+  const locale = useAppLocale();
   const changes = diff?.changes ?? [];
 
   return (
@@ -47,13 +51,15 @@ export function SnapshotDiffDialog({
         <DialogHeader>
           <DialogTitle>
             {market === null
-              ? "Snapshot refreshed"
-              : `Snapshot refreshed in ${formatCountry(market)}`}
+              ? t("snapshot.refreshed")
+              : t("snapshot.refreshedMarket", {
+                  country: formatCountryInLocale(market, locale),
+                })}
           </DialogTitle>
           <DialogDescription>
             {changes.length > 0
-              ? `${changes.length} field${changes.length === 1 ? "" : "s"} changed since the last snapshot.`
-              : "The store listing is unchanged since the last snapshot."}
+              ? t("snapshot.changed", { count: changes.length })
+              : t("snapshot.unchanged")}
           </DialogDescription>
         </DialogHeader>
 
@@ -61,31 +67,38 @@ export function SnapshotDiffDialog({
           {changes.length > 0 ? (
             <Table>
               <TableCaption className="sr-only">
-                Store listing fields that changed since the last snapshot, with
-                before and after values.
+                {t("snapshot.caption")}
               </TableCaption>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Field</TableHead>
-                  <TableHead>Before</TableHead>
-                  <TableHead>After</TableHead>
+                  <TableHead>{t("snapshot.field")}</TableHead>
+                  <TableHead>{t("snapshot.before")}</TableHead>
+                  <TableHead>{t("snapshot.after")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {changes.map((change) => {
-                  const cells = snapshotChangeCells(change, diff?.currency);
+                  const cells = snapshotChangeCells(change, diff?.currency, {
+                    translator: t,
+                    locale,
+                  });
                   return (
                     <TableRow
                       key={`${change.field}:${change.localization ?? ""}`}
                     >
                       <TableCell className="font-medium">
-                        {snapshotChangeLabel(change)}
+                        <span>
+                          {snapshotChangeLabel(change, {
+                            translator: t,
+                            locale,
+                          })}
+                        </span>
                       </TableCell>
                       <TableCell className="whitespace-normal wrap-anywhere text-muted-foreground">
-                        {cells.before}
+                        <span translate="no">{cells.before}</span>
                       </TableCell>
                       <TableCell className="whitespace-normal wrap-anywhere">
-                        {cells.after}
+                        <span translate="no">{cells.after}</span>
                       </TableCell>
                     </TableRow>
                   );
@@ -94,7 +107,7 @@ export function SnapshotDiffDialog({
             </Table>
           ) : (
             <p className="text-dense text-muted-foreground">
-              No changes detected.
+              {t("snapshot.noChanges")}
             </p>
           )}
         </DialogBody>

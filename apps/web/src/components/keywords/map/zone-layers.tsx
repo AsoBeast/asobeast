@@ -3,10 +3,10 @@ import { THRESHOLD_LINE_PROPS } from "@/components/charts/theme";
 import {
   isKeywordZone,
   KEYWORD_ZONES,
-  ZONE_LABELS,
   type KeywordZone,
   type ZoneThresholds,
 } from "@/lib/keyword-zones";
+import type { MessageTranslator } from "@/i18n/translator";
 
 export const ZONE_FILLS: Record<KeywordZone, string> = {
   quickWins: "var(--success)",
@@ -43,7 +43,11 @@ function zoneBounds(zone: KeywordZone, thresholds: ZoneThresholds) {
   };
 }
 
-function ZoneLabel({ value, viewBox }: LabelProps) {
+function ZoneLabel({
+  value,
+  viewBox,
+  t,
+}: LabelProps & { t: MessageTranslator }) {
   if (
     !isKeywordZone(value) ||
     !viewBox ||
@@ -69,7 +73,7 @@ function ZoneLabel({ value, viewBox }: LabelProps) {
       fill="var(--muted-foreground)"
       fontSize={10}
     >
-      {ZONE_LABELS[value]}
+      {t(`map.zones.names.${value}`)}
     </text>
   );
 }
@@ -78,10 +82,12 @@ export function zoneAreas({
   thresholds,
   selected,
   onZone,
+  t,
 }: {
   thresholds: ZoneThresholds;
   selected: KeywordZone | null;
   onZone?: (zone: KeywordZone) => void;
+  t: MessageTranslator;
 }) {
   return KEYWORD_ZONES.map((zone) => (
     <ReferenceArea
@@ -92,7 +98,10 @@ export function zoneAreas({
         zone === selected ? SELECTED_FILL_OPACITY : ZONE_FILL_OPACITY
       }
       ifOverflow="hidden"
-      label={{ value: zone, content: ZoneLabel }}
+      label={{
+        value: zone,
+        content: (props) => <ZoneLabel {...props} t={t} />,
+      }}
       className={onZone ? `zone-${zone} cursor-pointer` : `zone-${zone}`}
       onClick={onZone ? () => onZone(zone) : undefined}
     />
@@ -104,7 +113,10 @@ const thresholdLabel = (
   position: "insideTopRight" | "insideBottomRight" | "insideBottomLeft",
 ) => ({ value, position, fill: "var(--muted-foreground)", fontSize: 10 });
 
-export function thresholdLines(thresholds: ZoneThresholds) {
+export function thresholdLines(
+  thresholds: ZoneThresholds,
+  t: MessageTranslator,
+) {
   const nearTop = thresholds.popularity >= THRESHOLD_LABEL_FLIP_FROM;
   const nearRight = thresholds.difficulty >= THRESHOLD_LABEL_FLIP_FROM;
   return [
@@ -113,7 +125,10 @@ export function thresholdLines(thresholds: ZoneThresholds) {
       y={thresholds.popularity}
       {...THRESHOLD_LINE_PROPS}
       label={thresholdLabel(
-        `Popularity ${thresholds.popularity}`,
+        t("map.chart.thresholdLine", {
+          label: t("map.chart.popularity"),
+          value: thresholds.popularity,
+        }),
         nearTop ? "insideTopRight" : "insideBottomRight",
       )}
     />,
@@ -122,7 +137,10 @@ export function thresholdLines(thresholds: ZoneThresholds) {
       x={thresholds.difficulty}
       {...THRESHOLD_LINE_PROPS}
       label={thresholdLabel(
-        `Difficulty ${thresholds.difficulty}`,
+        t("map.chart.thresholdLine", {
+          label: t("map.chart.difficulty"),
+          value: thresholds.difficulty,
+        }),
         nearRight ? "insideBottomRight" : "insideBottomLeft",
       )}
     />,

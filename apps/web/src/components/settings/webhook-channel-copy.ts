@@ -4,9 +4,9 @@ import {
   webhookLabel,
   type WebhookChannel,
 } from "@asobeast/shared";
+import type { MessageTranslator } from "@/i18n/translator";
 
-export const WEBHOOK_CHANNEL_NAMES: Record<WebhookChannel, string> = {
-  generic: "JSON webhook",
+const PROVIDER_NAMES: Record<Exclude<WebhookChannel, "generic">, string> = {
   discord: "Discord",
   slack: "Slack",
   teams: "Microsoft Teams",
@@ -14,9 +14,16 @@ export const WEBHOOK_CHANNEL_NAMES: Record<WebhookChannel, string> = {
   google_chat: "Google Chat",
 };
 
+export function webhookChannelName(
+  channel: WebhookChannel,
+  translator: MessageTranslator,
+): string {
+  return channel === "generic"
+    ? translator("channels.generic")
+    : PROVIDER_NAMES[channel];
+}
+
 const SLACK_HOSTS = new Set(["hooks.slack.com", "hooks.slack-gov.com"]);
-const RETIRED_CONNECTOR_HINT =
-  'Office 365 connector urls stopped delivering in May 2026. Create a workflow with the "Send webhook alerts to a channel" template and paste its url.';
 
 function parse(url: string): URL | null {
   try {
@@ -26,40 +33,47 @@ function parse(url: string): URL | null {
   }
 }
 
-function genericHint(url: URL): string {
+function genericHint(url: URL, translator: MessageTranslator): string {
   if (SLACK_HOSTS.has(url.hostname)) {
-    return "Recognised as a Slack workflow trigger. It receives the JSON payload; map its fields in Workflow Builder.";
+    return translator("hints.slackWorkflow");
   }
   if (url.pathname.includes("/webhook-test/")) {
-    return "This is an n8n test url. It works only while the editor listens; use the production url.";
+    return translator("hints.n8nTest");
   }
-  return "Recognised as a JSON webhook. It receives the documented payload.";
+  return translator("hints.generic");
 }
 
 const CHANNEL_HINTS: Record<
   Exclude<WebhookChannel, "generic">,
-  (url: URL) => string
+  (url: URL, translator: MessageTranslator) => string
 > = {
-  discord: () =>
-    "Recognised as Discord. Reports arrive as embeds with the app icon.",
-  slack: () => "Recognised as Slack. Reports arrive as Block Kit messages.",
-  teams: () =>
-    "Recognised as Microsoft Teams. Reports arrive as an Adaptive Card; Teams confirms acceptance, not delivery.",
-  telegram: (url) =>
-    url.searchParams.get("chat_id")
-      ? "Recognised as Telegram. Reports arrive as a message from your bot."
-      : "Recognised as Telegram. Add ?chat_id=<id> after sendMessage.",
-  google_chat: () => "Recognised as Google Chat. Reports arrive as a card.",
+  discord: (_url, translator) => translator("hints.discord"),
+  slack: (_url, translator) => translator("hints.slack"),
+  teams: (_url, translator) => translator("hints.teams"),
+  telegram: (url, translator) =>
+    translator(
+      url.searchParams.get("chat_id")
+        ? "hints.telegramReady"
+        : "hints.telegramMissingChat",
+      { id: "<id>" },
+    ),
+  google_chat: (_url, translator) => translator("hints.googleChat"),
 };
 
-export function channelHint(raw: string): string | null {
+export function channelHint(
+  raw: string,
+  translator: MessageTranslator,
+): string | null {
   const url = parse(raw);
   if (!url || (url.protocol !== "http:" && url.protocol !== "https:")) {
     return null;
   }
-  if (isRetiredTeamsConnector(url.href)) return RETIRED_CONNECTOR_HINT;
+  if (isRetiredTeamsConnector(url.href))
+    return translator("hints.retiredTeams");
   const channel = webhookChannelOf(url.href);
-  return channel === "generic" ? genericHint(url) : CHANNEL_HINTS[channel](url);
+  return channel === "generic"
+    ? genericHint(url, translator)
+    : CHANNEL_HINTS[channel](url, translator);
 }
 
 export function deliversToChat(raw: string): boolean {

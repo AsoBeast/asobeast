@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { useTranslations } from "next-intl";
 import type { FormEvent, KeyboardEvent, RefObject } from "react";
 import { X } from "lucide-react";
 import { returnFocusTo } from "@/lib/focus-handoff";
@@ -36,12 +37,6 @@ import { limitCounterText, textLimit } from "@/lib/text-limit";
 import { cn } from "@/lib/utils";
 import { useKeywordUpdate } from "./useKeywordUpdate";
 
-const REFUSAL_MESSAGES: Record<TagRefusal, string> = {
-  invalid: `Tags are at most ${KEYWORD_TAG_MAX_LENGTH} letters, numbers, spaces, hyphens or underscores and start with a letter or number.`,
-  duplicate: "That tag is already on this keyword.",
-  limit: `A keyword has at most ${KEYWORD_TAGS_MAX} tags.`,
-};
-
 interface AnnotationsProps {
   appId: string;
   keyword: TrackedKeywordItem;
@@ -54,11 +49,13 @@ function AnnotationsForm({
   marketTags,
   onSaved,
 }: AnnotationsProps & { onSaved: () => void }) {
+  const t = useTranslations("keywords");
+  const tCommon = useTranslations("common");
   const update = useKeywordUpdate(appId, keyword);
   const tagsId = useId();
-  const messageId = useId();
+  const messageId = `${tagsId}-error`;
   const noteId = useId();
-  const counterId = useId();
+  const counterId = `${noteId}-counter`;
   const [tags, setTags] = useState<string[]>(keyword.tags ?? []);
   const [input, setInput] = useState("");
   const [refused, setRefused] = useState<TagRefusal | null>(null);
@@ -116,16 +113,19 @@ function AnnotationsForm({
     <form onSubmit={submit} className="flex min-h-0 flex-col gap-4">
       <DialogBody className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
-          <Label htmlFor={tagsId}>Tags</Label>
+          <Label htmlFor={tagsId}>{t("annotations.tags")}</Label>
           {tags.length > 0 ? (
-            <ul className="flex flex-wrap gap-1" aria-label="Current tags">
+            <ul
+              className="flex flex-wrap gap-1"
+              aria-label={t("annotations.currentTags")}
+            >
               {tags.map((tag) => (
                 <li key={tag}>
                   <Badge variant="outline" className="gap-1 pr-0.5">
                     {tag}
                     <button
                       type="button"
-                      aria-label={`Remove tag ${tag}`}
+                      aria-label={t("annotations.removeTag", { tag })}
                       onClick={() => setTags(tags.filter((t) => t !== tag))}
                       className="rounded-sm p-0.5 outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
                     >
@@ -140,14 +140,17 @@ function AnnotationsForm({
             id={tagsId}
             autoFocus
             value={input}
-            placeholder="Type a tag, then Enter or a comma"
+            placeholder={t("annotations.tagPlaceholder")}
             aria-describedby={refused ? messageId : undefined}
             onChange={(event) => changeInput(event.target.value)}
             onKeyDown={keyDown}
           />
           {refused ? (
             <p id={messageId} className="text-caption text-destructive">
-              {REFUSAL_MESSAGES[refused]}
+              {t(`annotations.refusal.${refused}`, {
+                tagLimit: KEYWORD_TAG_MAX_LENGTH,
+                tagsLimit: KEYWORD_TAGS_MAX,
+              })}
             </p>
           ) : null}
           {suggestions.length > 0 ? (
@@ -158,7 +161,7 @@ function AnnotationsForm({
                   type="button"
                   variant="outline"
                   size="xs"
-                  aria-label={`Add tag ${tag}`}
+                  aria-label={t("annotations.addTag", { tag })}
                   onClick={() => commit([tag])}
                 >
                   {tag}
@@ -168,7 +171,7 @@ function AnnotationsForm({
           ) : null}
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor={noteId}>Note</Label>
+          <Label htmlFor={noteId}>{t("annotations.note")}</Label>
           <Textarea
             id={noteId}
             value={note}
@@ -186,18 +189,18 @@ function AnnotationsForm({
                 : "text-muted-foreground",
             )}
           >
-            {limitCounterText(noteLimit, KEYWORD_NOTE_MAX_LENGTH)}
+            {limitCounterText(noteLimit, KEYWORD_NOTE_MAX_LENGTH, t)}
           </p>
         </div>
       </DialogBody>
       <DialogFooter>
         <DialogClose asChild>
           <Button type="button" variant="outline">
-            Cancel
+            {tCommon("cancel")}
           </Button>
         </DialogClose>
         <Button type="submit" disabled={update.isPending || noteLimit.over > 0}>
-          Save
+          {tCommon("save")}
         </Button>
       </DialogFooter>
     </form>
@@ -214,14 +217,16 @@ export function KeywordAnnotationsDialog({
   onOpenChange: (open: boolean) => void;
   returnFocus?: RefObject<HTMLElement | null>;
 }) {
+  const t = useTranslations("keywords");
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent onCloseAutoFocus={returnFocusTo(returnFocus)}>
         <DialogHeader>
-          <DialogTitle>Edit tags and note</DialogTitle>
+          <DialogTitle>{t("annotations.title")}</DialogTitle>
           <DialogDescription>
-            Tags and a note for {props.keyword.text}, visible to your workspace
-            only.
+            {t("annotations.description", {
+              keyword: props.keyword.text,
+            })}
           </DialogDescription>
         </DialogHeader>
         {open ? (

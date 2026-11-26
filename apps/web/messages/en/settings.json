@@ -1,0 +1,177 @@
+{
+  "title": "Settings",
+  "index": {
+    "onThisPage": "On this page",
+    "sections": {
+      "plan": "Plan",
+      "dailyCapacity": "Capacity",
+      "gettingStarted": "Getting started",
+      "alerts": "Alerts",
+      "team": "Team",
+      "workspace": "Workspace"
+    }
+  },
+  "capacity": {
+    "title": "Daily request budget",
+    "warning": "Daily jobs may not finish within store rate limits; remove keywords or countries, or raise SCRAPE_ITUNES_RPM at your own risk.",
+    "byStore": "By store",
+    "usedOfDailyLimit": "Used of the daily limit",
+    "heading": "Where the daily store requests go",
+    "perDay": "{used, number} of {limit, number} a day",
+    "storePerDay": "{used, number} of {limit, number} a day · {percent, number}%",
+    "storeUtilization": "{store} daily request utilization",
+    "parts": {
+      "keywords": "Keywords",
+      "categories": "Categories",
+      "apps": "Apps",
+      "reviews": "Reviews"
+    },
+    "status": {
+      "overCapacity": "Over capacity",
+      "nearCapacity": "Near capacity",
+      "high": "High",
+      "healthy": "Healthy"
+    },
+    "statusValue": "{status} · {percent, number}%",
+    "banner": "Daily requests exceed 85% of your store rate limit. <link>Review the request budget</link>.",
+    "completion": {
+      "empty": "The next run starts {date} and has nothing to collect yet.",
+      "only": "The next run starts {date}.",
+      "withinMinute": "The next run starts {date} and is expected to finish within a minute.",
+      "estimated": "The next run starts {date} and is expected to finish around {finish}, after about {hours, plural, one {# hour} other {# hours}} of collection."
+    },
+    "discovery": "Keyword discovery adds up to {searches, plural, one {# search} other {# searches}} a week, about {requests, plural, one {# request} other {# requests}}, outside this daily total.",
+    "marketListings": "{count, plural, one {# of the app requests refreshes the listing of a market you track keywords in.} other {# of the app requests refresh the listing of a market you track keywords in.}}",
+    "localizations": "{count, plural, one {# of the app requests reads a native localization of a storefront whose default is English.} other {# of the app requests read a native localization of a storefront whose default is English.}}"
+  },
+  "checklist": {
+    "title": "Getting started",
+    "show": "Show the setup checklist",
+    "hidden": "The checklist is hidden for everyone in this workspace.",
+    "footer": "The checklist floats at the bottom right of every page until every item is done.",
+    "loadError": "Could not load the setup checklist.",
+    "saveError": "Could not save the checklist setting",
+    "hideTitle": "Hide the setup checklist?",
+    "hideDescription": "It stays hidden for everyone in this workspace. You can show it again under Settings, Getting started.",
+    "hide": "Hide checklist",
+    "hiding": "Hiding…",
+    "hiddenToast": "Setup checklist hidden. Show it again in Settings.",
+    "hideError": "Could not hide the setup checklist",
+    "question": "What would you like to get done?",
+    "hint": "Pick one and the setup checklist starts with the steps that matter most. You can change it any time.",
+    "goalSet": "Goal set to {goal}",
+    "goalLoadError": "Could not load your goal.",
+    "goalSaveError": "Could not save your goal",
+    "progress": "{done, number} of {total, number} done",
+    "announcement": "Setup checklist: {progress}",
+    "panelTitle": "Setup checklist",
+    "goal": "Goal: {goal}",
+    "change": "Change",
+    "setupProgress": "Setup progress",
+    "steps": "Checklist steps",
+    "done": "Done",
+    "next": "Next",
+    "importFirst": "Import an app first",
+    "worthKnowing": "Worth knowing about {item}",
+    "opensNewTab": " (opens in a new tab)",
+    "expandPill": "Expand the pill",
+    "shrinkPill": "Shrink the pill",
+    "hideChecklist": "Hide checklist",
+    "inChecklist": " in the setup checklist",
+    "checkingPositions": "Checking where your app already ranks",
+    "firstPositionsReady": "Your first positions are in",
+    "seeRanks": "See where it ranks",
+    "firstPositionsError": "Could not check your first positions.",
+    "items": {
+      "importApp": {
+        "title": "Import an app",
+        "description": "Search the store by name or paste its URL. The listing, the keywords and the first positions arrive within minutes.",
+        "action": "Import an app",
+        "doneText": "App imported"
+      },
+      "secondMarket": {
+        "title": "Track keywords in a second market",
+        "description": "Rankings differ by storefront. Track your keywords in another market to see where you stand there.",
+        "action": "Add a market",
+        "doneText": "Tracking in two markets"
+      },
+      "addCompetitor": {
+        "title": "Add a competitor",
+        "description": "See your positions next to an app you compete with, on every keyword you track.",
+        "action": "Add a competitor",
+        "doneText": "Competitor added"
+      },
+      "connectConsole": {
+        "title": "Connect a store console",
+        "description": "Connect App Store Connect or the Google Play Console to see listing visits and downloads beside your rankings.",
+        "action": "Connect a console",
+        "doneText": "Console connected"
+      },
+      "connectAiClient": {
+        "title": "Connect your AI client",
+        "description": "Create a personal token and use it from Claude, Cursor or another MCP client.",
+        "action": "Create a token",
+        "doneText": "AI client connected"
+      },
+      "turnOnAlert": {
+        "title": "Turn on an alert",
+        "description": "Get an email or a webhook when something changes in your rankings, your listing or your reviews.",
+        "action": "Set up an alert",
+        "doneText": "Alerts are on"
+      },
+      "replyToReview": {
+        "title": "Reply to a review",
+        "description": "Write a reply or let AI draft one, keep it and post it from the reviews page.",
+        "action": "Open reviews",
+        "doneText": "Reply marked"
+      },
+      "fillKeywordField": {
+        "title": "Fill your keyword field",
+        "description": "Write the private 100 character iOS keyword field and see which tracked keywords it covers.",
+        "action": "Open metadata",
+        "doneText": "Keyword field saved"
+      }
+    },
+    "goals": {
+      "improveRankings": {
+        "label": "Improve my rankings",
+        "description": "Fill the keyword field, add competitors and watch your positions move."
+      },
+      "researchIdea": {
+        "label": "Research an idea",
+        "description": "Compare competitors and markets before you commit to keywords."
+      },
+      "useWithAi": {
+        "label": "Use AsoBeast from my AI",
+        "description": "Connect an MCP client and let your agent read your data."
+      }
+    },
+    "tips": {
+      "secondMarket": {
+        "quotes": "Search a keyword exactly by putting it in quotes",
+        "pasteList": "Paste a comma or newline list into Add keywords",
+        "searchWords": "See how many words each market's search reads",
+        "score": "Open a score to see where its popularity came from and how sure it is"
+      },
+      "addCompetitor": {
+        "rating": "Competitor cards show each app's rating, rating count and version"
+      },
+      "connectAiClient": {
+        "usage": "See when each token was last used and how many requests it made"
+      },
+      "turnOnAlert": {
+        "events": "Choose from {count, number} typed webhook events, rank gains included",
+        "retire": "Keywords that cost requests and never rank come back as actions to retire them"
+      },
+      "replyToReview": {
+        "language": "Drafts are written in the language of the review"
+      },
+      "fillKeywordField": {
+        "localization": "Add a localization your app ships to get more keyword field characters",
+        "limits": "Check every field against the store's limits and guidelines",
+        "newest": "Pick from the newest App Store localizations, including Bangla, Tamil, Telugu and Urdu",
+        "words": "Chinese, Japanese and Thai keywords are split into words"
+      }
+    }
+  }
+}

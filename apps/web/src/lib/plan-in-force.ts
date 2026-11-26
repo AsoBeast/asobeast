@@ -1,9 +1,6 @@
-import {
-  PLANS,
-  effectivePlan,
-  type AuthUser,
-  type PlanName,
-} from "@asobeast/shared";
+import { effectivePlan, type AuthUser, type PlanName } from "@asobeast/shared";
+import type { TranslationContext } from "@/i18n/translator";
+import { planLabel } from "@/lib/plan-choice";
 
 type PlanTerms = Pick<AuthUser, "plan" | "trialEndsAt" | "planExpiresAt">;
 
@@ -22,6 +19,10 @@ export function planInForce(user: PlanTerms, now: Date): PlanName {
   );
 }
 
-export function planInForceLabel(user: PlanTerms, now: Date): string {
-  return PLANS[planInForce(user, now)].displayName;
+export function planInForceLabel(
+  user: PlanTerms,
+  now: Date,
+  context: TranslationContext,
+): string {
+  return planLabel(planInForce(user, now), context);
 }

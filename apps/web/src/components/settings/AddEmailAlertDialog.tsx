@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import type { FormEvent, ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -24,9 +25,10 @@ import { ConfirmDropsField } from "./ConfirmDropsField";
 import { AlertChannelDialog } from "./alert-channel/AlertChannelDialog";
 import { awaitsConfirmation, recipientToast } from "./email-alert-recipient";
 
-const INVALID_ADDRESS = "Enter a valid email address";
-
 export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
+  const t = useTranslations("notifications");
+  const validation = useTranslations("validation");
+  const invalidAddress = validation("notifications.invalidEmail");
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -53,14 +55,14 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
       invalidateEmailAlertMutation(queryClient);
       if (saved.confirmationSent === false) {
         toast.warning(
-          `Email alert added. The confirmation email to ${saved.email} could not be sent, so use Resend confirmation to try again.`,
+          t("email.addedConfirmationFailed", { email: saved.email }),
           recipientToast(saved),
         );
       } else {
         toast.success(
           awaitsConfirmation(saved)
-            ? `Confirmation email sent to ${saved.email}`
-            : "Email alert added",
+            ? t("email.confirmationSent", { email: saved.email })
+            : t("email.added"),
           recipientToast(saved),
         );
       }
@@ -68,9 +70,7 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
     },
     onError: (err) => {
       setError(
-        err instanceof ApiError
-          ? err.envelope.message
-          : "Could not add email alert",
+        err instanceof ApiError ? err.envelope.message : t("email.addError"),
       );
     },
   });
@@ -93,18 +93,18 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
     setError(null);
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError(INVALID_ADDRESS);
+      setError(invalidAddress);
       return;
     }
     if (events.length === 0) {
-      setError("Switch on at least one rule");
+      setError(validation("notifications.ruleRequired"));
       return;
     }
     if (needsAStar(events, stars)) {
-      setError("Pick at least one star");
+      setError(validation("notifications.starRequired"));
       return;
     }
-    const thresholdError = rankThresholdError(events, rankText);
+    const thresholdError = rankThresholdError(events, rankText, validation);
     if (thresholdError) {
       setError(thresholdError);
       return;
@@ -117,22 +117,22 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
     <AlertChannelDialog
       open={open}
       onOpenChange={onOpenChange}
-      label="Add email alert"
-      description="AsoBeast emails this recipient when a subscribed event fires, using your configured SMTP server. Unless it is the verified account email of a member of this workspace, the recipient confirms the address from the link in a first email."
+      label={t("email.add")}
+      description={t("email.addDescription")}
       error={error}
       pending={mutation.isPending}
       onSubmit={submit}
       trigger={trigger}
     >
       <div className="flex flex-col gap-2">
-        <Label htmlFor="email-alert-address">Recipient email</Label>
+        <Label htmlFor="email-alert-address">{t("email.recipient")}</Label>
         <Input
           id="email-alert-address"
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           placeholder="alerts@example.com"
-          aria-invalid={error === INVALID_ADDRESS}
+          aria-invalid={error === invalidAddress}
         />
       </div>
 

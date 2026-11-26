@@ -6,16 +6,16 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { CalendarClock, Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { runDaily, apiErrorMessage } from "@/lib/api";
-import { pluralize } from "@/lib/format";
 import { appKeys } from "@/lib/queries";
-import { queuedToast } from "@/lib/queued-toast";
 import { useSingleFlight } from "@/lib/single-flight";
 
 export function RunDailyAction({ appId }: { appId: string }) {
   const queryClient = useQueryClient();
+  const t = useTranslations("jobs");
   const busy = useIsMutating({ mutationKey: ["app-action", appId] }) > 0;
 
   const mutation = useMutation({
@@ -26,21 +26,21 @@ export function RunDailyAction({ appId }: { appId: string }) {
       const { apps, keywords, categories, reviews } = result.enqueued;
       const jobs = apps + keywords + categories + reviews;
       if (jobs === 0) {
-        toast.info("Nothing new to queue", {
-          description:
-            "Today's checks for this app are already queued, running or done.",
+        toast.info(t("runDaily.nothingTitle"), {
+          description: t("runDaily.nothingBody"),
         });
         return;
       }
-      queuedToast(
+      const message =
         keywords > 0
-          ? `rank checks for ${pluralize(keywords, "keyword")}`
-          : pluralize(jobs, "job"),
-        "Follow the run in the header; tables update as positions land.",
-      );
+          ? t("runDaily.rankChecks", { count: keywords })
+          : t("runDaily.jobs", { count: jobs });
+      toast.info(t("runDaily.queued", { message }), {
+        description: t("runDaily.follow"),
+      });
     },
     onError: (error) => {
-      toast.error(apiErrorMessage(error, "Run daily failed"));
+      toast.error(apiErrorMessage(error, t("runDaily.failed")));
     },
   });
   const runOnce = useSingleFlight(mutation);
@@ -52,14 +52,14 @@ export function RunDailyAction({ appId }: { appId: string }) {
       onClick={() => {
         if (!busy) runOnce();
       }}
-      aria-label="Run daily"
+      aria-label={t("runDaily.action")}
     >
       {mutation.isPending ? (
         <Loader2 className="animate-spin" />
       ) : (
         <CalendarClock />
       )}
-      <span className="hidden lg:inline">Run daily</span>
+      <span className="hidden lg:inline">{t("runDaily.action")}</span>
     </Button>
   );
 }

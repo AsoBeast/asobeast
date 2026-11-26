@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import {
@@ -18,6 +19,7 @@ export function FirstResults({
   appId: string | null;
   onNavigate: () => void;
 }) {
+  const t = useTranslations("settings");
   const read = useQuery({
     ...firstRunOptions(appId ?? ""),
     enabled: appId !== null,
@@ -25,7 +27,7 @@ export function FirstResults({
   if (failedRead(read)) {
     return (
       <InlineQueryError
-        message="Could not check your first positions."
+        message={t("checklist.firstPositionsError")}
         read={read}
       />
     );
@@ -36,19 +38,19 @@ export function FirstResults({
     return (
       <p className="flex items-center gap-2 text-body">
         <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
-        <span>Checking where your app already ranks</span>
+        <span>{t("checklist.checkingPositions")}</span>
       </p>
     );
   }
   return (
     <p className="flex flex-wrap items-center gap-x-2 text-body">
-      <span>Your first positions are in</span>
+      <span>{t("checklist.firstPositionsReady")}</span>
       <Link
         href={`/apps/${row.appId}/rankings`}
         onClick={onNavigate}
         className={CHECKLIST_LINK}
       >
-        See where it ranks
+        <span>{t("checklist.seeRanks")}</span>
       </Link>
     </p>
   );

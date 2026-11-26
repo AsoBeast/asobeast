@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { useSuspenseQuery } from "@tanstack/react-query";
@@ -11,25 +12,27 @@ import type {
 } from "@asobeast/shared";
 import { META_LINE } from "@/components/layout/panel-classes";
 import { Separated } from "@/components/ui/separated";
-import { formatDate, pluralize } from "@/lib/format";
+import { formatDateInLocale } from "@/lib/format";
+import type { MessageTranslator } from "@/i18n/translator";
+import { useAppLocale } from "@/lib/use-app-locale";
 import {
   budgetOptions,
   portfolioOptions,
   runStatusOptions,
 } from "@/lib/queries";
 
-const RUN_STATE_TEXT: Record<RunState, string | null> = {
+const RUN_STATE_KEYS: Record<RunState, string | null> = {
   idle: null,
-  running: "Daily run in progress",
-  complete: "Daily run complete",
-  delayed: "Daily run delayed",
+  running: "running",
+  complete: "complete",
+  delayed: "delayed",
 };
 
-function inventory(totals: PortfolioTotals): ReactNode[] {
+function inventory(totals: PortfolioTotals, t: MessageTranslator): ReactNode[] {
   return [
-    pluralize(totals.apps, "app"),
-    pluralize(totals.trackedKeywords, "keyword"),
-    pluralize(totals.competitors, "competitor"),
+    t("counts.apps", { count: totals.apps }),
+    t("counts.keywords", { count: totals.trackedKeywords }),
+    t("counts.competitors", { count: totals.competitors }),
   ];
 }
 
@@ -41,21 +44,23 @@ function budgetShare(utilization: number): string {
 function freshness(
   run: WorkspaceRunStatus,
   budget: DailyBudget | null,
+  t: ReturnType<typeof useTranslations>,
+  locale: ReturnType<typeof useAppLocale>,
 ): ReactNode[] {
-  const state = RUN_STATE_TEXT[run.state];
+  const stateKey = RUN_STATE_KEYS[run.state];
   return [
-    run.lastCaptureAt ? (
-      <span>
-        Collected{" "}
-        <time dateTime={run.lastCaptureAt}>
-          {formatDate(run.lastCaptureAt)}
-        </time>
-      </span>
-    ) : null,
-    state,
+    run.lastCaptureAt
+      ? t.rich("status.collected", {
+          date: formatDateInLocale(run.lastCaptureAt, locale),
+          time: (chunks) => (
+            <time dateTime={run.lastCaptureAt ?? undefined}>{chunks}</time>
+          ),
+        })
+      : null,
+    stateKey === null ? null : t(`status.${stateKey}`),
     budget && budget.utilization > 0 ? (
       <Link href="/settings" className="underline-offset-4 hover:underline">
-        {`${budgetShare(budget.utilization)} of the daily request budget`}
+        {t("status.budgetShare", { percent: budgetShare(budget.utilization) })}
       </Link>
     ) : null,
   ].filter((part) => part !== null);
@@ -71,13 +76,15 @@ export function OperatorPortfolioStatusLine() {
 }
 
 function StatusLine({ budget }: { budget: DailyBudget | null }) {
+  const t = useTranslations("dashboard");
+  const locale = useAppLocale();
   const { data: portfolio } = useSuspenseQuery(portfolioOptions);
   const { data: run } = useSuspenseQuery(runStatusOptions);
-  const fresh = freshness(run, budget);
+  const fresh = freshness(run, budget, t, locale);
 
   return (
     <p data-slot="portfolio-status" className={META_LINE}>
-      <Separated parts={[...inventory(portfolio.totals), ...fresh]} />
+      <Separated parts={[...inventory(portfolio.totals, t), ...fresh]} />
     </p>
   );
 }

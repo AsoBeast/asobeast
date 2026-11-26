@@ -1,13 +1,9 @@
 "use client";
 
 import { useId } from "react";
+import { useTranslations } from "next-intl";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-
-export const CONFIRM_DROPS_LABEL = "Confirm drops before alerting";
-export const CONFIRM_DROPS_BADGE = "Confirmed drops";
-export const CONFIRM_DROPS_HELP =
-  "A rank drop, or an exit from the top 10, the top 3 or first place, is sent only if the next check confirms it. A keyword that slips from #9 to #11 and comes back sends nothing. Confirmed drops arrive one check later.";
 
 export function ConfirmDropsField({
   checked,
@@ -16,6 +12,7 @@ export function ConfirmDropsField({
   checked: boolean;
   onChange: (checked: boolean) => void;
 }) {
+  const t = useTranslations("notifications");
   const id = useId();
   const helpId = `${id}-help`;
   return (
@@ -28,9 +25,9 @@ export function ConfirmDropsField({
         onCheckedChange={(value) => onChange(value === true)}
       />
       <div className="flex min-w-0 flex-col gap-1">
-        <Label htmlFor={id}>{CONFIRM_DROPS_LABEL}</Label>
+        <Label htmlFor={id}>{t("confirmDrops.label")}</Label>
         <p id={helpId} className="text-caption text-muted-foreground">
-          {CONFIRM_DROPS_HELP}
+          {t("confirmDrops.help")}
         </p>
       </div>
     </div>

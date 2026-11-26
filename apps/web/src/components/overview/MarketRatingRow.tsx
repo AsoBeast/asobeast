@@ -1,16 +1,17 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import { GradedNumber } from "@/components/ui/graded";
 import { TableCell, TableRow } from "@/components/ui/table";
 import {
-  formatCountry,
-  formatDate,
-  formatNumber,
-  formatRating,
+  formatCountryInLocale,
+  formatDateInLocale,
+  formatNumberInLocale,
+  formatRatingInLocale,
 } from "@/lib/format";
 import { grade } from "@/lib/grade";
+import { useAppLocale } from "@/lib/use-app-locale";
 import type { MarketRatingRow as Row } from "@/lib/ratings-by-market";
-
-const NO_RATING = "No rating yet";
-const NOT_CAPTURED = "Not captured yet";
 
 function Dash({ label }: { label: string }) {
   return (
@@ -22,21 +23,33 @@ function Dash({ label }: { label: string }) {
 }
 
 function Average({ row, name }: { row: Row; name: string }) {
-  if (row.state === "uncaptured") return <Dash label={NOT_CAPTURED} />;
-  if (row.ratingAvg === null) return <Dash label={NO_RATING} />;
+  const t = useTranslations("overview");
+  const locale = useAppLocale();
+  if (row.state === "uncaptured")
+    return <Dash label={t("ratingsByMarket.notCaptured")} />;
+  if (row.ratingAvg === null)
+    return <Dash label={t("ratingsByMarket.noRating")} />;
   return (
     <GradedNumber
-      value={formatRating(row.ratingAvg)}
+      value={formatRatingInLocale(row.ratingAvg, locale)}
       grade={grade("rating", row.ratingAvg)}
-      label={`Rating in ${name}`}
+      label={t("ratingsByMarket.ratingIn", { country: name })}
     />
   );
 }
 
 function RatingCount({ row }: { row: Row }) {
-  if (row.state === "uncaptured") return <Dash label={NOT_CAPTURED} />;
-  if (row.ratingCount === null) return <Dash label={NO_RATING} />;
-  return <span className="numeric">{formatNumber(row.ratingCount)}</span>;
+  const t = useTranslations("overview");
+  const locale = useAppLocale();
+  if (row.state === "uncaptured")
+    return <Dash label={t("ratingsByMarket.notCaptured")} />;
+  if (row.ratingCount === null)
+    return <Dash label={t("ratingsByMarket.noRating")} />;
+  return (
+    <span className="numeric">
+      {formatNumberInLocale(row.ratingCount, locale)}
+    </span>
+  );
 }
 
 export function MarketRatingRow({
@@ -46,7 +59,9 @@ export function MarketRatingRow({
   row: Row;
   selected: boolean;
 }) {
-  const name = formatCountry(row.country);
+  const t = useTranslations("overview");
+  const locale = useAppLocale();
+  const name = formatCountryInLocale(row.country, locale);
   return (
     <TableRow
       data-state={selected ? "selected" : undefined}
@@ -59,10 +74,14 @@ export function MarketRatingRow({
           </span>
           <span className="font-medium">{name}</span>
           {row.home ? (
-            <span className="text-label text-muted-foreground">Home</span>
+            <span className="text-label text-muted-foreground">
+              {t("ratingsByMarket.home")}
+            </span>
           ) : null}
           {selected ? (
-            <span className="text-label text-muted-foreground">Selected</span>
+            <span className="text-label text-muted-foreground">
+              {t("ratingsByMarket.selected")}
+            </span>
           ) : null}
         </span>
       </TableCell>
@@ -74,9 +93,11 @@ export function MarketRatingRow({
       </TableCell>
       <TableCell className="text-right max-sm:hidden">
         {row.capturedAt === null ? (
-          <span className="text-muted-foreground">{NOT_CAPTURED}</span>
+          <span className="text-muted-foreground">
+            {t("ratingsByMarket.notCaptured")}
+          </span>
         ) : (
-          formatDate(row.capturedAt)
+          <span>{formatDateInLocale(row.capturedAt, locale)}</span>
         )}
       </TableCell>
     </TableRow>

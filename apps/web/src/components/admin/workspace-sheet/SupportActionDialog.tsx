@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   SUPPORT_REASON_MAX_LENGTH,
@@ -26,10 +27,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  ACTION_COPY,
   focusAfter,
   focusAfterConflict,
   nextSupportReason,
+  supportActionCopy,
   supportActionRequest,
   supportReasonLength,
   supportReasonReady,
@@ -66,8 +67,6 @@ const SEND: Record<
   restore: restoreSupportWorkspace,
 };
 
-const REASON_HINT = `At least ${SUPPORT_REASON_MIN_LENGTH} characters. Kept in the support access log.`;
-
 export function SupportActionDialog({
   workspace,
   billing,
@@ -78,7 +77,8 @@ export function SupportActionDialog({
   action: WorkspaceAction;
 }) {
   const { workspaceId, name } = workspace;
-  const copy = ACTION_COPY[action];
+  const t = useTranslations("admin");
+  const copy = supportActionCopy(action, t);
   const survivor = focusAfter(action, workspace, { billing });
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -103,7 +103,7 @@ export function SupportActionDialog({
       settle();
     },
     onError: (error) => {
-      toast.error(apiErrorMessage(error, "Could not finish. Try again."));
+      toast.error(apiErrorMessage(error, t("support.failed")));
       if (isConflict(error)) {
         const current = focusAfterConflict(action, workspace, { billing });
         if (current) armFocusHandoff(focusKeyOf(current));
@@ -148,7 +148,7 @@ export function SupportActionDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="flex flex-col gap-2">
-          <Label htmlFor={fieldId}>Reason</Label>
+          <Label htmlFor={fieldId}>{t("support.reason")}</Label>
           <Textarea
             id={fieldId}
             dir="auto"
@@ -162,9 +162,14 @@ export function SupportActionDialog({
             id={hintId}
             className="flex justify-between gap-3 text-caption text-muted-foreground"
           >
-            <span>{REASON_HINT}</span>
+            <span>
+              {t("support.reasonHint", { min: SUPPORT_REASON_MIN_LENGTH })}
+            </span>
             <span className="numeric shrink-0">
-              {`${supportReasonLength(reason)} of ${SUPPORT_REASON_MAX_LENGTH}`}
+              {t("support.reasonCount", {
+                used: supportReasonLength(reason),
+                max: SUPPORT_REASON_MAX_LENGTH,
+              })}
             </span>
           </div>
         </div>

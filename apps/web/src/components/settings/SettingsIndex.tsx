@@ -1,17 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { accountPlanOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
 export const SETTINGS_SECTIONS = {
-  plan: "Plan",
-  "daily-capacity": "Capacity",
-  "getting-started": "Getting started",
-  alerts: "Alerts",
-  team: "Team",
-  workspace: "Workspace",
+  plan: "index.sections.plan",
+  "daily-capacity": "index.sections.dailyCapacity",
+  "getting-started": "index.sections.gettingStarted",
+  alerts: "index.sections.alerts",
+  team: "index.sections.team",
+  workspace: "index.sections.workspace",
 };
 
 export type SettingsSectionId = keyof typeof SETTINGS_SECTIONS;
@@ -111,6 +112,7 @@ export function SettingsIndex({
   operator: boolean;
   className?: string;
 }) {
+  const t = useTranslations("settings");
   const { data: plan } = useQuery(accountPlanOptions);
   const ids = Object.keys(SETTINGS_SECTIONS)
     .filter(isSectionId)
@@ -123,10 +125,12 @@ export function SettingsIndex({
 
   return (
     <nav
-      aria-label="On this page"
+      aria-label={t("index.onThisPage")}
       className={cn("sticky top-20 self-start", className)}
     >
-      <p className="px-3 pb-2 text-tick text-faint-foreground">On this page</p>
+      <p className="px-3 pb-2 text-tick text-faint-foreground">
+        {t("index.onThisPage")}
+      </p>
       <ul className="flex flex-col gap-1">
         {ids.map((id) => (
           <li key={id}>
@@ -135,7 +139,7 @@ export function SettingsIndex({
               aria-current={id === inView ? "location" : undefined}
               className="relative flex h-8 items-center rounded-md px-3 text-dense text-muted-foreground outline-none transition-colors duration-150 ease-out hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring aria-[current]:bg-muted aria-[current]:font-medium aria-[current]:text-foreground aria-[current]:before:absolute aria-[current]:before:inset-y-2 aria-[current]:before:left-0 aria-[current]:before:w-0.5 aria-[current]:before:rounded-full aria-[current]:before:bg-foreground"
             >
-              <span>{SETTINGS_SECTIONS[id]}</span>
+              <span>{t(SETTINGS_SECTIONS[id])}</span>
             </a>
           </li>
         ))}

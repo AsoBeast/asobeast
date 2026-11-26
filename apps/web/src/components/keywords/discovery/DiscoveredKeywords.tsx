@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useMemo, useRef, useState, type RefObject } from "react";
+import { useTranslations } from "next-intl";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import type { OnChangeFn, RowSelectionState } from "@tanstack/react-table";
 import type { DiscoveryState, Store } from "@asobeast/shared";
@@ -28,6 +29,7 @@ interface DiscoveredProps {
 
 export function DiscoveredKeywords(props: DiscoveredProps) {
   const heading = useRef<HTMLHeadingElement>(null);
+  const t = useTranslations("keywordInspector");
   return (
     <div className="flex flex-col gap-4">
       <h2
@@ -35,7 +37,7 @@ export function DiscoveredKeywords(props: DiscoveredProps) {
         tabIndex={-1}
         className="sr-only rounded-sm text-heading outline-none focus:not-sr-only focus:ring-2 focus:ring-ring"
       >
-        Discovered keywords
+        {t("discovery.heading")}
       </h2>
       <Suspense fallback={<DiscoveredSkeleton />}>
         <DiscoveredList key={props.market} {...props} heading={heading} />
@@ -77,6 +79,7 @@ function DiscoveredList({
     keywordDiscoveriesOptions(id, market),
   );
   const [state, setState] = useDiscoveryState();
+  const t = useTranslations("keywordInspector");
   const [{ q }, setTableParams] = useDiscoveryTableParams();
   const selection = useStateSelection(state);
   const actions = useDiscoveryActions(id, market, selection.clear);
@@ -86,7 +89,7 @@ function DiscoveredList({
     [list.items, state],
   );
   const selected = selectedIn(rows, selection.rows);
-  const empty = emptyStateOf(list, rows.length, state);
+  const empty = emptyStateOf(list, rows.length, state, t);
   const footer = <DiscoveryFooter list={list} updatedAt={dataUpdatedAt} />;
 
   return (
@@ -94,7 +97,7 @@ function DiscoveredList({
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center gap-2">
           <SearchInput
-            label="Search discovered keywords"
+            label={t("discovery.search")}
             value={q}
             onSearch={(next, options) =>
               void setTableParams({ q: next || null }, options)
@@ -110,7 +113,10 @@ function DiscoveredList({
           onTrackSelected={(button) => handOffFocus(heading.current, button)}
         />
         {empty.kind === "never_run" ? (
-          <EmptyState title="No discoveries yet" body={empty.body} />
+          <EmptyState
+            title={t("discovery.empty.neverTitle")}
+            body={empty.body}
+          />
         ) : null}
         {empty.kind === "nothing_here" ? (
           <EmptyState
@@ -126,7 +132,7 @@ function DiscoveredList({
                     setState("all");
                   }}
                 >
-                  Show all
+                  {t("discovery.empty.showAll")}
                 </Button>
               )
             }

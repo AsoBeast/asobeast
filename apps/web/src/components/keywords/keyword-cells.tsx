@@ -1,6 +1,9 @@
 "use client";
 
 import { createContext, useContext, type ReactNode } from "react";
+import { createTranslator, useTranslations } from "next-intl";
+import enKeywords from "../../../messages/en/keywords.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import { ChartLine, LoaderCircle, StickyNote } from "lucide-react";
 import { DeltaChip } from "@/components/ui/delta-chip";
 import type { PlayAcquisitions, TrackedKeywordItem } from "@asobeast/shared";
@@ -17,7 +20,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatDate, formatMonth, formatNumber, pluralize } from "@/lib/format";
+import {
+  formatDateInLocale,
+  formatMonthInLocale,
+  formatNumberInLocale,
+} from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { isChecking, lostPosition, staleCheckDay } from "@/lib/keyword-checks";
 import { tagsLabel, visibleTags } from "@/lib/keyword-tags";
 import { NoSearchTermsContext } from "./PlayInstallsTip";
@@ -30,29 +38,40 @@ import { KeywordClassTag } from "./KeywordClassTag";
 import { PositionTrend } from "./PositionTrend";
 import {
   DEFAULT_TREND_WINDOW,
-  TREND_STATE_TEXT,
+  TREND_WINDOW_DAYS,
   trendChecks,
   trendDelta,
   trendFrame,
   trendPeriod,
-  trendSpan,
   type TrendSeries,
   type TrendState,
   type TrendWindow,
 } from "@/lib/trend-window";
 import { StaleCheckMark } from "./StaleCheckMark";
 
-function volatilityBand(value: number): { label: string; text: string } {
-  if (value < 20) return { label: "Low", text: "text-muted-foreground" };
-  if (value <= 50) return { label: "Medium", text: "text-foreground" };
-  return { label: "High", text: "text-warning" };
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywords",
+  messages: { keywords: enKeywords },
+});
+
+function volatilityBand(
+  value: number,
+  t: MessageTranslator,
+): { label: string; text: string } {
+  if (value < 20)
+    return { label: t("table.volatilityLow"), text: "text-muted-foreground" };
+  if (value <= 50)
+    return { label: t("table.volatilityMedium"), text: "text-foreground" };
+  return { label: t("table.volatilityHigh"), text: "text-warning" };
 }
 
 export function CheckingMark() {
+  const t = useTranslations("keywords");
   return (
     <span className="inline-flex items-center gap-1.5 text-muted-foreground">
       <LoaderCircle aria-hidden className="size-3.5 animate-spin" />
-      <span>Checking…</span>
+      <span>{t("table.checking")}</span>
     </span>
   );
 }
@@ -64,6 +83,7 @@ export function PositionCell({
   keyword: TrackedKeywordItem;
   today: string;
 }) {
+  const t = useTranslations("keywords");
   const label = formatCheckedPosition(
     keyword.latestPosition,
     keyword.latestDepth,
@@ -72,14 +92,11 @@ export function PositionCell({
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <span aria-label="Position: checking" className="inline-flex">
+          <span aria-label={t("table.checkingLabel")} className="inline-flex">
             <CheckingMark />
           </span>
         </TooltipTrigger>
-        <TooltipContent>
-          Queued for its first check. Scores can land first; the table updates
-          on its own.
-        </TooltipContent>
+        <TooltipContent>{t("table.checkingHint")}</TooltipContent>
       </Tooltip>
     );
   }
@@ -88,13 +105,13 @@ export function PositionCell({
       <Tooltip>
         <TooltipTrigger asChild>
           <span
-            aria-label="Position: not checked yet"
+            aria-label={t("table.notCheckedLabel")}
             className="text-muted-foreground"
           >
             —
           </span>
         </TooltipTrigger>
-        <TooltipContent>This keyword has not been checked yet</TooltipContent>
+        <TooltipContent>{t("table.notCheckedHint")}</TooltipContent>
       </Tooltip>
     );
   }
@@ -113,13 +130,21 @@ export function PositionCell({
   );
 }
 
-export function TrendHeading({ trendWindow }: { trendWindow: TrendWindow }) {
+export function TrendHeading({
+  trendWindow,
+  t = english,
+}: {
+  trendWindow: TrendWindow;
+  t?: MessageTranslator;
+}) {
   const prefixClass =
     trendWindow === DEFAULT_TREND_WINDOW ? undefined : "keywords-tight:hidden";
   return (
     <span>
-      <span className={prefixClass}>Last </span>
-      <span>{trendSpan(trendWindow)}</span>
+      <span className={prefixClass}>{t("table.lastPrefix")}</span>
+      <span>
+        {t("table.trendDays", { days: TREND_WINDOW_DAYS[trendWindow] })}
+      </span>
     </span>
   );
 }
@@ -139,6 +164,7 @@ export function TrendCell({
   series: TrendSeries | undefined;
   state?: TrendState;
 }) {
+  const t = useTranslations("keywords");
   const label = formatCheckedPosition(
     keyword.latestPosition,
     keyword.latestDepth,
@@ -146,7 +172,7 @@ export function TrendCell({
   const trend =
     state !== "ready" ? (
       <span className="shrink-0 whitespace-nowrap text-caption text-muted-foreground">
-        {TREND_STATE_TEXT[state]}
+        {state === "pending" ? t("table.trendPending") : t("table.trendFailed")}
       </span>
     ) : (
       <>
@@ -157,7 +183,7 @@ export function TrendCell({
         />
         <DeltaChip
           value={trendDelta(keyword, trendWindow, series)}
-          period={trendPeriod(trendWindow)}
+          period={trendPeriod(trendWindow, t)}
           className={keyword.active ? undefined : "text-muted-foreground"}
         />
       </>
@@ -178,21 +204,26 @@ export function TrendCell({
 }
 
 export function VolatilityCell({ value }: { value: number | null }) {
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
   if (value === null) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
           <span className="text-muted-foreground">—</span>
         </TooltipTrigger>
-        <TooltipContent>Not enough snapshots yet</TooltipContent>
+        <TooltipContent>{t("table.notEnoughSnapshots")}</TooltipContent>
       </Tooltip>
     );
   }
-  const band = volatilityBand(value);
+  const band = volatilityBand(value, t);
   return (
     <span
       className="inline-flex items-center justify-end gap-1.5"
-      aria-label={`${band.label} volatility, ${value} out of 100`}
+      aria-label={t("table.volatilityLabel", {
+        band: band.label,
+        value: formatNumberInLocale(value, locale),
+      })}
     >
       <span className={band.text}>{band.label}</span>
       <span className="numeric w-6 text-right text-muted-foreground">
@@ -207,9 +238,11 @@ export function PlayAcquisitionsCell({
 }: {
   value: PlayAcquisitions | null;
 }) {
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
   const noSearchTermsStatement = useContext(NoSearchTermsContext);
   if (!value) {
-    const message = noSearchTermsStatement ?? "No Play Console data";
+    const message = noSearchTermsStatement ?? t("table.noPlayData");
     return (
       <Tooltip>
         <TooltipTrigger asChild>
@@ -221,31 +254,37 @@ export function PlayAcquisitionsCell({
       </Tooltip>
     );
   }
-  const month = formatMonth(value.month);
-  const acquisitions = formatNumber(value.acquisitions);
-  const visitors = formatNumber(value.visitors);
+  const month = formatMonthInLocale(value.month, locale);
+  const acquisitions = formatNumberInLocale(value.acquisitions, locale);
+  const visitors = formatNumberInLocale(value.visitors, locale);
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <span
           className="numeric whitespace-nowrap"
-          aria-label={`${acquisitions} acquisitions from ${visitors} store listing visitors in ${month}`}
+          aria-label={t("table.playAcquisitionsLabel", {
+            acquisitions,
+            visitors,
+            month,
+          })}
         >
           <span>{acquisitions}</span>
           <span className="text-muted-foreground">{` · ${visitors}`}</span>
         </span>
       </TooltipTrigger>
       <TooltipContent>
-        {`Store listing acquisitions and visitors from this search term in ${month}`}
+        {t("table.playAcquisitionsHint", { month })}
       </TooltipContent>
     </Tooltip>
   );
 }
 
 export function TagList({ tags }: { tags: readonly string[] }) {
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
   if (tags.length === 0) return null;
   const { shown, hidden } = visibleTags(tags);
-  const label = tagsLabel(tags);
+  const label = tagsLabel(tags, t, locale);
   return (
     <span
       role="group"
@@ -264,12 +303,13 @@ export function TagList({ tags }: { tags: readonly string[] }) {
 }
 
 export function NoteButton({ note }: { note: string }) {
+  const t = useTranslations("keywords");
   return (
     <Popover>
       <PopoverTrigger asChild>
         <button
           type="button"
-          aria-label={`Note: ${note}`}
+          aria-label={t("table.noteLabel", { note })}
           className="flex size-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background data-[state=open]:text-foreground"
         >
           <StickyNote className="size-3.5" aria-hidden />
@@ -277,7 +317,7 @@ export function NoteButton({ note }: { note: string }) {
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        aria-label="Keyword note"
+        aria-label={t("table.noteTitle")}
         className="w-auto max-w-[min(24rem,calc(100vw-2rem))] font-normal break-words whitespace-pre-line"
       >
         {note}
@@ -328,6 +368,7 @@ function KeywordName({
 }
 
 export function KeywordCell({ keyword }: { keyword: TrackedKeywordItem }) {
+  const t = useTranslations("keywords");
   const marks = useContext(ListingMarksContext);
   const onChart = useContext(ChartedKeywordsContext).has(keyword.keywordId);
   return (
@@ -337,7 +378,7 @@ export function KeywordCell({ keyword }: { keyword: TrackedKeywordItem }) {
           segments={marks ? keyword.matchedIn : null}
           fallback={keyword.text}
         />
-        {onChart ? <span className="sr-only">, on the chart</span> : null}
+        {onChart ? <span className="sr-only">{t("table.onChart")}</span> : null}
       </KeywordName>
       {onChart ? (
         <ChartLine
@@ -348,11 +389,12 @@ export function KeywordCell({ keyword }: { keyword: TrackedKeywordItem }) {
       <KeywordClassTag
         keywordClass={keyword.keywordClass}
         source={keyword.keywordClassSource}
+        t={t}
       />
       {keyword.note ? <NoteButton note={keyword.note} /> : null}
       {!keyword.active ? (
         <Badge variant="secondary" className="shrink-0">
-          Paused
+          {t("table.paused")}
         </Badge>
       ) : null}
     </span>
@@ -360,34 +402,40 @@ export function KeywordCell({ keyword }: { keyword: TrackedKeywordItem }) {
 }
 
 export function AddedCell({ trackedAt }: { trackedAt: string | null }) {
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
   if (trackedAt === null) {
     return (
-      <span className="text-muted-foreground" aria-label="Added: unknown">
+      <span
+        className="text-muted-foreground"
+        aria-label={t("table.addedUnknown")}
+      >
         —
       </span>
     );
   }
   return (
     <time dateTime={trackedAt} className="numeric whitespace-nowrap">
-      {formatDate(trackedAt)}
+      {formatDateInLocale(trackedAt, locale)}
     </time>
   );
 }
 
 export function CompetitorsInTop10Cell({ value }: { value: number | null }) {
+  const t = useTranslations("keywords");
   if (value === null) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
           <span
             className="text-muted-foreground"
-            aria-label="Competitors in top 10: not available"
+            aria-label={t("table.competitorsUnavailable")}
           >
             —
           </span>
         </TooltipTrigger>
         <TooltipContent className="max-w-xs">
-          No competitors tracked, or no top 10 snapshot from today or yesterday
+          {t("table.competitorsUnavailableHint")}
         </TooltipContent>
       </Tooltip>
     );
@@ -395,19 +443,25 @@ export function CompetitorsInTop10Cell({ value }: { value: number | null }) {
   return (
     <span
       className="numeric"
-      aria-label={`${pluralize(value, "competitor")} in the top 10`}
+      aria-label={t("table.competitorsCount", { count: value })}
     >
       {value}
     </span>
   );
 }
 
-export function RevealCell({ label }: { label: string | null }) {
+export function RevealCell({
+  label,
+  t = english,
+}: {
+  label: string | null;
+  t?: MessageTranslator;
+}) {
   if (label === null) {
     return (
       <span className="text-muted-foreground">
         <span aria-hidden="true">—</span>
-        <span className="sr-only">Reveal: not available</span>
+        <span className="sr-only">{t("table.revealUnavailable")}</span>
       </span>
     );
   }

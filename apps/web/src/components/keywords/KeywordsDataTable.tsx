@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { useTranslations } from "next-intl";
 import { flexRender, type Table as TableInstance } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { TrackedKeywordItem } from "@asobeast/shared";
@@ -18,6 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { isNumericColumn } from "@/lib/table/column-visibility";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { ariaSort } from "@/lib/table/sorting";
 import { cn } from "@/lib/utils";
 
@@ -43,6 +45,8 @@ export function KeywordsDataTable({
   onClearFilters: () => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
   const rows = table.getRowModel().rows;
   const virtualize = rows.length > VIRTUALIZE_ABOVE;
 
@@ -77,13 +81,17 @@ export function KeywordsDataTable({
       aria-rowcount={rows.length + (rows.length > 0 ? 2 : 1)}
     >
       <TableCaption className="sr-only">
-        {keywordTableCaption({
-          added: shown("added"),
-          playInstalls,
-          competitors: shown("competitors"),
-          insights: shown("insights"),
-          totals: rows.length > 0,
-        })}
+        {keywordTableCaption(
+          {
+            added: shown("added"),
+            playInstalls,
+            competitors: shown("competitors"),
+            insights: shown("insights"),
+            totals: rows.length > 0,
+          },
+          t,
+          locale,
+        )}
       </TableCaption>
       <TableHeader className="sticky top-0 z-20">
         {table.getHeaderGroups().map((headerGroup) => (
@@ -115,7 +123,7 @@ export function KeywordsDataTable({
           <TableRow>
             <TableCell colSpan={columnCount}>
               <FilteredEmpty
-                title="No keywords match these filters"
+                title={t("table.emptyTitle")}
                 body={emptyBody}
                 onClear={onClearFilters}
               />

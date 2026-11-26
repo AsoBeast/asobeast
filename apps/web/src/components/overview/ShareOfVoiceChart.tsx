@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import type { AppAnnotationItem } from "@asobeast/shared";
 import {
   CartesianGrid,
@@ -40,7 +41,8 @@ import {
   TIME_AXIS_PROPS,
   VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
-import { formatDayMonth } from "@/lib/format";
+import { formatDayMonthInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import {
   annotationsOptions,
   appSummaryOptions,
@@ -58,16 +60,6 @@ import {
   shareReason,
 } from "./share-of-voice-text";
 
-const SERIES_LABELS = {
-  share: "Share of voice",
-  nonBranded: "Non branded",
-};
-
-const shareConfig = {
-  share: { label: SERIES_LABELS.share, color: seriesColor(0) },
-  nonBranded: { label: SERIES_LABELS.nonBranded, color: seriesColor(1) },
-} satisfies ChartConfig;
-
 function ShareTooltip({
   active,
   label,
@@ -79,6 +71,8 @@ function ShareTooltip({
   rows: ShareRow[];
   annotations: AppAnnotationItem[];
 }) {
+  const t = useTranslations("overview");
+  const locale = useAppLocale();
   if (!active || label === undefined) return null;
   const row = rows.find((candidate) => candidate.date === label);
   if (!row) return null;
@@ -91,20 +85,23 @@ function ShareTooltip({
             key,
             index,
             color: `var(--color-${key})`,
-            label: SERIES_LABELS[key],
-            value: formatShare(value),
+            label:
+              key === "share"
+                ? t("metrics.shareOfVoice")
+                : t("charts.nonBranded"),
+            value: formatShare(value, locale),
             sortBy: value,
           },
         ];
   });
   return (
     <SeriesTooltip
-      title={formatDayMonth(String(label))}
+      title={formatDayMonthInLocale(String(label), locale)}
       items={items}
       footer={
         <>
           <p className="text-muted-foreground">
-            {competitorsCaption(row.competitors)}
+            {competitorsCaption(row.competitors, t)}
           </p>
           <AnnotationTooltipNotes
             annotations={annotationsOn(annotations, String(label))}
@@ -116,22 +113,25 @@ function ShareTooltip({
 }
 
 function NoShare({ id, country }: { id: string; country?: string }) {
+  const t = useTranslations("overview");
   const { data: summary } = useQuery(appSummaryOptions(id, country));
   const reason = summary?.shareOfVoice?.reason;
   if (reason === "noCompetitors") {
     return (
       <ChartNotice
         height={CHART_HEIGHT.tall}
-        title="Add a competitor to chart share of voice"
-        body="Track one on the competitors page and its share is charted from its first daily check."
+        title={t("charts.addCompetitorTitle")}
+        body={t("charts.addCompetitorBody")}
       />
     );
   }
   return (
     <ChartNotice
       height={CHART_HEIGHT.tall}
-      title="No share of voice recorded yet"
-      body={`${shareReason(reason)}.`}
+      title={t("charts.noShareTitle")}
+      body={t("charts.shareUnavailable", {
+        reason: shareReason(reason, t),
+      })}
     />
   );
 }
@@ -143,10 +143,16 @@ export function ShareOfVoiceChart({
   id: string;
   range: VisibilityRange;
 }) {
+  const t = useTranslations("overview");
+  const locale = useAppLocale();
   const { country } = useKeywordScope(id);
   const { data } = useSuspenseQuery(
     visibilityOptions(id, presetToRange(range), country, "competitors"),
   );
+  const shareConfig = {
+    share: { label: t("metrics.shareOfVoice"), color: seriesColor(0) },
+    nonBranded: { label: t("charts.nonBranded"), color: seriesColor(1) },
+  } satisfies ChartConfig;
   const { data: annotations } = useQuery(annotationsOptions(id));
   const rows = shareSeries(data);
   const inScope = annotationsInScope(annotations?.annotations ?? [], country);
@@ -164,9 +170,11 @@ export function ShareOfVoiceChart({
     return (
       <ChartStat
         height={CHART_HEIGHT.tall}
-        label="Latest share of voice"
-        value={latest.share === undefined ? "—" : formatShare(latest.share)}
-        note="A trend line needs a few more daily checks."
+        label={t("charts.latestShare")}
+        value={
+          latest.share === undefined ? "—" : formatShare(latest.share, locale)
+        }
+        note={t("charts.trendNeedsChecks")}
       />
     );
   }
@@ -176,7 +184,7 @@ export function ShareOfVoiceChart({
       config={shareConfig}
       className={`${CHART_HEIGHT.tall} w-full`}
       role="region"
-      aria-label="Share of voice over time"
+      aria-label={t("charts.shareOverTime")}
     >
       <LineChart accessibilityLayer data={rows} margin={CHART_MARGIN}>
         <CartesianGrid {...GRID_PROPS} />
@@ -196,7 +204,10 @@ export function ShareOfVoiceChart({
         <ChartLegend
           content={
             <SeriesLegend
-              labels={SERIES_LABELS}
+              labels={{
+                share: t("metrics.shareOfVoice"),
+                nonBranded: t("charts.nonBranded"),
+              }}
               order={twoLines ? ["share", "nonBranded"] : ["share"]}
             />
           }

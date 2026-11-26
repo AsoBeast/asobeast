@@ -1,26 +1,26 @@
 "use client";
 
 import {
-  PLANS,
   type AccountPlan,
   type BillingCatalog,
   type BillingInterval,
   type BillingPrice,
   type PaidPlanName,
 } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { Lock } from "lucide-react";
 import type { RetryableRead } from "@/components/layout/InlineQueryError";
 import { LegalLinks } from "@/components/layout/LegalLinks";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sessionKeyOf } from "@/lib/embedded-checkout";
-import { INTERVAL_LABEL, summaryFromCatalog } from "@/lib/order-summary";
+import { summaryFromCatalog } from "@/lib/order-summary";
 import {
-  PAYMENT_TITLE,
-  SECURE_BY_STRIPE,
   buysPlan,
+  planLabel,
   type PlanAction,
   type ViewerClock,
 } from "@/lib/plan-choice";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { EmbeddedCheckout } from "./EmbeddedCheckout";
 import { OrderSummary } from "./OrderSummary";
 import { PaymentNote } from "./PaymentNote";
@@ -49,6 +49,9 @@ export function PaymentColumn({
   clock: ViewerClock;
   billing: boolean;
 }) {
+  const t = useTranslations("billing");
+  const locale = useAppLocale();
+  const context = { translator: t, locale };
   const offer = action === "trial" ? plan?.trialOffer : null;
   const theme = useCheckoutTheme();
 
@@ -58,7 +61,7 @@ export function PaymentColumn({
       className="flex min-w-0 flex-col gap-6 rounded-2xl border border-border bg-card p-4 shadow-raised sm:p-6 lg:col-start-1 lg:row-start-1"
     >
       <h2 id="payment-title" className="text-title">
-        {PAYMENT_TITLE}
+        {t("payment.title")}
       </h2>
       {publishableKey && price && theme ? (
         <EmbeddedCheckout
@@ -66,7 +69,12 @@ export function PaymentColumn({
           publishableKey={publishableKey}
           priceId={price.priceId}
           theme={theme}
-          label={`Stripe checkout for ${PLANS[name].displayName}, ${INTERVAL_LABEL[interval].toLowerCase()}`}
+          label={t(
+            interval === "month"
+              ? "checkout.regionMonth"
+              : "checkout.regionYear",
+            { plan: planLabel(name, context) },
+          )}
         />
       ) : null}
       {publishableKey && price && !theme ? (
@@ -74,13 +82,16 @@ export function PaymentColumn({
       ) : null}
       {buysPlan(action) ? (
         <OrderSummary
-          summary={summaryFromCatalog(name, interval, offer, clock)}
+          summary={summaryFromCatalog(name, interval, offer, {
+            ...context,
+            clock,
+          })}
         />
       ) : null}
       {catalog?.enabled && buysPlan(action) ? (
         <p className="flex items-center gap-2 text-caption text-muted-foreground">
           <Lock aria-hidden="true" className="size-3.5 shrink-0" />
-          <span>{SECURE_BY_STRIPE}</span>
+          <span>{t("payment.secure")}</span>
         </p>
       ) : null}
       <PaymentNote

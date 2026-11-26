@@ -1,21 +1,52 @@
+import { createTranslator } from "next-intl";
 import type { SplitPhrase, WastedWord } from "@asobeast/shared";
-import { formatList, formatNumber } from "@/lib/format";
-import { localizationName } from "@/lib/localizations";
+import enKeywords from "../../messages/en/keywords.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import { formatListInLocale } from "@/lib/format";
+import type { Locale } from "@/lib/locale";
+import { localizationNameInLocale } from "@/lib/localizations";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywords",
+  messages: { keywords: enKeywords },
+});
 
 export const WASTE_LINE_LIMIT = 5;
 
-const namesOf = (localizations: readonly string[]): string =>
-  formatList(localizations.map(localizationName));
+const namesOf = (localizations: readonly string[], locale: Locale): string =>
+  formatListInLocale(
+    localizations.map((localization) =>
+      localizationNameInLocale(localization, locale),
+    ),
+    locale,
+  );
 
-export function wastedWordLine({ word, localizations }: WastedWord): string {
-  return `"${word}" is in ${namesOf(localizations)}.`;
+export function wastedWordLine(
+  { word, localizations }: WastedWord,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
+): string {
+  return t("wasted.wordLine", {
+    word,
+    localizations: namesOf(localizations, locale),
+  });
 }
 
-export function splitPhraseLine({ phrase, parts }: SplitPhrase): string {
+export function splitPhraseLine(
+  { phrase, parts }: SplitPhrase,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
+): string {
   const holders = parts
-    .map(({ word, localizations }) => `${word} in ${namesOf(localizations)}`)
-    .join(", ");
-  return `"${phrase}": ${holders}.`;
+    .map(({ word, localizations }) =>
+      t("wasted.partLine", {
+        word,
+        localizations: namesOf(localizations, locale),
+      }),
+    )
+    .join(locale === "en" ? ", " : "、");
+  return t("wasted.phraseLine", { phrase, holders });
 }
 
 export function limitedLines(
@@ -28,5 +59,7 @@ export function limitedLines(
   };
 }
 
-export const moreLine = (hidden: number): string =>
-  `and ${formatNumber(hidden)} more`;
+export const moreLine = (
+  hidden: number,
+  t: MessageTranslator = english,
+): string => t("wasted.more", { count: hidden });

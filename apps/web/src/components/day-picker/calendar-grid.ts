@@ -1,3 +1,6 @@
+import { formatMonthInLocale } from "@/lib/format";
+import type { Locale } from "@/lib/locale";
+
 export interface Month {
   year: number;
   month: number;
@@ -11,12 +14,6 @@ export interface CalendarCell {
 const CELLS = 42;
 const WEEK = 7;
 
-const monthLabelFormat = new Intl.DateTimeFormat("en-US", {
-  timeZone: "UTC",
-  month: "long",
-  year: "numeric",
-});
-
 const pad = (value: number) => String(value).padStart(2, "0");
 
 export function monthOf(date: string): Month {
@@ -29,8 +26,14 @@ export function shiftMonth({ year, month }: Month, delta: number): Month {
   return { year: shifted.getUTCFullYear(), month: shifted.getUTCMonth() + 1 };
 }
 
-export function monthLabel({ year, month }: Month): string {
-  return monthLabelFormat.format(new Date(Date.UTC(year, month - 1, 1)));
+export function monthLabel(
+  { year, month }: Month,
+  locale: Locale = "en",
+): string {
+  return formatMonthInLocale(
+    `${year}-${String(month).padStart(2, "0")}-01`,
+    locale,
+  );
 }
 
 export function monthWeeks(month: Month): CalendarCell[][] {

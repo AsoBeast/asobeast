@@ -1,0 +1,236 @@
+{
+  "delivery": {
+    "title": "投递",
+    "flushNow": "立即刷新",
+    "flushError": "无法刷新提醒",
+    "nothingToFlush": "没有待刷新内容",
+    "flushed": "已从 {flushed, plural, one {# 个事件} other {# 个事件}}向 {channels, plural, one {# 个渠道} other {# 个渠道}}发送 {notifications, plural, one {# 条通知} other {# 条通知}}",
+    "lastFlush": "上次刷新",
+    "never": "从未",
+    "pending": "待处理",
+    "claimed": "已领取",
+    "mode": "模式",
+    "trigger": "触发方式",
+    "afterCompletion": "完成后",
+    "pipelineStarts": "流水线启动时间",
+    "batchedDescription": "每日事件会在应用更新处理完成后发送；当竞品监控有活动时，随后也会发送。",
+    "instantDescription": "每个事件都会立即投递，每个事件对应一条通知。",
+    "batched": "批量",
+    "instant": "即时"
+  },
+  "deliveries": {
+    "recent": "最近投递",
+    "loading": "加载中…",
+    "none": "暂无投递记录。",
+    "last": "最近 {count, number} 次",
+    "summary": "已投递 {sent, number} / {total, number}",
+    "success": "成功",
+    "failed": "失败",
+    "attempt": "第 {count, number} 次尝试"
+  },
+  "email": {
+    "title": "邮件",
+    "disabled": "邮件提醒已禁用。",
+    "setupIntro": "请在 API 上设置 SMTP 环境变量以启用邮件提醒：",
+    "required": "必须设置 <host>SMTP_HOST</host> 和 <from>SMTP_FROM</from>。",
+    "empty": "暂无邮件提醒。添加收件人，通过邮件接收元数据和排名提醒。",
+    "listLabel": "已配置的邮件提醒及其订阅事件。",
+    "add": "添加邮件提醒",
+    "addDescription": "订阅事件触发时，AsoBeast 会使用您配置的 SMTP 服务器向此收件人发送邮件。除非该地址是此工作区成员已验证的账户邮箱，否则收件人需要通过首封邮件中的链接确认地址。",
+    "recipient": "收件人邮箱",
+    "added": "邮件提醒已添加",
+    "addedConfirmationFailed": "邮件提醒已添加。但未能向 {email} 发送确认邮件，请使用“重新发送确认”重试。",
+    "confirmationSent": "确认邮件已发送至 {email}",
+    "addError": "无法添加邮件提醒",
+    "updateError": "无法更新邮件提醒",
+    "rulesSaved": "邮件提醒规则已保存",
+    "saveRulesError": "无法保存邮件提醒事件",
+    "testSent": "测试邮件已发送",
+    "testFailed": "无法发送测试邮件",
+    "removed": "邮件提醒已移除",
+    "removeError": "无法移除邮件提醒",
+    "resendError": "无法发送确认邮件",
+    "deleteTitle": "删除此邮件提醒？",
+    "deleteDescription": "AsoBeast 将停止向 {email} 发送邮件。此操作无法撤销。"
+  },
+  "webhook": {
+    "title": "Webhook",
+    "empty": "暂无 Webhook。添加一个，在 Discord、Slack、Microsoft Teams、Telegram、Google Chat 或您自己的端点接收元数据和排名提醒。",
+    "listLabel": "已配置的提醒 Webhook 及其订阅事件。",
+    "add": "添加 Webhook",
+    "addDescription": "订阅事件触发时，AsoBeast 会向此网址发送 JSON 载荷。添加密钥后，您会收到 HMAC 签名标头。",
+    "endpoint": "端点网址",
+    "secret": "密钥（选填）",
+    "secretPlaceholder": "至少 8 个字符",
+    "signed": "已签名",
+    "added": "Webhook 已添加",
+    "addError": "无法添加 Webhook",
+    "updateError": "无法更新 Webhook",
+    "rulesSaved": "Webhook 规则已保存",
+    "saveRulesError": "无法保存 Webhook 事件",
+    "testDelivered": "已投递（状态 {status}）",
+    "testFailed": "未投递（状态 {status}）",
+    "testFailedNoStatus": "未投递",
+    "testError": "无法连接 Webhook",
+    "removed": "Webhook 已移除",
+    "removeError": "无法移除 Webhook",
+    "deleteTitle": "删除此 Webhook？",
+    "deleteDescription": "AsoBeast 将停止向 {label} 投递提醒。此操作无法撤销。"
+  },
+  "rules": {
+    "label": "提醒规则",
+    "summary": "已开启 {count, plural, one {# 条规则} other {# 条规则}}",
+    "groups": {
+      "rankings": "排名",
+      "charts": "榜单",
+      "reviewsAndRatings": "评论与评分",
+      "listings": "应用详情",
+      "reports": "报告"
+    },
+    "events": {
+      "metadataChanged": {
+        "title": "元数据变化",
+        "detail": "您或竞品的应用详情发生变化。"
+      },
+      "rankDropped": {
+        "title": "排名下降",
+        "detail": "您的应用关键词排名至少下降指定名次。"
+      },
+      "rankImproved": {
+        "title": "排名提升",
+        "detail": "关键词排名至少提升相同名次。"
+      },
+      "rankMilestone": {
+        "title": "排名里程碑",
+        "detail": "您的应用关键词进入或离开前 10、前 3 或第一名。"
+      },
+      "rankFirst": {
+        "title": "首次获得排名",
+        "detail": "您的应用首次在某个关键词上获得排名。"
+      },
+      "rankOvertaken": {
+        "title": "被竞品超越",
+        "detail": "竞品在某个关键词上的排名超过您的应用。"
+      },
+      "reviewNew": {
+        "title": "新评论",
+        "detail": "您所选星级范围内的每条新评论。"
+      },
+      "reviewNegative": {
+        "title": "负面评论",
+        "detail": "评分不高于实例阈值的评论（默认 2 星）。"
+      },
+      "ratingDropped": {
+        "title": "评分下降",
+        "detail": "一周内平均评分至少下降指定的十分之一星。"
+      },
+      "reviewSpike": {
+        "title": "评论激增",
+        "detail": "一天内出现异常数量的新评论。"
+      },
+      "digestWeekly": {
+        "title": "每周摘要",
+        "detail": "您的应用组合每周摘要。"
+      },
+      "serpEntrant": {
+        "title": "搜索结果新入围者",
+        "detail": "一个新应用进入您跟踪关键词的前 10 名。"
+      },
+      "actionOpened": {
+        "title": "新行动建议",
+        "detail": "行动中心以实例设定的优先级开启或重新开启行动建议（默认高优先级）。"
+      },
+      "chartEntered": {
+        "title": "进入榜单",
+        "detail": "您的应用进入应用商店榜单。"
+      },
+      "chartLeft": {
+        "title": "离开榜单",
+        "detail": "您的应用离开应用商店榜单。"
+      },
+      "chartMilestone": {
+        "title": "榜单里程碑",
+        "detail": "您的应用进入或离开榜单第一名、前 3 或前 10。"
+      },
+      "appDelisted": {
+        "title": "应用已下架",
+        "detail": "一个应用从其主应用商店消失。"
+      },
+      "appUnlistedMarket": {
+        "title": "已在某市场下架",
+        "detail": "应用商店停止在某个市场上架该应用。"
+      }
+    },
+    "sendsPrefix": "发送：",
+    "sendsNothing": "不发送任何提醒",
+    "toggle": "切换 {label}",
+    "edit": "编辑规则",
+    "editDescription": "选择向 <recipient>{label}</recipient> 投递提醒的规则。",
+    "save": "保存规则",
+    "chooseOne": "请至少开启一条规则再保存。",
+    "usesRankDrop": "沿用排名下降阈值。",
+    "rankThresholdValue": "{value, number}+"
+  },
+  "reviewStars": {
+    "label": "新评论星级",
+    "option": "{score, plural, one {# 星} other {# 星}}",
+    "required": "请至少选择一颗星。",
+    "help": "这些星级的评论会作为新评论送达。如果同时开启了“负面评论”，不在这些星级范围内的低分评论仍会作为负面评论送达。",
+    "filtered": "{scores} {count, plural, one {星} other {星}}",
+    "range": "{first, number} 至 {last, number} {count, plural, one {星} other {星}}",
+    "single": "{score, number} {score, plural, one {星} other {星}}"
+  },
+  "ratingDrop": {
+    "label": "评分下降阈值",
+    "option": "{stars, number} {tenths, select, 1 {星} 10 {星} other {星}}",
+    "help": "当平均评分比 7 至 10 天前至少下降此数值时提醒。需要 20 条评分。这里统计的是应用商店显示的评分，不是评论数量。"
+  },
+  "rankDrop": {
+    "label": "排名下降名次",
+    "positions": "名次",
+    "helpDefault": "留空以使用实例值。更小的值会被视为此实例可检测到的最低值。",
+    "helpInstance": "留空以使用实例值 {instance, number}。更小的值会被视为 {instance, number}，即此实例可检测到的最低值。"
+  },
+  "confirmDrops": {
+    "label": "提醒前确认排名下降",
+    "badge": "已确认的下降",
+    "help": "排名下降或离开前 10、前 3 或第一名，只有在下次检查确认后才会发送。关键词从第 9 名跌到第 11 名后又恢复，不会发送提醒。已确认的下降会晚一次检查送达。"
+  },
+  "essential": {
+    "badge": "必要提醒",
+    "line": "由 AsoBeast 在首次每日运行后开启。您可以在此更改规则或将其关闭。",
+    "empty": "暂无邮件提醒。请添加收件人，或等待首次每日运行后自动开启的必要提醒。",
+    "needSmtp": "邮件功能可用后，AsoBeast 会在新工作区完成首次每日运行后开启必要提醒。",
+    "needHttps": "首次每日运行完成后，只要 {variable} 是 https 地址，AsoBeast 就会开启必要提醒。",
+    "needHttpsRich": "首次每日运行完成后，只要 <variable>WEB_PUBLIC_URL</variable> 是 https 地址，AsoBeast 就会开启必要提醒。"
+  },
+  "confirmation": {
+    "sendTest": "发送测试",
+    "resend": "重新发送确认",
+    "unsubscribedTitle": "已退订。",
+    "unsubscribedDetail": "收件人已要求不再接收这些提醒，因此不会再次要求其确认。",
+    "awaitingTitle": "等待确认。",
+    "awaitingDetail": "收件人点击邮件中的链接之前，不会发送任何提醒。"
+  },
+  "delete": {
+    "label": "删除",
+    "named": "删除 {label}",
+    "pending": "正在移除…"
+  },
+  "eventWithDetail": "{event} · {detail}",
+  "channels": {
+    "generic": "JSON Webhook"
+  },
+  "hints": {
+    "retiredTeams": "Office 365 连接器网址自 2026 年 5 月起已停止投递。请使用“Send webhook alerts to a channel”模板创建工作流，并粘贴其网址。",
+    "slackWorkflow": "已识别为 Slack 工作流触发器。它会接收 JSON 载荷；请在 Workflow Builder 中映射字段。",
+    "n8nTest": "这是 n8n 测试网址，仅在编辑器监听时有效；请使用生产网址。",
+    "generic": "已识别为 JSON Webhook。它会接收文档中说明的载荷。",
+    "discord": "已识别为 Discord。报告会以嵌入卡片形式发送，并显示应用图标。",
+    "slack": "已识别为 Slack。报告会以 Block Kit 消息形式发送。",
+    "teams": "已识别为 Microsoft Teams。报告会以自适应卡片形式发送；Teams 确认的是接收，而非实际投递。",
+    "telegramReady": "已识别为 Telegram。报告会以您的机器人发送的消息形式送达。",
+    "telegramMissingChat": "已识别为 Telegram。请在 sendMessage 后添加 ?chat_id={id}。",
+    "googleChat": "已识别为 Google Chat。报告会以卡片形式发送。"
+  }
+}

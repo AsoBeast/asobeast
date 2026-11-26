@@ -147,7 +147,9 @@ test("P-WEB-03 reviews every row, then imports the new and paused ones with thei
       .getByText("Repeats line 4"),
   ).toBeVisible();
   await expect(
-    rowOf(dialog, /tower/).getByText("zz is not an App Store storefront"),
+    rowOf(dialog, /tower/).getByText(
+      "App Store has no storefront with the code ZZ.",
+    ),
   ).toBeVisible();
   expect(sent.map((request) => request.url().includes("/preview"))).toEqual([
     true,

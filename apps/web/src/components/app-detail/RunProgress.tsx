@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Clock, LoaderCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { RunState } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +12,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { appRunStatusOptions, invalidateRunResults } from "@/lib/queries";
+import { useAppLocale } from "@/lib/use-app-locale";
 import {
   pillLabel,
   pillText,
@@ -19,8 +21,6 @@ import {
   startedSentence,
 } from "@/lib/run-progress";
 import { StageRow } from "./StageRow";
-
-const RUN_STATES = { ready: "Done", waiting: "Collecting" };
 
 function StateIcon({ state }: { state: RunState }) {
   if (state === "complete") {
@@ -36,6 +36,8 @@ function StateIcon({ state }: { state: RunState }) {
 
 export function RunProgress({ appId }: { appId: string }) {
   const headingId = useId();
+  const t = useTranslations("jobs");
+  const locale = useAppLocale();
   const queryClient = useQueryClient();
   const { data } = useQuery(appRunStatusOptions(appId));
   const previous = useRef(data);
@@ -47,9 +49,9 @@ export function RunProgress({ appId }: { appId: string }) {
     previous.current = data;
   }, [appId, data, queryClient]);
 
-  const text = data ? pillText(data) : null;
+  const text = data ? pillText(data, t) : null;
   if (!data || text === null) return null;
-  const label = pillLabel(data);
+  const label = pillLabel(data, t);
 
   return (
     <>
@@ -77,27 +79,30 @@ export function RunProgress({ appId }: { appId: string }) {
         >
           <div className="flex flex-col gap-0.5">
             <h3 id={headingId} className="text-dense font-medium">
-              Today&rsquo;s run
+              {t("progress.title")}
             </h3>
             <p className="text-caption text-muted-foreground">
-              {startedSentence(data)}
+              {startedSentence(data, { translator: t, locale })}
             </p>
           </div>
           <ul className="flex flex-col gap-3">
-            {runRows(data).map((row) => (
+            {runRows(data, t).map((row) => (
               <StageRow
                 key={row.stage}
                 label={row.label}
                 ready={row.ready}
                 progress={row.progress}
                 detail={row.detail}
-                states={RUN_STATES}
+                states={{
+                  ready: t("progress.states.done"),
+                  waiting: t("progress.states.collecting"),
+                }}
               />
             ))}
           </ul>
           {data.state === "complete" ? null : (
             <p className="text-caption text-muted-foreground">
-              Run daily queues what is still missing.
+              {t("progress.queuesMissing")}
             </p>
           )}
         </PopoverContent>

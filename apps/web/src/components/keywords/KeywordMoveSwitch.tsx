@@ -1,12 +1,14 @@
 "use client";
 
 import type { TrackedKeywordItem } from "@asobeast/shared";
-import { formatNumber } from "@/lib/format";
+import { useTranslations } from "next-intl";
+import { formatNumberInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import {
   KEYWORD_MOVE_FILTERS,
   matchesMoveFilter,
-  MOVE_FILTER_LABELS,
+  moveFilterLabel,
   type KeywordMoveFilter,
 } from "@/lib/keyword-day-change";
 
@@ -26,23 +28,26 @@ export function KeywordMoveSwitch({
   value: KeywordMoveFilter | null;
   onChange: (next: KeywordMoveFilter | null) => void;
 }) {
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
   return (
     <Tabs
       value={value ?? EVERY}
       onValueChange={(next) => onChange(isMoveFilter(next) ? next : null)}
     >
-      <TabsList aria-label="Change since yesterday">
+      <TabsList aria-label={t("filters.changeSinceYesterday")}>
         <TabsOption value={EVERY}>
-          <span>All</span>
+          <span>{t("filters.allChanges")}</span>
         </TabsOption>
         {KEYWORD_MOVE_FILTERS.map((filter) => (
           <TabsOption key={filter} value={filter}>
-            <span>{MOVE_FILTER_LABELS[filter]}</span>
+            <span>{moveFilterLabel(filter, t)}</span>
             <span className="numeric text-muted-foreground">
-              {formatNumber(
+              {formatNumberInLocale(
                 keywords.filter((keyword) =>
                   matchesMoveFilter(keyword, today, filter),
                 ).length,
+                locale,
               )}
             </span>
           </TabsOption>

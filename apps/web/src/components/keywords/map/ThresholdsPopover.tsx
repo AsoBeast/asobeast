@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { useTranslations } from "next-intl";
 import { SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,8 +22,7 @@ import {
   type ZoneThresholds,
 } from "@/lib/keyword-zones";
 import { useZoneThresholds } from "../use-zone-thresholds";
-
-const INVALID_THRESHOLD = `Enter a whole number from ${ZONE_THRESHOLD_MIN} to ${ZONE_THRESHOLD_MAX}`;
+import { useAppLocale } from "@/lib/use-app-locale";
 
 function ThresholdField({
   label,
@@ -35,6 +35,7 @@ function ThresholdField({
 }) {
   const id = useId();
   const errorId = useId();
+  const t = useTranslations("keywordInspector");
   const [draft, setDraft] = useState<string | null>(null);
   const invalid = draft !== null && parseThresholdInput(draft) === null;
   return (
@@ -60,7 +61,10 @@ function ThresholdField({
       <div className="min-h-lh text-caption">
         {invalid ? (
           <p id={errorId} role="alert" className="text-destructive">
-            {INVALID_THRESHOLD}
+            {t("thresholds.invalid", {
+              min: ZONE_THRESHOLD_MIN,
+              max: ZONE_THRESHOLD_MAX,
+            })}
           </p>
         ) : null}
       </div>
@@ -70,6 +74,9 @@ function ThresholdField({
 
 export function ThresholdsPopover() {
   const titleId = useId();
+  const t = useTranslations("keywordInspector");
+  const keywords = useTranslations("keywords");
+  const locale = useAppLocale();
   const { thresholds, setThresholds, resetThresholds, isDefault } =
     useZoneThresholds();
   const update = (field: keyof ZoneThresholds) => (next: number) =>
@@ -79,7 +86,7 @@ export function ThresholdsPopover() {
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" className="print:hidden">
           <SlidersHorizontal aria-hidden />
-          <span>Thresholds</span>
+          <span>{t("thresholds.trigger")}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent
@@ -90,9 +97,9 @@ export function ThresholdsPopover() {
       >
         <div className="flex items-start justify-between gap-3">
           <PopoverHeader>
-            <PopoverTitle id={titleId}>Zone thresholds</PopoverTitle>
+            <PopoverTitle id={titleId}>{t("thresholds.title")}</PopoverTitle>
             <PopoverDescription>
-              The two numbers that cut the map into zones. Kept in this browser.
+              {t("thresholds.description")}
             </PopoverDescription>
           </PopoverHeader>
           <Button
@@ -103,21 +110,26 @@ export function ThresholdsPopover() {
               if (!isDefault) resetThresholds();
             }}
           >
-            Reset
+            {t("thresholds.reset")}
           </Button>
         </div>
         <ThresholdField
-          label="Popularity at least"
+          label={t("thresholds.popularity")}
           value={thresholds.popularity}
           onValid={update("popularity")}
         />
         <ThresholdField
-          label="Difficulty at most"
+          label={t("thresholds.difficulty")}
           value={thresholds.difficulty}
           onValid={update("difficulty")}
         />
         <p className="text-caption text-muted-foreground">
-          {`Quick wins are ${zoneRule("quickWins", thresholds).toLowerCase()}.`}
+          {t("thresholds.quickWins", {
+            rule:
+              locale === "en"
+                ? zoneRule("quickWins", thresholds, keywords).toLowerCase()
+                : zoneRule("quickWins", thresholds, keywords),
+          })}
         </p>
       </PopoverContent>
     </Popover>

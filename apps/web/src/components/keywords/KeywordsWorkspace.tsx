@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { Plus, Upload } from "lucide-react";
 import { useQueryState } from "nuqs";
 import type { Store } from "@asobeast/shared";
@@ -34,6 +35,7 @@ export function KeywordsWorkspace({
   keywordFields: boolean;
   discoveries: boolean;
 }) {
+  const t = useTranslations("keywords");
   const [country] = useQueryState("country", countryParser);
   const [tab, setTab] = useKeywordsTab();
   const handOffFocus = useFocusAfterCommit();
@@ -69,13 +71,13 @@ export function KeywordsWorkspace({
           <ImportKeywordsDialog appId={id} store={store} country={market}>
             <Button variant="outline">
               <Upload />
-              <span className="max-sm:sr-only">Import CSV</span>
+              <span className="max-sm:sr-only">{t("workspace.importCsv")}</span>
             </Button>
           </ImportKeywordsDialog>
           <AddKeywordsDialog appId={id} store={store} country={market}>
             <Button ref={addKeywords}>
               <Plus />
-              Add keywords
+              {t("add.title")}
             </Button>
           </AddKeywordsDialog>
         </div>

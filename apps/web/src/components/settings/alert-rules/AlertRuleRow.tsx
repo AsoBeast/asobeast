@@ -1,10 +1,12 @@
 "use client";
 
 import { useId, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import type { WebhookEvent } from "@asobeast/shared";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import type { AlertRule } from "../alert-rules";
+import { alertRuleCopy } from "../alert-rules";
 
 export function AlertRuleRow({
   event,
@@ -19,9 +21,11 @@ export function AlertRuleRow({
   onToggle: (event: WebhookEvent) => void;
   children?: ReactNode;
 }) {
+  const t = useTranslations("notifications");
   const switchId = useId();
   const titleId = useId();
   const detailId = useId();
+  const copy = alertRuleCopy(rule, t);
 
   return (
     <li className="py-3">
@@ -36,10 +40,10 @@ export function AlertRuleRow({
         />
         <div className="flex min-w-0 flex-col gap-1">
           <Label id={titleId} htmlFor={switchId}>
-            {rule.title}
+            {copy.title}
           </Label>
           <p id={detailId} className="text-dense text-muted-foreground">
-            {rule.detail}
+            {copy.detail}
           </p>
           {on && children ? <div className="pt-2">{children}</div> : null}
         </div>

@@ -7,7 +7,8 @@ import {
   type PortfolioPartChange,
   type Store,
 } from "@asobeast/shared";
-import { pluralize, storeLabel, storeShortLabel } from "@/lib/format";
+import type { MessageTranslator } from "@/i18n/translator";
+import { storeLabel, storeShortLabel } from "@/lib/format";
 import type { DashboardBreakdown, DashboardMetric } from "@/lib/search-params";
 
 export const BREAKDOWN_LIMIT = 6;
@@ -62,8 +63,9 @@ export const scopeId = (scope: PortfolioHistoryScope): string | null =>
 export function appLabel(
   app: PortfolioApp,
   apps: readonly PortfolioApp[],
+  t: MessageTranslator,
 ): string {
-  const name = app.name ?? "Untitled app";
+  const name = app.name ?? t("table.untitled");
   const shared = apps.some(
     (other) => other.id !== app.id && other.name === app.name,
   );
@@ -81,18 +83,23 @@ function actionsOf(
   };
 }
 
+export interface BreakdownOptions {
+  by: DashboardBreakdown;
+  t: MessageTranslator;
+}
+
 export function breakdownRows(
   history: PortfolioHistory,
   apps: readonly PortfolioApp[],
   insights: ReadonlyMap<string, PortfolioAppInsight>,
-  by: DashboardBreakdown,
+  { by, t }: BreakdownOptions,
 ): BreakdownRow[] {
   if (by === "store") {
     return (history.stores ?? []).map((part) => ({
       id: part.store,
       name: storeLabel(part.store),
-      mark: pluralize(part.apps, "app"),
-      shortMark: pluralize(part.apps, "app"),
+      mark: t("counts.apps", { count: part.apps }),
+      shortMark: t("counts.apps", { count: part.apps }),
       change: part.change,
       ...actionsOf(
         apps.filter((app) => app.store === part.store),
@@ -106,7 +113,7 @@ export function breakdownRows(
     return [
       {
         id: app.id,
-        name: app.name ?? "Untitled app",
+        name: app.name ?? t("table.untitled"),
         mark: `${storeLabel(app.store)} · ${app.country.toUpperCase()}`,
         shortMark: `${storeShortLabel(app.store)} · ${app.country.toUpperCase()}`,
         iconUrl: app.iconUrl,
@@ -117,40 +124,55 @@ export function breakdownRows(
   });
 }
 
-const signed = (value: number): string =>
-  value > 0 ? `+${value}` : String(value);
-
 function figuresOf(
   row: BreakdownRow,
   metric: DashboardMetric,
   unit: string,
+  t: MessageTranslator,
 ): string {
   if (metric === "moved") {
-    const { up, down } = row.change.movement;
-    return `${up} climbing, ${down} falling`;
+    return t("breakdown.movedFigures", {
+      up: row.change.movement.up,
+      down: row.change.movement.down,
+    });
   }
   if (metric === "actions") {
     return row.critical > 0
-      ? `${row.open} open, ${row.critical} critical`
-      : `${row.open} open`;
+      ? t("breakdown.actionsFigures", {
+          open: row.open,
+          critical: row.critical,
+        })
+      : t("breakdown.actionsFiguresSimple", { open: row.open });
   }
   const [now, delta] =
     metric === "visibility"
       ? [Math.round(row.change.visibility), row.change.visibilityDelta]
       : [row.change.top10, row.change.top10Delta];
-  return delta === null
-    ? `${now} now, no ${unit} data`
-    : `${now} now, ${signed(Math.round(delta))} ${unit}`;
+  if (delta === null) return t("breakdown.nowNoDelta", { now, unit });
+  const rounded = Math.round(delta);
+  return t(rounded >= 0 ? "breakdown.nowDeltaUp" : "breakdown.nowDeltaDown", {
+    now,
+    delta: Math.abs(rounded),
+    unit,
+  });
 }
 
-const spokenMark = (row: BreakdownRow): string =>
-  row.shortMark === row.mark ? row.mark : `${row.shortMark}, ${row.mark}`;
+const spokenMark = (row: BreakdownRow, t: MessageTranslator): string =>
+  row.shortMark === row.mark
+    ? row.mark
+    : t("breakdown.spokenMark", { short: row.shortMark, long: row.mark });
 
 export const rowLabel = (
   row: BreakdownRow,
   metric: DashboardMetric,
   unit: string,
-): string => `${row.name} ${spokenMark(row)}, ${figuresOf(row, metric, unit)}`;
+  t: MessageTranslator,
+): string =>
+  t("breakdown.row", {
+    name: row.name,
+    mark: spokenMark(row, t),
+    figures: figuresOf(row, metric, unit, t),
+  });
 
 export const BREAKDOWN_MIN_APPS = 2;
 

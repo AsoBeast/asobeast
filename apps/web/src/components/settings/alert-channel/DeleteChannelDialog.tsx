@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { Trash2 } from "lucide-react";
 import {
   AlertDialog,
@@ -21,7 +22,7 @@ import {
   useCloseFocusHandoff,
 } from "@/lib/focus-handoff";
 
-const DELETE_CONTROL = 'button[aria-label^="Delete "]';
+const DELETE_CONTROL = "button[data-delete-control]";
 
 function deleteSuccessor(trigger: HTMLElement | null): HTMLElement | null {
   const row = trigger?.closest("li") ?? null;
@@ -42,6 +43,7 @@ export function DeleteChannelDialog({
   onDelete: () => Promise<unknown>;
 }) {
   const [open, setOpen] = useState(false);
+  const t = useTranslations("notifications");
   const trigger = useRef<HTMLButtonElement>(null);
   const { handOff, onCloseAutoFocus } = useCloseFocusHandoff();
 
@@ -55,7 +57,8 @@ export function DeleteChannelDialog({
           ref={trigger}
           variant="ghost"
           size="icon-sm"
-          aria-label={`Delete ${label}`}
+          data-delete-control
+          aria-label={t("delete.named", { label })}
         >
           <Trash2 />
         </Button>
@@ -67,8 +70,8 @@ export function DeleteChannelDialog({
         </AlertDialogHeader>
         <ConfirmActionFooter
           pending={pending}
-          label="Delete"
-          pendingLabel="Removing…"
+          label={t("delete.label")}
+          pendingLabel={t("delete.pending")}
           onConfirm={() => {
             const successor = deleteSuccessor(trigger.current);
             void onDelete().then(

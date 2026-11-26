@@ -1,7 +1,16 @@
+import { createTranslator } from "next-intl";
+import enKeywords from "../../../messages/en/keywords.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import { MAX_SERIES } from "@/components/charts/pivot";
 import { selectionForMarket } from "@/components/rankings/selection";
 import type { KeywordChartSelection } from "@/lib/search-params";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywords",
+  messages: { keywords: enKeywords },
+});
 
 export interface ChartedSelection {
   effective: string[];
@@ -29,8 +38,14 @@ export function resolveChartSelection(
 export const isCapped = (selection: ChartedSelection): boolean =>
   selection.effective.length > selection.charted.length;
 
-export function cappingLine(selection: ChartedSelection): string {
-  return `Charting ${selection.charted.length} of ${selection.effective.length} keywords.`;
+export function cappingLine(
+  selection: ChartedSelection,
+  t: MessageTranslator = english,
+): string {
+  return t("bulk.chartCapped", {
+    shown: selection.charted.length,
+    total: selection.effective.length,
+  });
 }
 
 export function withoutKeyword(
@@ -42,5 +57,5 @@ export function withoutKeyword(
 
 export const overChartLimit = (count: number): boolean => count > MAX_SERIES;
 
-export const chartLimitLine = (): string =>
-  `Select ${MAX_SERIES} or fewer keywords to chart.`;
+export const chartLimitLine = (t: MessageTranslator = english): string =>
+  t("bulk.chartLimit", { limit: MAX_SERIES });

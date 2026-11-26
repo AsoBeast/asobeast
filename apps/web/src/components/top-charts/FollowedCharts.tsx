@@ -3,6 +3,7 @@
 import { Suspense, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { BellOff, ListChecks, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +20,7 @@ import { storeLabel } from "@/lib/format";
 import { accountPlanOptions, chartFollowsOptions } from "@/lib/queries";
 import { formatQuotaUsage } from "@/lib/quota-usage";
 import { useSingleFlight } from "@/lib/single-flight";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { followedCategories, type FollowedCategory } from "./chart-follows";
 import { categoryTitle, chartHref, COLLECTION_LABELS } from "./chart-params";
 import { stopFollowingSuccessor } from "./stop-following-focus";
@@ -75,6 +77,8 @@ function FollowRow({
 }
 
 function FollowList({ onNavigate }: { onNavigate: () => void }) {
+  const t = useTranslations("billing");
+  const locale = useAppLocale();
   const { data: follows } = useSuspenseQuery(chartFollowsOptions);
   const handOffFocus = useFocusAfterCommit();
   const categories = followedCategories(follows);
@@ -84,7 +88,10 @@ function FollowList({ onNavigate }: { onNavigate: () => void }) {
     <div className="flex flex-col gap-2">
       {limit === undefined ? null : (
         <p className="text-caption text-muted-foreground">
-          {formatQuotaUsage({ used: categories.length, limit }, "followed")}
+          {formatQuotaUsage({ used: categories.length, limit }, "followed", {
+            translator: t,
+            locale,
+          })}
         </p>
       )}
       {categories.length === 0 ? (

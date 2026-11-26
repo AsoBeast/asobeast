@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   useIsMutating,
   useMutation,
@@ -32,13 +33,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { scoreKeyword } from "@/lib/api";
-import { queuedToast } from "@/lib/queued-toast";
 import { invalidateKeywords } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 import {
   classChoice,
   DETECTED_CHOICE,
-  KEYWORD_CLASS_OPTIONS,
+  keywordClassOptions,
 } from "./keyword-class";
 import { KeywordAnnotationsDialog } from "./KeywordAnnotationsDialog";
 import { rememberSerpOpener } from "./serp/serp-opener";
@@ -56,6 +56,7 @@ export function KeywordRowActions({
   marketTags: () => string[];
   onOpenSerp: () => void;
 }) {
+  const t = useTranslations("keywords");
   const queryClient = useQueryClient();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -71,12 +72,12 @@ export function KeywordRowActions({
     mutationFn: () => scoreKeyword(keyword.keywordId),
     onSuccess: () => {
       invalidateKeywords(queryClient, appId);
-      queuedToast(
-        "scoring",
-        "Popularity, difficulty and opportunity land after the run.",
-      );
+      toast.info(t("rowActions.scoreQueuedToast"), {
+        description: t("rowActions.scoreQueued"),
+      });
     },
-    onError: () => toast.error(`Could not queue scoring for ${keyword.text}`),
+    onError: () =>
+      toast.error(t("rowActions.scoreFailed", { keyword: keyword.text })),
   });
   const scoreOnce = useSingleFlight(score);
 
@@ -89,7 +90,8 @@ export function KeywordRowActions({
             variant="ghost"
             size="icon-sm"
             className="text-muted-foreground hover:text-foreground data-[state=open]:text-foreground pointer-coarse:size-11"
-            aria-label={`Keyword actions for ${keyword.text}`}
+            aria-label={t("rowActions.label", { keyword: keyword.text })}
+            data-keyword-actions
             data-serp-keyword={keyword.keywordId}
           >
             <MoreHorizontal />
@@ -103,16 +105,16 @@ export function KeywordRowActions({
             }}
           >
             <ListOrdered />
-            View search results
+            {t("rowActions.viewSerp")}
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => setEditOpen(true)}>
             <Tag />
-            Edit tags and note
+            {t("rowActions.editTags")}
           </DropdownMenuItem>
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>
               <Shapes />
-              Keyword type
+              {t("rowActions.type")}
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent>
               <DropdownMenuRadioGroup
@@ -125,9 +127,9 @@ export function KeywordRowActions({
                 }}
               >
                 <DropdownMenuRadioItem value={DETECTED_CHOICE}>
-                  <span>Detected automatically</span>
+                  <span>{t("rowActions.detected")}</span>
                 </DropdownMenuRadioItem>
-                {KEYWORD_CLASS_OPTIONS.map((option) => (
+                {keywordClassOptions(t).map((option) => (
                   <DropdownMenuRadioItem
                     key={option.value}
                     value={option.value}
@@ -140,7 +142,7 @@ export function KeywordRowActions({
           </DropdownMenuSub>
           <DropdownMenuItem disabled={scoring} onSelect={() => scoreOnce()}>
             <Sparkles />
-            Score now
+            {t("rowActions.scoreNow")}
           </DropdownMenuItem>
           <DropdownMenuItem
             aria-disabled={update.isPending || undefined}
@@ -151,7 +153,9 @@ export function KeywordRowActions({
             }}
           >
             {keyword.active ? <Pause /> : <Play />}
-            <span>{keyword.active ? "Pause tracking" : "Resume tracking"}</span>
+            <span>
+              {keyword.active ? t("rowActions.pause") : t("rowActions.resume")}
+            </span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
@@ -159,7 +163,7 @@ export function KeywordRowActions({
             onSelect={() => setConfirmOpen(true)}
           >
             <Trash2 />
-            Stop tracking
+            {t("bulk.stop")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

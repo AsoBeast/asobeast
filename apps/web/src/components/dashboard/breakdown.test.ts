@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { translationContext } from "@/test/translation-context";
 import type {
   PortfolioApp,
   PortfolioAppInsight,
@@ -22,6 +23,8 @@ import {
   sortRows,
   type BreakdownRow,
 } from "./breakdown";
+
+const t = translationContext("en", "dashboard").translator;
 
 const app = (
   id: string,
@@ -151,9 +154,9 @@ describe("historyScope", () => {
 
 describe("appLabel", () => {
   it("adds the storefront only where two apps share a name", () => {
-    expect(appLabel(APPS[1], APPS)).toBe("Focus Timer (DE)");
-    expect(appLabel(APPS[2], APPS)).toBe("Tomato Clock");
-    expect(appLabel({ ...APPS[2], name: null }, APPS)).toBe("Untitled app");
+    expect(appLabel(APPS[1], APPS, t)).toBe("Focus Timer (DE)");
+    expect(appLabel(APPS[2], APPS, t)).toBe("Tomato Clock");
+    expect(appLabel({ ...APPS[2], name: null }, APPS, t)).toBe("Untitled app");
   });
 });
 
@@ -181,7 +184,7 @@ describe("breakdownRows", () => {
   });
 
   it("names each app with its store and storefront and its open actions", () => {
-    expect(breakdownRows(answered, APPS, insights, "app")).toEqual([
+    expect(breakdownRows(answered, APPS, insights, { by: "app", t })).toEqual([
       {
         id: "a",
         name: "Focus Timer",
@@ -196,22 +199,28 @@ describe("breakdownRows", () => {
   });
 
   it("pools the open actions of a store's apps", () => {
-    expect(breakdownRows(answered, APPS, insights, "store")).toEqual([
-      {
-        id: "APP_STORE",
-        name: "App Store",
-        mark: "2 apps",
-        shortMark: "2 apps",
-        change: part({ top10: 9 }),
-        open: 7,
-        critical: 1,
-      },
-    ]);
+    expect(breakdownRows(answered, APPS, insights, { by: "store", t })).toEqual(
+      [
+        {
+          id: "APP_STORE",
+          name: "App Store",
+          mark: "2 apps",
+          shortMark: "2 apps",
+          change: part({ top10: 9 }),
+          open: 7,
+          critical: 1,
+        },
+      ],
+    );
   });
 
   it("answers no rows for a history without a breakdown", () => {
-    expect(breakdownRows(history({}), APPS, insights, "app")).toEqual([]);
-    expect(breakdownRows(history({}), APPS, insights, "store")).toEqual([]);
+    expect(
+      breakdownRows(history({}), APPS, insights, { by: "app", t }),
+    ).toEqual([]);
+    expect(
+      breakdownRows(history({}), APPS, insights, { by: "store", t }),
+    ).toEqual([]);
   });
 });
 
@@ -308,16 +317,16 @@ describe("rowLabel", () => {
   });
 
   it("reads the row with spaces between its parts and the figures of the tab", () => {
-    expect(rowLabel(named, "visibility", "30d")).toBe(
+    expect(rowLabel(named, "visibility", "30d", t)).toBe(
       "Focus Timer iOS · US, App Store · US, 62 now, +10 30d",
     );
-    expect(rowLabel(named, "top10", "7d")).toBe(
+    expect(rowLabel(named, "top10", "7d", t)).toBe(
       "Focus Timer iOS · US, App Store · US, 4 now, -1 7d",
     );
-    expect(rowLabel(named, "moved", "30d")).toBe(
+    expect(rowLabel(named, "moved", "30d", t)).toBe(
       "Focus Timer iOS · US, App Store · US, 3 climbing, 1 falling",
     );
-    expect(rowLabel(named, "actions", "30d")).toBe(
+    expect(rowLabel(named, "actions", "30d", t)).toBe(
       "Focus Timer iOS · US, App Store · US, 5 open, 1 critical",
     );
   });
@@ -330,8 +339,12 @@ describe("rowLabel", () => {
       open: 3,
     });
 
-    expect(rowLabel(named, "actions", "30d")).toMatch(/^Focus Timer iOS · US,/);
-    expect(rowLabel(store, "actions", "30d")).toBe("App Store 2 apps, 3 open");
+    expect(rowLabel(named, "actions", "30d", t)).toMatch(
+      /^Focus Timer iOS · US,/,
+    );
+    expect(rowLabel(store, "actions", "30d", t)).toBe(
+      "App Store 2 apps, 3 open",
+    );
   });
 
   it("words a change that cannot be compared and a queue without a critical action", () => {
@@ -342,12 +355,52 @@ describe("rowLabel", () => {
       open: 2,
       change: part({ visibility: 10, visibilityDelta: null }),
     });
-    expect(rowLabel(fresh, "visibility", "30d")).toBe(
+    expect(rowLabel(fresh, "visibility", "30d", t)).toBe(
       "Habit Tracker iOS · US, App Store · US, 10 now, no 30d data",
     );
-    expect(rowLabel(fresh, "actions", "30d")).toBe(
+    expect(rowLabel(fresh, "actions", "30d", t)).toBe(
       "Habit Tracker iOS · US, App Store · US, 2 open",
     );
+  });
+});
+
+describe("Simplified Chinese dashboard breakdown", () => {
+  it("localizes spoken row figures and app counts", () => {
+    const t = translationContext("zh-CN", "dashboard").translator;
+    const named = row("a", {
+      name: "Focus Timer",
+      mark: "App Store · US",
+      shortMark: "iOS · US",
+      open: 5,
+      critical: 1,
+      change: part({
+        visibility: 62.4,
+        visibilityDelta: 10.4,
+        top10: 4,
+        top10Delta: -1,
+        movement: { up: 3, down: 1, entered: 0, lost: 0 },
+      }),
+    });
+
+    expect(rowLabel(named, "visibility", "30 天", t)).toBe(
+      "Focus Timer iOS · US，App Store · US，当前 62，30 天 +10",
+    );
+    expect(rowLabel(named, "moved", "30 天", t)).toBe(
+      "Focus Timer iOS · US，App Store · US，3 个上升，1 个下降",
+    );
+    expect(rowLabel(named, "actions", "30 天", t)).toBe(
+      "Focus Timer iOS · US，App Store · US，5 个待处理，1 个紧急",
+    );
+    expect(
+      breakdownRows(
+        history({
+          stores: [{ store: "APP_STORE", apps: 2, change: part({ top10: 9 }) }],
+        }),
+        APPS,
+        new Map(),
+        { by: "store", t },
+      )[0]?.mark,
+    ).toBe("2 个应用");
   });
 });
 

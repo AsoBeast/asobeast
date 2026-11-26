@@ -51,9 +51,7 @@ test("unknown and unavailable apps render route boundaries", async ({
   page,
 }) => {
   await page.goto("/apps/deleted-app/setup");
-  await expect(
-    page.getByRole("main").getByText("Page not found"),
-  ).toBeVisible();
+  await expect(page.locator('[data-slot="not-found"]')).toBeVisible();
 
   await page.goto("/apps/err-app/setup");
   await expect(page.getByRole("main").getByRole("alert")).toBeVisible();
@@ -235,13 +233,13 @@ test("direct setup is resumable and completes after live checks", async ({
   const add = page.getByRole("button", { name: "Add", exact: true });
   await expect(page.getByText("Add another country")).toBeVisible();
   await page.getByRole("combobox", { name: "Country to add" }).click();
-  await page.getByRole("option", { name: "Other…" }).click();
-  await page.getByLabel("Storefront country code").fill("xx");
+  await page.locator('[data-action="other-country"]').click();
+  await page.locator('[data-action="country-code"]').fill("xx");
   await expect(
-    page.getByText("xx is not an App Store storefront"),
+    page.getByText("App Store has no storefront with the code XX."),
   ).toBeVisible();
   await expect(add).toBeDisabled();
-  await page.getByLabel("Storefront country code").fill("se");
+  await page.locator('[data-action="country-code"]').fill("se");
   await expect(add).toBeEnabled();
   await page.getByRole("combobox", { name: "Country to add" }).click();
   await page.getByRole("option", { name: "PL · Poland" }).click();
@@ -837,7 +835,7 @@ test("an app with no suggested markets keeps the country select", async ({
   await expect(
     page.getByRole("combobox", { name: "Country to add" }),
   ).toBeVisible();
-  await expect(page.getByLabel("Storefront country code")).toHaveCount(0);
+  await expect(page.locator('[data-action="country-code"]')).toHaveCount(0);
   await expect(page.getByText("Your listing ships")).toHaveCount(0);
   await expect(page.locator("legend")).toHaveCount(0);
 });

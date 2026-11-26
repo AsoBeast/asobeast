@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useTranslations } from "next-intl";
 import { Megaphone } from "lucide-react";
+import { useTranslations } from "next-intl";
 import {
   SidebarMenuButton,
   SidebarMenuItem,
@@ -14,14 +14,17 @@ import { hasUnseenRelease } from "@/lib/whats-new/release-notes";
 import { useSeenRelease } from "@/lib/whats-new/seen-release";
 
 export const WHATS_NEW_PATH = "/whats-new";
+export const WHATS_NEW_LABEL = "What's New";
 
 export function WhatsNewMenuItem({ latest }: { latest: string | null }) {
-  const t = useTranslations("navigation");
   const pathname = usePathname();
+  const t = useTranslations("navigation");
+  const shell = useTranslations("shell");
   const [seen] = useSeenRelease();
   const { isMobile, setOpenMobile } = useSidebar();
   const unread = hasUnseenRelease(latest, seen);
-  const name = t(unread ? "whatsNewUnread" : "whatsNew");
+  const label = t("whatsNew");
+  const name = unread ? `${label}${shell("whatsNewUnread")}` : label;
 
   return (
     <SidebarMenuItem>
@@ -33,6 +36,7 @@ export function WhatsNewMenuItem({ latest }: { latest: string | null }) {
       >
         <Link
           href={WHATS_NEW_PATH}
+          data-nav="whats-new"
           aria-label={name}
           data-unread={unread}
           onClick={() => {
@@ -48,7 +52,7 @@ export function WhatsNewMenuItem({ latest }: { latest: string | null }) {
             )}
           />
           <Megaphone />
-          <span>{t("whatsNew")}</span>
+          <span>{label}</span>
         </Link>
       </SidebarMenuButton>
     </SidebarMenuItem>

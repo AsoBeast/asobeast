@@ -1,0 +1,30 @@
+{
+  "previousMonth": "Previous month",
+  "nextMonth": "Next month",
+  "chooseCapturedDay": "Choose captured day",
+  "capturedDay": "Captured day",
+  "capturedDayValue": "Captured day, {date}",
+  "noCaptureYet": "No capture yet",
+  "previousCapturedDay": "Previous captured day",
+  "nextCapturedDay": "Next captured day",
+  "weekdays": {
+    "short": {
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "sun": "Sun"
+    },
+    "long": {
+      "mon": "Monday",
+      "tue": "Tuesday",
+      "wed": "Wednesday",
+      "thu": "Thursday",
+      "fri": "Friday",
+      "sat": "Saturday",
+      "sun": "Sunday"
+    }
+  }
+}

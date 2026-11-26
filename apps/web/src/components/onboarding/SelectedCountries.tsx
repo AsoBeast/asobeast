@@ -1,9 +1,12 @@
 import { useId, useRef, type MouseEvent } from "react";
+import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
 import Link from "next/link";
 import { FOOTER_LINK } from "@/components/layout/panel-classes";
 import { Button } from "@/components/ui/button";
-import { formatCountry } from "@/lib/format";
+import { formatCountryInLocale } from "@/lib/format";
+import type { MessageTranslator } from "@/i18n/translator";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { survivingNeighbour, useFocusAfterCommit } from "@/lib/focus-handoff";
 
 export interface MarketKeywordCount {
@@ -12,10 +15,13 @@ export interface MarketKeywordCount {
   error: boolean;
 }
 
-function countText({ active, error }: MarketKeywordCount): string {
-  if (error) return "Keywords unavailable";
-  if (active === null) return "Loading keywords…";
-  return `${active} active ${active === 1 ? "keyword" : "keywords"}`;
+function countText(
+  { active, error }: MarketKeywordCount,
+  t: MessageTranslator,
+): string {
+  if (error) return t("countries.countError");
+  if (active === null) return t("countries.countLoading");
+  return t("countries.activeKeywords", { count: active });
 }
 
 const REMOVE_CONTROL = "button[data-remove-country]";
@@ -42,6 +48,8 @@ export function SelectedCountries({
   counts: MarketKeywordCount[];
   onRemove: (market: string) => void;
 }) {
+  const t = useTranslations("setup");
+  const locale = useAppLocale();
   const headingId = useId();
   const list = useRef<HTMLUListElement>(null);
   const focusAfterCommit = useFocusAfterCommit();
@@ -63,7 +71,7 @@ export function SelectedCountries({
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-1">
       <h4 id={headingId} className="text-dense font-medium">
-        Selected countries
+        {t("countries.selectedTitle")}
       </h4>
       <ul
         ref={list}
@@ -71,7 +79,7 @@ export function SelectedCountries({
         className="flex flex-col divide-y divide-border-subtle"
       >
         {homeFirst.map((count) => {
-          const name = formatCountry(count.market);
+          const name = formatCountryInLocale(count.market, locale);
           const removable = count.market !== homeMarket && counts.length > 1;
           return (
             <li
@@ -85,26 +93,28 @@ export function SelectedCountries({
                 </span>
                 {count.market === homeMarket ? (
                   <span className="text-caption text-faint-foreground">
-                    Home
+                    {t("countries.home")}
                   </span>
                 ) : null}
               </span>
               <span className="order-last flex basis-full flex-wrap items-center gap-x-3 gap-y-1 sm:order-none sm:basis-auto">
                 <span className="numeric text-caption text-muted-foreground">
-                  {countText(count)}
+                  {countText(count, t)}
                 </span>
                 <Link
                   href={`/apps/${appId}/keywords?country=${count.market}`}
                   className={FOOTER_LINK}
                 >
-                  {`Review ${count.market.toUpperCase()} keywords`}
+                  {t("countries.reviewMarket", {
+                    code: count.market.toUpperCase(),
+                  })}
                 </Link>
               </span>
               {removable ? (
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  aria-label={`Remove ${name}`}
+                  aria-label={t("countries.remove", { country: name })}
                   data-remove-country=""
                   onClick={remove(count.market)}
                 >

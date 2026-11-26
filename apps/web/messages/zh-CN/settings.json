@@ -1,0 +1,177 @@
+{
+  "title": "设置",
+  "index": {
+    "onThisPage": "本页",
+    "sections": {
+      "plan": "套餐",
+      "dailyCapacity": "容量",
+      "gettingStarted": "开始使用",
+      "alerts": "提醒",
+      "team": "团队",
+      "workspace": "工作区"
+    }
+  },
+  "capacity": {
+    "title": "每日请求预算",
+    "warning": "每日任务可能无法在应用商店速率限制内完成；请减少关键词或市场，或自行承担风险提高 SCRAPE_ITUNES_RPM。",
+    "byStore": "按应用商店",
+    "usedOfDailyLimit": "已用 / 每日上限",
+    "heading": "每日应用商店请求的用途",
+    "perDay": "每日 {used, number} / {limit, number}",
+    "storePerDay": "每日 {used, number} / {limit, number} · {percent, number}%",
+    "storeUtilization": "{store} 每日请求使用率",
+    "parts": {
+      "keywords": "关键词",
+      "categories": "类别",
+      "apps": "应用",
+      "reviews": "评论"
+    },
+    "status": {
+      "overCapacity": "超出容量",
+      "nearCapacity": "接近容量",
+      "high": "偏高",
+      "healthy": "健康"
+    },
+    "statusValue": "{status} · {percent, number}%",
+    "banner": "每日请求已超过应用商店速率限制的 85%。<link>查看请求预算</link>。",
+    "completion": {
+      "empty": "下一次运行将于 {date} 开始，尚未有需要采集的内容。",
+      "only": "下一次运行将于 {date} 开始。",
+      "withinMinute": "下一次运行将于 {date} 开始，预计一分钟内完成。",
+      "estimated": "下一次运行将于 {date} 开始，预计约 {finish} 完成，采集约需 {hours, plural, one {# 小时} other {# 小时}}。"
+    },
+    "discovery": "关键词发现每周最多增加 {searches, plural, one {# 次搜索} other {# 次搜索}}、约 {requests, plural, one {# 次请求} other {# 次请求}}，不计入此每日总量。",
+    "marketListings": "{count, plural, one {# 次应用请求用于刷新您跟踪关键词的市场的应用详情。} other {# 次应用请求用于刷新您跟踪关键词的市场的应用详情。}}",
+    "localizations": "{count, plural, one {# 次应用请求用于读取默认语言为英语的应用商店地区的原生本地化内容。} other {# 次应用请求用于读取默认语言为英语的应用商店地区的原生本地化内容。}}"
+  },
+  "checklist": {
+    "title": "开始使用",
+    "show": "显示设置清单",
+    "hidden": "此工作区中的所有人都会隐藏该清单。",
+    "footer": "在完成所有项目之前，清单会一直浮现在每个页面的右下角。",
+    "loadError": "无法加载设置清单。",
+    "saveError": "无法保存清单设置",
+    "hideTitle": "隐藏设置清单？",
+    "hideDescription": "它会对此工作区中的所有人保持隐藏。您可以在“设置”的“开始使用”中重新显示。",
+    "hide": "隐藏清单",
+    "hiding": "正在隐藏…",
+    "hiddenToast": "设置清单已隐藏。您可以在设置中重新显示。",
+    "hideError": "无法隐藏设置清单",
+    "question": "您想完成什么？",
+    "hint": "选择一项，设置清单会优先展示最重要的步骤。您可以随时更改。",
+    "goalSet": "目标已设为{goal}",
+    "goalLoadError": "无法加载您的目标。",
+    "goalSaveError": "无法保存您的目标",
+    "progress": "已完成 {done, number} / {total, number}",
+    "announcement": "设置清单：{progress}",
+    "panelTitle": "设置清单",
+    "goal": "目标：{goal}",
+    "change": "更改",
+    "setupProgress": "设置进度",
+    "steps": "清单步骤",
+    "done": "已完成",
+    "next": "下一步",
+    "importFirst": "请先导入应用",
+    "worthKnowing": "关于{item}的实用提示",
+    "opensNewTab": "（在新标签页中打开）",
+    "expandPill": "展开悬浮入口",
+    "shrinkPill": "收起悬浮入口",
+    "hideChecklist": "隐藏清单",
+    "inChecklist": "，位于设置清单中",
+    "checkingPositions": "正在检查您的应用当前排名",
+    "firstPositionsReady": "首批排名已生成",
+    "seeRanks": "查看排名",
+    "firstPositionsError": "无法检查您的首批排名。",
+    "items": {
+      "importApp": {
+        "title": "导入应用",
+        "description": "按名称搜索应用商店或粘贴其网址。应用详情、关键词和首批排名会在几分钟内到达。",
+        "action": "导入应用",
+        "doneText": "应用已导入"
+      },
+      "secondMarket": {
+        "title": "在第二个市场跟踪关键词",
+        "description": "排名因应用商店地区而异。在另一个市场跟踪关键词，了解您在那里的表现。",
+        "action": "添加市场",
+        "doneText": "已在两个市场跟踪"
+      },
+      "addCompetitor": {
+        "title": "添加竞品",
+        "description": "在您跟踪的每个关键词上，将您的排名与竞品应用的排名并排查看。",
+        "action": "添加竞品",
+        "doneText": "竞品已添加"
+      },
+      "connectConsole": {
+        "title": "连接应用商店控制台",
+        "description": "连接 App Store Connect 或 Google Play Console，在排名旁查看应用详情页访问量和下载量。",
+        "action": "连接控制台",
+        "doneText": "控制台已连接"
+      },
+      "connectAiClient": {
+        "title": "连接您的 AI 客户端",
+        "description": "创建个人令牌，并从 Claude、Cursor 或其他 MCP 客户端使用。",
+        "action": "创建令牌",
+        "doneText": "AI 客户端已连接"
+      },
+      "turnOnAlert": {
+        "title": "开启提醒",
+        "description": "当排名、应用详情或评论发生变化时，通过邮件或 Webhook 接收通知。",
+        "action": "设置提醒",
+        "doneText": "提醒已开启"
+      },
+      "replyToReview": {
+        "title": "回复评论",
+        "description": "自行撰写回复或让 AI 起草，保存后从评论页面发布。",
+        "action": "打开评论",
+        "doneText": "已标记回复"
+      },
+      "fillKeywordField": {
+        "title": "填写关键词字段",
+        "description": "填写私有的 100 字符 iOS 关键词字段，并查看它覆盖了哪些已跟踪关键词。",
+        "action": "打开元数据",
+        "doneText": "关键词字段已保存"
+      }
+    },
+    "goals": {
+      "improveRankings": {
+        "label": "提升我的排名",
+        "description": "填写关键词字段、添加竞品，并观察您的排名变化。"
+      },
+      "researchIdea": {
+        "label": "研究一个想法",
+        "description": "在确定关键词之前，先比较竞品和市场。"
+      },
+      "useWithAi": {
+        "label": "通过 AI 使用 AsoBeast",
+        "description": "连接 MCP 客户端，让您的智能体读取数据。"
+      }
+    },
+    "tips": {
+      "secondMarket": {
+        "quotes": "将关键词放在引号中可进行精确搜索",
+        "pasteList": "将逗号或换行分隔的列表粘贴到“添加关键词”",
+        "searchWords": "查看每个市场的搜索会读取多少个词",
+        "score": "打开评分，了解热度来源及其可信度"
+      },
+      "addCompetitor": {
+        "rating": "竞品卡片会显示每个应用的评分、评分数和版本"
+      },
+      "connectAiClient": {
+        "usage": "查看每个令牌最近的使用时间和请求次数"
+      },
+      "turnOnAlert": {
+        "events": "从 {count, number} 种类型化 Webhook 事件中选择，包括排名提升",
+        "retire": "耗费请求却始终没有排名的关键词会作为行动建议重新出现，供您停用"
+      },
+      "replyToReview": {
+        "language": "回复草稿会使用评论的语言撰写"
+      },
+      "fillKeywordField": {
+        "localization": "添加应用已支持的一种本地化，以获得更多关键词字段字符",
+        "limits": "根据应用商店的限制和准则检查每个字段",
+        "newest": "从最新的 App Store 本地化中选择，包括孟加拉语、泰米尔语、泰卢固语和乌尔都语",
+        "words": "中文、日文和泰文关键词会拆分为单词"
+      }
+    }
+  }
+}

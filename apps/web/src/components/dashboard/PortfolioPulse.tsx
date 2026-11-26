@@ -1,6 +1,7 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useQueryState } from "nuqs";
 import type {
   ActionSummary,
@@ -11,7 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { DirectionArrow, TrendChip } from "@/components/ui/delta-chip";
 import { MetricStrip, StatTile } from "@/components/ui/stat-tile";
-import { formatNumber, pluralize } from "@/lib/format";
+import { formatNumberInLocale } from "@/lib/format";
+import type { MessageTranslator } from "@/i18n/translator";
+import { useAppLocale } from "@/lib/use-app-locale";
 import {
   actionSummaryOptions,
   portfolioInsightsOptions,
@@ -29,13 +32,18 @@ import {
   type DashboardMetric,
 } from "@/lib/search-params";
 
-function movedValue(change: PortfolioRangeChange): string {
+function movedValue(
+  change: PortfolioRangeChange,
+  locale: ReturnType<typeof useAppLocale>,
+): string {
   if (!change.compared) return "—";
   const { up, down } = change.movement;
-  return formatNumber(up + down);
+  return formatNumberInLocale(up + down, locale);
 }
 
 function MovedDelta({ change }: { change: PortfolioRangeChange }) {
+  const t = useTranslations("dashboard");
+  const locale = useAppLocale();
   if (!change.compared) return null;
   const { up, down } = change.movement;
   return (
@@ -43,51 +51,73 @@ function MovedDelta({ change }: { change: PortfolioRangeChange }) {
       {up > 0 ? (
         <Badge variant="up">
           <DirectionArrow way="up" />
-          <span aria-hidden>{formatNumber(up)}</span>
-          <span className="sr-only">{`${formatNumber(up)} climbed`}</span>
+          <span aria-hidden>{formatNumberInLocale(up, locale)}</span>
+          <span className="sr-only">{t("pulse.climbed", { count: up })}</span>
         </Badge>
       ) : null}
       {down > 0 ? (
         <Badge variant="down">
           <DirectionArrow way="down" />
-          <span aria-hidden>{formatNumber(down)}</span>
-          <span className="sr-only">{`${formatNumber(down)} fell`}</span>
+          <span aria-hidden>{formatNumberInLocale(down, locale)}</span>
+          <span className="sr-only">{t("pulse.fell", { count: down })}</span>
         </Badge>
       ) : null}
     </>
   );
 }
 
-const rangeUnit = (days: number): string => `${days}d`;
+const rangeUnit = (days: number, t: MessageTranslator): string =>
+  t("table.rangeUnit", { days });
 
-function movedNote(change: PortfolioRangeChange, days: number): string {
-  if (!change.compared) return `No check from ${days} days ago yet`;
+function movedNote(
+  change: PortfolioRangeChange,
+  days: number,
+  t: MessageTranslator,
+): string {
+  if (!change.compared) return t("pulse.noCheck", { days });
   const { entered, lost } = change.movement;
-  return `${formatNumber(entered)} started ranking · ${formatNumber(lost)} dropped out`;
+  return t("pulse.enteredLost", {
+    entered,
+    lost,
+  });
 }
 
-const actionsValue = (summary: ActionSummary): string =>
-  summary.generatedAt === null ? "—" : formatNumber(summary.open);
+const actionsValue = (
+  summary: ActionSummary,
+  locale: ReturnType<typeof useAppLocale>,
+): string =>
+  summary.generatedAt === null
+    ? "—"
+    : formatNumberInLocale(summary.open, locale);
 
 function ActionsDelta({ summary }: { summary: ActionSummary }) {
+  const t = useTranslations("dashboard");
   const { critical } = summary.openByPriority;
   if (summary.generatedAt === null || critical === 0) return null;
-  return <Badge variant="down">{`${formatNumber(critical)} critical`}</Badge>;
+  return (
+    <Badge variant="down">{t("counts.critical", { count: critical })}</Badge>
+  );
 }
 
-function actionsNote(summary: ActionSummary): string {
-  if (summary.generatedAt === null) return "Not generated yet";
+function actionsNote(summary: ActionSummary, t: MessageTranslator): string {
+  if (summary.generatedAt === null) return t("pulse.notGenerated");
   const { high, medium, low } = summary.openByPriority;
-  if (summary.open === 0) return "Nothing waiting on you";
-  return `${formatNumber(high)} high · ${formatNumber(medium)} medium · ${formatNumber(low)} low`;
+  if (summary.open === 0) return t("pulse.nothingWaiting");
+  return t("pulse.priorities", {
+    high,
+    medium,
+    low,
+  });
 }
 
-function visibilityNote(apps: PortfolioApp[]): string {
+function visibilityNote(apps: PortfolioApp[], t: MessageTranslator): string {
   const checked = apps.filter((app) => app.lastCapturedAt !== null).length;
-  return `weighted across ${pluralize(checked, "app")}`;
+  return t("pulse.weightedAcross", { count: checked });
 }
 
 export function PortfolioPulse() {
+  const t = useTranslations("dashboard");
+  const locale = useAppLocale();
   const { data: portfolio } = useSuspenseQuery(portfolioOptions);
   const { data: insights } = useSuspenseQuery(portfolioInsightsOptions);
   const { data: actions } = useSuspenseQuery(actionSummaryOptions);
@@ -98,7 +128,7 @@ export function PortfolioPulse() {
 
   const { top10 } = insights.totals;
   const { visibilityDelta, top10Delta } = history.change;
-  const unit = rangeUnit(days);
+  const unit = rangeUnit(days, t);
   const broken = isBrokenDown(history);
   const { visibility } = portfolio;
   const shown: DashboardMetric =
@@ -114,34 +144,36 @@ export function PortfolioPulse() {
         {visibility ? (
           <StatTile
             {...tab("visibility")}
-            label="Visibility"
-            value={formatNumber(Math.round(visibility.current))}
+            label={t("table.visibility")}
+            value={formatNumberInLocale(Math.round(visibility.current), locale)}
             delta={
               <TrendChip label={unit} value={visibilityDelta} form="pill" />
             }
-            note={visibilityNote(portfolio.apps)}
+            note={visibilityNote(portfolio.apps, t)}
           />
         ) : null}
         <StatTile
           {...tab("top10")}
-          label="Keywords in top 10"
-          value={formatNumber(top10)}
+          label={t("table.top10")}
+          value={formatNumberInLocale(top10, locale)}
           delta={<TrendChip label={unit} value={top10Delta} form="pill" />}
-          note={`of ${formatNumber(portfolio.totals.trackedKeywords)} tracked`}
+          note={t("pulse.ofTracked", {
+            count: portfolio.totals.trackedKeywords,
+          })}
         />
         <StatTile
           {...tab("moved")}
-          label={`Moved in ${days} days`}
-          value={movedValue(history.change)}
+          label={t("pulse.movedIn", { days })}
+          value={movedValue(history.change, locale)}
           delta={<MovedDelta change={history.change} />}
-          note={movedNote(history.change, days)}
+          note={movedNote(history.change, days, t)}
         />
         <StatTile
           {...tab("actions")}
-          label="Open actions"
-          value={actionsValue(actions)}
+          label={t("table.actions")}
+          value={actionsValue(actions, locale)}
           delta={<ActionsDelta summary={actions} />}
-          note={actionsNote(actions)}
+          note={actionsNote(actions, t)}
         />
       </MetricStrip>
       <div className={cn(PULSE_BODY, broken && PULSE_SPLIT)}>

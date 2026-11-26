@@ -1,7 +1,7 @@
 import { type Page, type Route } from "@playwright/test";
 import { type AccountPlan } from "@asobeast/shared";
 import { holdRequest, pressFromKeyboard } from "./held-request.mts";
-import { fulfillJson, seedSession } from "./plan-helpers.mts";
+import { EN_BILLING, fulfillJson, seedSession } from "./plan-helpers.mts";
 import { expect, test } from "./reporting.mts";
 import {
   CATALOG,
@@ -10,14 +10,12 @@ import {
   openBilling,
 } from "./trial-plans.mts";
 import { seedViewer } from "./viewer.mts";
-import {
-  PLAN_UNREACHABLE,
-  PRICES_UNREACHABLE,
-  paywallHeading,
-} from "../src/lib/plan-choice";
+import { paywallHeading } from "../src/lib/plan-choice";
 
+const PLAN_UNREACHABLE = EN_BILLING.translator("payment.planUnreachable");
+const PRICES_UNREACHABLE = EN_BILLING.translator("payment.pricesUnreachable");
 const TRIAL_BUTTON = "Pay $0 today and start your free trial";
-const UNCONFIGURED = "Checkout is not configured on this instance.";
+const UNCONFIGURED = EN_BILLING.translator("payment.unconfigured");
 
 async function openWall(page: Page, plan: AccountPlan = OFFERED_PLAN) {
   await seedViewer(page.context(), "checkout-pending");
@@ -98,7 +96,7 @@ test.describe("the billing wall when a read is lost", () => {
     await expect(
       page.getByRole("heading", {
         level: 1,
-        name: paywallHeading(OFFERED_PLAN),
+        name: paywallHeading(OFFERED_PLAN, EN_BILLING),
       }),
     ).toBeVisible();
     await expect(
@@ -142,7 +140,7 @@ test.describe("the billing wall when a read is lost", () => {
     await expect(
       page.getByRole("heading", {
         level: 1,
-        name: paywallHeading(OFFERED_PLAN),
+        name: paywallHeading(OFFERED_PLAN, EN_BILLING),
       }),
     ).toBeVisible();
     await expect(
@@ -232,7 +230,7 @@ test.describe("the billing wall when a read is lost", () => {
     await expect(
       page.getByRole("heading", {
         level: 1,
-        name: paywallHeading(OFFERED_PLAN),
+        name: paywallHeading(OFFERED_PLAN, EN_BILLING),
       }),
     ).toBeVisible();
     await expect(

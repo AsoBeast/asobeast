@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import type {
   KeywordDiscoveryList,
@@ -30,9 +31,6 @@ export interface DiscoveryTrack {
   removes: readonly string[];
 }
 
-const failed = (fallback: string) => (error: unknown) =>
-  toast.error(apiErrorMessage(error, fallback));
-
 const keyOfIds = (ids: readonly string[]): string => JSON.stringify(ids);
 
 const keyOfTrack = ({ request, removes }: DiscoveryTrack): string =>
@@ -44,6 +42,9 @@ export function useDiscoveryActions(
   onTracked: () => void,
 ) {
   const client = useQueryClient();
+  const t = useTranslations("keywordInspector");
+  const failed = (fallback: string) => (error: unknown) =>
+    toast.error(apiErrorMessage(error, t(fallback)));
   const { queryKey } = keywordDiscoveriesOptions(id, market);
   const removeRows = (ids: readonly string[]) =>
     client.setQueryData<KeywordDiscoveryList>(queryKey, (list) =>
@@ -63,10 +64,10 @@ export function useDiscoveryActions(
     onSuccess: (result, { removes }) => {
       if (result.skipped === 0) removeRows(removes);
       onTracked();
-      toast.success(trackedToast(result));
+      toast.success(trackedToast(result, t));
       refetchTracked();
     },
-    onError: failed("Could not track the keywords"),
+    onError: failed("discovery.toast.trackFailed"),
   });
 
   const dismiss = useMutation({
@@ -77,20 +78,20 @@ export function useDiscoveryActions(
       removeRows(ids);
       refetchDiscoveries();
     },
-    onError: failed("Could not dismiss the keywords"),
+    onError: failed("discovery.toast.dismissFailed"),
   });
 
   const refresh = useMutation({
     mutationKey: ["keyword-discovery", id, market, "refresh"],
     mutationFn: () => refreshKeywordDiscoveries(id),
     onSuccess: (result) => {
-      toast.success(refreshedToast(result));
+      toast.success(refreshedToast(result, t));
       const autoTracks =
         client.getQueryData<KeywordDiscoveryList>(queryKey)?.autoTrackRanked;
       if (autoTracks) refetchTracked();
       else refetchDiscoveries();
     },
-    onError: failed("Could not refresh the discoveries"),
+    onError: failed("discovery.toast.refreshFailed"),
   });
 
   const settings = useMutation({
@@ -103,13 +104,13 @@ export function useDiscoveryActions(
         refetchDiscoveries();
         return;
       }
-      toast.success(trackedToast(result));
+      toast.success(trackedToast(result, t));
       refetchTracked();
     },
     onError: (error, enabled) => {
       setAutoTrack(!enabled);
       refetchDiscoveries();
-      failed("Could not change auto tracking")(error);
+      failed("discovery.toast.settingsFailed")(error);
     },
   });
 

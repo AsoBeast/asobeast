@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   isStorefront,
@@ -22,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ApiError, requestKeywordInspection } from "@/lib/api";
+import type { MessageTranslator } from "@/i18n/translator";
 import { storeLabel } from "@/lib/format";
 import { seedKeywordInspection } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
@@ -33,10 +35,10 @@ export interface InspectFormValues {
   country: string;
 }
 
-const failureMessage = (error: unknown): string =>
+const failureMessage = (error: unknown, t: MessageTranslator): string =>
   error instanceof ApiError
     ? error.envelope.message
-    : "Could not start the inspection";
+    : t("inspector.form.failed");
 
 export function InspectForm({
   initial,
@@ -48,6 +50,7 @@ export function InspectForm({
   className?: string;
 }) {
   const queryClient = useQueryClient();
+  const t = useTranslations("keywordInspector");
   const [keyword, setKeyword] = useState(initial.keyword);
   const [store, setStore] = useState<Store>(initial.store);
   const [country, setCountry] = useState(initial.country);
@@ -66,14 +69,14 @@ export function InspectForm({
       seedKeywordInspection(queryClient, inspection);
       onInspected(inspection);
     },
-    onError: (error) => toast.error(failureMessage(error)),
+    onError: (error) => toast.error(failureMessage(error, t)),
   });
   const submit = useSingleFlight(inspect);
   const ready = keyword.trim().length > 0 && isStorefront(store, country);
 
   return (
     <form
-      aria-label="Inspect a keyword"
+      aria-label={t("inspector.form.aria")}
       className={cn("flex flex-wrap items-end gap-3", className)}
       onSubmit={(event) => {
         event.preventDefault();
@@ -82,19 +85,19 @@ export function InspectForm({
     >
       <div className="flex w-full min-w-56 flex-col gap-2 sm:w-auto sm:flex-1">
         <Label htmlFor="inspect-keyword" className="xl:sr-only">
-          Keyword
+          {t("inspector.form.keyword")}
         </Label>
         <Input
           id="inspect-keyword"
           value={keyword}
           maxLength={STORE_SEARCH_QUERY_MAX_LENGTH}
-          placeholder="e.g. habit tracker"
+          placeholder={t("inspector.form.keywordPlaceholder")}
           onChange={(event) => setKeyword(event.target.value)}
         />
       </div>
       <div className="flex w-full flex-col gap-2 sm:w-auto">
         <Label htmlFor="inspect-store" className="xl:sr-only">
-          Store
+          {t("inspector.form.store")}
         </Label>
         <Select
           value={store}
@@ -116,13 +119,13 @@ export function InspectForm({
       </div>
       <div className="flex w-full flex-col gap-2 sm:w-auto max-sm:[&_[data-slot=select-trigger]]:w-full">
         <Label htmlFor="inspect-country" className="xl:sr-only">
-          Country
+          {t("inspector.form.country")}
         </Label>
         <CountrySelect
           id="inspect-country"
           store={store}
           value={country}
-          ariaLabel="Country"
+          ariaLabel={t("inspector.form.country")}
           onChange={setCountry}
         />
       </div>
@@ -132,7 +135,9 @@ export function InspectForm({
         disabled={!ready}
         aria-disabled={inspect.isPending || undefined}
       >
-        {inspect.isPending ? "Starting…" : "Inspect"}
+        {inspect.isPending
+          ? t("inspector.form.starting")
+          : t("inspector.form.inspect")}
       </Button>
     </form>
   );

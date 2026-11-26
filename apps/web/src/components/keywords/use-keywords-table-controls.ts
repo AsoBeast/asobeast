@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueryStates } from "nuqs";
+import { useTranslations } from "next-intl";
 import type { Store } from "@asobeast/shared";
 import { useUrlSorting } from "@/components/data-table/useUrlSorting";
 import { useStoredColumnVisibility } from "@/components/data-table/useStoredColumnVisibility";
@@ -18,6 +19,7 @@ export function useKeywordsTableControls({
   store: Store;
   columns: Parameters<typeof useUrlSorting>[1];
 }) {
+  const t = useTranslations("keywords");
   const [{ sort, dir }, setSortParams] = useQueryStates({
     sort: keywordSortParser,
     dir: sortDirectionParser,
@@ -41,6 +43,6 @@ export function useKeywordsTableControls({
     "keywords",
     columns,
   );
-  const marks = listingMarksOption(store, visibility, setVisibility);
+  const marks = listingMarksOption(store, visibility, setVisibility, t);
   return { sorting, onSortingChange, visibility, setVisibility, marks };
 }

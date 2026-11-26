@@ -7,6 +7,7 @@ import type {
   KeywordInspectionSummary,
 } from "@asobeast/shared";
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { InlineQueryError } from "@/components/layout/InlineQueryError";
 import { PANEL_BLEED, PANEL_HEADER } from "@/components/layout/panel-classes";
@@ -20,13 +21,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { isNotFound, requestKeywordInspection } from "@/lib/api";
+import {
+  apiErrorMessage,
+  isNotFound,
+  requestKeywordInspection,
+} from "@/lib/api";
 import {
   armFocusHandoff,
   useFocusAfterCommit,
   useFocusClaim,
 } from "@/lib/focus-handoff";
-import { formatDateTime } from "@/lib/format";
 import { inspectionPollInterval } from "@/lib/keyword-inspection-polling";
 import {
   keywordInspectionKeys,
@@ -40,14 +44,10 @@ import { InspectionResultsTable } from "./InspectionResultsTable";
 import {
   InspectionCompetition,
   InspectionFigures,
-  InspectionSource,
   SUB_HEADER,
 } from "./InspectionScores";
-import {
-  otherStorefronts,
-  storefrontCode,
-  storefrontName,
-} from "./inspection-format";
+import { otherStorefronts, storefrontCode } from "./inspection-format";
+import { InspectionFooter } from "./InspectionFooter";
 import {
   InspectionDetailSkeleton,
   InspectionScoresSkeleton,
@@ -88,13 +88,14 @@ function DetailPanel({
 
 function FallbackHeading() {
   const claimFocus = useFocusClaim(INSPECTION_HEADING);
+  const t = useTranslations("keywordInspector");
   return (
     <h2
       ref={claimFocus}
       tabIndex={-1}
       className="rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      Inspection
+      {t("inspector.detail.heading")}
     </h2>
   );
 }
@@ -142,6 +143,7 @@ function PendingInspection({
   checking: boolean;
   onCheck: (leaving: HTMLButtonElement | null) => void;
 }) {
+  const t = useTranslations("keywordInspector");
   const button = useRef<HTMLButtonElement>(null);
   return (
     <>
@@ -156,8 +158,8 @@ function PendingInspection({
           />
           <span>
             {inspection.startedAt === null
-              ? "Waiting for the store queue. Scheduled store work runs first, so this can take a few minutes."
-              : "Reading the store. This usually takes under a minute."}
+              ? t("inspector.detail.waiting")
+              : t("inspector.detail.reading")}
           </span>
         </p>
         {polling ? null : (
@@ -170,7 +172,9 @@ function PendingInspection({
               if (!checking) onCheck(button.current);
             }}
           >
-            {checking ? "Checking…" : "Check again"}
+            {checking
+              ? t("inspector.detail.checking")
+              : t("inspector.detail.checkAgain")}
           </Button>
         )}
       </div>
@@ -189,6 +193,8 @@ function FailedInspection({
     leaving: HTMLButtonElement | null,
   ) => void;
 }) {
+  const t = useTranslations("keywordInspector");
+  const common = useTranslations("common");
   const queryClient = useQueryClient();
   const button = useRef<HTMLButtonElement>(null);
   const retry = useMutation({
@@ -202,12 +208,15 @@ function FailedInspection({
       seedKeywordInspection(queryClient, next);
       onRetried(next, button.current);
     },
-    onError: () => toast.error("Could not start the inspection again"),
+    onError: (error) =>
+      toast.error(apiErrorMessage(error, t("inspector.detail.retryFailed"))),
   });
   const retryOnce = useSingleFlight(retry);
   return (
     <div role="alert" className="flex flex-col items-start gap-2 p-4">
-      <p className="text-body font-medium">This inspection did not finish.</p>
+      <p className="text-body font-medium">
+        {t("inspector.detail.failedTitle")}
+      </p>
       {inspection.failure ? (
         <p className="text-body text-muted-foreground">{inspection.failure}</p>
       ) : null}
@@ -218,7 +227,7 @@ function FailedInspection({
         aria-disabled={retry.isPending || undefined}
         onClick={() => retryOnce(undefined)}
       >
-        {retry.isPending ? "Starting…" : "Try again"}
+        {retry.isPending ? t("inspector.form.starting") : common("retry")}
       </Button>
     </div>
   );
@@ -233,6 +242,7 @@ function CompletedInspection({
   items: readonly KeywordInspectionSummary[];
   onSelect: (id: string) => void;
 }) {
+  const t = useTranslations("keywordInspector");
   const at = inspection.completedAt ?? inspection.requestedAt;
   return (
     <>
@@ -248,16 +258,19 @@ function CompletedInspection({
       <InspectionCompetition inspection={inspection} />
       <section aria-labelledby="inspection-results">
         <div className={SUB_HEADER}>
-          <h3 id="inspection-results">Search results</h3>
+          <h3 id="inspection-results">{t("inspector.detail.searchResults")}</h3>
           {inspection.results.length > 0 ? (
             <span className="numeric text-faint-foreground">
-              {`Top ${Math.min(10, inspection.results.length)} of ${inspection.results.length}`}
+              {t("inspector.detail.topCount", {
+                shown: Math.min(10, inspection.results.length),
+                total: inspection.results.length,
+              })}
             </span>
           ) : null}
         </div>
         {inspection.results.length === 0 ? (
           <p className="px-4 py-6 text-center text-body text-muted-foreground">
-            The store returned no apps for this keyword.
+            {t("inspector.detail.noApps")}
           </p>
         ) : (
           <InspectionResultsTable
@@ -268,22 +281,6 @@ function CompletedInspection({
           />
         )}
       </section>
-    </>
-  );
-}
-
-function inspectionFooter(inspection: KeywordInspection): ReactNode {
-  const place = storefrontName(inspection.store, inspection.country);
-  const when =
-    inspection.status === "DONE" && inspection.completedAt
-      ? formatDateTime(inspection.completedAt)
-      : `requested ${formatDateTime(inspection.requestedAt)}`;
-  return (
-    <>
-      <span>{`${place} · ${when}`}</span>
-      {inspection.status === "DONE" ? (
-        <InspectionSource inspection={inspection} />
-      ) : null}
     </>
   );
 }
@@ -299,6 +296,7 @@ export function InspectionDetail({
   onInspected: (inspection: KeywordInspection) => void;
   onSelect: (id: string) => void;
 }) {
+  const t = useTranslations("keywordInspector");
   const queryClient = useQueryClient();
   const read = useQuery(keywordInspectionOptions(id));
   const heading = useRef<HTMLHeadingElement>(null);
@@ -306,7 +304,7 @@ export function InspectionDetail({
   const claimHeading = useFocusClaim(INSPECTION_HEADING);
   if (read.isPending) {
     return (
-      <DetailPanel heading={<h2>Inspection</h2>}>
+      <DetailPanel heading={<h2>{t("inspector.detail.heading")}</h2>}>
         <InspectionDetailSkeleton />
       </DetailPanel>
     );
@@ -314,8 +312,8 @@ export function InspectionDetail({
   if (read.isError && isNotFound(read.error)) {
     return (
       <EmptyInspection
-        title="This inspection no longer exists"
-        body="It may have been deleted. Run a new one above."
+        title={t("inspector.detail.missingTitle")}
+        body={t("inspector.detail.missingBody")}
       />
     );
   }
@@ -324,7 +322,7 @@ export function InspectionDetail({
       <DetailPanel heading={<FallbackHeading />}>
         <div className="p-4">
           <InlineQueryError
-            message="The inspection could not be loaded."
+            message={t("inspector.detail.loadFailed")}
             read={read}
           />
         </div>
@@ -344,7 +342,7 @@ export function InspectionDetail({
         />
       }
       storefront={storefrontCode(inspection.store, inspection.country)}
-      footer={inspectionFooter(inspection)}
+      footer={<InspectionFooter inspection={inspection} />}
     >
       <article aria-busy={inspection.status === "PENDING"}>
         {inspection.status === "PENDING" ? (

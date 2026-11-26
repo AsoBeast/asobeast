@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { translationContext } from "@/test/translation-context";
 import {
   channelHint,
   deliversToChat,
   webhookRowLabel,
 } from "./webhook-channel-copy";
+
+const en = translationContext("en", "notifications").translator;
+const zh = translationContext("zh-CN", "notifications").translator;
 
 describe("channelHint", () => {
   it.each([
@@ -52,13 +56,25 @@ describe("channelHint", () => {
       "Recognised as a JSON webhook. It receives the documented payload.",
     ],
   ])("describes %s", (url, hint) => {
-    expect(channelHint(url)).toBe(hint);
+    expect(channelHint(url, en)).toBe(hint);
   });
 
   it("says nothing until the text is an http url", () => {
-    expect(channelHint("")).toBeNull();
-    expect(channelHint("https://")).toBeNull();
-    expect(channelHint("ftp://files.example.com/x")).toBeNull();
+    expect(channelHint("", en)).toBeNull();
+    expect(channelHint("https://", en)).toBeNull();
+    expect(channelHint("ftp://files.example.com/x", en)).toBeNull();
+  });
+
+  it("localizes hints without changing providers or endpoint syntax", () => {
+    expect(channelHint("https://discord.com/api/webhooks/1/x", zh)).toBe(
+      "已识别为 Discord。报告会以嵌入卡片形式发送，并显示应用图标。",
+    );
+    expect(channelHint("https://api.telegram.org/bot1:A/sendMessage", zh)).toBe(
+      "已识别为 Telegram。请在 sendMessage 后添加 ?chat_id=<id>。",
+    );
+    expect(channelHint("https://hooks.slack.com/services/T1/B2/x", zh)).toBe(
+      "已识别为 Slack。报告会以 Block Kit 消息形式发送。",
+    );
   });
 });
 

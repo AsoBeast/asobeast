@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { ListingMarket } from "@asobeast/shared";
 import { useMarket } from "@/components/app-detail/use-market";
 import { CollapsedSectionsProvider } from "@/components/layout/CollapsedSections";
@@ -20,7 +21,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatNumber, formatRating, pluralize } from "@/lib/format";
+import { formatNumberInLocale, formatRatingInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { grade } from "@/lib/grade";
 import { offersMarkets } from "@/lib/market";
 import { marketRatingRows, ratingTotal } from "@/lib/ratings-by-market";
@@ -36,29 +38,28 @@ function RatingsTable({
   markets: readonly ListingMarket[];
   selected: string | undefined;
 }) {
+  const t = useTranslations("overview");
+  const locale = useAppLocale();
   const rows = marketRatingRows(markets);
   const total = ratingTotal(rows);
   return (
     <Table
       density="compact"
-      scrollLabel="Market ratings table"
+      scrollLabel={t("ratingsByMarket.tableLabel")}
       scrollFocus="overflow"
     >
-      <TableCaption>
-        Rating and number of ratings on the newest listing captured in each
-        market
-      </TableCaption>
+      <TableCaption>{t("ratingsByMarket.caption")}</TableCaption>
       <TableHeader>
         <TableRow>
-          <TableHead scope="col">Market</TableHead>
+          <TableHead scope="col">{t("ratingsByMarket.market")}</TableHead>
           <TableHead scope="col" className="text-right">
-            Average
+            {t("ratingsByMarket.average")}
           </TableHead>
           <TableHead scope="col" className="text-right">
-            Ratings
+            {t("ratingsByMarket.ratings")}
           </TableHead>
           <TableHead scope="col" className="text-right max-sm:hidden">
-            Captured
+            {t("ratingsByMarket.captured")}
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -74,19 +75,19 @@ function RatingsTable({
       {total ? (
         <TableFooter>
           <TableRow>
-            <TableCell>All listed markets</TableCell>
+            <TableCell>{t("ratingsByMarket.allMarkets")}</TableCell>
             <TableCell className="text-right">
               <GradedNumber
-                value={formatRating(total.average)}
+                value={formatRatingInLocale(total.average, locale)}
                 grade={grade("rating", total.average)}
-                label="Rating across the listed markets"
+                label={t("ratingsByMarket.averageAria")}
               />
             </TableCell>
             <TableCell className="numeric text-right">
-              {formatNumber(total.count)}
+              {formatNumberInLocale(total.count, locale)}
             </TableCell>
             <TableCell className="text-right text-muted-foreground max-sm:hidden">
-              {pluralize(total.markets, "market")}
+              {t("ratingsByMarket.marketCount", { count: total.markets })}
             </TableCell>
           </TableRow>
         </TableFooter>
@@ -96,16 +97,17 @@ function RatingsTable({
 }
 
 function SingleMarket({ id, canTrack }: { id: string; canTrack: boolean }) {
+  const t = useTranslations("overview");
   return (
     <EmptyState
       className="py-8"
-      title="Only one market so far"
-      body="The App Store keeps a rating for each storefront. Track a keyword in another market and the daily run captures the listing there, so its rating appears next to this one."
+      title={t("ratingsByMarket.onlyOneTitle")}
+      body={t("ratingsByMarket.onlyOneBody")}
       action={
         canTrack ? (
           <Button asChild variant="outline">
             <Link href={`/apps/${id}/keywords`}>
-              Track keywords in another market
+              {t("ratingsByMarket.trackAnother")}
             </Link>
           </Button>
         ) : undefined
@@ -138,11 +140,12 @@ export function RatingsByMarketCard({
   canTrack: boolean;
   collapsed: readonly string[];
 }) {
+  const t = useTranslations("overview");
   return (
     <CollapsedSectionsProvider initial={collapsed} known={KNOWN_SECTIONS}>
       <CollapsibleCard
         section={OVERVIEW_SECTION.ratingsByMarket}
-        title="Ratings by market"
+        title={t("ratingsByMarket.title")}
         actions={<RatingsByMarketHelp />}
       >
         <Suspense fallback={<RatingsByMarketSkeleton />}>

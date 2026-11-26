@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   useMutation,
   useQueryClient,
@@ -29,10 +30,7 @@ import {
 import { AddEmailAlertDialog } from "./AddEmailAlertDialog";
 import type { AlertSubscriptionChange } from "./alert-event-copy";
 import { AlertChannelRow } from "./alert-channel/AlertChannelRow";
-import {
-  ESSENTIAL_ALERTS_EMPTY,
-  essentialNeedCopy,
-} from "./essential-alerts-copy";
+import { essentialNeed as essentialNeedDescriptor } from "./essential-alerts-copy";
 import { EssentialAlertsNotice } from "./essential-alerts-notice";
 import { PanelBody } from "./SettingsPanel";
 import { useSharedFlight, useSingleFlight } from "@/lib/single-flight";
@@ -47,12 +45,13 @@ const SMTP_VARS = [
 ];
 
 function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
+  const t = useTranslations("notifications");
   const queryClient = useQueryClient();
 
   const toggle = useMutation({
     mutationFn: (active: boolean) => updateEmailAlert(alert.id, { active }),
     onSuccess: () => invalidateEmailAlertMutation(queryClient),
-    onError: () => toast.error("Could not update email alert"),
+    onError: () => toast.error(t("email.updateError")),
   });
   const toggleOnce = useSingleFlight(toggle);
 
@@ -62,9 +61,9 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
     onSuccess: (saved) => {
       seedEmailAlert(queryClient, saved);
       invalidateEmailAlertMutation(queryClient);
-      toast.success("Email alert rules saved");
+      toast.success(t("email.rulesSaved"));
     },
-    onError: () => toast.error("Could not save the email alert events"),
+    onError: () => toast.error(t("email.saveRulesError")),
   });
   const saveEvents = useSharedFlight(editEvents.mutateAsync);
 
@@ -72,27 +71,25 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
     mutationFn: () => testEmailAlert(alert.id),
     onSuccess: (result) => {
       if (result.delivered) {
-        toast.success("Test email sent");
+        toast.success(t("email.testSent"));
       } else {
-        toast.error("Could not send the test email");
+        toast.error(t("email.testFailed"));
       }
     },
-    onError: () => toast.error("Could not send the test email"),
+    onError: () => toast.error(t("email.testFailed")),
   });
 
   const resend = useMutation({
     mutationFn: () => resendEmailAlertConfirmation(alert.id),
     onSuccess: () =>
       toast.success(
-        `Confirmation email sent to ${alert.email}`,
+        t("email.confirmationSent", { email: alert.email }),
         recipientToast(alert),
       ),
     onSettled: () => invalidateEmailAlertMutation(queryClient),
     onError: (err) =>
       toast.error(
-        err instanceof ApiError
-          ? err.envelope.message
-          : "Could not send the confirmation email",
+        err instanceof ApiError ? err.envelope.message : t("email.resendError"),
         recipientToast(alert),
       ),
   });
@@ -104,9 +101,9 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
     mutationFn: () => deleteEmailAlert(alert.id),
     onSuccess: () => {
       invalidateEmailAlertMutation(queryClient);
-      toast.success("Email alert removed");
+      toast.success(t("email.removed"));
     },
-    onError: () => toast.error("Could not remove email alert"),
+    onError: () => toast.error(t("email.removeError")),
   });
   const removeOnce = useSharedFlight(remove.mutateAsync);
 
@@ -133,8 +130,8 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
       active={alert.active}
       activePending={toggle.isPending}
       onActiveChange={toggleOnce}
-      confirmTitle="Delete this email alert?"
-      confirmDescription={`AsoBeast will stop emailing ${alert.email}. This cannot be undone.`}
+      confirmTitle={t("email.deleteTitle")}
+      confirmDescription={t("email.deleteDescription", { email: alert.email })}
       testPending={test.isPending}
       onTest={testOnce}
       deletePending={remove.isPending}
@@ -146,16 +143,23 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
 }
 
 function SetupHint({ need }: { need: EssentialAlertsNeed | null | undefined }) {
+  const t = useTranslations("notifications");
   return (
     <PanelBody className="text-body text-muted-foreground">
-      <p className="font-medium text-foreground">Email alerts are disabled.</p>
-      <p>Set the SMTP environment variables on the API to enable them:</p>
+      <p className="font-medium text-foreground">{t("email.disabled")}</p>
+      <p>{t("email.setupIntro")}</p>
       <p translate="no" className="font-mono text-caption text-foreground">
         {SMTP_VARS.join(" ")}
       </p>
       <p>
-        <code className="font-mono text-caption">SMTP_HOST</code> and{" "}
-        <code className="font-mono text-caption">SMTP_FROM</code> are required.
+        {t.rich("email.required", {
+          host: (chunks) => (
+            <code className="font-mono text-caption">{chunks}</code>
+          ),
+          from: (chunks) => (
+            <code className="font-mono text-caption">{chunks}</code>
+          ),
+        })}
       </p>
       <EssentialAlertsNotice need={need} />
     </PanelBody>
@@ -163,6 +167,7 @@ function SetupHint({ need }: { need: EssentialAlertsNeed | null | undefined }) {
 }
 
 export function EmailAlertsCard() {
+  const t = useTranslations("notifications");
   const { data: config } = useSuspenseQuery(alertsConfigOptions);
   const { data } = useSuspenseQuery(emailAlertsOptions);
   const essentialNeed =
@@ -172,10 +177,10 @@ export function EmailAlertsCard() {
 
   return (
     <AlertChannelCard
-      title="Email"
+      title={t("email.title")}
       action={config.emailEnabled ? <AddEmailAlertDialog /> : null}
     >
-      {config.emailEnabled && essentialNeedCopy(essentialNeed) ? (
+      {config.emailEnabled && essentialNeedDescriptor(essentialNeed) ? (
         <PanelBody className="border-b border-border-subtle">
           <EssentialAlertsNotice need={essentialNeed} />
         </PanelBody>
@@ -184,12 +189,10 @@ export function EmailAlertsCard() {
         <SetupHint need={essentialNeed} />
       ) : data.length === 0 ? (
         <AlertChannelEmpty>
-          {essentialNeed === null
-            ? ESSENTIAL_ALERTS_EMPTY
-            : "No email alerts yet. Add a recipient to receive metadata and rank alerts by email."}
+          {essentialNeed === null ? t("essential.empty") : t("email.empty")}
         </AlertChannelEmpty>
       ) : (
-        <AlertChannelList label="Configured email alerts and their subscribed events.">
+        <AlertChannelList label={t("email.listLabel")}>
           {data.map((alert) => (
             <EmailAlertRow key={alert.id} alert={alert} />
           ))}

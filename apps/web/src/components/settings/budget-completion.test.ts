@@ -1,9 +1,19 @@
+import type { BudgetCompletion } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
+import { translationContext } from "@/test/translation-context";
 import { budgetCompletionSentence } from "./budget-completion";
+
+const context = translationContext("en", "settings");
+const zh = translationContext("zh-CN", "settings");
+const budgetSentence = (
+  completion: BudgetCompletion,
+  total: number,
+  selected = context,
+) => budgetCompletionSentence(completion, total, selected);
 
 describe("budgetCompletionSentence", () => {
   it("names the next run, not today's, once today's run has started", () => {
-    const sentence = budgetCompletionSentence(
+    const sentence = budgetSentence(
       {
         startsAt: "2026-10-05T03:00:00.000Z",
         completesAt: "2026-10-05T03:01:00.000Z",
@@ -20,7 +30,7 @@ describe("budgetCompletionSentence", () => {
 
   it("reads the same before today's run, because the projection is of the next run", () => {
     expect(
-      budgetCompletionSentence(
+      budgetSentence(
         {
           startsAt: "2026-10-04T03:00:00.000Z",
           completesAt: "2026-10-04T15:00:00.000Z",
@@ -35,7 +45,7 @@ describe("budgetCompletionSentence", () => {
 
   it("says when a run that starts late finishes after midnight", () => {
     expect(
-      budgetCompletionSentence(
+      budgetSentence(
         {
           startsAt: "2026-10-04T22:00:00.000Z",
           completesAt: "2026-10-05T04:00:00.000Z",
@@ -50,7 +60,7 @@ describe("budgetCompletionSentence", () => {
 
   it("says one hour in the singular", () => {
     expect(
-      budgetCompletionSentence(
+      budgetSentence(
         {
           startsAt: "2026-10-05T03:00:00.000Z",
           completesAt: "2026-10-05T04:00:00.000Z",
@@ -63,7 +73,7 @@ describe("budgetCompletionSentence", () => {
 
   it("gives the start alone when the capacity cannot finish the work", () => {
     expect(
-      budgetCompletionSentence(
+      budgetSentence(
         {
           startsAt: "2026-10-05T03:00:00.000Z",
           completesAt: null,
@@ -76,7 +86,7 @@ describe("budgetCompletionSentence", () => {
 
   it("says there is nothing to collect when the run has no work", () => {
     expect(
-      budgetCompletionSentence(
+      budgetSentence(
         {
           startsAt: "2026-10-05T03:00:00.000Z",
           completesAt: "2026-10-05T03:00:00.000Z",
@@ -91,7 +101,7 @@ describe("budgetCompletionSentence", () => {
 
   it("does not call a short run empty when its hours round to zero", () => {
     expect(
-      budgetCompletionSentence(
+      budgetSentence(
         {
           startsAt: "2026-10-05T03:00:00.000Z",
           completesAt: "2026-10-05T03:00:00.000Z",
@@ -105,7 +115,7 @@ describe("budgetCompletionSentence", () => {
   });
 
   it("says a run of a few seconds finishes within a minute instead of naming the start twice", () => {
-    const sentence = budgetCompletionSentence(
+    const sentence = budgetSentence(
       {
         startsAt: "2026-10-06T03:00:00.000Z",
         completesAt: "2026-10-06T03:00:36.000Z",
@@ -120,7 +130,7 @@ describe("budgetCompletionSentence", () => {
   });
 
   it("names the finish once a run takes a minute or more", () => {
-    const sentence = budgetCompletionSentence(
+    const sentence = budgetSentence(
       {
         startsAt: "2026-10-06T03:00:00.000Z",
         completesAt: "2026-10-06T03:01:12.000Z",
@@ -135,7 +145,7 @@ describe("budgetCompletionSentence", () => {
 
   it("says nothing for a schedule that is not once a day", () => {
     expect(
-      budgetCompletionSentence(
+      budgetSentence(
         {
           startsAt: null,
           completesAt: null,
@@ -144,5 +154,39 @@ describe("budgetCompletionSentence", () => {
         0,
       ),
     ).toBeNull();
+  });
+});
+
+describe("localized budget completion", () => {
+  it("localizes the schedule and hour count in Chinese", () => {
+    expect(
+      budgetSentence(
+        {
+          startsAt: "2026-10-05T03:00:00.000Z",
+          completesAt: "2026-10-05T04:00:00.000Z",
+          hours: 1,
+        },
+        900,
+        zh,
+      ),
+    ).toBe(
+      "下一次运行将于 2026年10月5日 03:00 UTC 开始，预计约 2026年10月5日 04:00 UTC 完成，采集约需 1 小时。",
+    );
+  });
+
+  it("localizes an empty run without naming a finish in Chinese", () => {
+    expect(
+      budgetSentence(
+        {
+          startsAt: "2026-10-05T03:00:00.000Z",
+          completesAt: "2026-10-05T03:00:00.000Z",
+          hours: 0,
+        },
+        0,
+        zh,
+      ),
+    ).toBe(
+      "下一次运行将于 2026年10月5日 03:00 UTC 开始，尚未有需要采集的内容。",
+    );
   });
 });

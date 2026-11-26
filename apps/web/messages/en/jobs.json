@@ -1,0 +1,45 @@
+{
+  "runDaily": {
+    "action": "Run daily",
+    "failed": "Run daily failed",
+    "nothingTitle": "Nothing new to queue",
+    "nothingBody": "Today's checks for this app are already queued, running or done.",
+    "queued": "Queued · {message}",
+    "rankChecks": "rank checks for {count, plural, one {# keyword} other {# keywords}}",
+    "jobs": "{count, plural, one {# job} other {# jobs}}",
+    "follow": "Follow the run in the header; tables update as positions land."
+  },
+  "progress": {
+    "count": "{ready, number} of {total, number}",
+    "running": "{progress}",
+    "complete": "Run complete",
+    "delayed": "Run delayed",
+    "title": "Today's run",
+    "labelRunning": "Today's run: {progress} checks done",
+    "labelComplete": "Today's run complete",
+    "labelDelayed": "Today's run delayed: {progress} checks done",
+    "started": "Started {date}.",
+    "queuesMissing": "Run daily queues what is still missing.",
+    "nothing": "Nothing to collect.",
+    "states": {
+      "done": "Done",
+      "collecting": "Collecting",
+      "ready": "Ready",
+      "waiting": "Waiting"
+    },
+    "stages": {
+      "listings": {
+        "label": "Listings captured",
+        "detail": "Home and market listings of the app and its competitors."
+      },
+      "keywords": {
+        "label": "Positions checked",
+        "detail": "Positions of the active keywords."
+      },
+      "categories": {
+        "label": "Charts read",
+        "detail": "Category charts the app sits in."
+      }
+    }
+  }
+}

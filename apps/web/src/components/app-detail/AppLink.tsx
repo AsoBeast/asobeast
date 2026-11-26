@@ -8,6 +8,7 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query";
 import { Link2, Link2Off, Loader2, MoreVertical } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import type { AppDetail, AppGroupMember, Store } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
@@ -66,15 +67,18 @@ function LinkedControl({
   counterpart: AppGroupMember;
 }) {
   const queryClient = useQueryClient();
+  const t = useTranslations("appDetail");
+  const tc = useTranslations("common");
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const unlink = useMutation({
     mutationFn: () => unlinkApp(appId),
     onSuccess: () => {
       invalidateLinkMutation(queryClient, appId, counterpart.id);
-      toast.success("Unlinked store listing");
+      toast.success(t("link.unlinked"));
     },
-    onError: (error) => toast.error(apiErrorMessage(error, "Unlink failed")),
+    onError: (error) =>
+      toast.error(apiErrorMessage(error, t("link.unlinkFailed"))),
   });
   const unlinkOnce = useSingleFlight(unlink);
 
@@ -88,7 +92,7 @@ function LinkedControl({
       </Button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" aria-label="Linked app options">
+          <Button variant="ghost" size="icon" aria-label={t("link.options")}>
             <MoreVertical />
           </Button>
         </DropdownMenuTrigger>
@@ -100,24 +104,25 @@ function LinkedControl({
             }}
           >
             <Link2Off />
-            Unlink
+            {t("link.unlink")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Unlink store listing?</AlertDialogTitle>
+            <AlertDialogTitle>{t("link.unlinkTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {counterpart.name ?? "The counterpart app"} will no longer appear
-              as this app’s linked listing. Keywords and rankings are
-              unaffected.
+              {t.rich("link.unlinkDescription", {
+                app: (chunks) => <span translate="no">{chunks}</span>,
+                name: counterpart.name ?? t("link.counterpart"),
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{tc("cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={() => unlinkOnce()}>
-              Unlink
+              {t("link.unlink")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -129,21 +134,21 @@ function LinkedControl({
 function LinkTrigger({ detail }: { detail: AppDetail }) {
   const [open, setOpen] = useState(false);
   const otherStore = OTHER_STORE[detail.store];
+  const t = useTranslations("appDetail");
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm" className="text-muted-foreground">
           <Link2 />
-          Link store listing
+          {t("link.linkListing")}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Link store listing</DialogTitle>
+          <DialogTitle>{t("link.linkListing")}</DialogTitle>
           <DialogDescription>
-            Pair this app with its {storeLabel(otherStore)} listing to switch
-            between them from the header.
+            {t("link.linkDescription", { store: storeLabel(otherStore) })}
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
@@ -151,7 +156,7 @@ function LinkTrigger({ detail }: { detail: AppDetail }) {
             fallback={
               <div className="flex items-center gap-2 py-6 text-dense text-muted-foreground">
                 <Loader2 className="animate-spin" />
-                Loading apps…
+                <span>{t("link.loadingApps")}</span>
               </div>
             }
           >
@@ -171,6 +176,7 @@ function LinkCandidates({
   onLinked: () => void;
 }) {
   const queryClient = useQueryClient();
+  const t = useTranslations("appDetail");
   const otherStore = OTHER_STORE[detail.store];
   const { data: apps } = useSuspenseQuery(appsOptions);
   const candidates = apps.filter(
@@ -181,17 +187,18 @@ function LinkCandidates({
     mutationFn: (appId: string) => linkApp(detail.id, appId),
     onSuccess: (_group, appId) => {
       invalidateLinkMutation(queryClient, detail.id, appId);
-      toast.success("Linked store listing");
+      toast.success(t("link.linked"));
       onLinked();
     },
-    onError: (error) => toast.error(apiErrorMessage(error, "Link failed")),
+    onError: (error) =>
+      toast.error(apiErrorMessage(error, t("link.linkFailed"))),
   });
   const linkOnce = useSingleFlight(mutation);
 
   if (candidates.length === 0) {
     return (
       <p className="text-dense text-muted-foreground">
-        No unlinked {storeLabel(otherStore)} apps to link. Import one first.
+        {t("link.noCandidates", { store: storeLabel(otherStore) })}
       </p>
     );
   }
@@ -208,8 +215,8 @@ function LinkCandidates({
           >
             <AppIcon src={candidate.iconUrl} size={36} />
             <span className="flex flex-col">
-              <span className="text-dense font-medium">
-                {candidate.name ?? "Untitled app"}
+              <span translate="no" className="text-dense font-medium">
+                {candidate.name ?? t("untitled")}
               </span>
               <span className="text-caption text-muted-foreground">
                 {candidate.country.toUpperCase()}

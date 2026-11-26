@@ -25,6 +25,7 @@ const DOCUMENTATION_URL = "https://docs.asobeast.com";
 
 export function AppSidebar() {
   const t = useTranslations("navigation");
+  const shell = useTranslations("shell");
   const version = appVersionLabel();
   const latest = latestShown(RELEASES, appVersion());
 
@@ -65,6 +66,7 @@ export function AppSidebar() {
               <SidebarMenuButton asChild tooltip={t("documentation")}>
                 <a
                   href={DOCUMENTATION_URL}
+                  data-nav="documentation"
                   rel="noreferrer noopener"
                   target="_blank"
                 >
@@ -75,7 +77,7 @@ export function AppSidebar() {
             </SidebarMenuItem>
           </SidebarMenu>
           <div className="px-2 pb-1 text-caption text-faint-foreground group-data-[collapsible=icon]:hidden">
-            <p>{t("tagline")}</p>
+            <p>{shell("tagline")}</p>
             <SidebarLegalLinks />
             {version ? (
               <p>

@@ -1,10 +1,12 @@
 "use client";
 
-import { Suspense, useDeferredValue } from "react";
+import { Suspense, useDeferredValue, type ReactNode } from "react";
 import Link from "next/link";
 import type { AppDetail, CategoryRankSeriesItem } from "@asobeast/shared";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
+import { useTranslations } from "next-intl";
+import type { DefaultLegendContentProps } from "recharts";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import {
   type ChartConfig,
@@ -12,7 +14,6 @@ import {
   ChartLegend,
   ChartTooltip,
 } from "@/components/ui/chart";
-import { SeriesLegend } from "@/components/charts/SeriesLegend";
 import { SeriesTooltip } from "@/components/charts/SeriesTooltip";
 import {
   Card,
@@ -23,7 +24,10 @@ import {
 } from "@/components/ui/card";
 import { PANEL_ACTION, PANEL_HEADER } from "@/components/layout/panel-classes";
 import { RangePicker } from "@/components/rankings/RangePicker";
-import { formatCategoryPosition, formatDayMonth } from "@/lib/format";
+import type { MessageTranslator } from "@/i18n/translator";
+import { formatCategoryPosition, formatDayMonthInLocale } from "@/lib/format";
+import type { Locale } from "@/lib/locale";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { appDetailOptions, categoryRanksOptions } from "@/lib/queries";
 import { presetToRange, RANGE_PRESETS, type RangePreset } from "@/lib/ranges";
 import { rangeParser } from "@/lib/search-params";
@@ -53,7 +57,7 @@ const ticksTo = (depth: number) => Y_TICKS.filter((tick) => tick <= depth);
 interface CategoryChartData {
   rows: Array<Record<string, string | number | null>>;
   config: ChartConfig;
-  seriesLabels: Record<string, string>;
+  seriesLabels: Record<string, ReactNode>;
   keys: string[];
   totalSeries: number;
   depth: number;
@@ -61,6 +65,62 @@ interface CategoryChartData {
 
 function seriesKey(item: CategoryRankSeriesItem): string {
   return `${item.collection}_${item.genre}`;
+}
+
+function CategorySeriesLabel({ item }: { item: CategoryRankSeriesItem }) {
+  const t = useTranslations("overview");
+  return t.rich("charts.seriesLabel", {
+    genre: item.genreName,
+    collection: t(`charts.collections.${item.collection}`),
+    name: (chunks) => <span translate="no">{chunks}</span>,
+  });
+}
+
+function CategorySeriesLegend({
+  payload,
+  labels,
+  order,
+}: DefaultLegendContentProps & {
+  labels: Record<string, ReactNode>;
+  order: string[];
+}) {
+  const t = useTranslations("ui");
+  if (!payload?.length) return null;
+
+  return (
+    <ul
+      aria-label={t("chartedSeries")}
+      className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 pt-3"
+    >
+      {payload
+        .filter((item) => item.type !== "none")
+        .map((item) => {
+          const key = String(item.dataKey ?? "");
+          return (
+            <li key={key} className="flex items-center gap-1.5">
+              <svg
+                aria-hidden
+                width="18"
+                height="8"
+                viewBox="0 0 18 8"
+                className="shrink-0"
+              >
+                <line
+                  x1="0"
+                  y1="4"
+                  x2="18"
+                  y2="4"
+                  stroke={item.color}
+                  strokeWidth="2"
+                  strokeDasharray={seriesDash(order.indexOf(key))}
+                />
+              </svg>
+              {labels[key] ?? key}
+            </li>
+          );
+        })}
+    </ul>
+  );
 }
 
 function buildCategoryChart(all: CategoryRankSeriesItem[]): CategoryChartData {
@@ -72,9 +132,9 @@ function buildCategoryChart(all: CategoryRankSeriesItem[]): CategoryChartData {
   const sortedDates = [...dates].sort();
 
   const config: ChartConfig = {};
-  const seriesLabels: Record<string, string> = {};
+  const seriesLabels: Record<string, ReactNode> = {};
   series.forEach((item, index) => {
-    const label = `${item.genreName} · ${item.collection}`;
+    const label = <CategorySeriesLabel item={item} />;
     config[seriesKey(item)] = { label, color: seriesColor(index) };
     seriesLabels[seriesKey(item)] = label;
   });
@@ -102,10 +162,12 @@ function CategoryTooltip({
   active,
   label,
   data,
+  locale,
 }: {
   active?: boolean;
   label?: string | number;
   data: CategoryChartData;
+  locale: Locale;
 }) {
   if (!active || label === undefined) return null;
   const row = data.rows.find((candidate) => candidate.date === label);
@@ -124,7 +186,12 @@ function CategoryTooltip({
     };
   });
 
-  return <SeriesTooltip title={formatDayMonth(String(label))} items={items} />;
+  return (
+    <SeriesTooltip
+      title={formatDayMonthInLocale(String(label), locale)}
+      items={items}
+    />
+  );
 }
 
 function HeaderStat({
@@ -134,36 +201,56 @@ function HeaderStat({
   series: CategoryRankSeriesItem[];
   detail: AppDetail;
 }) {
+  const t = useTranslations("overview");
   const headline = headlineSeries(series, detail.latestSnapshot?.price ?? null);
   if (!headline) return null;
   const href = headlineChartHref(headline, detail);
+  const absent = headline.current === null ? notInChartLabel(headline) : null;
 
   return (
     <p className="text-body">
       <Link href={href} className="link-underline">
-        {headline.current === null ? (
-          <span className="text-muted-foreground">
-            {notInChartLabel(headline)}
-          </span>
-        ) : (
+        {absent === null ? (
           <>
             <span className="numeric text-heading font-semibold">
               {`#${headline.current}`}
             </span>{" "}
             <span className="text-muted-foreground">
-              {`in ${headline.genreName}`}
+              {t.rich("charts.inGenre", {
+                genre: headline.genreName,
+                name: (chunks) => <span translate="no">{chunks}</span>,
+              })}
             </span>
           </>
+        ) : (
+          <span className="text-muted-foreground">
+            {t.rich(absent.key, {
+              ...absent.values,
+              name: (chunks) => <span translate="no">{chunks}</span>,
+            })}
+          </span>
         )}{" "}
         <span className="text-muted-foreground">
-          {`· ${headline.collection} chart`}
+          {t("charts.collectionChart", {
+            collection: t(`charts.collections.${headline.collection}`),
+          })}
         </span>
       </Link>
     </p>
   );
 }
 
-function CategoryRankBody({ id, range }: { id: string; range: RangePreset }) {
+function CategoryRankBody({
+  id,
+  range,
+  translator,
+  locale,
+}: {
+  id: string;
+  range: RangePreset;
+  translator: MessageTranslator;
+  locale: Locale;
+}) {
   const { data } = useSuspenseQuery(
     categoryRanksOptions(id, presetToRange(range)),
   );
@@ -173,8 +260,8 @@ function CategoryRankBody({ id, range }: { id: string; range: RangePreset }) {
     return (
       <ChartNotice
         height={CHART_HEIGHT.tall}
-        title="No category captures yet"
-        body="Chart positions are captured by the daily pipeline."
+        title={translator("charts.noCategoryTitle")}
+        body={translator("charts.noCategoryBody")}
       />
     );
   }
@@ -188,7 +275,7 @@ function CategoryRankBody({ id, range }: { id: string; range: RangePreset }) {
         config={chart.config}
         className={`${CHART_HEIGHT.tall} w-full`}
         role="region"
-        aria-label="Category chart position over time"
+        aria-label={translator("charts.categoryPositionOverTime")}
       >
         <LineChart accessibilityLayer data={chart.rows} margin={CHART_MARGIN}>
           <CartesianGrid {...GRID_PROPS} />
@@ -198,10 +285,15 @@ function CategoryRankBody({ id, range }: { id: string; range: RangePreset }) {
             domain={[1, chart.depth]}
             ticks={ticksTo(chart.depth)}
           />
-          <ChartTooltip content={<CategoryTooltip data={chart} />} />
+          <ChartTooltip
+            content={<CategoryTooltip data={chart} locale={locale} />}
+          />
           <ChartLegend
             content={
-              <SeriesLegend labels={chart.seriesLabels} order={chart.keys} />
+              <CategorySeriesLegend
+                labels={chart.seriesLabels}
+                order={chart.keys}
+              />
             }
           />
           {chart.keys.map((key, index) => (
@@ -222,13 +314,15 @@ function CategoryRankBody({ id, range }: { id: string; range: RangePreset }) {
 
 export function CategoryRankCard({ id }: { id: string }) {
   const [range, setRange] = useQueryState("categoryRange", rangeParser);
+  const t = useTranslations("overview");
+  const locale = useAppLocale();
   const shownRange = useDeferredValue(range);
 
   return (
     <Card className="h-full">
       <CardHeader className={PANEL_HEADER}>
         <CardTitle asChild>
-          <h2>Category ranks · Home market</h2>
+          <h2>{t("charts.categoryTitle")}</h2>
         </CardTitle>
         <CardAction className={PANEL_ACTION}>
           <RangePicker
@@ -240,7 +334,12 @@ export function CategoryRankCard({ id }: { id: string }) {
       </CardHeader>
       <CardContent>
         <Suspense fallback={<ChartSkeleton height={CHART_HEIGHT.tall} />}>
-          <CategoryRankBody id={id} range={shownRange} />
+          <CategoryRankBody
+            id={id}
+            range={shownRange}
+            translator={t}
+            locale={locale}
+          />
         </Suspense>
       </CardContent>
     </Card>

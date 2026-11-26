@@ -1,9 +1,13 @@
 import type { DiscoveryBudget } from "@asobeast/shared";
-import { pluralize } from "@/lib/format";
+import type { MessageTranslator } from "@/i18n/translator";
 
 export function discoveryNote(
   discovery: DiscoveryBudget | undefined,
+  translator: MessageTranslator,
 ): string | null {
   if (!discovery || discovery.checksPerWeek === 0) return null;
-  return `Keyword discovery adds up to ${pluralize(discovery.checksPerWeek, "search", "searches")} a week, about ${pluralize(discovery.requestsPerWeek, "request")}, outside this daily total.`;
+  return translator("capacity.discovery", {
+    searches: discovery.checksPerWeek,
+    requests: discovery.requestsPerWeek,
+  });
 }

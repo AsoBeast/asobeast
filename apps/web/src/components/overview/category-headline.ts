@@ -18,8 +18,16 @@ export function chartDepthOf(series: CategoryRankSeriesItem[]): number {
     : Math.max(...series.map(depthOf));
 }
 
-export function notInChartLabel(item: CategoryRankSeriesItem): string {
-  return `Not in top ${depthOf(item)} in ${item.genreName}`;
+export interface NotInChartCopy {
+  key: "charts.notInChart";
+  values: { depth: number; genre: string };
+}
+
+export function notInChartLabel(item: CategoryRankSeriesItem): NotInChartCopy {
+  return {
+    key: "charts.notInChart",
+    values: { depth: depthOf(item), genre: item.genreName },
+  };
 }
 
 const lastCapturedOn = (item: CategoryRankSeriesItem): string =>

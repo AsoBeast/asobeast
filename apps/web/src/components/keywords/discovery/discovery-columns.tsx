@@ -6,6 +6,7 @@ import { SortableHeader } from "@/components/data-table/SortableHeader";
 import { Checkbox } from "@/components/ui/checkbox";
 import { GradedNumber } from "@/components/ui/graded";
 import { InfoTip } from "@/components/ui/info-tip";
+import type { MessageTranslator } from "@/i18n/translator";
 import { grade, type GradeMetric } from "@/lib/grade";
 import { discoverySourceLabel } from "@/lib/keyword-discoveries";
 import { nullsLast } from "@/lib/table/sorting";
@@ -23,8 +24,6 @@ import {
 
 const DISCOVERY_GUIDE =
   "https://docs.asobeast.com/guides/keyword-discovery#how-the-rank-is-found";
-
-export const SELECT_ALL_DISCOVERIES = "Select all discovered keywords";
 
 const columnHelper = createColumnHelper<
   KeywordTableFeatures,
@@ -53,14 +52,18 @@ function ScoreValue({
   label,
   metric,
   emphasize,
+  t,
 }: {
   value: number | null;
   label: string;
   metric: GradeMetric;
   emphasize?: boolean;
+  t: MessageTranslator;
 }) {
   return value === null ? (
-    <Missing label={`No ${label.toLowerCase()} score`} />
+    <Missing
+      label={t("discovery.columns.noScore", { label: label.toLowerCase() })}
+    />
   ) : (
     <ScoreReadout
       value={value}
@@ -71,28 +74,40 @@ function ScoreValue({
   );
 }
 
-function NarrowOpportunity({ value }: { value: number | null }) {
+function NarrowOpportunity({
+  value,
+  t,
+}: {
+  value: number | null;
+  t: MessageTranslator;
+}) {
   if (value === null) return null;
   return (
     <span className="flex basis-full items-center gap-1.5 text-caption sm:hidden">
       <span aria-hidden className="text-muted-foreground">
-        Opportunity
+        {t("discovery.columns.opportunity")}
       </span>
       <GradedNumber
         value={`${value}`}
         grade={grade("opportunity", value)}
-        label="Opportunity"
+        label={t("discovery.columns.opportunity")}
       />
     </span>
   );
 }
 
-function PositionValue({ item }: { item: KeywordDiscoveryItem }) {
+function PositionValue({
+  item,
+  t,
+}: {
+  item: KeywordDiscoveryItem;
+  t: MessageTranslator;
+}) {
   const text = rankText(item);
   if (text === null) {
     return (
-      <span title="Not checked yet. The next weekly run or a refresh checks it.">
-        <Missing label="Not checked yet" />
+      <span title={t("discovery.columns.positionSummary")}>
+        <Missing label={t("discovery.columns.notChecked")} />
       </span>
     );
   }
@@ -100,7 +115,7 @@ function PositionValue({ item }: { item: KeywordDiscoveryItem }) {
     return (
       <span className="numeric text-muted-foreground">
         <span aria-hidden>{text}</span>
-        <span className="sr-only">{rankLabel(item)}</span>
+        <span className="sr-only">{rankLabel(item, t)}</span>
       </span>
     );
   }
@@ -109,17 +124,25 @@ function PositionValue({ item }: { item: KeywordDiscoveryItem }) {
     <GradedNumber
       value={text}
       grade={tier}
-      label="Position"
+      label={rankLabel(item, t)}
       marker={false}
       className={positionChipClass(tier)}
     />
   );
 }
 
-function MetricTip({ label, summary }: { label: string; summary: string }) {
+function MetricTip({
+  label,
+  summary,
+  t,
+}: {
+  label: string;
+  summary: string;
+  t: MessageTranslator;
+}) {
   return (
     <InfoTip
-      label={`About ${label.toLowerCase()}`}
+      label={t("discovery.columns.about", { label: label.toLowerCase() })}
       title={label}
       summary={summary}
     >
@@ -129,77 +152,90 @@ function MetricTip({ label, summary }: { label: string; summary: string }) {
         rel="noreferrer"
         className="font-medium text-foreground link-underline"
       >
-        Read about keyword discovery
+        {t("discovery.columns.read")}
       </a>
     </InfoTip>
   );
 }
 
-const selectColumn = columnHelper.display({
-  id: "select",
-  enableHiding: false,
-  header: ({ table }) => (
-    <Checkbox
-      checked={selectAllState(table)}
-      onCheckedChange={(value) => table.toggleAllRowsSelected(!!value)}
-      aria-label={SELECT_ALL_DISCOVERIES}
-    />
-  ),
-  cell: ({ row }) => (
-    <Checkbox
-      data-discovery-select
-      checked={row.getIsSelected()}
-      onCheckedChange={(value) => row.toggleSelected(!!value)}
-      aria-label={`Select ${row.original.text}`}
-    />
-  ),
-});
+const selectColumn = (t: MessageTranslator) =>
+  columnHelper.display({
+    id: "select",
+    enableHiding: false,
+    header: ({ table }) => (
+      <Checkbox
+        checked={selectAllState(table)}
+        onCheckedChange={(value) => table.toggleAllRowsSelected(!!value)}
+        aria-label={t("discovery.columns.selectAll")}
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        data-discovery-select
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        aria-label={t("discovery.columns.select", {
+          keyword: row.original.text,
+        })}
+      />
+    ),
+  });
 
-const keywordColumn = columnHelper.accessor("text", {
-  id: "keyword",
-  sortFn: "text",
-  sortDescFirst: false,
-  header: ({ column }) => <SortableHeader column={column} label="Keyword" />,
-  cell: ({ row }) => (
-    <span className="flex min-w-28 flex-wrap items-center gap-x-2 leading-tight">
-      <span className="font-medium wrap-anywhere">{row.original.text}</span>
-      {row.original.recommended ? (
-        <span className="text-label text-muted-foreground max-sm:hidden">
-          Recommended
-        </span>
-      ) : null}
-      <NarrowOpportunity value={shownScore(row.original.opportunity)} />
-    </span>
-  ),
-});
+const keywordColumn = (t: MessageTranslator) =>
+  columnHelper.accessor("text", {
+    id: "keyword",
+    sortFn: "text",
+    sortDescFirst: false,
+    header: ({ column }) => (
+      <SortableHeader column={column} label={t("discovery.columns.keyword")} />
+    ),
+    cell: ({ row }) => (
+      <span className="flex min-w-28 flex-wrap items-center gap-x-2 leading-tight">
+        <span className="font-medium wrap-anywhere">{row.original.text}</span>
+        {row.original.recommended ? (
+          <span className="text-label text-muted-foreground max-sm:hidden">
+            {t("discovery.columns.recommended")}
+          </span>
+        ) : null}
+        <NarrowOpportunity value={shownScore(row.original.opportunity)} t={t} />
+      </span>
+    ),
+  });
 
-const sourceColumn = (store: Store) =>
-  columnHelper.accessor((row) => discoverySourceLabel(row.source, store), {
+const sourceColumn = (store: Store, t: MessageTranslator) =>
+  columnHelper.accessor((row) => discoverySourceLabel(row.source, store, t), {
     id: "source",
     meta: { wideOnly: true },
     sortFn: "text",
     sortDescFirst: false,
-    header: ({ column }) => <SortableHeader column={column} label="Source" />,
+    header: ({ column }) => (
+      <SortableHeader column={column} label={t("discovery.columns.source")} />
+    ),
     cell: ({ getValue }) => (
       <span className="text-muted-foreground">{getValue()}</span>
     ),
   });
 
-const positionColumn = columnHelper.accessor((row) => nullsLast(row.position), {
-  id: "position",
-  ...SORTABLE,
-  sortDescFirst: false,
-  header: ({ column }) => (
-    <span className="inline-flex items-center gap-1">
-      <SortableHeader column={column} label="Position" />
-      <MetricTip
-        label="Position"
-        summary="Where your app appears in the store search for this phrase. A position up to 50 can come from another search made today or yesterday; a dash means not checked yet."
-      />
-    </span>
-  ),
-  cell: ({ row }) => <PositionValue item={row.original} />,
-});
+const positionColumn = (t: MessageTranslator) =>
+  columnHelper.accessor((row) => nullsLast(row.position), {
+    id: "position",
+    ...SORTABLE,
+    sortDescFirst: false,
+    header: ({ column }) => (
+      <span className="inline-flex items-center gap-1">
+        <SortableHeader
+          column={column}
+          label={t("discovery.columns.position")}
+        />
+        <MetricTip
+          label={t("discovery.columns.position")}
+          summary={t("discovery.columns.positionSummary")}
+          t={t}
+        />
+      </span>
+    ),
+    cell: ({ row }) => <PositionValue item={row.original} t={t} />,
+  });
 
 const scoreColumn = ({
   id,
@@ -208,6 +244,7 @@ const scoreColumn = ({
   value,
   summary,
   emphasize,
+  t,
 }: {
   id: string;
   label: string;
@@ -215,6 +252,7 @@ const scoreColumn = ({
   value: (item: KeywordDiscoveryItem) => number | null;
   summary?: string;
   emphasize?: boolean;
+  t: MessageTranslator;
 }) =>
   columnHelper.accessor((row) => nullsLast(value(row)), {
     id,
@@ -224,7 +262,7 @@ const scoreColumn = ({
     header: ({ column }) => (
       <span className="inline-flex items-center gap-1">
         <SortableHeader column={column} label={label} />
-        {summary ? <MetricTip label={label} summary={summary} /> : null}
+        {summary ? <MetricTip label={label} summary={summary} t={t} /> : null}
       </span>
     ),
     cell: ({ row }) => (
@@ -233,56 +271,62 @@ const scoreColumn = ({
         label={label}
         metric={metric}
         emphasize={emphasize}
+        t={t}
       />
     ),
   });
 
-const scoreColumns = [
+const scoreColumns = (t: MessageTranslator) => [
   scoreColumn({
     id: "opportunity",
-    label: "Opportunity",
+    label: t("discovery.columns.opportunity"),
     metric: "opportunity",
     value: (item) => shownScore(item.opportunity),
-    summary:
-      "Popularity weighed against difficulty. It needs both scores, which a keyword gets once it is tracked.",
+    summary: t("discovery.columns.opportunitySummary"),
     emphasize: true,
+    t,
   }),
   scoreColumn({
     id: "popularity",
-    label: "Popularity",
+    label: t("discovery.columns.popularity"),
     metric: "popularity",
     value: (item) => shownScore(item.volume),
+    t,
   }),
   scoreColumn({
     id: "difficulty",
-    label: "Difficulty",
+    label: t("discovery.columns.difficulty"),
     metric: "difficulty",
     value: shownDifficulty,
+    t,
   }),
   scoreColumn({
     id: "relevance",
-    label: "Relevance",
+    label: t("discovery.columns.relevance"),
     metric: "relevance",
     value: (item) => shownScore(item.relevance),
-    summary:
-      "How relevant the phrase is to your listing, from where it was found and how many of its words your listing holds.",
+    summary: t("discovery.columns.relevanceSummary"),
+    t,
   }),
 ];
 
-const actionsColumn = columnHelper.display({
-  id: "actions",
-  enableHiding: false,
-  meta: { label: "Actions" },
-  header: () => <span className="sr-only">Actions</span>,
-  cell: ({ row }) => <DiscoveryRowActions item={row.original} />,
-});
+const actionsColumn = (t: MessageTranslator) =>
+  columnHelper.display({
+    id: "actions",
+    enableHiding: false,
+    meta: { label: t("discovery.columns.actions") },
+    header: () => (
+      <span className="sr-only">{t("discovery.columns.actions")}</span>
+    ),
+    cell: ({ row }) => <DiscoveryRowActions item={row.original} />,
+  });
 
-export const discoveryColumns = (store: Store) =>
+export const discoveryColumns = (store: Store, t: MessageTranslator) =>
   columnHelper.columns([
-    selectColumn,
-    keywordColumn,
-    sourceColumn(store),
-    positionColumn,
-    ...scoreColumns,
-    actionsColumn,
+    selectColumn(t),
+    keywordColumn(t),
+    sourceColumn(store, t),
+    positionColumn(t),
+    ...scoreColumns(t),
+    actionsColumn(t),
   ]);

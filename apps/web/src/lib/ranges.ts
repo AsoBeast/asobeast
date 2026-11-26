@@ -1,3 +1,7 @@
+import enFormat from "../../messages/en/format.json";
+import { formatMessage } from "@/i18n/format-message";
+import type { MessageTranslator } from "@/i18n/translator";
+
 export const RANGE_PRESETS = ["7d", "30d", "90d"] as const;
 export type RangePreset = (typeof RANGE_PRESETS)[number];
 export const WIDEST_RANGE: RangePreset =
@@ -22,8 +26,14 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 export type DayPreset = `${number}d`;
 
-export function rangeLabel(preset: DayPreset): string {
-  return `Last ${presetDays(preset)} days`;
+export function rangeLabel(
+  preset: DayPreset,
+  translator?: MessageTranslator,
+): string {
+  const count = presetDays(preset);
+  return translator
+    ? translator("range.lastDays", { count })
+    : formatMessage(enFormat.range.lastDays, "en", { count });
 }
 
 export function todayUtc(): string {

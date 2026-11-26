@@ -1,37 +1,51 @@
 import {
   RANK_DROP_THRESHOLD_MAX,
   RANK_DROP_THRESHOLD_MIN,
-  ratingDropLabel,
   type WebhookEvent,
 } from "@asobeast/shared";
+import type { MessageTranslator } from "@/i18n/translator";
 import { ALERT_RULES } from "./alert-rules";
-
-export const RANK_THRESHOLD_ERROR = `Enter a whole number from ${RANK_DROP_THRESHOLD_MIN} to ${RANK_DROP_THRESHOLD_MAX}`;
 
 export interface ParsedThreshold {
   value: number | null;
   error: string | null;
 }
 
-export function parseRankDropThreshold(text: string): ParsedThreshold {
+function parseRankDropValue(text: string): number | null {
   const trimmed = text.trim();
-  if (trimmed === "") return { value: null, error: null };
+  if (trimmed === "") return null;
   const value = Number(trimmed);
   const valid =
     /^\d+$/.test(trimmed) &&
     value >= RANK_DROP_THRESHOLD_MIN &&
     value <= RANK_DROP_THRESHOLD_MAX;
-  return valid
-    ? { value, error: null }
-    : { value: null, error: RANK_THRESHOLD_ERROR };
+  return valid ? value : null;
+}
+
+export function parseRankDropThreshold(
+  text: string,
+  translator: MessageTranslator,
+): ParsedThreshold {
+  const value = parseRankDropValue(text);
+  return {
+    value,
+    error:
+      value === null && text.trim() !== ""
+        ? translator("notifications.rankThreshold", {
+            min: RANK_DROP_THRESHOLD_MIN,
+            max: RANK_DROP_THRESHOLD_MAX,
+          })
+        : null,
+  };
 }
 
 export function rankThresholdError(
   events: readonly WebhookEvent[],
   text: string,
+  translator: MessageTranslator,
 ): string | null {
   return events.includes("rank.dropped")
-    ? parseRankDropThreshold(text).error
+    ? parseRankDropThreshold(text, translator).error
     : null;
 }
 
@@ -40,14 +54,29 @@ export function rankThresholdToSend(
   text: string,
 ): number | undefined {
   if (!events.includes("rank.dropped")) return undefined;
-  return parseRankDropThreshold(text).value ?? undefined;
+  return parseRankDropValue(text) ?? undefined;
 }
 
-export function thresholdBadge(event: WebhookEvent, value: number): string {
-  const { title } = ALERT_RULES[event];
-  return event === "rating.dropped"
-    ? `${title} · ${ratingDropLabel(value)}`
-    : `${title} · ${value}+`;
+export function ratingDropOption(
+  tenths: number,
+  translator: MessageTranslator,
+): string {
+  return translator("ratingDrop.option", { stars: tenths / 10, tenths });
+}
+
+export function thresholdBadge(
+  event: WebhookEvent,
+  value: number,
+  translator: MessageTranslator,
+): string {
+  const title = translator(
+    `rules.events.${ALERT_RULES[event].catalogKey}.title`,
+  );
+  const detail =
+    event === "rating.dropped"
+      ? ratingDropOption(value, translator)
+      : translator("rules.rankThresholdValue", { value });
+  return translator("eventWithDetail", { event: title, detail });
 }
 
 export const rankTextOf = (threshold: number | null): string =>
@@ -59,6 +88,6 @@ export function rankThresholdChange(
   saved: number | null,
 ): { rankDropThreshold?: number | null } {
   if (!events.includes("rank.dropped")) return {};
-  const { value } = parseRankDropThreshold(text);
+  const value = parseRankDropValue(text);
   return value === saved ? {} : { rankDropThreshold: value };
 }

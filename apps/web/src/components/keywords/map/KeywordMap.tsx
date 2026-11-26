@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useId, useMemo, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { useQueryState } from "nuqs";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import {
@@ -17,6 +18,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import type { MessageTranslator } from "@/i18n/translator";
 import { zoneCounts, type KeywordZone } from "@/lib/keyword-zones";
 import { keywordZoneParser } from "@/lib/search-params";
 import { scorePair } from "@/lib/keyword-scores";
@@ -30,33 +32,44 @@ import { MapSurface } from "./MapSurface";
 import { MapZoneLegend, MapZoneTable } from "./MapZoneLegend";
 import { ThresholdsPopover } from "./ThresholdsPopover";
 
-const KEYBOARD_HELP =
-  "Tab moves to the dots. Arrow keys move to the nearest dot, Home and End jump to the highest and lowest opportunity, Enter opens the position history.";
-
-function unplottedCaption(count: number): string {
-  return count === 1
-    ? "1 keyword without both scores is not on the map."
-    : `${count} keywords without both scores are not on the map.`;
+function unplottedCaption(count: number, t: MessageTranslator): string {
+  return t("map.unplotted", { count });
 }
 
-function ShapeKey({ points }: { points: readonly MapPoint[] }) {
+function ShapeKey({
+  points,
+  t,
+}: {
+  points: readonly MapPoint[];
+  t: MessageTranslator;
+}) {
   const items = [
-    { key: "ranked", ranked: true, floor: false, label: "Ranking" },
-    { key: "unranked", ranked: false, floor: false, label: "Not ranking" },
+    {
+      key: "ranked",
+      ranked: true,
+      floor: false,
+      label: t("map.shapes.ranking"),
+    },
+    {
+      key: "unranked",
+      ranked: false,
+      floor: false,
+      label: t("map.shapes.notRanking"),
+    },
     ...(points.some((point) => point.floor)
       ? [
           {
             key: "floor",
             ranked: false,
             floor: true,
-            label: "Popularity at Apple's floor",
+            label: t("map.shapes.floor"),
           },
         ]
       : []),
   ];
   return (
     <ul
-      aria-label="Dot shapes"
+      aria-label={t("map.shapes.aria")}
       className="flex flex-wrap gap-x-4 gap-y-1 text-caption text-muted-foreground"
     >
       {items.map((item) => (
@@ -71,16 +84,18 @@ function ShapeKey({ points }: { points: readonly MapPoint[] }) {
   );
 }
 
-function unscoredBody(count: number): string {
-  return count === 1
-    ? "1 keyword matches these filters, and it does not have both a popularity and a difficulty."
-    : `${count} keywords match these filters, and none has both a popularity and a difficulty.`;
+function unscoredBody(count: number, t: MessageTranslator): string {
+  return t("map.notices.unscored", { count });
 }
 
-function tooFewDetail(narrowed: boolean, plotted: number): string {
+function tooFewDetail(
+  narrowed: boolean,
+  plotted: number,
+  t: MessageTranslator,
+): string {
   return narrowed
-    ? `These filters leave ${plotted}.`
-    : `${plotted} of ${MIN_TREND_POINTS} so far.`;
+    ? t("map.notices.filtered", { count: plotted })
+    : t("map.notices.soFar", { count: plotted, minimum: MIN_TREND_POINTS });
 }
 
 function MapNotice({
@@ -88,15 +103,17 @@ function MapNotice({
   points,
   narrowed,
   onClearFilters,
+  t,
 }: {
   keywords: readonly TrackedKeywordItem[];
   points: readonly MapPoint[];
   narrowed: boolean;
   onClearFilters: () => void;
+  t: MessageTranslator;
 }) {
   const clearButton = (
     <Button variant="outline" size="sm" onClick={onClearFilters}>
-      Clear filters
+      {t("map.notices.clear")}
     </Button>
   );
   const clear = narrowed ? clearButton : undefined;
@@ -104,7 +121,7 @@ function MapNotice({
     return (
       <ChartNotice
         height={CHART_HEIGHT.hero}
-        title="No keywords match these filters"
+        title={t("map.notices.noMatch")}
         action={clearButton}
       />
     );
@@ -113,23 +130,26 @@ function MapNotice({
     return narrowed ? (
       <ChartNotice
         height={CHART_HEIGHT.hero}
-        title="No scored keywords match these filters"
-        body={unscoredBody(keywords.length)}
+        title={t("map.notices.noScored")}
+        body={unscoredBody(keywords.length, t)}
         action={clear}
       />
     ) : (
       <ChartNotice
         height={CHART_HEIGHT.hero}
-        title="Nothing to map yet"
-        body="No tracked keyword has both a popularity and a difficulty yet. Scores arrive with the weekly scoring run."
+        title={t("map.notices.nothing")}
+        body={t("map.notices.nothingBody")}
       />
     );
   }
   return (
     <ChartNotice
       height={CHART_HEIGHT.hero}
-      title="Too few scored keywords"
-      body={`The map needs at least ${MIN_TREND_POINTS} keywords with both scores. ${tooFewDetail(narrowed, points.length)}`}
+      title={t("map.notices.tooFew")}
+      body={t("map.notices.tooFewBody", {
+        minimum: MIN_TREND_POINTS,
+        detail: tooFewDetail(narrowed, points.length, t),
+      })}
       action={clear}
     />
   );
@@ -150,6 +170,7 @@ export function KeywordMap({
   today: string;
   onClearFilters: () => void;
 }) {
+  const t = useTranslations("keywordInspector");
   const helpId = useId();
   const chartRef = useRef<HTMLDivElement>(null);
   const { thresholds } = useZoneThresholds();
@@ -177,7 +198,7 @@ export function KeywordMap({
     <Card className="print:break-inside-avoid">
       <CardHeader>
         <CardTitle asChild>
-          <h3>Opportunity map</h3>
+          <h3>{t("map.title")}</h3>
         </CardTitle>
         {ready ? (
           <CardAction className="flex flex-wrap items-center justify-end gap-2">
@@ -219,13 +240,13 @@ export function KeywordMap({
             </MapSurface>
             {unplotted > 0 ? (
               <p className="text-caption text-muted-foreground">
-                {unplottedCaption(unplotted)}
+                {unplottedCaption(unplotted, t)}
               </p>
             ) : null}
-            <ShapeKey points={points} />
+            <ShapeKey points={points} t={t} />
             <MapZoneTable counts={counts} thresholds={thresholds} />
             <p id={helpId} className="sr-only">
-              {KEYBOARD_HELP}
+              {t("map.keyboardHelp")}
             </p>
           </>
         ) : (
@@ -234,6 +255,7 @@ export function KeywordMap({
             points={points}
             narrowed={narrowed}
             onClearFilters={onClearFilters}
+            t={t}
           />
         )}
       </CardContent>

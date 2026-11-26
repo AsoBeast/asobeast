@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { flexRender, useTable } from "@tanstack/react-table";
 import { useQueryStates } from "nuqs";
 import { dataTableFeatures } from "@/components/data-table/table-features";
@@ -15,12 +17,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { appListParsers, appSortParser } from "@/lib/search-params";
+import { useAppLocale } from "@/lib/use-app-locale";
 import {
   isNumericColumn,
   isWideOnlyColumn,
 } from "@/lib/table/column-visibility";
 import { ariaSort } from "@/lib/table/sorting";
-import { portfolioColumns, type PortfolioTableRow } from "./portfolio-columns";
+import {
+  createPortfolioColumns,
+  type PortfolioTableRow,
+} from "./portfolio-columns";
 
 export const WIDE_COLUMNS_FROM_REM = 56;
 
@@ -28,14 +34,17 @@ const widthClass = (meta: unknown): string | undefined =>
   isWideOnlyColumn(meta) ? "md:@max-4xl/dashboard:hidden" : undefined;
 
 export function usePortfolioTable(rows: PortfolioTableRow[]) {
+  const t = useTranslations("dashboard");
+  const locale = useAppLocale();
+  const columns = useMemo(() => createPortfolioColumns(t, locale), [t, locale]);
   const [{ sort, dir }, setList] = useQueryStates(appListParsers);
   const [visibility, setVisibility] = useStoredColumnVisibility(
     "portfolio",
-    portfolioColumns,
+    columns,
   );
   const { sorting, onSortingChange } = useUrlSorting(
     { sort, dir },
-    portfolioColumns,
+    columns,
     (next) =>
       void setList({
         sort: next.sort === null ? null : appSortParser.parse(next.sort),
@@ -46,7 +55,7 @@ export function usePortfolioTable(rows: PortfolioTableRow[]) {
   return useTable({
     features: dataTableFeatures,
     data: rows,
-    columns: portfolioColumns,
+    columns,
     getRowId: (row) => row.app.id,
     state: { sorting, columnVisibility: visibility },
     onSortingChange,
@@ -61,9 +70,10 @@ export function PortfolioTable({
 }: {
   table: ReturnType<typeof usePortfolioTable>;
 }) {
+  const t = useTranslations("dashboard");
   return (
     <Table>
-      <TableCaption className="sr-only">Apps in this workspace</TableCaption>
+      <TableCaption className="sr-only">{t("apps.caption")}</TableCaption>
       <TableHeader>
         {table.getHeaderGroups().map((headerGroup) => (
           <TableRow key={headerGroup.id}>

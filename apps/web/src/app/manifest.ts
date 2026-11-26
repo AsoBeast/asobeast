@@ -1,11 +1,13 @@
 import type { MetadataRoute } from "next";
+import { getTranslations } from "next-intl/server";
 import { PRODUCT_NAME } from "@/lib/brand";
 
-export default function manifest(): MetadataRoute.Manifest {
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const t = await getTranslations("seo");
   return {
     name: PRODUCT_NAME,
     short_name: PRODUCT_NAME,
-    description: "Open-source App Store Optimization toolkit",
+    description: t("description"),
     start_url: "/",
     display: "standalone",
     background_color: "#07171e",

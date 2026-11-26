@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, type ReactNode, type RefObject } from "react";
+import { useTranslations } from "next-intl";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import type { Store } from "@asobeast/shared";
@@ -36,6 +37,7 @@ export function TrackedKeywordsTab({
   onFindKeywords?: (leaving: HTMLElement) => void;
   children?: ReactNode;
 }) {
+  const t = useTranslations("keywords");
   const [country] = useQueryState("country", countryParser);
   const [view] = useQueryState("view", keywordViewParser);
   const [selection] = useQueryState("keywords", keywordChartSelectionParser);
@@ -43,7 +45,7 @@ export function TrackedKeywordsTab({
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="sr-only">Tracked keywords</h2>
+      <h2 className="sr-only">{t("workspace.tracked")}</h2>
       <Suspense
         fallback={
           <div className="flex flex-col gap-3">

@@ -1,11 +1,10 @@
 import type {
   KeywordInspection,
   KeywordInspectionDelta,
+  ScoringConfidence,
+  ScoringSource,
 } from "@asobeast/shared";
-import {
-  SCORING_CONFIDENCE_LABELS,
-  SCORING_SOURCE_LABELS,
-} from "@/components/keywords/score-cells";
+import { useTranslations } from "next-intl";
 import {
   difficultySignalLines,
   popularitySignalLines,
@@ -13,15 +12,28 @@ import {
 import { GradedNumber, gradeFill } from "@/components/ui/graded";
 import { InfoTip } from "@/components/ui/info-tip";
 import { Meter } from "@/components/ui/meter";
-import { grade, gradeLabel, type GradeMetric } from "@/lib/grade";
+import { grade, gradeLabelInLocale, type GradeMetric } from "@/lib/grade";
+import { useAppLocale } from "@/lib/use-app-locale";
 import {
   competitionFacts,
   newcomerCount,
   shownScore,
 } from "./inspection-format";
 
-const OPPORTUNITY_NOTE =
-  "Opportunity weighs popularity against difficulty, before any app is considered.";
+const SCORE_SOURCE_KEYS: Record<ScoringSource, string> = {
+  APPLE_SUGGEST_SEARCH: "appleSuggestSearch",
+  GOOGLE_PLAY_PREFIX_SEARCH: "googlePlayPrefixSearch",
+  APPLE_SUGGEST_REACH: "appleSuggestReach",
+  GOOGLE_PLAY_SUGGEST_REACH: "googlePlaySuggestReach",
+  APPLE_ADS_POPULARITY: "appleAdsPopularity",
+  APPLE_SEARCH_SIGNALS: "appleSearchSignals",
+};
+
+const CONFIDENCE_KEYS: Record<ScoringConfidence, string> = {
+  LOW: "low",
+  MEDIUM: "medium",
+  HIGH: "high",
+};
 
 export const SUB_HEADER =
   "flex min-h-9 items-center justify-between gap-3 border-y px-4 text-label font-medium text-foreground";
@@ -37,14 +49,22 @@ function ScoreFigure({
   value: number | null;
   was: number | null | undefined;
 }) {
+  const t = useTranslations("keywordInspector");
+  const locale = useAppLocale();
   const shown = shownScore(value);
   const graded = value === null ? null : grade(metric, Math.round(value));
-  const note = [
-    graded === null ? "not scored" : gradeLabel(graded),
-    was === undefined || was === null ? null : `was ${shownScore(was)}`,
-  ]
-    .filter((part) => part !== null)
-    .join(" · ");
+  const previous =
+    was === undefined || was === null
+      ? "none"
+      : t("inspector.scores.was", { value: shownScore(was) });
+  const note =
+    graded === null
+      ? t("inspector.scores.notScored")
+      : t.rich("inspector.scores.note", {
+          grade: gradeLabelInLocale(graded, locale),
+          previous,
+          was: (chunks) => <span>{chunks}</span>,
+        });
   return (
     <div className="flex min-w-0 flex-col gap-1 px-4 pt-3 pb-3.5 not-first:border-l">
       <dt className="text-label text-muted-foreground">{label}</dt>
@@ -73,22 +93,27 @@ export function InspectionFigures({
   inspection: KeywordInspection;
   previous: KeywordInspectionDelta | null;
 }) {
+  const t = useTranslations("keywordInspector");
+  const keywords = useTranslations("keywords");
   return (
-    <dl aria-label="Scores" className="grid grid-cols-3 border-b">
+    <dl
+      aria-label={t("inspector.scores.aria")}
+      className="grid grid-cols-3 border-b"
+    >
       <ScoreFigure
-        label="Popularity"
+        label={keywords("table.popularity")}
         metric="popularity"
         value={inspection.volume}
         was={previous?.volume}
       />
       <ScoreFigure
-        label="Difficulty"
+        label={keywords("table.difficulty")}
         metric="difficulty"
         value={inspection.difficulty100}
         was={previous?.difficulty100}
       />
       <ScoreFigure
-        label="Opportunity"
+        label={keywords("table.opportunity")}
         metric="opportunity"
         value={inspection.opportunity}
         was={undefined}
@@ -102,23 +127,38 @@ export function InspectionSource({
 }: {
   inspection: KeywordInspection;
 }) {
+  const t = useTranslations("keywordInspector");
+  const keywords = useTranslations("keywords");
   const { provenance, signals } = inspection;
   if (!provenance) return null;
   const explanation = [
-    ...popularitySignalLines(signals, provenance.source, inspection.volume),
-    ...difficultySignalLines(signals),
-    OPPORTUNITY_NOTE,
+    ...popularitySignalLines(
+      signals,
+      provenance.source,
+      inspection.volume,
+      keywords,
+    ),
+    ...difficultySignalLines(signals, keywords),
+    t("inspector.scores.opportunityNote"),
   ].join(" ");
+  const confidence = keywords(
+    `scores.confidences.${CONFIDENCE_KEYS[provenance.confidence]}`,
+  );
   return (
     <span>
       <span>
-        {`${SCORING_SOURCE_LABELS[provenance.source]} · formula ${provenance.formulaVersion} · `}
+        {t("inspector.scores.formula", {
+          source: keywords(
+            `scores.sources.${SCORE_SOURCE_KEYS[provenance.source]}`,
+          ),
+          version: provenance.formulaVersion,
+        })}
       </span>
       <span className="inline-flex items-center gap-1.5 whitespace-nowrap align-middle">
-        <span>{`${SCORING_CONFIDENCE_LABELS[provenance.confidence]} confidence`}</span>
+        <span>{keywords("scores.confidenceSummary", { confidence })}</span>
         <InfoTip
-          label="How these scores are estimated"
-          title="How these scores are estimated"
+          label={t("inspector.scores.estimatedTitle")}
+          title={t("inspector.scores.estimatedTitle")}
           summary={explanation}
         />
       </span>
@@ -131,6 +171,8 @@ export function InspectionCompetition({
 }: {
   inspection: KeywordInspection;
 }) {
+  const t = useTranslations("keywordInspector");
+  const locale = useAppLocale();
   const { competition } = inspection;
   if (!competition) return null;
   const facts = competitionFacts(
@@ -140,11 +182,15 @@ export function InspectionCompetition({
       competition.topCount,
       inspection.completedAt ?? inspection.requestedAt,
     ),
+    t,
+    locale,
   );
   return (
     <section aria-labelledby="inspection-competition">
       <h3 id="inspection-competition" className={SUB_HEADER}>
-        {`Competition in the top ${competition.topCount}`}
+        {t("inspector.scores.competitionTitle", {
+          count: competition.topCount,
+        })}
       </h3>
       <dl className="grid grid-cols-1 gap-x-6 px-4 pt-1 pb-3 sm:grid-cols-2">
         {facts.map((fact) => (

@@ -7,11 +7,6 @@ export const PICKER_STRATEGIES = [
 
 export type PickerStrategy = (typeof PICKER_STRATEGIES)[number];
 
-export const PICKER_LABELS: Record<PickerStrategy, string> = {
-  metadata: "From your listing",
-  search: "Store autocomplete",
-};
-
 export const isPickerStrategy = (value: string): value is PickerStrategy =>
   (PICKER_STRATEGIES as readonly string[]).includes(value);
 

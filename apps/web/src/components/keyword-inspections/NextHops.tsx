@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   normalizeText,
@@ -11,6 +12,7 @@ import {
 import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { ApiError, requestKeywordInspection } from "@/lib/api";
+import type { MessageTranslator } from "@/i18n/translator";
 import { refreshKeywordInspections } from "@/lib/queries";
 import {
   nextHops,
@@ -24,10 +26,10 @@ const CHIP =
 const startKey = ({ keyword, store, country }: KeywordInspectionRequest) =>
   `${store}|${country}|${normalizeText(keyword)}`;
 
-const failureMessage = (error: unknown): string =>
+const failureMessage = (error: unknown, t: MessageTranslator): string =>
   error instanceof ApiError
     ? error.envelope.message
-    : "Could not start the inspection";
+    : t("inspector.next.failed");
 
 function HopChip({
   term,
@@ -42,12 +44,17 @@ function HopChip({
   onInspect: (term: string) => void;
   onSelect: (id: string) => void;
 }) {
+  const t = useTranslations("keywordInspector");
   if (state.kind === "done") {
     return (
       <button
         type="button"
         onClick={() => onSelect(state.id)}
-        aria-label={`${term}, inspected: popularity ${state.popularity}, difficulty ${state.difficulty}`}
+        aria-label={t("inspector.next.done", {
+          term,
+          popularity: state.popularity,
+          difficulty: state.difficulty,
+        })}
         className={CHIP}
       >
         <span>{term}</span>
@@ -62,7 +69,7 @@ function HopChip({
       <button
         type="button"
         aria-disabled
-        aria-label={`Inspecting ${term}`}
+        aria-label={t("inspector.next.running", { term })}
         className={CHIP}
       >
         <Loader2
@@ -77,7 +84,7 @@ function HopChip({
     <button
       type="button"
       onClick={() => onInspect(term)}
-      aria-label={`Inspect ${term}`}
+      aria-label={t("inspector.next.inspect", { term })}
       className={CHIP}
     >
       <Plus aria-hidden className="size-3.5 text-muted-foreground" />
@@ -98,6 +105,7 @@ export function NextHops({
   onPreview: (term: string | null) => void;
 }) {
   const queryClient = useQueryClient();
+  const t = useTranslations("keywordInspector");
   const storefront = { store: inspection.store, country: inspection.country };
   const [starting, setStarting] = useState<ReadonlySet<string>>(
     () => new Set(),
@@ -114,7 +122,7 @@ export function NextHops({
     onMutate: (request) =>
       setStarting((current) => new Set(current).add(startKey(request))),
     onSuccess: () => refreshKeywordInspections(queryClient),
-    onError: (error) => toast.error(failureMessage(error)),
+    onError: (error) => toast.error(failureMessage(error, t)),
     onSettled: (_data, _error, request) => settle(request),
   });
   useEffect(() => () => onPreview(null), [onPreview]);
@@ -129,11 +137,11 @@ export function NextHops({
       className="flex min-w-0 flex-col gap-2 border-t px-4 py-3"
     >
       <h3 id="inspection-next" className="text-label font-medium">
-        {`Next from “${inspection.keyword}”`}
+        {t("inspector.next.title", { keyword: inspection.keyword })}
       </h3>
       {terms.length === 0 ? (
         <p className="text-caption text-faint-foreground">
-          The store suggested nothing else for this keyword.
+          {t("inspector.next.empty")}
         </p>
       ) : (
         <ol className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-0.5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">

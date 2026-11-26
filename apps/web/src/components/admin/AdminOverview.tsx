@@ -3,6 +3,7 @@
 import { useDeferredValue } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryStates } from "nuqs";
+import { useTranslations } from "next-intl";
 import { PANEL_HEADER } from "@/components/layout/panel-classes";
 import {
   Card,
@@ -11,7 +12,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { pluralize } from "@/lib/format";
 import { adminConversionOptions, adminOverviewOptions } from "@/lib/queries";
 import { adminOverviewParsers } from "@/lib/search-params";
 import { OverviewStrip } from "./OverviewStrip";
@@ -28,6 +28,7 @@ import {
 } from "./overview-panels";
 
 export function AdminOverview() {
+  const t = useTranslations("admin");
   const [{ days }, setView] = useQueryStates(adminOverviewParsers);
   const shownDays = useDeferredValue(days);
   const { data: overview } = useSuspenseQuery(adminOverviewOptions);
@@ -52,14 +53,16 @@ export function AdminOverview() {
           <Card className="min-w-0">
             <CardHeader className={PANEL_HEADER}>
               <CardTitle asChild>
-                <h2>Sign ups, last 30 days</h2>
+                <h2>{t("overview.signupsTitle")}</h2>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <SignupsChart signups={overview.signups} />
             </CardContent>
             <CardFooter>
-              {`${pluralize(overview.users.joinedLast30Days, "account")} joined in the last 30 days.`}
+              {t("overview.signupsFooter", {
+                count: overview.users.joinedLast30Days,
+              })}
             </CardFooter>
           </Card>
           <DeparturesPanel conversion={conversion} />

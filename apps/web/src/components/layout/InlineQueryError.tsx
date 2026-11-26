@@ -1,6 +1,7 @@
 "use client";
 
 import { RefreshCw } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { useRetryRecoveryFocus } from "@/lib/focus-handoff";
 import { cn } from "@/lib/utils";
@@ -26,11 +27,13 @@ export function InlineQueryError({
 }) {
   const retrying = read.isFetching;
   const retry = useRetryRecoveryFocus();
+  const t = useTranslations("ui");
   return (
     <div className="flex flex-wrap items-center gap-3 text-body text-muted-foreground">
       <span role="alert">{message}</span>
       <Button
         ref={retry}
+        data-action="retry"
         size="sm"
         variant="outline"
         aria-disabled={retrying || undefined}
@@ -39,7 +42,7 @@ export function InlineQueryError({
         }}
       >
         <RefreshCw className={cn(retrying && "animate-spin")} />
-        Retry
+        {t("retry")}
       </Button>
     </div>
   );

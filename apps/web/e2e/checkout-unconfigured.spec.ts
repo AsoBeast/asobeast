@@ -36,7 +36,7 @@ test.describe("a Stripe instance whose catalog has not answered", () => {
     await expect(
       page.getByRole("heading", {
         level: 1,
-        name: "Start your 7 day free trial",
+        name: "Start your 7 days free trial",
       }),
     ).toBeVisible();
   });

@@ -1,0 +1,9 @@
+{
+  "percent": "{value}%",
+  "status": {
+    "healthy": "Healthy",
+    "high": "High",
+    "nearCapacity": "Near capacity",
+    "overCapacity": "Over capacity"
+  }
+}

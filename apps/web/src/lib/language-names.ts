@@ -1,36 +1,18 @@
-export const LANGUAGE_NAMES: Readonly<Record<string, string>> = {
-  af: "Afrikaans",
-  am: "Amharic",
-  as: "Assamese",
-  az: "Azerbaijani",
-  be: "Belarusian",
-  bg: "Bulgarian",
-  bs: "Bosnian",
-  cy: "Welsh",
-  et: "Estonian",
-  eu: "Basque",
-  fa: "Persian",
-  ga: "Irish",
-  gl: "Galician",
-  hy: "Armenian",
-  is: "Icelandic",
-  ka: "Georgian",
-  kk: "Kazakh",
-  km: "Khmer",
-  ky: "Kyrgyz",
-  lo: "Lao",
-  lt: "Lithuanian",
-  lv: "Latvian",
-  mk: "Macedonian",
-  mn: "Mongolian",
-  mt: "Maltese",
-  my: "Burmese",
-  ne: "Nepali",
-  si: "Sinhala",
-  sq: "Albanian",
-  sr: "Serbian",
-  sw: "Swahili",
-  tl: "Filipino",
-  uz: "Uzbek",
-  zu: "Zulu",
-};
+import enLanguages from "../../messages/en/languages.json";
+import zhLanguages from "../../messages/zh-CN/languages.json";
+import type { Locale } from "./locale";
+
+const LANGUAGE_NAMES_BY_LOCALE = {
+  en: enLanguages.names,
+  "zh-CN": zhLanguages.names,
+} as const;
+
+export const LANGUAGE_NAMES: Readonly<Record<string, string>> =
+  LANGUAGE_NAMES_BY_LOCALE.en;
+
+export function languageName(tag: string, locale: Locale = "en"): string {
+  const language = tag.split("-")[0]?.toLowerCase() ?? tag;
+  const names: Readonly<Record<string, string>> =
+    LANGUAGE_NAMES_BY_LOCALE[locale];
+  return names[language] ?? tag;
+}

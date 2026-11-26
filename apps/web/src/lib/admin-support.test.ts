@@ -8,20 +8,42 @@ import {
 } from "@asobeast/shared";
 import {
   availableActions,
-  dailyRunDone,
+  dailyRunDone as localizedDailyRunDone,
   focusAfter,
   focusAfterConflict,
   nextSupportReason,
-  onDemandRows,
-  queueLabel,
-  supportActionLabel,
+  onDemandRows as localizedOnDemandRows,
+  queueLabel as localizedQueueLabel,
+  supportActionLabel as localizedSupportActionLabel,
   supportActionRequest,
-  supportOutcomeLabel,
+  supportOutcomeLabel as localizedSupportOutcomeLabel,
   supportReasonLength,
   supportReasonReady,
-  usageLine,
-  usageRows,
+  usageLine as localizedUsageLine,
+  usageRows as localizedUsageRows,
 } from "./admin-support";
+import { translationContext } from "@/test/translation-context";
+
+const en = translationContext("en", "admin");
+const usageLine = (
+  used: number,
+  limit: Parameters<typeof localizedUsageLine>[1],
+) => localizedUsageLine(used, limit, en);
+const usageRows = (
+  limits: Parameters<typeof localizedUsageRows>[0],
+  usage: Parameters<typeof localizedUsageRows>[1],
+) => localizedUsageRows(limits, usage, en);
+const onDemandRows = (rules: Parameters<typeof localizedOnDemandRows>[0]) =>
+  localizedOnDemandRows(rules, en);
+const supportActionLabel = (
+  action: Parameters<typeof localizedSupportActionLabel>[0],
+) => localizedSupportActionLabel(action, en.translator);
+const supportOutcomeLabel = (
+  outcome: Parameters<typeof localizedSupportOutcomeLabel>[0],
+) => localizedSupportOutcomeLabel(outcome, en.translator);
+const queueLabel = (queue: string) => localizedQueueLabel(queue, en.translator);
+const dailyRunDone = (name: string, detail: string) =>
+  localizedDailyRunDone(name, detail, en.translator);
 
 const DAY = 86_400;
 const HOUR = 3_600;

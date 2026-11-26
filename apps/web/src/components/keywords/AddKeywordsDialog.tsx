@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -55,6 +56,8 @@ export function AddKeywordsDialog({
   country: string;
   children: ReactNode;
 }) {
+  const t = useTranslations("keywords");
+  const tCommon = useTranslations("common");
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [raw, setRaw] = useState("");
@@ -77,18 +80,16 @@ export function AddKeywordsDialog({
       const duplicates = list.length - added;
       invalidateKeywordMutation(queryClient, appId);
       setOpen(false);
-      toast.success(`Tracking ${added} keyword${added === 1 ? "" : "s"}`, {
+      toast.success(t("add.success", { count: added }), {
         description:
           duplicates > 0
-            ? `${duplicates} already tracked`
-            : "Positions arrive within minutes. The table updates as they land.",
+            ? t("add.duplicates", { count: duplicates })
+            : t("add.positionsHint"),
       });
     },
     onError: (err) =>
       setError(
-        err instanceof ApiError
-          ? err.envelope.message
-          : "Could not add keywords",
+        err instanceof ApiError ? err.envelope.message : t("add.failed"),
       ),
   });
 
@@ -107,7 +108,10 @@ export function AddKeywordsDialog({
     setError(null);
     if (chips.length > KEYWORD_BULK_ADD_LIMIT) {
       setError(
-        `One request may add ${KEYWORD_BULK_ADD_LIMIT} keywords, so split these ${chips.length}`,
+        t("add.tooMany", {
+          limit: KEYWORD_BULK_ADD_LIMIT,
+          count: chips.length,
+        }),
       );
       return;
     }
@@ -119,22 +123,19 @@ export function AddKeywordsDialog({
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add keywords</DialogTitle>
-          <DialogDescription>
-            Separate phrases with commas or new lines. Each is normalized to
-            lowercase and de-duplicated before tracking.
-          </DialogDescription>
+          <DialogTitle>{t("add.title")}</DialogTitle>
+          <DialogDescription>{t("add.description")}</DialogDescription>
         </DialogHeader>
 
         <DialogBody className="gap-3">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="add-keywords-market">Market</Label>
+            <Label htmlFor="add-keywords-market">{t("add.market")}</Label>
             <CountrySelect
               id="add-keywords-market"
               store={store}
               value={market}
               onChange={setMarket}
-              ariaLabel="Keyword market"
+              ariaLabel={t("add.marketLabel")}
             />
             <MarketAvailabilityNotice
               appId={appId}
@@ -143,7 +144,7 @@ export function AddKeywordsDialog({
             />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="add-keywords-text">Keywords</Label>
+            <Label htmlFor="add-keywords-text">{t("add.keywords")}</Label>
             <Textarea
               id="add-keywords-text"
               value={raw}
@@ -154,7 +155,7 @@ export function AddKeywordsDialog({
               rows={4}
               spellCheck={false}
               autoComplete="off"
-              placeholder="One phrase per line, or separated by commas"
+              placeholder={t("add.placeholder")}
               autoFocus
               aria-invalid={error !== null}
             />
@@ -169,21 +170,24 @@ export function AddKeywordsDialog({
             </div>
           ) : null}
           <p className="numeric text-caption text-muted-foreground">
-            {`${chips.length} of ${KEYWORD_BULK_ADD_LIMIT} keyword${chips.length === 1 ? "" : "s"} ready`}
+            {t("add.ready", {
+              used: chips.length,
+              limit: KEYWORD_BULK_ADD_LIMIT,
+            })}
           </p>
           {error ? <p className="text-body text-destructive">{error}</p> : null}
         </DialogBody>
 
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
+            <Button variant="outline">{tCommon("cancel")}</Button>
           </DialogClose>
           <Button
             disabled={mutation.isPending || chips.length === 0 || !validMarket}
             onClick={submit}
           >
             {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
-            {mutation.isPending ? "Adding…" : "Add keywords"}
+            {mutation.isPending ? t("add.pending") : t("add.title")}
           </Button>
         </DialogFooter>
       </DialogContent>

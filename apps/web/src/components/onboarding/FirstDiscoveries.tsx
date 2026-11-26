@@ -1,6 +1,7 @@
 "use client";
 
 import { useId } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import {
@@ -21,6 +22,7 @@ export function FirstDiscoveries({
   id: string;
   country: string;
 }) {
+  const t = useTranslations("setup");
   const headingId = useId();
   const read = useQuery({
     ...keywordDiscoveriesOptions(id, country),
@@ -29,22 +31,19 @@ export function FirstDiscoveries({
 
   if (failedRead(read)) {
     return (
-      <InlineQueryError
-        message="Could not load the first results."
-        read={read}
-      />
+      <InlineQueryError message={t("firstDiscoveries.loadError")} read={read} />
     );
   }
   if (!read.data) return <Skeleton className="h-16 w-full" />;
 
-  const summary = firstDiscoveries(read.data);
+  const summary = firstDiscoveries(read.data, t);
   if (summary === null) return null;
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-2">
       <h4 id={headingId} className="text-dense font-medium">
         {summary.status === "ready"
-          ? "Your first results are ready"
-          : "Looking for keywords near your listing"}
+          ? t("firstDiscoveries.readyTitle")
+          : t("firstDiscoveries.collectingTitle")}
       </h4>
       {summary.status === "ready" ? (
         <>
@@ -63,13 +62,12 @@ export function FirstDiscoveries({
             href={discoveriesHref(id, country)}
             className={cn(FOOTER_LINK, "w-fit text-dense")}
           >
-            See all discoveries
+            {t("firstDiscoveries.seeAll")}
           </Link>
         </>
       ) : (
         <p className="text-dense text-muted-foreground">
-          AsoBeast is checking where your app ranks for the phrases of your
-          listing. The first results appear here within minutes.
+          {t("firstDiscoveries.collectingBody")}
         </p>
       )}
     </section>

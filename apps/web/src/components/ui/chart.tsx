@@ -1,9 +1,12 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import * as RechartsPrimitive from "recharts";
 import type { TooltipValueType } from "recharts";
 
+import { formatNumberInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
 
 type ChartTheme = "light" | "dark";
@@ -160,6 +163,7 @@ function ChartTooltipContent({
     "accessibilityLayer"
   >) {
   const { config } = useChart();
+  const locale = useAppLocale();
 
   const tooltipLabel = React.useMemo(() => {
     if (hideLabel || !payload?.length) {
@@ -265,7 +269,7 @@ function ChartTooltipContent({
                       {item.value != null && (
                         <span className="numeric font-medium text-foreground">
                           {typeof item.value === "number"
-                            ? item.value.toLocaleString()
+                            ? formatNumberInLocale(item.value, locale)
                             : String(item.value)}
                         </span>
                       )}
@@ -293,6 +297,7 @@ function ChartLegendContent({
   nameKey?: string;
 } & RechartsPrimitive.DefaultLegendContentProps) {
   const { config } = useChart();
+  const t = useTranslations("ui");
 
   if (!payload?.length) {
     return null;
@@ -300,7 +305,7 @@ function ChartLegendContent({
 
   return (
     <ul
-      aria-label="Charted series"
+      aria-label={t("chartedSeries")}
       className={cn(
         "flex items-center justify-center gap-4",
         verticalAlign === "top" ? "pb-3" : "pt-3",

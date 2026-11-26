@@ -3,7 +3,13 @@ import type {
   WorkspaceDeletionStatus,
   WorkspaceRunStatus,
 } from "@asobeast/shared";
-import { formatDateTime, storeLabel } from "@/lib/format";
+import {
+  formatDateTime,
+  formatDateTimeInLocale,
+  formatListInLocale,
+  storeLabel,
+} from "@/lib/format";
+import type { TranslationContext } from "@/i18n/translator";
 import { runDelayNotice } from "./run-delay-notice";
 
 export const WORKSPACE_DELETION_HREF = "/settings#workspace";
@@ -21,23 +27,29 @@ export interface SystemNotice {
   linkLabel: string | null;
 }
 
-export function systemNotice(input: {
-  stores: StoreHealthReport | undefined;
-  run: WorkspaceRunStatus | undefined;
-  deletion?: WorkspaceDeletionStatus;
-}): SystemNotice | null {
+export function systemNotice(
+  input: {
+    stores: StoreHealthReport | undefined;
+    run: WorkspaceRunStatus | undefined;
+    deletion?: WorkspaceDeletionStatus;
+  },
+  context?: TranslationContext,
+): SystemNotice | null {
   if (input.deletion?.scheduled && input.deletion.dueAt) {
-    return deletionNotice(input.deletion.dueAt);
+    return deletionNotice(input.deletion.dueAt, context);
   }
 
   const broken = (input.stores?.stores ?? []).filter(
     (store) => store.state === "broken",
   );
   if (broken.length > 0) {
-    return breakageNotice(broken.map((store) => storeLabel(store.store)));
+    return breakageNotice(
+      broken.map((store) => storeLabel(store.store)),
+      context,
+    );
   }
 
-  const delay = input.run ? runDelayNotice(input.run) : null;
+  const delay = input.run ? runDelayNotice(input.run, context) : null;
   return delay
     ? {
         variant: "warning",
@@ -49,7 +61,21 @@ export function systemNotice(input: {
     : null;
 }
 
-function deletionNotice(dueAt: string): SystemNotice {
+function deletionNotice(
+  dueAt: string,
+  context?: TranslationContext,
+): SystemNotice {
+  if (context) {
+    return {
+      variant: "destructive",
+      title: context.translator("deletionTitle"),
+      detail: context.translator("deletionDetail", {
+        date: formatDateTimeInLocale(dueAt, context.locale),
+      }),
+      href: WORKSPACE_DELETION_HREF,
+      linkLabel: context.translator("cancelDeletion"),
+    };
+  }
   return {
     variant: "destructive",
     title: "This workspace is scheduled for deletion",
@@ -59,7 +85,20 @@ function deletionNotice(dueAt: string): SystemNotice {
   };
 }
 
-function breakageNotice(names: string[]): SystemNotice {
+function breakageNotice(
+  names: string[],
+  context?: TranslationContext,
+): SystemNotice {
+  if (context) {
+    const stores = formatListInLocale(names, context.locale);
+    return {
+      variant: "destructive",
+      title: context.translator("breakageTitle", { stores }),
+      detail: context.translator("breakageDetail", { stores }),
+      href: SCRAPER_BREAKAGE_URL,
+      linkLabel: context.translator("whatHappensNext"),
+    };
+  }
   const stores = names.join(" and ");
   return {
     variant: "destructive",

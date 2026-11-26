@@ -7,9 +7,18 @@ import {
   type MarketSuggestionsResult,
   type Store,
 } from "@asobeast/shared";
-import { pluralize } from "@/lib/format";
-import { LANGUAGE_NAMES } from "@/lib/language-names";
-import { localizationName } from "@/lib/localizations";
+import { createTranslator } from "next-intl";
+import enSetup from "../../../messages/en/setup.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import { languageName } from "@/lib/language-names";
+import { localizationNameInLocale } from "@/lib/localizations";
+import type { Locale } from "@/lib/locale";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "setup",
+  messages: { setup: enSetup },
+});
 
 export const MARKET_COST_GUIDE =
   "https://docs.asobeast.com/concepts/countries#what-does-a-market-cost";
@@ -24,6 +33,7 @@ export interface SuggestionGroup {
 
 export function groupSuggestions(
   result: MarketSuggestionsResult,
+  locale: Locale = "en",
 ): SuggestionGroup[] {
   const groups = new Map<AppStoreLocalization, MarketSuggestion[]>();
   for (const suggestion of result.suggestions) {
@@ -34,41 +44,48 @@ export function groupSuggestions(
   }
   return [...groups].map(([localization, markets]) => ({
     localization,
-    name: localizationName(localization),
+    name: localizationNameInLocale(localization, locale),
     markets,
   }));
 }
 
-const languageName = (language: string): string => {
+const languageNameOf = (language: string, locale: Locale): string => {
   const localization = APP_STORE_LOCALIZATION_IDS.find(
     (tag) => localizationLanguage(tag) === language,
   );
-  return localization
-    ? localizationName(localization).replace(/ \(.*\)$/, "")
-    : (LANGUAGE_NAMES[language] ?? language.toUpperCase());
+  if (!localization) {
+    const named = languageName(language, locale);
+    return named === language ? language.toUpperCase() : named;
+  }
+  return languageName(language, locale);
 };
 
-export function languageNames(result: MarketSuggestionsResult): string[] {
+export function languageNames(
+  result: MarketSuggestionsResult,
+  locale: Locale = "en",
+): string[] {
   const english = result.languages.filter((language) => language === ENGLISH);
   const others = result.languages.filter((language) => language !== ENGLISH);
-  return [...english, ...others].map(languageName);
+  return [...english, ...others].map((language) =>
+    languageNameOf(language, locale),
+  );
 }
 
-const MARKET_READS: Record<Store, string> = {
-  APP_STORE:
-    "one listing read a day for the app and for every competitor, one more for each localization captured there,",
-  GOOGLE_PLAY: "one listing read a day for the app and for every competitor,",
-};
-
-const SEEDING: Record<Store, string> = {
-  APP_STORE: ` Seeding tracks up to ${MARKET_SEED_LIMIT} keywords from the market's own title and subtitle; each one adds a daily search.`,
-  GOOGLE_PLAY: "",
-};
-
-export function marketCostSummary(store: Store): string {
-  return `A market adds ${MARKET_READS[store]} and one search a day for every keyword tracked there.${SEEDING[store]}`;
+export function marketCostSummary(
+  store: Store,
+  t: MessageTranslator = english,
+): string {
+  return store === "APP_STORE"
+    ? t("markets.costAppStore", { limit: MARKET_SEED_LIMIT })
+    : t("markets.costGooglePlay");
 }
 
-export function marketCostText({ dailyRequests }: MarketSuggestion): string {
-  return `${pluralize(dailyRequests.listing, "listing read")} a day, ${dailyRequests.perKeyword} per keyword`;
+export function marketCostText(
+  { dailyRequests }: MarketSuggestion,
+  t: MessageTranslator = english,
+): string {
+  return t("markets.costText", {
+    count: dailyRequests.listing,
+    perKeyword: dailyRequests.perKeyword,
+  });
 }

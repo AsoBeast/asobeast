@@ -1,15 +1,23 @@
+import { createTranslator } from "next-intl";
 import {
   normalizeText,
   type KeywordInspectionSummary,
   type Store,
 } from "@asobeast/shared";
+import enKeywordInspector from "../../../messages/en/keywordInspector.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import type { NavDot } from "@/components/keywords/map/dot-navigation";
 import {
-  ZONE_LABELS,
   zoneOf,
   type KeywordZone,
   type ZoneThresholds,
 } from "@/lib/keyword-zones";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywordInspector",
+  messages: { keywordInspector: enKeywordInspector },
+});
 
 export const END_ANCHORED_FROM = 72;
 
@@ -195,16 +203,19 @@ export function labelledKeywords(
   return labelled;
 }
 
-export function pointName(point: InspectionPoint): string {
-  return [
-    point.keyword,
-    `popularity ${point.popularity}`,
-    `difficulty ${point.difficulty}`,
-    point.opportunity === null ? null : `opportunity ${point.opportunity}`,
-    ZONE_LABELS[point.zone],
-  ]
-    .filter((part) => part !== null)
-    .join(", ");
+export function pointName(
+  point: InspectionPoint & { floor?: boolean; active?: boolean },
+  t: MessageTranslator = english,
+): string {
+  return t("inspector.map.point", {
+    keyword: point.keyword,
+    popularity: point.popularity,
+    difficulty: point.difficulty,
+    opportunity: point.opportunity ?? "none",
+    floor: point.floor ? "floor" : "none",
+    paused: point.active === false ? "paused" : "none",
+    zone: t(`map.zones.names.${point.zone}`),
+  });
 }
 
 export function suggestionState(

@@ -1,4 +1,5 @@
-import { gradeLabel, type Grade } from "@/lib/grade";
+import { gradeLabelInLocale, type Grade } from "@/lib/grade";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
 
 const GRADE_MARKER: Partial<Record<Grade, string>> = {
@@ -33,8 +34,9 @@ export function GradedNumber({
   marker?: boolean;
   className?: string;
 }) {
+  const locale = useAppLocale();
   const spoken = grade
-    ? `${label} ${value}, ${gradeLabel(grade)}`
+    ? `${label} ${value}, ${gradeLabelInLocale(grade, locale)}`
     : `${label} ${value}`;
   return (
     <span

@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, type KeyboardEvent } from "react";
+import { useTranslations } from "next-intl";
 import type { ScatterShapeProps } from "recharts";
 import { seriesColor } from "@/components/charts/theme";
 import {
@@ -131,6 +132,7 @@ function DotLabel({
 
 export function InspectionDot({ cx, cy, payload }: ScatterShapeProps) {
   const state = useContext(DotContext);
+  const t = useTranslations("keywordInspector");
   if (cx === undefined || cy === undefined || !isPoint(payload) || !state) {
     return null;
   }
@@ -150,7 +152,7 @@ export function InspectionDot({ cx, cy, payload }: ScatterShapeProps) {
       transform={`translate(${cx} ${cy})`}
       role="button"
       tabIndex={state.rovingId === payload.keywordId ? 0 : -1}
-      aria-label={pointName(payload)}
+      aria-label={pointName(payload, t)}
       aria-pressed={selected}
       data-inspection-id={payload.keywordId}
       data-inspection-keyword={payload.keyword}

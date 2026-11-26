@@ -1,7 +1,11 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import { NextIntlClientProvider } from "next-intl";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
+import { catalogs } from "@/i18n/messages";
+import enKeywordInspector from "../../../../messages/en/keywordInspector.json";
+import type { Locale } from "@/lib/locale";
 import { KeywordMap } from "./KeywordMap";
 import { filtersNarrowMap } from "./map-points";
 
@@ -38,22 +42,31 @@ const scored = (text: string, difficulty: number) =>
 const noticeOf = (
   keywords: readonly TrackedKeywordItem[],
   narrowed: boolean,
+  locale: Locale = "en",
+  inspectorMessages: Record<string, unknown> = catalogs[locale]
+    .keywordInspector as Record<string, unknown>,
 ): string =>
   renderToStaticMarkup(
     <NuqsTestingAdapter>
-      <KeywordMap
-        keywords={keywords}
-        narrowed={narrowed}
-        history={{
-          appId: "app-1",
-          store: "APP_STORE",
-          homeCountry: "us",
-          multiMarket: false,
-        }}
-        market="us"
-        today="2026-11-06"
-        onClearFilters={() => undefined}
-      />
+      <NextIntlClientProvider
+        locale={locale}
+        timeZone="UTC"
+        messages={{ ...catalogs[locale], keywordInspector: inspectorMessages }}
+      >
+        <KeywordMap
+          keywords={keywords}
+          narrowed={narrowed}
+          history={{
+            appId: "app-1",
+            store: "APP_STORE",
+            homeCountry: "us",
+            multiMarket: false,
+          }}
+          market="us"
+          today="2026-11-06"
+          onClearFilters={() => undefined}
+        />
+      </NextIntlClientProvider>
     </NuqsTestingAdapter>,
   )
     .replace(/<[^>]+>/g, " ")
@@ -105,6 +118,39 @@ describe("the empty opportunity map", () => {
       "The map needs at least 4 keywords with both scores. 2 of 4 so far.",
     );
     expect(notice).not.toContain("Clear filters");
+  });
+
+  it("localizes map thresholds and empty states in Chinese", () => {
+    const unscored = noticeOf([keyword("one"), keyword("two")], true, "zh-CN");
+    const few = noticeOf([scored("one", 2), scored("two", 3)], true, "zh-CN");
+
+    expect(unscored).toContain("没有已评分关键词匹配这些筛选条件");
+    expect(unscored).toContain(
+      "2 个关键词匹配这些筛选条件，但都没有同时具备热度和难度。",
+    );
+    expect(few).toContain("已评分关键词过少");
+    expect(few).toContain(
+      "地图至少需要 4 个同时具备热度和难度的关键词。这些筛选条件剩下 2 个。",
+    );
+    expect(few).toContain("清除筛选");
+  });
+
+  it("uses one reordered ICU plural message for singular and plural notices", () => {
+    const messages = {
+      ...enKeywordInspector,
+      map: {
+        ...enKeywordInspector.map,
+        notices: {
+          ...enKeywordInspector.map.notices,
+          unscored: "{count, plural, one {ONE} other {MANY={count}}}",
+        },
+      },
+    };
+
+    expect(noticeOf([keyword("one")], true, "en", messages)).toContain("ONE");
+    expect(
+      noticeOf([keyword("one"), keyword("two")], true, "en", messages),
+    ).toContain("MANY=2");
   });
 });
 

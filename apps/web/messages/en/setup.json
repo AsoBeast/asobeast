@@ -1,0 +1,218 @@
+{
+  "steps": {
+    "competitors": {
+      "title": "Pick competitors",
+      "next": "pick competitors",
+      "description": "Track at least one app you compete with, so every keyword search compares you against it. Two or three is typical.",
+      "skipReason": "Positions are compared against nobody until a competitor is added."
+    },
+    "keywords": {
+      "title": "Track keywords",
+      "next": "track keywords",
+      "description": "Track at least {target, number} keywords in your home storefront. The import already tracked the phrases of your {surface}.",
+      "skipReason": "Only the phrases from your listing are tracked.",
+      "surfaceAppStore": "title and subtitle",
+      "surfaceGooglePlay": "title and short description"
+    },
+    "countries": {
+      "title": "Add countries",
+      "next": "add countries",
+      "description": "Your home country is selected. Add the countries you sell in.",
+      "skipReason": "Keywords are tracked in your home storefront only."
+    }
+  },
+  "state": {
+    "done": "Done",
+    "skipped": "Skipped",
+    "next": "Next"
+  },
+  "progress": {
+    "sentence": "Set up {name} · {done} of {total} · {next}",
+    "ready": "ready to complete",
+    "next": "next: {step}",
+    "value": "{done} of {total, plural, one {# step} other {# steps}}",
+    "aria": "Setup progress",
+    "stepsAria": "Setup steps",
+    "completionHint": "Finish or skip {steps} first."
+  },
+  "facts": {
+    "competitors": "{count, plural, one {# competitor} other {# competitors}}",
+    "keywordsInMarket": "{count, plural, one {# keyword} other {# keywords}} in {country}",
+    "countries": "{count, plural, one {# country} other {# countries}}",
+    "completedAt": "completed {date}"
+  },
+  "status": {
+    "dismissedTitle": "Setup dismissed",
+    "dismissedSentence": "The checklist will not resume automatically. You can restart it whenever you need it.",
+    "restart": "Restart setup",
+    "backToApps": "Back to apps",
+    "startTitle": "Start setup for this app",
+    "startSentence": "Three short steps to a first set of positions. Each one is done once its number is reached, or skipped when it does not apply. Nothing is changed until you add something.",
+    "startAction": "Start this setup",
+    "completeTitle": "Setup complete",
+    "completeSentence": "Positions, competitors and countries are collected on every daily run.",
+    "openOverview": "Open the overview",
+    "countsError": "Some setup counts could not be loaded.",
+    "thisApp": "this app"
+  },
+  "actions": {
+    "dismiss": "Dismiss setup",
+    "complete": "Complete setup",
+    "failed": "Some live counts could not be loaded.",
+    "loading": "Finish loading every live count before completing setup."
+  },
+  "panel": {
+    "skip": "Skip this step",
+    "undoSkip": "Undo skip"
+  },
+  "competitors": {
+    "nextCheck": "A new competitor gets positions on the next keyword check",
+    "manage": "Manage competitors",
+    "countError": "Competitor count is temporarily unavailable.",
+    "countLoading": "Loading competitors…",
+    "countNone": "No competitor yet",
+    "countTracked": "{count, number} tracked: {names}",
+    "unnamed": "Unnamed app"
+  },
+  "keywords": {
+    "countError": "Keywords are temporarily unavailable.",
+    "countLoading": "Loading keywords…",
+    "countTracked": "{count, number} tracked in {country}",
+    "countTarget": "{active, number} of {target, number} tracked in {country}",
+    "checkedDaily": "A tracked keyword is checked on every daily run",
+    "review": "Review keywords"
+  },
+  "countries": {
+    "dailyCost": "Each country adds requests a day to the daily run",
+    "addAnother": "Add another country",
+    "add": "Add a country",
+    "countryToAdd": "Country to add",
+    "addAction": "Add",
+    "reviewed": "Countries reviewed",
+    "selectedTitle": "Selected countries",
+    "home": "Home",
+    "countError": "Keywords unavailable",
+    "countLoading": "Loading keywords…",
+    "activeKeywords": "{count, plural, one {# active keyword} other {# active keywords}}",
+    "reviewMarket": "Review {code} keywords",
+    "remove": "Remove {country}"
+  },
+  "markets": {
+    "listingLanguages": "Your listing ships {languages}.",
+    "seedLabel": "Seed with its listing",
+    "seedFor": " for {country}",
+    "tracked": "Tracked",
+    "costTipLabel": "About market costs",
+    "costTipTitle": "What a market costs",
+    "costGuide": "Read what a market costs",
+    "costAppStore": "A market adds one listing read a day for the app and for every competitor, one more for each localization captured there, and one search a day for every keyword tracked there. Seeding tracks up to {limit, number} keywords from the market's own title and subtitle; each one adds a daily search.",
+    "costGooglePlay": "A market adds one listing read a day for the app and for every competitor, and one search a day for every keyword tracked there.",
+    "costText": "{count, plural, one {# listing read} other {# listing reads}} a day, {perKeyword, number} per keyword",
+    "addCountries": "Add countries",
+    "addCountriesCount": "Add {count, plural, one {# country} other {# countries}}",
+    "addAndSeed": "{add} and seed {count, number}",
+    "seedUnavailable": "Not published on this storefront, so it was not added",
+    "seedSkipped": ", {count, number} left out by the keyword limit",
+    "seeded": "Seeded {count, plural, one {# keyword} other {# keywords}} from its listing{skipped}",
+    "seededNone": "Seeded no keywords{skipped}",
+    "noNewKeywords": "No new keywords in its listing",
+    "seeding": "Seeding from its listing…",
+    "seedFailed": "Could not seed this market"
+  },
+  "discovered": {
+    "title": "Suggested competitors",
+    "added": "Added",
+    "unknownDeveloper": "Unknown developer",
+    "loadError": "Could not load suggested competitors.",
+    "collecting": "Positions are still being collected. Apps that rank for your keywords appear here within minutes.",
+    "unavailable": "The store did not list similar apps right now.",
+    "none": "No suggestions yet.",
+    "addSelected": "Add selected",
+    "addSelectedCount": "Add {count, number} selected",
+    "appearances": "{count, plural, one {# appearance} other {# appearances}} · best #{position, number}",
+    "similarAppStore": "Similar on the App Store",
+    "similarGooglePlay": "Similar on Google Play",
+    "addFailed": "Could not add this competitor"
+  },
+  "firstDiscoveries": {
+    "loadError": "Could not load the first results.",
+    "readyTitle": "Your first results are ready",
+    "collectingTitle": "Looking for keywords near your listing",
+    "collectingBody": "AsoBeast is checking where your app ranks for the phrases of your listing. The first results appear here within minutes.",
+    "seeAll": "See all discoveries",
+    "notChecked": "not checked yet",
+    "found": "Found {count, plural, one {# keyword} other {# keywords}} near your listing.",
+    "ranked": "{found} Your app already ranks for {count, number} of them.",
+    "unrankedHeadline": "{found} {sentence} {track}",
+    "noneRank": "None of them rank yet.",
+    "noneCheckedShown": "None of the ones shown has been checked yet.",
+    "noneCheckedAll": "None of them has been checked yet.",
+    "trackFit": "Track the ones that fit your app."
+  },
+  "firstPositions": {
+    "title": "First positions",
+    "loadError": "Could not load the first positions.",
+    "seeAll": "See every position",
+    "collecting": "Positions are being collected for {count, plural, one {# keyword} other {# keywords}}.",
+    "best": "Your app ranks #{position, number} for “{keyword}”.",
+    "checkedNone": "Checked {checked, number} of {tracked, plural, one {# keyword} other {# keywords}}, none in the top {depth, number} yet.",
+    "missing": "not in the top {depth, number}"
+  },
+  "timeline": {
+    "metadataLabel": "Listing captured",
+    "keywordsLabel": "Keywords tracked",
+    "rankingsLabel": "Positions collected",
+    "scoresLabel": "Popularity and difficulty scored",
+    "reviewsLabel": "Reviews backfilled",
+    "historyLabel": "Daily history",
+    "metadataReady": "The first listing snapshot is stored.",
+    "keywordsReady": "Auto tracked from the indexed fields.",
+    "rankingsReady": "Every tracked keyword has a position.",
+    "scoresReady": "Popularity and difficulty are in for every tracked keyword.",
+    "reviewsReady": "The review backfill is stored.",
+    "historyReady": "A full week of daily captures is in.",
+    "metadataNone": "The store no longer lists this app, so no listing is expected.",
+    "keywordsNone": "No keywords are tracked for this app.",
+    "rankingsNone": "No keywords are tracked, so there are no positions to collect.",
+    "scoresNone": "No keywords are tracked, so there is nothing to score.",
+    "reviewsNone": "This listing has no ratings, so there are no reviews to collect.",
+    "historyNone": "No keywords are tracked, so no history is building.",
+    "metadataWaiting": "The listing is still being read from the store.",
+    "keywordsWaiting": "Keywords are still being extracted from the listing.",
+    "rankingsWaiting": "Positions are being collected now. The daily run catches anything still missing {when}.",
+    "scoresWaiting": "Every tracked keyword was queued for scoring at import. The weekly run catches anything still missing {when}.",
+    "reviewsWaiting": "The review backfill is running.",
+    "historyWaiting": "The trend rules need a week of daily captures before the action queue is worth reading.",
+    "queued": "Collection is queued rather than scheduled, so no time is promised.",
+    "rankingsQueued": "Positions are being collected now. {queued}",
+    "scoresQueued": "Every tracked keyword was queued for scoring at import. {queued}",
+    "rowProgress": "{ready} of {total}",
+    "fullyCollected": "This app is fully collected.",
+    "finishing": "{count, plural, one {One step is still finishing.} other {# steps are still finishing.}}"
+  },
+  "alertsNudge": {
+    "title": "Get told when a position moves",
+    "body": "Two daily captures are in, so positions can now move. Email or a webhook tells you when one drops, climbs or enters the top ten.",
+    "addEmail": "Add an email alert",
+    "addWebhook": "Add a webhook",
+    "notNow": "Not now",
+    "smtpLink": "Email alerts need SMTP on this instance. <link>Set up email delivery</link>"
+  },
+  "banner": {
+    "progressAria": "Setup progress",
+    "moreApps": "<link>and {count, plural, one {# more app} other {# more apps}}</link>",
+    "resume": "Resume setup",
+    "dismiss": "Dismiss"
+  },
+  "keywordPicker": {
+    "metadata": "From your listing",
+    "search": "Store autocomplete",
+    "remaining": "{count, number} more to reach {target, number}"
+  },
+  "skeleton": {
+    "loading": "Loading setup"
+  },
+  "errors": {
+    "save": "Could not save your setup progress"
+  }
+}

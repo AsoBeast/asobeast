@@ -9,7 +9,7 @@ test("switching app keeps the section and drops app scoped state", async ({
 }) => {
   await page.goto(`/apps/${APP}/rankings?range=90d&keywords=kw-1`);
 
-  await page.getByRole("button", { name: /^Switch app/ }).click();
+  await page.locator('[data-action="switch-app"]').click();
   await page.getByRole("option", { name: /Habit Tracker/ }).click();
 
   await expect(page).toHaveURL(`/apps/${OTHER_APP}/rankings`);
@@ -20,7 +20,7 @@ test("switching app from a workspace route lands on the app overview", async ({
 }) => {
   await page.goto("/settings");
 
-  await page.getByRole("button", { name: "Choose an app" }).click();
+  await page.locator('[data-action="switch-app"]').click();
   await page.getByRole("option", { name: /Habit Tracker/ }).click();
 
   await expect(page).toHaveURL(`/apps/${OTHER_APP}`);

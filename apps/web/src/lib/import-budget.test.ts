@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { translationContext } from "@/test/translation-context";
 import type { KeywordImportCost, StoreDailyBudget } from "@asobeast/shared";
 import { importBudgetNotice } from "./import-budget";
 
@@ -66,5 +67,20 @@ describe("importBudgetNotice", () => {
         true,
       )?.text,
     ).toContain("taking Google Play to 6% of its daily capacity");
+  });
+});
+
+describe("Simplified Chinese import budget", () => {
+  it("renders request plurals and capacity warnings in Chinese", () => {
+    const t = translationContext("zh-CN", "apps").translator;
+    expect(importBudgetNotice(cost(1), null, false, t)?.text).toBe(
+      "每天约增加 1 次应用商店请求。每个新关键词还会评分一次，这会在接下来几小时内产生更多请求。",
+    );
+    expect(
+      importBudgetNotice(cost(1_000), store(21_000), true, t),
+    ).toMatchObject({
+      tone: "critical",
+      text: "每天约增加 1,000 次应用商店请求，使 App Store 达到其每日容量的 102%，因此每日运行将无法在一天内完成。请减少导入的关键词或提高应用商店速率限制。每个新关键词还会评分一次，这会在接下来几小时内产生更多请求。",
+    });
   });
 });

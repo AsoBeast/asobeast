@@ -1,10 +1,9 @@
-import { adminSearchLabel, WORKSPACE_NOUN } from "../admin-search";
-
 export function workspaceCloseTarget(
   root: ParentNode,
   workspaceId: string,
+  searchLabel: string,
 ): HTMLElement | null {
-  const search = CSS.escape(adminSearchLabel(WORKSPACE_NOUN));
+  const search = CSS.escape(searchLabel);
   return (
     root.querySelector<HTMLElement>(
       `[data-workspace-sheet="${CSS.escape(workspaceId)}"]`,

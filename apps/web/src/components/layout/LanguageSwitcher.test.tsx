@@ -9,6 +9,7 @@ async function markup(locale: Locale) {
   return renderToStaticMarkup(
     <NextIntlClientProvider
       locale={locale}
+      timeZone="UTC"
       messages={await loadMessages(locale)}
     >
       <LanguageSwitcher />

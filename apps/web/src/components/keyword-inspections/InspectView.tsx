@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import type { KeywordInspectionSummary } from "@asobeast/shared";
 import { useQueryStates } from "nuqs";
 import { useZoneThresholds } from "@/components/keywords/use-zone-thresholds";
@@ -39,6 +40,7 @@ function InspectWorkspace({
   onSelect: (target: InspectTarget | null) => void;
 }) {
   const { data } = useSuspenseQuery(keywordInspectionsOptions);
+  const t = useTranslations("keywordInspector");
   const detail = useQuery({
     ...keywordInspectionOptions(selected ?? ""),
     enabled: selected !== null,
@@ -102,8 +104,8 @@ function InspectWorkspace({
           />
         ) : (
           <EmptyInspection
-            title="No inspection selected"
-            body="Inspect a keyword above, or pick a point on the map, and its live results, autocomplete and scores open here."
+            title={t("inspector.empty.title")}
+            body={t("inspector.empty.body")}
           />
         )}
       </div>
@@ -123,6 +125,7 @@ function InspectWorkspace({
 
 function InspectCost() {
   const plan = useQuery(accountPlanOptions);
+  const t = useTranslations("keywordInspector");
   return (
     <p
       aria-hidden={plan.isPending || undefined}
@@ -131,13 +134,14 @@ function InspectCost() {
         plan.isPending && "invisible",
       )}
     >
-      {inspectionCostText(plan.data?.limits)}
+      {inspectionCostText(plan.data?.limits, t)}
     </p>
   );
 }
 
 export function InspectView() {
   const [search, setSearch] = useQueryStates(inspectParsers);
+  const t = useTranslations("keywordInspector");
   const show = (target: InspectTarget | null) =>
     void setSearch(
       target === null
@@ -154,7 +158,7 @@ export function InspectView() {
   return (
     <>
       <PageHeader
-        title="Keyword inspector"
+        title={t("inspector.title")}
         controls={
           <div className="flex w-full flex-col gap-1.5 xl:w-auto xl:items-end">
             <InspectForm

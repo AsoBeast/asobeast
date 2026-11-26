@@ -1,5 +1,17 @@
 import { type Page } from "@playwright/test";
+import { createTranslator } from "next-intl";
 import { SESSION_COOKIE, type AccountPlan } from "@asobeast/shared";
+import enBilling from "../messages/en/billing.json";
+
+export const EN_BILLING = {
+  locale: "en" as const,
+  translator: createTranslator({
+    locale: "en",
+    namespace: "billing",
+    messages: { billing: enBilling },
+    timeZone: "UTC",
+  }),
+};
 
 export function fulfillJson(status: number, body: unknown) {
   return {

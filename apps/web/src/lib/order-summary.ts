@@ -1,25 +1,21 @@
 import {
   PLANS,
-  planRenewalTerms,
   type BillingInterval,
   type PaidPlanName,
   type TrialOffer,
 } from "@asobeast/shared";
-import { formatUsd } from "@/lib/format";
-import { trialEndLabel, type ViewerClock } from "@/lib/plan-choice";
+import type { TranslationContext } from "@/i18n/translator";
+import {
+  formatUsdInLocale,
+  planLabel,
+  planPriceLabel,
+  trialEndLabel,
+  type ViewerClock,
+} from "@/lib/plan-choice";
 
-export const INTERVAL_LABEL: Record<BillingInterval, string> = {
-  month: "Monthly",
-  year: "Annual",
-};
-
-export const ORDER_SUMMARY_TITLE = "Order summary";
-
-export const DUE_TODAY = "Due today";
-
-const CANCEL_ANY_TIME = "Cancel any time from settings.";
-
-const NOTHING_BEFORE_THE_DATE = "Nothing is charged before the date above.";
+export interface OrderSummaryContext extends TranslationContext {
+  clock: ViewerClock;
+}
 
 export interface OrderSummaryModel {
   planName: string;
@@ -35,24 +31,50 @@ export function priceOf(name: PaidPlanName, interval: BillingInterval): number {
   return (interval === "month" ? monthlyUsd : annualUsd) ?? 0;
 }
 
+export function intervalLabel(
+  interval: BillingInterval,
+  context: TranslationContext,
+): string {
+  return context.translator(`intervals.${interval}`);
+}
+
+export function planRenewalTerms(
+  name: PaidPlanName,
+  interval: BillingInterval,
+  context: TranslationContext,
+): string {
+  return context.translator("plan.renewalTerms", {
+    price: planPriceLabel(name, interval, context),
+    cadence: context.translator(
+      interval === "month" ? "intervals.monthly" : "intervals.yearly",
+    ),
+  });
+}
+
 export function summaryFromCatalog(
   name: PaidPlanName,
   interval: BillingInterval,
   offer: TrialOffer | null | undefined,
-  clock: ViewerClock,
+  context: OrderSummaryContext,
 ): OrderSummaryModel {
-  const unitAmount = formatUsd(priceOf(name, interval));
-  const renewalTerms = planRenewalTerms(name, interval);
+  const unitAmount = formatUsdInLocale(priceOf(name, interval), context.locale);
+  const renewalTerms = planRenewalTerms(name, interval, context);
   return {
-    planName: PLANS[name].displayName,
-    intervalLabel: INTERVAL_LABEL[interval],
+    planName: planLabel(name, context),
+    intervalLabel: intervalLabel(interval, context),
     unitAmount,
-    dueToday: offer ? formatUsd(0) : unitAmount,
+    dueToday: offer ? formatUsdInLocale(0, context.locale) : unitAmount,
     thenLine: offer
-      ? `From ${trialEndLabel(offer, clock)}: ${renewalTerms}.`
-      : `Then ${renewalTerms}.`,
+      ? context.translator("orderSummary.thenTrial", {
+          date: trialEndLabel(offer, context.clock, context),
+          terms: renewalTerms,
+        })
+      : context.translator("orderSummary.then", { terms: renewalTerms }),
     cancelLine: offer
-      ? `${CANCEL_ANY_TIME} ${NOTHING_BEFORE_THE_DATE}`
-      : CANCEL_ANY_TIME,
+      ? context.translator("orderSummary.trialCancel", {
+          cancel: context.translator("orderSummary.cancelAnyTime"),
+          nothing: context.translator("orderSummary.nothingBeforeDate"),
+        })
+      : context.translator("orderSummary.cancelAnyTime"),
   };
 }

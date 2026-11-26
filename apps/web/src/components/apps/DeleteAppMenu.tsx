@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { MoreVertical, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -40,6 +41,8 @@ function deleteSuccessor(trigger: HTMLElement | null): HTMLElement | null {
 }
 
 export function DeleteAppMenu({ id, name }: { id: string; name: string }) {
+  const t = useTranslations("apps");
+  const commonT = useTranslations("common");
   const queryClient = useQueryClient();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -53,10 +56,10 @@ export function DeleteAppMenu({ id, name }: { id: string; name: string }) {
       removeAppQueries(queryClient, id);
       handOff(deleteSuccessor(trigger.current));
       setConfirmOpen(false);
-      toast.success(`Deleted ${name}`);
+      toast.success(t("delete.success", { name }));
     },
     onError: () => {
-      toast.error(`Could not delete ${name}`);
+      toast.error(t("delete.error", { name }));
     },
   });
   const deleteOnce = useSingleFlight(mutation);
@@ -72,7 +75,7 @@ export function DeleteAppMenu({ id, name }: { id: string; name: string }) {
             ref={trigger}
             variant="ghost"
             size="icon-sm"
-            aria-label={`App actions, ${name}`}
+            aria-label={t("delete.actions", { name })}
           >
             <MoreVertical />
           </Button>
@@ -83,7 +86,7 @@ export function DeleteAppMenu({ id, name }: { id: string; name: string }) {
             onSelect={() => setConfirmOpen(true)}
           >
             <Trash2 />
-            Delete app
+            {t("delete.item")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -91,15 +94,14 @@ export function DeleteAppMenu({ id, name }: { id: string; name: string }) {
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent onCloseAutoFocus={onCloseAutoFocus}>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete {name}?</AlertDialogTitle>
+            <AlertDialogTitle>{t("delete.title", { name })}</AlertDialogTitle>
             <AlertDialogDescription>
-              This permanently removes the app and all of its snapshots, tracked
-              keywords and ranking history. This cannot be undone.
+              {t("delete.description")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={mutation.isPending}>
-              Cancel
+              {commonT("cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
@@ -109,7 +111,7 @@ export function DeleteAppMenu({ id, name }: { id: string; name: string }) {
                 deleteOnce();
               }}
             >
-              {mutation.isPending ? "Deleting…" : "Delete app"}
+              {mutation.isPending ? t("delete.pending") : t("delete.item")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

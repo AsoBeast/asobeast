@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   AlertDialogAction,
   AlertDialogCancel,
@@ -18,7 +19,7 @@ export function ConfirmActionFooter({
   pendingLabel,
   onConfirm,
   variant = "destructive",
-  cancelLabel = "Cancel",
+  cancelLabel,
   blocked = false,
 }: {
   pending: boolean;
@@ -29,15 +30,17 @@ export function ConfirmActionFooter({
   cancelLabel?: string;
   blocked?: boolean;
 }) {
+  const t = useTranslations("common");
   return (
     <AlertDialogFooter>
       <AlertDialogCancel
+        data-action="cancel"
         aria-disabled={pending || undefined}
         onClick={(event) => {
           if (pending) event.preventDefault();
         }}
       >
-        {cancelLabel}
+        {cancelLabel ?? t("cancel")}
       </AlertDialogCancel>
       <AlertDialogAction
         variant={variant}

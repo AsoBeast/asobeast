@@ -1,12 +1,13 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import type { ActionItem } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { ActionLine } from "@/components/actions/ActionLine";
 import { DoNextPanel, NoOpenActions } from "@/components/actions/DoNextPanel";
 import { DASHBOARD_ACTION_LIMIT } from "@/lib/action-filters";
-import { formatNumber, storeLabel } from "@/lib/format";
+import { storeLabel } from "@/lib/format";
 import {
   actionsOptions,
   actionSummaryOptions,
@@ -20,16 +21,19 @@ function ActionScope({
   item: ActionItem;
   iconUrl: string | null;
 }) {
+  const t = useTranslations("dashboard");
   const { appName, store, country } = item.scope;
   return (
     <>
       <AppIcon src={iconUrl} size={16} />
       <span className="truncate">
         {[
-          appName ?? "Unknown app",
+          appName ?? t("actions.unknownApp"),
           storeLabel(store),
           country.toUpperCase(),
-          item.reopenCount > 0 ? `Reopened ${item.reopenCount}×` : null,
+          item.reopenCount > 0
+            ? t("actions.reopened", { count: item.reopenCount })
+            : null,
         ]
           .filter((part) => part !== null)
           .join(" · ")}
@@ -67,13 +71,14 @@ function ActionList() {
 }
 
 export function DoNextCard() {
+  const t = useTranslations("dashboard");
   const { data: summary } = useSuspenseQuery(actionSummaryOptions);
   return (
     <DoNextPanel
       counts={
         summary.generatedAt === null
           ? null
-          : `${formatNumber(summary.open)} open`
+          : t("actions.openCount", { count: summary.open })
       }
       href="/actions"
       className="h-full"

@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import type { Row, Table } from "@tanstack/react-table";
 import type { inferParserType, SetValues } from "nuqs";
 import { FacetFilter } from "@/components/data-table/FacetFilter";
@@ -16,25 +17,13 @@ import {
   type combinationParsers,
 } from "@/lib/search-params";
 import { countBy } from "@/lib/table/facets";
-import {
-  COMBINATION_STATUS_LABELS,
-  wordCountLabel,
-} from "./combination-columns";
+import { useAppLocale } from "@/lib/use-app-locale";
+import { combinationStatusLabel, wordCountLabel } from "./combination-columns";
 import type { KeywordTableFeatures } from "./keyword-table-features";
 
 export type CombinationParams = inferParserType<typeof combinationParsers>;
 export type SetCombinationParams = SetValues<typeof combinationParsers>;
 export type CombinationTable = Table<KeywordTableFeatures, KeywordCombination>;
-
-const WORD_OPTIONS = COMBINATION_WORD_FILTERS.map((value) => ({
-  value,
-  label: wordCountLabel(Number(value)),
-}));
-
-const STATUS_OPTIONS = COMBINATION_STATUSES.map((value) => ({
-  value,
-  label: COMBINATION_STATUS_LABELS[value],
-}));
 
 function facetCounts<K>(
   table: CombinationTable,
@@ -55,28 +44,42 @@ export function CombinationFilters({
   setParams: SetCombinationParams;
   actions: ReactNode;
 }) {
-  const statuses = params.status.map(
-    (value) => COMBINATION_STATUS_LABELS[value],
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
+  const wordOptions = COMBINATION_WORD_FILTERS.map((value) => ({
+    value,
+    label: wordCountLabel(Number(value), t),
+  }));
+  const statusOptions = COMBINATION_STATUSES.map((value) => ({
+    value,
+    label: combinationStatusLabel(value, t),
+  }));
+  const statuses = params.status.map((value) =>
+    combinationStatusLabel(value, t),
   );
   const chips = [
     params.q
       ? {
           key: "q",
-          label: `Search: ${params.q}`,
+          label: t("combinations.searchChip", { query: params.q }),
           onRemove: () => void setParams({ q: null }),
         }
       : null,
     params.words.length > 0
       ? {
           key: "words",
-          label: `Words: ${params.words.join(", ")}`,
+          label: t("combinations.wordsChip", {
+            words: params.words.join(locale === "en" ? ", " : "、"),
+          }),
           onRemove: () => void setParams({ words: null }),
         }
       : null,
     statuses.length > 0
       ? {
           key: "status",
-          label: `Status: ${statuses.join(", ")}`,
+          label: t("combinations.statusChip", {
+            statuses: statuses.join(locale === "en" ? ", " : "、"),
+          }),
           onRemove: () => void setParams({ status: null }),
         }
       : null,
@@ -86,13 +89,13 @@ export function CombinationFilters({
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
         <SearchInput
-          label="Search combinations"
+          label={t("combinations.search")}
           value={params.q}
           onSearch={(q, options) => void setParams({ q }, options)}
         />
         <FacetFilter
-          title="Words"
-          options={WORD_OPTIONS}
+          title={t("combinations.words")}
+          options={wordOptions}
           selected={params.words}
           counts={facetCounts(table, "words", (row) =>
             String(row.original.wordCount),
@@ -100,8 +103,8 @@ export function CombinationFilters({
           onChange={(words) => void setParams({ words })}
         />
         <FacetFilter
-          title="Status"
-          options={STATUS_OPTIONS}
+          title={t("combinations.statusTitle")}
+          options={statusOptions}
           selected={params.status}
           counts={facetCounts(table, "status", (row) => row.original.status)}
           onChange={(status) => void setParams({ status })}

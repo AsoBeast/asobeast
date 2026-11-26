@@ -14,8 +14,8 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { answeredDatabaseDown } from "./health-answer";
-
-type Translator = ReturnType<typeof useTranslations>;
+import type { TranslationContext } from "@/i18n/translator";
+import { useAppLocale } from "@/lib/use-app-locale";
 
 function hoursAgo(iso: string): number {
   return Math.max(
@@ -24,21 +24,28 @@ function hoursAgo(iso: string): number {
   );
 }
 
-function degradedDetail(data: HealthStatus, t: Translator): string | null {
+function degradedDetail(
+  data: HealthStatus,
+  context: TranslationContext,
+): string | null {
   const causes: string[] = [];
   if (data.redis === "down") {
-    causes.push(t("redisUnavailable"));
+    causes.push(context.translator("redisUnavailable"));
   }
   const pipeline = data.pipeline;
   if (pipeline?.stale) {
     causes.push(
       pipeline.lastDailyRunAt
-        ? t("lastDailyRun", { hours: hoursAgo(pipeline.lastDailyRunAt) })
-        : t("pipelineStalled"),
+        ? context.translator("lastDailyRun", {
+            hours: hoursAgo(pipeline.lastDailyRunAt),
+          })
+        : context.translator("pipelineStalled"),
     );
   }
   if (pipeline && pipeline.failedJobs > 0) {
-    causes.push(t("failedJobs", { count: pipeline.failedJobs }));
+    causes.push(
+      context.translator("failedJobs", { count: pipeline.failedJobs }),
+    );
   }
   return causes.length > 0 ? causes.join(" · ") : null;
 }
@@ -61,41 +68,41 @@ function resolveState(
   data: HealthStatus | undefined,
   error: unknown,
   isPending: boolean,
-  t: Translator,
+  context: TranslationContext,
 ): BadgeState {
   if (isPending) {
     return {
       mark: dotMark("bg-muted-foreground animate-pulse"),
-      label: t("api"),
-      detail: t("checking"),
+      label: context.translator("api"),
+      detail: context.translator("checking"),
     };
   }
   if (answeredDatabaseDown(error)) {
     return {
       mark: glyphMark(TriangleAlert, "text-warning"),
-      label: t("degraded"),
-      detail: t("databaseUnavailable"),
+      label: context.translator("degraded"),
+      detail: context.translator("databaseUnavailable"),
     };
   }
   if (error || data?.status !== "ok") {
     return {
       mark: glyphMark(CircleX, "text-destructive"),
-      label: t("unreachable"),
-      detail: t("apiUnreachable"),
+      label: context.translator("unreachable"),
+      detail: context.translator("apiUnreachable"),
     };
   }
-  const detail = degradedDetail(data, t);
+  const detail = degradedDetail(data, context);
   if (detail) {
     return {
       mark: glyphMark(TriangleAlert, "text-warning"),
-      label: t("degraded"),
+      label: context.translator("degraded"),
       detail,
     };
   }
   return {
     mark: dotMark("bg-success"),
-    label: t("api"),
-    detail: t("healthy"),
+    label: context.translator("api"),
+    detail: context.translator("healthy"),
   };
 }
 
@@ -105,9 +112,13 @@ export function HealthBadge() {
 }
 
 function ApiStatus() {
-  const t = useTranslations("navigation.health");
+  const locale = useAppLocale();
+  const t = useTranslations("shell.health");
   const { data, error, isPending } = useQuery(healthOptions);
-  const state = resolveState(data, error, isPending, t);
+  const state = resolveState(data, error, isPending, {
+    translator: t,
+    locale,
+  });
 
   return (
     <Tooltip>

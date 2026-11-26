@@ -1,13 +1,17 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { AlertTriangle, CircleCheck, CircleHelp } from "lucide-react";
 import {
   isStorefront,
   type MarketAvailability,
   type Store,
 } from "@asobeast/shared";
-import { formatCountry } from "@/lib/format";
+import { formatCountryInLocale } from "@/lib/format";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { marketAvailabilityOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
@@ -26,15 +30,20 @@ const STATUS_STYLE: Record<
   unknown: { icon: CircleHelp, className: "text-muted-foreground" },
 };
 
-function statusLabel(status: MarketAvailability, country: string): string {
-  const market = formatCountry(country);
+function statusLabel(
+  status: MarketAvailability,
+  country: string,
+  t: MessageTranslator,
+  locale: Locale,
+): string {
+  const market = formatCountryInLocale(country, locale);
   if (status === "available") {
-    return `Published in ${market}`;
+    return t("market.available", { market });
   }
   if (status === "unavailable") {
-    return `Not published in ${market} — you can still track keywords there`;
+    return t("market.unavailable", { market });
   }
-  return `Could not verify availability in ${market}`;
+  return t("market.unknown", { market });
 }
 
 export function MarketAvailabilityNotice({
@@ -46,6 +55,8 @@ export function MarketAvailabilityNotice({
   store: Store;
   country: string;
 }) {
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
   const valid = isStorefront(store, country);
   const { data, isError } = useQuery({
     ...marketAvailabilityOptions(appId, country),
@@ -69,7 +80,7 @@ export function MarketAvailabilityNotice({
       {status && Icon ? (
         <>
           <Icon className="size-3.5 shrink-0" aria-hidden />
-          <span>{statusLabel(status, country)}</span>
+          <span>{statusLabel(status, country, t, locale)}</span>
         </>
       ) : null}
     </p>

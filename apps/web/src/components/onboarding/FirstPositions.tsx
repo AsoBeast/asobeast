@@ -1,6 +1,7 @@
 "use client";
 
 import { useId } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import {
@@ -21,6 +22,7 @@ function FirstPositionsBody({
   country: string;
   headingId: string;
 }) {
+  const t = useTranslations("setup");
   const keywords = useQuery({
     ...keywordsOptions(id, country),
     refetchOnMount: "always",
@@ -29,14 +31,14 @@ function FirstPositionsBody({
   if (failedRead(keywords)) {
     return (
       <InlineQueryError
-        message="Could not load the first positions."
+        message={t("firstPositions.loadError")}
         read={keywords}
       />
     );
   }
   if (!keywords.data) return <Skeleton className="h-16 w-full" />;
 
-  const summary = firstPositions(keywords.data);
+  const summary = firstPositions(keywords.data, t);
   return (
     <>
       <p className="text-dense font-medium">{summary.headline}</p>
@@ -48,12 +50,14 @@ function FirstPositionsBody({
                 key={row.keywordId}
                 className="numeric text-dense text-muted-foreground"
               >
-                {`“${row.text}” · ${positionLabel(row)}`}
+                {`“${row.text}” · ${positionLabel(row, t)}`}
               </li>
             ))}
           </ul>
           <Button asChild variant="link" className="h-auto w-fit px-0">
-            <Link href={`/apps/${id}/rankings`}>See every position</Link>
+            <Link href={`/apps/${id}/rankings`}>
+              {t("firstPositions.seeAll")}
+            </Link>
           </Button>
         </>
       ) : null}
@@ -68,12 +72,13 @@ export function FirstPositions({
   id: string;
   country: string;
 }) {
+  const t = useTranslations("setup");
   const headingId = useId();
 
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-2">
       <h3 id={headingId} className="text-dense font-medium">
-        First positions
+        {t("firstPositions.title")}
       </h3>
       <FirstPositionsBody id={id} country={country} headingId={headingId} />
     </section>

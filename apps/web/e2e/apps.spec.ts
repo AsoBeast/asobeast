@@ -169,14 +169,14 @@ test("the import dialog drops a storefront refusal when the storefront changes",
   const field = page.getByLabel("App name or store URL");
   await field.fill(FOCUS_TIMER_URL);
   await page.getByRole("combobox", { name: "Home storefront" }).click();
-  await page.getByRole("option", { name: "Other…" }).click();
-  await page.getByLabel("Storefront country code").fill("zz");
+  await page.locator('[data-action="other-country"]').click();
+  await page.locator('[data-action="country-code"]').fill("zz");
   await page.getByRole("button", { name: "Import", exact: true }).click();
   await expect(page.locator("#import-url-error")).toHaveText(
-    "zz is not an App Store storefront",
+    "App Store has no storefront with the code ZZ.",
   );
 
-  await page.getByLabel("Storefront country code").fill("us");
+  await page.locator('[data-action="country-code"]').fill("us");
 
   await expect(page.locator("#import-url-error")).toHaveCount(0);
   await expect(field).toHaveAttribute("aria-invalid", "false");
@@ -1158,7 +1158,7 @@ test("an unknown app renders the not-found boundary", async ({ page }) => {
   await page.goto("/apps/does-not-exist");
 
   const main = page.getByRole("main");
-  await expect(main.getByText("Page not found")).toBeVisible();
+  await expect(main.locator('[data-slot="not-found"]')).toBeVisible();
   await expect(
     main.getByText("There is nothing at this address."),
   ).toBeVisible();

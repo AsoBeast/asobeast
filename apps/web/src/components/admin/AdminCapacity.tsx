@@ -3,6 +3,7 @@
 import { useId, type ReactNode } from "react";
 import Link from "next/link";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { TriangleAlert } from "lucide-react";
 import type {
   CapacityReport,
@@ -21,23 +22,22 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { PANEL_HEADER } from "@/components/layout/panel-classes";
-import { formatNumber, formatUsd, pluralize, storeLabel } from "@/lib/format";
+import type { MessageTranslator } from "@/i18n/translator";
+import { formatNumberInLocale, storeLabel } from "@/lib/format";
+import { formatUsdInLocale } from "@/lib/plan-labels";
 import {
   adminCapacityOptions,
   adminProxyPoolOptions,
   adminWorkspacesOptions,
 } from "@/lib/queries";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { utilizationPercent, utilizationStatus } from "@/lib/utilization";
 
-const ALERT_COPY: Record<ProxyPoolAlert, string> = {
-  "pool.healthy.low":
-    "Few healthy endpoints remain, so store work may slow until the pool recovers.",
-  "pool.blocked.rising":
-    "Blocked responses are rising, so the stores may be refusing pool addresses.",
-  "pool.silent.rising":
-    "Silent failures are rising: responses arrive empty, which points at a block or a parser change.",
-  "residential.spend.near-cap":
-    "Residential fallback spend is close to its monthly cap.",
+const ALERT_KEYS: Record<ProxyPoolAlert, string> = {
+  "pool.healthy.low": "capacity.alerts.poolHealthyLow",
+  "pool.blocked.rising": "capacity.alerts.poolBlockedRising",
+  "pool.silent.rising": "capacity.alerts.poolSilentRising",
+  "residential.spend.near-cap": "capacity.alerts.residentialSpendNearCap",
 };
 
 function DemandLine({
@@ -46,20 +46,31 @@ function DemandLine({
   capacity,
   utilization,
   meterLabel,
+  statusTranslator,
 }: {
   label: string;
   requests: number;
   capacity: number;
   utilization: number;
   meterLabel: string;
+  statusTranslator: MessageTranslator;
 }) {
+  const t = useTranslations("admin");
+  const locale = useAppLocale();
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 text-dense">
         <span className="font-medium">{label}</span>
         <span className="text-muted-foreground tabular-nums">
-          {formatNumber(requests)} of {formatNumber(capacity)} requests/day ·{" "}
-          {utilizationPercent(utilization)}% · {utilizationStatus(utilization)}
+          {t("capacity.usage", {
+            used: formatNumberInLocale(requests, locale),
+            capacity: formatNumberInLocale(capacity, locale),
+            percent: formatNumberInLocale(
+              utilizationPercent(utilization),
+              locale,
+            ),
+            status: utilizationStatus(utilization, statusTranslator),
+          })}
         </span>
       </div>
       <UtilizationMeter label={meterLabel} utilization={utilization} />
@@ -90,18 +101,26 @@ function SectionCard({
   );
 }
 
-function InstanceDemand({ report }: { report: CapacityReport }) {
+function InstanceDemand({
+  report,
+  statusTranslator,
+}: {
+  report: CapacityReport;
+  statusTranslator: MessageTranslator;
+}) {
+  const t = useTranslations("admin");
   return (
     <SectionCard
-      title="Instance demand"
-      description="Store requests the daily run enqueues for every workspace it visits, against the capacity of this instance. Suspended and unentitled workspaces are skipped."
+      title={t("capacity.demandTitle")}
+      description={t("capacity.demandDescription")}
     >
       <DemandLine
-        label="All stores"
+        label={t("capacity.allStores")}
         requests={report.requestsPerDay}
         capacity={report.capacityPerDay}
         utilization={report.utilization}
-        meterLabel="Instance daily request utilization"
+        meterLabel={t("capacity.instanceMeter")}
+        statusTranslator={statusTranslator}
       />
       {report.stores?.map((store) => (
         <DemandLine
@@ -110,7 +129,10 @@ function InstanceDemand({ report }: { report: CapacityReport }) {
           requests={store.requestsPerDay}
           capacity={store.capacityPerDay}
           utilization={store.utilization}
-          meterLabel={`${storeLabel(store.store)} daily request utilization`}
+          meterLabel={t("capacity.storeMeter", {
+            store: storeLabel(store.store),
+          })}
+          statusTranslator={statusTranslator}
         />
       ))}
     </SectionCard>
@@ -124,17 +146,18 @@ function TopConsumers({
   report: CapacityReport;
   workspaces: SupportWorkspaceSummary[];
 }) {
+  const t = useTranslations("admin");
   const names = new Map(
     workspaces.map((workspace) => [workspace.workspaceId, workspace.name]),
   );
   return (
     <SectionCard
-      title="Top consumers"
-      description="The workspaces whose tracking costs the most requests per day."
+      title={t("capacity.consumersTitle")}
+      description={t("capacity.consumersDescription")}
     >
       {report.workspaces.length === 0 ? (
         <p className="text-dense text-muted-foreground">
-          No workspace is tracking anything yet.
+          {t("capacity.consumersEmpty")}
         </p>
       ) : (
         <ol className="flex flex-col divide-y text-dense">
@@ -151,7 +174,9 @@ function TopConsumers({
                 {names.get(consumer.workspaceId) ?? consumer.workspaceId}
               </Link>
               <span className="shrink-0 text-muted-foreground tabular-nums">
-                {formatNumber(consumer.requests)} requests/day
+                {t("capacity.requestsPerDay", {
+                  count: consumer.requests,
+                })}
               </span>
             </li>
           ))}
@@ -162,32 +187,36 @@ function TopConsumers({
 }
 
 function ProxyPool({ pool }: { pool: ProxyPoolHealth }) {
+  const t = useTranslations("admin");
+  const locale = useAppLocale();
   return (
     <SectionCard
-      title="Proxy pool"
-      description={`Store requests leave through ${pool.provider} endpoints instead of the host address.`}
+      title={t("capacity.proxyTitle")}
+      description={t("capacity.proxyDescription", {
+        provider: pool.provider,
+      })}
     >
       <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-dense sm:grid-cols-4">
         <div className="flex flex-col gap-0.5">
-          <dt className="text-muted-foreground">Provider</dt>
+          <dt className="text-muted-foreground">{t("capacity.provider")}</dt>
           <dd className="font-medium">{pool.provider}</dd>
         </div>
         <div className="flex flex-col gap-0.5">
-          <dt className="text-muted-foreground">Pool</dt>
+          <dt className="text-muted-foreground">{t("capacity.pool")}</dt>
           <dd className="font-medium tabular-nums">
-            {pluralize(pool.total, "endpoint")}
+            {t("common.endpointCount", { count: pool.total })}
           </dd>
         </div>
         <div className="flex flex-col gap-0.5">
-          <dt className="text-muted-foreground">Pending</dt>
+          <dt className="text-muted-foreground">{t("capacity.pending")}</dt>
           <dd className="font-medium tabular-nums">
-            {formatNumber(pool.pending)}
+            {formatNumberInLocale(pool.pending, locale)}
           </dd>
         </div>
         <div className="flex flex-col gap-0.5">
-          <dt className="text-muted-foreground">Retired</dt>
+          <dt className="text-muted-foreground">{t("capacity.retired")}</dt>
           <dd className="font-medium tabular-nums">
-            {formatNumber(pool.retired)}
+            {formatNumberInLocale(pool.retired, locale)}
           </dd>
         </div>
       </dl>
@@ -196,17 +225,21 @@ function ProxyPool({ pool }: { pool: ProxyPoolHealth }) {
           <li key={store.store} className="flex justify-between gap-4">
             <span>{storeLabel(store.store)}</span>
             <span className="text-muted-foreground tabular-nums">
-              {formatNumber(store.healthy)} of {formatNumber(store.endpoints)}{" "}
-              healthy
+              {t("capacity.healthy", {
+                healthy: formatNumberInLocale(store.healthy, locale),
+                total: formatNumberInLocale(store.endpoints, locale),
+              })}
             </span>
           </li>
         ))}
         {pool.residential.configured ? (
           <li className="flex justify-between gap-4">
-            <span>Residential fallback this month</span>
+            <span>{t("capacity.residential")}</span>
             <span className="text-muted-foreground tabular-nums">
-              {formatUsd(pool.residential.spendUsd)} of{" "}
-              {formatUsd(pool.residential.capUsd)}
+              {t("capacity.residentialUsage", {
+                spend: formatUsdInLocale(pool.residential.spendUsd, locale),
+                cap: formatUsdInLocale(pool.residential.capUsd, locale),
+              })}
             </span>
           </li>
         ) : null}
@@ -214,7 +247,7 @@ function ProxyPool({ pool }: { pool: ProxyPoolHealth }) {
       {pool.alerts.map((alert) => (
         <Alert key={alert}>
           <TriangleAlert />
-          <AlertDescription>{ALERT_COPY[alert]}</AlertDescription>
+          <AlertDescription>{t(ALERT_KEYS[alert])}</AlertDescription>
         </Alert>
       ))}
       <a
@@ -223,26 +256,27 @@ function ProxyPool({ pool }: { pool: ProxyPoolHealth }) {
         rel="noreferrer"
         className="w-fit text-dense font-medium underline underline-offset-4"
       >
-        Raw pool health
-        <span className="sr-only"> (opens in a new tab)</span>
+        {t("capacity.rawPool")}
+        <span className="sr-only"> {t("common.opensInNewTab")}</span>
       </a>
     </SectionCard>
   );
 }
 
 export function AdminCapacity() {
+  const t = useTranslations("admin");
+  const statusTranslator = useTranslations("metrics");
   const { data: report } = useSuspenseQuery(adminCapacityOptions);
   const { data: pool } = useSuspenseQuery(adminProxyPoolOptions);
   const { data: workspaces } = useSuspenseQuery(adminWorkspacesOptions);
 
   return (
     <div className="flex flex-col gap-6">
-      <InstanceDemand report={report} />
+      <InstanceDemand report={report} statusTranslator={statusTranslator} />
       <TopConsumers report={report} workspaces={workspaces} />
       {pool.enabled ? <ProxyPool pool={pool} /> : null}
       <p className="text-dense text-muted-foreground">
-        Each workspace sees only its own plan usage. Capacity is shown to the
-        platform operator only.
+        {t("capacity.operatorOnly")}
       </p>
     </div>
   );

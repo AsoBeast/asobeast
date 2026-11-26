@@ -1,17 +1,26 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { NextIntlClientProvider } from "next-intl";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import enMessages from "../../../messages/en/errors.json";
+import enCommon from "../../../messages/en/common.json";
 import { ErrorState } from "./ErrorState";
 
 function markup(props: Partial<Parameters<typeof ErrorState>[0]>) {
   return renderToStaticMarkup(
-    <QueryClientProvider client={new QueryClient()}>
-      <ErrorState
-        error={new Error("boom")}
-        retry={() => undefined}
-        {...props}
-      />
-    </QueryClientProvider>,
+    <NextIntlClientProvider
+      locale="en"
+      timeZone="UTC"
+      messages={{ errors: enMessages, common: enCommon }}
+    >
+      <QueryClientProvider client={new QueryClient()}>
+        <ErrorState
+          error={new Error("boom")}
+          retry={() => undefined}
+          {...props}
+        />
+      </QueryClientProvider>
+    </NextIntlClientProvider>,
   );
 }
 

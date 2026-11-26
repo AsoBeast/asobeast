@@ -1,6 +1,7 @@
 "use client";
 
 import { useId } from "react";
+import { useTranslations } from "next-intl";
 import type { Store } from "@asobeast/shared";
 import { Input } from "@/components/ui/input";
 import {
@@ -11,10 +12,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { COUNTRY_OPTIONS, OTHER, marketError } from "@/lib/countries";
-import { formatCountry } from "@/lib/format";
+import { formatCountryInLocale } from "@/lib/format";
+import type { Locale } from "@/lib/locale";
+import { useAppLocale } from "@/lib/use-app-locale";
 
-const countryLabel = (code: string) =>
-  `${code.toUpperCase()} · ${formatCountry(code)}`;
+const countryLabel = (code: string, locale: Locale) =>
+  `${code.toUpperCase()} · ${formatCountryInLocale(code, locale)}`;
 
 export function CountrySelect({
   id,
@@ -30,33 +33,47 @@ export function CountrySelect({
   ariaLabel?: string;
 }) {
   const errorId = useId();
+  const locale = useAppLocale();
+  const t = useTranslations("ui");
+  const validation = useTranslations("validation");
   const other = value === "" || !COUNTRY_OPTIONS.includes(value);
-  const error = other && value.length === 2 ? marketError(store, value) : null;
+  const error =
+    other && value.length === 2 ? marketError(store, value, validation) : null;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div data-slot="country-select" className="flex flex-col gap-2">
       <Select
         value={other ? OTHER : value}
         onValueChange={(next) => onChange(next === OTHER ? "" : next)}
       >
-        <SelectTrigger id={id} aria-label={ariaLabel} className="w-[220px]">
-          <SelectValue>{other ? "Other…" : countryLabel(value)}</SelectValue>
+        <SelectTrigger
+          id={id}
+          data-slot="country-select-trigger"
+          aria-label={ariaLabel}
+          className="w-[220px]"
+        >
+          <SelectValue>
+            {other ? t("other") : countryLabel(value, locale)}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           {COUNTRY_OPTIONS.map((code) => (
             <SelectItem key={code} value={code}>
-              {countryLabel(code)}
+              {countryLabel(code, locale)}
             </SelectItem>
           ))}
-          <SelectItem value={OTHER}>Other…</SelectItem>
+          <SelectItem value={OTHER} data-action="other-country">
+            {t("other")}
+          </SelectItem>
         </SelectContent>
       </Select>
       {other ? (
         <Input
-          aria-label="Storefront country code"
+          data-action="country-code"
+          aria-label={t("storefrontCountryCode")}
           value={value}
           onChange={(event) => onChange(event.target.value.toLowerCase())}
-          placeholder="two letter code, e.g. se"
+          placeholder={t("countryCodePlaceholder")}
           maxLength={2}
           className="w-[220px]"
           aria-invalid={error !== null}

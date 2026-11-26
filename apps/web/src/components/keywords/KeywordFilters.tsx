@@ -1,6 +1,7 @@
 "use client";
 
 import type { ComponentProps } from "react";
+import { useTranslations } from "next-intl";
 import {
   FiltersPopover,
   FiltersSheet,
@@ -28,11 +29,12 @@ export function KeywordFiltersSheet({
   otherWidth,
   ...facets
 }: WidthBoundFilters) {
+  const t = useTranslations("keywords");
   return (
     <FiltersSheet
       active={active}
       otherWidth={otherWidth}
-      description="Narrow the keywords by source, bucket, status, type, grade and position."
+      description={t("filters.description")}
     >
       <KeywordFacets {...facets} />
     </FiltersSheet>

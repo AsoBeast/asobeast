@@ -1,11 +1,16 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { MovementCell } from "@/components/movement/MovementCell";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { InfoTip } from "@/components/ui/info-tip";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCompact, formatDayMonth, formatRating } from "@/lib/format";
+import {
+  formatCompactInLocale,
+  formatDayMonthInLocale,
+  formatRatingInLocale,
+} from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import type {
   PositionSummary,
   RatingSummary,
@@ -13,6 +18,7 @@ import type {
   TitleSummary,
 } from "./serp-summary";
 import { serpRowId } from "./SerpRow";
+import { SerpMovement } from "./SerpRow";
 
 const SEARCH_RESULTS_GUIDE =
   "https://docs.asobeast.com/guides/read-rankings#search-results";
@@ -29,6 +35,7 @@ function jumpToRow(position: number) {
 }
 
 function GuideLink() {
+  const t = useTranslations("keywordInspector");
   return (
     <a
       href={SEARCH_RESULTS_GUIDE}
@@ -36,7 +43,7 @@ function GuideLink() {
       rel="noreferrer"
       className="link-underline"
     >
-      Read about search results
+      {t("serp.summary.guide")}
     </a>
   );
 }
@@ -78,6 +85,13 @@ function PositionValue({
   position: PositionSummary;
   comparedTo: string | null;
 }) {
+  const t = useTranslations("keywordInspector");
+  const locale = useAppLocale();
+  const period = comparedTo
+    ? t("serp.summary.period", {
+        date: formatDayMonthInLocale(comparedTo, locale),
+      })
+    : "";
   switch (position.kind) {
     case "listed":
       return (
@@ -85,17 +99,18 @@ function PositionValue({
           <Button
             variant="link"
             className="h-auto p-0 numeric text-body font-medium"
-            aria-label={`Jump to your row at #${position.position}`}
+            aria-label={t("serp.summary.jump", {
+              position: position.position,
+            })}
             onClick={() => jumpToRow(position.position)}
           >
             #{position.position}
           </Button>
           <span className="text-caption">
-            <MovementCell
+            <SerpMovement
               entry={position.moved}
-              period={comparedTo ? `since ${formatDayMonth(comparedTo)}` : ""}
-              noneText="No earlier position"
-              compact
+              period={period}
+              noneText={t("serp.summary.noEarlierPosition")}
             />
           </span>
         </>
@@ -104,39 +119,51 @@ function PositionValue({
       return (
         <>
           <Value>{`#${position.position}`}</Value>
-          <Note>{`below the top ${position.listed}`}</Note>
+          <Note>{t("serp.summary.deeper", { count: position.listed })}</Note>
         </>
       );
     case "notFound":
-      return <Note>{`Not in the top ${position.depth}`}</Note>;
+      return (
+        <Note>{t("serp.summary.notFound", { depth: position.depth })}</Note>
+      );
     default:
-      return <Note>Not in this list</Note>;
+      return <Note>{t("serp.summary.absent")}</Note>;
   }
 }
 
 function TitlesValue({ titles }: { titles: TitleSummary | null }) {
-  if (!titles) return <Note>Not reported</Note>;
-  return <Value>{`${titles.withKeyword} of ${titles.of}`}</Value>;
+  const t = useTranslations("keywordInspector");
+  if (!titles) return <Note>{t("serp.summary.notReported")}</Note>;
+  return (
+    <Value>
+      {t("serp.summary.ratio", {
+        shown: titles.withKeyword,
+        total: titles.of,
+      })}
+    </Value>
+  );
 }
 
 function RatingsValue({ ratings }: { ratings: RatingSummary }) {
+  const t = useTranslations("keywordInspector");
+  const locale = useAppLocale();
   if (ratings.kind === "median") {
     return (
       <>
-        <Value>{formatCompact(ratings.value)}</Value>
-        <Note>median</Note>
+        <Value>{formatCompactInLocale(ratings.value, locale)}</Value>
+        <Note>{t("serp.summary.median")}</Note>
       </>
     );
   }
   if (ratings.kind === "average") {
     return (
       <>
-        <Value>{formatRating(ratings.value)}</Value>
-        <Note>average</Note>
+        <Value>{formatRatingInLocale(ratings.value, locale)}</Value>
+        <Note>{t("serp.summary.average")}</Note>
       </>
     );
   }
-  return <Note>No ratings</Note>;
+  return <Note>{t("serp.summary.noRatings")}</Note>;
 }
 
 function SummaryGrid({
@@ -150,37 +177,46 @@ function SummaryGrid({
   ratings: ReactNode;
   tips: boolean;
 }) {
-  const tip = (tipLabel: string, title: string, summary: string) =>
-    tips ? (
-      <InfoTip label={tipLabel} title={title} summary={summary}>
-        <GuideLink />
-      </InfoTip>
-    ) : (
-      <span className="-my-1 size-6" />
-    );
+  const t = useTranslations("keywordInspector");
   return (
     <dl
       data-slot="serp-summary"
       className="mx-4 mt-4 grid grid-cols-3 gap-px overflow-hidden rounded-lg border bg-border"
     >
-      <Item label="Your position">{position}</Item>
+      <Item label={t("serp.summary.yourPosition")}>{position}</Item>
       <Item
-        label="Titles with it"
-        tip={tip(
-          "About titles with the keyword",
-          "Titles with the keyword",
-          "How many of the top 10 titles hold the whole keyword, its words in order. Titles that hold only some of the words, or match only without accents, do not count.",
-        )}
+        label={t("serp.summary.titles")}
+        tip={
+          tips ? (
+            <InfoTip
+              label={t("serp.summary.titlesTipLabel")}
+              title={t("serp.summary.titlesTipTitle")}
+              summary={t("serp.summary.titlesTipSummary")}
+            >
+              <GuideLink />
+            </InfoTip>
+          ) : (
+            <span className="-my-1 size-6" />
+          )
+        }
       >
         {titles}
       </Item>
       <Item
-        label="Top 10 ratings"
-        tip={tip(
-          "About top 10 ratings",
-          "Top 10 ratings",
-          "The median rating count of the top 10 apps, a rough measure of how established the top-ranked apps are. Google Play reports no counts, so its average rating shows instead.",
-        )}
+        label={t("serp.summary.ratings")}
+        tip={
+          tips ? (
+            <InfoTip
+              label={t("serp.summary.ratingsTipLabel")}
+              title={t("serp.summary.ratingsTipTitle")}
+              summary={t("serp.summary.ratingsTipSummary")}
+            >
+              <GuideLink />
+            </InfoTip>
+          ) : (
+            <span className="-my-1 size-6" />
+          )
+        }
       >
         {ratings}
       </Item>
@@ -208,9 +244,10 @@ export function SerpSummary({
 }
 
 export function SerpSummarySkeleton() {
+  const t = useTranslations("keywordInspector");
   const value = (
     <Skeleton className="w-16 border border-transparent text-transparent *:text-transparent">
-      <Value>0</Value> <Note>median</Note>
+      <Value>0</Value> <Note>{t("serp.summary.median")}</Note>
     </Skeleton>
   );
   return (

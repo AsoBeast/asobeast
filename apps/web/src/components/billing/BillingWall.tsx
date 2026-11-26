@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQueryState } from "nuqs";
 import {
-  PLANS,
-  planRenewalTerms,
   type AccountPlan,
   type AuthUser,
   type BillingCatalog,
@@ -14,6 +13,7 @@ import {
 import { SignUpSteps } from "@/components/auth/SignUpSteps";
 import type { RetryableRead } from "@/components/layout/InlineQueryError";
 import { embeddedKeyFor } from "@/lib/embedded-checkout";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { paywallFaq } from "@/lib/paywall-faq";
 import {
   buysPlan,
@@ -26,6 +26,7 @@ import {
   trustLines,
 } from "@/lib/plan-choice";
 import { planParam } from "@/lib/search-params";
+import { planRenewalTerms } from "@/lib/order-summary";
 import { signUpSteps } from "@/lib/sign-up-steps";
 import { HostedAction } from "./HostedAction";
 import { PaymentColumn } from "./PaymentColumn";
@@ -50,6 +51,9 @@ export function BillingWall({
   catalogRead: RetryableRead | null;
   billing: boolean;
 }) {
+  const t = useTranslations("billing");
+  const locale = useAppLocale();
+  const context = { translator: t, locale };
   const [selected, setSelected] = useQueryState(
     "plan",
     planParam.withDefault(DEFAULT_PLAN).withOptions({ clearOnDefault: false }),
@@ -67,19 +71,19 @@ export function BillingWall({
   const publishableKey = embeddedKeyFor(catalog, buys, price);
   const hostedAction = !publishableKey && !(catalogRead && buys);
   const trialParts =
-    action === "trial" && offer ? trialBarParts(offer, clock) : null;
+    action === "trial" && offer ? trialBarParts(offer, clock, context) : null;
 
   return (
     <div className="page-checkout flex flex-col gap-8 pb-40 sm:pb-28">
       <header className="flex flex-col gap-4">
         <SignUpSteps steps={signUpSteps(user)} />
         <h1 className="text-title tracking-tight text-balance sm:text-hero">
-          {paywallHeading(plan)}
+          {paywallHeading(plan, context)}
         </h1>
         <p className="max-w-prose text-body text-muted-foreground">
-          {paywallStatusLine(plan, clock)}
+          {paywallStatusLine(plan, clock, context)}
         </p>
-        {offer ? <TrustRow lines={trustLines(offer, clock)} /> : null}
+        {offer ? <TrustRow lines={trustLines(offer, clock, context)} /> : null}
       </header>
       <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,28rem)] xl:gap-12">
         <PlanPicker
@@ -103,16 +107,21 @@ export function BillingWall({
         />
       </div>
       <PaywallFaq
-        items={paywallFaq(offer, planRenewalTerms(selected, interval), clock)}
+        items={paywallFaq(
+          offer,
+          planRenewalTerms(selected, interval, context),
+          clock,
+          context,
+        )}
       />
       <TrialBar
         parts={trialParts}
-        label={trialParts ? "Your trial" : "Checkout"}
+        label={trialParts ? t("trial.label") : t("checkout.label")}
       >
         {hostedAction ? (
           <HostedAction
             action={action}
-            label={planActionLabel(action, PLANS[selected].displayName)}
+            label={planActionLabel(action, selected, context)}
             price={price}
           />
         ) : null}

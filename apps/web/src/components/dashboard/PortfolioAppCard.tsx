@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { PortfolioApp, PortfolioAppInsight } from "@asobeast/shared";
 import { RankBandBar } from "@/components/charts/RankBandBar";
 import { AppIcon } from "@/components/AppIcon";
@@ -7,12 +8,12 @@ import { Separated } from "@/components/ui/separated";
 import { Card } from "@/components/ui/card";
 import { TrendChip } from "@/components/ui/delta-chip";
 import {
-  formatCountry,
-  formatDate,
-  formatNumber,
-  pluralize,
+  formatCountryInLocale,
+  formatDateInLocale,
+  formatNumberInLocale,
   storeLabel,
 } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { AppCardLink } from "@/components/apps/AppCardLink";
 import { DelistedBadge } from "@/components/apps/DelistedBadge";
 import { DeleteAppMenu } from "@/components/apps/DeleteAppMenu";
@@ -21,17 +22,25 @@ import { setupChipText } from "./setup-chip";
 import { Sparkline } from "@/components/charts/Sparkline";
 
 export function AppStats({ app }: { app: PortfolioApp }) {
+  const t = useTranslations("dashboard");
+  const locale = useAppLocale();
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-muted-foreground">
-      <span>{pluralize(app.trackedKeywords, "keyword")}</span>
-      <span>{pluralize(app.competitors, "competitor")}</span>
-      <span>Updated {formatDate(app.lastCapturedAt)}</span>
+      <span>{t("counts.keywords", { count: app.trackedKeywords })}</span>
+      <span>{t("counts.competitors", { count: app.competitors })}</span>
+      <span>
+        {t("cards.updated", {
+          date: formatDateInLocale(app.lastCapturedAt, locale),
+        })}
+      </span>
     </div>
   );
 }
 
 export function AppBadges({ app }: { app: PortfolioApp }) {
-  const setup = setupChipText(app.setup);
+  const t = useTranslations("dashboard");
+  const locale = useAppLocale();
+  const setup = setupChipText(app.setup, t);
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-label text-muted-foreground">
       <span>
@@ -40,7 +49,9 @@ export function AppBadges({ app }: { app: PortfolioApp }) {
             storeLabel(app.store),
             <span
               key="country"
-              title={`Home storefront · ${formatCountry(app.country)}`}
+              title={t("cards.homeStorefront", {
+                country: formatCountryInLocale(app.country, locale),
+              })}
             >
               {app.country.toUpperCase()}
             </span>,
@@ -58,12 +69,20 @@ export function AppBadges({ app }: { app: PortfolioApp }) {
 }
 
 function Top10Line({ insight }: { insight: PortfolioAppInsight }) {
+  const t = useTranslations("dashboard");
   return (
     <div className="flex flex-col gap-1">
       <RankBandBar distribution={insight.rankDistribution} />
       <div className="flex flex-wrap items-center gap-2 text-caption text-muted-foreground">
-        <span>{formatNumber(insight.rankDistribution.top10)} in top 10</span>
-        <TrendChip label="7d" value={insight.top10Delta7d} />
+        <span>
+          {t("cards.top10", {
+            count: insight.rankDistribution.top10,
+          })}
+        </span>
+        <TrendChip
+          label={t("table.rangeUnit", { days: 7 })}
+          value={insight.top10Delta7d}
+        />
       </div>
     </div>
   );
@@ -79,7 +98,9 @@ export function PortfolioAppCard({
   app: PortfolioApp;
   insight: PortfolioAppInsight | undefined;
 }) {
-  const name = app.name ?? "Untitled app";
+  const t = useTranslations("dashboard");
+  const locale = useAppLocale();
+  const name = app.name ?? t("table.untitled");
 
   return (
     <Card className="@container/app-card relative h-full gap-0 p-4 transition-colors hover:bg-muted">
@@ -106,19 +127,25 @@ export function PortfolioAppCard({
 
         {app.lastCapturedAt === null ? (
           <p className="text-body text-muted-foreground">
-            Collecting the first positions. Visibility appears within the hour.
+            {t("cards.collecting")}
           </p>
         ) : (
           <>
             <div className="flex flex-col gap-1">
               <div className="flex items-baseline gap-2">
                 <span className="numeric text-metric">
-                  {Math.round(app.visibility.current)}
+                  {formatNumberInLocale(
+                    Math.round(app.visibility.current),
+                    locale,
+                  )}
                 </span>
-                <TrendChip label="7d" value={app.visibility.delta7d} />
+                <TrendChip
+                  label={t("table.rangeUnit", { days: 7 })}
+                  value={app.visibility.delta7d}
+                />
               </div>
               <span className="text-caption text-muted-foreground">
-                visibility
+                {t("cards.visibility")}
               </span>
             </div>
 
@@ -146,7 +173,9 @@ export function PortfolioGroupMember({
   app: PortfolioApp;
   insight: PortfolioAppInsight | undefined;
 }) {
-  const name = app.name ?? "Untitled app";
+  const t = useTranslations("dashboard");
+  const locale = useAppLocale();
+  const name = app.name ?? t("table.untitled");
 
   return (
     <div className="relative flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
@@ -171,16 +200,19 @@ export function PortfolioGroupMember({
         {app.lastCapturedAt === null ? null : (
           <div className="flex flex-col items-end gap-1">
             <span className="numeric text-title">
-              {Math.round(app.visibility.current)}
+              {formatNumberInLocale(Math.round(app.visibility.current), locale)}
             </span>
-            <TrendChip label="7d" value={app.visibility.delta7d} />
+            <TrendChip
+              label={t("table.rangeUnit", { days: 7 })}
+              value={app.visibility.delta7d}
+            />
           </div>
         )}
       </div>
 
       {app.lastCapturedAt === null ? (
         <p className="text-caption text-muted-foreground">
-          Collecting the first positions.
+          {t("cards.collectingShort")}
         </p>
       ) : (
         <>

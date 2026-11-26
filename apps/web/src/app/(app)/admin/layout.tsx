@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { AdminAccessNotice } from "@/components/admin/AdminAccessNotice";
 import { AdminHeader } from "@/components/admin/AdminHeader";
@@ -13,11 +14,12 @@ export default async function AdminLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
   const access = await viewerAdminAccess();
+  const t = await getTranslations("admin");
   if (access === "denied") notFound();
   if (access !== "granted") {
     return (
       <div className="page-wide flex flex-col gap-6">
-        <PageHeader title="Admin" />
+        <PageHeader title={t("title")} />
         <AdminAccessNotice access={access} />
       </div>
     );

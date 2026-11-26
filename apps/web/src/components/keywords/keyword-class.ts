@@ -4,21 +4,41 @@ import {
   type KeywordUpdateRequest,
   type TrackedKeywordItem,
 } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
+import enKeywords from "../../../messages/en/keywords.json";
+import type { MessageTranslator } from "@/i18n/translator";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywords",
+  messages: { keywords: enKeywords },
+});
 
 export const KEYWORD_CLASS_LABELS: Record<KeywordClass, string> = {
-  ownBrand: "Own brand",
-  competitorBrand: "Competitor brand",
-  generic: "Generic",
+  ownBrand: enKeywords.types.ownBrand,
+  competitorBrand: enKeywords.types.competitorBrand,
+  generic: enKeywords.types.generic,
 };
-
-export const KEYWORD_CLASS_OPTIONS = KEYWORD_CLASSES.map((value) => ({
-  value,
-  label: KEYWORD_CLASS_LABELS[value],
-}));
 
 export const DETECTED_CHOICE = "detected";
 
 export type KeywordClassChoice = KeywordClass | typeof DETECTED_CHOICE;
+
+export function keywordClassLabel(
+  value: KeywordClass,
+  t: MessageTranslator = english,
+): string {
+  return t(`types.${value}`);
+}
+
+export function keywordClassOptions(t: MessageTranslator = english) {
+  return KEYWORD_CLASSES.map((value) => ({
+    value,
+    label: keywordClassLabel(value, t),
+  }));
+}
+
+export const KEYWORD_CLASS_OPTIONS = keywordClassOptions();
 
 export function classChoice(
   row: Pick<TrackedKeywordItem, "keywordClass" | "keywordClassSource">,
