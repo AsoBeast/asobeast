@@ -120,6 +120,12 @@ describe("paceSentence", () => {
     );
   });
 
+  it("says when the projection passes the target", () => {
+    expect(paceSentence({ kind: "reaches", projected: 4.9 }, 45, 30)).toBe(
+      "At your current pace the store shows 4.9 in 30 days, above your target.",
+    );
+  });
+
   it("says when the current mix cannot reach the target", () => {
     expect(paceSentence({ kind: "belowTarget", newAverage: 4.2 }, 45, 30)).toBe(
       "Not at the current mix: new ratings average 4.2, below 4.5.",

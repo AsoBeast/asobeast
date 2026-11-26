@@ -66,6 +66,13 @@ export function goalNotes(store: Store, count: number): string[] {
 const shownTenths = (value: number): string =>
   formatTenths(displayedTenths(value));
 
+function reachedNote(answer: MixAnswer, targetTenths: number): string {
+  if (answer.kind !== "reaches") return "";
+  return displayedTenths(answer.projected) > targetTenths
+    ? ", above your target"
+    : ", your target";
+}
+
 export function paceSentence(
   answer: MixAnswer,
   targetTenths: number,
@@ -75,6 +82,6 @@ export function paceSentence(
   if (answer.kind === "belowTarget") {
     return `Not at the current mix: new ratings average ${shownTenths(answer.newAverage)}, below ${target}.`;
   }
-  const reached = answer.kind === "reaches" ? ", your target" : "";
-  return `At your current pace the store shows ${shownTenths(answer.projected)} in ${pluralize(days, "day")}${reached}.`;
+  const lead = `At your current pace the store shows ${shownTenths(answer.projected)} in ${pluralize(days, "day")}`;
+  return `${lead}${reachedNote(answer, targetTenths)}.`;
 }
