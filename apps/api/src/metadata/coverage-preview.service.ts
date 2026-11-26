@@ -24,6 +24,7 @@ import {
   draftMarkets,
   DraftTarget,
   previewKeywords,
+  previewTargets,
   withDraft,
 } from './draft-coverage';
 import { draftWastedWords } from './draft-wasted-words';
@@ -111,6 +112,7 @@ interface DraftInputs {
   tracked: TrackedKeywordItem[];
   competitors: string[];
   sources: CoverageSources;
+  targetSlots: string[] | null;
 }
 
 @Injectable()
@@ -124,8 +126,16 @@ export class CoveragePreviewService {
     appId: string,
     request: CoveragePreviewRequest,
   ): Promise<CoveragePreviewResult> {
-    const { app, appName, target, markets, tracked, competitors, sources } =
-      await this.load(appId, request);
+    const {
+      app,
+      appName,
+      target,
+      markets,
+      tracked,
+      competitors,
+      sources,
+      targetSlots,
+    } = await this.load(appId, request);
     const { judged, waiting } = draftMarkets(app, markets, sources, target);
     const drafted = withDraft(sources, app, target, request);
     const active = tracked.filter(
@@ -147,6 +157,12 @@ export class CoveragePreviewService {
       .filter((item) => item.active && waiting.includes(item.country))
       .map((item) => item.text);
     const keywords = previewKeywords(app, active, sources, drafted);
+    const targets =
+      targetSlots &&
+      previewTargets(app, targetSlots, judged, {
+        live: sources,
+        draft: drafted,
+      });
     return {
       appId,
       store: app.store,
@@ -172,6 +188,7 @@ export class CoveragePreviewService {
         tokenize(appName ?? ''),
       ),
       counts: changeCounts(keywords),
+      ...(targets ? { targets } : {}),
     };
   }
 
@@ -190,20 +207,22 @@ export class CoveragePreviewService {
       app.store === Store.GOOGLE_PLAY
         ? playTarget(app, request, markets)
         : appStoreTarget(app, request);
-    const [tracked, competitors, named, { sources }] = await Promise.all([
-      this.keywords.listTracked(appId, undefined, undefined, {
-        brandFacts: app.store === Store.APP_STORE,
-      }),
-      competitorNames(this.prisma, appId),
-      this.prisma.app.findFirst({
-        where: { id: appId },
-        select: { name: true },
-      }),
-      loadCoverageSources(this.prisma, app, markets, {
-        market: app.country,
-        localization: null,
-      }),
-    ]);
+    const [tracked, competitors, named, { sources }, targetSlots] =
+      await Promise.all([
+        this.keywords.listTracked(appId, undefined, undefined, {
+          brandFacts: app.store === Store.APP_STORE,
+        }),
+        competitorNames(this.prisma, appId),
+        this.prisma.app.findFirst({
+          where: { id: appId },
+          select: { name: true },
+        }),
+        loadCoverageSources(this.prisma, app, markets, {
+          market: app.country,
+          localization: null,
+        }),
+        this.targetSlots(appId, target),
+      ]);
     return {
       app,
       appName: named?.name ?? null,
@@ -212,6 +231,21 @@ export class CoveragePreviewService {
       tracked,
       competitors,
       sources,
+      targetSlots,
     };
+  }
+
+  private async targetSlots(
+    appId: string,
+    target: DraftTarget,
+  ): Promise<string[] | null> {
+    if (target.store !== Store.APP_STORE) return null;
+    const row = await this.prisma.listingTarget.findUnique({
+      where: {
+        appId_localization: { appId, localization: target.localization },
+      },
+      select: { slots: true },
+    });
+    return row?.slots ?? null;
   }
 }

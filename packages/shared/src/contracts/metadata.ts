@@ -1,5 +1,6 @@
 import type { AiStatus } from './ai';
 import type { KeywordClass } from './keywords';
+import type { TargetSlotRole } from './listing-targets';
 import { KeywordBucket, Store } from '../index';
 import { LintIssue } from '../aso/lint';
 import { MetadataField } from '../aso/limits';
@@ -96,6 +97,14 @@ export interface CoveragePreviewKeyword {
   change: CoveragePreviewChange;
 }
 
+export interface CoveragePreviewTarget {
+  position: number;
+  role: TargetSlotRole;
+  text: string;
+  live: CoverageVerdict;
+  draft: CoverageVerdict;
+}
+
 export const DRAFT_WASTE_REASONS = ['repeated', 'unused'] as const;
 export type DraftWasteReason = (typeof DRAFT_WASTE_REASONS)[number];
 
@@ -116,6 +125,7 @@ export interface CoveragePreviewResult {
   keywords: CoveragePreviewKeyword[];
   wastedWords: DraftWastedWord[];
   counts: Record<CoveragePreviewChange, number>;
+  targets?: CoveragePreviewTarget[];
 }
 
 export interface MetadataDraft {

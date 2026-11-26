@@ -214,6 +214,47 @@ describe('Metadata coverage preview (e2e)', () => {
     ]);
   });
 
+  it('judges each target keyword of the drafted localization', async () => {
+    const appId = await focusTimer();
+    await prisma.listingTarget.create({
+      data: {
+        appId,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        localization: 'en-US',
+        slots: ['habit tracker', '', 'focus timer'],
+      },
+    });
+
+    const result = await preview(appId, {
+      localization: 'en-US',
+      title: 'Habit Tracker',
+    });
+
+    expect(
+      result.targets?.map((target) => [
+        target.position,
+        target.role,
+        target.text,
+        target.live.covered,
+        target.draft.covered,
+      ]),
+    ).toEqual([
+      [1, 'title', 'habit tracker', false, true],
+      [3, 'subtitle', 'focus timer', true, false],
+    ]);
+  });
+
+  it('answers no targets for a localization without targets', async () => {
+    const appId = await focusTimer();
+
+    const result = await preview(appId, {
+      localization: 'en-US',
+      title: 'Habit Tracker',
+    });
+
+    expect(result).not.toHaveProperty('targets');
+  });
+
   it('keeps a keyword the drafted keyword field covers', async () => {
     const appId = await focusTimer();
 
