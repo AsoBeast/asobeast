@@ -1,6 +1,7 @@
 import type { ListingTargetItem, ListingTargetsResult } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
 import {
+  editsAfterSave,
   isEdited,
   missingMarkets,
   notTrackedLines,
@@ -308,5 +309,24 @@ describe("topThreeRefusal", () => {
       "No tracked keyword is left to pick",
     );
     expect(topThreeRefusal(EMPTY, [candidate("a")])).toBeNull();
+  });
+});
+
+describe("editsAfterSave", () => {
+  it("clears the edits a save submitted", () => {
+    const submitted = withSlot(EMPTY, 0, "a");
+
+    expect(editsAfterSave(submitted, [...submitted])).toBeNull();
+  });
+
+  it("keeps edits made while the save was pending", () => {
+    const submitted = withSlot(EMPTY, 0, "a");
+    const newer = withSlot(submitted, 1, "b");
+
+    expect(editsAfterSave(newer, [...submitted])).toBe(newer);
+  });
+
+  it("has nothing to keep when nothing was edited", () => {
+    expect(editsAfterSave(null, [...EMPTY])).toBeNull();
   });
 });

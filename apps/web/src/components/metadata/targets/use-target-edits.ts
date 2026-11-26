@@ -12,6 +12,7 @@ import {
 } from "@asobeast/shared";
 import { apiErrorMessage, saveListingTargets } from "@/lib/api";
 import {
+  editsAfterSave,
   isEdited,
   saveRequestOf,
   savedSentence,
@@ -44,10 +45,10 @@ export function useTargetEdits(id: string, localization: AppStoreLocalization) {
     mutationFn: (request: ListingTargetsRequest) =>
       saveListingTargets(id, localization, request),
     onMutate: () => setError(null),
-    onSuccess: (result) => {
+    onSuccess: (result, request) => {
       const before = queryClient.getQueryData<ListingTargetsResult>(key);
       queryClient.setQueryData<ListingTargetsResult>(key, result);
-      setEdits(null);
+      setEdits((current) => editsAfterSave(current, request.slots));
       setOutcome(result);
       invalidateListingTargetsMutation(queryClient, id);
       toast.success(savedSentence(before, result));

@@ -84,6 +84,12 @@ export function topThreeRefusal(
   return null;
 }
 
+export const editsAfterSave = (
+  edits: TargetSlots | null,
+  submitted: readonly (string | null)[],
+): TargetSlots | null =>
+  edits === null || !isEdited(edits, submitted) ? null : edits;
+
 export function targetPhrase(typed: string): string | null {
   const text = normalizeText(typed);
   if (text === "" || countChars(text) > TRACKED_KEYWORD_CHAR_LIMIT) {
