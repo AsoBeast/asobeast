@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react";
 import { ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -10,7 +11,7 @@ import {
   type ReleaseChange,
   type ReleaseKind,
 } from "@/lib/whats-new/release-notes";
-import { firstSentence, KIND_SHOWN, RELEASE_KIND_LABELS } from "./release-view";
+import { firstSentence, KIND_SHOWN } from "./release-view";
 
 const ROW =
   "relative grid grid-cols-[1rem_minmax(0,1fr)] gap-x-2 rounded-md px-2 py-2 text-body";
@@ -61,13 +62,14 @@ function ChangeGroup({
   release: Release;
   kind: ReleaseKind;
 }) {
+  const t = useTranslations("releaseNotes");
   const [all, setAll] = useState(false);
   const headingId = useId();
   const changes = release.changes.filter((change) => change.kind === kind);
   if (changes.length === 0) return null;
   const limit = KIND_SHOWN[kind];
   const shown = all ? changes : changes.slice(0, limit);
-  const label = RELEASE_KIND_LABELS[kind];
+  const label = t(`kinds.${kind}`);
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-1">
       <h3
@@ -90,8 +92,8 @@ function ChangeGroup({
           onClick={() => setAll((current) => !current)}
         >
           {all
-            ? `Show the first ${limit}`
-            : `Show all ${changes.length} ${label.toLowerCase()}`}
+            ? t("showFirst", { count: limit })
+            : t("showAll", { count: changes.length, kind: label })}
         </Button>
       ) : null}
     </section>

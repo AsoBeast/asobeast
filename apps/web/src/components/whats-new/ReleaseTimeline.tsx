@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import type { Release } from "@/lib/whats-new/release-notes";
 import { useSeenRelease } from "@/lib/whats-new/seen-release";
 import { ReleaseEntry } from "./ReleaseEntry";
@@ -37,15 +38,14 @@ export function ReleaseTimeline({
 }: {
   releases: readonly Release[];
 }) {
+  const t = useTranslations("releaseNotes");
   const newest = releases[0]?.version ?? null;
   const arrival = useArrival(newest);
   const [toggled, setToggled] = useState<ReadonlyMap<string, boolean>>(
     () => new Map(),
   );
   if (releases.length === 0) {
-    return (
-      <p className="text-body text-muted-foreground">No release notes yet.</p>
-    );
+    return <p className="text-body text-muted-foreground">{t("empty")}</p>;
   }
   const newestOnly = new Set(
     releases.slice(0, 1).map((release) => release.version),
@@ -58,7 +58,10 @@ export function ReleaseTimeline({
     toggled.get(version) ?? opened.has(version);
 
   return (
-    <ol aria-label="Releases" className="flex flex-col border-t border-border">
+    <ol
+      aria-label={t("releases")}
+      className="flex flex-col border-t border-border"
+    >
       {releases.map((release, index) => (
         <ReleaseEntry
           key={release.version}

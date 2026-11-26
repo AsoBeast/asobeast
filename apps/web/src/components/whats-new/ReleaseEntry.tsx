@@ -1,6 +1,8 @@
 import { ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
-import { formatDate, pluralize } from "@/lib/format";
+import { formatDateInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
 import { cn } from "@/lib/utils";
 import type { Release } from "@/lib/whats-new/release-notes";
@@ -25,6 +27,7 @@ function VersionToggle({
   stretched: boolean;
   className?: string;
 }) {
+  const t = useTranslations("releaseNotes");
   const anchor = releaseAnchor(release.version);
   const toggleKey = `${anchor}-toggle`;
   const claimFocus = useFocusClaim(toggleKey);
@@ -48,7 +51,7 @@ function VersionToggle({
           stretched && "after:absolute after:inset-0 after:rounded-md",
         )}
       >
-        <span className="sr-only">Version </span>
+        <span className="sr-only">{t("version")}</span>
         <span className="numeric">{release.version}</span>
         {unread ? (
           <span
@@ -68,7 +71,8 @@ function VersionToggle({
 }
 
 function UnreadNote({ unread }: { unread: boolean }) {
-  return unread ? <span className="sr-only">Not read yet</span> : null;
+  const t = useTranslations("releaseNotes");
+  return unread ? <span className="sr-only">{t("unread")}</span> : null;
 }
 
 function FoldedRelease({
@@ -80,6 +84,8 @@ function FoldedRelease({
   unread: boolean;
   onToggle: () => void;
 }) {
+  const t = useTranslations("releaseNotes");
+  const locale = useAppLocale();
   return (
     <div className="relative grid grid-cols-[auto_minmax(0,1fr)_1rem] items-center gap-x-3 gap-y-0.5 rounded-md py-2.5 pr-2 pl-2 transition-colors duration-150 ease-out hover:bg-muted sm:min-h-10 sm:grid-cols-[8rem_minmax(0,1fr)_auto_1rem] sm:gap-x-0 sm:py-0">
       <VersionToggle
@@ -98,8 +104,12 @@ function FoldedRelease({
         {release.title}
       </span>
       <span className="col-start-2 row-start-1 text-caption text-faint-foreground sm:col-start-3 sm:px-3">
-        <time dateTime={release.date}>{formatDate(release.date)}</time>
-        <span className="hidden sm:inline">{` · ${pluralize(release.changes.length, "change")}`}</span>
+        <time dateTime={release.date}>
+          {formatDateInLocale(release.date, locale)}
+        </time>
+        <span className="hidden sm:inline">
+          {` · ${t("changeCount", { count: release.changes.length })}`}
+        </span>
       </span>
       <ChevronRight
         aria-hidden
@@ -120,6 +130,8 @@ function OpenRelease({
   unread: boolean;
   onToggle: () => void;
 }) {
+  const t = useTranslations("releaseNotes");
+  const locale = useAppLocale();
   return (
     <div className="grid gap-3 py-6 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-0">
       <header className="flex flex-wrap items-center gap-x-3 gap-y-1 pl-2 sm:sticky sm:top-20 sm:flex-col sm:items-start sm:self-start">
@@ -135,9 +147,9 @@ function OpenRelease({
           dateTime={release.date}
           className="text-caption text-muted-foreground"
         >
-          {formatDate(release.date)}
+          {formatDateInLocale(release.date, locale)}
         </time>
-        {latest ? <Badge variant="brand">Latest</Badge> : null}
+        {latest ? <Badge variant="brand">{t("latest")}</Badge> : null}
       </header>
       <div
         id={`${releaseAnchor(release.version)}-body`}

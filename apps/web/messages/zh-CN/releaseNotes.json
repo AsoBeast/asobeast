@@ -1,1 +1,27 @@
-{}
+{
+  "title": "更新记录",
+  "technicalNotes": "技术版本记录",
+  "version": "版本 ",
+  "unread": "尚未阅读",
+  "latest": "最新",
+  "releases": "版本列表",
+  "empty": "尚无版本记录。",
+  "changeCount": "{count} 项变化",
+  "kinds": {
+    "new": "新增",
+    "improved": "改进",
+    "fixed": "修复"
+  },
+  "showFirst": "显示前 {count} 项",
+  "showAll": "显示全部 {count} 项{kind}",
+  "2.1.0": {
+    "title": "选择英文或简体中文",
+    "summary": "界面现在可以在英文和简体中文之间切换，首次访问时会跟随浏览器语言，并记住你的选择。",
+    "changes": [
+      {
+        "title": "每个页面都有语言切换",
+        "text": "可以在账号菜单、登录页或设置中选择 English 或简体中文。你的选择会保存在这台设备上，首次访问时界面会跟随浏览器语言。"
+      }
+    ]
+  }
+}
