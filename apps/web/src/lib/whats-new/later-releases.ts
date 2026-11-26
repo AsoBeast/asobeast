@@ -29,6 +29,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "Every target keyword now says where it fits best: the title, the subtitle, the keyword field, or nowhere, with the reason in one sentence, such as strong popularity and a rank you can improve. Apply suggestions puts your targets in that order, ready to save.",
       },
       {
+        kind: "new",
+        title: "Share a chart as a card",
+        text: "The rankings chart, the visibility chart and a keyword's position history now have a Share button that makes a card ready to post: your app's icon and name, a headline such as how far your average rank moved, the chart and the dates. Pick a wide, square or tall size and a light, dark or orange look, turn the change, the app or the Made with AsoBeast line off, then copy or download it.",
+      },
+      {
         kind: "fixed",
         title: "A search that lists no apps says so",
         text: "When a store lists no apps at all for a keyword you track, its position now reads No apps instead of more than 200: in the keywords table, on the rankings page with its chart and movers, in the position history, the search results sheet, the discovery list and the keyword breakdown. Pointing at it explains that the store lists no apps for this search. A rank alert and the weekly digest say the same when this happens to a keyword that used to rank. Checks from before this update keep the number they were stored with.",
