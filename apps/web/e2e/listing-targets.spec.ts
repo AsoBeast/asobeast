@@ -399,3 +399,86 @@ test("shows the targets before any field is edited", async ({ page }) => {
   await expect(targetRows(page).nth(0)).toContainText("Covered");
   expect(sent[0]).toEqual({ localization: "en-US" });
 });
+
+const chip = (page: Page, name: string, phrase: string) =>
+  slot(page, name).getByRole("button", {
+    name: new RegExp(`^Suggested: .+\\. Why ${phrase} belongs there$`),
+  });
+
+test("shows a suggestion beside each target", async ({ page }) => {
+  await seed(page, ["productivity app", "study timer"]);
+  await page.goto(DRAFT);
+
+  await expect(
+    slot(page, "Title").getByRole("button", {
+      name: "Suggested: Title. Why productivity app belongs there",
+    }),
+  ).toHaveText("Title");
+  await expect(
+    slot(page, "Subtitle", 0).getByRole("button", {
+      name: "Suggested: Skip. Why study timer belongs there",
+    }),
+  ).toHaveText("Skip");
+});
+
+test("explains the suggestion in one sentence with graded figures", async ({
+  page,
+}) => {
+  await seed(page, ["productivity app"]);
+  await page.goto(DRAFT);
+
+  await (await hydrated(chip(page, "Title", "productivity app"))).click();
+
+  const popover = page.getByRole("dialog", {
+    name: "Where productivity app belongs",
+  });
+  await expect(popover).toBeVisible();
+  await expect(popover).toContainText("Strong popularity");
+  await expect(popover).toContainText(": belongs in the title.");
+  await expect(popover.getByTitle("Popularity 65, strong")).toBeVisible();
+  await expect(popover.getByTitle("Difficulty 60, weak")).toBeVisible();
+});
+
+test("shows suggestions in the picker", async ({ page }) => {
+  await page.goto(DRAFT);
+
+  await openPicker(page, "Title");
+
+  await expect(
+    picker(page).getByRole("option", { name: /productivity app/ }),
+  ).toContainText("Title");
+  await expect(
+    picker(page).getByRole("option", { name: /study timer/ }),
+  ).toContainText("Skip");
+});
+
+test("shows no chip without a verdict", async ({ page }) => {
+  await seed(page, ["deep focus"]);
+  await page.goto(DRAFT);
+
+  await expect(
+    slot(page, "Title").getByRole("button", { name: "deep focus for Title" }),
+  ).toBeVisible();
+  await expect(
+    slot(page, "Title").getByRole("button", { name: /^Suggested:/ }),
+  ).toHaveCount(0);
+});
+
+test("closes the popover with Escape and returns focus to the chip", async ({
+  page,
+}) => {
+  await seed(page, ["productivity app"]);
+  await page.goto(DRAFT);
+  const trigger = chip(page, "Title", "productivity app");
+
+  await (await hydrated(trigger)).focus();
+  await page.keyboard.press("Enter");
+  const popover = page.getByRole("dialog", {
+    name: "Where productivity app belongs",
+  });
+  await expect(popover).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await expect(popover).toBeHidden();
+  await expect(trigger).toBeFocused();
+});

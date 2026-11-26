@@ -7,6 +7,7 @@ import {
   type ListingTargetsRequest,
   type ListingTargetsResult,
   type ListingTargetsSaveResult,
+  type PlacementSuggestion,
   type TargetNotTracked,
   type TargetScores,
   type TrackedKeywordItem,
@@ -20,6 +21,35 @@ interface TargetState {
   slots: string[];
   updatedAt: string;
 }
+
+const PLACEMENTS: Readonly<Record<string, PlacementSuggestion>> = {
+  "productivity app": {
+    field: "title",
+    reason: "strongestReachable",
+    popularity: 65,
+    difficulty: 60,
+    position: null,
+  },
+  "study timer": {
+    field: "skip",
+    reason: "lowRelevance",
+    popularity: 40,
+    difficulty: 50,
+    position: null,
+  },
+  "focus timer": {
+    field: "skip",
+    reason: "ownBrand",
+    popularity: 55,
+    difficulty: 40,
+    position: 3,
+  },
+};
+
+const placed = <T extends { text: string }>(item: T): T => {
+  const placement = PLACEMENTS[item.text];
+  return placement ? { ...item, placement } : item;
+};
 
 const stored = new Map<string, TargetState>();
 const trackedByTargets = new Map<string, Set<string>>();
@@ -127,7 +157,7 @@ function itemOf(
     rows.filter((row) => row.country === country && row.text === text),
   );
   const lead = held.find((row) => row.active) ?? held[0];
-  return {
+  const item: ListingTargetItem = {
     position: index + 1,
     role: targetSlotRole(index),
     text,
@@ -141,6 +171,7 @@ function itemOf(
     ),
     lead: lead ? scoresOf(lead) : null,
   };
+  return item.lead ? placed(item) : item;
 }
 
 function candidatesOf(
@@ -162,11 +193,13 @@ function candidatesOf(
     }
   }
   return [...groups.entries()]
-    .map(([text, held]) => ({
-      text,
-      markets: held.map((row) => row.country),
-      lead: scoresOf(held[0]),
-    }))
+    .map(([text, held]) =>
+      placed({
+        text,
+        markets: held.map((row) => row.country),
+        lead: scoresOf(held[0]),
+      }),
+    )
     .sort(
       (a, b) =>
         (b.lead.opportunity ?? -1) - (a.lead.opportunity ?? -1) ||

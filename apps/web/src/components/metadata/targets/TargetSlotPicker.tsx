@@ -17,6 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { PLACEMENT_LABELS } from "@/lib/placement";
 import {
   openCandidates,
   slotHolding,
@@ -135,7 +136,14 @@ export function TargetSlotPicker({
                   <span translate="no" dir="auto" className="truncate">
                     {candidate.text}
                   </span>
-                  <TargetFigures scores={candidate.lead} />
+                  <span className="inline-flex shrink-0 items-center gap-3">
+                    {candidate.placement ? (
+                      <span className="text-caption text-muted-foreground">
+                        {PLACEMENT_LABELS[candidate.placement.field]}
+                      </span>
+                    ) : null}
+                    <TargetFigures scores={candidate.lead} />
+                  </span>
                 </CommandItem>
               ))}
             </CommandGroup>

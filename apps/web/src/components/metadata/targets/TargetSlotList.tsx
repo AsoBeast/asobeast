@@ -3,6 +3,7 @@
 import type { ListingTargetsResult } from "@asobeast/shared";
 import {
   moveSlot,
+  placementsByPhrase,
   scoresByPhrase,
   slotLabel,
   untrackedByPhrase,
@@ -31,6 +32,7 @@ export function TargetSlotList({
 }) {
   const scores = scoresByPhrase(result);
   const untracked = untrackedByPhrase(result);
+  const placements = placementsByPhrase(result);
   return (
     <ul
       aria-label={label}
@@ -48,6 +50,7 @@ export function TargetSlotList({
             slots={slots}
             candidates={result.candidates}
             scores={value === null ? undefined : scores.get(value)}
+            placement={value === null ? undefined : placements.get(value)}
             untrackedIn={value === null ? [] : (untracked.get(value) ?? [])}
             onChange={(text) => onEdit(withSlot(slots, index, text))}
             onMove={(to) => {

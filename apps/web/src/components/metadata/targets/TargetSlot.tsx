@@ -2,7 +2,11 @@
 
 import { useRef, type RefCallback } from "react";
 import { ArrowDown, ArrowUp, X } from "lucide-react";
-import type { ListingTargetCandidate, TargetScores } from "@asobeast/shared";
+import type {
+  ListingTargetCandidate,
+  PlacementSuggestion,
+  TargetScores,
+} from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import {
   armFocusHandoff,
@@ -14,6 +18,7 @@ import {
   untrackedLine,
   type TargetSlots,
 } from "@/lib/listing-targets";
+import { PlacementChip } from "./PlacementChip";
 import { TargetFigures } from "./TargetFigures";
 import { TargetSlotPicker } from "./TargetSlotPicker";
 
@@ -62,6 +67,7 @@ export function TargetSlot({
   slots,
   candidates,
   scores,
+  placement,
   untrackedIn,
   onChange,
   onMove,
@@ -70,6 +76,7 @@ export function TargetSlot({
   slots: TargetSlots;
   candidates: readonly ListingTargetCandidate[];
   scores: TargetScores | undefined;
+  placement: PlacementSuggestion | undefined;
   untrackedIn: readonly string[];
   onChange: (text: string | null) => void;
   onMove: (to: number) => void;
@@ -131,7 +138,14 @@ export function TargetSlot({
           </Button>
         )}
       </div>
-      <div className="flex min-h-5 flex-wrap items-center gap-x-3">
+      <div className="flex min-h-5 flex-wrap items-center gap-x-3 gap-y-1">
+        {value !== null && placement ? (
+          <PlacementChip
+            subject={value}
+            suggestion={placement}
+            relevance={scores?.relevance ?? null}
+          />
+        ) : null}
         {value !== null && scores ? <TargetFigures scores={scores} /> : null}
         {untracked ? (
           <span className="text-caption text-muted-foreground">

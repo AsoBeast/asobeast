@@ -38,6 +38,25 @@ function TargetsTip() {
   );
 }
 
+function SuggestionsTip() {
+  return (
+    <InfoTip
+      label="About suggested fields"
+      title="Suggested fields"
+      summary="Each target and candidate names the field its scores suggest: the title for the strongest keyword you can realistically rank for, the subtitle for the next two, the keyword field for the rest, or skip. It is worked out from stored scores, and each candidate is judged as if you added it."
+    >
+      <a
+        href="https://docs.asobeast.com/concepts/scoring#where-does-each-keyword-belong"
+        target="_blank"
+        rel="noreferrer"
+        className="font-medium text-foreground link-underline"
+      >
+        Read how suggestions are made
+      </a>
+    </InfoTip>
+  );
+}
+
 export function TargetsBlock({
   id,
   localization,
@@ -87,6 +106,7 @@ export function TargetsBlock({
               </Button>
             ) : null}
             <TargetsTip />
+            <SuggestionsTip />
           </CardAction>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
