@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Check, Copy, Loader2, Plug } from "lucide-react";
 import { useQueryState } from "nuqs";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import type { ApiTokenCreated } from "@asobeast/shared";
 import { FOOTER_LINK } from "@/components/layout/panel-classes";
 import { Button } from "@/components/ui/button";
@@ -46,15 +47,12 @@ import { mcpClientParser } from "@/lib/search-params";
 import { invalidateApiTokenMutation } from "@/lib/queries";
 import { useAuth } from "@/components/auth/use-auth";
 import { useSingleFlight } from "@/lib/single-flight";
-import {
-  MCP_CHANGES_HINT,
-  mcpTokenNotice,
-  mcpTokenScope,
-} from "@/lib/mcp-token-scope";
+import { mcpTokenScope } from "@/lib/mcp-token-scope";
 
 const DOCS_URL = "https://docs.asobeast.com/mcp/setup";
 
 function CopyBlock({ snippet }: { snippet: ConnectSnippet }) {
+  const t = useTranslations("integrations.mcp");
   const { label, location, value } = snippet;
   const [copied, setCopied] = useState(false);
 
@@ -63,9 +61,9 @@ function CopyBlock({ snippet }: { snippet: ConnectSnippet }) {
       if (!navigator.clipboard) throw new Error("clipboard unavailable");
       await navigator.clipboard.writeText(value);
       setCopied(true);
-      toast.success(`${label} copied`);
+      toast.success(t("copied", { label }));
     } catch {
-      toast.error("Copy failed — select the text and copy it manually.");
+      toast.error(t("copyFailed"));
     }
   }
 
@@ -77,7 +75,7 @@ function CopyBlock({ snippet }: { snippet: ConnectSnippet }) {
           type="button"
           variant="outline"
           size="icon-sm"
-          aria-label={`Copy ${label}`}
+          aria-label={t("copyAria", { label })}
           onClick={() => void copy()}
         >
           {copied ? <Check /> : <Copy />}
@@ -98,6 +96,7 @@ function AgentSnippets({
   id: string;
   snippets: ConnectSnippet[];
 }) {
+  const t = useTranslations("integrations.mcp");
   const [selected, setSelected] = useQueryState("agent", mcpClientParser);
   const clients = MCP_CLIENTS.filter(
     (candidate) => snippetsFor(snippets, candidate).length > 0,
@@ -109,7 +108,7 @@ function AgentSnippets({
   return (
     <>
       <div className="flex flex-col gap-2">
-        <Label htmlFor={id}>Agent</Label>
+        <Label htmlFor={id}>{t("agent")}</Label>
         <Select
           value={client}
           onValueChange={(next) => {
@@ -136,21 +135,22 @@ function AgentSnippets({
 }
 
 function ConnectionSnippets({ token }: { token: string }) {
+  const t = useTranslations("integrations.mcp");
   return (
     <Tabs defaultValue="remote">
       <TabsList>
-        <TabsTrigger value="remote">Hosted endpoint</TabsTrigger>
-        <TabsTrigger value="stdio">Local server</TabsTrigger>
+        <TabsTrigger value="remote">{t("hostedEndpoint")}</TabsTrigger>
+        <TabsTrigger value="stdio">{t("localServer")}</TabsTrigger>
       </TabsList>
       <TabsContent value="remote" className="flex flex-col gap-4">
         <p className="text-dense text-muted-foreground">
-          Your client connects straight to this instance. Nothing to install.
+          {t("hostedDescription")}
         </p>
         <AgentSnippets id="mcp-hosted-agent" snippets={hostedSnippets(token)} />
       </TabsContent>
       <TabsContent value="stdio" className="flex flex-col gap-4">
         <p className="text-dense text-muted-foreground">
-          For a checkout of the repository. Hosted users need nothing here.
+          {t("localDescription")}
         </p>
         <AgentSnippets id="mcp-local-agent" snippets={localSnippets(token)} />
       </TabsContent>
@@ -161,6 +161,7 @@ function ConnectionSnippets({ token }: { token: string }) {
 const MINTED_DONE_FOCUS_KEY = "mcp-token-done";
 
 function ConnectDialog() {
+  const t = useTranslations("integrations.mcp");
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -181,9 +182,7 @@ function ConnectDialog() {
     },
     onError: (err) => {
       setError(
-        err instanceof ApiError
-          ? err.envelope.message
-          : "Could not create the token.",
+        err instanceof ApiError ? err.envelope.message : t("createFailed"),
       );
     },
   });
@@ -203,7 +202,7 @@ function ConnectDialog() {
     event.preventDefault();
     setError(null);
     if (name.trim() === "") {
-      setError("Give the token a name.");
+      setError(t("nameRequired"));
       return;
     }
     armFocusHandoff(MINTED_DONE_FOCUS_KEY);
@@ -215,16 +214,20 @@ function ConnectDialog() {
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <Plug />
-          Connect an agent
+          {t("connectAgent")}
         </Button>
       </DialogTrigger>
       <DialogContent size={created ? "lg" : "default"}>
         {created ? (
           <>
             <DialogHeader>
-              <DialogTitle>Connect AsoBeast</DialogTitle>
+              <DialogTitle>{t("connectedTitle")}</DialogTitle>
               <DialogDescription>
-                {mcpTokenNotice(created.scope)}
+                {t(
+                  created.scope === "write"
+                    ? "tokenNoticeWrite"
+                    : "tokenNoticeRead",
+                )}
               </DialogDescription>
             </DialogHeader>
             <DialogBody>
@@ -236,27 +239,24 @@ function ConnectDialog() {
                 type="button"
                 onClick={() => reset(false)}
               >
-                Done
+                {t("done")}
               </Button>
             </DialogFooter>
           </>
         ) : (
           <form onSubmit={submit} className="flex min-h-0 flex-col gap-4">
             <DialogHeader>
-              <DialogTitle>Connect an agent</DialogTitle>
-              <DialogDescription>
-                Name a token for this agent. We mint it read-only unless you
-                allow changes, and show you the ready-to-paste connect snippets.
-              </DialogDescription>
+              <DialogTitle>{t("connectTitle")}</DialogTitle>
+              <DialogDescription>{t("connectDescription")}</DialogDescription>
             </DialogHeader>
             <DialogBody>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="mcp-token-name">Token name</Label>
+                <Label htmlFor="mcp-token-name">{t("tokenName")}</Label>
                 <Input
                   id="mcp-token-name"
                   value={name}
                   onChange={(event) => setName(event.target.value)}
-                  placeholder="Claude Desktop"
+                  placeholder={t("tokenPlaceholder")}
                   aria-invalid={error !== null}
                 />
               </div>
@@ -271,14 +271,12 @@ function ConnectDialog() {
                   className="mt-0.5"
                 />
                 <div className="flex flex-col gap-1">
-                  <Label htmlFor="mcp-allow-changes">
-                    Allow this agent to make changes
-                  </Label>
+                  <Label htmlFor="mcp-allow-changes">{t("allowChanges")}</Label>
                   <p
                     id="mcp-allow-changes-hint"
                     className="text-caption text-muted-foreground"
                   >
-                    {MCP_CHANGES_HINT}
+                    {t("changesHint")}
                   </p>
                 </div>
               </div>
@@ -294,7 +292,7 @@ function ConnectDialog() {
                 {mutation.isPending ? (
                   <Loader2 className="animate-spin" />
                 ) : null}
-                Mint token
+                {t("mintToken")}
               </Button>
             </DialogFooter>
           </form>
@@ -305,6 +303,7 @@ function ConnectDialog() {
 }
 
 function EndpointField() {
+  const t = useTranslations("integrations.mcp");
   const endpoint = remoteEndpoint();
   const [copied, setCopied] = useState(false);
 
@@ -313,15 +312,15 @@ function EndpointField() {
       if (!navigator.clipboard) throw new Error("clipboard unavailable");
       await navigator.clipboard.writeText(endpoint);
       setCopied(true);
-      toast.success("Endpoint copied");
+      toast.success(t("endpointCopied"));
     } catch {
-      toast.error("Copy failed — select the text and copy it manually.");
+      toast.error(t("copyFailed"));
     }
   }
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-label">Endpoint</span>
+      <span className="text-label">{t("endpoint")}</span>
       <div className="flex min-w-0 items-center gap-2 rounded-md border bg-muted py-1 pr-1 pl-3">
         <code
           translate="no"
@@ -333,11 +332,11 @@ function EndpointField() {
           type="button"
           variant="ghost"
           size="sm"
-          aria-label="Copy endpoint"
+          aria-label={t("copyEndpoint")}
           onClick={() => void copy()}
         >
           {copied ? <Check /> : <Copy />}
-          Copy
+          {t("copy")}
         </Button>
       </div>
     </div>
@@ -345,35 +344,32 @@ function EndpointField() {
 }
 
 export function McpServerCard() {
+  const t = useTranslations("integrations.mcp");
   const { status, isLoading } = useAuth();
 
   if (isLoading || !status?.authenticated) return null;
 
   return (
     <SettingsPanel
-      title="MCP server"
+      title={t("title")}
       action={<ConnectDialog />}
       footer={
         <>
-          <p className="min-w-0 flex-1 basis-64">
-            Every connection is authenticated with a personal API token.
-          </p>
+          <p className="min-w-0 flex-1 basis-64">{t("footer")}</p>
           <a
             href={DOCS_URL}
             target="_blank"
             rel="noreferrer"
             className={FOOTER_LINK}
           >
-            Read the setup guide
+            {t("readGuide")}
           </a>
         </>
       }
     >
       <PanelBody className="gap-4">
         <p className="max-w-[70ch] text-body text-muted-foreground">
-          Point any MCP client at this instance to ask about your apps,
-          keywords, rankings and audits in plain language. Tools are read-only
-          unless you allow an agent to make changes when you connect it.
+          {t("description")}
         </p>
         <EndpointField />
       </PanelBody>

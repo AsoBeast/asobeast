@@ -1,4 +1,5 @@
 import type { ApiTokenItem } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -9,39 +10,51 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatDate, formatNumber } from "@/lib/format";
+import { formatDateInLocale, formatNumberInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { RevokeTokenButton } from "./RevokeTokenButton";
-import { SCOPE_LABELS } from "./token-scopes";
 
 const WIDE_ONLY = "hidden sm:table-cell";
 
-function phoneLine(token: ApiTokenItem): string {
+function phoneLine(
+  token: ApiTokenItem,
+  t: ReturnType<typeof useTranslations>,
+  locale: ReturnType<typeof useAppLocale>,
+): string {
   const expiry =
     token.expiresAt === null
-      ? "Never expires"
-      : `${token.expired ? "Expired" : "Expires"} ${formatDate(token.expiresAt)}`;
+      ? t("neverExpires")
+      : token.expired
+        ? t("expired")
+        : t("expires", { date: formatDateInLocale(token.expiresAt, locale) });
   const used = token.lastUsedAt
-    ? `last used ${formatDate(token.lastUsedAt)}`
-    : "never used";
-  return `${expiry} · ${used} · created ${formatDate(token.createdAt)}`;
+    ? t("lastUsedOn", { date: formatDateInLocale(token.lastUsedAt, locale) })
+    : t("neverUsed");
+  return `${expiry} · ${used} · ${t("createdOn", {
+    date: formatDateInLocale(token.createdAt, locale),
+  })}`;
 }
 
 function Expiry({ token }: { token: ApiTokenItem }) {
+  const t = useTranslations("integrations.tokens");
+  const locale = useAppLocale();
   if (token.expiresAt === null) {
-    return <span className="text-muted-foreground">Never</span>;
+    return <span className="text-muted-foreground">{t("never")}</span>;
   }
   return token.expired ? (
-    <Badge variant="destructive">Expired</Badge>
+    <Badge variant="destructive">{t("expired")}</Badge>
   ) : (
-    <span>{formatDate(token.expiresAt)}</span>
+    <span>{formatDateInLocale(token.expiresAt, locale)}</span>
   );
 }
 
 function LastUsed({ token }: { token: ApiTokenItem }) {
+  const t = useTranslations("integrations.tokens");
+  const locale = useAppLocale();
   return token.lastUsedAt ? (
-    <span>{formatDate(token.lastUsedAt)}</span>
+    <span>{formatDateInLocale(token.lastUsedAt, locale)}</span>
   ) : (
-    <span className="text-muted-foreground">Never</span>
+    <span className="text-muted-foreground">{t("never")}</span>
   );
 }
 
@@ -52,6 +65,8 @@ function TokenRow({
   token: ApiTokenItem;
   busiest: number;
 }) {
+  const t = useTranslations("integrations.tokens");
+  const locale = useAppLocale();
   const share = busiest === 0 ? 0 : (token.usageCount / busiest) * 100;
 
   return (
@@ -65,11 +80,11 @@ function TokenRow({
           {`${token.prefix}…`}
         </span>
         <span className="block text-caption text-faint-foreground sm:hidden">
-          {phoneLine(token)}
+          {phoneLine(token, t, locale)}
         </span>
       </TableCell>
       <TableCell>
-        <span>{SCOPE_LABELS[token.scope]}</span>
+        <span>{t(token.scope === "read" ? "scopeRead" : "scopeWrite")}</span>
       </TableCell>
       <TableCell className={WIDE_ONLY}>
         <Expiry token={token} />
@@ -77,7 +92,9 @@ function TokenRow({
       <TableCell className={WIDE_ONLY}>
         <LastUsed token={token} />
         <span className="block text-caption text-faint-foreground">
-          {`created ${formatDate(token.createdAt)}`}
+          {t("createdOn", {
+            date: formatDateInLocale(token.createdAt, locale),
+          })}
         </span>
       </TableCell>
       <TableCell className="numeric text-right">
@@ -87,7 +104,9 @@ function TokenRow({
             className="absolute inset-y-0 right-0 rounded-sm bg-chart-tint"
             style={{ inlineSize: `${share}%` }}
           />
-          <span className="relative">{formatNumber(token.usageCount)}</span>
+          <span className="relative">
+            {formatNumberInLocale(token.usageCount, locale)}
+          </span>
         </span>
       </TableCell>
       <TableCell>
@@ -100,22 +119,21 @@ function TokenRow({
 }
 
 export function TokensTable({ tokens }: { tokens: ApiTokenItem[] }) {
+  const t = useTranslations("integrations.tokens");
   const busiest = Math.max(0, ...tokens.map((token) => token.usageCount));
 
   return (
     <Table>
-      <TableCaption className="sr-only">
-        Personal API tokens for automation.
-      </TableCaption>
+      <TableCaption className="sr-only">{t("tableCaption")}</TableCaption>
       <TableHeader>
         <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Scope</TableHead>
-          <TableHead className={WIDE_ONLY}>Expires</TableHead>
-          <TableHead className={WIDE_ONLY}>Last used</TableHead>
-          <TableHead className="numeric text-right">Requests</TableHead>
+          <TableHead>{t("name")}</TableHead>
+          <TableHead>{t("scope")}</TableHead>
+          <TableHead className={WIDE_ONLY}>{t("expiry")}</TableHead>
+          <TableHead className={WIDE_ONLY}>{t("lastUsed")}</TableHead>
+          <TableHead className="numeric text-right">{t("requests")}</TableHead>
           <TableHead className="w-0">
-            <span className="sr-only">Actions</span>
+            <span className="sr-only">{t("actions")}</span>
           </TableHead>
         </TableRow>
       </TableHeader>

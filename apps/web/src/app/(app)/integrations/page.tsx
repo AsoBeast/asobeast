@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { getTranslations } from "next-intl/server";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { ApiTokensCard } from "@/components/integrations/ApiTokensCard";
 import { McpServerCard } from "@/components/integrations/McpServerCard";
@@ -16,6 +17,7 @@ import {
 } from "@/lib/store-connection-copy";
 
 export default async function IntegrationsPage() {
+  const t = await getTranslations("integrations.page");
   const queryClient = getQueryClient();
   await queryClient.prefetchQuery(storeConnectionsOptions);
   const connections = queryClient.getQueryData(
@@ -26,7 +28,7 @@ export default async function IntegrationsPage() {
     <HydrationBoundary state={dehydrate(queryClient)}>
       <div className="page-reading flex flex-col gap-8">
         <PageHeader
-          title="Integrations"
+          title={t("title")}
           lede={
             connections?.available === false ? undefined : (
               <Suspense fallback={null}>
@@ -35,25 +37,22 @@ export default async function IntegrationsPage() {
             )
           }
           meta={
-            <GuideLink
-              href={INTEGRATIONS_GUIDE}
-              subject="store connections, API tokens and MCP"
-            >
-              Read the integrations overview
+            <GuideLink href={INTEGRATIONS_GUIDE} subject={t("guideSubject")}>
+              {t("readOverview")}
             </GuideLink>
           }
         />
 
         <SettingsSection
           id={STORE_CONNECTIONS_SECTION_ID}
-          title="Store connections"
+          title={t("storeConnections")}
         >
           <Suspense fallback={<StoreConnectionsSkeleton />}>
             <StoreConnectionsCard />
           </Suspense>
         </SettingsSection>
 
-        <SettingsSection id="api-and-mcp" title="API and MCP">
+        <SettingsSection id="api-and-mcp" title={t("apiAndMcp")}>
           <ApiTokensCard />
           <McpServerCard />
         </SettingsSection>
