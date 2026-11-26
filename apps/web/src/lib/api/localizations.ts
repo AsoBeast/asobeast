@@ -5,6 +5,9 @@ import type {
   AppStoreLocalization,
   KeywordFieldPreviewRequest,
   KeywordFieldSavePreview,
+  ListingTargetsRequest,
+  ListingTargetsResult,
+  ListingTargetsSaveResult,
   LocalizationDetectionResult,
   LocalizedKeywordFieldRequest,
   LocalizedKeywordFieldResult,
@@ -97,5 +100,28 @@ export function getMarketKeywordFields(
   if (country) params.set("country", country);
   return apiFetch<MarketKeywordFields>(
     withQuery(`/apps/${appId}/keyword-fields/market`, params),
+  );
+}
+
+export function getListingTargets(
+  appId: string,
+  localization: AppStoreLocalization,
+): Promise<ListingTargetsResult> {
+  return apiFetch<ListingTargetsResult>(
+    `/apps/${appId}/localizations/${localization}/targets`,
+  );
+}
+
+export function saveListingTargets(
+  appId: string,
+  localization: AppStoreLocalization,
+  body: ListingTargetsRequest,
+): Promise<ListingTargetsSaveResult> {
+  return apiFetch<ListingTargetsSaveResult>(
+    `/apps/${appId}/localizations/${localization}/targets`,
+    {
+      method: "PUT",
+      body: JSON.stringify(body satisfies ListingTargetsRequest),
+    },
   );
 }

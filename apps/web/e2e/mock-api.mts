@@ -80,6 +80,14 @@ import {
   previewMarketsOf,
 } from "./coverage-preview.mts";
 import {
+  listingTargetsOf,
+  resetListingTargets,
+  saveListingTargetsOf,
+  seedListingTargets,
+  storedTargetSlots,
+  TARGETS_FULL_COOKIE,
+} from "./listing-targets.mts";
+import {
   STORE_CONNECT_OFF_COOKIE,
   STORE_CONNECTION_ACTIVE,
   STORE_CONNECTION_COOKIE,
@@ -285,6 +293,7 @@ import type {
   ReviewReplyPatchRequest,
   KeywordSuggestionStrategy,
   AddAppLocalizationRequest,
+  ListingTargetsRequest,
   AppLocalizationItem,
   AppLocalizationOrigin,
   AppLocalizationsResult,
@@ -1684,6 +1693,32 @@ function countLoggedRequest(kind: string, req: IncomingMessage): void {
   if (token === undefined) return;
   const key = `${kind}:${token}`;
   loggedRequests.set(key, (loggedRequests.get(key) ?? 0) + 1);
+}
+
+function targetsDataset(
+  id: string,
+  localization: string,
+  req: IncomingMessage,
+  res: ServerResponse,
+): (typeof DATASETS)[string] | undefined {
+  const path = req.url ?? "/";
+  const dataset = DATASETS[id];
+  if (!dataset) {
+    json(res, 404, errorEnvelope(404, path, `App ${id} not found`));
+    return undefined;
+  }
+  const refusal = dataset.detail.isCompetitor
+    ? "A competitor app has no localizations or keyword fields; use its primary app"
+    : dataset.detail.store !== "APP_STORE"
+      ? "Target keywords are picked per App Store localization; Google Play has no localizations here"
+      : !isAppStoreLocalization(localization)
+        ? `Unknown App Store localization: ${localization}`
+        : null;
+  if (refusal !== null) {
+    json(res, 400, errorEnvelope(400, path, refusal));
+    return undefined;
+  }
+  return dataset;
 }
 
 function logFieldRequest(id: string, req: IncomingMessage): void {
@@ -4622,7 +4657,15 @@ const routes: Route[] = [
             { ...audit, appId: id, store },
             dataset.detail.country,
             body,
-            previewMarketsOf(cookieValue(req, COVERAGE_PREVIEW_MARKETS_COOKIE)),
+            {
+              previewMarkets: previewMarketsOf(
+                cookieValue(req, COVERAGE_PREVIEW_MARKETS_COOKIE),
+              ),
+              targetSlots:
+                store === "APP_STORE"
+                  ? storedTargetSlots(id, body.localization ?? "en-US")
+                  : [],
+            },
           ),
         );
       });
@@ -5420,6 +5463,70 @@ const routes: Route[] = [
         };
         json(res, 200, result);
       });
+    },
+  },
+  {
+    method: "GET",
+    pattern: /^\/apps\/([^/]+)\/localizations\/([^/]+)\/targets$/,
+    handler: ([id, localization], req, res) => {
+      const dataset = targetsDataset(id, localization, req, res);
+      if (!dataset) return;
+      json(
+        res,
+        200,
+        listingTargetsOf({
+          id,
+          localization,
+          home: dataset.detail.country,
+          keywords: dataset.keywords,
+        }),
+      );
+    },
+  },
+  {
+    method: "PUT",
+    pattern: /^\/apps\/([^/]+)\/localizations\/([^/]+)\/targets$/,
+    handler: ([id, localization], req, res) => {
+      withBody<ListingTargetsRequest>(req, res, (body) => {
+        const dataset = targetsDataset(id, localization, req, res);
+        if (!dataset) return;
+        const answer = saveListingTargetsOf(
+          {
+            id,
+            localization,
+            home: dataset.detail.country,
+            keywords: dataset.keywords,
+          },
+          body,
+          hasCookie(req, TARGETS_FULL_COOKIE, "1"),
+        );
+        if (answer.status === 400) {
+          return json(
+            res,
+            400,
+            errorEnvelope(400, req.url ?? "/", answer.message),
+          );
+        }
+        json(res, 200, answer.body);
+      });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/__seed\/listing-targets\/([^/]+)\/([^/]+)$/,
+    handler: ([id, localization], req, res) => {
+      withBody<{ slots: string[] }>(req, res, ({ slots }) => {
+        seedListingTargets(id, localization, slots);
+        json(res, 200, { seeded: true });
+      });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/__reset\/listing-targets\/([^/]+)$/,
+    handler: ([id], _req, res) => {
+      resetListingTargets(id);
+      json(res, 200, { reset: true });
     },
   },
   {

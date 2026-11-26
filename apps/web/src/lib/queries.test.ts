@@ -19,6 +19,7 @@ import { queryMarket } from "./market";
 import {
   chartKeys,
   chartPageOptions,
+  listingTargetsOptions,
   invalidateChartMutation,
   seedChartCapture,
   adminKeys,
@@ -81,6 +82,7 @@ import {
   invalidateLocalizationMutation,
   invalidateKeywordDiscoveries,
   invalidateKeywordMutation,
+  invalidateListingTargetsMutation,
   invalidateMarketSeed,
   invalidateKeywords,
   invalidateLinkMutation,
@@ -876,8 +878,32 @@ describe("invalidation sets", () => {
       appKeys.firstRun(APP),
       appKeys.keywordDiscoveriesRoot(APP),
       appKeys.rankingsRoot(APP),
+      appKeys.listingTargetsRoot(APP),
       workspaceChecklistKey,
     ]);
+  });
+
+  it("keys the targets under the app", () => {
+    const key = listingTargetsOptions(APP, "en-US").queryKey;
+
+    expect(isPrefixOf(appKeys.detail(APP), key)).toBe(true);
+    expect(isPrefixOf(appKeys.listingTargetsRoot(APP), key)).toBe(true);
+    expect(key).not.toEqual(listingTargetsOptions(APP, "en-GB").queryKey);
+  });
+
+  it("refreshes the targets, the keywords, the audit and the draft coverage after a targets save", () => {
+    const keys = invalidatedKeys((client) =>
+      invalidateListingTargetsMutation(client, APP),
+    );
+
+    expect(keys).toEqual(
+      expect.arrayContaining([
+        appKeys.listingTargetsRoot(APP),
+        appKeys.keywordsRoot(APP),
+        appKeys.metadataAuditRoot(APP),
+        appKeys.coveragePreviewRoot(APP),
+      ]),
+    );
   });
 
   it("keys every rankings read under the app's rankings root", () => {
@@ -928,6 +954,7 @@ describe("invalidation sets", () => {
       appKeys.firstRun(APP),
       appKeys.keywordDiscoveriesRoot(APP),
       appKeys.rankingsRoot(APP),
+      appKeys.listingTargetsRoot(APP),
       workspaceChecklistKey,
       appKeys.listingMarkets(APP),
       budgetKey,
@@ -951,6 +978,7 @@ describe("invalidation sets", () => {
       appKeys.firstRun(APP),
       appKeys.keywordDiscoveriesRoot(APP),
       appKeys.rankingsRoot(APP),
+      appKeys.listingTargetsRoot(APP),
       workspaceChecklistKey,
       appKeys.metadataAuditRoot(APP),
     ]);
@@ -973,6 +1001,7 @@ describe("invalidation sets", () => {
       appKeys.firstRun(APP),
       appKeys.keywordDiscoveriesRoot(APP),
       appKeys.rankingsRoot(APP),
+      appKeys.listingTargetsRoot(APP),
       workspaceChecklistKey,
       appKeys.metadataAuditRoot(APP),
       accountPlanKey,
@@ -996,6 +1025,7 @@ describe("invalidation sets", () => {
       appKeys.firstRun(APP),
       appKeys.keywordDiscoveriesRoot(APP),
       appKeys.rankingsRoot(APP),
+      appKeys.listingTargetsRoot(APP),
       workspaceChecklistKey,
       appKeys.importPreviewRoot(APP),
     ]);

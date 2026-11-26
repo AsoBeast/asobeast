@@ -8,11 +8,13 @@ import {
   lintSubtitle,
   lintTitle,
   STORE_FIELD_LIMITS,
+  targetSlotRole,
   tokenize,
   type CoveragePreviewChange,
   type CoveragePreviewKeyword,
   type CoveragePreviewRequest,
   type CoveragePreviewResult,
+  type CoveragePreviewTarget,
   type CoverageVerdict,
   type DraftWastedWord,
   type MetadataAuditResult,
@@ -154,7 +156,10 @@ export function mockCoveragePreview(
   audit: MetadataAuditResult,
   home: string,
   request: CoveragePreviewRequest,
-  previewMarkets: PreviewMarkets = null,
+  {
+    previewMarkets = null,
+    targetSlots = [],
+  }: { previewMarkets?: PreviewMarkets; targetSlots?: readonly string[] } = {},
 ): CoveragePreviewResult {
   const store = audit.store;
   const live = liveTexts(audit);
@@ -204,5 +209,29 @@ export function mockCoveragePreview(
     keywords,
     wastedWords: repeatedWords(store, draft),
     counts,
+    ...(targetSlots.length > 0 && markets.length > 0
+      ? { targets: previewTargets(store, live, draft, targetSlots) }
+      : {}),
   };
+}
+
+function previewTargets(
+  store: Store,
+  live: Texts,
+  draft: Texts,
+  slots: readonly string[],
+): CoveragePreviewTarget[] {
+  return slots.flatMap((text, index) =>
+    text === ""
+      ? []
+      : [
+          {
+            position: index + 1,
+            role: targetSlotRole(index),
+            text,
+            live: verdict(store, live, text),
+            draft: verdict(store, draft, text),
+          },
+        ],
+  );
 }
