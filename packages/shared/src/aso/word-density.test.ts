@@ -171,6 +171,16 @@ describe('wordDensity', () => {
     expect(density.triples).toEqual([]);
   });
 
+  it('never starts a repeated phrase on a function word', () => {
+    const density = wordDensity(
+      'The planner works. The planner helps. The planner waits.',
+      english,
+    );
+
+    expect(density.pairs).toEqual([]);
+    expect(density.triples).toEqual([]);
+  });
+
   it('keeps function words inside a phrase', () => {
     const density = wordDensity(
       'time to focus. time to focus. time to focus.',
