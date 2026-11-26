@@ -65,7 +65,7 @@ function chipLift(painter: CardPainter, base: CardBox, endY: number): number {
     fonts.chip * CHIP_HEIGHT + dot * CHIP_OFFSET - (endY - box.y);
   if (shortfall <= 0) return 0;
   const share = (endY - base.y) / base.height;
-  return Math.ceil(shortfall / (1 - share));
+  return Math.min(Math.ceil(shortfall / (1 - share)), base.height / 2);
 }
 
 function plotOf(painter: CardPainter, chart: CardChartSpec): CardBox {
@@ -192,7 +192,6 @@ function breakEnds(shape: CardChartShape): Point[] {
 
 function drawStart(painter: CardPainter, shape: CardChartShape, plot: CardBox) {
   const { start } = shape;
-  for (const point of breakEnds(shape)) drawHollow(painter, point);
   if (start === null) return;
   drawHollow(painter, [start.x, start.y]);
   const { context, layout, theme } = painter;
@@ -280,6 +279,7 @@ export function drawCardChart(painter: CardPainter, chart: CardChartSpec) {
   drawGrid(painter, shape, plot);
   drawArea(painter, shape, plot);
   drawLine(painter, shape);
+  for (const point of breakEnds(shape)) drawHollow(painter, point);
   drawStart(painter, shape, plot);
   drawEnd(painter, shape);
   drawAxis(painter, chart, plot);
