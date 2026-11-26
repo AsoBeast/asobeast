@@ -5,5 +5,53 @@
     "high": "偏高",
     "nearCapacity": "接近容量上限",
     "overCapacity": "超出容量上限"
+  },
+  "visibility": {
+    "label": "关于曝光度",
+    "title": "曝光度如何计算",
+    "summary": "衡量应用在其跟踪的每个关键词上距离排名第一还有多远，并按关键词热度加权。100 表示所有关键词都排名第一，0 表示都没有找到。",
+    "intro": "每个关键词按热度占比计入，排名越低，计入越少：",
+    "tableCaption": "每个排名计入的关键词热度占比",
+    "position": "排名",
+    "counts": "计入比例",
+    "unscored": "尚无热度分数的关键词按热度 {value} 计入，热度为 0 的关键词不计入。变化以点数表示。",
+    "readCalculation": "查看完整计算方式"
+  },
+  "shareOfVoice": {
+    "label": "关于声量占比",
+    "title": "声量占比如何计算",
+    "summary": "你的曝光度占你和已跟踪竞品总曝光度的比例，使用相同关键词和同一天的数据。",
+    "example": "当你的曝光度为 {you}，竞品分别为 {first} 和 {second} 时，你的声量占比为 {share}；只与第一个竞品比较时为 {againstOne}。",
+    "checkedOnly": "只计入当天检查过的竞品，因此新增竞品不会改写历史数据。“非品牌”会排除归类为你自己的品牌或竞品品牌的关键词。",
+    "readCalculation": "查看声量占比的计算方式"
+  },
+  "annotations": {
+    "remove": "删除",
+    "removing": "正在删除…",
+    "removeAria": "删除 {label}",
+    "removeTitle": "删除 {label}？",
+    "removeBody": "这个标记会从排名历史和曝光度图表中消失。",
+    "removed": "已删除 {label}",
+    "removeFailed": "无法删除 {label}",
+    "loadFailed": "无法加载标注。",
+    "emptyTitle": "尚无标注",
+    "emptyBody": "把版本发布、详情页变化或活动开始日期固定到某一天，图表会在那里绘制一条线。",
+    "added": "标注已添加",
+    "addFailed": "无法连接 API 来添加这条标注。",
+    "date": "日期",
+    "label": "标签",
+    "labelPlaceholder": "版本 5.21.0",
+    "tag": "标签（可选）",
+    "tagPlaceholder": "活动",
+    "adding": "正在添加…",
+    "add": "添加",
+    "addAnnotation": "添加标注",
+    "addAria": "添加标注",
+    "title": "标注",
+    "footer": "在这个应用的图表上显示为虚线",
+    "limits": {
+      "counter": "{used} / {limit}",
+      "over": "{base}，超出 {over}"
+    }
   }
 }

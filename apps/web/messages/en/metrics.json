@@ -5,5 +5,53 @@
     "high": "High",
     "nearCapacity": "Near capacity",
     "overCapacity": "Over capacity"
+  },
+  "visibility": {
+    "label": "About visibility",
+    "title": "How visibility is calculated",
+    "summary": "How close the app is to ranking first for every keyword it tracks, weighted by popularity. 100 means position 1 for all of them, 0 means none was found.",
+    "intro": "Each keyword counts in proportion to its popularity, and less the lower it ranks:",
+    "tableCaption": "Share of a keyword's popularity counted at each position",
+    "position": "Position",
+    "counts": "Counts",
+    "unscored": "A keyword without a popularity score yet counts as popularity {value}, and one with popularity 0 does not count. Changes are in points.",
+    "readCalculation": "Read the full calculation"
+  },
+  "shareOfVoice": {
+    "label": "About share of voice",
+    "title": "How share of voice is calculated",
+    "summary": "Your visibility as a share of the visibility of your app and the competitors you track, over the same keywords and on the same day.",
+    "example": "With a visibility of {you} against competitors at {first} and {second}, your share of voice is {share}; against the first alone it is {againstOne}.",
+    "checkedOnly": "Only competitors checked that day count, so adding one does not rewrite earlier days. Non branded leaves out the keywords classed as your brand or a competitor's.",
+    "readCalculation": "Read how share of voice is counted"
+  },
+  "annotations": {
+    "remove": "Remove",
+    "removing": "Removing…",
+    "removeAria": "Remove {label}",
+    "removeTitle": "Remove {label}?",
+    "removeBody": "The marker disappears from the rank history and visibility charts.",
+    "removed": "Removed {label}",
+    "removeFailed": "Could not remove {label}",
+    "loadFailed": "Could not load the annotations.",
+    "emptyTitle": "No annotations yet",
+    "emptyBody": "Pin a release, a listing change or the start of a campaign to its day, and the charts draw a line there.",
+    "added": "Annotation added",
+    "addFailed": "Could not reach the API to add this annotation.",
+    "date": "Date",
+    "label": "Label",
+    "labelPlaceholder": "Release 5.21.0",
+    "tag": "Tag (optional)",
+    "tagPlaceholder": "wave",
+    "adding": "Adding…",
+    "add": "Add",
+    "addAnnotation": "Add annotation",
+    "addAria": "Add an annotation",
+    "title": "Annotations",
+    "footer": "Drawn as dashed lines on this app’s charts",
+    "limits": {
+      "counter": "{used} / {limit}",
+      "over": "{base}, {over} over"
+    }
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import type { DefaultLegendContentProps } from "recharts";
+import { useTranslations } from "next-intl";
 import { seriesDash } from "./theme";
 
 export type SeriesLabels = Record<string, string>;
@@ -13,11 +14,12 @@ export function SeriesLegend({
   labels: SeriesLabels;
   order: string[];
 }) {
+  const t = useTranslations("charts");
   if (!payload?.length) return null;
 
   return (
     <ul
-      aria-label="Charted series"
+      aria-label={t("chartedSeries")}
       className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 pt-3"
     >
       {payload

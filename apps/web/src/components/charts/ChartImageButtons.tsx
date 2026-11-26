@@ -1,6 +1,7 @@
 "use client";
 
 import { Copy, ImageDown } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { SubjectButton } from "@/components/SubjectButton";
 import { useChartImage, type ChartImageJob } from "./use-chart-image";
 
@@ -12,6 +13,7 @@ export function ChartImageButtons({
   makeJob: () => ChartImageJob | null;
 }) {
   const image = useChartImage();
+  const t = useTranslations("charts");
   const busy = image.pending || undefined;
   const start = (act: (job: ChartImageJob) => void) => () => {
     const job = makeJob();
@@ -22,7 +24,7 @@ export function ChartImageButtons({
     <>
       <SubjectButton
         icon={<Copy aria-hidden />}
-        label="Copy image"
+        label={t("copyImage")}
         subject={subject}
         className="print:hidden"
         aria-disabled={busy}
@@ -30,7 +32,7 @@ export function ChartImageButtons({
       />
       <SubjectButton
         icon={<ImageDown aria-hidden />}
-        label="Download PNG"
+        label={t("downloadPng")}
         subject={subject}
         className="print:hidden"
         aria-disabled={busy}

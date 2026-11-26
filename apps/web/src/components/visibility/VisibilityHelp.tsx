@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { InfoTip } from "@/components/ui/info-tip";
 import {
   Table,
@@ -15,25 +16,17 @@ import {
 } from "./visibility-help";
 
 export function VisibilityHelp({ note }: { note?: string }) {
+  const t = useTranslations("metrics.visibility");
   return (
-    <InfoTip
-      label="About visibility"
-      title="How visibility is calculated"
-      summary="How close the app is to ranking first for every keyword it tracks, weighted by popularity. 100 means position 1 for all of them, 0 means none was found."
-    >
-      <p className="text-muted-foreground">
-        Each keyword counts in proportion to its popularity, and less the lower
-        it ranks:
-      </p>
+    <InfoTip label={t("label")} title={t("title")} summary={t("summary")}>
+      <p className="text-muted-foreground">{t("intro")}</p>
       <Table className="text-caption">
-        <TableCaption className="sr-only">
-          Share of a keyword&apos;s popularity counted at each position
-        </TableCaption>
+        <TableCaption className="sr-only">{t("tableCaption")}</TableCaption>
         <TableHeader>
           <TableRow>
-            <TableHead scope="col">Position</TableHead>
+            <TableHead scope="col">{t("position")}</TableHead>
             <TableHead scope="col" className="text-right">
-              Counts
+              {t("counts")}
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -47,9 +40,7 @@ export function VisibilityHelp({ note }: { note?: string }) {
         </TableBody>
       </Table>
       <p className="text-muted-foreground">
-        A keyword without a popularity score yet counts as popularity{" "}
-        {UNSCORED_POPULARITY}, and one with popularity 0 does not count. Changes
-        are in points.
+        {t("unscored", { value: UNSCORED_POPULARITY })}
       </p>
       {note ? <p className="text-muted-foreground">{note}</p> : null}
       <a
@@ -58,7 +49,7 @@ export function VisibilityHelp({ note }: { note?: string }) {
         rel="noreferrer"
         className="font-medium text-foreground link-underline"
       >
-        Read the full calculation
+        {t("readCalculation")}
       </a>
     </InfoTip>
   );

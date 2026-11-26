@@ -1,6 +1,7 @@
 "use client";
 
 import type { Ref } from "react";
+import { useTranslations } from "next-intl";
 import {
   CartesianGrid,
   Line,
@@ -34,7 +35,8 @@ import {
   TIME_AXIS_PROPS,
 } from "./theme";
 import { markerLineProps, RANK_TICKS, rankTierAreas } from "./rank-layers";
-import { formatDayMonth } from "@/lib/format";
+import { formatDayMonthInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { todayUtc } from "@/lib/ranges";
 import {
   loneKey,
@@ -54,6 +56,7 @@ function RankingTooltip({
   data: RankingChartData;
   annotations: AppAnnotationItem[];
 }) {
+  const locale = useAppLocale();
   if (!active || label === undefined) return null;
 
   const rowIndex = data.rows.findIndex((candidate) => candidate.date === label);
@@ -78,7 +81,7 @@ function RankingTooltip({
 
   return (
     <SeriesTooltip
-      title={formatDayMonth(String(label))}
+      title={formatDayMonthInLocale(String(label), locale)}
       items={items}
       footer={
         <AnnotationTooltipNotes
@@ -96,11 +99,12 @@ function ChangeMarker(props: {
   y2: number;
   stroke?: string;
 }) {
+  const t = useTranslations("charts");
   const x = props.x1;
   const bottom = Math.max(props.y1, props.y2);
   return (
     <g className="metadata-change-marker" pointerEvents="none">
-      <title>Metadata change</title>
+      <title>{t("metadataChange")}</title>
       <path
         d={`M ${x - 4} ${bottom + 6} L ${x} ${bottom + 1} L ${x + 4} ${bottom + 6} Z`}
         fill={props.stroke}
@@ -139,6 +143,7 @@ export function RankingChart({
   chartRef?: Ref<HTMLDivElement>;
   ownKey?: boolean;
 }) {
+  const t = useTranslations("charts");
   const {
     today,
     plotted,
@@ -153,7 +158,7 @@ export function RankingChart({
         config={data.config}
         className={`${CHART_HEIGHT.hero} w-full`}
         role="region"
-        aria-label="Keyword rank positions"
+        aria-label={t("keywordRankPositions")}
       >
         <LineChart accessibilityLayer data={data.rows} margin={CHART_MARGIN}>
           {rankTierAreas()}
@@ -186,7 +191,7 @@ export function RankingChart({
               stroke="var(--muted-foreground)"
               strokeDasharray="2 4"
               label={{
-                value: "Today",
+                value: t("today"),
                 position: "insideTopLeft",
                 fill: "var(--muted-foreground)",
                 fontSize: 10,
@@ -241,7 +246,7 @@ export function RankingChart({
       </ChartContainer>
       {marked.length > 0 && !ownKey ? (
         <p className="text-caption text-muted-foreground">
-          The triangle marks a day the listing changed.
+          {t("changeMarkerNote")}
         </p>
       ) : null}
     </div>
