@@ -13,6 +13,7 @@ export const SETTINGS_SECTIONS = {
   alerts: "index.sections.alerts",
   team: "index.sections.team",
   workspace: "index.sections.workspace",
+  language: "index.sections.language",
 };
 
 export type SettingsSectionId = keyof typeof SETTINGS_SECTIONS;

@@ -1,5 +1,9 @@
 {
   "title": "设置",
+  "language": {
+    "title": "语言",
+    "description": "选择整个界面使用的语言。你的选择会保存在这台设备上。"
+  },
   "index": {
     "onThisPage": "本页",
     "sections": {
@@ -8,7 +12,8 @@
       "gettingStarted": "开始使用",
       "alerts": "提醒",
       "team": "团队",
-      "workspace": "工作区"
+      "workspace": "工作区",
+      "language": "语言"
     }
   },
   "capacity": {

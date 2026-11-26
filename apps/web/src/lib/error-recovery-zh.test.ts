@@ -4,11 +4,15 @@ import zhErrors from "../../messages/zh-CN/errors.json";
 import { ApiError } from "@/lib/api";
 import { recoveryFor } from "./error-recovery";
 
-function apiError(statusCode: number, retryAfterSeconds?: number): ApiError {
+function apiError(
+  statusCode: number,
+  retryAfterSeconds?: number,
+  message = "Too many refreshes",
+): ApiError {
   return new ApiError({
     statusCode,
     error: "Error",
-    message: "Too many refreshes",
+    message,
     path: "/health",
     timestamp: new Date().toISOString(),
     ...(retryAfterSeconds === undefined ? {} : { retryAfterSeconds }),
@@ -39,5 +43,38 @@ describe("Simplified Chinese error recovery", () => {
     expect(recoveryFor(apiError(429, 4), undefined, context).body).toContain(
       "4秒钟后",
     );
+  });
+
+  it("uses localized summaries and keeps unknown server text as detail", () => {
+    const translator = createTranslator({
+      locale: "zh-CN",
+      namespace: "errors",
+      messages: { errors: zhErrors },
+      timeZone: "UTC",
+    });
+    const context = { translator, locale: "zh-CN" as const };
+
+    expect(
+      recoveryFor(
+        apiError(400, undefined, "email must be valid"),
+        undefined,
+        context,
+      ),
+    ).toMatchObject({
+      title: "出了点问题",
+      body: "请求未能完成。重试通常可以解决临时故障。",
+      detail: "email must be valid",
+    });
+    expect(
+      recoveryFor(
+        apiError(503, undefined, "database unavailable"),
+        undefined,
+        context,
+      ),
+    ).toMatchObject({
+      title: "API 未能响应",
+      body: "请求未能完成，请稍后重试。",
+      detail: "database unavailable",
+    });
   });
 });

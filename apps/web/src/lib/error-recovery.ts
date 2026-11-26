@@ -13,6 +13,7 @@ export type RecoveryAction =
 export interface Recovery {
   title: string;
   body: string;
+  detail?: string;
   action: RecoveryAction;
   expected: boolean;
 }
@@ -217,20 +218,34 @@ export function recoveryFor(
     const known = byStatus(apiErrorDigestOf(error.envelope), scope, context);
     if (known) return known;
     if (statusCode >= 500) {
-      return {
-        title: context
-          ? context.translator("serverTitle")
-          : "The API failed to answer",
-        body: message,
-        action: { kind: "retry" },
-        expected: true,
-      };
+      return context
+        ? {
+            title: context.translator("serverTitle"),
+            body: context.translator("serverBody"),
+            detail: message,
+            action: { kind: "retry" },
+            expected: true,
+          }
+        : {
+            title: "The API failed to answer",
+            body: message,
+            action: { kind: "retry" },
+            expected: true,
+          };
     }
-    return {
-      ...GENERIC,
-      body: message,
-      expected: true,
-    };
+    return context
+      ? {
+          ...GENERIC,
+          title: context.translator("genericTitle"),
+          body: context.translator("genericBody"),
+          detail: message,
+          expected: true,
+        }
+      : {
+          ...GENERIC,
+          body: message,
+          expected: true,
+        };
   }
 
   if (isLostRequest(error)) {

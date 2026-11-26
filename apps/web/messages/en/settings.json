@@ -1,5 +1,9 @@
 {
   "title": "Settings",
+  "language": {
+    "title": "Language",
+    "description": "Choose the language used throughout the interface. Your choice is remembered on this device."
+  },
   "index": {
     "onThisPage": "On this page",
     "sections": {
@@ -8,7 +12,8 @@
       "gettingStarted": "Getting started",
       "alerts": "Alerts",
       "team": "Team",
-      "workspace": "Workspace"
+      "workspace": "Workspace",
+      "language": "Language"
     }
   },
   "capacity": {

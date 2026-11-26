@@ -27,5 +27,14 @@
   "seePlans": "See plans",
   "backToApps": "Back to apps",
   "openSettings": "Open settings",
-  "statusPage": "If this keeps happening, <link>check the status page</link>."
+  "statusPage": "If this keeps happening, <link>check the status page</link>.",
+  "boundary": {
+    "settings": "Settings could not be loaded",
+    "app": "This app could not be loaded",
+    "keywords": "Keywords could not be loaded",
+    "setup": "Setup could not be loaded",
+    "appNotFoundTitle": "App not found",
+    "appNotFoundBody": "This app does not exist or has been deleted.",
+    "appNotFoundBack": "Back to apps"
+  }
 }

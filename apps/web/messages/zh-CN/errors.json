@@ -27,5 +27,14 @@
   "seePlans": "查看套餐",
   "backToApps": "返回应用",
   "openSettings": "打开设置",
-  "statusPage": "如果问题持续出现，请<link>查看状态页</link>。"
+  "statusPage": "如果问题持续出现，请<link>查看状态页</link>。",
+  "boundary": {
+    "settings": "无法加载设置",
+    "app": "无法加载此应用",
+    "keywords": "无法加载关键词",
+    "setup": "无法加载初始化",
+    "appNotFoundTitle": "未找到应用",
+    "appNotFoundBody": "此应用不存在或已被删除。",
+    "appNotFoundBack": "返回应用"
+  }
 }

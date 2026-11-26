@@ -14,7 +14,9 @@ export function localeForTag(tag: string): Locale | null {
   if (
     normalized === "zh" ||
     normalized === "zh-cn" ||
-    normalized === "zh-hans"
+    normalized === "zh-sg" ||
+    normalized === "zh-hans" ||
+    normalized.startsWith("zh-hans-")
   ) {
     return "zh-CN";
   }

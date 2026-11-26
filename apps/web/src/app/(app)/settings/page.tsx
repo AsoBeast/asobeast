@@ -5,6 +5,7 @@ import { PlanSection } from "@/components/settings/PlanSection";
 import { TeamCard } from "@/components/settings/TeamCard";
 import { ChecklistSettingsCard } from "@/components/checklist/ChecklistSettingsCard";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { SettingsIndex } from "@/components/settings/SettingsIndex";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import { BudgetCard } from "@/components/settings/BudgetCard";
@@ -60,6 +61,19 @@ export default async function SettingsPage({
           />
           <div className="page-reading flex flex-col gap-8">
             <PageHeader title={t("title")} />
+
+            <SettingsSection
+              id="language"
+              title={t("language.title")}
+              headed={false}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-dense text-muted-foreground">
+                  {t("language.description")}
+                </p>
+                <LanguageSwitcher />
+              </div>
+            </SettingsSection>
 
             <PlanSection />
 

@@ -16,6 +16,8 @@ describe("locale contract", () => {
     [undefined, "zh", "zh-CN"],
     [undefined, "zh-CN", "zh-CN"],
     [undefined, "zh-Hans", "zh-CN"],
+    [undefined, "zh-Hans-CN", "zh-CN"],
+    [undefined, "zh-SG", "zh-CN"],
     [undefined, "ZH-hans", "zh-CN"],
     [undefined, "en-US,en;q=0.9", "en"],
     [undefined, "fr;q=0.9,zh-CN;q=0.8", "zh-CN"],

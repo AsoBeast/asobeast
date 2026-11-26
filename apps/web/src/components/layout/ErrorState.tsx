@@ -79,6 +79,14 @@ export function ErrorState({
         <p className={cn("text-body text-muted-foreground", classes.body)}>
           {recovery.body}
         </p>
+        {recovery.detail ? (
+          <details className="max-w-prose text-caption text-muted-foreground">
+            <summary className="cursor-pointer font-medium text-foreground">
+              {common("technicalDetails")}
+            </summary>
+            <p className="mt-2 wrap-anywhere">{recovery.detail}</p>
+          </details>
+        ) : null}
       </div>
       {recovery.action.kind === "retry" ? (
         <Button data-action="retry" variant="outline" onClick={tryAgain}>
