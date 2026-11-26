@@ -13,6 +13,7 @@ import {
 } from "@asobeast/shared";
 
 export const TARGETS_FULL_COOKIE = "e2e_targets_full";
+export const TARGETS_MOCK_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
 export const TARGETS_PATH = /\/localizations\/[^/]+\/targets$/;
 
 interface TargetState {

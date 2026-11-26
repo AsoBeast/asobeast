@@ -22,6 +22,7 @@ import {
 } from "@/lib/listing-draft";
 import { searchWords } from "@/lib/store-preview/search-words";
 import { CopyDraftButton, CopyFieldButton } from "./CopyDraftButtons";
+import { TargetsBlock } from "../targets/TargetsBlock";
 import { DraftCoveragePanel } from "./DraftCoveragePanel";
 import { useDraftFieldReveal } from "./draft-field-reveal";
 import { DraftFieldInput } from "./DraftFieldInput";
@@ -112,6 +113,13 @@ export function ListingDraftEditor({
 
   return (
     <div className="grid grid-cols-12 items-start gap-6">
+      {scope.store === "APP_STORE" ? (
+        <TargetsBlock
+          key={scope.localization}
+          id={id}
+          localization={scope.localization}
+        />
+      ) : null}
       <section
         aria-label="Draft listing"
         className="col-span-12 flex min-w-0 flex-col gap-4 rounded-lg border border-border bg-card px-4 pt-3 pb-4 @5xl/metadata:col-span-7 @5xl/metadata:row-span-2"
