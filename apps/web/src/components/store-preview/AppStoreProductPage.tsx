@@ -45,7 +45,10 @@ export function AppStoreProductPage({
       </div>
       <RatingLine rating={listing.rating} />
       {text ? (
-        <p dir="auto" className="line-clamp-3 text-dense whitespace-pre-line">
+        <p
+          dir="auto"
+          className="line-clamp-3 text-dense whitespace-pre-line wrap-anywhere"
+        >
           {text}
         </p>
       ) : null}
