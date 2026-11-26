@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useEffectEvent,
   useRef,
   useState,
   type ComponentProps,
@@ -83,6 +84,11 @@ export function ShareCardDialog({
 }) {
   const [open, setOpen] = useState(false);
   const card = useShareCard(source, open, loading);
+  const reportClosed = useEffectEvent(() => onOpenChange?.(false));
+  useEffect(() => {
+    if (!open) return;
+    return () => reportClosed();
+  }, [open]);
   const busy = card.busy || undefined;
   return (
     <Dialog
