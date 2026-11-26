@@ -31,9 +31,6 @@ export const isTrackedRow = (
   );
 };
 
-const escaped = (word: string): string =>
-  word.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
-
 const spacelessRanges = (text: string, row: string): TextRange[] => {
   const haystack = lowerCase(text);
   const needle = lowerCase(row);
@@ -50,7 +47,7 @@ const spacelessRanges = (text: string, row: string): TextRange[] => {
 
 const wordRanges = (text: string, words: readonly string[]): TextRange[] => {
   const pattern = new RegExp(
-    `${BEFORE_WORD}${words.map(escaped).join(BETWEEN_WORDS)}${AFTER_WORD}`,
+    `${BEFORE_WORD}${words.join(BETWEEN_WORDS)}${AFTER_WORD}`,
     "giu",
   );
   return [...text.matchAll(pattern)].map((match) => ({
