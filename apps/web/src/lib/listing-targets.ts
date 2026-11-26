@@ -42,6 +42,19 @@ export const saveRequestOf = (
 export const isEdited = (slots: TargetSlots, saved: TargetSlots): boolean =>
   slots.some((slot, index) => slot !== saved[index]);
 
+export function moveSlot(
+  slots: TargetSlots,
+  from: number,
+  to: number,
+): TargetSlots {
+  if (to < 0 || to >= slots.length || from === to) return slots;
+  return slots.map((slot, index) => {
+    if (index === from) return slots[to];
+    if (index === to) return slots[from];
+    return slot;
+  });
+}
+
 export const ROLE_SLOT_COUNT = 3;
 
 export function withTopThree(

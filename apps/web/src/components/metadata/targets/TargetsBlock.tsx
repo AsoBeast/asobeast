@@ -57,6 +57,11 @@ export function TargetsBlock({
   const headingId = useId();
   const targets = useTargetEdits(id, localization);
   const [more, setMore] = useState<boolean | null>(null);
+  const [moved, setMoved] = useState("");
+  const announceMove = (sentence: string, to: number) => {
+    setMoved(sentence);
+    if (to >= ROLE_SLOTS.length) setMore(true);
+  };
   const result = targets.read.data;
   const showMore =
     more ?? MORE_SLOTS.some((index) => targets.slots[index] !== null);
@@ -105,6 +110,7 @@ export function TargetsBlock({
                 slots={targets.slots}
                 result={result}
                 onEdit={targets.edit}
+                onMoved={announceMove}
                 className="rounded-md bg-brand-subtle"
               />
               <Button
@@ -128,6 +134,7 @@ export function TargetsBlock({
                   slots={targets.slots}
                   result={result}
                   onEdit={targets.edit}
+                  onMoved={announceMove}
                 />
               ) : null}
             </>
@@ -141,6 +148,9 @@ export function TargetsBlock({
               Reading the target keywords…
             </p>
           )}
+          <p role="status" className="sr-only">
+            {moved}
+          </p>
           {targets.error ? (
             <p role="alert" className="text-dense text-destructive">
               {targets.error}

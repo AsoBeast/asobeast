@@ -2,6 +2,7 @@ import type { ListingTargetItem, ListingTargetsResult } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
 import {
   isEdited,
+  moveSlot,
   openCandidates,
   readersLine,
   roleSlotsFilled,
@@ -218,5 +219,27 @@ describe("withTopThree", () => {
   it("knows when the role slots are full", () => {
     expect(roleSlotsFilled(EMPTY)).toBe(false);
     expect(roleSlotsFilled(["a", "b", "c", ...EMPTY.slice(3)])).toBe(true);
+  });
+});
+
+describe("moveSlot", () => {
+  it("swaps a slot with the one above", () => {
+    expect(moveSlot(["a", "b", ...EMPTY.slice(2)], 1, 0).slice(0, 2)).toEqual([
+      "b",
+      "a",
+    ]);
+  });
+
+  it("moves into an empty slot without shifting the rest", () => {
+    expect(
+      moveSlot(["a", null, "c", ...EMPTY.slice(3)], 0, 1).slice(0, 3),
+    ).toEqual([null, "a", "c"]);
+  });
+
+  it("does nothing at the top or the bottom", () => {
+    const slots = ["a", ...EMPTY.slice(1)];
+
+    expect(moveSlot(slots, 0, -1)).toBe(slots);
+    expect(moveSlot(slots, 9, 10)).toBe(slots);
   });
 });

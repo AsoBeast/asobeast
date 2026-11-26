@@ -224,3 +224,49 @@ test("says when there is nothing to fill", async ({ page }) => {
     "Title and subtitle slots are already filled",
   );
 });
+
+test("moves a keyword up into the title slot from the keyboard", async ({
+  page,
+}) => {
+  await seed(page, ["focus timer", "study timer"]);
+  await page.goto(DRAFT);
+
+  await (
+    await hydrated(
+      slot(page, "Subtitle", 0).getByRole("button", {
+        name: "Move study timer up",
+      }),
+    )
+  ).focus();
+  await page.keyboard.press("Enter");
+
+  const movedUp = slot(page, "Title").getByRole("button", {
+    name: "Move study timer up",
+  });
+  await expect(movedUp).toBeFocused();
+  await expect(movedUp).toHaveAttribute("aria-disabled", "true");
+  await expect(
+    slot(page, "Subtitle", 0).getByRole("button", {
+      name: "focus timer for Subtitle",
+    }),
+  ).toBeVisible();
+  await page.keyboard.press("Enter");
+  await expect(movedUp).toBeFocused();
+});
+
+test("announces the move", async ({ page }) => {
+  await seed(page, ["focus timer", "study timer"]);
+  await page.goto(DRAFT);
+
+  await (
+    await hydrated(
+      slot(page, "Title").getByRole("button", {
+        name: "Move focus timer down",
+      }),
+    )
+  ).click();
+
+  await expect(block(page).getByRole("status")).toHaveText(
+    "focus timer moved to Subtitle",
+  );
+});

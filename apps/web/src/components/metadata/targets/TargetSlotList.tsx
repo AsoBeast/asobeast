@@ -2,7 +2,9 @@
 
 import type { ListingTargetsResult } from "@asobeast/shared";
 import {
+  moveSlot,
   scoresByPhrase,
+  slotLabel,
   withSlot,
   type TargetSlots,
 } from "@/lib/listing-targets";
@@ -15,6 +17,7 @@ export function TargetSlotList({
   slots,
   result,
   onEdit,
+  onMoved,
   className,
 }: {
   label: string;
@@ -22,6 +25,7 @@ export function TargetSlotList({
   slots: TargetSlots;
   result: ListingTargetsResult;
   onEdit: (next: TargetSlots) => void;
+  onMoved: (sentence: string, to: number) => void;
   className?: string;
 }) {
   const scores = scoresByPhrase(result);
@@ -43,6 +47,10 @@ export function TargetSlotList({
             candidates={result.candidates}
             scores={value === null ? undefined : scores.get(value)}
             onChange={(text) => onEdit(withSlot(slots, index, text))}
+            onMove={(to) => {
+              onEdit(moveSlot(slots, index, to));
+              onMoved(`${value ?? ""} moved to ${slotLabel(to)}`, to);
+            }}
           />
         );
       })}
