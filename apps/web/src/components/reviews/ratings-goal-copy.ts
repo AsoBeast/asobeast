@@ -7,6 +7,7 @@ import {
   MIN_GOAL_DAYS,
   MIN_TARGET_TENTHS,
   type GoalPace,
+  type MixAnswer,
   type RatingsGoal,
   THIN_SAMPLE_COUNT,
 } from "@/lib/ratings-goal";
@@ -60,4 +61,23 @@ export function goalNotes(store: Store, count: number): string[] {
         ]
       : []),
   ];
+}
+
+const shownTenths = (value: number): string =>
+  formatTenths(displayedTenths(value));
+
+export function paceSentence(
+  answer: MixAnswer,
+  targetTenths: number,
+  days: number,
+): string {
+  const target = formatTenths(targetTenths);
+  if (answer.kind === "belowTarget") {
+    return `Not at the current mix: new ratings average ${shownTenths(answer.newAverage)}, below ${target}.`;
+  }
+  if (answer.kind === "atTarget") {
+    return `Not at the current mix: new ratings average ${shownTenths(answer.newAverage)}, no higher than ${target}.`;
+  }
+  const reached = answer.kind === "reaches" ? ", your target" : "";
+  return `At your current pace the store shows ${shownTenths(answer.projected)} in ${pluralize(days, "day")}${reached}.`;
 }

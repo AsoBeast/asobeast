@@ -3,6 +3,7 @@ import {
   defaultTargetTenths,
   displayedTenths,
   fiveStarRatingsToReach,
+  goalAtCurrentMix,
   goalPace,
   parseGoalDays,
   parseTargetTenths,
@@ -205,5 +206,48 @@ describe("fiveStarRatingsToReach", () => {
       }
     }
     expect(misses).toEqual([]);
+  });
+});
+
+describe("goalAtCurrentMix", () => {
+  const mix = {
+    average: 4.3,
+    count: 2000,
+    newAverage: 4.7,
+    perDay: 40,
+    days: 30,
+    targetTenths: 45,
+  };
+
+  it("projects the shown average after the days entered", () => {
+    const answer = goalAtCurrentMix(mix);
+
+    expect(answer?.kind).toBe("reaches");
+    expect(
+      answer && "projected" in answer ? answer.projected : null,
+    ).toBeCloseTo((4.3 * 2000 + 4.7 * 1200) / 3200, 9);
+    expect(goalAtCurrentMix({ ...mix, targetTenths: 46 })?.kind).toBe(
+      "fallsShort",
+    );
+  });
+
+  it("says when the mix cannot reach the target", () => {
+    expect(goalAtCurrentMix({ ...mix, newAverage: 4.2 })).toEqual({
+      kind: "belowTarget",
+      newAverage: 4.2,
+    });
+    expect(goalAtCurrentMix({ ...mix, newAverage: 4.46 })).toEqual({
+      kind: "atTarget",
+      newAverage: 4.46,
+    });
+  });
+
+  it("answers nothing without new ratings", () => {
+    expect(goalAtCurrentMix({ ...mix, perDay: 0 })).toBeNull();
+    expect(goalAtCurrentMix({ ...mix, newAverage: null })).toBeNull();
+  });
+
+  it("answers nothing once the store shows the target", () => {
+    expect(goalAtCurrentMix({ ...mix, average: 4.46 })).toBeNull();
   });
 });

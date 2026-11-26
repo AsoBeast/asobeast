@@ -3897,6 +3897,20 @@ DATASETS[APP_FEW_RATINGS_ID] = ratedDataset(
 );
 DATASETS[APP_UNRATED_ID] = ratedDataset(APP_UNRATED_ID, "Unrated Lab", 0, 0);
 
+export const APP_NEW_RATINGS_ID = "app-new-ratings";
+
+const NEW_RATINGS_LATEST = GROWING_RATINGS_HISTORY.points.at(-1);
+
+DATASETS[APP_NEW_RATINGS_ID] = {
+  ...ratedDataset(
+    APP_NEW_RATINGS_ID,
+    "New Ratings Lab",
+    NEW_RATINGS_LATEST?.ratingAvg ?? 0,
+    NEW_RATINGS_LATEST?.ratingCount ?? 0,
+  ),
+  ratingsHistory: GROWING_RATINGS_HISTORY,
+};
+
 export const APP_DRAFT_LOCALES_ID = "app-draft-locales";
 
 DATASETS[APP_DRAFT_LOCALES_ID] = localesDataset(

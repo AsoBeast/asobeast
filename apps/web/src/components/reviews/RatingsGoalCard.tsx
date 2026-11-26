@@ -1,6 +1,6 @@
 "use client";
 
-import { type ComponentProps, useId, useState } from "react";
+import { type ComponentProps, Suspense, useId, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { AppDetail, Store } from "@asobeast/shared";
 import { PANEL_HEADER } from "@/components/layout/panel-classes";
@@ -32,6 +32,7 @@ import {
   goalSentence,
   TARGET_HINT,
 } from "./ratings-goal-copy";
+import { GoalPace } from "./GoalPace";
 
 type GoalFieldProps = {
   label: string;
@@ -82,13 +83,46 @@ function storedRating(app: AppDetail | undefined): StoredRating | null {
   return { store: app.store, average: ratingAvg, count: ratingCount };
 }
 
+function GoalAnswer({
+  id,
+  rating,
+  target,
+  days,
+}: {
+  id: string;
+  rating: StoredRating;
+  target: number;
+  days: number;
+}) {
+  const goal = fiveStarRatingsToReach(
+    rating.average,
+    rating.count,
+    target,
+    days,
+  );
+  return (
+    <>
+      <p className="text-body">
+        {goalSentence(goal, target, rating.average, days)}
+      </p>
+      {goal.kind === "needed" && rating.store === "APP_STORE" ? (
+        <Suspense fallback={<span aria-hidden className="block h-lh" />}>
+          <GoalPace id={id} targetTenths={target} days={days} />
+        </Suspense>
+      ) : null}
+    </>
+  );
+}
+
 function GoalResult({
+  id,
   rating,
   target,
   days,
   targetHintId,
   daysHintId,
 }: {
+  id: string;
   rating: StoredRating;
   target: number | null;
   days: number | null;
@@ -100,20 +134,13 @@ function GoalResult({
       {target === null ? <Hint id={targetHintId} text={TARGET_HINT} /> : null}
       {days === null ? <Hint id={daysHintId} text={DAYS_HINT} /> : null}
       {target === null || days === null ? null : (
-        <p className="text-body">
-          {goalSentence(
-            fiveStarRatingsToReach(rating.average, rating.count, target, days),
-            target,
-            rating.average,
-            days,
-          )}
-        </p>
+        <GoalAnswer id={id} rating={rating} target={target} days={days} />
       )}
     </div>
   );
 }
 
-function GoalPanel({ rating }: { rating: StoredRating }) {
+function GoalPanel({ id, rating }: { id: string; rating: StoredRating }) {
   const headingId = useId();
   const targetHintId = useId();
   const daysHintId = useId();
@@ -158,6 +185,7 @@ function GoalPanel({ rating }: { rating: StoredRating }) {
             />
           </div>
           <GoalResult
+            id={id}
             rating={rating}
             target={target}
             days={days}
@@ -178,5 +206,5 @@ function GoalPanel({ rating }: { rating: StoredRating }) {
 export function RatingsGoalCard({ id }: { id: string }) {
   const { data: app } = useQuery(appDetailOptions(id));
   const rating = storedRating(app);
-  return rating ? <GoalPanel rating={rating} /> : null;
+  return rating ? <GoalPanel id={id} rating={rating} /> : null;
 }
