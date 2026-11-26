@@ -91,7 +91,7 @@ describe("placementSentence", () => {
     expect(words(parts)).toEqual([
       "Difficulty ",
       " is at or above popularity ",
-      " and you do not rank in the top 30 yet: index it in the keyword field.",
+      " and you have no recent rank in the top 30: index it in the keyword field.",
     ]);
     expect(figures(parts)).toEqual([
       ["difficulty", "80"],

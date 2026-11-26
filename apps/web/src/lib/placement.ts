@@ -74,10 +74,10 @@ function hardToRank({
   popularity,
   difficulty,
 }: PlacementSuggestion): PlacementPart[] {
-  const tail = ` and you do not rank in the top ${REACHABLE_POSITION} yet: index it in the keyword field.`;
+  const tail = ` and you have no recent rank in the top ${REACHABLE_POSITION}: index it in the keyword field.`;
   if (popularity === null || difficulty === null) {
     return [
-      `You do not rank in the top ${REACHABLE_POSITION} yet: index it in the keyword field.`,
+      `You have no recent rank in the top ${REACHABLE_POSITION}: index it in the keyword field.`,
     ];
   }
   return [
