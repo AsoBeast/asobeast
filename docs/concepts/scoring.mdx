@@ -215,6 +215,38 @@ Each grade has a colour, green, yellow, orange and red, but the colour is never 
 
 The grades apply to popularity, difficulty, opportunity and position on the keyword monitor, to every position and score in the comparison matrix and to the best position, average position and rating in discovery. Charts that show a distribution, such as the rank distribution, keep their own sequential colours.
 
+## Where does each keyword belong?
+
+On the App Store, each target keyword of a localization, and each candidate you can pick for a slot, carries a suggestion: **Title**, **Subtitle**, **Keyword field** or **Skip**. AsoBeast derives it from the stored scores of the keyword's lead market every time you read the targets. It is never stored and never written by AI, and a keyword that is unscored, whose score is outdated or that no reader market tracks gets no suggestion.
+
+The rules run in order and the first match wins:
+
+1. **Skip** a competitor's brand, your own brand (your title already makes your name searchable), a popularity under 20 or under the official floor, and a relevance under 60. A relevance nobody has measured yet does not skip.
+2. **Title** goes to the strongest keyword with popularity of at least 40 that you can realistically rank for and that fits the 30 characters of the title.
+3. **Subtitle** takes the next keywords you can realistically rank for, at most two, while they fit the 30 characters of the subtitle together.
+4. **Keyword field** takes the rest. A keyword you could rank for that found no room in the title or subtitle says those are taken by stronger keywords. Otherwise the reason is a single word, a long tail phrase (three words or more, or popularity under 25) or a keyword that is hard to rank for. A keyword whose new words no longer fit the 100 characters of the keyword field is skipped.
+
+Strength is opportunity, then popularity, then the phrase in alphabetical order. **Realistic to rank for** means the difficulty is under the popularity, as the **Beatable** insight reads it, or the app ranks 30th or better in a check from today or yesterday. An older check proves nothing, so it is ignored and never quoted.
+
+Characters are counted in code points, the way App Store Connect counts. The keyword field counts each word once: a word already placed in the title, the subtitle or the field adds nothing, and every new word costs its length plus a comma.
+
+Room is shared among your targets only, strongest first. Each candidate is judged alone, as if you added it after your current targets, so candidates never use up the title or the keyword field between them.
+
+| Threshold | Value | Why |
+| --- | --- | --- |
+| Lowest popularity | 20 | The floor of the push to top 10 and add uncovered actions, and the edge between a weak and a poor popularity grade |
+| Lowest relevance | 60 | The relevance every keyword rule of the Action Center asks for |
+| Title popularity | 40 | The edge between a weak and a fair popularity grade |
+| Reachable position | 30 | The edge between a weak and a poor position grade |
+| Long tail | 3 words, or popularity under 25 | The long tail bucket of the keyword list |
+| Subtitle keywords | 2 | The two subtitle slots |
+
+The grade edges live in the web app and these thresholds in the API, so a change to one of them changes the other in the same release.
+
+A keyword ranked 11 to 20 with popularity of at least 20 can always be reached, so it is suggested for the title or the subtitle, or for the keyword field because stronger keywords hold them. That agrees with the `keyword.push_to_top10` action of the [Action Center](/guides/action-center), which asks for the title or the subtitle. The audit's **Primary keyword in title** check can name another keyword: it asks which tracked keyword the title should carry, by opportunity, without the popularity and reach tests, while the suggestion asks whether a title spot is realistic.
+
+Google Play has no subtitle and no keyword field, so the same rules map to the title, the short description (80 characters) and the description. Targets are picked per App Store localization for now, so no Google Play suggestion is shown yet.
+
 ## Where does relevance start?
 
 The tracked keyword's source sets the starting relevance, which is then adjusted by how the phrase overlaps the app's snapshot text.
