@@ -1695,6 +1695,22 @@ function countLoggedRequest(kind: string, req: IncomingMessage): void {
   loggedRequests.set(key, (loggedRequests.get(key) ?? 0) + 1);
 }
 
+function targetsRefusal(
+  dataset: (typeof DATASETS)[string],
+  localization: string,
+): string | null {
+  if (dataset.detail.isCompetitor) {
+    return "A competitor app has no localizations or keyword fields; use its primary app";
+  }
+  if (dataset.detail.store !== "APP_STORE") {
+    return "Target keywords are picked per App Store localization; Google Play has no localizations here";
+  }
+  if (!isAppStoreLocalization(localization)) {
+    return `Unknown App Store localization: ${localization}`;
+  }
+  return null;
+}
+
 function targetsDataset(
   id: string,
   localization: string,
@@ -1707,13 +1723,7 @@ function targetsDataset(
     json(res, 404, errorEnvelope(404, path, `App ${id} not found`));
     return undefined;
   }
-  const refusal = dataset.detail.isCompetitor
-    ? "A competitor app has no localizations or keyword fields; use its primary app"
-    : dataset.detail.store !== "APP_STORE"
-      ? "Target keywords are picked per App Store localization; Google Play has no localizations here"
-      : !isAppStoreLocalization(localization)
-        ? `Unknown App Store localization: ${localization}`
-        : null;
+  const refusal = targetsRefusal(dataset, localization);
   if (refusal !== null) {
     json(res, 400, errorEnvelope(400, path, refusal));
     return undefined;

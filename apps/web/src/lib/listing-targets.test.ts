@@ -9,6 +9,7 @@ import {
   openCandidates,
   readersLine,
   roleSlotsFilled,
+  topThreeRefusal,
   saveRequestOf,
   savedSentence,
   savedSlots,
@@ -295,5 +296,17 @@ describe("missingMarkets", () => {
     ).toEqual(["au", "gb"]);
     expect(untrackedLine(["gb"])).toBe("Not tracked in United Kingdom");
     expect(untrackedLine([])).toBeNull();
+  });
+});
+
+describe("topThreeRefusal", () => {
+  it("says why Use top 3 has nothing to do", () => {
+    expect(topThreeRefusal(["a", "b", "c", ...EMPTY.slice(3)], [])).toBe(
+      "Title and subtitle slots are already filled",
+    );
+    expect(topThreeRefusal(EMPTY, [])).toBe(
+      "No tracked keyword is left to pick",
+    );
+    expect(topThreeRefusal(EMPTY, [candidate("a")])).toBeNull();
   });
 });

@@ -71,6 +71,19 @@ export function withTopThree(
 export const roleSlotsFilled = (slots: TargetSlots): boolean =>
   slots.slice(0, ROLE_SLOT_COUNT).every((slot) => slot !== null);
 
+export function topThreeRefusal(
+  slots: TargetSlots,
+  candidates: readonly ListingTargetCandidate[],
+): string | null {
+  if (roleSlotsFilled(slots)) {
+    return "Title and subtitle slots are already filled";
+  }
+  if (openCandidates(candidates, slots).length === 0) {
+    return "No tracked keyword is left to pick";
+  }
+  return null;
+}
+
 export function targetPhrase(typed: string): string | null {
   const text = normalizeText(typed);
   if (text === "" || countChars(text) > TRACKED_KEYWORD_CHAR_LIMIT) {
