@@ -12,7 +12,7 @@ export function HighlightedText({ text, row }: { text: string; row: string }) {
           part.marked ? (
             <mark
               key={part.start}
-              className="rounded-sm bg-brand-subtle text-foreground"
+              className="rounded-sm bg-brand-subtle text-foreground underline decoration-brand-mark decoration-2 underline-offset-2"
             >
               {part.text}
             </mark>
