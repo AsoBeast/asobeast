@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Store } from '@prisma/client';
 import {
   SerpEntryItem,
   SerpExitItem,
@@ -12,14 +13,18 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { SerpMoversQueryDto } from './dto/serp-movers-query.dto';
 import { SerpQueryDto } from './dto/serp-query.dto';
+import { followedSubtitles } from './followed-subtitles';
 import {
   appsByStoreAppId,
   DAY_MS,
+  FollowedApp,
   toDateKey,
+  utcDay,
   utcToday,
 } from './rankings.support';
 import { serpExits, serpMovement } from './serp-history';
 import { detectEntrants, SerpSnapshotDay } from './serp-movers';
+import { placementJudge } from './serp-placement';
 import { titleJudge } from './serp-title-match';
 import { TOP_TEN_ROWS } from './top-ten';
 
@@ -28,7 +33,15 @@ type SerpRole = Pick<SerpEntryItem, 'appId' | 'isCompetitor'>;
 const MOVERS_LIMIT = 50;
 const SERP_DATE_LIMIT = 365;
 
-const utcDay = (date: string) => new Date(`${date}T00:00:00.000Z`);
+const roleIn =
+  (known: Map<string, FollowedApp>) =>
+  (storeAppId: string): SerpRole => {
+    const app = known.get(storeAppId);
+    return {
+      appId: app?.id ?? null,
+      isCompetitor: app?.isCompetitor ?? false,
+    };
+  };
 
 interface SerpEntrant {
   date: string;
@@ -67,8 +80,19 @@ export class SerpService {
     );
     const entries = serpMovement(rows, earlier);
     const exits = serpExits(rows, earlier);
-    const roleOf = await this.rolesOf(keyword, [...rows, ...exits]);
+    const known = await this.followedApps(keyword, [...rows, ...exits]);
+    const roleOf = roleIn(known);
+    const subtitles = await this.subtitlesOf(keyword, rows, known, shown);
     const judgeTitle = titleJudge(keyword.text);
+    const judgePlacement = placementJudge(keyword.text);
+    const judge = (storeAppId: string, title: string) => {
+      const subtitle = subtitles.get(storeAppId);
+      return {
+        ...judgeTitle(title),
+        ...(subtitle !== undefined ? { subtitle } : {}),
+        ...judgePlacement(title, subtitle),
+      };
+    };
 
     return {
       keywordId,
@@ -83,7 +107,7 @@ export class SerpService {
         ratingCount: entry.ratingCount,
         ...roleOf(entry.storeAppId),
         iconUrl: entry.iconUrl,
-        ...judgeTitle(entry.title),
+        ...judge(entry.storeAppId, entry.title),
         previous: entry.previous,
         delta: entry.delta,
         movement: entry.movement,
@@ -113,23 +137,41 @@ export class SerpService {
     return { rows, comparedTo, earlier };
   }
 
-  private async rolesOf(
+  private followedApps(
     keyword: AuthorizedKeyword,
     rows: { storeAppId: string }[],
-  ): Promise<(storeAppId: string) => SerpRole> {
-    const known = await appsByStoreAppId(
-      this.prisma,
-      keyword.store,
-      keyword.country,
-      [...new Set(rows.map((row) => row.storeAppId))],
+  ): Promise<Map<string, FollowedApp>> {
+    return appsByStoreAppId(this.prisma, keyword.store, keyword.country, [
+      ...new Set(rows.map((row) => row.storeAppId)),
+    ]);
+  }
+
+  private async subtitlesOf(
+    keyword: AuthorizedKeyword,
+    rows: { storeAppId: string }[],
+    known: Map<string, FollowedApp>,
+    shown: string,
+  ): Promise<Map<string, string | null>> {
+    if (keyword.store !== Store.APP_STORE) return new Map();
+    const shownApps = new Map(
+      rows.flatMap((row) => {
+        const app = known.get(row.storeAppId);
+        return app ? [[row.storeAppId, app] as const] : [];
+      }),
     );
-    return (storeAppId) => {
-      const app = known.get(storeAppId);
-      return {
-        appId: app?.id ?? null,
-        isCompetitor: app?.isCompetitor ?? false,
-      };
-    };
+    const byAppId = await followedSubtitles(
+      this.prisma,
+      [...shownApps.values()],
+      keyword.country,
+      shown,
+    );
+    return new Map(
+      [...shownApps].flatMap(([storeAppId, app]) =>
+        byAppId.has(app.id)
+          ? [[storeAppId, byAppId.get(app.id) ?? null] as const]
+          : [],
+      ),
+    );
   }
 
   private async capturedDates(keywordId: string): Promise<string[]> {

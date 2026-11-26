@@ -14,11 +14,16 @@ export function toDateKey(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-interface KnownApp {
+export const utcDay = (date: string) => new Date(`${date}T00:00:00.000Z`);
+
+export interface FollowedApp {
   id: string;
-  storeAppId: string;
   country: string;
   isCompetitor: boolean;
+}
+
+interface KnownApp extends FollowedApp {
+  storeAppId: string;
 }
 
 function preferenceOf(app: KnownApp, country: string): number {
@@ -30,7 +35,7 @@ export async function appsByStoreAppId(
   store: Store,
   country: string,
   storeAppIds: string[],
-): Promise<Map<string, { id: string; isCompetitor: boolean }>> {
+): Promise<Map<string, FollowedApp>> {
   if (storeAppIds.length === 0) {
     return new Map();
   }
@@ -49,7 +54,7 @@ export async function appsByStoreAppId(
   return new Map(
     [...known].map(([storeAppId, app]) => [
       storeAppId,
-      { id: app.id, isCompetitor: app.isCompetitor },
+      { id: app.id, country: app.country, isCompetitor: app.isCompetitor },
     ]),
   );
 }
