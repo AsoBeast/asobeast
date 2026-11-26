@@ -1620,6 +1620,30 @@ test.describe("chart image controls keep focus", () => {
     expect(saved).toHaveLength(1);
   });
 
+  test("the share card's Copy image keeps focus while the card is drawn", async ({
+    page,
+  }) => {
+    const held = await holdRender(page);
+    await page.goto("/apps/app-1/rankings");
+    await (
+      await hydrated(
+        page.getByRole("button", { name: "Share the rankings chart" }),
+      )
+    ).click();
+    const dialog = page.getByRole("dialog", {
+      name: "Share the rankings chart",
+    });
+    await expect(dialog.getByRole("img")).not.toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
+    const control = dialog.getByRole("button", { name: "Copy image" });
+
+    await pressFromKeyboard(control);
+
+    await expectFocusKeptWhileHeld(control, held);
+  });
+
   test("the position history icon keeps focus while the picture is drawn", async ({
     page,
   }) => {

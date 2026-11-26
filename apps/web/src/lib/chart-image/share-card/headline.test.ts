@@ -6,6 +6,7 @@ import type {
 } from "@asobeast/shared";
 import { dayBefore } from "@/lib/utc-day";
 import {
+  headlineSentence,
   keywordHeadline,
   rankingsHeadline,
   visibilityHeadline,
@@ -302,5 +303,33 @@ describe("no store text", () => {
     ]);
 
     expect(texts.filter((text) => /#[^\d]/.test(text))).toEqual([]);
+  });
+});
+
+describe("headlineSentence", () => {
+  const headline: ShareHeadline = {
+    lead: "",
+    figure: "#3",
+    trail: "for “geography quiz”",
+    change: "up from #18",
+    from: "2026-10-01",
+    to: "2026-10-30",
+    span: 29,
+    line: [],
+  };
+
+  it("reads the headline as one sentence", () => {
+    expect(headlineSentence(headline, true)).toBe(
+      "#3 for “geography quiz”, up from #18",
+    );
+  });
+
+  it("leaves out a change the card does not show", () => {
+    expect(
+      headlineSentence(
+        { ...headline, lead: "Visibility", figure: "64", trail: null },
+        false,
+      ),
+    ).toBe("Visibility 64");
   });
 });

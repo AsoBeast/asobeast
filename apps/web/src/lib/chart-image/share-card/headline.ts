@@ -152,3 +152,15 @@ export function visibilityHeadline(
     line: points.map(({ date, visibility }) => ({ date, value: visibility })),
   };
 }
+
+export function headlineSentence(
+  headline: ShareHeadline,
+  withChange: boolean,
+): string {
+  const statement = [headline.lead, headline.figure, headline.trail]
+    .filter((part) => part !== null && part !== "")
+    .join(" ");
+  return withChange && headline.change !== null
+    ? `${statement}, ${headline.change}`
+    : statement;
+}

@@ -1,9 +1,13 @@
 "use client";
 
-import { Suspense, useRef, type RefObject } from "react";
+import { Suspense, useMemo, useRef, type RefObject } from "react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
-import type { AppAnnotationItem, TrackedKeywordItem } from "@asobeast/shared";
+import {
+  RANK_DEPTH,
+  type AppAnnotationItem,
+  type TrackedKeywordItem,
+} from "@asobeast/shared";
 import { ExportCsvButton } from "@/components/ExportCsvButton";
 import { PANEL_ACTION, PANEL_HEADER } from "@/components/layout/panel-classes";
 import {
@@ -32,6 +36,8 @@ import {
   type RangePreset,
 } from "@/lib/ranges";
 import { ChartImageButtons } from "@/components/charts/ChartImageButtons";
+import { ShareCardDialog } from "@/components/charts/share-card/ShareCardDialog";
+import { rankingsHeadline } from "@/lib/chart-image/share-card/headline";
 import {
   countryParser,
   keywordIdsParser,
@@ -203,6 +209,11 @@ function RankingsPanel({
     view === "chart" &&
     scoped.length > 0 &&
     chart.checkedDays >= MIN_TREND_POINTS;
+  const shareHeadline = useMemo(
+    () =>
+      imageReady ? rankingsHeadline(data.series.slice(0, MAX_SERIES)) : null,
+    [imageReady, data.series],
+  );
   const makeImageJob = () => {
     const container = chartRef.current;
     const spec = rankingImageSpec({
@@ -262,6 +273,18 @@ function RankingsPanel({
             <ChartImageButtons
               subject="the rankings chart"
               makeJob={makeImageJob}
+            />
+          ) : null}
+          {shareHeadline ? (
+            <ShareCardDialog
+              subject="the rankings chart"
+              source={{
+                chart: "rankings-card",
+                headline: shareHeadline,
+                kind: "rank",
+                depth: RANK_DEPTH,
+                app: detail,
+              }}
             />
           ) : null}
         </div>
