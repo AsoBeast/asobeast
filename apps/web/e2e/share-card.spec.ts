@@ -55,11 +55,13 @@ async function openShare(page: Page) {
   await expect(preview(page)).not.toHaveAttribute("aria-busy", "true");
 }
 
-const pick = (page: Page, list: string, option: string) =>
+const choice = (page: Page, group: string, option: string) =>
   dialog(page)
-    .getByRole("tablist", { name: list })
-    .getByRole("tab", { name: option })
-    .click();
+    .getByRole("radiogroup", { name: group })
+    .getByRole("radio", { name: option });
+
+const pick = (page: Page, group: string, option: string) =>
+  choice(page, group, option).check();
 
 const canvasSize = (page: Page) =>
   preview(page).evaluate((element) =>
@@ -99,7 +101,7 @@ test.describe("rankings", () => {
     await openShare(page);
 
     await expect(dialog(page)).toHaveAccessibleDescription(
-      "Pick a size and a theme, then copy or download the card.",
+      "A picture of this chart, ready to post.",
     );
     await expect(preview(page)).toHaveAccessibleName(
       headlineSentence(headline, true),
@@ -129,7 +131,7 @@ test.describe("rankings", () => {
         height: 675,
       });
 
-    await pick(page, "Size", "1:1");
+    await pick(page, "Size", "Square");
     await expect
       .poll(() => canvasSize(page))
       .toEqual({
@@ -137,7 +139,7 @@ test.describe("rankings", () => {
         height: 1080,
       });
 
-    await pick(page, "Size", "4:5");
+    await pick(page, "Size", "Portrait");
     await expect
       .poll(() => canvasSize(page))
       .toEqual({
@@ -181,7 +183,7 @@ test.describe("rankings", () => {
   test("downloads the card at its size", async ({ page }) => {
     const headline = await rankingsOverSevenDays(page);
     await openShare(page);
-    await pick(page, "Size", "1:1");
+    await pick(page, "Size", "Square");
 
     const [file] = await Promise.all([
       page.waitForEvent("download"),
@@ -208,6 +210,31 @@ test.describe("rankings", () => {
     expect(await pngSize(page, png)).toEqual({ width: 1200, height: 675 });
   });
 
+  test("copies the alt text", async ({ page }) => {
+    const headline = await rankingsOverSevenDays(page);
+    await openShare(page);
+
+    await dialog(page).getByRole("button", { name: "Copy alt text" }).click();
+
+    await expect(page.getByText("Alt text copied")).toBeVisible();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+      headlineSentence(headline, true),
+    );
+  });
+
+  test("names the pixel size of the chosen card", async ({ page }) => {
+    await page.goto(RANKINGS_PAGE);
+    await openShare(page);
+
+    await expect(
+      dialog(page).getByRole("radiogroup", { name: "Size · 1,200 × 675 px" }),
+    ).toBeVisible();
+    await pick(page, "Size", "Portrait");
+    await expect(
+      dialog(page).getByRole("radiogroup", { name: "Size · 1,080 × 1,350 px" }),
+    ).toBeVisible();
+  });
+
   test("downloads when the clipboard cannot take an image", async ({
     page,
   }) => {
@@ -232,7 +259,7 @@ test.describe("rankings", () => {
     await page.goto(RANKINGS_PAGE);
     await openShare(page);
     await pick(page, "Theme", "Dusk");
-    await pick(page, "Size", "4:5");
+    await pick(page, "Size", "Portrait");
     await page.keyboard.press("Escape");
 
     await page.reload();
@@ -240,13 +267,9 @@ test.describe("rankings", () => {
 
     for (const [list, option] of [
       ["Theme", "Dusk"],
-      ["Size", "4:5"],
+      ["Size", "Portrait"],
     ]) {
-      await expect(
-        dialog(page)
-          .getByRole("tablist", { name: list })
-          .getByRole("tab", { name: option }),
-      ).toHaveAttribute("aria-selected", "true");
+      await expect(choice(page, list, option)).toBeChecked();
     }
     await expect
       .poll(() => canvasSize(page))

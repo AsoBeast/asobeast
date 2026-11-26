@@ -7,7 +7,8 @@ import {
   type ComponentProps,
   type ReactNode,
 } from "react";
-import { Copy, ImageDown, Share2 } from "lucide-react";
+import { Copy, ImageDown, Share2, Type } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,6 +25,7 @@ import {
   paintShareCard,
   type ShareCardSpec,
 } from "@/lib/chart-image/share-card/render-card";
+import { copyText } from "@/lib/copy-text";
 import { ShareCardControls } from "./ShareCardControls";
 import { type ShareCardSource, useShareCard } from "./use-share-card";
 
@@ -43,13 +45,13 @@ function ShareCardPreview({
     if (canvas && spec) void paintShareCard(canvas, spec);
   }, [spec]);
   return (
-    <div className="flex min-h-40 items-center justify-center rounded-md bg-muted p-3">
+    <div className="flex h-64 items-center justify-center rounded-lg bg-muted p-3 sm:h-80">
       <canvas
         ref={canvasRef}
         role="img"
         aria-label={label}
         aria-busy={spec === null || undefined}
-        className="h-auto max-h-[45svh] w-auto max-w-full rounded-md border border-border"
+        className="h-auto max-h-full w-auto max-w-full rounded-md shadow-raised"
       />
     </div>
   );
@@ -84,6 +86,11 @@ export function ShareCardDialog({
   const [open, setOpen] = useState(false);
   const card = useShareCard(source, open, loading);
   const busy = card.busy || undefined;
+  const description = headlineSentence(source.headline, card.options.change);
+  const copyDescription = async () => {
+    if (await copyText(description)) toast.success("Alt text copied");
+    else toast.error("The browser refused to copy the alt text");
+  };
   return (
     <Dialog
       open={open}
@@ -100,14 +107,11 @@ export function ShareCardDialog({
         <DialogHeader>
           <DialogTitle>{`Share ${subject}`}</DialogTitle>
           <DialogDescription>
-            Pick a size and a theme, then copy or download the card.
+            A picture of this chart, ready to post.
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
-          <ShareCardPreview
-            spec={card.spec}
-            label={headlineSentence(source.headline, card.options.change)}
-          />
+          <ShareCardPreview spec={card.spec} label={description} />
           <ShareCardControls
             options={card.options}
             onChange={card.setOptions}
@@ -123,19 +127,25 @@ export function ShareCardDialog({
             </a>
           </p>
         </DialogBody>
-        <DialogFooter>
-          <Button
-            variant="outline"
-            aria-disabled={busy}
-            onClick={card.download}
-          >
-            <ImageDown aria-hidden />
-            Download PNG
+        <DialogFooter className="sm:justify-between">
+          <Button variant="ghost" onClick={copyDescription}>
+            <Type aria-hidden />
+            Copy alt text
           </Button>
-          <Button aria-disabled={busy} onClick={card.copy}>
-            <Copy aria-hidden />
-            Copy image
-          </Button>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row">
+            <Button
+              variant="outline"
+              aria-disabled={busy}
+              onClick={card.download}
+            >
+              <ImageDown aria-hidden />
+              Download PNG
+            </Button>
+            <Button aria-disabled={busy} onClick={card.copy}>
+              <Copy aria-hidden />
+              Copy image
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
