@@ -26,7 +26,7 @@ import {
   PENDING_LINE_PROPS,
   SCORE_AXIS_PROPS,
   seriesColor,
-  TIME_AXIS_PROPS,
+  timeAxisPropsInLocale,
   TIME_TOOLTIP_PROPS,
   VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
@@ -142,7 +142,7 @@ export function AuditHealthChart({
         >
           <SeriesFade id={fadeId} color={SERIES} />
           <CartesianGrid {...GRID_PROPS} />
-          <XAxis {...TIME_AXIS_PROPS} />
+          <XAxis {...timeAxisPropsInLocale(locale)} />
           <YAxis {...VALUE_AXIS_PROPS} {...SCORE_AXIS_PROPS} />
           <ChartTooltip
             content={<ChartTooltipContent {...TIME_TOOLTIP_PROPS} />}

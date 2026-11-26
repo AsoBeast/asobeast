@@ -2,6 +2,7 @@
 
 import type { AuditCreative, AuditIconObservation } from "@asobeast/shared";
 import { useTranslations } from "next-intl";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { AppIconImage } from "@/components/AppIconImage";
 import type { MessageTranslator } from "@/i18n/translator";
 import { screenshotSummary } from "./creative-summary";
@@ -68,6 +69,7 @@ export function CreativeObservations({
   creative: AuditCreative;
 }) {
   const t = useTranslations("audit");
+  const locale = useAppLocale();
   const { icon, screenshots } = creative;
 
   return (
@@ -86,7 +88,7 @@ export function CreativeObservations({
               {screenshots.length}
             </span>
             <span className="font-normal text-muted-foreground sm:ml-auto">
-              {screenshotSummary(screenshots)}
+              {screenshotSummary(screenshots, locale)}
             </span>
           </div>
           <ul

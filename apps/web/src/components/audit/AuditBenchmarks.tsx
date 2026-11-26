@@ -33,12 +33,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { useAppLocale } from "@/lib/use-app-locale";
 import {
   type Comparison,
   comparison,
   formatBenchmarkValue,
   medianGap,
 } from "./benchmark-comparison";
+import { auditBenchmarkLabel } from "./audit-content-zh";
 
 const STANDING_TONE: Record<Comparison, string> = {
   ahead: "text-signal-up",
@@ -70,12 +72,13 @@ function Standing({ row }: { row: AuditBenchmarkRow }) {
 }
 
 function BenchmarkRows({ rows }: { rows: AuditBenchmarkRow[] }) {
+  const locale = useAppLocale();
   return (
     <TableBody>
       {rows.map((row) => (
         <TableRow key={row.metric}>
           <TableCell>
-            <span>{row.label}</span>
+            <span>{auditBenchmarkLabel(row.metric, row.label, locale)}</span>
           </TableCell>
           <TableCell numeric className="font-medium">
             <span>{formatBenchmarkValue(row.metric, row.you)}</span>

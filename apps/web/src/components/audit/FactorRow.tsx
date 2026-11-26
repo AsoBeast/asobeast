@@ -8,7 +8,14 @@ import type { AuditFactorResult, Store } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { Meter } from "@/components/ui/meter";
 import { cn } from "@/lib/utils";
+import { useAppLocale } from "@/lib/use-app-locale";
 import type { MessageTranslator } from "@/i18n/translator";
+import {
+  auditCheckLabel,
+  auditFactorLabel,
+  auditText,
+  auditUnlockLabel,
+} from "./audit-content-zh";
 import { availabilityLabel, percent, scoreStatus } from "./audit-copy";
 import { unlockHref } from "./audit-links";
 import { FactorChecks } from "./FactorChecks";
@@ -47,6 +54,7 @@ function FactorNote({
   store: Store;
 }) {
   const t = useTranslations("audit");
+  const locale = useAppLocale();
   const unlock = factor.checks.find((check) => check.unlock)?.unlock ?? null;
   if (factor.availability === "awaiting-input" && unlock) {
     return (
@@ -54,7 +62,7 @@ function FactorNote({
         href={unlockHref(appId, unlock.kind)}
         className={cn(TEXT_LINK, "text-caption")}
       >
-        {unlock.label}
+        {auditUnlockLabel(unlock.kind, unlock.label, locale)}
       </Link>
     );
   }
@@ -62,7 +70,7 @@ function FactorNote({
     (check) => check.status === "warn" || check.status === "fail",
   );
   const note = firstIssue
-    ? `${firstIssue.label}: ${firstIssue.detail}`
+    ? `${auditCheckLabel(firstIssue.id, firstIssue.label, locale)}: ${auditText(firstIssue.detail, locale)}`
     : availabilityLabel(factor.availability, store, t);
   return note ? (
     <span className="text-caption wrap-anywhere text-muted-foreground">
@@ -83,8 +91,10 @@ export function FactorRow({
   totalWeight: number;
 }) {
   const t = useTranslations("audit");
+  const locale = useAppLocale();
   const [open, setOpen] = useState(false);
   const panelId = useId();
+  const label = auditFactorLabel(factor.id, factor.label, locale);
   const status = scoreStatus(factor.score);
   const Icon = STATUS_ICON[status];
   const waiting =
@@ -93,14 +103,12 @@ export function FactorRow({
 
   return (
     <article
-      aria-label={factor.label}
+      aria-label={label}
       className="border-b border-border-subtle last:border-b-0"
     >
       <div className={cn(FACTOR_COLUMNS, "min-h-14 py-2", open && OPEN_ROW)}>
         <div className="flex min-w-0 flex-col gap-0.5">
-          <h3 className="text-dense font-medium wrap-anywhere">
-            {factor.label}
-          </h3>
+          <h3 className="text-dense font-medium wrap-anywhere">{label}</h3>
           <FactorNote appId={appId} factor={factor} store={store} />
         </div>
         <span
@@ -152,7 +160,7 @@ export function FactorRow({
             aria-expanded={open}
             aria-controls={open ? panelId : undefined}
             aria-label={t(open ? "hideChecks" : "showChecks", {
-              factor: factor.label,
+              factor: label,
             })}
             onClick={() => setOpen(!open)}
           >

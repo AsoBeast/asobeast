@@ -30,6 +30,11 @@ import { useAppLocale } from "@/lib/use-app-locale";
 import type { MessageTranslator } from "@/i18n/translator";
 import type { Locale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
+import {
+  auditReadinessLabel,
+  auditReadinessLinkLabel,
+  auditText,
+} from "./audit-content-zh";
 
 const STATUS_ICON: Record<ReadinessStatus, typeof CircleCheck> = {
   pass: CircleCheck,
@@ -52,6 +57,8 @@ function ReadinessLinkView({
   link: ReadinessLink;
   subject: string;
 }) {
+  const locale = useAppLocale();
+  const label = auditReadinessLinkLabel(link.href, link.label, locale);
   if (link.href.startsWith("https://")) {
     return (
       <a
@@ -60,13 +67,13 @@ function ReadinessLinkView({
         rel="noreferrer"
         className="w-fit text-foreground link-underline"
       >
-        <span>{link.label}</span>
+        <span>{label}</span>
       </a>
     );
   }
   return (
     <Link href={link.href} className="w-fit text-foreground link-underline">
-      <span>{link.label}</span>
+      <span>{label}</span>
       <span className="sr-only">{`, ${subject}`}</span>
     </Link>
   );
@@ -74,7 +81,9 @@ function ReadinessLinkView({
 
 function ReadinessRow({ item }: { item: ReadinessItem }) {
   const t = useTranslations("audit");
+  const locale = useAppLocale();
   const Icon = STATUS_ICON[item.status];
+  const label = auditReadinessLabel(item.id, item.label, locale);
   return (
     <li className="flex items-start gap-2 px-2 py-2 text-dense">
       <Icon
@@ -84,7 +93,7 @@ function ReadinessRow({ item }: { item: ReadinessItem }) {
       <div className="min-w-0 flex-1">
         <p className="flex items-baseline justify-between gap-x-3">
           <span className="min-w-0 font-medium wrap-anywhere">
-            <span>{item.label}</span>
+            <span>{label}</span>
           </span>
           <span className="shrink-0 text-caption text-muted-foreground">
             <span>{t(`readiness.${item.status}`)}</span>
@@ -92,11 +101,13 @@ function ReadinessRow({ item }: { item: ReadinessItem }) {
         </p>
         {item.detail === null ? null : (
           <p className="text-caption text-muted-foreground">
-            <span>{item.detail}</span>
+            <span>
+              {item.detail === null ? null : auditText(item.detail, locale)}
+            </span>
           </p>
         )}
         {item.link === null ? null : (
-          <ReadinessLinkView link={item.link} subject={item.label} />
+          <ReadinessLinkView link={item.link} subject={label} />
         )}
       </div>
     </li>

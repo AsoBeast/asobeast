@@ -8,6 +8,7 @@ import { useAppLocale } from "@/lib/use-app-locale";
 import type { MessageTranslator } from "@/i18n/translator";
 import type { Locale } from "@/lib/locale";
 import { percent } from "./audit-copy";
+import { auditLimitation } from "./audit-content-zh";
 
 function computedLine(
   audit: AppAuditResult,
@@ -45,14 +46,17 @@ export function AuditFooter({ audit }: { audit: AppAuditResult }) {
             <span>{t("footer.title")}</span>
           </summary>
           <ul className="mt-2.5 flex max-w-[70ch] list-none flex-col gap-2 p-0 text-dense text-muted-foreground">
-            {limitations.map((limitation) => (
-              <li key={limitation.id}>
-                <span className="font-medium text-foreground">
-                  {`${limitation.label}. `}
-                </span>
-                <span>{limitation.detail}</span>
-              </li>
-            ))}
+            {limitations.map((limitation) => {
+              const copy = auditLimitation(limitation, locale);
+              return (
+                <li key={limitation.id}>
+                  <span className="font-medium text-foreground">
+                    {`${copy.label}. `}
+                  </span>
+                  <span>{copy.detail}</span>
+                </li>
+              );
+            })}
           </ul>
         </details>
       )}

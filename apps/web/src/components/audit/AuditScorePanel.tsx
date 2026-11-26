@@ -4,6 +4,7 @@ import { Suspense, useId } from "react";
 import Link from "next/link";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
+import { useAppLocale } from "@/lib/use-app-locale";
 import type {
   AppAuditResult,
   AuditCheckStatus,
@@ -29,6 +30,7 @@ import {
   scoreRingLabel,
   scoreStatus,
 } from "./audit-copy";
+import { auditUnlockLabel } from "./audit-content-zh";
 import { unlockHref } from "./audit-links";
 import { AuditHealthChart } from "./AuditHealthChart";
 import { TEXT_LINK } from "./layout-classes";
@@ -41,13 +43,15 @@ const CELL = "bg-card shadow-[-1px_0_0_var(--border),0_-1px_0_var(--border)]";
 const CHANGE_LABEL = `${CHANGE_WINDOW_DAYS}d`;
 
 function WeekChange({ audit }: { audit: AppAuditResult }) {
+  const locale = useAppLocale();
   const { shownRange } = useAuditRange();
   const { data } = useSuspenseQuery(
     auditHistoryOptions(audit.appId, presetToRange(shownRange)),
   );
   const change = weekChange(data.points, audit);
+  const label = locale === "zh-CN" ? `近${CHANGE_WINDOW_DAYS}天` : CHANGE_LABEL;
   return change === null ? null : (
-    <TrendChip label={CHANGE_LABEL} value={change} form="pill" />
+    <TrendChip label={label} value={change} form="pill" />
   );
 }
 
@@ -212,6 +216,7 @@ function ScoreFigures({ audit }: { audit: AppAuditResult }) {
 
 function Unlocks({ audit }: { audit: AppAuditResult }) {
   const t = useTranslations("audit");
+  const locale = useAppLocale();
   const { unlocks = [] } = audit;
   if (unlocks.length === 0) return null;
   return (
@@ -224,7 +229,7 @@ function Unlocks({ audit }: { audit: AppAuditResult }) {
               href={unlockHref(audit.appId, unlock.kind)}
               className={TEXT_LINK}
             >
-              {unlock.label}
+              {auditUnlockLabel(unlock.kind, unlock.label, locale)}
             </Link>
           </li>
         ))}

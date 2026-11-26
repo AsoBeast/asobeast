@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
+import { useAppLocale } from "@/lib/use-app-locale";
+import { auditLabel } from "./audit-content-zh";
 import { fixesWorth, liftFigure, liftLabel } from "./audit-copy";
 import { targetHref } from "./audit-links";
 import { topFixes } from "./top-fixes";
@@ -51,6 +53,7 @@ function FixRow({
   largest: number;
 }) {
   const t = useTranslations("audit");
+  const locale = useAppLocale();
   const href = item.target ? targetHref(appId, item.target) : null;
   const cells = (
     <>
@@ -63,7 +66,7 @@ function FixRow({
         {item.impact ? <PriorityWord priority={item.impact} /> : null}
       </span>
       <span dir="auto" className="relative font-medium wrap-anywhere">
-        {item.label}
+        {auditLabel(item.label, locale)}
       </span>
       <span className="relative hidden pt-px text-caption whitespace-nowrap text-faint-foreground sm:inline">
         {item.effort ? t(`efforts.${item.effort}`) : ""}

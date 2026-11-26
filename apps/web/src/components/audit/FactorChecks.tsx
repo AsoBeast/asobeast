@@ -3,6 +3,12 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import type { AuditCheckResult } from "@asobeast/shared";
+import { useAppLocale } from "@/lib/use-app-locale";
+import {
+  auditCheckLabel,
+  auditText,
+  auditUnlockLabel,
+} from "./audit-content-zh";
 import { unlockHref } from "./audit-links";
 import { TEXT_LINK } from "./layout-classes";
 import { STATUS_ICON, STATUS_TONE } from "./status-icons";
@@ -15,6 +21,7 @@ export function FactorChecks({
   checks: AuditCheckResult[];
 }) {
   const t = useTranslations("audit");
+  const locale = useAppLocale();
   return (
     <ul className="flex list-none flex-col gap-2.5 p-0">
       {checks.map((check) => {
@@ -29,7 +36,9 @@ export function FactorChecks({
               className={`mt-0.5 size-4 ${STATUS_TONE[check.status]}`}
             />
             <span className="flex flex-wrap items-baseline justify-between gap-x-3">
-              <span className="font-medium">{check.label}</span>
+              <span className="font-medium">
+                {auditCheckLabel(check.id, check.label, locale)}
+              </span>
               <span className="text-caption text-faint-foreground">
                 {check.source
                   ? `${t(`statuses.${check.status}`)} · ${t(`sources.${check.source}`)}`
@@ -37,14 +46,18 @@ export function FactorChecks({
               </span>
             </span>
             <span className="col-start-2 text-caption wrap-anywhere text-muted-foreground">
-              {check.detail}
+              {auditText(check.detail, locale)}
             </span>
             {check.unlock ? (
               <Link
                 href={unlockHref(appId, check.unlock.kind)}
                 className={`col-start-2 text-caption ${TEXT_LINK}`}
               >
-                {check.unlock.label}
+                {auditUnlockLabel(
+                  check.unlock.kind,
+                  check.unlock.label,
+                  locale,
+                )}
               </Link>
             ) : null}
           </li>

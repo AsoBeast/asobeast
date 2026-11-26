@@ -3,6 +3,7 @@
 import { Suspense } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
+import { useAppLocale } from "@/lib/use-app-locale";
 import type { AppAuditResult, AuditRecommendation } from "@asobeast/shared";
 import { LEDE } from "@/components/layout/panel-classes";
 import { auditHistoryOptions } from "@/lib/queries";
@@ -33,6 +34,7 @@ function WeekMove({ audit }: { audit: AppAuditResult }) {
 
 function TopFixesClause({ fixes }: { fixes: AuditRecommendation[] }) {
   const t = useTranslations("audit");
+  const locale = useAppLocale();
   if (fixes.length === 0) {
     return <span>{t("lede.noFixes")}</span>;
   }
@@ -54,13 +56,14 @@ function TopFixesClause({ fixes }: { fixes: AuditRecommendation[] }) {
       <span className={FIGURE}>{subject}</span>
       <span>{t(one ? "lede.oneWorth" : "lede.manyWorth")}</span>
       <span className={FIGURE}>{worth}</span>
-      <span>.</span>
+      <span>{locale === "zh-CN" ? "。" : "."}</span>
     </>
   );
 }
 
 export function AuditLede({ audit }: { audit: AppAuditResult }) {
   const t = useTranslations("audit");
+  const locale = useAppLocale();
   if (audit.overall === null) {
     return <p className={LEDE}>{t("lede.noScore")}</p>;
   }
@@ -72,7 +75,7 @@ export function AuditLede({ audit }: { audit: AppAuditResult }) {
       <Suspense fallback={null}>
         <WeekMove audit={audit} />
       </Suspense>
-      <span>. </span>
+      <span>{locale === "zh-CN" ? "。" : ". "}</span>
       <TopFixesClause fixes={topFixes(audit.recommendations)} />
     </p>
   );
