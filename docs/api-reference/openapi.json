@@ -3847,6 +3847,106 @@
         "tags": [
           "keywords"
         ]
+      },
+      "put": {
+        "description": "Stores up to ten target keywords of one App Store localization in slot order, null for an empty slot, each normalized like a tracked keyword. Empty slots in the middle keep their place and every slot null removes the targets. Every phrase new to the stored list, or every slot with trackMissing, that a market of the app reading the localization does not track yet is tracked there as a manual keyword, a paused one resumed, within the keyword limit of the plan, with its first position check and score queued. A reorder or a removal tracks nothing. A phrase that did not fit is answered in notTracked with its market and keywordLimit, and its slot is stored anyway. A localization no market reads stores its targets and tracks nothing. Answers the targets as the read does, plus tracked, notTracked and quota. Answers 400 for more than ten slots, a duplicate or an invalid phrase (naming its position), an unknown tag and a Google Play or competitor app, 403 with quota and writes nothing when the keyword markets would pass the plan limit meanwhile, and 404 for a missing app.",
+        "operationId": "LocalizationsController_saveTargets",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "localization",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "id",
+                "ru",
+                "th",
+                "de",
+                "fr",
+                "ar",
+                "pa",
+                "sv",
+                "it",
+                "pl",
+                "bn",
+                "ca",
+                "zh-Hans",
+                "zh-Hant",
+                "hr",
+                "cs",
+                "da",
+                "nl",
+                "en-AU",
+                "en-CA",
+                "en-GB",
+                "en-US",
+                "fi",
+                "fr-CA",
+                "el",
+                "gu",
+                "he",
+                "hi",
+                "hu",
+                "ja",
+                "kn",
+                "ko",
+                "ms",
+                "ml",
+                "mr",
+                "no",
+                "or",
+                "pt-BR",
+                "pt-PT",
+                "ro",
+                "sk",
+                "sl",
+                "es-MX",
+                "es-ES",
+                "ta",
+                "te",
+                "tr",
+                "uk",
+                "ur",
+                "vi"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListingTargetsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Save the target keywords of one localization",
+        "tags": [
+          "keywords"
+        ]
       }
     },
     "/apps/{id}/keyword-discoveries": {
@@ -8570,6 +8670,33 @@
         },
         "required": [
           "text"
+        ]
+      },
+      "ListingTargetsDto": {
+        "type": "object",
+        "properties": {
+          "slots": {
+            "type": "array",
+            "maxItems": 10,
+            "items": {
+              "type": "string",
+              "nullable": true
+            },
+            "example": [
+              "habit tracker",
+              "focus timer",
+              null,
+              "sleep sounds"
+            ],
+            "description": "The target keywords in slot order, null for an empty slot. Slot 1 is meant for the title and slots 2 and 3 for the subtitle."
+          },
+          "trackMissing": {
+            "type": "boolean",
+            "description": "Track every slot in every market reading the localization that does not track it yet, not only the phrases new to the stored list."
+          }
+        },
+        "required": [
+          "slots"
         ]
       },
       "KeywordDiscoveryTrackDto": {

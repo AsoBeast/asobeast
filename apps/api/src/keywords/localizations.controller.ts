@@ -16,6 +16,7 @@ import type {
   AppStoreLocalization,
   KeywordFieldSavePreview,
   ListingTargetsResult,
+  ListingTargetsSaveResult,
   LocalizedKeywordFieldResult,
   MarketKeywordFields,
 } from '@asobeast/shared';
@@ -23,6 +24,7 @@ import { RateLimitClass } from '../auth/rate-limit/rate-class';
 import { ReadOnlyEndpoint } from '../auth/read-access';
 import { AppLocalizationsService } from './app-localizations.service';
 import { AddAppLocalizationDto } from './dto/app-localization.dto';
+import { ListingTargetsDto } from './dto/listing-targets.dto';
 import {
   KeywordFieldPreviewDto,
   LocalizedKeywordFieldDto,
@@ -137,5 +139,20 @@ export class LocalizationsController {
     @Param('localization', LocalizationPipe) localization: AppStoreLocalization,
   ): Promise<ListingTargetsResult> {
     return this.targets.read(id, localization);
+  }
+
+  @Put('localizations/:localization/targets')
+  @QueuesWork()
+  @ApiOperation({
+    summary: 'Save the target keywords of one localization',
+    description:
+      'Stores up to ten target keywords of one App Store localization in slot order, null for an empty slot, each normalized like a tracked keyword. Empty slots in the middle keep their place and every slot null removes the targets. Every phrase new to the stored list, or every slot with trackMissing, that a market of the app reading the localization does not track yet is tracked there as a manual keyword, a paused one resumed, within the keyword limit of the plan, with its first position check and score queued. A reorder or a removal tracks nothing. A phrase that did not fit is answered in notTracked with its market and keywordLimit, and its slot is stored anyway. A localization no market reads stores its targets and tracks nothing. Answers the targets as the read does, plus tracked, notTracked and quota. Answers 400 for more than ten slots, a duplicate or an invalid phrase (naming its position), an unknown tag and a Google Play or competitor app, 403 with quota and writes nothing when the keyword markets would pass the plan limit meanwhile, and 404 for a missing app.',
+  })
+  saveTargets(
+    @Param('id') id: string,
+    @Param('localization', LocalizationPipe) localization: AppStoreLocalization,
+    @Body() dto: ListingTargetsDto,
+  ): Promise<ListingTargetsSaveResult> {
+    return this.targets.save(id, localization, dto);
   }
 }

@@ -319,6 +319,28 @@ describe('Write isolation', () => {
       .expect(404);
   });
 
+  it('refuses to read or save the target keywords of another workspace app', async () => {
+    const path = `/apps/${fixture.b.appleAppId}/localizations/en-US/targets`;
+
+    await fixture.a.agent.get(path).expect(404);
+    await fixture.a.agent
+      .put(path)
+      .send({ slots: ['smuggled target'] })
+      .expect(404);
+
+    await expect(
+      fixture.db.listingTarget.findUniqueOrThrow({
+        where: {
+          appId_localization: {
+            appId: fixture.b.appleAppId,
+            localization: 'en-US',
+          },
+        },
+        select: { slots: true },
+      }),
+    ).resolves.toEqual({ slots: [`${fixture.b.id} target`] });
+  });
+
   it('refuses to add a localization to another workspace app', async () => {
     await fixture.a.agent
       .post(`/apps/${fixture.a.appleAppId}/localizations`)

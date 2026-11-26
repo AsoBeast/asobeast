@@ -1,6 +1,8 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Store } from '@prisma/client';
+import { WorkspaceContext } from '../../common/tenancy/workspace-context';
 import { PrismaService } from '../../prisma/prisma.service';
+import { KeywordPairTracker } from '../keyword-pair-tracker';
 import { KeywordsService } from '../keywords.service';
 import { COMPETITOR_HAS_NO_LOCALIZATIONS } from '../keywords.support';
 import {
@@ -33,11 +35,23 @@ const build = (app: typeof APP | null = APP) => {
     },
   };
   const keywords = { listTracked: jest.fn().mockResolvedValue([]) };
+  const pairs = {
+    plan: jest.fn().mockResolvedValue({
+      plan: { results: [], additions: [] },
+      quota: null,
+      marketListings: 0,
+    }),
+    write: jest.fn().mockResolvedValue(0),
+    quotaAfterWrite: jest.fn().mockResolvedValue(null),
+  };
+  const workspace = { require: jest.fn(() => 'ws') };
   const service = new ListingTargetsService(
     prisma as unknown as PrismaService,
     keywords as unknown as KeywordsService,
+    pairs as unknown as KeywordPairTracker,
+    workspace as unknown as WorkspaceContext,
   );
-  return { prisma, keywords, service };
+  return { prisma, keywords, pairs, service };
 };
 
 describe('ListingTargetsService.read', () => {
@@ -86,5 +100,79 @@ describe('ListingTargetsService.read', () => {
     await expect(service.read('app1', 'en-US')).rejects.toBeInstanceOf(
       NotFoundException,
     );
+  });
+});
+
+describe('ListingTargetsService.save', () => {
+  it('refuses a duplicate before planning anything', async () => {
+    const { service, pairs } = build();
+
+    await expect(
+      service.save('app1', 'en-US', { slots: ['focus', 'Focus'] }),
+    ).rejects.toThrow(
+      new BadRequestException('Targets 1 and 2 are both "focus"'),
+    );
+    expect(pairs.plan).not.toHaveBeenCalled();
+    expect(pairs.write).not.toHaveBeenCalled();
+  });
+
+  it('plans only the phrases new to the stored list in every reader market', async () => {
+    const { service, pairs } = build();
+
+    await service.save('app1', 'en-US', {
+      slots: ['habit tracker', 'focus timer'],
+    });
+
+    expect(pairs.plan).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'app1' }),
+      [{ keyword: 'focus timer', country: 'us' }],
+      'us',
+    );
+  });
+
+  it('plans every slot when asked to track the missing ones', async () => {
+    const { service, pairs } = build();
+
+    await service.save('app1', 'en-US', {
+      slots: ['habit tracker', 'focus timer'],
+      trackMissing: true,
+    });
+
+    expect(pairs.plan).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'app1' }),
+      [
+        { keyword: 'habit tracker', country: 'us' },
+        { keyword: 'focus timer', country: 'us' },
+      ],
+      'us',
+    );
+  });
+
+  it('answers the phrases over the keyword limit as not tracked', async () => {
+    const { service, pairs } = build();
+    pairs.plan.mockResolvedValue({
+      plan: {
+        results: [
+          {
+            index: 0,
+            keyword: 'focus timer',
+            country: 'us',
+            status: 'overQuota',
+          },
+        ],
+        additions: [],
+      },
+      quota: null,
+      marketListings: 0,
+    });
+
+    const result = await service.save('app1', 'en-US', {
+      slots: ['focus timer'],
+    });
+
+    expect(result.notTracked).toEqual([
+      { text: 'focus timer', country: 'us', reason: 'keywordLimit' },
+    ]);
+    expect(result.tracked).toBe(0);
   });
 });
