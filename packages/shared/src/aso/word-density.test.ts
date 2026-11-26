@@ -57,6 +57,26 @@ describe('withoutLinks', () => {
       `See ${' '.repeat(16)} mail ${' '.repeat(6)} or ${' '.repeat(9)} now`,
     );
   });
+
+  it('blanks an address whatever surrounds its at sign', () => {
+    expect(withoutLinks('@a@b.c x a@b.c. y a@.b z ab@c.')).toBe(
+      `${' '.repeat(6)} x ${' '.repeat(6)} y a@.b z ab@c.`,
+    );
+  });
+});
+
+describe('withoutLinks in linear time', () => {
+  it.each([
+    ['exclamation marks', '!'.repeat(4000)],
+    ['exclamation marks and at signs', '!@'.repeat(2000)],
+    ['at signs and dots', '@.'.repeat(2000)],
+  ])('scans a description of %s in linear time', (_, text) => {
+    const started = performance.now();
+    withoutLinks(text);
+    countWords(text);
+
+    expect(performance.now() - started).toBeLessThan(1_000);
+  });
 });
 
 describe('wordDensity', () => {

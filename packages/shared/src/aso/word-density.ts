@@ -31,7 +31,8 @@ interface DensityToken {
   spaceless: boolean;
 }
 
-const LINK = /https?:\/\/\S+|www\.\S+|\S+@\S+\.\S+/giu;
+const LINK = /https?:\/\/\S+|www\.\S+/giu;
+const CHUNK = /\S+/gu;
 const SENTENCE_BREAK = /[!?;\n\r]/u;
 const WORD_CHARACTER = /[\p{L}\p{N}]/u;
 const NUMBER = /^\p{N}+$/u;
@@ -50,8 +51,17 @@ const segmenterFor = (language: string | null): Intl.Segmenter => {
   return segmenter;
 };
 
+const blank = (part: string): string => ' '.repeat(part.length);
+
+const isAddress = (chunk: string): boolean => {
+  const at = chunk.indexOf('@', 1);
+  return at !== -1 && chunk.slice(at + 2, -1).includes('.');
+};
+
 export const withoutLinks = (text: string): string =>
-  text.replace(LINK, (link) => ' '.repeat(link.length));
+  text
+    .replace(LINK, blank)
+    .replace(CHUNK, (chunk) => (isAddress(chunk) ? blank(chunk) : chunk));
 
 const runsOf = (text: string): string[] => text.match(SPACELESS_OR_NOT) ?? [];
 
