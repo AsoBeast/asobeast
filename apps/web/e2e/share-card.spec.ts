@@ -149,27 +149,32 @@ test.describe("rankings", () => {
   test("switches theme", async ({ page }) => {
     await page.goto(RANKINGS_PAGE);
     await openShare(page);
-    const corner = () => canvasPixel(preview(page), 4, 4);
-    await expect.poll(corner).toEqual(hexPixel(CARD_THEMES.light.panel));
+    const { panel } = cardLayout("landscape", ALL_PARTS);
+    const margin = () =>
+      canvasPixel(preview(page), panel.x + 12, panel.y + panel.height / 2);
+    await expect.poll(margin).toEqual(hexPixel(CARD_THEMES.paper.panel));
 
-    await pick(page, "Theme", "Dark");
-    await expect.poll(corner).toEqual(hexPixel(CARD_THEMES.dark.panel));
-
-    await pick(page, "Theme", "Orange");
-    await expect.poll(corner).toEqual(hexPixel(CARD_THEMES.orange.panel));
+    for (const name of ["night", "dusk", "sunrise"] as const) {
+      await pick(page, "Theme", CARD_THEMES[name].label);
+      await expect.poll(margin).toEqual(hexPixel(CARD_THEMES[name].panel));
+    }
   });
 
   test("always draws the credit", async ({ page }) => {
     await page.goto(RANKINGS_PAGE);
     await openShare(page);
     const { mark } = cardLayout("landscape", ALL_PARTS);
-    const background = hexPixel(CARD_THEMES.light.panel);
 
     await expect
-      .poll(() =>
-        canvasPixel(preview(page), mark.x + mark.width / 2, mark.y + 6),
-      )
-      .not.toEqual(background);
+      .poll(async () => {
+        const [red] = await canvasPixel(
+          preview(page),
+          mark.x + 3,
+          mark.y + mark.height / 2,
+        );
+        return red;
+      })
+      .toBeLessThan(100);
     await expect(dialog(page).getByRole("switch")).toHaveCount(2);
   });
 
@@ -226,7 +231,7 @@ test.describe("rankings", () => {
   test("remembers the choices", async ({ page }) => {
     await page.goto(RANKINGS_PAGE);
     await openShare(page);
-    await pick(page, "Theme", "Dark");
+    await pick(page, "Theme", "Dusk");
     await pick(page, "Size", "4:5");
     await page.keyboard.press("Escape");
 
@@ -234,7 +239,7 @@ test.describe("rankings", () => {
     await openShare(page);
 
     for (const [list, option] of [
-      ["Theme", "Dark"],
+      ["Theme", "Dusk"],
       ["Size", "4:5"],
     ]) {
       await expect(
@@ -315,7 +320,7 @@ test.describe("rankings", () => {
           icon.y + icon.height / 2,
         ),
       )
-      .toEqual(hexPixel(CARD_THEMES.light.line));
+      .toEqual(hexPixel(CARD_THEMES.paper.panelLine));
     expect(errors.filter((text) => text.includes("SecurityError"))).toEqual([]);
   });
 });

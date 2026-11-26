@@ -9,7 +9,7 @@ describe("parseCardOptions", () => {
   it("reads stored options", () => {
     const stored: ShareCardOptions = {
       size: "portrait",
-      theme: "dark",
+      theme: "night",
       change: false,
       app: true,
     };
@@ -17,10 +17,10 @@ describe("parseCardOptions", () => {
     expect(parseCardOptions(JSON.stringify(stored))).toEqual(stored);
   });
 
-  it("starts wide and light with every part shown", () => {
+  it("starts wide on paper with every part shown", () => {
     expect(DEFAULT_CARD_OPTIONS).toEqual({
       size: "landscape",
-      theme: "light",
+      theme: "paper",
       change: true,
       app: true,
     });
@@ -54,6 +54,6 @@ describe("parseCardOptions", () => {
           app: false,
         }),
       ),
-    ).toEqual({ ...DEFAULT_CARD_OPTIONS, theme: "orange", app: false });
+    ).toEqual({ ...DEFAULT_CARD_OPTIONS, app: false });
   });
 });

@@ -63,11 +63,12 @@ function traceRun(
 function plotOf(painter: CardPainter, chart: CardChartSpec): CardBox {
   const { context, layout } = painter;
   const { chart: box, fonts, dot } = layout;
+  const headroom = Math.round(fonts.chip * CHIP_HEIGHT + dot * CHIP_OFFSET);
   const area = {
     x: box.x,
-    y: box.y + fonts.tick / 2,
+    y: box.y + headroom,
     width: box.width - dot * RIGHT_INSET,
-    height: box.height - fonts.tick / 2 - Math.round(fonts.axis * AXIS_BAND),
+    height: box.height - headroom - Math.round(fonts.axis * AXIS_BAND),
   };
   const { ticks } = cardChartShape(chart.line, chart.kind, area, 0);
   context.font = fontOf(painter, 500, fonts.tick);
@@ -193,8 +194,7 @@ function drawChip(painter: CardPainter, end: CardMark) {
     context.measureText(end.label).width + fonts.chip * CHIP_PADDING * 2,
   );
   const x = Math.min(end.x + dot * CHIP_REACH, box.x + box.width) - width;
-  const above = end.y - dot * CHIP_OFFSET - height;
-  const y = above < box.y ? end.y + dot * CHIP_OFFSET : above;
+  const y = end.y - dot * CHIP_OFFSET - height;
   traceRoundedBox(context, { x, y, width, height }, height * CHIP_RADIUS);
   context.fillStyle = theme.chip.fill;
   context.fill();

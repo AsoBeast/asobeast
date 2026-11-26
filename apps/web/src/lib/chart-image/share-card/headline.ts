@@ -14,11 +14,18 @@ export interface ShareLinePoint {
   value: number | null;
 }
 
+export type ShareDirection = "up" | "down" | "flat";
+
+export interface ShareChange {
+  direction: ShareDirection;
+  text: string;
+}
+
 export interface ShareHeadline {
   lead: string;
+  term: string | null;
   figure: string;
-  trail: string | null;
-  change: string | null;
+  change: ShareChange | null;
   from: string;
   to: string;
   span: number;
@@ -26,6 +33,7 @@ export interface ShareHeadline {
 }
 
 const UNCHANGED_PLACES = 0.05;
+const NO_CHANGE: ShareChange = { direction: "flat", text: "no change" };
 
 interface Frame {
   from: string;
@@ -41,16 +49,19 @@ function frameOf(days: readonly string[]): Frame | null {
   return { from, to, span: utcDayNumber(to) - utcDayNumber(from) };
 }
 
-const inDays = (span: number) => `in ${pluralize(span, "day")}`;
+export const spanText = (span: number) => `in ${pluralize(span, "day")}`;
 
-const unchanged = (span: number) => `no change ${inDays(span)}`;
+export const quotedTerm = (term: string) => `“${term}”`;
 
-function placesChange(first: number, last: number, span: number): string {
+function placesChange(first: number, last: number): ShareChange {
   const moved = first - last;
-  if (Math.abs(moved) < UNCHANGED_PLACES) return unchanged(span);
+  if (Math.abs(moved) < UNCHANGED_PLACES) return NO_CHANGE;
   const direction = moved > 0 ? "up" : "down";
   const places = formatMeasure(Math.abs(moved));
-  return `${direction} ${places} ${places === "1" ? "place" : "places"} ${inDays(span)}`;
+  return {
+    direction,
+    text: `${direction} ${places} ${places === "1" ? "place" : "places"}`,
+  };
 }
 
 function rankedOnEvery(
@@ -86,9 +97,9 @@ export function rankingsHeadline(
   const last = line[line.length - 1].value;
   return {
     lead: `Average rank across ${pluralize(set.length, "keyword")}`,
+    term: null,
     figure: `#${formatMeasure(last)}`,
-    trail: null,
-    change: placesChange(first, last, frame.span),
+    change: placesChange(first, last),
     ...frame,
     line,
   };
@@ -99,15 +110,12 @@ const rankText = (point: RankingPoint): string =>
     ? `#${point.position}`
     : formatRankPosition(point.position, point.depth, point.resultCount);
 
-function rankChange(
-  first: RankingPoint,
-  last: RankingPoint,
-  span: number,
-): string {
+function rankChange(first: RankingPoint, last: RankingPoint): ShareChange {
   const before = isRanked(first.position) ? first.position : Infinity;
   const after = isRanked(last.position) ? last.position : Infinity;
-  if (before === after) return unchanged(span);
-  return `${after < before ? "up" : "down"} from ${rankText(first)}`;
+  if (before === after) return NO_CHANGE;
+  const direction = after < before ? "up" : "down";
+  return { direction, text: `${direction} from ${rankText(first)}` };
 }
 
 export function keywordHeadline(
@@ -118,10 +126,10 @@ export function keywordHeadline(
   const last = series.points.at(-1);
   if (!frame || first === undefined || last === undefined) return null;
   return {
-    lead: "",
+    lead: "Rank for",
+    term: series.text,
     figure: rankText(last),
-    trail: `for “${series.text}”`,
-    change: rankChange(first, last, frame.span),
+    change: rankChange(first, last),
     ...frame,
     line: series.points.map(({ date, position }) => ({
       date,
@@ -130,11 +138,12 @@ export function keywordHeadline(
   };
 }
 
-function percentChange(first: number, last: number, span: number) {
+function percentChange(first: number, last: number): ShareChange | null {
   if (first === 0) return null;
   const percent = Math.round(((last - first) / first) * 100);
-  if (percent === 0) return unchanged(span);
-  return `${percent > 0 ? "up" : "down"} ${Math.abs(percent)}% ${inDays(span)}`;
+  if (percent === 0) return NO_CHANGE;
+  const direction = percent > 0 ? "up" : "down";
+  return { direction, text: `${direction} ${Math.abs(percent)}%` };
 }
 
 export function visibilityHeadline(
@@ -145,10 +154,10 @@ export function visibilityHeadline(
   const last = points.at(-1);
   if (!frame || first === undefined || last === undefined) return null;
   return {
-    lead: "Visibility",
+    lead: "Visibility score",
+    term: null,
     figure: formatNumber(Math.round(last.visibility)),
-    trail: null,
-    change: percentChange(first.visibility, last.visibility, frame.span),
+    change: percentChange(first.visibility, last.visibility),
     ...frame,
     line: points.map(({ date, visibility }) => ({ date, value: visibility })),
   };
@@ -158,10 +167,12 @@ export function headlineSentence(
   headline: ShareHeadline,
   withChange: boolean,
 ): string {
-  const statement = [headline.lead, headline.figure, headline.trail]
-    .filter((part) => part !== null && part !== "")
-    .join(" ");
+  const subject =
+    headline.term === null
+      ? headline.lead
+      : `${headline.lead} ${quotedTerm(headline.term)}`;
+  const statement = `${subject} ${headline.figure}`;
   return withChange && headline.change !== null
-    ? `${statement}, ${headline.change}`
+    ? `${statement}, ${headline.change.text} ${spanText(headline.span)}`
     : statement;
 }

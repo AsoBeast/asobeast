@@ -14,6 +14,7 @@ export interface TextStyle {
   weight: number;
   color: string;
   baseline?: number;
+  tracking?: number;
 }
 
 const BASELINE_SHARE = 0.35;
@@ -30,6 +31,7 @@ export function drawText(
   const { context } = painter;
   const measureAt = (size: number) => (value: string) => {
     context.font = fontOf(painter, style.weight, size);
+    context.letterSpacing = `${size * (style.tracking ?? 0)}px`;
     return context.measureText(value).width;
   };
   const fitted = fitCardText(
@@ -39,6 +41,7 @@ export function drawText(
     measureAt,
   );
   context.font = fontOf(painter, style.weight, fitted.size);
+  context.letterSpacing = `${fitted.size * (style.tracking ?? 0)}px`;
   context.fillStyle = style.color;
   context.direction = textDirection(text);
   context.textAlign = "left";
@@ -48,7 +51,9 @@ export function drawText(
     box.x,
     style.baseline ?? box.y + box.height / 2 + fitted.size * BASELINE_SHARE,
   );
-  return context.measureText(fitted.text).width;
+  const width = context.measureText(fitted.text).width;
+  context.letterSpacing = "0px";
+  return width;
 }
 
 export const clearOf = (color: string): string =>

@@ -2,13 +2,17 @@ export const CARD_SIZE_NAMES = ["landscape", "square", "portrait"] as const;
 
 export type CardSizeName = (typeof CARD_SIZE_NAMES)[number];
 
-export const CARD_SIZES: Record<
-  CardSizeName,
-  { width: number; height: number; label: string }
-> = {
-  landscape: { width: 1200, height: 675, label: "16:9" },
-  square: { width: 1080, height: 1080, label: "1:1" },
-  portrait: { width: 1080, height: 1350, label: "4:5" },
+export interface CardSize {
+  width: number;
+  height: number;
+  label: string;
+  name: string;
+}
+
+export const CARD_SIZES: Record<CardSizeName, CardSize> = {
+  landscape: { width: 1200, height: 675, label: "16:9", name: "Landscape" },
+  square: { width: 1080, height: 1080, label: "1:1", name: "Square" },
+  portrait: { width: 1080, height: 1350, label: "4:5", name: "Portrait" },
 };
 
 export const isCardSizeName = (value: unknown): value is CardSizeName =>
@@ -31,56 +35,126 @@ export type CardFontRole =
   | "store"
   | "lead"
   | "figure"
-  | "trail"
   | "change"
+  | "tick"
   | "axis"
   | "chip"
-  | "credit"
-  | "tick";
+  | "credit";
+
+interface CardMetrics {
+  frame: number;
+  strip: number;
+  radius: number;
+  padding: number;
+  column: number | null;
+  icon: number;
+  pill: number;
+  mark: number;
+  stroke: number;
+  dot: number;
+  fonts: Record<CardFontRole, number>;
+}
+
+const METRICS: Record<CardSizeName, CardMetrics> = {
+  landscape: {
+    frame: 28,
+    strip: 72,
+    radius: 28,
+    padding: 44,
+    column: 420,
+    icon: 64,
+    pill: 46,
+    mark: 38,
+    stroke: 5,
+    dot: 9,
+    fonts: {
+      name: 26,
+      store: 18,
+      lead: 24,
+      figure: 136,
+      change: 24,
+      tick: 16,
+      axis: 17,
+      chip: 20,
+      credit: 21,
+    },
+  },
+  square: {
+    frame: 32,
+    strip: 84,
+    radius: 32,
+    padding: 52,
+    column: null,
+    icon: 76,
+    pill: 54,
+    mark: 44,
+    stroke: 6,
+    dot: 10,
+    fonts: {
+      name: 32,
+      store: 22,
+      lead: 30,
+      figure: 184,
+      change: 28,
+      tick: 18,
+      axis: 20,
+      chip: 24,
+      credit: 25,
+    },
+  },
+  portrait: {
+    frame: 32,
+    strip: 84,
+    radius: 32,
+    padding: 52,
+    column: null,
+    icon: 76,
+    pill: 58,
+    mark: 44,
+    stroke: 6,
+    dot: 10,
+    fonts: {
+      name: 32,
+      store: 22,
+      lead: 32,
+      figure: 208,
+      change: 30,
+      tick: 18,
+      axis: 20,
+      chip: 24,
+      credit: 25,
+    },
+  },
+};
 
 export interface CardLayout {
   width: number;
   height: number;
-  unit: number;
-  margin: number;
+  radius: number;
   stroke: number;
   dot: number;
   fonts: Record<CardFontRole, number>;
+  panel: CardBox;
+  strip: CardBox;
   header: CardBox | null;
   icon: CardBox | null;
   name: CardBox | null;
   store: CardBox | null;
-  headline: CardBox;
   lead: CardBox;
   figure: CardBox;
   change: CardBox | null;
   chart: CardBox;
-  footer: CardBox;
   mark: CardBox;
   credit: CardBox;
 }
 
-const UNITS_ACROSS = 40;
-const MARGIN_UNITS = 2;
-const ICON_UNITS = 2;
-const MARK_UNITS = 1.2;
 const LINE_HEIGHT = 1.3;
-const STROKE_UNITS = 0.17;
-const DOT_UNITS = 0.3;
-const FIGURE_LINE_HEIGHT = 1.15;
-
-const FONT_UNITS: Record<CardFontRole, number> = {
-  name: 0.8,
-  store: 0.6,
-  lead: 0.8,
-  figure: 2.4,
-  trail: 1,
-  change: 0.8,
-  axis: 0.6,
-  chip: 0.7,
-  credit: 0.6,
-  tick: 0.5,
-};
+const CAP_HEIGHT = 0.72;
+const NAME_GAP = 0.26;
+const LEAD_GAP = 0.6;
+const FIGURE_GAP = 0.16;
+const STRIP_INSET = 8;
+const MARK_GAP = 0.3;
 
 const box = (x: number, y: number, width: number, height: number) => ({
   x,
@@ -89,93 +163,165 @@ const box = (x: number, y: number, width: number, height: number) => ({
   height,
 });
 
-function fontsFor(unit: number): Record<CardFontRole, number> {
-  return {
-    name: FONT_UNITS.name * unit,
-    store: FONT_UNITS.store * unit,
-    lead: FONT_UNITS.lead * unit,
-    figure: FONT_UNITS.figure * unit,
-    trail: FONT_UNITS.trail * unit,
-    change: FONT_UNITS.change * unit,
-    axis: FONT_UNITS.axis * unit,
-    chip: FONT_UNITS.chip * unit,
-    credit: FONT_UNITS.credit * unit,
-    tick: FONT_UNITS.tick * unit,
-  };
-}
+const bottomOf = ({ y, height }: CardBox) => y + height;
 
-function headerBoxes(margin: number, inner: number, unit: number) {
-  const size = ICON_UNITS * unit;
-  const textX = margin + size + Math.round(unit * 0.6);
-  const textWidth = margin + inner - textX;
-  return {
-    header: box(margin, margin, inner, size),
-    icon: box(margin, margin, size, size),
-    name: box(textX, margin, textWidth, size / 2),
-    store: box(textX, margin + size / 2, textWidth, size / 2),
-  };
-}
-
-function footerBoxes(
-  margin: number,
-  inner: number,
-  unit: number,
-  bottom: number,
-) {
-  const size = Math.round(MARK_UNITS * unit);
-  const y = bottom - size;
-  const creditX = margin + size + Math.round(unit * 0.4);
-  return {
-    footer: box(margin, y, inner, size),
-    mark: box(margin, y, size, size),
-    credit: box(creditX, y, margin + inner - creditX, size),
-  };
-}
+const inset = ({ x, y, width, height }: CardBox, by: number) =>
+  box(x + by, y + by, width - 2 * by, height - 2 * by);
 
 const NO_HEADER = { header: null, icon: null, name: null, store: null };
 
-export function cardLayout(size: CardSizeName, parts: CardParts): CardLayout {
-  const { width, height } = CARD_SIZES[size];
-  const unit = Math.round(width / UNITS_ACROSS);
-  const margin = MARGIN_UNITS * unit;
-  const inner = width - 2 * margin;
-  const gap = Math.round(unit / 2);
-  const fonts = fontsFor(unit);
-  const lineOf = (role: CardFontRole) => Math.round(fonts[role] * LINE_HEIGHT);
+function headerBoxes(
+  metrics: CardMetrics,
+  x: number,
+  y: number,
+  width: number,
+) {
+  const size = metrics.icon;
+  const textX = x + size + Math.round(size * NAME_GAP);
+  const textWidth = x + width - textX;
+  return {
+    header: box(x, y, width, size),
+    icon: box(x, y, size, size),
+    name: box(textX, y, textWidth, size / 2),
+    store: box(textX, y + size / 2, textWidth, size / 2),
+  };
+}
 
-  const header = parts.app ? headerBoxes(margin, inner, unit) : NO_HEADER;
-  const top = header.header ? margin + header.header.height + unit : margin;
-  const lead = box(margin, top, inner, lineOf("lead"));
+function headlineHeight(metrics: CardMetrics, parts: CardParts): number {
+  const { fonts } = metrics;
+  const text =
+    Math.round(fonts.lead * LINE_HEIGHT) +
+    Math.round(fonts.lead * LEAD_GAP) +
+    Math.round(fonts.figure * CAP_HEIGHT);
+  return parts.change
+    ? text + Math.round(fonts.figure * FIGURE_GAP) + metrics.pill
+    : text;
+}
+
+function headlineBoxes(
+  metrics: CardMetrics,
+  parts: CardParts,
+  { x, y, width }: Omit<CardBox, "height">,
+) {
+  const { fonts } = metrics;
+  const lead = box(x, y, width, Math.round(fonts.lead * LINE_HEIGHT));
   const figure = box(
-    margin,
-    lead.y + lead.height,
-    inner,
-    Math.round(fonts.figure * FIGURE_LINE_HEIGHT),
+    x,
+    bottomOf(lead) + Math.round(fonts.lead * LEAD_GAP),
+    width,
+    Math.round(fonts.figure * CAP_HEIGHT),
   );
   const change = parts.change
-    ? box(margin, figure.y + figure.height, inner, lineOf("change"))
+    ? box(
+        x,
+        bottomOf(figure) + Math.round(fonts.figure * FIGURE_GAP),
+        width,
+        metrics.pill,
+      )
     : null;
-  const headlineBottom = change
-    ? change.y + change.height
-    : figure.y + figure.height;
+  return { lead, figure, change };
+}
 
-  const footer = footerBoxes(margin, inner, unit, height - margin);
-  const chartTop = headlineBottom + unit;
+function creditBoxes(metrics: CardMetrics, strip: CardBox) {
+  const size = metrics.mark;
+  const mark = box(
+    strip.x + STRIP_INSET,
+    strip.y + Math.round((strip.height - size) / 2),
+    size,
+    size,
+  );
+  const creditX = mark.x + size + Math.round(size * MARK_GAP);
+  return {
+    mark,
+    credit: box(
+      creditX,
+      mark.y,
+      strip.x + strip.width - STRIP_INSET - creditX,
+      size,
+    ),
+  };
+}
 
+function splitContent(
+  metrics: CardMetrics,
+  parts: CardParts,
+  content: CardBox,
+  column: number,
+) {
+  const header = parts.app
+    ? headerBoxes(metrics, content.x, content.y, column)
+    : NO_HEADER;
+  const height = headlineHeight(metrics, parts);
+  const top = header.header
+    ? bottomOf(content) - height
+    : content.y + Math.round((content.height - height) / 2);
+  const chartX = content.x + column + metrics.padding;
+  return {
+    ...header,
+    ...headlineBoxes(metrics, parts, { x: content.x, y: top, width: column }),
+    chart: box(
+      chartX,
+      content.y,
+      content.x + content.width - chartX,
+      content.height,
+    ),
+  };
+}
+
+function stackedContent(
+  metrics: CardMetrics,
+  parts: CardParts,
+  content: CardBox,
+) {
+  const header = parts.app
+    ? headerBoxes(metrics, content.x, content.y, content.width)
+    : NO_HEADER;
+  const top = header.header
+    ? bottomOf(header.header) + metrics.padding
+    : content.y;
+  const headline = headlineBoxes(metrics, parts, {
+    x: content.x,
+    y: top,
+    width: content.width,
+  });
+  const chartTop =
+    bottomOf(headline.change ?? headline.figure) + metrics.padding;
+  return {
+    ...header,
+    ...headline,
+    chart: box(
+      content.x,
+      chartTop,
+      content.width,
+      bottomOf(content) - chartTop,
+    ),
+  };
+}
+
+export function cardLayout(size: CardSizeName, parts: CardParts): CardLayout {
+  const { width, height } = CARD_SIZES[size];
+  const metrics = METRICS[size];
+  const { frame, strip: stripHeight } = metrics;
+  const panel = box(
+    frame,
+    frame,
+    width - 2 * frame,
+    height - frame - stripHeight,
+  );
+  const strip = box(frame, bottomOf(panel), panel.width, stripHeight);
+  const content = inset(panel, metrics.padding);
   return {
     width,
     height,
-    unit,
-    margin,
-    stroke: Math.round(unit * STROKE_UNITS),
-    dot: Math.round(unit * DOT_UNITS),
-    fonts,
-    ...header,
-    headline: box(margin, top, inner, headlineBottom - top),
-    lead,
-    figure,
-    change,
-    chart: box(margin, chartTop, inner, footer.footer.y - gap - chartTop),
-    ...footer,
+    radius: metrics.radius,
+    stroke: metrics.stroke,
+    dot: metrics.dot,
+    fonts: metrics.fonts,
+    panel,
+    strip,
+    ...(metrics.column === null
+      ? stackedContent(metrics, parts, content)
+      : splitContent(metrics, parts, content, metrics.column)),
+    ...creditBoxes(metrics, strip),
   };
 }

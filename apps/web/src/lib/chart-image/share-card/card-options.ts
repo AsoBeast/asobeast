@@ -14,7 +14,7 @@ export const SHARE_CARD_PREFERENCE = "asobeast.shareCard";
 
 export const DEFAULT_CARD_OPTIONS: ShareCardOptions = {
   size: "landscape",
-  theme: "light",
+  theme: "paper",
   change: true,
   app: true,
 };

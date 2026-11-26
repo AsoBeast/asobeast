@@ -36,7 +36,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "new",
         title: "Share a chart as a card",
-        text: "The rankings chart, the visibility chart and a keyword's position history now have a Share button that makes a card ready to post: your app's icon and name, a headline such as how far your average rank moved, the chart and the dates. Pick a wide, square or tall size and a light, dark or orange look, turn the change or the app off, then copy or download it. Every card carries a Made with AsoBeast line.",
+        text: "The rankings chart, the visibility chart and a keyword's position history now have a Share button that makes a card ready to post: your app's icon and name, a headline such as how far your average rank moved, the chart and the dates. Pick a wide, square or tall size and a paper, night, dusk or sunrise look, turn the change or the app off, then copy or download it. Every card carries a Tracked with AsoBeast line with the AsoBeast address.",
       },
       {
         kind: "fixed",
