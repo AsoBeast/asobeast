@@ -25,7 +25,12 @@ const stored = new Map<string, TargetState>();
 const trackedByTargets = new Map<string, Set<string>>();
 
 const slotKey = (id: string, localization: string) => `${id}:${localization}`;
-const pairKey = (country: string, text: string) => `${country}~${text}`;
+const pairKey = (country: string, text: string) =>
+  JSON.stringify([country, text]);
+const pairOf = (key: string): [string, string] => {
+  const [country, text] = JSON.parse(key) as [string, string];
+  return [country, text];
+};
 const normalized = (text: string) =>
   text.trim().toLowerCase().replace(/\s+/g, " ");
 
@@ -86,7 +91,7 @@ function rowsOf(
   keywords: readonly TrackedKeywordItem[],
 ): TrackedKeywordItem[] {
   const added = [...(trackedByTargets.get(id) ?? [])].map((pair) => {
-    const [country, text] = pair.split("~");
+    const [country, text] = pairOf(pair);
     return {
       keywordId: `target-${country}-${text}`,
       text,
