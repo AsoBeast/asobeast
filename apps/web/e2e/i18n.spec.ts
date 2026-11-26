@@ -65,6 +65,24 @@ test.describe("locale preference", () => {
     expect(failures).toEqual([]);
   });
 
+  test("translates generated alert sentences and their UTC clock", async ({
+    page,
+  }) => {
+    await seedSession(page);
+    await seedViewer(page.context(), "customer");
+    await page.goto("/alerts");
+
+    await expect(page.locator("body")).toContainText("排名下降:");
+    await expect(
+      page.getByText(/在美国的关键词“focus timer”上从第 4 名降至第 12 名/),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Rival Focus（竞品）更改了副标题"),
+    ).toBeVisible();
+    await expect(page.getByText("00:20 UTC")).toBeVisible();
+    await expect(page.locator("body")).not.toContainText("AM UTC");
+  });
+
   test("translates sign-in and registration before authentication", async ({
     page,
   }) => {

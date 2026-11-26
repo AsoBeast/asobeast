@@ -398,6 +398,10 @@ export function formatUtcClock(value: string): string {
   return `${formatClock(new Date(value), "en")} UTC`;
 }
 
+export function formatUtcClockInLocale(value: string, locale: Locale): string {
+  return `${formatClock(new Date(value), locale)} UTC`;
+}
+
 export function formatDateTime(value: string): string {
   const instant = new Date(value);
   return `${dateFormatterIn("UTC", "en").format(instant)}, ${formatClock(instant, "en")} UTC`;

@@ -3,6 +3,7 @@ import {
   eventLabel,
   EVENT_LABELS,
 } from "@/components/settings/alert-event-copy";
+import { alertSentence } from "@/components/alerts/alert-sentence";
 import type { MessageTranslator } from "@/i18n/translator";
 import { isNewSince } from "@/lib/alerts-seen";
 import {
@@ -65,6 +66,7 @@ function searchParts(
 ): string[] {
   return [
     event.sentence,
+    alertSentence(event, locale),
     t ? eventLabel(event.event, t) : EVENT_LABELS[event.event],
     event.appName ?? "",
     event.country ? formatCountryInLocale(event.country, locale) : "",

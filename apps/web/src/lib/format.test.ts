@@ -11,6 +11,7 @@ import {
   formatDateTimeInLocale,
   formatFixedNumberInLocale,
   formatUtcClock,
+  formatUtcClockInLocale,
   formatDayMonth,
   formatDayMonthInLocale,
   formatMonth,
@@ -334,6 +335,20 @@ describe("formatUtcClock", () => {
     ["2026-11-04T12:05:00.000Z", "12:05 PM UTC"],
   ])("writes %s as %s whatever the runner's zone", (value, expected) => {
     expect(formatUtcClock(value)).toBe(expected);
+  });
+});
+
+describe("formatUtcClockInLocale", () => {
+  it("uses a 24 hour clock in Chinese", () => {
+    expect(formatUtcClockInLocale("2026-11-04T00:00:01.000Z", "zh-CN")).toBe(
+      "00:00 UTC",
+    );
+    expect(formatUtcClockInLocale("2026-11-04T23:59:59.000Z", "zh-CN")).toBe(
+      "23:59 UTC",
+    );
+    expect(formatUtcClockInLocale("2026-11-04T23:59:59.000Z", "en")).toBe(
+      "11:59 PM UTC",
+    );
   });
 });
 

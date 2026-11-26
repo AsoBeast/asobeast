@@ -7,11 +7,12 @@ import { eventLabel } from "@/components/settings/alert-event-copy";
 import {
   formatCountryInLocale,
   formatDateTimeInLocale,
-  formatUtcClock,
+  formatUtcClockInLocale,
   storeLabel,
 } from "@/lib/format";
 import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
+import { alertSentence } from "./alert-sentence";
 import { ALERT_EVENT_ICONS, ALERT_TONE_CLASS } from "./alert-event-icons";
 import { alertEventHref } from "./alert-event-href";
 import { AlertSizePill } from "./AlertSizePill";
@@ -72,6 +73,7 @@ function Sentence({
   href: string | null;
 }) {
   const t = useTranslations("notifications");
+  const locale = useAppLocale();
   const content = (
     <>
       <span className="sr-only">{`${eventLabel(item.event, t)}: `}</span>
@@ -79,7 +81,7 @@ function Sentence({
         dir="auto"
         className="line-clamp-3 wrap-anywhere @2xl/alerts:line-clamp-2"
       >
-        {item.sentence}
+        {alertSentence(item, locale)}
       </span>
     </>
   );
@@ -138,7 +140,7 @@ export function AlertEventRow({
           title={formatDateTimeInLocale(item.occurredAt, locale)}
           className={ALERT_ROW_TIME}
         >
-          {formatUtcClock(item.occurredAt)}
+          {formatUtcClockInLocale(item.occurredAt, locale)}
         </time>
       </div>
       <AlertSizePill payload={item.payload} className={ALERT_ROW_SIZE} />
