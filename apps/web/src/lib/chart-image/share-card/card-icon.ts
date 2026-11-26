@@ -18,17 +18,24 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
   return Promise.race([decoded, timeout]);
 }
 
-export function loadCardIcon(
+function optimizedIconSrc(iconUrl: string): string | null {
+  try {
+    return getImageProps({
+      src: iconUrl,
+      alt: "",
+      width: ICON_SIZE,
+      height: ICON_SIZE,
+    }).props.src;
+  } catch {
+    return null;
+  }
+}
+
+export async function loadCardIcon(
   iconUrl: string | null,
 ): Promise<HTMLImageElement | null> {
-  if (iconUrl === null) return Promise.resolve(null);
-  const { props } = getImageProps({
-    src: iconUrl,
-    alt: "",
-    width: ICON_SIZE,
-    height: ICON_SIZE,
-  });
-  return loadImage(props.src);
+  const src = iconUrl === null ? null : optimizedIconSrc(iconUrl);
+  return src === null ? null : loadImage(src);
 }
 
 export const loadCardMark = (): Promise<HTMLImageElement | null> =>
