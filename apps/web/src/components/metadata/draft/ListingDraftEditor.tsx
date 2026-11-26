@@ -12,6 +12,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
+  changedFields,
   draftFieldsOf,
   draftRequest,
   draftScopeOf,
@@ -19,10 +20,12 @@ import {
   scopeKey,
   type ListingDraftField,
 } from "@/lib/listing-draft";
+import { searchWords } from "@/lib/store-preview/search-words";
 import { CopyDraftButton, CopyFieldButton } from "./CopyDraftButtons";
 import { DraftCoveragePanel } from "./DraftCoveragePanel";
 import { useDraftFieldReveal } from "./draft-field-reveal";
 import { DraftFieldInput } from "./DraftFieldInput";
+import { DraftStorePreview } from "./DraftStorePreview";
 import { KeywordFieldHandoff } from "./KeywordFieldHandoff";
 import {
   useDraftKeywordField,
@@ -73,11 +76,14 @@ export function ListingDraftEditor({
     [scope, values, live],
   );
   const preview = useCoveragePreview(id, request);
-  const lint = preview.requested ? preview.query.data?.fields : undefined;
+  const answer = preview.requested ? preview.query.data : undefined;
+  const lint = answer?.fields;
+  const current = !preview.settling && !preview.query.isPlaceholderData;
+  const wasted = current ? (answer?.wastedWords ?? []) : [];
   const revealDescription = useDraftFieldReveal("description");
   const [descriptionOpen, setDescriptionOpen] = useState(revealDescription);
   if (revealDescription && !descriptionOpen) setDescriptionOpen(true);
-  const unchanged = request === null;
+  const unchanged = changedFields(values, live).length === 0;
   const handsOff =
     field.handoff !== null &&
     !field.managed &&
@@ -95,6 +101,7 @@ export function ListingDraftEditor({
       readOnly={name === "keywordField" && locked}
       action={<CopyFieldButton field={name} value={values[name] ?? ""} />}
       issues={lint?.find((entry) => entry.field === name)?.issues ?? []}
+      words={searchWords(store, name, values[name] ?? "", wasted)}
     >
       {name === "keywordField" ? <KeywordFieldNotice field={field} /> : null}
       {name === "keywordField" && handsOff && field.handoff ? (
@@ -107,7 +114,7 @@ export function ListingDraftEditor({
     <div className="grid grid-cols-12 items-start gap-6">
       <section
         aria-label="Draft listing"
-        className="col-span-12 flex min-w-0 flex-col gap-4 rounded-lg border border-border bg-card px-4 pt-3 pb-4 @5xl/metadata:col-span-7"
+        className="col-span-12 flex min-w-0 flex-col gap-4 rounded-lg border border-border bg-card px-4 pt-3 pb-4 @5xl/metadata:col-span-7 @5xl/metadata:row-span-2"
       >
         {fields.filter((name) => name !== "description").map(input)}
         <Collapsible open={descriptionOpen} onOpenChange={setDescriptionOpen}>
@@ -139,6 +146,12 @@ export function ListingDraftEditor({
           </Button>
         </div>
       </section>
+      <DraftStorePreview
+        id={id}
+        values={values}
+        localization={localization}
+        className="col-span-12 min-w-0 @5xl/metadata:col-span-5"
+      />
       <DraftCoveragePanel
         preview={preview}
         className="col-span-12 @5xl/metadata:col-span-5"

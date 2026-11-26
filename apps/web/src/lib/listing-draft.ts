@@ -23,6 +23,7 @@ import {
 export const LISTING_DRAFT_FIELDS = [
   "title",
   "subtitle",
+  "promotionalText",
   "shortDescription",
   "keywordField",
   "description",
@@ -82,9 +83,11 @@ export const listingDraftKey = (appId: string, scope: string): string =>
 
 export const draftFieldsOf = (store: Store): ListingDraftField[] =>
   LISTING_DRAFT_FIELDS.filter(
-    (field) =>
-      field === "description" || STORE_FIELD_LIMITS[store][field]?.indexed,
+    (field) => STORE_FIELD_LIMITS[store][field] !== undefined,
   );
+
+const coverageFieldsOf = (store: Store): ListingDraftField[] =>
+  draftFieldsOf(store).filter((field) => field !== "promotionalText");
 
 export const liveDraftValues = (
   audit: Pick<MetadataAuditResult, "store" | "fields">,
@@ -159,14 +162,14 @@ export function draftRequest(
   values: ListingDraftValues,
   live: ListingDraftValues,
 ): CoveragePreviewRequest | null {
-  if (changedFields(values, live).length === 0) return null;
+  const fields = coverageFieldsOf(scope.store);
+  const changed = changedFields(values, live);
+  if (!fields.some((field) => changed.includes(field))) return null;
   return {
     ...(scope.store === "APP_STORE"
       ? { localization: scope.localization }
       : { country: scope.country }),
-    ...Object.fromEntries(
-      draftFieldsOf(scope.store).map((field) => [field, values[field] ?? ""]),
-    ),
+    ...Object.fromEntries(fields.map((field) => [field, values[field] ?? ""])),
   };
 }
 
@@ -254,6 +257,7 @@ const CONSOLE_LABELS: Record<
   APP_STORE: {
     title: "Name",
     subtitle: "Subtitle",
+    promotionalText: "Promotional Text",
     keywordField: "Keywords",
     description: "Description",
   },

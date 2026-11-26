@@ -90,6 +90,7 @@ describe("draftFieldsOf", () => {
     expect(draftFieldsOf("APP_STORE")).toEqual([
       "title",
       "subtitle",
+      "promotionalText",
       "keywordField",
       "description",
     ]);
@@ -98,6 +99,48 @@ describe("draftFieldsOf", () => {
       "shortDescription",
       "description",
     ]);
+  });
+});
+
+describe("promotional text", () => {
+  it("keeps promotional text in the draft on the App Store only", () => {
+    expect(draftFieldsOf("APP_STORE")).toContain("promotionalText");
+    expect(draftFieldsOf("GOOGLE_PLAY")).not.toContain("promotionalText");
+  });
+
+  it("reads promotional text from a stored draft", () => {
+    expect(
+      parseListingDraft('{"v":1,"promotionalText":"New: focus streaks"}'),
+    ).toEqual({ promotionalText: "New: focus streaks" });
+  });
+
+  it("never sends promotional text to the coverage preview", () => {
+    expect(
+      draftRequest(
+        { store: "APP_STORE", localization: "en-US" },
+        { ...live, title: "Habit Tracker", promotionalText: "New streaks" },
+        live,
+      ),
+    ).not.toHaveProperty("promotionalText");
+  });
+
+  it("asks for no coverage when only promotional text changed", () => {
+    expect(
+      draftRequest(
+        { store: "APP_STORE", localization: "en-US" },
+        { ...live, promotionalText: "New streaks" },
+        live,
+      ),
+    ).toBeNull();
+  });
+
+  it("copies promotional text under its App Store Connect name", () => {
+    expect(
+      consoleCopy("APP_STORE", {
+        title: "Habit Tracker",
+        promotionalText: "New streaks",
+      }),
+    ).toBe("Name\nHabit Tracker\n\nPromotional Text\nNew streaks");
   });
 });
 
@@ -209,6 +252,7 @@ describe("liveDraftValues", () => {
     ).toEqual({
       title: "Focus Timer",
       subtitle: "",
+      promotionalText: "",
       keywordField: "",
       description: "",
     });
@@ -400,7 +444,7 @@ describe("writeListingDraftField", () => {
         ] as const
       ).every(isListingDraftField),
     ).toBe(true);
-    expect(isListingDraftField("promotionalText")).toBe(false);
+    expect(isListingDraftField("whatsNew")).toBe(false);
   });
 });
 

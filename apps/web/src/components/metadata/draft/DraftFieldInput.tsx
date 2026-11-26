@@ -13,9 +13,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { useFocusClaim } from "@/lib/focus-handoff";
 import { fieldCount, type ListingDraftField } from "@/lib/listing-draft";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
+import type { SearchWord } from "@/lib/store-preview/search-words";
 import { cn } from "@/lib/utils";
+import { SearchWordChips } from "./SearchWordChips";
 
 const MULTILINE: ReadonlySet<ListingDraftField> = new Set([
+  "promotionalText",
   "keywordField",
   "description",
 ]);
@@ -33,6 +36,7 @@ export function DraftFieldInput({
   onChange,
   readOnly = false,
   issues = [],
+  words = null,
   action,
   children,
 }: {
@@ -42,6 +46,7 @@ export function DraftFieldInput({
   onChange: (value: string) => void;
   readOnly?: boolean;
   issues?: LintIssue[];
+  words?: readonly SearchWord[] | null;
   action?: ReactNode;
   children?: ReactNode;
 }) {
@@ -99,6 +104,12 @@ export function DraftFieldInput({
           onChange={(event) => onChange(event.target.value)}
         />
       )}
+      {words ? (
+        <SearchWordChips
+          label={`Words search reads in the ${METADATA_FIELD_LABELS[field].toLowerCase()}`}
+          words={words}
+        />
+      ) : null}
       {issues.length > 0 ? (
         <ul className="flex list-none flex-col gap-1 p-0">
           {issues.map((issue, index) => (

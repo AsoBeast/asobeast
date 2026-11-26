@@ -72,6 +72,16 @@ While you type, **Draft coverage** beside the fields judges every keyword you tr
 
 The draft never saves the keyword field. **Review in the keyword field editor** opens the editor of that localization with the drafted field as unsaved text, and you save it there with the usual preview and choice of markets. While App Store Connect imports the field, the drafted field is read only and shows what the store serves. To move the rest of the draft to the store, **Copy for App Store Connect** or **Copy for Play Console** copies every field under the name the console form uses, and each field has its own **Copy** button.
 
+## Preview the listing in the store
+
+**In the store** draws the listing the way a phone shows it. The app overview shows the newest captured listing of the market on screen, and Draft mode shows your draft beside its fields and follows every keystroke. **Search result** draws the row a search lists: the icon, the title, the subtitle on the App Store or the developer on Google Play, the rating and, on the App Store, the first three screenshots. **Product page** draws the top of the product page: the title, the subtitle or the short description, the opening text and the screenshots. A switch picks a 6.1 inch or a 6.7 inch iPhone on the App Store, or a smaller or a larger phone on Google Play. The preview follows the light or dark theme of the page, and you can fold it on the overview.
+
+When the title or the subtitle is longer than the phone can show, the preview cuts it with an ellipsis where the store would and says after which words, for example "Cut after “GeoGuess Map” on smaller iPhones." Words after the cut still count for search, but nobody reads them in the results. The cut is an estimate. On the App Store the type sizes and text widths follow the device preview in App Store Connect. AsoBeast measures the text with the store's own font where your device has it, which is the case in Safari or Chrome on a Mac, and with a close substitute elsewhere, and the store's rendering can still differ by a few pixels.
+
+Under each draft field, the words search reads are listed as tags, split and normalized the way [Keyword coverage](#check-keyword-coverage) reads them. On the App Store a word the title, subtitle or keyword field already holds is read once, so its second use is marked **repeat** once the draft coverage answers. A field the store does not search, such as the description or the promotional text on the App Store, shows **Not searched** and no tags.
+
+The store never shares promotional text with AsoBeast, so the overview shows the opening of the description in its place. Type promotional text in the draft to see it above the screenshots of the product page. It is not searched and never sent with the coverage check.
+
 ## Switch markets
 
 When you track keywords in more than one market, a **Listing market** control sits above the fields. It lists your home storefront and every market whose listing AsoBeast has captured. Choose one to see the title, subtitle, description and screenshot captions that storefront serves, with the coverage of the keywords tracked there. The URL keeps the choice as `?market=`, so a link opens on the same market.
