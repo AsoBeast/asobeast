@@ -21,7 +21,7 @@ export function TargetsLimitNotice({
       <AlertDescription>
         <span>{sentence}</span>
         {lines.length > 1 ? (
-          <ul className="list-disc pl-5">
+          <ul className="list-disc pl-4">
             {lines.map((line) => (
               <li key={line} translate="no">
                 {line}
