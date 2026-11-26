@@ -82,8 +82,8 @@ export function ShareCardDialog({
   onOpenChange?: (open: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const card = useShareCard(source, open);
-  const busy = card.busy || loading || undefined;
+  const card = useShareCard(source, open, loading);
+  const busy = card.busy || undefined;
   return (
     <Dialog
       open={open}

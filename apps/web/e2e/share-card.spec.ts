@@ -419,6 +419,56 @@ test.describe("visibility", () => {
     await expect(share(page)).not.toHaveAttribute("aria-disabled", "true");
   });
 
+  test("exports nothing while a range chosen behind the dialog loads", async ({
+    page,
+  }) => {
+    await page.goto(OVERVIEW);
+    await (await hydrated(share(page))).click();
+    const dialog = visibilityDialog(page);
+    await expect(dialog.getByRole("img")).not.toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
+    const held = await holdRequest(page, HISTORY, "GET");
+    await page
+      .locator('[data-slot="card"]')
+      .filter({
+        has: page.getByRole("region", {
+          name: "Search visibility over time",
+          includeHidden: true,
+        }),
+      })
+      .locator('[role="tab"]', { hasText: "90d" })
+      .dispatchEvent("mousedown", { button: 0 });
+    const download = dialog.getByRole("button", { name: "Download PNG" });
+    const copy = dialog.getByRole("button", { name: "Copy image" });
+    await expect(download).toHaveAttribute("aria-disabled", "true");
+
+    const saved = page.waitForEvent("download", { timeout: 2_000 }).then(
+      () => true,
+      () => false,
+    );
+    await download.focus();
+    await page.keyboard.press("Enter");
+    expect(await saved).toBe(false);
+    await expect(download).toBeFocused();
+
+    const copied = page
+      .getByText("Chart copied")
+      .waitFor({ timeout: 2_000 })
+      .then(
+        () => true,
+        () => false,
+      );
+    await copy.focus();
+    await page.keyboard.press("Enter");
+    expect(await copied).toBe(false);
+    await expect(copy).toBeFocused();
+
+    held.release();
+    await expect(download).not.toHaveAttribute("aria-disabled", "true");
+  });
+
   test("offers no card under four captured days", async ({ page }) => {
     await page.goto(OVERVIEW);
     await expect(share(page)).toBeVisible();

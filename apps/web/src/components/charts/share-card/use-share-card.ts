@@ -62,7 +62,11 @@ function useCardImages(open: boolean, iconUrl: string | null) {
   return current;
 }
 
-export function useShareCard(source: ShareCardSource, open: boolean) {
+export function useShareCard(
+  source: ShareCardSource,
+  open: boolean,
+  loading: boolean,
+) {
   const [raw, save] = useStoredPreference(SHARE_CARD_PREFERENCE);
   const options = useMemo(() => parseCardOptions(raw), [raw]);
   const images = useCardImages(open, source.app.iconUrl);
@@ -92,13 +96,13 @@ export function useShareCard(source: ShareCardSource, open: boolean) {
     size: options.size,
   });
   const run = (act: typeof image.copy) => () => {
-    if (spec) act(filename, () => renderShareCard(spec));
+    if (spec && !loading) act(filename, () => renderShareCard(spec));
   };
   return {
     options,
     setOptions: (next: ShareCardOptions) => save(JSON.stringify(next)),
     spec,
-    busy: image.pending || spec === null,
+    busy: image.pending || spec === null || loading,
     copy: run(image.copy),
     download: run(image.download),
   };
