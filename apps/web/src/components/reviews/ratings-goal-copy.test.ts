@@ -124,8 +124,5 @@ describe("paceSentence", () => {
     expect(paceSentence({ kind: "belowTarget", newAverage: 4.2 }, 45, 30)).toBe(
       "Not at the current mix: new ratings average 4.2, below 4.5.",
     );
-    expect(paceSentence({ kind: "atTarget", newAverage: 4.46 }, 45, 30)).toBe(
-      "Not at the current mix: new ratings average 4.5, no higher than 4.5.",
-    );
   });
 });

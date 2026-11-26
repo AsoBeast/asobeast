@@ -92,8 +92,7 @@ export function fiveStarRatingsToReach(
 export type MixAnswer =
   | { kind: "reaches"; projected: number }
   | { kind: "fallsShort"; projected: number }
-  | { kind: "belowTarget"; newAverage: number }
-  | { kind: "atTarget"; newAverage: number };
+  | { kind: "belowTarget"; newAverage: number };
 
 export interface CurrentMix {
   average: number;
@@ -114,9 +113,9 @@ export function goalAtCurrentMix({
 }: CurrentMix): MixAnswer | null {
   if (newAverage === null || perDay <= 0) return null;
   if (displayedTenths(average) >= targetTenths) return null;
-  const newTenths = displayedTenths(newAverage);
-  if (newTenths < targetTenths) return { kind: "belowTarget", newAverage };
-  if (newTenths === targetTenths) return { kind: "atTarget", newAverage };
+  if (displayedTenths(newAverage) < targetTenths) {
+    return { kind: "belowTarget", newAverage };
+  }
   const added = perDay * days;
   const projected = (average * count + newAverage * added) / (count + added);
   return {

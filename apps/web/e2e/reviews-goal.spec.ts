@@ -95,7 +95,7 @@ test("an invalid field names its range in the live region and is linked to it", 
   await expect(days).not.toHaveAttribute("aria-invalid");
   await expect(live.getByRole("paragraph")).toHaveText([
     "To show 4.9 you need 8,000 more five-star ratings, about 267 a day for 30 days.",
-    "Not at the current mix: new ratings average 4.9, no higher than 4.9.",
+    "At your current pace the store shows 4.7 in 30 days.",
   ]);
 });
 

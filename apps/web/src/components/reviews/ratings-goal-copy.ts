@@ -75,9 +75,6 @@ export function paceSentence(
   if (answer.kind === "belowTarget") {
     return `Not at the current mix: new ratings average ${shownTenths(answer.newAverage)}, below ${target}.`;
   }
-  if (answer.kind === "atTarget") {
-    return `Not at the current mix: new ratings average ${shownTenths(answer.newAverage)}, no higher than ${target}.`;
-  }
   const reached = answer.kind === "reaches" ? ", your target" : "";
   return `At your current pace the store shows ${shownTenths(answer.projected)} in ${pluralize(days, "day")}${reached}.`;
 }

@@ -236,10 +236,19 @@ describe("goalAtCurrentMix", () => {
       kind: "belowTarget",
       newAverage: 4.2,
     });
-    expect(goalAtCurrentMix({ ...mix, newAverage: 4.46 })).toEqual({
-      kind: "atTarget",
-      newAverage: 4.46,
-    });
+  });
+
+  it("reaches a target that the new ratings average shows exactly", () => {
+    expect(
+      goalAtCurrentMix({
+        average: 4.3875,
+        count: 2000,
+        newAverage: 4.54,
+        perDay: 40,
+        days: 300,
+        targetTenths: 45,
+      })?.kind,
+    ).toBe("reaches");
   });
 
   it("answers nothing without new ratings", () => {
