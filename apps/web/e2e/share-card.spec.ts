@@ -103,7 +103,7 @@ test.describe("rankings", () => {
     await expect(preview(page)).toHaveAccessibleName(
       headlineSentence(headline, true),
     );
-    expect(headlineSentence(headline, true)).not.toContain("focus timer");
+    await expect(preview(page)).not.toHaveAccessibleName(/focus timer/);
   });
 
   test("switches size", async ({ page }) => {
@@ -396,5 +396,95 @@ test.describe("visibility", () => {
 
     await expect(page.getByText("Latest visibility")).toBeVisible();
     await expect(share(page)).toHaveCount(0);
+  });
+});
+
+test.describe("position history", () => {
+  const KEYWORDS = "/apps/app-1/keywords";
+  const historyTrigger = (page: Page) =>
+    page.getByRole("button", { name: /^Position history: focus timer/ });
+  const popover = (page: Page) =>
+    page.getByRole("dialog", { name: "Position history focus timer" });
+  const shareIcon = (page: Page) =>
+    page.getByRole("button", {
+      name: "Share the position history of focus timer",
+      exact: true,
+    });
+  const keywordDialog = (page: Page) =>
+    page.getByRole("dialog", {
+      name: "Share the position history of focus timer",
+    });
+
+  async function openHistory(page: Page) {
+    await page.goto(KEYWORDS);
+    await (await hydrated(historyTrigger(page))).click();
+    await expect(popover(page)).toBeVisible();
+  }
+
+  test("offers a card beside the position history image button", async ({
+    page,
+  }) => {
+    await openHistory(page);
+
+    await expect(shareIcon(page)).toBeVisible();
+    await expect(
+      popover(page).getByRole("button", {
+        name: "Copy image of the position history of focus timer",
+      }),
+    ).toBeVisible();
+  });
+
+  test("keeps the popover open behind the dialog", async ({ page }) => {
+    await openHistory(page);
+
+    await shareIcon(page).click();
+
+    await expect(keywordDialog(page)).toBeVisible();
+    await expect(
+      page.getByRole("dialog", {
+        name: "Position history focus timer",
+        includeHidden: true,
+      }),
+    ).toBeVisible();
+  });
+
+  test("names the keyword only on this card", async ({ page }) => {
+    await openHistory(page);
+    await shareIcon(page).click();
+
+    await expect(keywordDialog(page).getByRole("img")).toHaveAccessibleName(
+      /for “focus timer”/,
+    );
+  });
+
+  test("returns focus to the share button", async ({ page }) => {
+    await openHistory(page);
+    await shareIcon(page).click();
+    await expect(keywordDialog(page).getByRole("img")).not.toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
+
+    await page.keyboard.press("Escape");
+
+    await expect(keywordDialog(page)).toBeHidden();
+    await expect(popover(page)).toBeVisible();
+    await expect(shareIcon(page)).toBeFocused();
+
+    await page.keyboard.press("Escape");
+
+    await expect(popover(page)).toBeHidden();
+    await expect(historyTrigger(page)).toBeFocused();
+  });
+
+  test("shares from the keyword sheet", async ({ page }) => {
+    await page.goto(`${KEYWORDS}?keyword=kw-1`);
+    await (await hydrated(shareIcon(page))).click();
+    await expect(keywordDialog(page)).toBeVisible();
+
+    await page.keyboard.press("Escape");
+
+    await expect(keywordDialog(page)).toBeHidden();
+    await expect(shareIcon(page)).toBeFocused();
   });
 });
