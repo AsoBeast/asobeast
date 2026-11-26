@@ -195,6 +195,24 @@ describe('placementVerdicts', () => {
       ).toMatchObject({ field: 'title', reason: 'strongestReachable' });
     });
 
+    it('does not count a difficulty equal to the popularity as beatable', () => {
+      expect(
+        only({
+          popularity: 45,
+          difficulty: 45,
+          position: null,
+          checkedOn: null,
+        }),
+      ).toMatchObject({ field: 'keywordField', reason: 'hardToRank' });
+    });
+
+    it('gives the title at popularity 40', () => {
+      expect(only({ popularity: 40, difficulty: 10 })).toMatchObject({
+        field: 'title',
+        reason: 'strongestReachable',
+      });
+    });
+
     it('counts a fresh rank within 30 as reachable', () => {
       expect(
         only({
