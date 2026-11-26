@@ -1,12 +1,14 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/components/auth/use-auth";
 import { useAlertsSeen } from "@/components/layout/AlertsSeen";
 import { hasUnread } from "@/lib/alerts-seen";
 import { alertNewestOptions } from "@/lib/queries";
 
 export function AlertsUnreadDot() {
+  const t = useTranslations("alerts");
   const { status } = useAuth();
   const { seenAt } = useAlertsSeen();
   const { data } = useQuery({
@@ -17,7 +19,7 @@ export function AlertsUnreadDot() {
 
   return (
     <>
-      <span className="sr-only">, new alerts</span>
+      <span className="sr-only">{t("newAlerts")}</span>
       <span
         data-slot="alerts-unread"
         aria-hidden

@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { formatNumberInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -62,11 +65,12 @@ function RowSkeleton({ sentence }: { sentence: string }) {
 }
 
 export function AlertFeedSkeleton() {
+  const t = useTranslations("alerts");
   return (
     <div
       role="status"
       aria-busy="true"
-      aria-label="Loading alerts"
+      aria-label={t("loading")}
       className="flex flex-col gap-6"
     >
       <div className="flex flex-col gap-2">
@@ -104,12 +108,16 @@ export function AlertFeedEmpty({
   searchedOnly: number | null;
   action?: React.ReactNode;
 }) {
+  const t = useTranslations("alerts");
+  const locale = useAppLocale();
   if (searchedOnly !== null) {
     return (
       <EmptyState
         className={EMPTY_STATE}
-        title="No loaded events match"
-        body={`Only the ${searchedOnly} loaded events were searched. Load more to search further back, or clear the filters.`}
+        title={t("noLoadedMatch")}
+        body={t("onlyLoadedSearched", {
+          count: formatNumberInLocale(searchedOnly, locale),
+        })}
         action={action}
       />
     );
@@ -118,8 +126,8 @@ export function AlertFeedEmpty({
     return (
       <EmptyState
         className={EMPTY_STATE}
-        title="No events match"
-        body="Nothing recorded in the last 30 days matches the current app, event type and search."
+        title={t("noMatch")}
+        body={t("noMatchBody")}
         action={action}
       />
     );
@@ -127,11 +135,11 @@ export function AlertFeedEmpty({
   return (
     <EmptyState
       className={EMPTY_STATE}
-      title="Nothing recorded yet"
-      body="The daily run records what it detects here, whether or not you have set up alerts. Come back after the next run, or set up delivery in Settings."
+      title={t("nothingYet")}
+      body={t("nothingYetBody")}
       action={
         <Button asChild variant="outline">
-          <Link href="/settings">Open Settings</Link>
+          <Link href="/settings">{t("openSettings")}</Link>
         </Button>
       }
     />

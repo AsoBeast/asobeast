@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { CardFooter } from "@/components/ui/card";
 import { FOOTER_LINK } from "@/components/layout/panel-classes";
@@ -12,9 +13,6 @@ import { ALERT_DAY, ALERT_DAY_HEADING, ALERT_ROWS } from "./alert-row-classes";
 
 const ALERTS_GUIDE =
   "https://docs.asobeast.com/guides/alerts#see-what-the-run-detected";
-
-export const WHAT_THE_FEED_READS =
-  "Last 30 days, newest first. Events are recorded whether or not a channel delivers them.";
 
 export function AlertEventList({
   groups,
@@ -62,6 +60,7 @@ export function AlertFeedFooter({
   children: ReactNode;
   action?: ReactNode;
 }) {
+  const t = useTranslations("alerts");
   return (
     <CardFooter className="flex-wrap justify-between gap-x-4 gap-y-2">
       {children}
@@ -72,7 +71,7 @@ export function AlertFeedFooter({
           rel="noreferrer"
           className={FOOTER_LINK}
         >
-          How alerts work
+          {t("howAlertsWork")}
         </a>
         {action}
       </div>
@@ -91,6 +90,7 @@ export function AlertFeedEnd({
   failed: boolean;
   onLoadMore: () => Promise<unknown>;
 }) {
+  const t = useTranslations("alerts");
   const end = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const handOffFocus = useFocusAfterCommit();
@@ -112,7 +112,7 @@ export function AlertFeedEnd({
             aria-disabled={loading || undefined}
             onClick={loadMore}
           >
-            Load more
+            {t("loadMore")}
           </Button>
         ) : null
       }
@@ -125,14 +125,10 @@ export function AlertFeedEnd({
       >
         {failed && !loading ? (
           <p role="alert" className="text-destructive">
-            More events could not be loaded. Try again.
+            {t("loadMoreFailed")}
           </p>
         ) : null}
-        <p>
-          {hasMore
-            ? WHAT_THE_FEED_READS
-            : "That is every event of the last 30 days."}
-        </p>
+        <p>{hasMore ? t("feedReads") : t("everyEvent")}</p>
       </div>
     </AlertFeedFooter>
   );
