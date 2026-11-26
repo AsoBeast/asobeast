@@ -13,11 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { queryMarket } from "@/lib/market";
-import { metadataAuditOptions } from "@/lib/queries";
+import { appDetailOptions, metadataAuditOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { CoverageByField } from "./CoverageByField";
 import { COVERAGE_SECTION_ID } from "./coverage-summary";
 import { CoverageTable } from "./CoverageTable";
+import { densityContext } from "./density/density-inputs";
+import { DescriptionDensity } from "./density/DescriptionDensity";
 import { FieldsNote } from "./FieldsNote";
 import { ListingDraftEditor } from "./draft/ListingDraftEditor";
 import { MetadataAssistantPanel } from "./MetadataAssistantPanel";
@@ -72,6 +74,9 @@ export function MetadataAuditView({
   const { data: result } = useSuspenseQuery(
     metadataAuditOptions(id, queryMarket(market, home), localization),
   );
+  const { data: app } = useSuspenseQuery(appDetailOptions(id));
+  const density = densityContext(result, market, localization, app.name);
+  const title = result.fields.find((field) => field.field === "title")?.value;
   const isAppStore = result.store === "APP_STORE";
   const tracked = result.coverage.length > 0;
   const withScreenshotText = showsScreenshotText(
@@ -119,7 +124,22 @@ export function MetadataAuditView({
                   limit={field.limit}
                   indexed={field.indexed}
                   issues={field.issues}
-                />
+                  className={
+                    field.field === "description"
+                      ? "@2xl/metadata:col-span-2"
+                      : undefined
+                  }
+                >
+                  {field.field === "description"
+                    ? (text) => (
+                        <DescriptionDensity
+                          text={text}
+                          title={title ?? null}
+                          context={density}
+                        />
+                      )
+                    : undefined}
+                </MetadataFieldCard>
               ))}
             </section>
             <FieldsNote id={id} keywordFields={keywordFields} />

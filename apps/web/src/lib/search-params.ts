@@ -662,6 +662,13 @@ export type MetadataMode = (typeof METADATA_MODES)[number];
 export const metadataModeParser =
   parseAsStringLiteral(METADATA_MODES).withDefault("live");
 
+export const DENSITY_VIEWS = ["words", "pairs", "triples"] as const;
+
+export type DensityView = (typeof DENSITY_VIEWS)[number];
+
+export const densityViewParser =
+  parseAsStringLiteral(DENSITY_VIEWS).withDefault("words");
+
 export const draftLocaleParser = localizationParser;
 
 export const fieldLocaleParser = localizationParser;

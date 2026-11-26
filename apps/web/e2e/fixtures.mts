@@ -5791,8 +5791,8 @@ export const APP_FR_DETAIL: AppDetail = {
 const FR_SHORT_DESCRIPTION =
   "Vendre tes vêtements de seconde main, acheter des vêtements sans frais";
 
-const FR_DESCRIPTION =
-  "Vinted est la première communauté de mode d'occasion. Vends les vêtements que tu ne portes plus, trouve des pièces uniques à petit prix et profite d'une livraison simple et sécurisée.";
+export const FR_DESCRIPTION =
+  "Vinted est la première communauté de mode d'occasion. Vends les vêtements que tu ne portes plus, trouve des pièces uniques à petit prix et profite d'une livraison simple et sécurisée. Vends, achète et échange des vêtements, des chaussures et des accessoires de mode d'occasion. Des milliers de vêtements arrivent chaque jour.";
 
 export const APP_FR_METADATA_AUDIT: MetadataAuditResult = {
   appId: APP_FR_ID,
@@ -5992,8 +5992,8 @@ export const METADATA_DRAFTS: MetadataDraft[] = [
   },
 ];
 
-const LONG_DESCRIPTION =
-  "Deep Focus Timer turns every study session, deep work block and quiet reading hour into a calm, measurable routine that keeps you away from notifications, tabs and the endless scroll while the timer runs.";
+export const LONG_DESCRIPTION =
+  "Deep Focus Timer turns every study session, deep work block and quiet reading hour into a calm, measurable routine that keeps you away from notifications, tabs and the endless scroll while the timer runs. Plan your day with a productivity app built for calm minds. A quiet routine, a quiet desk and a quiet phone make a calm productivity app feel natural.";
 
 const LONG_KEYWORD_FIELD =
   "focus,pomodoro,study,deepwork,productivity,concentration,habit,routine,planner,tracker,quiet,calm";
