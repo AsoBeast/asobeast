@@ -3,6 +3,7 @@ import {
   normalizeText,
   SPACELESS_CHARACTER,
   tokenize,
+  withoutLinks,
 } from "@asobeast/shared";
 
 export interface TextRange {
@@ -59,7 +60,8 @@ const wordRanges = (text: string, words: readonly string[]): TextRange[] => {
 export function occurrences(text: string, row: string): TextRange[] {
   const words = tokenize(row);
   if (words.length === 0) return [];
+  const searched = withoutLinks(text);
   return SPACELESS_CHARACTER.test(row)
-    ? spacelessRanges(text, row.trim())
-    : wordRanges(text, words);
+    ? spacelessRanges(searched, row.trim())
+    : wordRanges(searched, words);
 }

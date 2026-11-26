@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { countWords, DENSITY_ROW_LIMIT, wordDensity } from './word-density';
+import {
+  countWords,
+  DENSITY_ROW_LIMIT,
+  withoutLinks,
+  wordDensity,
+} from './word-density';
 
 const english = { language: 'en' };
 
@@ -41,6 +46,16 @@ describe('countWords', () => {
   it('counts mixed scripts', () => {
     expect(countWords('Pomodoro タイマー app')).toBe(3);
     expect(countWords('Pomodoroタイマー')).toBe(2);
+  });
+});
+
+describe('withoutLinks', () => {
+  it('blanks links and addresses where they stand', () => {
+    const text = 'See https://x.com/a, mail a@b.co or www.c.org now';
+
+    expect(withoutLinks(text)).toBe(
+      `See ${' '.repeat(16)} mail ${' '.repeat(6)} or ${' '.repeat(9)} now`,
+    );
   });
 });
 

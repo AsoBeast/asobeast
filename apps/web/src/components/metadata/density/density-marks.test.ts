@@ -51,6 +51,14 @@ describe("occurrences", () => {
     ]);
   });
 
+  it("skips the links and addresses the counts leave out", () => {
+    const text =
+      "Planner help: https://example.com/planner/help, planner@example.com, www.planner-site.org and a planner.";
+
+    expect(textAt(text, "planner")).toEqual(["Planner", "planner"]);
+    expect(textAt(text, "help")).toEqual(["help"]);
+  });
+
   it("finds a spaceless row by its characters", () => {
     expect(textAt("集中タイマーと集中タイマー", "集中タイマー")).toEqual([
       "集中タイマー",

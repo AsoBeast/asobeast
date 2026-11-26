@@ -50,7 +50,8 @@ const segmenterFor = (language: string | null): Intl.Segmenter => {
   return segmenter;
 };
 
-const withoutLinks = (text: string): string => text.replace(LINK, ' ');
+export const withoutLinks = (text: string): string =>
+  text.replace(LINK, (link) => ' '.repeat(link.length));
 
 const runsOf = (text: string): string[] => text.match(SPACELESS_OR_NOT) ?? [];
 
