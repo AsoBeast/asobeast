@@ -1,5 +1,6 @@
 export * from './limits';
 export * from './function-words';
+export * from './word-density';
 export * from './annotations';
 export * from './lint';
 export * from './plurals';
