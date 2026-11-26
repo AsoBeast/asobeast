@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   LISTING_TARGET_LIMIT,
+  PLACEMENT_REASONS,
+  PLACEMENT_SUGGESTIONS,
+  placementFieldsOf,
   TARGET_NOT_TRACKED_REASONS,
   targetSlotRole,
 } from '../index';
@@ -22,5 +25,45 @@ describe('the listing targets vocabulary', () => {
 
   it('names one reason a target is not tracked', () => {
     expect(TARGET_NOT_TRACKED_REASONS).toEqual(['keywordLimit']);
+  });
+
+  it('lists every field a suggestion can name, and skip', () => {
+    expect(PLACEMENT_SUGGESTIONS).toEqual([
+      'title',
+      'subtitle',
+      'keywordField',
+      'shortDescription',
+      'description',
+      'skip',
+    ]);
+  });
+
+  it('lists the reasons', () => {
+    expect(PLACEMENT_REASONS).toEqual([
+      'strongestReachable',
+      'nextReachable',
+      'hardToRank',
+      'singleWord',
+      'longTail',
+      'noStrongRoom',
+      'noRoom',
+      'lowPopularity',
+      'lowRelevance',
+      'competitorBrand',
+      'ownBrand',
+    ]);
+  });
+
+  it('names only App Store fields for the App Store and only Google Play fields for Google Play', () => {
+    expect(placementFieldsOf('APP_STORE')).toEqual([
+      'title',
+      'subtitle',
+      'keywordField',
+    ]);
+    expect(placementFieldsOf('GOOGLE_PLAY')).toEqual([
+      'title',
+      'shortDescription',
+      'description',
+    ]);
   });
 });
