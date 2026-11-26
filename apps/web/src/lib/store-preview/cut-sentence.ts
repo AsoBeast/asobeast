@@ -1,5 +1,5 @@
 import type { Store } from "@asobeast/shared";
-import { fitLines, type LineFit } from "../text-fit";
+import { fitLines, type LineFit, type Measure } from "../text-fit";
 import type { FontMeasure } from "./canvas-measure";
 import type { PreviewListing } from "./preview-listing";
 import {
@@ -72,6 +72,11 @@ export function cutSentence({
   };
 }
 
+const tracked =
+  (measure: Measure, letterSpacingPx: number): Measure =>
+  (text) =>
+    measure(text) + letterSpacingPx * Array.from(text).length;
+
 export const fitStoreText = (
   text: string,
   layout: StoreTextLayout,
@@ -81,7 +86,7 @@ export const fitStoreText = (
   fitLines(
     text,
     { width: layout.widths[device], lines: layout.lines },
-    measure(canvasFont(layout)),
+    tracked(measure(canvasFont(layout)), layout.letterSpacingPx),
   );
 
 const measuredText = (

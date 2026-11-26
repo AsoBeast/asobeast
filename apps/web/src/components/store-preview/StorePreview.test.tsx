@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest";
 import type { ScreenshotItem } from "@asobeast/shared";
 import type { FontMeasure } from "@/lib/store-preview/canvas-measure";
 import type { PreviewListing } from "@/lib/store-preview/preview-listing";
-import { STORE_TEXT_LAYOUTS } from "@/lib/store-preview/store-layouts";
+import {
+  STORE_SCREEN_WIDTHS,
+  STORE_TEXT_LAYOUTS,
+} from "@/lib/store-preview/store-layouts";
 import { CutNotes } from "./CutNotes";
 import { CutText } from "./CutText";
 import { StorePreview } from "./StorePreview";
@@ -77,7 +80,7 @@ describe("StorePreview", () => {
       )?.[1],
     );
     const frameBorder = 1;
-    const room = 390 - 2 * frameBorder - 2 * 16;
+    const room = STORE_SCREEN_WIDTHS.APP_STORE.small - 2 * frameBorder - 2 * 16;
     expect(3 * Math.round((height * 9) / 16) + 2 * 8).toBeLessThanOrEqual(room);
   });
 
@@ -136,7 +139,7 @@ describe("CutText", () => {
   it("draws each fitted line in its own element and ends a cut with an ellipsis", () => {
     const markup = renderToStaticMarkup(
       <CutText
-        text="GeoGuess Map Explorer: World Quiz and Travel Trivia"
+        text="GeoGuess Map Explorer: World Quiz and Travel Trivia Game Deluxe"
         layout={layout}
         device="small"
         measure={eightPerCharacter}
@@ -144,10 +147,10 @@ describe("CutText", () => {
     );
     expect(markup).toContain('data-cut="true"');
     expect(markup).toContain(
-      '<span class="block overflow-hidden whitespace-pre">GeoGuess Map Explorer:</span>',
+      '<span class="block overflow-hidden whitespace-pre">GeoGuess Map Explorer: World</span>',
     );
     expect(markup).toMatch(
-      /<span class="block[^"]*">World Quiz and[^<]*…<\/span>/,
+      /<span class="block[^"]*">Quiz and Travel Trivia[^<]*…<\/span>/,
     );
   });
 

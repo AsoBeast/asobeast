@@ -14,6 +14,7 @@ const textStyle = (
   fontFamily: layout.fontFamily,
   fontSize: layout.fontPx,
   fontWeight: layout.weight,
+  letterSpacing: layout.letterSpacingPx,
   lineHeight: `${layout.lineHeightPx}px`,
 });
 

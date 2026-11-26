@@ -17,6 +17,7 @@ export interface StoreTextLayout {
   fontFamily: string;
   fontPx: number;
   weight: number;
+  letterSpacingPx: number;
   lineHeightPx: number;
   lines: number;
   widths: Record<StorePreviewDevice, number>;
@@ -24,51 +25,67 @@ export interface StoreTextLayout {
 
 export const STORE_FONT = {
   APP_STORE:
-    '-apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif',
+    '-apple-system, system-ui, "SF Pro Text", "Helvetica Neue", Arial, sans-serif',
   GOOGLE_PLAY: 'Roboto, "Google Sans", Arial, sans-serif',
 } as const satisfies Record<Store, string>;
 
 export const STORE_SCREEN_WIDTHS = {
-  APP_STORE: { small: 390, large: 430 },
+  APP_STORE: { small: 393, large: 430 },
   GOOGLE_PLAY: { small: 360, large: 412 },
 } as const satisfies Record<Store, Record<StorePreviewDevice, number>>;
+
+export const APP_STORE_COLUMN_INSETS = {
+  search: 184,
+  product: 174,
+} as const satisfies Record<StoreSurface, number>;
+
+const appStoreColumn = (
+  surface: StoreSurface,
+): Record<StorePreviewDevice, number> => ({
+  small: STORE_SCREEN_WIDTHS.APP_STORE.small - APP_STORE_COLUMN_INSETS[surface],
+  large: STORE_SCREEN_WIDTHS.APP_STORE.large - APP_STORE_COLUMN_INSETS[surface],
+});
 
 export const STORE_TEXT_LAYOUTS = {
   APP_STORE: {
     search: {
       title: {
         fontFamily: STORE_FONT.APP_STORE,
-        fontPx: 17,
+        fontPx: 15,
         weight: 600,
-        lineHeightPx: 22,
+        letterSpacingPx: 0,
+        lineHeightPx: 19,
         lines: 1,
-        widths: { small: 188, large: 228 },
+        widths: appStoreColumn("search"),
       },
       subtitle: {
         fontFamily: STORE_FONT.APP_STORE,
-        fontPx: 13,
+        fontPx: 12,
         weight: 400,
-        lineHeightPx: 18,
+        letterSpacingPx: 0,
+        lineHeightPx: 16,
         lines: 1,
-        widths: { small: 188, large: 228 },
+        widths: appStoreColumn("search"),
       },
     },
     product: {
       title: {
         fontFamily: STORE_FONT.APP_STORE,
         fontPx: 22,
-        weight: 700,
+        weight: 500,
+        letterSpacingPx: -0.5,
         lineHeightPx: 28,
         lines: 2,
-        widths: { small: 216, large: 256 },
+        widths: appStoreColumn("product"),
       },
       subtitle: {
         fontFamily: STORE_FONT.APP_STORE,
         fontPx: 15,
         weight: 400,
+        letterSpacingPx: -0.05,
         lineHeightPx: 20,
         lines: 1,
-        widths: { small: 216, large: 256 },
+        widths: appStoreColumn("product"),
       },
     },
   },
@@ -78,6 +95,7 @@ export const STORE_TEXT_LAYOUTS = {
         fontFamily: STORE_FONT.GOOGLE_PLAY,
         fontPx: 16,
         weight: 500,
+        letterSpacingPx: 0,
         lineHeightPx: 22,
         lines: 2,
         widths: { small: 260, large: 300 },
@@ -88,6 +106,7 @@ export const STORE_TEXT_LAYOUTS = {
         fontFamily: STORE_FONT.GOOGLE_PLAY,
         fontPx: 22,
         weight: 500,
+        letterSpacingPx: 0,
         lineHeightPx: 28,
         lines: 2,
         widths: { small: 230, large: 270 },
@@ -96,6 +115,7 @@ export const STORE_TEXT_LAYOUTS = {
         fontFamily: STORE_FONT.GOOGLE_PLAY,
         fontPx: 14,
         weight: 400,
+        letterSpacingPx: 0,
         lineHeightPx: 20,
         lines: 3,
         widths: { small: 328, large: 368 },
