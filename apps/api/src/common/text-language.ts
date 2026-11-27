@@ -49,13 +49,17 @@ interface WordMatch {
   languages: string[];
 }
 
-function bestWordMatch(text: string): WordMatch {
-  const tokens = tokenize(text);
-  const ranked = Object.entries(LATIN_WORDS)
-    .map(([language, words]) => ({
+const hitsOf = (tokens: readonly string[]): Record<string, number> =>
+  Object.fromEntries(
+    Object.entries(LATIN_WORDS).map(([language, words]) => [
       language,
-      hits: tokens.filter((token) => words.has(token)).length,
-    }))
+      tokens.filter((token) => words.has(token)).length,
+    ]),
+  );
+
+function bestWordMatch(text: string): WordMatch {
+  const ranked = Object.entries(hitsOf(tokenize(text)))
+    .map(([language, hits]) => ({ language, hits }))
     .sort((a, b) => b.hits - a.hits);
   const hits = ranked[0].hits;
   return {
@@ -76,13 +80,13 @@ function wordLanguage(text: string): string | null {
 
 const lettersOf = (text: string): string[] => text.match(LETTER) ?? [];
 
-export function reviewLanguage(text: string): string | null {
+export function textLanguage(text: string): string | null {
   const letters = lettersOf(text);
   if (letters.length === 0) return null;
   return scriptLanguage(text, letters) ?? wordLanguage(text);
 }
 
-export function reviewLanguages(text: string): string[] {
+export function textLanguages(text: string): string[] {
   const letters = lettersOf(text);
   if (letters.length === 0) return [];
   const script = scriptLanguage(text, letters);
