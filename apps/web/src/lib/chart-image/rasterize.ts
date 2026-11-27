@@ -39,7 +39,7 @@ function loadImage(markup: string): Promise<HTMLImageElement> {
   }).finally(() => URL.revokeObjectURL(url));
 }
 
-function encodePng(canvas: HTMLCanvasElement): Promise<Blob> {
+export function encodePng(canvas: HTMLCanvasElement): Promise<Blob> {
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) =>

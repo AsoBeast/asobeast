@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import Image from "next/image";
-import { iconRadius } from "./app-icon-radius";
+import { iconRadius } from "@/lib/app-icon-radius";
 
 export function AppIconImage({
   src,

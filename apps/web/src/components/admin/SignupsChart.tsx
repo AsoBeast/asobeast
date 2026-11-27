@@ -2,7 +2,8 @@
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import type { AdminSignupDay } from "@asobeast/shared";
-import { ChartNotice, MIN_TREND_POINTS } from "@/components/charts/ChartStates";
+import { ChartNotice } from "@/components/charts/ChartStates";
+import { MIN_TREND_POINTS } from "@/lib/trend-points";
 import {
   CHART_HEIGHT,
   CHART_MARGIN,

@@ -73,4 +73,25 @@ describe("chartImageFilename", () => {
       }),
     ).toBe("asobeast-position-history-focus-timer-2026-09-28-2026-10-28.png");
   });
+
+  it("names a share card by its chart and size", () => {
+    expect(
+      chartImageFilename({ ...base, chart: "rankings-card", size: "square" }),
+    ).toBe(
+      "asobeast-rankings-card-focus-timer-2026-09-28-2026-10-28-square.png",
+    );
+  });
+
+  it("names a keyword card by its keyword and size", () => {
+    expect(
+      chartImageFilename({
+        ...base,
+        chart: "position-card",
+        keyword: "Pomodoro Timer!",
+        size: "portrait",
+      }),
+    ).toBe(
+      "asobeast-position-card-focus-timer-pomodoro-timer-2026-09-28-2026-10-28-portrait.png",
+    );
+  });
 });

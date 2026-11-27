@@ -6,7 +6,7 @@ import {
   type ChangeField,
   type TrackedKeywordItem,
 } from "@asobeast/shared";
-import { MIN_TREND_POINTS } from "@/components/charts/ChartStates";
+import { MIN_TREND_POINTS } from "@/lib/trend-points";
 import { hasCheck, type RankingChartData } from "@/components/charts/pivot";
 import { formatDayMonth } from "@/lib/format";
 import type { RangePreset } from "@/lib/ranges";
