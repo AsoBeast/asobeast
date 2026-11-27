@@ -56,6 +56,24 @@ If your browser cannot put an image on the clipboard, or refuses it, AsoBeast do
 
 Axis labels in the picture use your system's default font where the page uses Geist, because a picture cannot load the page's fonts. The caption keeps Geist.
 
+### Share a card
+
+A card is a picture made to be posted: a clean frame around one chart with a headline that says what it shows. **Share** sits beside **Download PNG** on the rankings view, above the visibility chart on the overview, and beside the copy icon in a keyword's position history, including the one in the keyword sheet. It opens a dialog with a live preview of the card.
+
+The card holds your app's icon, name and store, a headline worked out from the chart, the chart itself, the UTC days it covers, and a "Made with AsoBeast" line. Three switches turn the change, the app and the footer line off, on every plan, and the chart grows into the room they leave. An app without an icon gets a plain tile in its place.
+
+Each chart writes its own headline:
+
+- The rankings card averages the keywords shown that ranked on every checked day of the range and says how many it averaged, so a keyword that drops out of the results on one day never moves the average by itself. Its line is that daily average.
+- The keyword card names the keyword and where it came from, such as "#3 for “geography quiz”, up from #18". A keyword that dropped out of the results reads `>200` with the rank it fell from. The keyword name appears only on this card.
+- The visibility card gives the score on the last captured day and its change in percent.
+
+The time in a headline runs from the first to the last checked day, so "in 29 days" counts the days the chart saw, not the range you picked.
+
+Pick a size, 16:9 at 1200 by 675 pixels, square at 1080 by 1080, or 4:5 at 1080 by 1350, and a theme, light, dark or the AsoBeast orange. The card keeps its own colours whatever theme the page is in. Your choices are remembered in this browser.
+
+Like the image buttons, a card needs at least four checked days, so **Share** appears once the chart draws a line. **Copy image** and **Download PNG** work as they do for the chart picture: when the browser cannot put an image on the clipboard, the card is downloaded instead. The file is named `asobeast-rankings-card-<app>-<from>-<to>-<size>.png`, with `position-card` and the keyword, or `visibility-card`, for the other two.
+
 ## Search results
 
 For every tracked keyword and day, AsoBeast keeps the top 50 search results with the app, its position and the listing signals the store returned. That snapshot is what makes the rest of the page possible.
