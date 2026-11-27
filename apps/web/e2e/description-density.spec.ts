@@ -116,3 +116,58 @@ test("reads right to left text in its own direction", async ({ page }) => {
   const first = wordsTable(page).getByRole("row").nth(1);
   await expect(first.getByRole("cell").first()).toHaveAttribute("dir", "auto");
 });
+
+type LinkSample = { top: number; rendered: boolean };
+
+test("keeps the controls below in place when it renders", async ({ page }) => {
+  test.slow();
+  const cpu = await page.context().newCDPSession(page);
+  await cpu.send("Emulation.setCPUThrottlingRate", { rate: 6 });
+  await page.addInitScript(() => {
+    const samples: LinkSample[] = [];
+    Object.assign(window, { linkSamples: samples });
+    let link: HTMLAnchorElement | undefined;
+    let section: Element | null | undefined;
+    let after = 0;
+    const sample = () => {
+      link ??= Array.from(document.querySelectorAll("a")).find(
+        (anchor) => anchor.textContent?.trim() === "Edit this keyword field",
+      );
+      section ??= Array.from(document.querySelectorAll("h3, h4"))
+        .find((element) => element.textContent === "Word density")
+        ?.closest("section");
+      if (link) {
+        const rendered = Boolean(section?.querySelector("table"));
+        samples.push({
+          top: link.getBoundingClientRect().top + window.scrollY,
+          rendered,
+        });
+        if (rendered) after += 1;
+      }
+      if (after < 10) requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
+
+  await page.goto("/apps/app-1/metadata?market=pl&localization=pl");
+  await expect(wordsTable(page)).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as unknown as { linkSamples: LinkSample[] }).linkSamples
+            .length,
+      ),
+    )
+    .toBeGreaterThan(10);
+
+  const samples = await page.evaluate(
+    () => (window as unknown as { linkSamples: LinkSample[] }).linkSamples,
+  );
+  const first = samples.findIndex((entry) => entry.rendered);
+  expect(first).toBeGreaterThan(0);
+  const before = samples[first - 1]!.top;
+  for (const { top } of samples.slice(first)) {
+    expect(Math.abs(top - before)).toBeLessThanOrEqual(1);
+  }
+});

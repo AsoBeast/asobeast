@@ -73,6 +73,7 @@ export function ActionTrendChart({
             {...VALUE_AXIS_PROPS}
             reversed={data.reversed}
             domain={data.domain}
+            allowDecimals={data.allowDecimals}
             allowDataOverflow
           />
           {data.markers.map((marker) => (

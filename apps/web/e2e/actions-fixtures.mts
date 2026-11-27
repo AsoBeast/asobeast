@@ -24,8 +24,17 @@ function fixtureAction(id: string): ActionItem {
 
 const template = fixtureAction("act-prune");
 
-export const CROWDED_ACTIONS: ActionItem[] = CROWDED_APPS.map(
-  ([appId, appName, country], index) => ({
+const lint = fixtureAction("act-lint");
+
+export const MARKET_LINT_ACTION: ActionItem = {
+  ...structuredClone(lint),
+  id: "act-crowd-lint-tr",
+  impact: lint.impact - 20,
+  scope: { ...lint.scope, country: "tr" },
+};
+
+export const CROWDED_ACTIONS: ActionItem[] = [
+  ...CROWDED_APPS.map(([appId, appName, country], index): ActionItem => ({
     ...structuredClone(template),
     id: `act-crowd-${index + 1}`,
     impact: template.impact - index,
@@ -36,8 +45,9 @@ export const CROWDED_ACTIONS: ActionItem[] = CROWDED_APPS.map(
       country,
       keywordText: index === 0 ? RTL_KEYWORD : `phrase ${index + 1}`,
     },
-  }),
-);
+  })),
+  MARKET_LINT_ACTION,
+];
 
 const ACTIVE_DAYS = 2;
 

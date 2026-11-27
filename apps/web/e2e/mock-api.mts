@@ -934,7 +934,9 @@ function transition(action: ActionItem, body: ActionTransitionBody): void {
 }
 
 function actionDetail(action: ActionItem): ActionDetail {
-  const trend = trendFor(action);
+  const home =
+    DATASETS[action.scope.appId]?.detail.country ?? action.scope.country;
+  const trend = trendFor(action, home);
   return {
     ...action,
     events: actionEvents[action.id] ?? [],

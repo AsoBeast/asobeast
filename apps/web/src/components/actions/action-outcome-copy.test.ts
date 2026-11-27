@@ -27,6 +27,15 @@ describe("outcomeSentence", () => {
     );
   });
 
+  it("writes a store rule problem count as whole numbers", () => {
+    expect(
+      outcomeSentence(
+        outcome({ metric: "lintErrors", before: 2, after: 0, change: -2 }),
+        null,
+      ),
+    ).toBe("Store rule problems 2 → 0 between Jul 20, 2026 and Jul 30, 2026.");
+  });
+
   it("writes a score change as numbers", () => {
     expect(
       outcomeSentence(

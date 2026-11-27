@@ -123,6 +123,9 @@ test("links the suggestion to the keyword field of the viewed localization", asy
   await expect(
     page.getByText("Suggested keyword field · Polish"),
   ).toBeVisible();
+  await expect(
+    page.getByRole("tablist", { name: "Repeated words shown" }),
+  ).toBeVisible();
   await page.getByRole("link", { name: "Edit this keyword field" }).click();
   await expect(page).toHaveURL(
     /\/apps\/app-1\/metadata\?fieldLocale=pl#app-localizations$/,

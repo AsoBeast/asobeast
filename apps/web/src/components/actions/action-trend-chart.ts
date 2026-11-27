@@ -24,6 +24,7 @@ export interface TrendChartData {
   metricLabel: string;
   reversed: boolean;
   domain: [number, number] | ["auto", "auto"];
+  allowDecimals: boolean;
   markers: TrendMarker[];
   summary: string;
   plotted: number;
@@ -36,6 +37,7 @@ export const TREND_METRIC_LABEL: Record<ActionTrendMetric, string> = {
   rating: "Average review score",
   updateAge: "Days since update",
   conversion: "Conversion",
+  lintErrors: "Store rule problems",
 };
 
 function domainFor(
@@ -59,6 +61,8 @@ function domainFor(
     case "updateAge":
     case "conversion":
       return ["auto", "auto"];
+    case "lintErrors":
+      return [0, Math.max(1, ...rows.map((row) => row.value ?? 0))];
   }
 }
 
@@ -69,6 +73,7 @@ export const METRIC_DIGITS: Record<ActionTrendMetric, number> = {
   rating: MEASURE_DIGITS,
   updateAge: 0,
   conversion: MEASURE_DIGITS,
+  lintErrors: 0,
 };
 
 export function metricValue(metric: ActionTrendMetric, value: number): string {
@@ -142,6 +147,7 @@ export function trendChartData(
     metricLabel: TREND_METRIC_LABEL[trend.metric],
     reversed: trend.metric === "position",
     domain: domainFor(trend, rows),
+    allowDecimals: trend.metric !== "lintErrors",
     markers: markersFor(
       item,
       rows.map((row) => row.date),
