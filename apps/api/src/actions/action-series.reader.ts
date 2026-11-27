@@ -10,20 +10,28 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   ACTION_TREND_RATING_DAYS,
   dailyPoints,
+  MARKET_TREND_METRIC,
   trailingMeanPoints,
   TREND_DIRECTION,
   TREND_METRIC,
+  trendMetricOf,
   TrendWindow,
   trendWindow,
   updateAgePoints,
   conversionPercent,
 } from './action-trend';
-import { HOME_LISTING } from '../apps/listing';
+import { lintErrorPoints, snapshotLintField } from './action-lint-trend';
+import { HOME_LISTING, listingIn } from '../apps/listing';
 import { finalThrough, marketFunnelScope } from '../store-connect/store-funnel';
 
 interface SeriesBody {
   depth: number | null;
   points: ActionTrend['points'];
+}
+
+interface TrendSubject {
+  metric: ActionTrendMetric;
+  home: string | null;
 }
 
 function trendKeywordId(item: ActionItem): string | null {
@@ -37,19 +45,36 @@ export class ActionSeriesReader {
   constructor(private readonly prisma: PrismaService) {}
 
   async read(item: ActionItem, today: Date): Promise<ActionTrend | null> {
-    const metric = TREND_METRIC[item.rule];
+    const subject = await this.subjectOf(item);
+    if (!subject) return null;
     const window = trendWindow(
       new Date(item.firstSeenAt),
       item.closedAt ? new Date(item.closedAt) : null,
       today,
     );
-    const body = await this.series(metric, item, window);
+    const body = await this.series(subject, item, window);
     if (!body) return null;
+    const { metric } = subject;
     return { metric, direction: TREND_DIRECTION[metric], ...body };
   }
 
+  private async subjectOf(item: ActionItem): Promise<TrendSubject | null> {
+    if (MARKET_TREND_METRIC[item.rule] === undefined) {
+      return { metric: TREND_METRIC[item.rule], home: null };
+    }
+    const app = await this.prisma.app.findFirst({
+      where: { id: item.scope.appId },
+      select: { country: true },
+    });
+    if (!app) return null;
+    return {
+      metric: trendMetricOf(item.rule, item.scope.country, app.country),
+      home: app.country,
+    };
+  }
+
   private series(
-    metric: ActionTrendMetric,
+    { metric, home }: TrendSubject,
     item: ActionItem,
     window: TrendWindow,
   ): Promise<SeriesBody | null> {
@@ -66,6 +91,8 @@ export class ActionSeriesReader {
         return this.updateAge(item, window);
       case 'conversion':
         return this.conversion(item, window);
+      case 'lintErrors':
+        return this.lintErrors(item, window, home);
     }
   }
 
@@ -222,5 +249,32 @@ export class ActionSeriesReader {
       select: { capturedAt: true, storeUpdatedAt: true },
     });
     return { depth: null, points: updateAgePoints(rows, from, to) };
+  }
+
+  private async lintErrors(
+    item: ActionItem,
+    window: TrendWindow,
+    home: string | null,
+  ): Promise<SeriesBody | null> {
+    const field = snapshotLintField(item);
+    if (field === null || home === null) return null;
+    const rows = await this.prisma.appSnapshot.findMany({
+      where: {
+        appId: item.scope.appId,
+        ...listingIn(home, item.scope.country),
+        capturedAt: { gte: window.from },
+      },
+      select: {
+        capturedAt: true,
+        title: true,
+        subtitle: true,
+        summary: true,
+        description: true,
+      },
+    });
+    return {
+      depth: null,
+      points: lintErrorPoints(item.scope.store, field, rows, window),
+    };
   }
 }

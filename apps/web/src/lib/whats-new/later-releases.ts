@@ -55,6 +55,11 @@ export const LATER_RELEASES: readonly Release[] = [
       },
       {
         kind: "improved",
+        title: "Market fixes are measured in their market",
+        text: "When you mark a store rule problem in another market's title, subtitle, short description or description as done, its trend and outcome now count the problems left in that market's listing, day by day, instead of following your home market's audit score.",
+      },
+      {
+        kind: "improved",
         title: "Near the top 10 in every market",
         text: "The Action Center now spots a keyword sitting just outside the top 10 in any market you track, not only your home market, when that market's listing holds it only in a weak field. The suggestion opens the metadata page of its market, and the five such suggestions an app gets are shared across its markets.",
       },

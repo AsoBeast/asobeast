@@ -32,6 +32,15 @@ describe("trendChartData", () => {
     expect(data.domain).toEqual([1, 200]);
   });
 
+  it("keeps decimals on the axis of a measured share", () => {
+    expect(
+      trendChartData(
+        trend({ metric: "visibility", direction: "higher_is_better" }),
+        done,
+      ).allowDecimals,
+    ).toBe(true);
+  });
+
   it("uses a fixed scale for scores and the rating", () => {
     const higher = { direction: "higher_is_better" } as const;
 
@@ -51,6 +60,28 @@ describe("trendChartData", () => {
     expect(
       trendChartData(trend({ metric: "updateAge", depth: null }), done).domain,
     ).toEqual(["auto", "auto"]);
+  });
+
+  it("counts store rule problems from zero with room for one", () => {
+    const lint = { metric: "lintErrors", depth: null } as const;
+    const points = (values: number[]) =>
+      values.map((value, index) => ({
+        date: `2026-07-2${index}`,
+        checked: true,
+        value,
+      }));
+
+    expect(
+      trendChartData(trend({ ...lint, points: points([3, 2, 0]) }), done),
+    ).toMatchObject({
+      metricLabel: "Store rule problems",
+      reversed: false,
+      domain: [0, 3],
+      allowDecimals: false,
+    });
+    expect(
+      trendChartData(trend({ ...lint, points: points([0, 0]) }), done).domain,
+    ).toEqual([0, 1]);
   });
 
   it("marks the opening and the close inside the range", () => {

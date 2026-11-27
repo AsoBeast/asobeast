@@ -37,6 +37,21 @@ export const TREND_METRIC: Record<ActionRule, ActionTrendMetric> = {
   'listing.cpp_underperforms': 'conversion',
 };
 
+export const MARKET_TREND_METRIC: Partial<
+  Record<ActionRule, ActionTrendMetric>
+> = {
+  'metadata.fix_lint': 'lintErrors',
+};
+
+export function trendMetricOf(
+  rule: ActionRule,
+  market: string,
+  home: string,
+): ActionTrendMetric {
+  const marketMetric = market === home ? undefined : MARKET_TREND_METRIC[rule];
+  return marketMetric ?? TREND_METRIC[rule];
+}
+
 export const TREND_DIRECTION: Record<ActionTrendMetric, ActionTrendDirection> =
   {
     position: 'lower_is_better',
@@ -45,6 +60,7 @@ export const TREND_DIRECTION: Record<ActionTrendMetric, ActionTrendDirection> =
     rating: 'higher_is_better',
     updateAge: 'lower_is_better',
     conversion: 'higher_is_better',
+    lintErrors: 'lower_is_better',
   };
 
 export interface TrendWindow {
