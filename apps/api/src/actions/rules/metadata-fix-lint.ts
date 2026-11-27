@@ -7,6 +7,8 @@ import {
 import type { ActionContext, ActionContextApp } from '../action-context';
 import { clampUnit } from '../action-impact';
 import type { ActionDetector, DetectedAction } from '../action-rule';
+import { actionFingerprint } from '../action-fingerprint';
+import { appListings } from '../action-market-metadata';
 
 export const LINT_ACTION_SEVERITY: LintSeverity = 'error';
 export const LINT_FIELD_REACH: Record<MetadataField, number> = {
@@ -21,17 +23,24 @@ export const LINT_FIELD_REACH: Record<MetadataField, number> = {
 export const LINT_BASE_SEVERITY = 0.6;
 export const LINT_SEVERITY_STEP = 0.2;
 
-function detectField(
-  app: ActionContextApp,
+function actionIssues(
   audit: MetadataFieldAudit,
-): DetectedAction | null {
-  const issues = audit.issues
+): MetadataFixLintEvidence['issues'] {
+  return audit.issues
     .filter((issue) => issue.severity === LINT_ACTION_SEVERITY)
     .map((issue) => ({
       rule: issue.rule,
       message: issue.message,
       offendingText: issue.offendingText ?? null,
     }));
+}
+
+function detectField(
+  app: ActionContextApp,
+  country: string,
+  audit: MetadataFieldAudit,
+): DetectedAction | null {
+  const issues = actionIssues(audit);
   if (issues.length === 0) return null;
 
   const evidence: MetadataFixLintEvidence = {
@@ -45,7 +54,7 @@ function detectField(
     rule: 'metadata.fix_lint',
     appId: app.id,
     store: app.store,
-    country: app.country,
+    country,
     keywordId: null,
     discriminator: audit.field,
     terms: {
@@ -59,14 +68,43 @@ function detectField(
   };
 }
 
+function problemKey(audit: MetadataFieldAudit): string {
+  const issues = actionIssues(audit).map(
+    (issue) => `${issue.rule}~${issue.offendingText ?? ''}`,
+  );
+  return [audit.field, audit.value ?? '', ...issues].join('~');
+}
+
+function reportingMarket(
+  app: ActionContextApp,
+  shown: readonly DetectedAction[],
+): DetectedAction {
+  return (
+    shown.find((detection) =>
+      app.heldLintFingerprints.has(actionFingerprint(detection)),
+    ) ?? shown[0]
+  );
+}
+
+function detectForApp(app: ActionContextApp): DetectedAction[] {
+  const shownByProblem = new Map<string, DetectedAction[]>();
+  for (const { country, fields } of appListings(app)) {
+    for (const audit of fields) {
+      const detection = detectField(app, country, audit);
+      if (detection === null) continue;
+      const key = problemKey(audit);
+      shownByProblem.set(key, [...(shownByProblem.get(key) ?? []), detection]);
+    }
+  }
+  return [...shownByProblem.values()].map((shown) =>
+    reportingMarket(app, shown),
+  );
+}
+
 export function detectMetadataFixLint(
   context: ActionContext,
 ): DetectedAction[] {
-  return context.apps.flatMap((app) =>
-    app.metadataFields
-      .map((audit) => detectField(app, audit))
-      .filter((detection): detection is DetectedAction => detection !== null),
-  );
+  return context.apps.flatMap(detectForApp);
 }
 
 export const metadataFixLintDetector: ActionDetector = {

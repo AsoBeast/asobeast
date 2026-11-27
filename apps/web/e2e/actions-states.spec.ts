@@ -40,7 +40,7 @@ test("start here names the top action, its steps and where to fix it", async ({
   ]);
   await expect(
     start.getByRole("link", { name: "Fix it in Metadata" }),
-  ).toHaveAttribute("href", "/apps/app-1/metadata?keyword=kw-1");
+  ).toHaveAttribute("href", "/apps/app-1/metadata?market=us&keyword=kw-1");
 
   await start.getByRole("button", { name: "See the evidence" }).click();
   await expect(page.getByRole("dialog")).toBeVisible();

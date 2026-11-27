@@ -34,6 +34,12 @@ import {
 } from './action-competitors';
 import { HOME_EVENTS, HOME_LISTING } from '../apps/listing';
 import { TOP_TEN_ROWS } from '../rankings/top-ten';
+import {
+  ActionMarketMetadata,
+  auditMarkets,
+  loadHeldLintFingerprints,
+  metadataMarkets,
+} from './action-market-metadata';
 
 export interface ActionAuditCheck {
   id: string;
@@ -85,6 +91,12 @@ export interface ActionReview {
   replyCheckedAt: Date | null;
 }
 
+interface DerivedMetadata {
+  coverage: KeywordCoverageRow[];
+  fields: MetadataFieldAudit[];
+  markets: ActionMarketMetadata[];
+}
+
 export interface ActionContextApp {
   id: string;
   name: string | null;
@@ -95,6 +107,8 @@ export interface ActionContextApp {
   keywordsByCountry: Map<string, TrackedKeywordItem[]>;
   coverage: KeywordCoverageRow[];
   metadataFields: MetadataFieldAudit[];
+  marketMetadata: ActionMarketMetadata[];
+  heldLintFingerprints: ReadonlySet<string>;
   audit: ActionAuditSnapshot | null;
   changeEvents: ActionChangeEvent[];
   visibilityByCountry: Map<string, ActionVisibilityPoint[]>;
@@ -292,7 +306,7 @@ export class ActionContextLoader {
     const from = daysAgo(now, CONTEXT_WINDOW_DAYS);
     const serpFrom = daysAgo(now, CONTEXT_SERP_WINDOW_DAYS);
 
-    const [rankings, changeEvents, reviews, auditScores, snapshots] =
+    const [rankings, changeEvents, reviews, auditScores, snapshots, heldLint] =
       await Promise.all([
         this.prisma.keywordRanking.findMany({
           where: { appId: { in: appIds }, date: { gte: from } },
@@ -353,6 +367,7 @@ export class ActionContextLoader {
           },
           orderBy: { capturedAt: 'desc' },
         }),
+        loadHeldLintFingerprints(this.prisma, appIds),
       ]);
 
     const rankingsByApp = groupBy(rankings, (row) => row.appId);
@@ -418,6 +433,7 @@ export class ActionContextLoader {
             versions: versionsByApp.get(app.id) ?? [],
             competitors: competitorRows,
             homeKeywordIds: homeIds.get(app.id) ?? new Set(),
+            heldLint: heldLint.get(app.id) ?? new Set(),
           },
           serpByKeyword,
           volatility,
@@ -429,16 +445,31 @@ export class ActionContextLoader {
 
   private async derive(app: { id: string; country: string }): Promise<{
     tracked: TrackedKeywordItem[];
-    metadata: { coverage: KeywordCoverageRow[]; fields: MetadataFieldAudit[] };
+    metadata: DerivedMetadata;
   } | null> {
     try {
-      const [tracked, metadata] = await Promise.all([
+      const [tracked, home] = await Promise.all([
         this.keywords.listTracked(app.id, undefined, undefined, {
           brandFacts: true,
         }),
         this.metadata.audit(app.id, app.country),
       ]);
-      return { tracked, metadata };
+      const markets = await auditMarkets(
+        metadataMarkets(app.country, tracked),
+        (country) => this.metadata.audit(app.id, country),
+        (country, error) =>
+          this.logger.debug(
+            `no ${country} metadata for app ${app.id} in this action run: ${messageOf(error)}`,
+          ),
+      );
+      return {
+        tracked,
+        metadata: {
+          coverage: home.coverage,
+          fields: home.fields,
+          markets,
+        },
+      };
     } catch (error) {
       this.logger.warn(
         `skipping app ${app.id} in this action run: ${messageOf(error)}`,
@@ -461,7 +492,7 @@ export class ActionContextLoader {
       }>;
     },
     trackedKeywords: TrackedKeywordItem[],
-    metadata: { coverage: KeywordCoverageRow[]; fields: MetadataFieldAudit[] },
+    metadata: DerivedMetadata,
     rows: {
       rankings: RankingRow[];
       changes: Array<{ field: string; capturedAt: Date }>;
@@ -480,6 +511,7 @@ export class ActionContextLoader {
       }>;
       competitors: CompetitorRows;
       homeKeywordIds: ReadonlySet<string>;
+      heldLint: ReadonlySet<string>;
     },
     serpByKeyword: Map<
       string,
@@ -555,6 +587,8 @@ export class ActionContextLoader {
       keywordsByCountry,
       coverage: metadata.coverage,
       metadataFields: metadata.fields,
+      marketMetadata: metadata.markets,
+      heldLintFingerprints: rows.heldLint,
       audit: toAuditSnapshot(rows.audit),
       changeEvents: rows.changes
         .filter((row) => isChangeField(row.field))
