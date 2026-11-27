@@ -163,12 +163,15 @@ export function AppLocalizationsSection({
   id,
   canDraft,
   suggestion,
+  ownerWhileLoading,
 }: {
   id: string;
   canDraft: boolean;
   suggestion: KeywordFieldSuggestion | null;
+  ownerWhileLoading: boolean;
 }) {
-  const { isOwner } = useAuth();
+  const auth = useAuth();
+  const isOwner = auth.isLoading ? ownerWhileLoading : auth.isOwner;
   const { data, error, isError, refetch } = useQuery({
     ...appLocalizationsOptions(id),
     retry: false,
