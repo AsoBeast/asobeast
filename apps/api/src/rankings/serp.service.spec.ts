@@ -12,6 +12,7 @@ interface StoredRow {
   iconUrl?: string | null;
   ratingAvg?: number | null;
   ratingCount?: number | null;
+  shortDescription?: string | null;
 }
 
 interface SerpWhere {
@@ -24,7 +25,12 @@ const isDay = (date: SerpWhere['date']): date is Date => date instanceof Date;
 
 const LATEST = '2026-07-01';
 
-const row = (position: number, storeAppId: string, title = storeAppId) => ({
+const row = (
+  position: number,
+  storeAppId: string,
+  title = storeAppId,
+  shortDescription: string | null = null,
+) => ({
   position,
   storeAppId,
   title,
@@ -32,7 +38,15 @@ const row = (position: number, storeAppId: string, title = storeAppId) => ({
   iconUrl: null,
   ratingAvg: null,
   ratingCount: null,
+  shortDescription,
 });
+
+const play = {
+  id: 'kw1',
+  text: 'habit tracker',
+  store: Store.GOOGLE_PLAY,
+  country: 'us',
+};
 
 const dayKey = (date: Date) => date.toISOString().slice(0, 10);
 
@@ -451,29 +465,95 @@ describe('SerpService.serp', () => {
     expect(snapshot.entries[1]).not.toHaveProperty('subtitle');
   });
 
-  it('reads no subtitle on Google Play', async () => {
-    const { service, snapshotFindMany } = setup({
-      keyword: {
-        id: 'kw1',
-        text: 'habit tracker',
-        store: Store.GOOGLE_PLAY,
-        country: 'us',
-      },
-      days: {
-        [LATEST]: [row(1, 'self', 'Habit Tracker'), row(2, 'rival', 'Streaks')],
-      },
-      apps: [
-        { id: 'app1', storeAppId: 'self', country: 'us', isCompetitor: false },
-        { id: 'app2', storeAppId: 'rival', country: 'us', isCompetitor: true },
-      ],
-      snapshots: [{ appId: 'app2', subtitle: 'Habit tracker' }],
+  it('reads the short description column of each row', async () => {
+    const { service, findMany } = setup({
+      days: { [LATEST]: [row(1, 'a', 'Habit Tracker')] },
     });
 
-    const snapshot = await service.serp('kw1', {});
+    await service.serp('kw1', {});
+
+    const shownDay = findMany.mock.calls.find(
+      ([query]) => query.where.date !== undefined,
+    ) as unknown as [{ select: Record<string, boolean> }];
+    expect(shownDay[0].select.shortDescription).toBe(true);
+  });
+
+  it('judges a google play app on the short description of the search', async () => {
+    const { service, snapshotFindMany } = setup({
+      keyword: play,
+      days: {
+        [LATEST]: [
+          row(1, 'both', 'Habit Tracker', 'Habit tracker for streaks'),
+          row(2, 'desc', 'Streaks', 'Habit tracker and planner'),
+          row(3, 'split', 'Habit Builder', 'Tracker for streaks'),
+          row(4, 'none', 'Daily Goals', 'Plan your day'),
+          row(5, 'plain', 'Habit Tracker Pro'),
+          row(6, 'unknown', 'Streaks Pro'),
+        ],
+      },
+      apps: [
+        { id: 'app1', storeAppId: 'desc', country: 'us', isCompetitor: false },
+        { id: 'app2', storeAppId: 'none', country: 'us', isCompetitor: true },
+      ],
+      snapshots: [{ appId: 'app1', subtitle: 'Habit tracker' }],
+    });
+
+    const { entries } = await service.serp('kw1', {});
 
     expect(snapshotFindMany).not.toHaveBeenCalled();
-    expect(snapshot.entries[0].placement).toBe('title');
-    expect(snapshot.entries[1]).not.toHaveProperty('placement');
-    expect(snapshot.entries.some((entry) => 'subtitle' in entry)).toBe(false);
+    expect(entries[0]).toMatchObject({
+      shortDescription: 'Habit tracker for streaks',
+      placement: 'both',
+    });
+    expect(entries[1]).toMatchObject({
+      placement: 'subtitle',
+      shortDescriptionSegments: [
+        { text: 'Habit', match: 'exact' },
+        { text: ' ', match: 'none' },
+        { text: 'tracker', match: 'exact' },
+        { text: ' and planner', match: 'none' },
+      ],
+    });
+    expect(entries[2].placement).toBe('split');
+    expect(entries[3].placement).toBe('none');
+    expect(entries[4].placement).toBe('title');
+    expect(entries[4]).not.toHaveProperty('shortDescription');
+    expect(entries[5]).not.toHaveProperty('placement');
+    expect(entries[5]).not.toHaveProperty('shortDescription');
+    expect(
+      entries.some(
+        (entry) => 'subtitle' in entry || 'subtitleSegments' in entry,
+      ),
+    ).toBe(false);
+  });
+
+  it('reads a day without short descriptions as unknown, never as neither', async () => {
+    const { service } = setup({
+      keyword: play,
+      days: {
+        [LATEST]: [
+          row(1, 'a', 'Habit Tracker'),
+          row(2, 'b', 'Streaks'),
+          row(3, 'c', 'Daily Goals'),
+        ],
+      },
+    });
+
+    const { entries } = await service.serp('kw1', {});
+
+    expect(entries.some((entry) => entry.placement === 'none')).toBe(false);
+    expect(entries[0].placement).toBe('title');
+    expect(entries[1]).not.toHaveProperty('placement');
+  });
+
+  it('never answers a short description for an app store keyword', async () => {
+    const { service } = setup({
+      days: { [LATEST]: [row(1, 'a', 'Habit Tracker', 'Plan your day')] },
+    });
+
+    const { entries } = await service.serp('kw1', {});
+
+    expect(entries[0]).not.toHaveProperty('shortDescription');
+    expect(entries[0]).not.toHaveProperty('shortDescriptionSegments');
   });
 });

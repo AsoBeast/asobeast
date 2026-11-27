@@ -27,7 +27,7 @@ import {
 } from './rankings.support';
 import { serpExits, serpMovement } from './serp-history';
 import { detectEntrants, SerpSnapshotDay } from './serp-movers';
-import { placementJudge } from './serp-placement';
+import { listingJudge } from './serp-listing-judge';
 import { titleJudge } from './serp-title-match';
 import { TOP_TEN_ROWS } from './top-ten';
 
@@ -89,15 +89,7 @@ export class SerpService {
     const roleOf = roleIn(preferredRecords(records, keyword.country));
     const subtitles = await this.subtitlesOf(keyword, rows, records, shown);
     const judgeTitle = titleJudge(keyword.text);
-    const judgePlacement = placementJudge(keyword.text);
-    const judge = (storeAppId: string, title: string) => {
-      const subtitle = subtitles.get(storeAppId);
-      return {
-        ...judgeTitle(title),
-        ...(subtitle !== undefined ? { subtitle } : {}),
-        ...judgePlacement(title, subtitle),
-      };
-    };
+    const judgeListing = listingJudge(keyword.store, keyword.text, subtitles);
 
     return {
       keywordId,
@@ -112,7 +104,8 @@ export class SerpService {
         ratingCount: entry.ratingCount,
         ...roleOf(entry.storeAppId),
         iconUrl: entry.iconUrl,
-        ...judge(entry.storeAppId, entry.title),
+        ...judgeTitle(entry.title),
+        ...judgeListing(entry),
         previous: entry.previous,
         delta: entry.delta,
         movement: entry.movement,
@@ -193,6 +186,7 @@ export class SerpService {
         iconUrl: true,
         ratingAvg: true,
         ratingCount: true,
+        shortDescription: true,
       },
     });
   }

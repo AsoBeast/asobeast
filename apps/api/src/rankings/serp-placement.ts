@@ -7,7 +7,7 @@ import { judgeField, keywordWords } from '../keywords/keyword-breakdown-fields';
 
 export interface PlacementJudgement {
   placement?: SerpKeywordPlacement;
-  subtitleSegments?: KeywordBreakdownSegment[];
+  secondSegments?: KeywordBreakdownSegment[];
 }
 
 const isExact = (field: KeywordBreakdownField, index: number) =>
@@ -20,24 +20,24 @@ const holdsEvery = (field: KeywordBreakdownField) =>
 
 function placementOf(
   title: KeywordBreakdownField,
-  subtitle: KeywordBreakdownField | undefined,
+  second: KeywordBreakdownField | undefined,
 ): SerpKeywordPlacement | undefined {
   const inTitle = holdsEvery(title);
-  if (subtitle === undefined) return inTitle ? 'title' : undefined;
-  const inSubtitle = holdsEvery(subtitle);
-  if (inTitle) return inSubtitle ? 'both' : 'title';
-  if (inSubtitle) return 'subtitle';
+  if (second === undefined) return inTitle ? 'title' : undefined;
+  const inSecond = holdsEvery(second);
+  if (inTitle) return inSecond ? 'both' : 'title';
+  if (inSecond) return 'subtitle';
   const split = title.words.every(
-    (_, index) => isExact(title, index) || isExact(subtitle, index),
+    (_, index) => isExact(title, index) || isExact(second, index),
   );
   return split ? 'split' : 'none';
 }
 
 export function placementJudge(
   keyword: string,
-): (title: string, subtitle: string | null | undefined) => PlacementJudgement {
+): (title: string, second: string | null | undefined) => PlacementJudgement {
   const words = keywordWords(keyword);
-  return (title, subtitle) => {
+  return (title, second) => {
     if (words.length === 0) return {};
     const titleField = judgeField(
       { field: 'title', value: title },
@@ -45,20 +45,20 @@ export function placementJudge(
       words,
       false,
     );
-    const subtitleField =
-      subtitle === undefined
+    const secondField =
+      second === undefined
         ? undefined
         : judgeField(
-            { field: 'subtitle', value: subtitle ?? '' },
+            { field: 'subtitle', value: second ?? '' },
             keyword,
             words,
-            Boolean(subtitle),
+            Boolean(second),
           );
-    const placement = placementOf(titleField, subtitleField);
+    const placement = placementOf(titleField, secondField);
     return {
       ...(placement ? { placement } : {}),
-      ...(subtitleField?.segments
-        ? { subtitleSegments: subtitleField.segments }
+      ...(secondField?.segments
+        ? { secondSegments: secondField.segments }
         : {}),
     };
   };
