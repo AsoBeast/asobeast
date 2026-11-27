@@ -1,4 +1,5 @@
 import type { Locale } from "@/lib/locale";
+import { AUDIT_DETAIL_PATTERNS_ZH } from "./audit-detail-zh";
 
 const FACTOR_LABEL_ZH: Record<string, string> = {
   title: "标题",
@@ -205,7 +206,7 @@ const PATTERNS: ReadonlyArray<
     "全部 $1 个本地化都填写了推广文本。",
   ],
   [/^Average rating is ([\d.]+)\.$/, "平均评分为 $1。"],
-  [/^The last update was (\d+) days ago\.$/, "上次更新是 $1 天前。"],
+  [/^The last update was ([\d,]+) days ago\.$/, "上次更新是 $1 天前。"],
   [
     /^(\d+) of (\d+) recommended screenshots used\.$/,
     "已使用 $1 / $2 张推荐截图。",
@@ -218,7 +219,7 @@ const PATTERNS: ReadonlyArray<
     /^Search visibility: Visibility is ([\d.]+)\.$/,
     "搜索可见度：可见度为 $1。",
   ],
-  [/^The icon shows (\S+) elements\.$/, "图标包含 $1 个元素。"],
+  [/^The icon shows (.+) elements\.$/, "图标包含 $1 个元素。"],
   [/^A feature graphic is set\.$/, "已设置特色图片。"],
   [/^No feature graphic found\.$/, "未找到特色图片。"],
   [/^A promo video is linked\.$/, "已关联宣传视频。"],
@@ -259,6 +260,7 @@ const PATTERNS: ReadonlyArray<
 ];
 
 const LABEL_PATTERNS: ReadonlyArray<readonly [RegExp, string]> = [
+  [/^Add social proof to your description$/, "在描述中加入社会认同"],
   [/^Add a subtitle$/, "添加副标题"],
   [/^Raise your search visibility$/, "提升搜索可见度"],
   [/^Recover your search visibility$/, "恢复搜索可见度"],
@@ -364,6 +366,13 @@ export function auditReadinessLinkLabel(
 
 export function auditText(text: string, locale: Locale): string {
   if (!chinese(locale)) return text;
+  text = AUDIT_DETAIL_PATTERNS_ZH.reduce(
+    (value, [pattern, replacement]) =>
+      typeof replacement === "function"
+        ? value.replace(pattern, replacement as (...args: string[]) => string)
+        : value.replace(pattern, replacement),
+    text,
+  );
   const evidence = text.match(/^Evidence for (.+)\.$/);
   if (evidence) {
     return `${CHECK_LABEL_ZH[evidence[1]] ?? evidence[1]}的证据。`;

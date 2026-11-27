@@ -77,6 +77,48 @@ describe("audit content in Simplified Chinese", () => {
     );
   });
 
+  it("translates generated check details and fixes", () => {
+    expect(auditText("No policy or formatting issues found.", "zh-CN")).toBe(
+      "未发现商店规则或格式问题。",
+    );
+    expect(auditText("No competitor titles to compare against.", "zh-CN")).toBe(
+      "没有可对比的竞品标题。",
+    );
+    expect(auditText("App Store Connect analytics only.", "zh-CN")).toBe(
+      "仅 App Store Connect 分析数据。",
+    );
+    expect(
+      auditText("Submitted 21 days before the publish window.", "zh-CN"),
+    ).toBe("在发布窗口前 21 天提交。");
+    expect(
+      auditText(
+        "You have 341 ratings; the median competitor has 300.",
+        "zh-CN",
+      ),
+    ).toBe("你有 341 条评分；竞品中位数为 300。");
+    expect(
+      auditText(
+        "The title has “geo”, “map” from “geo quiz map”, but not the whole phrase.",
+        "zh-CN",
+      ),
+    ).toContain("没有完整短语");
+    expect(
+      auditText("Google Play does not allow emoji in the title.", "zh-CN"),
+    ).toContain("表情符号");
+  });
+
+  it("translates generated recommendation labels", () => {
+    expect(auditLabel("Add social proof to your description", "zh-CN")).toBe(
+      "在描述中加入社会认同",
+    );
+    expect(auditLabel("Raise your icon's contrast", "zh-CN")).toBe(
+      "提高图标对比度",
+    );
+    expect(
+      auditLabel("Cut your keyword field to 100 characters", "zh-CN"),
+    ).toBe("将关键词字段精简到 100 个字符");
+  });
+
   it("keeps English unchanged", () => {
     expect(auditText("19 of 30 characters used.", "en")).toBe(
       "19 of 30 characters used.",
