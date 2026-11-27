@@ -35,6 +35,11 @@ export const LATER_RELEASES: readonly Release[] = [
       },
       {
         kind: "new",
+        title: "How competitors' new ratings compare",
+        text: "On the reviews page, a second sentence now says what the middle one of your tracked competitors' new ratings averages over the same range, and whether it is above or below yours. It shows once at least three competitors have enough new ratings to compare, so one outlier never stands for the rest.",
+      },
+      {
+        kind: "new",
         title: "Share a chart as a card",
         text: "The rankings chart, the visibility chart and a keyword's position history now have a Share button that makes a card ready to post: your app's icon and name, a headline such as how far your average rank moved, the chart and the dates. Pick a wide, square or tall size and a paper, night, dusk or sunrise look, turn the change or the app off, then copy or download it. Every card carries a Tracked with AsoBeast line with the AsoBeast address.",
       },
