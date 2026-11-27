@@ -20,26 +20,34 @@ export interface NewRatingsAveragePoint {
   average: number | null;
 }
 
-interface CountRead {
+interface Read {
   date: string;
   count: number;
-  average: number | null;
+  sum: number | null;
+  rounding: number;
 }
 
-type RatedRead = CountRead & { average: number };
+type SummedRead = Read & { sum: number };
 
-const isRated = (read: CountRead): read is RatedRead => read.average !== null;
+const hasSum = (read: Read): read is SummedRead => read.sum !== null;
 
-function countReads(points: readonly RatingsPoint[]): CountRead[] {
+function impliedReads(points: readonly RatingsPoint[]): Read[] {
   return points.flatMap(({ date, ratingAvg, ratingCount }) =>
     ratingCount === null
       ? []
-      : [{ date, count: ratingCount, average: ratingAvg }],
+      : [
+          {
+            date,
+            count: ratingCount,
+            sum: ratingAvg === null ? null : ratingAvg * ratingCount,
+            rounding: ratingCount * AVERAGE_ROUNDING,
+          },
+        ],
   );
 }
 
-function segmentsOf(reads: readonly CountRead[]): CountRead[][] {
-  const segments: CountRead[][] = [];
+function segmentsOf(reads: readonly Read[]): Read[][] {
+  const segments: Read[][] = [];
   reads.forEach((read, index) => {
     if (index === 0 || read.count < reads[index - 1].count) {
       segments.push([read]);
@@ -50,18 +58,18 @@ function segmentsOf(reads: readonly CountRead[]): CountRead[][] {
   return segments;
 }
 
-function pooledAverage(reads: readonly CountRead[]): NewRatingsAverage | null {
+function pooledAverage(reads: readonly Read[]): NewRatingsAverage | null {
   let sum = 0;
   let added = 0;
   let error = 0;
   for (const segment of segmentsOf(reads)) {
-    const rated = segment.filter(isRated);
-    const start = rated[0];
-    const end = rated[rated.length - 1];
+    const summed = segment.filter(hasSum);
+    const start = summed[0];
+    const end = summed[summed.length - 1];
     if (!start || end.count <= start.count) continue;
-    sum += end.average * end.count - start.average * start.count;
+    sum += end.sum - start.sum;
     added += end.count - start.count;
-    error += (start.count + end.count) * AVERAGE_ROUNDING;
+    error += start.rounding + end.rounding;
   }
   if (added < NEW_RATINGS_MIN_ADDED) return null;
   if (error / added > NEW_RATINGS_MAX_ERROR) return null;
@@ -72,25 +80,16 @@ function pooledAverage(reads: readonly CountRead[]): NewRatingsAverage | null {
   return { average, added, span };
 }
 
-export function newRatingsAverage(
-  points: readonly RatingsPoint[],
-): NewRatingsAverage | null {
-  return pooledAverage(countReads(points));
-}
-
-function windowAverage(window: readonly CountRead[]): number | null {
+function windowAverage(window: readonly Read[]): number | null {
   if (segmentsOf(window).length > 1) return null;
   return pooledAverage(window)?.average ?? null;
 }
 
-export function newRatingsAverageSeries(
-  points: readonly RatingsPoint[],
-): NewRatingsAveragePoint[] {
-  const reads = countReads(points);
+function seriesOf(reads: readonly Read[]): NewRatingsAveragePoint[] {
   const first = reads[0];
   if (!first) return [];
   const firstFull = dayBefore(first.date, -NEW_RATINGS_WINDOW_DAYS);
-  return reads.filter(isRated).map(({ date }) => {
+  return reads.filter(hasSum).map(({ date }) => {
     if (date < firstFull) return { date, average: null };
     const since = dayBefore(date, NEW_RATINGS_WINDOW_DAYS);
     const window = reads.filter(
@@ -98,4 +97,16 @@ export function newRatingsAverageSeries(
     );
     return { date, average: windowAverage(window) };
   });
+}
+
+export function newRatingsAverage(
+  points: readonly RatingsPoint[],
+): NewRatingsAverage | null {
+  return pooledAverage(impliedReads(points));
+}
+
+export function newRatingsAverageSeries(
+  points: readonly RatingsPoint[],
+): NewRatingsAveragePoint[] {
+  return seriesOf(impliedReads(points));
 }
