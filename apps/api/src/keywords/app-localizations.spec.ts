@@ -4,6 +4,7 @@ const input = (
   overrides: Partial<Parameters<typeof toAppLocalizationItems>[0]> = {},
 ) => ({
   home: 'us',
+  defaultLocalization: null,
   markets: ['us'],
   stored: [],
   fields: [],
@@ -165,5 +166,55 @@ describe('toAppLocalizationItems', () => {
 
     expect(tags(items)).toEqual(['en-US', 'es-MX']);
     expect(items[1]).toMatchObject({ origin: 'detected', phrases: ['habito'] });
+  });
+
+  describe('a listing written in a native localization', () => {
+    const polish = (
+      overrides: Partial<Parameters<typeof toAppLocalizationItems>[0]> = {},
+    ) =>
+      input({
+        home: 'pl',
+        defaultLocalization: 'pl',
+        markets: ['pl'],
+        ...overrides,
+      });
+
+    it('puts the native default first as home', () => {
+      expect(toAppLocalizationItems(polish())).toEqual([
+        expect.objectContaining({
+          localization: 'pl',
+          origin: 'home',
+          readBy: [{ country: 'pl', role: 'additional', home: true }],
+        }),
+      ]);
+    });
+
+    it('lists the storefront primary only when it holds a field or a row', () => {
+      expect(
+        tags(
+          toAppLocalizationItems(
+            polish({
+              fields: [
+                {
+                  localization: 'en-GB',
+                  phrases: ['dziennik'],
+                  updatedAt: savedAt,
+                },
+              ],
+            }),
+          ),
+        ),
+      ).toEqual(['pl', 'en-GB']);
+      expect(tags(toAppLocalizationItems(polish()))).toEqual(['pl']);
+    });
+
+    it('never lists the home tag twice', () => {
+      const items = toAppLocalizationItems(
+        polish({ stored: [{ localization: 'pl', origin: 'detected' }] }),
+      );
+
+      expect(tags(items)).toEqual(['pl']);
+      expect(items[0].origin).toBe('home');
+    });
   });
 });

@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  isAppStoreLocalization,
-  storefrontLocalizations,
-} from "@asobeast/shared";
+import { isAppStoreLocalization } from "@asobeast/shared";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -18,10 +15,9 @@ import { useLocalization } from "./use-localization";
 const DEFAULT_VALUE = "default";
 
 export function LocalizationSwitcher({ id }: { id: string }) {
-  const { market, captured, localization, select } = useLocalization(id);
+  const { defaultTag, captured, localization, select } = useLocalization(id);
   if (captured.length === 0) return null;
-  const primary = storefrontLocalizations(market)?.primary;
-  const defaultLabel = `${primary ? localizationName(primary) : market.toUpperCase()} · default`;
+  const defaultLabel = `${localizationName(defaultTag)} · default`;
   const value = localization ?? DEFAULT_VALUE;
 
   return (

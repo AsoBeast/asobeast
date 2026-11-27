@@ -5,7 +5,7 @@ import {
   assertStorefront,
   KeywordCoverageRow,
   MetadataAuditResult,
-  keywordFieldLocalizations,
+  defaultLocalizationIn,
   ScreenshotItem,
   TrackedKeywordItem,
 } from '@asobeast/shared';
@@ -16,6 +16,7 @@ import { competitorNames } from './competitor-names';
 import { loadCoverageSources } from './coverage-sources';
 import {
   CoverageSources,
+  JudgedApp,
   judgeKeywordCoverage,
 } from './keyword-coverage-judge';
 import {
@@ -81,8 +82,7 @@ export class MetadataService {
     );
     refuseMissingView(view, app.country, market, localization);
     const { listings, keywordFields } = sources;
-    const viewLocalization =
-      localization ?? keywordFieldLocalizations(market)[0];
+    const viewLocalization = localization ?? defaultLocalizationIn(app, market);
 
     const keywordFieldValue =
       app.store === Store.APP_STORE
@@ -161,7 +161,7 @@ export class MetadataService {
   }
 
   private judgeCoverage(
-    app: { store: Store; country: string },
+    app: JudgedApp,
     active: TrackedKeywordItem[],
     sources: CoverageSources,
   ): JudgedCoverageRow[] {
@@ -186,10 +186,17 @@ export class MetadataService {
     store: Store;
     name: string | null;
     country: string;
+    defaultLocalization: string | null;
   }> {
     const app = await this.prisma.app.findFirst({
       where: { id: appId },
-      select: { id: true, store: true, name: true, country: true },
+      select: {
+        id: true,
+        store: true,
+        name: true,
+        country: true,
+        defaultLocalization: true,
+      },
     });
     if (!app) {
       throw new NotFoundException(`App ${appId} not found`);

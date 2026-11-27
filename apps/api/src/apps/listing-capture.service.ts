@@ -29,6 +29,7 @@ import { withKnownSubtitle } from './known-subtitle';
 import { listingIn, NEWEST_FIRST, storedMarket } from './listing';
 import { lockListing } from './listing-lock';
 import { ListingAlerts } from './listing-alerts.service';
+import { DefaultLocalizationRecorder } from './default-localization-recorder';
 import { LocalizationDetection } from './localization-detection.service';
 import { LocalizedListingCapture } from './localized-listing-capture.service';
 import { MarketLocalizationRecorder } from './market-localization-recorder';
@@ -49,6 +50,7 @@ export class ListingCaptureService {
     private readonly localizations: LocalizedListingCapture,
     private readonly detection: LocalizationDetection,
     private readonly recorder: MarketLocalizationRecorder,
+    private readonly defaults: DefaultLocalizationRecorder,
     private readonly storeReports: StoreReportQueue,
     private readonly listingAlerts: ListingAlerts,
   ) {}
@@ -183,6 +185,7 @@ export class ListingCaptureService {
     };
     const localized = await this.localizations.capture(app, market, listing);
     await this.recorder.record(app, market, listing, localized);
+    await this.defaults.record(app, market, listing, localized);
     if (
       !home &&
       !previous &&

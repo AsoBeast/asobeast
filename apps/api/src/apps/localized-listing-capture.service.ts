@@ -2,12 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { App, AppSnapshot, Store } from '@prisma/client';
 import {
   AppStoreLocalization,
+  keywordFieldLocalizations,
   readLocalizations,
   SnapshotChange,
 } from '@asobeast/shared';
 import { ChangesService } from '../changes/changes.service';
 import { recordAppLocalizations } from '../keywords/app-localization-records';
-import { homeLocalization } from '../keywords/localization-markets';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScreenshotQueue } from '../screenshots/screenshot-queue';
 import { ScreenshotRecorder } from '../screenshots/screenshot-recorder';
@@ -20,23 +20,32 @@ import { withKnownSubtitle } from './known-subtitle';
 import { listingIn, NEWEST_FIRST, storedMarket } from './listing';
 import { ComparableListing, servesLocalization } from './localization-served';
 import { capturedLocalizations } from './market-localizations';
+import { LocalizationProbe } from './native-default';
 import { shippedLocalizations } from './shipped-localizations';
 import { diffSnapshots, withRecordedChanges } from './snapshot-diff';
 
 export type ListedApp = Pick<
   App,
-  'id' | 'workspaceId' | 'store' | 'storeAppId' | 'country' | 'isCompetitor'
+  | 'id'
+  | 'workspaceId'
+  | 'store'
+  | 'storeAppId'
+  | 'country'
+  | 'defaultLocalization'
+  | 'isCompetitor'
 >;
 
 export interface LocalizedCapture {
   changes: SnapshotChange[];
   listings: ComparableListing[];
+  probes: LocalizationProbe[];
   complete: boolean;
 }
 
 interface LocalizationRead {
   changes: SnapshotChange[];
   listing: ComparableListing;
+  echoed: boolean;
 }
 
 interface LocalizedListing {
@@ -68,6 +77,7 @@ export class LocalizedListingCapture {
     const captured: LocalizedCapture = {
       changes: [],
       listings: [],
+      probes: [],
       complete: true,
     };
     if (app.store !== Store.APP_STORE) return captured;
@@ -80,6 +90,7 @@ export class LocalizedListingCapture {
         const read = await this.captureOne(app, market, localization, fallback);
         captured.changes.push(...read.changes);
         captured.listings.push(read.listing);
+        captured.probes.push({ localization, echoed: read.echoed });
       } catch (error: unknown) {
         captured.complete = false;
         this.logger.warn(
@@ -106,8 +117,9 @@ export class LocalizedListingCapture {
     if (!previous && normalized.subtitleUnavailable) {
       throw new Error('its product page did not answer');
     }
-    if (!previous && !servesLocalization(app.store, fallback, normalized)) {
-      return { changes: [], listing: normalized };
+    const echoed = !servesLocalization(app.store, fallback, normalized);
+    if (!previous && echoed) {
+      return { changes: [], listing: normalized, echoed };
     }
     const snapshot = await this.store(
       app,
@@ -133,6 +145,7 @@ export class LocalizedListingCapture {
         recorded,
       ).map((change) => ({ ...change, localization })),
       listing: normalized,
+      echoed,
     };
   }
 
@@ -160,7 +173,7 @@ export class LocalizedListingCapture {
       if (
         !previous &&
         !app.isCompetitor &&
-        localization !== homeLocalization(app.country)
+        localization !== keywordFieldLocalizations(app.country)[0]
       ) {
         await recordAppLocalizations(tx, [
           {

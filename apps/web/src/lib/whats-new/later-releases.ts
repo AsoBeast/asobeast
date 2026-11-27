@@ -89,6 +89,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "A proxy provider that refuses requests because of the account, such as a plan that ran out or credentials it no longer accepts, used to bench its addresses for up to a day. They are now tried again every few minutes, so collection resumes shortly after the account is put right.",
       },
       {
+        kind: "fixed",
+        title: "An app in its own language keeps that language",
+        text: "In a storefront that defaults to English, such as Poland, an app written only in the local language used to have its listing called English (U.K.), and its audit could not open the listing in the local language. After its next refresh, the keyword field editor, the audit, the draft and the description word list use the language the listing is written in. A keyword field you saved under English (U.K.) stays where it is.",
+      },
+      {
         kind: "new",
         title: "Why the proxy provider refuses",
         text: "The capacity page in the admin area now says when the proxy provider is turning requests away and why, from the answer it gave: a plan or quota that ran out, credentials it does not accept, or the status it refused with.",

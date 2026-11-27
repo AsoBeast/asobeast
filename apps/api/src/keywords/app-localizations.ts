@@ -7,7 +7,7 @@ import {
   KEYWORD_FIELD_CHAR_LIMIT,
   keywordFieldChars,
 } from '@asobeast/shared';
-import { homeLocalization, readersOf } from './localization-markets';
+import { homeLocalizationOf, readersOf } from './localization-markets';
 
 interface StoredLocalization {
   localization: string;
@@ -22,6 +22,7 @@ interface StoredField {
 
 export interface AppLocalizationInput {
   home: string;
+  defaultLocalization: string | null;
   markets: readonly string[];
   stored: readonly StoredLocalization[];
   fields: readonly StoredField[];
@@ -38,11 +39,12 @@ const byDisplayName = (left: AppLocalizationItem, right: AppLocalizationItem) =>
 
 export function toAppLocalizationItems({
   home,
+  defaultLocalization,
   markets,
   stored,
   fields,
 }: AppLocalizationInput): AppLocalizationItem[] {
-  const homeTag = homeLocalization(home);
+  const homeTag = homeLocalizationOf({ country: home, defaultLocalization });
   const origins = new Map<AppStoreLocalization, AppLocalizationOrigin>();
   const saved = new Map<AppStoreLocalization, StoredField>();
   for (const field of fields) {

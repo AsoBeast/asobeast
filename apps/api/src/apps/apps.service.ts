@@ -38,6 +38,7 @@ import { toAppDetail, toAppListItem } from './apps.mapper';
 import { FirstRunScheduler } from './first-run.scheduler';
 import { ListingCaptureService } from './listing-capture.service';
 import { ListingReadService } from './listing-read.service';
+import { DefaultLocalizationRecorder } from './default-localization-recorder';
 import { LocalizedListingCapture } from './localized-listing-capture.service';
 import { LATEST_HOME_LISTING } from './listing';
 
@@ -61,6 +62,7 @@ export class AppsService {
     private readonly workspace: WorkspaceContext,
     private readonly firstRun: FirstRunScheduler,
     private readonly localizations: LocalizedListingCapture,
+    private readonly defaults: DefaultLocalizationRecorder,
     private readonly setups: AppSetupService,
     private readonly discoveries: KeywordDiscoveryPlanner,
     private readonly tracker: KeywordTracker,
@@ -107,7 +109,13 @@ export class AppsService {
     );
 
     await this.beginSetup(app);
-    await this.localizations.capture(app, market, snapshot);
+    const localized = await this.localizations.capture(app, market, snapshot);
+    const defaultLocalization = await this.defaults.record(
+      app,
+      market,
+      snapshot,
+      localized,
+    );
     const tracked = await this.keywords.trackFromSnapshot(app.id);
 
     await this.scheduleFirstRun(app.id);
@@ -127,7 +135,7 @@ export class AppsService {
 
     await this.scheduleFirstDiscovery(app.id);
 
-    return toAppDetail(app, snapshot, [], null);
+    return toAppDetail({ ...app, defaultLocalization }, snapshot, [], null);
   }
 
   private async beginSetup(app: { id: string; country: string }) {

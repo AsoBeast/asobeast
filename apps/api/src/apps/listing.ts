@@ -1,4 +1,8 @@
 import { Prisma, Store } from '@prisma/client';
+import {
+  type DefaultingListing,
+  defaultLocalizationIn,
+} from '@asobeast/shared';
 import { readerRole } from '../keywords/localization-markets';
 
 export const HOME_LISTING = {
@@ -27,15 +31,20 @@ export function storedMarket(home: string, market: string): string | null {
   return market === home ? null : market;
 }
 
+export interface ListingOwner extends DefaultingListing {
+  store: Store;
+}
+
 export function storedLocalization(
-  store: Store,
+  app: ListingOwner,
   market: string,
   localization: string | null,
 ): string | null {
   const readsDefault =
     localization === null ||
-    (store === Store.APP_STORE &&
-      readerRole(market, localization) === 'default');
+    (app.store === Store.APP_STORE &&
+      (readerRole(market, localization) === 'default' ||
+        localization === defaultLocalizationIn(app, market)));
   return readsDefault ? null : localization;
 }
 

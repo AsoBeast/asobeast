@@ -26,7 +26,7 @@ import {
   trackedArgs,
 } from './keywords.support';
 import { listingFacts } from './listing-facts';
-import { homeLocalization, readsKeywordField } from './localization-markets';
+import { homeLocalizationOf, readsKeywordField } from './localization-markets';
 
 export type StoredKeywordFieldResult = KeywordFieldResult &
   Required<Pick<KeywordFieldResult, 'country' | 'localization' | 'phrases'>>;
@@ -103,7 +103,7 @@ export class KeywordFieldService {
       this.prisma.keywordField.findMany({ where: { appId } }),
       loadAppMarkets(this.prisma, app),
     ]);
-    const home = homeLocalization(app.country);
+    const home = homeLocalizationOf(app);
     const homeFirst = (localization: AppStoreLocalization) =>
       Number(localization !== home);
     return fields

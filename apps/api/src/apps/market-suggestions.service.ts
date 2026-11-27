@@ -19,7 +19,13 @@ export class MarketSuggestionsService {
   async suggest(appId: string): Promise<MarketSuggestionsResult> {
     const app = await this.prisma.app.findFirst({
       where: { id: appId },
-      select: { id: true, store: true, country: true, isCompetitor: true },
+      select: {
+        id: true,
+        store: true,
+        country: true,
+        defaultLocalization: true,
+        isCompetitor: true,
+      },
     });
     if (!app) {
       throw new NotFoundException(`App ${appId} not found`);

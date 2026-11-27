@@ -1,5 +1,5 @@
 import { APP_STORE_STOREFRONTS } from '@asobeast/shared';
-import { homeLocalization } from '../src/keywords/localization-markets';
+import { homeLocalizationOf } from '../src/keywords/localization-markets';
 import { migrationSql } from './helpers/migration-sql';
 
 describe.each(['add_keyword_fields', 'drop_home_app_localizations'])(
@@ -16,12 +16,14 @@ describe.each(['add_keyword_fields', 'drop_home_app_localizations'])(
     it.each([...APP_STORE_STOREFRONTS])(
       'is the default localization of a %s app',
       (country) => {
-        expect(named.get(country) ?? fallback).toBe(homeLocalization(country));
+        expect(named.get(country) ?? fallback).toBe(
+          homeLocalizationOf({ country }),
+        );
       },
     );
 
     it('falls back to the localization an unlisted home country reads', () => {
-      expect(fallback).toBe(homeLocalization('uk'));
+      expect(fallback).toBe(homeLocalizationOf({ country: 'uk' }));
     });
   },
 );

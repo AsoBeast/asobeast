@@ -42,6 +42,7 @@ interface BreakdownApp {
   name: string | null;
   iconUrl: string | null;
   country: string;
+  defaultLocalization: string | null;
 }
 
 interface SavedField {
@@ -67,7 +68,13 @@ export class KeywordBreakdownService {
     const words = keywordWords(text);
     const apps = await this.prisma.app.findMany({
       where: { OR: [{ id: appId }, { primaryAppId: appId }] },
-      select: { id: true, name: true, iconUrl: true, country: true },
+      select: {
+        id: true,
+        name: true,
+        iconUrl: true,
+        country: true,
+        defaultLocalization: true,
+      },
       orderBy: { createdAt: 'asc' },
     });
     const [rankings, subjects, fields, shipped, listingChange] =
@@ -158,7 +165,7 @@ export class KeywordBreakdownService {
     const [listing, localized] = await Promise.all([
       this.listing(app, market),
       store === Store.APP_STORE
-        ? latestLocalizedTexts(this.prisma, app.id, app.country, [market]).then(
+        ? latestLocalizedTexts(this.prisma, app, [market]).then(
             (texts): LocalizedTexts[] => texts.get(market) ?? [],
           )
         : [],
@@ -167,6 +174,8 @@ export class KeywordBreakdownService {
       id: app.id,
       name: app.name,
       iconUrl: app.iconUrl,
+      country: app.country,
+      defaultLocalization: app.defaultLocalization,
       listing,
       localized,
     };

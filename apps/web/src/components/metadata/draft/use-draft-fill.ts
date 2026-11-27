@@ -28,13 +28,14 @@ export function useDraftFill(
   store: Store,
   drafted: AppStoreLocalization | null,
 ): ((draft: MetadataDraft) => void) | null {
-  const { home, markets } = useMarket(appId);
+  const { home, defaultLocalization, markets } = useMarket(appId);
+  const owner = { country: home, defaultLocalization };
   const [, setQuery] = useQueryStates({
     mode: metadataModeParser,
     market: marketParser,
     localization: localizationParser,
   });
-  const view = draftView(home, drafted, markets);
+  const view = draftView(owner, drafted, markets);
   if (view === null) return null;
 
   return (draft) => {
@@ -44,6 +45,7 @@ export function useDraftFill(
       store,
       view.market,
       view.localization ?? undefined,
+      owner,
     );
     writeListingDraftField(appId, scopeKey(scope), field, draft.value);
     armFocusHandoff(draftFieldFocusKey(field));

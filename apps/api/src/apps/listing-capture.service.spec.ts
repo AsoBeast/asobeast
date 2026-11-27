@@ -13,6 +13,7 @@ import { ListingCaptureService } from './listing-capture.service';
 import type { LocalizationDetection } from './localization-detection.service';
 import type { LocalizedListingCapture } from './localized-listing-capture.service';
 import type { MarketLocalizationRecorder } from './market-localization-recorder';
+import type { DefaultLocalizationRecorder } from './default-localization-recorder';
 import type { StoreReportQueue } from '../store-connect/store-report-queue';
 
 const APP = {
@@ -94,6 +95,7 @@ const build = (overrides: {
   baseline?: typeof SNAPSHOT | null;
   detect?: jest.Mock;
   recordDefault?: jest.Mock;
+  recordHomeDefault?: jest.Mock;
   raw?: Record<string, unknown>;
   getApp?: jest.Mock;
   fieldSyncRow?: unknown;
@@ -167,6 +169,8 @@ const build = (overrides: {
     jest.fn().mockResolvedValue({ queued: 0, candidates: [] });
   const recordDefault =
     overrides.recordDefault ?? jest.fn().mockResolvedValue(undefined);
+  const recordHomeDefault =
+    overrides.recordHomeDefault ?? jest.fn().mockResolvedValue(undefined);
   const storeReports = { enqueue: jest.fn().mockResolvedValue({}) };
   const recordRatingDrop = jest.fn().mockResolvedValue(undefined);
   const recordLoss = jest.fn().mockResolvedValue(undefined);
@@ -181,6 +185,7 @@ const build = (overrides: {
     { capture } as unknown as LocalizedListingCapture,
     { request: detect } as unknown as LocalizationDetection,
     { record: recordDefault } as unknown as MarketLocalizationRecorder,
+    { record: recordHomeDefault } as unknown as DefaultLocalizationRecorder,
     storeReports as unknown as StoreReportQueue,
     { recordRatingDrop, recordLoss } as unknown as ListingAlerts,
   );
@@ -191,6 +196,7 @@ const build = (overrides: {
     capture,
     detect,
     recordDefault,
+    recordHomeDefault,
     storeReports,
     recordRatingDrop,
     recordLoss,
@@ -893,6 +899,41 @@ describe('ListingCaptureService market default localization', () => {
     await service.refreshListing(APP.id, 'de');
 
     expect(recordDefault).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('ListingCaptureService home default localization', () => {
+  it('records the default localization after the localized capture', async () => {
+    const order: string[] = [];
+    const read = {
+      changes: [],
+      listings: [],
+      probes: [{ localization: 'pl', echoed: true }],
+      complete: true,
+    };
+    const { service, capture, recordDefault, recordHomeDefault } = build({
+      recordDefault: jest.fn(() => {
+        order.push('market');
+        return Promise.resolve();
+      }),
+      recordHomeDefault: jest.fn(() => {
+        order.push('home');
+        return Promise.resolve();
+      }),
+    });
+    capture.mockResolvedValue(read);
+
+    await service.refreshListing(APP.id);
+
+    expect(order).toEqual(['market', 'home']);
+    expect(recordDefault).toHaveBeenCalledTimes(1);
+    expect(recordHomeDefault).toHaveBeenCalledTimes(1);
+    expect(recordHomeDefault).toHaveBeenCalledWith(
+      expect.objectContaining({ id: APP.id }),
+      APP.country,
+      { ...SNAPSHOT, subtitleUnavailable: false },
+      read,
+    );
   });
 });
 

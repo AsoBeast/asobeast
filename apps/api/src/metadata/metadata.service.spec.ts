@@ -54,6 +54,7 @@ const build = (
     listings?: Record<string, ReturnType<typeof listing>>;
     tracked?: TrackedKeywordItem[];
     country?: string;
+    defaultLocalization?: string | null;
   } = {},
 ) => {
   const listings = options.listings ?? {
@@ -104,6 +105,7 @@ const build = (
         store,
         name: 'Focus Timer',
         country: options.country ?? 'us',
+        defaultLocalization: options.defaultLocalization ?? null,
       }),
       findMany: jest.fn().mockResolvedValue([]),
     },
@@ -194,6 +196,22 @@ describe('MetadataService.audit', () => {
 
     expect(result.localization).toBe('pl');
 
+    expect(result.keywordFieldSuggestion).toMatchObject({
+      localization: 'pl',
+    });
+  });
+
+  it('shows the native home field in the default view', async () => {
+    const { service } = build(Store.APP_STORE, {
+      listings: { home: listing('snap_pl', 'Dzienniczek Ucznia') },
+      tracked: [tracked('frekwencja', 'pl')],
+      country: 'pl',
+      defaultLocalization: 'pl',
+    });
+
+    const result = await service.audit('app_1');
+
+    expect('localization' in result).toBe(false);
     expect(result.keywordFieldSuggestion).toMatchObject({
       localization: 'pl',
     });

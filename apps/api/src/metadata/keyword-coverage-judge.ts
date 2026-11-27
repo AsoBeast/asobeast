@@ -21,12 +21,18 @@ export interface KeywordCoverage {
   wordsSplit: boolean;
 }
 
+export interface JudgedApp {
+  store: Store;
+  country: string;
+  defaultLocalization: string | null;
+}
+
 export interface KeywordSurfaces extends JudgingSurfaces {
   listingCountry: string;
 }
 
 export function keywordSurfaces(
-  app: { store: Store; country: string },
+  app: JudgedApp,
   country: string,
   sources: CoverageSources,
 ): KeywordSurfaces {
@@ -38,6 +44,7 @@ export function keywordSurfaces(
         store: app.store,
         country: listingCountry,
         home: listingCountry === app.country,
+        defaultLocalization: app.defaultLocalization,
         listing: sources.listings.get(listingCountry),
         captured: sources.localized.get(listingCountry) ?? [],
       },
@@ -47,7 +54,7 @@ export function keywordSurfaces(
 }
 
 export function judgeKeywordCoverage(
-  app: { store: Store; country: string },
+  app: JudgedApp,
   keyword: { text: string; country: string },
   sources: CoverageSources,
 ): KeywordCoverage {
