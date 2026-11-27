@@ -113,7 +113,8 @@ export function SuggestionsPanel({
             onClose={closeIdeas}
           />
         </CardContent>
-      ) : open ? (
+      ) : null}
+      {open && !seeded ? (
         <CardContent className="flex flex-col gap-4">
           <p className="text-body text-muted-foreground">
             Phrases from your listing, your competitors, your reviews and store

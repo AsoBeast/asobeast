@@ -3,6 +3,7 @@
 import { Loader2, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatCountry } from "@/lib/format";
+import { DEEP_SEARCH_LENGTH } from "./deep-search";
 
 export function IdeasHeader({
   heading,
@@ -47,9 +48,7 @@ export function IdeasStartPrompt({
   return (
     <div className="flex flex-wrap items-center gap-4">
       <p className="max-w-prose text-body text-muted-foreground">
-        Asks the store for what people type after this keyword on its own and
-        followed by each letter from a to z. That is 27 lookups, usually about
-        two minutes.
+        {`Asks the store for what people type after this keyword on its own and followed by each letter from a to z. That is ${DEEP_SEARCH_LENGTH}.`}
       </p>
       <Button
         size="sm"

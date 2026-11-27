@@ -19,7 +19,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { addKeywords, ApiError, startSpider } from "@/lib/api";
-import { queuedToast } from "@/lib/queued-toast";
 import {
   invalidateKeywordMutation,
   keywordsOptions,
@@ -27,8 +26,11 @@ import {
 } from "@/lib/queries";
 import { spiderTermParser } from "@/lib/search-params";
 import { useSingleFlight } from "@/lib/single-flight";
-
-const PROBES_TOTAL = 27;
+import {
+  DEEP_SEARCH_LENGTH,
+  DEEP_SEARCH_PROBES,
+  toastDeepSearchQueued,
+} from "./deep-search";
 
 export function SpiderDialog({
   appId,
@@ -58,10 +60,7 @@ export function SpiderDialog({
     mutationFn: (value: string) => startSpider(appId, value, country),
     onSuccess: (_result, value) => {
       void setTerm(value);
-      queuedToast(
-        "27 lookups, usually about two minutes",
-        "Results fill in as each lookup completes. It takes longer while the daily run is collecting.",
-      );
+      toastDeepSearchQueued();
     },
     onError: (error) =>
       toast.error(
@@ -107,9 +106,7 @@ export function SpiderDialog({
         <DialogHeader>
           <DialogTitle>Deep search</DialogTitle>
           <DialogDescription>
-            Asks the store&apos;s search suggestions for your term on its own
-            and followed by each letter from a to z. That is 27 lookups, usually
-            about two minutes, and longer while the daily run is collecting.
+            {`Asks the store's search suggestions for your term on its own and followed by each letter from a to z. That is ${DEEP_SEARCH_LENGTH}, and longer while the daily run is collecting.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -150,19 +147,21 @@ export function SpiderDialog({
               <div className="flex flex-col gap-1.5">
                 <div className="numeric flex items-center justify-between text-caption text-muted-foreground">
                   <span>{complete ? "Complete" : "Searching…"}</span>
-                  <span>{`${probesDone}/${PROBES_TOTAL}`}</span>
+                  <span>{`${probesDone}/${DEEP_SEARCH_PROBES}`}</span>
                 </div>
                 <div
                   role="progressbar"
                   aria-valuemin={0}
-                  aria-valuemax={PROBES_TOTAL}
+                  aria-valuemax={DEEP_SEARCH_PROBES}
                   aria-valuenow={probesDone}
                   aria-label="Deep search progress"
                   className="h-2 overflow-hidden rounded-full bg-muted"
                 >
                   <div
                     className="h-full rounded-full bg-foreground transition-[width]"
-                    style={{ width: `${(probesDone / PROBES_TOTAL) * 100}%` }}
+                    style={{
+                      width: `${(probesDone / DEEP_SEARCH_PROBES) * 100}%`,
+                    }}
                   />
                 </div>
               </div>

@@ -4,9 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import type { KeywordSuggestion } from "@asobeast/shared";
 import { isSpiderTerm } from "@asobeast/shared";
 import { keywordsOptions, spiderOptions } from "@/lib/queries";
+import { DEEP_SEARCH_PROBES } from "./deep-search";
 import { ideaSuggestions } from "./ideas-selection";
 
-const PROBES_TOTAL = 27;
 const SPIDER_POLL_MS = 3000;
 
 export interface IdeasStatus {
@@ -40,7 +40,7 @@ export function useIdeasStatus(
     found: ideaSuggestions(status.data?.suggestions ?? []),
     trackedTexts: new Set((tracked.data ?? []).map((keyword) => keyword.text)),
     probesDone: status.data?.probesDone ?? 0,
-    probesTotal: status.data?.probesTotal ?? PROBES_TOTAL,
+    probesTotal: status.data?.probesTotal ?? DEEP_SEARCH_PROBES,
     complete: status.data?.complete ?? false,
     error: status.error,
     failed: status.isError,
