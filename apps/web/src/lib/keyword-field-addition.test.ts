@@ -13,6 +13,7 @@ import {
   keywordFieldAdditionHref,
   keywordFieldTarget,
   proposalDraft,
+  seededFieldDraft,
   proposedKeywordField,
   receivedAddition,
 } from "./keyword-field-addition";
@@ -51,6 +52,68 @@ describe("proposedKeywordField", () => {
   it("answers the stored text when nothing is new", () => {
     expect(proposedKeywordField(["focus"], ["focus"])).toBe("focus");
     expect(proposedKeywordField([], [])).toBe("");
+  });
+});
+
+describe("seededFieldDraft", () => {
+  it("seeds the stored draft field as the unsaved text", () => {
+    expect(
+      seededFieldDraft(
+        ["focus"],
+        { fromDraft: "timer,focus", fieldAdd: null },
+        false,
+      ),
+    ).toBe("timer,focus");
+  });
+
+  it("prefers the drafted field over added phrases", () => {
+    expect(
+      seededFieldDraft(
+        ["focus"],
+        { fromDraft: "timer", fieldAdd: ["deep work"] },
+        false,
+      ),
+    ).toBe("timer");
+  });
+
+  it("seeds nothing when the draft equals the stored field", () => {
+    expect(
+      seededFieldDraft(
+        ["timer", "focus"],
+        { fromDraft: "Timer, focus", fieldAdd: null },
+        false,
+      ),
+    ).toBeNull();
+  });
+
+  it("seeds nothing while the store manages the field", () => {
+    expect(
+      seededFieldDraft(
+        ["focus"],
+        { fromDraft: "timer", fieldAdd: ["deep work"] },
+        true,
+      ),
+    ).toBeNull();
+  });
+
+  it("seeds nothing when the flag is set but no draft is stored", () => {
+    expect(
+      seededFieldDraft(
+        ["focus"],
+        { fromDraft: undefined, fieldAdd: null },
+        false,
+      ),
+    ).toBeNull();
+  });
+
+  it("keeps the added phrases without a drafted field", () => {
+    expect(
+      seededFieldDraft(
+        ["focus"],
+        { fromDraft: undefined, fieldAdd: ["deep work"] },
+        false,
+      ),
+    ).toBe("focus,deep work");
   });
 });
 

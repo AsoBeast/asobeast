@@ -5,7 +5,7 @@ export function actionHref(item: ActionItem): string {
   switch (item.rule) {
     case "keyword.add_uncovered":
     case "keyword.push_to_top10":
-      return `/apps/${appId}/metadata${keywordId ? `?keyword=${keywordId}` : ""}`;
+      return `/apps/${appId}/metadata?market=${country}${keywordId ? `&keyword=${keywordId}` : ""}`;
     case "keyword.defend":
       return `/apps/${appId}/keywords?country=${country}${keywordId ? `&serp=${keywordId}` : ""}`;
     case "keyword.prune":
@@ -15,7 +15,7 @@ export function actionHref(item: ActionItem): string {
     case "serp.hold_volatile":
       return `/apps/${appId}/keywords?country=${country}&sort=volatility`;
     case "metadata.fix_lint":
-      return `/apps/${appId}/metadata`;
+      return `/apps/${appId}/metadata?market=${country}`;
     case "competitor.investigate_overtake":
       return `/apps/${appId}/competitors`;
     case "reviews.investigate_rating_decline":

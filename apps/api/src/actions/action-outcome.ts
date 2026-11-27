@@ -16,6 +16,7 @@ export const ACTION_OUTCOME_TOLERANCE: Record<ActionTrendMetric, number> = {
   rating: 0.1,
   updateAge: 1,
   conversion: 0.2,
+  lintErrors: 0,
 };
 
 const round1 = (value: number): number => Math.round(value * 10) / 10;

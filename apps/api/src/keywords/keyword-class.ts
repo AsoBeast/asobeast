@@ -1,5 +1,4 @@
-import { KeywordClass, SerpFlag } from '@asobeast/shared';
-import { isUnsegmented } from '../common/text/scripts';
+import { isUnsegmented, KeywordClass, SerpFlag } from '@asobeast/shared';
 import { sameWord } from '../scoring/plurals';
 import {
   BrandName,

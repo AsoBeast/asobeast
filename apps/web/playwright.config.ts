@@ -4,6 +4,7 @@ const BASELINE = process.env.CAPTURE_BASELINE ? [] : ["**/baseline.spec.ts"];
 const WEBKIT_SPECS = [
   "**/engine-hydration.spec.ts",
   "**/chart-image-engine.spec.ts",
+  "**/share-card-engine.spec.ts",
 ];
 const ACTION_STATE_SPECS = [
   "actions",

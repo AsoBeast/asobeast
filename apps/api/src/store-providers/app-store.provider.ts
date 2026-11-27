@@ -347,7 +347,9 @@ export class AppStoreProvider implements StoreProvider {
       if (lastError instanceof ShellListingError) {
         throw lastError;
       }
-      throw new StoreRequestError(this.store, method, messageOf(lastError));
+      throw new StoreRequestError(this.store, method, messageOf(lastError), {
+        cause: lastError,
+      });
     }
   }
 }

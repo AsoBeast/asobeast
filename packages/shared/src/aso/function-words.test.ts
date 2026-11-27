@@ -1,4 +1,6 @@
-import { countChars } from '@asobeast/shared';
+import { describe, expect, it } from 'vitest';
+
+import { countChars } from './limits';
 import {
   FUNCTION_WORDS,
   functionWordTest,

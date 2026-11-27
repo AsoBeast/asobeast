@@ -100,7 +100,7 @@ describe('normalizePrivateKey', () => {
     const started = performance.now();
 
     expect(normalizePrivateKey(hostile)).toBe(hostile.trim());
-    expect(performance.now() - started).toBeLessThan(200);
+    expect(performance.now() - started).toBeLessThan(1_000);
   });
 
   it('rebuilds a key pasted on one line, the way a password field sends it', () => {

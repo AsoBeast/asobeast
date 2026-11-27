@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  type BeforeApplicationShutdown,
-} from '@nestjs/common';
+import { Injectable, Logger, type OnModuleDestroy } from '@nestjs/common';
 import { DiscoveryService } from '@nestjs/core';
 import type { RedisClient, Worker } from 'bullmq';
 import { FailFastRedis } from '../redis/fail-fast-redis';
@@ -72,7 +68,7 @@ async function stillReconnecting(
 }
 
 @Injectable()
-export class QueueShutdown implements BeforeApplicationShutdown {
+export class QueueShutdown implements OnModuleDestroy {
   private readonly logger = new Logger(QueueShutdown.name);
 
   constructor(
@@ -81,7 +77,7 @@ export class QueueShutdown implements BeforeApplicationShutdown {
     private readonly drain: HttpDrain,
   ) {}
 
-  async beforeApplicationShutdown(): Promise<void> {
+  async onModuleDestroy(): Promise<void> {
     const workers = discoveredWorkers(this.discovery);
     if (await this.redisAnswers()) {
       await this.forceCloseReconnecting(workers);

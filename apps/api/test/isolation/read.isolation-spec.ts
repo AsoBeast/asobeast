@@ -1,14 +1,17 @@
+import { Store } from '@prisma/client';
 import request from 'supertest';
 import type {
   AppSummary,
   CompetitorAnalysis,
   PortfolioHistory,
   PortfolioSummary,
+  SerpSnapshot,
   TrackedKeywordItem,
 } from '@asobeast/shared';
 import {
   createIsolationFixture,
   IsolationFixture,
+  SHARED_COMPETITOR_ID,
   SHARED_KEYWORD,
 } from './fixture';
 import { IsolationWorkspace } from './fixture';
@@ -456,6 +459,92 @@ describe('Read isolation', () => {
     expect(forB?.matchedIn).toEqual([
       { text: SHARED_KEYWORD, surface: 'title', match: 'exact' },
     ]);
+  });
+
+  it("answers only the caller's own subtitles in the search results", async () => {
+    const day = '2026-07-01';
+    const capturedAt = new Date(`${day}T12:00:00.000Z`);
+    const onlyA = await fixture.db.app.create({
+      data: {
+        workspaceId: fixture.a.id,
+        store: Store.APP_STORE,
+        storeAppId: '333333333',
+        country: 'us',
+        name: 'Only followed by A',
+        isCompetitor: true,
+        primaryAppId: fixture.a.appleAppId,
+      },
+    });
+    const subtitles = [
+      [fixture.a.competitorId, 'Habit tracker of A'],
+      [fixture.b.competitorId, 'Streak notes of B'],
+      [onlyA.id, 'Planner only A knows'],
+    ] as const;
+    const snapshots = await Promise.all(
+      subtitles.map(([appId, subtitle]) =>
+        fixture.db.appSnapshot.create({
+          data: {
+            appId,
+            title: 'Rival',
+            subtitle,
+            description: '',
+            raw: {},
+            capturedAt,
+          },
+        }),
+      ),
+    );
+    await fixture.db.serpEntry.createMany({
+      data: [SHARED_COMPETITOR_ID, onlyA.storeAppId].map(
+        (storeAppId, index) => ({
+          keywordId: fixture.a.keywordId,
+          date: new Date(`${day}T00:00:00.000Z`),
+          position: index + 1,
+          storeAppId,
+          title: 'Rival',
+        }),
+      ),
+    });
+    const serpOf = async (workspace: IsolationWorkspace) =>
+      (
+        (
+          await workspace.agent
+            .get(`/keywords/${workspace.keywordId}/serp?date=${day}`)
+            .expect(200)
+        ).body as SerpSnapshot
+      ).entries;
+
+    try {
+      const [forA, forB] = await Promise.all([
+        serpOf(fixture.a),
+        serpOf(fixture.b),
+      ]);
+
+      expect(forA[0]).toMatchObject({
+        subtitle: 'Habit tracker of A',
+        placement: 'subtitle',
+      });
+      expect(forA[1]).toMatchObject({ subtitle: 'Planner only A knows' });
+      expect(forB[0]).toMatchObject({
+        subtitle: 'Streak notes of B',
+        placement: 'none',
+      });
+      expect(forB[1]).not.toHaveProperty('subtitle');
+      expect(JSON.stringify(forB)).not.toContain('of A');
+      expect(JSON.stringify(forB)).not.toContain('only A');
+      expect(JSON.stringify(forA)).not.toContain('of B');
+    } finally {
+      await fixture.db.serpEntry.deleteMany({
+        where: {
+          keywordId: fixture.a.keywordId,
+          date: new Date(`${day}T00:00:00.000Z`),
+        },
+      });
+      await fixture.db.appSnapshot.deleteMany({
+        where: { id: { in: snapshots.map((snapshot) => snapshot.id) } },
+      });
+      await fixture.db.app.delete({ where: { id: onlyA.id } });
+    }
   });
 
   it('answers 404 for the localized listing of another workspace app', async () => {

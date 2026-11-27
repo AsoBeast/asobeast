@@ -1,6 +1,6 @@
 import Stripe from 'stripe';
 
-export const STRIPE_API_VERSION = '2026-08-26.dahlia';
+export const STRIPE_API_VERSION = '2026-11-18.endive';
 
 export const STRIPE_TIMEOUT_MS = 20_000;
 

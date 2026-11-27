@@ -3,7 +3,7 @@ import { execSync } from 'child_process';
 import { request as httpRequest, type Server } from 'http';
 import type { AddressInfo } from 'net';
 import { join } from 'path';
-import { INestApplication } from '@nestjs/common';
+import { HttpStatus, INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import { App } from 'supertest/types';
@@ -24,7 +24,7 @@ const SHUTDOWN_DEADLINE_MS = 7_000;
 const REQUEST_SETTLE_MS = 750;
 const QUEUES_API = '/admin/queues/api/queues?page=1&jobsPerPage=1';
 
-type Outcome = 'answered' | 'cut';
+type Outcome = number | 'cut';
 
 interface HeldRequest {
   outcome: Promise<Outcome>;
@@ -41,7 +41,7 @@ function holdRequest(port: number, cookie: string): HeldRequest {
       { port, path: QUEUES_API, headers: { cookie } },
       (response) => {
         response.resume();
-        resolve('answered');
+        resolve(response.statusCode ?? 0);
       },
     );
     held.on('error', () => resolve('cut'));
@@ -122,6 +122,6 @@ describe('Shutdown with a request waiting on a lost redis (e2e)', () => {
 
     expect(stopped).toBe(true);
     expect(Date.now() - startedAt).toBeLessThan(SHUTDOWN_DEADLINE_MS);
-    await expect(held.outcome).resolves.toBe('cut');
+    await expect(held.outcome).resolves.toBe(HttpStatus.INTERNAL_SERVER_ERROR);
   });
 });

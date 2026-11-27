@@ -1,8 +1,10 @@
 import {
   ACTION_RULE_TITLES,
   CHANGE_FIELD_LABELS,
+  NO_APPS_LABEL,
   countChars,
   isRanked,
+  listsNoApps,
   truncateChars,
   type ActionOpenedPayload,
   type ActionPriority,
@@ -53,8 +55,14 @@ interface KeywordText {
   country?: string;
 }
 
-export function rankCell(position: number | null, depth: number): string {
-  return isRanked(position) ? `#${position}` : `>${depth}`;
+export function rankCell(
+  position: number | null,
+  depth: number,
+  resultCount?: number | null,
+): string {
+  if (isRanked(position)) return `#${position}`;
+  if (listsNoApps(resultCount)) return NO_APPS_LABEL;
+  return `>${depth}`;
 }
 
 export function keywordCell(
@@ -100,11 +108,14 @@ export function rankRow(
   alert: RankDroppedPayload | RankImprovedPayload,
   appCountry: string | null,
 ): ReportRow {
+  const fromCount =
+    'fromResultCount' in alert ? alert.fromResultCount : undefined;
+  const toCount = 'toResultCount' in alert ? alert.toResultCount : undefined;
   return {
     kind: 'move',
     label: keywordCell(alert.keyword, appCountry),
-    from: rankCell(alert.from, alert.fromDepth),
-    to: rankCell(alert.to, alert.toDepth),
+    from: rankCell(alert.from, alert.fromDepth, fromCount),
+    to: rankCell(alert.to, alert.toDepth, toCount),
     note: null,
   };
 }
@@ -116,8 +127,8 @@ export function milestoneRow(
   return {
     kind: 'move',
     label: keywordCell(alert.keyword, appCountry),
-    from: rankCell(alert.from, alert.fromDepth),
-    to: rankCell(alert.to, alert.toDepth),
+    from: rankCell(alert.from, alert.fromDepth, alert.fromResultCount),
+    to: rankCell(alert.to, alert.toDepth, alert.toResultCount),
     note: milestonePhrase(alert.tier, alert.direction),
   };
 }

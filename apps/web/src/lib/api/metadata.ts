@@ -1,4 +1,6 @@
 import type {
+  CoveragePreviewRequest,
+  CoveragePreviewResult,
   MetadataAssistantRequest,
   MetadataAssistantResult,
   MetadataAssistantStatus,
@@ -30,5 +32,18 @@ export function generateMetadataDrafts(
   return apiFetch<MetadataAssistantResult>(
     `/apps/${appId}/metadata/assistant`,
     { method: "POST", body: JSON.stringify(body) },
+  );
+}
+
+export function previewListingCoverage(
+  appId: string,
+  body: CoveragePreviewRequest,
+): Promise<CoveragePreviewResult> {
+  return apiFetch<CoveragePreviewResult>(
+    `/apps/${appId}/metadata/coverage-preview`,
+    {
+      method: "POST",
+      body: JSON.stringify(body satisfies CoveragePreviewRequest),
+    },
   );
 }

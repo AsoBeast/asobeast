@@ -148,6 +148,7 @@ export * from './storefronts';
 export * from './url-parser';
 export * from './contracts';
 export * from './text';
+export * from './text-scripts';
 export * from './listing-segments';
 export * from './input-length';
 export * from './release-notes';

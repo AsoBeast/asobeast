@@ -1,5 +1,4 @@
-import { tokenize } from '@asobeast/shared';
-import { FUNCTION_WORDS } from '../keywords/function-words';
+import { FUNCTION_WORDS, tokenize } from '@asobeast/shared';
 
 const ENGLISH = new Set(
   `the an and or but is are was were be been it its this that these those

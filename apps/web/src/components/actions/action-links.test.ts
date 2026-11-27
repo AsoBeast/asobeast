@@ -5,7 +5,7 @@ import { actionHref, actionSection } from "./action-links";
 import { actionItem } from "./action-test-item";
 
 const HREF: Record<ActionRule, string> = {
-  "keyword.add_uncovered": "/apps/app-1/metadata?keyword=kw-1",
+  "keyword.add_uncovered": "/apps/app-1/metadata?market=us&keyword=kw-1",
   "keyword.defend": "/apps/app-1/keywords?country=us&serp=kw-1",
   "keyword.prune": "/apps/app-1/keywords?country=us&sort=position",
   "rank.investigate_drop": "/apps/app-1/changes",
@@ -13,8 +13,8 @@ const HREF: Record<ActionRule, string> = {
   "audit.fix_factor": "/apps/app-1/audit",
   "reviews.investigate_theme": "/apps/app-1/reviews?score=1",
   "market.improve_country": "/apps/app-1/keywords?country=us",
-  "keyword.push_to_top10": "/apps/app-1/metadata?keyword=kw-1",
-  "metadata.fix_lint": "/apps/app-1/metadata",
+  "keyword.push_to_top10": "/apps/app-1/metadata?market=us&keyword=kw-1",
+  "metadata.fix_lint": "/apps/app-1/metadata?market=us",
   "rank.investigate_unexplained_drop": "/apps/app-1/keywords?country=us",
   "competitor.investigate_overtake": "/apps/app-1/competitors",
   "reviews.investigate_rating_decline": "/apps/app-1/reviews",
@@ -33,10 +33,26 @@ describe("actionHref", () => {
     },
   );
 
+  it("opens the metadata of the market the action belongs to", () => {
+    const scope = { country: "tr" };
+
+    expect(actionHref(actionItem({ scope }))).toBe(
+      "/apps/app-1/metadata?market=tr&keyword=kw-1",
+    );
+    expect(actionHref(actionItem({ rule: "metadata.fix_lint", scope }))).toBe(
+      "/apps/app-1/metadata?market=tr",
+    );
+    expect(
+      actionHref(actionItem({ rule: "keyword.push_to_top10", scope })),
+    ).toBe("/apps/app-1/metadata?market=tr&keyword=kw-1");
+  });
+
   it("drops the keyword parameters when the action has no keyword", () => {
     const scope = { keywordId: null, keywordText: null };
 
-    expect(actionHref(actionItem({ scope }))).toBe("/apps/app-1/metadata");
+    expect(actionHref(actionItem({ scope }))).toBe(
+      "/apps/app-1/metadata?market=us",
+    );
     expect(actionHref(actionItem({ rule: "keyword.defend", scope }))).toBe(
       "/apps/app-1/keywords?country=us",
     );

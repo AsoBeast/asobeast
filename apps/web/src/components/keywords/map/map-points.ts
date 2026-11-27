@@ -2,6 +2,8 @@ import {
   countChars,
   formatCheckedPosition,
   keywordLabel,
+  listsNoApps,
+  noAppsWords,
   truncateChars,
   type TrackedKeywordItem,
 } from "@asobeast/shared";
@@ -28,6 +30,7 @@ export interface MapPoint {
   opportunity: number | null;
   position: number | null;
   depth: number | null;
+  resultCount: number | null;
   positionLabel: string | null;
   ranked: boolean;
   floor: boolean;
@@ -72,9 +75,11 @@ export function mapPoints(
       opportunity: keyword.opportunity,
       position: keyword.latestPosition,
       depth: keyword.latestDepth,
+      resultCount: keyword.latestResultCount ?? null,
       positionLabel: formatCheckedPosition(
         keyword.latestPosition,
         keyword.latestDepth,
+        keyword.latestResultCount,
       ),
       ranked: keyword.latestPosition !== null,
       floor: hasFloorAnswer(keyword),
@@ -118,12 +123,15 @@ export const dotLabel = (text: string): string =>
     : `${truncateChars(text, MAP_LABEL_CHARS)}…`;
 
 export function rankWords(
-  point: Pick<MapPoint, "positionLabel" | "position" | "depth">,
+  point: Pick<MapPoint, "positionLabel" | "position" | "depth" | "resultCount">,
 ): string {
   if (point.positionLabel === null) return "not checked yet";
-  return point.position === null
-    ? `not in the top ${point.depth}`
-    : `position ${point.positionLabel}`;
+  if (point.position === null) {
+    return listsNoApps(point.resultCount)
+      ? noAppsWords
+      : `not in the top ${point.depth}`;
+  }
+  return `position ${point.positionLabel}`;
 }
 
 export const pointName = (point: MapPoint, multiMarket: boolean): string =>

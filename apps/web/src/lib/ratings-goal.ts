@@ -88,3 +88,38 @@ export function fiveStarRatingsToReach(
   const ratings = smallestRatingsToShow(average, count, targetTenths);
   return { kind: "needed", ratings, pace: goalPace(ratings, days) };
 }
+
+export type MixAnswer =
+  | { kind: "reaches"; projected: number }
+  | { kind: "fallsShort"; projected: number }
+  | { kind: "belowTarget"; newAverage: number };
+
+export interface CurrentMix {
+  average: number;
+  count: number;
+  newAverage: number | null;
+  perDay: number;
+  days: number;
+  targetTenths: number;
+}
+
+export function goalAtCurrentMix({
+  average,
+  count,
+  newAverage,
+  perDay,
+  days,
+  targetTenths,
+}: CurrentMix): MixAnswer | null {
+  if (newAverage === null || perDay <= 0) return null;
+  if (displayedTenths(average) >= targetTenths) return null;
+  if (displayedTenths(newAverage) < targetTenths) {
+    return { kind: "belowTarget", newAverage };
+  }
+  const added = perDay * days;
+  const projected = (average * count + newAverage * added) / (count + added);
+  return {
+    kind: displayedTenths(projected) >= targetTenths ? "reaches" : "fallsShort",
+    projected,
+  };
+}

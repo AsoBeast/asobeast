@@ -2,6 +2,15 @@ import { addUtcDays } from './utc-days';
 
 export const RANK_DEPTH = 200;
 
+export const NO_APPS_LABEL = 'No apps';
+
+export const NO_APPS_SENTENCE = 'The store lists no apps for this search';
+
+export const noAppsWords = `${NO_APPS_SENTENCE.charAt(0).toLowerCase()}${NO_APPS_SENTENCE.slice(1)}`;
+
+export const listsNoApps = (resultCount: number | null | undefined): boolean =>
+  resultCount === 0;
+
 export const isRanked = (
   position: number | null | undefined,
 ): position is number => position != null && position >= 1;
@@ -9,13 +18,19 @@ export const isRanked = (
 export const formatRankPosition = (
   position: number | null | undefined,
   depth: number = RANK_DEPTH,
-): string => (isRanked(position) ? String(position) : `>${depth}`);
+  resultCount?: number | null,
+): string => {
+  if (isRanked(position)) return String(position);
+  if (listsNoApps(resultCount)) return NO_APPS_LABEL;
+  return `>${depth}`;
+};
 
 export const formatCheckedPosition = (
   position: number | null,
   depth: number | null,
+  resultCount?: number | null,
 ): string | null =>
-  depth === null ? null : formatRankPosition(position, depth);
+  depth === null ? null : formatRankPosition(position, depth, resultCount);
 
 export const CHECK_FRESH_DAYS = 1;
 

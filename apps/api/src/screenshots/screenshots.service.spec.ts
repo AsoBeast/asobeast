@@ -135,6 +135,34 @@ describe('ScreenshotsService.forApp', () => {
     );
   });
 
+  it('reads the default listing for the default localization of a storefront', async () => {
+    const { service, prisma } = build({ snapshot: null });
+
+    await expect(
+      service.forApp('app_1', undefined, 'en-US'),
+    ).resolves.toMatchObject({
+      snapshotId: null,
+      screenshots: [],
+      localization: 'en-US',
+    });
+    expect(prisma.appSnapshot.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { appId: 'app_1', country: null, localization: null },
+      }),
+    );
+  });
+
+  it('answers 404 for a localization of a google play listing', async () => {
+    const { service } = build({
+      app: { id: 'app_1', store: Store.GOOGLE_PLAY, country: 'us' },
+      snapshot: null,
+    });
+
+    await expect(service.forApp('app_1', undefined, 'en-US')).rejects.toThrow(
+      new NotFoundException('No en-US listing captured for us'),
+    );
+  });
+
   it('answers 404 for a market without a captured listing', async () => {
     const { service } = build({ snapshot: null });
 

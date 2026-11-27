@@ -1,3 +1,4 @@
+import type { Measure } from "../text-fit";
 import { resolveCssVariables } from "./css-variables";
 import type { ChartCaption } from "./caption";
 import {
@@ -6,7 +7,6 @@ import {
   LEGEND_SAMPLE_GAP,
   LEGEND_SAMPLE_WIDTH,
   layoutImage,
-  type Measure,
 } from "./layout";
 import { untilStable } from "./settle";
 import {
@@ -39,7 +39,7 @@ function loadImage(markup: string): Promise<HTMLImageElement> {
   }).finally(() => URL.revokeObjectURL(url));
 }
 
-function encodePng(canvas: HTMLCanvasElement): Promise<Blob> {
+export function encodePng(canvas: HTMLCanvasElement): Promise<Blob> {
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) =>

@@ -125,7 +125,7 @@ test.describe("api status badge", () => {
     const readsBefore = healthReads.length;
 
     await expect(async () => {
-      await page.clock.runFor(30_000);
+      await page.clock.runFor(5_000);
       expect(healthReads.length - readsBefore).toBeGreaterThan(0);
     }).toPass({ timeout: 10_000 });
     await expect(async () => {

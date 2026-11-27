@@ -23,6 +23,7 @@ import {
   APP_GP_SERP_MOVERS,
   APP_CLASS_FOCUS_ID,
   APP_IMPORT_FOCUS_ID,
+  APP_TARGETS_FOCUS_ID,
   APP_TICKS_FOCUS_ID,
   AWAITING_ALERT_COOKIE,
   CROWDED_COMPETITORS_COOKIE,
@@ -1617,6 +1618,62 @@ test.describe("chart image controls keep focus", () => {
     await expect.poll(() => saved.length).toBe(1);
     await expect(control).not.toHaveAttribute("aria-disabled", "true");
     expect(saved).toHaveLength(1);
+  });
+
+  test("the share card's Copy image keeps focus while the card is drawn", async ({
+    page,
+  }) => {
+    const held = await holdRender(page);
+    await page.goto("/apps/app-1/rankings");
+    await (
+      await hydrated(
+        page.getByRole("button", { name: "Share the rankings chart" }),
+      )
+    ).click();
+    const dialog = page.getByRole("dialog", {
+      name: "Share the rankings chart",
+    });
+    await expect(dialog.getByRole("img")).not.toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
+    const control = dialog.getByRole("button", { name: "Copy image" });
+
+    await pressFromKeyboard(control);
+
+    await expectFocusKeptWhileHeld(control, held);
+  });
+
+  test("the position history share dialog keeps focus while the card is drawn", async ({
+    page,
+  }) => {
+    const held = await holdRender(page);
+    await page.goto("/apps/app-1/keywords");
+    await (
+      await hydrated(
+        page.getByRole("button", { name: /^Position history: focus timer/ }),
+      )
+    ).click();
+    const share = page.getByRole("button", {
+      name: "Share the position history of focus timer",
+      exact: true,
+    });
+    await (await hydrated(share)).click();
+    const dialog = page.getByRole("dialog", {
+      name: "Share the position history of focus timer",
+    });
+    await expect(dialog.getByRole("img")).not.toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
+    const control = dialog.getByRole("button", { name: "Copy image" });
+
+    await pressFromKeyboard(control);
+
+    await expectFocusKeptWhileHeld(control, held);
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(share).toBeFocused();
   });
 
   test("the position history icon keeps focus while the picture is drawn", async ({
@@ -3274,4 +3331,42 @@ test.describe("support action confirmations keep focus", () => {
       expect(posts).toBe(1);
     });
   }
+});
+
+test("keeps focus on Save targets while the targets save and after", async ({
+  page,
+}) => {
+  await page.request.post(
+    `${MOCK_API_URL}/__reset/listing-targets/${APP_TARGETS_FOCUS_ID}`,
+    { failOnStatusCode: true },
+  );
+  await page.goto(`/apps/${APP_TARGETS_FOCUS_ID}/metadata?mode=draft`);
+  const block = page.getByRole("region", {
+    name: "Targets for English (U.S.)",
+  });
+  await (
+    await hydrated(
+      block.getByRole("button", { name: "Choose a keyword for Title" }),
+    )
+  ).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("option", { name: /study timer/ })
+    .click();
+  const save = block.getByRole("button", { name: "Save targets" });
+  const held = await holdRequest(
+    page,
+    new RegExp(
+      `/api/backend/apps/${APP_TARGETS_FOCUS_ID}/localizations/en-US/targets$`,
+    ),
+    "PUT",
+  );
+
+  await pressFromKeyboard(save);
+
+  await expect(save).toHaveAttribute("aria-disabled", "true");
+  await expect(save).toBeFocused();
+  held.release();
+  await expect(page.getByText(/^Targets saved/)).toBeVisible();
+  await expect(save).toBeFocused();
 });

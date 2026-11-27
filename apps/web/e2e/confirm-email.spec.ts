@@ -149,7 +149,7 @@ test.describe("the confirmation page", () => {
     await openAs(page, "checkout-pending-unconfirmed");
     const hydrated = page.waitForResponse("**/api/backend/auth/me");
     await page.goto("/confirm-email");
-    await hydrated;
+    await (await hydrated).finished();
     await seedViewer(page.context(), "checkout-pending");
 
     await page.evaluate(() =>

@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useRef, type RefObject } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { Store, StoreSearchResult } from "@asobeast/shared";
 import { marketError } from "@/lib/countries";
 import { storeSearchOptions } from "@/lib/queries";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
 import {
   classifyInput,
   enterAction,
@@ -39,13 +40,8 @@ export function useStoreSearch(
   const problem = nameTooLongText(input);
   const q =
     isSearchable(input) && marketError(store, country) === null ? input.q : "";
-  const [term, setTerm] = useState(q);
+  const [term, settleTerm] = useDebouncedValue(q, STORE_SEARCH_DEBOUNCE_MS);
   const firstResultRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setTerm(q), STORE_SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [q]);
 
   const query = useQuery({
     ...storeSearchOptions(store, country, term),
@@ -68,7 +64,7 @@ export function useStoreSearch(
     const enter = enterAction(results, settled);
     if (enter.kind === "pick") pick(enter.result);
     if (enter.kind === "focus") firstResultRef.current?.focus();
-    if (enter.kind === "none") setTerm(q);
+    if (enter.kind === "none") settleTerm();
     return null;
   }
 

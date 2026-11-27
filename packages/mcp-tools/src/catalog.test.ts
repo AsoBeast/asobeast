@@ -129,6 +129,51 @@ describe("the tool catalog", () => {
     expect(description).not.toMatch(/>\d+/);
   });
 
+  it("tells an agent how to read the latest result count of list_keywords", () => {
+    const description = toolByName("list_keywords")?.description ?? "";
+
+    expect(description).toContain("latestResultCount");
+    expect(description).toContain(
+      "0 means the store lists no apps for the search",
+    );
+    expect(description).toContain(
+      "null marks checks stored before the count was recorded",
+    );
+    expect(description).not.toMatch(/>\d+/);
+  });
+
+  it("tells an agent how to read the result count of a ranking history point", () => {
+    const description = toolByName("ranking_history")?.description ?? "";
+
+    expect(description).toContain("resultCount is 0");
+    expect(description).toContain(
+      "the store lists no apps for that search that day",
+    );
+  });
+
+  it("tells an agent how to read the result count of a keyword breakdown ranking", () => {
+    const description = toolByName("keyword_breakdown")?.description ?? "";
+
+    expect(description).toContain("resultCount 0");
+    expect(description).toContain("the store lists no apps for that search");
+  });
+
+  it("tells an agent how to read the result count of a keyword discovery", () => {
+    const description = toolByName("keyword_discoveries")?.description ?? "";
+
+    expect(description).toContain("resultCount 0");
+    expect(description).toContain("a search that listed no apps");
+  });
+
+  it("tells an agent how to read the mover result counts of app_summary", () => {
+    const description = toolByName("app_summary")?.description ?? "";
+
+    expect(description).toContain("fromResultCount and toResultCount");
+    expect(description).toContain(
+      "carry meaning only at 0, which says the store lists no apps for the search",
+    );
+  });
+
   it.each([
     "officialPopularityState",
     "officialPopularityFloor",
@@ -144,6 +189,7 @@ describe("the tool catalog", () => {
     expect(names.slice(names.indexOf("keyword_fields"))).toEqual([
       "keyword_fields",
       "app_localizations",
+      "listing_targets",
       "market_keyword_fields",
     ]);
   });
@@ -200,6 +246,7 @@ describe("the tool catalog", () => {
   it.each([
     "keyword_fields",
     "app_localizations",
+    "listing_targets",
     "market_keyword_fields",
     "market_suggestions",
   ])(
@@ -211,12 +258,14 @@ describe("the tool catalog", () => {
     },
   );
 
-  it.each(["app_localizations", "market_keyword_fields", "market_suggestions"])(
-    "says %s answers an error on Google Play",
-    (name) => {
-      expect(toolByName(name)?.description).toContain("Google Play");
-    },
-  );
+  it.each([
+    "app_localizations",
+    "listing_targets",
+    "market_keyword_fields",
+    "market_suggestions",
+  ])("says %s answers an error on Google Play", (name) => {
+    expect(toolByName(name)?.description).toContain("Google Play");
+  });
 });
 
 const MARKET_TOOLS = [

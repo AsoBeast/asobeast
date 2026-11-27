@@ -26,7 +26,7 @@ Position 1 is the top result. `null` means the keyword was checked and the app w
   Never coerce `null` to `0`. Zero is a better position than 1, so treating a missing app as zero makes every unranked keyword look like the best result and inverts every average, delta and trend you compute.
 </Warning>
 
-Render `null` as a bound derived from the row's own `depth`, such as `>200` or `>30`. See [Positions and rank depth](/concepts/positions).
+Render `null` as a bound derived from the row's own `depth`, such as `>200` or `>30`. A `resultCount` of `0` means the store lists no apps for this search, which readers show as `No apps`, and a `resultCount` of `null` means the count was not recorded, so the bound stays. See [Positions and rank depth](/concepts/positions).
 
 ## Queued operations return 202
 

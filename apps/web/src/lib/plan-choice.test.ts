@@ -24,12 +24,16 @@ import {
   trustLines,
   paywallHeading,
   paywallStatusLine,
+  pausedNotice,
+  pausedPlanOf,
   TRIAL_REFUSED,
   suspensionNotice,
   trialBannerLine,
   trialEndsOn,
   trialPaymentNote,
   trialPriceLabel,
+  COLLECTION_PAUSED,
+  ASK_THE_OWNER,
 } from "./plan-choice";
 import { formatDate } from "./format";
 
@@ -190,6 +194,55 @@ describe("planStatusLine", () => {
     );
 
     expect(line).toContain("Cancelled");
+  });
+});
+
+describe("a plan switch scheduled for the end of the period", () => {
+  const RENEWS = "2026-12-01T00:00:00.000Z";
+  const scheduled = planOf({
+    plan: "ultimate",
+    displayName: "Ultimate",
+    renewsAt: RENEWS,
+    scheduledPlan: "indie",
+  });
+
+  it("names the next plan and the day it starts in settings", () => {
+    expect(planStatusLine(scheduled)).toBe(
+      `Switches to Indie on ${formatDate(RENEWS)}.`,
+    );
+  });
+
+  it("names the switch on the paywall instead of a renewal", () => {
+    expect(paywallStatusLine(scheduled, CLOCK)).toBe(
+      `Your Ultimate plan switches to Indie on ${formatDate(RENEWS)}.`,
+    );
+  });
+
+  it("keeps the renewal line when nothing is scheduled", () => {
+    expect(planStatusLine({ ...scheduled, scheduledPlan: null })).toBe(
+      `Renews on ${formatDate(RENEWS)}.`,
+    );
+    expect(planStatusLine({ ...scheduled, scheduledPlan: undefined })).toBe(
+      `Renews on ${formatDate(RENEWS)}.`,
+    );
+  });
+
+  it("names no day it does not know", () => {
+    expect(planStatusLine({ ...scheduled, renewsAt: null })).toBe(
+      "Billed monthly until you cancel.",
+    );
+  });
+
+  it("lets a cancellation outrank the switch", () => {
+    expect(planStatusLine({ ...scheduled, cancelAtPeriodEnd: true })).toBe(
+      `Cancelled. Access continues until ${formatDate(RENEWS)}.`,
+    );
+  });
+
+  it("lets a stalled subscription outrank the switch", () => {
+    expect(planStatusLine({ ...stalled, scheduledPlan: "indie" })).toBe(
+      planStatusLine(stalled),
+    );
   });
 });
 
@@ -361,6 +414,34 @@ describe("a card backed trial", () => {
 
     expect(planStatusLine(declined)).toBe(DECLINED);
     expect(paywallStatusLine(declined, CLOCK)).toBe(DECLINED);
+  });
+
+  it("tells the owner in the account bar that the card was declined", () => {
+    const declined = planOf({ trialChargeFailed: true });
+
+    expect(pausedNotice(declined, false)).toBe(DECLINED);
+  });
+
+  it("reads the paused bar only from a plan that is no longer entitled", () => {
+    const declined = planOf({ entitled: false, trialChargeFailed: true });
+    const cachedWhileTrialing = planOf({ entitled: true, trialing: true });
+
+    expect(pausedPlanOf(declined)).toBe(declined);
+    expect(pausedPlanOf(cachedWhileTrialing)).toBeUndefined();
+    expect(pausedPlanOf(undefined)).toBeUndefined();
+  });
+
+  it("keeps the paused bar for every other unentitled workspace", () => {
+    expect(pausedNotice(stalled, false)).toBe(COLLECTION_PAUSED);
+    expect(pausedNotice(undefined, false)).toBe(COLLECTION_PAUSED);
+  });
+
+  it("asks a member to reach the owner even when the card was declined", () => {
+    const declined = planOf({ trialChargeFailed: true });
+
+    expect(pausedNotice(declined, true)).toBe(
+      `${COLLECTION_PAUSED} ${ASK_THE_OWNER}`,
+    );
   });
 
   it("keeps the stalled sentence for a paying customer that once trialed", () => {

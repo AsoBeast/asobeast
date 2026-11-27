@@ -1,5 +1,4 @@
-import { normalizeText } from '@asobeast/shared';
-import { containsTerm } from '../common/text/scripts';
+import { containsTerm, normalizeText } from '@asobeast/shared';
 import { extractCandidates } from '../keywords/extraction';
 import { ListingText } from '../keywords/listing-texts';
 import { SearchItem } from '../store-providers/types';

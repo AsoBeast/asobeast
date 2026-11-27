@@ -73,6 +73,7 @@ export const EXPORT_TABLE_KEYS: readonly ExportTableKey[] = [
   { name: 'keywordField', key: BY_LOCALIZATION },
   { name: 'appSetup', key: ['appId'] },
   { name: 'appLocalization', key: BY_LOCALIZATION },
+  { name: 'listingTarget', key: BY_LOCALIZATION },
   { name: 'keywordRanking', key: ['appId', 'keywordId', 'date'] },
   { name: 'categoryRank', key: ['appId', 'date', 'collection', 'genre'] },
   { name: 'chartFollow', key: ID },

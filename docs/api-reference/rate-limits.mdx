@@ -40,6 +40,7 @@ These ceilings are resource safety rather than plan capacity, so they hold on a 
 | Characters of keyword field text | 1,000 | `PUT /apps/{id}/keyword-field`, `PUT /apps/{id}/keyword-fields/{localization}` and its preview |
 | Characters of the normalized keyword field | 100 | the same saves |
 | Markets in `trackIn` | 200 | `PUT /apps/{id}/keyword-fields/{localization}` |
+| Target keywords per localization | 10 | `PUT /apps/{id}/localizations/{localization}/targets` |
 
 A keyword is also capped at five words. Each tracked keyword market costs one real store search every day, so a pasted spreadsheet column or a scripting mistake would otherwise multiply a workspace's daily store volume without anyone choosing to. Exceeding any of these returns `400` and writes nothing, so a refused batch never lands half applied. Split a larger list across several requests.
 
@@ -51,7 +52,7 @@ The keyword field text may run to 1,000 characters, so spacing and duplicates in
 
 | Class | What it covers | Drawn from |
 | --- | --- | --- |
-| Read | Anything that returns stored data, including exports and the previews of keyword imports and keyword field saves, which validate and write nothing | The generous per minute budget |
+| Read | Anything that returns stored data, including exports and the previews of keyword imports, keyword field saves and draft listings (`POST /apps/{id}/metadata/coverage-preview`), which validate and write nothing | The generous per minute budget |
 | Write | Configuration changes such as adding a keyword or a competitor | The tighter write budget |
 | Store | Refresh, finding localizations, run daily, score, keyword suggestions, deep search, importing an app, adding a competitor, name search and similar apps lookups, and capturing a top chart | The write budget, plus its own on demand allowance |
 

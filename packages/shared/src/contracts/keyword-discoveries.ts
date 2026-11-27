@@ -36,6 +36,7 @@ export interface KeywordDiscoveryItem {
   source: DiscoverySource;
   position: number | null;
   depth: number | null;
+  resultCount?: number | null;
   checkedOn: string | null;
   traffic: number | null;
   difficulty: number | null;

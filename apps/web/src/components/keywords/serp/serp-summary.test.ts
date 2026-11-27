@@ -6,7 +6,11 @@ import type {
 } from "@asobeast/shared";
 import { serpSummary } from "./serp-summary";
 
-const VIEWER = { appId: "app-1", storeAppId: "123456789" };
+const VIEWER = {
+  appId: "app-1",
+  storeAppId: "123456789",
+  store: "APP_STORE",
+} as const;
 const NEWEST = "2026-10-31";
 const OLDER = "2026-10-30";
 
@@ -41,7 +45,10 @@ function snapshot(
 }
 
 const keyword = (
-  over: Pick<TrackedKeywordItem, "latestPosition" | "latestDepth">,
+  over: Pick<
+    TrackedKeywordItem,
+    "latestPosition" | "latestDepth" | "latestResultCount" | "latestCheckedOn"
+  >,
 ) => over as TrackedKeywordItem;
 
 const listOf = (count: number) =>
@@ -94,6 +101,51 @@ describe("serpSummary position", () => {
     ).toEqual({ kind: "notFound", depth: 200 });
   });
 
+  it("says the store lists no apps when the newest check listed none", () => {
+    expect(
+      serpSummary(
+        snapshot(listOf(50)),
+        VIEWER,
+        keyword({
+          latestPosition: null,
+          latestDepth: 200,
+          latestResultCount: 0,
+          latestCheckedOn: NEWEST,
+        }),
+      ).position,
+    ).toEqual({ kind: "noApps" });
+  });
+
+  it("claims no position when a newer check captured nothing", () => {
+    const newerCheck = keyword({
+      latestPosition: null,
+      latestDepth: 200,
+      latestResultCount: 0,
+      latestCheckedOn: "2026-11-02",
+    });
+
+    expect(
+      serpSummary(snapshot(listOf(50)), VIEWER, newerCheck).position,
+    ).toEqual({ kind: "absent" });
+    expect(
+      serpSummary(snapshot(listOf(10), OLDER), VIEWER, newerCheck).position,
+    ).toEqual({ kind: "absent" });
+  });
+
+  it("keeps the depth bound for a row written before the count existed", () => {
+    expect(
+      serpSummary(
+        snapshot(listOf(50)),
+        VIEWER,
+        keyword({
+          latestPosition: null,
+          latestDepth: 200,
+          latestResultCount: null,
+        }),
+      ).position,
+    ).toEqual({ kind: "notFound", depth: 200 });
+  });
+
   it("claims no position on an older day or without the keyword row", () => {
     const deeper = keyword({ latestPosition: 73, latestDepth: 200 });
 
@@ -113,36 +165,52 @@ describe("serpSummary position", () => {
   });
 });
 
-describe("serpSummary titles", () => {
-  it("counts the top 10 titles that hold the whole keyword", () => {
-    const entries = listOf(12).map((row) => ({
-      ...row,
-      titleMatch:
-        row.position <= 7 || row.position > 10
-          ? ("phrase" as const)
-          : ("words" as const),
-    }));
+describe("serpSummary placements", () => {
+  it("counts where the top 10 put the keyword", () => {
+    const placements = [
+      "title",
+      "both",
+      "subtitle",
+      "split",
+      "none",
+      undefined,
+      "title",
+      undefined,
+      "title",
+      "none",
+      "title",
+    ] as const;
+    const entries = placements.map((placement, index) =>
+      entry(index + 1, {
+        titleMatch: "none",
+        ...(placement ? { placement } : {}),
+        ...(index < 5 ? { subtitle: index === 4 ? null : "Subtitle" } : {}),
+      }),
+    );
 
-    expect(serpSummary(snapshot(entries), VIEWER).titles).toEqual({
-      withKeyword: 7,
+    expect(serpSummary(snapshot(entries), VIEWER).placements).toEqual({
+      inTitle: 4,
       of: 10,
+      inSubtitle: 2,
+      subtitlesKnown: 5,
     });
   });
 
-  it("counts over the entries a short list holds", () => {
-    const entries = listOf(6).map((row) => ({
+  it("counts titles only on Google Play", () => {
+    const entries = listOf(6).map((row, index) => ({
       ...row,
-      titleMatch: "partial" as const,
+      titleMatch: "none" as const,
+      ...(index < 2 ? { placement: "title" as const } : {}),
     }));
 
-    expect(serpSummary(snapshot(entries), VIEWER).titles).toEqual({
-      withKeyword: 0,
-      of: 6,
-    });
+    expect(
+      serpSummary(snapshot(entries), { ...VIEWER, store: "GOOGLE_PLAY" })
+        .placements,
+    ).toEqual({ inTitle: 2, of: 6, inSubtitle: null, subtitlesKnown: null });
   });
 
-  it("reports nothing when no title was judged", () => {
-    expect(serpSummary(snapshot(listOf(10)), VIEWER).titles).toBeNull();
+  it("reports nothing when no entry was judged", () => {
+    expect(serpSummary(snapshot(listOf(10)), VIEWER).placements).toBeNull();
   });
 });
 

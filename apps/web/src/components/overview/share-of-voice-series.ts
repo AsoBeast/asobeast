@@ -1,4 +1,5 @@
 import type { ShareOfVoicePoint, VisibilityHistory } from "@asobeast/shared";
+import { valueAxis, type ValueAxis } from "@/components/charts/trend-axis";
 
 export interface ShareRow {
   date: string;
@@ -27,5 +28,20 @@ export function shareSeries(history: VisibilityHistory): ShareRow[] {
     });
 }
 
-export const hasNonBranded = (history: VisibilityHistory): boolean =>
-  history.nonBrandedShareOfVoice !== undefined;
+export const hasNonBranded = (rows: readonly ShareRow[]): boolean =>
+  rows.some(
+    (row) => row.nonBranded !== undefined && row.nonBranded !== row.share,
+  );
+
+const FULL_SHARE = 100;
+const HEADROOM = 1.25;
+
+export function shareAxis(rows: readonly ShareRow[]): ValueAxis {
+  const values = rows.flatMap((row) =>
+    [row.share, row.nonBranded].filter((value) => value !== undefined),
+  );
+  return valueAxis([
+    0,
+    Math.min(FULL_SHARE, Math.max(0, ...values) * HEADROOM),
+  ]);
+}

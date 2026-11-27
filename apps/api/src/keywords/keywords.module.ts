@@ -10,9 +10,11 @@ import { KeywordFieldService } from './keyword-field.service';
 import { KeywordFieldWriter } from './keyword-field-writer';
 import { KeywordBulkService } from './keyword-bulk.service';
 import { KeywordImportService } from './keyword-import.service';
+import { KeywordPairTracker } from './keyword-pair-tracker';
 import { KeywordSuggestionService } from './keyword-suggestion.service';
 import { KeywordTracker } from './keyword-tracker';
 import { KeywordsController } from './keywords.controller';
+import { ListingTargetsService } from './listing-targets/listing-targets.service';
 import { LocalizationsController } from './localizations.controller';
 import { LocalizedKeywordFieldService } from './localized-keyword-field.service';
 import { KeywordsService } from './keywords.service';
@@ -42,8 +44,10 @@ import { TrackedKeywordAccess } from './tracked-keyword.access';
     KeywordFieldWriter,
     KeywordBulkService,
     KeywordImportService,
+    KeywordPairTracker,
     KeywordSuggestionService,
     KeywordTracker,
+    ListingTargetsService,
     LocalizedKeywordFieldService,
     MarketKeywordFieldsService,
     MarketListingRequests,

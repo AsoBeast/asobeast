@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { QuotaService } from '../auth/quota.service';
 import { FirstPositionChecks } from './first-position-checks';
 import { KeywordImportService } from './keyword-import.service';
+import { KeywordPairTracker } from './keyword-pair-tracker';
 import { KeywordTracker } from './keyword-tracker';
 import { MarketListingRequests } from './market-listing.requests';
 
@@ -85,10 +86,13 @@ const build = (
   };
   const service = new KeywordImportService(
     prisma as unknown as PrismaService,
-    tracker as unknown as KeywordTracker,
-    quota as unknown as QuotaService,
-    listings as unknown as MarketListingRequests,
-    checks as unknown as FirstPositionChecks,
+    new KeywordPairTracker(
+      prisma as unknown as PrismaService,
+      tracker as unknown as KeywordTracker,
+      quota as unknown as QuotaService,
+      listings as unknown as MarketListingRequests,
+      checks as unknown as FirstPositionChecks,
+    ),
   );
   return { prisma, tx, quota, tracker, listings, checks, service };
 };

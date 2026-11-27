@@ -216,7 +216,7 @@ test("prints the overview ranges as words and leaves its links out", async ({
   page,
 }) => {
   await open(page, OVERVIEW_WITH_RANGES);
-  await expect(page.getByRole("tablist")).toHaveCount(3);
+  await expect(page.getByRole("tablist")).toHaveCount(5);
 
   await printed(page);
 

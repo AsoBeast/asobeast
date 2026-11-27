@@ -480,6 +480,7 @@ export const ACTION_TREND_METRICS = [
   'rating',
   'updateAge',
   'conversion',
+  'lintErrors',
 ] as const;
 export type ActionTrendMetric = (typeof ACTION_TREND_METRICS)[number];
 

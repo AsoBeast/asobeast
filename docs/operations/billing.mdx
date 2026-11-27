@@ -79,6 +79,17 @@ The endpoint is the one billing route that is public, because Stripe has no sess
 
 A refused delivery is logged. Look for `rejected a webhook delivery` in the API log, which names the reason, and check the endpoint's own delivery history in the Stripe dashboard. Stripe retries a failed delivery, so a secret you fix within the retry window costs nothing.
 
+### When the pinned API version moves
+
+The API pins one Stripe API version, `STRIPE_API_VERSION` in `apps/api/src/billing/stripe.client.ts`, and the endpoint should send events in that version. Stripe renders each event in the version of the endpoint that delivers it and never changes the version of an existing endpoint, so a release that moves the pin needs a new endpoint:
+
+1. Read the upgrade notes of the release. They say whether the API still reads events in the version it replaces. When it does, deploy and keep the old endpoint until you switch; when it does not, switch right after the deploy.
+2. In Workbench, under Webhooks, create a destination on the same URL with the pinned API version and the same ten events, then disable it. The dashboard offers the newest version; when the pin is older than that, create the endpoint through the API with `api_version` set.
+3. Put the new endpoint's signing secret in `STRIPE_WEBHOOK_SECRET`, restart the API, enable the new endpoint and disable the old one. Delete the old one once its delivery history is quiet.
+4. Run the catalog script against the account again, because a new version can bring portal settings the script holds, such as the pause feature it keeps off.
+
+Between the restart and the switch of the endpoints, the old endpoint's deliveries fail signature verification and are logged as `rejected a webhook delivery`. The nightly reconciliation corrects any workspace an event missed in that window.
+
 ### What happens to an event this instance cannot place
 
 Every verified delivery is stored once and processed from a queue, and each stored event records how it settled:
@@ -167,7 +178,7 @@ A failed charge moves the subscription to `past_due`, which **stays entitled**. 
 
 ## Downgrade and cancellation
 
-Both are self service through the Stripe customer portal. A cancellation takes effect at period end, so the customer keeps what they paid for. A downgrade, or a switch from annual to monthly, is scheduled at period end as well. An upgrade applies at once and invoices the difference. A plan change is a portal change, never a second checkout: a workspace that already names a live subscription is refused a checkout session with 409 and sent to the portal, so one workspace is never charged twice.
+Both are self service through the Stripe customer portal. A cancellation takes effect at period end, so the customer keeps what they paid for. A downgrade, or a switch from annual to monthly, is scheduled at period end as well. Settings then names the plan a scheduled downgrade switches to and the day it starts, while a switch of interval alone keeps the renewal date. An upgrade applies at once and invoices the difference. A plan change is a portal change, never a second checkout: a workspace that already names a live subscription is refused a checkout session with 409 and sent to the portal, so one workspace is never charged twice.
 
 A workspace also gets at most one checkout session it can complete. Opening a session claims a short lease, so two requests in flight together cannot both create one, and the previous session is expired at Stripe before a new one opens, so a page left open in another tab cannot be paid afterwards. Stripe itself is asked for the customer's subscriptions before any session is created, which closes the window between a completed payment and the webhook that records it. A subscription found that way is reconciled onto the workspace before the checkout is refused, so the customer keeps what they already pay for, and a refusal that rests on stored state reconciles first as well rather than trusting a row a webhook may have missed. A live subscription on the customer whose metadata names a different workspace refuses the checkout without adopting it: one customer is never billed twice, and the mismatch is logged for support. Turn on **Limit customers to one subscription** in the Stripe dashboard as well: it is the only thing that stops two checkout tabs both completing.
 
@@ -179,7 +190,7 @@ A refusal carries the recovery in the error body, not only in its message, so th
 - Within a week of the effective date, if the workspace would be over the smaller plan's limits, the owner is emailed with the exact numbers.
 - At the effective date the daily run covers the first items in a stable order and leaves the rest untouched. **Nothing is deleted.**
 
-The catalog script provisions the portal rather than leaving it to the dashboard. It finds the default portal configuration and updates it, or creates one and says so. It allows cancellation at period end with a reason prompt, price changes across both products and all four prices with downgrades and switches to a shorter interval scheduled at period end, payment method updates, invoice history, and updates to the name, email, address, phone and tax id. It sets the terms and privacy links, `WEB_PUBLIC_URL` plus `/settings` as the default return, and turns the public portal login page off, because every portal visit starts from the API. Pausing is not offered: the portal of the pinned API version has no pause feature to configure, and a paused status cannot arise from a trial any more, because every trial holds a card; it stays recoverable for completeness.
+The catalog script provisions the portal rather than leaving it to the dashboard. It finds the default portal configuration and updates it, or creates one and says so. It allows cancellation at period end with a reason prompt, price changes across both products and all four prices with downgrades and switches to a shorter interval scheduled at period end, payment method updates, invoice history, and updates to the name, email, address, phone and tax id. It sets the terms and privacy links, `WEB_PUBLIC_URL` plus `/settings` as the default return, and turns the public portal login page off, because every portal visit starts from the API. Pausing is turned off, and the script turns it off again when it was switched on in the dashboard: a paused status cannot arise from a trial any more, because every trial holds a card; it stays recoverable for completeness.
 
 ## Reconciliation
 

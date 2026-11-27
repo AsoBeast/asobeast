@@ -21,6 +21,7 @@ describe('captureReading', () => {
       position: 7,
       depth: DISCOVERY_CAPTURE_DEPTH,
       ownSearch: false,
+      resultCount: null,
       checkedOn: TODAY,
     });
   });
@@ -30,6 +31,7 @@ describe('captureReading', () => {
       position: null,
       depth: DISCOVERY_CAPTURE_DEPTH,
       ownSearch: false,
+      resultCount: null,
       checkedOn: TODAY,
     });
   });
@@ -41,6 +43,7 @@ describe('captureReading', () => {
       position: null,
       depth: DISCOVERY_CAPTURE_DEPTH,
       ownSearch: false,
+      resultCount: null,
       checkedOn: TODAY,
     });
   });
@@ -60,6 +63,7 @@ describe('captureReading', () => {
       position: null,
       depth: DISCOVERY_CAPTURE_DEPTH,
       ownSearch: false,
+      resultCount: null,
       checkedOn: YESTERDAY,
     });
   });
@@ -71,6 +75,7 @@ describe('captureReading held depth', () => {
       position: null,
       depth: 26,
       ownSearch: false,
+      resultCount: null,
       checkedOn: TODAY,
     });
   });
@@ -89,6 +94,7 @@ describe('captureReading held depth', () => {
       position: 9,
       depth: 18,
       ownSearch: false,
+      resultCount: null,
       checkedOn: TODAY,
     });
   });
@@ -225,11 +231,23 @@ describe('DiscoveryCaptures.read', () => {
     expect([...readings]).toEqual([
       [
         'kw-ranked',
-        { position: 12, depth: 50, ownSearch: false, checkedOn: TODAY },
+        {
+          position: 12,
+          depth: 50,
+          resultCount: null,
+          ownSearch: false,
+          checkedOn: TODAY,
+        },
       ],
       [
         'kw-absent',
-        { position: null, depth: 50, ownSearch: false, checkedOn: YESTERDAY },
+        {
+          position: null,
+          depth: 50,
+          resultCount: null,
+          ownSearch: false,
+          checkedOn: YESTERDAY,
+        },
       ],
     ]);
     expect(findMany).toHaveBeenCalledTimes(1);
@@ -251,7 +269,13 @@ describe('DiscoveryCaptures.read', () => {
       new Map([
         [
           'kw-top',
-          { position: 1, depth: 50, ownSearch: false, checkedOn: TODAY },
+          {
+            position: 1,
+            depth: 50,
+            resultCount: null,
+            ownSearch: false,
+            checkedOn: TODAY,
+          },
         ],
       ]),
     );

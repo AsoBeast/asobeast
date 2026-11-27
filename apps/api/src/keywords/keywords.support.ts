@@ -116,16 +116,15 @@ export async function ensureKeywordFieldApp(
   return requireAppStore(await ensureApp(prisma, appId));
 }
 
+export const COMPETITOR_HAS_NO_LOCALIZATIONS =
+  'A competitor app has no localizations or keyword fields; use its primary app';
+
 export async function ensureLocalizedFieldApp(
   prisma: PrismaService,
   appId: string,
 ): Promise<KeywordApp> {
   return requireAppStore(
-    await ensurePrimaryApp(
-      prisma,
-      appId,
-      'A competitor app has no localizations or keyword fields; use its primary app',
-    ),
+    await ensurePrimaryApp(prisma, appId, COMPETITOR_HAS_NO_LOCALIZATIONS),
   );
 }
 
@@ -174,7 +173,12 @@ export function trackedArgs(appId: string) {
             where: { appId },
             orderBy: { date: 'desc' as const },
             take: RANKING_HISTORY_LIMIT,
-            select: { position: true, date: true, depth: true },
+            select: {
+              position: true,
+              date: true,
+              depth: true,
+              resultCount: true,
+            },
           },
           metrics: {
             orderBy: { date: 'desc' as const },

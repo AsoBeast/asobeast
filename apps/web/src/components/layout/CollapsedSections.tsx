@@ -44,11 +44,16 @@ export function CollapsedSectionsProvider({
 
   const setOpen = useCallback(
     (section: string, open: boolean) => {
-      const next = withSection(collapsed, section, open);
-      setCollapsed(next);
-      document.cookie = collapsedCookie(serializeCollapsed(next, known));
+      setCollapsed((current) => withSection(current, section, open));
+      const stored = parseCollapsed(
+        readCollapsedCookie(document.cookie),
+        known,
+      );
+      document.cookie = collapsedCookie(
+        serializeCollapsed(withSection(stored, section, open), known),
+      );
     },
-    [collapsed, known],
+    [known],
   );
 
   const value = useMemo(() => ({ collapsed, setOpen }), [collapsed, setOpen]);

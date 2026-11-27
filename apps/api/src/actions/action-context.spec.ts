@@ -1,5 +1,10 @@
 import { ConfigService } from '@nestjs/config';
-import { DailyBudget, TrackedKeywordItem } from '@asobeast/shared';
+import {
+  DailyBudget,
+  MetadataAuditResult,
+  TrackedKeywordItem,
+  UnknownStorefrontError,
+} from '@asobeast/shared';
 import { Env } from '../config/env';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { DEFAULT_WORKSPACE_ID } from '../common/tenancy/default-workspace';
@@ -7,6 +12,7 @@ import { ActionFunnelReader } from './action-funnel';
 import { PrismaService } from '../prisma/prisma.service';
 import { KeywordsService } from '../keywords/keywords.service';
 import { MetadataService } from '../metadata/metadata.service';
+import { missingListing } from '../apps/missing-listing';
 import {
   COMPETITOR_CHANGE_WINDOW_DAYS,
   COMPETITOR_RANKING_WINDOW_DAYS,
@@ -111,6 +117,7 @@ interface PrismaStubData {
     storeAppId: string;
     title: string;
   }>;
+  heldActions?: Array<{ appId: string; fingerprint: string }>;
 }
 
 const buildPrisma = (data: PrismaStubData = {}) => ({
@@ -131,6 +138,9 @@ const buildPrisma = (data: PrismaStubData = {}) => ({
   serpEntry: {
     findMany: jest.fn(() => Promise.resolve(data.serpEntries ?? [])),
     findFirst: jest.fn(() => Promise.resolve(null)),
+  },
+  actionItem: {
+    findMany: jest.fn(() => Promise.resolve(data.heldActions ?? [])),
   },
 });
 
@@ -470,6 +480,150 @@ describe('ActionContextLoader', () => {
       'us',
     ]);
     expect(context.apps[0].keywordsByCountry.get('de')).toHaveLength(2);
+  });
+
+  describe('market listings', () => {
+    const titleAudit = (country: string): MetadataAuditResult =>
+      ({
+        appId: 'app_1',
+        coverage: [],
+        fields: [
+          {
+            field: 'title',
+            value: country,
+            chars: 2,
+            limit: 30,
+            indexed: true,
+            issues: [],
+          },
+        ],
+      }) as unknown as MetadataAuditResult;
+
+    const marketLoader = (
+      audit: (appId: string, country: string) => Promise<MetadataAuditResult>,
+      prisma = buildPrisma(),
+    ): ActionContextLoader =>
+      new ActionContextLoader(
+        prisma as unknown as PrismaService,
+        {
+          get: jest.fn((key: keyof Env) =>
+            key === 'ALERT_REVIEW_SCORE_MAX' ? 2 : 5,
+          ),
+        } as unknown as ConfigService<Env, true>,
+        {
+          listTracked: jest.fn(() =>
+            Promise.resolve([
+              keyword('kw_1', 'us'),
+              keyword('kw_2', 'tr'),
+              keyword('kw_3', 'de'),
+              keyword('kw_4', 'fr'),
+              keyword('kw_5', 'jp', { active: false }),
+              keyword('kw_6', 'tr'),
+            ]),
+          ),
+        } as unknown as KeywordsService,
+        { audit } as unknown as MetadataService,
+        workspaceScope,
+        noFunnels,
+      );
+
+    it('audits every market with an active keyword once, in country order', async () => {
+      const audit = jest.fn((_appId: string, country: string) =>
+        Promise.resolve(titleAudit(country)),
+      );
+
+      const context = await marketLoader(audit).load(budget, NOW);
+
+      expect(audit.mock.calls.map(([, country]) => country)).toEqual([
+        'us',
+        'de',
+        'fr',
+        'tr',
+      ]);
+      expect(context.apps[0].metadataFields[0].value).toBe('us');
+      expect(
+        context.apps[0].marketMetadata.map((market) => [
+          market.country,
+          market.fields[0].value,
+        ]),
+      ).toEqual([
+        ['de', 'de'],
+        ['fr', 'fr'],
+        ['tr', 'tr'],
+      ]);
+    });
+
+    it('audits the markets of an app one at a time', async () => {
+      let running = 0;
+      let most = 0;
+      const audit = jest.fn(async (_appId: string, country: string) => {
+        running += 1;
+        most = Math.max(most, running);
+        await new Promise((resolve) => setImmediate(resolve));
+        running -= 1;
+        return titleAudit(country);
+      });
+
+      await marketLoader(audit).load(budget, NOW);
+
+      expect(audit).toHaveBeenCalledTimes(4);
+      expect(most).toBe(1);
+    });
+
+    it('skips a market whose listing was never captured or that is no storefront', async () => {
+      const audit = jest.fn((_appId: string, country: string) => {
+        if (country === 'fr') return Promise.reject(missingListing('fr'));
+        if (country === 'tr') {
+          return Promise.reject(new UnknownStorefrontError('APP_STORE', 'tr'));
+        }
+        return Promise.resolve(titleAudit(country));
+      });
+
+      const context = await marketLoader(audit).load(budget, NOW);
+
+      expect(context.apps).toHaveLength(1);
+      expect(
+        context.apps[0].marketMetadata.map((market) => market.country),
+      ).toEqual(['de']);
+    });
+
+    it('leaves the app out when a market audit fails unexpectedly', async () => {
+      const audit = jest.fn((_appId: string, country: string) =>
+        country === 'de'
+          ? Promise.reject(new Error('Timed out fetching a new connection'))
+          : Promise.resolve(titleAudit(country)),
+      );
+
+      const context = await marketLoader(audit).load(budget, NOW);
+
+      expect(context.apps).toEqual([]);
+    });
+
+    it('carries the fingerprints of the live lint actions of each app', async () => {
+      const prisma = buildPrisma({
+        heldActions: [
+          { appId: 'app_1', fingerprint: 'fp_au_subtitle' },
+          { appId: 'app_other', fingerprint: 'fp_other' },
+        ],
+      });
+
+      const context = await marketLoader(
+        (_appId, country) => Promise.resolve(titleAudit(country)),
+        prisma,
+      ).load(budget, NOW);
+
+      expect(prisma.actionItem.findMany).toHaveBeenCalledWith({
+        where: {
+          appId: { in: ['app_1'] },
+          rule: 'metadata.fix_lint',
+          status: { not: 'RESOLVED' },
+        },
+        select: { appId: true, fingerprint: true },
+      });
+      expect([...context.apps[0].heldLintFingerprints]).toEqual([
+        'fp_au_subtitle',
+      ]);
+    });
   });
 
   it('builds a per-market visibility series from the stored rankings', async () => {

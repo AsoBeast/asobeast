@@ -53,7 +53,7 @@ test("the sheet links to the workspace that fixes the action", async ({
 
   await expect(
     page.getByRole("link", { name: "Fix it in Metadata" }),
-  ).toHaveAttribute("href", "/apps/app-1/metadata?keyword=kw-1");
+  ).toHaveAttribute("href", "/apps/app-1/metadata?market=us&keyword=kw-1");
 });
 
 test("the sheet says a keyword that was never checked is not checked yet", async ({

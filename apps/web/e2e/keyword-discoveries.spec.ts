@@ -2,8 +2,9 @@ import AxeBuilder from "@axe-core/playwright";
 import type { Page, Request } from "@playwright/test";
 import { pressFromKeyboard } from "./held-request.mts";
 import { activateTwiceInOneTask, hydrated } from "./hydrated.mts";
+import { seedCookies } from "./routes.mts";
 import { expect, test } from "./session.mts";
-import { APP_GP_DETAIL, APP_RIVAL_ID } from "./fixtures.mts";
+import { APP_GP_DETAIL, APP_RIVAL_ID, NO_APPS_COOKIE } from "./fixtures.mts";
 import {
   DISCOVERY_FAIL_WRITE_COOKIE,
   DISCOVERY_NONE_COOKIE,
@@ -195,6 +196,24 @@ test("each row names its source, position and scores", async ({ page }) => {
   await expect(
     rowOf(page, "focus timer app").getByText("Recommended"),
   ).toBeVisible();
+});
+
+test("a discovery whose search listed nothing reads No apps", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { [NO_APPS_COOKIE]: "1" });
+  await page.goto(DISCOVERED);
+
+  const row = rowOf(page, "focus music");
+  await expect(row).toContainText("No apps");
+  await expect(row).not.toContainText(">200");
+  await expect(row).toHaveAccessibleName(
+    /No apps: The store lists no apps for this search/,
+  );
+  await expect(
+    row.locator('[title="The store lists no apps for this search"]'),
+  ).toHaveCount(1);
 });
 
 test("a header sorts the list and the search narrows it, both in the address", async ({

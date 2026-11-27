@@ -27,8 +27,8 @@ const DAY_MS = 86_400_000;
 
 const budget = dailyBudget();
 
-const emptyContext = (): ActionContext =>
-  actionContext([], { workspaceId: 'ws_default' });
+const appContext = (): ActionContext =>
+  actionContext([contextApp()], { workspaceId: 'ws_default' });
 
 const detection = (
   rule: ActionRule,
@@ -165,7 +165,7 @@ const generatorFor = (
 
 const fingerprintOf = async (): Promise<string> => {
   const prisma = buildPrisma();
-  await generatorFor(emptyContext(), prisma).generateForWorkspace(budget, NOW);
+  await generatorFor(appContext(), prisma).generateForWorkspace(budget, NOW);
   return prisma.created[0].fingerprint;
 };
 
@@ -202,7 +202,7 @@ describe('ActionsGenerator', () => {
     const prisma = buildPrisma();
 
     const result = await generatorFor(
-      emptyContext(),
+      appContext(),
       prisma,
     ).generateForWorkspace(budget, NOW);
 
@@ -221,7 +221,7 @@ describe('ActionsGenerator', () => {
     const prisma = buildPrisma();
 
     const result = await generatorFor(
-      emptyContext(),
+      appContext(),
       prisma,
     ).generateForWorkspace(budget, NOW);
 
@@ -252,7 +252,7 @@ describe('ActionsGenerator', () => {
     const prisma = buildPrisma(storedRow(fingerprint, {}));
 
     const result = await generatorFor(
-      emptyContext(),
+      appContext(),
       prisma,
     ).generateForWorkspace(budget, NOW);
 
@@ -273,7 +273,7 @@ describe('ActionsGenerator', () => {
     );
 
     const result = await generatorFor(
-      emptyContext(),
+      appContext(),
       prisma,
     ).generateForWorkspace(budget, NOW);
 
@@ -283,6 +283,26 @@ describe('ActionsGenerator', () => {
       resolvedAt: NOW,
       snoozedUntil: null,
     });
+  });
+
+  it('leaves the rows of an app the run could not load untouched', async () => {
+    useDetectors([{ rule: 'keyword.add_uncovered', detect: () => [] }]);
+    const prisma = buildPrisma(
+      storedRow('abc', {
+        appId: 'app_skipped',
+        status: 'SNOOZED',
+        snoozedUntil: new Date(NOW.getTime() + DAY_MS),
+      }),
+    );
+
+    const result = await generatorFor(
+      appContext(),
+      prisma,
+    ).generateForWorkspace(budget, NOW);
+
+    expect(result.resolved).toBe(0);
+    expect(prisma.updated).toHaveLength(0);
+    expect(prisma.events).toHaveLength(0);
   });
 
   it('leaves rows untouched when their detector crashed', async () => {
@@ -314,7 +334,7 @@ describe('ActionsGenerator', () => {
     ]);
 
     const result = await generatorFor(
-      emptyContext(),
+      appContext(),
       prisma,
     ).generateForWorkspace(budget, NOW);
 
@@ -342,7 +362,7 @@ describe('ActionsGenerator', () => {
     const prisma = buildPrisma();
 
     const result = await generatorFor(
-      emptyContext(),
+      appContext(),
       prisma,
       2,
     ).generateForWorkspace(budget, NOW);
@@ -367,7 +387,7 @@ describe('ActionsGenerator', () => {
       },
     ]);
     const probe = buildPrisma();
-    await generatorFor(emptyContext(), probe, 3).generateForWorkspace(
+    await generatorFor(appContext(), probe, 3).generateForWorkspace(
       budget,
       NOW,
     );
@@ -390,7 +410,7 @@ describe('ActionsGenerator', () => {
     );
 
     const result = await generatorFor(
-      emptyContext(),
+      appContext(),
       prisma,
       1,
     ).generateForWorkspace(budget, NOW);
@@ -422,11 +442,11 @@ describe('ActionsGenerator', () => {
     );
 
     const touched = await generatorFor(
-      emptyContext(),
+      appContext(),
       inside,
     ).generateForWorkspace(budget, NOW);
     const reopened = await generatorFor(
-      emptyContext(),
+      appContext(),
       outside,
     ).generateForWorkspace(budget, NOW);
 
@@ -452,7 +472,7 @@ describe('ActionsGenerator', () => {
     );
 
     const result = await generatorFor(
-      emptyContext(),
+      appContext(),
       prisma,
     ).generateForWorkspace(budget, NOW);
 
@@ -473,7 +493,7 @@ describe('ActionsGenerator', () => {
         storedRow(fingerprint, { status: 'RESOLVED' }),
       );
 
-      await generatorFor(emptyContext(), prisma).generateForWorkspace(
+      await generatorFor(appContext(), prisma).generateForWorkspace(
         budget,
         NOW,
       );
@@ -493,7 +513,7 @@ describe('ActionsGenerator', () => {
         }),
       );
 
-      await generatorFor(emptyContext(), prisma).generateForWorkspace(
+      await generatorFor(appContext(), prisma).generateForWorkspace(
         budget,
         NOW,
       );
@@ -515,7 +535,7 @@ describe('ActionsGenerator', () => {
     );
 
     const result = await generatorFor(
-      emptyContext(),
+      appContext(),
       prisma,
     ).generateForWorkspace(budget, NOW);
 
@@ -532,10 +552,7 @@ describe('ActionsGenerator', () => {
       }),
     );
 
-    await generatorFor(emptyContext(), prisma).generateForWorkspace(
-      budget,
-      NOW,
-    );
+    await generatorFor(appContext(), prisma).generateForWorkspace(budget, NOW);
 
     expect(prisma.updated[0].data).toMatchObject({
       status: 'OPEN',
@@ -552,10 +569,7 @@ describe('ActionsGenerator', () => {
       }),
     );
 
-    await generatorFor(emptyContext(), prisma).generateForWorkspace(
-      budget,
-      NOW,
-    );
+    await generatorFor(appContext(), prisma).generateForWorkspace(budget, NOW);
 
     expect(prisma.updated[0].data).toMatchObject({
       status: 'SNOOZED',
@@ -568,7 +582,7 @@ describe('ActionsGenerator', () => {
     it('records an opened event for a new action with its scored priority', async () => {
       const prisma = buildPrisma();
 
-      await generatorFor(emptyContext(), prisma).generateForWorkspace(
+      await generatorFor(appContext(), prisma).generateForWorkspace(
         budget,
         NOW,
       );
@@ -595,7 +609,7 @@ describe('ActionsGenerator', () => {
       useDetectors([{ rule: 'keyword.add_uncovered', detect: () => [] }]);
       const prisma = buildPrisma(storedRow('abc', {}));
 
-      await generatorFor(emptyContext(), prisma).generateForWorkspace(
+      await generatorFor(appContext(), prisma).generateForWorkspace(
         budget,
         NOW,
       );
@@ -616,7 +630,7 @@ describe('ActionsGenerator', () => {
       for (const status of ['OPEN', 'DONE', 'DISMISSED']) {
         const prisma = buildPrisma(storedRow(fingerprint, { status }));
 
-        await generatorFor(emptyContext(), prisma).generateForWorkspace(
+        await generatorFor(appContext(), prisma).generateForWorkspace(
           budget,
           NOW,
         );
@@ -634,7 +648,7 @@ describe('ActionsGenerator', () => {
         }),
       );
 
-      await generatorFor(emptyContext(), prisma).generateForWorkspace(
+      await generatorFor(appContext(), prisma).generateForWorkspace(
         budget,
         NOW,
       );
@@ -650,7 +664,7 @@ describe('ActionsGenerator', () => {
         storedRow(fingerprint, { status: 'RESOLVED' }),
       );
 
-      await generatorFor(emptyContext(), prisma).generateForWorkspace(
+      await generatorFor(appContext(), prisma).generateForWorkspace(
         budget,
         NOW,
       );
@@ -675,7 +689,7 @@ describe('ActionsGenerator', () => {
       ]);
       const prisma = buildPrisma(storedRow('abc', {}));
 
-      await generatorFor(emptyContext(), prisma).generateForWorkspace(
+      await generatorFor(appContext(), prisma).generateForWorkspace(
         budget,
         NOW,
       );
@@ -691,7 +705,7 @@ describe('ActionsGenerator', () => {
       const prisma = buildPrisma(storedRow('abc', { status: 'DONE' }));
 
       const result = await generatorFor(
-        emptyContext(),
+        appContext(),
         prisma,
       ).generateForWorkspace(budget, NOW);
 
@@ -718,7 +732,7 @@ describe('ActionsGenerator', () => {
       const prisma = buildPrisma(storedRow('abc', { status: 'DONE' }));
 
       const result = await generatorFor(
-        emptyContext(),
+        appContext(),
         prisma,
       ).generateForWorkspace(budget, NOW);
 
@@ -737,7 +751,7 @@ describe('ActionsGenerator', () => {
       );
 
       const result = await generatorFor(
-        emptyContext(),
+        appContext(),
         prisma,
       ).generateForWorkspace(budget, NOW);
 
@@ -764,7 +778,7 @@ describe('ActionsGenerator', () => {
       const prisma = buildPrisma(storedRow(fingerprint, {}));
 
       const result = await generatorFor(
-        emptyContext(),
+        appContext(),
         prisma,
       ).generateForWorkspace(budget, NOW);
 
@@ -780,7 +794,7 @@ describe('ActionsGenerator', () => {
       const prisma = buildPrisma(storedRow(fingerprint, { status: 'DONE' }));
 
       const result = await generatorFor(
-        emptyContext(),
+        appContext(),
         prisma,
       ).generateForWorkspace(budget, NOW);
 
@@ -795,7 +809,7 @@ describe('ActionsGenerator', () => {
       const prisma = buildPrisma();
 
       const result = await generatorFor(
-        emptyContext(),
+        appContext(),
         prisma,
         0,
       ).generateForWorkspace(budget, NOW);
@@ -990,7 +1004,7 @@ describe('ActionsGenerator', () => {
       );
 
       const result = await generatorFor(
-        emptyContext(),
+        appContext(),
         prisma,
       ).generateForWorkspace(budget, NOW);
 
@@ -1011,7 +1025,7 @@ describe('ActionsGenerator', () => {
       );
 
       const result = await generatorFor(
-        emptyContext(),
+        appContext(),
         prisma,
       ).generateForWorkspace(budget, NOW);
 
@@ -1031,7 +1045,7 @@ describe('ActionsGenerator', () => {
       );
 
       const result = await generatorFor(
-        emptyContext(),
+        appContext(),
         prisma,
       ).generateForWorkspace(budget, NOW);
 
@@ -1051,7 +1065,7 @@ describe('ActionsGenerator', () => {
       );
 
       const result = await generatorFor(
-        emptyContext(),
+        appContext(),
         prisma,
       ).generateForWorkspace(budget, NOW);
 
@@ -1070,7 +1084,7 @@ describe('ActionsGenerator', () => {
         }),
       );
 
-      await generatorFor(emptyContext(), prisma).generateForWorkspace(
+      await generatorFor(appContext(), prisma).generateForWorkspace(
         budget,
         NOW,
       );
@@ -1097,10 +1111,7 @@ describe('ActionsGenerator', () => {
       ...storedRow('gone', { id: 'act_1' }),
     ]);
 
-    await generatorFor(emptyContext(), prisma).generateForWorkspace(
-      budget,
-      NOW,
-    );
+    await generatorFor(appContext(), prisma).generateForWorkspace(budget, NOW);
 
     expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
     const [strings, ids] = prisma.$queryRaw.mock.calls[0];
@@ -1115,7 +1126,7 @@ describe('ActionsGenerator', () => {
     useDetectors([{ rule: 'keyword.add_uncovered', detect: () => [] }]);
 
     const result = await generatorFor(
-      emptyContext(),
+      appContext(),
       buildPrisma(),
     ).generateForWorkspace(budget, NOW);
 

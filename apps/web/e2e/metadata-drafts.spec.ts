@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { PLAY_DESCRIPTION_DRAFT } from "./fixtures.mts";
 import { hydrated } from "./hydrated.mts";
 import { collectPageErrors } from "./page-errors.mts";
 import { seedCookies } from "./routes.mts";
@@ -146,3 +147,87 @@ for (const width of [375, 768, 820, 1440]) {
     ).toBe(true);
   });
 }
+
+const draftField = (page: Page, name: string) =>
+  page
+    .getByRole("region", { name: "Draft listing" })
+    .getByRole("textbox", { name, exact: true });
+
+test("fills the draft from an assistant suggestion", async ({ page }) => {
+  await page.goto("/apps/app-1/metadata");
+  await generateDrafts(page);
+  const preview = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" &&
+      request.url().endsWith("/metadata/coverage-preview"),
+  );
+
+  await page.getByRole("button", { name: "Use in draft: Subtitle" }).click();
+
+  await expect(page).toHaveURL(/mode=draft/);
+  await expect(draftField(page, "Subtitle")).toHaveValue("Deep work sessions");
+  await expect(draftField(page, "Subtitle")).toBeFocused();
+  expect((await preview).postDataJSON()).toMatchObject({
+    subtitle: "Deep work sessions",
+  });
+});
+
+test("opens the folded description for a drafted description", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-gp/metadata");
+  await generateDrafts(page);
+
+  await page.getByRole("button", { name: "Use in draft: Description" }).click();
+
+  await expect(page).toHaveURL(/mode=draft/);
+  await expect(draftField(page, "Description")).toHaveValue(
+    PLAY_DESCRIPTION_DRAFT,
+  );
+  await expect(draftField(page, "Description")).toBeFocused();
+});
+
+test("opens the folded description of an open draft", async ({ page }) => {
+  await page.goto("/apps/app-gp/metadata?mode=draft");
+  await expect(draftField(page, "Description")).toHaveCount(0);
+  await generateDrafts(page);
+
+  await page.getByRole("button", { name: "Use in draft: Description" }).click();
+
+  await expect(draftField(page, "Description")).toHaveValue(
+    PLAY_DESCRIPTION_DRAFT,
+  );
+  await expect(draftField(page, "Description")).toBeFocused();
+});
+
+test("fills the draft of the localization the assistant wrote for", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/metadata?draftLocale=pl");
+  await generateDrafts(page);
+  await expect(page.getByText("Drafted in Polish")).toBeVisible();
+
+  await page.getByRole("button", { name: "Use in draft: Title" }).click();
+
+  await expect(page).toHaveURL(/market=pl/);
+  await expect(page).toHaveURL(/localization=pl/);
+  await expect(draftField(page, "Title")).toHaveValue("Focus Timer: Pomodoro");
+});
+
+test("leaves the live listing as it was", async ({ page }) => {
+  await page.goto("/apps/app-1/metadata");
+  await generateDrafts(page);
+  await page.getByRole("button", { name: "Use in draft: Title" }).click();
+  await expect(draftField(page, "Title")).toHaveValue("Focus Timer: Pomodoro");
+
+  await page
+    .getByRole("tablist", { name: "Listing mode" })
+    .getByRole("tab", { name: "Live listing" })
+    .click();
+
+  await expect(
+    page
+      .getByRole("region", { name: "Listing fields" })
+      .getByRole("textbox", { name: "Title", exact: true }),
+  ).toHaveValue("Focus Timer");
+});

@@ -969,6 +969,17 @@
         "operationId": "AlertsController_listDeliveries",
         "parameters": [
           {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "type": "integer"
+            }
+          },
+          {
             "name": "webhookId",
             "required": false,
             "in": "query",
@@ -982,21 +993,6 @@
             "in": "query",
             "schema": {
               "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 200,
-              "default": 50,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
             }
           }
         ],
@@ -2135,11 +2131,7 @@
               "minimum": 1,
               "maximum": 25,
               "default": 10,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "integer"
             }
           }
         ],
@@ -2520,7 +2512,7 @@
     },
     "/apps/{id}/keywords": {
       "get": {
-        "description": "competitorsInTop10 is the number of distinct competitors of the app in the newest stored top 10 of the keyword, or null when the app has no competitor or the newest snapshot is older than yesterday UTC. trackedAt is when the app started tracking the keyword in that market. dropStreak is the number of consecutive checks, newest first, at which the position got worse (a larger number, or not found after a ranked position), 0 when the newest check did not fall, and null for a paused keyword or one whose newest check is older than yesterday UTC. uncovered is set on active keywords only and is true when no field of the listing of the keyword's market (title, subtitle and saved keyword field on the App Store, title and descriptions on Google Play) holds it, the same verdict as the metadata coverage table. On the App Store a keyword is not uncovered when each of its words is in the title, subtitle or keyword field of one localization the market reads, because App Store search matches words across those fields. matchedIn is present when a word of the keyword is found in the listing of the keyword's market: the keyword text split into runs, each marked with the strongest place that holds the word (title, subtitle, shortDescription or keywordField) and whether it matched exactly or only with accents ignored. It is absent when no word is found. The App Store judges title, subtitle and the saved keyword field of every localization the market reads; Google Play judges title and short description. keywordClass is ownBrand, competitorBrand or generic: the keyword holds the whole brand name of the app (the lead of its home title or of its title in the keyword's market, or its developer) or of a competitor, or the stored search page flagged it as a brand search. When the page shows most top results already target the phrase, the keyword is generic unless the brand flag is raised. keywordClassSource is owner when the owner set the class and detected otherwise. lastRankedPosition is the newest position at which the app was found before the latest check when the latest check did not find it, and lastRankedOn is its UTC day; both are null when the latest check found the app, when none of the 60 newest checks did (older checks are not read), or when the keyword was never checked. previousPosition is only the position of the day before the latest check. recentPositions lists the checks of the 7 UTC days that end at the latest check, oldest first, each with its date and position (null when checked and not found); it is empty for a keyword never checked. topApps lists the first 3 apps of the newest stored search results of the keyword, with storeAppId, title, iconUrl, position and role (own for the app itself, competitor for one of its competitors, other for any other app), or null when no results were stored today or yesterday UTC.",
+        "description": "competitorsInTop10 is the number of distinct competitors of the app in the newest stored top 10 of the keyword, or null when the app has no competitor or the newest snapshot is older than yesterday UTC. trackedAt is when the app started tracking the keyword in that market. dropStreak is the number of consecutive checks, newest first, at which the position got worse (a larger number, or not found after a ranked position), 0 when the newest check did not fall, and null for a paused keyword or one whose newest check is older than yesterday UTC. uncovered is set on active keywords only and is true when no field of the listing of the keyword's market (title, subtitle and saved keyword field on the App Store, title and descriptions on Google Play) holds it, the same verdict as the metadata coverage table. On the App Store a keyword is not uncovered when each of its words is in the title, subtitle or keyword field of one localization the market reads, because App Store search matches words across those fields. matchedIn is present when a word of the keyword is found in the listing of the keyword's market: the keyword text split into runs, each marked with the strongest place that holds the word (title, subtitle, shortDescription or keywordField) and whether it matched exactly or only with accents ignored. It is absent when no word is found. The App Store judges title, subtitle and the saved keyword field of every localization the market reads; Google Play judges title and short description. keywordClass is ownBrand, competitorBrand or generic: the keyword holds the whole brand name of the app (the lead of its home title or of its title in the keyword's market, or its developer) or of a competitor, or the stored search page flagged it as a brand search. When the page shows most top results already target the phrase, the keyword is generic unless the brand flag is raised. keywordClassSource is owner when the owner set the class and detected otherwise. lastRankedPosition is the newest position at which the app was found before the latest check when the latest check did not find it, and lastRankedOn is its UTC day; both are null when the latest check found the app, when none of the 60 newest checks did (older checks are not read), or when the keyword was never checked. previousPosition is only the position of the day before the latest check. recentPositions lists the checks of the 7 UTC days that end at the latest check, oldest first, each with its date and position (null when checked and not found); it is empty for a keyword never checked. topApps lists the first 3 apps of the newest stored search results of the keyword, with storeAppId, title, iconUrl, position and role (own for the app itself, competitor for one of its competitors, other for any other app), or null when no results were stored today or yesterday UTC. latestResultCount is how many apps the store listed for the latest search; 0 means the store lists no apps for this search, and null means the count was not recorded.",
         "operationId": "KeywordsController_list",
         "parameters": [
           {
@@ -2675,11 +2667,7 @@
             "in": "query",
             "schema": {
               "default": false,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "boolean"
             }
           }
         ],
@@ -2703,7 +2691,7 @@
     },
     "/apps/{id}/keywords/{keywordId}/breakdown": {
       "get": {
-        "description": "Reads stored data only and makes no store request. The app comes first, then every competitor. words are the distinct words of the keyword. Each listing is one localization the keyword market searches (localization and role are null on Google Play), judged field by field: phrase is the verdict of the metadata coverage table, a word match is exact, folded (found only with accents ignored, never counted) or none, and segments split the field text into matched and unmatched runs (null for a Google Play long description). placement is the strongest place the keyword reaches in one localization: a field holding the whole phrase, else split (every word across fields of that localization), else partial, else none; an app placement is the best of its listings, and words never combine across localizations. ranking null means never checked; position null means checked and not found within depth. listingCountry names the market whose listing was read, the home market when the keyword market has none. unread lists the localizations the market searches whose text has not been captured for that app. rating comes from the listing read and names its market. insight is a rule of thumb set only on a competitor that ranks above the app while the app has been checked; ignore a rule you do not know. standing.recentChange is the newest listing change of the market or keyword field save it reads, at most 28 days old.",
+        "description": "Reads stored data only and makes no store request. The app comes first, then every competitor. words are the distinct words of the keyword. Each listing is one localization the keyword market searches (localization and role are null on Google Play), judged field by field: phrase is the verdict of the metadata coverage table, a word match is exact, folded (found only with accents ignored, never counted) or none, and segments split the field text into matched and unmatched runs (null for a Google Play long description). placement is the strongest place the keyword reaches in one localization: a field holding the whole phrase, else split (every word across fields of that localization), else partial, else none; an app placement is the best of its listings, and words never combine across localizations. ranking null means never checked; position null means checked and not found within depth. resultCount only says whether the latest search listed no apps: 0 means the store lists no apps for this search, every other value repeats the depth of the same row, and null means the count was not recorded. listingCountry names the market whose listing was read, the home market when the keyword market has none. unread lists the localizations the market searches whose text has not been captured for that app. rating comes from the listing read and names its market. insight is a rule of thumb set only on a competitor that ranks above the app while the app has been checked; ignore a rule you do not know. standing.recentChange is the newest listing change of the market or keyword field save it reads, at most 28 days old.",
         "operationId": "KeywordsController_breakdown",
         "parameters": [
           {
@@ -2790,11 +2778,7 @@
               "minimum": 1,
               "maximum": 100,
               "default": 30,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "integer"
             }
           }
         ],
@@ -3773,9 +3757,201 @@
         ]
       }
     },
+    "/apps/{id}/localizations/{localization}/targets": {
+      "get": {
+        "description": "Answers the ten target slots of one App Store localization in order, null for an empty slot. Slot 1 is meant for the title, slots 2 and 3 for the subtitle and slots 4 to 10 are extra, as role says. Each filled slot carries its phrase, the reader markets that track it (with their keyword id and whether it is paused), the reader markets that do not, and the scores of its lead market, the first reader that tracks it. readers lists the markets of the app whose storefront reads the localization, home first, and is empty for a localization no market reads yet. candidates lists up to 50 active tracked keywords of the reader markets, one per phrase, never a competitor brand and never a phrase already in a slot, by opportunity. Each slot and candidate may carry placement, a suggestion derived from stored scores: field names where the phrase belongs (title, subtitle or keywordField) or skip, reason says why, and popularity, difficulty and position (null unless checked within a day) are the figures judged. Room is shared among the targets, and each candidate is judged as if it were added to them. placement is absent when the phrase is unscored, its score is outdated or no reader market tracks it. Answers 400 for an unknown tag and for a Google Play or competitor app, and 404 for a missing app.",
+        "operationId": "LocalizationsController_readTargets",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "localization",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "id",
+                "ru",
+                "th",
+                "de",
+                "fr",
+                "ar",
+                "pa",
+                "sv",
+                "it",
+                "pl",
+                "bn",
+                "ca",
+                "zh-Hans",
+                "zh-Hant",
+                "hr",
+                "cs",
+                "da",
+                "nl",
+                "en-AU",
+                "en-CA",
+                "en-GB",
+                "en-US",
+                "fi",
+                "fr-CA",
+                "el",
+                "gu",
+                "he",
+                "hi",
+                "hu",
+                "ja",
+                "kn",
+                "ko",
+                "ms",
+                "ml",
+                "mr",
+                "no",
+                "or",
+                "pt-BR",
+                "pt-PT",
+                "ro",
+                "sk",
+                "sl",
+                "es-MX",
+                "es-ES",
+                "ta",
+                "te",
+                "tr",
+                "uk",
+                "ur",
+                "vi"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Read the target keywords of one localization",
+        "tags": [
+          "keywords"
+        ]
+      },
+      "put": {
+        "description": "Stores up to ten target keywords of one App Store localization in slot order, null for an empty slot, each normalized like a tracked keyword. Empty slots in the middle keep their place and every slot null removes the targets. Every phrase new to the stored list, or every slot with trackMissing, that a market of the app reading the localization does not track yet is tracked there as a manual keyword, a paused one resumed, within the keyword limit of the plan, with its first position check and score queued. A reorder or a removal tracks nothing. A phrase that did not fit is answered in notTracked with its market and keywordLimit, and its slot is stored anyway. A localization no market reads stores its targets and tracks nothing. Answers the targets as the read does, plus tracked, notTracked and quota. Answers 400 for more than ten slots, a duplicate or an invalid phrase (naming its position), an unknown tag and a Google Play or competitor app, 403 with quota and writes nothing when the keyword markets would pass the plan limit meanwhile, and 404 for a missing app.",
+        "operationId": "LocalizationsController_saveTargets",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "localization",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "id",
+                "ru",
+                "th",
+                "de",
+                "fr",
+                "ar",
+                "pa",
+                "sv",
+                "it",
+                "pl",
+                "bn",
+                "ca",
+                "zh-Hans",
+                "zh-Hant",
+                "hr",
+                "cs",
+                "da",
+                "nl",
+                "en-AU",
+                "en-CA",
+                "en-GB",
+                "en-US",
+                "fi",
+                "fr-CA",
+                "el",
+                "gu",
+                "he",
+                "hi",
+                "hu",
+                "ja",
+                "kn",
+                "ko",
+                "ms",
+                "ml",
+                "mr",
+                "no",
+                "or",
+                "pt-BR",
+                "pt-PT",
+                "ro",
+                "sk",
+                "sl",
+                "es-MX",
+                "es-ES",
+                "ta",
+                "te",
+                "tr",
+                "uk",
+                "ur",
+                "vi"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListingTargetsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Save the target keywords of one localization",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
     "/apps/{id}/keyword-discoveries": {
       "get": {
-        "description": "Reads stored rows only and reaches no store. A weekly job and a manual refresh build the list from the listing of each market, the home titles and subtitles of competitors, review phrases, Apple popularity weeks for the genre of the app and the phrases the workspace tracks for other apps, leaving out what the app tracks, active or paused, and what was dismissed. position is 1 based; null with a depth means checked and not found within that depth, and a null depth means never checked. depth is how far the reading looked: at most 50 when it came from another search of the phrase today or yesterday, and as far as the store listed, up to 200, when it came from the search of the app itself; a search that listed no apps reads 200 without having looked that deep, and a reading taken before depths were measured keeps the 200 it was stored with until the phrase is searched again. state is ranked when the app has a position, opportunity when it has none, relevance is at least 60 and opportunity at least 35, and open otherwise. traffic and difficulty come from a score some tracker already produced, or, for an unscored App Store term, from the popularity Apple lists; a discovery is never scored, so opportunity is null until the keyword has a score. recommended marks the first 50 rows in list order and counts cover every open row of the requested market, whatever the state filter and the limit. unfit is the number of ranked rows that did not fit the plan while auto track is on. checks reports the weekly cap of searches, how many were queued this ISO week, how many are still waiting, the day of the newest check and the next run of the discovery schedule, whatever its cadence, null when the schedule is off.",
+        "description": "Reads stored rows only and reaches no store. A weekly job and a manual refresh build the list from the listing of each market, the home titles and subtitles of competitors, review phrases, Apple popularity weeks for the genre of the app and the phrases the workspace tracks for other apps, leaving out what the app tracks, active or paused, and what was dismissed. position is 1 based; null with a depth means checked and not found within that depth, and a null depth means never checked. depth is how far the reading looked: at most 50 when it came from another search of the phrase today or yesterday, and as far as the store listed, up to 200, when it came from the search of the app itself; a search that listed no apps reads 200 without having looked that deep, and a reading taken before depths were measured keeps the 200 it was stored with until the phrase is searched again. resultCount only says whether the discovery's own search listed no apps: 0 means the store lists no apps for this search, every other value repeats the depth of the same row, and null means the reading came from another search's capture or predates the count. state is ranked when the app has a position, opportunity when it has none, relevance is at least 60 and opportunity at least 35, and open otherwise. traffic and difficulty come from a score some tracker already produced, or, for an unscored App Store term, from the popularity Apple lists; a discovery is never scored, so opportunity is null until the keyword has a score. recommended marks the first 50 rows in list order and counts cover every open row of the requested market, whatever the state filter and the limit. unfit is the number of ranked rows that did not fit the plan while auto track is on. checks reports the weekly cap of searches, how many were queued this ISO week, how many are still waiting, the day of the newest check and the next run of the discovery schedule, whatever its cadence, null when the schedule is off.",
         "operationId": "KeywordDiscoveryController_list",
         "parameters": [
           {
@@ -4000,6 +4176,7 @@
     },
     "/apps/{id}/rankings": {
       "get": {
+        "description": "Each point carries resultCount, a field whose only message is that the day's search listed no apps: 0 means the store lists no apps for this search, every other value repeats the depth of the same point, and null means the count was not recorded.",
         "operationId": "RankingsController_history",
         "parameters": [
           {
@@ -4087,6 +4264,17 @@
             }
           },
           {
+            "name": "days",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 30,
+              "default": 7,
+              "type": "integer"
+            }
+          },
+          {
             "name": "country",
             "required": false,
             "in": "query",
@@ -4095,21 +4283,6 @@
               "pattern": "^[a-z]{2}$",
               "example": "us",
               "type": "string"
-            }
-          },
-          {
-            "name": "days",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 30,
-              "default": 7,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
             }
           }
         ],
@@ -4133,7 +4306,7 @@
     },
     "/keywords/{keywordId}/serp": {
       "get": {
-        "description": "Answers up to 50 entries of the day asked for, or of the newest captured day. Each entry carries its iconUrl, titleMatch and titleSegments, and previous, delta and movement against comparedTo, the newest captured day before date. Movement is none when there is no earlier capture or the earlier capture did not reach that position. exits lists the apps of that earlier capture no longer listed, and dates lists up to 365 captured days, newest first.",
+        "description": "Answers up to 50 entries of the day asked for, or of the newest captured day. Each entry carries its iconUrl, titleMatch and titleSegments, and previous, delta and movement against comparedTo, the newest captured day before date. An entry may also carry subtitle, from the newest listing the workspace captured for that app in the keyword market by the end of the shown day (only for its own apps and competitors on the App Store), with subtitleSegments, and placement (title, subtitle, both, split or none), which is absent when the subtitle is unknown and the title does not hold the keyword. Movement is none when there is no earlier capture or the earlier capture did not reach that position. exits lists the apps of that earlier capture no longer listed, and dates lists up to 365 captured days, newest first.",
         "operationId": "SerpController_serp",
         "parameters": [
           {
@@ -4186,6 +4359,17 @@
             }
           },
           {
+            "name": "days",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 365,
+              "default": 90,
+              "type": "integer"
+            }
+          },
+          {
             "name": "country",
             "required": false,
             "in": "query",
@@ -4194,21 +4378,6 @@
               "pattern": "^[a-z]{2}$",
               "example": "de",
               "type": "string"
-            }
-          },
-          {
-            "name": "days",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 365,
-              "default": 90,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
             }
           }
         ],
@@ -4288,17 +4457,13 @@
         "parameters": [
           {
             "name": "limit",
-            "required": true,
+            "required": false,
             "in": "query",
             "schema": {
               "minimum": 1,
               "maximum": 50,
               "default": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "integer"
             }
           }
         ],
@@ -5242,6 +5407,17 @@
             }
           },
           {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "type": "integer"
+            }
+          },
+          {
             "name": "replyState",
             "required": false,
             "in": "query",
@@ -5284,21 +5460,6 @@
             "in": "query",
             "schema": {
               "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 200,
-              "default": 50,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
             }
           }
         ],
@@ -6021,6 +6182,48 @@
         ]
       }
     },
+    "/apps/{id}/metadata/coverage-preview": {
+      "post": {
+        "description": "Takes a draft of one listing: an App Store localization (title, subtitle, keyword field, description) or a Google Play market (title, short description, description). A field left out keeps its live value. Answers, for every active tracked keyword of the markets that read that listing, the live and the drafted coverage verdict judged as the coverage table judges them, the change between them, the lint of the drafted fields and the words the draft wastes. Markets that read the localization but are still judged on the home listing are named in waitingMarkets. Writes nothing, queues nothing and calls no store. Answers 400 for a competitor app, for a field the store does not have and for a localization on Google Play, and 404 for a missing app.",
+        "operationId": "MetadataController_coveragePreview",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoveragePreviewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Preview the keywords a draft listing would cover",
+        "tags": [
+          "metadata"
+        ]
+      }
+    },
     "/metadata/assistant": {
       "get": {
         "operationId": "MetadataAssistantController_status",
@@ -6390,11 +6593,7 @@
               "minimum": 1,
               "maximum": 200,
               "default": 100,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "integer"
             }
           }
         ],
@@ -6535,11 +6734,7 @@
               "minimum": 7,
               "maximum": 90,
               "default": 30,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "integer"
             }
           }
         ],
@@ -6787,11 +6982,7 @@
               "minimum": 1,
               "maximum": 200,
               "default": 100,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "integer"
             }
           }
         ],
@@ -6855,17 +7046,13 @@
           },
           {
             "name": "days",
-            "required": true,
+            "required": false,
             "in": "query",
             "schema": {
               "minimum": 7,
               "maximum": 90,
               "default": 30,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "integer"
             }
           }
         ],
@@ -7958,10 +8145,6 @@
           }
         }
       },
-      "Object": {
-        "type": "object",
-        "properties": {}
-      },
       "RequestDeletionDto": {
         "type": "object",
         "properties": {
@@ -8489,6 +8672,33 @@
           "text"
         ]
       },
+      "ListingTargetsDto": {
+        "type": "object",
+        "properties": {
+          "slots": {
+            "type": "array",
+            "maxItems": 10,
+            "items": {
+              "type": "string",
+              "nullable": true
+            },
+            "example": [
+              "habit tracker",
+              "focus timer",
+              null,
+              "sleep sounds"
+            ],
+            "description": "The target keywords in slot order, null for an empty slot. Slot 1 is meant for the title and slots 2 and 3 for the subtitle."
+          },
+          "trackMissing": {
+            "type": "boolean",
+            "description": "Track every slot in every market reading the localization that does not track it yet, not only the phrases new to the stored list."
+          }
+        },
+        "required": [
+          "slots"
+        ]
+      },
       "KeywordDiscoveryTrackDto": {
         "type": "object",
         "properties": {
@@ -8710,6 +8920,104 @@
         "required": [
           "language"
         ]
+      },
+      "CoveragePreviewDto": {
+        "type": "object",
+        "properties": {
+          "localization": {
+            "enum": [
+              "ar",
+              "bn",
+              "ca",
+              "zh-Hans",
+              "zh-Hant",
+              "hr",
+              "cs",
+              "da",
+              "nl",
+              "en-AU",
+              "en-CA",
+              "en-GB",
+              "en-US",
+              "fi",
+              "fr",
+              "fr-CA",
+              "de",
+              "el",
+              "gu",
+              "he",
+              "hi",
+              "hu",
+              "id",
+              "it",
+              "ja",
+              "kn",
+              "ko",
+              "ms",
+              "ml",
+              "mr",
+              "no",
+              "or",
+              "pl",
+              "pt-BR",
+              "pt-PT",
+              "pa",
+              "ro",
+              "ru",
+              "sk",
+              "sl",
+              "es-MX",
+              "es-ES",
+              "sv",
+              "ta",
+              "te",
+              "th",
+              "tr",
+              "uk",
+              "ur",
+              "vi"
+            ],
+            "type": "string",
+            "example": "en-US",
+            "description": "The App Store localization the draft rewrites. Defaults to the default localization of the home storefront. App Store only."
+          },
+          "country": {
+            "type": "string",
+            "example": "us",
+            "pattern": "^[a-z]{2}$",
+            "description": "The market whose listing the draft rewrites. Defaults to the home storefront. Google Play only."
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 1000,
+            "example": "Habit Tracker",
+            "description": "The drafted title. Left out, the live title is kept."
+          },
+          "subtitle": {
+            "type": "string",
+            "maxLength": 1000,
+            "example": "Daily goals and streaks",
+            "description": "The drafted subtitle. Left out, the live subtitle is kept. App Store only."
+          },
+          "shortDescription": {
+            "type": "string",
+            "maxLength": 1000,
+            "example": "Build habits that stick",
+            "description": "The drafted short description. Left out, the live one is kept. Google Play only."
+          },
+          "keywordField": {
+            "type": "string",
+            "maxLength": 1000,
+            "example": "habit,tracker,streak",
+            "description": "The drafted keyword field of the localization. Left out, the saved field is kept; an empty string drafts an empty field. App Store only."
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4000,
+            "example": "Track every habit.",
+            "description": "The drafted description. Left out, the live one is kept."
+          }
+        }
       },
       "MetadataAssistantDto": {
         "type": "object",

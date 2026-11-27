@@ -11,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 export interface CaptureReading {
   position: number | null;
   depth: number;
+  resultCount: number | null;
   ownSearch: boolean;
   checkedOn: string;
 }
@@ -42,6 +43,7 @@ export function captureReading(
       heldByDay.get(newest) ?? DISCOVERY_CAPTURE_DEPTH,
       DISCOVERY_CAPTURE_DEPTH,
     ),
+    resultCount: null,
     ownSearch: false,
     checkedOn: newest,
   };

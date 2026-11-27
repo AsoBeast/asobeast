@@ -227,16 +227,30 @@ describe('breakdownApp', () => {
     const date = new Date('2026-10-18T00:00:00Z');
     expect(
       breakdownApp(
-        subject({ ranking: { position: null, depth: 200, date } }),
+        subject({
+          ranking: { position: null, depth: 200, resultCount: 0, date },
+        }),
         context(),
       ).ranking,
-    ).toEqual({ position: null, depth: 200, date: '2026-10-18' });
+    ).toEqual({
+      position: null,
+      depth: 200,
+      resultCount: 0,
+      date: '2026-10-18',
+    });
     expect(
       breakdownApp(
-        subject({ ranking: { position: 4, depth: 100, date } }),
+        subject({
+          ranking: { position: 4, depth: 100, resultCount: null, date },
+        }),
         context(),
       ).ranking,
-    ).toEqual({ position: 4, depth: 100, date: '2026-10-18' });
+    ).toEqual({
+      position: 4,
+      depth: 100,
+      resultCount: null,
+      date: '2026-10-18',
+    });
     expect(breakdownApp(subject(), context()).capturedAt).toBe(
       '2026-10-17T03:00:00.000Z',
     );
@@ -257,7 +271,9 @@ describe('sortBreakdown', () => {
           name: id,
           isYou,
           ranking:
-            position === undefined ? null : { position, depth: 200, date },
+            position === undefined
+              ? null
+              : { position, depth: 200, resultCount: null, date },
         }),
         context(),
       );

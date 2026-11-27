@@ -1,4 +1,8 @@
-import type { TrackedKeywordItem } from "@asobeast/shared";
+import {
+  listsNoApps,
+  noAppsWords,
+  type TrackedKeywordItem,
+} from "@asobeast/shared";
 import { pluralize } from "@/lib/format";
 import { activeKeywordCount } from "./setup-progress";
 
@@ -9,6 +13,7 @@ export interface FirstPositionRow {
   text: string;
   position: number | null;
   depth: number;
+  resultCount: number | null;
 }
 
 const byPosition = (a: FirstPositionRow, b: FirstPositionRow): number => {
@@ -32,6 +37,7 @@ function checkedRows(
               text: keyword.text,
               position: keyword.latestPosition,
               depth: keyword.latestDepth,
+              resultCount: keyword.latestResultCount ?? null,
             },
           ]
         : [],
@@ -52,8 +58,12 @@ function headlineOf(checked: FirstPositionRow[], tracked: number): string {
   if (best.position !== null) {
     return `Your app ranks #${best.position} for “${best.text}”.`;
   }
+  const counted = `Checked ${checked.length} of ${pluralize(tracked, "keyword")}`;
+  if (checked.every((row) => listsNoApps(row.resultCount))) {
+    return `${counted}, and ${noAppsWords}.`;
+  }
   const depth = Math.min(...checked.map((row) => row.depth));
-  return `Checked ${checked.length} of ${pluralize(tracked, "keyword")}, none in the top ${depth} yet.`;
+  return `${counted}, none in the top ${depth} yet.`;
 }
 
 export function firstPositions(
@@ -67,7 +77,8 @@ export function firstPositions(
 }
 
 export function positionLabel(row: FirstPositionRow): string {
-  return row.position === null
-    ? `not in the top ${row.depth}`
-    : `#${row.position}`;
+  if (row.position !== null) return `#${row.position}`;
+  return listsNoApps(row.resultCount)
+    ? noAppsWords
+    : `not in the top ${row.depth}`;
 }
