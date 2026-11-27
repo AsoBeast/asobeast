@@ -7,6 +7,7 @@ import {
 import type { SerpSnapshotDay } from '../../rankings/serp-movers';
 import type { ActionContextApp, ActionRankingDay } from '../action-context';
 import { scoreImpact } from '../action-impact';
+import type { ActionMarketMetadata } from '../action-market-metadata';
 import {
   detectKeywordPushToTop10,
   keywordPushToTop10Detector,
@@ -355,12 +356,103 @@ describe('keyword.push_to_top10', () => {
     expect(detections.map((d) => d.keywordId)).not.toContain(brand);
   });
 
-  it('never considers another market or an outdated score', () => {
-    expect(
-      live([app({ trackedKeywords: [keyword({ country: 'de' })] })]),
-    ).toEqual([]);
+  it('never considers an outdated score', () => {
     expect(
       live([app({ trackedKeywords: [keyword({ scoreOutdated: true })] })]),
     ).toEqual([]);
+  });
+});
+
+describe('keyword.push_to_top10 in other markets', () => {
+  const market = (
+    country: string,
+    rows: KeywordCoverageRow[],
+  ): ActionMarketMetadata => ({ country, coverage: rows, fields: [] });
+
+  it('pushes a market keyword the listing of its own market holds weakly', () => {
+    const [detection] = live([
+      app({
+        trackedKeywords: [keyword({ keywordId: 'kw_de', country: 'de' })],
+        coverage: [],
+        marketMetadata: [market('de', [coverage('kw_de', ['keywordField'])])],
+        rankingDaysByKeyword: new Map([['kw_de', lastWeek(IN_BAND)]]),
+      }),
+    ]);
+
+    expect(detection).toMatchObject({
+      rule: 'keyword.push_to_top10',
+      country: 'de',
+      keywordId: 'kw_de',
+    });
+    expect(detection.evidence).toMatchObject({
+      coveredFields: ['keywordField'],
+    });
+  });
+
+  it('stays silent once a strong field of the market listing covers it', () => {
+    expect(
+      detect([
+        app({
+          trackedKeywords: [keyword({ keywordId: 'kw_de', country: 'de' })],
+          coverage: [coverage('kw_de', ['keywordField'])],
+          marketMetadata: [market('de', [coverage('kw_de', ['title'])])],
+          rankingDaysByKeyword: new Map([['kw_de', lastWeek(IN_BAND)]]),
+        }),
+      ]),
+    ).toEqual([]);
+  });
+
+  it('opens nothing in a market whose listing is not captured', () => {
+    expect(
+      detect([
+        app({
+          trackedKeywords: [keyword({ keywordId: 'kw_de', country: 'de' })],
+          coverage: [coverage('kw_de', ['keywordField'])],
+          rankingDaysByKeyword: new Map([['kw_de', lastWeek(IN_BAND)]]),
+        }),
+      ]),
+    ).toEqual([]);
+  });
+
+  it('never judges a home keyword by a market listing', () => {
+    const detections = detect([
+      app({
+        marketMetadata: [market('de', [coverage('kw_1', ['keywordField'])])],
+      }),
+    ]);
+
+    expect(detections.map((d) => d.country)).toEqual(['us']);
+  });
+
+  it('shares the five slots of the app across its markets', () => {
+    const home = ['kw_0', 'kw_1', 'kw_2'];
+    const german = ['kw_3', 'kw_4', 'kw_5'];
+    const ids = [...home, ...german];
+    const detections = detect([
+      app({
+        trackedKeywords: ids.map((keywordId, index) =>
+          keyword({
+            keywordId,
+            country: german.includes(keywordId) ? 'de' : 'us',
+            volume: 90 - index * 5,
+          }),
+        ),
+        coverage: home.map((id) => coverage(id, ['keywordField'])),
+        marketMetadata: [
+          market(
+            'de',
+            german.map((id) => coverage(id, ['keywordField'])),
+          ),
+        ],
+        rankingDaysByKeyword: new Map(ids.map((id) => [id, lastWeek(IN_BAND)])),
+      }),
+    ]);
+
+    expect(
+      detections.filter((d) => !d.withheld).map((d) => d.keywordId),
+    ).toEqual(ids.slice(0, PUSH_MAX_PER_APP));
+    expect(
+      detections.filter((d) => d.withheld).map((d) => [d.keywordId, d.country]),
+    ).toEqual([['kw_5', 'de']]);
   });
 });

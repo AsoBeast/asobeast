@@ -13,7 +13,7 @@ const HREF: Record<ActionRule, string> = {
   "audit.fix_factor": "/apps/app-1/audit",
   "reviews.investigate_theme": "/apps/app-1/reviews?score=1",
   "market.improve_country": "/apps/app-1/keywords?country=us",
-  "keyword.push_to_top10": "/apps/app-1/metadata?keyword=kw-1",
+  "keyword.push_to_top10": "/apps/app-1/metadata?market=us&keyword=kw-1",
   "metadata.fix_lint": "/apps/app-1/metadata?market=us",
   "rank.investigate_unexplained_drop": "/apps/app-1/keywords?country=us",
   "competitor.investigate_overtake": "/apps/app-1/competitors",
@@ -42,6 +42,9 @@ describe("actionHref", () => {
     expect(actionHref(actionItem({ rule: "metadata.fix_lint", scope }))).toBe(
       "/apps/app-1/metadata?market=tr",
     );
+    expect(
+      actionHref(actionItem({ rule: "keyword.push_to_top10", scope })),
+    ).toBe("/apps/app-1/metadata?market=tr&keyword=kw-1");
   });
 
   it("drops the keyword parameters when the action has no keyword", () => {
