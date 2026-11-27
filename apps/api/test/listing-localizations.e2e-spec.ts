@@ -1149,6 +1149,37 @@ describe('Native localizations of a listing (e2e)', () => {
       await api.delete(`/apps/${appId}/localizations/de`).expect(204);
     });
 
+    const trackedTexts = async (appId: string) =>
+      (
+        (await api.get(`/apps/${appId}/keywords`).expect(200))
+          .body as TrackedKeywordItem[]
+      ).map((keyword) => keyword.text);
+
+    it('seeds english words of an english default in germany', async () => {
+      registry.listings.set('de:default', {
+        ...ENGLISH_ONLY,
+        title: 'Die Cast Garage',
+        subtitle: 'Model cars to collect',
+      });
+
+      const appId = await importFrom(DE_APP_URL);
+
+      const texts = await trackedTexts(appId);
+      expect(texts.some((text) => text.split(' ').includes('die'))).toBe(true);
+    });
+
+    it('seeds a german listing in germany as before', async () => {
+      registry.listings.set('de:default', GERMAN_ONLY);
+
+      const appId = await importFrom(DE_APP_URL);
+
+      const texts = await trackedTexts(appId);
+      expect(texts).toContain('schultagebuch');
+      expect(texts).not.toEqual(
+        expect.arrayContaining([expect.stringMatching(/^(und|die|der)$/)]),
+      );
+    });
+
     it('never probes a suspect for a competitor', async () => {
       registry.listings.set('de:default', GERMAN_ONLY);
       const appId = await importFrom(DE_APP_URL);

@@ -13,7 +13,7 @@ const request = (
   limit: 30,
   tracked: new Set(),
   market: { store: Store.APP_STORE, country: 'de', storeAppId: 'store1' },
-  languages: { home: ['en'], market: ['de'] },
+  languages: { home: ['en'], listing: ['en'], market: ['de'] },
   ...overrides,
 });
 

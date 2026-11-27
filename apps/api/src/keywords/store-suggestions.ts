@@ -100,7 +100,7 @@ export class StoreSuggestions {
     const excluded = new Set(tracked);
     for (const candidate of extractCandidates(
       { title: snapshot.title },
-      languages.home,
+      languages.listing,
     )) {
       excluded.add(candidate.text);
     }

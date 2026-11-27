@@ -13,7 +13,7 @@ import {
 } from '../store-providers/egress/proxy-egress.service';
 import { extractCandidates } from './extraction';
 import { ensureApp, trackedTexts } from './keywords.support';
-import { listingLanguages } from './listing-languages';
+import { defaultListingLanguages, listingLanguages } from './listing-languages';
 import { seasonalSuggestions } from './seasonal-suggestions';
 import { StoreSuggestions } from './store-suggestions';
 import { competitorPhrases, recentReviewPhrases } from './suggestion-phrases';
@@ -45,6 +45,7 @@ export class KeywordSuggestionService {
       tracked: await trackedTexts(this.prisma, appId, market.country),
       languages: {
         home: listingLanguages(app.store, app.country),
+        listing: defaultListingLanguages(app),
         market: listingLanguages(market.store, market.country),
       },
     };
@@ -90,7 +91,7 @@ export class KeywordSuggestionService {
         limit,
       );
     }
-    return this.suggestFromMetadata(appId, tracked, limit, languages.home);
+    return this.suggestFromMetadata(appId, tracked, limit, languages.listing);
   }
 
   private async suggestFromMetadata(

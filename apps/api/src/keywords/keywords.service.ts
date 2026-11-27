@@ -373,6 +373,7 @@ export class KeywordsService {
         workspaceId: true,
         store: true,
         country: true,
+        defaultLocalization: true,
         isCompetitor: true,
       },
     });

@@ -6,7 +6,7 @@ import {
 } from '@asobeast/shared';
 import { listingIn, NEWEST_FIRST } from '../apps/listing';
 import { PrismaService } from '../prisma/prisma.service';
-import { listingLanguages } from './listing-languages';
+import { defaultListingLanguages } from './listing-languages';
 
 export interface ListingText {
   title: string;
@@ -19,6 +19,7 @@ interface ListedApp {
   id: string;
   store: Store;
   country: string;
+  defaultLocalization: string | null;
 }
 
 const latestListing = (
@@ -59,7 +60,7 @@ export async function listingTexts(
     return localized;
   }
   const ownLanguages = new Set(localized.flatMap((row) => row.languages));
-  const languages = listingLanguages(app.store, market).filter(
+  const languages = defaultListingLanguages(app, market).filter(
     (language) => !ownLanguages.has(language),
   );
   return [...localized, { ...fallback, languages }];

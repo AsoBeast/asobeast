@@ -1,5 +1,12 @@
 import { Store } from '@prisma/client';
-import { marketLanguages, storefrontLanguage } from '@asobeast/shared';
+import {
+  defaultLocalizationIn,
+  type DefaultingListing,
+  keywordFieldLocalizations,
+  localizationLanguage,
+  marketLanguages,
+  storefrontLanguage,
+} from '@asobeast/shared';
 
 export function listingLanguages(
   store: Store,
@@ -10,4 +17,17 @@ export function listingLanguages(
   }
   const language = storefrontLanguage(country);
   return language === null || language === 'en' ? [] : [language];
+}
+
+export function defaultListingLanguages(
+  app: DefaultingListing & { store: Store },
+  market: string = app.country,
+): readonly string[] {
+  if (app.store !== Store.APP_STORE) {
+    return listingLanguages(app.store, market);
+  }
+  const tag = defaultLocalizationIn(app, market);
+  return tag === keywordFieldLocalizations(market)[0]
+    ? listingLanguages(app.store, market)
+    : [localizationLanguage(tag)];
 }

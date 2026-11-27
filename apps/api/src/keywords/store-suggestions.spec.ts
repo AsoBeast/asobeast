@@ -28,6 +28,7 @@ const requestFor = ({
   market: { store, country: market, storeAppId: 'store1' },
   languages: {
     home: listingLanguages(store, home),
+    listing: listingLanguages(store, home),
     market: listingLanguages(store, market),
   },
 });
