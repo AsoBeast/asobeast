@@ -141,4 +141,16 @@ describe('marketReads', () => {
       ['pl', 'additional', 'home'],
     ]);
   });
+
+  it('reads the native default as home even when a detected row remains', () => {
+    const [, polish] = marketReads({
+      country: 'pl',
+      home: 'pl',
+      defaultLocalization: 'pl',
+      shipped: new Map<string, AppLocalizationOrigin>([['pl', 'detected']]),
+      fields: none,
+    });
+
+    expect(polish).toMatchObject({ localization: 'pl', origin: 'home' });
+  });
 });

@@ -736,7 +736,12 @@ describe('Native localizations of a listing (e2e)', () => {
         { localization: 'en-GB', origin: 'manual' },
       ]);
       expect(items[1].phrases).toEqual(['dziennik', 'oceny']);
-      await api.delete(`/apps/${appId}/localizations/pl`).expect(409);
+      const refused = await api
+        .delete(`/apps/${appId}/localizations/pl`)
+        .expect(409);
+      expect((refused.body as { message: string }).message).toBe(
+        'Polish is the language of the home listing and cannot be removed',
+      );
       await api.delete(`/apps/${appId}/localizations/en-GB`).expect(204);
     });
 
