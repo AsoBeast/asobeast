@@ -132,14 +132,14 @@ const repeated = (texts: readonly string[]): Map<string, number> =>
 
 const ranked = (
   counts: ReadonlyMap<string, number>,
-  words: number,
+  counted: number,
   size: number,
 ): DensityRow[] =>
   [...counts]
     .map(([text, count]) => ({
       text,
       count,
-      share: words === 0 ? 0 : (count * size) / words,
+      share: counted === 0 ? 0 : (count * size) / counted,
     }))
     .sort((a, b) => b.count - a.count || (a.text < b.text ? -1 : 1))
     .slice(0, DENSITY_ROW_LIMIT);
@@ -174,7 +174,7 @@ export function wordDensity(
   const tokens = segments.flat();
   const single = ranked(
     repeated(tokens.map((token) => token.text).filter(keep)),
-    words,
+    tokens.length,
     1,
   );
   const spaceless = tokens.filter((token) => token.spaceless).length;
@@ -184,7 +184,7 @@ export function wordDensity(
   return {
     words,
     single,
-    pairs: ranked(phrases(segments, 2, keep), words, 2),
-    triples: ranked(phrases(segments, 3, keep), words, 3),
+    pairs: ranked(phrases(segments, 2, keep), tokens.length, 2),
+    triples: ranked(phrases(segments, 3, keep), tokens.length, 3),
   };
 }

@@ -226,6 +226,13 @@ describe('wordDensity', () => {
     expect(density.triples).toEqual([]);
   });
 
+  it('takes a share from the words the table counts', () => {
+    const density = wordDensity('timer/timer timer/timer', english);
+
+    expect(density.words).toBe(2);
+    expect(density.single).toEqual([{ text: 'timer', count: 4, share: 1 }]);
+  });
+
   it('keeps function words inside a phrase', () => {
     const density = wordDensity(
       'time to focus. time to focus. time to focus.',
