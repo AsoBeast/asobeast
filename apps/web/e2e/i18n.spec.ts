@@ -65,6 +65,19 @@ test.describe("locale preference", () => {
     expect(failures).toEqual([]);
   });
 
+  test("keeps accessible names for the main controls in Chinese", async ({
+    page,
+  }) => {
+    await seedSession(page);
+    await seedViewer(page.context(), "customer");
+    await page.goto("/");
+
+    await expect(
+      page.getByRole("button", { name: "打开命令面板" }),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "列" })).toBeVisible();
+  });
+
   test("switches language from the settings page with a hash", async ({
     page,
     context,
@@ -192,5 +205,23 @@ test.describe("locale preference", () => {
     await expect(
       englishNavigation.getByRole("link", { name: "Dashboard" }),
     ).toBeVisible();
+  });
+});
+
+test.describe("English accessible names", () => {
+  test.use({
+    locale: "en",
+    extraHTTPHeaders: { "Accept-Language": "en" },
+  });
+
+  test("keeps accessible names for the main controls", async ({ page }) => {
+    await seedSession(page);
+    await seedViewer(page.context(), "customer");
+    await page.goto("/");
+
+    await expect(
+      page.getByRole("button", { name: "Open command palette" }),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Columns" })).toBeVisible();
   });
 });

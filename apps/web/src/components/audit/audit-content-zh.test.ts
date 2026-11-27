@@ -105,6 +105,15 @@ describe("audit content in Simplified Chinese", () => {
     expect(
       auditText("Google Play does not allow emoji in the title.", "zh-CN"),
     ).toContain("表情符号");
+    expect(auditText("The first screenshot shows a benefit.", "zh-CN")).toBe(
+      "首张截图展示了优势。",
+    );
+    expect(
+      auditText(
+        "It shows a benefit with “Build better habits.”. Most shoppers never scroll past the third screenshot.",
+        "zh-CN",
+      ),
+    ).toContain("多数用户不会翻过第三张截图");
   });
 
   it("translates generated recommendation labels", () => {

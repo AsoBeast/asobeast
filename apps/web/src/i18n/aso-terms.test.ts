@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CHANGE_FIELD_ZH, RULE_ZH } from "@/components/alerts/alert-sentence";
 import { loadMessages } from "./messages";
 
 const EXPECTED: Record<string, string> = {
@@ -75,6 +76,12 @@ describe("Simplified Chinese ASO terminology", () => {
     for (const [path, term] of Object.entries(EXPECTED)) {
       expect(valueAt(messages, path), path).toContain(term);
     }
+  });
+
+  it("keeps generated-content maps on the same terms", () => {
+    expect(CHANGE_FIELD_ZH.featuring).toBe("精选");
+    expect(CHANGE_FIELD_ZH.whatsNew).toBe("更新内容");
+    expect(RULE_ZH["keyword.defend"]).toContain("关键词");
   });
 
   it("keeps impressions distinct from visibility", async () => {

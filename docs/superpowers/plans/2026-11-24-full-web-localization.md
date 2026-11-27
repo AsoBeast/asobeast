@@ -1,3 +1,8 @@
+---
+title: "Full Web Localization Implementation Plan"
+description: "Task by task plan for translating every first party web surface."
+---
+
 # Full Web Localization Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -46,7 +51,7 @@
 
 - Create: `apps/web/messages/en/{ui,format,shell,seo,datePicker,validation,languages,legal,systemNotices}.json`
 - Create: `apps/web/messages/zh-CN/{ui,format,shell,seo,datePicker,validation,languages,legal,systemNotices}.json`
-- Create: empty catalogs for every feature namespace listed in Tasks 2–17 in both locales.
+- Create: empty catalogs for every feature namespace listed in Tasks 2 to 17 in both locales.
 - Modify: `apps/web/src/i18n/messages.ts`
 - Modify: `apps/web/playwright.config.ts`
 - Modify: `apps/web/src/components/ui/{breadcrumb,chart,command,delta-chip,dialog,sheet,sidebar,sonner}.tsx`
@@ -394,7 +399,7 @@
 
 **Interfaces:**
 
-- Consumes: completed catalogs and localized components from Tasks 1–17.
+- Consumes: completed catalogs and localized components from Tasks 1 to 17.
 - Produces: deterministic real-browser proof that every route renders Chinese interface chrome and preserves locale through navigation/reload.
 
 - [ ] Add a failing zh-CN route sweep using `SIGNED_IN_ROUTES` and `SIGNED_OUT_ROUTES`, asserting `lang="zh-CN"`, localized shell navigation, and expected page headings.

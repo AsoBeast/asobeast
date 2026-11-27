@@ -55,6 +55,8 @@ const chineseErrors = createTranslator({
 
 function browserLocale(): "en" | "zh-CN" {
   if (typeof document === "undefined") return "en";
+  const rendered = document.documentElement?.lang;
+  if (typeof rendered === "string" && isLocale(rendered)) return rendered;
   const pair = document.cookie
     .split(";")
     .map((entry) => entry.trim().split("="))

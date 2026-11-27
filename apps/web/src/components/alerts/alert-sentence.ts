@@ -30,9 +30,9 @@ export const CHANGE_FIELD_ZH: Record<ChangeField, string> = {
   screenshotImages: "截图图片",
   screenshotCaptions: "截图说明",
   icon: "图标",
-  whatsNew: "更新说明",
+  whatsNew: "更新内容",
   inAppEvents: "应用内活动",
-  featuring: "精选推荐",
+  featuring: "精选",
   editorsChoice: "编辑精选",
 };
 

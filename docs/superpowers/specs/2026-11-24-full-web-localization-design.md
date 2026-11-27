@@ -1,3 +1,8 @@
+---
+title: "Full Web Localization Design"
+description: "Design notes for the full web localization work."
+---
+
 # Full Web Localization Design
 
 ## Intent

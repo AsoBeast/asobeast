@@ -24,7 +24,7 @@ import type {
 } from "@asobeast/shared";
 import { formatCheckedPosition, formatRankPosition } from "@asobeast/shared";
 import {
-  formatDate,
+  formatDateInLocale,
   formatMeasure,
   formatMeasureFixed,
   formatMeasurePair,
@@ -204,10 +204,13 @@ function pruneSections(evidence: KeywordPruneEvidence): Sections {
   };
 }
 
-function dropSections(evidence: RankInvestigateDropEvidence): Sections {
+function dropSections(
+  evidence: RankInvestigateDropEvidence,
+  locale: Locale,
+): Sections {
   return {
     facts: [
-      fact("Changed on", formatDate(evidence.changedAt)),
+      fact("Changed on", formatDateInLocale(evidence.changedAt, locale)),
       fact("Visibility before", optionalFixed(evidence.visibilityBefore)),
       fact("Visibility after", optionalFixed(evidence.visibilityAfter)),
       fact("Visibility delta", optionalFixed(evidence.visibilityDelta)),
@@ -231,6 +234,7 @@ function dropSections(evidence: RankInvestigateDropEvidence): Sections {
 
 function unexplainedSections(
   evidence: RankInvestigateUnexplainedDropEvidence,
+  locale: Locale,
 ): Sections {
   return {
     facts: [
@@ -242,7 +246,9 @@ function unexplainedSections(
       fact("Mean volatility", optional(evidence.meanVolatility)),
       fact(
         "Your last change",
-        evidence.lastOwnChangeAt ? formatDate(evidence.lastOwnChangeAt) : "—",
+        evidence.lastOwnChangeAt
+          ? formatDateInLocale(evidence.lastOwnChangeAt, locale)
+          : "—",
       ),
     ],
     lists: [
@@ -256,11 +262,12 @@ function unexplainedSections(
 
 function overtakeSections(
   evidence: CompetitorInvestigateOvertakeEvidence,
+  locale: Locale,
 ): Sections {
   return {
     facts: [
       fact("Competitor", evidence.competitorName ?? "—"),
-      fact("Changed on", formatDate(evidence.changedAt)),
+      fact("Changed on", formatDateInLocale(evidence.changedAt, locale)),
       fact("New title", evidence.newTitle ?? "—"),
       fact("New subtitle", evidence.newSubtitle ?? "—"),
       fact("Keywords passed", formatNumber(evidence.keywords.length)),
@@ -320,7 +327,7 @@ function auditSections(
         "Rubric covered",
         `${evidence.coveredWeight} of ${evidence.totalWeight}`,
       ),
-      fact("Audit date", formatDate(evidence.auditDate)),
+      fact("Audit date", formatDateInLocale(evidence.auditDate, locale)),
     ],
     lists: [
       {
@@ -376,7 +383,10 @@ function declineSections(
   };
 }
 
-function replySections(evidence: ReviewsReplyNegativeEvidence): Sections {
+function replySections(
+  evidence: ReviewsReplyNegativeEvidence,
+  locale: Locale,
+): Sections {
   return {
     facts: [
       fact("Unanswered", formatNumber(evidence.unanswered)),
@@ -391,7 +401,7 @@ function replySections(evidence: ReviewsReplyNegativeEvidence): Sections {
       fact(
         "Oldest unanswered",
         evidence.oldestUnansweredAt
-          ? formatDate(evidence.oldestUnansweredAt)
+          ? formatDateInLocale(evidence.oldestUnansweredAt, locale)
           : "—",
       ),
       fact("Window", `${evidence.windowDays} days`),
@@ -400,10 +410,16 @@ function replySections(evidence: ReviewsReplyNegativeEvidence): Sections {
   };
 }
 
-function staleSections(evidence: ListingShipUpdateEvidence): Sections {
+function staleSections(
+  evidence: ListingShipUpdateEvidence,
+  locale: Locale,
+): Sections {
   return {
     facts: [
-      fact("Last store update", formatDate(evidence.storeUpdatedAt)),
+      fact(
+        "Last store update",
+        formatDateInLocale(evidence.storeUpdatedAt, locale),
+      ),
       fact("Days since update", formatNumber(evidence.daysSinceUpdate)),
       fact("Version", evidence.version ?? "—"),
       fact("Competitor median", optionalDays(evidence.competitorMedianDays)),
@@ -415,6 +431,7 @@ function staleSections(evidence: ListingShipUpdateEvidence): Sections {
 
 function conversionSections(
   evidence: ConversionInvestigateDropEvidence,
+  locale: Locale,
 ): Sections {
   return {
     facts: [
@@ -438,7 +455,10 @@ function conversionSections(
         "Compared",
         `last ${evidence.windowDays} days against the ${evidence.baselineDays} before`,
       ),
-      fact("Complete through", formatDate(evidence.completeThrough)),
+      fact(
+        "Complete through",
+        formatDateInLocale(evidence.completeThrough, locale),
+      ),
     ],
     lists: [],
   };
@@ -546,7 +566,7 @@ function sections(evidence: ActionEvidence, locale: Locale): Sections {
     case "keyword.prune":
       return pruneSections(evidence);
     case "rank.investigate_drop":
-      return dropSections(evidence);
+      return dropSections(evidence, locale);
     case "serp.hold_volatile":
       return volatileSections(evidence);
     case "audit.fix_factor":
@@ -558,17 +578,17 @@ function sections(evidence: ActionEvidence, locale: Locale): Sections {
     case "keyword.push_to_top10":
       return pushSections(evidence);
     case "rank.investigate_unexplained_drop":
-      return unexplainedSections(evidence);
+      return unexplainedSections(evidence, locale);
     case "competitor.investigate_overtake":
-      return overtakeSections(evidence);
+      return overtakeSections(evidence, locale);
     case "reviews.investigate_rating_decline":
       return declineSections(evidence);
     case "reviews.reply_negative":
-      return replySections(evidence);
+      return replySections(evidence, locale);
     case "listing.ship_update":
-      return staleSections(evidence);
+      return staleSections(evidence, locale);
     case "conversion.investigate_drop":
-      return conversionSections(evidence);
+      return conversionSections(evidence, locale);
     case "listing.cpp_underperforms":
       return productPageSections(evidence);
     case "metadata.fix_lint":

@@ -5,7 +5,37 @@ type Pattern = readonly [
 
 const quoted = (value: string): string => `“${value}”`;
 
+const MESSAGE_ZH: Readonly<Record<string, string>> = {
+  "a benefit": "优势",
+  "social proof": "社会认同",
+  "a feature": "功能",
+  "the interface only": "仅界面",
+  "something else": "其他内容",
+  "an onboarding screen": "引导页",
+  "nothing we could read": "无法读取的内容",
+};
+
+const messageLabel = (value: string): string => {
+  const withCaption = value.match(/^(.+?) with “(.+)”$/);
+  if (withCaption) {
+    return `${messageLabel(withCaption[1])}，文案为“${withCaption[2]}”`;
+  }
+  return value.replace(
+    /(a benefit|social proof|a feature|the interface only|something else|an onboarding screen|nothing we could read)/g,
+    (match) => MESSAGE_ZH[match] ?? match,
+  );
+};
+
 export const AUDIT_DETAIL_PATTERNS_ZH: readonly Pattern[] = [
+  [
+    /^The first screenshot shows (.+)\.$/,
+    (whole, value) => `首张截图展示了${messageLabel(value)}。`,
+  ],
+  [
+    /^It shows (.+)\. Most shoppers never scroll past the third screenshot\.$/,
+    (whole, value) =>
+      `它展示了${messageLabel(value)}。多数用户不会翻过第三张截图。`,
+  ],
   [/^(\d+) declared languages\.$/, "已声明 $1 种语言。"],
   [/^(\d+) declared (?:languages|language)\.$/, "已声明 $1 种语言。"],
   [/^(\d+) iPad screenshots found\.$/, "找到 $1 张 iPad 截图。"],

@@ -1,3 +1,8 @@
+---
+title: "Web Internationalization Design"
+description: "Design notes for locale resolution, catalogs and translated generated content."
+---
+
 # Web internationalization design
 
 Date: 2026-11-24
@@ -242,3 +247,7 @@ Each step keeps the app buildable and the existing tests green. No API, database
 - The internal helper names and cookie utility implementation.
 - Whether route-level message providers are needed after measuring the payload.
 - Commit boundaries inside each delivery step, provided each commit is one logical change and keeps tests green.
+
+## Configuration notes
+
+`next-intl` is pinned directly, and its `icu-minify` transitive dependency is excluded from the pnpm minimum release age so the fresh pair can install. `@swc/core` is allowed to build because the next-intl SWC extractor needs it. The Playwright Chrome project reads `PLAYWRIGHT_EXECUTABLE_PATH` when set so local runs can use a system browser; CI keeps the pinned browser.

@@ -307,23 +307,39 @@ const BRIEFS: {
 export function actionBriefZh(evidence: ActionEvidence): BriefPart[] {
   switch (evidence.rule) {
     case "keyword.add_uncovered":
+      return BRIEFS[evidence.rule](evidence);
     case "keyword.defend":
+      return BRIEFS[evidence.rule](evidence);
     case "keyword.prune":
+      return BRIEFS[evidence.rule](evidence);
     case "rank.investigate_drop":
+      return BRIEFS[evidence.rule](evidence);
     case "serp.hold_volatile":
+      return BRIEFS[evidence.rule](evidence);
     case "audit.fix_factor":
+      return BRIEFS[evidence.rule](evidence);
     case "reviews.investigate_theme":
+      return BRIEFS[evidence.rule](evidence);
     case "market.improve_country":
+      return BRIEFS[evidence.rule](evidence);
     case "keyword.push_to_top10":
+      return BRIEFS[evidence.rule](evidence);
     case "metadata.fix_lint":
+      return BRIEFS[evidence.rule](evidence);
     case "rank.investigate_unexplained_drop":
+      return BRIEFS[evidence.rule](evidence);
     case "competitor.investigate_overtake":
+      return BRIEFS[evidence.rule](evidence);
     case "reviews.investigate_rating_decline":
+      return BRIEFS[evidence.rule](evidence);
     case "reviews.reply_negative":
+      return BRIEFS[evidence.rule](evidence);
     case "listing.ship_update":
+      return BRIEFS[evidence.rule](evidence);
     case "conversion.investigate_drop":
+      return BRIEFS[evidence.rule](evidence);
     case "listing.cpp_underperforms":
-      return BRIEFS[evidence.rule](evidence as never);
+      return BRIEFS[evidence.rule](evidence);
     default: {
       const never: never = evidence;
       return never;
