@@ -1,6 +1,7 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
+import type { Store } from "@asobeast/shared";
 import {
   CartesianGrid,
   type DotItemDotProps,
@@ -24,7 +25,7 @@ import {
   TIME_AXIS_PROPS,
   VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
-import { newRatingsAverageSeries } from "@/components/reviews/new-ratings-average";
+import { newRatingsAverageSeriesFor } from "@/components/reviews/new-ratings-average";
 import {
   ChartContainer,
   ChartLegend,
@@ -53,11 +54,11 @@ const LONE_DOT_RADIUS = 2.5;
 export function RatingTrendChart({
   id,
   range,
-  newRatings = false,
+  newRatingsStore,
 }: {
   id: string;
   range: RatingsRange;
-  newRatings?: boolean;
+  newRatingsStore?: Store;
 }) {
   const { data } = useSuspenseQuery(
     ratingsHistoryOptions(id, presetToRange(range)),
@@ -87,7 +88,9 @@ export function RatingTrendChart({
 
   const rows = withNewRatings(
     points,
-    newRatings ? newRatingsAverageSeries(data.points) : [],
+    newRatingsStore
+      ? newRatingsAverageSeriesFor(newRatingsStore, data.points)
+      : [],
   );
   const newValues = rows.map((row) => row.newAverage);
   const twoLines = newValues.some((value) => value !== null);
