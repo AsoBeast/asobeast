@@ -16,7 +16,11 @@ import {
   SetupStatus,
 } from '@asobeast/shared';
 import { rawListedInIphoneSearch } from '../store-providers/iphone-search';
-import { currencyOf, extractRawFacts } from '../store-providers/raw-facts';
+import {
+  currencyOf,
+  extractRawFacts,
+  ratingHistogram,
+} from '../store-providers/raw-facts';
 import { NormalizedApp } from '../store-providers/types';
 import { listingMarket } from './listing';
 import { listingFactsOf, listingTextsOf } from './listing-facts';
@@ -231,6 +235,7 @@ export function toSnapshotData(
   market: string | null = null,
   localization: string | null = null,
 ): Prisma.AppSnapshotCreateInput {
+  const starCounts = ratingHistogram(normalized.store, normalized.raw);
   return {
     app: { connect: { id: appId } },
     country: market,
@@ -247,6 +252,7 @@ export function toSnapshotData(
     releasedAt: normalized.releasedAt,
     storeUpdatedAt: normalized.storeUpdatedAt,
     raw: normalized.raw,
+    ...(starCounts ? { ratingHistogram: starCounts } : {}),
   };
 }
 

@@ -315,25 +315,26 @@ model FeaturingSync {
 }
 
 model AppSnapshot {
-  id             String               @id @default(cuid())
-  appId          String
-  app            App                  @relation(fields: [appId], references: [id], onDelete: Cascade)
-  country        String?
-  localization   String?
-  title          String
-  subtitle       String?
-  summary        String?
-  description    String
-  ratingAvg      Float?
-  ratingCount    Int?
-  installs       BigInt?
-  price          Float?
-  version        String?
-  releasedAt     DateTime?
-  storeUpdatedAt DateTime?
-  raw            Json
-  screenshots    SnapshotScreenshot[]
-  capturedAt     DateTime             @default(now())
+  id              String               @id @default(cuid())
+  appId           String
+  app             App                  @relation(fields: [appId], references: [id], onDelete: Cascade)
+  country         String?
+  localization    String?
+  title           String
+  subtitle        String?
+  summary         String?
+  description     String
+  ratingAvg       Float?
+  ratingCount     Int?
+  ratingHistogram Json?
+  installs        BigInt?
+  price           Float?
+  version         String?
+  releasedAt      DateTime?
+  storeUpdatedAt  DateTime?
+  raw             Json
+  screenshots     SnapshotScreenshot[]
+  capturedAt      DateTime             @default(now())
 
   @@index([appId, country, localization, capturedAt])
 }

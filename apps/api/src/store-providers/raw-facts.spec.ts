@@ -10,12 +10,14 @@ import {
   primaryGenreId,
   primaryGenreKey,
   primaryGenreName,
+  ratingCountsOf,
   ratingHistogram,
   releaseNotesFor,
   screenshotsCount,
   storeDeveloperNameOf,
 } from './raw-facts';
 import { scrapedAppStoreRaw } from './app-store-scraped.fixture';
+import { omitStar, starCountsOf } from './star-counts.fixture';
 
 const realPayload = {
   id: 1234567890,
@@ -463,6 +465,43 @@ describe('ratingHistogram', () => {
     ]) {
       expect(ratingHistogram(Store.GOOGLE_PLAY, garbage)).toBeNull();
     }
+  });
+});
+
+describe('ratingCountsOf', () => {
+  it('parses five buckets', () => {
+    expect(ratingCountsOf(starCountsOf(1000))).toEqual(starCountsOf(1000));
+  });
+
+  it('reads a bucket stored as digits', () => {
+    expect(ratingCountsOf({ ...starCountsOf(100), '2': '20' })).toMatchObject({
+      '2': 20,
+    });
+  });
+
+  it('answers null for anything that is not five whole buckets', () => {
+    for (const garbage of [
+      null,
+      undefined,
+      'nope',
+      [],
+      {},
+      omitStar(starCountsOf(100), '5'),
+      { ...starCountsOf(100), '3': 'many' },
+      { ...starCountsOf(100), '3': 3.7 },
+      { ...starCountsOf(100), '3': -1 },
+      { ...starCountsOf(100), '3': true },
+    ]) {
+      expect(ratingCountsOf(garbage)).toBeNull();
+    }
+  });
+
+  it('is what ratingHistogram reads for Google Play', () => {
+    const histogram = starCountsOf(500);
+
+    expect(ratingHistogram(Store.GOOGLE_PLAY, { histogram })).toEqual(
+      ratingCountsOf(histogram),
+    );
   });
 });
 

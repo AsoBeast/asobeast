@@ -297,7 +297,12 @@ export class AnalyticsService {
         capturedAt: { gte: from, lt: addDays(to, 1) },
       },
       orderBy: { capturedAt: 'asc' },
-      select: { ratingAvg: true, ratingCount: true, capturedAt: true },
+      select: {
+        ratingAvg: true,
+        ratingCount: true,
+        ratingHistogram: true,
+        capturedAt: true,
+      },
     });
 
     return { points: collapseRatings(rows) };

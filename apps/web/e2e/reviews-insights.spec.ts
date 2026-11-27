@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { PLAY_NEW_AVERAGE } from "./fixtures.mts";
 import {
   HISTOGRAM_FAILING_COOKIE,
   RATINGS_HISTORY_COOKIE,
@@ -356,19 +357,92 @@ test("reads the new ratings average across a reset", async ({
   expect(newLine?.match(/M/g)).toHaveLength(2);
 });
 
-test("leaves the new ratings average out on Google Play", async ({
+const PLAY_REVIEWS = "/apps/app-gp/reviews";
+
+const averageChart = (page: Page) =>
+  page.getByRole("region", { name: "Average rating over time" });
+
+const playFigure = new RegExp(
+  `New ratings average ${PLAY_NEW_AVERAGE.toFixed(1)}, \\w+`,
+);
+
+test("draws the new ratings average beside the overall average on Google Play", async ({
   page,
   context,
 }) => {
-  await seedCookies(context, { [RATINGS_HISTORY_COOKIE]: "growth" });
-  await page.goto("/apps/app-gp/reviews");
-  const chart = page.getByRole("region", { name: "Average rating over time" });
+  await seedCookies(context, { [RATINGS_HISTORY_COOKIE]: "playGrowth" });
+  await page.goto(PLAY_REVIEWS);
+  const chart = averageChart(page);
+
+  await expect(chart.locator(".recharts-line")).toHaveCount(2);
+  await expect(
+    chart.getByRole("list", { name: "Charted series" }).getByRole("listitem"),
+  ).toHaveText(["Average rating", "New ratings, 7 day average"]);
+});
+
+test("says how new ratings compare with the overall average on Google Play", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { [RATINGS_HISTORY_COOKIE]: "playGrowth" });
+  await page.goto(PLAY_REVIEWS);
+  const sentence = newRatingsSentence(page, "above");
+
+  await expect(
+    sentence.locator("[data-grade]", { hasText: playFigure }),
+  ).toBeVisible();
+  const help = sentence.getByRole("button", {
+    name: "About the new ratings average",
+  });
+  await expect(help).toBeVisible();
+  await help.click();
+  await expect(
+    page.getByText(/worked out from the number of ratings at each star/),
+  ).toBeVisible();
+});
+
+test("reads the new ratings average across a reset on Google Play", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { [RATINGS_HISTORY_COOKIE]: "playReset" });
+  await page.goto(PLAY_REVIEWS);
+
+  await expect(
+    newRatingsSentence(page, "above").locator("[data-grade]", {
+      hasText: playFigure,
+    }),
+  ).toBeVisible();
+  const lines = averageChart(page).locator(".recharts-line-curve");
+  await expect(lines).toHaveCount(2);
+  const newLine = await lines.nth(1).getAttribute("d");
+  expect(newLine?.match(/M/g)).toHaveLength(2);
+});
+
+test("shows no new ratings average for a Google Play app without star counts", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { [RATINGS_HISTORY_COOKIE]: "playBare" });
+  await page.goto(PLAY_REVIEWS);
+  const chart = averageChart(page);
 
   await expect(chart.locator(".recharts-line")).toHaveCount(1);
   await expect(chart.getByRole("list", { name: "Charted series" })).toHaveCount(
     0,
   );
   await expect(page.getByText("New ratings average")).toHaveCount(0);
+});
+
+test("says too few new ratings on google play", async ({ page, context }) => {
+  await seedCookies(context, { [RATINGS_HISTORY_COOKIE]: "playThin" });
+  await page.goto(PLAY_REVIEWS);
+
+  await expect(
+    page.getByText(
+      "Too few new ratings over 30 days to work out their average.",
+    ),
+  ).toBeVisible();
 });
 
 test("keeps the overview rating chart as it was", async ({ page, context }) => {

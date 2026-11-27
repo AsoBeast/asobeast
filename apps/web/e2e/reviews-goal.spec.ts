@@ -11,7 +11,7 @@ import { expect, test } from "./session.mts";
 const ASSUMPTION =
   "Assumes every new rating is five stars and that the store shows one decimal.";
 const PLAY_NOTE =
-  "Google Play gives recent ratings more weight, so read this as a rough guide.";
+  "Google Play reports its own average, so read this as a rough guide.";
 const THIN_NOTE =
   "With fewer than 20 ratings the average moves a lot with each new one.";
 

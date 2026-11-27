@@ -120,7 +120,7 @@ export function RatingsPanel({ id }: { id: string }) {
   const [range, setRange] = useQueryState("range", ratingsRangeParser);
   const shownRange = useDeferredValue(range);
   const { data: app } = useQuery(appDetailOptions(id));
-  const newRatings = app?.store === "APP_STORE";
+  const store = app?.store;
 
   return (
     <Card className="gap-0 py-0">
@@ -153,11 +153,11 @@ export function RatingsPanel({ id }: { id: string }) {
             <RatingTrendChart
               id={id}
               range={shownRange}
-              newRatings={newRatings}
+              newRatingsStore={store}
             />
           )}
-          {newRatings ? (
-            <NewRatingsSentence id={id} range={shownRange} />
+          {store ? (
+            <NewRatingsSentence id={id} store={store} range={shownRange} />
           ) : null}
         </Suspense>
       </CardContent>

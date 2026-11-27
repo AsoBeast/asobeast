@@ -1,7 +1,11 @@
 import type { RatingsHistory } from "@asobeast/shared";
 import {
+  GROWING_PLAY_HISTORY,
   GROWING_RATINGS_HISTORY,
   grownRatingsPoints,
+  grownStarCounts,
+  PLAY_NEW_STARS,
+  splitStars,
   utcDaysAgo,
 } from "./fixtures.mts";
 
@@ -51,6 +55,34 @@ const RESET_RATINGS_HISTORY: RatingsHistory = {
   ],
 };
 
+const PLAY_SPREAD = [2, 3, 5, 20, 70] as const;
+
+const BARE_PLAY_RATINGS_HISTORY: RatingsHistory = {
+  points: GROWING_PLAY_HISTORY.points.map(
+    ({ date, ratingAvg, ratingCount }) => ({ date, ratingAvg, ratingCount }),
+  ),
+};
+
+const RESET_PLAY_RATINGS_HISTORY: RatingsHistory = {
+  points: [
+    ...grownStarCounts(
+      { daysAgo: 30, counts: splitStars(5000, PLAY_SPREAD) },
+      Array.from({ length: 15 }, () => PLAY_NEW_STARS),
+    ),
+    ...grownStarCounts(
+      { daysAgo: 14, counts: splitStars(1000, PLAY_SPREAD) },
+      Array.from({ length: 14 }, () => PLAY_NEW_STARS),
+    ),
+  ],
+};
+
+const THIN_PLAY_RATINGS_HISTORY: RatingsHistory = {
+  points: grownStarCounts(
+    { daysAgo: 1, counts: splitStars(500, PLAY_SPREAD) },
+    [splitStars(2, [0, 0, 0, 1, 1])],
+  ),
+};
+
 export const RATINGS_HISTORY_SETS: Record<string, RatingsHistory> = {
   single: SINGLE_RATINGS_HISTORY,
   short: SHORT_RATINGS_HISTORY,
@@ -58,4 +90,8 @@ export const RATINGS_HISTORY_SETS: Record<string, RatingsHistory> = {
   growth: GROWING_RATINGS_HISTORY,
   thin: THIN_RATINGS_HISTORY,
   reset: RESET_RATINGS_HISTORY,
+  playGrowth: GROWING_PLAY_HISTORY,
+  playReset: RESET_PLAY_RATINGS_HISTORY,
+  playBare: BARE_PLAY_RATINGS_HISTORY,
+  playThin: THIN_PLAY_RATINGS_HISTORY,
 };

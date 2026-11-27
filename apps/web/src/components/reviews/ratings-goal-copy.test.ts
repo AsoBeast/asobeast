@@ -86,7 +86,7 @@ describe("goalNotes", () => {
 
   it("calls the Google Play answer a rough guide", () => {
     expect(goalNotes("GOOGLE_PLAY", 1000)).toContain(
-      "Google Play gives recent ratings more weight, so read this as a rough guide.",
+      "Google Play reports its own average, so read this as a rough guide.",
     );
   });
 

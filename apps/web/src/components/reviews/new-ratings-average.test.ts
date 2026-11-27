@@ -1,9 +1,17 @@
 import { describe, expect, it } from "vitest";
-import type { RatingsPoint } from "@asobeast/shared";
+import {
+  RATING_STARS,
+  type RatingCounts,
+  type RatingsPoint,
+  type RatingStar,
+} from "@asobeast/shared";
 import { dayBefore } from "@/lib/utc-day";
 import {
+  hasStarCountReads,
   newRatingsAverage,
+  newRatingsAverageFor,
   newRatingsAverageSeries,
+  newRatingsAverageSeriesFor,
 } from "./new-ratings-average";
 
 const point = (
@@ -233,5 +241,323 @@ describe("newRatingsAverageSeries", () => {
 
     expect(byDate.get("2026-10-14")).toBeCloseTo(4.7, 6);
     expect(byDate.get("2026-10-16")).toBeCloseTo(4.7, 6);
+  });
+});
+
+type Weights = readonly [number, number, number, number, number];
+
+function splitStars(total: number, weights: Weights): RatingCounts {
+  const weightSum = weights.reduce((sum, weight) => sum + weight, 0);
+  const counts = {} as RatingCounts;
+  let assigned = 0;
+  RATING_STARS.forEach((star, index) => {
+    counts[star] =
+      star === "5"
+        ? total - assigned
+        : Math.floor((total * weights[index]) / weightSum);
+    assigned += counts[star];
+  });
+  return counts;
+}
+
+const starsTotal = (counts: RatingCounts): number =>
+  RATING_STARS.reduce((sum, star) => sum + counts[star], 0);
+
+const meanOf = (counts: RatingCounts): number =>
+  RATING_STARS.reduce((sum, star) => sum + Number(star) * counts[star], 0) /
+  starsTotal(counts);
+
+const plus = (left: RatingCounts, right: RatingCounts): RatingCounts => {
+  const counts = {} as RatingCounts;
+  for (const star of RATING_STARS) counts[star] = left[star] + right[star];
+  return counts;
+};
+
+const shift = (
+  counts: RatingCounts,
+  from: RatingStar,
+  to: RatingStar,
+  moved: number,
+): RatingCounts => ({
+  ...counts,
+  [from]: counts[from] - moved,
+  [to]: counts[to] + moved,
+});
+
+const playPoint = (
+  date: string,
+  counts: RatingCounts,
+  ratingCount: number | null = starsTotal(counts),
+): RatingsPoint => ({
+  date,
+  ratingAvg: meanOf(counts),
+  ratingCount,
+  starCounts: counts,
+});
+
+const withoutStarCounts = ({
+  date,
+  ratingAvg,
+  ratingCount,
+}: RatingsPoint): RatingsPoint => ({ date, ratingAvg, ratingCount });
+
+function playGrown(
+  start: { date: string; counts: RatingCounts },
+  days: number,
+  perDay: RatingCounts,
+): RatingsPoint[] {
+  const points = [playPoint(start.date, start.counts)];
+  let counts = start.counts;
+  for (let day = 1; day <= days; day += 1) {
+    counts = plus(counts, perDay);
+    points.push(playPoint(dayBefore(start.date, -day), counts));
+  }
+  return points;
+}
+
+const PLAY_START = {
+  date: "2026-10-01",
+  counts: splitStars(2000, [10, 10, 10, 20, 50]),
+};
+const DAILY = splitStars(40, [1, 0, 1, 6, 32]);
+const FOUR_SIXTY = splitStars(40, [0, 0, 0, 40, 60]);
+const SPREAD: Weights = [2, 3, 5, 20, 70];
+const ONE_FIVE_STAR = splitStars(1, [0, 0, 0, 0, 1]);
+
+const playReset = () => ({
+  before: playGrown(
+    { date: "2026-10-01", counts: splitStars(5000, SPREAD) },
+    10,
+    FOUR_SIXTY,
+  ),
+  after: playGrown(
+    { date: "2026-10-12", counts: splitStars(1000, SPREAD) },
+    10,
+    FOUR_SIXTY,
+  ),
+});
+
+describe("newRatingsAverageFor on Google Play", () => {
+  it("averages the ratings added from the counts per star", () => {
+    const answer = newRatingsAverageFor(
+      "GOOGLE_PLAY",
+      playGrown(PLAY_START, 30, DAILY),
+    );
+
+    expect(answer?.average).toBeCloseTo(meanOf(DAILY), 9);
+    expect(answer?.added).toBe(1200);
+    expect(answer?.span).toBe(30);
+  });
+
+  it("needs no rounding allowance", () => {
+    const big = { date: "2026-10-01", counts: splitStars(200_000, SPREAD) };
+    const points = playGrown(big, 20, ONE_FIVE_STAR);
+
+    expect(newRatingsAverageFor("GOOGLE_PLAY", points)?.added).toBe(20);
+    expect(
+      newRatingsAverageFor("APP_STORE", roundedLikeTheStore(points)),
+    ).toBeNull();
+  });
+
+  const START_COUNTS = splitStars(100, [10, 0, 0, 0, 90]);
+
+  const movedDay = (end: RatingCounts) => [
+    playPoint("2026-10-01", START_COUNTS),
+    playPoint("2026-10-02", end),
+  ];
+
+  it("nets a rating that moved between stars", () => {
+    const end = shift(
+      plus(START_COUNTS, splitStars(10, [0, 0, 50, 0, 50])),
+      "1",
+      "5",
+      1,
+    );
+    const answer = newRatingsAverageFor("GOOGLE_PLAY", movedDay(end));
+
+    expect(answer?.average).toBeCloseTo(4.4, 9);
+    expect(answer?.added).toBe(10);
+  });
+
+  it("answers nothing when the net change lands outside one to five stars", () => {
+    const end = shift(
+      plus(START_COUNTS, splitStars(10, [0, 0, 0, 0, 100])),
+      "1",
+      "5",
+      1,
+    );
+
+    expect(newRatingsAverageFor("GOOGLE_PLAY", movedDay(end))).toBeNull();
+  });
+
+  it("adds nothing for a rating that only moved between stars", () => {
+    const end = shift(START_COUNTS, "1", "5", 1);
+
+    expect(newRatingsAverageFor("GOOGLE_PLAY", movedDay(end))).toBeNull();
+  });
+
+  it("starts over where the star total drops", () => {
+    const { before, after } = playReset();
+    const answer = newRatingsAverageFor("GOOGLE_PLAY", [...before, ...after]);
+
+    expect(answer?.average).toBeCloseTo(meanOf(FOUR_SIXTY), 9);
+    expect(answer?.added).toBe(800);
+  });
+
+  it("answers nothing with fewer than five new ratings", () => {
+    expect(
+      newRatingsAverageFor(
+        "GOOGLE_PLAY",
+        playGrown(PLAY_START, 4, ONE_FIVE_STAR),
+      ),
+    ).toBeNull();
+    expect(
+      newRatingsAverageFor(
+        "GOOGLE_PLAY",
+        playGrown(PLAY_START, 5, ONE_FIVE_STAR),
+      )?.added,
+    ).toBe(5);
+  });
+
+  it("reads the star total and never the rating count", () => {
+    const points = playGrown(PLAY_START, 30, DAILY);
+    const noisy = points.map((each, index) => ({
+      ...each,
+      ratingCount: index % 2 === 0 ? 100 : 5000,
+    }));
+    const blank = points.map((each) => ({ ...each, ratingCount: null }));
+    const expected = newRatingsAverageFor("GOOGLE_PLAY", points);
+
+    expect(newRatingsAverageFor("GOOGLE_PLAY", noisy)).toEqual(expected);
+    expect(newRatingsAverageFor("GOOGLE_PLAY", blank)).toEqual(expected);
+  });
+
+  it("skips a point without star counts", () => {
+    const points = playGrown(PLAY_START, 30, DAILY);
+    const gaps = points.map((each, index) =>
+      index >= 1 && index <= 29 ? withoutStarCounts(each) : each,
+    );
+
+    expect(newRatingsAverageFor("GOOGLE_PLAY", gaps)).toEqual(
+      newRatingsAverageFor("GOOGLE_PLAY", points),
+    );
+  });
+
+  it("answers nothing when no point carries star counts", () => {
+    const stripped = playGrown(PLAY_START, 30, DAILY).map(withoutStarCounts);
+
+    expect(newRatingsAverageFor("GOOGLE_PLAY", stripped)).toBeNull();
+    expect(newRatingsAverageFor("APP_STORE", stripped)).not.toBeNull();
+  });
+
+  it("reads the average and count on the App Store, whatever else a point carries", () => {
+    const points = playGrown(PLAY_START, 30, DAILY);
+
+    expect(newRatingsAverageFor("APP_STORE", points)).toEqual(
+      newRatingsAverage(points),
+    );
+  });
+});
+
+describe("newRatingsAverageSeriesFor on Google Play", () => {
+  it("starts on the first day with a full week behind it", () => {
+    const series = newRatingsAverageSeriesFor(
+      "GOOGLE_PLAY",
+      playGrown(PLAY_START, 30, DAILY),
+    );
+
+    expect(series).toHaveLength(31);
+    expect(series.slice(0, 7).every((each) => each.average === null)).toBe(
+      true,
+    );
+    expect(series[7].date).toBe("2026-10-08");
+    for (const each of series.slice(7)) {
+      expect(each.average).toBeCloseTo(meanOf(DAILY), 9);
+    }
+  });
+
+  it("breaks the line for a week where the star total drops", () => {
+    const { before, after } = playReset();
+    const series = newRatingsAverageSeriesFor("GOOGLE_PLAY", [
+      ...before,
+      ...after,
+    ]);
+    const byDate = new Map(series.map((each) => [each.date, each.average]));
+    const gap = Array.from({ length: 7 }, (_, day) =>
+      byDate.get(dayBefore("2026-10-12", -day)),
+    );
+
+    expect(byDate.get("2026-10-11")).toBeCloseTo(meanOf(FOUR_SIXTY), 9);
+    expect(gap).toEqual(Array(7).fill(null));
+    expect(byDate.get("2026-10-19")).toBeCloseTo(meanOf(FOUR_SIXTY), 9);
+    for (const each of series) {
+      if (each.average !== null) {
+        expect(each.average).toBeCloseTo(meanOf(FOUR_SIXTY), 9);
+      }
+    }
+  });
+
+  it("leaves a day without star counts out of the line", () => {
+    const points = playGrown(PLAY_START, 30, DAILY);
+    const thatDate = points[15].date;
+    const series = newRatingsAverageSeriesFor(
+      "GOOGLE_PLAY",
+      points.map((each, index) =>
+        index === 15 ? withoutStarCounts(each) : each,
+      ),
+    );
+    const byDate = new Map(series.map((each) => [each.date, each.average]));
+
+    expect(series.some((each) => each.date === thatDate)).toBe(false);
+    expect(byDate.get(points[14].date)).toBeCloseTo(meanOf(DAILY), 9);
+    expect(byDate.get(points[16].date)).toBeCloseTo(meanOf(DAILY), 9);
+  });
+
+  it("reaches back to the last day with star counts at the start of a week", () => {
+    const ones = splitStars(70, [1, 0, 0, 0, 0]);
+    const fives = splitStars(10, [0, 0, 0, 0, 1]);
+    const first = PLAY_START.counts;
+    const eighth = plus(first, DAILY);
+    const fifteenth = plus(eighth, ones);
+    const sixteenth = plus(fifteenth, fives);
+    const byDate = new Map(
+      newRatingsAverageSeriesFor("GOOGLE_PLAY", [
+        playPoint("2026-10-01", first),
+        playPoint("2026-10-08", eighth),
+        playPoint("2026-10-15", fifteenth),
+        playPoint("2026-10-16", sixteenth),
+      ]).map((each) => [each.date, each.average]),
+    );
+
+    expect(byDate.get("2026-10-15")).toBeCloseTo(meanOf(ones), 9);
+    expect(byDate.get("2026-10-16")).toBeCloseTo(meanOf(plus(ones, fives)), 9);
+  });
+
+  it("draws nothing without star counts", () => {
+    expect(
+      newRatingsAverageSeriesFor(
+        "GOOGLE_PLAY",
+        playGrown(PLAY_START, 30, DAILY).map(withoutStarCounts),
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe("hasStarCountReads", () => {
+  it("is true when at least two points carry star counts", () => {
+    expect(hasStarCountReads(playGrown(PLAY_START, 3, DAILY))).toBe(true);
+  });
+
+  it("is false with one", () => {
+    expect(
+      hasStarCountReads([playPoint(PLAY_START.date, PLAY_START.counts)]),
+    ).toBe(false);
+  });
+
+  it("is false with none", () => {
+    expect(hasStarCountReads([])).toBe(false);
+    expect(
+      hasStarCountReads(playGrown(PLAY_START, 3, DAILY).map(withoutStarCounts)),
+    ).toBe(false);
   });
 });

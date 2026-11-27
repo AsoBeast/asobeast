@@ -31,7 +31,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "new",
         title: "The average of your new ratings",
-        text: "The ratings history on the reviews page now shows what your new ratings average beside your overall average, as a weekly line and in a sentence for the chosen range, so you see whether the last release pulls the average up or down long before the overall figure moves. The ratings goal also says where the current mix of new ratings takes you. This works on the App Store; Google Play weights recent ratings in its average, so it cannot be worked out there.",
+        text: "The ratings history on the reviews page now shows what your new ratings average beside your overall average, as a weekly line and in a sentence for the chosen range, so you see whether the last release pulls the average up or down long before the overall figure moves. It works on both stores: on the App Store from the average and the number of ratings, and on Google Play from the number of ratings at each star that the store reports every day. The ratings goal also says where the current mix of new ratings takes you on the App Store.",
       },
       {
         kind: "new",

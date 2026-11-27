@@ -51,9 +51,7 @@ export function goalNotes(store: Store, count: number): string[] {
   return [
     "Assumes every new rating is five stars and that the store shows one decimal.",
     ...(store === "GOOGLE_PLAY"
-      ? [
-          "Google Play gives recent ratings more weight, so read this as a rough guide.",
-        ]
+      ? ["Google Play reports its own average, so read this as a rough guide."]
       : []),
     ...(count < THIN_SAMPLE_COUNT
       ? [

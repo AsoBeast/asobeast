@@ -52,6 +52,7 @@ import type {
   RankingSeriesItem,
   ScoreProvenance,
   ScoreSignals,
+  RatingCounts,
   RatingsHistogram,
   ReviewThemes,
   RatingsHistory,
@@ -84,6 +85,7 @@ import {
   OVERALL_GENRE,
   PLAN_LIMITS,
   RANK_DEPTH,
+  RATING_STARS,
 } from "@asobeast/shared";
 
 export function utcDaysAgo(days: number): string {
@@ -1401,6 +1403,69 @@ export const GROWING_RATINGS_HISTORY: RatingsHistory = {
     { daysAgo: 30, count: 2000, average: 4.2 },
     Array<number>(30).fill(40),
     4.7,
+  ),
+};
+
+type StarWeights = readonly [number, number, number, number, number];
+
+export function splitStars(total: number, weights: StarWeights): RatingCounts {
+  const weightSum = weights.reduce((sum, weight) => sum + weight, 0);
+  const counts = {} as RatingCounts;
+  let assigned = 0;
+  RATING_STARS.forEach((star, index) => {
+    counts[star] =
+      star === "5"
+        ? total - assigned
+        : Math.floor((total * weights[index]) / weightSum);
+    assigned += counts[star];
+  });
+  return counts;
+}
+
+export function plusStars(
+  left: RatingCounts,
+  right: RatingCounts,
+): RatingCounts {
+  const counts = {} as RatingCounts;
+  for (const star of RATING_STARS) counts[star] = left[star] + right[star];
+  return counts;
+}
+
+const starTotal = (counts: RatingCounts): number =>
+  RATING_STARS.reduce((sum, star) => sum + counts[star], 0);
+
+export const starMean = (counts: RatingCounts): number =>
+  RATING_STARS.reduce((sum, star) => sum + Number(star) * counts[star], 0) /
+  starTotal(counts);
+
+export interface StarCountsStart {
+  daysAgo: number;
+  counts: RatingCounts;
+}
+
+export function grownStarCounts(
+  start: StarCountsStart,
+  additions: readonly RatingCounts[],
+): RatingsPoint[] {
+  const reads = [start.counts];
+  for (const added of additions) {
+    reads.push(plusStars(reads[reads.length - 1], added));
+  }
+  return reads.map((counts, day) => ({
+    date: utcDaysAgo(start.daysAgo - day),
+    ratingAvg: Number(starMean(counts).toFixed(STORE_AVERAGE_DECIMALS)),
+    ratingCount: starTotal(counts),
+    starCounts: counts,
+  }));
+}
+
+export const PLAY_NEW_STARS = splitStars(40, [1, 0, 1, 6, 32]);
+export const PLAY_NEW_AVERAGE = starMean(PLAY_NEW_STARS);
+
+export const GROWING_PLAY_HISTORY: RatingsHistory = {
+  points: grownStarCounts(
+    { daysAgo: 30, counts: splitStars(2000, [10, 10, 10, 20, 50]) },
+    Array.from({ length: 30 }, () => PLAY_NEW_STARS),
   ),
 };
 
