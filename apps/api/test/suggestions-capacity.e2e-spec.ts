@@ -2,6 +2,7 @@ import './helpers/enable-billing';
 import { Store } from '@prisma/client';
 import {
   ApiErrorEnvelope,
+  HOUR_SECONDS,
   KeywordSuggestionStrategy,
   PLAN_LIMITS,
 } from '@asobeast/shared';
@@ -14,7 +15,11 @@ import {
   startCapacityHarness,
   stopCapacityHarness,
 } from './helpers/capacity-harness';
-import { clearRateLimitCounters } from './obliterate-queues';
+import { awaitWindowHeadroom } from './helpers/burn-headroom';
+import {
+  clearRateLimitCounters,
+  spendOnDemandAllowance,
+} from './obliterate-queues';
 
 const SUGGESTIONS_LIMIT = PLAN_LIMITS.indie.onDemand?.suggestions.limit ?? 0;
 
@@ -170,10 +175,11 @@ describe('Keyword suggestions capacity (e2e)', () => {
   });
 
   it('refuses the similar strategy once the hourly allowance is spent and still answers the metadata strategy', async () => {
-    for (let used = 0; used < SUGGESTIONS_LIMIT; used += 1) {
-      await clearRateLimitCounters(harness.app);
-      await suggest('similar').expect(200);
-    }
+    await awaitWindowHeadroom(HOUR_SECONDS);
+    await suggest('similar').expect(200);
+    expect(await spendOnDemandAllowance(harness.app, SUGGESTIONS_LIMIT)).toBe(
+      1,
+    );
 
     await clearRateLimitCounters(harness.app);
     const refused = await suggest('similar').expect(429);

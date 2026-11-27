@@ -1,5 +1,9 @@
 import './helpers/enable-billing';
-import { CompetitorSuggestions, PLAN_LIMITS } from '@asobeast/shared';
+import {
+  CompetitorSuggestions,
+  HOUR_SECONDS,
+  PLAN_LIMITS,
+} from '@asobeast/shared';
 import { Store } from '@prisma/client';
 import { addDays, utcToday } from '../src/analytics/analytics.support';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
@@ -11,7 +15,11 @@ import {
   startCapacityHarness,
   stopCapacityHarness,
 } from './helpers/capacity-harness';
-import { clearRateLimitCounters } from './obliterate-queues';
+import { awaitWindowHeadroom } from './helpers/burn-headroom';
+import {
+  clearRateLimitCounters,
+  spendOnDemandAllowance,
+} from './obliterate-queues';
 
 const LOOKUP_LIMIT = PLAN_LIMITS.indie.onDemand?.storeLookup.limit ?? 0;
 
@@ -102,10 +110,9 @@ describe('Competitor suggestions capacity (e2e)', () => {
   });
 
   it('still answers the keyword result apps once the hourly allowance is spent', async () => {
-    for (let used = 0; used < LOOKUP_LIMIT; used += 1) {
-      await clearRateLimitCounters(harness.app);
-      await suggest().expect(200);
-    }
+    await awaitWindowHeadroom(HOUR_SECONDS);
+    await suggest().expect(200);
+    expect(await spendOnDemandAllowance(harness.app, LOOKUP_LIMIT)).toBe(1);
     await clearRateLimitCounters(harness.app);
 
     await seedKeywordResult();
