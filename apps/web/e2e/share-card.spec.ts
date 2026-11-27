@@ -13,8 +13,17 @@ import { utcDaysAgo } from "./fixtures.mts";
 import { holdRequest } from "./held-request.mts";
 import { hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
-import { cardLayout } from "../src/lib/chart-image/share-card/card-layout";
-import { CARD_THEMES } from "../src/lib/chart-image/share-card/card-themes";
+import { contrastRatio } from "../src/lib/contrast";
+import {
+  CARD_SIZE_NAMES,
+  CARD_SIZES,
+  cardLayout,
+  type CardBox,
+} from "../src/lib/chart-image/share-card/card-layout";
+import {
+  CARD_THEME_NAMES,
+  CARD_THEMES,
+} from "../src/lib/chart-image/share-card/card-themes";
 import {
   headlineSentence,
   rankingsHeadline,
@@ -62,6 +71,30 @@ const choice = (page: Page, group: string, option: string) =>
 
 const pick = (page: Page, group: string, option: string) =>
   choice(page, group, option).check();
+
+const CREDIT_LEAD_WIDTH = 150;
+
+const GLYPH_REACH = 0.6;
+
+const creditBackdrop = (page: Page, credit: CardBox, size: number) =>
+  preview(page).evaluate(
+    (element, { box, reach }) => {
+      if (!(element instanceof HTMLCanvasElement))
+        throw new Error("Not a canvas");
+      const context = element.getContext("2d", { willReadFrequently: true });
+      if (!context) throw new Error("No 2d context");
+      const hex = (value: number) => value.toString(16).padStart(2, "0");
+      const middle = box.y + box.height / 2;
+      return [middle - reach, middle + reach].flatMap((y) => {
+        const { data } = context.getImageData(box.x, y, box.width, 1);
+        return Array.from({ length: box.width }, (_, index) => ({
+          x: box.x + index,
+          hex: `#${hex(data[index * 4])}${hex(data[index * 4 + 1])}${hex(data[index * 4 + 2])}`,
+        }));
+      });
+    },
+    { box: credit, reach: Math.round(size * GLYPH_REACH) },
+  );
 
 const canvasSize = (page: Page) =>
   preview(page).evaluate((element) =>
@@ -160,6 +193,48 @@ test.describe("rankings", () => {
       await pick(page, "Theme", CARD_THEMES[name].label);
       await expect.poll(margin).toEqual(hexPixel(CARD_THEMES[name].panel));
     }
+  });
+
+  test("keeps the credit readable on every theme and size", async ({
+    page,
+  }) => {
+    await page.goto(RANKINGS_PAGE);
+    await openShare(page);
+    const weakest: string[] = [];
+    for (const size of CARD_SIZE_NAMES) {
+      await pick(page, "Size", CARD_SIZES[size].name);
+      const { panel, credit, fonts } = cardLayout(size, ALL_PARTS);
+      for (const name of CARD_THEME_NAMES) {
+        const theme = CARD_THEMES[name];
+        await pick(page, "Theme", theme.label);
+        await expect
+          .poll(() =>
+            canvasPixel(
+              preview(page),
+              panel.x + 12,
+              panel.y + panel.height / 2,
+            ),
+          )
+          .toEqual(hexPixel(theme.panel));
+        for (const { x, hex } of await creditBackdrop(
+          page,
+          credit,
+          fonts.credit,
+        )) {
+          const text =
+            x < credit.x + CREDIT_LEAD_WIDTH
+              ? theme.frameMuted
+              : theme.frameInk;
+          if ((contrastRatio(text, hex) ?? 0) < 4.5) {
+            weakest.push(`${size} ${name} ${text} on ${hex} at ${x}`);
+          }
+        }
+      }
+    }
+
+    expect([...new Set(weakest.map((line) => line.split(" on ")[0]))]).toEqual(
+      [],
+    );
   });
 
   test("always draws the credit", async ({ page }) => {

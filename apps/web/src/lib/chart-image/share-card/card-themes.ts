@@ -71,7 +71,7 @@ export const CARD_THEMES: Record<CardThemeName, CardTheme> = {
     tile: "#f4f2ee",
     ...LIGHT_PANEL,
     frameInk: "#1c1917",
-    frameMuted: "#5f5a53",
+    frameMuted: "#55504a",
   },
   night: {
     label: "Night",
@@ -132,10 +132,10 @@ export const CARD_THEMES: Record<CardThemeName, CardTheme> = {
     base: "#f7a531",
     glows: [
       { x: 0.1, y: -0.1, reach: 0.62, color: "rgba(255, 226, 160, 0.95)" },
-      { x: 1.04, y: 1.08, reach: 0.66, color: "rgba(214, 92, 10, 0.85)" },
+      { x: 1.04, y: 1.08, reach: 0.66, color: "rgba(214, 92, 10, 0.7)" },
     ],
     dots: "rgba(28, 20, 8, 0.07)",
-    shadow: "rgba(90, 40, 0, 0.4)",
+    shadow: "rgba(90, 40, 0, 0.3)",
     panel: "#fffdfa",
     panelLine: "#e1d2c3",
     tile: "#f6efe5",
