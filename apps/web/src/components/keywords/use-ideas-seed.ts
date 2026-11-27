@@ -1,55 +1,59 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, type RefObject } from "react";
 import { useQueryState } from "nuqs";
 import { pendingFocusStep } from "@/lib/focus-handoff";
 import { ideasSeedParser } from "@/lib/search-params";
-import { firstKeywordMenu, releaseIdeasOpener } from "./ideas-opener";
+import { createIdeasHistory } from "./ideas-history";
+import { ideasCloseTarget } from "./ideas-opener";
 
-interface Return {
-  target: HTMLElement;
-  leaving: HTMLElement | null;
+const ideasHistory = createIdeasHistory();
+let closedFrom: HTMLElement | null = null;
+
+const currentSearch = () => new URLSearchParams(window.location.search);
+
+function forgetIdeasClose(): void {
+  ideasHistory.cleared();
+  closedFrom = null;
 }
 
-let pending: Return | null = null;
-
-export function useIdeasReturn(): string {
+export function useIdeasReturn(
+  fallback: RefObject<HTMLElement | null>,
+): string {
   const [seed] = useQueryState("ideas", ideasSeedParser);
   const previous = useRef(seed);
+  useEffect(() => forgetIdeasClose, []);
   useEffect(() => {
     const cleared = previous.current !== "" && seed === "";
     previous.current = seed;
-    if (cleared && pending === null) {
-      const target = releaseIdeasOpener() ?? firstKeywordMenu();
-      const active = document.activeElement;
-      if (target) {
-        pending = {
-          target,
-          leaving: active instanceof HTMLElement ? active : null,
-        };
-      }
-    }
-    if (pending === null || seed !== "") return;
-    const step = pendingFocusStep(pending.target, pending.leaving);
-    if (step === "wait") return;
-    const { target } = pending;
-    pending = null;
-    if (step === "focus") target.focus();
-  });
+    if (!cleared) return;
+    const leaving = closedFrom;
+    forgetIdeasClose();
+    const target = ideasCloseTarget() ?? fallback.current;
+    if (target && pendingFocusStep(target, leaving) !== "drop") target.focus();
+  }, [seed, fallback]);
   return seed;
+}
+
+export function useOpenIdeas(): (seed: string) => void {
+  const [seed, setSeed] = useQueryState("ideas", ideasSeedParser);
+  const shown = seed !== "";
+  return useCallback(
+    (next: string) => {
+      if (shown) ideasHistory.switched(currentSearch(), setSeed(next));
+      else ideasHistory.opened(setSeed(next, { history: "push" }));
+    },
+    [shown, setSeed],
+  );
 }
 
 export function useIdeasSeed() {
   const [seed, setSeed] = useQueryState("ideas", ideasSeedParser);
-  const sectionToggle = useRef<HTMLButtonElement>(null);
   const close = () => {
     const active = document.activeElement;
-    const target =
-      releaseIdeasOpener() ?? firstKeywordMenu() ?? sectionToggle.current;
-    pending = target
-      ? { target, leaving: active instanceof HTMLElement ? active : null }
-      : null;
-    void setSeed(null);
+    closedFrom = active instanceof HTMLElement ? active : null;
+    if (ideasHistory.closing(currentSearch()) === "back") window.history.back();
+    else void setSeed(null);
   };
-  return { seed, seeded: seed.length > 0, sectionToggle, close };
+  return { seed, seeded: seed !== "", close };
 }

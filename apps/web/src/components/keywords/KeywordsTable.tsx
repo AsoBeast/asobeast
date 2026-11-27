@@ -15,8 +15,6 @@ import {
   keywordsOptions,
 } from "@/lib/queries";
 import {
-  countryParser,
-  ideasSeedParser,
   keywordFilterParsers,
   keywordViewParser,
   trendWindowParser,
@@ -54,6 +52,7 @@ import {
 import { NoSearchTermsContext } from "./PlayInstallsTip";
 import { SerpSheet } from "./serp/SerpSheet";
 import { useClearedSelectionFocus } from "./use-keywords-table-focus";
+import { useOpenIdeas } from "./use-ideas-seed";
 import { useSerpParams } from "./serp/use-serp-params";
 import { useKeywordColumnFilters } from "./use-zone-thresholds";
 import { useKeywordsTableControls } from "./use-keywords-table-controls";
@@ -120,21 +119,7 @@ export function KeywordsTable({
       void setSerpState({ serp: keywordId, serpDate: null }),
     [setSerpState],
   );
-  const [, setIdeas] = useQueryStates({
-    ideas: ideasSeedParser,
-    country: countryParser,
-  });
-  const openIdeas = useCallback(
-    (keyword: TrackedKeywordItem) =>
-      void setIdeas(
-        {
-          ideas: keyword.text,
-          ...(keyword.country === country ? {} : { country: keyword.country }),
-        },
-        { history: "push" },
-      ),
-    [setIdeas, country],
-  );
+  const openIdeas = useOpenIdeas();
   const buildColumns = useCallback(
     (series: TrendSeries | undefined, state: TrendState = "ready") =>
       keywordColumns({

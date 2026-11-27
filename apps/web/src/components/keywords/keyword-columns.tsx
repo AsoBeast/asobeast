@@ -123,7 +123,7 @@ export function keywordColumns({
   today: string;
   trend: TrendView;
   onOpenSerp: (keywordId: string) => void;
-  onOpenIdeas: (keyword: TrackedKeywordItem) => void;
+  onOpenIdeas: (seed: string) => void;
 }) {
   return columnHelper.columns([
     ...identityColumns(),
@@ -378,7 +378,7 @@ function actionsColumn({
 }: {
   appId: string;
   onOpenSerp: (keywordId: string) => void;
-  onOpenIdeas: (keyword: TrackedKeywordItem) => void;
+  onOpenIdeas: (seed: string) => void;
 }) {
   return columnHelper.display({
     id: "actions",
@@ -392,11 +392,7 @@ function actionsColumn({
           tagsIn(table.getCoreRowModel().rows.map((entry) => entry.original))
         }
         onOpenSerp={() => onOpenSerp(row.original.keywordId)}
-        onOpenIdeas={
-          isSpiderTerm(row.original.text)
-            ? () => onOpenIdeas(row.original)
-            : undefined
-        }
+        onOpenIdeas={isSpiderTerm(row.original.text) ? onOpenIdeas : undefined}
       />
     ),
   });

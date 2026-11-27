@@ -36,12 +36,12 @@ export function KeywordsWorkspace({
   discoveries: boolean;
 }) {
   const [country] = useQueryState("country", countryParser);
-  const ideas = useIdeasReturn();
   const [tab, setTab] = useKeywordsTab();
   const handOffFocus = useFocusAfterCommit();
   const market = country || homeCountry;
   const discovered = discoveries && tab === "discovered";
   const addKeywords = useRef<HTMLButtonElement>(null);
+  const ideas = useIdeasReturn(addKeywords);
   const findKeywords = (leaving: HTMLElement) => {
     handOffFocus(document.getElementById(DISCOVERED_TAB_ID), leaving);
     setTab("discovered");

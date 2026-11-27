@@ -1,12 +1,15 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useMutationState,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { addKeywords, ApiError } from "@/lib/api";
 import { invalidateKeywordMutation } from "@/lib/queries";
-import { useSingleFlight } from "@/lib/single-flight";
 import {
   TRACK_SELECTED_FAILED,
   trackingSelectedMessage,
@@ -24,7 +27,9 @@ export function useTrackSelected(
   onTracked: (texts: readonly string[], scope: string) => void,
 ) {
   const queryClient = useQueryClient();
+  const mutationKey = ["track-selected", id, country];
   const track = useMutation({
+    mutationKey,
     mutationFn: ({ texts }: TrackSelectedRequest) =>
       addKeywords(id, texts, country),
     onSuccess: (_items, { texts, scope }) => {
@@ -39,10 +44,18 @@ export function useTrackSelected(
           : TRACK_SELECTED_FAILED,
       ),
   });
+  const pending = useMutationState({
+    filters: { mutationKey, status: "pending" },
+    select: (mutation) =>
+      (mutation.state.variables as TrackSelectedRequest | undefined)?.texts ??
+      [],
+  });
   return {
-    busy: track.isPending,
-    sending: track.isPending ? (track.variables?.texts ?? []) : [],
-    trackOnce: useSingleFlight(track),
+    busy: pending.length > 0,
+    sending: pending.flat(),
+    trackOnce: (request: TrackSelectedRequest) => {
+      if (queryClient.isMutating({ mutationKey }) === 0) track.mutate(request);
+    },
   };
 }
 

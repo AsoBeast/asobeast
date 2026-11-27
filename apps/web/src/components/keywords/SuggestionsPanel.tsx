@@ -21,6 +21,7 @@ import { keywordsOptions, suggestionsOptions } from "@/lib/queries";
 import { suggestionStrategyParser } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
 import { KeywordIdeas } from "./KeywordIdeas";
+import { SUGGESTIONS_TOGGLE_ID } from "./ideas-opener";
 import { SpiderDialog } from "./SpiderDialog";
 import { SuggestionList, suggestionListState } from "./SuggestionList";
 import {
@@ -46,7 +47,7 @@ export function SuggestionsPanel({
     "strategy",
     suggestionStrategyParser,
   );
-  const { seed, seeded, sectionToggle, close: closeIdeas } = useIdeasSeed();
+  const { seed, seeded, close: closeIdeas } = useIdeasSeed();
   const liveLookup = isStoreSuggestionStrategy(strategy);
 
   const tracked = useQuery(keywordsOptions(id, country));
@@ -82,7 +83,7 @@ export function SuggestionsPanel({
           <h2>
             <button
               type="button"
-              ref={sectionToggle}
+              id={SUGGESTIONS_TOGGLE_ID}
               onClick={() =>
                 seeded ? closeIdeas() : setOpen((value) => !value)
               }

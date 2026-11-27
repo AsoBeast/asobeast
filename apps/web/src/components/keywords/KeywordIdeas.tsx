@@ -29,10 +29,11 @@ export function KeywordIdeas({
     status.complete ||
     status.found.length > 0;
 
-  useEffect(() => {
-    registerIdeasHeading(heading.current);
-    return () => registerIdeasHeading(null);
-  }, []);
+  useEffect(
+    () =>
+      heading.current ? registerIdeasHeading(heading.current, seed) : undefined,
+    [seed],
+  );
 
   return (
     <div className="flex flex-col gap-4">

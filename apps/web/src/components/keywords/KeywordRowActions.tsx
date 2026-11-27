@@ -58,13 +58,13 @@ export function KeywordRowActions({
   keyword: TrackedKeywordItem;
   marketTags: () => string[];
   onOpenSerp: () => void;
-  onOpenIdeas?: () => void;
+  onOpenIdeas?: (seed: string) => void;
 }) {
   const queryClient = useQueryClient();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const menu = useRef<HTMLButtonElement>(null);
-  const ideas = useIdeasMenu(menu, onOpenIdeas);
+  const ideas = useIdeasMenu(menu, keyword.text, onOpenIdeas);
 
   const update = useKeywordUpdate(appId, keyword);
   const checkedClass = classChoice(keyword);

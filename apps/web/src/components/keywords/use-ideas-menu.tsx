@@ -7,7 +7,8 @@ import { rememberIdeasOpener, requestIdeasFocus } from "./ideas-opener";
 
 export function useIdeasMenu(
   menu: RefObject<HTMLButtonElement | null>,
-  onOpenIdeas: (() => void) | undefined,
+  seed: string,
+  onOpenIdeas: ((seed: string) => void) | undefined,
 ): {
   item: ReactNode;
   onCloseAutoFocus: (event: Event) => void;
@@ -18,8 +19,8 @@ export function useIdeasMenu(
       <DropdownMenuItem
         onSelect={() => {
           opened.current = true;
-          rememberIdeasOpener(menu.current);
-          onOpenIdeas();
+          rememberIdeasOpener(menu.current, seed);
+          onOpenIdeas(seed);
         }}
       >
         <Lightbulb />
