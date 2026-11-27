@@ -13,6 +13,20 @@ describe("densityLanguage", () => {
     expect(densityLanguage("APP_STORE", "de", undefined)).toBe("de");
   });
 
+  it("reads the language of the localizations that have function words", () => {
+    expect(densityLanguage("APP_STORE", "ru", "ru")).toBe("ru");
+    expect(densityLanguage("APP_STORE", "ua", "uk")).toBe("uk");
+    expect(densityLanguage("APP_STORE", "kr", "ko")).toBe("ko");
+    expect(densityLanguage("APP_STORE", "sa", "ar")).toBe("ar");
+    expect(densityLanguage("APP_STORE", "th", "th")).toBe("th");
+    expect(densityLanguage("APP_STORE", "jp", "ja")).toBe("ja");
+  });
+
+  it("reads the default localization of a Russian or Korean market", () => {
+    expect(densityLanguage("APP_STORE", "ru", undefined)).toBe("ru");
+    expect(densityLanguage("APP_STORE", "kr", undefined)).toBe("ko");
+  });
+
   it("reads polish function words for a native default listing", () => {
     expect(
       densityLanguage("APP_STORE", "pl", undefined, {
@@ -26,5 +40,14 @@ describe("densityLanguage", () => {
   it("reads the storefront language on Google Play", () => {
     expect(densityLanguage("GOOGLE_PLAY", "de", null)).toBe("de");
     expect(densityLanguage("GOOGLE_PLAY", "zz", null)).toBeNull();
+  });
+
+  it("reads the storefront language of the Google Play markets that have function words", () => {
+    expect(densityLanguage("GOOGLE_PLAY", "ru", null)).toBe("ru");
+    expect(densityLanguage("GOOGLE_PLAY", "ua", null)).toBe("uk");
+    expect(densityLanguage("GOOGLE_PLAY", "kr", null)).toBe("ko");
+    expect(densityLanguage("GOOGLE_PLAY", "sa", null)).toBe("ar");
+    expect(densityLanguage("GOOGLE_PLAY", "th", null)).toBe("th");
+    expect(densityLanguage("GOOGLE_PLAY", "jp", null)).toBe("ja");
   });
 });

@@ -147,6 +147,106 @@ describe('wordDensity', () => {
     expect(texts(wordDensity(german, english).single)).toContain('und');
   });
 
+  it('leaves out Russian function words and keeps the phrase around them', () => {
+    const text =
+      'Список дел на день. Список дел на неделю. Список дел для работы и для дома.';
+    const density = wordDensity(text, { language: 'ru' });
+
+    expect(texts(density.single)).toEqual(['дел', 'список']);
+    expect(texts(density.pairs ?? [])).toEqual(['список дел']);
+    expect(density.triples).toEqual([]);
+    expect(texts(wordDensity(text, { language: 'xx' }).single)).toEqual([
+      'дел',
+      'список',
+      'для',
+      'на',
+    ]);
+  });
+
+  it('reads Ukrainian and Russian as two languages', () => {
+    const text =
+      'Планувальник для завдань та справ. Планувальник на кожен день, для роботи та для дому. Не забувайте завдання, не губіть завдання.';
+
+    expect(texts(wordDensity(text, { language: 'uk' }).single)).toEqual([
+      'завдання',
+      'планувальник',
+    ]);
+    expect(texts(wordDensity(text, { language: 'ru' }).single)).toEqual([
+      'завдання',
+      'планувальник',
+      'та',
+    ]);
+  });
+
+  it('leaves out Korean function words but not a word with a particle attached', () => {
+    const text =
+      '운동 기록 앱입니다. 그리고 운동 목표를 세우세요. 그리고 운동 기록을 공유하세요. 하지만 운동 습관이 중요합니다.';
+    const density = wordDensity(text, { language: 'ko' });
+
+    expect(density.single).toEqual([{ text: '운동', count: 4, share: 4 / 15 }]);
+    expect(density.pairs).toEqual([]);
+    expect(texts(wordDensity(text, { language: 'xx' }).single)).toEqual([
+      '운동',
+      '그리고',
+    ]);
+  });
+
+  it('lists a Korean word and the same word with a particle as two rows', () => {
+    const density = wordDensity('운동 운동을 운동 운동을', { language: 'ko' });
+
+    expect(texts(density.single)).toEqual(['운동', '운동을']);
+  });
+
+  it('leaves out Arabic function words written with tatweel or harakat', () => {
+    const text =
+      'المهام في كل يوم. المهام في كل يوم. مخطط أَكْثَر. مخطط أَكْثَر. مخطط أكـثر. مخطط أكـثر.';
+    const density = wordDensity(text, { language: 'ar' });
+
+    expect(texts(density.single)).toEqual(['مخطط', 'المهام', 'يوم']);
+    expect(density.pairs).toEqual([]);
+    expect(density.triples).toEqual([]);
+  });
+
+  it('leaves out the function words of Chinese and Thai', () => {
+    const chinese = '专注计时器我们的计时器我们的专注计时器一个计时器';
+    const thai = 'แอปจับเวลาที่ดี และ แอปจับเวลาที่ดี และ แอปจับเวลาที่ดี';
+
+    expect(texts(wordDensity(chinese, { language: 'zh' }).single)).toEqual([
+      '专注',
+    ]);
+    expect(texts(wordDensity(chinese, { language: 'xx' }).single)).toContain(
+      '我们',
+    );
+    expect(texts(wordDensity(thai, { language: 'th' }).single)).toEqual([
+      'จับ',
+      'ดี',
+      'เวลา',
+      'แอป',
+    ]);
+    expect(texts(wordDensity(thai, { language: 'xx' }).single)).toContain(
+      'และ',
+    );
+  });
+
+  it('leaves out the hiragana function words of Japanese and keeps the words', () => {
+    const text =
+      'タイマーです。ノートです。タイマーから始めます。ノートから始めます。';
+
+    expect(texts(wordDensity(text, { language: 'ja' }).single)).toEqual([
+      'タイマー',
+      'ノート',
+      '始め',
+    ]);
+    expect(texts(wordDensity(text, { language: 'xx' }).single)).toEqual([
+      'から',
+      'です',
+      'ます',
+      'タイマー',
+      'ノート',
+      '始め',
+    ]);
+  });
+
   it('keeps store words', () => {
     const density = wordDensity('free best app. free best app.', english);
 

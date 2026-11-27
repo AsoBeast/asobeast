@@ -41,6 +41,17 @@ describe('textLanguage', () => {
       textLanguage('I use this with my friend 田中 and it is the best for us'),
     ).toBe('en');
   });
+
+  it('leaves the function words of a script language to the script check', () => {
+    for (const text of [
+      'Timer Planner Notes في من على',
+      'Timer Planner Notes 그리고 하지만',
+      'Timer Planner Notes что для это',
+    ]) {
+      expect(textLanguage(text)).toBeNull();
+      expect(textLanguages(text)).toEqual([]);
+    }
+  });
 });
 
 describe('textLanguages', () => {

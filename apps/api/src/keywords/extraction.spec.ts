@@ -403,6 +403,119 @@ describe('extractCandidates', () => {
       expect(texts({ title: 'Te verde' }, ['es'])).toEqual(['verde']);
     });
 
+    it.each([
+      [
+        'russian',
+        'Яндекс Карты и навигация для водителей',
+        ['ru'],
+        [
+          'яндекс карты навигация',
+          'карты навигация водителей',
+          'яндекс карты',
+          'карты навигация',
+          'навигация водителей',
+          'яндекс',
+          'карты',
+          'навигация',
+          'водителей',
+        ],
+      ],
+      [
+        'ukrainian',
+        'Планувальник для завдань та справ',
+        ['uk'],
+        [
+          'планувальник завдань справ',
+          'планувальник завдань',
+          'завдань справ',
+          'планувальник',
+          'завдань',
+          'справ',
+        ],
+      ],
+      [
+        'korean',
+        '카카오톡 그리고 메신저',
+        ['ko'],
+        ['카카오톡 메신저', '카카오톡', '메신저'],
+      ],
+      [
+        'arabic',
+        'مطاعم حول المدينة',
+        ['ar'],
+        ['مطاعم المدينة', 'مطاعم', 'المدينة'],
+      ],
+    ])(
+      'skips the function words of a %s storefront',
+      (_, title, languages, expected) => {
+        expect(texts({ title }, languages)).toEqual(expected);
+        expect(texts({ title }, [])).not.toEqual(expected);
+      },
+    );
+
+    it('skips an arabic function word joined to the conjunction', () => {
+      const found = texts({ title: 'حول المدينة وحول العالم' }, ['ar']);
+
+      expect(found).toContain('المدينة');
+      expect(found.some((text) => text.includes('حول'))).toBe(false);
+    });
+
+    it('reads russian and ukrainian apart', () => {
+      expect(
+        texts({ title: 'Планувальник для завдань та справ' }, ['ru']),
+      ).toContain('та');
+    });
+
+    it('keeps the names that begin with a possessive or a word the listing owns', () => {
+      expect(texts({ title: 'Мой МТС' }, ['ru'])).toEqual([
+        'мой мтс',
+        'мой',
+        'мтс',
+      ]);
+      expect(texts({ title: 'Мій МТС' }, ['uk'])).toEqual([
+        'мій мтс',
+        'мій',
+        'мтс',
+      ]);
+      expect(texts({ title: 'Про шахматы' }, ['ru'])).toEqual([
+        'про шахматы',
+        'про',
+        'шахматы',
+      ]);
+      expect(texts({ title: '우리 은행' }, ['ko'])).toEqual([
+        '우리 은행',
+        '우리',
+        '은행',
+      ]);
+      expect(texts({ title: '카카오톡 무료 메신저' }, ['ko'])).toEqual([
+        '카카오톡 무료 메신저',
+        '카카오톡 무료',
+        '무료 메신저',
+        '카카오톡',
+        '무료',
+        '메신저',
+      ]);
+    });
+
+    it('reads a chinese or thai title the same with or without the storefront language', () => {
+      const chinese = { title: '小红书 我们 的' };
+      const thai = { title: 'การเดินทาง และ อาหาร' };
+
+      expect(texts(chinese, ['zh'])).toEqual(texts(chinese, []));
+      expect(texts(thai, ['th'])).toEqual(texts(thai, []));
+    });
+
+    it('skips the hiragana function words of a japanese storefront', () => {
+      expect(texts({ title: 'メルカリ です ます' }, ['ja'])).toEqual([
+        'メルカリ',
+      ]);
+      expect(texts({ title: 'メルカリ です ます' }, [])).toEqual([
+        'メルカリ',
+        'です',
+        'ます',
+      ]);
+    });
+
     it('does not change the words of scripts that keep their own lists', () => {
       const japanese = {
         title: 'メルカリ - フリマアプリ',

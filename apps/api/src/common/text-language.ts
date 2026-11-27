@@ -17,11 +17,6 @@ const ENGLISH_ONLY: ReadonlySet<string> = new Set(
   [...ENGLISH].filter((word) => !SHARED_WORDS.has(word)),
 );
 
-const LATIN_WORDS: Readonly<Record<string, ReadonlySet<string>>> = {
-  en: ENGLISH,
-  ...FUNCTION_WORDS,
-};
-
 const MIN_HITS = 2;
 const SCRIPT_SHARE = 0.5;
 
@@ -48,6 +43,15 @@ const SCRIPT_LANGUAGES: ReadonlySet<string> = new Set([
   'uk',
   ...SCRIPTS.map(([language]) => language),
 ]);
+
+const LATIN_WORDS: Readonly<Record<string, ReadonlySet<string>>> = {
+  en: ENGLISH,
+  ...Object.fromEntries(
+    Object.entries(FUNCTION_WORDS).filter(
+      ([language]) => !SCRIPT_LANGUAGES.has(language),
+    ),
+  ),
+};
 
 function scriptLanguage(text: string, letters: string[]): string | null {
   const share = (pattern: RegExp) =>

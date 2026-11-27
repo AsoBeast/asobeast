@@ -151,6 +151,32 @@ describe('reviewThemes', () => {
     ]);
   });
 
+  it('leaves out the function words of a russian review in any storefront', () => {
+    const reviews = [
+      ...times(6, 'Вылетает при запуске для всех', 1),
+      ...PRAISED,
+    ];
+
+    expect(complaintsOf(reviews, [])).toEqual(['вылетает при запуске']);
+  });
+
+  it('drops a russian negation at the edge of a theme as it drops a german or polish one', () => {
+    const reviews = [
+      ...times(6, 'Не работает синхронизация на телефоне', 1),
+      ...PRAISED,
+    ];
+
+    expect(complaintsOf(reviews, [])).toEqual([
+      'работает синхронизация на телефоне',
+    ]);
+  });
+
+  it('leaves out the function words of a korean review', () => {
+    const reviews = [...times(6, '그리고 앱이 자꾸 꺼집니다', 1), ...PRAISED];
+
+    expect(complaintsOf(reviews, [])).toEqual(['앱이 자꾸 꺼집니다']);
+  });
+
   it('reads a short english review as before', () => {
     const reviews = [
       ...times(4, 'Great app but it crashes a lot', 1),

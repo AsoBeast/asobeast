@@ -3,6 +3,33 @@ const words = (list: string): ReadonlySet<string> =>
 
 type WordLists = Readonly<Record<string, ReadonlySet<string>>>;
 
+export const CHINESE_FUNCTION_WORDS = words(`
+  一个 一個 我们 我們 什么 什麼 我的 你的
+`);
+
+export const CHINESE_PARTICLES = words(`
+  的 了 是 和 与 與 及 或 让 讓 你 我 他 她 都 也 就 很 把
+  被 给 給 从 從 对 對 为 為
+`);
+
+export const THAI_FUNCTION_WORDS = words(`
+  และ ที่ ที่สุด ของ ใน กับ หรือ ได้ ให้ เป็น มาก ทุก จาก ด้วย ไป มา นี้
+  นั้น จะ ก็ แล้ว ยัง คือ โดย เพื่อ ถึง แต่ ว่า ซึ่ง อีก เลย กว่า ไม่ ต้อง
+  แบบ
+`);
+
+export const ARABIC_FUNCTION_WORDS = words(`
+  في من على إلى الى عن مع هذا هذه ذلك التي الذي أو او ثم كل هو هي أن ان إن
+  لا ما قد بعد قبل بين حتى عند أكثر اكثر
+`);
+
+export const ARABIC_DECORATION = /\u0640|\u0670|[\u064B-\u065F]/gu;
+
+export const ARABIC_CONJUNCTION = 'و';
+
+const union = (...lists: readonly ReadonlySet<string>[]): ReadonlySet<string> =>
+  new Set(lists.flatMap((list) => [...list]));
+
 export const FUNCTION_WORDS: WordLists = {
   es: words(`
     de del la las el los lo al un una unos unas le les se su sus tu tus te nos
@@ -140,6 +167,55 @@ export const FUNCTION_WORDS: WordLists = {
     při před přes mezi bez podle také jen již ještě velmi více všechno všichni
     každý na do od po za ze ve
   `),
+  ru: words(`
+    не что он на со как все всё она так его но да ты же вы за бы по только
+    ее её мне было вот от меня еще ещё нет из ему когда даже ну ли если уже
+    или ни быть был него до вас вам там потом себя ничего ей может они тут
+    где надо ней для мы тебя их чем была чтоб без будто чего тоже себе под
+    будет тогда кто этот того потому этого какой совсем ним здесь этом почти
+    тем чтобы нее неё были куда зачем всех при об тот через эти нас всего
+    них какая эту эта это этой этих этим этими такой такая такие такое им
+    более между перед над после ею твой твоя твое твоё твои наш наша наше
+    наши ваш ваша ваше ваши свой своя свое своё свои свою своих своей своего
+    своим которая который которое которые которого которой которых которым
+    которую кого кому чему чём нибудь также чей чья чьё
+  `),
+  uk: words(`
+    на за по ніж проте та але чи або що як це цей ця ці той те ті він вона
+    воно вони ми ви ти мене мені мною тебе тобі його її їх нас нам вас вам
+    їм ним нею них який яка яке які якого якої яких якому яким кого кому
+    чого чому де коли тут там тепер вже ще лише тільки також теж так ні не
+    бути був була було були буде будуть має мають треба дуже все всі весь
+    вся всього всім кожен кожна кожне кожні інший інша інше інші свій своя
+    своє свої свою своїх своєї твій твоя твоє твої наш наша наше наші ваш
+    ваша ваше ваші цього цієї цих цим цьому цю тієї тих тим тому якщо щоб бо
+    адже навіть ось аж хоч хто хіба для без над під між через при від після
+    перед до із зі
+  `),
+  ko: words(`
+    그리고 그러나 그러면 그래서 그런데 하지만 또는 혹은 또한 이것 그것
+    저것 이런 그런 저런 이렇게 그렇게 저렇게 저희 당신 여러분 각각 매우
+    아주 너무 위한 위해 대한 대해 통해 통한 따라 따른 있는 있다 없는
+    없다 하는 하다 한다 합니다 입니다 있습니다 없습니다 됩니다 되는 되다
+    같은 같이 이미 때문 아니 아닌 않는 않고 하고 하며 하여 해서
+  `),
+  ar: union(
+    ARABIC_FUNCTION_WORDS,
+    words(`
+      هذان تلك هؤلاء الذين اللذين اللاتي هم هن نحن أنا انا أنت انت أنتم انتم
+      كان كانت كانوا يكون تكون يكن ليس ليست لم لن لما إذا اذا إذ إلا الا غير
+      دون بدون خلال حول ضد نحو منذ لدى عندما حيث كيف لماذا متى أين اين لكن
+      بل أي اي أيضا ايضا فقط كما كلما بعض هناك هنا له لها لهم لنا لك به بها
+      بهم منه منها منهم فيه فيها عليه عليها إليه اليه عنه عنها معه معها
+    `),
+  ),
+  zh: union(CHINESE_FUNCTION_WORDS, CHINESE_PARTICLES),
+  th: THAI_FUNCTION_WORDS,
+  ja: words(`
+    です ます でした ました ません から まで より など こと もの ため
+    これ それ あれ どれ この その あの ここ そこ あそこ どこ ない ある
+    いる する なる できる ので のに けど でも また および ほか さん
+  `),
 };
 
 export const REVIEW_ONLY_FUNCTION_WORDS: WordLists = {
@@ -161,10 +237,20 @@ const listsOf = (
     Object.hasOwn(source, language) ? [source[language]] : [],
   );
 
+const unconjoined = (word: string): string | null =>
+  word.startsWith(ARABIC_CONJUNCTION)
+    ? word.slice(ARABIC_CONJUNCTION.length)
+    : null;
+
 const containedIn =
   (lists: readonly ReadonlySet<string>[]): TokenTest =>
-  (token) =>
-    lists.some((list) => list.has(token));
+  (token) => {
+    const word = token.replace(ARABIC_DECORATION, '');
+    const joined = unconjoined(word);
+    return lists.some(
+      (list) => list.has(word) || (joined !== null && list.has(joined)),
+    );
+  };
 
 export const functionWordTest = (languages: readonly string[]): TokenTest =>
   containedIn(listsOf(FUNCTION_WORDS, languages));
