@@ -1,19 +1,25 @@
 import type { Store } from "@asobeast/shared";
 import { iconRadius } from "@/lib/app-icon-radius";
-import { PRODUCT_NAME } from "@/lib/brand";
 import { storeLabel } from "@/lib/format";
-import { dayRangeLabel } from "../caption";
 import type { CardChartKind } from "./card-chart";
 import type { CardBox } from "./card-layout";
 import type { ShareCardOptions } from "./card-options";
-import { type CardPainter, drawText, traceRoundedBox } from "./card-paint";
+import {
+  type CardPainter,
+  type TextStyle,
+  drawText,
+  measurerOf,
+  traceRoundedBox,
+} from "./card-paint";
+import { fitLead } from "./card-text";
+import { drawChange } from "./draw-change";
 import { drawCardChart } from "./draw-chart";
+import { drawBackdrop, drawCredit } from "./draw-frame";
 import type { ShareHeadline } from "./headline";
 
 export interface ShareCardSpec {
   headline: ShareHeadline;
   kind: CardChartKind;
-  depth: number;
   appName: string;
   store: Store;
   options: ShareCardOptions;
@@ -23,14 +29,9 @@ export interface ShareCardSpec {
 
 const PLACEHOLDER_SHARE = 0.4;
 const PLACEHOLDER_RADIUS = 0.3;
-const FIGURE_BASELINE = 0.8;
-const TRAIL_GAP_UNITS = 0.4;
+const FIGURE_TRACKING = -0.04;
 
-function drawImageTile(
-  painter: CardPainter,
-  image: HTMLImageElement,
-  box: CardBox,
-) {
+function drawIcon(painter: CardPainter, image: HTMLImageElement, box: CardBox) {
   const { context } = painter;
   context.save();
   traceRoundedBox(context, box, iconRadius(box.width));
@@ -44,7 +45,7 @@ function drawPlaceholder(painter: CardPainter, box: CardBox) {
   traceRoundedBox(context, box, iconRadius(box.width));
   context.fillStyle = theme.tile;
   context.fill();
-  context.strokeStyle = theme.line;
+  context.strokeStyle = theme.panelLine;
   context.lineWidth = 1;
   context.stroke();
   const inner = box.width * PLACEHOLDER_SHARE;
@@ -54,14 +55,14 @@ function drawPlaceholder(painter: CardPainter, box: CardBox) {
     { x: box.x + offset, y: box.y + offset, width: inner, height: inner },
     inner * PLACEHOLDER_RADIUS,
   );
-  context.fillStyle = theme.line;
+  context.fillStyle = theme.panelLine;
   context.fill();
 }
 
 function drawHeader(painter: CardPainter, spec: ShareCardSpec) {
   const { layout, theme } = painter;
   if (!layout.icon || !layout.name || !layout.store) return;
-  if (spec.icon) drawImageTile(painter, spec.icon, layout.icon);
+  if (spec.icon) drawIcon(painter, spec.icon, layout.icon);
   else drawPlaceholder(painter, layout.icon);
   drawText(painter, spec.appName, layout.name, {
     role: "name",
@@ -70,71 +71,65 @@ function drawHeader(painter: CardPainter, spec: ShareCardSpec) {
   });
   drawText(painter, storeLabel(spec.store), layout.store, {
     role: "store",
-    weight: 400,
+    weight: 500,
     color: theme.muted,
   });
+}
+
+function drawLead(painter: CardPainter, headline: ShareHeadline) {
+  const { layout, theme } = painter;
+  const { lead } = layout;
+  const muted: TextStyle = { role: "lead", weight: 500, color: theme.muted };
+  if (headline.term === null) {
+    drawText(painter, headline.lead, lead, muted);
+    return;
+  }
+  const prefix = `${headline.lead} `;
+  const term = fitLead(
+    { prefix, term: headline.term },
+    lead.width,
+    layout.fonts.lead,
+    measurerOf(painter, 600),
+  );
+  const shared: Pick<TextStyle, "size" | "direction"> = {
+    size: term.size,
+    direction: "ltr",
+  };
+  const width = drawText(painter, prefix, lead, { ...muted, ...shared });
+  drawText(
+    painter,
+    term.text,
+    { ...lead, x: lead.x + width, width: lead.width - width },
+    { role: "lead", weight: 600, color: theme.ink, ...shared },
+  );
 }
 
 function drawHeadline(painter: CardPainter, headline: ShareHeadline) {
   const { layout, theme } = painter;
   const { figure } = layout;
-  drawText(painter, headline.lead, layout.lead, {
-    role: "lead",
-    weight: 500,
-    color: theme.muted,
-  });
-  const baseline = figure.y + figure.height * FIGURE_BASELINE;
-  const figureWidth = drawText(painter, headline.figure, figure, {
+  drawLead(painter, headline);
+  drawText(painter, headline.figure, figure, {
     role: "figure",
-    weight: 600,
+    weight: 700,
     color: theme.ink,
-    baseline,
+    baseline: figure.y + figure.height,
+    tracking: FIGURE_TRACKING,
   });
-  if (headline.trail !== null) {
-    const indent = figureWidth + Math.round(layout.unit * TRAIL_GAP_UNITS);
-    drawText(
-      painter,
-      headline.trail,
-      { ...figure, x: figure.x + indent, width: figure.width - indent },
-      { role: "trail", weight: 500, color: theme.ink, baseline },
-    );
+  if (headline.change !== null) {
+    drawChange(painter, headline.change, headline.span);
   }
-  if (layout.change && headline.change !== null) {
-    drawText(painter, headline.change, layout.change, {
-      role: "change",
-      weight: 400,
-      color: theme.muted,
-    });
-  }
-}
-
-function drawFooter(painter: CardPainter, mark: HTMLImageElement | null) {
-  const { layout, theme } = painter;
-  if (!layout.mark || !layout.credit) return;
-  if (mark) drawImageTile(painter, mark, layout.mark);
-  drawText(painter, `Made with ${PRODUCT_NAME}`, layout.credit, {
-    role: "credit",
-    weight: 500,
-    color: theme.muted,
-  });
 }
 
 export function drawCard(painter: CardPainter, spec: ShareCardSpec) {
-  const { context, layout, theme } = painter;
   const { headline } = spec;
-  context.fillStyle = theme.background;
-  context.fillRect(0, 0, layout.width, layout.height);
+  drawBackdrop(painter);
   drawHeader(painter, spec);
   drawHeadline(painter, headline);
   drawCardChart(painter, {
     line: headline.line,
     kind: spec.kind,
-    depth: spec.depth,
+    from: headline.from,
+    to: headline.to,
   });
-  drawText(painter, dayRangeLabel(headline.from, headline.to), layout.range, {
-    role: "range",
-    weight: 400,
-    color: theme.muted,
-  });
-  drawFooter(painter, spec.mark);
+  drawCredit(painter, spec.mark);
 }

@@ -71,9 +71,9 @@ describe("rankingsHeadline", () => {
 
     expect(headline).toMatchObject({
       lead: "Average rank across 3 keywords",
+      term: null,
       figure: "#8.7",
-      trail: null,
-      change: "up 6 places in 29 days",
+      change: { direction: "up", text: "up 6 places" },
       from: dayBefore(END, 29),
       to: END,
       span: 29,
@@ -102,9 +102,10 @@ describe("rankingsHeadline", () => {
   });
 
   it("reads a fall as down", () => {
-    expect(rankingsHeadline([keyword("kw-1", steady(4, 10))])?.change).toBe(
-      "down 6 places in 29 days",
-    );
+    expect(rankingsHeadline([keyword("kw-1", steady(4, 10))])?.change).toEqual({
+      direction: "down",
+      text: "down 6 places",
+    });
   });
 
   it("reads a change under a twentieth as no change", () => {
@@ -118,7 +119,7 @@ describe("rankingsHeadline", () => {
     ]);
 
     expect(headline?.figure).toBe("#10");
-    expect(headline?.change).toBe("no change in 29 days");
+    expect(headline?.change).toEqual({ direction: "flat", text: "no change" });
   });
 
   it("keeps one decimal only where the average has one", () => {
@@ -128,13 +129,17 @@ describe("rankingsHeadline", () => {
     ]);
 
     expect(headline?.figure).toBe("#6");
-    expect(headline?.change).toBe("up 0.5 places in 29 days");
+    expect(headline?.change).toEqual({
+      direction: "up",
+      text: "up 0.5 places",
+    });
   });
 
   it("names one place in the singular", () => {
-    expect(rankingsHeadline([keyword("kw-1", steady(4, 3))])?.change).toBe(
-      "up 1 place in 29 days",
-    );
+    expect(rankingsHeadline([keyword("kw-1", steady(4, 3))])?.change).toEqual({
+      direction: "up",
+      text: "up 1 place",
+    });
   });
 
   it("counts the span between the first and last checked day", () => {
@@ -146,7 +151,7 @@ describe("rankingsHeadline", () => {
     const headline = rankingsHeadline([keyword("kw-1", early)]);
 
     expect(headline?.span).toBe(26);
-    expect(headline?.change).toBe("up 2 places in 26 days");
+    expect(headline?.change).toEqual({ direction: "up", text: "up 2 places" });
     expect(headline?.to).toBe(dayBefore(END, 3));
   });
 
@@ -174,16 +179,19 @@ describe("keywordHeadline", () => {
 
   it("reads a climb", () => {
     expect(keywordHeadline(series(steady(18, 3)))).toMatchObject({
-      lead: "",
+      lead: "Rank for",
+      term: "geography quiz",
       figure: "#3",
-      trail: "for “geography quiz”",
-      change: "up from #18",
+      change: { direction: "up", text: "up from #18" },
       span: 29,
     });
   });
 
   it("reads a fall", () => {
-    expect(keywordHeadline(series(steady(2, 7)))?.change).toBe("down from #2");
+    expect(keywordHeadline(series(steady(2, 7)))?.change).toEqual({
+      direction: "down",
+      text: "down from #2",
+    });
   });
 
   it("reads an entry from beyond the depth", () => {
@@ -197,7 +205,7 @@ describe("keywordHeadline", () => {
     );
 
     expect(headline?.figure).toBe("#9");
-    expect(headline?.change).toBe("up from >200");
+    expect(headline?.change).toEqual({ direction: "up", text: "up from >200" });
     expect(headline?.line.map((point) => point.value)).toEqual([
       null,
       null,
@@ -217,7 +225,10 @@ describe("keywordHeadline", () => {
     );
 
     expect(headline?.figure).toBe(">200");
-    expect(headline?.change).toBe("down from #14");
+    expect(headline?.change).toEqual({
+      direction: "down",
+      text: "down from #14",
+    });
   });
 
   it("reads no apps", () => {
@@ -234,9 +245,10 @@ describe("keywordHeadline", () => {
   });
 
   it("reads no change", () => {
-    expect(keywordHeadline(series(steady(5, 5, 21)))?.change).toBe(
-      "no change in 20 days",
-    );
+    expect(keywordHeadline(series(steady(5, 5, 21)))?.change).toEqual({
+      direction: "flat",
+      text: "no change",
+    });
   });
 
   it("answers nothing below four checked days", () => {
@@ -251,18 +263,19 @@ describe("visibilityHeadline", () => {
 
   it("reads a rise as a percentage", () => {
     expect(visibilityHeadline(visibility(rise))).toMatchObject({
-      lead: "Visibility",
+      lead: "Visibility score",
+      term: null,
       figure: "64",
-      trail: null,
-      change: "up 33% in 29 days",
+      change: { direction: "up", text: "up 33%" },
       span: 29,
     });
   });
 
   it("reads a fall", () => {
-    expect(visibilityHeadline(visibility([80, 70, 65, 60]))?.change).toBe(
-      "down 25% in 3 days",
-    );
+    expect(visibilityHeadline(visibility([80, 70, 65, 60]))?.change).toEqual({
+      direction: "down",
+      text: "down 25%",
+    });
   });
 
   it("leaves the change out from zero", () => {
@@ -315,7 +328,7 @@ describe("no store text", () => {
     ];
     const texts = headlines.flatMap((headline) => [
       headline?.figure ?? "",
-      headline?.change ?? "",
+      headline?.change?.text ?? "",
     ]);
 
     expect(texts.filter((text) => /#[^\d]/.test(text))).toEqual([]);
@@ -324,10 +337,10 @@ describe("no store text", () => {
 
 describe("headlineSentence", () => {
   const headline: ShareHeadline = {
-    lead: "",
+    lead: "Rank for",
+    term: "geography quiz",
     figure: "#3",
-    trail: "for “geography quiz”",
-    change: "up from #18",
+    change: { direction: "up", text: "up from #18" },
     from: "2026-10-01",
     to: "2026-10-30",
     span: 29,
@@ -336,16 +349,16 @@ describe("headlineSentence", () => {
 
   it("reads the headline as one sentence", () => {
     expect(headlineSentence(headline, true)).toBe(
-      "#3 for “geography quiz”, up from #18",
+      "Rank for “geography quiz” #3, up from #18 in 29 days",
     );
   });
 
   it("leaves out a change the card does not show", () => {
     expect(
       headlineSentence(
-        { ...headline, lead: "Visibility", figure: "64", trail: null },
+        { ...headline, lead: "Visibility score", figure: "64", term: null },
         false,
       ),
-    ).toBe("Visibility 64");
+    ).toBe("Visibility score 64");
   });
 });

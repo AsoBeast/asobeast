@@ -13,8 +13,17 @@ import { utcDaysAgo } from "./fixtures.mts";
 import { holdRequest } from "./held-request.mts";
 import { hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
-import { cardLayout } from "../src/lib/chart-image/share-card/card-layout";
-import { CARD_THEMES } from "../src/lib/chart-image/share-card/card-themes";
+import { contrastRatio } from "../src/lib/contrast";
+import {
+  CARD_SIZE_NAMES,
+  CARD_SIZES,
+  cardLayout,
+  type CardBox,
+} from "../src/lib/chart-image/share-card/card-layout";
+import {
+  CARD_THEME_NAMES,
+  CARD_THEMES,
+} from "../src/lib/chart-image/share-card/card-themes";
 import {
   headlineSentence,
   rankingsHeadline,
@@ -24,7 +33,7 @@ import {
 
 const RANKINGS_PAGE = "/apps/app-1/rankings";
 const RANKINGS = /\/api\/backend\/apps\/app-1\/rankings\?/;
-const ALL_PARTS = { change: true, app: true, footer: true };
+const ALL_PARTS = { change: true, app: true };
 
 const rankingsChart = (page: Page) =>
   page.getByRole("region", { name: "Keyword rank positions" });
@@ -55,11 +64,37 @@ async function openShare(page: Page) {
   await expect(preview(page)).not.toHaveAttribute("aria-busy", "true");
 }
 
-const pick = (page: Page, list: string, option: string) =>
+const choice = (page: Page, group: string, option: string) =>
   dialog(page)
-    .getByRole("tablist", { name: list })
-    .getByRole("tab", { name: option })
-    .click();
+    .getByRole("radiogroup", { name: group })
+    .getByRole("radio", { name: option });
+
+const pick = (page: Page, group: string, option: string) =>
+  choice(page, group, option).check();
+
+const CREDIT_LEAD_WIDTH = 150;
+
+const GLYPH_REACH = 0.6;
+
+const creditBackdrop = (page: Page, credit: CardBox, size: number) =>
+  preview(page).evaluate(
+    (element, { box, reach }) => {
+      if (!(element instanceof HTMLCanvasElement))
+        throw new Error("Not a canvas");
+      const context = element.getContext("2d", { willReadFrequently: true });
+      if (!context) throw new Error("No 2d context");
+      const hex = (value: number) => value.toString(16).padStart(2, "0");
+      const middle = box.y + box.height / 2;
+      return [middle - reach, middle + reach].flatMap((y) => {
+        const { data } = context.getImageData(box.x, y, box.width, 1);
+        return Array.from({ length: box.width }, (_, index) => ({
+          x: box.x + index,
+          hex: `#${hex(data[index * 4])}${hex(data[index * 4 + 1])}${hex(data[index * 4 + 2])}`,
+        }));
+      });
+    },
+    { box: credit, reach: Math.round(size * GLYPH_REACH) },
+  );
 
 const canvasSize = (page: Page) =>
   preview(page).evaluate((element) =>
@@ -99,7 +134,7 @@ test.describe("rankings", () => {
     await openShare(page);
 
     await expect(dialog(page)).toHaveAccessibleDescription(
-      "Pick a size and a theme, then copy or download the card.",
+      "A picture of this chart, ready to post.",
     );
     await expect(preview(page)).toHaveAccessibleName(
       headlineSentence(headline, true),
@@ -129,7 +164,7 @@ test.describe("rankings", () => {
         height: 675,
       });
 
-    await pick(page, "Size", "1:1");
+    await pick(page, "Size", "Square");
     await expect
       .poll(() => canvasSize(page))
       .toEqual({
@@ -137,7 +172,7 @@ test.describe("rankings", () => {
         height: 1080,
       });
 
-    await pick(page, "Size", "4:5");
+    await pick(page, "Size", "Portrait");
     await expect
       .poll(() => canvasSize(page))
       .toEqual({
@@ -149,40 +184,81 @@ test.describe("rankings", () => {
   test("switches theme", async ({ page }) => {
     await page.goto(RANKINGS_PAGE);
     await openShare(page);
-    const corner = () => canvasPixel(preview(page), 4, 4);
-    await expect.poll(corner).toEqual(hexPixel(CARD_THEMES.light.background));
+    const { panel } = cardLayout("landscape", ALL_PARTS);
+    const margin = () =>
+      canvasPixel(preview(page), panel.x + 12, panel.y + panel.height / 2);
+    await expect.poll(margin).toEqual(hexPixel(CARD_THEMES.paper.panel));
 
-    await pick(page, "Theme", "Dark");
-    await expect.poll(corner).toEqual(hexPixel(CARD_THEMES.dark.background));
-
-    await pick(page, "Theme", "Orange");
-    await expect.poll(corner).toEqual(hexPixel(CARD_THEMES.orange.background));
+    for (const name of ["night", "dusk", "sunrise"] as const) {
+      await pick(page, "Theme", CARD_THEMES[name].label);
+      await expect.poll(margin).toEqual(hexPixel(CARD_THEMES[name].panel));
+    }
   });
 
-  test("turns the footer off", async ({ page }) => {
+  test("keeps the credit readable on every theme and size", async ({
+    page,
+  }) => {
+    await page.goto(RANKINGS_PAGE);
+    await openShare(page);
+    const weakest: string[] = [];
+    for (const size of CARD_SIZE_NAMES) {
+      await pick(page, "Size", CARD_SIZES[size].name);
+      const { panel, credit, fonts } = cardLayout(size, ALL_PARTS);
+      for (const name of CARD_THEME_NAMES) {
+        const theme = CARD_THEMES[name];
+        await pick(page, "Theme", theme.label);
+        await expect
+          .poll(() =>
+            canvasPixel(
+              preview(page),
+              panel.x + 12,
+              panel.y + panel.height / 2,
+            ),
+          )
+          .toEqual(hexPixel(theme.panel));
+        for (const { x, hex } of await creditBackdrop(
+          page,
+          credit,
+          fonts.credit,
+        )) {
+          const text =
+            x < credit.x + CREDIT_LEAD_WIDTH
+              ? theme.frameMuted
+              : theme.frameInk;
+          if ((contrastRatio(text, hex) ?? 0) < 4.5) {
+            weakest.push(`${size} ${name} ${text} on ${hex} at ${x}`);
+          }
+        }
+      }
+    }
+
+    expect([...new Set(weakest.map((line) => line.split(" on ")[0]))]).toEqual(
+      [],
+    );
+  });
+
+  test("always draws the credit", async ({ page }) => {
     await page.goto(RANKINGS_PAGE);
     await openShare(page);
     const { mark } = cardLayout("landscape", ALL_PARTS);
-    if (!mark) throw new Error("The layout has no mark");
-    const markTop = () =>
-      canvasPixel(preview(page), mark.x + mark.width / 2, mark.y + 6);
-    const background = hexPixel(CARD_THEMES.light.background);
-    await expect.poll(markTop).not.toEqual(background);
 
-    await dialog(page)
-      .getByRole("switch", { name: "Show Made with AsoBeast" })
-      .click();
-
-    await expect.poll(markTop).toEqual(background);
-    expect(
-      cardLayout("landscape", { ...ALL_PARTS, footer: false }).chart.height,
-    ).toBeGreaterThan(cardLayout("landscape", ALL_PARTS).chart.height);
+    await expect
+      .poll(async () => {
+        const [red] = await canvasPixel(
+          preview(page),
+          mark.x + 3,
+          mark.y + mark.height / 2,
+        );
+        return red;
+      })
+      .toBeLessThan(100);
+    await expect(dialog(page).getByRole("switch")).toHaveCount(2);
   });
 
   test("downloads the card at its size", async ({ page }) => {
     const headline = await rankingsOverSevenDays(page);
     await openShare(page);
-    await pick(page, "Size", "1:1");
+    await pick(page, "Size", "Square");
 
     const [file] = await Promise.all([
       page.waitForEvent("download"),
@@ -209,6 +285,31 @@ test.describe("rankings", () => {
     expect(await pngSize(page, png)).toEqual({ width: 1200, height: 675 });
   });
 
+  test("copies the alt text", async ({ page }) => {
+    const headline = await rankingsOverSevenDays(page);
+    await openShare(page);
+
+    await dialog(page).getByRole("button", { name: "Copy alt text" }).click();
+
+    await expect(page.getByText("Alt text copied")).toBeVisible();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+      headlineSentence(headline, true),
+    );
+  });
+
+  test("names the pixel size of the chosen card", async ({ page }) => {
+    await page.goto(RANKINGS_PAGE);
+    await openShare(page);
+
+    await expect(
+      dialog(page).getByRole("radiogroup", { name: "Size · 1200 × 675 px" }),
+    ).toBeVisible();
+    await pick(page, "Size", "Portrait");
+    await expect(
+      dialog(page).getByRole("radiogroup", { name: "Size · 1080 × 1350 px" }),
+    ).toBeVisible();
+  });
+
   test("downloads when the clipboard cannot take an image", async ({
     page,
   }) => {
@@ -232,22 +333,18 @@ test.describe("rankings", () => {
   test("remembers the choices", async ({ page }) => {
     await page.goto(RANKINGS_PAGE);
     await openShare(page);
-    await pick(page, "Theme", "Dark");
-    await pick(page, "Size", "4:5");
+    await pick(page, "Theme", "Dusk");
+    await pick(page, "Size", "Portrait");
     await page.keyboard.press("Escape");
 
     await page.reload();
     await openShare(page);
 
     for (const [list, option] of [
-      ["Theme", "Dark"],
-      ["Size", "4:5"],
+      ["Theme", "Dusk"],
+      ["Size", "Portrait"],
     ]) {
-      await expect(
-        dialog(page)
-          .getByRole("tablist", { name: list })
-          .getByRole("tab", { name: option }),
-      ).toHaveAttribute("aria-selected", "true");
+      await expect(choice(page, list, option)).toBeChecked();
     }
     await expect
       .poll(() => canvasSize(page))
@@ -321,7 +418,7 @@ test.describe("rankings", () => {
           icon.y + icon.height / 2,
         ),
       )
-      .toEqual(hexPixel(CARD_THEMES.light.line));
+      .toEqual(hexPixel(CARD_THEMES.paper.panelLine));
     expect(errors.filter((text) => text.includes("SecurityError"))).toEqual([]);
   });
 });
@@ -465,8 +562,22 @@ test.describe("visibility", () => {
     expect(await copied).toBe(false);
     await expect(copy).toBeFocused();
 
+    const alt = dialog.getByRole("button", { name: "Copy alt text" });
+    await expect(alt).toHaveAttribute("aria-disabled", "true");
+    const described = page
+      .getByText("Alt text copied")
+      .waitFor({ timeout: 2_000 })
+      .then(
+        () => true,
+        () => false,
+      );
+    await alt.focus();
+    await page.keyboard.press("Enter");
+    expect(await described).toBe(false);
+
     held.release();
     await expect(download).not.toHaveAttribute("aria-disabled", "true");
+    await expect(alt).not.toHaveAttribute("aria-disabled", "true");
   });
 
   test("offers no card under four captured days", async ({ page }) => {

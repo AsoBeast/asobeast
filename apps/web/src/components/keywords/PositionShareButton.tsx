@@ -36,7 +36,6 @@ export function PositionShareButton({
         chart: "position-card",
         headline,
         kind: "rank",
-        depth: Math.max(...series.points.map(({ depth }) => depth)),
         app,
         keyword: keyword.text,
       }}

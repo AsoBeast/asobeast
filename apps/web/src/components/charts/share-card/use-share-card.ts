@@ -33,7 +33,6 @@ export interface ShareCardSource {
   chart: "rankings-card" | "position-card" | "visibility-card";
   headline: ShareHeadline;
   kind: CardChartKind;
-  depth: number;
   app: ShareCardApp;
   keyword?: string;
 }
@@ -71,20 +70,19 @@ export function useShareCard(
   const options = useMemo(() => parseCardOptions(raw), [raw]);
   const images = useCardImages(open, source.app.iconUrl);
   const image = useImageJob();
-  const { headline, kind, depth, app } = source;
+  const { headline, kind, app } = source;
   const spec = useMemo<ShareCardSpec | null>(
     () =>
       images && {
         headline,
         kind,
-        depth,
         appName: app.name ?? app.storeAppId,
         store: app.store,
         options,
         icon: images.icon,
         mark: images.mark,
       },
-    [images, headline, kind, depth, app, options],
+    [images, headline, kind, app, options],
   );
   const filename = chartImageFilename({
     chart: source.chart,

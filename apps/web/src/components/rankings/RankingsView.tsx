@@ -4,7 +4,6 @@ import { Suspense, useMemo, useRef, type RefObject } from "react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import {
-  RANK_DEPTH,
   type AppAnnotationItem,
   type TrackedKeywordItem,
 } from "@asobeast/shared";
@@ -282,7 +281,6 @@ function RankingsPanel({
                 chart: "rankings-card",
                 headline: shareHeadline,
                 kind: "rank",
-                depth: RANK_DEPTH,
                 app: detail,
               }}
             />

@@ -9,22 +9,20 @@ describe("parseCardOptions", () => {
   it("reads stored options", () => {
     const stored: ShareCardOptions = {
       size: "portrait",
-      theme: "dark",
+      theme: "night",
       change: false,
       app: true,
-      footer: false,
     };
 
     expect(parseCardOptions(JSON.stringify(stored))).toEqual(stored);
   });
 
-  it("starts wide and light with every part shown", () => {
+  it("starts wide on paper with every part shown", () => {
     expect(DEFAULT_CARD_OPTIONS).toEqual({
       size: "landscape",
-      theme: "light",
+      theme: "paper",
       change: true,
       app: true,
-      footer: true,
     });
   });
 
@@ -38,6 +36,14 @@ describe("parseCardOptions", () => {
     expect(parseCardOptions(raw)).toEqual(DEFAULT_CARD_OPTIONS);
   });
 
+  it("never stores a choice to hide the credit", () => {
+    expect(
+      parseCardOptions(
+        JSON.stringify({ ...DEFAULT_CARD_OPTIONS, footer: false }),
+      ),
+    ).toEqual(DEFAULT_CARD_OPTIONS);
+  });
+
   it("falls back to the defaults for anything it does not know", () => {
     expect(
       parseCardOptions(
@@ -46,9 +52,8 @@ describe("parseCardOptions", () => {
           theme: "orange",
           change: "no",
           app: false,
-          footer: 0,
         }),
       ),
-    ).toEqual({ ...DEFAULT_CARD_OPTIONS, theme: "orange", app: false });
+    ).toEqual({ ...DEFAULT_CARD_OPTIONS, app: false });
   });
 });
