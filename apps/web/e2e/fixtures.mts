@@ -767,6 +767,7 @@ export const SERP_SNAPSHOTS: Record<string, SerpSnapshot> = {
         ratingCount: 8400,
         appId: null,
         isCompetitor: false,
+        titleMatch: "none",
       },
       {
         position: 2,
@@ -787,6 +788,15 @@ export const SERP_SNAPSHOTS: Record<string, SerpSnapshot> = {
         ratingCount: 24000,
         appId: "app-1",
         isCompetitor: false,
+        titleMatch: "phrase",
+        subtitle: "Focus timer for deep work",
+        subtitleSegments: [
+          { text: "Focus", match: "exact" },
+          { text: " ", match: "none" },
+          { text: "timer", match: "exact" },
+          { text: " for deep work", match: "none" },
+        ],
+        placement: "both",
       },
       {
         position: 4,
@@ -797,6 +807,13 @@ export const SERP_SNAPSHOTS: Record<string, SerpSnapshot> = {
         ratingCount: 12000,
         appId: "comp-1",
         isCompetitor: true,
+        titleMatch: "partial",
+        subtitle: "Timer for long sessions",
+        subtitleSegments: [
+          { text: "Timer", match: "exact" },
+          { text: " for long sessions", match: "none" },
+        ],
+        placement: "split",
       },
       {
         position: 5,
@@ -808,7 +825,24 @@ export const SERP_SNAPSHOTS: Record<string, SerpSnapshot> = {
         appId: null,
         isCompetitor: false,
       },
+      {
+        position: 6,
+        storeAppId: "calm-store",
+        title: "Calm Breathing",
+        developer: "Calm Labs",
+        ratingAvg: 4.2,
+        ratingCount: 3100,
+        appId: "comp-calm",
+        isCompetitor: true,
+        titleMatch: "none",
+        subtitle: "Breathe and relax",
+        subtitleSegments: [{ text: "Breathe and relax", match: "none" }],
+        placement: "none",
+      },
     ],
+    comparedTo: null,
+    exits: [],
+    dates: [utcDaysAgo(0)],
   },
 };
 

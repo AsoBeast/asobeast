@@ -45,9 +45,9 @@ import { useSerpParams } from "./use-serp-params";
 
 type ActionsFor = (entry: SerpEntryItem, role: SerpRole) => ReactNode;
 
-function useSerpApp(appId: string) {
+function useSerpApp(appId: string, store: Store) {
   const { data } = useQuery(appDetailOptions(appId));
-  const viewer: SerpViewer = { appId, storeAppId: data?.storeAppId };
+  const viewer: SerpViewer = { appId, storeAppId: data?.storeAppId, store };
   return { viewer, homeCountry: data?.country };
 }
 
@@ -133,7 +133,7 @@ function SerpBody({
     ...serpOptions(keywordId, serpDate),
     placeholderData: keepPreviousData,
   });
-  const { viewer, homeCountry } = useSerpApp(appId);
+  const { viewer, homeCountry } = useSerpApp(appId, store);
   const snapshot = serp.data?.keywordId === keywordId ? serp.data : undefined;
   const country = keyword?.country ?? homeCountry;
   const actionsFor: ActionsFor | undefined = country
@@ -201,7 +201,7 @@ function SerpContent({
     return (
       <div role="status">
         <span className="sr-only">Loading search results</span>
-        <SerpSkeleton />
+        <SerpSkeleton store={viewer.store} />
       </div>
     );
   }

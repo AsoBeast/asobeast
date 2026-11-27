@@ -10,6 +10,15 @@ export const SERP_TITLE_MATCHES = [
 ] as const;
 export type SerpTitleMatch = (typeof SERP_TITLE_MATCHES)[number];
 
+export const SERP_KEYWORD_PLACEMENTS = [
+  'title',
+  'subtitle',
+  'both',
+  'split',
+  'none',
+] as const;
+export type SerpKeywordPlacement = (typeof SERP_KEYWORD_PLACEMENTS)[number];
+
 export interface SerpEntryItem {
   position: number;
   storeAppId: string;
@@ -22,6 +31,9 @@ export interface SerpEntryItem {
   iconUrl?: string | null;
   titleMatch?: SerpTitleMatch;
   titleSegments?: KeywordBreakdownSegment[];
+  subtitle?: string | null;
+  subtitleSegments?: KeywordBreakdownSegment[];
+  placement?: SerpKeywordPlacement;
   previous?: number | null;
   delta?: number | null;
   movement?: ChartMovement;

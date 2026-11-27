@@ -1,10 +1,15 @@
 import { readFileSync } from "node:fs";
 import type { Locator, Page } from "@playwright/test";
+import type { SerpEntryItem } from "@asobeast/shared";
 import { contrastViolations, THEMES } from "./contrast-check.mts";
 import { missingDescriptionIds } from "./described-by.mts";
 import { holdRequest, pressFromKeyboard } from "./held-request.mts";
 import { hydrated } from "./hydrated.mts";
-import { NO_APPS_COOKIE, STALE_CAPTURE_COOKIE } from "./fixtures.mts";
+import {
+  NO_APPS_COOKIE,
+  SERP_SNAPSHOTS,
+  STALE_CAPTURE_COOKIE,
+} from "./fixtures.mts";
 import { seedCookies } from "./routes.mts";
 import {
   SERP_HISTORY_DAYS,
@@ -78,43 +83,61 @@ async function openStudyTimer(page: Page): Promise<Locator> {
   return sheet;
 }
 
-test("draws the loading state at the geometry of the loaded sheet", async ({
-  page,
-}) => {
-  const held = await holdRequest(
+const SHEET_GEOMETRY_CASES = [
+  { name: "", appId: "app-1", keywordId: "kw-3", sameRows: true },
+  {
+    name: " with known subtitles",
+    appId: "app-1",
+    keywordId: "kw-1",
+    sameRows: false,
+  },
+  {
+    name: " on Google Play",
+    appId: "app-gp",
+    keywordId: "kw-gp-1",
+    sameRows: true,
+  },
+] as const;
+
+for (const { name, appId, keywordId, sameRows } of SHEET_GEOMETRY_CASES) {
+  test(`draws the loading state at the geometry of the loaded sheet${name}`, async ({
     page,
-    /\/api\/backend\/keywords\/kw-3\/serp/,
-    "GET",
-  );
-  await page.goto("/apps/app-1/keywords?serp=kw-3");
-  const sheet = serpSheet(page);
-  const summary = sheet.locator('[data-slot="serp-summary"]');
-  const firstRow = sheet.locator('[data-slot="serp-row"]').first();
-  const geometry = async () => {
-    const [dialog, strip, row] = await Promise.all([
-      sheet.boundingBox(),
-      summary.boundingBox(),
-      firstRow.boundingBox(),
-    ]);
-    return {
-      summaryTop: (strip?.y ?? 0) - (dialog?.y ?? 0),
-      summaryHeight: strip?.height,
-      rowTop: (row?.y ?? 0) - (dialog?.y ?? 0),
-      rowHeight: row?.height,
+  }) => {
+    const held = await holdRequest(
+      page,
+      new RegExp(`/api/backend/keywords/${keywordId}/serp`),
+      "GET",
+    );
+    await page.goto(`/apps/${appId}/keywords?serp=${keywordId}`);
+    const sheet = serpSheet(page);
+    const summary = sheet.locator('[data-slot="serp-summary"]');
+    const firstRow = sheet.locator('[data-slot="serp-row"]').first();
+    const geometry = async () => {
+      const [dialog, strip, row] = await Promise.all([
+        sheet.boundingBox(),
+        summary.boundingBox(),
+        firstRow.boundingBox(),
+      ]);
+      return {
+        summaryTop: (strip?.y ?? 0) - (dialog?.y ?? 0),
+        summaryHeight: strip?.height,
+        rowTop: (row?.y ?? 0) - (dialog?.y ?? 0),
+        ...(sameRows ? { rowHeight: row?.height } : {}),
+      };
     };
-  };
-  await expect(summary).toBeVisible();
-  await expect(summary.getByText("median").first()).toHaveCSS(
-    "color",
-    "rgba(0, 0, 0, 0)",
-  );
-  const loading = await geometry();
+    await expect(summary).toBeVisible();
+    await expect(summary.getByText("median").first()).toHaveCSS(
+      "color",
+      "rgba(0, 0, 0, 0)",
+    );
+    const loading = await geometry();
 
-  held.release();
-  await expect(rowAt(sheet, 1)).toBeVisible();
+    held.release();
+    await expect(rowAt(sheet, 1)).toBeVisible();
 
-  expect(await geometry()).toEqual(loading);
-});
+    expect(await geometry()).toEqual(loading);
+  });
+}
 
 test("opens from the row with the keyword large in the sheet", async ({
   page,
@@ -149,16 +172,18 @@ test("exporting downloads the snapshot the sheet shows", async ({ page }) => {
   );
   const lines = readFileSync(await download.path(), "utf8").split("\r\n");
   expect(lines[0]).toBe(
-    "﻿keyword,capturedOn,position,app,developer,rating,ratings,role,storeAppId,previousPosition",
+    "﻿keyword,capturedOn,position,app,developer,rating,ratings,role,storeAppId,previousPosition,subtitle,keywordIn",
   );
-  expect(lines).toHaveLength(6);
+  expect(lines).toHaveLength(7);
   expect(lines[3]).toMatch(
-    /^focus timer,\d{4}-\d{2}-\d{2},3,Focus Timer,Focus Labs,4\.8,24000,you,123456789,$/,
+    /^focus timer,\d{4}-\d{2}-\d{2},3,Focus Timer,Focus Labs,4\.8,24000,you,123456789,,Focus timer for deep work,Title and subtitle$/,
   );
   expect(lines[4]).toMatch(
-    /,4,Rival Focus,Rival Labs,4\.5,12000,competitor,comp-store,$/,
+    /,4,Rival Focus,Rival Labs,4\.5,12000,competitor,comp-store,,Timer for long sessions,Split across title and subtitle$/,
   );
-  expect(lines[5]).toMatch(/,5,Newcomer Timer,,,,other,stranger-store,$/);
+  expect(lines[5]).toMatch(
+    /,5,Newcomer Timer,,,,other,stranger-store,,,Not in the title \(subtitle not known\)$/,
+  );
 });
 
 test("exports every position of a deep day with its earlier position", async ({
@@ -175,8 +200,8 @@ test("exports every position of a deep day with its earlier position", async ({
 
   const lines = readFileSync(await download.path(), "utf8").split("\r\n");
   expect(lines).toHaveLength(51);
-  expect(lines[2]).toMatch(/,2,Study Timer & Focus,.*,4$/);
-  expect(lines[3]).toMatch(/,3,Study Timer Plus,.*,$/);
+  expect(lines[2]).toMatch(/,2,Study Timer & Focus,.*,4,,Title$/);
+  expect(lines[3]).toMatch(/,3,Study Timer Plus,.*,,,Title$/);
 });
 
 test("a read that fails stays inside the sheet and retry loads it", async ({
@@ -341,11 +366,155 @@ test("lays out a right to left title from the right edge of its row", async ({
   ).toBeLessThan(1);
 });
 
-test("sums up titles and ratings of the top 10", async ({ page }) => {
+async function openFocusTimer(page: Page): Promise<Locator> {
+  await page.goto("/apps/app-1/keywords?serp=kw-1");
+  const sheet = serpSheet(page);
+  await expect(rowAt(sheet, 1)).toBeVisible();
+  return sheet;
+}
+
+async function serveFocusTimer(
+  page: Page,
+  change: (entry: SerpEntryItem) => SerpEntryItem,
+): Promise<void> {
+  const snapshot = SERP_SNAPSHOTS["kw-1"];
+  await page.route(isSerpRead, (route) =>
+    route.fulfill({
+      json: { ...snapshot, entries: snapshot.entries.map(change) },
+    }),
+  );
+}
+
+const outlierIn = (row: Locator) => row.getByText("Outlier", { exact: true });
+
+test.describe("where the keyword sits", () => {
+  test("says where each app puts the keyword", async ({ page }) => {
+    const sheet = await openFocusTimer(page);
+
+    await expect(rowAt(sheet, 3)).toContainText(
+      "Keyword in Title and subtitle",
+    );
+    await expect(rowAt(sheet, 4)).toContainText(
+      "Keyword in Split across title and subtitle",
+    );
+    await expect(rowAt(sheet, 6)).toContainText("Keyword in Neither");
+  });
+
+  test("marks the keyword in a subtitle", async ({ page }) => {
+    const sheet = await openFocusTimer(page);
+
+    await expect(rowAt(sheet, 3)).toContainText("for deep work");
+    await expect(rowAt(sheet, 3).locator("mark")).toHaveText([
+      "Focus (in subtitle)",
+      "timer (in subtitle)",
+    ]);
+    await expect(rowAt(sheet, 4).locator("mark")).toHaveText([
+      "Timer (in subtitle)",
+    ]);
+  });
+
+  test("flags a competitor that ranks without the keyword", async ({
+    page,
+  }) => {
+    const sheet = await openFocusTimer(page);
+
+    await expect(outlierIn(rowAt(sheet, 6))).toBeVisible();
+    await expect(outlierIn(rowAt(sheet, 4))).toHaveCount(0);
+    await expect(outlierIn(rowAt(sheet, 3))).toHaveCount(0);
+  });
+
+  test("never flags your own app", async ({ page }) => {
+    await serveFocusTimer(page, (entry) =>
+      entry.appId === "app-1"
+        ? {
+            ...entry,
+            subtitle: "Deep work sessions",
+            subtitleSegments: [{ text: "Deep work sessions", match: "none" }],
+            placement: "none",
+          }
+        : entry,
+    );
+    const sheet = await openFocusTimer(page);
+
+    await expect(rowAt(sheet, 3)).toContainText("Keyword in Neither");
+    await expect(outlierIn(rowAt(sheet, 3))).toHaveCount(0);
+  });
+
+  test("says when a subtitle is not known", async ({ page }) => {
+    const sheet = await openFocusTimer(page);
+
+    await expect(rowAt(sheet, 5)).toContainText(
+      "Keyword in Not in the title, subtitle not known",
+    );
+    await expect(outlierIn(rowAt(sheet, 5))).toHaveCount(0);
+  });
+
+  test("reads an old row without a subtitle", async ({ page }) => {
+    await serveFocusTimer(page, (entry) => ({
+      ...entry,
+      subtitle: undefined,
+      subtitleSegments: undefined,
+      placement: undefined,
+    }));
+    const sheet = await openFocusTimer(page);
+
+    await expect(rowAt(sheet, 4)).toContainText("Rival Focus");
+    await expect(rowAt(sheet, 4)).toContainText(
+      "Keyword in Not in the title, subtitle not known",
+    );
+    await expect(rowAt(sheet, 4)).not.toContainText("Timer for long sessions");
+    await expect(sheet.getByText("Outlier", { exact: true })).toHaveCount(0);
+  });
+
+  test("sums up where the top 10 put the keyword", async ({ page }) => {
+    const sheet = await openFocusTimer(page);
+    const summary = sheet.locator("dl");
+
+    await expect(
+      summary.getByText("Keyword in", { exact: true }),
+    ).toBeVisible();
+    await expect(summary.getByText("1 of 6", { exact: true })).toBeVisible();
+    await expect(
+      summary.getByText("in the title", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      summary.getByText("1 of 3 in the subtitle", { exact: true }),
+    ).toBeVisible();
+
+    await summary
+      .getByRole("button", { name: "About where the keyword sits" })
+      .click();
+    const tip = page.getByRole("dialog", { name: "Where the keyword sits" });
+    await expect(tip).toHaveAccessibleDescription(/marked Outlier/);
+    await expect(
+      tip.getByRole("link", { name: "Read about outliers" }),
+    ).toHaveAttribute(
+      "href",
+      "https://docs.asobeast.com/guides/read-rankings#outliers",
+    );
+  });
+
+  test("reads titles only on Google Play", async ({ page }) => {
+    await page.goto("/apps/app-gp/keywords?serp=kw-gp-1");
+    const sheet = serpSheet(page);
+
+    await expect(rowAt(sheet, 1)).toContainText("Keyword in Title");
+    await expect(rowAt(sheet, 2)).toContainText("Keyword in Not in the title");
+    await expect(sheet).not.toContainText("subtitle not known");
+    await expect(sheet.getByText("Outlier", { exact: true })).toHaveCount(0);
+    await expect(
+      sheet.locator("dl").getByText("Google Play has no subtitle"),
+    ).toBeVisible();
+  });
+});
+
+test("sums up where the keyword sits and ratings of the top 10", async ({
+  page,
+}) => {
   const sheet = await openStudyTimer(page);
 
   const summary = sheet.locator("dl");
-  await expect(summary.getByText("7 of 10")).toBeVisible();
+  await expect(summary.getByText("8 of 10")).toBeVisible();
   await expect(summary.getByText("7K", { exact: true })).toBeVisible();
   await expect(summary.getByText("median", { exact: true })).toBeVisible();
 

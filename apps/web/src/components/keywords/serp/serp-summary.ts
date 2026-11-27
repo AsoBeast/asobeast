@@ -2,7 +2,9 @@ import {
   listsNoApps,
   SERP_DEPTH,
   type SerpEntryItem,
+  type SerpKeywordPlacement,
   type SerpSnapshot,
+  type Store,
   type TrackedKeywordItem,
 } from "@asobeast/shared";
 import type { Moved } from "@/components/movement/movement-text";
@@ -15,9 +17,11 @@ export type PositionSummary =
   | { kind: "noApps" }
   | { kind: "absent" };
 
-export interface TitleSummary {
-  withKeyword: number;
+export interface PlacementSummary {
+  inTitle: number;
   of: number;
+  inSubtitle: number | null;
+  subtitlesKnown: number | null;
 }
 
 export type RatingSummary =
@@ -27,7 +31,7 @@ export type RatingSummary =
 
 export interface SerpSummaryFacts {
   position: PositionSummary;
-  titles: TitleSummary | null;
+  placements: PlacementSummary | null;
   ratings: RatingSummary;
 }
 
@@ -80,11 +84,37 @@ function positionOf(
   return { kind: "absent" };
 }
 
-function titlesOf(topTen: readonly SerpEntryItem[]): TitleSummary | null {
-  if (!topTen.some((entry) => entry.titleMatch !== undefined)) return null;
+const countOf = (
+  entries: readonly SerpEntryItem[],
+  placements: readonly SerpKeywordPlacement[],
+): number =>
+  entries.filter(
+    (entry) => entry.placement && placements.includes(entry.placement),
+  ).length;
+
+function placementsOf(
+  topTen: readonly SerpEntryItem[],
+  store: Store,
+): PlacementSummary | null {
+  const judged = topTen.some(
+    (entry) => entry.titleMatch !== undefined || entry.placement !== undefined,
+  );
+  if (!judged) return null;
+  const inTitle = countOf(topTen, ["title", "both"]);
+  if (store !== "APP_STORE") {
+    return {
+      inTitle,
+      of: topTen.length,
+      inSubtitle: null,
+      subtitlesKnown: null,
+    };
+  }
+  const known = topTen.filter((entry) => entry.subtitle !== undefined);
   return {
-    withKeyword: topTen.filter((entry) => entry.titleMatch === "phrase").length,
+    inTitle,
     of: topTen.length,
+    inSubtitle: countOf(known, ["subtitle", "both"]),
+    subtitlesKnown: known.length,
   };
 }
 
@@ -119,7 +149,7 @@ export function serpSummary(
   );
   return {
     position: positionOf(snapshot, viewer, keyword),
-    titles: titlesOf(topTen),
+    placements: placementsOf(topTen, viewer.store),
     ratings: ratingsOf(topTen),
   };
 }
