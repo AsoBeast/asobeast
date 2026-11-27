@@ -103,16 +103,21 @@ const densitySegments = (
     .map((segment) => tokensOf(segment, language))
     .filter((tokens) => tokens.length > 0);
 
-const keptTest = ({
+const ignoredWordsOf = ({
   language,
   ignored = [],
-}: WordDensityOptions): TokenTest => {
-  const isFunctionWord = functionWordTest(language === null ? [] : [language]);
-  const ignoredWords = new Set(
+}: WordDensityOptions): ReadonlySet<string> =>
+  new Set(
     densitySegments(ignored.join('\n'), language)
       .flat()
       .map((token) => token.text),
   );
+
+const keptTest = (
+  language: string | null,
+  ignoredWords: ReadonlySet<string>,
+): TokenTest => {
+  const isFunctionWord = functionWordTest(language === null ? [] : [language]);
   return (token) =>
     !isFunctionWord(token) &&
     !(language === ENGLISH && ENGLISH_FUNCTION_WORDS.has(token)) &&
@@ -153,12 +158,18 @@ const phrases = (
   segments: readonly DensityToken[][],
   size: number,
   keep: TokenTest,
+  ignoredWords: ReadonlySet<string>,
 ): Map<string, number> => {
   const found = segments.flatMap((tokens) =>
     tokens
       .slice(0, Math.max(0, tokens.length - size + 1))
       .map((_, start) => tokens.slice(start, start + size))
-      .filter((gram) => keep(gram[0].text) && keep(gram[size - 1].text))
+      .filter(
+        (gram) =>
+          keep(gram[0].text) &&
+          keep(gram[size - 1].text) &&
+          !gram.some((token) => ignoredWords.has(token.text)),
+      )
       .map(joined),
   );
   return repeated(found);
@@ -170,7 +181,8 @@ export function wordDensity(
 ): WordDensity {
   const words = countWords(text);
   const segments = densitySegments(text, options.language);
-  const keep = keptTest(options);
+  const ignoredWords = ignoredWordsOf(options);
+  const keep = keptTest(options.language, ignoredWords);
   const tokens = segments.flat();
   const single = ranked(
     repeated(tokens.map((token) => token.text).filter(keep)),
@@ -184,7 +196,7 @@ export function wordDensity(
   return {
     words,
     single,
-    pairs: ranked(phrases(segments, 2, keep), tokens.length, 2),
-    triples: ranked(phrases(segments, 3, keep), tokens.length, 3),
+    pairs: ranked(phrases(segments, 2, keep, ignoredWords), tokens.length, 2),
+    triples: ranked(phrases(segments, 3, keep, ignoredWords), tokens.length, 3),
   };
 }

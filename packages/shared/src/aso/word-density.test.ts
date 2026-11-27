@@ -233,6 +233,16 @@ describe('wordDensity', () => {
     expect(density.single).toEqual([{ text: 'timer', count: 4, share: 1 }]);
   });
 
+  it('never lists a phrase holding the app name', () => {
+    const density = wordDensity(
+      'plan Acme sessions. plan Acme sessions. plan Acme now. plan Acme now.',
+      { language: 'en', ignored: ['Acme'] },
+    );
+
+    expect(density.pairs).toEqual([]);
+    expect(density.triples).toEqual([]);
+  });
+
   it('keeps function words inside a phrase', () => {
     const density = wordDensity(
       'time to focus. time to focus. time to focus.',
