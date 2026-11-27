@@ -1,8 +1,10 @@
 import { expect, test } from "./session.mts";
 import type { Page } from "@playwright/test";
 import { APP_PL_NATIVE_ID, APP_SUGGESTED_LOCALES_ID } from "./fixtures.mts";
+import { hydrated } from "./hydrated.mts";
 import { METADATA_AUDIT_COOKIE } from "./metadata-fixtures.mts";
 import { seedLocalizations } from "./localizations.mts";
+import { seedViewer } from "./viewer.mts";
 
 const APPLE_URL =
   "https://developer.apple.com/help/app-store-connect/reference/app-store-localizations/";
@@ -152,7 +154,9 @@ test("opens the polish home box from the keyword field suggestion", async ({
   ]);
   await page.goto(`/apps/${APP_PL_NATIVE_ID}/metadata`);
 
-  await page.getByRole("link", { name: "Edit this keyword field" }).click();
+  await (
+    await hydrated(page.getByRole("link", { name: "Edit this keyword field" }))
+  ).click();
 
   await expect(page).toHaveURL(
     new RegExp(
@@ -232,5 +236,64 @@ test.describe("suggested markets in the localization matrix", () => {
     await expect(
       page.getByRole("link", { name: "Add FR as a market" }),
     ).toHaveCount(0);
+  });
+});
+
+test.describe("the localizations header and fields note from the first paint", () => {
+  const serverHtml = async (page: Page) => {
+    const response = await page.request.get(
+      "/apps/app-1/metadata?market=pl&localization=pl",
+    );
+    expect(response.ok()).toBe(true);
+    return response.text();
+  };
+
+  test("holds the owner's import control in the localizations header", async ({
+    page,
+  }) => {
+    expect(await serverHtml(page)).toContain("Import from App Store Connect");
+  });
+
+  test("dates the snapshot of the viewed market", async ({ page }) => {
+    expect(await serverHtml(page)).toContain("Snapshot of ");
+  });
+
+  test("leaves the import control out for a member", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "member");
+    expect(await serverHtml(page)).not.toContain(
+      "Import from App Store Connect",
+    );
+
+    await page.goto("/apps/app-1/metadata?market=pl&localization=pl");
+    const section = page.getByRole("region", { name: SECTION });
+    await expect(
+      await hydrated(
+        section.getByRole("button", { name: "Find localizations" }),
+      ),
+    ).toBeVisible();
+    await expect(
+      section.getByRole("button", { name: "Import from App Store Connect" }),
+    ).toHaveCount(0);
+  });
+
+  test("hydrates the owner's controls without a mismatch", async ({ page }) => {
+    const errors: string[] = [];
+    page.on("console", (message) => {
+      if (message.type() === "error") errors.push(message.text());
+    });
+    page.on("pageerror", (error) => errors.push(error.message));
+
+    const signedIn = page.waitForResponse(/\/auth\/me/);
+    await page.goto("/apps/app-1/metadata?market=pl&localization=pl");
+    await signedIn;
+    const importButton = page
+      .getByRole("region", { name: SECTION })
+      .getByRole("button", { name: "Import from App Store Connect" });
+    await expect(await hydrated(importButton)).toBeVisible();
+
+    expect(errors.filter((text) => /hydrat|#418/i.test(text))).toEqual([]);
   });
 });

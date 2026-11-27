@@ -14,6 +14,7 @@ import type {
   ActionRankingDay,
 } from '../action-context';
 import { clampUnit, scoreImpact } from '../action-impact';
+import { ActionMarketMetadata, appListings } from '../action-market-metadata';
 import type { ActionDetector, DetectedAction } from '../action-rule';
 import { detectKeywordDefend } from './keyword-defend';
 import { isVolatile } from './serp-volatility';
@@ -63,12 +64,12 @@ function bandHistory(days: ActionRankingDay[], now: Date): BandHistory {
 
 function qualifies(
   keyword: TrackedKeywordItem,
-  homeCountry: string,
+  country: string,
 ): keyword is TrackedKeywordItem & { latestPosition: number } {
   return (
     keyword.active &&
     fitsOwnListing(keyword.keywordClass) &&
-    keyword.country === homeCountry &&
+    keyword.country === country &&
     !keyword.scoreOutdated &&
     keyword.relevance !== null &&
     keyword.relevance >= PUSH_MIN_RELEVANCE &&
@@ -91,10 +92,11 @@ function weaklyCovered(
 
 function candidate(
   app: ActionContextApp,
+  market: ActionMarketMetadata,
   keyword: TrackedKeywordItem,
   now: Date,
 ): DetectedAction | null {
-  if (!qualifies(keyword, app.country)) return null;
+  if (!qualifies(keyword, market.country)) return null;
   const history = bandHistory(
     app.rankingDaysByKeyword.get(keyword.keywordId) ?? [],
     now,
@@ -103,7 +105,7 @@ function candidate(
     return null;
   }
   const coveredFields = weaklyCovered(
-    app.coverage.find((row) => row.keywordId === keyword.keywordId),
+    market.coverage.find((row) => row.keywordId === keyword.keywordId),
     app.store,
   );
   if (coveredFields === null) return null;
@@ -124,7 +126,7 @@ function candidate(
     rule: 'keyword.push_to_top10',
     appId: app.id,
     store: app.store,
-    country: app.country,
+    country: market.country,
     keywordId: keyword.keywordId,
     discriminator: null,
     terms: {
@@ -146,9 +148,11 @@ function detectForApp(
   claimed: ReadonlySet<string>,
   now: Date,
 ): DetectedAction[] {
-  const candidates = app.trackedKeywords
-    .map((keyword) => candidate(app, keyword, now))
-    .filter((detection): detection is DetectedAction => detection !== null);
+  const candidates = appListings(app).flatMap((market) =>
+    app.trackedKeywords
+      .map((keyword) => candidate(app, market, keyword, now))
+      .filter((detection): detection is DetectedAction => detection !== null),
+  );
   const blocked = (detection: DetectedAction): boolean =>
     claimed.has(`${app.id}:${detection.keywordId}`) ||
     isVolatile(app.volatilityByKeyword.get(detection.keywordId ?? '') ?? null);

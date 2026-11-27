@@ -62,12 +62,14 @@ export function MetadataAuditView({
   draftable,
   hasLocalizations,
   keywordFields,
+  ownerWhileLoading,
 }: {
   id: string;
   canDraft: boolean;
   draftable: boolean;
   hasLocalizations: boolean;
   keywordFields: boolean;
+  ownerWhileLoading: boolean;
 }) {
   const [mode] = useMetadataMode();
   const { market, home } = useMarket(id);
@@ -167,6 +169,7 @@ export function MetadataAuditView({
           canDraft={drafting}
           suggestion={suggestion}
           homeLocalization={homeLocalization}
+          ownerWhileLoading={ownerWhileLoading}
         />
       ) : suggestion ? (
         <KeywordFieldSuggestionCard

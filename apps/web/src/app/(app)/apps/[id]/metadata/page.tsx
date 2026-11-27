@@ -19,6 +19,7 @@ import { getQueryClient } from "@/lib/get-query-client";
 import { queryMarket, resolveLocalization, resolveMarket } from "@/lib/market";
 import {
   appDetailOptions,
+  appListingOptions,
   appLocalizationsOptions,
   keywordCountriesOptions,
   listingMarketsOptions,
@@ -27,6 +28,7 @@ import {
   screenshotsOptions,
 } from "@/lib/queries";
 import { localizationParser, marketParser } from "@/lib/search-params";
+import { viewerWhenAnswered } from "@/lib/viewer";
 
 export default async function MetadataPage({
   params,
@@ -79,11 +81,15 @@ export default async function MetadataPage({
       screenshotsOptions(id, queryMarket(market, app.country), localization),
     );
   }
-  const [keywordMarkets, assistant] = await Promise.all([
+  const [keywordMarkets, assistant, signedInUser] = await Promise.all([
     isAppStore
       ? queryClient.fetchQuery(keywordCountriesOptions(id)).catch(() => null)
       : null,
     getMetadataAssistantStatus().catch(() => null),
+    keywordFields ? viewerWhenAnswered() : null,
+    queryClient.prefetchQuery(
+      appListingOptions(id, queryMarket(market, app.country)),
+    ),
     keywordFields
       ? queryClient.prefetchQuery(appLocalizationsOptions(id))
       : null,
@@ -116,6 +122,7 @@ export default async function MetadataPage({
             draftable={app.isCompetitor !== true}
             hasLocalizations={keywordMarkets !== null}
             keywordFields={keywordFields}
+            ownerWhileLoading={signedInUser?.role === "owner"}
           />
         </Suspense>
       </div>
