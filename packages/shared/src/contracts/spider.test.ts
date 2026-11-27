@@ -19,4 +19,9 @@ describe('isSpiderTerm', () => {
     expect(isSpiderTerm('\u0130'.repeat(20))).toBe(true);
     expect(isSpiderTerm('\u0130'.repeat(21))).toBe(false);
   });
+
+  it('leaves out a presentation selector as the endpoint does', () => {
+    expect(isSpiderTerm('\u2764\uFE0F')).toBe(false);
+    expect(isSpiderTerm('\u2764\uFE0F'.repeat(21))).toBe(true);
+  });
 });
