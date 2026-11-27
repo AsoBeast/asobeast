@@ -137,6 +137,7 @@ describe('serpEntryRows', () => {
       iconUrl: 'https://icon',
       ratingAvg: 4.5,
       ratingCount: 120,
+      shortDescription: null,
     });
     expect(rows[1]).toEqual({
       keywordId: 'kw1',
@@ -148,7 +149,34 @@ describe('serpEntryRows', () => {
       iconUrl: null,
       ratingAvg: null,
       ratingCount: null,
+      shortDescription: null,
     });
+  });
+
+  it('keeps the short description a Google Play result carries', () => {
+    const rows = serpEntryRows('kw1', TODAY, [
+      { storeAppId: 'a', title: 'A', summary: 'Plan your day' },
+      { storeAppId: 'b', title: 'B' },
+    ]);
+
+    expect(rows.map((row) => row.shortDescription)).toEqual([
+      'Plan your day',
+      null,
+    ]);
+  });
+
+  it('leaves the short description of an App Store shaped result null', () => {
+    const rows = serpEntryRows('kw1', TODAY, [
+      {
+        storeAppId: '42',
+        title: 'Result',
+        developer: 'Dev Co',
+        ratingAvg: 4,
+        ratingCount: 10,
+      },
+    ]);
+
+    expect(rows[0].shortDescription).toBeNull();
   });
 });
 

@@ -13,6 +13,7 @@ import {
 } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { KeywordInLine } from "./KeywordInLine";
+import { listingLineOf, type ListingLine } from "./listing-line";
 import type { SerpRole } from "./serp-csv";
 import { movedOf } from "./serp-summary";
 
@@ -55,13 +56,7 @@ function RoleBadge({ role }: { role: SerpRole }) {
   ) : null;
 }
 
-function SubtitleText({
-  subtitle,
-  segments,
-}: {
-  subtitle: string;
-  segments: SerpEntryItem["subtitleSegments"];
-}) {
+function ListingText({ line }: { line: ListingLine }) {
   return (
     <span
       translate="no"
@@ -69,11 +64,11 @@ function SubtitleText({
       className="text-caption text-muted-foreground wrap-anywhere"
     >
       <MatchedText
-        segments={segments?.map((segment) => ({
+        segments={line.segments?.map((segment) => ({
           ...segment,
-          surface: "subtitle" as const,
+          surface: line.surface,
         }))}
-        fallback={subtitle}
+        fallback={line.text}
       />
     </span>
   );
@@ -127,6 +122,7 @@ export function SerpRow({
   comparedTo: string | null;
   actions?: ReactNode;
 }) {
+  const line = listingLineOf(entry);
   return (
     <li
       id={serpRowId(entry.position)}
@@ -158,12 +154,7 @@ export function SerpRow({
         developer={entry.developer}
         role={role}
       >
-        {entry.subtitle ? (
-          <SubtitleText
-            subtitle={entry.subtitle}
-            segments={entry.subtitleSegments}
-          />
-        ) : null}
+        {line ? <ListingText line={line} /> : null}
         <KeywordInLine entry={entry} store={store} role={role} />
       </SerpAppText>
       <Rating average={entry.ratingAvg} count={entry.ratingCount} />

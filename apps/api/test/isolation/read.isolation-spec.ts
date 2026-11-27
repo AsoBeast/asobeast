@@ -13,6 +13,7 @@ import {
   IsolationFixture,
   SHARED_COMPETITOR_ID,
   SHARED_KEYWORD,
+  SHARED_PLAY_APP_ID,
 } from './fixture';
 import { IsolationWorkspace } from './fixture';
 
@@ -544,6 +545,71 @@ describe('Read isolation', () => {
         where: { id: { in: snapshots.map((snapshot) => snapshot.id) } },
       });
       await fixture.db.app.delete({ where: { id: onlyA.id } });
+    }
+  });
+
+  it('answers the same short description to every workspace and never a listing summary', async () => {
+    const day = '2026-07-01';
+    const keyword = await fixture.db.keyword.create({
+      data: { text: 'habit tracker', store: Store.GOOGLE_PLAY, country: 'us' },
+    });
+    await fixture.db.trackedKeyword.createMany({
+      data: [fixture.a, fixture.b].map((workspace) => ({
+        appId: workspace.playAppId,
+        keywordId: keyword.id,
+        source: 'MANUAL' as const,
+      })),
+    });
+    const snapshots = await Promise.all(
+      [
+        [fixture.a.playAppId, 'Summary only A knows'],
+        [fixture.b.playAppId, 'Summary only B knows'],
+      ].map(([appId, summary]) =>
+        fixture.db.appSnapshot.create({
+          data: {
+            appId,
+            title: 'Tracker',
+            summary,
+            description: '',
+            raw: {},
+            capturedAt: new Date(`${day}T12:00:00.000Z`),
+          },
+        }),
+      ),
+    );
+    await fixture.db.serpEntry.create({
+      data: {
+        keywordId: keyword.id,
+        date: new Date(`${day}T00:00:00.000Z`),
+        position: 1,
+        storeAppId: SHARED_PLAY_APP_ID,
+        title: 'Tracker',
+        shortDescription: 'Habit tracker and planner',
+      },
+    });
+    const serpOf = async (workspace: IsolationWorkspace) =>
+      (
+        await workspace.agent
+          .get(`/keywords/${keyword.id}/serp?date=${day}`)
+          .expect(200)
+      ).body as SerpSnapshot;
+
+    try {
+      const answers = await Promise.all([serpOf(fixture.a), serpOf(fixture.b)]);
+
+      for (const answer of answers) {
+        expect(answer.entries[0]).toMatchObject({
+          shortDescription: 'Habit tracker and planner',
+          placement: 'subtitle',
+        });
+        expect(JSON.stringify(answer)).not.toContain('Summary only A knows');
+        expect(JSON.stringify(answer)).not.toContain('Summary only B knows');
+      }
+    } finally {
+      await fixture.db.appSnapshot.deleteMany({
+        where: { id: { in: snapshots.map((snapshot) => snapshot.id) } },
+      });
+      await fixture.db.keyword.delete({ where: { id: keyword.id } });
     }
   });
 

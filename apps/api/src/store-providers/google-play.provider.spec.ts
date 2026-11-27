@@ -285,6 +285,42 @@ describe('GooglePlayProvider', () => {
     ]);
   });
 
+  it('keeps the short description of a search result', async () => {
+    const search = jest.fn().mockResolvedValue([
+      {
+        appId: 'com.a',
+        title: 'A',
+        developer: 'Dev A',
+        summary: 'Plan your day',
+      },
+      { appId: 'com.b', title: 'B', developer: 'Dev B' },
+      { appId: 'com.c', title: 'C', developer: 'Dev C', summary: '' },
+    ]);
+    const provider = new GooglePlayProvider(makeLib({ search }));
+
+    const results = await provider.search('note', 'us', 500);
+
+    expect(results[0].summary).toBe('Plan your day');
+    expect(results[1]).not.toHaveProperty('summary');
+    expect(results[2]).not.toHaveProperty('summary');
+  });
+
+  it.each(['Math & Music', 'Plan\nyour day'])(
+    'keeps the plain text of a short description as the store sent it %j',
+    async (summary) => {
+      const search = jest
+        .fn()
+        .mockResolvedValue([
+          { appId: 'com.a', title: 'A', developer: 'Dev A', summary },
+        ]);
+      const provider = new GooglePlayProvider(makeLib({ search }));
+
+      const results = await provider.search('note', 'us', 500);
+
+      expect(results[0].summary).toBe(summary);
+    },
+  );
+
   it('maps suggest strings to term objects', async () => {
     const suggest = jest.fn().mockResolvedValue(['note taking', 'notes']);
     const provider = new GooglePlayProvider(makeLib({ suggest }));

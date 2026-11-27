@@ -4,6 +4,7 @@ import type {
   KeywordWordMatch,
   SerpEntryItem,
   SerpExitItem,
+  SerpKeywordPlacement,
   SerpSnapshot,
   SerpTitleMatch,
 } from "@asobeast/shared";
@@ -36,6 +37,7 @@ interface Seed {
   isCompetitor?: boolean;
   previous?: number | null;
   movement?: ChartMovement;
+  shortDescription?: string;
 }
 
 const fold = (text: string) =>
@@ -72,6 +74,38 @@ function titleMatchOf(
   return found > 0 ? "partial" : "none";
 }
 
+const tokensOf = (text: string) =>
+  text
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean);
+
+const holdsKeyword = (
+  text: string,
+  keyword: string,
+  words: readonly string[],
+) => {
+  const match = titleMatchOf(text, keyword, words);
+  return match === "phrase" || match === "words";
+};
+
+function placementFor(
+  seed: Seed,
+  keyword: string,
+  words: readonly string[],
+): SerpKeywordPlacement | undefined {
+  const inTitle = holdsKeyword(seed.title, keyword, words);
+  if (seed.shortDescription === undefined) return inTitle ? "title" : undefined;
+  const inDescription = holdsKeyword(seed.shortDescription, keyword, words);
+  if (inTitle) return inDescription ? "both" : "title";
+  if (inDescription) return "subtitle";
+  const known = new Set([
+    ...tokensOf(seed.title),
+    ...tokensOf(seed.shortDescription),
+  ]);
+  return words.every((word) => known.has(word)) ? "split" : "none";
+}
+
 function deltaOf(position: number, previous: number | null): number | null {
   return previous === null ? null : position - previous;
 }
@@ -96,6 +130,7 @@ function entryOf(
       : seed.previous;
   const delta = deltaOf(position, previous);
   const titleMatch = titleMatchOf(seed.title, keyword, words);
+  const placement = placementFor(seed, keyword, words);
   return {
     position,
     storeAppId: seed.storeAppId,
@@ -112,9 +147,13 @@ function entryOf(
         : seed.iconUrl,
     titleMatch,
     titleSegments: segmentsOf(seed.title, words),
-    ...(titleMatch === "phrase" || titleMatch === "words"
-      ? { placement: "title" as const }
-      : {}),
+    ...(placement ? { placement } : {}),
+    ...(seed.shortDescription === undefined
+      ? {}
+      : {
+          shortDescription: seed.shortDescription,
+          shortDescriptionSegments: segmentsOf(seed.shortDescription, words),
+        }),
     previous,
     delta,
     movement: compared ? (seed.movement ?? movementOf(delta)) : "none",
@@ -309,6 +348,17 @@ const singleDay = (
   }),
 ];
 
+const PLAY_LISTINGS: Record<number, Partial<Seed>> = {
+  1: { shortDescription: "Pomodoro timer for study sessions" },
+  2: { shortDescription: "Stay on track with a pomodoro timer" },
+  3: { title: "Pomodoro Clock 3", shortDescription: "A timer for deep work" },
+  5: {
+    appId: "comp-gp-5",
+    isCompetitor: true,
+    shortDescription: "Habit tracker with daily goals",
+  },
+};
+
 const PLAY_SEEDS: Seed[] = Array.from({ length: 12 }, (_, index) => ({
   storeAppId: `com.example.pomodoro${index + 1}`,
   title:
@@ -318,6 +368,7 @@ const PLAY_SEEDS: Seed[] = Array.from({ length: 12 }, (_, index) => ({
   ratingAvg: 4 + (index % 6) / 10,
   ratingCount: null,
   iconUrl: SERP_PLAY_ICON_URL,
+  ...PLAY_LISTINGS[index + 1],
 }));
 
 export const SERP_PLAY_AVERAGE =

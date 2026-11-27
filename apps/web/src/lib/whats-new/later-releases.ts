@@ -41,7 +41,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "new",
         title: "Where ranking apps put the keyword",
-        text: "The search results of a keyword now say where each app puts it: in the title, the subtitle, both, split between them, or neither. On the App Store, subtitles come from the listings AsoBeast captures for your apps and competitors, so any other app is judged on its title alone, and a competitor in the top 10 without the keyword in either is marked as an outlier. Google Play has no subtitle, so only titles are read there. The summary counts how many of the top 10 hold it in the title, and in the subtitles AsoBeast knows.",
+        text: "The search results of a keyword now say where each app puts it: in the title, the subtitle, both, split between them, or neither. On the App Store, subtitles come from the listings AsoBeast captures for your apps and competitors, so any other app is judged on its title alone, and a competitor in the top 10 without the keyword in either is marked as an outlier. On Google Play the search results carry each app's short description, so every app shows it under its title and is judged on the title and the short description, with the same outlier mark; days checked before this update have no short descriptions yet. The summary counts how many of the top 10 hold it in the title, and in the subtitles or short descriptions AsoBeast knows.",
       },
       {
         kind: "new",

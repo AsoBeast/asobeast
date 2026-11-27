@@ -28,6 +28,7 @@ export interface SerpEntryRow {
   iconUrl: string | null;
   ratingAvg: number | null;
   ratingCount: number | null;
+  shortDescription: string | null;
 }
 
 export function positionsByStoreAppId(
@@ -65,6 +66,7 @@ export function serpEntryRows(
     iconUrl: item.iconUrl ?? null,
     ratingAvg: item.ratingAvg ?? null,
     ratingCount: item.ratingCount ?? null,
+    shortDescription: item.summary ?? null,
   }));
 }
 

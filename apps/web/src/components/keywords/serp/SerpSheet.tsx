@@ -87,6 +87,7 @@ function SerpResults({
       <SerpSummary
         facts={serpSummary(snapshot, viewer, keyword)}
         comparedTo={comparedTo}
+        store={viewer.store}
       />
       {topTen.length > 0 ? (
         <SerpList

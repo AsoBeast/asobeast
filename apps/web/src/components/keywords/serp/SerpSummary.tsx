@@ -14,6 +14,7 @@ import type {
   RatingSummary,
   SerpSummaryFacts,
 } from "./serp-summary";
+import { SECOND_FIELD_NAMES } from "./listing-line";
 import { serpRowId } from "./SerpRow";
 
 const SEARCH_RESULTS_GUIDE =
@@ -123,10 +124,6 @@ function PositionValue({
   }
 }
 
-const NO_PLAY_SUBTITLE = "Google Play has no subtitle";
-
-const SUBTITLE_LINE_SPACE = "0 of 0 in the subtitle";
-
 const Line = ({ children }: { children: ReactNode }) => (
   <span className="basis-full text-caption text-muted-foreground">
     {children}
@@ -139,29 +136,36 @@ const LineSpace = ({ children }: { children: string }) => (
   </span>
 );
 
-function SubtitleLine({ placements }: { placements: PlacementSummary }) {
-  const { inSubtitle, subtitlesKnown } = placements;
-  if (inSubtitle === null || subtitlesKnown === null) {
-    return <Line>{NO_PLAY_SUBTITLE}</Line>;
-  }
-  return subtitlesKnown >= 2 ? (
-    <Line>{`${inSubtitle} of ${subtitlesKnown} in the subtitle`}</Line>
+const secondLineSpace = (store: Store) =>
+  `0 of 0 in the ${SECOND_FIELD_NAMES[store]}`;
+
+function SecondLine({
+  placements,
+  store,
+}: {
+  placements: PlacementSummary;
+  store: Store;
+}) {
+  return placements.secondKnown >= 2 ? (
+    <Line>{`${placements.inSecond} of ${placements.secondKnown} in the ${SECOND_FIELD_NAMES[store]}`}</Line>
   ) : (
-    <LineSpace>{SUBTITLE_LINE_SPACE}</LineSpace>
+    <LineSpace>{secondLineSpace(store)}</LineSpace>
   );
 }
 
 function PlacementsValue({
   placements,
+  store,
 }: {
   placements: PlacementSummary | null;
+  store: Store;
 }) {
   if (!placements) return <Note>Not reported</Note>;
   return (
     <>
       <Value>{`${placements.inTitle} of ${placements.of}`}</Value>
       <Note>in the title</Note>
-      <SubtitleLine placements={placements} />
+      <SecondLine placements={placements} store={store} />
     </>
   );
 }
@@ -186,16 +190,25 @@ function RatingsValue({ ratings }: { ratings: RatingSummary }) {
   return <Note>No ratings</Note>;
 }
 
+const KEYWORD_IN_TIPS: Record<Store, string> = {
+  APP_STORE:
+    "How many of the top 10 hold every word of the keyword in their title, in any order. AsoBeast knows subtitles only for your apps and competitors, from their captured listings. A competitor in the top 10 without the keyword in either is marked Outlier, though it may still hold the keyword in its private keyword field.",
+  GOOGLE_PLAY:
+    "How many of the top 10 hold every word of the keyword in their title, in any order, and how many hold it in the short description the store's search showed. A competitor in the top 10 without the keyword in either is marked Outlier, though it may still hold the keyword in its long description, which the search does not show.",
+};
+
 function SummaryGrid({
   position,
   placements,
   ratings,
   tips,
+  store,
 }: {
   position: ReactNode;
   placements: ReactNode;
   ratings: ReactNode;
   tips: boolean;
+  store: Store;
 }) {
   const tip = (
     tipLabel: string,
@@ -221,7 +234,7 @@ function SummaryGrid({
         tip={tip(
           "About where the keyword sits",
           "Where the keyword sits",
-          "How many of the top 10 hold every word of the keyword in their title, in any order. AsoBeast knows subtitles only for your apps and competitors, from their captured listings. A competitor in the top 10 without the keyword in either is marked Outlier, though it may still hold the keyword in its private keyword field.",
+          KEYWORD_IN_TIPS[store],
           OUTLIERS_LINK,
         )}
       >
@@ -244,17 +257,22 @@ function SummaryGrid({
 export function SerpSummary({
   facts,
   comparedTo,
+  store,
 }: {
   facts: SerpSummaryFacts;
   comparedTo: string | null;
+  store: Store;
 }) {
   return (
     <SummaryGrid
       tips
+      store={store}
       position={
         <PositionValue position={facts.position} comparedTo={comparedTo} />
       }
-      placements={<PlacementsValue placements={facts.placements} />}
+      placements={
+        <PlacementsValue placements={facts.placements} store={store} />
+      }
       ratings={<RatingsValue ratings={facts.ratings} />}
     />
   );
@@ -273,13 +291,12 @@ export function SerpSummarySkeleton({ store }: { store: Store }) {
   return (
     <SummaryGrid
       tips={false}
+      store={store}
       position={value}
       placements={
         <>
           <ValueSkeleton />
-          <LineSpace>
-            {store === "GOOGLE_PLAY" ? NO_PLAY_SUBTITLE : SUBTITLE_LINE_SPACE}
-          </LineSpace>
+          <LineSpace>{secondLineSpace(store)}</LineSpace>
         </>
       }
       ratings={value}
