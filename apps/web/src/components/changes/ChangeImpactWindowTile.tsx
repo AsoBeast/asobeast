@@ -1,7 +1,11 @@
+"use client";
+
 import type { ChangeImpactWindow, Store } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { DeltaChip } from "@/components/ui/delta-chip";
 import { MEASURE_DIGITS } from "@/lib/format";
-import { FUNNEL_GETS_LABEL } from "@/lib/funnel";
+import { funnelGetsLabel } from "@/lib/funnel";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
 import {
   funnelNote,
@@ -29,41 +33,41 @@ const COLUMN_START: Record<number, string> = {
 };
 
 function MeasuredFacts({ impact }: { impact: ChangeImpactWindow }) {
-  const range = visibilityRange(impact);
+  const t = useTranslations("changes");
+  const locale = useAppLocale();
+  const range = visibilityRange(impact, locale);
   if (impact.movement === null || range === null) return null;
-  const shift = rankingShiftLine(impact.movement);
-  const moved = movementLine(impact.movement);
+  const shift = rankingShiftLine(impact.movement, t);
+  const moved = movementLine(impact.movement, t);
 
   return (
     <dl className={FACTS}>
-      <dt className={FACT_LABEL}>Visibility</dt>
+      <dt className={FACT_LABEL}>{t("impact.visibility")}</dt>
       <dd className={FACT_VALUE}>
         <span className="numeric">{range}</span>
         <DeltaChip
           value={impact.visibilityChange}
           polarity="higher-is-better"
-          period="in visibility"
+          period={t("impact.inVisibility")}
           digits={MEASURE_DIGITS}
           form="pill"
         />
       </dd>
-      <dt className={FACT_LABEL}>Keywords</dt>
+      <dt className={FACT_LABEL}>{t("impact.keywords")}</dt>
       <dd className={FACT_VALUE}>
         <ImpactMovementBar movement={impact.movement} />
       </dd>
       <dd className="col-span-2 -mt-0.5">
         {shift ? `${moved} · ${shift}` : moved}
       </dd>
-      <dt className={FACT_LABEL}>Median position</dt>
+      <dt className={FACT_LABEL}>{t("impact.medianPosition")}</dt>
       <dd className={FACT_VALUE}>
         {impact.medianPositionChange === null ? (
-          <span className="text-muted-foreground">
-            No keyword ranked on both days
-          </span>
+          <span className="text-muted-foreground">{t("impact.noMedian")}</span>
         ) : (
           <DeltaChip
             value={impact.medianPositionChange}
-            period="positions"
+            period={t("impact.positions")}
             form="pill"
           />
         )}
@@ -78,11 +82,14 @@ interface WindowProps {
 }
 
 function FunnelFacts({ impact, store }: WindowProps) {
+  const t = useTranslations("changes");
+  const overview = useTranslations("overview");
+  const locale = useAppLocale();
   const ranges = funnelRanges(impact.funnel);
-  const note = funnelNote(impact.funnel, impact.days);
+  const note = funnelNote(impact.funnel, impact.days, t, locale);
   if (!ranges) return note ? <p className={NOTE}>{note}</p> : null;
   const gets = impact.funnel?.change?.gets ?? null;
-  const getsLabel = FUNNEL_GETS_LABEL[store];
+  const getsLabel = funnelGetsLabel(store, overview);
 
   return (
     <dl className={FACTS}>
@@ -92,12 +99,12 @@ function FunnelFacts({ impact, store }: WindowProps) {
         <DeltaChip
           value={gets === null ? null : Math.round(gets * 100)}
           polarity="higher-is-better"
-          period={`in ${getsLabel}`}
+          period={t("impact.inGets", { label: getsLabel })}
           unit="%"
           form="pill"
         />
       </dd>
-      <dt className={FACT_LABEL}>Conversion</dt>
+      <dt className={FACT_LABEL}>{t("impact.conversion")}</dt>
       <dd className={FACT_VALUE}>
         <span className="numeric">{ranges.conversion}</span>
       </dd>
@@ -114,6 +121,7 @@ function WindowCell({
   funnelOnly?: boolean;
   children: React.ReactNode;
 }) {
+  const t = useTranslations("changes");
   return (
     <li
       className={cn(
@@ -122,7 +130,7 @@ function WindowCell({
       )}
     >
       <h4 className="text-label text-faint-foreground @3xl/impact:sr-only">
-        {windowTitle(days)}
+        {windowTitle(days, t)}
       </h4>
       {children}
     </li>
@@ -138,8 +146,10 @@ export function FunnelOnlyCell({ impact, store }: WindowProps) {
 }
 
 export function ChangeImpactWindowTile({ impact, store }: WindowProps) {
-  const notice = overlapNotice(impact.overlappingChanges);
-  const status = windowStatusLine(impact);
+  const t = useTranslations("changes");
+  const locale = useAppLocale();
+  const notice = overlapNotice(impact.overlappingChanges, t, locale);
+  const status = windowStatusLine(impact, t, locale);
   const measured = impact.movement !== null && impact.status === "measured";
 
   return (
@@ -150,11 +160,15 @@ export function ChangeImpactWindowTile({ impact, store }: WindowProps) {
       <MeasuredFacts impact={impact} />
       <FunnelFacts impact={impact} store={store} />
       {measured && impact.movement ? (
-        <p className={NOTE}>{`${status} · ${measuredLine(impact.movement)}`}</p>
+        <p
+          className={NOTE}
+        >{`${status} · ${measuredLine(impact.movement, t)}`}</p>
       ) : null}
       {notice ? (
         <p className={NOTE}>
-          <span className="font-medium text-warning">Overlap. </span>
+          <span className="font-medium text-warning">
+            {t("impact.overlapLabel")}
+          </span>
           <span>{notice}</span>
         </p>
       ) : null}

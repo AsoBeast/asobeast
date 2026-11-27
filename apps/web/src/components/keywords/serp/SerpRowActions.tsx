@@ -1,6 +1,7 @@
 "use client";
 
 import type { SerpEntryItem, Store } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { TrackButton } from "@/components/competitors/TrackButton";
 import { StoreLinkButton } from "@/components/StoreLinkButton";
 import { useFocusGroupClaim } from "@/lib/focus-handoff";
@@ -22,6 +23,7 @@ export function SerpRowActions({
   role: SerpRole;
 }) {
   const trackable = role === "other";
+  const t = useTranslations("keywordInspector");
   const focusKey = serpTrackFocusKey(entry.storeAppId);
   const group = useFocusGroupClaim(focusKey, trackable);
 
@@ -38,7 +40,10 @@ export function SerpRowActions({
           id={appId}
           storeAppId={entry.storeAppId}
           title={entry.title}
-          label={`Track ${entry.title} at #${entry.position}`}
+          label={t("serp.row.trackLabel", {
+            title: entry.title,
+            position: entry.position,
+          })}
           focusKey={focusKey}
           className="max-sm:[&>span]:sr-only"
         />

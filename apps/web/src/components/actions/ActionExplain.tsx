@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { Sparkles } from "lucide-react";
 import Link from "next/link";
 import type { ActionItem } from "@asobeast/shared";
@@ -11,13 +12,14 @@ import {
 } from "@/components/ai/ai-allowance";
 import { Button } from "@/components/ui/button";
 import { explainAction } from "@/lib/api";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTimeInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import {
   actionAiStatusOptions,
   invalidateActionMutation,
   invalidateAiUsage,
 } from "@/lib/queries";
-import { ACTION_AI_DISCLAIMER } from "./action-copy";
+import { aiDisclaimer } from "./action-copy";
 import { useSingleFlight } from "@/lib/single-flight";
 
 function ExplanationNote({
@@ -29,19 +31,22 @@ function ExplanationNote({
   model: string | null;
   generatedAt: string | null;
 }) {
+  const t = useTranslations("actions");
+  const locale = useAppLocale();
   return (
     <div className="rounded-md bg-muted/50 p-3">
       <p className="text-dense">{explanation}</p>
       <p className="mt-2 text-caption text-muted-foreground">
-        {ACTION_AI_DISCLAIMER}
+        {aiDisclaimer(t)}
         {model ? ` ${model}` : ""}
-        {generatedAt ? ` · ${formatDateTime(generatedAt)}` : ""}
+        {generatedAt ? ` · ${formatDateTimeInLocale(generatedAt, locale)}` : ""}
       </p>
     </div>
   );
 }
 
 export function ActionExplain({ item }: { item: ActionItem }) {
+  const t = useTranslations("actions");
   const queryClient = useQueryClient();
   const { data: status } = useQuery(actionAiStatusOptions);
   const spent = useAiAllowanceSpent();
@@ -49,7 +54,7 @@ export function ActionExplain({ item }: { item: ActionItem }) {
 
   const explain = useMutation({
     mutationFn: () => explainAction(item.id),
-    onError: (error) => failAi(error, "Could not summarize this action"),
+    onError: (error) => failAi(error, t("explain.failed")),
     onSettled: () => {
       invalidateActionMutation(queryClient, item.scope.appId);
       invalidateAiUsage(queryClient);
@@ -73,7 +78,7 @@ export function ActionExplain({ item }: { item: ActionItem }) {
           onClick={() => explainOnce()}
         >
           <Sparkles aria-hidden className="size-4" />
-          {explanation ? "Regenerate summary" : "Explain"}
+          {explanation ? t("explain.regenerate") : t("explain.explain")}
         </Button>
         <AiCallsLeft />
         {item.category === "metadata" && (
@@ -81,7 +86,7 @@ export function ActionExplain({ item }: { item: ActionItem }) {
             href={`/apps/${item.scope.appId}/metadata`}
             className="text-dense underline-offset-4 hover:underline"
           >
-            Draft metadata with the assistant
+            {t("explain.draftMetadata")}
           </Link>
         )}
       </div>

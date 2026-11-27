@@ -1,4 +1,7 @@
+"use client";
+
 import type { ComponentProps, ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 
 type SubjectButtonProps = Omit<
@@ -12,11 +15,12 @@ export function SubjectButton({
   subject,
   ...props
 }: SubjectButtonProps) {
+  const t = useTranslations("ui");
   return (
     <Button variant="outline" size="sm" {...props}>
       {icon}
       {label}
-      <span className="sr-only">{` of ${subject}`}</span>
+      <span className="sr-only">{t("subjectOf", { subject })}</span>
     </Button>
   );
 }

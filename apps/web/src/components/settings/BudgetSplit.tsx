@@ -1,26 +1,33 @@
+import { useTranslations } from "next-intl";
 import type { DailyBudget } from "@asobeast/shared";
-import { formatNumber } from "@/lib/format";
+import { formatNumberInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 
 const PARTS = [
-  { key: "keywords", label: "Keywords", share: 100 },
-  { key: "categories", label: "Categories", share: 62 },
-  { key: "apps", label: "Apps", share: 38 },
-  { key: "reviews", label: "Reviews", share: 20 },
+  { key: "keywords", labelKey: "keywords", share: 100 },
+  { key: "categories", labelKey: "categories", share: 62 },
+  { key: "apps", labelKey: "apps", share: 38 },
+  { key: "reviews", labelKey: "reviews", share: 20 },
 ] as const;
 
 const tint = (share: number) =>
   `color-mix(in srgb, var(--brand-mark) ${share}%, var(--card))`;
 
 export function BudgetSplit({ budget }: { budget: DailyBudget }) {
+  const t = useTranslations("settings");
+  const locale = useAppLocale();
   const parts = PARTS.map((part) => ({ ...part, value: budget[part.key] }));
   const drawn = parts.filter((part) => part.value > 0);
 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <p className="text-label">Where the daily store requests go</p>
+        <p className="text-label">{t("capacity.heading")}</p>
         <p className="numeric text-caption text-faint-foreground">
-          {`${formatNumber(budget.total)} of ${formatNumber(budget.capacityPerDay)} a day`}
+          {t("capacity.perDay", {
+            used: budget.total,
+            limit: budget.capacityPerDay,
+          })}
         </p>
       </div>
       {drawn.length > 0 ? (
@@ -45,9 +52,9 @@ export function BudgetSplit({ budget }: { budget: DailyBudget }) {
               className="size-2 rounded-xs"
               style={{ background: tint(part.share) }}
             />
-            <dt>{part.label}</dt>
+            <dt>{t(`capacity.parts.${part.labelKey}`)}</dt>
             <dd className="numeric font-medium text-foreground">
-              {formatNumber(part.value)}
+              {formatNumberInLocale(part.value, locale)}
             </dd>
           </div>
         ))}

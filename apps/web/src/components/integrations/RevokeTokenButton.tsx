@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -26,7 +27,7 @@ import {
 import { invalidateApiTokenMutation } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 
-const REVOKE_CONTROL = 'button[aria-label^="Revoke "]';
+const REVOKE_CONTROL = 'button[data-action="revoke-token"]';
 
 const revokeSuccessor = (trigger: HTMLElement | null): HTMLElement | null => {
   const row = trigger?.closest("tr") ?? null;
@@ -34,6 +35,7 @@ const revokeSuccessor = (trigger: HTMLElement | null): HTMLElement | null => {
 };
 
 export function RevokeTokenButton({ id, name }: { id: string; name: string }) {
+  const t = useTranslations("integrations.tokens");
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -45,9 +47,9 @@ export function RevokeTokenButton({ id, name }: { id: string; name: string }) {
       invalidateApiTokenMutation(queryClient);
       handOff(revokeSuccessor(trigger.current));
       setOpen(false);
-      toast.success("Token revoked");
+      toast.success(t("revoked"));
     },
-    onError: () => toast.error("Could not revoke the token"),
+    onError: () => toast.error(t("revokeFailed")),
   });
   const revokeOnce = useSingleFlight(revoke);
 
@@ -61,23 +63,23 @@ export function RevokeTokenButton({ id, name }: { id: string; name: string }) {
           ref={trigger}
           variant="ghost"
           size="icon-sm"
-          aria-label={`Revoke ${name}`}
+          data-action="revoke-token"
+          aria-label={t("revokeAria", { name })}
         >
           <Trash2 />
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent onCloseAutoFocus={onCloseAutoFocus}>
         <AlertDialogHeader>
-          <AlertDialogTitle>Revoke this token?</AlertDialogTitle>
+          <AlertDialogTitle>{t("revokeTitle")}</AlertDialogTitle>
           <AlertDialogDescription>
-            Anything using {name} will stop authenticating immediately. This
-            cannot be undone.
+            {t("revokeBody", { name })}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <ConfirmActionFooter
           pending={revoke.isPending}
-          label="Revoke"
-          pendingLabel="Revoking…"
+          label={t("revoke")}
+          pendingLabel={t("revoking")}
           onConfirm={revokeOnce}
         />
       </AlertDialogContent>

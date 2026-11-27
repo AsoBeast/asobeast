@@ -3,6 +3,7 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery, useSuspenseInfiniteQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { isAlertFeedEvent } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -15,11 +16,11 @@ import {
   alertNewestOnVisitOptions,
 } from "@/lib/queries";
 import { cn } from "@/lib/utils";
+import { useAppLocale } from "@/lib/use-app-locale";
 import {
   AlertEventList,
   AlertFeedEnd,
   AlertFeedFooter,
-  WHAT_THE_FEED_READS,
 } from "./AlertEventList";
 import { AlertFeedEmpty } from "./AlertFeedStates";
 import {
@@ -37,12 +38,13 @@ import {
 const ALERT_SETTINGS = "/settings#alerts";
 
 function AlertFeedHeader({ lede }: { lede: FeedLede | null }) {
+  const t = useTranslations("alerts");
   return (
     <PageHeader
-      title="Alerts"
+      title={t("title")}
       controls={
         <Link href={ALERT_SETTINGS} className={cn(FOOTER_LINK, "text-dense")}>
-          Alert settings
+          {t("settings")}
         </Link>
       }
       lede={
@@ -89,6 +91,8 @@ function useVisitMark(): string | null {
 }
 
 export function AlertFeed() {
+  const t = useTranslations("alerts");
+  const locale = useAppLocale();
   const seenAt = useVisitMark();
   const { filters, query, setView } = useFeedFilters();
   const searchBox = useRef<HTMLDivElement>(null);
@@ -97,7 +101,10 @@ export function AlertFeed() {
     () => feed.data.pages.flatMap((page) => page.events),
     [feed.data.pages],
   );
-  const shown = useMemo(() => searchEvents(events, query), [events, query]);
+  const shown = useMemo(
+    () => searchEvents(events, query, locale, t),
+    [events, query, locale, t],
+  );
   const filtered = Object.keys(filters).length > 0 || query.trim() !== "";
   const clearAll = () => {
     void setView(CLEARED_ALERT_FEED);
@@ -111,7 +118,13 @@ export function AlertFeed() {
       <AlertFeedHeader
         lede={
           recorded || filtered
-            ? feedLede({ events, seenAt, hasMore: feed.hasNextPage })
+            ? feedLede({
+                events,
+                seenAt,
+                hasMore: feed.hasNextPage,
+                locale,
+                t,
+              })
             : null
         }
       />
@@ -131,13 +144,13 @@ export function AlertFeed() {
             }
             action={
               <Button variant="outline" onClick={clearAll}>
-                Clear filters
+                {t("clearFilters")}
               </Button>
             }
           />
         ) : (
           <AlertEventList
-            groups={dayGroups(shown, feed.dataUpdatedAt)}
+            groups={dayGroups(shown, feed.dataUpdatedAt, locale, t)}
             seenAt={seenAt}
           />
         )}
@@ -150,7 +163,7 @@ export function AlertFeed() {
           />
         ) : (
           <AlertFeedFooter>
-            <p>{WHAT_THE_FEED_READS}</p>
+            <p>{t("feedReads")}</p>
           </AlertFeedFooter>
         )}
       </Card>

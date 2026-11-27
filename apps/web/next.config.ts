@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
 import { withSentryConfig } from "@sentry/nextjs/config";
 import { REQUEST_BODY_LIMIT_BYTES } from "@asobeast/shared";
 import { version } from "./package.json";
@@ -49,10 +50,13 @@ const nextConfig: NextConfig = {
   },
 };
 
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
+const configured = withNextIntl(nextConfig);
+
 const { SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT } = process.env;
 
 export default SENTRY_AUTH_TOKEN && SENTRY_ORG && SENTRY_PROJECT
-  ? withSentryConfig(nextConfig, {
+  ? withSentryConfig(configured, {
       org: SENTRY_ORG,
       project: SENTRY_PROJECT,
       authToken: SENTRY_AUTH_TOKEN,
@@ -60,4 +64,4 @@ export default SENTRY_AUTH_TOKEN && SENTRY_ORG && SENTRY_PROJECT
       silent: !process.env.CI,
       telemetry: false,
     })
-  : nextConfig;
+  : configured;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueryState } from "nuqs";
+import { useTranslations } from "next-intl";
 import {
   DISCOVERY_STATES,
   type DiscoveryState,
@@ -10,9 +11,9 @@ import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { discoveryStateParser } from "@/lib/search-params";
 
 const STATE_LABELS: Record<DiscoveryState, string> = {
-  all: "All",
-  ranked: "Ranked",
-  opportunity: "Opportunities",
+  all: "all",
+  ranked: "ranked",
+  opportunity: "opportunity",
 };
 
 export function useDiscoveryState() {
@@ -28,6 +29,7 @@ export function DiscoveryStateTabs({
   counts: KeywordDiscoveryCounts;
 }) {
   const [state, setState] = useDiscoveryState();
+  const t = useTranslations("keywordInspector");
   return (
     <Tabs
       value={state}
@@ -36,10 +38,13 @@ export function DiscoveryStateTabs({
       }
       className="max-w-full min-w-0"
     >
-      <TabsList aria-label="Discovered keyword states" scrollable>
+      <TabsList aria-label={t("discovery.states.aria")} scrollable>
         {DISCOVERY_STATES.map((value) => (
           <TabsOption key={value} value={value}>
-            {`${STATE_LABELS[value]} ${counts[value]}`}
+            {t("discovery.states.count", {
+              label: t(`discovery.states.${STATE_LABELS[value]}`),
+              count: counts[value],
+            })}
           </TabsOption>
         ))}
       </TabsList>

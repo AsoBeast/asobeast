@@ -1,4 +1,7 @@
+"use client";
+
 import type { ChangeImpactMovement } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 const SEGMENTS: ReadonlyArray<{
@@ -26,6 +29,7 @@ export function ImpactMovementBar({
 }: {
   movement: ChangeImpactMovement;
 }) {
+  const t = useTranslations("changes");
   const shown = SEGMENTS.filter(({ id }) => movement[id] > 0);
   if (shown.length === 0) return null;
 
@@ -33,7 +37,7 @@ export function ImpactMovementBar({
     <span
       role="img"
       aria-label={shown
-        .map(({ id, word }) => `${movement[id]} ${word}`)
+        .map(({ id }) => `${movement[id]} ${t(`impact.movementWords.${id}`)}`)
         .join(", ")}
       className="flex h-1.5 w-full max-w-48 gap-0.5"
     >

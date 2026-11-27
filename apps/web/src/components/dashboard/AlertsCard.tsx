@@ -1,16 +1,18 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import type { AlertEventItem } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
+import { alertSentence } from "@/components/alerts/alert-sentence";
 import { alertEventHref } from "@/components/alerts/alert-event-href";
 import { AlertSizePill } from "@/components/alerts/AlertSizePill";
 import {
   failedRead,
   InlineQueryError,
 } from "@/components/layout/InlineQueryError";
-import { EVENT_LABELS } from "@/components/settings/alert-event-copy";
+import { eventLabel } from "@/components/settings/alert-event-copy";
 import {
   Card,
   CardAction,
@@ -29,22 +31,30 @@ import {
 import { FeedRowsSkeleton } from "./skeletons";
 import { PANEL_COUNT, PANEL_HEADER } from "@/components/layout/panel-classes";
 import { dayBefore } from "@/lib/utc-day";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { EmptyState } from "@/components/ui/empty-state";
 
 const WINDOW_DAYS = 7;
 const DAYS_BEFORE_TODAY = WINDOW_DAYS - 1;
 
 function AlertLine({ item, today }: { item: AlertEventItem; today: string }) {
+  const t = useTranslations("dashboard");
+  const eventT = useTranslations("notifications");
+  const locale = useAppLocale();
   const href = alertEventHref(item);
   const body = (
     <>
-      <FeedDay>{feedDayLabel(item.occurredAt.slice(0, 10), today)}</FeedDay>
+      <FeedDay>
+        {feedDayLabel(item.occurredAt.slice(0, 10), today, locale)}
+      </FeedDay>
       <span className="flex min-w-0 items-center gap-2">
         <AppIcon src={item.iconUrl} size={16} />
         <span className="line-clamp-2 min-w-0">
-          <span className="sr-only">{`${EVENT_LABELS[item.event]}: `}</span>
+          <span className="sr-only">
+            {t("alerts.eventPrefix", { event: eventLabel(item.event, eventT) })}
+          </span>
           <span dir="auto" className="wrap-anywhere">
-            {item.sentence}
+            {alertSentence(item, locale)}
           </span>
         </span>
       </span>
@@ -61,6 +71,7 @@ function AlertLine({ item, today }: { item: AlertEventItem; today: string }) {
 }
 
 function AlertList({ today }: { today: string }) {
+  const t = useTranslations("dashboard");
   const read = useQuery(
     alertRecentOptions(dayBefore(today, DAYS_BEFORE_TODAY)),
   );
@@ -68,20 +79,20 @@ function AlertList({ today }: { today: string }) {
   if (failedRead(read)) {
     return (
       <div className="px-2">
-        <InlineQueryError message="Alerts could not be loaded." read={read} />
+        <InlineQueryError message={t("alerts.loadError")} read={read} />
       </div>
     );
   }
   if (read.data === undefined) {
     return (
       <div role="status">
-        <span className="sr-only">Loading alerts</span>
+        <span className="sr-only">{t("alerts.loading")}</span>
         <FeedRowsSkeleton />
       </div>
     );
   }
   if (read.data.events.length === 0) {
-    return <EmptyState title="No alerts in the last 7 days." />;
+    return <EmptyState title={t("alerts.empty")} />;
   }
   return (
     <ul className="flex flex-col">
@@ -95,13 +106,14 @@ function AlertList({ today }: { today: string }) {
 }
 
 export function AlertsCard({ today }: { today: string }) {
+  const t = useTranslations("dashboard");
   return (
     <Card className="h-full">
       <CardHeader className={PANEL_HEADER}>
         <CardTitle asChild>
-          <h2>Alerts</h2>
+          <h2>{t("alerts.title")}</h2>
         </CardTitle>
-        <CardAction className={PANEL_COUNT}>Last 7 days</CardAction>
+        <CardAction className={PANEL_COUNT}>{t("alerts.last7Days")}</CardAction>
       </CardHeader>
       <CardContent className="px-2">
         <AlertList today={today} />

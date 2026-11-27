@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, type ReactNode, type RefObject } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { ChangeField, Store, TrackedKeywordItem } from "@asobeast/shared";
@@ -17,7 +18,8 @@ import {
 } from "@/components/charts/pivot";
 import { RangePicker } from "@/components/rankings/RangePicker";
 import { changesOptions, rankingsOptions } from "@/lib/queries";
-import { formatDayMonth } from "@/lib/format";
+import { formatDayMonthInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { queryMarket } from "@/lib/market";
 import {
   presetDays,
@@ -50,13 +52,16 @@ function plottedChanges(
 }
 
 function ChangesLine({ changes }: { changes: Map<string, ChangeField[]> }) {
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
   if (changes.size === 0) return null;
   const days = [...changes].map(
-    ([day, fields]) => `${formatDayMonth(day)} ${changedFieldsLabel(fields)}`,
+    ([day, fields]) =>
+      `${formatDayMonthInLocale(day, locale)} ${changedFieldsLabel(fields, t, locale)}`,
   );
   return (
     <p className="text-caption text-muted-foreground">
-      {`Listing changes: ${days.join(" · ")}`}
+      {t("history.listingChanges", { days: days.join(" · ") })}
     </p>
   );
 }
@@ -77,19 +82,20 @@ function PositionHistoryControls({
   onRange: (next: RangePreset) => void;
   image: ReactNode;
 }) {
+  const t = useTranslations("keywords");
   return (
     <div className="flex flex-wrap items-center justify-between gap-2">
       <RangePicker
         presets={RANGE_PRESETS}
         value={range}
         onChange={onRange}
-        label="Date range"
+        label={t("history.dateRange")}
       />
       <div className="flex items-center gap-1">
         {image}
         <Button asChild variant="link" size="sm" className="px-0">
           <Link href={rankingsHistoryHref(appId, keywordId, range)}>
-            Open in Rankings
+            {t("history.openRankings")}
           </Link>
         </Button>
       </div>
@@ -145,12 +151,13 @@ function PositionHistoryBody({
   view: HistoryView | null;
   chartRef: RefObject<HTMLDivElement | null>;
 }) {
+  const t = useTranslations("keywords");
   if (chart && view) {
     if (view.kind === "empty") {
       return (
         <ChartNotice
           height={CHART_HEIGHT.compact}
-          title={`No checks in the last ${presetDays(range)} days`}
+          title={t("history.noChecks", { days: presetDays(range) })}
           action={
             range === WIDEST_RANGE ? null : (
               <Button
@@ -158,7 +165,7 @@ function PositionHistoryBody({
                 variant="outline"
                 onClick={() => onRange(WIDEST_RANGE)}
               >
-                Show {presetDays(WIDEST_RANGE)} days
+                {t("history.showDays", { days: presetDays(WIDEST_RANGE) })}
               </Button>
             )
           }
@@ -179,7 +186,7 @@ function PositionHistoryBody({
           line={view.line}
           best={keyword.bestPosition ?? null}
           changes={changes}
-          label={`Position history of ${keyword.text}`}
+          label={t("position.historyOf", { keyword: keyword.text })}
           busy={read.isPlaceholderData}
           chartRef={chartRef}
         />
@@ -191,7 +198,7 @@ function PositionHistoryBody({
         <ChangesLine changes={changes} />
         {failedRead(changesRead) ? (
           <InlineQueryError
-            message="Could not load the listing changes."
+            message={t("history.changesFailed")}
             read={changesRead}
           />
         ) : null}
@@ -200,10 +207,7 @@ function PositionHistoryBody({
   }
   if (failedRead(read)) {
     return (
-      <InlineQueryError
-        message="Could not load the position history."
-        read={read}
-      />
+      <InlineQueryError message={t("history.positionsFailed")} read={read} />
     );
   }
   return (
@@ -231,6 +235,8 @@ export function PositionHistoryPanel({
   onRange: (next: RangePreset) => void;
   onShareOpenChange?: (open: boolean) => void;
 }) {
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
   const chartRef = useRef<HTMLDivElement>(null);
   const bounds = presetToRange(range);
   const read = useRankingsRead(appId, keyword.keywordId, bounds);
@@ -241,7 +247,7 @@ export function PositionHistoryPanel({
         bounds.to,
       )
     : null;
-  const view = chart ? historyView(chart, keyword) : null;
+  const view = chart ? historyView(chart, keyword, t, locale) : null;
   const copyable = chart !== null && view?.kind === "chart" && view.line;
 
   return (

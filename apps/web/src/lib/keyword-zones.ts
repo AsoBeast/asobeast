@@ -1,3 +1,7 @@
+import { createTranslator } from "next-intl";
+import enKeywords from "../../messages/en/keywords.json";
+import type { MessageTranslator } from "@/i18n/translator";
+
 export const KEYWORD_ZONES = [
   "quickWins",
   "worthFighting",
@@ -39,19 +43,25 @@ export const ZONE_THRESHOLD_MIN = 0;
 export const ZONE_THRESHOLD_MAX = 100;
 export const ZONE_THRESHOLDS_KEY = "asobeast.map.thresholds";
 
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywords",
+  messages: { keywords: enKeywords },
+});
+
 export const ZONE_LABELS: Record<KeywordZone, string> = {
-  quickWins: "Quick wins",
-  worthFighting: "Worth fighting for",
-  easyPickings: "Easy pickings",
-  lowPriority: "Low priority",
+  quickWins: enKeywords.zones.quickWins,
+  worthFighting: enKeywords.zones.worthFighting,
+  easyPickings: enKeywords.zones.easyPickings,
+  lowPriority: enKeywords.zones.lowPriority,
 };
 
-const ZONE_MEANINGS: Record<KeywordZone, string> = {
-  quickWins: "Easy enough to rank for and searched enough to matter.",
-  worthFighting: "Searched a lot, and hard to rank for.",
-  easyPickings: "Easy to rank for, but few people search for it.",
-  lowPriority: "Hard to rank for and little searched.",
-};
+export function zoneLabel(
+  zone: KeywordZone,
+  t: MessageTranslator = english,
+): string {
+  return t(`zones.${zone}`);
+}
 
 export function zoneOf(
   pair: ScorePair | null,
@@ -86,19 +96,23 @@ export function zoneCounts(
 export function zoneRule(
   zone: KeywordZone,
   thresholds: ZoneThresholds,
+  t: MessageTranslator = english,
 ): string {
   const popular = zone === "quickWins" || zone === "worthFighting";
   const easy = zone === "quickWins" || zone === "easyPickings";
-  const popularity = popular
-    ? `Popularity ${thresholds.popularity} or more`
-    : `Popularity below ${thresholds.popularity}`;
-  const difficulty = easy
-    ? `difficulty ${thresholds.difficulty} or less`
-    : `difficulty above ${thresholds.difficulty}`;
-  return `${popularity} and ${difficulty}`;
+  const popularity = t(popular ? "zones.rulePopular" : "zones.ruleUnpopular", {
+    threshold: thresholds.popularity,
+  });
+  const difficulty = t(easy ? "zones.ruleEasy" : "zones.ruleHard", {
+    threshold: thresholds.difficulty,
+  });
+  return t("zones.rule", { popularity, difficulty });
 }
 
-export const zoneMeaning = (zone: KeywordZone): string => ZONE_MEANINGS[zone];
+export const zoneMeaning = (
+  zone: KeywordZone,
+  t: MessageTranslator = english,
+): string => t(`zones.meanings.${zone}`);
 
 export const isZoneThreshold = (value: unknown): value is number =>
   typeof value === "number" &&

@@ -163,9 +163,7 @@ test("the page that is not found keeps the header and the theme control", async 
     "/",
   );
   await expect(header.getByRole("button")).toBeVisible();
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Page not found" }),
-  ).toBeVisible();
+  await expect(page.locator('[data-slot="not-found"]')).toBeVisible();
 });
 
 test("the account menu names the plan as text under the email", async ({
@@ -250,7 +248,7 @@ test.describe("toasts", () => {
       })
       .toBe(true);
 
-    const dismiss = failed.getByRole("button", { name: "Dismiss" });
+    const dismiss = failed.locator("[data-close-button]");
     await pill(page).focus();
     await dismiss.focus();
     await page.keyboard.press("Enter");

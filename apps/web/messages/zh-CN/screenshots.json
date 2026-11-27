@@ -1,0 +1,23 @@
+{
+  "title": "截图说明",
+  "count": "{total} 张中的 {captioned} 张有说明",
+  "emptyTitle": "尚未记录截图",
+  "emptyBody": "每次快照都会记录截图。刷新应用即可抓取。",
+  "aria": "按商店顺序排列的截图",
+  "alt": "截图 {position}",
+  "captured": "抓取于 {date}。",
+  "status": {
+    "pending": "读取中",
+    "read": "已读取说明",
+    "blank": "没有说明",
+    "failed": "无法读取",
+    "skipped": "未读取"
+  },
+  "summary": {
+    "unsupported": "Google Play 不会索引截图文字，因此 {product} 不会读取。",
+    "off": "此实例已关闭截图文字读取。",
+    "empty": "尚未记录截图。刷新应用即可抓取。",
+    "pending": "正在读取 {total} 张截图中的 {settled} 张。完成后此页面会更新。",
+    "settled": "{total} 张截图中有 {read} 张包含说明。"
+  }
+}

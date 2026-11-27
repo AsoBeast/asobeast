@@ -1,6 +1,7 @@
 "use client";
 
 import { Sparkles } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type {
   AppLocalizationItem,
   AppLocalizationStoreSync,
@@ -14,7 +15,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { useFocusClaim } from "@/lib/focus-handoff";
 import { ShareTrack } from "@/components/metadata/ShareTrack";
-import { localizationName } from "@/lib/localizations";
+import { localizationNameInLocale } from "@/lib/localizations";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { KeywordFieldEditor } from "./KeywordFieldEditor";
 import { OriginMark } from "./OriginMark";
 import { ReaderChips } from "./ReadRoleBadge";
@@ -45,7 +47,9 @@ export function LocalizationItem({
   editorKey?: string;
   onProposalSettled?: () => void;
 }) {
-  const name = localizationName(item.localization);
+  const t = useTranslations("localizations");
+  const locale = useAppLocale();
+  const name = localizationNameInLocale(item.localization, locale);
   const claimFocus = useFocusClaim(localizationFocusKey(item.localization));
 
   return (
@@ -85,11 +89,11 @@ export function LocalizationItem({
               <Button
                 variant="outline"
                 size="xs"
-                aria-label={`Draft with AI: ${name}`}
+                aria-label={t("item.draftAria", { name })}
                 onClick={() => onDraft(item.localization)}
               >
                 <Sparkles aria-hidden />
-                Draft with AI
+                {t("item.draft")}
               </Button>
             </div>
           ) : null}

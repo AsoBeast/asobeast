@@ -1,9 +1,12 @@
+import { createTranslator } from "next-intl";
 import {
   BACKEND_PROXY_PATH,
   UPGRADE_PATH,
   type ApiErrorEnvelope,
 } from "@asobeast/shared";
+import zhErrors from "../../../messages/zh-CN/errors.json";
 import { isPublicRoute, loginUrl } from "@/lib/auth-routes";
+import { isLocale, LOCALE_COOKIE_NAME } from "@/lib/locale";
 import { writeApiErrorDigest } from "./error-digest";
 import { redirectRefusedRender } from "./server-session";
 
@@ -44,8 +47,57 @@ export class ApiError extends Error {
   }
 }
 
+const chineseErrors = createTranslator({
+  locale: "zh-CN",
+  namespace: "errors",
+  messages: { errors: zhErrors },
+});
+
+function browserLocale(): "en" | "zh-CN" {
+  if (typeof document === "undefined") return "en";
+  const rendered = document.documentElement?.lang;
+  if (typeof rendered === "string" && isLocale(rendered)) return rendered;
+  const pair = document.cookie
+    .split(";")
+    .map((entry) => entry.trim().split("="))
+    .find(([name]) => name === LOCALE_COOKIE_NAME);
+  const value = pair?.[1];
+  return value !== undefined && isLocale(value) ? value : "en";
+}
+
+const localizeEnvelope = (
+  envelope: ApiErrorEnvelope,
+  fallback: string,
+): string => {
+  const locale = browserLocale();
+  if (locale === "en") return envelope.message;
+  const t = chineseErrors;
+  const retry = t("retryMoment");
+  switch (envelope.statusCode) {
+    case 401:
+      return t("unauthorizedBody");
+    case 402:
+      return t("paymentRequiredBody");
+    case 403:
+      return t("forbiddenBody");
+    case 404:
+      return t("notFoundBody");
+    case 408:
+    case 504:
+      return t("timeoutBody");
+    case 429:
+      return envelope.quota
+        ? t("planBudgetBody", { retry })
+        : t("tooManyBody", { retry });
+    default:
+      return envelope.statusCode >= 500 ? t("serverBody") : fallback;
+  }
+};
+
 export function apiErrorMessage(error: unknown, fallback: string): string {
-  return error instanceof ApiError ? error.envelope.message : fallback;
+  return error instanceof ApiError
+    ? localizeEnvelope(error.envelope, fallback)
+    : fallback;
 }
 
 const answered = (error: unknown, statusCode: number): boolean =>

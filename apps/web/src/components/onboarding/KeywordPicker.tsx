@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -14,7 +15,6 @@ import {
 } from "@/components/keywords/SuggestionList";
 import {
   NOTHING_TICKED,
-  TRACK_SELECTED_FAILED,
   trackingSelectedMessage,
   trackSelectedLabel,
   withTick,
@@ -30,7 +30,6 @@ import { useSingleFlight } from "@/lib/single-flight";
 import { activeKeywordCount } from "./setup-progress";
 import {
   isPickerStrategy,
-  PICKER_LABELS,
   PICKER_STRATEGIES,
   remainingToTarget,
   type PickerStrategy,
@@ -45,6 +44,8 @@ export function KeywordPicker({
   country: string;
   tracked: TrackedKeywordItem[];
 }) {
+  const t = useTranslations("setup");
+  const tKeywords = useTranslations("keywords");
   const queryClient = useQueryClient();
   const [strategy, setStrategy] = useState<PickerStrategy>("metadata");
   const [selected, setSelected] = useState(NOTHING_TICKED);
@@ -56,13 +57,13 @@ export function KeywordPicker({
     onSuccess: (_items, texts) => {
       invalidateKeywordMutation(queryClient, appId);
       setSelected(NOTHING_TICKED);
-      toast.success(trackingSelectedMessage(texts.length));
+      toast.success(trackingSelectedMessage(texts.length, tKeywords));
     },
     onError: (error) =>
       toast.error(
         error instanceof ApiError
           ? error.envelope.message
-          : TRACK_SELECTED_FAILED,
+          : tKeywords("suggestions.trackSelectedFailed"),
       ),
   });
   const trackOnce = useSingleFlight(track);
@@ -87,7 +88,7 @@ export function KeywordPicker({
         <TabsList scrollable>
           {PICKER_STRATEGIES.map((value) => (
             <TabsOption key={value} value={value}>
-              {PICKER_LABELS[value]}
+              {t(`keywordPicker.${value}`)}
             </TabsOption>
           ))}
         </TabsList>
@@ -108,11 +109,14 @@ export function KeywordPicker({
           }}
         >
           {track.isPending ? <Loader2 className="animate-spin" /> : <Plus />}
-          {trackSelectedLabel(selected.size)}
+          {trackSelectedLabel(selected.size, tKeywords)}
         </Button>
         {remaining > 0 ? (
           <span className="text-caption text-muted-foreground">
-            {`${remaining} more to reach ${SETUP_KEYWORD_TARGET}`}
+            {t("keywordPicker.remaining", {
+              count: remaining,
+              target: SETUP_KEYWORD_TARGET,
+            })}
           </span>
         ) : null}
       </div>

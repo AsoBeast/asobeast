@@ -169,7 +169,7 @@ describe("isDefaultThresholds", () => {
 
 describe("zoneMeaning", () => {
   it("gives each zone its own sentence without dash punctuation", () => {
-    const sentences = KEYWORD_ZONES.map(zoneMeaning);
+    const sentences = KEYWORD_ZONES.map((zone) => zoneMeaning(zone));
     expect(new Set(sentences).size).toBe(KEYWORD_ZONES.length);
     for (const sentence of sentences) {
       expect(sentence.length).toBeGreaterThan(0);

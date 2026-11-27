@@ -2,7 +2,12 @@ import { formatDate } from "../src/lib/format";
 import { type Locator, type Page } from "@playwright/test";
 import { openEmbedded, STRIPE_STUB } from "./embedded-checkout.mts";
 import { holdRequest } from "./held-request.mts";
-import { fulfillJson, seedPlan, seedSession } from "./plan-helpers.mts";
+import {
+  EN_BILLING,
+  fulfillJson,
+  seedPlan,
+  seedSession,
+} from "./plan-helpers.mts";
 import { layoutBox } from "./layout-box.mts";
 import { expect, test } from "./reporting.mts";
 import {
@@ -51,7 +56,7 @@ test.describe("the billing wall", () => {
     await expect(
       page.getByRole("heading", {
         level: 1,
-        name: "Start your 7 day free trial",
+        name: "Start your 7 days free trial",
       }),
     ).toBeVisible();
     const endsOn = formatDate(new Date(Date.now() + 7 * DAY_MS).toISOString());
@@ -60,7 +65,7 @@ test.describe("the billing wall", () => {
         `Pay $0 today. Your trial ends on ${endsOn}, then the plan you choose is charged, plus any VAT or sales tax, and renews until you cancel. Cancel any time from settings.`,
       ),
     ).toBeVisible();
-    for (const line of trustLines({ days: 7 }, utcClock())) {
+    for (const line of trustLines({ days: 7 }, utcClock(), EN_BILLING)) {
       await expect(page.getByText(line, { exact: true })).toBeVisible();
     }
     await expect(page.getByRole("tab", { name: "Monthly" })).toBeVisible();
@@ -459,7 +464,7 @@ test.describe("the billing wall", () => {
     await openBilling(page);
     const now = new Date();
     await page.clock.setFixedTime(now);
-    const lines = trustLines({ days: 7 }, utcClock(now));
+    const lines = trustLines({ days: 7 }, utcClock(now), EN_BILLING);
 
     await page.goto("/upgrade");
 
@@ -584,7 +589,7 @@ test.describe("the billing wall", () => {
     await openBilling(page);
     const now = new Date();
     await page.clock.setFixedTime(now);
-    const parts = trialBarParts({ days: 7 }, utcClock(now));
+    const parts = trialBarParts({ days: 7 }, utcClock(now), EN_BILLING);
 
     await page.goto("/upgrade");
 
@@ -592,15 +597,13 @@ test.describe("the billing wall", () => {
     const color = (locator: Locator) =>
       locator.evaluate((node) => getComputedStyle(node).color);
     const heading = await color(page.getByRole("heading", { level: 1 }));
-    expect(await color(strip.getByText(parts.free, { exact: true }))).toBe(
-      heading,
-    );
-    expect(await color(strip.getByText(parts.endsOn, { exact: true }))).toBe(
+    expect(await color(strip.getByText("100% free", { exact: true }))).toBe(
       heading,
     );
     expect(
-      await color(strip.getByText(parts.before.trim(), { exact: true })),
-    ).not.toBe(heading);
+      await color(strip.getByText(parts.values.endsOn, { exact: true })),
+    ).toBe(heading);
+    expect(await color(strip.locator("p"))).not.toBe(heading);
     const button = strip.getByRole("button", { name: TRIAL_BUTTON });
     expect((await layoutBox(button)).height).toBe(44);
   });
@@ -643,7 +646,7 @@ test.describe("the billing wall", () => {
       "indie",
       "month",
       { days: 7 },
-      utcClock(),
+      { ...EN_BILLING, clock: utcClock() },
     );
 
     await page.goto("/upgrade");
@@ -671,6 +674,7 @@ test.describe("the billing wall", () => {
       { days: 7 },
       "$10 per month plus any VAT or sales tax, renewing monthly until you cancel",
       utcClock(),
+      EN_BILLING,
     );
 
     await page.goto("/upgrade");
@@ -727,7 +731,7 @@ test.describe("the billing wall", () => {
       ).toBeVisible();
       await expect(
         page.getByRole("region", { name: "Your trial" }),
-      ).toContainText("Your 7 day trial is 100% free");
+      ).toContainText("Your 7 days trial is 100% free");
       await expect(
         page.locator('[data-mounted="cs_test_secret_price_indie_month"]'),
       ).toHaveAttribute("aria-label", "Stripe checkout for Indie, monthly");

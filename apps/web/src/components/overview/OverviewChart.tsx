@@ -2,6 +2,7 @@
 
 import { Suspense, useDeferredValue, type ReactNode } from "react";
 import { useQueryState } from "nuqs";
+import { useTranslations } from "next-intl";
 import { useKeywordScope } from "@/components/app-detail/use-market";
 import { ChartSkeleton } from "@/components/charts/ChartStates";
 import { CHART_HEIGHT } from "@/components/charts/theme";
@@ -16,7 +17,7 @@ import {
 } from "@/lib/search-params";
 import { RankBandsChart } from "./RankBandsChart";
 import { RatingTrendChart } from "./RatingTrendChart";
-import { OVERVIEW_VIEW_TITLES } from "./use-overview-view";
+import { overviewViewTitle } from "./use-overview-view";
 import { ShareOfVoiceChart } from "./ShareOfVoiceChart";
 import { VisibilityAreaChart } from "./VisibilityAreaChart";
 import { VisibilityShare } from "./VisibilityShare";
@@ -56,12 +57,16 @@ export function OverviewChart({
   view: VisibilityView;
 }) {
   const { country } = useKeywordScope(id);
+  const t = useTranslations("overview");
   const [range, setRange] = useQueryState("range", visibilityRangeParser);
   const shownRange = useDeferredValue(range);
   const shownView = useDeferredValue(view);
   const { help, scoped, Chart } = OVERVIEW_CHARTS[shownView];
-  const title = OVERVIEW_VIEW_TITLES[shownView];
-  const scope = scoped && country ? ` · ${country.toUpperCase()}` : "";
+  const title = overviewViewTitle(shownView, t);
+  const heading =
+    scoped && country
+      ? t("views.scoped", { title, country: country.toUpperCase() })
+      : title;
 
   return (
     <CardContent
@@ -70,7 +75,7 @@ export function OverviewChart({
     >
       <div className="flex min-h-8 flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="flex items-center gap-1 text-label font-medium text-muted-foreground">
-          <h2>{`${title}${scope}`}</h2>
+          <h2>{heading}</h2>
           {help}
         </div>
         <div className="flex flex-wrap items-center gap-2">

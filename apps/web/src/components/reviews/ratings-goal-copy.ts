@@ -1,5 +1,10 @@
+import { pluralize } from "@/lib/format";
 import type { Store } from "@asobeast/shared";
-import { formatNumber, formatRating, pluralize } from "@/lib/format";
+import { createTranslator } from "next-intl";
+import enReviews from "../../../messages/en/reviews.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import { formatNumberInLocale, formatRating } from "@/lib/format";
+import type { Locale } from "@/lib/locale";
 import {
   displayedTenths,
   MAX_GOAL_DAYS,
@@ -12,6 +17,12 @@ import {
   THIN_SAMPLE_COUNT,
 } from "@/lib/ratings-goal";
 
+const english = createTranslator({
+  locale: "en",
+  namespace: "reviews",
+  messages: { reviews: enReviews },
+});
+
 export const formatTenths = (tenths: number): string =>
   formatRating(tenths / 10);
 
@@ -19,10 +30,14 @@ export const TARGET_HINT = `Enter a target from ${formatTenths(MIN_TARGET_TENTHS
 
 export const DAYS_HINT = `Enter a whole number of days from ${MIN_GOAL_DAYS} to ${MAX_GOAL_DAYS}.`;
 
-function paceText(pace: GoalPace): string {
+function paceText(
+  pace: GoalPace,
+  t: MessageTranslator,
+  locale: Locale,
+): string {
   return pace.kind === "daily"
-    ? `about ${formatNumber(pace.ratings)} a day`
-    : `about one every ${formatNumber(pace.days)} days`;
+    ? t("goal.dailyPace", { count: formatNumberInLocale(pace.ratings, locale) })
+    : t("goal.intervalPace", { count: pace.days });
 }
 
 export function goalSentence(
@@ -30,35 +45,43 @@ export function goalSentence(
   targetTenths: number,
   average: number,
   days: number,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
 ): string {
   const target = formatTenths(targetTenths);
   if (goal.kind === "first") {
-    return `With no ratings yet, the first five-star rating shows ${formatTenths(MAX_TARGET_TENTHS)}.`;
+    return t("goal.first", { target: formatTenths(MAX_TARGET_TENTHS) });
   }
   if (goal.kind === "reached") {
     const shown = displayedTenths(average);
     return shown === targetTenths
-      ? `The store already shows ${target}.`
-      : `The store already shows ${formatTenths(shown)}, above ${target}.`;
+      ? t("goal.reached", { target })
+      : t("goal.reachedAbove", {
+          shown: formatTenths(shown),
+          target,
+        });
   }
   if (goal.ratings === 1) {
-    return `To show ${target} you need 1 more five-star rating.`;
+    return t("goal.oneMore", { target });
   }
-  return `To show ${target} you need ${formatNumber(goal.ratings)} more five-star ratings, ${paceText(goal.pace)} for ${pluralize(days, "day")}.`;
+  return t("goal.more", {
+    target,
+    count: formatNumberInLocale(goal.ratings, locale),
+    pace: paceText(goal.pace, t, locale),
+    days,
+  });
 }
 
-export function goalNotes(store: Store, count: number): string[] {
+export function goalNotes(
+  store: Store,
+  count: number,
+  t: MessageTranslator = english,
+): string[] {
   return [
-    "Assumes every new rating is five stars and that the store shows one decimal.",
-    ...(store === "GOOGLE_PLAY"
-      ? [
-          "Google Play gives recent ratings more weight, so read this as a rough guide.",
-        ]
-      : []),
+    t("goal.assumes"),
+    ...(store === "GOOGLE_PLAY" ? [t("goal.playWeight")] : []),
     ...(count < THIN_SAMPLE_COUNT
-      ? [
-          `With fewer than ${THIN_SAMPLE_COUNT} ratings the average moves a lot with each new one.`,
-        ]
+      ? [t("goal.thinSample", { count: THIN_SAMPLE_COUNT })]
       : []),
   ];
 }

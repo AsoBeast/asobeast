@@ -1,6 +1,7 @@
-import { CheckCircle2, LoaderCircle } from "lucide-react";
+"use client";
 
-const DEFAULT_STATES = { ready: "Ready", waiting: "Waiting" };
+import { CheckCircle2, LoaderCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export interface StageRowProps {
   label: string;
@@ -15,9 +16,14 @@ export function StageRow({
   ready,
   progress,
   detail,
-  states = DEFAULT_STATES,
+  states,
 }: StageRowProps) {
+  const t = useTranslations("jobs");
   const Icon = ready ? CheckCircle2 : LoaderCircle;
+  const state = states ?? {
+    ready: t("progress.states.ready"),
+    waiting: t("progress.states.waiting"),
+  };
 
   return (
     <li className="flex items-start gap-3">
@@ -33,7 +39,7 @@ export function StageRow({
         <p className="flex flex-wrap items-baseline gap-x-2 text-dense font-medium">
           <span>{label}</span>
           <span className="text-caption font-normal text-muted-foreground">
-            {`${ready ? states.ready : states.waiting}${progress ? ` · ${progress}` : ""}`}
+            {`${ready ? state.ready : state.waiting}${progress ? ` · ${progress}` : ""}`}
           </span>
         </p>
         <p className="text-dense text-muted-foreground">{detail}</p>

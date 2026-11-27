@@ -1,0 +1,39 @@
+{
+  "main": "主导航",
+  "workspace": "工作区",
+  "app": "应用",
+  "apps": "应用",
+  "dashboard": "仪表盘",
+  "actionCenter": "行动中心",
+  "alerts": "提醒",
+  "topCharts": "榜单",
+  "keywordInspector": "关键词检查器",
+  "integrations": "集成",
+  "settings": "设置",
+  "admin": "管理",
+  "documentation": "帮助文档",
+  "releaseNotes": "版本记录",
+  "whatsNew": "更新动态",
+  "openActions": "{count} 个待处理行动",
+  "appSections": {
+    "label": "应用分区",
+    "overview": "概览",
+    "actions": "行动",
+    "keywords": "关键词",
+    "rankings": "排名",
+    "competitors": "竞品",
+    "changes": "变更",
+    "reviews": "评论",
+    "audit": "审计",
+    "metadata": "元数据",
+    "setup": "设置"
+  },
+  "adminSections": {
+    "overview": "概览",
+    "conversion": "转化",
+    "capacity": "容量",
+    "workspaces": "工作区",
+    "users": "用户",
+    "apps": "应用"
+  }
+}

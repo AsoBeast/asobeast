@@ -1,12 +1,12 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { ListChecks } from "lucide-react";
 import Link from "next/link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { pluralize } from "@/lib/format";
 import { portfolioOptions } from "@/lib/queries";
 import {
   bannerApps,
@@ -24,6 +24,7 @@ export function OnboardingBanner() {
 }
 
 function SetupBanner({ app, more }: { app: AppInSetup; more: number }) {
+  const t = useTranslations("setup");
   const dismiss = useSetupDismissal(app.id);
 
   return (
@@ -34,26 +35,31 @@ function SetupBanner({ app, more }: { app: AppInSetup; more: number }) {
       <ListChecks />
       <AlertDescription className="flex flex-col gap-2">
         <span>
-          {progressSentence(app.name, app.setup)}
+          {progressSentence(app.name, app.setup, t)}
           {more > 0 ? (
             <>
               {" · "}
-              <Link href="/?view=cards" className="link-underline">
-                and {pluralize(more, "more app", "more apps")}
-              </Link>
+              {t.rich("banner.moreApps", {
+                count: more,
+                link: (chunks) => (
+                  <Link href="/?view=cards" className="link-underline">
+                    {chunks}
+                  </Link>
+                ),
+              })}
             </>
           ) : null}
         </span>
         <Progress
           value={progressPercent(app.setup)}
-          aria-label="Setup progress"
-          getValueLabel={() => progressValueLabel(app.setup)}
+          aria-label={t("banner.progressAria")}
+          getValueLabel={() => progressValueLabel(app.setup, t)}
           className="max-w-xs"
         />
       </AlertDescription>
       <div className="col-span-full flex flex-wrap gap-2 sm:col-span-1 sm:col-start-3 sm:row-span-2">
         <Button asChild size="sm">
-          <Link href={`/apps/${app.id}/setup`}>Resume setup</Link>
+          <Link href={`/apps/${app.id}/setup`}>{t("banner.resume")}</Link>
         </Button>
         <Button
           size="sm"
@@ -61,7 +67,7 @@ function SetupBanner({ app, more }: { app: AppInSetup; more: number }) {
           disabled={dismiss.isPending}
           onClick={() => dismiss.mutate()}
         >
-          Dismiss
+          {t("banner.dismiss")}
         </Button>
       </div>
     </Alert>

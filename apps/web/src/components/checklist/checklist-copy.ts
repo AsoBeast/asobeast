@@ -4,24 +4,29 @@ import {
   type WorkspaceChecklistItemId,
   type WorkspaceGoal,
 } from "@asobeast/shared";
+import type { MessageTranslator } from "@/i18n/translator";
 import { STORE_CONNECTIONS_SECTION_ID } from "@/lib/store-connection-copy";
 
 export interface ChecklistItemCopy {
-  description: string;
-  action: string;
-  doneText: string;
+  catalogKey: string;
+  titleKey: string;
+  descriptionKey: string;
+  actionKey: string;
+  doneTextKey: string;
   href: (appId: string | null) => string | null;
 }
 
 export interface ChecklistTip {
-  label: string;
+  labelKey: string;
+  values?: Record<string, string | number>;
   href: (appId: string | null) => string | null;
   external?: true;
 }
 
 export interface GoalCopy {
-  label: string;
-  description: string;
+  catalogKey: string;
+  labelKey: string;
+  descriptionKey: string;
 }
 
 const appPage =
@@ -39,81 +44,74 @@ const REVIEWS_NEEDING_REPLY = appPage(
 const SETTINGS_ALERTS = "/settings#alerts";
 const API_AND_MCP = `${INTEGRATIONS_PATH}#api-and-mcp`;
 
+const item = (
+  catalogKey: string,
+  href: (appId: string | null) => string | null,
+): ChecklistItemCopy => ({
+  catalogKey,
+  titleKey: `checklist.items.${catalogKey}.title`,
+  descriptionKey: `checklist.items.${catalogKey}.description`,
+  actionKey: `checklist.items.${catalogKey}.action`,
+  doneTextKey: `checklist.items.${catalogKey}.doneText`,
+  href,
+});
+
 export const ITEM_COPY: Record<WorkspaceChecklistItemId, ChecklistItemCopy> = {
-  import_app: {
-    description:
-      "Search the store by name or paste its URL. The listing, the keywords and the first positions arrive within minutes.",
-    action: "Import an app",
-    doneText: "App imported",
-    href: fixed("/"),
-  },
-  second_market: {
-    description:
-      "Rankings differ by storefront. Track your keywords in another market to see where you stand there.",
-    action: "Add a market",
-    doneText: "Tracking in two markets",
-    href: KEYWORDS,
-  },
-  add_competitor: {
-    description:
-      "See your positions next to an app you compete with, on every keyword you track.",
-    action: "Add a competitor",
-    doneText: "Competitor added",
-    href: appPage("competitors"),
-  },
-  connect_console: {
-    description:
-      "Connect App Store Connect or the Google Play Console to see listing visits and downloads beside your rankings.",
-    action: "Connect a console",
-    doneText: "Console connected",
-    href: fixed(`${INTEGRATIONS_PATH}#${STORE_CONNECTIONS_SECTION_ID}`),
-  },
-  connect_ai_client: {
-    description:
-      "Create a personal token and use it from Claude, Cursor or another MCP client.",
-    action: "Create a token",
-    doneText: "AI client connected",
-    href: fixed(API_AND_MCP),
-  },
-  turn_on_alert: {
-    description:
-      "Get an email or a webhook when something changes in your rankings, your listing or your reviews.",
-    action: "Set up an alert",
-    doneText: "Alerts are on",
-    href: fixed(SETTINGS_ALERTS),
-  },
-  reply_to_review: {
-    description:
-      "Write a reply or let AI draft one, keep it and post it from the reviews page.",
-    action: "Open reviews",
-    doneText: "Reply marked",
-    href: REVIEWS_NEEDING_REPLY,
-  },
-  fill_keyword_field: {
-    description:
-      "Write the private 100 character iOS keyword field and see which tracked keywords it covers.",
-    action: "Open metadata",
-    doneText: "Keyword field saved",
-    href: METADATA,
-  },
+  import_app: item("importApp", fixed("/")),
+  second_market: item("secondMarket", KEYWORDS),
+  add_competitor: item("addCompetitor", appPage("competitors")),
+  connect_console: item(
+    "connectConsole",
+    fixed(`${INTEGRATIONS_PATH}#${STORE_CONNECTIONS_SECTION_ID}`),
+  ),
+  connect_ai_client: item("connectAiClient", fixed(API_AND_MCP)),
+  turn_on_alert: item("turnOnAlert", fixed(SETTINGS_ALERTS)),
+  reply_to_review: item("replyToReview", REVIEWS_NEEDING_REPLY),
+  fill_keyword_field: item("fillKeywordField", METADATA),
 };
+
+export function checklistItemCopy(
+  id: WorkspaceChecklistItemId,
+  translator: MessageTranslator,
+) {
+  const copy = ITEM_COPY[id];
+  return {
+    title: translator(copy.titleKey),
+    description: translator(copy.descriptionKey),
+    action: translator(copy.actionKey),
+    doneText: translator(copy.doneTextKey),
+    href: copy.href,
+  };
+}
 
 export const GOAL_COPY: Record<WorkspaceGoal, GoalCopy> = {
   improve_rankings: {
-    label: "Improve my rankings",
-    description:
-      "Fill the keyword field, add competitors and watch your positions move.",
+    catalogKey: "improveRankings",
+    labelKey: "checklist.goals.improveRankings.label",
+    descriptionKey: "checklist.goals.improveRankings.description",
   },
   research_idea: {
-    label: "Research an idea",
-    description:
-      "Compare competitors and markets before you commit to keywords.",
+    catalogKey: "researchIdea",
+    labelKey: "checklist.goals.researchIdea.label",
+    descriptionKey: "checklist.goals.researchIdea.description",
   },
   use_with_ai: {
-    label: "Use AsoBeast from my AI",
-    description: "Connect an MCP client and let your agent read your data.",
+    catalogKey: "useWithAi",
+    labelKey: "checklist.goals.useWithAi.label",
+    descriptionKey: "checklist.goals.useWithAi.description",
   },
 };
+
+export function checklistGoalCopy(
+  goal: WorkspaceGoal,
+  translator: MessageTranslator,
+) {
+  const copy = GOAL_COPY[goal];
+  return {
+    label: translator(copy.labelKey),
+    description: translator(copy.descriptionKey),
+  };
+}
 
 export const ITEM_TIPS: Record<
   WorkspaceChecklistItemId,
@@ -122,71 +120,67 @@ export const ITEM_TIPS: Record<
   import_app: [],
   second_market: [
     {
-      label: "Search a keyword exactly by putting it in quotes",
+      labelKey: "checklist.tips.secondMarket.quotes",
       href: KEYWORDS,
     },
     {
-      label: "Paste a comma or newline list into Add keywords",
+      labelKey: "checklist.tips.secondMarket.pasteList",
       href: KEYWORDS,
     },
     {
-      label: "See how many words each market's search reads",
+      labelKey: "checklist.tips.secondMarket.searchWords",
       href: KEYWORDS,
     },
     {
-      label:
-        "Open a score to see where its popularity came from and how sure it is",
+      labelKey: "checklist.tips.secondMarket.score",
       href: KEYWORDS,
     },
   ],
   add_competitor: [
     {
-      label:
-        "Competitor cards show each app's rating, rating count and version",
+      labelKey: "checklist.tips.addCompetitor.rating",
       href: appPage("competitors"),
     },
   ],
   connect_console: [],
   connect_ai_client: [
     {
-      label: "See when each token was last used and how many requests it made",
+      labelKey: "checklist.tips.connectAiClient.usage",
       href: fixed(API_AND_MCP),
     },
   ],
   turn_on_alert: [
     {
-      label: `Choose from ${WEBHOOK_EVENTS.length} typed webhook events, rank gains included`,
+      labelKey: "checklist.tips.turnOnAlert.events",
+      values: { count: WEBHOOK_EVENTS.length },
       href: fixed(SETTINGS_ALERTS),
     },
     {
-      label:
-        "Keywords that cost requests and never rank come back as actions to retire them",
+      labelKey: "checklist.tips.turnOnAlert.retire",
       href: appPage("actions"),
     },
   ],
   reply_to_review: [
     {
-      label: "Drafts are written in the language of the review",
+      labelKey: "checklist.tips.replyToReview.language",
       href: REVIEWS_NEEDING_REPLY,
     },
   ],
   fill_keyword_field: [
     {
-      label:
-        "Add a localization your app ships to get more keyword field characters",
+      labelKey: "checklist.tips.fillKeywordField.localization",
       href: METADATA,
     },
     {
-      label: "Check every field against the store's limits and guidelines",
+      labelKey: "checklist.tips.fillKeywordField.limits",
       href: METADATA,
     },
     {
-      label:
-        "Pick from the newest App Store localizations, including Bangla, Tamil, Telugu and Urdu",
+      labelKey: "checklist.tips.fillKeywordField.newest",
       href: METADATA,
     },
     {
-      label: "Chinese, Japanese and Thai keywords are split into words",
+      labelKey: "checklist.tips.fillKeywordField.words",
       href: fixed(
         "https://docs.asobeast.com/concepts/stores#how-are-auto-tracked-keywords-chosen",
       ),
@@ -194,3 +188,14 @@ export const ITEM_TIPS: Record<
     },
   ],
 };
+
+export function checklistTips(
+  id: WorkspaceChecklistItemId,
+  translator: MessageTranslator,
+) {
+  return ITEM_TIPS[id].map((tip) => ({
+    label: translator(tip.labelKey, tip.values),
+    href: tip.href,
+    external: tip.external,
+  }));
+}

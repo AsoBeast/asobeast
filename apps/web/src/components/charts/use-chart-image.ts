@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { downloadBlob } from "@/lib/download-blob";
 import { browserPngWriter, copyOrDownload } from "@/lib/chart-image/clipboard";
@@ -15,40 +16,49 @@ export interface ChartImageJob extends ChartImageRequest {
 }
 
 export type RenderImage = () => Promise<Blob>;
+type Translator = ReturnType<typeof useTranslations>;
 
-async function copyImage(filename: string, render: RenderImage) {
+async function copyImage(filename: string, render: RenderImage, t: Translator) {
   const outcome = await copyOrDownload(render(), browserPngWriter(), (blob) =>
     downloadBlob(filename, blob),
   );
-  if (outcome === "copied") toast.success("Chart copied");
-  else toast.info("Clipboard unavailable, downloaded instead");
+  if (outcome === "copied") toast.success(t("copied"));
+  else toast.info(t("clipboardDownloaded"));
 }
 
-async function downloadImage(filename: string, render: RenderImage) {
+async function downloadImage(
+  filename: string,
+  render: RenderImage,
+  t: Translator,
+) {
   downloadBlob(filename, await render());
-  toast.success("Chart downloaded");
+  toast.success(t("downloaded"));
 }
 
 export function useImageJob() {
+  const t = useTranslations("charts");
   const [pending, setPending] = useState(false);
   const run = useSharedFlight(
-    useCallback(async (task: () => Promise<void>) => {
-      setPending(true);
-      try {
-        await task();
-      } catch {
-        toast.error("Could not draw the chart image");
-      } finally {
-        setPending(false);
-      }
-    }, []),
+    useCallback(
+      async (task: () => Promise<void>) => {
+        setPending(true);
+        try {
+          await task();
+        } catch {
+          toast.error(t("drawFailed"));
+        } finally {
+          setPending(false);
+        }
+      },
+      [t],
+    ),
   );
   return {
     pending,
     copy: (filename: string, render: RenderImage) =>
-      void run(() => copyImage(filename, render)),
+      void run(() => copyImage(filename, render, t)),
     download: (filename: string, render: RenderImage) =>
-      void run(() => downloadImage(filename, render)),
+      void run(() => downloadImage(filename, render, t)),
   };
 }
 

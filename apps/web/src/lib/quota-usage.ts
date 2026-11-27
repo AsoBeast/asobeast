@@ -1,5 +1,7 @@
 import type { BudgetQuota, QuotaUsage } from "@asobeast/shared";
-import { formatNumber, formatPlanLimit } from "@/lib/format";
+import type { TranslationContext } from "@/i18n/translator";
+
+export type QuotaCounted = "tracked" | "followed" | "used";
 
 export function hasNoCapacity({ limit }: QuotaUsage): boolean {
   return limit === 0;
@@ -7,12 +9,22 @@ export function hasNoCapacity({ limit }: QuotaUsage): boolean {
 
 export function formatQuotaUsage(
   usage: QuotaUsage,
-  counted = "tracked",
+  counted: QuotaCounted,
+  context: TranslationContext,
 ): string {
   if (hasNoCapacity(usage)) {
-    return `${formatNumber(usage.used)} ${counted}, none included`;
+    return context.translator("quota.noneIncluded", {
+      used: usage.used,
+      counted,
+    });
   }
-  return `${formatNumber(usage.used)} of ${formatPlanLimit(usage.limit)}`;
+  return context.translator(
+    usage.limit === null ? "quota.unlimited" : "quota.of",
+    {
+      used: usage.used,
+      ...(usage.limit === null ? {} : { limit: usage.limit }),
+    },
+  );
 }
 
 export function keywordLimitExceededSince(

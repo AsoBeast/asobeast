@@ -1,0 +1,104 @@
+{
+  "untitled": "Untitled app",
+  "header": {
+    "homeStorefront": "Home storefront {country}",
+    "storePage": "Store page"
+  },
+  "link": {
+    "options": "Linked app options",
+    "unlink": "Unlink",
+    "unlinkTitle": "Unlink store listing?",
+    "unlinkDescription": "<app>{name}</app> will no longer appear as this app’s linked listing. Keywords and rankings are unaffected.",
+    "counterpart": "The counterpart app",
+    "linkListing": "Link store listing",
+    "linkDescription": "Pair this app with its {store} listing to switch between them from the header.",
+    "loadingApps": "Loading apps…",
+    "noCandidates": "No unlinked {store} apps to link. Import one first.",
+    "linked": "Linked store listing",
+    "unlinked": "Unlinked store listing",
+    "linkFailed": "Link failed",
+    "unlinkFailed": "Unlink failed"
+  },
+  "switchers": {
+    "localization": "Localization",
+    "defaultLocalization": "{name} · default",
+    "market": "Market",
+    "listingMarket": "Listing market",
+    "allMarkets": "All markets"
+  },
+  "notices": {
+    "notInSearchTitle": "Not listed in iPhone search",
+    "notInSearchBody": "This app is not available on iPhone, and AsoBeast reads iPhone search, so its keywords are never found within the checked depth and its visibility stays at 0."
+  },
+  "print": {
+    "report": "Print report"
+  },
+  "report": {
+    "title": "{page} report",
+    "homeStorefront": "Home storefront: {country}",
+    "range": "{label}: {range}",
+    "printed": "Printed {date} (UTC) from {product}"
+  },
+  "refresh": {
+    "action": "Refresh",
+    "listing": "Refresh {country} listing",
+    "failed": "Refresh failed",
+    "staleMarket": "this market",
+    "staleReason": "No keywords are tracked in {market} any more, so its listing is no longer refreshed."
+  },
+  "delisted": {
+    "title": "No longer listed on {store}",
+    "since": "Since {date}, {store} answers that it has no app {id} in {country}.",
+    "history": "The stored history stays, and every daily run checks again, so this notice clears on the first capture that finds the app.",
+    "checkStore": "Open the store page to check. If the app moved to a new store id, import it again from its new link.",
+    "goneApp": "If it is gone for good, delete it from the dashboard.",
+    "goneCompetitor": "If it is gone for good, remove it from the competitors of the app that tracks it."
+  },
+  "snapshot": {
+    "refreshed": "Snapshot refreshed",
+    "refreshedMarket": "Snapshot refreshed in {country}",
+    "changed": "{count, plural, one {# field} other {# fields}} changed since the last snapshot.",
+    "unchanged": "The store listing is unchanged since the last snapshot.",
+    "caption": "Store listing fields that changed since the last snapshot, with before and after values.",
+    "field": "Field",
+    "before": "Before",
+    "after": "After",
+    "noChanges": "No changes detected.",
+    "free": "Free",
+    "characters": "{count} chars",
+    "iconUpdated": "Icon updated",
+    "fields": {
+      "title": "Title",
+      "subtitle": "Subtitle",
+      "summary": "Short description",
+      "description": "Description",
+      "version": "Version",
+      "price": "Price",
+      "screenshots": "Screenshots",
+      "screenshotImages": "Screenshot images",
+      "screenshotCaptions": "Screenshot captions",
+      "icon": "Icon",
+      "whatsNew": "What's new",
+      "inAppEvents": "In-app events",
+      "featuring": "Featuring",
+      "editorsChoice": "Editors' Choice",
+      "ratingAvg": "Rating",
+      "ratingCount": "Ratings",
+      "installs": "Installs"
+    },
+    "storeSummary": {
+      "eventAddedOne": "Event added: {name}",
+      "eventAddedMany": "{count, plural, other {# events added}}",
+      "eventRemovedOne": "Event removed: {name}",
+      "eventRemovedMany": "{count, plural, other {# events removed}}",
+      "storyAddedOne": "Featured story added: {name}",
+      "storyAddedMany": "{count, plural, other {# featured stories added}}",
+      "storyRemovedOne": "Featured story removed: {name}",
+      "storyRemovedMany": "{count, plural, other {# featured stories removed}}",
+      "editorsChoiceAdded": "Editors' Choice badge added",
+      "editorsChoiceRemoved": "Editors' Choice badge removed",
+      "eventFallback": "In-app event",
+      "storyFallback": "Featured story"
+    }
+  }
+}

@@ -1,4 +1,7 @@
+"use client";
+
 import type { AuditCheckStatus, AuditFactorResult } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { PANEL_COUNT, PANEL_HEADER } from "@/components/layout/panel-classes";
 import {
   Card,
@@ -8,9 +11,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { pluralize } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { STATUS_LABEL } from "./audit-copy";
+import type { MessageTranslator } from "@/i18n/translator";
 import { CHECK_STATUSES, checkSummary, type CheckCounts } from "./check-counts";
 import { STATUS_ICON, STATUS_TONE } from "./status-icons";
 
@@ -21,19 +23,13 @@ const SEGMENT: Record<AuditCheckStatus, string> = {
   unanswered: "bg-border",
 };
 
-const COUNT_WORD: Record<AuditCheckStatus, string> = {
-  pass: "pass",
-  warn: "need work",
-  fail: "fail",
-  unanswered: "not scored",
-};
-
-const countsText = (counts: CheckCounts): string =>
+const countsText = (counts: CheckCounts, t: MessageTranslator): string =>
   CHECK_STATUSES.map(
-    (status) => `${counts[status]} ${COUNT_WORD[status]}`,
+    (status) => `${counts[status]} ${t(`checkCountWord.${status}`)}`,
   ).join(", ");
 
 export function AuditChecks({ factors }: { factors: AuditFactorResult[] }) {
+  const t = useTranslations("audit");
   const { counts, total, factors: factorCount } = checkSummary(factors);
   if (total === 0) return null;
 
@@ -41,16 +37,16 @@ export function AuditChecks({ factors }: { factors: AuditFactorResult[] }) {
     <Card>
       <CardHeader className={PANEL_HEADER}>
         <CardTitle asChild>
-          <h2>Checks</h2>
+          <h2>{t("checks")}</h2>
         </CardTitle>
         <CardAction className={cn(PANEL_COUNT, "numeric")}>
-          {`${counts.pass} of ${total} pass`}
+          {t("passCount", { pass: counts.pass, total })}
         </CardAction>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
         <div
           role="img"
-          aria-label={`Checks by result: ${countsText(counts)}`}
+          aria-label={t("checksByResult", { counts: countsText(counts, t) })}
           className="flex h-1.5 gap-0.5"
         >
           {CHECK_STATUSES.filter((status) => counts[status] > 0).map(
@@ -75,7 +71,7 @@ export function AuditChecks({ factors }: { factors: AuditFactorResult[] }) {
                   aria-hidden
                   className={cn("size-4", STATUS_TONE[status])}
                 />
-                <span>{STATUS_LABEL[status]}</span>
+                <span>{t(`statuses.${status}`)}</span>
                 <span className="numeric ml-auto font-medium">
                   {counts[status]}
                 </span>
@@ -85,7 +81,9 @@ export function AuditChecks({ factors }: { factors: AuditFactorResult[] }) {
         </ul>
       </CardContent>
       <CardFooter>
-        <span>{`${pluralize(total, "check")} across ${pluralize(factorCount, "factor")}`}</span>
+        <span>
+          {t("checksAcross", { checks: total, factors: factorCount })}
+        </span>
       </CardFooter>
     </Card>
   );

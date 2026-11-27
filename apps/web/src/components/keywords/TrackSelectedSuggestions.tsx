@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,6 @@ import { addKeywords, ApiError } from "@/lib/api";
 import { invalidateKeywordMutation } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 import {
-  TRACK_SELECTED_FAILED,
   trackingSelectedMessage,
   trackSelectedLabel,
 } from "./suggestion-selection";
@@ -23,6 +23,7 @@ export function useTrackSelected(
   country: string,
   onTracked: (texts: readonly string[], scope: string) => void,
 ) {
+  const t = useTranslations("keywords");
   const queryClient = useQueryClient();
   const track = useMutation({
     mutationFn: ({ texts }: TrackSelectedRequest) =>
@@ -30,13 +31,13 @@ export function useTrackSelected(
     onSuccess: (_items, { texts, scope }) => {
       invalidateKeywordMutation(queryClient, id);
       onTracked(texts, scope);
-      toast.success(trackingSelectedMessage(texts.length));
+      toast.success(trackingSelectedMessage(texts.length, t));
     },
     onError: (error) =>
       toast.error(
         error instanceof ApiError
           ? error.envelope.message
-          : TRACK_SELECTED_FAILED,
+          : t("suggestions.trackSelectedFailed"),
       ),
   });
   return {
@@ -55,6 +56,7 @@ export function TrackSelectedButton({
   busy: boolean;
   onTrack: () => void;
 }) {
+  const t = useTranslations("keywords");
   return (
     <Button
       variant="outline"
@@ -65,7 +67,7 @@ export function TrackSelectedButton({
       }}
     >
       {busy ? <Loader2 className="animate-spin" /> : <Plus />}
-      {trackSelectedLabel(count)}
+      {trackSelectedLabel(count, t)}
     </Button>
   );
 }

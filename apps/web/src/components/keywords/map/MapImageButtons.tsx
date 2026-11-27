@@ -1,12 +1,14 @@
 "use client";
 
 import type { RefObject } from "react";
+import { useTranslations } from "next-intl";
 import type { Store } from "@asobeast/shared";
 import { ChartImageButtons } from "@/components/charts/ChartImageButtons";
 import { buildChartCaption } from "@/lib/chart-image/caption";
 import { chartImageFilename } from "@/lib/chart-image/filename";
 import { appDetailOptions } from "@/lib/queries";
 import { useCachedQueryData } from "@/lib/use-cached-query-data";
+import { useAppLocale } from "@/lib/use-app-locale";
 
 export function MapImageButtons({
   chartRef,
@@ -22,6 +24,8 @@ export function MapImageButtons({
   today: string;
 }) {
   const detail = useCachedQueryData(appDetailOptions(appId).queryKey);
+  const t = useTranslations("keywordInspector");
+  const locale = useAppLocale();
   const makeJob = () => {
     const container = chartRef.current;
     if (!container) return null;
@@ -35,17 +39,22 @@ export function MapImageButtons({
         from: today,
         to: today,
       }),
-      caption: buildChartCaption({
-        title: "Keyword opportunity map",
-        appName,
-        storeAppId: detail?.storeAppId ?? appId,
-        store,
-        countries: [market],
-        from: today,
-        to: today,
-        series: [],
-      }),
+      caption: buildChartCaption(
+        {
+          title: t("map.image.title"),
+          appName,
+          storeAppId: detail?.storeAppId ?? appId,
+          store,
+          countries: [market],
+          from: today,
+          to: today,
+          series: [],
+        },
+        locale,
+      ),
     };
   };
-  return <ChartImageButtons subject="the opportunity map" makeJob={makeJob} />;
+  return (
+    <ChartImageButtons subject={t("map.image.subject")} makeJob={makeJob} />
+  );
 }

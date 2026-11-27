@@ -4,6 +4,7 @@ import {
   type StoreSearchResult,
 } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
+import { translationContext } from "@/test/translation-context";
 import { ApiError } from "@/lib/api";
 import {
   classifyInput,
@@ -114,30 +115,22 @@ describe("enterAction", () => {
 });
 
 describe("searchErrorText", () => {
-  it("passes a spent allowance through, because it names the wait", () => {
-    const message =
-      "Store lookup limit reached: the indie plan allows 60 requests per hour.";
+  it.each([400, 429, 500, 502])(
+    "preserves the API-provided %i message verbatim",
+    (statusCode) => {
+      const message = `api detail ${statusCode}`;
 
-    expect(searchErrorText(apiError(429, message))).toBe(message);
-  });
+      expect(searchErrorText(apiError(statusCode, message))).toBe(message);
+    },
+  );
 
-  it("says the store did not answer on a bad gateway", () => {
-    expect(searchErrorText(apiError(502))).toBe(
-      "The store did not answer. Try again in a moment.",
-    );
-  });
+  it("uses localized copy only for non-API failures", () => {
+    const t = translationContext("zh-CN", "apps").translator;
 
-  it("falls back to a plain sentence for anything else", () => {
-    expect(searchErrorText(apiError(500))).toBe("Could not search the store.");
     expect(searchErrorText(new Error("offline"))).toBe(
       "Could not search the store.",
     );
-  });
-
-  it("says the name cannot be searched when the api refuses it", () => {
-    expect(searchErrorText(apiError(400))).toBe(
-      "This name cannot be searched. Change it and try again.",
-    );
+    expect(searchErrorText(new Error("offline"), t)).toBe("无法搜索应用商店。");
   });
 });
 
@@ -195,5 +188,22 @@ describe("nameTooLongText", () => {
   it("is not searchable once it is over the limit", () => {
     expect(isSearchable(nameOf(STORE_SEARCH_QUERY_MAX_LENGTH))).toBe(true);
     expect(isSearchable(nameOf(STORE_SEARCH_QUERY_MAX_LENGTH + 1))).toBe(false);
+  });
+});
+
+describe("Simplified Chinese app search", () => {
+  const t = translationContext("zh-CN", "apps").translator;
+
+  it("localizes validation and preserves API messages in Chinese", () => {
+    expect(nameTooLongText(classifyInput("a".repeat(81)), t)).toBe(
+      "搜索最多 80 个字符。此名称有 81 个。",
+    );
+    expect(searchErrorText(apiError(400, "Name refused by API"), t)).toBe(
+      "Name refused by API",
+    );
+    expect(searchErrorText(apiError(502, "Store detail from API"), t)).toBe(
+      "Store detail from API",
+    );
+    expect(searchErrorText(new Error("offline"), t)).toBe("无法搜索应用商店。");
   });
 });

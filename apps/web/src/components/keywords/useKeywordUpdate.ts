@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import type {
   KeywordUpdateRequest,
@@ -10,6 +11,7 @@ import { answeredKeyword, optimisticKeyword } from "./keyword-class";
 import { rollbackKeywordUpdate } from "./keyword-rollback";
 
 export function useKeywordUpdate(appId: string, keyword: TrackedKeywordItem) {
+  const t = useTranslations("keywords");
   const queryClient = useQueryClient();
   const updateRow = (change: (row: TrackedKeywordItem) => TrackedKeywordItem) =>
     queryClient.setQueriesData<TrackedKeywordItem[]>(
@@ -45,7 +47,7 @@ export function useKeywordUpdate(appId: string, keyword: TrackedKeywordItem) {
           rollbackKeywordUpdate(current, data, keyword.keywordId, update),
         );
       });
-      toast.error(`Could not update ${keyword.text}`);
+      toast.error(t("rowActions.updateFailed", { keyword: keyword.text }));
     },
     onSettled: () => invalidateKeywordMutation(queryClient, appId),
   });

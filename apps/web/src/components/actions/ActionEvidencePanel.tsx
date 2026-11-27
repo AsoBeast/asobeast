@@ -1,8 +1,10 @@
 import type { ActionEvidence } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { Badge } from "@/components/ui/badge";
 import { GradedNumber } from "@/components/ui/graded";
 import { grade } from "@/lib/grade";
-import { ACTION_EVIDENCE_UNAVAILABLE } from "./action-copy";
+import { evidenceUnavailable } from "./action-copy";
 import {
   evidenceSections,
   type EvidenceFact,
@@ -47,15 +49,17 @@ export function ActionEvidencePanel({
 }: {
   evidence: ActionEvidence | null;
 }) {
+  const t = useTranslations("actions");
+  const locale = useAppLocale();
   if (!evidence) {
     return (
       <p className="text-dense text-muted-foreground">
-        {ACTION_EVIDENCE_UNAVAILABLE}
+        {evidenceUnavailable(t)}
       </p>
     );
   }
 
-  const { facts, lists, summary } = evidenceSections(evidence);
+  const { facts, lists, summary } = evidenceSections(evidence, t, locale);
 
   return (
     <div className="flex flex-col gap-3">

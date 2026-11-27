@@ -1,11 +1,15 @@
+"use client";
+
 import type { ChangeEventItem } from "@asobeast/shared";
-import { CHANGE_FIELD_LABELS } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatNumber, formatPrice } from "@/lib/format";
+import { formatNumberInLocale, formatPrice } from "@/lib/format";
+import { changeFieldLabel } from "@/lib/change-field-label";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
 import { releaseNotesInline } from "./release-notes";
 import { hasScreenshotDetail } from "./screenshot-change";
@@ -17,23 +21,30 @@ function text(value: string | null): string {
   return value === null || value === "" ? "—" : value;
 }
 
-function chars(value: string | null): string {
-  return value === null ? "—" : `${formatNumber(Number(value))} chars`;
+function chars(
+  value: string | null,
+  t: ReturnType<typeof useTranslations>,
+): string {
+  return value === null ? "—" : t("value.chars", { count: Number(value) });
 }
 
 function price(
   value: string | null,
   currency: string | null | undefined,
+  freeLabel: string,
 ): string {
-  return value === null ? "—" : formatPrice(Number(value), currency);
+  return value === null ? "—" : formatPrice(Number(value), currency, freeLabel);
 }
 
 function inlineNotes(value: string | null): string {
   return value === null ? "—" : text(releaseNotesInline(value));
 }
 
-function count(value: string | null): string {
-  return value === null ? "—" : formatNumber(Number(value));
+function count(
+  value: string | null,
+  locale: ReturnType<typeof useAppLocale>,
+): string {
+  return value === null ? "—" : formatNumberInLocale(Number(value), locale);
 }
 
 export function ChangeValue({
@@ -43,6 +54,9 @@ export function ChangeValue({
   event: ChangeEventItem;
   dense: boolean;
 }) {
+  const t = useTranslations("changes");
+  const common = useTranslations("common");
+  const locale = useAppLocale();
   const { field, before, after } = event;
 
   if (hasScreenshotDetail(event)) {
@@ -54,7 +68,9 @@ export function ChangeValue({
   }
 
   if (field === "icon") {
-    return <span className="text-muted-foreground">Icon updated</span>;
+    return (
+      <span className="text-muted-foreground">{t("value.iconUpdated")}</span>
+    );
   }
 
   if (field === "whatsNew") {
@@ -63,7 +79,9 @@ export function ChangeValue({
         <TooltipTrigger asChild>
           <span className="break-words">
             <span className="text-muted-foreground">
-              {CHANGE_FIELD_LABELS.whatsNew} updated:{" "}
+              {t("value.whatsNewUpdated", {
+                field: changeFieldLabel(field, t),
+              })}
             </span>
             <span
               className={cn(
@@ -76,7 +94,7 @@ export function ChangeValue({
           </span>
         </TooltipTrigger>
         <TooltipContent className="max-w-xs">
-          Previous: {inlineNotes(before)}
+          {t("value.previous", { value: inlineNotes(before) })}
         </TooltipContent>
       </Tooltip>
     );
@@ -85,14 +103,14 @@ export function ChangeValue({
   let from: string;
   let to: string;
   if (field === "summary" || field === "description") {
-    from = chars(before);
-    to = chars(after);
+    from = chars(before, t);
+    to = chars(after, t);
   } else if (field === "price") {
-    from = price(before, event.currency);
-    to = price(after, event.currency);
+    from = price(before, event.currency, common("free"));
+    to = price(after, event.currency, common("free"));
   } else if (field === "screenshots") {
-    from = count(before);
-    to = count(after);
+    from = count(before, locale);
+    to = count(after, locale);
   } else {
     from = text(before);
     to = text(after);

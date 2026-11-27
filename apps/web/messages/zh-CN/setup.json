@@ -1,0 +1,220 @@
+{
+  "steps": {
+    "competitors": {
+      "title": "选择竞品",
+      "next": "选择竞品",
+      "description": "至少跟踪一个与您竞争的应用，这样每次关键词搜索都会将您与它进行比较。通常选择两到三个。",
+      "skipReason": "在添加竞品之前，排名不会与任何应用进行比较。"
+    },
+    "keywords": {
+      "title": "跟踪关键词",
+      "next": "跟踪关键词",
+      "description": "在主应用商店地区至少跟踪 {target, number} 个关键词。导入时已经跟踪了您的{surface}中的短语。",
+      "skipReason": "仅跟踪详情页中的短语。",
+      "surfaceAppStore": "标题和副标题",
+      "surfaceGooglePlay": "标题和简短描述"
+    },
+    "countries": {
+      "title": "添加国家",
+      "next": "添加国家",
+      "description": "已选择您的主国家。请添加您销售应用的国家。",
+      "skipReason": "仅在您的主应用商店地区跟踪关键词。"
+    }
+  },
+  "state": {
+    "done": "完成",
+    "skipped": "已跳过",
+    "next": "下一步"
+  },
+  "progress": {
+    "sentence": "设置 {name} · {done}/{total} · {next}",
+    "ready": "可以完成",
+    "next": "下一步：{step}",
+    "value": "{done}/{total, plural, other {# 个步骤}}",
+    "aria": "设置进度",
+    "stepsAria": "设置步骤",
+    "completionHint": "请先完成或跳过{steps}。"
+  },
+  "facts": {
+    "competitors": "{count, plural, other {# 个竞品}}",
+    "keywordsInMarket": "{count, plural, other {# 个关键词}}，位于 {country}",
+    "countries": "{count, plural, other {# 个国家}}",
+    "completedAt": "于 {date} 完成"
+  },
+  "status": {
+    "dismissedTitle": "设置已忽略",
+    "dismissedSentence": "检查清单不会自动恢复。您可以在需要时随时重新开始。",
+    "restart": "重新开始设置",
+    "backToApps": "返回应用",
+    "startTitle": "开始设置此应用",
+    "startSentence": "三个简短步骤即可获得首批排名。达到相应数量后，每个步骤即完成；不适用时可跳过。在您添加内容之前，不会更改任何数据。",
+    "startAction": "开始此设置",
+    "completeTitle": "设置完成",
+    "completeSentence": "每次每日运行都会采集排名、竞品和国家数据。",
+    "openOverview": "打开概览",
+    "countsError": "无法加载部分设置计数。",
+    "thisApp": "此应用"
+  },
+  "actions": {
+    "dismiss": "忽略设置",
+    "complete": "完成设置",
+    "failed": "无法加载部分实时计数。",
+    "loading": "完成设置前，请等待所有实时计数加载完毕。"
+  },
+  "panel": {
+    "skip": "跳过此步骤",
+    "undoSkip": "撤销跳过"
+  },
+  "competitors": {
+    "nextCheck": "新竞品会在下次关键词检查时获得排名",
+    "manage": "管理竞品",
+    "countError": "竞品计数暂时不可用。",
+    "countLoading": "正在加载竞品…",
+    "countNone": "尚无竞品",
+    "countTracked": "已跟踪 {count, number} 个：{names}",
+    "unnamed": "未命名应用"
+  },
+  "keywords": {
+    "countError": "关键词暂时不可用。",
+    "countLoading": "正在加载关键词…",
+    "countTracked": "在 {country} 已跟踪 {count, number} 个",
+    "countTarget": "在 {country} 已跟踪 {active, number}/{target, number} 个",
+    "checkedDaily": "每个跟踪关键词会在每次每日运行时检查",
+    "review": "查看关键词"
+  },
+  "countries": {
+    "dailyCost": "每个国家都会增加每日运行的请求量",
+    "addAnother": "添加另一个国家",
+    "add": "添加国家",
+    "countryToAdd": "要添加的国家",
+    "addAction": "添加",
+    "reviewed": "国家已确认",
+    "selectedTitle": "已选国家",
+    "home": "主地区",
+    "countError": "关键词不可用",
+    "countLoading": "正在加载关键词…",
+    "activeKeywords": "{count, plural, other {# 个活跃关键词}}",
+    "reviewMarket": "查看 {code} 关键词",
+    "remove": "移除 {country}"
+  },
+  "markets": {
+    "listingLanguages": "您的详情页提供{languages}。",
+    "seedLabel": "使用其详情页填充关键词",
+    "seedFor": "（{country}）",
+    "tracked": "已跟踪",
+    "costTipLabel": "关于市场成本",
+    "costTipTitle": "一个市场的成本",
+    "costGuide": "了解市场成本",
+    "costAppStore": "一个市场会增加：应用和每个竞品每天各 1 次详情页读取，在该地区采集的每个本地化版本额外增加 1 次，以及在该市场跟踪的每个关键词每天 1 次搜索。填充会从该市场自己的标题和副标题中跟踪最多 {limit, number} 个关键词；每个关键词还会增加一次每日搜索。",
+    "costGooglePlay": "一个市场会增加：应用和每个竞品每天各 1 次详情页读取，以及在该市场跟踪的每个关键词每天 1 次搜索。",
+    "costText": "每天 {count, plural, other {# 次详情页读取}}，每个关键词 {perKeyword, number} 次",
+    "addCountries": "添加国家",
+    "addCountriesCount": "添加 {count, plural, other {# 个国家}}",
+    "addAndSeed": "{add}并填充 {count, number} 个",
+    "seedUnavailable": "未在此应用商店地区发布，因此未添加",
+    "seedSkipped": "，{count, number} 个因关键词上限未加入",
+    "seeded": "已从详情页填充 {count, plural, other {# 个关键词}}{skipped}",
+    "seededNone": "未填充关键词{skipped}",
+    "noNewKeywords": "详情页没有新关键词",
+    "seeding": "正在从详情页填充…",
+    "seedFailed": "无法填充此市场"
+  },
+  "discovered": {
+    "title": "建议竞品",
+    "added": "已添加",
+    "unknownDeveloper": "未知开发者",
+    "loadError": "无法加载建议竞品。",
+    "collecting": "仍在采集排名。为您的关键词排名的应用会在几分钟内显示在这里。",
+    "unavailable": "应用商店目前没有列出相似应用。",
+    "none": "尚无建议。",
+    "addSelected": "添加选中的竞品",
+    "addSelectedCount": "添加选中的 {count, number} 个",
+    "appearances": "出现 {count, plural, other {# 次}} · 最佳第 {position, number} 名",
+    "similarAppStore": "App Store 上的相似应用",
+    "similarGooglePlay": "Google Play 上的相似应用",
+    "addFailed": "无法添加此竞品"
+  },
+  "firstDiscoveries": {
+    "loadError": "无法加载首批结果。",
+    "readyTitle": "首批结果已就绪",
+    "collectingTitle": "正在查找与您详情页相近的关键词",
+    "collectingBody": "AsoBeast 正在检查你的应用在详情页短语上的排名。首批结果会在几分钟内显示在这里。",
+    "seeAll": "查看所有发现",
+    "notChecked": "尚未检查",
+    "found": "在与您详情页相近的关键词中找到 {count, plural, other {# 个关键词}}。",
+    "ranked": "{found}您的应用已有 {count, number} 个进入排名。",
+    "unrankedHeadline": "{found}{sentence}{track}",
+    "noneRank": "它们目前都未进入排名。",
+    "noneCheckedShown": "显示的关键词尚未检查。",
+    "noneCheckedAll": "它们尚未检查。",
+    "trackFit": "请跟踪适合您应用的关键词。",
+    "noApps": "无应用"
+  },
+  "firstPositions": {
+    "title": "首批排名",
+    "loadError": "无法加载首批排名。",
+    "seeAll": "查看所有排名",
+    "collecting": "正在为 {count, plural, other {# 个关键词}}采集排名。",
+    "best": "您的应用凭借“{keyword}”排名第 {position, number}。",
+    "checkedNone": "已检查 {checked, number} 个关键词（共 {tracked, plural, other {# 个}}），目前都没有进入前 {depth, number} 名。",
+    "missing": "未进入前 {depth, number} 名",
+    "noApps": "无应用"
+  },
+  "timeline": {
+    "metadataLabel": "详情页已采集",
+    "keywordsLabel": "关键词已跟踪",
+    "rankingsLabel": "排名已采集",
+    "scoresLabel": "热度和难度已评分",
+    "reviewsLabel": "评论已回填",
+    "historyLabel": "每日历史",
+    "metadataReady": "首个详情页快照已存储。",
+    "keywordsReady": "已从索引字段自动跟踪。",
+    "rankingsReady": "每个跟踪关键词都已有排名。",
+    "scoresReady": "每个跟踪关键词的热度和难度均已计算。",
+    "reviewsReady": "评论回填数据已存储。",
+    "historyReady": "已采集完整一周的每日数据。",
+    "metadataNone": "应用商店已不再上架此应用，因此不会采集页面。",
+    "keywordsNone": "此应用没有跟踪关键词。",
+    "rankingsNone": "没有跟踪关键词，因此没有排名可采集。",
+    "scoresNone": "没有跟踪关键词，因此没有内容可评分。",
+    "reviewsNone": "此页面没有评分，因此没有评论可采集。",
+    "historyNone": "没有跟踪关键词，因此不会建立历史。",
+    "metadataWaiting": "仍在从应用商店读取页面。",
+    "keywordsWaiting": "仍在从页面提取关键词。",
+    "rankingsWaiting": "正在采集排名。每日运行会在{when}补齐仍缺失的排名。",
+    "scoresWaiting": "每个跟踪关键词在导入时都已加入评分队列。每周运行会在{when}补齐仍缺失的评分。",
+    "reviewsWaiting": "评论回填正在运行。",
+    "historyWaiting": "趋势规则需要一周的每日采集数据，之后行动队列才有参考价值。",
+    "queued": "采集已排队而非定时执行，因此不承诺具体时间。",
+    "rankingsQueued": "正在采集排名。{queued}",
+    "scoresQueued": "每个跟踪关键词在导入时都已加入评分队列。{queued}",
+    "rowProgress": "{ready}/{total}",
+    "fullyCollected": "此应用已全部采集。",
+    "finishing": "{count, plural, other {还有 # 个步骤正在完成。}}"
+  },
+  "alertsNudge": {
+    "title": "排名变化时及时获知",
+    "body": "已有两次每日采集，排名现在可能发生变化。当排名下降、上升或进入前十时，邮件或 Webhook 会通知您。",
+    "addEmail": "添加邮件提醒",
+    "addWebhook": "添加 Webhook",
+    "notNow": "暂不",
+    "smtpLink": "此实例需要配置 SMTP 才能发送邮件提醒。<link>设置邮件投递</link>"
+  },
+  "banner": {
+    "progressAria": "设置进度",
+    "moreApps": "<link>以及 {count, plural, other {# 个其他应用}}</link>",
+    "resume": "继续设置",
+    "dismiss": "忽略"
+  },
+  "keywordPicker": {
+    "metadata": "来自您的详情页",
+    "search": "应用商店自动补全",
+    "remaining": "还需 {count, number} 个才能达到 {target, number} 个"
+  },
+  "skeleton": {
+    "loading": "正在加载设置"
+  },
+  "errors": {
+    "save": "无法保存您的设置进度"
+  }
+}

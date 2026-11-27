@@ -11,10 +11,10 @@ test("the sidebar stays off canvas until the trigger opens it at 375", async ({
   await page.setViewportSize({ width: 375, height: 800 });
   await page.goto("/");
 
-  const documentation = page.getByRole("link", { name: "Documentation" });
+  const documentation = page.locator('[data-nav="documentation"]');
   await expect(documentation).toBeHidden();
 
-  const trigger = page.getByRole("button", { name: "Toggle Sidebar" });
+  const trigger = page.locator('[data-action="toggle-sidebar"]');
   await expect(trigger).toBeVisible();
   await trigger.click();
   await expect(documentation).toBeVisible();
@@ -69,15 +69,11 @@ for (const width of DESKTOP_WIDTHS) {
 
     const sidebar = page.locator("[data-slot=sidebar]");
     await expect(sidebar).toHaveAttribute("data-state", "expanded");
-    await expect(
-      page.getByRole("link", { name: "Documentation" }),
-    ).toBeVisible();
+    await expect(page.locator('[data-nav="documentation"]')).toBeVisible();
 
     await page.keyboard.press("ControlOrMeta+b");
     await expect(sidebar).toHaveAttribute("data-collapsible", "icon");
-    await expect(
-      page.getByRole("link", { name: "Documentation" }),
-    ).toBeVisible();
+    await expect(page.locator('[data-nav="documentation"]')).toBeVisible();
   });
 }
 
@@ -98,9 +94,7 @@ test("an empty portfolio turns the switcher into an import affordance", async ({
   await expect(
     sidebar.getByRole("button", { name: "Import app" }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: /^Choose an app/ }),
-  ).toHaveCount(0);
+  await expect(page.locator('[data-action="switch-app"]')).toHaveCount(0);
   await expect(
     page.getByRole("navigation", { name: "App sections" }),
   ).toHaveCount(0);
@@ -115,7 +109,7 @@ test("a failed apps read says so instead of counting zero", async ({
 
   await page.goto("/");
 
-  const switcher = page.getByRole("button", { name: "Choose an app" });
+  const switcher = page.locator('[data-action="switch-app"]');
   await expect(switcher).toContainText("Could not load apps", {
     timeout: 20_000,
   });

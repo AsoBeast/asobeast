@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import {
   flexRender,
   useTable,
@@ -46,7 +47,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
-import { formatDate, formatDateTime, formatDayMonth } from "@/lib/format";
+import {
+  formatDateInLocale,
+  formatDateTimeInLocale,
+  formatDayMonthInLocale,
+} from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
 import { chartTableParsers, type ChartTableView } from "@/lib/search-params";
 import { numericProps } from "@/lib/table/column-visibility";
 import { ariaSort } from "@/lib/table/sorting";
@@ -54,30 +62,52 @@ import { cn } from "@/lib/utils";
 import { rowContextOf } from "./chart-actions";
 import { chartColumns } from "./chart-columns";
 import { ChartHistory } from "./ChartHistory";
-import { chartTitle, COLLECTION_LABELS } from "./chart-params";
+import { chartTitle, collectionLabel } from "./chart-params";
 import { HISTORY_APPS, historyDates, historyReady } from "./chart-summary";
 import { compareLabel } from "./movement";
 import { OWN_ROW_BAR } from "./RowActions";
 
-const TABLE_VIEWS: ReadonlyArray<{ id: ChartTableView; label: string }> = [
-  { id: "rows", label: "Table" },
-  { id: "history", label: "History" },
+const TABLE_VIEWS: ReadonlyArray<{
+  id: ChartTableView;
+  key: "table" | "history";
+}> = [
+  { id: "rows", key: "table" },
+  { id: "history", key: "history" },
 ];
 
-function footerLine(page: ChartPage & { capture: ChartCaptureSummary }) {
+function footerLine(
+  page: ChartPage & { capture: ChartCaptureSummary },
+  t: MessageTranslator,
+  locale: Locale,
+) {
   const total = page.entries.length;
   return [
-    `${total} ${total === 1 ? "app" : "apps"}`,
-    `captured ${formatDateTime(page.capture.capturedAt)}`,
+    t("appCount", { count: total }),
+    t("captured", {
+      date: formatDateTimeInLocale(page.capture.capturedAt, locale),
+    }),
     ...(page.comparison
-      ? [`compared with ${formatDayMonth(page.comparison.date)}`]
+      ? [
+          t("comparedWith", {
+            date: formatDayMonthInLocale(page.comparison.date, locale),
+          }),
+        ]
       : []),
   ].join(" · ");
 }
 
-function historyLine(page: ChartPage & { capture: ChartCaptureSummary }) {
+function historyLine(
+  page: ChartPage & { capture: ChartCaptureSummary },
+  t: MessageTranslator,
+  locale: Locale,
+) {
   const days = historyDates(page.dates, page.capture.date).length;
-  return `The top ${Math.min(HISTORY_APPS, page.entries.length)} of ${formatDayMonth(page.capture.date)} across the last ${days} captured days. A line breaks on a day the app was outside the top ${HISTORY_APPS}.`;
+  return t("historyFooter", {
+    shown: Math.min(HISTORY_APPS, page.entries.length),
+    date: formatDayMonthInLocale(page.capture.date, locale),
+    days,
+    limit: HISTORY_APPS,
+  });
 }
 
 type ChartRowsTable = TableInstance<DataTableFeatures, ChartEntryItem>;
@@ -93,6 +123,7 @@ function ChartRows({
   isOwn: (storeAppId: string) => boolean;
   onClear: () => void;
 }) {
+  const t = useTranslations("topCharts");
   const rows = table.getRowModel().rows;
   return (
     <Table>
@@ -119,10 +150,7 @@ function ChartRows({
         {rows.length === 0 ? (
           <TableRow>
             <TableCell colSpan={table.getVisibleLeafColumns().length}>
-              <FilteredEmpty
-                title="No apps match this search"
-                onClear={onClear}
-              />
+              <FilteredEmpty title={t("noMatches")} onClear={onClear} />
             </TableCell>
           </TableRow>
         ) : null}
@@ -153,8 +181,10 @@ export function ChartTable({
   page: ChartPage & { capture: ChartCaptureSummary };
   apps: readonly AppListItem[];
 }) {
+  const t = useTranslations("topCharts");
+  const locale = useAppLocale();
   const [params, setParams] = useQueryStates(chartTableParsers);
-  const period = compareLabel(page.compare, page.comparison);
+  const period = compareLabel(page.compare, page.comparison, t, locale);
   const context = useMemo(
     () => rowContextOf({ chart: page.chart, apps: page.apps }, apps),
     [page.chart, page.apps, apps],
@@ -162,8 +192,8 @@ export function ChartTable({
   const withGenre = page.entries.some((entry) => entry.genreName !== null);
   const withPrice = page.chart.collection !== "free";
   const columns = useMemo(
-    () => chartColumns(period, context, { withGenre, withPrice }),
-    [period, context, withGenre, withPrice],
+    () => chartColumns(period, context, { withGenre, withPrice }, t, locale),
+    [period, context, withGenre, withPrice, t, locale],
   );
   const [visibility, setVisibility] = useStoredColumnVisibility(
     "top-chart",
@@ -207,7 +237,7 @@ export function ChartTable({
     <Card className="gap-3">
       <CardHeader className={PANEL_HEADER}>
         <CardTitle asChild>
-          <h2>{COLLECTION_LABELS[page.chart.collection]}</h2>
+          <h2>{collectionLabel(page.chart.collection, t)}</h2>
         </CardTitle>
         <CardAction className={PANEL_ACTION}>
           <Tabs
@@ -219,10 +249,10 @@ export function ChartTable({
               }
             }}
           >
-            <TabsList aria-label="Chart display">
-              {TABLE_VIEWS.map(({ id, label }) => (
+            <TabsList aria-label={t("display")}>
+              {TABLE_VIEWS.map(({ id, key }) => (
                 <TabsOption key={id} value={id}>
-                  {label}
+                  {t(key)}
                 </TabsOption>
               ))}
             </TabsList>
@@ -237,7 +267,7 @@ export function ChartTable({
         <>
           <CardContent className="flex flex-wrap items-center gap-2">
             <SearchInput
-              label="Search apps"
+              label={t("search")}
               value={params.q}
               onSearch={(q, options) => void setParams({ q }, options)}
             />
@@ -253,7 +283,10 @@ export function ChartTable({
           <CardContent className={cn(PANEL_BLEED, "mt-0 border-t")}>
             <ChartRows
               table={table}
-              caption={`${chartTitle(page.chart)} on ${formatDate(page.capture.date)}`}
+              caption={t("caption", {
+                chart: chartTitle(page.chart, t, locale),
+                date: formatDateInLocale(page.capture.date, locale),
+              })}
               isOwn={own}
               onClear={() => void setParams({ q: null })}
             />
@@ -262,7 +295,11 @@ export function ChartTable({
       )}
       {history && !historyReady(page.dates, page.capture.date) ? null : (
         <CardFooter>
-          <span>{history ? historyLine(page) : footerLine(page)}</span>
+          <span>
+            {history
+              ? historyLine(page, t, locale)
+              : footerLine(page, t, locale)}
+          </span>
         </CardFooter>
       )}
     </Card>

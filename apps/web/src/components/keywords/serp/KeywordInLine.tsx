@@ -1,4 +1,5 @@
 import type { SerpEntryItem, Store } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { isOutlier, keywordInLabel } from "./placement-labels";
 import type { SerpRole } from "./serp-csv";
@@ -12,15 +13,16 @@ export function KeywordInLine({
   store: Store;
   role: SerpRole;
 }) {
-  const { label, note } = keywordInLabel(entry, store);
+  const t = useTranslations("keywordInspector");
+  const { label, note } = keywordInLabel(entry, store, t);
   return (
     <p className="text-caption text-muted-foreground">
-      <span>Keyword in </span>
+      <span>{t("serp.summary.keywordIn")} </span>
       <span className="text-foreground">{label}</span>
       {note === null ? null : <span>{`, ${note}`}</span>}
       {isOutlier(entry, store, role) ? (
         <Badge variant="outline" className="ml-2 align-middle">
-          Outlier
+          {t("serp.row.outlier")}
         </Badge>
       ) : null}
     </p>

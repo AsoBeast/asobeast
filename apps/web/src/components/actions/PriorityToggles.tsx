@@ -1,7 +1,10 @@
+"use client";
+
 import { ACTION_PRIORITIES, type ActionPriority } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { formatNumber, pluralize } from "@/lib/format";
-import { ACTION_PRIORITY_LABEL } from "./action-copy";
+import { formatNumber } from "@/lib/format";
+import { actionPriorityLabel } from "./action-copy";
 
 export function PriorityToggles({
   selected,
@@ -12,9 +15,10 @@ export function PriorityToggles({
   counts: ReadonlyMap<ActionPriority, number>;
   onChange: (next: ActionPriority[]) => void;
 }) {
+  const t = useTranslations("actions");
   return (
     <fieldset className="flex flex-wrap items-center gap-2">
-      <legend className="sr-only">Filter by priority</legend>
+      <legend className="sr-only">{t("filterPriority")}</legend>
       {ACTION_PRIORITIES.map((priority) => {
         const pressed = selected.includes(priority);
         const count = counts.get(priority) ?? 0;
@@ -25,7 +29,10 @@ export function PriorityToggles({
             size="sm"
             variant={pressed ? "secondary" : "outline"}
             aria-pressed={pressed}
-            aria-label={`${ACTION_PRIORITY_LABEL[priority]}, ${pluralize(count, "action")}`}
+            aria-label={t("priorityCount", {
+              priority: actionPriorityLabel(priority, t),
+              count,
+            })}
             onClick={() =>
               onChange(
                 pressed
@@ -34,7 +41,7 @@ export function PriorityToggles({
               )
             }
           >
-            {ACTION_PRIORITY_LABEL[priority]}
+            {actionPriorityLabel(priority, t)}
             <span aria-hidden className="numeric text-muted-foreground">
               {formatNumber(count)}
             </span>

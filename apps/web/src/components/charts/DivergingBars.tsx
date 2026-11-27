@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import {
   Bar,
   BarChart,
@@ -14,7 +15,8 @@ import {
   ChartContainer,
   ChartTooltip,
 } from "@/components/ui/chart";
-import { formatDayMonth, formatNumber } from "@/lib/format";
+import { formatDayMonthInLocale, formatNumberInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { ChartKey } from "./ChartKey";
 import { ChartNotice, trendState } from "./ChartStates";
 import {
@@ -28,7 +30,7 @@ import {
   CHART_HEIGHT,
   CHART_MARGIN,
   GRID_PROPS,
-  TIME_AXIS_PROPS,
+  timeAxisPropsInLocale,
   VALUE_AXIS_PROPS,
   ZERO_LINE_PROPS,
 } from "./theme";
@@ -63,12 +65,14 @@ function DivergingTooltip({
   details: DivergingDetails;
   notes: DivergingNotes;
 }) {
+  const t = useTranslations("charts");
+  const locale = useAppLocale();
   if (!active || label === undefined) return null;
   const row = trend.rows.find((candidate) => candidate.date === label);
   if (!row) return null;
   return (
     <SeriesTooltip
-      title={formatDayMonth(String(label))}
+      title={formatDayMonthInLocale(String(label), locale)}
       items={
         row.checked
           ? [
@@ -77,7 +81,7 @@ function DivergingTooltip({
                 index: 0,
                 color: subject.up.color,
                 label: subject.up.label,
-                value: formatNumber(row.up),
+                value: formatNumberInLocale(row.up, locale),
                 sortBy: 0,
               },
               {
@@ -85,7 +89,7 @@ function DivergingTooltip({
                 index: 0,
                 color: subject.down.color,
                 label: subject.down.label,
-                value: formatNumber(fallen(row)),
+                value: formatNumberInLocale(fallen(row), locale),
                 sortBy: 1,
               },
               ...details(row),
@@ -96,7 +100,7 @@ function DivergingTooltip({
         row.checked ? (
           notes(row.date)
         ) : (
-          <span className="text-muted-foreground">Not checked</span>
+          <span className="text-muted-foreground">{t("notChecked")}</span>
         )
       }
     />
@@ -110,9 +114,10 @@ export function DivergingKey({
   trend: DivergingTrend;
   subject: DivergingSubject;
 }) {
+  const t = useTranslations("charts");
   return (
     <ChartKey
-      label="Chart bars"
+      label={t("chartBars")}
       items={
         trend.checked === 0
           ? []
@@ -136,6 +141,8 @@ export function DivergingBars({
   details?: DivergingDetails;
   notes?: DivergingNotes;
 }) {
+  const t = useTranslations("charts");
+  const locale = useAppLocale();
   const height = CHART_HEIGHT.tall;
   const state = trendState(trend.checked);
   if (state !== "ready") {
@@ -143,7 +150,7 @@ export function DivergingBars({
       <ChartNotice
         height={height}
         title={
-          state === "empty" ? "Nothing recorded yet" : "Not enough history yet"
+          state === "empty" ? t("nothingRecorded") : t("notEnoughHistoryYet")
         }
         body={subject.waiting}
       />
@@ -160,7 +167,10 @@ export function DivergingBars({
       config={config}
       className={`${height} w-full`}
       role="region"
-      aria-label={`${subject.region} over the last ${trend.days} days`}
+      aria-label={t("regionOverDays", {
+        region: subject.region,
+        days: trend.days,
+      })}
     >
       <BarChart
         accessibilityLayer
@@ -169,13 +179,15 @@ export function DivergingBars({
         stackOffset="sign"
       >
         <CartesianGrid {...GRID_PROPS} />
-        <XAxis {...TIME_AXIS_PROPS} ticks={trend.dayTicks} />
+        <XAxis {...timeAxisPropsInLocale(locale)} ticks={trend.dayTicks} />
         <YAxis
           {...VALUE_AXIS_PROPS}
           domain={trend.domain}
           ticks={trend.valueTicks}
           allowDecimals={false}
-          tickFormatter={(value: number) => formatNumber(Math.abs(value))}
+          tickFormatter={(value: number) =>
+            formatNumberInLocale(Math.abs(value), locale)
+          }
         />
         <ReferenceLine y={0} {...ZERO_LINE_PROPS} />
         <ChartTooltip

@@ -1,0 +1,226 @@
+{
+  "views": {
+    "searchVisibility": "Search visibility",
+    "shareOfVoice": "Share of voice",
+    "rankBands": "Tracked keywords by rank band",
+    "homeRating": "Rating on the home listing",
+    "scoped": "{title} · {country}",
+    "categoryRanks": "Category ranks",
+    "overview": "Overview"
+  },
+  "metrics": {
+    "visibility": "Visibility",
+    "shareOfVoice": "Share of voice",
+    "top10": "Keywords in top 10",
+    "rating": "Rating",
+    "ratingCount": "{count, plural, one {# rating} other {# ratings}}",
+    "noRating": "No rating captured yet",
+    "tracked": "of {count, plural, one {# tracked keyword} other {# tracked keywords}}",
+    "nonBranded": "{value} non branded",
+    "competitors": "vs {count, plural, one {# competitor} other {# competitors}}",
+    "reasons": {
+      "noCompetitors": "Add a competitor to see your share of voice",
+      "notChecked": "Your competitors have not been checked yet",
+      "nobodyRanks": "Nobody ranks for these keywords yet"
+    }
+  },
+  "charts": {
+    "collections": {
+      "free": "free",
+      "paid": "paid",
+      "grossing": "grossing"
+    },
+    "averageRating": "Average rating",
+    "nonBranded": "Non branded",
+    "visibility": "Visibility",
+    "ratingOverTime": "Average rating over time",
+    "shareOverTime": "Share of voice over time",
+    "searchVisibilityOverTime": "Search visibility over time",
+    "rankBandsLabel": "Tracked keywords by rank band",
+    "rankBandsAria": "Keywords in each rank band today",
+    "noRankHistoryTitle": "No rank history yet",
+    "noRankHistoryBody": "Bands appear once the daily pipeline has checked your keywords.",
+    "top10Label": "Keywords in the top 10",
+    "trendNeedsChecks": "A trend needs a few more daily checks.",
+    "noRatingTitle": "No rating recorded yet",
+    "noRatingBody": "The daily pipeline stores the rating of the home listing with each snapshot.",
+    "latestAverageRating": "Latest average rating",
+    "trendNeedsSnapshots": "A trend line needs a few more daily snapshots.",
+    "addCompetitorTitle": "Add a competitor to chart share of voice",
+    "addCompetitorBody": "Track one on the competitors page and its share is charted from its first daily check.",
+    "noShareTitle": "No share of voice recorded yet",
+    "shareUnavailable": "{reason}.",
+    "latestShare": "Latest share of voice",
+    "noVisibilityTitle": "No visibility recorded yet",
+    "noVisibilityBody": "The daily pipeline captures your first point within 24 hours.",
+    "latestVisibility": "Latest visibility",
+    "lastDays": "Last {count, plural, one {# day} other {# days}}",
+    "daysShort": "{count}d",
+    "previousDays": "Previous {count, plural, one {# day} other {# days}}",
+    "listingChange": "Listing change",
+    "chartLines": "Chart lines",
+    "seeChanges": "See what each change did",
+    "previousRangeError": "The range before could not be loaded.",
+    "listingChangesError": "The listing changes could not be loaded.",
+    "changedFields": "{fields} changed",
+    "categoryPositionOverTime": "Category chart position over time",
+    "noCategoryTitle": "No category captures yet",
+    "noCategoryBody": "Chart positions are captured by the daily pipeline.",
+    "categoryTitle": "Category ranks · Home market",
+    "inGenre": "in <name>{genre}</name>",
+    "collectionChart": "· {collection} chart",
+    "notInChart": "Not in top {depth} in <name>{genre}</name>",
+    "seriesLabel": "<name>{genre}</name> · {collection}"
+  },
+  "coverage": {
+    "title": "Metadata coverage",
+    "fields": {
+      "title": "Title",
+      "subtitle": "Subtitle",
+      "description": "Description"
+    },
+    "aria": "Tracked keywords found in each field",
+    "ratio": "<emphasized>{found}</emphasized> <muted>of {tracked}</muted>",
+    "covered": "Your metadata covers your top opportunities.",
+    "notInMetadata": "Not in your metadata",
+    "opportunity": "Opportunity",
+    "opportunityAria": "Opportunity ",
+    "uncoveredAria": "High-opportunity keywords absent from your metadata",
+    "allMarkets": "All markets, judged against the home listing"
+  },
+  "funnel": {
+    "title": "Store funnel",
+    "scoped": "Store funnel · {market}",
+    "allMarkets": "All markets",
+    "about": "About the store funnel",
+    "readNumbers": "Read how the numbers are read",
+    "tiles": {
+      "impressions": "Impressions",
+      "pageViews": "Product page views",
+      "gets": {
+        "appStore": "Get taps",
+        "googlePlay": "Acquisitions"
+      },
+      "playVisitors": "Store listing visitors",
+      "conversion": "Conversion"
+    },
+    "trendLabel": "{label}, last {count, plural, one {# complete day} other {# complete days}}",
+    "footer": {
+      "search": "Search: {share}% of {base}. ",
+      "measured": "{console}. {search}Last {days} complete days through {date}, against the {days} before.",
+      "fresh": "{console}. {freshness}"
+    },
+    "notReporting": "{console} reports nothing for this app yet: {reason}.",
+    "verify": "Verify in Integrations",
+    "connect": "Connect in Integrations",
+    "noSearchTerms": "{console}'s {month} report named no search terms for this app.",
+    "memberRefusal": "{reason} {askOwner}",
+    "help": {
+      "appStore": {
+        "summary": "Impressions, product page views and Get taps come from Apple's App Store Discovery and Engagement report through the App Store Connect key connected in Integrations. Conversion is Get taps divided by unique impressions.",
+        "detail": "Apple drops rows under five users and adds small noise, and a day is final three days later. Totals add unique counts across markets and sources, so they read slightly high."
+      },
+      "googlePlay": {
+        "summary": "Store listing visitors and acquisitions come from the monthly store performance files Play Console writes to its Cloud Storage bucket, read through the Google Play connection in Integrations. Conversion is acquisitions divided by visitors.",
+        "detail": "A market reads the country file and All markets the traffic source file, so the two split sources differently. Google posts a day three to seven days later and changed how it counts visitors and acquisitions on July 10, 2026, so compare periods on the same side of that date."
+      }
+    },
+    "copy": {
+      "appStore": {
+        "console": "App Store Connect",
+        "base": "impressions",
+        "freshness": "Apple finishes a day within three days; the newest days may still grow.",
+        "connectTitle": "Connect App Store Connect to see impressions and conversion here.",
+        "connectBody": "A key from App Store Connect lets AsoBeast read Apple's own numbers for this app, back to 2024.",
+        "askOwner": "Ask the workspace owner to connect App Store Connect.",
+        "notReporting": "The connected key sees this app once it belongs to the key's team and Apple has published its first report.",
+        "refusedTitle": "App Store Connect refused the connected key.",
+        "refusedBody": "The numbers already stored come back once the key is accepted again. Verify it, or connect a new key.",
+        "refusedAskOwner": "Ask the workspace owner to verify the key in Integrations."
+      },
+      "googlePlay": {
+        "console": "Google Play Console",
+        "base": "store listing visitors",
+        "freshness": "Google posts a day three to seven days later; counting changed on July 10, 2026.",
+        "connectTitle": "Connect the Google Play Console to see store listing visitors and conversion here.",
+        "connectBody": "Signing in with Google, or a service account invited in Play Console, lets AsoBeast read Google's own numbers for this app from its monthly report files.",
+        "askOwner": "Ask the workspace owner to connect the Google Play Console.",
+        "notReporting": "The connection reads this app once Play Console writes its store performance files to the bucket.",
+        "refusedTitle": "Google Play Console refused the connection.",
+        "refusedBody": "The numbers already stored come back once Google accepts the connection again. Verify it, or reconnect.",
+        "refusedAskOwner": "Ask the workspace owner to verify the Google Play connection in Integrations."
+      }
+    }
+  },
+  "ratingsByMarket": {
+    "title": "Ratings by market",
+    "tableLabel": "Market ratings table",
+    "caption": "Rating and number of ratings on the newest listing captured in each market",
+    "market": "Market",
+    "average": "Average",
+    "ratings": "Ratings",
+    "captured": "Captured",
+    "allMarkets": "All listed markets",
+    "averageAria": "Rating across the listed markets",
+    "marketCount": "{count, plural, one {# market} other {# markets}}",
+    "home": "Home",
+    "selected": "Selected",
+    "noRating": "No rating yet",
+    "notCaptured": "Not captured yet",
+    "ratingIn": "Rating in {country}",
+    "onlyOneTitle": "Only one market so far",
+    "onlyOneBody": "The App Store keeps a rating for each storefront. Track a keyword in another market and the daily run captures the listing there, so its rating appears next to this one.",
+    "trackAnother": "Track keywords in another market",
+    "about": "About ratings by market",
+    "helpTitle": "How ratings by market are read",
+    "helpSummary": "The App Store keeps a separate rating for each storefront. Each row is the average and the number of ratings on the newest listing {product} captured in that market.",
+    "helpDetail": "The last row averages the markets above it, each weighted by its number of ratings. It covers only the markets listed here, not every storefront, and each market was captured on the day in its last column.",
+    "readRatings": "Read how ratings by market are read"
+  },
+  "movers": {
+    "quiet": "No keyword moved in the last {count, plural, one {# day} other {# days}}.",
+    "withinDays": "in {count} days",
+    "spanDays": "in the last {count} days",
+    "changeHeading": "{count}d change",
+    "positionTrend": "position, last {count, plural, one {# day} other {# days}}"
+  },
+  "nearTopTen": {
+    "title": "Closest to the top 10",
+    "loadError": "The keywords near the top 10 could not be loaded.",
+    "empty": "No keyword sits just outside the top 10.",
+    "keyword": "Keyword",
+    "position": "Position",
+    "toTop10": "To top 10",
+    "places": "{count, plural, one {# place} other {# places}}"
+  },
+  "gaps": {
+    "aria": "Gaps against your competitors",
+    "loadError": "The gap summary could not be loaded.",
+    "about": "About the gap line",
+    "title": "How the gap line is counted",
+    "summary": "The line counts the same lists as the Gap analysis on the competitors page, for the market you are looking at.",
+    "readLists": "Read how the lists are chosen",
+    "noCompetitors": "Add a competitor to see gaps.",
+    "allDelisted": "Every competitor you track is delisted.",
+    "notCompared": "Your competitors have not been checked yet.",
+    "quiet": "No winnable gaps or threats right now.",
+    "noWinnable": "No winnable gaps.",
+    "winnable": "{count, plural, one {# winnable gap} other {# winnable gaps}}.",
+    "threats": "{count, plural, one {# threat} other {# threats}}.",
+    "biggest": "Biggest: <keyword>{text}</keyword>, <competitor>{rival}</competitor>{position}, {yours}.",
+    "biggestGeneric": "Biggest: <keyword>{text}</keyword>, {genericCompetitor}{position}, {yours}.",
+    "genericCompetitor": "a competitor",
+    "competitorRanks": " ranks #{position}",
+    "notRanked": "you are not ranked",
+    "yourRank": "you are at #{position}",
+    "addCompetitor": "Add a competitor",
+    "seeThreats": "See the threats",
+    "seeWinnable": "See the winnable gaps"
+  },
+  "snapshot": {
+    "installs": "{count} installs",
+    "captured": "Snapshot {date}{market}",
+    "market": " · {country}",
+    "empty": "No store snapshot yet. Refresh to capture one."
+  }
+}

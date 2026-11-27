@@ -1,6 +1,9 @@
 "use client";
 
 import { Suspense, useMemo } from "react";
+import { createTranslator, useTranslations } from "next-intl";
+import enKeywords from "../../../messages/en/keywords.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
 import { useQueryState, useQueryStates } from "nuqs";
@@ -19,7 +22,8 @@ import {
   SECTION_CHEVRON,
   SECTION_TOGGLE,
 } from "@/components/layout/panel-classes";
-import { formatCountry, pluralize } from "@/lib/format";
+import { formatCountryInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { buildCombinations } from "@/lib/keyword-combinations";
 import {
   appDetailOptions,
@@ -37,9 +41,28 @@ import { KeywordCombinationsSkeleton } from "./skeletons";
 
 const TITLE_ID = "keyword-combinations-title";
 
-const LISTING_FIELDS: Record<Store, string> = {
-  APP_STORE: "title, subtitle and keyword field",
-  GOOGLE_PLAY: "title and short description",
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywords",
+  messages: { keywords: enKeywords },
+});
+
+export function untrackedCombinationSentence(
+  truncated: boolean,
+  count: number,
+  t: MessageTranslator = english,
+): string {
+  return t(
+    truncated
+      ? "combinations.atLeastUntracked"
+      : "combinations.untrackedSentence",
+    { count },
+  );
+}
+
+const LISTING_FIELD_KEYS: Record<Store, string> = {
+  APP_STORE: "appStore",
+  GOOGLE_PLAY: "googlePlay",
 };
 
 function UntrackedCount({
@@ -51,6 +74,7 @@ function UntrackedCount({
   store: Store;
   homeCountry: string;
 }) {
+  const t = useTranslations("keywords");
   const { data: app } = useQuery(appDetailOptions(id));
   const { data: tracked } = useQuery(keywordsOptions(id, homeCountry));
   const { data: field } = useQuery({
@@ -74,10 +98,9 @@ function UntrackedCount({
     return { count, truncated };
   }, [app, tracked, field, store, homeCountry]);
   if (untracked === null) return null;
-  const phrases = pluralize(untracked.count, "untracked phrase");
   return (
     <span className="numeric">
-      {untracked.truncated ? `At least ${phrases}. ` : `${phrases}. `}
+      {untrackedCombinationSentence(untracked.truncated, untracked.count, t)}
     </span>
   );
 }
@@ -95,11 +118,13 @@ export function KeywordCombinations({
   market: string;
   countUntracked: boolean;
 }) {
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
   const [params, setParams] = useQueryStates(combinationParsers, {
     urlKeys: COMBINATION_URL_KEYS,
   });
   const [, setCountry] = useQueryState("country", countryParser);
-  const home = formatCountry(homeCountry);
+  const home = formatCountryInLocale(homeCountry, locale);
 
   return (
     <Card>
@@ -112,7 +137,7 @@ export function KeywordCombinations({
               onClick={() => void setParams({ open: !params.open })}
               className={SECTION_TOGGLE}
             >
-              Keyword combinations
+              {t("combinations.title")}
               <ChevronDown
                 aria-hidden
                 className={cn(SECTION_CHEVRON, !params.open && "-rotate-90")}
@@ -122,9 +147,9 @@ export function KeywordCombinations({
         </CardTitle>
         <CardAction className={PANEL_ACTION}>
           <InfoTip
-            label="About keyword combinations"
-            title="Keyword combinations"
-            summary="Every phrase of one to three words that your listing words can form, in any order, and whether you track it in your home market. Coverage on the metadata page checks the reverse: whether each tracked keyword appears word for word in one field."
+            label={t("combinations.about")}
+            title={t("combinations.title")}
+            summary={t("combinations.summary")}
           />
         </CardAction>
       </CardHeader>
@@ -138,7 +163,13 @@ export function KeywordCombinations({
             {countUntracked && market === homeCountry ? (
               <UntrackedCount id={id} store={store} homeCountry={homeCountry} />
             ) : null}
-            <span>{`Phrases the words in your ${LISTING_FIELDS[store]} can form.`}</span>
+            <span>
+              {t("combinations.description", {
+                fields: t(
+                  `combinations.listingFields.${LISTING_FIELD_KEYS[store]}`,
+                ),
+              })}
+            </span>
           </p>
           {market === homeCountry ? (
             <Suspense fallback={<KeywordCombinationsSkeleton />}>
@@ -153,14 +184,14 @@ export function KeywordCombinations({
           ) : (
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-body text-muted-foreground">
-                Combinations come from the listing in your home market, {home}.
+                {t("combinations.homeMarket", { country: home })}
               </p>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => void setCountry(null)}
               >
-                Switch to {home}
+                {t("combinations.switchTo", { country: home })}
               </Button>
             </div>
           )}

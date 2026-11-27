@@ -1,25 +1,37 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { TriangleAlert } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { formatDate, formatPlanLimit } from "@/lib/format";
+import { formatDateInLocale } from "@/lib/format";
 import { budgetOptions } from "@/lib/queries";
 import { keywordLimitExceededSince } from "@/lib/quota-usage";
+import { useAppLocale } from "@/lib/use-app-locale";
 
 export function KeywordLimitNotice() {
+  const t = useTranslations("billing");
+  const locale = useAppLocale();
   const { data: budget } = useSuspenseQuery(budgetOptions);
   const since = keywordLimitExceededSince(budget.quota);
 
   if (!budget.quota || !since) return null;
 
+  const limit = budget.quota.keywordMarkets.limit;
+
   return (
     <Alert variant="destructive">
       <TriangleAlert />
       <AlertDescription>
-        Over the keyword limit since {formatDate(since)}. Daily checks cover the
-        first {formatPlanLimit(budget.quota.keywordMarkets.limit)} keyword
-        markets in a stable order; remove keywords or upgrade to cover the rest.
+        {t(
+          limit === null
+            ? "keywordLimit.noticeUnlimited"
+            : "keywordLimit.notice",
+          {
+            date: formatDateInLocale(since, locale),
+            ...(limit === null ? {} : { limit }),
+          },
+        )}
       </AlertDescription>
     </Alert>
   );

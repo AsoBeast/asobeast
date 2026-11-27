@@ -1,6 +1,5 @@
 import { formatDate } from "../src/lib/format";
-import { COLLECTION_PAUSED } from "../src/lib/plan-choice";
-import { fulfillJson, seedSession } from "./plan-helpers.mts";
+import { EN_BILLING, fulfillJson, seedSession } from "./plan-helpers.mts";
 import { expect, test } from "./reporting.mts";
 import { OFFERED_PLAN, TRIALING_PLAN, openBilling } from "./trial-plans.mts";
 import { seedViewer } from "./viewer.mts";
@@ -198,7 +197,9 @@ test.describe("an account that owes nothing", () => {
     await page.goto("/");
 
     await expect(
-      page.getByText(COLLECTION_PAUSED, { exact: false }),
+      page.getByText(EN_BILLING.translator("status.collectionPaused"), {
+        exact: false,
+      }),
     ).toBeVisible();
     await expect(page).toHaveURL("http://localhost:3000/");
   });
@@ -230,7 +231,9 @@ test.describe("an account that owes nothing", () => {
     await page.goto("/");
 
     await expect(
-      page.getByText(COLLECTION_PAUSED, { exact: false }),
+      page.getByText(EN_BILLING.translator("status.collectionPaused"), {
+        exact: false,
+      }),
     ).toBeVisible();
     await expect(page).toHaveURL("http://localhost:3000/");
   });

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   useMutation,
   useQueryClient,
@@ -22,9 +23,10 @@ import { AddWebhookDialog } from "./AddWebhookDialog";
 import type { AlertSubscriptionChange } from "./alert-event-copy";
 import { AlertChannelRow } from "./alert-channel/AlertChannelRow";
 import { useSharedFlight, useSingleFlight } from "@/lib/single-flight";
-import { WEBHOOK_CHANNEL_NAMES, webhookRowLabel } from "./webhook-channel-copy";
+import { webhookChannelName, webhookRowLabel } from "./webhook-channel-copy";
 
 function WebhookRow({ webhook }: { webhook: WebhookItem }) {
+  const t = useTranslations("notifications");
   const queryClient = useQueryClient();
   const channel = webhook.channel ?? webhookChannelOf(webhook.url);
   const label = webhookRowLabel(webhook.url, channel);
@@ -32,7 +34,7 @@ function WebhookRow({ webhook }: { webhook: WebhookItem }) {
   const toggle = useMutation({
     mutationFn: (active: boolean) => updateWebhook(webhook.id, { active }),
     onSuccess: () => invalidateWebhookMutation(queryClient),
-    onError: () => toast.error("Could not update webhook"),
+    onError: () => toast.error(t("webhook.updateError")),
   });
   const toggleOnce = useSingleFlight(toggle);
 
@@ -42,9 +44,9 @@ function WebhookRow({ webhook }: { webhook: WebhookItem }) {
     onSuccess: (saved) => {
       seedWebhook(queryClient, saved);
       invalidateWebhookMutation(queryClient);
-      toast.success("Webhook rules saved");
+      toast.success(t("webhook.rulesSaved"));
     },
-    onError: () => toast.error("Could not save the webhook events"),
+    onError: () => toast.error(t("webhook.saveRulesError")),
   });
   const saveEvents = useSharedFlight(editEvents.mutateAsync);
 
@@ -52,14 +54,18 @@ function WebhookRow({ webhook }: { webhook: WebhookItem }) {
     mutationFn: () => testWebhook(webhook.id),
     onSuccess: (result) => {
       if (result.delivered) {
-        toast.success(`Delivered (status ${result.status ?? "—"})`);
+        toast.success(
+          t("webhook.testDelivered", { status: result.status ?? "—" }),
+        );
       } else {
         toast.error(
-          `Not delivered${result.status !== null ? ` (status ${result.status})` : ""}`,
+          result.status === null
+            ? t("webhook.testFailedNoStatus")
+            : t("webhook.testFailed", { status: result.status }),
         );
       }
     },
-    onError: () => toast.error("Could not reach the webhook"),
+    onError: () => toast.error(t("webhook.testError")),
   });
 
   const testOnce = useSingleFlight(test);
@@ -68,9 +74,9 @@ function WebhookRow({ webhook }: { webhook: WebhookItem }) {
     mutationFn: () => deleteWebhook(webhook.id),
     onSuccess: () => {
       invalidateWebhookMutation(queryClient);
-      toast.success("Webhook removed");
+      toast.success(t("webhook.removed"));
     },
-    onError: () => toast.error("Could not remove webhook"),
+    onError: () => toast.error(t("webhook.removeError")),
   });
   const removeOnce = useSharedFlight(remove.mutateAsync);
 
@@ -85,14 +91,14 @@ function WebhookRow({ webhook }: { webhook: WebhookItem }) {
       ratingDropTenths={webhook.ratingDropTenths}
       rankDropThreshold={webhook.rankDropThreshold}
       facts={[
-        ...(channel === "generic" ? [] : [WEBHOOK_CHANNEL_NAMES[channel]]),
-        ...(webhook.hasSecret ? ["Signed"] : []),
+        ...(channel === "generic" ? [] : [webhookChannelName(channel, t)]),
+        ...(webhook.hasSecret ? [t("webhook.signed")] : []),
       ]}
       active={webhook.active}
       activePending={toggle.isPending}
       onActiveChange={toggleOnce}
-      confirmTitle="Delete this webhook?"
-      confirmDescription={`AsoBeast will stop delivering alerts to ${label}. This cannot be undone.`}
+      confirmTitle={t("webhook.deleteTitle")}
+      confirmDescription={t("webhook.deleteDescription", { label })}
       testPending={test.isPending}
       onTest={testOnce}
       deletePending={remove.isPending}
@@ -104,18 +110,15 @@ function WebhookRow({ webhook }: { webhook: WebhookItem }) {
 }
 
 export function WebhooksCard() {
+  const t = useTranslations("notifications");
   const { data } = useSuspenseQuery(webhooksOptions);
 
   return (
-    <AlertChannelCard title="Webhooks" action={<AddWebhookDialog />}>
+    <AlertChannelCard title={t("webhook.title")} action={<AddWebhookDialog />}>
       {data.length === 0 ? (
-        <AlertChannelEmpty>
-          No webhooks yet. Add one to receive metadata and rank alerts in
-          Discord, Slack, Microsoft Teams, Telegram, Google Chat or your own
-          endpoint.
-        </AlertChannelEmpty>
+        <AlertChannelEmpty>{t("webhook.empty")}</AlertChannelEmpty>
       ) : (
-        <AlertChannelList label="Configured alert webhooks and their subscribed events.">
+        <AlertChannelList label={t("webhook.listLabel")}>
           {data.map((webhook) => (
             <WebhookRow key={webhook.id} webhook={webhook} />
           ))}

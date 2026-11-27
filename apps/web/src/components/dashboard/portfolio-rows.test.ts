@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { translationContext } from "@/test/translation-context";
 import type { PortfolioApp, PortfolioAppInsight } from "@asobeast/shared";
 import {
   filterRows,
@@ -352,5 +353,18 @@ describe("matchesQuery", () => {
     expect(rest).toEqual([]);
     expect(group.kind === "group" && group.members).toHaveLength(2);
     expect(ids(filterRows(rows, "focus"))).toEqual(["g"]);
+  });
+
+  it("localizes fallback group names without changing app names", () => {
+    const t = translationContext("zh-CN", "dashboard").translator;
+    const rows = toRows(
+      [
+        app({ id: "a", groupId: "g", groupName: null, name: null }),
+        app({ id: "b", groupId: "g", groupName: null, name: null }),
+      ],
+      t,
+    );
+
+    expect(rows[0]).toMatchObject({ kind: "group", name: "应用分组" });
   });
 });

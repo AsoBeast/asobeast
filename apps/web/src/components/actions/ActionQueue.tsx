@@ -1,4 +1,5 @@
 import type { ActionItem } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -14,6 +15,7 @@ function GroupSelect({
   group: QueueGroup;
   selection: QueueSelection;
 }) {
+  const t = useTranslations("actions");
   const ids = group.items
     .map((item) => item.id)
     .filter((id) => selection.selectable.includes(id));
@@ -25,7 +27,7 @@ function GroupSelect({
   return (
     <label className="flex size-11 items-center justify-center @2xl/queue:size-6">
       <Checkbox
-        aria-label={`Select all in ${group.label}`}
+        aria-label={t("selectAllIn", { group: group.label })}
         checked={
           chosen === ids.length ? true : chosen > 0 ? "indeterminate" : false
         }
@@ -36,6 +38,7 @@ function GroupSelect({
 }
 
 export function QueueColumnHead() {
+  const t = useTranslations("actions");
   return (
     <div
       aria-hidden
@@ -44,9 +47,9 @@ export function QueueColumnHead() {
         "hidden h-9 items-center border-b border-border px-4 text-label text-faint-foreground @2xl/queue:grid",
       )}
     >
-      <span className="col-start-2">Priority</span>
-      <span>Action</span>
-      <span className="text-right">Impact</span>
+      <span className="col-start-2">{t("priority")}</span>
+      <span>{t("action")}</span>
+      <span className="text-right">{t("impact")}</span>
     </div>
   );
 }

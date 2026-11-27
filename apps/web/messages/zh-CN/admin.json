@@ -1,0 +1,464 @@
+{
+  "title": "管理面板",
+  "access": {
+    "needsPlanTitle": "您的工作区需要套餐才能打开管理面板",
+    "needsPlanBody": "只有运营者自己的工作区持有有效套餐时，管理页面、队列仪表盘、API 文档和指标端点才会开放。您的工作区没有套餐，因此它们都会返回未找到。在启用账单的自托管实例上，您也可以在数据库中的引导工作区上设置套餐。",
+    "choosePlan": "选择套餐",
+    "readGuide": "阅读指南"
+  },
+  "nav": {
+    "label": "管理面板",
+    "overview": "概览",
+    "conversion": "转化",
+    "capacity": "容量",
+    "workspaces": "工作区",
+    "users": "用户",
+    "apps": "应用",
+    "queueDashboard": "队列仪表盘",
+    "apiDocs": "API 文档"
+  },
+  "common": {
+    "workspaceCount": "{count, plural, one {# 个工作区} other {# 个工作区}}",
+    "accountCount": "{count, plural, one {# 个账户} other {# 个账户}}",
+    "memberCount": "{count, plural, one {# 个成员} other {# 个成员}}",
+    "appCount": "{count, plural, one {# 个应用} other {# 个应用}}",
+    "competitorCount": "{count, plural, one {# 个竞品} other {# 个竞品}}",
+    "storefrontCount": "{count, plural, one {# 个应用商店地区} other {# 个应用商店地区}}",
+    "trialCount": "{count, plural, one {# 个试用} other {# 个试用}}",
+    "dayCount": "{count, plural, one {# 天} other {# 天}}",
+    "signUpCount": "{count, plural, one {# 次注册} other {# 次注册}}",
+    "erasedWorkspaceCount": "{count, plural, one {# 个已删除工作区} other {# 个已删除工作区}}",
+    "endpointCount": "{count, plural, one {# 个端点} other {# 个端点}}",
+    "attemptCount": "{count, plural, one {# 次尝试} other {# 次尝试}}",
+    "noun": "{count, plural, one {{noun, select, workspace {工作区} account {账户} app {应用} other {}}} other {{noun, select, workspace {工作区} account {账户} app {应用} other {}}}}",
+    "search": {
+      "workspace": "搜索工作区",
+      "account": "搜索账户",
+      "app": "搜索应用"
+    },
+    "empty": {
+      "filtered": "没有{noun}匹配这些筛选条件",
+      "instance": "此实例上还没有{noun}"
+    },
+    "listCount": "{shown, number} / {loaded, number} {loaded, plural, one {{noun, select, workspace {个工作区} account {个账户} app {个应用} other {}}} other {{noun, select, workspace {个工作区} account {个账户} app {个应用} other {}}}}",
+    "limitNote": "共 {total, number} 个{noun}，显示最新 {shown, number} 个。<link>打开一个工作区</link>以列出其中的所有{noun}。",
+    "auditRead": "每次读取都会写入支持审计记录。",
+    "appsAuditRead": "不含竞品。每次读取都会写入支持审计记录。",
+    "opensInNewTab": "（在新标签页中打开）",
+    "untitledApp": "未命名应用",
+    "operator": "平台运营者",
+    "confirmed": "已确认",
+    "notConfirmed": "未确认",
+    "roles": {
+      "owner": "所有者",
+      "member": "成员"
+    }
+  },
+  "header": {
+    "read": "读取于 {time}",
+    "billingMeta": "{workspaces} · {trialing} 个试用中 · {paying} 个付费 · {read}",
+    "selfHostedMeta": "{workspaces} · {accounts} · {read}"
+  },
+  "overview": {
+    "group": "实例概览",
+    "signups": "注册",
+    "activation": "激活",
+    "paying": "付费",
+    "onTrial": "试用中",
+    "trialToPaid": "试用转付费",
+    "workspaces": "工作区",
+    "accounts": "账户",
+    "points": "个百分点",
+    "signupsNote": "过去 {days, plural, one {# 天} other {# 天}}内的工作区",
+    "activationValue": "{ranked} / {imported}",
+    "activationNote": "导入后一天内获得排名 · {completed} 个完成设置",
+    "activationInfoLabel": "激活的含义",
+    "activationSummary": "在过去 {days} 天导入的应用中，有多少在导入后 24 小时内就有一个关键词获得排名。引导式设置正是以这段时间作为实现价值的时长。",
+    "activationGuide": "查看激活的计算方式",
+    "payingCanceling": "{count} 个将在周期结束时取消",
+    "payingOf": "共 {total, plural, one {# 个工作区} other {# 个工作区}}",
+    "trialsEnding": "{days, plural, one {# 天} other {# 天}}内将有 {count, plural, one {# 个试用} other {# 个试用}}结束",
+    "trialRateNote": "{days, plural, one {# 天} other {# 天}}内结束的 {ended, plural, one {# 个试用} other {# 个试用}}中，有 {paid} 个转付费",
+    "pendingDeletion": "{count} 个待删除",
+    "accountsNote": "{confirmed} 个已确认 · {joined} 个本周加入",
+    "signupsTitle": "过去 30 天的注册",
+    "signupsFooter": "过去 30 天加入了 {count, plural, one {# 个账户} other {# 个账户}}。",
+    "of": "共 {count} 个",
+    "chart": {
+      "tooFew": "过去 30 天注册人数太少，无法绘制图表。",
+      "series": "账户",
+      "region": "每日创建的账户"
+    }
+  },
+  "conversion": {
+    "window": "注册时间范围",
+    "days": "{count} 天",
+    "title": "漏斗",
+    "list": "注册到付费",
+    "fallback": "过去 {days, plural, one {# 天} other {# 天}}内注册的工作区。",
+    "columns": {
+      "step": "步骤",
+      "previous": "占上一步",
+      "workspaces": "工作区"
+    },
+    "median": "中位数：{parts}",
+    "medianToFirstApp": "{days}到首个应用",
+    "medianToTrial": "{days}到试用",
+    "medianTrialToPaid": "{days}从试用到付费",
+    "unrecorded": "在 {date} 之前删除的工作区不计入。",
+    "needsLook": "需要关注",
+    "needsLookList": "需要关注的工作区",
+    "billingFooter": "仍可挽回：{days} 天内结束的试用、停止续订和扣款失败。",
+    "selfHostedFooter": "即将离开或已失去访问权限的工作区。",
+    "stagesTitle": "按阶段划分的工作区",
+    "stagesFooter": "每个工作区当前的账单状态。",
+    "payingTitle": "按套餐和周期划分的付费工作区",
+    "payingFooter": "付费工作区按其所持套餐及续订频率划分。",
+    "payingEmpty": "目前没有付费工作区。",
+    "payingPlan": "{plan} · {interval}",
+    "instanceTitle": "实例",
+    "instanceFooter": "已跟踪应用不含竞品；激活统计过去 30 天。",
+    "instanceList": "实例总计",
+    "trackedApps": "已跟踪应用",
+    "keywordMarkets": "关键词市场",
+    "searchedKeywords": "已搜索关键词",
+    "aiCalls": "本月 AI 调用",
+    "rankedWithinDay": "导入后一天内获得排名",
+    "departuresTitle": "过去 {days, plural, one {# 天} other {# 天}}内离开",
+    "departureStages": "离开时所在阶段：{stages}。",
+    "departureStage": "{stage} {count, plural, one {# 个} other {# 个}}",
+    "departureStageSeparator": " · ",
+    "departuresEmptyFooter": "已删除的工作区，按所选原因统计。",
+    "seeAllDepartures": "查看所有离开记录",
+    "reasonsList": "工作区离开的原因",
+    "reason": "原因",
+    "departureEmpty": "过去 {days, plural, one {# 天} other {# 天}}内没有工作区被删除。",
+    "stages": {
+      "trialing": "试用中",
+      "paying": "付费",
+      "paymentFailed": "付款失败",
+      "comped": "赠送套餐",
+      "trialEnded": "试用结束",
+      "churned": "已流失",
+      "noPlan": "无套餐",
+      "selfHosted": "自托管"
+    },
+    "flags": {
+      "endingSoon": "试用将在 {days} 天内结束",
+      "canceling": "将在周期结束时取消",
+      "deleting": "待删除",
+      "suspended": "已暂停"
+    },
+    "funnelSteps": {
+      "signedUp": "注册",
+      "confirmedEmail": "确认邮箱",
+      "firstApp": "导入首个应用",
+      "rankedWithinADay": "一天内获得排名",
+      "trialStarted": "开始试用",
+      "paid": "付费"
+    },
+    "reasons": {
+      "tooExpensive": "价格太高",
+      "missingFeature": "缺少所需功能",
+      "notUsing": "不再使用",
+      "switchedTool": "已改用其他工具",
+      "other": "其他",
+      "unanswered": "未回答"
+    },
+    "cohorts": {
+      "title": "每周同期群",
+      "footer": "共 {count, plural, one {# 次注册} other {# 次注册}}，覆盖 {weeks} 周，按 UTC 周一至周日划分，每群持续跟踪至今。",
+      "caption": "每周注册数及每群进展",
+      "empty": "过去 {weeks} 周没有工作区注册。",
+      "columns": {
+        "week": "开始周",
+        "signedUp": "已注册",
+        "confirmed": "已确认",
+        "trial": "试用",
+        "firstApp": "首个应用",
+        "paid": "已付费",
+        "stillPaying": "仍付费"
+      }
+    },
+    "departures": {
+      "title": "离开记录",
+      "truncated": "最新 {shown} 个，共 {total} 个已删除工作区。",
+      "all": "{count, plural, one {# 个已删除工作区} other {# 个已删除工作区}}，最新在前，不包含可识别信息。",
+      "before": "在 {date} 之前删除的工作区不在此列表中。",
+      "caption": "已删除工作区，最新在前",
+      "emptySince": "自 {date} 以来没有工作区被删除。",
+      "empty": "尚无工作区被删除。",
+      "paidBefore": "曾付费",
+      "paidPlan": "{paidBefore} · {plan}",
+      "columns": {
+        "erased": "删除时间",
+        "requested": "申请离开",
+        "created": "创建时间",
+        "stage": "阶段",
+        "apps": "应用",
+        "keywordMarkets": "关键词市场",
+        "members": "成员",
+        "reason": "原因"
+      }
+    }
+  },
+  "capacity": {
+    "demandTitle": "实例需求",
+    "demandDescription": "每日运行为其访问的每个工作区排入的应用商店请求，与此实例的容量对比。已暂停或没有权限的工作区会被跳过。",
+    "allStores": "所有应用商店",
+    "instanceMeter": "实例每日请求利用率",
+    "storeMeter": "{store} 每日请求利用率",
+    "usage": "{used} / {capacity} 次请求/天 · {percent}% · {status}",
+    "requestsPerDay": "{count, plural, one {# 次请求/天} other {# 次请求/天}}",
+    "consumersTitle": "主要消耗者",
+    "consumersDescription": "跟踪成本最高的每日请求工作区。",
+    "consumersEmpty": "目前没有工作区在跟踪任何内容。",
+    "proxyTitle": "代理池",
+    "proxyDescription": "应用商店请求通过 {provider} 端点发出，而非使用主机地址。",
+    "provider": "提供商",
+    "pool": "代理池",
+    "pending": "待处理",
+    "retired": "已退役",
+    "healthy": "{healthy} / {total} 个健康",
+    "residential": "本月住宅回退",
+    "residentialUsage": "{spend} / {cap}",
+    "rawPool": "原始代理池健康状态",
+    "operatorOnly": "每个工作区只能查看自己的套餐用量。容量仅向平台运营者显示。",
+    "alerts": {
+      "poolHealthyLow": "健康端点所剩无几，因此代理池恢复前应用商店任务可能会变慢。",
+      "poolBlockedRising": "被拒绝的响应正在增加，应用商店可能正在屏蔽代理池地址。",
+      "poolSilentRising": "静默失败正在增加：响应为空，这表明可能遭到屏蔽或解析器发生变化。",
+      "residentialSpendNearCap": "住宅回退支出已接近月度上限。"
+    }
+  },
+  "workspaces": {
+    "caption": "此实例上的工作区",
+    "filtersDescription": "按账单阶段和需要关注的事项筛选工作区。",
+    "stage": "阶段",
+    "needsLook": "需要关注",
+    "stageChip": "阶段：{stage}",
+    "workspaceChip": "工作区：{name}",
+    "columns": {
+      "workspace": "工作区",
+      "stage": "阶段",
+      "members": "成员",
+      "apps": "应用",
+      "keywordMarkets": "关键词市场",
+      "created": "创建时间"
+    },
+    "pills": {
+      "paymentFailed": "付款失败",
+      "trialUntil": "试用至 {date}",
+      "canceling": "将于 {date} 取消",
+      "suspended": "已暂停",
+      "deletes": "将于 {date} 删除",
+      "requestedByOn": "{by} 于 {date} 申请",
+      "askedBy": "由 {by} 申请"
+    },
+    "memberLink": "{name} 中的 {count, plural, one {# 个成员} other {# 个成员}}",
+    "appLink": "{name} 中的 {count, plural, one {# 个应用} other {# 个应用}}"
+  },
+  "users": {
+    "caption": "此实例上的账户",
+    "columns": {
+      "account": "账户",
+      "role": "角色",
+      "email": "邮箱",
+      "workspace": "工作区",
+      "stage": "阶段",
+      "joined": "加入时间"
+    },
+    "appsTitle": "{name} 中的应用"
+  },
+  "apps": {
+    "caption": "此实例上已跟踪的应用",
+    "store": "应用商店",
+    "storeChip": "应用商店：{store}",
+    "columns": {
+      "app": "应用",
+      "store": "应用商店",
+      "market": "主市场",
+      "workspace": "工作区",
+      "competitors": "竞品",
+      "keywordMarkets": "关键词市场",
+      "added": "添加时间"
+    },
+    "accountsTitle": "{name} 中的账户"
+  },
+  "plans": {
+    "free": "免费",
+    "trial": "试用",
+    "indie": "Indie",
+    "ultimate": "Ultimate"
+  },
+  "intervals": {
+    "monthly": "按月续订",
+    "yearly": "按年续订",
+    "notRecorded": "未记录周期"
+  },
+  "support": {
+    "title": "工作区",
+    "description": "一个工作区的支持详情。",
+    "gone": "此工作区已不存在。",
+    "readFailed": "无法读取此工作区。",
+    "offline": "您当前处于离线状态。恢复连接后将加载详情。",
+    "factsTitle": "套餐和日期",
+    "stageWithPlan": "{plan} · {stage}",
+    "suspendedReason": "所有成员都能看到的暂停原因",
+    "facts": {
+      "stage": "阶段",
+      "storedPlan": "已存储套餐",
+      "created": "创建时间",
+      "trialStarted": "试用开始",
+      "trialEnd": "试用结束",
+      "firstPaid": "首次付费",
+      "subscription": "订阅",
+      "cancelsOn": "取消日期",
+      "periodEnds": "周期结束",
+      "suspendedSince": "暂停时间",
+      "deletesOn": "删除日期",
+      "deletionAskedBy": "删除申请人"
+    },
+    "subscriptionRenews": "{status}，每{cadence}续订",
+    "subscriptionBilled": "{status}，按{cadence}计费",
+    "deletionAskedBy": "{by}，日期为 {date}",
+    "cadence": {
+      "month": "月",
+      "year": "年"
+    },
+    "limitsTitle": "套餐限制与用量",
+    "limit": "限制",
+    "usedAllowed": "已用和允许量",
+    "allowed": "允许量",
+    "onDemand": "按需额度",
+    "unlimited": "无限制",
+    "usage": "{used} / {limit}",
+    "usageUnlimited": "{used}，无限制",
+    "competitorUsage": "共 {used} 个，每个应用最多 {limit} 个",
+    "competitorUsageUnlimited": "共 {used} 个，无限制",
+    "allowance": "{window} {count} 次",
+    "windows": {
+      "second": "每秒",
+      "minute": "每分钟",
+      "hour": "每小时",
+      "day": "每天",
+      "week": "每周",
+      "everySecond": "每 {count} 秒",
+      "everyMinute": "每 {count} 分钟",
+      "everyHour": "每 {count} 小时",
+      "everyDay": "每 {count} 天",
+      "everyWeek": "每 {count} 周"
+    },
+    "limitLabels": {
+      "apps": "应用",
+      "keywordMarkets": "关键词市场",
+      "competitorsPerApp": "每个应用的竞品数",
+      "chartFollows": "关注的榜单",
+      "aiCallsPerMonth": "每月 AI 调用",
+      "apiRequestsPerMinute": "每分钟 API 请求",
+      "apiWritesPerMinute": "每分钟 API 写入",
+      "apiRequestsPerDay": "每日 API 请求",
+      "apiConcurrentRequests": "并发 API 请求",
+      "mcpRequestsPerMinute": "每分钟 MCP 请求",
+      "members": "成员",
+      "competitors": "竞品"
+    },
+    "onDemandLabels": {
+      "refresh": "刷新",
+      "runDaily": "每日运行",
+      "score": "重新评分",
+      "suggestions": "关键词建议",
+      "spider": "深度搜索",
+      "importApp": "应用导入",
+      "addCompetitor": "添加竞品",
+      "storeLookup": "应用商店查询",
+      "chartCapture": "榜单抓取"
+    },
+    "queues": {
+      "appstore": "App Store",
+      "gplay": "Google Play"
+    },
+    "actions": {
+      "list": "已列出工作区",
+      "view": "已查看",
+      "reconcile": "已对账账单",
+      "suspend": "已暂停",
+      "restore": "已恢复",
+      "runDaily": "已开始每日运行",
+      "replay": "已重放账单事件"
+    },
+    "outcomes": {
+      "attempted": "进行中",
+      "succeeded": "成功",
+      "failed": "失败"
+    },
+    "access": {
+      "title": "访问日志",
+      "note": "最近 20 次对此工作区的读取和操作，包括打开这些详情。"
+    },
+    "checks": {
+      "title": "上周关键词检查",
+      "empty": "过去 7 天没有关键词检查。",
+      "caption": "关键词检查",
+      "day": "日期",
+      "checked": "已检查",
+      "notFound": "未找到",
+      "note": "每天检查的排名，以及有多少在结果中完全找不到该应用。没有检查的日期不会显示。"
+    },
+    "failedJobs": {
+      "title": "失败的应用商店任务",
+      "empty": "没有失败的应用商店任务。",
+      "unavailable": "任务队列未响应，因此不显示失败的任务。",
+      "note": "最近 20 个提及此工作区的失败 App Store 和 Google Play 任务。",
+      "timeUnknown": "未记录时间",
+      "item": "{queue} · {attempts} · {time}"
+    },
+    "actionsTitle": "支持操作",
+    "operatorWorkspace": "您自己的工作区无法被暂停。",
+    "reason": "原因",
+    "reasonHint": "至少 {min} 个字符。将保留在支持访问日志中。",
+    "reasonCount": "{used} / {max}",
+    "failed": "无法完成，请重试。",
+    "runDaily": {
+      "open": "运行每日任务",
+      "title": "为 {name} 开始每日运行？",
+      "body": "为 {name} 排队今天尚未运行的应用刷新、关键词检查、评论和分类排名，并重新排队失败的任务。队列中仍保留的今日任务会被跳过，因此已运行的工作通常不会重复。",
+      "confirm": "开始每日运行",
+      "pending": "正在开始…",
+      "queued": "已为 {name} 排队每日运行。",
+      "nothingQueued": "今天没有新的任务可为 {name} 排队。"
+    },
+    "reconcile": {
+      "open": "对账账单",
+      "title": "将 {name} 与 Stripe 对账？",
+      "body": "从 Stripe 读取 {name} 的订阅，并在不一致时更正此处存储的套餐、试用和续订信息。如果 Stripe 没有对应订阅，{name} 将转为免费套餐，并取消 Stripe 不应开始的试用。不会产生扣费。",
+      "confirm": "对账账单",
+      "pending": "正在对账…",
+      "done": "{name} 已与 Stripe 完成对账。"
+    },
+    "suspend": {
+      "open": "暂停",
+      "title": "暂停 {name}？",
+      "body": "在您恢复之前，{name} 的所有写入和按需操作都会被拒绝。{name} 的每个成员都会在每个页面看到此原因，因此请面向他们填写。",
+      "confirm": "暂停工作区",
+      "pending": "正在暂停…",
+      "done": "{name} 已暂停。"
+    },
+    "restore": {
+      "open": "恢复",
+      "title": "恢复 {name}？",
+      "body": "{name} 将可以再次写入，其成员将不再看到暂停提示。原因会保留在访问日志中。",
+      "confirm": "恢复工作区",
+      "pending": "正在恢复…",
+      "done": "{name} 现在可以再次写入。"
+    }
+  },
+  "errors": {
+    "overview": "无法加载管理概览",
+    "apps": "无法加载已跟踪的应用",
+    "capacity": "无法加载实例容量",
+    "conversion": "无法加载转化数据",
+    "users": "无法加载账户",
+    "workspaces": "无法加载工作区"
+  }
+}

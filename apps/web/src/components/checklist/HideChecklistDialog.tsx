@@ -1,6 +1,7 @@
 "use client";
 
 import type { RefObject } from "react";
+import { useTranslations } from "next-intl";
 import {
   ConfirmActionFooter,
   closeUnlessPending,
@@ -27,6 +28,7 @@ export function HideChecklistDialog({
   pending: boolean;
   returnFocus: RefObject<HTMLElement | null>;
 }) {
+  const t = useTranslations("settings");
   return (
     <AlertDialog
       open={open}
@@ -34,17 +36,16 @@ export function HideChecklistDialog({
     >
       <AlertDialogContent onCloseAutoFocus={returnFocusTo(returnFocus)}>
         <AlertDialogHeader>
-          <AlertDialogTitle>Hide the setup checklist?</AlertDialogTitle>
+          <AlertDialogTitle>{t("checklist.hideTitle")}</AlertDialogTitle>
           <AlertDialogDescription>
-            It stays hidden for everyone in this workspace. You can show it
-            again under Settings, Getting started.
+            {t("checklist.hideDescription")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <ConfirmActionFooter
           variant="default"
           pending={pending}
-          label="Hide checklist"
-          pendingLabel="Hiding…"
+          label={t("checklist.hide")}
+          pendingLabel={t("checklist.hiding")}
           onConfirm={onConfirm}
         />
       </AlertDialogContent>

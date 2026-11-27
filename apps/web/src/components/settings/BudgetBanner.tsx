@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { TriangleAlert } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -8,6 +9,7 @@ import { budgetOptions } from "@/lib/queries";
 import { utilizationLevel } from "@/lib/utilization";
 
 export function BudgetBanner() {
+  const t = useTranslations("settings");
   const { data: budget } = useSuspenseQuery(budgetOptions);
   if (utilizationLevel(budget.utilization) !== "danger") {
     return null;
@@ -17,11 +19,13 @@ export function BudgetBanner() {
     <Alert variant="destructive">
       <TriangleAlert />
       <AlertDescription>
-        Daily requests exceed 85% of your store rate limit.{" "}
-        <Link href="/settings" className="font-medium underline">
-          Review the request budget
-        </Link>
-        .
+        {t.rich("capacity.banner", {
+          link: (chunks) => (
+            <Link href="/settings" className="font-medium underline">
+              <span>{chunks}</span>
+            </Link>
+          ),
+        })}
       </AlertDescription>
     </Alert>
   );

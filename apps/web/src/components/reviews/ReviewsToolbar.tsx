@@ -8,6 +8,7 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query";
 import type { Options } from "nuqs";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { REVIEW_SORTS, type ReviewSort } from "@asobeast/shared";
 import { SearchInput } from "@/components/data-table/SearchInput";
@@ -28,12 +29,9 @@ import {
 import { literalOf } from "@/lib/literal";
 import { RATINGS_RANGES, rangeLabel, type RatingsRange } from "@/lib/ranges";
 import { hasSearchTerms } from "@/lib/search-text";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { useSingleFlight } from "@/lib/single-flight";
-import {
-  EXPORT_ORDER,
-  exportReviews,
-  truncatedExportNotice,
-} from "./review-csv";
+import { exportReviews, truncatedExportNotice } from "./review-csv";
 import { reviewFilters, type ReviewView } from "./review-filters";
 import { matchesReviewQuery } from "./review-search";
 import { ReplyGuidelinesDialog } from "./ReplyGuidelinesDialog";
@@ -44,11 +42,6 @@ const SELECT_WIDTH =
   "w-[150px] max-sm:min-w-0 max-sm:flex-1 max-sm:basis-[40%]";
 const STAR_TOGGLE =
   "-ml-px rounded-none first:ml-0 first:rounded-l-md last:rounded-r-md focus-visible:z-10 aria-pressed:bg-accent max-sm:flex-1";
-
-const SORT_OPTIONS: { value: ReviewSort; label: string }[] = [
-  { value: "newest", label: "Newest first" },
-  { value: "lowest", label: "Lowest first" },
-];
 
 export interface ReviewsToolbarProps {
   id: string;
@@ -70,6 +63,7 @@ function VersionSelect({
   version: string;
   onChange: (next: string) => void;
 }) {
+  const t = useTranslations("reviews");
   const { data } = useSuspenseQuery(reviewsOptions(id, {}));
 
   return (
@@ -77,11 +71,14 @@ function VersionSelect({
       value={version || ALL}
       onValueChange={(next) => onChange(next === ALL ? "" : next)}
     >
-      <SelectTrigger className={SELECT_WIDTH} aria-label="Filter by version">
-        <SelectValue placeholder="All versions" />
+      <SelectTrigger
+        className={SELECT_WIDTH}
+        aria-label={t("toolbar.versionFilter")}
+      >
+        <SelectValue placeholder={t("toolbar.allVersions")} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value={ALL}>All versions</SelectItem>
+        <SelectItem value={ALL}>{t("toolbar.allVersions")}</SelectItem>
         {data.versions.map((item) => (
           <SelectItem key={item} value={item}>
             v{item}
@@ -99,6 +96,8 @@ function SinceSelect({
   since: RatingsRange | null;
   onChange: (next: RatingsRange | null) => void;
 }) {
+  const t = useTranslations("reviews");
+  const format = useTranslations("format");
   return (
     <Select
       value={since ?? ALL}
@@ -106,14 +105,17 @@ function SinceSelect({
         onChange(literalOf(RATINGS_RANGES, next) ?? null)
       }
     >
-      <SelectTrigger className={SELECT_WIDTH} aria-label="Filter by date">
-        <SelectValue placeholder="Any time" />
+      <SelectTrigger
+        className={SELECT_WIDTH}
+        aria-label={t("toolbar.dateFilter")}
+      >
+        <SelectValue placeholder={t("toolbar.anyTime")} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value={ALL}>Any time</SelectItem>
+        <SelectItem value={ALL}>{t("toolbar.anyTime")}</SelectItem>
         {RATINGS_RANGES.map((preset) => (
           <SelectItem key={preset} value={preset}>
-            {rangeLabel(preset)}
+            {rangeLabel(preset, format)}
           </SelectItem>
         ))}
       </SelectContent>
@@ -130,6 +132,8 @@ function ExportReviewsButton({
   view: ReviewView;
   query: string;
 }) {
+  const t = useTranslations("reviews");
+  const locale = useAppLocale();
   const queryClient = useQueryClient();
   const filters = reviewFilters(view);
   const { data } = useQuery(reviewsOptions(id, filters));
@@ -140,29 +144,34 @@ function ExportReviewsButton({
         matchesReviewQuery(review, query),
       );
       if (rows.length === 0) {
-        toast.info("Nothing to export: no review matches this search");
+        toast.info(t("toolbar.nothingToExport"));
         return;
       }
-      exportReviews(id, rows);
+      exportReviews(id, rows, t);
       const notice = truncatedExportNotice(
         list,
         view.sort,
         hasSearchTerms(query) ? rows.length : null,
+        t,
+        locale,
       );
       if (notice) toast.info(notice);
     },
     onError: () => {
-      toast.error("Could not export reviews");
+      toast.error(t("toolbar.exportFailed"));
     },
   });
   const exportOnce = useSingleFlight(exporting);
 
   return (
     <ExportCsvButton
-      subject="reviews"
+      subject={t("toolbar.exportSubject")}
       disabled={(data?.total ?? 0) === 0 || exporting.isPending}
       onClick={() => exportOnce()}
-      title={`Exports the ${EXPORT_ORDER[view.sort]} ${REVIEWS_EXPORT_LIMIT} reviews that match the filters`}
+      title={t("toolbar.exportTitle", {
+        order: t(`toolbar.exportOrder.${view.sort}`),
+        limit: REVIEWS_EXPORT_LIMIT,
+      })}
     />
   );
 }
@@ -177,12 +186,13 @@ export function ReviewsToolbar({
   onSort,
   onQuery,
 }: ReviewsToolbarProps) {
+  const t = useTranslations("reviews");
   return (
     <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
       <div
         className="flex max-sm:w-full"
         role="group"
-        aria-label="Filter by star rating"
+        aria-label={t("toolbar.starFilter")}
       >
         {STAR_FILTERS.map((star) => (
           <Button
@@ -207,18 +217,25 @@ export function ReviewsToolbar({
           onSort(literalOf(REVIEW_SORTS, next) ?? "newest")
         }
       >
-        <SelectTrigger className={SELECT_WIDTH} aria-label="Sort reviews">
+        <SelectTrigger
+          className={SELECT_WIDTH}
+          aria-label={t("toolbar.sortFilter")}
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {SORT_OPTIONS.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
+          {REVIEW_SORTS.map((sort) => (
+            <SelectItem key={sort} value={sort}>
+              {t(`toolbar.${sort}`)}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
-      <SearchInput label="Search reviews" value={query} onSearch={onQuery} />
+      <SearchInput
+        label={t("toolbar.search")}
+        value={query}
+        onSearch={onQuery}
+      />
       <div className="ml-auto flex flex-wrap items-center gap-2">
         <ReplyGuidelinesDialog id={id} />
         <ExportReviewsButton id={id} view={view} query={query} />

@@ -2,6 +2,7 @@
 
 import { Suspense, startTransition, useDeferredValue, useState } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { storefrontLanguage, type ReviewSort } from "@asobeast/shared";
 import {
   PANEL_ACTION,
@@ -18,7 +19,8 @@ import {
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { InfoTip } from "@/components/ui/info-tip";
-import { formatNumber } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
+import type { MessageTranslator } from "@/i18n/translator";
 import { appDetailOptions, reviewsOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { ReplyComposer } from "./ReplyComposer";
@@ -37,17 +39,17 @@ import { reviewActionLabel, reviewTwins } from "./review-subject";
 import { ReplySwitchSkeleton, ReviewsListSkeleton } from "./skeletons";
 import { useReviewView } from "./use-review-view";
 
-const SORT_WORDS: Record<ReviewSort, string> = {
-  newest: "newest first",
-  lowest: "lowest first",
-};
-
 const EMPTY_STATE = "px-4 py-12";
 
-function searchCount(matches: number, shown: number, total: number): string {
-  const found = `${formatNumber(matches)} of ${formatNumber(shown)} match the search`;
+function searchCount(
+  matches: number,
+  shown: number,
+  total: number,
+  t: MessageTranslator,
+): string {
+  const found = t("list.searchFound", { matches, shown });
   return total > shown
-    ? `${found} · search covers the ${formatNumber(shown)} loaded of ${formatNumber(total)} reviews`
+    ? t("list.searchPartial", { found, shown, total })
     : found;
 }
 
@@ -68,21 +70,20 @@ function ListFooter({
   expanded: boolean;
   onShowAll: () => void;
 }) {
+  const t = useTranslations("reviews");
   const partial = total > shown;
   const counted = searching
-    ? searchCount(matches, shown, total)
-    : `Showing ${formatNumber(shown)} of ${formatNumber(total)} · ${SORT_WORDS[sort]}`;
+    ? searchCount(matches, shown, total, t)
+    : t("list.showing", { shown, total, sort: t(`sort.${sort}`) });
   return (
     <div className="flex min-h-12 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-border px-4 py-2.5 text-caption text-faint-foreground">
       <p role="status">{counted}</p>
       {partial && expanded ? (
-        <p>
-          {`The page shows at most ${REVIEWS_SHOW_ALL_LIMIT} reviews; narrow the filters to reach the others.`}
-        </p>
+        <p>{t("list.pageLimit", { limit: REVIEWS_SHOW_ALL_LIMIT })}</p>
       ) : null}
       {partial && !expanded ? (
         <Button variant="outline" size="sm" onClick={onShowAll}>
-          Show all
+          {t("list.showAll")}
         </Button>
       ) : null}
     </div>
@@ -106,6 +107,8 @@ function ReviewCards({
   onClearFilters: () => void;
   onResetSearch: () => void;
 }) {
+  const t = useTranslations("reviews");
+  const locale = useAppLocale();
   const { data: app } = useSuspenseQuery(appDetailOptions(id));
   const viewKey = JSON.stringify(view);
   const [expandedView, setExpandedView] = useState<string | null>(null);
@@ -128,26 +131,24 @@ function ReviewCards({
       <EmptyState
         className={EMPTY_STATE}
         title={
-          queueCleared
-            ? "Nothing needs a reply"
-            : "No reviews match these filters"
+          queueCleared ? t("list.nothingToReply") : t("list.noFilterMatches")
         }
         body={
           queueCleared
-            ? "Every stored review has a reply or a saved draft."
-            : "Nothing stored matches the selected rating, version, period and reply state."
+            ? t("list.nothingToReplyBody")
+            : t("list.noFilterMatchesBody")
         }
         action={
           <Button variant="outline" onClick={onClearFilters}>
-            {queueCleared ? "Show all reviews" : "Clear filters"}
+            {queueCleared ? t("list.showAllReviews") : t("list.clearFilters")}
           </Button>
         }
       />
     ) : (
       <EmptyState
         className={EMPTY_STATE}
-        title="No reviews stored yet"
-        body="Reviews appear after the next daily sync."
+        title={t("list.noStored")}
+        body={t("list.noStoredBody")}
       />
     );
   }
@@ -162,15 +163,15 @@ function ReviewCards({
       {shown.length === 0 ? (
         <EmptyState
           className={EMPTY_STATE}
-          title="No reviews match this search"
+          title={t("list.noSearchMatches")}
           body={
             quotedPhrase(query) === null
-              ? "Search looks through the titles, texts, authors and replies of the reviews loaded here."
-              : "A search in quotes matches whole words in the titles and texts of the reviews loaded here."
+              ? t("list.searchBody")
+              : t("list.quotedSearchBody")
           }
           action={
             <Button variant="outline" onClick={onResetSearch}>
-              Reset search
+              {t("list.resetSearch")}
             </Button>
           }
         />
@@ -195,16 +196,22 @@ function ReviewCards({
                       className="ml-auto"
                       autoFocus={closed === review.id}
                       aria-label={reviewActionLabel(
-                        review.reply?.text ? "Edit reply to" : "Reply to",
+                        review.reply?.text
+                          ? t("list.editReplyTo")
+                          : t("list.replyTo"),
                         review,
                         twin,
+                        t,
+                        locale,
                       )}
                       onClick={() => {
                         setClosed(null);
                         onReply(review.id);
                       }}
                     >
-                      {review.reply?.text ? "Edit reply" : "Reply"}
+                      {review.reply?.text
+                        ? t("list.editReply")
+                        : t("list.reply")}
                     </Button>
                   )
                 }
@@ -240,6 +247,7 @@ function ReviewCards({
 }
 
 export function ReviewsList({ id }: { id: string }) {
+  const t = useTranslations("reviews");
   const {
     view,
     query,
@@ -259,7 +267,7 @@ export function ReviewsList({ id }: { id: string }) {
         className={`${PANEL_HEADER} flex flex-wrap items-center justify-between gap-x-4 gap-y-2`}
       >
         <CardTitle asChild>
-          <h2>Reviews</h2>
+          <h2>{t("title")}</h2>
         </CardTitle>
         <CardAction
           className={`${PANEL_ACTION} flex items-center gap-1 max-sm:w-full`}
@@ -275,9 +283,9 @@ export function ReviewsList({ id }: { id: string }) {
             />
           </Suspense>
           <InfoTip
-            label="About reply status"
-            title="Reply status"
-            summary="Needs reply: no reply anywhere. Draft: a reply is kept here and not marked. Replied: the store shows a reply, posted from here or in the console, or you marked the review as replied. Updated: the reviewer edited the review after the Google Play reply, so read it again."
+            label={t("list.replyStatusLabel")}
+            title={t("list.replyStatusTitle")}
+            summary={t("list.replyStatusSummary")}
           >
             <a
               href={REPLY_STATES_GUIDE}
@@ -285,7 +293,7 @@ export function ReviewsList({ id }: { id: string }) {
               rel="noreferrer"
               className="font-medium text-foreground link-underline"
             >
-              Read how replies work
+              {t("list.readReplies")}
             </a>
           </InfoTip>
         </CardAction>

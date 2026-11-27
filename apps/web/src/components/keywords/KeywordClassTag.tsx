@@ -1,20 +1,35 @@
+"use client";
+
+import { createTranslator } from "next-intl";
 import type { KeywordClass, KeywordClassSource } from "@asobeast/shared";
+import enKeywords from "../../../messages/en/keywords.json";
+import type { MessageTranslator } from "@/i18n/translator";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywords",
+  messages: { keywords: enKeywords },
+});
 
 const MARKS = {
-  ownBrand: { letter: "B", words: "Brand keyword" },
-  competitorBrand: { letter: "CB", words: "Competitor brand keyword" },
+  ownBrand: { letter: "B", key: "ownBrand" },
+  competitorBrand: { letter: "CB", key: "competitorBrand" },
 } as const;
 
 export function KeywordClassTag({
   keywordClass,
   source,
+  t = english,
 }: {
   keywordClass: KeywordClass | undefined;
   source: KeywordClassSource | undefined;
+  t?: MessageTranslator;
 }) {
   if (keywordClass === undefined || keywordClass === "generic") return null;
-  const { letter, words } = MARKS[keywordClass];
-  const label = source === "owner" ? `${words}, set by you` : words;
+  const { letter, key } = MARKS[keywordClass];
+  const words = t(`classTag.${key}`);
+  const label =
+    source === "owner" ? t("classTag.owner", { type: words }) : words;
   return (
     <span
       data-slot="keyword-class"

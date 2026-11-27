@@ -1,0 +1,286 @@
+{
+  "title": "Audit",
+  "score": "ASO score",
+  "grades": {
+    "A": "Excellent",
+    "B": "Good",
+    "C": "Fair",
+    "D": "Weak",
+    "F": "Poor",
+    "none": "Not scored yet"
+  },
+  "groups": {
+    "discoverability": "Search visibility",
+    "conversion": "Conversion"
+  },
+  "statuses": {
+    "pass": "Pass",
+    "warn": "Needs work",
+    "fail": "Fail",
+    "unanswered": "Not scored yet"
+  },
+  "sources": {
+    "store": "Store listing",
+    "keywords": "Your keywords",
+    "competitors": "Competitors",
+    "reviews": "Reviews",
+    "rankings": "Rankings",
+    "ai": "AI observation"
+  },
+  "efforts": {
+    "minutes": "Minutes",
+    "hours": "Hours",
+    "weeks": "Weeks"
+  },
+  "impacts": {
+    "high": "High impact",
+    "medium": "Medium impact",
+    "low": "Low impact"
+  },
+  "buckets": {
+    "quickWins": "Quick wins · Today",
+    "highImpact": "High impact · This week",
+    "strategic": "Strategic · This month"
+  },
+  "bucketTabs": {
+    "quickWins": "Quick wins",
+    "highImpact": "High impact",
+    "strategic": "Strategic"
+  },
+  "targets": {
+    "metadata": "Open the metadata workbench",
+    "keywords": "Open keywords",
+    "competitors": "Open competitors",
+    "reviews": "Open reviews",
+    "rankings": "Open rankings",
+    "store-console": "Change it in your store console",
+    "ai-analysis": "Analyze creative"
+  },
+  "messages": {
+    "benefit": "Benefit",
+    "feature": "Feature",
+    "social-proof": "Social proof",
+    "ui-only": "Interface only",
+    "onboarding": "Onboarding screen",
+    "other": "Other"
+  },
+  "measured": "{percent}% of the rubric measured",
+  "measuredShort": "{percent}% measured",
+  "provisional": "Provisional",
+  "potential": "Reach {score} by finishing the plan",
+  "availability": {
+    "notMeasurable": "Not measured on the {store}",
+    "awaiting": "Waiting for input"
+  },
+  "lift": {
+    "unknown": "Lift not estimated",
+    "points": "+{points} points",
+    "figure": "+{points}"
+  },
+  "fixesWorth": "+{points} points",
+  "scoredFactors": "{scored} of {total, plural, one {# factor} other {# factors}} scored",
+  "allFactorsScored": "{total, plural, one {# factor} other {# factors}} scored",
+  "emptyBucket": "Nothing to change here.",
+  "emptyBucketPending": "Nothing yet. {count, plural, one {# check is} other {# checks are}} not scored, so this list may grow.",
+  "scoreRing": "ASO score {score} out of 100, grade {grade}, {label}{measured}",
+  "scoreUnavailable": "ASO score not available yet",
+  "lede": {
+    "unchanged": ", unchanged since last week",
+    "up": ", up ",
+    "down": ", down ",
+    "sinceWeek": " since last week",
+    "noFixes": "No change is waiting on you right now.",
+    "oneFix": "The top fix",
+    "manyFixes": "The top {count} fixes",
+    "oneListed": " is listed below.",
+    "manyListed": " are listed below.",
+    "oneWorth": " is worth ",
+    "manyWorth": " are worth ",
+    "noScore": "The score is not available yet.",
+    "score": "Score "
+  },
+  "factors": "Factors",
+  "factor": "Factor",
+  "status": "Status",
+  "worth": "Worth",
+  "scoreOutOfTen": "Score /10",
+  "scoredCount": "{scored} of {total} scored",
+  "factorNote": "Worth {weight} points of {total}",
+  "checksScored": "{scored} of {total} checks scored",
+  "pointsShort": "{points} pts",
+  "showChecks": "Show checks for {factor}",
+  "hideChecks": "Hide checks for {factor}",
+  "checks": "Checks",
+  "passCount": "{pass} of {total} pass",
+  "checksByResult": "Checks by result: {counts}",
+  "checkCountWord": {
+    "pass": "pass",
+    "warn": "need work",
+    "fail": "fail",
+    "unanswered": "not scored"
+  },
+  "checksAcross": "{checks, plural, one {# check} other {# checks}} across {factors, plural, one {# factor} other {# factors}}",
+  "plan": {
+    "title": "Action plan",
+    "impact": "Impact",
+    "fix": "Fix",
+    "effort": "Effort",
+    "where": "Where",
+    "lift": "Lift",
+    "showAll": "Show all {count}",
+    "empty": "The plan fills as checks find something to change",
+    "count": "{count, plural, one {# fix} other {# fixes}} in the plan",
+    "worth": "{count}, worth {points} together"
+  },
+  "topFixes": {
+    "title": "Top fixes",
+    "empty": "No change is waiting on you right now.",
+    "byLift": "By estimated lift",
+    "viewPlan": "View the full plan"
+  },
+  "history": {
+    "title": "Score history",
+    "aria": "Score history",
+    "key": "Score history key",
+    "rubricChange": "Rubric change",
+    "emptyTitle": "No audit snapshots yet",
+    "emptyBody": "The daily audit snapshot builds this trend.",
+    "shortNote": "A trend needs a few more daily snapshots.",
+    "reachable": "Reachable {score}",
+    "lastSnapshot": "Last daily snapshot · {date}",
+    "rubricLabel": "Rubric {version}",
+    "footer": "One snapshot a day. A rubric change can move the score without a listing change."
+  },
+  "unlocks": "Score more of the rubric:",
+  "measuredTile": "Measured",
+  "ofRubric": "of the rubric",
+  "benchmarks": {
+    "title": "Competitor comparison",
+    "aria": "Competitor comparison",
+    "metric": "Metric",
+    "you": "You",
+    "median": "Competitor median",
+    "best": "Best",
+    "againstMedian": "Against the median",
+    "standing": "Standing",
+    "ahead": "Ahead",
+    "behind": "Behind",
+    "even": "Even",
+    "unknown": "No data",
+    "emptyTitle": "No competitors to compare with",
+    "emptyBody": "Track a few rivals and the audit compares your listing with theirs.",
+    "add": "Add competitors"
+  },
+  "footer": {
+    "title": "What this audit cannot see",
+    "body": "The audit cannot see installs, ad performance, private keyword fields or the store's ranking weights. It judges the listing and the data this instance has collected."
+  },
+  "readiness": {
+    "title": "Featuring readiness",
+    "pass": "Pass",
+    "warn": "Needs work",
+    "fail": "Fail",
+    "unmeasurable": "Not measured",
+    "notRead": "The store page has not been read yet.",
+    "noStories": "In no featured stories"
+  },
+  "screenshot": {
+    "noCaption": "No readable caption",
+    "keyword": "Keyword",
+    "keywords": "Keywords",
+    "aria": "Screenshots"
+  },
+  "creative": {
+    "icon": "Icon",
+    "screenshots": "Screenshots",
+    "stale": "These observations describe your previous screenshots.",
+    "elements": {
+      "one": "One element",
+      "two": "Two elements",
+      "three-or-more": "Three or more elements"
+    },
+    "contrast": {
+      "high": "High contrast",
+      "medium": "Medium contrast",
+      "low": "Low contrast"
+    },
+    "hasText": "The icon contains text",
+    "noText": "No text in the icon",
+    "similar": "Looks like {name}",
+    "aCompetitor": "a competitor",
+    "distinct": "Distinct from the competitor icons we sent"
+  },
+  "copy": {
+    "success": "Report copied",
+    "failed": "Your browser blocked the clipboard",
+    "button": "Copy report"
+  },
+  "computed": "Computed {date}",
+  "rubric": "Rubric {version}",
+  "pageRead": "Page read {date}",
+  "featuredStories": "In {count, plural, one {# featured story} other {# featured stories}}",
+  "editorsBadge": "Editors' Choice badge",
+  "readinessPass": "{pass} of {total} pass",
+  "competitorCount": "{count, plural, one {# competitor} other {# competitors}}",
+  "benchmarkCaption": "How your listing compares with {count, plural, one {# competitor} other {# competitors}}",
+  "benchmarkFooter": "Read from the stored listings of {count, plural, one {# competitor} other {# competitors}}",
+  "openCompetitors": "Open competitors",
+  "screenshotAlt": "Screenshot {position}{caption}",
+  "screenshotCaption": ": {caption}",
+  "imageUnavailable": "Image unavailable",
+  "imageUnavailableAria": "{alt}, image unavailable",
+  "keywordHits": "{kind}: {keywords}",
+  "analysisTitle": "AI creative analysis",
+  "outdated": "Outdated",
+  "analyzed": "Analyzed {date} with {model}",
+  "aiGuide": "Read the AI features guide",
+  "analysisCopy": {
+    "unconfigured": "Add OPENAI_API_KEY to let AI read your icon and screenshots. Everything else in this audit works without it.",
+    "never": "AI reads your icon and first six screenshots, and your competitors' icons, and reports what it sees. The rules score it.",
+    "requesting": "Queuing the analysis.",
+    "active": "You can leave this page. The audit updates when it finishes.",
+    "current": "The analysis matches your current icon and screenshots.",
+    "stale": "Your icon or screenshots changed since the last analysis.",
+    "failed": "Nothing was charged to the score."
+  },
+  "analysisAction": {
+    "never": "Analyze creative",
+    "requesting": "Queuing",
+    "stale": "Analyze again",
+    "failed": "Try again"
+  },
+  "analysisProgress": {
+    "all": "Analyzing your icon and screenshots",
+    "some": "Analyzing your icon and {count, plural, one {# screenshot} other {# screenshots}}"
+  },
+  "analysisSent": {
+    "configured": "Sends the icon and screenshots to {provider}.",
+    "configuredModel": "Sends the icon and screenshots to {model} on {provider}.",
+    "openai": "Sends the icon and screenshots to OpenAI.",
+    "openaiModel": "Sends the icon and screenshots to OpenAI with {model}.",
+    "configuredProvider": "the AI provider this instance is configured with"
+  },
+  "analysis": {
+    "upToDate": "Up to date",
+    "already": "Already up to date",
+    "unchanged": "Your icon and screenshots have not changed.",
+    "queueFailed": "The analysis could not be queued",
+    "finished": "Creative analysis finished",
+    "failed": "Creative analysis failed",
+    "scoreChange": "Score {before} to {after}"
+  },
+  "report": {
+    "title": "ASO audit: {name}",
+    "thisApp": "this app",
+    "impactUnknown": "Impact unknown",
+    "effortUnknown": "Effort unknown",
+    "grade": "Grade {grade}, {label}",
+    "potential": "Potential {score}",
+    "factorTable": "| Factor | Score | Status | Notes |",
+    "factorDivider": "| --- | --- | --- | --- |",
+    "emptyBucket": "No change is waiting in {bucket}.",
+    "benchmarkCompared": "Compared with {count, plural, one {# competitor} other {# competitors}}.",
+    "benchmarkTable": "| Metric | You | Competitor median | Best | Comparison |",
+    "benchmarkDivider": "| --- | --- | --- | --- | --- |"
+  }
+}

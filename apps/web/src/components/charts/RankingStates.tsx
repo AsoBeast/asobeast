@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { formatCheckedPosition } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { CHART_NOTICE } from "./ChartStates";
 import { CHART_HEIGHT } from "./theme";
-import { formatCountry } from "@/lib/format";
+import { formatCountryInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
 import { lastCheckedIndex, NOT_CHECKED, type RankingChartData } from "./pivot";
 
@@ -31,13 +33,14 @@ function Frame({
 }
 
 export function NoKeywordsTracked({ id }: { id: string }) {
+  const t = useTranslations("charts");
   return (
     <Frame
-      title="No keywords tracked yet"
-      body="Ranking history is drawn from the keywords you track for this app."
+      title={t("noKeywordsTracked")}
+      body={t("noKeywordsTrackedBody")}
       action={
         <Button asChild size="sm" className="print:hidden">
-          <Link href={`/apps/${id}/keywords`}>Go to keywords</Link>
+          <Link href={`/apps/${id}/keywords`}>{t("goToKeywords")}</Link>
         </Button>
       }
     />
@@ -53,15 +56,19 @@ export function NoKeywordsInMarket({
   country: string;
   action?: React.ReactNode;
 }) {
+  const t = useTranslations("charts");
+  const locale = useAppLocale();
   return (
     <Frame
-      title={`No keywords tracked in ${formatCountry(country)} yet`}
-      body="Track keywords for this market to follow their positions here."
+      title={t("noKeywordsInMarket", {
+        country: formatCountryInLocale(country, locale),
+      })}
+      body={t("noKeywordsInMarketBody")}
       action={
         action === undefined ? (
           <Button asChild size="sm" className="print:hidden">
             <Link href={`/apps/${id}/keywords?country=${country}`}>
-              Go to keywords
+              {t("goToKeywords")}
             </Link>
           </Button>
         ) : (
@@ -73,19 +80,16 @@ export function NoKeywordsInMarket({
 }
 
 export function NoPositionsYet() {
-  return (
-    <Frame
-      title="No positions captured yet"
-      body="The daily pipeline checks each tracked keyword and the first points appear within 24 hours of import."
-    />
-  );
+  const t = useTranslations("charts");
+  return <Frame title={t("noPositionsYet")} body={t("noPositionsBody")} />;
 }
 
 export function NoDataInRange({ onWiden }: { onWiden?: () => void }) {
+  const t = useTranslations("charts");
   return (
     <Frame
-      title="Nothing captured in this range"
-      body="These keywords have history outside the selected window."
+      title={t("nothingInRange")}
+      body={t("nothingInRangeBody")}
       action={
         onWiden ? (
           <Button
@@ -94,7 +98,7 @@ export function NoDataInRange({ onWiden }: { onWiden?: () => void }) {
             className="print:hidden"
             onClick={onWiden}
           >
-            Widen to 90 days
+            {t("widen90")}
           </Button>
         ) : null
       }
@@ -103,16 +107,14 @@ export function NoDataInRange({ onWiden }: { onWiden?: () => void }) {
 }
 
 export function InsufficientHistory({ data }: { data: RankingChartData }) {
+  const t = useTranslations("charts");
   const lastIndex = lastCheckedIndex(data);
   const row = data.rows[lastIndex];
   const depths = data.depths[lastIndex];
   const counts = data.resultCounts[lastIndex];
 
   return (
-    <Frame
-      title="Not enough history for a trend"
-      body="A line needs at least four daily checks. These are the latest captured positions."
-    >
+    <Frame title={t("insufficientTitle")} body={t("insufficientBody")}>
       <dl className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
         {data.keywordIds.map((keywordId) => {
           const value = row?.[keywordId];

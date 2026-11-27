@@ -1,6 +1,4 @@
 import {
-  PLANS,
-  RENEWAL_CADENCE,
   TRIAL_ENDING_SOON_DAYS,
   paidPlanOf,
   type AdminDepartureReason,
@@ -10,59 +8,109 @@ import {
   type SupportWorkspaceSummary,
   type WorkspaceStage,
 } from "@asobeast/shared";
+import type { MessageTranslator } from "@/i18n/translator";
 import { adminHref } from "./admin-sections";
-import { DELETION_REASON_LABELS } from "./deletion-reasons";
 import {
   ADMIN_WORKSPACE_FLAGS,
   type AdminWorkspaceFlag,
 } from "./search-params";
 
-export const WORKSPACE_STAGE_LABELS: Record<WorkspaceStage, string> = {
-  trialing: "On trial",
-  paying: "Paying",
-  "payment-failed": "Payment failed",
-  comped: "Comped",
-  "trial-ended": "Trial ended",
-  churned: "Churned",
-  "no-plan": "No plan",
-  "self-hosted": "Self-hosted",
+const STAGE_KEYS: Record<WorkspaceStage, string> = {
+  trialing: "conversion.stages.trialing",
+  paying: "conversion.stages.paying",
+  "payment-failed": "conversion.stages.paymentFailed",
+  comped: "conversion.stages.comped",
+  "trial-ended": "conversion.stages.trialEnded",
+  churned: "conversion.stages.churned",
+  "no-plan": "conversion.stages.noPlan",
+  "self-hosted": "conversion.stages.selfHosted",
 };
+
+const FLAG_KEYS: Record<AdminWorkspaceFlag, string> = {
+  "ending-soon": "conversion.flags.endingSoon",
+  canceling: "conversion.flags.canceling",
+  deleting: "conversion.flags.deleting",
+  suspended: "conversion.flags.suspended",
+};
+
+const DEPARTURE_REASON_KEYS: Record<AdminDepartureReason, string> = {
+  "too-expensive": "conversion.reasons.tooExpensive",
+  "missing-feature": "conversion.reasons.missingFeature",
+  "not-using": "conversion.reasons.notUsing",
+  "switched-tool": "conversion.reasons.switchedTool",
+  other: "conversion.reasons.other",
+  unanswered: "conversion.reasons.unanswered",
+};
+
+export function workspaceStageLabel(
+  stage: WorkspaceStage,
+  translator: MessageTranslator,
+): string {
+  return translator(STAGE_KEYS[stage]);
+}
+
+export function workspaceFlagLabel(
+  flag: AdminWorkspaceFlag,
+  translator: MessageTranslator,
+): string {
+  return translator(FLAG_KEYS[flag], { days: TRIAL_ENDING_SOON_DAYS });
+}
+
+export function departureReasonLabel(
+  reason: AdminDepartureReason,
+  translator: MessageTranslator,
+): string {
+  return translator(DEPARTURE_REASON_KEYS[reason]);
+}
 
 export function stageLabel(
   stage: WorkspaceStage | undefined,
   plan: PlanName,
+  translator: MessageTranslator,
 ): string {
-  return stage ? WORKSPACE_STAGE_LABELS[stage] : PLANS[plan].displayName;
+  return stage
+    ? workspaceStageLabel(stage, translator)
+    : translator(`plans.${plan}`);
 }
 
-export function heldPlanLabel(plan: PlanName): string | null {
+export function heldPlanLabel(
+  plan: PlanName,
+  translator: MessageTranslator,
+): string | null {
   const paid = paidPlanOf(plan);
-  return paid ? PLANS[paid].displayName : null;
+  return paid ? translator(`plans.${paid}`) : null;
+}
+
+export function stageWithPlanLabel(
+  stage: WorkspaceStage | undefined,
+  plan: PlanName,
+  translator: MessageTranslator,
+): string {
+  const label = stageLabel(stage, plan, translator);
+  const held = stage ? heldPlanLabel(plan, translator) : null;
+  return held
+    ? translator("support.stageWithPlan", { stage: label, plan: held })
+    : label;
 }
 
 export function payingPlanLabel(
   plan: PaidPlanName,
   interval: BillingInterval | null,
+  translator: MessageTranslator,
 ): string {
-  const renews = interval ? RENEWAL_CADENCE[interval] : "interval not recorded";
-  return `${PLANS[plan].displayName} · ${renews}`;
+  return translator("conversion.payingPlan", {
+    plan: translator(`plans.${plan}`),
+    interval: translator(
+      interval
+        ? `intervals.${interval === "month" ? "monthly" : "yearly"}`
+        : "intervals.notRecorded",
+    ),
+  });
 }
 
 const DAY_MS = 24 * 60 * 60_000;
 
 export const TRIAL_ENDING_SOON_MS = TRIAL_ENDING_SOON_DAYS * DAY_MS;
-
-export const ADMIN_FLAG_LABELS: Record<AdminWorkspaceFlag, string> = {
-  "ending-soon": `Trial ends within ${TRIAL_ENDING_SOON_DAYS} days`,
-  canceling: "Canceling at period end",
-  deleting: "Pending deletion",
-  suspended: "Suspended",
-};
-
-export const DEPARTURE_REASON_LABELS: Record<AdminDepartureReason, string> = {
-  ...DELETION_REASON_LABELS,
-  unanswered: "No answer",
-};
 
 const endsSoon = (moment: string | null, now: number) =>
   moment !== null &&

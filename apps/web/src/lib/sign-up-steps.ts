@@ -2,28 +2,20 @@ import type { AuthUser } from "@asobeast/shared";
 
 export type SignUpStepState = "done" | "current" | "upcoming";
 
-export const SIGN_UP_STEP_STATE_TEXT: Record<SignUpStepState, string | null> = {
-  done: " (completed)",
-  current: null,
-  upcoming: " (not started)",
-};
+export type SignUpStepKey =
+  "createAccount" | "accountCreated" | "emailConfirmed" | "choosePlan";
 
 export interface SignUpStep {
-  label: string;
+  labelKey: SignUpStepKey;
   state: SignUpStepState;
 }
-
-const CREATE_ACCOUNT = "Create account";
-const ACCOUNT_CREATED = "Account created";
-const EMAIL_CONFIRMED = "Email confirmed";
-const CHOOSE_A_PLAN = "Choose a plan";
 
 function emailStep(
   confirming: boolean,
   emailVerified: boolean,
 ): readonly SignUpStep[] {
-  if (confirming) return [{ label: EMAIL_CONFIRMED, state: "current" }];
-  if (emailVerified) return [{ label: EMAIL_CONFIRMED, state: "done" }];
+  if (confirming) return [{ labelKey: "emailConfirmed", state: "current" }];
+  if (emailVerified) return [{ labelKey: "emailConfirmed", state: "done" }];
   return [];
 }
 
@@ -33,20 +25,22 @@ export function signUpSteps(
   if (!user?.entryStep) return [];
   const confirming = user.entryStep === "confirm-email";
   return [
-    { label: ACCOUNT_CREATED, state: "done" },
+    { labelKey: "accountCreated", state: "done" },
     ...emailStep(confirming, user.emailVerified),
-    { label: CHOOSE_A_PLAN, state: confirming ? "upcoming" : "current" },
+    { labelKey: "choosePlan", state: confirming ? "upcoming" : "current" },
   ];
 }
 
 function upcomingEmailStep(confirmsEmail: boolean): readonly SignUpStep[] {
-  return confirmsEmail ? [{ label: EMAIL_CONFIRMED, state: "upcoming" }] : [];
+  return confirmsEmail
+    ? [{ labelKey: "emailConfirmed", state: "upcoming" }]
+    : [];
 }
 
 export function registerSteps(confirmsEmail: boolean): readonly SignUpStep[] {
   return [
-    { label: CREATE_ACCOUNT, state: "current" },
+    { labelKey: "createAccount", state: "current" },
     ...upcomingEmailStep(confirmsEmail),
-    { label: CHOOSE_A_PLAN, state: "upcoming" },
+    { labelKey: "choosePlan", state: "upcoming" },
   ];
 }

@@ -1,11 +1,11 @@
 "use client";
 
 import { Download, FileUp } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { KEYWORD_IMPORT_LIMIT } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { downloadCsv, toCsv } from "@/lib/csv";
-import { formatNumber } from "@/lib/format";
 
 const TEMPLATE = toCsv(
   ["keyword", "country", "tags", "note"],
@@ -14,8 +14,6 @@ const TEMPLATE = toCsv(
     ["streak counter", "pl", "testing", null],
   ],
 );
-
-const PARTS_HINT = `A long file is imported in parts of up to ${formatNumber(KEYWORD_IMPORT_LIMIT)} rows.`;
 
 export function ImportFileStep({
   fileName,
@@ -26,9 +24,10 @@ export function ImportFileStep({
   onChoose: (file: File | undefined) => void;
   disabled: boolean;
 }) {
+  const t = useTranslations("keywords");
   return (
     <div className="flex flex-col gap-2">
-      <Label htmlFor="keyword-import-file">Keyword file</Label>
+      <Label htmlFor="keyword-import-file">{t("import.file")}</Label>
       <div className="flex flex-wrap items-center gap-2">
         <input
           id="keyword-import-file"
@@ -46,7 +45,7 @@ export function ImportFileStep({
         >
           <label htmlFor="keyword-import-file">
             <FileUp aria-hidden />
-            {fileName ? "Choose another file" : "Choose a file"}
+            {fileName ? t("import.replace") : t("import.choose")}
           </label>
         </Button>
         <Button
@@ -55,13 +54,16 @@ export function ImportFileStep({
           onClick={() => downloadCsv("keyword-import-template.csv", TEMPLATE)}
         >
           <Download aria-hidden />
-          Download template
+          {t("import.template")}
         </Button>
       </div>
       <p className="text-caption text-muted-foreground">
-        {fileName
-          ? `Reading ${fileName}. ${PARTS_HINT}`
-          : `${PARTS_HINT} UTF-8 or UTF-16, separated by commas, semicolons, tabs or pipes.`}
+        {fileName === null
+          ? t("import.fileHint", { limit: KEYWORD_IMPORT_LIMIT })
+          : t("import.readingFile", {
+              file: fileName,
+              limit: KEYWORD_IMPORT_LIMIT,
+            })}
       </p>
     </div>
   );

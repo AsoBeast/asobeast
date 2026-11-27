@@ -1,11 +1,9 @@
 "use client";
 
 import { useId } from "react";
+import { useTranslations } from "next-intl";
 import { useQueryState } from "nuqs";
-import {
-  APP_STORE_LOCALIZATIONS,
-  isAppStoreLocalization,
-} from "@asobeast/shared";
+import { isAppStoreLocalization } from "@asobeast/shared";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -14,7 +12,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { draftableLocalizations } from "@/lib/localizations";
+import {
+  localizationNameInLocale,
+  draftableLocalizations,
+} from "@/lib/localizations";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { draftLocaleParser } from "@/lib/search-params";
 import { useStorefrontRows } from "./use-storefront-rows";
 
@@ -29,6 +31,8 @@ export function focusDraftLocalization(): void {
 }
 
 export function DraftLocalizationSelect({ appId }: { appId: string }) {
+  const t = useTranslations("metadata");
+  const locale = useAppLocale();
   const hintId = useId();
   const draftable = draftableLocalizations(useStorefrontRows(appId));
   const [draftLocale, setDraftLocale] = useQueryState(
@@ -43,7 +47,9 @@ export function DraftLocalizationSelect({ appId }: { appId: string }) {
 
   return (
     <div className="flex flex-col gap-2">
-      <Label htmlFor={DRAFT_LOCALIZATION_ID}>Localization</Label>
+      <Label htmlFor={DRAFT_LOCALIZATION_ID}>
+        {t("draftLocalization.label")}
+      </Label>
       <Select
         value={draftLocale ?? PRIMARY_LISTING}
         onValueChange={(next) =>
@@ -58,17 +64,21 @@ export function DraftLocalizationSelect({ appId }: { appId: string }) {
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={PRIMARY_LISTING}>Primary listing</SelectItem>
+          <SelectItem value={PRIMARY_LISTING}>
+            {t("draftLocalization.primary")}
+          </SelectItem>
           {options.map((localization) => (
             <SelectItem key={localization} value={localization}>
-              {APP_STORE_LOCALIZATIONS[localization]}
+              {localizationNameInLocale(localization, locale)}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
       {draftLocale ? (
         <p id={hintId} className="text-caption text-muted-foreground">
-          {`Drafts are written in ${APP_STORE_LOCALIZATIONS[draftLocale]}. To fill its keyword field with keywords in another language instead, say so in the instructions.`}
+          {t("draftLocalization.hint", {
+            language: localizationNameInLocale(draftLocale, locale),
+          })}
         </p>
       ) : null}
     </div>

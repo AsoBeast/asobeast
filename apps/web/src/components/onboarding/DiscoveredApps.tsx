@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Plus } from "lucide-react";
 import type { CompetitorSuggestion, Store } from "@asobeast/shared";
@@ -36,10 +37,11 @@ function withoutIds(
 const ICON_SIZE = 24;
 
 function OutcomeLine({ outcome }: { outcome: AddOutcome | undefined }) {
+  const t = useTranslations("setup");
   if (!outcome) return null;
   return outcome.kind === "added" ? (
     <span role="status" className="text-caption text-muted-foreground">
-      Added
+      {t("discovered.added")}
     </span>
   ) : (
     <span role="status" className="text-caption text-destructive">
@@ -65,6 +67,7 @@ function SuggestionRow({
   outcome: AddOutcome | undefined;
   onToggle: (on: boolean) => void;
 }) {
+  const t = useTranslations("setup");
   return (
     <li className="flex min-h-11 items-center gap-3 py-1">
       <Checkbox
@@ -82,7 +85,7 @@ function SuggestionRow({
           {row.title}
         </span>
         <span className="numeric max-w-full truncate text-tick text-faint-foreground">
-          {`${row.developer ?? "Unknown developer"} · ${suggestionMeta(row, store)}`}
+          {`${row.developer ?? t("discovered.unknownDeveloper")} · ${suggestionMeta(row, store, t)}`}
         </span>
       </Label>
       <OutcomeLine outcome={outcome} />
@@ -99,6 +102,7 @@ function SuggestionsBody({
   collecting: boolean;
   headingId: string;
 }) {
+  const t = useTranslations("setup");
   const [ticked, setTicked] = useState(NOTHING_TICKED);
   const suggestions = useQuery(competitorSuggestionsOptions(appId));
   const { outcomes, run, adding } = useAddCompetitors(appId, (added) =>
@@ -118,10 +122,7 @@ function SuggestionsBody({
   if (failedRead(suggestions)) {
     return (
       <InlineQueryError
-        message={apiErrorMessage(
-          suggestions.error,
-          "Could not load suggested competitors.",
-        )}
+        message={apiErrorMessage(suggestions.error, t("discovered.loadError"))}
         read={suggestions}
       />
     );
@@ -130,7 +131,7 @@ function SuggestionsBody({
   if (rows.length === 0) {
     return (
       <p className="text-dense text-muted-foreground">
-        {discoveredEmptyText(collecting, suggestions.data.similar)}
+        {discoveredEmptyText(collecting, suggestions.data.similar, t)}
       </p>
     );
   }
@@ -165,7 +166,7 @@ function SuggestionsBody({
         }}
       >
         {adding ? <Loader2 className="animate-spin" /> : <Plus />}
-        {addButtonLabel(selected.length)}
+        {addButtonLabel(selected.length, t)}
       </Button>
     </>
   );
@@ -178,12 +179,13 @@ export function DiscoveredApps({
   appId: string;
   collecting: boolean;
 }) {
+  const t = useTranslations("setup");
   const headingId = useId();
 
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-2">
       <h4 id={headingId} className="text-dense font-medium">
-        Suggested competitors
+        {t("discovered.title")}
       </h4>
       <SuggestionsBody
         appId={appId}

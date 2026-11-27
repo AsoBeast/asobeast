@@ -1,15 +1,17 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 
-export default function AppNotFound() {
+export default async function AppNotFound() {
+  const t = await getTranslations("errors.boundary");
   return (
     <EmptyState
-      title="App not found"
-      body="This app does not exist or has been deleted."
+      title={t("appNotFoundTitle")}
+      body={t("appNotFoundBody")}
       action={
         <Button asChild>
-          <Link href="/">Back to apps</Link>
+          <Link href="/">{t("appNotFoundBack")}</Link>
         </Button>
       }
     />

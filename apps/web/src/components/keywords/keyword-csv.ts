@@ -1,11 +1,19 @@
 import { formatCheckedPosition, utcDayOf } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
+import enKeywords from "../../../messages/en/keywords.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import type { ScoreSignals, TrackedKeywordItem } from "@asobeast/shared";
 import { csvFilename, downloadCsv, toCsv } from "@/lib/csv";
 import { insightsCsv } from "@/lib/keyword-insights";
 import { scoreValue } from "@/lib/keyword-scores";
 
-export const SCORE_COMPARABILITY =
-  "Apple App Store and Google Play popularity and volume scores use different public signals and are not directly comparable";
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywords",
+  messages: { keywords: enKeywords },
+});
+
+export const SCORE_COMPARABILITY = enKeywords.scores.comparability;
 
 const KEYWORD_CSV_HEADERS = [
   "keyword",
@@ -74,7 +82,11 @@ function evidenceColumns(
   ];
 }
 
-export function keywordCsv(rows: TrackedKeywordItem[], today: string): string {
+export function keywordCsv(
+  rows: TrackedKeywordItem[],
+  today: string,
+  t: MessageTranslator = english,
+): string {
   const csvRows = rows.map((keyword) => [
     keyword.text,
     keyword.source,
@@ -90,7 +102,7 @@ export function keywordCsv(rows: TrackedKeywordItem[], today: string): string {
     roundOrNull(scoreValue(keyword, "traffic")),
     roundOrNull(scoreValue(keyword, "difficulty")),
     roundOrNull(keyword.opportunity),
-    insightsCsv(keyword, today),
+    insightsCsv(keyword, today, t),
     keyword.bucket,
     keyword.keywordClass ?? null,
     keyword.relevance,
@@ -102,7 +114,7 @@ export function keywordCsv(rows: TrackedKeywordItem[], today: string): string {
     keyword.scoreProvenance?.confidence ?? null,
     keyword.scoreProvenance?.capturedAt ?? null,
     ...evidenceColumns(keyword),
-    SCORE_COMPARABILITY,
+    t("scores.comparability"),
     (keyword.tags ?? []).join("; "),
     keyword.note ?? null,
     keyword.country,
@@ -114,6 +126,7 @@ export function exportKeywords(
   appId: string,
   rows: TrackedKeywordItem[],
   today: string,
+  t: MessageTranslator = english,
 ): void {
-  downloadCsv(csvFilename("keywords", appId), keywordCsv(rows, today));
+  downloadCsv(csvFilename("keywords", appId), keywordCsv(rows, today, t));
 }

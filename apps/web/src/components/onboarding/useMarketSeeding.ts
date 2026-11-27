@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiErrorMessage, seedMarket } from "@/lib/api";
 import { invalidateMarketSeed } from "@/lib/queries";
@@ -16,6 +17,7 @@ export function useMarketSeeding(
   appId: string,
   onSelect: (market: string, selected: boolean) => void,
 ) {
+  const t = useTranslations("setup");
   const queryClient = useQueryClient();
   const [outcomes, setOutcomes] = useState<Record<string, SeedOutcome>>({});
   const record = (market: string, outcome: SeedOutcome) =>
@@ -31,7 +33,7 @@ export function useMarketSeeding(
         } catch (error) {
           record(market, {
             kind: "failed",
-            message: apiErrorMessage(error, "Could not seed this market"),
+            message: apiErrorMessage(error, t("markets.seedFailed")),
           });
         }
       }

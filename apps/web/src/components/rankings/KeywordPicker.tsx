@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import { Check, ChevronsUpDown } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -32,6 +33,7 @@ export function KeywordPicker({
   value: string[];
   onChange: (next: string[]) => void;
 }) {
+  const t = useTranslations("rankings");
   const [open, setOpen] = useState(false);
   const label = pickerLabel(tracked);
 
@@ -51,19 +53,19 @@ export function KeywordPicker({
           variant="outline"
           className="justify-between gap-2 print:hidden"
         >
-          {`${value.length} selected`}
+          {t("selectedCount", { count: value.length })}
           <ChevronsUpDown className="size-4 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        aria-label="Choose keywords"
+        aria-label={t("chooseKeywords")}
         className="w-72 p-0"
         align="end"
       >
         <Command>
-          <CommandInput placeholder="Search keywords…" />
+          <CommandInput placeholder={t("searchKeywords")} />
           <CommandList>
-            <CommandEmpty>No keywords found.</CommandEmpty>
+            <CommandEmpty>{t("noKeywordsFound")}</CommandEmpty>
             <CommandGroup>
               {tracked.map((keyword) => (
                 <CommandItem
@@ -90,9 +92,11 @@ export function KeywordPicker({
                   onChange(topByOpportunity(tracked, DEFAULT_SELECTION))
                 }
               >
-                Top {DEFAULT_SELECTION} by opportunity
+                {t("topOpportunity", { count: DEFAULT_SELECTION })}
               </CommandItem>
-              <CommandItem onSelect={() => onChange([])}>Clear</CommandItem>
+              <CommandItem onSelect={() => onChange([])}>
+                {t("clear")}
+              </CommandItem>
             </CommandGroup>
           </CommandList>
         </Command>

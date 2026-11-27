@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import type { AppListItem } from "@asobeast/shared";
@@ -32,6 +33,8 @@ export function AddAsCompetitor({
   title: string;
   apps: readonly AppListItem[];
 }) {
+  const t = useTranslations("topCharts");
+  const competitors = useTranslations("competitors");
   const queryClient = useQueryClient();
   const mutation = useMutation({
     ...busyRetry,
@@ -40,13 +43,15 @@ export function AddAsCompetitor({
       renewFocusHandoff(competitorFocusKey(storeAppId));
       invalidateCompetitorMutation(queryClient, appId);
       invalidateChartMutation(queryClient);
-      toast.success(`Now tracking ${competitor.name ?? title}`);
+      toast.success(
+        competitors("tracking", { name: competitor.name ?? title }),
+      );
     },
     onError: (error) =>
       toast.error(
         error instanceof ApiError
           ? error.envelope.message
-          : `Could not track ${title}`,
+          : competitors("trackFailed", { title }),
       ),
   });
   const [open, setOpen] = useState(false);
@@ -68,7 +73,10 @@ export function AddAsCompetitor({
       <Button
         variant="ghost"
         size="icon-sm"
-        aria-label={`Add ${title} to ${app.name ?? "your app"}`}
+        aria-label={t("row.addTo", {
+          title,
+          app: app.name ?? t("row.yourApp"),
+        })}
         aria-busy={mutation.isPending}
         aria-disabled={mutation.isPending || undefined}
         onClick={() => add(app.id)}
@@ -86,7 +94,7 @@ export function AddAsCompetitor({
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label={`Add ${title} as competitor`}
+          aria-label={t("row.addAs", { title })}
           aria-busy={mutation.isPending}
           aria-disabled={mutation.isPending || undefined}
         >
@@ -94,7 +102,7 @@ export function AddAsCompetitor({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Add as competitor to</DropdownMenuLabel>
+        <DropdownMenuLabel>{t("row.addAsTo")}</DropdownMenuLabel>
         {apps.map((app) => (
           <DropdownMenuItem key={app.id} onSelect={() => add(app.id)}>
             {app.name ?? app.id}

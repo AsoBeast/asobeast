@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import {
   countChars,
   type LintIssue,
@@ -9,7 +10,7 @@ import {
 import { LintIssueRow } from "@/components/metadata/LintIssueRow";
 import { NotSearchedLabel } from "@/components/metadata/NotSearchedLabel";
 import { Textarea } from "@/components/ui/textarea";
-import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
+import { metadataFieldLabel } from "@/lib/metadata-display";
 import { cn } from "@/lib/utils";
 
 export function MetadataFieldCard({
@@ -29,11 +30,12 @@ export function MetadataFieldCard({
   className?: string;
   children?: (text: string) => ReactNode;
 }) {
+  const t = useTranslations("metadata");
   const countId = useId();
   const [draft, setDraft] = useState(value);
   const used = countChars(draft);
   const over = used > limit;
-  const label = METADATA_FIELD_LABELS[field];
+  const label = metadataFieldLabel(field, t);
 
   return (
     <div
@@ -55,7 +57,9 @@ export function MetadataFieldCard({
             over ? "text-signal-down" : "text-faint-foreground",
           )}
         >
-          {`${used}/${limit}${over ? ` · ${used - limit} over` : ""}`}
+          {`${t("characterCount", { used, limit })}${
+            over ? ` · ${t("overLimit", { count: used - limit })}` : ""
+          }`}
         </span>
       </div>
 

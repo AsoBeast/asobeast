@@ -1,0 +1,494 @@
+{
+  "inspector": {
+    "title": "关键词检查器",
+    "form": {
+      "aria": "检查关键词",
+      "keyword": "关键词",
+      "keywordPlaceholder": "例如 habit tracker",
+      "store": "应用商店",
+      "country": "国家/地区",
+      "inspect": "检查",
+      "starting": "正在开始…",
+      "failed": "无法开始检查"
+    },
+    "empty": {
+      "title": "未选择检查",
+      "body": "在上方检查关键词，或选择地图上的一个点，即可在此查看实时结果、自动补全和评分。"
+    },
+    "detail": {
+      "heading": "检查",
+      "missingTitle": "此检查已不存在",
+      "missingBody": "它可能已被删除。请在上方运行新的检查。",
+      "loadFailed": "无法加载此检查。",
+      "waiting": "正在等待应用商店队列。计划内的商店工作会优先运行，因此可能需要几分钟。",
+      "reading": "正在读取应用商店。通常需要不到一分钟。",
+      "checking": "检查中…",
+      "checkAgain": "再次检查",
+      "failedTitle": "此检查未能完成。",
+      "retryFailed": "无法再次开始检查",
+      "searchResults": "搜索结果",
+      "topCount": "前 {shown, number} 个，共 {total, number} 个",
+      "noApps": "应用商店没有为此关键词返回任何应用。",
+      "requestedAt": "请求于 {date}"
+    },
+    "scores": {
+      "aria": "评分",
+      "notScored": "未评分",
+      "was": "原为 {value}",
+      "note": "{grade}{previous, select, none {} other { · <was>{previous}</was>}}",
+      "opportunityNote": "机会在考虑任何应用之前，综合衡量热度与难度。",
+      "formula": "{source} · 公式 {version} · ",
+      "estimatedTitle": "这些评分如何估算",
+      "competitionTitle": "前 {count, number} 中的竞争"
+    },
+    "results": {
+      "scrollLabel": "搜索结果",
+      "caption": "“{keyword}”的前 {count, number} 个结果，按应用商店顺序",
+      "rank": "#",
+      "app": "应用",
+      "titleMatch": "标题命中",
+      "ratings": "评分",
+      "new": "新进入",
+      "newInTop10": "，进入前十",
+      "showTop10": "显示前 10 个",
+      "showAll": "显示全部 {count, number} 个结果",
+      "matches": {
+        "phrase": "完整短语",
+        "words": "所有词语",
+        "partial": "部分词语",
+        "none": "未命中"
+      }
+    },
+    "notes": {
+      "verdict": "<label>{zone}</label>，按您的阈值判定。{meaning}",
+      "sincePrevious": "自上次检查以来",
+      "delta": "自 {date} 以来{enteredTitles, select, none {} other { · <entered>{enteredTitles}</entered>进入了前十}}{leftTitles, select, none {} other { · <left>{leftTitles}</left>离开了前十}}",
+      "search": "{autocomplete, select, none {} other {<autocompleteText>{autocomplete}</autocompleteText>}}{elsewhere, select, none {} other {{autocomplete, select, none {} other { · }}<elsewhereText>{items}</elsewhereText>}}",
+      "elsewhere": "还在以下地区检查过：<links>{items}</links>",
+      "listSeparator": "、",
+      "change": "{label} {change}{tone, select, same {} other {（{tone}）}}",
+      "tones": {
+        "better": "改善",
+        "worse": "变差"
+      }
+    },
+    "next": {
+      "title": "从“{keyword}”继续",
+      "empty": "应用商店没有为此关键词推荐其他内容。",
+      "done": "{term}，已检查：热度 {popularity}，难度 {difficulty}",
+      "running": "正在检查 {term}",
+      "inspect": "检查 {term}",
+      "failed": "无法开始检查"
+    },
+    "log": {
+      "title": "所有检查",
+      "count": "{count, number} · 最新 {limit, number} 条",
+      "emptyTitle": "暂无检查",
+      "emptyBody": "您检查的每个关键词都会保存在这里，覆盖所有应用商店和国家/地区，方便以后比较。",
+      "keyword": "关键词",
+      "storefront": "应用商店地区",
+      "popularity": "热度",
+      "difficulty": "难度",
+      "opportunity": "机会分",
+      "inspected": "检查时间",
+      "noScore": "无评分",
+      "running": "运行中",
+      "failed": "失败",
+      "footer": "{inspections}，覆盖 {storefronts} · 保留最新 {limit, number} 条",
+      "inspectionCount": "{count, plural, other {# 次检查}}",
+      "storefrontCount": "{count, plural, other {# 个应用商店地区}}",
+      "deleteSubject": "{date}检查的 {store} {country} 关键词 {keyword}"
+    },
+    "delete": {
+      "trigger": "删除 {subject} 的检查",
+      "title": "删除此检查？",
+      "description": "“{keyword}”的已保存结果将被移除，之后的检查将与此检查之前的一次运行进行比较。",
+      "deleting": "正在删除…",
+      "success": "检查已删除",
+      "failed": "无法删除此检查"
+    },
+    "map": {
+      "title": "关键词地图",
+      "inStorefront": "此应用商店地区有 {count, number} 个",
+      "emptyTitle": "地图上暂无内容",
+      "emptyBody": "在{store}的{country}检查关键词后，它会按热度和难度显示在这里。",
+      "keyboardHelp": "方向键移动到最近的关键词，Home 和 End 跳到机会最高和最低的关键词，Enter 显示其检查结果。",
+      "aria": "按难度和热度排列的已检查关键词",
+      "group": "已检查关键词",
+      "nothingInspected": "尚未检查任何关键词",
+      "latest": "最新 {date}",
+      "footer": "{storefront} · {status}",
+      "suggestionHint": "点击一次建议即可开始检查",
+      "difficulty": "难度",
+      "popularity": "热度",
+      "point": "{keyword}，热度 {popularity}，难度 {difficulty}{opportunity, select, none {} other {，机会 {opportunity}}}{floor, select, none {} other {，最低热度答案}}{paused, select, none {} other {，已暂停}}，{zone}"
+    },
+    "format": {
+      "updatedToday": "今天更新",
+      "updatedDaysAgo": "{count, plural, other {# 天前}}更新",
+      "updatedMonthsAgo": "{count, plural, other {# 个月前}}更新",
+      "typicalUpdatedToday": "通常今天更新",
+      "typicalUpdateAgo": "通常 {count, plural, other {# 天前}}更新",
+      "noChange": "无变化",
+      "autocompleteWhileTyping": "自动补全会在输入过程中推荐它",
+      "autocompleteAfter": "自动补全在输入 {count, plural, other {# 个字符}}后于第 {position, number} 位推荐它",
+      "autocompleteListed": "只有输入完整短语后，自动补全才会推荐它",
+      "autocompleteAbsent": "自动补全从不推荐它",
+      "costRead": "每次检查读取应用商店一次。",
+      "costNone": "您的套餐不包含按需评分。",
+      "costDaily": "每次检查使用套餐每日允许的 {limit, number} 次按需评分中的 1 次。",
+      "costHourly": "每次检查使用套餐每小时允许的 {limit, number} 次按需评分中的 1 次。",
+      "competition": {
+        "newcomers": "新进入者",
+        "newcomersValue": "{count, number}/{total, number}",
+        "newcomersNote": "过去一年内发布",
+        "typicalRatings": "典型评分",
+        "typicalRatingsNote": "前 {count, number} 的中位数",
+        "strongestApp": "最强应用",
+        "strongestAppNote": "顶部结果中评分数量最多",
+        "averageRating": "平均评分",
+        "averageRatingNote": "前 {count, number} 的平均值",
+        "titlesTarget": "标题命中",
+        "exactTitlesNote": "{count, number} 个包含完整短语",
+        "heavyweights": "头部应用",
+        "heavyweightsNote": "评分数量达到 10 万或以上",
+        "recentlyUpdated": "最近更新",
+        "updatesUnavailable": "更新日期不可用"
+      }
+    }
+  },
+  "discovery": {
+    "heading": "发现的关键词",
+    "tabs": {
+      "aria": "关键词列表",
+      "tracked": "已跟踪",
+      "trackedCount": "已跟踪 {count, number}",
+      "discovered": "已发现",
+      "discoveredCount": "已发现 {count, number}",
+      "unseen": "{label}，有新的发现待查看"
+    },
+    "search": "搜索发现的关键词",
+    "states": {
+      "aria": "发现关键词的状态",
+      "all": "全部",
+      "ranked": "已排名",
+      "opportunity": "机会",
+      "count": "{label} {count, number}"
+    },
+    "autoTrack": {
+      "label": "自动跟踪已排名",
+      "hint": "发现应用有排名时立即跟踪该关键词"
+    },
+    "refresh": "刷新发现",
+    "bulk": {
+      "selected": "跟踪已选（{count, number}）",
+      "recommended": "跟踪推荐（{count, number}）",
+      "ranked": "跟踪所有已排名（{count, number}）"
+    },
+    "empty": {
+      "neverTitle": "暂无发现",
+      "showAll": "显示全部",
+      "nothing": {
+        "all": {
+          "title": "暂无待查看内容",
+          "body": "您详情页附近发现的每个关键词都已被跟踪或忽略。新的关键词会在下次每周运行后出现。"
+        },
+        "ranked": {
+          "title": "尚未有已排名关键词",
+          "body": "这些关键词目前都没有在应用商店搜索中显示您的应用。当应用出现时，已检查的关键词会移到这里。"
+        },
+        "opportunity": {
+          "title": "暂无机会",
+          "body": "机会需要热度和难度评分。跟踪关键词后可获得评分，或等待下次评分运行。"
+        }
+      },
+      "neverRun": {
+        "queued": "AsoBeast 已排队检查您详情页附近的关键词。在此市场找到的结果会显示在这里。",
+        "never": "AsoBeast 尚未查找您详情页附近的关键词。请点击“刷新”立即查找。",
+        "weekly": "AsoBeast 每周查找一次您详情页附近的关键词。请点击“刷新”立即查找。"
+      }
+    },
+    "table": {
+      "scrollLabel": "关键词发现",
+      "caption": "关键词发现：您尚未跟踪、且与您详情页相近的关键词，以及您的应用在每个关键词上的排名。",
+      "filteredTitle": "没有发现的关键词匹配此搜索",
+      "filteredBody": "请更改或清除搜索条件以重新查看结果。",
+      "showing": "显示 {shown, number} 个，共 {total, number} 个",
+      "showMore": "再显示 {count, number} 个"
+    },
+    "columns": {
+      "selectAll": "选择所有发现的关键词",
+      "select": "选择 {keyword}",
+      "keyword": "关键词",
+      "recommended": "推荐",
+      "source": "来源",
+      "position": "排名",
+      "opportunity": "机会分",
+      "popularity": "热度",
+      "difficulty": "难度",
+      "relevance": "相关性",
+      "actions": "操作",
+      "noScore": "无{label}评分",
+      "notChecked": "尚未检查",
+      "notFound": "未进入前 {depth, number} 名",
+      "rank": "排名第 {position, number} 位",
+      "about": "关于{label}",
+      "read": "阅读关键词发现说明",
+      "positionSummary": "您的应用在此短语的应用商店搜索中的位置。最高 50 名的位置可能来自今天或昨天进行的另一次搜索；短横线表示尚未检查。",
+      "opportunitySummary": "综合热度与难度得出的机会。它需要两项评分，关键词被跟踪后即可获得。",
+      "relevanceSummary": "此短语与您详情页的相关程度，取决于它的发现来源以及您的详情页包含其中多少个词。",
+      "noApps": "无应用",
+      "noAppsSentence": "商店显示此搜索没有应用。"
+    },
+    "actions": {
+      "track": "跟踪",
+      "trackLabel": "跟踪 {keyword}",
+      "dismissLabel": "忽略 {keyword}"
+    },
+    "footer": {
+      "checkedToday": "今天检查。",
+      "checkedDaysAgo": "{count, plural, other {# 天前}}检查。",
+      "notChecked": "尚未检查。",
+      "weeklyBudget": "每周 {count, plural, other {# 次检查}}{used, select, none {} other {，已使用 {used, number} 次}}",
+      "weeklyOff": "{budget}。每周运行已关闭。",
+      "nextRun": "{budget}；下次运行在{weekday}。",
+      "combined": "{checked}{weekly}",
+      "pending": "{count, plural, other {# 次检查待处理}}",
+      "unfit": "{count, number} 个不符合您的套餐",
+      "weekdays": {
+        "sunday": "星期日",
+        "monday": "星期一",
+        "tuesday": "星期二",
+        "wednesday": "星期三",
+        "thursday": "星期四",
+        "friday": "星期五",
+        "saturday": "星期六"
+      }
+    },
+    "toast": {
+      "tracked": "正在跟踪 {count, plural, other {# 个关键词}}",
+      "trackedPartial": "{tracking}。{unfit}。",
+      "nothingFit": "没有关键词符合您的套餐",
+      "nothingNew": "没有新的关键词可跟踪",
+      "queued": "已排队 {count, plural, other {# 次检查}}",
+      "refreshed": "本周没有可排队的检查。列表已根据其他搜索结果刷新。",
+      "nothingToCheck": "本周没有新的内容可检查",
+      "trackFailed": "无法跟踪这些关键词",
+      "dismissFailed": "无法忽略这些关键词",
+      "refreshFailed": "无法刷新发现",
+      "settingsFailed": "无法更改自动跟踪"
+    },
+    "line": {
+      "found": "发现 {count, plural, other {# 个关键词}}",
+      "ranked": "{found}，其中 {ranked, number} 个已有排名"
+    },
+    "sources": {
+      "title": "您的标题",
+      "subtitle": "您的副标题",
+      "description": "您的描述",
+      "shortDescription": "您的简短描述",
+      "competitors": "竞品",
+      "reviews": "评论",
+      "popularity": "Apple 热度",
+      "portfolio": "您的其他应用"
+    }
+  },
+  "serp": {
+    "title": "搜索结果",
+    "description": "每日检查时应用商店针对此关键词显示的应用。",
+    "loadFailed": "无法加载搜索结果。",
+    "loading": "正在加载搜索结果",
+    "top10": "前 10",
+    "deeper": "第 {from, number} 至 {to, number} 位",
+    "keptShort": "此日未保留前十之后的位置。",
+    "header": {
+      "comparison": "对比 {date}",
+      "noEarlier": "没有更早的采集",
+      "exportSubject": "搜索结果"
+    },
+    "exits": {
+      "heading": "自 {date} 以来离开",
+      "was": "原为第 {position, number} 位",
+      "spoken": "原为第 {position, number} 位，已不在此列表中"
+    },
+    "states": {
+      "neverChecked": "尚未检查。搜索结果会在下次每日检查后显示。",
+      "nothingCaptured": "{date}没有采集任何内容。请选择有采集的日期。",
+      "noApps": "应用商店在 {date}没有为此关键词显示任何应用。",
+      "noAppsGeneric": "商店显示此搜索没有应用。"
+    },
+    "summary": {
+      "yourPosition": "您的排名",
+      "titles": "包含它的标题",
+      "ratings": "前十评分",
+      "jump": "跳转到第 {position} 名所在行",
+      "period": "自 {date} 以来",
+      "noEarlierPosition": "没有更早的排名",
+      "deeper": "低于前 {count, number} 名",
+      "notFound": "未进入前 {depth, number} 名",
+      "absent": "不在此列表中",
+      "notReported": "未报告",
+      "ratio": "{shown} / {total}",
+      "median": "中位数",
+      "average": "平均",
+      "noRatings": "无评分",
+      "titlesTipLabel": "关于包含关键词的标题",
+      "titlesTipTitle": "包含关键词的标题",
+      "titlesTipSummary": "前十标题中有多少包含完整关键词，且词语顺序一致。只包含部分词语或仅忽略重音后匹配的标题不计入。",
+      "ratingsTipLabel": "关于前十评分",
+      "ratingsTipTitle": "前十评分",
+      "ratingsTipSummary": "前十应用评分数量的中位数，大致反映头部应用的成熟度。Google Play 不报告评分数量，因此显示平均评分。",
+      "guide": "阅读搜索结果说明",
+      "outliers": "了解异常值",
+      "noneEarlier": "没有更早的排名",
+      "noPlaySubtitle": "Google Play 没有副标题",
+      "keywordIn": "包含它的标题",
+      "keywordInTipLabel": "关于关键词所在位置",
+      "keywordInTipTitle": "关键词位于何处",
+      "keywordInTipSummary": "前 10 名中有多少个应用在标题里包含关键词的所有词（顺序不限）。AsoBeast 只能从已捕获的详情页获知你和竞品的副标题。前 10 名中两者都没有的应用会标记为异常值，但它仍可能把关键词放在私有关键词字段中。",
+      "top10Ratings": "前十评分",
+      "top10TipLabel": "关于前 10 名评分",
+      "top10TipTitle": "前 10 名评分",
+      "top10TipSummary": "前 10 名应用评分数量的中位数，粗略反映头部应用的成熟度。Google Play 不提供评分数量，因此显示平均评分。",
+      "inSubtitle": "{total} 个中有 {shown} 个在副标题中",
+      "subtitleLineSpace": "副标题中 0 / 0",
+      "below": "前 {listed} 名之外",
+      "notFoundDepth": "未进入前 {depth} 名",
+      "noApps": "商店显示此搜索没有应用。",
+      "inTitle": "在标题中",
+      "sinceDate": "自 {date} 起"
+    },
+    "row": {
+      "rating": "评分 {rating}",
+      "ratings": "评分 {rating}，来自 {count, plural, other {# 条评分}}",
+      "you": "您",
+      "competitor": "竞品",
+      "trackLabel": "跟踪第 {position, number} 位的 {title}",
+      "new": "新进入",
+      "movementUp": "从第 {previous, number} 位上升 {count, number} 位",
+      "movementDown": "从第 {previous, number} 位下降 {count, number} 位",
+      "movementSame": "无变化",
+      "movementNew": "新进入",
+      "notInTitle": "不在标题中",
+      "subtitleNotKnown": "副标题未知",
+      "outlier": "异常值"
+    }
+  },
+  "keywordSheet": {
+    "title": "关键词",
+    "description": "一个已跟踪关键词的详情。",
+    "previous": "上一个关键词",
+    "next": "下一个关键词",
+    "paused": "已暂停",
+    "market": "{store} · {country}{status, select, active {} paused { · <paused>已暂停</paused>} other {}}",
+    "history": {
+      "title": "排名历史",
+      "firstCheck": "首次检查已排队。图表会在结果到达后显示。"
+    },
+    "facts": {
+      "notChecked": "排名：尚未检查",
+      "notScored": "{label}：尚未评分"
+    },
+    "insights": {
+      "title": "需要了解",
+      "paused": "跟踪已暂停，因此不再检查此关键词。请从关键词操作菜单恢复跟踪。"
+    },
+    "scores": {
+      "title": "评分及其来源",
+      "notScored": "尚未评分"
+    },
+    "notes": {
+      "title": "标签和备注",
+      "empty": "暂无标签或备注。",
+      "edit": "编辑标签和备注"
+    },
+    "results": {
+      "title": "搜索结果",
+      "captured": "采集于 {date}",
+      "all": "所有结果和更早日期",
+      "loadFailed": "无法加载搜索结果。",
+      "loading": "正在加载搜索结果"
+    },
+    "listing": {
+      "title": "在您的详情页中",
+      "loadFailed": "无法加载您的详情页字段。"
+    }
+  },
+  "map": {
+    "title": "机会地图",
+    "keyboardHelp": "Tab 移动到圆点。方向键移动到最近的圆点，Home 和 End 跳到机会最高和最低的位置，Enter 打开排名历史。",
+    "unplotted": "{count, plural, other {# 个关键词未同时具备两项评分，因此未显示在地图上。}}",
+    "shapes": {
+      "aria": "圆点形状",
+      "ranking": "有排名",
+      "notRanking": "无排名",
+      "floor": "热度为 Apple 最低值"
+    },
+    "notices": {
+      "noMatch": "没有关键词匹配这些筛选条件",
+      "noScored": "没有已评分关键词匹配这些筛选条件",
+      "unscored": "{count, plural, one {# 个关键词匹配这些筛选条件，但它没有同时具备热度和难度。} other {# 个关键词匹配这些筛选条件，但都没有同时具备热度和难度。}}",
+      "nothing": "暂无可绘制内容",
+      "nothingBody": "尚无已跟踪关键词同时具备热度和难度。评分会在每周评分运行后到达。",
+      "tooFew": "已评分关键词过少",
+      "tooFewBody": "地图至少需要 {minimum, number} 个同时具备热度和难度的关键词。{detail}",
+      "filtered": "这些筛选条件剩下 {count, number} 个。",
+      "soFar": "目前已有 {count, number}/{minimum, number} 个。",
+      "clear": "清除筛选"
+    },
+    "overlay": {
+      "position": "排名",
+      "popularity": "热度",
+      "difficulty": "难度",
+      "opportunity": "机会分",
+      "floor": "最低热度答案",
+      "paused": "已暂停",
+      "notChecked": "尚未检查",
+      "notFound": "未进入前 {depth, number} 名"
+    },
+    "dot": {
+      "name": "{keyword}，{rankState, select, unchecked {尚未检查} notFound {未进入前 {depth, number} 名} ranked {排名第 {rank} 位} other {尚未检查}}，热度 {popularity}{floor, select, none {} other {，最低热度答案}}，难度 {difficulty}{opportunity, select, none {} other {，机会 {opportunity}}}，{zone}{paused, select, none {} other {，已暂停}}"
+    },
+    "chart": {
+      "aria": "关键词机会地图",
+      "group": "按难度和热度排列的关键词",
+      "difficulty": "难度",
+      "popularity": "热度",
+      "thresholdLine": "{label} {value, number}"
+    },
+    "image": {
+      "title": "关键词机会地图",
+      "subject": "机会地图"
+    },
+    "zones": {
+      "names": {
+        "quickWins": "快速取胜",
+        "worthFighting": "值得争取",
+        "easyPickings": "轻易获得",
+        "lowPriority": "低优先级"
+      },
+      "aria": "区域",
+      "toggle": "{name} {count, plural, other {# 个关键词}}",
+      "about": "关于{name}",
+      "summary": "{meaning}{rule}。",
+      "guide": "阅读机会地图",
+      "tableCaption": "机会地图区域",
+      "zone": "区域",
+      "rule": "规则",
+      "keywords": "关键词",
+      "unplotted": "未在地图上",
+      "missing": "缺少热度或难度"
+    },
+    "noApps": "无应用"
+  },
+  "thresholds": {
+    "trigger": "阈值",
+    "title": "区域阈值",
+    "description": "这两个数字将地图划分为不同区域。设置保存在此浏览器中。",
+    "reset": "重置",
+    "popularity": "热度至少",
+    "difficulty": "难度至多",
+    "invalid": "请输入 {min, number} 到 {max, number} 之间的整数",
+    "quickWins": "快速取胜是{rule}。"
+  }
+}

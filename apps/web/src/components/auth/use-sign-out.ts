@@ -1,11 +1,13 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { logout } from "@/lib/api";
 import { invalidateAuth } from "@/lib/queries";
 
 export function useSignOut() {
+  const t = useTranslations("auth");
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => logout(),
@@ -13,6 +15,6 @@ export function useSignOut() {
       invalidateAuth(queryClient);
       window.location.replace("/login");
     },
-    onError: () => toast.error("Could not sign out."),
+    onError: () => toast.error(t("signOutFailed")),
   });
 }

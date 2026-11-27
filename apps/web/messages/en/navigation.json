@@ -1,0 +1,39 @@
+{
+  "main": "Main",
+  "workspace": "Workspace",
+  "app": "App",
+  "apps": "Apps",
+  "dashboard": "Dashboard",
+  "actionCenter": "Action Center",
+  "alerts": "Alerts",
+  "topCharts": "Top charts",
+  "keywordInspector": "Keyword inspector",
+  "integrations": "Integrations",
+  "settings": "Settings",
+  "admin": "Admin",
+  "documentation": "Documentation",
+  "releaseNotes": "Release notes",
+  "whatsNew": "What's New",
+  "openActions": "{count, plural, one {# open action} other {# open actions}}",
+  "appSections": {
+    "label": "App sections",
+    "overview": "Overview",
+    "actions": "Actions",
+    "keywords": "Keywords",
+    "rankings": "Rankings",
+    "competitors": "Competitors",
+    "changes": "Changes",
+    "reviews": "Reviews",
+    "audit": "Audit",
+    "metadata": "Metadata",
+    "setup": "Setup"
+  },
+  "adminSections": {
+    "overview": "Overview",
+    "conversion": "Conversion",
+    "capacity": "Capacity",
+    "workspaces": "Workspaces",
+    "users": "Users",
+    "apps": "Apps"
+  }
+}

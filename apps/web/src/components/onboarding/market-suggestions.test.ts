@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { translationContext } from "@/test/translation-context";
 import type {
   MarketSuggestion,
   MarketSuggestionsResult,
@@ -108,6 +109,28 @@ describe("marketCostSummary", () => {
     );
     expect(marketCostSummary("GOOGLE_PLAY")).toBe(
       "A market adds one listing read a day for the app and for every competitor, and one search a day for every keyword tracked there.",
+    );
+  });
+});
+
+describe("Simplified Chinese market costs", () => {
+  const t = translationContext("zh-CN", "setup").translator;
+
+  it("localizes market cost counts and explanations", () => {
+    expect(
+      groupSuggestions(RESULT, "zh-CN").map((group) => group.name),
+    ).toEqual(["德语", "法语", "法语（加拿大）"]);
+    expect(languageNames(RESULT, "zh-CN")).toEqual([
+      "英语",
+      "德语",
+      "法语",
+      "XX",
+    ]);
+    expect(marketCostText(suggestion("de", "de"), t)).toBe(
+      "每天 2 次详情页读取，每个关键词 1 次",
+    );
+    expect(marketCostSummary("GOOGLE_PLAY", t)).toBe(
+      "一个市场会增加：应用和每个竞品每天各 1 次详情页读取，以及在该市场跟踪的每个关键词每天 1 次搜索。",
     );
   });
 });

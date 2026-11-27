@@ -1,0 +1,23 @@
+{
+  "title": "Screenshot captions",
+  "count": "{captioned} of {total} with a caption",
+  "emptyTitle": "No screenshots recorded",
+  "emptyBody": "Screenshots are recorded with every snapshot. Refresh the app to capture them.",
+  "aria": "Screenshots in store order",
+  "alt": "Screenshot {position}",
+  "captured": "Captured {date}.",
+  "status": {
+    "pending": "Reading",
+    "read": "Caption read",
+    "blank": "No caption",
+    "failed": "Could not read",
+    "skipped": "Not read"
+  },
+  "summary": {
+    "unsupported": "Google Play does not index screenshot text, so {product} does not read it.",
+    "off": "Reading screenshot text is switched off on this instance.",
+    "empty": "No screenshots recorded yet. Refresh the app to capture them.",
+    "pending": "Reading {settled} of {total} screenshots. This page updates when they are done.",
+    "settled": "{read} of {total} screenshots carry a caption."
+  }
+}

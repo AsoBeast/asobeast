@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import {
   isAppStoreLocalization,
@@ -10,7 +11,14 @@ import { AppIcon } from "@/components/AppIcon";
 import { ReadRoleBadge } from "@/components/localizations/ReadRoleBadge";
 import { Badge } from "@/components/ui/badge";
 import { editLocalizationHref } from "@/lib/app-localizations";
-import { formatCountry, formatDate, formatList } from "@/lib/format";
+import {
+  formatCountryInLocale,
+  formatDateInLocale,
+  formatListInLocale,
+} from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
 import { localizationName } from "@/lib/localizations";
 import {
   insightText,
@@ -19,24 +27,35 @@ import {
   standingLines,
 } from "./breakdown-text";
 import { BreakdownField } from "./BreakdownField";
-import { PositionCell } from "./comparison-columns";
-import { UNNAMED_COMPETITOR } from "./comparison-scores";
+import { PositionCell } from "./comparison-cells";
 
 type Breakdown = Pick<KeywordBreakdown, "store" | "country" | "standing">;
 
-function noteOf(app: KeywordBreakdownApp, breakdown: Breakdown): string[] {
-  if (app.isYou) return standingLines(breakdown.standing);
+function noteOf(
+  app: KeywordBreakdownApp,
+  breakdown: Breakdown,
+  t: MessageTranslator,
+  locale: Locale,
+): string[] {
+  if (app.isYou) return standingLines(breakdown.standing, t, locale);
   const text = app.insight
-    ? insightText(app.insight, breakdown.store, app.placement)
+    ? insightText(app.insight, breakdown.store, app.placement, { t, locale })
     : null;
   return text === null ? [] : [text];
 }
 
-function sourceLine(app: KeywordBreakdownApp, market: string): string | null {
-  if (app.listingCountry === null)
-    return "No listing captured for this app yet.";
+function sourceLine(
+  app: KeywordBreakdownApp,
+  market: string,
+  t: MessageTranslator,
+  locale: Locale,
+): string | null {
+  if (app.listingCountry === null) return t("breakdown.noListing");
   if (app.listingCountry === market) return null;
-  return `No ${formatCountry(market)} listing captured for this app, so its ${formatCountry(app.listingCountry)} listing was read.`;
+  return t("breakdown.otherListing", {
+    market: formatCountryInLocale(market, locale),
+    other: formatCountryInLocale(app.listingCountry, locale),
+  });
 }
 
 const isEmptyField = (field: KeywordBreakdownListing["fields"][number]) =>
@@ -51,6 +70,7 @@ function ListingBlock({
   app: KeywordBreakdownApp;
   listing: KeywordBreakdownListing;
 }) {
+  const t = useTranslations("competitors");
   const { localization, role } = listing;
   const missingField =
     app.isYou &&
@@ -72,12 +92,14 @@ function ListingBlock({
         ))}
       {missingField ? (
         <p className="text-caption text-muted-foreground">
-          No keyword field saved for {localizationName(localization)}.{" "}
+          {t("breakdown.missingKeywordField", {
+            localization: localizationName(localization),
+          })}{" "}
           <Link
             href={editLocalizationHref(appId, localization)}
             className="link-underline"
           >
-            Edit it on the metadata page
+            {t("breakdown.editMetadata")}
           </Link>
         </p>
       ) : null}
@@ -94,10 +116,12 @@ export function BreakdownAppCard({
   app: KeywordBreakdownApp;
   breakdown: Breakdown;
 }) {
+  const t = useTranslations("competitors");
+  const locale = useAppLocale();
   const headingId = useId();
-  const note = noteOf(app, breakdown);
-  const source = sourceLine(app, breakdown.country);
-  const rating = ratingLine(app, breakdown.country);
+  const note = noteOf(app, breakdown, t, locale);
+  const source = sourceLine(app, breakdown.country, t, locale);
+  const rating = ratingLine(app, breakdown.country, t, locale);
   const position = app.ranking?.position ?? null;
   return (
     <li
@@ -113,20 +137,20 @@ export function BreakdownAppCard({
             id={headingId}
             className="flex flex-wrap items-center gap-2 font-medium"
           >
-            <bdi className="wrap-anywhere">
-              {app.name ?? UNNAMED_COMPETITOR}
-            </bdi>
-            {app.isYou ? <Badge>You</Badge> : null}
+            <bdi className="wrap-anywhere">{app.name ?? t("unnamed")}</bdi>
+            {app.isYou ? <Badge>{t("standing.you")}</Badge> : null}
           </h3>
           {app.ranking ? (
             <span className="text-caption text-muted-foreground">
-              Checked {formatDate(app.ranking.date)}
+              {t("breakdown.checked", {
+                date: formatDateInLocale(app.ranking.date, locale),
+              })}
             </span>
           ) : null}
         </div>
         {position === null ? (
           <span className="shrink-0 numeric text-body text-muted-foreground">
-            {rankingLabel(app.ranking)}
+            {rankingLabel(app.ranking, t)}
           </span>
         ) : (
           <PositionCell value={position} best={false} />
@@ -136,7 +160,7 @@ export function BreakdownAppCard({
         <div
           role="note"
           aria-label={
-            app.isYou ? "Where you stand" : "Why it may rank above you"
+            app.isYou ? t("breakdown.whereYouStand") : t("breakdown.whyAbove")
           }
           className="flex flex-col gap-1 border-l-2 border-border pl-3 text-dense"
         >
@@ -158,7 +182,12 @@ export function BreakdownAppCard({
       ))}
       {app.unread.length > 0 ? (
         <p className="text-caption text-muted-foreground">
-          Not read: {formatList(app.unread.map(localizationName))}.
+          {t("breakdown.notRead", {
+            localizations: formatListInLocale(
+              app.unread.map(localizationName),
+              locale,
+            ),
+          })}
         </p>
       ) : null}
       {rating ? (

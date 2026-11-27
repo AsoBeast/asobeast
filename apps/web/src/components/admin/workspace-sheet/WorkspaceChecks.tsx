@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import type { SupportRunDay } from "@asobeast/shared";
 import { SheetSection } from "@/components/layout/SheetSection";
 import {
@@ -9,45 +12,47 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatDayMonth, formatNumber } from "@/lib/format";
+import { formatDayMonthInLocale, formatNumberInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { SectionEmpty, SectionNote } from "./SectionNote";
 
 export function WorkspaceChecks({ days }: { days: SupportRunDay[] }) {
+  const t = useTranslations("admin");
+  const locale = useAppLocale();
   return (
-    <SheetSection title="Keyword checks, last week">
+    <SheetSection title={t("support.checks.title")}>
       {days.length === 0 ? (
-        <SectionEmpty>No keyword checks in the last 7 days.</SectionEmpty>
+        <SectionEmpty>{t("support.checks.empty")}</SectionEmpty>
       ) : (
         <Table density="compact">
-          <TableCaption className="sr-only">Keyword checks</TableCaption>
+          <TableCaption className="sr-only">
+            {t("support.checks.caption")}
+          </TableCaption>
           <TableHeader>
             <TableRow>
-              <TableHead>Day</TableHead>
-              <TableHead numeric>Checked</TableHead>
-              <TableHead numeric>Not found</TableHead>
+              <TableHead>{t("support.checks.day")}</TableHead>
+              <TableHead numeric>{t("support.checks.checked")}</TableHead>
+              <TableHead numeric>{t("support.checks.notFound")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {days.map((day) => (
               <TableRow key={day.date}>
                 <TableCell>
-                  <span>{formatDayMonth(day.date)}</span>
+                  <span>{formatDayMonthInLocale(day.date, locale)}</span>
                 </TableCell>
                 <TableCell numeric>
-                  <span>{formatNumber(day.captured)}</span>
+                  <span>{formatNumberInLocale(day.captured, locale)}</span>
                 </TableCell>
                 <TableCell numeric>
-                  <span>{formatNumber(day.unresolved)}</span>
+                  <span>{formatNumberInLocale(day.unresolved, locale)}</span>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       )}
-      <SectionNote>
-        Positions checked per day, and how many found the app nowhere in the
-        results. A day without checks has no row.
-      </SectionNote>
+      <SectionNote>{t("support.checks.note")}</SectionNote>
     </SheetSection>
   );
 }

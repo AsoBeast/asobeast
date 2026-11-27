@@ -1,4 +1,5 @@
-import { formatDayMonth } from "@/lib/format";
+import { formatDayMonth, formatDayMonthInLocale } from "@/lib/format";
+import type { Locale } from "@/lib/locale";
 
 export const CHART_SERIES_COUNT = 8;
 
@@ -42,6 +43,14 @@ export const TIME_AXIS_PROPS = {
   minTickGap: 24,
   tickFormatter: (value: unknown) => formatDayMonth(String(value)),
 } as const;
+
+export function timeAxisPropsInLocale(locale: Locale) {
+  return {
+    ...TIME_AXIS_PROPS,
+    tickFormatter: (value: unknown) =>
+      formatDayMonthInLocale(String(value), locale),
+  };
+}
 
 export const VALUE_AXIS_PROPS = {
   tickLine: false,
@@ -135,6 +144,13 @@ export const FADE_STOPS = [
 export const TIME_TOOLTIP_PROPS = {
   labelFormatter: (value: unknown) => formatDayMonth(String(value)),
 } as const;
+
+export function timeTooltipPropsInLocale(locale: Locale) {
+  return {
+    labelFormatter: (value: unknown) =>
+      formatDayMonthInLocale(String(value), locale),
+  };
+}
 
 export const SCORE_AXIS_TICKS = [0, 25, 50, 75, 100];
 

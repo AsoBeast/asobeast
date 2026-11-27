@@ -1,11 +1,15 @@
+import type { ReactNode } from "react";
 import type {
   KeywordInspection,
   KeywordInspectionDelta,
   KeywordInspectionSummary,
 } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { useZoneThresholds } from "@/components/keywords/use-zone-thresholds";
-import { formatDateTime, formatList } from "@/lib/format";
-import { ZONE_LABELS, zoneMeaning, zoneOf } from "@/lib/keyword-zones";
+import { formatDateTimeInLocale, formatListInLocale } from "@/lib/format";
+import { zoneLabel, zoneMeaning, zoneOf } from "@/lib/keyword-zones";
+import { useAppLocale } from "@/lib/use-app-locale";
+import type { MessageTranslator } from "@/i18n/translator";
 import {
   autocompleteLine,
   changeTone,
@@ -23,13 +27,20 @@ function spokenChange(
   label: string,
   change: number | null,
   higherIsBetter: boolean,
+  t: MessageTranslator,
 ): string | null {
   if (change === null) return null;
   const tone = changeTone(change, higherIsBetter);
-  return `${label} ${signedChange(change)}${tone === "same" ? "" : ` (${tone})`}`;
+  return t("inspector.notes.change", {
+    label,
+    change: signedChange(change, t),
+    tone: tone === "same" ? "same" : t(`inspector.notes.tones.${tone}`),
+  });
 }
 
 function InspectionVerdict({ inspection }: { inspection: KeywordInspection }) {
+  const t = useTranslations("keywordInspector");
+  const keywords = useTranslations("keywords");
   const { thresholds } = useZoneThresholds();
   if (inspection.volume === null || inspection.difficulty100 === null) {
     return null;
@@ -44,8 +55,13 @@ function InspectionVerdict({ inspection }: { inspection: KeywordInspection }) {
   if (zone === null) return null;
   return (
     <p className="text-body text-muted-foreground">
-      <span className="font-medium text-foreground">{ZONE_LABELS[zone]}</span>
-      <span>{` on your thresholds. ${zoneMeaning(zone)}`}</span>
+      {t.rich("inspector.notes.verdict", {
+        zone: zoneLabel(zone, keywords),
+        meaning: zoneMeaning(zone, keywords),
+        label: (chunks) => (
+          <span className="font-medium text-foreground">{chunks}</span>
+        ),
+      })}
     </p>
   );
 }
@@ -57,45 +73,82 @@ function InspectionDelta({
   inspection: KeywordInspection;
   previous: KeywordInspectionDelta;
 }) {
-  const moves = [
-    { apps: previous.entered, verb: "entered the top 10" },
-    { apps: previous.left, verb: "left the top 10" },
-  ].filter((move) => move.apps.length > 0);
+  const t = useTranslations("keywordInspector");
+  const locale = useAppLocale();
+  const enteredTitles = previous.entered.length
+    ? formatListInLocale(
+        previous.entered.map((app) => app.title),
+        locale,
+      )
+    : "none";
+  const leftTitles = previous.left.length
+    ? formatListInLocale(
+        previous.left.map((app) => app.title),
+        locale,
+      )
+    : "none";
   return (
     <section aria-labelledby="inspection-delta" className={NOTE}>
       <h3 id="inspection-delta" className="sr-only">
-        Since the previous inspection
+        {t("inspector.notes.sincePrevious")}
       </h3>
       <p>
-        <span>{`Since ${formatDateTime(previous.completedAt)}`}</span>
-        {moves.map((move) => (
-          <span key={move.verb}>
-            <span> · </span>
-            <span className={NOTE_FIGURE}>
-              {formatList(move.apps.map((app) => app.title))}
-            </span>
-            <span>{` ${move.verb}`}</span>
-          </span>
-        ))}
+        {t.rich("inspector.notes.delta", {
+          date: formatDateTimeInLocale(previous.completedAt, locale),
+          enteredTitles,
+          leftTitles,
+          entered: (chunks) => <span className={NOTE_FIGURE}>{chunks}</span>,
+          left: (chunks) => <span className={NOTE_FIGURE}>{chunks}</span>,
+        })}
       </p>
       <p className="sr-only">
         {[
           spokenChange(
-            "Popularity",
+            t("inspector.log.popularity"),
             scoreChange(inspection.volume, previous.volume),
             true,
+            t,
           ),
           spokenChange(
-            "Difficulty",
+            t("inspector.log.difficulty"),
             scoreChange(inspection.difficulty100, previous.difficulty100),
             false,
+            t,
           ),
         ]
           .filter((line) => line !== null)
-          .join(", ")}
+          .join(t("inspector.notes.listSeparator"))}
       </p>
     </section>
   );
+}
+
+function elsewhereLinks(
+  items: readonly KeywordInspectionSummary[],
+  locale: ReturnType<typeof useAppLocale>,
+  onSelect: (id: string) => void,
+): ReactNode {
+  const codes = items.map((item) => storefrontCode(item.store, item.country));
+  let itemIndex = 0;
+  return new Intl.ListFormat(locale, { type: "conjunction" })
+    .formatToParts(codes)
+    .map((part, index) => {
+      if (part.type !== "element") {
+        return <span key={`separator-${index}`}>{part.value}</span>;
+      }
+      const item = items[itemIndex];
+      itemIndex += 1;
+      return (
+        <button
+          key={item.id}
+          type="button"
+          onClick={() => onSelect(item.id)}
+          className={ELSEWHERE_LINK}
+        >
+          {part.value}
+        </button>
+      );
+    });
 }
 
 function SearchNotes({
@@ -107,25 +160,32 @@ function SearchNotes({
   elsewhere: readonly KeywordInspectionSummary[];
   onSelect: (id: string) => void;
 }) {
-  const autocomplete = autocompleteLine(inspection.signals);
+  const t = useTranslations("keywordInspector");
+  const locale = useAppLocale();
+  const autocomplete = autocompleteLine(inspection.signals, t);
   if (autocomplete === null && elsewhere.length === 0) return null;
+  const items = elsewhere.length
+    ? formatListInLocale(
+        elsewhere.map((item) => storefrontCode(item.store, item.country)),
+        locale,
+      )
+    : "";
+  const links = elsewhereLinks(elsewhere, locale, onSelect);
   return (
     <p className={NOTE}>
-      {autocomplete === null ? null : <span>{autocomplete}</span>}
-      {autocomplete !== null && elsewhere.length > 0 ? <span> · </span> : null}
-      {elsewhere.length > 0 ? <span>Also inspected in </span> : null}
-      {elsewhere.map((item, index) => (
-        <span key={item.id}>
-          {index > 0 ? <span>, </span> : null}
-          <button
-            type="button"
-            onClick={() => onSelect(item.id)}
-            className={ELSEWHERE_LINK}
-          >
-            {storefrontCode(item.store, item.country)}
-          </button>
-        </span>
-      ))}
+      {t.rich("inspector.notes.search", {
+        autocomplete: autocomplete ?? "none",
+        elsewhere: elsewhere.length > 0 ? "present" : "none",
+        items,
+        autocompleteText: (chunks) => <span>{chunks}</span>,
+        elsewhereText: () =>
+          elsewhere.length === 0
+            ? null
+            : t.rich("inspector.notes.elsewhere", {
+                items,
+                links: () => links,
+              }),
+      })}
     </p>
   );
 }

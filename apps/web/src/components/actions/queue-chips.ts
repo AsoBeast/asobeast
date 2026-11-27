@@ -4,12 +4,16 @@ import type {
   ActionRule,
   Store,
 } from "@asobeast/shared";
-import { formatCountry, storeLabel } from "@/lib/format";
+import { createTranslator } from "next-intl";
+import enActions from "../../../messages/en/actions.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
+import { formatCountryInLocale, storeLabel } from "@/lib/format";
 import {
-  ACTION_CATEGORY_LABEL,
-  ACTION_PRIORITY_LABEL,
-  ACTION_RULE_LABEL,
-  ACTION_STATUS_LABEL,
+  actionCategoryLabel,
+  actionPriorityLabel,
+  actionRuleLabel,
+  actionStatusLabel,
 } from "./action-copy";
 import type { QueueView } from "./queue-filters";
 import { presetOf } from "./status-presets";
@@ -29,6 +33,12 @@ export interface QueueChip {
   };
 }
 
+const english = createTranslator({
+  locale: "en",
+  namespace: "actions",
+  messages: { actions: enActions },
+});
+
 function without<T>(values: readonly T[], value: T): T[] {
   return values.filter((entry) => entry !== value);
 }
@@ -36,6 +46,8 @@ function without<T>(values: readonly T[], value: T): T[] {
 export function queueChips(
   view: QueueView,
   appLabels: ReadonlyMap<string, string>,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
 ): QueueChip[] {
   const custom = presetOf(view.status) === null;
   return [
@@ -43,24 +55,24 @@ export function queueChips(
       ? [
           {
             key: "status",
-            label: `Status: ${view.status.map((status) => ACTION_STATUS_LABEL[status]).join(", ")}`,
+            label: `${t("statusLabel")}: ${view.status.map((status) => actionStatusLabel(status, t)).join(", ")}`,
             clear: { status: null },
           },
         ]
       : []),
     ...view.priority.map((priority) => ({
       key: `priority~${priority}`,
-      label: ACTION_PRIORITY_LABEL[priority],
+      label: actionPriorityLabel(priority, t),
       clear: { priority: without(view.priority, priority) },
     })),
     ...view.rule.map((rule) => ({
       key: `rule~${rule}`,
-      label: ACTION_RULE_LABEL[rule],
+      label: actionRuleLabel(rule, t),
       clear: { rule: without(view.rule, rule) },
     })),
     ...view.category.map((category) => ({
       key: `category~${category}`,
-      label: ACTION_CATEGORY_LABEL[category],
+      label: actionCategoryLabel(category, t),
       clear: { category: without(view.category, category) },
     })),
     ...view.app.map((app) => ({
@@ -70,7 +82,7 @@ export function queueChips(
     })),
     ...view.market.map((market) => ({
       key: `market~${market}`,
-      label: formatCountry(market),
+      label: formatCountryInLocale(market, locale),
       clear: { market: without(view.market, market) },
     })),
     ...(view.store
@@ -83,7 +95,13 @@ export function queueChips(
         ]
       : []),
     ...(view.q.trim() !== ""
-      ? [{ key: "q", label: `Search: "${view.q.trim()}"`, clear: { q: null } }]
+      ? [
+          {
+            key: "q",
+            label: `${t("searchLabel")}: "${view.q.trim()}"`,
+            clear: { q: null },
+          },
+        ]
       : []),
   ];
 }

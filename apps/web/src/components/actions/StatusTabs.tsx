@@ -2,9 +2,10 @@
 
 import { Suspense } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import type { ActionStatus } from "@asobeast/shared";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
-import { formatNumber, pluralize } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 import { actionSummaryFor } from "@/lib/queries";
 import { presetCount, presetOf, STATUS_PRESETS } from "./status-presets";
 
@@ -13,11 +14,19 @@ interface StatusTabsProps {
   onChange: (next: ActionStatus[] | null) => void;
 }
 
+const PRESET_KEY = {
+  todo: "todo",
+  DONE: "done",
+  DISMISSED: "dismissed",
+  RESOLVED: "resolved",
+} as const;
+
 function Tabbed({
   status,
   onChange,
   byStatus,
 }: StatusTabsProps & { byStatus: Record<ActionStatus, number> | null }) {
+  const t = useTranslations("actions");
   return (
     <Tabs
       value={presetOf(status)?.key ?? ""}
@@ -28,9 +37,10 @@ function Tabbed({
       }}
       className="min-w-0 max-w-full"
     >
-      <TabsList aria-label="Action status" scrollable>
+      <TabsList aria-label={t("statusAria")} scrollable>
         {STATUS_PRESETS.map((preset) => {
           const count = byStatus ? presetCount(preset, byStatus) : null;
+          const label = t(`presets.${PRESET_KEY[preset.key]}`);
           return (
             <TabsOption
               key={preset.key}
@@ -39,11 +49,11 @@ function Tabbed({
               aria-label={
                 count === null
                   ? undefined
-                  : `${preset.label}, ${pluralize(count, "action")}`
+                  : t("statusCount", { status: label, count })
               }
               className="flex-none"
             >
-              {preset.label}
+              {label}
               {count === null ? null : (
                 <span className="numeric text-muted-foreground">
                   {formatNumber(count)}

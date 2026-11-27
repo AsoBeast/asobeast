@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { AppDetail, CompetitorAnalysis } from "@asobeast/shared";
 import { CollapsedSectionsProvider } from "@/components/layout/CollapsedSections";
+import { TestIntlProvider } from "@/test/intl-provider";
 import { appDetailOptions, competitorAnalysisOptions } from "@/lib/queries";
 import { COMPETITOR_SECTIONS } from "./competitor-sections";
 import { StandingPanel } from "./StandingPanel";
@@ -53,11 +54,13 @@ function newClient(): QueryClient {
 
 function render(client: QueryClient): string {
   return renderToStaticMarkup(
-    <QueryClientProvider client={client}>
-      <CollapsedSectionsProvider initial={[]} known={COMPETITOR_SECTIONS}>
-        <StandingPanel id={APP} />
-      </CollapsedSectionsProvider>
-    </QueryClientProvider>,
+    <TestIntlProvider>
+      <QueryClientProvider client={client}>
+        <CollapsedSectionsProvider initial={[]} known={COMPETITOR_SECTIONS}>
+          <StandingPanel id={APP} />
+        </CollapsedSectionsProvider>
+      </QueryClientProvider>
+    </TestIntlProvider>,
   );
 }
 

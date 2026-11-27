@@ -1,3 +1,4 @@
+import { createTranslator } from "next-intl";
 import {
   countChars,
   formatCheckedPosition,
@@ -7,14 +8,21 @@ import {
   truncateChars,
   type TrackedKeywordItem,
 } from "@asobeast/shared";
+import enKeywordInspector from "../../../../messages/en/keywordInspector.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import {
-  ZONE_LABELS,
   zoneOf,
   type KeywordZone,
   type ZoneThresholds,
 } from "@/lib/keyword-zones";
 import { hasFloorAnswer, scorePair } from "@/lib/keyword-scores";
 import { opportunityOrder } from "./dot-navigation";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywordInspector",
+  messages: { keywordInspector: enKeywordInspector },
+});
 
 export const MAP_LABEL_LIMIT = 5;
 export const MAP_LABEL_CHARS = 22;
@@ -137,18 +145,31 @@ export function rankWords(
 export const pointName = (point: MapPoint, multiMarket: boolean): string =>
   multiMarket ? keywordLabel(point) : point.text;
 
-export function dotName(point: MapPoint, multiMarket: boolean): string {
-  return [
-    pointName(point, multiMarket),
-    rankWords(point),
-    `popularity ${point.popularity}${point.floor ? ", floor answer" : ""}`,
-    `difficulty ${point.difficulty}`,
-    point.opportunity === null ? null : `opportunity ${point.opportunity}`,
-    ZONE_LABELS[point.zone],
-    point.active ? null : "paused",
-  ]
-    .filter((part) => part !== null)
-    .join(", ");
+export function dotName(
+  point: MapPoint,
+  multiMarket: boolean,
+  t: MessageTranslator = english,
+): string {
+  const rankState =
+    point.positionLabel === null
+      ? "unchecked"
+      : point.position === null
+        ? listsNoApps(point.resultCount)
+          ? "noApps"
+          : "notFound"
+        : "ranked";
+  return t("map.dot.name", {
+    keyword: pointName(point, multiMarket),
+    rankState,
+    depth: point.depth ?? 0,
+    rank: point.positionLabel ?? "",
+    popularity: point.popularity,
+    difficulty: point.difficulty,
+    opportunity: point.opportunity ?? "none",
+    floor: point.floor ? "floor" : "none",
+    paused: point.active ? "none" : "paused",
+    zone: t(`map.zones.names.${point.zone}`),
+  });
 }
 
 const clamp = (value: number, max: number): number =>

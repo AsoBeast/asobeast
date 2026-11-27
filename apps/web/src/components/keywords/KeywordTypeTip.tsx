@@ -1,13 +1,17 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import { InfoTip } from "@/components/ui/info-tip";
 
 const KEYWORD_TYPES_GUIDE = "https://docs.asobeast.com/concepts/keyword-types";
 
 export function KeywordTypeTip() {
+  const t = useTranslations("keywords");
   return (
     <InfoTip
-      label="About keyword types"
-      title="Keyword types"
-      summary="Own brand: the keyword holds the name of your app or its developer. Competitor brand: it holds the name of a competitor or of another app that dominates the results. Generic: everything else. A type you set yourself is marked as set by you."
+      label={t("typeTip.about")}
+      title={t("typeTip.title")}
+      summary={t("typeTip.summary")}
     >
       <a
         href={KEYWORD_TYPES_GUIDE}
@@ -15,7 +19,7 @@ export function KeywordTypeTip() {
         rel="noreferrer"
         className="link-underline"
       >
-        Read about keyword types
+        {t("typeTip.read")}
       </a>
     </InfoTip>
   );

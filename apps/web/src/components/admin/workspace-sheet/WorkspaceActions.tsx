@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import type { SupportWorkspaceSummary } from "@asobeast/shared";
 import { SheetSection } from "@/components/layout/SheetSection";
 import { availableActions } from "@/lib/admin-support";
@@ -11,9 +14,10 @@ export function WorkspaceActions({
   workspace: SupportWorkspaceSummary;
   billing: boolean;
 }) {
+  const t = useTranslations("admin");
   const actions = availableActions(workspace, { billing });
   return (
-    <SheetSection title="Support actions">
+    <SheetSection title={t("support.actionsTitle")}>
       {actions.length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {actions.map((action) => (
@@ -27,7 +31,7 @@ export function WorkspaceActions({
         </div>
       ) : null}
       {workspace.operatorWorkspace ? (
-        <SectionNote>Your own workspace cannot be suspended.</SectionNote>
+        <SectionNote>{t("support.operatorWorkspace")}</SectionNote>
       ) : null}
     </SheetSection>
   );

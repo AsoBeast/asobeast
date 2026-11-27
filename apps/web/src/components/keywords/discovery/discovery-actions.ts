@@ -1,4 +1,5 @@
 import type { KeywordDiscoveryItem } from "@asobeast/shared";
+import type { MessageTranslator } from "@/i18n/translator";
 
 const idsOf = (items: readonly KeywordDiscoveryItem[]): string[] =>
   items.map(({ keywordId }) => keywordId);
@@ -16,10 +17,13 @@ export interface BulkCounts {
   ranked: number;
 }
 
-export const bulkLabels = ({ selected, recommended, ranked }: BulkCounts) => ({
-  selected: `Track selected (${selected})`,
-  recommended: `Track recommended (${recommended})`,
-  ranked: `Track all ranked (${ranked})`,
+export const bulkLabels = (
+  { selected, recommended, ranked }: BulkCounts,
+  t: MessageTranslator,
+) => ({
+  selected: t("discovery.bulk.selected", { count: selected }),
+  recommended: t("discovery.bulk.recommended", { count: recommended }),
+  ranked: t("discovery.bulk.ranked", { count: ranked }),
 });
 
 export const selectedIn = (

@@ -1,27 +1,36 @@
 import { useId } from "react";
+import { createTranslator } from "next-intl";
 import type { KeywordTopApp, TrackedKeywordItem } from "@asobeast/shared";
+import enKeywords from "../../../messages/en/keywords.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import { AppIcon } from "@/components/AppIcon";
 import { cn } from "@/lib/utils";
 import { ROW_PEEK } from "./row-peek";
 import { rememberSerpOpener } from "./serp/serp-opener";
 
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywords",
+  messages: { keywords: enKeywords },
+});
+
 const ICON_SIZE = 24;
 
-const ROLE_WORDS: Record<KeywordTopApp["role"], string> = {
-  own: " (your app)",
-  competitor: " (competitor)",
-  other: "",
-};
-
-const appLine = (app: KeywordTopApp): string =>
-  `#${app.position} ${app.title}${ROLE_WORDS[app.role]}`;
+const appLine = (app: KeywordTopApp, t: MessageTranslator): string =>
+  t("topApps.line", {
+    position: app.position,
+    title: app.title,
+    role: app.role === "other" ? "" : t(`topApps.roles.${app.role}`),
+  });
 
 export function TopAppsCell({
   keyword,
   onOpen,
+  t = english,
 }: {
   keyword: Pick<TrackedKeywordItem, "keywordId" | "text" | "topApps">;
   onOpen: () => void;
+  t?: MessageTranslator;
 }) {
   const appsId = useId();
   const apps = keyword.topApps;
@@ -29,9 +38,7 @@ export function TopAppsCell({
     return (
       <span className="text-muted-foreground">
         <span aria-hidden>—</span>
-        <span className="sr-only">
-          No search results from today or yesterday
-        </span>
+        <span className="sr-only">{t("topApps.noResults")}</span>
       </span>
     );
   }
@@ -39,7 +46,7 @@ export function TopAppsCell({
   return (
     <button
       type="button"
-      aria-label={`View search results for ${keyword.text}`}
+      aria-label={t("topApps.open", { keyword: keyword.text })}
       aria-describedby={appsId}
       data-serp-keyword={keyword.keywordId}
       onClick={(event) => {
@@ -49,12 +56,14 @@ export function TopAppsCell({
       className={cn("group/apps flex items-center", ROW_PEEK)}
     >
       <span id={appsId} className="sr-only">
-        {`Top apps: ${apps.map(appLine).join(", ")}`}
+        {t("topApps.summary", {
+          apps: apps.map((app) => appLine(app, t)).join(", "),
+        })}
       </span>
       {apps.map((app) => (
         <span
           key={app.position}
-          title={appLine(app)}
+          title={appLine(app, t)}
           data-role={app.role}
           className={cn(
             "relative -ml-1.5 flex rounded-md ring-2 ring-card first:ml-0 group-hover/row:ring-muted group-hover/apps:ring-card group-data-[state=selected]/row:ring-accent",
@@ -70,7 +79,9 @@ export function TopAppsCell({
           aria-hidden
           data-slot="own-rank"
           className="numeric ml-1.5 text-tick font-medium text-foreground keywords-snug:hidden"
-        >{`you #${own.position}`}</span>
+        >
+          {t("topApps.ownRank", { position: own.position })}
+        </span>
       ) : null}
     </button>
   );

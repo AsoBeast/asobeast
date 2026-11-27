@@ -1,0 +1,20 @@
+{
+  "menu": {
+    "account": "账号菜单",
+    "plan": "{plan}套餐",
+    "adminArea": "管理后台",
+    "queueDashboard": "队列仪表盘",
+    "apiDocs": "API 文档"
+  },
+  "notices": {
+    "choosePlan": "选择套餐",
+    "manageBilling": "管理账单",
+    "upgrade": "升级",
+    "pausedAction": "{sentence}<link>{action}</link>",
+    "trialAction": "{sentence}<link>{action}</link>"
+  },
+  "memberBilling": {
+    "backToApps": "返回您的应用",
+    "seeTeam": "查看工作区团队"
+  }
+}

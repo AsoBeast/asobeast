@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,25 +24,27 @@ const METHOD_ORDER = ["google", "key"] as const;
 type Method = (typeof METHOD_ORDER)[number];
 
 const BUCKET = /^pubsite_prod(_rev)?_\d+$/;
-const SIGN_IN_LABEL = "Sign in with Google";
 
-const METHODS: Record<
-  Method,
-  { label: string; description: string; guide: string }
-> = {
-  google: {
-    label: SIGN_IN_LABEL,
-    guide: CONNECT_GUIDES.google,
-    description:
-      "Sign in with the Google account that owns your Play Console developer account. AsoBeast asks Google for read only access to Cloud Storage and for access to Play Console to post the review replies you send, checks the bucket and stores the sign in encrypted.",
-  },
-  key: {
-    label: "Service account key",
-    guide: CONNECT_GUIDES.key,
-    description:
-      "Use a Google Cloud service account invited in Play Console under Users and permissions, with View app information and download bulk reports on the Account permissions tab, and Reply to reviews to post replies. AsoBeast checks it with Google, stores the key encrypted and never shows it again.",
-  },
-};
+const METHOD_GUIDE = {
+  google: CONNECT_GUIDES.google,
+  key: CONNECT_GUIDES.key,
+} as const;
+
+const methodLabel = (
+  method: Method,
+  t: ReturnType<typeof useTranslations>,
+): string =>
+  t(method === "google" ? "connectPlay.googleLabel" : "connectPlay.keyLabel");
+
+const methodDescription = (
+  method: Method,
+  t: ReturnType<typeof useTranslations>,
+): string =>
+  t(
+    method === "google"
+      ? "connectPlay.googleDescription"
+      : "connectPlay.keyDescription",
+  );
 
 const bucketOf = (raw: string): string =>
   raw
@@ -53,20 +56,24 @@ function problemOf(
   method: Method,
   bucket: string,
   serviceAccountJson: string,
+  t: ReturnType<typeof useTranslations>,
 ): string | null {
   if (!BUCKET.test(bucket)) {
-    return "Copy the bucket id that starts with pubsite_prod from Download reports in Play Console.";
+    return t("connectPlay.bucketRequired");
   }
   if (method === "key" && !isServiceAccountKey(serviceAccountJson)) {
-    return "Choose the JSON key file Google Cloud downloaded for the service account, or paste its contents.";
+    return t("connectPlay.keyRequired");
   }
   return null;
 }
 
-const messageOf = (failure: unknown): string =>
+const messageOf = (
+  failure: unknown,
+  t: ReturnType<typeof useTranslations>,
+): string =>
   failure instanceof ApiError
     ? failure.envelope.message
-    : "Could not connect the Google Play Console.";
+    : t("connectPlay.connectFailed");
 
 export function ConnectPlayDialog({
   label,
@@ -75,6 +82,7 @@ export function ConnectPlayDialog({
   label: string;
   googleSignIn: boolean;
 }) {
+  const t = useTranslations("integrations");
   const queryClient = useQueryClient();
   const initial: Method = googleSignIn ? "google" : "key";
   const [open, setOpen] = useState(false);
@@ -112,10 +120,10 @@ export function ConnectPlayDialog({
       }),
     onSuccess: () => {
       invalidateStoreConnectionMutation(queryClient);
-      toast.success("Google Play Console connected");
+      toast.success(t("connectPlay.connected"));
       reset(false);
     },
-    onError: (failure) => setError(messageOf(failure)),
+    onError: (failure) => setError(messageOf(failure, t)),
   });
   const signInMutation = useMutation({
     mutationFn: () => startPlaySignIn({ bucket: bucketOf(bucket) }),
@@ -123,7 +131,7 @@ export function ConnectPlayDialog({
       setRedirecting(true);
       window.location.assign(url);
     },
-    onError: (failure) => setError(messageOf(failure)),
+    onError: (failure) => setError(messageOf(failure, t)),
   });
   const pending =
     keyMutation.isPending || signInMutation.isPending || redirecting;
@@ -132,7 +140,7 @@ export function ConnectPlayDialog({
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const problem = problemOf(method, bucketOf(bucket), serviceAccountJson);
+    const problem = problemOf(method, bucketOf(bucket), serviceAccountJson, t);
     setError(problem);
     if (problem) return;
     if (pending) return;
@@ -145,12 +153,12 @@ export function ConnectPlayDialog({
       open={open}
       onOpenChange={reset}
       label={label}
-      submitLabel={method === "google" ? SIGN_IN_LABEL : label}
+      submitLabel={method === "google" ? t("connectPlay.googleLabel") : label}
       description={
         <>
-          <span>{METHODS[method].description}</span>{" "}
-          <GuideLink href={METHODS[method].guide} subject="Google Play">
-            Step by step guide
+          <span>{methodDescription(method, t)}</span>{" "}
+          <GuideLink href={METHOD_GUIDE[method]} subject="Google Play">
+            {t("connectPlay.guide")}
           </GuideLink>
         </>
       }
@@ -174,17 +182,17 @@ export function ConnectPlayDialog({
             setError(null);
           }}
         >
-          <TabsList aria-label="How to connect">
+          <TabsList aria-label={t("connectPlay.howConnect")}>
             {METHOD_ORDER.map((each) => (
               <TabsOption key={each} value={each}>
-                {METHODS[each].label}
+                {methodLabel(each, t)}
               </TabsOption>
             ))}
           </TabsList>
         </Tabs>
       ) : null}
       <div className="flex flex-col gap-2">
-        <Label htmlFor="play-bucket">Bucket id</Label>
+        <Label htmlFor="play-bucket">{t("connectPlay.bucketId")}</Label>
         <Input
           id="play-bucket"
           value={bucket}
@@ -195,8 +203,7 @@ export function ConnectPlayDialog({
           className="font-mono md:text-caption"
         />
         <p className="text-caption text-muted-foreground">
-          Play Console shows it under Download reports, as the Cloud Storage URI
-          after gs://.
+          {t("connectPlay.bucketNote")}
         </p>
       </div>
       {method === "key" ? (

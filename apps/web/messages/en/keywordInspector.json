@@ -1,0 +1,494 @@
+{
+  "inspector": {
+    "title": "Keyword inspector",
+    "form": {
+      "aria": "Inspect a keyword",
+      "keyword": "Keyword",
+      "keywordPlaceholder": "e.g. habit tracker",
+      "store": "Store",
+      "country": "Country",
+      "inspect": "Inspect",
+      "starting": "Starting…",
+      "failed": "Could not start the inspection"
+    },
+    "empty": {
+      "title": "No inspection selected",
+      "body": "Inspect a keyword above, or pick a point on the map, and its live results, autocomplete and scores open here."
+    },
+    "detail": {
+      "heading": "Inspection",
+      "missingTitle": "This inspection no longer exists",
+      "missingBody": "It may have been deleted. Run a new one above.",
+      "loadFailed": "The inspection could not be loaded.",
+      "waiting": "Waiting for the store queue. Scheduled store work runs first, so this can take a few minutes.",
+      "reading": "Reading the store. This usually takes under a minute.",
+      "checking": "Checking…",
+      "checkAgain": "Check again",
+      "failedTitle": "This inspection did not finish.",
+      "retryFailed": "Could not start the inspection again",
+      "searchResults": "Search results",
+      "topCount": "Top {shown, number} of {total, number}",
+      "noApps": "The store returned no apps for this keyword.",
+      "requestedAt": "requested {date}"
+    },
+    "scores": {
+      "aria": "Scores",
+      "notScored": "not scored",
+      "was": "was {value}",
+      "note": "{grade}{previous, select, none {} other { · <was>{previous}</was>}}",
+      "opportunityNote": "Opportunity weighs popularity against difficulty, before any app is considered.",
+      "formula": "{source} · formula {version} · ",
+      "estimatedTitle": "How these scores are estimated",
+      "competitionTitle": "Competition in the top {count, number}"
+    },
+    "results": {
+      "scrollLabel": "Search results",
+      "caption": "The top {count, number} results for “{keyword}”, in store order",
+      "rank": "#",
+      "app": "App",
+      "titleMatch": "Title match",
+      "ratings": "Ratings",
+      "new": "New",
+      "newInTop10": " in the top 10",
+      "showTop10": "Show the top 10",
+      "showAll": "Show all {count, number} results",
+      "matches": {
+        "phrase": "Exact phrase",
+        "words": "All words",
+        "partial": "Some words",
+        "none": "No match"
+      }
+    },
+    "notes": {
+      "verdict": "<label>{zone}</label> on your thresholds. {meaning}",
+      "sincePrevious": "Since the previous inspection",
+      "delta": "Since {date}{enteredTitles, select, none {} other { · <entered>{enteredTitles}</entered> entered the top 10}}{leftTitles, select, none {} other { · <left>{leftTitles}</left> left the top 10}}",
+      "search": "{autocomplete, select, none {} other {<autocompleteText>{autocomplete}</autocompleteText>}}{elsewhere, select, none {} other {{autocomplete, select, none {} other { · }}<elsewhereText>{items}</elsewhereText>}}",
+      "elsewhere": "Also inspected in <links>{items}</links>",
+      "listSeparator": ", ",
+      "change": "{label} {change}{tone, select, same {} other { ({tone})}}",
+      "tones": {
+        "better": "better",
+        "worse": "worse"
+      }
+    },
+    "next": {
+      "title": "Next from “{keyword}”",
+      "empty": "The store suggested nothing else for this keyword.",
+      "done": "{term}, inspected: popularity {popularity}, difficulty {difficulty}",
+      "running": "Inspecting {term}",
+      "inspect": "Inspect {term}",
+      "failed": "Could not start the inspection"
+    },
+    "log": {
+      "title": "All inspections",
+      "count": "{count, number} · latest {limit, number}",
+      "emptyTitle": "No inspections yet",
+      "emptyBody": "Every keyword you inspect is kept here, across every store and country, so you can compare it later.",
+      "keyword": "Keyword",
+      "storefront": "Storefront",
+      "popularity": "Popularity",
+      "difficulty": "Difficulty",
+      "opportunity": "Opportunity",
+      "inspected": "Inspected",
+      "noScore": "No score",
+      "running": "Running",
+      "failed": "Failed",
+      "footer": "{inspections} across {storefronts} · the newest {limit, number} are kept",
+      "inspectionCount": "{count, plural, one {# inspection} other {# inspections}}",
+      "storefrontCount": "{count, plural, one {# storefront} other {# storefronts}}",
+      "deleteSubject": "{keyword} in {store} {country} from {date}"
+    },
+    "delete": {
+      "trigger": "Delete the inspection of {subject}",
+      "title": "Delete this inspection?",
+      "description": "The saved results for “{keyword}” are removed, and later inspections of the keyword compare with the run before this one.",
+      "deleting": "Deleting…",
+      "success": "Inspection deleted",
+      "failed": "Could not delete the inspection"
+    },
+    "map": {
+      "title": "Keyword map",
+      "inStorefront": "{count, number} in this storefront",
+      "emptyTitle": "Nothing on the map yet",
+      "emptyBody": "Inspect a keyword in {store}, {country} and it lands here by its popularity and difficulty.",
+      "keyboardHelp": "Arrow keys move to the nearest keyword, Home and End jump to the highest and lowest opportunity, Enter shows its inspection.",
+      "aria": "Inspected keywords by difficulty and popularity",
+      "group": "Inspected keywords",
+      "nothingInspected": "nothing inspected yet",
+      "latest": "latest {date}",
+      "footer": "{storefront} · {status}",
+      "suggestionHint": "A suggestion inspects in one click",
+      "difficulty": "Difficulty",
+      "popularity": "Popularity",
+      "point": "{keyword}, popularity {popularity}, difficulty {difficulty}{opportunity, select, none {} other {, opportunity {opportunity}}}{floor, select, none {} other {, floor answer}}{paused, select, none {} other {, paused}}, {zone}"
+    },
+    "format": {
+      "updatedToday": "updated today",
+      "updatedDaysAgo": "updated {count, plural, one {# day} other {# days}} ago",
+      "updatedMonthsAgo": "updated {count, plural, one {# month} other {# months}} ago",
+      "typicalUpdatedToday": "Typically updated today",
+      "typicalUpdateAgo": "Typical update {count, plural, one {# day} other {# days}} ago",
+      "noChange": "no change",
+      "autocompleteWhileTyping": "Autocomplete suggests it while it is typed",
+      "autocompleteAfter": "Autocomplete suggests it in position {position, number} after {count, plural, one {# typed character} other {# typed characters}}",
+      "autocompleteListed": "Autocomplete suggests it only once the whole phrase is typed",
+      "autocompleteAbsent": "Autocomplete never suggests it",
+      "costRead": "Each inspection reads the store once.",
+      "costNone": "Your plan includes no on demand scores.",
+      "costDaily": "Each inspection uses one of the {limit, number} on demand scores your plan allows a day.",
+      "costHourly": "Each inspection uses one of the {limit, number} on demand scores your plan allows an hour.",
+      "competition": {
+        "newcomers": "Newcomers",
+        "newcomersValue": "{count, number} of {total, number}",
+        "newcomersNote": "Released in the last year",
+        "typicalRatings": "Typical ratings",
+        "typicalRatingsNote": "Median of the top {count, number}",
+        "strongestApp": "Strongest app",
+        "strongestAppNote": "Most ratings in the top results",
+        "averageRating": "Average rating",
+        "averageRatingNote": "Across the top {count, number}",
+        "titlesTarget": "Titles that target it",
+        "exactTitlesNote": "{count, number} with the exact phrase",
+        "heavyweights": "Heavyweights",
+        "heavyweightsNote": "Apps with 100K ratings or more",
+        "recentlyUpdated": "Recently updated",
+        "updatesUnavailable": "Update dates unavailable"
+      }
+    }
+  },
+  "discovery": {
+    "heading": "Discovered keywords",
+    "tabs": {
+      "aria": "Keyword lists",
+      "tracked": "Tracked",
+      "trackedCount": "Tracked {count, number}",
+      "discovered": "Discovered",
+      "discoveredCount": "Discovered {count, number}",
+      "unseen": "{label}, new discoveries to review"
+    },
+    "search": "Search discovered keywords",
+    "states": {
+      "aria": "Discovered keyword states",
+      "all": "All",
+      "ranked": "Ranked",
+      "opportunity": "Opportunities",
+      "count": "{label} {count, number}"
+    },
+    "autoTrack": {
+      "label": "Auto-track ranked",
+      "hint": "Track every keyword the app ranks for, as soon as it is found"
+    },
+    "refresh": "Refresh discoveries",
+    "bulk": {
+      "selected": "Track selected ({count, number})",
+      "recommended": "Track recommended ({count, number})",
+      "ranked": "Track all ranked ({count, number})"
+    },
+    "empty": {
+      "neverTitle": "No discoveries yet",
+      "showAll": "Show all",
+      "nothing": {
+        "all": {
+          "title": "Nothing to review",
+          "body": "Every keyword found near your listing is tracked or dismissed. New ones appear after the next weekly run."
+        },
+        "ranked": {
+          "title": "Nothing ranked yet",
+          "body": "None of these keywords show your app in the store search yet. Checked keywords move here when your app appears."
+        },
+        "opportunity": {
+          "title": "No opportunities yet",
+          "body": "Opportunities need a popularity and a difficulty score. Track a keyword to score it, or wait for the next scoring run."
+        }
+      },
+      "neverRun": {
+        "queued": "AsoBeast has queued checks of the keywords near your listing. Any it finds in this market appear here.",
+        "never": "AsoBeast has not looked for keywords near your listing yet. Press Refresh to look now.",
+        "weekly": "AsoBeast looks for keywords near your listing once a week. Press Refresh to look now."
+      }
+    },
+    "table": {
+      "scrollLabel": "Keyword discoveries",
+      "caption": "Keyword discoveries: keywords near your listing that you do not track yet, with where your app ranks for each.",
+      "filteredTitle": "No discovered keywords match this search",
+      "filteredBody": "Change or clear the search to see the rows again.",
+      "showing": "Showing {shown, number} of {total, number}",
+      "showMore": "Show {count, number} more"
+    },
+    "columns": {
+      "selectAll": "Select all discovered keywords",
+      "select": "Select {keyword}",
+      "keyword": "Keyword",
+      "recommended": "Recommended",
+      "source": "Source",
+      "position": "Position",
+      "opportunity": "Opportunity",
+      "popularity": "Popularity",
+      "difficulty": "Difficulty",
+      "relevance": "Relevance",
+      "actions": "Actions",
+      "noScore": "No {label} score",
+      "notChecked": "Not checked yet",
+      "notFound": "Not found in the top {depth, number}",
+      "rank": "Rank {position, number}",
+      "about": "About {label}",
+      "read": "Read about keyword discovery",
+      "positionSummary": "Where your app appears in the store search for this phrase. A position up to 50 can come from another search made today or yesterday; a dash means not checked yet.",
+      "opportunitySummary": "Popularity weighed against difficulty. It needs both scores, which a keyword gets once it is tracked.",
+      "relevanceSummary": "How relevant the phrase is to your listing, from where it was found and how many of its words your listing holds.",
+      "noApps": "No apps",
+      "noAppsSentence": "The store lists no apps for this search"
+    },
+    "actions": {
+      "track": "Track",
+      "trackLabel": "Track {keyword}",
+      "dismissLabel": "Dismiss {keyword}"
+    },
+    "footer": {
+      "checkedToday": "Checked today.",
+      "checkedDaysAgo": "Checked {count, plural, one {# day} other {# days}} ago.",
+      "notChecked": "Not checked yet.",
+      "weeklyBudget": "{count, plural, one {# check} other {# checks}} a week{used, select, none {} other {, {used, number} used}}",
+      "weeklyOff": "{budget}. Weekly runs are off.",
+      "nextRun": "{budget}; the next run is on {weekday}.",
+      "combined": "{checked} {weekly}",
+      "pending": "{count, plural, one {# check pending} other {# checks pending}}",
+      "unfit": "{count, number} did not fit your plan",
+      "weekdays": {
+        "sunday": "Sunday",
+        "monday": "Monday",
+        "tuesday": "Tuesday",
+        "wednesday": "Wednesday",
+        "thursday": "Thursday",
+        "friday": "Friday",
+        "saturday": "Saturday"
+      }
+    },
+    "toast": {
+      "tracked": "Tracking {count, plural, one {# keyword} other {# keywords}}",
+      "trackedPartial": "{tracking}. {unfit}.",
+      "nothingFit": "Nothing fit your plan",
+      "nothingNew": "Nothing new to track",
+      "queued": "Queued {count, plural, one {# check} other {# checks}}",
+      "refreshed": "No checks to queue this week. The list was refreshed from other searches.",
+      "nothingToCheck": "Nothing new to check this week",
+      "trackFailed": "Could not track the keywords",
+      "dismissFailed": "Could not dismiss the keywords",
+      "refreshFailed": "Could not refresh the discoveries",
+      "settingsFailed": "Could not change auto tracking"
+    },
+    "line": {
+      "found": "{count, plural, one {# keyword discovery} other {# keyword discoveries}}",
+      "ranked": "{found}, {ranked, number} where you already rank"
+    },
+    "sources": {
+      "title": "Your title",
+      "subtitle": "Your subtitle",
+      "description": "Your description",
+      "shortDescription": "Your short description",
+      "competitors": "Competitors",
+      "reviews": "Reviews",
+      "popularity": "Apple popularity",
+      "portfolio": "Your other apps"
+    }
+  },
+  "serp": {
+    "title": "Search results",
+    "description": "The apps the store showed for this keyword on a daily check.",
+    "loadFailed": "The search results could not be loaded.",
+    "loading": "Loading search results",
+    "top10": "Top 10",
+    "deeper": "Positions {from, number} to {to, number}",
+    "keptShort": "Positions below the top 10 are not kept for this day.",
+    "header": {
+      "comparison": "vs {date}",
+      "noEarlier": "No earlier capture",
+      "exportSubject": "the search results"
+    },
+    "exits": {
+      "heading": "Left since {date}",
+      "was": "was {position, number}",
+      "spoken": "was number {position, number}, not in this list"
+    },
+    "states": {
+      "neverChecked": "Not checked yet. The search results appear after the next daily check.",
+      "nothingCaptured": "Nothing was captured on {date}. Pick a captured day.",
+      "noApps": "The store showed no apps for this keyword on {date}.",
+      "noAppsGeneric": "The store lists no apps for this search."
+    },
+    "summary": {
+      "yourPosition": "Your position",
+      "titles": "Titles with it",
+      "ratings": "Top 10 ratings",
+      "jump": "Jump to your row at #{position}",
+      "period": "since {date}",
+      "noEarlierPosition": "No earlier position",
+      "deeper": "below the top {count, number}",
+      "notFound": "Not in the top {depth, number}",
+      "absent": "Not in this list",
+      "notReported": "Not reported",
+      "ratio": "{shown} of {total}",
+      "median": "median",
+      "average": "average",
+      "noRatings": "No ratings",
+      "titlesTipLabel": "About titles with the keyword",
+      "titlesTipTitle": "Titles with the keyword",
+      "titlesTipSummary": "How many of the top 10 titles hold the whole keyword, its words in order. Titles that hold only some of the words, or match only without accents, do not count.",
+      "ratingsTipLabel": "About top 10 ratings",
+      "ratingsTipTitle": "Top 10 ratings",
+      "ratingsTipSummary": "The median rating count of the top 10 apps, a rough measure of how established the top-ranked apps are. Google Play reports no counts, so its average rating shows instead.",
+      "guide": "Read about search results",
+      "outliers": "Read about outliers",
+      "noneEarlier": "No earlier position",
+      "noPlaySubtitle": "Google Play has no subtitle",
+      "keywordIn": "Keyword in",
+      "keywordInTipLabel": "About where the keyword sits",
+      "keywordInTipTitle": "Where the keyword sits",
+      "keywordInTipSummary": "How many of the top 10 hold every word of the keyword in their title, in any order. AsoBeast knows subtitles only for your apps and competitors, from their captured listings. A competitor in the top 10 without the keyword in either is marked Outlier, though it may still hold the keyword in its private keyword field.",
+      "top10Ratings": "Top 10 ratings",
+      "top10TipLabel": "About top 10 ratings",
+      "top10TipTitle": "Top 10 ratings",
+      "top10TipSummary": "The median rating count of the top 10 apps, a rough measure of how established the top-ranked apps are. Google Play reports no counts, so its average rating shows instead.",
+      "inSubtitle": "{shown} of {total} in the subtitle",
+      "subtitleLineSpace": "0 of 0 in the subtitle",
+      "below": "below the top {listed}",
+      "notFoundDepth": "Not in the top {depth}",
+      "noApps": "The store lists no apps for this search",
+      "inTitle": "in the title",
+      "sinceDate": "since {date}"
+    },
+    "row": {
+      "rating": "Rated {rating}",
+      "ratings": "Rated {rating} from {count, plural, one {# rating} other {# ratings}}",
+      "you": "You",
+      "competitor": "Competitor",
+      "trackLabel": "Track {title} at #{position, number}",
+      "new": "New",
+      "movementUp": "Up {count, number} from #{previous, number}",
+      "movementDown": "Down {count, number} from #{previous, number}",
+      "movementSame": "No change",
+      "movementNew": "New entry",
+      "notInTitle": "Not in the title",
+      "subtitleNotKnown": "subtitle not known",
+      "outlier": "Outlier"
+    }
+  },
+  "keywordSheet": {
+    "title": "Keyword",
+    "description": "Details of one tracked keyword.",
+    "previous": "Previous keyword",
+    "next": "Next keyword",
+    "paused": "Paused",
+    "market": "{store} · {country}{status, select, active {} paused { · <paused>Paused</paused>} other {}}",
+    "history": {
+      "title": "Position history",
+      "firstCheck": "The first check is queued. The chart appears once it lands."
+    },
+    "facts": {
+      "notChecked": "Position: not checked yet",
+      "notScored": "{label}: not scored yet"
+    },
+    "insights": {
+      "title": "What to know",
+      "paused": "Tracking is paused, so this keyword is no longer checked. Resume it from the keyword actions menu."
+    },
+    "scores": {
+      "title": "Scores and where they come from",
+      "notScored": "not scored yet"
+    },
+    "notes": {
+      "title": "Tags and note",
+      "empty": "No tags or note yet.",
+      "edit": "Edit tags and note"
+    },
+    "results": {
+      "title": "Search results",
+      "captured": "Captured {date}",
+      "all": "All results and earlier days",
+      "loadFailed": "The search results could not be loaded.",
+      "loading": "Loading search results"
+    },
+    "listing": {
+      "title": "In your listing",
+      "loadFailed": "Your listing fields could not be loaded."
+    }
+  },
+  "map": {
+    "title": "Opportunity map",
+    "keyboardHelp": "Tab moves to the dots. Arrow keys move to the nearest dot, Home and End jump to the highest and lowest opportunity, Enter opens the position history.",
+    "unplotted": "{count, plural, one {# keyword without both scores is not on the map.} other {# keywords without both scores are not on the map.}}",
+    "shapes": {
+      "aria": "Dot shapes",
+      "ranking": "Ranking",
+      "notRanking": "Not ranking",
+      "floor": "Popularity at Apple's floor"
+    },
+    "notices": {
+      "noMatch": "No keywords match these filters",
+      "noScored": "No scored keywords match these filters",
+      "unscored": "{count, plural, one {# keyword matches these filters, and it does not have both a popularity and a difficulty.} other {# keywords match these filters, and none has both a popularity and a difficulty.}}",
+      "nothing": "Nothing to map yet",
+      "nothingBody": "No tracked keyword has both a popularity and a difficulty yet. Scores arrive with the weekly scoring run.",
+      "tooFew": "Too few scored keywords",
+      "tooFewBody": "The map needs at least {minimum, number} keywords with both scores. {detail}",
+      "filtered": "These filters leave {count, number}.",
+      "soFar": "{count, number} of {minimum, number} so far.",
+      "clear": "Clear filters"
+    },
+    "overlay": {
+      "position": "Position",
+      "popularity": "Popularity",
+      "difficulty": "Difficulty",
+      "opportunity": "Opportunity",
+      "floor": "Floor answer",
+      "paused": "Paused",
+      "notChecked": "Not checked yet",
+      "notFound": "Not in the top {depth, number}"
+    },
+    "dot": {
+      "name": "{keyword}, {rankState, select, unchecked {not checked yet} notFound {not in the top {depth, number}} ranked {position {rank}} noApps {the store lists no apps for this search} other {not checked yet}}, popularity {popularity}{floor, select, none {} other {, floor answer}}, difficulty {difficulty}{opportunity, select, none {} other {, opportunity {opportunity}}}, {zone}{paused, select, none {} other {, paused}}"
+    },
+    "chart": {
+      "aria": "Keyword opportunity map",
+      "group": "Keywords by difficulty and popularity",
+      "difficulty": "Difficulty",
+      "popularity": "Popularity",
+      "thresholdLine": "{label} {value, number}"
+    },
+    "image": {
+      "title": "Keyword opportunity map",
+      "subject": "the opportunity map"
+    },
+    "zones": {
+      "names": {
+        "quickWins": "Quick wins",
+        "worthFighting": "Worth fighting for",
+        "easyPickings": "Easy pickings",
+        "lowPriority": "Low priority"
+      },
+      "aria": "Zones",
+      "toggle": "{name} {count, plural, one {# keyword} other {# keywords}}",
+      "about": "About {name}",
+      "summary": "{meaning} {rule}.",
+      "guide": "Read the opportunity map",
+      "tableCaption": "Opportunity map zones",
+      "zone": "Zone",
+      "rule": "Rule",
+      "keywords": "Keywords",
+      "unplotted": "Not on the map",
+      "missing": "Missing a popularity or a difficulty"
+    },
+    "noApps": "No apps"
+  },
+  "thresholds": {
+    "trigger": "Thresholds",
+    "title": "Zone thresholds",
+    "description": "The two numbers that cut the map into zones. Kept in this browser.",
+    "reset": "Reset",
+    "popularity": "Popularity at least",
+    "difficulty": "Difficulty at most",
+    "invalid": "Enter a whole number from {min, number} to {max, number}",
+    "quickWins": "Quick wins are {rule}."
+  }
+}

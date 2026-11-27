@@ -1,6 +1,7 @@
 "use client";
 
 import type { Ref } from "react";
+import { useTranslations } from "next-intl";
 import {
   Area,
   CartesianGrid,
@@ -31,16 +32,16 @@ import {
   GRID_PROPS,
   LINE_PROPS,
   RANK_AXIS_PROPS,
-  TIME_AXIS_PROPS,
+  timeAxisPropsInLocale,
 } from "@/components/charts/theme";
 import {
   lastCheckedIndex,
   loneKey,
-  NOT_CHECKED,
   notFoundKey,
   type RankingChartData,
 } from "@/components/charts/pivot";
-import { formatDayMonth } from "@/lib/format";
+import { formatDayMonthInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import {
   changedFieldsLabel,
   changeSincePrevious,
@@ -58,6 +59,8 @@ function HistoryTooltip({
   data: RankingChartData;
   changes: Map<string, ChangeField[]>;
 }) {
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
   if (!active || label === undefined) return null;
   const day = String(label);
   const index = data.rows.findIndex((row) => row.date === day);
@@ -72,19 +75,22 @@ function HistoryTooltip({
 
   return (
     <SeriesTooltip
-      title={formatDayMonth(day)}
+      title={formatDayMonthInLocale(day, locale)}
       items={[
         {
           key: keywordId,
           index: 0,
           color: data.config[keywordId]?.color,
-          label: "Position",
-          value:
-            formatCheckedPosition(
-              typeof value === "number" ? value : null,
-              depth,
-              resultCount,
-            ) ?? NOT_CHECKED,
+          label: t("position.label"),
+          value: (() => {
+            const shown =
+              formatCheckedPosition(
+                typeof value === "number" ? value : null,
+                depth,
+                resultCount,
+              ) ?? t("history.notChecked");
+            return shown === "No apps" ? t("history.noApps") : shown;
+          })(),
           sortBy: 0,
         },
       ]}
@@ -92,10 +98,16 @@ function HistoryTooltip({
         movement || changed ? (
           <div className="grid gap-0.5 text-muted-foreground">
             {movement ? (
-              <span>{movementLine(movement.places, movement.day)}</span>
+              <span>
+                {movementLine(movement.places, movement.day, t, locale)}
+              </span>
             ) : null}
             {changed ? (
-              <span>{changedFieldsLabel(changed)} changed</span>
+              <span>
+                {t("history.fieldsChanged", {
+                  fields: changedFieldsLabel(changed, t, locale),
+                })}
+              </span>
             ) : null}
           </div>
         ) : null
@@ -121,6 +133,9 @@ export function PositionHistoryChart({
   busy: boolean;
   chartRef?: Ref<HTMLDivElement>;
 }) {
+  const t = useTranslations("keywords");
+  const rankT = useTranslations("rankings");
+  const locale = useAppLocale();
   const fadeId = useFadeId();
   const keywordId = data.keywordIds[0] ?? "";
   const color = `var(--color-${keywordId})`;
@@ -139,9 +154,9 @@ export function PositionHistoryChart({
     >
       <ComposedChart accessibilityLayer data={data.rows} margin={CHART_MARGIN}>
         <SeriesFade id={fadeId} color={color} />
-        {rankTierAreas()}
+        {rankTierAreas(rankT)}
         <CartesianGrid {...GRID_PROPS} />
-        <XAxis {...TIME_AXIS_PROPS} />
+        <XAxis {...timeAxisPropsInLocale(locale)} />
         <YAxis
           {...RANK_AXIS_PROPS}
           domain={[1, RANK_DEPTH]}
@@ -156,7 +171,7 @@ export function PositionHistoryChart({
             stroke="var(--muted-foreground)"
             strokeDasharray="4 3"
             label={{
-              value: `Best ${best}`,
+              value: t("hold.bestValue", { position: best }),
               position: "insideBottomLeft",
               fill: "var(--muted-foreground)",
               fontSize: 10,

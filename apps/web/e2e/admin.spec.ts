@@ -50,7 +50,9 @@ test.describe("the admin area for the platform operator", () => {
     await expect(tile(strip, "Paying")).toContainText(
       "1 canceling at period end",
     );
-    await expect(tile(strip, "On trial")).toContainText("1 end within 3 days");
+    await expect(tile(strip, "On trial")).toContainText(
+      "1 trial ends within 3 days",
+    );
     await expect(tile(strip, "Trial to paid")).toContainText("36%");
     await expect(tile(strip, "Trial to paid")).toContainText("+14 pts");
     await expect(tile(strip, "Trial to paid")).toContainText(
@@ -249,7 +251,7 @@ test.describe("the admin area for the platform operator", () => {
   test("is offered by the command palette", async ({ page }) => {
     await page.goto("/");
 
-    await page.getByRole("button", { name: "Open command palette" }).click();
+    await page.locator('[data-action="open-command-palette"]').click();
     const palette = page.getByRole("dialog", { name: "Command palette" });
     await page.keyboard.type("admin");
     await palette.getByRole("option", { name: "Admin" }).click();
@@ -521,7 +523,9 @@ test.describe("workspaces in the admin area", () => {
     await seedCookies(context, { e2e_billing: "1" });
     await page.goto("/admin/workspaces");
 
-    await page.getByRole("button", { name: "Filters" }).click();
+    await page
+      .locator('[data-action="filters"][data-filter-trigger="popover"]')
+      .click();
     const filters = page.getByRole("dialog", { name: "Filters" });
     await filters.getByRole("button", { name: "Filter by stage" }).click();
     await page.getByRole("option", { name: /^Paying/ }).click();
@@ -551,7 +555,9 @@ test.describe("workspaces in the admin area", () => {
     await seedCookies(context, { e2e_billing: "1" });
     await page.goto("/admin/workspaces");
 
-    const filtersButton = page.getByRole("button", { name: "Filters" });
+    const filtersButton = page.locator(
+      '[data-action="filters"][data-filter-trigger="popover"]',
+    );
     const filters = page.getByRole("dialog", { name: "Filters" });
     await filtersButton.click();
     await expect(filters).toBeVisible();
@@ -583,7 +589,9 @@ test.describe("workspaces in the admin area", () => {
       .getByRole("row");
     await expect(rows).toHaveCount(2);
     await expect(rows.nth(1)).toContainText("Suspended");
-    await page.getByRole("button", { name: "Filters" }).click();
+    await page
+      .locator('[data-action="filters"][data-filter-trigger="popover"]')
+      .click();
     await expect(
       page
         .getByRole("dialog", { name: "Filters" })
@@ -847,7 +855,7 @@ for (const viewer of VIEWERS) {
           .getByRole("link", { name: "Admin", exact: true }),
       ).toHaveCount(0);
 
-      await page.getByRole("button", { name: "Open command palette" }).click();
+      await page.locator('[data-action="open-command-palette"]').click();
       const palette = page.getByRole("dialog", { name: "Command palette" });
       await expect(
         palette.getByRole("option", { name: "Settings" }),
@@ -879,9 +887,7 @@ for (const viewer of VIEWERS) {
 
         await page.goto(path);
 
-        await expect(
-          page.getByRole("heading", { level: 1, name: "Page not found" }),
-        ).toBeVisible();
+        await expect(page.locator('[data-slot="not-found"]')).toBeVisible();
         await expect(
           page.getByRole("navigation", { name: "Main" }),
         ).toBeVisible();

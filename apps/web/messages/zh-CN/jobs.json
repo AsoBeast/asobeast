@@ -1,0 +1,45 @@
+{
+  "runDaily": {
+    "action": "运行每日检查",
+    "failed": "运行每日检查失败",
+    "nothingTitle": "没有新任务可排队",
+    "nothingBody": "此应用今天的检查已排队、正在运行或已完成。",
+    "queued": "已排队 · {message}",
+    "rankChecks": "{count, plural, one {# 个关键词} other {# 个关键词}}的排名检查",
+    "jobs": "{count, plural, one {# 个任务} other {# 个任务}}",
+    "follow": "请在页眉关注运行进度；排名产生后，表格会自动更新。"
+  },
+  "progress": {
+    "count": "{ready, number} / {total, number}",
+    "running": "已完成 {progress}",
+    "complete": "运行完成",
+    "delayed": "运行延迟",
+    "title": "今日运行",
+    "labelRunning": "今日运行：已完成 {progress} 项检查",
+    "labelComplete": "今日运行已完成",
+    "labelDelayed": "今日运行延迟：已完成 {progress} 项检查",
+    "started": "开始于 {date}。",
+    "queuesMissing": "运行每日检查会为仍缺失的数据排队。",
+    "nothing": "暂无可收集的数据。",
+    "states": {
+      "done": "已完成",
+      "collecting": "正在收集",
+      "ready": "已就绪",
+      "waiting": "等待中"
+    },
+    "stages": {
+      "listings": {
+        "label": "已抓取详情页",
+        "detail": "应用及其竞品的主市场详情页和分市场详情页。"
+      },
+      "keywords": {
+        "label": "已检查排名",
+        "detail": "活跃关键词的排名。"
+      },
+      "categories": {
+        "label": "已读取榜单",
+        "detail": "应用所在的分类榜单。"
+      }
+    }
+  }
+}

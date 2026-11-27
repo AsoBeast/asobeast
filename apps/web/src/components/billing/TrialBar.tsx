@@ -1,15 +1,18 @@
 import type { ReactNode } from "react";
-import type { TrialBarParts } from "@/lib/plan-choice";
+import { useTranslations } from "next-intl";
+import type { TrialBarDescriptor } from "@/lib/plan-choice";
 
 export function TrialBar({
   parts,
   label,
   children,
 }: {
-  parts: TrialBarParts | null;
+  parts: TrialBarDescriptor | null;
   label: string;
   children?: ReactNode;
 }) {
+  const t = useTranslations("billing");
+
   if (!parts && !children) return null;
 
   return (
@@ -21,11 +24,15 @@ export function TrialBar({
       <div className="page-checkout flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-end sm:gap-8 sm:py-4">
         {parts ? (
           <p className="text-heading font-normal text-muted-foreground sm:mr-auto">
-            <span>{parts.before}</span>
-            <span className="font-medium text-foreground">{parts.free}</span>
-            <span>{parts.middle}</span>
-            <span className="font-medium text-foreground">{parts.endsOn}</span>
-            <span>{parts.after}</span>
+            {t.rich(parts.messageKey, {
+              ...parts.values,
+              free: (chunks) => (
+                <span className="font-medium text-foreground">{chunks}</span>
+              ),
+              date: (chunks) => (
+                <span className="font-medium text-foreground">{chunks}</span>
+              ),
+            })}
           </p>
         ) : null}
         {children}

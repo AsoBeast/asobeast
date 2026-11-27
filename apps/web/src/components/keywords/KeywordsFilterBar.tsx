@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { useTranslations } from "next-intl";
 import type { SetValues } from "nuqs";
 import type { Table } from "@tanstack/react-table";
 import type { TrackedKeywordItem } from "@asobeast/shared";
@@ -16,6 +17,7 @@ import { ExportCsvButton } from "@/components/ExportCsvButton";
 import type { keywordFilterParsers } from "@/lib/search-params";
 import type { KeywordTableFeatures } from "./keyword-table-features";
 import { exportKeywords } from "./keyword-csv";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { keywordFilterChips, type KeywordFilters } from "./keyword-filters";
 import { KeywordFiltersPopover, KeywordFiltersSheet } from "./KeywordFilters";
 import { KeywordMoveSwitch } from "./KeywordMoveSwitch";
@@ -43,11 +45,13 @@ export function KeywordsFilterBar({
   viewOptions: readonly ViewOption[];
   viewChoices: readonly ViewChoice[];
 }) {
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
   const shown = table.getRowModel().rows;
   const everyKeyword = table
     .getPreFilteredRowModel()
     .rows.map((row) => row.original);
-  const chips = keywordFilterChips(filters);
+  const chips = keywordFilterChips(filters, t, locale);
   const active = chips.filter(
     (chip) => !CHIPS_OUTSIDE_THE_PANEL.has(chip.key),
   ).length;
@@ -57,11 +61,13 @@ export function KeywordsFilterBar({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
-        <SearchInput
-          label="Search keywords"
-          value={filters.q}
-          onSearch={(q, options) => void setFilters({ q }, options)}
-        />
+        <div data-keyword-search className="contents">
+          <SearchInput
+            label={t("filters.search")}
+            value={filters.q}
+            onSearch={(q, options) => void setFilters({ q }, options)}
+          />
+        </div>
         <div ref={narrowerFilters} className="contents md:hidden">
           <KeywordFiltersSheet
             table={table}
@@ -98,13 +104,14 @@ export function KeywordsFilterBar({
             choices={viewChoices}
           />
           <ExportCsvButton
-            subject="keywords"
+            subject={t("filters.keywordsSubject")}
             disabled={shown.length === 0}
             onClick={() =>
               exportKeywords(
                 appId,
                 shown.map((row) => row.original),
                 today,
+                t,
               )
             }
           />

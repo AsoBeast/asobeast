@@ -1,0 +1,12 @@
+{
+  "marketCode": "Market must be a two letter code, e.g. us",
+  "unknownMarket": "{store} has no storefront with the code {code}.",
+  "notifications": {
+    "invalidEmail": "Enter a valid email address",
+    "invalidUrl": "Enter a valid http(s) URL",
+    "ruleRequired": "Switch on at least one rule",
+    "starRequired": "Pick at least one star",
+    "secretTooShort": "Secret must be at least 8 characters",
+    "rankThreshold": "Enter a whole number from {min, number} to {max, number}"
+  }
+}

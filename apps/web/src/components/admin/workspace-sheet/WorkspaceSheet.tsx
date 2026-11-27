@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import type { SupportWorkspaceDetail } from "@asobeast/shared";
 import {
   failedRead,
@@ -19,6 +20,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { isNotFound } from "@/lib/api";
 import { useFocusClaim } from "@/lib/focus-handoff";
 import { adminWorkspaceOptions } from "@/lib/queries";
+import { useAppLocale } from "@/lib/use-app-locale";
+import { adminSearchLabel } from "../admin-search";
 import { workspaceCloseTarget } from "./close-target";
 import { WORKSPACE_GONE_FOCUS_KEY } from "./focus-keys";
 import { standingOf } from "./workspace-facts";
@@ -44,12 +47,14 @@ function SheetSkeleton() {
 }
 
 function WorkspaceGone({ onClose }: { onClose: () => void }) {
+  const t = useTranslations("admin");
+  const common = useTranslations("common");
   const claimFocus = useFocusClaim(WORKSPACE_GONE_FOCUS_KEY);
   return (
     <div className="flex flex-col items-start gap-3 px-4 py-4 text-dense">
-      <p>This workspace no longer exists.</p>
+      <p>{t("support.gone")}</p>
       <Button ref={claimFocus} variant="outline" size="sm" onClick={onClose}>
-        Close
+        {common("close")}
       </Button>
     </div>
   );
@@ -62,21 +67,19 @@ function PendingBody({
   read: WorkspaceRead;
   onClose: () => void;
 }) {
+  const t = useTranslations("admin");
   if (isNotFound(read.error)) return <WorkspaceGone onClose={onClose} />;
   if (failedRead(read)) {
     return (
       <div className="px-4 py-4">
-        <InlineQueryError
-          message="Could not read this workspace."
-          read={read}
-        />
+        <InlineQueryError message={t("support.readFailed")} read={read} />
       </div>
     );
   }
   if (read.fetchStatus === "paused") {
     return (
       <p role="status" className="px-4 py-4 text-dense text-muted-foreground">
-        You are offline. The details load when the connection is back.
+        {t("support.offline")}
       </p>
     );
   }
@@ -90,6 +93,8 @@ function WorkspaceDetails({
   workspace: SupportWorkspaceDetail;
   billing: boolean;
 }) {
+  const t = useTranslations("admin");
+  const locale = useAppLocale();
   return (
     <>
       <SheetHeader className={SHEET_GUTTER}>
@@ -100,7 +105,7 @@ function WorkspaceDetails({
           <span translate="no" className="wrap-anywhere">
             {workspace.workspaceId}
           </span>
-          <span>{`· ${standingOf(workspace)}`}</span>
+          <span>{`· ${standingOf(workspace, { translator: t, locale })}`}</span>
         </SheetDescription>
       </SheetHeader>
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-6">
@@ -127,6 +132,7 @@ export function WorkspaceSheet({
   billing: boolean;
   onClose: () => void;
 }) {
+  const t = useTranslations("admin");
   const [lastId, setLastId] = useState(shownId);
   if (shownId !== "" && shownId !== lastId) setLastId(shownId);
   const open = shownId !== "";
@@ -146,7 +152,11 @@ export function WorkspaceSheet({
         side="right"
         className="w-full gap-0 p-0 sm:max-w-xl"
         onCloseAutoFocus={(event) => {
-          const target = workspaceCloseTarget(document, lastId);
+          const target = workspaceCloseTarget(
+            document,
+            lastId,
+            adminSearchLabel("workspace", t),
+          );
           if (!target) return;
           event.preventDefault();
           target.focus();
@@ -157,10 +167,8 @@ export function WorkspaceSheet({
         ) : (
           <>
             <SheetHeader className={SHEET_GUTTER}>
-              <SheetTitle>Workspace</SheetTitle>
-              <SheetDescription>
-                The support details of one workspace.
-              </SheetDescription>
+              <SheetTitle>{t("support.title")}</SheetTitle>
+              <SheetDescription>{t("support.description")}</SheetDescription>
             </SheetHeader>
             <PendingBody read={read} onClose={onClose} />
           </>

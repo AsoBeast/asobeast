@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -8,18 +9,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-const SHORTCUTS: ReadonlyArray<[string[], string]> = [
-  [["j", "↓"], "Focus the next action"],
-  [["k", "↑"], "Focus the previous action"],
-  [["Enter", "o"], "Open the focused action"],
-  [["d"], "Mark the focused action done"],
-  [["s"], "Snooze the focused action"],
-  [["Shift", "D"], "Dismiss the focused action"],
-  [["x"], "Select the focused action"],
-  [["/"], "Search actions"],
-  [["?"], "Show these shortcuts"],
-  [["Esc"], "Clear the selection"],
-];
+const SHORTCUTS = [
+  [["j", "↓"], "shortcutNext"],
+  [["k", "↑"], "shortcutPrevious"],
+  [["Enter", "o"], "shortcutOpen"],
+  [["d"], "shortcutDone"],
+  [["s"], "shortcutSnooze"],
+  [["Shift", "D"], "shortcutDismiss"],
+  [["x"], "shortcutSelect"],
+  [["/"], "shortcutSearch"],
+  [["?"], "shortcutShow"],
+  [["Esc"], "shortcutClear"],
+] as const;
 
 export function ActionShortcutsDialog({
   open,
@@ -28,29 +29,25 @@ export function ActionShortcutsDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations("actions");
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Keyboard shortcuts</DialogTitle>
-          <DialogDescription>
-            Work the queue without the mouse. Shortcuts pause while you type or
-            while a menu is open.
-          </DialogDescription>
+          <DialogTitle>{t("shortcutsTitle")}</DialogTitle>
+          <DialogDescription>{t("shortcutsDescription")}</DialogDescription>
         </DialogHeader>
         <table className="w-full text-body">
-          <caption className="sr-only">
-            Action Center keyboard shortcuts
-          </caption>
+          <caption className="sr-only">{t("shortcutsCaption")}</caption>
           <thead className="sr-only">
             <tr>
-              <th scope="col">Keys</th>
-              <th scope="col">Action</th>
+              <th scope="col">{t("keys")}</th>
+              <th scope="col">{t("shortcutAction")}</th>
             </tr>
           </thead>
           <tbody>
-            {SHORTCUTS.map(([keys, label]) => (
-              <tr key={label} className="border-b last:border-0">
+            {SHORTCUTS.map(([keys, labelKey]) => (
+              <tr key={labelKey} className="border-b last:border-0">
                 <td className="py-2 pr-4">
                   <span className="flex gap-1">
                     {keys.map((key) => (
@@ -63,7 +60,7 @@ export function ActionShortcutsDialog({
                     ))}
                   </span>
                 </td>
-                <td className="py-2">{label}</td>
+                <td className="py-2">{t(labelKey)}</td>
               </tr>
             ))}
           </tbody>

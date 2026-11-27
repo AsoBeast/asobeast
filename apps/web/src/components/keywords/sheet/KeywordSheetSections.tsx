@@ -1,15 +1,18 @@
+"use client";
+
 import {
   formatCheckedPosition,
   type TrackedKeywordItem,
 } from "@asobeast/shared";
 import { useRef, useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { isChecking, lostPosition, staleCheckDay } from "@/lib/keyword-checks";
 import { dayChange } from "@/lib/keyword-day-change";
 import {
-  INSIGHT_LABELS,
   insightDetail,
+  insightLabel,
   insightsOf,
 } from "@/lib/keyword-insights";
 import { shownScore } from "@/lib/keyword-scores";
@@ -50,10 +53,11 @@ function Missing({ label }: { label: string }) {
 }
 
 function UncheckedPosition({ checking }: { checking: boolean }) {
+  const t = useTranslations("keywordInspector");
   return checking ? (
     <CheckingMark />
   ) : (
-    <Missing label="Position: not checked yet" />
+    <Missing label={t("keywordSheet.facts.notChecked")} />
   );
 }
 
@@ -72,11 +76,12 @@ function ScoreFact({
   outdated?: boolean;
   floorAnswer?: boolean;
 }) {
+  const t = useTranslations("keywordInspector");
   const shown = shownScore(value);
   return (
     <Fact label={label}>
       {shown === null ? (
-        <Missing label={`${label}: not scored yet`} />
+        <Missing label={t("keywordSheet.facts.notScored", { label })} />
       ) : (
         <ScoreReadout
           value={shown}
@@ -104,10 +109,11 @@ export function KeywordSheetFacts({
     keyword.latestDepth,
     keyword.latestResultCount,
   );
+  const t = useTranslations("keywords");
   const staleOn = staleCheckDay(keyword, today);
   return (
     <dl className="grid grid-cols-2 gap-x-4 gap-y-3 px-4 pt-4 pb-4 sm:grid-cols-4">
-      <Fact label="Position">
+      <Fact label={t("table.position")}>
         {label === null ? (
           <UncheckedPosition checking={isChecking(keyword)} />
         ) : (
@@ -128,9 +134,9 @@ export function KeywordSheetFacts({
         )}
       </Fact>
       {[
-        opportunityEvidence(keyword),
-        popularityEvidence(keyword),
-        difficultyEvidence(keyword),
+        opportunityEvidence(keyword, t),
+        popularityEvidence(keyword, t),
+        difficultyEvidence(keyword, t),
       ].map((evidence) => (
         <ScoreFact
           key={evidence.metric}
@@ -154,13 +160,14 @@ export function KeywordSheetInsights({
   today: string;
 }) {
   const insights = insightsOf(keyword, today);
+  const t = useTranslations("keywordInspector");
+  const keywords = useTranslations("keywords");
   if (keyword.active && insights.length === 0) return null;
   return (
-    <SheetSection title="What to know">
+    <SheetSection title={t("keywordSheet.insights.title")}>
       {keyword.active ? null : (
         <p className="text-muted-foreground">
-          Tracking is paused, so this keyword is no longer checked. Resume it
-          from the keyword actions menu.
+          {t("keywordSheet.insights.paused")}
         </p>
       )}
       {insights.length === 0 ? null : (
@@ -168,10 +175,10 @@ export function KeywordSheetInsights({
           {insights.map((insight) => (
             <li key={insight} className="flex flex-wrap items-center gap-2">
               <Badge variant={INSIGHT_VARIANTS[insight]}>
-                {INSIGHT_LABELS[insight]}
+                {insightLabel(insight, keywords)}
               </Badge>
               <span className="text-muted-foreground">
-                {insightDetail(keyword, insight)}
+                {insightDetail(keyword, insight, keywords)}
               </span>
             </li>
           ))}
@@ -192,13 +199,16 @@ function EvidenceRow({
   value: number | null;
   children: ReactNode;
 }) {
+  const t = useTranslations("keywordInspector");
   const shown = shownScore(value);
   return (
     <div className="flex flex-col gap-1">
       <p className="flex items-baseline gap-2">
         <span className="font-medium">{label}</span>
         {shown === null ? (
-          <span className="text-muted-foreground">not scored yet</span>
+          <span className="text-muted-foreground">
+            {t("keywordSheet.scores.notScored")}
+          </span>
         ) : null}
       </p>
       {shown === null ? null : <div className={EVIDENCE}>{children}</div>}
@@ -211,11 +221,13 @@ export function KeywordSheetScores({
 }: {
   keyword: TrackedKeywordItem;
 }) {
-  const opportunity = opportunityEvidence(keyword);
-  const popularity = popularityEvidence(keyword);
-  const difficulty = difficultyEvidence(keyword);
+  const t = useTranslations("keywords");
+  const copy = useTranslations("keywordInspector");
+  const opportunity = opportunityEvidence(keyword, t);
+  const popularity = popularityEvidence(keyword, t);
+  const difficulty = difficultyEvidence(keyword, t);
   return (
-    <SheetSection title="Scores and where they come from">
+    <SheetSection title={copy("keywordSheet.scores.title")}>
       <EvidenceRow label={opportunity.label} value={opportunity.value}>
         <DerivedScoreDetails details={opportunity.details} />
       </EvidenceRow>
@@ -239,10 +251,11 @@ export function KeywordSheetNotes({
   marketTags: () => string[];
 }) {
   const [editing, setEditing] = useState(false);
+  const t = useTranslations("keywordInspector");
   const edit = useRef<HTMLButtonElement>(null);
   const tags = keyword.tags ?? [];
   return (
-    <SheetSection title="Tags and note">
+    <SheetSection title={t("keywordSheet.notes.title")}>
       {tags.length > 0 ? (
         <ul className="flex flex-wrap gap-1.5">
           {tags.map((tag) => (
@@ -261,7 +274,7 @@ export function KeywordSheetNotes({
         </p>
       ) : null}
       {tags.length === 0 && !keyword.note ? (
-        <p className="text-muted-foreground">No tags or note yet.</p>
+        <p className="text-muted-foreground">{t("keywordSheet.notes.empty")}</p>
       ) : null}
       <div>
         <Button
@@ -270,7 +283,7 @@ export function KeywordSheetNotes({
           size="sm"
           onClick={() => setEditing(true)}
         >
-          Edit tags and note
+          {t("keywordSheet.notes.edit")}
         </Button>
       </div>
       <KeywordAnnotationsDialog

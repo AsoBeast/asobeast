@@ -239,4 +239,18 @@ describe("apiErrorMessage", () => {
       "Could not finish.",
     );
   });
+
+  it("uses a Chinese status message when the viewer chose Chinese", () => {
+    vi.stubGlobal("document", { cookie: "asobeast_locale=zh-CN" });
+    try {
+      expect(
+        apiErrorMessage(
+          new ApiError({ ...ENVELOPE, statusCode: 404 }),
+          "无法完成",
+        ),
+      ).toBe("此应用或记录已不存在，可能已被删除。");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });

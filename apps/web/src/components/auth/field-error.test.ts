@@ -2,6 +2,7 @@ import { PASSWORD_RULE } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "@/lib/api";
 import {
+  authApiErrorMessage,
   authFieldError,
   fieldErrorProps,
   fieldOfAuthError,
@@ -54,6 +55,44 @@ describe("authFieldError", () => {
       field: "form",
       message: "fallback",
     });
+  });
+});
+
+describe("authApiErrorMessage", () => {
+  const translations: Record<string, string> = {
+    invalidCredentials: "邮箱或密码不正确",
+    emailRegistered: "此邮箱已注册",
+    invalidCurrentPassword: "当前密码不正确",
+    linkExpired: "链接已过期",
+    linkInvalid: "链接无效",
+  };
+  const translator = (key: string) => translations[key] ?? key;
+
+  it.each([
+    ["Invalid email or password", "邮箱或密码不正确"],
+    ["Email already registered", "此邮箱已注册"],
+    ["That email already has an account", "此邮箱已注册"],
+    ["Invalid current password", "当前密码不正确"],
+    ["That verification link has expired", "链接已过期"],
+    ["That confirmation link has expired", "链接已过期"],
+  ])("translates the known refusal %s", (message, expected) => {
+    expect(
+      authApiErrorMessage(
+        new ApiError(envelope(409, message)),
+        "fallback",
+        translator,
+      ),
+    ).toBe(expected);
+  });
+
+  it("uses the localized fallback for an unknown server message", () => {
+    expect(
+      authApiErrorMessage(
+        new ApiError(envelope(500, "Unexpected server detail")),
+        "请求失败，请重试",
+        translator,
+      ),
+    ).toBe("请求失败，请重试");
   });
 });
 

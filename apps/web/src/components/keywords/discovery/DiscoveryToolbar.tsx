@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, type MouseEvent } from "react";
+import { useTranslations } from "next-intl";
 import { RefreshCw } from "lucide-react";
 import type { KeywordDiscoveryList } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
@@ -51,13 +52,17 @@ export function DiscoveryToolbar({
 }) {
   const switchId = useId();
   const hintId = useId();
+  const t = useTranslations("keywordInspector");
   const recommended = recommendedIds(list.items);
   const ranked = rankedIds(list.items);
-  const labels = bulkLabels({
-    selected: selected.length,
-    recommended: recommended.length,
-    ranked: list.counts.ranked,
-  });
+  const labels = bulkLabels(
+    {
+      selected: selected.length,
+      recommended: recommended.length,
+      ranked: list.counts.ranked,
+    },
+    t,
+  );
   const tracking = actions.track.isPending;
   const refreshing = actions.refresh.isPending;
   const switching = actions.settings.isPending;
@@ -75,9 +80,9 @@ export function DiscoveryToolbar({
           }}
         />
         <div className="flex flex-col">
-          <Label htmlFor={switchId}>Auto-track ranked</Label>
+          <Label htmlFor={switchId}>{t("discovery.autoTrack.label")}</Label>
           <span id={hintId} className="text-caption text-muted-foreground">
-            Track every keyword the app ranks for, as soon as it is found
+            {t("discovery.autoTrack.hint")}
           </span>
         </div>
       </div>
@@ -95,7 +100,7 @@ export function DiscoveryToolbar({
             aria-hidden
             className={cn(refreshing && "motion-safe:animate-spin")}
           />
-          Refresh discoveries
+          {t("discovery.refresh")}
         </Button>
         {selected.length > 0 ? (
           <BulkTrack

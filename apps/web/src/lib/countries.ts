@@ -1,3 +1,4 @@
+import type { MessageTranslator } from "@/i18n/translator";
 import {
   COUNTRY_PATTERN,
   isStorefront,
@@ -26,11 +27,21 @@ export const COUNTRY_OPTIONS = [
 
 export const OTHER = "other";
 
-export function marketError(store: Store, country: string): string | null {
+export function marketError(
+  store: Store,
+  country: string,
+  translator?: MessageTranslator,
+): string | null {
   if (!COUNTRY_PATTERN.test(country)) {
-    return "Market must be a two letter code, e.g. us";
+    return translator
+      ? translator("marketCode")
+      : "Market must be a two letter code, e.g. us";
   }
-  return isStorefront(store, country)
-    ? null
-    : new UnknownStorefrontError(store, country).message;
+  if (isStorefront(store, country)) return null;
+  if (!translator) return new UnknownStorefrontError(store, country).message;
+  const name = store === "APP_STORE" ? "App Store" : "Google Play";
+  return translator("unknownMarket", {
+    store: name,
+    code: country.toUpperCase(),
+  });
 }

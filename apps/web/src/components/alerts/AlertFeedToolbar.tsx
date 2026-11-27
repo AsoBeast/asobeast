@@ -2,6 +2,7 @@
 
 import type { RefObject } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useQueryStates } from "nuqs";
 import {
   ALERT_FEED_EVENTS,
@@ -15,8 +16,9 @@ import {
 } from "@/components/data-table/FilterChips";
 import { RowCount } from "@/components/data-table/RowCount";
 import { SearchInput } from "@/components/data-table/SearchInput";
-import { EVENT_LABELS } from "@/components/settings/alert-event-copy";
-import { storeLabel } from "@/lib/format";
+import { eventLabel } from "@/components/settings/alert-event-copy";
+import { formatNumberInLocale, storeLabel } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { appsOptions } from "@/lib/queries";
 import { alertFeedParsers } from "@/lib/search-params";
 import { useHydrated } from "@/lib/use-hydrated";
@@ -28,20 +30,19 @@ type SetAlertFeedView = ReturnType<typeof useAlertFeedView>[1];
 
 export const CLEARED_ALERT_FEED = { app: null, type: null, q: null } as const;
 
-const TYPE_OPTIONS = ALERT_FEED_EVENTS.map((event) => ({
-  value: event,
-  label: EVENT_LABELS[event],
-}));
-
-const appName = (app: AppListItem): string =>
-  `${app.name ?? "Untitled app"} · ${storeLabel(app.store)} · ${app.country.toUpperCase()}`;
+const appName = (
+  app: AppListItem,
+  t: ReturnType<typeof useTranslations>,
+): string =>
+  `${app.name ?? t("untitledApp")} · ${storeLabel(app.store)} · ${app.country.toUpperCase()}`;
 
 function appLabels(
   apps: readonly AppListItem[] | undefined,
   selected: string | null,
+  t: ReturnType<typeof useTranslations>,
 ): Map<string, string> {
   const labels = new Map(
-    (apps ?? []).map((app) => [app.id, appName(app)] as const),
+    (apps ?? []).map((app) => [app.id, appName(app, t)] as const),
   );
   if (selected !== null && !labels.has(selected))
     labels.set(selected, selected);
@@ -52,6 +53,8 @@ function chipsOf(
   view: AlertFeedView,
   labels: ReadonlyMap<string, string>,
   setView: SetAlertFeedView,
+  t: ReturnType<typeof useTranslations>,
+  notifications: ReturnType<typeof useTranslations>,
 ): FilterChip[] {
   const app = view.app;
   return [
@@ -60,13 +63,13 @@ function chipsOf(
       : [
           {
             key: "app",
-            label: `App: ${labels.get(app) ?? app}`,
+            label: t("appChip", { label: labels.get(app) ?? app }),
             onRemove: () => void setView({ app: null }),
           },
         ]),
     ...view.type.map((event: AlertFeedEvent) => ({
       key: `type-${event}`,
-      label: `Event: ${EVENT_LABELS[event]}`,
+      label: t("eventChip", { label: eventLabel(event, notifications) }),
       onRemove: () =>
         void setView({
           type: view.type.filter((entry) => entry !== event),
@@ -77,7 +80,7 @@ function chipsOf(
       : [
           {
             key: "q",
-            label: `Search: ${view.q}`,
+            label: t("searchChip", { query: view.q }),
             onRemove: () => void setView({ q: null }),
           },
         ]),
@@ -97,17 +100,24 @@ export function AlertFeedToolbar({
   searchBox: RefObject<HTMLDivElement | null>;
   onClearAll: () => void;
 }) {
+  const t = useTranslations("alerts");
+  const notifications = useTranslations("notifications");
+  const locale = useAppLocale();
   const [view, setView] = useAlertFeedView();
   const hydrated = useHydrated();
   const { data: apps } = useQuery(appsOptions);
-  const labels = appLabels(hydrated ? apps : undefined, view.app);
+  const labels = appLabels(hydrated ? apps : undefined, view.app, t);
+  const typeOptions = ALERT_FEED_EVENTS.map((event) => ({
+    value: event,
+    label: eventLabel(event, notifications),
+  }));
 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
         <div ref={searchBox} className="w-full sm:w-64">
           <SearchInput
-            label="Search alerts"
+            label={t("search")}
             value={view.q}
             onSearch={(q, options) =>
               void setView({ q: q === "" ? null : q }, options)
@@ -115,7 +125,7 @@ export function AlertFeedToolbar({
           />
         </div>
         <FacetFilter
-          title="App"
+          title={t("app")}
           options={[...labels].map(([value, label]) => ({ value, label }))}
           selected={view.app === null ? [] : [view.app]}
           onChange={(selected) =>
@@ -123,8 +133,8 @@ export function AlertFeedToolbar({
           }
         />
         <FacetFilter
-          title="Event type"
-          options={TYPE_OPTIONS}
+          title={t("eventType")}
+          options={typeOptions}
           selected={view.type}
           onChange={(type) => void setView({ type })}
         />
@@ -133,12 +143,14 @@ export function AlertFeedToolbar({
         </div>
       </div>
       <FilterChips
-        chips={chipsOf(view, labels, setView)}
+        chips={chipsOf(view, labels, setView, t, notifications)}
         onClearAll={onClearAll}
       />
       {hasMore && view.q !== "" ? (
         <p className="text-caption text-muted-foreground">
-          {`Searching the ${loaded} loaded events. Load more to search further.`}
+          {t("searchingLoaded", {
+            count: formatNumberInLocale(loaded, locale),
+          })}
         </p>
       ) : null}
     </div>

@@ -1,8 +1,11 @@
+import { APP_STORE_LOCALIZATIONS } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
 import {
   draftableLocalizations,
   LOCALIZED_FIELDS_NOTE,
+  localizedFieldsNote,
   localizationName,
+  localizationNameInLocale,
   localizedLabel,
   storefrontRows,
 } from "./localizations";
@@ -33,6 +36,12 @@ describe("LOCALIZED_FIELDS_NOTE", () => {
   it("reads every limit from the shared field limits", () => {
     expect(LOCALIZED_FIELDS_NOTE).toBe(
       "Each localization has its own 30 character title, 30 character subtitle and 100 character keyword field.",
+    );
+  });
+
+  it("translates the field limits for Simplified Chinese", () => {
+    expect(localizedFieldsNote("zh-CN")).toBe(
+      "每个本地化版本分别包含 30 个字符的标题、30 个字符的副标题和 100 个字符的关键词字段。",
     );
   });
 });
@@ -72,8 +81,19 @@ describe("localizationName", () => {
     expect(localizationName("zh-Hans")).toBe("Chinese (Simplified)");
   });
 
+  it("keeps every shared App Store localization name", () => {
+    for (const [tag, name] of Object.entries(APP_STORE_LOCALIZATIONS)) {
+      expect(localizationName(tag)).toBe(name);
+    }
+  });
+
   it("passes a tag it does not know through", () => {
     expect(localizationName("xx")).toBe("xx");
+  });
+
+  it("translates App Store localization names", () => {
+    expect(localizationNameInLocale("zh-Hans", "zh-CN")).toBe("简体中文");
+    expect(localizationNameInLocale("en-US", "zh-CN")).toBe("英语（美国）");
   });
 });
 

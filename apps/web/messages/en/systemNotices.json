@@ -1,0 +1,12 @@
+{
+  "deletionTitle": "This workspace is scheduled for deletion",
+  "deletionDetail": "Every app, keyword and history in it is erased on or after {date}. The owner can cancel it until then.",
+  "cancelDeletion": "Cancel deletion",
+  "breakageTitle": "{stores} parsing looks broken",
+  "breakageDetail": "This is on us, not your setup. Your stored data is untouched and collection resumes on its own once we ship a fix. Until then, collection is paused for {stores}.",
+  "whatHappensNext": "What happens next",
+  "delayAllTitle": "Today's rankings are delayed",
+  "delayStoresTitle": "Rankings for your {stores} apps are delayed",
+  "delayEmptyDetail": "Today's run has not captured anything yet. Your stored history is unchanged, and collection resumes on its own.",
+  "delayProgressDetail": "Today's run has captured {captured} of {tracked} tracked keywords. Positions you see may be from yesterday until it finishes."
+}

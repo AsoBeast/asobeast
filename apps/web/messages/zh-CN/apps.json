@@ -1,0 +1,55 @@
+{
+  "import": {
+    "title": "导入应用",
+    "description": "按名称搜索 App Store 或 Google Play，或粘贴应用商店链接，导入应用并开始跟踪其关键词。",
+    "action": "导入",
+    "pending": "导入中…",
+    "success": "已导入 {name}",
+    "unknownApp": "应用",
+    "unreachable": "无法连接到 API 以导入此应用",
+    "store": "应用商店",
+    "nameOrUrl": "应用名称或应用商店链接",
+    "hint": "输入名称进行搜索，或粘贴应用商店链接。",
+    "placeholderAppStore": "Focus Timer 或 apps.apple.com/us/app/…/id123",
+    "placeholderGooglePlay": "Focus Timer 或 com.example.app",
+    "homeStorefront": "主应用商店地区",
+    "homeStorefrontHint": "在此读取该应用的元数据和类别排名。之后可从关键词监控添加其他市场。",
+    "invalidAddress": "无法识别的应用商店链接或 ID：{value}",
+    "nameTooLong": "搜索最多 {limit, number} 个字符。此名称有 {used, number} 个。",
+    "shortName": "请至少输入 {count, number} 个字符进行搜索。",
+    "searchFailed": "无法搜索应用商店。",
+    "noListing": "在 {country} 没有名为“{query}”的应用商店页面。",
+    "resultsLabel": "{store} 在{country}的搜索结果",
+    "ratingCount": "{average} · {count, plural, other {# 条评分}}"
+  },
+  "delete": {
+    "actions": "应用操作，{name}",
+    "item": "删除应用",
+    "title": "删除 {name}？",
+    "description": "这将永久删除该应用及其所有快照、跟踪关键词和排名历史。此操作无法撤销。",
+    "pending": "删除中…",
+    "success": "已删除 {name}",
+    "error": "无法删除 {name}"
+  },
+  "delisted": {
+    "label": "已下架",
+    "title": "自 {date} 起未在其应用商店上架"
+  },
+  "firstRun": {
+    "title": "跟踪您的第一个应用",
+    "lede": "输入应用名称或粘贴其应用商店链接。",
+    "benefitsLabel": "您将获得",
+    "benefitPositions": "几分钟内获取标题和副标题中关键词的排名。",
+    "benefitCompetitors": "在您跟踪的每个关键词上，与您添加的每个竞品进行比较。",
+    "benefitActions": "一周的每日采集完成后，生成需要修改的事项队列。"
+  },
+  "budget": {
+    "added": "每天约增加 {count, plural, other {# 次应用商店请求}}",
+    "scoring": "每个新关键词还会评分一次，这会在接下来几小时内产生更多请求。",
+    "notice": "{added}。{scoring}",
+    "shareNotice": "{share}。{scoring}",
+    "overNotice": "{share}{over}{scoring}",
+    "share": "{added}，使 {store} 达到其每日容量的 {percent, number}%",
+    "overCapacity": "，因此每日运行将无法在一天内完成。请减少导入的关键词或提高应用商店速率限制。"
+  }
+}

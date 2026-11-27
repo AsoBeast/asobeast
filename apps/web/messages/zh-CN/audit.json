@@ -1,0 +1,286 @@
+{
+  "title": "审计",
+  "score": "ASO 评分",
+  "grades": {
+    "A": "优秀",
+    "B": "良好",
+    "C": "一般",
+    "D": "较弱",
+    "F": "较差",
+    "none": "尚未评分"
+  },
+  "groups": {
+    "discoverability": "搜索可见度",
+    "conversion": "转化率"
+  },
+  "statuses": {
+    "pass": "通过",
+    "warn": "需要改进",
+    "fail": "未通过",
+    "unanswered": "尚未评分"
+  },
+  "sources": {
+    "store": "商店详情页",
+    "keywords": "你的关键词",
+    "competitors": "竞品",
+    "reviews": "评论",
+    "rankings": "排名",
+    "ai": "AI 观察"
+  },
+  "efforts": {
+    "minutes": "分钟",
+    "hours": "小时",
+    "weeks": "周"
+  },
+  "impacts": {
+    "high": "高影响",
+    "medium": "中等影响",
+    "low": "低影响"
+  },
+  "buckets": {
+    "quickWins": "快速改进 · 今天",
+    "highImpact": "高影响 · 本周",
+    "strategic": "战略性改进 · 本月"
+  },
+  "bucketTabs": {
+    "quickWins": "快速改进",
+    "highImpact": "高影响",
+    "strategic": "战略性"
+  },
+  "targets": {
+    "metadata": "打开元数据工作台",
+    "keywords": "打开关键词",
+    "competitors": "打开竞品",
+    "reviews": "打开评论",
+    "rankings": "打开排名",
+    "store-console": "在商店控制台中修改",
+    "ai-analysis": "分析创意素材"
+  },
+  "messages": {
+    "benefit": "优势",
+    "feature": "功能",
+    "social-proof": "社会证明",
+    "ui-only": "仅界面",
+    "onboarding": "引导页",
+    "other": "其他"
+  },
+  "measured": "已衡量评分规则的 {percent}%",
+  "measuredShort": "已衡量 {percent}%",
+  "provisional": "暂定",
+  "potential": "完成计划可达到 {score} 分",
+  "availability": {
+    "notMeasurable": "无法在 {store} 上衡量",
+    "awaiting": "等待输入"
+  },
+  "lift": {
+    "unknown": "未估算提升",
+    "points": "+{points} 分",
+    "figure": "+{points}"
+  },
+  "fixesWorth": "+{points} 分",
+  "scoredFactors": "已评分 {total} 个因素中的 {scored} 个",
+  "allFactorsScored": "已评分 {total} 个因素",
+  "emptyBucket": "这里无需修改。",
+  "emptyBucketPending": "暂无内容。{count} 项检查尚未评分，因此此列表可能会增加。",
+  "scoreRing": "ASO 评分 {score} 分，满分 100 分，等级 {grade}，{label}{measured}",
+  "scoreUnavailable": "暂无 ASO 评分",
+  "lede": {
+    "unchanged": "，与上周相比不变",
+    "up": "，上升 ",
+    "down": "，下降 ",
+    "sinceWeek": "，与上周相比",
+    "noFixes": "目前没有等待你处理的修改。",
+    "oneFix": "首要改进",
+    "manyFixes": "前 {count} 项改进",
+    "oneListed": " 已列在下方。",
+    "manyListed": " 已列在下方。",
+    "oneWorth": " 价值 ",
+    "manyWorth": " 价值 ",
+    "noScore": "目前无法获得评分。",
+    "score": "评分 "
+  },
+  "factors": "因素",
+  "factor": "因素",
+  "status": "状态",
+  "worth": "权重",
+  "scoreOutOfTen": "评分 /10",
+  "scoredCount": "已评分 {total} 个中的 {scored} 个",
+  "factorNote": "权重 {weight} 分，总分 {total} 分",
+  "checksScored": "已评分 {total} 项检查中的 {scored} 项",
+  "pointsShort": "{points} 分",
+  "showChecks": "显示{factor}的检查",
+  "hideChecks": "隐藏{factor}的检查",
+  "checks": "检查",
+  "passCount": "{total} 项中通过 {pass} 项",
+  "checksByResult": "检查结果：{counts}",
+  "checkCountWord": {
+    "pass": "通过",
+    "warn": "需要改进",
+    "fail": "未通过",
+    "unanswered": "尚未评分"
+  },
+  "checksAcross": "{factors, plural, one {# 个因素} other {# 个因素}}中的 {checks, plural, one {# 项检查} other {# 项检查}}",
+  "plan": {
+    "title": "行动计划",
+    "impact": "影响",
+    "fix": "修复",
+    "effort": "工作量",
+    "where": "位置",
+    "lift": "提升",
+    "showAll": "显示全部 {count} 项",
+    "empty": "检查发现问题后，计划会在这里生成",
+    "count": "计划中有 {count} 项修复",
+    "worth": "{count}，合计价值 {points}"
+  },
+  "topFixes": {
+    "title": "首要改进",
+    "empty": "目前没有等待你处理的修改。",
+    "byLift": "按估算提升排序",
+    "viewPlan": "查看完整计划"
+  },
+  "history": {
+    "title": "评分历史",
+    "aria": "评分历史",
+    "key": "评分历史图例",
+    "rubricChange": "评分规则变化",
+    "emptyTitle": "尚无审计快照",
+    "emptyBody": "每日审计快照会生成此趋势。",
+    "shortNote": "趋势还需要更多每日快照。",
+    "reachable": "可达到 {score} 分",
+    "lastSnapshot": "最近每日快照 · {date}",
+    "rubricLabel": "评分规则 {version}",
+    "footer": "每天生成一次快照。评分规则变化可能在没有详情页变化的情况下改变评分。"
+  },
+  "unlocks": "衡量更多评分规则：",
+  "measuredTile": "已衡量",
+  "ofRubric": "的评分规则",
+  "benchmarks": {
+    "title": "竞品对比",
+    "aria": "竞品对比",
+    "metric": "指标",
+    "you": "你",
+    "median": "竞品中位数",
+    "best": "最佳",
+    "againstMedian": "与中位数相比",
+    "standing": "表现",
+    "ahead": "领先",
+    "behind": "落后",
+    "even": "持平",
+    "unknown": "无数据",
+    "emptyTitle": "没有可对比的竞品",
+    "emptyBody": "跟踪几个竞品后，审计会对比你的详情页和它们的详情页。",
+    "add": "添加竞品"
+  },
+  "footer": {
+    "title": "此审计无法看到什么",
+    "body": "审计无法看到安装量、广告表现、私有关键字字段或商店的排名权重。它评估详情页以及此实例已收集的数据。"
+  },
+  "readiness": {
+    "title": "商店推荐准备度",
+    "pass": "通过",
+    "warn": "需要改进",
+    "fail": "未通过",
+    "unmeasurable": "无法衡量",
+    "notRead": "尚未读取商店页面。",
+    "noStories": "未出现在精选故事中"
+  },
+  "screenshot": {
+    "noCaption": "没有可读说明",
+    "keyword": "关键词",
+    "keywords": "关键词",
+    "aria": "截图"
+  },
+  "creative": {
+    "icon": "图标",
+    "screenshots": "截图",
+    "stale": "这些观察结果描述的是你之前的截图。",
+    "elements": {
+      "one": "一个元素",
+      "two": "两个元素",
+      "three-or-more": "三个或更多元素"
+    },
+    "contrast": {
+      "high": "高对比度",
+      "medium": "中等对比度",
+      "low": "低对比度"
+    },
+    "hasText": "图标包含文字",
+    "noText": "图标中没有文字",
+    "similar": "看起来像{name}",
+    "aCompetitor": "一个竞品",
+    "distinct": "与我们发送的竞品图标不同"
+  },
+  "copy": {
+    "success": "报告已复制",
+    "failed": "浏览器阻止了剪贴板访问",
+    "button": "复制报告"
+  },
+  "computed": "计算于 {date}",
+  "rubric": "评分规则 {version}",
+  "pageRead": "页面读取于 {date}",
+  "featuredStories": "出现在 {count} 个精选故事中",
+  "editorsBadge": "编辑精选徽章",
+  "readinessPass": "{total} 项中通过 {pass} 项",
+  "competitorCount": "{count} 个竞品",
+  "benchmarkCaption": "你的详情页与 {count} 个竞品的对比",
+  "benchmarkFooter": "读取自 {count} 个竞品的已保存详情页",
+  "openCompetitors": "打开竞品",
+  "screenshotAlt": "截图 {position}{caption}",
+  "screenshotCaption": "：{caption}",
+  "imageUnavailable": "图片不可用",
+  "imageUnavailableAria": "{alt}，图片不可用",
+  "keywordHits": "{kind}：{keywords}",
+  "analysisTitle": "AI 创意分析",
+  "outdated": "已过期",
+  "analyzed": "于 {date} 使用 {model} 分析",
+  "aiGuide": "阅读 AI 功能指南",
+  "analysisCopy": {
+    "unconfigured": "添加 OPENAI_API_KEY，让 AI 读取你的图标和截图。不配置它，审计的其他功能仍可使用。",
+    "never": "AI 会读取你的图标、前六张截图和竞品图标，并报告观察结果。规则负责评分。",
+    "requesting": "正在排队分析。",
+    "active": "你可以离开此页面。完成后审计会更新。",
+    "current": "分析结果与你当前的图标和截图一致。",
+    "stale": "上次分析后，你的图标或截图发生了变化。",
+    "failed": "没有从评分中扣除任何费用。"
+  },
+  "analysisAction": {
+    "never": "分析创意素材",
+    "requesting": "排队中",
+    "stale": "重新分析",
+    "failed": "重试"
+  },
+  "analysisProgress": {
+    "all": "正在分析你的图标和截图",
+    "some": "正在分析你的图标和 {count} 张截图"
+  },
+  "analysisSent": {
+    "configured": "将图标和截图发送到 {provider}。",
+    "configuredModel": "将图标和截图发送到{provider}上的 {model}。",
+    "openai": "将图标和截图发送到 OpenAI。",
+    "openaiModel": "使用 {model} 将图标和截图发送到 OpenAI。",
+    "configuredProvider": "此实例配置的 AI 服务商"
+  },
+  "analysis": {
+    "upToDate": "最新",
+    "already": "已经是最新",
+    "unchanged": "你的图标和截图没有变化。",
+    "queueFailed": "无法排队进行分析",
+    "finished": "创意分析已完成",
+    "failed": "创意分析失败",
+    "scoreChange": "评分从 {before} 变为 {after}"
+  },
+  "report": {
+    "title": "ASO 审计：{name}",
+    "thisApp": "此应用",
+    "impactUnknown": "影响未知",
+    "effortUnknown": "工作量未知",
+    "grade": "等级 {grade}，{label}",
+    "potential": "潜力 {score}",
+    "factorTable": "| 因素 | 评分 | 状态 | 备注 |",
+    "factorDivider": "| --- | --- | --- | --- |",
+    "emptyBucket": "{bucket}中没有等待处理的修改。",
+    "benchmarkCompared": "与 {count} 个竞品进行了对比。",
+    "benchmarkTable": "| 指标 | 你 | 竞品中位数 | 最佳 | 对比 |",
+    "benchmarkDivider": "| --- | --- | --- | --- | --- |"
+  }
+}

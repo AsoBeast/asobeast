@@ -1,0 +1,33 @@
+{
+  "title": "删除工作区",
+  "deleteWorkspace": "删除工作区",
+  "confirmTitle": "删除此工作区？",
+  "confirmDescription": "其中的所有应用、关键词和历史记录会在 {days, plural, one {# 天} other {# 天}}后删除。在此之前您可以取消。",
+  "reasonLabel": "您为什么离开？（选填）",
+  "confirmLabel": "输入 {confirmation} 以确认",
+  "scheduling": "正在安排…",
+  "keepWorkspace": "保留工作区",
+  "scheduledToast": "已安排删除工作区",
+  "scheduleError": "无法安排删除。",
+  "cancelDeletion": "取消删除",
+  "cancelling": "正在取消…",
+  "cancelledToast": "已取消删除",
+  "cancelError": "无法取消删除。",
+  "body": "删除会在 {days, plural, one {# 天} other {# 天}}的宽限期后清除此工作区中的所有应用、关键词和历史记录，期间所有者可以取消。",
+  "ownerFallback": "所有者",
+  "scheduled": "{requester} 已安排删除此工作区。",
+  "scheduledOn": "{requester} 已于 {date} 安排删除此工作区。",
+  "erasedOnOrAfter": "删除将于 {date} 或之后执行。",
+  "dueDateFallback": "计划日期",
+  "memberScheduled": "只有工作区所有者可以取消删除。",
+  "memberUnscheduled": "只有工作区所有者可以删除此工作区。",
+  "operatorNote": "此工作区包含平台操作员。只要还存在其他账户，就不能删除它，否则管理区域、队列面板和支持工具也会一并消失，且没有账户可以接管。AsoBeast 尚未提供交接功能。如需清除您自己的数据，请改为删除其中的应用和关键词。只有在您的账户是唯一账户时才能删除此工作区，并且此操作会重置实例。",
+  "reasons": {
+    "preferNotToSay": "不愿透露",
+    "tooExpensive": "价格太高",
+    "missingFeature": "缺少所需功能",
+    "notUsing": "不再使用",
+    "switchedTool": "已改用其他工具",
+    "other": "其他"
+  }
+}

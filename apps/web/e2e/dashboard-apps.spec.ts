@@ -249,7 +249,7 @@ for (const { view, path, names } of APP_VIEWS) {
     await expect(region.getByText('No apps match "zzz"')).toBeVisible();
     await expect(region.getByRole("table")).toHaveCount(0);
 
-    await region.getByRole("button", { name: "Clear filters" }).click();
+    await region.locator('[data-action="clear-filters"]').click();
 
     await expect
       .poll(async () => (await names(page)).length)
@@ -360,7 +360,7 @@ test("the toolbar offers columns for the table and a sort for the cards", async 
   await page.goto("/");
 
   const region = appsRegion(page);
-  const columns = region.getByRole("button", { name: "Columns" });
+  const columns = region.locator('[data-action="columns"]');
   const sortBy = region.getByRole("combobox", { name: "Sort by" });
   await expect(columns).toBeVisible();
   await expect(sortBy).toHaveCount(0);
@@ -592,7 +592,7 @@ test("the columns menu leaves out the columns a tablet cannot show", async ({
   await page.setViewportSize({ width: 1024, height: 900 });
   await page.goto("/");
 
-  const columns = appsRegion(page).getByRole("button", { name: "Columns" });
+  const columns = appsRegion(page).locator('[data-action="columns"]');
   await (await hydrated(columns)).click();
   const choices = page.getByRole("menuitemcheckbox");
   await expect(choices.filter({ hasText: "Audit" })).toBeVisible();
@@ -623,7 +623,7 @@ test("the table keeps phone columns and reveals more on request", async ({
     "More",
   ]);
 
-  await appsRegion(page).getByRole("button", { name: "Columns" }).click();
+  await appsRegion(page).locator('[data-action="columns"]').click();
   await page.getByRole("menuitemcheckbox", { name: "Rating" }).click();
   await page.keyboard.press("Escape");
 

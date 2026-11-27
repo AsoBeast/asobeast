@@ -14,11 +14,12 @@ import {
   Trophy,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppIcon } from "@/components/AppIcon";
 import { ADMIN_ENTRY } from "@/components/admin/admin-links";
 import { useAuth } from "@/components/auth/use-auth";
-import { WHATS_NEW_LABEL, WHATS_NEW_PATH } from "./WhatsNewMenuItem";
+import { WHATS_NEW_PATH } from "./WhatsNewMenuItem";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,14 +46,14 @@ import {
 import { appsOptions } from "@/lib/queries";
 
 const GENERAL = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/actions", label: "Action Center", icon: ListChecks },
-  { href: "/alerts", label: "Alerts", icon: Bell },
-  { href: "/charts", label: "Top charts", icon: Trophy },
-  { href: "/inspect", label: "Keyword inspector", icon: ScanSearch },
-  { href: INTEGRATIONS_PATH, label: "Integrations", icon: Plug },
-  { href: WHATS_NEW_PATH, label: WHATS_NEW_LABEL, icon: Megaphone },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/", label: "dashboard", icon: LayoutDashboard },
+  { href: "/actions", label: "actionCenter", icon: ListChecks },
+  { href: "/alerts", label: "alerts", icon: Bell },
+  { href: "/charts", label: "topCharts", icon: Trophy },
+  { href: "/inspect", label: "keywordInspector", icon: ScanSearch },
+  { href: INTEGRATIONS_PATH, label: "integrations", icon: Plug },
+  { href: WHATS_NEW_PATH, label: "whatsNew", icon: Megaphone },
+  { href: "/settings", label: "settings", icon: Settings },
 ] as const;
 
 export function CommandPalette() {
@@ -60,11 +61,19 @@ export function CommandPalette() {
   const [query, setQuery] = useState("");
   const router = useRouter();
   const pathname = usePathname();
+  const t = useTranslations("navigation");
+  const shell = useTranslations("shell");
+  const ui = useTranslations("ui");
   const route = appRouteFrom(pathname);
   const appId = route?.id;
   const { data: apps } = useQuery({ ...appsOptions, enabled: open });
   const { isOperator } = useAuth();
-  const general = isOperator ? [...GENERAL, ADMIN_ENTRY] : GENERAL;
+  const general = isOperator
+    ? [
+        ...GENERAL,
+        { href: ADMIN_ENTRY.href, label: "admin", icon: ADMIN_ENTRY.icon },
+      ]
+    : GENERAL;
 
   const openRef = useRef(open);
 
@@ -102,82 +111,92 @@ export function CommandPalette() {
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label="Open command palette"
+            data-action="open-command-palette"
+            aria-label={shell("openCommandPalette")}
             onClick={() => handleOpenChange(true)}
           >
             <Search />
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Search — ⌘ K</TooltipContent>
+        <TooltipContent>{shell("searchShortcut")}</TooltipContent>
       </Tooltip>
 
       <CommandDialog
         open={open}
         onOpenChange={handleOpenChange}
-        title="Command palette"
-        description="Jump to an app, a section or a page."
+        title={shell("commandPaletteTitle")}
+        description={shell("commandPaletteDescription")}
       >
         <Command>
           <CommandInput
             value={query}
             onValueChange={setQuery}
-            placeholder="Search apps and sections…"
+            placeholder={shell("commandPaletteSearch")}
           />
           <CommandList>
-            <CommandEmpty>No matches.</CommandEmpty>
+            <CommandEmpty>{ui("noMatches")}</CommandEmpty>
 
             {apps && apps.length > 0 ? (
-              <CommandGroup heading="Apps">
-                {apps.map((item) => (
-                  <CommandItem
-                    key={item.id}
-                    value={`${item.name ?? "Untitled app"} ${storeLabel(item.store)} ${item.country}`}
-                    onSelect={() =>
-                      go(
-                        sectionHref(
-                          item.id,
-                          equivalentSection(route?.segment ?? ""),
-                        ),
-                      )
-                    }
-                  >
-                    <AppIcon src={item.iconUrl} size={20} />
-                    <span className="truncate">
-                      {item.name ?? "Untitled app"}
-                    </span>
-                    <Badge variant="secondary" className="ml-auto">
-                      {storeLabel(item.store)}
-                    </Badge>
-                  </CommandItem>
-                ))}
+              <CommandGroup heading={shell("apps")}>
+                {apps.map((item) => {
+                  const name = item.name ?? shell("untitledApp");
+                  return (
+                    <CommandItem
+                      key={item.id}
+                      value={`${name} ${storeLabel(item.store)} ${item.country}`}
+                      onSelect={() =>
+                        go(
+                          sectionHref(
+                            item.id,
+                            equivalentSection(route?.segment ?? ""),
+                          ),
+                        )
+                      }
+                    >
+                      <AppIcon src={item.iconUrl} size={20} />
+                      <span className="truncate">{name}</span>
+                      <Badge variant="secondary" className="ml-auto">
+                        {storeLabel(item.store)}
+                      </Badge>
+                    </CommandItem>
+                  );
+                })}
               </CommandGroup>
             ) : null}
 
             {appId ? (
-              <CommandGroup heading="Sections">
-                {APP_SECTIONS.map((section) => (
-                  <CommandItem
-                    key={section.segment || "overview"}
-                    value={`section ${section.label}`}
-                    onSelect={() => go(sectionHref(appId, section.segment))}
-                  >
-                    {section.label}
-                  </CommandItem>
-                ))}
+              <CommandGroup heading={shell("sections")}>
+                {APP_SECTIONS.map((section) => {
+                  const label = t(
+                    `appSections.${section.segment || "overview"}`,
+                  );
+                  return (
+                    <CommandItem
+                      key={section.segment || "overview"}
+                      value={`section ${label}`}
+                      onSelect={() => go(sectionHref(appId, section.segment))}
+                    >
+                      {label}
+                    </CommandItem>
+                  );
+                })}
               </CommandGroup>
             ) : null}
 
-            <CommandGroup heading="General">
-              {general.map((entry) => (
-                <CommandItem
-                  key={entry.href}
-                  value={entry.label}
-                  onSelect={() => go(entry.href)}
-                >
-                  <entry.icon />
-                  {entry.label}
-                </CommandItem>
-              ))}
+            <CommandGroup heading={shell("general")}>
+              {general.map((entry) => {
+                const label = t(entry.label);
+                return (
+                  <CommandItem
+                    key={entry.href}
+                    value={label}
+                    onSelect={() => go(entry.href)}
+                  >
+                    <entry.icon />
+                    {label}
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
           </CommandList>
         </Command>

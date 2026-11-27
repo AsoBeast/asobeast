@@ -1,0 +1,6 @@
+{
+  "description": "开源 App Store 优化工具",
+  "errorTitle": "出了点问题",
+  "errorBody": "{product} 无法渲染此页面。重试通常可以解决临时故障。",
+  "errorReference": "参考编号 {reference}"
+}

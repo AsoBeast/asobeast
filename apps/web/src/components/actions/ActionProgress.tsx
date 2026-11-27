@@ -1,6 +1,7 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import type { ActionActivity } from "@asobeast/shared";
 import {
   DivergingBars,
@@ -23,21 +24,28 @@ import {
   type ActivityRow,
 } from "./activity-chart";
 
-const PROGRESS: DivergingSubject = {
-  region: "Actions opened and closed each day",
-  waiting: "The chart fills in as actions open and close.",
-  up: { label: "Opened", color: ACTION_COLORS.opened },
-  down: { label: "Closed", color: ACTION_COLORS.closed },
-};
+function progressSubject(
+  t: ReturnType<typeof useTranslations>,
+): DivergingSubject {
+  return {
+    region: t("progressChart.region"),
+    waiting: t("progressChart.waiting"),
+    up: { label: t("progressChart.opened"), color: ACTION_COLORS.opened },
+    down: { label: t("progressChart.closed"), color: ACTION_COLORS.closed },
+  };
+}
 
-function closedSplit(row: ActivityRow | undefined): SeriesTooltipItem[] {
+function closedSplit(
+  row: ActivityRow | undefined,
+  t: ReturnType<typeof useTranslations>,
+): SeriesTooltipItem[] {
   if (!row || row.closedByYou + row.resolved === 0) return [];
   return [
     {
       key: "closedByYou",
       index: 1,
       color: ACTION_COLORS.closed,
-      label: "Closed by you",
+      label: t("progressChart.closedByYou"),
       value: formatNumber(row.closedByYou),
       sortBy: 2,
     },
@@ -45,14 +53,17 @@ function closedSplit(row: ActivityRow | undefined): SeriesTooltipItem[] {
       key: "resolved",
       index: 2,
       color: ACTION_COLORS.closed,
-      label: "Resolved on its own",
+      label: t("progressChart.resolvedOwn"),
       value: formatNumber(row.resolved),
       sortBy: 3,
     },
   ];
 }
 
-function progressOf(activity: ActionActivity) {
+function progressOf(
+  activity: ActionActivity,
+  t: ReturnType<typeof useTranslations>,
+) {
   const rows = activityRows(activity);
   const byDate = new Map(rows.map((row) => [row.date, row]));
   return {
@@ -65,7 +76,7 @@ function progressOf(activity: ActionActivity) {
       activity.days.length,
       activeDays(activity),
     ),
-    details: (row: DivergingRow) => closedSplit(byDate.get(row.date)),
+    details: (row: DivergingRow) => closedSplit(byDate.get(row.date), t),
   };
 }
 
@@ -75,15 +86,24 @@ function useActivity(appId?: string): ActionActivity {
 }
 
 export function ActionProgressKey({ appId }: { appId?: string }) {
-  const { trend } = progressOf(useActivity(appId));
-  return <DivergingKey trend={trend} subject={PROGRESS} />;
+  const t = useTranslations("actions");
+  const { trend } = progressOf(useActivity(appId), t);
+  return <DivergingKey trend={trend} subject={progressSubject(t)} />;
 }
 
 export function ActionProgress({ appId }: { appId?: string }) {
-  const { trend, details } = progressOf(useActivity(appId));
-  return <DivergingBars trend={trend} subject={PROGRESS} details={details} />;
+  const t = useTranslations("actions");
+  const { trend, details } = progressOf(useActivity(appId), t);
+  return (
+    <DivergingBars
+      trend={trend}
+      subject={progressSubject(t)}
+      details={details}
+    />
+  );
 }
 
 export function ActionProgressTotals({ appId }: { appId?: string }) {
-  return <span>{activityTotalsLine(useActivity(appId))}</span>;
+  const t = useTranslations("actions");
+  return <span>{activityTotalsLine(useActivity(appId), t)}</span>;
 }

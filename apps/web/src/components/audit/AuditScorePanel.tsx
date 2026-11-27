@@ -3,6 +3,8 @@
 import { Suspense, useId } from "react";
 import Link from "next/link";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
+import { useAppLocale } from "@/lib/use-app-locale";
 import type {
   AppAuditResult,
   AuditCheckStatus,
@@ -20,7 +22,6 @@ import { presetToRange, VISIBILITY_RANGES } from "@/lib/ranges";
 import { cn } from "@/lib/utils";
 import {
   gradeLabel,
-  GROUP_LABEL,
   measuredLine,
   percent,
   potentialLine,
@@ -28,8 +29,8 @@ import {
   scoredFactorsLine,
   scoreRingLabel,
   scoreStatus,
-  STATUS_LABEL,
 } from "./audit-copy";
+import { auditUnlockLabel } from "./audit-content-zh";
 import { unlockHref } from "./audit-links";
 import { AuditHealthChart } from "./AuditHealthChart";
 import { TEXT_LINK } from "./layout-classes";
@@ -42,28 +43,32 @@ const CELL = "bg-card shadow-[-1px_0_0_var(--border),0_-1px_0_var(--border)]";
 const CHANGE_LABEL = `${CHANGE_WINDOW_DAYS}d`;
 
 function WeekChange({ audit }: { audit: AppAuditResult }) {
+  const locale = useAppLocale();
   const { shownRange } = useAuditRange();
   const { data } = useSuspenseQuery(
     auditHistoryOptions(audit.appId, presetToRange(shownRange)),
   );
   const change = weekChange(data.points, audit);
+  const label = locale === "zh-CN" ? `近${CHANGE_WINDOW_DAYS}天` : CHANGE_LABEL;
   return change === null ? null : (
-    <TrendChip label={CHANGE_LABEL} value={change} form="pill" />
+    <TrendChip label={label} value={change} form="pill" />
   );
 }
 
 function MeasuredLine({ confidence }: { confidence: number | undefined }) {
+  const t = useTranslations("audit");
   if (confidence === undefined) return null;
-  if (!provisional(confidence)) return <p>{measuredLine(confidence)}</p>;
+  if (!provisional(confidence)) return <p>{measuredLine(confidence, t)}</p>;
   return (
     <p>
-      <span className="font-medium text-warning">Provisional</span>
-      <span>{` · ${percent(confidence)}% measured`}</span>
+      <span className="font-medium text-warning">{t("provisional")}</span>
+      <span>{` · ${t("measuredShort", { percent: percent(confidence) })}`}</span>
     </p>
   );
 }
 
 function ScoreSummary({ audit }: { audit: AppAuditResult }) {
+  const t = useTranslations("audit");
   const headingId = useId();
   const { overall, grade, confidence, potential } = audit;
 
@@ -74,7 +79,7 @@ function ScoreSummary({ audit }: { audit: AppAuditResult }) {
     >
       <ScoreRing
         value={overall}
-        label={scoreRingLabel(overall, grade, confidence)}
+        label={scoreRingLabel(overall, grade, confidence, t)}
       >
         <span className="numeric text-5xl font-semibold tracking-tight">
           {overall === null ? "—" : Math.round(overall)}
@@ -82,12 +87,12 @@ function ScoreSummary({ audit }: { audit: AppAuditResult }) {
       </ScoreRing>
       <div className="flex min-w-0 flex-col gap-1.5">
         <h2 id={headingId} className="text-label text-muted-foreground">
-          ASO score
+          {t("score")}
         </h2>
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="numeric text-title">{grade ?? "—"}</span>
           <span className="text-body text-muted-foreground">
-            {gradeLabel(grade)}
+            {gradeLabel(grade, t)}
           </span>
           <Suspense fallback={null}>
             <WeekChange audit={audit} />
@@ -96,7 +101,7 @@ function ScoreSummary({ audit }: { audit: AppAuditResult }) {
         <div className="flex flex-col gap-0.5 text-caption text-faint-foreground">
           <MeasuredLine confidence={confidence} />
           {potential !== null && potential !== undefined ? (
-            <p>{potentialLine(potential)}</p>
+            <p>{potentialLine(potential, t)}</p>
           ) : null}
         </div>
       </div>
@@ -105,6 +110,7 @@ function ScoreSummary({ audit }: { audit: AppAuditResult }) {
 }
 
 function FigureStatus({ status }: { status: AuditCheckStatus }) {
+  const t = useTranslations("audit");
   const Icon = STATUS_ICON[status];
   return (
     <>
@@ -112,7 +118,7 @@ function FigureStatus({ status }: { status: AuditCheckStatus }) {
         aria-hidden
         className={cn("size-4 shrink-0", STATUS_TONE[status])}
       />
-      <span className="sr-only">{STATUS_LABEL[status]}</span>
+      <span className="sr-only">{t(`statuses.${status}`)}</span>
     </>
   );
 }
@@ -154,7 +160,11 @@ function FigureTile({
   );
 }
 
-function groupNote(audit: AppAuditResult, group: AuditGroupId): string {
+function groupNote(
+  audit: AppAuditResult,
+  group: AuditGroupId,
+  t: ReturnType<typeof useTranslations>,
+): string {
   const factors = audit.factors.filter(
     (factor) =>
       factor.group === group && factor.availability !== "not-measurable",
@@ -162,10 +172,12 @@ function groupNote(audit: AppAuditResult, group: AuditGroupId): string {
   return scoredFactorsLine(
     factors.filter((factor) => factor.score !== null).length,
     factors.length,
+    t,
   );
 }
 
 function ScoreFigures({ audit }: { audit: AppAuditResult }) {
+  const t = useTranslations("audit");
   const { groups = [], confidence } = audit;
   return (
     <div className="@container/score">
@@ -175,7 +187,7 @@ function ScoreFigures({ audit }: { audit: AppAuditResult }) {
           {groups.map((group) => (
             <FigureTile
               key={group.id}
-              label={GROUP_LABEL[group.id]}
+              label={t(`groups.${group.id}`)}
               value={
                 group.score === null
                   ? "—"
@@ -184,16 +196,16 @@ function ScoreFigures({ audit }: { audit: AppAuditResult }) {
               share={(group.score ?? 0) / 10}
               tone="health"
               status={scoreStatus(group.score)}
-              note={groupNote(audit, group.id)}
+              note={groupNote(audit, group.id, t)}
             />
           ))}
           {confidence === undefined ? null : (
             <FigureTile
-              label="Measured"
+              label={t("measuredTile")}
               value={`${percent(confidence)}%`}
               share={confidence}
               tone="neutral"
-              note="of the rubric"
+              note={t("ofRubric")}
             />
           )}
         </div>
@@ -203,11 +215,13 @@ function ScoreFigures({ audit }: { audit: AppAuditResult }) {
 }
 
 function Unlocks({ audit }: { audit: AppAuditResult }) {
+  const t = useTranslations("audit");
+  const locale = useAppLocale();
   const { unlocks = [] } = audit;
   if (unlocks.length === 0) return null;
   return (
     <div className="flex flex-wrap gap-x-3 gap-y-1 border-t border-border px-4 py-2.5 text-caption text-faint-foreground">
-      <span>Score more of the rubric:</span>
+      <span>{t("unlocks")}</span>
       <ul className="contents">
         {unlocks.map((unlock) => (
           <li key={unlock.kind} className="contents">
@@ -215,7 +229,7 @@ function Unlocks({ audit }: { audit: AppAuditResult }) {
               href={unlockHref(audit.appId, unlock.kind)}
               className={TEXT_LINK}
             >
-              {unlock.label}
+              {auditUnlockLabel(unlock.kind, unlock.label, locale)}
             </Link>
           </li>
         ))}
@@ -225,6 +239,7 @@ function Unlocks({ audit }: { audit: AppAuditResult }) {
 }
 
 export function AuditScorePanel({ audit }: { audit: AppAuditResult }) {
+  const t = useTranslations("audit");
   const { range, shownRange, setRange } = useAuditRange();
 
   return (
@@ -236,7 +251,7 @@ export function AuditScorePanel({ audit }: { audit: AppAuditResult }) {
         className="flex flex-col gap-2 border-t border-border pt-3 pb-4"
       >
         <div className="flex min-h-8 flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          <h2 className="text-heading">Score history</h2>
+          <h2 className="text-heading">{t("history.title")}</h2>
           <RangePicker
             presets={VISIBILITY_RANGES}
             value={range}
@@ -252,10 +267,7 @@ export function AuditScorePanel({ audit }: { audit: AppAuditResult }) {
         </Suspense>
       </CardContent>
       <CardFooter>
-        <span>
-          One snapshot a day. A rubric change can move the score without a
-          listing change.
-        </span>
+        <span>{t("history.footer")}</span>
       </CardFooter>
     </Card>
   );

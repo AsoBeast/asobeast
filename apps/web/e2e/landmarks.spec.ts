@@ -62,9 +62,7 @@ test("an unmatched route answers 404 with one main landmark and the branded card
 
   expect(response?.status()).toBe(404);
   await expect(page.getByRole("main")).toHaveCount(1);
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Page not found" }),
-  ).toBeVisible();
+  await expect(page.locator('[data-slot="not-found"]')).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Back to AsoBeast" }),
   ).toHaveAttribute("href", "/");

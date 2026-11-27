@@ -1,4 +1,5 @@
 import type { Ref } from "react";
+import { useTranslations } from "next-intl";
 import { Check, Circle, Minus, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -13,15 +14,10 @@ import {
   progressPercent,
   progressSentence,
   progressValueLabel,
-  STEP_TITLES,
+  stepTitle,
 } from "./setup-progress";
 
 type StepStates = Record<SetupStep, SetupStepState>;
-
-const STATE_WORDS: Partial<Record<SetupStepState, string>> = {
-  done: "Done",
-  skipped: "Skipped",
-};
 
 const STATE_GLYPHS: Record<SetupStepState, LucideIcon> = {
   done: Check,
@@ -44,8 +40,14 @@ function StepGlyph({ state }: { state: SetupStepState }) {
 }
 
 function StepState({ state, next }: { state: SetupStepState; next: boolean }) {
-  if (next) return <Badge variant="brand">Next</Badge>;
-  const word = STATE_WORDS[state];
+  const t = useTranslations("setup");
+  if (next) return <Badge variant="brand">{t("state.next")}</Badge>;
+  const word =
+    state === "done"
+      ? t("state.done")
+      : state === "skipped"
+        ? t("state.skipped")
+        : null;
   return word ? (
     <span className="text-caption text-faint-foreground">{word}</span>
   ) : null;
@@ -73,6 +75,7 @@ export function SetupStepList({
   linked?: boolean;
   className?: string;
 }) {
+  const t = useTranslations("setup");
   return (
     <ol className={cn("flex text-dense", LIST_LAYOUTS[layout].list, className)}>
       {SETUP_STEPS.map((step) => {
@@ -100,10 +103,10 @@ export function SetupStepList({
                   aria-current={current ? "step" : undefined}
                   className={cn(title, "rounded-sm link-underline")}
                 >
-                  {STEP_TITLES[step]}
+                  {stepTitle(step, t)}
                 </a>
               ) : (
-                <span className={title}>{STEP_TITLES[step]}</span>
+                <span className={title}>{stepTitle(step, t)}</span>
               )}
             </span>
             <StepState state={states[step]} next={current} />
@@ -123,8 +126,9 @@ export function SetupStepNav({
   next: SetupStep | null;
   className?: string;
 }) {
+  const t = useTranslations("setup");
   return (
-    <nav aria-label="Setup steps" className={className}>
+    <nav aria-label={t("progress.stepsAria")} className={className}>
       <SetupStepList states={states} next={next} layout="rail" linked />
     </nav>
   );
@@ -139,6 +143,7 @@ export function SetupProgress({
   progress: SetupStepProgress;
   headingRef?: Ref<HTMLHeadingElement>;
 }) {
+  const t = useTranslations("setup");
   return (
     <div className="flex flex-col gap-3">
       <h2
@@ -146,12 +151,12 @@ export function SetupProgress({
         tabIndex={-1}
         className="rounded-sm text-heading text-balance wrap-anywhere outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        {progressSentence(name, progress)}
+        {progressSentence(name, progress, t)}
       </h2>
       <Progress
         value={progressPercent(progress)}
-        aria-label="Setup progress"
-        getValueLabel={() => progressValueLabel(progress)}
+        aria-label={t("progress.aria")}
+        getValueLabel={() => progressValueLabel(progress, t)}
       />
     </div>
   );

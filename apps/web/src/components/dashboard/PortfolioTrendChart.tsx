@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import {
   Area,
   CartesianGrid,
@@ -26,7 +27,7 @@ import {
   PENDING_LINE_PROPS,
   PREVIOUS_LINE_PROPS,
   seriesColor,
-  TIME_AXIS_PROPS,
+  timeAxisPropsInLocale,
   VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
 import {
@@ -34,7 +35,8 @@ import {
   ChartContainer,
   ChartTooltip,
 } from "@/components/ui/chart";
-import { formatDayMonth, formatNumber } from "@/lib/format";
+import { formatDayMonthInLocale, formatNumberInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { dayBefore } from "@/lib/utc-day";
 import type { HistoryTrend } from "./history-trend";
 
@@ -49,17 +51,26 @@ export interface TrendSubject {
 
 export type DayNoter = (date: string) => ReactNode;
 
-export const LISTING_CHANGE_KEY: ChartKeyItem = {
-  label: "Listing change",
+export const listingChangeKey = (
+  t: ReturnType<typeof useTranslations>,
+): ChartKeyItem => ({
+  label: t("charts.listingChange"),
   color: CHANGE_MARKER_PROPS.stroke,
   mark: "dash",
-};
+});
 
-const figure = (value: number): string => formatNumber(Math.round(value));
+const figure = (
+  value: number,
+  locale: ReturnType<typeof useAppLocale>,
+): string => formatNumberInLocale(Math.round(value), locale);
 
-function trendNote(unfinished: boolean, unchecked: boolean): string | null {
-  if (unfinished) return "Today's checks are still running";
-  return unchecked ? "Not checked" : null;
+function trendNote(
+  unfinished: boolean,
+  unchecked: boolean,
+  t: ReturnType<typeof useTranslations>,
+): string | null {
+  if (unfinished) return t("charts.todayChecks");
+  return unchecked ? t("charts.notChecked") : null;
 }
 
 function TrendTooltip({
@@ -75,16 +86,22 @@ function TrendTooltip({
   subject: TrendSubject;
   notes: DayNoter;
 }) {
+  const t = useTranslations("dashboard");
+  const locale = useAppLocale();
   if (!active || label === undefined) return null;
   const day = String(label);
   const row = trend.rows.find((candidate) => candidate.date === day);
   if (!row) return null;
   const unfinished = day === trend.pendingDay;
   const value = unfinished ? row.pending : row.value;
-  const note = trendNote(unfinished, value === null && row.previous === null);
+  const note = trendNote(
+    unfinished,
+    value === null && row.previous === null,
+    t,
+  );
   return (
     <SeriesTooltip
-      title={formatDayMonth(day)}
+      title={formatDayMonthInLocale(day, locale)}
       items={[
         ...(value === null
           ? []
@@ -93,8 +110,10 @@ function TrendTooltip({
                 key: "value",
                 index: 0,
                 color: SERIES,
-                label: unfinished ? `${subject.label} so far` : subject.label,
-                value: figure(value),
+                label: unfinished
+                  ? t("charts.soFar", { label: subject.label })
+                  : subject.label,
+                value: figure(value, locale),
                 sortBy: 0,
               },
             ]),
@@ -105,8 +124,11 @@ function TrendTooltip({
                 key: "previous",
                 index: 0,
                 color: PREVIOUS,
-                label: formatDayMonth(dayBefore(day, trend.days)),
-                value: figure(row.previous),
+                label: formatDayMonthInLocale(
+                  dayBefore(day, trend.days),
+                  locale,
+                ),
+                value: figure(row.previous, locale),
                 sortBy: 1,
               },
             ]),
@@ -130,16 +152,21 @@ export function TrendLegend({
   trend: HistoryTrend;
   marked: boolean;
 }) {
+  const t = useTranslations("dashboard");
   const items: ChartKeyItem[] =
     trend.checked === 0
       ? []
       : [
-          { label: `Last ${trend.days} days`, color: SERIES, mark: "line" },
+          {
+            label: t("charts.lastDays", { days: trend.days }),
+            color: SERIES,
+            mark: "line",
+          },
           ...(trend.pendingDay === null
             ? []
             : [
                 {
-                  label: "Still checking",
+                  label: t("charts.stillChecking"),
                   color: SERIES,
                   mark: "dash",
                 } as const,
@@ -147,15 +174,15 @@ export function TrendLegend({
           ...(trend.compared
             ? [
                 {
-                  label: `Previous ${trend.days} days`,
+                  label: t("charts.previousDays", { days: trend.days }),
                   color: PREVIOUS,
                   mark: "line",
                 } as const,
               ]
             : []),
-          ...(marked ? [LISTING_CHANGE_KEY] : []),
+          ...(marked ? [listingChangeKey(t)] : []),
         ];
-  return <ChartKey label="Chart lines" items={items} />;
+  return <ChartKey label={t("charts.chartLines")} items={items} />;
 }
 
 const NO_NOTES: DayNoter = () => null;
@@ -171,6 +198,8 @@ export function PortfolioTrendChart({
   markers?: readonly string[];
   notes?: DayNoter;
 }) {
+  const t = useTranslations("dashboard");
+  const locale = useAppLocale();
   const fadeId = useFadeId();
   const height = CHART_HEIGHT.tall;
 
@@ -180,17 +209,22 @@ export function PortfolioTrendChart({
       <ChartNotice
         height={height}
         title={
-          state === "empty" ? "Nothing recorded yet" : "Not enough history yet"
+          state === "empty"
+            ? t("charts.nothingRecorded")
+            : t("charts.notEnoughHistory")
         }
-        body="The trend appears after a few daily runs."
+        body={t("charts.trendAppears")}
       />
     );
   }
 
   const config: ChartConfig = {
-    value: { label: `Last ${trend.days} days`, color: SERIES },
-    pending: { label: "Still checking", color: SERIES },
-    previous: { label: `Previous ${trend.days} days`, color: PREVIOUS },
+    value: { label: t("charts.lastDays", { days: trend.days }), color: SERIES },
+    pending: { label: t("charts.stillChecking"), color: SERIES },
+    previous: {
+      label: t("charts.previousDays", { days: trend.days }),
+      color: PREVIOUS,
+    },
   };
   const line = subject.counted ? COUNT_LINE_PROPS : LINE_PROPS;
   const pendingRow = trend.rows.find((row) => row.date === trend.pendingDay);
@@ -200,12 +234,12 @@ export function PortfolioTrendChart({
       config={config}
       className={`${height} w-full`}
       role="region"
-      aria-label={`${subject.region} over the last ${trend.days} days`}
+      aria-label={subject.region}
     >
       <ComposedChart accessibilityLayer data={trend.rows} margin={CHART_MARGIN}>
         <SeriesFade id={fadeId} color={SERIES} />
         <CartesianGrid {...GRID_PROPS} />
-        <XAxis {...TIME_AXIS_PROPS} ticks={trend.dayTicks} />
+        <XAxis {...timeAxisPropsInLocale(locale)} ticks={trend.dayTicks} />
         <YAxis
           {...VALUE_AXIS_PROPS}
           domain={trend.domain}

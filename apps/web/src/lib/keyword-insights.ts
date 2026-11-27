@@ -2,9 +2,17 @@ import {
   KEYWORD_MIN_RELEVANCE,
   type TrackedKeywordItem,
 } from "@asobeast/shared";
-import { pluralize } from "./format";
+import { createTranslator } from "next-intl";
+import enKeywords from "../../messages/en/keywords.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import { staleCheckDay } from "./keyword-checks";
 import { hasFloorAnswer, scoreValue, shownScore } from "./keyword-scores";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywords",
+  messages: { keywords: enKeywords },
+});
 
 export const KEYWORD_INSIGHTS = [
   "dropping",
@@ -16,11 +24,18 @@ export const KEYWORD_INSIGHTS = [
 export type KeywordInsight = (typeof KEYWORD_INSIGHTS)[number];
 
 export const INSIGHT_LABELS: Record<KeywordInsight, string> = {
-  dropping: "Dropping",
-  pageOneClose: "Page 1 close",
-  beatable: "Beatable",
-  notInListing: "Not in listing",
+  dropping: enKeywords.insights.labels.dropping,
+  pageOneClose: enKeywords.insights.labels.pageOneClose,
+  beatable: enKeywords.insights.labels.beatable,
+  notInListing: enKeywords.insights.labels.notInListing,
 };
+
+export function insightLabel(
+  insight: KeywordInsight,
+  t: MessageTranslator = english,
+): string {
+  return t(`insights.labels.${insight}`);
+}
 
 export const MAX_SHOWN_INSIGHTS = 2;
 export const DROPPING_MIN_STREAK = 3;
@@ -91,20 +106,32 @@ export const shownInsights = (
 export function insightDetail(
   row: TrackedKeywordItem,
   insight: KeywordInsight,
+  t: MessageTranslator = english,
 ): string {
   switch (insight) {
     case "dropping":
-      return `Fell on ${pluralize(row.dropStreak ?? 0, "check")} in a row`;
+      return t("insights.detail.dropping", {
+        count: row.dropStreak ?? 0,
+      });
     case "pageOneClose":
-      return `${pluralize((row.latestPosition ?? TOP_TEN) - TOP_TEN, "place")} from the top 10`;
+      return t("insights.detail.pageOneClose", {
+        count: (row.latestPosition ?? TOP_TEN) - TOP_TEN,
+      });
     case "beatable":
-      return `Difficulty ${shownDifficulty(row) ?? 0} is below popularity ${shownPopularity(row) ?? 0}`;
+      return t("insights.detail.beatable", {
+        difficulty: shownDifficulty(row) ?? 0,
+        popularity: shownPopularity(row) ?? 0,
+      });
     case "notInListing":
-      return "Relevant, and no field of your listing holds it";
+      return t("insights.detail.notInListing");
   }
 }
 
-export const insightsCsv = (row: TrackedKeywordItem, today: string): string =>
+export const insightsCsv = (
+  row: TrackedKeywordItem,
+  today: string,
+  t: MessageTranslator = english,
+): string =>
   insightsOf(row, today)
-    .map((insight) => INSIGHT_LABELS[insight])
+    .map((insight) => insightLabel(insight, t))
     .join("; ");

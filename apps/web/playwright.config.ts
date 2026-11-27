@@ -25,6 +25,13 @@ export default defineConfig({
         ...WEBKIT_SPECS,
         ...ACTION_STATE_SPECS.map((name) => `**/${name}.spec.ts`),
       ],
+      use: process.env.PLAYWRIGHT_EXECUTABLE_PATH
+        ? {
+            launchOptions: {
+              executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH,
+            },
+          }
+        : {},
     },
     {
       name: "webkit",

@@ -1,8 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import type { MessageTranslator } from "@/i18n/translator";
 import { Button } from "@/components/ui/button";
 import { addKeywords, ApiError } from "@/lib/api";
 import {
@@ -18,10 +20,10 @@ import {
   TrackCombinationsDialog,
 } from "./TrackCombinationsDialog";
 
-function errorMessage(error: unknown): string {
+function errorMessage(error: unknown, t: MessageTranslator): string {
   return error instanceof ApiError
     ? error.envelope.message
-    : "Could not track the keywords";
+    : t("combinations.trackFailed");
 }
 
 export function TrackCombinations({
@@ -33,6 +35,7 @@ export function TrackCombinations({
   id: string;
   homeCountry: string;
 }) {
+  const t = useTranslations("keywords");
   const queryClient = useQueryClient();
   const [pending, setPending] = useState<string[] | null>(null);
   const opener = useRef<HTMLButtonElement | null>(null);
@@ -56,13 +59,20 @@ export function TrackCombinations({
       table.resetRowSelection();
       setPending(null);
       if (outcome.ok) {
-        toast.success(`Tracking ${keywordCount(outcome.tracked)}`);
+        toast.success(
+          t("combinations.tracking", {
+            count: keywordCount(outcome.tracked, t),
+          }),
+        );
         return;
       }
-      toast.error(errorMessage(outcome.error), {
+      toast.error(errorMessage(outcome.error, t), {
         description:
           outcome.tracked > 0
-            ? `${outcome.tracked} of ${phrases.length} tracked before this error`
+            ? t("combinations.partialTracked", {
+                tracked: outcome.tracked,
+                total: phrases.length,
+              })
             : undefined,
       });
     },
@@ -82,7 +92,7 @@ export function TrackCombinations({
             if (!busy) confirm(selected, event.currentTarget);
           }}
         >
-          {`Track selected (${selected.length})`}
+          {t("combinations.trackSelected", { count: selected.length })}
         </Button>
       ) : null}
       <Button
@@ -94,7 +104,7 @@ export function TrackCombinations({
           if (shown.length > 0 && !busy) confirm(shown, event.currentTarget);
         }}
       >
-        {`Track all shown (${shown.length})`}
+        {t("combinations.trackShown", { count: shown.length })}
       </Button>
       <TrackCombinationsDialog
         count={pending?.length ?? 0}

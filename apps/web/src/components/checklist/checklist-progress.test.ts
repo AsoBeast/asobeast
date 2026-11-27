@@ -3,6 +3,7 @@ import type {
   WorkspaceChecklistItem,
 } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
+import { translationContext } from "@/test/translation-context";
 import {
   nextItemId,
   pillLabel,
@@ -10,6 +11,9 @@ import {
   progressAnnouncement,
   ringFraction,
 } from "./checklist-progress";
+
+const en = translationContext("en", "settings").translator;
+const zh = translationContext("zh-CN", "settings").translator;
 
 const item = (
   id: WorkspaceChecklistItem["id"],
@@ -51,31 +55,38 @@ describe("pillVisible", () => {
 
 describe("pillLabel", () => {
   it("counts the done items of the total", () => {
-    expect(pillLabel(2, 8)).toBe("2 of 8 done");
+    expect(pillLabel(2, 8, en)).toBe("2 of 8 done");
+    expect(pillLabel(2, 8, zh)).toBe("已完成 2 / 8");
   });
 });
 
 describe("progressAnnouncement", () => {
   it("announces nothing on the first render", () => {
-    expect(progressAnnouncement(null, { done: 2, total: 8 })).toBeNull();
+    expect(progressAnnouncement(null, { done: 2, total: 8 }, en)).toBeNull();
   });
 
   it("announces nothing when the progress did not change", () => {
     expect(
-      progressAnnouncement({ done: 2, total: 8 }, { done: 2, total: 8 }),
+      progressAnnouncement({ done: 2, total: 8 }, { done: 2, total: 8 }, en),
     ).toBeNull();
   });
 
   it("announces a new done item", () => {
     expect(
-      progressAnnouncement({ done: 2, total: 8 }, { done: 3, total: 8 }),
+      progressAnnouncement({ done: 2, total: 8 }, { done: 3, total: 8 }, en),
     ).toBe("Setup checklist: 3 of 8 done");
   });
 
   it("announces a total that moved", () => {
     expect(
-      progressAnnouncement({ done: 1, total: 8 }, { done: 1, total: 7 }),
+      progressAnnouncement({ done: 1, total: 8 }, { done: 1, total: 7 }, en),
     ).toBe("Setup checklist: 1 of 7 done");
+  });
+
+  it("announces progress in Chinese", () => {
+    expect(
+      progressAnnouncement({ done: 2, total: 8 }, { done: 3, total: 8 }, zh),
+    ).toBe("设置清单：已完成 3 / 8");
   });
 });
 

@@ -1,6 +1,7 @@
 "use client";
 
 import type { Store } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { CountrySelect } from "@/components/CountrySelect";
 import { Label } from "@/components/ui/label";
 import {
@@ -17,19 +18,15 @@ import type {
   FileView,
 } from "@/lib/csv-import/parse-keyword-file";
 import { ALL_APPS, type FileScope } from "@/lib/csv-import/scope";
-import { formatNumber } from "@/lib/format";
 
-const FIELD_LABELS: Record<ImportField, string> = {
-  keyword: "Keyword",
-  country: "Country",
-  tags: "Tags",
-  note: "Note",
+const FIELD_KEYS: Record<ImportField, string> = {
+  keyword: "keyword",
+  country: "country",
+  tags: "tags",
+  note: "note",
 };
 
 const NONE = "none";
-
-const rowCount = (rows: number): string =>
-  `${formatNumber(rows)} row${rows === 1 ? "" : "s"}`;
 
 export function ImportMapping({
   store,
@@ -50,6 +47,9 @@ export function ImportMapping({
   onViewChange: (view: FileView) => void;
   disabled: boolean;
 }) {
+  const t = useTranslations("keywords");
+  const fieldLabel = (field: ImportField) => t(`import.${FIELD_KEYS[field]}`);
+  const rowCount = (rows: number) => t("import.rowCount", { count: rows });
   const pick = (field: ImportField, value: string) =>
     onViewChange({
       ...view,
@@ -64,14 +64,18 @@ export function ImportMapping({
       disabled={disabled}
       className="flex flex-col gap-3 rounded-lg border p-3"
     >
-      <legend className="px-1 text-body font-medium">Columns</legend>
+      <legend className="px-1 text-body font-medium">
+        {t("import.columns")}
+      </legend>
       <div className="flex items-center gap-2">
         <Switch
           id="keyword-import-header"
           checked={view.hasHeader}
           onCheckedChange={(hasHeader) => onViewChange({ ...view, hasHeader })}
         />
-        <Label htmlFor="keyword-import-header">First row is a header</Label>
+        <Label htmlFor="keyword-import-header">
+          {t("import.firstRowHeader")}
+        </Label>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {IMPORT_FIELDS.map((field) => {
@@ -79,20 +83,24 @@ export function ImportMapping({
           const id = `keyword-import-column-${field}`;
           return (
             <div key={field} className="flex flex-col gap-1.5">
-              <Label htmlFor={id}>{FIELD_LABELS[field]}</Label>
+              <Label htmlFor={id}>{fieldLabel(field)}</Label>
               <Select
                 value={value === null ? NONE : String(value)}
                 onValueChange={(next) => pick(field, next)}
               >
                 <SelectTrigger
                   id={id}
-                  aria-label={`${FIELD_LABELS[field]} column`}
+                  aria-label={t("import.columnLabel", {
+                    field: fieldLabel(field),
+                  })}
                 >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {field === "keyword" ? null : (
-                    <SelectItem value={NONE}>Not in the file</SelectItem>
+                    <SelectItem value={NONE}>
+                      {t("import.notInFile")}
+                    </SelectItem>
                   )}
                   {options.map((option) => (
                     <SelectItem key={option.index} value={String(option.index)}>
@@ -108,21 +116,27 @@ export function ImportMapping({
       </div>
       {view.hasHeader && scope.apps.length > 1 ? (
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="keyword-import-app">App to import</Label>
+          <Label htmlFor="keyword-import-app">{t("import.appToImport")}</Label>
           <Select
             value={view.app ?? ""}
             onValueChange={(app) => onViewChange({ ...view, app })}
           >
-            <SelectTrigger id="keyword-import-app" aria-label="App to import">
-              <SelectValue placeholder="Choose an app" />
+            <SelectTrigger
+              id="keyword-import-app"
+              aria-label={t("import.appToImport")}
+            >
+              <SelectValue placeholder={t("import.chooseApp")} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL_APPS}>
-                {`All apps (${rowCount(scope.rows)})`}
+                {t("import.allApps", { rows: rowCount(scope.rows) })}
               </SelectItem>
               {scope.apps.map((app) => (
                 <SelectItem key={app.value} value={app.value}>
-                  {`${app.label} (${rowCount(app.rows)})`}
+                  {t("import.appRows", {
+                    app: app.label,
+                    rows: rowCount(app.rows),
+                  })}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -131,14 +145,14 @@ export function ImportMapping({
       ) : null}
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="keyword-import-market">
-          Market for rows without a country
+          {t("import.fallbackMarket")}
         </Label>
         <CountrySelect
           id="keyword-import-market"
           store={store}
           value={market}
           onChange={onMarketChange}
-          ariaLabel="Market for rows without a country"
+          ariaLabel={t("import.fallbackMarket")}
         />
       </div>
     </fieldset>

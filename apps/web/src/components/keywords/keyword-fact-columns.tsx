@@ -1,5 +1,8 @@
 "use client";
 
+import { createTranslator } from "next-intl";
+import enKeywords from "../../../messages/en/keywords.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import { InfoTip } from "@/components/ui/info-tip";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import { nullsLast } from "@/lib/table/sorting";
@@ -12,56 +15,72 @@ import {
   RevealCell,
   VolatilityCell,
 } from "./keyword-cells";
-import { REVEAL_WORDS, revealLabel, revealRank } from "./score-signals";
+import { revealLabel, revealRank, revealWords } from "./score-signals";
 import { TopAppsCell } from "./TopAppsCell";
 import {
   keywordColumnHelper as columnHelper,
   SORTABLE,
 } from "./keyword-column-helper";
 
-export function addedColumn() {
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywords",
+  messages: { keywords: enKeywords },
+});
+
+export function addedColumn(t: MessageTranslator = english) {
   return columnHelper.accessor((row) => nullsLast(row.trackedAt ?? null), {
     id: "added",
-    meta: { label: "Added", hiddenByDefault: true },
+    meta: { label: t("table.added"), hiddenByDefault: true },
     ...SORTABLE,
     sortDescFirst: true,
-    header: ({ column }) => <SortableHeader column={column} label="Added" />,
+    header: ({ column }) => (
+      <SortableHeader column={column} label={t("table.added")} />
+    ),
     cell: ({ row }) => <AddedCell trackedAt={row.original.trackedAt ?? null} />,
   });
 }
 
-export function revealColumn() {
+export function revealColumn(t: MessageTranslator = english) {
+  const words = revealWords(t);
   return columnHelper.accessor(
     (row) => nullsLast(revealRank(row.scoreSignals ?? null)),
     {
       id: "reveal",
-      meta: { label: "Reveal", hiddenByDefault: true },
+      meta: { label: t("table.reveal"), hiddenByDefault: true },
       ...SORTABLE,
       sortDescFirst: false,
       header: ({ column }) => (
         <span className="inline-flex items-center gap-1">
-          <SortableHeader column={column} label="Reveal" />
+          <SortableHeader column={column} label={t("table.reveal")} />
           <InfoTip
-            label="About the reveal"
-            title="When the store suggests the keyword"
-            summary={`How many letters a shopper types before the store suggests this keyword, and at which position of the suggestions. ${REVEAL_WORDS.full} means the store only suggests it once the whole phrase is typed, and ${REVEAL_WORDS.absent} means it never does. ${REVEAL_WORDS.dash} means the store could not answer, or the keyword has no stored score yet.`}
+            label={t("table.aboutReveal")}
+            title={t("table.revealTitle")}
+            summary={t("table.revealSummary", {
+              full: words.full,
+              absent: words.absent,
+              dash: words.dash,
+            })}
           />
         </span>
       ),
       cell: ({ row }) => (
-        <RevealCell label={revealLabel(row.original.scoreSignals ?? null)} />
+        <RevealCell
+          label={revealLabel(row.original.scoreSignals ?? null, t)}
+          t={t}
+        />
       ),
     },
   );
 }
 
-export function competitorsColumn() {
+export function competitorsColumn(t: MessageTranslator = english) {
   return columnHelper.accessor(
     (row) => nullsLast(row.competitorsInTop10 ?? null),
     {
       id: "competitors",
       meta: {
-        label: "Competitors in top 10",
+        label: t("table.competitorsTop10"),
         hiddenByDefault: true,
         numeric: true,
       },
@@ -69,11 +88,11 @@ export function competitorsColumn() {
       sortDescFirst: true,
       header: ({ column }) => (
         <span className="inline-flex items-center gap-1">
-          <SortableHeader column={column} label="Competitors in top 10" />
+          <SortableHeader column={column} label={t("table.competitorsTop10")} />
           <InfoTip
-            label="About competitors in the top 10"
-            title="Competitors in the top 10"
-            summary="How many of your competitors rank in the top 10 of this keyword's newest stored search results. A dash means you track no competitors, or the keyword has no snapshot from today or yesterday."
+            label={t("table.aboutCompetitorsTop10")}
+            title={t("table.competitorsTop10Title")}
+            summary={t("table.competitorsTop10Summary")}
           />
         </span>
       ),
@@ -86,15 +105,19 @@ export function competitorsColumn() {
   );
 }
 
-export function insightsColumn(today: string, multiMarket: boolean) {
+export function insightsColumn(
+  today: string,
+  multiMarket: boolean,
+  t: MessageTranslator = english,
+) {
   return columnHelper.accessor((row) => insightsOf(row, today).length, {
     id: "insights",
-    meta: { label: "Insights" },
+    meta: { label: t("table.insights") },
     enableSorting: false,
     header: () => (
       <span className="inline-flex items-center gap-1">
-        <span>Insights</span>
-        <InsightsTip />
+        <span>{t("table.insights")}</span>
+        <InsightsTip t={t} />
       </span>
     ),
     cell: ({ row }) => (
@@ -102,24 +125,29 @@ export function insightsColumn(today: string, multiMarket: boolean) {
         keyword={row.original}
         today={today}
         multiMarket={multiMarket}
+        t={t}
       />
     ),
   });
 }
 
-export function volatilityColumn() {
+export function volatilityColumn(t: MessageTranslator = english) {
   return columnHelper.accessor((row) => nullsLast(row.serpVolatility7d), {
     id: "volatility",
-    meta: { label: "Volatility", numeric: true, hiddenByDefault: true },
+    meta: {
+      label: t("table.volatility"),
+      numeric: true,
+      hiddenByDefault: true,
+    },
     ...SORTABLE,
     sortDescFirst: true,
     header: ({ column }) => (
       <span className="inline-flex items-center gap-1">
-        <SortableHeader column={column} label="Volatility" />
+        <SortableHeader column={column} label={t("table.volatility")} />
         <InfoTip
-          label="About volatility"
-          title="Volatility"
-          summary="How much the top 10 changed day to day over the last week. High churn means rankings here are unstable."
+          label={t("table.aboutVolatility")}
+          title={t("table.volatilityTitle")}
+          summary={t("table.volatilitySummary")}
         />
       </span>
     ),
@@ -127,16 +155,20 @@ export function volatilityColumn() {
   });
 }
 
-export function topAppsColumn(onOpenSerp: (keywordId: string) => void) {
+export function topAppsColumn(
+  onOpenSerp: (keywordId: string) => void,
+  t: MessageTranslator = english,
+) {
   return columnHelper.accessor((row) => row.topApps ?? null, {
     id: "topApps",
-    meta: { label: "Top apps" },
+    meta: { label: t("table.topApps") },
     enableSorting: false,
-    header: "Top apps",
+    header: () => <span>{t("table.topApps")}</span>,
     cell: ({ row }) => (
       <TopAppsCell
         keyword={row.original}
         onOpen={() => onOpenSerp(row.original.keywordId)}
+        t={t}
       />
     ),
   });

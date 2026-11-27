@@ -1,5 +1,9 @@
+"use client";
+
 import type { AppEventRef, ChangeEventItem, StoryRef } from "@asobeast/shared";
-import { CHANGE_FIELD_LABELS } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
+import { changeFieldLabel } from "@/lib/change-field-label";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
 import {
   eventMeta,
@@ -29,16 +33,18 @@ function EventGroup({
   refs: AppEventRef[];
   tone: string;
 }) {
+  const t = useTranslations("changes");
+  const locale = useAppLocale();
   if (refs.length === 0) return null;
   return (
     <span className="flex gap-3">
       <GroupLabel label={label} />
       <span className="flex min-w-0 flex-col gap-0.5">
         {refs.map((ref) => {
-          const meta = eventMeta(ref);
+          const meta = eventMeta(ref, t, locale);
           return (
             <span key={ref.appEventId} className="wrap-anywhere">
-              <span className={tone}>{eventTitle(ref)}</span>
+              <span className={tone}>{eventTitle(ref, t)}</span>
               {meta ? <span className={META_TONE}>{` · ${meta}`}</span> : null}
             </span>
           );
@@ -57,6 +63,7 @@ function StoryGroup({
   refs: StoryRef[];
   tone: string;
 }) {
+  const t = useTranslations("changes");
   if (refs.length === 0) return null;
   return (
     <span className="flex gap-3">
@@ -70,7 +77,7 @@ function StoryGroup({
               {kicker ? (
                 <span className={META_TONE}>{`${kicker} · `}</span>
               ) : null}
-              <span className={tone}>{storyTitle(ref)}</span>
+              <span className={tone}>{storyTitle(ref, t)}</span>
             </span>
           );
         })}
@@ -86,9 +93,12 @@ export function StoreChangeValue({
   event: ChangeEventItem;
   dense: boolean;
 }) {
+  const t = useTranslations("changes");
   const detail = event.detail;
-  const fallback = `${CHANGE_FIELD_LABELS[event.field]} updated`;
-  const summary = detail ? storeChangeSummary(event) : "";
+  const fallback = t("value.updated", {
+    field: changeFieldLabel(event.field, t),
+  });
+  const summary = detail ? storeChangeSummary(event, t) : "";
 
   if (dense || summary === "") {
     return (
@@ -99,8 +109,16 @@ export function StoreChangeValue({
   if (detail?.kind === "events") {
     return (
       <span className="flex min-w-0 flex-col gap-1">
-        <EventGroup label="Removed" refs={detail.removed} tone={REMOVED_TONE} />
-        <EventGroup label="Added" refs={detail.added} tone={ADDED_TONE} />
+        <EventGroup
+          label={t("value.removed")}
+          refs={detail.removed}
+          tone={REMOVED_TONE}
+        />
+        <EventGroup
+          label={t("value.added")}
+          refs={detail.added}
+          tone={ADDED_TONE}
+        />
       </span>
     );
   }
@@ -108,8 +126,16 @@ export function StoreChangeValue({
   if (detail?.kind === "featuring") {
     return (
       <span className="flex min-w-0 flex-col gap-1">
-        <StoryGroup label="Removed" refs={detail.removed} tone={REMOVED_TONE} />
-        <StoryGroup label="Added" refs={detail.added} tone={ADDED_TONE} />
+        <StoryGroup
+          label={t("value.removed")}
+          refs={detail.removed}
+          tone={REMOVED_TONE}
+        />
+        <StoryGroup
+          label={t("value.added")}
+          refs={detail.added}
+          tone={ADDED_TONE}
+        />
       </span>
     );
   }

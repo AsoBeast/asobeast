@@ -1,14 +1,30 @@
 import type { KeywordSuggestionStrategy } from "@asobeast/shared";
-import { pluralize } from "@/lib/format";
+import { createTranslator } from "next-intl";
+import enKeywords from "../../../messages/en/keywords.json";
+import type { MessageTranslator } from "@/i18n/translator";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywords",
+  messages: { keywords: enKeywords },
+});
 
 export const NOTHING_TICKED: ReadonlySet<string> = new Set();
 
-export function trackSelectedLabel(count: number): string {
-  return count === 0 ? "Track selected" : `Track ${count} selected`;
+export function trackSelectedLabel(
+  count: number,
+  t: MessageTranslator = english,
+): string {
+  return count === 0
+    ? t("suggestions.trackSelected")
+    : t("suggestions.trackSelectedCount", { count });
 }
 
-export function trackingSelectedMessage(count: number): string {
-  return `Tracking ${pluralize(count, "keyword")}. Positions arrive within minutes.`;
+export function trackingSelectedMessage(
+  count: number,
+  t: MessageTranslator = english,
+): string {
+  return t("suggestions.trackingSelected", { count });
 }
 
 export function withTick(
@@ -22,7 +38,7 @@ export function withTick(
   return next;
 }
 
-export const TRACK_SELECTED_FAILED = "Could not track the selected keywords";
+export const TRACK_SELECTED_FAILED = enKeywords.suggestions.trackSelectedFailed;
 
 export interface SuggestionSelection {
   scope: string;

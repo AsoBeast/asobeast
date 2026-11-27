@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -36,23 +37,25 @@ import {
   apiErrorMessage,
 } from "@/lib/api";
 import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
-import { formatDateTime, pluralize } from "@/lib/format";
+import { formatDateTimeInLocale } from "@/lib/format";
 import {
   invalidateWorkspaceDeletion,
   workspaceDeletionOptions,
 } from "@/lib/queries";
 import {
-  DELETION_REASON_CHOICES,
-  UNANSWERED_REASON,
+  deletionReasonChoices,
   deletionReasonOf,
+  UNANSWERED_REASON,
 } from "@/lib/deletion-reasons";
 import { useSingleFlight } from "@/lib/single-flight";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { PanelBody, SettingsPanel } from "./SettingsPanel";
 import { PanelSkeleton } from "./skeletons";
 
 const DELETION_FOCUS_KEY = "workspace-deletion";
 
 function ScheduleDeletionDialog({ graceDays }: { graceDays: number }) {
+  const t = useTranslations("workspace");
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
@@ -62,12 +65,11 @@ function ScheduleDeletionDialog({ graceDays }: { graceDays: number }) {
   const schedule = useMutation({
     mutationFn: () => scheduleWorkspaceDeletion(deletionReasonOf(reason)),
     onSuccess: () => {
-      toast.success("Workspace scheduled for deletion");
+      toast.success(t("scheduledToast"));
       invalidateWorkspaceDeletion(queryClient);
       setOpen(false);
     },
-    onError: (err) =>
-      toast.error(apiErrorMessage(err, "Could not schedule the deletion.")),
+    onError: (err) => toast.error(apiErrorMessage(err, t("scheduleError"))),
   });
   const scheduleOnce = useSingleFlight(schedule);
   const pending = schedule.isPending;
@@ -83,27 +85,24 @@ function ScheduleDeletionDialog({ graceDays }: { graceDays: number }) {
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogTrigger asChild>
         <Button ref={claimFocus} variant="destructive" size="sm">
-          Delete workspace
+          {t("deleteWorkspace")}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete this workspace?</AlertDialogTitle>
+          <AlertDialogTitle>{t("confirmTitle")}</AlertDialogTitle>
           <AlertDialogDescription>
-            Every app, keyword and history in it is erased after{" "}
-            {pluralize(graceDays, "day")}. You can cancel until then.
+            {t("confirmDescription", { days: graceDays })}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="workspace-deletion-reason">
-            Why are you leaving? Optional
-          </Label>
+          <Label htmlFor="workspace-deletion-reason">{t("reasonLabel")}</Label>
           <Select value={reason} onValueChange={setReason}>
             <SelectTrigger id="workspace-deletion-reason" className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {DELETION_REASON_CHOICES.map((choice) => (
+              {deletionReasonChoices(t).map((choice) => (
                 <SelectItem key={choice.value} value={choice.value}>
                   {choice.label}
                 </SelectItem>
@@ -113,7 +112,7 @@ function ScheduleDeletionDialog({ graceDays }: { graceDays: number }) {
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="workspace-deletion-confirm">
-            Type {DELETION_CONFIRMATION} to confirm
+            {t("confirmLabel", { confirmation: DELETION_CONFIRMATION })}
           </Label>
           <Input
             id="workspace-deletion-confirm"
@@ -125,9 +124,9 @@ function ScheduleDeletionDialog({ graceDays }: { graceDays: number }) {
         </div>
         <ConfirmActionFooter
           pending={pending}
-          label="Delete workspace"
-          pendingLabel="Scheduling…"
-          cancelLabel="Keep workspace"
+          label={t("deleteWorkspace")}
+          pendingLabel={t("scheduling")}
+          cancelLabel={t("keepWorkspace")}
           blocked={typed !== DELETION_CONFIRMATION}
           onConfirm={() => {
             armFocusHandoff(DELETION_FOCUS_KEY);
@@ -140,16 +139,16 @@ function ScheduleDeletionDialog({ graceDays }: { graceDays: number }) {
 }
 
 function CancelDeletionButton() {
+  const t = useTranslations("workspace");
   const queryClient = useQueryClient();
   const claimFocus = useFocusClaim(DELETION_FOCUS_KEY);
   const cancel = useMutation({
     mutationFn: cancelWorkspaceDeletion,
     onSuccess: () => {
-      toast.success("Deletion cancelled");
+      toast.success(t("cancelledToast"));
       invalidateWorkspaceDeletion(queryClient);
     },
-    onError: (err) =>
-      toast.error(apiErrorMessage(err, "Could not cancel the deletion.")),
+    onError: (err) => toast.error(apiErrorMessage(err, t("cancelError"))),
   });
   const cancelOnce = useSingleFlight(cancel);
 
@@ -165,34 +164,37 @@ function CancelDeletionButton() {
         cancelOnce();
       }}
     >
-      {cancel.isPending ? "Cancelling…" : "Cancel deletion"}
+      {cancel.isPending ? t("cancelling") : t("cancelDeletion")}
     </Button>
   );
 }
 
 function ScheduledStatus({ deletion }: { deletion: WorkspaceDeletionStatus }) {
+  const t = useTranslations("workspace");
+  const locale = useAppLocale();
+  const requester = deletion.requestedBy ?? t("ownerFallback");
+  const scheduled = deletion.requestedAt
+    ? t("scheduledOn", {
+        requester,
+        date: formatDateTimeInLocale(deletion.requestedAt, locale),
+      })
+    : t("scheduled", { requester });
+  const due = deletion.dueAt
+    ? formatDateTimeInLocale(deletion.dueAt, locale)
+    : t("dueDateFallback");
   return (
     <p className="text-body">
-      {deletion.requestedBy ?? "The owner"} scheduled this workspace for
-      deletion
-      {deletion.requestedAt
-        ? ` on ${formatDateTime(deletion.requestedAt)}`
-        : ""}
-      . It is erased on or after{" "}
-      {deletion.dueAt ? formatDateTime(deletion.dueAt) : "the due date"}.
+      <span>{scheduled}</span>{" "}
+      <span>{t("erasedOnOrAfter", { date: due })}</span>
     </p>
   );
 }
 
 function OperatorNote() {
+  const t = useTranslations("workspace");
   return (
     <p className="max-w-[70ch] text-body text-muted-foreground">
-      This workspace holds the platform operator. It cannot be deleted while
-      other accounts exist, because the admin area, the queue dashboard and the
-      support tools would go with it and no account could take them over.
-      AsoBeast has no hand over yet. To clear your own data, delete its apps and
-      keywords instead. Deleting this workspace is allowed only while yours is
-      the only account, and it resets the instance.
+      {t("operatorNote")}
     </p>
   );
 }
@@ -206,6 +208,7 @@ function DeletionControl({ deletion }: { deletion: WorkspaceDeletionStatus }) {
 }
 
 export function WorkspaceDeletionCard() {
+  const t = useTranslations("workspace");
   const { user, isOperator, isLoading } = useAuth();
   const { data: deletion, isPending } = useQuery(workspaceDeletionOptions);
 
@@ -219,21 +222,18 @@ export function WorkspaceDeletionCard() {
   return (
     <SettingsPanel
       as="h2"
-      title="Delete workspace"
+      title={t("title")}
       action={isOwner ? <DeletionControl deletion={deletion} /> : null}
     >
       <PanelBody>
         <p className="max-w-[70ch] text-body text-muted-foreground">
-          Deleting erases every app, keyword and history in this workspace after
-          a grace period of {pluralize(deletion.graceDays, "day")}, during which
-          the owner can cancel it.
+          {t("body", { days: deletion.graceDays })}
         </p>
         {isOperator ? <OperatorNote /> : null}
         {deletion.scheduled ? <ScheduledStatus deletion={deletion} /> : null}
         {isOwner ? null : (
           <p className="text-body text-muted-foreground">
-            Only the workspace owner can{" "}
-            {deletion.scheduled ? "cancel this" : "delete this workspace"}.
+            {deletion.scheduled ? t("memberScheduled") : t("memberUnscheduled")}
           </p>
         )}
       </PanelBody>

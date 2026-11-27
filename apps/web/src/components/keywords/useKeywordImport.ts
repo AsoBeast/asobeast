@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { type KeywordImportRequest, type Store } from "@asobeast/shared";
@@ -15,6 +16,7 @@ import {
   type KeywordFile,
   type MappedFile,
 } from "@/lib/csv-import/parse-keyword-file";
+import type { MessageTranslator } from "@/i18n/translator";
 import {
   importAction,
   importParts,
@@ -38,32 +40,28 @@ import { useCachedQueryData } from "@/lib/use-cached-query-data";
 
 const MAX_FILE_BYTES = 2_000_000;
 
-const FILE_TOO_LARGE = "That file is too large to be a keyword list.";
-
-const FILE_UNREADABLE =
-  "That file could not be read. Choose it again, or save a copy of it and choose the copy.";
-
-const RACE_LOST =
-  "Your plan's keyword limit was reached by another change. Nothing was imported. The review has been refreshed.";
-
-const REVIEW_UNREACHABLE = "Could not reach the api to review this file";
-
 interface Loaded {
   name: string;
   file: KeywordFile;
 }
 
-function previewMessage(error: Error | null): string | null {
+function previewMessage(
+  error: Error | null,
+  t: MessageTranslator,
+): string | null {
   if (error === null) return null;
   return error instanceof ApiError
     ? error.envelope.message
-    : REVIEW_UNREACHABLE;
+    : t("import.reviewUnreachable");
 }
 
-function submitMessage(error: Error | null): string | null {
+function submitMessage(
+  error: Error | null,
+  t: MessageTranslator,
+): string | null {
   if (error === null) return null;
   if (error instanceof ApiError) {
-    return error.envelope.quota ? RACE_LOST : error.envelope.message;
+    return error.envelope.quota ? t("import.raceLost") : error.envelope.message;
   }
   return error.message;
 }
@@ -87,7 +85,11 @@ const sameRows = (
   previous.rows.length === next.rows.length &&
   previous.rows.every((row, index) => row === next.rows[index]);
 
-function useImportParts(mapped: MappedFile | null, market: string) {
+function useImportParts(
+  mapped: MappedFile | null,
+  market: string,
+  t: MessageTranslator,
+) {
   const [index, setIndex] = useState(0);
   const refusal = useMemo(
     () => (mapped ? refuseImport(mapped, market) : null),
@@ -113,7 +115,7 @@ function useImportParts(mapped: MappedFile | null, market: string) {
     progress,
     current,
     lines: current?.lines ?? [],
-    notice: mapped ? partNotice(parts, progress, mapped.lines) : null,
+    notice: mapped ? partNotice(parts, progress, mapped.lines, t) : null,
     setIndex,
   };
 }
@@ -124,6 +126,7 @@ export function useKeywordImport(
   homeMarket: string,
   onImported: () => void,
 ) {
+  const t = useTranslations("keywords");
   const queryClient = useQueryClient();
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [view, setView] = useState<FileView | null>(null);
@@ -143,10 +146,10 @@ export function useKeywordImport(
     [loaded, view, store],
   );
   const appsToChoose = appsStillToChoose(loaded, view, mapped);
-  const partFlow = useImportParts(mapped, market);
+  const partFlow = useImportParts(mapped, market, t);
   const { refusal, current, progress } = partFlow;
   const unknownMarket =
-    mapped && !refusal ? marketRefusal(store, market) : null;
+    mapped && !refusal ? marketRefusal(store, market, t) : null;
   const request = useMemo<KeywordImportRequest | null>(
     () =>
       current && !unknownMarket
@@ -182,12 +185,12 @@ export function useKeywordImport(
 
   const submit = useMutation({
     mutationFn: () => {
-      if (request === null) throw new Error("There is nothing to import");
+      if (request === null) throw new Error(t("import.nothingToSend"));
       return importKeywords(appId, request);
     },
     onSuccess: (outcome) => {
       invalidateKeywordMutation(queryClient, appId);
-      const { title, description } = importToast(outcome, progress);
+      const { title, description } = importToast(outcome, progress, t);
       toast.success(title, { description });
       if (progress.index + 1 < progress.count) {
         partFlow.setIndex(progress.index + 1);
@@ -205,7 +208,7 @@ export function useKeywordImport(
     if (!file) return;
     submit.reset();
     if (file.size > MAX_FILE_BYTES) {
-      forget(FILE_TOO_LARGE);
+      forget(t("import.fileTooLarge"));
       return;
     }
     latestChoice.current += 1;
@@ -217,7 +220,7 @@ export function useKeywordImport(
       setLoaded({ name: file.name, file: parsed });
       changeView(initialView(parsed, target));
     } catch {
-      if (choice === latestChoice.current) forget(FILE_UNREADABLE);
+      if (choice === latestChoice.current) forget(t("import.fileUnreadable"));
     }
   }
 
@@ -229,9 +232,9 @@ export function useKeywordImport(
 
   const blocking =
     readError ??
-    (refusal ? refusalMessage(refusal) : null) ??
+    (refusal ? refusalMessage(refusal, t) : null) ??
     unknownMarket ??
-    previewMessage(preview.error);
+    previewMessage(preview.error, t);
   const result = request === null ? null : (preview.data ?? null);
   const ready =
     appsToChoose === 0 &&
@@ -256,7 +259,7 @@ export function useKeywordImport(
     result,
     busy: preview.isFetching,
     importing: submit.isPending,
-    error: blocking ?? submitMessage(submit.error),
+    error: blocking ?? submitMessage(submit.error, t),
     appsToChoose,
     progress,
     action: ready ? importAction(result, progress) : null,

@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import { DeltaChip } from "@/components/ui/delta-chip";
 import { movementText, type Moved } from "./movement-text";
 
@@ -10,8 +13,13 @@ function Shown({
   period: string;
   compact: boolean;
 }) {
+  const t = useTranslations("format");
   if (entry.movement === "new") {
-    return <span className="font-medium text-signal-up">New</span>;
+    return (
+      <span className="font-medium text-signal-up">
+        {t("movement.newShort")}
+      </span>
+    );
   }
   if (entry.movement === "none" || entry.movement === "same") {
     return <span className="text-muted-foreground">—</span>;
@@ -21,7 +29,7 @@ function Shown({
       <DeltaChip value={entry.delta} period={period} />
       {compact ? null : (
         <span className="text-caption text-muted-foreground">
-          {`from #${entry.previous}`}
+          {t("movement.from", { previous: entry.previous ?? "—" })}
         </span>
       )}
     </span>
@@ -39,12 +47,13 @@ export function MovementCell({
   noneText?: string;
   compact?: boolean;
 }) {
+  const t = useTranslations("format");
   return (
     <>
       <span aria-hidden>
         <Shown entry={entry} period={period} compact={compact} />
       </span>
-      <span className="sr-only">{movementText(entry, noneText)}</span>
+      <span className="sr-only">{movementText(entry, noneText, t)}</span>
     </>
   );
 }

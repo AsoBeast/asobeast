@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useId } from "react";
+import { useTranslations } from "next-intl";
 import { LIST_HEAD, PANEL_HEADER } from "@/components/layout/panel-classes";
 import {
   BREAKDOWN_BUTTON_ROW,
@@ -13,7 +14,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { formatNumber, pluralize } from "@/lib/format";
+import { formatNumberInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
+import type { MessageTranslator } from "@/i18n/translator";
 import { cn } from "@/lib/utils";
 import { fieldCounts, fieldGroupLabel, type FieldCount } from "./change-fields";
 import { FieldBreakdownSkeleton } from "./skeletons";
@@ -21,10 +24,15 @@ import { useChangeEvents, useChangeFilter } from "./use-change-view";
 
 const COLUMNS = "grid grid-cols-[minmax(0,1fr)_3.5rem_6rem] gap-3 px-2";
 
-const rowName = (row: FieldCount): string =>
-  `${fieldGroupLabel(row.group)}: ${row.yours} yours, ${row.competitors} from competitors`;
+const rowName = (row: FieldCount, t: MessageTranslator): string =>
+  t("breakdown.rowAria", {
+    field: fieldGroupLabel(row.group, t),
+    yours: row.yours,
+    competitors: row.competitors,
+  });
 
 function Count({ value }: { value: number }) {
+  const locale = useAppLocale();
   return (
     <span
       className={cn(
@@ -32,12 +40,13 @@ function Count({ value }: { value: number }) {
         value === 0 ? "text-faint-foreground" : null,
       )}
     >
-      {formatNumber(value)}
+      {formatNumberInLocale(value, locale)}
     </span>
   );
 }
 
 function FieldBreakdown({ id }: { id: string }) {
+  const t = useTranslations("changes");
   const headingId = useId();
   const { events, days } = useChangeEvents(id);
   const { filter, setFilter } = useChangeFilter();
@@ -50,14 +59,14 @@ function FieldBreakdown({ id }: { id: string }) {
       <Card>
         <CardHeader className={PANEL_HEADER}>
           <CardTitle asChild>
-            <h2 id={headingId}>What changed</h2>
+            <h2 id={headingId}>{t("breakdown.title")}</h2>
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-1 px-2">
           <div aria-hidden className={cn(COLUMNS, LIST_HEAD)}>
-            <span>Field</span>
-            <span className="text-right">Yours</span>
-            <span className="text-right">Competitors</span>
+            <span>{t("breakdown.field")}</span>
+            <span className="text-right">{t("owners.yours")}</span>
+            <span className="text-right">{t("owners.competitors")}</span>
           </div>
           <ul className="flex list-none flex-col p-0">
             {rows.map((row) => {
@@ -67,7 +76,7 @@ function FieldBreakdown({ id }: { id: string }) {
                   <button
                     type="button"
                     aria-pressed={selected}
-                    aria-label={rowName(row)}
+                    aria-label={rowName(row, t)}
                     onClick={() =>
                       setFilter({ field: selected ? null : row.group })
                     }
@@ -77,7 +86,7 @@ function FieldBreakdown({ id }: { id: string }) {
                       share={(row.yours + row.competitors) / largest}
                     />
                     <span className="relative truncate font-medium">
-                      {fieldGroupLabel(row.group)}
+                      {fieldGroupLabel(row.group, t)}
                     </span>
                     <Count value={row.yours} />
                     <Count value={row.competitors} />
@@ -88,7 +97,7 @@ function FieldBreakdown({ id }: { id: string }) {
           </ul>
         </CardContent>
         <CardFooter>
-          <span>{`${pluralize(events.length, "change")} in ${days} days. A row filters the list.`}</span>
+          <span>{t("breakdown.footer", { count: events.length, days })}</span>
         </CardFooter>
       </Card>
     </section>

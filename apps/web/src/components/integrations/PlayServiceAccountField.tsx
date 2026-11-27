@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -28,6 +29,7 @@ export function PlayServiceAccountField({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const t = useTranslations("integrations");
   async function choose(file: File | undefined) {
     if (!file) return;
     onChange(await file.text());
@@ -35,13 +37,13 @@ export function PlayServiceAccountField({
 
   return (
     <div className="flex flex-col gap-2">
-      <Label htmlFor="play-service-account">Service account key</Label>
+      <Label htmlFor="play-service-account">{t("serviceAccount.label")}</Label>
       <Input
         id="play-service-account"
         type="password"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        placeholder="Contents of the downloaded JSON key"
+        placeholder={t("serviceAccount.placeholder")}
         autoComplete="off"
         spellCheck={false}
         data-1p-ignore="true"
@@ -49,7 +51,7 @@ export function PlayServiceAccountField({
         data-bwignore="true"
       />
       <Label htmlFor="play-service-account-file" className="sr-only">
-        Service account key file
+        {t("serviceAccount.file")}
       </Label>
       <Input
         id="play-service-account-file"
@@ -59,9 +61,7 @@ export function PlayServiceAccountField({
         onChange={(event) => void choose(event.target.files?.[0])}
       />
       <p className="text-caption text-muted-foreground">
-        Choose the JSON key file or paste its contents. AsoBeast reads only the
-        store performance files in the bucket, and posts only the review replies
-        you send.
+        {t("serviceAccount.note")}
       </p>
     </div>
   );

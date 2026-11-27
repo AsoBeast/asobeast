@@ -1,21 +1,18 @@
 import { formatRankPosition } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
 import type { CompetitorGapKeyword } from "@asobeast/shared";
+import enCompetitors from "../../../messages/en/competitors.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import { csvFilename, downloadCsv, toCsv } from "@/lib/csv";
 import type { GapTab } from "@/lib/gap-lists";
-import { UNNAMED_COMPETITOR } from "./comparison-scores";
 
-const HEADERS = [
-  "keyword",
-  "market",
-  "competitor",
-  "theirPosition",
-  "yourPosition",
-  "popularity",
-  "difficulty",
-  "opportunity",
-];
+const english = createTranslator({
+  locale: "en",
+  namespace: "competitors",
+  messages: { competitors: enCompetitors },
+});
 
-const TAB_HEADERS: Record<GapTab, string[]> = {
+const TAB_HEADER_KEYS: Record<GapTab, string[]> = {
   gaps: [],
   winnable: [],
   threats: ["reason", "change"],
@@ -35,9 +32,10 @@ const cell = (value: number | null | undefined): string =>
 function competitorCell(
   row: CompetitorGapKeyword,
   names: ReadonlyMap<string, string | null>,
+  t: MessageTranslator,
 ): string {
   if (row.bestCompetitorId === null) return "";
-  return names.get(row.bestCompetitorId) ?? UNNAMED_COMPETITOR;
+  return names.get(row.bestCompetitorId) ?? t("unnamed");
 }
 
 function tabCells(tab: GapTab, row: CompetitorGapKeyword): string[] {
@@ -50,13 +48,25 @@ export function gapCsv(
   tab: GapTab,
   rows: readonly CompetitorGapKeyword[],
   names: ReadonlyMap<string, string | null>,
+  t: MessageTranslator = english,
 ): string {
+  const headers = [
+    t("csv.keyword"),
+    t("csv.market"),
+    t("csv.competitor"),
+    t("csv.theirPosition"),
+    t("csv.yourPosition"),
+    t("csv.popularity"),
+    t("csv.difficulty"),
+    t("csv.opportunity"),
+    ...TAB_HEADER_KEYS[tab].map((key) => t(`csv.${key}`)),
+  ];
   return toCsv(
-    [...HEADERS, ...TAB_HEADERS[tab]],
+    headers,
     rows.map((row) => [
       row.text,
       row.country ?? "",
-      competitorCell(row, names),
+      competitorCell(row, names, t),
       cell(row.bestCompetitorPosition),
       formatRankPosition(row.yourPosition),
       cell(row.volume),
@@ -74,8 +84,11 @@ export function gapFilename(tab: GapTab, appId: string): string {
 export function exportGaps(
   tab: GapTab,
   appId: string,
-  rows: readonly CompetitorGapKeyword[],
-  names: ReadonlyMap<string, string | null>,
+  data: {
+    rows: readonly CompetitorGapKeyword[];
+    names: ReadonlyMap<string, string | null>;
+  },
+  t: MessageTranslator = english,
 ): void {
-  downloadCsv(gapFilename(tab, appId), gapCsv(tab, rows, names));
+  downloadCsv(gapFilename(tab, appId), gapCsv(tab, data.rows, data.names, t));
 }

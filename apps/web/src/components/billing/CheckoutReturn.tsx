@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ApiError, reconcileBilling } from "@/lib/api";
 import { entryDestination } from "@/lib/auth-routes";
@@ -17,6 +18,7 @@ import {
   invalidateAuth,
   refetchAuth,
 } from "@/lib/queries";
+import { useAppLocale } from "@/lib/use-app-locale";
 
 const SETTLED_REFUSALS: ReadonlySet<number> = new Set([400, 401, 403, 404]);
 
@@ -47,6 +49,8 @@ function leaveForTheOwedStep(client: QueryClient): void {
 
 export function CheckoutReturn() {
   const client = useQueryClient();
+  const t = useTranslations("billing");
+  const locale = useAppLocale();
   const settled = useRef(false);
 
   useEffect(() => {
@@ -60,7 +64,7 @@ export function CheckoutReturn() {
             ...accountPlanOptions,
             staleTime: 0,
           });
-          const welcome = trialStartedToast(plan);
+          const welcome = trialStartedToast(plan, { translator: t, locale });
           if (welcome) toast.success(welcome);
           await refetchAuth(client);
           forgetCheckout();
@@ -77,7 +81,7 @@ export function CheckoutReturn() {
         },
       )
       .catch(() => invalidateAuth(client));
-  }, [client]);
+  }, [client, t, locale]);
 
   return null;
 }

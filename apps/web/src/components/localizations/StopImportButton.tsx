@@ -1,16 +1,18 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { ApiError, stopAppStoreImport } from "@/lib/api";
+import { stopAppStoreImport, apiErrorMessage } from "@/lib/api";
 import { armFocusHandoff, useFocusClaim } from "@/lib/focus-handoff";
 import { invalidateStoreImport } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 import { STORE_IMPORT_FOCUS_KEY } from "./ImportFromStoreButton";
 
 export function StopImportButton({ id }: { id: string }) {
+  const t = useTranslations("localizations");
   const queryClient = useQueryClient();
   const claimFocus = useFocusClaim(STORE_IMPORT_FOCUS_KEY);
   const stop = useMutation({
@@ -18,12 +20,7 @@ export function StopImportButton({ id }: { id: string }) {
     onSuccess: () => {
       invalidateStoreImport(queryClient, id);
     },
-    onError: (error) =>
-      toast.error(
-        error instanceof ApiError
-          ? error.envelope.message
-          : "Could not stop importing",
-      ),
+    onError: (error) => toast.error(apiErrorMessage(error, t("stop.failed"))),
   });
   const stopOnce = useSingleFlight(stop);
 
@@ -40,7 +37,7 @@ export function StopImportButton({ id }: { id: string }) {
       }}
     >
       {stop.isPending ? <Loader2 className="animate-spin" /> : null}
-      Stop importing
+      {t("stop.button")}
     </Button>
   );
 }

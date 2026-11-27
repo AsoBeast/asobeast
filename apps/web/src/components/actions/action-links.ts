@@ -1,3 +1,6 @@
+import { createTranslator } from "next-intl";
+import enActions from "../../../messages/en/actions.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import type { ActionItem } from "@asobeast/shared";
 
 export function actionHref(item: ActionItem): string {
@@ -41,16 +44,18 @@ export function actionHref(item: ActionItem): string {
   }
 }
 
-const SECTION_LABEL: Record<string, string> = {
-  metadata: "Metadata",
-  keywords: "Keywords",
-  competitors: "Competitors",
-  changes: "Changes",
-  audit: "Audit",
-  reviews: "Reviews",
-};
+const english = createTranslator({
+  locale: "en",
+  namespace: "actions",
+  messages: { actions: enActions },
+});
 
-export function actionSection(href: string): string {
+export function actionSection(
+  href: string,
+  t: MessageTranslator = english,
+): string {
   const segment = href.split("?")[0].split("/")[3] ?? "";
-  return SECTION_LABEL[segment] ?? "the app";
+  return segment in enActions.sections
+    ? t(`sections.${segment as keyof typeof enActions.sections}`)
+    : t("sections.app");
 }

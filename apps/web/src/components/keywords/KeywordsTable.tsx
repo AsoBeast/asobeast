@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import {
   utcDayOf,
@@ -21,7 +22,7 @@ import {
 } from "@/lib/search-params";
 import {
   TREND_WINDOWS,
-  trendLabel,
+  TREND_WINDOW_DAYS,
   type TrendSeries,
   type TrendState,
 } from "@/lib/trend-window";
@@ -59,6 +60,7 @@ import { useTrendSeries } from "./use-trend-series";
 import { KeywordMap } from "./map/KeywordMap";
 import { filtersNarrowMap } from "./map/map-points";
 import { useKeywordsAcrossZones } from "./map/use-map-keywords";
+import { useAppLocale } from "@/lib/use-app-locale";
 
 export function KeywordsTable({
   id,
@@ -77,6 +79,9 @@ export function KeywordsTable({
   chartedIds: readonly string[];
   onFindKeywords?: (leaving: HTMLElement) => void;
 }) {
+  const t = useTranslations("keywords");
+  const tOverview = useTranslations("overview");
+  const locale = useAppLocale();
   const [{ serp: serpId }, setSerpState] = useSerpParams();
   const showDynamics = useShowDynamics();
   const [filters, setFilters] = useQueryStates(keywordFilterParsers);
@@ -102,7 +107,10 @@ export function KeywordsTable({
     ...funnelOptions(id, FUNNEL_SERIES_DAYS, undefined),
     enabled: store === "GOOGLE_PLAY",
   });
-  const noSearchTerms = noSearchTermsFact(funnel?.noSearchTermsMonth);
+  const noSearchTerms = noSearchTermsFact(funnel?.noSearchTermsMonth, {
+    translator: tOverview,
+    locale,
+  });
 
   const rowSelection = useMemo(
     () => selectedKeywordsStillOnScreen(selection, keywords),
@@ -128,8 +136,9 @@ export function KeywordsTable({
         today,
         trend: { window: trendWindow, series, state },
         onOpenSerp: openSerp,
+        translator: t,
       }),
-    [id, store, homeCountry, multiMarket, today, trendWindow, openSerp],
+    [id, store, homeCountry, multiMarket, today, trendWindow, openSerp, t],
   );
   const shellColumns = useMemo(() => buildColumns(undefined), [buildColumns]);
 
@@ -210,20 +219,22 @@ export function KeywordsTable({
           viewChoices={[
             {
               id: "trend",
-              label: "Trend window",
+              label: t("filters.trendWindow"),
               value: trendWindow,
               onValueChange: (value) =>
                 void setTrendWindow(trendWindowParser.parse(value)),
               options: TREND_WINDOWS.map((value) => ({
                 value,
-                label: trendLabel(value),
+                label: t("table.lastDays", {
+                  days: TREND_WINDOW_DAYS[value],
+                }),
               })),
             },
           ]}
         />
         {state === "failed" ? (
           <InlineQueryError
-            message="Could not load the 30 day trend."
+            message={t("table.trendLoadFailed")}
             read={trendRead}
           />
         ) : null}
@@ -244,7 +255,7 @@ export function KeywordsTable({
                 <KeywordsDataTable
                   table={table}
                   chartedSet={chartedSet}
-                  emptyBody={exactSearchEmptyBody(filters.q)}
+                  emptyBody={exactSearchEmptyBody(filters.q, t)}
                   onClearFilters={() => void setFilters(null)}
                 />
               </KeywordSheetContext>
@@ -259,7 +270,7 @@ export function KeywordsTable({
               selectedKeywords={selectedKeywords}
               marketTags={tagsIn(keywords)}
               onClear={clearSelection}
-              onExport={() => exportKeywords(id, selectedKeywords, today)}
+              onExport={() => exportKeywords(id, selectedKeywords, today, t)}
               onShowDynamics={() => showDynamics(selectedIds)}
               fieldAction={keywordFieldAction({
                 appId: id,

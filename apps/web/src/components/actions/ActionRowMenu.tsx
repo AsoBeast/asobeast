@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { useTranslations } from "next-intl";
 import { MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import type { ActionItem, ActionUpdateRequest } from "@asobeast/shared";
@@ -30,6 +31,7 @@ export function ActionRowMenu({
   busy: boolean;
   onUpdate: (body: ActionUpdateRequest) => void;
 }) {
+  const t = useTranslations("actions");
   const menu = useBusyMenu(busy);
   const requested = useRowMenuRequest(item.id);
   const dismissTrigger = useRef<HTMLDivElement>(null);
@@ -39,7 +41,7 @@ export function ActionRowMenu({
   };
   const copyLink = async () => {
     await navigator.clipboard.writeText(`${window.location.origin}${href}`);
-    toast.success("Link copied");
+    toast.success(t("linkCopied"));
   };
 
   return (
@@ -52,7 +54,7 @@ export function ActionRowMenu({
           variant="ghost"
           size="icon-sm"
           aria-disabled={busy || undefined}
-          aria-label={`More actions for ${headline}`}
+          aria-label={t("moreActions", { headline })}
           data-command="more"
           className="size-11 @2xl/queue:size-7"
         >
@@ -78,7 +80,7 @@ export function ActionRowMenu({
       >
         {item.status === "SNOOZED" ? (
           <DropdownMenuItem onSelect={() => onUpdate({ status: "OPEN" })}>
-            Wake now
+            {t("wakeNow")}
           </DropdownMenuItem>
         ) : (
           SNOOZE_PRESET_DAYS.map((days) => (
@@ -88,7 +90,7 @@ export function ActionRowMenu({
                 onUpdate({ status: "SNOOZED", snoozedUntil: snoozeUntil(days) })
               }
             >
-              Snooze {days} days
+              {t("snoozeFor", { count: days })}
             </DropdownMenuItem>
           ))
         )}
@@ -98,7 +100,7 @@ export function ActionRowMenu({
         />
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => void copyLink()}>
-          Copy link
+          {t("copyLink")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { Toaster } from "@/components/ui/sonner";
 import { Providers } from "./providers";
 import "@fontsource-variable/geist/wght.css";
@@ -6,23 +7,27 @@ import "./globals.css";
 import { CheckoutReturn } from "@/components/billing/CheckoutReturn";
 import { STREAMING_SEGMENT_GUARD } from "@/lib/streaming-segment-guard";
 import { PRODUCT_NAME } from "@/lib/brand";
+import { DEFAULT_LOCALE, isLocale } from "@/lib/locale";
 
-export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
-  ),
-  applicationName: PRODUCT_NAME,
-  title: {
-    default: PRODUCT_NAME,
-    template: `%s · ${PRODUCT_NAME}`,
-  },
-  description: "Open-source App Store Optimization toolkit",
-  appleWebApp: {
-    capable: true,
-    title: PRODUCT_NAME,
-    statusBarStyle: "black-translucent",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("seo");
+  return {
+    metadataBase: new URL(
+      process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+    ),
+    applicationName: PRODUCT_NAME,
+    title: {
+      default: PRODUCT_NAME,
+      template: `%s · ${PRODUCT_NAME}`,
+    },
+    description: t("description"),
+    appleWebApp: {
+      capable: true,
+      title: PRODUCT_NAME,
+      statusBarStyle: "black-translucent",
+    },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: [
@@ -31,13 +36,18 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const currentLocale = await getLocale();
+  const locale = isLocale(currentLocale) ? currentLocale : DEFAULT_LOCALE;
+  const messages = await getMessages();
+  const t = await getTranslations("ui");
+
   return (
-    <html lang="en" suppressHydrationWarning className="h-full antialiased">
+    <html lang={locale} suppressHydrationWarning className="h-full antialiased">
       <head>
         <script dangerouslySetInnerHTML={{ __html: STREAMING_SEGMENT_GUARD }} />
       </head>
@@ -46,9 +56,9 @@ export default function RootLayout({
           href="#main-content"
           className="sr-only rounded-md bg-background px-4 py-2 text-dense font-medium focus-visible:not-sr-only focus-visible:absolute focus-visible:top-4 focus-visible:left-4 focus-visible:z-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none print:hidden"
         >
-          Skip to content
+          {t("skipToContent")}
         </a>
-        <Providers>
+        <Providers locale={locale} messages={messages}>
           <CheckoutReturn />
           {children}
           <Toaster />

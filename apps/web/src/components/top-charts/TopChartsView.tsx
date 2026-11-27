@@ -2,10 +2,12 @@
 
 import { useDeferredValue, useMemo } from "react";
 import { useSuspenseQueries, useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useQueryStates } from "nuqs";
 import type { ChartPage } from "@asobeast/shared";
 import { appsOptions } from "@/lib/queries";
 import { chartParsers } from "@/lib/search-params";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { candidateApps } from "./chart-actions";
 import { categoryDates } from "./chart-column-rows";
 import { ChartColumns } from "./ChartColumns";
@@ -43,6 +45,8 @@ function HeaderActions({
 }
 
 export function TopChartsView() {
+  const t = useTranslations("topCharts");
+  const locale = useAppLocale();
   const [search, setSearch] = useQueryStates(chartParsers);
   const { view, store, country, collection, genre, device, date, compare } =
     search;
@@ -83,7 +87,7 @@ export function TopChartsView() {
     <>
       <ChartsHeader
         actions={<HeaderActions inTable={inTable} page={page} />}
-        lede={chartLede(pages, day)}
+        lede={chartLede(pages, day, { t, locale })}
       />
       <ChartToolbar
         chart={chartKeyFrom(search)}

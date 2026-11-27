@@ -6,12 +6,18 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import type { AppSetupState, AppSetupUpdateRequest } from "@asobeast/shared";
 import { ApiError, updateAppSetup } from "@/lib/api";
 import { invalidateSetupMutation, setupKey, setupOptions } from "@/lib/queries";
 import { applySetupPatch, type SetupTransition } from "./setup-transitions";
+import type { MessageTranslator } from "@/i18n/translator";
 
-const SETUP_SAVE_ERROR = "Could not save your setup progress";
+export function toastSetupError(error: unknown, t: MessageTranslator): void {
+  toast.error(
+    error instanceof ApiError ? error.envelope.message : t("errors.save"),
+  );
+}
 
 interface SetupSave {
   patch: AppSetupUpdateRequest;
@@ -23,13 +29,8 @@ export const setupSaveQueue = (id: string) => ({
   scope: { id: setupKey(id).join(":") },
 });
 
-export function toastSetupError(error: unknown): void {
-  toast.error(
-    error instanceof ApiError ? error.envelope.message : SETUP_SAVE_ERROR,
-  );
-}
-
 export function useSetup(id: string) {
+  const t = useTranslations("setup");
   const client = useQueryClient();
   const queryKey = setupKey(id);
   const { data: setup } = useSuspenseQuery(setupOptions(id));
@@ -39,7 +40,7 @@ export function useSetup(id: string) {
     mutationFn: ({ patch }: SetupSave) => updateAppSetup(id, patch),
     onError: (error, { previous }) => {
       if (isLastSave()) client.setQueryData(queryKey, previous);
-      toastSetupError(error);
+      toastSetupError(error, t);
     },
     onSettled: () =>
       isLastSave() ? invalidateSetupMutation(client, id) : undefined,

@@ -2,24 +2,40 @@ import { describe, expect, it } from "vitest";
 import {
   formatCategoryPosition,
   formatCompact,
+  formatCompactInLocale,
   formatCountry,
   formatDate,
+  formatDateInLocale,
+  formatDateInZoneAndLocale,
   formatDateTime,
+  formatDateTimeInLocale,
+  formatFixedNumberInLocale,
   formatUtcClock,
+  formatUtcClockInLocale,
   formatDayMonth,
+  formatDayMonthInLocale,
   formatMonth,
+  formatMonthInLocale,
   formatMeasure,
   formatMeasureFixed,
+  formatMeasureFixedInLocale,
+  formatMeasureInLocale,
   formatMeasurePair,
+  formatMeasurePairInLocale,
   roundAsShown,
   formatNumber,
+  formatNumberInLocale,
   formatPrice,
   formatUsd,
   formatRating,
+  formatRatingInLocale,
   formatRelativeTime,
+  formatRelativeTimeInLocale,
   formatList,
+  formatListInLocale,
   pluralize,
   storeLabel,
+  formatCountryInLocale,
 } from "./format";
 
 describe("formatNumber", () => {
@@ -117,6 +133,11 @@ describe("formatPrice", () => {
   it("renders a zero price as free in any currency", () => {
     expect(formatPrice(0)).toBe("Free");
     expect(formatPrice(0, "EUR")).toBe("Free");
+  });
+
+  it("uses a supplied localized free label without changing currency formatting", () => {
+    expect(formatPrice(0, "USD", "免费")).toBe("免费");
+    expect(formatPrice(4.99, "USD", "免费")).toBe("$4.99");
   });
 
   it.each([
@@ -314,5 +335,80 @@ describe("formatUtcClock", () => {
     ["2026-11-04T12:05:00.000Z", "12:05 PM UTC"],
   ])("writes %s as %s whatever the runner's zone", (value, expected) => {
     expect(formatUtcClock(value)).toBe(expected);
+  });
+});
+
+describe("formatUtcClockInLocale", () => {
+  it("uses a 24 hour clock in Chinese", () => {
+    expect(formatUtcClockInLocale("2026-11-04T00:00:01.000Z", "zh-CN")).toBe(
+      "00:00 UTC",
+    );
+    expect(formatUtcClockInLocale("2026-11-04T23:59:59.000Z", "zh-CN")).toBe(
+      "23:59 UTC",
+    );
+    expect(formatUtcClockInLocale("2026-11-04T23:59:59.000Z", "en")).toBe(
+      "11:59 PM UTC",
+    );
+  });
+});
+
+describe("Simplified Chinese formatting", () => {
+  const now = Date.parse("2026-01-10T12:00:00.000Z");
+
+  it("formats UTC dates in Chinese", () => {
+    expect(formatDateInLocale("2026-01-01", "zh-CN")).toBe("2026年1月1日");
+    expect(formatDayMonthInLocale("2026-01-01", "zh-CN")).toBe("1月1日");
+    expect(formatMonthInLocale("2026-09-01", "zh-CN")).toBe("2026年9月");
+    expect(
+      formatDateInZoneAndLocale(
+        new Date("2026-07-04T13:45:00.000Z"),
+        "UTC",
+        "zh-CN",
+      ),
+    ).toBe("2026年7月4日");
+  });
+
+  it("uses a 24-hour clock for Chinese date-times", () => {
+    expect(formatDateTimeInLocale("2026-07-04T13:45:00.000Z", "zh-CN")).toBe(
+      "2026年7月4日 13:45 UTC",
+    );
+    expect(formatDateTimeInLocale("2026-07-04T00:05:00.000Z", "zh-CN")).toBe(
+      "2026年7月4日 00:05 UTC",
+    );
+  });
+
+  it("localizes relative time and lists", () => {
+    expect(
+      formatRelativeTimeInLocale("2026-01-10T09:00:00.000Z", now, "zh-CN"),
+    ).toBe("3小时前");
+    expect(formatListInLocale(["标题", "副标题", "关键词字段"], "zh-CN")).toBe(
+      "标题、副标题和关键词字段",
+    );
+  });
+
+  it("keeps grouped numbers readable", () => {
+    expect(formatNumberInLocale(1234567, "zh-CN")).toBe("1,234,567");
+    expect(formatFixedNumberInLocale(3.5, 1, "zh-CN")).toBe("3.5");
+  });
+
+  it("localizes measures, compact numbers, ratings, and pairs", () => {
+    expect(formatMeasureInLocale(1234.56, "zh-CN")).toBe("1,234.6");
+    expect(formatMeasureFixedInLocale(20, "zh-CN")).toBe("20.0");
+    expect(formatCompactInLocale(1_000_000, "zh-CN")).toBe("100万");
+    expect(formatRatingInLocale(4.5, "zh-CN")).toBe("4.5");
+    expect(formatMeasurePairInLocale(1200.25, 980, "zh-CN")).toEqual([
+      "1,200.3",
+      "980.0",
+    ]);
+  });
+
+  it("names storefronts in Chinese", () => {
+    expect(formatCountryInLocale("cn", "zh-CN")).toBe("中国");
+    expect(formatCountryInLocale("tw", "zh-CN")).toBe("台湾");
+    expect(formatCountryInLocale("hk", "zh-CN")).toBe("香港");
+    expect(formatCountryInLocale("us", "zh-CN")).toBe("美国");
+    expect(formatCountryInLocale("gb", "zh-CN")).toBe("英国");
+    expect(formatCountryInLocale("de", "zh-CN")).toBe("德国");
+    expect(formatCountryInLocale("jp", "zh-CN")).toBe("日本");
   });
 });

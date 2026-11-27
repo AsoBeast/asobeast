@@ -1,6 +1,7 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useQueryState } from "nuqs";
 import type {
   PortfolioApp,
@@ -8,11 +9,7 @@ import type {
   PortfolioRangeChange,
 } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
-import {
-  daysPeriod,
-  LAST_RUN,
-  type MoverPeriod,
-} from "@/components/rankings/mover-change";
+import { daysPeriod, lastRunPeriod } from "@/components/rankings/mover-change";
 import { ALL_MOVERS, MoversPanel } from "@/components/rankings/MoversPanel";
 import {
   Select,
@@ -21,7 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatNumber } from "@/lib/format";
+import type { MessageTranslator } from "@/i18n/translator";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { portfolioOptions } from "@/lib/queries";
 import { moverSpanParser, type MoverSpan } from "@/lib/search-params";
 import { quietSentence } from "./movement-sentence";
@@ -30,7 +28,7 @@ import { useRangeHistory } from "./use-range-history";
 const rankingsHref = (mover: PortfolioKeywordMover) =>
   `/apps/${mover.appId}/rankings?keywords=${mover.keywordId}`;
 
-const QUIET_RUN = "No keyword moved in the last run.";
+const QUIET_RUN = "quietRun";
 
 function MoverLead({
   mover,
@@ -39,7 +37,8 @@ function MoverLead({
   mover: PortfolioKeywordMover;
   app: PortfolioApp | undefined;
 }) {
-  const mark = `${mover.country.toUpperCase()} · ${app?.name ?? "Unknown app"}`;
+  const t = useTranslations("dashboard");
+  const mark = `${mover.country.toUpperCase()} · ${app?.name ?? t("actions.unknownApp")}`;
   return (
     <>
       <AppIcon src={app?.iconUrl ?? null} size={16} />
@@ -68,16 +67,20 @@ function SpanSelect({
   days: number;
   onChange: (next: MoverSpan) => void;
 }) {
+  const t = useTranslations("dashboard");
   const labels: Record<MoverSpan, string> = {
-    run: "Last run",
-    range: `Last ${days} days`,
+    run: t("movers.lastRun"),
+    range: t("range.label", { days }),
   };
   return (
     <Select
       value={span}
       onValueChange={(next) => onChange(moverSpanParser.parse(next) ?? "run")}
     >
-      <SelectTrigger size="sm" aria-label={`Movers period, ${labels[span]}`}>
+      <SelectTrigger
+        size="sm"
+        aria-label={t("movers.periodAria", { period: labels[span] })}
+      >
         <SelectValue>{labels[span]}</SelectValue>
       </SelectTrigger>
       <SelectContent align="end">
@@ -92,16 +95,23 @@ const quietOf = (
   change: PortfolioRangeChange,
   daily: boolean,
   days: number,
-): string => (daily ? QUIET_RUN : quietSentence(change.compared, days));
+  t: MessageTranslator,
+): string => (daily ? t(QUIET_RUN) : quietSentence(change.compared, days, t));
 
-function footerOf(change: PortfolioRangeChange, period: MoverPeriod): string {
+function footerOf(
+  change: PortfolioRangeChange,
+  period: string,
+  t: MessageTranslator,
+): string {
   const moved = change.movement.up + change.movement.down;
   return moved > ALL_MOVERS
-    ? `The largest of ${formatNumber(moved)} position changes ${period.span}`
-    : `Position changes ${period.span}, largest first`;
+    ? t("movers.largest", { count: moved, period })
+    : t("movers.all", { period });
 }
 
 export function PortfolioMoversCard() {
+  const t = useTranslations("dashboard");
+  const locale = useAppLocale();
   const { days, history } = useRangeHistory();
   const { data: portfolio } = useSuspenseQuery(portfolioOptions);
   const [span, setSpan] = useQueryState("span", moverSpanParser);
@@ -110,9 +120,12 @@ export function PortfolioMoversCard() {
   const { lastRun } = history;
   const daily = span === "run" && lastRun?.compared === true;
   const change = daily ? lastRun : history.change;
-  const period = daily ? LAST_RUN : daysPeriod(days);
+  const period = daily ? lastRunPeriod(locale) : daysPeriod(days, locale);
+  const periodText = daily
+    ? t("movers.periodRun")
+    : t("movers.periodRange", { days });
   const { up, down } = change.movement;
-  const quiet = up + down > 0 ? null : quietOf(change, daily, days);
+  const quiet = up + down > 0 ? null : quietOf(change, daily, days, t);
 
   return (
     <MoversPanel
@@ -131,7 +144,7 @@ export function PortfolioMoversCard() {
       }
       hrefOf={rankingsHref}
       lead={(mover) => <MoverLead mover={mover} app={apps.get(mover.appId)} />}
-      footer={quiet === null ? footerOf(change, period) : null}
+      footer={quiet === null ? footerOf(change, periodText, t) : null}
     />
   );
 }

@@ -1,18 +1,11 @@
 "use client";
 
 import { useLayoutEffect, useRef, type RefObject } from "react";
+import { useTranslations } from "next-intl";
 import { ArrowDownToLine } from "lucide-react";
-import { ZONE_LABELS } from "@/lib/keyword-zones";
+import { zoneLabel } from "@/lib/keyword-zones";
 import { DOT_TARGET, dotIn } from "./MapDot";
-import {
-  placeOverlay,
-  pointName,
-  rankWords,
-  type MapPoint,
-} from "./map-points";
-
-const capitalized = (text: string): string =>
-  `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
+import { placeOverlay, pointName, type MapPoint } from "./map-points";
 
 function OverlayRow({ label, value }: { label: string; value: string }) {
   return (
@@ -41,6 +34,8 @@ export function MapOverlay({
   surfaceRef: RefObject<HTMLElement | null>;
 }) {
   const overlayRef = useRef<HTMLDivElement>(null);
+  const t = useTranslations("keywordInspector");
+  const keywords = useTranslations("keywords");
   useLayoutEffect(() => {
     const node = overlayRef.current;
     const surface = surfaceRef.current;
@@ -70,28 +65,39 @@ export function MapOverlay({
       </p>
       <dl className="grid gap-1">
         <OverlayRow
-          label="Position"
+          label={t("map.overlay.position")}
           value={
             point.position === null
-              ? capitalized(rankWords(point))
+              ? point.depth === null
+                ? t("map.overlay.notChecked")
+                : t("map.overlay.notFound", { depth: point.depth })
               : String(point.position)
           }
         />
-        <OverlayRow label="Popularity" value={String(point.popularity)} />
-        <OverlayRow label="Difficulty" value={String(point.difficulty)} />
+        <OverlayRow
+          label={t("map.overlay.popularity")}
+          value={String(point.popularity)}
+        />
+        <OverlayRow
+          label={t("map.overlay.difficulty")}
+          value={String(point.difficulty)}
+        />
         {point.opportunity === null ? null : (
-          <OverlayRow label="Opportunity" value={String(point.opportunity)} />
+          <OverlayRow
+            label={t("map.overlay.opportunity")}
+            value={String(point.opportunity)}
+          />
         )}
       </dl>
       {point.floor ? (
         <p className="flex items-center gap-1 text-muted-foreground">
           <ArrowDownToLine aria-hidden className="size-3" />
-          <span>Floor answer</span>
+          <span>{t("map.overlay.floor")}</span>
         </p>
       ) : null}
       <p className="flex flex-wrap gap-x-2 text-muted-foreground">
-        <span>{ZONE_LABELS[point.zone]}</span>
-        {point.active ? null : <span>Paused</span>}
+        <span>{zoneLabel(point.zone, keywords)}</span>
+        {point.active ? null : <span>{t("map.overlay.paused")}</span>}
       </p>
     </div>
   );

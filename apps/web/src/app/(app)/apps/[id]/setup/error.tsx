@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { ErrorState } from "@/components/layout/ErrorState";
 
 export default function SetupError({
@@ -9,7 +10,6 @@ export default function SetupError({
   error: Error & { digest?: string };
   retry: () => void;
 }) {
-  return (
-    <ErrorState error={error} retry={retry} title="Setup could not be loaded" />
-  );
+  const t = useTranslations("errors.boundary");
+  return <ErrorState error={error} retry={retry} title={t("setup")} />;
 }

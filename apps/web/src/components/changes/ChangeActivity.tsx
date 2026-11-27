@@ -3,6 +3,7 @@
 import { Fragment, Suspense, useId } from "react";
 import Link from "next/link";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import type { VisibilityHistory } from "@asobeast/shared";
 import {
   Area,
@@ -28,7 +29,7 @@ import {
   GRID_PROPS,
   LINE_PROPS,
   seriesColor,
-  TIME_AXIS_PROPS,
+  timeAxisPropsInLocale,
   VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
 import {
@@ -51,7 +52,12 @@ import {
   ChartTooltip,
 } from "@/components/ui/chart";
 import { VisibilityHelp } from "@/components/visibility/VisibilityHelp";
-import { formatCountry, formatDayMonth, formatNumber } from "@/lib/format";
+import {
+  formatCountryInLocale,
+  formatDayMonthInLocale,
+  formatNumberInLocale,
+} from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { isVisibilityOfMarket, visibilityOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import {
@@ -66,7 +72,7 @@ import {
   type VisibilityRow,
 } from "./change-activity";
 import { effectLine, effectsByDay, type ChangeEffect } from "./change-effects";
-import { CHANGE_KIND_LABELS, CHANGE_KINDS } from "./change-fields";
+import { ChangeActivityKey } from "./ChangeActivityKey";
 import { KindMark } from "./KindMark";
 import { ChangeActivitySkeleton } from "./skeletons";
 import type { ShownChange } from "./timeline-days";
@@ -75,10 +81,6 @@ import {
   useChangeImpact,
   useImpactCountry,
 } from "./use-change-view";
-
-const chartConfig = {
-  visibility: { label: "Visibility", color: seriesColor(0) },
-} satisfies ChartConfig;
 
 const PLOT_LEFT = CHART_MARGIN.left + VALUE_AXIS_PROPS.width;
 const PLOT_INSET = PLOT_LEFT + CHART_MARGIN.right;
@@ -99,16 +101,18 @@ function ActivityTooltip({
   lanes: Lane[];
   effects: ReadonlyMap<string, ChangeEffect>;
 }) {
+  const t = useTranslations("changes");
+  const locale = useAppLocale();
   if (!active || label === undefined) return null;
   const day = String(label);
   const row = rows.find((candidate) => candidate.date === day);
   if (!row) return null;
-  const changed = changeLinesOn(lanes, day);
+  const changed = changeLinesOn(lanes, day, t, locale);
   const effect = effects.get(day);
 
   return (
     <SeriesTooltip
-      title={formatDayMonth(day)}
+      title={formatDayMonthInLocale(day, locale)}
       items={
         row.visibility === null
           ? []
@@ -117,8 +121,8 @@ function ActivityTooltip({
                 key: "visibility",
                 index: 0,
                 color: "var(--color-visibility)",
-                label: "Visibility",
-                value: formatNumber(row.visibility),
+                label: t("timeline.visibility"),
+                value: formatNumberInLocale(row.visibility, locale),
                 sortBy: 0,
               },
             ]
@@ -131,40 +135,13 @@ function ActivityTooltip({
             </p>
           ))}
           {effect ? (
-            <p className="text-muted-foreground">{effectLine(effect)}</p>
+            <p className="text-muted-foreground">
+              {effectLine(effect, t, locale)}
+            </p>
           ) : null}
         </>
       }
     />
-  );
-}
-
-function ActivityKey() {
-  return (
-    <ul
-      aria-label="Chart marks"
-      className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 text-label text-muted-foreground"
-    >
-      <li className="flex items-center gap-1.5">
-        <svg aria-hidden width="16" height="8" viewBox="0 0 16 8">
-          <line
-            x1="0"
-            y1="4"
-            x2="16"
-            y2="4"
-            stroke={seriesColor(0)}
-            strokeWidth="2"
-          />
-        </svg>
-        <span>Visibility</span>
-      </li>
-      {CHANGE_KINDS.map((kind) => (
-        <li key={kind} className="flex items-center gap-1.5">
-          <KindMark kind={kind} />
-          <span>{CHANGE_KIND_LABELS[kind]}</span>
-        </li>
-      ))}
-    </ul>
   );
 }
 
@@ -179,6 +156,11 @@ function VisibilityPlot({
   markers: string[];
   effects: ReadonlyMap<string, ChangeEffect>;
 }) {
+  const t = useTranslations("changes");
+  const locale = useAppLocale();
+  const chartConfig = {
+    visibility: { label: t("timeline.visibility"), color: seriesColor(0) },
+  } satisfies ChartConfig;
   const fadeId = useFadeId();
   const state = trendState(
     rows.filter((row) => row.visibility !== null).length,
@@ -191,18 +173,20 @@ function VisibilityPlot({
           height={CHART_HEIGHT.compact}
           title={
             state === "empty"
-              ? "No visibility recorded in this window"
-              : "Not enough visibility history yet"
+              ? t("activity.emptyTitle")
+              : t("activity.shortTitle")
           }
-          body="The line needs four daily checks of this market's keywords."
+          body={t("activity.shortBody")}
         />
         <p
           aria-hidden
           className="flex justify-between text-tick text-faint-foreground"
           style={{ paddingLeft: PLOT_LEFT, paddingRight: CHART_MARGIN.right }}
         >
-          <span>{formatDayMonth(rows[0].date)}</span>
-          <span>{formatDayMonth(rows[rows.length - 1].date)}</span>
+          <span>{formatDayMonthInLocale(rows[0].date, locale)}</span>
+          <span>
+            {formatDayMonthInLocale(rows[rows.length - 1].date, locale)}
+          </span>
         </p>
       </div>
     );
@@ -213,12 +197,12 @@ function VisibilityPlot({
       config={chartConfig}
       className={cn(CHART_HEIGHT.compact, PLOT_COLUMN, "w-full")}
       role="region"
-      aria-label="Search visibility and the days your listing changed"
+      aria-label={t("activity.aria")}
     >
       <ComposedChart accessibilityLayer data={rows} margin={CHART_MARGIN}>
         <SeriesFade id={fadeId} color="var(--color-visibility)" />
         <CartesianGrid {...GRID_PROPS} />
-        <XAxis {...TIME_AXIS_PROPS} />
+        <XAxis {...timeAxisPropsInLocale(locale)} />
         <YAxis {...VALUE_AXIS_PROPS} domain={["auto", "auto"]} />
         {markers.map((day) => (
           <ReferenceLine key={day} x={day} {...CHANGE_MARKER_PROPS} />
@@ -252,6 +236,7 @@ function VisibilityLine({
   markers: string[];
   effects: ReadonlyMap<string, ChangeEffect>;
 }) {
+  const t = useTranslations("changes");
   if (read.data) {
     return (
       <VisibilityPlot
@@ -265,10 +250,7 @@ function VisibilityLine({
   if (failedRead(read)) {
     return (
       <div className={cn(PLOT_COLUMN, CHART_HEIGHT.compact, CHART_NOTICE)}>
-        <InlineQueryError
-          message="Could not load the visibility line."
-          read={read}
-        />
+        <InlineQueryError message={t("activity.loadFailed")} read={read} />
       </div>
     );
   }
@@ -284,35 +266,40 @@ function LaneRow({
   lane: Lane;
   onShowChange: (change: ShownChange) => void;
 }) {
+  const t = useTranslations("changes");
+  const locale = useAppLocale();
   return (
     <Fragment>
       <div className="flex h-9 min-w-0 items-center gap-2 mt-1 border-border-subtle text-dense @3xl/activity:mt-0 @3xl/activity:border-t">
         <AppIcon src={lane.iconUrl} size={16} />
         <bdi className="truncate font-medium">{lane.appName}</bdi>
-        {lane.own ? <Badge variant="brand">You</Badge> : null}
+        {lane.own ? <Badge variant="brand">{t("you")}</Badge> : null}
         <span className="numeric ml-auto text-label text-faint-foreground">
-          <span>{lane.count}</span>
-          <span className="sr-only">{" changes"}</span>
+          <span>{formatNumberInLocale(lane.count, locale)}</span>
+          <span className="sr-only">{t("activity.changes")}</span>
         </span>
       </div>
       <div className="relative h-9 border-t border-border-subtle">
-        {lane.marks.map((mark) => (
-          <button
-            key={mark.day}
-            type="button"
-            aria-label={markLabel(lane, mark)}
-            title={markLabel(lane, mark)}
-            onClick={() => onShowChange({ appId: lane.appId, day: mark.day })}
-            className="absolute inset-y-0 flex w-4 -translate-x-1/2 flex-col items-center justify-center gap-0.5 rounded-sm text-muted-foreground outline-none transition-colors duration-150 ease-out hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
-            style={{
-              left: `calc(${PLOT_LEFT}px + (100% - ${PLOT_INSET}px) * ${mark.position})`,
-            }}
-          >
-            {mark.kinds.map((kind) => (
-              <KindMark key={kind} kind={kind} own={lane.own} />
-            ))}
-          </button>
-        ))}
+        {lane.marks.map((mark) => {
+          const label = markLabel(lane, mark, t, locale);
+          return (
+            <button
+              key={mark.day}
+              type="button"
+              aria-label={label}
+              title={label}
+              onClick={() => onShowChange({ appId: lane.appId, day: mark.day })}
+              className="absolute inset-y-0 flex w-4 -translate-x-1/2 flex-col items-center justify-center gap-0.5 rounded-sm text-muted-foreground outline-none transition-colors duration-150 ease-out hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+              style={{
+                left: `calc(${PLOT_LEFT}px + (100% - ${PLOT_INSET}px) * ${mark.position})`,
+              }}
+            >
+              {mark.kinds.map((kind) => (
+                <KindMark key={kind} kind={kind} own={lane.own} />
+              ))}
+            </button>
+          );
+        })}
       </div>
     </Fragment>
   );
@@ -327,11 +314,13 @@ function Activity({
   homeCountry: string;
   onShowChange: (change: ShownChange) => void;
 }) {
+  const t = useTranslations("changes");
+  const locale = useAppLocale();
   const headingId = useId();
   const { events, days, homeListing, today } = useChangeEvents(id);
   const country = useImpactCountry(homeCountry);
   const span = windowDays(today, days);
-  const lanes = activityLanes(events, span);
+  const lanes = activityLanes(events, span, t);
   const visibility = useQuery({
     ...visibilityOptions(id, changeWindowRange(today, days), country),
     enabled: lanes.length > 0,
@@ -353,14 +342,14 @@ function Activity({
       <Card>
         <CardHeader className={PANEL_HEADER}>
           <CardTitle asChild>
-            <h2 id={headingId}>Visibility and listing changes</h2>
+            <h2 id={headingId}>{t("activity.title")}</h2>
           </CardTitle>
           <CardAction>
             <VisibilityHelp />
           </CardAction>
         </CardHeader>
         <CardContent className="@container/activity flex flex-col gap-3">
-          <ActivityKey />
+          <ChangeActivityKey />
           <div className={LANES}>
             <VisibilityLine
               read={visibility}
@@ -379,9 +368,13 @@ function Activity({
           </div>
         </CardContent>
         <CardFooter className="flex-wrap justify-between gap-x-4 gap-y-2">
-          <span>{`Visibility over every keyword tracked in ${formatCountry(country)}. A mark opens that day in the list below.`}</span>
+          <span>
+            {t("activity.footer", {
+              market: formatCountryInLocale(country, locale),
+            })}
+          </span>
           <Link href={`/apps/${id}/rankings`} className={FOOTER_LINK}>
-            Open rankings
+            {t("activity.openRankings")}
           </Link>
         </CardFooter>
       </Card>

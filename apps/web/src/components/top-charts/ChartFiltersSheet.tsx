@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { ListFilter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,12 +39,13 @@ export function ChartFiltersSheet({
   active,
   ...filters
 }: ChartFilterProps & { active: number }) {
+  const t = useTranslations("topCharts");
   return (
     <Sheet>
       <SheetTrigger asChild>
         <Button variant="outline" size="sm">
           <ListFilter aria-hidden />
-          Filters
+          {t("filters")}
           {active > 0 ? (
             <Badge variant="secondary" className="numeric">
               {active}
@@ -53,32 +55,30 @@ export function ChartFiltersSheet({
       </SheetTrigger>
       <SheetContent side="bottom" className="max-h-[80svh]">
         <SheetHeader>
-          <SheetTitle>Filters</SheetTitle>
-          <SheetDescription>
-            Pick the country, category and comparison of the charts.
-          </SheetDescription>
+          <SheetTitle>{t("filters")}</SheetTitle>
+          <SheetDescription>{t("filterDescription")}</SheetDescription>
         </SheetHeader>
         <div className="flex flex-col items-start gap-4">
-          <Field label="Country">
+          <Field label={t("country")}>
             <ChartCountryFilter {...filters} />
           </Field>
-          <Field label="Category">
+          <Field label={t("category")}>
             <ChartGenreFilter {...filters} />
           </Field>
           {showsDevice(filters.chart.store) ? (
-            <Field label="Device">
+            <Field label={t("device")}>
               <ChartDeviceFilter {...filters} />
             </Field>
           ) : null}
           {filters.view === "table" ? (
-            <Field label="Chart">
+            <Field label={t("chart")}>
               <ChartKindFilter {...filters} />
             </Field>
           ) : null}
-          <Field label="Compare">
+          <Field label={t("compare")}>
             <ChartCompareFilter {...filters} />
           </Field>
-          <Field label="Layout">
+          <Field label={t("layout")}>
             <ChartLayoutFilter {...filters} />
           </Field>
         </div>

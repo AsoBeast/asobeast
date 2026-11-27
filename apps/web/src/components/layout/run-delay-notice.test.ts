@@ -1,5 +1,7 @@
+import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
 import type { WorkspaceRunStatus } from "@asobeast/shared";
+import zhSystemNotices from "../../../messages/zh-CN/systemNotices.json";
 import { runDelayNotice } from "./run-delay-notice";
 
 function statusOf(
@@ -20,6 +22,22 @@ function statusOf(
 }
 
 describe("runDelayNotice", () => {
+  it("translates delayed run progress for Simplified Chinese", () => {
+    const translator = createTranslator({
+      locale: "zh-CN",
+      namespace: "systemNotices",
+      messages: { systemNotices: zhSystemNotices },
+      timeZone: "UTC",
+    });
+    const notice = runDelayNotice(statusOf(), {
+      translator,
+      locale: "zh-CN",
+    });
+
+    expect(notice?.title).toBe("你的 Google Play 应用排名更新延迟");
+    expect(notice?.detail).toContain("已采集 100 个被跟踪关键词中的 40 个");
+  });
+
   it("says nothing while the run is on time", () => {
     expect(runDelayNotice(statusOf({ state: "running" }))).toBeNull();
     expect(runDelayNotice(statusOf({ state: "complete" }))).toBeNull();

@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { LIST_HEAD, LIST_ROW } from "@/components/layout/panel-classes";
-import { formatNumber } from "@/lib/format";
+import { formatNumberInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
 
 export interface BreakdownRow {
@@ -17,7 +20,13 @@ const COLUMNS =
 
 const BAR_MAX = 0.6;
 
-function RowBody({ row }: { row: BreakdownRow }) {
+function RowBody({
+  row,
+  locale,
+}: {
+  row: BreakdownRow;
+  locale: ReturnType<typeof useAppLocale>;
+}) {
   return (
     <>
       {row.share !== undefined ? (
@@ -34,14 +43,11 @@ function RowBody({ row }: { row: BreakdownRow }) {
         {row.detail ?? ""}
       </span>
       <span className="numeric relative text-right font-medium">
-        {formatNumber(row.count)}
+        {formatNumberInLocale(row.count, locale)}
       </span>
     </>
   );
 }
-
-const nameOf = (row: BreakdownRow) =>
-  [row.label, formatNumber(row.count), row.detail].filter(Boolean).join(", ");
 
 export function BreakdownList({
   rows,
@@ -52,6 +58,12 @@ export function BreakdownList({
   label: string;
   heads?: { label: string; detail?: string; count: string };
 }) {
+  const locale = useAppLocale();
+  const nameOf = (row: BreakdownRow) =>
+    [row.label, formatNumberInLocale(row.count, locale), row.detail]
+      .filter(Boolean)
+      .join(", ");
+
   return (
     <div className="flex flex-col gap-1">
       {heads ? (
@@ -70,11 +82,11 @@ export function BreakdownList({
                 aria-label={nameOf(row)}
                 className={cn(COLUMNS, LIST_ROW)}
               >
-                <RowBody row={row} />
+                <RowBody row={row} locale={locale} />
               </Link>
             ) : (
               <div className={cn(COLUMNS, LIST_ROW, "hover:bg-transparent")}>
-                <RowBody row={row} />
+                <RowBody row={row} locale={locale} />
               </div>
             )}
           </li>

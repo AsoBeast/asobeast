@@ -6,6 +6,7 @@ import {
   type FirstRunStatus,
 } from "@asobeast/shared";
 import { formatRelativeTime } from "@/lib/format";
+import { translationContext } from "@/test/translation-context";
 import {
   firstRunHeadline,
   firstRunRows,
@@ -278,6 +279,39 @@ describe("rankingsAdvanced", () => {
     expect(rankingsCollecting(ranked(3))).toBe(true);
     expect(rankingsCollecting(ranked(8))).toBe(false);
     expect(rankingsCollecting(undefined)).toBe(false);
+  });
+});
+
+describe("Simplified Chinese first-run timeline", () => {
+  it("renders first-run stages and plural headlines in Chinese", () => {
+    const t = translationContext("zh-CN", "setup").translator;
+    const waiting = statusOf([
+      stage("metadata"),
+      stage("rankings", { complete: false }),
+      stage("scores", { complete: false }),
+    ]);
+
+    expect(firstRunHeadline(waiting, t)).toBe("还有 2 个步骤正在完成。");
+    expect(firstRunHeadline(completeStatus, t)).toBe("此应用已全部采集。");
+    expect(firstRunRows(completeStatus, NOW, t)[0]).toMatchObject({
+      label: "详情页已采集",
+      detail: "首个详情页快照已存储。",
+    });
+    expect(
+      firstRunRows(
+        statusOf([
+          stage("rankings", {
+            ready: 0,
+            total: 15,
+            complete: false,
+            expectedBy: TOMORROW,
+          }),
+        ]),
+        NOW,
+        t,
+        "zh-CN",
+      )[0]?.detail,
+    ).toBe("正在采集排名。每日运行会在18小时后补齐仍缺失的排名。");
   });
 });
 

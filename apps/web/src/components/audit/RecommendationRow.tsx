@@ -1,8 +1,13 @@
+"use client";
+
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { AuditRecommendation, AuditTarget } from "@asobeast/shared";
 import { PriorityWord } from "@/components/actions/PriorityWord";
 import { cn } from "@/lib/utils";
-import { EFFORT_LABEL, liftLabel, TARGET_LABEL } from "./audit-copy";
+import { useAppLocale } from "@/lib/use-app-locale";
+import { auditLabel, auditText } from "./audit-content-zh";
+import { liftLabel } from "./audit-copy";
 import { targetHref } from "./audit-links";
 import { TEXT_LINK } from "./layout-classes";
 
@@ -18,16 +23,17 @@ function Where({
   appId: string;
   target: AuditTarget | undefined;
 }) {
+  const t = useTranslations("audit");
   if (!target) return null;
   const href = targetHref(appId, target);
   if (href === null) {
     return (
-      <span className="text-muted-foreground">{TARGET_LABEL[target]}</span>
+      <span className="text-muted-foreground">{t(`targets.${target}`)}</span>
     );
   }
   return (
     <Link href={href} className={TEXT_LINK}>
-      {TARGET_LABEL[target]}
+      {t(`targets.${target}`)}
     </Link>
   );
 }
@@ -39,6 +45,8 @@ export function RecommendationRow({
   appId: string;
   item: AuditRecommendation;
 }) {
+  const t = useTranslations("audit");
+  const locale = useAppLocale();
   return (
     <li
       className={cn(
@@ -51,17 +59,19 @@ export function RecommendationRow({
       </span>
       <div className="flex min-w-0 flex-col gap-0.5">
         <h4 dir="auto" className="text-body font-medium wrap-anywhere">
-          {item.label}
+          {auditLabel(item.label, locale)}
         </h4>
         <p className="text-caption wrap-anywhere text-muted-foreground">
-          {item.detail}
+          {auditText(item.detail, locale)}
         </p>
         {item.fix ? (
-          <p className="text-caption wrap-anywhere">{item.fix}</p>
+          <p className="text-caption wrap-anywhere">
+            {auditText(item.fix, locale)}
+          </p>
         ) : null}
       </div>
       <span className="numeric col-start-3 row-start-1 text-right font-medium whitespace-nowrap @3xl/plan:col-start-5">
-        {liftLabel(item.lift)}
+        {liftLabel(item.lift, t)}
       </span>
       {item.effort ? (
         <span
@@ -70,7 +80,7 @@ export function RecommendationRow({
             WIDE_ROW,
           )}
         >
-          {EFFORT_LABEL[item.effort]}
+          {t(`efforts.${item.effort}`)}
         </span>
       ) : null}
       <span

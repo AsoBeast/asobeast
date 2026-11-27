@@ -2,16 +2,25 @@
 
 import type { MouseEvent } from "react";
 import { createColumnHelper } from "@tanstack/react-table";
+import { createTranslator } from "next-intl";
+import { useTranslations } from "next-intl";
 import { isCheckFresh, type CompetitorGapKeyword } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import type { DataTableFeatures } from "@/components/data-table/table-features";
 import { GradedNumber } from "@/components/ui/graded";
-import { formatCountry, formatDayMonth } from "@/lib/format";
+import {
+  formatCountryInLocale,
+  formatDayMonth,
+  formatDayMonthInLocale,
+} from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
+import enCompetitors from "../../../messages/en/competitors.json";
 import { grade, type GradeMetric } from "@/lib/grade";
 import { nullsLast } from "@/lib/table/sorting";
-import { PositionCell } from "./comparison-columns";
-import { UNNAMED_COMPETITOR } from "./comparison-scores";
+import { PositionCell } from "./comparison-cells";
 import { StaleClock } from "./StaleClock";
 
 export interface GapCompetitor {
@@ -26,7 +35,11 @@ export interface GapColumnScope {
   onOpenBreakdown: (keywordId: string, opener: HTMLElement) => void;
 }
 
-const NO_COMPETITOR = "No competitor ranks";
+const english = createTranslator({
+  locale: "en",
+  namespace: "competitors",
+  messages: { competitors: enCompetitors },
+});
 
 const POSITION_SORT = {
   sortFn: "basic",
@@ -45,17 +58,23 @@ const THREAT_ORDER = { overtook: 0, closing: 1 } as const;
 export function threatText(
   row: CompetitorGapKeyword,
   formatDay: (day: string) => string = formatDayMonth,
+  t: MessageTranslator = english,
 ): string {
   if (row.threat === "overtook" && row.overtookOn) {
-    return `Overtook you on ${formatDay(row.overtookOn)}`;
+    return t("gaps.threatOvertook", { date: formatDay(row.overtookOn) });
   }
   return row.competitorDelta === null || row.competitorDelta === undefined
-    ? "Closing in, newly ranked"
-    : `Closing in, rose ${row.competitorDelta}`;
+    ? t("gaps.threatClosingNew")
+    : t("gaps.threatClosing", { count: row.competitorDelta });
 }
 
-export function leadText(row: CompetitorGapKeyword): string {
-  return row.gap === null ? NO_COMPETITOR : `${row.gap} ahead`;
+export function leadText(
+  row: CompetitorGapKeyword,
+  t: MessageTranslator = english,
+): string {
+  return row.gap === null
+    ? t("gaps.noCompetitor")
+    : t("gaps.ahead", { count: row.gap });
 }
 
 export function gapSortValue(
@@ -91,7 +110,10 @@ function ScoreCell({
   label: string;
   value: number | null;
 }) {
-  if (value === null) return <Dash label={`No ${label.toLowerCase()} yet`} />;
+  const t = useTranslations("competitors");
+  if (value === null) {
+    return <Dash label={t("gaps.noScore", { metric: label })} />;
+  }
   return (
     <GradedNumber
       value={String(value)}
@@ -111,13 +133,15 @@ function KeywordButton({
   multiMarket: boolean;
   onOpen: GapColumnScope["onOpenBreakdown"];
 }) {
+  const t = useTranslations("competitors");
+  const locale = useAppLocale();
   const country = row.country;
   return (
     <div className="flex flex-col gap-0.5">
       <button
         type="button"
         title={row.text}
-        aria-label={`${row.text}, why apps rank`}
+        aria-label={t("comparison.whyRank", { keyword: row.text })}
         data-breakdown-keyword={row.keywordId}
         onClick={(event: MouseEvent<HTMLButtonElement>) =>
           onOpen(row.keywordId, event.currentTarget)
@@ -128,11 +152,13 @@ function KeywordButton({
       </button>
       {multiMarket && country ? (
         <span
-          title={formatCountry(country)}
+          title={formatCountryInLocale(country, locale)}
           className="text-tick text-faint-foreground"
         >
           <span aria-hidden>{country.toUpperCase()}</span>
-          <span className="sr-only">{formatCountry(country)}</span>
+          <span className="sr-only">
+            {formatCountryInLocale(country, locale)}
+          </span>
         </span>
       ) : null}
     </div>
@@ -146,9 +172,12 @@ function CompetitorCell({
   row: CompetitorGapKeyword;
   competitors: GapColumnScope["competitors"];
 }) {
-  if (row.bestCompetitorId === null) return <Dash label={NO_COMPETITOR} />;
+  const t = useTranslations("competitors");
+  if (row.bestCompetitorId === null) {
+    return <Dash label={t("gaps.noCompetitor")} />;
+  }
   const competitor = competitors.get(row.bestCompetitorId);
-  const name = competitor?.name ?? UNNAMED_COMPETITOR;
+  const name = competitor?.name ?? t("unnamed");
   return (
     <span className="inline-flex items-center gap-2">
       <span aria-hidden>
@@ -197,7 +226,11 @@ function scoreColumn(
   });
 }
 
-export function gapColumns(scope: GapColumnScope) {
+export function gapColumns(
+  scope: GapColumnScope,
+  copy: { t: MessageTranslator; locale: Locale },
+) {
+  const { t, locale } = copy;
   return columnHelper.columns([
     columnHelper.accessor("text", {
       id: "keyword",
@@ -205,7 +238,7 @@ export function gapColumns(scope: GapColumnScope) {
       sortDescFirst: false,
       enableHiding: false,
       header: ({ column }) => (
-        <SortableHeader column={column} label="Keyword" />
+        <SortableHeader column={column} label={t("comparison.keyword")} />
       ),
       cell: ({ row }) => (
         <KeywordButton
@@ -219,16 +252,15 @@ export function gapColumns(scope: GapColumnScope) {
       (row) =>
         row.bestCompetitorId === null
           ? undefined
-          : (scope.competitors.get(row.bestCompetitorId)?.name ??
-            UNNAMED_COMPETITOR),
+          : (scope.competitors.get(row.bestCompetitorId)?.name ?? t("unnamed")),
       {
         id: "competitor",
         sortFn: "text",
         sortUndefined: "last",
         sortDescFirst: false,
-        meta: { label: "Best competitor" },
+        meta: { label: t("gaps.bestCompetitor") },
         header: ({ column }) => (
-          <SortableHeader column={column} label="Best competitor" />
+          <SortableHeader column={column} label={t("gaps.bestCompetitor")} />
         ),
         cell: ({ row }) => (
           <CompetitorCell row={row.original} competitors={scope.competitors} />
@@ -238,13 +270,13 @@ export function gapColumns(scope: GapColumnScope) {
     columnHelper.accessor((row) => gapSortValue("theirs", row), {
       id: "theirs",
       ...POSITION_SORT,
-      meta: { label: "Their position", numeric: true, phone: true },
+      meta: { label: t("gaps.theirPosition"), numeric: true, phone: true },
       header: ({ column }) => (
-        <SortableHeader column={column} label="Their position" />
+        <SortableHeader column={column} label={t("gaps.theirPosition")} />
       ),
       cell: ({ row }) =>
         row.original.bestCompetitorPosition === null ? (
-          <Dash label={NO_COMPETITOR} />
+          <Dash label={t("gaps.noCompetitor")} />
         ) : (
           <PositionCell
             value={row.original.bestCompetitorPosition}
@@ -258,33 +290,49 @@ export function gapColumns(scope: GapColumnScope) {
       enableHiding: false,
       meta: { numeric: true },
       header: ({ column }) => (
-        <SortableHeader column={column} label="Your position" />
+        <SortableHeader column={column} label={t("gaps.yourPosition")} />
       ),
       cell: ({ row }) => <YoursCell row={row.original} today={scope.today} />,
     }),
-    scoreColumn("popularity", "Popularity", (row) => row.volume),
-    scoreColumn("difficulty", "Difficulty", (row) => row.difficulty),
-    scoreColumn("opportunity", "Opportunity", (row) => row.opportunity),
+    scoreColumn("popularity", t("comparison.popularity"), (row) => row.volume),
+    scoreColumn(
+      "difficulty",
+      t("comparison.difficulty"),
+      (row) => row.difficulty,
+    ),
+    scoreColumn("opportunity", t("gaps.opportunity"), (row) => row.opportunity),
     columnHelper.accessor((row) => gapSortValue("reason", row), {
       id: "reason",
       sortFn: "basic",
       sortUndefined: "last",
       sortDescFirst: false,
       enableHiding: false,
-      header: ({ column }) => <SortableHeader column={column} label="Why" />,
-      cell: ({ row }) => <span>{threatText(row.original)}</span>,
+      header: ({ column }) => (
+        <SortableHeader column={column} label={t("gaps.why")} />
+      ),
+      cell: ({ row }) => (
+        <span>
+          {threatText(
+            row.original,
+            (day) => formatDayMonthInLocale(day, locale),
+            t,
+          )}
+        </span>
+      ),
     }),
     columnHelper.accessor((row) => gapSortValue("margin", row), {
       id: "margin",
       ...SCORE_SORT,
       enableHiding: false,
       meta: { numeric: true },
-      header: ({ column }) => <SortableHeader column={column} label="Margin" />,
+      header: ({ column }) => (
+        <SortableHeader column={column} label={t("gaps.margin")} />
+      ),
       cell: ({ row }) =>
         row.original.gap === null ? (
-          <Dash label={NO_COMPETITOR} />
+          <Dash label={t("gaps.noCompetitor")} />
         ) : (
-          <span className="numeric">{leadText(row.original)}</span>
+          <span className="numeric">{leadText(row.original, t)}</span>
         ),
     }),
   ]);

@@ -2,6 +2,7 @@
 
 import { type RefObject, useEffect, useRef, useSyncExternalStore } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import type { AppAuditResult } from "@asobeast/shared";
 import { invalidateAiUsage, invalidateAudit } from "@/lib/queries";
@@ -52,6 +53,7 @@ export function useFocusWhenQueued(
 }
 
 export function useRunTransitions(appId: string, audit: AppAuditResult): void {
+  const t = useTranslations("audit");
   const queryClient = useQueryClient();
   const previous = useRef(audit.ai.run?.state ?? null);
   const overall = useRef(audit.overall);
@@ -66,14 +68,17 @@ export function useRunTransitions(appId: string, audit: AppAuditResult): void {
       return;
     }
     if (state === "completed") {
-      toast.success("Creative analysis finished", {
-        description: `Score ${overall.current ?? "—"} to ${audit.overall ?? "—"}`,
+      toast.success(t("analysis.finished"), {
+        description: t("analysis.scoreChange", {
+          before: overall.current ?? "—",
+          after: audit.overall ?? "—",
+        }),
       });
       void invalidateAudit(queryClient, appId);
       invalidateAiUsage(queryClient);
     }
     if (state === "failed") {
-      toast.error("Creative analysis failed", {
+      toast.error(t("analysis.failed"), {
         description: audit.ai.run?.error ?? undefined,
       });
       invalidateAiUsage(queryClient);
@@ -85,5 +90,6 @@ export function useRunTransitions(appId: string, audit: AppAuditResult): void {
     audit.ai.run?.error,
     audit.overall,
     queryClient,
+    t,
   ]);
 }

@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type RefObject } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import type { MessageTranslator } from "@/i18n/translator";
 import { useAuth } from "@/components/auth/use-auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,7 +29,10 @@ import { useChecklistSave } from "./use-checklist-save";
 
 export const CHECKLIST_COLLAPSED = "asobeast.checklist.collapsed";
 
-function useProgressAnnouncement(progress: ChecklistProgress | null): string {
+function useProgressAnnouncement(
+  progress: ChecklistProgress | null,
+  translator: MessageTranslator,
+): string {
   const [seen, setSeen] = useState<ChecklistProgress | null>(null);
   const [announcement, setAnnouncement] = useState("");
   if (
@@ -35,7 +40,7 @@ function useProgressAnnouncement(progress: ChecklistProgress | null): string {
     (seen?.done !== progress.done || seen.total !== progress.total)
   ) {
     setSeen(progress);
-    const sentence = progressAnnouncement(seen, progress);
+    const sentence = progressAnnouncement(seen, progress, translator);
     if (sentence !== null) setAnnouncement(sentence);
   }
   return announcement;
@@ -64,6 +69,7 @@ export function ChecklistPill() {
 }
 
 function EntitledPill() {
+  const t = useTranslations("settings");
   const { data: checklist } = useQuery(workspaceChecklistOptions);
   const [collapsedValue, saveCollapsed] =
     useStoredPreference(CHECKLIST_COLLAPSED);
@@ -77,6 +83,7 @@ function EntitledPill() {
   const summaryId = useId();
   const announcement = useProgressAnnouncement(
     checklist ? { done: checklist.done, total: checklist.total } : null,
+    t,
   );
 
   const visible = checklist !== undefined && pillVisible(checklist);
@@ -85,7 +92,7 @@ function EntitledPill() {
   if (!visible || !checklist) return null;
 
   const collapsed = collapsedValue === "1";
-  const label = pillLabel(checklist.done, checklist.total);
+  const label = pillLabel(checklist.done, checklist.total, t);
 
   const startHiding = () => {
     setOpen(false);
@@ -96,11 +103,11 @@ function EntitledPill() {
     save(
       { dismissed: true },
       {
-        failure: "Could not hide the setup checklist",
+        failure: t("checklist.hideError"),
         onSaved: () => {
           focusAfterCommit(document.getElementById("main-content"));
           setHiding(false);
-          toast.success("Setup checklist hidden. Show it again in Settings.");
+          toast.success(t("checklist.hiddenToast"));
         },
       },
     );
@@ -127,7 +134,7 @@ function EntitledPill() {
             >
               <ProgressRing done={checklist.done} total={checklist.total} />
               <span className={collapsed ? "sr-only" : undefined}>{label}</span>
-              <span className="sr-only"> in the setup checklist</span>
+              <span className="sr-only">{t("checklist.inChecklist")}</span>
             </Button>
           </PopoverTrigger>
           <PopoverContent

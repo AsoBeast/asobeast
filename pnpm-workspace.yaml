@@ -22,6 +22,7 @@ allowBuilds:
   "@prisma/engines": true
   "@scarf/scarf": false
   "@sentry/cli": false
+  "@swc/core": true
   argon2: false
   esbuild: false
   msgpackr-extract: false
@@ -29,3 +30,7 @@ allowBuilds:
   sharp: false
   tesseract.js: false
   unrs-resolver: false
+
+minimumReleaseAgeExclude:
+  - icu-minify@4.15.3
+  - next-intl@4.16.0

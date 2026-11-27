@@ -1,8 +1,9 @@
 "use client";
 
-import { useDeferredValue, useTransition } from "react";
+import { useDeferredValue, useMemo, useTransition } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryStates } from "nuqs";
+import { useTranslations } from "next-intl";
 import { STORES } from "@asobeast/shared";
 import { FacetFilter } from "@/components/data-table/FacetFilter";
 import { appMatches } from "@/lib/admin-search";
@@ -10,18 +11,16 @@ import { storeLabel } from "@/lib/format";
 import { adminAppsOptions, authStatusOptions } from "@/lib/queries";
 import { adminAppListParsers, adminAppSortParser } from "@/lib/search-params";
 import { countBy, oneOf } from "@/lib/table/facets";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { AdminList } from "./AdminList";
 import { appColumns } from "./app-columns";
 import { useAdminTable } from "./useAdminTable";
 import { workspaceChip } from "./workspace-chip";
 
-const STORE_OPTIONS = STORES.map((store) => ({
-  value: store,
-  label: storeLabel(store),
-}));
-
 export function AdminApps() {
   const [, startTransition] = useTransition();
+  const t = useTranslations("admin");
+  const locale = useAppLocale();
   const [{ q, workspace, store, sort, dir }, setList] = useQueryStates(
     adminAppListParsers,
     {
@@ -34,13 +33,17 @@ export function AdminApps() {
   const { data: status } = useSuspenseQuery(authStatusOptions);
   const query = useDeferredValue(q);
   const searched = apps.items.filter((app) => appMatches(app, query));
+  const columns = useMemo(
+    () => appColumns({ translator: t, locale }),
+    [t, locale],
+  );
 
   const table = useAdminTable({
     name: "admin-apps",
     data: searched.filter(
       (app) => store.length === 0 || oneOf(app.store, store),
     ),
-    columns: appColumns,
+    columns,
     getRowId: (app) => app.id,
     sort: { sort, dir },
     onSort: (next) =>
@@ -54,7 +57,7 @@ export function AdminApps() {
   return (
     <AdminList
       table={table}
-      caption="Tracked apps on this instance"
+      caption={t("apps.caption")}
       noun="app"
       loaded={apps.items.length}
       total={apps.total}
@@ -63,8 +66,11 @@ export function AdminApps() {
       onSearch={(next, options) => void setList({ q: next }, options)}
       filters={
         <FacetFilter
-          title="Store"
-          options={STORE_OPTIONS}
+          title={t("apps.store")}
+          options={STORES.map((store) => ({
+            value: store,
+            label: storeLabel(store),
+          }))}
           selected={store}
           counts={countBy(searched, (app) => app.store)}
           onChange={(next) => void setList({ store: next })}
@@ -73,7 +79,7 @@ export function AdminApps() {
       chips={[
         ...store.map((value) => ({
           key: `store-${value}`,
-          label: `Store: ${storeLabel(value)}`,
+          label: t("apps.storeChip", { store: storeLabel(value) }),
           onRemove: () =>
             void setList({ store: store.filter((entry) => entry !== value) }),
         })),
@@ -81,9 +87,10 @@ export function AdminApps() {
           workspace,
           apps.items,
           () => void setList({ workspace: null }),
+          t,
         ),
       ]}
-      reads="Competitors aside. Each read is written to the support audit trail."
+      reads={t("common.appsAuditRead")}
       onClearFilters={() =>
         void setList({ q: null, store: null, workspace: null })
       }

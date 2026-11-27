@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import Link from "next/link";
 import { ArrowRight, Check } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { ActionItem, ActionUpdateRequest } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { PANEL_COUNT, PANEL_HEADER } from "@/components/layout/panel-classes";
@@ -16,8 +17,9 @@ import {
 } from "@/components/ui/card";
 import { useFocusAfterCommit } from "@/lib/focus-handoff";
 import { formatNumber } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
-import { ACTION_EVIDENCE_UNAVAILABLE, summarizeEvidence } from "./action-copy";
+import { evidenceUnavailable, summarizeEvidence } from "./action-copy";
 import { actionHeadline } from "./action-headline";
 import { actionHref, actionSection } from "./action-links";
 import { actionSteps } from "./action-steps";
@@ -37,6 +39,7 @@ function StartControls({
   onOpen: () => void;
   onLeave: () => void;
 }) {
+  const t = useTranslations("actions");
   const { update: send, isPending: busy } = useActionUpdate(item);
   const update = (body: ActionUpdateRequest) => {
     if (busy) return;
@@ -49,7 +52,7 @@ function StartControls({
     <div className="flex flex-wrap items-center gap-2">
       <Button asChild size="sm">
         <Link href={href}>
-          {`Fix it in ${actionSection(href)}`}
+          {t("fixItIn", { section: actionSection(href, t) })}
           <ArrowRight aria-hidden />
         </Link>
       </Button>
@@ -60,7 +63,7 @@ function StartControls({
         onClick={() => update({ status: "DONE" })}
       >
         <Check aria-hidden />
-        Done
+        {t("done")}
       </Button>
       <ActionSnoozeMenu
         status={item.status}
@@ -70,7 +73,7 @@ function StartControls({
         onWake={() => update({ status: "OPEN" })}
       />
       <Button variant="ghost" size="sm" onClick={onOpen}>
-        See the evidence
+        {t("detail.seeEvidence")}
       </Button>
     </div>
   );
@@ -87,6 +90,8 @@ export function StartHere({
   iconOf?: (appId: string) => string | null;
   onOpen: (id: string) => void;
 }) {
+  const t = useTranslations("actions");
+  const locale = useAppLocale();
   const headline = useRef<HTMLParagraphElement>(null);
   const handOffFocus = useFocusAfterCommit();
   const open = items.filter((item) => item.status === "OPEN");
@@ -101,11 +106,11 @@ export function StartHere({
       <Card>
         <CardHeader className={PANEL_HEADER}>
           <CardTitle asChild>
-            <h2 id="start-heading">Start here</h2>
+            <h2 id="start-heading">{t("startHere")}</h2>
           </CardTitle>
           {truncated ? null : (
             <CardAction className={PANEL_COUNT}>
-              {`highest impact of ${formatNumber(open.length)} open`}
+              {t("highestImpact", { count: formatNumber(open.length) })}
             </CardAction>
           )}
         </CardHeader>
@@ -124,7 +129,7 @@ export function StartHere({
                   tabIndex={-1}
                   className="rounded-sm text-heading text-pretty outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  {actionHeadline(top)}
+                  {actionHeadline(top, t, locale)}
                 </p>
                 <div className="flex max-w-[70ch] flex-wrap items-center gap-x-2 gap-y-1 text-dense text-muted-foreground">
                   <span className="inline-flex max-w-full min-w-0 items-center gap-2">
@@ -132,7 +137,7 @@ export function StartHere({
                       <>
                         <AppIcon src={iconOf(top.scope.appId)} size={16} />
                         <span className="min-w-0 font-medium wrap-anywhere text-foreground">
-                          {top.scope.appName ?? "Unknown app"}
+                          {top.scope.appName ?? t("unknownApp")}
                         </span>
                       </>
                     ) : null}
@@ -142,15 +147,15 @@ export function StartHere({
                   </span>
                   <span>
                     {top.evidence
-                      ? summarizeEvidence(top.evidence)
-                      : ACTION_EVIDENCE_UNAVAILABLE}
+                      ? summarizeEvidence(top.evidence, locale)
+                      : evidenceUnavailable(t)}
                   </span>
                 </div>
               </div>
               <ImpactFigure impact={top.impact} labelled />
             </div>
             <NumberedSteps
-              steps={actionSteps(top)}
+              steps={actionSteps(top, locale)}
               muteLast
               className="gap-2"
             />

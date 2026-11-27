@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { WORKSPACE_GOALS, type WorkspaceGoal } from "@asobeast/shared";
 import { useAuth } from "@/components/auth/use-auth";
@@ -11,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { workspaceChecklistOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
-import { GOAL_COPY } from "./checklist-copy";
+import { checklistGoalCopy } from "./checklist-copy";
 import { useChecklistSave } from "./use-checklist-save";
 
 export function GoalPicker({
@@ -21,6 +22,7 @@ export function GoalPicker({
   as?: "h2" | "h3";
   hint?: boolean;
 }) {
+  const t = useTranslations("settings");
   const { authenticated } = useAuth();
   const read = useQuery({
     ...workspaceChecklistOptions,
@@ -33,7 +35,7 @@ export function GoalPicker({
 
   if (!checklist) {
     return failedRead(read) ? (
-      <InlineQueryError message="Could not load your goal." read={read} />
+      <InlineQueryError message={t("checklist.goalLoadError")} read={read} />
     ) : null;
   }
 
@@ -43,8 +45,13 @@ export function GoalPicker({
       { goal },
       {
         optimistic: true,
-        failure: "Could not save your goal",
-        onSaved: () => setAnnouncement(`Goal set to ${GOAL_COPY[goal].label}`),
+        failure: t("checklist.goalSaveError"),
+        onSaved: () =>
+          setAnnouncement(
+            t("checklist.goalSet", {
+              goal: checklistGoalCopy(goal, t).label,
+            }),
+          ),
       },
     );
   };
@@ -56,12 +63,11 @@ export function GoalPicker({
           id={headingId}
           className={hint ? "text-heading" : "text-label"}
         >
-          What would you like to get done?
+          {t("checklist.question")}
         </Heading>
         {hint ? (
           <p className="text-body text-muted-foreground">
-            Pick one and the setup checklist starts with the steps that matter
-            most. You can change it any time.
+            {t("checklist.hint")}
           </p>
         ) : null}
       </div>
@@ -72,6 +78,7 @@ export function GoalPicker({
       >
         {WORKSPACE_GOALS.map((goal) => {
           const pressed = checklist.goal === goal;
+          const copy = checklistGoalCopy(goal, t);
           return (
             <Button
               key={goal}
@@ -85,9 +92,9 @@ export function GoalPicker({
               )}
               onClick={() => choose(goal)}
             >
-              <span className="font-medium">{GOAL_COPY[goal].label}</span>
+              <span className="font-medium">{copy.label}</span>
               <span className="text-caption font-normal text-muted-foreground">
-                {GOAL_COPY[goal].description}
+                {copy.description}
               </span>
             </Button>
           );

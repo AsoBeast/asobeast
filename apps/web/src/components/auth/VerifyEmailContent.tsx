@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ApiError, resendVerification, verifyEmail } from "@/lib/api";
@@ -13,6 +14,7 @@ import { SessionNotKeptAlert } from "./SessionNotKeptAlert";
 import { useSessionEntry } from "./use-session-entry";
 
 export function VerifyEmailContent() {
+  const t = useTranslations("auth");
   const token = useSearchParams().get("token") ?? "";
 
   const { mutation, sessionDropped } = useSessionEntry({
@@ -30,12 +32,12 @@ export function VerifyEmailContent() {
   if (token === "") {
     return (
       <AuthCard
-        title="Confirmation link incomplete"
-        description="Open the link from your confirmation email."
+        title={t("verifyEmail.incompleteTitle")}
+        description={t("verifyEmail.incompleteDescription")}
       >
         <AuthActions>
           <Button asChild variant="outline">
-            <Link href="/login">Back to sign in</Link>
+            <Link href="/login">{t("backToSignIn")}</Link>
           </Button>
         </AuthActions>
       </AuthCard>
@@ -45,20 +47,20 @@ export function VerifyEmailContent() {
   const reason =
     mutation.error instanceof ApiError
       ? mutation.error.envelope.message
-      : "That confirmation link is no longer valid.";
+      : t("verifyEmail.invalid");
 
   const resendReason =
     resend.error instanceof ApiError && resend.error.envelope.statusCode === 401
-      ? "Sign in first, then ask for a new link."
-      : "Could not send a new link. Try again shortly.";
+      ? t("verifyEmail.resendSignIn")
+      : t("verifyEmail.resendFailed");
 
   return (
     <AuthCard
-      title="Confirm your email"
-      description="Confirming marks this address as yours and signs you in on this device."
+      title={t("verifyEmail.title")}
+      description={t("verifyEmail.description")}
     >
       {sessionDropped ? (
-        <SessionNotKeptAlert outcome="Your email is confirmed." offerSignIn />
+        <SessionNotKeptAlert outcome={t("verifyEmail.confirmed")} offerSignIn />
       ) : null}
       <AuthActions>
         <Button
@@ -68,7 +70,7 @@ export function VerifyEmailContent() {
           }}
         >
           {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
-          Confirm my email
+          {t("verifyEmail.submit")}
         </Button>
         {mutation.isError && !sessionDropped ? (
           <>
@@ -81,7 +83,9 @@ export function VerifyEmailContent() {
               }}
             >
               {resend.isPending ? <Loader2 className="animate-spin" /> : null}
-              {resend.isSuccess ? "New link sent" : "Send me a new link"}
+              {resend.isSuccess
+                ? t("resendConfirmation.newLinkSent")
+                : t("verifyEmail.resend")}
             </Button>
             {resend.isError ? (
               <p className="text-dense text-destructive">{resendReason}</p>
@@ -90,9 +94,7 @@ export function VerifyEmailContent() {
         ) : null}
       </AuthActions>
       <AuthAside>
-        <p className="text-caption">
-          Signed in as someone else? Sign out first, then open this link again.
-        </p>
+        <p className="text-caption">{t("verifyEmail.otherSignedIn")}</p>
       </AuthAside>
     </AuthCard>
   );

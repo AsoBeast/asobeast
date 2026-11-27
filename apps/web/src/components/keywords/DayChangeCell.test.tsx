@@ -1,10 +1,15 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { TestIntlProvider } from "@/test/intl-provider";
 import type { DayChange } from "@/lib/keyword-day-change";
 import { DayChangeCell } from "./DayChangeCell";
 
 const render = (change: DayChange | null, muted = false) =>
-  renderToStaticMarkup(<DayChangeCell change={change} muted={muted} />);
+  renderToStaticMarkup(
+    <TestIntlProvider>
+      <DayChangeCell change={change} muted={muted} />
+    </TestIntlProvider>,
+  );
 
 describe("DayChangeCell", () => {
   it("names a rank that vanished as lost, in the falling colour", () => {

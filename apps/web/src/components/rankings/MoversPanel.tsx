@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useQueryState } from "nuqs";
+import { useTranslations } from "next-intl";
 import type { KeywordMover } from "@asobeast/shared";
 import { PANEL_ACTION, PANEL_HEADER } from "@/components/layout/panel-classes";
 import {
@@ -20,21 +21,10 @@ import {
 } from "@/lib/search-params";
 import { MoverList } from "./MoverList";
 import { byMagnitude, type MoverPeriod } from "./mover-change";
-import { formatNumber } from "@/lib/format";
+import { formatNumberInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
-
-const MOVER_LABELS: Record<MoverView, string> = {
-  all: "All",
-  up: "Climbers",
-  down: "Fallers",
-};
-
-const EMPTY: Record<MoverView, (period: MoverPeriod) => string> = {
-  all: ({ span }) => `No keyword moved ${span}.`,
-  up: ({ span }) => `No keyword climbed ${span}.`,
-  down: ({ span }) => `No keyword fell ${span}.`,
-};
 
 export const ALL_MOVERS = 8;
 
@@ -61,18 +51,31 @@ export function MoversPanel<Mover extends KeywordMover>({
   footer?: ReactNode;
   children?: ReactNode;
 }) {
+  const t = useTranslations("rankings");
+  const locale = useAppLocale();
   const [view, setView] = useQueryState("movers", moverViewParser);
   const shown = {
     all: byMagnitude([...up, ...down]).slice(0, ALL_MOVERS),
     up,
     down,
   }[view];
+  const labels: Record<MoverView, string> = {
+    all: t("all"),
+    up: t("climbers"),
+    down: t("fallers"),
+  };
+  const empty =
+    view === "all"
+      ? t("noMover", { span: period.span })
+      : view === "up"
+        ? t("noClimber", { span: period.span })
+        : t("noFall", { span: period.span });
 
   return (
     <Card className="h-full">
       <CardHeader className={PANEL_HEADER}>
         <CardTitle asChild>
-          <h2>Keyword movers</h2>
+          <h2>{t("moversTitle")}</h2>
         </CardTitle>
         {quiet && !control ? null : (
           <CardAction
@@ -86,13 +89,16 @@ export function MoversPanel<Mover extends KeywordMover>({
                   void setView(moverViewParser.parse(next))
                 }
               >
-                <TabsList aria-label="Movers shown" className="print:hidden">
+                <TabsList
+                  aria-label={t("moversShown")}
+                  className="print:hidden"
+                >
                   {MOVER_VIEWS.map((value) => (
                     <TabsOption key={value} value={value}>
-                      <span>{MOVER_LABELS[value]}</span>
+                      <span>{labels[value]}</span>
                       {counts ? (
                         <span className="numeric text-muted-foreground max-[359px]:hidden">
-                          {formatNumber(counts[value])}
+                          {formatNumberInLocale(counts[value], locale)}
                         </span>
                       ) : null}
                     </TabsOption>
@@ -110,7 +116,7 @@ export function MoversPanel<Mover extends KeywordMover>({
           <MoverList
             movers={shown}
             period={period}
-            empty={EMPTY[view](period)}
+            empty={empty}
             changeHeading={changeHeading}
             hrefOf={hrefOf}
             lead={lead}

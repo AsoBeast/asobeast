@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import {
   type MarketSuggestion,
@@ -12,7 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { InfoTip } from "@/components/ui/info-tip";
 import { Label } from "@/components/ui/label";
-import { formatCountry, formatList } from "@/lib/format";
+import { formatCountryInLocale, formatListInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
 import {
   seedChosen,
@@ -52,7 +54,9 @@ export function SuggestedMarkets({
   selected: readonly string[];
   onSelect: (market: string, selected: boolean) => void;
 }) {
-  const languages = languageNames(result);
+  const t = useTranslations("setup");
+  const locale = useAppLocale();
+  const languages = languageNames(result, locale);
   const [ticked, setTicked] = useState<ReadonlySet<string>>(new Set());
   const [seedChoices, setSeedChoices] = useState<ReadonlyMap<string, boolean>>(
     new Map(),
@@ -87,9 +91,11 @@ export function SuggestedMarkets({
   return (
     <div className="flex flex-col gap-4">
       <p className="text-dense">
-        {`Your listing ships ${formatList(languages)}.`}
+        {t("markets.listingLanguages", {
+          languages: formatListInLocale(languages, locale),
+        })}
       </p>
-      {groupSuggestions(result).map((group) => (
+      {groupSuggestions(result, locale).map((group) => (
         <fieldset key={group.localization} className="flex flex-col">
           <legend className="text-label text-faint-foreground">
             {group.name}
@@ -120,18 +126,19 @@ export function SuggestedMarkets({
         onClick={add}
       >
         {seeding.length > 0 ? <Loader2 className="animate-spin" /> : null}
-        {seedButtonLabel(pending.length, plan.seed.length)}
+        {seedButtonLabel(pending.length, plan.seed.length, t)}
       </Button>
     </div>
   );
 }
 
 export function MarketCostTip({ store }: { store: Store }) {
+  const t = useTranslations("setup");
   return (
     <InfoTip
-      label="About market costs"
-      title="What a market costs"
-      summary={marketCostSummary(store)}
+      label={t("markets.costTipLabel")}
+      title={t("markets.costTipTitle")}
+      summary={marketCostSummary(store, t)}
     >
       <a
         href={MARKET_COST_GUIDE}
@@ -139,7 +146,7 @@ export function MarketCostTip({ store }: { store: Store }) {
         rel="noreferrer"
         className="font-medium text-foreground link-underline"
       >
-        Read what a market costs
+        {t("markets.costGuide")}
       </a>
     </InfoTip>
   );
@@ -164,9 +171,11 @@ function SuggestedMarket({
   onPick: (on: boolean) => void;
   onSeed: (on: boolean) => void;
 }) {
+  const t = useTranslations("setup");
+  const locale = useAppLocale();
   const id = `setup-suggested-${market.country}`;
   const seedId = `setup-seed-${market.country}`;
-  const name = formatCountry(market.country);
+  const name = formatCountryInLocale(market.country, locale);
   return (
     <div className="flex flex-col gap-1 py-2">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-dense">
@@ -181,10 +190,12 @@ function SuggestedMarket({
         </Label>
         <ReadRoleBadge role={market.role} />
         {market.tracked ? (
-          <span className="text-caption text-faint-foreground">Tracked</span>
+          <span className="text-caption text-faint-foreground">
+            {t("markets.tracked")}
+          </span>
         ) : null}
         <span className="numeric text-caption text-muted-foreground sm:ml-auto">
-          {marketCostText(market)}
+          {marketCostText(market, t)}
         </span>
       </div>
       {ticked ? (
@@ -198,8 +209,10 @@ function SuggestedMarket({
             htmlFor={seedId}
             className="text-caption font-normal text-muted-foreground"
           >
-            Seed with its listing
-            <span className="sr-only"> for {name}</span>
+            {t("markets.seedLabel")}
+            <span className="sr-only">
+              {t("markets.seedFor", { country: name })}
+            </span>
           </Label>
         </div>
       ) : null}
@@ -212,7 +225,7 @@ function SuggestedMarket({
             : "text-muted-foreground",
         )}
       >
-        {seedStatusText(seeding, outcome)}
+        {seedStatusText(seeding, outcome, t)}
       </p>
     </div>
   );

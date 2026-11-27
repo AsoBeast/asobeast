@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { flexRender, useTable } from "@tanstack/react-table";
 import type { inferParserType, SetValues } from "nuqs";
 import type { CompetitorGapKeyword } from "@asobeast/shared";
@@ -21,7 +22,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { GAP_TAB_SUBJECTS, type GapTab } from "@/lib/gap-lists";
+import { gapTabSubject, type GapTab } from "@/lib/gap-lists";
+import { useAppLocale } from "@/lib/use-app-locale";
 import {
   GAP_DEFAULT_SORT,
   gapSortParser,
@@ -40,13 +42,6 @@ import {
 } from "./section-layout";
 
 type GapTableParams = inferParserType<typeof gapTableParsers>;
-
-const TAB_CAPTIONS: Record<GapTab, string> = {
-  gaps: "Keywords where a competitor ranks and you do not",
-  winnable: "Keyword gaps that look winnable",
-  threats: "Keywords where a competitor is closing in or passed you",
-  lead: "Keywords where you rank ahead of every competitor",
-};
 
 const TAB_COLUMNS: Record<GapTab, { reason: boolean; margin: boolean }> = {
   gaps: { reason: false, margin: false },
@@ -74,7 +69,12 @@ export function GapTable({
   setParams: SetValues<typeof gapTableParsers>;
   footer: string | null;
 }) {
-  const columns = useMemo(() => gapColumns(scope), [scope]);
+  const t = useTranslations("competitors");
+  const locale = useAppLocale();
+  const columns = useMemo(
+    () => gapColumns(scope, { t, locale }),
+    [scope, t, locale],
+  );
   const [visibility, setVisibility] = useStoredColumnVisibility(
     "gaps",
     columns,
@@ -111,7 +111,9 @@ export function GapTable({
     getColumnCanGlobalFilter: (column) => column.id === "keyword",
   });
   const visible = table.getRowModel().rows;
-  const caption = `${TAB_CAPTIONS[tab]}${marketName ? `, for ${marketName}` : ""}.`;
+  const caption = `${t(`gaps.captions.${tab}`)}${
+    marketName ? t("gaps.captionMarket", { market: marketName }) : ""
+  }.`;
   const names = new Map(
     [...scope.competitors].map(([id, competitor]) => [id, competitor.name]),
   );
@@ -120,7 +122,7 @@ export function GapTable({
     <>
       <div className={SECTION_TOOLBAR}>
         <SearchInput
-          label="Search gap keywords"
+          label={t("gaps.search")}
           value={params.q}
           onSearch={(q, options) => void setParams({ q }, options)}
         />
@@ -128,22 +130,25 @@ export function GapTable({
         <div className="ml-auto flex items-center gap-2">
           <ColumnMenu columns={table.getAllLeafColumns()} />
           <ExportCsvButton
-            subject={GAP_TAB_SUBJECTS[tab]}
+            subject={gapTabSubject(tab, t)}
             aria-disabled={visible.length === 0 || undefined}
             onClick={() => {
               if (visible.length === 0) return;
               exportGaps(
                 tab,
                 appId,
-                visible.map((row) => row.original),
-                names,
+                {
+                  rows: visible.map((row) => row.original),
+                  names,
+                },
+                t,
               );
             }}
           />
         </div>
       </div>
       <div className={cn(SECTION_SHEET, PHONE_HIDES_IDLE_SORT)}>
-        <Table scrollLabel={TAB_CAPTIONS[tab]} scrollFocus="overflow">
+        <Table scrollLabel={t(`gaps.captions.${tab}`)} scrollFocus="overflow">
           <TableCaption className="sr-only">{caption}</TableCaption>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -168,7 +173,7 @@ export function GapTable({
               <TableRow>
                 <TableCell colSpan={table.getVisibleLeafColumns().length}>
                   <FilteredEmpty
-                    title="No keywords match this search"
+                    title={t("gaps.noMatches")}
                     onClear={() => void setParams({ q: null })}
                   />
                 </TableCell>

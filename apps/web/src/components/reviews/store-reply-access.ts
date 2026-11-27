@@ -5,9 +5,25 @@ import {
   type Store,
   type StoreConnectionState,
 } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
+import enReviews from "../../../messages/en/reviews.json";
+import enIntegrations from "../../../messages/en/integrations.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import { storeLabel } from "@/lib/format";
 import { replyAccessLine, STORE_CONSOLES } from "@/lib/store-connection-copy";
 import { consoleLabel } from "./store-console";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "reviews",
+  messages: { reviews: enReviews },
+});
+
+const englishIntegrations = createTranslator({
+  locale: "en",
+  namespace: "integrations",
+  messages: { integrations: enIntegrations },
+});
 
 export type StoreReplyAccessKind =
   "off" | "none" | "rejected" | "forbidden" | "ready";
@@ -25,6 +41,8 @@ export const PLAY_NO_WITHDRAW =
 export function storeReplyAccess(
   state: StoreConnectionState | undefined,
   store: Store,
+  t: MessageTranslator = english,
+  connectionT: MessageTranslator = englishIntegrations,
 ): StoreReplyAccess {
   if (!state?.available) return OFF;
   const name = STORE_CONSOLES[store].name;
@@ -32,50 +50,63 @@ export function storeReplyAccess(
   if (!item) {
     return {
       kind: "none",
-      note: `Connect ${name} in Integrations to post replies from here.`,
+      note: t("storeAccess.connect", { name }),
     };
   }
   if (item.status === "rejected") {
     return {
       kind: "rejected",
       note: item.lastError
-        ? `${item.lastError} Until then, replies cannot be posted from here.`
-        : `${name} refused the connected key. Verify it or connect a new one in Integrations to post replies.`,
+        ? t("storeAccess.rejectedError", { error: item.lastError })
+        : t("storeAccess.rejected", { name }),
     };
   }
   if (item.replyAccess === "forbidden") {
-    return { kind: "forbidden", note: replyAccessLine(item).text };
+    return { kind: "forbidden", note: replyAccessLine(item, connectionT).text };
   }
   return {
     kind: "ready",
-    note: `Posting sends this text to ${consoleLabel(store)} with the key connected in Integrations.`,
+    note: t("storeAccess.ready", { console: consoleLabel(store) }),
   };
 }
 
-export const postLabel = (store: Store): string =>
-  `Post to ${storeLabel(store)}`;
+export const postLabel = (
+  store: Store,
+  t: MessageTranslator = english,
+): string =>
+  t(
+    store === "APP_STORE" ? "storeAccess.postAppStore" : "storeAccess.postPlay",
+  );
 
 export function postActionLabel(
   store: Store,
   reply: Pick<ReviewReplyItem, "text" | "post"> | null | undefined,
+  t: MessageTranslator = english,
 ): string {
-  return reply?.post ? `Update on ${storeLabel(store)}` : postLabel(store);
+  return reply?.post ? t("storeAccess.updateAppStore") : postLabel(store, t);
 }
 
-export function postRules(store: Store): string[] {
+export function postRules(
+  store: Store,
+  t: MessageTranslator = english,
+): string[] {
   return [
-    `The reply is public under the review on ${storeLabel(store)}.`,
-    "A review has one reply, so posting again replaces it.",
-    "Do not ask for a rating or offer anything in return.",
-    ...(store === "APP_STORE" ? ["Apple shows it within 24 hours."] : []),
+    t("storeAccess.publicRule", { store: storeLabel(store) }),
+    t("storeAccess.oneReply"),
+    t("storeAccess.noRatingAsk"),
+    ...(store === "APP_STORE" ? [t("storeAccess.apple24")] : []),
   ];
 }
 
-export function postedToast(store: Store, post: ReviewReplyPost): string {
-  if (store === "GOOGLE_PLAY") return "Posted on Google Play.";
+export function postedToast(
+  store: Store,
+  post: ReviewReplyPost,
+  t: MessageTranslator = english,
+): string {
+  if (store === "GOOGLE_PLAY") return t("storeAccess.postedPlay");
   return post.state === "pending"
-    ? "Posted to App Store Connect. Apple publishes it within 24 hours."
-    : "Posted to App Store Connect.";
+    ? t("storeAccess.postedPending")
+    : t("storeAccess.postedAppStore");
 }
 
 export const WITHDRAWN_TOAST =
@@ -84,13 +115,14 @@ export const WITHDRAWN_TOAST =
 export function discardNotice(
   store: Store,
   reply: Pick<ReviewReplyItem, "post"> | null | undefined,
+  t: MessageTranslator = english,
 ): string {
   if (!reply?.post) {
-    return `A reply already posted in ${consoleLabel(store)} stays there.`;
+    return t("storeAccess.discardConsole", { console: consoleLabel(store) });
   }
   return store === "APP_STORE"
-    ? "The reply posted to App Store Connect stays there unless you withdraw it."
-    : "The reply posted on Google Play stays there.";
+    ? t("storeAccess.appStoreStays")
+    : t("storeAccess.playStays");
 }
 
 export const needsPosting = (
@@ -98,9 +130,13 @@ export const needsPosting = (
   text: string,
 ): boolean => !reply?.post || isPostEdited({ text, post: reply.post });
 
-export function markLabel(marked: boolean, ready: boolean): string {
-  if (marked) return "Undo";
-  return ready ? "Mark as replied without posting" : "Mark as replied";
+export function markLabel(
+  marked: boolean,
+  ready: boolean,
+  t: MessageTranslator = english,
+): string {
+  if (marked) return t("storeAccess.undo");
+  return ready ? t("storeAccess.markWithoutPosting") : t("storeAccess.mark");
 }
 
 export interface ComposerActions {
@@ -115,13 +151,16 @@ export function composerActions(
   store: Store,
   reply: Pick<ReviewReplyItem, "text" | "post"> | null | undefined,
   text: string,
+  t: MessageTranslator = english,
 ): ComposerActions {
   const ready = access.kind === "ready";
   const posted = Boolean(reply?.post);
   const withdraw = ready && posted && store === "APP_STORE";
   return {
     post:
-      ready && needsPosting(reply, text) ? postActionLabel(store, reply) : null,
+      ready && needsPosting(reply, text)
+        ? postActionLabel(store, reply, t)
+        : null,
     withdraw,
     discard: !withdraw,
     mark: !posted,

@@ -1,4 +1,13 @@
 import type { AiProvider, AppAuditResult } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
+import enAudit from "../../../messages/en/audit.json";
+import type { MessageTranslator } from "@/i18n/translator";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "audit",
+  messages: { audit: enAudit },
+});
 
 export type AnalysisState =
   | "unconfigured"
@@ -23,32 +32,28 @@ export function analysisState(
   return "never";
 }
 
-export const ANALYSIS_COPY: Record<AnalysisState, string> = {
-  unconfigured:
-    "Add OPENAI_API_KEY to let AI read your icon and screenshots. Everything else in this audit works without it.",
-  never:
-    "AI reads your icon and first six screenshots, and your competitors' icons, and reports what it sees. The rules score it.",
-  requesting: "Queuing the analysis.",
-  active: "You can leave this page. The audit updates when it finishes.",
-  current: "The analysis matches your current icon and screenshots.",
-  stale: "Your icon or screenshots changed since the last analysis.",
-  failed: "Nothing was charged to the score.",
+export const analysisCopy = (
+  state: AnalysisState,
+  t: MessageTranslator = english,
+): string => t(`analysisCopy.${state}`);
+
+export const analysisAction = (
+  state: AnalysisState,
+  t: MessageTranslator = english,
+): string | null => {
+  if (state === "unconfigured" || state === "active" || state === "current") {
+    return null;
+  }
+  return t(`analysisAction.${state}`);
 };
 
-export const ANALYSIS_ACTION: Record<AnalysisState, string | null> = {
-  unconfigured: null,
-  never: "Analyze creative",
-  requesting: "Queuing",
-  active: null,
-  current: null,
-  stale: "Analyze again",
-  failed: "Try again",
-};
-
-export const progressLine = (screenshots: number | null): string =>
+export const progressLine = (
+  screenshots: number | null,
+  t: MessageTranslator = english,
+): string =>
   screenshots === null
-    ? "Analyzing your icon and screenshots"
-    : `Analyzing your icon and ${screenshots} screenshot${screenshots === 1 ? "" : "s"}`;
+    ? t("analysisProgress.all")
+    : t("analysisProgress.some", { count: screenshots });
 
 const SENDS_CREATIVE: ReadonlySet<AnalysisState> = new Set([
   "never",
@@ -59,20 +64,23 @@ const SENDS_CREATIVE: ReadonlySet<AnalysisState> = new Set([
 export const sendsCreative = (state: AnalysisState): boolean =>
   SENDS_CREATIVE.has(state);
 
-const CONFIGURED_PROVIDER = "the AI provider this instance is configured with";
-
 export const creativeSentLine = (
   provider: AiProvider | null | undefined,
   model: string | null,
+  t: MessageTranslator = english,
 ): string => {
   if (provider === "compatible") {
+    const configuredProvider = t("analysisSent.configuredProvider");
     return model === null
-      ? `Sends the icon and screenshots to ${CONFIGURED_PROVIDER}.`
-      : `Sends the icon and screenshots to ${model} on ${CONFIGURED_PROVIDER}.`;
+      ? t("analysisSent.configured", { provider: configuredProvider })
+      : t("analysisSent.configuredModel", {
+          model,
+          provider: configuredProvider,
+        });
   }
   return model === null
-    ? "Sends the icon and screenshots to OpenAI."
-    : `Sends the icon and screenshots to OpenAI with ${model}.`;
+    ? t("analysisSent.openai")
+    : t("analysisSent.openaiModel", { model });
 };
 
 export const AI_FEATURES_GUIDE = "https://docs.asobeast.com/guides/ai-features";

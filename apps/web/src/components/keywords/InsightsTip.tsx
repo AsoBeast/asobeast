@@ -1,48 +1,66 @@
+import { createTranslator } from "next-intl";
 import { KEYWORD_MIN_RELEVANCE } from "@asobeast/shared";
+import enKeywords from "../../../messages/en/keywords.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import { InfoTip } from "@/components/ui/info-tip";
 import {
   BEATABLE_MIN_POPULARITY,
   DROPPING_MIN_STREAK,
-  INSIGHT_LABELS,
+  insightLabel,
   MAX_SHOWN_INSIGHTS,
   PAGE_ONE_CLOSE_MAX_POSITION,
   PAGE_ONE_CLOSE_MIN_POSITION,
+  type KeywordInsight,
 } from "@/lib/keyword-insights";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywords",
+  messages: { keywords: enKeywords },
+});
 
 export const INSIGHTS_GUIDE =
   "https://docs.asobeast.com/guides/track-keywords#insights-and-totals";
 
-const RULES = [
+const RULES: {
+  insight: KeywordInsight;
+  values: Record<string, number>;
+}[] = [
   {
-    label: INSIGHT_LABELS.dropping,
-    rule: `the position got worse on each of the last ${DROPPING_MIN_STREAK} checks.`,
+    insight: "dropping",
+    values: { count: DROPPING_MIN_STREAK },
   },
   {
-    label: INSIGHT_LABELS.pageOneClose,
-    rule: `position ${PAGE_ONE_CLOSE_MIN_POSITION} to ${PAGE_ONE_CLOSE_MAX_POSITION} on a current check.`,
+    insight: "pageOneClose",
+    values: {
+      from: PAGE_ONE_CLOSE_MIN_POSITION,
+      to: PAGE_ONE_CLOSE_MAX_POSITION,
+    },
   },
   {
-    label: INSIGHT_LABELS.beatable,
-    rule: `difficulty is below popularity, and popularity is at least ${BEATABLE_MIN_POPULARITY} and not an Apple floor answer.`,
+    insight: "beatable",
+    values: { count: BEATABLE_MIN_POPULARITY },
   },
   {
-    label: INSIGHT_LABELS.notInListing,
-    rule: `relevance is at least ${KEYWORD_MIN_RELEVANCE} and no field of your listing holds the keyword.`,
+    insight: "notInListing",
+    values: { count: KEYWORD_MIN_RELEVANCE },
   },
 ];
 
-export function InsightsTip() {
+export function InsightsTip({ t = english }: { t?: MessageTranslator }) {
   return (
     <InfoTip
-      label="About insights"
-      title="Insights"
-      summary={`Up to ${MAX_SHOWN_INSIGHTS} verdicts per keyword, worked out from the numbers on its row.`}
+      label={t("insights.about")}
+      title={t("insights.title")}
+      summary={t("insights.summary", { count: MAX_SHOWN_INSIGHTS })}
     >
       <ul className="flex flex-col gap-1 text-muted-foreground">
-        {RULES.map(({ label, rule }) => (
-          <li key={label}>
-            <span className="font-medium text-foreground">{label}</span>
-            <span>{`: ${rule}`}</span>
+        {RULES.map(({ insight, values }) => (
+          <li key={insight}>
+            <span className="font-medium text-foreground">
+              {insightLabel(insight, t)}
+            </span>
+            <span>{`: ${t(`insights.rules.${insight}`, values)}`}</span>
           </li>
         ))}
       </ul>
@@ -52,7 +70,7 @@ export function InsightsTip() {
         rel="noreferrer"
         className="font-medium text-foreground link-underline"
       >
-        Read about insights
+        {t("insights.read")}
       </a>
     </InfoTip>
   );

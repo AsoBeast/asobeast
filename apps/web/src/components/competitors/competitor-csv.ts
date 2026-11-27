@@ -1,19 +1,14 @@
 import type { AppSnapshotSummary, CompetitorItem } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
+import enCompetitors from "../../../messages/en/competitors.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import { csvFilename, downloadCsv, toCsv } from "@/lib/csv";
 
-const COMPETITOR_CSV_HEADERS = [
-  "competitor",
-  "store",
-  "title",
-  "subtitle",
-  "summary",
-  "rating",
-  "ratings",
-  "installs",
-  "price",
-  "version",
-  "capturedAt",
-];
+const english = createTranslator({
+  locale: "en",
+  namespace: "competitors",
+  messages: { competitors: enCompetitors },
+});
 
 const SNAPSHOT_FIELDS = [
   "title",
@@ -27,9 +22,24 @@ const SNAPSHOT_FIELDS = [
   "capturedAt",
 ] as const satisfies ReadonlyArray<keyof AppSnapshotSummary>;
 
-export function competitorCsv(competitors: readonly CompetitorItem[]): string {
+export function competitorCsv(
+  competitors: readonly CompetitorItem[],
+  t: MessageTranslator = english,
+): string {
   return toCsv(
-    COMPETITOR_CSV_HEADERS,
+    [
+      t("csv.competitor"),
+      t("csv.store"),
+      t("csv.title"),
+      t("csv.subtitle"),
+      t("csv.summary"),
+      t("csv.rating"),
+      t("csv.ratings"),
+      t("csv.installs"),
+      t("csv.price"),
+      t("csv.version"),
+      t("csv.capturedAt"),
+    ],
     competitors.map(({ name, store, latestSnapshot }) => [
       name,
       store,
@@ -41,6 +51,7 @@ export function competitorCsv(competitors: readonly CompetitorItem[]): string {
 export function exportCompetitors(
   appId: string,
   competitors: readonly CompetitorItem[],
+  t: MessageTranslator = english,
 ): void {
-  downloadCsv(csvFilename("competitors", appId), competitorCsv(competitors));
+  downloadCsv(csvFilename("competitors", appId), competitorCsv(competitors, t));
 }

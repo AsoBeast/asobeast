@@ -713,7 +713,7 @@ test.describe("captured day", () => {
     await pressFromKeyboard(trigger);
     const grid = page.getByRole("dialog", { name: "Choose captured day" });
     if (DAY_BEFORE.slice(0, 7) !== TODAY.slice(0, 7)) {
-      await grid.getByRole("button", { name: "Previous month" }).click();
+      await grid.locator('[data-action="previous-month"]').click();
     }
     await grid
       .getByRole("button", { name: formatDay(DAY_BEFORE), exact: true })

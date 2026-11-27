@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, type RefObject } from "react";
+import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
 import type { KeywordDiscoveryItem } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ const holds = (ids: readonly string[] | undefined, id: string): boolean =>
 
 export function DiscoveryRowActions({ item }: { item: KeywordDiscoveryItem }) {
   const context = useContext(DiscoveryRowActionsContext);
+  const t = useTranslations("keywordInspector");
   if (!context) return null;
   const { actions, handOffFocus, heading } = context;
   const ids = [item.keywordId];
@@ -49,7 +51,7 @@ export function DiscoveryRowActions({ item }: { item: KeywordDiscoveryItem }) {
         size="sm"
         variant="outline"
         data-discovery-track
-        aria-label={`Track ${item.text}`}
+        aria-label={t("discovery.actions.trackLabel", { keyword: item.text })}
         aria-disabled={busy || undefined}
         aria-busy={tracking || undefined}
         onClick={(event) => {
@@ -58,13 +60,13 @@ export function DiscoveryRowActions({ item }: { item: KeywordDiscoveryItem }) {
           actions.trackOnce({ request: { keywordIds: ids }, removes: ids });
         }}
       >
-        Track
+        {t("discovery.actions.track")}
       </Button>
       <Button
         size="icon-sm"
         variant="ghost"
         data-discovery-dismiss
-        aria-label={`Dismiss ${item.text}`}
+        aria-label={t("discovery.actions.dismissLabel", { keyword: item.text })}
         aria-disabled={busy || undefined}
         aria-busy={dismissing || undefined}
         onClick={(event) => {

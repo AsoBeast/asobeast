@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { ErrorState } from "@/components/layout/ErrorState";
 
 export default function InspectError({
@@ -9,11 +10,8 @@ export default function InspectError({
   error: Error & { digest?: string };
   retry: () => void;
 }) {
+  const t = useTranslations("errors");
   return (
-    <ErrorState
-      error={error}
-      retry={retry}
-      title="Keyword inspections could not be loaded"
-    />
+    <ErrorState error={error} retry={retry} title={t("boundary.inspect")} />
   );
 }

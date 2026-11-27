@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { TestIntlProvider } from "@/test/intl-provider";
 import { formatDate } from "@/lib/format";
 import type { TrendSeries, TrendState, TrendWindow } from "@/lib/trend-window";
 import { PositionCell, TrendCell, TrendHeading } from "./keyword-cells";
@@ -43,9 +44,11 @@ const HISTORY = {
 
 const render = (row: TrackedKeywordItem) =>
   renderToStaticMarkup(
-    <TooltipProvider>
-      <PositionCell keyword={row} today={TODAY} />
-    </TooltipProvider>,
+    <TestIntlProvider>
+      <TooltipProvider>
+        <PositionCell keyword={row} today={TODAY} />
+      </TooltipProvider>
+    </TestIntlProvider>,
   );
 
 const renderTrend = (
@@ -56,14 +59,16 @@ const renderTrend = (
   state?: TrendState,
 ) =>
   renderToStaticMarkup(
-    <TrendCell
-      keyword={row}
-      today={TODAY}
-      history={{ ...HISTORY, multiMarket }}
-      trendWindow={trendWindow}
-      series={series}
-      state={state}
-    />,
+    <TestIntlProvider>
+      <TrendCell
+        keyword={row}
+        today={TODAY}
+        history={{ ...HISTORY, multiMarket }}
+        trendWindow={trendWindow}
+        series={series}
+        state={state}
+      />
+    </TestIntlProvider>,
   );
 
 const CLOCK = "lucide-history";

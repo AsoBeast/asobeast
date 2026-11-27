@@ -3,8 +3,11 @@ import {
   ACTION_PRIORITIES,
   type ActionItem,
 } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
+import enActions from "../../../messages/en/actions.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import type { ActionGroup, ActionSort } from "@/lib/search-params";
-import { ACTION_CATEGORY_LABEL, ACTION_PRIORITY_LABEL } from "./action-copy";
+import { actionCategoryLabel, actionPriorityLabel } from "./action-copy";
 import { appLabel } from "./queue-filters";
 
 export interface QueueGroup {
@@ -17,6 +20,12 @@ const byImpact = (left: ActionItem, right: ActionItem): number =>
   right.impact - left.impact ||
   left.firstSeenAt.localeCompare(right.firstSeenAt) ||
   left.id.localeCompare(right.id);
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "actions",
+  messages: { actions: enActions },
+});
 
 const SORTS: Record<
   ActionSort,
@@ -53,12 +62,15 @@ function inOrder<K extends string>(
 const openCount = (group: QueueGroup): number =>
   group.items.filter((item) => item.status === "OPEN").length;
 
-function byApp(items: readonly ActionItem[]): QueueGroup[] {
+function byApp(
+  items: readonly ActionItem[],
+  t: MessageTranslator,
+): QueueGroup[] {
   const groups = new Map<string, QueueGroup>();
   for (const item of items) {
     const group = groups.get(item.scope.appId) ?? {
       key: item.scope.appId,
-      label: appLabel(item.scope),
+      label: appLabel(item.scope, t),
       items: [],
     };
     group.items.push(item);
@@ -74,6 +86,7 @@ function byApp(items: readonly ActionItem[]): QueueGroup[] {
 export function groupQueue(
   items: readonly ActionItem[],
   group: ActionGroup,
+  t: MessageTranslator = english,
 ): QueueGroup[] {
   switch (group) {
     case "priority":
@@ -81,16 +94,26 @@ export function groupQueue(
         items,
         ACTION_PRIORITIES,
         (item) => item.priority,
-        ACTION_PRIORITY_LABEL,
+        Object.fromEntries(
+          ACTION_PRIORITIES.map((priority) => [
+            priority,
+            actionPriorityLabel(priority, t),
+          ]),
+        ) as Record<ActionItem["priority"], string>,
       );
     case "category":
       return inOrder(
         items,
         ACTION_CATEGORIES,
         (item) => item.category,
-        ACTION_CATEGORY_LABEL,
+        Object.fromEntries(
+          ACTION_CATEGORIES.map((category) => [
+            category,
+            actionCategoryLabel(category, t),
+          ]),
+        ) as Record<ActionItem["category"], string>,
       );
     case "app":
-      return byApp(items);
+      return byApp(items, t);
   }
 }

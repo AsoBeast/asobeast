@@ -1,0 +1,43 @@
+{
+  "direction": {
+    "up": "up",
+    "down": "down",
+    "flat": "unchanged"
+  },
+  "movement": {
+    "up": "Up {count} from #{previous}",
+    "down": "Down {count} from #{previous}",
+    "same": "No change",
+    "new": "New entry",
+    "newShort": "New",
+    "from": "from #{previous}",
+    "noEarlier": "No earlier capture"
+  },
+  "noData": "no {label} data",
+  "deltaLabel": "{direction} {magnitude}{unit} {period}",
+  "positionDeltaLabel": "{direction} {magnitude} {period}",
+  "positionSinceYesterday": "since yesterday",
+  "trendValue": "{value} {label}",
+  "trendPeriod": " {label}",
+  "grade": {
+    "strong": "strong",
+    "fair": "fair",
+    "weak": "weak",
+    "poor": "poor"
+  },
+  "range": {
+    "lastDays": "Last {count, plural, one {# day} other {# days}}"
+  },
+  "dateRange": {
+    "sameDay": "{date} UTC",
+    "span": "{from} to {to} UTC"
+  },
+  "today": "Today",
+  "yesterday": "Yesterday",
+  "market": {
+    "home": "{label} (home)"
+  },
+  "localizations": {
+    "fieldsNote": "Each localization has its own {title} character title, {subtitle} character subtitle and {keywordField} character keyword field."
+  }
+}

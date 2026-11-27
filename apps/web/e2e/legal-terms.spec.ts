@@ -1,9 +1,8 @@
 import { expect, test } from "./reporting.mts";
-import { fulfillJson, seedSession } from "./plan-helpers.mts";
+import { EN_BILLING, fulfillJson, seedSession } from "./plan-helpers.mts";
 import { OFFERED_PLAN, openBilling, openRegistration } from "./trial-plans.mts";
 import { seedViewer } from "./viewer.mts";
 import { TERMS_OF_SERVICE_URL, PRIVACY_POLICY_URL } from "../src/lib/legal";
-import { TRIAL_REFUSED } from "../src/lib/plan-choice";
 
 const CONSENT = /By creating an account you agree to the/;
 
@@ -98,7 +97,9 @@ test.describe("the terms on a billing instance", () => {
     await page.goto("/?checkout=complete&session_id=cs_test_refused");
 
     await expect(page).toHaveURL(/\/upgrade$/);
-    await expect(page.getByText(TRIAL_REFUSED)).toBeVisible();
+    await expect(
+      page.getByText(EN_BILLING.translator("status.trialRefused")),
+    ).toBeVisible();
   });
 
   test("a refused trial is told why and offered a normal checkout", async ({
@@ -115,7 +116,9 @@ test.describe("the terms on a billing instance", () => {
 
     await page.goto("/upgrade");
 
-    await expect(page.getByText(TRIAL_REFUSED)).toBeVisible();
+    await expect(
+      page.getByText(EN_BILLING.translator("status.trialRefused")),
+    ).toBeVisible();
     await expect(
       page.getByRole("heading", { level: 1, name: /free trial/ }),
     ).toHaveCount(0);

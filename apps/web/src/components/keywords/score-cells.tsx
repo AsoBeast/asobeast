@@ -1,12 +1,16 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { ArrowDownToLine, RefreshCcw } from "lucide-react";
 import type {
   ScoreProvenance,
   ScoringConfidence,
   ScoringSource,
 } from "@asobeast/shared";
+import enKeywords from "../../../messages/en/keywords.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
 import { Badge } from "@/components/ui/badge";
 import { Meter } from "@/components/ui/meter";
 import { gradeFill } from "@/components/ui/graded";
@@ -20,15 +24,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatDateTime } from "@/lib/format";
-import { grade, gradeLabel, type GradeMetric } from "@/lib/grade";
+import { formatDateTimeInLocale } from "@/lib/format";
+import { grade, gradeLabelInLocale, type GradeMetric } from "@/lib/grade";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
-
-const OUTDATED_SCORE_DETAIL =
-  "Scored by an older formula. It is rescored automatically; the new number replaces this one within a day.";
-
-const DERIVED_SCORE_DETAIL =
-  "Calculated from popularity and difficulty when the list loaded, so it carries no stored capture time. It is the same for every app that tracks the keyword.";
 
 type ScoreMetric = Extract<
   GradeMetric,
@@ -36,6 +35,36 @@ type ScoreMetric = Extract<
 >;
 
 const SCORE_STACK = "ml-auto flex w-14 flex-col items-end gap-1 numeric";
+
+const SCORING_SOURCE_KEYS: Record<ScoringSource, string> = {
+  APPLE_SUGGEST_SEARCH: "appleSuggestSearch",
+  GOOGLE_PLAY_PREFIX_SEARCH: "googlePlayPrefixSearch",
+  APPLE_SUGGEST_REACH: "appleSuggestReach",
+  GOOGLE_PLAY_SUGGEST_REACH: "googlePlaySuggestReach",
+  APPLE_ADS_POPULARITY: "appleAdsPopularity",
+  APPLE_SEARCH_SIGNALS: "appleSearchSignals",
+};
+
+const SCORING_CONFIDENCE_KEYS: Record<ScoringConfidence, string> = {
+  LOW: "low",
+  MEDIUM: "medium",
+  HIGH: "high",
+};
+
+export const SCORING_SOURCE_LABELS: Record<ScoringSource, string> = {
+  APPLE_SUGGEST_SEARCH: enKeywords.scores.sources.appleSuggestSearch,
+  GOOGLE_PLAY_PREFIX_SEARCH: enKeywords.scores.sources.googlePlayPrefixSearch,
+  APPLE_SUGGEST_REACH: enKeywords.scores.sources.appleSuggestReach,
+  GOOGLE_PLAY_SUGGEST_REACH: enKeywords.scores.sources.googlePlaySuggestReach,
+  APPLE_ADS_POPULARITY: enKeywords.scores.sources.appleAdsPopularity,
+  APPLE_SEARCH_SIGNALS: enKeywords.scores.sources.appleSearchSignals,
+};
+
+export const SCORING_CONFIDENCE_LABELS: Record<ScoringConfidence, string> = {
+  LOW: enKeywords.scores.confidences.low,
+  MEDIUM: enKeywords.scores.confidences.medium,
+  HIGH: enKeywords.scores.confidences.high,
+};
 
 export function ScoreReadout({
   value,
@@ -54,11 +83,16 @@ export function ScoreReadout({
   floorAnswer?: boolean;
   className?: string;
 }) {
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
   const graded = grade(metric, value);
+  const gradeWords = graded
+    ? t("scores.gradeSuffix", { grade: gradeLabelInLocale(graded, locale) })
+    : "";
   const spoken = [
-    graded ? `${label} ${value}, ${gradeLabel(graded)}` : `${label} ${value}`,
-    ...(outdated ? ["Older formula"] : []),
-    ...(floorAnswer ? ["Floor answer"] : []),
+    t("scores.valueWithGrade", { label, value, grade: gradeWords }),
+    ...(outdated ? [t("scores.olderFormula")] : []),
+    ...(floorAnswer ? [t("scores.floorAnswer")] : []),
   ].join(". ");
   return (
     <span
@@ -103,24 +137,28 @@ function ScoreButton({
   outdated?: boolean;
   children: ReactNode;
 }) {
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
   if (value === null) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
           <span
-            aria-label={`${label}: not scored yet`}
+            aria-label={t("scores.notScoredLabel", { label })}
             className="text-muted-foreground"
           >
             —
           </span>
         </TooltipTrigger>
-        <TooltipContent>Not scored yet</TooltipContent>
+        <TooltipContent>{t("scores.notScored")}</TooltipContent>
       </Tooltip>
     );
   }
   const valueLabel = Math.round(value);
   const graded = grade(metric, valueLabel);
-  const gradeWords = graded ? `, ${gradeLabel(graded)}` : "";
+  const gradeWords = graded
+    ? t("scores.gradeSuffix", { grade: gradeLabelInLocale(graded, locale) })
+    : "";
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -128,7 +166,12 @@ function ScoreButton({
           type="button"
           data-grade={graded ?? undefined}
           data-outdated={outdated || undefined}
-          aria-label={`${label} ${valueLabel}${gradeWords}. ${summary}. Show scoring details`}
+          aria-label={t("scores.buttonLabel", {
+            label,
+            value: valueLabel,
+            grade: gradeWords,
+            summary,
+          })}
           className={cn(
             SCORE_STACK,
             "rounded-sm outline-none transition-shadow duration-150 ease-out hover:bg-card hover:shadow-[0_0_0_3px_var(--card),0_0_0_4px_var(--border)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
@@ -157,10 +200,16 @@ function ScoreButton({
       <PopoverContent
         align="end"
         collisionPadding={16}
-        aria-label={`${label} scoring details`}
+        aria-label={t("scores.detailsLabel", { label })}
         className="w-80 max-w-(--radix-popover-content-available-width) items-start gap-1.5 p-3 text-left text-body font-normal whitespace-normal text-muted-foreground"
       >
-        <p className="text-heading text-foreground">{`${label} ${valueLabel}${gradeWords}`}</p>
+        <p className="text-heading text-foreground">
+          {t("scores.valueWithGrade", {
+            label,
+            value: valueLabel,
+            grade: gradeWords,
+          })}
+        </p>
         {children}
       </PopoverContent>
     </Popover>
@@ -169,16 +218,21 @@ function ScoreButton({
 
 function scoreSummary(
   provenance: ScoreProvenance | null,
-  outdated?: boolean,
-  floorAnswer?: boolean,
+  outdated: boolean | undefined,
+  floorAnswer: boolean | undefined,
+  t: MessageTranslator,
 ): string {
   if (outdated) {
-    return "Older formula";
+    return t("scores.olderFormula");
   }
   const confidence = provenance
-    ? `${SCORING_CONFIDENCE_LABELS[provenance.confidence]} confidence`
-    : "Legacy score";
-  return floorAnswer ? `Floor answer, ${confidence}` : confidence;
+    ? t("scores.confidenceSummary", {
+        confidence: t(
+          `scores.confidences.${SCORING_CONFIDENCE_KEYS[provenance.confidence]}`,
+        ),
+      })
+    : t("scores.legacyScore");
+  return floorAnswer ? t("scores.floorSummary", { confidence }) : confidence;
 }
 
 function DetailList({ lines }: { lines?: string[] }) {
@@ -200,9 +254,10 @@ export function ScoreDetails({
   details?: string[];
   outdated?: boolean;
 }) {
+  const t = useTranslations("keywords");
   return (
     <>
-      {outdated ? <span>{OUTDATED_SCORE_DETAIL}</span> : null}
+      {outdated ? <span>{t("scores.outdatedDetail")}</span> : null}
       <DetailList lines={details} />
       <ScoreProvenanceDetails provenance={provenance} />
     </>
@@ -210,9 +265,10 @@ export function ScoreDetails({
 }
 
 export function DerivedScoreDetails({ details }: { details?: string[] }) {
+  const t = useTranslations("keywords");
   return (
     <>
-      <span>{DERIVED_SCORE_DETAIL}</span>
+      <span>{t("scores.derivedDetail")}</span>
       <DetailList lines={details} />
     </>
   );
@@ -237,6 +293,7 @@ export function ScoreCell({
   emphasize?: boolean;
   floorAnswer?: boolean;
 }) {
+  const t = useTranslations("keywords");
   return (
     <ScoreButton
       value={value}
@@ -245,7 +302,7 @@ export function ScoreCell({
       emphasize={emphasize}
       floorAnswer={floorAnswer}
       outdated={outdated}
-      summary={scoreSummary(provenance, outdated, floorAnswer)}
+      summary={scoreSummary(provenance, outdated, floorAnswer, t)}
     >
       <ScoreDetails
         provenance={provenance}
@@ -271,6 +328,7 @@ export function DerivedScoreCell({
   details?: string[];
   lowerConfidence?: boolean;
 }) {
+  const t = useTranslations("keywords");
   return (
     <ScoreButton
       value={value}
@@ -278,7 +336,9 @@ export function DerivedScoreCell({
       metric={metric}
       emphasize={emphasize}
       summary={
-        lowerConfidence ? "Derived score, lower confidence" : "Derived score"
+        lowerConfidence
+          ? t("scores.derivedLowerSummary")
+          : t("scores.derivedSummary")
       }
     >
       <DerivedScoreDetails details={details} />
@@ -286,25 +346,14 @@ export function DerivedScoreCell({
   );
 }
 
-export const SCORING_SOURCE_LABELS: Record<ScoringSource, string> = {
-  APPLE_SUGGEST_SEARCH: "Apple suggest and search",
-  GOOGLE_PLAY_PREFIX_SEARCH: "Google Play prefix suggest and search",
-  APPLE_SUGGEST_REACH: "App Store suggest reach",
-  GOOGLE_PLAY_SUGGEST_REACH: "Google Play suggest reach",
-  APPLE_ADS_POPULARITY: "Apple Ads search popularity",
-  APPLE_SEARCH_SIGNALS: "App Store search signals",
-};
-
-export const SCORING_CONFIDENCE_LABELS: Record<ScoringConfidence, string> = {
-  LOW: "Low",
-  MEDIUM: "Medium",
-  HIGH: "High",
-};
-
-function capturedAtLabel(value: string): string {
+function capturedAtLabel(
+  value: string,
+  t: MessageTranslator,
+  locale: Locale,
+): string {
   return Number.isNaN(new Date(value).getTime())
-    ? "Capture time unavailable"
-    : formatDateTime(value);
+    ? t("scores.capturedUnavailable")
+    : formatDateTimeInLocale(value, locale);
 }
 
 function ScoreProvenanceDetails({
@@ -312,19 +361,25 @@ function ScoreProvenanceDetails({
 }: {
   provenance: ScoreProvenance | null;
 }) {
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
   if (!provenance) {
-    return <span>Legacy score — provenance unavailable</span>;
+    return <span>{t("scores.legacyProvenance")}</span>;
   }
-  const confidence = SCORING_CONFIDENCE_LABELS[provenance.confidence];
+  const confidence = t(
+    `scores.confidences.${SCORING_CONFIDENCE_KEYS[provenance.confidence]}`,
+  );
   return (
     <>
-      <span>{SCORING_SOURCE_LABELS[provenance.source]}</span>
-      <span>Formula {provenance.formulaVersion}</span>
-      <span>{capturedAtLabel(provenance.capturedAt)}</span>
-      <Badge variant="secondary">{confidence} confidence</Badge>
-      <span className="text-caption">
-        Confidence measures input completeness, not ranking accuracy.
+      <span>
+        {t(`scores.sources.${SCORING_SOURCE_KEYS[provenance.source]}`)}
       </span>
+      <span>{t("scores.formula", { version: provenance.formulaVersion })}</span>
+      <span>{capturedAtLabel(provenance.capturedAt, t, locale)}</span>
+      <Badge variant="secondary">
+        {t("scores.confidenceSummary", { confidence })}
+      </Badge>
+      <span className="text-caption">{t("scores.confidenceNote")}</span>
     </>
   );
 }

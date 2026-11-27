@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Tag } from "lucide-react";
 import {
   isKeywordTag,
@@ -8,6 +9,7 @@ import {
   normalizeKeywordTag,
   type TrackedKeywordItem,
 } from "@asobeast/shared";
+import type { MessageTranslator } from "@/i18n/translator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,8 +25,8 @@ import {
   type BulkTagMode,
 } from "@/lib/keyword-tags";
 
-const keywordsCount = (count: number) =>
-  `${count} keyword${count === 1 ? "" : "s"}`;
+const keywordsCount = (count: number, t: MessageTranslator) =>
+  t("bulk.keywordCount", { count });
 
 export function BulkTagPopover({
   keywords,
@@ -37,6 +39,7 @@ export function BulkTagPopover({
   disabled: boolean;
   onApply: (changes: BulkTagChange[], mode: BulkTagMode) => void;
 }) {
+  const t = useTranslations("keywords");
   const inputId = useId();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
@@ -66,16 +69,16 @@ export function BulkTagPopover({
           aria-disabled={disabled || undefined}
         >
           <Tag />
-          Tag
+          {t("bulk.tag")}
         </Button>
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        aria-label="Tag keywords"
+        aria-label={t("bulk.tagKeywords")}
         className="flex w-72 flex-col gap-3"
       >
         <div className="flex flex-col gap-2">
-          <Label htmlFor={inputId}>Tag to add or remove</Label>
+          <Label htmlFor={inputId}>{t("bulk.tagToChange")}</Label>
           <Input
             id={inputId}
             value={input}
@@ -97,7 +100,11 @@ export function BulkTagPopover({
         </div>
         {valid && add.atLimit.length > 0 ? (
           <p className="text-caption text-muted-foreground">
-            {`Skips ${keywordsCount(add.atLimit.length)} at the ${KEYWORD_TAGS_MAX} tag limit: ${add.atLimit.join(", ")}`}
+            {t("bulk.tagLimitSkipped", {
+              count: add.atLimit.length,
+              limit: KEYWORD_TAGS_MAX,
+              keywords: add.atLimit.join(", "),
+            })}
           </p>
         ) : null}
         <div className="flex flex-wrap gap-2">
@@ -106,7 +113,9 @@ export function BulkTagPopover({
             disabled={!valid || add.changes.length === 0}
             onClick={() => apply(add.changes, "add")}
           >
-            Add to {keywordsCount(add.changes.length)}
+            {t("bulk.addTo", {
+              count: keywordsCount(add.changes.length, t),
+            })}
           </Button>
           <Button
             size="sm"
@@ -114,7 +123,9 @@ export function BulkTagPopover({
             disabled={!valid || remove.changes.length === 0}
             onClick={() => apply(remove.changes, "remove")}
           >
-            Remove from {keywordsCount(remove.changes.length)}
+            {t("bulk.removeFrom", {
+              count: keywordsCount(remove.changes.length, t),
+            })}
           </Button>
         </div>
       </PopoverContent>

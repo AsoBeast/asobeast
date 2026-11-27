@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import type { FormEvent } from "react";
 import { Loader2, Pencil } from "lucide-react";
 import {
@@ -52,6 +53,8 @@ export function EditEventsDialog({
   pending: boolean;
   onSave: (change: AlertSubscriptionChange) => Promise<unknown>;
 }) {
+  const t = useTranslations("notifications");
+  const validation = useTranslations("validation");
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<WebhookEvent[]>(events);
   const [stars, setStars] = useState<number[]>(
@@ -63,7 +66,7 @@ export function EditEventsDialog({
   const blocked =
     selected.length === 0 ||
     needsAStar(selected, stars) ||
-    rankThresholdError(selected, rankText) !== null;
+    rankThresholdError(selected, rankText, validation) !== null;
 
   function changeOpen(next: boolean) {
     if (next) {
@@ -100,16 +103,20 @@ export function EditEventsDialog({
       <DialogTrigger asChild>
         <Button variant="ghost" size="xs">
           <Pencil />
-          Edit rules
+          {t("rules.edit")}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <form onSubmit={submit} className="flex min-h-0 flex-col gap-4">
           <DialogHeader>
-            <DialogTitle>Edit rules</DialogTitle>
+            <DialogTitle>{t("rules.edit")}</DialogTitle>
             <DialogDescription>
-              Choose the rules that deliver alerts to{" "}
-              <span className="break-all text-foreground">{label}</span>.
+              {t.rich("rules.editDescription", {
+                recipient: (chunks) => (
+                  <span className="break-all text-foreground">{chunks}</span>
+                ),
+                label,
+              })}
             </DialogDescription>
           </DialogHeader>
           <DialogBody>
@@ -126,7 +133,7 @@ export function EditEventsDialog({
             <ConfirmDropsField checked={confirming} onChange={setConfirming} />
             {selected.length === 0 ? (
               <p className="text-dense text-muted-foreground">
-                Switch on at least one rule to save.
+                {t("rules.chooseOne")}
               </p>
             ) : null}
           </DialogBody>
@@ -136,7 +143,7 @@ export function EditEventsDialog({
               aria-disabled={pending || blocked || undefined}
             >
               {pending ? <Loader2 className="animate-spin" /> : null}
-              Save rules
+              {t("rules.save")}
             </Button>
           </DialogFooter>
         </form>

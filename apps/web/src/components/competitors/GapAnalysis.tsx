@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useQueryState, useQueryStates } from "nuqs";
 import { utcDayOf, type CompetitorGaps } from "@asobeast/shared";
 import { SelectFilter } from "@/components/data-table/SelectFilter";
@@ -11,9 +12,10 @@ import {
 } from "@/components/layout/InlineQueryError";
 import { CollapsibleCard } from "@/components/layout/CollapsibleCard";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
-import { formatCountry } from "@/lib/format";
+import { formatCountryInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import {
-  GAP_TAB_LABELS,
+  gapTabLabel,
   GAP_TABS,
   gapCounts,
   gapEmpty,
@@ -77,16 +79,19 @@ function GapLists({
   home: string;
   today: string;
 }) {
+  const t = useTranslations("competitors");
+  const locale = useAppLocale();
   const [tab, setTab] = useQueryState("gaps", GAP_TAB_STATE);
   const [params, setParams] = useQueryStates(gapTableParsers, {
     urlKeys: GAP_URL_KEYS,
   });
-  const markets = gapMarkets(gaps.coverage, home);
+  const markets = gapMarkets(gaps.coverage, home, locale);
   const country = markets.includes(params.country) ? params.country : "";
   const scope = useGapScope(appId, markets.length > 1, today);
   const counts = gapCounts(gaps, country, home);
   const rows = gapRows(gaps, tab, country, home);
   const empty = gapEmpty(gaps.coverage, country);
+  const coverage = coverageLine(gaps.coverage, country, t);
 
   const listed = empty === "none" && rows.length > 0;
 
@@ -98,16 +103,17 @@ function GapLists({
           onValueChange={(next) => void setTab(next as GapTab)}
           className="max-w-full min-w-0"
         >
-          <TabsList aria-label="Gap lists" scrollable>
+          <TabsList aria-label={t("gaps.lists")} scrollable>
             {GAP_TABS.map((value) => {
               const count = empty === "none" ? counts[value] : 0;
+              const label = gapTabLabel(value, t);
               return (
                 <TabsOption
                   key={value}
                   value={value}
-                  aria-label={`${GAP_TAB_LABELS[value]} (${count})`}
+                  aria-label={`${label} (${count})`}
                 >
-                  <span>{GAP_TAB_LABELS[value]}</span>
+                  <span>{label}</span>
                   <span className="numeric text-muted-foreground">
                     {String(count)}
                   </span>
@@ -119,9 +125,9 @@ function GapLists({
         {markets.length > 1 ? (
           <div className="sm:ml-auto">
             <SelectFilter
-              title="Gap market"
+              title={t("gaps.market")}
               value={country === "" ? ALL_MARKETS : country}
-              options={marketOptions(markets)}
+              options={marketOptions(markets, t, locale)}
               onChange={(next) =>
                 void setParams({ country: next === ALL_MARKETS ? null : next })
               }
@@ -134,11 +140,13 @@ function GapLists({
           appId={appId}
           tab={tab}
           rows={rows}
-          marketName={country === "" ? null : formatCountry(country)}
+          marketName={
+            country === "" ? null : formatCountryInLocale(country, locale)
+          }
           scope={scope}
           params={params}
           setParams={setParams}
-          footer={coverageLine(gaps.coverage, country)}
+          footer={coverage}
         />
       ) : (
         <GapEmpty kind={empty} tab={tab} country={country} />
@@ -148,15 +156,11 @@ function GapLists({
 }
 
 function GapAnalysisBody({ id }: { id: string }) {
+  const t = useTranslations("competitors");
   const read = useQuery(competitorAnalysisOptions(id));
   const { data: app } = useQuery(appDetailOptions(id));
   if (failedRead(read)) {
-    return (
-      <InlineQueryError
-        message="The gap analysis could not be loaded."
-        read={read}
-      />
-    );
+    return <InlineQueryError message={t("gaps.loadFailed")} read={read} />;
   }
   if (read.data === undefined || app === undefined) {
     return <GapAnalysisSkeleton />;
@@ -172,10 +176,11 @@ function GapAnalysisBody({ id }: { id: string }) {
 }
 
 export function GapAnalysis({ id }: { id: string }) {
+  const t = useTranslations("competitors");
   return (
     <CollapsibleCard
       section={COMPETITOR_SECTION.gaps}
-      title="Where competitors beat you"
+      title={t("gaps.title")}
       actions={<GapHelp />}
     >
       <GapAnalysisBody id={id} />

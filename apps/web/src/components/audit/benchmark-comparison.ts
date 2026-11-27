@@ -3,13 +3,6 @@ import { formatMeasure, formatRating } from "@/lib/format";
 
 export type Comparison = "ahead" | "behind" | "even" | "unknown";
 
-export const COMPARISON_LABEL: Record<Comparison, string> = {
-  ahead: "Ahead",
-  behind: "Behind",
-  even: "Even",
-  unknown: "No data",
-};
-
 export function comparison(row: AuditBenchmarkRow): Comparison {
   if (row.you === null || row.median === null) return "unknown";
   if (row.you === row.median) return "even";

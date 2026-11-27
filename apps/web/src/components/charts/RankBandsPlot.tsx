@@ -17,6 +17,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { RANK_BANDS, topTenOf, UNRANKED_BAND } from "./rank-bands";
 import {
   CHANGE_MARKER_PROPS,
@@ -24,8 +25,8 @@ import {
   CHART_MARGIN,
   COUNT_LINE_PROPS,
   GRID_PROPS,
-  TIME_AXIS_PROPS,
-  TIME_TOOLTIP_PROPS,
+  timeAxisPropsInLocale,
+  timeTooltipPropsInLocale,
   TOP_TEN_EDGE_PROPS,
   VALUE_AXIS_PROPS,
 } from "./theme";
@@ -45,7 +46,7 @@ export function RankBandsPlot({
   ticks,
   markers = [],
   edge = false,
-  tooltip = <ChartTooltipContent {...TIME_TOOLTIP_PROPS} />,
+  tooltip,
 }: {
   points: RankDistributionPoint[];
   label: string;
@@ -54,6 +55,10 @@ export function RankBandsPlot({
   edge?: boolean;
   tooltip?: ReactElement;
 }) {
+  const locale = useAppLocale();
+  const shownTooltip = tooltip ?? (
+    <ChartTooltipContent {...timeTooltipPropsInLocale(locale)} />
+  );
   return (
     <ChartContainer
       config={chartConfig}
@@ -63,9 +68,9 @@ export function RankBandsPlot({
     >
       <ComposedChart accessibilityLayer data={points} margin={CHART_MARGIN}>
         <CartesianGrid {...GRID_PROPS} />
-        <XAxis {...TIME_AXIS_PROPS} ticks={ticks} />
+        <XAxis {...timeAxisPropsInLocale(locale)} ticks={ticks} />
         <YAxis {...VALUE_AXIS_PROPS} allowDecimals={false} />
-        <ChartTooltip content={tooltip} />
+        <ChartTooltip content={shownTooltip} />
         {PLOTTED_BANDS.map((band) => (
           <Area
             key={band.key}

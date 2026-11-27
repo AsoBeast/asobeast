@@ -1,19 +1,23 @@
 import { ACTION_RULE_TITLES } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
+import enActions from "../../../messages/en/actions.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
 import type {
   ActionItem,
   ActionRule,
   ChangeField,
+  MetadataField,
   RankInvestigateDropEvidence,
   RankInvestigateUnexplainedDropEvidence,
 } from "@asobeast/shared";
 import {
-  formatCountry,
-  formatList,
+  formatCountryInLocale,
+  formatListInLocale,
   formatMeasure,
   formatMeasureFixed,
-  pluralize,
 } from "@/lib/format";
-import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
+import { actionRuleLabel } from "./action-copy";
 
 export const CHANGE_FIELD_WORD: Record<ChangeField, string> = {
   title: "title",
@@ -32,35 +36,99 @@ export const CHANGE_FIELD_WORD: Record<ChangeField, string> = {
   editorsChoice: "editors' choice",
 };
 
+export const FIELD_KEY = {
+  title: "title",
+  subtitle: "subtitle",
+  summary: "summary",
+  shortDescription: "summary",
+  description: "description",
+  version: "version",
+  price: "price",
+  screenshots: "screenshots",
+  screenshotImages: "screenshotImages",
+  screenshotCaptions: "screenshotCaptions",
+  icon: "icon",
+  whatsNew: "whatsNew",
+  inAppEvents: "inAppEvents",
+  featuring: "featuring",
+  editorsChoice: "editorsChoice",
+  keywordField: "keywordField",
+  promotionalText: "promotionalText",
+} as const satisfies Record<
+  ChangeField | MetadataField,
+  keyof typeof enActions.evidenceFields
+>;
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "actions",
+  messages: { actions: enActions },
+});
+
 const quoted = (text: string): string => `"${text}"`;
 
 const measure = (value: number): string =>
   formatMeasure(Math.round(value * 10) / 10);
 
-export function changedFields(fields: readonly ChangeField[]): string {
-  return formatList(fields.map((field) => CHANGE_FIELD_WORD[field]));
+export function changedFields(
+  fields: readonly ChangeField[],
+  t: MessageTranslator = english,
+  locale: Locale = "en",
+): string {
+  return formatListInLocale(
+    fields.map((field) => {
+      const label = t(`evidenceFields.${FIELD_KEY[field]}`);
+      return locale === "en" ? label.toLowerCase() : label;
+    }),
+    locale,
+  );
 }
 
-function degradedHeadline(item: ActionItem): string {
-  const title = ACTION_RULE_TITLES[item.rule];
+function degradedHeadline(
+  item: ActionItem,
+  t: MessageTranslator,
+  locale: Locale,
+): string {
+  const title =
+    locale === "en"
+      ? ACTION_RULE_TITLES[item.rule]
+      : actionRuleLabel(item.rule, t);
   const keyword = item.scope.keywordText;
   return keyword ? `${title}: ${quoted(keyword)}` : title;
 }
 
 function unexplainedHeadline(
   evidence: RankInvestigateUnexplainedDropEvidence,
+  t: MessageTranslator,
+  locale: Locale,
 ): string {
-  const country = formatCountry(evidence.country);
+  const country = formatCountryInLocale(evidence.country, locale);
   return evidence.visibilityDelta < 1 && evidence.droppedKeywords.length > 0
-    ? `Find out why ${pluralize(evidence.droppedKeywords.length, "keyword")} fell in ${country}`
-    : `Find out why visibility fell ${measure(evidence.visibilityDelta)} points in ${country}`;
+    ? t("headline.unexplainedKeywords", {
+        count: evidence.droppedKeywords.length,
+        country,
+      })
+    : t("headline.unexplainedVisibility", {
+        points: measure(evidence.visibilityDelta),
+        country,
+      });
 }
 
-function dropHeadline(evidence: RankInvestigateDropEvidence): string {
-  const fields = changedFields(evidence.fields);
+function dropHeadline(
+  evidence: RankInvestigateDropEvidence,
+  t: MessageTranslator,
+  locale: Locale,
+): string {
+  const fields = changedFields(evidence.fields, t, locale);
   return evidence.visibilityDelta
-    ? `Investigate the ${measure(Math.abs(evidence.visibilityDelta))} point drop after your ${fields} change`
-    : `Investigate ${pluralize(evidence.droppedKeywords.length, "keyword drop")} after your ${fields} change`;
+    ? t("headline.dropVisibility", {
+        points: measure(Math.abs(evidence.visibilityDelta)),
+        fields,
+      })
+    : t("headline.dropKeywords", {
+        count: evidence.droppedKeywords.length,
+        fields,
+      });
 }
 
 const KEYWORD_RULES: readonly ActionRule[] = [
@@ -71,52 +139,92 @@ const KEYWORD_RULES: readonly ActionRule[] = [
   "keyword.push_to_top10",
 ];
 
-export function actionHeadline(item: ActionItem): string {
+export function actionHeadline(
+  item: ActionItem,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
+): string {
   const { evidence } = item;
-  if (evidence === null) return degradedHeadline(item);
+  if (evidence === null) return degradedHeadline(item, t, locale);
   const keyword = item.scope.keywordText;
   if (keyword === null && KEYWORD_RULES.includes(evidence.rule)) {
-    return ACTION_RULE_TITLES[evidence.rule];
+    return locale === "en"
+      ? ACTION_RULE_TITLES[evidence.rule]
+      : actionRuleLabel(evidence.rule, t);
   }
   const subject = quoted(keyword ?? "");
 
   switch (evidence.rule) {
     case "keyword.add_uncovered":
-      return `Add ${subject} to your metadata`;
+      return t("headline.addKeyword", { keyword: subject });
     case "keyword.defend":
       return evidence.entrants.length > 0
-        ? `Defend ${subject}: ${pluralize(evidence.entrants.length, "new app")} in the top 10`
-        : `Defend ${subject} in the top 10`;
+        ? t("headline.defendEntrants", {
+            keyword: subject,
+            count: evidence.entrants.length,
+          })
+        : t("headline.defend", { keyword: subject });
     case "keyword.prune":
-      return `Retire ${subject}: ranked on ${evidence.rankedDays} of ${evidence.checkedDays} days`;
+      return t("headline.prune", {
+        keyword: subject,
+        ranked: evidence.rankedDays,
+        checked: evidence.checkedDays,
+      });
     case "rank.investigate_drop":
-      return dropHeadline(evidence);
+      return dropHeadline(evidence, t, locale);
     case "serp.hold_volatile":
-      return `Hold changes on ${subject} while its results are volatile`;
+      return t("headline.hold", { keyword: subject });
     case "audit.fix_factor":
-      return `Raise ${evidence.factorLabel} from ${measure(evidence.score)} of 10`;
+      return t("headline.raiseFactor", {
+        factor: evidence.factorLabel,
+        score: measure(evidence.score),
+      });
     case "reviews.investigate_theme":
-      return `Look into ${quoted(evidence.theme)} in reviews of ${evidence.version ?? "the latest version"}`;
+      return t("headline.reviewTheme", {
+        theme: quoted(evidence.theme),
+        version: evidence.version ?? t("headline.latestVersion"),
+      });
     case "market.improve_country":
-      return `Close the ${measure(evidence.gap)} point visibility gap in ${formatCountry(evidence.country)}`;
+      return t("headline.marketGap", {
+        points: measure(evidence.gap),
+        country: formatCountryInLocale(evidence.country, locale),
+      });
     case "keyword.push_to_top10":
-      return `Push ${subject} from #${evidence.latestPosition} into the top 10`;
+      return t("headline.pushTop10", {
+        keyword: subject,
+        position: evidence.latestPosition,
+      });
     case "rank.investigate_unexplained_drop":
-      return unexplainedHeadline(evidence);
+      return unexplainedHeadline(evidence, t, locale);
     case "competitor.investigate_overtake":
-      return `${evidence.competitorName ?? "A competitor"} changed its ${changedFields(evidence.fields)} and passed you on ${pluralize(evidence.keywords.length, "keyword")}`;
+      return t("headline.competitorOvertake", {
+        competitor: evidence.competitorName ?? t("headline.aCompetitor"),
+        fields: changedFields(evidence.fields, t, locale),
+        count: evidence.keywords.length,
+      });
     case "reviews.investigate_rating_decline":
-      return `Review scores fell from ${formatMeasureFixed(evidence.baselineAverage)} to ${formatMeasureFixed(evidence.recentAverage)} in the last ${evidence.recentDays} days`;
+      return t("headline.ratingDecline", {
+        before: formatMeasureFixed(evidence.baselineAverage),
+        after: formatMeasureFixed(evidence.recentAverage),
+        days: evidence.recentDays,
+      });
     case "reviews.reply_negative":
-      return `Reply to ${pluralize(evidence.unanswered, "unanswered low review")}`;
+      return t("headline.replyNegative", { count: evidence.unanswered });
     case "listing.ship_update":
-      return `Ship an update: your listing is ${formatMeasure(evidence.daysSinceUpdate)} days old`;
+      return t("headline.shipUpdate", {
+        days: formatMeasure(evidence.daysSinceUpdate),
+      });
     case "conversion.investigate_drop":
-      return `Fewer Get taps while page views held in ${evidence.country.toUpperCase()}`;
+      return t("headline.fewerGets", {
+        country: evidence.country.toUpperCase(),
+      });
     case "listing.cpp_underperforms":
-      return `"${evidence.pageTitle}" converts below your default product page`;
+      return t("headline.cppWeak", { page: evidence.pageTitle });
     case "metadata.fix_lint":
-      return `Fix ${pluralize(evidence.issues.length, "store rule problem")} in your ${METADATA_FIELD_LABELS[evidence.field].toLowerCase()}`;
+      return t("headline.lintProblems", {
+        count: evidence.issues.length,
+        field: t(`evidenceFields.${FIELD_KEY[evidence.field]}`).toLowerCase(),
+      });
     default: {
       const never: never = evidence;
       return never;

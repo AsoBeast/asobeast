@@ -1,5 +1,14 @@
 import type { ListingMarket } from "@asobeast/shared";
-import { formatCountry } from "./format";
+import enFormat from "../../messages/en/format.json";
+import zhFormat from "../../messages/zh-CN/format.json";
+import { formatMessage } from "@/i18n/format-message";
+import { formatCountryInLocale } from "./format";
+import type { Locale } from "./locale";
+
+const HOME_LABELS = {
+  en: enFormat.market.home,
+  "zh-CN": zhFormat.market.home,
+} as const;
 
 const isListed = (country: string, markets: readonly ListingMarket[]) =>
   markets.some((market) => market.country === country);
@@ -28,9 +37,14 @@ export function queryMarket(market: string, home: string): string | undefined {
   return market === home ? undefined : market;
 }
 
-export function marketLabel(market: ListingMarket): string {
-  const name = `${market.country.toUpperCase()} · ${formatCountry(market.country)}`;
-  return market.home ? `${name} (home)` : name;
+export function marketLabel(
+  market: ListingMarket,
+  locale: Locale = "en",
+): string {
+  const name = `${market.country.toUpperCase()} · ${formatCountryInLocale(market.country, locale)}`;
+  return market.home
+    ? formatMessage(HOME_LABELS[locale], locale, { label: name })
+    : name;
 }
 
 export function isRefreshable(

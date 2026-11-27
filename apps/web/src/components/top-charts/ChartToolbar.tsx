@@ -1,6 +1,7 @@
 "use client";
 
 import { STORES, type Store } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { storeLabel } from "@/lib/format";
 import { useIsMobile } from "@/lib/use-is-mobile";
@@ -21,6 +22,7 @@ import { storeChanged } from "./chart-params";
 export function ChartToolbar(
   props: ChartFilterProps & { day: string | null; dates: readonly string[] },
 ) {
+  const t = useTranslations("topCharts");
   const { day, dates, ...filters } = props;
   const { chart, compare, onChange } = filters;
   const isMobile = useIsMobile();
@@ -31,7 +33,7 @@ export function ChartToolbar(
         value={chart.store}
         onValueChange={(next) => onChange(storeChanged(next as Store, chart))}
       >
-        <TabsList aria-label="Store">
+        <TabsList aria-label={t("store")}>
           {STORES.map((store) => (
             <TabsOption key={store} value={store}>
               {storeLabel(store)}

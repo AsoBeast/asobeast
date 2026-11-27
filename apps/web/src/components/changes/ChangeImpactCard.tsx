@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import {
   CHANGE_IMPACT_WINDOWS,
   type ChangeImpactItem,
@@ -22,7 +23,8 @@ import {
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { VisibilityHelp } from "@/components/visibility/VisibilityHelp";
-import { formatCountry, formatDate } from "@/lib/format";
+import { formatCountryInLocale, formatDateInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { changeImpactOptions, keywordCountriesOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { impactAnchor } from "./change-effects";
@@ -35,7 +37,6 @@ import {
 import { ChangeImpactSkeleton } from "./skeletons";
 import { useChangeWindow, useImpactCountry } from "./use-change-view";
 
-const REGION_NAME = "How rankings moved after each change";
 const COLUMNS = "@3xl/impact:grid-cols-[minmax(11rem,0.9fr)_3fr]";
 const WINDOWS =
   "grid grid-cols-1 pb-2 @3xl/impact:grid-cols-3 @3xl/impact:pb-0";
@@ -48,6 +49,7 @@ interface ImpactScope {
 }
 
 function ColumnHead() {
+  const t = useTranslations("changes");
   return (
     <div
       aria-hidden
@@ -57,11 +59,11 @@ function ColumnHead() {
         LIST_HEAD,
       )}
     >
-      <span className="px-4">Change</span>
+      <span className="px-4">{t("impact.change")}</span>
       <span className="grid grid-cols-3">
         {CHANGE_IMPACT_WINDOWS.map((days) => (
           <span key={days} className="px-4">
-            {windowTitle(days)}
+            {windowTitle(days, t)}
           </span>
         ))}
       </span>
@@ -76,6 +78,8 @@ function ChangeImpactRow({
   item: ChangeImpactItem;
   store: Store;
 }) {
+  const t = useTranslations("changes");
+  const locale = useAppLocale();
   const anchored = item.baselineDate !== null;
   const windows = anchored
     ? item.windows
@@ -94,10 +98,10 @@ function ChangeImpactRow({
           tabIndex={-1}
           className="scroll-mt-16 rounded-sm text-dense font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          {formatDate(item.changedOn)}
+          {formatDateInLocale(item.changedOn, locale)}
         </h3>
         <p className="text-dense text-muted-foreground">
-          {changedFieldsText(item.fields).map((label, index) => (
+          {changedFieldsText(item.fields, t).map((label, index) => (
             <span key={label}>
               {index > 0 ? <span>{", "}</span> : null}
               <span>{label}</span>
@@ -106,8 +110,10 @@ function ChangeImpactRow({
         </p>
         <p className="mt-1 text-caption text-faint-foreground">
           {anchored
-            ? `Compared with the rank check on ${formatDate(item.baselineDate)}`
-            : "No rank check just before this change, so its effect on rankings cannot be measured."}
+            ? t("impact.comparedWith", {
+                date: formatDateInLocale(item.baselineDate, locale),
+              })
+            : t("impact.noBaseline")}
         </p>
       </div>
       {windows.length > 0 ? (
@@ -130,14 +136,15 @@ function ChangeImpactRow({
 }
 
 function ChangeImpactList({ id, store, days, market }: ImpactScope) {
+  const t = useTranslations("changes");
   const { data } = useSuspenseQuery(changeImpactOptions(id, days, market));
 
   if (data.items.length === 0) {
     return (
       <CardContent>
         <EmptyState
-          title={`No changes to your listing in the last ${days} days`}
-          body="A change appears here once a refresh detects an edit to your own listing. Widen the window to look further back."
+          title={t("impact.emptyTitle", { days })}
+          body={t("impact.emptyBody")}
         />
       </CardContent>
     );
@@ -155,11 +162,17 @@ function ChangeImpactList({ id, store, days, market }: ImpactScope) {
       </CardContent>
       <CardFooter>
         <span>
-          {`${impactScopeLine({
-            days,
-            totalChanges: data.totalChanges,
-            shown: data.items.length,
-          })} · Visibility over this market's keywords checked on both days · Market ${market.toUpperCase()}`}
+          {t("impact.footer", {
+            scope: impactScopeLine(
+              {
+                days,
+                totalChanges: data.totalChanges,
+                shown: data.items.length,
+              },
+              t,
+            ),
+            market: market.toUpperCase(),
+          })}
         </span>
       </CardFooter>
     </>
@@ -167,6 +180,8 @@ function ChangeImpactList({ id, store, days, market }: ImpactScope) {
 }
 
 function ChangeImpactBody({ id, store, days, market }: ImpactScope) {
+  const t = useTranslations("changes");
+  const locale = useAppLocale();
   const { data: markets } = useSuspenseQuery(keywordCountriesOptions(id));
   const tracked =
     markets.find((entry) => entry.country === market)?.keywordCount ?? 0;
@@ -175,8 +190,10 @@ function ChangeImpactBody({ id, store, days, market }: ImpactScope) {
     return (
       <CardContent>
         <EmptyState
-          title={`No keywords tracked in ${formatCountry(market)} yet`}
-          body="Track keywords in this market to see how changes to your listing move them."
+          title={t("impact.noKeywordsTitle", {
+            market: formatCountryInLocale(market, locale),
+          })}
+          body={t("impact.noKeywordsBody")}
         />
       </CardContent>
     );
@@ -197,17 +214,18 @@ export function ChangeImpactCard({
   store: Store;
   homeCountry: string;
 }) {
+  const t = useTranslations("changes");
   const days = useChangeWindow();
   const market = useImpactCountry(homeCountry);
 
   return (
-    <Card role="region" aria-label={REGION_NAME}>
+    <Card role="region" aria-label={t("impact.region")}>
       <CardHeader className={PANEL_HEADER}>
         <CardTitle asChild>
-          <h2>Change impact</h2>
+          <h2>{t("impact.title")}</h2>
         </CardTitle>
         <CardAction>
-          <VisibilityHelp note="Here visibility covers only this market's keywords checked on both days, each weighted by its popularity on the last check before the change, so only positions move it." />
+          <VisibilityHelp note={t("impact.help")} />
         </CardAction>
       </CardHeader>
       <Suspense fallback={<ChangeImpactSkeleton />}>

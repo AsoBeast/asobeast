@@ -1,14 +1,23 @@
 import type { TrackedKeywordItem } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
+import enKeywords from "../../../messages/en/keywords.json";
+import type { MessageTranslator } from "@/i18n/translator";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywords",
+  messages: { keywords: enKeywords },
+});
 
 export interface HoldFact {
   label: string;
   value: string;
 }
 
-const count = (value: number, one: string, many: string) =>
-  `${value} ${value === 1 ? one : many}`;
-
-export function positionHoldFacts(keyword: TrackedKeywordItem): HoldFact[] {
+export function positionHoldFacts(
+  keyword: TrackedKeywordItem,
+  t: MessageTranslator = english,
+): HoldFact[] {
   const best = keyword.bestPosition ?? null;
   const delta = keyword.positionDeltaFromBest ?? null;
   const held = keyword.daysInTier ?? null;
@@ -16,21 +25,18 @@ export function positionHoldFacts(keyword: TrackedKeywordItem): HoldFact[] {
 
   const facts: HoldFact[] = [];
   if (best !== null) {
-    facts.push({ label: "Best", value: `#${best}` });
+    facts.push({ label: t("hold.best"), value: `#${best}` });
   }
   if (delta !== null) {
     facts.push({
-      label: "From best",
-      value:
-        delta === 0
-          ? "At its best"
-          : `${count(delta, "place", "places")} below`,
+      label: t("hold.fromBest"),
+      value: delta === 0 ? t("hold.atBest") : t("hold.below", { count: delta }),
     });
   }
   if (held !== null && tier !== null) {
     facts.push({
-      label: "Held",
-      value: `Top ${tier} for ${count(held, "day", "days")}`,
+      label: t("hold.held"),
+      value: t("hold.heldValue", { tier, count: held }),
     });
   }
   return facts;

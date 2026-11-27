@@ -1,5 +1,5 @@
+import { AppsDashboardSkeleton } from "@/components/dashboard/AppsDashboardSkeleton";
 import {
-  AppsDashboardSkeleton,
   DashboardLedeSkeleton,
   DoNextCardSkeleton,
   PortfolioMoversCardSkeleton,

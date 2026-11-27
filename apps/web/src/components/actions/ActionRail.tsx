@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { useTranslations } from "next-intl";
 import { ChartSkeleton } from "@/components/charts/ChartStates";
 import { CHART_HEIGHT } from "@/components/charts/theme";
 import { PANEL_ACTION, PANEL_HEADER } from "@/components/layout/panel-classes";
@@ -28,13 +29,14 @@ export function ActionRail({
   iconOf?: (appId: string) => string | null;
   setView: SetQueueView;
 }) {
+  const t = useTranslations("actions");
   return (
-    <aside aria-label="Progress and open work" className={RAIL_COLUMN}>
+    <aside aria-label={t("progressAria")} className={RAIL_COLUMN}>
       <section aria-labelledby="progress-heading">
         <Card>
           <CardHeader className={PANEL_HEADER}>
             <CardTitle asChild>
-              <h2 id="progress-heading">Progress</h2>
+              <h2 id="progress-heading">{t("progress")}</h2>
             </CardTitle>
             <CardAction className={PANEL_ACTION}>
               <Suspense fallback={null}>

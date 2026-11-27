@@ -1,0 +1,187 @@
+{
+  "title": "榜单",
+  "store": "商店",
+  "country": "国家",
+  "category": "类别",
+  "device": "设备",
+  "chart": "榜单",
+  "compare": "对比",
+  "layout": "布局",
+  "filters": "筛选",
+  "filterDescription": "选择榜单的国家、类别和对比方式。",
+  "collections": {
+    "free": "免费",
+    "paid": "付费",
+    "grossing": "畅销"
+  },
+  "collectionTitles": {
+    "free": "免费榜",
+    "paid": "付费榜",
+    "grossing": "畅销榜"
+  },
+  "devices": {
+    "iphone": "iPhone",
+    "android": "Android"
+  },
+  "compareOptions": {
+    "1d": "与前一日对比",
+    "7d": "与 7 天前对比",
+    "30d": "与 30 天前对比"
+  },
+  "compareWords": {
+    "1d": "前一日",
+    "7d": "7 天前",
+    "30d": "30 天前",
+    "noneCaptured": "没有捕获记录",
+    "vs": "对比 ",
+    "vsDate": "对比 {date}"
+  },
+  "genres": {
+    "apps": "应用",
+    "games": "游戏",
+    "family": "家庭",
+    "overall": "总榜"
+  },
+  "view": {
+    "sideBySide": "并排",
+    "table": "表格"
+  },
+  "display": "榜单显示方式",
+  "table": "表格",
+  "history": "历史",
+  "search": "搜索应用",
+  "noMatches": "没有应用符合此搜索",
+  "appCount": "{count} 个应用",
+  "captured": "抓取于 {date}",
+  "comparedWith": "对比于 {date}",
+  "historyFooter": "{date} 的前 {shown} 名在最近 {days} 个抓取日中的表现。应用掉出前 {limit} 名时，折线会断开。",
+  "column": {
+    "notCaptured": "尚未捕获",
+    "notCapturedOn": "{date} 未捕获",
+    "noApps": "没有应用 · {date}",
+    "top": "{total} 个中的前 {shown} 名",
+    "captured": "捕获于 {date}"
+  },
+  "caption": "{date} 的{chart}",
+  "actions": "操作",
+  "price": "价格",
+  "change": "变化",
+  "app": "应用",
+  "trending": {
+    "aria": "趋势列表",
+    "kind": "榜单类型",
+    "title": "趋势",
+    "since": "自 {date} 以来的趋势",
+    "climbers": "上升",
+    "entries": "新进入",
+    "fallers": "下降",
+    "exits": "掉出榜单",
+    "out": "掉出",
+    "noClimbers": "没有上升的应用",
+    "noEntries": "没有新进入的应用",
+    "noFallers": "没有下降的应用",
+    "noExits": "没有应用掉出榜单",
+    "newAt": "新进入第 {position} 名",
+    "was": "原为第 {position} 名",
+    "fromTo": "从第 {from} 名到第 {to} 名",
+    "captureMore": "捕获更多日期以查看变化。",
+    "footer": "每个列表最多显示 {limit} 个，来自每个已捕获的名次。"
+  },
+  "tracked": {
+    "unavailable": "不可用",
+    "notListed": "未上榜",
+    "yours": "你的应用",
+    "competitor": "竞品",
+    "title": "你的应用和竞品在{genre}中的表现",
+    "listed": "{count} 个上榜",
+    "last30Days": "最近 30 天",
+    "trendLabel": "{app}在{collection}中最近 30 天的表现",
+    "footer": "读取每次捕获的所有已列出名次，而不只是下方显示的行。"
+  },
+  "followed": {
+    "title": "已关注榜单",
+    "description": "每日运行会每天捕获这些榜单。",
+    "empty": "尚未关注任何类别。关注一个类别，让每日运行捕获它的榜单。",
+    "stop": "停止关注{title}"
+  },
+  "capture": {
+    "failed": "无法捕获榜单。",
+    "storeFailed": "商店没有响应。请稍后重试。",
+    "followFailed": "无法关注该类别。",
+    "followSuccess": "已关注{category}；每日运行将从明天开始捕获它的榜单",
+    "once": "捕获今天会请求商店一次。",
+    "everyWorkspace": "捕获今天会请求商店一次，并为每个工作区保存榜单。",
+    "noCaptures": "你的套餐不包含榜单捕获次数。",
+    "dailyLimit": "捕获今天会消耗套餐每天允许的 {limit} 次榜单捕获中的一次。",
+    "pickCaptured": "选择已捕获的日期，或捕获今天。",
+    "pickOnly": "选择已捕获的日期。",
+    "captureOrFollow": "现在捕获，或关注该类别，让每日运行持续捕获。",
+    "followOnly": "关注该类别，让每日运行持续捕获。",
+    "capturedToday": "已捕获今天的榜单",
+    "captureToday": "捕获今天",
+    "following": "已关注",
+    "followCategory": "关注类别",
+    "stopFollowing": "停止关注",
+    "stopDescription": "每日运行将停止捕获它的免费、付费和畅销榜单；已保存的日期会保留。",
+    "stopTitle": "停止关注此类别？",
+    "stopped": "已停止关注",
+    "stopFailed": "无法停止关注该类别。"
+  },
+  "row": {
+    "yours": "你的应用",
+    "competitorOf": "{name}的竞品",
+    "yourApp": "你的应用",
+    "addTo": "将 {title} 添加到 {app}",
+    "addAs": "将 {title} 添加为竞品",
+    "addAsTo": "添加为竞品到"
+  },
+  "openTable": "打开表格",
+  "openTableOf": "（{collection}）",
+  "loading": "正在加载 {store} · {country}…",
+  "empty": {
+    "notCaptured": "尚未捕获此榜单",
+    "noCaptureOn": "{date} 没有此榜单的捕获记录",
+    "noApps": "此榜单中没有应用"
+  },
+  "noAppsBody": "{store} 在 {date} 的{genre}中没有列出任何应用。某个类别可能没有某一类型的应用，例如付费应用。",
+  "noAppsToast": "{store} 今天在此榜单中没有列出应用",
+  "historyNotice": {
+    "title": "历史需要四个捕获日",
+    "body": "目前已捕获 {count} 天。关注该类别，让每日运行捕获它。",
+    "failed": "无法加载更早的捕获记录。",
+    "notListed": "未上榜",
+    "yours": " · 你的应用",
+    "aria": "前 {apps} 个应用在 {days} 个捕获日中的排名"
+  },
+  "lede": {
+    "movement": "{climbed} 个上升，{entered} 个新进入，{held} 个持平，{fell} 个下降",
+    "up": " 上升 {count} 名至 {place}",
+    "down": " 下降 {count} 名至 {place}",
+    "new": " 以 {place} 进入{collection}",
+    "same": " 保持 {place}",
+    "sameWhere": "，在{collection}中不变",
+    "none": " 位于 {place}",
+    "where": "，在{collection}中",
+    "scopeTwo": "在两个榜单中，",
+    "scopeOne": "，",
+    "scopeThree": "在三个榜单中，",
+    "since": "，自 {date} 以来",
+    "sinceEarlier": "，自每个榜单的较早日期以来",
+    "noneMoved": " 没有应用变化{since}。",
+    "notCaptured": "尚未捕获{category}。",
+    "noCaptureOn": "{category} 在 {date} 没有捕获记录。",
+    "noneOwn": "你的应用不在{charts}中。",
+    "thisChart": "此榜单",
+    "theseCharts": "这些榜单",
+    "firstCount": "{count} 个应用{verb}",
+    "restCount": "{count} 个{verb}",
+    "and": "和",
+    "comma": "、",
+    "verbs": {
+      "climbed": "上升",
+      "entered": "新进入",
+      "fell": "下降",
+      "held": "持平"
+    }
+  }
+}

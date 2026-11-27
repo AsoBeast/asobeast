@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { useTranslations } from "next-intl";
 import type {
   AppAuditResult,
   AuditRecommendations,
@@ -10,15 +11,9 @@ import { LIST_HEAD } from "@/components/layout/panel-classes";
 import { Button } from "@/components/ui/button";
 import { Card, CardFooter, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { pluralize } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import {
-  BUCKET_LABEL,
-  BUCKET_TAB_LABEL,
-  BUCKETS,
-  emptyBucketLine,
-  fixesWorth,
-} from "./audit-copy";
+import type { MessageTranslator } from "@/i18n/translator";
+import { BUCKETS, emptyBucketLine, fixesWorth } from "./audit-copy";
 import { PLAN_COLUMNS, RecommendationRow } from "./RecommendationRow";
 
 export const PLAN_PAGE_SIZE = 5;
@@ -37,16 +32,17 @@ function BucketPanel({
   recommendations: AuditRecommendations;
   unanswered: number;
 }) {
+  const t = useTranslations("audit");
   const [expanded, setExpanded] = useState(false);
   const items = recommendations[bucket];
   const shown = expanded ? items : items.slice(0, PLAN_PAGE_SIZE);
 
   return (
     <TabsContent value={bucket} className="flex flex-col">
-      <h3 className="sr-only">{BUCKET_LABEL[bucket]}</h3>
+      <h3 className="sr-only">{t(`buckets.${bucket}`)}</h3>
       {items.length === 0 ? (
         <p className="px-4 py-8 text-center text-body text-muted-foreground">
-          {emptyBucketLine(unanswered)}
+          {emptyBucketLine(unanswered, t)}
         </p>
       ) : (
         <>
@@ -58,11 +54,11 @@ function BucketPanel({
               "hidden h-9 items-center border-b border-border @3xl/plan:grid",
             )}
           >
-            <span>Impact</span>
-            <span>Fix</span>
-            <span>Effort</span>
-            <span>Where</span>
-            <span className="text-right">Lift</span>
+            <span>{t("plan.impact")}</span>
+            <span>{t("plan.fix")}</span>
+            <span>{t("plan.effort")}</span>
+            <span>{t("plan.where")}</span>
+            <span className="text-right">{t("plan.lift")}</span>
           </div>
           <ul className="flex list-none flex-col p-0">
             {shown.map((item) => (
@@ -80,7 +76,7 @@ function BucketPanel({
                 size="sm"
                 onClick={() => setExpanded(true)}
               >
-                {`Show all ${items.length}`}
+                {t("plan.showAll", { count: items.length })}
               </Button>
             </div>
           ) : null}
@@ -90,14 +86,17 @@ function BucketPanel({
   );
 }
 
-function planNote(recommendations: AuditRecommendations): string {
+function planNote(
+  recommendations: AuditRecommendations,
+  t: MessageTranslator,
+): string {
   const all = BUCKETS.flatMap((bucket) => recommendations[bucket]);
   if (all.length === 0) {
-    return "The plan fills as checks find something to change";
+    return t("plan.empty");
   }
-  const count = `${pluralize(all.length, "fix", "fixes")} in the plan`;
-  const worth = fixesWorth(all);
-  return worth === null ? count : `${count}, worth ${worth} together`;
+  const count = t("plan.count", { count: all.length });
+  const worth = fixesWorth(all, t);
+  return worth === null ? count : t("plan.worth", { count, points: worth });
 }
 
 export function AuditActionPlan({
@@ -107,6 +106,7 @@ export function AuditActionPlan({
   appId: string;
   audit: AppAuditResult;
 }) {
+  const t = useTranslations("audit");
   const headingId = useId();
   const unanswered = unansweredCount(audit.unlocks);
 
@@ -116,12 +116,12 @@ export function AuditActionPlan({
         <Card className="@container/plan gap-0 py-0">
           <div className="flex min-h-[47px] flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border px-4 py-1.5">
             <CardTitle asChild>
-              <h2 id={headingId}>Action plan</h2>
+              <h2 id={headingId}>{t("plan.title")}</h2>
             </CardTitle>
             <TabsList scrollable>
               {BUCKETS.map((bucket) => (
                 <TabsTrigger key={bucket} value={bucket}>
-                  <span>{BUCKET_TAB_LABEL[bucket]}</span>
+                  <span>{t(`bucketTabs.${bucket}`)}</span>
                   <span className="numeric font-normal text-muted-foreground">
                     {audit.recommendations[bucket].length}
                   </span>
@@ -139,7 +139,7 @@ export function AuditActionPlan({
             />
           ))}
           <CardFooter>
-            <span>{planNote(audit.recommendations)}</span>
+            <span>{planNote(audit.recommendations, t)}</span>
           </CardFooter>
         </Card>
       </Tabs>

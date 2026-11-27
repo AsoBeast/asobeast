@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AppRunStatus, RunState } from "@asobeast/shared";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTimeInLocale } from "@/lib/format";
+import { translationContext } from "@/test/translation-context";
 import {
   pillLabel,
   pillText,
@@ -10,6 +11,9 @@ import {
   runRows,
   startedSentence,
 } from "./run-progress";
+
+const en = translationContext("en", "jobs");
+const zh = translationContext("zh-CN", "jobs");
 
 const status = (
   state: RunState,
@@ -38,15 +42,17 @@ const status = (
 
 describe("the run progress pill", () => {
   it("W-RUN-01 words the pill per state", () => {
-    expect(pillText(status("running"))).toBe("12 of 46");
-    expect(pillText(status("complete"))).toBe("Run complete");
-    expect(pillText(status("delayed"))).toBe("Run delayed");
-    expect(pillText(status("idle"))).toBeNull();
-    expect(pillLabel(status("running"))).toBe(
+    expect(pillText(status("running"), en.translator)).toBe("12 of 46");
+    expect(pillText(status("complete"), en.translator)).toBe("Run complete");
+    expect(pillText(status("delayed"), en.translator)).toBe("Run delayed");
+    expect(pillText(status("idle"), en.translator)).toBeNull();
+    expect(pillLabel(status("running"), en.translator)).toBe(
       "Today's run: 12 of 46 checks done",
     );
-    expect(pillLabel(status("complete"))).toBe("Today's run complete");
-    expect(pillLabel(status("delayed"))).toBe(
+    expect(pillLabel(status("complete"), en.translator)).toBe(
+      "Today's run complete",
+    );
+    expect(pillLabel(status("delayed"), en.translator)).toBe(
       "Today's run delayed: 12 of 46 checks done",
     );
   });
@@ -59,6 +65,7 @@ describe("the run progress pill", () => {
           [12, 40],
           [0, 0],
         ]),
+        en.translator,
       ),
     ).toEqual([
       {
@@ -109,17 +116,23 @@ describe("the run progress pill", () => {
   });
 
   it("W-RUN-05 formats the start time with the pinned clock", () => {
-    expect(startedSentence(status("running"))).toBe(
-      `Started ${formatDateTime("2026-10-15T03:00:00.000Z")}.`,
+    expect(startedSentence(status("running"), en)).toBe(
+      `Started ${formatDateTimeInLocale("2026-10-15T03:00:00.000Z", "en")}.`,
     );
   });
   it("W-RUN-06 hides the pill of a paused run that has not finished", () => {
-    expect(pillText(status("running", undefined, true))).toBeNull();
-    expect(pillText(status("delayed", undefined, true))).toBeNull();
+    expect(
+      pillText(status("running", undefined, true), en.translator),
+    ).toBeNull();
+    expect(
+      pillText(status("delayed", undefined, true), en.translator),
+    ).toBeNull();
   });
 
   it("W-RUN-07 keeps the pill of a run that finished before the pause", () => {
-    expect(pillText(status("complete", undefined, true))).toBe("Run complete");
+    expect(pillText(status("complete", undefined, true), en.translator)).toBe(
+      "Run complete",
+    );
   });
 
   it("W-RUN-08 does not poll a paused run", () => {
@@ -129,6 +142,44 @@ describe("the run progress pill", () => {
     );
     expect(runProgressInterval(status("running", undefined, false))).toBe(
       RUN_PROGRESS_POLL_MS,
+    );
+  });
+
+  it("W-RUN-09 localizes progress, stages and the pinned start time in Chinese", () => {
+    expect(pillText(status("running"), zh.translator)).toBe("已完成 12 / 46");
+    expect(pillText(status("complete"), zh.translator)).toBe("运行完成");
+    expect(pillText(status("delayed"), zh.translator)).toBe("运行延迟");
+    expect(pillLabel(status("running"), zh.translator)).toBe(
+      "今日运行：已完成 12 / 46 项检查",
+    );
+    expect(
+      runRows(
+        status("running", [
+          [1, 1],
+          [12, 40],
+          [0, 0],
+        ]),
+        zh.translator,
+      ).map(({ label, progress, detail }) => ({ label, progress, detail })),
+    ).toEqual([
+      {
+        label: "已抓取详情页",
+        progress: null,
+        detail: "应用及其竞品的主市场详情页和分市场详情页。",
+      },
+      {
+        label: "已检查排名",
+        progress: "12 / 40",
+        detail: "活跃关键词的排名。",
+      },
+      {
+        label: "已读取榜单",
+        progress: null,
+        detail: "暂无可收集的数据。",
+      },
+    ]);
+    expect(startedSentence(status("running"), zh)).toBe(
+      `开始于 ${formatDateTimeInLocale("2026-10-15T03:00:00.000Z", "zh-CN")}。`,
     );
   });
 });

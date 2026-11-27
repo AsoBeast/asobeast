@@ -1,6 +1,7 @@
 "use client";
 
 import { Check } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +19,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { useAppLocale } from "@/lib/use-app-locale";
 
 interface FacetOption<T extends string> {
   value: T;
@@ -38,6 +40,9 @@ export function FacetFilter<T extends string>({
   counts?: ReadonlyMap<unknown, number>;
   onChange: (next: T[]) => void;
 }) {
+  const locale = useAppLocale();
+  const t = useTranslations("ui");
+  const name = title.toLocaleLowerCase(locale);
   const toggle = (value: T) =>
     onChange(
       selected.includes(value)
@@ -53,8 +58,8 @@ export function FacetFilter<T extends string>({
           size="sm"
           aria-label={
             selected.length > 0
-              ? `Filter by ${title.toLowerCase()}, ${selected.length} selected`
-              : `Filter by ${title.toLowerCase()}`
+              ? t("filterBySelected", { title: name, count: selected.length })
+              : t("filterBy", { title: name })
           }
         >
           {title}
@@ -67,16 +72,16 @@ export function FacetFilter<T extends string>({
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        aria-label={`Filter by ${title.toLowerCase()}`}
+        aria-label={t("filterBy", { title: name })}
         className="w-60 p-0"
       >
         <Command>
           <CommandInput
             placeholder={title}
-            aria-label={`Search ${title.toLowerCase()}`}
+            aria-label={t("searchTitle", { title: name })}
           />
           <CommandList>
-            <CommandEmpty>No matches</CommandEmpty>
+            <CommandEmpty>{t("noMatches")}</CommandEmpty>
             <CommandGroup>
               {options.map((option) => {
                 const checked = selected.includes(option.value);
@@ -121,7 +126,7 @@ export function FacetFilter<T extends string>({
                     onSelect={() => onChange([])}
                     className="justify-center"
                   >
-                    Clear
+                    {t("clear")}
                   </CommandItem>
                 </CommandGroup>
               </>

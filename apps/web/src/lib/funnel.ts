@@ -6,7 +6,15 @@ import type {
   StoreFunnelWindow,
   StoreFunnelWindowDays,
 } from "@asobeast/shared";
-import { formatMonth, formatNumber } from "./format";
+import enOverview from "../../messages/en/overview.json";
+import { formatMessage } from "@/i18n/format-message";
+import type { MessageTranslator, TranslationContext } from "@/i18n/translator";
+import type { Locale } from "./locale";
+import {
+  formatMeasureFixedInLocale,
+  formatMonthInLocale,
+  formatNumberInLocale,
+} from "./format";
 
 export const FUNNEL_SERIES_DAYS = 90;
 export const FUNNEL_HEADLINE_DAYS: StoreFunnelWindowDays = 28;
@@ -31,80 +39,96 @@ export interface FunnelCopy {
   refusedAskOwner: string;
 }
 
+function messageAt(messages: unknown, key: string): string {
+  let value = messages;
+  for (const part of key.split(".")) {
+    if (typeof value !== "object" || value === null || !(part in value)) {
+      return key;
+    }
+    value = (value as Record<string, unknown>)[part];
+  }
+  return typeof value === "string" ? value : key;
+}
+
+const englishTranslator: MessageTranslator = (key, values) =>
+  formatMessage(messageAt(enOverview, key), "en", values);
+
 export const FUNNEL_GETS_LABEL: Record<Store, string> = {
-  APP_STORE: "Get taps",
-  GOOGLE_PLAY: "Acquisitions",
+  APP_STORE: enOverview.funnel.tiles.gets.appStore,
+  GOOGLE_PLAY: enOverview.funnel.tiles.gets.googlePlay,
 };
 
-const APP_STORE_TILES: readonly [
-  FunnelTile,
-  FunnelTile,
-  FunnelTile,
-  FunnelTile,
-] = [
-  { label: "Impressions", metric: "impressions" },
-  { label: "Product page views", metric: "pageViews" },
-  { label: FUNNEL_GETS_LABEL.APP_STORE, metric: "gets" },
-  { label: "Conversion", metric: "conversion" },
-];
-
-const PLAY_TILES: readonly [FunnelTile, FunnelTile, FunnelTile] = [
-  { label: "Store listing visitors", metric: "pageViews" },
-  { label: FUNNEL_GETS_LABEL.GOOGLE_PLAY, metric: "gets" },
-  { label: "Conversion", metric: "conversion" },
-];
-
-export const FUNNEL_COPY: Record<Store, FunnelCopy> = {
-  APP_STORE: {
-    console: "App Store Connect",
-    base: "impressions",
-    freshness:
-      "Apple finishes a day within three days; the newest days may still grow.",
-    connectTitle:
-      "Connect App Store Connect to see impressions and conversion here.",
-    connectBody:
-      "A key from App Store Connect lets AsoBeast read Apple's own numbers for this app, back to 2024.",
-    askOwner: "Ask the workspace owner to connect App Store Connect.",
-    notReporting:
-      "The connected key sees this app once it belongs to the key's team and Apple has published its first report.",
-    refusedTitle: "App Store Connect refused the connected key.",
-    refusedBody:
-      "The numbers already stored come back once the key is accepted again. Verify it, or connect a new key.",
-    refusedAskOwner:
-      "Ask the workspace owner to verify the key in Integrations.",
-  },
-  GOOGLE_PLAY: {
-    console: "Google Play Console",
-    base: "store listing visitors",
-    freshness:
-      "Google posts a day three to seven days later; counting changed on July 10, 2026.",
-    connectTitle:
-      "Connect the Google Play Console to see store listing visitors and conversion here.",
-    connectBody:
-      "Signing in with Google, or a service account invited in Play Console, lets AsoBeast read Google's own numbers for this app from its monthly report files.",
-    askOwner: "Ask the workspace owner to connect the Google Play Console.",
-    notReporting:
-      "The connection reads this app once Play Console writes its store performance files to the bucket.",
-    refusedTitle: "Google Play Console refused the connection.",
-    refusedBody:
-      "The numbers already stored come back once Google accepts the connection again. Verify it, or reconnect.",
-    refusedAskOwner:
-      "Ask the workspace owner to verify the Google Play connection in Integrations.",
-  },
+const STORE_COPY_KEY: Record<Store, string> = {
+  APP_STORE: "appStore",
+  GOOGLE_PLAY: "googlePlay",
 };
+
+export function funnelCopy(
+  store: Store,
+  translator: MessageTranslator,
+): FunnelCopy {
+  const prefix = `funnel.copy.${STORE_COPY_KEY[store]}`;
+  return {
+    console: translator(`${prefix}.console`),
+    base: translator(`${prefix}.base`),
+    freshness: translator(`${prefix}.freshness`),
+    connectTitle: translator(`${prefix}.connectTitle`),
+    connectBody: translator(`${prefix}.connectBody`),
+    askOwner: translator(`${prefix}.askOwner`),
+    notReporting: translator(`${prefix}.notReporting`),
+    refusedTitle: translator(`${prefix}.refusedTitle`),
+    refusedBody: translator(`${prefix}.refusedBody`),
+    refusedAskOwner: translator(`${prefix}.refusedAskOwner`),
+  };
+}
+
+export function funnelGetsLabel(
+  store: Store,
+  translator: MessageTranslator,
+): string {
+  return translator(
+    `funnel.tiles.gets.${store === "APP_STORE" ? "appStore" : "googlePlay"}`,
+  );
+}
 
 export function refusalBody(
   store: Store,
   reason: string | null,
   isOwner: boolean,
+  translator: MessageTranslator,
 ): string {
-  const copy = FUNNEL_COPY[store];
+  const copy = funnelCopy(store, translator);
   if (isOwner) return reason ?? copy.refusedBody;
-  return reason ? `${reason} ${copy.refusedAskOwner}` : copy.refusedAskOwner;
+  return reason
+    ? translator("funnel.memberRefusal", {
+        reason,
+        askOwner: copy.refusedAskOwner,
+      })
+    : copy.refusedAskOwner;
 }
 
-export const funnelTiles = (report: Pick<StoreFunnelReport, "store">) =>
-  report.store === "GOOGLE_PLAY" ? PLAY_TILES : APP_STORE_TILES;
+export const funnelTiles = (
+  report: Pick<StoreFunnelReport, "store">,
+  translator: MessageTranslator = englishTranslator,
+) =>
+  report.store === "GOOGLE_PLAY"
+    ? ([
+        {
+          label: translator("funnel.tiles.playVisitors"),
+          metric: "pageViews",
+        },
+        { label: funnelGetsLabel("GOOGLE_PLAY", translator), metric: "gets" },
+        { label: translator("funnel.tiles.conversion"), metric: "conversion" },
+      ] as const)
+    : ([
+        {
+          label: translator("funnel.tiles.impressions"),
+          metric: "impressions",
+        },
+        { label: translator("funnel.tiles.pageViews"), metric: "pageViews" },
+        { label: funnelGetsLabel("APP_STORE", translator), metric: "gets" },
+        { label: translator("funnel.tiles.conversion"), metric: "conversion" },
+      ] as const);
 
 const PERCENT = 100;
 
@@ -127,12 +151,20 @@ export function funnelTrend(
   return values.every((value) => value !== null) ? values : [];
 }
 
-export function formatCount(value: number | null): string {
-  return value === null ? "—" : formatNumber(value);
+export function formatCount(
+  value: number | null,
+  locale: Locale = "en",
+): string {
+  return value === null ? "—" : formatNumberInLocale(value, locale);
 }
 
-export function formatConversion(value: number | null): string {
-  return value === null ? "—" : `${(value * PERCENT).toFixed(1)}%`;
+export function formatConversion(
+  value: number | null,
+  locale: Locale = "en",
+): string {
+  return value === null
+    ? "—"
+    : `${formatMeasureFixedInLocale(value * PERCENT, locale)}%`;
 }
 
 export function searchShare(
@@ -170,9 +202,18 @@ export function funnelState(report: StoreFunnelReport): FunnelState {
     : "waiting";
 }
 
+const ENGLISH_CONTEXT: TranslationContext = {
+  locale: "en",
+  translator: englishTranslator,
+};
+
 export function noSearchTermsFact(
   month: string | null | undefined,
+  context: TranslationContext = ENGLISH_CONTEXT,
 ): string | null {
   if (!month) return null;
-  return `${FUNNEL_COPY.GOOGLE_PLAY.console}'s ${formatMonth(month)} report named no search terms for this app.`;
+  return context.translator("funnel.noSearchTerms", {
+    console: context.translator("funnel.copy.googlePlay.console"),
+    month: formatMonthInLocale(month, context.locale),
+  });
 }

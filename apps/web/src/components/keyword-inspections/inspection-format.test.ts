@@ -4,6 +4,7 @@ import type {
   ScoreSignals,
 } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
+import { translationContext } from "@/test/translation-context";
 import {
   autocompleteLine,
   changeTone,
@@ -18,6 +19,8 @@ import {
   sinceUpdate,
   updatedAgo,
 } from "./inspection-format";
+
+const zh = translationContext("zh-CN", "keywordInspector").translator;
 
 describe("shownScore", () => {
   it("rounds a score and shows a dash for a missing one", () => {
@@ -43,6 +46,11 @@ describe("signedChange", () => {
     expect(signedChange(0)).toBe("no change");
     expect(signedChange(null)).toBe("—");
   });
+
+  it("localizes a flat score change in Chinese", () => {
+    expect(signedChange(0, zh)).toBe("无变化");
+    expect(signedChange(-2, zh)).toBe("−2");
+  });
 });
 
 describe("changeTone", () => {
@@ -64,6 +72,12 @@ describe("updatedAgo", () => {
     expect(updatedAgo(0)).toBe("Typically updated today");
     expect(updatedAgo(1)).toBe("Typical update 1 day ago");
     expect(updatedAgo(18)).toBe("Typical update 18 days ago");
+  });
+
+  it("localizes typical update ages in Chinese", () => {
+    expect(updatedAgo(0, zh)).toBe("通常今天更新");
+    expect(updatedAgo(1, zh)).toBe("通常 1 天前更新");
+    expect(updatedAgo(18, zh)).toBe("通常 18 天前更新");
   });
 });
 
@@ -122,6 +136,36 @@ describe("competitionFacts", () => {
       note: "Released in the last year",
     });
   });
+
+  it("localizes competition labels and notes in Chinese", () => {
+    const facts = competitionFacts(
+      {
+        topCount: 10,
+        medianRatingCount: 16_000,
+        strongestRatingCount: 250_000,
+        averageRating: 4.5,
+        exactTitleMatches: 2,
+        titleMatches: 7,
+        appsOverHundredThousandRatings: 2,
+        medianDaysSinceUpdate: 12,
+        freshlyUpdated: 8,
+      },
+      2,
+      zh,
+    );
+
+    expect(facts.map((fact) => [fact.label, fact.value])).toEqual([
+      ["典型评分", "16K"],
+      ["最强应用", "250K"],
+      ["平均评分", "4.5"],
+      ["标题命中", "7/10"],
+      ["头部应用", "2/10"],
+      ["最近更新", "8/10"],
+      ["新进入者", "2/10"],
+    ]);
+    expect(facts[3].note).toBe("2 个包含完整短语");
+    expect(facts[5].note).toBe("通常 12 天前更新");
+  });
 });
 
 describe("inspectionCostText", () => {
@@ -148,6 +192,21 @@ describe("inspectionCostText", () => {
       "Each inspection reads the store once.",
     );
   });
+
+  it("localizes inspection cost and plan limits in Chinese", () => {
+    expect(inspectionCostText(daily as never, zh)).toBe(
+      "每次检查使用套餐每日允许的 100 次按需评分中的 1 次。",
+    );
+    expect(
+      inspectionCostText(
+        { onDemand: { score: { limit: 0, windowSeconds: 86_400 } } } as never,
+        zh,
+      ),
+    ).toBe("您的套餐不包含按需评分。");
+    expect(inspectionCostText(undefined, zh)).toBe(
+      "每次检查读取应用商店一次。",
+    );
+  });
 });
 
 describe("sinceUpdate", () => {
@@ -168,6 +227,14 @@ describe("sinceUpdate", () => {
   it("says nothing without an update date and never goes negative", () => {
     expect(sinceUpdate(null, at)).toBeNull();
     expect(sinceUpdate("2026-11-20T00:00:00.000Z", at)).toBe("updated today");
+  });
+
+  it("localizes update ages in Chinese", () => {
+    expect(sinceUpdate("2026-11-14T01:00:00.000Z", at, zh)).toBe("今天更新");
+    expect(sinceUpdate("2026-11-13T07:00:00.000Z", at, zh)).toBe("1 天前更新");
+    expect(sinceUpdate("2026-08-10T00:00:00.000Z", at, zh)).toBe(
+      "3 个月前更新",
+    );
   });
 });
 
@@ -226,6 +293,21 @@ describe("autocompleteLine", () => {
       autocompleteLine(signals({ suggestReach: "unavailable" })),
     ).toBeNull();
     expect(autocompleteLine(null)).toBeNull();
+  });
+
+  it("localizes autocomplete reach in Chinese", () => {
+    expect(autocompleteLine(signals({}), zh)).toBe(
+      "自动补全在输入 5 个字符后于第 1 位推荐它",
+    );
+    expect(autocompleteLine(signals({ suggestPrefixLength: null }), zh)).toBe(
+      "自动补全会在输入过程中推荐它",
+    );
+    expect(autocompleteLine(signals({ suggestReach: "listed" }), zh)).toBe(
+      "只有输入完整短语后，自动补全才会推荐它",
+    );
+    expect(autocompleteLine(signals({ suggestReach: "absent" }), zh)).toBe(
+      "自动补全从不推荐它",
+    );
   });
 });
 

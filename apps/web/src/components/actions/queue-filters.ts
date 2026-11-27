@@ -7,7 +7,11 @@ import type {
   ActionStatus,
   Store,
 } from "@asobeast/shared";
-import { formatCountry } from "@/lib/format";
+import { createTranslator } from "next-intl";
+import enActions from "../../../messages/en/actions.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
+import { formatCountryInLocale } from "@/lib/format";
 import { ACTION_DEFAULT_STATUSES } from "@/lib/search-params";
 import { matchesSearch } from "@/lib/search-text";
 import { actionHeadline } from "./action-headline";
@@ -32,6 +36,12 @@ export interface QueueFacetCounts {
   store: ReadonlyMap<Store, number>;
 }
 
+const english = createTranslator({
+  locale: "en",
+  namespace: "actions",
+  messages: { actions: enActions },
+});
+
 type FacetKey = keyof QueueFacetCounts;
 
 const FACETS: readonly FacetKey[] = [
@@ -52,8 +62,11 @@ const FACET_VALUE: Record<FacetKey, (item: ActionItem) => string> = {
   store: (item) => item.scope.store,
 };
 
-export function appLabel(scope: ActionScope): string {
-  return `${scope.appName ?? "Unknown app"} · ${scope.country.toUpperCase()}`;
+export function appLabel(
+  scope: ActionScope,
+  t: MessageTranslator = english,
+): string {
+  return `${scope.appName ?? t("unknownApp")} · ${scope.country.toUpperCase()}`;
 }
 
 function chosen(view: QueueView, key: FacetKey): readonly string[] {
@@ -66,13 +79,18 @@ function matchesFacet(item: ActionItem, view: QueueView, key: FacetKey) {
   return values.length === 0 || values.includes(FACET_VALUE[key](item));
 }
 
-function matchesText(item: ActionItem, query: string): boolean {
+function matchesText(
+  item: ActionItem,
+  query: string,
+  t: MessageTranslator,
+  locale: Locale,
+): boolean {
   return matchesSearch(
     [
-      actionHeadline(item),
+      actionHeadline(item, t, locale),
       item.scope.keywordText ?? "",
       item.scope.appName ?? "",
-      formatCountry(item.scope.country),
+      formatCountryInLocale(item.scope.country, locale),
     ],
     query,
   );
@@ -81,11 +99,13 @@ function matchesText(item: ActionItem, query: string): boolean {
 export function filterQueue(
   items: readonly ActionItem[],
   view: QueueView,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
 ): ActionItem[] {
   return items.filter(
     (item) =>
       FACETS.every((key) => matchesFacet(item, view, key)) &&
-      matchesText(item, view.q),
+      matchesText(item, view.q, t, locale),
   );
 }
 
@@ -93,13 +113,14 @@ function countFacet(
   items: readonly ActionItem[],
   view: QueueView,
   key: FacetKey,
+  { t, locale }: { t: MessageTranslator; locale: Locale },
 ): Map<string, number> {
   const counts = new Map<string, number>();
   for (const item of items) {
     const others = FACETS.every(
       (other) => other === key || matchesFacet(item, view, other),
     );
-    if (!others || !matchesText(item, view.q)) continue;
+    if (!others || !matchesText(item, view.q, t, locale)) continue;
     const value = FACET_VALUE[key](item);
     counts.set(value, (counts.get(value) ?? 0) + 1);
   }
@@ -109,20 +130,28 @@ function countFacet(
 export function facetCounts(
   items: readonly ActionItem[],
   view: QueueView,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
 ): QueueFacetCounts {
   return {
-    priority: countFacet(items, view, "priority") as Map<
+    priority: countFacet(items, view, "priority", { t, locale }) as Map<
       ActionPriority,
       number
     >,
-    rule: countFacet(items, view, "rule") as Map<ActionRule, number>,
-    category: countFacet(items, view, "category") as Map<
+    rule: countFacet(items, view, "rule", { t, locale }) as Map<
+      ActionRule,
+      number
+    >,
+    category: countFacet(items, view, "category", { t, locale }) as Map<
       ActionCategory,
       number
     >,
-    app: countFacet(items, view, "app"),
-    market: countFacet(items, view, "market"),
-    store: countFacet(items, view, "store") as Map<Store, number>,
+    app: countFacet(items, view, "app", { t, locale }),
+    market: countFacet(items, view, "market", { t, locale }),
+    store: countFacet(items, view, "store", { t, locale }) as Map<
+      Store,
+      number
+    >,
   };
 }
 

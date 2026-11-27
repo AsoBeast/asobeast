@@ -1,3 +1,4 @@
+import type { MessageTranslator } from "@/i18n/translator";
 import type {
   ActionDroppedKeyword,
   ActionEvidence,
@@ -23,7 +24,7 @@ import type {
 } from "@asobeast/shared";
 import { formatCheckedPosition, formatRankPosition } from "@asobeast/shared";
 import {
-  formatDate,
+  formatDateInLocale,
   formatMeasure,
   formatMeasureFixed,
   formatMeasurePair,
@@ -31,8 +32,19 @@ import {
 } from "@/lib/format";
 import type { GradeMetric } from "@/lib/grade";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
+import type { Locale } from "@/lib/locale";
 import { ACTION_RULE_LABEL, percent, summarizeEvidence } from "./action-copy";
+import {
+  evidenceEnglish,
+  localizedField,
+  localizedItemText,
+  localizedLabel,
+} from "./evidence-labels";
 import { CHANGE_FIELD_WORD } from "./action-headline";
+import {
+  auditCheckLabel,
+  auditFactorLabel,
+} from "@/components/audit/audit-content-zh";
 
 export interface EvidenceFact {
   label: string;
@@ -192,10 +204,13 @@ function pruneSections(evidence: KeywordPruneEvidence): Sections {
   };
 }
 
-function dropSections(evidence: RankInvestigateDropEvidence): Sections {
+function dropSections(
+  evidence: RankInvestigateDropEvidence,
+  locale: Locale,
+): Sections {
   return {
     facts: [
-      fact("Changed on", formatDate(evidence.changedAt)),
+      fact("Changed on", formatDateInLocale(evidence.changedAt, locale)),
       fact("Visibility before", optionalFixed(evidence.visibilityBefore)),
       fact("Visibility after", optionalFixed(evidence.visibilityAfter)),
       fact("Visibility delta", optionalFixed(evidence.visibilityDelta)),
@@ -219,6 +234,7 @@ function dropSections(evidence: RankInvestigateDropEvidence): Sections {
 
 function unexplainedSections(
   evidence: RankInvestigateUnexplainedDropEvidence,
+  locale: Locale,
 ): Sections {
   return {
     facts: [
@@ -230,7 +246,9 @@ function unexplainedSections(
       fact("Mean volatility", optional(evidence.meanVolatility)),
       fact(
         "Your last change",
-        evidence.lastOwnChangeAt ? formatDate(evidence.lastOwnChangeAt) : "—",
+        evidence.lastOwnChangeAt
+          ? formatDateInLocale(evidence.lastOwnChangeAt, locale)
+          : "—",
       ),
     ],
     lists: [
@@ -244,11 +262,12 @@ function unexplainedSections(
 
 function overtakeSections(
   evidence: CompetitorInvestigateOvertakeEvidence,
+  locale: Locale,
 ): Sections {
   return {
     facts: [
       fact("Competitor", evidence.competitorName ?? "—"),
-      fact("Changed on", formatDate(evidence.changedAt)),
+      fact("Changed on", formatDateInLocale(evidence.changedAt, locale)),
       fact("New title", evidence.newTitle ?? "—"),
       fact("New subtitle", evidence.newSubtitle ?? "—"),
       fact("Keywords passed", formatNumber(evidence.keywords.length)),
@@ -291,10 +310,16 @@ function volatileSections(evidence: SerpHoldVolatileEvidence): Sections {
   };
 }
 
-function auditSections(evidence: AuditFixFactorEvidence): Sections {
+function auditSections(
+  evidence: AuditFixFactorEvidence,
+  locale: Locale,
+): Sections {
   return {
     facts: [
-      fact("Factor", evidence.factorLabel),
+      fact(
+        "Factor",
+        auditFactorLabel(evidence.factorId, evidence.factorLabel, locale),
+      ),
       fact("Score", `${formatMeasure(evidence.score)} of 10`),
       fact("Weight", formatMeasure(evidence.weight)),
       graded("Overall audit", evidence.overall, "audit"),
@@ -302,13 +327,13 @@ function auditSections(evidence: AuditFixFactorEvidence): Sections {
         "Rubric covered",
         `${evidence.coveredWeight} of ${evidence.totalWeight}`,
       ),
-      fact("Audit date", formatDate(evidence.auditDate)),
+      fact("Audit date", formatDateInLocale(evidence.auditDate, locale)),
     ],
     lists: [
       {
         label: "Checks to fix",
         items: evidence.failingChecks.map((check) => ({
-          text: check.label,
+          text: auditCheckLabel(check.id, check.label, locale),
           detail: check.status,
           tone: "down",
         })),
@@ -358,7 +383,10 @@ function declineSections(
   };
 }
 
-function replySections(evidence: ReviewsReplyNegativeEvidence): Sections {
+function replySections(
+  evidence: ReviewsReplyNegativeEvidence,
+  locale: Locale,
+): Sections {
   return {
     facts: [
       fact("Unanswered", formatNumber(evidence.unanswered)),
@@ -373,7 +401,7 @@ function replySections(evidence: ReviewsReplyNegativeEvidence): Sections {
       fact(
         "Oldest unanswered",
         evidence.oldestUnansweredAt
-          ? formatDate(evidence.oldestUnansweredAt)
+          ? formatDateInLocale(evidence.oldestUnansweredAt, locale)
           : "—",
       ),
       fact("Window", `${evidence.windowDays} days`),
@@ -382,10 +410,16 @@ function replySections(evidence: ReviewsReplyNegativeEvidence): Sections {
   };
 }
 
-function staleSections(evidence: ListingShipUpdateEvidence): Sections {
+function staleSections(
+  evidence: ListingShipUpdateEvidence,
+  locale: Locale,
+): Sections {
   return {
     facts: [
-      fact("Last store update", formatDate(evidence.storeUpdatedAt)),
+      fact(
+        "Last store update",
+        formatDateInLocale(evidence.storeUpdatedAt, locale),
+      ),
       fact("Days since update", formatNumber(evidence.daysSinceUpdate)),
       fact("Version", evidence.version ?? "—"),
       fact("Competitor median", optionalDays(evidence.competitorMedianDays)),
@@ -397,6 +431,7 @@ function staleSections(evidence: ListingShipUpdateEvidence): Sections {
 
 function conversionSections(
   evidence: ConversionInvestigateDropEvidence,
+  locale: Locale,
 ): Sections {
   return {
     facts: [
@@ -420,7 +455,10 @@ function conversionSections(
         "Compared",
         `last ${evidence.windowDays} days against the ${evidence.baselineDays} before`,
       ),
-      fact("Complete through", formatDate(evidence.completeThrough)),
+      fact(
+        "Complete through",
+        formatDateInLocale(evidence.completeThrough, locale),
+      ),
     ],
     lists: [],
   };
@@ -519,7 +557,7 @@ function lintSections(evidence: MetadataFixLintEvidence): Sections {
   };
 }
 
-function sections(evidence: ActionEvidence): Sections {
+function sections(evidence: ActionEvidence, locale: Locale): Sections {
   switch (evidence.rule) {
     case "keyword.add_uncovered":
       return uncoveredSections(evidence);
@@ -528,11 +566,11 @@ function sections(evidence: ActionEvidence): Sections {
     case "keyword.prune":
       return pruneSections(evidence);
     case "rank.investigate_drop":
-      return dropSections(evidence);
+      return dropSections(evidence, locale);
     case "serp.hold_volatile":
       return volatileSections(evidence);
     case "audit.fix_factor":
-      return auditSections(evidence);
+      return auditSections(evidence, locale);
     case "reviews.investigate_theme":
       return themeSections(evidence);
     case "market.improve_country":
@@ -540,17 +578,17 @@ function sections(evidence: ActionEvidence): Sections {
     case "keyword.push_to_top10":
       return pushSections(evidence);
     case "rank.investigate_unexplained_drop":
-      return unexplainedSections(evidence);
+      return unexplainedSections(evidence, locale);
     case "competitor.investigate_overtake":
-      return overtakeSections(evidence);
+      return overtakeSections(evidence, locale);
     case "reviews.investigate_rating_decline":
       return declineSections(evidence);
     case "reviews.reply_negative":
-      return replySections(evidence);
+      return replySections(evidence, locale);
     case "listing.ship_update":
-      return staleSections(evidence);
+      return staleSections(evidence, locale);
     case "conversion.investigate_drop":
-      return conversionSections(evidence);
+      return conversionSections(evidence, locale);
     case "listing.cpp_underperforms":
       return productPageSections(evidence);
     case "metadata.fix_lint":
@@ -562,11 +600,28 @@ function sections(evidence: ActionEvidence): Sections {
   }
 }
 
-export function evidenceSections(evidence: ActionEvidence): EvidenceSections {
-  const { facts, lists } = sections(evidence);
+export function evidenceSections(
+  evidence: ActionEvidence,
+  t: MessageTranslator = evidenceEnglish,
+  locale: Locale = "en",
+): EvidenceSections {
+  const { facts, lists } = sections(evidence, locale);
   return {
-    facts,
-    lists: lists.filter((list) => list.items.length > 0),
-    summary: summarizeEvidence(evidence),
+    facts: facts.map((fact) => ({
+      ...fact,
+      label: localizedLabel(fact.label, t),
+      value: localizedField(fact.value, t),
+    })),
+    lists: lists
+      .filter((list) => list.items.length > 0)
+      .map((list) => ({
+        ...list,
+        label: localizedLabel(list.label, t),
+        items: list.items.map((item) => ({
+          ...item,
+          text: localizedItemText(item.text, t),
+        })),
+      })),
+    summary: summarizeEvidence(evidence, locale),
   };
 }

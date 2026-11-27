@@ -5,17 +5,19 @@ import type {
   AdminMedianDays,
   AdminTrialRate,
 } from "@asobeast/shared";
-import { formatDayMonth, formatNumber, pluralize } from "./format";
+import type { MessageTranslator, TranslationContext } from "@/i18n/translator";
+import type { Locale } from "./locale";
+import { formatDayMonthInLocale } from "./format";
 
 export const CONVERSION_TAB_WINDOW: AdminConversionWindow = 90;
 
-export const FUNNEL_STEP_LABELS: Record<AdminFunnelStepKey, string> = {
-  "signed-up": "Signed up",
-  "confirmed-email": "Confirmed email",
-  "first-app": "Imported a first app",
-  "ranked-within-a-day": "Ranked within a day",
-  "trial-started": "Started a trial",
-  paid: "Paid",
+const FUNNEL_STEP_KEYS: Record<AdminFunnelStepKey, string> = {
+  "signed-up": "conversion.funnelSteps.signedUp",
+  "confirmed-email": "conversion.funnelSteps.confirmedEmail",
+  "first-app": "conversion.funnelSteps.firstApp",
+  "ranked-within-a-day": "conversion.funnelSteps.rankedWithinADay",
+  "trial-started": "conversion.funnelSteps.trialStarted",
+  paid: "conversion.funnelSteps.paid",
 };
 
 export interface FunnelRow {
@@ -43,12 +45,15 @@ const inEntryOrder = (funnel: AdminConversion["funnel"]) =>
     (a, b) => ENTRY_ORDER.indexOf(a.key) - ENTRY_ORDER.indexOf(b.key),
   );
 
-export function funnelRows(funnel: AdminConversion["funnel"]): FunnelRow[] {
+export function funnelRows(
+  funnel: AdminConversion["funnel"],
+  translator: MessageTranslator,
+): FunnelRow[] {
   const steps = inEntryOrder(funnel);
   const first = steps[0]?.count ?? 0;
   return steps.map((step, index) => ({
     key: step.key,
-    label: FUNNEL_STEP_LABELS[step.key],
+    label: translator(FUNNEL_STEP_KEYS[step.key]),
     count: step.count,
     ofPrevious:
       index === 0 ? null : shareOf(step.count, steps[index - 1].count),
@@ -56,8 +61,11 @@ export function funnelRows(funnel: AdminConversion["funnel"]): FunnelRow[] {
   }));
 }
 
-export function formatShare(share: number): string {
-  return `${Math.round(share * 100)}%`;
+export function formatShare(share: number, locale: Locale = "en"): string {
+  return new Intl.NumberFormat(locale, {
+    style: "percent",
+    maximumFractionDigits: 0,
+  }).format(share);
 }
 
 export function trialRate(rate: AdminTrialRate): number | null {
@@ -75,36 +83,52 @@ export function rateChange(
     : Math.round((now - before) * 100);
 }
 
-const days = (value: number) =>
-  `${formatNumber(value)} ${value === 1 ? "day" : "days"}`;
-
-export function medianLine(medians: AdminMedianDays): string | null {
+export function medianLine(
+  medians: AdminMedianDays,
+  translator: MessageTranslator,
+): string | null {
+  const days = (value: number) =>
+    translator("common.dayCount", { count: value });
   const parts = [
     medians.signupToFirstApp != null
-      ? `${days(medians.signupToFirstApp)} to a first app`
+      ? translator("conversion.medianToFirstApp", {
+          days: days(medians.signupToFirstApp),
+        })
       : null,
     medians.signupToTrial != null
-      ? `${days(medians.signupToTrial)} to a trial`
+      ? translator("conversion.medianToTrial", {
+          days: days(medians.signupToTrial),
+        })
       : null,
     medians.trialToPaid != null
-      ? `${days(medians.trialToPaid)} from trial to paid`
+      ? translator("conversion.medianTrialToPaid", {
+          days: days(medians.trialToPaid),
+        })
       : null,
   ].filter((part) => part !== null);
-  return parts.length === 0 ? null : `Median ${parts.join(" · ")}`;
+  return parts.length === 0
+    ? null
+    : translator("conversion.median", { parts: parts.join(" · ") });
 }
 
 export function unrecordedNote(
   recordedSince: string | null,
   windowDays: number,
   generatedAt: string,
+  context: TranslationContext,
 ): string | null {
   if (recordedSince === null) return null;
   const windowStart =
     new Date(generatedAt).getTime() - windowDays * 24 * 60 * 60_000;
   if (new Date(recordedSince).getTime() <= windowStart) return null;
-  return `Workspaces erased before ${formatDayMonth(recordedSince)} are not counted.`;
+  return context.translator("conversion.unrecorded", {
+    date: formatDayMonthInLocale(recordedSince, context.locale),
+  });
 }
 
-export function departuresTitle(windowDays: number): string {
-  return `Left in the last ${pluralize(windowDays, "day")}`;
+export function departuresTitle(
+  windowDays: number,
+  translator: MessageTranslator,
+): string {
+  return translator("conversion.departuresTitle", { days: windowDays });
 }

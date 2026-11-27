@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 const KEY = "flex items-center gap-1.5";
 
 export function RankingKey({
@@ -7,10 +8,11 @@ export function RankingKey({
   changes: boolean;
   annotations: boolean;
 }) {
+  const t = useTranslations("rankings");
   if (!changes && !annotations) return null;
   return (
     <ul
-      aria-label="Chart marks"
+      aria-label={t("chartMarks")}
       className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 text-label text-muted-foreground"
     >
       {changes ? (
@@ -18,7 +20,7 @@ export function RankingKey({
           <svg aria-hidden width="10" height="8" viewBox="0 0 10 8">
             <path d="M1 8h8L5 1z" fill="var(--faint-foreground)" />
           </svg>
-          <span>Listing change</span>
+          <span>{t("listingChange")}</span>
         </li>
       ) : null}
       {annotations ? (
@@ -33,7 +35,7 @@ export function RankingKey({
               strokeDasharray="6 3"
             />
           </svg>
-          <span>Annotation</span>
+          <span>{t("annotation")}</span>
         </li>
       ) : null}
     </ul>

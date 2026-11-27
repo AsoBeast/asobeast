@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { useQueryStates } from "nuqs";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { LayoutGrid, Rows3 } from "lucide-react";
@@ -15,7 +16,8 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { VisibilityHelp } from "@/components/visibility/VisibilityHelp";
-import { formatNumber, storeLabel } from "@/lib/format";
+import { formatNumberInLocale, storeLabel } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { portfolioOptions } from "@/lib/queries";
 import {
   appListParsers,
@@ -29,17 +31,19 @@ const SEARCH_MIN_APPS = 6;
 
 const EVERY_STORE = "all";
 
-const SORT_LABELS: Record<AppSort, string> = {
-  visibility: "Visibility",
-  change: "7 day change",
-  top10: "Keywords in top 10",
-  rating: "Rating",
-  actions: "Open actions",
-  name: "Name",
-  updated: "Last collected",
-};
+const SORT_OPTIONS = [
+  "visibility",
+  "change",
+  "top10",
+  "rating",
+  "actions",
+  "name",
+  "updated",
+] as const satisfies readonly AppSort[];
 
 export function AppsToolbar({ columns }: { columns: ReactNode }) {
+  const t = useTranslations("dashboard");
+  const locale = useAppLocale();
   const { data } = useSuspenseQuery(portfolioOptions);
   const [{ q, sort, view, store }, setList] = useQueryStates(appListParsers);
   const counts = STORES.map((each) => ({
@@ -56,18 +60,18 @@ export function AppsToolbar({ columns }: { columns: ReactNode }) {
             void setList({ store: appStoreParser.parse(next) })
           }
         >
-          <TabsList aria-label="Store">
+          <TabsList aria-label={t("apps.store")}>
             <TabsOption value={EVERY_STORE}>
-              <span>All</span>
+              <span>{t("apps.all")}</span>
               <span className="numeric text-muted-foreground">
-                {formatNumber(data.apps.length)}
+                {formatNumberInLocale(data.apps.length, locale)}
               </span>
             </TabsOption>
             {counts.map(({ store: each, apps }) => (
               <TabsOption key={each} value={each}>
                 <span>{storeLabel(each)}</span>
                 <span className="numeric text-muted-foreground">
-                  {formatNumber(apps)}
+                  {formatNumberInLocale(apps, locale)}
                 </span>
               </TabsOption>
             ))}
@@ -77,7 +81,7 @@ export function AppsToolbar({ columns }: { columns: ReactNode }) {
       <VisibilityHelp />
       {data.apps.length > SEARCH_MIN_APPS || q !== "" ? (
         <SearchInput
-          label="Search apps"
+          label={t("apps.search")}
           value={q}
           onSearch={(next, options) => void setList({ q: next }, options)}
         />
@@ -89,13 +93,13 @@ export function AppsToolbar({ columns }: { columns: ReactNode }) {
             void setList({ sort: appSortParser.parse(next), dir: null })
           }
         >
-          <SelectTrigger size="sm" aria-label="Sort by">
-            <SelectValue>{SORT_LABELS[sort]}</SelectValue>
+          <SelectTrigger size="sm" aria-label={t("apps.sortBy")}>
+            <SelectValue>{t(`sort.${sort}`)}</SelectValue>
           </SelectTrigger>
           <SelectContent>
-            {Object.entries(SORT_LABELS).map(([value, label]) => (
+            {SORT_OPTIONS.map((value) => (
               <SelectItem key={value} value={value}>
-                {label}
+                {t(`sort.${value}`)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -109,10 +113,10 @@ export function AppsToolbar({ columns }: { columns: ReactNode }) {
         }
       >
         <TabsList>
-          <TabsOption value="table" aria-label="Table">
+          <TabsOption value="table" aria-label={t("apps.tableView")}>
             <Rows3 aria-hidden />
           </TabsOption>
-          <TabsOption value="cards" aria-label="Cards">
+          <TabsOption value="cards" aria-label={t("apps.cardsView")}>
             <LayoutGrid aria-hidden />
           </TabsOption>
         </TabsList>

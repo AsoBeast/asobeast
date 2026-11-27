@@ -4,7 +4,9 @@ import type {
   RankInvestigateDropEvidence,
   ReviewsInvestigateThemeEvidence,
 } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
+import zhActions from "../../../messages/zh-CN/actions.json";
 import { ACTIONS } from "../../../e2e/fixtures.mts";
 import { actionHeadline, changedFields } from "./action-headline";
 import { actionItem } from "./action-test-item";
@@ -21,6 +23,12 @@ const headline = (
       scope: { keywordText },
     }),
   );
+
+const zh = createTranslator({
+  locale: "zh-CN",
+  namespace: "actions",
+  messages: { actions: zhActions },
+});
 
 describe("actionHeadline", () => {
   it("names the keyword to add", () => {
@@ -355,8 +363,22 @@ describe("actionHeadline", () => {
 
   it("gives every open fixture action its own headline", () => {
     const open = ACTIONS.filter((item) => item.status === "OPEN");
-    const headlines = open.map(actionHeadline);
+    const headlines = open.map((item) => actionHeadline(item));
 
     expect(new Set(headlines).size).toBe(open.length);
+  });
+
+  it("writes generated headlines in Simplified Chinese", () => {
+    const item = ACTIONS.find(
+      (entry) => entry.rule === "keyword.add_uncovered",
+    );
+    if (!item) throw new Error("Expected an uncovered keyword fixture");
+
+    expect(actionHeadline(item, zh, "zh-CN")).toBe(
+      '将 "habit tracker" 添加到元数据',
+    );
+    expect(changedFields(["title", "subtitle"], zh, "zh-CN")).toBe(
+      "标题和副标题",
+    );
   });
 });

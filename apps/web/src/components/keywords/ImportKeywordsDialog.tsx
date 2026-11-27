@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import type { Store } from "@asobeast/shared";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -15,6 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import type { MessageTranslator } from "@/i18n/translator";
 import {
   columnOptions,
   skippedAboveHeader,
@@ -36,13 +38,14 @@ function primaryLabel({
   action,
   progress,
   result,
+  t,
 }: Pick<
   ReturnType<typeof useKeywordImport>,
   "importing" | "action" | "progress" | "result"
->): string {
-  if (importing) return "Importing…";
-  if (action === "skip") return skipButtonLabel(progress);
-  return result ? importButtonLabel(result.summary) : "Nothing to import";
+> & { t: MessageTranslator }): string {
+  if (importing) return t("import.pending");
+  if (action === "skip") return skipButtonLabel(progress, t);
+  return result ? importButtonLabel(result.summary, t) : t("import.nothing");
 }
 
 export function ImportKeywordsDialog({
@@ -56,6 +59,8 @@ export function ImportKeywordsDialog({
   country: string;
   children: ReactNode;
 }) {
+  const t = useTranslations("keywords");
+  const tCommon = useTranslations("common");
   const [open, setOpen] = useState(false);
   const flow = useKeywordImport(appId, store, country, () => setOpen(false));
 
@@ -68,15 +73,18 @@ export function ImportKeywordsDialog({
   const { loaded, view, mapped, result } = flow;
   const notices =
     loaded && view && mapped
-      ? fileNotices({
-          fallback: loaded.file.fallback,
-          hasHeader: view.hasHeader,
-          skippedRows: skippedAboveHeader(loaded.file, view),
-          ignoredColumns: mapped.ignoredColumns,
-          store,
-          leftOut: mapped.leftOut,
-          appsToChoose: flow.appsToChoose,
-        })
+      ? fileNotices(
+          {
+            fallback: loaded.file.fallback,
+            hasHeader: view.hasHeader,
+            skippedRows: skippedAboveHeader(loaded.file, view),
+            ignoredColumns: mapped.ignoredColumns,
+            store,
+            leftOut: mapped.leftOut,
+            appsToChoose: flow.appsToChoose,
+          },
+          t,
+        )
       : [];
 
   return (
@@ -84,11 +92,8 @@ export function ImportKeywordsDialog({
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>Import keywords from CSV</DialogTitle>
-          <DialogDescription>
-            Choose a file with one keyword per row. Country, tags and note are
-            optional columns. Nothing is saved until you confirm.
-          </DialogDescription>
+          <DialogTitle>{t("import.title")}</DialogTitle>
+          <DialogDescription>{t("import.description")}</DialogDescription>
         </DialogHeader>
 
         <DialogBody className="gap-4">
@@ -143,7 +148,7 @@ export function ImportKeywordsDialog({
             disabled={flow.importing}
             onClick={() => onOpenChange(false)}
           >
-            Cancel
+            {tCommon("cancel")}
           </Button>
           <Button
             aria-disabled={flow.action === null}
@@ -153,7 +158,7 @@ export function ImportKeywordsDialog({
             }}
           >
             {flow.importing ? <Loader2 className="animate-spin" /> : null}
-            {primaryLabel(flow)}
+            {primaryLabel({ ...flow, t })}
           </Button>
         </DialogFooter>
       </DialogContent>

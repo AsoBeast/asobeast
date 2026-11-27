@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import {
   keepPreviousData,
   useQuery,
@@ -68,6 +69,7 @@ function SerpResults({
   keyword: TrackedKeywordItem | undefined;
   actionsFor: ActionsFor | undefined;
 }) {
+  const t = useTranslations("keywordInspector");
   const { entries, date } = snapshot;
   const comparedTo = snapshot.comparedTo ?? null;
   if (entries.length === 0) {
@@ -81,6 +83,7 @@ function SerpResults({
   const deeper = entries.filter((entry) => entry.position > SERP_DEPTH);
   const keptShort = !isNewestDay(snapshot) && entries.length === SERP_DEPTH;
   const exits = snapshot.exits ?? [];
+  const deeperThrough = deeper.at(-1)?.position ?? SERP_DEPTH + 1;
 
   return (
     <div className="flex flex-col pb-6">
@@ -90,7 +93,7 @@ function SerpResults({
       />
       {topTen.length > 0 ? (
         <SerpList
-          heading="Top 10"
+          heading={t("serp.top10")}
           entries={topTen}
           viewer={viewer}
           comparedTo={comparedTo}
@@ -99,7 +102,10 @@ function SerpResults({
       ) : null}
       {deeper.length > 0 ? (
         <SerpList
-          heading={`Positions ${SERP_DEPTH + 1} to ${deeper.at(-1)?.position}`}
+          heading={t("serp.deeper", {
+            from: SERP_DEPTH + 1,
+            to: deeperThrough,
+          })}
           entries={deeper}
           viewer={viewer}
           comparedTo={comparedTo}
@@ -187,20 +193,18 @@ function SerpContent({
   keyword: TrackedKeywordItem | undefined;
   actionsFor: ActionsFor | undefined;
 }) {
+  const t = useTranslations("keywordInspector");
   if (failedRead(read)) {
     return (
       <div className="px-4 pt-4">
-        <InlineQueryError
-          message="The search results could not be loaded."
-          read={read}
-        />
+        <InlineQueryError message={t("serp.loadFailed")} read={read} />
       </div>
     );
   }
   if (!snapshot) {
     return (
       <div role="status">
-        <span className="sr-only">Loading search results</span>
+        <span className="sr-only">{t("serp.loading")}</span>
         <SerpSkeleton store={viewer.store} />
       </div>
     );
@@ -234,6 +238,7 @@ export function SerpSheet({
   keyword?: TrackedKeywordItem;
 }) {
   const [{ serp: keywordId, serpDate }, setSerpState] = useSerpParams();
+  const t = useTranslations("keywordInspector");
   const [shownId, setShownId] = useState(keywordId);
   if (keywordId !== "" && keywordId !== shownId) setShownId(keywordId);
   const open = keywordId.length > 0;
@@ -256,10 +261,8 @@ export function SerpSheet({
         }}
       >
         <SheetHeader className="px-4 pt-4 pr-12">
-          <SheetTitle>Search results</SheetTitle>
-          <SheetDescription>
-            The apps the store showed for this keyword on a daily check.
-          </SheetDescription>
+          <SheetTitle>{t("serp.title")}</SheetTitle>
+          <SheetDescription>{t("serp.description")}</SheetDescription>
         </SheetHeader>
         {open ? (
           <SerpBody

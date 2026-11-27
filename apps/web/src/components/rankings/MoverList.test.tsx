@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { KeywordMover } from "@asobeast/shared";
 import { daysPeriod } from "./mover-change";
+import { TestIntlProvider } from "@/test/intl-provider";
 import { MoverList } from "./MoverList";
 
 const mover = (over: Partial<KeywordMover>): KeywordMover => ({
@@ -16,13 +17,15 @@ const mover = (over: Partial<KeywordMover>): KeywordMover => ({
 
 const render = (movers: KeywordMover[]) =>
   renderToStaticMarkup(
-    <MoverList
-      movers={movers}
-      period={daysPeriod(7)}
-      empty="Nothing moved"
-      hrefOf={() => "/rankings"}
-      lead={(entry) => <bdi>{entry.text}</bdi>}
-    />,
+    <TestIntlProvider>
+      <MoverList
+        movers={movers}
+        period={daysPeriod(7)}
+        empty="Nothing moved"
+        hrefOf={() => "/rankings"}
+        lead={(entry) => <bdi>{entry.text}</bdi>}
+      />
+    </TestIntlProvider>,
   );
 
 describe("MoverList", () => {

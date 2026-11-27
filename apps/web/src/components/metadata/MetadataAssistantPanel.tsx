@@ -2,11 +2,11 @@
 
 import { Suspense, useId, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { Copy, Loader2, PencilLine, Sparkles } from "lucide-react";
 import { useQueryState } from "nuqs";
 import { toast } from "sonner";
 import {
-  APP_STORE_LOCALIZATIONS,
   type MetadataDraft,
   type MetadataField,
   type Store,
@@ -34,7 +34,9 @@ import { PRODUCT_NAME } from "@/lib/brand";
 import { copyText } from "@/lib/copy-text";
 import { isListingDraftField } from "@/lib/listing-draft";
 import { invalidateAiUsage } from "@/lib/queries";
-import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
+import { localizationNameInLocale } from "@/lib/localizations";
+import { metadataFieldLabel } from "@/lib/metadata-display";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { draftLocaleParser } from "@/lib/search-params";
 import { useSingleFlight } from "@/lib/single-flight";
 import { DraftLocalizationSelect } from "./DraftLocalizationSelect";
@@ -54,13 +56,14 @@ function DraftRow({
   draft: MetadataDraft;
   onUse: ((draft: MetadataDraft) => void) | null;
 }) {
-  const label = METADATA_FIELD_LABELS[draft.field];
+  const t = useTranslations("metadata");
+  const label = metadataFieldLabel(draft.field, t);
 
   async function copy() {
     if (await copyText(draft.value)) {
-      toast.success(`${label} copied`);
+      toast.success(t("assistant.copied", { field: label }));
     } else {
-      toast.error("Couldn't copy. Select and copy it manually.");
+      toast.error(t("assistant.copyFailed"));
     }
   }
 
@@ -78,21 +81,21 @@ function DraftRow({
             <Button
               variant="outline"
               size="sm"
-              aria-label={`Use in draft: ${label}`}
+              aria-label={t("assistant.useInDraftAria", { field: label })}
               onClick={() => onUse(draft)}
             >
               <PencilLine aria-hidden />
-              <span>Use in draft</span>
+              <span>{t("assistant.useInDraft")}</span>
             </Button>
           ) : null}
           <Button
             variant="outline"
             size="sm"
-            aria-label={`Copy ${label} draft`}
+            aria-label={t("assistant.copyAria", { field: label })}
             onClick={copy}
           >
             <Copy aria-hidden />
-            <span>Copy</span>
+            <span>{t("assistant.copy")}</span>
           </Button>
         </div>
       </div>
@@ -124,6 +127,8 @@ export function MetadataAssistantPanel({
   store: Store;
   canLocalize: boolean;
 }) {
+  const t = useTranslations("metadata");
+  const locale = useAppLocale();
   const available = STORE_FIELDS[store];
   const [selected, setSelected] = useState<MetadataField[]>(available);
   const [instructions, setInstructions] = useState("");
@@ -142,7 +147,7 @@ export function MetadataAssistantPanel({
         instructions: instructions.trim() || undefined,
         localization: canLocalize ? (draftLocale ?? undefined) : undefined,
       }),
-    onError: (error) => failAi(error, "Draft generation failed"),
+    onError: (error) => failAi(error, t("assistant.generationFailed")),
     onSettled: () => invalidateAiUsage(queryClient),
   });
   const draftOnce = useSingleFlight(mutation);
@@ -162,7 +167,7 @@ export function MetadataAssistantPanel({
       <Card>
         <CardHeader className={PANEL_HEADER}>
           <CardTitle asChild>
-            <h2 id={headingId}>AI drafts</h2>
+            <h2 id={headingId}>{t("assistant.title")}</h2>
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
@@ -172,14 +177,16 @@ export function MetadataAssistantPanel({
             </Suspense>
           ) : null}
           <div className="flex flex-col gap-2">
-            <Label htmlFor={instructionsId}>Instructions (optional)</Label>
+            <Label htmlFor={instructionsId}>
+              {t("assistant.instructions")}
+            </Label>
             <Textarea
               id={instructionsId}
               value={instructions}
               onChange={(event) => setInstructions(event.target.value)}
               maxLength={500}
               rows={2}
-              placeholder="Steer tone or angle, for example: emphasise sleep tracking."
+              placeholder={t("assistant.placeholder")}
               className="max-w-[70ch] resize-y"
             />
           </div>
@@ -190,7 +197,7 @@ export function MetadataAssistantPanel({
                   checked={selected.includes(field)}
                   onCheckedChange={(checked) => toggle(field, checked === true)}
                 />
-                <span>{METADATA_FIELD_LABELS[field]}</span>
+                <span>{metadataFieldLabel(field, t)}</span>
               </Label>
             ))}
           </div>
@@ -205,7 +212,9 @@ export function MetadataAssistantPanel({
               ) : (
                 <Sparkles />
               )}
-              {drafts.length > 0 ? "Regenerate" : "Generate drafts"}
+              {drafts.length > 0
+                ? t("assistant.regenerate")
+                : t("assistant.generate")}
             </Button>
             <AiCallsLeft />
           </div>
@@ -214,7 +223,9 @@ export function MetadataAssistantPanel({
           <div className="border-t border-border">
             {drafted ? (
               <p className={SUB_HEADER}>
-                {`Drafted in ${APP_STORE_LOCALIZATIONS[drafted]}`}
+                {t("assistant.draftedIn", {
+                  language: localizationNameInLocale(drafted, locale),
+                })}
               </p>
             ) : null}
             <ul className="flex list-none flex-col divide-y divide-border-subtle p-0">
@@ -225,7 +236,7 @@ export function MetadataAssistantPanel({
           </div>
         ) : null}
         <CardFooter>
-          <span>{`Drafts are suggestions. ${PRODUCT_NAME} never writes to the store.`}</span>
+          <span>{t("assistant.footer", { product: PRODUCT_NAME })}</span>
         </CardFooter>
       </Card>
     </section>

@@ -3,7 +3,17 @@ import type {
   FirstRunStageStatus,
   FirstRunStatus,
 } from "@asobeast/shared";
-import { formatRelativeTime } from "@/lib/format";
+import { createTranslator } from "next-intl";
+import enSetup from "../../../messages/en/setup.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import { formatRelativeTimeInLocale } from "@/lib/format";
+import type { Locale } from "@/lib/locale";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "setup",
+  messages: { setup: enSetup },
+});
 
 export type FirstRunRowState = "ready" | "waiting";
 
@@ -15,88 +25,74 @@ export interface FirstRunRow {
   detail: string;
 }
 
-const LABELS: Record<FirstRunStage, string> = {
-  metadata: "Listing captured",
-  keywords: "Keywords tracked",
-  rankings: "Positions collected",
-  scores: "Popularity and difficulty scored",
-  reviews: "Reviews backfilled",
-  history: "Daily history",
-};
-
-const READY: Record<FirstRunStage, string> = {
-  metadata: "The first listing snapshot is stored.",
-  keywords: "Auto tracked from the indexed fields.",
-  rankings: "Every tracked keyword has a position.",
-  scores: "Popularity and difficulty are in for every tracked keyword.",
-  reviews: "The review backfill is stored.",
-  history: "A full week of daily captures is in.",
-};
-
-const NOTHING_EXPECTED: Record<FirstRunStage, string> = {
-  metadata: "The store no longer lists this app, so no listing is expected.",
-  keywords: "No keywords are tracked for this app.",
-  rankings: "No keywords are tracked, so there are no positions to collect.",
-  scores: "No keywords are tracked, so there is nothing to score.",
-  reviews: "This listing has no ratings, so there are no reviews to collect.",
-  history: "No keywords are tracked, so no history is building.",
-};
-
-const QUEUED_WITHOUT_A_TIME =
-  "Collection is queued rather than scheduled, so no time is promised.";
-
-function waitingDetail(row: FirstRunStageStatus, now: number): string {
-  const when = row.expectedBy ? formatRelativeTime(row.expectedBy, now) : null;
+function waitingDetail(
+  row: FirstRunStageStatus,
+  now: number,
+  t: MessageTranslator,
+  locale: Locale,
+): string {
+  const when = row.expectedBy
+    ? formatRelativeTimeInLocale(row.expectedBy, now, locale)
+    : null;
 
   switch (row.stage) {
     case "metadata":
-      return "The listing is still being read from the store.";
+      return t("timeline.metadataWaiting");
     case "keywords":
-      return "Keywords are still being extracted from the listing.";
+      return t("timeline.keywordsWaiting");
     case "rankings":
       return when
-        ? `Positions are being collected now. The daily run catches anything still missing ${when}.`
-        : `Positions are being collected now. ${QUEUED_WITHOUT_A_TIME}`;
+        ? t("timeline.rankingsWaiting", { when })
+        : t("timeline.rankingsQueued", { queued: t("timeline.queued") });
     case "scores":
       return when
-        ? `Every tracked keyword was queued for scoring at import. The weekly run catches anything still missing ${when}.`
-        : `Every tracked keyword was queued for scoring at import. ${QUEUED_WITHOUT_A_TIME}`;
+        ? t("timeline.scoresWaiting", { when })
+        : t("timeline.scoresQueued", { queued: t("timeline.queued") });
     case "reviews":
-      return "The review backfill is running.";
+      return t("timeline.reviewsWaiting");
     case "history":
-      return "The trend rules need a week of daily captures before the action queue is worth reading.";
+      return t("timeline.historyWaiting");
   }
 }
 
-function detailOf(row: FirstRunStageStatus, now: number): string {
-  if (row.total === 0) {
-    return NOTHING_EXPECTED[row.stage];
-  }
-  return row.complete ? READY[row.stage] : waitingDetail(row, now);
+function detailOf(
+  row: FirstRunStageStatus,
+  now: number,
+  t: MessageTranslator,
+  locale: Locale,
+): string {
+  if (row.total === 0) return t(`timeline.${row.stage}None`);
+  return row.complete
+    ? t(`timeline.${row.stage}Ready`)
+    : waitingDetail(row, now, t, locale);
 }
 
 export function firstRunRows(
   status: FirstRunStatus,
   now: number,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
 ): FirstRunRow[] {
   return status.stages.map((row) => ({
     stage: row.stage,
-    label: LABELS[row.stage],
+    label: t(`timeline.${row.stage}Label`),
     state: row.complete ? "ready" : "waiting",
-    progress: row.total > 1 ? `${row.ready} of ${row.total}` : null,
-    detail: detailOf(row, now),
+    progress:
+      row.total > 1
+        ? t("timeline.rowProgress", { ready: row.ready, total: row.total })
+        : null,
+    detail: detailOf(row, now, t, locale),
   }));
 }
 
-export function firstRunHeadline(status: FirstRunStatus): string {
+export function firstRunHeadline(
+  status: FirstRunStatus,
+  t: MessageTranslator = english,
+): string {
   const waiting = status.stages.filter((row) => !row.complete).length;
 
-  if (waiting === 0) {
-    return "This app is fully collected.";
-  }
-  return waiting === 1
-    ? "One step is still finishing."
-    : `${waiting} steps are still finishing.`;
+  if (waiting === 0) return t("timeline.fullyCollected");
+  return t("timeline.finishing", { count: waiting });
 }
 
 const listingWaiting = (status: FirstRunStatus): boolean =>

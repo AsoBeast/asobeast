@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ export function FilterChips({
 }) {
   const list = useRef<HTMLUListElement>(null);
   const focusAfterCommit = useFocusAfterCommit();
+  const t = useTranslations("ui");
 
   const fallback = (): HTMLElement | null => {
     const element = list.current;
@@ -61,7 +63,7 @@ export function FilterChips({
   return (
     <ul
       ref={list}
-      aria-label="Active filters"
+      aria-label={t("activeFilters")}
       className="flex flex-wrap items-center gap-2"
     >
       {chips.map((chip) => (
@@ -75,7 +77,7 @@ export function FilterChips({
               type="button"
               data-chip-remove
               data-chip-key={chip.key}
-              aria-label={`Remove ${chip.label}`}
+              aria-label={t("removeFilter", { label: chip.label })}
               onClick={(event) => remove(chip, event.currentTarget)}
               className="inline-flex size-5 shrink-0 items-center justify-center rounded-full opacity-70 outline-none hover:opacity-100 focus-visible:ring-2 focus-visible:ring-ring"
             >
@@ -87,11 +89,12 @@ export function FilterChips({
       {chips.length > 1 ? (
         <li>
           <Button
+            data-action="clear-all"
             variant="ghost"
             size="xs"
             onClick={(event) => clearAll(event.currentTarget)}
           >
-            Clear all
+            {t("clearAll")}
           </Button>
         </li>
       ) : null}

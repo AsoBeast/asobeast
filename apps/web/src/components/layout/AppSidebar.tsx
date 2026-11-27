@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { BookOpen } from "lucide-react";
 import {
   Sidebar,
@@ -23,12 +24,14 @@ import { WhatsNewMenuItem } from "./WhatsNewMenuItem";
 const DOCUMENTATION_URL = "https://docs.asobeast.com";
 
 export function AppSidebar() {
+  const t = useTranslations("navigation");
+  const shell = useTranslations("shell");
   const version = appVersionLabel();
   const latest = latestShown(RELEASES, appVersion());
 
   return (
     <Sidebar collapsible="icon">
-      <nav aria-label="Main" className="flex min-h-0 flex-1 flex-col">
+      <nav aria-label={t("main")} className="flex min-h-0 flex-1 flex-col">
         <SidebarHeader>
           <Link
             href="/"
@@ -60,20 +63,21 @@ export function AppSidebar() {
           <SidebarMenu>
             <WhatsNewMenuItem latest={latest} />
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Documentation">
+              <SidebarMenuButton asChild tooltip={t("documentation")}>
                 <a
                   href={DOCUMENTATION_URL}
+                  data-nav="documentation"
                   rel="noreferrer noopener"
                   target="_blank"
                 >
                   <BookOpen />
-                  <span>Documentation</span>
+                  <span>{t("documentation")}</span>
                 </a>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
           <div className="px-2 pb-1 text-caption text-faint-foreground group-data-[collapsible=icon]:hidden">
-            <p>Open-source ASO toolkit for the App Store and Google Play.</p>
+            <p>{shell("tagline")}</p>
             <SidebarLegalLinks />
             {version ? (
               <p>
@@ -81,11 +85,11 @@ export function AppSidebar() {
                   href={releaseNotesUrl(version)}
                   rel="noreferrer noopener"
                   target="_blank"
-                  title="Release notes"
+                  title={t("releaseNotes")}
                   className="rounded-sm underline decoration-border underline-offset-4 hover:text-foreground hover:decoration-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none"
                 >
                   <span translate="no">{version}</span>
-                  <span className="sr-only"> release notes</span>
+                  <span className="sr-only"> {t("releaseNotes")}</span>
                 </a>
               </p>
             ) : null}

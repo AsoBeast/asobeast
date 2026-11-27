@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
@@ -19,8 +20,9 @@ import {
   uniqueWordCount,
   unshippedReads,
 } from "@/lib/app-localizations";
-import { formatList, formatNumber, pluralize } from "@/lib/format";
-import { localizationName } from "@/lib/localizations";
+import { formatListInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
+import { localizationNameInLocale } from "@/lib/localizations";
 import { marketKeywordFieldsOptions } from "@/lib/queries";
 import {
   FOOTER_LINK,
@@ -40,10 +42,11 @@ function ReadsCard({
   aside?: ReactNode;
   children: ReactNode;
 }) {
+  const t = useTranslations("keywords");
   return (
     <CollapsibleCard
       section={KEYWORD_SECTION.reads}
-      title={`What ${market.toUpperCase()} search reads`}
+      title={t("reads.title", { market: market.toUpperCase() })}
       actions={aside}
     >
       <div className="flex flex-col gap-4">{children}</div>
@@ -52,7 +55,9 @@ function ReadsCard({
 }
 
 function ReadRow({ id, read }: { id: string; read: MarketLocalizationRead }) {
-  const name = localizationName(read.localization);
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
+  const name = localizationNameInLocale(read.localization, locale);
   return (
     <li className="flex flex-wrap items-center gap-x-3 gap-y-1">
       <span className="flex min-w-44 items-center gap-2">
@@ -67,16 +72,19 @@ function ReadRow({ id, read }: { id: string; read: MarketLocalizationRead }) {
         />
         <span className="numeric shrink-0 text-caption text-muted-foreground">
           {read.phrases.length === 0
-            ? "Keyword field empty"
-            : `Keyword field ${read.charactersUsed}/${read.charactersLimit}`}
+            ? t("reads.fieldEmpty")
+            : t("reads.fieldUsed", {
+                used: read.charactersUsed,
+                limit: read.charactersLimit,
+              })}
         </span>
       </span>
       <Link
         href={editLocalizationHref(id, read.localization)}
-        aria-label={`Edit the ${name} keyword field`}
+        aria-label={t("reads.editLabel", { name })}
         className={FOOTER_LINK}
       >
-        Edit
+        {t("reads.edit")}
       </Link>
     </li>
   );
@@ -93,6 +101,8 @@ function UnshippedReads({
   reads: readonly MarketLocalizationRead[];
   open: boolean;
 }) {
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
   if (reads.length === 0) return null;
   return (
     <details
@@ -101,7 +111,11 @@ function UnshippedReads({
     >
       <summary className="flex list-none items-center gap-2 rounded-sm text-body outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
         <span>
-          {`${market.toUpperCase()} also reads ${pluralize(reads.length, "localization")} you don't ship · up to ${formatNumber(reads.length * KEYWORD_FIELD_CHAR_LIMIT)} more characters`}
+          {t("reads.alsoReads", {
+            market: market.toUpperCase(),
+            count: reads.length,
+            characters: reads.length * KEYWORD_FIELD_CHAR_LIMIT,
+          })}
         </span>
         <ChevronDown
           aria-hidden
@@ -109,19 +123,25 @@ function UnshippedReads({
         />
       </summary>
       <p className="mt-3 max-w-prose text-dense text-muted-foreground">
-        {formatList(reads.map((read) => localizationName(read.localization)))}
+        {formatListInLocale(
+          reads.map((read) =>
+            localizationNameInLocale(read.localization, locale),
+          ),
+          locale,
+        )}
       </p>
       <Link
         href={localizationsSectionHref(id)}
         className={cn(FOOTER_LINK, "mt-2")}
       >
-        Add one on the metadata page
+        {t("reads.addMetadata")}
       </Link>
     </details>
   );
 }
 
 function MarketReads({ id, market }: { id: string; market: string }) {
+  const t = useTranslations("keywords");
   const { data } = useSuspenseQuery(marketKeywordFieldsOptions(id, market));
   const shipped = data.localizations.filter((read) => read.shipped);
 
@@ -131,19 +151,23 @@ function MarketReads({ id, market }: { id: string; market: string }) {
       aside={
         <span className="flex items-center gap-2 text-caption text-muted-foreground">
           <span>
-            {`${pluralize(uniqueWordCount(data.localizations), "unique word")} · ${pluralize(shipped.length, "localization")}`}
+            {`${t("reads.uniqueWords", {
+              count: uniqueWordCount(data.localizations),
+            })} · ${t("reads.localizations", {
+              count: shipped.length,
+            })}`}
           </span>
           <InfoTip
-            label="About market keyword fields"
-            title="What a market reads"
-            summary="Search in a storefront reads the keyword field of every localization on its list. Words combine only within one localization."
+            label={t("reads.about")}
+            title={t("reads.aboutTitle")}
+            summary={t("reads.aboutSummary")}
           />
         </span>
       }
     >
       {shipped.length === 0 ? (
         <p className="text-body text-muted-foreground">
-          {`${market.toUpperCase()} reads none of the localizations this app ships.`}
+          {t("reads.none", { market: market.toUpperCase() })}
         </p>
       ) : (
         <ul className="flex flex-col gap-3">
@@ -176,11 +200,12 @@ export function MarketSearchReadsCard({
   homeCountry: string;
   market: string;
 }) {
+  const t = useTranslations("keywords");
   if (!hasMarketReads(homeCountry, market)) {
     return (
       <ReadsCard market={market}>
         <p className="text-body text-muted-foreground">
-          {`${market.toUpperCase()} is not an App Store storefront, so it has no keyword field.`}
+          {t("reads.notStorefront", { market: market.toUpperCase() })}
         </p>
       </ReadsCard>
     );

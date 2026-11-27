@@ -3,6 +3,7 @@ import type {
   KeywordDiscoveryList,
 } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
+import { translationContext } from "@/test/translation-context";
 import {
   emptyStateOf,
   rankLabel,
@@ -48,6 +49,8 @@ const list = (
   },
 });
 
+const zh = translationContext("zh-CN", "keywordInspector").translator;
+
 describe("rankText", () => {
   it("names the rank, the depth searched or nothing, never zero", () => {
     expect(rankText({ position: 3, depth: 200 })).toBe("3");
@@ -82,6 +85,14 @@ describe("rankLabel", () => {
       "Not found in the top 50",
     );
     expect(rankLabel({ position: null, depth: null })).toBe("Not checked yet");
+  });
+
+  it("speaks each rank state in Chinese without changing the position", () => {
+    expect(rankLabel({ position: 3, depth: 200 }, zh)).toBe("排名第 3 位");
+    expect(rankLabel({ position: null, depth: 200 }, zh)).toBe(
+      "未进入前 200 名",
+    );
+    expect(rankLabel({ position: null, depth: null }, zh)).toBe("尚未检查");
   });
 
   it("names the no apps state like the tracked table does", () => {
@@ -157,6 +168,22 @@ describe("emptyStateOf", () => {
     expect(emptyStateOf(list([]), 0, "all")).toMatchObject({
       kind: "nothing_here",
       title: "Nothing to review",
+    });
+  });
+
+  it("localizes every discovery empty state in Chinese", () => {
+    expect(emptyStateOf(list([], null), 0, "all", zh)).toEqual({
+      kind: "never_run",
+      body: "AsoBeast 尚未查找您详情页附近的关键词。请点击“刷新”立即查找。",
+    });
+    expect(emptyStateOf(list([item()]), 0, "ranked", zh)).toMatchObject({
+      kind: "nothing_here",
+      title: "尚未有已排名关键词",
+    });
+    expect(emptyStateOf(list([item()]), 0, "opportunity", zh)).toMatchObject({
+      kind: "nothing_here",
+      title: "暂无机会",
+      body: "机会需要热度和难度评分。跟踪关键词后可获得评分，或等待下次评分运行。",
     });
   });
 });

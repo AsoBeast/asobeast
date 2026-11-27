@@ -1,6 +1,7 @@
 "use client";
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { useTranslations } from "next-intl";
 import type { AdminSignupDay } from "@asobeast/shared";
 import { ChartNotice } from "@/components/charts/ChartStates";
 import { MIN_TREND_POINTS } from "@/lib/trend-points";
@@ -9,8 +10,8 @@ import {
   CHART_MARGIN,
   GRID_PROPS,
   seriesColor,
-  TIME_AXIS_PROPS,
-  TIME_TOOLTIP_PROPS,
+  timeAxisPropsInLocale,
+  timeTooltipPropsInLocale,
   VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
 import {
@@ -19,20 +20,23 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-
-const chartConfig = {
-  users: { label: "Accounts", color: seriesColor(0) },
-} satisfies ChartConfig;
+import { useAppLocale } from "@/lib/use-app-locale";
 
 const activeDays = (days: AdminSignupDay[]) =>
   days.filter((day) => day.users > 0).length;
 
 export function SignupsChart({ signups }: { signups: AdminSignupDay[] }) {
+  const t = useTranslations("admin");
+  const locale = useAppLocale();
+  const chartConfig = {
+    users: { label: t("overview.chart.series"), color: seriesColor(0) },
+  } satisfies ChartConfig;
+
   if (activeDays(signups) < MIN_TREND_POINTS) {
     return (
       <ChartNotice
         height={CHART_HEIGHT.compact}
-        title="Too few sign ups in the last 30 days to chart."
+        title={t("overview.chart.tooFew")}
       />
     );
   }
@@ -42,14 +46,16 @@ export function SignupsChart({ signups }: { signups: AdminSignupDay[] }) {
       config={chartConfig}
       className={`${CHART_HEIGHT.compact} w-full`}
       role="region"
-      aria-label="Accounts created per day"
+      aria-label={t("overview.chart.region")}
     >
       <BarChart accessibilityLayer data={signups} margin={CHART_MARGIN}>
         <CartesianGrid {...GRID_PROPS} />
-        <XAxis {...TIME_AXIS_PROPS} />
+        <XAxis {...timeAxisPropsInLocale(locale)} />
         <YAxis {...VALUE_AXIS_PROPS} allowDecimals={false} />
         <ChartTooltip
-          content={<ChartTooltipContent {...TIME_TOOLTIP_PROPS} />}
+          content={
+            <ChartTooltipContent {...timeTooltipPropsInLocale(locale)} />
+          }
         />
         <Bar
           dataKey="users"

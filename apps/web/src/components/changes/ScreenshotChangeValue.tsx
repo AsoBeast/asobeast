@@ -1,5 +1,9 @@
+"use client";
+
 import type { ChangeEventItem, ScreenshotRef } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { ScreenshotThumb } from "@/components/screenshots/ScreenshotThumb";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
 import { screenshotChangeSummary } from "./screenshot-change";
 
@@ -16,12 +20,13 @@ function Strip({
   marked: number[];
   ring: string;
 }) {
+  const t = useTranslations("changes");
   return (
     <span className="flex min-w-0 flex-col gap-1">
       <span className="text-label text-faint-foreground">{label}</span>
       <span
         role="group"
-        aria-label={`${label} screenshots`}
+        aria-label={t("value.screenshotGroup", { label })}
         tabIndex={0}
         className="flex gap-2 overflow-x-auto p-1"
       >
@@ -29,7 +34,10 @@ function Strip({
           <ScreenshotThumb
             key={ref.position}
             src={ref.url}
-            alt={`${label}, screenshot ${ref.position}`}
+            alt={t("value.screenshotAlt", {
+              label,
+              position: ref.position,
+            })}
             height={THUMB_HEIGHT}
             className={cn(marked.includes(ref.position) && `ring-2 ${ring}`)}
           />
@@ -75,8 +83,10 @@ export function ScreenshotChangeValue({
   event: ChangeEventItem;
   dense: boolean;
 }) {
+  const t = useTranslations("changes");
+  const locale = useAppLocale();
   const detail = event.detail;
-  const summary = screenshotChangeSummary(event);
+  const summary = screenshotChangeSummary(event, t, locale);
 
   if (dense || !detail) {
     return <span className="break-words">{summary}</span>;
@@ -86,11 +96,15 @@ export function ScreenshotChangeValue({
     return (
       <span className="flex min-w-0 flex-col gap-1">
         <CaptionList
-          label="Removed"
+          label={t("value.removed")}
           captions={detail.removed}
           tone="text-muted-foreground line-through"
         />
-        <CaptionList label="Added" captions={detail.added} tone="font-medium" />
+        <CaptionList
+          label={t("value.added")}
+          captions={detail.added}
+          tone="font-medium"
+        />
       </span>
     );
   }
@@ -104,13 +118,13 @@ export function ScreenshotChangeValue({
       <span className="break-words">{summary}</span>
       <span className="flex min-w-0 flex-wrap gap-x-6 gap-y-2">
         <Strip
-          label="Before"
+          label={t("value.before")}
           refs={detail.before}
           marked={detail.removed}
           ring="ring-destructive"
         />
         <Strip
-          label="After"
+          label={t("value.after")}
           refs={detail.after}
           marked={detail.added}
           ring="ring-success"

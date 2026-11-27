@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
-import { formatDayMonth } from "@/lib/format";
+import enFormat from "../../../messages/en/format.json";
+import zhFormat from "../../../messages/zh-CN/format.json";
+import { formatDayMonthInLocale } from "@/lib/format";
+import type { Locale } from "@/lib/locale";
 import { dayBefore } from "@/lib/utc-day";
 
 export const FEED_ROW =
@@ -10,10 +13,17 @@ export const FEED_LINK =
 
 export const FEED_TEXT = "line-clamp-2 min-w-0 @2xl/dashboard:line-clamp-1";
 
-export function feedDayLabel(day: string, today: string): string {
-  if (day === today) return "Today";
-  if (day === dayBefore(today, 1)) return "Yesterday";
-  return formatDayMonth(day);
+export function feedDayLabel(
+  day: string,
+  today: string,
+  locale: Locale = "en",
+): string {
+  if (day === today)
+    return locale === "zh-CN" ? zhFormat.today : enFormat.today;
+  if (day === dayBefore(today, 1)) {
+    return locale === "zh-CN" ? zhFormat.yesterday : enFormat.yesterday;
+  }
+  return formatDayMonthInLocale(day, locale);
 }
 
 export function FeedDay({ children }: { children: ReactNode }) {

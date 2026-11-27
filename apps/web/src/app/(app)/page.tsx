@@ -29,8 +29,8 @@ import {
   OperatorPortfolioStatusLine,
   PortfolioStatusLine,
 } from "@/components/dashboard/PortfolioStatusLine";
+import { AppsDashboardSkeleton } from "@/components/dashboard/AppsDashboardSkeleton";
 import {
-  AppsDashboardSkeleton,
   DashboardLedeSkeleton,
   DoNextCardSkeleton,
   PortfolioMoversCardSkeleton,

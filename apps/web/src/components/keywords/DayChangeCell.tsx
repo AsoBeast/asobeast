@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import { DeltaChip } from "@/components/ui/delta-chip";
 import type { DayChange } from "@/lib/keyword-day-change";
 import { cn } from "@/lib/utils";
@@ -5,20 +8,9 @@ import { cn } from "@/lib/utils";
 const WORD =
   "inline-flex h-[22px] items-center rounded-md px-[7px] text-label font-medium";
 
-const WORDS: Record<
-  "lost" | "entered",
-  { label: string; name: string; tone: string }
-> = {
-  lost: {
-    label: "Lost",
-    name: "Dropped out of the results since yesterday",
-    tone: "bg-signal-down-subtle text-signal-down",
-  },
-  entered: {
-    label: "New",
-    name: "Entered the results since yesterday",
-    tone: "bg-signal-up-subtle text-signal-up",
-  },
+const TONES = {
+  lost: "bg-signal-down-subtle text-signal-down",
+  entered: "bg-signal-up-subtle text-signal-up",
 };
 
 const MUTED = "bg-transparent px-0 text-muted-foreground";
@@ -30,23 +22,23 @@ export function DayChangeCell({
   change: DayChange | null;
   muted: boolean;
 }) {
+  const t = useTranslations("keywords");
   if (change === null) {
     return (
       <span className="text-muted-foreground">
         <span aria-hidden>—</span>
-        <span className="sr-only">No change since yesterday to show</span>
+        <span className="sr-only">{t("change.none")}</span>
       </span>
     );
   }
   if (change.kind === "lost" || change.kind === "entered") {
-    const word = WORDS[change.kind];
     return (
       <span
         data-change={change.kind}
-        className={cn(WORD, muted ? MUTED : word.tone)}
+        className={cn(WORD, muted ? MUTED : TONES[change.kind])}
       >
-        <span aria-hidden>{word.label}</span>
-        <span className="sr-only">{word.name}</span>
+        <span aria-hidden>{t(`change.${change.kind}`)}</span>
+        <span className="sr-only">{t(`change.${change.kind}Name`)}</span>
       </span>
     );
   }
@@ -54,7 +46,7 @@ export function DayChangeCell({
   return (
     <DeltaChip
       value={places}
-      period="since yesterday"
+      period={t("change.period")}
       form={places === 0 ? "text" : "pill"}
       className={muted ? MUTED : undefined}
     />

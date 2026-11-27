@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { ACTION_RULE_TITLES, type ActionItem } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
+import type { ActionItem } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,8 +9,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { formatCountry, storeLabel } from "@/lib/format";
-import { ACTION_CATEGORY_LABEL, ACTION_STATUS_LABEL } from "./action-copy";
+import { formatCountryInLocale, storeLabel } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
+import {
+  actionCategoryLabel,
+  actionRuleLabel,
+  actionStatusLabel,
+} from "./action-copy";
 import { actionHeadline } from "./action-headline";
 import { actionHref, actionSection } from "./action-links";
 import { ActionStateControls } from "./ActionStateControls";
@@ -17,6 +23,8 @@ import { StatusIcon } from "./ActionStatusIcon";
 import { PriorityWord } from "./PriorityWord";
 
 export function ActionDetailHeader({ item }: { item: ActionItem }) {
+  const t = useTranslations("actions");
+  const locale = useAppLocale();
   const href = actionHref(item);
 
   return (
@@ -24,22 +32,25 @@ export function ActionDetailHeader({ item }: { item: ActionItem }) {
       <div className="flex flex-wrap items-center gap-2">
         <PriorityWord priority={item.priority} />
         <Badge variant="secondary">
-          {ACTION_CATEGORY_LABEL[item.category]}
+          {actionCategoryLabel(item.category, t)}
         </Badge>
         <Badge variant="outline">
           <StatusIcon status={item.status} />
-          <span>{ACTION_STATUS_LABEL[item.status]}</span>
+          <span>{actionStatusLabel(item.status, t)}</span>
         </Badge>
       </div>
-      <SheetTitle className="text-balance">{actionHeadline(item)}</SheetTitle>
+      <SheetTitle className="text-balance">
+        {actionHeadline(item, t, locale)}
+      </SheetTitle>
       <SheetDescription>
-        {ACTION_RULE_TITLES[item.rule]} · {item.scope.appName ?? "An app"} ·{" "}
-        {storeLabel(item.scope.store)} · {formatCountry(item.scope.country)}
+        {actionRuleLabel(item.rule, t)} · {item.scope.appName ?? t("anApp")} ·{" "}
+        {storeLabel(item.scope.store)} ·{" "}
+        {formatCountryInLocale(item.scope.country, locale)}
       </SheetDescription>
       <div className="flex flex-wrap items-center gap-2">
         <Button asChild size="sm">
           <Link href={href}>
-            Fix it in {actionSection(href)}
+            {t("fixItIn", { section: actionSection(href, t) })}
             <ArrowRight aria-hidden />
           </Link>
         </Button>

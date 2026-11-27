@@ -7,6 +7,7 @@ import {
   type UseQueryResult,
 } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
+import { useTranslations } from "next-intl";
 import type {
   ChangeTimeline,
   RankingSeries as RankingSeriesContract,
@@ -107,6 +108,7 @@ function KeywordDynamicsBody({
   onClear: () => void;
   onWiden: () => void;
 }) {
+  const t = useTranslations("keywords");
   const [, setKeywords] = useQueryState(
     "keywords",
     keywordChartSelectionParser,
@@ -131,7 +133,7 @@ function KeywordDynamicsBody({
   if (failedRead(rankingsRead)) {
     return (
       <InlineQueryError
-        message="Could not load the rank positions."
+        message={t("dynamics.positionsFailed")}
         read={rankingsRead}
       />
     );
@@ -184,7 +186,7 @@ function KeywordDynamicsBody({
       />
       {isCapped(chart) ? (
         <p className="text-caption text-muted-foreground">
-          {cappingLine(chart)}
+          {cappingLine(chart, t)}
         </p>
       ) : null}
       <DynamicsReadErrors
@@ -238,17 +240,18 @@ function DynamicsReadErrors({
   rankingsRead: UseQueryResult<RankingSeriesContract>;
   changesRead: UseQueryResult<ChangeTimeline>;
 }) {
+  const t = useTranslations("keywords");
   return (
     <>
       {rankingsRead.isError ? (
         <InlineQueryError
-          message="Could not refresh the rank positions."
+          message={t("dynamics.positionsRefreshFailed")}
           read={rankingsRead}
         />
       ) : null}
       {failedRead(changesRead) ? (
         <InlineQueryError
-          message="Could not load the listing changes."
+          message={t("history.changesFailed")}
           read={changesRead}
         />
       ) : null}

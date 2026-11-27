@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import type { FormEvent, ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -24,9 +25,10 @@ import { channelHint, deliversToChat } from "./webhook-channel-copy";
 
 const HINT_ID = "webhook-channel-hint";
 
-const INVALID_URL = "Enter a valid http(s) URL";
-
 export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
+  const t = useTranslations("notifications");
+  const validation = useTranslations("validation");
+  const invalidUrl = validation("notifications.invalidUrl");
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [url, setUrl] = useState("");
@@ -51,19 +53,17 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
       }),
     onSuccess: () => {
       invalidateWebhookMutation(queryClient);
-      toast.success("Webhook added");
+      toast.success(t("webhook.added"));
       onOpenChange(false);
     },
     onError: (err) => {
       setError(
-        err instanceof ApiError
-          ? err.envelope.message
-          : "Could not add webhook",
+        err instanceof ApiError ? err.envelope.message : t("webhook.addError"),
       );
     },
   });
   const createOnce = useSingleFlight(mutation);
-  const hint = channelHint(url);
+  const hint = channelHint(url, t);
   const confirmDrops = confirmChoice ?? deliversToChat(url);
 
   function onOpenChange(next: boolean) {
@@ -89,24 +89,24 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
         throw new Error();
       }
     } catch {
-      setError(INVALID_URL);
+      setError(invalidUrl);
       return;
     }
     if (events.length === 0) {
-      setError("Switch on at least one rule");
+      setError(validation("notifications.ruleRequired"));
       return;
     }
     if (needsAStar(events, stars)) {
-      setError("Pick at least one star");
+      setError(validation("notifications.starRequired"));
       return;
     }
-    const thresholdError = rankThresholdError(events, rankText);
+    const thresholdError = rankThresholdError(events, rankText, validation);
     if (thresholdError) {
       setError(thresholdError);
       return;
     }
     if (secret.trim() !== "" && secret.length < 8) {
-      setError("Secret must be at least 8 characters");
+      setError(validation("notifications.secretTooShort"));
       return;
     }
 
@@ -117,21 +117,21 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
     <AlertChannelDialog
       open={open}
       onOpenChange={onOpenChange}
-      label="Add webhook"
-      description="AsoBeast POSTs a JSON payload to this URL when a subscribed event fires. Add a secret to receive an HMAC signature header."
+      label={t("webhook.add")}
+      description={t("webhook.addDescription")}
       error={error}
       pending={mutation.isPending}
       onSubmit={submit}
       trigger={trigger}
     >
       <div className="flex flex-col gap-2">
-        <Label htmlFor="webhook-url">Endpoint URL</Label>
+        <Label htmlFor="webhook-url">{t("webhook.endpoint")}</Label>
         <Input
           id="webhook-url"
           value={url}
           onChange={(event) => setUrl(event.target.value)}
           placeholder="https://hooks.example.com/asobeast"
-          aria-invalid={error === INVALID_URL}
+          aria-invalid={error === invalidUrl}
           aria-describedby={hint ? HINT_ID : undefined}
         />
         {hint && (
@@ -155,13 +155,13 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
       <ConfirmDropsField checked={confirmDrops} onChange={setConfirmChoice} />
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="webhook-secret">Secret (optional)</Label>
+        <Label htmlFor="webhook-secret">{t("webhook.secret")}</Label>
         <Input
           id="webhook-secret"
           type="password"
           value={secret}
           onChange={(event) => setSecret(event.target.value)}
-          placeholder="At least 8 characters"
+          placeholder={t("webhook.secretPlaceholder")}
         />
       </div>
     </AlertChannelDialog>

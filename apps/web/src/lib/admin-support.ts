@@ -11,7 +11,8 @@ import {
   type SupportOutcome,
   type SupportWorkspaceSummary,
 } from "@asobeast/shared";
-import { formatNumber, formatPlanLimit } from "./format";
+import type { MessageTranslator, TranslationContext } from "@/i18n/translator";
+import { formatNumberInLocale } from "./format";
 
 export interface LabelledValue {
   label: string;
@@ -19,19 +20,6 @@ export interface LabelledValue {
 }
 
 type LimitKey = Exclude<keyof PlanLimits, "onDemand">;
-
-const LIMIT_LABELS: Record<LimitKey, string> = {
-  apps: "Apps",
-  keywordMarkets: "Keyword markets",
-  competitorsPerApp: "Competitors per app",
-  chartFollows: "Followed charts",
-  aiCallsPerMonth: "AI calls per month",
-  apiRequestsPerMinute: "API requests per minute",
-  apiWritesPerMinute: "API writes per minute",
-  apiRequestsPerDay: "API requests per day",
-  apiConcurrentRequests: "Concurrent API requests",
-  mcpRequestsPerMinute: "MCP requests per minute",
-};
 
 const LIMIT_KEYS: readonly LimitKey[] = [
   "apps",
@@ -46,31 +34,51 @@ const LIMIT_KEYS: readonly LimitKey[] = [
   "mcpRequestsPerMinute",
 ];
 
-const ON_DEMAND_LABELS: Record<OnDemandAction, string> = {
-  refresh: "Refresh",
-  runDaily: "Daily runs",
-  score: "Rescores",
-  suggestions: "Keyword suggestions",
-  spider: "Deep searches",
-  importApp: "App imports",
-  addCompetitor: "Competitor adds",
-  storeLookup: "Store lookups",
-  chartCapture: "Chart captures",
+const ON_DEMAND_KEYS: Record<OnDemandAction, string> = {
+  refresh: "support.onDemandLabels.refresh",
+  runDaily: "support.onDemandLabels.runDaily",
+  score: "support.onDemandLabels.score",
+  suggestions: "support.onDemandLabels.suggestions",
+  spider: "support.onDemandLabels.spider",
+  importApp: "support.onDemandLabels.importApp",
+  addCompetitor: "support.onDemandLabels.addCompetitor",
+  storeLookup: "support.onDemandLabels.storeLookup",
+  chartCapture: "support.onDemandLabels.chartCapture",
 };
 
 interface WindowUnit {
   seconds: number;
-  unit: string;
   one: string;
+  every: string;
 }
 
-const SECOND: WindowUnit = { seconds: 1, unit: "second", one: "a second" };
+const SECOND: WindowUnit = {
+  seconds: 1,
+  one: "support.windows.second",
+  every: "support.windows.everySecond",
+};
 
 const WINDOW_UNITS: readonly WindowUnit[] = [
-  { seconds: 7 * 86_400, unit: "week", one: "a week" },
-  { seconds: 86_400, unit: "day", one: "a day" },
-  { seconds: 3_600, unit: "hour", one: "an hour" },
-  { seconds: 60, unit: "minute", one: "a minute" },
+  {
+    seconds: 7 * 86_400,
+    one: "support.windows.week",
+    every: "support.windows.everyWeek",
+  },
+  {
+    seconds: 86_400,
+    one: "support.windows.day",
+    every: "support.windows.everyDay",
+  },
+  {
+    seconds: 3_600,
+    one: "support.windows.hour",
+    every: "support.windows.everyHour",
+  },
+  {
+    seconds: 60,
+    one: "support.windows.minute",
+    every: "support.windows.everyMinute",
+  },
 ];
 
 type WorkspaceUsage = Pick<
@@ -78,92 +86,154 @@ type WorkspaceUsage = Pick<
   "members" | "apps" | "competitors" | "keywordMarkets"
 >;
 
-export function usageLine(used: number, limit: PlanLimit): string {
+const number = (value: number, context: TranslationContext) =>
+  formatNumberInLocale(value, context.locale);
+
+export function usageLine(
+  used: number,
+  limit: PlanLimit,
+  context: TranslationContext,
+): string {
   return limit === null
-    ? `${formatNumber(used)}, no limit`
-    : `${formatNumber(used)} of ${formatNumber(limit)}`;
+    ? context.translator("support.usageUnlimited", {
+        used: number(used, context),
+      })
+    : context.translator("support.usage", {
+        used: number(used, context),
+        limit: number(limit, context),
+      });
 }
 
-function competitorLine(competitors: number, perApp: PlanLimit): string {
+function competitorLine(
+  competitors: number,
+  perApp: PlanLimit,
+  context: TranslationContext,
+): string {
   return perApp === null
-    ? `${formatNumber(competitors)} in all, no limit`
-    : `${formatNumber(competitors)} in all, up to ${formatNumber(perApp)} per app`;
+    ? context.translator("support.competitorUsageUnlimited", {
+        used: number(competitors, context),
+      })
+    : context.translator("support.competitorUsage", {
+        used: number(competitors, context),
+        limit: number(perApp, context),
+      });
 }
 
 const USED: Partial<
-  Record<LimitKey, (usage: WorkspaceUsage, limit: PlanLimit) => string>
+  Record<
+    LimitKey,
+    (
+      usage: WorkspaceUsage,
+      limit: PlanLimit,
+      context: TranslationContext,
+    ) => string
+  >
 > = {
-  apps: (usage, limit) => usageLine(usage.apps, limit),
-  keywordMarkets: (usage, limit) => usageLine(usage.keywordMarkets, limit),
-  competitorsPerApp: (usage, limit) => competitorLine(usage.competitors, limit),
+  apps: (usage, limit, context) => usageLine(usage.apps, limit, context),
+  keywordMarkets: (usage, limit, context) =>
+    usageLine(usage.keywordMarkets, limit, context),
+  competitorsPerApp: (usage, limit, context) =>
+    competitorLine(usage.competitors, limit, context),
 };
 
 const USAGE_LABELS: Partial<Record<LimitKey, string>> = {
-  competitorsPerApp: "Competitors",
+  competitorsPerApp: "support.limitLabels.competitors",
 };
+
+function limitValue(value: PlanLimit, context: TranslationContext): string {
+  return value === null
+    ? context.translator("support.unlimited")
+    : number(value, context);
+}
 
 export function usageRows(
   limits: PlanLimits,
   usage: WorkspaceUsage,
+  context: TranslationContext,
 ): LabelledValue[] {
   return [
-    { label: "Members", value: formatNumber(usage.members) },
+    {
+      label: context.translator("support.limitLabels.members"),
+      value: number(usage.members, context),
+    },
     ...LIMIT_KEYS.map((key) => ({
-      label: USAGE_LABELS[key] ?? LIMIT_LABELS[key],
-      value: USED[key]?.(usage, limits[key]) ?? formatPlanLimit(limits[key]),
+      label: context.translator(
+        USAGE_LABELS[key] ?? `support.limitLabels.${key}`,
+      ),
+      value:
+        USED[key]?.(usage, limits[key], context) ??
+        limitValue(limits[key], context),
     })),
   ];
 }
 
-function windowLabel(seconds: number): string {
+function windowLabel(seconds: number, context: TranslationContext): string {
   const {
-    unit,
     one,
+    every,
     seconds: size,
   } = WINDOW_UNITS.find((entry) => seconds % entry.seconds === 0) ?? SECOND;
   const count = seconds / size;
-  return count === 1 ? one : `every ${formatNumber(count)} ${unit}s`;
+  return count === 1
+    ? context.translator(one)
+    : context.translator(every, { count: number(count, context) });
 }
 
-export function onDemandRows(rules: OnDemandRules | null): LabelledValue[] {
+export function onDemandRows(
+  rules: OnDemandRules | null,
+  context: TranslationContext,
+): LabelledValue[] {
   if (!rules) return [];
   return ON_DEMAND_ACTIONS.map((action) => ({
-    label: ON_DEMAND_LABELS[action],
-    value: `${formatNumber(rules[action].limit)} ${windowLabel(rules[action].windowSeconds)}`,
+    label: context.translator(ON_DEMAND_KEYS[action]),
+    value: context.translator("support.allowance", {
+      count: number(rules[action].limit, context),
+      window: windowLabel(rules[action].windowSeconds, context),
+    }),
   }));
 }
 
-const SUPPORT_ACTION_LABELS: Record<SupportAction, string> = {
-  list: "Listed workspaces",
-  view: "Viewed",
-  reconcile: "Reconciled billing",
-  suspend: "Suspended",
-  restore: "Restored",
-  "run-daily": "Started a daily run",
-  replay: "Replayed a billing event",
+const SUPPORT_ACTION_KEYS: Record<SupportAction, string> = {
+  list: "support.actions.list",
+  view: "support.actions.view",
+  reconcile: "support.actions.reconcile",
+  suspend: "support.actions.suspend",
+  restore: "support.actions.restore",
+  "run-daily": "support.actions.runDaily",
+  replay: "support.actions.replay",
 };
 
-const SUPPORT_OUTCOME_LABELS: Record<SupportOutcome, string> = {
-  attempted: "In progress",
-  succeeded: "Succeeded",
-  failed: "Failed",
+const SUPPORT_OUTCOME_KEYS: Record<SupportOutcome, string> = {
+  attempted: "support.outcomes.attempted",
+  succeeded: "support.outcomes.succeeded",
+  failed: "support.outcomes.failed",
 };
 
-const QUEUE_LABELS: Record<string, string> = {
-  appstore: "App Store",
-  gplay: "Google Play",
+const QUEUE_KEYS: Record<string, string> = {
+  appstore: "support.queues.appstore",
+  gplay: "support.queues.gplay",
 };
 
-export function supportActionLabel(action: SupportAction): string {
-  return SUPPORT_ACTION_LABELS[action];
+export function supportActionLabel(
+  action: SupportAction,
+  translator: MessageTranslator,
+): string {
+  return translator(SUPPORT_ACTION_KEYS[action]);
 }
 
-export function supportOutcomeLabel(outcome: SupportOutcome): string {
-  return SUPPORT_OUTCOME_LABELS[outcome];
+export function supportOutcomeLabel(
+  outcome: SupportOutcome,
+  translator: MessageTranslator,
+): string {
+  return translator(SUPPORT_OUTCOME_KEYS[outcome]);
 }
 
-export function queueLabel(queue: string): string {
-  return QUEUE_LABELS[queue] ?? queue;
+export function queueLabel(
+  queue: string,
+  translator: MessageTranslator,
+): string {
+  const key = QUEUE_KEYS[queue];
+  return key ? translator(key) : queue;
 }
 
 const SURROGATE_PAIR = /[\uD800-\uDBFF][\uDC00-\uDFFF]/g;
@@ -273,16 +343,25 @@ export function focusAfterConflict(
   return focusAfter(stateFound, workspace, options);
 }
 
-export function dailyRunDone(name: string, detail: string): string {
+export function dailyRunDone(
+  name: string,
+  detail: string,
+  translator: MessageTranslator,
+): string {
   const counts = detail.match(/\d+/g) ?? [];
   const nothingQueued =
     counts.length > 0 && counts.every((count) => Number(count) === 0);
-  return nothingQueued
-    ? `Nothing new to queue for ${name} today.`
-    : `Daily run queued for ${name}.`;
+  return translator(
+    nothingQueued
+      ? "support.runDaily.nothingQueued"
+      : "support.runDaily.queued",
+    {
+      name,
+    },
+  );
 }
 
-interface ActionCopy {
+export interface ActionCopy {
   open: string;
   title: (name: string) => string;
   body: (name: string) => string;
@@ -292,45 +371,28 @@ interface ActionCopy {
   variant: "destructive" | "default";
 }
 
-export const ACTION_COPY: Record<WorkspaceAction, ActionCopy> = {
-  "run-daily": {
-    open: "Run daily",
-    title: (name) => `Start a daily run for ${name}?`,
-    body: (name) =>
-      `Queues the app refreshes, keyword checks, reviews and category ranks of ${name} that have not run yet today, and queues again the ones that failed. A job of today the queue still holds is skipped, so work that already ran is usually not repeated.`,
-    confirm: "Start daily run",
-    pending: "Starting…",
-    done: dailyRunDone,
-    variant: "default",
-  },
-  reconcile: {
-    open: "Reconcile billing",
-    title: (name) => `Reconcile ${name} with Stripe?`,
-    body: (name) =>
-      `Reads the subscription of ${name} from Stripe and corrects the plan, trial and renewal stored here when they differ. If Stripe has no subscription for it, ${name} moves to Free, and a trial Stripe should not have started is cancelled. Nothing is charged.`,
-    confirm: "Reconcile billing",
-    pending: "Reconciling…",
-    done: (name) => `${name} is reconciled with Stripe.`,
-    variant: "default",
-  },
-  suspend: {
-    open: "Suspend",
-    title: (name) => `Suspend ${name}?`,
-    body: (name) =>
-      `Every write and on demand action in ${name} is refused until you restore it. Every member of ${name} sees this reason on every page, so write it for them.`,
-    confirm: "Suspend workspace",
-    pending: "Suspending…",
-    done: (name) => `${name} is suspended.`,
-    variant: "destructive",
-  },
-  restore: {
-    open: "Restore",
-    title: (name) => `Restore ${name}?`,
-    body: (name) =>
-      `${name} may write again, and the suspension notice disappears for its members. The reason is kept in the access log.`,
-    confirm: "Restore workspace",
-    pending: "Restoring…",
-    done: (name) => `${name} may write again.`,
-    variant: "default",
-  },
-};
+export function supportActionCopy(
+  action: WorkspaceAction,
+  translator: MessageTranslator,
+): ActionCopy {
+  if (action === "run-daily") {
+    return {
+      open: translator("support.runDaily.open"),
+      title: (name) => translator("support.runDaily.title", { name }),
+      body: (name) => translator("support.runDaily.body", { name }),
+      confirm: translator("support.runDaily.confirm"),
+      pending: translator("support.runDaily.pending"),
+      done: (name, detail) => dailyRunDone(name, detail, translator),
+      variant: "default",
+    };
+  }
+  return {
+    open: translator(`support.${action}.open`),
+    title: (name) => translator(`support.${action}.title`, { name }),
+    body: (name) => translator(`support.${action}.body`, { name }),
+    confirm: translator(`support.${action}.confirm`),
+    pending: translator(`support.${action}.pending`),
+    done: (name) => translator(`support.${action}.done`, { name }),
+    variant: action === "suspend" ? "destructive" : "default",
+  };
+}

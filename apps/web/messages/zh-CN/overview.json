@@ -1,0 +1,226 @@
+{
+  "views": {
+    "searchVisibility": "搜索可见度",
+    "shareOfVoice": "声量份额",
+    "rankBands": "按排名区间统计的关键词",
+    "homeRating": "主市场详情页评分",
+    "scoped": "{title} · {country}",
+    "categoryRanks": "分类排名",
+    "overview": "概览"
+  },
+  "metrics": {
+    "visibility": "可见度",
+    "shareOfVoice": "声量份额",
+    "top10": "进入前十的关键词",
+    "rating": "评分",
+    "ratingCount": "{count} 条评分",
+    "noRating": "尚未捕获评分",
+    "tracked": "共跟踪 {count} 个关键词",
+    "nonBranded": "{value} 非品牌",
+    "competitors": "对比 {count} 个竞品",
+    "reasons": {
+      "noCompetitors": "添加竞品以查看您的声量份额",
+      "notChecked": "尚未检查您的竞品",
+      "nobodyRanks": "尚无应用在这些关键词上获得排名"
+    }
+  },
+  "charts": {
+    "collections": {
+      "free": "免费",
+      "paid": "付费",
+      "grossing": "畅销"
+    },
+    "averageRating": "平均评分",
+    "nonBranded": "非品牌",
+    "visibility": "可见度",
+    "ratingOverTime": "平均评分趋势",
+    "shareOverTime": "声量份额趋势",
+    "searchVisibilityOverTime": "搜索可见度趋势",
+    "rankBandsLabel": "按排名区间统计的关键词",
+    "rankBandsAria": "今天各排名区间中的关键词",
+    "noRankHistoryTitle": "尚无排名历史",
+    "noRankHistoryBody": "每日流程检查关键词后，才会显示排名区间。",
+    "top10Label": "进入前十的关键词",
+    "trendNeedsChecks": "还需要更多每日检查才能显示趋势。",
+    "noRatingTitle": "尚无评分记录",
+    "noRatingBody": "每日流程会在每次捕获快照时存储主市场详情页的评分。",
+    "latestAverageRating": "最新平均评分",
+    "trendNeedsSnapshots": "还需要更多每日快照才能显示趋势线。",
+    "addCompetitorTitle": "添加竞品以绘制声量份额",
+    "addCompetitorBody": "在竞品页面跟踪一个竞品后，系统会从其首次每日检查开始绘制其份额。",
+    "noShareTitle": "尚无声量份额记录",
+    "shareUnavailable": "{reason}。",
+    "latestShare": "最新声量份额",
+    "noVisibilityTitle": "尚无可见度记录",
+    "noVisibilityBody": "每日流程会在 24 小时内捕获第一个数据点。",
+    "latestVisibility": "最新可见度",
+    "lastDays": "最近 {count} 天",
+    "daysShort": "{count} 天",
+    "previousDays": "此前 {count} 天",
+    "listingChange": "详情页变化",
+    "chartLines": "图表线条",
+    "seeChanges": "查看每次变更的影响",
+    "previousRangeError": "无法加载此前的时间范围。",
+    "listingChangesError": "无法加载详情页变化。",
+    "changedFields": "{fields} 发生变化",
+    "categoryPositionOverTime": "分类榜单排名趋势",
+    "noCategoryTitle": "尚无分类榜单捕获记录",
+    "noCategoryBody": "榜单位置由每日流程捕获。",
+    "categoryTitle": "分类排名 · 主市场",
+    "inGenre": "位于 <name>{genre}</name>",
+    "collectionChart": "· {collection} 榜单",
+    "notInChart": "未进入 <name>{genre}</name> 的前 {depth} 名",
+    "seriesLabel": "<name>{genre}</name> · {collection}"
+  },
+  "coverage": {
+    "title": "元数据覆盖率",
+    "fields": {
+      "title": "标题",
+      "subtitle": "副标题",
+      "description": "描述"
+    },
+    "aria": "在各字段中找到的已跟踪关键词",
+    "ratio": "<emphasized>{found}</emphasized> <muted>/ {tracked}</muted>",
+    "covered": "您的元数据已覆盖机会分最高的关键词。",
+    "notInMetadata": "不在您的元数据中",
+    "opportunity": "机会分",
+    "opportunityAria": "机会分 ",
+    "uncoveredAria": "元数据中缺失的高机会关键词",
+    "allMarkets": "所有市场，均对照主市场详情页评判"
+  },
+  "funnel": {
+    "title": "商店漏斗",
+    "scoped": "商店漏斗 · {market}",
+    "allMarkets": "所有市场",
+    "about": "关于商店漏斗",
+    "readNumbers": "了解这些数字的读取方式",
+    "tiles": {
+      "impressions": "曝光量",
+      "pageViews": "应用详情页浏览量",
+      "gets": {
+        "appStore": "获取点击量",
+        "googlePlay": "获取量"
+      },
+      "playVisitors": "应用详情页访客",
+      "conversion": "转化率"
+    },
+    "trendLabel": "{label}，最近 {count} 个完整日",
+    "footer": {
+      "search": "搜索：占 {base} 的 {share}%。",
+      "measured": "{console}。{search}最近 {days} 个完整日截至 {date}，与此前 {days} 个完整日对比。",
+      "fresh": "{console}。{freshness}"
+    },
+    "notReporting": "{console} 尚未报告此应用的数据：{reason}。",
+    "verify": "在“集成”中验证",
+    "connect": "在“集成”中连接",
+    "noSearchTerms": "{console} 的 {month}报告未列出此应用的搜索词。",
+    "memberRefusal": "{reason} {askOwner}",
+    "help": {
+      "appStore": {
+        "summary": "曝光量、应用详情页浏览量和获取点击量来自 Apple 的 App Store Discovery and Engagement 报告，通过“集成”中连接的 App Store Connect 密钥读取。转化率为获取点击量除以独立曝光量。",
+        "detail": "Apple 会剔除少于五名用户的行并加入少量噪声，一天的数据会在三天后最终确定。各市场和各来源的独立计数相加后，总计会略偏高。"
+      },
+      "googlePlay": {
+        "summary": "应用详情页访客和获取量来自 Google Play Console 写入 Cloud Storage 存储桶的月度商店表现文件，通过“集成”中的 Google Play 连接读取。转化率为获取量除以访客数。",
+        "detail": "单个市场读取国家文件，所有市场读取流量来源文件，因此两者的来源拆分方式不同。Google 会在三到七天后公布前一天的数据，并于 2026年7月10日改变了访客和获取量的统计方式，因此请对比该日期同侧的时间段。"
+      }
+    },
+    "copy": {
+      "appStore": {
+        "console": "App Store Connect",
+        "base": "曝光量",
+        "freshness": "Apple 会在三天内完成一天的数据；最新几天的数据仍可能增长。",
+        "connectTitle": "连接 App Store Connect，在此查看曝光量和转化率。",
+        "connectBody": "App Store Connect 密钥允许 AsoBeast 读取 Apple 为此应用提供的自有数据，最早可追溯至 2024 年。",
+        "askOwner": "请工作区所有者连接 App Store Connect。",
+        "notReporting": "此应用属于密钥对应的团队且 Apple 已发布首份报告后，已连接的密钥才能看到它。",
+        "refusedTitle": "App Store Connect 拒绝了已连接的密钥。",
+        "refusedBody": "密钥重新获得接受后，已存储的数据会恢复显示。请验证该密钥，或连接新密钥。",
+        "refusedAskOwner": "请工作区所有者在“集成”中验证该密钥。"
+      },
+      "googlePlay": {
+        "console": "Google Play Console",
+        "base": "应用详情页访客",
+        "freshness": "Google 会在三到七天后公布前一天的数据；统计方式于 2026年7月10日发生变化。",
+        "connectTitle": "连接 Google Play Console，在此查看应用详情页访客和转化率。",
+        "connectBody": "通过 Google 登录，或使用受邀加入 Play Console 的服务账号，AsoBeast 即可从月度报告文件中读取 Google 为此应用提供的自有数据。",
+        "askOwner": "请工作区所有者连接 Google Play Console。",
+        "notReporting": "Play Console 将商店表现文件写入存储桶后，此连接即可读取此应用的数据。",
+        "refusedTitle": "Google Play Console 拒绝了此连接。",
+        "refusedBody": "Google 重新接受此连接后，已存储的数据会恢复显示。请验证连接，或重新连接。",
+        "refusedAskOwner": "请工作区所有者在“集成”中验证 Google Play 连接。"
+      }
+    }
+  },
+  "ratingsByMarket": {
+    "title": "各市场评分",
+    "tableLabel": "各市场评分表",
+    "caption": "各市场最新捕获的详情页评分及评分数量",
+    "market": "市场",
+    "average": "平均分",
+    "ratings": "评分数",
+    "captured": "捕获时间",
+    "allMarkets": "所有已上架市场",
+    "averageAria": "所有已上架市场的综合评分",
+    "marketCount": "{count} 个市场",
+    "home": "主市场",
+    "selected": "已选择",
+    "noRating": "尚无评分",
+    "notCaptured": "尚未捕获",
+    "ratingIn": "{country}的评分",
+    "onlyOneTitle": "目前只有一个市场",
+    "onlyOneBody": "App Store 为每个应用商店地区分别保留评分。在另一个市场跟踪关键词后，每日流程会捕获该市场的详情页，其评分就会显示在此处。",
+    "trackAnother": "在另一个市场跟踪关键词",
+    "about": "关于各市场评分",
+    "helpTitle": "如何解读各市场评分",
+    "helpSummary": "App Store 为每个应用商店地区分别保留评分。每行显示 {product} 在该市场捕获的最新详情页的平均分和评分数量。",
+    "helpDetail": "最后一行按各市场的评分数量加权，计算上方市场的平均分。它仅覆盖此处列出的市场，而非所有应用商店地区；每个市场的捕获日期见最后一列。",
+    "readRatings": "了解如何解读各市场评分"
+  },
+  "movers": {
+    "quiet": "最近 {count} 天内没有关键词发生变化。",
+    "withinDays": "在 {count} 天内",
+    "spanDays": "最近 {count} 天内",
+    "changeHeading": "{count} 天变化",
+    "positionTrend": "排名，最近 {count} 天"
+  },
+  "nearTopTen": {
+    "title": "最接近前十",
+    "loadError": "无法加载接近前十的关键词。",
+    "empty": "没有关键词恰好位于前十之外。",
+    "keyword": "关键词",
+    "position": "排名",
+    "toTop10": "距前十",
+    "places": "{count} 名"
+  },
+  "gaps": {
+    "aria": "与竞品的差距",
+    "loadError": "无法加载差距摘要。",
+    "about": "关于差距提示",
+    "title": "差距提示如何计算",
+    "summary": "此提示使用与竞品页面“差距分析”相同的列表，范围为您当前查看的市场。",
+    "readLists": "了解列表如何筛选",
+    "noCompetitors": "添加竞品以查看差距。",
+    "allDelisted": "您跟踪的所有竞品均已下架。",
+    "notCompared": "尚未检查您的竞品。",
+    "quiet": "目前没有可赢得的差距或威胁。",
+    "noWinnable": "没有可争取的缺口。",
+    "winnable": "{count, plural, one {# 个可争取的缺口} other {# 个可争取的缺口}}。",
+    "threats": "{count} 个威胁。",
+    "biggest": "最大差距：<keyword>{text}</keyword>，<competitor>{rival}</competitor>{position}，{yours}。",
+    "biggestGeneric": "最大差距：<keyword>{text}</keyword>，{genericCompetitor}{position}，{yours}。",
+    "genericCompetitor": "一个竞品",
+    "competitorRanks": " 排名第 {position}",
+    "notRanked": "您未进入排名",
+    "yourRank": "您排名第 {position}",
+    "addCompetitor": "添加竞品",
+    "seeThreats": "查看威胁",
+    "seeWinnable": "查看可争取的缺口"
+  },
+  "snapshot": {
+    "installs": "{count} 次安装",
+    "captured": "快照 {date}{market}",
+    "market": " · {country}",
+    "empty": "尚无应用商店快照。刷新以捕获一个快照。"
+  }
+}

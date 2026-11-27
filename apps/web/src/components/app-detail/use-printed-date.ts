@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { flushSync } from "react-dom";
-import { formatDate } from "@/lib/format";
+import { formatDateInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 
 function now() {
   return new Date().toISOString();
 }
 
 export function usePrintedDate() {
+  const locale = useAppLocale();
   const [printedAt, setPrintedAt] = useState(now);
 
   useEffect(() => {
@@ -17,5 +19,5 @@ export function usePrintedDate() {
     return () => window.removeEventListener("beforeprint", stamp);
   }, []);
 
-  return formatDate(printedAt);
+  return formatDateInLocale(printedAt, locale);
 }

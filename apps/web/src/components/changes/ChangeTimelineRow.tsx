@@ -1,13 +1,15 @@
 "use client";
 
 import { useId, useState } from "react";
-import { CHANGE_FIELD_LABELS } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import type { ChangeEventItem } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatDayMonth } from "@/lib/format";
+import { formatDayMonthInLocale } from "@/lib/format";
+import { changeFieldLabel } from "@/lib/change-field-label";
 import { localizedLabel } from "@/lib/localizations";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { dayOf } from "./change-fields";
 import type { ChangeEntry } from "./change-runs";
 import { ChangeValue } from "./ChangeValue";
@@ -32,48 +34,57 @@ function RowFrame({
   field: string;
   children: React.ReactNode;
 }) {
+  const t = useTranslations("changes");
+  const name = event.appName ?? t("unknownApp");
   return (
     <li
       data-change-field={event.field}
-      aria-label={`${event.appName ?? "Unknown app"}, ${field}`}
+      aria-label={t("row.aria", { name, field })}
       className={ROW}
     >
       <span className={ICON}>
         <AppIcon src={event.iconUrl ?? null} size={24} />
       </span>
-      <bdi className={NAME}>{event.appName ?? "Unknown app"}</bdi>
+      <bdi className={NAME}>{name}</bdi>
       <span className={FIELD}>{field}</span>
       <div className={VALUE}>{children}</div>
       <Badge variant="flat" className={OWNER}>
-        {event.isCompetitor ? "competitor" : "yours"}
+        {t(event.isCompetitor ? "competitor" : "yours")}
       </Badge>
     </li>
   );
 }
 
 function VersionRun({ events }: { events: ChangeEventItem[] }) {
+  const t = useTranslations("changes");
+  const locale = useAppLocale();
   const listId = useId();
   const [open, setOpen] = useState(false);
   const [newest] = events;
 
   return (
-    <RowFrame event={newest} field={CHANGE_FIELD_LABELS.version}>
+    <RowFrame event={newest} field={changeFieldLabel("version", t)}>
       <div className="flex flex-col items-start gap-1">
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span>
-            <span className="font-medium">{`${events.length} versions`}</span>
-            <span className="text-muted-foreground">{" · latest "}</span>
+            <span className="font-medium">
+              {t("row.versions", { count: events.length })}
+            </span>
+            <span className="text-muted-foreground">{t("row.latest")}</span>
             <span className="font-medium">{newest.after ?? "—"}</span>
           </span>
           <Button
             variant="outline"
             size="xs"
-            aria-label={`${open ? "Hide versions" : "Show versions"} of ${newest.appName ?? "Unknown app"}`}
+            aria-label={t("row.versionsAria", {
+              action: t(open ? "row.hideVersions" : "row.showVersions"),
+              name: newest.appName ?? t("unknownApp"),
+            })}
             aria-expanded={open}
             aria-controls={listId}
             onClick={() => setOpen((shown) => !shown)}
           >
-            {open ? "Hide versions" : "Show versions"}
+            {t(open ? "row.hideVersions" : "row.showVersions")}
           </Button>
         </p>
         {open ? (
@@ -81,7 +92,7 @@ function VersionRun({ events }: { events: ChangeEventItem[] }) {
             {events.map((event) => (
               <li key={event.id} className="flex gap-3">
                 <span className="w-14 shrink-0 text-label text-faint-foreground">
-                  {formatDayMonth(dayOf(event))}
+                  {formatDayMonthInLocale(dayOf(event), locale)}
                 </span>
                 <ChangeValue event={event} dense />
               </li>
@@ -94,11 +105,14 @@ function VersionRun({ events }: { events: ChangeEventItem[] }) {
 }
 
 export function ChangeTimelineRow({ entry }: { entry: ChangeEntry }) {
+  const t = useTranslations("changes");
+  const locale = useAppLocale();
   if (entry.kind === "versions") return <VersionRun events={entry.events} />;
   const { event } = entry;
   const label = localizedLabel(
-    CHANGE_FIELD_LABELS[event.field],
+    changeFieldLabel(event.field, t),
     event.localization,
+    locale,
   );
 
   return (

@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import type { SupportWorkspaceDetail } from "@asobeast/shared";
 import { SheetSection } from "@/components/layout/SheetSection";
 import {
@@ -14,6 +17,7 @@ import {
   usageRows,
   type LabelledValue,
 } from "@/lib/admin-support";
+import { useAppLocale } from "@/lib/use-app-locale";
 
 function LimitTable({
   caption,
@@ -26,12 +30,13 @@ function LimitTable({
   valueHeader: string;
   rows: LabelledValue[];
 }) {
+  const t = useTranslations("admin");
   return (
     <Table density="compact">
       <TableCaption className={captionClassName}>{caption}</TableCaption>
       <TableHeader>
         <TableRow>
-          <TableHead>Limit</TableHead>
+          <TableHead>{t("support.limit")}</TableHead>
           <TableHead numeric>{valueHeader}</TableHead>
         </TableRow>
       </TableHeader>
@@ -56,20 +61,23 @@ export function WorkspaceLimits({
 }: {
   workspace: SupportWorkspaceDetail;
 }) {
-  const onDemand = onDemandRows(workspace.limits.onDemand);
+  const t = useTranslations("admin");
+  const locale = useAppLocale();
+  const context = { translator: t, locale };
+  const onDemand = onDemandRows(workspace.limits.onDemand, context);
   return (
-    <SheetSection title="Limits and usage">
+    <SheetSection title={t("support.limitsTitle")}>
       <LimitTable
-        caption="Limits and usage"
+        caption={t("support.limitsTitle")}
         captionClassName="sr-only"
-        valueHeader="Used and allowed"
-        rows={usageRows(workspace.limits, workspace)}
+        valueHeader={t("support.usedAllowed")}
+        rows={usageRows(workspace.limits, workspace, context)}
       />
       {onDemand.length > 0 ? (
         <LimitTable
-          caption="On demand allowances"
+          caption={t("support.onDemand")}
           captionClassName="mt-2 mb-2 caption-top text-left text-label text-muted-foreground"
-          valueHeader="Allowed"
+          valueHeader={t("support.allowed")}
           rows={onDemand}
         />
       ) : null}

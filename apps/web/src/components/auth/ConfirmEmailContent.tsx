@@ -1,16 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import type { AuthUser } from "@asobeast/shared";
 import { entryDestination } from "@/lib/auth-routes";
-import {
-  CONFIRM_EMAIL_CAPTION,
-  CONFIRM_EMAIL_TITLE,
-  REGISTER_AGAIN,
-  WRONG_ADDRESS,
-  confirmEmailParts,
-  sellingTrial,
-} from "@/lib/plan-choice";
+import { sellingTrial } from "@/lib/plan-choice";
 import {
   billingCatalogOptions,
   confirmEmailViewerOptions,
@@ -24,16 +18,14 @@ import { SignUpStepsAbove } from "./SignUpSteps";
 import { useLeaveFor } from "./use-leave-for";
 
 export function ConfirmEmailContent({ user }: { user: AuthUser }) {
+  const t = useTranslations("auth");
   const leaving = useLeaveFor(
     (user) =>
       user.entryStep === "confirm-email" ? null : entryDestination(user, null),
     confirmEmailViewerOptions,
   );
   const { data: catalog } = useQuery(billingCatalogOptions);
-  const { before, address, after } = confirmEmailParts(
-    user.email,
-    user.trialAwaitsCheckout === true && sellingTrial(catalog),
-  );
+  const offered = user.trialAwaitsCheckout === true && sellingTrial(catalog);
 
   if (leaving) {
     return (
@@ -46,29 +38,33 @@ export function ConfirmEmailContent({ user }: { user: AuthUser }) {
   return (
     <SignUpStepsAbove steps={signUpSteps(user)}>
       <AuthCard
-        title={CONFIRM_EMAIL_TITLE}
+        title={t("confirmEmail.title")}
         width="wall"
-        description={
-          <>
-            <span>{before}</span>
+        description={t.rich("confirmEmail.description", {
+          address: (chunks) => (
             <strong className="font-medium wrap-anywhere text-foreground">
-              {address}
+              {chunks}
             </strong>
-            <span>{after}</span>
-          </>
-        }
+          ),
+          email: user.email,
+          offered: offered ? "true" : "false",
+        })}
       >
         <AuthActions>
           <ResendConfirmationButton />
           <p className="text-caption text-balance text-muted-foreground">
-            {CONFIRM_EMAIL_CAPTION}
+            {t("confirmEmail.caption")}
           </p>
         </AuthActions>
         <AuthAside>
           <div className="flex flex-wrap items-center justify-center gap-x-1 text-dense">
-            <span>{WRONG_ADDRESS}</span>
-            <SignOutButton variant="link" size="sm" className="h-auto px-0" />
-            <span>{REGISTER_AGAIN}</span>
+            {t.rich("confirmEmail.registerAgainLink", {
+              link: (chunks) => (
+                <SignOutButton variant="link" size="sm" className="h-auto px-0">
+                  {chunks}
+                </SignOutButton>
+              ),
+            })}
           </div>
         </AuthAside>
       </AuthCard>

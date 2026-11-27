@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useQueryStates } from "nuqs";
 import { Tabs, TabsList, TabsOption } from "@/components/ui/tabs";
 import { discoveryTabLabel } from "@/lib/keyword-discoveries";
@@ -43,9 +44,10 @@ export function useKeywordsTab() {
 
 export function KeywordsTabs({ id, market }: { id: string; market: string }) {
   const [tab, setTab] = useKeywordsTab();
+  const t = useTranslations("keywordInspector");
   const { data: tracked } = useQuery(keywordsOptions(id, market));
   const { data: discovered } = useQuery(keywordDiscoveriesOptions(id, market));
-  const discoveredLabel = discoveryTabLabel(discovered?.counts);
+  const discoveredLabel = discoveryTabLabel(discovered?.counts, t);
   const unseen = tab !== "discovered" && (discovered?.counts.all ?? 0) > 0;
 
   return (
@@ -54,15 +56,19 @@ export function KeywordsTabs({ id, market }: { id: string; market: string }) {
       onValueChange={(next) => setTab(keywordsTabParser.parse(next) ?? tab)}
       className="max-w-full min-w-0"
     >
-      <TabsList aria-label="Keyword lists" scrollable>
+      <TabsList aria-label={t("discovery.tabs.aria")} scrollable>
         <TabsOption value="tracked">
-          {tracked ? `Tracked ${tracked.length}` : "Tracked"}
+          {tracked
+            ? t("discovery.tabs.trackedCount", { count: tracked.length })
+            : t("discovery.tabs.tracked")}
         </TabsOption>
         <TabsOption
           id={DISCOVERED_TAB_ID}
           value="discovered"
           aria-label={
-            unseen ? `${discoveredLabel}, new discoveries to review` : undefined
+            unseen
+              ? t("discovery.tabs.unseen", { label: discoveredLabel })
+              : undefined
           }
         >
           <span>{discoveredLabel}</span>

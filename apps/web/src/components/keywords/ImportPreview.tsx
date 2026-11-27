@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { flexRender, useTable } from "@tanstack/react-table";
 import {
@@ -21,13 +22,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { IMPORT_STATUS_LABELS, summarySentence } from "@/lib/keyword-import";
+import { importStatusLabel, summarySentence } from "@/lib/keyword-import";
 import { importColumns, type PreviewRow } from "./import-columns";
-
-const STATUS_OPTIONS = KEYWORD_IMPORT_STATUSES.map((value) => ({
-  value,
-  label: IMPORT_STATUS_LABELS[value],
-}));
 
 export function ImportPreview({
   result,
@@ -38,12 +34,13 @@ export function ImportPreview({
   lines: readonly number[];
   busy: boolean;
 }) {
+  const t = useTranslations("keywords");
   const [statuses, setStatuses] = useState<KeywordImportStatus[]>([]);
   const data = useMemo<PreviewRow[]>(
     () => result.results.map((row) => ({ ...row, line: lines[row.index] })),
     [result, lines],
   );
-  const columns = useMemo(() => importColumns(lines), [lines]);
+  const columns = useMemo(() => importColumns(lines, t), [lines, t]);
   const table = useTable({
     features: dataTableFeatures,
     data,
@@ -65,28 +62,32 @@ export function ImportPreview({
     [result],
   );
   const rows = table.getRowModel().rows;
+  const statusOptions = KEYWORD_IMPORT_STATUSES.map((value) => ({
+    value,
+    label: importStatusLabel(value, t),
+  }));
 
   return (
     <section
-      aria-label="Review"
+      aria-label={t("import.preview")}
       aria-busy={busy}
       className="flex flex-col gap-3"
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <p role="status" className="text-body font-medium">
-          {summarySentence(result.summary)}
+          {summarySentence(result.summary, t)}
         </p>
         {busy ? (
           <span className="flex items-center gap-1.5 text-caption text-muted-foreground">
             <Loader2 aria-hidden className="size-3.5 animate-spin" />
-            Updating
+            {t("import.updating")}
           </span>
         ) : null}
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <FacetFilter
-          title="Status"
-          options={STATUS_OPTIONS}
+          title={t("import.status")}
+          options={statusOptions}
           selected={statuses}
           counts={counts}
           onChange={setStatuses}
@@ -94,11 +95,11 @@ export function ImportPreview({
         <RowCount shown={rows.length} total={data.length} noun="row" />
       </div>
       <Table
-        scrollLabel="Rows of the file"
+        scrollLabel={t("import.rows")}
         containerClassName="max-h-72 overflow-y-auto rounded-lg border bg-card"
       >
         <TableCaption className="sr-only">
-          Every row of the file, with what an import would do with it.
+          {t("import.previewDescription")}
         </TableCaption>
         <TableHeader className="sticky top-0 bg-card">
           {table.getHeaderGroups().map((headerGroup) => (
@@ -119,7 +120,7 @@ export function ImportPreview({
             <TableRow>
               <TableCell colSpan={columns.length}>
                 <FilteredEmpty
-                  title="No rows match this status"
+                  title={t("import.noRows")}
                   onClear={() => setStatuses([])}
                 />
               </TableCell>

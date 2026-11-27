@@ -2,6 +2,21 @@ import type { Release } from "./release-notes";
 
 export const LATER_RELEASES: readonly Release[] = [
   {
+    version: "2.2.0",
+    date: "2026-11-27",
+    title: "Choose English or Simplified Chinese",
+    summary:
+      "The interface can now switch between English and Simplified Chinese, follows your browser language on first visit and remembers your choice.",
+    changes: [
+      {
+        kind: "new",
+        title: "A language switch for every screen",
+        text: "Choose English or 简体中文 from the account menu, the sign-in page or Settings. Your choice is remembered on this device, and the interface follows your browser language the first time you visit.",
+      },
+    ],
+  },
+
+  {
     version: "2.1.0",
     date: "2026-11-24",
     title: "Help me write it",

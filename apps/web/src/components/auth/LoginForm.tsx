@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { ApiError, login } from "@/lib/api";
 import { saysRegistrationClosed, signedInDestination } from "@/lib/auth-routes";
@@ -13,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuthCard, AuthPanel, INLINE_LINK } from "./AuthCard";
+import { authApiErrorMessage } from "./field-error";
 import { PasswordField } from "./PasswordField";
 import { SessionNotKeptAlert } from "./SessionNotKeptAlert";
 import { useAuth } from "./use-auth";
@@ -22,6 +24,7 @@ const REFUSED_CREDENTIAL_STATUS = 401;
 
 export function LoginForm() {
   const params = useSearchParams();
+  const t = useTranslations("auth");
   const { status } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,11 +34,7 @@ export function LoginForm() {
     establish: () => login(email, password),
     destination: () => signedInDestination(params.get("next")),
     onFailure: (err) => {
-      setError(
-        err instanceof ApiError
-          ? err.envelope.message
-          : "Could not sign in. Try again.",
-      );
+      setError(authApiErrorMessage(err, t("signInFailed"), t));
     },
   });
   const submitOnce = useSingleFlight(mutation);
@@ -52,30 +51,29 @@ export function LoginForm() {
 
   return (
     <AuthCard
-      title="Sign in"
+      title={t("signIn")}
       description={
-        saysRegistrationClosed(params)
-          ? "Registration is closed on this deployment. Ask the owner for an account."
-          : undefined
+        saysRegistrationClosed(params) ? t("registrationClosed") : undefined
       }
       footer={
-        status?.registrationOpen ? (
-          <>
-            Need an account?{" "}
-            <Link href="/register" className={INLINE_LINK}>
-              Create one
-            </Link>
-          </>
-        ) : undefined
+        status?.registrationOpen
+          ? t.rich("needAccountLink", {
+              link: (chunks) => (
+                <Link href="/register" className={INLINE_LINK}>
+                  {chunks}
+                </Link>
+              ),
+            })
+          : undefined
       }
     >
       {sessionDropped ? (
-        <SessionNotKeptAlert outcome="Your password was accepted." />
+        <SessionNotKeptAlert outcome={t("sessionDropped")} />
       ) : null}
       <AuthPanel>
         <form onSubmit={submit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t("email")}</Label>
             <Input
               id="email"
               type="email"
@@ -91,7 +89,7 @@ export function LoginForm() {
             />
           </div>
           <PasswordField
-            label="Password"
+            label={t("password.label")}
             autoComplete="current-password"
             value={password}
             onChange={setPassword}
@@ -102,7 +100,7 @@ export function LoginForm() {
                 href="/forgot-password"
                 className={cn(INLINE_LINK, "text-label font-normal")}
               >
-                Forgot password?
+                {t("forgotPassword")}
               </Link>
             }
           />
@@ -117,7 +115,7 @@ export function LoginForm() {
           ) : null}
           <Button type="submit" size="lg" aria-disabled={locked || undefined}>
             {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
-            Sign in
+            {t("signIn")}
           </Button>
         </form>
       </AuthPanel>

@@ -1,6 +1,10 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { formatCountry } from "@/lib/format";
+import { formatCountryInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 
 export function KeywordsEmptyState({
   country,
@@ -9,10 +13,14 @@ export function KeywordsEmptyState({
   country: string;
   onFindKeywords?: (leaving: HTMLElement) => void;
 }) {
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
   return (
     <EmptyState
-      title={`No keywords tracked in ${formatCountry(country)} yet`}
-      body="Add the phrases you want this app to rank for and AsoBeast starts capturing positions on the next daily run."
+      title={t("empty.title", {
+        country: formatCountryInLocale(country, locale),
+      })}
+      body={t("empty.body")}
       action={
         onFindKeywords ? (
           <Button
@@ -20,7 +28,7 @@ export function KeywordsEmptyState({
             size="sm"
             onClick={(event) => onFindKeywords(event.currentTarget)}
           >
-            Find keywords to track
+            {t("empty.find")}
           </Button>
         ) : null
       }

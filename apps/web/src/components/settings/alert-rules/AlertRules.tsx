@@ -1,11 +1,13 @@
 "use client";
 
 import { useId } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import type { WebhookEvent } from "@asobeast/shared";
 import { Label } from "@/components/ui/label";
 import { alertsConfigOptions } from "@/lib/queries";
 import type { RuleControl } from "../alert-rules";
+import { alertRuleGroupLabel } from "../alert-rules";
 import { groupedRules, ruleSummary, toggleRule } from "../alert-rules-state";
 import {
   RankDropField,
@@ -34,6 +36,7 @@ function RuleControlField({
   props: AlertRulesProps;
   instance: number | null;
 }) {
+  const t = useTranslations("notifications");
   if (control === "rank-threshold") {
     return (
       <RankDropField
@@ -46,7 +49,7 @@ function RuleControlField({
   if (control === "rank-follows") {
     return (
       <p className="text-dense text-muted-foreground">
-        Uses the rank drop value.
+        {t("rules.usesRankDrop")}
       </p>
     );
   }
@@ -67,6 +70,7 @@ function RuleControlField({
 }
 
 export function AlertRules(props: AlertRulesProps) {
+  const t = useTranslations("notifications");
   const labelId = useId();
   const summaryId = useId();
   const { data: config } = useQuery(alertsConfigOptions);
@@ -82,15 +86,15 @@ export function AlertRules(props: AlertRulesProps) {
       className="flex flex-col gap-3"
     >
       <div className="flex items-baseline justify-between gap-3">
-        <Label id={labelId}>Alert rules</Label>
+        <Label id={labelId}>{t("rules.label")}</Label>
         <span id={summaryId} className="text-dense text-muted-foreground">
-          {ruleSummary(props.events)}
+          {ruleSummary(props.events, t)}
         </span>
       </div>
       {groupedRules(props.events).map(({ group, rules }) => (
         <fieldset key={group} className="min-w-0">
           <legend className="text-dense font-medium text-muted-foreground">
-            {group}
+            {alertRuleGroupLabel(group, t)}
           </legend>
           <ul className="divide-y">
             {rules.map(({ event, rule, on }) => (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import type { ReviewItem, ReviewReplyDraftRequest } from "@asobeast/shared";
 import { useAiFailureToast } from "@/components/ai/ai-allowance";
 import { draftReviewReply } from "@/lib/api";
@@ -16,6 +17,7 @@ export function useReplyDraft(
   review: ReviewItem,
   onDraft: (text: string) => void,
 ) {
+  const t = useTranslations("reviews");
   const queryClient = useQueryClient();
   const failAi = useAiFailureToast();
   const drafting = useMutation({
@@ -25,7 +27,7 @@ export function useReplyDraft(
       upsertReviewReply(queryClient, appId, review, result.reply);
       onDraft(result.reply.text);
     },
-    onError: (error) => failAi(error, "Could not draft a reply"),
+    onError: (error) => failAi(error, t("composer.draftFailed")),
     onSettled: () => {
       invalidateAiUsage(queryClient);
       invalidateReviewReplyMutation(queryClient, appId);

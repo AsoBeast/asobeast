@@ -1,30 +1,45 @@
-import { pluralize } from "@/lib/format";
+"use client";
+
+import { useTranslations } from "next-intl";
 import {
   additionNotice,
   type KeywordFieldAddition,
   type KeywordFieldAdditionOutcome,
 } from "@/lib/keyword-field-addition";
-import { localizationName } from "@/lib/localizations";
+import { localizationNameInLocale } from "@/lib/localizations";
+import { useAppLocale } from "@/lib/use-app-locale";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
 
 function receivedSentence(
   addition: KeywordFieldAddition,
   name: string,
+  t: MessageTranslator,
+  keywords: MessageTranslator,
 ): string | null {
-  const notice = additionNotice(addition, name);
+  const notice = additionNotice(addition, name, keywords);
   if (addition.added.length === 0) return notice;
-  const added = `Added ${pluralize(addition.added.length, "phrase")} from the keywords page to the ${name} keyword field. Review them and save.`;
+  const added = t("addition.received", {
+    count: addition.added.length,
+    name,
+  });
   return notice ? `${added} ${notice}` : added;
 }
 
-function statusSentence(outcome: KeywordFieldAdditionOutcome): string | null {
-  const name = localizationName(outcome.localization);
+function statusSentence(
+  outcome: KeywordFieldAdditionOutcome,
+  t: MessageTranslator,
+  keywords: MessageTranslator,
+  locale: Locale,
+): string | null {
+  const name = localizationNameInLocale(outcome.localization, locale);
   switch (outcome.state) {
     case "received":
-      return receivedSentence(outcome.addition, name);
+      return receivedSentence(outcome.addition, name, t, keywords);
     case "managed":
-      return `The selected phrases were not added, because App Store Connect manages the ${name} keyword field.`;
+      return t("addition.managed", { name });
     case "unlisted":
-      return `The selected phrases were not added, because this app does not list ${name}. Add it under Not listed yet, then send them again.`;
+      return t("addition.unlisted", { name });
   }
 }
 
@@ -33,7 +48,10 @@ export function KeywordFieldAdditionStatus({
 }: {
   outcome: KeywordFieldAdditionOutcome;
 }) {
-  const sentence = statusSentence(outcome);
+  const t = useTranslations("localizations");
+  const keywords = useTranslations("keywords");
+  const locale = useAppLocale();
+  const sentence = statusSentence(outcome, t, keywords, locale);
   if (!sentence) return null;
   return (
     <p

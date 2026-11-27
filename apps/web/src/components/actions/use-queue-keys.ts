@@ -63,7 +63,7 @@ export function useQueueKeys({
       }
       case "search":
         document
-          .querySelector<HTMLElement>('input[aria-label="Search actions"]')
+          .querySelector<HTMLElement>("input[data-search-input]")
           ?.focus();
         return;
       case "help":

@@ -1,4 +1,7 @@
 import type { VisibilityPoint } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
+import { formatNumberInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
 import { seriesColor } from "./theme";
 import { areaPath, monotonePath, sparklinePoints } from "./sparkline-path";
@@ -26,6 +29,7 @@ export function TrendLine({
   now: string;
   className?: string;
 }) {
+  const t = useTranslations("charts");
   if (values.length < 2) {
     return (
       <span
@@ -34,7 +38,7 @@ export function TrendLine({
           className,
         )}
       >
-        Not enough history
+        {t("notEnoughHistory")}
       </span>
     );
   }
@@ -42,7 +46,11 @@ export function TrendLine({
   return (
     <svg
       role="img"
-      aria-label={`${label}: ${direction}, now ${now}`}
+      aria-label={t("trendAria", {
+        label,
+        direction: t(`directions.${direction}`),
+        now,
+      })}
       width={TREND_BOX.width}
       height={TREND_BOX.height}
       viewBox={`0 0 ${TREND_BOX.width} ${TREND_BOX.height}`}
@@ -61,10 +69,12 @@ export function TrendLine({
 }
 
 export function Sparkline({ points }: { points: VisibilityPoint[] }) {
+  const t = useTranslations("charts");
+  const locale = useAppLocale();
   if (points.length < 2) {
     return (
       <div className="flex h-12 items-center text-caption text-muted-foreground">
-        Not enough history yet
+        {t("notEnoughHistoryYet")}
       </div>
     );
   }
@@ -87,7 +97,10 @@ export function Sparkline({ points }: { points: VisibilityPoint[] }) {
     >
       <svg
         role="img"
-        aria-label={`visibility, last 30 days: ${direction}, now ${Math.round(last)}`}
+        aria-label={t("visibilityAria", {
+          direction: t(`directions.${direction}`),
+          value: formatNumberInLocale(Math.round(last), locale),
+        })}
         viewBox={`0 0 ${BOX.width} ${BOX.height}`}
         preserveAspectRatio="none"
         className="block h-full w-full"

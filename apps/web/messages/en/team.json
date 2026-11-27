@@ -1,0 +1,37 @@
+{
+  "title": "Team",
+  "inviteMember": "Invite member",
+  "inviteTitle": "Invite a member",
+  "inviteDescription": "They join this workspace and see everything in it except billing.",
+  "email": "Email",
+  "sendInvitation": "Send invitation",
+  "invitations": "Invitations",
+  "waiting": "Waiting to be accepted",
+  "invitationsCaption": "Invitations waiting to be accepted",
+  "role": "Role",
+  "expires": "Expires",
+  "expiresOn": "Expires {date}",
+  "revokeInvitation": "Revoke the invitation for {email}",
+  "loadError": "Team members could not be loaded.",
+  "membersCaption": "Members of this workspace",
+  "joined": "Joined",
+  "actions": "Actions",
+  "you": "You",
+  "roles": {
+    "owner": "Owner",
+    "member": "Member"
+  },
+  "memberCount": "{count, plural, one {# member} other {# members}}",
+  "invitationCount": "{count, plural, one {# invitation} other {# invitations}}",
+  "removeMember": "Remove {email}",
+  "revoked": "Invitation revoked",
+  "revokeError": "Could not revoke the invitation.",
+  "removed": "Member removed",
+  "removeError": "Could not remove the member.",
+  "inviteError": "Could not send the invitation.",
+  "outcome": {
+    "sent": "Invitation sent to {email}.",
+    "link": "The invitation could not be emailed, so send {email} this link yourself.",
+    "failed": "The invitation to {email} could not be emailed. Check the email settings, then invite them again."
+  }
+}

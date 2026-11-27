@@ -1,0 +1,20 @@
+{
+  "menu": {
+    "account": "Account menu",
+    "plan": "{plan} plan",
+    "adminArea": "Admin area",
+    "queueDashboard": "Queue dashboard",
+    "apiDocs": "API docs"
+  },
+  "notices": {
+    "choosePlan": "Choose a plan",
+    "manageBilling": "Manage billing",
+    "upgrade": "Upgrade",
+    "pausedAction": "{sentence} <link>{action}</link>",
+    "trialAction": "{sentence} <link>{action}</link>"
+  },
+  "memberBilling": {
+    "backToApps": "Back to your apps",
+    "seeTeam": "See the workspace team"
+  }
+}

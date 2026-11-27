@@ -1,12 +1,28 @@
+import { NextIntlClientProvider } from "next-intl";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import enFormat from "../../../messages/en/format.json";
+import zhFormat from "../../../messages/zh-CN/format.json";
+import type { Locale } from "@/lib/locale";
 import { GRADES, type Grade } from "@/lib/grade";
 import { GradedNumber } from "./graded";
 
-function markerClasses(grade: Grade | null): string | null {
-  const html = renderToString(
-    <GradedNumber value="42" grade={grade} label="Difficulty" />,
+const messages = { en: enFormat, "zh-CN": zhFormat };
+
+function gradedMarkup(grade: Grade | null, locale: Locale = "en") {
+  return renderToString(
+    <NextIntlClientProvider
+      locale={locale}
+      timeZone="UTC"
+      messages={{ format: messages[locale] }}
+    >
+      <GradedNumber value="42" grade={grade} label="Difficulty" />
+    </NextIntlClientProvider>,
   );
+}
+
+function markerClasses(grade: Grade | null): string | null {
+  const html = gradedMarkup(grade);
   const marker = /<span[^>]*data-slot="grade-marker"[^>]*>/.exec(html)?.[0];
   return marker ? (/class="([^"]*)"/.exec(marker)?.[1] ?? "") : null;
 }
@@ -30,5 +46,9 @@ describe("the grade marker", () => {
       shapeOf(markerClasses(grade) ?? ""),
     );
     expect(new Set(shapes).size).toBe(shapes.length);
+  });
+
+  it("names the grade in Chinese", () => {
+    expect(gradedMarkup("strong", "zh-CN")).toContain("Difficulty 42, 强");
   });
 });

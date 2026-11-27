@@ -4,6 +4,7 @@ import {
   GRADE_SCALES,
   grade,
   gradeLabel,
+  gradeLabelInLocale,
   type Grade,
   type GradeMetric,
 } from "./grade";
@@ -103,5 +104,14 @@ describe("GRADE_SCALES", () => {
 describe("gradeLabel", () => {
   it.each(GRADES)("names the %s grade in lower case", (value) => {
     expect(gradeLabel(value)).toBe(value.toLowerCase());
+  });
+
+  it("translates grades for Simplified Chinese", () => {
+    expect(GRADES.map((grade) => gradeLabelInLocale(grade, "zh-CN"))).toEqual([
+      "强",
+      "一般",
+      "弱",
+      "差",
+    ]);
   });
 });

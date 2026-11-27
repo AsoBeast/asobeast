@@ -1,11 +1,12 @@
 "use client";
 
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { formatRankPosition } from "@asobeast/shared";
 import type { KeywordMover, RankingPoint } from "@asobeast/shared";
+import type { MessageTranslator } from "@/i18n/translator";
 import { useKeywordScope } from "@/components/app-detail/use-market";
 import { TrendLine } from "@/components/charts/Sparkline";
-import { daysPeriod } from "@/components/rankings/mover-change";
 import { MoversPanel } from "@/components/rankings/MoversPanel";
 import { positionTrail } from "@/components/rankings/position-trail";
 import {
@@ -21,13 +22,21 @@ const MOVER_DAYS = 7;
 
 const TRAIL_RANGE = "30d";
 
-function PositionTrend({ points }: { points: readonly RankingPoint[] }) {
+function PositionTrend({
+  points,
+  translator,
+}: {
+  points: readonly RankingPoint[];
+  translator: MessageTranslator;
+}) {
   const latest = points.at(-1);
   if (!latest || points.length < 2) return null;
   return (
     <TrendLine
       values={positionTrail(points)}
-      label={`position, last ${presetDays(TRAIL_RANGE)} days`}
+      label={translator("movers.positionTrend", {
+        count: presetDays(TRAIL_RANGE),
+      })}
       now={formatRankPosition(
         latest.position,
         latest.depth,
@@ -50,6 +59,7 @@ function useMoverTrails(id: string, movers: readonly KeywordMover[]) {
 }
 
 export function MoversCard({ id }: { id: string }) {
+  const t = useTranslations("overview");
   const { country } = useKeywordScope(id);
   const { data: summary } = useSuspenseQuery(appSummaryOptions(id, country));
   const { data: app } = useSuspenseQuery(appDetailOptions(id));
@@ -59,13 +69,16 @@ export function MoversCard({ id }: { id: string }) {
   return (
     <MoversPanel
       movers={summary.movers}
-      period={daysPeriod(MOVER_DAYS)}
+      period={{
+        within: t("movers.withinDays", { count: MOVER_DAYS }),
+        span: t("movers.spanDays", { count: MOVER_DAYS }),
+      }}
       quiet={
         up.length + down.length > 0
           ? null
-          : `No keyword moved in the last ${MOVER_DAYS} days.`
+          : t("movers.quiet", { count: MOVER_DAYS })
       }
-      changeHeading={`${MOVER_DAYS}d change`}
+      changeHeading={t("movers.changeHeading", { count: MOVER_DAYS })}
       hrefOf={(mover) => `/apps/${id}/rankings?keywords=${mover.keywordId}`}
       lead={(mover) => (
         <>
@@ -75,7 +88,10 @@ export function MoversCard({ id }: { id: string }) {
           >
             {mover.text}
           </span>
-          <PositionTrend points={trails.get(mover.keywordId) ?? []} />
+          <PositionTrend
+            points={trails.get(mover.keywordId) ?? []}
+            translator={t}
+          />
         </>
       )}
       footer={

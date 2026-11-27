@@ -1,0 +1,144 @@
+{
+  "title": "App Store localizations",
+  "keywordFields": "Keyword fields",
+  "charactersUsed": "{used} of {limit} characters used",
+  "pausedImport": "Importing from App Store Connect is paused because the connection needs attention in ",
+  "pausedImportAfter": ". The fields are editable here again and follow the store once the key works.",
+  "integrations": "Integrations",
+  "appleTable": "Apple’s localization table",
+  "help": {
+    "label": "About App Store localizations",
+    "title": "A keyword field belongs to a language",
+    "summary": "Search in every storefront on its list reads it, and words combine only within one localization."
+  },
+  "loadFailed": "Localizations could not be loaded.",
+  "add": {
+    "button": "Add localization",
+    "title": "Add a localization",
+    "description": "Pick a language you ship in App Store Connect. Its keyword field is read in every storefront on its list.",
+    "search": "Search languages",
+    "empty": "No language found.",
+    "readMarkets": "Read in your markets",
+    "otherLanguages": "Other languages",
+    "readIn": "Read in {markets}",
+    "failed": "Could not add the localization"
+  },
+  "import": {
+    "button": "Import from App Store Connect",
+    "title": "Import from App Store Connect?",
+    "confirm": "Import",
+    "pending": "Importing…",
+    "failed": "Could not start the import",
+    "removals": "App Store Connect does not serve every localization, and the ones it does not serve lose their field here. Stopping does not bring them back.",
+    "all": "App Store Connect replaces the keyword fields of every localization it serves. {removals} The fields become read only here and follow App Store Connect with every release. Stop importing any time to edit them here again.",
+    "one": "Your {names} field will be replaced by what App Store Connect serves. {removals} The fields become read only here and follow App Store Connect with every release. Stop importing any time to edit them here again.",
+    "many": "Your {names} fields will be replaced by what App Store Connect serves. {removals} The fields become read only here and follow App Store Connect with every release. Stop importing any time to edit them here again."
+  },
+  "stop": {
+    "button": "Stop importing",
+    "failed": "Could not stop importing"
+  },
+  "find": {
+    "button": "Find localizations",
+    "none": "Every language your markets read is already listed or was checked today.",
+    "checking": "Checking {count, plural, one {# language} other {# languages}} in the App Store. Detected ones appear here.",
+    "failed": "Could not look for localizations"
+  },
+  "editor": {
+    "separate": "Separate keywords with commas.",
+    "overLimit": "{count} over the limit",
+    "storedAs": "Stored as ",
+    "imported": "Imported from App Store Connect",
+    "lastRead": "last read {date}",
+    "waiting": "waiting for its first read",
+    "notice": ". Edit the keywords there, and this field imports them again with every release. The connection lives in ",
+    "importStopped": "The last import stopped: {error}",
+    "fieldAria": "{name} keyword field",
+    "noneReads": "None of your markets reads {name}. Storefronts that read it: {markets}. Add one of them as a keyword market to track these phrases there.",
+    "saving": "Saving…",
+    "save": "Save keyword field",
+    "saveFailed": "Could not save the keyword field",
+    "checkFailed": "Could not check the keyword field",
+    "saved": "Saved the {name} keyword field"
+  },
+  "saveDialog": {
+    "title": "Save the {name} keyword field",
+    "description": "Choose the markets that should track its phrases. Every market on its list reads the field either way.",
+    "legend": "Markets that track the phrases",
+    "newCount": "{count} new",
+    "seePlans": "See plans",
+    "cancel": "Cancel",
+    "saving": "Saving…",
+    "save": "Save",
+    "saveAndTrack": "Save and track"
+  },
+  "matrix": {
+    "scroll": "Localization matrix",
+    "caption": "Which of your markets read each localization",
+    "captionSuggested": "Which of your markets read each localization, and up to {count} suggested markets",
+    "readMarkets": "Read in your markets",
+    "suggested": "suggested",
+    "suggestedTitle": "{market}, suggested",
+    "notRead": "Not read",
+    "hint": "{market} reads {languages}.",
+    "hintLink": "Add {market} as a market"
+  },
+  "role": {
+    "default": "Default",
+    "additional": "Also",
+    "notRead": "Not read in your markets"
+  },
+  "origin": {
+    "home": "Home",
+    "manual": "Manual",
+    "detected": "Detected"
+  },
+  "item": {
+    "draftAria": "Draft with AI: {name}",
+    "draft": "Draft with AI"
+  },
+  "unlisted": {
+    "title": "Not listed yet",
+    "aria": "Localizations your markets read that are not listed",
+    "addAria": "Add {name}",
+    "add": "Add",
+    "managed": "Your markets read these localizations. Add one your app ships in App Store Connect and the import brings its keyword field; a localization the store serves is added on its own after the next capture of that market.",
+    "manual": "Your markets read these localizations. Add one your app ships in App Store Connect to type its keyword field; a localization the store serves is added on its own after the next capture of that market."
+  },
+  "remove": {
+    "button": "Remove localization",
+    "title": "Remove {name}?",
+    "confirm": "Remove",
+    "pending": "Removing…",
+    "removed": "Removed {name}",
+    "failed": "Could not remove {name}",
+    "noReads": "Its keyword field is deleted. Phrases you track for another reason stay.",
+    "reads": "Its keyword field is deleted. Its phrases stop being tracked as keyword field phrases in {markets}; phrases you track for another reason stay."
+  },
+  "saved": {
+    "empty": "The field is empty.",
+    "untracked": "Its phrases are not tracked in any market",
+    "tracked": "{count, plural, one {# phrase} other {# phrases}} tracked in {markets}",
+    "duplicates": "{count, plural, one {# duplicate} other {# duplicates}} removed"
+  },
+  "cost": {
+    "none": "Tracks nothing new.",
+    "summary": "Adds {markets, plural, one {# keyword market} other {# keyword markets}} and about {requests, plural, one {# store request} other {# store requests}} a day."
+  },
+  "quota": {
+    "empty": "Your plan includes no keyword markets.",
+    "after": "{after} of {limit} keyword markets after saving."
+  },
+  "phrases": {
+    "added": "{count, plural, one {# new phrase} other {# new phrases}}: {phrases}",
+    "droppedOneNoMarkets": "1 phrase leaves the field",
+    "droppedManyNoMarkets": "{count} phrases leave the field",
+    "droppedOne": "1 phrase leaves the field and stops being tracked as a keyword field phrase in {markets}",
+    "droppedMany": "{count} phrases leave the field and stop being tracked as keyword field phrases in {markets}"
+  },
+  "addition": {
+    "received": "Added {count, plural, one {# phrase} other {# phrases}} from the keywords page to the {name} keyword field. Review them and save.",
+    "managed": "The selected phrases were not added, because App Store Connect manages the {name} keyword field.",
+    "unlisted": "The selected phrases were not added, because this app does not list {name}. Add it under Not listed yet, then send them again."
+  }
+}

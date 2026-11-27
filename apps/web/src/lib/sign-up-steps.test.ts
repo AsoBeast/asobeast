@@ -13,9 +13,9 @@ describe("signUpSteps", () => {
     expect(
       signUpSteps({ entryStep: "confirm-email", emailVerified: false }),
     ).toEqual([
-      { label: "Account created", state: "done" },
-      { label: "Email confirmed", state: "current" },
-      { label: "Choose a plan", state: "upcoming" },
+      { labelKey: "accountCreated", state: "done" },
+      { labelKey: "emailConfirmed", state: "current" },
+      { labelKey: "choosePlan", state: "upcoming" },
     ]);
   });
 
@@ -23,9 +23,9 @@ describe("signUpSteps", () => {
     expect(
       signUpSteps({ entryStep: "choose-plan", emailVerified: true }),
     ).toEqual([
-      { label: "Account created", state: "done" },
-      { label: "Email confirmed", state: "done" },
-      { label: "Choose a plan", state: "current" },
+      { labelKey: "accountCreated", state: "done" },
+      { labelKey: "emailConfirmed", state: "done" },
+      { labelKey: "choosePlan", state: "current" },
     ]);
   });
 
@@ -33,8 +33,8 @@ describe("signUpSteps", () => {
     expect(
       signUpSteps({ entryStep: "choose-plan", emailVerified: false }),
     ).toEqual([
-      { label: "Account created", state: "done" },
-      { label: "Choose a plan", state: "current" },
+      { labelKey: "accountCreated", state: "done" },
+      { labelKey: "choosePlan", state: "current" },
     ]);
   });
 
@@ -54,22 +54,22 @@ describe("signUpSteps", () => {
 describe("registerSteps", () => {
   it("puts a visitor on the account step before the email and the plan", () => {
     expect(registerSteps(true)).toEqual([
-      { label: "Create account", state: "current" },
-      { label: "Email confirmed", state: "upcoming" },
-      { label: "Choose a plan", state: "upcoming" },
+      { labelKey: "createAccount", state: "current" },
+      { labelKey: "emailConfirmed", state: "upcoming" },
+      { labelKey: "choosePlan", state: "upcoming" },
     ]);
   });
 
   it("leaves the email step out where the instance sends no confirmation mail", () => {
     expect(registerSteps(false)).toEqual([
-      { label: "Create account", state: "current" },
-      { label: "Choose a plan", state: "upcoming" },
+      { labelKey: "createAccount", state: "current" },
+      { labelKey: "choosePlan", state: "upcoming" },
     ]);
   });
 
   it("names the same later steps the confirm page names", () => {
     const later = (steps: readonly SignUpStep[]) =>
-      steps.slice(1).map((step) => step.label);
+      steps.slice(1).map((step) => step.labelKey);
 
     expect(later(registerSteps(true))).toEqual(
       later(signUpSteps({ entryStep: "confirm-email", emailVerified: false })),

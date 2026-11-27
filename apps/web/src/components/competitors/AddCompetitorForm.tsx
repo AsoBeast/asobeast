@@ -8,6 +8,7 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query";
 import { Loader2, Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import type { Store, StoreSearchResult } from "@asobeast/shared";
 import { StoreSearchField } from "@/components/apps/StoreSearchField";
@@ -33,12 +34,11 @@ export function AddCompetitorForm({
   id: string;
   submitVariant?: ComponentProps<typeof Button>["variant"];
 }) {
+  const t = useTranslations("competitors");
   const queryClient = useQueryClient();
   const { data: detail } = useSuspenseQuery(appDetailOptions(id));
   const [url, setUrl] = useState("");
-  const outcome = useFieldOutcome(
-    "Could not reach the api to add this competitor",
-  );
+  const outcome = useFieldOutcome(t("add.failed"));
   const search = useStoreSearch(detail.store, detail.country, url);
 
   const mutation = useMutation({
@@ -47,7 +47,7 @@ export function AddCompetitorForm({
     onSuccess: (competitor) => {
       invalidateCompetitorMutation(queryClient, id);
       setUrl("");
-      toast.success(`Added ${competitor.name ?? "competitor"}`);
+      toast.success(t("add.added", { name: competitor.name ?? t("untitled") }));
     },
     onError: outcome.fail,
   });
@@ -83,8 +83,8 @@ export function AddCompetitorForm({
     <form onSubmit={submit}>
       <StoreSearchField
         id="competitor-search"
-        label={`Competitor name or ${storeLabel(detail.store)} URL`}
-        hint="Type a name to search, or paste a store URL."
+        label={t("add.label", { store: storeLabel(detail.store) })}
+        hint={t("add.hint")}
         placeholder={STORE_URL_EXAMPLES[detail.store]}
         store={detail.store}
         country={detail.country}
@@ -101,7 +101,7 @@ export function AddCompetitorForm({
           aria-disabled={inert || undefined}
         >
           {mutation.isPending ? <Loader2 className="animate-spin" /> : <Plus />}
-          {mutation.isPending ? "Adding…" : "Add competitor"}
+          {mutation.isPending ? t("add.adding") : t("add.submit")}
         </Button>
       </StoreSearchField>
     </form>

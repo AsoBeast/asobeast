@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { translationContext } from "@/test/translation-context";
 import type { MarketSeedResult, MarketSuggestion } from "@asobeast/shared";
 import {
   defaultSeedChoice,
@@ -142,5 +143,17 @@ describe("seedStatusText", () => {
       "Not published on this storefront, so it was not added",
     );
     expect(seedStatusText(false, undefined)).toBeNull();
+  });
+});
+
+describe("Simplified Chinese market seeding", () => {
+  const t = translationContext("zh-CN", "setup").translator;
+
+  it("localizes seed actions and outcomes with ICU counts", () => {
+    expect(seedButtonLabel(3, 2, t)).toBe("添加 3 个国家并填充 2 个");
+    expect(outcomeText({ kind: "seeded", seeded: 1, skipped: 3 }, t)).toBe(
+      "已从详情页填充 1 个关键词，3 个因关键词上限未加入",
+    );
+    expect(seedStatusText(true, undefined, t)).toBe("正在从详情页填充…");
   });
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { AddEmailAlertDialog } from "@/components/settings/AddEmailAlertDialog";
 import { AddWebhookDialog } from "@/components/settings/AddWebhookDialog";
@@ -50,6 +51,7 @@ function useNudgeDismissal(appId: string) {
 }
 
 export function AlertsNudge({ id }: { id: string }) {
+  const t = useTranslations("setup");
   const firstRun = useQuery(firstRunOptions(id));
   const [dismissed, dismiss] = useNudgeDismissal(id);
   const enabled = !dismissed && nudgeDue(firstRun.data);
@@ -72,39 +74,45 @@ export function AlertsNudge({ id }: { id: string }) {
     <Card className="print:hidden">
       <CardHeader className={PANEL_HEADER}>
         <CardTitle asChild>
-          <h2>Get told when a position moves</h2>
+          <h2>{t("alertsNudge.title")}</h2>
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <p className="max-w-[70ch] text-dense text-muted-foreground">
-          Two daily captures are in, so positions can now move. Email or a
-          webhook tells you when one drops, climbs or enters the top ten.
+          {t("alertsNudge.body")}
         </p>
         <div className="flex flex-wrap items-center gap-2">
           {state === "email" ? (
             <AddEmailAlertDialog
-              trigger={<Button variant="outline">Add an email alert</Button>}
+              trigger={
+                <Button variant="outline">{t("alertsNudge.addEmail")}</Button>
+              }
             />
           ) : (
             <AddWebhookDialog
-              trigger={<Button variant="outline">Add a webhook</Button>}
+              trigger={
+                <Button variant="outline">{t("alertsNudge.addWebhook")}</Button>
+              }
             />
           )}
           <Button variant="ghost" onClick={dismiss}>
-            Not now
+            {t("alertsNudge.notNow")}
           </Button>
         </div>
         {state === "webhook" ? (
           <p className="text-caption text-muted-foreground">
-            Email alerts need SMTP on this instance.{" "}
-            <a
-              href={EMAIL_DELIVERY_GUIDE}
-              target="_blank"
-              rel="noreferrer"
-              className="text-foreground link-underline"
-            >
-              Set up email delivery
-            </a>
+            {t.rich("alertsNudge.smtpLink", {
+              link: (chunks) => (
+                <a
+                  href={EMAIL_DELIVERY_GUIDE}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-foreground link-underline"
+                >
+                  {chunks}
+                </a>
+              ),
+            })}
           </p>
         ) : null}
       </CardContent>

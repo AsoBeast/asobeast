@@ -1,0 +1,104 @@
+{
+  "untitled": "未命名应用",
+  "header": {
+    "homeStorefront": "主应用商店地区 {country}",
+    "storePage": "应用商店页面"
+  },
+  "link": {
+    "options": "已关联应用选项",
+    "unlink": "取消关联",
+    "unlinkTitle": "取消关联应用商店页面？",
+    "unlinkDescription": "<app>{name}</app> 将不再作为此应用的关联页面显示。关键词和排名不受影响。",
+    "counterpart": "关联应用",
+    "linkListing": "关联应用商店页面",
+    "linkDescription": "将此应用与其 {store} 页面配对，以便从页眉快速切换。",
+    "loadingApps": "正在加载应用…",
+    "noCandidates": "没有可连接的未关联 {store} 应用。请先导入一个。",
+    "linked": "已关联应用商店页面",
+    "unlinked": "已取消关联应用商店页面",
+    "linkFailed": "关联失败",
+    "unlinkFailed": "取消关联失败"
+  },
+  "switchers": {
+    "localization": "本地化版本",
+    "defaultLocalization": "{name} · 默认",
+    "market": "市场",
+    "listingMarket": "详情页市场",
+    "allMarkets": "所有市场"
+  },
+  "notices": {
+    "notInSearchTitle": "未在 iPhone 搜索中上架",
+    "notInSearchBody": "此应用不适用于 iPhone，而 AsoBeast 读取的是 iPhone 搜索结果，因此其关键词永远不会在检查深度内被找到，可见度也始终为 0。"
+  },
+  "print": {
+    "report": "打印报告"
+  },
+  "report": {
+    "title": "{page}报告",
+    "homeStorefront": "主应用商店地区：{country}",
+    "range": "{label}：{range}",
+    "printed": "打印于 {date} (UTC)，数据来自 {product}"
+  },
+  "refresh": {
+    "action": "刷新",
+    "listing": "刷新{country}详情页",
+    "failed": "刷新失败",
+    "staleMarket": "此市场",
+    "staleReason": "{market}已不再跟踪任何关键词，因此不再刷新该市场的详情页。"
+  },
+  "delisted": {
+    "title": "{store} 上已下架",
+    "since": "自 {date} 起，{store} 表示在{country}找不到应用 {id}。",
+    "history": "已存储的历史记录会保留，每日运行也会再次检查；首次捕获重新找到此应用后，此提示就会消失。",
+    "checkStore": "请打开应用商店页面确认。如果应用已迁移到新的商店 ID，请从新链接重新导入。",
+    "goneApp": "如果应用已永久下架，请从仪表盘中删除。",
+    "goneCompetitor": "如果应用已永久下架，请将其从跟踪它的应用竞品中移除。"
+  },
+  "snapshot": {
+    "refreshed": "已刷新快照",
+    "refreshedMarket": "已在{country}刷新快照",
+    "changed": "自上次快照以来有 {count} 个字段发生变化。",
+    "unchanged": "自上次快照以来，商店详情页未发生变化。",
+    "caption": "自上次快照以来发生变化的商店详情页字段及其前后值。",
+    "field": "字段",
+    "before": "变更前",
+    "after": "变更后",
+    "noChanges": "未检测到变化。",
+    "free": "免费",
+    "characters": "{count} 个字符",
+    "iconUpdated": "图标已更新",
+    "fields": {
+      "title": "标题",
+      "subtitle": "副标题",
+      "summary": "简短描述",
+      "description": "描述",
+      "version": "版本",
+      "price": "价格",
+      "screenshots": "截图",
+      "screenshotImages": "截图图片",
+      "screenshotCaptions": "截图说明",
+      "icon": "图标",
+      "whatsNew": "更新内容",
+      "inAppEvents": "应用内活动",
+      "featuring": "精选",
+      "editorsChoice": "编辑精选",
+      "ratingAvg": "评分",
+      "ratingCount": "评分数",
+      "installs": "安装量"
+    },
+    "storeSummary": {
+      "eventAddedOne": "已添加应用内活动：{name}",
+      "eventAddedMany": "已添加 {count} 个应用内活动",
+      "eventRemovedOne": "已移除应用内活动：{name}",
+      "eventRemovedMany": "已移除 {count} 个应用内活动",
+      "storyAddedOne": "已添加推荐故事：{name}",
+      "storyAddedMany": "已添加 {count} 个推荐故事",
+      "storyRemovedOne": "已移除推荐故事：{name}",
+      "storyRemovedMany": "已移除 {count} 个推荐故事",
+      "editorsChoiceAdded": "已添加编辑精选徽章",
+      "editorsChoiceRemoved": "已移除编辑精选徽章",
+      "eventFallback": "应用内活动",
+      "storyFallback": "推荐故事"
+    }
+  }
+}

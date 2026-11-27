@@ -1,6 +1,10 @@
 import type { ActionItem, ActionPriorityCounts } from "@asobeast/shared";
-import { formatCountry } from "@/lib/format";
-import { ACTION_CATEGORY_LABEL } from "./action-copy";
+import { createTranslator } from "next-intl";
+import enActions from "../../../messages/en/actions.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
+import { formatCountryInLocale } from "@/lib/format";
+import { actionCategoryLabel } from "./action-copy";
 
 export interface WorkScopeRow {
   key: string;
@@ -10,6 +14,12 @@ export interface WorkScopeRow {
   counts: ActionPriorityCounts;
   total: number;
 }
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "actions",
+  messages: { actions: enActions },
+});
 
 function tally(
   items: readonly ActionItem[],
@@ -41,29 +51,41 @@ function tally(
   );
 }
 
-export function workByApp(items: readonly ActionItem[]): WorkScopeRow[] {
+export function workByApp(
+  items: readonly ActionItem[],
+  t: MessageTranslator = english,
+): WorkScopeRow[] {
   return tally(
     items,
     (item) => item.scope.appId,
     (item) => ({
-      name: item.scope.appName ?? "Unknown app",
+      name: item.scope.appName ?? t("unknownApp"),
       detail: item.scope.country.toUpperCase(),
     }),
   );
 }
 
-export function workByMarket(items: readonly ActionItem[]): WorkScopeRow[] {
+export function workByMarket(
+  items: readonly ActionItem[],
+  locale: Locale = "en",
+): WorkScopeRow[] {
   return tally(
     items,
     (item) => item.scope.country,
-    (item) => ({ name: formatCountry(item.scope.country), detail: null }),
+    (item) => ({
+      name: formatCountryInLocale(item.scope.country, locale),
+      detail: null,
+    }),
   );
 }
 
-export function workByCategory(items: readonly ActionItem[]): WorkScopeRow[] {
+export function workByCategory(
+  items: readonly ActionItem[],
+  t: MessageTranslator = english,
+): WorkScopeRow[] {
   return tally(
     items,
     (item) => item.category,
-    (item) => ({ name: ACTION_CATEGORY_LABEL[item.category], detail: null }),
+    (item) => ({ name: actionCategoryLabel(item.category, t), detail: null }),
   );
 }

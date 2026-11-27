@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import {
@@ -18,7 +19,10 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { isNotFound } from "@/lib/api";
 import { PRODUCT_NAME } from "@/lib/brand";
-import { formatCountry } from "@/lib/format";
+import { formatCountryInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
 import { keywordBreakdownOptions } from "@/lib/queries";
 import { breakdownParser } from "@/lib/search-params";
 import { BreakdownAppCard } from "./BreakdownAppCard";
@@ -58,6 +62,8 @@ function BreakdownBody({
   read: BreakdownRead;
   onClose: () => void;
 }) {
+  const t = useTranslations("competitors");
+  const common = useTranslations("common");
   if (read.data) {
     return (
       <div className="flex flex-col gap-4">
@@ -72,9 +78,7 @@ function BreakdownBody({
           ))}
         </ul>
         <p className="text-caption text-muted-foreground">
-          These are rules of thumb from what {PRODUCT_NAME} can see. Neither
-          store publishes how it weighs a field, and installs are not visible
-          for other apps.
+          {t("breakdown.rules", { product: PRODUCT_NAME })}
         </p>
       </div>
     );
@@ -82,41 +86,45 @@ function BreakdownBody({
   if (isNotFound(read.error)) {
     return (
       <div className="flex flex-col items-start gap-3 text-dense">
-        <p>This keyword is not tracked any more.</p>
+        <p>{t("breakdown.notTracked")}</p>
         <Button variant="outline" size="sm" onClick={onClose}>
-          Close
+          {common("close")}
         </Button>
       </div>
     );
   }
   if (failedRead(read)) {
-    return (
-      <InlineQueryError
-        message="The breakdown could not be loaded."
-        read={read}
-      />
-    );
+    return <InlineQueryError message={t("breakdown.loadFailed")} read={read} />;
   }
   if (waitsForConnection(read)) {
     return (
       <p role="status" className="text-dense text-muted-foreground">
-        You are offline. The breakdown loads when the connection is back.
+        {t("breakdown.offline")}
       </p>
     );
   }
   return <BreakdownSkeleton />;
 }
 
-function descriptionOf(read: BreakdownRead): string {
+function descriptionOf(
+  read: BreakdownRead,
+  t: MessageTranslator,
+  locale: Locale,
+): string {
   if (read.data) {
-    return `“${read.data.text}” in ${formatCountry(read.data.country)}, from the latest daily check.`;
+    return t("breakdown.description", {
+      keyword: read.data.text,
+      market: formatCountryInLocale(read.data.country, locale),
+    });
   }
   return unavailable(read)
-    ? "Each app's listing judged against one tracked keyword."
-    : "Loading the breakdown.";
+    ? t("breakdown.fallbackDescription")
+    : t("breakdown.loadingDescription");
 }
 
 export function KeywordBreakdownSheet({ appId }: { appId: string }) {
+  const t = useTranslations("competitors");
+  const locale = useAppLocale();
   const [keywordId, setKeywordId] = useQueryState("keyword", breakdownParser);
   const [shownId, setShownId] = useState(keywordId);
   if (keywordId !== "" && keywordId !== shownId) setShownId(keywordId);
@@ -149,8 +157,8 @@ export function KeywordBreakdownSheet({ appId }: { appId: string }) {
         }}
       >
         <SheetHeader>
-          <SheetTitle>Why apps rank for this keyword</SheetTitle>
-          <SheetDescription>{descriptionOf(read)}</SheetDescription>
+          <SheetTitle>{t("breakdown.title")}</SheetTitle>
+          <SheetDescription>{descriptionOf(read, t, locale)}</SheetDescription>
         </SheetHeader>
         <BreakdownBody appId={appId} read={read} onClose={close} />
       </SheetContent>

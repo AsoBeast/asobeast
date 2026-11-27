@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-query";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import {
   ANNOTATION_LABEL_MAX_LENGTH,
   ANNOTATION_TAG_MAX_LENGTH,
@@ -51,7 +52,8 @@ import {
 } from "@/components/layout/InlineQueryError";
 import { addAnnotation, ApiError, deleteAnnotation } from "@/lib/api";
 import { focusCanMoveTo, survivingNeighbour } from "@/lib/focus-handoff";
-import { formatCountry, formatDate } from "@/lib/format";
+import { formatCountryInLocale, formatDateInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import {
   annotationsOptions,
   invalidateAnnotationMutation,
@@ -71,17 +73,21 @@ function AnnotationRow({
   onRemove: (annotation: AppAnnotationItem) => void;
   registerButton: (annotationId: string, button: HTMLButtonElement) => void;
 }) {
+  const t = useTranslations("metrics.annotations");
+  const locale = useAppLocale();
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const facts = [
     ...(annotation.tag === null ? [] : [annotation.tag]),
-    ...(annotation.market === null ? [] : [formatCountry(annotation.market)]),
+    ...(annotation.market === null
+      ? []
+      : [formatCountryInLocale(annotation.market, locale)]),
   ];
 
   return (
     <li className="flex min-h-10 items-center gap-3 rounded-md py-1 pr-1 pl-2 text-dense transition-colors duration-150 ease-out hover:bg-muted sm:min-h-9">
       <span className="numeric w-24 shrink-0 text-faint-foreground">
-        {formatDate(annotation.date)}
+        {formatDateInLocale(annotation.date, locale)}
       </span>
       <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2">
         <bdi className="font-medium wrap-anywhere">{annotation.label}</bdi>
@@ -100,7 +106,7 @@ function AnnotationRow({
             variant="ghost"
             size="icon-sm"
             className="print:hidden"
-            aria-label={`Remove ${annotation.label}`}
+            aria-label={t("removeAria", { label: annotation.label })}
             ref={(button) => {
               if (button) registerButton(annotation.id, button);
             }}
@@ -110,15 +116,15 @@ function AnnotationRow({
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove {annotation.label}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              The marker disappears from the rank history and visibility charts.
-            </AlertDialogDescription>
+            <AlertDialogTitle>
+              {t("removeTitle", { label: annotation.label })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>{t("removeBody")}</AlertDialogDescription>
           </AlertDialogHeader>
           <ConfirmActionFooter
             pending={removing}
-            label="Remove"
-            pendingLabel="Removing…"
+            label={t("remove")}
+            pendingLabel={t("removing")}
             onConfirm={() => onRemove(annotation)}
           />
         </AlertDialogContent>
@@ -128,6 +134,7 @@ function AnnotationRow({
 }
 
 function AnnotationsList({ id }: { id: string }) {
+  const t = useTranslations("metrics.annotations");
   const queryClient = useQueryClient();
   const list = useQuery(annotationsOptions(id));
   const buttons = useRef(new Map<string, HTMLButtonElement>());
@@ -139,11 +146,11 @@ function AnnotationsList({ id }: { id: string }) {
       deleteAnnotation(id, annotation.id),
     onSuccess: (_data, annotation) => {
       invalidateAnnotationMutation(queryClient, id);
-      toast.success(`Removed ${annotation.label}`);
+      toast.success(t("removed", { label: annotation.label }));
     },
     onError: (_error, annotation) => {
       removing.current.delete(annotation.id);
-      toast.error(`Could not remove ${annotation.label}`);
+      toast.error(t("removeFailed", { label: annotation.label }));
     },
   });
   const removeOnce = useKeyedSingleFlight(remove, (row) => row.id);
@@ -172,20 +179,13 @@ function AnnotationsList({ id }: { id: string }) {
   }
 
   if (failedRead(list)) {
-    return (
-      <InlineQueryError message="Could not load the annotations." read={list} />
-    );
+    return <InlineQueryError message={t("loadFailed")} read={list} />;
   }
 
   const rows = list.data?.annotations ?? [];
 
   if (rows.length === 0) {
-    return (
-      <EmptyState
-        title="No annotations yet"
-        body="Pin a release, a listing change or the start of a campaign to its day, and the charts draw a line there."
-      />
-    );
+    return <EmptyState title={t("emptyTitle")} body={t("emptyBody")} />;
   }
 
   return (
@@ -217,6 +217,7 @@ function AddAnnotationForm({
   id: string;
   onAdded: () => void;
 }) {
+  const t = useTranslations("metrics.annotations");
   const queryClient = useQueryClient();
   const [date, setDate] = useState("");
   const [label, setLabel] = useState("");
@@ -239,15 +240,11 @@ function AddAnnotationForm({
       setLabel("");
       setTag("");
       setError(null);
-      toast.success("Annotation added");
+      toast.success(t("added"));
       onAdded();
     },
     onError: (err) => {
-      setError(
-        err instanceof ApiError
-          ? err.envelope.message
-          : "Could not reach the api to add this annotation",
-      );
+      setError(err instanceof ApiError ? err.envelope.message : t("addFailed"));
     },
   });
   const addOnce = useSingleFlight(mutation);
@@ -268,7 +265,7 @@ function AddAnnotationForm({
     <form onSubmit={submit} className="flex flex-col gap-3">
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="annotation-date">Date</Label>
+          <Label htmlFor="annotation-date">{t("date")}</Label>
           <Input
             id="annotation-date"
             type="date"
@@ -278,33 +275,33 @@ function AddAnnotationForm({
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="annotation-label">Label</Label>
+          <Label htmlFor="annotation-label">{t("label")}</Label>
           <Input
             id="annotation-label"
             required
-            placeholder="Release 5.21.0"
+            placeholder={t("labelPlaceholder")}
             value={label}
             onChange={(event) => setLabel(event.target.value)}
           />
           {labelLimit.over > 0 ? (
             <p className="text-caption text-destructive">
-              {limitCounterText(labelLimit, ANNOTATION_LABEL_MAX_LENGTH)}
+              {limitCounterText(labelLimit, ANNOTATION_LABEL_MAX_LENGTH, t)}
             </p>
           ) : null}
         </div>
       </div>
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <Label htmlFor="annotation-tag">Tag (optional)</Label>
+          <Label htmlFor="annotation-tag">{t("tag")}</Label>
           <Input
             id="annotation-tag"
-            placeholder="wave"
+            placeholder={t("tagPlaceholder")}
             value={tag}
             onChange={(event) => setTag(event.target.value)}
           />
           {tagLimit.over > 0 ? (
             <p className="text-caption text-destructive">
-              {limitCounterText(tagLimit, ANNOTATION_TAG_MAX_LENGTH)}
+              {limitCounterText(tagLimit, ANNOTATION_TAG_MAX_LENGTH, t)}
             </p>
           ) : null}
         </div>
@@ -314,7 +311,7 @@ function AddAnnotationForm({
           aria-disabled={mutation.isPending || !addable || undefined}
         >
           {mutation.isPending ? <Loader2 className="animate-spin" /> : <Plus />}
-          {mutation.isPending ? "Adding…" : "Add"}
+          {mutation.isPending ? t("adding") : t("add")}
         </Button>
       </div>
       {error ? (
@@ -327,6 +324,7 @@ function AddAnnotationForm({
 }
 
 function AddAnnotation({ id }: { id: string }) {
+  const t = useTranslations("metrics.annotations");
   const [open, setOpen] = useState(false);
   const adding = useIsMutating({ mutationKey: addAnnotationKey(id) }) > 0;
   return (
@@ -339,11 +337,11 @@ function AddAnnotation({ id }: { id: string }) {
           className="print:hidden"
         >
           <Plus />
-          Add annotation
+          {t("addAnnotation")}
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        aria-label="Add an annotation"
+        aria-label={t("addAria")}
         align="end"
         className="w-80 max-w-[calc(100vw-2rem)] p-4"
       >
@@ -354,11 +352,12 @@ function AddAnnotation({ id }: { id: string }) {
 }
 
 export function AnnotationsCard({ id }: { id: string }) {
+  const t = useTranslations("metrics.annotations");
   return (
     <Card>
       <CardHeader className={PANEL_HEADER}>
         <CardTitle asChild>
-          <h2>Annotations</h2>
+          <h2>{t("title")}</h2>
         </CardTitle>
         <CardAction className={PANEL_ACTION}>
           <AddAnnotation id={id} />
@@ -368,7 +367,7 @@ export function AnnotationsCard({ id }: { id: string }) {
         <AnnotationsList id={id} />
       </CardContent>
       <CardFooter>
-        <span>Drawn as dashed lines on this app’s charts</span>
+        <span>{t("footer")}</span>
       </CardFooter>
     </Card>
   );

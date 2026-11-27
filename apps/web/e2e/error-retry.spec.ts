@@ -39,7 +39,7 @@ test("try again refetches a comparison that failed after the competitors page wa
   const refetched = page.waitForRequest((request) =>
     isGapsRead(new URL(request.url())),
   );
-  await boundary.getByRole("button", { name: "Try again" }).click();
+  await boundary.locator('[data-action="retry"]').click();
   await refetched;
 
   await expect(boundary).toBeHidden();
@@ -77,7 +77,7 @@ test("a double press on try again refetches once and keeps the page", async ({
   page.on("request", (request) => {
     if (isGapsRead(new URL(request.url()))) reads.push(request.url());
   });
-  await boundary.getByRole("button", { name: "Try again" }).dblclick();
+  await boundary.locator('[data-action="retry"]').dblclick();
 
   await expect(boundary).toBeHidden();
   await expect(matrixRow(page, "productivity app")).toBeVisible();
@@ -123,12 +123,10 @@ test("try again also recovers the shell reads that failed with the page", async 
   await expect(health).toHaveCount(0);
 
   failing = false;
-  await boundary.getByRole("button", { name: "Try again" }).click();
+  await boundary.locator('[data-action="retry"]').click();
 
   await expect(boundary).toBeHidden();
-  await expect(
-    sidebar.getByRole("button", { name: "Switch app, currently Focus Timer" }),
-  ).toBeVisible();
+  await expect(sidebar.locator('[data-action="switch-app"]')).toBeVisible();
   await expect(admin).toBeVisible();
   await expect(health).toBeVisible();
 });

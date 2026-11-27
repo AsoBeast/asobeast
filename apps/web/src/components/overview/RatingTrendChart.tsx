@@ -21,7 +21,7 @@ import {
   GRID_PROPS,
   LINE_PROPS,
   seriesDash,
-  TIME_AXIS_PROPS,
+  timeAxisPropsInLocale,
   VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
 import { newRatingsAverageSeries } from "@/components/reviews/new-ratings-average";
@@ -30,7 +30,9 @@ import {
   ChartLegend,
   ChartTooltip,
 } from "@/components/ui/chart";
-import { formatRating } from "@/lib/format";
+import { formatRatingInLocale } from "@/lib/format";
+import { useTranslations } from "next-intl";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { ratingsHistoryOptions } from "@/lib/queries";
 import { presetToRange, type RatingsRange } from "@/lib/ranges";
 import {
@@ -59,6 +61,8 @@ export function RatingTrendChart({
   range: RatingsRange;
   newRatings?: boolean;
 }) {
+  const t = useTranslations("overview");
+  const locale = useAppLocale();
   const { data } = useSuspenseQuery(
     ratingsHistoryOptions(id, presetToRange(range)),
   );
@@ -79,7 +83,10 @@ export function RatingTrendChart({
       <ChartStat
         height={HEIGHT}
         label="Latest average rating"
-        value={formatRating(points[points.length - 1].ratingAvg)}
+        value={formatRatingInLocale(
+          points[points.length - 1].ratingAvg,
+          locale,
+        )}
         note="A trend line needs a few more daily snapshots."
       />
     );
@@ -107,17 +114,17 @@ export function RatingTrendChart({
       config={RATING_CHART_CONFIG}
       className={`${HEIGHT} w-full`}
       role="region"
-      aria-label="Average rating over time"
+      aria-label={t("charts.ratingOverTime")}
     >
       <LineChart accessibilityLayer data={rows} margin={CHART_MARGIN}>
         <CartesianGrid {...GRID_PROPS} />
-        <XAxis {...TIME_AXIS_PROPS} />
+        <XAxis {...timeAxisPropsInLocale(locale)} />
         <YAxis
           {...VALUE_AXIS_PROPS}
           domain={axis.domain}
           ticks={axis.ticks}
           interval={0}
-          tickFormatter={(value: number) => formatRating(value)}
+          tickFormatter={(value: number) => formatRatingInLocale(value, locale)}
         />
         <ChartTooltip content={<RatingTooltip rows={rows} />} />
         {twoLines ? (

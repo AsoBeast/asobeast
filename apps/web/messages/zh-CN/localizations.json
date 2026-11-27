@@ -1,0 +1,144 @@
+{
+  "title": "App Store 本地化版本",
+  "keywordFields": "关键词字段",
+  "charactersUsed": "已使用 {limit} 个字符中的 {used} 个",
+  "pausedImport": "从 App Store Connect 导入已暂停，因为连接需要你在 ",
+  "pausedImportAfter": " 中处理。这里可以重新编辑字段，密钥恢复后会继续跟随商店。",
+  "integrations": "集成",
+  "appleTable": "Apple 本地化语言表",
+  "help": {
+    "label": "关于 App Store 本地化版本",
+    "title": "关键词字段属于一种语言",
+    "summary": "该市场包含的本地化版本都会读取它，词语只在同一个本地化版本内组合。"
+  },
+  "loadFailed": "无法加载本地化版本。",
+  "add": {
+    "button": "添加本地化版本",
+    "title": "添加本地化版本",
+    "description": "选择你在 App Store Connect 中发布的语言。该语言发布的每个商店市场都会读取它的关键词字段。",
+    "search": "搜索语言",
+    "empty": "没有找到语言。",
+    "readMarkets": "在你的市场中读取",
+    "otherLanguages": "其他语言",
+    "readIn": "在 {markets} 中读取",
+    "failed": "无法添加本地化版本"
+  },
+  "import": {
+    "button": "从 App Store Connect 导入",
+    "title": "从 App Store Connect 导入？",
+    "confirm": "导入",
+    "pending": "导入中…",
+    "failed": "无法开始导入",
+    "removals": "App Store Connect 不提供所有本地化版本，未提供的版本会在这里丢失关键词字段。停止导入也不会恢复它们。",
+    "all": "App Store Connect 会替换它提供的所有本地化版本的关键词字段。{removals} 字段在这里会变为只读，并随每次发布跟随 App Store Connect。你可以随时停止导入，在这里重新编辑。",
+    "one": "你的{names}字段会被 App Store Connect 提供的内容替换。{removals} 字段在这里会变为只读，并随每次发布跟随 App Store Connect。你可以随时停止导入，在这里重新编辑。",
+    "many": "你的{names}字段会被 App Store Connect 提供的内容替换。{removals} 字段在这里会变为只读，并随每次发布跟随 App Store Connect。你可以随时停止导入，在这里重新编辑。"
+  },
+  "stop": {
+    "button": "停止导入",
+    "failed": "无法停止导入"
+  },
+  "find": {
+    "button": "查找本地化版本",
+    "none": "你的市场读取的每种语言都已列出，或今天已经检查过。",
+    "checking": "正在 App Store 中检查 {count} 种语言。检测到的语言会显示在这里。",
+    "failed": "无法查找本地化版本"
+  },
+  "editor": {
+    "separate": "请用逗号分隔关键词。",
+    "overLimit": "超出限制 {count} 个字符",
+    "storedAs": "存储为 ",
+    "imported": "从 App Store Connect 导入",
+    "lastRead": "上次读取于 {date}",
+    "waiting": "等待首次读取",
+    "notice": "。请在那里编辑关键词，此字段会在每次发布时重新导入。连接位于 ",
+    "importStopped": "上次导入已停止：{error}",
+    "fieldAria": "{name}关键词字段",
+    "noneReads": "你的市场都不读取{name}。会读取它的商店市场：{markets}。请将其中一个添加为关键词市场，以在这些市场跟踪这些短语。",
+    "saving": "保存中…",
+    "save": "保存关键词字段",
+    "saveFailed": "无法保存关键词字段",
+    "checkFailed": "无法检查关键词字段",
+    "saved": "已保存{name}关键词字段"
+  },
+  "saveDialog": {
+    "title": "保存{name}关键词字段",
+    "description": "选择应跟踪其短语的市场。无论是否选择，该字段都会被所有发布此语言的市场读取。",
+    "legend": "跟踪这些短语的市场",
+    "newCount": "{count} 个新短语",
+    "seePlans": "查看套餐",
+    "cancel": "取消",
+    "saving": "保存中…",
+    "save": "保存",
+    "saveAndTrack": "保存并跟踪"
+  },
+  "matrix": {
+    "scroll": "本地化版本矩阵",
+    "caption": "你的哪些市场会读取每个本地化版本",
+    "captionSuggested": "你的哪些市场会读取每个本地化版本，以及最多 {count} 个建议市场",
+    "readMarkets": "在你的市场中读取",
+    "suggested": "建议",
+    "suggestedTitle": "{market}，建议",
+    "notRead": "未读取",
+    "hint": "{market}读取{languages}。",
+    "hintLink": "将 {market} 添加为市场"
+  },
+  "role": {
+    "default": "默认",
+    "additional": "同时",
+    "notRead": "不在你的市场中读取"
+  },
+  "origin": {
+    "home": "主版本",
+    "manual": "手动添加",
+    "detected": "检测到"
+  },
+  "item": {
+    "draftAria": "使用 AI 起草：{name}",
+    "draft": "使用 AI 起草"
+  },
+  "unlisted": {
+    "title": "尚未列出",
+    "aria": "你的市场会读取但尚未列出的本地化版本",
+    "addAria": "添加{name}",
+    "add": "添加",
+    "managed": "你的市场会读取这些本地化版本。添加一个你的应用在 App Store Connect 中发布的语言，导入会带上它的关键词字段；商店提供的本地化版本会在下次抓取该市场时自动添加。",
+    "manual": "你的市场会读取这些本地化版本。添加一个你的应用在 App Store Connect 中发布的语言，即可输入它的关键词字段；商店提供的本地化版本会在下次抓取该市场时自动添加。"
+  },
+  "remove": {
+    "button": "移除本地化版本",
+    "title": "移除{name}？",
+    "confirm": "移除",
+    "pending": "移除中…",
+    "removed": "已移除{name}",
+    "failed": "无法移除{name}",
+    "noReads": "它的关键词字段会被删除。你因其他原因跟踪的短语会保留。",
+    "reads": "它的关键词字段会被删除。它的短语在{markets}中不再作为关键词字段短语跟踪；你因其他原因跟踪的短语会保留。"
+  },
+  "saved": {
+    "empty": "字段为空。",
+    "untracked": "它的短语尚未在任何市场跟踪",
+    "tracked": "在{markets}中跟踪了 {count} 个短语",
+    "duplicates": "移除了 {count} 个重复项"
+  },
+  "cost": {
+    "none": "不会跟踪新内容。",
+    "summary": "新增 {markets} 个关键词市场，每天约增加 {requests} 个商店请求。"
+  },
+  "quota": {
+    "empty": "你的套餐不包含关键词市场。",
+    "after": "保存后使用 {limit} 个关键词市场中的 {after} 个。"
+  },
+  "phrases": {
+    "added": "{count} 个新短语：{phrases}",
+    "droppedOneNoMarkets": "1 个短语离开字段",
+    "droppedManyNoMarkets": "{count} 个短语离开字段",
+    "droppedOne": "1 个短语离开字段，并不再在{markets}中作为关键词字段短语跟踪",
+    "droppedMany": "{count} 个短语离开字段，并不再在{markets}中作为关键词字段短语跟踪"
+  },
+  "addition": {
+    "received": "已从关键词页面向{name}关键词字段添加 {count} 个短语。请检查并保存。",
+    "managed": "未添加所选短语，因为 App Store Connect 管理{name}关键词字段。",
+    "unlisted": "未添加所选短语，因为此应用未列出{name}。请在“尚未列出”下添加，然后重新发送。"
+  }
+}

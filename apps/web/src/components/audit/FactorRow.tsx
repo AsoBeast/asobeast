@@ -1,18 +1,22 @@
 "use client";
 
 import { useId, useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import type { AuditFactorResult, Store } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { Meter } from "@/components/ui/meter";
 import { cn } from "@/lib/utils";
+import { useAppLocale } from "@/lib/use-app-locale";
+import type { MessageTranslator } from "@/i18n/translator";
 import {
-  availabilityLabel,
-  percent,
-  scoreStatus,
-  STATUS_LABEL,
-} from "./audit-copy";
+  auditCheckLabel,
+  auditFactorLabel,
+  auditText,
+  auditUnlockLabel,
+} from "./audit-content-zh";
+import { availabilityLabel, percent, scoreStatus } from "./audit-copy";
 import { unlockHref } from "./audit-links";
 import { FactorChecks } from "./FactorChecks";
 import { TEXT_LINK } from "./layout-classes";
@@ -25,13 +29,17 @@ export const FACTOR_WIDE_CELL = "hidden @lg/factors:block";
 
 const OPEN_ROW = "bg-muted shadow-[inset_2px_0_0_var(--foreground)]";
 
-function checksNote(factor: AuditFactorResult, totalWeight: number): string {
+function checksNote(
+  factor: AuditFactorResult,
+  totalWeight: number,
+  t: MessageTranslator,
+): string {
   const scored = factor.checks.filter((check) => check.score !== null).length;
   return [
-    `Worth ${factor.weight} points of ${totalWeight}`,
-    `${scored} of ${factor.checks.length} checks scored`,
+    t("factorNote", { weight: factor.weight, total: totalWeight }),
+    t("checksScored", { scored, total: factor.checks.length }),
     ...(factor.confidence !== undefined && factor.confidence < 1
-      ? [`${percent(factor.confidence)}% measured`]
+      ? [t("measuredShort", { percent: percent(factor.confidence) })]
       : []),
   ].join(" · ");
 }
@@ -45,6 +53,8 @@ function FactorNote({
   factor: AuditFactorResult;
   store: Store;
 }) {
+  const t = useTranslations("audit");
+  const locale = useAppLocale();
   const unlock = factor.checks.find((check) => check.unlock)?.unlock ?? null;
   if (factor.availability === "awaiting-input" && unlock) {
     return (
@@ -52,7 +62,7 @@ function FactorNote({
         href={unlockHref(appId, unlock.kind)}
         className={cn(TEXT_LINK, "text-caption")}
       >
-        {unlock.label}
+        {auditUnlockLabel(unlock.kind, unlock.label, locale)}
       </Link>
     );
   }
@@ -60,8 +70,8 @@ function FactorNote({
     (check) => check.status === "warn" || check.status === "fail",
   );
   const note = firstIssue
-    ? `${firstIssue.label}: ${firstIssue.detail}`
-    : availabilityLabel(factor.availability, store);
+    ? `${auditCheckLabel(firstIssue.id, firstIssue.label, locale)}: ${auditText(firstIssue.detail, locale)}`
+    : availabilityLabel(factor.availability, store, t);
   return note ? (
     <span className="text-caption wrap-anywhere text-muted-foreground">
       {note}
@@ -80,8 +90,11 @@ export function FactorRow({
   store: Store;
   totalWeight: number;
 }) {
+  const t = useTranslations("audit");
+  const locale = useAppLocale();
   const [open, setOpen] = useState(false);
   const panelId = useId();
+  const label = auditFactorLabel(factor.id, factor.label, locale);
   const status = scoreStatus(factor.score);
   const Icon = STATUS_ICON[status];
   const waiting =
@@ -90,14 +103,12 @@ export function FactorRow({
 
   return (
     <article
-      aria-label={factor.label}
+      aria-label={label}
       className="border-b border-border-subtle last:border-b-0"
     >
       <div className={cn(FACTOR_COLUMNS, "min-h-14 py-2", open && OPEN_ROW)}>
         <div className="flex min-w-0 flex-col gap-0.5">
-          <h3 className="text-dense font-medium wrap-anywhere">
-            {factor.label}
-          </h3>
+          <h3 className="text-dense font-medium wrap-anywhere">{label}</h3>
           <FactorNote appId={appId} factor={factor} store={store} />
         </div>
         <span
@@ -112,7 +123,7 @@ export function FactorRow({
               className={cn("size-4 shrink-0", STATUS_TONE[status])}
             />
             <span className="sr-only @lg/factors:not-sr-only">
-              {STATUS_LABEL[status]}
+              {t(`statuses.${status}`)}
             </span>
           </span>
         </span>
@@ -122,7 +133,7 @@ export function FactorRow({
             "numeric text-right text-dense text-muted-foreground",
           )}
         >
-          {`${factor.weight} pts`}
+          {t("pointsShort", { points: factor.weight })}
         </span>
         <span className="grid grid-cols-[minmax(0,1fr)_2.25rem] items-center gap-2.5">
           <Meter
@@ -148,7 +159,9 @@ export function FactorRow({
             size="icon-sm"
             aria-expanded={open}
             aria-controls={open ? panelId : undefined}
-            aria-label={`${open ? "Hide" : "Show"} checks for ${factor.label}`}
+            aria-label={t(open ? "hideChecks" : "showChecks", {
+              factor: label,
+            })}
             onClick={() => setOpen(!open)}
           >
             <ChevronRight
@@ -166,7 +179,7 @@ export function FactorRow({
           className={cn("flex flex-col gap-3 px-4 pt-1 pb-3", OPEN_ROW)}
         >
           <span className="text-caption text-faint-foreground">
-            {checksNote(factor, totalWeight)}
+            {checksNote(factor, totalWeight, t)}
           </span>
           <FactorChecks appId={appId} checks={factor.checks} />
         </div>

@@ -2,9 +2,11 @@
 
 import { useRef, useState, type ReactNode, type RefObject } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { ChartLine, Pause, Play, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import type { KeywordBulkAction, TrackedKeywordItem } from "@asobeast/shared";
+import type { MessageTranslator } from "@/i18n/translator";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -20,7 +22,6 @@ import {
 import { ExportCsvButton } from "@/components/ExportCsvButton";
 import { Button } from "@/components/ui/button";
 import { applyKeywordBulk, updateKeyword } from "@/lib/api";
-import { pluralize } from "@/lib/format";
 import { bulkInChunks, bulkReport } from "@/lib/keyword-bulk";
 import type { BulkTagChange, BulkTagMode } from "@/lib/keyword-tags";
 import { invalidateKeywordMutation } from "@/lib/queries";
@@ -34,6 +35,7 @@ interface BulkChange {
 }
 
 function reportTagging(
+  t: MessageTranslator,
   verb: string,
   results: PromiseSettledResult<unknown>[],
 ): void {
@@ -42,10 +44,10 @@ function reportTagging(
   ).length;
   const ok = results.length - failed;
   if (failed === 0) {
-    toast.success(`${verb} ${pluralize(ok, "keyword")}`);
+    toast.success(t("bulk.changed", { done: verb, count: ok }));
     return;
   }
-  toast.warning(`${verb} ${ok}, ${failed} failed`);
+  toast.warning(t("bulk.tagPartial", { verb, changed: ok, failed }));
 }
 
 function ConfirmRemove({
@@ -65,6 +67,7 @@ function ConfirmRemove({
   removed: RefObject<boolean>;
   onConfirm: () => void;
 }) {
+  const t = useTranslations("keywords");
   const settle = closeUnlessPending(pending, onOpenChange);
   return (
     <AlertDialog
@@ -77,7 +80,7 @@ function ConfirmRemove({
       <AlertDialogTrigger asChild>
         <Button variant="outline" size="sm" aria-disabled={busy || undefined}>
           <Trash2 />
-          Stop tracking
+          {t("bulk.stop")}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent
@@ -86,18 +89,15 @@ function ConfirmRemove({
         }}
       >
         <AlertDialogHeader>
-          <AlertDialogTitle>
-            Stop tracking {pluralize(count, "keyword")}?
-          </AlertDialogTitle>
+          <AlertDialogTitle>{t("bulk.stopTitle", { count })}</AlertDialogTitle>
           <AlertDialogDescription>
-            Ranking history for the selected keywords stops accruing. You can
-            add them again later, but the gap in history will remain.
+            {t("bulk.stopDescription")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <ConfirmActionFooter
           pending={pending}
-          label="Stop tracking"
-          pendingLabel="Removing…"
+          label={t("bulk.stop")}
+          pendingLabel={t("bulk.removing")}
           onConfirm={onConfirm}
         />
       </AlertDialogContent>
@@ -124,6 +124,7 @@ export function KeywordsBulkActions({
   onShowDynamics: () => void;
   fieldAction?: ReactNode;
 }) {
+  const t = useTranslations("keywords");
   const queryClient = useQueryClient();
   const selectedIds = selectedKeywords.map((keyword) => keyword.keywordId);
   const overCap = overChartLimit(selectedIds.length);
@@ -140,6 +141,7 @@ export function KeywordsBulkActions({
         action,
         outcome,
         keywordIds.length,
+        t,
       );
       toast[level](message, { description });
       invalidateKeywordMutation(queryClient, appId);
@@ -164,7 +166,11 @@ export function KeywordsBulkActions({
         ),
       ),
     onSuccess: (results, { mode }) => {
-      reportTagging(mode === "add" ? "Tagged" : "Untagged", results);
+      reportTagging(
+        t,
+        mode === "add" ? t("bulk.taggedVerb") : t("bulk.untaggedVerb"),
+        results,
+      );
       invalidateKeywordMutation(queryClient, appId);
       onClear();
     },
@@ -180,11 +186,11 @@ export function KeywordsBulkActions({
   return (
     <div
       role="group"
-      aria-label="Bulk keyword actions"
+      aria-label={t("bulk.label")}
       className="flex flex-wrap items-center gap-2 rounded-lg border bg-popover px-3 py-2 text-body shadow-overlay"
     >
       <span className="numeric font-medium">
-        {`${selectedIds.length} selected`}
+        {t("bulk.selected", { count: selectedIds.length })}
       </span>
       <div className="flex flex-wrap items-center gap-2">
         <Button
@@ -197,11 +203,11 @@ export function KeywordsBulkActions({
           }}
         >
           <ChartLine />
-          Show dynamics
+          {t("bulk.showDynamics")}
         </Button>
         {overCap ? (
           <span className="text-caption text-muted-foreground">
-            {chartLimitLine()}
+            {chartLimitLine(t)}
           </span>
         ) : null}
         {anyActive ? (
@@ -212,7 +218,7 @@ export function KeywordsBulkActions({
             onClick={() => run("pause")}
           >
             <Pause />
-            Pause
+            {t("bulk.pause")}
           </Button>
         ) : null}
         {anyPaused ? (
@@ -223,7 +229,7 @@ export function KeywordsBulkActions({
             onClick={() => run("resume")}
           >
             <Play />
-            Activate
+            {t("bulk.activate")}
           </Button>
         ) : null}
         <BulkTagPopover
@@ -242,7 +248,7 @@ export function KeywordsBulkActions({
           onConfirm={() => run("untrack")}
         />
         {fieldAction}
-        <ExportCsvButton subject="selected keywords" onClick={onExport} />
+        <ExportCsvButton subject={t("bulk.exportSubject")} onClick={onExport} />
         <Button
           variant="ghost"
           size="sm"
@@ -250,10 +256,10 @@ export function KeywordsBulkActions({
           onClick={() => {
             if (!busy) onClear();
           }}
-          aria-label="Clear selection"
+          aria-label={t("bulk.clearSelection")}
         >
           <X />
-          Clear
+          {t("bulk.clear")}
         </Button>
       </div>
     </div>

@@ -3,6 +3,7 @@ import type {
   KeywordDiscoveryList,
 } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
+import { translationContext } from "@/test/translation-context";
 import { firstDiscoveries } from "./first-discoveries";
 
 const item = (
@@ -181,5 +182,35 @@ describe("firstDiscoveries", () => {
     ).toMatchObject({
       rows: [{ text: "study planner", rank: ">200" }],
     });
+  });
+});
+
+describe("Simplified Chinese first discoveries", () => {
+  it("renders found, ranked, and unchecked counts in Chinese", () => {
+    const t = translationContext("zh-CN", "setup").translator;
+    const result = firstDiscoveries(
+      list([
+        item("focus timer app", 3, 200),
+        item("study planner", null, 200),
+        item("work sprint", null, null),
+      ]),
+      t,
+    );
+
+    expect(result).toMatchObject({
+      headline:
+        "在与您详情页相近的关键词中找到 3 个关键词。您的应用已有 1 个进入排名。",
+      rows: [
+        { text: "focus timer app", rank: "#3" },
+        { text: "study planner", rank: ">200" },
+        { text: "work sprint", rank: "尚未检查" },
+      ],
+    });
+    expect(firstDiscoveries(list([item("timer", null, 200)]), t)).toMatchObject(
+      {
+        headline:
+          "在与您详情页相近的关键词中找到 1 个关键词。它们目前都未进入排名。请跟踪适合您应用的关键词。",
+      },
+    );
   });
 });

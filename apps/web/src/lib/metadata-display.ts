@@ -3,6 +3,15 @@ import {
   type LintSeverity,
   type MetadataField,
 } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
+import enMetadata from "../../messages/en/metadata.json";
+import type { MessageTranslator } from "@/i18n/translator";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "metadata",
+  messages: { metadata: enMetadata },
+});
 
 export const METADATA_FIELD_LABELS: Record<MetadataField, string> = {
   title: CHANGE_FIELD_LABELS.title,
@@ -13,6 +22,20 @@ export const METADATA_FIELD_LABELS: Record<MetadataField, string> = {
   whatsNew: CHANGE_FIELD_LABELS.whatsNew,
   shortDescription: CHANGE_FIELD_LABELS.summary,
 };
+
+export function metadataFieldLabel(
+  field: MetadataField,
+  t: MessageTranslator = english,
+): string {
+  return t(`fields.${field}`);
+}
+
+export function lintSeverityLabel(
+  severity: LintSeverity,
+  t: MessageTranslator = english,
+): string {
+  return t(`severity.${severity}`);
+}
 
 export const LINT_SEVERITY_TONE: Record<LintSeverity, string> = {
   error: "text-signal-down",

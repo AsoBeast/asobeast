@@ -1,12 +1,14 @@
+import type { MessageTranslator } from "@/i18n/translator";
+
 export const ADMIN_ROOT = "/admin";
 
 export const ADMIN_SECTIONS = [
-  { segment: "", label: "Overview" },
-  { segment: "conversion", label: "Conversion" },
-  { segment: "capacity", label: "Capacity" },
-  { segment: "workspaces", label: "Workspaces" },
-  { segment: "users", label: "Users" },
-  { segment: "apps", label: "Apps" },
+  { segment: "", labelKey: "nav.overview" },
+  { segment: "conversion", labelKey: "nav.conversion" },
+  { segment: "capacity", labelKey: "nav.capacity" },
+  { segment: "workspaces", labelKey: "nav.workspaces" },
+  { segment: "users", labelKey: "nav.users" },
+  { segment: "apps", labelKey: "nav.apps" },
 ] as const;
 
 export type AdminSection = (typeof ADMIN_SECTIONS)[number];
@@ -31,4 +33,11 @@ export function adminSectionFrom(pathname: string): AdminSection | null {
   if (!match) return null;
   const segment = match[1] ?? "";
   return ADMIN_SECTIONS.find((section) => section.segment === segment) ?? null;
+}
+
+export function adminSectionLabel(
+  section: AdminSection,
+  translator: MessageTranslator,
+): string {
+  return translator(section.labelKey);
 }

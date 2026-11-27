@@ -1,4 +1,5 @@
 import type { WebhookEvent } from "@asobeast/shared";
+import type { MessageTranslator } from "@/i18n/translator";
 
 export const ALERT_RULE_GROUPS = [
   "Rankings",
@@ -13,111 +14,66 @@ export type RuleControl =
   "none" | "rank-threshold" | "rank-follows" | "rating-tenths" | "review-stars";
 
 export interface AlertRule {
-  title: string;
-  detail: string;
+  catalogKey: string;
   group: AlertRuleGroup;
   control: RuleControl;
 }
 
 const rule = (
-  title: string,
+  catalogKey: string,
   group: AlertRuleGroup,
-  detail: string,
   control: RuleControl = "none",
-): AlertRule => ({ title, detail, group, control });
+): AlertRule => ({ catalogKey, group, control });
 
 export const ALERT_RULES: Record<WebhookEvent, AlertRule> = {
-  "metadata.changed": rule(
-    "Metadata changed",
-    "Listings",
-    "A listing changes, yours or a competitor's.",
-  ),
-  "rank.dropped": rule(
-    "Rank dropped",
-    "Rankings",
-    "A keyword of your app falls by at least this many positions.",
-    "rank-threshold",
-  ),
-  "rank.improved": rule(
-    "Rank improved",
-    "Rankings",
-    "A keyword climbs by at least the same number of positions.",
-    "rank-follows",
-  ),
-  "rank.milestone": rule(
-    "Rank milestone",
-    "Rankings",
-    "Your app enters or leaves the top 10, the top 3 or first place for a keyword.",
-  ),
-  "rank.first": rule(
-    "First ranking",
-    "Rankings",
-    "Your app ranks for a keyword for the first time.",
-  ),
-  "rank.overtaken": rule(
-    "Overtaken by competitor",
-    "Rankings",
-    "A competitor moves above your app for a keyword.",
-  ),
-  "review.new": rule(
-    "New review",
-    "Reviews and ratings",
-    "Every new review, for the stars you pick.",
-    "review-stars",
-  ),
-  "review.negative": rule(
-    "Negative review",
-    "Reviews and ratings",
-    "A low review, at or below the cutoff the instance sets (2 stars by default).",
-  ),
+  "metadata.changed": rule("metadataChanged", "Listings"),
+  "rank.dropped": rule("rankDropped", "Rankings", "rank-threshold"),
+  "rank.improved": rule("rankImproved", "Rankings", "rank-follows"),
+  "rank.milestone": rule("rankMilestone", "Rankings"),
+  "rank.first": rule("rankFirst", "Rankings"),
+  "rank.overtaken": rule("rankOvertaken", "Rankings"),
+  "review.new": rule("reviewNew", "Reviews and ratings", "review-stars"),
+  "review.negative": rule("reviewNegative", "Reviews and ratings"),
   "rating.dropped": rule(
-    "Rating dropped",
+    "ratingDropped",
     "Reviews and ratings",
-    "The average rating falls by at least this many tenths of a star within a week.",
     "rating-tenths",
   ),
-  "review.spike": rule(
-    "Review spike",
-    "Reviews and ratings",
-    "An unusual number of new reviews arrives in one day.",
-  ),
-  "digest.weekly": rule(
-    "Weekly digest",
-    "Reports",
-    "A weekly summary of your portfolio.",
-  ),
-  "serp.entrant": rule(
-    "SERP entrant",
-    "Rankings",
-    "A new app enters the top 10 of a keyword you track.",
-  ),
-  "action.opened": rule(
-    "New action",
-    "Reports",
-    "The Action Center opens or reopens an action at the priority the instance sets (high by default).",
-  ),
-  "chart.entered": rule(
-    "Chart entered",
-    "Charts",
-    "Your app enters a store chart.",
-  ),
-  "chart.left": rule("Chart left", "Charts", "Your app leaves a store chart."),
-  "chart.milestone": rule(
-    "Chart milestone",
-    "Charts",
-    "Your app enters or leaves first place, the top 3 or the top 10 of a chart.",
-  ),
-  "app.delisted": rule(
-    "App delisted",
-    "Listings",
-    "An app disappears from its home store.",
-  ),
-  "app.unlisted_market": rule(
-    "Unlisted in a market",
-    "Listings",
-    "A store stops listing an app in one market.",
-  ),
+  "review.spike": rule("reviewSpike", "Reviews and ratings"),
+  "digest.weekly": rule("digestWeekly", "Reports"),
+  "serp.entrant": rule("serpEntrant", "Rankings"),
+  "action.opened": rule("actionOpened", "Reports"),
+  "chart.entered": rule("chartEntered", "Charts"),
+  "chart.left": rule("chartLeft", "Charts"),
+  "chart.milestone": rule("chartMilestone", "Charts"),
+  "app.delisted": rule("appDelisted", "Listings"),
+  "app.unlisted_market": rule("appUnlistedMarket", "Listings"),
 };
+
+export function alertRuleCopy(
+  rule: AlertRule,
+  translator: MessageTranslator,
+): { title: string; detail: string } {
+  return {
+    title: translator(`rules.events.${rule.catalogKey}.title`),
+    detail: translator(`rules.events.${rule.catalogKey}.detail`),
+  };
+}
+
+const GROUP_KEYS: Record<AlertRuleGroup, string> = {
+  Rankings: "rules.groups.rankings",
+  Charts: "rules.groups.charts",
+  "Reviews and ratings": "rules.groups.reviewsAndRatings",
+  Listings: "rules.groups.listings",
+  Reports: "rules.groups.reports",
+};
+
+export function alertRuleGroupLabel(
+  group: AlertRuleGroup,
+  translator: MessageTranslator,
+): string {
+  return translator(GROUP_KEYS[group]);
+}
 
 export const ALERT_RULE_ORDER: readonly WebhookEvent[] = [
   "metadata.changed",

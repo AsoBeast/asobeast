@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import type { FormEvent, MouseEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Trash2, UserPlus } from "lucide-react";
@@ -45,12 +46,13 @@ import {
   siblingControl,
   useFocusAfterCommit,
 } from "@/lib/focus-handoff";
-import { formatDate, pluralize } from "@/lib/format";
+import { formatDateInLocale } from "@/lib/format";
 import {
   invalidateWorkspaceTeamMutation,
   workspaceTeamOptions,
 } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { inviteOutcome } from "./invite-outcome";
 import { PanelSubhead } from "./PanelSubhead";
 import { PanelBody, SettingsPanel } from "./SettingsPanel";
@@ -70,6 +72,7 @@ function TeamColumns({ isOwner }: { isOwner: boolean }) {
 }
 
 function InviteDialog() {
+  const t = useTranslations("team");
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -83,12 +86,11 @@ function InviteDialog() {
       setEmail("");
       invalidateWorkspaceTeamMutation(queryClient);
     },
-    onError: (err) =>
-      setError(apiErrorMessage(err, "Could not send the invitation.")),
+    onError: (err) => setError(apiErrorMessage(err, t("inviteError"))),
   });
   const inviteOnce = useSingleFlight(mutation);
 
-  const outcome = created ? inviteOutcome(created) : null;
+  const outcome = created ? inviteOutcome(created, t) : null;
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -109,15 +111,13 @@ function InviteDialog() {
       <DialogTrigger asChild>
         <Button size="sm" variant="outline">
           <UserPlus />
-          Invite member
+          {t("inviteMember")}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Invite a member</DialogTitle>
-          <DialogDescription>
-            They join this workspace and see everything in it except billing.
-          </DialogDescription>
+          <DialogTitle>{t("inviteTitle")}</DialogTitle>
+          <DialogDescription>{t("inviteDescription")}</DialogDescription>
         </DialogHeader>
         {outcome ? (
           <DialogBody className="gap-2">
@@ -132,7 +132,7 @@ function InviteDialog() {
           <form onSubmit={submit} className="flex min-h-0 flex-col gap-4">
             <DialogBody>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="invite-email">Email</Label>
+                <Label htmlFor="invite-email">{t("email")}</Label>
                 <Input
                   id="invite-email"
                   type="email"
@@ -157,7 +157,7 @@ function InviteDialog() {
                 {mutation.isPending ? (
                   <Loader2 className="animate-spin" />
                 ) : null}
-                Send invitation
+                {t("sendInvitation")}
               </Button>
             </DialogFooter>
           </form>
@@ -178,26 +178,28 @@ function Invitations({
   busy: boolean;
   onRevoke: (event: MouseEvent<HTMLButtonElement>, id: string) => void;
 }) {
+  const t = useTranslations("team");
+  const locale = useAppLocale();
   return (
     <>
       <PanelSubhead
-        title="Invitations"
+        title={t("invitations")}
         count={invites.length}
-        note="Waiting to be accepted"
+        note={t("waiting")}
       />
       <Table className="table-fixed">
         <TableCaption className="sr-only">
-          Invitations waiting to be accepted
+          {t("invitationsCaption")}
         </TableCaption>
         <TeamColumns isOwner={isOwner} />
         <TableHeader className="sr-only">
           <TableRow>
-            <TableHead>Email</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead className={DATE_COLUMN}>Expires</TableHead>
+            <TableHead>{t("email")}</TableHead>
+            <TableHead>{t("role")}</TableHead>
+            <TableHead className={DATE_COLUMN}>{t("expires")}</TableHead>
             {isOwner ? (
               <TableHead>
-                <span className="sr-only">Actions</span>
+                <span className="sr-only">{t("actions")}</span>
               </TableHead>
             ) : null}
           </TableRow>
@@ -208,21 +210,27 @@ function Invitations({
               <TableCell className="whitespace-normal">
                 <span className="wrap-anywhere">{invite.email}</span>
                 <span className="block text-caption text-faint-foreground sm:hidden">
-                  {`Expires ${formatDate(invite.expiresAt)}`}
+                  {t("expiresOn", {
+                    date: formatDateInLocale(invite.expiresAt, locale),
+                  })}
                 </span>
               </TableCell>
               <TableCell className="text-muted-foreground capitalize">
-                <span>{invite.role}</span>
+                <span>{t(`roles.${invite.role}`)}</span>
               </TableCell>
               <TableCell className={`${DATE_COLUMN} text-muted-foreground`}>
-                <span>{`Expires ${formatDate(invite.expiresAt)}`}</span>
+                <span>
+                  {t("expiresOn", {
+                    date: formatDateInLocale(invite.expiresAt, locale),
+                  })}
+                </span>
               </TableCell>
               {isOwner ? (
                 <TableCell>
                   <Button
                     size="icon"
                     variant="ghost"
-                    aria-label={`Revoke the invitation for ${invite.email}`}
+                    aria-label={t("revokeInvitation", { email: invite.email })}
                     aria-disabled={busy || undefined}
                     onClick={(event) => onRevoke(event, invite.id)}
                   >
@@ -239,6 +247,8 @@ function Invitations({
 }
 
 export function TeamCard() {
+  const t = useTranslations("team");
+  const locale = useAppLocale();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const read = useQuery(workspaceTeamOptions);
@@ -249,22 +259,20 @@ export function TeamCard() {
   const revoke = useMutation({
     mutationFn: revokeInvite,
     onSuccess: () => {
-      toast.success("Invitation revoked");
+      toast.success(t("revoked"));
       invalidateWorkspaceTeamMutation(queryClient);
     },
-    onError: (err) =>
-      toast.error(apiErrorMessage(err, "Could not revoke the invitation.")),
+    onError: (err) => toast.error(apiErrorMessage(err, t("revokeError"))),
   });
   const revokeOnce = useSingleFlight(revoke);
 
   const remove = useMutation({
     mutationFn: removeMember,
     onSuccess: () => {
-      toast.success("Member removed");
+      toast.success(t("removed"));
       invalidateWorkspaceTeamMutation(queryClient);
     },
-    onError: (err) =>
-      toast.error(apiErrorMessage(err, "Could not remove the member.")),
+    onError: (err) => toast.error(apiErrorMessage(err, t("removeError"))),
   });
   const removeOnce = useSingleFlight(remove);
   const busy = revoke.isPending || remove.isPending;
@@ -284,14 +292,11 @@ export function TeamCard() {
       return (
         <SettingsPanel
           as="h2"
-          title="Team"
+          title={t("title")}
           action={isOwner ? <InviteDialog /> : null}
         >
           <PanelBody>
-            <InlineQueryError
-              message="Team members could not be loaded."
-              read={read}
-            />
+            <InlineQueryError message={t("loadError")} read={read} />
           </PanelBody>
         </SettingsPanel>
       );
@@ -304,32 +309,30 @@ export function TeamCard() {
   return (
     <SettingsPanel
       as="h2"
-      title="Team"
+      title={t("title")}
       action={isOwner ? <InviteDialog /> : null}
       footer={
         <p className="numeric">
           {[
-            pluralize(team.members.length, "member"),
+            t("memberCount", { count: team.members.length }),
             ...(team.invites.length > 0
-              ? [pluralize(team.invites.length, "invitation")]
+              ? [t("invitationCount", { count: team.invites.length })]
               : []),
           ].join(" · ")}
         </p>
       }
     >
       <Table className="table-fixed">
-        <TableCaption className="sr-only">
-          Members of this workspace
-        </TableCaption>
+        <TableCaption className="sr-only">{t("membersCaption")}</TableCaption>
         <TeamColumns isOwner={isOwner} />
         <TableHeader>
           <TableRow>
-            <TableHead>Email</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead className={DATE_COLUMN}>Joined</TableHead>
+            <TableHead>{t("email")}</TableHead>
+            <TableHead>{t("role")}</TableHead>
+            <TableHead className={DATE_COLUMN}>{t("joined")}</TableHead>
             {isOwner ? (
               <TableHead>
-                <span className="sr-only">Actions</span>
+                <span className="sr-only">{t("actions")}</span>
               </TableHead>
             ) : null}
           </TableRow>
@@ -341,15 +344,15 @@ export function TeamCard() {
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="min-w-0 wrap-anywhere">{member.email}</span>
                   {member.email === user?.email ? (
-                    <Badge variant="brand">You</Badge>
+                    <Badge variant="brand">{t("you")}</Badge>
                   ) : null}
                 </span>
               </TableCell>
               <TableCell className="capitalize">
-                <span>{member.role}</span>
+                <span>{t(`roles.${member.role}`)}</span>
               </TableCell>
               <TableCell className={DATE_COLUMN}>
-                <span>{formatDate(member.createdAt)}</span>
+                <span>{formatDateInLocale(member.createdAt, locale)}</span>
               </TableCell>
               {isOwner ? (
                 <TableCell>
@@ -357,7 +360,7 @@ export function TeamCard() {
                     <Button
                       size="icon"
                       variant="ghost"
-                      aria-label={`Remove ${member.email}`}
+                      aria-label={t("removeMember", { email: member.email })}
                       aria-disabled={busy || undefined}
                       onClick={(event) =>
                         removeRow(event, () => removeOnce(member.id))

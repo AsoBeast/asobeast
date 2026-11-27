@@ -1,16 +1,16 @@
+"use client";
+
 import { TriangleAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export function NotInSearchNotice() {
+  const t = useTranslations("appDetail");
   return (
     <Alert variant="warning" role="note">
       <TriangleAlert aria-hidden="true" />
-      <AlertTitle>Not listed in iPhone search</AlertTitle>
-      <AlertDescription>
-        This app is not available on iPhone, and AsoBeast reads iPhone search,
-        so its keywords are never found within the checked depth and its
-        visibility stays at 0.
-      </AlertDescription>
+      <AlertTitle>{t("notices.notInSearchTitle")}</AlertTitle>
+      <AlertDescription>{t("notices.notInSearchBody")}</AlertDescription>
     </Alert>
   );
 }

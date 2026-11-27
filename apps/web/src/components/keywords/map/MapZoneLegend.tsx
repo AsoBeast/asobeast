@@ -1,16 +1,18 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { InfoTip } from "@/components/ui/info-tip";
 import {
   KEYWORD_ZONES,
-  ZONE_LABELS,
+  zoneLabel,
   zoneMeaning,
   zoneRule,
   type KeywordZone,
   type ZoneCounts,
   type ZoneThresholds,
 } from "@/lib/keyword-zones";
+import type { MessageTranslator } from "@/i18n/translator";
 import { ZONE_FILLS } from "./zone-layers";
 
 const OPPORTUNITY_MAP_GUIDE =
@@ -18,8 +20,11 @@ const OPPORTUNITY_MAP_GUIDE =
 
 const SWATCH_OPACITY = 0.5;
 
-const toggleName = (name: string, count: number): string =>
-  `${name} ${count} ${count === 1 ? "keyword" : "keywords"}`;
+const toggleName = (
+  name: string,
+  count: number,
+  t: MessageTranslator,
+): string => t("map.zones.toggle", { name, count });
 
 export function MapZoneLegend({
   counts,
@@ -32,10 +37,15 @@ export function MapZoneLegend({
   selected: KeywordZone | null;
   onToggle: (zone: KeywordZone) => void;
 }) {
+  const t = useTranslations("keywordInspector");
+  const keywords = useTranslations("keywords");
   return (
-    <ul aria-label="Zones" className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+    <ul
+      aria-label={t("map.zones.aria")}
+      className="grid grid-cols-2 gap-2 lg:grid-cols-4"
+    >
       {KEYWORD_ZONES.map((zone) => {
-        const name = ZONE_LABELS[zone];
+        const name = zoneLabel(zone, keywords);
         const count = counts.zones[zone];
         return (
           <li key={zone} className="flex min-w-0 items-center gap-1">
@@ -43,7 +53,7 @@ export function MapZoneLegend({
               variant="outline"
               size="sm"
               aria-pressed={selected === zone}
-              aria-label={toggleName(name, count)}
+              aria-label={toggleName(name, count, t)}
               onClick={() => onToggle(zone)}
               className="h-auto min-h-8 min-w-0 flex-1 justify-start py-1 text-left whitespace-normal aria-pressed:border-foreground aria-pressed:bg-secondary"
             >
@@ -59,9 +69,12 @@ export function MapZoneLegend({
               <span className="ml-auto numeric">{String(count)}</span>
             </Button>
             <InfoTip
-              label={`About ${name}`}
+              label={t("map.zones.about", { name })}
               title={name}
-              summary={`${zoneMeaning(zone)} ${zoneRule(zone, thresholds)}.`}
+              summary={t("map.zones.summary", {
+                meaning: zoneMeaning(zone, keywords),
+                rule: zoneRule(zone, thresholds, keywords),
+              })}
             >
               <a
                 href={OPPORTUNITY_MAP_GUIDE}
@@ -69,7 +82,7 @@ export function MapZoneLegend({
                 rel="noreferrer"
                 className="font-medium text-foreground link-underline"
               >
-                Read the opportunity map
+                {t("map.zones.guide")}
               </a>
             </InfoTip>
           </li>
@@ -86,28 +99,30 @@ export function MapZoneTable({
   counts: ZoneCounts;
   thresholds: ZoneThresholds;
 }) {
+  const t = useTranslations("keywordInspector");
+  const keywords = useTranslations("keywords");
   return (
     <div className="sr-only">
       <table>
-        <caption>Opportunity map zones</caption>
+        <caption>{t("map.zones.tableCaption")}</caption>
         <thead>
           <tr>
-            <th scope="col">Zone</th>
-            <th scope="col">Rule</th>
-            <th scope="col">Keywords</th>
+            <th scope="col">{t("map.zones.zone")}</th>
+            <th scope="col">{t("map.zones.rule")}</th>
+            <th scope="col">{t("map.zones.keywords")}</th>
           </tr>
         </thead>
         <tbody>
           {KEYWORD_ZONES.map((zone) => (
             <tr key={zone}>
-              <th scope="row">{ZONE_LABELS[zone]}</th>
-              <td>{zoneRule(zone, thresholds)}</td>
+              <th scope="row">{zoneLabel(zone, keywords)}</th>
+              <td>{zoneRule(zone, thresholds, keywords)}</td>
               <td>{String(counts.zones[zone])}</td>
             </tr>
           ))}
           <tr>
-            <th scope="row">Not on the map</th>
-            <td>Missing a popularity or a difficulty</td>
+            <th scope="row">{t("map.zones.unplotted")}</th>
+            <td>{t("map.zones.missing")}</td>
             <td>{String(counts.unplotted)}</td>
           </tr>
         </tbody>

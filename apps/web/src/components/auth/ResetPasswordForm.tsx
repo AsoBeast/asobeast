@@ -5,9 +5,10 @@ import type { FormEvent } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { resetPassword } from "@/lib/api";
-import { PASSWORD_HINT, passwordError } from "@/lib/password";
+import { passwordError, passwordHint } from "@/lib/password";
 import { Button } from "@/components/ui/button";
 import { useFocusClaim } from "@/lib/focus-handoff";
 import { useSingleFlight } from "@/lib/single-flight";
@@ -20,6 +21,7 @@ import { useAnswerFocus } from "./use-answer-focus";
 const PASSWORD_SET_FOCUS_KEY = "password-set";
 
 export function ResetPasswordForm() {
+  const t = useTranslations("auth");
   const token = useSearchParams().get("token") ?? "";
   const [password, setPassword] = useState("");
   const [error, setError] = useState<AuthFieldError | null>(null);
@@ -33,12 +35,7 @@ export function ResetPasswordForm() {
     mutationFn: () => resetPassword(token, password),
     onSuccess: handFocus,
     onError: (err) =>
-      setError(
-        passwordFormError(
-          err,
-          "Could not set the new password. Ask for a fresh link.",
-        ),
-      ),
+      setError(passwordFormError(err, t("resetPassword.failed"), t)),
   });
   const submitOnce = useSingleFlight(mutation);
   const claimFocus = useFocusClaim(PASSWORD_SET_FOCUS_KEY);
@@ -47,7 +44,7 @@ export function ResetPasswordForm() {
     event.preventDefault();
     if (mutation.isPending) return;
     setError(null);
-    const problem = passwordError(password);
+    const problem = passwordError(password, t);
     if (problem) {
       setError({ field: "password", message: problem });
       return;
@@ -59,12 +56,12 @@ export function ResetPasswordForm() {
   if (token === "") {
     return (
       <AuthCard
-        title="Recovery link incomplete"
-        description="Open the link from your recovery email, or ask for a new one."
+        title={t("resetPassword.incompleteTitle")}
+        description={t("resetPassword.incompleteDescription")}
       >
         <AuthActions>
           <Button asChild variant="outline">
-            <Link href="/forgot-password">Ask for a new link</Link>
+            <Link href="/forgot-password">{t("resetPassword.newLink")}</Link>
           </Button>
         </AuthActions>
       </AuthCard>
@@ -74,14 +71,14 @@ export function ResetPasswordForm() {
   if (mutation.isSuccess) {
     return (
       <AuthCard
-        title="Choose a new password"
-        description="Your password is set. Every other session has been signed out and your API tokens were revoked."
+        title={t("resetPassword.title")}
+        description={t("resetPassword.successDescription")}
         announce
       >
         <AuthActions>
           <Button asChild>
             <Link ref={claimFocus} href="/login">
-              Sign in
+              {t("signIn")}
             </Link>
           </Button>
         </AuthActions>
@@ -91,17 +88,17 @@ export function ResetPasswordForm() {
 
   return (
     <AuthCard
-      title="Choose a new password"
-      description="Setting it signs out every device that was already signed in and revokes your API tokens."
+      title={t("resetPassword.title")}
+      description={t("resetPassword.description")}
     >
       <AuthPanel>
         <form ref={watchForm} onSubmit={submit} className="flex flex-col gap-4">
           <PasswordField
-            label="New password"
+            label={t("password.new")}
             autoComplete="new-password"
             value={password}
             onChange={setPassword}
-            hint={PASSWORD_HINT}
+            hint={passwordHint(t)}
             error={error?.field === "password" ? error.message : null}
           />
           <FieldErrorMessage error={error} field="form" id="form-error" />
@@ -111,11 +108,11 @@ export function ResetPasswordForm() {
             aria-disabled={mutation.isPending || undefined}
           >
             {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
-            Set new password
+            {t("resetPassword.submit")}
           </Button>
           {mutation.isError ? (
             <Button asChild variant="outline">
-              <Link href="/forgot-password">Ask for a new link</Link>
+              <Link href="/forgot-password">{t("resetPassword.newLink")}</Link>
             </Button>
           ) : null}
         </form>

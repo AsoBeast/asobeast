@@ -4,6 +4,7 @@ import {
   type SerpKeywordPlacement,
   type Store,
 } from "@asobeast/shared";
+import type { MessageTranslator } from "@/i18n/translator";
 import type { SerpRole } from "./serp-csv";
 
 export const PLACEMENT_LABELS: Record<SerpKeywordPlacement, string> = {
@@ -21,14 +22,22 @@ export interface KeywordInLabel {
 
 type Judged = Pick<SerpEntryItem, "placement" | "subtitle">;
 
-export function keywordInLabel(entry: Judged, store: Store): KeywordInLabel {
+export function keywordInLabel(
+  entry: Judged,
+  store: Store,
+  t?: MessageTranslator,
+): KeywordInLabel {
   if (entry.placement) {
     return { label: PLACEMENT_LABELS[entry.placement], note: null };
   }
   const unknown = store === "APP_STORE" && entry.subtitle === undefined;
   return {
-    label: "Not in the title",
-    note: unknown ? "subtitle not known" : null,
+    label: t ? t("serp.row.notInTitle") : "Not in the title",
+    note: unknown
+      ? t
+        ? t("serp.row.subtitleNotKnown")
+        : "subtitle not known"
+      : null,
   };
 }
 

@@ -1,18 +1,34 @@
-import {
-  listsNoApps,
-  NO_APPS_LABEL,
-  NO_APPS_SENTENCE,
-  type TrackedKeywordItem,
-} from "@asobeast/shared";
+"use client";
+
+import { createTranslator, useTranslations } from "next-intl";
+import { listsNoApps, type TrackedKeywordItem } from "@asobeast/shared";
+import enKeywords from "../../../messages/en/keywords.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import { PositionDeltaChip } from "@/components/ui/delta-chip";
 import { GradedNumber } from "@/components/ui/graded";
-import { formatDate } from "@/lib/format";
+import { formatDateInLocale } from "@/lib/format";
 import { grade, type Grade } from "@/lib/grade";
 import type { LostPosition } from "@/lib/keyword-checks";
+import type { Locale } from "@/lib/locale";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
 
-export const lastRankedLine = (position: number, on: string) =>
-  `Last ranked #${position} on ${formatDate(on)}`;
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywords",
+  messages: { keywords: enKeywords },
+});
+
+export const lastRankedLine = (
+  position: number,
+  on: string,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
+) =>
+  t("position.lastRanked", {
+    position,
+    date: formatDateInLocale(on, locale),
+  });
 
 const CHIP = "h-6 min-w-9 justify-center rounded-md px-1.5 font-semibold";
 
@@ -39,22 +55,24 @@ export function PositionReadout({
   chip?: boolean;
   className?: string;
 }) {
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
   const tier = grade("position", keyword.latestPosition);
   const noApps =
     keyword.latestPosition === null && listsNoApps(keyword.latestResultCount);
   const lostTitle = lost?.on
-    ? lastRankedLine(lost.position, lost.on)
+    ? lastRankedLine(lost.position, lost.on, t, locale)
     : undefined;
   const title =
-    [noApps ? NO_APPS_SENTENCE : null, lostTitle]
+    [noApps ? t("position.noAppsSentence") : null, lostTitle]
       .filter((part): part is string => Boolean(part))
       .join(". ") || undefined;
   const worded =
     keyword.latestDepth !== null && keyword.latestDepth !== undefined;
   const name = [
     noApps
-      ? `${NO_APPS_LABEL}: ${NO_APPS_SENTENCE}`
-      : `Not found in the top ${keyword.latestDepth}`,
+      ? `${t("position.noApps")}: ${t("position.noAppsSentence")}`
+      : t("position.notFound", { depth: keyword.latestDepth ?? 0 }),
     lostTitle ?? (lost ? `was #${lost.position}` : null),
   ]
     .filter((part): part is string => part !== null)
@@ -76,10 +94,9 @@ export function PositionReadout({
         >
           <span aria-hidden={worded || undefined}>{label}</span>
           {lost ? (
-            <span
-              aria-hidden
-              className="text-tick text-faint-foreground"
-            >{`was #${lost.position}`}</span>
+            <span className="text-tick text-faint-foreground">
+              {t("position.was", { position: lost.position })}
+            </span>
           ) : null}
           {worded ? <span className="sr-only">{name}</span> : null}
         </span>
@@ -87,7 +104,7 @@ export function PositionReadout({
         <GradedNumber
           value={label}
           grade={tier}
-          label="Position"
+          label={t("position.label")}
           marker={!chip}
           className={cn(chip && positionChipClass(tier), className)}
         />

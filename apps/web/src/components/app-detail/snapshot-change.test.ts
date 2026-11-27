@@ -1,6 +1,25 @@
-import { CHANGE_FIELD_LABELS, CHANGE_FIELDS } from "@asobeast/shared";
+import {
+  CHANGE_FIELD_LABELS,
+  CHANGE_FIELDS,
+  type SnapshotChange,
+} from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
-import { snapshotChangeCells, snapshotChangeLabel } from "./snapshot-change";
+import { translationContext } from "@/test/translation-context";
+import {
+  snapshotChangeCells as cellsInLocale,
+  snapshotChangeLabel as labelInLocale,
+} from "./snapshot-change";
+
+const en = translationContext("en", "appDetail");
+const zh = translationContext("zh-CN", "appDetail");
+
+const snapshotChangeLabel = (
+  change: Pick<SnapshotChange, "field" | "localization">,
+) => labelInLocale(change, en);
+const snapshotChangeCells = (
+  change: SnapshotChange,
+  currency?: string | null,
+) => cellsInLocale(change, currency, en);
 
 describe("snapshotChangeLabel", () => {
   it("names every recorded change field like the changes timeline", () => {
@@ -157,7 +176,9 @@ describe("snapshotChangeCells", () => {
       snapshotChangeCells({ field: "subtitle", before: null, after: 7 }),
     ).toEqual({ before: "—", after: "7 chars" });
   });
+});
 
+describe("snapshotChangeCells store summaries", () => {
   it("keeps the recorded screenshot wording", () => {
     expect(
       snapshotChangeCells({
@@ -216,5 +237,68 @@ describe("snapshotChangeCells", () => {
     expect(
       snapshotChangeCells({ field: "inAppEvents", before: null, after: null }),
     ).toEqual({ before: "—", after: "—" });
+  });
+
+  it("localizes field labels, character counts and free prices in Chinese", () => {
+    expect(labelInLocale({ field: "title", localization: "pl" }, zh)).toBe(
+      "标题 · 波兰语",
+    );
+    expect(
+      cellsInLocale({ field: "title", before: 3, after: 1200 }, null, zh),
+    ).toEqual({ before: "3 个字符", after: "1,200 个字符" });
+    expect(
+      cellsInLocale({ field: "price", before: "1.99", after: "0" }, "EUR", zh),
+    ).toEqual({ before: "€1.99", after: "免费" });
+    expect(
+      cellsInLocale(
+        {
+          field: "icon",
+          before: "https://example.com/a.png",
+          after: "https://example.com/b.png",
+        },
+        null,
+        zh,
+      ),
+    ).toEqual({ before: "—", after: "图标已更新" });
+  });
+
+  it("localizes store-decided snapshot summaries without translating their names", () => {
+    expect(
+      cellsInLocale(
+        {
+          field: "inAppEvents",
+          before: null,
+          after: null,
+          detail: {
+            kind: "events",
+            added: [
+              {
+                appEventId: "e1",
+                title: "Double XP weekend",
+                kind: null,
+                badge: null,
+                startsAt: null,
+                endsAt: null,
+              },
+            ],
+            removed: [],
+          },
+        },
+        null,
+        zh,
+      ),
+    ).toEqual({ before: "—", after: "已添加应用内活动：Double XP weekend" });
+    expect(
+      cellsInLocale(
+        {
+          field: "editorsChoice",
+          before: null,
+          after: null,
+          detail: { kind: "editorsChoice", showsBadge: true, notes: null },
+        },
+        null,
+        zh,
+      ),
+    ).toEqual({ before: "—", after: "已添加编辑精选徽章" });
   });
 });

@@ -1,35 +1,47 @@
-import {
-  RENEWAL_CADENCE,
-  type SupportWorkspaceSummary,
-} from "@asobeast/shared";
-import { heldPlanLabel, stageLabel } from "@/lib/admin-stages";
+import type { SupportWorkspaceSummary } from "@asobeast/shared";
+import type { TranslationContext } from "@/i18n/translator";
+import { stageWithPlanLabel } from "@/lib/admin-stages";
 import type { LabelledValue } from "@/lib/admin-support";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { formatDateInLocale, formatDateTimeInLocale } from "@/lib/format";
 
-export function standingOf(workspace: SupportWorkspaceSummary): string {
-  const stage = stageLabel(workspace.stage, workspace.plan);
-  const held = workspace.stage ? heldPlanLabel(workspace.plan) : null;
-  return held ? `${stage} · ${held}` : stage;
+export function standingOf(
+  workspace: SupportWorkspaceSummary,
+  context: TranslationContext,
+): string {
+  return stageWithPlanLabel(
+    workspace.stage,
+    workspace.plan,
+    context.translator,
+  );
 }
 
 function subscriptionLine(
   status: string,
   workspace: SupportWorkspaceSummary,
+  context: TranslationContext,
 ): string {
-  const words = status.replaceAll("_", " ");
-  if (!workspace.billingInterval) return words;
-  const cadence = RENEWAL_CADENCE[workspace.billingInterval];
-  return workspace.cancelAtPeriodEnd
-    ? `${words}, billed ${cadence}`
-    : `${words}, renews ${cadence}`;
+  if (!workspace.billingInterval) return status;
+  const cadence = context.translator(
+    `support.cadence.${workspace.billingInterval === "month" ? "month" : "year"}`,
+  );
+  return context.translator(
+    workspace.cancelAtPeriodEnd
+      ? "support.subscriptionBilled"
+      : "support.subscriptionRenews",
+    { status, cadence },
+  );
 }
 
 function deletionAskedBy(
   by: string,
   workspace: SupportWorkspaceSummary,
+  context: TranslationContext,
 ): string {
   return workspace.deletionRequestedAt
-    ? `${by} on ${formatDate(workspace.deletionRequestedAt)}`
+    ? context.translator("support.deletionAskedBy", {
+        by,
+        date: formatDateInLocale(workspace.deletionRequestedAt, context.locale),
+      })
     : by;
 }
 
@@ -38,44 +50,60 @@ const fact = (label: string, value: string | null | undefined) =>
 
 export function workspaceFacts(
   workspace: SupportWorkspaceSummary,
+  context: TranslationContext,
 ): LabelledValue[] {
   const { storedPlan, plan, subscriptionStatus, planExpiresAt } = workspace;
+  const t = context.translator;
   return [
-    { label: "Stage", value: standingOf(workspace) },
-    ...fact("Plan stored", storedPlan !== plan ? storedPlan : null),
-    { label: "Created", value: formatDate(workspace.createdAt) },
+    { label: t("support.facts.stage"), value: standingOf(workspace, context) },
     ...fact(
-      "Trial started",
-      workspace.trialStartedAt && formatDate(workspace.trialStartedAt),
+      t("support.facts.storedPlan"),
+      storedPlan !== plan ? storedPlan : null,
+    ),
+    {
+      label: t("support.facts.created"),
+      value: formatDateInLocale(workspace.createdAt, context.locale),
+    },
+    ...fact(
+      t("support.facts.trialStarted"),
+      workspace.trialStartedAt &&
+        formatDateInLocale(workspace.trialStartedAt, context.locale),
     ),
     ...fact(
-      "Trial end",
-      workspace.trialEndsAt && formatDate(workspace.trialEndsAt),
+      t("support.facts.trialEnd"),
+      workspace.trialEndsAt &&
+        formatDateInLocale(workspace.trialEndsAt, context.locale),
     ),
     ...fact(
-      "First paid",
-      workspace.firstPaidAt && formatDate(workspace.firstPaidAt),
+      t("support.facts.firstPaid"),
+      workspace.firstPaidAt &&
+        formatDateInLocale(workspace.firstPaidAt, context.locale),
     ),
     ...fact(
-      "Subscription",
-      subscriptionStatus && subscriptionLine(subscriptionStatus, workspace),
+      t("support.facts.subscription"),
+      subscriptionStatus &&
+        subscriptionLine(subscriptionStatus, workspace, context),
     ),
     ...fact(
-      workspace.cancelAtPeriodEnd ? "Cancels on" : "Period ends",
-      planExpiresAt && formatDate(planExpiresAt),
+      workspace.cancelAtPeriodEnd
+        ? t("support.facts.cancelsOn")
+        : t("support.facts.periodEnds"),
+      planExpiresAt && formatDateInLocale(planExpiresAt, context.locale),
     ),
     ...fact(
-      "Suspended since",
-      workspace.suspendedAt && formatDateTime(workspace.suspendedAt),
+      t("support.facts.suspendedSince"),
+      workspace.suspendedAt &&
+        formatDateTimeInLocale(workspace.suspendedAt, context.locale),
     ),
     ...fact(
-      "Deletes on",
-      workspace.deletionDueAt && formatDate(workspace.deletionDueAt),
+      t("support.facts.deletesOn"),
+      workspace.deletionDueAt &&
+        formatDateInLocale(workspace.deletionDueAt, context.locale),
     ),
     ...fact(
-      "Deletion asked by",
+      t("support.facts.deletionAskedBy"),
       workspace.deletionRequestedBy &&
-        deletionAskedBy(workspace.deletionRequestedBy, workspace),
+        deletionAskedBy(workspace.deletionRequestedBy, workspace, context),
     ),
   ];
 }

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useKeywordScope } from "@/components/app-detail/use-market";
 import {
   FOOTER_LINK,
@@ -16,9 +17,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { formatNumber } from "@/lib/format";
+import { formatNumberInLocale } from "@/lib/format";
 import { discoveriesHref, discoveriesLine } from "@/lib/keyword-discoveries";
 import { appDetailOptions, appSummaryOptions } from "@/lib/queries";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
 
@@ -35,6 +37,8 @@ function CoverageField({
   found: number;
   tracked: number;
 }) {
+  const t = useTranslations("overview");
+  const locale = useAppLocale();
   const share = tracked === 0 ? 0 : Math.min(found / tracked, 1);
   return (
     <div className="grid grid-cols-[5.5rem_minmax(0,1fr)_auto] items-center gap-3">
@@ -51,8 +55,16 @@ function CoverageField({
           />
         </span>
         <span className="numeric text-right text-dense">
-          <span className="font-semibold">{formatNumber(found)}</span>
-          <span className="text-muted-foreground">{` of ${formatNumber(tracked)}`}</span>
+          {t.rich("coverage.ratio", {
+            found: formatNumberInLocale(found, locale),
+            tracked: formatNumberInLocale(tracked, locale),
+            emphasized: (chunks) => (
+              <span className="font-semibold">{chunks}</span>
+            ),
+            muted: (chunks) => (
+              <span className="text-muted-foreground">{chunks}</span>
+            ),
+          })}
         </span>
       </dd>
     </div>
@@ -61,30 +73,32 @@ function CoverageField({
 
 export function CoverageCard({ id }: { id: string }) {
   const { country, switchable } = useKeywordScope(id);
+  const t = useTranslations("overview");
+  const discoveriesT = useTranslations("keywordInspector");
   const { data: market } = useSuspenseQuery(appSummaryOptions(id, country));
   const { data: everyMarket } = useSuspenseQuery(appSummaryOptions(id));
   const { data: detail } = useSuspenseQuery(appDetailOptions(id));
   const coverage = everyMarket.coverage;
-  const discoveries = discoveriesLine(market.discoveries);
+  const discoveries = discoveriesLine(market.discoveries, discoveriesT);
 
   const fields = [
-    { label: "Title", found: coverage.inTitle },
+    { label: t("coverage.fields.title"), found: coverage.inTitle },
     ...(detail.store === "APP_STORE"
-      ? [{ label: "Subtitle", found: coverage.inSubtitle }]
+      ? [{ label: t("coverage.fields.subtitle"), found: coverage.inSubtitle }]
       : []),
-    { label: "Description", found: coverage.inDescription },
+    { label: t("coverage.fields.description"), found: coverage.inDescription },
   ];
 
   return (
     <Card>
       <CardHeader className={PANEL_HEADER}>
         <CardTitle asChild>
-          <h2>Metadata coverage</h2>
+          <h2>{t("coverage.title")}</h2>
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 px-2">
         <dl
-          aria-label="Tracked keywords found in each field"
+          aria-label={t("coverage.aria")}
           className="flex flex-col gap-2 px-2"
         >
           {fields.map((field) => (
@@ -96,15 +110,15 @@ export function CoverageCard({ id }: { id: string }) {
           ))}
         </dl>
         {coverage.uncoveredHighOpportunity.length === 0 ? (
-          <EmptyState title="Your metadata covers your top opportunities." />
+          <EmptyState title={t("coverage.covered")} />
         ) : (
           <div className="flex flex-col gap-1">
             <div aria-hidden className={cn(COLUMNS, LIST_HEAD)}>
-              <span>Not in your metadata</span>
-              <span className="text-right">Opportunity</span>
+              <span>{t("coverage.notInMetadata")}</span>
+              <span className="text-right">{t("coverage.opportunity")}</span>
             </div>
             <ul
-              aria-label="High-opportunity keywords absent from your metadata"
+              aria-label={t("coverage.uncoveredAria")}
               className="flex flex-col"
             >
               {coverage.uncoveredHighOpportunity.map((keyword) => (
@@ -117,7 +131,9 @@ export function CoverageCard({ id }: { id: string }) {
                       {keyword.text}
                     </span>
                     <span className="numeric text-right">
-                      <span className="sr-only">Opportunity </span>
+                      <span className="sr-only">
+                        {t("coverage.opportunityAria")}
+                      </span>
                       <span>{Math.round(keyword.opportunity)}</span>
                     </span>
                   </Link>
@@ -129,9 +145,7 @@ export function CoverageCard({ id }: { id: string }) {
       </CardContent>
       {switchable || discoveries ? (
         <CardFooter className="flex-wrap justify-between gap-y-1">
-          {switchable ? (
-            <span>All markets, judged against the home listing</span>
-          ) : null}
+          {switchable ? <span>{t("coverage.allMarkets")}</span> : null}
           {discoveries ? (
             <Link href={discoveriesHref(id, country)} className={FOOTER_LINK}>
               {discoveries}

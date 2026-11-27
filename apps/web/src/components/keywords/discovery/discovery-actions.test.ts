@@ -1,5 +1,6 @@
 import type { KeywordDiscoveryItem } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
+import { translationContext } from "@/test/translation-context";
 import {
   bulkLabels,
   rankedIds,
@@ -52,16 +53,30 @@ describe("bulk targets", () => {
 });
 
 describe("bulkLabels", () => {
+  const en = translationContext("en", "keywordInspector").translator;
+  const zh = translationContext("zh-CN", "keywordInspector").translator;
   it("names the count of each bulk action", () => {
-    expect(bulkLabels({ selected: 3, recommended: 50, ranked: 28 })).toEqual({
+    expect(
+      bulkLabels({ selected: 3, recommended: 50, ranked: 28 }, en),
+    ).toEqual({
       selected: "Track selected (3)",
       recommended: "Track recommended (50)",
       ranked: "Track all ranked (28)",
     });
-    expect(bulkLabels({ selected: 0, recommended: 0, ranked: 0 })).toEqual({
+    expect(bulkLabels({ selected: 0, recommended: 0, ranked: 0 }, en)).toEqual({
       selected: "Track selected (0)",
       recommended: "Track recommended (0)",
       ranked: "Track all ranked (0)",
+    });
+  });
+
+  it("localizes each bulk action and count in Chinese", () => {
+    expect(
+      bulkLabels({ selected: 3, recommended: 50, ranked: 28 }, zh),
+    ).toEqual({
+      selected: "跟踪已选（3）",
+      recommended: "跟踪推荐（50）",
+      ranked: "跟踪所有已排名（28）",
     });
   });
 });

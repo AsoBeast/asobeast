@@ -1,15 +1,18 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { AlertEventItem } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { Badge } from "@/components/ui/badge";
-import { EVENT_LABELS } from "@/components/settings/alert-event-copy";
+import { eventLabel } from "@/components/settings/alert-event-copy";
 import {
-  formatCountry,
-  formatDateTime,
-  formatUtcClock,
+  formatCountryInLocale,
+  formatDateTimeInLocale,
+  formatUtcClockInLocale,
   storeLabel,
 } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
+import { alertSentence } from "./alert-sentence";
 import { ALERT_EVENT_ICONS, ALERT_TONE_CLASS } from "./alert-event-icons";
 import { alertEventHref } from "./alert-event-href";
 import { AlertSizePill } from "./AlertSizePill";
@@ -30,12 +33,15 @@ const ROW_LINK =
 
 const SEPARATOR = "·";
 
-function marketNames(item: AlertEventItem): { full: string; short: string } {
+function marketNames(
+  item: AlertEventItem,
+  locale: ReturnType<typeof useAppLocale>,
+): { full: string; short: string } {
   const country = item.country;
   return {
     full: [
       item.store ? storeLabel(item.store) : null,
-      country ? formatCountry(country) : null,
+      country ? formatCountryInLocale(country, locale) : null,
     ]
       .filter((part) => part !== null)
       .join(` ${SEPARATOR} `),
@@ -44,7 +50,8 @@ function marketNames(item: AlertEventItem): { full: string; short: string } {
 }
 
 function Market({ item }: { item: AlertEventItem }) {
-  const { full, short } = marketNames(item);
+  const locale = useAppLocale();
+  const { full, short } = marketNames(item, locale);
   const lead = item.appName === null ? "" : `${SEPARATOR} `;
   return (
     <>
@@ -65,14 +72,16 @@ function Sentence({
   item: AlertEventItem;
   href: string | null;
 }) {
+  const t = useTranslations("notifications");
+  const locale = useAppLocale();
   const content = (
     <>
-      <span className="sr-only">{`${EVENT_LABELS[item.event]}: `}</span>
+      <span className="sr-only">{`${eventLabel(item.event, t)}: `}</span>
       <span
         dir="auto"
         className="line-clamp-3 wrap-anywhere @2xl/alerts:line-clamp-2"
       >
-        {item.sentence}
+        {alertSentence(item, locale)}
       </span>
     </>
   );
@@ -92,6 +101,8 @@ export function AlertEventRow({
   item: AlertEventItem;
   isNew: boolean;
 }) {
+  const t = useTranslations("alerts");
+  const locale = useAppLocale();
   const { icon: Icon, tone } = ALERT_EVENT_ICONS[item.event];
   const href = alertEventHref(item);
 
@@ -110,7 +121,7 @@ export function AlertEventRow({
         <Sentence item={item} href={href} />
         {isNew ? (
           <Badge variant="info" className={ALERT_ROW_NEW}>
-            New
+            {t("new")}
           </Badge>
         ) : null}
       </div>
@@ -126,10 +137,10 @@ export function AlertEventRow({
         </span>
         <time
           dateTime={item.occurredAt}
-          title={formatDateTime(item.occurredAt)}
+          title={formatDateTimeInLocale(item.occurredAt, locale)}
           className={ALERT_ROW_TIME}
         >
-          {formatUtcClock(item.occurredAt)}
+          {formatUtcClockInLocale(item.occurredAt, locale)}
         </time>
       </div>
       <AlertSizePill payload={item.payload} className={ALERT_ROW_SIZE} />

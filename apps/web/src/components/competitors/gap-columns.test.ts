@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { createTranslator } from "next-intl";
+import zhCompetitors from "../../../messages/zh-CN/competitors.json";
 import type { CompetitorGapKeyword } from "@asobeast/shared";
 import { gapSortValue, leadText, threatText } from "./gap-columns";
 
@@ -17,7 +19,19 @@ const row = (
   ...over,
 });
 
+const zh = createTranslator({
+  locale: "zh-CN",
+  namespace: "competitors",
+  messages: { competitors: zhCompetitors },
+});
+
 describe("threatText", () => {
+  it("writes a closing threat in Simplified Chinese", () => {
+    expect(
+      threatText(row({ threat: "closing", competitorDelta: 3 }), undefined, zh),
+    ).toBe("正在逼近，上升了 3 名");
+  });
+
   it("says how far a closing competitor rose", () => {
     expect(threatText(row({ threat: "closing", competitorDelta: 3 }))).toBe(
       "Closing in, rose 3",
@@ -53,6 +67,7 @@ describe("leadText", () => {
 
   it("says nobody else ranks", () => {
     expect(leadText(row({ gap: null }))).toBe("No competitor ranks");
+    expect(leadText(row({ gap: null }), zh)).toBe("没有竞品获得排名");
   });
 });
 

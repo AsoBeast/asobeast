@@ -1,12 +1,14 @@
 "use client";
 
 import { Check, RotateCcw, StickyNote } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { ActionItem } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { actionBrief, briefText } from "./action-brief";
 import { actionHeadline } from "./action-headline";
 import { actionStatusTag, type ActionStatusTag } from "./action-status-tag";
@@ -43,8 +45,10 @@ function RowReason({
   item: ActionItem;
   iconUrl: string | null | undefined;
 }) {
-  const tag = actionStatusTag(item);
-  const parts = item.evidence ? actionBrief(item.evidence) : [];
+  const t = useTranslations("actions");
+  const locale = useAppLocale();
+  const tag = actionStatusTag(item, t, locale);
+  const parts = item.evidence ? actionBrief(item.evidence, locale) : [];
 
   return (
     <div className="col-span-3 col-start-2 row-start-3 flex min-w-0 flex-wrap items-start gap-x-2 gap-y-1 pr-2 text-caption text-muted-foreground @2xl/queue:pr-0">
@@ -53,7 +57,7 @@ function RowReason({
           <>
             <AppIcon src={iconUrl} size={16} />
             <span className="min-w-0 font-medium wrap-anywhere text-foreground">
-              {item.scope.appName ?? "Unknown app"}
+              {item.scope.appName ?? t("unknownApp")}
             </span>
           </>
         )}
@@ -73,7 +77,7 @@ function RowReason({
       {item.note ? (
         <span className="inline-flex">
           <StickyNote aria-hidden className="size-3.5" />
-          <span className="sr-only">Has a note</span>
+          <span className="sr-only">{t("detail.note")}</span>
         </span>
       ) : null}
     </div>
@@ -89,6 +93,7 @@ function RowControls({
   headline: string;
   href: string;
 }) {
+  const t = useTranslations("actions");
   const { update, isPending: busy } = useActionUpdate(item, {
     moveFocus: true,
   });
@@ -103,7 +108,7 @@ function RowControls({
         onClick={() => update({ status: "OPEN" })}
       >
         <RotateCcw aria-hidden />
-        Reopen
+        {t("reopen")}
       </Button>
     );
   }
@@ -114,13 +119,13 @@ function RowControls({
         variant="secondary"
         size="sm"
         aria-disabled={busy || undefined}
-        aria-label="Done"
+        aria-label={t("done")}
         data-command="done"
         className="size-11 @2xl/queue:h-7 @2xl/queue:w-auto"
         onClick={() => update({ status: "DONE" })}
       >
         <Check aria-hidden />
-        <span className="hidden @2xl/queue:inline">Done</span>
+        <span className="hidden @2xl/queue:inline">{t("done")}</span>
       </Button>
       <ActionRowMenu
         item={item}
@@ -152,7 +157,9 @@ export function ActionRow({
   tabbable: boolean;
   onFocus: () => void;
 }) {
-  const headline = actionHeadline(item);
+  const t = useTranslations("actions");
+  const locale = useAppLocale();
+  const headline = actionHeadline(item, t, locale);
   const selectable = selection.selectable.includes(item.id);
   const checked = selectable && selection.isSelected(item.id);
 
@@ -172,7 +179,7 @@ export function ActionRow({
           <Checkbox
             checked={checked}
             onCheckedChange={() => selection.toggle(item.id)}
-            aria-label={`Select ${headline}`}
+            aria-label={t("selectAction", { headline })}
           />
         </label>
       ) : (

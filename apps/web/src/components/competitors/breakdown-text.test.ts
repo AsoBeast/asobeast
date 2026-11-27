@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { createTranslator } from "next-intl";
+import zhCompetitors from "../../../messages/zh-CN/competitors.json";
 import type {
   KeywordBreakdownApp,
   KeywordBreakdownField,
@@ -38,7 +40,17 @@ const standing = (
   ...overrides,
 });
 
+const zh = createTranslator({
+  locale: "zh-CN",
+  namespace: "competitors",
+  messages: { competitors: zhCompetitors },
+});
+
 describe("fieldLabel", () => {
+  it("names metadata fields in Simplified Chinese", () => {
+    expect(fieldLabel("keywordField", zh)).toBe("关键词字段");
+  });
+
   it.each([
     ["title", "Title"],
     ["subtitle", "Subtitle"],
@@ -134,6 +146,17 @@ describe("placementPhrase", () => {
 });
 
 describe("insightText", () => {
+  it("writes rating evidence in Simplified Chinese", () => {
+    expect(
+      insightText(
+        { rule: "ratings", theirs: 12000, yours: 300 },
+        "APP_STORE",
+        "none",
+        { t: zh, locale: "zh-CN" },
+      ),
+    ).toBe("它在这里的详情页有 12,000 条评分，而你有 300 条。");
+  });
+
   it("explains a stronger placement", () => {
     expect(
       insightText(

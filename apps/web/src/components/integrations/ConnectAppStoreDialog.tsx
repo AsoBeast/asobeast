@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,13 +24,14 @@ function problemOf(
   issuerId: string,
   keyId: string,
   privateKey: string,
+  t: ReturnType<typeof useTranslations>,
 ): string | null {
   if (!ISSUER_ID.test(issuerId)) {
-    return "Paste the issuer ID shown above the team keys in App Store Connect.";
+    return t("connectAppStore.issuerRequired");
   }
-  if (!KEY_ID.test(keyId)) return "The key ID is ten letters and digits.";
+  if (!KEY_ID.test(keyId)) return t("connectAppStore.keyIdRequired");
   if (!privateKey.includes(PRIVATE_KEY_MARKER)) {
-    return "Paste the whole contents of the .p8 file, or choose the file.";
+    return t("connectAppStore.privateKeyRequired");
   }
   return null;
 }
@@ -41,6 +43,7 @@ export function ConnectAppStoreDialog({
   label: string;
   variant?: "default" | "outline";
 }) {
+  const t = useTranslations("integrations");
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [issuerId, setIssuerId] = useState("");
@@ -67,21 +70,21 @@ export function ConnectAppStoreDialog({
       }),
     onSuccess: () => {
       invalidateStoreConnectionMutation(queryClient);
-      toast.success("App Store Connect connected");
+      toast.success(t("connectAppStore.connected"));
       reset(false);
     },
     onError: (failure) =>
       setError(
         failure instanceof ApiError
           ? failure.envelope.message
-          : "Could not connect App Store Connect.",
+          : t("connectAppStore.connectFailed"),
       ),
   });
   const connectOnce = useSingleFlight(mutation);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const problem = problemOf(issuerId.trim(), keyId.trim(), privateKey);
+    const problem = problemOf(issuerId.trim(), keyId.trim(), privateKey, t);
     setError(problem);
     if (!problem) connectOnce();
   }
@@ -98,11 +101,9 @@ export function ConnectAppStoreDialog({
       label={label}
       description={
         <>
-          Create a team key with the Admin role in Users and Access,
-          Integrations, so AsoBeast can ask Apple for the reports. AsoBeast
-          checks it with Apple, stores it encrypted and never shows it again.{" "}
+          <span>{t("connectAppStore.description")}</span>{" "}
           <GuideLink href={CONNECT_GUIDES.appStore} subject="App Store Connect">
-            Step by step guide
+            {t("connectAppStore.guide")}
           </GuideLink>
         </>
       }
@@ -116,7 +117,7 @@ export function ConnectAppStoreDialog({
       }
     >
       <div className="flex flex-col gap-2">
-        <Label htmlFor="asc-issuer-id">Issuer ID</Label>
+        <Label htmlFor="asc-issuer-id">{t("connectAppStore.issuerId")}</Label>
         <Input
           id="asc-issuer-id"
           value={issuerId}
@@ -128,7 +129,7 @@ export function ConnectAppStoreDialog({
         />
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="asc-key-id">Key ID</Label>
+        <Label htmlFor="asc-key-id">{t("connectAppStore.keyId")}</Label>
         <Input
           id="asc-key-id"
           value={keyId}
@@ -140,13 +141,15 @@ export function ConnectAppStoreDialog({
         />
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="asc-private-key">Private key</Label>
+        <Label htmlFor="asc-private-key">
+          {t("connectAppStore.privateKey")}
+        </Label>
         <Input
           id="asc-private-key"
           type="password"
           value={privateKey}
           onChange={(event) => setPrivateKey(event.target.value)}
-          placeholder="Contents of AuthKey_2X9R4HXF34.p8"
+          placeholder={t("connectAppStore.privateKeyPlaceholder")}
           autoComplete="off"
           spellCheck={false}
           data-1p-ignore="true"
@@ -154,7 +157,7 @@ export function ConnectAppStoreDialog({
           data-bwignore="true"
         />
         <Label htmlFor="asc-private-key-file" className="sr-only">
-          Private key file
+          {t("connectAppStore.privateKeyFile")}
         </Label>
         <Input
           id="asc-private-key-file"
@@ -164,9 +167,7 @@ export function ConnectAppStoreDialog({
           onChange={(event) => void choose(event.target.files?.[0])}
         />
         <p className="text-caption text-muted-foreground">
-          Paste the key or choose the .p8 file you downloaded. A team key with
-          the Admin role covers reports and replies; Sales and Reports reads
-          reports only, Customer Support replies only.
+          {t("connectAppStore.keyNote")}
         </p>
       </div>
     </AlertChannelDialog>

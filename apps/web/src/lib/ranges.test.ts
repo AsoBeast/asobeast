@@ -1,4 +1,7 @@
+import { createTranslator } from "next-intl";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import enFormat from "../../messages/en/format.json";
+import zhFormat from "../../messages/zh-CN/format.json";
 import {
   MOVER_WINDOWS,
   RANGE_PRESETS,
@@ -110,5 +113,25 @@ describe("rangeLabel", () => {
 
   it("labels a mover window the same way", () => {
     expect(rangeLabel(`${MOVER_WINDOWS[0]}d`)).toBe("Last 7 days");
+  });
+
+  it("labels ranges in Simplified Chinese", () => {
+    const translator = createTranslator({
+      locale: "zh-CN",
+      namespace: "format",
+      messages: { format: zhFormat },
+      timeZone: "UTC",
+    });
+    expect(rangeLabel("30d", translator)).toBe("最近 30 天");
+  });
+
+  it("uses the registered ICU descriptor and singular branch", () => {
+    const translator = createTranslator({
+      locale: "en",
+      namespace: "format",
+      messages: { format: enFormat },
+      timeZone: "UTC",
+    });
+    expect(rangeLabel("1d", translator)).toBe("Last 1 day");
   });
 });

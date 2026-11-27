@@ -1,5 +1,6 @@
 import type { AppSetupSummary, PortfolioApp } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
+import { translationContext } from "@/test/translation-context";
 import {
   activeKeywordCount,
   bannerApps,
@@ -199,6 +200,51 @@ describe("keywordsStepDescription", () => {
   it("names the title and short description of a Google Play listing", () => {
     expect(keywordsStepDescription("GOOGLE_PLAY")).toBe(
       "Track at least 10 keywords in your home storefront. The import already tracked the phrases of your title and short description.",
+    );
+  });
+});
+
+describe("Simplified Chinese setup progress", () => {
+  const t = translationContext("zh-CN", "setup").translator;
+
+  it("renders progress, completed facts, and the remaining steps in Chinese", () => {
+    expect(
+      progressSentence(
+        "Focus Timer",
+        { done: 1, total: 3, next: "keywords" },
+        t,
+      ),
+    ).toBe("设置 Focus Timer · 1/3 · 下一步：跟踪关键词");
+    expect(
+      progressValueLabel({ done: 2, total: 3, next: "countries" }, t),
+    ).toBe("2/3 个步骤");
+    expect(
+      completedFacts(
+        {
+          competitors: 1,
+          keywords: 4,
+          home: "us",
+          markets: 2,
+          completedAt: "2026-11-12T08:30:00.000Z",
+        },
+        t,
+        "zh-CN",
+      ),
+    ).toEqual([
+      "1 个竞品",
+      "4 个关键词，位于 美国",
+      "2 个国家",
+      "于 11月12日 完成",
+    ]);
+    expect(
+      completionHint(
+        { competitors: "done", keywords: "open", countries: "loading" },
+        t,
+        "zh-CN",
+      ),
+    ).toBe("请先完成或跳过跟踪关键词和添加国家。");
+    expect(keywordsStepDescription("APP_STORE", t)).toBe(
+      "在主应用商店地区至少跟踪 10 个关键词。导入时已经跟踪了您的标题和副标题中的短语。",
     );
   });
 });

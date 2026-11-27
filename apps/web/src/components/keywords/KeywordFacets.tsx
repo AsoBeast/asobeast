@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { SetValues } from "nuqs";
 import type { Row, Table } from "@tanstack/react-table";
 import {
@@ -7,60 +8,36 @@ import {
   KEYWORD_SOURCES,
   type TrackedKeywordItem,
 } from "@asobeast/shared";
-import { BUCKET_LABELS } from "@/components/BucketBadge";
 import { FacetFilter } from "@/components/data-table/FacetFilter";
 import { SelectFilter } from "@/components/data-table/SelectFilter";
 import { gradeFill } from "@/components/ui/graded";
-import { GRADES, grade, gradeLabel, type GradeMetric } from "@/lib/grade";
+import {
+  GRADES,
+  grade,
+  gradeLabelInLocale,
+  type GradeMetric,
+} from "@/lib/grade";
 import {
   KEYWORD_STATUSES,
   type keywordFilterParsers,
 } from "@/lib/search-params";
+import { countBy, POSITION_BANDS, positionBandOf } from "@/lib/table/facets";
+import { useAppLocale } from "@/lib/use-app-locale";
 import {
-  countBy,
-  POSITION_BAND_LABELS,
-  POSITION_BANDS,
-  positionBandOf,
-} from "@/lib/table/facets";
-import { KEYWORD_CLASS_OPTIONS } from "./keyword-class";
-import { KeywordTypeTip } from "./KeywordTypeTip";
-import type { KeywordTableFeatures } from "./keyword-table-features";
-import {
-  STATUS_LABELS,
+  bucketLabel,
+  positionBandLabel,
+  statusLabel,
   tagOptions,
   type KeywordFilters,
 } from "./keyword-filters";
+import { keywordClassOptions } from "./keyword-class";
+import { KeywordTypeTip } from "./KeywordTypeTip";
+import type { KeywordTableFeatures } from "./keyword-table-features";
 import { shownScore } from "@/lib/keyword-scores";
-import { SOURCE_LABELS } from "./SourceLabel";
+import { sourceLabel } from "./SourceLabel";
 
 type KeywordTable = Table<KeywordTableFeatures, TrackedKeywordItem>;
 type KeywordRow = Row<KeywordTableFeatures, TrackedKeywordItem>;
-
-const SOURCE_OPTIONS = KEYWORD_SOURCES.map((value) => ({
-  value,
-  label: SOURCE_LABELS[value],
-}));
-
-const BUCKET_OPTIONS = KEYWORD_BUCKETS.map((value) => ({
-  value,
-  label: BUCKET_LABELS[value],
-}));
-
-const STATUS_OPTIONS = KEYWORD_STATUSES.map((value) => ({
-  value,
-  label: STATUS_LABELS[value],
-}));
-
-const GRADE_OPTIONS = GRADES.map((value) => ({
-  value,
-  label: gradeLabel(value),
-  swatch: gradeFill(value),
-}));
-
-const POSITION_OPTIONS = POSITION_BANDS.map((value) => ({
-  value,
-  label: POSITION_BAND_LABELS[value],
-}));
 
 function facetCounts<K>(
   table: KeywordTable,
@@ -80,10 +57,12 @@ function TagFacet({
   table,
   selected,
   setFilters,
+  title,
 }: {
   table: KeywordTable;
   selected: readonly string[];
   setFilters: SetValues<typeof keywordFilterParsers>;
+  title: string;
 }) {
   const counts = table.getColumn("tags")?.getFacetedUniqueValues() ?? new Map();
   const options = tagOptions(
@@ -93,7 +72,7 @@ function TagFacet({
   if (options.length === 0) return null;
   return (
     <FacetFilter
-      title="Tags"
+      title={title}
       options={options}
       selected={selected}
       counts={counts}
@@ -111,11 +90,35 @@ export function KeywordFacets({
   filters: KeywordFilters;
   setFilters: SetValues<typeof keywordFilterParsers>;
 }) {
+  const t = useTranslations("keywords");
+  const locale = useAppLocale();
+  const sourceOptions = KEYWORD_SOURCES.map((value) => ({
+    value,
+    label: sourceLabel(value, t),
+  }));
+  const bucketOptions = KEYWORD_BUCKETS.map((value) => ({
+    value,
+    label: bucketLabel(value, t),
+  }));
+  const statusOptions = KEYWORD_STATUSES.map((value) => ({
+    value,
+    label: statusLabel(value, t),
+  }));
+  const gradeOptions = GRADES.map((value) => ({
+    value,
+    label: gradeLabelInLocale(value, locale),
+    swatch: gradeFill(value),
+  }));
+  const positionOptions = POSITION_BANDS.map((value) => ({
+    value,
+    label: positionBandLabel(value, t),
+  }));
+
   return (
     <>
       <FacetFilter
-        title="Position"
-        options={POSITION_OPTIONS}
+        title={t("filters.position")}
+        options={positionOptions}
         selected={filters.pos}
         counts={facetCounts(table, "position", (row) =>
           positionBandOf(row.original.latestPosition, row.original.latestDepth),
@@ -123,30 +126,30 @@ export function KeywordFacets({
         onChange={(pos) => void setFilters({ pos })}
       />
       <FacetFilter
-        title="Opportunity"
-        options={GRADE_OPTIONS}
+        title={t("filters.opportunity")}
+        options={gradeOptions}
         selected={filters.opp}
         counts={gradeCounts(table, "opportunity", "opportunity")}
         onChange={(opp) => void setFilters({ opp })}
       />
       <FacetFilter
-        title="Popularity"
-        options={GRADE_OPTIONS}
+        title={t("filters.popularity")}
+        options={gradeOptions}
         selected={filters.pop}
         counts={gradeCounts(table, "traffic", "popularity")}
         onChange={(pop) => void setFilters({ pop })}
       />
       <FacetFilter
-        title="Difficulty"
-        options={GRADE_OPTIONS}
+        title={t("filters.difficulty")}
+        options={gradeOptions}
         selected={filters.diff}
         counts={gradeCounts(table, "difficulty", "difficulty")}
         onChange={(diff) => void setFilters({ diff })}
       />
       <span className="inline-flex items-center gap-1">
         <FacetFilter
-          title="Type"
-          options={KEYWORD_CLASS_OPTIONS}
+          title={t("filters.type")}
+          options={keywordClassOptions(t)}
           selected={filters.type}
           counts={facetCounts(
             table,
@@ -157,23 +160,28 @@ export function KeywordFacets({
         />
         <KeywordTypeTip />
       </span>
-      <TagFacet table={table} selected={filters.tag} setFilters={setFilters} />
+      <TagFacet
+        table={table}
+        selected={filters.tag}
+        setFilters={setFilters}
+        title={t("filters.tags")}
+      />
       <SelectFilter
-        title="Status"
+        title={t("filters.status")}
         value={filters.status}
-        options={STATUS_OPTIONS}
+        options={statusOptions}
         onChange={(status) => void setFilters({ status })}
       />
       <FacetFilter
-        title="Source"
-        options={SOURCE_OPTIONS}
+        title={t("filters.source")}
+        options={sourceOptions}
         selected={filters.source}
         counts={facetCounts(table, "source", (row) => row.original.source)}
         onChange={(source) => void setFilters({ source })}
       />
       <FacetFilter
-        title="Bucket"
-        options={BUCKET_OPTIONS}
+        title={t("filters.bucket")}
+        options={bucketOptions}
         selected={filters.bucket}
         counts={facetCounts(table, "bucket", (row) => row.original.bucket)}
         onChange={(bucket) => void setFilters({ bucket })}

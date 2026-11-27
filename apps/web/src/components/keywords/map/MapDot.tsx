@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, type KeyboardEvent } from "react";
+import { useTranslations } from "next-intl";
 import type { ScatterShapeProps } from "recharts";
 import { seriesColor } from "@/components/charts/theme";
 import { isKeywordZone, type KeywordZone } from "@/lib/keyword-zones";
@@ -107,6 +108,7 @@ export function MapDotShape({ cx, cy, payload }: ScatterShapeProps) {
   const { chosenZone, labelled, rovingId, focusedId, openId, multiMarket } =
     useContext(MapDotState);
   const actions = useContext(MapDotActionsContext);
+  const t = useTranslations("keywordInspector");
   if (cx === undefined || cy === undefined || !isMapPoint(payload)) {
     return null;
   }
@@ -126,7 +128,7 @@ export function MapDotShape({ cx, cy, payload }: ScatterShapeProps) {
       className="group outline-none"
       role={checked ? "button" : "img"}
       tabIndex={rovingId === payload.keywordId ? 0 : -1}
-      aria-label={dotName(payload, multiMarket)}
+      aria-label={dotName(payload, multiMarket, t)}
       aria-haspopup={checked ? "dialog" : undefined}
       aria-expanded={checked ? openId === payload.keywordId : undefined}
       onPointerEnter={() => actions?.hover(payload)}

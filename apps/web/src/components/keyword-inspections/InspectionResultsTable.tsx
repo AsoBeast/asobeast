@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import type {
   KeywordInspectionApp,
   KeywordInspectionResult,
@@ -17,8 +18,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatCompact, formatNumber } from "@/lib/format";
-import { sinceUpdate, TITLE_MATCH_LABELS } from "./inspection-format";
+import { formatCompactInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
+import { sinceUpdate, titleMatchLabel } from "./inspection-format";
 
 const COLLAPSED_COUNT = 10;
 
@@ -31,7 +33,8 @@ function ResultName({
   isNew: boolean;
   at: string;
 }) {
-  const line = [result.developer, sinceUpdate(result.updatedAt, at)]
+  const t = useTranslations("keywordInspector");
+  const line = [result.developer, sinceUpdate(result.updatedAt, at, t)]
     .filter((part) => part !== null)
     .join(" · ");
   return (
@@ -47,8 +50,10 @@ function ResultName({
           </span>
           {isNew ? (
             <span className="shrink-0 text-label text-signal-up">
-              <span>New</span>
-              <span className="sr-only"> in the top 10</span>
+              <span>{t("inspector.results.new")}</span>
+              <span className="sr-only">
+                {t("inspector.results.newInTop10")}
+              </span>
             </span>
           ) : null}
         </span>
@@ -77,22 +82,36 @@ export function InspectionResultsTable({
   at: string;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const t = useTranslations("keywordInspector");
+  const locale = useAppLocale();
   const shown = expanded ? results : results.slice(0, COLLAPSED_COUNT);
   const newcomers = new Set(entered.map((app) => app.storeAppId));
   return (
     <div className="flex flex-col">
-      <Table scrollLabel="Search results" scrollFocus="overflow">
+      <Table
+        scrollLabel={t("inspector.results.scrollLabel")}
+        scrollFocus="overflow"
+      >
         <TableCaption className="sr-only">
-          {`The top ${shown.length} results for “${keyword}”, in store order`}
+          {t("inspector.results.caption", {
+            count: shown.length,
+            keyword,
+          })}
         </TableCaption>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-10 pr-0 text-right">#</TableHead>
-            <TableHead className="md:pr-2">App</TableHead>
-            <TableHead className="hidden w-26 md:px-2 sm:table-cell">
-              Title match
+            <TableHead className="w-10 pr-0 text-right">
+              {t("inspector.results.rank")}
             </TableHead>
-            <TableHead className="w-20 text-right md:pl-2">Ratings</TableHead>
+            <TableHead className="md:pr-2">
+              {t("inspector.results.app")}
+            </TableHead>
+            <TableHead className="hidden w-26 md:px-2 sm:table-cell">
+              {t("inspector.results.titleMatch")}
+            </TableHead>
+            <TableHead className="w-20 text-right md:pl-2">
+              {t("inspector.results.ratings")}
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -109,13 +128,13 @@ export function InspectionResultsTable({
                 />
               </TableCell>
               <TableCell className="hidden text-muted-foreground sm:table-cell md:px-2">
-                <span>{TITLE_MATCH_LABELS[result.titleMatch]}</span>
+                <span>{titleMatchLabel(result.titleMatch, t)}</span>
               </TableCell>
               <TableCell className="numeric text-right md:pl-2">
                 <span>
                   {result.ratingCount === null
                     ? "—"
-                    : formatCompact(result.ratingCount)}
+                    : formatCompactInLocale(result.ratingCount, locale)}
                 </span>
               </TableCell>
             </TableRow>
@@ -131,8 +150,10 @@ export function InspectionResultsTable({
             onClick={() => setExpanded((open) => !open)}
           >
             {expanded
-              ? "Show the top 10"
-              : `Show all ${formatNumber(results.length)} results`}
+              ? t("inspector.results.showTop10")
+              : t("inspector.results.showAll", {
+                  count: results.length,
+                })}
           </Button>
         </div>
       ) : null}

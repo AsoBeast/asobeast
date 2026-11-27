@@ -3,16 +3,24 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import type { AppSummary, ShareOfVoice } from "@asobeast/shared";
+import type { MessageTranslator } from "@/i18n/translator";
 import { useKeywordScope } from "@/components/app-detail/use-market";
 import { appSummaryOptions } from "@/lib/queries";
 import { visibilityViewParser, type VisibilityView } from "@/lib/search-params";
 
-export const OVERVIEW_VIEW_TITLES: Record<VisibilityView, string> = {
-  visibility: "Search visibility",
-  share: "Share of voice",
-  top10: "Tracked keywords by rank band",
-  rating: "Rating on the home listing",
+const OVERVIEW_VIEW_KEYS: Record<VisibilityView, string> = {
+  visibility: "views.searchVisibility",
+  share: "views.shareOfVoice",
+  top10: "views.rankBands",
+  rating: "views.homeRating",
 };
+
+export function overviewViewTitle(
+  view: VisibilityView,
+  translator: MessageTranslator,
+): string {
+  return translator(OVERVIEW_VIEW_KEYS[view]);
+}
 
 const UNMEASURED_SHARE: ShareOfVoice = {
   current: null,

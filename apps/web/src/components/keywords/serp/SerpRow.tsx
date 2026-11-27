@@ -1,16 +1,18 @@
 import type { ReactNode } from "react";
 import { Star } from "lucide-react";
 import type { SerpEntryItem, Store } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
 import { AppIcon } from "@/components/AppIcon";
 import { MatchedText } from "@/components/keyword-match/MatchedText";
-import { MovementCell } from "@/components/movement/MovementCell";
+import type { Moved } from "@/components/movement/movement-text";
 import { Badge } from "@/components/ui/badge";
+import { DeltaChip } from "@/components/ui/delta-chip";
 import {
-  formatCompact,
-  formatDayMonth,
-  formatRating,
-  pluralize,
+  formatCompactInLocale,
+  formatDayMonthInLocale,
+  formatRatingInLocale,
 } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
 import { KeywordInLine } from "./KeywordInLine";
 import type { SerpRole } from "./serp-csv";
@@ -21,9 +23,16 @@ export const SERP_ROW_GRID =
 
 export const serpRowId = (position: number) => `serp-row-${position}`;
 
-function ratingSentence(average: number, count: number | null): string {
-  const rated = `Rated ${formatRating(average)}`;
-  return count === null ? rated : `${rated} from ${pluralize(count, "rating")}`;
+function ratingSentence(
+  average: number,
+  count: number | null,
+  t: ReturnType<typeof useTranslations>,
+  locale: ReturnType<typeof useAppLocale>,
+): string {
+  const rating = formatRatingInLocale(average, locale);
+  return count === null
+    ? t("serp.row.rating", { rating })
+    : t("serp.row.ratings", { rating, count });
 }
 
 function Rating({
@@ -33,26 +42,85 @@ function Rating({
   average: number | null;
   count: number | null;
 }) {
+  const t = useTranslations("keywordInspector");
+  const locale = useAppLocale();
   if (average === null) return null;
   return (
     <span className="col-start-3 row-start-2 flex items-center text-caption text-muted-foreground sm:col-start-4 sm:row-start-1 sm:pt-0.5">
       <span aria-hidden className="flex items-center gap-1.5 numeric">
         <Star className="size-3 fill-current" />
-        <span>{formatRating(average)}</span>
-        {count === null ? null : <span>{formatCompact(count)}</span>}
+        <span>{formatRatingInLocale(average, locale)}</span>
+        {count === null ? null : (
+          <span>{formatCompactInLocale(count, locale)}</span>
+        )}
       </span>
-      <span className="sr-only">{ratingSentence(average, count)}</span>
+      <span className="sr-only">
+        {ratingSentence(average, count, t, locale)}
+      </span>
     </span>
   );
 }
 
 function RoleBadge({ role }: { role: SerpRole }) {
+  const t = useTranslations("keywordInspector");
   if (role === "you") {
-    return <Badge variant="brand">You</Badge>;
+    return <Badge variant="brand">{t("serp.row.you")}</Badge>;
   }
   return role === "competitor" ? (
-    <Badge variant="secondary">Competitor</Badge>
+    <Badge variant="secondary">{t("serp.row.competitor")}</Badge>
   ) : null;
+}
+
+export function SerpMovement({
+  entry,
+  period,
+  noneText,
+}: {
+  entry: Moved;
+  period: string;
+  noneText: string;
+}) {
+  const t = useTranslations("keywordInspector");
+  if (entry.movement === "new") {
+    return (
+      <>
+        <span aria-hidden className="font-medium text-signal-up">
+          {t("serp.row.new")}
+        </span>
+        <span className="sr-only">{t("serp.row.movementNew")}</span>
+      </>
+    );
+  }
+  if (entry.movement === "none" || entry.movement === "same") {
+    return (
+      <>
+        <span aria-hidden className="text-muted-foreground">
+          —
+        </span>
+        <span className="sr-only">
+          {entry.movement === "same" ? t("serp.row.movementSame") : noneText}
+        </span>
+      </>
+    );
+  }
+  const spoken =
+    entry.movement === "up"
+      ? t("serp.row.movementUp", {
+          count: Math.abs(entry.delta ?? 0),
+          previous: entry.previous ?? 0,
+        })
+      : t("serp.row.movementDown", {
+          count: entry.delta ?? 0,
+          previous: entry.previous ?? 0,
+        });
+  return (
+    <>
+      <span aria-hidden>
+        <DeltaChip value={entry.delta} period={period} />
+      </span>
+      <span className="sr-only">{spoken}</span>
+    </>
+  );
 }
 
 function SubtitleText({
@@ -127,6 +195,13 @@ export function SerpRow({
   comparedTo: string | null;
   actions?: ReactNode;
 }) {
+  const t = useTranslations("keywordInspector");
+  const locale = useAppLocale();
+  const period = comparedTo
+    ? t("serp.summary.period", {
+        date: formatDayMonthInLocale(comparedTo, locale),
+      })
+    : "";
   return (
     <li
       id={serpRowId(entry.position)}
@@ -141,11 +216,10 @@ export function SerpRow({
       <span className="col-start-1 row-span-2 row-start-1 flex flex-col items-end gap-0.5 text-right">
         <span className="numeric font-medium">{entry.position}</span>
         <span className="text-caption">
-          <MovementCell
+          <SerpMovement
             entry={movedOf(entry)}
-            period={comparedTo ? `since ${formatDayMonth(comparedTo)}` : ""}
-            noneText="No earlier position"
-            compact
+            period={period}
+            noneText={t("serp.summary.noEarlierPosition")}
           />
         </span>
       </span>

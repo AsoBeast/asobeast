@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import type { AppDetail, AppScreenshots } from "@asobeast/shared";
+import { TestIntlProvider } from "@/test/intl-provider";
 import { ListingStorePreview } from "./ListingStorePreview";
 
 const detail: AppDetail = {
@@ -55,11 +56,13 @@ const read = (state: ReadState): UseQueryResult<AppScreenshots> =>
 
 const markupOf = (state: ReadState) =>
   renderToStaticMarkup(
-    <ListingStorePreview
-      detail={detail}
-      screenshots={read(state)}
-      source="live"
-    />,
+    <TestIntlProvider>
+      <ListingStorePreview
+        detail={detail}
+        screenshots={read(state)}
+        source="live"
+      />
+    </TestIntlProvider>,
   );
 
 describe("ListingStorePreview", () => {

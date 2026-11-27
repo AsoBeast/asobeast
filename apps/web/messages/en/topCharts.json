@@ -1,0 +1,187 @@
+{
+  "title": "Top charts",
+  "store": "Store",
+  "country": "Country",
+  "category": "Category",
+  "device": "Device",
+  "chart": "Chart",
+  "compare": "Compare",
+  "layout": "Layout",
+  "filters": "Filters",
+  "filterDescription": "Pick the country, category and comparison of the charts.",
+  "collections": {
+    "free": "Free",
+    "paid": "Paid",
+    "grossing": "Grossing"
+  },
+  "collectionTitles": {
+    "free": "Top free",
+    "paid": "Top paid",
+    "grossing": "Top grossing"
+  },
+  "devices": {
+    "iphone": "iPhone",
+    "android": "Android"
+  },
+  "compareOptions": {
+    "1d": "vs previous day",
+    "7d": "vs 7 days ago",
+    "30d": "vs 30 days ago"
+  },
+  "compareWords": {
+    "1d": "previous day",
+    "7d": "7 days ago",
+    "30d": "30 days ago",
+    "noneCaptured": "none captured",
+    "vs": "vs ",
+    "vsDate": "vs {date}"
+  },
+  "genres": {
+    "apps": "Apps",
+    "games": "Games",
+    "family": "Family",
+    "overall": "Overall"
+  },
+  "view": {
+    "sideBySide": "Side by side",
+    "table": "Table"
+  },
+  "display": "Chart display",
+  "table": "Table",
+  "history": "History",
+  "search": "Search apps",
+  "noMatches": "No apps match this search",
+  "appCount": "{count, plural, one {# app} other {# apps}}",
+  "captured": "captured {date}",
+  "comparedWith": "compared with {date}",
+  "historyFooter": "The top {shown} of {date} across the last {days} captured days. A line breaks on a day the app was outside the top {limit}.",
+  "column": {
+    "notCaptured": "Not captured yet",
+    "notCapturedOn": "Not captured on {date}",
+    "noApps": "No apps · {date}",
+    "top": "Top {shown} of {total}",
+    "captured": "Captured {date}"
+  },
+  "caption": "{chart} on {date}",
+  "actions": "Actions",
+  "price": "Price",
+  "change": "Change",
+  "app": "App",
+  "trending": {
+    "aria": "Trending list",
+    "kind": "Chart kind",
+    "title": "Trending",
+    "since": "Trending since {date}",
+    "climbers": "Climbers",
+    "entries": "New",
+    "fallers": "Fallers",
+    "exits": "Dropped out",
+    "out": "Out",
+    "noClimbers": "No climbers",
+    "noEntries": "No new entries",
+    "noFallers": "No fallers",
+    "noExits": "Nothing dropped out",
+    "newAt": "New at #{position}",
+    "was": "Was #{position}",
+    "fromTo": "from #{from} to #{to}",
+    "captureMore": "Capture more days to see movement.",
+    "footer": "Up to {limit} per list, from every captured place."
+  },
+  "tracked": {
+    "unavailable": "Unavailable",
+    "notListed": "not listed",
+    "yours": "Yours",
+    "competitor": "Competitor",
+    "title": "Your apps and competitors in {genre}",
+    "listed": "{count} listed",
+    "last30Days": "Last 30 days",
+    "trendLabel": "{app} in {collection}, last 30 days",
+    "footer": "Read from every listed place of each capture, not only the rows shown below."
+  },
+  "followed": {
+    "title": "Followed charts",
+    "description": "The daily run captures these every day.",
+    "empty": "No categories followed yet. Follow a category to have the daily run capture its charts.",
+    "stop": "Stop following {title}"
+  },
+  "capture": {
+    "failed": "Could not capture the chart.",
+    "storeFailed": "The store did not answer. Try again in a moment.",
+    "followFailed": "Could not follow the category.",
+    "followSuccess": "Following {category}; the daily run captures its charts from tomorrow",
+    "once": "Capture today reaches the store once.",
+    "everyWorkspace": "Capture today reaches the store once and stores the chart for every workspace.",
+    "noCaptures": "Your plan includes no chart captures.",
+    "dailyLimit": "Capture today spends one of the {limit} chart captures your plan allows a day.",
+    "pickCaptured": "Pick a captured day, or capture today.",
+    "pickOnly": "Pick a captured day.",
+    "captureOrFollow": "Capture it now, or follow the category so the daily run keeps it.",
+    "followOnly": "Follow the category so the daily run keeps it.",
+    "capturedToday": "Captured today's chart",
+    "captureToday": "Capture today",
+    "following": "Following",
+    "followCategory": "Follow category",
+    "stopFollowing": "Stop following",
+    "stopDescription": "The daily run stops capturing its free, paid and grossing charts; stored days stay.",
+    "stopTitle": "Stop following this category?",
+    "stopped": "Stopped following",
+    "stopFailed": "Could not stop following the category."
+  },
+  "row": {
+    "yours": "Yours",
+    "competitorOf": "Competitor of {name}",
+    "yourApp": "your app",
+    "addTo": "Add {title} to {app}",
+    "addAs": "Add {title} as competitor",
+    "addAsTo": "Add as competitor to"
+  },
+  "openTable": "Open table",
+  "openTableOf": " of {collection}",
+  "loading": "Loading {store} · {country}…",
+  "empty": {
+    "notCaptured": "This chart has not been captured yet",
+    "noCaptureOn": "No capture of this chart on {date}",
+    "noApps": "No apps in this chart"
+  },
+  "noAppsBody": "{store} listed no apps in {genre} on {date}. A category can have no apps of one kind, such as paid apps.",
+  "noAppsToast": "{store} lists no apps in this chart today",
+  "historyNotice": {
+    "title": "History needs four captured days",
+    "body": "{count} captured so far. Follow the category so the daily run captures it.",
+    "failed": "Could not load the earlier captures.",
+    "notListed": "Not listed",
+    "yours": " · yours",
+    "aria": "Positions of the top {apps} apps over {days} captured days"
+  },
+  "lede": {
+    "movement": "{climbed} climbed, {entered} new, {held} held, {fell} fell",
+    "up": " climbed {count} to {place}",
+    "down": " fell {count} to {place}",
+    "new": " entered {collection} at {place}",
+    "same": " holds {place}",
+    "sameWhere": " in {collection}, unchanged",
+    "none": " is {place}",
+    "where": " in {collection}",
+    "scopeTwo": " Across two charts ",
+    "scopeOne": " ",
+    "scopeThree": " Across the three charts ",
+    "since": " since {date}",
+    "sinceEarlier": " since each chart's earlier day",
+    "noneMoved": " Nothing moved{since}.",
+    "notCaptured": "{category} has not been captured yet.",
+    "noCaptureOn": "{category} has no capture on {date}.",
+    "noneOwn": "None of your apps is in {charts}.",
+    "thisChart": "this chart",
+    "theseCharts": "these charts",
+    "firstCount": "{count} {count, plural, one {app} other {apps}} {verb}",
+    "restCount": "{count} {verb}",
+    "and": " and ",
+    "comma": ", ",
+    "verbs": {
+      "climbed": "climbed",
+      "entered": "entered",
+      "fell": "fell",
+      "held": "held"
+    }
+  }
+}

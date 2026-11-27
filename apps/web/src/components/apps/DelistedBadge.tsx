@@ -1,14 +1,18 @@
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
-import { formatDate } from "@/lib/format";
+import { formatDateInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 
 export function DelistedBadge({ since }: { since: string }) {
+  const t = useTranslations("apps");
+  const locale = useAppLocale();
   return (
     <Badge
       variant="warning"
       className="w-fit"
-      title={`Not listed in its store since ${formatDate(since)}`}
+      title={t("delisted.title", { date: formatDateInLocale(since, locale) })}
     >
-      Delisted
+      {t("delisted.label")}
     </Badge>
   );
 }

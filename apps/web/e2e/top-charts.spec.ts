@@ -48,7 +48,7 @@ const monthIndex = (date: string) =>
 
 const stepBackToMonthOf = async (page: Page, shown: string, date: string) => {
   for (let month = monthIndex(date); month < monthIndex(shown); month += 1) {
-    await page.getByRole("button", { name: "Previous month" }).click();
+    await page.locator('[data-action="previous-month"]').click();
   }
 };
 
@@ -58,6 +58,11 @@ const kindRegion = (page: Page, name: string) =>
 const pick = async (page: Page, control: string, option: string) => {
   await page.getByRole("combobox", { name: control }).click();
   await page.getByRole("option", { name: option, exact: true }).click();
+};
+
+const pickOtherCountry = async (page: Page) => {
+  await page.getByRole("combobox", { name: "Country" }).click();
+  await page.locator('[data-action="other-country"]').click();
 };
 
 test("renders the chart for the default filters", async ({ page }) => {
@@ -336,8 +341,8 @@ test("keeps focus in the storefront code while a custom code is typed", async ({
   page,
 }) => {
   await page.goto("/charts?view=table");
-  await pick(page, "Country", "Other…");
-  const code = page.getByRole("textbox", { name: "Storefront country code" });
+  await pickOtherCountry(page);
+  const code = page.locator('[data-action="country-code"]');
 
   await code.click();
   await code.pressSequentially("se");
@@ -351,10 +356,8 @@ test("drops an unfinished custom code when the store changes", async ({
   page,
 }) => {
   await page.goto("/charts?view=table");
-  await pick(page, "Country", "Other…");
-  await page
-    .getByRole("textbox", { name: "Storefront country code" })
-    .fill("x");
+  await pickOtherCountry(page);
+  await page.locator('[data-action="country-code"]').fill("x");
 
   await page
     .getByRole("tablist", { name: "Store" })
@@ -364,9 +367,7 @@ test("drops an unfinished custom code when the store changes", async ({
   await expect(page.getByRole("combobox", { name: "Country" })).toHaveText(
     "US · United States",
   );
-  await expect(
-    page.getByRole("textbox", { name: "Storefront country code" }),
-  ).toHaveCount(0);
+  await expect(page.locator('[data-action="country-code"]')).toHaveCount(0);
 });
 
 test("shows a device control only for a store with more than one device", async ({
@@ -577,7 +578,7 @@ test("filters the rows in the browser", async ({ page }) => {
   await expect(chartTable(page).locator("tbody tr")).toHaveCount(1);
   await expect(page.getByText(/1\s+of\s+10\s+apps/)).toBeVisible();
 
-  await page.getByRole("button", { name: "Clear search" }).click();
+  await page.locator('[data-action="clear-search"]').click();
   await expect(chartTable(page).locator("tbody tr")).toHaveCount(10);
 });
 
@@ -1719,7 +1720,7 @@ test("keeps the loading cue clear of the table toolbar", async ({
   const pill = await cue.locator("span").first().boundingBox();
   const controls = [
     page.getByRole("textbox", { name: "Search apps" }),
-    page.getByRole("button", { name: "Columns" }),
+    page.locator('[data-action="columns"]'),
   ];
   for (const control of controls) {
     const box = await control.boundingBox();
@@ -2066,7 +2067,7 @@ async function retryWhileOneCaptureLoads(page: Page): Promise<HeldRequest> {
     "GET",
   );
   await page.goto("/charts?view=table&tableView=history");
-  const retry = page.getByRole("button", { name: "Retry" });
+  const retry = page.locator('[data-action="retry"]');
   await expect(retry).toBeVisible({ timeout: 30_000 });
 
   failing = false;
@@ -2134,7 +2135,7 @@ test.describe("chart history", () => {
       failing ? route.fulfill({ status: 500, body: "{}" }) : route.continue(),
     );
     await page.goto("/charts?view=table&tableView=history");
-    const retry = page.getByRole("button", { name: "Retry" });
+    const retry = page.locator('[data-action="retry"]');
     await expect(retry).toBeVisible({ timeout: 30_000 });
 
     failing = false;
@@ -2156,7 +2157,7 @@ test.describe("chart history", () => {
       route.fulfill({ status: 500, body: "{}" }),
     );
     await page.goto("/charts?view=table&tableView=history");
-    const retry = page.getByRole("button", { name: "Retry" });
+    const retry = page.locator('[data-action="retry"]');
     await expect(retry).toBeVisible({ timeout: 30_000 });
     const held = await holdRequest(page, /\/charts\?.*date=/, "GET");
 

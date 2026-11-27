@@ -17,12 +17,10 @@ for (const [name, path] of ROUTES) {
 
     const header = page.getByRole("banner");
     await expect(header.getByRole("button", { name: "Refresh" })).toBeVisible();
-    await expect(
-      header.getByRole("navigation", { name: "breadcrumb" }).locator("ol"),
-    ).toBeVisible();
+    await expect(header.locator('[data-slot="breadcrumb"] ol')).toBeVisible();
 
     const overlaps = await header.evaluate((node) => {
-      const list = node.querySelector("nav[aria-label='breadcrumb'] ol");
+      const list = node.querySelector('[data-slot="breadcrumb"] ol');
       if (!list) return ["breadcrumb list missing"];
       const crumbs = Array.from(list.querySelectorAll("li")).map((item) =>
         item.getBoundingClientRect(),
@@ -65,9 +63,7 @@ test("an unknown app offers no app actions and reads no run status", async ({
   });
 
   await page.goto("/apps/does-not-exist/keywords");
-  await expect(
-    page.getByRole("main").getByText("Page not found"),
-  ).toBeVisible();
+  await expect(page.locator('[data-slot="not-found"]')).toBeVisible();
   await page.waitForLoadState("networkidle");
 
   const header = page.getByRole("banner");

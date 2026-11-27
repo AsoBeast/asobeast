@@ -1,5 +1,8 @@
+"use client";
+
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   FOOTER_LINK,
   PANEL_COUNT,
@@ -16,11 +19,10 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 
 export function NoOpenActions({ generated }: { generated: boolean }) {
+  const t = useTranslations("actions");
   return (
     <EmptyState
-      title={
-        generated ? "Nothing needs you right now." : "No actions generated yet."
-      }
+      title={generated ? t("doNext.emptyGenerated") : t("doNext.emptyNever")}
     />
   );
 }
@@ -36,11 +38,12 @@ export function DoNextPanel({
   className?: string;
   children: ReactNode;
 }) {
+  const t = useTranslations("actions");
   return (
     <Card className={className}>
       <CardHeader className={PANEL_HEADER}>
         <CardTitle asChild>
-          <h2>Do next</h2>
+          <h2>{t("doNext.title")}</h2>
         </CardTitle>
         {counts ? (
           <CardAction className={PANEL_COUNT}>{counts}</CardAction>
@@ -48,9 +51,9 @@ export function DoNextPanel({
       </CardHeader>
       <CardContent className="flex-1 px-2">{children}</CardContent>
       <CardFooter className="justify-between">
-        <span>Rules over your stored history</span>
+        <span>{t("rulesOverHistory")}</span>
         <Link href={href} className={FOOTER_LINK}>
-          Open the Action Center
+          {t("doNext.openCenter")}
         </Link>
       </CardFooter>
     </Card>

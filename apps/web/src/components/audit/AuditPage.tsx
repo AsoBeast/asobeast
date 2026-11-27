@@ -1,6 +1,7 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { AiAnalysisPanel } from "@/components/audit/AiAnalysisPanel";
 import { AuditActionPlan } from "@/components/audit/AuditActionPlan";
 import { AuditBenchmarks } from "@/components/audit/AuditBenchmarks";
@@ -21,12 +22,13 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { appDetailOptions, auditOptions } from "@/lib/queries";
 
 export function AuditPage({ appId }: { appId: string }) {
+  const t = useTranslations("audit");
   const { data: audit } = useSuspenseQuery(auditOptions(appId));
   const { data: app } = useSuspenseQuery(appDetailOptions(appId));
 
   return (
     <div className="page-wide @container/audit flex flex-col gap-6">
-      <PageHeader title="Audit" titleHidden>
+      <PageHeader title={t("title")} titleHidden>
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
           <AuditLede audit={audit} />
           <CopyReportButton

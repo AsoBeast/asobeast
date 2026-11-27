@@ -1,0 +1,12 @@
+{
+  "marketCode": "市场代码必须是两位字母，例如 us",
+  "unknownMarket": "{store} 没有代码为 {code} 的应用商店地区。",
+  "notifications": {
+    "invalidEmail": "请输入有效的邮箱地址",
+    "invalidUrl": "请输入有效的 http(s) 网址",
+    "ruleRequired": "请至少开启一条规则",
+    "starRequired": "请至少选择一颗星",
+    "secretTooShort": "密钥必须至少包含 8 个字符",
+    "rankThreshold": "请输入 {min, number} 到 {max, number} 之间的整数"
+  }
+}

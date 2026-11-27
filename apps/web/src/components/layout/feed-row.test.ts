@@ -11,4 +11,10 @@ describe("feedDayLabel", () => {
   it("crosses a month boundary for yesterday", () => {
     expect(feedDayLabel("2026-10-31", "2026-11-01")).toBe("Yesterday");
   });
+
+  it("translates relative day labels and dates", () => {
+    expect(feedDayLabel("2026-11-06", "2026-11-06", "zh-CN")).toBe("今天");
+    expect(feedDayLabel("2026-11-05", "2026-11-06", "zh-CN")).toBe("昨天");
+    expect(feedDayLabel("2026-11-04", "2026-11-06", "zh-CN")).toBe("11月4日");
+  });
 });

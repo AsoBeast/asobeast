@@ -1,23 +1,22 @@
 "use client";
 
 import { Fragment, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { Clock, Loader2, MailCheck, MailX, Send } from "lucide-react";
 import type { WebhookEvent } from "@asobeast/shared";
+import type { TranslationContext } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { useAppLocale } from "@/lib/use-app-locale";
 import {
   eventBadgeLabel,
   type AlertSubscriptionChange,
 } from "../alert-event-copy";
-import { CONFIRM_DROPS_BADGE } from "../ConfirmDropsField";
 import { DeliveriesSection } from "../DeliveriesSection";
 import { DeleteChannelDialog } from "./DeleteChannelDialog";
 import { EditEventsDialog } from "./EditEventsDialog";
-import {
-  ESSENTIAL_ALERTS_BADGE,
-  ESSENTIAL_ALERTS_LINE,
-} from "../essential-alerts-copy";
 
 export interface AwaitingConfirmation {
   pending: boolean;
@@ -34,6 +33,7 @@ function RowAction({
   testPending: boolean;
   onTest: () => void;
 }) {
+  const t = useTranslations("notifications");
   if (awaiting?.unsubscribed) return null;
   if (awaiting) {
     return (
@@ -48,7 +48,7 @@ function RowAction({
         ) : (
           <MailCheck />
         )}
-        Resend confirmation
+        {t("confirmation.resend")}
       </Button>
     );
   }
@@ -60,23 +60,24 @@ function RowAction({
       onClick={onTest}
     >
       {testPending ? <Loader2 className="animate-spin" /> : <Send />}
-      Send test
+      {t("confirmation.sendTest")}
     </Button>
   );
 }
 
 function ConfirmationNotice({ awaiting }: { awaiting?: AwaitingConfirmation }) {
+  const t = useTranslations("notifications");
   if (!awaiting) return null;
   const [Icon, title, detail] = awaiting.unsubscribed
     ? [
         MailX,
-        "Unsubscribed.",
-        "The recipient asked not to receive these alerts, so they are not asked to confirm again.",
+        t("confirmation.unsubscribedTitle"),
+        t("confirmation.unsubscribedDetail"),
       ]
     : [
         Clock,
-        "Awaiting confirmation.",
-        "No alerts are sent until the recipient follows the link in the email.",
+        t("confirmation.awaitingTitle"),
+        t("confirmation.awaitingDetail"),
       ];
   return (
     <p className="flex items-start gap-2 text-caption text-muted-foreground">
@@ -94,6 +95,36 @@ interface Rule {
   label: string;
 }
 
+function RuleLabels({
+  rules,
+  locale,
+}: {
+  rules: readonly Rule[];
+  locale: Locale;
+}) {
+  const parts = new Intl.ListFormat(locale, {
+    type: "conjunction",
+  }).formatToParts(rules.map((rule) => rule.label));
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (part.type === "element") {
+          const ruleIndex = parts
+            .slice(0, index)
+            .filter((candidate) => candidate.type === "element").length;
+          const rule = rules[ruleIndex];
+          return (
+            <span key={rule.event} data-slot="alert-rule">
+              {rule.label}
+            </span>
+          );
+        }
+        return <span key={`${part.type}-${index}`}>{part.value}</span>;
+      })}
+    </>
+  );
+}
+
 function RuleLine({
   essential,
   facts,
@@ -105,11 +136,11 @@ function RuleLine({
   confirmDrops: boolean;
   rules: readonly Rule[];
 }) {
+  const t = useTranslations("notifications");
+  const locale = useAppLocale();
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-      {essential ? (
-        <Badge variant="info">{ESSENTIAL_ALERTS_BADGE}</Badge>
-      ) : null}
+      {essential ? <Badge variant="info">{t("essential.badge")}</Badge> : null}
       <p className="min-w-0 text-caption text-muted-foreground">
         {facts.map((fact) => (
           <Fragment key={fact}>
@@ -119,17 +150,18 @@ function RuleLine({
         ))}
         {confirmDrops ? (
           <>
-            <span data-slot="alert-rule">{CONFIRM_DROPS_BADGE}</span>
+            <span data-slot="alert-rule">{t("confirmDrops.badge")}</span>
             <span> · </span>
           </>
         ) : null}
-        {rules.length > 0 ? <span>Sends </span> : <span>Sends nothing</span>}
-        {rules.map((rule, index) => (
-          <Fragment key={rule.event}>
-            {index > 0 ? <span>, </span> : null}
-            <span data-slot="alert-rule">{rule.label}</span>
-          </Fragment>
-        ))}
+        {rules.length > 0 ? (
+          <>
+            <span>{t("rules.sendsPrefix")}</span>
+            <RuleLabels rules={rules} locale={locale} />
+          </>
+        ) : (
+          <span>{t("rules.sendsNothing")}</span>
+        )}
       </p>
     </div>
   );
@@ -182,6 +214,9 @@ export function AlertChannelRow({
   eventsPending: boolean;
   onEventsSave: (change: AlertSubscriptionChange) => Promise<unknown>;
 }) {
+  const t = useTranslations("notifications");
+  const locale = useAppLocale();
+  const context: TranslationContext = { translator: t, locale };
   return (
     <li className="flex flex-col gap-2 border-b border-border-subtle px-(--card-spacing) py-3 last:border-b-0">
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
@@ -192,7 +227,7 @@ export function AlertChannelRow({
           <Switch
             checked={active}
             aria-disabled={activePending || undefined}
-            aria-label={`Toggle ${label}`}
+            aria-label={t("rules.toggle", { label })}
             onCheckedChange={(next) => {
               if (!activePending) onActiveChange(next);
             }}
@@ -214,7 +249,7 @@ export function AlertChannelRow({
 
       {essential ? (
         <p className="text-caption text-muted-foreground">
-          {ESSENTIAL_ALERTS_LINE}
+          {t("essential.line")}
         </p>
       ) : null}
 
@@ -226,10 +261,15 @@ export function AlertChannelRow({
         confirmDrops={confirmDrops}
         rules={events.map((event) => ({
           event,
-          label: eventBadgeLabel(event, reviewScores, {
-            ratingDropTenths,
-            rankDropThreshold,
-          }),
+          label: eventBadgeLabel(
+            event,
+            reviewScores,
+            {
+              ratingDropTenths,
+              rankDropThreshold,
+            },
+            context,
+          ),
         }))}
       />
 

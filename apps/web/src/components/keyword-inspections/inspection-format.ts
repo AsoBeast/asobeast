@@ -1,3 +1,4 @@
+import { createTranslator } from "next-intl";
 import {
   DAY_SECONDS,
   normalizeText,
@@ -9,23 +10,23 @@ import {
   type SerpTitleMatch,
   type Store,
 } from "@asobeast/shared";
+import enKeywordInspector from "../../../messages/en/keywordInspector.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
 import {
-  formatCompact,
-  formatCountry,
-  formatNumber,
-  formatRating,
-  pluralize,
+  formatCompactInLocale,
+  formatCountryInLocale,
+  formatRatingInLocale,
   storeLabel,
 } from "@/lib/format";
 
-const DEFAULT_INSPECTION_COUNTRY = "us";
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywordInspector",
+  messages: { keywordInspector: enKeywordInspector },
+});
 
-export const TITLE_MATCH_LABELS: Record<SerpTitleMatch, string> = {
-  phrase: "Exact phrase",
-  words: "All words",
-  partial: "Some words",
-  none: "No match",
-};
+const DEFAULT_INSPECTION_COUNTRY = "us";
 
 export const inspectionCountry = (country: string): string =>
   country === "" ? DEFAULT_INSPECTION_COUNTRY : country;
@@ -52,15 +53,21 @@ export function changeTone(
   return change > 0 === higherIsBetter ? "better" : "worse";
 }
 
-export function updatedAgo(days: number): string {
+export function updatedAgo(
+  days: number,
+  t: MessageTranslator = english,
+): string {
   return days === 0
-    ? "Typically updated today"
-    : `Typical update ${pluralize(days, "day")} ago`;
+    ? t("inspector.format.typicalUpdatedToday")
+    : t("inspector.format.typicalUpdateAgo", { count: days });
 }
 
-export function signedChange(change: number | null): string {
+export function signedChange(
+  change: number | null,
+  t: MessageTranslator = english,
+): string {
   if (change === null) return "—";
-  if (change === 0) return "no change";
+  if (change === 0) return t("inspector.format.noChange");
   return change > 0 ? `+${change}` : `−${Math.abs(change)}`;
 }
 
@@ -70,60 +77,68 @@ export interface CompetitionFact {
   note: string;
 }
 
-const countOrDash = (value: number | null): string =>
-  value === null ? "—" : formatCompact(value);
+const countOrDash = (value: number | null, locale: Locale): string =>
+  value === null ? "—" : formatCompactInLocale(value, locale);
+
+const ratio = (count: number, total: number, t: MessageTranslator): string =>
+  t("inspector.format.competition.newcomersValue", { count, total });
 
 export function competitionFacts(
   competition: KeywordInspectionCompetition,
   newcomers: number | null = null,
+  t: MessageTranslator = english,
+  locale: Locale = "en",
 ): CompetitionFact[] {
   const top = competition.topCount;
+  const labels = "inspector.format.competition";
   const newcomerFact: CompetitionFact[] =
     newcomers === null
       ? []
       : [
           {
-            label: "Newcomers",
-            value: `${formatNumber(newcomers)} of ${formatNumber(top)}`,
-            note: "Released in the last year",
+            label: t(`${labels}.newcomers`),
+            value: ratio(newcomers, top, t),
+            note: t(`${labels}.newcomersNote`),
           },
         ];
   return [
     {
-      label: "Typical ratings",
-      value: countOrDash(competition.medianRatingCount),
-      note: `Median of the top ${top}`,
+      label: t(`${labels}.typicalRatings`),
+      value: countOrDash(competition.medianRatingCount, locale),
+      note: t(`${labels}.typicalRatingsNote`, { count: top }),
     },
     {
-      label: "Strongest app",
-      value: countOrDash(competition.strongestRatingCount),
-      note: "Most ratings in the top results",
+      label: t(`${labels}.strongestApp`),
+      value: countOrDash(competition.strongestRatingCount, locale),
+      note: t(`${labels}.strongestAppNote`),
     },
     {
-      label: "Average rating",
+      label: t(`${labels}.averageRating`),
       value:
         competition.averageRating === null
           ? "—"
-          : formatRating(competition.averageRating),
-      note: `Across the top ${top}`,
+          : formatRatingInLocale(competition.averageRating, locale),
+      note: t(`${labels}.averageRatingNote`, { count: top }),
     },
     {
-      label: "Titles that target it",
-      value: `${formatNumber(competition.titleMatches)} of ${formatNumber(top)}`,
-      note: `${formatNumber(competition.exactTitleMatches)} with the exact phrase`,
+      label: t(`${labels}.titlesTarget`),
+      value: ratio(competition.titleMatches, top, t),
+      note: t(`${labels}.exactTitlesNote`, {
+        count: competition.exactTitleMatches,
+      }),
     },
     {
-      label: "Heavyweights",
-      value: `${formatNumber(competition.appsOverHundredThousandRatings)} of ${formatNumber(top)}`,
-      note: "Apps with 100K ratings or more",
+      label: t(`${labels}.heavyweights`),
+      value: ratio(competition.appsOverHundredThousandRatings, top, t),
+      note: t(`${labels}.heavyweightsNote`),
     },
     {
-      label: "Recently updated",
-      value: `${formatNumber(competition.freshlyUpdated)} of ${formatNumber(top)}`,
+      label: t(`${labels}.recentlyUpdated`),
+      value: ratio(competition.freshlyUpdated, top, t),
       note:
         competition.medianDaysSinceUpdate === null
-          ? "Update dates unavailable"
-          : updatedAgo(competition.medianDaysSinceUpdate),
+          ? t(`${labels}.updatesUnavailable`)
+          : updatedAgo(competition.medianDaysSinceUpdate, t),
     },
     ...newcomerFact,
   ];
@@ -137,31 +152,41 @@ const MONTHS_FROM_DAYS = 60;
 export const storefrontCode = (store: Store, country: string): string =>
   `${storeLabel(store)} · ${country.toUpperCase()}`;
 
-export const storefrontName = (store: Store, country: string): string =>
-  `${storeLabel(store)} · ${formatCountry(country)}`;
+export const storefrontName = (
+  store: Store,
+  country: string,
+  locale: Locale = "en",
+): string => `${storeLabel(store)} · ${formatCountryInLocale(country, locale)}`;
 
 const daysBetween = (from: string, to: string): number =>
   Math.floor((Date.parse(to) - Date.parse(from)) / DAY_MS);
 
 export function inspectionCostText(
   limits: Pick<PlanLimits, "onDemand"> | undefined,
+  t: MessageTranslator = english,
 ): string {
   const score = limits?.onDemand?.score;
-  if (!score) return "Each inspection reads the store once.";
-  if (score.limit === 0) return "Your plan includes no on demand scores.";
-  const window = score.windowSeconds === DAY_SECONDS ? "a day" : "an hour";
-  return `Each inspection uses one of the ${formatNumber(score.limit)} on demand scores your plan allows ${window}.`;
+  if (!score) return t("inspector.format.costRead");
+  if (score.limit === 0) return t("inspector.format.costNone");
+  return score.windowSeconds === DAY_SECONDS
+    ? t("inspector.format.costDaily", { limit: score.limit })
+    : t("inspector.format.costHourly", { limit: score.limit });
 }
 
 export function sinceUpdate(
   updatedAt: string | null,
   at: string,
+  t: MessageTranslator = english,
 ): string | null {
   if (updatedAt === null) return null;
   const days = Math.max(0, daysBetween(updatedAt, at));
-  if (days === 0) return "updated today";
-  if (days < MONTHS_FROM_DAYS) return `updated ${pluralize(days, "day")} ago`;
-  return `updated ${pluralize(Math.floor(days / MONTH_DAYS), "month")} ago`;
+  if (days === 0) return t("inspector.format.updatedToday");
+  if (days < MONTHS_FROM_DAYS) {
+    return t("inspector.format.updatedDaysAgo", { count: days });
+  }
+  return t("inspector.format.updatedMonthsAgo", {
+    count: Math.floor(days / MONTH_DAYS),
+  });
 }
 
 export function newcomerCount(
@@ -178,22 +203,35 @@ export function newcomerCount(
   ).length;
 }
 
-export function autocompleteLine(signals: ScoreSignals | null): string | null {
+export function autocompleteLine(
+  signals: ScoreSignals | null,
+  t: MessageTranslator = english,
+): string | null {
   switch (signals?.suggestReach) {
     case "hit": {
       const typed = signals.suggestPrefixLength;
       const position = signals.suggestPosition;
       return typed === null || position === null
-        ? "Autocomplete suggests it while it is typed"
-        : `Autocomplete suggests it in position ${position} after ${pluralize(typed, "typed character")}`;
+        ? t("inspector.format.autocompleteWhileTyping")
+        : t("inspector.format.autocompleteAfter", {
+            count: typed,
+            position,
+          });
     }
     case "listed":
-      return "Autocomplete suggests it only once the whole phrase is typed";
+      return t("inspector.format.autocompleteListed");
     case "absent":
-      return "Autocomplete never suggests it";
+      return t("inspector.format.autocompleteAbsent");
     default:
       return null;
   }
+}
+
+export function titleMatchLabel(
+  match: SerpTitleMatch,
+  t: MessageTranslator = english,
+): string {
+  return t(`inspector.results.matches.${match}`);
 }
 
 export function otherStorefronts(

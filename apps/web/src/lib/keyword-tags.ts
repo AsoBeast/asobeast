@@ -5,6 +5,18 @@ import {
   SUGGESTED_KEYWORD_TAGS,
 } from "@asobeast/shared";
 
+import { createTranslator } from "next-intl";
+import enKeywords from "../../messages/en/keywords.json";
+import type { MessageTranslator } from "@/i18n/translator";
+import { formatListInLocale } from "@/lib/format";
+import type { Locale } from "@/lib/locale";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywords",
+  messages: { keywords: enKeywords },
+});
+
 export const VISIBLE_TAGS = 3;
 
 export function visibleTags(
@@ -17,8 +29,14 @@ export function visibleTags(
   };
 }
 
-export function tagsLabel(tags: readonly string[]): string {
-  return `Tags: ${tags.join(", ")}`;
+export function tagsLabel(
+  tags: readonly string[],
+  t: MessageTranslator = english,
+  locale: Locale = "en",
+): string {
+  return t("tags.label", {
+    tags: locale === "en" ? tags.join(", ") : formatListInLocale(tags, locale),
+  });
 }
 
 export type TagRefusal = "invalid" | "duplicate" | "limit";

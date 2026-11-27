@@ -1,0 +1,43 @@
+{
+  "direction": {
+    "up": "上升",
+    "down": "下降",
+    "flat": "持平"
+  },
+  "movement": {
+    "up": "从第 {previous} 名上升 {count} 名",
+    "down": "从第 {previous} 名下降 {count} 名",
+    "same": "没有变化",
+    "new": "新进入",
+    "newShort": "新增",
+    "from": "原为第 {previous} 名",
+    "noEarlier": "没有更早的捕获记录"
+  },
+  "noData": "暂无{label}数据",
+  "deltaLabel": "{period}{direction} {magnitude}{unit}",
+  "positionDeltaLabel": "{period}{direction} {magnitude}",
+  "positionSinceYesterday": "较昨日",
+  "trendValue": "{label} {value}",
+  "trendPeriod": "（{label}）",
+  "grade": {
+    "strong": "强",
+    "fair": "一般",
+    "weak": "弱",
+    "poor": "差"
+  },
+  "range": {
+    "lastDays": "最近 {count} 天"
+  },
+  "dateRange": {
+    "sameDay": "{date} UTC",
+    "span": "{from} 至 {to} UTC"
+  },
+  "today": "今天",
+  "yesterday": "昨天",
+  "market": {
+    "home": "{label}（默认）"
+  },
+  "localizations": {
+    "fieldsNote": "每个本地化版本分别包含 {title} 个字符的标题、{subtitle} 个字符的副标题和 {keywordField} 个字符的关键词字段。"
+  }
+}

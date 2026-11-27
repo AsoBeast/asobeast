@@ -1,6 +1,7 @@
 "use client";
 
 import { createColumnHelper } from "@tanstack/react-table";
+import { useTranslations } from "next-intl";
 import type { CompetitorDiscoveryItem } from "@asobeast/shared";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import type { DataTableFeatures } from "@/components/data-table/table-features";
@@ -12,7 +13,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { formatNumber, formatRating } from "@/lib/format";
+import { formatNumberInLocale, formatRating } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
+import type { MessageTranslator } from "@/i18n/translator";
+import type { Locale } from "@/lib/locale";
 import { grade } from "@/lib/grade";
 import { nullsLast } from "@/lib/table/sorting";
 import { TrackButton } from "./TrackButton";
@@ -24,14 +28,20 @@ const columnHelper = createColumnHelper<
 
 const NUMBER_SORT = { sortFn: "basic", sortUndefined: "last" } as const;
 
-export function discoveryColumns(appId: string) {
+export function discoveryColumns(
+  appId: string,
+  copy: { t: MessageTranslator; locale: Locale },
+) {
+  const { t, locale } = copy;
   return columnHelper.columns([
     columnHelper.accessor("title", {
       id: "app",
       sortFn: "text",
       sortDescFirst: false,
       enableHiding: false,
-      header: ({ column }) => <SortableHeader column={column} label="App" />,
+      header: ({ column }) => (
+        <SortableHeader column={column} label={t("standing.app")} />
+      ),
       cell: ({ row }) => (
         <div className="flex min-w-0 items-center gap-3">
           <span aria-hidden className="hidden shrink-0 sm:block">
@@ -54,21 +64,23 @@ export function discoveryColumns(appId: string) {
       id: "appearances",
       ...NUMBER_SORT,
       sortDescFirst: true,
-      meta: { label: "Appearances", phone: true, numeric: true },
+      meta: { label: t("discovery.appearances"), phone: true, numeric: true },
       header: ({ column }) => (
-        <SortableHeader column={column} label="Appearances" />
+        <SortableHeader column={column} label={t("discovery.appearances")} />
       ),
       cell: ({ row }) => (
-        <span className="numeric">{row.original.appearances}</span>
+        <span className="numeric">
+          {formatNumberInLocale(row.original.appearances, locale)}
+        </span>
       ),
     }),
     columnHelper.accessor("keywordCount", {
       id: "keywords",
       ...NUMBER_SORT,
       sortDescFirst: true,
-      meta: { label: "Keywords", numeric: true },
+      meta: { label: t("discovery.keywords"), numeric: true },
       header: ({ column }) => (
-        <SortableHeader column={column} label="Keywords" />
+        <SortableHeader column={column} label={t("discovery.keywords")} />
       ),
       cell: ({ row }) => <KeywordsPopover item={row.original} />,
     }),
@@ -76,13 +88,15 @@ export function discoveryColumns(appId: string) {
       id: "best",
       ...NUMBER_SORT,
       sortDescFirst: false,
-      meta: { label: "Best", phone: true, numeric: true },
-      header: ({ column }) => <SortableHeader column={column} label="Best" />,
+      meta: { label: t("discovery.best"), phone: true, numeric: true },
+      header: ({ column }) => (
+        <SortableHeader column={column} label={t("discovery.best")} />
+      ),
       cell: ({ row }) => (
         <GradedNumber
           value={String(row.original.bestPosition)}
           grade={grade("position", row.original.bestPosition)}
-          label="Best position"
+          label={t("discovery.bestPosition")}
           marker={false}
           className={positionChipClass(
             grade("position", row.original.bestPosition),
@@ -94,13 +108,15 @@ export function discoveryColumns(appId: string) {
       id: "avg",
       ...NUMBER_SORT,
       sortDescFirst: false,
-      meta: { label: "Avg", numeric: true },
-      header: ({ column }) => <SortableHeader column={column} label="Avg" />,
+      meta: { label: t("discovery.average"), numeric: true },
+      header: ({ column }) => (
+        <SortableHeader column={column} label={t("discovery.average")} />
+      ),
       cell: ({ row }) => (
         <GradedNumber
           value={String(row.original.avgPosition)}
           grade={grade("position", row.original.avgPosition)}
-          label="Average position"
+          label={t("discovery.averagePosition")}
           aligned
         />
       ),
@@ -109,14 +125,16 @@ export function discoveryColumns(appId: string) {
       id: "rating",
       ...NUMBER_SORT,
       sortDescFirst: true,
-      meta: { label: "Rating", phone: true, numeric: true },
-      header: ({ column }) => <SortableHeader column={column} label="Rating" />,
+      meta: { label: t("standing.rating"), phone: true, numeric: true },
+      header: ({ column }) => (
+        <SortableHeader column={column} label={t("standing.rating")} />
+      ),
       cell: ({ row }) => <RatingCell item={row.original} />,
     }),
     columnHelper.display({
       id: "track",
       enableHiding: false,
-      header: () => <span className="sr-only">Track</span>,
+      header: () => <span className="sr-only">{t("discovery.track")}</span>,
       cell: ({ row }) => (
         <div className="flex justify-end">
           <TrackButton
@@ -131,9 +149,12 @@ export function discoveryColumns(appId: string) {
 }
 
 function KeywordsPopover({ item }: { item: CompetitorDiscoveryItem }) {
-  const title = `${item.keywordCount} ${
-    item.keywordCount === 1 ? "keyword" : "keywords"
-  } where ${item.title} appears`;
+  const t = useTranslations("competitors");
+  const locale = useAppLocale();
+  const title = t("discovery.keywordPopover", {
+    count: item.keywordCount,
+    app: item.title,
+  });
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -142,7 +163,7 @@ function KeywordsPopover({ item }: { item: CompetitorDiscoveryItem }) {
           aria-label={title}
           className="numeric rounded-sm underline decoration-muted-foreground decoration-dotted underline-offset-4 hover:decoration-foreground"
         >
-          <span>{item.keywordCount}</span>
+          <span>{formatNumberInLocale(item.keywordCount, locale)}</span>
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" aria-label={title} className="w-64">
@@ -160,6 +181,8 @@ function KeywordsPopover({ item }: { item: CompetitorDiscoveryItem }) {
 }
 
 function RatingCell({ item }: { item: CompetitorDiscoveryItem }) {
+  const t = useTranslations("competitors");
+  const locale = useAppLocale();
   if (item.ratingAvg === null) {
     return <span className="text-muted-foreground">—</span>;
   }
@@ -168,12 +191,12 @@ function RatingCell({ item }: { item: CompetitorDiscoveryItem }) {
       <GradedNumber
         value={formatRating(item.ratingAvg)}
         grade={grade("rating", item.ratingAvg)}
-        label="Rating"
+        label={t("standing.rating")}
         aligned
       />
       {item.ratingCount !== null ? (
         <span className="numeric hidden min-w-12 text-right text-muted-foreground sm:inline">
-          {formatNumber(item.ratingCount)}
+          {formatNumberInLocale(item.ratingCount, locale)}
         </span>
       ) : null}
     </span>

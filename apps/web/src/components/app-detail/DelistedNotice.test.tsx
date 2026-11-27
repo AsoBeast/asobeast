@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { AppDetail } from "@asobeast/shared";
+import { TestIntlProvider } from "@/test/intl-provider";
 import { DelistedNotice } from "./DelistedNotice";
 
 const SINCE = "2026-10-20T23:59:00.000Z";
@@ -23,7 +24,18 @@ const detail = (over: Partial<AppDetail> = {}): AppDetail => ({
 });
 
 const text = (app: AppDetail) =>
-  renderToStaticMarkup(<DelistedNotice detail={app} since={SINCE} />);
+  renderToStaticMarkup(
+    <TestIntlProvider locale="en">
+      <DelistedNotice detail={app} since={SINCE} />
+    </TestIntlProvider>,
+  );
+
+const chineseText = (app: AppDetail) =>
+  renderToStaticMarkup(
+    <TestIntlProvider locale="zh-CN">
+      <DelistedNotice detail={app} since={SINCE} />
+    </TestIntlProvider>,
+  );
 
 describe("DelistedNotice", () => {
   it("names the store, the store id, the storefront and the UTC day", () => {
@@ -48,5 +60,16 @@ describe("DelistedNotice", () => {
     expect(text(detail({ isCompetitor: true }))).toContain(
       "If it is gone for good, remove it from the competitors of the app that tracks it.",
     );
+  });
+
+  it("renders the delisting notice in Chinese without translating store data", () => {
+    const markup = chineseText(detail());
+
+    expect(markup).toContain("App Store 上已下架");
+    expect(markup).toContain(
+      "自 2026年10月20日 起，App Store 表示在德国找不到应用 471112395。",
+    );
+    expect(markup).toContain("如果应用已永久下架，请从仪表盘中删除。");
+    expect(markup).not.toContain("No longer listed on App Store");
   });
 });

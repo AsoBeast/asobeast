@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { ErrorState } from "@/components/layout/ErrorState";
 
 export default function AppDetailError({
@@ -9,11 +10,6 @@ export default function AppDetailError({
   error: Error & { digest?: string };
   retry: () => void;
 }) {
-  return (
-    <ErrorState
-      error={error}
-      retry={retry}
-      title="This app could not be loaded"
-    />
-  );
+  const t = useTranslations("errors.boundary");
+  return <ErrorState error={error} retry={retry} title={t("app")} />;
 }

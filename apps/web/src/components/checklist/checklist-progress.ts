@@ -3,6 +3,7 @@ import type {
   WorkspaceChecklistItem,
   WorkspaceChecklistItemId,
 } from "@asobeast/shared";
+import type { MessageTranslator } from "@/i18n/translator";
 
 export interface ChecklistProgress {
   done: number;
@@ -14,18 +15,24 @@ export const pillVisible = (checklist: WorkspaceChecklist): boolean =>
   checklist.total > 0 &&
   checklist.done < checklist.total;
 
-export const pillLabel = (done: number, total: number): string =>
-  `${done} of ${total} done`;
+export const pillLabel = (
+  done: number,
+  total: number,
+  translator: MessageTranslator,
+): string => translator("checklist.progress", { done, total });
 
 export function progressAnnouncement(
   previous: ChecklistProgress | null,
   current: ChecklistProgress,
+  translator: MessageTranslator,
 ): string | null {
   if (previous === null) return null;
   if (previous.done === current.done && previous.total === current.total) {
     return null;
   }
-  return `Setup checklist: ${pillLabel(current.done, current.total)}`;
+  return translator("checklist.announcement", {
+    progress: pillLabel(current.done, current.total, translator),
+  });
 }
 
 export const nextItemId = (

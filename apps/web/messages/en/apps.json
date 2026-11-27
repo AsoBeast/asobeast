@@ -1,0 +1,55 @@
+{
+  "import": {
+    "title": "Import an app",
+    "description": "Search the App Store or Google Play by name, or paste a store URL, to import the app and start tracking its keywords.",
+    "action": "Import",
+    "pending": "Importing…",
+    "success": "Imported {name}",
+    "unknownApp": "app",
+    "unreachable": "Could not reach the api to import this app",
+    "store": "Store",
+    "nameOrUrl": "App name or store URL",
+    "hint": "Type a name to search, or paste a store URL.",
+    "placeholderAppStore": "Focus Timer or apps.apple.com/us/app/…/id123",
+    "placeholderGooglePlay": "Focus Timer or com.example.app",
+    "homeStorefront": "Home storefront",
+    "homeStorefrontHint": "Where this app’s metadata and category ranks are read. Add other markets later from the keyword monitor.",
+    "invalidAddress": "Unrecognized store URL or id: {value}",
+    "nameTooLong": "Search with up to {limit, number} characters. This name has {used, number}.",
+    "shortName": "Type at least {count, number} characters to search.",
+    "searchFailed": "Could not search the store.",
+    "noListing": "No listing named “{query}” in {country}.",
+    "resultsLabel": "Results from {store} in {country}",
+    "ratingCount": "{average} · {count, plural, one {# rating} other {# ratings}}"
+  },
+  "delete": {
+    "actions": "App actions, {name}",
+    "item": "Delete app",
+    "title": "Delete {name}?",
+    "description": "This permanently removes the app and all of its snapshots, tracked keywords and ranking history. This cannot be undone.",
+    "pending": "Deleting…",
+    "success": "Deleted {name}",
+    "error": "Could not delete {name}"
+  },
+  "delisted": {
+    "label": "Delisted",
+    "title": "Not listed in its store since {date}"
+  },
+  "firstRun": {
+    "title": "Track your first app",
+    "lede": "Type your app's name or paste its store URL.",
+    "benefitsLabel": "What you get",
+    "benefitPositions": "Positions for the keywords in your title and subtitle, within minutes.",
+    "benefitCompetitors": "A comparison against every competitor you add, on every keyword you track.",
+    "benefitActions": "A queue of what to change, once a week of daily captures is in."
+  },
+  "budget": {
+    "added": "Adds about {count, plural, one {# store request} other {# store requests}} a day",
+    "scoring": "Each new keyword is also scored once, which takes more requests over the next hours.",
+    "notice": "{added}. {scoring}",
+    "shareNotice": "{share}. {scoring}",
+    "overNotice": "{share}{over} {scoring}",
+    "share": "{added}, taking {store} to {percent, number}% of its daily capacity",
+    "overCapacity": ", so the daily run will not finish within a day. Import fewer keywords or raise the store rate limit."
+  }
+}

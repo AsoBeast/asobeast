@@ -1,5 +1,13 @@
 import type { MarketSeedResult, MarketSuggestion } from "@asobeast/shared";
-import { pluralize } from "@/lib/format";
+import { createTranslator } from "next-intl";
+import enSetup from "../../../messages/en/setup.json";
+import type { MessageTranslator } from "@/i18n/translator";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "setup",
+  messages: { setup: enSetup },
+});
 
 export type SeedOutcome =
   | { kind: "seeded"; seeded: number; skipped: number }
@@ -28,10 +36,14 @@ export function withoutOutcomes(
   );
 }
 
-export function seedButtonLabel(markets: number, seeds: number): string {
-  if (markets === 0) return "Add countries";
-  const add = `Add ${pluralize(markets, "country", "countries")}`;
-  return seeds === 0 ? add : `${add} and seed ${seeds}`;
+export function seedButtonLabel(
+  markets: number,
+  seeds: number,
+  t: MessageTranslator = english,
+): string {
+  if (markets === 0) return t("markets.addCountries");
+  const add = t("markets.addCountriesCount", { count: markets });
+  return seeds === 0 ? add : t("markets.addAndSeed", { add, count: seeds });
 }
 
 export function seedPlan(
@@ -50,27 +62,29 @@ export function outcomeOf(result: MarketSeedResult): SeedOutcome {
     : { kind: "seeded", seeded: result.seeded, skipped: result.skipped };
 }
 
-export function outcomeText(outcome: SeedOutcome): string {
+export function outcomeText(
+  outcome: SeedOutcome,
+  t: MessageTranslator = english,
+): string {
   if (outcome.kind === "failed") return outcome.message;
-  if (outcome.kind === "unavailable") {
-    return "Not published on this storefront, so it was not added";
-  }
+  if (outcome.kind === "unavailable") return t("markets.seedUnavailable");
   const skipped =
     outcome.skipped > 0
-      ? `, ${outcome.skipped} left out by the keyword limit`
+      ? t("markets.seedSkipped", { count: outcome.skipped })
       : "";
   if (outcome.seeded > 0) {
-    return `Seeded ${pluralize(outcome.seeded, "keyword")} from its listing${skipped}`;
+    return t("markets.seeded", { count: outcome.seeded, skipped });
   }
   return skipped
-    ? `Seeded no keywords${skipped}`
-    : "No new keywords in its listing";
+    ? t("markets.seededNone", { skipped })
+    : t("markets.noNewKeywords");
 }
 
 export function seedStatusText(
   seeding: boolean,
   outcome: SeedOutcome | undefined,
+  t: MessageTranslator = english,
 ): string | null {
-  if (outcome) return outcomeText(outcome);
-  return seeding ? "Seeding from its listing…" : null;
+  if (outcome) return outcomeText(outcome, t);
+  return seeding ? t("markets.seeding") : null;
 }

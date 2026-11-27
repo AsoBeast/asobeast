@@ -14,7 +14,7 @@ import {
   openImportDialog,
   resetImportKeywords,
 } from "./keyword-import-dialog.mts";
-import { fulfillJson, routePlan } from "./plan-helpers.mts";
+import { EN_BILLING, fulfillJson, routePlan } from "./plan-helpers.mts";
 import { SERP_HISTORY_DAYS } from "./serp-history.mts";
 import type { SerpEntryItem, SerpSnapshot } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
@@ -22,7 +22,6 @@ import { translatedFiltersButton } from "./keyword-controls.mts";
 import { collectDomErrors, translateText } from "./translate.mts";
 import { openBilling } from "./trial-plans.mts";
 import { typeInto } from "./type.mts";
-import { HANDLED_BY_STRIPE, PRICES_UNREACHABLE } from "../src/lib/plan-choice";
 import { openSettledDialog } from "./dialog.mts";
 import { GOOGLE_SIGN_IN_COOKIE } from "./store-connections.mts";
 import { seedViewer } from "./viewer.mts";
@@ -92,13 +91,19 @@ test("a translated upgrade page shows the payment note a retried catalog brings"
   });
   await page.goto("/upgrade");
   const retry = await hydrated(page.getByRole("button", { name: "Retry" }));
-  await expect(page.getByText(PRICES_UNREACHABLE)).toBeVisible();
+  await expect(
+    page.getByText(EN_BILLING.translator("payment.pricesUnreachable")),
+  ).toBeVisible();
 
   await translateText(page);
   await retry.click();
 
-  await expect(page.getByText(HANDLED_BY_STRIPE)).toBeVisible();
-  await expect(page.getByText(PRICES_UNREACHABLE)).toHaveCount(0);
+  await expect(
+    page.getByText(EN_BILLING.translator("payment.handledByStripe")),
+  ).toBeVisible();
+  await expect(
+    page.getByText(EN_BILLING.translator("payment.pricesUnreachable")),
+  ).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 

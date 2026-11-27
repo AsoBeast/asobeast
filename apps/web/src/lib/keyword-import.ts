@@ -2,7 +2,6 @@ import {
   isStorefront,
   KEYWORD_IMPORT_LIMIT,
   KEYWORD_IMPORT_STATUSES,
-  UnknownStorefrontError,
   type KeywordImportResult,
   type KeywordImportRow,
   type KeywordImportRowResult,
@@ -10,10 +9,19 @@ import {
   type KeywordImportSummary,
   type Store,
 } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
+import enKeywords from "../../messages/en/keywords.json";
 import type { ParsedImportRows } from "@/lib/csv-import/rows";
 import type { LeftOut } from "@/lib/csv-import/scope";
-import { formatNumber, storeLabel } from "@/lib/format";
+import type { MessageTranslator, TranslationContext } from "@/i18n/translator";
+import { storeLabel } from "@/lib/format";
 import { formatQuotaUsage, hasNoCapacity } from "@/lib/quota-usage";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywords",
+  messages: { keywords: enKeywords },
+});
 
 export const IMPORT_BODY_BYTES = 96_000;
 
@@ -31,13 +39,20 @@ export interface ImportProgress {
 }
 
 export const IMPORT_STATUS_LABELS: Record<KeywordImportStatus, string> = {
-  new: "New",
-  resume: "Resume",
-  tracked: "Already tracked",
-  duplicate: "Duplicate",
-  invalid: "Invalid",
-  overQuota: "Over limit",
+  new: enKeywords.import.statusNew,
+  resume: enKeywords.import.statusResume,
+  tracked: enKeywords.import.statusTracked,
+  duplicate: enKeywords.import.statusDuplicate,
+  invalid: enKeywords.import.statusInvalid,
+  overQuota: enKeywords.import.statusOverQuota,
 };
+
+export function importStatusLabel(
+  status: KeywordImportStatus,
+  t: MessageTranslator = english,
+): string {
+  return t(`import.status${status[0].toUpperCase()}${status.slice(1)}`);
+}
 
 export const IMPORT_STATUS_VARIANT: Record<
   KeywordImportStatus,
@@ -103,12 +118,15 @@ export const partRows = (
   lines: lines.slice(start, end),
 });
 
-export function refusalMessage(refusal: ImportRefusal): string {
+export function refusalMessage(
+  refusal: ImportRefusal,
+  t: MessageTranslator = english,
+): string {
   switch (refusal.kind) {
     case "empty":
-      return "The file has no keyword rows.";
+      return t("import.emptyFile");
     case "rowTooLarge":
-      return `Line ${formatNumber(refusal.line)} is too large to send. Shorten its note or tags, or remove the line, and choose the file again.`;
+      return t("import.rowTooLarge", { line: refusal.line });
   }
 }
 
@@ -116,10 +134,17 @@ export function partNotice(
   parts: readonly ImportPart[],
   progress: ImportProgress,
   lines: readonly number[],
+  t: MessageTranslator = english,
 ): string | null {
   const part = parts[progress.index];
   if (parts.length < 2 || !part) return null;
-  return `The ${formatNumber(lines.length)} rows are imported in ${formatNumber(parts.length)} parts, one after the other. Part ${formatNumber(progress.index + 1)} holds lines ${formatNumber(lines[part.start] ?? 0)} to ${formatNumber(lines[part.end - 1] ?? 0)}.`;
+  return t("import.partNotice", {
+    rows: lines.length,
+    parts: parts.length,
+    part: progress.index + 1,
+    from: lines[part.start] ?? 0,
+    to: lines[part.end - 1] ?? 0,
+  });
 }
 
 export function importableCount(summary: KeywordImportSummary): number {
@@ -137,30 +162,38 @@ export function importAction(
   return progress.index + 1 < progress.count ? "skip" : null;
 }
 
-export const skipButtonLabel = (progress: ImportProgress): string =>
-  `Skip to part ${formatNumber(progress.index + 2)}`;
+export const skipButtonLabel = (
+  progress: ImportProgress,
+  t: MessageTranslator = english,
+): string => t("import.skip", { part: progress.index + 2 });
 
-export function importButtonLabel(summary: KeywordImportSummary): string {
+export function importButtonLabel(
+  summary: KeywordImportSummary,
+  t: MessageTranslator = english,
+): string {
   const count = importableCount(summary);
-  if (count === 0) return "Nothing to import";
-  return `Import ${formatNumber(count)} keyword${count === 1 ? "" : "s"}`;
+  if (count === 0) return t("import.nothing");
+  return t("import.importCount", { count });
 }
 
 export function rowNote(
   result: KeywordImportRowResult,
   lines: readonly number[],
+  t: MessageTranslator = english,
 ): string {
   switch (result.status) {
     case "invalid":
       return result.message ?? "";
     case "duplicate":
-      return `Repeats line ${lines[result.duplicateOf ?? 0]}`;
+      return t("import.duplicateNote", {
+        line: lines[result.duplicateOf ?? 0],
+      });
     case "tracked":
-      return "Already tracked, nothing changes";
+      return t("import.trackedNote");
     case "resume":
-      return "Paused, will resume";
+      return t("import.resumeNote");
     case "overQuota":
-      return "Over your plan's keyword limit, skipped";
+      return t("import.overQuotaNote");
     case "new":
       return "";
   }
@@ -169,8 +202,14 @@ export function rowNote(
 const otherStore = (store: Store): Store =>
   store === "APP_STORE" ? "GOOGLE_PLAY" : "APP_STORE";
 
-const leftOutSentence = (rows: number, subject: string): string =>
-  `${formatNumber(rows)} row${rows === 1 ? "" : "s"} for ${subject} ${rows === 1 ? "is" : "are"} left out.`;
+const leftOutSentence = (
+  rows: number,
+  subject: string,
+  t: MessageTranslator,
+): string =>
+  subject === "other apps"
+    ? t("import.otherApps", { count: rows })
+    : t("import.otherStore", { count: rows, store: subject });
 
 export interface FileNoticeFacts {
   fallback: boolean;
@@ -182,51 +221,54 @@ export interface FileNoticeFacts {
   appsToChoose?: number;
 }
 
-export function fileNotices(file: FileNoticeFacts): string[] {
+export function fileNotices(
+  file: FileNoticeFacts,
+  t: MessageTranslator = english,
+): string[] {
   const notices: string[] = [];
   if (file.fallback) {
-    notices.push(
-      "This file is not UTF-8, so it was read as Windows-1252. If letters look wrong, save it as CSV UTF-8 and choose it again.",
-    );
+    notices.push(t("import.notUtf8"));
   }
   if (!file.hasHeader) {
-    notices.push(
-      "No header row was found, so column 1 is read as the keyword.",
-    );
+    notices.push(t("import.noHeader"));
   }
   if (file.skippedRows) {
-    notices.push(
-      `${formatNumber(file.skippedRows)} row${file.skippedRows === 1 ? "" : "s"} above the header ${file.skippedRows === 1 ? "was" : "were"} skipped.`,
-    );
+    notices.push(t("import.skippedRows", { count: file.skippedRows }));
   }
   if (file.appsToChoose) {
-    notices.push(
-      `This file holds rows for ${formatNumber(file.appsToChoose)} apps. Choose one under App to import, or All apps, before you import.`,
-    );
+    notices.push(t("import.appsToChoose", { count: file.appsToChoose }));
   }
   if (file.leftOut && file.leftOut.otherApps > 0) {
-    notices.push(leftOutSentence(file.leftOut.otherApps, "other apps"));
+    notices.push(leftOutSentence(file.leftOut.otherApps, "other apps", t));
   }
   if (file.leftOut && file.leftOut.otherStore > 0 && file.store) {
     notices.push(
       leftOutSentence(
         file.leftOut.otherStore,
         storeLabel(otherStore(file.store)),
+        t,
       ),
     );
   }
   if (file.ignoredColumns > 0) {
-    notices.push(
-      `${file.ignoredColumns} other column${file.ignoredColumns === 1 ? " is" : "s are"} ignored.`,
-    );
+    notices.push(t("import.ignoredColumns", { count: file.ignoredColumns }));
   }
   return notices;
 }
 
-export function marketRefusal(store: Store, market: string): string | null {
+export function marketRefusal(
+  store: Store,
+  market: string,
+  t: MessageTranslator = english,
+): string | null {
   return isStorefront(store, market)
     ? null
-    : `${new UnknownStorefrontError(store, market).message}. Choose the market for rows without a country.`;
+    : t(
+        store === "APP_STORE"
+          ? "import.unknownMarket.appStore"
+          : "import.unknownMarket.googlePlay",
+        { market, store: storeLabel(store) },
+      );
 }
 
 export interface QuotaNotice {
@@ -234,50 +276,63 @@ export interface QuotaNotice {
   upgrade: boolean;
 }
 
-export function quotaNotice({
-  summary,
-  quota,
-}: Pick<KeywordImportResult, "summary" | "quota">): QuotaNotice | null {
+export function quotaNotice(
+  { summary, quota }: Pick<KeywordImportResult, "summary" | "quota">,
+  context: TranslationContext,
+  t: MessageTranslator = english,
+): QuotaNotice | null {
   const over = summary.overQuota;
   if (quota === null || over === 0) return null;
-  const used = hasNoCapacity(quota)
-    ? "Your plan includes no keyword markets."
-    : `${formatQuotaUsage(quota)} keyword markets used.`;
-  const rows =
-    over === 1
-      ? "1 row is over your plan's keyword limit and is skipped."
-      : `${formatNumber(over)} rows are over your plan's keyword limit and are skipped.`;
-  return { text: `${used} ${rows}`, upgrade: quota.upgradeTo !== null };
+  const usage = hasNoCapacity(quota)
+    ? "none"
+    : formatQuotaUsage(quota, "tracked", context);
+  return {
+    text: t("import.quotaNotice", { usage, count: over }),
+    upgrade: quota.upgradeTo !== null,
+  };
 }
 
-export function summarySentence(summary: KeywordImportSummary): string {
+export function summarySentence(
+  summary: KeywordImportSummary,
+  t: MessageTranslator = english,
+): string {
   const parts = KEYWORD_IMPORT_STATUSES.filter(
     (status) => summary[status] > 0,
-  ).map(
-    (status) =>
-      `${formatNumber(summary[status])} ${IMPORT_STATUS_LABELS[status].toLowerCase()}`,
+  ).map((status) =>
+    t("import.summaryPart", {
+      count: summary[status],
+      status: importStatusLabel(status, t).toLocaleLowerCase(),
+    }),
   );
-  return parts.length > 0 ? parts.join(", ") : "No rows";
+  return parts.length > 0 ? parts.join(", ") : t("import.summaryNoRows");
 }
 
-function nextStep(progress: ImportProgress | undefined): string {
+function nextStep(
+  progress: ImportProgress | undefined,
+  t: MessageTranslator,
+): string {
   if (!progress || progress.index + 1 >= progress.count) {
-    return "Rankings capture on the next run.";
+    return t("import.nextRun");
   }
-  return `Part ${formatNumber(progress.index + 1)} of ${formatNumber(progress.count)} is in. Review part ${formatNumber(progress.index + 2)} and import it next.`;
+  return t("import.nextPart", {
+    part: progress.index + 1,
+    parts: progress.count,
+    next: progress.index + 2,
+  });
 }
 
 export function importToast(
   result: Pick<KeywordImportResult, "imported" | "summary">,
   progress?: ImportProgress,
+  t: MessageTranslator = english,
 ): { title: string; description: string } {
   const skipped = result.summary.rows - importableCount(result.summary);
-  const skippedSentence =
-    skipped > 0
-      ? `${formatNumber(skipped)} row${skipped === 1 ? "" : "s"} skipped. `
-      : "";
   return {
-    title: `Tracking ${formatNumber(result.imported)} keyword${result.imported === 1 ? "" : "s"}`,
-    description: `${skippedSentence}${nextStep(progress)}`,
+    title: t("import.toastTitle", { count: result.imported }),
+    description: t("import.toastDescription", {
+      skipped: skipped > 0 ? "yes" : "none",
+      count: skipped,
+      step: nextStep(progress, t),
+    }),
   };
 }

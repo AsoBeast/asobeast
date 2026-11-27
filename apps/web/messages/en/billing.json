@@ -1,0 +1,205 @@
+{
+  "plans": {
+    "free": "Free",
+    "trial": "Trial",
+    "indie": "Indie",
+    "ultimate": "Ultimate"
+  },
+  "intervals": {
+    "month": "Monthly",
+    "year": "Annual",
+    "monthName": "month",
+    "yearName": "year",
+    "perMonth": "/month",
+    "perYear": "/year",
+    "monthly": "monthly",
+    "yearly": "yearly"
+  },
+  "plan": {
+    "title": "Plan",
+    "choose": "Choose a plan",
+    "heading": "Keep optimizing without limits",
+    "trialHeading": "Start your {days, plural, one {# day} other {# days}} free trial",
+    "chooseTitle": "Choose a plan",
+    "billingInterval": "Billing interval",
+    "plans": "Plans",
+    "current": "Current",
+    "featuresTitle": "What {plan} includes",
+    "includes": "Every plan includes",
+    "saving": "Save {percent, number}%",
+    "features": {
+      "rankTracking": "Daily keyword rank tracking across every storefront",
+      "scoring": "Popularity, difficulty and opportunity scoring",
+      "competitors": "Competitor discovery and metadata audits",
+      "aiDrafts": "AI audit and metadata drafts",
+      "alerts": "Alerts by email and webhook",
+      "api": "Personal API tokens and the MCP server"
+    },
+    "resources": {
+      "apps": "Apps",
+      "keywordMarkets": "Keyword markets",
+      "competitorsPerApp": "Competitors per app",
+      "aiCallsPerMonth": "AI calls per month",
+      "aiCallsThisMonth": "AI calls this month"
+    },
+    "limits": {
+      "unlimited": "Unlimited",
+      "apps": {
+        "unlimited": "Unlimited apps",
+        "count": "{count, plural, one {# app} other {# apps}}"
+      },
+      "keywordMarkets": {
+        "unlimited": "Unlimited keyword markets",
+        "count": "{count, plural, one {# keyword market} other {# keyword markets}}"
+      }
+    },
+    "pricePerInterval": "{price} per {interval}",
+    "renewalTerms": "{price} plus any VAT or sales tax, renewing {cadence} until you cancel",
+    "cardLabel": "{plan}, {price}{current, select, true {, current plan} other {}}",
+    "accessPaused": "Access paused",
+    "manageBilling": "Manage billing",
+    "upgrade": "Upgrade plan",
+    "resume": "Resume plan"
+  },
+  "actions": {
+    "current": "Current plan",
+    "checkout": "Choose {plan}",
+    "trial": "Pay {price} today and start your free trial",
+    "change": "Change in the billing portal",
+    "resume": "Resume in the billing portal",
+    "pending": "Confirming your payment"
+  },
+  "status": {
+    "choose": "Choose a plan to unlock AsoBeast.",
+    "paymentConfirming": "Your payment is being confirmed. This usually takes a minute; if it has not completed within a day the attempt expires and you can choose a plan again.",
+    "trialRefused": "This card or email has already had a free trial. Choose a plan to start today.",
+    "collectionPaused": "Collection is paused. Everything AsoBeast has already gathered stays readable and exportable.",
+    "suspended": "This workspace is suspended. Your data stays readable and exportable and billing stays open, but changes and the daily run are paused. Contact the operator of this instance to lift it.",
+    "suspendedWithReason": "This workspace is suspended: {reason}. Your data stays readable and exportable and billing stays open, but changes and the daily run are paused. Contact the operator of this instance to lift it.",
+    "stalledPaywall": "Your subscription stopped collecting. Add a payment method in the billing portal and it picks up where it left off.",
+    "trialChargeDeclined": "Your trial ended, but the card was declined. Update it in the billing portal to start your plan.",
+    "stalledSettings": "Your subscription stopped collecting. Add a payment method in the billing portal and tracking resumes.",
+    "startTrial": "Start your free trial from the plan page.",
+    "dataReadable": "Your data stays readable and exportable; tracking resumes when you choose a plan.",
+    "trialActiveUntil": "Your trial is active until {date}.",
+    "trialSettingsUntil": "Trial active until {date}.",
+    "cancelledTrial": "Cancelled. Your trial ends on {date} and nothing is charged.",
+    "trialRunning": "Your trial runs until {date}. Change or cancel it in the billing portal.",
+    "trialRunningThen": "Your trial runs until {date}, then {price}. Change or cancel it in the billing portal.",
+    "trialSettings": "Trial until {date}.",
+    "trialSettingsThen": "Trial until {date}, then {price}.",
+    "trialOffer": "Pay {price} today. Your trial ends on {date}, then the plan you choose is charged, plus any VAT or sales tax, and renews until you cancel. Cancel any time from settings.",
+    "trialEnded": "Your trial ended on {date}. Your data is still here.",
+    "renews": "Your {plan} plan renews on {date}.",
+    "cancelledAccessUntil": "Cancelled. Access continues until {date}.",
+    "renewsShort": "Renews on {date}.",
+    "billedMonthly": "Billed monthly until you cancel.",
+    "switchesTo": "Switches to {plan} on {date}."
+  },
+  "trial": {
+    "bannerEnds": "Trial ends on {date}. Nothing will be charged.",
+    "bannerRemaining": "Trial ends in {days, plural, one {# day} other {# days}}",
+    "bannerRemainingOnly": "Trial ends in {days, plural, one {# day} other {# days}}.",
+    "bannerThen": "{remaining}, then {plan} at {price}.",
+    "bar": "Your {days, plural, one {# day} other {# days}} trial is <free>100% free</free>, ending <date>{endsOn}</date>. Cancel any time from settings.",
+    "trustSafe": "No risk: cancel before {date} and nothing is charged",
+    "trustFree": "Pay nothing for the first {days, plural, one {# day} other {# days}}",
+    "trustCancel": "Cancel any time from settings",
+    "trustLabel": "Why the trial is safe",
+    "label": "Your trial",
+    "paymentNote": "Your card is verified now and charged on {date}."
+  },
+  "payment": {
+    "title": "Payment",
+    "secure": "Secure payments processed by Stripe.",
+    "unconfigured": "Checkout is not configured on this instance.",
+    "handledByLink": "Payments are handled by Link, a Stripe affiliate and the merchant of record. Prices are in US dollars; checkout adds sales tax or VAT where it applies and can charge in your local currency. Cancel any time from settings.",
+    "handledByStripe": "Payments are handled by Stripe. Cancel any time from settings.",
+    "planUnreachable": "Your plan could not be loaded. Check your connection, then try again.",
+    "pricesUnreachable": "The prices could not be loaded. Check your connection, then try again.",
+    "support": "Need help? <link>Contact support</link>."
+  },
+  "checkout": {
+    "label": "Checkout",
+    "regionMonth": "Stripe checkout for {plan}, monthly",
+    "regionYear": "Stripe checkout for {plan}, yearly",
+    "unreachable": "Checkout could not be opened. Try again.",
+    "reopening": "Opening checkout…",
+    "priceMissing": "Checkout is not configured yet",
+    "startFailed": "Could not start checkout. Try again.",
+    "portalFailed": "Could not open the billing portal. Try again.",
+    "trialStarted": "Your free trial has started. The first charge is on {date}."
+  },
+  "orderSummary": {
+    "title": "Order summary",
+    "dueToday": "Due today",
+    "cancelAnyTime": "Cancel any time from settings.",
+    "nothingBeforeDate": "Nothing is charged before the date above.",
+    "trialCancel": "{cancel} {nothing}",
+    "thenTrial": "From {date}: {terms}.",
+    "then": "Then {terms}."
+  },
+  "faq": {
+    "title": "Questions",
+    "readMore": "Read more",
+    "readMoreContext": " about {question} (opens in a new tab)",
+    "chargeToday": {
+      "question": "Will I be charged today?",
+      "answer": "No. Your card is verified today and nothing is charged. From {date}: {terms}. Cancel from settings before then and nothing is charged."
+    },
+    "chargeLater": {
+      "question": "When am I charged?",
+      "answer": "Today, for the first period. Then {terms}."
+    },
+    "cancel": {
+      "question": "How do I cancel?",
+      "answer": "Open Settings, then Billing, and cancel in the billing portal. A trial cancelled before its end is never charged; a paid plan runs to the end of the period you paid for."
+    },
+    "cardSafety": {
+      "question": "Is my card safe with AsoBeast?",
+      "answer": "The card fields are Stripe's and the number never reaches AsoBeast. AsoBeast is open source; the code behind this page is on GitHub."
+    },
+    "keywordMarket": {
+      "question": "What is a keyword market?",
+      "answer": "One phrase tracked in one storefront. The same phrase in two countries is two keyword markets."
+    },
+    "app": {
+      "question": "What counts as an app?",
+      "answer": "An app you import and track. Its competitors do not count against the limit; each plan sets how many competitors an app may have."
+    },
+    "changePlan": {
+      "question": "Can I change the plan later?",
+      "answer": "Yes, from Settings. An upgrade applies at once; a downgrade applies at the end of the period."
+    },
+    "deleteAccount": {
+      "question": "How do I delete my account?",
+      "answer": "From Settings, Workspace. The deletion waits a few days and can be cancelled until then."
+    }
+  },
+  "member": {
+    "title": "Your workspace owner manages billing",
+    "note": "Your workspace owner manages billing.",
+    "paused": "Collection is paused. Everything AsoBeast has already gathered stays readable and exportable. Ask your workspace owner to choose a plan.",
+    "trial": "{sentence} Ask your workspace owner to choose a plan.",
+    "onlyOwner": "Only the workspace owner can change the plan or the payment method."
+  },
+  "quota": {
+    "of": "{used, number} of {limit, number}",
+    "unlimited": "{used, number} of Unlimited",
+    "noneIncluded": "{used, number} {counted, select, tracked {tracked} followed {followed} used {used} other {used}}, none included"
+  },
+  "ai": {
+    "noCalls": "This workspace includes no AI calls",
+    "renewal": "Renews {date}",
+    "callsLeft": "{left, number} of {limit, number} AI calls left this month",
+    "spent": "AI calls used up. {renewal}",
+    "refusal": "This workspace has used the {limit, plural, one {# AI call} other {# AI calls}} its plan includes this month. {renewal}.",
+    "trialAllowance": "The trial allowance applies until the first charge.",
+    "usageNoteTrial": "{renewal}. {trial}",
+    "seePlans": "See plans"
+  },
+  "keywordLimit": {
+    "notice": "Over the keyword limit since {date}. Daily checks cover the first {limit, plural, one {# keyword market} other {# keyword markets}} in a stable order; remove keywords or upgrade to cover the rest.",
+    "noticeUnlimited": "Over the keyword limit since {date}. Daily checks cover keyword markets in a stable order; remove keywords or upgrade to cover the rest."
+  }
+}

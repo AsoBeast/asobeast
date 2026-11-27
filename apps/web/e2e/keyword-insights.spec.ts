@@ -102,7 +102,7 @@ test.describe("on a phone", () => {
     await expect(keywordRow(page, "pomodoro")).toBeVisible();
     await expect(insightsHeader(page)).toHaveCount(0);
 
-    await page.getByRole("button", { name: "Columns" }).click();
+    await page.locator('[data-action="columns"]').click();
     await page.getByRole("menuitemcheckbox", { name: "Insights" }).click();
     await page.keyboard.press("Escape");
 
@@ -185,8 +185,8 @@ test.describe("the totals row", () => {
     await expect(keywordTotal(page)).toHaveText("1 keyword");
     await expect(footer(page)).toContainText("avg 45");
     await search.fill("time");
-    await expect(page.getByRole("button", { name: "Clear all" })).toBeVisible();
-    await page.getByRole("button", { name: "Clear all" }).click();
+    await expect(page.locator('[data-action="clear-all"]')).toBeVisible();
+    await page.locator('[data-action="clear-all"]').click();
     await expect(keywordTotal(page)).toHaveText("5 keywords");
   });
 
@@ -209,7 +209,7 @@ test.describe("the totals row", () => {
     await page.goto(KEYWORDS);
     await expect(footer(page)).toContainText("avg 6250");
 
-    await page.getByRole("button", { name: "Columns" }).click();
+    await page.locator('[data-action="columns"]').click();
     await page.getByRole("menuitemcheckbox", { name: "Popularity" }).click();
     await page.keyboard.press("Escape");
 

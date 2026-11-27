@@ -1,9 +1,10 @@
 "use client";
 
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import type { ReviewReplyPostResult, Store } from "@asobeast/shared";
 import { useSharedFlight } from "@/lib/single-flight";
-import { postedToast, WITHDRAWN_TOAST } from "./store-reply-access";
+import { postedToast } from "./store-reply-access";
 
 export function useStorePosting({
   store,
@@ -16,6 +17,7 @@ export function useStorePosting({
   post: () => Promise<ReviewReplyPostResult>;
   withdraw: () => Promise<ReviewReplyPostResult>;
 }) {
+  const t = useTranslations("reviews");
   const postOnce = useSharedFlight(post);
   const withdrawOnce = useSharedFlight(withdraw);
 
@@ -24,14 +26,14 @@ export function useStorePosting({
       .then(() => postOnce(undefined))
       .then(({ review }) => {
         if (review.reply?.post) {
-          toast.success(postedToast(store, review.reply.post));
+          toast.success(postedToast(store, review.reply.post, t));
         }
       })
       .catch(() => null);
 
   const retract = () =>
     void withdrawOnce(undefined)
-      .then(() => toast.success(WITHDRAWN_TOAST))
+      .then(() => toast.success(t("storeAccess.withdrawn")))
       .catch(() => null);
 
   return { publish, retract };

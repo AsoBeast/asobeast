@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import type { KeywordRecentPosition } from "@asobeast/shared";
 import {
   positionTrendShape,
@@ -15,6 +18,7 @@ export function PositionTrend({
   frame: TrendFrame;
   checked: boolean;
 }) {
+  const t = useTranslations("keywords");
   const shape = positionTrendShape(checks, frame);
   if (!shape) {
     return checked ? (
@@ -22,7 +26,7 @@ export function PositionTrend({
         style={{ width: TREND_WIDTH }}
         className="shrink-0 whitespace-normal text-caption leading-tight text-muted-foreground keywords-tight:hidden"
       >
-        Not enough checks
+        {t("position.trendNotEnough")}
       </span>
     ) : (
       <span
@@ -35,7 +39,11 @@ export function PositionTrend({
   return (
     <svg
       role="img"
-      aria-label={`Position over the last ${frame.days} days, from ${shape.first} to ${shape.last}`}
+      aria-label={t("position.trendLabel", {
+        days: frame.days,
+        first: shape.first,
+        last: shape.last,
+      })}
       data-slot="position-trend"
       width={TREND_WIDTH}
       height={TREND_HEIGHT}

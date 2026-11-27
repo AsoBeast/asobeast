@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { ErrorState } from "@/components/layout/ErrorState";
 
 export default function KeywordsError({
@@ -9,11 +10,6 @@ export default function KeywordsError({
   error: Error & { digest?: string };
   retry: () => void;
 }) {
-  return (
-    <ErrorState
-      error={error}
-      retry={retry}
-      title="Keywords could not be loaded"
-    />
-  );
+  const t = useTranslations("errors.boundary");
+  return <ErrorState error={error} retry={retry} title={t("keywords")} />;
 }

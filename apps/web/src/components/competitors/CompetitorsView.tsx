@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { CollapsedSectionsProvider } from "@/components/layout/CollapsedSections";
 import { CollapsibleCard } from "@/components/layout/CollapsibleCard";
 import { KNOWN_SECTIONS } from "@/components/layout/known-sections";
@@ -31,10 +32,11 @@ function CompetitorListSection({ id }: { id: string }) {
 }
 
 function TrackedPanel({ id }: { id: string }) {
+  const t = useTranslations("competitors");
   return (
     <CollapsibleCard
       section={COMPETITOR_SECTION.tracked}
-      title="Track the apps you rank against"
+      title={t("trackedTitle")}
       actions={<TrackedSummary id={id} />}
     >
       <div className={SECTION_BODY}>
@@ -45,9 +47,7 @@ function TrackedPanel({ id }: { id: string }) {
           <Suspense fallback={<CompetitorListSkeleton />}>
             <CompetitorListSection id={id} />
           </Suspense>
-          <p className={SECTION_FOOTER}>
-            A new competitor gets positions on the next keyword check
-          </p>
+          <p className={SECTION_FOOTER}>{t("trackedFooter")}</p>
         </div>
       </div>
     </CollapsibleCard>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import {
   Area,
   CartesianGrid,
@@ -25,8 +26,8 @@ import {
   PENDING_LINE_PROPS,
   SCORE_AXIS_PROPS,
   seriesColor,
-  TIME_AXIS_PROPS,
-  TIME_TOOLTIP_PROPS,
+  timeAxisPropsInLocale,
+  timeTooltipPropsInLocale,
   VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
 import {
@@ -35,7 +36,9 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { formatDate } from "@/lib/format";
+import { formatDateInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
+import type { MessageTranslator } from "@/i18n/translator";
 import { auditHistoryOptions } from "@/lib/queries";
 import { presetToRange, type VisibilityRange } from "@/lib/ranges";
 import { rubricChanges } from "./rubric-changes";
@@ -46,21 +49,18 @@ const SERIES = seriesColor(0);
 const REACHABLE = "var(--muted-foreground)";
 const LABEL_STAGGER = 14;
 
-const chartConfig = {
-  overall: { label: "ASO score", color: SERIES },
-} satisfies ChartConfig;
-
 function keyItems(
   potential: number | null,
   hasRubricChange: boolean,
+  t: MessageTranslator,
 ): ChartKeyItem[] {
   return [
-    { label: "ASO score", color: SERIES, mark: "line" },
+    { label: t("score"), color: SERIES, mark: "line" },
     ...(potential === null
       ? []
       : [
           {
-            label: `Reachable ${Math.round(potential)}`,
+            label: t("history.reachable", { score: Math.round(potential) }),
             color: REACHABLE,
             mark: "dash" as const,
           },
@@ -68,7 +68,7 @@ function keyItems(
     ...(hasRubricChange
       ? [
           {
-            label: "Rubric change",
+            label: t("history.rubricChange"),
             color: CHANGE_MARKER_PROPS.stroke,
             mark: "dash" as const,
           },
@@ -86,6 +86,11 @@ export function AuditHealthChart({
   range: VisibilityRange;
   potential: number | null;
 }) {
+  const t = useTranslations("audit");
+  const locale = useAppLocale();
+  const chartConfig = {
+    overall: { label: t("score"), color: SERIES },
+  } satisfies ChartConfig;
   const fadeId = useFadeId();
   const { data } = useSuspenseQuery(
     auditHistoryOptions(id, presetToRange(range)),
@@ -97,8 +102,8 @@ export function AuditHealthChart({
     return (
       <ChartNotice
         height={HEIGHT}
-        title="No audit snapshots yet"
-        body="The daily audit snapshot builds this trend."
+        title={t("history.emptyTitle")}
+        body={t("history.emptyBody")}
       />
     );
   }
@@ -107,9 +112,11 @@ export function AuditHealthChart({
     return (
       <ChartStat
         height={HEIGHT}
-        label={`Last daily snapshot · ${formatDate(last.date)}`}
+        label={t("history.lastSnapshot", {
+          date: formatDateInLocale(last.date, locale),
+        })}
         value={String(last.overall)}
-        note="A trend needs a few more daily snapshots."
+        note={t("history.shortNote")}
       />
     );
   }
@@ -119,14 +126,14 @@ export function AuditHealthChart({
   return (
     <div className="flex flex-col gap-2">
       <ChartKey
-        label="Score history key"
-        items={keyItems(potential, changes.length > 0)}
+        label={t("history.key")}
+        items={keyItems(potential, changes.length > 0, t)}
       />
       <ChartContainer
         config={chartConfig}
         className={`${HEIGHT} w-full`}
         role="region"
-        aria-label="Score history"
+        aria-label={t("history.aria")}
       >
         <ComposedChart
           accessibilityLayer
@@ -135,10 +142,12 @@ export function AuditHealthChart({
         >
           <SeriesFade id={fadeId} color={SERIES} />
           <CartesianGrid {...GRID_PROPS} />
-          <XAxis {...TIME_AXIS_PROPS} />
+          <XAxis {...timeAxisPropsInLocale(locale)} />
           <YAxis {...VALUE_AXIS_PROPS} {...SCORE_AXIS_PROPS} />
           <ChartTooltip
-            content={<ChartTooltipContent {...TIME_TOOLTIP_PROPS} />}
+            content={
+              <ChartTooltipContent {...timeTooltipPropsInLocale(locale)} />
+            }
           />
           {changes.map((change, index) => (
             <ReferenceLine
@@ -146,7 +155,7 @@ export function AuditHealthChart({
               x={change.date}
               {...CHANGE_MARKER_PROPS}
               label={{
-                value: `Rubric ${change.version}`,
+                value: t("history.rubricLabel", { version: change.version }),
                 position:
                   change.labelPosition === "insideRight"
                     ? "insideTopRight"

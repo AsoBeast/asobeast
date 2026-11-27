@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import {
   KEYWORD_FIELD_CHAR_LIMIT,
@@ -15,9 +16,10 @@ import {
   readingStorefrontNames,
   type KeywordFieldDraft,
 } from "@/lib/app-localizations";
-import { formatDateTime, formatList } from "@/lib/format";
-import { seededFieldDraft } from "@/lib/keyword-field-addition";
-import { localizationName } from "@/lib/localizations";
+import { formatDateTimeInLocale, formatListInLocale } from "@/lib/format";
+import { localizationNameInLocale } from "@/lib/localizations";
+import { useAppLocale } from "@/lib/use-app-locale";
+import { proposalDraft, seededFieldDraft } from "@/lib/keyword-field-addition";
 import { STORE_CONNECTIONS_PATH } from "@/lib/store-connection-copy";
 import { cn } from "@/lib/utils";
 import { SaveKeywordFieldDialog } from "./SaveKeywordFieldDialog";
@@ -30,13 +32,12 @@ function KeywordFieldUsage({
   field: KeywordFieldDraft;
   countId: string;
 }) {
+  const t = useTranslations("localizations");
   const over = field.over > 0;
   return (
     <>
       <div className="flex items-center justify-between gap-3 text-caption">
-        <span className="text-muted-foreground">
-          Separate keywords with commas.
-        </span>
+        <span className="text-muted-foreground">{t("editor.separate")}</span>
         <span
           id={countId}
           aria-live="polite"
@@ -45,12 +46,14 @@ function KeywordFieldUsage({
             over ? "font-medium text-signal-down" : "text-muted-foreground",
           )}
         >
-          {`${field.used}/${KEYWORD_FIELD_CHAR_LIMIT}${over ? ` · ${field.over} over the limit` : ""}`}
+          {`${field.used}/${KEYWORD_FIELD_CHAR_LIMIT}${
+            over ? ` · ${t("editor.overLimit", { count: field.over })}` : ""
+          }`}
         </span>
       </div>
       {field.storedAs === null ? null : (
         <p className="text-caption text-muted-foreground">
-          Stored as{" "}
+          {t("editor.storedAs")}
           <span className="font-mono break-all">{field.storedAs}</span>
         </p>
       )}
@@ -63,28 +66,35 @@ export function StoreFieldNotice({
 }: {
   sync: AppLocalizationStoreSync | null;
 }) {
+  const t = useTranslations("localizations");
+  const locale = useAppLocale();
   return (
     <>
       <p className="text-caption text-muted-foreground">
-        Imported from App Store Connect
+        {t("editor.imported")}
         {sync?.at ? (
-          <> · last read {formatDateTime(sync.at)}</>
+          <>
+            {" "}
+            ·{" "}
+            {t("editor.lastRead", {
+              date: formatDateTimeInLocale(sync.at, locale),
+            })}
+          </>
         ) : (
-          " · waiting for its first read"
+          <> · {t("editor.waiting")}</>
         )}
-        . Edit the keywords there, and this field imports them again with every
-        release. The connection lives in{" "}
+        {t("editor.notice")}
         <Link
           href={STORE_CONNECTIONS_PATH}
           className="font-medium text-foreground link-underline"
         >
-          Integrations
+          {t("integrations")}
         </Link>
         .
       </p>
       {sync?.error ? (
         <p role="alert" className="text-dense text-destructive">
-          The last import stopped: {sync.error}
+          {t("editor.importStopped", { error: sync.error })}
         </p>
       ) : null}
     </>
@@ -110,10 +120,12 @@ export function KeywordFieldEditor({
   drafted?: string;
   onProposalSettled?: () => void;
 }) {
+  const t = useTranslations("localizations");
+  const locale = useAppLocale();
   const countId = useId();
   const editor = useRef<HTMLTextAreaElement>(null);
   const saveButton = useRef<HTMLButtonElement>(null);
-  const name = localizationName(item.localization);
+  const name = localizationNameInLocale(item.localization, locale);
   const [draft, setDraft] = useState<string | null>(() =>
     seededFieldDraft(
       item.phrases,
@@ -160,7 +172,7 @@ export function KeywordFieldEditor({
         rows={3}
         spellCheck={false}
         dir="auto"
-        aria-label={`${name} keyword field`}
+        aria-label={t("editor.fieldAria", { name })}
         aria-describedby={countId}
         aria-invalid={managed ? undefined : over}
         className="bg-card"
@@ -169,9 +181,13 @@ export function KeywordFieldEditor({
       <KeywordFieldUsage field={field} countId={countId} />
       {item.readBy.length === 0 ? (
         <p className="text-caption text-muted-foreground">
-          None of your markets reads {name}. Storefronts that read it:{" "}
-          {formatList(readingStorefrontNames(item.localization))}. Add one of
-          them as a keyword market to track these phrases there.
+          {t("editor.noneReads", {
+            name,
+            markets: formatListInLocale(
+              readingStorefrontNames(item.localization, locale),
+              locale,
+            ),
+          })}
         </p>
       ) : null}
       {managed ? null : (
@@ -192,7 +208,7 @@ export function KeywordFieldEditor({
               }}
             >
               {busy ? <Loader2 className="animate-spin" /> : null}
-              {busy ? "Saving…" : "Save keyword field"}
+              {busy ? t("editor.saving") : t("editor.save")}
             </Button>
           </div>
           {review ? (

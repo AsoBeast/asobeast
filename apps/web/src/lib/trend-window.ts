@@ -1,9 +1,18 @@
+import { createTranslator } from "next-intl";
+import enKeywords from "../../messages/en/keywords.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import {
   addUtcDays,
   KEYWORD_RECENT_POSITION_DAYS,
   type KeywordRecentPosition,
   type RankingPoint,
 } from "@asobeast/shared";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywords",
+  messages: { keywords: enKeywords },
+});
 
 export const TREND_WINDOWS = ["7d", "30d"] as const;
 export type TrendWindow = (typeof TREND_WINDOWS)[number];
@@ -20,14 +29,20 @@ export interface TrendFrame {
   end?: string;
 }
 
-export const trendSpan = (window: TrendWindow): string =>
-  `${TREND_WINDOW_DAYS[window]} days`;
+export const trendSpan = (
+  window: TrendWindow,
+  t: MessageTranslator = english,
+): string => t("table.trendDays", { days: TREND_WINDOW_DAYS[window] });
 
-export const trendLabel = (window: TrendWindow): string =>
-  `Last ${trendSpan(window)}`;
+export const trendLabel = (
+  window: TrendWindow,
+  t: MessageTranslator = english,
+): string => t("table.lastDays", { days: TREND_WINDOW_DAYS[window] });
 
-export const trendPeriod = (window: TrendWindow): string =>
-  `over ${trendSpan(window)}`;
+export const trendPeriod = (
+  window: TrendWindow,
+  t: MessageTranslator = english,
+): string => t("table.trendPeriod", { days: TREND_WINDOW_DAYS[window] });
 
 export function trendFrame(window: TrendWindow, today: string): TrendFrame {
   const days = TREND_WINDOW_DAYS[window];

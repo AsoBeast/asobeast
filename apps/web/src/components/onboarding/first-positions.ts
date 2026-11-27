@@ -1,10 +1,15 @@
-import {
-  listsNoApps,
-  noAppsWords,
-  type TrackedKeywordItem,
-} from "@asobeast/shared";
+import { listsNoApps, type TrackedKeywordItem } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
+import enSetup from "../../../messages/en/setup.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import { pluralize } from "@/lib/format";
 import { activeKeywordCount } from "./setup-progress";
+
+const english = createTranslator({
+  locale: "en",
+  namespace: "setup",
+  messages: { setup: enSetup },
+});
 
 export const FIRST_POSITIONS_LIMIT = 8;
 
@@ -50,35 +55,49 @@ export interface FirstPositions {
   rows: FirstPositionRow[];
 }
 
-function headlineOf(checked: FirstPositionRow[], tracked: number): string {
+function headlineOf(
+  checked: FirstPositionRow[],
+  tracked: number,
+  t: MessageTranslator,
+): string {
   const best = checked[0];
   if (!best) {
-    return `Positions are being collected for ${pluralize(tracked, "keyword")}.`;
+    return t("firstPositions.collecting", { count: tracked });
   }
   if (best.position !== null) {
-    return `Your app ranks #${best.position} for “${best.text}”.`;
+    return t("firstPositions.best", {
+      position: best.position,
+      keyword: best.text,
+    });
   }
   const counted = `Checked ${checked.length} of ${pluralize(tracked, "keyword")}`;
   if (checked.every((row) => listsNoApps(row.resultCount))) {
-    return `${counted}, and ${noAppsWords}.`;
+    return `${counted}, and ${t("firstPositions.noApps")}.`;
   }
   const depth = Math.min(...checked.map((row) => row.depth));
-  return `${counted}, none in the top ${depth} yet.`;
+  return t("firstPositions.checkedNone", {
+    checked: checked.length,
+    tracked,
+    depth,
+  });
 }
 
 export function firstPositions(
   keywords: readonly TrackedKeywordItem[],
+  t: MessageTranslator = english,
 ): FirstPositions {
   const checked = checkedRows(keywords);
   return {
-    headline: headlineOf(checked, activeKeywordCount(keywords)),
+    headline: headlineOf(checked, activeKeywordCount(keywords), t),
     rows: checked.slice(0, FIRST_POSITIONS_LIMIT),
   };
 }
 
-export function positionLabel(row: FirstPositionRow): string {
+export function positionLabel(
+  row: FirstPositionRow,
+  t: MessageTranslator = english,
+): string {
   if (row.position !== null) return `#${row.position}`;
-  return listsNoApps(row.resultCount)
-    ? noAppsWords
-    : `not in the top ${row.depth}`;
+  if (listsNoApps(row.resultCount)) return t("firstPositions.noApps");
+  return t("firstPositions.missing", { depth: row.depth });
 }

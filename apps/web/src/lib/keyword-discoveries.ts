@@ -1,3 +1,4 @@
+import { createTranslator } from "next-intl";
 import type {
   DiscoverySource,
   KeywordDiscoveryCount,
@@ -10,29 +11,36 @@ import type {
   KeywordDiscoveryTrackResult,
   Store,
 } from "@asobeast/shared";
+import enKeywordInspector from "../../messages/en/keywordInspector.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import { FIRST_CHECK_POLL_LIMIT, FIRST_CHECK_POLL_MS } from "./keyword-checks";
-import { pluralize } from "./format";
 
 const DAY_MS = 86_400_000;
 
+const english = createTranslator({
+  locale: "en",
+  namespace: "keywordInspector",
+  messages: { keywordInspector: enKeywordInspector },
+});
+
 const WEEKDAYS = [
-  "Sunday",
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
 ] as const;
 
-const SOURCE_LABELS: Record<DiscoverySource, string> = {
-  title: "Your title",
-  subtitle: "Your subtitle",
-  description: "Your description",
-  competitors: "Competitors",
-  reviews: "Reviews",
-  popularity: "Apple popularity",
-  portfolio: "Your other apps",
+const SOURCE_KEYS: Record<DiscoverySource, string> = {
+  title: "title",
+  subtitle: "subtitle",
+  description: "description",
+  competitors: "competitors",
+  reviews: "reviews",
+  popularity: "popularity",
+  portfolio: "portfolio",
 };
 
 export function keywordDiscoveriesPollInterval(
@@ -75,82 +83,116 @@ export function withoutDiscoveries(
 
 export const discoveryTabLabel = (
   counts: KeywordDiscoveryCounts | undefined,
-): string => (counts ? `Discovered ${counts.all}` : "Discovered");
+  t: MessageTranslator = english,
+): string =>
+  counts
+    ? t("discovery.tabs.discoveredCount", { count: counts.all })
+    : t("discovery.tabs.discovered");
 
 export const discoverySourceLabel = (
   source: DiscoverySource,
   store: Store,
+  t: MessageTranslator = english,
 ): string =>
-  source === "description" && store === "GOOGLE_PLAY"
-    ? "Your short description"
-    : SOURCE_LABELS[source];
+  t(
+    source === "description" && store === "GOOGLE_PLAY"
+      ? "discovery.sources.shortDescription"
+      : `discovery.sources.${SOURCE_KEYS[source]}`,
+  );
 
 const utcDayNumber = (instant: Date): number =>
   Math.floor(instant.getTime() / DAY_MS);
 
-function checkedSentence(checkedAt: string | null, now: Date): string {
-  if (checkedAt === null) return "Not checked yet.";
+function checkedSentence(
+  checkedAt: string | null,
+  now: Date,
+  t: MessageTranslator,
+): string {
+  if (checkedAt === null) return t("discovery.footer.notChecked");
   const days = Math.max(
     0,
     utcDayNumber(now) - utcDayNumber(new Date(checkedAt)),
   );
   return days === 0
-    ? "Checked today."
-    : `Checked ${pluralize(days, "day")} ago.`;
+    ? t("discovery.footer.checkedToday")
+    : t("discovery.footer.checkedDaysAgo", { count: days });
 }
 
-function weeklySentence(checks: KeywordDiscoveryChecks): string {
-  const used = checks.usedThisWeek > 0 ? `, ${checks.usedThisWeek} used` : "";
-  const budget = `${pluralize(checks.perWeek, "check")} a week${used}`;
-  if (checks.nextRunAt === null) return `${budget}. Weekly runs are off.`;
+function weeklySentence(
+  checks: KeywordDiscoveryChecks,
+  t: MessageTranslator,
+): string {
+  const budget = t("discovery.footer.weeklyBudget", {
+    count: checks.perWeek,
+    used: checks.usedThisWeek > 0 ? checks.usedThisWeek : "none",
+  });
+  if (checks.nextRunAt === null) {
+    return t("discovery.footer.weeklyOff", { budget });
+  }
   const weekday = WEEKDAYS[new Date(checks.nextRunAt).getUTCDay()];
-  return `${budget}; the next run is on ${weekday}.`;
+  return t("discovery.footer.nextRun", {
+    budget,
+    weekday: t(`discovery.footer.weekdays.${weekday}`),
+  });
 }
 
 export const discoveryFooter = (
   checks: KeywordDiscoveryChecks,
   now: Date,
+  t: MessageTranslator = english,
 ): string =>
-  `${checkedSentence(checks.checkedAt, now)} ${weeklySentence(checks)}`;
+  t("discovery.footer.combined", {
+    checked: checkedSentence(checks.checkedAt, now, t),
+    weekly: weeklySentence(checks, t),
+  });
 
-export const pendingChecksText = (pending: number): string =>
-  pending > 0 ? `${pluralize(pending, "check")} pending` : "";
+export const pendingChecksText = (
+  pending: number,
+  t: MessageTranslator = english,
+): string =>
+  pending > 0 ? t("discovery.footer.pending", { count: pending }) : "";
 
-export const unfitNotice = (unfit: number): string =>
-  unfit > 0 ? `${unfit} did not fit your plan` : "";
+export const unfitNotice = (
+  unfit: number,
+  t: MessageTranslator = english,
+): string => (unfit > 0 ? t("discovery.footer.unfit", { count: unfit }) : "");
 
-export function trackedToast({
-  tracked,
-  skipped,
-}: KeywordDiscoveryTrackResult): string {
+export function trackedToast(
+  { tracked, skipped }: KeywordDiscoveryTrackResult,
+  t: MessageTranslator = english,
+): string {
   if (tracked === 0) {
-    return skipped > 0 ? "Nothing fit your plan" : "Nothing new to track";
+    return skipped > 0
+      ? t("discovery.toast.nothingFit")
+      : t("discovery.toast.nothingNew");
   }
-  const tracking = `Tracking ${pluralize(tracked, "keyword")}`;
-  return skipped > 0 ? `${tracking}. ${unfitNotice(skipped)}.` : tracking;
+  const tracking = t("discovery.toast.tracked", { count: tracked });
+  return skipped > 0
+    ? t("discovery.toast.trackedPartial", {
+        tracking,
+        unfit: unfitNotice(skipped, t),
+      })
+    : tracking;
 }
 
-export function refreshedToast({
-  queued,
-  resolved,
-}: KeywordDiscoveryRefreshResult): string {
-  if (queued > 0) return `Queued ${pluralize(queued, "check")}`;
+export function refreshedToast(
+  { queued, resolved }: KeywordDiscoveryRefreshResult,
+  t: MessageTranslator = english,
+): string {
+  if (queued > 0) return t("discovery.toast.queued", { count: queued });
   return resolved > 0
-    ? "No checks to queue this week. The list was refreshed from other searches."
-    : "Nothing new to check this week";
+    ? t("discovery.toast.refreshed")
+    : t("discovery.toast.nothingToCheck");
 }
 
 export function discoveriesLine(
   count: KeywordDiscoveryCount | undefined,
+  t: MessageTranslator = english,
 ): string | null {
   if (!count || count.open === 0) return null;
-  const found = pluralize(
-    count.open,
-    "keyword discovery",
-    "keyword discoveries",
-  );
+  const found = t("discovery.line.found", { count: count.open });
   return count.ranked > 0
-    ? `${found}, ${count.ranked} where you already rank`
+    ? t("discovery.line.ranked", { found, ranked: count.ranked })
     : found;
 }
 

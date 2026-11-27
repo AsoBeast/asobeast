@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { INTEGRATIONS_PATH, PLAY_SIGN_IN_PATH } from "@asobeast/shared";
 import { useAuth } from "@/components/auth/use-auth";
 import {
@@ -14,34 +15,29 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ADMIN_ROOT, adminSectionFrom } from "@/lib/admin-sections";
-import { APP_SECTIONS, appRouteFrom, sectionHref } from "@/lib/app-sections";
+import { appRouteFrom, sectionHref } from "@/lib/app-sections";
 import { appDetailOptions } from "@/lib/queries";
 import { useCachedQueryData } from "@/lib/use-cached-query-data";
-import { WHATS_NEW_LABEL, WHATS_NEW_PATH } from "./WhatsNewMenuItem";
+import { WHATS_NEW_PATH } from "./WhatsNewMenuItem";
 
 const WORKSPACE_LABELS: Record<string, string> = {
-  "/": "Dashboard",
-  "/actions": "Action Center",
-  "/alerts": "Alerts",
-  "/charts": "Top charts",
-  "/inspect": "Keyword inspector",
-  [INTEGRATIONS_PATH]: "Integrations",
-  [PLAY_SIGN_IN_PATH]: "Integrations",
-  "/settings": "Settings",
-  [WHATS_NEW_PATH]: WHATS_NEW_LABEL,
+  "/": "dashboard",
+  "/actions": "actionCenter",
+  "/alerts": "alerts",
+  "/charts": "topCharts",
+  "/inspect": "keywordInspector",
+  [INTEGRATIONS_PATH]: "integrations",
+  [PLAY_SIGN_IN_PATH]: "integrations",
+  "/settings": "settings",
+  [WHATS_NEW_PATH]: "whatsNew",
 };
 
-function sectionLabel(segment: string): string {
-  return (
-    APP_SECTIONS.find((section) => section.segment === segment)?.label ??
-    "Setup"
-  );
-}
-
 function AppCrumbs({ id, segment }: { id: string; segment: string }) {
+  const t = useTranslations("navigation");
+  const shell = useTranslations("shell");
   const data = useCachedQueryData(appDetailOptions(id).queryKey);
 
-  const name = data?.name ?? "Untitled app";
+  const name = data?.name ?? shell("untitledApp");
 
   return (
     <>
@@ -66,7 +62,7 @@ function AppCrumbs({ id, segment }: { id: string; segment: string }) {
           <BreadcrumbSeparator className="hidden sm:block" />
           <BreadcrumbItem className="min-w-0">
             <BreadcrumbPage className="truncate">
-              {sectionLabel(segment)}
+              {t(`appSections.${segment || "overview"}`)}
             </BreadcrumbPage>
           </BreadcrumbItem>
         </>
@@ -75,17 +71,20 @@ function AppCrumbs({ id, segment }: { id: string; segment: string }) {
   );
 }
 
-function AdminCrumbs({ label }: { label: string }) {
+function AdminCrumbs({ segment }: { segment: string }) {
+  const t = useTranslations("navigation");
   return (
     <>
       <BreadcrumbItem className="hidden sm:inline-flex">
         <BreadcrumbLink asChild>
-          <Link href={ADMIN_ROOT}>Admin</Link>
+          <Link href={ADMIN_ROOT}>{t("admin")}</Link>
         </BreadcrumbLink>
       </BreadcrumbItem>
       <BreadcrumbSeparator className="hidden sm:block" />
       <BreadcrumbItem className="min-w-0">
-        <BreadcrumbPage className="truncate">{label}</BreadcrumbPage>
+        <BreadcrumbPage className="truncate">
+          {t(`adminSections.${segment || "overview"}`)}
+        </BreadcrumbPage>
       </BreadcrumbItem>
     </>
   );
@@ -93,6 +92,7 @@ function AdminCrumbs({ label }: { label: string }) {
 
 export function Breadcrumbs() {
   const pathname = usePathname();
+  const t = useTranslations("navigation");
   const app = appRouteFrom(pathname);
   const { isOperator } = useAuth();
   const admin = adminSectionFrom(pathname);
@@ -102,7 +102,7 @@ export function Breadcrumbs() {
       <BreadcrumbList className="flex-nowrap">
         {admin ? (
           isOperator ? (
-            <AdminCrumbs label={admin.label} />
+            <AdminCrumbs segment={admin.segment} />
           ) : null
         ) : (
           <>
@@ -111,11 +111,11 @@ export function Breadcrumbs() {
             >
               {app ? (
                 <BreadcrumbLink asChild>
-                  <Link href="/">Apps</Link>
+                  <Link href="/">{t("apps")}</Link>
                 </BreadcrumbLink>
               ) : (
                 <BreadcrumbPage>
-                  {WORKSPACE_LABELS[pathname] ?? "Dashboard"}
+                  {t(WORKSPACE_LABELS[pathname] ?? "dashboard")}
                 </BreadcrumbPage>
               )}
             </BreadcrumbItem>

@@ -1,12 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { ChevronDown, ChevronUp, type LucideIcon } from "lucide-react";
-import {
-  formatCheckedPosition,
-  type Store,
-  type TrackedKeywordItem,
-} from "@asobeast/shared";
+import { type Store, type TrackedKeywordItem } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -15,7 +12,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { formatCountry, storeLabel } from "@/lib/format";
+import { formatCountryInLocale, storeLabel } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { isChecking, staleCheckDay } from "@/lib/keyword-checks";
 import type { RangePreset } from "@/lib/ranges";
 import { KeywordClassTag } from "../KeywordClassTag";
@@ -91,11 +89,12 @@ function PositionHistorySection({
   today: string;
 }) {
   const [range, setRange] = useState<RangePreset>("30d");
+  const t = useTranslations("keywordInspector");
   return (
-    <SheetSection title="Position history">
+    <SheetSection title={t("keywordSheet.history.title")}>
       {isChecking(keyword) ? (
         <p className="text-muted-foreground">
-          The first check is queued. The chart appears once it lands.
+          {t("keywordSheet.history.firstCheck")}
         </p>
       ) : (
         <>
@@ -138,6 +137,9 @@ function KeywordSheetBody({
   onStep: (keywordId: string) => void;
   onOpenSerp: () => void;
 }) {
+  const t = useTranslations("keywordInspector");
+  const keywords = useTranslations("keywords");
+  const locale = useAppLocale();
   return (
     <>
       <SheetHeader className="flex-row items-start justify-between gap-3 px-4 pt-4 pr-12">
@@ -149,21 +151,27 @@ function KeywordSheetBody({
             <KeywordClassTag
               keywordClass={keyword.keywordClass}
               source={keyword.keywordClassSource}
+              t={keywords}
             />
           </SheetTitle>
           <SheetDescription>
-            {`${storeLabel(store)} · ${formatCountry(keyword.country)}${keyword.active ? "" : " · Paused"}`}
+            {t.rich("keywordSheet.market", {
+              store: storeLabel(store),
+              country: formatCountryInLocale(keyword.country, locale),
+              status: keyword.active ? "active" : "paused",
+              paused: (chunks) => <span>{chunks}</span>,
+            })}
           </SheetDescription>
         </div>
         <div className="flex shrink-0 items-center">
           <StepButton
-            label="Previous keyword"
+            label={t("keywordSheet.previous")}
             icon={ChevronUp}
             target={steps.previous}
             onStep={onStep}
           />
           <StepButton
-            label="Next keyword"
+            label={t("keywordSheet.next")}
             icon={ChevronDown}
             target={steps.next}
             onStep={onStep}
@@ -231,6 +239,7 @@ export function KeywordSheet({
   onClose: () => void;
   onOpenSerp: (keywordId: string) => void;
 }) {
+  const t = useTranslations("keywordInspector");
   const [shown, setShown] = useState<Shown>({
     keywordId: keyword?.keywordId ?? "",
     steps: NO_STEPS,
@@ -275,8 +284,8 @@ export function KeywordSheet({
           />
         ) : (
           <SheetHeader className="sr-only">
-            <SheetTitle>Keyword</SheetTitle>
-            <SheetDescription>Details of one tracked keyword.</SheetDescription>
+            <SheetTitle>{t("keywordSheet.title")}</SheetTitle>
+            <SheetDescription>{t("keywordSheet.description")}</SheetDescription>
           </SheetHeader>
         )}
       </SheetContent>

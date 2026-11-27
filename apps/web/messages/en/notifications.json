@@ -1,0 +1,236 @@
+{
+  "delivery": {
+    "title": "Delivery",
+    "flushNow": "Flush now",
+    "flushError": "Could not flush alerts",
+    "nothingToFlush": "Nothing to flush",
+    "flushed": "Sent {notifications, plural, one {# notification} other {# notifications}} to {channels, plural, one {# channel} other {# channels}} from {flushed, plural, one {# event} other {# events}}",
+    "lastFlush": "Last flush",
+    "never": "Never",
+    "pending": "Pending",
+    "claimed": "Claimed",
+    "mode": "Mode",
+    "trigger": "Trigger",
+    "afterCompletion": "After completion",
+    "pipelineStarts": "Pipeline starts",
+    "batchedDescription": "Daily events are sent after processing as an app update, followed by a competitor watch when each has activity.",
+    "instantDescription": "Each event is delivered instantly, one notification per event.",
+    "batched": "Batched",
+    "instant": "Instant"
+  },
+  "deliveries": {
+    "recent": "Recent deliveries",
+    "loading": "Loading…",
+    "none": "No deliveries yet.",
+    "last": "Last {count, number}",
+    "summary": "{sent, number} of {total, number} delivered",
+    "success": "Success",
+    "failed": "Failed",
+    "attempt": "attempt {count, number}"
+  },
+  "email": {
+    "title": "Email",
+    "disabled": "Email alerts are disabled.",
+    "setupIntro": "Set the SMTP environment variables on the API to enable them:",
+    "required": "<host>SMTP_HOST</host> and <from>SMTP_FROM</from> are required.",
+    "empty": "No email alerts yet. Add a recipient to receive metadata and rank alerts by email.",
+    "listLabel": "Configured email alerts and their subscribed events.",
+    "add": "Add email alert",
+    "addDescription": "AsoBeast emails this recipient when a subscribed event fires, using your configured SMTP server. Unless it is the verified account email of a member of this workspace, the recipient confirms the address from the link in a first email.",
+    "recipient": "Recipient email",
+    "added": "Email alert added",
+    "addedConfirmationFailed": "Email alert added. The confirmation email to {email} could not be sent, so use Resend confirmation to try again.",
+    "confirmationSent": "Confirmation email sent to {email}",
+    "addError": "Could not add email alert",
+    "updateError": "Could not update email alert",
+    "rulesSaved": "Email alert rules saved",
+    "saveRulesError": "Could not save the email alert events",
+    "testSent": "Test email sent",
+    "testFailed": "Could not send the test email",
+    "removed": "Email alert removed",
+    "removeError": "Could not remove email alert",
+    "resendError": "Could not send the confirmation email",
+    "deleteTitle": "Delete this email alert?",
+    "deleteDescription": "AsoBeast will stop emailing {email}. This cannot be undone."
+  },
+  "webhook": {
+    "title": "Webhooks",
+    "empty": "No webhooks yet. Add one to receive metadata and rank alerts in Discord, Slack, Microsoft Teams, Telegram, Google Chat or your own endpoint.",
+    "listLabel": "Configured alert webhooks and their subscribed events.",
+    "add": "Add webhook",
+    "addDescription": "AsoBeast POSTs a JSON payload to this URL when a subscribed event fires. Add a secret to receive an HMAC signature header.",
+    "endpoint": "Endpoint URL",
+    "secret": "Secret (optional)",
+    "secretPlaceholder": "At least 8 characters",
+    "signed": "Signed",
+    "added": "Webhook added",
+    "addError": "Could not add webhook",
+    "updateError": "Could not update webhook",
+    "rulesSaved": "Webhook rules saved",
+    "saveRulesError": "Could not save the webhook events",
+    "testDelivered": "Delivered (status {status})",
+    "testFailed": "Not delivered (status {status})",
+    "testFailedNoStatus": "Not delivered",
+    "testError": "Could not reach the webhook",
+    "removed": "Webhook removed",
+    "removeError": "Could not remove webhook",
+    "deleteTitle": "Delete this webhook?",
+    "deleteDescription": "AsoBeast will stop delivering alerts to {label}. This cannot be undone."
+  },
+  "rules": {
+    "label": "Alert rules",
+    "summary": "{count, plural, one {# rule on} other {# rules on}}",
+    "groups": {
+      "rankings": "Rankings",
+      "charts": "Charts",
+      "reviewsAndRatings": "Reviews and ratings",
+      "listings": "Listings",
+      "reports": "Reports"
+    },
+    "events": {
+      "metadataChanged": {
+        "title": "Metadata changed",
+        "detail": "A listing changes, yours or a competitor's."
+      },
+      "rankDropped": {
+        "title": "Rank dropped",
+        "detail": "A keyword of your app falls by at least this many positions."
+      },
+      "rankImproved": {
+        "title": "Rank improved",
+        "detail": "A keyword climbs by at least the same number of positions."
+      },
+      "rankMilestone": {
+        "title": "Rank milestone",
+        "detail": "Your app enters or leaves the top 10, the top 3 or first place for a keyword."
+      },
+      "rankFirst": {
+        "title": "First ranking",
+        "detail": "Your app ranks for a keyword for the first time."
+      },
+      "rankOvertaken": {
+        "title": "Overtaken by competitor",
+        "detail": "A competitor moves above your app for a keyword."
+      },
+      "reviewNew": {
+        "title": "New review",
+        "detail": "Every new review, for the stars you pick."
+      },
+      "reviewNegative": {
+        "title": "Negative review",
+        "detail": "A low review, at or below the cutoff the instance sets (2 stars by default)."
+      },
+      "ratingDropped": {
+        "title": "Rating dropped",
+        "detail": "The average rating falls by at least this many tenths of a star within a week."
+      },
+      "reviewSpike": {
+        "title": "Review spike",
+        "detail": "An unusual number of new reviews arrives in one day."
+      },
+      "digestWeekly": {
+        "title": "Weekly digest",
+        "detail": "A weekly summary of your portfolio."
+      },
+      "serpEntrant": {
+        "title": "SERP entrant",
+        "detail": "A new app enters the top 10 of a keyword you track."
+      },
+      "actionOpened": {
+        "title": "New action",
+        "detail": "The Action Center opens or reopens an action at the priority the instance sets (high by default)."
+      },
+      "chartEntered": {
+        "title": "Chart entered",
+        "detail": "Your app enters a store chart."
+      },
+      "chartLeft": {
+        "title": "Chart left",
+        "detail": "Your app leaves a store chart."
+      },
+      "chartMilestone": {
+        "title": "Chart milestone",
+        "detail": "Your app enters or leaves first place, the top 3 or the top 10 of a chart."
+      },
+      "appDelisted": {
+        "title": "App delisted",
+        "detail": "An app disappears from its home store."
+      },
+      "appUnlistedMarket": {
+        "title": "Unlisted in a market",
+        "detail": "A store stops listing an app in one market."
+      }
+    },
+    "sendsPrefix": "Sends ",
+    "sendsNothing": "Sends nothing",
+    "toggle": "Toggle {label}",
+    "edit": "Edit rules",
+    "editDescription": "Choose the rules that deliver alerts to <recipient>{label}</recipient>.",
+    "save": "Save rules",
+    "chooseOne": "Switch on at least one rule to save.",
+    "usesRankDrop": "Uses the rank drop value.",
+    "rankThresholdValue": "{value, number}+"
+  },
+  "reviewStars": {
+    "label": "New review stars",
+    "option": "{score, plural, one {# star} other {# stars}}",
+    "required": "Pick at least one star.",
+    "help": "Reviews with these stars arrive as new reviews. When Negative review is ticked too, a low review outside these stars still arrives as a negative review.",
+    "filtered": "{scores} {count, plural, one {star} other {stars}}",
+    "range": "{first, number} to {last, number} {count, plural, one {star} other {stars}}",
+    "single": "{score, number} {score, plural, one {star} other {stars}}"
+  },
+  "ratingDrop": {
+    "label": "Rating drop threshold",
+    "option": "{stars, number} {tenths, select, 1 {star} 10 {star} other {stars}}",
+    "help": "Alert when the average rating falls by at least this much against seven to ten days earlier. Needs 20 ratings. Reviews are not counted, the number shown in the store is."
+  },
+  "rankDrop": {
+    "label": "Rank drop positions",
+    "positions": "positions",
+    "helpDefault": "Leave empty to use the instance value. A smaller value counts as the lowest value this instance detects.",
+    "helpInstance": "Leave empty to use the instance value, {instance, number}. A smaller value counts as {instance, number}, the lowest value this instance detects."
+  },
+  "confirmDrops": {
+    "label": "Confirm drops before alerting",
+    "badge": "Confirmed drops",
+    "help": "A rank drop, or an exit from the top 10, the top 3 or first place, is sent only if the next check confirms it. A keyword that slips from #9 to #11 and comes back sends nothing. Confirmed drops arrive one check later."
+  },
+  "essential": {
+    "badge": "Essential alerts",
+    "line": "Turned on by AsoBeast after your first daily run. Change the rules or stop them here.",
+    "empty": "No email alerts yet. Add a recipient, or wait for the essential alerts that turn on after your first daily run.",
+    "needSmtp": "Once email works, AsoBeast turns on the essential alerts for a new workspace after its first daily run.",
+    "needHttps": "AsoBeast turns on the essential alerts after your first daily run once {variable} is an https address.",
+    "needHttpsRich": "AsoBeast turns on the essential alerts after your first daily run once <variable>WEB_PUBLIC_URL</variable> is an https address."
+  },
+  "confirmation": {
+    "sendTest": "Send test",
+    "resend": "Resend confirmation",
+    "unsubscribedTitle": "Unsubscribed.",
+    "unsubscribedDetail": "The recipient asked not to receive these alerts, so they are not asked to confirm again.",
+    "awaitingTitle": "Awaiting confirmation.",
+    "awaitingDetail": "No alerts are sent until the recipient follows the link in the email."
+  },
+  "delete": {
+    "label": "Delete",
+    "named": "Delete {label}",
+    "pending": "Removing…"
+  },
+  "eventWithDetail": "{event} · {detail}",
+  "channels": {
+    "generic": "JSON webhook"
+  },
+  "hints": {
+    "retiredTeams": "Office 365 connector urls stopped delivering in May 2026. Create a workflow with the \"Send webhook alerts to a channel\" template and paste its url.",
+    "slackWorkflow": "Recognised as a Slack workflow trigger. It receives the JSON payload; map its fields in Workflow Builder.",
+    "n8nTest": "This is an n8n test url. It works only while the editor listens; use the production url.",
+    "generic": "Recognised as a JSON webhook. It receives the documented payload.",
+    "discord": "Recognised as Discord. Reports arrive as embeds with the app icon.",
+    "slack": "Recognised as Slack. Reports arrive as Block Kit messages.",
+    "teams": "Recognised as Microsoft Teams. Reports arrive as an Adaptive Card; Teams confirms acceptance, not delivery.",
+    "telegramReady": "Recognised as Telegram. Reports arrive as a message from your bot.",
+    "telegramMissingChat": "Recognised as Telegram. Add ?chat_id={id} after sendMessage.",
+    "googleChat": "Recognised as Google Chat. Reports arrive as a card."
+  }
+}

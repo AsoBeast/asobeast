@@ -1,42 +1,55 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { META_LINE } from "@/components/layout/panel-classes";
 import { useMarket } from "@/components/app-detail/use-market";
 import {
-  formatCompact,
-  formatCountry,
-  formatDate,
+  formatCompactInLocale,
+  formatCountryInLocale,
+  formatDateInLocale,
   formatPrice,
 } from "@/lib/format";
 import { queryMarket } from "@/lib/market";
 import { appListingOptions } from "@/lib/queries";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
 
 export function SnapshotFacts({ id }: { id: string }) {
   const { market, home } = useMarket(id);
+  const t = useTranslations("overview");
+  const tc = useTranslations("common");
+  const locale = useAppLocale();
   const country = queryMarket(market, home);
   const { data: detail } = useSuspenseQuery(appListingOptions(id, country));
   const snapshot = detail.latestSnapshot;
-  const where = country === undefined ? "" : ` · ${formatCountry(country)}`;
+  const where =
+    country === undefined
+      ? ""
+      : t("snapshot.market", {
+          country: formatCountryInLocale(country, locale),
+        });
 
   const facts = [
     snapshot?.installs != null
-      ? `${formatCompact(snapshot.installs)} installs`
+      ? t("snapshot.installs", {
+          count: formatCompactInLocale(snapshot.installs, locale),
+        })
       : null,
     snapshot?.version ? `v${snapshot.version}` : null,
     snapshot?.price != null
-      ? formatPrice(snapshot.price, snapshot.currency)
+      ? formatPrice(snapshot.price, snapshot.currency, tc("free"))
       : null,
-    snapshot ? `Snapshot ${formatDate(snapshot.capturedAt)}${where}` : null,
+    snapshot
+      ? t("snapshot.captured", {
+          date: formatDateInLocale(snapshot.capturedAt, locale),
+          market: where,
+        })
+      : null,
   ].filter((fact) => fact !== null);
 
   if (facts.length === 0) {
-    return (
-      <p className={META_LINE}>
-        No store snapshot yet. Refresh to capture one.
-      </p>
-    );
+    return <p className={META_LINE}>{t("snapshot.empty")}</p>;
   }
 
   return (

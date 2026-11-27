@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { Dialog as SheetPrimitive } from "radix-ui";
 import { XIcon } from "lucide-react";
 
@@ -64,6 +65,7 @@ function SheetContent({
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: keyof typeof SHEET_SIDES;
 }) {
+  const t = useTranslations("common");
   return (
     <SheetPrimitive.Portal data-slot="sheet-portal">
       <SheetOverlay />
@@ -83,12 +85,13 @@ function SheetContent({
         {children}
         <SheetPrimitive.Close data-slot="sheet-close" asChild>
           <Button
+            data-action="close"
             variant="ghost"
             className="absolute top-2 right-2"
             size="icon-sm"
           >
             <XIcon />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">{t("close")}</span>
           </Button>
         </SheetPrimitive.Close>
       </SheetPrimitive.Content>

@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Clock } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { ActionUpdateRequest } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,16 +31,17 @@ export function ActionBulkBar({
   onSelectAll: () => void;
   onClear: () => void;
 }) {
+  const t = useTranslations("actions");
   if (count === 0) return null;
 
   return (
     <div
       role="toolbar"
-      aria-label="Bulk actions"
+      aria-label={t("bulkActions")}
       className="sticky bottom-4 z-20 flex flex-wrap items-center gap-2 rounded-lg border bg-popover px-3 py-2 shadow-overlay"
     >
       <span className="text-body font-medium">
-        {`${formatNumber(count)} selected`}
+        {t("selected", { count: formatNumber(count) })}
       </span>
       <Button
         size="sm"
@@ -48,7 +50,7 @@ export function ActionBulkBar({
         onClick={() => onUpdate({ status: "DONE" })}
       >
         <Check aria-hidden />
-        Done
+        {t("done")}
       </Button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -59,7 +61,7 @@ export function ActionBulkBar({
             disabled={busy}
           >
             <Clock aria-hidden />
-            Snooze
+            {t("snooze")}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">
@@ -70,7 +72,7 @@ export function ActionBulkBar({
                 onUpdate({ status: "SNOOZED", snoozedUntil: snoozeUntil(days) })
               }
             >
-              {days} days
+              {t("days", { count: days })}
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>
@@ -87,7 +89,7 @@ export function ActionBulkBar({
           className={BAR_BUTTON}
           onClick={onSelectAll}
         >
-          Select all {formatNumber(shown)} shown
+          {t("selectAllShown", { count: formatNumber(shown) })}
         </Button>
       ) : null}
       <Button
@@ -96,7 +98,7 @@ export function ActionBulkBar({
         className={BAR_BUTTON}
         onClick={onClear}
       >
-        Clear selection
+        {t("clearSelection")}
       </Button>
     </div>
   );

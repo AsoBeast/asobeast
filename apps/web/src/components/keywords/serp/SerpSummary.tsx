@@ -1,13 +1,19 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { NO_APPS_SENTENCE, type Store } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
+import { type Store } from "@asobeast/shared";
 import { MovementCell } from "@/components/movement/MovementCell";
 import { Button } from "@/components/ui/button";
 import { InfoTip } from "@/components/ui/info-tip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { formatCompact, formatDayMonth, formatRating } from "@/lib/format";
+import {
+  formatCompactInLocale,
+  formatDayMonthInLocale,
+  formatRatingInLocale,
+} from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import type {
   PlacementSummary,
   PositionSummary,
@@ -34,9 +40,18 @@ function jumpToRow(position: number) {
 }
 
 function GuideLink({ href, text }: { href: string; text: string }) {
+  const t = useTranslations("keywordInspector");
+  const label =
+    text === "__OUTLIERS__"
+      ? t("serp.summary.outliers")
+      : text === "__GUIDE__"
+        ? t("serp.summary.guide")
+        : text === "__NO_PLAY__"
+          ? t("serp.summary.noPlaySubtitle")
+          : text;
   return (
     <a href={href} target="_blank" rel="noreferrer" className="link-underline">
-      {text}
+      {label}
     </a>
   );
 }
@@ -46,7 +61,7 @@ const SEARCH_RESULTS_LINK = {
   text: "Read about search results",
 };
 
-const OUTLIERS_LINK = { href: OUTLIERS_GUIDE, text: "Read about outliers" };
+const OUTLIERS_LINK = { href: OUTLIERS_GUIDE, text: "__OUTLIERS__" };
 
 function Item({
   label,
@@ -85,6 +100,8 @@ function PositionValue({
   position: PositionSummary;
   comparedTo: string | null;
 }) {
+  const t = useTranslations("keywordInspector");
+  const locale = useAppLocale();
   switch (position.kind) {
     case "listed":
       return (
@@ -92,7 +109,7 @@ function PositionValue({
           <Button
             variant="link"
             className="h-auto p-0 numeric text-body font-medium"
-            aria-label={`Jump to your row at #${position.position}`}
+            aria-label={t("serp.summary.jump", { position: position.position })}
             onClick={() => jumpToRow(position.position)}
           >
             #{position.position}
@@ -100,8 +117,14 @@ function PositionValue({
           <span className="text-caption">
             <MovementCell
               entry={position.moved}
-              period={comparedTo ? `since ${formatDayMonth(comparedTo)}` : ""}
-              noneText="No earlier position"
+              period={
+                comparedTo
+                  ? t("serp.summary.sinceDate", {
+                      date: formatDayMonthInLocale(comparedTo, locale),
+                    })
+                  : ""
+              }
+              noneText={t("serp.summary.noneEarlier")}
               compact
             />
           </span>
@@ -111,21 +134,23 @@ function PositionValue({
       return (
         <>
           <Value>{`#${position.position}`}</Value>
-          <Note>{`below the top ${position.listed}`}</Note>
+          <Note>{t("serp.summary.below", { listed: position.listed })}</Note>
         </>
       );
     case "notFound":
-      return <Note>{`Not in the top ${position.depth}`}</Note>;
+      return (
+        <Note>
+          {t("serp.summary.notFoundDepth", { depth: position.depth })}
+        </Note>
+      );
     case "noApps":
-      return <Note>{NO_APPS_SENTENCE}</Note>;
+      return <Note>{t("serp.summary.noApps")}</Note>;
     default:
-      return <Note>Not in this list</Note>;
+      return <Note>{t("serp.summary.absent")}</Note>;
   }
 }
 
-const NO_PLAY_SUBTITLE = "Google Play has no subtitle";
-
-const SUBTITLE_LINE_SPACE = "0 of 0 in the subtitle";
+const SUBTITLE_LINE_SPACE = "__SPACE__";
 
 const Line = ({ children }: { children: ReactNode }) => (
   <span className="basis-full text-caption text-muted-foreground">
@@ -140,14 +165,20 @@ const LineSpace = ({ children }: { children: string }) => (
 );
 
 function SubtitleLine({ placements }: { placements: PlacementSummary }) {
+  const t = useTranslations("keywordInspector");
   const { inSubtitle, subtitlesKnown } = placements;
   if (inSubtitle === null || subtitlesKnown === null) {
-    return <Line>{NO_PLAY_SUBTITLE}</Line>;
+    return <Line>{t("serp.summary.noPlaySubtitle")}</Line>;
   }
   return subtitlesKnown >= 2 ? (
-    <Line>{`${inSubtitle} of ${subtitlesKnown} in the subtitle`}</Line>
+    <Line>
+      {t("serp.summary.inSubtitle", {
+        shown: inSubtitle,
+        total: subtitlesKnown,
+      })}
+    </Line>
   ) : (
-    <LineSpace>{SUBTITLE_LINE_SPACE}</LineSpace>
+    <LineSpace>{t("serp.summary.subtitleLineSpace")}</LineSpace>
   );
 }
 
@@ -156,34 +187,42 @@ function PlacementsValue({
 }: {
   placements: PlacementSummary | null;
 }) {
-  if (!placements) return <Note>Not reported</Note>;
+  const t = useTranslations("keywordInspector");
+  if (!placements) return <Note>{t("serp.summary.notReported")}</Note>;
   return (
     <>
-      <Value>{`${placements.inTitle} of ${placements.of}`}</Value>
-      <Note>in the title</Note>
+      <Value>
+        {t("serp.summary.ratio", {
+          shown: placements.inTitle,
+          total: placements.of,
+        })}
+      </Value>
+      <Note>{t("serp.summary.inTitle")}</Note>
       <SubtitleLine placements={placements} />
     </>
   );
 }
 
 function RatingsValue({ ratings }: { ratings: RatingSummary }) {
+  const t = useTranslations("keywordInspector");
+  const locale = useAppLocale();
   if (ratings.kind === "median") {
     return (
       <>
-        <Value>{formatCompact(ratings.value)}</Value>
-        <Note>median</Note>
+        <Value>{formatCompactInLocale(ratings.value, locale)}</Value>
+        <Note>{t("serp.summary.median")}</Note>
       </>
     );
   }
   if (ratings.kind === "average") {
     return (
       <>
-        <Value>{formatRating(ratings.value)}</Value>
-        <Note>average</Note>
+        <Value>{formatRatingInLocale(ratings.value, locale)}</Value>
+        <Note>{t("serp.summary.average")}</Note>
       </>
     );
   }
-  return <Note>No ratings</Note>;
+  return <Note>{t("serp.summary.noRatings")}</Note>;
 }
 
 function SummaryGrid({
@@ -197,6 +236,7 @@ function SummaryGrid({
   ratings: ReactNode;
   tips: boolean;
 }) {
+  const t = useTranslations("keywordInspector");
   const tip = (
     tipLabel: string,
     title: string,
@@ -215,12 +255,12 @@ function SummaryGrid({
       data-slot="serp-summary"
       className="mx-4 mt-4 grid grid-cols-3 gap-px overflow-hidden rounded-lg border bg-border"
     >
-      <Item label="Your position">{position}</Item>
+      <Item label={t("serp.summary.yourPosition")}>{position}</Item>
       <Item
-        label="Keyword in"
+        label={t("serp.summary.keywordIn")}
         tip={tip(
-          "About where the keyword sits",
-          "Where the keyword sits",
+          t("serp.summary.keywordInTipLabel"),
+          t("serp.summary.keywordInTipTitle"),
           "How many of the top 10 hold every word of the keyword in their title, in any order. AsoBeast knows subtitles only for your apps and competitors, from their captured listings. A competitor in the top 10 without the keyword in either is marked Outlier, though it may still hold the keyword in its private keyword field.",
           OUTLIERS_LINK,
         )}
@@ -228,10 +268,10 @@ function SummaryGrid({
         {placements}
       </Item>
       <Item
-        label="Top 10 ratings"
+        label={t("serp.summary.top10Ratings")}
         tip={tip(
-          "About top 10 ratings",
-          "Top 10 ratings",
+          t("serp.summary.top10TipLabel"),
+          t("serp.summary.top10TipTitle"),
           "The median rating count of the top 10 apps, a rough measure of how established the top-ranked apps are. Google Play reports no counts, so its average rating shows instead.",
         )}
       >
@@ -260,15 +300,19 @@ export function SerpSummary({
   );
 }
 
-const ValueSkeleton = ({ className }: { className?: string }) => (
-  <Skeleton
-    className={cn("w-16 text-transparent *:text-transparent", className)}
-  >
-    <Value>0</Value> <Note>median</Note>
-  </Skeleton>
-);
+const ValueSkeleton = ({ className }: { className?: string }) => {
+  const t = useTranslations("keywordInspector");
+  return (
+    <Skeleton
+      className={cn("w-16 text-transparent *:text-transparent", className)}
+    >
+      <Value>0</Value> <Note>{t("serp.summary.median")}</Note>
+    </Skeleton>
+  );
+};
 
 export function SerpSummarySkeleton({ store }: { store: Store }) {
+  const t = useTranslations("keywordInspector");
   const value = <ValueSkeleton className="border border-transparent" />;
   return (
     <SummaryGrid
@@ -278,7 +322,9 @@ export function SerpSummarySkeleton({ store }: { store: Store }) {
         <>
           <ValueSkeleton />
           <LineSpace>
-            {store === "GOOGLE_PLAY" ? NO_PLAY_SUBTITLE : SUBTITLE_LINE_SPACE}
+            {store === "GOOGLE_PLAY"
+              ? t("serp.summary.noPlaySubtitle")
+              : t("serp.summary.subtitleLineSpace")}
           </LineSpace>
         </>
       }

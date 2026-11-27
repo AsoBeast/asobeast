@@ -6,14 +6,16 @@ import {
   type ReviewReplyState,
   type Store,
 } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
+import enReviews from "../../../messages/en/reviews.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import { storeLabel } from "@/lib/format";
 
-const STATE_LABELS: Record<ReviewReplyState, string> = {
-  needs_reply: "Needs reply",
-  drafted: "Draft saved",
-  replied: "Replied",
-  updated: "Updated after reply",
-};
+const english = createTranslator({
+  locale: "en",
+  namespace: "reviews",
+  messages: { reviews: enReviews },
+});
 
 const STATE_VARIANTS = {
   needs_reply: "outline",
@@ -25,15 +27,11 @@ const STATE_VARIANTS = {
 export const REPLY_STATES_GUIDE =
   "https://docs.asobeast.com/guides/reviews#reply-to-reviews";
 
-const SWITCH_LABELS: Record<ReviewReplyState, string> = {
-  needs_reply: "Needs reply",
-  drafted: "Draft",
-  replied: "Replied",
-  updated: "Updated",
-};
-
-export function replyStateLabel(state: ReviewReplyState): string {
-  return STATE_LABELS[state];
+export function replyStateLabel(
+  state: ReviewReplyState,
+  t: MessageTranslator = english,
+): string {
+  return t(`state.${state}`);
 }
 
 export function replyStateVariant(
@@ -45,17 +43,20 @@ export function replyStateVariant(
 export function replyBadgeLabel(
   review: Parameters<typeof replyStateOf>[0],
   store: Store,
+  t: MessageTranslator = english,
 ): string {
   const state = replyStateOf(review);
-  if (state !== "replied") return replyStateLabel(state);
+  if (state !== "replied") return replyStateLabel(state, t);
   const { reply } = review;
   if (reply?.post) {
-    if (isPostEdited(reply)) return "Edited since posting";
-    return reply.post.state === "pending" ? "Pending publication" : "Posted";
+    if (isPostEdited(reply)) return t("state.edited");
+    return reply.post.state === "pending"
+      ? t("state.pending")
+      : t("state.posted");
   }
   return review.repliedAt
-    ? `Replied on ${storeLabel(store)}`
-    : "Marked replied";
+    ? t("state.repliedOn", { store: storeLabel(store) })
+    : t("state.marked");
 }
 
 export function replyBadgeVariant(
@@ -69,16 +70,15 @@ export function replyBadgeVariant(
   return replyStateVariant(replyStateOf(review));
 }
 
-const REPLY_STATE_OPTIONS = REVIEW_REPLY_STATES.map((state) => ({
-  value: state,
-  short: SWITCH_LABELS[state],
-}));
-
 export function shownReplyStates(
   counts: ReviewReplyCounts | undefined,
   selected: ReviewReplyState | null,
+  t: MessageTranslator = english,
 ) {
-  return REPLY_STATE_OPTIONS.filter(
+  return REVIEW_REPLY_STATES.map((state) => ({
+    value: state,
+    short: t(`state.short.${state}`),
+  })).filter(
     ({ value }) =>
       value !== "updated" || value === selected || (counts?.updated ?? 0) > 0,
   );

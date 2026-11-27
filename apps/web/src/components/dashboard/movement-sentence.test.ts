@@ -1,3 +1,4 @@
+import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
 import type {
   PortfolioApp,
@@ -5,11 +6,43 @@ import type {
   PortfolioMovement,
   PortfolioRangeChange,
 } from "@asobeast/shared";
+import enDashboard from "../../../messages/en/dashboard.json";
+import zhDashboard from "../../../messages/zh-CN/dashboard.json";
+import type { Locale } from "@/lib/locale";
 import {
   dashboardLede,
   movementLede,
   quietSentence,
+  type LedePart,
 } from "./movement-sentence";
+
+const t = createTranslator({
+  locale: "en",
+  namespace: "dashboard",
+  messages: { dashboard: enDashboard },
+});
+
+function read(
+  parts: LedePart[],
+  locale: Locale = "en",
+  dashboard: unknown = locale === "zh-CN" ? zhDashboard : enDashboard,
+): string {
+  const translator = createTranslator({
+    locale,
+    namespace: "dashboard",
+    messages: { dashboard } as Parameters<
+      typeof createTranslator
+    >[0]["messages"],
+  });
+  return parts
+    .map((part) =>
+      translator.rich(part.key, {
+        ...part.values,
+        strong: (chunks) => chunks,
+      }),
+    )
+    .join("");
+}
 
 const change = (
   up: number,
@@ -25,18 +58,17 @@ const change = (
   ...rest,
 });
 
-const sentence = (...parts: Parameters<typeof movementLede>): string => {
-  const { lead, fact, tail } = movementLede(...parts);
-  return `${lead}${fact}${tail}`;
-};
+const sentence = (value: PortfolioRangeChange, days: number): string =>
+  read(movementLede(value, days));
 
 describe("movementLede", () => {
-  it("separates the fact from the words around it", () => {
-    expect(movementLede(change(4, 3, { appsMoved: 5 }), 30)).toEqual({
-      lead: "In the last 30 days ",
-      fact: "4 keywords climbed and 3 fell",
-      tail: " across 5 apps.",
-    });
+  it("returns one complete ICU descriptor for a range sentence", () => {
+    expect(movementLede(change(4, 3, { appsMoved: 5 }), 30)).toEqual([
+      {
+        key: "lede.rangeBothMany",
+        values: { days: 30, up: 4, down: 3, count: 5 },
+      },
+    ]);
   });
 
   it("says no keyword moved once the range has a day to compare with", () => {
@@ -62,11 +94,26 @@ describe("movementLede", () => {
       "In the last 7 days 2 keywords fell across 2 apps.",
     );
   });
+
+  it("lets a reordered catalog place the fall before the climb", () => {
+    const reordered = {
+      ...enDashboard,
+      lede: {
+        ...enDashboard.lede,
+        rangeBothSingle:
+          "<strong>{down, plural, one {# fell} other {# fell}}</strong> before <strong>{up, plural, one {# keyword climbed} other {# keywords climbed}}</strong> in {days, number} days",
+      },
+    };
+
+    expect(read(movementLede(change(4, 3), 30), "en", reordered)).toBe(
+      "3 fell before 4 keywords climbed in 30 days",
+    );
+  });
 });
 
 describe("quietSentence", () => {
   it("names the range it speaks for", () => {
-    expect(quietSentence(true, 30)).toBe(
+    expect(quietSentence(true, 30, t)).toBe(
       "No keyword moved in the last 30 days.",
     );
   });
@@ -122,14 +169,15 @@ describe("dashboardLede", () => {
       lastRun: run,
     })),
   });
-  const read = (...parts: Parameters<typeof dashboardLede>): string =>
-    dashboardLede(...parts)
-      .map((part) => part.text)
-      .join("");
+  const readDashboard = (
+    value: PortfolioHistory,
+    apps: readonly PortfolioApp[],
+    locale: Locale = "en",
+  ): string => read(dashboardLede(value, apps, t), locale);
 
   it("reads the last run first and names the app that moved most", () => {
     expect(
-      read(
+      readDashboard(
         history(change(3, 5), {
           us: moved(1, 1),
           de: moved(0, 4),
@@ -144,17 +192,19 @@ describe("dashboardLede", () => {
 
   it("names no app when two moved as much or only one moved", () => {
     const tied = { us: moved(2, 0), tc: moved(1, 1) };
-    expect(read(history(change(3, 1), tied), APPS)).toBe(
+    expect(readDashboard(history(change(3, 1), tied), APPS)).toBe(
       "In the last run 3 keywords climbed and 1 fell. Over the last 30 days visibility is up 3.",
     );
-    expect(read(history(change(2, 0), { us: moved(2, 0) }), APPS)).toBe(
+    expect(
+      readDashboard(history(change(2, 0), { us: moved(2, 0) }), APPS),
+    ).toBe(
       "In the last run 2 keywords climbed. Over the last 30 days visibility is up 3.",
     );
   });
 
   it("says a quiet run and a flat or falling range in words", () => {
     expect(
-      read(
+      readDashboard(
         history(change(0, 0), {}, change(1, 1, { visibilityDelta: 0.2 })),
         APPS,
       ),
@@ -162,7 +212,7 @@ describe("dashboardLede", () => {
       "In the last run no keyword moved. Over the last 30 days visibility is unchanged.",
     );
     expect(
-      read(
+      readDashboard(
         history(change(0, 2), {}, change(1, 1, { visibilityDelta: -2.6 })),
         APPS,
       ),
@@ -173,27 +223,62 @@ describe("dashboardLede", () => {
 
   it("leaves the range out until it can be compared", () => {
     expect(
-      read(history(change(1, 0), {}, change(0, 0, { compared: false })), APPS),
+      readDashboard(
+        history(change(1, 0), {}, change(0, 0, { compared: false })),
+        APPS,
+      ),
     ).toBe("In the last run 1 keyword climbed.");
   });
 
   it("falls back to the range sentence without a run to compare", () => {
-    expect(read(history(undefined), APPS)).toBe(
+    expect(readDashboard(history(undefined), APPS)).toBe(
       "In the last 30 days 4 keywords climbed and 3 fell.",
     );
-    expect(read(history(change(0, 0, { compared: false })), APPS)).toBe(
-      "In the last 30 days 4 keywords climbed and 3 fell.",
-    );
+    expect(
+      readDashboard(history(change(0, 0, { compared: false })), APPS),
+    ).toBe("In the last 30 days 4 keywords climbed and 3 fell.");
   });
 
-  it("marks the facts for emphasis and nothing else", () => {
+  it("marks only the translated facts for emphasis", () => {
+    const translator = createTranslator({
+      locale: "en",
+      namespace: "dashboard",
+      messages: { dashboard: enDashboard } as Parameters<
+        typeof createTranslator
+      >[0]["messages"],
+    });
+    const markup = dashboardLede(
+      history(change(1, 0), { us: moved(1, 0) }),
+      APPS,
+      t,
+    )
+      .map((part) =>
+        translator.rich(part.key, {
+          ...part.values,
+          strong: (chunks) => `<strong>${chunks}</strong>`,
+        }),
+      )
+      .join("");
+
+    expect(markup).toBe(
+      "In the last run <strong>1 keyword climbed</strong>. Over the last 30 days visibility is <strong>up 3</strong>.",
+    );
+  });
+});
+
+describe("Simplified Chinese dashboard movement copy", () => {
+  const chinese = createTranslator({
+    locale: "zh-CN",
+    namespace: "dashboard",
+    messages: { dashboard: zhDashboard },
+  });
+
+  it("uses complete Chinese sentences for range and last-run movement", () => {
     expect(
-      dashboardLede(history(change(1, 0), { us: moved(1, 0) }), APPS).filter(
-        (part) => part.strong,
-      ),
-    ).toEqual([
-      { text: "1 keyword climbed", strong: true },
-      { text: "up 3", strong: true },
-    ]);
+      read(movementLede(change(4, 3, { appsMoved: 5 }), 30), "zh-CN"),
+    ).toBe("最近 30 天内，4 个关键词上升，3 个下降，涉及 5 个应用。");
+    expect(quietSentence(true, 30, chinese)).toBe(
+      "最近 30 天内没有关键词排名变化。",
+    );
   });
 });

@@ -8,6 +8,7 @@ import {
   type RefObject,
 } from "react";
 import { useQueryState } from "nuqs";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { RangePicker } from "@/components/rankings/RangePicker";
 import { RANGE_PRESETS, WIDEST_RANGE } from "@/lib/ranges";
@@ -47,6 +48,7 @@ export function KeywordDynamicsPanel({
   chart: ChartedSelection;
   clearFocus: RefObject<HTMLButtonElement | null>;
 }) {
+  const t = useTranslations("keywords");
   const [range, setRange] = useQueryState("range", rangeParser);
   const [, setKeywords] = useQueryState(
     "keywords",
@@ -79,16 +81,16 @@ export function KeywordDynamicsPanel({
           tabIndex={-1}
           className="text-heading outline-none"
         >
-          Keyword dynamics
+          {t("dynamics.title")}
         </h3>
         <RangePicker
           presets={RANGE_PRESETS}
           value={range}
           onChange={setRange}
-          label="Chart date range"
+          label={t("dynamics.dateRange")}
         />
         <Button variant="ghost" size="sm" className="ml-auto" onClick={clear}>
-          Clear
+          {t("bulk.clear")}
         </Button>
       </div>
       <Suspense fallback={<KeywordDynamicsSkeleton />}>

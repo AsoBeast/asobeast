@@ -1,22 +1,36 @@
 import { formatRankPosition } from "@asobeast/shared";
+import { createTranslator } from "next-intl";
 import type {
   KeywordComparisonCompetitor,
   KeywordComparisonRow,
 } from "@asobeast/shared";
+import enCompetitors from "../../../messages/en/competitors.json";
+import type { MessageTranslator } from "@/i18n/translator";
 import { csvFilename, downloadCsv, toCsv } from "@/lib/csv";
 import { versusOf } from "@/lib/table/facets";
 import { isChecked } from "./comparison-checks";
-import { comparisonScoreValue, UNNAMED_COMPETITOR } from "./comparison-scores";
+import { comparisonScoreValue } from "./comparison-scores";
 
-const LEADING_HEADERS = ["keyword", "popularity", "difficulty", "you"];
-const TRAILING_HEADERS = ["result", "gap", "country"];
+const english = createTranslator({
+  locale: "en",
+  namespace: "competitors",
+  messages: { competitors: enCompetitors },
+});
 
 function competitorHeaders(
   competitors: readonly KeywordComparisonCompetitor[],
+  t: MessageTranslator,
 ): string[] {
-  const taken = new Set([...LEADING_HEADERS, ...TRAILING_HEADERS]);
+  const leading = [
+    t("csv.keyword"),
+    t("csv.popularity"),
+    t("csv.difficulty"),
+    t("csv.you"),
+  ];
+  const trailing = [t("csv.result"), t("csv.gap"), t("csv.country")];
+  const taken = new Set([...leading, ...trailing]);
   return competitors.map(({ name }) => {
-    const base = name ?? UNNAMED_COMPETITOR;
+    const base = name ?? t("unnamed");
     let header = base;
     for (let copy = 2; taken.has(header); copy += 1) {
       header = `${base} (${copy})`;
@@ -38,13 +52,17 @@ export function comparisonCsv(
   competitors: readonly KeywordComparisonCompetitor[],
   rows: readonly KeywordComparisonRow[],
   appId: string,
+  t: MessageTranslator = english,
 ): string {
+  const leading = [
+    t("csv.keyword"),
+    t("csv.popularity"),
+    t("csv.difficulty"),
+    t("csv.you"),
+  ];
+  const trailing = [t("csv.result"), t("csv.gap"), t("csv.country")];
   return toCsv(
-    [
-      ...LEADING_HEADERS,
-      ...competitorHeaders(competitors),
-      ...TRAILING_HEADERS,
-    ],
+    [...leading, ...competitorHeaders(competitors, t), ...trailing],
     rows.map((row) => {
       const positions = competitors.map(({ id }) => row.positions[id] ?? null);
       return [
@@ -70,11 +88,14 @@ export function comparisonFilename(appId: string, onlyGaps: boolean): string {
 export function exportComparison(
   appId: string,
   onlyGaps: boolean,
-  competitors: readonly KeywordComparisonCompetitor[],
-  rows: readonly KeywordComparisonRow[],
+  data: {
+    competitors: readonly KeywordComparisonCompetitor[];
+    rows: readonly KeywordComparisonRow[];
+  },
+  t: MessageTranslator = english,
 ): void {
   downloadCsv(
     comparisonFilename(appId, onlyGaps),
-    comparisonCsv(competitors, rows, appId),
+    comparisonCsv(data.competitors, data.rows, appId, t),
   );
 }

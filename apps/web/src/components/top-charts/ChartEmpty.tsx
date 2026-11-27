@@ -1,9 +1,11 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
-import { formatDate } from "@/lib/format";
+import { formatDateInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { accountPlanOptions } from "@/lib/queries";
 import { emptyChartBody } from "./chart-actions";
 
@@ -18,16 +20,20 @@ export function ChartEmpty({
   action?: ReactNode;
   className?: string;
 }) {
+  const t = useTranslations("topCharts");
+  const locale = useAppLocale();
   const limits = useQuery(accountPlanOptions).data?.limits;
   return (
     <EmptyState
       className={className}
       title={
-        captured
-          ? `No capture of this chart on ${formatDate(date)}`
-          : "This chart has not been captured yet"
+        captured && date !== null
+          ? t("empty.noCaptureOn", {
+              date: formatDateInLocale(date, locale),
+            })
+          : t("empty.notCaptured")
       }
-      body={emptyChartBody(captured, limits)}
+      body={emptyChartBody(captured, limits, t)}
       action={action}
     />
   );

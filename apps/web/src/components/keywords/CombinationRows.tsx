@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { flexRender } from "@tanstack/react-table";
 import { FilteredEmpty } from "@/components/data-table/FilteredEmpty";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatNumber } from "@/lib/format";
 import { COMBINATION_PAGE_SIZE } from "@/lib/keyword-combinations";
 import type { CombinationTable } from "./CombinationFilters";
 
@@ -24,6 +24,7 @@ export function CombinationRows({
   table: CombinationTable;
   onClearFilters: () => void;
 }) {
+  const t = useTranslations("keywords");
   const [pages, setPages] = useState(1);
   const rows = table.getRowModel().rows;
   const shown = rows.slice(0, pages * COMBINATION_PAGE_SIZE);
@@ -33,8 +34,7 @@ export function CombinationRows({
     <div className="flex max-w-3xl flex-col gap-3">
       <Table density="compact" containerClassName="rounded-lg border bg-card">
         <TableCaption className="sr-only">
-          Keyword combinations built from the words of your listing, where those
-          words appear, and whether each phrase is tracked.
+          {t("combinations.caption")}
         </TableCaption>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -55,7 +55,7 @@ export function CombinationRows({
             <TableRow>
               <TableCell colSpan={table.getVisibleLeafColumns().length}>
                 <FilteredEmpty
-                  title="No combinations match these filters"
+                  title={t("combinations.empty")}
                   onClear={onClearFilters}
                 />
               </TableCell>
@@ -85,7 +85,10 @@ export function CombinationRows({
       {rows.length > COMBINATION_PAGE_SIZE ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-caption text-muted-foreground" aria-live="polite">
-            {`Showing ${formatNumber(shown.length)} of ${formatNumber(rows.length)}`}
+            {t("combinations.showing", {
+              shown: shown.length,
+              total: rows.length,
+            })}
           </p>
           {next > 0 ? (
             <Button
@@ -93,7 +96,7 @@ export function CombinationRows({
               size="sm"
               onClick={() => setPages((count) => count + 1)}
             >
-              {`Show ${next} more`}
+              {t("combinations.showMore", { count: next })}
             </Button>
           ) : null}
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import type { FilterFn } from "@tanstack/react-table";
+import type { MessageTranslator } from "@/i18n/translator";
 import type {
   KeywordBucket,
   KeywordClass,
@@ -20,7 +21,6 @@ import {
 import { tagsIn } from "@/lib/keyword-tags";
 import { DayChangeCell } from "./DayChangeCell";
 import { attributeColumns } from "./keyword-attribute-columns";
-import { SCORE_COMPARABILITY } from "./keyword-csv";
 import { keywordZoneFilter } from "./keyword-filters";
 import { KeywordRowActions } from "./KeywordRowActions";
 import { PlayInstallsTip } from "./PlayInstallsTip";
@@ -54,9 +54,9 @@ import {
   positionFooter,
 } from "./KeywordTotalsFooters";
 import {
+  TREND_WINDOW_DAYS,
   DEFAULT_TREND_WINDOW,
   trendDelta,
-  trendLabel,
   type TrendSeries,
   type TrendState,
   type TrendWindow,
@@ -85,8 +85,6 @@ export interface TrendView {
   state?: TrendState;
 }
 
-export const SELECT_ALL_KEYWORDS = "Select all keywords";
-
 export const HIDDEN_KEYWORD_COLUMNS = {
   bucket: false,
   status: false,
@@ -113,6 +111,7 @@ export function keywordColumns({
   today,
   trend,
   onOpenSerp,
+  translator: t,
 }: {
   appId: string;
   store: Store;
@@ -121,27 +120,28 @@ export function keywordColumns({
   today: string;
   trend: TrendView;
   onOpenSerp: (keywordId: string) => void;
+  translator: MessageTranslator;
 }) {
   return columnHelper.columns([
-    ...identityColumns(),
-    positionColumn(today),
-    changeColumn(today),
-    deltaColumn(today, trend, { appId, store, homeCountry, multiMarket }),
-    ...scoreColumns(),
-    insightsColumn(today, multiMarket),
-    ...(store === "GOOGLE_PLAY" ? [acquisitionsColumn()] : []),
-    topAppsColumn(onOpenSerp),
-    ...attributeColumns(),
-    volatilityColumn(),
-    addedColumn(),
-    competitorsColumn(),
-    revealColumn(),
-    actionsColumn({ appId, onOpenSerp }),
+    ...identityColumns(t),
+    positionColumn(today, t),
+    changeColumn(today, t),
+    deltaColumn(today, trend, { appId, store, homeCountry, multiMarket }, t),
+    ...scoreColumns(t),
+    insightsColumn(today, multiMarket, t),
+    ...(store === "GOOGLE_PLAY" ? [acquisitionsColumn(t)] : []),
+    topAppsColumn(onOpenSerp, t),
+    ...attributeColumns(t),
+    volatilityColumn(t),
+    addedColumn(t),
+    competitorsColumn(t),
+    revealColumn(t),
+    actionsColumn({ appId, onOpenSerp }, t),
     ...filterColumns(),
   ]);
 }
 
-function identityColumns() {
+function identityColumns(t: MessageTranslator) {
   return [
     columnHelper.display({
       id: "select",
@@ -156,14 +156,15 @@ function identityColumns() {
                 : false
           }
           onCheckedChange={(value) => table.toggleAllRowsSelected(!!value)}
-          aria-label={SELECT_ALL_KEYWORDS}
+          aria-label={t("table.selectAll")}
+          data-select-all-keywords
         />
       ),
       cell: ({ row }) => (
         <Checkbox
           checked={row.getIsSelected()}
           onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label={`Select ${row.original.text}`}
+          aria-label={t("table.selectOne", { keyword: row.original.text })}
         />
       ),
     }),
@@ -173,9 +174,9 @@ function identityColumns() {
       sortFn: "text",
       sortDescFirst: false,
       header: ({ column }) => (
-        <SortableHeader column={column} label="Keyword" />
+        <SortableHeader column={column} label={t("table.keyword")} />
       ),
-      footer: keywordCountFooter,
+      footer: ({ table }) => keywordCountFooter({ table }, t),
       cell: ({ row }) => <KeywordCell keyword={row.original} />,
     }),
   ];
@@ -213,10 +214,10 @@ function filterColumns() {
   ];
 }
 
-function positionColumn(today: string) {
+function positionColumn(today: string, t: MessageTranslator) {
   return columnHelper.accessor((row) => nullsLast(row.latestPosition), {
     id: "position",
-    meta: { label: "Position", phone: true },
+    meta: { label: t("table.position"), phone: true },
     ...SORTABLE,
     sortDescFirst: false,
     filterFn: (row, _id, selected: PositionBand[]) =>
@@ -225,24 +226,28 @@ function positionColumn(today: string) {
         row.original.latestDepth,
         selected,
       ),
-    header: ({ column }) => <SortableHeader column={column} label="Position" />,
-    footer: positionFooter,
+    header: ({ column }) => (
+      <SortableHeader column={column} label={t("table.position")} />
+    ),
+    footer: ({ table }) => positionFooter({ table }, t),
     cell: ({ row }) => <PositionCell keyword={row.original} today={today} />,
   });
 }
 
-function changeColumn(today: string) {
+function changeColumn(today: string, t: MessageTranslator) {
   return columnHelper.accessor(
     (row) => nullsLast(dayChangeRank(dayChange(row, today))),
     {
       id: "change",
-      meta: { label: "Change", phone: true },
+      meta: { label: t("table.change"), phone: true },
       ...SORTABLE,
       sortDescFirst: true,
       filterFn: (row, _id, filter: KeywordMoveFilter) =>
         matchesMoveFilter(row.original, today, filter),
-      header: ({ column }) => <SortableHeader column={column} label="Change" />,
-      footer: ({ table }) => dayChangeFooter({ table }, today),
+      header: ({ column }) => (
+        <SortableHeader column={column} label={t("table.change")} />
+      ),
+      footer: ({ table }) => dayChangeFooter({ table }, today, t),
       cell: ({ row }) => (
         <DayChangeCell
           change={dayChange(row.original, today)}
@@ -257,8 +262,11 @@ function deltaColumn(
   today: string,
   { window: trendWindow, series, state = "ready" }: TrendView,
   history: PositionHistoryContext,
+  t: MessageTranslator,
 ) {
-  const label = trendLabel(trendWindow);
+  const label = t("table.lastDays", {
+    days: TREND_WINDOW_DAYS[trendWindow],
+  });
   const deltaOf = (row: TrackedKeywordItem) =>
     trendDelta(row, trendWindow, series);
   return columnHelper.accessor(
@@ -275,13 +283,14 @@ function deltaColumn(
         <SortableHeader
           column={column}
           aria-label={label}
-          label={<TrendHeading trendWindow={trendWindow} />}
+          label={<TrendHeading trendWindow={trendWindow} t={t} />}
         />
       ),
       footer: ({ table }) =>
         movedFooter(
           { table },
           trendWindow === DEFAULT_TREND_WINDOW ? undefined : { deltaOf, state },
+          t,
         ),
       cell: ({ row }) => (
         <TrendCell
@@ -297,67 +306,67 @@ function deltaColumn(
   );
 }
 
-function scoreColumns() {
+function scoreColumns(t: MessageTranslator) {
   return [
     columnHelper.accessor((row) => nullsLast(row.opportunity), {
       id: "opportunity",
-      meta: { label: "Opportunity", numeric: true },
+      meta: { label: t("table.opportunity"), numeric: true },
       ...SORTABLE,
       sortDescFirst: true,
       filterFn: gradeFilter("opportunity"),
       header: ({ column }) => (
-        <SortableHeader column={column} label="Opportunity" />
+        <SortableHeader column={column} label={t("table.opportunity")} />
       ),
-      footer: opportunityFooter,
+      footer: ({ table }) => opportunityFooter({ table }, t),
       cell: ({ row }) => (
-        <DerivedScoreCell {...opportunityEvidence(row.original)} />
+        <DerivedScoreCell {...opportunityEvidence(row.original, t)} />
       ),
     }),
     columnHelper.accessor((row) => nullsLast(scoreValue(row, "traffic")), {
       id: "traffic",
-      meta: { label: "Popularity", numeric: true },
+      meta: { label: t("table.popularity"), numeric: true },
       ...SORTABLE,
       sortDescFirst: true,
       filterFn: gradeFilter("popularity"),
       header: ({ column }) => (
         <span className="inline-flex items-center gap-1">
-          <SortableHeader column={column} label="Popularity" />
+          <SortableHeader column={column} label={t("table.popularity")} />
           <InfoTip
-            label="About popularity"
-            title="Popularity"
-            summary={`${SCORE_COMPARABILITY}.`}
+            label={t("table.aboutPopularity")}
+            title={t("table.popularity")}
+            summary={`${t("scores.comparability")}.`}
           />
         </span>
       ),
-      footer: popularityFooter,
-      cell: ({ row }) => <ScoreCell {...popularityEvidence(row.original)} />,
+      footer: ({ table }) => popularityFooter({ table }, t),
+      cell: ({ row }) => <ScoreCell {...popularityEvidence(row.original, t)} />,
     }),
     columnHelper.accessor((row) => nullsLast(scoreValue(row, "difficulty")), {
       id: "difficulty",
-      meta: { label: "Difficulty", numeric: true },
+      meta: { label: t("table.difficulty"), numeric: true },
       ...SORTABLE,
       sortDescFirst: true,
       filterFn: gradeFilter("difficulty"),
       header: ({ column }) => (
-        <SortableHeader column={column} label="Difficulty" />
+        <SortableHeader column={column} label={t("table.difficulty")} />
       ),
-      footer: difficultyFooter,
-      cell: ({ row }) => <ScoreCell {...difficultyEvidence(row.original)} />,
+      footer: ({ table }) => difficultyFooter({ table }, t),
+      cell: ({ row }) => <ScoreCell {...difficultyEvidence(row.original, t)} />,
     }),
   ];
 }
 
-function acquisitionsColumn() {
+function acquisitionsColumn(t: MessageTranslator) {
   return columnHelper.accessor(
     (row) => nullsLast(row.playAcquisitions?.acquisitions ?? null),
     {
       id: "acquisitions",
-      meta: { label: "Play installs", numeric: true },
+      meta: { label: t("table.playInstalls"), numeric: true },
       ...SORTABLE,
       sortDescFirst: true,
       header: ({ column }) => (
         <span className="inline-flex items-center gap-1">
-          <SortableHeader column={column} label="Installs" />
+          <SortableHeader column={column} label={t("table.installs")} />
           <PlayInstallsTip />
         </span>
       ),
@@ -368,17 +377,20 @@ function acquisitionsColumn() {
   );
 }
 
-function actionsColumn({
-  appId,
-  onOpenSerp,
-}: {
-  appId: string;
-  onOpenSerp: (keywordId: string) => void;
-}) {
+function actionsColumn(
+  {
+    appId,
+    onOpenSerp,
+  }: {
+    appId: string;
+    onOpenSerp: (keywordId: string) => void;
+  },
+  t: MessageTranslator,
+) {
   return columnHelper.display({
     id: "actions",
     enableHiding: false,
-    header: () => <span className="sr-only">Actions</span>,
+    header: () => <span className="sr-only">{t("table.actions")}</span>,
     cell: ({ row, table }) => (
       <KeywordRowActions
         appId={appId}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { Clock } from "lucide-react";
 import type { ActionStatus } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { focusIsLost } from "@/lib/focus-handoff";
-import { formatDate } from "@/lib/format";
+import { formatDateInLocale } from "@/lib/format";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { useBusyMenu } from "./use-busy-menu";
 
 export const SNOOZE_PRESET_DAYS = [7, 14, 30] as const;
@@ -54,6 +56,8 @@ export function ActionSnoozeMenu({
   onSnooze: (snoozedUntil: string) => void;
   onWake: () => void;
 }) {
+  const t = useTranslations("actions");
+  const locale = useAppLocale();
   const { arm, claim } = useSwapFocus(busy);
   const menu = useBusyMenu(busy);
   const swap = (update: () => void) => {
@@ -72,7 +76,9 @@ export function ActionSnoozeMenu({
         onClick={() => swap(onWake)}
       >
         <Clock aria-hidden className="size-4" />
-        {snoozedUntil ? `Wakes ${formatDate(snoozedUntil)}` : "Wake now"}
+        {snoozedUntil
+          ? t("wakesOn", { date: formatDateInLocale(snoozedUntil, locale) })
+          : t("wakeNow")}
       </Button>
     );
   }
@@ -88,7 +94,7 @@ export function ActionSnoozeMenu({
           data-command="snooze"
         >
           <Clock aria-hidden className="size-4" />
-          Snooze
+          {t("snooze")}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
@@ -97,7 +103,7 @@ export function ActionSnoozeMenu({
             key={days}
             onSelect={() => swap(() => onSnooze(snoozeUntil(days)))}
           >
-            {days} days
+            {t("days", { count: days })}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

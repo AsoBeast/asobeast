@@ -2,6 +2,7 @@
 
 import { Suspense, useDeferredValue, useState } from "react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { PANEL_ACTION, PANEL_BLEED } from "@/components/layout/panel-classes";
 import {
   Card,
@@ -14,6 +15,7 @@ import {
 import { queueFilters } from "@/lib/action-filters";
 import { useFocusAfterCommit } from "@/lib/focus-handoff";
 import { actionsOptions, portfolioOptions } from "@/lib/queries";
+import { useAppLocale } from "@/lib/use-app-locale";
 import { ActionBulkBar } from "./ActionBulkBar";
 import { ActionCenterHeader } from "./ActionCenterHeader";
 import { ActionDetailSheet } from "./ActionDetailSheet";
@@ -59,13 +61,18 @@ const CLEARED_VIEW = {
 };
 
 export function ActionCenter({ appId }: { appId?: string }) {
+  const t = useTranslations("actions");
+  const locale = useAppLocale();
   const [view, setView] = useQueueView();
   const q = useDeferredValue(view.q);
 
   const { data } = useSuspenseQuery(
     actionsOptions(queueFilters(view.status), appId),
   );
-  const visible = sortQueue(filterQueue(data.items, { ...view, q }), view.sort);
+  const visible = sortQueue(
+    filterQueue(data.items, { ...view, q }, t, locale),
+    view.sort,
+  );
 
   const sheet = useActionSheet(view);
   const selection = useQueueSelection(visible, isDefaultStatusSet(view.status));
@@ -80,6 +87,7 @@ export function ActionCenter({ appId }: { appId?: string }) {
   const groups = groupQueue(
     visible,
     appId && view.group === "app" ? "priority" : view.group,
+    t,
   );
   const [menuRequest, setMenuRequest] = useState<RowMenuRequest | null>(null);
   const keys = useQueueKeys({
@@ -138,7 +146,7 @@ export function ActionCenter({ appId }: { appId?: string }) {
             <Card>
               <CardHeader className="flex min-h-[47px] flex-wrap items-center justify-between gap-2">
                 <CardTitle asChild>
-                  <h2 id="queue-heading">Queue</h2>
+                  <h2 id="queue-heading">{t("queue")}</h2>
                 </CardTitle>
                 <CardAction className={`${PANEL_ACTION} min-w-0`}>
                   <StatusTabs

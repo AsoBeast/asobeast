@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { TestIntlProvider } from "@/test/intl-provider";
 import type { MapPoint } from "./map-points";
 import { MapDotShape } from "./MapDot";
 
@@ -23,13 +24,15 @@ const point = (overrides: Partial<MapPoint>): MapPoint => ({
 
 const markup = (payload: MapPoint) =>
   renderToStaticMarkup(
-    <svg>
-      <MapDotShape
-        {...({ cx: 10, cy: 20, payload, index: 0 } as Parameters<
-          typeof MapDotShape
-        >[0])}
-      />
-    </svg>,
+    <TestIntlProvider>
+      <svg>
+        <MapDotShape
+          {...({ cx: 10, cy: 20, payload, index: 0 } as Parameters<
+            typeof MapDotShape
+          >[0])}
+        />
+      </svg>
+    </TestIntlProvider>,
   );
 
 describe("MapDotShape", () => {

@@ -8,6 +8,9 @@ import {
   type ChartGenreGroup,
   type Store,
 } from "@asobeast/shared";
+import { useTranslations } from "next-intl";
+import { useAppLocale } from "@/lib/use-app-locale";
+import { genreNameInLocale } from "./genre-name";
 import {
   Select,
   SelectContent,
@@ -17,12 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-const GROUP_LABELS: Record<ChartGenreGroup, string> = {
-  apps: "Apps",
-  games: "Games",
-  family: "Family",
-};
 
 function groupsOf(store: Store): Array<[ChartGenreGroup, ChartGenre[]]> {
   const groups = new Map<ChartGenreGroup, ChartGenre[]>();
@@ -42,16 +39,20 @@ export function GenreSelect({
   value: string;
   onChange: (genre: string) => void;
 }) {
+  const t = useTranslations("topCharts");
+  const locale = useAppLocale();
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger aria-label="Category" className="w-[220px]">
-        <SelectValue>{chartGenreName(store, value) ?? value}</SelectValue>
+      <SelectTrigger aria-label={t("category")} className="w-[220px]">
+        <SelectValue>
+          {genreNameInLocale(chartGenreName(store, value) ?? value, locale)}
+        </SelectValue>
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value={OVERALL_GENRE}>Overall</SelectItem>
+        <SelectItem value={OVERALL_GENRE}>{t("genres.overall")}</SelectItem>
         {groupsOf(store).map(([group, genres]) => (
           <SelectGroup key={group}>
-            <SelectLabel>{GROUP_LABELS[group]}</SelectLabel>
+            <SelectLabel>{t(`genres.${group}`)}</SelectLabel>
             {genres.map((genre) => (
               <SelectItem key={genre.id} value={genre.id}>
                 {genre.name}
