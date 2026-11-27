@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CoveragePreviewKeyword } from "@asobeast/shared";
 import {
+  adoptHomeDraft,
   changedFields,
   consoleCopy,
   draftFieldsOf,
@@ -443,6 +444,45 @@ describe("writeListingDraftField", () => {
     expect(
       parseListingDraft(store.get("asobeast.listingDraft.app-1.pl") ?? null),
     ).toEqual({ title: "Nawyki" });
+  });
+
+  it("moves a home draft saved under the storefront default to the native home", () => {
+    const store = stubStorage({
+      "asobeast.listingDraft.app-1.en-GB": '{"v":1,"title":"Dziennik"}',
+    });
+
+    adoptHomeDraft("app-1", { country: "pl", defaultLocalization: "pl" });
+
+    expect(
+      parseListingDraft(store.get("asobeast.listingDraft.app-1.pl") ?? null),
+    ).toEqual({ title: "Dziennik" });
+    expect(store.get("asobeast.listingDraft.app-1.en-GB")).toBe("");
+  });
+
+  it("never overwrites a draft of the native home", () => {
+    const store = stubStorage({
+      "asobeast.listingDraft.app-1.en-GB": '{"v":1,"title":"Old"}',
+      "asobeast.listingDraft.app-1.pl": '{"v":1,"title":"New"}',
+    });
+
+    adoptHomeDraft("app-1", { country: "pl", defaultLocalization: "pl" });
+
+    expect(
+      parseListingDraft(store.get("asobeast.listingDraft.app-1.pl") ?? null),
+    ).toEqual({ title: "New" });
+    expect(store.get("asobeast.listingDraft.app-1.en-GB")).toBe(
+      '{"v":1,"title":"Old"}',
+    );
+  });
+
+  it("moves nothing for an app on its storefront default", () => {
+    const store = stubStorage({
+      "asobeast.listingDraft.app-1.en-GB": '{"v":1,"title":"Diary"}',
+    });
+
+    adoptHomeDraft("app-1", { country: "pl", defaultLocalization: null });
+
+    expect([...store.keys()]).toEqual(["asobeast.listingDraft.app-1.en-GB"]);
   });
 
   it("maps the assistant field names to draft fields", () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { ChevronRight, RotateCcw } from "lucide-react";
 import type { DefaultingListing, MetadataAuditResult } from "@asobeast/shared";
 import { InlineQueryError } from "@/components/layout/InlineQueryError";
@@ -15,6 +15,7 @@ import {
   changedFields,
   draftFieldsOf,
   draftRequest,
+  adoptHomeDraft,
   draftScopeOf,
   liveDraftValues,
   scopeKey,
@@ -66,6 +67,11 @@ export function ListingDraftEditor({
   const headingId = useId();
   const store = audit.store;
   const { country, defaultLocalization } = app;
+  useEffect(() => {
+    if (market === country) {
+      adoptHomeDraft(id, { country, defaultLocalization });
+    }
+  }, [id, market, country, defaultLocalization]);
   const scope = useMemo(
     () =>
       draftScopeOf(store, market, localization, {

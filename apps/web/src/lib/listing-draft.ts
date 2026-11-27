@@ -131,6 +131,26 @@ export const serializeListingDraft = (values: ListingDraftValues): string =>
     ? ""
     : JSON.stringify({ v: DRAFT_VERSION, ...values });
 
+export function adoptHomeDraft(appId: string, app: DefaultingListing): void {
+  const home = defaultLocalizationIn(app, app.country);
+  const storefront = defaultLocalizationIn(
+    { country: app.country },
+    app.country,
+  );
+  if (home === storefront) return;
+  const from = listingDraftKey(appId, storefront);
+  const to = listingDraftKey(appId, home);
+  const previous = readStoredPreference(from);
+  if (
+    parseListingDraft(previous) === null ||
+    parseListingDraft(readStoredPreference(to)) !== null
+  ) {
+    return;
+  }
+  writeStoredPreference(to, previous ?? "");
+  writeStoredPreference(from, "");
+}
+
 export function writeListingDraftField(
   appId: string,
   scope: string,
