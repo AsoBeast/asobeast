@@ -608,6 +608,42 @@ test.describe("position history", () => {
     await expect(shareIcon(page)).not.toHaveAttribute("aria-disabled", "true");
   });
 
+  test("lets the popover close once a share it held open is gone", async ({
+    page,
+  }) => {
+    await openHistory(page);
+    await shareIcon(page).click();
+    await expect(keywordDialog(page)).toBeVisible();
+    await page.route(RANKINGS, (route) =>
+      route.fulfill({
+        json: {
+          series: [
+            {
+              keywordId: "kw-1",
+              text: "focus timer",
+              store: "APP_STORE",
+              country: "us",
+              points: [1, 0].map((days) => ({
+                date: utcDaysAgo(days),
+                position: 4,
+                depth: 200,
+              })),
+            },
+          ],
+        },
+      }),
+    );
+
+    await page
+      .locator('[data-slot="popover-content"] [role="tab"]', { hasText: "7d" })
+      .dispatchEvent("mousedown", { button: 0 });
+    await expect(keywordDialog(page)).toBeHidden();
+    await expect(shareIcon(page)).toHaveCount(0);
+    await page.getByRole("heading", { level: 1 }).click();
+
+    await expect(popover(page)).toBeHidden();
+  });
+
   test("shares from the keyword sheet", async ({ page }) => {
     await page.goto(`${KEYWORDS}?keyword=kw-1`);
     await (await hydrated(shareIcon(page))).click();
