@@ -77,7 +77,7 @@ A comparison over a range (movers, movement, the top 10 change, the visibility c
 
 The reference day, each app's own latest check, reads each keyword through `currentCheck` (`analytics/baseline.ts`): the check on that day, else the day before, with the popularity of the check's day, never further back and never forward, so a keyword the daily run has not reached yet keeps its last position in visibility, the top 10, the rank distribution and the summary's opportunity (`keywordsNow`, `positionsNow`, `rankDistributionNow`). The movers, the last run comparison and the share of voice keep exact days.
 
-`GET /apps/{id}/visibility-history` and `/rank-distribution-history` accept up to `QUERY_BOUNDS.historyDays` (365) days, the ratings history and the compared visibility history `QUERY_BOUNDS.snapshotHistoryDays` (180); the mock API applies the same bounds.
+`GET /apps/{id}/visibility-history` and `/rank-distribution-history` accept up to `QUERY_BOUNDS.historyDays` (365) days, the ratings history and the compared visibility history `QUERY_BOUNDS.snapshotHistoryDays` (180); the mock API applies the same bounds. A Google Play day of the ratings history carries `starCounts`, read from `AppSnapshot.ratingHistogram` (written by `toSnapshotData` from `ratingHistogram` and backfilled for home rows by its migration, SQL `NULL` when unknown, so the route never reads `raw`) and only when the star total is above 0 and within 2 percent of that snapshot's `ratingCount` (`consistentStarCounts`, `analytics/ratings-history.ts`); the key is omitted otherwise, and an App Store day never carries it.
 
 ## Domain rule 7: Tenancy is enforced by the database, not by remembering to filter
 
