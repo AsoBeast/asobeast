@@ -774,6 +774,92 @@ describe('Native localizations of a listing (e2e)', () => {
       });
     });
 
+    const titleOf = (audit: MetadataAuditResult) =>
+      audit.fields.find((field) => field.field === 'title')?.value;
+
+    it('audits the polish default listing under pl', async () => {
+      polishOnly();
+      const appId = await importFrom(PL_APP_URL);
+
+      const audit = (
+        await api
+          .get(`/apps/${appId}/metadata/audit?localization=pl`)
+          .expect(200)
+      ).body as MetadataAuditResult;
+
+      expect(titleOf(audit)).toBe(POLISH_ONLY.title);
+    });
+
+    it('still audits the default listing under en-GB', async () => {
+      polishOnly();
+      const appId = await importFrom(PL_APP_URL);
+
+      const audit = (
+        await api
+          .get(`/apps/${appId}/metadata/audit?localization=en-GB`)
+          .expect(200)
+      ).body as MetadataAuditResult;
+
+      expect(titleOf(audit)).toBe(POLISH_ONLY.title);
+    });
+
+    it('reads the market detail and screenshots under pl', async () => {
+      polishOnly();
+      const appId = await importFrom(PL_APP_URL);
+
+      const detail = (
+        await api.get(`/apps/${appId}?localization=pl`).expect(200)
+      ).body as AppDetail;
+      const shots = (
+        await api.get(`/apps/${appId}/screenshots?localization=pl`).expect(200)
+      ).body as AppScreenshots;
+
+      expect(detail.latestSnapshot?.title).toBe(POLISH_ONLY.title);
+      expect(detail.localization).toBe('pl');
+      expect(shots.screenshots.map((item) => item.url)).toEqual(
+        POLISH_ONLY.screenshots,
+      );
+    });
+
+    it('offers no stale polish entry in the market switcher', async () => {
+      registry.listings.set('pl:default', ENGLISH_ONLY);
+      registry.listings.set('pl:pl', POLISH_ONLY);
+      const appId = await importFrom(PL_APP_URL);
+      polishOnly();
+      await api.post(`/apps/${appId}/refresh`).expect(200);
+
+      const markets = (
+        await api.get(`/apps/${appId}/listing-markets`).expect(200)
+      ).body as ListingMarket[];
+
+      await expect(defaultOf(appId)).resolves.toBe('pl');
+      const home = markets.find((market) => market.home);
+      expect(home?.localizations ?? []).not.toContain('pl');
+    });
+
+    it('answers the default localization on the app detail', async () => {
+      polishOnly();
+      const polishId = await importFrom(PL_APP_URL);
+      registry.reset();
+      const englishId = await importFrom(US_APP_URL);
+
+      const polish = (await api.get(`/apps/${polishId}`).expect(200))
+        .body as AppDetail;
+      const english = (await api.get(`/apps/${englishId}`).expect(200))
+        .body as AppDetail;
+
+      expect(polish.defaultLocalization).toBe('pl');
+      expect('defaultLocalization' in english).toBe(false);
+    });
+
+    it('keeps refusing a polish view of another market', async () => {
+      const appId = await importFrom(US_APP_URL);
+
+      await api
+        .get(`/apps/${appId}/metadata/audit?country=pl&localization=pl`)
+        .expect(404);
+    });
+
     it('leaves the default alone when the polish lookup fails', async () => {
       polishOnly();
       const appId = await importFrom(PL_APP_URL);

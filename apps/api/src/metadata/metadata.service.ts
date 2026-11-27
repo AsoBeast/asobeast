@@ -5,7 +5,7 @@ import {
   assertStorefront,
   KeywordCoverageRow,
   MetadataAuditResult,
-  keywordFieldLocalizations,
+  defaultLocalizationIn,
   ScreenshotItem,
   TrackedKeywordItem,
 } from '@asobeast/shared';
@@ -81,8 +81,7 @@ export class MetadataService {
     );
     refuseMissingView(view, app.country, market, localization);
     const { listings, keywordFields } = sources;
-    const viewLocalization =
-      localization ?? keywordFieldLocalizations(market)[0];
+    const viewLocalization = localization ?? defaultLocalizationIn(app, market);
 
     const keywordFieldValue =
       app.store === Store.APP_STORE

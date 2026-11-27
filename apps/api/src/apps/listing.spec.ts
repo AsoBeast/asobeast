@@ -95,25 +95,74 @@ describe('storedLocalization', () => {
     'stores the %s default localization %s as the default listing',
     (market, localization) => {
       expect(
-        storedLocalization(Store.APP_STORE, market, localization),
+        storedLocalization(
+          { store: Store.APP_STORE, country: 'us' },
+          market,
+          localization,
+        ),
       ).toBeNull();
     },
   );
 
   it('keeps an additional localization of the storefront', () => {
-    expect(storedLocalization(Store.APP_STORE, 'pl', 'pl')).toBe('pl');
+    expect(
+      storedLocalization({ store: Store.APP_STORE, country: 'us' }, 'pl', 'pl'),
+    ).toBe('pl');
   });
 
   it('keeps a localization the storefront does not read', () => {
-    expect(storedLocalization(Store.APP_STORE, 'us', 'pl')).toBe('pl');
+    expect(
+      storedLocalization({ store: Store.APP_STORE, country: 'us' }, 'us', 'pl'),
+    ).toBe('pl');
   });
 
   it('keeps the default listing when no localization is asked for', () => {
-    expect(storedLocalization(Store.APP_STORE, 'us', null)).toBeNull();
-    expect(storedLocalization(Store.GOOGLE_PLAY, 'us', null)).toBeNull();
+    expect(
+      storedLocalization({ store: Store.APP_STORE, country: 'us' }, 'us', null),
+    ).toBeNull();
+    expect(
+      storedLocalization(
+        { store: Store.GOOGLE_PLAY, country: 'us' },
+        'us',
+        null,
+      ),
+    ).toBeNull();
   });
 
   it('keeps every localization on google play', () => {
-    expect(storedLocalization(Store.GOOGLE_PLAY, 'us', 'en-US')).toBe('en-US');
+    expect(
+      storedLocalization(
+        { store: Store.GOOGLE_PLAY, country: 'us' },
+        'us',
+        'en-US',
+      ),
+    ).toBe('en-US');
+  });
+
+  describe('an app whose home listing is written in polish', () => {
+    const POLISH_APP = {
+      store: Store.APP_STORE,
+      country: 'pl',
+      defaultLocalization: 'pl',
+    };
+
+    it('reads the default listing under pl and en-GB at home', () => {
+      expect(storedLocalization(POLISH_APP, 'pl', 'pl')).toBeNull();
+      expect(storedLocalization(POLISH_APP, 'pl', 'en-GB')).toBeNull();
+    });
+
+    it('keeps pl in another market', () => {
+      expect(storedLocalization(POLISH_APP, 'cz', 'pl')).toBe('pl');
+    });
+
+    it('keeps every tag of a google play app', () => {
+      expect(
+        storedLocalization(
+          { ...POLISH_APP, store: Store.GOOGLE_PLAY },
+          'pl',
+          'pl',
+        ),
+      ).toBe('pl');
+    });
   });
 });

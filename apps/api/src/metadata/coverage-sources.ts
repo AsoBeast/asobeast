@@ -47,11 +47,7 @@ export async function loadCoverageSources(
     app.store === Store.APP_STORE
       ? await latestLocalizedTexts(prisma, app, [...listings.keys()])
       : new Map<string, LocalizedTexts[]>();
-  const localization = storedLocalization(
-    app.store,
-    view.market,
-    view.localization,
-  );
+  const localization = storedLocalization(app, view.market, view.localization);
   return {
     sources: { listings, localized, keywordFields: fieldPhrases(stored) },
     view:

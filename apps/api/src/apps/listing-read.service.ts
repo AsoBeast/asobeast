@@ -47,7 +47,7 @@ export class ListingReadService {
       shippedLocalizations(this.prisma, { id, ...app }),
     ]);
     const listed = withTracking(
-      toListingMarkets(app.country, rows, shipped),
+      toListingMarkets(app, rows, shipped),
       new Set(keywords.map((keyword) => keyword.country)),
     );
     return withRatings(
@@ -84,7 +84,7 @@ export class ListingReadService {
     market: string,
     localization: AppStoreLocalization | null = null,
   ): Promise<AppDetail> {
-    const stored = storedLocalization(app.store, market, localization);
+    const stored = storedLocalization(app, market, localization);
     const loaded = await this.prisma.app.findFirst({
       where: { id: app.id },
       select: {
