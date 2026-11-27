@@ -16,6 +16,7 @@ export interface IdeasStatus {
   probesTotal: number;
   complete: boolean;
   error: unknown;
+  read: boolean;
   failed: boolean;
   retry: () => void;
 }
@@ -43,6 +44,7 @@ export function useIdeasStatus(
     probesTotal: status.data?.probesTotal ?? DEEP_SEARCH_PROBES,
     complete: status.data?.complete ?? false,
     error: status.error,
+    read: status.isSuccess,
     failed: status.isError,
     retry: () => void status.refetch(),
   };

@@ -309,6 +309,36 @@ test("a link with a seed the deep search refuses offers no search", async ({
   expect(reads).toBe(0);
 });
 
+test("a failing status read never offers Find ideas while it retries", async ({
+  page,
+}) => {
+  await page.route(SPIDER_URL, (route) =>
+    route.request().method() === "GET"
+      ? route.fulfill(fulfillJson(500, { message: "down" }))
+      : route.fallback(),
+  );
+  await page.clock.install();
+  await page.goto(`/apps/${APP}/keywords?ideas=${encodeURIComponent(SEED)}`);
+  const ideas = panel(page);
+  await expect(ideas).toContainText(
+    "Checking for an earlier search on this keyword…",
+  );
+  await expect(ideas.getByRole("button", { name: "Find ideas" })).toHaveCount(
+    0,
+  );
+
+  const retry = ideas.getByRole("button", { name: "Retry" });
+  await expect
+    .poll(async () => {
+      await page.clock.fastForward(5_000);
+      return retry.isVisible();
+    })
+    .toBe(true);
+  await expect(ideas.getByRole("button", { name: "Find ideas" })).toHaveCount(
+    0,
+  );
+});
+
 test("an idle panel does not poll the deep search status", async ({ page }) => {
   let reads = 0;
   await routeSpider(page);

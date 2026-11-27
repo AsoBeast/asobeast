@@ -13,11 +13,12 @@ import { registerIdeasHeading } from "./ideas-opener";
 import { useIdeasStart } from "./use-ideas-start";
 import { useIdeasStatus } from "./use-ideas-status";
 
-type IdeasView = "refused" | "start" | "results";
+type IdeasView = "refused" | "reading" | "start" | "results";
 
-function ideasView(seed: string, started: boolean): IdeasView {
+function ideasView(seed: string, started: boolean, read: boolean): IdeasView {
   if (!isSpiderTerm(seed)) return "refused";
-  return started ? "results" : "start";
+  if (started) return "results";
+  return read ? "start" : "reading";
 }
 
 export function KeywordIdeas({
@@ -40,7 +41,7 @@ export function KeywordIdeas({
     status.probesDone > 0 ||
     status.complete ||
     status.found.length > 0;
-  const view = ideasView(seed, started || status.failed);
+  const view = ideasView(seed, started || status.failed, status.read);
 
   useEffect(
     () =>
@@ -59,6 +60,11 @@ export function KeywordIdeas({
       {view === "refused" ? (
         <p className="text-body text-muted-foreground">
           {`Ideas need a keyword of ${SPIDER_TERM_MIN_LENGTH} to ${SPIDER_TERM_MAX_LENGTH} characters.`}
+        </p>
+      ) : null}
+      {view === "reading" ? (
+        <p className="text-body text-muted-foreground">
+          Checking for an earlier search on this keyword…
         </p>
       ) : null}
       {view === "results" ? (
