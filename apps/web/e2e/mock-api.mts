@@ -28,6 +28,7 @@ import {
   HISTOGRAM_FAILING_COOKIE,
   RATINGS_HISTORY_COOKIE,
   RATINGS_HISTORY_SETS,
+  RIVALS_FAILING_COOKIE,
 } from "./reviews-fixtures.mts";
 import { auditHistoryFor } from "./audit-fixtures.mts";
 import { BREAKDOWNS } from "./keyword-breakdowns.mts";
@@ -268,6 +269,7 @@ import {
   DELISTED_COOKIE,
   PRICED_REFRESHES,
   manualKeyword,
+  BENCHMARK_ID_PREFIX,
 } from "./fixtures.mts";
 import { portfolioHistoryFor } from "./portfolio-history.mts";
 import {
@@ -457,6 +459,8 @@ import {
   RANKINGS_EDGE_COOKIE,
   windowAnnotations,
 } from "./rankings-fixtures.mts";
+const BENCHMARK_RIVAL_PATH = new RegExp(`^/apps/${BENCHMARK_ID_PREFIX}[^/]+/`);
+
 const PORT = Number(process.env.MOCK_API_PORT ?? 4100);
 const ERROR_ID = "err-app";
 const MCP_STREAM_MS = 3_000;
@@ -5573,6 +5577,9 @@ const routes: Route[] = [
       (dataset, _query, req) =>
         RATINGS_HISTORY_SETS[cookieValue(req, RATINGS_HISTORY_COOKIE) ?? ""] ??
         dataset.ratingsHistory,
+      (req) =>
+        hasCookie(req, RIVALS_FAILING_COOKIE, "1") &&
+        BENCHMARK_RIVAL_PATH.test(req.url ?? ""),
     ),
     () => QUERY_BOUNDS.snapshotHistoryDays.max,
   ),
