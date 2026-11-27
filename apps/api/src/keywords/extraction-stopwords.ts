@@ -1,4 +1,5 @@
 import {
+  ARABIC_CONJUNCTION,
   ARABIC_DECORATION,
   ARABIC_FUNCTION_WORDS,
   CHINESE_FUNCTION_WORDS,
@@ -29,8 +30,6 @@ const ARABIC_NOISE = [
   'جديد',
   'تحميل',
 ];
-
-const ARABIC_CONJUNCTION = 'و';
 
 const ARABIC_WORDS: ReadonlySet<string> = new Set([
   ...ARABIC_FUNCTION_WORDS,

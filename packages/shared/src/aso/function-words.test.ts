@@ -257,6 +257,17 @@ describe('functionWordTest', () => {
     expect(isFunctionWord('طَعَام')).toBe(false);
   });
 
+  it('reads an arabic function word joined to the conjunction as the word', () => {
+    const isFunctionWord = functionWordTest(['ar']);
+
+    expect(
+      ['وحول', 'وفي', 'وَحَول'].filter((word) => !isFunctionWord(word)),
+    ).toEqual([]);
+    expect(isFunctionWord('وطعام')).toBe(false);
+    expect(isFunctionWord('و')).toBe(false);
+    expect(functionWordTest(['fr'])('وفي')).toBe(false);
+  });
+
   it('keeps the russian and the ukrainian lists apart', () => {
     expect(functionWordTest(['ru'])('что')).toBe(true);
     expect(functionWordTest(['ru'])('чи')).toBe(false);

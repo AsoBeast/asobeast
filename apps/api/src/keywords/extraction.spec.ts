@@ -453,6 +453,13 @@ describe('extractCandidates', () => {
       },
     );
 
+    it('skips an arabic function word joined to the conjunction', () => {
+      const found = texts({ title: 'حول المدينة وحول العالم' }, ['ar']);
+
+      expect(found).toContain('المدينة');
+      expect(found.some((text) => text.includes('حول'))).toBe(false);
+    });
+
     it('reads russian and ukrainian apart', () => {
       expect(
         texts({ title: 'Планувальник для завдань та справ' }, ['ru']),

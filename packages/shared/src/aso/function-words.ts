@@ -25,6 +25,8 @@ export const ARABIC_FUNCTION_WORDS = words(`
 
 export const ARABIC_DECORATION = /\u0640|\u0670|[\u064B-\u065F]/gu;
 
+export const ARABIC_CONJUNCTION = 'و';
+
 const union = (...lists: readonly ReadonlySet<string>[]): ReadonlySet<string> =>
   new Set(lists.flatMap((list) => [...list]));
 
@@ -235,11 +237,19 @@ const listsOf = (
     Object.hasOwn(source, language) ? [source[language]] : [],
   );
 
+const unconjoined = (word: string): string | null =>
+  word.startsWith(ARABIC_CONJUNCTION)
+    ? word.slice(ARABIC_CONJUNCTION.length)
+    : null;
+
 const containedIn =
   (lists: readonly ReadonlySet<string>[]): TokenTest =>
   (token) => {
     const word = token.replace(ARABIC_DECORATION, '');
-    return lists.some((list) => list.has(word));
+    const joined = unconjoined(word);
+    return lists.some(
+      (list) => list.has(word) || (joined !== null && list.has(joined)),
+    );
   };
 
 export const functionWordTest = (languages: readonly string[]): TokenTest =>
