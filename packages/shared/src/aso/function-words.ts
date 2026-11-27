@@ -3,6 +3,28 @@ const words = (list: string): ReadonlySet<string> =>
 
 type WordLists = Readonly<Record<string, ReadonlySet<string>>>;
 
+export const CHINESE_FUNCTION_WORDS = words(`
+  一个 一個 我们 我們 什么 什麼 我的 你的
+`);
+
+export const CHINESE_PARTICLES = words(`
+  的 了 是 和 与 與 及 或 让 讓 你 我 他 她 都 也 就 很 把
+  被 给 給 从 從 对 對 为 為
+`);
+
+export const THAI_FUNCTION_WORDS = words(`
+  และ ที่ ที่สุด ของ ใน กับ หรือ ได้ ให้ เป็น มาก ทุก จาก ด้วย ไป มา นี้
+  นั้น จะ ก็ แล้ว ยัง คือ โดย เพื่อ ถึง แต่ ว่า ซึ่ง อีก เลย กว่า ไม่ ต้อง
+  แบบ
+`);
+
+export const ARABIC_FUNCTION_WORDS = words(`
+  في من على إلى الى عن مع هذا هذه ذلك التي الذي أو او ثم كل هو هي أن ان إن
+  لا ما قد بعد قبل بين حتى عند أكثر اكثر
+`);
+
+export const ARABIC_DECORATION = /\u0640|\u0670|[\u064B-\u065F]/gu;
+
 export const FUNCTION_WORDS: WordLists = {
   es: words(`
     de del la las el los lo al un una unos unas le les se su sus tu tus te nos

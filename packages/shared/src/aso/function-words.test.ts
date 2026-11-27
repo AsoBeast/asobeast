@@ -2,10 +2,15 @@ import { describe, expect, it } from 'vitest';
 
 import { countChars } from './limits';
 import {
+  ARABIC_DECORATION,
+  ARABIC_FUNCTION_WORDS,
+  CHINESE_FUNCTION_WORDS,
+  CHINESE_PARTICLES,
   FUNCTION_WORDS,
   functionWordTest,
   REVIEW_ONLY_FUNCTION_WORDS,
   reviewWordTest,
+  THAI_FUNCTION_WORDS,
 } from './function-words';
 
 const LISTS = Object.entries(FUNCTION_WORDS).map(
@@ -268,5 +273,33 @@ describe('reviewWordTest', () => {
     ).toEqual([]);
     expect(['chce', 'wiem'].filter(polish)).toEqual([]);
     expect(['got', 'one'].filter(german)).toEqual([]);
+  });
+});
+
+const SCRIPT_LISTS = [
+  ['the chinese function words', CHINESE_FUNCTION_WORDS, 8],
+  ['the chinese particles', CHINESE_PARTICLES, 28],
+  ['the thai function words', THAI_FUNCTION_WORDS, 35],
+  ['the arabic function words', ARABIC_FUNCTION_WORDS, 31],
+] as const;
+
+describe('the script function words', () => {
+  it.each(SCRIPT_LISTS)('keeps %s as they were', (_, list, size) => {
+    expect(list.size).toBe(size);
+  });
+
+  it('holds the function words and not the store words of keyword extraction', () => {
+    expect(ARABIC_FUNCTION_WORDS.has('كل')).toBe(true);
+    expect(ARABIC_FUNCTION_WORDS.has('تطبيق')).toBe(false);
+    expect(THAI_FUNCTION_WORDS.has('และ')).toBe(true);
+    expect(THAI_FUNCTION_WORDS.has('แอป')).toBe(false);
+    expect(CHINESE_FUNCTION_WORDS.has('我们')).toBe(true);
+    expect(CHINESE_FUNCTION_WORDS.has('免费')).toBe(false);
+  });
+
+  it('strips the tatweel and the harakat of an arabic word', () => {
+    expect('أكـثر'.replace(ARABIC_DECORATION, '')).toBe('أكثر');
+    expect('أَكْثَر'.replace(ARABIC_DECORATION, '')).toBe('أكثر');
+    expect('طعام'.replace(ARABIC_DECORATION, '')).toBe('طعام');
   });
 });
