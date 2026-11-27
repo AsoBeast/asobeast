@@ -1581,7 +1581,8 @@ function keywordFieldTarget(
     return undefined;
   }
   const read = readLocalizations(country);
-  const requested = query.get("localization") ?? read[0];
+  const requested =
+    query.get("localization") ?? defaultLocalizationIn(dataset.detail, country);
   const localization = read.find((tag) => tag === requested);
   if (!localization) {
     const names = read.map((tag) => APP_STORE_LOCALIZATIONS[tag]).join(", ");
@@ -2003,10 +2004,7 @@ function detectLocalizations(
 
 function recordShipped(id: string, localization: AppStoreLocalization): void {
   const home = DATASETS[id]?.detail.country;
-  if (
-    home === undefined ||
-    localization === keywordFieldLocalizations(home)[0]
-  ) {
+  if (home === undefined || localization === homeTagOf(id, home)) {
     return;
   }
   if (!keywordFields.has(fieldKey(id, localization))) return;
