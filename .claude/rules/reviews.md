@@ -32,12 +32,12 @@ Lists and themes:
 
 - `GET /apps/{id}/reviews` filters by `replyState` and `from` (first UTC day written), sorts `newest` or `lowest`, embeds `reply` on every row and answers `counts` under the star, version and `from` filters, never under `replyState`.
 - `GET /apps/{id}/reviews/themes` (`reviewThemes` on `reviewPhrases`, up to four words, `themeIgnoredWords` kept off a phrase's edges) calls no store and no model. Each phrase of the newest `REVIEW_THEMES_BASELINE` reviews under the version and `from` filters gets a binomial surprise score for its share of reviews at or below `ALERT_REVIEW_SCORE_MAX` against the period's smoothed share. The majority side is judged by lean, the other by `REVIEW_THEME_SURPRISE`, each with at least `REVIEW_THEME_MIN_REVIEWS`. Counts come from the first `REVIEW_THEMES_CAP` (200) reviews under every list filter in the list's `sort`; only then is a shorter phrase dropped for a longer one covering three quarters of its mentions, so a star filter narrows counts, never the judgement.
-- Each review drops the function words of the storefront's languages and its guessed language, or, when the guess is null, of every language tied for the most function words it holds (`reviewLanguages`).
+- Each review drops the function words of the storefront's languages and its guessed language, or, when the guess is null, of every language tied for the most function words it holds (`textLanguages`, `common/text-language.ts`).
 
 Translation:
 
 - A translation lives on the `Review` row (`translationLanguage`, `sourceLanguage`, `translatedTitle`, `translatedText`, `translatedAt`), one language at a time. `ReviewTranslator` returns a kept translation for the same language free; otherwise one `AiGateway` call under `reviewTranslation` after every refusing check (unknown review, no words, unknown language). The sync clears it (`TRANSLATION_CLEARED`) when an edit changes title or text, and the write matches the translated title and text, so a translation of replaced text is answered but not kept. Same untrusted block and `foreignContacts` refusal as drafts.
-- `ReviewItem.language` (`reviewLanguage`: script, then the function words of the Latin script lists only, because `review-language.ts` keeps the languages it reads from a script out of `LATIN_WORDS`, `null` when unsure) only decides where the web offers **Translate**, falling back to the storefront's language.
+- `ReviewItem.language` (`textLanguage`, `common/text-language.ts`: script, then the function words of the Latin script lists only, because it keeps the languages it reads from a script out of `LATIN_WORDS`, `null` when unsure) only decides where the web offers **Translate**, falling back to the storefront's language.
 
 Posting to the store:
 

@@ -8,7 +8,11 @@ import {
   AppLocalizationsResult,
   AppScreenshots,
   ChangeTimeline,
+  CoveragePreviewResult,
+  KeywordBreakdown,
+  KeywordFieldResult,
   ListingMarket,
+  MarketKeywordFields,
   MetadataAuditResult,
   SnapshotDiffResult,
   TrackedKeywordItem,
@@ -20,11 +24,13 @@ import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import {
   ENGLISH,
+  ENGLISH_ONLY,
   FRENCH,
   GERMAN,
   LocalizedRegistry,
   PL_APP_URL,
   POLISH,
+  POLISH_ONLY,
   US_APP_URL,
 } from './helpers/localized-store';
 import { ownerAgent, useCookies } from './helpers/session';
@@ -633,6 +639,353 @@ describe('Native localizations of a listing (e2e)', () => {
           { localization: 'fr', origin: 'manual' },
         ]);
       });
+    });
+  });
+
+  describe('the language of the default listing', () => {
+    const polishOnly = () => {
+      for (const key of ['pl:default', 'pl:pl', 'pl:en-GB']) {
+        registry.listings.set(key, POLISH_ONLY);
+      }
+    };
+
+    const defaultOf = async (appId: string) =>
+      (
+        await prisma.app.findUniqueOrThrow({
+          where: { id: appId },
+          select: { defaultLocalization: true },
+        })
+      ).defaultLocalization;
+
+    it('records polish as the default of a polish only app', async () => {
+      polishOnly();
+
+      const imported = (
+        await api.post('/apps').send({ url: PL_APP_URL }).expect(201)
+      ).body as AppDetail;
+
+      expect(imported.defaultLocalization).toBe('pl');
+      await expect(defaultOf(imported.id)).resolves.toBe('pl');
+    });
+
+    it('keeps an english only app on the storefront default', async () => {
+      for (const key of ['pl:default', 'pl:pl', 'pl:en-GB']) {
+        registry.listings.set(key, ENGLISH_ONLY);
+      }
+
+      const appId = await importFrom(PL_APP_URL);
+
+      await expect(defaultOf(appId)).resolves.toBeNull();
+    });
+
+    it('clears the default once the store serves a distinct polish page', async () => {
+      polishOnly();
+      const appId = await importFrom(PL_APP_URL);
+      registry.listings.set('pl:default', ENGLISH_ONLY);
+      registry.listings.set('pl:en-GB', ENGLISH_ONLY);
+
+      await api.post(`/apps/${appId}/refresh`).expect(200);
+
+      await expect(defaultOf(appId)).resolves.toBeNull();
+      await expect(snapshotsOf(appId)).resolves.toContainEqual({
+        country: null,
+        localization: 'pl',
+        title: POLISH_ONLY.title,
+      });
+    });
+
+    const localizationItems = async (appId: string) =>
+      (
+        (await api.get(`/apps/${appId}/localizations`).expect(200))
+          .body as AppLocalizationsResult
+      ).localizations;
+
+    it('labels the home localization of a polish only app polish', async () => {
+      polishOnly();
+      const appId = await importFrom(PL_APP_URL);
+
+      const items = await localizationItems(appId);
+
+      expect(items[0]).toMatchObject({ localization: 'pl', origin: 'home' });
+      expect(items.map((item) => item.localization)).not.toContain('en-GB');
+    });
+
+    it('labels an english only app english (u.k.)', async () => {
+      for (const key of ['pl:default', 'pl:pl', 'pl:en-GB']) {
+        registry.listings.set(key, ENGLISH_ONLY);
+      }
+      const appId = await importFrom(PL_APP_URL);
+
+      const items = await localizationItems(appId);
+
+      expect(items[0]).toMatchObject({ localization: 'en-GB', origin: 'home' });
+    });
+
+    it('keeps a saved english field as a removable item', async () => {
+      const appId = await importFrom(PL_APP_URL);
+      await api
+        .put(`/apps/${appId}/keyword-fields/en-GB`)
+        .send({ text: 'dziennik,oceny', trackIn: [] })
+        .expect(200);
+      polishOnly();
+
+      await api.post(`/apps/${appId}/refresh`).expect(200);
+
+      const items = await localizationItems(appId);
+      expect(
+        items.map(({ localization, origin }) => ({ localization, origin })),
+      ).toEqual([
+        { localization: 'pl', origin: 'home' },
+        { localization: 'en-GB', origin: 'manual' },
+      ]);
+      expect(items[1].phrases).toEqual(['dziennik', 'oceny']);
+      const refused = await api
+        .delete(`/apps/${appId}/localizations/pl`)
+        .expect(409);
+      expect((refused.body as { message: string }).message).toBe(
+        'Polish is the language of the home listing and cannot be removed',
+      );
+      await api.delete(`/apps/${appId}/localizations/en-GB`).expect(204);
+    });
+
+    it('saves the polish home field without a manual row', async () => {
+      polishOnly();
+      const appId = await importFrom(PL_APP_URL);
+
+      await api
+        .put(`/apps/${appId}/keyword-fields/pl`)
+        .send({ text: 'frekwencja', trackIn: [] })
+        .expect(200);
+
+      await expect(
+        prisma.appLocalization.findMany({ where: { appId } }),
+      ).resolves.toEqual([]);
+      const items = await localizationItems(appId);
+      expect(items[0]).toMatchObject({
+        localization: 'pl',
+        origin: 'home',
+        phrases: ['frekwencja'],
+      });
+    });
+
+    it('reads the polish home field from the keyword field route without a query', async () => {
+      polishOnly();
+      const appId = await importFrom(PL_APP_URL);
+      await api
+        .put(`/apps/${appId}/keyword-fields/pl`)
+        .send({ text: 'frekwencja', trackIn: [] })
+        .expect(200);
+
+      const field = (await api.get(`/apps/${appId}/keyword-field`).expect(200))
+        .body as KeywordFieldResult;
+
+      expect(field).toMatchObject({
+        localization: 'pl',
+        phrases: ['frekwencja'],
+      });
+    });
+
+    const titleOf = (audit: MetadataAuditResult) =>
+      audit.fields.find((field) => field.field === 'title')?.value;
+
+    it('audits the polish default listing under pl', async () => {
+      polishOnly();
+      const appId = await importFrom(PL_APP_URL);
+
+      const audit = (
+        await api
+          .get(`/apps/${appId}/metadata/audit?localization=pl`)
+          .expect(200)
+      ).body as MetadataAuditResult;
+
+      expect(titleOf(audit)).toBe(POLISH_ONLY.title);
+    });
+
+    it('still audits the default listing under en-GB', async () => {
+      polishOnly();
+      const appId = await importFrom(PL_APP_URL);
+
+      const audit = (
+        await api
+          .get(`/apps/${appId}/metadata/audit?localization=en-GB`)
+          .expect(200)
+      ).body as MetadataAuditResult;
+
+      expect(titleOf(audit)).toBe(POLISH_ONLY.title);
+    });
+
+    it('reads the market detail and screenshots under pl', async () => {
+      polishOnly();
+      const appId = await importFrom(PL_APP_URL);
+
+      const detail = (
+        await api.get(`/apps/${appId}?localization=pl`).expect(200)
+      ).body as AppDetail;
+      const shots = (
+        await api.get(`/apps/${appId}/screenshots?localization=pl`).expect(200)
+      ).body as AppScreenshots;
+
+      expect(detail.latestSnapshot?.title).toBe(POLISH_ONLY.title);
+      expect(detail.localization).toBe('pl');
+      expect(shots.screenshots.map((item) => item.url)).toEqual(
+        POLISH_ONLY.screenshots,
+      );
+    });
+
+    it('offers no stale polish entry in the market switcher', async () => {
+      registry.listings.set('pl:default', ENGLISH_ONLY);
+      registry.listings.set('pl:pl', POLISH_ONLY);
+      const appId = await importFrom(PL_APP_URL);
+      polishOnly();
+      await api.post(`/apps/${appId}/refresh`).expect(200);
+
+      const markets = (
+        await api.get(`/apps/${appId}/listing-markets`).expect(200)
+      ).body as ListingMarket[];
+
+      await expect(defaultOf(appId)).resolves.toBe('pl');
+      const home = markets.find((market) => market.home);
+      expect(home?.localizations ?? []).not.toContain('pl');
+    });
+
+    it('answers the default localization on the app detail', async () => {
+      polishOnly();
+      const polishId = await importFrom(PL_APP_URL);
+      registry.reset();
+      const englishId = await importFrom(US_APP_URL);
+
+      const polish = (await api.get(`/apps/${polishId}`).expect(200))
+        .body as AppDetail;
+      const english = (await api.get(`/apps/${englishId}`).expect(200))
+        .body as AppDetail;
+
+      expect(polish.defaultLocalization).toBe('pl');
+      expect('defaultLocalization' in english).toBe(false);
+    });
+
+    it('keeps refusing a polish view of another market', async () => {
+      const appId = await importFrom(US_APP_URL);
+
+      await api
+        .get(`/apps/${appId}/metadata/audit?country=pl&localization=pl`)
+        .expect(404);
+    });
+
+    const trackPolish = async (appId: string, keywords: string[]) => {
+      await api
+        .post(`/apps/${appId}/keywords`)
+        .send({ keywords, country: 'pl' })
+        .expect(201);
+      const listed = (
+        await api.get(`/apps/${appId}/keywords`).query({ country: 'pl' })
+      ).body as TrackedKeywordItem[];
+      return new Map(listed.map((item) => [item.text, item]));
+    };
+
+    const savePolishField = (appId: string, text: string) =>
+      api
+        .put(`/apps/${appId}/keyword-fields/pl`)
+        .send({ text, trackIn: [] })
+        .expect(200);
+
+    it('covers a polish keyword split between the polish title and the polish field', async () => {
+      polishOnly();
+      const appId = await importFrom(PL_APP_URL);
+      await trackPolish(appId, ['ucznia frekwencja']);
+      await savePolishField(appId, 'frekwencja');
+
+      const audit = (await api.get(`/apps/${appId}/metadata/audit`).expect(200))
+        .body as MetadataAuditResult;
+
+      expect(
+        audit.coverage.find((row) => row.text === 'ucznia frekwencja'),
+      ).toMatchObject({ uncovered: false });
+    });
+
+    it('flags the split polish keyword covered in the keywords table', async () => {
+      polishOnly();
+      const appId = await importFrom(PL_APP_URL);
+      await trackPolish(appId, ['ucznia frekwencja']);
+      await savePolishField(appId, 'frekwencja');
+
+      const listed = (
+        await api.get(`/apps/${appId}/keywords`).query({ country: 'pl' })
+      ).body as TrackedKeywordItem[];
+
+      expect(
+        listed.find((item) => item.text === 'ucznia frekwencja')?.uncovered,
+      ).toBe(false);
+    });
+
+    it('previews a polish draft as the default listing', async () => {
+      polishOnly();
+      const appId = await importFrom(PL_APP_URL);
+      await trackPolish(appId, ['dzienniczek']);
+
+      const preview = (
+        await api
+          .post(`/apps/${appId}/metadata/coverage-preview`)
+          .send({ localization: 'pl', title: 'Plan lekcji' })
+          .expect(200)
+      ).body as CoveragePreviewResult;
+
+      expect(
+        preview.keywords.find((item) => item.text === 'dzienniczek')?.change,
+      ).toBe('lost');
+    });
+
+    it('labels the default group of the keyword field diagnostics polish', async () => {
+      polishOnly();
+      const appId = await importFrom(PL_APP_URL);
+      await trackPolish(appId, ['ucznia frekwencja']);
+      await api
+        .put(`/apps/${appId}/keyword-fields/en-GB`)
+        .send({ text: 'frekwencja', trackIn: [] })
+        .expect(200);
+
+      const market = (
+        await api
+          .get(`/apps/${appId}/keyword-fields/market`)
+          .query({ country: 'pl' })
+          .expect(200)
+      ).body as MarketKeywordFields;
+
+      expect(
+        market.splitPhrases.find(
+          (phrase) => phrase.phrase === 'ucznia frekwencja',
+        )?.parts,
+      ).toEqual([
+        { word: 'ucznia', localizations: ['pl'] },
+        { word: 'frekwencja', localizations: ['en-GB'] },
+      ]);
+    });
+
+    it('labels the default listing of the breakdown polish', async () => {
+      polishOnly();
+      const appId = await importFrom(PL_APP_URL);
+      const tracked = await trackPolish(appId, ['ucznia frekwencja']);
+      const keywordId = tracked.get('ucznia frekwencja')?.keywordId;
+
+      const breakdown = (
+        await api
+          .get(`/apps/${appId}/keywords/${keywordId}/breakdown`)
+          .expect(200)
+      ).body as KeywordBreakdown;
+      const you = breakdown.apps.find((each) => each.isYou);
+
+      expect(you?.listings[0]).toMatchObject({ localization: 'pl' });
+      expect(you?.unread).not.toContain('pl');
+    });
+
+    it('leaves the default alone when the polish lookup fails', async () => {
+      polishOnly();
+      const appId = await importFrom(PL_APP_URL);
+      await api.post(`/apps/${appId}/refresh`).expect(200);
+      registry.failing = 'pl';
+
+      await api.post(`/apps/${appId}/refresh`).expect(200);
+
+      await expect(defaultOf(appId)).resolves.toBe('pl');
     });
   });
 });

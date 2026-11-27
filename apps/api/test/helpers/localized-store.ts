@@ -14,6 +14,7 @@ export interface Listing {
   subtitle?: string;
   description: string;
   screenshots: string[];
+  languages?: string[];
 }
 
 export const ENGLISH: Listing = {
@@ -42,6 +43,24 @@ export const FRENCH: Listing = {
   subtitle: 'Jeu de géographie mondiale',
   description: 'Découvrez le monde',
   screenshots: [7, 8].map(shot),
+};
+
+export const POLISH_ONLY: Listing = {
+  title: 'Dzienniczek Ucznia',
+  subtitle: 'Oceny i plan lekcji',
+  description:
+    'Dzienniczek to aplikacja dla uczniów i rodziców. Sprawdzaj oceny, frekwencję i plan lekcji w jednym miejscu. Otrzymuj powiadomienia o nowych ocenach oraz wiadomościach od nauczycieli. Aplikacja działa z dziennikiem szkolnym i jest dostępna dla każdej szkoły, która korzysta z systemu. Wszystkie dane są bezpieczne, a logowanie jest proste i szybkie. Możesz też dodać kilka kont i przełączać się między nimi bez wylogowania.',
+  screenshots: [9, 10].map(shot),
+  languages: ['PL'],
+};
+
+export const ENGLISH_ONLY: Listing = {
+  title: 'School Diary',
+  subtitle: 'Grades and timetable',
+  description:
+    'The diary is an app for students and their parents. Check your grades, attendance and timetable in one place. Get a notice about new grades and about messages from your teachers. The app works with the school register and is open to every school that uses the system. All of your data is safe, and signing in is quick and simple. You can also add more than one account and switch between them at any time.',
+  screenshots: [11, 12].map(shot),
+  languages: ['EN', 'PL'],
 };
 
 export class LocalizedRegistry {
@@ -80,7 +99,10 @@ export class LocalizedRegistry {
           description: listing.description,
           version: '4.0',
           price: 0,
-          raw: { screenshots: listing.screenshots },
+          raw: {
+            screenshots: listing.screenshots,
+            languages: listing.languages ?? [],
+          },
           searchable: true,
         } satisfies NormalizedApp);
       },

@@ -19,6 +19,7 @@ const CHECKED_APP_SELECT = {
   workspaceId: true,
   store: true,
   country: true,
+  defaultLocalization: true,
   storeAppId: true,
   delistedAt: true,
   unlistedMarkets: true,

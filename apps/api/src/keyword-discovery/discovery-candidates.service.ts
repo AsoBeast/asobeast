@@ -29,6 +29,7 @@ export interface DiscoveryApp {
   workspaceId: string;
   store: Store;
   country: string;
+  defaultLocalization: string | null;
   storeAppId: string;
 }
 

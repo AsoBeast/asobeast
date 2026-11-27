@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import {
   assertStorefront,
-  keywordFieldLocalizations,
+  localizationReadOrder,
   MarketKeywordFields,
   SplitPhrase,
 } from '@asobeast/shared';
@@ -10,6 +10,7 @@ import {
   latestListingTexts,
   latestLocalizedTexts,
 } from '../apps/listing-texts';
+import { ShippingApp } from '../apps/shipped-localizations';
 import { FieldPhrases, judgingSurfaces } from '../metadata/listing-surfaces';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppLocalizationsService } from './app-localizations.service';
@@ -32,9 +33,17 @@ export class MarketKeywordFieldsService {
     const fields: FieldPhrases = new Map(
       localizations.map(({ localization, phrases }) => [localization, phrases]),
     );
+    const app: ShippingApp = {
+      id: appId,
+      country: home,
+      defaultLocalization:
+        localizations.find(({ origin }) => origin === 'home')?.localization ??
+        null,
+    };
     const reads = marketReads({
       country: market,
       home,
+      defaultLocalization: app.defaultLocalization,
       shipped: new Map(
         localizations.map(({ localization, origin }) => [localization, origin]),
       ),
@@ -45,21 +54,25 @@ export class MarketKeywordFieldsService {
       home: market === home,
       localizations: reads,
       wastedWords: wastedWords(reads),
-      splitPhrases: await this.splitPhrasesOf(appId, home, market, fields),
+      splitPhrases: await this.splitPhrasesOf(app, market, fields),
     };
   }
 
   private async splitPhrasesOf(
-    appId: string,
-    home: string,
+    app: ShippingApp,
     market: string,
     fields: FieldPhrases,
   ): Promise<SplitPhrase[]> {
+    const home = app.country;
     const [listings, localized, tracked] = await Promise.all([
-      latestListingTexts(this.prisma, appId, home, [market]),
-      latestLocalizedTexts(this.prisma, appId, home, [market]),
+      latestListingTexts(this.prisma, app.id, home, [market]),
+      latestLocalizedTexts(this.prisma, app, [market]),
       this.prisma.trackedKeyword.findMany({
-        where: { appId, active: true, keyword: { is: { country: market } } },
+        where: {
+          appId: app.id,
+          active: true,
+          keyword: { is: { country: market } },
+        },
         select: { keywordId: true, keyword: { select: { text: true } } },
       }),
     ]);
@@ -67,12 +80,13 @@ export class MarketKeywordFieldsService {
       [...fields].filter(([, phrases]) => phrases.length > 0),
     );
     const groups = localizationGroups(
-      keywordFieldLocalizations(market),
+      localizationReadOrder(app, market),
       judgingSurfaces(
         {
           store: Store.APP_STORE,
           country: market,
           home: market === home,
+          defaultLocalization: app.defaultLocalization,
           listing: listings.get(market),
           captured: localized.get(market) ?? [],
         },

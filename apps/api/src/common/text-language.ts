@@ -9,10 +9,19 @@ const ENGLISH = new Set(
     .filter(Boolean),
 );
 
+const SHARED_WORDS: ReadonlySet<string> = new Set(
+  Object.values(FUNCTION_WORDS).flatMap((words) => [...words]),
+);
+
+const ENGLISH_ONLY: ReadonlySet<string> = new Set(
+  [...ENGLISH].filter((word) => !SHARED_WORDS.has(word)),
+);
+
 const MIN_HITS = 2;
 const SCRIPT_SHARE = 0.5;
 
 const LETTER = /\p{L}/gu;
+const HAS_LETTER = /\p{L}/u;
 const HANGUL = /\p{Script=Hangul}/u;
 const KANA = /[\p{Script=Hiragana}\p{Script=Katakana}]/u;
 const CJK = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u;
@@ -62,13 +71,17 @@ interface WordMatch {
   languages: string[];
 }
 
-function bestWordMatch(text: string): WordMatch {
-  const tokens = tokenize(text);
-  const ranked = Object.entries(LATIN_WORDS)
-    .map(([language, words]) => ({
+const hitsOf = (tokens: readonly string[]): Record<string, number> =>
+  Object.fromEntries(
+    Object.entries(LATIN_WORDS).map(([language, words]) => [
       language,
-      hits: tokens.filter((token) => words.has(token)).length,
-    }))
+      tokens.filter((token) => words.has(token)).length,
+    ]),
+  );
+
+function bestWordMatch(text: string): WordMatch {
+  const ranked = Object.entries(hitsOf(tokenize(text)))
+    .map(([language, hits]) => ({ language, hits }))
     .sort((a, b) => b.hits - a.hits);
   const hits = ranked[0].hits;
   return {
@@ -89,15 +102,38 @@ function wordLanguage(text: string): string | null {
 
 const lettersOf = (text: string): string[] => text.match(LETTER) ?? [];
 
-export function reviewLanguage(text: string): string | null {
+export function textLanguage(text: string): string | null {
   const letters = lettersOf(text);
   if (letters.length === 0) return null;
   return scriptLanguage(text, letters) ?? wordLanguage(text);
 }
 
-export function reviewLanguages(text: string): string[] {
+export function textLanguages(text: string): string[] {
   const letters = lettersOf(text);
   if (letters.length === 0) return [];
   const script = scriptLanguage(text, letters);
   return script ? [script] : bestWordMatch(text).languages;
+}
+
+export interface LanguageEvidence {
+  tokens: number;
+  script: string | null;
+  hits: Readonly<Record<string, number>>;
+  englishOnly: number;
+  words: number;
+}
+
+export const knowsLanguage = (language: string): boolean =>
+  Object.hasOwn(LATIN_WORDS, language) || SCRIPT_LANGUAGES.has(language);
+
+export function languageEvidence(text: string): LanguageEvidence {
+  const tokens = tokenize(text);
+  const letters = lettersOf(text);
+  return {
+    tokens: tokens.length,
+    script: letters.length === 0 ? null : scriptLanguage(text, letters),
+    hits: hitsOf(tokens),
+    englishOnly: tokens.filter((token) => ENGLISH_ONLY.has(token)).length,
+    words: tokens.filter((token) => HAS_LETTER.test(token)).length,
+  };
 }

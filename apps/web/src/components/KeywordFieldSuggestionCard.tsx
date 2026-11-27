@@ -3,9 +3,9 @@
 import { useId, useState } from "react";
 import Link from "next/link";
 import { Copy } from "lucide-react";
-import {
-  keywordFieldLocalizations,
-  type KeywordFieldSuggestion,
+import type {
+  AppStoreLocalization,
+  KeywordFieldSuggestion,
 } from "@asobeast/shared";
 import {
   SUB_HEADER,
@@ -21,13 +21,13 @@ const COPIED_MS = 1500;
 
 interface SuggestionProps {
   id: string;
-  home: string;
+  homeLocalization: AppStoreLocalization;
   suggestion: KeywordFieldSuggestion;
 }
 
 export function KeywordFieldSuggestionRow({
   id,
-  home,
+  homeLocalization,
   suggestion,
   heading: Heading = "h3",
   editable = true,
@@ -36,7 +36,7 @@ export function KeywordFieldSuggestionRow({
   const [copied, setCopied] = useState(false);
   const editHref = editLocalizationHref(
     id,
-    suggestion.localization ?? keywordFieldLocalizations(home)[0],
+    suggestion.localization ?? homeLocalization,
   );
 
   async function copy() {

@@ -18,6 +18,7 @@ export interface KeywordApp {
   workspaceId: string;
   store: Store;
   country: string;
+  defaultLocalization: string | null;
   storeAppId: string;
 }
 
@@ -65,6 +66,7 @@ const KEYWORD_APP_SELECT = {
   workspaceId: true,
   store: true,
   country: true,
+  defaultLocalization: true,
   storeAppId: true,
 } as const;
 

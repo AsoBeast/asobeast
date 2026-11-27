@@ -95,14 +95,15 @@ export class DailyTargetsCollector {
       select: {
         id: true,
         country: true,
+        defaultLocalization: true,
         appLocalizations: { select: { localization: true } },
       },
     });
     return new Map(
-      apps.map(({ id, country, appLocalizations }) => [
+      apps.map(({ id, country, defaultLocalization, appLocalizations }) => [
         id,
         withHomeLocalization(
-          country,
+          { country, defaultLocalization },
           appLocalizations.map(({ localization }) => localization),
         ),
       ]),

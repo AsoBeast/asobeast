@@ -235,6 +235,7 @@ model App {
   store                  Store
   storeAppId             String
   country                String                  @default("us")
+  defaultLocalization    String?
   name                   String?
   iconUrl                String?
   delistedAt             DateTime?

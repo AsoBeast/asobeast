@@ -5,7 +5,10 @@ import { AppFacts, classFacts } from './keywords.mapper';
 import { KeywordApp } from './keywords.support';
 import { listingFacts } from './listing-facts';
 
-type ClassApp = Pick<KeywordApp, 'id' | 'country' | 'store'>;
+type ClassApp = Pick<
+  KeywordApp,
+  'id' | 'country' | 'defaultLocalization' | 'store'
+>;
 
 export type KeywordClasses = ReadonlyMap<string, KeywordClass | undefined>;
 

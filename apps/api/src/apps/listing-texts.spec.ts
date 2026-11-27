@@ -75,6 +75,8 @@ describe('relevanceText', () => {
 });
 
 describe('latestLocalizedTexts', () => {
+  const APP = { id: 'app_1', country: 'us', defaultLocalization: null };
+
   const localizedPrisma = (rows: unknown[], shipped: string[] = []) => {
     const findMany = jest.fn().mockResolvedValue(rows);
     const shippedRows = jest
@@ -92,10 +94,7 @@ describe('latestLocalizedTexts', () => {
   it('asks nothing for a market that reads no localization beside its default', async () => {
     const { findMany, prisma } = localizedPrisma([]);
 
-    const localized = await latestLocalizedTexts(prisma, 'app_1', 'us', [
-      'za',
-      'zz',
-    ]);
+    const localized = await latestLocalizedTexts(prisma, APP, ['za', 'zz']);
 
     expect(findMany).not.toHaveBeenCalled();
     expect(localized.get('za')).toEqual([]);
@@ -107,7 +106,7 @@ describe('latestLocalizedTexts', () => {
       ['fr', 'de'],
     );
 
-    const localized = await latestLocalizedTexts(prisma, 'app_1', 'us', ['ch']);
+    const localized = await latestLocalizedTexts(prisma, APP, ['ch']);
 
     expect(findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -128,7 +127,7 @@ describe('latestLocalizedTexts', () => {
   it('reads nothing of a localization the app stopped shipping', async () => {
     const { findMany, prisma } = localizedPrisma([], []);
 
-    const localized = await latestLocalizedTexts(prisma, 'app_1', 'us', ['ch']);
+    const localized = await latestLocalizedTexts(prisma, APP, ['ch']);
 
     expect(findMany).not.toHaveBeenCalled();
     expect(localized.get('ch')).toEqual([]);
@@ -140,10 +139,7 @@ describe('latestLocalizedTexts', () => {
       { ...texts('Nederlands'), localization: 'nl' },
     ]);
 
-    const localized = await latestLocalizedTexts(prisma, 'app_1', 'us', [
-      'be',
-      'be',
-    ]);
+    const localized = await latestLocalizedTexts(prisma, APP, ['be', 'be']);
 
     expect(findMany).toHaveBeenCalledTimes(1);
     expect(findMany).toHaveBeenCalledWith({

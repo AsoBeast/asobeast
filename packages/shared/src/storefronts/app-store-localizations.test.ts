@@ -5,7 +5,9 @@ import {
   APP_STORE_LOCALIZATIONS,
   APP_STORE_STOREFRONT_LOCALIZATIONS,
   APP_STORE_STOREFRONTS,
+  defaultLocalizationIn,
   isAppStoreLocalization,
+  localizationReadOrder,
   nativeLocalizations,
   keywordFieldLocalizations,
   readLocalizations,
@@ -222,4 +224,45 @@ describe('storefrontsReading', () => {
       expect(storefrontsReading(localization, countries)).toEqual(expected);
     },
   );
+});
+
+describe('defaultLocalizationIn', () => {
+  it('answers the storefront primary as the default of a market', () => {
+    expect(defaultLocalizationIn({ country: 'pl' }, 'pl')).toBe('en-GB');
+    expect(
+      defaultLocalizationIn({ country: 'pl', defaultLocalization: null }, 'pl'),
+    ).toBe('en-GB');
+  });
+
+  it('answers the app default in its home market only', () => {
+    const app = { country: 'pl', defaultLocalization: 'pl' };
+
+    expect(defaultLocalizationIn(app, 'pl')).toBe('pl');
+    expect(defaultLocalizationIn(app, 'gb')).toBe('en-GB');
+    expect(defaultLocalizationIn(app, 'cz')).toBe('en-GB');
+  });
+
+  it('ignores a default its home storefront does not read', () => {
+    expect(
+      defaultLocalizationIn(
+        { country: 'pl', defaultLocalization: 'de-DE' },
+        'pl',
+      ),
+    ).toBe('en-GB');
+  });
+});
+
+describe('localizationReadOrder', () => {
+  it('reads the app default first in its home market', () => {
+    expect(
+      localizationReadOrder({ country: 'pl', defaultLocalization: 'pl' }, 'pl'),
+    ).toEqual(['pl', 'en-GB']);
+    expect(localizationReadOrder({ country: 'pl' }, 'pl')).toEqual([
+      'en-GB',
+      'pl',
+    ]);
+    expect(
+      localizationReadOrder({ country: 'pl', defaultLocalization: 'pl' }, 'be'),
+    ).toEqual(keywordFieldLocalizations('be'));
+  });
 });

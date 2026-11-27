@@ -301,6 +301,31 @@ export function keywordFieldLocalizations(
   return read.length > 0 ? read : [UNLISTED_STOREFRONT_LOCALIZATION];
 }
 
+export interface DefaultingListing {
+  country: string;
+  defaultLocalization?: string | null;
+}
+
+export function defaultLocalizationIn(
+  app: DefaultingListing,
+  market: string,
+): AppStoreLocalization {
+  const read = keywordFieldLocalizations(market);
+  const own = app.defaultLocalization;
+  return (market === app.country && read.find((tag) => tag === own)) || read[0];
+}
+
+export function localizationReadOrder(
+  app: DefaultingListing,
+  market: string,
+): AppStoreLocalization[] {
+  const first = defaultLocalizationIn(app, market);
+  return [
+    first,
+    ...keywordFieldLocalizations(market).filter((tag) => tag !== first),
+  ];
+}
+
 export const readsLocalization = (
   country: string,
   localization: string,

@@ -41,7 +41,7 @@ import {
   reviewNewPayload,
 } from './review-alert-payloads';
 import { ReviewInserts } from './review-inserts';
-import { reviewLanguage } from './review-language';
+import { textLanguage } from '../common/text-language';
 import { toReviewTranslation, TranslationColumns } from './review-translation';
 import { StoredReview, storedReviewChanges } from './stored-review-changes';
 
@@ -332,7 +332,7 @@ export class ReviewsService {
       repliedAt: review.repliedAt ? review.repliedAt.toISOString() : null,
       replyText: review.replyText,
       reply: review.reply ? toReviewReplyItem(review.reply) : null,
-      language: reviewLanguage(`${review.title ?? ''} ${review.text}`),
+      language: textLanguage(`${review.title ?? ''} ${review.text}`),
       translation: toReviewTranslation(review),
     };
   }

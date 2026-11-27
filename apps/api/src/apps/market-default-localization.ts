@@ -1,14 +1,15 @@
 import { Store } from '@prisma/client';
 import {
   type AppStoreLocalization,
+  type DefaultingListing,
   isStorefront,
   keywordFieldLocalizations,
 } from '@asobeast/shared';
-import { homeLocalization } from '../keywords/localization-markets';
+import { homeLocalizationOf } from '../keywords/localization-markets';
 import { ComparableListing, servesLocalization } from './localization-served';
 
 export interface DefaultLocalizationProof {
-  home: string;
+  home: DefaultingListing;
   market: string;
   homeListing: ComparableListing;
   listing: ComparableListing;
@@ -24,7 +25,7 @@ export function provenDefaultLocalization({
 }: DefaultLocalizationProof): AppStoreLocalization | null {
   if (!isStorefront(Store.APP_STORE, market)) return null;
   const localization = keywordFieldLocalizations(market)[0];
-  if (localization === homeLocalization(home)) return null;
+  if (localization === homeLocalizationOf(home)) return null;
   if (!servesLocalization(Store.APP_STORE, homeListing, listing)) return null;
   const echoed = others.some(
     (other) => !servesLocalization(Store.APP_STORE, other, listing),

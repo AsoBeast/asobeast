@@ -24,6 +24,8 @@ const subject = (
   id: 'you',
   name: 'Habit Pro',
   iconUrl: null,
+  country: 'us',
+  defaultLocalization: null,
   isYou: true,
   listing: {
     texts: texts({ title: 'Habit Tracker' }),
@@ -181,6 +183,30 @@ describe('breakdownApp', () => {
         context(),
       ).unread,
     ).toEqual([]);
+  });
+
+  it('reads no unread localization for the native default', () => {
+    const polish = breakdownApp(
+      subject({
+        country: 'pl',
+        defaultLocalization: 'pl',
+        shipped: ['pl'],
+        listing: {
+          texts: texts({ title: 'Dzienniczek Ucznia' }),
+          country: 'pl',
+          capturedAt: new Date('2026-10-17T03:00:00Z'),
+          ratingAvg: null,
+          ratingCount: null,
+        },
+      }),
+      context({ market: 'pl', home: 'pl', keyword: 'dzienniczek' }),
+    );
+
+    expect(polish.unread).toEqual([]);
+    expect(polish.listings[0]).toMatchObject({
+      localization: 'pl',
+      role: 'default',
+    });
   });
 
   it('falls back to the home listing', () => {
