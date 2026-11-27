@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import type { AppLocalizationsResult } from "@asobeast/shared";
 import { contrastViolations, THEMES } from "./contrast-check.mts";
 import {
+  APP_DE_ENGLISH_ID,
   APP_PL_NATIVE_ID,
   APP_RIVAL_ID,
   type LocalizationSeed,
@@ -1495,4 +1496,17 @@ test("shows the polish home localization of a native only app", async ({
     polish.panel.getByRole("button", { name: "Remove localization" }),
   ).toHaveCount(0);
   await expect(localizationItem(page, "English (U.K.)").trigger).toHaveCount(0);
+});
+
+test("shows the english home localization of an english app from germany", async ({
+  page,
+}) => {
+  await page.goto(`/apps/${APP_DE_ENGLISH_ID}/metadata?fieldLocale=en-GB`);
+
+  const english = localizationItem(page, "English (U.K.)");
+  await expect(english.trigger).toHaveAttribute("aria-expanded", "true");
+  await expect(
+    english.panel.getByRole("button", { name: "Remove localization" }),
+  ).toHaveCount(0);
+  await expect(localizationItem(page, "German").trigger).toHaveCount(0);
 });

@@ -18,9 +18,16 @@ import { snapshotIcon, toSnapshotData } from './apps.mapper';
 import { toChangeSnapshot } from './change-snapshot';
 import { withKnownSubtitle } from './known-subtitle';
 import { listingIn, NEWEST_FIRST, storedMarket } from './listing';
-import { ComparableListing, servesLocalization } from './localization-served';
-import { capturedLocalizations } from './market-localizations';
-import { LocalizationProbe } from './native-default';
+import {
+  ComparableListing,
+  echoesDefaultPage,
+  servesLocalization,
+} from './localization-served';
+import {
+  capturedLocalizations,
+  homeDefaultProbes,
+} from './market-localizations';
+import { LocalizationProbe } from './home-default';
 import { shippedLocalizations } from './shipped-localizations';
 import { diffSnapshots, withRecordedChanges } from './snapshot-diff';
 
@@ -85,7 +92,8 @@ export class LocalizedListingCapture {
       app.isCompetitor || readLocalizations(market).length < 2
         ? []
         : await shippedLocalizations(this.prisma, app);
-    for (const localization of capturedLocalizations(market, shipped)) {
+    const probed = [...shipped, ...homeDefaultProbes(app, market, fallback)];
+    for (const localization of capturedLocalizations(market, probed)) {
       try {
         const read = await this.captureOne(app, market, localization, fallback);
         captured.changes.push(...read.changes);
@@ -117,8 +125,8 @@ export class LocalizedListingCapture {
     if (!previous && normalized.subtitleUnavailable) {
       throw new Error('its product page did not answer');
     }
-    const echoed = !servesLocalization(app.store, fallback, normalized);
-    if (!previous && echoed) {
+    const echoed = echoesDefaultPage(app.store, fallback, normalized);
+    if (!previous && !servesLocalization(app.store, fallback, normalized)) {
       return { changes: [], listing: normalized, echoed };
     }
     const snapshot = await this.store(

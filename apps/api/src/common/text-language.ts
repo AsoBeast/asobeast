@@ -23,8 +23,10 @@ const SCRIPT_SHARE = 0.5;
 const LETTER = /\p{L}/gu;
 const HAS_LETTER = /\p{L}/u;
 const HANGUL = /\p{Script=Hangul}/u;
+const HAN = /\p{Script=Han}/u;
 const KANA = /[\p{Script=Hiragana}\p{Script=Katakana}]/u;
 const CJK = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u;
+const CYRILLIC = /\p{Script=Cyrillic}/u;
 const UKRAINIAN = /[ґєії]/iu;
 
 const SCRIPTS: readonly (readonly [string, RegExp])[] = [
@@ -35,14 +37,18 @@ const SCRIPTS: readonly (readonly [string, RegExp])[] = [
   ['hi', /\p{Script=Devanagari}/u],
 ];
 
-const SCRIPT_LANGUAGES: ReadonlySet<string> = new Set([
-  'ko',
-  'ja',
-  'zh',
-  'ru',
-  'uk',
-  ...SCRIPTS.map(([language]) => language),
-]);
+const SCRIPT_PATTERNS: readonly (readonly [string, RegExp])[] = [
+  ['ko', HANGUL],
+  ['ja', CJK],
+  ['zh', HAN],
+  ['ru', CYRILLIC],
+  ['uk', CYRILLIC],
+  ...SCRIPTS,
+];
+
+const SCRIPT_LANGUAGES: ReadonlySet<string> = new Set(
+  SCRIPT_PATTERNS.map(([language]) => language),
+);
 
 const LATIN_WORDS: Readonly<Record<string, ReadonlySet<string>>> = {
   en: ENGLISH,
@@ -53,12 +59,16 @@ const LATIN_WORDS: Readonly<Record<string, ReadonlySet<string>>> = {
   ),
 };
 
+const shareOf = (letters: readonly string[], pattern: RegExp): number =>
+  letters.length === 0
+    ? 0
+    : letters.filter((letter) => pattern.test(letter)).length / letters.length;
+
 function scriptLanguage(text: string, letters: string[]): string | null {
-  const share = (pattern: RegExp) =>
-    letters.filter((letter) => pattern.test(letter)).length / letters.length;
+  const share = (pattern: RegExp) => shareOf(letters, pattern);
   if (share(HANGUL) >= SCRIPT_SHARE) return 'ko';
   if (share(CJK) >= SCRIPT_SHARE) return share(KANA) > 0 ? 'ja' : 'zh';
-  if (share(/\p{Script=Cyrillic}/u) >= SCRIPT_SHARE) {
+  if (share(CYRILLIC) >= SCRIPT_SHARE) {
     return UKRAINIAN.test(text) ? 'uk' : 'ru';
   }
   return (
@@ -119,6 +129,7 @@ export interface LanguageEvidence {
   tokens: number;
   script: string | null;
   hits: Readonly<Record<string, number>>;
+  scriptShares: Readonly<Record<string, number>>;
   englishOnly: number;
   words: number;
 }
@@ -133,6 +144,12 @@ export function languageEvidence(text: string): LanguageEvidence {
     tokens: tokens.length,
     script: letters.length === 0 ? null : scriptLanguage(text, letters),
     hits: hitsOf(tokens),
+    scriptShares: Object.fromEntries(
+      SCRIPT_PATTERNS.map(([language, pattern]) => [
+        language,
+        shareOf(letters, pattern),
+      ]),
+    ),
     englishOnly: tokens.filter((token) => ENGLISH_ONLY.has(token)).length,
     words: tokens.filter((token) => HAS_LETTER.test(token)).length,
   };

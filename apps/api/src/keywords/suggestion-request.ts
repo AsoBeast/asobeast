@@ -6,7 +6,11 @@ export interface SuggestionRequest {
   limit: number;
   tracked: Set<string>;
   market: { store: Store; country: string; storeAppId: string };
-  languages: { home: readonly string[]; market: readonly string[] };
+  languages: {
+    home: readonly string[];
+    listing: readonly string[];
+    market: readonly string[];
+  };
 }
 
 export type StoreLookup = () => Promise<KeywordSuggestion[]>;

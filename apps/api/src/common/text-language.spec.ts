@@ -140,6 +140,19 @@ describe('languageEvidence', () => {
     expect(evidence.englishOnly).toBe(1);
   });
 
+  it('measures the share of letters each script holds', () => {
+    const latin = 'abcdefghijklmnopqrst';
+    const kana = 'あいうえおかきくけこさしすせそたちつてと';
+
+    expect(languageEvidence(`${latin} ${kana}`).scriptShares.ja).toBe(0.5);
+    expect(
+      languageEvidence('The app works with your watch').scriptShares,
+    ).toMatchObject({ ja: 0, ru: 0 });
+    expect(
+      languageEvidence('Приложение работает с вашими часами').scriptShares.ru,
+    ).toBe(1);
+  });
+
   it('knows the languages it can name', () => {
     expect(['pl', 'en', 'ko'].map(knowsLanguage)).toEqual([true, true, true]);
     expect(['hu', 'sk', 'vi'].map(knowsLanguage)).toEqual([

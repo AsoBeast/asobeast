@@ -77,6 +77,8 @@ A localization the app does not have is answered by the store with the default t
 
 A market capture also reads every localization your app ships that the storefront reads besides its default, so French and Italian in Switzerland, Catalan in Spain or Spanish (Mexico) in the United States are captured once the app ships them. It stores one only when the store serves its own text, exactly as for a native localization, and the budget counts each read under `localizations`. Competitors are captured with the native localizations only, because the localizations on the list are your app's. See [Which localizations does an app ship?](#which-localizations-does-an-app-ship)
 
+In a storefront whose default is not English, the home capture of your app also asks for the one language its default page reads as, such as English (U.K.) in Germany. Once that language is the home localization it is read like any localization your app ships, at home and in every market that reads it, one more listing read per capture in each, counted under `localizations`.
+
 The native localizations are captured with the listing they belong to: when you import an app, when you refresh a listing and in the daily run. Each one costs one more listing read, and `GET /jobs/budget` reports them as `localizations`, a part of `apps`. India reads eleven localizations, so a market there costs the most.
 
 Coverage judges a keyword within each localization, because the words of one localization combine into phrases only with each other: a keyword in the Polish title is covered even when the English title does not contain it, and the metadata page names the localization that covers it. Auto tracked keywords take phrases from every localization of the home storefront in turn, native first, up to the same limit. The keyword field you saved for a localization is judged with that localization too. Changes to a native localization are recorded in that localization only and send no alert.
@@ -173,7 +175,7 @@ The keywords page never edits a field. Its **What {market} search reads** card r
 
 You can tick only markets of your app whose storefront reads the localization. A market of your app is your home storefront and every storefront where you track at least one keyword.
 
-The field you saved before keyword fields were kept per localization is the field of your home storefront's default localization, English (U.S.) for an app whose home storefront is the United States. An app whose home listing is written in the native language of a storefront that defaults to English, such as a Polish app in Poland, gets that localization as its home localization on its next refresh, see [When your home listing is written in the native language](#when-your-home-listing-is-written-in-the-native-language). See [Edit the iOS keyword field](/guides/metadata-workbench#edit-the-ios-keyword-field).
+The field you saved before keyword fields were kept per localization is the field of your home storefront's default localization, English (U.S.) for an app whose home storefront is the United States. An app whose home listing is written in the native language of a storefront that defaults to English, such as a Polish app in Poland, gets that localization as its home localization on its next refresh, see [When your home listing is written in the native language](#when-your-home-listing-is-written-in-the-native-language). An app whose listing is only in English, added from a storefront whose default is another language such as Germany, gets English as its home localization on its next refresh, see [When your app has no listing in the language of its storefront](#when-your-app-has-no-listing-in-the-language-of-its-storefront). See [Edit the iOS keyword field](/guides/metadata-workbench#edit-the-ios-keyword-field).
 
 ### Which localizations does an app ship?
 
@@ -204,6 +206,22 @@ For a language AsoBeast has no word list for, such as Hungarian or Slovak, it al
 When the app later gets its own English page, the next capture sees that the native page differs, the default localization becomes the home localization again and the native one is listed as detected.
 
 A keyword field you saved under English (U.K.) before stays as it was. Every storefront that reads English (U.K.) still reads it, and you can remove it. To use those words for the native listing, copy them into the native field and remove the English one. A field saved under the native localization is read only by storefronts that read that language.
+
+#### When your app has no listing in the language of its storefront
+
+A storefront shows its default page in its own language when your app has that language. When it does not, it shows another of your localizations, so an app that ships only English and is added from Germany, France, Japan or another storefront whose default is not English shows its English page there.
+
+After each capture of the home listing AsoBeast checks whether the description reads as another language the storefront reads, such as English (U.K.) in Germany or English (U.S.) in Japan, and if so asks the store for that language too. When the store answers the same page (a default page that shows your category where the page in that language shows your subtitle still counts as the same page), the description reads as that language clearly more than as the storefront's own language, and the languages the app declares to Apple do not leave it out, that localization becomes the home localization. The keyword field editor names it, the metadata audit reads the listing under it and the keywords picked from the listing at import keep its words. An app with a listing in the storefront's own language, such as German in Germany, keeps that language and costs no extra listing read.
+
+The localization AsoBeast names is the one the storefront lists. If your only English localization in App Store Connect is English (U.S.), Germany still shows it to everyone, and AsoBeast calls it English (U.K.), the English Germany reads. Apple's [App Store localizations](https://developer.apple.com/help/app-store-connect/reference/app-store-localizations/) table lists English (U.K.) as a language Germany supports, and a localization's keywords are searched in every storefront that supports its language, so adding an English (U.K.) localization with its own keyword field is how you choose the English keywords Germany reads. If App Store Connect manages your keyword fields, its import keeps your English (U.S.) field under English (U.S.), which Germany does not list, and the English (U.K.) home field stays empty.
+
+These cases keep the storefront's default as the home localization:
+
+- The default page and the page the storefront gives customers who browse in English differ, which happens when your app has two English localizations with different text, such as English (U.S.) and English (U.K.) or English (Australia). The home listing is then in neither the storefront's language nor the English it lists. AsoBeast captures the page English readers get as a detected English (U.K.) localization of its own.
+- Your app is written in Japanese, Chinese, Korean or Russian and its description mixes in more than a little English, or it is a Ukrainian app added from Russia: the two languages cannot be told apart reliably, so nothing is recorded.
+- Your app is written in a language the storefront does not read, such as a Polish app added from Germany, or in Catalan added from Spain.
+
+When your app later gets a listing in the storefront's language, the next capture reads it, the storefront's default becomes the home localization again and the other page is listed as detected.
 
 What AsoBeast still cannot know:
 

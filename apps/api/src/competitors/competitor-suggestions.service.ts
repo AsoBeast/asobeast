@@ -22,6 +22,7 @@ interface PrimaryApp {
   store: Store;
   storeAppId: string;
   country: string;
+  defaultLocalization: string | null;
   competitors: { storeAppId: string }[];
 }
 
@@ -76,6 +77,7 @@ export class CompetitorSuggestionsService {
         store: true,
         storeAppId: true,
         country: true,
+        defaultLocalization: true,
         competitors: { select: { storeAppId: true } },
       },
     });

@@ -1,6 +1,10 @@
 import { expect, test } from "./session.mts";
 import type { Page } from "@playwright/test";
-import { APP_PL_NATIVE_ID, APP_SUGGESTED_LOCALES_ID } from "./fixtures.mts";
+import {
+  APP_DE_ENGLISH_ID,
+  APP_PL_NATIVE_ID,
+  APP_SUGGESTED_LOCALES_ID,
+} from "./fixtures.mts";
 import { hydrated } from "./hydrated.mts";
 import { METADATA_AUDIT_COOKIE } from "./metadata-fixtures.mts";
 import { seedLocalizations } from "./localizations.mts";
@@ -167,6 +171,33 @@ test("opens the polish home box from the keyword field suggestion", async ({
     "aria-expanded",
     "true",
   );
+});
+
+test("opens the english (u.k.) home box of an english app from germany from the keyword field suggestion", async ({
+  page,
+}) => {
+  await page.context().addCookies([
+    {
+      name: METADATA_AUDIT_COOKIE,
+      value: "suggestion",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.goto(`/apps/${APP_DE_ENGLISH_ID}/metadata`);
+
+  await (
+    await hydrated(page.getByRole("link", { name: "Edit this keyword field" }))
+  ).click();
+
+  await expect(page).toHaveURL(
+    new RegExp(
+      `/apps/${APP_DE_ENGLISH_ID}/metadata\\?fieldLocale=en-GB#app-localizations$`,
+    ),
+  );
+  await expect(
+    page.getByRole("button", { name: /^English \(U\.K\.\)/ }),
+  ).toHaveAttribute("aria-expanded", "true");
 });
 
 test("shows the keyword field card of the viewed localization", async ({

@@ -410,3 +410,60 @@ describe('KeywordSuggestionService.suggest allowance', () => {
     expect(through).not.toHaveBeenCalled();
   });
 });
+
+describe('KeywordSuggestionService.suggest for an english listing in germany', () => {
+  const buildPrisma = () => ({
+    keywordField: { findMany: jest.fn().mockResolvedValue([]) },
+    app: {
+      findFirst: jest.fn().mockResolvedValue({
+        id: 'app1',
+        store: Store.APP_STORE,
+        country: 'de',
+        defaultLocalization: 'en-GB',
+        storeAppId: 'store1',
+      }),
+      findMany: jest
+        .fn()
+        .mockResolvedValue([
+          { snapshots: [{ title: 'Die Autos Sammeln', subtitle: null }] },
+          { snapshots: [{ title: 'Die Autos Garage', subtitle: null }] },
+        ]),
+    },
+    appSnapshot: {
+      findFirst: jest.fn().mockResolvedValue({
+        title: 'Die Cast Garage',
+        subtitle: 'Model cars to collect',
+        summary: null,
+      }),
+    },
+    trackedKeyword: { findMany: jest.fn().mockResolvedValue([]) },
+  });
+
+  const words = (suggestions: { text: string }[]): string[] =>
+    suggestions.flatMap(({ text }) => text.split(' '));
+
+  it('reads its own listing in english', async () => {
+    const service = buildSuggestionService(
+      buildPrisma(),
+      undefined,
+      passThroughEgress,
+    );
+
+    const suggestions = await service.suggest('app1', 'metadata', 30);
+
+    expect(suggestions.map(({ text }) => text)).toContain('die cast garage');
+  });
+
+  it('reads competitor listings in the language of the market', async () => {
+    const service = buildSuggestionService(
+      buildPrisma(),
+      undefined,
+      passThroughEgress,
+    );
+
+    const suggestions = await service.suggest('app1', 'competitors', 30);
+
+    expect(suggestions.map(({ text }) => text)).toContain('autos');
+    expect(words(suggestions)).not.toContain('die');
+  });
+});

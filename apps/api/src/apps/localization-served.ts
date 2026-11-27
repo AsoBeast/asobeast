@@ -43,3 +43,12 @@ export function servesLocalization(
       localizedSubtitleDiffers(store, fallback, localized))
   );
 }
+
+export const echoesDefaultPage = (
+  store: Store,
+  fallback: ComparableListing,
+  localized: ComparableListing,
+): boolean =>
+  textSignature(store, fallback) === textSignature(store, localized) &&
+  (ownSubtitle(store, fallback) === null ||
+    !localizedSubtitleDiffers(store, fallback, localized));

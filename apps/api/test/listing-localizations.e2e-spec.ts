@@ -8,6 +8,7 @@ import {
   AppLocalizationsResult,
   AppScreenshots,
   ChangeTimeline,
+  CompetitorItem,
   CoveragePreviewResult,
   KeywordBreakdown,
   KeywordFieldResult,
@@ -23,10 +24,14 @@ import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import {
+  BRITISH_ONLY,
+  DE_APP_URL,
   ENGLISH,
   ENGLISH_ONLY,
   FRENCH,
   GERMAN,
+  GERMAN_ONLY,
+  JP_APP_URL,
   LocalizedRegistry,
   PL_APP_URL,
   POLISH,
@@ -91,6 +96,23 @@ describe('Native localizations of a listing (e2e)', () => {
       orderBy: [{ capturedAt: 'asc' }, { localization: 'asc' }],
       select: { country: true, localization: true, title: true },
     });
+
+  const defaultOf = async (appId: string) =>
+    (
+      await prisma.app.findUniqueOrThrow({
+        where: { id: appId },
+        select: { defaultLocalization: true },
+      })
+    ).defaultLocalization;
+
+  const localizationItems = async (appId: string) =>
+    (
+      (await api.get(`/apps/${appId}/localizations`).expect(200))
+        .body as AppLocalizationsResult
+    ).localizations;
+
+  const titleOf = (audit: MetadataAuditResult) =>
+    audit.fields.find((field) => field.field === 'title')?.value;
 
   it('stores the english and the polish listing of an app imported from a polish url', async () => {
     registry.listings.set('pl:pl', POLISH);
@@ -649,14 +671,6 @@ describe('Native localizations of a listing (e2e)', () => {
       }
     };
 
-    const defaultOf = async (appId: string) =>
-      (
-        await prisma.app.findUniqueOrThrow({
-          where: { id: appId },
-          select: { defaultLocalization: true },
-        })
-      ).defaultLocalization;
-
     it('records polish as the default of a polish only app', async () => {
       polishOnly();
 
@@ -693,12 +707,6 @@ describe('Native localizations of a listing (e2e)', () => {
         title: POLISH_ONLY.title,
       });
     });
-
-    const localizationItems = async (appId: string) =>
-      (
-        (await api.get(`/apps/${appId}/localizations`).expect(200))
-          .body as AppLocalizationsResult
-      ).localizations;
 
     it('labels the home localization of a polish only app polish', async () => {
       polishOnly();
@@ -784,9 +792,6 @@ describe('Native localizations of a listing (e2e)', () => {
         phrases: ['frekwencja'],
       });
     });
-
-    const titleOf = (audit: MetadataAuditResult) =>
-      audit.fields.find((field) => field.field === 'title')?.value;
 
     it('audits the polish default listing under pl', async () => {
       polishOnly();
@@ -986,6 +991,228 @@ describe('Native localizations of a listing (e2e)', () => {
       await api.post(`/apps/${appId}/refresh`).expect(200);
 
       await expect(defaultOf(appId)).resolves.toBe('pl');
+    });
+  });
+
+  describe('a home listing in another language its storefront reads', () => {
+    const englishOnly = (country: string) => {
+      registry.listings.set(`${country}:default`, ENGLISH_ONLY);
+    };
+
+    const englishProbes = (country: string, localization = 'en-GB') =>
+      registry.calls.filter(
+        (call) =>
+          call.country === country && call.localization === localization,
+      );
+
+    it('records english (u.k.) as the default of an english only app in germany', async () => {
+      englishOnly('de');
+
+      const imported = (
+        await api.post('/apps').send({ url: DE_APP_URL }).expect(201)
+      ).body as AppDetail;
+
+      expect(imported.defaultLocalization).toBe('en-GB');
+      await expect(defaultOf(imported.id)).resolves.toBe('en-GB');
+      expect(englishProbes('de')).toHaveLength(1);
+    });
+
+    it('labels the home localization of an english only app in germany english (u.k.)', async () => {
+      englishOnly('de');
+      const appId = await importFrom(DE_APP_URL);
+
+      const items = await localizationItems(appId);
+
+      expect(items[0]).toMatchObject({ localization: 'en-GB', origin: 'home' });
+      expect(items.map((item) => item.localization)).not.toContain('de');
+    });
+
+    it('audits the english default listing in germany under en-GB', async () => {
+      englishOnly('de');
+      const appId = await importFrom(DE_APP_URL);
+
+      const audit = (await api.get(`/apps/${appId}/metadata/audit`).expect(200))
+        .body as MetadataAuditResult;
+
+      expect(audit.keywordFieldSuggestion?.localization).toBe('en-GB');
+      expect(titleOf(audit)).toBe(ENGLISH_ONLY.title);
+    });
+
+    it('still audits the default listing under de', async () => {
+      englishOnly('de');
+      const appId = await importFrom(DE_APP_URL);
+
+      const audit = (
+        await api
+          .get(`/apps/${appId}/metadata/audit?localization=de`)
+          .expect(200)
+      ).body as MetadataAuditResult;
+
+      expect(titleOf(audit)).toBe(ENGLISH_ONLY.title);
+    });
+
+    it('keeps a german only app german without an english probe', async () => {
+      registry.listings.set('de:default', GERMAN_ONLY);
+
+      const appId = await importFrom(DE_APP_URL);
+
+      await expect(defaultOf(appId)).resolves.toBeNull();
+      expect((await localizationItems(appId))[0].localization).toBe('de');
+      expect(
+        registry.calls.filter(
+          (call) => call.country === 'de' && call.localization !== undefined,
+        ),
+      ).toEqual([]);
+    });
+
+    it('keeps the storefront default when the english page differs', async () => {
+      englishOnly('de');
+      registry.listings.set('de:en-GB', BRITISH_ONLY);
+
+      const appId = await importFrom(DE_APP_URL);
+
+      await expect(defaultOf(appId)).resolves.toBeNull();
+      const items = await localizationItems(appId);
+      expect(items[0].localization).toBe('de');
+      expect(items).toContainEqual(
+        expect.objectContaining({ localization: 'en-GB', origin: 'detected' }),
+      );
+      await expect(snapshotsOf(appId)).resolves.toContainEqual({
+        country: null,
+        localization: 'en-GB',
+        title: BRITISH_ONLY.title,
+      });
+    });
+
+    it('records english (u.s.) as the default of an english only app in japan', async () => {
+      englishOnly('jp');
+
+      const appId = await importFrom(JP_APP_URL);
+
+      await expect(defaultOf(appId)).resolves.toBe('en-US');
+      expect((await localizationItems(appId))[0].localization).toBe('en-US');
+    });
+
+    it('clears the english default once the listing is german', async () => {
+      englishOnly('de');
+      const appId = await importFrom(DE_APP_URL);
+      registry.listings.set('de:default', GERMAN_ONLY);
+      registry.listings.set('de:en-GB', ENGLISH_ONLY);
+
+      await api.post(`/apps/${appId}/refresh`).expect(200);
+
+      await expect(defaultOf(appId)).resolves.toBeNull();
+      const items = await localizationItems(appId);
+      expect(items[0].localization).toBe('de');
+      expect(items).toContainEqual(
+        expect.objectContaining({ localization: 'en-GB', origin: 'detected' }),
+      );
+    });
+
+    it('leaves the english default alone when the english lookup fails', async () => {
+      englishOnly('de');
+      const appId = await importFrom(DE_APP_URL);
+      registry.failing = 'en-GB';
+
+      await api.post(`/apps/${appId}/refresh`).expect(200);
+
+      await expect(defaultOf(appId)).resolves.toBe('en-GB');
+    });
+
+    it('keeps english (u.k.) when only the english page shows the subtitle', async () => {
+      registry.listings.set('de:default', {
+        ...ENGLISH_ONLY,
+        subtitle: undefined,
+        subtitleUnavailable: false,
+      });
+      registry.listings.set('de:en-GB', ENGLISH_ONLY);
+      const appId = await importFrom(DE_APP_URL);
+
+      await api.post(`/apps/${appId}/refresh`).expect(200);
+
+      await expect(defaultOf(appId)).resolves.toBe('en-GB');
+      expect((await localizationItems(appId))[0]).toMatchObject({
+        localization: 'en-GB',
+        origin: 'home',
+      });
+    });
+
+    it('probes english once per capture', async () => {
+      englishOnly('de');
+      const appId = await importFrom(DE_APP_URL);
+
+      await api.post(`/apps/${appId}/refresh`).expect(200);
+
+      expect(englishProbes('de')).toHaveLength(2);
+    });
+
+    it('keeps a german field saved before the fix as a removable item', async () => {
+      englishOnly('de');
+      registry.failing = 'en-GB';
+      const appId = await importFrom(DE_APP_URL);
+      await api
+        .put(`/apps/${appId}/keyword-fields/de`)
+        .send({ text: 'tagebuch,noten', trackIn: [] })
+        .expect(200);
+      registry.failing = null;
+
+      await api.post(`/apps/${appId}/refresh`).expect(200);
+
+      const items = await localizationItems(appId);
+      expect(items[0]).toMatchObject({ localization: 'en-GB', origin: 'home' });
+      expect(items.find((item) => item.localization === 'de')?.phrases).toEqual(
+        ['tagebuch', 'noten'],
+      );
+      await api.delete(`/apps/${appId}/localizations/en-GB`).expect(409);
+      await api.delete(`/apps/${appId}/localizations/de`).expect(204);
+    });
+
+    const trackedTexts = async (appId: string) =>
+      (
+        (await api.get(`/apps/${appId}/keywords`).expect(200))
+          .body as TrackedKeywordItem[]
+      ).map((keyword) => keyword.text);
+
+    it('seeds english words of an english default in germany', async () => {
+      registry.listings.set('de:default', {
+        ...ENGLISH_ONLY,
+        title: 'Die Cast Garage',
+        subtitle: 'Model cars to collect',
+      });
+
+      const appId = await importFrom(DE_APP_URL);
+
+      const texts = await trackedTexts(appId);
+      expect(texts.some((text) => text.split(' ').includes('die'))).toBe(true);
+    });
+
+    it('seeds a german listing in germany as before', async () => {
+      registry.listings.set('de:default', GERMAN_ONLY);
+
+      const appId = await importFrom(DE_APP_URL);
+
+      const texts = await trackedTexts(appId);
+      expect(texts).toContain('schultagebuch');
+      expect(
+        texts.filter((text) => ['und', 'die', 'der'].includes(text)),
+      ).toEqual([]);
+    });
+
+    it('never probes a suspect for a competitor', async () => {
+      registry.listings.set('de:default', GERMAN_ONLY);
+      const appId = await importFrom(DE_APP_URL);
+      englishOnly('de');
+      registry.calls.length = 0;
+
+      const competitor = (
+        await api
+          .post(`/apps/${appId}/competitors`)
+          .send({ url: 'https://apps.apple.com/de/app/rival/id9876543210' })
+          .expect(201)
+      ).body as CompetitorItem;
+
+      expect(englishProbes('de')).toEqual([]);
+      await expect(defaultOf(competitor.id)).resolves.toBeNull();
     });
   });
 });
