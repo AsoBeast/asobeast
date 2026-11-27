@@ -40,11 +40,14 @@ describe('unlessHomeLocalization', () => {
   });
 
   it('reads the app inside the write transaction', async () => {
-    const tx = txWith({ country: 'pl', defaultLocalization: 'pl' });
+    const findFirst = jest
+      .fn()
+      .mockResolvedValue({ country: 'pl', defaultLocalization: 'pl' });
+    const tx = { app: { findFirst } } as unknown as Prisma.TransactionClient;
 
     await unlessHomeLocalization('app_1', 'en-GB')(tx);
 
-    expect(tx.app.findFirst).toHaveBeenCalledWith({
+    expect(findFirst).toHaveBeenCalledWith({
       where: { id: 'app_1' },
       select: { country: true, defaultLocalization: true },
     });
