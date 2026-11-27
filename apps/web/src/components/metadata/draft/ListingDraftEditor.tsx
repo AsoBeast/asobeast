@@ -68,10 +68,10 @@ export function ListingDraftEditor({
   const store = audit.store;
   const { country, defaultLocalization } = app;
   useEffect(() => {
-    if (market === country) {
+    if (market === country && localization === undefined) {
       adoptHomeDraft(id, { country, defaultLocalization });
     }
-  }, [id, market, country, defaultLocalization]);
+  }, [id, market, localization, country, defaultLocalization]);
   const scope = useMemo(
     () =>
       draftScopeOf(store, market, localization, {

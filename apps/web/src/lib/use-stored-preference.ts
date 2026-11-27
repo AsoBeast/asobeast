@@ -39,10 +39,12 @@ function write(key: string, raw: string): boolean {
 export const readStoredPreference = (key: string): string | null =>
   unsaved.get(key) ?? read(key);
 
-export function writeStoredPreference(key: string, raw: string): void {
-  if (write(key, raw)) unsaved.delete(key);
+export function writeStoredPreference(key: string, raw: string): boolean {
+  const saved = write(key, raw);
+  if (saved) unsaved.delete(key);
   else unsaved.set(key, raw);
   listeners.forEach((listener) => listener());
+  return saved;
 }
 
 export function useStoredPreference(key: string) {

@@ -475,6 +475,27 @@ describe("writeListingDraftField", () => {
     );
   });
 
+  it("keeps the storefront draft when the home draft cannot be saved", () => {
+    const store = new Map<string, string>([
+      ["asobeast.listingDraft.app-1.en-GB", '{"v":1,"title":"Dziennik"}'],
+    ]);
+    vi.stubGlobal("window", {
+      localStorage: {
+        getItem: (key: string) => store.get(key) ?? null,
+        setItem: (key: string, value: string) => {
+          if (key.endsWith(".pl")) throw new Error("quota exceeded");
+          store.set(key, value);
+        },
+      },
+    });
+
+    adoptHomeDraft("app-1", { country: "pl", defaultLocalization: "pl" });
+
+    expect(store.get("asobeast.listingDraft.app-1.en-GB")).toBe(
+      '{"v":1,"title":"Dziennik"}',
+    );
+  });
+
   it("moves nothing for an app on its storefront default", () => {
     const store = stubStorage({
       "asobeast.listingDraft.app-1.en-GB": '{"v":1,"title":"Diary"}',

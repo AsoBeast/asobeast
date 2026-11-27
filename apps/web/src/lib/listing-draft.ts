@@ -147,8 +147,9 @@ export function adoptHomeDraft(appId: string, app: DefaultingListing): void {
   ) {
     return;
   }
-  writeStoredPreference(to, previous ?? "");
-  writeStoredPreference(from, "");
+  if (writeStoredPreference(to, previous ?? "")) {
+    writeStoredPreference(from, "");
+  }
 }
 
 export function writeListingDraftField(
