@@ -65,6 +65,26 @@ test.describe("locale preference", () => {
     expect(failures).toEqual([]);
   });
 
+  test("switches language from the settings page with a hash", async ({
+    page,
+    context,
+  }) => {
+    await seedSession(page);
+    await seedViewer(context, "customer");
+    await page.goto("/settings#language");
+    await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
+
+    await page.getByRole("combobox", { name: "语言" }).click();
+    await page.getByRole("option", { name: "English" }).click();
+
+    await expect(page.locator("html")).toHaveAttribute("lang", "en");
+    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+    expect(
+      (await context.cookies()).find((c) => c.name === "asobeast_locale")
+        ?.value,
+    ).toBe("en");
+  });
+
   test("translates generated alert sentences and their UTC clock", async ({
     page,
   }) => {

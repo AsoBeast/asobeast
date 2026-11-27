@@ -8,5 +8,5 @@ export function writeLocaleCookie(locale: Locale): void {
 
 export function navigateToLocale(locale: Locale): void {
   writeLocaleCookie(locale);
-  window.location.assign(window.location.href);
+  window.location.reload();
 }

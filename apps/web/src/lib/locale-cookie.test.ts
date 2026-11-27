@@ -6,7 +6,7 @@ function browserWith(
   currentUrl = "http://localhost:3000/apps/one?tab=keywords#top",
 ) {
   let cookie = "";
-  const assign = vi.fn();
+  const reload = vi.fn();
   vi.stubGlobal("document", {
     get cookie() {
       return cookie;
@@ -16,9 +16,9 @@ function browserWith(
     },
   });
   vi.stubGlobal("window", {
-    location: { href: currentUrl, assign },
+    location: { href: currentUrl, reload },
   });
-  return { assign, currentUrl, readCookie: () => cookie };
+  return { reload, currentUrl, readCookie: () => cookie };
 }
 
 afterEach(() => {
@@ -39,13 +39,12 @@ describe("locale preference cookie", () => {
     },
   );
 
-  it("reloads the exact current URL after storing the choice", () => {
+  it("reloads the current page after storing the choice", () => {
     const browser = browserWith();
 
     navigateToLocale("zh-CN");
 
     expect(browser.readCookie()).toContain("asobeast_locale=zh-CN");
-    expect(browser.assign).toHaveBeenCalledOnce();
-    expect(browser.assign).toHaveBeenCalledWith(browser.currentUrl);
+    expect(browser.reload).toHaveBeenCalledOnce();
   });
 });
