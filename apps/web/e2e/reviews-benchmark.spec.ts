@@ -159,9 +159,7 @@ test("compares google play new ratings with competitors", async ({ page }) => {
   await expect(benchmarkSentence(page)).toContainText("(median of 3)");
 });
 
-test("keeps focus on the help when the benchmark gains a third figure", async ({
-  page,
-}) => {
+async function tooFewHeldForAThirdFigure(page: Page) {
   let upgraded = false;
   let release = () => {};
   const held = new Promise<void>((resolve) => {
@@ -191,14 +189,34 @@ test("keeps focus on the help when the benchmark gains a third figure", async ({
   upgraded = true;
   await ranges.getByRole("tab", { name: "30d" }).click();
   await expect(tooFew).toBeVisible();
-  const help = page.getByRole("button", {
-    name: "About the competitor benchmark",
-  });
+  return {
+    help: page.getByRole("button", { name: "About the competitor benchmark" }),
+    release,
+  };
+}
+
+test("keeps focus on the help when the benchmark gains a third figure", async ({
+  page,
+}) => {
+  const { help, release } = await tooFewHeldForAThirdFigure(page);
   await help.focus();
   release();
 
   await expect(benchmarkSentence(page)).toContainText("(median of 3)");
   await expect(help).toBeFocused();
+});
+
+test("keeps the help open when the benchmark gains a third figure", async ({
+  page,
+}) => {
+  const { help, release } = await tooFewHeldForAThirdFigure(page);
+  await help.click();
+  const tip = page.getByRole("dialog", { name: "Competitor benchmark" });
+  await expect(tip).toBeVisible();
+  release();
+
+  await expect(benchmarkSentence(page)).toContainText("(median of 3)");
+  await expect(tip).toBeVisible();
 });
 
 test("draws the benchmark from the competitor list the page already read", async ({
