@@ -164,6 +164,7 @@ export interface RatingsPoint {
   date: string;
   ratingAvg: number | null;
   ratingCount: number | null;
+  starCounts?: RatingCounts;
 }
 
 export interface RatingsHistory {

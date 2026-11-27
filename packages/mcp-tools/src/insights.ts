@@ -124,7 +124,7 @@ export const INSIGHT_TOOLS: ReadTool[] = [
     name: "ratings_history",
     title: "Ratings history",
     description:
-      "Daily average rating and rating-count history for one app over a date window (App Store home market).",
+      "Daily average rating and rating-count history for one app over a date window (home market). Google Play days also carry the rating counts per star of that day as starCounts.",
     inputSchema: z.object({ appId, from, to }),
     request: ({ appId, from, to }) => ({
       path: `/apps/${seg(appId)}/ratings-history`,

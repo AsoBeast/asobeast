@@ -20,6 +20,10 @@ import {
 } from '@asobeast/shared';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import {
+  emptyStar,
+  starCountsOf,
+} from '../src/store-providers/star-counts.fixture';
 import { testDb } from './helpers/test-db';
 import { ownerAgent, useCookies } from './helpers/session';
 import { addDays } from '../src/analytics/days';
@@ -2086,6 +2090,136 @@ describe('AnalyticsController (e2e)', () => {
       { date: '2026-06-23', ratingAvg: 4.4, ratingCount: 90 },
       { date: '2026-06-30', ratingAvg: 4.7, ratingCount: 120 },
     ]);
+  });
+
+  describe('the star counts of the ratings history', () => {
+    const seedPlay = (
+      relation: { isCompetitor?: boolean; primaryAppId?: string } = {},
+      storeAppId = 'com.rated',
+    ) =>
+      prisma.app.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: Store.GOOGLE_PLAY,
+          storeAppId,
+          country: 'us',
+          name: 'Rated Play',
+          ...relation,
+        },
+      });
+
+    const snapshot = (
+      appId: string,
+      capturedAt: string,
+      ratingCount: number,
+      ratingHistogram?: Record<string, number>,
+    ) => ({
+      appId,
+      title: 'Rated Play',
+      description: 'd',
+      raw: {},
+      ratingAvg: 4.5,
+      ratingCount,
+      capturedAt: new Date(capturedAt),
+      ...(ratingHistogram ? { ratingHistogram } : {}),
+    });
+
+    const pointsOf = async (appId: string) => {
+      const response = await api
+        .get(`/apps/${appId}/ratings-history`)
+        .query({ from: '2026-06-20', to: '2026-07-01' })
+        .expect(200);
+      return (response.body as RatingsHistory).points;
+    };
+
+    it('answers the star counts of each day of a google play app', async () => {
+      const app = await seedPlay();
+      await prisma.appSnapshot.createMany({
+        data: [
+          snapshot(
+            app.id,
+            '2026-06-23T02:00:00.000Z',
+            1000,
+            starCountsOf(1000),
+          ),
+          snapshot(
+            app.id,
+            '2026-06-30T02:00:00.000Z',
+            1100,
+            starCountsOf(1100),
+          ),
+          snapshot(
+            app.id,
+            '2026-06-30T20:00:00.000Z',
+            1200,
+            starCountsOf(1200),
+          ),
+        ],
+      });
+
+      expect(await pointsOf(app.id)).toEqual([
+        {
+          date: '2026-06-23',
+          ratingAvg: 4.5,
+          ratingCount: 1000,
+          starCounts: starCountsOf(1000),
+        },
+        {
+          date: '2026-06-30',
+          ratingAvg: 4.5,
+          ratingCount: 1200,
+          starCounts: starCountsOf(1200),
+        },
+      ]);
+    });
+
+    it('leaves the star counts out of a day whose histogram is partial', async () => {
+      const app = await seedPlay();
+      await prisma.appSnapshot.create({
+        data: snapshot(
+          app.id,
+          '2026-06-30T02:00:00.000Z',
+          50000,
+          emptyStar(starCountsOf(50000), '5'),
+        ),
+      });
+
+      const [point] = await pointsOf(app.id);
+
+      expect(point.ratingCount).toBe(50000);
+      expect(point).not.toHaveProperty('starCounts');
+    });
+
+    it('leaves the star counts out of a day captured before they were kept', async () => {
+      const app = await seedPlay();
+      await prisma.appSnapshot.create({
+        data: snapshot(app.id, '2026-06-30T02:00:00.000Z', 1000),
+      });
+
+      const [point] = await pointsOf(app.id);
+
+      expect(point).not.toHaveProperty('starCounts');
+    });
+
+    it('answers the star counts of a competitor', async () => {
+      const primary = await seedPlay();
+      const rival = await seedPlay(
+        { isCompetitor: true, primaryAppId: primary.id },
+        'com.rival',
+      );
+      await prisma.appSnapshot.create({
+        data: snapshot(
+          rival.id,
+          '2026-06-30T02:00:00.000Z',
+          1000,
+          starCountsOf(1000),
+        ),
+      });
+
+      const [point] = await pointsOf(rival.id);
+
+      expect(point.starCounts).toEqual(starCountsOf(1000));
+    });
   });
 
   it('returns a 404 envelope for an unknown app id', async () => {
