@@ -33,6 +33,19 @@ const captured = (complete = true): LocalizedCapture => ({
   complete,
 });
 
+const GERMAN = {
+  description:
+    'Das Tagebuch ist eine App für Schüler und ihre Eltern. Sieh dir deine Noten, die Anwesenheit und den Stundenplan an einem Ort an. Die App arbeitet mit dem Klassenbuch der Schule und ist für jede Schule offen, die das System nutzt.',
+  raw: { languages: ['DE', 'EN'] },
+};
+
+const englishProbe = (): LocalizedCapture => ({
+  changes: [],
+  listings: [],
+  probes: [{ localization: 'en-GB', echoed: true }],
+  complete: true,
+});
+
 const build = (update = jest.fn().mockResolvedValue({})) => {
   const $executeRaw = jest.fn().mockResolvedValue(1);
   const tx = { $executeRaw, app: { update } };
@@ -118,6 +131,38 @@ describe('DefaultLocalizationRecorder', () => {
     await recorder.record(APP, 'pl', ENGLISH, captured());
 
     expect(update).not.toHaveBeenCalled();
+  });
+
+  it('records english (u.k.) as the default of an english listing in germany', async () => {
+    const { recorder, update } = build();
+
+    await recorder.record(
+      { ...APP, country: 'de' },
+      'de',
+      ENGLISH,
+      englishProbe(),
+    );
+
+    expect(update).toHaveBeenCalledWith({
+      where: { id: APP.id },
+      data: { defaultLocalization: 'en-GB' },
+    });
+  });
+
+  it('clears english (u.k.) once the listing reads german', async () => {
+    const { recorder, update } = build();
+
+    await recorder.record(
+      { ...APP, country: 'de', defaultLocalization: 'en-GB' },
+      'de',
+      GERMAN,
+      englishProbe(),
+    );
+
+    expect(update).toHaveBeenCalledWith({
+      where: { id: APP.id },
+      data: { defaultLocalization: null },
+    });
   });
 
   it.each([
