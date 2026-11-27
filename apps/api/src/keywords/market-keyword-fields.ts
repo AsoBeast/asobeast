@@ -6,11 +6,12 @@ import {
   MarketLocalizationRead,
 } from '@asobeast/shared';
 import type { FieldPhrases } from '../metadata/listing-surfaces';
-import { homeLocalization } from './localization-markets';
+import { homeLocalizationOf } from './localization-markets';
 
 export interface MarketReadsInput {
   country: string;
   home: string;
+  defaultLocalization: string | null;
   shipped: ReadonlyMap<string, AppLocalizationOrigin>;
   fields: FieldPhrases;
 }
@@ -18,14 +19,15 @@ export interface MarketReadsInput {
 export function marketReads({
   country,
   home,
+  defaultLocalization,
   shipped,
   fields,
 }: MarketReadsInput): MarketLocalizationRead[] {
-  const homeTag = homeLocalization(home);
+  const homeTag = homeLocalizationOf({ country: home, defaultLocalization });
   return keywordFieldLocalizations(country).map(
     (localization, index): MarketLocalizationRead => {
       const origin: AppLocalizationOrigin | null =
-        shipped.get(localization) ?? (localization === homeTag ? 'home' : null);
+        localization === homeTag ? 'home' : (shipped.get(localization) ?? null);
       const phrases = [...(fields.get(localization) ?? [])];
       return {
         localization,

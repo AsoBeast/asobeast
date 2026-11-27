@@ -389,7 +389,7 @@ describe('SerpController (e2e)', () => {
     async function serpOf(
       store: Store,
       trackerId: string,
-      rows: [string, string][],
+      rows: [string, string, string?][],
       date: string,
       country = 'us',
     ) {
@@ -401,12 +401,13 @@ describe('SerpController (e2e)', () => {
       });
       await prisma.serpEntry.createMany({
         data: [SHOWN, LATER].flatMap((day) =>
-          rows.map(([storeAppId, title], index) => ({
+          rows.map(([storeAppId, title, shortDescription], index) => ({
             keywordId: keyword.id,
             date: new Date(`${day}T00:00:00.000Z`),
             position: index + 1,
             storeAppId,
             title,
+            ...(shortDescription === undefined ? {} : { shortDescription }),
           })),
         ),
       });
@@ -558,36 +559,107 @@ describe('SerpController (e2e)', () => {
       });
     });
 
-    it('answers no subtitle on Google Play', async () => {
-      const you = await prisma.app.create({
-        data: {
-          workspaceId: DEFAULT_WORKSPACE_ID,
-          store: Store.GOOGLE_PLAY,
-          storeAppId: 'com.self',
-          country: 'us',
-          name: 'You',
-        },
+    describe('on Google Play', () => {
+      async function playDay(rows: [string, string, string?][]) {
+        const you = await prisma.app.create({
+          data: {
+            workspaceId: DEFAULT_WORKSPACE_ID,
+            store: Store.GOOGLE_PLAY,
+            storeAppId: 'com.self',
+            country: 'us',
+            name: 'You',
+          },
+        });
+        await snapshotOf(
+          you.id,
+          'Streaks',
+          'Habit tracker and planner',
+          at('2026-06-30T08:00:00.000Z'),
+        );
+        return serpOf(Store.GOOGLE_PLAY, you.id, rows, SHOWN);
+      }
+
+      const listingLess = (entries: SerpSnapshot['entries']) =>
+        entries.every(
+          (entry) => !('subtitle' in entry) && !('subtitleSegments' in entry),
+        );
+
+      it('answers the short description and placement of every result', async () => {
+        const entries = await playDay([
+          ['com.both', 'Habit Tracker', 'Habit tracker for streaks'],
+          ['com.self', 'Streaks', 'Plan your day'],
+          ['com.desc', 'Streaks Pro', 'Habit tracker and planner'],
+          ['com.split', 'Habit Builder', 'Tracker for streaks'],
+          ['com.none', 'Daily Goals', 'Plan your day'],
+        ]);
+
+        expect(entries.map((entry) => entry.placement)).toEqual([
+          'both',
+          'none',
+          'subtitle',
+          'split',
+          'none',
+        ]);
+        expect(entries.map((entry) => entry.shortDescription)).toEqual([
+          'Habit tracker for streaks',
+          'Plan your day',
+          'Habit tracker and planner',
+          'Tracker for streaks',
+          'Plan your day',
+        ]);
+        expect(entries[2].shortDescriptionSegments).toEqual([
+          { text: 'Habit', match: 'exact' },
+          { text: ' ', match: 'none' },
+          { text: 'tracker', match: 'exact' },
+          { text: ' and planner', match: 'none' },
+        ]);
+        expect(listingLess(entries)).toBe(true);
       });
-      await snapshotOf(
-        you.id,
-        'Streaks',
-        'Habit tracker and planner',
-        at('2026-06-30T08:00:00.000Z'),
-      );
 
-      const entries = await serpOf(
-        Store.GOOGLE_PLAY,
-        you.id,
-        [
+      it('reads rows from before the column existed as unknown', async () => {
+        const entries = await playDay([
           ['com.title', 'Habit Tracker'],
-          ['com.self', 'Streaks'],
-        ],
-        SHOWN,
-      );
+          ['com.unknown', 'Streaks'],
+        ]);
 
-      expect(entries[0]).toMatchObject({ placement: 'title' });
-      expect(entries.some((entry) => 'subtitle' in entry)).toBe(false);
-      expect(entries[1]).not.toHaveProperty('placement');
+        expect(entries[0]).toMatchObject({ placement: 'title' });
+        expect(entries[0]).not.toHaveProperty('shortDescription');
+        expect(entries[1]).not.toHaveProperty('placement');
+        expect(entries[1]).not.toHaveProperty('shortDescription');
+        expect(entries.some((entry) => entry.placement === 'none')).toBe(false);
+      });
+
+      it('keeps a known result beside an unknown one', async () => {
+        const entries = await playDay([
+          ['com.known', 'Streaks', 'Habit tracker and planner'],
+          ['com.blank', 'Streaks Pro'],
+        ]);
+
+        expect(entries[0].placement).toBe('subtitle');
+        expect(entries[1]).not.toHaveProperty('placement');
+      });
+
+      it('never answers a short description on the App Store', async () => {
+        const you = await appRow('self-store', 'us');
+
+        const entries = await serpOf(
+          Store.APP_STORE,
+          you.id,
+          [
+            ['unfollowed-title', 'Habit Tracker', 'Plan your day'],
+            ['self-store', 'Streaks', 'Plan your day'],
+          ],
+          SHOWN,
+        );
+
+        expect(
+          entries.some(
+            (entry) =>
+              'shortDescription' in entry ||
+              'shortDescriptionSegments' in entry,
+          ),
+        ).toBe(false);
+      });
     });
   });
 });

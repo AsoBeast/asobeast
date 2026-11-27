@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CoveragePreviewKeyword } from "@asobeast/shared";
 import {
+  adoptHomeDraft,
   changedFields,
   consoleCopy,
   draftFieldsOf,
@@ -214,6 +215,19 @@ describe("draftScopeOf", () => {
     expect(draftScopeOf("APP_STORE", "us", undefined)).toEqual({
       store: "APP_STORE",
       localization: "en-US",
+    });
+  });
+
+  it("drafts the native default of the home market", () => {
+    const polish = { country: "pl", defaultLocalization: "pl" };
+
+    expect(draftScopeOf("APP_STORE", "pl", undefined, polish)).toEqual({
+      store: "APP_STORE",
+      localization: "pl",
+    });
+    expect(draftScopeOf("APP_STORE", "pl", undefined)).toEqual({
+      store: "APP_STORE",
+      localization: "en-GB",
     });
   });
 
@@ -432,6 +446,66 @@ describe("writeListingDraftField", () => {
     ).toEqual({ title: "Nawyki" });
   });
 
+  it("moves a home draft saved under the storefront default to the native home", () => {
+    const store = stubStorage({
+      "asobeast.listingDraft.app-1.en-GB": '{"v":1,"title":"Dziennik"}',
+    });
+
+    adoptHomeDraft("app-1", { country: "pl", defaultLocalization: "pl" });
+
+    expect(
+      parseListingDraft(store.get("asobeast.listingDraft.app-1.pl") ?? null),
+    ).toEqual({ title: "Dziennik" });
+    expect(store.get("asobeast.listingDraft.app-1.en-GB")).toBe("");
+  });
+
+  it("never overwrites a draft of the native home", () => {
+    const store = stubStorage({
+      "asobeast.listingDraft.app-1.en-GB": '{"v":1,"title":"Old"}',
+      "asobeast.listingDraft.app-1.pl": '{"v":1,"title":"New"}',
+    });
+
+    adoptHomeDraft("app-1", { country: "pl", defaultLocalization: "pl" });
+
+    expect(
+      parseListingDraft(store.get("asobeast.listingDraft.app-1.pl") ?? null),
+    ).toEqual({ title: "New" });
+    expect(store.get("asobeast.listingDraft.app-1.en-GB")).toBe(
+      '{"v":1,"title":"Old"}',
+    );
+  });
+
+  it("keeps the storefront draft when the home draft cannot be saved", () => {
+    const store = new Map<string, string>([
+      ["asobeast.listingDraft.app-1.en-GB", '{"v":1,"title":"Dziennik"}'],
+    ]);
+    vi.stubGlobal("window", {
+      localStorage: {
+        getItem: (key: string) => store.get(key) ?? null,
+        setItem: (key: string, value: string) => {
+          if (key.endsWith(".pl")) throw new Error("quota exceeded");
+          store.set(key, value);
+        },
+      },
+    });
+
+    adoptHomeDraft("app-1", { country: "pl", defaultLocalization: "pl" });
+
+    expect(store.get("asobeast.listingDraft.app-1.en-GB")).toBe(
+      '{"v":1,"title":"Dziennik"}',
+    );
+  });
+
+  it("moves nothing for an app on its storefront default", () => {
+    const store = stubStorage({
+      "asobeast.listingDraft.app-1.en-GB": '{"v":1,"title":"Diary"}',
+    });
+
+    adoptHomeDraft("app-1", { country: "pl", defaultLocalization: null });
+
+    expect([...store.keys()]).toEqual(["asobeast.listingDraft.app-1.en-GB"]);
+  });
+
   it("maps the assistant field names to draft fields", () => {
     expect(
       (
@@ -461,24 +535,35 @@ describe("draftView", () => {
   ];
 
   it("opens the home listing for a draft of its default localization", () => {
-    expect(draftView("us", null, markets)).toEqual({
+    expect(draftView({ country: "us" }, null, markets)).toEqual({
       market: "us",
       localization: null,
     });
-    expect(draftView("us", "en-US", markets)).toEqual({
+    expect(draftView({ country: "us" }, "en-US", markets)).toEqual({
       market: "us",
       localization: null,
     });
   });
 
   it("opens the market that captures the drafted localization", () => {
-    expect(draftView("us", "pl", markets)).toEqual({
+    expect(draftView({ country: "us" }, "pl", markets)).toEqual({
       market: "pl",
       localization: "pl",
     });
   });
 
+  it("views a draft of the native default as the home listing", () => {
+    const polish = { country: "pl", defaultLocalization: "pl" };
+    const home = [{ country: "pl", home: true, capturedAt: "", tracked: true }];
+
+    expect(draftView(polish, "pl", home)).toEqual({
+      market: "pl",
+      localization: null,
+    });
+    expect(draftView(polish, "en-GB", home)).toBeNull();
+  });
+
   it("opens nothing for a localization no market captures", () => {
-    expect(draftView("us", "es-MX", markets)).toBeNull();
+    expect(draftView({ country: "us" }, "es-MX", markets)).toBeNull();
   });
 });

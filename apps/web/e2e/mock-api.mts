@@ -387,6 +387,7 @@ import {
   keywordFieldChars,
   parseKeywordField,
   keywordFieldLocalizations,
+  defaultLocalizationIn,
   readLocalizations,
   APP_STORE_LOCALIZATIONS,
   type AppStoreLocalization,
@@ -1584,7 +1585,8 @@ function keywordFieldTarget(
     return undefined;
   }
   const read = readLocalizations(country);
-  const requested = query.get("localization") ?? read[0];
+  const requested =
+    query.get("localization") ?? defaultLocalizationIn(dataset.detail, country);
   const localization = read.find((tag) => tag === requested);
   if (!localization) {
     const names = read.map((tag) => APP_STORE_LOCALIZATIONS[tag]).join(", ");
@@ -1876,7 +1878,7 @@ function localizationItemOf(
 ): AppLocalizationItem {
   const phrases = keywordFields.get(fieldKey(id, localization)) ?? [];
   const origin: AppLocalizationOrigin =
-    localization === keywordFieldLocalizations(home)[0]
+    localization === homeTagOf(id, home)
       ? "home"
       : (shippedLocalizations.get(id)?.get(localization) ?? "manual");
   return {
@@ -1902,6 +1904,15 @@ function localizationItemOf(
   };
 }
 
+const homeTagOf = (id: string, home: string): AppStoreLocalization =>
+  defaultLocalizationIn(
+    {
+      country: home,
+      defaultLocalization: DATASETS[id]?.detail.defaultLocalization,
+    },
+    home,
+  );
+
 function shippedTags(id: string, home: string): AppStoreLocalization[] {
   const saved = [...keywordFields.keys()]
     .filter((key) => key.startsWith(`${id}:`))
@@ -1909,7 +1920,7 @@ function shippedTags(id: string, home: string): AppStoreLocalization[] {
     .filter(isAppStoreLocalization);
   return [
     ...new Set([
-      keywordFieldLocalizations(home)[0],
+      homeTagOf(id, home),
       ...(shippedLocalizations.get(id)?.keys() ?? []),
       ...saved,
     ]),
@@ -1997,10 +2008,7 @@ function detectLocalizations(
 
 function recordShipped(id: string, localization: AppStoreLocalization): void {
   const home = DATASETS[id]?.detail.country;
-  if (
-    home === undefined ||
-    localization === keywordFieldLocalizations(home)[0]
-  ) {
+  if (home === undefined || localization === homeTagOf(id, home)) {
     return;
   }
   if (!keywordFields.has(fieldKey(id, localization))) return;
@@ -4148,6 +4156,9 @@ const routes: Route[] = [
             home: true,
             capturedAt: dataset.detail.latestSnapshot?.capturedAt ?? null,
             tracked: true,
+            ...(dataset.detail.defaultLocalization
+              ? { localizations: [dataset.detail.defaultLocalization] }
+              : {}),
           },
         ],
   ),
@@ -5255,7 +5266,7 @@ const routes: Route[] = [
       const path = req.url ?? "/";
       const home = app.dataset.detail.country;
       const name = APP_STORE_LOCALIZATIONS[app.tag];
-      if (app.tag === keywordFieldLocalizations(home)[0]) {
+      if (app.tag === homeTagOf(id, home)) {
         return json(
           res,
           409,

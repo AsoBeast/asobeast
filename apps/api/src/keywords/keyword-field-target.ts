@@ -4,6 +4,8 @@ import {
   APP_STORE_LOCALIZATIONS,
   type AppStoreLocalization,
   assertStorefront,
+  type DefaultingListing,
+  defaultLocalizationIn,
   KeywordFieldQuery,
   keywordFieldLocalizations,
 } from '@asobeast/shared';
@@ -14,7 +16,7 @@ export interface KeywordFieldTarget {
 }
 
 export function keywordFieldTarget(
-  app: { store: Store; country: string },
+  app: DefaultingListing & { store: Store },
   query: KeywordFieldQuery,
 ): KeywordFieldTarget {
   const country = query.country ?? app.country;
@@ -22,7 +24,8 @@ export function keywordFieldTarget(
     assertStorefront(app.store, country);
   }
   const read = keywordFieldLocalizations(country);
-  const localization = query.localization ?? read[0];
+  const localization =
+    query.localization ?? defaultLocalizationIn(app, country);
   if (!read.includes(localization)) {
     throw new BadRequestException(
       `The ${country.toUpperCase()} storefront reads ${read

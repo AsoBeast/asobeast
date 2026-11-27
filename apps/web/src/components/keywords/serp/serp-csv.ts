@@ -23,6 +23,7 @@ const SERP_CSV_HEADERS = [
   "previousPosition",
   "subtitle",
   "keywordIn",
+  "shortDescription",
 ];
 
 export function serpRole(
@@ -56,6 +57,7 @@ export function serpCsv(viewer: SerpViewer, snapshot: SerpSnapshot): string {
       entry.previous ?? null,
       entry.subtitle ?? null,
       keywordInCell(entry, viewer),
+      entry.shortDescription ?? null,
     ]),
   );
 }

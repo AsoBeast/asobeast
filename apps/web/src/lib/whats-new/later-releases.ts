@@ -46,7 +46,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "new",
         title: "Where ranking apps put the keyword",
-        text: "The search results of a keyword now say where each app puts it: in the title, the subtitle, both, split between them, or neither. On the App Store, subtitles come from the listings AsoBeast captures for your apps and competitors, so any other app is judged on its title alone, and a competitor in the top 10 without the keyword in either is marked as an outlier. Google Play has no subtitle, so only titles are read there. The summary counts how many of the top 10 hold it in the title, and in the subtitles AsoBeast knows.",
+        text: "The search results of a keyword now say where each app puts it: in the title, the subtitle, both, split between them, or neither. On the App Store, subtitles come from the listings AsoBeast captures for your apps and competitors, so any other app is judged on its title alone, and a competitor in the top 10 without the keyword in either is marked as an outlier. On Google Play the search results carry each app's short description, so every app shows it under its title and is judged on the title and the short description, with the same outlier mark; days checked before this update have no short descriptions yet. The summary counts how many of the top 10 hold it in the title, and in the subtitles or short descriptions AsoBeast knows.",
       },
       {
         kind: "new",
@@ -92,6 +92,11 @@ export const LATER_RELEASES: readonly Release[] = [
         kind: "fixed",
         title: "Collection resumes soon after a proxy account is fixed",
         text: "A proxy provider that refuses requests because of the account, such as a plan that ran out or credentials it no longer accepts, used to bench its addresses for up to a day. They are now tried again every few minutes, so collection resumes shortly after the account is put right.",
+      },
+      {
+        kind: "fixed",
+        title: "An app in its own language keeps that language",
+        text: "In a storefront that defaults to English, such as Poland, an app written only in the local language used to have its listing called English (U.K.), and its audit could not open the listing in the local language. After its next refresh, the keyword field editor, the audit, the draft and the description word list use the language the listing is written in. A keyword field you saved under English (U.K.) stays where it is.",
       },
       {
         kind: "new",

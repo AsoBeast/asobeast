@@ -1,13 +1,16 @@
 import {
   APP_STORE_LOCALIZATIONS,
   type AppStoreLocalization,
+  type DefaultingListing,
+  defaultLocalizationIn,
   keywordFieldLocalizations,
   type LocalizationReader,
   type LocalizationReadRole,
 } from '@asobeast/shared';
 
-export const homeLocalization = (home: string): AppStoreLocalization =>
-  keywordFieldLocalizations(home)[0];
+export const homeLocalizationOf = (
+  app: DefaultingListing,
+): AppStoreLocalization => defaultLocalizationIn(app, app.country);
 
 export function readerRole(
   country: string,

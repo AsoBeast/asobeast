@@ -191,22 +191,50 @@ describe("serpSummary placements", () => {
     expect(serpSummary(snapshot(entries), VIEWER).placements).toEqual({
       inTitle: 4,
       of: 10,
-      inSubtitle: 2,
-      subtitlesKnown: 5,
+      inSecond: 2,
+      secondKnown: 5,
     });
   });
 
-  it("counts titles only on Google Play", () => {
-    const entries = listOf(6).map((row, index) => ({
-      ...row,
-      titleMatch: "none" as const,
-      ...(index < 2 ? { placement: "title" as const } : {}),
-    }));
+  it("counts the short descriptions on Google Play", () => {
+    const listed = { shortDescription: "Plan your day" };
+    const overlays: Partial<SerpEntryItem>[] = [
+      { placement: "title" },
+      { placement: "title" },
+      { placement: "subtitle", ...listed },
+      { placement: "both", ...listed },
+      { placement: "none", ...listed },
+      {},
+    ];
+    const entries = overlays.map((over, index) =>
+      entry(index + 1, { titleMatch: "none", ...over }),
+    );
 
     expect(
       serpSummary(snapshot(entries), { ...VIEWER, store: "GOOGLE_PLAY" })
         .placements,
-    ).toEqual({ inTitle: 2, of: 6, inSubtitle: null, subtitlesKnown: null });
+    ).toEqual({ inTitle: 3, of: 6, inSecond: 2, secondKnown: 3 });
+  });
+
+  it("does not count the other store's field", () => {
+    const appStore = listOf(3).map((row) => ({
+      ...row,
+      titleMatch: "none" as const,
+      shortDescription: "Plan your day",
+    }));
+    const play = listOf(3).map((row) => ({
+      ...row,
+      titleMatch: "none" as const,
+      subtitle: "Plan your day",
+    }));
+
+    expect(
+      serpSummary(snapshot(appStore), VIEWER).placements?.secondKnown,
+    ).toBe(0);
+    expect(
+      serpSummary(snapshot(play), { ...VIEWER, store: "GOOGLE_PLAY" })
+        .placements?.secondKnown,
+    ).toBe(0);
   });
 
   it("reports nothing when no entry was judged", () => {

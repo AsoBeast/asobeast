@@ -1,5 +1,6 @@
 import { Store } from '../index';
 import type { ChangeDetail } from './changes';
+import type { AppStoreLocalization } from '../storefronts/app-store-localizations';
 
 export interface AppSnapshotSummary {
   id: string;
@@ -74,6 +75,7 @@ export interface AppDetail {
   competitors: CompetitorItem[];
   group: AppGroupSummary | null;
   localization?: string;
+  defaultLocalization?: AppStoreLocalization;
   isCompetitor?: boolean;
   delistedAt?: string | null;
 }

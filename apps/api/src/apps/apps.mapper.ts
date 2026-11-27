@@ -7,6 +7,9 @@ import {
   AppSnapshotDetail,
   AppSnapshotSummary,
   CompetitorItem,
+  type DefaultingListing,
+  defaultLocalizationIn,
+  isAppStoreLocalization,
   ListingMarket,
   SETUP_STATUSES,
   SETUP_STEPS,
@@ -66,10 +69,11 @@ export interface ListingMarketRow {
 }
 
 function localizationsByMarket(
-  home: string,
+  app: DefaultingListing,
   rows: readonly ListingMarketRow[],
   shipped: readonly string[],
 ): Map<string, string[]> {
+  const home = app.country;
   const captured = new Map<string, Set<string>>();
   for (const row of rows) {
     if (!row.localization) continue;
@@ -82,20 +86,23 @@ function localizationsByMarket(
   return new Map(
     [...captured].map(([market, tags]) => [
       market,
-      capturedLocalizations(market, shipped).filter((tag) => tags.has(tag)),
+      capturedLocalizations(market, shipped).filter(
+        (tag) => tags.has(tag) && tag !== defaultLocalizationIn(app, market),
+      ),
     ]),
   );
 }
 
 export function toListingMarkets(
-  home: string,
+  app: DefaultingListing,
   rows: readonly ListingMarketRow[],
   shipped: readonly string[],
 ): ListingMarket[] {
+  const home = app.country;
   const capturedAt = (row: ListingMarketRow | undefined) =>
     row?._max.capturedAt?.toISOString() ?? null;
   const defaults = rows.filter((row) => !row.localization);
-  const localizations = localizationsByMarket(home, rows, shipped);
+  const localizations = localizationsByMarket(app, rows, shipped);
   const withLocalizations = (market: ListingMarket): ListingMarket => {
     const captured = localizations.get(market.country) ?? [];
     return captured.length > 0
@@ -210,6 +217,10 @@ export function toAppDetail(
     ),
     group: group ? toAppGroupSummary(group) : null,
     ...(localization ? { localization } : {}),
+    ...(app.defaultLocalization &&
+    isAppStoreLocalization(app.defaultLocalization)
+      ? { defaultLocalization: app.defaultLocalization }
+      : {}),
     isCompetitor: app.isCompetitor,
   };
 }

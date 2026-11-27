@@ -3,6 +3,7 @@
 import { Suspense } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { defaultLocalizationIn } from "@asobeast/shared";
 import { AppLocalizationsSection } from "@/components/localizations/AppLocalizationsSection";
 import { useLocalization } from "@/components/app-detail/use-localization";
 import { useMarket } from "@/components/app-detail/use-market";
@@ -77,7 +78,8 @@ export function MetadataAuditView({
     metadataAuditOptions(id, queryMarket(market, home), localization),
   );
   const { data: app } = useSuspenseQuery(appDetailOptions(id));
-  const density = densityContext(result, market, localization, app.name);
+  const density = densityContext(result, market, localization, app);
+  const homeLocalization = defaultLocalizationIn(app, home);
   const title = result.fields.find((field) => field.field === "title")?.value;
   const isAppStore = result.store === "APP_STORE";
   const tracked = result.coverage.length > 0;
@@ -103,6 +105,7 @@ export function MetadataAuditView({
         <ListingDraftEditor
           id={id}
           audit={result}
+          app={app}
           market={market}
           localization={localization}
           density={density}
@@ -165,12 +168,13 @@ export function MetadataAuditView({
           id={id}
           canDraft={drafting}
           suggestion={suggestion}
+          homeLocalization={homeLocalization}
           ownerWhileLoading={ownerWhileLoading}
         />
       ) : suggestion ? (
         <KeywordFieldSuggestionCard
           id={id}
-          home={home}
+          homeLocalization={homeLocalization}
           suggestion={suggestion}
         />
       ) : null}

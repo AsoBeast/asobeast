@@ -9,6 +9,7 @@ import {
   type AppLocalizationItem,
   type AppLocalizationsResult,
   type AppStoreLocalization,
+  keywordFieldLocalizations,
 } from '@asobeast/shared';
 import { type SecretBox } from '../common/crypto/secret-box';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
@@ -24,12 +25,14 @@ import {
   STORE_IMPORT_NEEDED,
 } from './keyword-field-managed';
 import { SECRET_BOX } from '../store-connect/secret-box.provider';
+import { unlessHomeLocalization } from './home-localization-guard';
 import {
+  FieldWriteSupersededError,
   KeywordFieldWriter,
   serializeKeywordField,
 } from './keyword-field-writer';
 import { ensureLocalizedFieldApp, KeywordApp } from './keywords.support';
-import { homeLocalization } from './localization-markets';
+import { homeLocalizationOf } from './localization-markets';
 
 const itemOf = (
   result: AppLocalizationsResult,
@@ -49,7 +52,9 @@ const notShipped = (localization: AppStoreLocalization) =>
 
 const notRemovable = (app: KeywordApp, localization: AppStoreLocalization) =>
   new ConflictException(
-    `${APP_STORE_LOCALIZATIONS[localization]} is the default localization of the ${app.country.toUpperCase()} storefront and cannot be removed`,
+    localization === keywordFieldLocalizations(app.country)[0]
+      ? `${APP_STORE_LOCALIZATIONS[localization]} is the default localization of the ${app.country.toUpperCase()} storefront and cannot be removed`
+      : `${APP_STORE_LOCALIZATIONS[localization]} is the language of the home listing and cannot be removed`,
   );
 
 @Injectable()
@@ -130,13 +135,24 @@ export class AppLocalizationsService {
   ): Promise<void> {
     const app = await ensureLocalizedFieldApp(this.prisma, appId);
     await refuseManagedField(this.prisma, this.box, app.id);
-    if (localization === homeLocalization(app.country)) {
+    if (localization === homeLocalizationOf(app)) {
       throw notRemovable(app, localization);
     }
     if (!itemOf(await this.resultOf(app), localization)) {
       throw notShipped(localization);
     }
-    await this.writer.remove(app, localization);
+    try {
+      await this.writer.remove(
+        app,
+        localization,
+        unlessHomeLocalization(app.id, localization),
+      );
+    } catch (error: unknown) {
+      if (error instanceof FieldWriteSupersededError) {
+        throw notRemovable(app, localization);
+      }
+      throw error;
+    }
   }
 
   private async resultOf(app: KeywordApp): Promise<AppLocalizationsResult> {
@@ -158,6 +174,7 @@ export class AppLocalizationsService {
       markets,
       localizations: toAppLocalizationItems({
         home: app.country,
+        defaultLocalization: app.defaultLocalization,
         markets,
         stored,
         fields,

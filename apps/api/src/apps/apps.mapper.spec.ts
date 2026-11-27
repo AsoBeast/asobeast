@@ -105,7 +105,11 @@ describe('toListingMarkets', () => {
 
   it('lists the home market first even before it has a listing', () => {
     expect(
-      toListingMarkets('us', [row('de', '2026-07-02T00:00:00.000Z')], []),
+      toListingMarkets(
+        { country: 'us' },
+        [row('de', '2026-07-02T00:00:00.000Z')],
+        [],
+      ),
     ).toEqual([
       { country: 'us', home: true, capturedAt: null },
       { country: 'de', home: false, capturedAt: '2026-07-02T00:00:00.000Z' },
@@ -115,7 +119,7 @@ describe('toListingMarkets', () => {
   it('folds the captured localizations of a market into it in table order', () => {
     expect(
       toListingMarkets(
-        'pl',
+        { country: 'pl' },
         [
           row(null, '2026-07-01T00:00:00.000Z'),
           { ...row(null, '2026-07-01T00:01:00.000Z'), localization: 'pl' },
@@ -150,13 +154,13 @@ describe('toListingMarkets', () => {
       { ...row('ch', '2026-07-02T00:01:00.000Z'), localization: 'fr' },
     ];
 
-    expect(toListingMarkets('us', rows, ['fr'])[1]).toEqual({
+    expect(toListingMarkets({ country: 'us' }, rows, ['fr'])[1]).toEqual({
       country: 'ch',
       home: false,
       capturedAt: '2026-07-02T00:00:00.000Z',
       localizations: ['fr'],
     });
-    expect(toListingMarkets('us', rows, [])[1]).toEqual({
+    expect(toListingMarkets({ country: 'us' }, rows, [])[1]).toEqual({
       country: 'ch',
       home: false,
       capturedAt: '2026-07-02T00:00:00.000Z',
@@ -166,7 +170,7 @@ describe('toListingMarkets', () => {
   it('lists the other markets by code with the time of their newest listing', () => {
     expect(
       toListingMarkets(
-        'us',
+        { country: 'us' },
         [
           row('pl', '2026-07-03T00:00:00.000Z'),
           row(null, '2026-07-01T00:00:00.000Z'),
@@ -179,6 +183,35 @@ describe('toListingMarkets', () => {
       { country: 'de', home: false, capturedAt: '2026-07-02T00:00:00.000Z' },
       { country: 'pl', home: false, capturedAt: '2026-07-03T00:00:00.000Z' },
     ]);
+  });
+
+  it('drops the native default from the home market', () => {
+    const rows = [
+      row(null, '2026-07-01T00:00:00.000Z'),
+      { ...row(null, '2026-07-01T00:01:00.000Z'), localization: 'pl' },
+    ];
+
+    expect(
+      toListingMarkets({ country: 'pl', defaultLocalization: 'pl' }, rows, []),
+    ).toEqual([
+      { country: 'pl', home: true, capturedAt: '2026-07-01T00:00:00.000Z' },
+    ]);
+  });
+
+  it('keeps a native localization in other markets', () => {
+    const rows = [
+      row(null, '2026-07-01T00:00:00.000Z'),
+      row('be', '2026-07-02T00:00:00.000Z'),
+      { ...row('be', '2026-07-02T00:01:00.000Z'), localization: 'nl' },
+    ];
+
+    expect(
+      toListingMarkets(
+        { country: 'nl', defaultLocalization: 'nl' },
+        rows,
+        [],
+      )[1],
+    ).toMatchObject({ country: 'be', localizations: ['nl'] });
   });
 });
 
@@ -229,6 +262,7 @@ describe('the listing facts of a snapshot', () => {
     store,
     storeAppId: id,
     country,
+    defaultLocalization: null,
     name: id,
     iconUrl: null,
     delistedAt: null,
@@ -338,6 +372,28 @@ describe('the listing facts of a snapshot', () => {
       APP_STORE_FACTS,
     );
     expect(detail.latestSnapshot?.contentRating).toBe('17+');
+  });
+
+  it('answers the default localization only when one is recorded', () => {
+    const snapshot = snapshotOf('s1', APP_STORE_RAW, DATES);
+
+    expect(
+      toAppDetail(
+        { ...appStore, defaultLocalization: 'pl' },
+        snapshot,
+        [],
+        null,
+      ).defaultLocalization,
+    ).toBe('pl');
+    expect(
+      'defaultLocalization' in
+        toAppDetail(
+          { ...appStore, defaultLocalization: null },
+          snapshot,
+          [],
+          null,
+        ),
+    ).toBe(false);
   });
 
   it('answers null for every fact the payload does not say', () => {

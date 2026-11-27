@@ -235,6 +235,7 @@ model App {
   store                  Store
   storeAppId             String
   country                String                  @default("us")
+  defaultLocalization    String?
   name                   String?
   iconUrl                String?
   delistedAt             DateTime?
@@ -633,17 +634,18 @@ model ChartFollow {
 }
 
 model SerpEntry {
-  keywordId   String
-  keyword     Keyword  @relation(fields: [keywordId], references: [id], onDelete: Cascade)
-  date        DateTime @db.Date
-  position    Int
-  storeAppId  String
-  title       String
-  developer   String?
-  iconUrl     String?
-  ratingAvg   Float?
-  ratingCount Int?
-  createdAt   DateTime @default(now())
+  keywordId        String
+  keyword          Keyword  @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+  date             DateTime @db.Date
+  position         Int
+  storeAppId       String
+  title            String
+  developer        String?
+  iconUrl          String?
+  ratingAvg        Float?
+  ratingCount      Int?
+  shortDescription String?
+  createdAt        DateTime @default(now())
 
   @@id([keywordId, date, position])
   @@index([storeAppId, date])

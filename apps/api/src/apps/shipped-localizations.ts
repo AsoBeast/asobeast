@@ -1,15 +1,17 @@
-import { homeLocalization } from '../keywords/localization-markets';
+import type { DefaultingListing } from '@asobeast/shared';
+import { homeLocalizationOf } from '../keywords/localization-markets';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface ShippingApp {
   id: string;
   country: string;
+  defaultLocalization: string | null;
 }
 
 export const withHomeLocalization = (
-  home: string,
+  app: DefaultingListing,
   stored: readonly string[],
-): string[] => [...new Set([homeLocalization(home), ...stored])];
+): string[] => [...new Set([homeLocalizationOf(app), ...stored])];
 
 export async function shippedLocalizations(
   prisma: PrismaService,
@@ -20,7 +22,7 @@ export async function shippedLocalizations(
     select: { localization: true },
   });
   return withHomeLocalization(
-    app.country,
+    app,
     rows.map(({ localization }) => localization),
   );
 }

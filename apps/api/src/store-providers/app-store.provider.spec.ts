@@ -553,6 +553,24 @@ describe('AppStoreProvider', () => {
     });
   });
 
+  it('never carries a short description in a search item', async () => {
+    const search = jest.fn().mockResolvedValue([
+      {
+        id: 42,
+        title: 'Result',
+        developer: 'Dev Co',
+        score: 4,
+        reviews: 10,
+        updated: '2024-05-01T00:00:00Z',
+      },
+    ]);
+    const provider = new AppStoreProvider(makeLib({ search }));
+
+    const items = await provider.search('puzzle', 'us', 5);
+
+    expect(items[0]).not.toHaveProperty('summary');
+  });
+
   it('preserves suggest priority untouched', async () => {
     const suggest = jest
       .fn()

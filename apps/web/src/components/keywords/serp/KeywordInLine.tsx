@@ -18,7 +18,7 @@ export function KeywordInLine({
       <span>Keyword in </span>
       <span className="text-foreground">{label}</span>
       {note === null ? null : <span>{`, ${note}`}</span>}
-      {isOutlier(entry, store, role) ? (
+      {isOutlier(entry, role) ? (
         <Badge variant="outline" className="ml-2 align-middle">
           Outlier
         </Badge>

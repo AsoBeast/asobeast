@@ -13,6 +13,16 @@ describe("densityLanguage", () => {
     expect(densityLanguage("APP_STORE", "de", undefined)).toBe("de");
   });
 
+  it("reads polish function words for a native default listing", () => {
+    expect(
+      densityLanguage("APP_STORE", "pl", undefined, {
+        country: "pl",
+        defaultLocalization: "pl",
+      }),
+    ).toBe("pl");
+    expect(densityLanguage("APP_STORE", "pl", undefined)).toBe("en");
+  });
+
   it("reads the storefront language on Google Play", () => {
     expect(densityLanguage("GOOGLE_PLAY", "de", null)).toBe("de");
     expect(densityLanguage("GOOGLE_PLAY", "zz", null)).toBeNull();

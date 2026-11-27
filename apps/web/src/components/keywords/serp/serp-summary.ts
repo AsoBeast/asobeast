@@ -8,6 +8,7 @@ import {
   type TrackedKeywordItem,
 } from "@asobeast/shared";
 import type { Moved } from "@/components/movement/movement-text";
+import { secondTextOf } from "./listing-line";
 import { serpRole, type SerpViewer } from "./serp-csv";
 
 export type PositionSummary =
@@ -20,8 +21,8 @@ export type PositionSummary =
 export interface PlacementSummary {
   inTitle: number;
   of: number;
-  inSubtitle: number | null;
-  subtitlesKnown: number | null;
+  inSecond: number;
+  secondKnown: number;
 }
 
 export type RatingSummary =
@@ -100,21 +101,14 @@ function placementsOf(
     (entry) => entry.titleMatch !== undefined || entry.placement !== undefined,
   );
   if (!judged) return null;
-  const inTitle = countOf(topTen, ["title", "both"]);
-  if (store !== "APP_STORE") {
-    return {
-      inTitle,
-      of: topTen.length,
-      inSubtitle: null,
-      subtitlesKnown: null,
-    };
-  }
-  const known = topTen.filter((entry) => entry.subtitle !== undefined);
+  const known = topTen.filter(
+    (entry) => secondTextOf(entry, store) !== undefined,
+  );
   return {
-    inTitle,
+    inTitle: countOf(topTen, ["title", "both"]),
     of: topTen.length,
-    inSubtitle: countOf(known, ["subtitle", "both"]),
-    subtitlesKnown: known.length,
+    inSecond: countOf(known, ["subtitle", "both"]),
+    secondKnown: known.length,
   };
 }
 

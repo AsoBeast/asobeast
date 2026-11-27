@@ -1,7 +1,11 @@
 import type { Page } from "@playwright/test";
 import type { AppLocalizationsResult } from "@asobeast/shared";
 import { contrastViolations, THEMES } from "./contrast-check.mts";
-import { APP_RIVAL_ID, type LocalizationSeed } from "./fixtures.mts";
+import {
+  APP_PL_NATIVE_ID,
+  APP_RIVAL_ID,
+  type LocalizationSeed,
+} from "./fixtures.mts";
 import {
   expectContains,
   expectFitsViewport,
@@ -1478,4 +1482,17 @@ test.describe("on the locale lab", () => {
       await expect(find(page)).toBeEnabled();
     });
   });
+});
+
+test("shows the polish home localization of a native only app", async ({
+  page,
+}) => {
+  await page.goto(`/apps/${APP_PL_NATIVE_ID}/metadata?fieldLocale=pl`);
+
+  const polish = localizationItem(page, "Polish");
+  await expect(polish.trigger).toHaveAttribute("aria-expanded", "true");
+  await expect(
+    polish.panel.getByRole("button", { name: "Remove localization" }),
+  ).toHaveCount(0);
+  await expect(localizationItem(page, "English (U.K.)").trigger).toHaveCount(0);
 });

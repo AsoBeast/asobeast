@@ -2,6 +2,7 @@ import { Store } from '@prisma/client';
 import { ListingTexts, LocalizedTexts } from '../apps/listing-texts';
 import {
   changeCounts,
+  draftedListing,
   draftMarkets,
   PreviewableKeyword,
   previewKeywords,
@@ -20,8 +21,16 @@ const texts = (overrides: Partial<ListingTexts> = {}): ListingTexts => ({
   ...overrides,
 });
 
-const appStore = { store: Store.APP_STORE, country: 'us' };
-const play = { store: Store.GOOGLE_PLAY, country: 'us' };
+const appStore = {
+  store: Store.APP_STORE,
+  country: 'us',
+  defaultLocalization: null,
+};
+const play = {
+  store: Store.GOOGLE_PLAY,
+  country: 'us',
+  defaultLocalization: null,
+};
 
 const sources = (
   listings: [string, ListingTexts][],
@@ -81,6 +90,37 @@ describe('withDraft on the App Store', () => {
     });
     expect(live.listings.get('us')?.title).toBe('Focus Timer');
     expect(draft.listings).not.toBe(live.listings);
+  });
+
+  it('replaces the default listing with a draft of the native home tag', () => {
+    const live = sources([['pl', texts({ title: 'Dzienniczek Ucznia' })]]);
+
+    const draft = withDraft(
+      live,
+      { ...appStore, country: 'pl', defaultLocalization: 'pl' },
+      { store: Store.APP_STORE, localization: 'pl' },
+      { title: 'Plan lekcji' },
+    );
+
+    expect(draft.listings.get('pl')?.title).toBe('Plan lekcji');
+    expect(draft.localized.get('pl')).toBeUndefined();
+  });
+
+  it('drafts the storefront primary of a native home app over the default listing', () => {
+    const polishApp = { ...appStore, country: 'pl', defaultLocalization: 'pl' };
+    const live = sources([
+      ['pl', texts({ title: 'Dzienniczek Ucznia', subtitle: 'Oceny' })],
+    ]);
+    const target = { store: Store.APP_STORE, localization: 'en-GB' } as const;
+
+    const draft = withDraft(live, polishApp, target, { keywordField: 'diary' });
+
+    expect(draftedListing(polishApp, draft, target, 'pl')).toMatchObject({
+      title: 'Dzienniczek Ucznia',
+      subtitle: 'Oceny',
+    });
+    expect(draft.keywordFields.get('en-GB')).toEqual(['diary']);
+    expect(draft.listings.get('pl')?.title).toBe('Dzienniczek Ucznia');
   });
 
   it('writes an additional localization into the localized texts of a market', () => {

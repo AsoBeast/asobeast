@@ -34,13 +34,18 @@ export class ScreenshotsService {
   ): Promise<AppScreenshots> {
     const app = await this.prisma.app.findFirst({
       where: { id: appId },
-      select: { id: true, store: true, country: true },
+      select: {
+        id: true,
+        store: true,
+        country: true,
+        defaultLocalization: true,
+      },
     });
     if (!app) throw new NotFoundException(`App ${appId} not found`);
     const market = country ?? app.country;
     const home = market === app.country;
     if (!home) assertStorefront(app.store, market);
-    const stored = storedLocalization(app.store, market, localization);
+    const stored = storedLocalization(app, market, localization);
     const latest = await this.prisma.appSnapshot.findFirst({
       where: { appId, ...listingIn(app.country, market, stored) },
       orderBy: NEWEST_FIRST,

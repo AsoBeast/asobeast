@@ -42,4 +42,33 @@ describe('keywordFieldTarget', () => {
       UnknownStorefrontError,
     );
   });
+
+  describe('a listing written in a native localization', () => {
+    const PL_APP = {
+      store: Store.APP_STORE,
+      country: 'pl',
+      defaultLocalization: 'pl',
+    };
+
+    it('targets the native default of the home market without a query', () => {
+      expect(keywordFieldTarget(PL_APP, {})).toEqual({
+        country: 'pl',
+        localization: 'pl',
+      });
+    });
+
+    it('still targets english (u.k.) when the query names it', () => {
+      expect(keywordFieldTarget(PL_APP, { localization: 'en-GB' })).toEqual({
+        country: 'pl',
+        localization: 'en-GB',
+      });
+    });
+
+    it('targets the primary of another market', () => {
+      expect(keywordFieldTarget(PL_APP, { country: 'cz' })).toEqual({
+        country: 'cz',
+        localization: 'en-GB',
+      });
+    });
+  });
 });
