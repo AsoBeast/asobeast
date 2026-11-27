@@ -498,6 +498,17 @@ describe('extractCandidates', () => {
       expect(texts(thai, ['th'])).toEqual(texts(thai, []));
     });
 
+    it('skips the hiragana function words of a japanese storefront', () => {
+      expect(texts({ title: 'メルカリ です ます' }, ['ja'])).toEqual([
+        'メルカリ',
+      ]);
+      expect(texts({ title: 'メルカリ です ます' }, [])).toEqual([
+        'メルカリ',
+        'です',
+        'ます',
+      ]);
+    });
+
     it('does not change the words of scripts that keep their own lists', () => {
       const japanese = {
         title: 'メルカリ - フリマアプリ',

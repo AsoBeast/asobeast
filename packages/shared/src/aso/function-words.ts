@@ -209,6 +209,11 @@ export const FUNCTION_WORDS: WordLists = {
   ),
   zh: union(CHINESE_FUNCTION_WORDS, CHINESE_PARTICLES),
   th: THAI_FUNCTION_WORDS,
+  ja: words(`
+    です ます でした ました ません から まで より など こと もの ため
+    これ それ あれ どれ この その あの ここ そこ あそこ どこ ない ある
+    いる する なる できる ので のに けど でも また および ほか さん
+  `),
 };
 
 export const REVIEW_ONLY_FUNCTION_WORDS: WordLists = {

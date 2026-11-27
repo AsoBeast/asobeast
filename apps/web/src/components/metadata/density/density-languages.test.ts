@@ -19,6 +19,7 @@ describe("densityLanguage", () => {
     expect(densityLanguage("APP_STORE", "kr", "ko")).toBe("ko");
     expect(densityLanguage("APP_STORE", "sa", "ar")).toBe("ar");
     expect(densityLanguage("APP_STORE", "th", "th")).toBe("th");
+    expect(densityLanguage("APP_STORE", "jp", "ja")).toBe("ja");
   });
 
   it("reads the default localization of a Russian or Korean market", () => {
@@ -37,5 +38,6 @@ describe("densityLanguage", () => {
     expect(densityLanguage("GOOGLE_PLAY", "kr", null)).toBe("ko");
     expect(densityLanguage("GOOGLE_PLAY", "sa", null)).toBe("ar");
     expect(densityLanguage("GOOGLE_PLAY", "th", null)).toBe("th");
+    expect(densityLanguage("GOOGLE_PLAY", "jp", null)).toBe("ja");
   });
 });

@@ -228,6 +228,25 @@ describe('wordDensity', () => {
     );
   });
 
+  it('leaves out the hiragana function words of Japanese and keeps the words', () => {
+    const text =
+      'タイマーです。ノートです。タイマーから始めます。ノートから始めます。';
+
+    expect(texts(wordDensity(text, { language: 'ja' }).single)).toEqual([
+      'タイマー',
+      'ノート',
+      '始め',
+    ]);
+    expect(texts(wordDensity(text, { language: 'xx' }).single)).toEqual([
+      'から',
+      'です',
+      'ます',
+      'タイマー',
+      'ノート',
+      '始め',
+    ]);
+  });
+
   it('keeps store words', () => {
     const density = wordDensity('free best app. free best app.', english);
 

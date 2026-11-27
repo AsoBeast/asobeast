@@ -56,6 +56,7 @@ const LEFT_TO_THE_LISTING: Readonly<Record<string, readonly string[]>> = {
   ar: ['تطبيق', 'مجاني', 'أفضل', 'جديد', 'تحميل', 'رسمي', 'go'],
   zh: ['免费', '应用', '官方', 'go'],
   th: ['แอป', 'ฟรี', 'วันนี้', 'go'],
+  ja: ['アプリ', '無料', '公式', 'ダウンロード', 'go'],
 };
 
 const NEVER_A_FUNCTION_WORD: readonly string[] = [
@@ -88,6 +89,7 @@ describe('FUNCTION_WORDS', () => {
         'fr',
         'id',
         'it',
+        'ja',
         'ko',
         'nl',
         'no',
@@ -111,6 +113,7 @@ describe('FUNCTION_WORDS', () => {
     ['ar', 111],
     ['zh', 36],
     ['th', 35],
+    ['ja', 37],
   ])('holds the words of %s once each', (language, size) => {
     expect(FUNCTION_WORDS[language].size).toBe(size);
   });
@@ -217,6 +220,7 @@ describe('functionWordTest', () => {
     ['ar', ['في', 'من', 'على', 'أكثر', 'هذان', 'حول', 'لكن']],
     ['zh', ['我们', '一个', '的', '我']],
     ['th', ['ที่', 'และ', 'ไม่']],
+    ['ja', ['です', 'ます', 'から', 'この', 'ない']],
   ])('knows the function words of %s', (language, words) => {
     const isFunctionWord = functionWordTest([language]);
 
