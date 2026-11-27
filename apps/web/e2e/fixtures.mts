@@ -4039,6 +4039,8 @@ const BENCHMARK_START = { daysAgo: 30, count: 3000, average: 4.1 };
 const BENCHMARK_DAILY = 30;
 const BENCHMARK_DAYS = 30;
 
+const thinBenchmarkDay = (day: number): number => (day % 10 === 9 ? 1 : 0);
+
 const benchmarkId = (index: number): string =>
   `${BENCHMARK_ID_PREFIX}${index + 1}`;
 
@@ -4047,7 +4049,7 @@ function benchmarkHistory(mean: number | null): RatingsHistory {
     points: grownRatingsPoints(
       BENCHMARK_START,
       Array.from({ length: BENCHMARK_DAYS }, (_, day) =>
-        mean === null ? (day % 10 === 9 ? 1 : 0) : BENCHMARK_DAILY,
+        mean === null ? thinBenchmarkDay(day) : BENCHMARK_DAILY,
       ),
       mean ?? BENCHMARK_START.average,
     ),
