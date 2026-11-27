@@ -54,6 +54,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "Store rule problems and keywords no field covers are now found in the listing of every market you track keywords in, not only your home market. A store rule problem in text that several markets share is listed once, and each action opens the metadata page of its market.",
       },
       {
+        kind: "improved",
+        title: "Near the top 10 in every market",
+        text: "The Action Center now spots a keyword sitting just outside the top 10 in any market you track, not only your home market, when that market's listing holds it only in a weak field. The suggestion opens the metadata page of its market, and the five such suggestions an app gets are shared across its markets.",
+      },
+      {
         kind: "fixed",
         title: "A search that lists no apps says so",
         text: "When a store lists no apps at all for a keyword you track, its position now reads No apps instead of more than 200: in the keywords table, on the rankings page with its chart and movers, in the position history, the search results sheet, the discovery list and the keyword breakdown. Pointing at it explains that the store lists no apps for this search. A rank alert and the weekly digest say the same when this happens to a keyword that used to rank. Checks from before this update keep the number they were stored with.",
