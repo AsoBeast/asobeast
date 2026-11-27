@@ -49,6 +49,7 @@ const build = (
 const read = (listings: (typeof ENGLISH)[], complete = true) => ({
   changes: [],
   listings,
+  probes: [],
   complete,
 });
 
