@@ -1,25 +1,28 @@
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import type { Store } from "@asobeast/shared";
 import type { PlacementSummary, PositionSummary } from "./serp-summary";
-import { SerpSummary } from "./SerpSummary";
+import { SerpSummary, SerpSummarySkeleton } from "./SerpSummary";
 
 const TEXT_SEPARATOR = "<!-- -->";
 
 const PLACEMENTS: PlacementSummary = {
   inTitle: 3,
   of: 10,
-  inSubtitle: null,
-  subtitlesKnown: null,
+  inSecond: 0,
+  secondKnown: 0,
 };
 
 const summaryOf = (
   position: PositionSummary,
   placements: PlacementSummary | null = PLACEMENTS,
+  store: Store = "APP_STORE",
 ) =>
   renderToString(
     <SerpSummary
       facts={{ position, placements, ratings: { kind: "none" } }}
       comparedTo="2026-10-30"
+      store={store}
     />,
   );
 
@@ -56,8 +59,8 @@ describe("SerpSummary", () => {
       {
         inTitle: 8,
         of: 10,
-        inSubtitle: 2,
-        subtitlesKnown: 1,
+        inSecond: 2,
+        secondKnown: 1,
       },
     );
 
@@ -77,8 +80,8 @@ describe("SerpSummary", () => {
       {
         inTitle: 8,
         of: 10,
-        inSubtitle: 1,
-        subtitlesKnown: 2,
+        inSecond: 1,
+        secondKnown: 2,
       },
     );
 
@@ -86,9 +89,38 @@ describe("SerpSummary", () => {
     expect(html).not.toContain(TEXT_SEPARATOR);
   });
 
-  it("says Google Play has no subtitle", () => {
-    const html = summaryOf({ kind: "absent" });
+  it("adds the short description count on Google Play once two are known", () => {
+    const html = summaryOf(
+      { kind: "absent" },
+      { inTitle: 8, of: 10, inSecond: 1, secondKnown: 2 },
+      "GOOGLE_PLAY",
+    );
 
-    expect(html).toContain(">Google Play has no subtitle<");
+    expect(html).toContain(">1 of 2 in the short description<");
+    expect(html).toContain(">8 of 10<");
+    expect(html).not.toContain("Google Play has no subtitle");
+    expect(html).not.toContain(TEXT_SEPARATOR);
+  });
+
+  it("keeps the line space on Google Play until two short descriptions are known", () => {
+    const html = summaryOf(
+      { kind: "absent" },
+      { inTitle: 8, of: 10, inSecond: 1, secondKnown: 1 },
+      "GOOGLE_PLAY",
+    );
+
+    expect(html).toContain(
+      'class="invisible basis-full text-caption">0 of 0 in the short description<',
+    );
+    expect(html).not.toContain(">1 of 1 in the short description<");
+  });
+
+  it("reserves the second line in the loading state of each store", () => {
+    expect(
+      renderToString(<SerpSummarySkeleton store="GOOGLE_PLAY" />),
+    ).toContain("0 of 0 in the short description");
+    expect(renderToString(<SerpSummarySkeleton store="APP_STORE" />)).toContain(
+      "0 of 0 in the subtitle",
+    );
   });
 });

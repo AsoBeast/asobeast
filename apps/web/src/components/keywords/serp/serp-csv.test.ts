@@ -36,7 +36,7 @@ const lines = (value: SerpSnapshot) => serpCsv(VIEWER, value).split("\r\n");
 describe("serpCsv", () => {
   it("heads the file with the snapshot columns in order", () => {
     expect(lines(snapshot([]))[0]).toBe(
-      "﻿keyword,capturedOn,position,app,developer,rating,ratings,role,storeAppId,previousPosition,subtitle,keywordIn",
+      "﻿keyword,capturedOn,position,app,developer,rating,ratings,role,storeAppId,previousPosition,subtitle,keywordIn,shortDescription",
     );
   });
 
@@ -48,7 +48,7 @@ describe("serpCsv", () => {
 
   it("repeats the keyword and the capture day and keeps numbers as numbers", () => {
     expect(lines(snapshot([entry()]))[1]).toBe(
-      `focus timer,${capturedOn},1,Deep Work Sessions,Nordlys Labs,4.7,8400,other,555000111,,,Not in the title (subtitle not known)`,
+      `focus timer,${capturedOn},1,Deep Work Sessions,Nordlys Labs,4.7,8400,other,555000111,,,Not in the title (subtitle not known),`,
     );
   });
 
@@ -60,7 +60,7 @@ describe("serpCsv", () => {
         ]),
       )[1],
     ).toBe(
-      `focus timer,${capturedOn},1,Deep Work Sessions,,,,other,555000111,,,Not in the title (subtitle not known)`,
+      `focus timer,${capturedOn},1,Deep Work Sessions,,,,other,555000111,,,Not in the title (subtitle not known),`,
     );
   });
 
@@ -122,12 +122,50 @@ describe("serpCsv keyword placement", () => {
     ];
 
     expect(
-      split.endsWith(",Timer for deep work,Split across title and subtitle"),
+      split.endsWith(",Timer for deep work,Split across title and subtitle,"),
     ).toBe(true);
-    expect(unknown.endsWith(",,Not in the title (subtitle not known)")).toBe(
+    expect(unknown.endsWith(",,Not in the title (subtitle not known),")).toBe(
       true,
     );
-    expect(play.endsWith(",,Not in the title")).toBe(true);
+    expect(
+      play.endsWith(",,Not in the title (short description not known),"),
+    ).toBe(true);
+  });
+
+  const playLine = (over: Partial<SerpEntryItem>) =>
+    serpCsv(
+      { ...VIEWER, store: "GOOGLE_PLAY" },
+      snapshot([entry({ placement: "subtitle", ...over })]),
+    ).split("\r\n")[1];
+
+  it("writes the short description of a Google Play result", () => {
+    expect(
+      playLine({ shortDescription: "Plan your day" }).endsWith(
+        ",,Short description,Plan your day",
+      ),
+    ).toBe(true);
+  });
+
+  it("quotes a short description that holds a comma or a line break", () => {
+    expect(
+      serpCsv(
+        { ...VIEWER, store: "GOOGLE_PLAY" },
+        snapshot([
+          entry({
+            placement: "subtitle",
+            shortDescription: "Plan\nyour day, again",
+          }),
+        ]),
+      ).endsWith(',Short description,"Plan\nyour day, again"'),
+    ).toBe(true);
+  });
+
+  it("guards a short description that starts like a formula", () => {
+    expect(
+      playLine({ shortDescription: "=SUM(1)" }).endsWith(
+        ",Short description,'=SUM(1)",
+      ),
+    ).toBe(true);
   });
 });
 

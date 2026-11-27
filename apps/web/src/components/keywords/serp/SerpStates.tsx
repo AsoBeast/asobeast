@@ -60,6 +60,9 @@ export function SerpSkeleton({ store }: { store: Store }) {
           <Skeleton className="col-start-2 row-start-1 size-10 rounded-lg" />
           <div className="col-start-3 row-start-1 flex flex-col gap-0.5">
             <Skeleton className="h-lh w-3/4" />
+            {store === "GOOGLE_PLAY" ? (
+              <Skeleton className="h-lh w-2/3 text-caption" />
+            ) : null}
             <Skeleton className="h-lh w-1/2 text-caption" />
             <Skeleton className="h-lh w-1/3 text-caption" />
           </div>
