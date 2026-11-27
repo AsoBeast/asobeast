@@ -104,6 +104,37 @@ test("a crowded workspace opens the detail of its own actions", async ({
   ).toHaveText(/^Retire "phrase 2"/);
 });
 
+test("a lint action in another market charts its own store rule problems", async ({
+  page,
+  context,
+}) => {
+  await crowd(context);
+  await page.goto("/actions?action=act-crowd-lint-tr");
+
+  const dialog = page.getByRole("dialog");
+  const chart = dialog.getByRole("region", {
+    name: "Store rule problems over time",
+  });
+  await expect(chart.locator("svg").first()).toBeVisible();
+  await expect(chart.locator(".recharts-yAxis-tick-labels")).not.toContainText(
+    ".",
+  );
+  await expect(
+    dialog.getByRole("region", { name: "Audit score over time" }),
+  ).toHaveCount(0);
+});
+
+test("a lint action in the home market keeps the audit score", async ({
+  page,
+}) => {
+  await page.goto("/actions?action=act-lint");
+
+  const chart = page
+    .getByRole("dialog")
+    .getByRole("region", { name: "Audit score over time" });
+  await expect(chart.locator("svg").first()).toBeVisible();
+});
+
 test("a crowded workspace folds the apps past the fifth and waits for history", async ({
   page,
   context,

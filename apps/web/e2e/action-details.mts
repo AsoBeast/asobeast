@@ -136,18 +136,30 @@ const FALLBACK: Record<ActionTrendMetric, (offset: number) => number | null> = {
   rating: () => 4.2,
   updateAge: (offset) => 60 + (TREND_DAYS - offset),
   conversion: (offset) => 3 + (offset % 3) / 10,
+  lintErrors: (offset) => (offset > 10 ? 2 : 0),
 };
 
-export function trendFor(item: ActionItem): ActionTrend | null {
+const LOWER_IS_BETTER: ReadonlySet<ActionTrendMetric> = new Set([
+  "position",
+  "updateAge",
+  "lintErrors",
+]);
+
+function metricOf(item: ActionItem, home: string): ActionTrendMetric {
+  return item.rule === "metadata.fix_lint" && item.scope.country !== home
+    ? "lintErrors"
+    : TREND_METRIC[item.rule];
+}
+
+export function trendFor(item: ActionItem, home: string): ActionTrend | null {
   if (item.degraded) return null;
-  const metric = TREND_METRIC[item.rule];
+  const metric = metricOf(item, home);
   const valueAt = PATHS[item.id] ?? FALLBACK[metric];
   return {
     metric,
-    direction:
-      metric === "position" || metric === "updateAge"
-        ? "lower_is_better"
-        : "higher_is_better",
+    direction: LOWER_IS_BETTER.has(metric)
+      ? "lower_is_better"
+      : "higher_is_better",
     depth: metric === "position" ? 200 : null,
     points: Array.from({ length: TREND_DAYS + 1 }, (_, index) => {
       const offset = TREND_DAYS - index;
