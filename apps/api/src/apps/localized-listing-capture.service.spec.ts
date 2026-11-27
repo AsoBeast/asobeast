@@ -666,6 +666,23 @@ describe('the suspect of a home listing', () => {
     expect(getApp).not.toHaveBeenCalled();
   });
 
+  it('reports an echo when only the page asked for shows the subtitle the default page leaves out', async () => {
+    const getApp = jest
+      .fn()
+      .mockResolvedValue(
+        normalized({ ...englishDefault, subtitle: 'Podcast player' }),
+      );
+    const { capture } = build({ getApp });
+
+    const captured = await capture.capture(
+      { ...german, defaultLocalization: 'en-GB' },
+      'de',
+      { ...englishDefault, subtitle: null, subtitleUnavailable: false },
+    );
+
+    expect(captured.probes).toEqual([{ localization: 'en-GB', echoed: true }]);
+  });
+
   it('probes a recorded default once', async () => {
     const getApp = jest.fn().mockResolvedValue(normalized(englishDefault));
     const { capture } = build({ getApp });

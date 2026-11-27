@@ -1,5 +1,5 @@
 import { Store } from '@prisma/client';
-import { servesLocalization } from './localization-served';
+import { echoesDefaultPage, servesLocalization } from './localization-served';
 
 const shot = (n: number) =>
   `https://is1-ssl.mzstatic.com/image/thumb/a/b/${n}/shot.jpg/392x696bb.jpg`;
@@ -172,6 +172,43 @@ describe('servesLocalization', () => {
           ),
         },
       }),
+    ).toBe(false);
+  });
+});
+
+describe('echoesDefaultPage', () => {
+  const read = { ...english, subtitleUnavailable: false };
+
+  it('echoes a default page that shows the category where the page asked for shows a subtitle', () => {
+    expect(
+      echoesDefaultPage(
+        Store.APP_STORE,
+        { ...read, subtitle: null },
+        { ...english, subtitle: 'Podcast player' },
+      ),
+    ).toBe(true);
+  });
+
+  it('echoes the same page', () => {
+    expect(echoesDefaultPage(Store.APP_STORE, read, { ...english })).toBe(true);
+  });
+
+  it('never echoes a page whose own subtitle differs from the default subtitle', () => {
+    expect(
+      echoesDefaultPage(Store.APP_STORE, read, {
+        ...english,
+        subtitle: 'Mapa Świata',
+      }),
+    ).toBe(false);
+  });
+
+  it('never echoes a page whose text differs', () => {
+    expect(
+      echoesDefaultPage(
+        Store.APP_STORE,
+        { ...read, subtitle: null },
+        { ...english, subtitle: null, description: 'Odkrywaj świat' },
+      ),
     ).toBe(false);
   });
 });

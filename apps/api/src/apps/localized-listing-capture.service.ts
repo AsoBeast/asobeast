@@ -18,7 +18,11 @@ import { snapshotIcon, toSnapshotData } from './apps.mapper';
 import { toChangeSnapshot } from './change-snapshot';
 import { withKnownSubtitle } from './known-subtitle';
 import { listingIn, NEWEST_FIRST, storedMarket } from './listing';
-import { ComparableListing, servesLocalization } from './localization-served';
+import {
+  ComparableListing,
+  echoesDefaultPage,
+  servesLocalization,
+} from './localization-served';
 import {
   capturedLocalizations,
   homeDefaultProbes,
@@ -121,8 +125,8 @@ export class LocalizedListingCapture {
     if (!previous && normalized.subtitleUnavailable) {
       throw new Error('its product page did not answer');
     }
-    const echoed = !servesLocalization(app.store, fallback, normalized);
-    if (!previous && echoed) {
+    const echoed = echoesDefaultPage(app.store, fallback, normalized);
+    if (!previous && !servesLocalization(app.store, fallback, normalized)) {
       return { changes: [], listing: normalized, echoed };
     }
     const snapshot = await this.store(

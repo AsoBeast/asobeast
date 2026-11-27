@@ -1119,6 +1119,24 @@ describe('Native localizations of a listing (e2e)', () => {
       await expect(defaultOf(appId)).resolves.toBe('en-GB');
     });
 
+    it('keeps english (u.k.) when only the english page shows the subtitle', async () => {
+      registry.listings.set('de:default', {
+        ...ENGLISH_ONLY,
+        subtitle: undefined,
+        subtitleUnavailable: false,
+      });
+      registry.listings.set('de:en-GB', ENGLISH_ONLY);
+      const appId = await importFrom(DE_APP_URL);
+
+      await api.post(`/apps/${appId}/refresh`).expect(200);
+
+      await expect(defaultOf(appId)).resolves.toBe('en-GB');
+      expect((await localizationItems(appId))[0]).toMatchObject({
+        localization: 'en-GB',
+        origin: 'home',
+      });
+    });
+
     it('probes english once per capture', async () => {
       englishOnly('de');
       const appId = await importFrom(DE_APP_URL);

@@ -14,6 +14,7 @@ const shot = (n: number) =>
 export interface Listing {
   title: string;
   subtitle?: string;
+  subtitleUnavailable?: boolean;
   description: string;
   screenshots: string[];
   languages?: string[];
@@ -116,6 +117,7 @@ export class LocalizedRegistry {
           storeAppId,
           title: listing.title,
           subtitle: listing.subtitle,
+          subtitleUnavailable: listing.subtitleUnavailable,
           description: listing.description,
           version: '4.0',
           price: 0,
