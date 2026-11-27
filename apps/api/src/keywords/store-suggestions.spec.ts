@@ -168,6 +168,32 @@ describe('StoreSuggestions.suggest in a spanish market', () => {
   });
 });
 
+describe('StoreSuggestions.suggest for an english listing in germany', () => {
+  it('excludes the home title read in the language it is written in', async () => {
+    const developerApps = jest
+      .fn()
+      .mockResolvedValue([{ storeAppId: '2', title: 'Die Cast Racing' }]);
+    const store = buildStore(
+      { artistId: 1 },
+      { get: jest.fn().mockReturnValue({ developerApps }) },
+      'Die Cast Garage',
+    );
+
+    const suggestions = await lookUp(store, 'developer', {
+      ...requestFor({ market: 'us' }),
+      languages: {
+        home: listingLanguages(Store.APP_STORE, 'de'),
+        listing: ['en'],
+        market: listingLanguages(Store.APP_STORE, 'us'),
+      },
+    });
+
+    const texts = suggestions.map(({ text }) => text);
+    expect(texts).toContain('racing');
+    expect(texts).not.toContain('die cast');
+  });
+});
+
 describe('StoreSuggestions.plan', () => {
   const trackedRows = (sources: string[]) =>
     sources.map((source, index) => ({
