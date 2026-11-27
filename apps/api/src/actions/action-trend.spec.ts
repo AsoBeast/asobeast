@@ -4,9 +4,11 @@ import {
   ACTION_TREND_MAX_DAYS,
   ACTION_TREND_MIN_DAYS,
   dailyPoints,
+  MARKET_TREND_METRIC,
   trailingMeanPoints,
   TREND_DIRECTION,
   TREND_METRIC,
+  trendMetricOf,
   trendWindow,
   updateAgePoints,
 } from './action-trend';
@@ -108,5 +110,23 @@ describe('trend metrics', () => {
     }
     expect(TREND_DIRECTION.position).toBe('lower_is_better');
     expect(TREND_DIRECTION.visibility).toBe('higher_is_better');
+  });
+});
+
+describe('trendMetricOf', () => {
+  it('measures a lint action in another market by its own store rule problems', () => {
+    expect(trendMetricOf('metadata.fix_lint', 'tr', 'us')).toBe('lintErrors');
+    expect(TREND_DIRECTION.lintErrors).toBe('lower_is_better');
+  });
+
+  it('keeps the audit score for a lint action in the home market', () => {
+    expect(trendMetricOf('metadata.fix_lint', 'us', 'us')).toBe('audit');
+  });
+
+  it('keeps the rule metric in any market for a rule without a market metric', () => {
+    for (const rule of ACTION_RULES) {
+      if (MARKET_TREND_METRIC[rule] !== undefined) continue;
+      expect(trendMetricOf(rule, 'tr', 'us')).toBe(TREND_METRIC[rule]);
+    }
   });
 });

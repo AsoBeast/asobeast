@@ -1,4 +1,4 @@
-import { ActionItem, ActionRule } from '@asobeast/shared';
+import { ActionItem, ActionRule, MetadataField } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActionSeriesReader } from './action-series.reader';
 
@@ -47,6 +47,10 @@ const buildPrisma = () => {
     auditScore: { findMany: jest.fn(empty) },
     review: { findMany: jest.fn(empty) },
     appSnapshot: { findMany: jest.fn(empty) },
+    app: {
+      findMany: jest.fn(empty),
+      findFirst: jest.fn().mockResolvedValue({ country: 'us' }),
+    },
   };
 };
 
@@ -56,8 +60,10 @@ const calls = (prisma: ReturnType<typeof buildPrisma>): number =>
     0,
   );
 
-const read = async (subject: ActionItem) => {
-  const prisma = buildPrisma();
+const read = async (
+  subject: ActionItem,
+  prisma: ReturnType<typeof buildPrisma> = buildPrisma(),
+) => {
   const trend = await new ActionSeriesReader(
     prisma as unknown as PrismaService,
   ).read(subject, TODAY);
@@ -217,6 +223,106 @@ describe('ActionSeriesReader', () => {
     );
     expect(trend?.metric).toBe('rating');
     expect(calls(prisma)).toBe(1);
+  });
+});
+
+describe('ActionSeriesReader store rule problems', () => {
+  const lint = (
+    country: string,
+    field: MetadataField | null = 'title',
+  ): ActionItem => ({
+    ...item('metadata.fix_lint', null),
+    scope: { ...item('metadata.fix_lint', null).scope, country },
+    evidence:
+      field === null
+        ? null
+        : {
+            rule: 'metadata.fix_lint',
+            field,
+            chars: 34,
+            limit: 30,
+            issues: [],
+          },
+  });
+
+  it('keeps the home audit score for a lint action in the home market', async () => {
+    const { prisma, trend } = await read(lint('us'));
+
+    expect(trend?.metric).toBe('audit');
+    expect(prisma.auditScore.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.appSnapshot.findMany).not.toHaveBeenCalled();
+  });
+
+  it('counts the problems of the field in the stored listing of the action market', async () => {
+    const prisma = buildPrisma();
+    prisma.appSnapshot.findMany.mockResolvedValueOnce([
+      {
+        capturedAt: new Date('2026-07-28T05:00:00.000Z'),
+        title: 'Bütçe Planlayıcı Para Takibi Pro',
+        subtitle: null,
+        summary: null,
+        description: '',
+      },
+      {
+        capturedAt: new Date('2026-07-29T05:00:00.000Z'),
+        title: 'Bütçe Planlayıcı',
+        subtitle: null,
+        summary: null,
+        description: '',
+      },
+    ] as never);
+
+    const { trend } = await read(lint('tr'), prisma);
+
+    expect(prisma.app.findFirst).toHaveBeenCalledWith({
+      where: { id: 'app_1' },
+      select: { country: true },
+    });
+    expect(prisma.appSnapshot.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          appId: 'app_1',
+          country: 'tr',
+          localization: null,
+          capturedAt: { gte: new Date('2026-06-25T00:00:00.000Z') },
+        },
+      }),
+    );
+    expect(prisma.auditScore.findMany).not.toHaveBeenCalled();
+    expect(trend).toMatchObject({
+      metric: 'lintErrors',
+      direction: 'lower_is_better',
+      depth: null,
+    });
+    expect(trend?.points.slice(-3)).toEqual([
+      { date: '2026-07-28', checked: true, value: 1 },
+      { date: '2026-07-29', checked: true, value: 0 },
+      { date: '2026-07-30', checked: false, value: null },
+    ]);
+  });
+
+  it('has no trend for a market keyword field, whose history is not stored', async () => {
+    const { prisma, trend } = await read(lint('tr', 'keywordField'));
+
+    expect(trend).toBeNull();
+    expect(calls(prisma)).toBe(0);
+  });
+
+  it('has no trend for a market lint action without its evidence', async () => {
+    const { prisma, trend } = await read(lint('tr', null));
+
+    expect(trend).toBeNull();
+    expect(calls(prisma)).toBe(0);
+  });
+
+  it('has no trend for a lint action of an app it cannot read', async () => {
+    const prisma = buildPrisma();
+    prisma.app.findFirst.mockResolvedValueOnce(null);
+
+    const { trend } = await read(lint('tr'), prisma);
+
+    expect(trend).toBeNull();
+    expect(calls(prisma)).toBe(0);
   });
 });
 

@@ -61,6 +61,24 @@ describe('measureOutcome', () => {
     ).toBe('unchanged');
   });
 
+  it('counts one store rule problem fewer as improved', () => {
+    const lint = {
+      metric: 'lintErrors',
+      direction: 'lower_is_better',
+      depth: null,
+    } as const;
+
+    expect(
+      measureOutcome(trend([point(0, 2), point(4, 1)], lint), CLOSED).verdict,
+    ).toBe('improved');
+    expect(
+      measureOutcome(trend([point(0, 1), point(4, 1)], lint), CLOSED).verdict,
+    ).toBe('unchanged');
+    expect(
+      measureOutcome(trend([point(0, 0), point(4, 1)], lint), CLOSED).verdict,
+    ).toBe('worsened');
+  });
+
   it('waits three days after the close before judging', () => {
     const outcome = measureOutcome(trend([point(0, 14), point(2, 3)]), CLOSED);
 
