@@ -46,7 +46,7 @@ export const LATER_RELEASES: readonly Release[] = [
       {
         kind: "new",
         title: "See which words your description repeats",
-        text: "The description on the metadata page now counts its words and lists the words and phrases it repeats most, with the keywords you track marked and a button that shows each one in the text. On the App Store a short note explains why the description does not help you rank, and on Google Play the card says how many of your tracked keywords it holds. The same list appears under the description of a draft.",
+        text: "The description on the metadata page now counts its words and lists the words and phrases it repeats most, with the keywords you track marked and a button that shows each one in the text. On the App Store a short note explains why the description does not help you rank, and on Google Play the card says how many of your tracked keywords it holds. The same list appears under the description of a draft. Common words such as and, with and for are left out in English and in 22 other languages, including Russian, Ukrainian, Korean, Arabic and Japanese. Keyword ideas and review phrases skip them in those languages too.",
       },
       {
         kind: "new",
