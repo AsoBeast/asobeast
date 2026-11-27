@@ -1,4 +1,5 @@
 import { App, AppSetup, AppSnapshot, Store } from '@prisma/client';
+import { omitStar, starCountsOf } from '../store-providers/star-counts.fixture';
 import { NormalizedApp } from '../store-providers/types';
 import {
   defaultSetup,
@@ -23,6 +24,12 @@ const NORMALIZED: NormalizedApp = {
   searchable: true,
 };
 
+const PLAY: NormalizedApp = {
+  ...NORMALIZED,
+  store: Store.GOOGLE_PLAY,
+  storeAppId: 'com.habit.tracker',
+};
+
 describe('toSnapshotData', () => {
   it('stores no market for the home listing', () => {
     expect(toSnapshotData('app_1', NORMALIZED)).toMatchObject({
@@ -35,6 +42,46 @@ describe('toSnapshotData', () => {
       country: 'de',
       title: 'Habit Tracker',
     });
+  });
+
+  it('stores the star counts of a google play listing', () => {
+    expect(
+      toSnapshotData('app_1', {
+        ...PLAY,
+        raw: { histogram: starCountsOf(1000) },
+      }),
+    ).toMatchObject({ ratingHistogram: starCountsOf(1000) });
+  });
+
+  it('stores the star counts of a market listing too', () => {
+    expect(
+      toSnapshotData(
+        'app_1',
+        { ...PLAY, raw: { histogram: starCountsOf(1000) } },
+        'de',
+      ),
+    ).toMatchObject({ country: 'de', ratingHistogram: starCountsOf(1000) });
+  });
+
+  it('stores no star counts for an app store listing', () => {
+    expect(
+      toSnapshotData('app_1', {
+        ...NORMALIZED,
+        raw: { histogram: starCountsOf(1000) },
+      }),
+    ).not.toHaveProperty('ratingHistogram');
+  });
+
+  it('stores no star counts when the payload has none, not even a JSON null', () => {
+    expect(toSnapshotData('app_1', { ...PLAY, raw: {} })).not.toHaveProperty(
+      'ratingHistogram',
+    );
+    expect(
+      toSnapshotData('app_1', {
+        ...PLAY,
+        raw: { histogram: omitStar(starCountsOf(1000), '5') },
+      }),
+    ).not.toHaveProperty('ratingHistogram');
   });
 });
 

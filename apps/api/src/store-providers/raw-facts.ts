@@ -164,26 +164,29 @@ export function storeDeveloperNameOf(raw: unknown): string | null {
   return trimmedString(asRecord(raw)?.developer);
 }
 
-export function ratingHistogram(
-  store: Store,
-  raw: unknown,
-): RatingCounts | null {
-  if (store !== Store.GOOGLE_PLAY) {
-    return null;
-  }
-  const histogram = asRecord(asRecord(raw)?.histogram);
+export function ratingCountsOf(value: unknown): RatingCounts | null {
+  const histogram = asRecord(value);
   if (!histogram) {
     return null;
   }
   const counts = {} as RatingCounts;
   for (const star of RATING_STARS) {
-    const value = countOf(histogram[star]);
-    if (value === null) {
+    const bucket = countOf(histogram[star]);
+    if (bucket === null) {
       return null;
     }
-    counts[star] = value;
+    counts[star] = bucket;
   }
   return counts;
+}
+
+export function ratingHistogram(
+  store: Store,
+  raw: unknown,
+): RatingCounts | null {
+  return store === Store.GOOGLE_PLAY
+    ? ratingCountsOf(asRecord(raw)?.histogram)
+    : null;
 }
 
 export function isPaid(raw: unknown): boolean {
