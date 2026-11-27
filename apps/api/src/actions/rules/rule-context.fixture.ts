@@ -55,6 +55,7 @@ export const contextApp = (
   coverage: [],
   metadataFields: [],
   marketMetadata: [],
+  heldLintFingerprints: new Set(),
   audit: null,
   changeEvents: [],
   visibilityByCountry: new Map(),

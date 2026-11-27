@@ -34,6 +34,12 @@ import {
 } from './action-competitors';
 import { HOME_EVENTS, HOME_LISTING } from '../apps/listing';
 import { TOP_TEN_ROWS } from '../rankings/top-ten';
+import {
+  ActionMarketMetadata,
+  auditMarkets,
+  loadHeldLintFingerprints,
+  metadataMarkets,
+} from './action-market-metadata';
 
 export interface ActionAuditCheck {
   id: string;
@@ -85,29 +91,10 @@ export interface ActionReview {
   replyCheckedAt: Date | null;
 }
 
-export interface ActionMarketMetadata {
-  country: string;
-  coverage: KeywordCoverageRow[];
-  fields: MetadataFieldAudit[];
-}
-
 interface DerivedMetadata {
   coverage: KeywordCoverageRow[];
   fields: MetadataFieldAudit[];
   markets: ActionMarketMetadata[];
-}
-
-export function metadataMarkets(
-  home: string,
-  tracked: readonly TrackedKeywordItem[],
-): string[] {
-  return [
-    ...new Set(
-      tracked
-        .filter((item) => item.active && item.country !== home)
-        .map((item) => item.country),
-    ),
-  ].sort();
 }
 
 export interface ActionContextApp {
@@ -121,6 +108,7 @@ export interface ActionContextApp {
   coverage: KeywordCoverageRow[];
   metadataFields: MetadataFieldAudit[];
   marketMetadata: ActionMarketMetadata[];
+  heldLintFingerprints: ReadonlySet<string>;
   audit: ActionAuditSnapshot | null;
   changeEvents: ActionChangeEvent[];
   visibilityByCountry: Map<string, ActionVisibilityPoint[]>;
@@ -318,7 +306,7 @@ export class ActionContextLoader {
     const from = daysAgo(now, CONTEXT_WINDOW_DAYS);
     const serpFrom = daysAgo(now, CONTEXT_SERP_WINDOW_DAYS);
 
-    const [rankings, changeEvents, reviews, auditScores, snapshots] =
+    const [rankings, changeEvents, reviews, auditScores, snapshots, heldLint] =
       await Promise.all([
         this.prisma.keywordRanking.findMany({
           where: { appId: { in: appIds }, date: { gte: from } },
@@ -379,6 +367,7 @@ export class ActionContextLoader {
           },
           orderBy: { capturedAt: 'desc' },
         }),
+        loadHeldLintFingerprints(this.prisma, appIds),
       ]);
 
     const rankingsByApp = groupBy(rankings, (row) => row.appId);
@@ -444,6 +433,7 @@ export class ActionContextLoader {
             versions: versionsByApp.get(app.id) ?? [],
             competitors: competitorRows,
             homeKeywordIds: homeIds.get(app.id) ?? new Set(),
+            heldLint: heldLint.get(app.id) ?? new Set(),
           },
           serpByKeyword,
           volatility,
@@ -464,39 +454,25 @@ export class ActionContextLoader {
         }),
         this.metadata.audit(app.id, app.country),
       ]);
-      const markets = await Promise.all(
-        metadataMarkets(app.country, tracked).map((country) =>
-          this.marketMetadata(app.id, country),
-        ),
+      const markets = await auditMarkets(
+        metadataMarkets(app.country, tracked),
+        (country) => this.metadata.audit(app.id, country),
+        (country, error) =>
+          this.logger.debug(
+            `no ${country} metadata for app ${app.id} in this action run: ${messageOf(error)}`,
+          ),
       );
       return {
         tracked,
         metadata: {
           coverage: home.coverage,
           fields: home.fields,
-          markets: markets.filter(
-            (market): market is ActionMarketMetadata => market !== null,
-          ),
+          markets,
         },
       };
     } catch (error) {
       this.logger.warn(
         `skipping app ${app.id} in this action run: ${messageOf(error)}`,
-      );
-      return null;
-    }
-  }
-
-  private async marketMetadata(
-    appId: string,
-    country: string,
-  ): Promise<ActionMarketMetadata | null> {
-    try {
-      const audit = await this.metadata.audit(appId, country);
-      return { country, coverage: audit.coverage, fields: audit.fields };
-    } catch (error) {
-      this.logger.debug(
-        `no ${country} metadata for app ${appId} in this action run: ${messageOf(error)}`,
       );
       return null;
     }
@@ -535,6 +511,7 @@ export class ActionContextLoader {
       }>;
       competitors: CompetitorRows;
       homeKeywordIds: ReadonlySet<string>;
+      heldLint: ReadonlySet<string>;
     },
     serpByKeyword: Map<
       string,
@@ -611,6 +588,7 @@ export class ActionContextLoader {
       coverage: metadata.coverage,
       metadataFields: metadata.fields,
       marketMetadata: metadata.markets,
+      heldLintFingerprints: rows.heldLint,
       audit: toAuditSnapshot(rows.audit),
       changeEvents: rows.changes
         .filter((row) => isChangeField(row.field))

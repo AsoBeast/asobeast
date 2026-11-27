@@ -14,6 +14,7 @@ import {
 import { fitsOwnListing } from '../../keywords/keyword-class';
 import type { ActionContext, ActionContextApp } from '../action-context';
 import type { ActionDetector, DetectedAction } from '../action-rule';
+import { ActionMarketMetadata, appListings } from '../action-market-metadata';
 
 export const UNCOVERED_MIN_RELEVANCE = OPPORTUNITY_MIN_RELEVANCE;
 export const UNCOVERED_MIN_VOLUME = 20;
@@ -52,15 +53,9 @@ function qualifyingOpportunity(keyword: TrackedKeywordItem): number | null {
   return keyword.opportunity;
 }
 
-interface MarketListing {
-  country: string;
-  coverage: KeywordCoverageRow[];
-  fields: MetadataFieldAudit[];
-}
-
 function detectInMarket(
   app: ActionContextApp,
-  market: MarketListing,
+  market: ActionMarketMetadata,
 ): DetectedAction[] {
   const coverage = new Map<string, KeywordCoverageRow>(
     market.coverage.map((row) => [row.keywordId, row]),
@@ -119,14 +114,7 @@ function detectInMarket(
 }
 
 function detectForApp(app: ActionContextApp): DetectedAction[] {
-  return [
-    {
-      country: app.country,
-      coverage: app.coverage,
-      fields: app.metadataFields,
-    },
-    ...app.marketMetadata,
-  ].flatMap((market) => detectInMarket(app, market));
+  return appListings(app).flatMap((market) => detectInMarket(app, market));
 }
 
 export function detectKeywordAddUncovered(

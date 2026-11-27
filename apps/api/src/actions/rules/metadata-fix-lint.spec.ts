@@ -217,9 +217,19 @@ describe('metadata.fix_lint in market listings', () => {
       chars: value.length,
       issues: [REPEAT],
     });
+  const lintFingerprint = (country: string, discriminator = 'subtitle') =>
+    actionFingerprint({
+      rule: 'metadata.fix_lint',
+      appId: 'app_1',
+      store: 'APP_STORE',
+      country,
+      keywordId: null,
+      discriminator,
+    });
   const withMarkets = (
     home: MetadataFieldAudit[],
     markets: Array<[string, MetadataFieldAudit[]]>,
+    held: readonly string[] = [],
   ) =>
     app(home, {
       marketMetadata: markets.map(([country, fields]) => ({
@@ -227,7 +237,18 @@ describe('metadata.fix_lint in market listings', () => {
         coverage: [],
         fields,
       })),
+      heldLintFingerprints: new Set(
+        held.map((country) => lintFingerprint(country)),
+      ),
     });
+  const shared = subtitle('Friends on your home screen');
+  const reportedIn = (
+    markets: Array<[string, MetadataFieldAudit[]]>,
+    held: readonly string[] = [],
+  ) =>
+    detect([withMarkets([], markets, held)]).map(
+      (detection) => detection.country,
+    );
 
   it('opens an action in a market whose own listing breaks a rule', () => {
     const detections = detect([
@@ -242,7 +263,6 @@ describe('metadata.fix_lint in market listings', () => {
   });
 
   it('reports a problem shared with the home listing once, in the home market', () => {
-    const shared = subtitle('Friends on your home screen');
     const detections = detect([
       withMarkets(
         [shared],
@@ -257,18 +277,55 @@ describe('metadata.fix_lint in market listings', () => {
   });
 
   it('reports a shared market problem in the first market by country', () => {
-    const shared = subtitle('Amis sur ton écran');
-    const detections = detect([
-      withMarkets(
-        [],
+    expect(
+      reportedIn([
+        ['au', [shared]],
+        ['gb', [shared]],
+      ]),
+    ).toEqual(['au']);
+  });
+
+  it('keeps a shared problem in the market that already holds its action', () => {
+    expect(
+      reportedIn(
         [
-          ['be', [shared]],
-          ['fr', [shared]],
+          ['ae', [shared]],
+          ['au', [shared]],
+          ['gb', [shared]],
         ],
+        ['au'],
       ),
+    ).toEqual(['au']);
+  });
+
+  it('keeps a home problem in the market that already holds its action', () => {
+    const detections = detect([
+      withMarkets([shared], [['gb', [shared]]], ['gb']),
     ]);
 
-    expect(detections.map((detection) => detection.country)).toEqual(['be']);
+    expect(detections.map((detection) => detection.country)).toEqual(['gb']);
+  });
+
+  it('moves a shared problem to the next market once its holder stops showing it', () => {
+    expect(reportedIn([['gb', [shared]]], ['au'])).toEqual(['gb']);
+  });
+
+  it('ignores a held action of another field', () => {
+    const listing = withMarkets(
+      [],
+      [
+        ['au', [shared]],
+        ['gb', [shared]],
+      ],
+    );
+    const detections = detect([
+      {
+        ...listing,
+        heldLintFingerprints: new Set([lintFingerprint('gb', 'title')]),
+      },
+    ]);
+
+    expect(detections.map((detection) => detection.country)).toEqual(['au']);
   });
 
   it('keeps one action per market when the field text differs', () => {

@@ -6,6 +6,7 @@ import {
 } from '@asobeast/shared';
 import { OPPORTUNITY_HIGH } from '../../scoring/opportunity';
 import { ActionContext, ActionContextApp } from '../action-context';
+import { ActionMarketMetadata } from '../action-market-metadata';
 import {
   detectKeywordAddUncovered,
   keywordAddUncoveredDetector,
@@ -286,8 +287,8 @@ describe('keyword.add_uncovered', () => {
 
   describe('market listings', () => {
     const german = (
-      overrides: Partial<ActionContextApp['marketMetadata'][number]> = {},
-    ) => ({
+      overrides: Partial<ActionMarketMetadata> = {},
+    ): ActionMarketMetadata => ({
       country: 'de',
       coverage: [
         coverage(
