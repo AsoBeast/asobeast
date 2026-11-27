@@ -2,6 +2,7 @@ import { Store } from '@prisma/client';
 import { ListingTexts, LocalizedTexts } from '../apps/listing-texts';
 import {
   changeCounts,
+  draftedListing,
   draftMarkets,
   PreviewableKeyword,
   previewKeywords,
@@ -103,6 +104,23 @@ describe('withDraft on the App Store', () => {
 
     expect(draft.listings.get('pl')?.title).toBe('Plan lekcji');
     expect(draft.localized.get('pl')).toBeUndefined();
+  });
+
+  it('drafts the storefront primary of a native home app over the default listing', () => {
+    const polishApp = { ...appStore, country: 'pl', defaultLocalization: 'pl' };
+    const live = sources([
+      ['pl', texts({ title: 'Dzienniczek Ucznia', subtitle: 'Oceny' })],
+    ]);
+    const target = { store: Store.APP_STORE, localization: 'en-GB' } as const;
+
+    const draft = withDraft(live, polishApp, target, { keywordField: 'diary' });
+
+    expect(draftedListing(polishApp, draft, target, 'pl')).toMatchObject({
+      title: 'Dzienniczek Ucznia',
+      subtitle: 'Oceny',
+    });
+    expect(draft.keywordFields.get('en-GB')).toEqual(['diary']);
+    expect(draft.listings.get('pl')?.title).toBe('Dzienniczek Ucznia');
   });
 
   it('writes an additional localization into the localized texts of a market', () => {

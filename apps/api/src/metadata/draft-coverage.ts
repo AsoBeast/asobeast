@@ -14,6 +14,7 @@ import {
   parseKeywordField,
   targetSlotRole,
 } from '@asobeast/shared';
+import { storedLocalization } from '../apps/listing';
 import { ListingTexts, LocalizedTexts } from '../apps/listing-texts';
 import { readsKeywordField } from '../keywords/localization-markets';
 import {
@@ -74,11 +75,12 @@ const withLocalization = (
   captured: readonly LocalizedTexts[],
   localization: AppStoreLocalization,
   draft: ListingDraftTexts,
+  base: ListingTexts,
 ): LocalizedTexts[] => {
   const own = captured.find((entry) => entry.localization === localization);
   const drafted = {
     localization,
-    texts: mergeTexts(own?.texts ?? EMPTY_TEXTS, draft),
+    texts: mergeTexts(own?.texts ?? base, draft),
   };
   return own
     ? captured.map((entry) => (entry === own ? drafted : entry))
@@ -104,6 +106,9 @@ function withAppStoreDraft(
           sources.localized.get(country) ?? [],
           localization,
           draft,
+          storedLocalization(app, country, localization) === null
+            ? listing
+            : EMPTY_TEXTS,
         ),
       );
     }
