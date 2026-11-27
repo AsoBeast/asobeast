@@ -1,4 +1,4 @@
-import type { RatingsPoint } from "@asobeast/shared";
+import { RATING_STARS, type RatingsPoint, type Store } from "@asobeast/shared";
 import { dayBefore, utcDayNumber } from "@/lib/utc-day";
 
 export const NEW_RATINGS_MIN_ADDED = 5;
@@ -6,6 +6,7 @@ export const NEW_RATINGS_MAX_ERROR = 0.05;
 export const NEW_RATINGS_WINDOW_DAYS = 7;
 
 const AVERAGE_ROUNDING = 5e-6;
+const EXACT_COUNTS_ROUNDING = 0;
 const LOWEST_STARS = 1;
 const HIGHEST_STARS = 5;
 
@@ -99,14 +100,43 @@ function seriesOf(reads: readonly Read[]): NewRatingsAveragePoint[] {
   });
 }
 
-export function newRatingsAverage(
-  points: readonly RatingsPoint[],
-): NewRatingsAverage | null {
-  return pooledAverage(impliedReads(points));
+function starReads(points: readonly RatingsPoint[]): Read[] {
+  return points.flatMap(({ date, starCounts }) => {
+    if (!starCounts) return [];
+    let count = 0;
+    let sum = 0;
+    for (const star of RATING_STARS) {
+      count += starCounts[star];
+      sum += Number(star) * starCounts[star];
+    }
+    return [{ date, count, sum, rounding: EXACT_COUNTS_ROUNDING }];
+  });
 }
 
-export function newRatingsAverageSeries(
+const readsOf = (store: Store, points: readonly RatingsPoint[]): Read[] =>
+  store === "GOOGLE_PLAY" ? starReads(points) : impliedReads(points);
+
+export function newRatingsAverageFor(
+  store: Store,
+  points: readonly RatingsPoint[],
+): NewRatingsAverage | null {
+  return pooledAverage(readsOf(store, points));
+}
+
+export function newRatingsAverageSeriesFor(
+  store: Store,
   points: readonly RatingsPoint[],
 ): NewRatingsAveragePoint[] {
-  return seriesOf(impliedReads(points));
+  return seriesOf(readsOf(store, points));
 }
+
+export const newRatingsAverage = (
+  points: readonly RatingsPoint[],
+): NewRatingsAverage | null => newRatingsAverageFor("APP_STORE", points);
+
+export const newRatingsAverageSeries = (
+  points: readonly RatingsPoint[],
+): NewRatingsAveragePoint[] => newRatingsAverageSeriesFor("APP_STORE", points);
+
+export const hasStarCountReads = (points: readonly RatingsPoint[]): boolean =>
+  starReads(points).length > 1;
