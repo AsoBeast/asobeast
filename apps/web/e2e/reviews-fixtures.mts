@@ -13,6 +13,8 @@ export const RATINGS_HISTORY_COOKIE = "e2e_ratings";
 
 export const HISTOGRAM_FAILING_COOKIE = "e2e_histogram_failing";
 
+export const RIVALS_FAILING_COOKIE = "e2e_rivals_failing";
+
 const SHORT_RATINGS_HISTORY: RatingsHistory = {
   points: [
     { date: utcDaysAgo(1), ratingAvg: 4.4, ratingCount: 180 },

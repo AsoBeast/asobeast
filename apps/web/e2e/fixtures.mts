@@ -35,6 +35,7 @@ import type {
   ChangeImpactWindowDays,
   ChangeTimeline,
   CompetitorItem,
+  Store,
   HealthStatus,
   StoreHealthReport,
   StoreSearchResult,
@@ -4017,6 +4018,180 @@ DATASETS[APP_NEW_RATINGS_ID] = {
   ),
   ratingsHistory: GROWING_RATINGS_HISTORY,
 };
+
+export const BENCHMARK_ID_PREFIX = "bench-";
+
+export const BENCHMARK_MEANS: readonly (number | null)[] = [
+  4.2,
+  4.4,
+  4.6,
+  null,
+  null,
+  4.3,
+  4.5,
+  4.1,
+  4.8,
+  4.0,
+  4.9,
+];
+
+const BENCHMARK_START = { daysAgo: 30, count: 3000, average: 4.1 };
+const BENCHMARK_DAILY = 30;
+const BENCHMARK_DAYS = 30;
+
+const thinBenchmarkDay = (day: number): number => (day % 10 === 9 ? 1 : 0);
+
+const benchmarkId = (index: number): string =>
+  `${BENCHMARK_ID_PREFIX}${index + 1}`;
+
+function benchmarkHistory(mean: number | null): RatingsHistory {
+  return {
+    points: grownRatingsPoints(
+      BENCHMARK_START,
+      Array.from({ length: BENCHMARK_DAYS }, (_, day) =>
+        mean === null ? thinBenchmarkDay(day) : BENCHMARK_DAILY,
+      ),
+      mean ?? BENCHMARK_START.average,
+    ),
+  };
+}
+
+function benchmarkRival(
+  id: string,
+  name: string,
+  store: Store,
+  history: RatingsHistory,
+): CompetitorItem {
+  const latest = history.points.at(-1);
+  const base = ratedDataset(
+    id,
+    name,
+    latest?.ratingAvg ?? 0,
+    latest?.ratingCount ?? 0,
+  );
+  DATASETS[id] = {
+    ...base,
+    detail: { ...base.detail, store, isCompetitor: true },
+    ratingsHistory: history,
+  };
+  return { id, store, name, iconUrl: null, latestSnapshot: null };
+}
+
+const BENCHMARK_RIVALS = BENCHMARK_MEANS.map((mean, index) =>
+  benchmarkRival(
+    benchmarkId(index),
+    `Bench Rival ${index + 1}`,
+    "APP_STORE",
+    benchmarkHistory(mean),
+  ),
+);
+
+function benchmarkOwner(
+  id: string,
+  name: string,
+  store: Store,
+  competitors: readonly CompetitorItem[],
+  history: RatingsHistory,
+): void {
+  const latest = history.points.at(-1);
+  const base = ratedDataset(
+    id,
+    name,
+    latest?.ratingAvg ?? 0,
+    latest?.ratingCount ?? 0,
+  );
+  DATASETS[id] = {
+    ...base,
+    detail: { ...base.detail, store, competitors: [...competitors] },
+    competitors: [...competitors],
+    ratingsHistory: history,
+  };
+}
+
+const rivalsAt = (indexes: readonly number[]) =>
+  indexes.map((index) => BENCHMARK_RIVALS[index]);
+
+export const APP_BENCHMARK_ID = "app-benchmark";
+export const APP_BENCHMARK_THIN_ID = "app-benchmark-thin";
+export const APP_BENCHMARK_TWO_ID = "app-benchmark-two";
+export const APP_BENCHMARK_CROWDED_ID = "app-benchmark-crowded";
+export const APP_BENCHMARK_PLAY_ID = "app-benchmark-play";
+
+benchmarkOwner(
+  APP_BENCHMARK_ID,
+  "Benchmark Lab",
+  "APP_STORE",
+  rivalsAt([0, 1, 2, 3]),
+  GROWING_RATINGS_HISTORY,
+);
+benchmarkOwner(
+  APP_BENCHMARK_THIN_ID,
+  "Thin Benchmark Lab",
+  "APP_STORE",
+  rivalsAt([0, 1, 3, 4]),
+  GROWING_RATINGS_HISTORY,
+);
+benchmarkOwner(
+  APP_BENCHMARK_TWO_ID,
+  "Two Rivals Lab",
+  "APP_STORE",
+  rivalsAt([0, 1]),
+  GROWING_RATINGS_HISTORY,
+);
+benchmarkOwner(
+  APP_BENCHMARK_CROWDED_ID,
+  "Crowded Benchmark Lab",
+  "APP_STORE",
+  BENCHMARK_RIVALS,
+  GROWING_RATINGS_HISTORY,
+);
+
+const middleOf = (values: readonly number[]): number => {
+  const sorted = [...values].sort((left, right) => left - right);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1
+    ? sorted[middle]
+    : (sorted[middle - 1] + sorted[middle]) / 2;
+};
+
+export const BENCHMARK_FIRST_FOUR_MEDIAN = middleOf(
+  BENCHMARK_MEANS.slice(0, 4).flatMap((mean) => (mean === null ? [] : [mean])),
+);
+
+const PLAY_BENCHMARK_MIXES = [
+  splitStars(30, [2, 1, 2, 10, 15]),
+  splitStars(30, [1, 0, 2, 7, 20]),
+  splitStars(30, [0, 0, 1, 4, 25]),
+] as const;
+
+const PLAY_BENCHMARK_RIVALS = PLAY_BENCHMARK_MIXES.map((mix, index) =>
+  benchmarkRival(
+    `${BENCHMARK_ID_PREFIX}play-${index + 1}`,
+    `Play Bench Rival ${index + 1}`,
+    "GOOGLE_PLAY",
+    {
+      points: grownStarCounts(
+        {
+          daysAgo: BENCHMARK_DAYS,
+          counts: splitStars(3000, [2, 3, 5, 20, 70]),
+        },
+        Array.from({ length: BENCHMARK_DAYS }, () => mix),
+      ),
+    },
+  ),
+);
+
+export const PLAY_BENCHMARK_MEDIAN = middleOf(
+  PLAY_BENCHMARK_MIXES.map(starMean),
+);
+
+benchmarkOwner(
+  APP_BENCHMARK_PLAY_ID,
+  "Play Benchmark Lab",
+  "GOOGLE_PLAY",
+  PLAY_BENCHMARK_RIVALS,
+  GROWING_PLAY_HISTORY,
+);
 
 export const APP_DRAFT_LOCALES_ID = "app-draft-locales";
 export const APP_PL_NATIVE_ID = "app-pl-native";

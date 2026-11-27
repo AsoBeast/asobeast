@@ -18,6 +18,7 @@ import { getQueryClient } from "@/lib/get-query-client";
 import { presetToRange, type RatingsRange } from "@/lib/ranges";
 import {
   aiStatusOptions,
+  competitorsOptions,
   ratingsHistogramOptions,
   replyGuidelinesOptions,
   ratingsHistoryOptions,
@@ -93,6 +94,7 @@ export default async function ReviewsPage({
       ),
     ),
     queryClient.prefetchQuery(ratingsHistogramOptions(id)),
+    queryClient.prefetchQuery(competitorsOptions(id)),
     queryClient.prefetchQuery(aiStatusOptions),
   ]);
   void queryClient.prefetchQuery(replyGuidelinesOptions(id));

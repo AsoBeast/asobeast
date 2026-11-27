@@ -33,6 +33,7 @@ import {
   type RatingsView,
 } from "@/lib/search-params";
 import { NewRatingsChart } from "./NewRatingsChart";
+import { CompetitorBenchmark } from "./CompetitorBenchmark";
 import { NewRatingsSentence } from "./NewRatingsSentence";
 import {
   latestRatingCount,
@@ -158,6 +159,9 @@ export function RatingsPanel({ id }: { id: string }) {
           )}
           {store ? (
             <NewRatingsSentence id={id} store={store} range={shownRange} />
+          ) : null}
+          {store && !app?.isCompetitor ? (
+            <CompetitorBenchmark id={id} store={store} range={shownRange} />
           ) : null}
         </Suspense>
       </CardContent>
