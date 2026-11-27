@@ -53,6 +53,27 @@ describe("trendChartData", () => {
     ).toEqual(["auto", "auto"]);
   });
 
+  it("counts store rule problems from zero with room for one", () => {
+    const lint = { metric: "lintErrors", depth: null } as const;
+    const points = (values: number[]) =>
+      values.map((value, index) => ({
+        date: `2026-07-2${index}`,
+        checked: true,
+        value,
+      }));
+
+    expect(
+      trendChartData(trend({ ...lint, points: points([3, 2, 0]) }), done),
+    ).toMatchObject({
+      metricLabel: "Store rule problems",
+      reversed: false,
+      domain: [0, 3],
+    });
+    expect(
+      trendChartData(trend({ ...lint, points: points([0, 0]) }), done).domain,
+    ).toEqual([0, 1]);
+  });
+
   it("marks the opening and the close inside the range", () => {
     expect(trendChartData(trend(), done).markers).toEqual([
       { date: "2026-07-20", label: "Opened" },
