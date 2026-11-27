@@ -29,8 +29,8 @@ export const formatShare = (share: number): string =>
 function RowText({ text }: { text: string }) {
   const { tracked } = use(DensityMarksContext);
   return (
-    <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-      <bdi className="whitespace-normal break-words">{text}</bdi>
+    <span className="flex min-w-28 flex-wrap items-center gap-x-2 gap-y-1">
+      <bdi className="whitespace-normal wrap-anywhere">{text}</bdi>
       {isTrackedRow(text, tracked) ? (
         <Badge variant="secondary">Tracked</Badge>
       ) : null}
