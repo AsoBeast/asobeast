@@ -20,11 +20,13 @@ import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import {
   ENGLISH,
+  ENGLISH_ONLY,
   FRENCH,
   GERMAN,
   LocalizedRegistry,
   PL_APP_URL,
   POLISH,
+  POLISH_ONLY,
   US_APP_URL,
 } from './helpers/localized-store';
 import { ownerAgent, useCookies } from './helpers/session';
@@ -633,6 +635,67 @@ describe('Native localizations of a listing (e2e)', () => {
           { localization: 'fr', origin: 'manual' },
         ]);
       });
+    });
+  });
+
+  describe('the language of the default listing', () => {
+    const polishOnly = () => {
+      for (const key of ['pl:default', 'pl:pl', 'pl:en-GB']) {
+        registry.listings.set(key, POLISH_ONLY);
+      }
+    };
+
+    const defaultOf = async (appId: string) =>
+      (
+        await prisma.app.findUniqueOrThrow({
+          where: { id: appId },
+          select: { defaultLocalization: true },
+        })
+      ).defaultLocalization;
+
+    it('records polish as the default of a polish only app', async () => {
+      polishOnly();
+
+      const appId = await importFrom(PL_APP_URL);
+
+      await expect(defaultOf(appId)).resolves.toBe('pl');
+    });
+
+    it('keeps an english only app on the storefront default', async () => {
+      for (const key of ['pl:default', 'pl:pl', 'pl:en-GB']) {
+        registry.listings.set(key, ENGLISH_ONLY);
+      }
+
+      const appId = await importFrom(PL_APP_URL);
+
+      await expect(defaultOf(appId)).resolves.toBeNull();
+    });
+
+    it('clears the default once the store serves a distinct polish page', async () => {
+      polishOnly();
+      const appId = await importFrom(PL_APP_URL);
+      registry.listings.set('pl:default', ENGLISH_ONLY);
+      registry.listings.set('pl:en-GB', ENGLISH_ONLY);
+
+      await api.post(`/apps/${appId}/refresh`).expect(200);
+
+      await expect(defaultOf(appId)).resolves.toBeNull();
+      await expect(snapshotsOf(appId)).resolves.toContainEqual({
+        country: null,
+        localization: 'pl',
+        title: POLISH_ONLY.title,
+      });
+    });
+
+    it('leaves the default alone when the polish lookup fails', async () => {
+      polishOnly();
+      const appId = await importFrom(PL_APP_URL);
+      await api.post(`/apps/${appId}/refresh`).expect(200);
+      registry.failing = 'pl';
+
+      await api.post(`/apps/${appId}/refresh`).expect(200);
+
+      await expect(defaultOf(appId)).resolves.toBe('pl');
     });
   });
 });

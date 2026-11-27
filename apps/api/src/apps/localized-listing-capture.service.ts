@@ -20,6 +20,7 @@ import { withKnownSubtitle } from './known-subtitle';
 import { listingIn, NEWEST_FIRST, storedMarket } from './listing';
 import { ComparableListing, servesLocalization } from './localization-served';
 import { capturedLocalizations } from './market-localizations';
+import { LocalizationProbe } from './native-default';
 import { shippedLocalizations } from './shipped-localizations';
 import { diffSnapshots, withRecordedChanges } from './snapshot-diff';
 
@@ -31,12 +32,14 @@ export type ListedApp = Pick<
 export interface LocalizedCapture {
   changes: SnapshotChange[];
   listings: ComparableListing[];
+  probes: LocalizationProbe[];
   complete: boolean;
 }
 
 interface LocalizationRead {
   changes: SnapshotChange[];
   listing: ComparableListing;
+  echoed: boolean;
 }
 
 interface LocalizedListing {
@@ -68,6 +71,7 @@ export class LocalizedListingCapture {
     const captured: LocalizedCapture = {
       changes: [],
       listings: [],
+      probes: [],
       complete: true,
     };
     if (app.store !== Store.APP_STORE) return captured;
@@ -80,6 +84,7 @@ export class LocalizedListingCapture {
         const read = await this.captureOne(app, market, localization, fallback);
         captured.changes.push(...read.changes);
         captured.listings.push(read.listing);
+        captured.probes.push({ localization, echoed: read.echoed });
       } catch (error: unknown) {
         captured.complete = false;
         this.logger.warn(
@@ -106,8 +111,9 @@ export class LocalizedListingCapture {
     if (!previous && normalized.subtitleUnavailable) {
       throw new Error('its product page did not answer');
     }
-    if (!previous && !servesLocalization(app.store, fallback, normalized)) {
-      return { changes: [], listing: normalized };
+    const echoed = !servesLocalization(app.store, fallback, normalized);
+    if (!previous && echoed) {
+      return { changes: [], listing: normalized, echoed };
     }
     const snapshot = await this.store(
       app,
@@ -133,6 +139,7 @@ export class LocalizedListingCapture {
         recorded,
       ).map((change) => ({ ...change, localization })),
       listing: normalized,
+      echoed,
     };
   }
 

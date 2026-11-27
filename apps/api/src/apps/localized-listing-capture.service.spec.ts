@@ -339,6 +339,67 @@ describe('LocalizedListingCapture', () => {
     }
   });
 
+  describe('reporting the probes', () => {
+    it('reports whether each probed localization echoed the default', async () => {
+      const echo = build({
+        getApp: jest.fn().mockResolvedValue(normalized(ENGLISH)),
+      });
+      const served = build({
+        getApp: jest.fn().mockResolvedValue(normalized(POLISH)),
+      });
+
+      await expect(
+        echo.capture.capture(APP, 'pl', fallback),
+      ).resolves.toMatchObject({
+        probes: [{ localization: 'pl', echoed: true }],
+      });
+      await expect(
+        served.capture.capture(APP, 'pl', fallback),
+      ).resolves.toMatchObject({
+        probes: [{ localization: 'pl', echoed: false }],
+      });
+    });
+
+    it('reports an echo even when a localized snapshot was stored before', async () => {
+      const { capture, create } = build({
+        getApp: jest.fn().mockResolvedValue(normalized(ENGLISH)),
+        previous: row(POLISH, 'pl', 'snap_pl_old'),
+        created: row(ENGLISH, 'pl'),
+      });
+
+      await expect(capture.capture(APP, 'pl', fallback)).resolves.toMatchObject(
+        {
+          probes: [{ localization: 'pl', echoed: true }],
+        },
+      );
+      expect(create).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports no probe for a failed lookup', async () => {
+      const warn = jest
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation(() => undefined);
+      const { capture } = build({
+        getApp: jest
+          .fn()
+          .mockRejectedValue(
+            new StoreRequestError(Store.APP_STORE, 'getApp', 'HTTP 429'),
+          ),
+      });
+
+      try {
+        await expect(
+          capture.capture(APP, 'pl', fallback),
+        ).resolves.toMatchObject({
+          probes: [],
+          complete: false,
+        });
+      } finally {
+        warn.mockRestore();
+      }
+    });
+  });
+
   it('asks for every native localization of a storefront in order', async () => {
     const getApp = jest.fn().mockResolvedValue(normalized(ENGLISH));
     const { capture } = build({ getApp });

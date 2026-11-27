@@ -1,4 +1,9 @@
-import { textLanguage, textLanguages } from './text-language';
+import {
+  knowsLanguage,
+  languageEvidence,
+  textLanguage,
+  textLanguages,
+} from './text-language';
 
 describe('textLanguage', () => {
   it.each([
@@ -87,5 +92,42 @@ describe('textLanguages', () => {
     ]) {
       expect(textLanguages(text)).toEqual([textLanguage(text)]);
     }
+  });
+});
+
+describe('languageEvidence', () => {
+  it('counts the tokens and the function word hits of every language', () => {
+    const evidence = languageEvidence(
+      'The app is a timer for the gym and it works with your watch when you train at home or in the park',
+    );
+
+    expect(evidence.tokens).toBe(23);
+    expect(evidence.script).toBeNull();
+    expect(evidence.hits.en).toBe(14);
+    expect(evidence.hits.pl).toBe(0);
+  });
+
+  it('names the script of a text written in one', () => {
+    expect(languageEvidence('앱이 시작되지 않습니다').script).toBe('ko');
+    expect(languageEvidence('Програма не працює після оновлення').script).toBe(
+      'uk',
+    );
+  });
+
+  it('answers nothing for a text without letters', () => {
+    const evidence = languageEvidence('2024 1.0');
+
+    expect(evidence.tokens).toBe(3);
+    expect(evidence.script).toBeNull();
+    expect(Object.values(evidence.hits).every((hits) => hits === 0)).toBe(true);
+  });
+
+  it('knows the languages it can name', () => {
+    expect(['pl', 'en', 'ko'].map(knowsLanguage)).toEqual([true, true, true]);
+    expect(['hu', 'sk', 'vi'].map(knowsLanguage)).toEqual([
+      false,
+      false,
+      false,
+    ]);
   });
 });

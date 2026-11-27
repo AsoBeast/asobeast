@@ -31,6 +31,15 @@ const SCRIPTS: readonly (readonly [string, RegExp])[] = [
   ['hi', /\p{Script=Devanagari}/u],
 ];
 
+const SCRIPT_LANGUAGES: ReadonlySet<string> = new Set([
+  'ko',
+  'ja',
+  'zh',
+  'ru',
+  'uk',
+  ...SCRIPTS.map(([language]) => language),
+]);
+
 function scriptLanguage(text: string, letters: string[]): string | null {
   const share = (pattern: RegExp) =>
     letters.filter((letter) => pattern.test(letter)).length / letters.length;
@@ -91,4 +100,23 @@ export function textLanguages(text: string): string[] {
   if (letters.length === 0) return [];
   const script = scriptLanguage(text, letters);
   return script ? [script] : bestWordMatch(text).languages;
+}
+
+export interface LanguageEvidence {
+  tokens: number;
+  script: string | null;
+  hits: Readonly<Record<string, number>>;
+}
+
+export const knowsLanguage = (language: string): boolean =>
+  Object.hasOwn(LATIN_WORDS, language) || SCRIPT_LANGUAGES.has(language);
+
+export function languageEvidence(text: string): LanguageEvidence {
+  const tokens = tokenize(text);
+  const letters = lettersOf(text);
+  return {
+    tokens: tokens.length,
+    script: letters.length === 0 ? null : scriptLanguage(text, letters),
+    hits: hitsOf(tokens),
+  };
 }
