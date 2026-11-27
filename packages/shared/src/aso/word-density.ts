@@ -90,8 +90,11 @@ export function countWords(text: string): number {
 const tokensOf = (segment: string, language: string | null): DensityToken[] =>
   runsOf(segment).flatMap((run) =>
     SPACELESS_CHARACTER.test(run)
-      ? segmentWords(run, language).map((text) => ({ text, spaceless: true }))
-      : tokenize(run).map((text) => ({ text, spaceless: false })),
+      ? segmentWords(run, language).map((text): DensityToken => ({
+          text,
+          spaceless: true,
+        }))
+      : tokenize(run).map((text): DensityToken => ({ text, spaceless: false })),
   );
 
 const densitySegments = (
