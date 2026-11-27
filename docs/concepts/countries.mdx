@@ -173,7 +173,7 @@ The keywords page never edits a field. Its **What {market} search reads** card r
 
 You can tick only markets of your app whose storefront reads the localization. A market of your app is your home storefront and every storefront where you track at least one keyword.
 
-The field you saved before keyword fields were kept per localization is the field of your home storefront's default localization, English (U.S.) for an app whose home storefront is the United States. If your home storefront defaults to English and you had pasted the field of its native localization, such as Polish in Poland, save it again under that localization and empty the default one. See [Edit the iOS keyword field](/guides/metadata-workbench#edit-the-ios-keyword-field).
+The field you saved before keyword fields were kept per localization is the field of your home storefront's default localization, English (U.S.) for an app whose home storefront is the United States. An app whose home listing is written in the native language of a storefront that defaults to English, such as a Polish app in Poland, gets that localization as its home localization on its next refresh, see [When your home listing is written in the native language](#when-your-home-listing-is-written-in-the-native-language). See [Edit the iOS keyword field](/guides/metadata-workbench#edit-the-ios-keyword-field).
 
 ### Which localizations does an app ship?
 
@@ -181,7 +181,7 @@ An app ships a localization when it has its own text in App Store Connect. AsoBe
 
 | Origin | Which localization | How it got on the list |
 | --- | --- | --- |
-| Home | The default localization of your home storefront | It is always shipped, it is never stored and it cannot be removed |
+| Home | The localization your home listing is written in: your home storefront's default, or one of its other languages when AsoBeast proved the listing is written in it | It is always shipped, it is never stored as a row and it cannot be removed |
 | Manual | Any of the 50 localizations | You added it, or you saved a non-empty keyword field for it |
 | Detected | A localization the store served | AsoBeast captured the native localization of a listing, the listing of a market proved the market's default localization, or **Find localizations** found the store serving it |
 
@@ -194,6 +194,16 @@ AsoBeast also asks the store on its own. The lookups queue after the first captu
 The default localization of a market needs no lookup. Every capture of a market's listing compares it with your home listing and with every additional localization read in that market at the same time. When it differs from all of them, the store is serving the market's own language, and that localization is added as detected. Germany tracked with a German listing adds German after its next capture, so by the next daily run at the latest, or at once when you press **Refresh** on that market. A market whose listing repeats your home text adds nothing, because the store is not serving its language; add it by hand if you ship it with the same words.
 
 AsoBeast also records a native localization when it first captures one, which is how English storefronts such as Poland or India add their native languages without a click. See [What about storefronts that default to English?](#what-about-storefronts-that-default-to-english)
+
+#### When your home listing is written in the native language
+
+In a storefront that defaults to English but also reads a native language, such as Poland, an app that ships only the native language shows the same native page whatever language is asked for. After each capture of the home listing AsoBeast checks three things: the native page the store answered is the same as the default page, the description reads as that language, and the languages the app declares to Apple do not leave it out. When all three hold, the native localization becomes the home localization. The keyword field editor names it, the metadata audit reads the listing under it, and coverage joins its keyword field with the home title and subtitle.
+
+For a language AsoBeast has no word list for, such as Hungarian or Slovak, it also needs a description of at least fifty words, almost no English words, and Apple to declare only that language. Anything less keeps your home storefront's default as the home localization.
+
+When the app later gets its own English page, the next capture sees that the native page differs, the default localization becomes the home localization again and the native one is listed as detected.
+
+A keyword field you saved under English (U.K.) before stays as it was. Every storefront that reads English (U.K.) still reads it, and you can remove it. To use those words for the native listing, copy them into the native field and remove the English one. A field saved under the native localization is read only by storefronts that read that language.
 
 What AsoBeast still cannot know:
 
