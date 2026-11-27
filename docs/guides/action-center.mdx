@@ -86,10 +86,13 @@ Once you mark an action done, AsoBeast measures what happened to the rule's metr
 | --- | --- | --- |
 | Position | `keyword.add_uncovered`, `keyword.defend`, `keyword.prune`, `serp.hold_volatile`, `keyword.push_to_top10`, and `competitor.investigate_overtake` for its first keyword | Lower |
 | Visibility in the action's market | `rank.investigate_drop`, `rank.investigate_unexplained_drop`, `market.improve_country` | Higher |
-| Overall audit score | `audit.fix_factor`, `metadata.fix_lint` | Higher |
+| Overall audit score | `audit.fix_factor`, and `metadata.fix_lint` in the home market | Higher |
+| Store rule problems left on the field, counted in each day's captured listing of the action's market | `metadata.fix_lint` in any other market | Lower |
 | Review score, a trailing 14 day mean | `reviews.investigate_theme`, `reviews.investigate_rating_decline`, `reviews.reply_negative` | Higher |
 | Days since the last store update | `listing.ship_update` | Lower |
 | Conversion in the action's market, or of the named product page | `conversion.investigate_drop`, `listing.cpp_underperforms` | Higher |
+
+The home audit never reads a market listing, so a store rule problem in another market is measured by that listing alone: the error level problems the lint finds on the field in the newest listing captured each day. The keyword field of a market keeps no history, so a market keyword field action shows no trend and no outcome.
 
 The verdict is **Improved**, **Worsened** or **No change**, with a small tolerance per metric so noise does not count as movement. It stays **Measuring** until there are three days of data after you marked the action done. A keyword that was not ranked before counts as one position below the checked depth, so moving from unranked into the results reads as an improvement.
 
