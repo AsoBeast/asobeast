@@ -19,7 +19,13 @@ const APP = {
   storeAppId: 'store1',
 };
 
-const build = (stored: string[] = []) => {
+const build = (
+  stored: string[] = [],
+  current: {
+    country: string;
+    defaultLocalization: string | null;
+  } | null = null,
+) => {
   const events: string[] = [];
   const queued: string[] = [];
   const tx = {
@@ -35,6 +41,7 @@ const build = (stored: string[] = []) => {
       upsert: jest.fn().mockResolvedValue({}),
       deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
+    app: { findFirst: jest.fn().mockResolvedValue(current) },
     trackedKeyword: {
       findMany: jest.fn().mockResolvedValue([]),
       createMany: jest.fn().mockResolvedValue({ count: 0 }),
@@ -452,6 +459,28 @@ describe('KeywordFieldWriter', () => {
       ],
       skipDuplicates: true,
     });
+  });
+
+  it('records a manual row for a tag that stopped being home before the lock', async () => {
+    const { writer, tx } = build([], {
+      country: 'pl',
+      defaultLocalization: null,
+    });
+
+    await writer.save({
+      app: { ...APP, country: 'pl', defaultLocalization: 'pl' },
+      localization: 'pl',
+      phrases: ['frekwencja'],
+      markets: [],
+    });
+
+    expect(tx.appLocalization.createMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: [
+          expect.objectContaining({ localization: 'pl', origin: 'manual' }),
+        ],
+      }),
+    );
   });
 
   describe('remove', () => {
