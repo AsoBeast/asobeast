@@ -41,6 +41,8 @@ import {
   KEYWORD_CLASS_OPTIONS,
 } from "./keyword-class";
 import { KeywordAnnotationsDialog } from "./KeywordAnnotationsDialog";
+import { KEYWORD_MENU_ATTRIBUTE } from "./ideas-opener";
+import { useIdeasMenu } from "./use-ideas-menu";
 import { rememberSerpOpener } from "./serp/serp-opener";
 import { StopTrackingDialog } from "./StopTrackingDialog";
 import { useKeywordUpdate } from "./useKeywordUpdate";
@@ -50,16 +52,19 @@ export function KeywordRowActions({
   keyword,
   marketTags,
   onOpenSerp,
+  onOpenIdeas,
 }: {
   appId: string;
   keyword: TrackedKeywordItem;
   marketTags: () => string[];
   onOpenSerp: () => void;
+  onOpenIdeas?: (seed: string) => void;
 }) {
   const queryClient = useQueryClient();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const menu = useRef<HTMLButtonElement>(null);
+  const ideas = useIdeasMenu(menu, keyword.text, onOpenIdeas);
 
   const update = useKeywordUpdate(appId, keyword);
   const checkedClass = classChoice(keyword);
@@ -91,11 +96,16 @@ export function KeywordRowActions({
             className="text-muted-foreground hover:text-foreground data-[state=open]:text-foreground pointer-coarse:size-11"
             aria-label={`Keyword actions for ${keyword.text}`}
             data-serp-keyword={keyword.keywordId}
+            {...{ [KEYWORD_MENU_ATTRIBUTE]: keyword.keywordId }}
           >
             <MoreHorizontal />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-52">
+        <DropdownMenuContent
+          align="end"
+          className="min-w-52"
+          onCloseAutoFocus={ideas.onCloseAutoFocus}
+        >
           <DropdownMenuItem
             onSelect={() => {
               rememberSerpOpener(menu.current);
@@ -105,6 +115,7 @@ export function KeywordRowActions({
             <ListOrdered />
             View search results
           </DropdownMenuItem>
+          {ideas.item}
           <DropdownMenuItem onSelect={() => setEditOpen(true)}>
             <Tag />
             Edit tags and note

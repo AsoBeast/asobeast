@@ -1992,6 +1992,47 @@ test.describe("suggestion ticks keep focus", () => {
     await expect(track).toBeFocused();
     expect(await focusLeftForBody(page)).toBe(false);
   });
+
+  test("Find ideas keeps focus while the deep search starts and hands it to the heading", async ({
+    page,
+  }) => {
+    const spider = new RegExp(`/api/backend/apps/${app}/keywords/spider`);
+    await page.route(spider, (route) =>
+      route.request().method() === "GET"
+        ? route.fulfill(
+            fulfillJson(200, {
+              term: "focus timer",
+              probesDone: 0,
+              probesTotal: 27,
+              complete: false,
+              suggestions: [],
+            }),
+          )
+        : route.fallback(),
+    );
+    const held = await holdRequest(page, spider, "POST", (route) =>
+      route.fulfill(fulfillJson(202, { enqueued: 27 })),
+    );
+    await page.goto(`/apps/${app}/keywords`);
+    const menu = page.getByRole("button", {
+      name: "Keyword actions for focus timer",
+      exact: true,
+    });
+    await (await hydrated(menu)).click();
+    await page.getByRole("menuitem", { name: "Ideas" }).click();
+    const find = page.getByRole("button", { name: "Find ideas" });
+
+    await pressFromKeyboard(find);
+    await expect(find).toHaveAttribute("aria-disabled", "true");
+    await expect(find).toBeFocused();
+    held.release();
+
+    await expect(find).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: "Ideas for “focus timer”" }),
+    ).toBeFocused();
+    expect(await focusLeftForBody(page)).toBe(false);
+  });
 });
 
 test.describe("the keyword inspector keeps focus", () => {

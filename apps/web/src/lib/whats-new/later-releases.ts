@@ -93,6 +93,11 @@ export const LATER_RELEASES: readonly Release[] = [
         title: "Why the proxy provider refuses",
         text: "The capacity page in the admin area now says when the proxy provider is turning requests away and why, from the answer it gave: a plan or quota that ran out, credentials it does not accept, or the status it refused with.",
       },
+      {
+        kind: "new",
+        title: "Ideas from a keyword row",
+        text: "The menu of a tracked keyword has an Ideas item that opens suggestions for that keyword in its market. Find ideas runs a deep search on it, you tick results to track several at once, and Select top 5 ticks the first five you do not track yet.",
+      },
     ],
   },
   {

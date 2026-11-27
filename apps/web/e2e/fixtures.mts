@@ -2721,6 +2721,8 @@ export const APP_TICKS_MARKETS = ["us", "gb"];
 
 export const APP_TICKS_FOCUS_ID = "app-ticks-focus";
 
+export const APP_TICKS_RIVAL_ID = "app-ticks-rival";
+
 export const APP_FLOOR_DETAIL: AppDetail = {
   ...APP_LONG_DETAIL,
   id: "app-floor",
@@ -3881,6 +3883,12 @@ DATASETS[APP_TICKS_FOCUS_ID] = {
   keywords: APP_TICKS_KEYWORDS.map((keyword) => ({ ...keyword })),
 };
 SUGGESTIONS[APP_TICKS_FOCUS_ID] = SUGGESTIONS[APP_TICKS_DETAIL.id];
+DATASETS[APP_TICKS_RIVAL_ID] = {
+  ...DATASETS[APP_TICKS_DETAIL.id],
+  detail: { ...APP_TICKS_DETAIL, id: APP_TICKS_RIVAL_ID, isCompetitor: true },
+  keywords: APP_TICKS_KEYWORDS.map((keyword) => ({ ...keyword })),
+};
+SUGGESTIONS[APP_TICKS_RIVAL_ID] = SUGGESTIONS[APP_TICKS_DETAIL.id];
 DATASETS[APP_SUGGESTED_LOCALES_ID] = localesDataset(
   APP_SUGGESTED_LOCALES_ID,
   "Market Lab",

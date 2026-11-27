@@ -52,6 +52,7 @@ import {
 import { NoSearchTermsContext } from "./PlayInstallsTip";
 import { SerpSheet } from "./serp/SerpSheet";
 import { useClearedSelectionFocus } from "./use-keywords-table-focus";
+import { useOpenIdeas } from "./use-ideas-seed";
 import { useSerpParams } from "./serp/use-serp-params";
 import { useKeywordColumnFilters } from "./use-zone-thresholds";
 import { useKeywordsTableControls } from "./use-keywords-table-controls";
@@ -118,6 +119,7 @@ export function KeywordsTable({
       void setSerpState({ serp: keywordId, serpDate: null }),
     [setSerpState],
   );
+  const openIdeas = useOpenIdeas();
   const buildColumns = useCallback(
     (series: TrendSeries | undefined, state: TrendState = "ready") =>
       keywordColumns({
@@ -128,8 +130,18 @@ export function KeywordsTable({
         today,
         trend: { window: trendWindow, series, state },
         onOpenSerp: openSerp,
+        onOpenIdeas: openIdeas,
       }),
-    [id, store, homeCountry, multiMarket, today, trendWindow, openSerp],
+    [
+      id,
+      store,
+      homeCountry,
+      multiMarket,
+      today,
+      trendWindow,
+      openSerp,
+      openIdeas,
+    ],
   );
   const shellColumns = useMemo(() => buildColumns(undefined), [buildColumns]);
 

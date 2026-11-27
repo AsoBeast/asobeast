@@ -1,6 +1,7 @@
 "use client";
 
 import type { FilterFn } from "@tanstack/react-table";
+import { isSpiderTerm } from "@asobeast/shared";
 import type {
   KeywordBucket,
   KeywordClass,
@@ -113,6 +114,7 @@ export function keywordColumns({
   today,
   trend,
   onOpenSerp,
+  onOpenIdeas,
 }: {
   appId: string;
   store: Store;
@@ -121,6 +123,7 @@ export function keywordColumns({
   today: string;
   trend: TrendView;
   onOpenSerp: (keywordId: string) => void;
+  onOpenIdeas: (seed: string) => void;
 }) {
   return columnHelper.columns([
     ...identityColumns(),
@@ -136,7 +139,7 @@ export function keywordColumns({
     addedColumn(),
     competitorsColumn(),
     revealColumn(),
-    actionsColumn({ appId, onOpenSerp }),
+    actionsColumn({ appId, onOpenSerp, onOpenIdeas }),
     ...filterColumns(),
   ]);
 }
@@ -371,9 +374,11 @@ function acquisitionsColumn() {
 function actionsColumn({
   appId,
   onOpenSerp,
+  onOpenIdeas,
 }: {
   appId: string;
   onOpenSerp: (keywordId: string) => void;
+  onOpenIdeas: (seed: string) => void;
 }) {
   return columnHelper.display({
     id: "actions",
@@ -387,6 +392,7 @@ function actionsColumn({
           tagsIn(table.getCoreRowModel().rows.map((entry) => entry.original))
         }
         onOpenSerp={() => onOpenSerp(row.original.keywordId)}
+        onOpenIdeas={isSpiderTerm(row.original.text) ? onOpenIdeas : undefined}
       />
     ),
   });

@@ -18,6 +18,7 @@ import { ImportKeywordsDialog } from "./ImportKeywordsDialog";
 import { KeywordMarketSelect } from "./KeywordMarketSelect";
 import { KeywordCombinations } from "./KeywordCombinations";
 import { KeywordViewSwitch } from "./KeywordViewSwitch";
+import { useIdeasReturn } from "./use-ideas-seed";
 import { SuggestionsPanel } from "./SuggestionsPanel";
 import { TrackedKeywordsTab } from "./TrackedKeywordsTab";
 
@@ -40,13 +41,17 @@ export function KeywordsWorkspace({
   const market = country || homeCountry;
   const discovered = discoveries && tab === "discovered";
   const addKeywords = useRef<HTMLButtonElement>(null);
+  const ideasOpen = useIdeasReturn(addKeywords) !== "";
   const findKeywords = (leaving: HTMLElement) => {
     handOffFocus(document.getElementById(DISCOVERED_TAB_ID), leaving);
     setTab("discovered");
   };
+  const suggestions = (
+    <SuggestionsPanel id={id} country={market} store={store} />
+  );
   const research = (
     <>
-      <SuggestionsPanel id={id} country={market} store={store} />
+      {suggestions}
       <KeywordCombinations
         id={id}
         store={store}
@@ -94,7 +99,7 @@ export function KeywordsWorkspace({
           clearFocus={addKeywords}
           onFindKeywords={discoveries ? findKeywords : undefined}
         >
-          {discoveries ? null : research}
+          {discoveries ? ideasOpen && suggestions : research}
         </TrackedKeywordsTab>
       )}
     </div>
