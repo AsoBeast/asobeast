@@ -24,9 +24,9 @@ import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import {
-  ENGLISH,
   BRITISH_ONLY,
   DE_APP_URL,
+  ENGLISH,
   ENGLISH_ONLY,
   FRENCH,
   GERMAN,
@@ -1175,9 +1175,9 @@ describe('Native localizations of a listing (e2e)', () => {
 
       const texts = await trackedTexts(appId);
       expect(texts).toContain('schultagebuch');
-      expect(texts).not.toEqual(
-        expect.arrayContaining([expect.stringMatching(/^(und|die|der)$/)]),
-      );
+      expect(
+        texts.filter((text) => ['und', 'die', 'der'].includes(text)),
+      ).toEqual([]);
     });
 
     it('never probes a suspect for a competitor', async () => {
