@@ -75,11 +75,11 @@
   --sidebar-border: var(--neutral-line);
   --sidebar-ring: var(--neutral-ink);
 
-  --elevation-flat: none;
-  --elevation-raised: none;
+  --elevation-flat: 0 0 #0000;
+  --elevation-raised: 0 0 #0000;
   --elevation-segment: 0 1px 2px rgb(0 0 0 / 6%);
   --elevation-overlay: 0 8px 24px rgb(0 0 0 / 12%);
-  --elevation-highlight: none;
+  --elevation-highlight: 0 0 #0000;
 }
 
 @media screen {
@@ -160,8 +160,8 @@
     --sidebar-border: var(--neutral-dark-line);
     --sidebar-ring: var(--neutral-dark-ink);
 
-    --elevation-flat: none;
-    --elevation-raised: none;
+    --elevation-flat: 0 0 #0000;
+    --elevation-raised: 0 0 #0000;
     --elevation-segment: 0 1px 2px rgb(0 0 0 / 40%);
     --elevation-overlay:
       0 1px 0 rgb(255 255 255 / 6%) inset, 0 12px 32px rgb(0 0 0 / 60%);

@@ -1,12 +1,13 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import {
   countChars,
   type LintIssue,
   type MetadataField,
 } from "@asobeast/shared";
 import { LintIssueRow } from "@/components/metadata/LintIssueRow";
+import { NotSearchedLabel } from "@/components/metadata/NotSearchedLabel";
 import { Textarea } from "@/components/ui/textarea";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
 import { cn } from "@/lib/utils";
@@ -17,12 +18,16 @@ export function MetadataFieldCard({
   limit,
   indexed,
   issues,
+  className,
+  children,
 }: {
   field: MetadataField;
   value: string;
   limit: number;
   indexed: boolean;
   issues: LintIssue[];
+  className?: string;
+  children?: (text: string) => ReactNode;
 }) {
   const countId = useId();
   const [draft, setDraft] = useState(value);
@@ -31,15 +36,16 @@ export function MetadataFieldCard({
   const label = METADATA_FIELD_LABELS[field];
 
   return (
-    <div className="flex min-w-0 flex-col gap-3 rounded-lg border border-border bg-card px-4 pt-3 pb-4">
+    <div
+      className={cn(
+        "flex min-w-0 flex-col gap-3 rounded-lg border border-border bg-card px-4 pt-3 pb-4",
+        className,
+      )}
+    >
       <div className="flex flex-wrap items-baseline justify-between gap-x-3">
         <h3 className="flex min-w-0 flex-wrap items-baseline gap-x-2 text-heading font-semibold text-foreground">
           <span>{label}</span>
-          {indexed ? null : (
-            <span className="text-caption font-normal text-faint-foreground">
-              Not searched by the store
-            </span>
-          )}
+          {indexed ? null : <NotSearchedLabel field={field} />}
         </h3>
         <span
           id={countId}
@@ -71,6 +77,7 @@ export function MetadataFieldCard({
           ))}
         </ul>
       ) : null}
+      {children?.(draft)}
     </div>
   );
 }

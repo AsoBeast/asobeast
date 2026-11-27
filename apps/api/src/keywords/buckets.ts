@@ -3,7 +3,7 @@ import { KeywordBucket, TrackedKeywordItem } from '@asobeast/shared';
 export const ASPIRATIONAL_VOLUME = 60;
 export const ASPIRATIONAL_DIFFICULTY100 = 65;
 const PRIMARY_TOP = 5;
-const LONGTAIL_MIN_WORDS = 3;
+export const LONGTAIL_MIN_WORDS = 3;
 export const LONGTAIL_MAX_VOLUME = 25;
 
 const isScored = (item: TrackedKeywordItem): boolean =>

@@ -8,7 +8,12 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { toAppDetail, toListingMarkets, withTracking } from './apps.mapper';
 import { shippedLocalizations } from './shipped-localizations';
-import { EVERY_LISTING, latestListingIn, listingIn } from './listing';
+import {
+  EVERY_LISTING,
+  latestListingIn,
+  listingIn,
+  storedLocalization,
+} from './listing';
 import { NewestRating, withRatings } from './market-ratings';
 import { missingListing } from './missing-listing';
 
@@ -79,10 +84,11 @@ export class ListingReadService {
     market: string,
     localization: AppStoreLocalization | null = null,
   ): Promise<AppDetail> {
+    const stored = storedLocalization(app.store, market, localization);
     const loaded = await this.prisma.app.findFirst({
       where: { id: app.id },
       select: {
-        snapshots: latestListingIn(app.country, market, localization),
+        snapshots: latestListingIn(app.country, market, stored),
         competitors: {
           select: { id: true, snapshots: latestListingIn(app.country, market) },
         },
@@ -90,7 +96,7 @@ export class ListingReadService {
     });
     const own = loaded?.snapshots[0];
     if (!loaded || !own) {
-      throw missingListing(market, localization);
+      throw missingListing(market, stored);
     }
     const latest = new Map(
       loaded.competitors.map((rival) => [rival.id, rival.snapshots]),

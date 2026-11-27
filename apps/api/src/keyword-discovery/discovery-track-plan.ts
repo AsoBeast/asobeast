@@ -9,6 +9,7 @@ export interface TrackRow {
   source: DiscoverySource;
   position: number | null;
   depth: number | null;
+  resultCount: number | null;
   ownSearch: boolean;
   checkedOn: string | null;
 }

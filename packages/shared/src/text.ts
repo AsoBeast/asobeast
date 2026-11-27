@@ -1,4 +1,4 @@
-export const STOPWORDS: ReadonlySet<string> = new Set([
+export const ENGLISH_FUNCTION_WORDS: ReadonlySet<string> = new Set([
   'a',
   'about',
   'above',
@@ -124,6 +124,9 @@ export const STOPWORDS: ReadonlySet<string> = new Set([
   'yours',
   'yourself',
   'yourselves',
+]);
+
+const STORE_WORDS = [
   'app',
   'apps',
   'free',
@@ -132,6 +135,11 @@ export const STOPWORDS: ReadonlySet<string> = new Set([
   'official',
   'get',
   'download',
+] as const;
+
+export const STOPWORDS: ReadonlySet<string> = new Set([
+  ...ENGLISH_FUNCTION_WORDS,
+  ...STORE_WORDS,
 ]);
 
 const DOTTED_SMALL_I = 'i\u0307';

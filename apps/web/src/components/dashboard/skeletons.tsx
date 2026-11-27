@@ -8,7 +8,7 @@ import {
   CardFooter,
   CardHeader,
 } from "@/components/ui/card";
-import { iconRadius } from "@/components/app-icon-radius";
+import { iconRadius } from "@/lib/app-icon-radius";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MetricStripSkeleton } from "@/components/ui/stat-tile";
 import {

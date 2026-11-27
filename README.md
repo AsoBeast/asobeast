@@ -12,6 +12,7 @@
     <a href="LICENSE"><img alt="License: AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg" /></a>
     <a href="https://github.com/AsoBeast/asobeast/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/AsoBeast/asobeast" /></a>
     <a href="https://github.com/AsoBeast/asobeast/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/AsoBeast/asobeast?style=flat" /></a>
+    <a href="https://glama.ai/mcp/servers/AsoBeast/asobeast"><img alt="AsoBeast MCP server on Glama" src="https://glama.ai/mcp/servers/AsoBeast/asobeast/badges/score.svg" /></a>
   </p>
   <p>
     <a href="https://docs.asobeast.com">Docs</a> ·
@@ -95,7 +96,7 @@ Ask the agent which keywords dropped this week, which competitor entered the top
 - The [Action Center](https://docs.asobeast.com/guides/action-center) runs seventeen deterministic rules over your history and ranks what to do next, each action with the numbers behind it. AI can summarize an action but never adds or reorders one. The [audit](https://docs.asobeast.com/guides/aso-audit) scores the listing itself.
 - Connect an App Store Connect key or a Google Play service account to read the [store's own reports](https://docs.asobeast.com/guides/store-funnel): impressions, page views, Get taps and conversion on the App Store, and installs per search term on Google Play.
 - [Alerts](https://docs.asobeast.com/guides/alerts) for rank drops, first rankings, metadata changes, chart moves, rating drops and review spikes go out by email, webhook, Slack, Discord, Microsoft Teams, Telegram or Google Chat.
-- The [MCP server](https://docs.asobeast.com/mcp/introduction) gives Claude, Cursor, VS Code and other clients 42 read tools and 8 opt-in write tools, and the [HTTP API](https://docs.asobeast.com/api-reference/introduction) is documented with OpenAPI.
+- The [MCP server](https://docs.asobeast.com/mcp/introduction) gives Claude, Cursor, VS Code and other clients 43 read tools and 8 opt-in write tools, and the [HTTP API](https://docs.asobeast.com/api-reference/introduction) is documented with OpenAPI.
 
 ## What's new in AsoBeast 2
 

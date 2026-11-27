@@ -19,7 +19,7 @@ const app = {
 const row = (keywordId: string, active: boolean, country = 'us') => ({
   keywordId,
   active,
-  keyword: { store: Store.APP_STORE, country },
+  keyword: { store: Store.APP_STORE, country, text: keywordId },
 });
 
 const build = (
@@ -50,6 +50,12 @@ const build = (
         .mockResolvedValue({ count: counts.changed ?? tracked.length }),
     },
     keywordField: { findMany: jest.fn(), upsert: jest.fn() },
+    listingTarget: { findMany: jest.fn().mockResolvedValue([]) },
+    $executeRaw: jest.fn().mockResolvedValue(1),
+    withTransaction: jest.fn(
+      (run: (client: unknown) => Promise<unknown>): Promise<unknown> =>
+        run(prisma),
+    ),
   };
   const quota = {
     admitKeywordMarkets: jest.fn(

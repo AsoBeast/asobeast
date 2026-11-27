@@ -101,6 +101,7 @@ export class KeywordDiscoveryService {
         relevance: true,
         position: true,
         depth: true,
+        resultCount: true,
         checkedOn: true,
         keyword: {
           select: {

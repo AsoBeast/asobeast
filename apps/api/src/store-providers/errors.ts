@@ -31,6 +31,7 @@ export const TRANSPORT_MESSAGES = [
   'tunneling socket',
   'timeout',
   'fetch failed',
+  'network request to',
   'rate limited',
 ] as const;
 
@@ -95,8 +96,9 @@ export class StoreRequestError extends Error {
     readonly store: Store,
     readonly method: string,
     readonly causeMessage: string,
+    options?: ErrorOptions,
   ) {
-    super(`${store} ${method} failed: ${causeMessage}`);
+    super(`${store} ${method} failed: ${causeMessage}`, options);
     this.name = 'StoreRequestError';
   }
 

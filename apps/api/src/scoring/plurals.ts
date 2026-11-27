@@ -1,22 +1,6 @@
-import { hasInflectedStemScript } from '../common/text/scripts';
+import { hasInflectedStemScript, pluralsOf } from '@asobeast/shared';
 
-const ES_STEM = /(s|x|z|ch|sh|o)$/;
-const CONSONANT_Y = /[^aeiou]y$/;
-const SINGLE_Z = /[aeiou]z$/;
-
-export function pluralsOf(word: string): string[] {
-  const forms = [word, `${word}s`];
-  if (ES_STEM.test(word)) {
-    forms.push(`${word}es`);
-  }
-  if (SINGLE_Z.test(word)) {
-    forms.push(`${word}zes`);
-  }
-  if (CONSONANT_Y.test(word)) {
-    forms.push(`${word.slice(0, -1)}ies`);
-  }
-  return forms;
-}
+export { pluralsOf } from '@asobeast/shared';
 
 export const INFLECTION_STEM_CHARS = 7;
 export const INFLECTION_ENDING_CHARS = 3;

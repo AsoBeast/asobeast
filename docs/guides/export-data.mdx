@@ -32,7 +32,7 @@ The file can be imported again: the keyword, `country`, `tags` and `note` column
 
 The `scoreComparability` column repeats, on every row, that App Store and Google Play scores use different public signals and are not directly comparable. That caveat is easy to lose once data leaves the product, so it is written into the file. See [App Store and Google Play](/concepts/stores).
 
-`position` is formatted the same way the table shows it, so an unranked keyword exports as `>` the check's depth, such as `>200` or `>30`, rather than as an empty cell or a zero. See [Positions and rank depth](/concepts/positions).
+`position` is formatted the same way the table shows it, so an unranked keyword exports as `>` the check's depth, such as `>200` or `>30`, rather than as an empty cell or a zero. A keyword whose search listed no apps exports as `No apps`. See [Positions and rank depth](/concepts/positions).
 
 ## Export rankings to CSV
 
@@ -118,6 +118,8 @@ The search results sheet on the keyword monitor exports the day it shows, one ro
 | `role` | `you`, `competitor` for an app tracked as a competitor in the workspace, as the sheet's badge shows, or `other` |
 | `storeAppId` | The store's id for the app |
 | `previousPosition` | The position on the earlier captured day the sheet compares with, empty when the app was not listed then or there is no earlier day |
+| `subtitle` | The subtitle AsoBeast captured for your own app or a competitor, empty for any other app and on Google Play |
+| `keywordIn` | Where the app puts the keyword, as the sheet's **Keyword in** line says it |
 
 `ratings` stays empty for Google Play keywords, whose search results carry no rating counts. See [Search results](/guides/read-rankings#search-results) for what the sheet shows. See [App Store and Google Play](/concepts/stores).
 

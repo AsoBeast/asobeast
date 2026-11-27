@@ -472,6 +472,9 @@ test.describe("instance capacity in the admin area", () => {
     await expect(pool).toContainText("webshare");
     await expect(pool).toContainText("12 endpoints");
     await expect(pool).toContainText("Few healthy endpoints remain");
+    await expect(pool).toContainText(
+      "1 endpoint refused by the proxy provider: the plan or its quota is used up (HTTP 402).",
+    );
     await expect(
       pool.getByRole("link", { name: "Raw pool health" }),
     ).toHaveAttribute("href", "/api/backend/admin/proxy-pool");

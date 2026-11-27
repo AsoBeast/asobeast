@@ -6,8 +6,15 @@ import {
   StoreRequestError,
   TRANSPORT_MESSAGES,
 } from '../errors';
+import {
+  ProxyPoolStoppingError,
+  ProxyPoolUnavailableError,
+} from '../egress/proxy-pool.service';
 import { CanaryShapeError } from './canary-checks';
 import { outcomeOfError } from './canary-outcome';
+
+const PLAY_NETWORK_FAILURE =
+  'HttpError: Network request to https://play.google.com/store/apps/details?id=com.facebook.katana&hl=en&gl=us failed';
 
 function requestError(causeMessage: string): StoreRequestError {
   return new StoreRequestError(Store.APP_STORE, 'getApp', causeMessage);
@@ -84,6 +91,23 @@ describe('outcomeOfError', () => {
   ])('calls the status in %s unreachable', (cause) => {
     expect(outcomeOfError(requestError(cause))).toBe('unreachable');
   });
+
+  it.each([
+    [
+      'no free pool endpoint',
+      new ProxyPoolUnavailableError(Store.APP_STORE, 120_000, 30_000),
+    ],
+    ['a pool that is stopping', new ProxyPoolStoppingError(Store.APP_STORE)],
+    [
+      'a play network failure',
+      new StoreRequestError(Store.GOOGLE_PLAY, 'getApp', PLAY_NETWORK_FAILURE),
+    ],
+  ])(
+    'calls %s unreachable because no request reached the store',
+    (_label, error) => {
+      expect(outcomeOfError(error)).toBe('unreachable');
+    },
+  );
 
   it('calls a request failure with no transport marker broken', () => {
     expect(

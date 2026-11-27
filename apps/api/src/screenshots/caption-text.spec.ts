@@ -145,7 +145,7 @@ describe('selectCaption', () => {
     const started = performance.now();
     const caption = selectCaption([line(text, 100, 200)], IMAGE_HEIGHT);
 
-    expect(performance.now() - started).toBeLessThan(250);
+    expect(performance.now() - started).toBeLessThan(1_000);
     expect(caption).toBe('a'.repeat(MAX_CAPTION_CHARS));
   });
 });

@@ -2,6 +2,8 @@ import type { Page } from "@playwright/test";
 import { settleAnimations } from "./dialog.mts";
 import { pressFromKeyboard } from "./held-request.mts";
 import { hydrated } from "./hydrated.mts";
+import { NO_APPS_COOKIE } from "./fixtures.mts";
+import { seedCookies } from "./routes.mts";
 import { expect, test } from "./session.mts";
 
 const KEYWORDS = "/apps/app-1/keywords";
@@ -146,12 +148,43 @@ test("the sheet says when the store showed no apps", async ({ page }) => {
   const dialog = sheet(page, "study timer");
 
   await expect(
-    dialog.getByText(/^The store showed no apps for this keyword on /),
+    dialog.getByText(/^The store lists no apps for this search on /),
   ).toBeVisible();
   await expect(dialog.getByText(/below the top 0/)).toHaveCount(0);
   await expect(
     dialog.getByRole("button", { name: "All results and earlier days" }),
   ).toBeVisible();
+});
+
+test("the sheet says when nothing was listed and not that it is unchecked", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { [NO_APPS_COOKIE]: "1" });
+  await page.route("**/api/backend/keywords/kw-4/serp**", (route) =>
+    route.fulfill({
+      json: {
+        keywordId: "kw-4",
+        text: "productivity app",
+        date: null,
+        entries: [],
+        comparedTo: null,
+        exits: [],
+        dates: [],
+      },
+    }),
+  );
+  await page.goto(`${KEYWORDS}?keyword=kw-4`);
+  const dialog = sheet(page, "productivity app");
+
+  await expect(
+    dialog.getByText("The store lists no apps for this search."),
+  ).toBeVisible();
+  await expect(
+    dialog.getByText(
+      "Not checked yet. The search results appear after the next daily check.",
+    ),
+  ).toHaveCount(0);
 });
 
 test("all results opens the search results and closing them returns to the sheet", async ({

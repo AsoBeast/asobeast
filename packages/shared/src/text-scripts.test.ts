@@ -1,4 +1,6 @@
-import { containsTerm, isUnsegmented } from './scripts';
+import { describe, expect, it } from 'vitest';
+
+import { containsTerm, isUnsegmented } from './text-scripts';
 
 describe('isUnsegmented', () => {
   it.each([

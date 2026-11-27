@@ -1,4 +1,5 @@
-import { Prisma } from '@prisma/client';
+import { Prisma, Store } from '@prisma/client';
+import { readerRole } from '../keywords/localization-markets';
 
 export const HOME_LISTING = {
   country: null,
@@ -24,6 +25,18 @@ export const LATEST_HOME_LISTING = {
 
 export function storedMarket(home: string, market: string): string | null {
   return market === home ? null : market;
+}
+
+export function storedLocalization(
+  store: Store,
+  market: string,
+  localization: string | null,
+): string | null {
+  const readsDefault =
+    localization === null ||
+    (store === Store.APP_STORE &&
+      readerRole(market, localization) === 'default');
+  return readsDefault ? null : localization;
 }
 
 export function listingMarket(home: string, stored: string | null): string {

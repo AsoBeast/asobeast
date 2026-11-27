@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import type { KeywordInspectionSummary } from "@asobeast/shared";
 import { useQueryStates } from "nuqs";
@@ -58,7 +58,11 @@ function InspectWorkspace({
   const storefront: Storefront = current
     ? { store: current.store, country: current.country }
     : fallback;
-  const points = inspectionPoints(data.items, storefront, thresholds);
+  const { store, country } = storefront;
+  const points = useMemo(
+    () => inspectionPoints(data.items, { store, country }, thresholds),
+    [data.items, store, country, thresholds],
+  );
   const unfilled = current !== undefined && formKeyword === "" ? current : null;
   useEffect(() => {
     if (unfilled) onSelect(unfilled);

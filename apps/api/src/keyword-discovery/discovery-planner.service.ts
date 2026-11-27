@@ -136,6 +136,7 @@ export class KeywordDiscoveryPlanner {
         relevance: true,
         position: true,
         depth: true,
+        resultCount: true,
         ownSearch: true,
         checkedOn: true,
         keyword: { select: { text: true, country: true } },
@@ -206,6 +207,7 @@ export class KeywordDiscoveryPlanner {
       stored.checkedOn === read.checkedOn &&
       stored.position === read.position &&
       stored.depth === read.depth &&
+      stored.resultCount === read.resultCount &&
       stored.ownSearch === read.ownSearch
     ) {
       return true;
@@ -216,12 +218,14 @@ export class KeywordDiscoveryPlanner {
         keywordId: stored.keywordId,
         position: stored.position,
         depth: stored.depth,
+        resultCount: stored.resultCount,
         ownSearch: stored.ownSearch,
         checkedOn: stored.checkedOn === null ? null : utcDate(stored.checkedOn),
       },
       data: {
         position: read.position,
         depth: read.depth,
+        resultCount: read.resultCount,
         ownSearch: read.ownSearch,
         checkedOn: read.checkedOn === null ? null : utcDate(read.checkedOn),
         relevance: read.relevance,

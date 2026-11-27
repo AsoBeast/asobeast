@@ -24,6 +24,7 @@ export const TENANT_TABLES = [
   'KeywordFieldSync',
   'KeywordInspection',
   'KeywordRanking',
+  'ListingTarget',
   'Review',
   'ReviewReply',
   'SnapshotScreenshot',

@@ -68,6 +68,7 @@ describe("keyword_breakdown", () => {
 
 describe.each([
   "app_localizations",
+  "listing_targets",
   "market_keyword_fields",
   "market_suggestions",
   "app_run_status",

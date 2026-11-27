@@ -11,6 +11,7 @@ export interface Ranking {
   position: number | null;
   date: Date;
   depth: number;
+  resultCount?: number | null;
 }
 
 export const addDays = (date: Date, days: number): Date =>

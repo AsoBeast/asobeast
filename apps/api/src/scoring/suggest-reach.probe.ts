@@ -1,6 +1,5 @@
-import { searchKey, Store } from '@asobeast/shared';
+import { hasInflectedStemScript, searchKey, Store } from '@asobeast/shared';
 import { pluralsOf, sameWord } from './plurals';
-import { hasInflectedStemScript } from '../common/text/scripts';
 import { PREFIX_PROBE_CAP, SuggestReach } from './suggest-reach';
 
 export type SuggestLookup = (term: string) => Promise<Array<{ term: string }>>;

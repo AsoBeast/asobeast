@@ -2,7 +2,7 @@ import { formatDate } from "../src/lib/format";
 import { type Locator, type Page } from "@playwright/test";
 import { openEmbedded, STRIPE_STUB } from "./embedded-checkout.mts";
 import { holdRequest } from "./held-request.mts";
-import { fulfillJson, seedSession } from "./plan-helpers.mts";
+import { fulfillJson, seedPlan, seedSession } from "./plan-helpers.mts";
 import { layoutBox } from "./layout-box.mts";
 import { expect, test } from "./reporting.mts";
 import {
@@ -10,6 +10,7 @@ import {
   DAY_MS,
   DECLINED_PLAN,
   OFFERED_PLAN,
+  SCHEDULED_DOWNGRADE_PLAN,
   TRIALING_PLAN,
   openBilling,
   openRegistration,
@@ -24,6 +25,9 @@ const TRIAL_BUTTON = "Pay $0 today and start your free trial";
 test.use({ timezoneId: "UTC" });
 
 const utcClock = (now = new Date()) => ({ now, timeZone: "UTC" });
+
+const boxShadowOf = (locator: Locator) =>
+  locator.evaluate((element) => getComputedStyle(element).boxShadow);
 
 async function register(page: Page, path = "/register") {
   await page.goto(path);
@@ -197,6 +201,51 @@ test.describe("the billing wall", () => {
       layoutBox(questions.nth(1)),
     ]);
     expect(Math.round(first.y)).toBe(Math.round(second.y));
+  });
+
+  test("rings the plan card that has keyboard focus", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+    await page.goto("/upgrade");
+
+    const ultimate = page.getByRole("button", {
+      name: "Ultimate, $99 per month",
+    });
+    await page.getByRole("tab", { name: "Monthly" }).focus();
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Tab");
+
+    await expect(ultimate).toBeFocused();
+    expect(
+      await ultimate.evaluate((element) => element.matches(":focus-visible")),
+    ).toBe(true);
+    await expect.poll(() => boxShadowOf(ultimate)).toMatch(/0px 0px 0px 2px/);
+  });
+
+  test("keeps the primary ring on the selected plan card", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "checkout-pending");
+    await seedSession(page);
+    await openBilling(page);
+    await page.goto("/upgrade");
+
+    const indie = page.getByRole("button", { name: "Indie, $10 per month" });
+    await expect(indie).toHaveAttribute("aria-pressed", "true");
+    await page.getByRole("tab", { name: "Monthly" }).focus();
+
+    await expect.poll(() => boxShadowOf(indie)).toMatch(/0px 0px 0px 1px/);
+    expect(await boxShadowOf(indie)).not.toBe("none");
+
+    await page.keyboard.press("Tab");
+
+    await expect(indie).toBeFocused();
+    await expect.poll(() => boxShadowOf(indie)).toMatch(/0px 0px 0px 2px/);
   });
 
   test("puts the plans above the payment on a phone without scrolling sideways", async ({
@@ -1098,7 +1147,7 @@ test.describe("a card backed trial", () => {
     ).toBeVisible();
     await expect(
       page.getByRole("link", { name: "Manage billing" }),
-    ).toHaveAttribute("href", "/settings");
+    ).toHaveAttribute("href", "/settings#plan");
   });
 
   test("says a cancelled trial charges nothing", async ({ page }) => {
@@ -1149,5 +1198,96 @@ test.describe("a card backed trial", () => {
     await expect(
       page.getByRole("button", { name: "Manage billing" }),
     ).toBeVisible();
+  });
+
+  test("names a declined card in the account bar and links to billing", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "lapsed-operator");
+    await openBilling(page, DECLINED_PLAN);
+
+    await page.goto("/");
+
+    const bar = page.locator('[data-slot="account-bar"]');
+    await expect(bar).toContainText(
+      "Your trial ended, but the card was declined. Update it in the billing portal to start your plan.",
+    );
+    await expect(bar).not.toContainText("Collection is paused");
+    await expect(
+      bar.getByRole("link", { name: "Manage billing" }),
+    ).toHaveAttribute("href", "/settings#plan");
+    await expect(bar.getByRole("link", { name: "Choose a plan" })).toHaveCount(
+      0,
+    );
+  });
+
+  test("never shows the paused sentence while the plan is loading", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "lapsed-operator");
+    await openBilling(page, DECLINED_PLAN);
+    const plan = await holdRequest(page, /\/api\/backend\/auth\/plan$/, "GET");
+
+    await page.goto("/");
+
+    const bar = page.locator('[data-slot="account-bar"]');
+    await expect(bar).toBeVisible();
+    await expect(bar).not.toContainText("Collection is paused");
+    await expect(bar.getByRole("link")).toHaveCount(0);
+    plan.release();
+    await expect(bar).toContainText("the card was declined");
+  });
+
+  test("never reads the paused bar from a plan cached during the trial", async ({
+    page,
+    context,
+  }) => {
+    await page.clock.install();
+    await openBilling(page, TRIALING_PLAN);
+    await page.goto("/");
+    await expect(
+      page.getByRole("link", { name: "Manage billing" }),
+    ).toBeVisible();
+
+    await seedViewer(context, "lapsed-operator");
+    await seedPlan(page, DECLINED_PLAN);
+    const plan = await holdRequest(page, /\/api\/backend\/auth\/plan$/, "GET");
+    await page.clock.fastForward("00:31");
+    await page.evaluate(() =>
+      window.dispatchEvent(new Event("visibilitychange")),
+    );
+
+    const bar = page.locator('[data-slot="account-bar"]');
+    await expect(bar.locator("svg")).toBeVisible();
+    await expect(bar).not.toContainText("Trial ends");
+    await expect(bar).not.toContainText("Collection is paused");
+    await expect(bar.getByRole("link")).toHaveCount(0);
+    plan.release();
+    await expect(bar).toContainText("the card was declined");
+    await expect(
+      bar.getByRole("link", { name: "Manage billing" }),
+    ).toHaveAttribute("href", "/settings#plan");
+  });
+});
+
+test.describe("a plan switch scheduled in the billing portal", () => {
+  test("names the next plan and its day in settings", async ({
+    page,
+    context,
+  }) => {
+    await seedViewer(context, "customer");
+    await seedSession(page);
+    await openBilling(page, SCHEDULED_DOWNGRADE_PLAN);
+
+    await page.goto("/settings");
+
+    await expect(
+      page.getByText(
+        `Switches to Indie on ${formatDate(SCHEDULED_DOWNGRADE_PLAN.renewsAt)}.`,
+      ),
+    ).toBeVisible();
+    await expect(page.getByText(/^Renews on/)).toHaveCount(0);
   });
 });

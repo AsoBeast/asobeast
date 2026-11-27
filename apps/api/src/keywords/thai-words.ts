@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { THAI_CHARACTER } from '../common/text/scripts';
+import { THAI_CHARACTER } from '@asobeast/shared';
 import { isExtractionStopword, isThaiPrefix } from './extraction-stopwords';
 
 export interface ThaiSpan {

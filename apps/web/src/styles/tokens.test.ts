@@ -72,6 +72,19 @@ describe("design tokens", () => {
 
     expect(semanticLiterals.map(([name]) => name)).toEqual([]);
   });
+
+  it("keeps every elevation composable with a ring", () => {
+    const flat = [":root", "\\.dark"].flatMap((scope) =>
+      Object.entries(declarations(semantic, scope))
+        .filter(
+          ([name, value]) =>
+            name.startsWith("--elevation-") && value.trim() === "none",
+        )
+        .map(([name]) => `${scope} ${name}`),
+    );
+
+    expect(flat).toEqual([]);
+  });
 });
 
 describe.each(Object.entries(THEMES))("%s theme contrast", (_theme, scope) => {

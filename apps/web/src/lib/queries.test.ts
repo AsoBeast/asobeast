@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from "vitest";
 import { QUERY_BOUNDS, STORE_SUGGESTION_STRATEGIES } from "@asobeast/shared";
 import type {
   AppAuditResult,
+  AuthUser,
   ChartPage,
   AuditAiRunState,
   EmailAlertItem,
@@ -18,6 +19,7 @@ import { queryMarket } from "./market";
 import {
   chartKeys,
   chartPageOptions,
+  listingTargetsOptions,
   invalidateChartMutation,
   seedChartCapture,
   adminKeys,
@@ -36,6 +38,7 @@ import {
   alertNewestOptions,
   apiTokenKeys,
   appKeys,
+  coveragePreviewOptions,
   importPreviewRequest,
   appDetailOptions,
   appSummaryOptions,
@@ -44,7 +47,9 @@ import {
   auditOptions,
   accountPlanKey,
   authMeKey,
+  authMeOptions,
   authStatusKey,
+  refetchAuth,
   budgetKey,
   categoryRanksOptions,
   changeImpactOptions,
@@ -77,6 +82,7 @@ import {
   invalidateLocalizationMutation,
   invalidateKeywordDiscoveries,
   invalidateKeywordMutation,
+  invalidateListingTargetsMutation,
   invalidateMarketSeed,
   invalidateKeywords,
   invalidateLinkMutation,
@@ -127,15 +133,29 @@ const APP = "app-1";
 const OTHER_APP = "app-2";
 const RANGE = { from: "2026-01-01", to: "2026-01-31" };
 
-function invalidatedKeys(
+function recordInvalidations(
   invalidate: (client: QueryClient) => void,
-): QueryKey[] {
+): () => QueryKey[] {
   const client = new QueryClient();
   const spy = vi
     .spyOn(client, "invalidateQueries")
     .mockResolvedValue(undefined);
   invalidate(client);
-  return spy.mock.calls.map(([filters]) => filters!.queryKey as QueryKey);
+  return () => spy.mock.calls.map(([filters]) => filters!.queryKey as QueryKey);
+}
+
+function invalidatedKeys(
+  invalidate: (client: QueryClient) => void,
+): QueryKey[] {
+  return recordInvalidations(invalidate)();
+}
+
+async function settledInvalidatedKeys(
+  invalidate: (client: QueryClient) => void,
+): Promise<QueryKey[]> {
+  const keys = recordInvalidations(invalidate);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  return keys();
 }
 
 function isPrefixOf(prefix: QueryKey, key: QueryKey): boolean {
@@ -495,6 +515,29 @@ describe("appKeys", () => {
     expect(requested[0]).toMatch(/\/apps\/app-1\/metadata\/audit$/);
   });
 
+  it("keys the coverage preview under the app", () => {
+    const key = appKeys.coveragePreview(APP, {
+      localization: "en-US",
+      title: "Habit Tracker",
+    });
+
+    expect(key.slice(0, appKeys.detail(APP).length)).toEqual(
+      appKeys.detail(APP),
+    );
+  });
+
+  it("keys two drafts apart", () => {
+    expect(
+      hashKey(appKeys.coveragePreview(APP, { title: "Habit Tracker" })),
+    ).not.toEqual(
+      hashKey(appKeys.coveragePreview(APP, { title: "Habit Tracker Pro" })),
+    );
+  });
+
+  it("never retries a coverage preview", () => {
+    expect(coveragePreviewOptions(APP, { title: "Habit" }).retry).toBe(false);
+  });
+
   it("keys the metadata audit and the listing of each market apart", () => {
     expect(appKeys.metadataAudit(APP, "de")).not.toEqual(
       appKeys.metadataAudit(APP, "pl"),
@@ -835,8 +878,33 @@ describe("invalidation sets", () => {
       appKeys.firstRun(APP),
       appKeys.keywordDiscoveriesRoot(APP),
       appKeys.rankingsRoot(APP),
+      appKeys.listingTargetsRoot(APP),
+      appKeys.coveragePreviewRoot(APP),
       workspaceChecklistKey,
     ]);
+  });
+
+  it("keys the targets under the app", () => {
+    const key = listingTargetsOptions(APP, "en-US").queryKey;
+
+    expect(isPrefixOf(appKeys.detail(APP), key)).toBe(true);
+    expect(isPrefixOf(appKeys.listingTargetsRoot(APP), key)).toBe(true);
+    expect(key).not.toEqual(listingTargetsOptions(APP, "en-GB").queryKey);
+  });
+
+  it("refreshes the targets, the keywords, the audit and the draft coverage after a targets save", () => {
+    const keys = invalidatedKeys((client) =>
+      invalidateListingTargetsMutation(client, APP),
+    );
+
+    expect(keys).toEqual(
+      expect.arrayContaining([
+        appKeys.listingTargetsRoot(APP),
+        appKeys.keywordsRoot(APP),
+        appKeys.metadataAuditRoot(APP),
+        appKeys.coveragePreviewRoot(APP),
+      ]),
+    );
   });
 
   it("keys every rankings read under the app's rankings root", () => {
@@ -887,6 +955,8 @@ describe("invalidation sets", () => {
       appKeys.firstRun(APP),
       appKeys.keywordDiscoveriesRoot(APP),
       appKeys.rankingsRoot(APP),
+      appKeys.listingTargetsRoot(APP),
+      appKeys.coveragePreviewRoot(APP),
       workspaceChecklistKey,
       appKeys.listingMarkets(APP),
       budgetKey,
@@ -910,6 +980,8 @@ describe("invalidation sets", () => {
       appKeys.firstRun(APP),
       appKeys.keywordDiscoveriesRoot(APP),
       appKeys.rankingsRoot(APP),
+      appKeys.listingTargetsRoot(APP),
+      appKeys.coveragePreviewRoot(APP),
       workspaceChecklistKey,
       appKeys.metadataAuditRoot(APP),
     ]);
@@ -932,6 +1004,8 @@ describe("invalidation sets", () => {
       appKeys.firstRun(APP),
       appKeys.keywordDiscoveriesRoot(APP),
       appKeys.rankingsRoot(APP),
+      appKeys.listingTargetsRoot(APP),
+      appKeys.coveragePreviewRoot(APP),
       workspaceChecklistKey,
       appKeys.metadataAuditRoot(APP),
       accountPlanKey,
@@ -955,6 +1029,8 @@ describe("invalidation sets", () => {
       appKeys.firstRun(APP),
       appKeys.keywordDiscoveriesRoot(APP),
       appKeys.rankingsRoot(APP),
+      appKeys.listingTargetsRoot(APP),
+      appKeys.coveragePreviewRoot(APP),
       workspaceChecklistKey,
       appKeys.importPreviewRoot(APP),
     ]);
@@ -1019,21 +1095,21 @@ describe("invalidation sets", () => {
     ).toEqual([actionKeys.all, portfolioInsightsKey, actionKeys.appRoot(APP)]);
   });
 
-  it("invalidates every account query when the session changes", () => {
-    expect(invalidatedKeys(invalidateAuth)).toEqual([
+  it("invalidates every account query when the session changes", async () => {
+    expect(await settledInvalidatedKeys(invalidateAuth)).toEqual([
       authStatusKey,
       authMeKey,
       accountPlanKey,
     ]);
   });
 
-  it("also invalidates the api token list when the password changes", () => {
-    expect(invalidatedKeys(invalidatePasswordChange)).toEqual([
+  it("also invalidates the api token list when the password changes", async () => {
+    expect(await settledInvalidatedKeys(invalidatePasswordChange)).toEqual([
+      apiTokenKeys.all,
+      workspaceChecklistKey,
       authStatusKey,
       authMeKey,
       accountPlanKey,
-      apiTokenKeys.all,
-      workspaceChecklistKey,
     ]);
   });
 
@@ -1531,5 +1607,46 @@ describe("isVisibilityOfMarket", () => {
       false,
     );
     expect(isVisibilityOfMarket(undefined, "de")).toBe(false);
+  });
+});
+
+describe("refetching the account after a change", () => {
+  const userOf = (over: Partial<AuthUser>): AuthUser => ({
+    id: "u1",
+    email: "owner@example.com",
+    emailVerified: true,
+    name: null,
+    role: "owner",
+    plan: "free",
+    trialEndsAt: null,
+    planExpiresAt: null,
+    entitled: false,
+    platformOperator: false,
+    ...over,
+  });
+
+  it("answers with a request sent after the change, not one still in flight", async () => {
+    const client = new QueryClient();
+    const before = userOf({ entryStep: "choose-plan" });
+    const after = userOf({ entitled: true });
+    let answerFirst: (user: AuthUser) => void = () => undefined;
+    const queryFn = vi
+      .fn<() => Promise<AuthUser>>()
+      .mockImplementationOnce(
+        () => new Promise((resolve) => (answerFirst = resolve)),
+      )
+      .mockResolvedValueOnce(after);
+    const unsubscribe = new QueryObserver(client, {
+      ...authMeOptions,
+      queryFn,
+    }).subscribe(() => undefined);
+
+    const refetched = refetchAuth(client);
+    answerFirst(before);
+    await refetched;
+
+    expect(queryFn).toHaveBeenCalledTimes(2);
+    expect(client.getQueryData(authMeKey)).toEqual(after);
+    unsubscribe();
   });
 });

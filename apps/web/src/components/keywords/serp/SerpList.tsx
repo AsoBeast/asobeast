@@ -55,6 +55,7 @@ export function SerpList({
             <SerpRow
               key={keys[index]}
               entry={entry}
+              store={viewer.store}
               role={role}
               comparedTo={comparedTo}
               actions={actionsFor?.(entry, role)}

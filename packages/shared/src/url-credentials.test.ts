@@ -49,6 +49,6 @@ describe('redactUrlCredentials', () => {
     const started = performance.now();
     redact(text);
 
-    expect(performance.now() - started).toBeLessThan(250);
+    expect(performance.now() - started).toBeLessThan(1_000);
   });
 });

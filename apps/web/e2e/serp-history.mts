@@ -95,6 +95,7 @@ function entryOf(
       ? position
       : seed.previous;
   const delta = deltaOf(position, previous);
+  const titleMatch = titleMatchOf(seed.title, keyword, words);
   return {
     position,
     storeAppId: seed.storeAppId,
@@ -109,8 +110,11 @@ function entryOf(
       seed.iconUrl === undefined
         ? SERP_ICON_URLS[position % SERP_ICON_URLS.length]
         : seed.iconUrl,
-    titleMatch: titleMatchOf(seed.title, keyword, words),
+    titleMatch,
     titleSegments: segmentsOf(seed.title, words),
+    ...(titleMatch === "phrase" || titleMatch === "words"
+      ? { placement: "title" as const }
+      : {}),
     previous,
     delta,
     movement: compared ? (seed.movement ?? movementOf(delta)) : "none",
@@ -348,6 +352,15 @@ export const SERP_HISTORY: Record<string, SerpSnapshot[]> = {
       dates: [],
     },
   ],
+};
+
+export const SERP_STALE_HISTORY: Record<string, SerpSnapshot[]> = {
+  "kw-4": singleDay(
+    "kw-4",
+    "productivity app",
+    utcDaysAgo(3),
+    filler(101, 150, "Productivity App"),
+  ),
 };
 
 export function serpOnDay(

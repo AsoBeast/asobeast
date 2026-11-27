@@ -13,7 +13,7 @@ export class SerpController {
   @ApiOperation({
     summary: 'Top search results captured for a keyword',
     description:
-      'Answers up to 50 entries of the day asked for, or of the newest captured day. Each entry carries its iconUrl, titleMatch and titleSegments, and previous, delta and movement against comparedTo, the newest captured day before date. Movement is none when there is no earlier capture or the earlier capture did not reach that position. exits lists the apps of that earlier capture no longer listed, and dates lists up to 365 captured days, newest first.',
+      'Answers up to 50 entries of the day asked for, or of the newest captured day. Each entry carries its iconUrl, titleMatch and titleSegments, and previous, delta and movement against comparedTo, the newest captured day before date. An entry may also carry subtitle, from the newest listing the workspace captured for that app in the keyword market by the end of the shown day (only for its own apps and competitors on the App Store), with subtitleSegments, and placement (title, subtitle, both, split or none), which is absent when the subtitle is unknown and the title does not hold the keyword. Movement is none when there is no earlier capture or the earlier capture did not reach that position. exits lists the apps of that earlier capture no longer listed, and dates lists up to 365 captured days, newest first.',
   })
   serp(
     @Param('keywordId') keywordId: string,

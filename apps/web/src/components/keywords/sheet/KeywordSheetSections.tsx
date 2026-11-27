@@ -102,6 +102,7 @@ export function KeywordSheetFacts({
   const label = formatCheckedPosition(
     keyword.latestPosition,
     keyword.latestDepth,
+    keyword.latestResultCount,
   );
   const staleOn = staleCheckDay(keyword, today);
   return (

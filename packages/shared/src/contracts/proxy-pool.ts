@@ -35,6 +35,7 @@ export interface ProxyEndpointHealth {
   cooldownUntil: string | null;
   lastOutcome: ProxyOutcomeName | null;
   lastUsedAt: string | null;
+  lastRefusalStatus?: number | null;
 }
 
 export interface ResidentialFallbackHealth {

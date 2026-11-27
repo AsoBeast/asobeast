@@ -163,6 +163,7 @@ export function MapSurface({
               formatCheckedPosition(
                 openKeyword.latestPosition,
                 openKeyword.latestDepth,
+                openKeyword.latestResultCount,
               ) ?? ""
             }
             staleOn={staleCheckDay(openKeyword, today)}

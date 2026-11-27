@@ -29,7 +29,7 @@ export const INSIGHT_TOOLS: ReadTool[] = [
     name: "ranking_history",
     title: "Ranking history",
     description:
-      "Daily position history for one app's tracked keywords over a date window. Positions are 1-based; null means checked but not found within the depth carried by each point (render as >depth, for example >30). Charts read best with a reversed Y axis (position 1 on top). Omit keywordIds for every tracked keyword.",
+      "Daily position history for one app's tracked keywords over a date window. Positions are 1-based; null means checked but not found within the depth carried by each point (render as >depth, for example >30). A point whose resultCount is 0 means the store lists no apps for that search that day. Charts read best with a reversed Y axis (position 1 on top). Omit keywordIds for every tracked keyword.",
     inputSchema: z.object({
       appId,
       keywordIds: z
@@ -49,7 +49,7 @@ export const INSIGHT_TOOLS: ReadTool[] = [
     name: "serp_snapshot",
     title: "SERP snapshot",
     description:
-      "The stored search-results snapshot for one tracked keyword: the ranked apps captured on a given day, up to 50 positions. Each entry names its icon, whether the keyword is in its title (titleMatch: phrase, words, partial or none, with titleSegments marking the matched words), and whether the app is yours (appId) or a competitor. previous, delta and movement compare each entry with comparedTo, the newest earlier captured day; exits are apps of that day no longer listed; dates lists the captured days, newest first. Omit date for the most recent snapshot. Dates are UTC date strings (YYYY-MM-DD).",
+      "The stored search-results snapshot for one tracked keyword: the ranked apps captured on a given day, up to 50 positions. Each entry names its icon, whether the keyword is in its title (titleMatch: phrase, words, partial or none, with titleSegments marking the matched words), and whether the app is yours (appId) or a competitor. Each entry may also carry placement (title, subtitle, both, split or none: where the app puts the keyword's words), and, for your own apps and competitors, the subtitle captured by the end of that day with subtitleSegments; an app you do not follow is judged on its title alone, so placement is absent when its title lacks the keyword. previous, delta and movement compare each entry with comparedTo, the newest earlier captured day; exits are apps of that day no longer listed; dates lists the captured days, newest first. Omit date for the most recent snapshot. Dates are UTC date strings (YYYY-MM-DD).",
     inputSchema: z.object({
       keywordId: z.string().describe("The tracked keyword id."),
       date: utcDate

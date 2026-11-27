@@ -4,12 +4,13 @@ import { IsInt, IsOptional, Matches, Max, Min } from 'class-validator';
 import { COUNTRY_PATTERN, QUERY_BOUNDS } from '@asobeast/shared';
 
 export class SerpMoversQueryDto {
+  @ApiPropertyOptional({ type: 'integer' })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(QUERY_BOUNDS.serpMoverDays.min)
   @Max(QUERY_BOUNDS.serpMoverDays.max)
-  days = QUERY_BOUNDS.serpMoverDays.default;
+  days: number = QUERY_BOUNDS.serpMoverDays.default;
 
   @ApiPropertyOptional({
     example: 'us',

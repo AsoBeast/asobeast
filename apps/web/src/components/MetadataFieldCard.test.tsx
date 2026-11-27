@@ -28,6 +28,23 @@ describe("MetadataFieldCard", () => {
     expect(markup).toContain("Not searched by the store");
   });
 
+  it("explains a field the store does not search", () => {
+    const markup = renderToStaticMarkup(
+      <MetadataFieldCard
+        field="description"
+        value="A calm focus timer."
+        limit={4000}
+        indexed={false}
+        issues={[]}
+      />,
+    );
+
+    expect(markup).toContain("Not searched by the store");
+    expect(markup).toContain(
+      'aria-label="Why the store does not search Description"',
+    );
+  });
+
   it("keeps the character count in either case", () => {
     expect(render(true)).toContain("11/30");
     expect(render(false)).toContain("11/30");

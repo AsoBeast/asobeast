@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { NO_APPS_SENTENCE, type Store } from "@asobeast/shared";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate } from "@/lib/format";
 import { SERP_ROW_GRID } from "./SerpRow";
@@ -28,10 +29,12 @@ export function SerpNothingCaptured({ date }: { date: string }) {
   );
 }
 
-export function SerpNoApps({ date }: { date: string }) {
+export function SerpNoApps({ date }: { date?: string }) {
   return (
     <Panel>
-      {`The store showed no apps for this keyword on ${formatDate(date)}.`}
+      {date === undefined
+        ? `${NO_APPS_SENTENCE}.`
+        : `${NO_APPS_SENTENCE} on ${formatDate(date)}.`}
     </Panel>
   );
 }
@@ -44,10 +47,10 @@ export function SerpKeptShort() {
   );
 }
 
-export function SerpSkeleton() {
+export function SerpSkeleton({ store }: { store: Store }) {
   return (
     <div aria-hidden className="flex flex-col">
-      <SerpSummarySkeleton />
+      <SerpSummarySkeleton store={store} />
       <div className="px-4 pt-4 pb-1 text-label">
         <Skeleton className="h-lh w-12" />
       </div>
@@ -57,6 +60,7 @@ export function SerpSkeleton() {
           <Skeleton className="col-start-2 row-start-1 size-10 rounded-lg" />
           <div className="col-start-3 row-start-1 flex flex-col gap-0.5">
             <Skeleton className="h-lh w-3/4" />
+            <Skeleton className="h-lh w-1/2 text-caption" />
             <Skeleton className="h-lh w-1/3 text-caption" />
           </div>
           <Skeleton className="col-start-4 row-start-1 h-4 w-12" />

@@ -20,6 +20,7 @@ const SCOPED_TABLES = [
   'trackedKeyword',
   'keywordDiscovery',
   'keywordField',
+  'listingTarget',
   'featuringSync',
   'keywordRanking',
   'categoryRank',

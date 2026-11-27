@@ -25,6 +25,7 @@ const row = (overrides: Partial<TrackRow> = {}): TrackRow => ({
   source: 'reviews',
   position: null,
   depth: null,
+  resultCount: null,
   ownSearch: false,
   checkedOn: null,
   ...overrides,
@@ -34,6 +35,7 @@ interface RankingRow {
   keywordId: string;
   position: number | null;
   depth: number;
+  resultCount: number | null;
 }
 
 const build = (created = 1, limit: number | null = null) => {
@@ -132,6 +134,7 @@ describe('DiscoveryTracker', () => {
           date: new Date('2026-11-05T00:00:00.000Z'),
           position: 4,
           depth: 50,
+          resultCount: null,
         },
         {
           appId: 'app1',
@@ -140,6 +143,7 @@ describe('DiscoveryTracker', () => {
           date: new Date('2026-11-04T00:00:00.000Z'),
           position: null,
           depth: 200,
+          resultCount: null,
         },
       ],
       skipDuplicates: true,
@@ -149,6 +153,36 @@ describe('DiscoveryTracker', () => {
       ['k1', 'k2', 'k3', 'k4'],
       app,
     );
+  });
+
+  it('seeds the ranking row with the result count of the discovery', async () => {
+    const { service, tx } = build(1);
+    await service.trackRows(
+      app,
+      [
+        row({
+          position: 4,
+          depth: 50,
+          resultCount: 30,
+          checkedOn: TODAY,
+        }),
+      ],
+      TODAY,
+    );
+    expect(tx.keywordRanking.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          appId: 'app1',
+          workspaceId: 'ws',
+          keywordId: 'k1',
+          date: new Date(`${TODAY}T00:00:00.000Z`),
+          position: 4,
+          depth: 50,
+          resultCount: 30,
+        },
+      ],
+      skipDuplicates: true,
+    });
   });
 
   it('tracks an own search at depth 30 without the app as a known position', async () => {
@@ -174,6 +208,7 @@ describe('DiscoveryTracker', () => {
           date: new Date(`${TODAY}T00:00:00.000Z`),
           position: null,
           depth: 30,
+          resultCount: null,
         },
       ],
       skipDuplicates: true,

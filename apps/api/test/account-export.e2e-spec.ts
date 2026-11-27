@@ -420,4 +420,44 @@ describe('Account export credential state (e2e)', () => {
       });
     }
   });
+
+  it('exports the target keywords of a localization with their slots', async () => {
+    const app = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: 'APP_STORE',
+        storeAppId: '551000005',
+        name: 'Targeting Export',
+      },
+    });
+    try {
+      await prisma.listingTarget.create({
+        data: {
+          appId: app.id,
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          localization: 'en-US',
+          slots: ['habit tracker', '', 'focus timer'],
+        },
+      });
+
+      const { lines } = await exportAs({ cookie: ownerCookie });
+
+      expect(
+        lines
+          .filter(
+            (line) =>
+              line.table === 'listingTarget' && line.row?.appId === app.id,
+          )
+          .map((line) => line.row),
+      ).toEqual([
+        expect.objectContaining({
+          appId: app.id,
+          localization: 'en-US',
+          slots: ['habit tracker', '', 'focus timer'],
+        }),
+      ]);
+    } finally {
+      await prisma.app.delete({ where: { id: app.id } });
+    }
+  });
 });

@@ -1,5 +1,10 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 
+import {
+  COVERAGE_PREVIEW_CHANGES,
+  DRAFT_WASTE_REASONS,
+  isCoveragePreviewChange,
+} from '../index';
 import type {
   AppStoreLocalization,
   MetadataAssistantRequest,
@@ -27,5 +32,26 @@ describe('metadata assistant contract', () => {
     expectTypeOf<MetadataAssistantResult['localization']>().toEqualTypeOf<
       AppStoreLocalization | null | undefined
     >();
+  });
+});
+
+describe('coverage preview contract', () => {
+  it('lists the preview changes in reading order', () => {
+    expect(COVERAGE_PREVIEW_CHANGES).toEqual([
+      'lost',
+      'gained',
+      'missing',
+      'kept',
+    ]);
+  });
+
+  it('names the draft waste reasons', () => {
+    expect(DRAFT_WASTE_REASONS).toEqual(['repeated', 'unused']);
+  });
+
+  it('tells a preview change from any other string', () => {
+    expect(isCoveragePreviewChange('gained')).toBe(true);
+    expect(isCoveragePreviewChange('won')).toBe(false);
+    expect(isCoveragePreviewChange(undefined)).toBe(false);
   });
 });

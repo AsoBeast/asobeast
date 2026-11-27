@@ -1,6 +1,11 @@
 import { Store } from '@prisma/client';
-import { listingSegments, normalizeText, tokenize } from '@asobeast/shared';
-import { containsTerm, isUnsegmented } from '../common/text/scripts';
+import {
+  containsTerm,
+  isUnsegmented,
+  listingSegments,
+  normalizeText,
+  tokenize,
+} from '@asobeast/shared';
 import { extractCandidates } from './extraction';
 import { seedSources } from './listing-seed';
 

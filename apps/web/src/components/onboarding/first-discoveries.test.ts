@@ -9,6 +9,7 @@ const item = (
   text: string,
   position: number | null,
   depth: number | null,
+  resultCount?: number | null,
 ): KeywordDiscoveryItem => ({
   keywordId: `kw-${text}`,
   text,
@@ -24,6 +25,7 @@ const item = (
   opportunity: null,
   state: position === null ? "open" : "ranked",
   recommended: true,
+  ...(resultCount === undefined ? {} : { resultCount }),
 });
 
 const list = (
@@ -158,5 +160,26 @@ describe("firstDiscoveries", () => {
     expect(firstDiscoveries(list([item("timer", 4, 200)], null))).toMatchObject(
       { status: "ready" },
     );
+  });
+
+  it("says the search listed no apps for a row the store emptied", () => {
+    expect(
+      firstDiscoveries(list([item("study planner", null, 200, 0)])),
+    ).toMatchObject({
+      rows: [
+        {
+          text: "study planner",
+          rank: "the store lists no apps for this search",
+        },
+      ],
+    });
+  });
+
+  it("keeps the bound for a row written before the count existed", () => {
+    expect(
+      firstDiscoveries(list([item("study planner", null, 200, null)])),
+    ).toMatchObject({
+      rows: [{ text: "study planner", rank: ">200" }],
+    });
   });
 });

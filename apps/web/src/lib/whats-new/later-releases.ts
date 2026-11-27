@@ -2,6 +2,85 @@ import type { Release } from "./release-notes";
 
 export const LATER_RELEASES: readonly Release[] = [
   {
+    version: "2.1.0",
+    date: "2026-11-24",
+    title: "Help me write it",
+    summary:
+      "The metadata page helps you write the next version of your listing before it ships.",
+    changes: [
+      {
+        kind: "new",
+        title: "Draft your next listing",
+        text: "The metadata page has a Draft mode: write the next title, subtitle, keyword field and description beside the live ones and see, while you type, which tracked keywords the draft would newly cover, which ones it would lose, and which words are wasted. The draft is kept in your browser, and while you type its text goes to your AsoBeast server to work out that coverage, never to the stores. Copy it out for App Store Connect or Play Console, and save the keyword field through its usual editor.",
+      },
+      {
+        kind: "new",
+        title: "See your listing the way the store shows it",
+        text: "The overview and the draft show your listing as a search result and as a product page, light or dark, on a smaller and a larger iPhone. When a title or subtitle is too long, the preview estimates where the store cuts it and says after which words, and under each draft field you see the words search reads.",
+      },
+      {
+        kind: "new",
+        title: "Target keywords for each language",
+        text: "At the top of a draft, pick what each App Store language should rank for: one keyword for the title, two for the subtitle and up to seven more, or press Use top 3. Picking a keyword you do not track yet starts tracking it in every country that reads that language, and the draft shows which targets it covers.",
+      },
+      {
+        kind: "new",
+        title: "Where each keyword belongs",
+        text: "Every target keyword now says where it fits best: the title, the subtitle, the keyword field, or nowhere, with the reason in one sentence, such as strong popularity and a rank you can improve. Apply suggestions puts your targets in that order, ready to save.",
+      },
+      {
+        kind: "new",
+        title: "The average of your new ratings",
+        text: "The ratings history on the reviews page now shows what your new ratings average beside your overall average, as a weekly line and in a sentence for the chosen range, so you see whether the last release pulls the average up or down long before the overall figure moves. The ratings goal also says where the current mix of new ratings takes you. This works on the App Store; Google Play weights recent ratings in its average, so it cannot be worked out there.",
+      },
+      {
+        kind: "new",
+        title: "Share a chart as a card",
+        text: "The rankings chart, the visibility chart and a keyword's position history now have a Share button that makes a card ready to post: your app's icon and name, a headline such as how far your average rank moved, the chart and the dates. Pick a wide, square or tall size and a paper, night, dusk or sunrise look, turn the change or the app off, then copy or download it. Every card carries a Tracked with AsoBeast line with the AsoBeast address.",
+      },
+      {
+        kind: "new",
+        title: "Where ranking apps put the keyword",
+        text: "The search results of a keyword now say where each app puts it: in the title, the subtitle, both, split between them, or neither. On the App Store, subtitles come from the listings AsoBeast captures for your apps and competitors, so any other app is judged on its title alone, and a competitor in the top 10 without the keyword in either is marked as an outlier. Google Play has no subtitle, so only titles are read there. The summary counts how many of the top 10 hold it in the title, and in the subtitles AsoBeast knows.",
+      },
+      {
+        kind: "new",
+        title: "See which words your description repeats",
+        text: "The description on the metadata page now counts its words and lists the words and phrases it repeats most, with the keywords you track marked and a button that shows each one in the text. On the App Store a short note explains why the description does not help you rank, and on Google Play the card says how many of your tracked keywords it holds. The same list appears under the description of a draft.",
+      },
+      {
+        kind: "fixed",
+        title: "A search that lists no apps says so",
+        text: "When a store lists no apps at all for a keyword you track, its position now reads No apps instead of more than 200: in the keywords table, on the rankings page with its chart and movers, in the position history, the search results sheet, the discovery list and the keyword breakdown. Pointing at it explains that the store lists no apps for this search. A rank alert and the weekly digest say the same when this happens to a keyword that used to rank. Checks from before this update keep the number they were stored with.",
+      },
+      {
+        kind: "fixed",
+        title: "A scheduled plan change shows in Settings",
+        text: "When you move to a smaller plan in the billing portal and the change waits for the end of the period, the Plan section in Settings now names the plan you switch to and the day it starts, instead of saying the current plan renews.",
+      },
+      {
+        kind: "fixed",
+        title: "A declined card says so at the top",
+        text: "When the card on a free trial is declined at the end of the trial, the bar at the top of every page now says the card was declined and links to billing in Settings, where you update the card in the billing portal, instead of asking you to choose a plan again.",
+      },
+      {
+        kind: "fixed",
+        title: "No false parsing alarm when the store was never reached",
+        text: "When every proxy was resting or the network failed before the store answered, the store check called it broken parsing and could show the breakage banner. It now records that the store could not be reached, which raises no banner.",
+      },
+      {
+        kind: "fixed",
+        title: "Collection resumes soon after a proxy account is fixed",
+        text: "A proxy provider that refuses requests because of the account, such as a plan that ran out or credentials it no longer accepts, used to bench its addresses for up to a day. They are now tried again every few minutes, so collection resumes shortly after the account is put right.",
+      },
+      {
+        kind: "new",
+        title: "Why the proxy provider refuses",
+        text: "The capacity page in the admin area now says when the proxy provider is turning requests away and why, from the answer it gave: a plan or quota that ran out, credentials it does not accept, or the status it refused with.",
+      },
+    ],
+  },
+  {
     version: "2.0.0",
     date: "2026-11-10",
     title: "AsoBeast 2",
@@ -222,6 +301,11 @@ export const LATER_RELEASES: readonly Release[] = [
         kind: "fixed",
         title: "Action Center keys and bulk changes",
         text: "Pressing s or Shift D on an action now opens its menu on the snooze options or on Dismiss, as the shortcuts list says. Selecting every action shown and pressing Done, Snooze or Dismiss now changes all of them, however many the queue shows, where more than one hundred used to change nothing.",
+      },
+      {
+        kind: "fixed",
+        title: "Whole words in the suggested keyword field",
+        text: "The suggested keyword field used to drop the last letter of English words ending in s, so focus became focu and news became new. It now keeps every word as you track it and writes the singular only when you track that singular too, and the keyword field check no longer calls news a plural of new.",
       },
     ],
   },

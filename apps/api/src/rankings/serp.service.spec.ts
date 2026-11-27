@@ -41,6 +41,7 @@ describe('SerpService.serp', () => {
     keyword?: unknown;
     days?: Record<string, StoredRow[]>;
     apps?: unknown[];
+    snapshots?: { appId: string; subtitle: string | null }[];
   }) => {
     const keyword =
       options && 'keyword' in options
@@ -86,9 +87,13 @@ describe('SerpService.serp', () => {
         );
       });
     const appFindMany = jest.fn().mockResolvedValue(options?.apps ?? []);
+    const snapshotFindMany = jest
+      .fn()
+      .mockResolvedValue(options?.snapshots ?? []);
     const prisma = {
       serpEntry: { findMany, findFirst },
       app: { findMany: appFindMany },
+      appSnapshot: { findMany: snapshotFindMany },
     };
     const service = new SerpService(
       prisma as unknown as PrismaService,
@@ -99,7 +104,14 @@ describe('SerpService.serp', () => {
         .map(([query]) => query.where)
         .filter((where) => isDay(where.date))
         .map((where) => dayKey(where.date as Date));
-    return { service, findMany, appFindMany, requireKeyword, daysRead };
+    return {
+      service,
+      findMany,
+      appFindMany,
+      snapshotFindMany,
+      requireKeyword,
+      daysRead,
+    };
   };
 
   it('throws when the caller does not track the keyword', async () => {
@@ -374,5 +386,94 @@ describe('SerpService.serp', () => {
       ([query]) => query.where.date !== undefined,
     ) as unknown as [{ select: Record<string, boolean> }];
     expect(shownDay[0].select.iconUrl).toBe(true);
+  });
+
+  it('puts the subtitle and placement on a followed app', async () => {
+    const { service, snapshotFindMany } = setup({
+      days: {
+        [LATEST]: [
+          row(1, 'self-store', 'Streaks'),
+          row(2, 'rival-store', 'Habit Builder'),
+        ],
+      },
+      apps: [
+        {
+          id: 'app1',
+          storeAppId: 'self-store',
+          country: 'us',
+          isCompetitor: false,
+        },
+        {
+          id: 'app2',
+          storeAppId: 'rival-store',
+          country: 'us',
+          isCompetitor: true,
+        },
+      ],
+      snapshots: [
+        { appId: 'app1', subtitle: 'Habit tracker and planner' },
+        { appId: 'app2', subtitle: 'Tracker for streaks' },
+      ],
+    });
+
+    const snapshot = await service.serp('kw1', {});
+
+    expect(snapshotFindMany).toHaveBeenCalledTimes(1);
+    expect(snapshot.entries[0]).toMatchObject({
+      subtitle: 'Habit tracker and planner',
+      placement: 'subtitle',
+      subtitleSegments: [
+        { text: 'Habit', match: 'exact' },
+        { text: ' ', match: 'none' },
+        { text: 'tracker', match: 'exact' },
+        { text: ' and planner', match: 'none' },
+      ],
+    });
+    expect(snapshot.entries[1]).toMatchObject({
+      subtitle: 'Tracker for streaks',
+      placement: 'split',
+    });
+  });
+
+  it('judges an unfollowed app on its title alone', async () => {
+    const { service } = setup({
+      days: {
+        [LATEST]: [row(1, 'a', 'Habit Tracker'), row(2, 'b', 'Streaks Pro')],
+      },
+    });
+
+    const snapshot = await service.serp('kw1', {});
+
+    expect(snapshot.entries[0].placement).toBe('title');
+    expect(snapshot.entries[0]).not.toHaveProperty('subtitle');
+    expect(snapshot.entries[0]).not.toHaveProperty('subtitleSegments');
+    expect(snapshot.entries[1]).not.toHaveProperty('placement');
+    expect(snapshot.entries[1]).not.toHaveProperty('subtitle');
+  });
+
+  it('reads no subtitle on Google Play', async () => {
+    const { service, snapshotFindMany } = setup({
+      keyword: {
+        id: 'kw1',
+        text: 'habit tracker',
+        store: Store.GOOGLE_PLAY,
+        country: 'us',
+      },
+      days: {
+        [LATEST]: [row(1, 'self', 'Habit Tracker'), row(2, 'rival', 'Streaks')],
+      },
+      apps: [
+        { id: 'app1', storeAppId: 'self', country: 'us', isCompetitor: false },
+        { id: 'app2', storeAppId: 'rival', country: 'us', isCompetitor: true },
+      ],
+      snapshots: [{ appId: 'app2', subtitle: 'Habit tracker' }],
+    });
+
+    const snapshot = await service.serp('kw1', {});
+
+    expect(snapshotFindMany).not.toHaveBeenCalled();
+    expect(snapshot.entries[0].placement).toBe('title');
+    expect(snapshot.entries[1]).not.toHaveProperty('placement');
+    expect(snapshot.entries.some((entry) => 'subtitle' in entry)).toBe(false);
   });
 });

@@ -141,7 +141,12 @@ describe('KeywordsController breakdown (e2e)', () => {
     return keyword.id;
   };
 
-  const ranking = (appId: string, keywordId: string, position: number) =>
+  const ranking = (
+    appId: string,
+    keywordId: string,
+    position: number,
+    resultCount?: number,
+  ) =>
     prisma.keywordRanking.create({
       data: {
         appId,
@@ -150,6 +155,7 @@ describe('KeywordsController breakdown (e2e)', () => {
         date: utcToday(),
         position,
         depth: 200,
+        ...(resultCount === undefined ? {} : { resultCount }),
       },
     });
 
@@ -255,6 +261,30 @@ describe('KeywordsController breakdown (e2e)', () => {
       above: 1,
       competitors: 2,
       checked: true,
+    });
+  });
+
+  it('carries the result count on the rankings of the breakdown', async () => {
+    const counted = await createApp({
+      storeAppId: '400',
+      name: 'Counted App',
+      primaryAppId: seeded.prim,
+    });
+    const keyword = await trackedKeyword(seeded.prim, 'counted habit', 'us');
+    await ranking(seeded.prim, keyword, 7, 0);
+    await ranking(counted.id, keyword, 2);
+
+    const result = await breakdown(seeded.prim, keyword);
+
+    expect(appOf(result, seeded.prim).ranking).toMatchObject({
+      position: 7,
+      depth: 200,
+      resultCount: 0,
+    });
+    expect(appOf(result, counted.id).ranking).toMatchObject({
+      position: 2,
+      depth: 200,
+      resultCount: null,
     });
   });
 

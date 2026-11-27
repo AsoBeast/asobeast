@@ -7,7 +7,9 @@ import type {
   ChartFollowItem,
   ChartPage,
   AppAuditResult,
+  CoveragePreviewRequest,
   AppLocalizationsResult,
+  AppStoreLocalization,
   EmailAlertItem,
   FirstRunStatus,
   KeywordFieldQuery,
@@ -27,6 +29,7 @@ import { isStoreSuggestionStrategy, QUERY_BOUNDS } from "@asobeast/shared";
 import {
   hashKey,
   infiniteQueryOptions,
+  keepPreviousData,
   queryOptions,
   skipToken,
   type QueryClient,
@@ -96,7 +99,9 @@ import {
   getAppSetup,
   getMarketSuggestions,
   searchStore,
+  getListingTargets,
   getMetadataAudit,
+  previewListingCoverage,
   getPortfolio,
   getPortfolioHistory,
   getPortfolioInsights,
@@ -273,6 +278,14 @@ export const appKeys = {
       ...appKeys.metadataAuditRoot(id),
       { market, ...(localization === undefined ? {} : { localization }) },
     ] as const,
+  coveragePreviewRoot: (id: string) =>
+    [...appKeys.detail(id), "coverage-preview"] as const,
+  coveragePreview: (id: string, request: CoveragePreviewRequest) =>
+    [...appKeys.coveragePreviewRoot(id), request] as const,
+  listingTargetsRoot: (id: string) =>
+    [...appKeys.detail(id), "listing-targets"] as const,
+  listingTargets: (id: string, localization: AppStoreLocalization | null) =>
+    [...appKeys.listingTargetsRoot(id), localization] as const,
   serpRoot: () => ["serp"] as const,
   serp: (keywordId: string, date: string | null = null) =>
     [...appKeys.serpRoot(), keywordId, date] as const,
@@ -504,6 +517,7 @@ export const apiTokensOptions = queryOptions({
 });
 
 export async function refetchAuth(client: QueryClient): Promise<void> {
+  await client.cancelQueries({ queryKey: authMeKey });
   await Promise.all([
     client.invalidateQueries({ queryKey: authStatusKey }),
     client.invalidateQueries({ queryKey: authMeKey }),
@@ -779,6 +793,31 @@ export const metadataAuditOptions = (
   queryOptions({
     queryKey: appKeys.metadataAudit(id, market, localization),
     queryFn: () => getMetadataAudit(id, market, localization),
+  });
+
+export const coveragePreviewOptions = (
+  id: string,
+  request: CoveragePreviewRequest,
+) =>
+  queryOptions({
+    queryKey: appKeys.coveragePreview(id, request),
+    queryFn: () => previewListingCoverage(id, request),
+    staleTime: 30_000,
+    retry: false,
+    placeholderData: keepPreviousData,
+  });
+
+export const listingTargetsOptions = (
+  id: string,
+  localization: AppStoreLocalization | null,
+) =>
+  queryOptions({
+    queryKey: appKeys.listingTargets(id, localization),
+    queryFn:
+      localization === null
+        ? skipToken
+        : () => getListingTargets(id, localization),
+    staleTime: 30_000,
   });
 
 export const appSummaryOptions = (id: string, country?: string) =>
@@ -1277,6 +1316,8 @@ export function invalidateKeywordMutation(
     queryKey: appKeys.keywordDiscoveriesRoot(id),
   });
   void client.invalidateQueries({ queryKey: appKeys.rankingsRoot(id) });
+  void client.invalidateQueries({ queryKey: appKeys.listingTargetsRoot(id) });
+  void client.invalidateQueries({ queryKey: appKeys.coveragePreviewRoot(id) });
   invalidateWorkspaceChecklist(client);
 }
 
@@ -1312,6 +1353,14 @@ export function invalidateKeywordFieldMutation(
 
 export function invalidateMetadataAudit(client: QueryClient, id: string): void {
   void client.invalidateQueries({ queryKey: appKeys.metadataAuditRoot(id) });
+}
+
+export function invalidateListingTargetsMutation(
+  client: QueryClient,
+  id: string,
+): void {
+  invalidateKeywordMutation(client, id);
+  invalidateMetadataAudit(client, id);
 }
 
 export function invalidateLocalizationMutation(

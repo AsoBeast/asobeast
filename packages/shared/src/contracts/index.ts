@@ -6,6 +6,7 @@ export * from './keywords';
 export * from './keyword-discoveries';
 export * from './keyword-breakdown';
 export * from './keyword-inspections';
+export * from './listing-targets';
 export * from './localizations';
 export * from './markets';
 export * from './setup';

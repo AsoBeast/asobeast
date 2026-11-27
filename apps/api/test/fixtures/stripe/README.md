@@ -1,10 +1,11 @@
 # Stripe webhook fixtures
 
-Full event envelopes for API version `2026-08-26.dahlia`, the version
+Full event envelopes for API version `2026-11-18.endive`, the version
 `apps/api/src/billing/stripe.client.ts` pins. Each file is one complete
-`Stripe.Event` exactly as the endpoint receives it, so the e2e suite exercises
-the same shape the live integration does, including the `data.object` nesting
-and `data.previous_attributes`. There is one file per event type in
+`Stripe.Event` envelope in the shape the endpoint receives, so the e2e suite
+exercises the same nesting the live integration does, including `data.object`
+and `data.previous_attributes`. The objects carry the fields asobeast reads and
+their neighbours, not every field Stripe sends. There is one file per event type in
 `HANDLED_EVENTS`, plus `customer.subscription.cancel_pending` and
 `customer.subscription.past_due` as named variants of `updated`, and
 `customer.discount.created` as the unhandled type.
@@ -43,6 +44,19 @@ them. None was missing from the real events, and the subscription invoices again
 named their subscription only through `parent.subscription_details`. The files
 stay assembled, because the e2e suite addresses them by their identifiers.
 
+On 2026-11-25 the pin moved to `2026-11-18.endive`. A sandbox pass forwarded real
+`2026-11-18.endive` events from a card trial checkout, a cancellation scheduled and
+withdrawn, a trial ended early into a paid invoice, a test clock renewal on a
+declining card (`past_due`), a pause and resume, a coupon applied to a
+subscription, CLI triggers and an immediate cancellation, and every field path
+each envelope here carries was compared with them. Endive only added fields; the
+paths that did not show were values of the data, not of the version: the
+asobeast metadata on subscriptions asobeast did not create, a triggered invoice
+with no subscription parent, and `payment_method_options` set where the envelope
+has `null`. The envelopes moved to the new version without other edits, so
+fields endive added, such as `status_details` on subscriptions and invoices, are
+not in them; recapture before a handler reads one.
+
 ## Capturing
 
 Recapture on the pinned version from the `asobeast-local` sandbox, never from a
@@ -54,12 +68,21 @@ stripe listen --project-name asobeast-local --latest --all-snapshot --forward-to
 
 `--latest` renders the events on the newest API version instead of the
 account's default, so check that the line `stripe listen` prints when it is
-ready names the pinned version. Run M-QA-01, M-QA-03, M-QA-04, M-QA-06 and
+ready names the pinned version. Pass `--project-name asobeast-local` to every
+`stripe trigger` and `stripe post` below as well; without it the CLI uses its
+default account, where the ids do not exist and triggered events never reach the
+listener. Run M-QA-01, M-QA-03, M-QA-04, M-QA-06 and
 M-QA-07 from the manual pass, then `stripe trigger`
 `customer.subscription.trial_will_end` and `customer.subscription.paused` for
 two events no asobeast flow produces. The CLI cannot trigger
-`customer.subscription.resumed`, so resume the paused subscription with
-`stripe post /v1/subscriptions/<id>/resume`. Pick one envelope per file name above, save
+`customer.subscription.resumed`, and on `endive` a resume waits for the
+resumption invoice to be paid, so attach `pm_card_visa` to the paused
+subscription's customer, set it as the subscription's default payment method,
+call `stripe post /v1/subscriptions/<id>/resume` and pay the invoice it opens
+with `stripe post /v1/invoices/<id>/pay`. `stripe trigger customer.discount.created`
+fails because a customer no longer takes a `coupon`; create a coupon and apply
+it with `stripe post /v1/subscriptions/<id> -d "discounts[0][coupon]=<id>"`
+instead. Pick one envelope per file name above, save
 each as `raw/<name>.json`, and scrub it:
 
 ```bash
@@ -77,4 +100,6 @@ replaces tax id values and hosted invoice links, and leaves the rest alone.
 customers in the sandbox, and record the capture date and the scenario each file
 came from here.
 
-When the pinned API version changes, recapture rather than hand-edit.
+When the pinned API version changes, recapture, or compare every field path of
+these envelopes with a fresh capture on the new version as on 2026-11-25, rather
+than hand-edit.

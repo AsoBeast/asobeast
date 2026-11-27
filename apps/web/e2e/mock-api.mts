@@ -36,7 +36,11 @@ import {
   withDiscoveryIcons,
 } from "./competitors-fixtures.mts";
 import { analysisOf, visibilityComparedFor } from "./gap-mock.mts";
-import { SERP_HISTORY, serpOnDay } from "./serp-history.mts";
+import {
+  SERP_HISTORY,
+  SERP_STALE_HISTORY,
+  serpOnDay,
+} from "./serp-history.mts";
 import "./keyword-map.mts";
 import "./keyword-insights.mts";
 import { planMockImport } from "./keyword-import.mts";
@@ -69,6 +73,20 @@ import {
 } from "./keyword-inspections-mock.mts";
 import { seededInspections } from "./keyword-inspection-fixtures.mts";
 import { funnelFor } from "./store-funnel.mts";
+import {
+  COVERAGE_PREVIEW_FAIL_COOKIE,
+  COVERAGE_PREVIEW_MARKETS_COOKIE,
+  mockCoveragePreview,
+  previewMarketsOf,
+} from "./coverage-preview.mts";
+import {
+  listingTargetsOf,
+  resetListingTargets,
+  saveListingTargetsOf,
+  seedListingTargets,
+  storedTargetSlots,
+  TARGETS_FULL_COOKIE,
+} from "./listing-targets.mts";
 import {
   STORE_CONNECT_OFF_COOKIE,
   STORE_CONNECTION_ACTIVE,
@@ -128,6 +146,11 @@ import {
   PL_HISTORY_COOKIE,
   PL_HISTORY_KEYWORD,
   PL_HISTORY_SERIES,
+  NO_APPS_COOKIE,
+  STALE_CAPTURE_COOKIE,
+  NO_APPS_KEYWORD_ID,
+  NO_APPS_DISCOVERY_KEYWORD_ID,
+  NO_APPS_SERIES,
   PROVISIONAL_AUDIT,
   METADATA_AUDIT,
   APP_1_PL_SCREENSHOTS,
@@ -270,6 +293,7 @@ import type {
   ReviewReplyPatchRequest,
   KeywordSuggestionStrategy,
   AddAppLocalizationRequest,
+  ListingTargetsRequest,
   AppLocalizationItem,
   AppLocalizationOrigin,
   AppLocalizationsResult,
@@ -311,6 +335,7 @@ import type {
   KeywordAddRequest,
   KeywordFieldResult,
   KeywordImportRequest,
+  CoveragePreviewRequest,
   MetadataAssistantRequest,
   MetadataAssistantResult,
   MetadataAuditResult,
@@ -337,6 +362,7 @@ import type {
   AppSetupUpdateRequest,
   WorkspaceChecklistUpdateRequest,
   KeywordComparison,
+  KeywordDiscoveryList,
   SerpEntryItem,
   SerpSnapshot,
   StoreImportState,
@@ -754,6 +780,7 @@ const ACCOUNT_PLAN: AccountPlan = {
   cancelAtPeriodEnd: false,
   trialEndsAt: null,
   renewsAt: null,
+  scheduledPlan: null,
   upgradeTo: null,
   upgradePath: UPGRADE_PATH,
   limits: SELF_HOSTED_LIMITS,
@@ -1087,6 +1114,19 @@ const REVIEW_SETS: Record<string, typeof UPDATE_THEME_REVIEWS> = {
 
 const hasPolishHistory = (req: IncomingMessage) =>
   hasCookie(req, PL_HISTORY_COOKIE, "1");
+
+const hasNoApps = (req: IncomingMessage) => hasCookie(req, NO_APPS_COOKIE, "1");
+
+function withNoAppsDiscovery(list: KeywordDiscoveryList): KeywordDiscoveryList {
+  return {
+    ...list,
+    items: list.items.map((item) =>
+      item.keywordId === NO_APPS_DISCOVERY_KEYWORD_ID
+        ? { ...item, resultCount: 0 }
+        : item,
+    ),
+  };
+}
 
 function rankingsIn(
   rankings: RankingSeries,
@@ -1653,6 +1693,42 @@ function countLoggedRequest(kind: string, req: IncomingMessage): void {
   if (token === undefined) return;
   const key = `${kind}:${token}`;
   loggedRequests.set(key, (loggedRequests.get(key) ?? 0) + 1);
+}
+
+function targetsRefusal(
+  dataset: (typeof DATASETS)[string],
+  localization: string,
+): string | null {
+  if (dataset.detail.isCompetitor) {
+    return "A competitor app has no localizations or keyword fields; use its primary app";
+  }
+  if (dataset.detail.store !== "APP_STORE") {
+    return "Target keywords are picked per App Store localization; Google Play has no localizations here";
+  }
+  if (!isAppStoreLocalization(localization)) {
+    return `Unknown App Store localization: ${localization}`;
+  }
+  return null;
+}
+
+function targetsDataset(
+  id: string,
+  localization: string,
+  req: IncomingMessage,
+  res: ServerResponse,
+): (typeof DATASETS)[string] | undefined {
+  const path = req.url ?? "/";
+  const dataset = DATASETS[id];
+  if (!dataset) {
+    json(res, 404, errorEnvelope(404, path, `App ${id} not found`));
+    return undefined;
+  }
+  const refusal = targetsRefusal(dataset, localization);
+  if (refusal !== null) {
+    json(res, 400, errorEnvelope(400, path, refusal));
+    return undefined;
+  }
+  return dataset;
 }
 
 function logFieldRequest(id: string, req: IncomingMessage): void {
@@ -3918,15 +3994,20 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/keywords\/([^/]+)\/serp$/,
     handler: ([keywordId], req, res) => {
-      const history = SERP_HISTORY[keywordId];
-      if (history) {
+      const history =
+        keywordId === NO_APPS_KEYWORD_ID &&
+        hasCookie(req, STALE_CAPTURE_COOKIE, "1")
+          ? SERP_STALE_HISTORY
+          : SERP_HISTORY;
+      const days = history[keywordId];
+      if (days) {
         const date = new URL(req.url ?? "/", "http://mock").searchParams.get(
           "date",
         );
         return json(
           res,
           200,
-          withTrackedCompetitors(keywordId, serpOnDay(history, date)),
+          withTrackedCompetitors(keywordId, serpOnDay(days, date)),
         );
       }
       const snapshot = SERP_SNAPSHOTS[keywordId];
@@ -4094,19 +4175,22 @@ const routes: Route[] = [
           errorEnvelope(400, path, DISCOVERY_COMPETITOR_REFUSAL),
         );
       }
+      const discoveries = discoveriesFor(
+        id,
+        dataset.detail.store,
+        new URL(path, "http://localhost").searchParams.get("country"),
+        {
+          pending: hasCookie(req, DISCOVERY_PENDING_COOKIE, "1"),
+          none: hasCookie(req, DISCOVERY_NONE_COOKIE, "1"),
+          unfit: hasCookie(req, DISCOVERY_UNFIT_COOKIE, "1"),
+        },
+      );
       json(
         res,
         200,
-        discoveriesFor(
-          id,
-          dataset.detail.store,
-          new URL(path, "http://localhost").searchParams.get("country"),
-          {
-            pending: hasCookie(req, DISCOVERY_PENDING_COOKIE, "1"),
-            none: hasCookie(req, DISCOVERY_NONE_COOKIE, "1"),
-            unfit: hasCookie(req, DISCOVERY_UNFIT_COOKIE, "1"),
-          },
-        ),
+        id === "app-1" && hasNoApps(req)
+          ? withNoAppsDiscovery(discoveries)
+          : discoveries,
       );
     },
   },
@@ -4354,6 +4438,14 @@ const routes: Route[] = [
       const scoped = country
         ? dataset.keywords.filter((keyword) => keyword.country === country)
         : dataset.keywords;
+      const noAppsScoped =
+        id === "app-1" && hasNoApps(req)
+          ? scoped.map((keyword) =>
+              keyword.keywordId === NO_APPS_KEYWORD_ID
+                ? { ...keyword, latestResultCount: 0 }
+                : keyword,
+            )
+          : scoped;
       const polishHistory =
         id === "app-1" && country === "pl" && hasPolishHistory(req)
           ? [PL_HISTORY_KEYWORD]
@@ -4363,7 +4455,7 @@ const routes: Route[] = [
         200,
         sortKeywords(
           [
-            ...[...scoped, ...polishHistory].map((keyword) =>
+            ...[...noAppsScoped, ...polishHistory].map((keyword) =>
               annotated(id, keyword),
             ),
             ...(id === "app-1" ? firstCheckRows(req) : []),
@@ -4525,6 +4617,67 @@ const routes: Route[] = [
           ).filter((draft) => fields.includes(draft.field)),
         };
         json(res, 201, result);
+      });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/apps\/([^/]+)\/metadata\/coverage-preview$/,
+    handler: ([id], req, res) => {
+      withBody<CoveragePreviewRequest>(req, res, (body) => {
+        const path = req.url ?? "/";
+        const dataset = DATASETS[id];
+        if (!dataset) {
+          return json(res, 404, errorEnvelope(404, path, "App not found"));
+        }
+        if (dataset.detail.isCompetitor) {
+          return json(
+            res,
+            400,
+            errorEnvelope(
+              400,
+              path,
+              "A competitor app has no draft; draft its primary app instead",
+            ),
+          );
+        }
+        const store = dataset.detail.store;
+        if (
+          store === "GOOGLE_PLAY" &&
+          (body.subtitle !== undefined || body.keywordField !== undefined)
+        ) {
+          return json(
+            res,
+            400,
+            errorEnvelope(
+              400,
+              path,
+              "Google Play has no subtitle or keyword field; draft the short description instead",
+            ),
+          );
+        }
+        if (hasCookie(req, COVERAGE_PREVIEW_FAIL_COOKIE, "1")) {
+          return json(res, 500, errorEnvelope(500, path));
+        }
+        const audit = METADATA_AUDITS[id] ?? METADATA_AUDIT;
+        json(
+          res,
+          200,
+          mockCoveragePreview(
+            { ...audit, appId: id, store },
+            dataset.detail.country,
+            body,
+            {
+              previewMarkets: previewMarketsOf(
+                cookieValue(req, COVERAGE_PREVIEW_MARKETS_COOKIE),
+              ),
+              targetSlots:
+                store === "APP_STORE"
+                  ? storedTargetSlots(id, body.localization ?? "en-US")
+                  : [],
+            },
+          ),
+        );
       });
     },
   },
@@ -4731,7 +4884,23 @@ const routes: Route[] = [
           errorEnvelope(404, path, `Keyword ${keywordId} is not tracked`),
         );
       }
-      json(res, 200, breakdown);
+      json(
+        res,
+        200,
+        id === "app-1" && keywordId === NO_APPS_KEYWORD_ID && hasNoApps(req)
+          ? {
+              ...breakdown,
+              apps: breakdown.apps.map((entry) =>
+                entry.ranking && entry.ranking.position === null
+                  ? {
+                      ...entry,
+                      ranking: { ...entry.ranking, resultCount: 0 },
+                    }
+                  : entry,
+              ),
+            }
+          : breakdown,
+      );
     },
   },
   appRoute(/^\/apps\/([^/]+)\/keywords\/compare$/, (dataset, query, req) => {
@@ -4750,13 +4919,22 @@ const routes: Route[] = [
 
   appRoute(
     /^\/apps\/([^/]+)\/rankings$/,
-    (dataset, query, req) =>
-      rankingsIn(
+    (dataset, query, req) => {
+      const base =
         dataset.detail.id === "app-1" && hasPolishHistory(req)
           ? { series: [...dataset.rankings.series, PL_HISTORY_SERIES] }
-          : dataset.rankings,
+          : dataset.rankings;
+      return rankingsIn(
+        dataset.detail.id === "app-1" && hasNoApps(req)
+          ? {
+              series: base.series.map((item) =>
+                item.keywordId === NO_APPS_KEYWORD_ID ? NO_APPS_SERIES : item,
+              ),
+            }
+          : base,
         query,
-      ),
+      );
+    },
     (req) => hasCookie(req, RANKINGS_FAIL_COOKIE, "1"),
   ),
   {
@@ -5295,6 +5473,70 @@ const routes: Route[] = [
         };
         json(res, 200, result);
       });
+    },
+  },
+  {
+    method: "GET",
+    pattern: /^\/apps\/([^/]+)\/localizations\/([^/]+)\/targets$/,
+    handler: ([id, localization], req, res) => {
+      const dataset = targetsDataset(id, localization, req, res);
+      if (!dataset) return;
+      json(
+        res,
+        200,
+        listingTargetsOf({
+          id,
+          localization,
+          home: dataset.detail.country,
+          keywords: dataset.keywords,
+        }),
+      );
+    },
+  },
+  {
+    method: "PUT",
+    pattern: /^\/apps\/([^/]+)\/localizations\/([^/]+)\/targets$/,
+    handler: ([id, localization], req, res) => {
+      withBody<ListingTargetsRequest>(req, res, (body) => {
+        const dataset = targetsDataset(id, localization, req, res);
+        if (!dataset) return;
+        const answer = saveListingTargetsOf(
+          {
+            id,
+            localization,
+            home: dataset.detail.country,
+            keywords: dataset.keywords,
+          },
+          body,
+          hasCookie(req, TARGETS_FULL_COOKIE, "1"),
+        );
+        if (answer.status === 400) {
+          return json(
+            res,
+            400,
+            errorEnvelope(400, req.url ?? "/", answer.message),
+          );
+        }
+        json(res, 200, answer.body);
+      });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/__seed\/listing-targets\/([^/]+)\/([^/]+)$/,
+    handler: ([id, localization], req, res) => {
+      withBody<{ slots: string[] }>(req, res, ({ slots }) => {
+        seedListingTargets(id, localization, slots);
+        json(res, 200, { seeded: true });
+      });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/__reset\/listing-targets\/([^/]+)$/,
+    handler: ([id], _req, res) => {
+      resetListingTargets(id);
+      json(res, 200, { reset: true });
     },
   },
   {

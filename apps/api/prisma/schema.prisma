@@ -56,6 +56,7 @@ model Workspace {
   snapshotScreenshots           SnapshotScreenshot[]
   keywordFields                 KeywordField[]
   appLocalizations              AppLocalization[]
+  listingTargets                ListingTarget[]
   appSetups                     AppSetup[]
   keywordDiscoveries            KeywordDiscovery[]
   keywordInspections            KeywordInspection[]
@@ -248,6 +249,7 @@ model App {
   tracked                TrackedKeyword[]
   keywordFields          KeywordField[]
   appLocalizations       AppLocalization[]
+  listingTargets         ListingTarget[]
   rankings               KeywordRanking[]
   categoryRanks          CategoryRank[]
   changeEvents           ChangeEvent[]
@@ -419,6 +421,7 @@ model KeywordDiscovery {
   relevance   Int
   position    Int?
   depth       Int?
+  resultCount Int?
   checkedOn   DateTime? @db.Date
   ownSearch   Boolean   @default(false)
   queuedAt    DateTime?
@@ -470,6 +473,19 @@ model AppLocalization {
   localization String
   origin       String
   createdAt    DateTime  @default(now())
+
+  @@id([appId, localization])
+  @@index([workspaceId])
+}
+
+model ListingTarget {
+  appId        String
+  workspaceId  String
+  app          App       @relation(fields: [appId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  localization String
+  slots        String[]
+  updatedAt    DateTime  @updatedAt
 
   @@id([appId, localization])
   @@index([workspaceId])
@@ -547,6 +563,7 @@ model KeywordRanking {
   date        DateTime  @db.Date
   position    Int?
   depth       Int       @default(200)
+  resultCount Int?
   createdAt   DateTime  @default(now())
 
   @@id([appId, keywordId, date])
@@ -871,6 +888,7 @@ model ProxyHealth {
   lastSuccessAt       DateTime?
   lastFailureAt       DateTime?
   lastOutcome         ProxyOutcome?
+  lastRefusalStatus   Int?
   updatedAt           DateTime      @updatedAt
 
   @@id([endpointId, store])
