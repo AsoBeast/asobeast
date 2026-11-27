@@ -86,17 +86,23 @@ function windowAverage(window: readonly Read[]): number | null {
   return pooledAverage(window)?.average ?? null;
 }
 
+function windowEndingOn(
+  reads: readonly Read[],
+  date: string,
+): readonly Read[] | null {
+  const since = dayBefore(date, NEW_RATINGS_WINDOW_DAYS);
+  const baseline = reads
+    .filter((read) => hasSum(read) && read.date <= since)
+    .at(-1);
+  return baseline
+    ? reads.filter((read) => read.date >= baseline.date && read.date <= date)
+    : null;
+}
+
 function seriesOf(reads: readonly Read[]): NewRatingsAveragePoint[] {
-  const first = reads[0];
-  if (!first) return [];
-  const firstFull = dayBefore(first.date, -NEW_RATINGS_WINDOW_DAYS);
   return reads.filter(hasSum).map(({ date }) => {
-    if (date < firstFull) return { date, average: null };
-    const since = dayBefore(date, NEW_RATINGS_WINDOW_DAYS);
-    const window = reads.filter(
-      (read) => read.date >= since && read.date <= date,
-    );
-    return { date, average: windowAverage(window) };
+    const window = windowEndingOn(reads, date);
+    return { date, average: window ? windowAverage(window) : null };
   });
 }
 

@@ -513,6 +513,26 @@ describe("newRatingsAverageSeriesFor on Google Play", () => {
     expect(byDate.get(points[16].date)).toBeCloseTo(meanOf(DAILY), 9);
   });
 
+  it("reaches back to the last day with star counts at the start of a week", () => {
+    const ones = splitStars(70, [1, 0, 0, 0, 0]);
+    const fives = splitStars(10, [0, 0, 0, 0, 1]);
+    const first = PLAY_START.counts;
+    const eighth = plus(first, DAILY);
+    const fifteenth = plus(eighth, ones);
+    const sixteenth = plus(fifteenth, fives);
+    const byDate = new Map(
+      newRatingsAverageSeriesFor("GOOGLE_PLAY", [
+        playPoint("2026-10-01", first),
+        playPoint("2026-10-08", eighth),
+        playPoint("2026-10-15", fifteenth),
+        playPoint("2026-10-16", sixteenth),
+      ]).map((each) => [each.date, each.average]),
+    );
+
+    expect(byDate.get("2026-10-15")).toBeCloseTo(meanOf(ones), 9);
+    expect(byDate.get("2026-10-16")).toBeCloseTo(meanOf(plus(ones, fives)), 9);
+  });
+
   it("draws nothing without star counts", () => {
     expect(
       newRatingsAverageSeriesFor(
