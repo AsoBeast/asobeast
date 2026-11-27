@@ -37,7 +37,7 @@ Lists and themes:
 Translation:
 
 - A translation lives on the `Review` row (`translationLanguage`, `sourceLanguage`, `translatedTitle`, `translatedText`, `translatedAt`), one language at a time. `ReviewTranslator` returns a kept translation for the same language free; otherwise one `AiGateway` call under `reviewTranslation` after every refusing check (unknown review, no words, unknown language). The sync clears it (`TRANSLATION_CLEARED`) when an edit changes title or text, and the write matches the translated title and text, so a translation of replaced text is answered but not kept. Same untrusted block and `foreignContacts` refusal as drafts.
-- `ReviewItem.language` (`reviewLanguage`: script, then function words, `null` when unsure) only decides where the web offers **Translate**, falling back to the storefront's language.
+- `ReviewItem.language` (`reviewLanguage`: script, then the function words of the Latin script lists only, because `review-language.ts` keeps the languages it reads from a script out of `LATIN_WORDS`, `null` when unsure) only decides where the web offers **Translate**, falling back to the storefront's language.
 
 Posting to the store:
 
