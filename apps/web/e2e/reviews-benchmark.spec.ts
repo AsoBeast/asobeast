@@ -79,11 +79,7 @@ test("asks for no competitor history with fewer than three competitors", async (
   page,
 }) => {
   const reads = rivalReads(page);
-  const listed = page.waitForResponse((response) =>
-    response.url().includes(`/apps/${APP_BENCHMARK_TWO_ID}/competitors`),
-  );
   await page.goto(reviewsOf(APP_BENCHMARK_TWO_ID));
-  await listed;
 
   await expect(ownSentence(page)).toBeVisible();
   expect(reads).toEqual([]);
@@ -161,4 +157,22 @@ test("compares google play new ratings with competitors", async ({ page }) => {
     }),
   ).toBeVisible();
   await expect(benchmarkSentence(page)).toContainText("(median of 3)");
+});
+
+test("draws the benchmark from the competitor list the page already read", async ({
+  page,
+}) => {
+  const listReads: string[] = [];
+  page.on("request", (request) => {
+    if (
+      new URL(request.url()).pathname ===
+      `/api/backend/apps/${APP_BENCHMARK_ID}/competitors`
+    ) {
+      listReads.push(request.url());
+    }
+  });
+  await page.goto(reviewsOf(APP_BENCHMARK_ID));
+
+  await expect(benchmarkSentence(page)).toContainText("(median of 3)");
+  expect(listReads).toEqual([]);
 });
