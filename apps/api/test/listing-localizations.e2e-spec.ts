@@ -660,9 +660,12 @@ describe('Native localizations of a listing (e2e)', () => {
     it('records polish as the default of a polish only app', async () => {
       polishOnly();
 
-      const appId = await importFrom(PL_APP_URL);
+      const imported = (
+        await api.post('/apps').send({ url: PL_APP_URL }).expect(201)
+      ).body as AppDetail;
 
-      await expect(defaultOf(appId)).resolves.toBe('pl');
+      expect(imported.defaultLocalization).toBe('pl');
+      await expect(defaultOf(imported.id)).resolves.toBe('pl');
     });
 
     it('keeps an english only app on the storefront default', async () => {

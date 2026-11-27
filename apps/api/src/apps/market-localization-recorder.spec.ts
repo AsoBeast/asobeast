@@ -23,6 +23,7 @@ const APP = {
   store: Store.APP_STORE,
   storeAppId: '6657987209',
   country: 'us',
+  defaultLocalization: null,
   isCompetitor: false,
 };
 

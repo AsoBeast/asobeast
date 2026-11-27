@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Store } from '@prisma/client';
+import { serializeKeywordField } from '../keywords/keyword-field-writer';
 import { PrismaService } from '../prisma/prisma.service';
 import { extractRawFacts } from '../store-providers/raw-facts';
 import {
@@ -27,14 +28,14 @@ export class DefaultLocalizationRecorder {
     market: string,
     listing: CapturedDefault,
     localized: LocalizedCapture,
-  ): Promise<void> {
+  ): Promise<string | null> {
     if (
       market !== app.country ||
       app.isCompetitor ||
       app.store !== Store.APP_STORE ||
       !localized.complete
     ) {
-      return;
+      return app.defaultLocalization;
     }
     try {
       const proven = provenNativeDefault({
@@ -43,15 +44,21 @@ export class DefaultLocalizationRecorder {
         probes: localized.probes,
         declared: extractRawFacts(app.store, listing.raw).languages,
       });
-      if (proven === app.defaultLocalization) return;
-      await this.prisma.app.update({
-        where: { id: app.id },
-        data: { defaultLocalization: proven },
-      });
+      if (proven !== app.defaultLocalization) {
+        await this.prisma.withTransaction(async (tx) => {
+          await serializeKeywordField(tx, app.id);
+          await tx.app.update({
+            where: { id: app.id },
+            data: { defaultLocalization: proven },
+          });
+        });
+      }
+      return proven;
     } catch (error: unknown) {
       this.logger.warn(
         `could not record the default localization of ${app.id}: ${reason(error)}`,
       );
+      return app.defaultLocalization;
     }
   }
 }

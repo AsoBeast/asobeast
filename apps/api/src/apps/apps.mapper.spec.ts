@@ -215,6 +215,7 @@ describe('the listing facts of a snapshot', () => {
     store,
     storeAppId: id,
     country,
+    defaultLocalization: null,
     name: id,
     iconUrl: null,
     delistedAt: null,

@@ -110,7 +110,12 @@ export class AppsService {
 
     await this.beginSetup(app);
     const localized = await this.localizations.capture(app, market, snapshot);
-    await this.defaults.record(app, market, snapshot, localized);
+    const defaultLocalization = await this.defaults.record(
+      app,
+      market,
+      snapshot,
+      localized,
+    );
     const tracked = await this.keywords.trackFromSnapshot(app.id);
 
     await this.scheduleFirstRun(app.id);
@@ -130,7 +135,7 @@ export class AppsService {
 
     await this.scheduleFirstDiscovery(app.id);
 
-    return toAppDetail(app, snapshot, [], null);
+    return toAppDetail({ ...app, defaultLocalization }, snapshot, [], null);
   }
 
   private async beginSetup(app: { id: string; country: string }) {

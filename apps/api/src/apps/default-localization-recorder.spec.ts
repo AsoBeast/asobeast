@@ -34,8 +34,18 @@ const captured = (complete = true): LocalizedCapture => ({
 });
 
 const build = (update = jest.fn().mockResolvedValue({})) => {
-  const prisma = { app: { update } } as unknown as PrismaService;
-  return { recorder: new DefaultLocalizationRecorder(prisma), update };
+  const $executeRaw = jest.fn().mockResolvedValue(1);
+  const tx = { $executeRaw, app: { update } };
+  const prisma = {
+    withTransaction: jest.fn((work: (client: typeof tx) => unknown) =>
+      work(tx),
+    ),
+  } as unknown as PrismaService;
+  return {
+    recorder: new DefaultLocalizationRecorder(prisma),
+    update,
+    $executeRaw,
+  };
 };
 
 describe('DefaultLocalizationRecorder', () => {
@@ -48,6 +58,36 @@ describe('DefaultLocalizationRecorder', () => {
       where: { id: APP.id },
       data: { defaultLocalization: 'pl' },
     });
+  });
+
+  it('writes under the keyword field lock of the app', async () => {
+    const { recorder, update, $executeRaw } = build();
+
+    await recorder.record(APP, 'pl', POLISH, captured());
+
+    expect($executeRaw).toHaveBeenCalledTimes(1);
+    expect($executeRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      update.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('answers the default it leaves on the app', async () => {
+    const { recorder } = build();
+
+    await expect(recorder.record(APP, 'pl', POLISH, captured())).resolves.toBe(
+      'pl',
+    );
+    await expect(
+      recorder.record(
+        { ...APP, defaultLocalization: 'pl' },
+        'gb',
+        POLISH,
+        captured(),
+      ),
+    ).resolves.toBe('pl');
+    await expect(
+      recorder.record(APP, 'pl', POLISH, captured(false)),
+    ).resolves.toBeNull();
   });
 
   it('clears a default the capture no longer proves', async () => {
@@ -107,7 +147,7 @@ describe('DefaultLocalizationRecorder', () => {
     try {
       await expect(
         recorder.record(APP, 'pl', POLISH, captured()),
-      ).resolves.toBeUndefined();
+      ).resolves.toBeNull();
       expect(warn).toHaveBeenCalledWith(
         'could not record the default localization of app_1: down',
       );
