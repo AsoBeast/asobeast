@@ -44,6 +44,11 @@ export const LATER_RELEASES: readonly Release[] = [
         text: "The search results of a keyword now say where each app puts it: in the title, the subtitle, both, split between them, or neither. On the App Store, subtitles come from the listings AsoBeast captures for your apps and competitors, so any other app is judged on its title alone, and a competitor in the top 10 without the keyword in either is marked as an outlier. Google Play has no subtitle, so only titles are read there. The summary counts how many of the top 10 hold it in the title, and in the subtitles AsoBeast knows.",
       },
       {
+        kind: "new",
+        title: "See which words your description repeats",
+        text: "The description on the metadata page now counts its words and lists the words and phrases it repeats most, with the keywords you track marked and a button that shows each one in the text. On the App Store a short note explains why the description does not help you rank, and on Google Play the card says how many of your tracked keywords it holds. The same list appears under the description of a draft.",
+      },
+      {
         kind: "fixed",
         title: "A search that lists no apps says so",
         text: "When a store lists no apps at all for a keyword you track, its position now reads No apps instead of more than 200: in the keywords table, on the rankings page with its chart and movers, in the position history, the search results sheet, the discovery list and the keyword breakdown. Pointing at it explains that the store lists no apps for this search. A rank alert and the weekly digest say the same when this happens to a keyword that used to rank. Checks from before this update keep the number they were stored with.",

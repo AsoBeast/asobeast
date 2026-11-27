@@ -1,5 +1,4 @@
-import { normalizeText } from '@asobeast/shared';
-import { containsTerm, isUnsegmented } from '../common/text/scripts';
+import { containsTerm, isUnsegmented, normalizeText } from '@asobeast/shared';
 
 export const fieldCoverage = (
   field: string,

@@ -1,4 +1,5 @@
 import {
+  containsTerm,
   type KeywordBreakdownField,
   type KeywordBreakdownListing,
   type KeywordBreakdownSegment,
@@ -8,13 +9,10 @@ import {
   lowerCase,
   normalizeText,
   searchKey,
-  tokenize,
-} from '@asobeast/shared';
-import {
-  containsTerm,
   SPACELESS_CHARACTER,
   SPACELESS_OR_NOT,
-} from '../common/text/scripts';
+  tokenize,
+} from '@asobeast/shared';
 import type { Surface } from '../metadata/localized-coverage';
 import { coversKeyword } from './keyword-coverage';
 

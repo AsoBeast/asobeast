@@ -101,6 +101,31 @@ test("a covered listing says so and offers no uncovered filter", async ({
   ).toBeVisible();
 });
 
+test("explains why the store does not search the description", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-long/metadata");
+
+  const tip = page.getByRole("button", {
+    name: "Why the store does not search Description",
+  });
+  await (await hydrated(tip)).click();
+  const dialog = page.getByRole("dialog", {
+    name: "Not searched by the store",
+  });
+  await expect(dialog).toBeVisible();
+  await expect(
+    dialog.getByRole("link", { name: "What each store searches" }),
+  ).toHaveAttribute(
+    "href",
+    "https://docs.asobeast.com/concepts/stores#what-does-each-store-index",
+  );
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(tip).toBeFocused();
+});
+
 test("without tracked keywords the coverage panel points at keywords", async ({
   page,
 }) => {

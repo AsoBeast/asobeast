@@ -1,5 +1,4 @@
-import { pluralsOf } from '@asobeast/shared';
-import { hasInflectedStemScript } from '../common/text/scripts';
+import { hasInflectedStemScript, pluralsOf } from '@asobeast/shared';
 
 export { pluralsOf } from '@asobeast/shared';
 

@@ -7,6 +7,7 @@ import {
   type Store,
 } from "@asobeast/shared";
 import { LintIssueRow } from "@/components/metadata/LintIssueRow";
+import { NotSearchedLabel } from "@/components/metadata/NotSearchedLabel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -71,11 +72,7 @@ export function DraftFieldInput({
       <div className="flex flex-wrap items-baseline justify-between gap-x-3">
         <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
           <Label htmlFor={inputId}>{METADATA_FIELD_LABELS[field]}</Label>
-          {searched ? null : (
-            <span className="text-caption text-faint-foreground">
-              Not searched by the store
-            </span>
-          )}
+          {searched ? null : <NotSearchedLabel field={field} />}
         </div>
         <div className="flex items-center gap-1">
           <span

@@ -64,6 +64,18 @@ Search the coverage table by keyword, sort it by keyword or bucket, and switch o
 
 To see what a new title or subtitle would cover before you ship it, [draft a listing](#draft-a-listing).
 
+## Read your description
+
+The description card counts words beside its characters. A word is a run of letters or digits between spaces, so `don't`, `e-mail` and `24/7` count once each, and links and email addresses count not at all. Japanese, Chinese, Thai, Lao, Khmer and Burmese text has no spaces, so the browser splits it into dictionary words, and the count there is an estimate that can differ slightly between browsers.
+
+Under the text, **Word density** lists the words the description repeats most. A switch moves between **Words**, **Two words** and **Three words**, each showing its top 20. A word or phrase is listed only when it appears at least twice, a phrase never runs across a full stop, a comma or a line break, and phrases are hidden for text written mostly in Chinese or Japanese, where a dictionary split makes them noise. The table follows your edits as you type.
+
+The list leaves out links, numbers, words of one character, the words of your app's name and title, and common function words such as `the` and `with` for English and fifteen other languages: Spanish, Portuguese, French, German, Italian, Dutch, Swedish, Norwegian, Danish, Finnish, Polish, Turkish, Indonesian, Romanian and Czech. Store words such as free, best and new stay in, because those are repeats worth seeing. A word joined by a hyphen or a slash, such as `e-mail`, counts once in the total but is listed as its parts, the way keyword coverage reads it. Each row shows how often it appears and its share, the part of all the words of the description that the row takes up.
+
+**Tracked** marks a row that is a keyword you track in this market. **Show in text** marks every place the row appears in a read only copy of the description, skipping links and addresses as the count does, and pressing it again hides the copy. A phrase that repeats back to back, such as `tab tab tab` for `tab tab`, counts each time it starts and is marked as one run.
+
+On the App Store the description is not searched, so the table is about the people who read your page. On Google Play the description is searched, and the card says how many of your tracked keywords the live description holds, the same verdict as the description column of the [coverage table](#check-keyword-coverage), so the number follows the listing AsoBeast captured, not the text you are editing. The same section appears under the description of a [draft](#draft-a-listing).
+
 ## Draft a listing
 
 Press **Draft** beside the **Localization** control to write the next version of the listing on screen beside the live one. The draft starts from the live title, subtitle and keyword field on the App Store, or the title and short description on Google Play, with the description folded under its own button. There is one draft per localization on the App Store and one per market on Google Play. It stays in this browser until you reset it with **Reset to live listing**. While you type, AsoBeast sends the draft text to its own server to judge coverage, and never sends it to the store. The URL keeps the mode as `?mode=draft`; the draft text never enters a link.
