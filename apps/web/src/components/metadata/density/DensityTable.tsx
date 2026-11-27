@@ -43,9 +43,9 @@ export function DensityTable({
 
   return (
     <DensityMarksContext value={marks}>
-      <Table containerClassName="rounded-lg border border-border">
+      <Table containerClassName="min-h-0 flex-1 scroll-pt-12 overflow-y-auto rounded-lg border border-border bg-card">
         <TableCaption className="sr-only">{caption}</TableCaption>
-        <TableHeader>
+        <TableHeader className="sticky top-0 z-10 bg-card [&_th]:shadow-[inset_0_-1px_0_var(--color-border)] [&_tr]:border-b-0">
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => (

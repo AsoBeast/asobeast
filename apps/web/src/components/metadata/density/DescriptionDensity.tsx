@@ -16,6 +16,8 @@ import type { DensityContext, DescriptionSearch } from "./density-inputs";
 import { DensityTable } from "./DensityTable";
 import { HighlightedText } from "./HighlightedText";
 
+const FRAME = "flex h-96 flex-col gap-3";
+
 const VIEWS: Record<
   DensityView,
   { tab: string; noun: string; caption: string; empty: string }
@@ -47,6 +49,21 @@ function SearchedLine({ searched }: { searched: DescriptionSearch }) {
       <span>Google Play searches the description.</span>{" "}
       <span>{`The live description holds ${searched.held} of your ${pluralize(searched.tracked, "tracked keyword")}.`}</span>
     </p>
+  );
+}
+
+function DensitySkeleton({ searched }: { searched: DescriptionSearch | null }) {
+  return (
+    <>
+      <div aria-hidden className="text-dense">
+        <Skeleton shape="text" className="inline-block w-24 align-middle" />
+      </div>
+      {searched ? <SearchedLine searched={searched} /> : null}
+      <div aria-hidden className={FRAME}>
+        <Skeleton className="h-9 w-64 max-w-full shrink-0" />
+        <Skeleton className="min-h-0 flex-1" />
+      </div>
+    </>
   );
 }
 
@@ -86,31 +103,33 @@ function DensityBody({
         <span>{pluralize(density.words, "word")}</span>
       </p>
       {context.searched ? <SearchedLine searched={context.searched} /> : null}
-      {phrases ? (
-        <Tabs
-          value={view}
-          onValueChange={(next) =>
-            void setView(
-              DENSITY_VIEWS.find((option) => option === next) ?? "words",
-            )
-          }
-        >
-          <TabsList aria-label="Repeated words shown">
-            {DENSITY_VIEWS.map((option) => (
-              <TabsOption key={option} value={option}>
-                {VIEWS[option].tab}
-              </TabsOption>
-            ))}
-          </TabsList>
-        </Tabs>
-      ) : null}
-      <DensityTable
-        rows={rows}
-        caption={labels.caption}
-        empty={labels.empty}
-        noun={labels.noun}
-        marks={marks}
-      />
+      <div className={FRAME}>
+        {phrases ? (
+          <Tabs
+            value={view}
+            onValueChange={(next) =>
+              void setView(
+                DENSITY_VIEWS.find((option) => option === next) ?? "words",
+              )
+            }
+          >
+            <TabsList aria-label="Repeated words shown">
+              {DENSITY_VIEWS.map((option) => (
+                <TabsOption key={option} value={option}>
+                  {VIEWS[option].tab}
+                </TabsOption>
+              ))}
+            </TabsList>
+          </Tabs>
+        ) : null}
+        <DensityTable
+          rows={rows}
+          caption={labels.caption}
+          empty={labels.empty}
+          noun={labels.noun}
+          marks={marks}
+        />
+      </div>
       {shown ? <HighlightedText text={text} row={shown} /> : null}
     </>
   );
@@ -150,11 +169,7 @@ export function DescriptionDensity({
       {hydrated ? (
         <DensityBody text={deferred} ignored={ignored} context={context} />
       ) : (
-        <div aria-hidden className="flex flex-col gap-3">
-          <Skeleton shape="text" className="w-24 text-dense" />
-          <Skeleton className="h-9 w-64 max-w-full" />
-          <Skeleton className="h-48 w-full" />
-        </div>
+        <DensitySkeleton searched={context.searched} />
       )}
     </section>
   );
