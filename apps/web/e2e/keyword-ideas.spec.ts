@@ -288,6 +288,27 @@ test("a keyword longer than the deep search accepts has no Ideas item", async ({
   await expect(page.getByRole("menuitem", { name: "Ideas" })).toHaveCount(0);
 });
 
+test("a link with a seed the deep search refuses offers no search", async ({
+  page,
+}) => {
+  let reads = 0;
+  await page.route(SPIDER_URL, (route) => {
+    reads += 1;
+    return route.fallback();
+  });
+  await page.goto(
+    `/apps/${APP}/keywords?ideas=${encodeURIComponent(TOO_LONG)}`,
+  );
+  const ideas = panel(page);
+  await expect(ideas).toContainText(
+    "Ideas need a keyword of 2 to 40 characters.",
+  );
+  await expect(ideas.getByRole("button", { name: "Find ideas" })).toHaveCount(
+    0,
+  );
+  expect(reads).toBe(0);
+});
+
 test("an idle panel does not poll the deep search status", async ({ page }) => {
   let reads = 0;
   await routeSpider(page);

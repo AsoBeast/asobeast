@@ -37,13 +37,16 @@ export function useIdeasReturn(
 
 export function useOpenIdeas(): (seed: string) => void {
   const [seed, setSeed] = useQueryState("ideas", ideasSeedParser);
-  const shown = seed !== "";
+  const shown = useRef(seed !== "");
+  useEffect(() => {
+    shown.current = seed !== "";
+  }, [seed]);
   return useCallback(
     (next: string) => {
-      if (shown) ideasHistory.switched(currentSearch(), setSeed(next));
+      if (shown.current) ideasHistory.switched(currentSearch(), setSeed(next));
       else ideasHistory.opened(setSeed(next, { history: "push" }));
     },
-    [shown, setSeed],
+    [setSeed],
   );
 }
 

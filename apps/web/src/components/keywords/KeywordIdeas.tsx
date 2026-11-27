@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import {
+  isSpiderTerm,
+  SPIDER_TERM_MAX_LENGTH,
+  SPIDER_TERM_MIN_LENGTH,
+} from "@asobeast/shared";
 import { useFocusAfterCommit } from "@/lib/focus-handoff";
 import { IdeasHeader, IdeasStartPrompt } from "./IdeasParts";
 import { IdeasResults } from "./IdeasResults";
@@ -43,7 +48,11 @@ export function KeywordIdeas({
         country={country}
         onClose={onClose}
       />
-      {started || status.failed ? (
+      {!isSpiderTerm(seed) ? (
+        <p className="text-body text-muted-foreground">
+          {`Ideas need a keyword of ${SPIDER_TERM_MIN_LENGTH} to ${SPIDER_TERM_MAX_LENGTH} characters.`}
+        </p>
+      ) : started || status.failed ? (
         <IdeasResults id={id} country={country} seed={seed} status={status} />
       ) : (
         <IdeasStartPrompt

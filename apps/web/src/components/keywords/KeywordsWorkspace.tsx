@@ -41,7 +41,7 @@ export function KeywordsWorkspace({
   const market = country || homeCountry;
   const discovered = discoveries && tab === "discovered";
   const addKeywords = useRef<HTMLButtonElement>(null);
-  const ideas = useIdeasReturn(addKeywords);
+  const ideasOpen = useIdeasReturn(addKeywords) !== "";
   const findKeywords = (leaving: HTMLElement) => {
     handOffFocus(document.getElementById(DISCOVERED_TAB_ID), leaving);
     setTab("discovered");
@@ -99,7 +99,7 @@ export function KeywordsWorkspace({
           clearFocus={addKeywords}
           onFindKeywords={discoveries ? findKeywords : undefined}
         >
-          {discoveries ? (ideas.length === 0 ? null : suggestions) : research}
+          {discoveries ? ideasOpen && suggestions : research}
         </TrackedKeywordsTab>
       )}
     </div>
