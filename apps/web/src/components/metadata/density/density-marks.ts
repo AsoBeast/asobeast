@@ -46,6 +46,11 @@ const spacelessRanges = (text: string, row: string): TextRange[] => {
   return ranges;
 };
 
+const BASIC_PLANE_END = 0xffff;
+
+const firstCharacterWidth = (text: string): number =>
+  (text.codePointAt(0) ?? 0) > BASIC_PLANE_END ? 2 : 1;
+
 const wordRanges = (text: string, words: readonly string[]): TextRange[] => {
   const pattern = new RegExp(
     `${BEFORE_WORD}${words.join(BETWEEN_WORDS)}${AFTER_WORD}`,
@@ -54,7 +59,7 @@ const wordRanges = (text: string, words: readonly string[]): TextRange[] => {
   const ranges: TextRange[] = [];
   for (let match = pattern.exec(text); match; match = pattern.exec(text)) {
     ranges.push({ start: match.index, end: match.index + match[0].length });
-    pattern.lastIndex = match.index + 1;
+    pattern.lastIndex = match.index + firstCharacterWidth(match[0]);
   }
   return ranges;
 };

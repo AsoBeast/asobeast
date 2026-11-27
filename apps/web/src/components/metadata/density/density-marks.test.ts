@@ -74,6 +74,11 @@ describe("occurrences", () => {
     );
   });
 
+  it("steps past a letter outside the basic plane", () => {
+    expect(textAt("𝒜 𝒜 x", "𝒜")).toEqual(["𝒜", "𝒜"]);
+    expect(textAt("𝒜𝒷 𝒜𝒷 𝒜𝒷", "𝒜𝒷 𝒜𝒷")).toEqual(["𝒜𝒷 𝒜𝒷", "𝒜𝒷 𝒜𝒷"]);
+  });
+
   it("finds a spaceless row by its characters", () => {
     expect(textAt("集中タイマーと集中タイマー", "集中タイマー")).toEqual([
       "集中タイマー",
