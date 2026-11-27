@@ -141,7 +141,7 @@ export const CARD_THEMES: Record<CardThemeName, CardTheme> = {
     tile: "#f6efe5",
     ...LIGHT_PANEL,
     frameInk: "#1c1408",
-    frameMuted: "#3d2a0c",
+    frameMuted: "#2e2008",
   },
 };
 

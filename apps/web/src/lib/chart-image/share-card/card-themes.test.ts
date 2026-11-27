@@ -3,9 +3,11 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { contrastRatio } from "@/lib/contrast";
 import { declarations } from "@/styles/token-scope";
+import { CARD_SIZE_NAMES, CARD_SIZES, cardLayout } from "./card-layout";
 import {
   CARD_THEME_NAMES,
   CARD_THEMES,
+  type CardTheme,
   type CardThemeName,
 } from "./card-themes";
 
@@ -76,6 +78,44 @@ const valueAt = (theme: object, path: string): unknown =>
 const channels = (hex: string) =>
   [1, 3, 5].map((start) => parseInt(hex.slice(start, start + 2), 16));
 
+const rgba = (color: string): number[] => {
+  const hex = /^#([\da-f]{6})$/i.exec(color)?.[1];
+  if (hex) return [...channels(`#${hex}`), 1];
+  return (/rgba\(([^)]+)\)/.exec(color)?.[1] ?? "").split(",").map(Number);
+};
+
+const toHex = (values: number[]) =>
+  `#${values.map((value) => Math.round(value).toString(16).padStart(2, "0")).join("")}`;
+
+function backdropAt(
+  theme: CardTheme,
+  [x, y]: [number, number],
+  { width, height }: { width: number; height: number },
+) {
+  return toHex(
+    theme.glows.reduce((under, glow) => {
+      const cx = glow.x * width;
+      const cy = glow.y * height;
+      const corner = Math.max(
+        Math.hypot(cx, cy),
+        Math.hypot(width - cx, cy),
+        Math.hypot(cx, height - cy),
+        Math.hypot(width - cx, height - cy),
+      );
+      const [red, green, blue, alpha] = rgba(glow.color);
+      const reach = Math.min(
+        Math.hypot(x - cx, y - cy) / (corner * glow.reach),
+        1,
+      );
+      const cover = alpha * (1 - reach);
+      return under.map(
+        (channel, index) =>
+          channel * (1 - cover) + [red, green, blue][index] * cover,
+      );
+    }, channels(theme.base)),
+  );
+}
+
 describe("card themes", () => {
   it("names each theme for its picker", () => {
     expect(CARD_THEME_NAMES.map((name) => CARD_THEMES[name].label)).toEqual([
@@ -127,4 +167,23 @@ describe("card themes", () => {
       pairs.filter(([, text, back]) => (contrastRatio(text, back) ?? 0) < 4.5),
     ).toEqual([]);
   });
+
+  it.each(CARD_THEME_NAMES)(
+    "keeps the credit readable over the glows of %s",
+    (name) => {
+      const theme = CARD_THEMES[name];
+      const failing = CARD_SIZE_NAMES.flatMap((size) => {
+        const { credit } = cardLayout(size, { change: true, app: true });
+        const middle = credit.y + credit.height / 2;
+        return [credit.x, credit.x + credit.width].flatMap((x) => {
+          const back = backdropAt(theme, [x, middle], CARD_SIZES[size]);
+          return [theme.frameInk, theme.frameMuted]
+            .filter((text) => (contrastRatio(text, back) ?? 0) < 4.5)
+            .map((text) => `${size} ${x} ${text} on ${back}`);
+        });
+      });
+
+      expect(failing).toEqual([]);
+    },
+  );
 });
