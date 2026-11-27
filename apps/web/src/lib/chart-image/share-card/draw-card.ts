@@ -6,6 +6,7 @@ import type { CardBox } from "./card-layout";
 import type { ShareCardOptions } from "./card-options";
 import {
   type CardPainter,
+  type TextStyle,
   drawText,
   measurerOf,
   traceRoundedBox,
@@ -78,7 +79,7 @@ function drawHeader(painter: CardPainter, spec: ShareCardSpec) {
 function drawLead(painter: CardPainter, headline: ShareHeadline) {
   const { layout, theme } = painter;
   const { lead } = layout;
-  const muted = { role: "lead", weight: 500, color: theme.muted } as const;
+  const muted: TextStyle = { role: "lead", weight: 500, color: theme.muted };
   if (headline.term === null) {
     drawText(painter, headline.lead, lead, muted);
     return;
@@ -90,7 +91,10 @@ function drawLead(painter: CardPainter, headline: ShareHeadline) {
     layout.fonts.lead,
     measurerOf(painter, 600),
   );
-  const shared = { size: term.size, direction: "ltr" } as const;
+  const shared: Pick<TextStyle, "size" | "direction"> = {
+    size: term.size,
+    direction: "ltr",
+  };
   const width = drawText(painter, prefix, lead, { ...muted, ...shared });
   drawText(
     painter,
