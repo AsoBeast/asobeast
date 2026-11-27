@@ -33,6 +33,8 @@ export interface SerpEntryItem {
   titleSegments?: KeywordBreakdownSegment[];
   subtitle?: string | null;
   subtitleSegments?: KeywordBreakdownSegment[];
+  shortDescription?: string;
+  shortDescriptionSegments?: KeywordBreakdownSegment[];
   placement?: SerpKeywordPlacement;
   previous?: number | null;
   delta?: number | null;
