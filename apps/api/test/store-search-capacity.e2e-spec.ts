@@ -1,5 +1,5 @@
 import './helpers/enable-billing';
-import { ApiErrorEnvelope, PLAN_LIMITS } from '@asobeast/shared';
+import { ApiErrorEnvelope, HOUR_SECONDS, PLAN_LIMITS } from '@asobeast/shared';
 import {
   allowanceSpendsDuring,
   CapacityHarness,
@@ -8,7 +8,11 @@ import {
   startCapacityHarness,
   stopCapacityHarness,
 } from './helpers/capacity-harness';
-import { clearRateLimitCounters } from './obliterate-queues';
+import { awaitWindowHeadroom } from './helpers/burn-headroom';
+import {
+  clearRateLimitCounters,
+  spendOnDemandAllowance,
+} from './obliterate-queues';
 
 const LOOKUP_LIMIT = PLAN_LIMITS.indie.onDemand?.storeLookup.limit ?? 0;
 
@@ -56,10 +60,9 @@ describe('Store search capacity (e2e)', () => {
   });
 
   it('refuses a search once the hourly allowance is spent', async () => {
-    for (let searched = 0; searched < LOOKUP_LIMIT; searched += 1) {
-      await clearRateLimitCounters(harness.app);
-      await search().expect(200);
-    }
+    await awaitWindowHeadroom(HOUR_SECONDS);
+    await search().expect(200);
+    expect(await spendOnDemandAllowance(harness.app, LOOKUP_LIMIT)).toBe(1);
     await clearRateLimitCounters(harness.app);
 
     const refused = await search().expect(429);
