@@ -4,7 +4,7 @@ export const SPIDER_TERM_MIN_LENGTH = 2;
 export const SPIDER_TERM_MAX_LENGTH = 40;
 
 export function isSpiderTerm(term: string): boolean {
-  const length = countChars(term.trim());
+  const length = countChars(term.trim().toLowerCase());
   return length >= SPIDER_TERM_MIN_LENGTH && length <= SPIDER_TERM_MAX_LENGTH;
 }
 

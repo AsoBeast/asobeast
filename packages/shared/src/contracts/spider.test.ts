@@ -14,4 +14,9 @@ describe('isSpiderTerm', () => {
     expect(isSpiderTerm('😀'.repeat(21))).toBe(true);
     expect(isSpiderTerm('😀'.repeat(41))).toBe(false);
   });
+
+  it('counts the term as the endpoint does, after lowercasing', () => {
+    expect(isSpiderTerm('\u0130'.repeat(20))).toBe(true);
+    expect(isSpiderTerm('\u0130'.repeat(21))).toBe(false);
+  });
 });
