@@ -1,7 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import {
+  defaultLocalizationIn,
   isAppStoreLocalization,
+  keywordFieldLocalizations,
   parseKeywordField,
   type AppStoreLocalization,
 } from '@asobeast/shared';
@@ -12,7 +14,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { loadAppMarkets } from '../keywords/app-markets';
 import { storedKeywordFields } from '../keywords/keyword-field-index';
 import { checkKeywordText, KeywordApp } from '../keywords/keywords.support';
-import { homeLocalization, readersOf } from '../keywords/localization-markets';
+import { homeLocalizationOf } from '../keywords/localization-markets';
 import {
   FieldWriteGuard,
   FieldWriteSupersededError,
@@ -107,13 +109,16 @@ const knownLocalizations = (
 };
 
 const defaultMarketsOf = (
+  app: KeywordApp,
   localization: AppStoreLocalization,
   markets: string[],
-  home: string,
 ): string[] =>
-  readersOf(localization, markets, home)
-    .filter(({ role }) => role === 'default')
-    .map(({ country }) => country);
+  markets.filter(
+    (country) => defaultLocalizationIn(app, country) === localization,
+  );
+
+const keptWhenUnserved = (app: KeywordApp): ReadonlySet<string> =>
+  new Set([homeLocalizationOf(app), keywordFieldLocalizations(app.country)[0]]);
 
 @Injectable()
 export class AscKeywordFieldSync {
@@ -146,6 +151,7 @@ export class AscKeywordFieldSync {
           workspaceId: true,
           store: true,
           country: true,
+          defaultLocalization: true,
           storeAppId: true,
           isCompetitor: true,
         },
@@ -190,8 +196,10 @@ export class AscKeywordFieldSync {
       ),
     );
     const markets = await loadAppMarkets(this.prisma, app);
-    const home = homeLocalization(app.country);
-    const { imports, unmapped } = knownLocalizations(served, home);
+    const { imports, unmapped } = knownLocalizations(
+      served,
+      homeLocalizationOf(app),
+    );
     const servedTags = new Set(imports.map(({ localization }) => localization));
 
     const outcome = await this.importFields(app, imports, stored, markets);
@@ -224,7 +232,6 @@ export class AscKeywordFieldSync {
     stored: Map<AppStoreLocalization, string[]>,
     markets: string[],
   ): Promise<FieldOutcome> {
-    const home = homeLocalization(app.country);
     let fields = 0;
     let changed = 0;
     let stoppedAt: AppStoreLocalization | null = null;
@@ -241,7 +248,7 @@ export class AscKeywordFieldSync {
           app,
           localization: entry.localization,
           phrases: entry.phrases,
-          markets: defaultMarketsOf(entry.localization, markets, home),
+          markets: defaultMarketsOf(app, entry.localization, markets),
           guard: this.followsOf(app),
         });
       } catch (error) {
@@ -263,20 +270,20 @@ export class AscKeywordFieldSync {
     servedTags: Set<AppStoreLocalization>,
     markets: string[],
   ): Promise<number | null> {
-    const home = homeLocalization(app.country);
+    const kept = keptWhenUnserved(app);
     let removed = 0;
     for (const localization of stored.keys()) {
       if (servedTags.has(localization)) continue;
       if (!(await this.stillFollowing(app))) return null;
       const before = stored.get(localization) ?? [];
-      if (localization === home) {
+      if (kept.has(localization)) {
         if (before.length === 0) continue;
         try {
           await this.writer.save({
             app,
             localization,
             phrases: [],
-            markets: defaultMarketsOf(localization, markets, home),
+            markets: defaultMarketsOf(app, localization, markets),
             guard: this.followsOf(app),
           });
         } catch (error) {

@@ -44,7 +44,7 @@ describe('provenDefaultLocalization', () => {
   it('answers the market default when the listing differs from the home one', () => {
     expect(
       provenDefaultLocalization({
-        home: 'us',
+        home: { country: 'us' },
         market: 'de',
         homeListing: ENGLISH,
         listing: GERMAN,
@@ -56,7 +56,7 @@ describe('provenDefaultLocalization', () => {
   it('answers nothing when the market echoes the home listing', () => {
     expect(
       provenDefaultLocalization({
-        home: 'us',
+        home: { country: 'us' },
         market: 'de',
         homeListing: ENGLISH,
         listing: ENGLISH,
@@ -68,7 +68,7 @@ describe('provenDefaultLocalization', () => {
   it('answers nothing for the home localization', () => {
     expect(
       provenDefaultLocalization({
-        home: 'de',
+        home: { country: 'de' },
         market: 'at',
         homeListing: GERMAN,
         listing: ENGLISH,
@@ -77,7 +77,7 @@ describe('provenDefaultLocalization', () => {
     ).toBeNull();
     expect(
       provenDefaultLocalization({
-        home: 'gb',
+        home: { country: 'gb' },
         market: 'pl',
         homeListing: ENGLISH,
         listing: GERMAN,
@@ -91,7 +91,7 @@ describe('provenDefaultLocalization', () => {
 
     expect(
       provenDefaultLocalization({
-        home: 'us',
+        home: { country: 'us' },
         market: 'gb',
         homeListing: ENGLISH,
         listing: british,
@@ -100,7 +100,7 @@ describe('provenDefaultLocalization', () => {
     ).toBe('en-GB');
     expect(
       provenDefaultLocalization({
-        home: 'us',
+        home: { country: 'us' },
         market: 'gb',
         homeListing: ENGLISH,
         listing: ENGLISH,
@@ -112,7 +112,7 @@ describe('provenDefaultLocalization', () => {
   it('answers nothing when an additional localization of the market echoes the listing', () => {
     expect(
       provenDefaultLocalization({
-        home: 'us',
+        home: { country: 'us' },
         market: 'ch',
         homeListing: ENGLISH,
         listing: FRENCH,
@@ -121,7 +121,7 @@ describe('provenDefaultLocalization', () => {
     ).toBeNull();
     expect(
       provenDefaultLocalization({
-        home: 'us',
+        home: { country: 'us' },
         market: 'ch',
         homeListing: ENGLISH,
         listing: FRENCH,
@@ -135,7 +135,7 @@ describe('provenDefaultLocalization', () => {
 
     expect(
       provenDefaultLocalization({
-        home: 'us',
+        home: { country: 'us' },
         market: 'de',
         homeListing: ENGLISH,
         listing: subtitled,
@@ -144,7 +144,7 @@ describe('provenDefaultLocalization', () => {
     ).toBe('de');
     expect(
       provenDefaultLocalization({
-        home: 'us',
+        home: { country: 'us' },
         market: 'de',
         homeListing: { ...ENGLISH, subtitle: undefined },
         listing: subtitled,
@@ -156,12 +156,24 @@ describe('provenDefaultLocalization', () => {
   it('answers nothing for a code that is no storefront', () => {
     expect(
       provenDefaultLocalization({
-        home: 'us',
+        home: { country: 'us' },
         market: 'xx',
         homeListing: ENGLISH,
         listing: GERMAN,
         others: [],
       }),
     ).toBeNull();
+  });
+
+  it('proves a market default against the native home tag', () => {
+    expect(
+      provenDefaultLocalization({
+        home: { country: 'pl', defaultLocalization: 'pl' },
+        market: 'gb',
+        homeListing: ENGLISH,
+        listing: { ...ENGLISH, description: 'Discover the world, colour' },
+        others: [],
+      }),
+    ).toBe('en-GB');
   });
 });

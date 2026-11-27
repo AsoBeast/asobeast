@@ -1,13 +1,13 @@
 import {
   appMarkets,
-  homeLocalization,
+  homeLocalizationOf,
   readersOf,
   readerRole,
   readsKeywordField,
   trackInError,
 } from './localization-markets';
 
-describe('homeLocalization', () => {
+describe('homeLocalizationOf', () => {
   it.each([
     ['us', 'en-US'],
     ['mx', 'es-MX'],
@@ -16,12 +16,18 @@ describe('homeLocalization', () => {
   ] as const)(
     'is the default localization of the %s storefront',
     (country, expected) => {
-      expect(homeLocalization(country)).toBe(expected);
+      expect(homeLocalizationOf({ country })).toBe(expected);
     },
   );
 
   it('is English (U.K.) for a country that is no storefront', () => {
-    expect(homeLocalization('zz')).toBe('en-GB');
+    expect(homeLocalizationOf({ country: 'zz' })).toBe('en-GB');
+  });
+
+  it('is the recorded default of a native only listing', () => {
+    expect(
+      homeLocalizationOf({ country: 'pl', defaultLocalization: 'pl' }),
+    ).toBe('pl');
   });
 });
 

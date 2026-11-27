@@ -12,7 +12,7 @@ import {
 import { loadAppMarkets } from '../keywords/app-markets';
 import { KeywordsService } from '../keywords/keywords.service';
 import { ensurePrimaryApp, KeywordApp } from '../keywords/keywords.support';
-import { homeLocalization } from '../keywords/localization-markets';
+import { homeLocalizationOf } from '../keywords/localization-markets';
 import { PrismaService } from '../prisma/prisma.service';
 import { competitorNames } from './competitor-names';
 import { DESCRIPTION_INPUT_LIMIT } from './dto/coverage-preview.dto';
@@ -75,7 +75,8 @@ function appStoreTarget(
   }
   return {
     store: Store.APP_STORE,
-    localization: request.localization ?? homeLocalization(app.country),
+    localization:
+      request.localization ?? homeLocalizationOf({ country: app.country }),
   };
 }
 

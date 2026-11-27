@@ -15,6 +15,7 @@ const APP = {
   workspaceId: 'ws1',
   store: Store.APP_STORE,
   country: 'us',
+  defaultLocalization: null,
   storeAppId: 'store1',
 };
 
@@ -415,6 +416,42 @@ describe('KeywordFieldWriter', () => {
     });
 
     expect(tx.appLocalization.createMany).not.toHaveBeenCalled();
+  });
+
+  it('records no row for the native home localization', async () => {
+    const { writer, tx } = build();
+
+    await writer.save({
+      app: { ...APP, country: 'pl', defaultLocalization: 'pl' },
+      localization: 'pl',
+      phrases: ['frekwencja'],
+      markets: ['pl'],
+    });
+
+    expect(tx.appLocalization.createMany).not.toHaveBeenCalled();
+  });
+
+  it('records a manual row for en-GB once polish is home', async () => {
+    const { writer, tx } = build();
+
+    await writer.save({
+      app: { ...APP, country: 'pl', defaultLocalization: 'pl' },
+      localization: 'en-GB',
+      phrases: ['school diary'],
+      markets: [],
+    });
+
+    expect(tx.appLocalization.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          appId: APP.id,
+          workspaceId: 'ws1',
+          localization: 'en-GB',
+          origin: 'manual',
+        },
+      ],
+      skipDuplicates: true,
+    });
   });
 
   describe('remove', () => {

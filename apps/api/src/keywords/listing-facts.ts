@@ -30,7 +30,7 @@ const marketTitlesOf = (
 
 export async function listingFacts(
   prisma: PrismaService,
-  app: Pick<KeywordApp, 'id' | 'country' | 'store'>,
+  app: Pick<KeywordApp, 'id' | 'country' | 'defaultLocalization' | 'store'>,
   markets: readonly string[] = [],
   options: { coverage?: boolean; marks?: boolean; brand?: boolean } = {},
 ): Promise<AppFacts> {
@@ -49,9 +49,7 @@ export async function listingFacts(
   const localized =
     app.store === Store.APP_STORE &&
     (options.coverage || options.marks || options.brand)
-      ? await latestLocalizedTexts(prisma, app.id, app.country, [
-          ...listings.keys(),
-        ])
+      ? await latestLocalizedTexts(prisma, app, [...listings.keys()])
       : new Map<string, LocalizedTexts[]>();
   const facts: AppFacts = {
     snapshotText,

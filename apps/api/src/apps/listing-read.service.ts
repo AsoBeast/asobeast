@@ -28,7 +28,7 @@ export class ListingReadService {
   async markets(id: string): Promise<ListingMarket[]> {
     const app = await this.prisma.app.findFirst({
       where: { id },
-      select: { country: true, primaryAppId: true },
+      select: { country: true, defaultLocalization: true, primaryAppId: true },
     });
     if (!app) {
       throw new NotFoundException(`App ${id} not found`);
@@ -44,7 +44,7 @@ export class ListingReadService {
         select: { country: true },
         distinct: ['country'],
       }),
-      shippedLocalizations(this.prisma, { id, country: app.country }),
+      shippedLocalizations(this.prisma, { id, ...app }),
     ]);
     const listed = withTracking(
       toListingMarkets(app.country, rows, shipped),

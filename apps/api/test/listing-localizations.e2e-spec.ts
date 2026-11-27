@@ -8,6 +8,7 @@ import {
   AppLocalizationsResult,
   AppScreenshots,
   ChangeTimeline,
+  KeywordFieldResult,
   ListingMarket,
   MetadataAuditResult,
   SnapshotDiffResult,
@@ -684,6 +685,92 @@ describe('Native localizations of a listing (e2e)', () => {
         country: null,
         localization: 'pl',
         title: POLISH_ONLY.title,
+      });
+    });
+
+    const localizationItems = async (appId: string) =>
+      (
+        (await api.get(`/apps/${appId}/localizations`).expect(200))
+          .body as AppLocalizationsResult
+      ).localizations;
+
+    it('labels the home localization of a polish only app polish', async () => {
+      polishOnly();
+      const appId = await importFrom(PL_APP_URL);
+
+      const items = await localizationItems(appId);
+
+      expect(items[0]).toMatchObject({ localization: 'pl', origin: 'home' });
+      expect(items.map((item) => item.localization)).not.toContain('en-GB');
+    });
+
+    it('labels an english only app english (u.k.)', async () => {
+      for (const key of ['pl:default', 'pl:pl', 'pl:en-GB']) {
+        registry.listings.set(key, ENGLISH_ONLY);
+      }
+      const appId = await importFrom(PL_APP_URL);
+
+      const items = await localizationItems(appId);
+
+      expect(items[0]).toMatchObject({ localization: 'en-GB', origin: 'home' });
+    });
+
+    it('keeps a saved english field as a removable item', async () => {
+      const appId = await importFrom(PL_APP_URL);
+      await api
+        .put(`/apps/${appId}/keyword-fields/en-GB`)
+        .send({ text: 'dziennik,oceny', trackIn: [] })
+        .expect(200);
+      polishOnly();
+
+      await api.post(`/apps/${appId}/refresh`).expect(200);
+
+      const items = await localizationItems(appId);
+      expect(
+        items.map(({ localization, origin }) => ({ localization, origin })),
+      ).toEqual([
+        { localization: 'pl', origin: 'home' },
+        { localization: 'en-GB', origin: 'manual' },
+      ]);
+      expect(items[1].phrases).toEqual(['dziennik', 'oceny']);
+      await api.delete(`/apps/${appId}/localizations/pl`).expect(409);
+      await api.delete(`/apps/${appId}/localizations/en-GB`).expect(204);
+    });
+
+    it('saves the polish home field without a manual row', async () => {
+      polishOnly();
+      const appId = await importFrom(PL_APP_URL);
+
+      await api
+        .put(`/apps/${appId}/keyword-fields/pl`)
+        .send({ text: 'frekwencja', trackIn: [] })
+        .expect(200);
+
+      await expect(
+        prisma.appLocalization.findMany({ where: { appId } }),
+      ).resolves.toEqual([]);
+      const items = await localizationItems(appId);
+      expect(items[0]).toMatchObject({
+        localization: 'pl',
+        origin: 'home',
+        phrases: ['frekwencja'],
+      });
+    });
+
+    it('reads the polish home field from the keyword field route without a query', async () => {
+      polishOnly();
+      const appId = await importFrom(PL_APP_URL);
+      await api
+        .put(`/apps/${appId}/keyword-fields/pl`)
+        .send({ text: 'frekwencja', trackIn: [] })
+        .expect(200);
+
+      const field = (await api.get(`/apps/${appId}/keyword-field`).expect(200))
+        .body as KeywordFieldResult;
+
+      expect(field).toMatchObject({
+        localization: 'pl',
+        phrases: ['frekwencja'],
       });
     });
 

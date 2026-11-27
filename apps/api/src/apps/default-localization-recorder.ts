@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { App, Store } from '@prisma/client';
+import { Store } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { extractRawFacts } from '../store-providers/raw-facts';
 import {
@@ -7,8 +7,6 @@ import {
   LocalizedCapture,
 } from './localized-listing-capture.service';
 import { provenNativeDefault } from './native-default';
-
-export type DefaultingApp = ListedApp & Pick<App, 'defaultLocalization'>;
 
 export interface CapturedDefault {
   description: string;
@@ -25,7 +23,7 @@ export class DefaultLocalizationRecorder {
   constructor(private readonly prisma: PrismaService) {}
 
   async record(
-    app: DefaultingApp,
+    app: ListedApp,
     market: string,
     listing: CapturedDefault,
     localized: LocalizedCapture,

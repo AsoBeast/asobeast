@@ -23,6 +23,7 @@ const APP = {
   workspaceId: 'ws_1',
   store: Store.APP_STORE,
   country: 'us',
+  defaultLocalization: null,
   storeAppId: '1234567890',
   isCompetitor: false,
 };
@@ -53,6 +54,7 @@ interface KeywordAppRow {
   workspaceId: string;
   store: Store;
   country: string;
+  defaultLocalization: string | null;
   storeAppId: string;
   isCompetitor: boolean;
 }
@@ -473,5 +475,55 @@ describe('AscKeywordFieldSync.run', () => {
     });
     expect(refused[0].data.syncedAt).toBeInstanceOf(Date);
     expect(actions.request).not.toHaveBeenCalled();
+  });
+
+  describe('an app whose home listing is written in polish', () => {
+    const POLISH_APP = { ...APP, country: 'pl', defaultLocalization: 'pl' };
+
+    it('never removes the native home field', async () => {
+      const { service, writer } = build({
+        apps: { [APP.id]: POLISH_APP },
+        stored: [{ localization: 'pl', phrases: ['dziennik'] }],
+        served: [{ locale: 'en-GB', keywords: 'diary' }],
+      });
+
+      await service.run();
+
+      expect(writer.remove).not.toHaveBeenCalled();
+      expect(writer.save).toHaveBeenCalledWith(
+        expect.objectContaining({ localization: 'pl', phrases: [] }),
+      );
+    });
+
+    it('tracks an imported native home field in the home market', async () => {
+      const { service, writer } = build({
+        apps: { [APP.id]: POLISH_APP },
+        served: [{ locale: 'pl', keywords: 'dziennik,oceny' }],
+      });
+
+      await service.run();
+
+      expect(writer.save).toHaveBeenCalledWith(
+        expect.objectContaining({ localization: 'pl', markets: ['pl'] }),
+      );
+    });
+
+    it('still empties an unserved storefront primary field', async () => {
+      const { service, writer } = build({
+        apps: { [APP.id]: POLISH_APP },
+        stored: [
+          { localization: 'pl', phrases: ['dziennik'] },
+          { localization: 'en-GB', phrases: ['diary'] },
+        ],
+        served: [{ locale: 'pl', keywords: 'dziennik' }],
+      });
+
+      await service.run();
+
+      expect(writer.remove).not.toHaveBeenCalled();
+      expect(writer.save).toHaveBeenCalledWith(
+        expect.objectContaining({ localization: 'en-GB', phrases: [] }),
+      );
+    });
   });
 });

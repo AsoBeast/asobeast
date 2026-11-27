@@ -9,7 +9,7 @@ import { indexKeywordFields, storedPhrases } from './keyword-field-index';
 import { pairKey } from './keyword-import';
 import { KeywordTracker } from './keyword-tracker';
 import { KeywordApp } from './keywords.support';
-import { homeLocalization, readsKeywordField } from './localization-markets';
+import { homeLocalizationOf, readsKeywordField } from './localization-markets';
 import { MarketListingRequests } from './market-listing.requests';
 
 const KEYWORD_FIELD_LOCK = 3_958_261;
@@ -202,10 +202,7 @@ export class KeywordFieldWriter {
     localization: AppStoreLocalization,
     phrases: string[],
   ): Promise<void> {
-    if (
-      phrases.length === 0 ||
-      localization === homeLocalization(app.country)
-    ) {
+    if (phrases.length === 0 || localization === homeLocalizationOf(app)) {
       return;
     }
     await recordAppLocalizations(tx, [

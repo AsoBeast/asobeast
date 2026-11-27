@@ -29,7 +29,7 @@ import {
   serializeKeywordField,
 } from './keyword-field-writer';
 import { ensureLocalizedFieldApp, KeywordApp } from './keywords.support';
-import { homeLocalization } from './localization-markets';
+import { homeLocalizationOf } from './localization-markets';
 
 const itemOf = (
   result: AppLocalizationsResult,
@@ -49,7 +49,9 @@ const notShipped = (localization: AppStoreLocalization) =>
 
 const notRemovable = (app: KeywordApp, localization: AppStoreLocalization) =>
   new ConflictException(
-    `${APP_STORE_LOCALIZATIONS[localization]} is the default localization of the ${app.country.toUpperCase()} storefront and cannot be removed`,
+    localization === app.defaultLocalization
+      ? `${APP_STORE_LOCALIZATIONS[localization]} is the language of the home listing and cannot be removed`
+      : `${APP_STORE_LOCALIZATIONS[localization]} is the default localization of the ${app.country.toUpperCase()} storefront and cannot be removed`,
   );
 
 @Injectable()
@@ -130,7 +132,7 @@ export class AppLocalizationsService {
   ): Promise<void> {
     const app = await ensureLocalizedFieldApp(this.prisma, appId);
     await refuseManagedField(this.prisma, this.box, app.id);
-    if (localization === homeLocalization(app.country)) {
+    if (localization === homeLocalizationOf(app)) {
       throw notRemovable(app, localization);
     }
     if (!itemOf(await this.resultOf(app), localization)) {
@@ -158,6 +160,7 @@ export class AppLocalizationsService {
       markets,
       localizations: toAppLocalizationItems({
         home: app.country,
+        defaultLocalization: app.defaultLocalization,
         markets,
         stored,
         fields,

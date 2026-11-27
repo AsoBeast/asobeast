@@ -2,12 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { App, AppSnapshot, Store } from '@prisma/client';
 import {
   AppStoreLocalization,
+  keywordFieldLocalizations,
   readLocalizations,
   SnapshotChange,
 } from '@asobeast/shared';
 import { ChangesService } from '../changes/changes.service';
 import { recordAppLocalizations } from '../keywords/app-localization-records';
-import { homeLocalization } from '../keywords/localization-markets';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScreenshotQueue } from '../screenshots/screenshot-queue';
 import { ScreenshotRecorder } from '../screenshots/screenshot-recorder';
@@ -26,7 +26,13 @@ import { diffSnapshots, withRecordedChanges } from './snapshot-diff';
 
 export type ListedApp = Pick<
   App,
-  'id' | 'workspaceId' | 'store' | 'storeAppId' | 'country' | 'isCompetitor'
+  | 'id'
+  | 'workspaceId'
+  | 'store'
+  | 'storeAppId'
+  | 'country'
+  | 'defaultLocalization'
+  | 'isCompetitor'
 >;
 
 export interface LocalizedCapture {
@@ -167,7 +173,7 @@ export class LocalizedListingCapture {
       if (
         !previous &&
         !app.isCompetitor &&
-        localization !== homeLocalization(app.country)
+        localization !== keywordFieldLocalizations(app.country)[0]
       ) {
         await recordAppLocalizations(tx, [
           {

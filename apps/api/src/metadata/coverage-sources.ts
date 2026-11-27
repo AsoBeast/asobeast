@@ -16,6 +16,7 @@ export interface CoverageApp {
   id: string;
   store: Store;
   country: string;
+  defaultLocalization: string | null;
 }
 
 export interface ListingView {
@@ -44,9 +45,7 @@ export async function loadCoverageSources(
   ]);
   const localized =
     app.store === Store.APP_STORE
-      ? await latestLocalizedTexts(prisma, app.id, app.country, [
-          ...listings.keys(),
-        ])
+      ? await latestLocalizedTexts(prisma, app, [...listings.keys()])
       : new Map<string, LocalizedTexts[]>();
   const localization = storedLocalization(
     app.store,

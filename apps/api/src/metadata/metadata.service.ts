@@ -186,10 +186,17 @@ export class MetadataService {
     store: Store;
     name: string | null;
     country: string;
+    defaultLocalization: string | null;
   }> {
     const app = await this.prisma.app.findFirst({
       where: { id: appId },
-      select: { id: true, store: true, name: true, country: true },
+      select: {
+        id: true,
+        store: true,
+        name: true,
+        country: true,
+        defaultLocalization: true,
+      },
     });
     if (!app) {
       throw new NotFoundException(`App ${appId} not found`);

@@ -12,6 +12,7 @@ describe('marketReads', () => {
     const reads = marketReads({
       country: 'mx',
       home: 'us',
+      defaultLocalization: null,
       shipped: nothingShipped,
       fields: none,
     });
@@ -28,6 +29,7 @@ describe('marketReads', () => {
     const [read] = marketReads({
       country: 'mx',
       home: 'us',
+      defaultLocalization: null,
       shipped: nothingShipped,
       fields: none,
     });
@@ -47,6 +49,7 @@ describe('marketReads', () => {
     const [read] = marketReads({
       country: 'mx',
       home: 'us',
+      defaultLocalization: null,
       shipped: new Map([['es-MX', 'detected' as const]]),
       fields: new Map([['es-MX', ['uno', 'dos']]]),
     });
@@ -63,6 +66,7 @@ describe('marketReads', () => {
     const [read] = marketReads({
       country: 'us',
       home: 'us',
+      defaultLocalization: null,
       shipped: new Map([['en-US', 'home' as const]]),
       fields: new Map([['en-US', ['é', 'ab']]]),
     });
@@ -74,6 +78,7 @@ describe('marketReads', () => {
     const [read] = marketReads({
       country: 'us',
       home: 'us',
+      defaultLocalization: null,
       shipped: nothingShipped,
       fields: none,
     });
@@ -90,6 +95,7 @@ describe('marketReads', () => {
       marketReads({
         country: 'zz',
         home: 'zz',
+        defaultLocalization: null,
         shipped: nothingShipped,
         fields: none,
       }),
@@ -107,10 +113,32 @@ describe('marketReads', () => {
     const reads = marketReads({
       country: 'gb',
       home: 'us',
+      defaultLocalization: null,
       shipped: new Map([['es-MX', 'manual' as const]]),
       fields: new Map([['es-MX', ['uno']]]),
     });
 
     expect(reads.map(({ localization }) => localization)).toEqual(['en-GB']);
+  });
+
+  it('marks the native default home and keeps its storefront role', () => {
+    const reads = marketReads({
+      country: 'pl',
+      home: 'pl',
+      defaultLocalization: 'pl',
+      shipped: nothingShipped,
+      fields: none,
+    });
+
+    expect(
+      reads.map(({ localization, role, origin }) => [
+        localization,
+        role,
+        origin,
+      ]),
+    ).toEqual([
+      ['en-GB', 'default', null],
+      ['pl', 'additional', 'home'],
+    ]);
   });
 });

@@ -54,7 +54,7 @@ export class MarketLocalizationRecorder {
     });
     if (!homeListing) return;
     const localization = provenDefaultLocalization({
-      home: app.country,
+      home: app,
       market,
       homeListing,
       listing,
