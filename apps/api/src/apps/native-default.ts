@@ -66,7 +66,7 @@ function unlistedNative(
   if (knowsLanguage(language)) return null;
   if (declared.size !== 1 || !declared.has(language)) return null;
   if (evidence.tokens < UNLISTED_MIN_TOKENS) return null;
-  return englishHits(evidence) / evidence.tokens < UNLISTED_MAX_ENGLISH_SHARE
+  return evidence.englishOnly / evidence.tokens < UNLISTED_MAX_ENGLISH_SHARE
     ? native
     : null;
 }

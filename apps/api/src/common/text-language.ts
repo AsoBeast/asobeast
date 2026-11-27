@@ -9,6 +9,14 @@ const ENGLISH = new Set(
     .filter(Boolean),
 );
 
+const SHARED_WORDS: ReadonlySet<string> = new Set(
+  Object.values(FUNCTION_WORDS).flatMap((words) => [...words]),
+);
+
+const ENGLISH_ONLY: ReadonlySet<string> = new Set(
+  [...ENGLISH].filter((word) => !SHARED_WORDS.has(word)),
+);
+
 const LATIN_WORDS: Readonly<Record<string, ReadonlySet<string>>> = {
   en: ENGLISH,
   ...FUNCTION_WORDS,
@@ -106,6 +114,7 @@ export interface LanguageEvidence {
   tokens: number;
   script: string | null;
   hits: Readonly<Record<string, number>>;
+  englishOnly: number;
 }
 
 export const knowsLanguage = (language: string): boolean =>
@@ -118,5 +127,6 @@ export function languageEvidence(text: string): LanguageEvidence {
     tokens: tokens.length,
     script: letters.length === 0 ? null : scriptLanguage(text, letters),
     hits: hitsOf(tokens),
+    englishOnly: tokens.filter((token) => ENGLISH_ONLY.has(token)).length,
   };
 }

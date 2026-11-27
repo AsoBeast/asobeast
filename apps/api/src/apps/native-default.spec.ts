@@ -12,6 +12,9 @@ const BILINGUAL_DESCRIPTION = `${POLISH_DESCRIPTION} ${ENGLISH_DESCRIPTION}`;
 const HUNGARIAN_DESCRIPTION =
   'Ez az alkalmazás segít a diákoknak és a szülőknek abban, hogy minden jegyet, hiányzást és órarendet egy helyen lássanak. Értesítést kapsz az új jegyekről, valamint a tanárok üzeneteiről. Az alkalmazás az iskolai naplóval működik, és minden olyan iskola számára elérhető, amely ezt a rendszert használja. Minden adatod biztonságban van, a bejelentkezés pedig egyszerű és gyors. Több fiókot is hozzáadhatsz, és kijelentkezés nélkül válthatsz közöttük bármikor napközben vagy este otthon.';
 
+const SLOVENIAN_DESCRIPTION =
+  'Aplikacija prikazuje vremensko napoved za vse kraje v Sloveniji in opozorila pred neurjem, točo in močnim vetrom. Spremljaj radarsko sliko padavin in temperature po urah in dnevih. Prejmi obvestilo, ko se nevihta približa tvoji lokaciji, in preveri stanje na cestah. Podatki se osvežujejo vsakih deset minut in so na voljo brez registracije, zato je uporaba preprosta in hitra.';
+
 const SLOVAK_DESCRIPTION =
   'Táto aplikácia pomáha žiakom a rodičom vidieť všetky známky, dochádzku a rozvrh hodín na jednom mieste. Dostaneš upozornenie na nové známky a na správy od učiteľov. Aplikácia funguje so školským denníkom a je dostupná pre každú školu, ktorá tento systém používa. Všetky tvoje údaje sú v bezpečí a prihlásenie je jednoduché a rýchle. Môžeš si pridať viac účtov a prepínať medzi nimi bez odhlásenia kedykoľvek počas dňa aj večer doma.';
 
@@ -187,6 +190,28 @@ describe('provenNativeDefault', () => {
         description: HUNGARIAN_DESCRIPTION.split(' ').slice(0, 20).join(' '),
         probes: echoed('hu'),
         declared: ['HU'],
+      }),
+    ).toBeNull();
+  });
+
+  it('proves slovenian whose word in is also english', () => {
+    expect(
+      proof({
+        home: 'si',
+        description: SLOVENIAN_DESCRIPTION,
+        probes: echoed('sl'),
+        declared: ['SL'],
+      }),
+    ).toBe('sl');
+  });
+
+  it('never proves an unlisted native from english text', () => {
+    expect(
+      proof({
+        home: 'si',
+        description: ENGLISH_DESCRIPTION,
+        probes: echoed('sl'),
+        declared: ['SL'],
       }),
     ).toBeNull();
   });

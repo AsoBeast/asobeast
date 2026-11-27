@@ -122,6 +122,13 @@ describe('languageEvidence', () => {
     expect(Object.values(evidence.hits).every((hits) => hits === 0)).toBe(true);
   });
 
+  it('counts only the english words no other language shares', () => {
+    const evidence = languageEvidence('Vreme in napoved in the radar');
+
+    expect(evidence.hits.en).toBe(3);
+    expect(evidence.englishOnly).toBe(1);
+  });
+
   it('knows the languages it can name', () => {
     expect(['pl', 'en', 'ko'].map(knowsLanguage)).toEqual([true, true, true]);
     expect(['hu', 'sk', 'vi'].map(knowsLanguage)).toEqual([
