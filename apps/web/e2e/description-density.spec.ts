@@ -102,7 +102,7 @@ test("says the description counts for search on Google Play", async ({
   await expect(page.getByText("Not searched by the store")).toHaveCount(0);
   await expect(
     density(page).getByText(
-      `Google Play searches the description. It holds ${held} of your ${tracked} tracked keywords.`,
+      `Google Play searches the description. The live description holds ${held} of your ${tracked} tracked keywords.`,
     ),
   ).toBeVisible();
   await expect(

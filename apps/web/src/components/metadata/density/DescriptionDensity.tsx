@@ -45,7 +45,7 @@ function SearchedLine({ searched }: { searched: DescriptionSearch }) {
   return (
     <p className="text-dense text-muted-foreground">
       <span>Google Play searches the description.</span>{" "}
-      <span>{`It holds ${searched.held} of your ${pluralize(searched.tracked, "tracked keyword")}.`}</span>
+      <span>{`The live description holds ${searched.held} of your ${pluralize(searched.tracked, "tracked keyword")}.`}</span>
     </p>
   );
 }
