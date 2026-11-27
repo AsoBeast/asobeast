@@ -147,7 +147,8 @@
     "noneRank": "它们目前都未进入排名。",
     "noneCheckedShown": "显示的关键词尚未检查。",
     "noneCheckedAll": "它们尚未检查。",
-    "trackFit": "请跟踪适合您应用的关键词。"
+    "trackFit": "请跟踪适合您应用的关键词。",
+    "noApps": "无应用"
   },
   "firstPositions": {
     "title": "首批排名",
@@ -156,7 +157,8 @@
     "collecting": "正在为 {count, plural, other {# 个关键词}}采集排名。",
     "best": "您的应用凭借“{keyword}”排名第 {position, number}。",
     "checkedNone": "已检查 {checked, number} 个关键词（共 {tracked, plural, other {# 个}}），目前都没有进入前 {depth, number} 名。",
-    "missing": "未进入前 {depth, number} 名"
+    "missing": "未进入前 {depth, number} 名",
+    "noApps": "无应用"
   },
   "timeline": {
     "metadataLabel": "详情页已采集",

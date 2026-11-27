@@ -706,7 +706,9 @@ describe('KeywordsService.listTracked serp volatility', () => {
       ...row,
       keyword: {
         ...row.keyword,
-        rankings: [{ position: 5, date: new Date(), depth: 200 }],
+        rankings: [
+          { position: 5, date: new Date(), depth: 200, resultCount: null },
+        ],
       },
     });
     const prisma = {

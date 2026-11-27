@@ -99,7 +99,8 @@
     "inTop10": "进入前 10 名",
     "lead": "你领先 ",
     "trail": "落后 ",
-    "headToHeadAria": "你领先 {lead} 个，落后 {trail} 个"
+    "headToHeadAria": "你领先 {lead} 个，落后 {trail} 个",
+    "noApps": "无应用"
   },
   "gaps": {
     "title": "竞品在哪些关键词上胜过你",

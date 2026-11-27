@@ -16,8 +16,8 @@ describe('movers', () => {
     const result = movers(
       [
         row([
-          { position: null, depth: 100, date: BASELINE },
-          { position: 4, depth: 200, date: REFERENCE },
+          { position: null, depth: 100, date: BASELINE, resultCount: null },
+          { position: 4, depth: 200, date: REFERENCE, resultCount: null },
         ]),
       ],
       REFERENCE,
@@ -29,15 +29,57 @@ describe('movers', () => {
         text: 'focus timer',
         from: null,
         fromDepth: 100,
+        fromResultCount: null,
         to: 4,
         toDepth: 200,
+        toResultCount: null,
       },
     ]);
   });
 
+  it('carries the result count of both compared rankings', () => {
+    const result = movers(
+      [
+        row([
+          { position: 24, depth: 100, date: BASELINE, resultCount: 30 },
+          { position: 11, depth: 200, date: REFERENCE, resultCount: 45 },
+        ]),
+      ],
+      REFERENCE,
+    );
+
+    expect(result.up).toEqual([
+      {
+        keywordId: 'kw_1',
+        text: 'focus timer',
+        from: 24,
+        fromDepth: 100,
+        fromResultCount: 30,
+        to: 11,
+        toDepth: 200,
+        toResultCount: 45,
+      },
+    ]);
+  });
+
+  it('maps a null count for a side stored without one', () => {
+    const result = movers(
+      [
+        row([
+          { position: 24, depth: 100, date: BASELINE, resultCount: null },
+          { position: 11, depth: 200, date: REFERENCE, resultCount: null },
+        ]),
+      ],
+      REFERENCE,
+    );
+
+    expect(result.up[0]?.fromResultCount).toBeNull();
+    expect(result.up[0]?.toResultCount).toBeNull();
+  });
+
   it('ignores a keyword with no baseline capture in the window', () => {
     const result = movers(
-      [row([{ position: 4, depth: 200, date: REFERENCE }])],
+      [row([{ position: 4, depth: 200, date: REFERENCE, resultCount: null }])],
       REFERENCE,
     );
 
@@ -46,7 +88,7 @@ describe('movers', () => {
 
   it('ignores a keyword that was not checked on the reference date', () => {
     const result = movers(
-      [row([{ position: 4, depth: 200, date: BASELINE }])],
+      [row([{ position: 4, depth: 200, date: BASELINE, resultCount: null }])],
       REFERENCE,
     );
 
@@ -57,8 +99,8 @@ describe('movers', () => {
     const result = movers(
       [
         row([
-          { position: 0, depth: 100, date: BASELINE },
-          { position: 4, depth: 200, date: REFERENCE },
+          { position: 0, depth: 100, date: BASELINE, resultCount: null },
+          { position: 4, depth: 200, date: REFERENCE, resultCount: null },
         ]),
       ],
       REFERENCE,
@@ -70,8 +112,10 @@ describe('movers', () => {
         text: 'focus timer',
         from: null,
         fromDepth: 100,
+        fromResultCount: null,
         to: 4,
         toDepth: 200,
+        toResultCount: null,
       },
     ]);
     expect(result.down).toEqual([]);
@@ -81,8 +125,8 @@ describe('movers', () => {
     const result = movers(
       [
         row([
-          { position: -1, depth: 200, date: BASELINE },
-          { position: 0, depth: 200, date: REFERENCE },
+          { position: -1, depth: 200, date: BASELINE, resultCount: null },
+          { position: 0, depth: 200, date: REFERENCE, resultCount: null },
         ]),
       ],
       REFERENCE,
@@ -95,8 +139,8 @@ describe('movers', () => {
     const result = movers(
       [
         row([
-          { position: 4, depth: 200, date: BASELINE },
-          { position: null, depth: 200, date: REFERENCE },
+          { position: 4, depth: 200, date: BASELINE, resultCount: null },
+          { position: null, depth: 200, date: REFERENCE, resultCount: null },
         ]),
       ],
       REFERENCE,
@@ -108,8 +152,10 @@ describe('movers', () => {
         text: 'focus timer',
         from: 4,
         fromDepth: 200,
+        fromResultCount: null,
         to: null,
         toDepth: 200,
+        toResultCount: null,
       },
     ]);
   });
@@ -118,8 +164,8 @@ describe('movers', () => {
 describe('rankedMovers', () => {
   const climber = (index: number, from: number | null, to: number) => ({
     ...row([
-      { position: from, depth: 200, date: BASELINE },
-      { position: to, depth: 200, date: REFERENCE },
+      { position: from, depth: 200, date: BASELINE, resultCount: null },
+      { position: to, depth: 200, date: REFERENCE, resultCount: null },
     ]),
     keywordId: `kw_${index}`,
   });

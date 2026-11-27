@@ -74,6 +74,31 @@ function bodyParserError(
   });
 }
 
+const PARSER_REFUSALS: [number, string, string, string][] = [
+  [413, 'Payload Too Large', 'request entity too large', 'entity.too.large'],
+  [413, 'Payload Too Large', 'too many parameters', 'parameters.too.many'],
+  [
+    415,
+    'Unsupported Media Type',
+    'unsupported charset "LATIN1"',
+    'charset.unsupported',
+  ],
+  [
+    415,
+    'Unsupported Media Type',
+    'unsupported content encoding "compress"',
+    'encoding.unsupported',
+  ],
+  [400, 'Bad Request', 'request aborted', 'request.aborted'],
+  [
+    400,
+    'Bad Request',
+    'request size did not match content length',
+    'request.size.invalid',
+  ],
+  [403, 'Forbidden', 'request verification failed', 'entity.verify.failed'],
+];
+
 describe('AllExceptionsFilter', () => {
   it('reports the request path without its query string', () => {
     const { envelope } = capture(
@@ -322,30 +347,7 @@ describe('AllExceptionsFilter', () => {
     warn.mockRestore();
   });
 
-  it.each([
-    [413, 'Payload Too Large', 'request entity too large', 'entity.too.large'],
-    [413, 'Payload Too Large', 'too many parameters', 'parameters.too.many'],
-    [
-      415,
-      'Unsupported Media Type',
-      'unsupported charset "LATIN1"',
-      'charset.unsupported',
-    ],
-    [
-      415,
-      'Unsupported Media Type',
-      'unsupported content encoding "compress"',
-      'encoding.unsupported',
-    ],
-    [400, 'Bad Request', 'request aborted', 'request.aborted'],
-    [
-      400,
-      'Bad Request',
-      'request size did not match content length',
-      'request.size.invalid',
-    ],
-    [403, 'Forbidden', 'request verification failed', 'entity.verify.failed'],
-  ])(
+  it.each(PARSER_REFUSALS)(
     'answers %i %s for a body the parser refused as %s',
     (statusCode, error, message, type) => {
       const logged = jest.spyOn(Logger.prototype, 'error').mockImplementation();
@@ -365,6 +367,42 @@ describe('AllExceptionsFilter', () => {
       expect(tracked).not.toHaveBeenCalled();
     },
   );
+
+  it.each(PARSER_REFUSALS)(
+    'answers %i %s when the adapter hands over a parser refusal as %s',
+    (statusCode, error, message, type) => {
+      const logged = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+
+      const { status, envelope, tracked } = capture(
+        new HttpException(message, statusCode, {
+          cause: bodyParserError(statusCode, message, type),
+        }),
+      );
+
+      expect(status).toBe(statusCode);
+      expect(envelope).toMatchObject({
+        statusCode,
+        error,
+        message,
+        path: '/apps',
+      });
+      expect(logged).not.toHaveBeenCalled();
+      expect(tracked).not.toHaveBeenCalled();
+    },
+  );
+
+  it('names an exception whose body carries no error by its status', () => {
+    const { status, envelope } = capture(
+      new HttpException({ message: 'already linked' }, HttpStatus.CONFLICT),
+    );
+
+    expect(status).toBe(HttpStatus.CONFLICT);
+    expect(envelope).toMatchObject({
+      statusCode: HttpStatus.CONFLICT,
+      error: 'Conflict',
+      message: 'already linked',
+    });
+  });
 
   it('keeps a server error from the parser a 500 with a generic message', () => {
     const logged = jest.spyOn(Logger.prototype, 'error').mockImplementation();

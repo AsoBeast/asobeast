@@ -87,6 +87,7 @@ export function PositionCell({
   const label = formatCheckedPosition(
     keyword.latestPosition,
     keyword.latestDepth,
+    keyword.latestResultCount,
   );
   if (label === null && isChecking(keyword)) {
     return (
@@ -168,6 +169,7 @@ export function TrendCell({
   const label = formatCheckedPosition(
     keyword.latestPosition,
     keyword.latestDepth,
+    keyword.latestResultCount,
   );
   const trend =
     state !== "ready" ? (

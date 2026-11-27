@@ -360,4 +360,234 @@ describe('SerpController (e2e)', () => {
       expect((response.body as SerpSnapshot).date).toBe('2028-02-29');
     });
   });
+
+  describe('where the keyword sits', () => {
+    const SHOWN = '2026-07-01';
+    const LATER = '2026-07-03';
+    const at = (instant: string) => new Date(instant);
+
+    async function snapshotOf(
+      appId: string,
+      title: string,
+      subtitle: string | null,
+      capturedAt: Date,
+      country: string | null = null,
+    ) {
+      await prisma.appSnapshot.create({
+        data: {
+          appId,
+          country,
+          title,
+          subtitle,
+          description: '',
+          raw: {},
+          capturedAt,
+        },
+      });
+    }
+
+    async function serpOf(
+      store: Store,
+      trackerId: string,
+      rows: [string, string][],
+      date: string,
+      country = 'us',
+    ) {
+      const keyword = await prisma.keyword.create({
+        data: { text: 'habit tracker', store, country },
+      });
+      await prisma.trackedKeyword.create({
+        data: { appId: trackerId, keywordId: keyword.id, source: 'MANUAL' },
+      });
+      await prisma.serpEntry.createMany({
+        data: [SHOWN, LATER].flatMap((day) =>
+          rows.map(([storeAppId, title], index) => ({
+            keywordId: keyword.id,
+            date: new Date(`${day}T00:00:00.000Z`),
+            position: index + 1,
+            storeAppId,
+            title,
+          })),
+        ),
+      });
+      const response = await api
+        .get(`/keywords/${keyword.id}/serp?date=${date}`)
+        .expect(200);
+      return (response.body as SerpSnapshot).entries;
+    }
+
+    async function appStoreDay(date: string) {
+      const you = await appRow('self-store', 'us');
+      const split = await appRow('split-store', 'us', you.id);
+      const without = await appRow('without-store', 'us', you.id);
+      const away = await appRow('away-store', 'gb', you.id);
+      await snapshotOf(
+        you.id,
+        'Streaks',
+        'Habit tracker and planner',
+        at('2026-06-30T08:00:00.000Z'),
+      );
+      await snapshotOf(
+        split.id,
+        'Habit Builder',
+        'Tracker for streaks',
+        at('2026-07-01T23:59:00.000Z'),
+      );
+      await snapshotOf(
+        split.id,
+        'Habit Builder',
+        'Habit tracker daily',
+        at('2026-07-02T00:00:00.000Z'),
+      );
+      await snapshotOf(
+        without.id,
+        'Daily Goals',
+        'Plan your day',
+        at('2026-06-30T08:00:00.000Z'),
+      );
+      await snapshotOf(
+        away.id,
+        'Away Planner',
+        'Habit tracker abroad',
+        at('2026-06-30T08:00:00.000Z'),
+      );
+      return serpOf(
+        Store.APP_STORE,
+        you.id,
+        [
+          ['unfollowed-title', 'Habit Tracker'],
+          ['self-store', 'Streaks'],
+          ['unfollowed-other', 'Streaks Pro'],
+          ['away-store', 'Away Planner'],
+          ['split-store', 'Habit Builder'],
+          ['filler', 'Filler'],
+          ['without-store', 'Daily Goals'],
+        ],
+        date,
+      );
+    }
+
+    it('answers the subtitle and placement of your app and competitors', async () => {
+      const entries = await appStoreDay(SHOWN);
+
+      expect(entries[1]).toMatchObject({
+        storeAppId: 'self-store',
+        subtitle: 'Habit tracker and planner',
+        placement: 'subtitle',
+        subtitleSegments: [
+          { text: 'Habit', match: 'exact' },
+          { text: ' ', match: 'none' },
+          { text: 'tracker', match: 'exact' },
+          { text: ' and planner', match: 'none' },
+        ],
+      });
+      expect(entries[4]).toMatchObject({
+        storeAppId: 'split-store',
+        subtitle: 'Tracker for streaks',
+        placement: 'split',
+      });
+      expect(entries[6]).toMatchObject({
+        storeAppId: 'without-store',
+        subtitle: 'Plan your day',
+        placement: 'none',
+      });
+    });
+
+    it('judges an app you do not follow on its title alone', async () => {
+      const entries = await appStoreDay(SHOWN);
+
+      expect(entries[0]).toMatchObject({ placement: 'title' });
+      expect(entries[0]).not.toHaveProperty('subtitle');
+      expect(entries[2]).not.toHaveProperty('placement');
+      expect(entries[2]).not.toHaveProperty('subtitle');
+    });
+
+    it('reads the listing captured by the end of the shown day', async () => {
+      const shown = await appStoreDay(SHOWN);
+
+      expect(shown[4].subtitle).toBe('Tracker for streaks');
+
+      await prisma.$executeRawUnsafe(
+        'TRUNCATE TABLE "App", "Keyword" RESTART IDENTITY CASCADE',
+      );
+      const later = await appStoreDay(LATER);
+
+      expect(later[4]).toMatchObject({
+        subtitle: 'Habit tracker daily',
+        placement: 'subtitle',
+      });
+    });
+
+    it('knows no subtitle of a competitor followed only in another market', async () => {
+      const entries = await appStoreDay(SHOWN);
+
+      expect(entries[3].appId).not.toBeNull();
+      expect(entries[3]).not.toHaveProperty('subtitle');
+      expect(entries[3]).not.toHaveProperty('placement');
+    });
+
+    it('reads the market listing another record of the same app captured', async () => {
+      const american = await appRow('self-store', 'us');
+      const german = await appRow('self-store', 'de');
+      await snapshotOf(
+        american.id,
+        'Streaks',
+        'Habit tracker und Planer',
+        at('2026-06-30T08:00:00.000Z'),
+        'de',
+      );
+      await snapshotOf(
+        german.id,
+        'Streaks',
+        'Gewohnheiten planen',
+        at('2026-07-02T08:00:00.000Z'),
+      );
+
+      const entries = await serpOf(
+        Store.APP_STORE,
+        german.id,
+        [['self-store', 'Streaks']],
+        SHOWN,
+        'de',
+      );
+
+      expect(entries[0]).toMatchObject({
+        appId: german.id,
+        subtitle: 'Habit tracker und Planer',
+        placement: 'subtitle',
+      });
+    });
+
+    it('answers no subtitle on Google Play', async () => {
+      const you = await prisma.app.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: Store.GOOGLE_PLAY,
+          storeAppId: 'com.self',
+          country: 'us',
+          name: 'You',
+        },
+      });
+      await snapshotOf(
+        you.id,
+        'Streaks',
+        'Habit tracker and planner',
+        at('2026-06-30T08:00:00.000Z'),
+      );
+
+      const entries = await serpOf(
+        Store.GOOGLE_PLAY,
+        you.id,
+        [
+          ['com.title', 'Habit Tracker'],
+          ['com.self', 'Streaks'],
+        ],
+        SHOWN,
+      );
+
+      expect(entries[0]).toMatchObject({ placement: 'title' });
+      expect(entries.some((entry) => 'subtitle' in entry)).toBe(false);
+      expect(entries[1]).not.toHaveProperty('placement');
+    });
+  });
 });

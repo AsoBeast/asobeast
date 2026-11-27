@@ -14,13 +14,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { queryMarket } from "@/lib/market";
-import { metadataAuditOptions } from "@/lib/queries";
+import { appDetailOptions, metadataAuditOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { CoverageByField } from "./CoverageByField";
 import { COVERAGE_SECTION_ID } from "./coverage-summary";
 import { CoverageTable } from "./CoverageTable";
+import { densityContext } from "./density/density-inputs";
+import { DescriptionDensity } from "./density/DescriptionDensity";
 import { FieldsNote } from "./FieldsNote";
+import { ListingDraftEditor } from "./draft/ListingDraftEditor";
 import { MetadataAssistantPanel } from "./MetadataAssistantPanel";
+import { useMetadataMode } from "./MetadataModeSwitch";
 import { ScreenshotCaptionsCard } from "./ScreenshotCaptionsCard";
 import { showsScreenshotText } from "./screenshot-text-marks";
 import { ScreenshotCaptionsSkeleton } from "./skeletons";
@@ -56,20 +60,26 @@ function NoKeywords({ id }: { id: string }) {
 export function MetadataAuditView({
   id,
   canDraft,
+  draftable,
   hasLocalizations,
   keywordFields,
 }: {
   id: string;
   canDraft: boolean;
+  draftable: boolean;
   hasLocalizations: boolean;
   keywordFields: boolean;
 }) {
   const t = useTranslations("metadata");
+  const [mode] = useMetadataMode();
   const { market, home } = useMarket(id);
   const localization = useLocalization(id).localization ?? undefined;
   const { data: result } = useSuspenseQuery(
     metadataAuditOptions(id, queryMarket(market, home), localization),
   );
+  const { data: app } = useSuspenseQuery(appDetailOptions(id));
+  const density = densityContext(result, market, localization, app.name);
+  const title = result.fields.find((field) => field.field === "title")?.value;
   const isAppStore = result.store === "APP_STORE";
   const tracked = result.coverage.length > 0;
   const withScreenshotText = showsScreenshotText(
@@ -78,41 +88,69 @@ export function MetadataAuditView({
   );
   const suggestion = isAppStore ? result.keywordFieldSuggestion : null;
   const drafting = canDraft && market === home;
+  const draftMode = draftable && mode === "draft";
+
+  const coverageByField = tracked ? (
+    <CoverageByField
+      rows={result.coverage}
+      withScreenshotText={withScreenshotText}
+      className="col-span-12 @5xl/metadata:col-span-4"
+    />
+  ) : null;
 
   return (
     <>
-      <div className="grid grid-cols-12 items-start gap-6">
-        <div
-          className={cn(
-            "col-span-12 flex min-w-0 flex-col gap-3",
-            tracked && "@5xl/metadata:col-span-8",
-          )}
-        >
-          <section
-            aria-label={t("listingFields")}
-            className="grid grid-cols-1 gap-4 @2xl/metadata:grid-cols-2"
+      {draftMode ? (
+        <ListingDraftEditor
+          id={id}
+          audit={result}
+          market={market}
+          localization={localization}
+          density={density}
+        />
+      ) : (
+        <div className="grid grid-cols-12 items-start gap-6">
+          <div
+            className={cn(
+              "col-span-12 flex min-w-0 flex-col gap-3",
+              tracked && "@5xl/metadata:col-span-8",
+            )}
           >
-            {result.fields.map((field) => (
-              <MetadataFieldCard
-                key={`${market}:${localization ?? ""}:${field.field}`}
-                field={field.field}
-                value={field.value ?? ""}
-                limit={field.limit}
-                indexed={field.indexed}
-                issues={field.issues}
-              />
-            ))}
-          </section>
-          <FieldsNote id={id} keywordFields={keywordFields} />
+            <section
+              aria-label={t("listingFields")}
+              className="grid grid-cols-1 gap-4 @2xl/metadata:grid-cols-2"
+            >
+              {result.fields.map((field) => (
+                <MetadataFieldCard
+                  key={`${market}:${localization ?? ""}:${field.field}`}
+                  field={field.field}
+                  value={field.value ?? ""}
+                  limit={field.limit}
+                  indexed={field.indexed}
+                  issues={field.issues}
+                  className={
+                    field.field === "description"
+                      ? "@2xl/metadata:col-span-2"
+                      : undefined
+                  }
+                >
+                  {field.field === "description"
+                    ? (text) => (
+                        <DescriptionDensity
+                          text={text}
+                          title={title ?? null}
+                          context={density}
+                        />
+                      )
+                    : undefined}
+                </MetadataFieldCard>
+              ))}
+            </section>
+            <FieldsNote id={id} keywordFields={keywordFields} />
+          </div>
+          {coverageByField}
         </div>
-        {tracked ? (
-          <CoverageByField
-            rows={result.coverage}
-            withScreenshotText={withScreenshotText}
-            className="col-span-12 @5xl/metadata:col-span-4"
-          />
-        ) : null}
-      </div>
+      )}
 
       {tracked ? (
         <CoverageTable

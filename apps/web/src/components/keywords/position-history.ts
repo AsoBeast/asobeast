@@ -2,11 +2,13 @@ import { createTranslator } from "next-intl";
 import enKeywords from "../../../messages/en/keywords.json";
 import type { MessageTranslator } from "@/i18n/translator";
 import {
+  CHANGE_FIELD_LABELS,
+  listsNoApps,
   type ChangeEventItem,
   type ChangeField,
   type TrackedKeywordItem,
 } from "@asobeast/shared";
-import { MIN_TREND_POINTS } from "@/components/charts/ChartStates";
+import { MIN_TREND_POINTS } from "@/lib/trend-points";
 import { hasCheck, type RankingChartData } from "@/components/charts/pivot";
 import { formatDayMonthInLocale } from "@/lib/format";
 import type { Locale } from "@/lib/locale";
@@ -64,10 +66,18 @@ export function historyView(
     );
   }
   if (checked.every((index) => positionOn(chart, index) === null)) {
-    const deepest = Math.max(
-      ...checked.map((index) => chart.depths[index]?.[seriesOf(chart)] ?? 0),
-    );
-    notes.push(t("history.notInRange", { depth: deepest }));
+    if (
+      checked.every((index) =>
+        listsNoApps(chart.resultCounts[index]?.[seriesOf(chart)]),
+      )
+    ) {
+      notes.push(t("history.noAppsNote"));
+    } else {
+      const deepest = Math.max(
+        ...checked.map((index) => chart.depths[index]?.[seriesOf(chart)] ?? 0),
+      );
+      notes.push(t("history.notInRange", { depth: deepest }));
+    }
   }
   if (!keyword.active) notes.push(pausedNote(keyword, t, locale));
   return { kind: "chart", line, notes };

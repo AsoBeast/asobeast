@@ -114,6 +114,7 @@ test("offers a manual check once a queued inspection stops polling", async ({
           response.url().includes("/keyword-inspections/inspection-1"),
         { timeout: 5_000 },
       )
+      .then((response) => response.finished())
       .catch(() => null);
     await nextPoll(page);
     await read;

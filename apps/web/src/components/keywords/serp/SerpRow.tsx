@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Star } from "lucide-react";
-import type { SerpEntryItem } from "@asobeast/shared";
+import type { SerpEntryItem, Store } from "@asobeast/shared";
 import { useTranslations } from "next-intl";
 import { AppIcon } from "@/components/AppIcon";
 import { MatchedText } from "@/components/keyword-match/MatchedText";
@@ -14,6 +14,7 @@ import {
 } from "@/lib/format";
 import { useAppLocale } from "@/lib/use-app-locale";
 import { cn } from "@/lib/utils";
+import { KeywordInLine } from "./KeywordInLine";
 import type { SerpRole } from "./serp-csv";
 import { movedOf } from "./serp-summary";
 
@@ -122,16 +123,42 @@ export function SerpMovement({
   );
 }
 
+function SubtitleText({
+  subtitle,
+  segments,
+}: {
+  subtitle: string;
+  segments: SerpEntryItem["subtitleSegments"];
+}) {
+  return (
+    <span
+      translate="no"
+      dir="auto"
+      className="text-caption text-muted-foreground wrap-anywhere"
+    >
+      <MatchedText
+        segments={segments?.map((segment) => ({
+          ...segment,
+          surface: "subtitle" as const,
+        }))}
+        fallback={subtitle}
+      />
+    </span>
+  );
+}
+
 export function SerpAppText({
   title,
   segments,
   developer,
   role,
+  children,
 }: {
   title: string;
   segments?: SerpEntryItem["titleSegments"];
   developer: string | null;
   role: SerpRole;
+  children?: ReactNode;
 }) {
   return (
     <div className="col-start-3 row-start-1 flex min-w-0 flex-col gap-0.5">
@@ -141,6 +168,7 @@ export function SerpAppText({
         </span>
         <RoleBadge role={role} />
       </span>
+      {children}
       {developer ? (
         <span
           translate="no"
@@ -156,11 +184,13 @@ export function SerpAppText({
 
 export function SerpRow({
   entry,
+  store,
   role,
   comparedTo,
   actions,
 }: {
   entry: SerpEntryItem;
+  store: Store;
   role: SerpRole;
   comparedTo: string | null;
   actions?: ReactNode;
@@ -201,7 +231,15 @@ export function SerpRow({
         segments={entry.titleSegments}
         developer={entry.developer}
         role={role}
-      />
+      >
+        {entry.subtitle ? (
+          <SubtitleText
+            subtitle={entry.subtitle}
+            segments={entry.subtitleSegments}
+          />
+        ) : null}
+        <KeywordInLine entry={entry} store={store} role={role} />
+      </SerpAppText>
       <Rating average={entry.ratingAvg} count={entry.ratingCount} />
       {actions ? (
         <div className="col-start-4 row-start-1 flex items-center gap-1 sm:col-start-5">

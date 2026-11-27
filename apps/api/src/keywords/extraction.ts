@@ -1,8 +1,11 @@
-import { countChars, listingSegments } from '@asobeast/shared';
-import { WIDE_CHARACTER } from '../common/text/scripts';
+import {
+  countChars,
+  functionWordTest,
+  listingSegments,
+  type TokenTest,
+  WIDE_CHARACTER,
+} from '@asobeast/shared';
 import { isExtractionStopword } from './extraction-stopwords';
-import { functionWordTest } from './function-words';
-import type { TokenTest } from './function-words';
 import { isBoundWord, wordGroups } from './word-groups';
 import type { WordGroup } from './word-groups';
 

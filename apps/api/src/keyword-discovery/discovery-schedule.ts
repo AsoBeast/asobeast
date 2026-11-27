@@ -13,6 +13,7 @@ export interface ScheduledRow {
   relevance: number;
   position: number | null;
   depth: number | null;
+  resultCount: number | null;
   ownSearch: boolean;
   checkedOn: string | null;
   dismissed: boolean;

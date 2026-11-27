@@ -200,6 +200,7 @@ function KeywordSheetBody({
         />
         <KeywordSheetResults
           appId={appId}
+          store={store}
           keyword={keyword}
           onOpenAll={onOpenSerp}
         />

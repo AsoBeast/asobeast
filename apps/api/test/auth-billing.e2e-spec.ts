@@ -426,6 +426,44 @@ describe('Auth (billing mode)', () => {
     });
   });
 
+  it('reports a downgrade scheduled for the end of the period', async () => {
+    const { cookie, workspaceId } = await registerOwner();
+    const planExpiresAt = new Date(Date.now() + 30 * DAY_MS);
+    await prisma.workspace.update({
+      where: { id: workspaceId },
+      data: {
+        plan: 'ultimate',
+        planExpiresAt,
+        subscriptionId: 'sub_scheduled_downgrade',
+        subscriptionStatus: 'active',
+        pendingPlan: 'indie',
+      },
+    });
+
+    const scheduled = await request(app.getHttpServer())
+      .get('/auth/plan')
+      .set('Cookie', cookie)
+      .expect(200);
+
+    expect(scheduled.body as AccountPlan).toMatchObject({
+      plan: 'ultimate',
+      renewsAt: planExpiresAt.toISOString(),
+      scheduledPlan: 'indie',
+    });
+
+    await prisma.workspace.update({
+      where: { id: workspaceId },
+      data: { cancelAtPeriodEnd: true },
+    });
+
+    const cancelled = await request(app.getHttpServer())
+      .get('/auth/plan')
+      .set('Cookie', cookie)
+      .expect(200);
+
+    expect((cancelled.body as AccountPlan).scheduledPlan).toBeNull();
+  });
+
   it('names the plan and the upgrade route in the 402 envelope', async () => {
     const { cookie, workspaceId } = await registerOwner();
     const trialEndsAt = new Date(Date.now() - DAY_MS);

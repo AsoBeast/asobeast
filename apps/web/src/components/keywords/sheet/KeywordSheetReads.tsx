@@ -3,8 +3,10 @@
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import {
+  listsNoApps,
   SERP_DEPTH,
   type SerpSnapshot,
+  type Store,
   type TrackedKeywordItem,
 } from "@asobeast/shared";
 import { BreakdownAppCard } from "@/components/competitors/BreakdownAppCard";
@@ -22,13 +24,12 @@ import {
   serpOptions,
 } from "@/lib/queries";
 import { SerpList } from "../serp/SerpList";
+import type { SerpViewer } from "../serp/serp-csv";
 import { isCaptured, type CapturedSerp } from "../serp/SerpSheet";
 import { SerpNeverChecked, SerpNoApps, SerpSkeleton } from "../serp/SerpStates";
 import { SerpSummary } from "../serp/SerpSummary";
 import { serpSummary } from "../serp/serp-summary";
 import { SheetSection } from "@/components/layout/SheetSection";
-
-type Viewer = { appId: string; storeAppId: string | undefined };
 
 function CapturedResults({
   snapshot,
@@ -37,7 +38,7 @@ function CapturedResults({
   onOpenAll,
 }: {
   snapshot: CapturedSerp;
-  viewer: Viewer;
+  viewer: SerpViewer;
   keyword: TrackedKeywordItem;
   onOpenAll: () => void;
 }) {
@@ -84,10 +85,12 @@ function CapturedResults({
 
 export function KeywordSheetResults({
   appId,
+  store,
   keyword,
   onOpenAll,
 }: {
   appId: string;
+  store: Store;
   keyword: TrackedKeywordItem;
   onOpenAll: () => void;
 }) {
@@ -95,7 +98,7 @@ export function KeywordSheetResults({
   const { data: app } = useQuery(appDetailOptions(appId));
   const t = useTranslations("keywordInspector");
   const locale = useAppLocale();
-  const viewer = { appId, storeAppId: app?.storeAppId };
+  const viewer: SerpViewer = { appId, storeAppId: app?.storeAppId, store };
   const snapshot = serp.data;
   const captured = isCaptured(snapshot) ? snapshot : null;
 
@@ -130,7 +133,7 @@ function ResultsBody({
 }: {
   read: UseQueryResult<SerpSnapshot>;
   captured: CapturedSerp | null;
-  viewer: Viewer;
+  viewer: SerpViewer;
   keyword: TrackedKeywordItem;
   onOpenAll: () => void;
 }) {
@@ -147,14 +150,18 @@ function ResultsBody({
     return (
       <div role="status" className="-mx-4">
         <span className="sr-only">{t("keywordSheet.results.loading")}</span>
-        <SerpSkeleton />
+        <SerpSkeleton store={viewer.store} />
       </div>
     );
   }
   if (!captured) {
     return (
       <div className="-mx-4">
-        <SerpNeverChecked />
+        {listsNoApps(keyword.latestResultCount) ? (
+          <SerpNoApps />
+        ) : (
+          <SerpNeverChecked />
+        )}
       </div>
     );
   }

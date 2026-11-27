@@ -37,7 +37,11 @@ function PositionTrend({
       label={translator("movers.positionTrend", {
         count: presetDays(TRAIL_RANGE),
       })}
-      now={formatRankPosition(latest.position, latest.depth)}
+      now={formatRankPosition(
+        latest.position,
+        latest.depth,
+        latest.resultCount,
+      )}
       className="ml-auto hidden sm:block print:hidden"
     />
   );

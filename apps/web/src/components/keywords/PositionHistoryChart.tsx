@@ -69,6 +69,7 @@ function HistoryTooltip({
 
   const value = data.rows[index]?.[keywordId];
   const depth = data.depths[index]?.[keywordId] ?? null;
+  const resultCount = data.resultCounts[index]?.[keywordId] ?? null;
   const movement = changeSincePrevious(data, index);
   const changed = changes.get(day);
 
@@ -81,11 +82,15 @@ function HistoryTooltip({
           index: 0,
           color: data.config[keywordId]?.color,
           label: t("position.label"),
-          value:
-            formatCheckedPosition(
-              typeof value === "number" ? value : null,
-              depth,
-            ) ?? t("history.notChecked"),
+          value: (() => {
+            const shown =
+              formatCheckedPosition(
+                typeof value === "number" ? value : null,
+                depth,
+                resultCount,
+              ) ?? t("history.notChecked");
+            return shown === "No apps" ? t("history.noApps") : shown;
+          })(),
           sortBy: 0,
         },
       ]}

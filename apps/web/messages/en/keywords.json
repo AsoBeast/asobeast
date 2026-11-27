@@ -392,7 +392,9 @@
     "changesFailed": "Could not load the listing changes.",
     "positionsFailed": "Could not load the position history.",
     "notChecked": "Not checked",
-    "fieldsChanged": "{fields} changed"
+    "fieldsChanged": "{fields} changed",
+    "noApps": "No apps",
+    "noAppsNote": "The store lists no apps for this search on every checked day"
   },
   "changeFields": {
     "title": "Title",
@@ -422,7 +424,10 @@
     "historyName": "Position history: {keyword}",
     "historyStaleName": "{name}, {stale}",
     "copyImage": "Copy image of the position history of {keyword}",
-    "historyOf": "Position history of {keyword}"
+    "historyOf": "Position history of {keyword}",
+    "noApps": "No apps",
+    "noAppsSentence": "The store lists no apps for this search",
+    "notFound": "Not found in the top {depth}"
   },
   "hold": {
     "best": "Best",

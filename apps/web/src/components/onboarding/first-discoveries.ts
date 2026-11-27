@@ -1,7 +1,8 @@
-import type { KeywordDiscoveryList } from "@asobeast/shared";
+import { listsNoApps, type KeywordDiscoveryList } from "@asobeast/shared";
 import { createTranslator } from "next-intl";
 import enSetup from "../../../messages/en/setup.json";
 import type { MessageTranslator } from "@/i18n/translator";
+import { pluralize } from "@/lib/format";
 import { rankText } from "@/components/keywords/discovery/discovery-rows";
 
 const english = createTranslator({
@@ -25,10 +26,11 @@ export type FirstDiscoveries =
 const rankOf = (
   item: KeywordDiscoveryList["items"][number],
   t: MessageTranslator,
-): string =>
-  item.position === null
-    ? (rankText(item) ?? t("firstDiscoveries.notChecked"))
-    : `#${item.position}`;
+): string => {
+  if (item.position !== null) return `#${item.position}`;
+  if (listsNoApps(item.resultCount)) return t("firstDiscoveries.noApps");
+  return rankText(item, t) ?? t("firstDiscoveries.notChecked");
+};
 
 function uncheckedSentence(
   { items, counts }: KeywordDiscoveryList,

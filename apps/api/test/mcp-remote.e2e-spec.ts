@@ -458,6 +458,23 @@ describe('Remote MCP transport (e2e)', () => {
     );
   });
 
+  it('matches the rest api for the target keywords of a localization', async () => {
+    const appId = await fixtureAppId();
+
+    const [viaMcp, viaRest] = await Promise.all([
+      callTool('listing_targets', { appId, localization: 'en-US' }),
+      request(app.getHttpServer())
+        .get(`/apps/${appId}/localizations/en-US/targets`)
+        .set('Authorization', `Bearer ${TOKEN}`)
+        .expect(200),
+    ]);
+
+    expect(viaMcp?.isError).toBeUndefined();
+    expect(JSON.parse(viaMcp?.content?.[0].text ?? 'null')).toEqual(
+      viaRest.body,
+    );
+  });
+
   it('matches the rest api for the keyword discoveries of an app', async () => {
     const appId = await fixtureAppId();
     const keyword = await prisma.keyword.upsert({

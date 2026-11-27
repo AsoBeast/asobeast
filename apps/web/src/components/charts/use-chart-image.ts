@@ -15,24 +15,27 @@ export interface ChartImageJob extends ChartImageRequest {
   filename: string;
 }
 
+export type RenderImage = () => Promise<Blob>;
 type Translator = ReturnType<typeof useTranslations>;
 
-async function copyJob(job: ChartImageJob, t: Translator): Promise<void> {
-  const outcome = await copyOrDownload(
-    renderChartPng(job),
-    browserPngWriter(),
-    (blob) => downloadBlob(job.filename, blob),
+async function copyImage(filename: string, render: RenderImage, t: Translator) {
+  const outcome = await copyOrDownload(render(), browserPngWriter(), (blob) =>
+    downloadBlob(filename, blob),
   );
   if (outcome === "copied") toast.success(t("copied"));
   else toast.info(t("clipboardDownloaded"));
 }
 
-async function downloadJob(job: ChartImageJob, t: Translator): Promise<void> {
-  downloadBlob(job.filename, await renderChartPng(job));
+async function downloadImage(
+  filename: string,
+  render: RenderImage,
+  t: Translator,
+) {
+  downloadBlob(filename, await render());
   toast.success(t("downloaded"));
 }
 
-export function useChartImage() {
+export function useImageJob() {
   const t = useTranslations("charts");
   const [pending, setPending] = useState(false);
   const run = useSharedFlight(
@@ -52,7 +55,20 @@ export function useChartImage() {
   );
   return {
     pending,
-    copy: (job: ChartImageJob) => void run(() => copyJob(job, t)),
-    download: (job: ChartImageJob) => void run(() => downloadJob(job, t)),
+    copy: (filename: string, render: RenderImage) =>
+      void run(() => copyImage(filename, render, t)),
+    download: (filename: string, render: RenderImage) =>
+      void run(() => downloadImage(filename, render, t)),
+  };
+}
+
+export function useChartImage() {
+  const image = useImageJob();
+  return {
+    pending: image.pending,
+    copy: (job: ChartImageJob) =>
+      image.copy(job.filename, () => renderChartPng(job)),
+    download: (job: ChartImageJob) =>
+      image.download(job.filename, () => renderChartPng(job)),
   };
 }

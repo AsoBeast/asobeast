@@ -111,6 +111,7 @@ export function InsufficientHistory({ data }: { data: RankingChartData }) {
   const lastIndex = lastCheckedIndex(data);
   const row = data.rows[lastIndex];
   const depths = data.depths[lastIndex];
+  const counts = data.resultCounts[lastIndex];
 
   return (
     <Frame title={t("insufficientTitle")} body={t("insufficientBody")}>
@@ -126,6 +127,7 @@ export function InsufficientHistory({ data }: { data: RankingChartData }) {
                 {formatCheckedPosition(
                   typeof value === "number" ? value : null,
                   depths?.[keywordId] ?? null,
+                  counts?.[keywordId] ?? null,
                 ) ?? NOT_CHECKED}
               </dd>
             </div>

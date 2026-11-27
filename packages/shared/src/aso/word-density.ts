@@ -1,0 +1,205 @@
+import { listingSegments } from '../listing-segments';
+import { ENGLISH_FUNCTION_WORDS, lowerCase, tokenize } from '../text';
+import { SPACELESS_CHARACTER, SPACELESS_OR_NOT } from '../text-scripts';
+import { functionWordTest, type TokenTest } from './function-words';
+import { countChars } from './limits';
+
+export const DENSITY_ROW_LIMIT = 20;
+export const DENSITY_MIN_REPEAT = 2;
+export const DENSITY_MIN_TOKEN_CHARS = 2;
+
+export interface DensityRow {
+  text: string;
+  count: number;
+  share: number;
+}
+
+export interface WordDensity {
+  words: number;
+  single: DensityRow[];
+  pairs: DensityRow[] | null;
+  triples: DensityRow[] | null;
+}
+
+export interface WordDensityOptions {
+  language: string | null;
+  ignored?: readonly string[];
+}
+
+interface DensityToken {
+  text: string;
+  spaceless: boolean;
+}
+
+const LINK = /https?:\/\/\S+|www\.\S+/giu;
+const CHUNK = /\S+/gu;
+const SENTENCE_BREAK = /[!?;\n\r]/u;
+const WORD_CHARACTER = /[\p{L}\p{N}]/u;
+const NUMBER = /^\p{N}+$/u;
+const ENGLISH = 'en';
+
+const segmenters = new Map<string, Intl.Segmenter>();
+
+const segmenterFor = (language: string | null): Intl.Segmenter => {
+  const key = language ?? '';
+  const cached = segmenters.get(key);
+  if (cached) return cached;
+  const segmenter = new Intl.Segmenter(language ?? undefined, {
+    granularity: 'word',
+  });
+  segmenters.set(key, segmenter);
+  return segmenter;
+};
+
+const blank = (part: string): string => ' '.repeat(part.length);
+
+const isAddress = (chunk: string): boolean => {
+  const at = chunk.indexOf('@', 1);
+  return at !== -1 && chunk.slice(at + 2, -1).includes('.');
+};
+
+export const withoutLinks = (text: string): string =>
+  text
+    .replace(LINK, blank)
+    .replace(CHUNK, (chunk) => (isAddress(chunk) ? blank(chunk) : chunk));
+
+const runsOf = (text: string): string[] => text.match(SPACELESS_OR_NOT) ?? [];
+
+const segmentWords = (run: string, language: string | null): string[] =>
+  [...segmenterFor(language).segment(run)]
+    .filter((segment) => segment.isWordLike)
+    .map((segment) => lowerCase(segment.segment));
+
+const wordsInRun = (run: string): number =>
+  SPACELESS_CHARACTER.test(run)
+    ? segmentWords(run, null).length
+    : Number(WORD_CHARACTER.test(run));
+
+const wordsInChunk = (chunk: string): number =>
+  SPACELESS_CHARACTER.test(chunk)
+    ? runsOf(chunk).reduce((sum, run) => sum + wordsInRun(run), 0)
+    : 1;
+
+export function countWords(text: string): number {
+  return withoutLinks(text)
+    .split(/\s+/u)
+    .filter((chunk) => WORD_CHARACTER.test(chunk))
+    .reduce((sum, chunk) => sum + wordsInChunk(chunk), 0);
+}
+
+const tokensOf = (segment: string, language: string | null): DensityToken[] =>
+  runsOf(segment).flatMap((run) =>
+    SPACELESS_CHARACTER.test(run)
+      ? segmentWords(run, language).map((text): DensityToken => ({
+          text,
+          spaceless: true,
+        }))
+      : tokenize(run).map((text): DensityToken => ({ text, spaceless: false })),
+  );
+
+const densitySegments = (
+  text: string,
+  language: string | null,
+): DensityToken[][] =>
+  listingSegments(withoutLinks(text))
+    .flatMap((segment) => segment.split(SENTENCE_BREAK))
+    .map((segment) => tokensOf(segment, language))
+    .filter((tokens) => tokens.length > 0);
+
+const ignoredWordsOf = ({
+  language,
+  ignored = [],
+}: WordDensityOptions): ReadonlySet<string> =>
+  new Set(
+    densitySegments(ignored.join('\n'), language)
+      .flat()
+      .map((token) => token.text),
+  );
+
+const keptTest = (
+  language: string | null,
+  ignoredWords: ReadonlySet<string>,
+): TokenTest => {
+  const isFunctionWord = functionWordTest(language === null ? [] : [language]);
+  return (token) =>
+    !isFunctionWord(token) &&
+    !(language === ENGLISH && ENGLISH_FUNCTION_WORDS.has(token)) &&
+    !ignoredWords.has(token) &&
+    !NUMBER.test(token) &&
+    countChars(token) >= DENSITY_MIN_TOKEN_CHARS;
+};
+
+const tally = (texts: readonly string[]): Map<string, number> => {
+  const counts = new Map<string, number>();
+  for (const text of texts) counts.set(text, (counts.get(text) ?? 0) + 1);
+  return counts;
+};
+
+const repeated = (texts: readonly string[]): Map<string, number> =>
+  new Map([...tally(texts)].filter(([, count]) => count >= DENSITY_MIN_REPEAT));
+
+const ranked = (
+  counts: ReadonlyMap<string, number>,
+  counted: number,
+  size: number,
+): DensityRow[] =>
+  [...counts]
+    .map(([text, count]) => ({
+      text,
+      count,
+      share: counted === 0 ? 0 : (count * size) / counted,
+    }))
+    .sort((a, b) => b.count - a.count || (a.text < b.text ? -1 : 1))
+    .slice(0, DENSITY_ROW_LIMIT);
+
+const joined = (tokens: readonly DensityToken[]): string =>
+  tokens
+    .map((token) => token.text)
+    .join(tokens.every((token) => token.spaceless) ? '' : ' ');
+
+const phrases = (
+  segments: readonly DensityToken[][],
+  size: number,
+  keep: TokenTest,
+  ignoredWords: ReadonlySet<string>,
+): Map<string, number> => {
+  const found = segments.flatMap((tokens) =>
+    tokens
+      .slice(0, Math.max(0, tokens.length - size + 1))
+      .map((_, start) => tokens.slice(start, start + size))
+      .filter(
+        (gram) =>
+          keep(gram[0].text) &&
+          keep(gram[size - 1].text) &&
+          !gram.some((token) => ignoredWords.has(token.text)),
+      )
+      .map(joined),
+  );
+  return repeated(found);
+};
+
+export function wordDensity(
+  text: string,
+  options: WordDensityOptions,
+): WordDensity {
+  const words = countWords(text);
+  const segments = densitySegments(text, options.language);
+  const ignoredWords = ignoredWordsOf(options);
+  const keep = keptTest(options.language, ignoredWords);
+  const tokens = segments.flat();
+  const single = ranked(
+    repeated(tokens.map((token) => token.text).filter(keep)),
+    tokens.length,
+    1,
+  );
+  const spaceless = tokens.filter((token) => token.spaceless).length;
+  if (spaceless * 2 > tokens.length) {
+    return { words, single, pairs: null, triples: null };
+  }
+  return {
+    words,
+    single,
+    pairs: ranked(phrases(segments, 2, keep, ignoredWords), tokens.length, 2),
+    triples: ranked(phrases(segments, 3, keep, ignoredWords), tokens.length, 3),
+  };
+}

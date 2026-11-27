@@ -7,6 +7,7 @@ import { MarketSwitcher } from "@/components/app-detail/MarketSwitcher";
 import { MarketSwitcherSkeleton } from "@/components/app-detail/skeletons";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { MetadataAuditView } from "@/components/metadata/MetadataAuditView";
+import { MetadataModeSwitch } from "@/components/metadata/MetadataModeSwitch";
 import { MetadataStatusLine } from "@/components/metadata/MetadataStatusLine";
 import {
   MetadataAuditSkeleton,
@@ -105,6 +106,7 @@ export default async function MetadataPage({
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <MarketSwitcher id={id} />
                 <LocalizationSwitcher id={id} />
+                {app.isCompetitor ? null : <MetadataModeSwitch />}
               </div>
             </Suspense>
           </div>
@@ -113,6 +115,7 @@ export default async function MetadataPage({
           <MetadataAuditView
             id={id}
             canDraft={assistant?.configured === true}
+            draftable={app.isCompetitor !== true}
             hasLocalizations={keywordMarkets !== null}
             keywordFields={keywordFields}
           />

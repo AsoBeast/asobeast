@@ -147,7 +147,8 @@
     "noneRank": "None of them rank yet.",
     "noneCheckedShown": "None of the ones shown has been checked yet.",
     "noneCheckedAll": "None of them has been checked yet.",
-    "trackFit": "Track the ones that fit your app."
+    "trackFit": "Track the ones that fit your app.",
+    "noApps": "the store lists no apps for this search"
   },
   "firstPositions": {
     "title": "First positions",
@@ -156,7 +157,8 @@
     "collecting": "Positions are being collected for {count, plural, one {# keyword} other {# keywords}}.",
     "best": "Your app ranks #{position, number} for “{keyword}”.",
     "checkedNone": "Checked {checked, number} of {tracked, plural, one {# keyword} other {# keywords}}, none in the top {depth, number} yet.",
-    "missing": "not in the top {depth, number}"
+    "missing": "not in the top {depth, number}",
+    "noApps": "the store lists no apps for this search"
   },
   "timeline": {
     "metadataLabel": "Listing captured",

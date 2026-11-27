@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import type { AppAuditResult } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
+import { copyText } from "@/lib/copy-text";
 import { auditMarkdown } from "./audit-report";
 
 export function CopyReportButton({
@@ -16,10 +17,9 @@ export function CopyReportButton({
 }) {
   const t = useTranslations("audit");
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(auditMarkdown(audit, app, t));
+    if (await copyText(auditMarkdown(audit, app, t))) {
       toast.success(t("copy.success"));
-    } catch {
+    } else {
       toast.error(t("copy.failed"));
     }
   };

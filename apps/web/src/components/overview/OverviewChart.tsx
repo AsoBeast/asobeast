@@ -20,6 +20,7 @@ import { RatingTrendChart } from "./RatingTrendChart";
 import { overviewViewTitle } from "./use-overview-view";
 import { ShareOfVoiceChart } from "./ShareOfVoiceChart";
 import { VisibilityAreaChart } from "./VisibilityAreaChart";
+import { VisibilityShare } from "./VisibilityShare";
 
 interface ChartView {
   help?: ReactNode;
@@ -77,11 +78,16 @@ export function OverviewChart({
           <h2>{heading}</h2>
           {help}
         </div>
-        <RangePicker
-          presets={VISIBILITY_RANGES}
-          value={range}
-          onChange={setRange}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          {shownView === "visibility" ? (
+            <VisibilityShare id={id} range={range} />
+          ) : null}
+          <RangePicker
+            presets={VISIBILITY_RANGES}
+            value={range}
+            onChange={setRange}
+          />
+        </div>
       </div>
       <Suspense fallback={<ChartSkeleton height={CHART_HEIGHT.tall} />}>
         <Chart id={id} range={shownRange} />

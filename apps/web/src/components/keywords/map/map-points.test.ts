@@ -7,6 +7,7 @@ import { DEFAULT_ZONE_THRESHOLDS, zoneCounts } from "@/lib/keyword-zones";
 import { scorePair } from "@/lib/keyword-scores";
 import {
   dotLabel,
+  dotName,
   labelledIds,
   MAP_LABEL_LIMIT,
   mapPoints,
@@ -146,6 +147,27 @@ describe("mapPoints", () => {
       ranked: false,
       positionLabel: ">200",
     });
+  });
+
+  it("carries a zero result count and reads the keyword as no apps", () => {
+    const point = onlyPoint(
+      keyword({ volume: 35, difficulty: 1.2, latestResultCount: 0 }),
+    );
+
+    expect(point).toMatchObject({
+      ranked: false,
+      positionLabel: "No apps",
+      resultCount: 0,
+    });
+    expect(dotName(point, false)).toContain(
+      ", the store lists no apps for this search, ",
+    );
+  });
+
+  it("keeps the depth words for a keyword without a result count", () => {
+    const point = onlyPoint(keyword({ volume: 35, difficulty: 1.2 }));
+
+    expect(dotName(point, false)).toContain(", not in the top 200, ");
   });
 
   it("plots a never checked keyword without a position", () => {
@@ -322,6 +344,80 @@ describe("dotLabel", () => {
 
   it("cuts by code points, never inside a pair", () => {
     expect(dotLabel("𠮷".repeat(30))).toBe(`${"𠮷".repeat(22)}…`);
+  });
+});
+
+describe("dotName", () => {
+  const point = (overrides: Partial<MapPoint>): MapPoint => ({
+    keywordId: "kw-1",
+    text: "focus timer",
+    country: "us",
+    popularity: 62,
+    difficulty: 18,
+    zone: "quickWins",
+    opportunity: 82,
+    position: 3,
+    depth: 200,
+    resultCount: null,
+    positionLabel: "3",
+    ranked: true,
+    floor: false,
+    active: true,
+    ...overrides,
+  });
+
+  it("names a ranked dot in words", () => {
+    expect(dotName(point({}), false)).toBe(
+      "focus timer, position 3, popularity 62, difficulty 18, opportunity 82, Quick wins",
+    );
+  });
+
+  it("names an unranked dot by the depth of its row", () => {
+    expect(
+      dotName(
+        point({
+          text: "study timer",
+          position: null,
+          depth: 100,
+          positionLabel: ">100",
+          ranked: false,
+        }),
+        false,
+      ),
+    ).toBe(
+      "study timer, not in the top 100, popularity 62, difficulty 18, opportunity 82, Quick wins",
+    );
+  });
+
+  it("names a never checked dot", () => {
+    expect(
+      dotName(
+        point({
+          position: null,
+          depth: null,
+          positionLabel: null,
+          ranked: false,
+        }),
+        false,
+      ),
+    ).toContain(", not checked yet, ");
+  });
+
+  it("names a floor answer, a pause and a missing opportunity", () => {
+    const name = dotName(
+      point({ popularity: 41, floor: true, active: false, opportunity: null }),
+      false,
+    );
+
+    expect(name).toContain("popularity 41, floor answer");
+    expect(name).not.toContain("opportunity");
+    expect(name.endsWith(", paused")).toBe(true);
+  });
+
+  it("adds the market when the page has several", () => {
+    expect(dotName(point({}), true).startsWith("focus timer (US), ")).toBe(
+      true,
+    );
   });
 });
 

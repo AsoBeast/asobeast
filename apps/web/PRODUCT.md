@@ -39,7 +39,7 @@ AsoBeast is an App Store Optimization tool and keyword rank tracker for both sto
 ## Capabilities and Constraints
 
 - Two live stores. Google Play has no subtitle and no keyword field; those stay App Store concepts and are hidden for Play apps.
-- Position is 1 based; a checked keyword that was not found is shown as `>100` or `>200` from its depth, never `0`. A keyword not yet checked reads **Checking…**.
+- Position is 1 based; a checked keyword that was not found is shown as `>100` or `>200` from its depth, never `0`. When the store lists no apps for the search, it reads **No apps**, explained as "The store lists no apps for this search"; a check without a recorded count keeps the bound. A keyword not yet checked reads **Checking…**.
 - Popularity, difficulty and opportunity are 0 to 100 scores; judged numbers carry a grade word (strong, fair, weak, poor) and a marker whose shape, not its colour, tells the grades apart.
 - Both light and dark themes are first class. Layouts must hold at 320 px width with the collapsible sidebar shell.
 - The interface must survive browser page translation and render identically in WebKit, Chromium and Node (no engine-worded dates or country names).

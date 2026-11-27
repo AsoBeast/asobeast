@@ -77,6 +77,22 @@ export function proposalDraft(
   return proposedKeywordField(stored, phrases);
 }
 
+export interface FieldSeed {
+  fromDraft: string | undefined;
+  fieldAdd: readonly string[] | null;
+}
+
+export function seededFieldDraft(
+  stored: readonly string[],
+  { fromDraft, fieldAdd }: FieldSeed,
+  managed: boolean,
+): string | null {
+  if (managed) return null;
+  if (fromDraft === undefined) return proposalDraft(stored, fieldAdd);
+  const drafted = parseKeywordField(fromDraft).phrases;
+  return drafted.join(",") === stored.join(",") ? null : fromDraft;
+}
+
 export const keywordFieldAdditionHref = (
   id: string,
   localization: AppStoreLocalization,

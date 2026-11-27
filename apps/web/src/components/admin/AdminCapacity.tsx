@@ -32,6 +32,7 @@ import {
 } from "@/lib/queries";
 import { useAppLocale } from "@/lib/use-app-locale";
 import { utilizationPercent, utilizationStatus } from "@/lib/utilization";
+import { proxyRefusals } from "./proxy-refusals";
 
 const ALERT_KEYS: Record<ProxyPoolAlert, string> = {
   "pool.healthy.low": "capacity.alerts.poolHealthyLow",
@@ -189,6 +190,7 @@ function TopConsumers({
 function ProxyPool({ pool }: { pool: ProxyPoolHealth }) {
   const t = useTranslations("admin");
   const locale = useAppLocale();
+  const refusals = proxyRefusals(pool.endpoints);
   return (
     <SectionCard
       title={t("capacity.proxyTitle")}
@@ -248,6 +250,14 @@ function ProxyPool({ pool }: { pool: ProxyPoolHealth }) {
         <Alert key={alert}>
           <TriangleAlert />
           <AlertDescription>{t(ALERT_KEYS[alert])}</AlertDescription>
+        </Alert>
+      ))}
+      {refusals.map((refusal) => (
+        <Alert key={refusal.status}>
+          <TriangleAlert />
+          <AlertDescription>
+            <span>{refusal.sentence}</span>
+          </AlertDescription>
         </Alert>
       ))}
       <a

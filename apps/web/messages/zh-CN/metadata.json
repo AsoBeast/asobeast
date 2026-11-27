@@ -82,7 +82,9 @@
     "regenerate": "重新生成",
     "generate": "生成草稿",
     "draftedIn": "使用{language}生成",
-    "footer": "草稿只是建议。{product} 不会写入商店。"
+    "footer": "草稿只是建议。{product} 不会写入商店。",
+    "useInDraft": "用于草稿",
+    "useInDraftAria": "在草稿中使用：{field}"
   },
   "draftLocalization": {
     "label": "本地化版本",
@@ -96,5 +98,10 @@
     "copied": "已复制",
     "copy": "复制",
     "edit": "编辑此关键词字段"
-  }
+  },
+  "notSearched": "商店不会搜索此字段",
+  "notSearchedTipLabel": "为什么商店不搜索{field}",
+  "notSearchedTipTitle": "商店不会搜索此字段",
+  "notSearchedTipSummary": "App Store 不会搜索此字段，因此其中的词无助于排名。请为阅读页面的用户撰写。",
+  "whatEachStoreSearches": "各商店搜索哪些内容"
 }

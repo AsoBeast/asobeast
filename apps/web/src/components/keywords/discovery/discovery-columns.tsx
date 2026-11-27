@@ -1,7 +1,12 @@
 "use client";
 
 import { createColumnHelper } from "@tanstack/react-table";
-import type { KeywordDiscoveryItem, Store } from "@asobeast/shared";
+import {
+  listsNoApps,
+  NO_APPS_SENTENCE,
+  type KeywordDiscoveryItem,
+  type Store,
+} from "@asobeast/shared";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import { Checkbox } from "@/components/ui/checkbox";
 import { GradedNumber } from "@/components/ui/graded";
@@ -103,7 +108,7 @@ function PositionValue({
   item: KeywordDiscoveryItem;
   t: MessageTranslator;
 }) {
-  const text = rankText(item);
+  const text = rankText(item, t);
   if (text === null) {
     return (
       <span title={t("discovery.columns.positionSummary")}>
@@ -112,8 +117,12 @@ function PositionValue({
     );
   }
   if (item.position === null) {
+    const noApps = listsNoApps(item.resultCount);
     return (
-      <span className="numeric text-muted-foreground">
+      <span
+        className="numeric text-muted-foreground"
+        title={noApps ? NO_APPS_SENTENCE : undefined}
+      >
         <span aria-hidden>{text}</span>
         <span className="sr-only">{rankLabel(item, t)}</span>
       </span>

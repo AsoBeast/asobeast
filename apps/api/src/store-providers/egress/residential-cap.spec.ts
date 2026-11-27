@@ -3,6 +3,7 @@ import { ProxyTier, Store } from '@prisma/client';
 jest.mock('undici', () => ({
   fetch: jest.fn(() => Promise.resolve({ status: 200 })),
   ProxyAgent: jest.fn(() => ({ agent: 'residential' })),
+  Pool: jest.fn(),
 }));
 
 import { Dispatcher } from 'undici';

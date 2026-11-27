@@ -93,7 +93,8 @@
     "renews": "Your {plan} plan renews on {date}.",
     "cancelledAccessUntil": "Cancelled. Access continues until {date}.",
     "renewsShort": "Renews on {date}.",
-    "billedMonthly": "Billed monthly until you cancel."
+    "billedMonthly": "Billed monthly until you cancel.",
+    "switchesTo": "Switches to {plan} on {date}."
   },
   "trial": {
     "bannerEnds": "Trial ends on {date}. Nothing will be charged.",

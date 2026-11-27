@@ -28,12 +28,14 @@ const TIER_LIMITS = [3, 10, 25, 50, 100] as const;
 function DayCell({
   position,
   depth,
+  resultCount,
 }: {
   position: number | null;
   depth: number | null;
+  resultCount: number | null;
 }) {
   const t = useTranslations("rankings");
-  const text = formatCheckedPosition(position, depth);
+  const text = formatCheckedPosition(position, depth, resultCount);
   if (text === null) {
     return (
       <span className={cn(CELL, "text-faint-foreground")}>
@@ -67,7 +69,11 @@ export function PositionsByDay({
   const t = useTranslations("rankings");
   const locale = useAppLocale();
   const days = chart.rows
-    .map((row, index) => ({ row, depths: chart.depths[index] }))
+    .map((row, index) => ({
+      row,
+      depths: chart.depths[index],
+      counts: chart.resultCounts[index],
+    }))
     .filter(({ depths }) => hasCheck(depths))
     .reverse();
 
@@ -103,13 +109,14 @@ export function PositionsByDay({
                 </span>
               </span>
             </TableHead>
-            {days.map(({ row, depths }) => {
+            {days.map(({ row, depths, counts }) => {
               const value = row[stats.keywordId];
               return (
                 <TableCell key={String(row.date)} numeric className={DAY}>
                   <DayCell
                     position={typeof value === "number" ? value : null}
                     depth={depths?.[stats.keywordId] ?? null}
+                    resultCount={counts?.[stats.keywordId] ?? null}
                   />
                 </TableCell>
               );

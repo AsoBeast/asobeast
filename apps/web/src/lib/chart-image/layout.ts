@@ -1,6 +1,5 @@
+import { clipText, wrapWords, type Measure } from "../text-fit";
 import type { CaptionSeries, ChartCaption } from "./caption";
-
-export type Measure = (text: string) => number;
 
 export const IMAGE_SCALE = 2;
 
@@ -17,42 +16,6 @@ const BRAND_GAP = 16;
 export const LEGEND_SAMPLE_WIDTH = 22;
 export const LEGEND_SAMPLE_GAP = 6;
 const LEGEND_ITEM_GAP = 16;
-const ELLIPSIS = "…";
-
-export function clipText(
-  text: string,
-  maxWidth: number,
-  measure: Measure,
-): string {
-  if (measure(text) <= maxWidth) return text;
-  const characters = Array.from(text);
-  while (
-    characters.length > 0 &&
-    measure(`${characters.join("")}${ELLIPSIS}`) > maxWidth
-  ) {
-    characters.pop();
-  }
-  return `${characters.join("")}${ELLIPSIS}`;
-}
-
-export function wrapWords(
-  text: string,
-  maxWidth: number,
-  measure: Measure,
-): string[] {
-  const lines: string[] = [];
-  let line = "";
-  for (const word of text.split(" ")) {
-    const candidate = line === "" ? word : `${line} ${word}`;
-    if (line !== "" && measure(candidate) > maxWidth) {
-      lines.push(line);
-      line = word;
-    } else {
-      line = candidate;
-    }
-  }
-  return line === "" ? lines : [...lines, line];
-}
 
 export function dashPattern(dash: string | undefined): number[] {
   return dash === undefined ? [] : dash.split(" ").map(Number);

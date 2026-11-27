@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { hoverForTooltip } from "./hover.mts";
-import { utcDaysAgo } from "./fixtures.mts";
+import { seedCookies } from "./routes.mts";
+import { NO_APPS_COOKIE, utcDaysAgo } from "./fixtures.mts";
 import {
   RANKINGS_EDGE_COOKIE,
   RTL_ENTRANT_KEYWORD,
@@ -518,3 +519,71 @@ for (const width of [320, 1440] as const) {
     }
   });
 }
+
+test.describe("a keyword whose search lists no apps", () => {
+  test.beforeEach(async ({ context }) => {
+    await seedCookies(context, { [NO_APPS_COOKIE]: "1" });
+  });
+
+  test("the key table reads the newest day as No apps", async ({ page }) => {
+    await page.goto("/apps/app-1/rankings");
+
+    const row = page.getByRole("row", { name: /productivity app/ });
+    await expect(row.getByText("No apps", { exact: true })).toBeVisible();
+    await expect(row.getByText(">200")).toHaveCount(0);
+  });
+
+  test("the tooltip reads No apps on a no-apps day and the bound on a normal day", async ({
+    page,
+  }) => {
+    await page.goto("/apps/app-1/rankings");
+
+    const newest = await tooltipOn(page, utcDaysAgo(0));
+    await expect(newest.getByText("No apps", { exact: true })).toHaveCount(1);
+    await expect(newest.getByText(">200")).toHaveCount(0);
+
+    await page.reload();
+    const older = await tooltipOn(page, utcDaysAgo(2));
+    await expect(older.getByText(">200", { exact: true })).toHaveCount(1);
+  });
+
+  test("the by day grid swaps the two newest chips for No apps", async ({
+    page,
+  }) => {
+    await page.goto("/apps/app-1/rankings");
+
+    await page
+      .getByRole("tablist", { name: "Positions view" })
+      .getByRole("tab", { name: "By day" })
+      .click();
+    const grid = page.getByRole("table", { name: /^The position of each/ });
+
+    await expect(
+      grid.getByRole("row", { name: /productivity app/ }).getByRole("cell"),
+    ).toHaveText([
+      "No apps",
+      "No apps",
+      ">200",
+      ">200",
+      ">100",
+      ">100",
+      ">100",
+    ]);
+  });
+
+  test("the rankings csv writes No apps for the no-apps days", async ({
+    page,
+  }) => {
+    await page.goto("/apps/app-1/rankings");
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page.getByRole("button", { name: "Export CSV of rankings" }).click(),
+    ]);
+    const csv = readFileSync(await download.path(), "utf8");
+
+    expect(csv).toContain("No apps");
+    expect(csv).toContain(">200");
+    expect(csv).toContain(">100");
+  });
+});

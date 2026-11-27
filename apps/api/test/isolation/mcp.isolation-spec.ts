@@ -65,14 +65,21 @@ describe('Remote MCP boundaries between workspaces', () => {
     expect(decode(response.text).result?.isError).toBe(true);
   });
 
-  it.each(['app_localizations', 'market_keyword_fields', 'market_suggestions'])(
+  it.each([
+    ['app_localizations', {}],
+    ['listing_targets', { localization: 'en-US' }],
+    ['market_keyword_fields', {}],
+    ['market_suggestions', {}],
+  ])(
     'reads its own app and not another workspace app through %s',
-    async (name) => {
+    async (name, extra) => {
       const own = await callTool(fixture.a.token, name, {
         appId: fixture.a.appleAppId,
+        ...extra,
       }).expect(200);
       const foreign = await callTool(fixture.a.token, name, {
         appId: fixture.b.appleAppId,
+        ...extra,
       }).expect(200);
 
       expect(decode(own.text).result?.isError).toBeUndefined();

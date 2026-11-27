@@ -25,14 +25,18 @@ function snapshot(
   return { keywordId: "kw-1", text: "focus timer", date, entries };
 }
 
-const VIEWER = { appId: "app-1", storeAppId: "904237743" };
+const VIEWER = {
+  appId: "app-1",
+  storeAppId: "904237743",
+  store: "APP_STORE",
+} as const;
 
 const lines = (value: SerpSnapshot) => serpCsv(VIEWER, value).split("\r\n");
 
 describe("serpCsv", () => {
   it("heads the file with the snapshot columns in order", () => {
     expect(lines(snapshot([]))[0]).toBe(
-      "﻿keyword,capturedOn,position,app,developer,rating,ratings,role,storeAppId,previousPosition",
+      "﻿keyword,capturedOn,position,app,developer,rating,ratings,role,storeAppId,previousPosition,subtitle,keywordIn",
     );
   });
 
@@ -44,7 +48,7 @@ describe("serpCsv", () => {
 
   it("repeats the keyword and the capture day and keeps numbers as numbers", () => {
     expect(lines(snapshot([entry()]))[1]).toBe(
-      `focus timer,${capturedOn},1,Deep Work Sessions,Nordlys Labs,4.7,8400,other,555000111,`,
+      `focus timer,${capturedOn},1,Deep Work Sessions,Nordlys Labs,4.7,8400,other,555000111,,,Not in the title (subtitle not known)`,
     );
   });
 
@@ -56,7 +60,7 @@ describe("serpCsv", () => {
         ]),
       )[1],
     ).toBe(
-      `focus timer,${capturedOn},1,Deep Work Sessions,,,,other,555000111,`,
+      `focus timer,${capturedOn},1,Deep Work Sessions,,,,other,555000111,,,Not in the title (subtitle not known)`,
     );
   });
 
@@ -68,9 +72,9 @@ describe("serpCsv", () => {
         entry(),
       ]),
     );
-    expect(moved.endsWith(",555000111,4")).toBe(true);
-    expect(entered.endsWith(",555000111,")).toBe(true);
-    expect(older.endsWith(",555000111,")).toBe(true);
+    expect(moved).toContain(",555000111,4,");
+    expect(entered).toContain(",555000111,,");
+    expect(older).toContain(",555000111,,");
   });
 
   it("names each app's role against the app being viewed", () => {
@@ -97,6 +101,33 @@ describe("serpCsv", () => {
       ]),
     );
     expect(you).toContain(",you,");
+  });
+});
+
+describe("serpCsv keyword placement", () => {
+  it("writes the subtitle and where the keyword sits", () => {
+    const [, split, unknown, play] = [
+      ...lines(
+        snapshot([
+          entry({
+            subtitle: "Timer for deep work",
+            placement: "split",
+          }),
+          entry(),
+        ]),
+      ),
+      serpCsv({ ...VIEWER, store: "GOOGLE_PLAY" }, snapshot([entry()])).split(
+        "\r\n",
+      )[1],
+    ];
+
+    expect(
+      split.endsWith(",Timer for deep work,Split across title and subtitle"),
+    ).toBe(true);
+    expect(unknown.endsWith(",,Not in the title (subtitle not known)")).toBe(
+      true,
+    );
+    expect(play.endsWith(",,Not in the title")).toBe(true);
   });
 });
 

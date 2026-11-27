@@ -93,7 +93,8 @@
     "renews": "您的{plan}套餐将于 {date} 续费。",
     "cancelledAccessUntil": "已取消。您仍可使用至 {date}。",
     "renewsShort": "将于 {date} 续费。",
-    "billedMonthly": "按月计费，直到您取消。"
+    "billedMonthly": "按月计费，直到您取消。",
+    "switchesTo": "将于 {date} 切换为 {plan}。"
   },
   "trial": {
     "bannerEnds": "试用将于 {date} 结束。不会产生扣费。",

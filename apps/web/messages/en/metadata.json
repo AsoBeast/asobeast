@@ -82,7 +82,9 @@
     "regenerate": "Regenerate",
     "generate": "Generate drafts",
     "draftedIn": "Drafted in {language}",
-    "footer": "Drafts are suggestions. {product} never writes to the store."
+    "footer": "Drafts are suggestions. {product} never writes to the store.",
+    "useInDraft": "Use in draft",
+    "useInDraftAria": "Use in draft: {field}"
   },
   "draftLocalization": {
     "label": "Localization",
@@ -96,5 +98,10 @@
     "copied": "Copied",
     "copy": "Copy",
     "edit": "Edit this keyword field"
-  }
+  },
+  "notSearched": "Not searched by the store",
+  "notSearchedTipLabel": "Why the store does not search {field}",
+  "notSearchedTipTitle": "Not searched by the store",
+  "notSearchedTipSummary": "The App Store does not search this field, so words in it do not help you rank. Write it for the people who read your page.",
+  "whatEachStoreSearches": "What each store searches"
 }

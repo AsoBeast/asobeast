@@ -1,7 +1,8 @@
-import type { TrackedKeywordItem } from "@asobeast/shared";
+import { listsNoApps, type TrackedKeywordItem } from "@asobeast/shared";
 import { createTranslator } from "next-intl";
 import enSetup from "../../../messages/en/setup.json";
 import type { MessageTranslator } from "@/i18n/translator";
+import { pluralize } from "@/lib/format";
 import { activeKeywordCount } from "./setup-progress";
 
 const english = createTranslator({
@@ -17,6 +18,7 @@ export interface FirstPositionRow {
   text: string;
   position: number | null;
   depth: number;
+  resultCount: number | null;
 }
 
 const byPosition = (a: FirstPositionRow, b: FirstPositionRow): number => {
@@ -40,6 +42,7 @@ function checkedRows(
               text: keyword.text,
               position: keyword.latestPosition,
               depth: keyword.latestDepth,
+              resultCount: keyword.latestResultCount ?? null,
             },
           ]
         : [],
@@ -67,6 +70,10 @@ function headlineOf(
       keyword: best.text,
     });
   }
+  const counted = `Checked ${checked.length} of ${pluralize(tracked, "keyword")}`;
+  if (checked.every((row) => listsNoApps(row.resultCount))) {
+    return `${counted}, and ${t("firstPositions.noApps")}.`;
+  }
   const depth = Math.min(...checked.map((row) => row.depth));
   return t("firstPositions.checkedNone", {
     checked: checked.length,
@@ -90,7 +97,7 @@ export function positionLabel(
   row: FirstPositionRow,
   t: MessageTranslator = english,
 ): string {
-  return row.position === null
-    ? t("firstPositions.missing", { depth: row.depth })
-    : `#${row.position}`;
+  if (row.position !== null) return `#${row.position}`;
+  if (listsNoApps(row.resultCount)) return t("firstPositions.noApps");
+  return t("firstPositions.missing", { depth: row.depth });
 }

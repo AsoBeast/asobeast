@@ -99,7 +99,8 @@
     "inTop10": "in top 10",
     "lead": "You lead ",
     "trail": "trail ",
-    "headToHeadAria": "You lead {lead}, trail {trail}"
+    "headToHeadAria": "You lead {lead}, trail {trail}",
+    "noApps": "No apps"
   },
   "gaps": {
     "title": "Where competitors beat you",

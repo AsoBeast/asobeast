@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import {
@@ -19,7 +19,7 @@ import {
 import { formatDateTimeInLocale, formatListInLocale } from "@/lib/format";
 import { localizationNameInLocale } from "@/lib/localizations";
 import { useAppLocale } from "@/lib/use-app-locale";
-import { proposalDraft } from "@/lib/keyword-field-addition";
+import { proposalDraft, seededFieldDraft } from "@/lib/keyword-field-addition";
 import { STORE_CONNECTIONS_PATH } from "@/lib/store-connection-copy";
 import { cn } from "@/lib/utils";
 import { SaveKeywordFieldDialog } from "./SaveKeywordFieldDialog";
@@ -61,7 +61,11 @@ function KeywordFieldUsage({
   );
 }
 
-function StoreFieldNotice({ sync }: { sync: AppLocalizationStoreSync | null }) {
+export function StoreFieldNotice({
+  sync,
+}: {
+  sync: AppLocalizationStoreSync | null;
+}) {
   const t = useTranslations("localizations");
   const locale = useAppLocale();
   return (
@@ -104,6 +108,7 @@ export function KeywordFieldEditor({
   sync = null,
   leading,
   proposed = null,
+  drafted,
   onProposalSettled,
 }: {
   id: string;
@@ -112,6 +117,7 @@ export function KeywordFieldEditor({
   sync?: AppLocalizationStoreSync | null;
   leading?: ReactNode;
   proposed?: readonly string[] | null;
+  drafted?: string;
   onProposalSettled?: () => void;
 }) {
   const t = useTranslations("localizations");
@@ -121,8 +127,18 @@ export function KeywordFieldEditor({
   const saveButton = useRef<HTMLButtonElement>(null);
   const name = localizationNameInLocale(item.localization, locale);
   const [draft, setDraft] = useState<string | null>(() =>
-    proposalDraft(item.phrases, proposed),
+    seededFieldDraft(
+      item.phrases,
+      { fromDraft: drafted, fieldAdd: proposed },
+      managed,
+    ),
   );
+  const [handedIn] = useState(drafted !== undefined && !managed);
+  useEffect(() => {
+    if (!handedIn) return;
+    editor.current?.scrollIntoView({ block: "center" });
+    editor.current?.focus({ preventScroll: true });
+  }, [handedIn]);
   const stored = item.phrases.join(",");
   const text = managed ? stored : (draft ?? stored);
   const field = keywordFieldDraft(text, item.phrases);

@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 import type { Store, StoreFunnelReport } from "@asobeast/shared";
 import { useKeywordScope } from "@/components/app-detail/use-market";
 import { useAuth } from "@/components/auth/use-auth";
-import { MIN_TREND_POINTS } from "@/components/charts/ChartStates";
+import { MIN_TREND_POINTS } from "@/lib/trend-points";
 import { TrendLine } from "@/components/charts/Sparkline";
 import {
   Card,

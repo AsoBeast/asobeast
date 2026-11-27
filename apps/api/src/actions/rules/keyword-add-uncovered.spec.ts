@@ -6,6 +6,7 @@ import {
 } from '@asobeast/shared';
 import { OPPORTUNITY_HIGH } from '../../scoring/opportunity';
 import { ActionContext, ActionContextApp } from '../action-context';
+import { ActionMarketMetadata } from '../action-market-metadata';
 import {
   detectKeywordAddUncovered,
   keywordAddUncoveredDetector,
@@ -276,12 +277,102 @@ describe('keyword.add_uncovered', () => {
     });
   });
 
-  it('never fires outside the home market', () => {
+  it('never fires in a market whose listing has no audit', () => {
     const foreign = app({
       trackedKeywords: [keyword({ country: 'de' })],
     });
 
     expect(detectKeywordAddUncovered(context([foreign]))).toEqual([]);
+  });
+
+  describe('market listings', () => {
+    const german = (
+      overrides: Partial<ActionMarketMetadata> = {},
+    ): ActionMarketMetadata => ({
+      country: 'de',
+      coverage: [
+        coverage(
+          { title: false, subtitle: false, keywordField: false },
+          'kw_de',
+        ),
+      ],
+      fields: APPLE_FIELDS,
+      ...overrides,
+    });
+
+    it('judges a market keyword by its own market listing', () => {
+      const detections = detectKeywordAddUncovered(
+        context([
+          app({
+            trackedKeywords: [keyword({ keywordId: 'kw_de', country: 'de' })],
+            coverage: [],
+            marketMetadata: [german()],
+          }),
+        ]),
+      );
+
+      expect(detections).toHaveLength(1);
+      expect(detections[0]).toMatchObject({
+        country: 'de',
+        keywordId: 'kw_de',
+      });
+    });
+
+    it('opens one action per market for the same text', () => {
+      const detections = detectKeywordAddUncovered(
+        context([
+          app({
+            trackedKeywords: [
+              keyword(),
+              keyword({ keywordId: 'kw_de', country: 'de' }),
+            ],
+            marketMetadata: [german()],
+          }),
+        ]),
+      );
+
+      expect(
+        detections.map(({ country, keywordId }) => [country, keywordId]),
+      ).toEqual([
+        ['us', 'kw_1'],
+        ['de', 'kw_de'],
+      ]);
+    });
+
+    it('reads headroom from the market keyword field, not the home one', () => {
+      const full = APPLE_FIELDS.map((field) =>
+        field.field === 'keywordField'
+          ? { ...field, value: 'x'.repeat(100), chars: 100 }
+          : field,
+      );
+      const detections = detectKeywordAddUncovered(
+        context([
+          app({
+            trackedKeywords: [keyword({ keywordId: 'kw_de', country: 'de' })],
+            marketMetadata: [german({ fields: full })],
+          }),
+        ]),
+      );
+
+      expect(evidenceOf(detections).keywordFieldCharsFree).toBe(0);
+    });
+
+    it('does not fire when the market listing covers the keyword', () => {
+      const detections = detectKeywordAddUncovered(
+        context([
+          app({
+            trackedKeywords: [keyword({ keywordId: 'kw_de', country: 'de' })],
+            marketMetadata: [
+              german({
+                coverage: [coverage({ title: true, subtitle: false }, 'kw_de')],
+              }),
+            ],
+          }),
+        ]),
+      );
+
+      expect(detections).toEqual([]);
+    });
   });
 
   it('withholds an uncovered keyword while its score is outdated', () => {

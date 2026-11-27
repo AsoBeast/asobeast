@@ -3,6 +3,7 @@ import type { Page } from "@playwright/test";
 import { contrastViolations, THEMES } from "./contrast-check.mts";
 import { missingDescriptionIds } from "./described-by.mts";
 import { hydrated } from "./hydrated.mts";
+import { NO_APPS_COOKIE } from "./fixtures.mts";
 import { seedCookies } from "./routes.mts";
 import { expect, test } from "./session.mts";
 
@@ -118,6 +119,17 @@ test("never checked and not found read as such", async ({ page }) => {
   await expect(card(page, /Rival Focus/)).toContainText(
     "may rank through its private keyword field",
   );
+});
+
+test("a ranking whose search listed nothing reads No apps", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { [NO_APPS_COOKIE]: "1" });
+  await page.goto(`${PAGE}?keyword=kw-4`);
+
+  await expect(card(page, /Focus Timer/)).toContainText("No apps");
+  await expect(card(page, /Focus Timer/)).not.toContainText(">200");
 });
 
 test("a competitor with only some of the words is not told it shows no match", async ({

@@ -1,4 +1,4 @@
-import { SPACELESS_CHARACTER } from '../common/text/scripts';
+import { SPACELESS_CHARACTER } from '@asobeast/shared';
 
 export interface OcrLine {
   text: string;

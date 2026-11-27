@@ -1,7 +1,11 @@
-import { KeywordSuggestion, listingSegments, tokenize } from '@asobeast/shared';
+import {
+  KeywordSuggestion,
+  listingSegments,
+  reviewWordTest,
+  tokenize,
+  type TokenTest,
+} from '@asobeast/shared';
 import { usableIn } from './extraction';
-import { reviewWordTest } from './function-words';
-import type { TokenTest } from './function-words';
 
 export interface MinableReview {
   title: string | null;

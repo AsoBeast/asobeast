@@ -1,99 +1,71 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import {
+  CartesianGrid,
+  type DotItemDotProps,
+  Line,
+  LineChart,
+  XAxis,
+  YAxis,
+} from "recharts";
 import {
   ChartNotice,
   ChartStat,
   trendState,
 } from "@/components/charts/ChartStates";
-import { SeriesTooltip } from "@/components/charts/SeriesTooltip";
+import { SeriesLegend } from "@/components/charts/SeriesLegend";
 import {
   CHART_HEIGHT,
   CHART_MARGIN,
   GRID_PROPS,
   LINE_PROPS,
-  seriesColor,
+  seriesDash,
   timeAxisPropsInLocale,
   VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
+import { newRatingsAverageSeries } from "@/components/reviews/new-ratings-average";
 import {
-  type ChartConfig,
   ChartContainer,
+  ChartLegend,
   ChartTooltip,
 } from "@/components/ui/chart";
-import {
-  formatDayMonthInLocale,
-  formatFixedNumberInLocale,
-  formatRatingInLocale,
-} from "@/lib/format";
+import { formatRatingInLocale } from "@/lib/format";
+import { useTranslations } from "next-intl";
 import { useAppLocale } from "@/lib/use-app-locale";
 import { ratingsHistoryOptions } from "@/lib/queries";
 import { presetToRange, type RatingsRange } from "@/lib/ranges";
-import { ratedPoints, ratingAxis, type RatedPoint } from "./rating-trend";
+import {
+  isLoneNewAverage,
+  ratedPoints,
+  ratingAxis,
+  withNewRatings,
+} from "./rating-trend";
+import {
+  RATING_CHART_CONFIG,
+  RATING_SERIES_LABELS,
+  RATING_SERIES_ORDER,
+  RatingTooltip,
+} from "./RatingTooltip";
 
 const HEIGHT = CHART_HEIGHT.tall;
 
-const PRECISE_DIGITS = 2;
-
-function RatingTooltip({
-  active,
-  label,
-  points,
-}: {
-  active?: boolean;
-  label?: string | number;
-  points: RatedPoint[];
-}) {
-  const t = useTranslations("overview");
-  const locale = useAppLocale();
-  if (!active || label === undefined) return null;
-  const point = points.find((candidate) => candidate.date === label);
-  if (!point) return null;
-  return (
-    <SeriesTooltip
-      title={formatDayMonthInLocale(point.date, locale)}
-      items={[
-        {
-          key: "ratingAvg",
-          index: 0,
-          color: "var(--color-ratingAvg)",
-          label: t("charts.averageRating"),
-          value: formatFixedNumberInLocale(
-            point.ratingAvg,
-            PRECISE_DIGITS,
-            locale,
-          ),
-          sortBy: 0,
-        },
-      ]}
-      footer={
-        point.ratingCount === null ? null : (
-          <p className="text-muted-foreground">
-            {t("metrics.ratingCount", { count: point.ratingCount })}
-          </p>
-        )
-      }
-    />
-  );
-}
+const LONE_DOT_RADIUS = 2.5;
 
 export function RatingTrendChart({
   id,
   range,
+  newRatings = false,
 }: {
   id: string;
   range: RatingsRange;
+  newRatings?: boolean;
 }) {
   const t = useTranslations("overview");
   const locale = useAppLocale();
   const { data } = useSuspenseQuery(
     ratingsHistoryOptions(id, presetToRange(range)),
   );
-  const chartConfig = {
-    ratingAvg: { label: t("charts.averageRating"), color: seriesColor(0) },
-  } satisfies ChartConfig;
   const points = ratedPoints(data.points);
 
   const state = trendState(points.length);
@@ -101,8 +73,8 @@ export function RatingTrendChart({
     return (
       <ChartNotice
         height={HEIGHT}
-        title={t("charts.noRatingTitle")}
-        body={t("charts.noRatingBody")}
+        title="No rating recorded yet"
+        body="The daily pipeline stores the rating of the home listing with each snapshot."
       />
     );
   }
@@ -110,26 +82,41 @@ export function RatingTrendChart({
     return (
       <ChartStat
         height={HEIGHT}
-        label={t("charts.latestAverageRating")}
+        label="Latest average rating"
         value={formatRatingInLocale(
           points[points.length - 1].ratingAvg,
           locale,
         )}
-        note={t("charts.trendNeedsSnapshots")}
+        note="A trend line needs a few more daily snapshots."
       />
     );
   }
 
-  const axis = ratingAxis(points);
+  const rows = withNewRatings(
+    points,
+    newRatings ? newRatingsAverageSeries(data.points) : [],
+  );
+  const newValues = rows.map((row) => row.newAverage);
+  const twoLines = newValues.some((value) => value !== null);
+  const axis = ratingAxis(points, newValues);
+  const loneDot = ({ cx, cy, index }: DotItemDotProps) =>
+    isLoneNewAverage(rows, index) && cx !== undefined && cy !== undefined ? (
+      <circle
+        cx={cx}
+        cy={cy}
+        r={LONE_DOT_RADIUS}
+        fill="var(--color-newAverage)"
+      />
+    ) : null;
 
   return (
     <ChartContainer
-      config={chartConfig}
+      config={RATING_CHART_CONFIG}
       className={`${HEIGHT} w-full`}
       role="region"
       aria-label={t("charts.ratingOverTime")}
     >
-      <LineChart accessibilityLayer data={points} margin={CHART_MARGIN}>
+      <LineChart accessibilityLayer data={rows} margin={CHART_MARGIN}>
         <CartesianGrid {...GRID_PROPS} />
         <XAxis {...timeAxisPropsInLocale(locale)} />
         <YAxis
@@ -139,12 +126,33 @@ export function RatingTrendChart({
           interval={0}
           tickFormatter={(value: number) => formatRatingInLocale(value, locale)}
         />
-        <ChartTooltip content={<RatingTooltip points={points} />} />
+        <ChartTooltip content={<RatingTooltip rows={rows} />} />
+        {twoLines ? (
+          <ChartLegend
+            itemSorter={null}
+            content={
+              <SeriesLegend
+                labels={RATING_SERIES_LABELS}
+                order={RATING_SERIES_ORDER}
+              />
+            }
+          />
+        ) : null}
         <Line
           {...LINE_PROPS}
           dataKey="ratingAvg"
           stroke="var(--color-ratingAvg)"
         />
+        {twoLines ? (
+          <Line
+            {...LINE_PROPS}
+            dataKey="newAverage"
+            stroke="var(--color-newAverage)"
+            strokeDasharray={seriesDash(1)}
+            connectNulls={false}
+            dot={loneDot}
+          />
+        ) : null}
       </LineChart>
     </ChartContainer>
   );

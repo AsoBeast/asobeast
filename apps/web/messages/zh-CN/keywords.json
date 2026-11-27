@@ -392,7 +392,9 @@
     "changesFailed": "无法加载详情页变化。",
     "positionsFailed": "无法加载排名历史。",
     "notChecked": "未检查",
-    "fieldsChanged": "{fields}有变化"
+    "fieldsChanged": "{fields}有变化",
+    "noApps": "无应用",
+    "noAppsNote": "每次检查时，商店都显示此搜索没有应用。"
   },
   "changeFields": {
     "title": "标题",
@@ -422,7 +424,10 @@
     "historyName": "排名历史：{keyword}",
     "historyStaleName": "{name}，{stale}",
     "copyImage": "复制 {keyword} 的排名历史图片",
-    "historyOf": "{keyword}的排名历史"
+    "historyOf": "{keyword}的排名历史",
+    "noApps": "无应用",
+    "noAppsSentence": "商店显示此搜索没有应用。",
+    "notFound": "前 {depth} 名中未找到"
   },
   "hold": {
     "best": "最佳",

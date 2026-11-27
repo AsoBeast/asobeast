@@ -9,13 +9,14 @@ import { QuotaService } from '../auth/quota.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { FirstPositionChecks } from './first-position-checks';
 import { KeywordTracker } from './keyword-tracker';
+import { untrackKeywords } from './listing-targets/listing-target-cleanup';
 import { ensureApp, KeywordApp } from './keywords.support';
 import { MarketListingRequests } from './market-listing.requests';
 
 interface TrackedRow {
   keywordId: string;
   active: boolean;
-  keyword: { store: KeywordApp['store']; country: string };
+  keyword: { store: KeywordApp['store']; country: string; text: string };
 }
 
 const idsOf = (rows: readonly Pick<TrackedRow, 'keywordId'>[]): string[] =>
@@ -42,7 +43,7 @@ export class KeywordBulkService {
       select: {
         keywordId: true,
         active: true,
-        keyword: { select: { store: true, country: true } },
+        keyword: { select: { store: true, country: true, text: true } },
       },
     });
     const found = new Set(idsOf(tracked));
@@ -77,14 +78,19 @@ export class KeywordBulkService {
     return count;
   }
 
-  private async untrack(
+  private untrack(
     appId: string,
     tracked: readonly TrackedRow[],
   ): Promise<number> {
-    const { count } = await this.prisma.trackedKeyword.deleteMany({
-      where: { appId, keywordId: { in: idsOf(tracked) } },
-    });
-    return count;
+    return untrackKeywords(
+      this.prisma,
+      appId,
+      tracked.map(({ keywordId, keyword }) => ({
+        keywordId,
+        text: keyword.text,
+        country: keyword.country,
+      })),
+    );
   }
 
   private async resume(

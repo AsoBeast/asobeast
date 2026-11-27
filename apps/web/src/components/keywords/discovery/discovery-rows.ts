@@ -1,6 +1,7 @@
 import { createTranslator } from "next-intl";
 import {
   formatCheckedPosition,
+  listsNoApps,
   toDifficulty100,
   type DiscoveryState,
   type KeywordDiscoveryItem,
@@ -18,14 +19,25 @@ const english = createTranslator({
 export const DISCOVERY_PAGE_SIZE = 50;
 
 export const rankText = (
-  item: Pick<KeywordDiscoveryItem, "position" | "depth">,
-): string | null => formatCheckedPosition(item.position, item.depth);
+  item: Pick<KeywordDiscoveryItem, "position" | "depth" | "resultCount">,
+  t?: MessageTranslator,
+): string | null => {
+  const shown = formatCheckedPosition(
+    item.position,
+    item.depth,
+    item.resultCount,
+  );
+  return shown === "No apps" && t ? t("discovery.columns.noApps") : shown;
+};
 
 export function rankLabel(
-  item: Pick<KeywordDiscoveryItem, "position" | "depth">,
+  item: Pick<KeywordDiscoveryItem, "position" | "depth" | "resultCount">,
   t: MessageTranslator = english,
 ): string {
   if (item.depth === null) return t("discovery.columns.notChecked");
+  if (item.position === null && listsNoApps(item.resultCount)) {
+    return `${t("discovery.columns.noApps")}: ${t("discovery.columns.noAppsSentence")}`;
+  }
   return item.position === null
     ? t("discovery.columns.notFound", { depth: item.depth })
     : t("discovery.columns.rank", { position: item.position });

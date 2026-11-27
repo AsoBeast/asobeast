@@ -132,12 +132,18 @@ export class KeywordBreakdownService {
       where: { keywordId, appId: { in: apps.map((each) => each.id) } },
       orderBy: { date: 'desc' },
       distinct: ['appId'],
-      select: { appId: true, position: true, depth: true, date: true },
+      select: {
+        appId: true,
+        position: true,
+        depth: true,
+        resultCount: true,
+        date: true,
+      },
     });
     return new Map(
-      rows.map(({ appId, position, depth, date }) => [
+      rows.map(({ appId, position, depth, resultCount, date }) => [
         appId,
-        { position, depth, date },
+        { position, depth, resultCount, date },
       ]),
     );
   }

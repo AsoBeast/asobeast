@@ -1849,6 +1849,88 @@ describe('KeywordsController (e2e)', () => {
     });
   });
 
+  it('carries the result count of the latest check on the list', async () => {
+    const you = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: 'empty-list-1',
+        country: 'us',
+        name: 'Empty List',
+      },
+    });
+    const keyword = await prisma.keyword.create({
+      data: { text: 'empty results', store: Store.APP_STORE, country: 'us' },
+    });
+    await prisma.trackedKeyword.create({
+      data: {
+        appId: you.id,
+        keywordId: keyword.id,
+        source: 'MANUAL',
+        active: true,
+      },
+    });
+
+    await asWorkspace(app, () =>
+      app.get(RankingsService).checkKeyword(keyword.id),
+    );
+
+    const ranking = await prisma.keywordRanking.findFirst({
+      where: { appId: you.id, keywordId: keyword.id },
+    });
+    expect(ranking).toMatchObject({
+      position: null,
+      depth: 200,
+      resultCount: 0,
+    });
+    const tracked = await api.get(`/apps/${you.id}/keywords`).expect(200);
+    expect((tracked.body as TrackedKeywordItem[])[0]).toMatchObject({
+      latestPosition: null,
+      latestDepth: 200,
+      latestResultCount: 0,
+    });
+  });
+
+  it('returns a null result count for a row stored without the field', async () => {
+    const you = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: 'uncounted-1',
+        country: 'us',
+        name: 'Uncounted',
+      },
+    });
+    const keyword = await prisma.keyword.create({
+      data: { text: 'uncounted', store: Store.APP_STORE, country: 'us' },
+    });
+    await prisma.trackedKeyword.create({
+      data: {
+        appId: you.id,
+        keywordId: keyword.id,
+        source: 'MANUAL',
+        active: true,
+      },
+    });
+    await prisma.keywordRanking.create({
+      data: {
+        appId: you.id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        keywordId: keyword.id,
+        date: new Date(),
+        position: 5,
+        depth: 100,
+      },
+    });
+
+    const tracked = await api.get(`/apps/${you.id}/keywords`).expect(200);
+    expect((tracked.body as TrackedKeywordItem[])[0]).toMatchObject({
+      latestPosition: 5,
+      latestDepth: 100,
+      latestResultCount: null,
+    });
+  });
+
   it('keeps the top 50 results of an app store check', async () => {
     const you = await prisma.app.create({
       data: {

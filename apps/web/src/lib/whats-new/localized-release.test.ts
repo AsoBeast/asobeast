@@ -4,7 +4,7 @@ import { localizedRelease } from "./localized-release";
 
 describe("localizedRelease", () => {
   it("translates the language-switch release into Simplified Chinese", () => {
-    const release = RELEASES.find((item) => item.version === "2.1.0");
+    const release = RELEASES.find((item) => item.version === "2.2.0");
     expect(release).toBeDefined();
     const localized = localizedRelease(release!, "zh-CN");
 

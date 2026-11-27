@@ -72,9 +72,9 @@ function MoverLine({
         {children}
       </span>
       <span className="numeric relative text-right whitespace-nowrap text-muted-foreground">
-        <span>{`${formatRankPosition(mover.from, mover.fromDepth)} → `}</span>
+        <span>{`${formatRankPosition(mover.from, mover.fromDepth, mover.fromResultCount)} → `}</span>
         <span className="font-medium text-foreground">
-          {formatRankPosition(mover.to, mover.toDepth)}
+          {formatRankPosition(mover.to, mover.toDepth, mover.toResultCount)}
         </span>
       </span>
       <span

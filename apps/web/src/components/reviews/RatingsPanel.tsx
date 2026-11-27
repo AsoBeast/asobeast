@@ -1,8 +1,7 @@
 "use client";
 
 import { Suspense, useDeferredValue } from "react";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import { ChartSkeleton } from "@/components/charts/ChartStates";
 import { CHART_HEIGHT } from "@/components/charts/theme";
@@ -21,14 +20,12 @@ import {
   StatTile,
 } from "@/components/ui/stat-tile";
 import {
-  formatDayMonthInLocale,
-  formatNumberInLocale,
+  formatDayMonth,
+  formatNumber,
   formatRating,
+  pluralize,
 } from "@/lib/format";
-import { useAppLocale } from "@/lib/use-app-locale";
-import type { MessageTranslator } from "@/i18n/translator";
-import type { Locale } from "@/lib/locale";
-import { ratingsHistoryOptions } from "@/lib/queries";
+import { appDetailOptions, ratingsHistoryOptions } from "@/lib/queries";
 import { presetToRange, RATINGS_RANGES, type RatingsRange } from "@/lib/ranges";
 import {
   ratingsRangeParser,
@@ -36,6 +33,7 @@ import {
   type RatingsView,
 } from "@/lib/search-params";
 import { NewRatingsChart } from "./NewRatingsChart";
+import { NewRatingsSentence } from "./NewRatingsSentence";
 import {
   latestRatingCount,
   ratingsAdded,
@@ -46,21 +44,16 @@ import {
 const RATING_CHANGE_DIGITS = 2;
 const CHANGE_LABEL = `${RATING_CHANGE_DAYS}d`;
 
-function growthNote(
-  { added, since }: RatingsGrowth,
-  t: MessageTranslator,
-  locale: Locale,
-): string {
-  const day = formatDayMonthInLocale(since, locale);
+const CHART_TITLES: Record<RatingsView, string> = {
+  average: "Average rating",
+  volume: "New ratings",
+};
+
+function growthNote({ added, since }: RatingsGrowth): string {
+  const day = formatDayMonth(since);
   return added < 0
-    ? t("ratings.fewerSince", {
-        count: formatNumberInLocale(-added, locale),
-        date: day,
-      })
-    : t("ratings.newSince", {
-        count: formatNumberInLocale(added, locale),
-        date: day,
-      });
+    ? `${formatNumber(-added)} fewer since ${day}`
+    : `${formatNumber(added)} new since ${day}`;
 }
 
 function RatingsStrip({
@@ -74,8 +67,6 @@ function RatingsStrip({
   view: RatingsView;
   onSelect: (next: RatingsView) => void;
 }) {
-  const t = useTranslations("reviews");
-  const locale = useAppLocale();
   const { data } = useSuspenseQuery(
     ratingsHistoryOptions(id, presetToRange(range)),
   );
@@ -86,9 +77,9 @@ function RatingsStrip({
   const growth = ratingsGrowth(data.points);
 
   return (
-    <MetricStrip columns={2} framed={false} label={t("ratings.figures")}>
+    <MetricStrip columns={2} framed={false} label="Ratings figures">
       <StatTile
-        label={t("ratings.rating")}
+        label="Rating"
         value={average === null ? "—" : formatRating(average)}
         delta={
           change === null ? null : (
@@ -102,21 +93,21 @@ function RatingsStrip({
         }
         note={
           count === null
-            ? t("ratings.noRatings")
-            : t("ratings.averageOf", { count })
+            ? "No ratings read yet"
+            : `Average of ${pluralize(count, "rating")}`
         }
         selected={view === "average"}
         onSelect={() => onSelect("average")}
       />
       <StatTile
-        label={t("ratings.ratings")}
-        value={count === null ? "—" : formatNumberInLocale(count, locale)}
+        label="Ratings"
+        value={count === null ? "—" : formatNumber(count)}
         delta={
           added === null ? null : (
             <TrendChip label={CHANGE_LABEL} value={added} form="pill" />
           )
         }
-        note={growth === null ? "" : growthNote(growth, t, locale)}
+        note={growth === null ? "" : growthNote(growth)}
         selected={view === "volume"}
         onSelect={() => onSelect("volume")}
       />
@@ -125,10 +116,11 @@ function RatingsStrip({
 }
 
 export function RatingsPanel({ id }: { id: string }) {
-  const t = useTranslations("reviews");
   const [view, setView] = useQueryState("ratingsView", ratingsViewParser);
   const [range, setRange] = useQueryState("range", ratingsRangeParser);
   const shownRange = useDeferredValue(range);
+  const { data: app } = useQuery(appDetailOptions(id));
+  const newRatings = app?.store === "APP_STORE";
 
   return (
     <Card className="gap-0 py-0">
@@ -146,9 +138,7 @@ export function RatingsPanel({ id }: { id: string }) {
       >
         <div className="flex min-h-8 flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <h2 className="text-label font-medium text-muted-foreground">
-            {t(
-              view === "average" ? "ratings.averageTitle" : "ratings.newTitle",
-            )}
+            {CHART_TITLES[view]}
           </h2>
           <RangePicker
             presets={RATINGS_RANGES}
@@ -160,8 +150,15 @@ export function RatingsPanel({ id }: { id: string }) {
           {view === "volume" ? (
             <NewRatingsChart id={id} range={shownRange} />
           ) : (
-            <RatingTrendChart id={id} range={shownRange} />
+            <RatingTrendChart
+              id={id}
+              range={shownRange}
+              newRatings={newRatings}
+            />
           )}
+          {newRatings ? (
+            <NewRatingsSentence id={id} range={shownRange} />
+          ) : null}
         </Suspense>
       </CardContent>
     </Card>

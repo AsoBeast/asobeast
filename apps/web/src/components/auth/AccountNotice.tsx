@@ -11,7 +11,12 @@ import {
   NoticeLine,
   type NoticeTone,
 } from "@/components/layout/notice-line";
-import { suspensionNotice, trialBannerLine } from "@/lib/plan-choice";
+import {
+  pausedPlanOf,
+  suspensionNotice,
+  trialBannerLine,
+  trialChargeDeclined,
+} from "@/lib/plan-choice";
 import { accountPlanOptions } from "@/lib/queries";
 import { useAppLocale } from "@/lib/use-app-locale";
 import { useAuth } from "./use-auth";
@@ -29,14 +34,20 @@ const TRIAL_ENDING_DAYS = 3;
 
 const UPGRADE = "/upgrade";
 
+const MANAGE_BILLING = { href: "/settings#plan", label: "Manage billing" };
+
+const CHOOSE_A_PLAN = { href: UPGRADE, label: "Choose a plan" };
+
 function AccountBar({
   icon,
   tone,
   sentence,
+  action,
 }: {
   icon: LucideIcon;
   tone: NoticeTone;
   sentence: ReactNode;
+  action?: { href: string; label: string };
 }) {
   return (
     <NoticeLine
@@ -47,29 +58,75 @@ function AccountBar({
     >
       <p className="max-w-[110ch] wrap-anywhere">
         <span>{sentence}</span>
+        {action ? (
+          <>
+            {" "}
+            <Link href={action.href} className={NOTICE_LINK}>
+              {action.label}
+            </Link>
+          </>
+        ) : null}
       </p>
     </NoticeLine>
   );
 }
+function pausedAction(
+  isMember: boolean,
+  declined: boolean,
+  t: MessageTranslator,
+) {
+  if (isMember) return undefined;
+  return declined
+    ? { href: "/settings", label: t("plan.manageBilling") }
+    : { href: UPGRADE, label: t("plan.choose") };
+}
 
 function PausedBanner({ isMember }: { isMember: boolean }) {
   const t = useTranslations("billing");
-  const account = useTranslations("account");
+  const { data, isFetching } = useQuery({
+    ...accountPlanOptions,
+    enabled: !isMember,
+    refetchOnMount: "always",
+  });
+  const plan = pausedPlanOf(data);
+  const declined = trialChargeDeclined(plan);
+
+  if (!plan && isFetching) {
+    return (
+      <AccountBar
+        icon={CirclePause}
+        tone="warning"
+        sentence={t("status.collectionPaused")}
+        action={{ href: UPGRADE, label: t("plan.choose") }}
+      />
+    );
+  }
+  if (!plan) {
+    return (
+      <AccountBar
+        icon={CirclePause}
+        tone="warning"
+        sentence={t("status.collectionPaused")}
+        action={{ href: UPGRADE, label: t("plan.choose") }}
+      />
+    );
+  }
+
   const sentence = isMember
     ? t("member.paused")
-    : account.rich("notices.pausedAction", {
-        sentence: t("status.collectionPaused"),
-        action: account("notices.choosePlan"),
-        link: (chunks) => (
-          <Link href={UPGRADE} className={NOTICE_LINK}>
-            <span>{chunks}</span>
-          </Link>
-        ),
-      });
+    : declined
+      ? t("status.trialChargeDeclined")
+      : t("status.collectionPaused");
 
-  return <AccountBar icon={CirclePause} tone="warning" sentence={sentence} />;
+  return (
+    <AccountBar
+      icon={CirclePause}
+      tone="warning"
+      sentence={sentence}
+      action={pausedAction(isMember, declined, t)}
+    />
+  );
 }
-
 function trialAction(
   isMember: boolean,
   card: boolean,

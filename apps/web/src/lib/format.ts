@@ -299,7 +299,7 @@ export function formatCompactInLocale(value: number, locale: Locale): string {
 }
 
 export function formatRating(value: number): string {
-  return formatRatingInLocale(value, "en");
+  return value.toFixed(1);
 }
 
 export function formatRatingInLocale(value: number, locale: Locale): string {

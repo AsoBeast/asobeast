@@ -99,8 +99,10 @@ function PositionHistoryContent({
   store,
   homeCountry,
   ids,
+  onShareOpenChange,
 }: PositionHistoryProps & {
   ids: { eyebrow: string; title: string; market: string };
+  onShareOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations("keywords");
   const locale = useAppLocale();
@@ -135,6 +137,7 @@ function PositionHistoryContent({
         homeCountry={homeCountry}
         range={range}
         onRange={setRange}
+        onShareOpenChange={onShareOpenChange}
       />
     </>
   );
@@ -147,6 +150,10 @@ export function PositionHistoryPopoverContent({
   onCloseAutoFocus?: ComponentProps<typeof PopoverContent>["onCloseAutoFocus"];
 }) {
   const ids = { eyebrow: useId(), title: useId(), market: useId() };
+  const [sharing, setSharing] = useState(false);
+  const keepOpenWhileSharing = (event: Event) => {
+    if (sharing) event.preventDefault();
+  };
   return (
     <PopoverContent
       align="end"
@@ -154,9 +161,15 @@ export function PositionHistoryPopoverContent({
       aria-labelledby={`${ids.eyebrow} ${ids.title}`}
       aria-describedby={ids.market}
       onCloseAutoFocus={onCloseAutoFocus}
+      onInteractOutside={keepOpenWhileSharing}
+      onFocusOutside={keepOpenWhileSharing}
       className="max-h-(--radix-popover-content-available-height) w-md max-w-(--radix-popover-content-available-width) gap-2.5 overflow-y-auto p-3"
     >
-      <PositionHistoryContent {...props} ids={ids} />
+      <PositionHistoryContent
+        {...props}
+        ids={ids}
+        onShareOpenChange={setSharing}
+      />
     </PopoverContent>
   );
 }

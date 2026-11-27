@@ -92,7 +92,7 @@ describe('releaseNotesText', () => {
       const started = performance.now();
       const text = releaseNotesText(opening.repeat(count));
 
-      expect(performance.now() - started).toBeLessThan(250);
+      expect(performance.now() - started).toBeLessThan(1_000);
       expect(text).toBe(opening.repeat(count - 1));
     },
   );

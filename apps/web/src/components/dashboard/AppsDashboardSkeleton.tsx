@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import type { AppView } from "@/lib/search-params";
-import { iconRadius } from "@/components/app-icon-radius";
+import { iconRadius } from "@/lib/app-icon-radius";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {

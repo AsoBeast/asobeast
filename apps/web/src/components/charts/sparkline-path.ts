@@ -1,4 +1,6 @@
-export type Point = readonly [number, number];
+import { monotoneSegments, type Point } from "@/lib/monotone-curve";
+
+export type { Point } from "@/lib/monotone-curve";
 
 export interface SparklineBox {
   width: number;
@@ -23,36 +25,15 @@ export function sparklinePoints(
   ]);
 }
 
-const secantSlopes = (points: readonly Point[]): number[] =>
-  points.slice(1).map(([x, y], index) => {
-    const [px, py] = points[index];
-    return (y - py) / (x - px);
-  });
-
-function tangentAt(slopes: number[], index: number): number {
-  if (index === 0) return slopes[0];
-  if (index === slopes.length) return slopes[index - 1];
-  const before = slopes[index - 1];
-  const after = slopes[index];
-  if (before === 0 || after === 0 || Math.sign(before) !== Math.sign(after)) {
-    return 0;
-  }
-  return 2 / (1 / before + 1 / after);
-}
-
 export function monotonePath(points: readonly Point[]): string {
-  const slopes = secantSlopes(points);
-  const tangents = points.map((_, index) => tangentAt(slopes, index));
-  return points
-    .map(([x, y], index) => {
-      if (index === 0) return `M${fixed(x)} ${fixed(y)}`;
-      const [px, py] = points[index - 1];
-      const third = (x - px) / 3;
-      return `C${fixed(px + third)} ${fixed(py + tangents[index - 1] * third)} ${fixed(
-        x - third,
-      )} ${fixed(y - tangents[index] * third)} ${fixed(x)} ${fixed(y)}`;
-    })
-    .join(" ");
+  const [x, y] = points[0];
+  return [
+    `M${fixed(x)} ${fixed(y)}`,
+    ...monotoneSegments(points).map(
+      ({ first, second, end }) =>
+        `C${[...first, ...second, ...end].map(fixed).join(" ")}`,
+    ),
+  ].join(" ");
 }
 
 export function areaPath(points: readonly Point[], bottom: number): string {

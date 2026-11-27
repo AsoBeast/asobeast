@@ -22,6 +22,53 @@ function explain(status) {
   return "the API answered unexpectedly";
 }
 
+const OBJECT_SCHEMA_REF = "#/components/schemas/Object";
+const SCHEMA_TYPE_KEYS = ["type", "$ref", "oneOf", "anyOf", "allOf"];
+const HTTP_METHODS = new Set([
+  "get",
+  "put",
+  "post",
+  "delete",
+  "options",
+  "head",
+  "patch",
+  "trace",
+]);
+
+function documentedAsObject(schema = {}) {
+  return (
+    schema.type === "object" ||
+    schema.$ref === OBJECT_SCHEMA_REF ||
+    [schema.allOf, schema.oneOf, schema.anyOf].some((members = []) =>
+      members.some((member) => documentedAsObject(member)),
+    )
+  );
+}
+
+function parameterProblem({ required, schema = {} }) {
+  if (documentedAsObject(schema)) return "is documented as an object";
+  if (!SCHEMA_TYPE_KEYS.some((key) => key in schema)) return "has no type";
+  if (required && schema.default !== undefined) {
+    return "is required although it has a default";
+  }
+  return null;
+}
+
+function misdocumentedParameters(document) {
+  return Object.entries(document.paths ?? {}).flatMap(([path, operations]) =>
+    Object.entries(operations)
+      .filter(([method]) => HTTP_METHODS.has(method))
+      .flatMap(([method, operation]) =>
+        (operation.parameters ?? []).flatMap((parameter) => {
+          const problem = parameterProblem(parameter);
+          return problem
+            ? [`  ${method} ${path} ${parameter.name} ${problem}`]
+            : [];
+        }),
+      ),
+  );
+}
+
 function serialize(document) {
   return `${JSON.stringify(document, null, 2)}\n`;
 }
@@ -97,6 +144,16 @@ async function fetchDocument() {
   if (paths === 0) {
     throw new Error(
       `GET ${url} returned a document with no paths, so the API did not boot fully`,
+    );
+  }
+
+  const misdocumented = misdocumentedParameters(document);
+  if (misdocumented.length > 0) {
+    throw new Error(
+      [
+        `GET ${url} misdocuments parameters; give each DTO property an explicit type, and use @ApiPropertyOptional for one with a default:`,
+        ...misdocumented,
+      ].join("\n"),
     );
   }
 

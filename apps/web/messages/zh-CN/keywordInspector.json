@@ -236,7 +236,9 @@
       "read": "阅读关键词发现说明",
       "positionSummary": "您的应用在此短语的应用商店搜索中的位置。最高 50 名的位置可能来自今天或昨天进行的另一次搜索；短横线表示尚未检查。",
       "opportunitySummary": "综合热度与难度得出的机会。它需要两项评分，关键词被跟踪后即可获得。",
-      "relevanceSummary": "此短语与您详情页的相关程度，取决于它的发现来源以及您的详情页包含其中多少个词。"
+      "relevanceSummary": "此短语与您详情页的相关程度，取决于它的发现来源以及您的详情页包含其中多少个词。",
+      "noApps": "无应用",
+      "noAppsSentence": "商店显示此搜索没有应用。"
     },
     "actions": {
       "track": "跟踪",
@@ -312,22 +314,23 @@
     "states": {
       "neverChecked": "尚未检查。搜索结果会在下次每日检查后显示。",
       "nothingCaptured": "{date}没有采集任何内容。请选择有采集的日期。",
-      "noApps": "应用商店在 {date}没有为此关键词显示任何应用。"
+      "noApps": "应用商店在 {date}没有为此关键词显示任何应用。",
+      "noAppsGeneric": "商店显示此搜索没有应用。"
     },
     "summary": {
       "yourPosition": "您的排名",
       "titles": "包含它的标题",
       "ratings": "前十评分",
-      "jump": "跳转到您位于第 {position, number} 位的行",
+      "jump": "跳转到第 {position} 名所在行",
       "period": "自 {date} 以来",
       "noEarlierPosition": "没有更早的排名",
       "deeper": "低于前 {count, number} 名",
       "notFound": "未进入前 {depth, number} 名",
       "absent": "不在此列表中",
       "notReported": "未报告",
-      "ratio": "{shown, number}/{total, number}",
+      "ratio": "{shown} / {total}",
       "median": "中位数",
-      "average": "平均值",
+      "average": "平均",
       "noRatings": "无评分",
       "titlesTipLabel": "关于包含关键词的标题",
       "titlesTipTitle": "包含关键词的标题",
@@ -335,7 +338,25 @@
       "ratingsTipLabel": "关于前十评分",
       "ratingsTipTitle": "前十评分",
       "ratingsTipSummary": "前十应用评分数量的中位数，大致反映头部应用的成熟度。Google Play 不报告评分数量，因此显示平均评分。",
-      "guide": "阅读搜索结果说明"
+      "guide": "阅读搜索结果说明",
+      "outliers": "了解异常值",
+      "noneEarlier": "没有更早的排名",
+      "noPlaySubtitle": "Google Play 没有副标题",
+      "keywordIn": "包含它的标题",
+      "keywordInTipLabel": "关于关键词所在位置",
+      "keywordInTipTitle": "关键词位于何处",
+      "keywordInTipSummary": "前 10 名中有多少个应用在标题里包含关键词的所有词（顺序不限）。AsoBeast 只能从已捕获的详情页获知你和竞品的副标题。前 10 名中两者都没有的应用会标记为异常值，但它仍可能把关键词放在私有关键词字段中。",
+      "top10Ratings": "前十评分",
+      "top10TipLabel": "关于前 10 名评分",
+      "top10TipTitle": "前 10 名评分",
+      "top10TipSummary": "前 10 名应用评分数量的中位数，粗略反映头部应用的成熟度。Google Play 不提供评分数量，因此显示平均评分。",
+      "inSubtitle": "{total} 个中有 {shown} 个在副标题中",
+      "subtitleLineSpace": "副标题中 0 / 0",
+      "below": "前 {listed} 名之外",
+      "notFoundDepth": "未进入前 {depth} 名",
+      "noApps": "商店显示此搜索没有应用。",
+      "inTitle": "在标题中",
+      "sinceDate": "自 {date} 起"
     },
     "row": {
       "rating": "评分 {rating}",
@@ -347,7 +368,10 @@
       "movementUp": "从第 {previous, number} 位上升 {count, number} 位",
       "movementDown": "从第 {previous, number} 位下降 {count, number} 位",
       "movementSame": "无变化",
-      "movementNew": "新进入"
+      "movementNew": "新进入",
+      "notInTitle": "不在标题中",
+      "subtitleNotKnown": "副标题未知",
+      "outlier": "异常值"
     }
   },
   "keywordSheet": {
@@ -454,7 +478,8 @@
       "keywords": "关键词",
       "unplotted": "未在地图上",
       "missing": "缺少热度或难度"
-    }
+    },
+    "noApps": "无应用"
   },
   "thresholds": {
     "trigger": "阈值",

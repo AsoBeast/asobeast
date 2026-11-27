@@ -16,6 +16,8 @@ import { CoverageCard } from "@/components/overview/CoverageCard";
 import { FunnelCard } from "@/components/overview/FunnelCard";
 import { MoversCard } from "@/components/overview/MoversCard";
 import { RatingsByMarketCard } from "@/components/overview/RatingsByMarketCard";
+import { OVERVIEW_SECTION } from "@/components/overview/overview-sections";
+import { StorePreviewCard } from "@/components/overview/StorePreviewCard";
 import { KNOWN_SECTIONS } from "@/components/layout/known-sections";
 import { OverviewReportHeader } from "@/components/overview/OverviewReportHeader";
 import { OverviewPulse } from "@/components/overview/OverviewPulse";
@@ -54,6 +56,7 @@ import {
   listingMarketsOptions,
   rankDistributionHistoryOptions,
   ratingsHistoryOptions,
+  screenshotsOptions,
   storeConnectionsOptions,
   visibilityOptions,
 } from "@/lib/queries";
@@ -149,9 +152,15 @@ export default async function AppOverviewPage({
     );
   }
   const market = resolveMarket(requested, markets, app.country);
-  await queryClient.prefetchQuery(
-    appListingOptions(id, queryMarket(market, app.country)),
-  );
+  const listingMarket = queryMarket(market, app.country);
+  const storePreview =
+    !app.isCompetitor && !collapsed.has(OVERVIEW_SECTION.storePreview);
+  await Promise.all([
+    queryClient.prefetchQuery(appListingOptions(id, listingMarket)),
+    storePreview
+      ? queryClient.prefetchQuery(screenshotsOptions(id, listingMarket))
+      : null,
+  ]);
   await Promise.all([firstRun, ratingChange]);
   const byMarket = ratesByMarket(app.store);
 
@@ -195,6 +204,9 @@ export default async function AppOverviewPage({
             <Suspense fallback={<CoverageCardSkeleton />}>
               <CoverageCard id={id} />
             </Suspense>
+            {app.isCompetitor ? null : (
+              <StorePreviewCard id={id} collapsed={[...collapsed]} />
+            )}
           </div>
         </div>
 

@@ -13,10 +13,8 @@ import type {
   RankingSeries as RankingSeriesContract,
   TrackedKeywordItem,
 } from "@asobeast/shared";
-import {
-  ChartSkeleton,
-  MIN_TREND_POINTS,
-} from "@/components/charts/ChartStates";
+import { ChartSkeleton } from "@/components/charts/ChartStates";
+import { MIN_TREND_POINTS } from "@/lib/trend-points";
 import { CHART_HEIGHT } from "@/components/charts/theme";
 import {
   buildRankingChart,

@@ -9,6 +9,7 @@ import type {
   Store,
 } from "@asobeast/shared";
 import { createTranslator } from "next-intl";
+import { listsNoApps } from "@asobeast/shared";
 import enCompetitors from "../../../messages/en/competitors.json";
 import { PRODUCT_NAME } from "@/lib/brand";
 import type { MessageTranslator } from "@/i18n/translator";
@@ -70,9 +71,12 @@ export function rankingLabel(
   t: MessageTranslator = english,
 ): string {
   if (ranking === null) return t("comparison.notChecked");
-  return ranking.position === null
-    ? `>${ranking.depth}`
-    : `#${ranking.position}`;
+  if (ranking.position === null) {
+    return listsNoApps(ranking.resultCount)
+      ? t("comparison.noApps")
+      : `>${ranking.depth}`;
+  }
+  return `#${ranking.position}`;
 }
 
 export function placementPhrase(

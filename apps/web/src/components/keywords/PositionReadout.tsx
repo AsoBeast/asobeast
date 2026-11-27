@@ -1,7 +1,7 @@
 "use client";
 
 import { createTranslator, useTranslations } from "next-intl";
-import type { TrackedKeywordItem } from "@asobeast/shared";
+import { listsNoApps, type TrackedKeywordItem } from "@asobeast/shared";
 import enKeywords from "../../../messages/en/keywords.json";
 import type { MessageTranslator } from "@/i18n/translator";
 import { PositionDeltaChip } from "@/components/ui/delta-chip";
@@ -58,6 +58,25 @@ export function PositionReadout({
   const t = useTranslations("keywords");
   const locale = useAppLocale();
   const tier = grade("position", keyword.latestPosition);
+  const noApps =
+    keyword.latestPosition === null && listsNoApps(keyword.latestResultCount);
+  const lostTitle = lost?.on
+    ? lastRankedLine(lost.position, lost.on, t, locale)
+    : undefined;
+  const title =
+    [noApps ? t("position.noAppsSentence") : null, lostTitle]
+      .filter((part): part is string => Boolean(part))
+      .join(". ") || undefined;
+  const worded =
+    keyword.latestDepth !== null && keyword.latestDepth !== undefined;
+  const name = [
+    noApps
+      ? `${t("position.noApps")}: ${t("position.noAppsSentence")}`
+      : t("position.notFound", { depth: keyword.latestDepth ?? 0 }),
+    lostTitle ?? (lost ? `was #${lost.position}` : null),
+  ]
+    .filter((part): part is string => part !== null)
+    .join(", ");
   return (
     <span
       className={cn(
@@ -67,22 +86,19 @@ export function PositionReadout({
     >
       {keyword.latestPosition === null ? (
         <span
-          title={
-            lost?.on
-              ? lastRankedLine(lost.position, lost.on, t, locale)
-              : undefined
-          }
+          title={title}
           className={cn(
             "flex flex-col leading-tight text-muted-foreground",
             className,
           )}
         >
-          <span>{label}</span>
+          <span aria-hidden={worded || undefined}>{label}</span>
           {lost ? (
             <span className="text-tick text-faint-foreground">
               {t("position.was", { position: lost.position })}
             </span>
           ) : null}
+          {worded ? <span className="sr-only">{name}</span> : null}
         </span>
       ) : (
         <GradedNumber

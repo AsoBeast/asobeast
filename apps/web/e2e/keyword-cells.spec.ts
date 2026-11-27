@@ -1,7 +1,8 @@
 import type { Page } from "@playwright/test";
 import { formatDate } from "../src/lib/format";
 import { contrastViolations, THEMES } from "./contrast-check.mts";
-import { APP_MARKS_KEYWORDS } from "./fixtures.mts";
+import { APP_MARKS_KEYWORDS, NO_APPS_COOKIE } from "./fixtures.mts";
+import { seedCookies } from "./routes.mts";
 import { hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
 
@@ -492,5 +493,35 @@ test.describe("the change since the check before", () => {
         name: "up 2 since yesterday",
       }),
     ).toBeVisible();
+  });
+});
+
+test.describe("the position of a keyword whose search lists no apps", () => {
+  test.beforeEach(async ({ context }) => {
+    await seedCookies(context, { [NO_APPS_COOKIE]: "1" });
+  });
+
+  test("the cell reads No apps and titles the sentence", async ({ page }) => {
+    await page.goto("/apps/app-1/keywords");
+    const row = rowOf(page, "productivity app");
+
+    await expect(row.getByText("No apps", { exact: true })).toBeVisible();
+    await expect(
+      row.locator('[title="The store lists no apps for this search"]'),
+    ).toHaveCount(1);
+    await expect(row).toHaveAccessibleName(
+      /No apps: The store lists no apps for this search/,
+    );
+  });
+
+  test("a keyword without a result count keeps the bound and no sentence", async ({
+    page,
+  }) => {
+    await openMarks(page);
+    const row = rowOf(page, "never ranked");
+
+    await expect(row.getByText(">200", { exact: true })).toBeVisible();
+    await expect(row.getByText("No apps")).toHaveCount(0);
+    await expect(row.getByText("The store lists no apps")).toHaveCount(0);
   });
 });

@@ -74,6 +74,7 @@ export function portalConfiguration(
         enabled: true,
         allowed_updates: [...PORTAL_CUSTOMER_UPDATES],
       },
+      subscription_pause: { enabled: false },
       payment_method_update: { enabled: true },
       invoice_history: { enabled: true },
     },

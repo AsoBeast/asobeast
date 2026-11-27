@@ -1,3 +1,4 @@
+import { pluralize } from "@/lib/format";
 import type { Store } from "@asobeast/shared";
 import { createTranslator } from "next-intl";
 import enReviews from "../../../messages/en/reviews.json";
@@ -11,6 +12,7 @@ import {
   MIN_GOAL_DAYS,
   MIN_TARGET_TENTHS,
   type GoalPace,
+  type MixAnswer,
   type RatingsGoal,
   THIN_SAMPLE_COUNT,
 } from "@/lib/ratings-goal";
@@ -82,4 +84,27 @@ export function goalNotes(
       ? [t("goal.thinSample", { count: THIN_SAMPLE_COUNT })]
       : []),
   ];
+}
+
+const shownTenths = (value: number): string =>
+  formatTenths(displayedTenths(value));
+
+function reachedNote(answer: MixAnswer, targetTenths: number): string {
+  if (answer.kind !== "reaches") return "";
+  return displayedTenths(answer.projected) > targetTenths
+    ? ", above your target"
+    : ", your target";
+}
+
+export function paceSentence(
+  answer: MixAnswer,
+  targetTenths: number,
+  days: number,
+): string {
+  const target = formatTenths(targetTenths);
+  if (answer.kind === "belowTarget") {
+    return `Not at the current mix: new ratings average ${shownTenths(answer.newAverage)}, below ${target}.`;
+  }
+  const lead = `At your current pace the store shows ${shownTenths(answer.projected)} in ${pluralize(days, "day")}`;
+  return `${lead}${reachedNote(answer, targetTenths)}.`;
 }

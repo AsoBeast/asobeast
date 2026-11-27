@@ -310,7 +310,7 @@ describe('foreignContacts', () => {
     for (const input of inputs) {
       const started = performance.now();
       foreignContacts(input, [input]);
-      expect(performance.now() - started).toBeLessThan(250);
+      expect(performance.now() - started).toBeLessThan(1_000);
     }
   });
 

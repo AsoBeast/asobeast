@@ -37,6 +37,7 @@ import {
   type HistoryView,
 } from "./position-history";
 import { PositionImageButton } from "./PositionImageButton";
+import { PositionShareButton } from "./PositionShareButton";
 
 function plottedChanges(
   days: Map<string, ChangeField[]>,
@@ -224,6 +225,7 @@ export function PositionHistoryPanel({
   homeCountry,
   range,
   onRange,
+  onShareOpenChange,
 }: {
   appId: string;
   store: Store;
@@ -231,6 +233,7 @@ export function PositionHistoryPanel({
   homeCountry: string;
   range: RangePreset;
   onRange: (next: RangePreset) => void;
+  onShareOpenChange?: (open: boolean) => void;
 }) {
   const t = useTranslations("keywords");
   const locale = useAppLocale();
@@ -256,13 +259,24 @@ export function PositionHistoryPanel({
         onRange={onRange}
         image={
           copyable ? (
-            <PositionImageButton
-              appId={appId}
-              store={store}
-              keyword={keyword}
-              chart={chart}
-              chartRef={chartRef}
-            />
+            <>
+              <PositionImageButton
+                appId={appId}
+                store={store}
+                keyword={keyword}
+                chart={chart}
+                chartRef={chartRef}
+              />
+              <PositionShareButton
+                appId={appId}
+                keyword={keyword}
+                series={read.data?.series.find(
+                  (item) => item.keywordId === keyword.keywordId,
+                )}
+                loading={read.isPlaceholderData}
+                onOpenChange={onShareOpenChange}
+              />
+            </>
           ) : null
         }
       />

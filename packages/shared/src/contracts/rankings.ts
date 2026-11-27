@@ -4,6 +4,7 @@ export interface RankingPoint {
   date: string;
   position: number | null;
   depth: number;
+  resultCount?: number | null;
 }
 
 export interface RankingSeriesItem {

@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ProxyOutcome, ProxyTier, Store } from '@prisma/client';
-import { storeDeadlinePassed } from '../store-deadline';
+import { storeDeadlineEndsAt, storeDeadlinePassed } from '../store-deadline';
 import {
   currentEgress,
   EgressMeter,
@@ -9,14 +9,21 @@ import {
 } from './egress';
 import {
   HealthObservation,
+  isAccountRefusal,
   outcomeOf,
   ProxyHealthTracker,
+  refusedStatusOf,
+  TUNNEL_REFUSAL_COOLDOWN_MS,
 } from './proxy-health.service';
 import { ProxyLedger } from './proxy-ledger.service';
 import { worstOutcome } from './proxy-outcome';
 import { ProxyPoolConfig } from './proxy-pool.config';
 import { ProxyPoolMaintenance } from './proxy-pool.maintenance';
-import { ProxyLease, ProxyPool } from './proxy-pool.service';
+import {
+  ProxyAccountRefusedError,
+  ProxyLease,
+  ProxyPool,
+} from './proxy-pool.service';
 import { ResidentialFallback } from './residential-fallback.service';
 
 const BURNT: ProxyOutcome[] = [ProxyOutcome.BLOCKED, ProxyOutcome.SILENT];
@@ -65,7 +72,7 @@ export class ProxyEgress implements OnModuleInit {
       if (outcome && BURNT.includes(outcome)) {
         return this.retryResidential(store, work, { outcome, error });
       }
-      throw error;
+      throw queuedRefusalOf(store, outcome, error) ?? error;
     }
     await this.settle(lease, store, meter, null);
     return result;
@@ -110,6 +117,7 @@ export class ProxyEgress implements OnModuleInit {
         failures: observation.failures,
         outcome: observation.outcome ?? ProxyOutcome.SUCCESS,
         pacing,
+        refusedStatus: observation.refusedStatus,
       });
     }
     await this.ledger.record(ProxyTier.DATACENTER, observation.requests);
@@ -146,9 +154,31 @@ export class ProxyEgress implements OnModuleInit {
   }
 }
 
+function queuedRefusalOf(
+  store: Store,
+  outcome: ProxyOutcome | null,
+  thrown: unknown,
+): ProxyAccountRefusedError | null {
+  const ending = { outcome, refusedStatus: refusedStatusOf(thrown) };
+  if (storeDeadlineEndsAt() !== null || !isAccountRefusal(ending)) return null;
+  return new ProxyAccountRefusedError(
+    store,
+    ending.refusedStatus,
+    TUNNEL_REFUSAL_COOLDOWN_MS,
+    { cause: thrown },
+  );
+}
+
 interface EgressObservation extends Omit<HealthObservation, 'outcome'> {
   requests: number;
   outcome: ProxyOutcome | null;
+}
+
+function pureRefusalOf(failures: readonly unknown[]): number | undefined {
+  const judged = failures.filter((failure) => outcomeOf(failure) !== null);
+  const statuses = judged.map(refusedStatusOf);
+  if (statuses.length === 0 || statuses.includes(undefined)) return undefined;
+  return statuses.at(-1);
 }
 
 function observe(meter: EgressMeter, thrown: unknown): EgressObservation {
@@ -166,6 +196,9 @@ function observe(meter: EgressMeter, thrown: unknown): EgressObservation {
     requests,
     successes: requests - failures,
     failures,
+    refusedStatus: pureRefusalOf(
+      thrownOutcome === null ? meter.failures : [...meter.failures, thrown],
+    ),
     outcome: worstOutcome(
       thrownOutcome === null ? refused : [...refused, thrownOutcome],
     ),

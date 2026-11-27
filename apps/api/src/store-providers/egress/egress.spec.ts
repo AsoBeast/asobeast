@@ -3,6 +3,7 @@ import type { Dispatcher } from 'undici';
 jest.mock('undici', () => ({
   fetch: jest.fn(() => Promise.resolve({ ok: true })),
   ProxyAgent: jest.fn(),
+  Pool: jest.fn(),
 }));
 
 import { fetch as undiciFetch, ProxyAgent } from 'undici';
@@ -16,6 +17,7 @@ import {
   restoreDirectFetch,
   throughEgress,
 } from './egress';
+import { tunnelPoolFor } from './proxy-tunnel';
 
 interface EgressInit {
   dispatcher?: Dispatcher;
@@ -229,17 +231,29 @@ describe('proxy egress', () => {
       password: 'secret',
     });
 
-    expect(proxyAgentMock).toHaveBeenCalledWith({
-      uri: 'http://proxy.example:8080',
-      token: `Basic ${Buffer.from('pool:secret').toString('base64')}`,
-    });
+    expect(proxyAgentMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        uri: 'http://proxy.example:8080',
+        token: `Basic ${Buffer.from('pool:secret').toString('base64')}`,
+      }),
+    );
   });
 
   it('omits the authorization header for an anonymous proxy', () => {
     proxyDispatcher('http://proxy.example:8080');
 
-    expect(proxyAgentMock).toHaveBeenCalledWith({
-      uri: 'http://proxy.example:8080',
-    });
+    expect(proxyAgentMock).toHaveBeenCalledWith(
+      expect.objectContaining({ uri: 'http://proxy.example:8080' }),
+    );
+    const [options] = proxyAgentMock.mock.calls.at(-1) as [object];
+    expect(options).not.toHaveProperty('token');
+  });
+
+  it('opens every tunnel through a pool that keeps a refused status', () => {
+    proxyDispatcher('http://proxy.example:8080');
+
+    expect(proxyAgentMock).toHaveBeenCalledWith(
+      expect.objectContaining({ clientFactory: tunnelPoolFor }),
+    );
   });
 });

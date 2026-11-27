@@ -4,11 +4,8 @@ import { useCallback, useId, useMemo, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryState } from "nuqs";
 import type { TrackedKeywordItem } from "@asobeast/shared";
-import {
-  ChartNotice,
-  MIN_TREND_POINTS,
-  trendState,
-} from "@/components/charts/ChartStates";
+import { ChartNotice, trendState } from "@/components/charts/ChartStates";
+import { MIN_TREND_POINTS } from "@/lib/trend-points";
 import { CHART_HEIGHT } from "@/components/charts/theme";
 import { Button } from "@/components/ui/button";
 import {

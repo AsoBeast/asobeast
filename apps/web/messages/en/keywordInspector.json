@@ -236,7 +236,9 @@
       "read": "Read about keyword discovery",
       "positionSummary": "Where your app appears in the store search for this phrase. A position up to 50 can come from another search made today or yesterday; a dash means not checked yet.",
       "opportunitySummary": "Popularity weighed against difficulty. It needs both scores, which a keyword gets once it is tracked.",
-      "relevanceSummary": "How relevant the phrase is to your listing, from where it was found and how many of its words your listing holds."
+      "relevanceSummary": "How relevant the phrase is to your listing, from where it was found and how many of its words your listing holds.",
+      "noApps": "No apps",
+      "noAppsSentence": "The store lists no apps for this search"
     },
     "actions": {
       "track": "Track",
@@ -312,20 +314,21 @@
     "states": {
       "neverChecked": "Not checked yet. The search results appear after the next daily check.",
       "nothingCaptured": "Nothing was captured on {date}. Pick a captured day.",
-      "noApps": "The store showed no apps for this keyword on {date}."
+      "noApps": "The store showed no apps for this keyword on {date}.",
+      "noAppsGeneric": "The store lists no apps for this search."
     },
     "summary": {
       "yourPosition": "Your position",
       "titles": "Titles with it",
       "ratings": "Top 10 ratings",
-      "jump": "Jump to your row at #{position, number}",
+      "jump": "Jump to your row at #{position}",
       "period": "since {date}",
       "noEarlierPosition": "No earlier position",
       "deeper": "below the top {count, number}",
       "notFound": "Not in the top {depth, number}",
       "absent": "Not in this list",
       "notReported": "Not reported",
-      "ratio": "{shown, number} of {total, number}",
+      "ratio": "{shown} of {total}",
       "median": "median",
       "average": "average",
       "noRatings": "No ratings",
@@ -335,7 +338,25 @@
       "ratingsTipLabel": "About top 10 ratings",
       "ratingsTipTitle": "Top 10 ratings",
       "ratingsTipSummary": "The median rating count of the top 10 apps, a rough measure of how established the top-ranked apps are. Google Play reports no counts, so its average rating shows instead.",
-      "guide": "Read about search results"
+      "guide": "Read about search results",
+      "outliers": "Read about outliers",
+      "noneEarlier": "No earlier position",
+      "noPlaySubtitle": "Google Play has no subtitle",
+      "keywordIn": "Keyword in",
+      "keywordInTipLabel": "About where the keyword sits",
+      "keywordInTipTitle": "Where the keyword sits",
+      "keywordInTipSummary": "How many of the top 10 hold every word of the keyword in their title, in any order. AsoBeast knows subtitles only for your apps and competitors, from their captured listings. A competitor in the top 10 without the keyword in either is marked Outlier, though it may still hold the keyword in its private keyword field.",
+      "top10Ratings": "Top 10 ratings",
+      "top10TipLabel": "About top 10 ratings",
+      "top10TipTitle": "Top 10 ratings",
+      "top10TipSummary": "The median rating count of the top 10 apps, a rough measure of how established the top-ranked apps are. Google Play reports no counts, so its average rating shows instead.",
+      "inSubtitle": "{shown} of {total} in the subtitle",
+      "subtitleLineSpace": "0 of 0 in the subtitle",
+      "below": "below the top {listed}",
+      "notFoundDepth": "Not in the top {depth}",
+      "noApps": "The store lists no apps for this search",
+      "inTitle": "in the title",
+      "sinceDate": "since {date}"
     },
     "row": {
       "rating": "Rated {rating}",
@@ -347,7 +368,10 @@
       "movementUp": "Up {count, number} from #{previous, number}",
       "movementDown": "Down {count, number} from #{previous, number}",
       "movementSame": "No change",
-      "movementNew": "New entry"
+      "movementNew": "New entry",
+      "notInTitle": "Not in the title",
+      "subtitleNotKnown": "subtitle not known",
+      "outlier": "Outlier"
     }
   },
   "keywordSheet": {
@@ -423,7 +447,7 @@
       "notFound": "Not in the top {depth, number}"
     },
     "dot": {
-      "name": "{keyword}, {rankState, select, unchecked {not checked yet} notFound {not in the top {depth, number}} ranked {position {rank}} other {not checked yet}}, popularity {popularity}{floor, select, none {} other {, floor answer}}, difficulty {difficulty}{opportunity, select, none {} other {, opportunity {opportunity}}}, {zone}{paused, select, none {} other {, paused}}"
+      "name": "{keyword}, {rankState, select, unchecked {not checked yet} notFound {not in the top {depth, number}} ranked {position {rank}} noApps {the store lists no apps for this search} other {not checked yet}}, popularity {popularity}{floor, select, none {} other {, floor answer}}, difficulty {difficulty}{opportunity, select, none {} other {, opportunity {opportunity}}}, {zone}{paused, select, none {} other {, paused}}"
     },
     "chart": {
       "aria": "Keyword opportunity map",
@@ -454,7 +478,8 @@
       "keywords": "Keywords",
       "unplotted": "Not on the map",
       "missing": "Missing a popularity or a difficulty"
-    }
+    },
+    "noApps": "No apps"
   },
   "thresholds": {
     "trigger": "Thresholds",

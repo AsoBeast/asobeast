@@ -41,8 +41,35 @@ function cardTrialEnd(plan: AccountPlan): string | null {
   return plan.trialing === true ? plan.trialEndsAt : null;
 }
 
-function declined(plan: AccountPlan): boolean {
-  return plan.trialChargeFailed === true;
+export function trialChargeDeclined(plan: AccountPlan | undefined): boolean {
+  return plan?.trialChargeFailed === true;
+}
+
+const declined = trialChargeDeclined;
+
+export function pausedPlanOf(
+  plan: AccountPlan | undefined,
+): AccountPlan | undefined {
+  return plan?.entitled === false ? plan : undefined;
+}
+
+export function pausedNotice(
+  plan: AccountPlan | undefined,
+  isMember: boolean,
+): string {
+  if (isMember) return `${COLLECTION_PAUSED} ${ASK_THE_OWNER}`;
+  return trialChargeDeclined(plan) ? TRIAL_CHARGE_DECLINED : COLLECTION_PAUSED;
+}
+
+function scheduledSwitch(
+  plan: AccountPlan,
+  context: TranslationContext,
+): string | null {
+  if (!plan.scheduledPlan || !plan.renewsAt) return null;
+  return context.translator("status.switchesTo", {
+    plan: PLANS[plan.scheduledPlan].displayName,
+    date: formatDateInLocale(plan.renewsAt, context.locale),
+  });
 }
 
 export function trialPriceLabel(
@@ -318,6 +345,8 @@ export function paywallStatusLine(
       date: formatDateInLocale(plan.trialEndsAt, context.locale),
     });
   }
+  const switchTo = scheduledSwitch(plan, context);
+  if (switchTo) return switchTo;
   if (plan.renewsAt) {
     return context.translator("status.renews", {
       plan: planLabel(planOf(plan.plan), context),
@@ -345,6 +374,8 @@ export function planStatusLine(
       date: formatDateInLocale(plan.renewsAt, context.locale),
     });
   }
+  const switchTo = scheduledSwitch(plan, context);
+  if (switchTo) return switchTo;
   if (plan.renewsAt) {
     return context.translator("status.renewsShort", {
       date: formatDateInLocale(plan.renewsAt, context.locale),
@@ -406,3 +437,52 @@ export function suspensionNotice(
     cause ? { reason: cause } : {},
   );
 }
+
+export const PAYMENT_CONFIRMING =
+  "Your payment is being confirmed. This usually takes a minute; if it has not completed within a day the attempt expires and you can choose a plan again.";
+export const HANDLED_BY_LINK =
+  "Payments are handled by Link, a Stripe affiliate and the merchant of record. Prices are in US dollars; checkout adds sales tax or VAT where it applies and can charge in your local currency. Cancel any time from settings.";
+export const HANDLED_BY_STRIPE =
+  "Payments are handled by Stripe. Cancel any time from settings.";
+export const CHECKOUT_UNCONFIGURED =
+  "Checkout is not configured on this instance.";
+export const TRIAL_REFUSED =
+  "This card or email has already had a free trial. Choose a plan to start today.";
+export const COLLECTION_PAUSED =
+  "Collection is paused. Everything AsoBeast has already gathered stays readable and exportable.";
+export const MEMBER_BILLING_TITLE = "Your workspace owner manages billing";
+export const MEMBER_BILLING_NOTE = `${MEMBER_BILLING_TITLE}.`;
+export const ASK_THE_OWNER = "Ask your workspace owner to choose a plan.";
+export const CONFIRM_EMAIL_TITLE = "Confirm your email";
+export const CONFIRM_EMAIL_CAPTION =
+  "Check your spam folder if it has not arrived. The link works for a day.";
+export const WRONG_ADDRESS = "Wrong address?";
+export const REGISTER_AGAIN = "and register again.";
+export const PAYMENT_TITLE = "Payment";
+export const CHOOSE_A_PLAN_TITLE = "Choose a plan";
+export const FAQ_TITLE = "Questions";
+export const EVERY_PLAN_INCLUDES = "Every plan includes";
+export const SECURE_BY_STRIPE = "Secure payments processed by Stripe.";
+export const NEED_HELP = "Need help?";
+export const CONTACT_SUPPORT = "Contact support";
+export const CHECKOUT_UNREACHABLE = "Checkout could not be opened. Try again.";
+export const PLAN_UNREACHABLE =
+  "Your plan could not be loaded. Check your connection, then try again.";
+export const PRICES_UNREACHABLE =
+  "The prices could not be loaded. Check your connection, then try again.";
+export const CHECKOUT_REOPENING = "Opening checkout…";
+export const CHECKOUT_PRICE_MISSING = "Checkout is not configured yet";
+export const CHECKOUT_START_FAILED = "Could not start checkout. Try again.";
+export const PORTAL_OPEN_FAILED =
+  "Could not open the billing portal. Try again.";
+export const EVERY_PLAN_FEATURES: readonly string[] = [
+  "Daily keyword rank tracking across every storefront",
+  "Popularity, difficulty and opportunity scoring",
+  "Competitor discovery and metadata audits",
+  "AI audit and metadata drafts",
+  "Alerts by email and webhook",
+  "Personal API tokens and the MCP server",
+];
+
+export const TRIAL_CHARGE_DECLINED =
+  "Your trial ended, but the card was declined. Update it in the billing portal to start your plan.";

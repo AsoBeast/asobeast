@@ -108,6 +108,28 @@ describe("rankingLabel", () => {
       "#4",
     );
   });
+
+  it("says No apps when the search listed none", () => {
+    expect(
+      rankingLabel({
+        position: null,
+        depth: 200,
+        date: "2026-10-18",
+        resultCount: 0,
+      }),
+    ).toBe("No apps");
+  });
+
+  it("keeps the bound for a row written before the count existed", () => {
+    expect(
+      rankingLabel({
+        position: null,
+        depth: 200,
+        date: "2026-10-18",
+        resultCount: null,
+      }),
+    ).toBe(">200");
+  });
 });
 
 describe("placementPhrase", () => {

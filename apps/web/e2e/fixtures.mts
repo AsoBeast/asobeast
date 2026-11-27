@@ -55,6 +55,7 @@ import type {
   RatingsHistogram,
   ReviewThemes,
   RatingsHistory,
+  RatingsPoint,
   ReviewItem,
   ReviewList,
   SerpMovers,
@@ -140,9 +141,11 @@ function pointsFrom(
   positions: Array<number | null>,
   depths?: number[],
   unchecked: readonly number[] = [],
+  counts?: Array<number | null>,
 ): RankingPoint[] {
   return positions.flatMap((position, index) => {
     const daysAgo = positions.length - 1 - index;
+    const count = counts?.[index];
     return unchecked.includes(daysAgo)
       ? []
       : [
@@ -150,6 +153,7 @@ function pointsFrom(
             date: utcDaysAgo(daysAgo),
             position,
             depth: depths?.[index] ?? RANK_DEPTH,
+            ...(count === undefined ? {} : { resultCount: count }),
           },
         ];
   });
@@ -659,6 +663,27 @@ export const APP_1_RANKINGS: RankingSeries = {
 
 export const PL_HISTORY_COOKIE = "e2e-pl-history";
 
+export const NO_APPS_COOKIE = "e2e-no-apps";
+
+export const STALE_CAPTURE_COOKIE = "e2e-stale-capture";
+
+export const NO_APPS_KEYWORD_ID = "kw-4";
+
+export const NO_APPS_DISCOVERY_KEYWORD_ID = "disc-app-1-us-focus-music";
+
+export const NO_APPS_SERIES: RankingSeriesItem = {
+  keywordId: "kw-4",
+  text: "productivity app",
+  store: "APP_STORE" as const,
+  country: "us",
+  points: pointsFrom(
+    [null, null, null, null, null, null, null, null],
+    [100, 100, 100, 100, 200, 200, 200, 200],
+    [5],
+    [null, null, null, null, null, null, 0, 0],
+  ),
+};
+
 export const PL_HISTORY_KEYWORD: TrackedKeywordItem = {
   keywordId: "kw-pl-history",
   text: "minutnik skupienia",
@@ -742,6 +767,7 @@ export const SERP_SNAPSHOTS: Record<string, SerpSnapshot> = {
         ratingCount: 8400,
         appId: null,
         isCompetitor: false,
+        titleMatch: "none",
       },
       {
         position: 2,
@@ -762,6 +788,15 @@ export const SERP_SNAPSHOTS: Record<string, SerpSnapshot> = {
         ratingCount: 24000,
         appId: "app-1",
         isCompetitor: false,
+        titleMatch: "phrase",
+        subtitle: "Focus timer for deep work",
+        subtitleSegments: [
+          { text: "Focus", match: "exact" },
+          { text: " ", match: "none" },
+          { text: "timer", match: "exact" },
+          { text: " for deep work", match: "none" },
+        ],
+        placement: "both",
       },
       {
         position: 4,
@@ -772,6 +807,13 @@ export const SERP_SNAPSHOTS: Record<string, SerpSnapshot> = {
         ratingCount: 12000,
         appId: "comp-1",
         isCompetitor: true,
+        titleMatch: "partial",
+        subtitle: "Timer for long sessions",
+        subtitleSegments: [
+          { text: "Timer", match: "exact" },
+          { text: " for long sessions", match: "none" },
+        ],
+        placement: "split",
       },
       {
         position: 5,
@@ -783,7 +825,24 @@ export const SERP_SNAPSHOTS: Record<string, SerpSnapshot> = {
         appId: null,
         isCompetitor: false,
       },
+      {
+        position: 6,
+        storeAppId: "calm-store",
+        title: "Calm Breathing",
+        developer: "Calm Labs",
+        ratingAvg: 4.2,
+        ratingCount: 3100,
+        appId: "comp-calm",
+        isCompetitor: true,
+        titleMatch: "none",
+        subtitle: "Breathe and relax",
+        subtitleSegments: [{ text: "Breathe and relax", match: "none" }],
+        placement: "none",
+      },
     ],
+    comparedTo: null,
+    exits: [],
+    dates: [utcDaysAgo(0)],
   },
 };
 
@@ -1308,6 +1367,41 @@ export const APP_1_RATINGS_HISTORY: RatingsHistory = {
     ratingAvg: 4.6 + (index % 4) * 0.05,
     ratingCount: 20000 + index * 130,
   })),
+};
+
+const STORE_AVERAGE_DECIMALS = 5;
+
+export interface RatingsStart {
+  daysAgo: number;
+  count: number;
+  average: number;
+}
+
+export function grownRatingsPoints(
+  start: RatingsStart,
+  additions: readonly number[],
+  mean: number,
+): RatingsPoint[] {
+  let count = start.count;
+  let sum = start.average * start.count;
+  const steps = [0, ...additions];
+  return steps.map((added, day) => {
+    count += added;
+    sum += mean * added;
+    return {
+      date: utcDaysAgo(start.daysAgo - day),
+      ratingAvg: Number((sum / count).toFixed(STORE_AVERAGE_DECIMALS)),
+      ratingCount: count,
+    };
+  });
+}
+
+export const GROWING_RATINGS_HISTORY: RatingsHistory = {
+  points: grownRatingsPoints(
+    { daysAgo: 30, count: 2000, average: 4.2 },
+    Array<number>(30).fill(40),
+    4.7,
+  ),
 };
 
 export const APP_1_RATINGS_HISTOGRAM: RatingsHistogram = {
@@ -3837,6 +3931,38 @@ DATASETS[APP_FEW_RATINGS_ID] = ratedDataset(
 );
 DATASETS[APP_UNRATED_ID] = ratedDataset(APP_UNRATED_ID, "Unrated Lab", 0, 0);
 
+export const APP_NEW_RATINGS_ID = "app-new-ratings";
+
+const NEW_RATINGS_LATEST = GROWING_RATINGS_HISTORY.points.at(-1);
+
+DATASETS[APP_NEW_RATINGS_ID] = {
+  ...ratedDataset(
+    APP_NEW_RATINGS_ID,
+    "New Ratings Lab",
+    NEW_RATINGS_LATEST?.ratingAvg ?? 0,
+    NEW_RATINGS_LATEST?.ratingCount ?? 0,
+  ),
+  ratingsHistory: GROWING_RATINGS_HISTORY,
+};
+
+export const APP_DRAFT_LOCALES_ID = "app-draft-locales";
+
+DATASETS[APP_DRAFT_LOCALES_ID] = localesDataset(
+  APP_DRAFT_LOCALES_ID,
+  "Draft Lab",
+);
+
+export const APP_TARGETS_ID = "app-targets";
+export const APP_TARGETS_FOCUS_ID = "app-targets-focus";
+
+for (const id of [APP_TARGETS_ID, APP_TARGETS_FOCUS_ID]) {
+  DATASETS[id] = {
+    ...DATASETS["app-1"],
+    detail: { ...APP_1_DETAIL, id, name: "Target Lab" },
+    keywords: APP_1_KEYWORDS.map((keyword) => ({ ...keyword })),
+  };
+}
+
 export const APP_FIELD_PROPOSAL_ID = "app-field-proposal";
 export const APP_FIELD_PROPOSAL_RIVAL_ID = "app-field-proposal-rival";
 export const FIELD_PROPOSAL_NOT_STOREFRONT = "cu";
@@ -5589,8 +5715,26 @@ export const APP_1_PL_LOCALIZED_SCREENSHOTS: AppScreenshots = {
   ],
 };
 
+const playScreenshotUrl = (position: number): string =>
+  `https://play-lh.googleusercontent.com/e2e-tomato-${position}=w526-h296`;
+
+export const APP_GP_SCREENSHOTS: AppScreenshots = {
+  appId: "app-gp",
+  store: "GOOGLE_PLAY",
+  snapshotId: "snap-gp",
+  capturedAt: utcTimestampDaysAgo(0),
+  reading: "unsupported",
+  screenshots: [1, 2, 3].map((position) => ({
+    position,
+    url: playScreenshotUrl(position),
+    caption: null,
+    status: "skipped",
+  })),
+};
+
 export const SCREENSHOTS: Record<string, AppScreenshots> = {
   "app-1": APP_1_SCREENSHOTS,
+  "app-gp": APP_GP_SCREENSHOTS,
 };
 
 export const emptyScreenshots = (
@@ -5634,7 +5778,7 @@ const playCoverageRow = (
 });
 
 const AR_DESCRIPTION =
-  "تسوق الملابس والإلكترونيات ومنتجات المنزل من متجر واحد. شحن سريع إلى باب بيتك، ودفع آمن عند الاستلام، وعروض جديدة كل يوم. SHOP, SAVE & ENJOY مع تطبيق سوق.";
+  "تسوق الملابس والإلكترونيات ومنتجات المنزل من متجر واحد. شحن سريع إلى باب بيتك، ودفع آمن عند الاستلام، وعروض جديدة كل يوم. SHOP, SAVE & ENJOY مع تطبيق سوق. وعروض يومية وعروض أسبوعية.";
 
 export const APP_AR_METADATA_AUDIT: MetadataAuditResult = {
   appId: APP_AR_ID,
@@ -5731,8 +5875,8 @@ export const APP_FR_DETAIL: AppDetail = {
 const FR_SHORT_DESCRIPTION =
   "Vendre tes vêtements de seconde main, acheter des vêtements sans frais";
 
-const FR_DESCRIPTION =
-  "Vinted est la première communauté de mode d'occasion. Vends les vêtements que tu ne portes plus, trouve des pièces uniques à petit prix et profite d'une livraison simple et sécurisée.";
+export const FR_DESCRIPTION =
+  "Vinted est la première communauté de mode d'occasion. Vends les vêtements que tu ne portes plus, trouve des pièces uniques à petit prix et profite d'une livraison simple et sécurisée. Vends, achète et échange des vêtements, des chaussures et des accessoires de mode d'occasion. Des milliers de vêtements arrivent chaque jour.";
 
 export const APP_FR_METADATA_AUDIT: MetadataAuditResult = {
   appId: APP_FR_ID,
@@ -5894,6 +6038,9 @@ DATASETS[APP_HE_ID] = {
   changeImpact: emptyChangeImpact(APP_HE_DETAIL),
 };
 
+export const PLAY_DESCRIPTION_DRAFT =
+  "Focus Timer keeps every study session and deep work block on track.";
+
 export const METADATA_DRAFTS: MetadataDraft[] = [
   {
     field: "title",
@@ -5919,10 +6066,18 @@ export const METADATA_DRAFTS: MetadataDraft[] = [
     issues: [],
     rationale: "Covers uncovered terms.",
   },
+  {
+    field: "description",
+    value: PLAY_DESCRIPTION_DRAFT,
+    chars: PLAY_DESCRIPTION_DRAFT.length,
+    limit: 4000,
+    issues: [],
+    rationale: "Repeats the primary keywords in the first lines.",
+  },
 ];
 
-const LONG_DESCRIPTION =
-  "Deep Focus Timer turns every study session, deep work block and quiet reading hour into a calm, measurable routine that keeps you away from notifications, tabs and the endless scroll while the timer runs.";
+export const LONG_DESCRIPTION =
+  "Deep Focus Timer turns every study session, deep work block and quiet reading hour into a calm, measurable routine that keeps you away from notifications, tabs and the endless scroll while the timer runs. Plan your day with a productivity app built for calm minds. A quiet routine, a quiet desk and a quiet phone make a calm productivity app feel natural.";
 
 const LONG_KEYWORD_FIELD =
   "focus,pomodoro,study,deepwork,productivity,concentration,habit,routine,planner,tracker,quiet,calm";
@@ -6151,6 +6306,9 @@ METADATA_AUDITS[APP_RIVAL_ID] = METADATA_AUDIT;
 METADATA_AUDITS[APP_UNLISTED_MANAGED_ID] = METADATA_AUDIT;
 METADATA_AUDITS[APP_IMPORT_FOCUS_ID] = METADATA_AUDIT;
 METADATA_AUDITS[APP_FIELD_PROPOSAL_ID] = METADATA_AUDIT;
+METADATA_AUDITS[APP_DRAFT_LOCALES_ID] = METADATA_AUDIT;
+METADATA_AUDITS[APP_TARGETS_ID] = METADATA_AUDIT;
+METADATA_AUDITS[APP_TARGETS_FOCUS_ID] = METADATA_AUDIT;
 
 export const APP_READS_ID = "app-reads";
 

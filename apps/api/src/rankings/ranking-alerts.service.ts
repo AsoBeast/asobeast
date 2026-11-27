@@ -26,6 +26,7 @@ interface PreviousRanking {
   date: Date;
   position: number | null;
   depth: number;
+  resultCount: number | null;
 }
 
 export interface MilestoneCheck {
@@ -33,6 +34,7 @@ export interface MilestoneCheck {
   keyword: KeywordScope;
   date: Date;
   depth: number;
+  resultCount: number | null;
   capture: RankCapture;
   competitors: CompetitorCapture[];
 }
@@ -42,11 +44,15 @@ interface ConfirmedContext {
   app: { id: string; name: string | null };
   keyword: KeywordScope;
   depth: number;
+  resultCount: number | null;
   window: ConfirmationWindow;
 }
 
 const undoingMark = (undoing: boolean): { undoesDrop?: true } =>
   undoing ? { undoesDrop: true } : {};
+
+const fromCountOf = (count: number | null | undefined) =>
+  typeof count === 'number' ? { fromResultCount: count } : {};
 
 @Injectable()
 export class RankingAlertsService {
@@ -111,9 +117,13 @@ export class RankingAlertsService {
     app: { id: string; name: string | null },
     keyword: KeywordScope,
     date: Date,
-    capture: { position: number | null; depth: number },
+    capture: {
+      position: number | null;
+      depth: number;
+      resultCount: number | null;
+    },
   ): Promise<void> {
-    const { position, depth } = capture;
+    const { position, depth, resultCount } = capture;
     const previous = await this.previousRanking(app.id, keyword.id, date);
     if (!previous) {
       return;
@@ -134,6 +144,7 @@ export class RankingAlertsService {
         to: position,
         fromDepth: previous.depth,
         toDepth: depth,
+        toResultCount: resultCount,
         threshold,
       });
     } else if (
@@ -149,6 +160,7 @@ export class RankingAlertsService {
         to: position,
         fromDepth: previous.depth,
         toDepth: depth,
+        ...fromCountOf(previous.resultCount),
         threshold,
         ...undoingMark(undoesDrop(window)),
       });
@@ -158,6 +170,7 @@ export class RankingAlertsService {
       app,
       keyword,
       depth,
+      resultCount,
       window,
     });
   }
@@ -218,6 +231,8 @@ export class RankingAlertsService {
         to,
         fromDepth: previous.depth,
         toDepth: depth,
+        ...fromCountOf(previous.resultCount),
+        toResultCount: check.resultCount,
         ...undoingMark(
           alert.milestone.direction === 'entered' &&
             undoesExit(window, alert.milestone.tier),
@@ -229,6 +244,7 @@ export class RankingAlertsService {
       app,
       keyword,
       depth,
+      resultCount: check.resultCount,
       window,
     });
   }
@@ -265,6 +281,7 @@ export class RankingAlertsService {
       to: context.window.today,
       fromDepth: confirmed.fromDepth,
       toDepth: context.depth,
+      toResultCount: context.resultCount,
       threshold: context.window.threshold,
       confirmed: true,
     });
@@ -286,6 +303,7 @@ export class RankingAlertsService {
       to: context.window.today,
       fromDepth: confirmed.fromDepth,
       toDepth: context.depth,
+      toResultCount: context.resultCount,
       confirmed: true,
     });
   }
@@ -349,7 +367,7 @@ export class RankingAlertsService {
     return this.prisma.keywordRanking.findFirst({
       where: { appId, keywordId, date: { lt: date } },
       orderBy: { date: 'desc' },
-      select: { date: true, position: true, depth: true },
+      select: { date: true, position: true, depth: true, resultCount: true },
     });
   }
 

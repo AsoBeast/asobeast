@@ -47,6 +47,7 @@ describe('AccountPlanService', () => {
       firstPaidAt?: Date | null;
       trialStartedAt?: Date | null;
       trialRefusedSubscriptionId?: string | null;
+      pendingPlan?: string | null;
     } = {},
   ) => ({
     plan: 'free',
@@ -60,6 +61,7 @@ describe('AccountPlanService', () => {
     firstPaidAt: new Date('2026-08-01T00:00:00.000Z'),
     trialStartedAt: null,
     trialRefusedSubscriptionId: null,
+    pendingPlan: null,
     ...over,
   });
 
@@ -201,6 +203,52 @@ describe('AccountPlanService', () => {
         null,
       ),
     ).resolves.toMatchObject({ cancelAtPeriodEnd: true });
+  });
+
+  describe('scheduled plan', () => {
+    const describeWith = (over: Parameters<typeof workspace>[0]) =>
+      build(true, { plan: 'ultimate', apps: 1, keywordMarkets: 1 }).describe(
+        workspace({
+          plan: 'ultimate',
+          subscriptionId: 'sub_1',
+          subscriptionStatus: 'active',
+          ...over,
+        }),
+        NOW,
+        null,
+      );
+
+    it('reports the plan a subscription switches to at period end', async () => {
+      await expect(
+        describeWith({ pendingPlan: 'indie' }),
+      ).resolves.toMatchObject({ scheduledPlan: 'indie' });
+    });
+
+    it.each([
+      ['nothing is scheduled', { pendingPlan: null }],
+      ['the next phase keeps the plan', { pendingPlan: 'ultimate' }],
+      ['the next phase names no paid plan', { pendingPlan: 'free' }],
+      [
+        'the subscription ends at period end',
+        { pendingPlan: 'indie', cancelAtPeriodEnd: true },
+      ],
+      [
+        'no subscription is held',
+        {
+          pendingPlan: 'indie',
+          subscriptionId: null,
+          subscriptionStatus: null,
+        },
+      ],
+      [
+        'the subscription is gone',
+        { pendingPlan: 'indie', subscriptionStatus: 'canceled' },
+      ],
+    ])('reports no scheduled plan when %s', async (_case, over) => {
+      await expect(describeWith(over)).resolves.toMatchObject({
+        scheduledPlan: null,
+      });
+    });
   });
 
   it('marks a lapsed workspace unentitled and points it at the entry plan', async () => {

@@ -1,4 +1,5 @@
 import { PRODUCT_NAME } from "@/lib/brand";
+import type { CardSizeName } from "./share-card/card-layout";
 
 const MAX_PART_LENGTH = 40;
 const FILENAME_PREFIX = PRODUCT_NAME.toLowerCase();
@@ -15,12 +16,19 @@ export function slugPart(value: string): string {
 }
 
 export interface ChartImageName {
-  chart: "rankings" | "position-history" | "opportunity-map";
+  chart:
+    | "rankings"
+    | "position-history"
+    | "opportunity-map"
+    | "rankings-card"
+    | "position-card"
+    | "visibility-card";
   appName: string | null;
   appId: string;
   keyword?: string;
   from: string;
   to: string;
+  size?: CardSizeName;
 }
 
 export function chartImageFilename(name: ChartImageName): string {
@@ -32,6 +40,7 @@ export function chartImageFilename(name: ChartImageName): string {
     slugPart(name.keyword ?? ""),
     name.from,
     name.to,
+    name.size ?? "",
   ].filter((part) => part !== "");
   return `${parts.join("-")}.png`;
 }

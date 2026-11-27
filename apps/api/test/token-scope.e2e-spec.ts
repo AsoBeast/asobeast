@@ -307,5 +307,14 @@ describe('Read-only token scope (e2e)', () => {
 
       expect(response.status).toBe(404);
     });
+
+    it('lets a read-only token preview a draft listing', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/apps/app_missing/metadata/coverage-preview')
+        .set('Authorization', `Bearer ${READ_TOKEN}`)
+        .send({ title: 'Habit Tracker' });
+
+      expect(response.status).toBe(404);
+    });
   });
 });
