@@ -30,7 +30,7 @@ const COMPETITOR_BRAND_NOTE =
 
 const RULE_DESCRIPTION: Record<ActionRule, string> = {
   'keyword.add_uncovered':
-    'A high-opportunity, relevant tracked keyword appears in no indexed metadata field of the home market listing.',
+    'A high-opportunity, relevant tracked keyword appears in no indexed metadata field of the listing of the market it is tracked in.',
   'keyword.defend':
     'Several new apps entered the top 10 for a keyword this app ranks on, and at least one sits at or above its position.',
   'keyword.prune':
@@ -48,7 +48,7 @@ const RULE_DESCRIPTION: Record<ActionRule, string> = {
   'keyword.push_to_top10':
     'A relevant, valuable keyword has sat just outside the top 10 for most of the last week and appears only in a weak metadata field.',
   'metadata.fix_lint':
-    'A home market listing field has error-level lint issues that break a store rule, such as exceeding its character limit.',
+    'A listing field of this market has error-level lint issues that break a store rule, such as exceeding its character limit. Markets that read the same localization share the text, so one fix can clear it in all of them.',
   'rank.investigate_unexplained_drop':
     'Visibility or several tracked ranks fell in a market over the last two weeks without an indexed metadata change of this app to explain it.',
   'competitor.investigate_overtake':
@@ -132,6 +132,7 @@ export class ActionsAiService {
         impact: true,
         evidence: true,
         appId: true,
+        country: true,
         app: { select: { name: true, store: true, country: true } },
       },
     });
@@ -155,6 +156,7 @@ export class ActionsAiService {
             type: 'text',
             text: [
               `App: ${row.app.name ?? 'Unnamed'} (${row.app.store}, ${row.app.country})`,
+              `Market: ${row.country}`,
               `Rule: ${row.rule}`,
               `Rule description: ${RULE_DESCRIPTION[evidence.rule]}`,
               `Priority: ${row.priority}`,

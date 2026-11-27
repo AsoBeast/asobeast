@@ -27,6 +27,7 @@ const ACTION_ROW = {
   impact: 71,
   evidence: EVIDENCE,
   appId: 'app_1',
+  country: 'us',
   app: { name: 'Budget', store: 'APP_STORE', country: 'us' },
 };
 
@@ -112,6 +113,23 @@ describe('ActionsAiService.explain', () => {
     expect(request.content[0].text).toContain('opportunity');
     expect(request.content[0].text).not.toContain('workspaceId');
     expect(request.content[0].text).not.toContain('competitor brand');
+  });
+
+  it('names the market of the action beside the home market of the app', async () => {
+    const spend = jest.fn(() =>
+      Promise.resolve(aiCompletion({ explanation: 'Fine.' })),
+    );
+    await serviceFor(
+      buildPrisma({ ...ACTION_ROW, country: 'tr' }),
+      buildAi(spend),
+    ).explain('act_1', 'usr_1');
+
+    const request = spend.mock.calls[0][1] as unknown as {
+      content: Array<{ text: string }>;
+    };
+    const lines = request.content[0].text.split('\n');
+    expect(lines).toContain('App: Budget (APP_STORE, us)');
+    expect(lines).toContain('Market: tr');
   });
 
   describe('on a defend action', () => {
