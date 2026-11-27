@@ -21,6 +21,14 @@ export interface TrackSelectedRequest {
   scope: string;
 }
 
+function sentTexts(variables: unknown): string[] {
+  if (typeof variables !== "object" || variables === null) return [];
+  if (!("texts" in variables) || !Array.isArray(variables.texts)) return [];
+  return variables.texts.filter(
+    (text): text is string => typeof text === "string",
+  );
+}
+
 export function useTrackSelected(
   id: string,
   country: string,
@@ -46,9 +54,7 @@ export function useTrackSelected(
   });
   const pending = useMutationState({
     filters: { mutationKey, status: "pending" },
-    select: (mutation) =>
-      (mutation.state.variables as TrackSelectedRequest | undefined)?.texts ??
-      [],
+    select: (mutation) => sentTexts(mutation.state.variables),
   });
   return {
     busy: pending.length > 0,
