@@ -217,6 +217,19 @@ describe("draftScopeOf", () => {
     });
   });
 
+  it("drafts the native default of the home market", () => {
+    const polish = { country: "pl", defaultLocalization: "pl" };
+
+    expect(draftScopeOf("APP_STORE", "pl", undefined, polish)).toEqual({
+      store: "APP_STORE",
+      localization: "pl",
+    });
+    expect(draftScopeOf("APP_STORE", "pl", undefined)).toEqual({
+      store: "APP_STORE",
+      localization: "en-GB",
+    });
+  });
+
   it("drafts the market on Google Play", () => {
     expect(draftScopeOf("GOOGLE_PLAY", "de", undefined)).toEqual({
       store: "GOOGLE_PLAY",
@@ -461,24 +474,35 @@ describe("draftView", () => {
   ];
 
   it("opens the home listing for a draft of its default localization", () => {
-    expect(draftView("us", null, markets)).toEqual({
+    expect(draftView({ country: "us" }, null, markets)).toEqual({
       market: "us",
       localization: null,
     });
-    expect(draftView("us", "en-US", markets)).toEqual({
+    expect(draftView({ country: "us" }, "en-US", markets)).toEqual({
       market: "us",
       localization: null,
     });
   });
 
   it("opens the market that captures the drafted localization", () => {
-    expect(draftView("us", "pl", markets)).toEqual({
+    expect(draftView({ country: "us" }, "pl", markets)).toEqual({
       market: "pl",
       localization: "pl",
     });
   });
 
+  it("views a draft of the native default as the home listing", () => {
+    const polish = { country: "pl", defaultLocalization: "pl" };
+    const home = [{ country: "pl", home: true, capturedAt: "", tracked: true }];
+
+    expect(draftView(polish, "pl", home)).toEqual({
+      market: "pl",
+      localization: null,
+    });
+    expect(draftView(polish, "en-GB", home)).toBeNull();
+  });
+
   it("opens nothing for a localization no market captures", () => {
-    expect(draftView("us", "es-MX", markets)).toBeNull();
+    expect(draftView({ country: "us" }, "es-MX", markets)).toBeNull();
   });
 });

@@ -19,6 +19,7 @@ export interface SelectedMarket {
   market: string;
   scope: string | undefined;
   home: string;
+  defaultLocalization: string | null;
   markets: ListingMarket[];
   select: (market: string | null) => void;
 }
@@ -32,6 +33,7 @@ export function useMarket(id: string): SelectedMarket {
     market: resolveMarket(requested, markets, app.country),
     scope: keywordScope(requested, markets),
     home: app.country,
+    defaultLocalization: app.defaultLocalization ?? null,
     markets,
     select: (next) => {
       void setRequested(next);

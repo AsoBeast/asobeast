@@ -2,7 +2,7 @@
 
 import { useId, useMemo, useState } from "react";
 import { ChevronRight, RotateCcw } from "lucide-react";
-import type { MetadataAuditResult } from "@asobeast/shared";
+import type { DefaultingListing, MetadataAuditResult } from "@asobeast/shared";
 import { InlineQueryError } from "@/components/layout/InlineQueryError";
 import { StoreFieldNotice } from "@/components/localizations/KeywordFieldEditor";
 import { Button } from "@/components/ui/button";
@@ -51,21 +51,28 @@ function KeywordFieldNotice({ field }: { field: DraftKeywordField }) {
 export function ListingDraftEditor({
   id,
   audit,
+  app,
   market,
   localization,
   density,
 }: {
   id: string;
   audit: MetadataAuditResult;
+  app: DefaultingListing;
   market: string;
   localization: string | undefined;
   density: DensityContext;
 }) {
   const headingId = useId();
   const store = audit.store;
+  const { country, defaultLocalization } = app;
   const scope = useMemo(
-    () => draftScopeOf(store, market, localization),
-    [store, market, localization],
+    () =>
+      draftScopeOf(store, market, localization, {
+        country,
+        defaultLocalization,
+      }),
+    [store, market, localization, country, defaultLocalization],
   );
   const live = useMemo(() => liveDraftValues(audit), [audit]);
   const draft = useListingDraft(id, scopeKey(scope), live);

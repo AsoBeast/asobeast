@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import type {
   AppLocalizationsResult,
+  AppStoreLocalization,
   KeywordFieldSuggestion,
 } from "@asobeast/shared";
 import { useAuth } from "@/components/auth/use-auth";
@@ -88,11 +89,13 @@ function LocalizationsBody({
   result,
   canDraft,
   suggestion,
+  homeLocalization,
 }: {
   id: string;
   result: AppLocalizationsResult;
   canDraft: boolean;
   suggestion: KeywordFieldSuggestion | null;
+  homeLocalization: AppStoreLocalization;
 }) {
   const suggestions = useQuery({
     ...marketSuggestionsOptions(id),
@@ -128,7 +131,7 @@ function LocalizationsBody({
         {suggestion && !result.storeManaged ? (
           <KeywordFieldSuggestionRow
             id={id}
-            home={result.home}
+            homeLocalization={homeLocalization}
             suggestion={suggestion}
           />
         ) : null}
@@ -163,10 +166,12 @@ export function AppLocalizationsSection({
   id,
   canDraft,
   suggestion,
+  homeLocalization,
 }: {
   id: string;
   canDraft: boolean;
   suggestion: KeywordFieldSuggestion | null;
+  homeLocalization: AppStoreLocalization;
 }) {
   const { isOwner } = useAuth();
   const { data, error, isError, refetch } = useQuery({
@@ -223,6 +228,7 @@ export function AppLocalizationsSection({
             result={data}
             canDraft={canDraft}
             suggestion={suggestion}
+            homeLocalization={homeLocalization}
           />
         ) : (
           <CardContent>

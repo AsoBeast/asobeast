@@ -33,7 +33,7 @@ describe("densityContext", () => {
       ]),
       "us",
       "en-GB",
-      "Focus Flow",
+      { name: "Focus Flow", country: "us" },
     );
 
     expect(context).toEqual({
@@ -54,10 +54,20 @@ describe("densityContext", () => {
       ]),
       "fr",
       undefined,
-      "Vinted",
+      { name: "Vinted", country: "fr" },
     );
 
     expect(context.language).toBe("fr");
     expect(context.searched).toEqual({ held: 1, tracked: 3 });
+  });
+
+  it("reads the language of a native default listing", () => {
+    const context = densityContext(audit("APP_STORE", []), "pl", undefined, {
+      name: "Dzienniczek",
+      country: "pl",
+      defaultLocalization: "pl",
+    });
+
+    expect(context.language).toBe("pl");
   });
 });

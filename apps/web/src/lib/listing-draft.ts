@@ -1,7 +1,8 @@
 import {
   countChars,
   isAppStoreLocalization,
-  keywordFieldLocalizations,
+  type DefaultingListing,
+  defaultLocalizationIn,
   STORE_FIELD_LIMITS,
   type AppStoreLocalization,
   type CoveragePreviewChange,
@@ -51,12 +52,13 @@ export function draftScopeOf(
   store: Store,
   market: string,
   localization: string | undefined,
+  app: DefaultingListing = { country: market },
 ): DraftScope {
   if (store === "GOOGLE_PLAY") return { store, country: market };
   if (localization !== undefined && isAppStoreLocalization(localization)) {
     return { store, localization };
   }
-  return { store, localization: keywordFieldLocalizations(market)[0] };
+  return { store, localization: defaultLocalizationIn(app, market) };
 }
 
 export interface DraftView {
@@ -65,12 +67,12 @@ export interface DraftView {
 }
 
 export function draftView(
-  home: string,
+  app: DefaultingListing,
   drafted: AppStoreLocalization | null,
   markets: readonly Pick<ListingMarket, "country" | "localizations">[],
 ): DraftView | null {
-  if (drafted === null || drafted === keywordFieldLocalizations(home)[0]) {
-    return { market: home, localization: null };
+  if (drafted === null || drafted === defaultLocalizationIn(app, app.country)) {
+    return { market: app.country, localization: null };
   }
   const reader = markets.find((entry) =>
     entry.localizations?.includes(drafted),

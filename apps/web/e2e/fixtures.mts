@@ -3946,11 +3946,18 @@ DATASETS[APP_NEW_RATINGS_ID] = {
 };
 
 export const APP_DRAFT_LOCALES_ID = "app-draft-locales";
+export const APP_PL_NATIVE_ID = "app-pl-native";
 
 DATASETS[APP_DRAFT_LOCALES_ID] = localesDataset(
   APP_DRAFT_LOCALES_ID,
   "Draft Lab",
 );
+
+const plNative = localesDataset(APP_PL_NATIVE_ID, "Dzienniczek");
+DATASETS[APP_PL_NATIVE_ID] = {
+  ...plNative,
+  detail: { ...plNative.detail, country: "pl", defaultLocalization: "pl" },
+};
 
 export const APP_TARGETS_ID = "app-targets";
 export const APP_TARGETS_FOCUS_ID = "app-targets-focus";
@@ -6307,6 +6314,7 @@ METADATA_AUDITS[APP_UNLISTED_MANAGED_ID] = METADATA_AUDIT;
 METADATA_AUDITS[APP_IMPORT_FOCUS_ID] = METADATA_AUDIT;
 METADATA_AUDITS[APP_FIELD_PROPOSAL_ID] = METADATA_AUDIT;
 METADATA_AUDITS[APP_DRAFT_LOCALES_ID] = METADATA_AUDIT;
+METADATA_AUDITS[APP_PL_NATIVE_ID] = METADATA_AUDIT;
 METADATA_AUDITS[APP_TARGETS_ID] = METADATA_AUDIT;
 METADATA_AUDITS[APP_TARGETS_FOCUS_ID] = METADATA_AUDIT;
 

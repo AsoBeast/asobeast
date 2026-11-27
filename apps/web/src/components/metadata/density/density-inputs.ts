@@ -1,4 +1,5 @@
 import {
+  type DefaultingListing,
   STORE_FIELD_LIMITS,
   type MetadataAuditResult,
   type Store,
@@ -32,16 +33,20 @@ const descriptionSearch = (
       }
     : null;
 
+export interface DensityApp extends DefaultingListing {
+  name: string | null;
+}
+
 export function densityContext(
   audit: MetadataAuditResult,
   market: string,
   localization: string | undefined,
-  appName: string | null,
+  app: DensityApp,
 ): DensityContext {
   return {
     store: audit.store,
-    language: densityLanguage(audit.store, market, localization),
-    appName,
+    language: densityLanguage(audit.store, market, localization, app),
+    appName: app.name,
     tracked: audit.coverage.map((row) => row.text),
     searched: descriptionSearch(audit),
   };

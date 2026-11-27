@@ -1,6 +1,7 @@
 import { expect, test } from "./session.mts";
 import type { Page } from "@playwright/test";
-import { APP_SUGGESTED_LOCALES_ID } from "./fixtures.mts";
+import { APP_PL_NATIVE_ID, APP_SUGGESTED_LOCALES_ID } from "./fixtures.mts";
+import { METADATA_AUDIT_COOKIE } from "./metadata-fixtures.mts";
 import { seedLocalizations } from "./localizations.mts";
 
 const APPLE_URL =
@@ -133,6 +134,32 @@ test("links the suggestion to the keyword field of the viewed localization", asy
   await expect(
     page.getByRole("textbox", { name: "Polish keyword field" }),
   ).toHaveValue("nawyki,cel");
+});
+
+test("opens the polish home box from the keyword field suggestion", async ({
+  page,
+}) => {
+  await page.context().addCookies([
+    {
+      name: METADATA_AUDIT_COOKIE,
+      value: "suggestion",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.goto(`/apps/${APP_PL_NATIVE_ID}/metadata`);
+
+  await page.getByRole("link", { name: "Edit this keyword field" }).click();
+
+  await expect(page).toHaveURL(
+    new RegExp(
+      `/apps/${APP_PL_NATIVE_ID}/metadata\\?fieldLocale=pl#app-localizations$`,
+    ),
+  );
+  await expect(page.getByRole("button", { name: /^Polish/ })).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
 });
 
 test("shows the keyword field card of the viewed localization", async ({

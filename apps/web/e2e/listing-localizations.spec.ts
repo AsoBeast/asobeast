@@ -1,4 +1,5 @@
 import { contrastViolations, THEMES } from "./contrast-check.mts";
+import { APP_PL_NATIVE_ID } from "./fixtures.mts";
 import { expect, test } from "./session.mts";
 
 const LOCALIZATION = "Localization";
@@ -84,3 +85,16 @@ for (const theme of THEMES) {
     ).toEqual([]);
   });
 }
+
+test("offers no second polish entry for a polish default listing", async ({
+  page,
+}) => {
+  await page.goto(`/apps/${APP_PL_NATIVE_ID}/metadata`);
+
+  await expect(
+    page.getByRole("region", { name: "App Store localizations" }),
+  ).toBeVisible();
+  await expect(page.getByRole("combobox", { name: LOCALIZATION })).toHaveCount(
+    0,
+  );
+});
