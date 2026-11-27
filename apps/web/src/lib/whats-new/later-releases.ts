@@ -30,6 +30,16 @@ export const LATER_RELEASES: readonly Release[] = [
       },
       {
         kind: "new",
+        title: "The average of your new ratings",
+        text: "The ratings history on the reviews page now shows what your new ratings average beside your overall average, as a weekly line and in a sentence for the chosen range, so you see whether the last release pulls the average up or down long before the overall figure moves. The ratings goal also says where the current mix of new ratings takes you. This works on the App Store; Google Play weights recent ratings in its average, so it cannot be worked out there.",
+      },
+      {
+        kind: "new",
+        title: "Share a chart as a card",
+        text: "The rankings chart, the visibility chart and a keyword's position history now have a Share button that makes a card ready to post: your app's icon and name, a headline such as how far your average rank moved, the chart and the dates. Pick a wide, square or tall size and a light, dark or orange look, turn the change, the app or the Made with AsoBeast line off, then copy or download it.",
+      },
+      {
+        kind: "new",
         title: "See which words your description repeats",
         text: "The description on the metadata page now counts its words and lists the words and phrases it repeats most, with the keywords you track marked and a button that shows each one in the text. On the App Store a short note explains why the description does not help you rank, and on Google Play the card says how many of your tracked keywords it holds. The same list appears under the description of a draft.",
       },

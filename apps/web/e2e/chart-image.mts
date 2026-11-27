@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import type { HeldRequest } from "./held-request.mts";
 
 export interface PngReading {
@@ -93,6 +93,50 @@ export async function readPng(
       };
     },
     { base64: png.toString("base64"), token: seriesToken },
+  );
+}
+
+export type Pixel = [number, number, number];
+
+export const hexPixel = (hex: string): Pixel => [
+  parseInt(hex.slice(1, 3), 16),
+  parseInt(hex.slice(3, 5), 16),
+  parseInt(hex.slice(5, 7), 16),
+];
+
+export async function pngSize(
+  page: Page,
+  png: Buffer,
+): Promise<{ width: number; height: number }> {
+  return page.evaluate(async (base64) => {
+    const bitmap = await createImageBitmap(
+      await (await fetch(`data:image/png;base64,${base64}`)).blob(),
+    );
+    return { width: bitmap.width, height: bitmap.height };
+  }, png.toString("base64"));
+}
+
+export async function canvasPixel(
+  canvas: Locator,
+  x: number,
+  y: number,
+): Promise<Pixel> {
+  return canvas.evaluate(
+    (element, point) => {
+      if (!(element instanceof HTMLCanvasElement)) {
+        throw new Error("Not a canvas");
+      }
+      const context = element.getContext("2d", { willReadFrequently: true });
+      if (!context) throw new Error("No 2d context");
+      const [red = 0, green = 0, blue = 0] = context.getImageData(
+        point.x,
+        point.y,
+        1,
+        1,
+      ).data;
+      return [red, green, blue] satisfies [number, number, number];
+    },
+    { x, y },
   );
 }
 

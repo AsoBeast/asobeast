@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import {
   HISTOGRAM_FAILING_COOKIE,
   RATINGS_HISTORY_COOKIE,
@@ -263,4 +264,120 @@ test("a failing distribution request keeps the reviews page and offers a retry",
   await page.keyboard.press("Enter");
 
   await expect(distribution.getByRole("listitem")).toHaveCount(5);
+});
+
+const newRatingsSentence = (page: Page, comparison: string) =>
+  page.locator("p", { hasText: `over 30 days, ${comparison} your overall` });
+
+test("draws the new ratings average beside the overall average", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { [RATINGS_HISTORY_COOKIE]: "growth" });
+  await page.goto(REVIEWS);
+  const chart = page.getByRole("region", { name: "Average rating over time" });
+  const legend = chart.getByRole("list", { name: "Charted series" });
+
+  await expect(chart.locator(".recharts-line")).toHaveCount(2);
+  await expect(legend.getByRole("listitem")).toHaveText([
+    "Average rating",
+    "New ratings, 7 day average",
+  ]);
+});
+
+test("says how new ratings compare with the overall average", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { [RATINGS_HISTORY_COOKIE]: "growth" });
+  await page.goto(REVIEWS);
+  const sentence = newRatingsSentence(page, "above");
+
+  await expect(sentence).toContainText("New ratings average");
+  await expect(
+    sentence.locator("[data-grade]", {
+      hasText: "New ratings average 4.7, strong",
+    }),
+  ).toBeVisible();
+  await expect(
+    sentence.locator("[data-grade]", { hasText: "Overall average 4.4, fair" }),
+  ).toBeVisible();
+  await expect(
+    sentence.getByRole("button", { name: "About the new ratings average" }),
+  ).toBeVisible();
+});
+
+test("keeps the new ratings sentence in the volume view", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { [RATINGS_HISTORY_COOKIE]: "growth" });
+  await page.goto(`${REVIEWS}?ratingsView=volume`);
+
+  await expect(
+    page.getByRole("region", { name: "New ratings between daily reads" }),
+  ).toBeVisible();
+  await expect(newRatingsSentence(page, "above")).toBeVisible();
+});
+
+test("says when there are too few new ratings", async ({ page, context }) => {
+  await seedCookies(context, { [RATINGS_HISTORY_COOKIE]: "thin" });
+  await page.goto(REVIEWS);
+
+  await expect(
+    page.getByText(
+      "Too few new ratings over 30 days to work out their average.",
+    ),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Average rating over time" })
+      .locator(".recharts-line"),
+  ).toHaveCount(1);
+});
+
+test("reads the new ratings average across a reset", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { [RATINGS_HISTORY_COOKIE]: "reset" });
+  await page.goto(REVIEWS);
+
+  await expect(
+    newRatingsSentence(page, "above").locator("[data-grade]", {
+      hasText: "New ratings average 4.6, strong",
+    }),
+  ).toBeVisible();
+  const lines = page
+    .getByRole("region", { name: "Average rating over time" })
+    .locator(".recharts-line-curve");
+  await expect(lines).toHaveCount(2);
+  const newLine = await lines.nth(1).getAttribute("d");
+  expect(newLine?.match(/M/g)).toHaveLength(2);
+});
+
+test("leaves the new ratings average out on Google Play", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { [RATINGS_HISTORY_COOKIE]: "growth" });
+  await page.goto("/apps/app-gp/reviews");
+  const chart = page.getByRole("region", { name: "Average rating over time" });
+
+  await expect(chart.locator(".recharts-line")).toHaveCount(1);
+  await expect(chart.getByRole("list", { name: "Charted series" })).toHaveCount(
+    0,
+  );
+  await expect(page.getByText("New ratings average")).toHaveCount(0);
+});
+
+test("keeps the overview rating chart as it was", async ({ page, context }) => {
+  await seedCookies(context, { [RATINGS_HISTORY_COOKIE]: "growth" });
+  await page.goto("/apps/app-1?visView=rating");
+  const chart = page.getByRole("region", { name: "Average rating over time" });
+
+  await expect(chart.locator(".recharts-line")).toHaveCount(1);
+  await expect(chart.getByRole("list", { name: "Charted series" })).toHaveCount(
+    0,
+  );
 });
