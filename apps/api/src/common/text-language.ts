@@ -26,6 +26,7 @@ const MIN_HITS = 2;
 const SCRIPT_SHARE = 0.5;
 
 const LETTER = /\p{L}/gu;
+const HAS_LETTER = /\p{L}/u;
 const HANGUL = /\p{Script=Hangul}/u;
 const KANA = /[\p{Script=Hiragana}\p{Script=Katakana}]/u;
 const CJK = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u;
@@ -115,6 +116,7 @@ export interface LanguageEvidence {
   script: string | null;
   hits: Readonly<Record<string, number>>;
   englishOnly: number;
+  words: number;
 }
 
 export const knowsLanguage = (language: string): boolean =>
@@ -128,5 +130,6 @@ export function languageEvidence(text: string): LanguageEvidence {
     script: letters.length === 0 ? null : scriptLanguage(text, letters),
     hits: hitsOf(tokens),
     englishOnly: tokens.filter((token) => ENGLISH_ONLY.has(token)).length,
+    words: tokens.filter((token) => HAS_LETTER.test(token)).length,
   };
 }

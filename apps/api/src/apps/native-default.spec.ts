@@ -216,6 +216,19 @@ describe('provenNativeDefault', () => {
     ).toBeNull();
   });
 
+  it('never proves an unlisted native from a text without letters', () => {
+    expect(
+      proof({
+        home: 'hu',
+        description: Array.from({ length: 80 }, (_, index) => `${index}`).join(
+          ' ',
+        ),
+        probes: echoed('hu'),
+        declared: ['HU'],
+      }),
+    ).toBeNull();
+  });
+
   it('proves slovak where the czech list hits', () => {
     expect(
       proof({
